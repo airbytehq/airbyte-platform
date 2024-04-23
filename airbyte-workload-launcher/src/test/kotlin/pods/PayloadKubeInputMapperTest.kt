@@ -6,6 +6,7 @@ import io.airbyte.config.ActorType
 import io.airbyte.config.ResourceRequirements
 import io.airbyte.config.StandardCheckConnectionInput
 import io.airbyte.config.StandardDiscoverCatalogInput
+import io.airbyte.config.WorkloadPriority
 import io.airbyte.featureflag.InjectAwsSecretsToConnectorPods
 import io.airbyte.featureflag.TestClient
 import io.airbyte.persistence.job.models.IntegrationLauncherConfig
@@ -23,6 +24,7 @@ import io.airbyte.workers.sync.OrchestratorConstants
 import io.airbyte.workers.sync.ReplicationLauncherWorker
 import io.airbyte.workers.sync.ReplicationLauncherWorker.INIT_FILE_DESTINATION_LAUNCHER_CONFIG
 import io.airbyte.workers.sync.ReplicationLauncherWorker.INIT_FILE_SOURCE_LAUNCHER_CONFIG
+import io.airbyte.workload.launcher.config.OrchestratorEnvSingleton
 import io.airbyte.workload.launcher.model.getActorType
 import io.airbyte.workload.launcher.model.getAttemptId
 import io.airbyte.workload.launcher.model.getJobId
@@ -51,7 +53,9 @@ class PayloadKubeInputMapperTest {
     val namespace = "test-namespace"
     val podNameGenerator = PodNameGenerator(namespace = namespace)
     val containerInfo = KubeContainerInfo("img-name", "pull-policy")
-    val envMap: Map<String, String> = mapOf()
+    val orchestratorEnvSingleton: OrchestratorEnvSingleton = mockk()
+    every { orchestratorEnvSingleton.orchestratorEnvVars(any()) } returns emptyList()
+    every { orchestratorEnvSingleton.orchestratorEnvMap(any()) } returns emptyMap()
     val awsAssumedRoleEnv: List<EnvVar> = listOf()
     val replSelectors = mapOf("test-selector" to "normal-repl")
     val replCustomSelectors = mapOf("test-selector" to "custom-repl")
@@ -68,9 +72,9 @@ class PayloadKubeInputMapperTest {
         serializer,
         labeler,
         podNameGenerator,
+        orchestratorEnvSingleton,
         namespace,
         containerInfo,
-        envMap,
         awsAssumedRoleEnv,
         replConfigs,
         checkConfigs,
@@ -133,6 +137,7 @@ class PayloadKubeInputMapperTest {
   fun `builds a kube input from a check payload`(
     customConnector: Boolean,
     assumedRoleEnabled: Boolean,
+    workloadPriority: WorkloadPriority,
   ) {
     val ffClient =
       TestClient(
@@ -148,7 +153,9 @@ class PayloadKubeInputMapperTest {
     val podNameGenerator: PodNameGenerator = mockk()
     every { podNameGenerator.getCheckPodName(any(), any(), any()) } returns podName
     val orchestratorContainerInfo = KubeContainerInfo("img-name", "pull-policy")
-    val orchestratorEnvMap: Map<String, String> = mapOf()
+    val orchestratorEnvSingleton: OrchestratorEnvSingleton = mockk()
+    every { orchestratorEnvSingleton.orchestratorEnvVars(any()) } returns emptyList()
+    every { orchestratorEnvSingleton.orchestratorEnvMap(any()) } returns emptyMap()
     val awsAssumedRoleEnv: List<EnvVar> = listOf(EnvVar("aws-assumed-role", "value", null))
     val checkSelectors = mapOf("test-selector" to "normal-check")
     val pullPolicy = "pull-policy"
@@ -161,15 +168,17 @@ class PayloadKubeInputMapperTest {
     val discoverConfigs: WorkerConfigs = mockk()
     val specConfigs: WorkerConfigs = mockk()
     val replConfigs: WorkerConfigs = mockk()
+    val replSelectors = mapOf("test-selector-repl" to "normal-repl")
+    every { replConfigs.getworkerKubeNodeSelectors() } returns replSelectors
 
     val mapper =
       PayloadKubeInputMapper(
         serializer,
         labeler,
         podNameGenerator,
+        orchestratorEnvSingleton,
         namespace,
         orchestratorContainerInfo,
-        orchestratorEnvMap,
         awsAssumedRoleEnv,
         replConfigs,
         checkConfigs,
@@ -197,6 +206,7 @@ class PayloadKubeInputMapperTest {
         every { dockerImage } returns imageName
         every { isCustomConnector } returns customConnector
         every { workspaceId } returns workspaceId1
+        every { priority } returns workloadPriority
       }
     every { input.checkConnectionInput } returns checkConnectionInput
 
@@ -210,7 +220,16 @@ class PayloadKubeInputMapperTest {
     val result = mapper.toKubeInput(workloadId, input, sharedLabels)
 
     Assertions.assertEquals(connectorLabels + sharedLabels, result.connectorLabels)
-    Assertions.assertEquals(if (customConnector) checkCustomSelectors else checkSelectors, result.nodeSelectors)
+    Assertions.assertEquals(
+      if (customConnector) {
+        checkCustomSelectors
+      } else if (WorkloadPriority.DEFAULT.equals(workloadPriority)) {
+        replSelectors
+      } else {
+        checkSelectors
+      },
+      result.nodeSelectors,
+    )
     Assertions.assertEquals(namespace, result.kubePodInfo.namespace)
     Assertions.assertEquals(podName, result.kubePodInfo.name)
     Assertions.assertEquals(imageName, result.kubePodInfo.mainContainerInfo.image)
@@ -238,6 +257,7 @@ class PayloadKubeInputMapperTest {
   fun `builds a kube input from a discover payload`(
     customConnector: Boolean,
     assumedRoleEnabled: Boolean,
+    workloadPriority: WorkloadPriority,
   ) {
     val ffClient =
       TestClient(
@@ -253,7 +273,9 @@ class PayloadKubeInputMapperTest {
     val podNameGenerator: PodNameGenerator = mockk()
     every { podNameGenerator.getDiscoverPodName(any(), any(), any()) } returns podName
     val orchestratorContainerInfo = KubeContainerInfo("img-name", "pull-policy")
-    val orchestratorEnvMap: Map<String, String> = mapOf()
+    val orchestratorEnvSingleton: OrchestratorEnvSingleton = mockk()
+    every { orchestratorEnvSingleton.orchestratorEnvVars(any()) } returns emptyList()
+    every { orchestratorEnvSingleton.orchestratorEnvMap(any()) } returns emptyMap()
     val awsAssumedRoleEnv: List<EnvVar> = listOf(EnvVar("aws-assumed-role", "value", null))
     val checkSelectors = mapOf("test-selector" to "normal-check")
     val pullPolicy = "pull-policy"
@@ -266,15 +288,17 @@ class PayloadKubeInputMapperTest {
     every { discoverConfigs.jobImagePullPolicy } returns pullPolicy
     val specConfigs: WorkerConfigs = mockk()
     val replConfigs: WorkerConfigs = mockk()
+    val replSelectors = mapOf("test-selector-repl" to "normal-repl")
+    every { replConfigs.getworkerKubeNodeSelectors() } returns replSelectors
 
     val mapper =
       PayloadKubeInputMapper(
         serializer,
         labeler,
         podNameGenerator,
+        orchestratorEnvSingleton,
         namespace,
         orchestratorContainerInfo,
-        orchestratorEnvMap,
         awsAssumedRoleEnv,
         replConfigs,
         checkConfigs,
@@ -301,6 +325,7 @@ class PayloadKubeInputMapperTest {
         every { dockerImage } returns imageName
         every { isCustomConnector } returns customConnector
         every { workspaceId } returns workspaceId1
+        every { priority } returns workloadPriority
       }
     every { input.discoverCatalogInput } returns discoverCatalogInput
 
@@ -314,7 +339,16 @@ class PayloadKubeInputMapperTest {
     val result = mapper.toKubeInput(workloadId, input, sharedLabels)
 
     Assertions.assertEquals(connectorLabels + sharedLabels, result.connectorLabels)
-    Assertions.assertEquals(if (customConnector) checkCustomSelectors else checkSelectors, result.nodeSelectors)
+    Assertions.assertEquals(
+      if (customConnector) {
+        checkCustomSelectors
+      } else if (WorkloadPriority.DEFAULT.equals(workloadPriority)) {
+        replSelectors
+      } else {
+        checkSelectors
+      },
+      result.nodeSelectors,
+    )
     Assertions.assertEquals(namespace, result.kubePodInfo.namespace)
     Assertions.assertEquals(podName, result.kubePodInfo.name)
     Assertions.assertEquals(imageName, result.kubePodInfo.mainContainerInfo.image)
@@ -350,7 +384,9 @@ class PayloadKubeInputMapperTest {
     val podNameGenerator: PodNameGenerator = mockk()
     every { podNameGenerator.getSpecPodName(any(), any(), any()) } returns podName
     val orchestratorContainerInfo = KubeContainerInfo("img-name", "pull-policy")
-    val orchestratorEnvMap: Map<String, String> = mapOf()
+    val orchestratorEnvSingleton: OrchestratorEnvSingleton = mockk()
+    every { orchestratorEnvSingleton.orchestratorEnvVars(any()) } returns emptyList()
+    every { orchestratorEnvSingleton.orchestratorEnvMap(any()) } returns emptyMap()
     val awsAssumedRoleEnv: List<EnvVar> = listOf(EnvVar("aws-assumed-role", "value", null))
     val checkSelectors = mapOf("test-selector" to "normal-check")
     val pullPolicy = "pull-policy"
@@ -369,9 +405,9 @@ class PayloadKubeInputMapperTest {
         serializer,
         labeler,
         podNameGenerator,
+        orchestratorEnvSingleton,
         namespace,
         orchestratorContainerInfo,
-        orchestratorEnvMap,
         awsAssumedRoleEnv,
         replConfigs,
         checkConfigs,
@@ -425,10 +461,11 @@ class PayloadKubeInputMapperTest {
     @JvmStatic
     private fun connectorInputMatrix(): Stream<Arguments> {
       return Stream.of(
-        Arguments.of(true, true),
-        Arguments.of(false, true),
-        Arguments.of(true, false),
-        Arguments.of(false, false),
+        Arguments.of(true, true, WorkloadPriority.HIGH),
+        Arguments.of(false, true, WorkloadPriority.HIGH),
+        Arguments.of(true, false, WorkloadPriority.HIGH),
+        Arguments.of(false, false, WorkloadPriority.HIGH),
+        Arguments.of(false, false, WorkloadPriority.DEFAULT),
       )
     }
   }

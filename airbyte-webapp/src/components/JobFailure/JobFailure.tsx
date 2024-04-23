@@ -145,7 +145,7 @@ export const JobFailure: React.FC<JobFailureProps> = ({ job, fallbackMessage }) 
                 expanded={isStacktraceExpanded}
                 messageId="jobs.failure.expandStacktrace"
               />
-              {isStacktraceExpanded && <Logs logsArray={failureReason.stacktrace.split("\n")} />}
+              {isStacktraceExpanded && <Logs follow logsArray={failureReason.stacktrace.split("\n")} />}
             </FlexItem>
           )}
           {job.logs?.logLines && job.logs.logLines.length > 0 && (
@@ -156,7 +156,7 @@ export const JobFailure: React.FC<JobFailureProps> = ({ job, fallbackMessage }) 
                 messageId="jobs.failure.expandLogs"
                 icon={<DownloadButton configType={job.configType} id={job.id} logLines={job.logs.logLines} />}
               />
-              {isLogsExpanded && <Logs logsArray={job.logs.logLines} />}
+              {isLogsExpanded && <Logs follow logsArray={job.logs.logLines} />}
             </FlexItem>
           )}
         </FlexContainer>

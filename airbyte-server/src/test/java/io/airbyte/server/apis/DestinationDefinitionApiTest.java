@@ -6,6 +6,7 @@ package io.airbyte.server.apis;
 
 import static org.mockito.Mockito.doThrow;
 
+import io.airbyte.api.model.generated.ActorDefinitionIdWithScope;
 import io.airbyte.api.model.generated.CustomDestinationDefinitionCreate;
 import io.airbyte.api.model.generated.DestinationDefinitionIdRequestBody;
 import io.airbyte.api.model.generated.DestinationDefinitionIdWithWorkspaceId;
@@ -15,7 +16,6 @@ import io.airbyte.api.model.generated.DestinationDefinitionUpdate;
 import io.airbyte.api.model.generated.PrivateDestinationDefinitionRead;
 import io.airbyte.api.model.generated.PrivateDestinationDefinitionReadList;
 import io.airbyte.api.model.generated.WorkspaceIdRequestBody;
-import io.airbyte.commons.json.Jsons;
 import io.airbyte.commons.server.errors.ApplicationErrorKnownException;
 import io.airbyte.config.persistence.ConfigNotFoundException;
 import io.airbyte.validation.json.JsonValidationException;
@@ -40,7 +40,7 @@ class DestinationDefinitionApiTest extends BaseControllerTest {
         .thenReturn(new DestinationDefinitionRead());
     final String path = "/api/v1/destination_definitions/create_custom";
     testEndpointStatus(
-        HttpRequest.POST(path, Jsons.serialize(new CustomDestinationDefinitionCreate())),
+        HttpRequest.POST(path, new CustomDestinationDefinitionCreate()),
         HttpStatus.OK);
   }
 
@@ -51,10 +51,10 @@ class DestinationDefinitionApiTest extends BaseControllerTest {
         .when(destinationDefinitionsHandler).deleteDestinationDefinition(Mockito.any());
     final String path = "/api/v1/destination_definitions/delete";
     testEndpointStatus(
-        HttpRequest.POST(path, Jsons.serialize(new DestinationDefinitionIdRequestBody())),
+        HttpRequest.POST(path, new DestinationDefinitionIdRequestBody()),
         HttpStatus.NO_CONTENT);
     testErrorEndpointStatus(
-        HttpRequest.POST(path, Jsons.serialize(new DestinationDefinitionIdRequestBody())),
+        HttpRequest.POST(path, new DestinationDefinitionIdRequestBody()),
         HttpStatus.NOT_FOUND);
   }
 
@@ -65,7 +65,8 @@ class DestinationDefinitionApiTest extends BaseControllerTest {
 
     final String path = "/api/v1/destination_definitions/delete";
     testErrorEndpointStatus(
-        HttpRequest.POST(path, Jsons.serialize(new DestinationDefinitionIdRequestBody().destinationDefinitionId(destinationDefinitionId))),
+        HttpRequest.POST(path,
+            new DestinationDefinitionIdRequestBody().destinationDefinitionId(destinationDefinitionId)),
         HttpStatus.UNPROCESSABLE_ENTITY);
   }
 
@@ -76,10 +77,10 @@ class DestinationDefinitionApiTest extends BaseControllerTest {
         .thenThrow(new ConfigNotFoundException("", ""));
     final String path = "/api/v1/destination_definitions/get";
     testEndpointStatus(
-        HttpRequest.POST(path, Jsons.serialize(new DestinationDefinitionIdRequestBody())),
+        HttpRequest.POST(path, new DestinationDefinitionIdRequestBody()),
         HttpStatus.OK);
     testErrorEndpointStatus(
-        HttpRequest.POST(path, Jsons.serialize(new DestinationDefinitionIdRequestBody())),
+        HttpRequest.POST(path, new DestinationDefinitionIdRequestBody()),
         HttpStatus.NOT_FOUND);
   }
 
@@ -90,10 +91,10 @@ class DestinationDefinitionApiTest extends BaseControllerTest {
         .thenThrow(new ConfigNotFoundException("", ""));
     final String path = "/api/v1/destination_definitions/get_for_workspace";
     testEndpointStatus(
-        HttpRequest.POST(path, Jsons.serialize(new DestinationDefinitionIdRequestBody())),
+        HttpRequest.POST(path, new DestinationDefinitionIdWithWorkspaceId()),
         HttpStatus.OK);
     testErrorEndpointStatus(
-        HttpRequest.POST(path, Jsons.serialize(new DestinationDefinitionIdRequestBody())),
+        HttpRequest.POST(path, new DestinationDefinitionIdWithWorkspaceId()),
         HttpStatus.NOT_FOUND);
   }
 
@@ -104,10 +105,10 @@ class DestinationDefinitionApiTest extends BaseControllerTest {
         .thenThrow(new ConfigNotFoundException("", ""));
     final String path = "/api/v1/destination_definitions/grant_definition";
     testEndpointStatus(
-        HttpRequest.POST(path, Jsons.serialize(new DestinationDefinitionIdWithWorkspaceId())),
+        HttpRequest.POST(path, new ActorDefinitionIdWithScope()),
         HttpStatus.OK);
     testErrorEndpointStatus(
-        HttpRequest.POST(path, Jsons.serialize(new DestinationDefinitionIdWithWorkspaceId())),
+        HttpRequest.POST(path, new ActorDefinitionIdWithScope()),
         HttpStatus.NOT_FOUND);
   }
 
@@ -127,7 +128,7 @@ class DestinationDefinitionApiTest extends BaseControllerTest {
         .thenReturn(new DestinationDefinitionReadList());
     final String path = "/api/v1/destination_definitions/list_for_workspace";
     testEndpointStatus(
-        HttpRequest.POST(path, Jsons.serialize(new WorkspaceIdRequestBody())),
+        HttpRequest.POST(path, new WorkspaceIdRequestBody()),
         HttpStatus.OK);
   }
 
@@ -147,7 +148,7 @@ class DestinationDefinitionApiTest extends BaseControllerTest {
         .thenReturn(new PrivateDestinationDefinitionReadList());
     final String path = "/api/v1/destination_definitions/list_private";
     testEndpointStatus(
-        HttpRequest.POST(path, Jsons.serialize(new WorkspaceIdRequestBody())),
+        HttpRequest.POST(path, new WorkspaceIdRequestBody()),
         HttpStatus.OK);
   }
 
@@ -157,7 +158,7 @@ class DestinationDefinitionApiTest extends BaseControllerTest {
         .when(destinationDefinitionsHandler).revokeDestinationDefinition(Mockito.any());
     final String path = "/api/v1/destination_definitions/revoke_definition";
     testEndpointStatus(
-        HttpRequest.POST(path, Jsons.serialize(new DestinationDefinitionIdWithWorkspaceId())),
+        HttpRequest.POST(path, new ActorDefinitionIdWithScope()),
         HttpStatus.OK);
   }
 
@@ -169,10 +170,10 @@ class DestinationDefinitionApiTest extends BaseControllerTest {
         .thenThrow(new ConfigNotFoundException("", ""));
     final String path = "/api/v1/destination_definitions/update";
     testEndpointStatus(
-        HttpRequest.POST(path, Jsons.serialize(new DestinationDefinitionUpdate())),
+        HttpRequest.POST(path, new DestinationDefinitionUpdate()),
         HttpStatus.OK);
     testErrorEndpointStatus(
-        HttpRequest.POST(path, Jsons.serialize(new DestinationDefinitionUpdate())),
+        HttpRequest.POST(path, new DestinationDefinitionUpdate()),
         HttpStatus.NOT_FOUND);
   }
 
@@ -183,7 +184,8 @@ class DestinationDefinitionApiTest extends BaseControllerTest {
 
     final String path = "/api/v1/destination_definitions/update";
     testErrorEndpointStatus(
-        HttpRequest.POST(path, Jsons.serialize(new DestinationDefinitionUpdate().destinationDefinitionId(destinationDefinitionId))),
+        HttpRequest.POST(path,
+            new DestinationDefinitionUpdate().destinationDefinitionId(destinationDefinitionId)),
         HttpStatus.UNPROCESSABLE_ENTITY);
   }
 

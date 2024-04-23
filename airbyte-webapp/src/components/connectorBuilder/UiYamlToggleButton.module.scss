@@ -6,15 +6,28 @@
   cursor: pointer;
   border: variables.$border-thin solid colors.$dark-blue;
   background-color: colors.$dark-blue;
-  border-radius: variables.$border-radius-sm;
   padding: 0;
   overflow: hidden;
   display: grid;
   grid-template: 1fr / 1fr 1fr;
   align-self: center;
-  width: builderVariables.$toggleButtonWidth;
   flex-basis: auto;
   flex-shrink: 0;
+
+  &.xs {
+    width: auto;
+    border-radius: variables.$border-radius-xs;
+  }
+
+  &.sm {
+    width: builderVariables.$toggleButtonWidth;
+    border-radius: variables.$border-radius-sm;
+  }
+
+  &:disabled {
+    pointer-events: none;
+    opacity: 0.25;
+  }
 }
 
 .text {
@@ -24,7 +37,17 @@
   align-items: center;
   justify-content: center;
   font-weight: 700;
-  padding: 4px 8px;
+  font-size: 9px;
+
+  &.xs {
+    font-size: variables.$font-size-xs;
+    padding: 3px 5px;
+  }
+
+  &.sm {
+    font-size: 11px;
+    padding: 4px 8px;
+  }
 }
 
 .selected {
@@ -35,4 +58,9 @@
 .unselected {
   background-color: colors.$foreground;
   color: colors.$dark-blue;
+}
+
+.tooltipContainer {
+  width: fit-content;
+  align-self: center;
 }

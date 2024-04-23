@@ -28,8 +28,8 @@ import io.airbyte.api.server.services.SourceService
 import io.airbyte.api.server.services.UserService
 import io.micronaut.http.annotation.Controller
 import io.micronaut.http.annotation.Patch
+import jakarta.ws.rs.core.Response
 import java.util.UUID
-import javax.ws.rs.core.Response
 
 // Marked as open because when not marked, micronaut failed to start up because generated beans couldn't extend this one since it was "final"
 @Controller(SOURCES_PATH)

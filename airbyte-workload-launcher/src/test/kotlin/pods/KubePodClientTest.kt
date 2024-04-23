@@ -111,10 +111,18 @@ class KubePodClientTest {
         .withConnectionId(UUID.randomUUID())
 
     checkInput =
-      CheckConnectionInput(JobRunConfig().withJobId("jobId").withAttemptId(1), IntegrationLauncherConfig().withDockerImage("dockerImage"), null)
+      CheckConnectionInput(
+        JobRunConfig().withJobId("jobId").withAttemptId(1),
+        IntegrationLauncherConfig().withDockerImage("dockerImage"),
+        null,
+      )
 
     discoverInput =
-      DiscoverCatalogInput(JobRunConfig().withJobId("jobId").withAttemptId(1), IntegrationLauncherConfig().withDockerImage("dockerImage"), null)
+      DiscoverCatalogInput(
+        JobRunConfig().withJobId("jobId").withAttemptId(1),
+        IntegrationLauncherConfig().withDockerImage("dockerImage"),
+        null,
+      )
 
     specInput =
       SpecInput(JobRunConfig().withJobId("jobId").withAttemptId(1), IntegrationLauncherConfig().withDockerImage("dockerImage"))
@@ -129,6 +137,7 @@ class KubePodClientTest {
 
     every {
       orchestratorPodFactory.create(
+        any(),
         replKubeInput.orchestratorLabels,
         replKubeInput.resourceReqs,
         replKubeInput.nodeSelectors,
@@ -167,6 +176,7 @@ class KubePodClientTest {
 
     every {
       orchestratorPodFactory.create(
+        any(),
         replKubeInput.orchestratorLabels,
         replKubeInput.resourceReqs,
         replKubeInput.nodeSelectors,
@@ -202,6 +212,7 @@ class KubePodClientTest {
 
     every {
       orchestratorPodFactory.create(
+        any(),
         replKubeInput.orchestratorLabels,
         replKubeInput.resourceReqs,
         replKubeInput.nodeSelectors,

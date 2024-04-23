@@ -1,5 +1,6 @@
 package io.airbyte.server.apis.publicapi.netty
 
+import io.airbyte.server.apis.publicapi.constants.ROOT_PATH
 import io.netty.buffer.ByteBuf
 import io.netty.channel.ChannelDuplexHandler
 import io.netty.channel.ChannelHandlerContext
@@ -35,7 +36,6 @@ class LoggingNettyChannelHandler : ChannelDuplexHandler() {
       writer = CaptureWriter()
       request = NettyHttpRequest(message as HttpRequest)
       request!!.register(writer!!)
-      log.info("[{}] {}", request!!.method, request!!.requestURI)
     }
     if (request == null) {
       return
@@ -85,6 +85,12 @@ class LoggingNettyChannelHandler : ChannelDuplexHandler() {
   }
 
   private fun capture() {
+    if ((request?.requestURI?.contains(ROOT_PATH) == false)) {
+      request = null
+      response = null
+      writer = null
+      return
+    }
     log.info("Request: [{}] -- {}", request!!.requestId, request!!.getLogString())
     log.info("Response: [{}] -- {}", request!!.requestId, response!!.getLogString())
     request = null

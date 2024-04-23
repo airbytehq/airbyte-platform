@@ -53,7 +53,7 @@ public class AirbyteCdkRequesterImpl implements AirbyteCdkRequester {
                                                         "json_schema": {},
                                                         "supported_sync_modes": ["full_refresh", "incremental"]
                                                       },
-                                                      "sync_mode": "full_refresh",
+                                                      "sync_mode": "incremental",
                                                       "destination_sync_mode": "overwrite"
                                                     }
                                                   ]

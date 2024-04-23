@@ -1,5 +1,3 @@
-import isEqual from "lodash/isEqual";
-import toPath from "lodash/toPath";
 import { ReactNode, useEffect, useRef } from "react";
 import { useController, useWatch } from "react-hook-form";
 import { FormattedMessage } from "react-intl";
@@ -61,6 +59,8 @@ export type BuilderFieldProps = BaseFieldProps &
         onChange?: (newValue: string) => void;
         onBlur?: (value: string) => void;
         disabled?: boolean;
+        step?: number;
+        min?: number;
       }
     | { type: "date" | "date-time"; onChange?: (newValue: string) => void }
     | { type: "boolean"; onChange?: (newValue: boolean) => void; disabled?: boolean; disabledTooltip?: string }
@@ -122,23 +122,6 @@ const ArrayField: React.FC<ArrayFieldProps> = ({
   );
 };
 
-// check whether paths are equal, normalizing [] and . notation
-function arePathsEqual(path1: string, path2: string) {
-  return isEqual(toPath(path1), toPath(path2));
-}
-
-const handleScrollToField = (
-  ref: React.RefObject<HTMLDivElement>,
-  path: string,
-  scrollToField: string | undefined,
-  setScrollToField: (value: string | undefined) => void
-) => {
-  if (ref.current && scrollToField && arePathsEqual(path, scrollToField)) {
-    ref.current.scrollIntoView({ block: "center" });
-    setScrollToField(undefined);
-  }
-};
-
 const InnerBuilderField: React.FC<BuilderFieldProps> = ({
   path,
   optional = false,
@@ -163,14 +146,14 @@ const InnerBuilderField: React.FC<BuilderFieldProps> = ({
     false,
     omitInterpolationContext
   );
-  const { scrollToField, setScrollToField } = useConnectorBuilderFormManagementState();
+  const { handleScrollToField } = useConnectorBuilderFormManagementState();
 
   const elementRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     // Call handler in here to make sure it handles new scrollToField value from the context
-    handleScrollToField(elementRef, path, scrollToField, setScrollToField);
-  }, [path, scrollToField, setScrollToField]);
+    handleScrollToField(elementRef, path);
+  }, [handleScrollToField, path]);
 
   if (props.type === "boolean") {
     const switchId = `switch-${path}`;
@@ -181,7 +164,7 @@ const InnerBuilderField: React.FC<BuilderFieldProps> = ({
         ref={(ref) => {
           elementRef.current = ref;
           // Call handler in here to make sure it handles new refs
-          handleScrollToField(elementRef, path, scrollToField, setScrollToField);
+          handleScrollToField(elementRef, path);
         }}
         checked={fieldValue as boolean}
         label={
@@ -220,7 +203,7 @@ const InnerBuilderField: React.FC<BuilderFieldProps> = ({
       optional={optional}
       ref={(ref) => {
         elementRef.current = ref;
-        handleScrollToField(elementRef, path, scrollToField, setScrollToField);
+        handleScrollToField(elementRef, path);
       }}
     >
       {(props.type === "number" || props.type === "string" || props.type === "integer") && (
@@ -236,6 +219,8 @@ const InnerBuilderField: React.FC<BuilderFieldProps> = ({
           readOnly={readOnly}
           adornment={adornment}
           disabled={props.disabled}
+          step={props.step}
+          min={props.min}
           onBlur={(e) => {
             field.onBlur();
             props.onBlur?.(e.target.value);

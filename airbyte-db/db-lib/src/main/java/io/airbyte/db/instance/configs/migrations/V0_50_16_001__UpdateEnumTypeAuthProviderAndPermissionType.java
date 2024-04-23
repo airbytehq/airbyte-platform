@@ -62,7 +62,7 @@ public class V0_50_16_001__UpdateEnumTypeAuthProviderAndPermissionType extends B
     ctx.alterTable(USER_TABLE).dropColumn(OLD_AUTH_PROVIDER_COLUMN).execute();
     ctx.dropTypeIfExists(AuthProvider.NAME).execute();
     ctx.createType(AuthProvider.NAME)
-        .asEnum(Arrays.stream(AuthProvider.values()).map(AuthProvider::getLiteral).toList())
+        .asEnum(Arrays.stream(AuthProvider.values()).map(AuthProvider::getLiteral).toArray(String[]::new))
         .execute();
     ctx.alterTable(USER_TABLE).addColumn(NEW_AUTH_PROVIDER_COLUMN).execute();
     ctx.createIndexIfNotExists("user_auth_provider_auth_user_id_idx")
@@ -74,7 +74,7 @@ public class V0_50_16_001__UpdateEnumTypeAuthProviderAndPermissionType extends B
     ctx.alterTable(PERMISSION_TABLE).dropColumn(OLD_PERMISSION_TYPE_COLUMN).execute();
     ctx.dropTypeIfExists(PermissionType.NAME).execute();
     ctx.createType(PermissionType.NAME)
-        .asEnum(Arrays.stream(PermissionType.values()).map(PermissionType::getLiteral).toList())
+        .asEnum(Arrays.stream(PermissionType.values()).map(PermissionType::getLiteral).toArray(String[]::new))
         .execute();
     ctx.alterTable(PERMISSION_TABLE).addColumn(NEW_PERMISSION_TYPE_COLUMN).execute();
   }

@@ -1,6 +1,11 @@
+import { dump } from "js-yaml";
 import cloneDeep from "lodash/cloneDeep";
+import get from "lodash/get";
+import isArray from "lodash/isArray";
 import isEqual from "lodash/isEqual";
+import isString from "lodash/isString";
 import pick from "lodash/pick";
+import { match } from "ts-pattern";
 
 import {
   ConnectorManifest,
@@ -24,21 +29,21 @@ import {
   BearerAuthenticator,
   OAuthAuthenticator,
   DefaultPaginator,
-  CursorPagination,
   DeclarativeComponentSchemaMetadata,
   HttpRequesterErrorHandler,
   NoAuth,
   SessionTokenAuthenticator,
+  DatetimeBasedCursorType,
 } from "core/api/types/ConnectorManifest";
 import { removeEmptyProperties } from "core/utils/form";
 
 import {
   API_KEY_AUTHENTICATOR,
-  authTypeToKeyToInferredInput,
   BASIC_AUTHENTICATOR,
   BEARER_AUTHENTICATOR,
+  BuilderErrorHandler,
   BuilderFormAuthenticator,
-  BuilderFormValues,
+  BuilderFormInput,
   BuilderIncrementalSync,
   BuilderPaginator,
   BuilderRequestBody,
@@ -47,18 +52,21 @@ import {
   DEFAULT_BUILDER_FORM_VALUES,
   DEFAULT_BUILDER_STREAM_VALUES,
   extractInterpolatedConfigKey,
-  getInferredAuthValue,
-  hasIncrementalSyncUserInput,
   INCREMENTAL_SYNC_USER_INPUT_DATE_FORMAT,
-  incrementalSyncInferredInputs,
+  interpolateConfigKey,
   isInterpolatedConfigKey,
   NO_AUTH,
-  OAUTH_ACCESS_TOKEN_INPUT,
   OAUTH_AUTHENTICATOR,
-  OAUTH_TOKEN_EXPIRY_DATE_INPUT,
   RequestOptionOrPathInject,
   SESSION_TOKEN_AUTHENTICATOR,
+  YamlString,
+  YamlSupportedComponentName,
 } from "./types";
+import {
+  getKeyToDesiredLockedInput,
+  LOCKED_INPUT_BY_FIELD_NAME_BY_AUTH_TYPE,
+  LOCKED_INPUT_BY_INCREMENTAL_FIELD_NAME,
+} from "./useLockedInputs";
 import { formatJson } from "./utils";
 import { AirbyteJSONSchema } from "../../core/jsonSchema/types";
 
@@ -68,15 +76,7 @@ export const convertToBuilderFormValuesSync = (resolvedManifest: ConnectorManife
 
   const streams = resolvedManifest.streams;
   if (streams === undefined || streams.length === 0) {
-    const { inputs, inferredInputOverrides, inputOrder } = manifestSpecAndAuthToBuilder(
-      resolvedManifest.spec,
-      undefined,
-      undefined
-    );
-    builderFormValues.inputs = inputs;
-    builderFormValues.inferredInputOverrides = inferredInputOverrides;
-    builderFormValues.inputOrder = inputOrder;
-
+    builderFormValues.inputs = manifestSpecToBuilderInputs(resolvedManifest.spec, { type: NO_AUTH }, []);
     return removeEmptyProperties(builderFormValues);
   }
 
@@ -92,19 +92,20 @@ export const convertToBuilderFormValuesSync = (resolvedManifest: ConnectorManife
       serializedStreamToIndex,
       streams[0].retriever.requester.url_base,
       streams[0].retriever.requester.authenticator,
-      resolvedManifest.metadata
+      resolvedManifest.metadata,
+      resolvedManifest.spec
     )
   );
 
-  const { inputs, inferredInputOverrides, auth, inputOrder } = manifestSpecAndAuthToBuilder(
-    resolvedManifest.spec,
+  builderFormValues.global.authenticator = manifestAuthenticatorToBuilder(
     streams[0].retriever.requester.authenticator,
+    resolvedManifest.spec
+  );
+  builderFormValues.inputs = manifestSpecToBuilderInputs(
+    resolvedManifest.spec,
+    builderFormValues.global.authenticator,
     builderFormValues.streams
   );
-  builderFormValues.inputs = inputs;
-  builderFormValues.inferredInputOverrides = inferredInputOverrides;
-  builderFormValues.global.authenticator = auth;
-  builderFormValues.inputOrder = inputOrder;
 
   return removeEmptyProperties(builderFormValues);
 };
@@ -147,7 +148,8 @@ const manifestStreamToBuilder = (
   serializedStreamToIndex: Record<string, number>,
   firstStreamUrlBase: string,
   firstStreamAuthenticator?: HttpRequesterAuthenticator,
-  metadata?: DeclarativeComponentSchemaMetadata
+  metadata?: DeclarativeComponentSchemaMetadata,
+  spec?: Spec
 ): BuilderStream => {
   assertType<SimpleRetriever>(stream.retriever, "SimpleRetriever", stream.name);
   const retriever = stream.retriever;
@@ -185,7 +187,7 @@ const manifestStreamToBuilder = (
   return {
     ...DEFAULT_BUILDER_STREAM_VALUES,
     id: index.toString(),
-    name: stream.name ?? "",
+    name: stream.name ?? `stream_${index}`,
     urlPath: requester.path,
     httpMethod: requester.http_method === "POST" ? "POST" : "GET",
     fieldPointer: retriever.record_selector.extractor.field_path as string[],
@@ -195,13 +197,38 @@ const manifestStreamToBuilder = (
       requestBody: requesterToRequestBody(requester),
     },
     primaryKey: manifestPrimaryKeyToBuilder(stream),
-    paginator: manifestPaginatorToBuilder(retriever.paginator, stream.name),
-    incrementalSync: manifestIncrementalSyncToBuilder(stream.incremental_sync, stream.name),
+    paginator: convertOrDumpAsString(
+      retriever.paginator,
+      manifestPaginatorToBuilder,
+      "paginator",
+      stream.name,
+      metadata
+    ),
+    incrementalSync: convertOrDumpAsString(
+      stream.incremental_sync,
+      manifestIncrementalSyncToBuilder,
+      "incrementalSync",
+      stream.name,
+      metadata,
+      spec
+    ),
     parentStreams,
     parameterizedRequests,
     schema: manifestSchemaLoaderToBuilderSchema(stream.schema_loader),
-    errorHandler: manifestErrorHandlerToBuilder(stream.name, requester.error_handler),
-    transformations: manifestTransformationsToBuilder(stream.name, stream.transformations),
+    errorHandler: convertOrDumpAsString(
+      requester.error_handler,
+      manifestErrorHandlerToBuilder,
+      "errorHandler",
+      stream.name,
+      metadata
+    ),
+    transformations: convertOrDumpAsString(
+      stream.transformations,
+      manifestTransformationsToBuilder,
+      "transformations",
+      stream.name,
+      metadata
+    ),
     unsupportedFields: {
       retriever: {
         record_selector: {
@@ -217,22 +244,21 @@ function requesterToRequestBody(requester: HttpRequester): BuilderRequestBody {
   if (requester.request_body_data && typeof requester.request_body_data === "object") {
     return { type: "form_list", values: Object.entries(requester.request_body_data) };
   }
-  if (requester.request_body_data && typeof requester.request_body_data === "string") {
+  if (requester.request_body_data && isString(requester.request_body_data)) {
     return { type: "string_freeform", value: requester.request_body_data };
   }
   if (!requester.request_body_json) {
     return { type: "json_list", values: [] };
   }
-  const allStringValues = Object.values(requester.request_body_json).every((value) => typeof value === "string");
+  const allStringValues = Object.values(requester.request_body_json).every((value) => isString(value));
   if (allStringValues) {
     return { type: "json_list", values: Object.entries(requester.request_body_json) };
   }
   return {
     type: "json_freeform",
-    value:
-      typeof requester.request_body_json === "string"
-        ? requester.request_body_json
-        : formatJson(requester.request_body_json),
+    value: isString(requester.request_body_json)
+      ? requester.request_body_json
+      : formatJson(requester.request_body_json),
   };
 }
 
@@ -275,16 +301,15 @@ function manifestPartitionRouterToBuilder(
       parameterizedRequests: [
         {
           ...partitionRouter,
-          values:
-            typeof partitionRouter.values === "string"
-              ? {
-                  value: partitionRouter.values,
-                  type: "variable" as const,
-                }
-              : {
-                  value: partitionRouter.values,
-                  type: "list" as const,
-                },
+          values: isString(partitionRouter.values)
+            ? {
+                value: partitionRouter.values,
+                type: "variable" as const,
+              }
+            : {
+                value: partitionRouter.values,
+                type: "list" as const,
+              },
         },
       ],
     };
@@ -322,24 +347,37 @@ function manifestPartitionRouterToBuilder(
   throw new ManifestCompatibilityError(streamName, "partition_router type is unsupported");
 }
 
-function manifestErrorHandlerToBuilder(
-  streamName: string | undefined,
-  errorHandler: HttpRequesterErrorHandler | undefined
-): BuilderStream["errorHandler"] {
+export function manifestErrorHandlerToBuilder(
+  errorHandler: HttpRequesterErrorHandler | undefined,
+  streamName?: string
+): BuilderErrorHandler[] | undefined {
   if (!errorHandler) {
     return undefined;
   }
-  const handlers = errorHandler.type === "CompositeErrorHandler" ? errorHandler.error_handlers : [errorHandler];
-  if (handlers.some((handler) => handler.type === "CustomErrorHandler")) {
-    throw new ManifestCompatibilityError(streamName, "custom error handler used");
-  }
-  if (handlers.some((handler) => handler.type === "CompositeErrorHandler")) {
-    throw new ManifestCompatibilityError(streamName, "nested composite error handler used");
-  }
+  const handlers: HttpRequesterErrorHandler[] =
+    errorHandler.type === "CompositeErrorHandler" ? errorHandler.error_handlers : [errorHandler];
+
+  handlers.forEach((handler) => {
+    match(handler.type)
+      .with("DefaultErrorHandler", () => {})
+      .with("CustomErrorHandler", () => {
+        throw new ManifestCompatibilityError(streamName, "custom error handler used");
+      })
+      .with("CompositeErrorHandler", () => {
+        throw new ManifestCompatibilityError(streamName, "nested composite error handler used");
+      })
+      .otherwise(() => {
+        throw new ManifestCompatibilityError(
+          streamName,
+          "error handler type is unsupported; only CompositeErrorHandler and DefaultErrorHandler are supported"
+        );
+      });
+  });
+
   const defaultHandlers = handlers as DefaultErrorHandler[];
   return defaultHandlers.map((handler) => {
     if (handler.backoff_strategies && handler.backoff_strategies.length > 1) {
-      throw new ManifestCompatibilityError(streamName, "more than one backoff strategy");
+      throw new ManifestCompatibilityError(streamName, "more than one backoff strategy per handler");
     }
     const backoffStrategy = handler.backoff_strategies?.[0];
     if (backoffStrategy?.type === "CustomBackoffStrategy") {
@@ -375,9 +413,9 @@ function manifestPrimaryKeyToBuilder(manifestStream: DeclarativeStream): Builder
   }
 }
 
-function manifestTransformationsToBuilder(
-  name: string | undefined,
-  transformations: DeclarativeStreamTransformationsItem[] | undefined
+export function manifestTransformationsToBuilder(
+  transformations: DeclarativeStreamTransformationsItem[] | undefined,
+  streamName?: string
 ): BuilderTransformation[] | undefined {
   if (!transformations) {
     return undefined;
@@ -386,7 +424,7 @@ function manifestTransformationsToBuilder(
 
   transformations.forEach((transformation) => {
     if (transformation.type === "CustomTransformation") {
-      throw new ManifestCompatibilityError(name, "custom transformation used");
+      throw new ManifestCompatibilityError(streamName, "custom transformation used");
     }
     if (transformation.type === "AddFields") {
       builderTransformations.push(
@@ -409,25 +447,26 @@ function manifestTransformationsToBuilder(
 }
 
 function getFormat(
-  format: DatetimeBasedCursorStartDatetime | DatetimeBasedCursorEndDatetime,
+  manifestCursorDatetime: DatetimeBasedCursorStartDatetime | DatetimeBasedCursorEndDatetime,
   manifestIncrementalSync: DeclarativeStreamIncrementalSync
 ) {
-  if (typeof format === "string" || !format.datetime_format) {
+  if (isString(manifestCursorDatetime) || !manifestCursorDatetime.datetime_format) {
     return manifestIncrementalSync.datetime_format;
   }
-  return format.datetime_format;
+  return manifestCursorDatetime.datetime_format;
 }
 
 function isFormatSupported(
-  format: DatetimeBasedCursorStartDatetime | DatetimeBasedCursorEndDatetime,
+  manifestCursorDatetime: DatetimeBasedCursorStartDatetime | DatetimeBasedCursorEndDatetime,
   manifestIncrementalSync: DeclarativeStreamIncrementalSync
 ) {
-  return getFormat(format, manifestIncrementalSync) === INCREMENTAL_SYNC_USER_INPUT_DATE_FORMAT;
+  return getFormat(manifestCursorDatetime, manifestIncrementalSync) === INCREMENTAL_SYNC_USER_INPUT_DATE_FORMAT;
 }
 
-function manifestIncrementalSyncToBuilder(
+export function manifestIncrementalSyncToBuilder(
   manifestIncrementalSync: DeclarativeStreamIncrementalSync | undefined,
-  streamName?: string
+  streamName?: string,
+  spec?: Spec
 ): BuilderStream["incrementalSync"] | undefined {
   if (!manifestIncrementalSync) {
     return undefined;
@@ -435,6 +474,7 @@ function manifestIncrementalSyncToBuilder(
   if (manifestIncrementalSync.type === "CustomIncrementalSync") {
     throw new ManifestCompatibilityError(streamName, "incremental sync uses a custom implementation");
   }
+  assertType(manifestIncrementalSync, "DatetimeBasedCursor", streamName);
 
   if (manifestIncrementalSync.partition_field_start || manifestIncrementalSync.partition_field_end) {
     throw new ManifestCompatibilityError(
@@ -458,30 +498,44 @@ function manifestIncrementalSyncToBuilder(
     ...regularFields
   } = manifestIncrementalSync;
 
+  if (
+    (manifestStartDateTime &&
+      typeof manifestStartDateTime !== "string" &&
+      (manifestStartDateTime.max_datetime || manifestStartDateTime.min_datetime)) ||
+    (manifestEndDateTime &&
+      typeof manifestEndDateTime !== "string" &&
+      (manifestEndDateTime.max_datetime || manifestEndDateTime.min_datetime))
+  ) {
+    throw new ManifestCompatibilityError(
+      streamName,
+      "DatetimeBasedCursor max_datetime and min_datetime are not supported"
+    );
+  }
+
   let start_datetime: BuilderIncrementalSync["start_datetime"] = {
     type: "custom",
-    value: typeof manifestStartDateTime === "string" ? manifestStartDateTime : manifestStartDateTime.datetime,
+    value: isString(manifestStartDateTime) ? manifestStartDateTime : manifestStartDateTime.datetime,
     format: getFormat(manifestStartDateTime, manifestIncrementalSync),
   };
   let end_datetime: BuilderIncrementalSync["end_datetime"] = {
     type: "custom",
-    value: typeof manifestEndDateTime === "string" ? manifestEndDateTime : manifestEndDateTime?.datetime || "",
+    value: isString(manifestEndDateTime) ? manifestEndDateTime : manifestEndDateTime?.datetime || "",
     format: manifestEndDateTime ? getFormat(manifestEndDateTime, manifestIncrementalSync) : undefined,
   };
 
-  if (
-    start_datetime.value === "{{ config['start_date'] }}" &&
-    isFormatSupported(manifestStartDateTime, manifestIncrementalSync)
-  ) {
-    start_datetime = { type: "user_input" };
+  const startDateSpecKey = tryExtractAndValidateIncrementalKey(
+    ["start_datetime"],
+    start_datetime.value,
+    spec,
+    streamName
+  );
+  if (startDateSpecKey && isFormatSupported(manifestStartDateTime, manifestIncrementalSync)) {
+    start_datetime = { type: "user_input", value: interpolateConfigKey(startDateSpecKey) };
   }
 
-  if (
-    end_datetime.value === "{{ config['end_date'] }}" &&
-    manifestEndDateTime &&
-    isFormatSupported(manifestEndDateTime, manifestIncrementalSync)
-  ) {
-    end_datetime = { type: "user_input" };
+  const endDateSpecKey = tryExtractAndValidateIncrementalKey(["end_datetime"], end_datetime.value, spec, streamName);
+  if (manifestEndDateTime && endDateSpecKey && isFormatSupported(manifestEndDateTime, manifestIncrementalSync)) {
+    end_datetime = { type: "user_input", value: interpolateConfigKey(endDateSpecKey) };
   } else if (
     !manifestEndDateTime ||
     end_datetime.value === `{{ now_utc().strftime('${INCREMENTAL_SYNC_USER_INPUT_DATE_FORMAT}') }}`
@@ -533,7 +587,12 @@ function manifestPaginatorStrategyToBuilder(
   if (strategy.type === "OffsetIncrement" || strategy.type === "PageIncrement") {
     return strategy;
   }
-  const { cursor_value, stop_condition, ...rest } = strategy as CursorPagination;
+
+  if (strategy.type !== "CursorPagination") {
+    throw new ManifestCompatibilityError(undefined, "paginator.pagination_strategy uses an unsupported type");
+  }
+
+  const { cursor_value, stop_condition, ...rest } = strategy;
 
   const path = safeJinjaAccessToPath(cursor_value, stop_condition || "");
 
@@ -549,13 +608,14 @@ function manifestPaginatorStrategyToBuilder(
   };
 }
 
-function manifestPaginatorToBuilder(
+export function manifestPaginatorToBuilder(
   manifestPaginator: SimpleRetrieverPaginator | undefined,
-  streamName: string | undefined
+  streamName?: string
 ): BuilderPaginator | undefined {
   if (manifestPaginator === undefined || manifestPaginator.type === "NoPagination") {
     return undefined;
   }
+  assertType(manifestPaginator, "DefaultPaginator", streamName);
 
   if (manifestPaginator.pagination_strategy.type === "CustomPaginationStrategy") {
     throw new ManifestCompatibilityError(streamName, "paginator.pagination_strategy uses a CustomPaginationStrategy");
@@ -604,7 +664,7 @@ function removeTrailingSlashes(path: string) {
   return path.replace(/\/+$/, "");
 }
 
-type SupportedAuthenticators =
+type SupportedAuthenticator =
   | ApiKeyAuthenticator
   | BasicHttpAuthenticator
   | BearerAuthenticator
@@ -612,7 +672,7 @@ type SupportedAuthenticators =
   | NoAuth
   | SessionTokenAuthenticator;
 
-function isSupportedAuthenticator(authenticator: HttpRequesterAuthenticator): authenticator is SupportedAuthenticators {
+function isSupportedAuthenticator(authenticator: HttpRequesterAuthenticator): authenticator is SupportedAuthenticator {
   const supportedAuthTypes: string[] = [
     NO_AUTH,
     API_KEY_AUTHENTICATOR,
@@ -625,154 +685,190 @@ function isSupportedAuthenticator(authenticator: HttpRequesterAuthenticator): au
 }
 
 function manifestAuthenticatorToBuilder(
-  manifestAuthenticator: HttpRequesterAuthenticator | undefined,
+  authenticator: HttpRequesterAuthenticator | undefined,
+  spec: Spec | undefined,
   streamName?: string
 ): BuilderFormAuthenticator {
-  let builderAuthenticator: BuilderFormAuthenticator;
-  if (manifestAuthenticator === undefined) {
-    builderAuthenticator = {
-      type: "NoAuth",
+  if (authenticator === undefined) {
+    return {
+      type: NO_AUTH,
     };
-  } else if (manifestAuthenticator.type === undefined) {
+  } else if (authenticator.type === undefined) {
     throw new ManifestCompatibilityError(streamName, "Authenticator has no type");
-  } else if (!isSupportedAuthenticator(manifestAuthenticator)) {
-    throw new ManifestCompatibilityError(streamName, `Unsupported authenticator type: ${manifestAuthenticator.type}`);
-  } else if (manifestAuthenticator.type === "ApiKeyAuthenticator") {
-    builderAuthenticator = {
-      ...manifestAuthenticator,
-      inject_into: manifestAuthenticator.inject_into ?? {
-        type: "RequestOption",
-        field_name: manifestAuthenticator.header || "",
-        inject_into: "header",
-      },
-    };
-  } else if (manifestAuthenticator.type === "OAuthAuthenticator") {
-    if (
-      Object.values(manifestAuthenticator.refresh_request_body ?? {}).filter((value) => typeof value !== "string")
-        .length > 0
-    ) {
-      throw new ManifestCompatibilityError(
-        streamName,
-        "OAuthAuthenticator contains a refresh_request_body with non-string values"
-      );
+  } else if (!isSupportedAuthenticator(authenticator)) {
+    throw new ManifestCompatibilityError(streamName, `Unsupported authenticator type: ${authenticator.type}`);
+  }
+
+  switch (authenticator.type) {
+    case NO_AUTH: {
+      return {
+        type: NO_AUTH,
+      };
     }
 
-    const refreshTokenUpdater = manifestAuthenticator.refresh_token_updater;
-    if (refreshTokenUpdater) {
-      if (!isEqual(refreshTokenUpdater?.access_token_config_path, [OAUTH_ACCESS_TOKEN_INPUT])) {
-        throw new ManifestCompatibilityError(
-          streamName,
-          `OAuthAuthenticator access token config path needs to be [${OAUTH_ACCESS_TOKEN_INPUT}]`
-        );
-      }
-      if (!isEqual(refreshTokenUpdater?.token_expiry_date_config_path, [OAUTH_TOKEN_EXPIRY_DATE_INPUT])) {
-        throw new ManifestCompatibilityError(
-          streamName,
-          `OAuthAuthenticator token expiry date config path needs to be [${OAUTH_TOKEN_EXPIRY_DATE_INPUT}]`
-        );
-      }
+    case API_KEY_AUTHENTICATOR: {
+      return {
+        ...authenticator,
+        inject_into: authenticator.inject_into ?? {
+          type: "RequestOption",
+          field_name: authenticator.header || "",
+          inject_into: "header",
+        },
+        api_token: interpolateConfigKey(extractAndValidateAuthKey(["api_token"], authenticator, spec, streamName)),
+      };
+    }
+
+    case BEARER_AUTHENTICATOR: {
+      return {
+        ...authenticator,
+        api_token: interpolateConfigKey(extractAndValidateAuthKey(["api_token"], authenticator, spec, streamName)),
+      };
+    }
+
+    case BASIC_AUTHENTICATOR: {
+      return {
+        ...authenticator,
+        username: interpolateConfigKey(extractAndValidateAuthKey(["username"], authenticator, spec, streamName)),
+        password: interpolateConfigKey(extractAndValidateAuthKey(["password"], authenticator, spec, streamName)),
+      };
+    }
+
+    case OAUTH_AUTHENTICATOR: {
       if (
-        !isEqual(refreshTokenUpdater?.refresh_token_config_path, [
-          extractInterpolatedConfigKey(manifestAuthenticator.refresh_token),
-        ])
+        Object.values(authenticator.refresh_request_body ?? {}).filter((value) => typeof value !== "string").length > 0
       ) {
         throw new ManifestCompatibilityError(
           streamName,
-          "OAuthAuthenticator refresh_token_config_path needs to match the config value used for refresh_token"
+          "OAuthAuthenticator contains a refresh_request_body with non-string values"
         );
       }
-    }
-    if (
-      manifestAuthenticator.grant_type &&
-      manifestAuthenticator.grant_type !== "refresh_token" &&
-      manifestAuthenticator.grant_type !== "client_credentials"
-    ) {
-      throw new ManifestCompatibilityError(streamName, "OAuthAuthenticator sets custom grant_type");
+      if (
+        authenticator.grant_type &&
+        authenticator.grant_type !== "refresh_token" &&
+        authenticator.grant_type !== "client_credentials"
+      ) {
+        throw new ManifestCompatibilityError(
+          streamName,
+          "OAuthAuthenticator sets custom grant_type, but it must be one of 'refresh_token' or 'client_credentials'"
+        );
+      }
+
+      let builderAuthenticator: BuilderFormAuthenticator = {
+        ...authenticator,
+        refresh_request_body: Object.entries(authenticator.refresh_request_body ?? {}),
+        grant_type: authenticator.grant_type ?? "refresh_token",
+        refresh_token_updater: undefined,
+        client_id: interpolateConfigKey(extractAndValidateAuthKey(["client_id"], authenticator, spec, streamName)),
+        client_secret: interpolateConfigKey(
+          extractAndValidateAuthKey(["client_secret"], authenticator, spec, streamName)
+        ),
+      };
+
+      if (!authenticator.grant_type || authenticator.grant_type === "refresh_token") {
+        const refreshTokenSpecKey = extractAndValidateAuthKey(["refresh_token"], authenticator, spec, streamName);
+        builderAuthenticator = {
+          ...builderAuthenticator,
+          refresh_token: interpolateConfigKey(refreshTokenSpecKey),
+        };
+
+        if (authenticator.refresh_token_updater) {
+          if (!isEqual(authenticator.refresh_token_updater?.refresh_token_config_path, [refreshTokenSpecKey])) {
+            throw new ManifestCompatibilityError(
+              streamName,
+              "OAuthAuthenticator refresh_token_config_path needs to match the config path used for refresh_token"
+            );
+          }
+          const {
+            access_token_config_path,
+            token_expiry_date_config_path,
+            refresh_token_config_path,
+            ...refresh_token_updater
+          } = authenticator.refresh_token_updater;
+          builderAuthenticator = {
+            ...builderAuthenticator,
+            refresh_token_updater: {
+              ...refresh_token_updater,
+              access_token: interpolateConfigKey(
+                extractAndValidateAuthKey(
+                  ["refresh_token_updater", "access_token_config_path"],
+                  authenticator,
+                  spec,
+                  streamName
+                )
+              ),
+              token_expiry_date: interpolateConfigKey(
+                extractAndValidateAuthKey(
+                  ["refresh_token_updater", "token_expiry_date_config_path"],
+                  authenticator,
+                  spec,
+                  streamName
+                )
+              ),
+            },
+          };
+        }
+      }
+
+      return builderAuthenticator;
     }
 
-    builderAuthenticator = {
-      ...manifestAuthenticator,
-      refresh_request_body: Object.entries(manifestAuthenticator.refresh_request_body ?? {}),
-      grant_type: manifestAuthenticator.grant_type ?? "refresh_token",
-    };
-  } else if (manifestAuthenticator.type === "SessionTokenAuthenticator") {
-    const manifestLoginRequester = manifestAuthenticator.login_requester;
-    if (
-      manifestLoginRequester.authenticator &&
-      manifestLoginRequester.authenticator?.type !== NO_AUTH &&
-      manifestLoginRequester.authenticator?.type !== API_KEY_AUTHENTICATOR &&
-      manifestLoginRequester.authenticator?.type !== BEARER_AUTHENTICATOR &&
-      manifestLoginRequester.authenticator?.type !== BASIC_AUTHENTICATOR
-    ) {
-      throw new ManifestCompatibilityError(
-        streamName,
-        `SessionTokenAuthenticator login_requester.authenticator must have one of the following types: ${NO_AUTH}, ${API_KEY_AUTHENTICATOR}, ${BEARER_AUTHENTICATOR}, ${BASIC_AUTHENTICATOR}`
+    case SESSION_TOKEN_AUTHENTICATOR: {
+      const manifestLoginRequester = authenticator.login_requester;
+      if (
+        manifestLoginRequester.authenticator &&
+        manifestLoginRequester.authenticator?.type !== NO_AUTH &&
+        manifestLoginRequester.authenticator?.type !== API_KEY_AUTHENTICATOR &&
+        manifestLoginRequester.authenticator?.type !== BEARER_AUTHENTICATOR &&
+        manifestLoginRequester.authenticator?.type !== BASIC_AUTHENTICATOR
+      ) {
+        throw new ManifestCompatibilityError(
+          streamName,
+          `SessionTokenAuthenticator login_requester.authenticator must have one of the following types: ${NO_AUTH}, ${API_KEY_AUTHENTICATOR}, ${BEARER_AUTHENTICATOR}, ${BASIC_AUTHENTICATOR}`
+        );
+      }
+      const builderLoginRequesterAuthenticator = manifestAuthenticatorToBuilder(
+        manifestLoginRequester.authenticator,
+        spec,
+        streamName
       );
-    }
-    builderAuthenticator = {
-      ...manifestAuthenticator,
-      login_requester: {
-        url: `${removeTrailingSlashes(manifestLoginRequester.url_base)}/${removeLeadingSlashes(
-          manifestLoginRequester.path
-        )}`,
-        authenticator: manifestLoginRequester.authenticator ?? { type: NO_AUTH },
-        httpMethod: manifestLoginRequester.http_method === "GET" ? "GET" : "POST",
-        requestOptions: {
-          requestParameters: Object.entries(manifestLoginRequester.request_parameters ?? {}),
-          requestHeaders: Object.entries(manifestLoginRequester.request_headers ?? {}),
-          requestBody: requesterToRequestBody(manifestLoginRequester),
+
+      return {
+        ...authenticator,
+        login_requester: {
+          url: `${removeTrailingSlashes(manifestLoginRequester.url_base)}/${removeLeadingSlashes(
+            manifestLoginRequester.path
+          )}`,
+          authenticator: builderLoginRequesterAuthenticator as
+            | ApiKeyAuthenticator
+            | BearerAuthenticator
+            | BasicHttpAuthenticator,
+          httpMethod: manifestLoginRequester.http_method === "GET" ? "GET" : "POST",
+          requestOptions: {
+            requestParameters: Object.entries(manifestLoginRequester.request_parameters ?? {}),
+            requestHeaders: Object.entries(manifestLoginRequester.request_headers ?? {}),
+            requestBody: requesterToRequestBody(manifestLoginRequester),
+          },
+          errorHandler: manifestErrorHandlerToBuilder(manifestLoginRequester.error_handler),
         },
-        errorHandler: manifestErrorHandlerToBuilder(undefined, manifestLoginRequester.error_handler),
-      },
-    };
-  } else {
-    builderAuthenticator = manifestAuthenticator;
-  }
-
-  // verify that all auth keys which require a user input have a {{config[]}} value
-
-  const inferredInputs = authTypeToKeyToInferredInput(builderAuthenticator);
-  const userInputAuthKeys = Object.keys(inferredInputs);
-
-  for (const userInputAuthKey of userInputAuthKeys) {
-    if (
-      !inferredInputs[userInputAuthKey].as_config_path &&
-      !isInterpolatedConfigKey(getInferredAuthValue(builderAuthenticator, userInputAuthKey))
-    ) {
-      throw new ManifestCompatibilityError(
-        undefined,
-        `Authenticator's ${userInputAuthKey} value must be of the form {{ config['key'] }}`
-      );
+      };
     }
   }
-
-  return builderAuthenticator;
 }
 
-function manifestSpecAndAuthToBuilder(
+function manifestSpecToBuilderInputs(
   manifestSpec: Spec | undefined,
-  manifestAuthenticator: HttpRequesterAuthenticator | undefined,
-  streams: BuilderStream[] | undefined
+  authenticator: BuilderFormAuthenticator,
+  streams: BuilderStream[]
 ) {
-  const result: {
-    inputs: BuilderFormValues["inputs"];
-    inferredInputOverrides: BuilderFormValues["inferredInputOverrides"];
-    auth: BuilderFormAuthenticator;
-    inputOrder: string[];
-  } = {
-    inputs: [],
-    inferredInputOverrides: {},
-    auth: manifestAuthenticatorToBuilder(manifestAuthenticator),
-    inputOrder: [],
-  };
-
   if (manifestSpec === undefined) {
-    return result;
+    return [];
   }
+
+  const lockedInputKeys = Object.keys(getKeyToDesiredLockedInput(authenticator, streams));
 
   const required = manifestSpec.connection_specification.required as string[] | undefined;
 
-  Object.entries(manifestSpec.connection_specification.properties as Record<string, AirbyteJSONSchema>)
+  return Object.entries(manifestSpec.connection_specification.properties as Record<string, AirbyteJSONSchema>)
     .sort(([_keyA, valueA], [_keyB, valueB]) => {
       if (valueA.order !== undefined && valueB.order !== undefined) {
         return valueA.order - valueB.order;
@@ -785,37 +881,14 @@ function manifestSpecAndAuthToBuilder(
       }
       return 0;
     })
-    .forEach(([specKey, specDefinition]) => {
-      const matchingInferredInput = getMatchingInferredInput(result.auth, streams, specKey);
-      if (matchingInferredInput) {
-        result.inferredInputOverrides[matchingInferredInput.key] = specDefinition;
-      } else {
-        result.inputs.push({
-          key: specKey,
-          definition: specDefinition,
-          required: required?.includes(specKey) || false,
-        });
-      }
-      if (specDefinition.order !== undefined) {
-        result.inputOrder.push(specKey);
-      }
+    .map(([specKey, specDefinition]) => {
+      return {
+        key: specKey,
+        definition: specDefinition,
+        required: required?.includes(specKey) || false,
+        isLocked: lockedInputKeys.includes(specKey),
+      };
     });
-
-  return result;
-}
-
-function getMatchingInferredInput(
-  auth: BuilderFormAuthenticator,
-  streams: BuilderStream[] | undefined,
-  specKey: string
-) {
-  if (streams && specKey === "start_date" && hasIncrementalSyncUserInput(streams, "start_datetime")) {
-    return incrementalSyncInferredInputs.start_date;
-  }
-  if (streams && specKey === "end_date" && hasIncrementalSyncUserInput(streams, "end_datetime")) {
-    return incrementalSyncInferredInputs.end_date;
-  }
-  return Object.values(authTypeToKeyToInferredInput(auth)).find((input) => input.key === specKey);
 }
 
 function assertType<T extends { type: string }>(
@@ -844,3 +917,136 @@ export class ManifestCompatibilityError extends Error {
 export function isManifestCompatibilityError(error: { __type?: string }): error is ManifestCompatibilityError {
   return error.__type === "connectorBuilder.manifestCompatibility";
 }
+
+function convertOrDumpAsString<ManifestInput, BuilderOutput>(
+  manifestValue: ManifestInput,
+  convertFn: (manifestValue: ManifestInput, streamName?: string, spec?: Spec) => BuilderOutput | undefined,
+  componentName: YamlSupportedComponentName,
+  streamName?: string | undefined,
+  metadata?: DeclarativeComponentSchemaMetadata,
+  spec?: Spec
+): BuilderOutput | YamlString | undefined {
+  if (streamName && metadata?.yamlComponents?.streams?.[streamName]?.includes(componentName)) {
+    return dump(manifestValue);
+  }
+
+  try {
+    return convertFn(manifestValue, streamName, spec);
+  } catch (e) {
+    if (isManifestCompatibilityError(e)) {
+      return dump(manifestValue);
+    }
+    throw e;
+  }
+}
+
+const extractAndValidateAuthKey = (
+  path: string[],
+  authenticator: SupportedAuthenticator,
+  manifestSpec: Spec | undefined,
+  streamName?: string
+) => {
+  return extractAndValidateSpecKey(
+    path,
+    get(authenticator, path),
+    get(LOCKED_INPUT_BY_FIELD_NAME_BY_AUTH_TYPE[authenticator.type], path),
+    authenticator.type,
+    manifestSpec,
+    streamName
+  );
+};
+
+const tryExtractAndValidateIncrementalKey = (
+  path: string[],
+  value: string,
+  manifestSpec: Spec | undefined,
+  streamName?: string
+) => {
+  try {
+    return extractAndValidateSpecKey(
+      path,
+      value,
+      get(LOCKED_INPUT_BY_INCREMENTAL_FIELD_NAME, path),
+      DatetimeBasedCursorType.DatetimeBasedCursor,
+      manifestSpec,
+      streamName
+    );
+  } catch (e) {
+    if (isManifestCompatibilityError(e)) {
+      // if the manifest value doesn't point to the expected input in the spec, just treat it as custom
+      return undefined;
+    }
+    throw e;
+  }
+};
+
+const extractAndValidateSpecKey = (
+  path: string[],
+  value: string | string[] | undefined,
+  lockedInput: BuilderFormInput,
+  componentName: string,
+  spec: Spec | undefined,
+  streamName?: string
+): string => {
+  const manifestPath = `${componentName}.${path.join(".")}`;
+
+  let specKey: string | undefined = undefined;
+  if (isArray(value)) {
+    if (value.length < 1) {
+      throw new ManifestCompatibilityError(
+        streamName,
+        `${manifestPath} has an empty path, but a non-empty path is required.`
+      );
+    }
+    if (value.length > 1) {
+      throw new ManifestCompatibilityError(
+        streamName,
+        `${manifestPath} points to a nested config path, but only top-level config fields are supported.`
+      );
+    }
+    [specKey] = value;
+  }
+  if (isString(value)) {
+    if (!isInterpolatedConfigKey(value)) {
+      throw new ManifestCompatibilityError(streamName, `${manifestPath} must be of the form {{ config["key"] }}`);
+    }
+    specKey = extractInterpolatedConfigKey(value);
+  }
+  if (!specKey) {
+    throw new ManifestCompatibilityError(streamName, `${manifestPath} must point to a config field`);
+  }
+
+  const specDefinition = specKey ? spec?.connection_specification?.properties?.[specKey] : undefined;
+  if (!specDefinition) {
+    throw new ManifestCompatibilityError(
+      streamName,
+      `${manifestPath} references spec key "${specKey}", which must appear in the spec`
+    );
+  }
+  if (lockedInput.required && !spec?.connection_specification?.required?.includes(specKey)) {
+    throw new ManifestCompatibilityError(
+      streamName,
+      `${manifestPath} references spec key "${specKey}", which must be required in the spec`
+    );
+  }
+  if (specDefinition.type !== "string") {
+    throw new ManifestCompatibilityError(
+      streamName,
+      `${manifestPath} references spec key "${specKey}", which must be of type string`
+    );
+  }
+  if (lockedInput.definition.airbyte_secret && !specDefinition.airbyte_secret) {
+    throw new ManifestCompatibilityError(
+      streamName,
+      `${manifestPath} references spec key "${specKey}", which must have airbyte_secret set to true`
+    );
+  }
+  if (lockedInput.definition.pattern && specDefinition.pattern !== lockedInput.definition.pattern) {
+    throw new ManifestCompatibilityError(
+      streamName,
+      `${manifestPath} references spec key "${specKey}", which must have pattern "${lockedInput.definition.pattern}"`
+    );
+  }
+
+  return specKey;
+};

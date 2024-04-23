@@ -2,7 +2,6 @@ import React from "react";
 import { FormattedMessage } from "react-intl";
 
 import { Button } from "components/ui/Button";
-import { Icon } from "components/ui/Icon";
 
 import { ConnectorDefinitionSpecification } from "core/domain/connector";
 
@@ -37,7 +36,7 @@ export const RevokeButton: React.FC<RevokeButtonProps> = ({ sourceId, selectedCo
         type="button"
         data-id="oauth-revoke-button"
         onClick={run}
-        icon={<Icon type="disabled" />}
+        icon="disabled"
         size="sm"
       >
         {buttonLabel}

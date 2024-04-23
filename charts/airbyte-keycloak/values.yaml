@@ -6,6 +6,7 @@
 global:
   # serviceAccountName -- Service Account name override
   serviceAccountName: placeholderServiceAccount
+  edition: community
   # -- airbyte deployment mode
   deploymentMode: oss
   secretName: ""
@@ -22,6 +23,8 @@ global:
 
 
 enabled: true
+
+bypassInit: false
 ##  image.repository The repository to use for the airbyte keycloak image.
 ##  image.pullPolicy the pull policy to use for the airbyte keycloak image
 ##  image.tag The airbyte keycloak image tag. Defaults to the chart's AppVersion
@@ -48,9 +51,9 @@ podLabels: {}
 ##
 livenessProbe:
   enabled: true
-  initialDelaySeconds: 120
-  periodSeconds: 5
-  timeoutSeconds: 5
+  initialDelaySeconds: 30
+  periodSeconds: 10
+  timeoutSeconds: 1
   failureThreshold: 3
   successThreshold: 1
 
@@ -63,10 +66,18 @@ livenessProbe:
 ##
 readinessProbe:
   enabled: true
-  initialDelaySeconds: 120
+  initialDelaySeconds: 30
+  periodSeconds: 10
+  timeoutSeconds: 1
+  failureThreshold: 3
+  successThreshold: 1
+
+startupProbe:
+  enabled: true
+  initialDelaySeconds: 30
   periodSeconds: 5
-  timeoutSeconds: 5
-  failureThreshold: 10
+  timeoutSeconds: 1
+  failureThreshold: 60
   successThreshold: 1
 
 ##  containerSecurityContext Security context for the container

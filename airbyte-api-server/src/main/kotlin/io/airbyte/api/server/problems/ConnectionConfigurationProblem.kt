@@ -8,11 +8,11 @@ import io.airbyte.airbyte_api.model.generated.ConnectionSyncModeEnum
 import io.airbyte.api.server.constants.API_DOC_URL
 import io.micronaut.http.HttpStatus
 import io.micronaut.problem.HttpStatusType
+import jakarta.validation.Valid
 import org.zalando.problem.AbstractThrowableProblem
 import org.zalando.problem.Exceptional
 import java.io.Serial
 import java.net.URI
-import javax.validation.Valid
 
 /**
  * Thrown when a configuration for a connection is not valid.

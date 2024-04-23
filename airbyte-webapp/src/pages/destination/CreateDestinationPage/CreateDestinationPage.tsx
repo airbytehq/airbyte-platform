@@ -9,12 +9,11 @@ import { DestinationForm } from "components/destination/DestinationForm";
 import { Box } from "components/ui/Box";
 import { Button } from "components/ui/Button";
 import { FlexContainer } from "components/ui/Flex";
-import { Icon } from "components/ui/Icon";
 import { PageHeaderWithNavigation } from "components/ui/PageHeader";
 
 import { ConnectionConfiguration } from "area/connector/types";
-import { useDestinationDefinitionList, useCreateDestination } from "core/api";
-import { useTrackPage, PageTrackingCodes } from "core/services/analytics";
+import { useCreateDestination, useDestinationDefinitionList } from "core/api";
+import { PageTrackingCodes, useTrackPage } from "core/services/analytics";
 import { useFormChangeTrackerService } from "hooks/services/FormChangeTracker";
 import { DestinationPaths, RoutePaths } from "pages/routePaths";
 import { ConnectorDocumentationWrapper } from "views/Connector/ConnectorDocumentationLayout";
@@ -68,7 +67,7 @@ export const CreateDestinationPage: React.FC = () => {
       <FormPageContent>
         <FlexContainer justifyContent="flex-start">
           <Box mb="md">
-            <Button variant="clear" onClick={onGoBack} icon={<Icon type="chevronLeft" size="lg" />}>
+            <Button variant="clear" onClick={onGoBack} icon="chevronLeft" iconSize="lg">
               <FormattedMessage id="connectorBuilder.backButtonLabel" />
             </Button>
           </Box>

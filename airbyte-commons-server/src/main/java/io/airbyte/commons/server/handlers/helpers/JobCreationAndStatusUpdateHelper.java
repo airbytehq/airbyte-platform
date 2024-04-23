@@ -4,12 +4,15 @@
 
 package io.airbyte.commons.server.handlers.helpers;
 
+import static io.airbyte.config.JobConfig.ConfigType.REFRESH;
 import static io.airbyte.config.JobConfig.ConfigType.SYNC;
 import static io.airbyte.metrics.lib.ApmTraceConstants.Tags.FAILURE_ORIGINS_KEY;
 import static io.airbyte.metrics.lib.ApmTraceConstants.Tags.FAILURE_TYPES_KEY;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
+import io.airbyte.api.model.generated.JobFailureRequest;
+import io.airbyte.api.model.generated.JobSuccessWithAttemptNumberRequest;
 import io.airbyte.commons.enums.Enums;
 import io.airbyte.commons.server.JobStatus;
 import io.airbyte.config.ActorDefinitionVersion;
@@ -65,7 +68,7 @@ public class JobCreationAndStatusUpdateHelper {
       ReleaseStage.BETA, 3,
       ReleaseStage.GENERALLY_AVAILABLE, 4);
   private static final Comparator<ReleaseStage> RELEASE_STAGE_COMPARATOR = Comparator.comparingInt(RELEASE_STAGE_ORDER::get);
-  public static final Set<ConfigType> SYNC_CONFIG_SET = Set.of(SYNC);
+  public static final Set<ConfigType> SYNC_CONFIG_SET = Set.of(SYNC, REFRESH);
 
   private final JobPersistence jobPersistence;
   private final ConfigRepository configRepository;
@@ -154,7 +157,7 @@ public class JobCreationAndStatusUpdateHelper {
         attemptStats.add(jobPersistence.getAttemptStats(jobId, attempt.getAttemptNumber()));
       }
       final Job failedJob = jobPersistence.getJob(jobId);
-      jobNotifier.failJob("Failing job in order to start from clean job state for new temporal workflow run.", failedJob, attemptStats);
+      jobNotifier.failJob(failedJob, attemptStats);
       trackCompletion(failedJob, JobStatus.FAILED);
     }
   }
@@ -251,6 +254,8 @@ public class JobCreationAndStatusUpdateHelper {
     final List<UUID> actorDefVersionIds = switch (job.getConfig().getConfigType()) {
       case SYNC -> List.of(job.getConfig().getSync().getDestinationDefinitionVersionId(), job.getConfig().getSync().getSourceDefinitionVersionId());
       case RESET_CONNECTION -> List.of(job.getConfig().getResetConnection().getDestinationDefinitionVersionId());
+      case REFRESH -> List.of(job.getConfig().getRefresh().getSourceDefinitionVersionId(),
+          job.getConfig().getRefresh().getDestinationDefinitionVersionId());
       default -> throw new IllegalArgumentException("Unexpected config type: " + job.getConfigType());
     };
 
@@ -258,6 +263,45 @@ public class JobCreationAndStatusUpdateHelper {
   }
 
   public void emitJobToReleaseStagesMetric(final OssMetricsRegistry metric, final Job job) throws IOException {
+    emitToReleaseStagesMetricHelper(metric, job, Collections.emptyList());
+  }
+
+  public void emitJobToReleaseStagesMetric(final OssMetricsRegistry metric, final Job job, final JobSuccessWithAttemptNumberRequest input)
+      throws IOException {
+    List<MetricAttribute> additionalAttributes = new ArrayList<>();
+    if (job.getConfigType() == SYNC) {
+      final var sync = job.getConfig().getSync();
+      additionalAttributes.add(new MetricAttribute(MetricTags.SOURCE_ID, sync.getSourceDefinitionVersionId().toString()));
+      additionalAttributes.add(new MetricAttribute(MetricTags.SOURCE_IMAGE, sync.getSourceDockerImage()));
+      additionalAttributes.add(new MetricAttribute(MetricTags.DESTINATION_IMAGE, sync.getDestinationDockerImage()));
+      additionalAttributes.add(new MetricAttribute(MetricTags.WORKSPACE_ID, sync.getWorkspaceId().toString()));
+      additionalAttributes.add(new MetricAttribute(MetricTags.CONNECTION_ID, input.getConnectionId().toString()));
+    } else if (job.getConfigType() == REFRESH) {
+      final var refresh = job.getConfig().getRefresh();
+      additionalAttributes.add(new MetricAttribute(MetricTags.SOURCE_ID, refresh.getSourceDefinitionVersionId().toString()));
+      additionalAttributes.add(new MetricAttribute(MetricTags.SOURCE_IMAGE, refresh.getSourceDockerImage()));
+      additionalAttributes.add(new MetricAttribute(MetricTags.DESTINATION_IMAGE, refresh.getDestinationDockerImage()));
+      additionalAttributes.add(new MetricAttribute(MetricTags.WORKSPACE_ID, refresh.getWorkspaceId().toString()));
+      additionalAttributes.add(new MetricAttribute(MetricTags.CONNECTION_ID, input.getConnectionId().toString()));
+    }
+    emitToReleaseStagesMetricHelper(metric, job, additionalAttributes);
+  }
+
+  public void emitJobToReleaseStagesMetric(final OssMetricsRegistry metric, final Job job, final JobFailureRequest input) throws IOException {
+    List<MetricAttribute> additionalAttributes = new ArrayList<>();
+    if (job.getConfigType() == SYNC) {
+      final var sync = job.getConfig().getSync();
+      additionalAttributes.add(new MetricAttribute(MetricTags.SOURCE_ID, sync.getSourceDefinitionVersionId().toString()));
+      additionalAttributes.add(new MetricAttribute(MetricTags.SOURCE_IMAGE, sync.getSourceDockerImage()));
+      additionalAttributes.add(new MetricAttribute(MetricTags.DESTINATION_IMAGE, sync.getDestinationDockerImage()));
+      additionalAttributes.add(new MetricAttribute(MetricTags.WORKSPACE_ID, sync.getWorkspaceId().toString()));
+      additionalAttributes.add(new MetricAttribute(MetricTags.CONNECTION_ID, input.getConnectionId().toString()));
+    }
+    emitToReleaseStagesMetricHelper(metric, job, additionalAttributes);
+  }
+
+  private void emitToReleaseStagesMetricHelper(final OssMetricsRegistry metric, final Job job, List<MetricAttribute> additionalAttributes)
+      throws IOException {
     final var releaseStages = getJobToReleaseStages(job);
     if (releaseStages.isEmpty()) {
       return;
@@ -265,8 +309,11 @@ public class JobCreationAndStatusUpdateHelper {
 
     for (final ReleaseStage stage : releaseStages) {
       if (stage != null) {
-        MetricClientFactory.getMetricClient().count(metric, 1,
-            new MetricAttribute(MetricTags.RELEASE_STAGE, MetricTags.getReleaseStage(stage)));
+        List<MetricAttribute> attributes = new ArrayList<>();
+        attributes.add(new MetricAttribute(MetricTags.RELEASE_STAGE, MetricTags.getReleaseStage(stage)));
+        attributes.addAll(additionalAttributes);
+
+        MetricClientFactory.getMetricClient().count(metric, 1, attributes.toArray(new MetricAttribute[0]));
       }
     }
   }

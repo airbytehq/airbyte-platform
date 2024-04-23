@@ -5,17 +5,14 @@ import { LoadingPage } from "components";
 import { FlexContainer } from "components/ui/Flex";
 
 import { useListWorkspacesInfinite } from "core/api";
-import { useAppMonitoringService } from "hooks/services/AppMonitoringService";
+import { DefaultErrorBoundary } from "core/errors";
 import { useGetConnectorsOutOfDate } from "hooks/services/useConnector";
-import { ResourceNotFoundErrorBoundary } from "views/common/ResourceNotFoundErrorBoundary";
-import { StartOverErrorView } from "views/common/StartOverErrorView";
 
 import styles from "./MainView.module.scss";
 import { HelpDropdown } from "../SideBar/components/HelpDropdown";
 import { SideBar } from "../SideBar/SideBar";
 
 const MainView: React.FC<React.PropsWithChildren> = (props) => {
-  const { trackError } = useAppMonitoringService();
   const { hasNewVersions } = useGetConnectorsOutOfDate();
 
   return (
@@ -26,9 +23,9 @@ const MainView: React.FC<React.PropsWithChildren> = (props) => {
         settingHighlight={hasNewVersions}
       />
       <div className={styles.content}>
-        <ResourceNotFoundErrorBoundary errorComponent={<StartOverErrorView />} trackError={trackError}>
+        <DefaultErrorBoundary>
           <React.Suspense fallback={<LoadingPage />}>{props.children}</React.Suspense>
-        </ResourceNotFoundErrorBoundary>
+        </DefaultErrorBoundary>
       </div>
     </FlexContainer>
   );

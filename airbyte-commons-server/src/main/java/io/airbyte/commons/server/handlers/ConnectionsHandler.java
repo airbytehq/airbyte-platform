@@ -5,8 +5,6 @@
 package io.airbyte.commons.server.handlers;
 
 import static io.airbyte.commons.converters.ConnectionHelper.validateCatalogDoesntContainDuplicateStreamNames;
-import static io.airbyte.persistence.job.JobNotifier.CONNECTION_DISABLED_NOTIFICATION;
-import static io.airbyte.persistence.job.JobNotifier.CONNECTION_DISABLED_WARNING_NOTIFICATION;
 import static io.airbyte.persistence.job.models.Job.REPLICATION_TYPES;
 import static java.time.temporal.ChronoUnit.DAYS;
 
@@ -61,7 +59,6 @@ import io.airbyte.config.BasicSchedule;
 import io.airbyte.config.DestinationConnection;
 import io.airbyte.config.FieldSelectionData;
 import io.airbyte.config.Geography;
-import io.airbyte.config.JobConfig;
 import io.airbyte.config.JobConfig.ConfigType;
 import io.airbyte.config.JobOutput;
 import io.airbyte.config.JobSyncConfig.NamespaceDefinitionType;
@@ -79,6 +76,9 @@ import io.airbyte.config.helpers.ScheduleHelpers;
 import io.airbyte.config.persistence.ActorDefinitionVersionHelper;
 import io.airbyte.config.persistence.ConfigNotFoundException;
 import io.airbyte.config.persistence.ConfigRepository;
+import io.airbyte.config.persistence.StreamGenerationRepository;
+import io.airbyte.config.persistence.domain.Generation;
+import io.airbyte.config.persistence.helper.CatalogGenerationSetter;
 import io.airbyte.featureflag.CheckWithCatalog;
 import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.featureflag.Workspace;
@@ -105,6 +105,7 @@ import jakarta.inject.Singleton;
 import java.io.IOException;
 import java.time.Instant;
 import java.time.LocalDate;
+import java.time.LocalTime;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.util.ArrayList;
@@ -147,9 +148,12 @@ public class ConnectionsHandler {
   private final Integer maxDaysOfOnlyFailedJobsBeforeConnectionDisable;
   private final Integer maxFailedJobsInARowBeforeConnectionDisable;
   private final int maxJobLookback = 10;
+  private final StreamRefreshesHandler streamRefreshesHandler;
+  private final StreamGenerationRepository streamGenerationRepository;
+  private final CatalogGenerationSetter catalogGenerationSetter;
 
   @Inject
-  public ConnectionsHandler(
+  public ConnectionsHandler(final StreamRefreshesHandler streamRefreshesHandler,
                             final JobPersistence jobPersistence,
                             final ConfigRepository configRepository,
                             @Named("uuidGenerator") final Supplier<UUID> uuidGenerator,
@@ -162,7 +166,9 @@ public class ConnectionsHandler {
                             final ConnectorDefinitionSpecificationHandler connectorSpecHandler,
                             final JobNotifier jobNotifier,
                             @Value("${airbyte.server.connection.disable.max-days}") final Integer maxDaysOfOnlyFailedJobsBeforeConnectionDisable,
-                            @Value("${airbyte.server.connection.disable.max-jobs}") final Integer maxFailedJobsInARowBeforeConnectionDisable) {
+                            @Value("${airbyte.server.connection.disable.max-jobs}") final Integer maxFailedJobsInARowBeforeConnectionDisable,
+                            final StreamGenerationRepository streamGenerationRepository,
+                            final CatalogGenerationSetter catalogGenerationSetter) {
     this.jobPersistence = jobPersistence;
     this.configRepository = configRepository;
     this.uuidGenerator = uuidGenerator;
@@ -176,6 +182,9 @@ public class ConnectionsHandler {
     this.jobNotifier = jobNotifier;
     this.maxDaysOfOnlyFailedJobsBeforeConnectionDisable = maxDaysOfOnlyFailedJobsBeforeConnectionDisable;
     this.maxFailedJobsInARowBeforeConnectionDisable = maxFailedJobsInARowBeforeConnectionDisable;
+    this.streamRefreshesHandler = streamRefreshesHandler;
+    this.streamGenerationRepository = streamGenerationRepository;
+    this.catalogGenerationSetter = catalogGenerationSetter;
   }
 
   /**
@@ -337,9 +346,6 @@ public class ConnectionsHandler {
     } else if (numFailures == maxFailedJobsInARowBeforeConnectionDisableWarning && !warningPreviouslySentForMaxDays) {
       // warn if number of consecutive failures hits 50% of MaxFailedJobsInARow
       jobNotifier.autoDisableConnectionWarning(optionalLastJob.get(), attemptStats);
-      // explicitly send to email if customer.io api key is set, since email notification cannot be set by
-      // configs through UI yet
-      jobNotifier.notifyJobByEmail(null, CONNECTION_DISABLED_WARNING_NOTIFICATION, optionalLastJob.get(), attemptStats);
       return new InternalOperationResult().succeeded(false);
     }
 
@@ -371,9 +377,6 @@ public class ConnectionsHandler {
     if (firstReplicationOlderThanMaxDisableWarningDays && successOlderThanPrevFailureByMaxWarningDays) {
 
       jobNotifier.autoDisableConnectionWarning(optionalLastJob.get(), attemptStats);
-      // explicitly send to email if customer.io api key is set, since email notification cannot be set by
-      // configs through UI yet
-      jobNotifier.notifyJobByEmail(null, CONNECTION_DISABLED_WARNING_NOTIFICATION, optionalLastJob.get(), attemptStats);
     }
     return new InternalOperationResult().succeeded(false);
   }
@@ -387,9 +390,6 @@ public class ConnectionsHandler {
       attemptStats.add(jobPersistence.getAttemptStats(lastJob.getId(), attempt.getAttemptNumber()));
     }
     jobNotifier.autoDisableConnection(lastJob, attemptStats);
-    // explicitly send to email if customer.io api key is set, since email notification cannot be set by
-    // configs through UI yet
-    jobNotifier.notifyJobByEmail(null, CONNECTION_DISABLED_NOTIFICATION, lastJob, attemptStats);
   }
 
   private int getDaysSinceTimestamp(final long currentTimestampInSeconds, final long timestampInSeconds) {
@@ -718,6 +718,11 @@ public class ConnectionsHandler {
     return buildConnectionRead(connectionId);
   }
 
+  public ConnectionRead getConnectionForJob(final UUID connectionId, final Long jobId)
+      throws JsonValidationException, IOException, ConfigNotFoundException {
+    return buildConnectionRead(connectionId, jobId);
+  }
+
   public CatalogDiff getDiff(final AirbyteCatalog oldCatalog, final AirbyteCatalog newCatalog, final ConfiguredAirbyteCatalog configuredCatalog)
       throws JsonValidationException {
     return new CatalogDiff().transforms(CatalogHelpers.getCatalogDiff(
@@ -805,11 +810,37 @@ public class ConnectionsHandler {
   public void deleteConnection(final UUID connectionId) throws JsonValidationException, ConfigNotFoundException, IOException {
     connectionHelper.deleteConnection(connectionId);
     eventRunner.forceDeleteConnection(connectionId);
+    streamRefreshesHandler.deleteRefreshesForConnection(connectionId);
   }
 
   private ConnectionRead buildConnectionRead(final UUID connectionId)
       throws ConfigNotFoundException, IOException, JsonValidationException {
     final StandardSync standardSync = configRepository.getStandardSync(connectionId);
+    return ApiPojoConverters.internalToConnectionRead(standardSync);
+  }
+
+  private ConnectionRead buildConnectionRead(final UUID connectionId, final Long jobId)
+      throws ConfigNotFoundException, IOException, JsonValidationException {
+    final StandardSync standardSync = configRepository.getStandardSync(connectionId);
+    final Job job = jobPersistence.getJob(jobId);
+    final List<Generation> generations = streamGenerationRepository.getMaxGenerationOfStreamsForConnectionId(connectionId);
+    final Optional<ConfiguredAirbyteCatalog> catalogWithGeneration;
+    if (job.getConfigType() == ConfigType.SYNC) {
+      catalogWithGeneration = Optional.of(catalogGenerationSetter.updateCatalogWithGenerationAndSyncInformation(
+          standardSync.getCatalog(),
+          jobId,
+          List.of(),
+          generations));
+    } else if (job.getConfigType() == ConfigType.REFRESH) {
+      catalogWithGeneration = Optional.of(catalogGenerationSetter.updateCatalogWithGenerationAndSyncInformation(
+          standardSync.getCatalog(),
+          jobId,
+          job.getConfig().getRefresh().getStreamsToRefresh(),
+          generations));
+    } else {
+      catalogWithGeneration = Optional.empty();
+    }
+    catalogWithGeneration.ifPresent(updatedCatalog -> standardSync.setCatalog(updatedCatalog));
     return ApiPojoConverters.internalToConnectionRead(standardSync);
   }
 
@@ -870,7 +901,7 @@ public class ConnectionsHandler {
     final List<UUID> connectionIds = connectionStatusesRequestBody.getConnectionIds();
     final List<ConnectionStatusRead> result = new ArrayList<>();
     for (final UUID connectionId : connectionIds) {
-      final List<Job> jobs = jobPersistence.listJobs(Set.of(JobConfig.ConfigType.SYNC, JobConfig.ConfigType.RESET_CONNECTION),
+      final List<Job> jobs = jobPersistence.listJobs(REPLICATION_TYPES,
           connectionId.toString(),
           maxJobLookback);
       final boolean isRunning = jobs.stream().anyMatch(job -> JobStatus.NON_TERMINAL_STATUSES.contains(job.getStatus()));
@@ -923,7 +954,7 @@ public class ConnectionsHandler {
     final ZoneId requestZone = ZoneId.of(connectionDataHistoryRequestBody.getTimezone());
 
     // Start time in designated timezone
-    final ZonedDateTime endTimeInUserTimeZone = Instant.now().atZone(ZoneId.of(connectionDataHistoryRequestBody.getTimezone()));
+    final ZonedDateTime endTimeInUserTimeZone = Instant.now().atZone(requestZone).toLocalDate().atTime(LocalTime.MAX).atZone(requestZone);
     final ZonedDateTime startTimeInUserTimeZone = endTimeInUserTimeZone.toLocalDate().atStartOfDay(requestZone).minusDays(29);
     // Convert start time to UTC (since that's what the database uses)
     final Instant startTimeInUTC = startTimeInUserTimeZone.toInstant();
@@ -1122,8 +1153,11 @@ public class ConnectionsHandler {
         payload.put("connection_id", connectionId);
         payload.put("schema_change_event_date", changeEventTimeline);
         payload.put("stream_change_type", streamTransform.getTransformType().toString());
-        payload.put("stream_namespace", streamTransform.getStreamDescriptor().getNamespace());
-        payload.put("stream_name", streamTransform.getStreamDescriptor().getName());
+        StreamDescriptor streamDescriptor = streamTransform.getStreamDescriptor();
+        if (streamDescriptor.getNamespace() != null) {
+          payload.put("stream_namespace", streamDescriptor.getNamespace());
+        }
+        payload.put("stream_name", streamDescriptor.getName());
         if (streamTransform.getTransformType() == TransformTypeEnum.UPDATE_STREAM) {
           payload.put("stream_field_changes", Jsons.serialize(streamTransform.getUpdateStream()));
         }

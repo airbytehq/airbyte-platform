@@ -57,6 +57,10 @@ class VaultSecretPersistence(
     }
   }
 
+  override fun delete(coordinate: SecretCoordinate) {
+    return
+  }
+
   companion object {
     private const val SECRET_KEY = "value"
   }

@@ -1,15 +1,19 @@
 package io.airbyte.data.services.impls.data
 
+import io.airbyte.config.ScopeType
 import io.airbyte.data.exceptions.ConfigNotFoundException
 import io.airbyte.data.repositories.PermissionRepository
 import io.airbyte.data.repositories.UserInvitationRepository
 import io.airbyte.data.repositories.entities.Permission
 import io.airbyte.data.repositories.entities.UserInvitation
+import io.airbyte.data.services.InvitationDuplicateException
+import io.airbyte.data.services.InvitationStatusUnexpectedException
+import io.airbyte.data.services.impls.data.mappers.EntityInvitationStatus
+import io.airbyte.data.services.impls.data.mappers.EntityPermissionType
+import io.airbyte.data.services.impls.data.mappers.EntityScopeType
 import io.airbyte.data.services.impls.data.mappers.toConfigModel
-import io.airbyte.db.instance.configs.jooq.generated.enums.InvitationStatus
-import io.airbyte.db.instance.configs.jooq.generated.enums.PermissionType
-import io.airbyte.db.instance.configs.jooq.generated.enums.ScopeType
 import io.mockk.clearAllMocks
+import io.mockk.confirmVerified
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
@@ -35,11 +39,12 @@ internal class UserInvitationServiceDataImplTest {
       inviterUserId = UUID.randomUUID(),
       invitedEmail = "invited@airbyte.io",
       scopeId = UUID.randomUUID(),
-      scopeType = ScopeType.workspace,
-      permissionType = PermissionType.workspace_admin,
-      status = InvitationStatus.pending,
+      scopeType = EntityScopeType.workspace,
+      permissionType = EntityPermissionType.workspace_admin,
+      status = EntityInvitationStatus.pending,
       createdAt = OffsetDateTime.now(ZoneOffset.UTC).truncatedTo(java.time.temporal.ChronoUnit.SECONDS),
       updatedAt = OffsetDateTime.now(ZoneOffset.UTC).truncatedTo(java.time.temporal.ChronoUnit.SECONDS),
+      expiresAt = OffsetDateTime.now(ZoneOffset.UTC).plusDays(7).truncatedTo(java.time.temporal.ChronoUnit.SECONDS),
     )
 
   @BeforeEach
@@ -68,6 +73,7 @@ internal class UserInvitationServiceDataImplTest {
 
   @Test
   fun `test create user invitation`() {
+    every { userInvitationRepository.findByStatusAndScopeTypeAndScopeIdAndInvitedEmail(any(), any(), any(), any()) } returns emptyList()
     every { userInvitationRepository.save(invitation) } returns invitation
 
     val result = userInvitationService.createUserInvitation(invitation.toConfigModel())
@@ -77,9 +83,22 @@ internal class UserInvitationServiceDataImplTest {
   }
 
   @Test
+  fun `test create duplicate user invitation throws`() {
+    every { userInvitationRepository.findByStatusAndScopeTypeAndScopeIdAndInvitedEmail(any(), any(), any(), any()) } returns listOf(invitation)
+
+    assertThrows<InvitationDuplicateException> { userInvitationService.createUserInvitation(invitation.toConfigModel()) }
+
+    verify(exactly = 0) { userInvitationRepository.save(invitation) }
+  }
+
+  @Test
   fun `test accept user invitation`() {
     val invitedUserId = UUID.randomUUID()
-    val expectedUpdatedInvitation = invitation.copy(status = InvitationStatus.accepted)
+    val expectedUpdatedInvitation =
+      invitation.copy(
+        status = EntityInvitationStatus.accepted,
+        acceptedByUserId = invitedUserId,
+      )
 
     every { userInvitationRepository.findByInviteCode(invitation.inviteCode) } returns Optional.of(invitation)
     every { userInvitationRepository.update(expectedUpdatedInvitation) } returns expectedUpdatedInvitation
@@ -104,9 +123,9 @@ internal class UserInvitationServiceDataImplTest {
   }
 
   @ParameterizedTest
-  @EnumSource(value = InvitationStatus::class)
-  fun `test accept user invitation fails if not pending`(status: InvitationStatus) {
-    if (status == InvitationStatus.pending) {
+  @EnumSource(value = EntityInvitationStatus::class)
+  fun `test accept user invitation fails if not pending`(status: EntityInvitationStatus) {
+    if (status == EntityInvitationStatus.pending) {
       return // not testing this case
     }
 
@@ -115,8 +134,66 @@ internal class UserInvitationServiceDataImplTest {
 
     every { userInvitationRepository.findByInviteCode(invitation.inviteCode) } returns Optional.of(invitation)
 
-    assertThrows<IllegalStateException> { userInvitationService.acceptUserInvitation(invitation.inviteCode, invitedUserId) }
+    assertThrows<InvitationStatusUnexpectedException> { userInvitationService.acceptUserInvitation(invitation.inviteCode, invitedUserId) }
 
     verify(exactly = 0) { userInvitationRepository.update(any()) }
+  }
+
+  @Test
+  fun `test accept user invitation fails if expired`() {
+    val invitedUserId = UUID.randomUUID()
+    val expiredInvitation =
+      invitation.copy(
+        status = EntityInvitationStatus.pending,
+        expiresAt = OffsetDateTime.now(ZoneOffset.UTC).minusDays(1),
+      )
+    val expectedUpdatedInvitation = expiredInvitation.copy(status = EntityInvitationStatus.expired)
+
+    every { userInvitationRepository.findByInviteCode(expiredInvitation.inviteCode) } returns Optional.of(expiredInvitation)
+    every { userInvitationRepository.update(expectedUpdatedInvitation) } returns expectedUpdatedInvitation
+
+    assertThrows<InvitationStatusUnexpectedException> { userInvitationService.acceptUserInvitation(expiredInvitation.inviteCode, invitedUserId) }
+
+    verify { userInvitationRepository.update(expectedUpdatedInvitation) }
+  }
+
+  @Test
+  fun `test get pending invitations`() {
+    val workspaceId = UUID.randomUUID()
+    val organizationId = UUID.randomUUID()
+    val mockWorkspaceInvitations = listOf(invitation, invitation.copy(id = UUID.randomUUID()))
+    val mockOrganizationInvitations = listOf(invitation.copy(id = UUID.randomUUID()), invitation.copy(id = UUID.randomUUID()))
+
+    every {
+      userInvitationRepository.findByStatusAndScopeTypeAndScopeId(EntityInvitationStatus.pending, EntityScopeType.workspace, workspaceId)
+    } returns mockWorkspaceInvitations
+    every {
+      userInvitationRepository.findByStatusAndScopeTypeAndScopeId(EntityInvitationStatus.pending, EntityScopeType.organization, organizationId)
+    } returns mockOrganizationInvitations
+
+    val workspaceResult = userInvitationService.getPendingInvitations(ScopeType.WORKSPACE, workspaceId)
+    val organizationResult = userInvitationService.getPendingInvitations(ScopeType.ORGANIZATION, organizationId)
+
+    verify(exactly = 1) {
+      userInvitationRepository.findByStatusAndScopeTypeAndScopeId(EntityInvitationStatus.pending, EntityScopeType.workspace, workspaceId)
+    }
+    verify(exactly = 1) {
+      userInvitationRepository.findByStatusAndScopeTypeAndScopeId(EntityInvitationStatus.pending, EntityScopeType.organization, organizationId)
+    }
+    confirmVerified(userInvitationRepository)
+
+    assert(workspaceResult == mockWorkspaceInvitations.map { it.toConfigModel() })
+    assert(organizationResult == mockOrganizationInvitations.map { it.toConfigModel() })
+  }
+
+  @Test
+  fun `test cancel invitation`() {
+    val expectedUpdatedInvitation = invitation.copy(status = EntityInvitationStatus.cancelled)
+    every { userInvitationRepository.findByInviteCode(invitation.inviteCode) } returns Optional.of(invitation)
+    every { userInvitationRepository.update(expectedUpdatedInvitation) } returns expectedUpdatedInvitation
+
+    userInvitationService.cancelUserInvitation(invitation.inviteCode)
+
+    verify { userInvitationRepository.update(expectedUpdatedInvitation) }
   }
 }

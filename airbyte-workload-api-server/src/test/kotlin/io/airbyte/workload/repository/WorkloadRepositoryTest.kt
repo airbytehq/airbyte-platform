@@ -8,9 +8,10 @@ import io.airbyte.workload.repository.domain.WorkloadLabel
 import io.airbyte.workload.repository.domain.WorkloadStatus
 import io.airbyte.workload.repository.domain.WorkloadType
 import io.micronaut.context.ApplicationContext
+import io.micronaut.context.env.Environment
 import io.micronaut.context.env.PropertySource
+import io.micronaut.data.connection.jdbc.advice.DelegatingDataSource
 import io.micronaut.test.extensions.junit5.annotation.MicronautTest
-import io.micronaut.transaction.jdbc.DelegatingDataSource
 import org.jooq.DSLContext
 import org.jooq.SQLDialect
 import org.junit.jupiter.api.AfterAll
@@ -26,7 +27,7 @@ import java.time.OffsetDateTime
 import java.time.temporal.ChronoUnit
 import javax.sql.DataSource
 
-@MicronautTest
+@MicronautTest(environments = [Environment.TEST])
 internal class WorkloadRepositoryTest {
   val defaultDeadline = OffsetDateTime.now()
 
@@ -238,6 +239,28 @@ internal class WorkloadRepositoryTest {
     persistedWorkload = workloadRepo.findById(WORKLOAD_ID)
     assertTrue(persistedWorkload.isPresent)
     assertEquals("dataplaneId2", persistedWorkload.get().dataplaneId)
+  }
+
+  @Test
+  fun `test mutex search`() {
+    val mutexKey = "mutex-search-test"
+    val workload1 =
+      Fixtures.workload(
+        id = "workload-mutex-search-1",
+        status = WorkloadStatus.PENDING,
+        mutexKey = mutexKey,
+      )
+    workloadRepo.save(workload1)
+
+    val match = workloadRepo.searchByMutexKeyAndStatusInList(mutexKey, listOf(WorkloadStatus.PENDING, WorkloadStatus.RUNNING))
+    assertEquals(1, match.size)
+    assertEquals(workload1.id, match[0].id)
+
+    val emptyResult = workloadRepo.searchByMutexKeyAndStatusInList(mutexKey, listOf(WorkloadStatus.CLAIMED, WorkloadStatus.RUNNING))
+    assertEquals(0, emptyResult.size)
+
+    val mutexMismatch = workloadRepo.searchByMutexKeyAndStatusInList("mismatch", listOf(WorkloadStatus.PENDING, WorkloadStatus.RUNNING))
+    assertEquals(0, mutexMismatch.size)
   }
 
   @Test

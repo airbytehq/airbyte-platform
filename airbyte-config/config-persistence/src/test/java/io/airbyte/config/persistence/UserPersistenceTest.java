@@ -15,6 +15,7 @@ import io.airbyte.config.StandardWorkspace;
 import io.airbyte.config.User;
 import io.airbyte.config.secrets.SecretsRepositoryReader;
 import io.airbyte.config.secrets.SecretsRepositoryWriter;
+import io.airbyte.data.helpers.ActorDefinitionVersionUpdater;
 import io.airbyte.data.services.ConnectionService;
 import io.airbyte.data.services.SecretPersistenceConfigService;
 import io.airbyte.data.services.impls.jooq.ActorDefinitionServiceJooqImpl;
@@ -54,6 +55,7 @@ class UserPersistenceTest extends BaseConfigDatabaseTest {
     final SecretPersistenceConfigService secretPersistenceConfigService = mock(SecretPersistenceConfigService.class);
 
     final ConnectionService connectionService = mock(ConnectionService.class);
+    final ActorDefinitionVersionUpdater actorDefinitionVersionUpdater = mock(ActorDefinitionVersionUpdater.class);
     configRepository = new ConfigRepository(
         new ActorDefinitionServiceJooqImpl(database),
         new CatalogServiceJooqImpl(database),
@@ -64,7 +66,8 @@ class UserPersistenceTest extends BaseConfigDatabaseTest {
             secretsRepositoryReader,
             secretsRepositoryWriter,
             secretPersistenceConfigService,
-            connectionService),
+            connectionService,
+            actorDefinitionVersionUpdater),
         new OAuthServiceJooqImpl(database,
             featureFlagClient,
             secretsRepositoryReader,
@@ -75,7 +78,8 @@ class UserPersistenceTest extends BaseConfigDatabaseTest {
             secretsRepositoryReader,
             secretsRepositoryWriter,
             secretPersistenceConfigService,
-            connectionService),
+            connectionService,
+            actorDefinitionVersionUpdater),
         new WorkspaceServiceJooqImpl(database,
             featureFlagClient,
             secretsRepositoryReader,
@@ -142,6 +146,16 @@ class UserPersistenceTest extends BaseConfigDatabaseTest {
         final Optional<User> userFromDb = userPersistence.getUserByEmail(user.getEmail());
         Assertions.assertEquals(user, userFromDb.get());
       }
+    }
+
+    @Test
+    void getUsersByEmailTest() throws IOException {
+      for (final User user : MockData.dupEmailUsers()) {
+        userPersistence.writeUser(user);
+      }
+
+      final List<User> usersWithSameEmail = userPersistence.getUsersByEmail(MockData.DUP_EMAIL);
+      Assertions.assertEquals(new HashSet<>(MockData.dupEmailUsers()), new HashSet<>(usersWithSameEmail));
     }
 
     @Test
@@ -274,7 +288,6 @@ class UserPersistenceTest extends BaseConfigDatabaseTest {
     void setup() throws IOException, JsonValidationException, SQLException {
       truncateAllTables();
 
-      final PermissionPersistence permissionPersistence = new PermissionPersistence(database);
       final OrganizationPersistence organizationPersistence = new OrganizationPersistence(database);
 
       organizationPersistence.createOrganization(ORG);
@@ -289,7 +302,7 @@ class UserPersistenceTest extends BaseConfigDatabaseTest {
 
       for (final Permission permission : List.of(ORG_MEMBER_USER_PERMISSION, ORG_READER_PERMISSION, WORKSPACE_2_READER_PERMISSION,
           WORKSPACE_3_READER_PERMISSION, BOTH_USER_WORKSPACE_PERMISSION, BOTH_USER_ORGANIZATION_PERMISSION)) {
-        permissionPersistence.writePermission(permission);
+        BaseConfigDatabaseTest.writePermission(permission);
       }
     }
 

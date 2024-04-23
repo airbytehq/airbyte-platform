@@ -4,12 +4,11 @@
 
 package io.airbyte.server.apis;
 
+import io.airbyte.api.model.generated.CompleteDestinationOAuthRequest;
 import io.airbyte.api.model.generated.CompleteOAuthResponse;
-import io.airbyte.api.model.generated.DestinationDefinitionIdWithWorkspaceId;
 import io.airbyte.api.model.generated.DestinationOauthConsentRequest;
 import io.airbyte.api.model.generated.OAuthConsentRead;
 import io.airbyte.api.model.generated.SetInstancewideDestinationOauthParamsRequestBody;
-import io.airbyte.commons.json.Jsons;
 import io.airbyte.config.persistence.ConfigNotFoundException;
 import io.airbyte.validation.json.JsonValidationException;
 import io.micronaut.context.annotation.Requires;
@@ -33,10 +32,10 @@ class DestinationOauthApiTest extends BaseControllerTest {
         .thenThrow(new ConfigNotFoundException("", ""));
     final String path = "/api/v1/destination_oauths/complete_oauth";
     testEndpointStatus(
-        HttpRequest.POST(path, Jsons.serialize(new DestinationDefinitionIdWithWorkspaceId())),
+        HttpRequest.POST(path, new CompleteDestinationOAuthRequest()),
         HttpStatus.OK);
     testErrorEndpointStatus(
-        HttpRequest.POST(path, Jsons.serialize(new DestinationDefinitionIdWithWorkspaceId())),
+        HttpRequest.POST(path, new CompleteDestinationOAuthRequest()),
         HttpStatus.NOT_FOUND);
   }
 
@@ -47,10 +46,10 @@ class DestinationOauthApiTest extends BaseControllerTest {
         .thenThrow(new ConfigNotFoundException("", ""));
     final String path = "/api/v1/destination_oauths/get_consent_url";
     testEndpointStatus(
-        HttpRequest.POST(path, Jsons.serialize(new DestinationOauthConsentRequest())),
+        HttpRequest.POST(path, new DestinationOauthConsentRequest()),
         HttpStatus.OK);
     testErrorEndpointStatus(
-        HttpRequest.POST(path, Jsons.serialize(new DestinationOauthConsentRequest())),
+        HttpRequest.POST(path, new DestinationOauthConsentRequest()),
         HttpStatus.NOT_FOUND);
   }
 
@@ -61,7 +60,7 @@ class DestinationOauthApiTest extends BaseControllerTest {
 
     final String path = "/api/v1/destination_oauths/oauth_params/create";
     testEndpointStatus(
-        HttpRequest.POST(path, Jsons.serialize(new SetInstancewideDestinationOauthParamsRequestBody())),
+        HttpRequest.POST(path, new SetInstancewideDestinationOauthParamsRequestBody()),
         HttpStatus.OK);
   }
 

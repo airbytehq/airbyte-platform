@@ -1,6 +1,8 @@
 micronaut:
   application:
     name: airbyte-workload-launcher
+  env:
+    cloud-deduction: true
   server:
     port: 8016
     netty:
@@ -49,10 +51,12 @@ airbyte:
         max: ${KUBERNETES_CLIENT_MAX_RETRIES:5}
     resource-check-rate: ${WORKLOAD_LAUNCHER_POD_PENDING_RESOURCE_CHECK_RATE:PT30S}
   docker:
-    docker-socket: ${DOCKER_SOCKET:/var/run/docker.sock}
+    docker-socket: ${DOCKER_SOCKET:}
     network: ${DOCKER_NETWORK:host}
     workspace-mount-name: ${WORKSPACE_DOCKER_MOUNT:}
     workspace-mount-path: ${WORKSPACE_ROOT}
+    local-mount-name: ${LOCAL_DOCKER_MOUNT:}
+    local-mount-path: ${LOCAL_ROOT}
   workload-api:
     base-path: ${WORKLOAD_API_HOST:}
     bearer-token: ${WORKLOAD_API_BEARER_TOKEN:}
@@ -106,7 +110,7 @@ airbyte:
         strategy: ${JOB_ERROR_REPORTING_STRATEGY:LOGGING}
       kube:
         images:
-          busybox: ${JOB_KUBE_BUSYBOX_IMAGE:`busybox:1.28`}
+          busybox: ${JOB_KUBE_BUSYBOX_IMAGE:`busybox:1.35`}
           curl: ${JOB_KUBE_CURL_IMAGE:`curlimages/curl:7.83.1`}
           socat: ${JOB_KUBE_SOCAT_IMAGE:`alpine/socat:1.7.4.3-r0`}
         main:
@@ -178,36 +182,24 @@ airbyte:
   acceptance.test.enabled: ${ACCEPTANCE_TEST_ENABLED:false}
   cloud:
     storage:
-      logs:
-        type: ${WORKER_LOGS_STORAGE_TYPE:}
-        gcs:
-          application-credentials: ${GOOGLE_APPLICATION_CREDENTIALS:}
-          bucket: ${GCS_LOG_BUCKET:}
-        minio:
-          access-key: ${AWS_ACCESS_KEY_ID:}
-          bucket: ${S3_LOG_BUCKET:}
-          endpoint: ${S3_MINIO_ENDPOINT:}
-          secret-access-key: ${AWS_SECRET_ACCESS_KEY:}
-        s3:
-          access-key: ${AWS_ACCESS_KEY_ID:}
-          bucket: ${S3_LOG_BUCKET:}
-          region: ${S3_LOG_BUCKET_REGION:}
-          secret-access-key: ${AWS_SECRET_ACCESS_KEY:}
-      state:
-        type: ${WORKER_STATE_STORAGE_TYPE:}
-        gcs:
-          application-credentials: ${STATE_STORAGE_GCS_APPLICATION_CREDENTIALS:}
-          bucket: ${STATE_STORAGE_GCS_BUCKET_NAME:}
-        minio:
-          access-key: ${STATE_STORAGE_MINIO_ACCESS_KEY:}
-          bucket: ${STATE_STORAGE_MINIO_BUCKET_NAME:}
-          endpoint: ${STATE_STORAGE_MINIO_ENDPOINT:}
-          secret-access-key: ${STATE_STORAGE_MINIO_SECRET_ACCESS_KEY:}
-        s3:
-          access-key: ${STATE_STORAGE_S3_ACCESS_KEY:}
-          bucket: ${STATE_STORAGE_S3_BUCKET_NAME:}
-          region: ${STATE_STORAGE_S3_REGION:}
-          secret-access-key: ${STATE_STORAGE_S3_SECRET_ACCESS_KEY:}
+      type: ${STORAGE_TYPE}
+      bucket:
+        log: ${STORAGE_BUCKET_LOG}
+        state: ${STORAGE_BUCKET_STATE}
+        workload-output: ${STORAGE_BUCKET_WORKLOAD_OUTPUT}
+        activity-payload: ${STORAGE_BUCKET_ACTIVITY_PAYLOAD}
+      gcs:
+        application-credentials: ${GOOGLE_APPLICATION_CREDENTIALS:}
+      local:
+        root: ${LOCAL_ROOT:}
+      minio:
+        access-key: ${AWS_ACCESS_KEY_ID:}
+        endpoint: ${MINIO_ENDPOINT:}
+        secret-access-key: ${AWS_SECRET_ACCESS_KEY:}
+      s3:
+        access-key: ${AWS_ACCESS_KEY_ID:}
+        region: ${AWS_DEFAULT_REGION:}
+        secret-access-key: ${AWS_SECRET_ACCESS_KEY:}
   workspace:
     docker-mount: ${WORKSPACE_DOCKER_MOUNT:}
     root: ${WORKSPACE_ROOT}

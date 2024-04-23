@@ -3,8 +3,8 @@ package io.airbyte.data.repositories
 import io.airbyte.db.factory.DSLContextFactory
 import io.airbyte.db.instance.test.TestDatabaseProviders
 import io.micronaut.context.ApplicationContext
+import io.micronaut.data.connection.jdbc.advice.DelegatingDataSource
 import io.micronaut.data.repository.CrudRepository
-import io.micronaut.transaction.jdbc.DelegatingDataSource
 import org.jooq.DSLContext
 import org.jooq.SQLDialect
 import org.junit.jupiter.api.AfterAll
@@ -38,6 +38,10 @@ abstract class AbstractConfigRepositoryTest<T : CrudRepository<*, *>>(
     @JvmStatic
     fun setupBase() {
       container.start()
+
+      // occasionally, the container is not yet accepting connections even though start() has returned.
+      // this createConnection() call will block until the container is ready to accept connections.
+      container.createConnection("").use { }
 
       // set the micronaut datasource properties to match our container we started up
       context =

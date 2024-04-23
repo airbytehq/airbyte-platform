@@ -28,9 +28,9 @@ import io.airbyte.api.server.services.SourceService
 import io.airbyte.api.server.services.UserService
 import io.micronaut.http.annotation.Controller
 import io.micronaut.http.annotation.Patch
+import jakarta.ws.rs.core.Response
 import java.util.Objects
 import java.util.UUID
-import javax.ws.rs.core.Response
 
 @Controller(CONNECTIONS_PATH)
 open class ConnectionsController(
@@ -103,7 +103,14 @@ open class ConnectionsController(
       for (streamConfiguration in connectionCreateRequest.configurations.streams) {
         val validStreamAndConfig = validStreams[streamConfiguration.name]
         val schemaStream = validStreamAndConfig!!.stream
-        val schemaConfig = validStreamAndConfig.config
+        val updatedValidStreamAndConfig = AirbyteStreamAndConfiguration()
+        updatedValidStreamAndConfig.stream = schemaStream
+        updatedValidStreamAndConfig.config =
+          AirbyteCatalogHelper.updateAirbyteStreamConfiguration(
+            validStreamAndConfig.config,
+            schemaStream,
+            streamConfiguration,
+          )
 
         val validDestinationSyncModes =
           trackingHelper.callWithTracker(
@@ -116,23 +123,21 @@ open class ConnectionsController(
         // set user configs
         trackingHelper.callWithTracker(
           {
-            AirbyteCatalogHelper.setAndValidateStreamConfig(
-              streamConfiguration,
-              validDestinationSyncModes,
-              schemaStream!!,
-              schemaConfig!!,
+            AirbyteCatalogHelper.validateStreamConfig(
+              streamConfiguration = streamConfiguration,
+              validDestinationSyncModes = validDestinationSyncModes,
+              airbyteStream = schemaStream!!,
             )
           },
           CONNECTIONS_PATH,
           POST,
           userId,
         )
-        configuredCatalog!!.addStreamsItem(validStreamAndConfig)
+        configuredCatalog!!.addStreamsItem(updatedValidStreamAndConfig)
       }
     } else {
       // no user supplied stream configs, return all streams with full refresh overwrite
-      configuredCatalog = airbyteCatalogFromDiscoverSchema
-      AirbyteCatalogHelper.setAllStreamsFullRefreshOverwrite(configuredCatalog!!)
+      configuredCatalog = AirbyteCatalogHelper.updateAllStreamsFullRefreshOverwrite(airbyteCatalogFromDiscoverSchema)
     }
 
     val finalConfiguredCatalog = configuredCatalog
@@ -328,7 +333,14 @@ open class ConnectionsController(
       for (streamConfiguration in connectionPatchRequest.configurations.streams) {
         val validStreamAndConfig = validStreams[streamConfiguration.name]
         val schemaStream = validStreamAndConfig!!.stream
-        val schemaConfig = validStreamAndConfig.config
+        val updatedValidStreamAndConfig = AirbyteStreamAndConfiguration()
+        updatedValidStreamAndConfig.stream = schemaStream
+        updatedValidStreamAndConfig.config =
+          AirbyteCatalogHelper.updateAirbyteStreamConfiguration(
+            validStreamAndConfig.config,
+            schemaStream,
+            streamConfiguration,
+          )
 
         val validDestinationSyncModes =
           trackingHelper.callWithTracker(
@@ -341,18 +353,17 @@ open class ConnectionsController(
         // set user configs
         trackingHelper.callWithTracker(
           {
-            AirbyteCatalogHelper.setAndValidateStreamConfig(
-              streamConfiguration,
-              validDestinationSyncModes,
-              schemaStream!!,
-              schemaConfig!!,
+            AirbyteCatalogHelper.validateStreamConfig(
+              streamConfiguration = streamConfiguration,
+              validDestinationSyncModes = validDestinationSyncModes,
+              airbyteStream = schemaStream!!,
             )
           },
           CONNECTIONS_PATH,
           POST,
           userId,
         )
-        configuredCatalog!!.addStreamsItem(validStreamAndConfig)
+        configuredCatalog!!.addStreamsItem(updatedValidStreamAndConfig)
       }
     } else {
       // no user supplied stream configs, return all existing streams

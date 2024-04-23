@@ -1,4 +1,4 @@
-import React, { Suspense, useDeferredValue, useMemo, useState } from "react";
+import React, { Suspense, useDeferredValue, useMemo } from "react";
 import { FormattedMessage } from "react-intl";
 import { useNavigate } from "react-router-dom";
 
@@ -10,15 +10,13 @@ import { Button } from "components/ui/Button";
 import { Card } from "components/ui/Card";
 import { FlexContainer, FlexItem } from "components/ui/Flex";
 import { Heading } from "components/ui/Heading";
-import { Icon } from "components/ui/Icon";
 import { PageHeader } from "components/ui/PageHeader";
 import { Text } from "components/ui/Text";
 
 import { useConnectionList, useCurrentWorkspace, useFilters } from "core/api";
 import { JobStatus, WebBackendConnectionListItem } from "core/api/types/AirbyteClient";
-import { useTrackPage, PageTrackingCodes } from "core/services/analytics";
+import { PageTrackingCodes, useTrackPage } from "core/services/analytics";
 import { useIntent } from "core/utils/rbac";
-import { useExperiment } from "hooks/services/Experiment";
 
 import styles from "./AllConnectionsPage.module.scss";
 import { ConnectionsFilters, FilterValues } from "./ConnectionsFilters";
@@ -42,10 +40,8 @@ const isConnectionFailed = (
   connection.latestSyncJobStatus === JobStatus.incomplete;
 
 export const AllConnectionsPage: React.FC = () => {
-  const navigate = useNavigate();
-
   useTrackPage(PageTrackingCodes.CONNECTIONS_LIST);
-  const isConnectionsSummaryEnabled = useExperiment("connections.summaryView", false);
+  const navigate = useNavigate();
 
   const { workspaceId } = useCurrentWorkspace();
   const canCreateConnection = useIntent("CreateConnection", { workspaceId });
@@ -53,13 +49,13 @@ export const AllConnectionsPage: React.FC = () => {
   const connectionList = useConnectionList();
   const connections = useMemo(() => connectionList?.connections ?? [], [connectionList?.connections]);
 
-  const [searchFilter, setSearchFilter] = useState<string>("");
-  const debouncedSearchFilter = useDeferredValue(searchFilter);
   const [filterValues, setFilterValue, setFilters] = useFilters<FilterValues>({
+    search: "",
     status: null,
     source: null,
     destination: null,
   });
+  const debouncedSearchFilter = useDeferredValue(filterValues.search);
 
   const filteredConnections = useMemo(() => {
     const statusFilter = filterValues.status;
@@ -158,18 +154,16 @@ export const AllConnectionsPage: React.FC = () => {
                         <FormattedMessage id="sidebar.connections" />
                       </Heading>
                     </FlexItem>
-                    {isConnectionsSummaryEnabled && (
-                      <FlexItem>
-                        <ConnectionsSummary {...connectionsSummary} />
-                      </FlexItem>
-                    )}
+                    <FlexItem>
+                      <ConnectionsSummary {...connectionsSummary} />
+                    </FlexItem>
                   </FlexContainer>
                 }
                 endComponent={
                   <FlexItem className={styles.alignSelfStart}>
                     <Button
                       disabled={!canCreateConnection}
-                      icon={<Icon type="plus" />}
+                      icon="plus"
                       variant="primary"
                       size="sm"
                       onClick={() => onCreateClick()}
@@ -183,20 +177,15 @@ export const AllConnectionsPage: React.FC = () => {
             }
           >
             <Card noPadding className={styles.connections}>
-              {isConnectionsSummaryEnabled && (
-                <ConnectionsFilters
-                  connections={connections}
-                  searchFilter={searchFilter}
-                  setSearchFilter={setSearchFilter}
-                  filterValues={filterValues}
-                  setFilterValue={setFilterValue}
-                  setFilters={setFilters}
-                />
-              )}
-              <ConnectionsTable
-                connections={filteredConnections}
-                variant={isConnectionsSummaryEnabled ? "white" : "default"}
+              <ConnectionsFilters
+                connections={connections}
+                searchFilter={filterValues.search}
+                setSearchFilter={(search) => setFilterValue("search", search)}
+                filterValues={filterValues}
+                setFilterValue={setFilterValue}
+                setFilters={setFilters}
               />
+              <ConnectionsTable connections={filteredConnections} variant="white" />
               {filteredConnections.length === 0 && (
                 <Box pt="xl" pb="lg">
                   <Text bold color="grey" align="center">

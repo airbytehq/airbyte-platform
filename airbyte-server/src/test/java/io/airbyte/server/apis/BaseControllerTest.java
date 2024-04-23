@@ -6,7 +6,6 @@ package io.airbyte.server.apis;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
-import io.airbyte.analytics.TrackingClient;
 import io.airbyte.commons.server.handlers.ActorDefinitionVersionHandler;
 import io.airbyte.commons.server.handlers.AttemptHandler;
 import io.airbyte.commons.server.handlers.ConnectionsHandler;
@@ -35,8 +34,6 @@ import io.airbyte.commons.server.handlers.WorkspacesHandler;
 import io.airbyte.commons.server.scheduler.SynchronousSchedulerClient;
 import io.airbyte.commons.server.support.CurrentUserService;
 import io.airbyte.commons.server.validation.ActorDefinitionAccessValidator;
-import io.airbyte.commons.temporal.TemporalClient;
-import io.airbyte.db.Database;
 import io.airbyte.persistence.job.JobNotifier;
 import io.airbyte.persistence.job.tracker.JobTracker;
 import io.micronaut.context.annotation.Replaces;
@@ -52,11 +49,9 @@ import io.micronaut.test.extensions.junit5.annotation.MicronautTest;
 import io.temporal.client.WorkflowClient;
 import io.temporal.serviceclient.WorkflowServiceStubs;
 import jakarta.inject.Inject;
-import jakarta.inject.Named;
 import org.assertj.core.api.Assertions;
 import org.assertj.core.api.Condition;
 import org.assertj.core.api.InstanceOfAssertFactory;
-import org.jooq.DSLContext;
 import org.mockito.Mockito;
 
 /**
@@ -291,19 +286,6 @@ abstract class BaseControllerTest {
     return Mockito.mock(SynchronousSchedulerClient.class);
   }
 
-  @MockBean(Database.class)
-  @Replaces(Database.class)
-  @Named("configDatabase")
-  Database mmDatabase() {
-    return Mockito.mock(Database.class);
-  }
-
-  @MockBean(TrackingClient.class)
-  @Replaces(TrackingClient.class)
-  TrackingClient mmTrackingClient() {
-    return Mockito.mock(TrackingClient.class);
-  }
-
   @MockBean(WorkflowClient.class)
   @Replaces(WorkflowClient.class)
   WorkflowClient mmWorkflowClient() {
@@ -314,12 +296,6 @@ abstract class BaseControllerTest {
   @Replaces(WorkflowServiceStubs.class)
   WorkflowServiceStubs mmWorkflowServiceStubs() {
     return Mockito.mock(WorkflowServiceStubs.class);
-  }
-
-  @MockBean(TemporalClient.class)
-  @Replaces(TemporalClient.class)
-  TemporalClient mmTemporalClient() {
-    return Mockito.mock(TemporalClient.class);
   }
 
   @MockBean(SecurityService.class)
@@ -346,12 +322,6 @@ abstract class BaseControllerTest {
   @Replaces(JobTracker.class)
   JobTracker mmJobTracker() {
     return Mockito.mock(JobTracker.class);
-  }
-
-  @Replaces(DSLContext.class)
-  @Named("config")
-  DSLContext mmDSLContext() {
-    return Mockito.mock(DSLContext.class);
   }
 
   @Inject

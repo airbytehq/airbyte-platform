@@ -7,10 +7,10 @@ package io.airbyte.persistence.job.models;
 import io.airbyte.config.AttemptFailureSummary;
 import io.airbyte.config.AttemptSyncConfig;
 import io.airbyte.config.JobOutput;
+import jakarta.annotation.Nullable;
 import java.nio.file.Path;
 import java.util.Objects;
 import java.util.Optional;
-import javax.annotation.Nullable;
 
 /**
  * POJO / accessors for the attempt domain model.

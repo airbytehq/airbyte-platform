@@ -14,14 +14,14 @@ import static org.mockito.Mockito.when;
 import io.airbyte.commons.auth.config.AirbyteKeycloakConfiguration;
 import io.airbyte.config.Application;
 import io.airbyte.config.User;
+import jakarta.ws.rs.BadRequestException;
+import jakarta.ws.rs.core.Response;
 import java.net.URI;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
-import javax.ws.rs.BadRequestException;
-import javax.ws.rs.core.Response;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.keycloak.admin.client.Keycloak;
@@ -328,19 +328,19 @@ class ApplicationServiceKeycloakImplTests {
     assert apiKeys.isEmpty();
   }
 
-  private ClientRepresentation buildClientRepresentation(User user, String name, int index) {
+  private ClientRepresentation buildClientRepresentation(final User user, final String name, final int index) {
     final var clientRepresentation = new ClientRepresentation();
     clientRepresentation.setClientId(user.getUserId() + "-" + index);
     clientRepresentation.setName(name);
     clientRepresentation.setSecret("test");
-    var attributes = new HashMap<String, String>();
+    final var attributes = new HashMap<String, String>();
     attributes.put("user_id", user.getUserId().toString());
     attributes.put("client.secret.creation.time", "365");
     clientRepresentation.setAttributes(attributes);
     return clientRepresentation;
   }
 
-  private static String buildClientId(String userId, String index) {
+  private static String buildClientId(final String userId, final String index) {
     return userId + "-" + index;
   }
 

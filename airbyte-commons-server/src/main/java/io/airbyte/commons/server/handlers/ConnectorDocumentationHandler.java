@@ -16,11 +16,11 @@ import io.airbyte.config.persistence.ConfigNotFoundException;
 import io.airbyte.config.persistence.ConfigRepository;
 import io.airbyte.config.specs.RemoteDefinitionsProvider;
 import io.airbyte.validation.json.JsonValidationException;
+import jakarta.annotation.Nullable;
 import jakarta.inject.Singleton;
 import java.io.IOException;
 import java.util.Optional;
 import java.util.UUID;
-import javax.annotation.Nullable;
 
 /**
  * ConnectorDocumentationHandler. Javadocs suppressed because api docs should be used as source of
@@ -52,25 +52,15 @@ public class ConnectorDocumentationHandler {
     final String dockerRepo = actorDefinitionVersion.getDockerRepository();
     final String version = actorDefinitionVersion.getDockerImageTag();
 
-    // prioritize versioned over latest, then inapp over full
-    final Optional<String> versionedInappDocString = remoteDefinitionsProvider.getConnectorDocumentation(dockerRepo, version, true);
-    if (versionedInappDocString.isPresent()) {
-      return new ConnectorDocumentationRead().doc(versionedInappDocString.get());
+    // prioritize versioned over latest
+    final Optional<String> versionedDocString = remoteDefinitionsProvider.getConnectorDocumentation(dockerRepo, version);
+    if (versionedDocString.isPresent()) {
+      return new ConnectorDocumentationRead().doc(versionedDocString.get());
     }
 
-    final Optional<String> versionedFullDocString = remoteDefinitionsProvider.getConnectorDocumentation(dockerRepo, version, false);
-    if (versionedFullDocString.isPresent()) {
-      return new ConnectorDocumentationRead().doc(versionedFullDocString.get());
-    }
-
-    final Optional<String> latestInappDocString = remoteDefinitionsProvider.getConnectorDocumentation(dockerRepo, LATEST, true);
-    if (latestInappDocString.isPresent()) {
-      return new ConnectorDocumentationRead().doc(latestInappDocString.get());
-    }
-
-    final Optional<String> latestFullDocString = remoteDefinitionsProvider.getConnectorDocumentation(dockerRepo, LATEST, false);
-    if (latestFullDocString.isPresent()) {
-      return new ConnectorDocumentationRead().doc(latestFullDocString.get());
+    final Optional<String> latestDocString = remoteDefinitionsProvider.getConnectorDocumentation(dockerRepo, LATEST);
+    if (latestDocString.isPresent()) {
+      return new ConnectorDocumentationRead().doc(latestDocString.get());
     }
 
     throw new NotFoundException(String.format("Could not find any documentation for connector %s", dockerRepo));

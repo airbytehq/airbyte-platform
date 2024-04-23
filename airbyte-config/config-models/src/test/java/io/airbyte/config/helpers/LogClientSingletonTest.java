@@ -14,6 +14,7 @@ import static org.mockito.Mockito.when;
 
 import io.airbyte.config.Configs;
 import io.airbyte.config.Configs.WorkerEnvironment;
+import io.airbyte.config.storage.LocalStorageConfig;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.util.Collections;
@@ -24,17 +25,23 @@ class LogClientSingletonTest {
 
   private Configs configs;
   private CloudLogs mockLogClient;
+  private LogConfigs logConfigs;
+  private LocalStorageConfig storageConfig;
 
   @BeforeEach
   void setup() {
     configs = mock(Configs.class);
     mockLogClient = mock(CloudLogs.class);
+    logConfigs = mock(LogConfigs.class);
+    storageConfig = mock(LocalStorageConfig.class);
     LogClientSingleton.getInstance().logClient = mockLogClient;
   }
 
   @Test
   void testGetJobLogFileK8s() throws IOException {
     when(configs.getWorkerEnvironment()).thenReturn(WorkerEnvironment.KUBERNETES);
+    when(configs.getLogConfigs()).thenReturn(logConfigs);
+    when(logConfigs.getStorageConfig()).thenReturn(storageConfig);
     assertEquals(Collections.emptyList(),
         LogClientSingleton.getInstance().getJobLogFile(configs.getWorkerEnvironment(), configs.getLogConfigs(), Path.of("/job/1")));
     verify(mockLogClient).tailCloudLog(any(), eq("job-logging/job/1"), eq(LogClientSingleton.LOG_TAIL_SIZE));
@@ -42,6 +49,9 @@ class LogClientSingletonTest {
 
   @Test
   void testGetJobLogFileNullPath() throws IOException {
+    when(configs.getWorkerEnvironment()).thenReturn(WorkerEnvironment.KUBERNETES);
+    when(configs.getLogConfigs()).thenReturn(logConfigs);
+    when(logConfigs.getStorageConfig()).thenReturn(storageConfig);
     assertEquals(Collections.emptyList(),
         LogClientSingleton.getInstance().getJobLogFile(configs.getWorkerEnvironment(), configs.getLogConfigs(), null));
     verifyNoInteractions(mockLogClient);
@@ -49,6 +59,9 @@ class LogClientSingletonTest {
 
   @Test
   void testGetJobLogFileEmptyPath() throws IOException {
+    when(configs.getWorkerEnvironment()).thenReturn(WorkerEnvironment.KUBERNETES);
+    when(configs.getLogConfigs()).thenReturn(logConfigs);
+    when(logConfigs.getStorageConfig()).thenReturn(storageConfig);
     assertEquals(Collections.emptyList(),
         LogClientSingleton.getInstance().getJobLogFile(configs.getWorkerEnvironment(), configs.getLogConfigs(), Path.of("")));
     verifyNoInteractions(mockLogClient);

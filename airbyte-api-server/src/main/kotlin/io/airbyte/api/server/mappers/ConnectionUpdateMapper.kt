@@ -14,8 +14,8 @@ import io.airbyte.api.client.model.generated.ConnectionStatus
 import io.airbyte.api.client.model.generated.ConnectionUpdate
 import io.airbyte.api.client.model.generated.Geography
 import io.airbyte.api.server.helpers.ConnectionHelper
+import jakarta.validation.constraints.NotBlank
 import java.util.UUID
-import javax.validation.constraints.NotBlank
 
 /**
  * Mappers that help convert models from the public api to models from the config api.

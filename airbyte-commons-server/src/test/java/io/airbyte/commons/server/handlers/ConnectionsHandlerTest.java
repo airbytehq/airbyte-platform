@@ -91,6 +91,7 @@ import io.airbyte.config.JobConfig.ConfigType;
 import io.airbyte.config.JobOutput;
 import io.airbyte.config.JobOutput.OutputType;
 import io.airbyte.config.JobSyncConfig;
+import io.airbyte.config.RefreshConfig;
 import io.airbyte.config.Schedule;
 import io.airbyte.config.Schedule.TimeUnit;
 import io.airbyte.config.ScheduleData;
@@ -109,8 +110,12 @@ import io.airbyte.config.persistence.ActorDefinitionVersionHelper;
 import io.airbyte.config.persistence.ActorDefinitionVersionHelper.ActorDefinitionVersionWithOverrideStatus;
 import io.airbyte.config.persistence.ConfigNotFoundException;
 import io.airbyte.config.persistence.ConfigRepository;
+import io.airbyte.config.persistence.StreamGenerationRepository;
+import io.airbyte.config.persistence.domain.Generation;
+import io.airbyte.config.persistence.helper.CatalogGenerationSetter;
 import io.airbyte.config.secrets.JsonSecretsProcessor;
 import io.airbyte.config.secrets.SecretsRepositoryReader;
+import io.airbyte.data.helpers.ActorDefinitionVersionUpdater;
 import io.airbyte.data.services.DestinationService;
 import io.airbyte.data.services.SecretPersistenceConfigService;
 import io.airbyte.data.services.SourceService;
@@ -138,7 +143,9 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.time.LocalDate;
+import java.time.LocalTime;
 import java.time.ZoneId;
+import java.time.ZonedDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -212,6 +219,7 @@ class ConnectionsHandlerTest {
   private ConnectionHelper connectionHelper;
   private TestClient featureFlagClient;
   private ActorDefinitionVersionHelper actorDefinitionVersionHelper;
+  private ActorDefinitionVersionUpdater actorDefinitionVersionUpdater;
   private ConnectorDefinitionSpecificationHandler connectorDefinitionSpecificationHandler;
 
   private JsonSchemaValidator validator;
@@ -228,8 +236,11 @@ class ConnectionsHandlerTest {
 
   private DestinationHandler destinationHandler;
   private SourceHandler sourceHandler;
+  private StreamRefreshesHandler streamRefreshesHandler;
   private JobNotifier jobNotifier;
   private Job job;
+  private StreamGenerationRepository streamGenerationRepository;
+  private CatalogGenerationSetter catalogGenerationSetter;
 
   @SuppressWarnings("unchecked")
   @BeforeEach
@@ -315,6 +326,7 @@ class ConnectionsHandlerTest {
         .withGeography(Geography.US);
 
     jobPersistence = mock(JobPersistence.class);
+    streamRefreshesHandler = mock(StreamRefreshesHandler.class);
     configRepository = mock(ConfigRepository.class);
     uuidGenerator = mock(Supplier.class);
     workspaceHelper = mock(WorkspaceHelper.class);
@@ -322,6 +334,7 @@ class ConnectionsHandlerTest {
     eventRunner = mock(EventRunner.class);
     connectionHelper = mock(ConnectionHelper.class);
     actorDefinitionVersionHelper = mock(ActorDefinitionVersionHelper.class);
+    actorDefinitionVersionUpdater = mock(ActorDefinitionVersionUpdater.class);
     connectorDefinitionSpecificationHandler = mock(ConnectorDefinitionSpecificationHandler.class);
     validator = mock(JsonSchemaValidator.class);
     secretsProcessor = mock(JsonSecretsProcessor.class);
@@ -348,7 +361,8 @@ class ConnectionsHandlerTest {
             actorDefinitionVersionHelper,
             destinationService,
             featureFlagClient,
-            actorDefinitionHandlerHelper);
+            actorDefinitionHandlerHelper,
+            actorDefinitionVersionUpdater);
     sourceHandler = new SourceHandler(configRepository,
         secretsRepositoryReader,
         validator,
@@ -358,12 +372,15 @@ class ConnectionsHandlerTest {
         configurationUpdate,
         oAuthConfigSupplier,
         actorDefinitionVersionHelper, featureFlagClient, sourceService, workspaceService, secretPersistenceConfigService,
-        actorDefinitionHandlerHelper);
+        actorDefinitionHandlerHelper,
+        actorDefinitionVersionUpdater);
 
     matchSearchHandler = new MatchSearchHandler(configRepository, destinationHandler, sourceHandler);
     jobNotifier = mock(JobNotifier.class);
     featureFlagClient = mock(TestClient.class);
     job = mock(Job.class);
+    streamGenerationRepository = mock(StreamGenerationRepository.class);
+    catalogGenerationSetter = mock(CatalogGenerationSetter.class);
     when(workspaceHelper.getWorkspaceForSourceIdIgnoreExceptions(sourceId)).thenReturn(workspaceId);
     when(workspaceHelper.getWorkspaceForDestinationIdIgnoreExceptions(destinationId)).thenReturn(workspaceId);
     when(workspaceHelper.getWorkspaceForOperationIdIgnoreExceptions(operationId)).thenReturn(workspaceId);
@@ -376,6 +393,7 @@ class ConnectionsHandlerTest {
     @BeforeEach
     void setUp() throws JsonValidationException, ConfigNotFoundException, IOException {
       connectionsHandler = new ConnectionsHandler(
+          streamRefreshesHandler,
           jobPersistence,
           configRepository,
           uuidGenerator,
@@ -388,7 +406,9 @@ class ConnectionsHandlerTest {
           connectorDefinitionSpecificationHandler,
           jobNotifier,
           MAX_DAYS_OF_ONLY_FAILED_JOBS,
-          MAX_FAILURE_JOBS_IN_A_ROW);
+          MAX_FAILURE_JOBS_IN_A_ROW,
+          streamGenerationRepository,
+          catalogGenerationSetter);
 
       when(uuidGenerator.get()).thenReturn(standardSync.getConnectionId());
       final StandardSourceDefinition sourceDefinition = new StandardSourceDefinition()
@@ -417,6 +437,70 @@ class ConnectionsHandlerTest {
           .thenReturn(standardSync);
 
       final ConnectionRead actualConnectionRead = connectionsHandler.getConnection(standardSync.getConnectionId());
+
+      assertEquals(ConnectionHelpers.generateExpectedConnectionRead(standardSync), actualConnectionRead);
+    }
+
+    @Test
+    void testGetConnectionForJob() throws JsonValidationException, ConfigNotFoundException, IOException {
+      final Long jobId = 456L;
+
+      when(configRepository.getStandardSync(standardSync.getConnectionId()))
+          .thenReturn(standardSync);
+      when(jobPersistence.getJob(jobId)).thenReturn(new Job(
+          jobId,
+          ConfigType.SYNC,
+          null,
+          null,
+          null,
+          null,
+          null,
+          0,
+          0));
+      List<Generation> generations = List.of(new Generation("name", null, 1));
+      when(streamGenerationRepository.getMaxGenerationOfStreamsForConnectionId(standardSync.getConnectionId())).thenReturn(generations);
+      when(catalogGenerationSetter.updateCatalogWithGenerationAndSyncInformation(
+          standardSync.getCatalog(),
+          jobId,
+          List.of(),
+          generations)).thenReturn(standardSync.getCatalog());
+
+      final ConnectionRead actualConnectionRead = connectionsHandler.getConnectionForJob(standardSync.getConnectionId(), jobId);
+
+      assertEquals(ConnectionHelpers.generateExpectedConnectionRead(standardSync), actualConnectionRead);
+    }
+
+    @Test
+    void testGetConnectionForJobWithRefresh() throws JsonValidationException, ConfigNotFoundException, IOException {
+      final Long jobId = 456L;
+
+      List<io.airbyte.protocol.models.StreamDescriptor> refreshStreamDescriptors =
+          List.of(new io.airbyte.protocol.models.StreamDescriptor().withName("name"));
+
+      final JobConfig config = new JobConfig()
+          .withRefresh(new RefreshConfig().withStreamsToRefresh(refreshStreamDescriptors));
+
+      when(configRepository.getStandardSync(standardSync.getConnectionId()))
+          .thenReturn(standardSync);
+      when(jobPersistence.getJob(jobId)).thenReturn(new Job(
+          jobId,
+          ConfigType.REFRESH,
+          null,
+          config,
+          null,
+          null,
+          null,
+          0,
+          0));
+      List<Generation> generations = List.of(new Generation("name", null, 1));
+      when(streamGenerationRepository.getMaxGenerationOfStreamsForConnectionId(standardSync.getConnectionId())).thenReturn(generations);
+      when(catalogGenerationSetter.updateCatalogWithGenerationAndSyncInformation(
+          standardSync.getCatalog(),
+          jobId,
+          refreshStreamDescriptors,
+          generations)).thenReturn(standardSync.getCatalog());
+
+      final ConnectionRead actualConnectionRead = connectionsHandler.getConnectionForJob(standardSync.getConnectionId(), jobId);
 
       assertEquals(ConnectionHelpers.generateExpectedConnectionRead(standardSync), actualConnectionRead);
     }
@@ -634,6 +718,7 @@ class ConnectionsHandlerTest {
       connectionsHandler.deleteConnection(connectionId);
 
       verify(connectionHelper).deleteConnection(connectionId);
+      verify(streamRefreshesHandler).deleteRefreshesForConnection(connectionId);
     }
 
     @Test
@@ -711,7 +796,6 @@ class ConnectionsHandlerTest {
         assertFalse(internalOperationResult.getSucceeded());
         verify(configRepository, Mockito.never()).writeStandardSync(any());
         verify(jobNotifier, Mockito.never()).autoDisableConnection(any(), any());
-        verify(jobNotifier, times(1)).notifyJobByEmail(any(), any(), any(), any());
         verify(jobNotifier, times(1)).autoDisableConnectionWarning(any(), any());
       }
 
@@ -731,7 +815,6 @@ class ConnectionsHandlerTest {
         assertFalse(internalOperationResult.getSucceeded());
         verify(configRepository, Mockito.never()).writeStandardSync(any());
         verify(jobNotifier, Mockito.never()).autoDisableConnection(any(), any());
-        verify(jobNotifier, times(1)).notifyJobByEmail(any(), any(), any(), any());
         verify(jobNotifier, times(1)).autoDisableConnectionWarning(any(), any());
       }
 
@@ -753,7 +836,6 @@ class ConnectionsHandlerTest {
         assertFalse(internalOperationResult.getSucceeded());
         verify(configRepository, Mockito.never()).writeStandardSync(any());
         verify(jobNotifier, Mockito.never()).autoDisableConnection(any(), any());
-        verify(jobNotifier, Mockito.never()).notifyJobByEmail(any(), any(), any(), any());
         verify(jobNotifier, Mockito.never()).autoDisableConnectionWarning(any(), any());
       }
 
@@ -775,7 +857,6 @@ class ConnectionsHandlerTest {
         assertFalse(internalOperationResult.getSucceeded());
         verify(configRepository, Mockito.never()).writeStandardSync(any());
         verify(jobNotifier, Mockito.never()).autoDisableConnection(any(), any());
-        verify(jobNotifier, Mockito.never()).notifyJobByEmail(any(), any(), any(), any());
         verify(jobNotifier, Mockito.never()).autoDisableConnectionWarning(any(), any());
       }
 
@@ -794,7 +875,6 @@ class ConnectionsHandlerTest {
         assertFalse(internalOperationResult.getSucceeded());
         verify(configRepository, Mockito.never()).writeStandardSync(any());
         verify(jobNotifier, Mockito.never()).autoDisableConnection(any(), any());
-        verify(jobNotifier, Mockito.never()).notifyJobByEmail(any(), any(), any(), any());
         verify(jobNotifier, Mockito.never()).autoDisableConnectionWarning(any(), any());
       }
 
@@ -834,7 +914,6 @@ class ConnectionsHandlerTest {
         assertFalse(internalOperationResult.getSucceeded());
         verify(configRepository, Mockito.never()).writeStandardSync(any());
         verify(jobNotifier, Mockito.never()).autoDisableConnection(any(), any());
-        verify(jobNotifier, Mockito.never()).notifyJobByEmail(any(), any(), any(), any());
         verify(jobNotifier, Mockito.never()).autoDisableConnectionWarning(any(), any());
 
       }
@@ -850,7 +929,6 @@ class ConnectionsHandlerTest {
         assertFalse(internalOperationResult.getSucceeded());
         verify(configRepository, Mockito.never()).writeStandardSync(any());
         verify(jobNotifier, Mockito.never()).autoDisableConnection(any(), any());
-        verify(jobNotifier, Mockito.never()).notifyJobByEmail(any(), any(), any(), any());
         verify(jobNotifier, Mockito.never()).autoDisableConnectionWarning(any(), any());
       }
 
@@ -883,7 +961,6 @@ class ConnectionsHandlerTest {
         assertFalse(internalOperationResult.getSucceeded());
         verify(configRepository, Mockito.never()).writeStandardSync(any());
         verify(jobNotifier, Mockito.never()).autoDisableConnection(any(), any());
-        verify(jobNotifier, Mockito.never()).notifyJobByEmail(any(), any(), any(), any());
       }
 
       private void verifyDisabled() throws IOException {
@@ -891,7 +968,6 @@ class ConnectionsHandlerTest {
             argThat(standardSync -> (standardSync.getStatus().equals(Status.INACTIVE) && standardSync.getConnectionId().equals(connectionId))));
         verify(configRepository, times(1)).writeStandardSync(standardSync);
         verify(jobNotifier, times(1)).autoDisableConnection(eq(job), any());
-        verify(jobNotifier, times(1)).notifyJobByEmail(any(), any(), eq(job), any());
         verify(jobNotifier, Mockito.never()).autoDisableConnectionWarning(any(), any());
       }
 
@@ -1495,6 +1571,7 @@ class ConnectionsHandlerTest {
     @BeforeEach
     void setUp() {
       connectionsHandler = new ConnectionsHandler(
+          streamRefreshesHandler,
           jobPersistence,
           configRepository,
           uuidGenerator,
@@ -1507,7 +1584,9 @@ class ConnectionsHandlerTest {
           connectorDefinitionSpecificationHandler,
           jobNotifier,
           MAX_DAYS_OF_ONLY_FAILED_JOBS,
-          MAX_FAILURE_JOBS_IN_A_ROW);
+          MAX_FAILURE_JOBS_IN_A_ROW,
+          streamGenerationRepository,
+          catalogGenerationSetter);
     }
 
     private Attempt generateMockAttempt(final Instant attemptTime, final long recordsSynced) {
@@ -1584,8 +1663,13 @@ class ConnectionsHandlerTest {
       @DisplayName("Aggregates data correctly")
       void testDataHistoryAggregation() throws IOException {
         final UUID connectionId = UUID.randomUUID();
-        final Instant endTime = Instant.now();
-        final Instant startTime = endTime.minus(29, ChronoUnit.DAYS);
+
+        final ZonedDateTime endTimeZoned = ZonedDateTime.now(ZoneId.of(TIMEZONE_LOS_ANGELES)).with(LocalTime.MAX);
+        final Instant endTime = endTimeZoned.toInstant();
+
+        final ZonedDateTime startTimeZoned = endTimeZoned.minusDays(29).with(LocalTime.MIN);
+        final Instant startTime = startTimeZoned.toInstant();
+
         final long attempt1Records = 100L;
         final long attempt2Records = 150L;
         final long attempt3Records = 200L;
@@ -1608,7 +1692,7 @@ class ConnectionsHandlerTest {
             attempt.getJobInfo().getId(),
             attempt.getAttempt().getOutput().map(output -> output.getSync().getStandardSyncSummary().getTotalStats().getRecordsCommitted())
                 .orElse(0L),
-            attempt.getAttempt().getEndedAtInSecond().map(endedAt -> endedAt).orElse(0L))).toList();
+            attempt.getAttempt().getEndedAtInSecond().orElse(0L))).toList();
 
         when(jobPersistence.listRecordsCommittedForConnectionAfterTimestamp(eq(connectionId), any(Instant.class)))
             .thenReturn(jobsAndRecords);
@@ -1637,10 +1721,9 @@ class ConnectionsHandlerTest {
       @DisplayName("Handles empty history response")
       void testStreamHistoryWithEmptyResponse() throws IOException {
         final UUID connectionId = UUID.randomUUID();
-        final String timezone = "America/Los_Angeles";
         final ConnectionStreamHistoryRequestBody requestBody = new ConnectionStreamHistoryRequestBody()
             .connectionId(connectionId)
-            .timezone(timezone);
+            .timezone(TIMEZONE_LOS_ANGELES);
 
         when(jobPersistence.listAttemptsForConnectionAfterTimestamp(eq(connectionId), eq(ConfigType.SYNC), any(Instant.class)))
             .thenReturn(Collections.emptyList());
@@ -1741,6 +1824,7 @@ class ConnectionsHandlerTest {
     @BeforeEach
     void setUp() {
       connectionsHandler = new ConnectionsHandler(
+          streamRefreshesHandler,
           jobPersistence,
           configRepository,
           uuidGenerator,
@@ -1753,7 +1837,9 @@ class ConnectionsHandlerTest {
           connectorDefinitionSpecificationHandler,
           jobNotifier,
           MAX_DAYS_OF_ONLY_FAILED_JOBS,
-          MAX_FAILURE_JOBS_IN_A_ROW);
+          MAX_FAILURE_JOBS_IN_A_ROW,
+          streamGenerationRepository,
+          catalogGenerationSetter);
     }
 
     @Test
@@ -2143,8 +2229,9 @@ class ConnectionsHandlerTest {
           new Job(0L, JobConfig.ConfigType.SYNC, connectionId.toString(), null, null, JobStatus.RUNNING, 1001L, 1000L, 1002L),
           new Job(0L, JobConfig.ConfigType.SYNC, connectionId.toString(), null, List.of(failedAttempt), JobStatus.FAILED, 901L, 900L, 902L),
           new Job(0L, JobConfig.ConfigType.SYNC, connectionId.toString(), null, null, JobStatus.SUCCEEDED, 801L, 800L, 802L));
-      when(jobPersistence.listJobs(Set.of(JobConfig.ConfigType.SYNC, JobConfig.ConfigType.RESET_CONNECTION), connectionId.toString(), 10))
-          .thenReturn(jobs);
+      when(jobPersistence.listJobs(REPLICATION_TYPES,
+          connectionId.toString(), 10))
+              .thenReturn(jobs);
       final ConnectionStatusesRequestBody req = new ConnectionStatusesRequestBody().connectionIds(List.of(connectionId));
       final List<ConnectionStatusRead> status = connectionsHandler.getConnectionStatuses(req);
       assertEquals(1, status.size());
@@ -2224,6 +2311,7 @@ class ConnectionsHandlerTest {
       when(workspaceHelper.getWorkspaceForSourceIdIgnoreExceptions(SOURCE_ID)).thenReturn(WORKSPACE_ID);
       when(workspaceHelper.getWorkspaceForDestinationIdIgnoreExceptions(DESTINATION_ID)).thenReturn(WORKSPACE_ID);
       connectionsHandler = new ConnectionsHandler(
+          streamRefreshesHandler,
           jobPersistence,
           configRepository,
           uuidGenerator,
@@ -2236,7 +2324,9 @@ class ConnectionsHandlerTest {
           connectorDefinitionSpecificationHandler,
           jobNotifier,
           MAX_DAYS_OF_ONLY_FAILED_JOBS,
-          MAX_FAILURE_JOBS_IN_A_ROW);
+          MAX_FAILURE_JOBS_IN_A_ROW,
+          streamGenerationRepository,
+          catalogGenerationSetter);
     }
 
     @Test

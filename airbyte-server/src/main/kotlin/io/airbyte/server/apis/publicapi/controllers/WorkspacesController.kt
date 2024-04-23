@@ -5,14 +5,16 @@
 package io.airbyte.server.apis.publicapi.controllers
 
 import io.airbyte.api.model.generated.PermissionType
+import io.airbyte.commons.auth.OrganizationAuthRole
+import io.airbyte.commons.server.authorization.ApiAuthorizationHelper
+import io.airbyte.commons.server.authorization.Scope
 import io.airbyte.commons.server.scheduling.AirbyteTaskExecutors
 import io.airbyte.commons.server.support.CurrentUserService
+import io.airbyte.config.persistence.OrganizationPersistence.DEFAULT_ORGANIZATION_ID
 import io.airbyte.public_api.generated.PublicWorkspacesApi
 import io.airbyte.public_api.model.generated.WorkspaceCreateRequest
 import io.airbyte.public_api.model.generated.WorkspaceOAuthCredentialsRequest
 import io.airbyte.public_api.model.generated.WorkspaceUpdateRequest
-import io.airbyte.server.apis.publicapi.authorization.AirbyteApiAuthorizationHelper
-import io.airbyte.server.apis.publicapi.authorization.Scope
 import io.airbyte.server.apis.publicapi.constants.WORKSPACES_PATH
 import io.airbyte.server.apis.publicapi.services.WorkspaceService
 import io.github.oshai.kotlinlogging.KotlinLogging
@@ -21,27 +23,27 @@ import io.micronaut.http.annotation.Patch
 import io.micronaut.scheduling.annotation.ExecuteOn
 import io.micronaut.security.annotation.Secured
 import io.micronaut.security.rules.SecurityRule
+import jakarta.ws.rs.Path
+import jakarta.ws.rs.core.Response
 import java.util.UUID
-import javax.ws.rs.Path
-import javax.ws.rs.core.Response
 
 val logger = KotlinLogging.logger {}
 
 @Controller(WORKSPACES_PATH)
 @Secured(SecurityRule.IS_AUTHENTICATED)
 open class WorkspacesController(
-  private val workspaceService: WorkspaceService,
-  private val airbyteApiAuthorizationHelper: AirbyteApiAuthorizationHelper,
+  protected val workspaceService: WorkspaceService,
+  private val apiAuthorizationHelper: ApiAuthorizationHelper,
   private val currentUserService: CurrentUserService,
 ) : PublicWorkspacesApi {
   @Path("/{workspaceId}/oauthCredentials")
-  @ExecuteOn(AirbyteTaskExecutors.IO)
+  @ExecuteOn(AirbyteTaskExecutors.PUBLIC_API)
   override fun createOrUpdateWorkspaceOAuthCredentials(
     workspaceId: UUID?,
     workspaceOAuthCredentialsRequest: WorkspaceOAuthCredentialsRequest?,
   ): Response {
     val userId: UUID = currentUserService.currentUser.userId
-    airbyteApiAuthorizationHelper.checkWorkspacePermissions(
+    apiAuthorizationHelper.checkWorkspacePermissions(
       listOf(workspaceId!!.toString()),
       Scope.WORKSPACE,
       userId,
@@ -53,17 +55,22 @@ open class WorkspacesController(
     )
   }
 
-  @ExecuteOn(AirbyteTaskExecutors.IO)
+  @ExecuteOn(AirbyteTaskExecutors.PUBLIC_API)
   override fun publicCreateWorkspace(workspaceCreateRequest: WorkspaceCreateRequest?): Response {
-    // As long as user is authenticated, they can proceed.
+    // Now that we have orgs everywhere, ensure the user is at least an organization editor
+    apiAuthorizationHelper.ensureUserHasAnyRequiredRoleOrThrow(
+      Scope.ORGANIZATION,
+      listOf(DEFAULT_ORGANIZATION_ID.toString()),
+      setOf(OrganizationAuthRole.ORGANIZATION_EDITOR),
+    )
     return workspaceService.controllerCreateWorkspace(workspaceCreateRequest!!)
   }
 
   @Path("/{workspaceId}")
-  @ExecuteOn(AirbyteTaskExecutors.IO)
+  @ExecuteOn(AirbyteTaskExecutors.PUBLIC_API)
   override fun publicDeleteWorkspace(workspaceId: UUID?): Response {
     val userId: UUID = currentUserService.currentUser.userId
-    airbyteApiAuthorizationHelper.checkWorkspacePermissions(
+    apiAuthorizationHelper.checkWorkspacePermissions(
       listOf(workspaceId!!.toString()),
       Scope.WORKSPACE,
       userId,
@@ -73,10 +80,10 @@ open class WorkspacesController(
   }
 
   @Path("/{workspaceId}")
-  @ExecuteOn(AirbyteTaskExecutors.IO)
+  @ExecuteOn(AirbyteTaskExecutors.PUBLIC_API)
   override fun publicGetWorkspace(workspaceId: UUID?): Response {
     val userId: UUID = currentUserService.currentUser.userId
-    airbyteApiAuthorizationHelper.checkWorkspacePermissions(
+    apiAuthorizationHelper.checkWorkspacePermissions(
       listOf(workspaceId!!.toString()),
       Scope.WORKSPACE,
       userId,
@@ -85,7 +92,7 @@ open class WorkspacesController(
     return workspaceService.controllerGetWorkspace(workspaceId)
   }
 
-  @ExecuteOn(AirbyteTaskExecutors.IO)
+  @ExecuteOn(AirbyteTaskExecutors.PUBLIC_API)
   override fun publicListWorkspaces(
     workspaceIds: MutableList<UUID>?,
     includeDeleted: Boolean?,
@@ -94,7 +101,7 @@ open class WorkspacesController(
   ): Response {
     val userId: UUID = currentUserService.currentUser.userId
     logger.debug { "listing workspaces: $workspaceIds" }
-    airbyteApiAuthorizationHelper.checkWorkspacePermissions(
+    apiAuthorizationHelper.checkWorkspacePermissions(
       workspaceIds?.map { it.toString() } ?: emptyList(),
       Scope.WORKSPACES,
       userId,
@@ -110,13 +117,13 @@ open class WorkspacesController(
 
   @Patch
   @Path("/{workspaceId}")
-  @ExecuteOn(AirbyteTaskExecutors.IO)
+  @ExecuteOn(AirbyteTaskExecutors.PUBLIC_API)
   override fun publicUpdateWorkspace(
     workspaceId: UUID?,
     workspaceUpdateRequest: WorkspaceUpdateRequest?,
   ): Response {
     val userId: UUID = currentUserService.currentUser.userId
-    airbyteApiAuthorizationHelper.checkWorkspacePermissions(
+    apiAuthorizationHelper.checkWorkspacePermissions(
       listOf(workspaceId!!.toString()),
       Scope.WORKSPACE,
       userId,

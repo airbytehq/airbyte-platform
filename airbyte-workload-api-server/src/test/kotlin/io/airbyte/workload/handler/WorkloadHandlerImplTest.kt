@@ -1,5 +1,6 @@
 package io.airbyte.workload.handler
 
+import io.airbyte.featureflag.TestClient
 import io.airbyte.workload.api.domain.WorkloadLabel
 import io.airbyte.workload.errors.ConflictException
 import io.airbyte.workload.errors.InvalidStatusTransitionException
@@ -41,6 +42,17 @@ class WorkloadHandlerImplTest {
   }
 
   @Test
+  fun `test active statuses are complete`() {
+    assertEquals(
+      setOf(WorkloadStatus.PENDING, WorkloadStatus.CLAIMED, WorkloadStatus.LAUNCHED, WorkloadStatus.RUNNING),
+      WorkloadHandlerImpl.ACTIVE_STATUSES.toSet(),
+    )
+    assertFalse(WorkloadHandlerImpl.ACTIVE_STATUSES.contains(WorkloadStatus.CANCELLED))
+    assertFalse(WorkloadHandlerImpl.ACTIVE_STATUSES.contains(WorkloadStatus.FAILURE))
+    assertFalse(WorkloadHandlerImpl.ACTIVE_STATUSES.contains(WorkloadStatus.SUCCESS))
+  }
+
+  @Test
   fun `test get workload`() {
     val domainWorkload =
       Workload(
@@ -74,6 +86,7 @@ class WorkloadHandlerImplTest {
     val workloadLabels = mutableListOf(workloadLabel1, workloadLabel2)
 
     every { workloadRepository.existsById(WORKLOAD_ID) }.returns(false)
+    every { workloadRepository.searchByMutexKeyAndStatusInList("mutex-this", WorkloadHandlerImpl.ACTIVE_STATUSES) }.returns(listOf())
     every { workloadRepository.save(any()) }.returns(
       Fixtures.workload(),
     )
@@ -115,6 +128,43 @@ class WorkloadHandlerImplTest {
     every { workloadRepository.existsById(WORKLOAD_ID) }.returns(true)
     assertThrows<ConflictException> {
       workloadHandler.createWorkload(WORKLOAD_ID, null, "", "", "US", "mutex-this", io.airbyte.config.WorkloadType.SYNC, UUID.randomUUID(), now)
+    }
+  }
+
+  @Test
+  fun `test create workload mutex conflict`() {
+    val workloadIdWithSuccessfulFail = "workload-id-with-successful-fail"
+    val workloadIdWithFailedFail = "workload-id-with-failed-fail"
+    val duplWorkloads =
+      listOf(
+        Fixtures.workload(workloadIdWithSuccessfulFail, createdAt = OffsetDateTime.now().minusSeconds(5)),
+        Fixtures.workload(workloadIdWithFailedFail, createdAt = OffsetDateTime.now().minusSeconds(10)),
+      )
+    val newWorkload = Fixtures.workload(WORKLOAD_ID)
+    every { workloadRepository.existsById(WORKLOAD_ID) }.returns(false)
+    every {
+      workloadHandler.failWorkload(workloadIdWithSuccessfulFail, any(), any())
+    }.answers {}
+    every {
+      workloadHandler.failWorkload(workloadIdWithFailedFail, any(), any())
+    }.throws(InvalidStatusTransitionException("$workloadIdWithFailedFail"))
+    every { workloadRepository.save(any()) }.returns(newWorkload)
+    every {
+      workloadRepository.searchByMutexKeyAndStatusInList(
+        "mutex-this",
+        WorkloadHandlerImpl.ACTIVE_STATUSES,
+      )
+    }.returns(duplWorkloads + listOf(newWorkload))
+
+    workloadHandler.createWorkload(WORKLOAD_ID, null, "", "", "US", "mutex-this", io.airbyte.config.WorkloadType.SYNC, UUID.randomUUID(), now)
+    verify {
+      workloadHandler.failWorkload(workloadIdWithFailedFail, any(), any())
+      workloadHandler.failWorkload(workloadIdWithSuccessfulFail, any(), any())
+      workloadRepository.save(
+        match {
+          it.id == WORKLOAD_ID && it.mutexKey == "mutex-this"
+        },
+      )
     }
   }
 
@@ -329,7 +379,7 @@ class WorkloadHandlerImplTest {
   }
 
   @ParameterizedTest
-  @EnumSource(value = WorkloadStatus::class, names = ["SUCCESS", "PENDING", "CANCELLED"])
+  @EnumSource(value = WorkloadStatus::class, names = ["SUCCESS", "CANCELLED"])
   fun `test fail workload in inactive status`(workloadStatus: WorkloadStatus) {
     every { workloadRepository.findById(WORKLOAD_ID) }.returns(
       Optional.of(
@@ -506,7 +556,7 @@ class WorkloadHandlerImplTest {
   }
 
   @ParameterizedTest
-  @EnumSource(value = WorkloadStatus::class, names = ["PENDING", "RUNNING", "SUCCESS", "CANCELLED", "FAILURE"])
+  @EnumSource(value = WorkloadStatus::class, names = ["PENDING", "SUCCESS", "CANCELLED", "FAILURE"])
   fun `test set workload status to launched when is not in claimed state`(workloadStatus: WorkloadStatus) {
     every { workloadRepository.findById(WORKLOAD_ID) }.returns(
       Optional.of(
@@ -535,6 +585,24 @@ class WorkloadHandlerImplTest {
 
     workloadHandler.setWorkloadStatusToLaunched(WORKLOAD_ID, now.plusMinutes(10))
     verify { workloadRepository.update(eq(WORKLOAD_ID), eq(WorkloadStatus.LAUNCHED), eq(now.plusMinutes(10))) }
+  }
+
+  @ParameterizedTest
+  @EnumSource(value = WorkloadStatus::class, names = ["LAUNCHED", "RUNNING"])
+  fun `test set workload status to launched is a noop`(workloadStatus: WorkloadStatus) {
+    every { workloadRepository.findById(WORKLOAD_ID) }.returns(
+      Optional.of(
+        Fixtures.workload(
+          id = WORKLOAD_ID,
+          status = workloadStatus,
+        ),
+      ),
+    )
+
+    every { workloadRepository.update(any(), ofType(WorkloadStatus::class), any()) } just Runs
+
+    workloadHandler.setWorkloadStatusToLaunched(WORKLOAD_ID, now.plusMinutes(10))
+    verify(exactly = 0) { workloadRepository.update(eq(WORKLOAD_ID), eq(WorkloadStatus.LAUNCHED), eq(now.plusMinutes(10))) }
   }
 
   @Test
@@ -574,7 +642,7 @@ class WorkloadHandlerImplTest {
 
   @Test
   fun `offsetDateTime method should always return current time`() {
-    val workloadHandlerImpl = WorkloadHandlerImpl(mockk<WorkloadRepository>())
+    val workloadHandlerImpl = WorkloadHandlerImpl(mockk<WorkloadRepository>(), TestClient())
     val offsetDateTime = workloadHandlerImpl.offsetDateTime()
     Thread.sleep(10)
     val offsetDateTimeAfter10Ms = workloadHandlerImpl.offsetDateTime()
@@ -585,7 +653,7 @@ class WorkloadHandlerImplTest {
     val workloadRepository = mockk<WorkloadRepository>()
     const val WORKLOAD_ID = "test"
     const val DATAPLANE_ID = "dataplaneId"
-    val workloadHandler = spyk(WorkloadHandlerImpl(workloadRepository))
+    val workloadHandler = spyk(WorkloadHandlerImpl(workloadRepository, TestClient(mapOf("platform.enforce-mutex-key-on-create" to true))))
 
     fun workload(
       id: String = WORKLOAD_ID,
@@ -597,6 +665,7 @@ class WorkloadHandlerImplTest {
       geography: String = "US",
       mutexKey: String = "",
       type: WorkloadType = WorkloadType.SYNC,
+      createdAt: OffsetDateTime = OffsetDateTime.now(),
     ): Workload =
       Workload(
         id = id,
@@ -608,6 +677,7 @@ class WorkloadHandlerImplTest {
         geography = geography,
         mutexKey = mutexKey,
         type = type,
+        createdAt = createdAt,
       )
   }
 }

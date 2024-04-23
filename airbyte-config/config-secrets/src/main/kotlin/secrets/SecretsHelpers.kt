@@ -497,52 +497,6 @@ object SecretsHelpers {
   }
 
   /**
-   * This method takes in the key (JSON key or HMAC key) of a workspace service account as a secret
-   * and generates a co-ordinate for the secret so that the secret can be written in secret
-   * persistence at the generated co-ordinate.
-   *
-   * @param newSecret The JSON key or HMAC key value
-   * @param secretReader To read the value from secret persistence for comparison with the new value
-   * @param workspaceId of the service account
-   * @param uuidSupplier provided to allow a test case to produce known UUIDs in order for easy *
-   * fixture creation.
-   * @param oldSecretCoordinate a nullable full coordinate (base+version) retrieved from the *
-   * previous config
-   * @param keyType HMAC ot JSON key
-   * @return a coordinate (versioned reference to where the secret is stored in the persistence)
-   */
-  fun convertServiceAccountCredsToSecret(
-    newSecret: String,
-    secretReader: ReadOnlySecretPersistence,
-    workspaceId: UUID,
-    uuidSupplier: Supplier<UUID>,
-    oldSecretCoordinate: JsonNode?,
-    keyType: String,
-  ): SecretCoordinateToPayload {
-    val oldSecretFullCoordinate =
-      if (oldSecretCoordinate != null && oldSecretCoordinate.has(COORDINATE_FIELD)) oldSecretCoordinate[COORDINATE_FIELD].asText() else null
-    val coordinateForStagingConfig: SecretCoordinate =
-      getSecretCoordinate(
-        "service_account_" + keyType + "_",
-        newSecret,
-        secretReader,
-        workspaceId,
-        uuidSupplier,
-        oldSecretFullCoordinate,
-      )
-    return SecretCoordinateToPayload(
-      coordinateForStagingConfig,
-      newSecret,
-      Jsons.jsonNode<Map<String, String>>(
-        java.util.Map.of(
-          COORDINATE_FIELD,
-          coordinateForStagingConfig.fullCoordinate,
-        ),
-      ),
-    )
-  }
-
-  /**
    * Takes in the secret coordinate in form of a JSON and fetches the secret from the store.
    *
    * @param secretCoordinateAsJson The co-ordinate at which we expect the secret value to be present

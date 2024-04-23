@@ -37,7 +37,8 @@ export const ParameterizedRequestsSection: React.FC<ParameterizedRequestsSection
       docLink={links.connectorBuilderParameterizedRequests}
       label={formatMessage({ id: "connectorBuilder.parameterizedRequests.label" })}
       tooltip={formatMessage({ id: "connectorBuilder.parameterizedRequests.tooltip" })}
-      toggleConfig={{
+      inputsConfig={{
+        toggleable: true,
         path: streamFieldPath("parameterizedRequests"),
         defaultValue: [EMPTY_PARAMETERIZED_REQUEST],
       }}

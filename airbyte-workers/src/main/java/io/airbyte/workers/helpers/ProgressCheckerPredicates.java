@@ -5,9 +5,9 @@
 package io.airbyte.workers.helpers;
 
 import io.airbyte.api.client.model.generated.AttemptStats;
+import jakarta.annotation.Nonnull;
 import jakarta.inject.Singleton;
 import java.util.Objects;
-import javax.annotation.Nonnull;
 
 /**
  * Simple predicates for judging progress based on domain data.

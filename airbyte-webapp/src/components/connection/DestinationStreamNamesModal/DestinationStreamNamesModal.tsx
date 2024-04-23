@@ -70,21 +70,16 @@ const destinationStreamNamesValidationSchema = yup.object().shape({
 
 interface DestinationStreamNamesModalProps {
   initialValues: Pick<FormConnectionFormValues, "prefix">;
-  onCloseModal: () => void;
-  onSubmit: (value: DestinationStreamNamesFormValues) => void;
+  onCancel: () => void;
+  onSubmit: (value: DestinationStreamNamesFormValues) => Promise<void>;
 }
 
 export const DestinationStreamNamesModal: React.FC<DestinationStreamNamesModalProps> = ({
   initialValues,
-  onCloseModal,
+  onCancel,
   onSubmit,
 }) => {
   const { formatMessage } = useIntl();
-
-  const onSubmitCallback = async (values: DestinationStreamNamesFormValues) => {
-    onCloseModal();
-    onSubmit(values);
-  };
 
   return (
     <Form
@@ -94,7 +89,7 @@ export const DestinationStreamNamesModal: React.FC<DestinationStreamNamesModalPr
         prefix: initialValues.prefix ?? "",
       }}
       schema={destinationStreamNamesValidationSchema}
-      onSubmit={onSubmitCallback}
+      onSubmit={onSubmit}
     >
       <ModalBody padded>
         <FlexContainer direction="column">
@@ -135,7 +130,7 @@ export const DestinationStreamNamesModal: React.FC<DestinationStreamNamesModalPr
       <ModalFooter>
         <ModalFormSubmissionButtons
           submitKey="form.apply"
-          onCancelClickCallback={onCloseModal}
+          onCancelClickCallback={onCancel}
           additionalCancelButtonProps={{ "data-testid": "destination-stream-names-cancel-button" }}
           additionalSubmitButtonProps={{ "data-testid": "destination-stream-names-apply-button" }}
         />

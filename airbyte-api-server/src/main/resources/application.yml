@@ -1,6 +1,17 @@
 micronaut:
   application:
     name: airbyte-api-server
+  caches:
+    # used by the analytics tracking client to cache calls to resolve the deployment and identity (workspace) for
+    # track events
+    analytics-tracking-deployments:
+      charset: "UTF-8"
+      expire-after-access: 10m
+    analytics-tracking-identity:
+      charset: "UTF-8"
+      expire-after-access: 10m
+  env:
+    cloud-deduction: true
   executors:
     health:
       type: fixed
@@ -62,9 +73,9 @@ airbyte:
     persistence: ${SECRET_PERSISTENCE:TESTING_CONFIG_DB_TABLE}
     store:
       aws:
-        access-key: ${AWS_ACCESS_KEY:}
-        secret-key: ${AWS_SECRET_ACCESS_KEY:}
-        region: ${AWS_REGION:}
+        access-key: ${AWS_SECRET_MANAGER_ACCESS_KEY_ID:}
+        secret-key: ${AWS_SECRET_MANAGER_SECRET_ACCESS_KEY:}
+        region: ${AWS_SECRET_MANAGER_REGION:}
       gcp:
         credentials: ${SECRET_STORE_GCP_CREDENTIALS:}
         project-id: ${SECRET_STORE_GCP_PROJECT_ID:}
@@ -88,6 +99,9 @@ airbyte:
 
 endpoints:
   beans:
+    enabled: true
+    sensitive: false
+  caches:
     enabled: true
     sensitive: false
   env:

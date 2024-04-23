@@ -9,7 +9,6 @@ import { LoadingPage } from "components";
 import { Button } from "components/ui/Button";
 import { FlexContainer } from "components/ui/Flex";
 import { Heading } from "components/ui/Heading";
-import { Icon } from "components/ui/Icon";
 import { ExternalLink } from "components/ui/Link";
 import { Markdown } from "components/ui/Markdown";
 
@@ -49,7 +48,7 @@ const ImgRelativePathReplacer: React.FC<
 
   if (src === undefined || actorType === undefined) {
     newSrc = src;
-  } else if (src.startsWith("../")) {
+  } else if (src.startsWith("../") || src.startsWith("./")) {
     if (isDev) {
       newSrc =
         actorType === "source" ? path.join(LOCAL_DOCS_SOURCES_PATH, src) : path.join(LOCAL_DOCS_DESTINATIONS_PATH, src);
@@ -74,7 +73,7 @@ const LinkRelativePathReplacer: React.FC<
         {children}
       </a>
     );
-  } else if (href && href.startsWith("../")) {
+  } else if (href && (href.startsWith("../") || href.startsWith("./"))) {
     const docPath = href.replace(/\.md$/, "");
     const url =
       actorType === "source"
@@ -179,7 +178,7 @@ export const DocumentationPanel: React.FC = () => {
           <FormattedMessage id="connector.setupGuide" />
         </Heading>
         <ExternalLink href={selectedConnectorDefinition.documentationUrl}>
-          <Button variant="secondary" icon={<Icon type="share" />}>
+          <Button variant="secondary" icon="share">
             <FormattedMessage id="connector.setupGuide.fullDocs" />
           </Button>
         </ExternalLink>

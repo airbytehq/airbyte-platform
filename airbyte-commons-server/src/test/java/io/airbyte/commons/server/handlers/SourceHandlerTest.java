@@ -54,6 +54,7 @@ import io.airbyte.config.persistence.ConfigRepository;
 import io.airbyte.config.secrets.JsonSecretsProcessor;
 import io.airbyte.config.secrets.SecretCoordinate;
 import io.airbyte.config.secrets.SecretsRepositoryReader;
+import io.airbyte.data.helpers.ActorDefinitionVersionUpdater;
 import io.airbyte.data.services.SecretPersistenceConfigService;
 import io.airbyte.data.services.SourceService;
 import io.airbyte.data.services.WorkspaceService;
@@ -95,6 +96,7 @@ class SourceHandlerTest {
   private ConnectorSpecification connectorSpecification;
   private OAuthConfigSupplier oAuthConfigSupplier;
   private ActorDefinitionVersionHelper actorDefinitionVersionHelper;
+  private ActorDefinitionVersionUpdater actorDefinitionVersionUpdater;
   private TestClient featureFlagClient;
 
   private static final String SHOES = "shoes";
@@ -103,8 +105,8 @@ class SourceHandlerTest {
       Field.of(SKU, JsonSchemaType.STRING));
 
   private static final String ICON_URL = "https://connectors.airbyte.com/files/metadata/airbyte/destination-test/latest/icon.svg";
-  private static boolean IS_VERSION_OVERRIDE_APPLIED = true;
-  private static SupportState SUPPORT_STATE = SupportState.SUPPORTED;
+  private static final boolean IS_VERSION_OVERRIDE_APPLIED = true;
+  private static final SupportState SUPPORT_STATE = SupportState.SUPPORTED;
 
   private SourceService sourceService;
   private WorkspaceService workspaceService;
@@ -130,6 +132,7 @@ class SourceHandlerTest {
     workspaceService = mock(WorkspaceService.class);
     secretPersistenceConfigService = mock(SecretPersistenceConfigService.class);
     actorDefinitionHandlerHelper = mock(ActorDefinitionHandlerHelper.class);
+    actorDefinitionVersionUpdater = mock(ActorDefinitionVersionUpdater.class);
 
     connectorSpecification = ConnectorSpecificationHelpers.generateConnectorSpecification();
 
@@ -163,7 +166,8 @@ class SourceHandlerTest {
         configurationUpdate,
         oAuthConfigSupplier,
         actorDefinitionVersionHelper, featureFlagClient, sourceService, workspaceService, secretPersistenceConfigService,
-        actorDefinitionHandlerHelper);
+        actorDefinitionHandlerHelper,
+        actorDefinitionVersionUpdater);
   }
 
   @Test
@@ -264,18 +268,14 @@ class SourceHandlerTest {
   void testUpgradeSourceVersion() throws JsonValidationException, ConfigNotFoundException, IOException {
     final SourceIdRequestBody sourceIdRequestBody = new SourceIdRequestBody().sourceId(sourceConnection.getSourceId());
 
-    final UUID newDefaultVersionId = UUID.randomUUID();
-    final StandardSourceDefinition sourceDefinitionWithNewVersion = Jsons.clone(standardSourceDefinition)
-        .withDefaultVersionId(newDefaultVersionId);
-
     when(configRepository.getSourceConnection(sourceConnection.getSourceId())).thenReturn(sourceConnection);
-    when(configRepository.getStandardSourceDefinition(sourceDefinitionWithNewVersion.getSourceDefinitionId()))
-        .thenReturn(sourceDefinitionWithNewVersion);
+    when(configRepository.getStandardSourceDefinition(standardSourceDefinition.getSourceDefinitionId()))
+        .thenReturn(standardSourceDefinition);
 
     sourceHandler.upgradeSourceVersion(sourceIdRequestBody);
 
-    // validate that we set the actor version to the actor definition (global) default version
-    verify(configRepository).setActorDefaultVersion(sourceConnection.getSourceId(), newDefaultVersionId);
+    // validate that we call the actorDefinitionVersionUpdater to upgrade the version to global default
+    verify(actorDefinitionVersionUpdater).upgradeActorVersion(sourceConnection, standardSourceDefinition);
   }
 
   @Test

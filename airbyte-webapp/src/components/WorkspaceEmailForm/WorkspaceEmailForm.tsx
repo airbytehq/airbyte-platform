@@ -68,14 +68,13 @@ export const WorkspaceEmailForm = () => {
       <FormControl<WorkspaceEmailFormValues>
         name="email"
         fieldType="input"
-        inline
-        description={formatMessage({ id: "settings.notifications.emailRecipient" })}
+        labelTooltip={formatMessage({ id: "settings.notifications.emailRecipient" })}
         label={formatMessage({ id: "settings.workspaceSettings.updateWorkspaceNameForm.email.label" })}
         placeholder={formatMessage({
           id: "settings.workspaceSettings.updateWorkspaceNameForm.email.placeholder",
         })}
       />
-      <FormSubmissionButtons submitKey="form.saveChanges" />
+      <FormSubmissionButtons noCancel justify="flex-start" submitKey="form.saveChanges" />
     </Form>
   );
 };

@@ -1,14 +1,14 @@
 import {
+  createNewConnectionViaApi,
   createPostgresDestinationViaApi,
   createPostgresSourceViaApi,
-  createNewConnectionViaApi,
 } from "@cy/commands/connection";
 import {
-  WebBackendConnectionRead,
   DestinationRead,
   DestinationSyncMode,
-  SyncMode,
   SourceRead,
+  SyncMode,
+  WebBackendConnectionRead,
 } from "@src/core/api/types/AirbyteClient";
 import { requestDeleteConnection, requestDeleteDestination, requestDeleteSource } from "commands/api";
 import { runDbQuery } from "commands/db/db";
@@ -36,27 +36,31 @@ describe("Connection - Stream details", () => {
   let destination: DestinationRead;
   let connection: WebBackendConnectionRead;
 
-  before(() => {
-    dropTables();
+  // setup logic adapted from https://stackoverflow.com/questions/71285827/cypress-e2e-before-hook-not-working-on-retries/71377694#71377694
+  // to allow retrying, as Cypress doesn't retry if `before` throws an error
+  let isBackendSetup = false;
+  let isError = false;
+  const setup = () => {
+    if (isBackendSetup === false) {
+      dropTables();
 
-    runDbQuery(getCreateUsersTableQuery("users"), createUserCarsTableQuery, createTableWithLotsOfColumnsQuery);
+      runDbQuery(getCreateUsersTableQuery("users"), createUserCarsTableQuery, createTableWithLotsOfColumnsQuery);
 
-    createPostgresSourceViaApi().then((pgSource) => {
-      source = pgSource;
-      createPostgresDestinationViaApi().then((pgDestination) => {
-        destination = pgDestination;
-        createNewConnectionViaApi(source, destination).then((connectionResponse) => {
-          connection = connectionResponse;
+      return createPostgresSourceViaApi().then((pgSource) => {
+        source = pgSource;
+        createPostgresDestinationViaApi().then((pgDestination) => {
+          destination = pgDestination;
+          createNewConnectionViaApi(source, destination).then((connectionResponse) => {
+            connection = connectionResponse;
+            isBackendSetup = true;
+          });
         });
       });
-    });
-  });
+    }
+    return cy.get("body"); // return a Cypress chainable so it can be 'then'ed
+  };
 
-  beforeEach(() => {
-    connectionPage.visit(connection, "replication");
-  });
-
-  after(() => {
+  const cleanup = () => {
     if (connection) {
       requestDeleteConnection({ connectionId: connection.connectionId });
     }
@@ -68,7 +72,25 @@ describe("Connection - Stream details", () => {
     }
 
     dropTables();
+  };
+
+  beforeEach(() => {
+    cy.once("fail", (err) => {
+      isError = true;
+      throw err;
+    });
+    if (isError) {
+      cleanup();
+      isError = false;
+    }
+
+    // @ts-expect-error the .then() signature between the two possibilities don't exactly match
+    setup().then(() => {
+      connectionPage.visit(connection, "replication");
+    });
   });
+
+  after(cleanup);
 
   describe("basics", () => {
     beforeEach(() => {
@@ -81,9 +103,15 @@ describe("Connection - Stream details", () => {
       const fieldTypes = ["String", "Integer", "String", "Datetime"];
 
       streamDetails.isSyncStreamDisabled();
+      streamDetails.isSelectSyncModeHidden();
       streamDetails.isNamespace("public");
       streamDetails.isStreamName("users");
       streamDetails.areFieldsValid({ names: fieldNames, dataTypes: fieldTypes });
+    });
+
+    it("show sync mode dropdown if stream is enabled", () => {
+      streamDetails.enableSyncStream();
+      streamDetails.isSelectSyncModeVisible();
     });
 
     it("closes", () => {
@@ -125,6 +153,8 @@ describe("Connection - Stream details", () => {
       const cursor = "created_at";
       const primaryKeys = ["car_id", "user_id"];
 
+      userCarsStreamRow.toggleStreamSync();
+      userCarsStreamRow.isStreamSyncEnabled(true);
       userCarsStreamRow.selectSyncMode(SyncMode.incremental, DestinationSyncMode.append_dedup);
       userCarsStreamRow.showStreamDetails();
 
@@ -140,10 +170,13 @@ describe("Connection - Stream details", () => {
 
   describe("sync mode", () => {
     const userCarsStreamRow = new StreamRowPageObject("public", "user_cars");
+
     it("can select cursor and primary key", () => {
       const cursor = "created_at";
       const primaryKeys = ["car_id", "user_id"];
 
+      userCarsStreamRow.toggleStreamSync();
+      userCarsStreamRow.isStreamSyncEnabled(true);
       userCarsStreamRow.showStreamDetails();
 
       streamDetails.selectSyncMode(SyncMode.incremental, DestinationSyncMode.append_dedup);
@@ -162,6 +195,8 @@ describe("Connection - Stream details", () => {
     const columnsStreamRow = new StreamRowPageObject("public", "columns");
 
     it("selects cursors for stream with many fields", () => {
+      columnsStreamRow.toggleStreamSync();
+      columnsStreamRow.isStreamSyncEnabled(true);
       columnsStreamRow.selectSyncMode(SyncMode.incremental, DestinationSyncMode.append);
       columnsStreamRow.showStreamDetails();
 

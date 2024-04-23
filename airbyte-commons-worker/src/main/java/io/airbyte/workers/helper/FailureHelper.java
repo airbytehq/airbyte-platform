@@ -12,6 +12,7 @@ import io.airbyte.config.FailureReason;
 import io.airbyte.config.FailureReason.FailureOrigin;
 import io.airbyte.config.FailureReason.FailureType;
 import io.airbyte.config.Metadata;
+import io.airbyte.config.StreamDescriptor;
 import io.airbyte.protocol.models.AirbyteTraceMessage;
 import java.util.Comparator;
 import java.util.List;
@@ -102,11 +103,19 @@ public class FailureHelper {
         failureType = FailureType.SYSTEM_ERROR;
       }
     }
+    StreamDescriptor streamDescriptor = null;
+    if (m.getError().getStreamDescriptor() != null) {
+      streamDescriptor = new StreamDescriptor()
+          .withNamespace(m.getError().getStreamDescriptor().getNamespace())
+          .withName(m.getError().getStreamDescriptor().getName());
+    }
+
     return new FailureReason()
         .withInternalMessage(m.getError().getInternalMessage())
         .withExternalMessage(m.getError().getMessage())
         .withStacktrace(m.getError().getStackTrace())
         .withTimestamp(m.getEmittedAt().longValue())
+        .withStreamDescriptor(streamDescriptor)
         .withFailureType(failureType)
         .withMetadata(traceMessageMetadata(jobId, attemptNumber));
   }
@@ -180,11 +189,18 @@ public class FailureHelper {
    * @param attemptNumber attempt number
    * @return failure reason
    */
-  public static FailureReason sourceHeartbeatFailure(final Throwable t, final Long jobId, final Integer attemptNumber) {
+  public static FailureReason sourceHeartbeatFailure(final Throwable t,
+                                                     final Long jobId,
+                                                     final Integer attemptNumber,
+                                                     final String humanReadableThreshold,
+                                                     final String timeBetweenLastRecord) {
+    final var errorMessage = String.format(
+        "Airbyte detected that the Source didn't send any records in the last %s, exceeding the configured %s threshold. Airbyte will try reading again on the next sync. Please see https://docs.airbyte.com/understanding-airbyte/heartbeats for more info.",
+        timeBetweenLastRecord, humanReadableThreshold);
     return connectorCommandFailure(t, jobId, attemptNumber, ConnectorCommand.READ)
         .withFailureOrigin(FailureOrigin.SOURCE)
         .withFailureType(FailureType.HEARTBEAT_TIMEOUT)
-        .withExternalMessage("The source is unresponsive");
+        .withExternalMessage(errorMessage);
   }
 
   /**
@@ -195,11 +211,18 @@ public class FailureHelper {
    * @param attemptNumber attempt number
    * @return failure reason
    */
-  public static FailureReason destinationTimeoutFailure(final Throwable t, final Long jobId, final Integer attemptNumber) {
+  public static FailureReason destinationTimeoutFailure(final Throwable t,
+                                                        final Long jobId,
+                                                        final Integer attemptNumber,
+                                                        final String humanReadableThreshold,
+                                                        final String timeBetweenLastAction) {
+    final var errorMessage = String.format(
+        "Airbyte detected that the Destination didn't make progress in the last %s, exceeding the configured %s threshold. Airbyte will try reading again on the next sync. Please see https://docs.airbyte.com/understanding-airbyte/heartbeats for more info.",
+        timeBetweenLastAction, humanReadableThreshold);
     return connectorCommandFailure(t, jobId, attemptNumber, ConnectorCommand.WRITE)
         .withFailureOrigin(FailureOrigin.DESTINATION)
         .withFailureType(FailureType.DESTINATION_TIMEOUT)
-        .withExternalMessage("Something went wrong when calling the destination. The destination seems stuck");
+        .withExternalMessage(errorMessage);
   }
 
   /**
@@ -408,6 +431,20 @@ public class FailureHelper {
         exceptionChainContains(t, SizeLimitException.class)
             ? "Size limit exceeded, please check your configuration, this is often related to a high number of streams."
             : "Something went wrong within the airbyte platform";
+    return genericFailure(t, jobId, attemptNumber)
+        .withFailureOrigin(FailureOrigin.AIRBYTE_PLATFORM)
+        .withExternalMessage(externalMessage);
+  }
+
+  /**
+   * Create generic platform failure.
+   *
+   * @param t throwable that cause the failure
+   * @param jobId job id
+   * @param attemptNumber attempt number
+   * @return failure reason
+   */
+  public static FailureReason platformFailure(final Throwable t, final Long jobId, final Integer attemptNumber, final String externalMessage) {
     return genericFailure(t, jobId, attemptNumber)
         .withFailureOrigin(FailureOrigin.AIRBYTE_PLATFORM)
         .withExternalMessage(externalMessage);

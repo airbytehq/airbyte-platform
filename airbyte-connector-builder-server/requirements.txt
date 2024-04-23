@@ -4,9 +4,9 @@
 #
 #    pip-compile
 #
-airbyte-cdk==0.65.0
+airbyte-cdk==0.83.0
     # via -r requirements.in
-airbyte-protocol-models==0.5.1
+airbyte-protocol-models==0.9.0
     # via airbyte-cdk
 attrs==23.2.0
     # via
@@ -17,57 +17,82 @@ backoff==2.2.1
     # via airbyte-cdk
 bracex==2.4
     # via wcmatch
-cachetools==5.3.2
+cachetools==5.3.3
     # via airbyte-cdk
 cattrs==23.2.3
     # via requests-cache
 certifi==2024.2.2
     # via requests
+cffi==1.16.0
+    # via cryptography
 charset-normalizer==3.3.2
     # via requests
+cryptography==42.0.5
+    # via airbyte-cdk
 deprecated==1.2.14
     # via airbyte-cdk
 dpath==2.0.8
     # via airbyte-cdk
-exceptiongroup==1.2.0
+exceptiongroup==1.2.1
     # via cattrs
 genson==1.2.2
     # via airbyte-cdk
-idna==3.6
+idna==3.7
     # via requests
 isodate==0.6.1
     # via airbyte-cdk
 jinja2==3.1.3
     # via airbyte-cdk
-jsonref==0.3.0
+jsonpatch==1.33
+    # via langchain-core
+jsonpointer==2.4
+    # via jsonpatch
+jsonref==0.2
     # via airbyte-cdk
 jsonschema==3.2.0
     # via airbyte-cdk
+langchain-core==0.1.42
+    # via airbyte-cdk
+langsmith==0.1.49
+    # via langchain-core
 markupsafe==2.1.5
     # via jinja2
+orjson==3.10.1
+    # via langsmith
+packaging==23.2
+    # via langchain-core
 pendulum==2.1.2
     # via airbyte-cdk
 platformdirs==4.2.0
     # via requests-cache
-pydantic==1.10.14
+pycparser==2.22
+    # via cffi
+pydantic==1.10.15
     # via
     #   airbyte-cdk
     #   airbyte-protocol-models
+    #   langchain-core
+    #   langsmith
+pyjwt==2.8.0
+    # via airbyte-cdk
 pyrate-limiter==3.1.1
     # via airbyte-cdk
 pyrsistent==0.20.0
     # via jsonschema
-python-dateutil==2.8.2
+python-dateutil==2.9.0.post0
     # via
     #   airbyte-cdk
     #   pendulum
 pytzdata==2020.1
     # via pendulum
 pyyaml==6.0.1
-    # via airbyte-cdk
+    # via
+    #   airbyte-cdk
+    #   langchain-core
 requests==2.31.0
     # via
     #   airbyte-cdk
+    #   langsmith
     #   requests-cache
 requests-cache==1.2.0
     # via airbyte-cdk
@@ -77,7 +102,9 @@ six==1.16.0
     #   jsonschema
     #   python-dateutil
     #   url-normalize
-typing-extensions==4.9.0
+tenacity==8.2.3
+    # via langchain-core
+typing-extensions==4.11.0
     # via
     #   cattrs
     #   pydantic

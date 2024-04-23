@@ -14,6 +14,7 @@ import io.airbyte.commons.server.handlers.ConnectorDocumentationHandler;
 import io.airbyte.commons.server.scheduling.AirbyteTaskExecutors;
 import io.micronaut.context.annotation.Context;
 import io.micronaut.http.HttpStatus;
+import io.micronaut.http.annotation.Body;
 import io.micronaut.http.annotation.Controller;
 import io.micronaut.http.annotation.Post;
 import io.micronaut.http.annotation.Status;
@@ -29,7 +30,7 @@ public class ConnectorDocumentationApiController implements ConnectorDocumentati
 
   private final ConnectorDocumentationHandler connectorDocumentationHandler;
 
-  public ConnectorDocumentationApiController(final ConnectorDocumentationHandler connectorDocumentationHandler) {
+  public ConnectorDocumentationApiController(@Body final ConnectorDocumentationHandler connectorDocumentationHandler) {
     this.connectorDocumentationHandler = connectorDocumentationHandler;
   }
 
@@ -38,7 +39,7 @@ public class ConnectorDocumentationApiController implements ConnectorDocumentati
   @Status(HttpStatus.OK)
   @Secured({WORKSPACE_READER, ORGANIZATION_READER})
   @ExecuteOn(AirbyteTaskExecutors.IO)
-  public ConnectorDocumentationRead getConnectorDocumentation(ConnectorDocumentationRequestBody connectorDocumentationRequestBody) {
+  public ConnectorDocumentationRead getConnectorDocumentation(@Body final ConnectorDocumentationRequestBody connectorDocumentationRequestBody) {
     return ApiHelper.execute(() -> connectorDocumentationHandler.getConnectorDocumentation(connectorDocumentationRequestBody));
   }
 

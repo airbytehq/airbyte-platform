@@ -40,7 +40,7 @@ class UserApiControllerTest extends BaseControllerTest {
         .thenReturn(new UserRead());
     final String path = "/api/v1/users/create";
     testEndpointStatus(
-        HttpRequest.POST(path, Jsons.serialize(new UserCreate())),
+        HttpRequest.POST(path, new UserCreate()),
         HttpStatus.OK);
   }
 
@@ -50,7 +50,7 @@ class UserApiControllerTest extends BaseControllerTest {
         .thenReturn(new UserRead());
     final String path = "/api/v1/users/get";
     testEndpointStatus(
-        HttpRequest.POST(path, Jsons.serialize(new UserIdRequestBody())),
+        HttpRequest.POST(path, new UserIdRequestBody()),
         HttpStatus.OK);
   }
 
@@ -60,7 +60,7 @@ class UserApiControllerTest extends BaseControllerTest {
         .thenReturn(new UserRead());
     final String path = "/api/v1/users/get_by_auth_id";
     testEndpointStatus(
-        HttpRequest.POST(path, Jsons.serialize(new UserAuthIdRequestBody())),
+        HttpRequest.POST(path, new UserAuthIdRequestBody()),
         HttpStatus.OK);
   }
 
@@ -70,7 +70,7 @@ class UserApiControllerTest extends BaseControllerTest {
         .thenReturn(new UserRead());
     final String path = "/api/v1/users/get_by_email";
     testEndpointStatus(
-        HttpRequest.POST(path, Jsons.serialize(new UserEmailRequestBody())),
+        HttpRequest.POST(path, new UserEmailRequestBody()),
         HttpStatus.OK);
   }
 
@@ -79,7 +79,7 @@ class UserApiControllerTest extends BaseControllerTest {
     Mockito.doNothing().when(userHandler).deleteUser(Mockito.any());
     final String path = "/api/v1/users/delete";
     testEndpointStatus(
-        HttpRequest.POST(path, Jsons.serialize(new UserIdRequestBody())),
+        HttpRequest.POST(path, new UserIdRequestBody()),
         HttpStatus.OK);
   }
 
@@ -89,7 +89,7 @@ class UserApiControllerTest extends BaseControllerTest {
         .thenReturn(new UserRead());
     final String path = "/api/v1/users/update";
     testEndpointStatus(
-        HttpRequest.POST(path, Jsons.serialize(new UserUpdate())),
+        HttpRequest.POST(path, new UserUpdate()),
         HttpStatus.OK);
   }
 
@@ -99,7 +99,7 @@ class UserApiControllerTest extends BaseControllerTest {
         .thenReturn(new OrganizationUserReadList());
     final String path = "/api/v1/users/list_by_organization_id";
     testEndpointStatus(
-        HttpRequest.POST(path, Jsons.serialize(new OrganizationIdRequestBody())),
+        HttpRequest.POST(path, new OrganizationIdRequestBody()),
         HttpStatus.OK);
   }
 
@@ -109,7 +109,7 @@ class UserApiControllerTest extends BaseControllerTest {
         .thenReturn(new WorkspaceUserReadList());
     final String path = "/api/v1/users/list_by_workspace_id";
     testEndpointStatus(
-        HttpRequest.POST(path, Jsons.serialize(new WorkspaceIdRequestBody())),
+        HttpRequest.POST(path, new WorkspaceIdRequestBody()),
         HttpStatus.OK);
   }
 
@@ -129,7 +129,7 @@ class UserApiControllerTest extends BaseControllerTest {
         .thenReturn(new UserGetOrCreateByAuthIdResponse().userRead(new UserRead()));
     final String path = "/api/v1/users/get_or_create_by_auth_id";
     testEndpointStatus(
-        HttpRequest.POST(path, Jsons.serialize(new UserAuthIdRequestBody())),
+        HttpRequest.POST(path, new UserAuthIdRequestBody()),
         HttpStatus.OK);
   }
 

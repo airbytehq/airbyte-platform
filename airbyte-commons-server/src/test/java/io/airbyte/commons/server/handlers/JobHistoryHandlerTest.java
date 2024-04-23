@@ -5,6 +5,7 @@
 package io.airbyte.commons.server.handlers;
 
 import static io.airbyte.featureflag.ContextKt.ANONYMOUS;
+import static io.airbyte.persistence.job.models.Job.SYNC_REPLICATION_TYPES;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.anyInt;
@@ -97,7 +98,7 @@ class JobHistoryHandlerTest {
   private static final long JOB_ID = 100L;
   private static final String JOB_CONFIG_ID = "ef296385-6796-413f-ac1b-49c4caba3f2b";
   private static final JobStatus JOB_STATUS = JobStatus.SUCCEEDED;
-  private static final JobConfig.ConfigType CONFIG_TYPE = JobConfig.ConfigType.CHECK_CONNECTION_SOURCE;
+  private static final JobConfig.ConfigType CONFIG_TYPE = ConfigType.SYNC;
   private static final JobConfigType CONFIG_TYPE_FOR_API = JobConfigType.CHECK_CONNECTION_SOURCE;
   private static final JobConfig JOB_CONFIG = new JobConfig()
       .withConfigType(CONFIG_TYPE)
@@ -367,7 +368,7 @@ class JobHistoryHandlerTest {
       final var secondJobId = JOB_ID + 100;
       final var createdAt2 = CREATED_AT + 1000;
       final var secondJobAttempt = createAttempt(0, secondJobId, createdAt2, AttemptStatus.SUCCEEDED);
-      final var secondJob = new Job(secondJobId, ConfigType.DISCOVER_SCHEMA, JOB_CONFIG_ID, JOB_CONFIG, ImmutableList.of(secondJobAttempt),
+      final var secondJob = new Job(secondJobId, ConfigType.SYNC, JOB_CONFIG_ID, JOB_CONFIG, ImmutableList.of(secondJobAttempt),
           JobStatus.SUCCEEDED, null, createdAt2, createdAt2);
 
       final Set<ConfigType> configTypes = Set.of(
@@ -615,7 +616,7 @@ class JobHistoryHandlerTest {
 
     when(jobPersistence.listJobsForConnectionWithStatuses(
         connectionId,
-        Collections.singleton(ConfigType.SYNC),
+        SYNC_REPLICATION_TYPES,
         JobStatus.NON_TERMINAL_STATUSES)).thenReturn(List.of(newerRunningJob, olderRunningJob));
 
     final Optional<JobRead> expectedJob = Optional.of(JobConverter.getJobRead(newerRunningJob));
@@ -631,7 +632,7 @@ class JobHistoryHandlerTest {
 
     when(jobPersistence.listJobsForConnectionWithStatuses(
         connectionId,
-        Collections.singleton(ConfigType.SYNC),
+        SYNC_REPLICATION_TYPES,
         JobStatus.NON_TERMINAL_STATUSES)).thenReturn(Collections.emptyList());
 
     final Optional<JobRead> actual = jobHistoryHandler.getLatestRunningSyncJob(connectionId);
@@ -678,6 +679,22 @@ class JobHistoryHandlerTest {
         List.of(new AttemptNormalizationStatusRead().attemptNumber(1).hasRecordsCommitted(true).hasNormalizationFailed(false).recordsCommitted(10L)));
 
     assertEquals(expectedStatus, jobHistoryHandler.getAttemptNormalizationStatuses(new JobIdRequestBody().id(JOB_ID)));
+
+  }
+
+  @Test
+  @DisplayName("Should test to ensure that JobInfoReadWithoutLogs includes the bytes and records committed")
+  void testGetJobInfoWithoutLogs() throws IOException {
+
+    when(jobPersistence.getJob(JOB_ID))
+        .thenReturn(new Job(JOB_ID, JOB_CONFIG.getConfigType(), JOB_CONFIG_ID, JOB_CONFIG, ImmutableList.of(testJobAttempt),
+            JOB_STATUS, null, CREATED_AT, CREATED_AT));
+    when(jobPersistence.getAttemptStats(List.of(JOB_ID)))
+        .thenReturn(Map.of(new JobAttemptPair(JOB_ID, testJobAttempt.getAttemptNumber()), FIRST_ATTEMPT_STATS));
+
+    final JobInfoRead resultingJobInfo = jobHistoryHandler.getJobInfoWithoutLogs(new JobIdRequestBody().id(JOB_ID));
+    assertEquals(resultingJobInfo.getJob().getAggregatedStats().getBytesCommitted(), FIRST_ATTEMPT_STATS.combinedStats().getBytesCommitted());
+    assertEquals(resultingJobInfo.getJob().getAggregatedStats().getRecordsCommitted(), FIRST_ATTEMPT_STATS.combinedStats().getRecordsCommitted());
 
   }
 

@@ -117,6 +117,7 @@ export const CodeEditor: React.FC<CodeEditorProps> = ({
               top: paddingTopValue,
             }
           : {},
+        fixedOverflowWidgets: true,
       }}
     />
   );

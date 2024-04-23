@@ -53,7 +53,7 @@ export const CloudHelpDropdown: React.FC = () => {
       ]}
       onChange={handleChatUs}
       label={<FormattedMessage id="sidebar.help" />}
-      icon={<Icon type="question" />}
+      icon="question"
     />
   );
 };

@@ -30,6 +30,8 @@ import io.airbyte.config.secrets.SecretsRepositoryReader;
 import io.airbyte.config.secrets.SecretsRepositoryWriter;
 import io.airbyte.config.specs.DefinitionsProvider;
 import io.airbyte.config.specs.LocalDefinitionsProvider;
+import io.airbyte.data.helpers.ActorDefinitionVersionUpdater;
+import io.airbyte.data.services.ScopedConfigurationService;
 import io.airbyte.data.services.SecretPersistenceConfigService;
 import io.airbyte.data.services.impls.jooq.ActorDefinitionServiceJooqImpl;
 import io.airbyte.data.services.impls.jooq.CatalogServiceJooqImpl;
@@ -95,8 +97,8 @@ class BootloaderTest {
 
   // ⚠️ This line should change with every new migration to show that you meant to make a new
   // migration to the prod database
-  private static final String CURRENT_CONFIGS_MIGRATION_VERSION = "0.50.41.007";
-  private static final String CURRENT_JOBS_MIGRATION_VERSION = "0.50.4.001";
+  private static final String CURRENT_CONFIGS_MIGRATION_VERSION = "0.55.1.003";
+  private static final String CURRENT_JOBS_MIGRATION_VERSION = "0.57.2.001";
   private static final String CDK_VERSION = "1.2.3";
 
   @BeforeEach
@@ -145,18 +147,27 @@ class BootloaderTest {
     final SecretsRepositoryWriter secretsRepositoryWriter = mock(SecretsRepositoryWriter.class);
     final SecretPersistenceConfigService secretPersistenceConfigService = mock(SecretPersistenceConfigService.class);
     val connectionService = new ConnectionServiceJooqImpl(configDatabase);
+    val actorDefinitionService = new ActorDefinitionServiceJooqImpl(configDatabase);
+    val scopedConfigurationService = mock(ScopedConfigurationService.class);
+    val actorDefinitionVersionUpdater = new ActorDefinitionVersionUpdater(
+        featureFlagClient,
+        connectionService,
+        actorDefinitionService,
+        scopedConfigurationService);
     val destinationService = new DestinationServiceJooqImpl(configDatabase,
         featureFlagClient,
         secretsRepositoryReader,
         secretsRepositoryWriter,
         secretPersistenceConfigService,
-        connectionService);
+        connectionService,
+        actorDefinitionVersionUpdater);
     val sourceService = new SourceServiceJooqImpl(configDatabase,
         featureFlagClient,
         secretsRepositoryReader,
         secretsRepositoryWriter,
         secretPersistenceConfigService,
-        connectionService);
+        connectionService,
+        actorDefinitionVersionUpdater);
     val configRepository = new ConfigRepository(
         new ActorDefinitionServiceJooqImpl(configDatabase),
         new CatalogServiceJooqImpl(configDatabase),
@@ -190,7 +201,6 @@ class BootloaderTest {
     val actorDefinitionVersionHelper =
         new ActorDefinitionVersionHelper(configRepository, new NoOpDefinitionVersionOverrideProvider(), new NoOpDefinitionVersionOverrideProvider(),
             featureFlagClient);
-    val actorDefinitionService = new ActorDefinitionServiceJooqImpl(configDatabase);
     val supportStateUpdater =
         new SupportStateUpdater(actorDefinitionService, sourceService, destinationService, DeploymentMode.OSS,
             actorDefinitionVersionHelper, breakingChangeNotificationHelper,
@@ -244,6 +254,13 @@ class BootloaderTest {
     val configDatabase = new ConfigsDatabaseTestProvider(configsDslContext, configsFlyway).create(false);
     val jobDatabase = new JobsDatabaseTestProvider(jobsDslContext, jobsFlyway).create(false);
     val connectionService = new ConnectionServiceJooqImpl(configDatabase);
+    val actorDefinitionService = new ActorDefinitionServiceJooqImpl(configDatabase);
+    val scopedConfigurationService = mock(ScopedConfigurationService.class);
+    val actorDefinitionVersionUpdater = new ActorDefinitionVersionUpdater(
+        featureFlagClient,
+        connectionService,
+        actorDefinitionService,
+        scopedConfigurationService);
     val configRepository = new ConfigRepository(
         new ActorDefinitionServiceJooqImpl(configDatabase),
         new CatalogServiceJooqImpl(configDatabase),
@@ -254,7 +271,8 @@ class BootloaderTest {
             mock(SecretsRepositoryReader.class),
             mock(SecretsRepositoryWriter.class),
             mock(SecretPersistenceConfigService.class),
-            connectionService),
+            connectionService,
+            actorDefinitionVersionUpdater),
         new OAuthServiceJooqImpl(configDatabase,
             featureFlagClient,
             mock(SecretsRepositoryReader.class),
@@ -265,7 +283,8 @@ class BootloaderTest {
             mock(SecretsRepositoryReader.class),
             mock(SecretsRepositoryWriter.class),
             mock(SecretPersistenceConfigService.class),
-            connectionService),
+            connectionService,
+            actorDefinitionVersionUpdater),
         new WorkspaceServiceJooqImpl(configDatabase,
             featureFlagClient,
             mock(SecretsRepositoryReader.class),
@@ -286,19 +305,20 @@ class BootloaderTest {
     val actorDefinitionVersionHelper =
         new ActorDefinitionVersionHelper(configRepository, new NoOpDefinitionVersionOverrideProvider(), new NoOpDefinitionVersionOverrideProvider(),
             featureFlagClient);
-    val actorDefinitionService = new ActorDefinitionServiceJooqImpl(configDatabase);
     val sourceService = new SourceServiceJooqImpl(configDatabase,
         featureFlagClient,
         mock(SecretsRepositoryReader.class),
         mock(SecretsRepositoryWriter.class),
         mock(SecretPersistenceConfigService.class),
-        connectionService);
+        connectionService,
+        actorDefinitionVersionUpdater);
     val destinationService = new DestinationServiceJooqImpl(configDatabase,
         featureFlagClient,
         mock(SecretsRepositoryReader.class),
         mock(SecretsRepositoryWriter.class),
         mock(SecretPersistenceConfigService.class),
-        connectionService);
+        connectionService,
+        actorDefinitionVersionUpdater);
     val supportStateUpdater =
         new SupportStateUpdater(actorDefinitionService, sourceService, destinationService, DeploymentMode.OSS, actorDefinitionVersionHelper,
             breakingChangeNotificationHelper, featureFlagClient);
@@ -381,6 +401,13 @@ class BootloaderTest {
     val configDatabase = new ConfigsDatabaseTestProvider(configsDslContext, configsFlyway).create(false);
     val jobDatabase = new JobsDatabaseTestProvider(jobsDslContext, jobsFlyway).create(false);
     val connectionService = new ConnectionServiceJooqImpl(configDatabase);
+    val actorDefinitionService = new ActorDefinitionServiceJooqImpl(configDatabase);
+    val scopedConfigurationService = mock(ScopedConfigurationService.class);
+    val actorDefinitionVersionUpdater = new ActorDefinitionVersionUpdater(
+        featureFlagClient,
+        connectionService,
+        actorDefinitionService,
+        scopedConfigurationService);
     val configRepository = new ConfigRepository(
         new ActorDefinitionServiceJooqImpl(configDatabase),
         new CatalogServiceJooqImpl(configDatabase),
@@ -391,7 +418,8 @@ class BootloaderTest {
             mock(SecretsRepositoryReader.class),
             mock(SecretsRepositoryWriter.class),
             mock(SecretPersistenceConfigService.class),
-            connectionService),
+            connectionService,
+            actorDefinitionVersionUpdater),
         new OAuthServiceJooqImpl(configDatabase,
             featureFlagClient,
             mock(SecretsRepositoryReader.class),
@@ -402,7 +430,8 @@ class BootloaderTest {
             mock(SecretsRepositoryReader.class),
             mock(SecretsRepositoryWriter.class),
             mock(SecretPersistenceConfigService.class),
-            connectionService),
+            connectionService,
+            actorDefinitionVersionUpdater),
         new WorkspaceServiceJooqImpl(configDatabase,
             featureFlagClient,
             mock(SecretsRepositoryReader.class),

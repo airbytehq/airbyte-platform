@@ -22,6 +22,7 @@ import io.airbyte.config.JobDiscoverCatalogConfig;
 import io.airbyte.config.JobGetSpecConfig;
 import io.airbyte.config.StandardCheckConnectionInput;
 import io.airbyte.config.StandardDiscoverCatalogInput;
+import io.airbyte.config.WorkloadPriority;
 import io.airbyte.config.persistence.StreamResetPersistence;
 import io.airbyte.metrics.lib.MetricAttribute;
 import io.airbyte.metrics.lib.MetricClient;
@@ -36,6 +37,7 @@ import io.temporal.api.workflowservice.v1.ListClosedWorkflowExecutionsRequest;
 import io.temporal.api.workflowservice.v1.ListClosedWorkflowExecutionsResponse;
 import io.temporal.api.workflowservice.v1.ListOpenWorkflowExecutionsRequest;
 import io.temporal.api.workflowservice.v1.ListOpenWorkflowExecutionsResponse;
+import jakarta.annotation.Nullable;
 import jakarta.inject.Named;
 import jakarta.inject.Singleton;
 import java.io.IOException;
@@ -51,7 +53,6 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
-import javax.annotation.Nullable;
 import lombok.Builder;
 import lombok.Value;
 import lombok.extern.slf4j.Slf4j;
@@ -409,7 +410,8 @@ public class TemporalClient {
         .withWorkspaceId(workspaceId)
         .withDockerImage(config.getDockerImage())
         .withProtocolVersion(config.getProtocolVersion())
-        .withIsCustomConnector(config.getIsCustomConnector());
+        .withIsCustomConnector(config.getIsCustomConnector())
+        .withPriority(WorkloadPriority.HIGH);
 
     final StandardCheckConnectionInput input = new StandardCheckConnectionInput()
         .withActorType(config.getActorType())
@@ -437,7 +439,8 @@ public class TemporalClient {
                                                                    final UUID workspaceId,
                                                                    final String taskQueue,
                                                                    final JobDiscoverCatalogConfig config,
-                                                                   final ActorContext context) {
+                                                                   final ActorContext context,
+                                                                   final WorkloadPriority priority) {
     final JobRunConfig jobRunConfig = TemporalWorkflowUtils.createJobRunConfig(jobId, attempt);
     final IntegrationLauncherConfig launcherConfig = new IntegrationLauncherConfig()
         .withJobId(jobId.toString())
@@ -445,7 +448,8 @@ public class TemporalClient {
         .withWorkspaceId(workspaceId)
         .withDockerImage(config.getDockerImage())
         .withProtocolVersion(config.getProtocolVersion())
-        .withIsCustomConnector(config.getIsCustomConnector());
+        .withIsCustomConnector(config.getIsCustomConnector())
+        .withPriority(priority);
     final StandardDiscoverCatalogInput input = new StandardDiscoverCatalogInput().withConnectionConfiguration(config.getConnectionConfiguration())
         .withSourceId(config.getSourceId()).withConnectorVersion(config.getConnectorVersion()).withConfigHash(config.getConfigHash())
         .withResourceRequirements(config.getResourceRequirements()).withActorContext(context);
@@ -488,7 +492,7 @@ public class TemporalClient {
 
   @VisibleForTesting
   <T> TemporalResponse<T> execute(final JobRunConfig jobRunConfig, final Supplier<T> executor) {
-    final Path jobRoot = TemporalUtils.getJobRoot(workspaceRoot, jobRunConfig);
+    final Path jobRoot = TemporalUtils.getJobRoot(workspaceRoot, jobRunConfig.getJobId(), jobRunConfig.getAttemptId());
     final Path logPath = TemporalUtils.getLogPath(jobRoot);
 
     T operationOutput = null;

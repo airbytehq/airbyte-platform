@@ -25,6 +25,7 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
+import org.apache.commons.lang3.time.DurationFormatUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -99,7 +100,8 @@ public class HeartbeatTimeoutChaperone implements AutoCloseable {
    * @throws ExecutionException - throw is the runnable throw an exception
    */
   public void runWithHeartbeatThread(final CompletableFuture<Void> runnableFuture) throws ExecutionException {
-    LOGGER.info("Starting source heartbeat check. Will check every {} minutes.", timeoutCheckDuration.toMinutes());
+    LOGGER.info("Starting source heartbeat check. Will check threshold of {} seconds, every {} minutes.",
+        heartbeatMonitor.getHeartbeatFreshnessThreshold().toSeconds(), timeoutCheckDuration.toMinutes());
     final CompletableFuture<Void> heartbeatFuture = CompletableFuture.runAsync(customMonitor.orElse(this::monitor), getLazyExecutorService());
 
     try {
@@ -126,10 +128,9 @@ public class HeartbeatTimeoutChaperone implements AutoCloseable {
             new MetricAttribute(MetricTags.CONNECTION_ID, connectionId.toString()),
             new MetricAttribute(MetricTags.KILLED, "true"),
             new MetricAttribute(MetricTags.SOURCE_IMAGE, sourceDockerImage));
-        throw new HeartbeatTimeoutException(
-            String.format("Heartbeat has stopped. Heartbeat freshness threshold: %s secs Actual heartbeat age: %s secs",
-                heartbeatMonitor.getHeartbeatFreshnessThreshold().getSeconds(),
-                heartbeatMonitor.getTimeSinceLastBeat().orElse(Duration.ZERO).getSeconds()));
+        final var thresholdMs = heartbeatMonitor.getHeartbeatFreshnessThreshold().toMillis();
+        final var timeBetweenLastRecordMs = heartbeatMonitor.getTimeSinceLastBeat().orElse(Duration.ZERO).toMillis();
+        throw new HeartbeatTimeoutException(thresholdMs, timeBetweenLastRecordMs);
       } else {
         LOGGER.info("Do not terminate as feature flag is disable");
         metricClient.count(OssMetricsRegistry.SOURCE_HEARTBEAT_FAILURE, 1,
@@ -185,8 +186,15 @@ public class HeartbeatTimeoutChaperone implements AutoCloseable {
    */
   public static class HeartbeatTimeoutException extends RuntimeException {
 
-    public HeartbeatTimeoutException(final String message) {
-      super(message);
+    public final String humanReadableThreshold;
+    public final String humanReadableTimeSinceLastRec;
+
+    public HeartbeatTimeoutException(final long thresholdMs, final long timeBetweenLastRecordMs) {
+      super(String.format("Last record seen %s ago, exceeding the threshold of %s.",
+          DurationFormatUtils.formatDurationWords(timeBetweenLastRecordMs, true, true),
+          DurationFormatUtils.formatDurationWords(thresholdMs, true, true)));
+      this.humanReadableThreshold = DurationFormatUtils.formatDurationWords(thresholdMs, true, true);
+      this.humanReadableTimeSinceLastRec = DurationFormatUtils.formatDurationWords(timeBetweenLastRecordMs, true, true);
     }
 
   }

@@ -42,6 +42,7 @@ import io.airbyte.api.model.generated.ExistingConnectorBuilderProjectWithWorkspa
 import io.airbyte.api.model.generated.SourceDefinitionIdBody;
 import io.airbyte.api.model.generated.WorkspaceIdRequestBody;
 import io.airbyte.commons.json.Jsons;
+import io.airbyte.commons.server.handlers.helpers.BuilderProjectUpdater;
 import io.airbyte.commons.server.handlers.helpers.DeclarativeSourceManifestInjector;
 import io.airbyte.config.ActorDefinitionConfigInjection;
 import io.airbyte.config.ActorDefinitionVersion;
@@ -113,6 +114,7 @@ class ConnectorBuilderProjectsHandlerTest {
   }
 
   private ConfigRepository configRepository;
+  private BuilderProjectUpdater builderProjectUpdater;
   private ConnectorBuilderProjectsHandler connectorBuilderProjectsHandler;
   private Supplier<UUID> uuidSupplier;
   private DeclarativeSourceManifestInjector manifestInjector;
@@ -167,6 +169,7 @@ class ConnectorBuilderProjectsHandlerTest {
   @BeforeEach
   void setUp() throws JsonProcessingException {
     configRepository = mock(ConfigRepository.class);
+    builderProjectUpdater = mock(BuilderProjectUpdater.class);
     uuidSupplier = mock(Supplier.class);
     manifestInjector = mock(DeclarativeSourceManifestInjector.class);
     cdkVersionProvider = mock(CdkVersionProvider.class);
@@ -184,7 +187,8 @@ class ConnectorBuilderProjectsHandlerTest {
     workspaceId = UUID.randomUUID();
 
     connectorBuilderProjectsHandler =
-        new ConnectorBuilderProjectsHandler(configRepository, cdkVersionProvider, uuidSupplier, manifestInjector, workspaceService, featureFlagClient,
+        new ConnectorBuilderProjectsHandler(configRepository, builderProjectUpdater, cdkVersionProvider, uuidSupplier, manifestInjector,
+            workspaceService, featureFlagClient,
             secretsRepositoryReader, secretsRepositoryWriter, secretPersistenceConfigService, connectorBuilderService, secretsProcessor,
             connectorBuilderServerApiClient);
   }
@@ -233,46 +237,9 @@ class ConnectorBuilderProjectsHandlerTest {
 
     connectorBuilderProjectsHandler.updateConnectorBuilderProject(update);
 
-    verify(configRepository, times(1))
-        .writeBuilderProjectDraft(
-            project.getBuilderProjectId(), project.getWorkspaceId(), project.getName(), project.getManifestDraft());
-  }
-
-  @Test
-  void givenActorDefinitionAssociatedWithProjectWhenUpdateConnectorBuilderProjectThenUpdateProjectAndDefinition() throws Exception {
-    when(configRepository.getConnectorBuilderProject(A_BUILDER_PROJECT_ID, false)).thenReturn(anyBuilderProject()
-        .withBuilderProjectId(A_BUILDER_PROJECT_ID)
-        .withWorkspaceId(A_WORKSPACE_ID)
-        .withActorDefinitionId(A_SOURCE_DEFINITION_ID));
-
-    connectorBuilderProjectsHandler.updateConnectorBuilderProject(new ExistingConnectorBuilderProjectWithWorkspaceId()
-        .builderProject(new ConnectorBuilderProjectDetails()
-            .name(A_SOURCE_NAME)
-            .draftManifest(A_MANIFEST))
-        .workspaceId(A_WORKSPACE_ID)
-        .builderProjectId(A_BUILDER_PROJECT_ID));
-
-    verify(configRepository, times(1))
-        .updateBuilderProjectAndActorDefinition(
-            A_BUILDER_PROJECT_ID, A_WORKSPACE_ID, A_SOURCE_NAME, A_MANIFEST, A_SOURCE_DEFINITION_ID);
-  }
-
-  @Test
-  @DisplayName("updateConnectorBuilderProject should update an existing project removing the draft")
-  void testUpdateConnectorBuilderProjectWipeDraft() throws IOException, ConfigNotFoundException {
-    final ConnectorBuilderProject project = generateBuilderProject();
-
-    when(configRepository.getConnectorBuilderProject(project.getBuilderProjectId(), false)).thenReturn(project);
-
-    final ExistingConnectorBuilderProjectWithWorkspaceId update = new ExistingConnectorBuilderProjectWithWorkspaceId()
-        .builderProject(new ConnectorBuilderProjectDetails().name(project.getName()))
-        .workspaceId(workspaceId).builderProjectId(project.getBuilderProjectId());
-
-    connectorBuilderProjectsHandler.updateConnectorBuilderProject(update);
-
-    verify(configRepository, times(1))
-        .writeBuilderProjectDraft(
-            project.getBuilderProjectId(), project.getWorkspaceId(), project.getName(), null);
+    verify(builderProjectUpdater, times(1))
+        .persistBuilderProjectUpdate(
+            update);
   }
 
   @Test
@@ -664,7 +631,7 @@ class ConnectorBuilderProjectsHandlerTest {
     final String responseBody = "[" + Jsons.serialize(record1) + "," + Jsons.serialize(record2) + "]";
     final String requestUrl = "https://api.com/users";
     final int responseStatus = 200;
-    final HttpRequest httpRequest = new HttpRequest(requestUrl, HttpMethod.GET, null, null, null);
+    final HttpRequest httpRequest = new HttpRequest(requestUrl, HttpMethod.GET, null, null);
     final HttpResponse httpResponse = new HttpResponse(responseStatus, responseBody, null);
     final StreamRead streamRead = new StreamRead(Collections.emptyList(), List.of(
         new StreamReadSlicesInner(List.of(new StreamReadSlicesInnerPagesInner(List.of(record1, record2), httpRequest, httpResponse)), null, null)),

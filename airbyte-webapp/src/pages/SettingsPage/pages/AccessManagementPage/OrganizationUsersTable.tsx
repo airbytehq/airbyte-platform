@@ -4,19 +4,17 @@ import { FormattedMessage } from "react-intl";
 
 import { Table } from "components/ui/Table";
 
-import { useCurrentWorkspace } from "core/api";
 import { OrganizationUserRead } from "core/api/types/AirbyteClient";
 import { useCurrentUser } from "core/services/auth";
 import { RbacRoleHierarchy, partitionPermissionType } from "core/utils/rbac/rbacPermissionsQuery";
 
 import { UserCell } from "./components/UserCell";
-import { RoleManagementMenu } from "./next/RoleManagementMenu";
+import { RoleManagementCell } from "./next/RoleManagementCell";
 
 export const OrganizationUsersTable: React.FC<{
   users: OrganizationUserRead[];
 }> = ({ users }) => {
   const { userId: currentUserId } = useCurrentUser();
-  const { workspaceId } = useCurrentWorkspace();
 
   const columnHelper = createColumnHelper<OrganizationUserRead>();
 
@@ -30,7 +28,7 @@ export const OrganizationUsersTable: React.FC<{
               name={props.row.original.name}
               email={props.row.original.email}
               isCurrentUser={props.row.original.userId === currentUserId}
-              userId={props.row.original.userId}
+              uniqueId={props.row.original.userId}
             />
           );
         },
@@ -49,9 +47,8 @@ export const OrganizationUsersTable: React.FC<{
         cell: (props) => {
           const user = {
             userName: props.row.original.name ?? "",
-            userId: props.row.original.userId,
+            id: props.row.original.userId,
             userEmail: props.row.original.email,
-            workspaceId,
             organizationPermission: {
               permissionType: props.row.original.permissionType,
               organizationId: props.row.original.organizationId,
@@ -60,7 +57,7 @@ export const OrganizationUsersTable: React.FC<{
             },
           };
 
-          return <RoleManagementMenu user={user} resourceType="organization" />;
+          return <RoleManagementCell user={user} resourceType="organization" />;
         },
         sortingFn: (a, b, order) => {
           const aRole = partitionPermissionType(a.original.permissionType)[1];
@@ -76,8 +73,8 @@ export const OrganizationUsersTable: React.FC<{
         },
       }),
     ],
-    [columnHelper, currentUserId, workspaceId]
+    [columnHelper, currentUserId]
   );
 
-  return <Table data={users} columns={columns} initialSortBy={[{ id: "name", desc: false }]} />;
+  return <Table data={users} columns={columns} initialSortBy={[{ id: "name", desc: false }]} stickyHeaders={false} />;
 };

@@ -1,15 +1,19 @@
+import classNames from "classnames";
 import { useCallback } from "react";
 import { FormattedMessage, useIntl } from "react-intl";
 
+import { Box } from "components/ui/Box";
 import { Button, ButtonVariant } from "components/ui/Button";
 import { DropdownMenu, DropdownMenuOptionType } from "components/ui/DropdownMenu";
 import { FlexContainer } from "components/ui/Flex";
-import { Icon } from "components/ui/Icon";
+import { Text } from "components/ui/Text";
 
 import { ConnectionStatus } from "core/api/types/AirbyteClient";
 import { useConfirmationModalService } from "hooks/services/ConfirmationModal";
 import { useConnectionFormService } from "hooks/services/ConnectionForm/ConnectionFormService";
+import { useExperiment } from "hooks/services/Experiment";
 
+import styles from "./ConnectionSyncButtons.module.scss";
 import { useConnectionSyncContext } from "./ConnectionSyncContext";
 import { useConnectionStatus } from "../ConnectionStatus/useConnectionStatus";
 
@@ -41,24 +45,43 @@ export const ConnectionSyncButtons: React.FC<ConnectionSyncButtonsProps> = ({
   } = useConnectionSyncContext();
   const { mode, connection } = useConnectionFormService();
   const isReadOnly = mode === "readonly";
+  const sayClearInsteadOfReset = useExperiment("connection.clearNotReset", false);
 
   const connectionStatus = useConnectionStatus(connection.connectionId ?? "");
 
   const { openConfirmationModal, closeConfirmationModal } = useConfirmationModalService();
 
   const resetWithModal = useCallback(() => {
-    openConfirmationModal({
-      text: `form.resetDataText`,
-      title: `form.resetData`,
-      submitButtonText: "form.reset",
-      cancelButtonText: "form.noNeed",
-      onSubmit: async () => {
-        await resetStreams();
-        closeConfirmationModal();
-      },
-      submitButtonDataId: "reset",
-    });
-  }, [closeConfirmationModal, openConfirmationModal, resetStreams]);
+    sayClearInsteadOfReset
+      ? openConfirmationModal({
+          title: <FormattedMessage id="connection.actions.clearData.confirm.title" />,
+          text: "connection.actions.clearData.confirm.text",
+          additionalContent: (
+            <Box pt="xl">
+              <Text color="grey400">
+                <FormattedMessage id="connection.stream.actions.clearData.confirm.additionalText" />
+              </Text>
+            </Box>
+          ),
+          submitButtonText: "connection.stream.actions.clearData.confirm.submit",
+          cancelButtonText: "connection.stream.actions.clearData.confirm.cancel",
+          onSubmit: async () => {
+            await resetStreams();
+            closeConfirmationModal();
+          },
+        })
+      : openConfirmationModal({
+          text: `form.resetDataText`,
+          title: `form.resetData`,
+          submitButtonText: "form.reset",
+          cancelButtonText: "form.noNeed",
+          onSubmit: async () => {
+            await resetStreams();
+            closeConfirmationModal();
+          },
+          submitButtonDataId: "reset",
+        });
+  }, [closeConfirmationModal, openConfirmationModal, resetStreams, sayClearInsteadOfReset]);
 
   const handleDropdownMenuOptionClick = (optionClicked: DropdownMenuOptionType) => {
     switch (optionClicked.value) {
@@ -73,7 +96,7 @@ export const ConnectionSyncButtons: React.FC<ConnectionSyncButtonsProps> = ({
       {!connectionStatus.isRunning && (
         <Button
           onClick={syncConnection}
-          icon={syncStarting ? undefined : <Icon type="sync" />}
+          {...(syncStarting && { icon: "sync" })}
           variant={variant}
           className={buttonClassName}
           isLoading={syncStarting}
@@ -92,7 +115,13 @@ export const ConnectionSyncButtons: React.FC<ConnectionSyncButtonsProps> = ({
           className={buttonClassName}
         >
           <FormattedMessage
-            id={resetStarting || jobResetRunning ? "connection.cancelReset" : "connection.cancelSync"}
+            id={
+              resetStarting || jobResetRunning
+                ? sayClearInsteadOfReset
+                  ? "connection.cancelDataClear"
+                  : "connection.cancelReset"
+                : "connection.cancelSync"
+            }
           />
         </Button>
       )}
@@ -101,16 +130,19 @@ export const ConnectionSyncButtons: React.FC<ConnectionSyncButtonsProps> = ({
         data-testid="job-history-dropdown-menu"
         options={[
           {
-            displayName: formatMessage({ id: "connection.resetData" }),
+            displayName: formatMessage({
+              id: sayClearInsteadOfReset ? "connection.stream.actions.clearData" : "connection.resetData",
+            }),
             value: ContextMenuOptions.ResetData,
             disabled:
               connectionStatus.isRunning || connection.status !== ConnectionStatus.active || mode === "readonly",
             "data-testid": "reset-data-dropdown-option",
+            className: classNames({ [styles.clearDataLabel]: sayClearInsteadOfReset }),
           },
         ]}
         onChange={handleDropdownMenuOptionClick}
       >
-        {() => <Button variant="clear" icon={<Icon type="options" />} />}
+        {() => <Button variant="clear" icon="options" />}
       </DropdownMenu>
     </FlexContainer>
   );

@@ -25,6 +25,7 @@ import io.airbyte.api.model.generated.UserStatus;
 import io.airbyte.api.model.generated.UserUpdate;
 import io.airbyte.api.model.generated.UserWithPermissionInfoRead;
 import io.airbyte.api.model.generated.UserWithPermissionInfoReadList;
+import io.airbyte.api.model.generated.WorkspaceCreateWithId;
 import io.airbyte.api.model.generated.WorkspaceIdRequestBody;
 import io.airbyte.api.model.generated.WorkspaceRead;
 import io.airbyte.api.model.generated.WorkspaceReadList;
@@ -35,7 +36,9 @@ import io.airbyte.api.model.generated.WorkspaceUserReadList;
 import io.airbyte.commons.auth.config.InitialUserConfiguration;
 import io.airbyte.commons.enums.Enums;
 import io.airbyte.commons.json.Jsons;
+import io.airbyte.commons.server.errors.ConflictException;
 import io.airbyte.commons.server.errors.OperationNotAllowedException;
+import io.airbyte.commons.server.handlers.helpers.WorkspaceHelpersKt;
 import io.airbyte.commons.server.support.UserAuthenticationResolver;
 import io.airbyte.config.ConfigSchema;
 import io.airbyte.config.Organization;
@@ -49,6 +52,8 @@ import io.airbyte.config.persistence.OrganizationPersistence;
 import io.airbyte.config.persistence.PermissionPersistence;
 import io.airbyte.config.persistence.SQLOperationNotAllowedException;
 import io.airbyte.config.persistence.UserPersistence;
+import io.airbyte.data.services.PermissionRedundantException;
+import io.airbyte.data.services.PermissionService;
 import io.airbyte.validation.json.JsonValidationException;
 import jakarta.inject.Named;
 import jakarta.inject.Singleton;
@@ -74,31 +79,37 @@ public class UserHandler {
   private final Supplier<UUID> uuidGenerator;
   private final UserPersistence userPersistence;
   private final PermissionPersistence permissionPersistence;
+  private final PermissionService permissionService;
   private final PermissionHandler permissionHandler;
   private final WorkspacesHandler workspacesHandler;
   private final OrganizationPersistence organizationPersistence;
 
   private final UserAuthenticationResolver userAuthenticationResolver;
   private final Optional<InitialUserConfiguration> initialUserConfiguration;
+  private final ResourceBootstrapHandlerInterface resourceBootstrapHandler;
 
   @VisibleForTesting
   public UserHandler(
                      final UserPersistence userPersistence,
                      final PermissionPersistence permissionPersistence,
+                     final PermissionService permissionService,
                      final OrganizationPersistence organizationPersistence,
                      final PermissionHandler permissionHandler,
                      final WorkspacesHandler workspacesHandler,
                      @Named("uuidGenerator") final Supplier<UUID> uuidGenerator,
                      final UserAuthenticationResolver userAuthenticationResolver,
-                     final Optional<InitialUserConfiguration> initialUserConfiguration) {
+                     final Optional<InitialUserConfiguration> initialUserConfiguration,
+                     final ResourceBootstrapHandlerInterface resourceBootstrapHandler) {
     this.uuidGenerator = uuidGenerator;
     this.userPersistence = userPersistence;
     this.organizationPersistence = organizationPersistence;
     this.permissionPersistence = permissionPersistence;
+    this.permissionService = permissionService;
     this.workspacesHandler = workspacesHandler;
     this.permissionHandler = permissionHandler;
     this.userAuthenticationResolver = userAuthenticationResolver;
     this.initialUserConfiguration = initialUserConfiguration;
+    this.resourceBootstrapHandler = resourceBootstrapHandler;
   }
 
   /**
@@ -221,15 +232,10 @@ public class UserHandler {
 
     final User user = buildUser(userRead);
 
-    // We do not allow update on these fields: userId, authUserId, authProvider.
+    // We do not allow update on these fields: userId, authUserId, authProvider, and email
     boolean hasUpdate = false;
     if (userUpdate.getName() != null) {
       user.setName(userUpdate.getName());
-      hasUpdate = true;
-    }
-
-    if (userUpdate.getEmail() != null) {
-      user.setEmail(userUpdate.getEmail());
       hasUpdate = true;
     }
 
@@ -299,7 +305,6 @@ public class UserHandler {
         .authProvider(userRead.getAuthProvider())
         .status(UserStatus.DISABLED)
         .companyName(userRead.getCompanyName())
-        .email(userRead.getEmail())
         .news(userRead.getNews());
     updateUser(userUpdate);
   }
@@ -381,13 +386,16 @@ public class UserHandler {
     return createUser(userCreate);
   }
 
-  private void handleUserPermissionsAndWorkspace(final UserRead createdUser) throws IOException, JsonValidationException, ConfigNotFoundException {
+  private void handleUserPermissionsAndWorkspace(final UserRead createdUser)
+      throws IOException, JsonValidationException, ConfigNotFoundException {
     createInstanceAdminPermissionIfInitialUser(createdUser);
     final Optional<Organization> ssoOrg = getSsoOrganizationIfExists();
     if (ssoOrg.isPresent()) {
+      // SSO users will have some additional logic but will ultimately call createDefaultWorkspaceForUser
       handleSsoUser(createdUser, ssoOrg.get());
     } else {
-      handleNonSsoUser(createdUser);
+      // non-SSO users will just create a default workspace
+      createDefaultWorkspaceForUser(createdUser, Optional.empty());
     }
   }
 
@@ -415,28 +423,42 @@ public class UserHandler {
         new ListWorkspacesInOrganizationRequestBody().organizationId(organization.getOrganizationId()));
 
     if (orgWorkspaces.getWorkspaces().isEmpty()) {
-      final WorkspaceRead defaultWorkspace = createDefaultWorkspaceForUser(user, Optional.of(organization));
-      createPermissionForUserAndWorkspace(user.getUserId(), defaultWorkspace.getWorkspaceId(), PermissionType.WORKSPACE_ADMIN);
+      // Now calls bootstrap which includes all permissions and updates userRead.
+      createDefaultWorkspaceForUser(user, Optional.of(organization));
     }
   }
 
-  private void handleNonSsoUser(final UserRead user) throws JsonValidationException, ConfigNotFoundException, IOException {
-    final WorkspaceRead defaultWorkspace = createDefaultWorkspaceForUser(user, Optional.empty());
-    createPermissionForUserAndWorkspace(user.getUserId(), defaultWorkspace.getWorkspaceId(), PermissionType.WORKSPACE_ADMIN);
-  }
-
-  private WorkspaceRead createDefaultWorkspaceForUser(final UserRead createdUser, final Optional<Organization> organization)
+  protected void createDefaultWorkspaceForUser(final UserRead user, final Optional<Organization> organization)
       throws JsonValidationException, IOException, ConfigNotFoundException {
 
-    final WorkspaceRead defaultWorkspace = workspacesHandler.createDefaultWorkspaceForUser(createdUser, organization);
+    // Only do this if the user doesn't already have a default workspace.
+    if (user.getDefaultWorkspaceId() != null) {
+      return;
+    }
+
+    // Logic stolen from workspaceHandler.createDefaultWorkspaceForUser
+    final String companyName = user.getCompanyName();
+    final String email = user.getEmail();
+    final Boolean news = user.getNews();
+    // otherwise, create a default workspace for this user
+    final WorkspaceCreateWithId workspaceCreate = new WorkspaceCreateWithId()
+        .name(WorkspaceHelpersKt.getDefaultWorkspaceName(organization, companyName, email))
+        .organizationId(organization.map(Organization::getOrganizationId).orElse(null))
+        .email(email)
+        .news(news)
+        .anonymousDataCollection(false)
+        .securityUpdates(false)
+        .displaySetupWizard(true)
+        .id(uuidGenerator.get());
+
+    final WorkspaceRead defaultWorkspace = resourceBootstrapHandler.bootStrapWorkspaceForCurrentUser(workspaceCreate);
 
     // set default workspace id in User table
     final UserUpdate userUpdateDefaultWorkspace = new UserUpdate()
-        .userId(createdUser.getUserId())
+        .userId(user.getUserId())
         .defaultWorkspaceId(defaultWorkspace.getWorkspaceId());
     updateUser(userUpdateDefaultWorkspace);
 
-    return defaultWorkspace;
   }
 
   private Optional<Organization> getSsoOrganizationIfExists() throws IOException {
@@ -460,7 +482,7 @@ public class UserHandler {
         .permissionType(permissionType));
   }
 
-  private void createInstanceAdminPermissionIfInitialUser(final UserRead createdUser) throws IOException, JsonValidationException {
+  private void createInstanceAdminPermissionIfInitialUser(final UserRead createdUser) {
     if (initialUserConfiguration.isEmpty()) {
       // do nothing if initial_user bean is not present.
       return;
@@ -482,12 +504,16 @@ public class UserHandler {
     LOGGER.info("creating instance_admin permission for user ID {} because their email matches this instance's configured initial_user",
         createdUser.getUserId());
 
-    permissionPersistence.writePermission(new Permission()
-        .withPermissionId(uuidGenerator.get())
-        .withUserId(createdUser.getUserId())
-        .withPermissionType(Permission.PermissionType.INSTANCE_ADMIN)
-        .withOrganizationId(null)
-        .withWorkspaceId(null));
+    try {
+      permissionService.createPermission(new Permission()
+          .withPermissionId(uuidGenerator.get())
+          .withUserId(createdUser.getUserId())
+          .withPermissionType(Permission.PermissionType.INSTANCE_ADMIN)
+          .withOrganizationId(null)
+          .withWorkspaceId(null));
+    } catch (final PermissionRedundantException e) {
+      throw new ConflictException(e.getMessage(), e);
+    }
   }
 
   private WorkspaceUserReadList buildWorkspaceUserReadList(final List<UserPermission> userPermissions, final UUID workspaceId) {

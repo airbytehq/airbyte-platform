@@ -48,6 +48,7 @@ import io.airbyte.config.secrets.JsonSecretsProcessor;
 import io.airbyte.config.secrets.SecretCoordinate;
 import io.airbyte.config.secrets.SecretsRepositoryReader;
 import io.airbyte.config.secrets.persistence.RuntimeSecretPersistence;
+import io.airbyte.data.helpers.ActorDefinitionVersionUpdater;
 import io.airbyte.data.services.SecretPersistenceConfigService;
 import io.airbyte.data.services.SourceService;
 import io.airbyte.data.services.WorkspaceService;
@@ -85,6 +86,7 @@ public class SourceHandler {
   private final JsonSecretsProcessor secretsProcessor;
   private final OAuthConfigSupplier oAuthConfigSupplier;
   private final ActorDefinitionVersionHelper actorDefinitionVersionHelper;
+  private final ActorDefinitionVersionUpdater actorDefinitionVersionUpdater;
   private final FeatureFlagClient featureFlagClient;
   private final SourceService sourceService;
   private final WorkspaceService workspaceService;
@@ -105,7 +107,8 @@ public class SourceHandler {
                        final SourceService sourceService,
                        final WorkspaceService workspaceService,
                        final SecretPersistenceConfigService secretPersistenceConfigService,
-                       final ActorDefinitionHandlerHelper actorDefinitionHandlerHelper) {
+                       final ActorDefinitionHandlerHelper actorDefinitionHandlerHelper,
+                       final ActorDefinitionVersionUpdater actorDefinitionVersionUpdater) {
     this.configRepository = configRepository;
     this.secretsRepositoryReader = secretsRepositoryReader;
     validator = integrationSchemaValidation;
@@ -120,6 +123,7 @@ public class SourceHandler {
     this.workspaceService = workspaceService;
     this.secretPersistenceConfigService = secretPersistenceConfigService;
     this.actorDefinitionHandlerHelper = actorDefinitionHandlerHelper;
+    this.actorDefinitionVersionUpdater = actorDefinitionVersionUpdater;
   }
 
   public SourceRead createSourceWithOptionalSecret(final SourceCreate sourceCreate)
@@ -240,7 +244,7 @@ public class SourceHandler {
       throws IOException, JsonValidationException, ConfigNotFoundException {
     final SourceConnection sourceConnection = configRepository.getSourceConnection(sourceIdRequestBody.getSourceId());
     final StandardSourceDefinition sourceDefinition = configRepository.getStandardSourceDefinition(sourceConnection.getSourceDefinitionId());
-    configRepository.setActorDefaultVersion(sourceIdRequestBody.getSourceId(), sourceDefinition.getDefaultVersionId());
+    actorDefinitionVersionUpdater.upgradeActorVersion(sourceConnection, sourceDefinition);
   }
 
   public SourceRead getSource(final SourceIdRequestBody sourceIdRequestBody)

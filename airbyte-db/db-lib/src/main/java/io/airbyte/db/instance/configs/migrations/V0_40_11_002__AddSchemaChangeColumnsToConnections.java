@@ -36,7 +36,7 @@ public class V0_40_11_002__AddSchemaChangeColumnsToConnections extends BaseJavaM
 
   private static void addNonBreakingChangePreferenceEnumTypes(final DSLContext ctx) {
     ctx.createType(NonBreakingChangePreferenceType.NAME)
-        .asEnum(Arrays.stream(NonBreakingChangePreferenceType.values()).map(NonBreakingChangePreferenceType::getLiteral).toList())
+        .asEnum(Arrays.stream(NonBreakingChangePreferenceType.values()).map(NonBreakingChangePreferenceType::getLiteral).toArray(String[]::new))
         .execute();
   }
 

@@ -95,7 +95,7 @@ class RecordMetricActivityImplTest {
         eq(1L),
         eq(new MetricAttribute(MetricTags.CONNECTION_ID, String.valueOf(CONNECTION_ID))),
         eq(new MetricAttribute(MetricTags.WORKSPACE_ID, String.valueOf(WORKSPACE_ID))),
-        eq(new MetricAttribute(MetricTags.RESET_WORKFLOW_FAILURE_CAUSE, failureCause.name())));
+        eq(new MetricAttribute(MetricTags.FAILURE_CAUSE, failureCause.name())));
   }
 
   @Test

@@ -1,6 +1,19 @@
 micronaut:
   application:
     name: airbyte-cron
+  caches:
+    # used by the analytics tracking client to cache calls to resolve the deployment and identity (workspace) for
+    # track events
+    analytics-tracking-deployments:
+      charset: "UTF-8"
+      expire-after-access: 10m
+    analytics-tracking-identity:
+      charset: "UTF-8"
+      expire-after-access: 10m
+    remote-definitions-provider:
+      expire-after-write: 15s
+  env:
+    cloud-deduction: true
   metrics:
     enabled: ${MICROMETER_METRICS_ENABLED:false}
     export:
@@ -10,9 +23,6 @@ micronaut:
         step: ${MICROMETER_METRICS_STEP:PT30S}
         host: ${STATSD_HOST:localhost}
         port: ${STATSD_PORT:8125}
-  caches:
-    remote-definitions-provider:
-      expire-after-write: 15s
   server:
     port: 9001
 
@@ -102,6 +112,9 @@ docker:
 
 endpoints:
   beans:
+    enabled: true
+    sensitive: false
+  caches:
     enabled: true
     sensitive: false
   env:

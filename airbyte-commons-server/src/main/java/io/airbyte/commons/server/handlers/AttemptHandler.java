@@ -4,6 +4,7 @@
 
 package io.airbyte.commons.server.handlers;
 
+import com.google.common.annotations.VisibleForTesting;
 import io.airbyte.api.model.generated.AttemptInfoRead;
 import io.airbyte.api.model.generated.AttemptStats;
 import io.airbyte.api.model.generated.CreateNewAttemptNumberResponse;
@@ -20,19 +21,29 @@ import io.airbyte.commons.server.errors.UnprocessableContentException;
 import io.airbyte.commons.server.handlers.helpers.JobCreationAndStatusUpdateHelper;
 import io.airbyte.commons.temporal.TemporalUtils;
 import io.airbyte.config.AttemptFailureSummary;
+import io.airbyte.config.JobConfig;
 import io.airbyte.config.JobOutput;
 import io.airbyte.config.StandardSyncOutput;
 import io.airbyte.config.StreamSyncStats;
 import io.airbyte.config.SyncStats;
 import io.airbyte.config.helpers.LogClientSingleton;
+import io.airbyte.config.persistence.StatePersistence;
+import io.airbyte.featureflag.Connection;
+import io.airbyte.featureflag.DeleteFullRefreshState;
+import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.metrics.lib.OssMetricsRegistry;
 import io.airbyte.persistence.job.JobPersistence;
 import io.airbyte.persistence.job.models.Job;
+import io.airbyte.protocol.models.ConfiguredAirbyteCatalog;
+import io.airbyte.protocol.models.StreamDescriptor;
+import io.airbyte.protocol.models.SyncMode;
 import jakarta.inject.Named;
 import jakarta.inject.Singleton;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.util.Optional;
+import java.util.Set;
+import java.util.UUID;
 import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -44,20 +55,27 @@ import org.slf4j.LoggerFactory;
 public class AttemptHandler {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(AttemptHandler.class);
+  private static final int FIRST_ATTEMPT = 0;
 
   private final JobPersistence jobPersistence;
+  private final StatePersistence statePersistence;
 
   private final JobConverter jobConverter;
   private final JobCreationAndStatusUpdateHelper jobCreationAndStatusUpdateHelper;
   private final Path workspaceRoot;
+  private final FeatureFlagClient featureFlagClient;
 
   public AttemptHandler(final JobPersistence jobPersistence,
+                        final StatePersistence statePersistence,
                         final JobConverter jobConverter,
+                        final FeatureFlagClient featureFlagClient,
                         final JobCreationAndStatusUpdateHelper jobCreationAndStatusUpdateHelper,
                         @Named("workspaceRoot") final Path workspaceRoot) {
     this.jobPersistence = jobPersistence;
+    this.statePersistence = statePersistence;
     this.jobConverter = jobConverter;
     this.jobCreationAndStatusUpdateHelper = jobCreationAndStatusUpdateHelper;
+    this.featureFlagClient = featureFlagClient;
     this.workspaceRoot = workspaceRoot;
   }
 
@@ -72,10 +90,41 @@ public class AttemptHandler {
     final Path jobRoot = TemporalUtils.getJobRoot(workspaceRoot, String.valueOf(jobId), job.getAttemptsCount());
     final Path logFilePath = jobRoot.resolve(LogClientSingleton.LOG_FILENAME);
     final int persistedAttemptNumber = jobPersistence.createAttempt(jobId, logFilePath);
+
+    // We cannot easily do this in a transaction as the attempt and state tables are in separate logical
+    // databases.
+    final var removeFullRefreshStreamState =
+        job.getConfigType().equals(JobConfig.ConfigType.SYNC) || job.getConfigType().equals(JobConfig.ConfigType.REFRESH);
+    if (removeFullRefreshStreamState) {
+      if (featureFlagClient.boolVariation(DeleteFullRefreshState.INSTANCE, new Connection(job.getScope()))) {
+        LOGGER.info("Clearing full refresh state..");
+        final var stateToClear = getFullRefreshStreams(job.getConfig().getSync().getConfiguredAirbyteCatalog(), job.getId());
+        if (!stateToClear.isEmpty()) {
+          statePersistence.bulkDelete(UUID.fromString(job.getScope()), stateToClear);
+        }
+      }
+    }
+
     jobCreationAndStatusUpdateHelper.emitJobToReleaseStagesMetric(OssMetricsRegistry.ATTEMPT_CREATED_BY_RELEASE_STAGE, job);
     jobCreationAndStatusUpdateHelper.emitAttemptCreatedEvent(job, persistedAttemptNumber);
 
     return new CreateNewAttemptNumberResponse().attemptNumber(persistedAttemptNumber);
+  }
+
+  @VisibleForTesting
+  Set<StreamDescriptor> getFullRefreshStreams(ConfiguredAirbyteCatalog catalog, long id) {
+    if (catalog == null) {
+      throw new BadRequestException("Missing configured catalog for job: " + id);
+    }
+    final var configuredStreams = catalog.getStreams();
+    if (configuredStreams == null) {
+      throw new BadRequestException("Missing configured catalog stream for job: " + id);
+    }
+
+    return configuredStreams.stream()
+        .filter(s -> s.getSyncMode().equals(SyncMode.FULL_REFRESH))
+        .map(s -> new StreamDescriptor().withName(s.getStream().getName()).withNamespace(s.getStream().getNamespace()))
+        .collect(Collectors.toSet());
   }
 
   public AttemptInfoRead getAttemptForJob(final long jobId, final int attemptNo) throws IOException {

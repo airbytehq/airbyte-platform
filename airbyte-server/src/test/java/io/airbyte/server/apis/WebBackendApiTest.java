@@ -13,10 +13,9 @@ import io.airbyte.api.model.generated.WebBackendConnectionReadList;
 import io.airbyte.api.model.generated.WebBackendConnectionRequestBody;
 import io.airbyte.api.model.generated.WebBackendGeographiesListResult;
 import io.airbyte.api.model.generated.WebBackendWorkspaceStateResult;
-import io.airbyte.commons.json.Jsons;
+import io.airbyte.commons.server.authorization.ApiAuthorizationHelper;
+import io.airbyte.commons.server.errors.problems.ForbiddenProblem;
 import io.airbyte.config.persistence.ConfigNotFoundException;
-import io.airbyte.server.apis.publicapi.authorization.AirbyteApiAuthorizationHelper;
-import io.airbyte.server.apis.publicapi.problems.ForbiddenProblem;
 import io.airbyte.validation.json.JsonValidationException;
 import io.micronaut.context.annotation.Primary;
 import io.micronaut.context.annotation.Requires;
@@ -36,7 +35,7 @@ import org.mockito.Mockito;
 @SuppressWarnings("PMD.JUnitTestsShouldIncludeAssert")
 class WebBackendApiTest extends BaseControllerTest {
 
-  private AirbyteApiAuthorizationHelper airbyteApiAuthorizationHelper;
+  private ApiAuthorizationHelper apiAuthorizationHelper;
 
   // Due to some strange interaction between Micronaut 3, Java, and Kotlin, the only way to
   // mock this Kotlin dependency is to annotate it with @Bean instead of @MockBean, and to
@@ -44,13 +43,13 @@ class WebBackendApiTest extends BaseControllerTest {
   // back to BaseControllerTest and use @MockBean after we upgrade to Micronaut 4.
   @Singleton
   @Primary
-  AirbyteApiAuthorizationHelper mmAirbyteApiAuthorizationHelper() {
-    return airbyteApiAuthorizationHelper;
+  ApiAuthorizationHelper mmAirbyteApiAuthorizationHelper() {
+    return apiAuthorizationHelper;
   }
 
   @BeforeEach
   void setup() {
-    airbyteApiAuthorizationHelper = Mockito.mock(AirbyteApiAuthorizationHelper.class);
+    apiAuthorizationHelper = Mockito.mock(ApiAuthorizationHelper.class);
   }
 
   @Test
@@ -59,7 +58,7 @@ class WebBackendApiTest extends BaseControllerTest {
         .thenReturn(ConnectionStateType.STREAM);
     final String path = "/api/v1/web_backend/state/get_type";
     testEndpointStatus(
-        HttpRequest.POST(path, Jsons.serialize(new SourceIdRequestBody())),
+        HttpRequest.POST(path, new SourceIdRequestBody()),
         HttpStatus.OK);
   }
 
@@ -69,7 +68,7 @@ class WebBackendApiTest extends BaseControllerTest {
         .thenReturn(new WebBackendCheckUpdatesRead());
     final String path = "/api/v1/web_backend/check_updates";
     testEndpointStatus(
-        HttpRequest.POST(path, Jsons.serialize(new SourceIdRequestBody())),
+        HttpRequest.POST(path, new SourceIdRequestBody()),
         HttpStatus.OK);
   }
 
@@ -80,10 +79,10 @@ class WebBackendApiTest extends BaseControllerTest {
         .thenThrow(new ConfigNotFoundException("", ""));
     final String path = "/api/v1/web_backend/connections/create";
     testEndpointStatus(
-        HttpRequest.POST(path, Jsons.serialize(new SourceIdRequestBody())),
+        HttpRequest.POST(path, new SourceIdRequestBody()),
         HttpStatus.OK);
     testErrorEndpointStatus(
-        HttpRequest.POST(path, Jsons.serialize(new SourceDefinitionIdRequestBody())),
+        HttpRequest.POST(path, new SourceDefinitionIdRequestBody()),
         HttpStatus.NOT_FOUND);
   }
 
@@ -96,33 +95,34 @@ class WebBackendApiTest extends BaseControllerTest {
         .thenReturn(new WebBackendConnectionRead()) // second call that makes it here succeeds
         .thenThrow(new ConfigNotFoundException("", "")); // third call that makes it here 404s
 
+    // This only impacts calls where withRefreshCatalog(true) is present
     Mockito
         .doNothing() // first call that makes it here passes auth check
         .doNothing() // second call that makes it here passes auth check but 404s
         .doThrow(new ForbiddenProblem("forbidden")) // third call fails auth check and 403s
-        .when(airbyteApiAuthorizationHelper).checkWorkspacePermissions(Mockito.anyString(), Mockito.any(), Mockito.any());
+        .when(apiAuthorizationHelper).checkWorkspacePermissions(Mockito.anyString(), Mockito.any(), Mockito.any());
 
     // first call doesn't activate checkWorkspacePermissions because withRefreshedCatalog is false
     testEndpointStatus(
-        HttpRequest.POST(path, Jsons.serialize(new WebBackendConnectionRequestBody().connectionId(UUID.randomUUID()).withRefreshedCatalog(false))),
+        HttpRequest.POST(path, new WebBackendConnectionRequestBody()),
         HttpStatus.OK);
 
     // second call activates checkWorkspacePermissions because withRefreshedCatalog is true, and passes
     // the check
     testEndpointStatus(
-        HttpRequest.POST(path, Jsons.serialize(new WebBackendConnectionRequestBody().connectionId(UUID.randomUUID()).withRefreshedCatalog(true))),
+        HttpRequest.POST(path, new WebBackendConnectionRequestBody().connectionId(UUID.randomUUID()).withRefreshedCatalog(true)),
         HttpStatus.OK);
 
     // third call activates checkWorkspacePermissions because withRefreshedCatalog is true, passes it,
     // but then fails on the 404
     testErrorEndpointStatus(
-        HttpRequest.POST(path, Jsons.serialize(new WebBackendConnectionRequestBody().connectionId(UUID.randomUUID()).withRefreshedCatalog(true))),
+        HttpRequest.POST(path, new WebBackendConnectionRequestBody().connectionId(UUID.randomUUID()).withRefreshedCatalog(true)),
         HttpStatus.NOT_FOUND);
 
     // fourth call activates checkWorkspacePermissions because withRefreshedCatalog is true, but fails
     // the check, so 403s
     testErrorEndpointStatus(
-        HttpRequest.POST(path, Jsons.serialize(new WebBackendConnectionRequestBody().connectionId(UUID.randomUUID()).withRefreshedCatalog(true))),
+        HttpRequest.POST(path, new WebBackendConnectionRequestBody().connectionId(UUID.randomUUID()).withRefreshedCatalog(true)),
         HttpStatus.FORBIDDEN);
   }
 
@@ -132,7 +132,7 @@ class WebBackendApiTest extends BaseControllerTest {
         .thenReturn(new WebBackendWorkspaceStateResult());
     final String path = "/api/v1/web_backend/workspace/state";
     testEndpointStatus(
-        HttpRequest.POST(path, Jsons.serialize(new SourceIdRequestBody())),
+        HttpRequest.POST(path, new SourceIdRequestBody()),
         HttpStatus.OK);
   }
 
@@ -142,7 +142,7 @@ class WebBackendApiTest extends BaseControllerTest {
         .thenReturn(new WebBackendConnectionReadList());
     final String path = "/api/v1/web_backend/connections/list";
     testEndpointStatus(
-        HttpRequest.POST(path, Jsons.serialize(new SourceIdRequestBody())),
+        HttpRequest.POST(path, new SourceIdRequestBody()),
         HttpStatus.OK);
   }
 
@@ -152,7 +152,7 @@ class WebBackendApiTest extends BaseControllerTest {
         .thenReturn(new WebBackendGeographiesListResult());
     final String path = "/api/v1/web_backend/geographies/list";
     testEndpointStatus(
-        HttpRequest.POST(path, Jsons.serialize(new SourceIdRequestBody())),
+        HttpRequest.POST(path, new SourceIdRequestBody()),
         HttpStatus.OK);
   }
 
@@ -163,10 +163,10 @@ class WebBackendApiTest extends BaseControllerTest {
         .thenThrow(new ConfigNotFoundException("", ""));
     final String path = "/api/v1/web_backend/connections/update";
     testEndpointStatus(
-        HttpRequest.POST(path, Jsons.serialize(new SourceIdRequestBody())),
+        HttpRequest.POST(path, new SourceIdRequestBody()),
         HttpStatus.OK);
     testErrorEndpointStatus(
-        HttpRequest.POST(path, Jsons.serialize(new SourceDefinitionIdRequestBody())),
+        HttpRequest.POST(path, new SourceDefinitionIdRequestBody()),
         HttpStatus.NOT_FOUND);
   }
 

@@ -103,7 +103,7 @@ class SegmentTrackingClientTest {
 
     verify(exactly = 1) { analytics.enqueue(any()) }
     val actual = builderSlot.captured.build()
-    val expectedTraits: Map<String?, Any?>? =
+    val expectedTraits: Map<String?, Any?> =
       mapOf(
         "airbyte_role" to "role",
         SegmentTrackingClient.AIRBYTE_VERSION_KEY to airbyteVersion.serialize(),
@@ -124,7 +124,7 @@ class SegmentTrackingClientTest {
     val builderSlot = slot<TrackMessage.Builder>()
     every { analytics.enqueue(capture(builderSlot)) } returns Unit
 
-    val metadata: Map<String?, Any?>? =
+    val metadata: Map<String?, Any?> =
       mapOf(
         SegmentTrackingClient.AIRBYTE_VERSION_KEY to airbyteVersion.serialize(),
         "user_id" to identity.customerId,
@@ -147,7 +147,7 @@ class SegmentTrackingClientTest {
     val builderSlot = slot<TrackMessage.Builder>()
     every { analytics.enqueue(capture(builderSlot)) } returns Unit
 
-    val metadata: Map<String?, Any?>? =
+    val metadata: Map<String?, Any?> =
       mapOf(
         SegmentTrackingClient.AIRBYTE_VERSION_KEY to airbyteVersion.serialize(),
         EMAIL_KEY to EMAIL,
@@ -176,18 +176,17 @@ class SegmentTrackingClientTest {
     every { httpHeaders.get(SegmentTrackingClient.AIRBYTE_ANALYTIC_SOURCE_HEADER) } returns analyticSource
     every { httpRequest.headers } returns httpHeaders
 
-    ServerRequestContext.set(httpRequest)
-
-    val metadata: Map<String?, Any?>? =
-      mapOf(
-        SegmentTrackingClient.AIRBYTE_VERSION_KEY to airbyteVersion.serialize(),
-        EMAIL_KEY to EMAIL,
-        "height" to "80 meters",
-        "user_id" to identity.customerId,
-        SegmentTrackingClient.AIRBYTE_SOURCE to SegmentTrackingClient.UNKNOWN,
-      )
-    segmentTrackingClient.track(workspaceId, JUMP, metadata)
-
+    ServerRequestContext.with(httpRequest) {
+      val metadata: Map<String?, Any?> =
+        mapOf(
+          SegmentTrackingClient.AIRBYTE_VERSION_KEY to airbyteVersion.serialize(),
+          EMAIL_KEY to EMAIL,
+          "height" to "80 meters",
+          "user_id" to identity.customerId,
+          SegmentTrackingClient.AIRBYTE_SOURCE to SegmentTrackingClient.UNKNOWN,
+        )
+      segmentTrackingClient.track(workspaceId, JUMP, metadata)
+    }
     verify(exactly = 1) { analytics.enqueue(any()) }
     val actual = builderSlot.captured.build()
     Assertions.assertEquals(

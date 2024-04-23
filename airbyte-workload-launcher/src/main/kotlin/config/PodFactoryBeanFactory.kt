@@ -8,6 +8,7 @@ import io.airbyte.workload.launcher.pods.factories.ConnectorPodFactory
 import io.airbyte.workload.launcher.pods.factories.ConnectorPodFactory.Companion.CHECK_OPERATION_NAME
 import io.airbyte.workload.launcher.pods.factories.ConnectorPodFactory.Companion.DISCOVER_OPERATION_NAME
 import io.airbyte.workload.launcher.pods.factories.ConnectorPodFactory.Companion.SPEC_OPERATION_NAME
+import io.airbyte.workload.launcher.pods.factories.InitContainerFactory
 import io.airbyte.workload.launcher.pods.factories.VolumeFactory
 import io.fabric8.kubernetes.api.model.EnvVar
 import io.fabric8.kubernetes.api.model.LocalObjectReference
@@ -32,6 +33,7 @@ class PodFactoryBeanFactory {
     @Named("sidecarKubeContainerInfo") sidecarContainerInfo: KubeContainerInfo,
     @Value("\${airbyte.worker.job.kube.serviceAccount}") serviceAccount: String?,
     volumeFactory: VolumeFactory,
+    initContainerFactory: InitContainerFactory,
   ): ConnectorPodFactory {
     return ConnectorPodFactory(
       CHECK_OPERATION_NAME,
@@ -45,6 +47,7 @@ class PodFactoryBeanFactory {
       sidecarContainerInfo,
       serviceAccount,
       volumeFactory,
+      initContainerFactory,
       mapOf(
         "config" to "${KubePodProcess.CONFIG_DIR}/connectionConfiguration.json",
       ),
@@ -64,6 +67,7 @@ class PodFactoryBeanFactory {
     @Named("sidecarKubeContainerInfo") sidecarContainerInfo: KubeContainerInfo,
     @Value("\${airbyte.worker.job.kube.serviceAccount}") serviceAccount: String?,
     volumeFactory: VolumeFactory,
+    initContainerFactory: InitContainerFactory,
   ): ConnectorPodFactory {
     return ConnectorPodFactory(
       DISCOVER_OPERATION_NAME,
@@ -77,6 +81,7 @@ class PodFactoryBeanFactory {
       sidecarContainerInfo,
       serviceAccount,
       volumeFactory,
+      initContainerFactory,
       mapOf(
         "config" to "${KubePodProcess.CONFIG_DIR}/connectionConfiguration.json",
       ),
@@ -96,6 +101,7 @@ class PodFactoryBeanFactory {
     @Named("sidecarKubeContainerInfo") sidecarContainerInfo: KubeContainerInfo,
     @Value("\${airbyte.worker.job.kube.serviceAccount}") serviceAccount: String?,
     volumeFactory: VolumeFactory,
+    initContainerFactory: InitContainerFactory,
   ): ConnectorPodFactory {
     return ConnectorPodFactory(
       SPEC_OPERATION_NAME,
@@ -109,6 +115,7 @@ class PodFactoryBeanFactory {
       sidecarContainerInfo,
       serviceAccount,
       volumeFactory,
+      initContainerFactory,
       mapOf(),
     )
   }

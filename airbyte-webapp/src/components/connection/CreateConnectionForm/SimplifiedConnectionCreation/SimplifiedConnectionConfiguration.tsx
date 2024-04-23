@@ -14,27 +14,18 @@ import { Box } from "components/ui/Box";
 import { Button } from "components/ui/Button";
 import { Card } from "components/ui/Card";
 import { FlexContainer } from "components/ui/Flex";
-import { Icon } from "components/ui/Icon";
 import { Link } from "components/ui/Link";
 import { Text } from "components/ui/Text";
 
 import { useGetDestinationFromSearchParams, useGetSourceFromSearchParams } from "area/connector/utils";
 import { useCurrentWorkspaceLink } from "area/workspace/utils";
-import { FeatureItem, useFeature } from "core/services/features";
+import { PageTrackingCodes, useTrackPage } from "core/services/analytics";
 import { useConnectionFormService } from "hooks/services/ConnectionForm/ConnectionFormService";
-import { useExperiment } from "hooks/services/Experiment";
 import { useFormChangeTrackerService } from "hooks/services/FormChangeTracker";
 import { ConnectionRoutePaths, RoutePaths } from "pages/routePaths";
 
-import { SimplfiedSchemaChangesFormField } from "./SimplfiedSchemaChangesFormField";
-import { SimplifiedBackfillFormField } from "./SimplifiedBackfillFormField";
 import styles from "./SimplifiedConnectionConfiguration.module.scss";
-import { SimplfiedConnectionDataResidencyFormField } from "./SimplifiedConnectionDataResidencyFormField";
-import { SimplifiedConnectionNameFormField } from "./SimplifiedConnectionNameFormField";
-import { SimplifiedConnectionScheduleFormField } from "./SimplifiedConnectionScheduleFormField";
-import { SimplifiedDestinationNamespaceFormField } from "./SimplifiedDestinationNamespaceFormField";
-import { SimplifiedDestinationStreamPrefixNameFormField } from "./SimplifiedDestinationStreamPrefixNameFormField";
-import { SimplifiedSchemaChangeNotificationFormField } from "./SimplifiedSchemaChangeNotificationFormField";
+import { SimplifiedConnectionsSettingsCard } from "./SimplifiedConnectionSettingsCard";
 import { SimplifiedSchemaQuestionnaire } from "./SimplifiedSchemaQuestionnaire";
 import { CREATE_CONNECTION_FORM_ID } from "../CreateConnectionForm";
 
@@ -64,6 +55,7 @@ export const SimplifiedConnectionConfiguration: React.FC = () => {
 };
 
 const SimplifiedConnectionCreationReplication: React.FC = () => {
+  useTrackPage(PageTrackingCodes.CONNECTIONS_NEW_SELECT_STREAMS);
   const { formatMessage } = useIntl();
   const { isDirty } = useFormState<FormConnectionFormValues>();
   const { trackFormChange } = useFormChangeTrackerService();
@@ -75,25 +67,25 @@ const SimplifiedConnectionCreationReplication: React.FC = () => {
 
   return (
     <>
-      <Card title={formatMessage({ id: "connectionForm.selectSyncMode" })}>
-        <Box m="xl">
-          <SimplifiedSchemaQuestionnaire />
-        </Box>
+      <Card
+        title={formatMessage({ id: "connectionForm.selectSyncMode" })}
+        helpText={formatMessage({ id: "connectionForm.selectSyncModeDescription" })}
+      >
+        <SimplifiedSchemaQuestionnaire />
       </Card>
-      <Card>
-        <SyncCatalogCard />
-      </Card>
+      <SyncCatalogCard />
     </>
   );
 };
 
 const SimplifiedConnectionCreationConfigureConnection: React.FC = () => {
+  useTrackPage(PageTrackingCodes.CONNECTIONS_NEW_CONFIGURE_CONNECTION);
   const { formatMessage } = useIntl();
-  const [isAdvancedOpen, setIsAdvancedOpen] = React.useState(false);
-  const canEditDataGeographies = useFeature(FeatureItem.AllowChangeDataGeographies);
-  const canBackfillNewColumns = useExperiment("platform.auto-backfill-on-new-columns", false);
   const { isDirty } = useFormState<FormConnectionFormValues>();
   const { trackFormChange } = useFormChangeTrackerService();
+
+  const source = useGetSourceFromSearchParams();
+  const destination = useGetDestinationFromSearchParams();
 
   // if the user is navigating from the first step the form may be dirty
   useMount(() => {
@@ -101,48 +93,19 @@ const SimplifiedConnectionCreationConfigureConnection: React.FC = () => {
   });
 
   return (
-    <Card title={formatMessage({ id: "connectionForm.configureConnection" })} className={styles.hideOverflow}>
-      <FlexContainer direction="column" gap="xl">
-        <SimplifiedConnectionNameFormField />
-        <SimplifiedConnectionScheduleFormField />
-        <SimplifiedDestinationNamespaceFormField />
-        <SimplifiedDestinationStreamPrefixNameFormField />
-      </FlexContainer>
-
-      <Box mt="md">
-        <button
-          type="button"
-          className={styles.advancedSettings}
-          onClick={() => setIsAdvancedOpen((isAdvancedOpen) => !isAdvancedOpen)}
-        >
-          <FormattedMessage id="connectionForm.advancedSettings" />
-          <Icon type={isAdvancedOpen ? "chevronDown" : "chevronRight"} size="lg" />
-        </button>
-
-        <Text color="grey">
-          <FormattedMessage id="connectionForm.advancedSettings.subtitle" />
-        </Text>
-
-        {isAdvancedOpen && <hr className={styles.hr} />}
-
-        {/* using styles.hidden to show/hide as residency field makes an http request for geographies */}
-        {/* which triggers a suspense boundary - none of the places for a suspense fallback are good UX  */}
-        {/* so always render, making the geography request as part of the initial page load */}
-        <FlexContainer direction="column" gap="xl" className={isAdvancedOpen ? undefined : styles.hidden}>
-          {canEditDataGeographies && <SimplfiedConnectionDataResidencyFormField />}
-          <SimplfiedSchemaChangesFormField />
-          <SimplifiedSchemaChangeNotificationFormField />
-          {canBackfillNewColumns && <SimplifiedBackfillFormField />}
-        </FlexContainer>
-      </Box>
-    </Card>
+    <SimplifiedConnectionsSettingsCard
+      title={formatMessage({ id: "connectionForm.configureConnection" })}
+      source={source}
+      destination={destination}
+      isCreating
+    />
   );
 };
 
 const FirstNav: React.FC = () => {
   const createLink = useCurrentWorkspaceLink();
-  const source = useGetSourceFromSearchParams();
   const destination = useGetDestinationFromSearchParams();
+  const source = useGetSourceFromSearchParams();
 
   const { isValid, errors } = useFormState<FormConnectionFormValues>();
   const { trigger } = useFormContext<FormConnectionFormValues>();
@@ -189,7 +152,7 @@ const FirstNav: React.FC = () => {
               ),
               search: `?${SOURCE_ID_PARAM}=${source.sourceId}&${DESTINATION_ID_PARAM}=${destination.destinationId}`,
             }}
-            className={classNames(styles.linkText)}
+            className={classNames(styles.nextLink)}
             onClick={() => {
               // we're navigating to the next step which retains the creation form's state
               clearFormChange(CREATE_CONNECTION_FORM_ID);
@@ -198,7 +161,7 @@ const FirstNav: React.FC = () => {
             <FormattedMessage id="connectionForm.nextButton" />
           </Link>
         ) : (
-          <Button variant="secondary" disabled>
+          <Button disabled>
             <FormattedMessage id="connectionForm.nextButton" />
           </Button>
         )}

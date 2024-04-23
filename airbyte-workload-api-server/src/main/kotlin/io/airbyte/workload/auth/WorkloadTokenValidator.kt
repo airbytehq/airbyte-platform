@@ -25,7 +25,7 @@ private val LOGGER = KotlinLogging.logger {}
 @Singleton
 class WorkloadTokenValidator(
   @Value("\${micronaut.security.token.jwt.bearer.secret}") val bearerSecret: String,
-) : TokenValidator {
+) : TokenValidator<HttpRequest<*>> {
   override fun validateToken(
     token: String,
     request: HttpRequest<*>?,

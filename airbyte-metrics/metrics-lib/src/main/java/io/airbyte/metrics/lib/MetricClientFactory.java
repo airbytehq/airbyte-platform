@@ -4,8 +4,7 @@
 
 package io.airbyte.metrics.lib;
 
-import io.airbyte.config.Configs;
-import io.airbyte.config.EnvConfigs;
+import io.airbyte.commons.envvar.EnvVar;
 import io.micrometer.core.instrument.Clock;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.statsd.StatsdConfig;
@@ -22,8 +21,7 @@ public class MetricClientFactory {
 
   static final String DATADOG_METRIC_CLIENT = "datadog";
   private static final String OTEL_METRIC_CLIENT = "otel";
-
-  private static final Configs configs = new EnvConfigs();
+  private static final String METRIC_CLIENT = EnvVar.METRIC_CLIENT.fetch("");
 
   private MetricClientFactory() {
     // no explicit implementation
@@ -57,17 +55,17 @@ public class MetricClientFactory {
    */
   public static synchronized void initialize(final MetricEmittingApp metricEmittingApp) {
     if (metricClient != null) {
-      LOGGER.warn("Metric client is already initialized to " + configs.getMetricClient());
+      LOGGER.warn("Metric client is already initialized to " + METRIC_CLIENT);
       return;
     }
 
-    if (DATADOG_METRIC_CLIENT.equals(configs.getMetricClient())) {
-      if (configs.getDDAgentHost() == null || configs.getDDDogStatsDPort() == null) {
+    if (DATADOG_METRIC_CLIENT.equals(METRIC_CLIENT)) {
+      if (EnvVar.DD_AGENT_HOST.fetch() == null || EnvVar.DD_DOGSTATSD_PORT.fetch() == null) {
         throw new RuntimeException("DD_AGENT_HOST is null or DD_DOGSTATSD_PORT is null. Both are required to use the DataDog Metric Client");
       } else {
         initializeDatadogMetricClient(metricEmittingApp);
       }
-    } else if (OTEL_METRIC_CLIENT.equals(configs.getMetricClient())) {
+    } else if (OTEL_METRIC_CLIENT.equals(METRIC_CLIENT)) {
       initializeOpenTelemetryMetricClient(metricEmittingApp);
     } else {
       metricClient = new NotImplementedMetricClient();
@@ -90,7 +88,7 @@ public class MetricClientFactory {
        */
       @Override
       public String host() {
-        return configs.getDDAgentHost();
+        return EnvVar.DD_AGENT_HOST.fetch("");
       }
 
       /**
@@ -111,7 +109,7 @@ public class MetricClientFactory {
    */
   public static MeterRegistry getMeterRegistry() {
 
-    if (DATADOG_METRIC_CLIENT.equals(configs.getMetricClient())) {
+    if (DATADOG_METRIC_CLIENT.equals(METRIC_CLIENT)) {
       final StatsdConfig config = getDatadogStatsDConfig();
       return new StatsdMeterRegistry(config, Clock.SYSTEM);
     }
@@ -125,14 +123,14 @@ public class MetricClientFactory {
   private static void initializeDatadogMetricClient(final MetricEmittingApp metricEmittingApp) {
     LOGGER.info("Initializing DatadogMetricClient");
     final DogStatsDMetricClient client = new DogStatsDMetricClient();
-    client.initialize(metricEmittingApp, new DatadogClientConfiguration(configs));
+    client.initialize(metricEmittingApp, new DatadogClientConfiguration());
     metricClient = client;
   }
 
   private static void initializeOpenTelemetryMetricClient(final MetricEmittingApp metricEmittingApp) {
     LOGGER.info("Initializing OpenTelemetryMetricClient");
     final OpenTelemetryMetricClient client = new OpenTelemetryMetricClient();
-    client.initialize(metricEmittingApp, configs.getOtelCollectorEndpoint());
+    client.initialize(metricEmittingApp, EnvVar.OTEL_COLLECTOR_ENDPOINT.fetch(""));
     metricClient = client;
   }
 

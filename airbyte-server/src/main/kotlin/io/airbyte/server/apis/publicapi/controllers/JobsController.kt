@@ -4,10 +4,10 @@
 
 package io.airbyte.server.apis.publicapi.controllers
 
-import io.airbyte.api.model.generated.JobListForWorkspacesRequestBody.OrderByFieldEnum
-import io.airbyte.api.model.generated.JobListForWorkspacesRequestBody.OrderByMethodEnum
 import io.airbyte.api.model.generated.PermissionType
-import io.airbyte.commons.enums.Enums
+import io.airbyte.commons.server.authorization.ApiAuthorizationHelper
+import io.airbyte.commons.server.authorization.Scope
+import io.airbyte.commons.server.errors.problems.UnprocessableEntityProblem
 import io.airbyte.commons.server.scheduling.AirbyteTaskExecutors
 import io.airbyte.commons.server.support.CurrentUserService
 import io.airbyte.public_api.generated.PublicJobsApi
@@ -16,29 +16,26 @@ import io.airbyte.public_api.model.generated.JobCreateRequest
 import io.airbyte.public_api.model.generated.JobStatusEnum
 import io.airbyte.public_api.model.generated.JobTypeEnum
 import io.airbyte.server.apis.publicapi.apiTracking.TrackingHelper
-import io.airbyte.server.apis.publicapi.authorization.AirbyteApiAuthorizationHelper
-import io.airbyte.server.apis.publicapi.authorization.Scope
 import io.airbyte.server.apis.publicapi.constants.DELETE
 import io.airbyte.server.apis.publicapi.constants.GET
 import io.airbyte.server.apis.publicapi.constants.JOBS_PATH
 import io.airbyte.server.apis.publicapi.constants.JOBS_WITH_ID_PATH
 import io.airbyte.server.apis.publicapi.constants.POST
 import io.airbyte.server.apis.publicapi.filters.JobsFilter
-import io.airbyte.server.apis.publicapi.problems.BadRequestProblem
-import io.airbyte.server.apis.publicapi.problems.UnprocessableEntityProblem
+import io.airbyte.server.apis.publicapi.helpers.orderByToFieldAndMethod
 import io.airbyte.server.apis.publicapi.services.ConnectionService
+import io.airbyte.server.apis.publicapi.services.JobService
 import io.micronaut.http.annotation.Controller
 import io.micronaut.scheduling.annotation.ExecuteOn
 import io.micronaut.security.annotation.Secured
 import io.micronaut.security.rules.SecurityRule
-import services.JobService
+import jakarta.ws.rs.DELETE
+import jakarta.ws.rs.GET
+import jakarta.ws.rs.Path
+import jakarta.ws.rs.PathParam
+import jakarta.ws.rs.core.Response
 import java.time.OffsetDateTime
 import java.util.UUID
-import javax.ws.rs.DELETE
-import javax.ws.rs.GET
-import javax.ws.rs.Path
-import javax.ws.rs.PathParam
-import javax.ws.rs.core.Response
 
 @Controller(JOBS_PATH)
 @Secured(SecurityRule.IS_AUTHENTICATED)
@@ -46,17 +43,17 @@ open class JobsController(
   private val jobService: JobService,
   private val connectionService: ConnectionService,
   private val trackingHelper: TrackingHelper,
-  private val airbyteApiAuthorizationHelper: AirbyteApiAuthorizationHelper,
+  private val apiAuthorizationHelper: ApiAuthorizationHelper,
   private val currentUserService: CurrentUserService,
 ) : PublicJobsApi {
   @DELETE
   @Path("/{jobId}")
-  @ExecuteOn(AirbyteTaskExecutors.IO)
+  @ExecuteOn(AirbyteTaskExecutors.PUBLIC_API)
   override fun publicCancelJob(
     @PathParam("jobId") jobId: Long,
   ): Response {
     val userId: UUID = currentUserService.currentUser.userId
-    airbyteApiAuthorizationHelper.checkWorkspacePermissions(
+    apiAuthorizationHelper.checkWorkspacePermissions(
       listOf(jobId.toString()),
       Scope.JOB,
       userId,
@@ -86,10 +83,10 @@ open class JobsController(
       .build()
   }
 
-  @ExecuteOn(AirbyteTaskExecutors.IO)
+  @ExecuteOn(AirbyteTaskExecutors.PUBLIC_API)
   override fun publicCreateJob(jobCreateRequest: JobCreateRequest): Response {
     val userId: UUID = currentUserService.currentUser.userId
-    airbyteApiAuthorizationHelper.checkWorkspacePermissions(
+    apiAuthorizationHelper.checkWorkspacePermissions(
       listOf(jobCreateRequest.connectionId.toString()),
       Scope.CONNECTION,
       userId,
@@ -163,12 +160,12 @@ open class JobsController(
 
   @GET
   @Path("/{jobId}")
-  @ExecuteOn(AirbyteTaskExecutors.IO)
+  @ExecuteOn(AirbyteTaskExecutors.PUBLIC_API)
   override fun getJob(
     @PathParam("jobId") jobId: Long,
   ): Response {
     val userId: UUID = currentUserService.currentUser.userId
-    airbyteApiAuthorizationHelper.checkWorkspacePermissions(
+    apiAuthorizationHelper.checkWorkspacePermissions(
       listOf(jobId.toString()),
       Scope.JOB,
       userId,
@@ -198,7 +195,7 @@ open class JobsController(
       .build()
   }
 
-  @ExecuteOn(AirbyteTaskExecutors.IO)
+  @ExecuteOn(AirbyteTaskExecutors.PUBLIC_API)
   override fun listJobs(
     connectionId: UUID?,
     limit: Int?,
@@ -214,14 +211,14 @@ open class JobsController(
   ): Response {
     val userId: UUID = currentUserService.currentUser.userId
     if (connectionId != null) {
-      airbyteApiAuthorizationHelper.checkWorkspacePermissions(
+      apiAuthorizationHelper.checkWorkspacePermissions(
         listOf(connectionId.toString()),
         Scope.CONNECTION,
         userId,
         PermissionType.WORKSPACE_READER,
       )
     } else {
-      airbyteApiAuthorizationHelper.checkWorkspacePermissions(
+      apiAuthorizationHelper.checkWorkspacePermissions(
         workspaceIds?.map { it.toString() } ?: emptyList(),
         Scope.WORKSPACES,
         userId,
@@ -285,24 +282,5 @@ open class JobsController(
       .status(Response.Status.OK.statusCode)
       .entity(jobsResponse)
       .build()
-  }
-
-  private fun orderByToFieldAndMethod(orderBy: String?): Pair<OrderByFieldEnum, OrderByMethodEnum> {
-    var field: OrderByFieldEnum = OrderByFieldEnum.CREATEDAT
-    var method: OrderByMethodEnum = OrderByMethodEnum.ASC
-    if (orderBy != null) {
-      val pattern: java.util.regex.Pattern = java.util.regex.Pattern.compile("([a-zA-Z0-9]+)|(ASC|DESC)")
-      val matcher: java.util.regex.Matcher = pattern.matcher(orderBy)
-      if (!matcher.find()) {
-        throw BadRequestProblem("Invalid order by clause provided: $orderBy")
-      }
-      field =
-        Enums.toEnum(matcher.group(1), OrderByFieldEnum::class.java)
-          .orElseThrow { BadRequestProblem("Invalid order by clause provided: $orderBy") }
-      method =
-        Enums.toEnum(matcher.group(2), OrderByMethodEnum::class.java)
-          .orElseThrow { BadRequestProblem("Invalid order by clause provided: $orderBy") }
-    }
-    return Pair(field, method)
   }
 }

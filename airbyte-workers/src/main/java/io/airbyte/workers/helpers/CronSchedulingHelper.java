@@ -5,10 +5,10 @@
 package io.airbyte.workers.helpers;
 
 import io.airbyte.api.client.model.generated.JobRead;
+import jakarta.annotation.Nullable;
 import java.time.Duration;
 import java.util.Date;
 import java.util.function.Supplier;
-import javax.annotation.Nullable;
 import org.quartz.CronExpression;
 
 /**

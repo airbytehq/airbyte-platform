@@ -11,7 +11,6 @@ import { FeatureItem, useFeature } from "core/services/features";
 import { useConnectionFormService } from "hooks/services/ConnectionForm/ConnectionFormService";
 
 import styles from "./ConnectionTransformationPage.module.scss";
-import { CustomTransformationsForm } from "./CustomTransformationsForm";
 import { DbtCloudTransformations } from "./DbtCloudTransformations";
 import { NormalizationForm } from "./NormalizationForm";
 
@@ -20,16 +19,14 @@ export const ConnectionTransformationPage: React.FC = () => {
 
   useTrackPage(PageTrackingCodes.CONNECTIONS_ITEM_TRANSFORMATION);
   const supportsNormalization = destDefinitionVersion.normalizationConfig.supported;
-  const supportsDbt = useFeature(FeatureItem.AllowCustomDBT) && destDefinitionVersion.supportsDbt;
   const supportsCloudDbtIntegration =
     useFeature(FeatureItem.AllowDBTCloudIntegration) && destDefinitionVersion.supportsDbt;
-  const noSupportedTransformations = !supportsNormalization && !supportsDbt && !supportsCloudDbtIntegration;
+  const noSupportedTransformations = !supportsNormalization && !supportsCloudDbtIntegration;
 
   return (
     <PageContainer centered>
       <FlexContainer direction="column" gap="lg">
         {supportsNormalization && <NormalizationForm />}
-        {supportsDbt && <CustomTransformationsForm />}
         {supportsCloudDbtIntegration && <DbtCloudTransformations />}
         {noSupportedTransformations && (
           <Card className={styles.customCard}>

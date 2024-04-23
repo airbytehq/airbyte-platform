@@ -183,7 +183,7 @@ internal class JsonSecretsProcessorTest {
     private const val SECRET_1 = "secret1"
     private const val SECRET_2 = "secret2"
     private const val NAME = "name"
-    private const val S3_BUCKET_NAME = "s3_bucket_name"
+    private const val BUCKET_NAME = "bucket_name"
     private const val SECRET_ACCESS_KEY = "secret_access_key"
     private const val HOUSE = "house"
     private const val WAREHOUSE = "warehouse"
@@ -343,7 +343,7 @@ internal class JsonSecretsProcessorTest {
       Jsons.jsonNode<ImmutableMap<Any, Any>>(
         ImmutableMap.builder<Any, Any>()
           .put(
-            S3_BUCKET_NAME,
+            BUCKET_NAME,
             NAME,
           )
           .put(SECRET_ACCESS_KEY, "secret")
@@ -366,7 +366,7 @@ internal class JsonSecretsProcessorTest {
       Jsons.jsonNode<ImmutableMap<Any, Any>>(
         ImmutableMap.builder<Any, Any>()
           .put(
-            S3_BUCKET_NAME,
+            BUCKET_NAME,
             NAME,
           )
           .put(SECRET_ACCESS_KEY, AirbyteSecretConstants.SECRETS_MASK)
@@ -386,7 +386,7 @@ internal class JsonSecretsProcessorTest {
       Jsons.jsonNode<ImmutableMap<Any, Any>>(
         ImmutableMap.builder<Any, Any>()
           .put(
-            S3_BUCKET_NAME,
+            BUCKET_NAME,
             NAME,
           )
           .put(SECRET_ACCESS_KEY, "secret").build(),
@@ -417,7 +417,7 @@ internal class JsonSecretsProcessorTest {
       Jsons.jsonNode<ImmutableMap<Any, Any>>(
         ImmutableMap.builder<Any, Any>()
           .put(
-            S3_BUCKET_NAME,
+            BUCKET_NAME,
             NAME,
           )
           .put(SECRET_ACCESS_KEY, AirbyteSecretConstants.SECRETS_MASK)

@@ -5,7 +5,6 @@ import * as yup from "yup";
 
 import { Form, FormControl } from "components/forms";
 import { FormSubmissionButtons } from "components/forms/FormSubmissionButtons";
-import { Card } from "components/ui/Card";
 
 import { AuthUpdatePassword, useCurrentUser } from "core/services/auth";
 import { useAppMonitoringService } from "hooks/services/AppMonitoringService";
@@ -98,39 +97,37 @@ export const PasswordSection: React.FC<PasswordSectionProps> = ({ updatePassword
   };
 
   return (
-    <Card>
-      <Form<PasswordFormValues>
-        defaultValues={defaultFormValues}
-        onSubmit={onSubmit}
-        onSuccess={onSuccess}
-        onError={onError}
-        schema={passwordFormSchema}
-      >
-        <FormControl<PasswordFormValues>
-          label={formatMessage({ id: "settings.accountSettings.currentPassword" })}
-          name="currentPassword"
-          type="password"
-          fieldType="input"
-          required
-          autoComplete="current-password"
-        />
-        <FormControl<PasswordFormValues>
-          label={formatMessage({ id: "settings.accountSettings.newPassword" })}
-          name="newPassword"
-          type="password"
-          fieldType="input"
-          required
-          autoComplete="new-password"
-        />
-        <FormControl<PasswordFormValues>
-          label={formatMessage({ id: "settings.accountSettings.newPasswordConfirmation" })}
-          name="passwordConfirmation"
-          type="password"
-          fieldType="input"
-          required
-        />
-        <FormSubmissionButtons submitKey="settings.accountSettings.updatePassword" />
-      </Form>
-    </Card>
+    <Form<PasswordFormValues>
+      defaultValues={defaultFormValues}
+      onSubmit={onSubmit}
+      onSuccess={onSuccess}
+      onError={onError}
+      schema={passwordFormSchema}
+    >
+      <FormControl<PasswordFormValues>
+        label={formatMessage({ id: "settings.accountSettings.currentPassword" })}
+        name="currentPassword"
+        type="password"
+        fieldType="input"
+        required
+        autoComplete="current-password"
+      />
+      <FormControl<PasswordFormValues>
+        label={formatMessage({ id: "settings.accountSettings.newPassword" })}
+        name="newPassword"
+        type="password"
+        fieldType="input"
+        required
+        autoComplete="new-password"
+      />
+      <FormControl<PasswordFormValues>
+        label={formatMessage({ id: "settings.accountSettings.newPasswordConfirmation" })}
+        name="passwordConfirmation"
+        type="password"
+        fieldType="input"
+        required
+      />
+      <FormSubmissionButtons noCancel justify="flex-start" submitKey="settings.accountSettings.updatePassword" />
+    </Form>
   );
 };

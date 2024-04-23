@@ -6,11 +6,11 @@ package io.airbyte.workers.process;
 
 import static io.airbyte.workers.process.Metadata.AWS_ACCESS_KEY_ID;
 import static io.airbyte.workers.process.Metadata.AWS_ASSUME_ROLE_EXTERNAL_ID;
-import static io.airbyte.workers.process.Metadata.AWS_ASSUME_ROLE_SECRET_NAME;
 import static io.airbyte.workers.process.Metadata.AWS_SECRET_ACCESS_KEY;
 
 import autovalue.shaded.org.jetbrains.annotations.NotNull;
 import com.google.common.annotations.VisibleForTesting;
+import io.airbyte.commons.envvar.EnvVar;
 import io.airbyte.commons.helper.DockerImageNameHelper;
 import io.airbyte.commons.lang.Exceptions;
 import io.airbyte.commons.map.MoreMaps;
@@ -286,7 +286,7 @@ public class KubeProcessFactory implements ProcessFactory {
 
   private Map<String, SecretMetadata> buildSecretMetadataMap(final Boolean isCustomConnector, final UUID workspaceId) {
     if (shouldInjectAwsSecretsToConnectorPods(isCustomConnector, workspaceId)) {
-      final String secretName = System.getenv(AWS_ASSUME_ROLE_SECRET_NAME);
+      final String secretName = EnvVar.AWS_ASSUME_ROLE_SECRET_NAME.fetch();
       if (secretName != null) {
         return Map.of(
             AWS_ACCESS_KEY_ID, new SecretMetadata(secretName, AWS_ACCESS_KEY_ID),

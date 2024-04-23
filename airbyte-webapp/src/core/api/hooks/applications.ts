@@ -43,8 +43,8 @@ export const useCreateApplication = () => {
       },
       onError: () => {
         registerNotification({
-          id: "settings.accessManagement.permissionCreate.error",
-          text: formatMessage({ id: "settings.accessManagement.permissionCreate.error" }),
+          id: "settings.application.create.error",
+          text: formatMessage({ id: "settings.application.create.error" }),
           type: "error",
         });
       },

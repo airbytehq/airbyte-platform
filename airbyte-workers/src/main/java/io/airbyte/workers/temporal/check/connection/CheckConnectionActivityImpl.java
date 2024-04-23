@@ -30,10 +30,11 @@ import io.airbyte.commons.workers.config.WorkerConfigsProvider;
 import io.airbyte.commons.workers.config.WorkerConfigsProvider.ResourceType;
 import io.airbyte.config.Configs.WorkerEnvironment;
 import io.airbyte.config.ConnectorJobOutput;
-import io.airbyte.config.FailureReason;
+import io.airbyte.config.ConnectorJobOutput.OutputType;
 import io.airbyte.config.ResourceRequirements;
 import io.airbyte.config.StandardCheckConnectionInput;
 import io.airbyte.config.StandardCheckConnectionOutput;
+import io.airbyte.config.StandardCheckConnectionOutput.Status;
 import io.airbyte.config.helpers.LogConfigs;
 import io.airbyte.config.helpers.ResourceRequirementsUtils;
 import io.airbyte.config.secrets.SecretsRepositoryReader;
@@ -61,24 +62,21 @@ import io.airbyte.workers.process.AirbyteIntegrationLauncher;
 import io.airbyte.workers.process.IntegrationLauncher;
 import io.airbyte.workers.process.Metadata;
 import io.airbyte.workers.process.ProcessFactory;
+import io.airbyte.workers.sync.WorkloadClient;
 import io.airbyte.workers.temporal.TemporalAttemptExecution;
-import io.airbyte.workers.workload.JobOutputDocStore;
 import io.airbyte.workers.workload.WorkloadIdGenerator;
-import io.airbyte.workers.workload.exception.DocStoreAccessException;
-import io.airbyte.workload.api.client.generated.WorkloadApi;
-import io.airbyte.workload.api.client.model.generated.Workload;
 import io.airbyte.workload.api.client.model.generated.WorkloadCreateRequest;
 import io.airbyte.workload.api.client.model.generated.WorkloadLabel;
-import io.airbyte.workload.api.client.model.generated.WorkloadStatus;
+import io.airbyte.workload.api.client.model.generated.WorkloadPriority;
 import io.airbyte.workload.api.client.model.generated.WorkloadType;
 import io.micronaut.context.annotation.Value;
-import io.micronaut.http.HttpStatus;
 import io.temporal.activity.Activity;
 import io.temporal.activity.ActivityExecutionContext;
+import io.temporal.activity.ActivityOptions;
 import jakarta.inject.Named;
 import jakarta.inject.Singleton;
-import java.io.IOException;
 import java.nio.file.Path;
+import java.time.Duration;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -86,7 +84,6 @@ import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicReference;
 import lombok.extern.slf4j.Slf4j;
-import org.openapitools.client.infrastructure.ClientException;
 
 /**
  * Check connection activity temporal implementation for the control plane.
@@ -107,11 +104,11 @@ public class CheckConnectionActivityImpl implements CheckConnectionActivity {
   private final FeatureFlags featureFlags;
   private final GsonPksExtractor gsonPksExtractor;
   private final CheckConnectionInputHydrator inputHydrator;
-  private final WorkloadApi workloadApi;
+  private final WorkloadClient workloadClient;
   private final WorkloadIdGenerator workloadIdGenerator;
-  private final JobOutputDocStore jobOutputDocStore;
   private final FeatureFlagClient featureFlagClient;
   private final MetricClient metricClient;
+  private final ActivityOptions activityOptions;
 
   public CheckConnectionActivityImpl(final WorkerConfigsProvider workerConfigsProvider,
                                      final ProcessFactory processFactory,
@@ -126,10 +123,10 @@ public class CheckConnectionActivityImpl implements CheckConnectionActivity {
                                      final FeatureFlags featureFlags,
                                      final FeatureFlagClient featureFlagClient,
                                      final GsonPksExtractor gsonPksExtractor,
-                                     final WorkloadApi workloadApi,
+                                     final WorkloadClient workloadClient,
                                      final WorkloadIdGenerator workloadIdGenerator,
-                                     final JobOutputDocStore jobOutputDocStore,
-                                     final MetricClient metricClient) {
+                                     final MetricClient metricClient,
+                                     @Named("checkActivityOptions") final ActivityOptions activityOptions) {
     this(workerConfigsProvider,
         processFactory,
         secretsRepositoryReader,
@@ -143,36 +140,36 @@ public class CheckConnectionActivityImpl implements CheckConnectionActivity {
         featureFlags,
         featureFlagClient,
         gsonPksExtractor,
-        workloadApi,
+        workloadClient,
         workloadIdGenerator,
-        jobOutputDocStore,
         new CheckConnectionInputHydrator(
             new ConnectorSecretsHydrator(
                 secretsRepositoryReader,
                 airbyteApiClient.getSecretPersistenceConfigApi(),
                 featureFlagClient)),
-        metricClient);
+        metricClient,
+        activityOptions);
   }
 
   @VisibleForTesting
   CheckConnectionActivityImpl(final WorkerConfigsProvider workerConfigsProvider,
                               final ProcessFactory processFactory,
                               final SecretsRepositoryReader secretsRepositoryReader,
-                              @Named("workspaceRoot") final Path workspaceRoot,
+                              final Path workspaceRoot,
                               final WorkerEnvironment workerEnvironment,
                               final LogConfigs logConfigs,
                               final AirbyteApiClient airbyteApiClient,
-                              @Value("${airbyte.version}") final String airbyteVersion,
+                              final String airbyteVersion,
                               final AirbyteMessageSerDeProvider serDeProvider,
                               final AirbyteProtocolVersionedMigratorFactory migratorFactory,
                               final FeatureFlags featureFlags,
                               final FeatureFlagClient featureFlagClient,
                               final GsonPksExtractor gsonPksExtractor,
-                              final WorkloadApi workloadApi,
+                              final WorkloadClient workloadClient,
                               final WorkloadIdGenerator workloadIdGenerator,
-                              final JobOutputDocStore jobOutputDocStore,
                               final CheckConnectionInputHydrator checkConnectionInputHydrator,
-                              final MetricClient metricClient) {
+                              final MetricClient metricClient,
+                              final ActivityOptions activityOptions) {
     this.workerConfigsProvider = workerConfigsProvider;
     this.processFactory = processFactory;
     this.workspaceRoot = workspaceRoot;
@@ -184,12 +181,17 @@ public class CheckConnectionActivityImpl implements CheckConnectionActivity {
     this.migratorFactory = migratorFactory;
     this.featureFlags = featureFlags;
     this.gsonPksExtractor = gsonPksExtractor;
-    this.workloadApi = workloadApi;
+    this.workloadClient = workloadClient;
     this.workloadIdGenerator = workloadIdGenerator;
-    this.jobOutputDocStore = jobOutputDocStore;
     this.featureFlagClient = featureFlagClient;
     this.inputHydrator = checkConnectionInputHydrator;
     this.metricClient = metricClient;
+    this.activityOptions = activityOptions;
+  }
+
+  @Override
+  public Duration getCheckConnectionTimeout() {
+    return activityOptions.getStartToCloseTimeout();
   }
 
   @Trace(operationName = ACTIVITY_TRACE_OPERATION_NAME)
@@ -250,55 +252,36 @@ public class CheckConnectionActivityImpl implements CheckConnectionActivity {
         fullLogPath(Path.of(workloadId)),
         geo.getValue(),
         WorkloadType.CHECK,
+        WorkloadPriority.Companion.decode(input.getLauncherConfig().getPriority().toString()),
         null,
         null);
 
-    createWorkload(workloadCreateRequest);
+    workloadClient.createWorkload(workloadCreateRequest);
 
-    try {
-      Workload workload = workloadApi.workloadGet(workloadId);
-      final int checkFrequencyInSeconds = featureFlagClient.intVariation(WorkloadCheckFrequencyInSeconds.INSTANCE,
-          new Workspace(workspaceId));
-      while (!isWorkloadTerminal(workload)) {
-        Thread.sleep(1000 * checkFrequencyInSeconds);
-        workload = workloadApi.workloadGet(workloadId);
-      }
-    } catch (final IOException | InterruptedException e) {
-      throw new RuntimeException(e);
-    }
+    final int checkFrequencyInSeconds =
+        featureFlagClient.intVariation(WorkloadCheckFrequencyInSeconds.INSTANCE, new Workspace(workspaceId));
+    workloadClient.waitForWorkload(workloadId, checkFrequencyInSeconds);
 
-    try {
-      final Optional<ConnectorJobOutput> connectorJobOutput = jobOutputDocStore.read(workloadId);
+    final var output = workloadClient.getConnectorJobOutput(
+        workloadId,
+        failureReason -> new ConnectorJobOutput()
+            .withOutputType(OutputType.CHECK_CONNECTION)
+            .withCheckConnection(
+                new StandardCheckConnectionOutput()
+                    .withStatus(Status.FAILED)
+                    .withMessage(failureReason.getExternalMessage()))
+            .withFailureReason(failureReason));
 
-      if (connectorJobOutput.isEmpty() || connectorJobOutput.get().getCheckConnection().getStatus() == StandardCheckConnectionOutput.Status.FAILED) {
-        metricClient.count(OssMetricsRegistry.SIDECAR_CHECK, 1, new MetricAttribute(MetricTags.STATUS, "failed"));
-      } else {
-        metricClient.count(OssMetricsRegistry.SIDECAR_CHECK, 1, new MetricAttribute(MetricTags.STATUS, "success"));
-      }
-
-      return connectorJobOutput.orElse(new ConnectorJobOutput()
-          .withOutputType(ConnectorJobOutput.OutputType.CHECK_CONNECTION)
-          .withCheckConnection(
-              new StandardCheckConnectionOutput()
-                  .withStatus(StandardCheckConnectionOutput.Status.FAILED)
-                  .withMessage("Unable to read output"))
-          .withFailureReason(new FailureReason()
-              .withFailureType(FailureReason.FailureType.CONFIG_ERROR)
-              .withInternalMessage("Unable to read output for workload: " + workloadId)
-              .withExternalMessage("Unable to read output")));
-    } catch (final DocStoreAccessException e) {
-      throw new WorkerException("Unable to read output", e);
-    }
+    metricClient.count(
+        OssMetricsRegistry.SIDECAR_CHECK,
+        1,
+        new MetricAttribute(MetricTags.STATUS, output.getCheckConnection().getStatus() == Status.FAILED ? "failed" : "success"));
+    return output;
   }
 
   @Override
   public boolean shouldUseWorkload(final UUID workspaceId) {
     return featureFlagClient.boolVariation(UseWorkloadApiForCheck.INSTANCE, new Workspace(workspaceId));
-  }
-
-  private boolean isWorkloadTerminal(final Workload workload) {
-    final var status = workload.getStatus();
-    return status == WorkloadStatus.SUCCESS || status == WorkloadStatus.FAILURE || status == WorkloadStatus.CANCELLED;
   }
 
   @VisibleForTesting
@@ -324,26 +307,6 @@ public class CheckConnectionActivityImpl implements CheckConnectionActivity {
                   .orElse(Geography.AUTO));
     } catch (final Exception e) {
       throw new WorkerException("Unable to find geography of connection " + maybeConnectionId, e);
-    }
-  }
-
-  private void createWorkload(final WorkloadCreateRequest workloadCreateRequest) {
-    try {
-      workloadApi.workloadCreate(workloadCreateRequest);
-    } catch (final ClientException e) {
-      /*
-       * The Workload API returns a 409 response when the request to execute the workload has already been
-       * created. That response is handled in the form of a ClientException by the generated OpenAPI
-       * client. We do not want to cause the Temporal workflow to retry, so catch it and log the
-       * information so that the workflow will continue.
-       */
-      if (e.getStatusCode() == HttpStatus.CONFLICT.getCode()) {
-        log.warn("Workload {} already created and in progress.  Continuing...", workloadCreateRequest.getWorkloadId());
-      } else {
-        throw new RuntimeException(e);
-      }
-    } catch (final IOException e) {
-      throw new RuntimeException(e);
     }
   }
 
@@ -377,8 +340,8 @@ public class CheckConnectionActivityImpl implements CheckConnectionActivity {
       final var protocolVersion =
           launcherConfig.getProtocolVersion() != null ? launcherConfig.getProtocolVersion() : AirbyteProtocolVersion.DEFAULT_AIRBYTE_PROTOCOL_VERSION;
       final AirbyteStreamFactory streamFactory =
-          new VersionedAirbyteStreamFactory<>(serDeProvider, migratorFactory, protocolVersion, Optional.empty(), Optional.empty(), Optional.empty(),
-              new VersionedAirbyteStreamFactory.InvalidLineFailureConfiguration(false, false, false),
+          new VersionedAirbyteStreamFactory<>(serDeProvider, migratorFactory, protocolVersion, Optional.empty(), Optional.empty(),
+              new VersionedAirbyteStreamFactory.InvalidLineFailureConfiguration(false),
               gsonPksExtractor);
 
       return new DefaultCheckConnectionWorker(integrationLauncher, connectorConfigUpdater, streamFactory);

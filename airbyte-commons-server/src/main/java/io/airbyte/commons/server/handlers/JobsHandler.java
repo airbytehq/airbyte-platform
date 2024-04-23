@@ -16,6 +16,7 @@ import io.airbyte.commons.server.errors.BadRequestException;
 import io.airbyte.commons.server.handlers.helpers.JobCreationAndStatusUpdateHelper;
 import io.airbyte.config.AttemptFailureSummary;
 import io.airbyte.config.AttemptSyncConfig;
+import io.airbyte.config.JobConfig;
 import io.airbyte.config.JobOutput;
 import io.airbyte.config.JobResetConnectionConfig;
 import io.airbyte.config.JobSyncConfig;
@@ -76,8 +77,10 @@ public class JobsHandler {
       for (Attempt attempt : job.getAttempts()) {
         attemptStats.add(jobPersistence.getAttemptStats(jobId, attempt.getAttemptNumber()));
       }
-      jobNotifier.failJob(input.getReason(), job, attemptStats);
-      jobCreationAndStatusUpdateHelper.emitJobToReleaseStagesMetric(OssMetricsRegistry.JOB_FAILED_BY_RELEASE_STAGE, job);
+      if (!job.getConfigType().equals(JobConfig.ConfigType.RESET_CONNECTION)) {
+        jobNotifier.failJob(job, attemptStats);
+      }
+      jobCreationAndStatusUpdateHelper.emitJobToReleaseStagesMetric(OssMetricsRegistry.JOB_FAILED_BY_RELEASE_STAGE, job, input);
 
       final UUID connectionId = UUID.fromString(job.getScope());
       if (!connectionId.equals(input.getConnectionId())) {
@@ -154,8 +157,10 @@ public class JobsHandler {
       for (Attempt attempt : job.getAttempts()) {
         attemptStats.add(jobPersistence.getAttemptStats(jobId, attempt.getAttemptNumber()));
       }
-      jobNotifier.successJob(job, attemptStats);
-      jobCreationAndStatusUpdateHelper.emitJobToReleaseStagesMetric(OssMetricsRegistry.JOB_SUCCEEDED_BY_RELEASE_STAGE, job);
+      if (!job.getConfigType().equals(JobConfig.ConfigType.RESET_CONNECTION)) {
+        jobNotifier.successJob(job, attemptStats);
+      }
+      jobCreationAndStatusUpdateHelper.emitJobToReleaseStagesMetric(OssMetricsRegistry.JOB_SUCCEEDED_BY_RELEASE_STAGE, job, input);
       jobCreationAndStatusUpdateHelper.trackCompletion(job, JobStatus.SUCCEEDED);
 
       return new InternalOperationResult().succeeded(true);
@@ -233,7 +238,6 @@ public class JobsHandler {
         attemptStats.add(jobPersistence.getAttemptStats(jobId, attempt.getAttemptNumber()));
       }
       jobCreationAndStatusUpdateHelper.emitJobToReleaseStagesMetric(OssMetricsRegistry.JOB_CANCELLED_BY_RELEASE_STAGE, job);
-      jobNotifier.failJob("Job was cancelled", job, attemptStats);
       jobCreationAndStatusUpdateHelper.trackCompletion(job, JobStatus.FAILED);
     } catch (final IOException e) {
       jobCreationAndStatusUpdateHelper.trackCompletionForInternalFailure(jobId, connectionId, attemptNumber,

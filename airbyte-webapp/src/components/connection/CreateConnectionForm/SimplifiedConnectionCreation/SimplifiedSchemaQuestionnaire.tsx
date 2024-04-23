@@ -3,17 +3,18 @@ import { useFormContext } from "react-hook-form";
 import { FormattedMessage } from "react-intl";
 
 import { FormConnectionFormValues } from "components/connection/ConnectionForm/formConfig";
-import { FormFieldLayout } from "components/connection/ConnectionForm/FormFieldLayout";
 import { RadioButtonTiles } from "components/connection/CreateConnection/RadioButtonTiles";
 import { updateStreamSyncMode } from "components/connection/syncCatalog/SyncCatalog/updateStreamSyncMode";
 import { SyncModeValue } from "components/connection/syncCatalog/SyncModeSelect";
 import { ControlLabels } from "components/LabeledControl";
 import { Badge } from "components/ui/Badge";
+import { Box } from "components/ui/Box";
 import { FlexContainer } from "components/ui/Flex";
 import { Icon } from "components/ui/Icon";
 import { Text } from "components/ui/Text";
 
 import { DestinationSyncMode, SyncMode } from "core/api/types/AirbyteClient";
+import { Action, Namespace, useAnalyticsService } from "core/services/analytics";
 import { useConnectionFormService } from "hooks/services/ConnectionForm/ConnectionFormService";
 
 import styles from "./SimplifiedSchemaQuestionnaire.module.scss";
@@ -25,33 +26,37 @@ type QuestionnaireOutcomes = Record<Delivery, Array<[SyncMode, DestinationSyncMo
 const deliveryOptions: ComponentProps<typeof RadioButtonTiles<Delivery>>["options"] = [
   {
     value: "mirrorSource",
-    label: "connectionForm.questionnaire.delivery.mirrorSource.title",
-    labelValues: {
-      badge: (
-        <Badge variant="blue" className={styles.badgeAlignment}>
-          Recommended
-        </Badge>
-      ),
-    },
-    description: "connectionForm.questionnaire.delivery.mirrorSource.subtitle",
+    label: (
+      <FormattedMessage
+        id="connectionForm.questionnaire.delivery.mirrorSource.title"
+        values={{
+          badge: (
+            <Badge variant="blue" className={styles.badgeAlignment}>
+              Recommended
+            </Badge>
+          ),
+        }}
+      />
+    ),
+    description: <FormattedMessage id="connectionForm.questionnaire.delivery.mirrorSource.subtitle" />,
   },
   {
     value: "appendChanges",
-    label: "connectionForm.questionnaire.delivery.appendChanges.title",
-    description: "connectionForm.questionnaire.delivery.appendChanges.subtitle",
+    label: <FormattedMessage id="connectionForm.questionnaire.delivery.appendChanges.title" />,
+    description: <FormattedMessage id="connectionForm.questionnaire.delivery.appendChanges.subtitle" />,
   },
 ];
 
 const deletionRecordsOptions: ComponentProps<typeof RadioButtonTiles<IncrementOrRefresh>>["options"] = [
   {
     value: SyncMode.incremental,
-    label: "connectionForm.questionnaire.incrementOrRefresh.increment.title",
-    description: "connectionForm.questionnaire.incrementOrRefresh.increment.subtitle",
+    label: <FormattedMessage id="connectionForm.questionnaire.incrementOrRefresh.increment.title" />,
+    description: <FormattedMessage id="connectionForm.questionnaire.incrementOrRefresh.increment.subtitle" />,
   },
   {
     value: SyncMode.full_refresh,
-    label: "connectionForm.questionnaire.incrementOrRefresh.refresh.title",
-    description: "connectionForm.questionnaire.incrementOrRefresh.refresh.subtitle",
+    label: <FormattedMessage id="connectionForm.questionnaire.incrementOrRefresh.refresh.title" />,
+    description: <FormattedMessage id="connectionForm.questionnaire.incrementOrRefresh.refresh.subtitle" />,
     extra: (
       <Text color="blue" size="sm">
         <FlexContainer alignItems="flex-end" gap="xs">
@@ -98,6 +103,7 @@ export const getEnforcedIncrementOrRefresh = (supportedSyncModes: SyncMode[]) =>
 };
 
 export const SimplifiedSchemaQuestionnaire = () => {
+  const analyticsService = useAnalyticsService();
   const {
     connection,
     destDefinitionSpecification: { supportedDestinationSyncModes },
@@ -138,18 +144,39 @@ export const SimplifiedSchemaQuestionnaire = () => {
   const enforcedSelectedDelivery = getEnforcedDelivery(questionnaireOutcomes);
   const enforcedIncrementOrRefresh = getEnforcedIncrementOrRefresh(supportedSyncModes);
 
-  const [selectedDelivery, _setSelectedDelivery] = useState<Delivery | undefined>(enforcedSelectedDelivery);
-  const [selectedIncrementOrRefresh, setSelectedIncrementOrRefresh] = useState<IncrementOrRefresh | undefined>(
+  const [selectedDelivery, _setSelectedDelivery] = useState<Delivery>(enforcedSelectedDelivery ?? "mirrorSource");
+  const [selectedIncrementOrRefresh, _setSelectedIncrementOrRefresh] = useState<IncrementOrRefresh | undefined>(
     enforcedIncrementOrRefresh
   );
 
   const setSelectedDelivery: typeof _setSelectedDelivery = (value) => {
+    analyticsService.track(Namespace.SYNC_QUESTIONNAIRE, Action.ANSWERED, {
+      actionDescription: "First question has been answered",
+      question: "delivery",
+      answer: value,
+    });
+
     _setSelectedDelivery(value);
     if (value === "mirrorSource") {
       // clear any user-provided answer for the second question when switching to mirrorSource
       // this is purely a UX decision
-      setSelectedIncrementOrRefresh(enforcedIncrementOrRefresh);
+      setSelectedIncrementOrRefresh(enforcedIncrementOrRefresh, { automatedAction: true });
     }
+  };
+
+  const setSelectedIncrementOrRefresh = (
+    value: SyncMode | undefined,
+    { automatedAction }: { automatedAction?: boolean } = { automatedAction: false }
+  ) => {
+    if (!automatedAction) {
+      analyticsService.track(Namespace.SYNC_QUESTIONNAIRE, Action.ANSWERED, {
+        actionDescription: "Second question has been answered",
+        question: "all_or_some",
+        answer: value,
+      });
+    }
+
+    _setSelectedIncrementOrRefresh(value);
   };
 
   const selectedModes = useMemo<SyncModeValue[]>(() => {
@@ -170,12 +197,6 @@ export const SimplifiedSchemaQuestionnaire = () => {
     }
     return [];
   }, [selectedDelivery, questionnaireOutcomes.mirrorSource, selectedIncrementOrRefresh]);
-
-  // if a source & destination sync mode selection has been made (by default or by the user), show the result
-  let selectionMessage;
-  if (selectedModes.length) {
-    selectionMessage = <FormattedMessage id="connectionForm.questionnaire.result" />;
-  }
 
   // when a sync mode is selected, choose it for all streams
   const { trigger, getValues, setValue } = useFormContext<FormConnectionFormValues>();
@@ -208,17 +229,39 @@ export const SimplifiedSchemaQuestionnaire = () => {
     });
     setValue("syncCatalog.streams", nextFields);
     trigger("syncCatalog.streams");
-  }, [setValue, trigger, getValues, selectedDelivery, selectedIncrementOrRefresh, selectedModes]);
 
+    analyticsService.track(Namespace.SYNC_QUESTIONNAIRE, Action.APPLIED, {
+      actionDescription: "Questionnaire has applied a sync mode",
+      delivery: selectedDelivery,
+      all_or_some: selectedIncrementOrRefresh,
+    });
+  }, [setValue, trigger, getValues, selectedDelivery, selectedIncrementOrRefresh, selectedModes, analyticsService]);
+
+  const showFirstQuestion = enforcedSelectedDelivery == null;
   const showSecondQuestion = enforcedIncrementOrRefresh == null && selectedDelivery === "appendChanges";
 
+  useEffect(() => {
+    if (showFirstQuestion) {
+      analyticsService.track(Namespace.SYNC_QUESTIONNAIRE, Action.DISPLAYED, {
+        actionDescription: "First question has been shown to the user",
+        question: "delivery",
+      });
+    }
+  }, [showFirstQuestion, analyticsService]);
+
+  useEffect(() => {
+    if (showSecondQuestion) {
+      analyticsService.track(Namespace.SYNC_QUESTIONNAIRE, Action.DISPLAYED, {
+        actionDescription: "Second question has been shown to the user",
+        question: "all_or_some",
+      });
+    }
+  }, [showSecondQuestion, analyticsService]);
+
   return (
-    <FlexContainer
-      direction="column"
-      gap={showSecondQuestion ? "xl" : "md" /* maintain consistent spacing between the first question & message */}
-    >
-      {enforcedSelectedDelivery == null && (
-        <FormFieldLayout alignItems="flex-start" nextSizing>
+    <FlexContainer direction="column" gap="md">
+      {showFirstQuestion && (
+        <FlexContainer direction="column">
           <ControlLabels
             label={
               <FlexContainer direction="column">
@@ -229,42 +272,37 @@ export const SimplifiedSchemaQuestionnaire = () => {
             }
           />
           <RadioButtonTiles
-            direction="column"
+            direction="row"
             name="delivery"
             options={deliveryOptions}
             selectedValue={selectedDelivery ?? ""}
             onSelectRadioButton={setSelectedDelivery}
           />
-        </FormFieldLayout>
+        </FlexContainer>
       )}
 
       <div className={showSecondQuestion ? styles.expandedQuestion : styles.collapsedQuestion}>
-        <FormFieldLayout alignItems="flex-start" nextSizing>
-          <ControlLabels
-            label={
-              <FlexContainer direction="column">
-                <Text>
-                  <FormattedMessage id="connectionForm.questionnaire.incrementOrRefresh" />
-                </Text>
-              </FlexContainer>
-            }
-          />
-          <RadioButtonTiles
-            direction="column"
-            name="delectedRecords"
-            options={deletionRecordsOptions}
-            selectedValue={selectedIncrementOrRefresh ?? ""}
-            onSelectRadioButton={setSelectedIncrementOrRefresh}
-          />
-        </FormFieldLayout>
+        <Box mt="md">
+          <FlexContainer direction="column">
+            <ControlLabels
+              label={
+                <FlexContainer direction="column">
+                  <Text>
+                    <FormattedMessage id="connectionForm.questionnaire.incrementOrRefresh" />
+                  </Text>
+                </FlexContainer>
+              }
+            />
+            <RadioButtonTiles
+              direction="row"
+              name="delectedRecords"
+              options={deletionRecordsOptions}
+              selectedValue={selectedIncrementOrRefresh ?? ""}
+              onSelectRadioButton={setSelectedIncrementOrRefresh}
+            />
+          </FlexContainer>
+        </Box>
       </div>
-
-      {selectionMessage && (
-        <FormFieldLayout alignItems="flex-start" nextSizing>
-          <ControlLabels label="" />
-          <Text color="blue">{selectionMessage}</Text>
-        </FormFieldLayout>
-      )}
     </FlexContainer>
   );
 };

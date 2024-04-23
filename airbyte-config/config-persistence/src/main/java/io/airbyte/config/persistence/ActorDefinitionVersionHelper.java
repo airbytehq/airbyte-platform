@@ -18,6 +18,7 @@ import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.featureflag.UseActorScopedDefaultVersions;
 import io.airbyte.featureflag.Workspace;
 import io.airbyte.validation.json.JsonValidationException;
+import jakarta.annotation.Nullable;
 import jakarta.inject.Named;
 import jakarta.inject.Singleton;
 import java.io.IOException;
@@ -27,7 +28,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
-import javax.annotation.Nullable;
 import kotlin.Pair;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -125,7 +125,7 @@ public class ActorDefinitionVersionHelper {
       throws ConfigNotFoundException, IOException, JsonValidationException {
     final ActorDefinitionVersion defaultVersion = getDefaultSourceVersion(sourceDefinition, workspaceId, actorId);
 
-    Optional<ActorDefinitionVersion> versionOverride = Optional.empty();
+    Optional<ActorDefinitionVersionWithOverrideStatus> versionOverride = Optional.empty();
 
     if (featureFlagClient.boolVariation(EnableConfigurationOverrideProvider.INSTANCE, new Workspace(workspaceId))) {
       versionOverride = configOverrideProvider.getOverride(
@@ -145,7 +145,7 @@ public class ActorDefinitionVersionHelper {
           defaultVersion);
     }
 
-    return new ActorDefinitionVersionWithOverrideStatus(versionOverride.orElse(defaultVersion), versionOverride.isPresent());
+    return versionOverride.orElse(new ActorDefinitionVersionWithOverrideStatus(defaultVersion, false));
   }
 
   /**
@@ -189,7 +189,7 @@ public class ActorDefinitionVersionHelper {
       throws ConfigNotFoundException, IOException, JsonValidationException {
     final ActorDefinitionVersion defaultVersion = getDefaultDestinationVersion(destinationDefinition, workspaceId, actorId);
 
-    Optional<ActorDefinitionVersion> versionOverride = Optional.empty();
+    Optional<ActorDefinitionVersionWithOverrideStatus> versionOverride = Optional.empty();
 
     if (featureFlagClient.boolVariation(EnableConfigurationOverrideProvider.INSTANCE, new Workspace(workspaceId))) {
       versionOverride = configOverrideProvider.getOverride(
@@ -209,7 +209,7 @@ public class ActorDefinitionVersionHelper {
           defaultVersion);
     }
 
-    return new ActorDefinitionVersionWithOverrideStatus(versionOverride.orElse(defaultVersion), versionOverride.isPresent());
+    return versionOverride.orElse(new ActorDefinitionVersionWithOverrideStatus(defaultVersion, false));
   }
 
   /**

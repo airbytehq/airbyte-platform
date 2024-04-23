@@ -13,7 +13,6 @@ import io.airbyte.api.model.generated.ConnectionUpdate;
 import io.airbyte.api.model.generated.InternalOperationResult;
 import io.airbyte.api.model.generated.JobInfoRead;
 import io.airbyte.api.model.generated.WorkspaceIdRequestBody;
-import io.airbyte.commons.json.Jsons;
 import io.airbyte.config.persistence.ConfigNotFoundException;
 import io.airbyte.validation.json.JsonValidationException;
 import io.micronaut.context.annotation.Requires;
@@ -21,9 +20,9 @@ import io.micronaut.context.env.Environment;
 import io.micronaut.http.HttpRequest;
 import io.micronaut.http.HttpStatus;
 import io.micronaut.test.extensions.junit5.annotation.MicronautTest;
+import jakarta.validation.ConstraintViolationException;
 import java.io.IOException;
 import java.util.HashSet;
-import javax.validation.ConstraintViolationException;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 
@@ -40,13 +39,13 @@ class ConnectionApiTest extends BaseControllerTest {
         .thenThrow(new ConfigNotFoundException("", ""));
     final String path = "/api/v1/connections/auto_disable";
     testEndpointStatus(
-        HttpRequest.POST(path, Jsons.serialize(new ConnectionUpdate())),
+        HttpRequest.POST(path, new ConnectionUpdate()),
         HttpStatus.OK);
     testErrorEndpointStatus(
-        HttpRequest.POST(path, Jsons.serialize(new ConnectionUpdate())),
+        HttpRequest.POST(path, new ConnectionUpdate()),
         HttpStatus.BAD_REQUEST);
     testErrorEndpointStatus(
-        HttpRequest.POST(path, Jsons.serialize(new ConnectionUpdate())),
+        HttpRequest.POST(path, new ConnectionUpdate()),
         HttpStatus.NOT_FOUND);
   }
 
@@ -57,10 +56,10 @@ class ConnectionApiTest extends BaseControllerTest {
         .thenThrow(new ConstraintViolationException(new HashSet<>()));
     final String path = "/api/v1/connections/create";
     testEndpointStatus(
-        HttpRequest.POST(path, Jsons.serialize(new ConnectionCreate())),
+        HttpRequest.POST(path, new ConnectionCreate()),
         HttpStatus.OK);
     testErrorEndpointStatus(
-        HttpRequest.POST(path, Jsons.serialize(new ConnectionCreate())),
+        HttpRequest.POST(path, new ConnectionCreate()),
         HttpStatus.BAD_REQUEST);
   }
 
@@ -72,13 +71,13 @@ class ConnectionApiTest extends BaseControllerTest {
         .thenThrow(new ConfigNotFoundException("", ""));
     final String path = "/api/v1/connections/update";
     testEndpointStatus(
-        HttpRequest.POST(path, Jsons.serialize(new ConnectionUpdate())),
+        HttpRequest.POST(path, new ConnectionUpdate()),
         HttpStatus.OK);
     testErrorEndpointStatus(
-        HttpRequest.POST(path, Jsons.serialize(new ConnectionUpdate())),
+        HttpRequest.POST(path, new ConnectionUpdate()),
         HttpStatus.BAD_REQUEST);
     testErrorEndpointStatus(
-        HttpRequest.POST(path, Jsons.serialize(new ConnectionUpdate())),
+        HttpRequest.POST(path, new ConnectionUpdate()),
         HttpStatus.NOT_FOUND);
   }
 
@@ -89,10 +88,10 @@ class ConnectionApiTest extends BaseControllerTest {
         .thenThrow(new ConfigNotFoundException("", ""));
     final String path = "/api/v1/connections/list";
     testEndpointStatus(
-        HttpRequest.POST(path, Jsons.serialize(new WorkspaceIdRequestBody())),
+        HttpRequest.POST(path, new WorkspaceIdRequestBody()),
         HttpStatus.OK);
     testErrorEndpointStatus(
-        HttpRequest.POST(path, Jsons.serialize(new WorkspaceIdRequestBody())),
+        HttpRequest.POST(path, new WorkspaceIdRequestBody()),
         HttpStatus.NOT_FOUND);
   }
 
@@ -103,10 +102,10 @@ class ConnectionApiTest extends BaseControllerTest {
         .thenThrow(new ConfigNotFoundException("", ""));
     final String path = "/api/v1/connections/list_all";
     testEndpointStatus(
-        HttpRequest.POST(path, Jsons.serialize(new WorkspaceIdRequestBody())),
+        HttpRequest.POST(path, new WorkspaceIdRequestBody()),
         HttpStatus.OK);
     testErrorEndpointStatus(
-        HttpRequest.POST(path, Jsons.serialize(new WorkspaceIdRequestBody())),
+        HttpRequest.POST(path, new WorkspaceIdRequestBody()),
         HttpStatus.NOT_FOUND);
   }
 
@@ -117,10 +116,10 @@ class ConnectionApiTest extends BaseControllerTest {
         .thenThrow(new ConfigNotFoundException("", ""));
     final String path = "/api/v1/connections/search";
     testEndpointStatus(
-        HttpRequest.POST(path, Jsons.serialize(new ConnectionSearch())),
+        HttpRequest.POST(path, new ConnectionSearch()),
         HttpStatus.OK);
     testErrorEndpointStatus(
-        HttpRequest.POST(path, Jsons.serialize(new ConnectionSearch())),
+        HttpRequest.POST(path, new ConnectionSearch()),
         HttpStatus.NOT_FOUND);
   }
 
@@ -131,10 +130,10 @@ class ConnectionApiTest extends BaseControllerTest {
         .thenThrow(new ConfigNotFoundException("", ""));
     final String path = "/api/v1/connections/get";
     testEndpointStatus(
-        HttpRequest.POST(path, Jsons.serialize(new ConnectionIdRequestBody())),
+        HttpRequest.POST(path, new ConnectionIdRequestBody()),
         HttpStatus.OK);
     testErrorEndpointStatus(
-        HttpRequest.POST(path, Jsons.serialize(new ConnectionIdRequestBody())),
+        HttpRequest.POST(path, new ConnectionIdRequestBody()),
         HttpStatus.NOT_FOUND);
   }
 
@@ -146,10 +145,10 @@ class ConnectionApiTest extends BaseControllerTest {
 
     final String path = "/api/v1/connections/delete";
     testEndpointStatus(
-        HttpRequest.POST(path, Jsons.serialize(new ConnectionIdRequestBody())),
+        HttpRequest.POST(path, new ConnectionIdRequestBody()),
         HttpStatus.NO_CONTENT);
     testErrorEndpointStatus(
-        HttpRequest.POST(path, Jsons.serialize(new ConnectionIdRequestBody())),
+        HttpRequest.POST(path, new ConnectionIdRequestBody()),
         HttpStatus.NOT_FOUND);
   }
 
@@ -160,10 +159,10 @@ class ConnectionApiTest extends BaseControllerTest {
         .thenThrow(new ConfigNotFoundException("", ""));
     final String path = "/api/v1/connections/sync";
     testEndpointStatus(
-        HttpRequest.POST(path, Jsons.serialize(new ConnectionIdRequestBody())),
+        HttpRequest.POST(path, new ConnectionIdRequestBody()),
         HttpStatus.OK);
     testErrorEndpointStatus(
-        HttpRequest.POST(path, Jsons.serialize(new ConnectionIdRequestBody())),
+        HttpRequest.POST(path, new ConnectionIdRequestBody()),
         HttpStatus.NOT_FOUND);
   }
 
@@ -174,10 +173,10 @@ class ConnectionApiTest extends BaseControllerTest {
         .thenThrow(new ConfigNotFoundException("", ""));
     final String path = "/api/v1/connections/reset";
     testEndpointStatus(
-        HttpRequest.POST(path, Jsons.serialize(new ConnectionIdRequestBody())),
+        HttpRequest.POST(path, new ConnectionIdRequestBody()),
         HttpStatus.OK);
     testErrorEndpointStatus(
-        HttpRequest.POST(path, Jsons.serialize(new ConnectionIdRequestBody())),
+        HttpRequest.POST(path, new ConnectionIdRequestBody()),
         HttpStatus.NOT_FOUND);
   }
 

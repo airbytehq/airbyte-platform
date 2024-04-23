@@ -8,12 +8,12 @@ import io.airbyte.commons.temporal.JobMetadata;
 import io.airbyte.config.ConnectorJobOutput;
 import io.airbyte.config.FailureReason;
 import io.airbyte.config.JobConfig.ConfigType;
+import jakarta.annotation.Nullable;
 import java.nio.file.Path;
 import java.time.Instant;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
-import javax.annotation.Nullable;
 
 /**
  * Job metadata for synchronous jobs. Provides common interface for this metadata to make handling

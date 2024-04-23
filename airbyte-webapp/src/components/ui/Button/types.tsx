@@ -1,5 +1,7 @@
 import React from "react";
 
+import { IconProps } from "../Icon";
+
 type ButtonSize = "xs" | "sm" | "lg";
 export type ButtonVariant =
   | "primary"
@@ -14,11 +16,14 @@ export type ButtonVariant =
 export interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   full?: boolean;
   narrow?: boolean;
-  icon?: React.ReactElement;
-  iconPosition?: "left" | "right";
   isLoading?: boolean;
   size?: ButtonSize;
   variant?: ButtonVariant;
   width?: number;
+  icon?: IconProps["type"];
+  iconSize?: IconProps["size"];
+  iconColor?: IconProps["color"];
+  iconClassName?: IconProps["className"];
+  iconPosition?: "left" | "right";
   "data-testid"?: string;
 }

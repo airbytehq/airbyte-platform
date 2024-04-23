@@ -51,7 +51,6 @@ class FailureHandler(
               add(MetricAttribute(MeterFilterFactory.KUBE_POD_TYPE_TAG, clientEx.podType.toString()))
             }
           }
-          add(MetricAttribute(MeterFilterFactory.WORKLOAD_ID_TAG, io.msg.workloadId))
           add(MetricAttribute(MeterFilterFactory.WORKLOAD_TYPE_TAG, io.msg.workloadType.toString()))
           add(MetricAttribute(MeterFilterFactory.STATUS_TAG, MeterFilterFactory.FAILURE_STATUS))
         }

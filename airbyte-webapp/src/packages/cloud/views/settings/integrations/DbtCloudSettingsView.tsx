@@ -5,8 +5,8 @@ import * as yup from "yup";
 import { Form, FormControl } from "components/forms";
 import { FormSubmissionButtons } from "components/forms/FormSubmissionButtons";
 import { Button } from "components/ui/Button";
-import { Card } from "components/ui/Card";
 import { FlexContainer } from "components/ui/Flex";
+import { Heading } from "components/ui/Heading";
 import { ExternalLink } from "components/ui/Link";
 import { Text } from "components/ui/Text";
 
@@ -61,47 +61,46 @@ export const DbtCloudSettingsView: React.FC = () => {
   };
 
   return (
-    <Card title={formatMessage({ id: "settings.integrationSettings.dbtCloudSettings" })} titleWithBottomBorder>
-      <FlexContainer direction="column">
-        <Text color="grey300">
-          <FormattedMessage
-            id="settings.integrationSettings.dbtCloudSettings.form.description"
-            values={{
-              lnk: (node: React.ReactNode) => <ExternalLink href={links.dbtCloudIntegrationDocs}>{node}</ExternalLink>,
-            }}
-          />
-        </Text>
-        <Form<ServiceTokenFormValues>
-          defaultValues={{ serviceToken: "" }}
-          onSubmit={onSubmit}
-          onSuccess={onSuccess}
-          onError={onError}
-          schema={ServiceTokenFormSchema}
-          disabled={!canUpdateWorkspace}
-        >
-          <FormControl
-            name="serviceToken"
-            fieldType="input"
-            type="password"
-            disabled={hasExistingToken}
-            label={formatMessage({ id: "settings.integrationSettings.dbtCloudSettings.form.serviceTokenLabel" })}
-            placeholder={formatMessage({
-              id: hasExistingToken
-                ? "settings.integrationSettings.dbtCloudSettings.form.serviceTokenAlreadyExist"
-                : "settings.integrationSettings.dbtCloudSettings.form.serviceTokenInputHidden",
-            })}
-          />
-          {hasExistingToken ? (
-            <FlexContainer justifyContent="flex-end">
-              <Button variant="danger" type="button" onClick={onDeleteClick}>
-                <FormattedMessage id="settings.integrationSettings.dbtCloudSettings.actions.delete" />
-              </Button>
-            </FlexContainer>
-          ) : (
-            <FormSubmissionButtons submitKey="form.saveChanges" />
-          )}
-        </Form>
-      </FlexContainer>
-    </Card>
+    <FlexContainer direction="column" gap="xl">
+      <Heading as="h1">{formatMessage({ id: "settings.integrationSettings.dbtCloudSettings" })}</Heading>
+      <Text>
+        <FormattedMessage
+          id="settings.integrationSettings.dbtCloudSettings.form.description"
+          values={{
+            lnk: (node: React.ReactNode) => <ExternalLink href={links.dbtCloudIntegrationDocs}>{node}</ExternalLink>,
+          }}
+        />
+      </Text>
+      <Form<ServiceTokenFormValues>
+        defaultValues={{ serviceToken: "" }}
+        onSubmit={onSubmit}
+        onSuccess={onSuccess}
+        onError={onError}
+        schema={ServiceTokenFormSchema}
+        disabled={!canUpdateWorkspace}
+      >
+        <FormControl
+          name="serviceToken"
+          fieldType="input"
+          type="password"
+          disabled={hasExistingToken}
+          label={formatMessage({ id: "settings.integrationSettings.dbtCloudSettings.form.serviceTokenLabel" })}
+          placeholder={formatMessage({
+            id: hasExistingToken
+              ? "settings.integrationSettings.dbtCloudSettings.form.serviceTokenAlreadyExist"
+              : "settings.integrationSettings.dbtCloudSettings.form.serviceTokenInputHidden",
+          })}
+        />
+        {hasExistingToken ? (
+          <FlexContainer justifyContent="flex-start">
+            <Button variant="danger" type="button" onClick={onDeleteClick}>
+              <FormattedMessage id="settings.integrationSettings.dbtCloudSettings.actions.delete" />
+            </Button>
+          </FlexContainer>
+        ) : (
+          <FormSubmissionButtons noCancel justify="flex-start" submitKey="form.saveChanges" />
+        )}
+      </Form>
+    </FlexContainer>
   );
 };

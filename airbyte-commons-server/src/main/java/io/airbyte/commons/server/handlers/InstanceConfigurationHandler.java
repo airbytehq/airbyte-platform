@@ -14,6 +14,7 @@ import io.airbyte.api.model.generated.WorkspaceUpdate;
 import io.airbyte.commons.auth.config.AirbyteKeycloakConfiguration;
 import io.airbyte.commons.enums.Enums;
 import io.airbyte.commons.license.ActiveAirbyteLicense;
+import io.airbyte.commons.version.AirbyteVersion;
 import io.airbyte.config.Configs.AirbyteEdition;
 import io.airbyte.config.Organization;
 import io.airbyte.config.StandardWorkspace;
@@ -40,6 +41,7 @@ public class InstanceConfigurationHandler {
 
   private final String webappUrl;
   private final AirbyteEdition airbyteEdition;
+  private final AirbyteVersion airbyteVersion;
   private final Optional<AirbyteKeycloakConfiguration> airbyteKeycloakConfiguration;
   private final Optional<ActiveAirbyteLicense> activeAirbyteLicense;
   private final WorkspacePersistence workspacePersistence;
@@ -55,6 +57,7 @@ public class InstanceConfigurationHandler {
   public InstanceConfigurationHandler(@Value("${airbyte.webapp-url:null}") final String webappUrl,
                                       @Value("${airbyte.tracking.strategy:}") final String trackingStrategy,
                                       final AirbyteEdition airbyteEdition,
+                                      final AirbyteVersion airbyteVersion,
                                       final Optional<AirbyteKeycloakConfiguration> airbyteKeycloakConfiguration,
                                       final Optional<ActiveAirbyteLicense> activeAirbyteLicense,
                                       final WorkspacePersistence workspacePersistence,
@@ -64,6 +67,7 @@ public class InstanceConfigurationHandler {
     this.webappUrl = webappUrl;
     this.trackingStrategy = trackingStrategy;
     this.airbyteEdition = airbyteEdition;
+    this.airbyteVersion = airbyteVersion;
     this.airbyteKeycloakConfiguration = airbyteKeycloakConfiguration;
     this.activeAirbyteLicense = activeAirbyteLicense;
     this.workspacePersistence = workspacePersistence;
@@ -79,6 +83,7 @@ public class InstanceConfigurationHandler {
     return new InstanceConfigurationResponse()
         .webappUrl(webappUrl)
         .edition(Enums.convertTo(airbyteEdition, EditionEnum.class))
+        .version(airbyteVersion.serialize())
         .licenseType(getLicenseType())
         .auth(getAuthConfiguration())
         .initialSetupComplete(initialSetupComplete)

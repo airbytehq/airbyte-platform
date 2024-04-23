@@ -44,12 +44,15 @@ class TemporalWorkerController(
 
   @Scheduled(fixedRate = "PT60S")
   fun reportPollerStatuses() {
-    reportPollerStatus(launcherQueue)
-    reportPollerStatus(launcherHighPriorityQueue)
+    reportPollerStatus(workerFactory, launcherQueue)
+    reportPollerStatus(highPriorityWorkerFactory, launcherHighPriorityQueue)
   }
 
-  private fun reportPollerStatus(queueName: String) {
-    val isPollingSuspended = workerFactory.getWorker(queueName).isSuspended
+  private fun reportPollerStatus(
+    wf: WorkerFactory,
+    queueName: String,
+  ) {
+    val isPollingSuspended = wf.getWorker(queueName).isSuspended
     customMetricPublisher.count(
       WorkloadLauncherMetricMetadata.WORKLOAD_LAUNCHER_POLLER_STATUS,
       MetricAttribute(QUEUE_NAME_TAG, queueName),

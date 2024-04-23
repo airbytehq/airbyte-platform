@@ -4,15 +4,12 @@
 
 package io.airbyte.connector_builder.command_runner;
 
-import static io.airbyte.workers.internal.VersionedAirbyteStreamFactory.RECORD_TOO_LONG;
-
 import datadog.trace.api.Trace;
 import io.airbyte.commons.io.IOs;
 import io.airbyte.connector_builder.TracingHelper;
 import io.airbyte.connector_builder.exceptions.AirbyteCdkInvalidInputException;
 import io.airbyte.connector_builder.exceptions.CdkProcessException;
 import io.airbyte.connector_builder.exceptions.CdkUnknownException;
-import io.airbyte.connector_builder.exceptions.UnprocessableEntityException;
 import io.airbyte.connector_builder.requester.AirbyteCdkRequesterImpl;
 import io.airbyte.protocol.models.AirbyteMessage;
 import io.airbyte.protocol.models.AirbyteMessage.Type;
@@ -52,9 +49,6 @@ public class ProcessOutputParser {
     } catch (final NullPointerException exc) {
       throwCdkException(process, cdkCommand);
     } catch (final IllegalStateException e) {
-      if (e.getMessage().contains(RECORD_TOO_LONG)) {
-        throw new UnprocessableEntityException("API response is too large. Reduce the size by requesting smaller pages or time intervals.", e);
-      }
       throw e;
     }
 

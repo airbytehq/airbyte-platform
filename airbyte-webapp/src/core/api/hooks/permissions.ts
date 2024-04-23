@@ -41,22 +41,17 @@ export const useUpdatePermissions = () => {
   const { formatMessage } = useIntl();
 
   return useMutation(
-    (permission: PermissionUpdate): Promise<PermissionRead> => {
+    (permission: PermissionUpdate) => {
       return updatePermission(permission, requestOptions);
     },
     {
-      onSuccess: (data: PermissionRead) => {
+      onSuccess: () => {
         registerNotification({
           id: "settings.accessManagement.permissionUpdate.success",
           text: formatMessage({ id: "settings.accessManagement.permissionUpdate.success" }),
           type: "success",
         });
-        if (data.organizationId) {
-          queryClient.invalidateQueries(organizationKeys.listUsers(data.organizationId));
-        }
-        if (data.workspaceId) {
-          queryClient.invalidateQueries(workspaceKeys.listUsers(data.workspaceId));
-        }
+        queryClient.invalidateQueries(organizationKeys.allListUsers);
         queryClient.invalidateQueries(workspaceKeys.allListAccessUsers);
       },
       onError: () => {
@@ -85,21 +80,18 @@ export const useCreatePermission = () => {
       onSuccess: (data: PermissionRead) => {
         registerNotification({
           id: "settings.accessManagement.permissionCreate.success",
-          text: formatMessage({ id: "settings.accessManagement.permissionCreate.success" }),
+          text: formatMessage({ id: "userInvitations.create.success.directlyAdded" }),
           type: "success",
         });
         if (data.organizationId) {
           queryClient.invalidateQueries(organizationKeys.listUsers(data.organizationId));
-        }
-        if (data.workspaceId) {
-          queryClient.invalidateQueries(workspaceKeys.listUsers(data.workspaceId));
         }
         queryClient.invalidateQueries(workspaceKeys.allListAccessUsers);
       },
       onError: () => {
         registerNotification({
           id: "settings.accessManagement.permissionCreate.error",
-          text: formatMessage({ id: "settings.accessManagement.permissionCreate.error" }),
+          text: formatMessage({ id: "userInvitations.create.error" }),
           type: "error",
         });
       },
@@ -123,7 +115,6 @@ export const useDeletePermissions = () => {
         type: "success",
       });
       queryClient.invalidateQueries(organizationKeys.allListUsers);
-      queryClient.invalidateQueries(workspaceKeys.allListUsers);
       queryClient.invalidateQueries(workspaceKeys.allListAccessUsers);
     },
     onError: () => {

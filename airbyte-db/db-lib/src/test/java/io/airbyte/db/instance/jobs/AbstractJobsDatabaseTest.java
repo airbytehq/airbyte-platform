@@ -6,8 +6,8 @@ package io.airbyte.db.instance.jobs;
 
 import io.airbyte.db.Database;
 import io.airbyte.db.init.DatabaseInitializationException;
-import io.airbyte.db.instance.AbstractDatabaseTest;
 import io.airbyte.db.instance.test.TestDatabaseProviders;
+import io.airbyte.test.utils.AbstractDatabaseTest;
 import java.io.IOException;
 import javax.sql.DataSource;
 import org.jooq.DSLContext;

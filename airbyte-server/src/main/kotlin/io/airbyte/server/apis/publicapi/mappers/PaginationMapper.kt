@@ -8,13 +8,14 @@ import io.micronaut.core.util.CollectionUtils
 import io.micronaut.http.uri.UriBuilder
 import java.util.Optional
 import java.util.UUID
+import kotlin.math.max
 
 /**
  * Pagination mapper for easily creating pagination previous/next strings.
  */
 object PaginationMapper {
-  const val LIMIT = "limit"
-  const val OFFSET = "offset"
+  private const val LIMIT = "limit"
+  private const val OFFSET = "offset"
 
   /**
    * Base URI builder we need to create.
@@ -38,13 +39,13 @@ object PaginationMapper {
    * @param offset current offset
    * @return offset or null which indicates we have no next offset to provide
    */
-  fun getNextOffset(
+  private fun getNextOffset(
     collection: Collection<*>,
     limit: Int,
     offset: Int,
   ): Optional<Int> {
-    // If we have no more entries or we had no entries this page, just return empty - no next URL
-    return if (CollectionUtils.isEmpty(collection) || collection.size < limit) {
+    // If we have no more entries, or we had no entries this page, just return empty - no next URL
+    return if (CollectionUtils.isEmpty(collection)) {
       Optional.empty()
     } else {
       Optional.of(offset + limit)
@@ -58,12 +59,12 @@ object PaginationMapper {
    * @param offset current offset
    * @return new "previous" offset
    */
-  fun getPreviousOffset(
+  private fun getPreviousOffset(
     limit: Int,
     offset: Int,
   ): Int {
     val previousOffset = offset - limit
-    return Math.max(previousOffset, 0)
+    return max(previousOffset, 0)
   }
 
   /**

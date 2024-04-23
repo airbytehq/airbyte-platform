@@ -11,6 +11,7 @@ exports[`#useInitialFormValues should generate initial values w/ 'not create' mo
   "normalization": "basic",
   "notifySchemaChanges": true,
   "prefix": "",
+  "scheduleData": undefined,
   "scheduleType": "manual",
   "syncCatalog": {
     "streams": [
@@ -1566,12 +1567,14 @@ exports[`#useInitialFormValues should generate initial values w/ 'not create' mo
 {
   "backfillPreference": "disabled",
   "geography": "auto",
+  "name": "Scrafty <> Heroku Postgres",
   "namespaceDefinition": "source",
   "namespaceFormat": "\${SOURCE_NAMESPACE}",
   "nonBreakingChangesPreference": "ignore",
   "normalization": "basic",
   "notifySchemaChanges": true,
   "prefix": "",
+  "scheduleData": undefined,
   "scheduleType": "manual",
   "syncCatalog": {
     "streams": [
@@ -3134,6 +3137,7 @@ exports[`#useInitialFormValues should generate initial values w/ no 'not create'
   "normalization": "basic",
   "notifySchemaChanges": true,
   "prefix": "",
+  "scheduleData": undefined,
   "scheduleType": "manual",
   "syncCatalog": {
     "streams": [

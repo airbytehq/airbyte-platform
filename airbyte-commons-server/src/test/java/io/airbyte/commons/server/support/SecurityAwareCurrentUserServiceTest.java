@@ -4,6 +4,7 @@
 
 package io.airbyte.commons.server.support;
 
+import static org.junit.jupiter.api.Assertions.fail;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -22,7 +23,6 @@ import jakarta.inject.Inject;
 import java.io.IOException;
 import java.util.Optional;
 import org.junit.jupiter.api.Assertions;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 
@@ -51,31 +51,32 @@ public class SecurityAwareCurrentUserServiceTest {
   @Inject
   UserPersistence userPersistence;
 
-  @BeforeEach
-  void setUp() {
+  @Test
+  void testGetCurrentUser() {
     // set up a mock request context, details don't matter, just needed to make the
     // @RequestScope work on the SecurityAwareCurrentUserService
-    ServerRequestContext.set(HttpRequest.GET("/"));
-  }
+    ServerRequestContext.with(HttpRequest.GET("/"), () -> {
+      try {
+        final String authUserId = "testUser";
+        final User expectedUser = new User().withAuthUserId(authUserId);
 
-  @Test
-  void testgetCurrentUser() throws IOException {
-    final String authUserId = "testUser";
-    final User expectedUser = new User().withAuthUserId(authUserId);
+        when(securityService.username()).thenReturn(Optional.of(authUserId));
+        when(userPersistence.getUserByAuthId(authUserId)).thenReturn(Optional.of(expectedUser));
 
-    when(securityService.username()).thenReturn(Optional.of(authUserId));
-    when(userPersistence.getUserByAuthId(authUserId)).thenReturn(Optional.of(expectedUser));
+        // First call - should fetch from userPersistence
+        final User user1 = currentUserService.getCurrentUser();
+        Assertions.assertEquals(expectedUser, user1);
 
-    // First call - should fetch from userPersistence
-    final User user1 = currentUserService.getCurrentUser();
-    Assertions.assertEquals(expectedUser, user1);
+        // Second call - should use cached user
+        final User user2 = currentUserService.getCurrentUser();
+        Assertions.assertEquals(expectedUser, user2);
 
-    // Second call - should use cached user
-    final User user2 = currentUserService.getCurrentUser();
-    Assertions.assertEquals(expectedUser, user2);
-
-    // Verify that getUserByAuthId is called only once
-    verify(userPersistence, times(1)).getUserByAuthId(authUserId);
+        // Verify that getUserByAuthId is called only once
+        verify(userPersistence, times(1)).getUserByAuthId(authUserId);
+      } catch (final IOException e) {
+        fail(e);
+      }
+    });
   }
 
 }

@@ -213,6 +213,25 @@ paths:
                 $ref: "#/components/schemas/CreateKeycloakUserResponseBody"
         "409":
           $ref: "#/components/responses/ExceptionResponse"
+  /v1/users/send_verification_email:
+    post:
+      tags:
+        - user
+      summary: Triggers a verification email to be sent to the user
+      operationId: sendVerificationEmail
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UserIdRequestBody"
+        required: true
+      responses:
+        "204":
+          description: The verification email was sent successfully.
+        "404":
+          $ref: "#/components/responses/NotFoundResponse"
+        "422":
+          $ref: "#/components/responses/InvalidInputResponse"
   # CLOUD_WORKSPACE
   /v1/cloud_workspaces/create:
     post:
@@ -863,9 +882,6 @@ components:
           $ref: "#/components/schemas/UserStatus"
         companyName:
           type: string
-        email:
-          type: string
-          format: email
         news:
           type: boolean
     UserStatus:

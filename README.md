@@ -31,8 +31,8 @@
 We believe that only an **open-source** solution to data movement can cover the **long tail of data sources** while empowering data engineers to **customize existing connectors**. Our ultimate vision is to help you move data from any source to any destination. Airbyte already provides [300+ connectors](https://docs.airbyte.com/integrations/) for popular APIs, databases, data warehouses and data lakes.
 
 Airbyte connectors can be implemented in any language and take the form of a Docker image that follows the [Airbyte specification](https://docs.airbyte.com/understanding-airbyte/airbyte-protocol/). You can create new connectors very fast with:
- - The [low-code Connector Development Kit](https://docs.airbyte.com/connector-development/config-based/low-code-cdk-overview) (CDK) for API connectors ([demo](https://www.youtube.com/watch?v=i7VSL2bDvmw))
- - The [Python CDK](https://docs.airbyte.com/connector-development/cdk-python/) ([tutorial](https://docs.airbyte.com/connector-development/tutorials/cdk-speedrun))
+- The [low-code Connector Development Kit](https://docs.airbyte.com/connector-development/config-based/low-code-cdk-overview) (CDK) for API connectors ([demo](https://www.youtube.com/watch?v=i7VSL2bDvmw))
+- The [Python CDK](https://docs.airbyte.com/connector-development/cdk-python/) ([tutorial](https://docs.airbyte.com/connector-development/tutorials/cdk-speedrun))
 
 Airbyte has a built-in scheduler and uses [Temporal](https://airbyte.com/blog/scale-workflow-orchestration-with-temporal) to orchestrate jobs and ensure reliability at scale. Airbyte leverages [dbt](https://www.youtube.com/watch?v=saXwh6SpeHA) to normalize extracted data and can trigger custom transformations in SQL and dbt. You can also orchestrate Airbyte syncs with [Airflow](https://docs.airbyte.com/operator-guides/using-the-airflow-airbyte-operator), [Prefect](https://docs.airbyte.com/operator-guides/using-prefect-task), [Dagster](https://docs.airbyte.com/operator-guides/using-dagster-integration), or [Kestra](https://docs.airbyte.com/operator-guides/using-kestra-plugin/).
 
@@ -42,21 +42,41 @@ Explore our [demo app](https://demo.airbyte.io/).
 
 ## Quick start
 
+⚠️ This Quickstart method is still under active development. This tool is intended to get Airbyte running as quickly as possible with no additional configuration necessary.
+Additional configuration options may be added in the future, however, if you need additional configuration options now, use the
+docker compose solution by following the instructions for the `run_ab_platform.sh` script [here](/deploying-airbyte/docker-compose).
+⚠️
+
 ### Run Airbyte locally
 
-You can run Airbyte locally with Docker.
+You can run Airbyte locally with `abctl`. Mac users can install `abctl` with Brew:
 
 ```bash
-git clone --depth 1 https://github.com/airbytehq/airbyte.git
-cd airbyte
-./run-ab-platform.sh 
+brew tap airbytehq/tap
+brew install abctl
 ```
 
-Login to the web app at [http://localhost:8000](http://localhost:8000) by entering the default credentials found in your .env file.
 
+## Setup & launch Airbyte
+
+- Install `Docker Desktop`  \(see [instructions](https://docs.docker.com/desktop/install/mac-install/)\).
+- After `Docker Desktop` is installed, you must enable `Kubernetes` \(see [instructions](https://docs.docker.com/desktop/kubernetes/)\).
+- For users that cannot install `abctl` with `brew` you download the latest version of `abctl` from the [releases page](https://github.com/airbytehq/abctl/releases)
+- Run the following command:
+
+```bash
+./abctl local install
 ```
-BASIC_AUTH_USERNAME=airbyte
-BASIC_AUTH_PASSWORD=password
+
+- Your browser should open to the Airbyte Application, if it does not visit [http://localhost](http://localhost)
+- You will be asked for a username and password. By default, that's username `airbyte` and password `password`. You can set these values through command line flags or environment variables. For example, to set the username and password to `foo` and `bar` respectively, you can run the following command:
+
+```bash
+./abctl local install --username foo --password bar
+
+# Or as Environment Variables
+ABCTL_LOCAL_INSTALL_PASSWORD=foo
+ABCTL_LOCAL_INSTALL_USERNAME=bar
 ```
 
 Follow web app UI instructions to set up a source, destination and connection to replicate data. Connections support the most popular sync modes: full refresh, incremental and change data capture for databases.
@@ -69,7 +89,7 @@ You can also programmatically manage sources, destinations, and connections with
 
 ### Deploy Airbyte to production
 
-Deployment options: [Docker](https://docs.airbyte.com/deploying-airbyte/local-deployment), [AWS EC2](https://docs.airbyte.com/deploying-airbyte/on-aws-ec2), [Azure](https://docs.airbyte.com/deploying-airbyte/on-azure-vm-cloud-shell), [GCP](https://docs.airbyte.com/deploying-airbyte/on-gcp-compute-engine), [Kubernetes](https://docs.airbyte.com/deploying-airbyte/on-kubernetes), [Restack](https://docs.airbyte.com/deploying-airbyte/on-restack), [Plural](https://docs.airbyte.com/deploying-airbyte/on-plural), [Oracle Cloud](https://docs.airbyte.com/deploying-airbyte/on-oci-vm), [Digital Ocean](https://docs.airbyte.com/deploying-airbyte/on-digitalocean-droplet)...
+Deployment options: [Docker](https://docs.airbyte.com/deploying-airbyte/local-deployment), [AWS EC2](https://docs.airbyte.com/deploying-airbyte/on-aws-ec2), [Azure](https://docs.airbyte.com/deploying-airbyte/on-azure-vm-cloud-shell), [GCP](https://docs.airbyte.com/deploying-airbyte/on-gcp-compute-engine), [Kubernetes](https://docs.airbyte.com/deploying-airbyte/on-kubernetes-via-helm), [Restack](https://docs.airbyte.com/deploying-airbyte/on-restack), [Plural](https://docs.airbyte.com/deploying-airbyte/on-plural), [Oracle Cloud](https://docs.airbyte.com/deploying-airbyte/on-oci-vm), [Digital Ocean](https://docs.airbyte.com/deploying-airbyte/on-digitalocean-droplet)...
 
 ### Use Airbyte Cloud
 

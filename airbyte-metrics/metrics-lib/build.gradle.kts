@@ -1,44 +1,52 @@
 plugins {
-    id("io.airbyte.gradle.jvm.lib")
-    id("io.airbyte.gradle.publish")
-    kotlin("jvm")
-    kotlin("kapt")
+  id("io.airbyte.gradle.jvm.lib")
+  id("io.airbyte.gradle.publish")
+  kotlin("jvm")
+  kotlin("kapt")
 }
 
 dependencies {
-    kapt(libs.bundles.micronaut.annotation.processor)
+  compileOnly(libs.lombok)
+  annotationProcessor(libs.lombok) // Lombok must be added BEFORE Micronaut
 
-    implementation(project(":airbyte-commons"))
-    implementation(project(":airbyte-config:config-models"))
-    implementation(project(":airbyte-db:jooq"))
-    implementation(project(":airbyte-db:db-lib"))
+  kapt(libs.bundles.micronaut.annotation.processor)
 
-    implementation(libs.guava)
-    implementation(libs.google.cloud.storage)
-    compileOnly(libs.lombok)
-    annotationProcessor(libs.lombok)
+  implementation(project(":airbyte-commons"))
+  implementation(project(":airbyte-config:config-models"))
+  implementation(project(":airbyte-db:jooq"))
+  implementation(project(":airbyte-db:db-lib"))
 
-    implementation(libs.otel.semconv)
-    implementation(libs.otel.sdk)
-    implementation(libs.otel.sdk.testing)
-    implementation(libs.micrometer.statsd)
-    implementation(platform(libs.otel.bom))
-    implementation(("io.opentelemetry:opentelemetry-api"))
-    implementation(("io.opentelemetry:opentelemetry-sdk"))
-    implementation(("io.opentelemetry:opentelemetry-exporter-otlp"))
+  implementation(libs.guava)
+  implementation(libs.google.cloud.storage)
 
-    implementation(libs.java.dogstatsd.client)
-    implementation(libs.bundles.datadog)
+  implementation(libs.otel.semconv)
+  implementation(libs.otel.sdk)
+  implementation(libs.otel.sdk.testing)
+  implementation(libs.micrometer.statsd)
+  implementation(platform(libs.otel.bom))
+  implementation(("io.opentelemetry:opentelemetry-api"))
+  implementation(("io.opentelemetry:opentelemetry-sdk"))
+  implementation(("io.opentelemetry:opentelemetry-exporter-otlp"))
 
-    testImplementation(project(":airbyte-config:config-persistence"))
-    testImplementation(project(":airbyte-test-utils"))
-    testImplementation(libs.platform.testcontainers.postgresql)
-    testRuntimeOnly(libs.junit.jupiter.engine)
-    testImplementation(libs.bundles.junit)
-    testImplementation(libs.assertj.core)
-    testImplementation(libs.mockk)
-    testImplementation((variantOf(libs.opentracing.util) { classifier("tests") }))
+  implementation(libs.java.dogstatsd.client)
+  implementation(libs.bundles.datadog)
 
-    testImplementation(libs.junit.pioneer)
+  testImplementation(project(":airbyte-config:config-persistence"))
+  testImplementation(project(":airbyte-test-utils"))
+  testImplementation(libs.platform.testcontainers.postgresql)
+  testRuntimeOnly(libs.junit.jupiter.engine)
+  testImplementation(libs.bundles.junit)
+  testImplementation(libs.assertj.core)
+  testImplementation(libs.mockk)
+  testImplementation((variantOf(libs.opentracing.util) { classifier("tests") }))
 
+  testImplementation(libs.junit.pioneer)
+}
+
+tasks.named<Test>("test") {
+  environment(
+    mapOf(
+      "DD_CONSTANT_TAGS" to "a, ,c, d,e ",
+    ),
+  )
 }

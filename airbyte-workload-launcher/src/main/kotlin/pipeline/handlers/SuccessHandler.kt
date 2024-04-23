@@ -4,7 +4,6 @@
 
 package io.airbyte.workload.launcher.pipeline.handlers
 
-import io.airbyte.api.client.invoker.generated.ApiException
 import io.airbyte.metrics.lib.MetricAttribute
 import io.airbyte.workload.launcher.client.WorkloadApiClient
 import io.airbyte.workload.launcher.metrics.CustomMetricPublisher
@@ -15,6 +14,7 @@ import io.github.oshai.kotlinlogging.KotlinLogging
 import io.github.oshai.kotlinlogging.withLoggingContext
 import jakarta.inject.Named
 import jakarta.inject.Singleton
+import org.openapitools.client.infrastructure.ClientException
 import java.util.Optional
 import java.util.function.Function
 
@@ -30,7 +30,6 @@ class SuccessHandler(
     withLoggingContext(io.logCtx) {
       metricPublisher.count(
         WorkloadLauncherMetricMetadata.WORKLOAD_PROCESSED,
-        MetricAttribute(MeterFilterFactory.WORKLOAD_ID_TAG, io.msg.workloadId),
         MetricAttribute(MeterFilterFactory.WORKLOAD_TYPE_TAG, io.msg.workloadType.toString()),
         MetricAttribute(MeterFilterFactory.STATUS_TAG, MeterFilterFactory.SUCCESS_STATUS),
       )
@@ -50,7 +49,7 @@ class SuccessHandler(
           apiClient.updateStatusToLaunched(io.msg.workloadId)
         } catch (e: Exception) {
           val errorMsg = "Failed to update workload status to launched. Workload may be reprocessed on restart."
-          if (e is ApiException && e.code == 410) {
+          if (e is ClientException && e.statusCode == 410) {
             logger.debug(e) { errorMsg }
           } else {
             logger.warn(e) { errorMsg }

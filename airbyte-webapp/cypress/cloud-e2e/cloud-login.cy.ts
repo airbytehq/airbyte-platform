@@ -7,10 +7,10 @@ describe("manually logging in and out of airbyte cloud", () => {
     cy.visit("/");
     // unauthenticated users are redirected to /login
     assertOnLoginPage();
-
-    cy.get("[data-testid='login.email']").type(testUser.email);
-    cy.get("[data-testid='login.password']").type(testUser.password);
-    cy.get("[data-testid='login.submit']").click();
+    cy.get("button").contains("Continue with Email").click();
+    cy.get("input[name=username]").type(testUser.email);
+    cy.get("input[name=password]").type(testUser.password);
+    cy.get("input[name=login]").click();
     cy.hasNavigatedTo("/workspaces");
     cy.selectWorkspace();
 

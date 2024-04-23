@@ -2,7 +2,6 @@ import { createColumnHelper } from "@tanstack/react-table";
 import React, { useCallback, useMemo, useState } from "react";
 import { FormattedMessage } from "react-intl";
 
-import { HeadTitle } from "components/common/HeadTitle";
 import { ConnectorBuilderProjectTable } from "components/ConnectorBuilderProjectTable";
 import { FlexContainer, FlexItem } from "components/ui/Flex";
 import { Heading } from "components/ui/Heading";
@@ -16,10 +15,10 @@ import { FeatureItem, useFeature } from "core/services/features";
 import { useIntent } from "core/utils/rbac";
 import { RoutePaths } from "pages/routePaths";
 
+import { AddNewConnectorButton } from "./AddNewConnectorButton";
 import { ConnectorCell } from "./ConnectorCell";
 import styles from "./ConnectorsView.module.scss";
 import { ConnectorsViewContext } from "./ConnectorsViewContext";
-import CreateConnector from "./CreateConnector";
 import ImageCell from "./ImageCell";
 import { UpdateDestinationConnectorVersionCell } from "./UpdateDestinationConnectorVersionCell";
 import { UpdateSourceConnectorVersionCell } from "./UpdateSourceConnectorVersionCell";
@@ -210,22 +209,31 @@ const ConnectorsView: React.FC<ConnectorsViewProps> = ({
     sections.push({
       title: type === "sources" ? "admin.manageSource" : "admin.manageDestination",
       content: (
-        <MemoizedTable columns={usedDefinitionColumns} data={filteredUsedConnectorsDefinitions} sorting={false} />
+        <MemoizedTable
+          stickyHeaders={false}
+          columns={usedDefinitionColumns}
+          data={filteredUsedConnectorsDefinitions}
+          sorting={false}
+        />
       ),
     });
   }
 
   sections.push({
     title: type === "sources" ? "admin.availableSource" : "admin.availableDestinations",
-    content: <MemoizedTable columns={definitionColumns} data={filteredConnectorsDefinitions} sorting={false} />,
+    content: (
+      <MemoizedTable
+        stickyHeaders={false}
+        columns={definitionColumns}
+        data={filteredConnectorsDefinitions}
+        sorting={false}
+      />
+    ),
   });
 
   return (
     <ConnectorsViewContext.Provider value={ctx}>
       <div className={styles.connectorsTable}>
-        <HeadTitle
-          titles={[{ id: "sidebar.settings" }, { id: type === "sources" ? "admin.sources" : "admin.destinations" }]}
-        />
         <FlexContainer direction="column" gap="2xl">
           {sections.map((section, index) => (
             <FlexContainer key={index} direction="column">
@@ -237,7 +245,7 @@ const ConnectorsView: React.FC<ConnectorsViewProps> = ({
                 </FlexItem>
                 {index === 0 && (
                   <FlexContainer>
-                    <CreateConnector type={type} />
+                    <AddNewConnectorButton type={type} />
                     {allowUpdateConnectors && <UpgradeAllButton connectorType={type} />}
                   </FlexContainer>
                 )}

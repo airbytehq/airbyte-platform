@@ -4,17 +4,10 @@
 
 package io.airbyte.workload.launcher.config
 
-import io.airbyte.commons.constants.WorkerConstants
-import io.airbyte.commons.features.EnvVariableFeatureFlags
-import io.airbyte.commons.features.FeatureFlags
 import io.airbyte.commons.workers.config.WorkerConfigs
-import io.airbyte.config.Configs
-import io.airbyte.config.EnvConfigs
+import io.airbyte.config.storage.StorageConfig
 import io.airbyte.workers.process.Metadata.AWS_ACCESS_KEY_ID
 import io.airbyte.workers.process.Metadata.AWS_SECRET_ACCESS_KEY
-import io.airbyte.workers.sync.OrchestratorConstants
-import io.airbyte.workload.launcher.config.cloud.CloudLoggingConfig
-import io.airbyte.workload.launcher.config.cloud.CloudStateConfig
 import io.fabric8.kubernetes.api.model.EnvVar
 import io.fabric8.kubernetes.api.model.EnvVarSource
 import io.fabric8.kubernetes.api.model.SecretKeySelector
@@ -32,110 +25,21 @@ import java.util.function.Consumer
 @Factory
 class EnvVarConfigBeanFactory {
   /**
-   * Map of env vars to be passed to the orchestrator container.
-   */
-  @Singleton
-  @Named("orchestratorEnvMap")
-  fun orchestratorEnvMap(
-    featureFlags: FeatureFlags,
-    @Value("\${airbyte.container.orchestrator.java-opts}") containerOrchestratorJavaOpts: String,
-    workerEnv: Configs.WorkerEnvironment,
-    cloudLoggingConfig: CloudLoggingConfig,
-    cloudStateConfig: CloudStateConfig,
-    @Named("workloadApiEnvMap") workloadApiEnvMap: Map<String, String>,
-    @Named("metricsEnvMap") metricsEnvMap: Map<String, String>,
-    @Named("micronautEnvMap") micronautEnvMap: Map<String, String>,
-    @Named("apiClientEnvMap") apiClientEnvMap: Map<String, String>,
-  ): Map<String, String> {
-    // Build the map of additional environment variables to be passed to the container orchestrator
-    val envMap: MutableMap<String, String> = HashMap()
-    envMap[EnvVariableFeatureFlags.AUTO_DETECT_SCHEMA] = java.lang.Boolean.toString(featureFlags.autoDetectSchema())
-    envMap[EnvVariableFeatureFlags.APPLY_FIELD_SELECTION] = java.lang.Boolean.toString(featureFlags.applyFieldSelection())
-    envMap[EnvVariableFeatureFlags.FIELD_SELECTION_WORKSPACES] = featureFlags.fieldSelectionWorkspaces()
-    envMap[JAVA_OPTS_ENV_VAR] = containerOrchestratorJavaOpts
-
-    val configs: Configs = EnvConfigs()
-    envMap[EnvConfigs.FEATURE_FLAG_CLIENT] = configs.featureFlagClient
-    envMap[EnvConfigs.LAUNCHDARKLY_KEY] = configs.launchDarklyKey
-    envMap[EnvConfigs.OTEL_COLLECTOR_ENDPOINT] = configs.otelCollectorEndpoint
-    envMap[EnvConfigs.SOCAT_KUBE_CPU_LIMIT] = configs.socatSidecarKubeCpuLimit
-    envMap[EnvConfigs.SOCAT_KUBE_CPU_REQUEST] = configs.socatSidecarKubeCpuRequest
-
-    // Manually add the worker environment
-    envMap[WorkerConstants.WORKER_ENVIRONMENT] = workerEnv.name
-
-    // Cloud logging configuration
-    envMap.putAll(cloudLoggingConfig.toEnvVarMap())
-
-    // Cloud state configuration
-    envMap.putAll(cloudStateConfig.toEnvVarMap())
-
-    // Workload Api configuration
-    envMap.putAll(workloadApiEnvMap)
-
-    // Api client configuration
-    envMap.putAll(apiClientEnvMap)
-
-    // Metrics configuration
-    envMap.putAll(metricsEnvMap)
-
-    // Micronaut environment
-    envMap.putAll(micronautEnvMap)
-
-    // TODO: Don't do this. Be explicit about what env vars we pass.
-    // Copy over all local values
-    val localEnvMap =
-      System.getenv()
-        .filter { OrchestratorConstants.ENV_VARS_TO_TRANSFER.contains(it.key) }
-
-    envMap.putAll(localEnvMap)
-
-    return envMap
-  }
-
-  /**
-   * The list of environment variables to be passed to the orchestrator.
-   * The created list contains both regular environment variables and environment variables that
-   * are sourced from Kubernetes secrets.
-   */
-  @Singleton
-  @Named("orchestratorEnvVars")
-  fun orchestratorEnvVars(
-    @Named("orchestratorEnvMap") envMap: Map<String, String>,
-    @Named("orchestratorSecretsEnvMap") secretsEnvMap: Map<String, EnvVarSource>,
-  ): List<EnvVar> {
-    val envVars =
-      envMap
-        .map { EnvVar(it.key, it.value, null) }
-        .toList()
-
-    val secretEnvVars =
-      secretsEnvMap
-        .map { EnvVar(it.key, null, it.value) }
-        .toList()
-
-    return envVars + secretEnvVars
-  }
-
-  /**
    * The list of env vars to be passed to the check sidecar container.
    */
   @Singleton
   @Named("sideCarEnvVars")
   fun sideCarEnvVars(
-    cloudLoggingConfig: CloudLoggingConfig,
-    cloudStateConfig: CloudStateConfig,
+    storageConfig: StorageConfig,
     @Named("workloadApiEnvMap") workloadApiEnvMap: Map<String, String>,
     @Named("apiClientEnvMap") apiClientEnvMap: Map<String, String>,
     @Named("micronautEnvMap") micronautEnvMap: Map<String, String>,
     @Named("workloadApiSecretEnv") secretsEnvMap: Map<String, EnvVarSource>,
   ): List<EnvVar> {
     val envMap: MutableMap<String, String> = HashMap()
-    // Cloud logging configuration
-    envMap.putAll(cloudLoggingConfig.toEnvVarMap())
 
-    // Cloud state configuration
-    envMap.putAll(cloudStateConfig.toEnvVarMap())
+    // Cloud storage configuration
+    envMap.putAll(storageConfig.toEnvVarMap())
 
     // Workload Api configuration
     envMap.putAll(workloadApiEnvMap)
@@ -389,7 +293,7 @@ class EnvVarConfigBeanFactory {
     private const val DD_ENV_ENV_VAR = "DD_ENV"
     private const val DD_SERVICE_ENV_VAR = "DD_SERVICE"
     private const val DD_VERSION_ENV_VAR = "DD_VERSION"
-    private const val JAVA_OPTS_ENV_VAR = "JAVA_OPTS"
+    const val JAVA_OPTS_ENV_VAR = "JAVA_OPTS"
     private const val PUBLISH_METRICS_ENV_VAR = "PUBLISH_METRICS"
     private const val CONTROL_PLANE_AUTH_ENDPOINT_ENV_VAR = "CONTROL_PLANE_AUTH_ENDPOINT"
     private const val DATA_PLANE_SERVICE_ACCOUNT_CREDENTIALS_PATH_ENV_VAR = "DATA_PLANE_SERVICE_ACCOUNT_CREDENTIALS_PATH"

@@ -27,6 +27,7 @@ import io.airbyte.api.model.generated.ExistingConnectorBuilderProjectWithWorkspa
 import io.airbyte.api.model.generated.SourceDefinitionIdBody;
 import io.airbyte.api.model.generated.WorkspaceIdRequestBody;
 import io.airbyte.commons.json.Jsons;
+import io.airbyte.commons.server.handlers.helpers.BuilderProjectUpdater;
 import io.airbyte.commons.server.handlers.helpers.DeclarativeSourceManifestInjector;
 import io.airbyte.config.ActorDefinitionVersion;
 import io.airbyte.config.ConfigSchema;
@@ -59,6 +60,7 @@ import io.airbyte.featureflag.Organization;
 import io.airbyte.featureflag.UseRuntimeSecretPersistence;
 import io.airbyte.protocol.models.ConnectorSpecification;
 import io.airbyte.validation.json.JsonValidationException;
+import jakarta.annotation.Nullable;
 import jakarta.inject.Inject;
 import jakarta.inject.Named;
 import jakarta.inject.Singleton;
@@ -67,7 +69,6 @@ import java.util.Optional;
 import java.util.UUID;
 import java.util.function.Supplier;
 import java.util.stream.Stream;
-import javax.annotation.Nullable;
 
 /**
  * ConnectorBuilderProjectsHandler. Javadocs suppressed because api docs should be used as source of
@@ -77,6 +78,8 @@ import javax.annotation.Nullable;
 public class ConnectorBuilderProjectsHandler {
 
   private final ConfigRepository configRepository;
+
+  private final BuilderProjectUpdater buildProjectUpdater;
   private final Supplier<UUID> uuidSupplier;
   private final DeclarativeSourceManifestInjector manifestInjector;
   private final CdkVersionProvider cdkVersionProvider;
@@ -89,11 +92,12 @@ public class ConnectorBuilderProjectsHandler {
   private final JsonSecretsProcessor secretsProcessor;
   private final ConnectorBuilderServerApi connectorBuilderServerApiClient;
 
-  static final String SPEC_FIELD = "spec";
-  static final String CONNECTION_SPECIFICATION_FIELD = "connection_specification";
+  public static final String SPEC_FIELD = "spec";
+  public static final String CONNECTION_SPECIFICATION_FIELD = "connection_specification";
 
   @Inject
   public ConnectorBuilderProjectsHandler(final ConfigRepository configRepository,
+                                         final BuilderProjectUpdater builderProjectUpdater,
                                          final CdkVersionProvider cdkVersionProvider,
                                          @Named("uuidGenerator") final Supplier<UUID> uuidSupplier,
                                          final DeclarativeSourceManifestInjector manifestInjector,
@@ -106,6 +110,7 @@ public class ConnectorBuilderProjectsHandler {
                                          @Named("jsonSecretsProcessorWithCopy") final JsonSecretsProcessor secretsProcessor,
                                          final ConnectorBuilderServerApi connectorBuilderServerApiClient) {
     this.configRepository = configRepository;
+    this.buildProjectUpdater = builderProjectUpdater;
     this.cdkVersionProvider = cdkVersionProvider;
     this.uuidSupplier = uuidSupplier;
     this.manifestInjector = manifestInjector;
@@ -154,22 +159,12 @@ public class ConnectorBuilderProjectsHandler {
   }
 
   public void updateConnectorBuilderProject(final ExistingConnectorBuilderProjectWithWorkspaceId projectUpdate)
-      throws IOException, ConfigNotFoundException {
+      throws ConfigNotFoundException, IOException {
+
     final ConnectorBuilderProject connectorBuilderProject = configRepository.getConnectorBuilderProject(projectUpdate.getBuilderProjectId(), false);
     validateProjectUnderRightWorkspace(connectorBuilderProject, projectUpdate.getWorkspaceId());
 
-    if (connectorBuilderProject.getActorDefinitionId() != null) {
-      configRepository.updateBuilderProjectAndActorDefinition(projectUpdate.getBuilderProjectId(),
-          projectUpdate.getWorkspaceId(),
-          projectUpdate.getBuilderProject().getName(),
-          projectUpdate.getBuilderProject().getDraftManifest(),
-          connectorBuilderProject.getActorDefinitionId());
-    } else {
-      configRepository.writeBuilderProjectDraft(projectUpdate.getBuilderProjectId(),
-          projectUpdate.getWorkspaceId(),
-          projectUpdate.getBuilderProject().getName(),
-          projectUpdate.getBuilderProject().getDraftManifest());
-    }
+    buildProjectUpdater.persistBuilderProjectUpdate(projectUpdate);
   }
 
   public void deleteConnectorBuilderProject(final ConnectorBuilderProjectIdWithWorkspaceId projectDelete)
@@ -325,7 +320,7 @@ public class ConnectorBuilderProjectsHandler {
     }
   }
 
-  public ConnectorBuilderProjectStreamRead readConnectorBuilderProjectStream(ConnectorBuilderProjectStreamReadRequestBody requestBody)
+  public ConnectorBuilderProjectStreamRead readConnectorBuilderProjectStream(final ConnectorBuilderProjectStreamReadRequestBody requestBody)
       throws ConfigNotFoundException, IOException, JsonValidationException {
     try {
       final ConnectorBuilderProject project = connectorBuilderService.getConnectorBuilderProject(requestBody.getBuilderProjectId(), false);
@@ -364,7 +359,7 @@ public class ConnectorBuilderProjectsHandler {
     }
   }
 
-  private ConnectorBuilderProjectStreamRead convertStreamRead(StreamRead streamRead) {
+  private ConnectorBuilderProjectStreamRead convertStreamRead(final StreamRead streamRead) {
     return new ConnectorBuilderProjectStreamRead()
         .logs(streamRead.getLogs())
         .slices(streamRead.getSlices().stream().map(slice -> new ConnectorBuilderProjectStreamReadSlicesInner()
@@ -387,18 +382,17 @@ public class ConnectorBuilderProjectsHandler {
         .inferredDatetimeFormats(streamRead.getInferredDatetimeFormats());
   }
 
-  private ConnectorBuilderHttpRequest convertHttpRequest(@Nullable HttpRequest request) {
+  private ConnectorBuilderHttpRequest convertHttpRequest(@Nullable final HttpRequest request) {
     return request != null
         ? new ConnectorBuilderHttpRequest()
             .url(request.getUrl())
             .httpMethod(ConnectorBuilderHttpRequest.HttpMethodEnum.fromString(request.getHttpMethod().getValue()))
-            .parameters(request.getParameters())
             .body(request.getBody())
             .headers(request.getHeaders())
         : null;
   }
 
-  private ConnectorBuilderHttpResponse convertHttpResponse(HttpResponse response) {
+  private ConnectorBuilderHttpResponse convertHttpResponse(final HttpResponse response) {
     return response != null
         ? new ConnectorBuilderHttpResponse()
             .status(response.getStatus())

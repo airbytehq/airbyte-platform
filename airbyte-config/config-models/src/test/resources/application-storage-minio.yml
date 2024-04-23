@@ -1,0 +1,13 @@
+airbyte:
+  cloud:
+    storage:
+      type: minio
+      bucket:
+        log: log
+        state: state
+        workload-output: workload
+        activity-payload: payload
+      minio:
+        access-key: access
+        secret-access-key: secret-access
+        endpoint: endpoint

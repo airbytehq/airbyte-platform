@@ -13,7 +13,7 @@ import { LogSearchInput } from "area/connection/components/JobHistoryItem/LogSea
 import { JobLogOrigins, KNOWN_LOG_ORIGINS, useCleanLogs } from "area/connection/components/JobHistoryItem/useCleanLogs";
 import { VirtualLogs } from "area/connection/components/JobHistoryItem/VirtualLogs";
 import { LinkToAttemptButton } from "area/connection/components/JobLogsModal/LinkToAttemptButton";
-import { useAttemptForJob, useJobInfoWithoutLogs } from "core/api";
+import { useAttemptCombinedStatsForJob, useAttemptForJob, useJobInfoWithoutLogs } from "core/api";
 
 import { AttemptStatusIcon } from "./AttemptStatusIcon";
 import { DownloadLogsButton } from "./DownloadLogsButton";
@@ -36,6 +36,12 @@ export const JobLogsModal: React.FC<JobLogsModalProps> = ({ jobId, initialAttemp
     initialAttemptId ?? job.attempts[job.attempts.length - 1].attempt.id
   );
   const jobAttempt = useAttemptForJob(jobId, selectedAttemptId);
+  const aggregatedAttemptStats = useAttemptCombinedStatsForJob(jobId, selectedAttemptId, {
+    refetchInterval() {
+      // if the attempt hasn't ended refetch every 2.5 seconds
+      return jobAttempt.attempt.endedAt ? false : 2500;
+    },
+  });
   const { logLines, origins } = useCleanLogs(jobAttempt);
   const [selectedLogOrigins, setSelectedLogOrigins] = useState<JobLogOrigins[] | null>(
     KNOWN_LOG_ORIGINS.map(({ key }) => key)
@@ -181,7 +187,13 @@ export const JobLogsModal: React.FC<JobLogsModalProps> = ({ jobId, initialAttemp
               isDisabled={job.attempts.length === 1}
             />
           </div>
-          <AttemptDetails attempt={jobAttempt.attempt} jobId={String(jobId)} showEndedAt showFailureMessage={false} />
+          <AttemptDetails
+            attempt={jobAttempt.attempt}
+            aggregatedAttemptStats={aggregatedAttemptStats}
+            jobId={String(jobId)}
+            showEndedAt
+            showFailureMessage={false}
+          />
           <FlexContainer className={styles.downloadLogs}>
             <LinkToAttemptButton jobId={jobId} attemptId={selectedAttemptId} />
             <DownloadLogsButton logLines={logLines} fileName={`job-${jobId}-attempt-${selectedAttemptId + 1}`} />

@@ -17,12 +17,12 @@ import io.airbyte.config.StandardSourceDefinition.SourceType;
 import io.airbyte.config.SupportLevel;
 import io.airbyte.config.VersionBreakingChange;
 import io.airbyte.protocol.models.ConnectorSpecification;
+import jakarta.annotation.Nullable;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.stream.Collectors;
-import javax.annotation.Nullable;
 
 /**
  * Utility class for converting between the connector registry and platform types.

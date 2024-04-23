@@ -43,7 +43,7 @@ class InstanceConfigurationApiControllerTest extends BaseControllerTest {
   static String PATH = "/api/v1/instance_configuration";
 
   @Test
-  void testGetInstanceConfiguration() throws ConfigNotFoundException, IOException {
+  void testGetInstanceConfiguration() throws IOException {
     when(instanceConfigurationHandler.getInstanceConfiguration())
         .thenReturn(new InstanceConfigurationResponse());
 
@@ -55,7 +55,8 @@ class InstanceConfigurationApiControllerTest extends BaseControllerTest {
     when(instanceConfigurationHandler.setupInstanceConfiguration(Mockito.any()))
         .thenReturn(new InstanceConfigurationResponse());
 
-    testEndpointStatus(HttpRequest.POST(PATH + "/setup", new InstanceConfigurationResponse()), HttpStatus.OK);
+    testEndpointStatus(HttpRequest.POST(PATH + "/setup", new InstanceConfigurationResponse()),
+        HttpStatus.OK);
   }
 
 }

@@ -134,7 +134,7 @@ class DefaultSyncJobFactoryTest {
     final SyncJobFactory factory =
         new DefaultSyncJobFactory(true, jobCreator, configRepository, oAuthConfigSupplier, configInjector, workspaceHelper,
             actorDefinitionVersionHelper);
-    final long actualJobId = factory.create(connectionId);
+    final long actualJobId = factory.createSync(connectionId);
     assertEquals(jobId, actualJobId);
 
     verify(jobCreator)

@@ -42,28 +42,28 @@ public class OrganizationApiController implements OrganizationApi {
   @Secured({ORGANIZATION_MEMBER})
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @Override
-  public OrganizationRead getOrganization(OrganizationIdRequestBody organizationIdRequestBody) {
+  public OrganizationRead getOrganization(@Body final OrganizationIdRequestBody organizationIdRequestBody) {
     return ApiHelper.execute(() -> organizationsHandler.getOrganization(organizationIdRequestBody));
   }
 
   @Post("/update")
   @Secured({ORGANIZATION_EDITOR})
   @Override
-  public OrganizationRead updateOrganization(OrganizationUpdateRequestBody organizationUpdateRequestBody) {
+  public OrganizationRead updateOrganization(@Body final OrganizationUpdateRequestBody organizationUpdateRequestBody) {
     return ApiHelper.execute(() -> organizationsHandler.updateOrganization(organizationUpdateRequestBody));
   }
 
   @Post("/create")
   @Secured({ADMIN}) // instance admin only
   @Override
-  public OrganizationRead createOrganization(OrganizationCreateRequestBody organizationCreateRequestBody) {
+  public OrganizationRead createOrganization(@Body final OrganizationCreateRequestBody organizationCreateRequestBody) {
     return ApiHelper.execute(() -> organizationsHandler.createOrganization(organizationCreateRequestBody));
   }
 
   @Post("/delete")
   @Secured({ADMIN}) // instance admin only
   @Override
-  public void deleteOrganization(OrganizationIdRequestBody organizationIdRequestBody) {
+  public void deleteOrganization(@Body final OrganizationIdRequestBody organizationIdRequestBody) {
     // To be implemented; we need a tombstone column for organizations table.
   }
 

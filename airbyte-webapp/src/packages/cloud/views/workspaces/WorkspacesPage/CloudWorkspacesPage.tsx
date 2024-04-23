@@ -2,6 +2,7 @@ import { useMutation } from "@tanstack/react-query";
 import React, { useDeferredValue, useState } from "react";
 import { FormattedMessage } from "react-intl";
 
+import { HeadTitle } from "components/common/HeadTitle";
 import AirbyteLogo from "components/illustrations/airbyte-logo.svg?react";
 import { Box } from "components/ui/Box";
 import { Button } from "components/ui/Button";
@@ -22,7 +23,7 @@ import { WORKSPACE_LIST_LENGTH } from "pages/workspaces/WorkspacesPage";
 import { CloudWorkspacesCreateControl } from "./CloudWorkspacesCreateControl";
 import styles from "./CloudWorkspacesPage.module.scss";
 
-export const CloudWorkspacesPage: React.FC = () => {
+export const CloudWorkspacesPageInner: React.FC = () => {
   const { isLoading: isLogoutLoading, mutateAsync: handleLogout } = useMutation(() => logout?.() ?? Promise.resolve());
   useTrackPage(PageTrackingCodes.WORKSPACES);
   const [searchValue, setSearchValue] = useState("");
@@ -105,5 +106,14 @@ export const CloudWorkspacesPage: React.FC = () => {
         </>
       )}
     </div>
+  );
+};
+
+export const CloudWorkspacesPage = () => {
+  return (
+    <>
+      <HeadTitle titles={[{ id: "workspaces.title" }]} />
+      <CloudWorkspacesPageInner />
+    </>
   );
 };

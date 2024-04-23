@@ -4,8 +4,8 @@ import io.airbyte.api.server.constants.ROOT_PATH
 import io.airbyte.api.server.controllers.interfaces.DefaultApi
 import io.micronaut.context.annotation.Value
 import io.micronaut.http.annotation.Controller
+import jakarta.ws.rs.core.Response
 import java.net.URI
-import javax.ws.rs.core.Response
 
 @Controller(ROOT_PATH)
 open class DefaultController() : DefaultApi {

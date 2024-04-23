@@ -4,7 +4,7 @@
 
 package io.airbyte.server.apis.publicapi.helpers
 
-import io.airbyte.server.apis.publicapi.problems.UnknownValueProblem
+import io.airbyte.commons.server.errors.problems.UnknownValueProblem
 import java.util.UUID
 
 fun getActorDefinitionIdFromActorName(

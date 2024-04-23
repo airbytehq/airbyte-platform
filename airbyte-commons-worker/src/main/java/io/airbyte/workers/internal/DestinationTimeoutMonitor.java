@@ -20,6 +20,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
+import org.apache.commons.lang3.time.DurationFormatUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -46,6 +47,8 @@ public class DestinationTimeoutMonitor implements AutoCloseable {
 
   private final AtomicReference<Long> currentAcceptCallStartTime = new AtomicReference<>(null);
   private final AtomicReference<Long> currentNotifyEndOfInputCallStartTime = new AtomicReference<>(null);
+  private final AtomicReference<Long> timeSinceLastAction = new AtomicReference<>(null);
+
   private final UUID workspaceId;
   private ExecutorService lazyExecutorService;
   private final UUID connectionId;
@@ -127,7 +130,7 @@ public class DestinationTimeoutMonitor implements AutoCloseable {
     LOGGER.info("thread status... timeout thread: {} , replication thread: {}", timeoutMonitorFuture.isDone(), runnableFuture.isDone());
 
     if (timeoutMonitorFuture.isDone() && !runnableFuture.isDone()) {
-      onTimeout(runnableFuture);
+      onTimeout(runnableFuture, timeout.toMillis(), timeSinceLastAction.get());
     }
 
     timeoutMonitorFuture.cancel(true);
@@ -184,11 +187,11 @@ public class DestinationTimeoutMonitor implements AutoCloseable {
     currentNotifyEndOfInputCallStartTime.set(null);
   }
 
-  private void onTimeout(final CompletableFuture<Void> runnableFuture) {
+  private void onTimeout(final CompletableFuture<Void> runnableFuture, final long threshold, final long timeSinceLastAction) {
     if (throwExceptionOnTimeout) {
       runnableFuture.cancel(true);
 
-      throw new TimeoutException("Destination has timed out");
+      throw new TimeoutException(threshold, timeSinceLastAction);
     } else {
       LOGGER.info("Destination has timed out but exception is not thrown due to feature "
           + "flag being disabled for workspace {} and connection {}", workspaceId, connectionId);
@@ -228,10 +231,12 @@ public class DestinationTimeoutMonitor implements AutoCloseable {
       // by the time we get here, currentAcceptCallStartTime might have already been reset.
       // this won't be a problem since we are not getting the start time from currentAcceptCallStartTime
       // but from startTime
-      if (System.currentTimeMillis() - startTime > timeout.toMillis()) {
+      final var timeSince = System.currentTimeMillis() - startTime;
+      if (timeSince > timeout.toMillis()) {
         LOGGER.error("Destination has timed out on accept call");
         metricClient.count(OssMetricsRegistry.WORKER_DESTINATION_ACCEPT_TIMEOUT, 1,
             new MetricAttribute(MetricTags.CONNECTION_ID, connectionId.toString()));
+        timeSinceLastAction.set(timeSince);
         return true;
       }
     }
@@ -245,10 +250,12 @@ public class DestinationTimeoutMonitor implements AutoCloseable {
       // by the time we get here, currentNotifyEndOfInputCallStartTime might have already been reset.
       // this won't be a problem since we are not getting the start time from
       // currentNotifyEndOfInputCallStartTime but from startTime
-      if (System.currentTimeMillis() - startTime > timeout.toMillis()) {
+      final var timeSince = System.currentTimeMillis() - startTime;
+      if (timeSince > timeout.toMillis()) {
         LOGGER.error("Destination has timed out on notifyEndOfInput call");
         metricClient.count(OssMetricsRegistry.WORKER_DESTINATION_NOTIFY_END_OF_INPUT_TIMEOUT, 1,
             new MetricAttribute(MetricTags.CONNECTION_ID, connectionId.toString()));
+        timeSinceLastAction.set(timeSince);
         return true;
       }
     }
@@ -270,8 +277,15 @@ public class DestinationTimeoutMonitor implements AutoCloseable {
 
   public static class TimeoutException extends RuntimeException {
 
-    public TimeoutException(final String message) {
-      super(message);
+    public final String humanReadableThreshold;
+    public final String humanReadableTimeSinceLastAction;
+
+    public TimeoutException(final long thresholdMs, final long timeSinceLastActionMs) {
+      super(String.format("Last action %s ago, exceeding the threshold of %s.",
+          DurationFormatUtils.formatDurationWords(timeSinceLastActionMs, true, true),
+          DurationFormatUtils.formatDurationWords(thresholdMs, true, true)));
+      this.humanReadableThreshold = DurationFormatUtils.formatDurationWords(thresholdMs, true, true);
+      this.humanReadableTimeSinceLastAction = DurationFormatUtils.formatDurationWords(timeSinceLastActionMs, true, true);
     }
 
   }

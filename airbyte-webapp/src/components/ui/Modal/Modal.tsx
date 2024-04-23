@@ -13,11 +13,7 @@ import { Overlay } from "../Overlay";
 export interface ModalProps {
   title?: string | React.ReactNode;
   /**
-   * Function to call when the user clicks on the close button (cross icon).
-   */
-  onClose?: (reason: string) => void;
-  /**
-   * Function to call when the user clicks on overlay or press escape.
+   * Function to call when the user press Escape, clicks on Backdrop clicks or X-button clicks.
    * Note: if openModal function was called with "preventCancel: true" then this function will not be called.
    */
   onCancel?: () => void;
@@ -42,7 +38,6 @@ export const Modal: React.FC<React.PropsWithChildren<ModalProps>> = ({
   children,
   title,
   size,
-  onClose,
   onCancel,
   cardless,
   testId,
@@ -56,11 +51,6 @@ export const Modal: React.FC<React.PropsWithChildren<ModalProps>> = ({
       setIsOpen(false);
       onCancel();
     }
-  };
-
-  const onModalClose = () => {
-    setIsOpen(false);
-    onClose?.("closeButtonClicked");
   };
 
   const Wrapper = wrapIn || "div";
@@ -85,13 +75,15 @@ export const Modal: React.FC<React.PropsWithChildren<ModalProps>> = ({
                       {title}
                     </Heading>
                   </Box>
-                  <button
-                    className={styles.card__closeButton}
-                    onClick={onModalClose}
-                    aria-label={formatMessage({ id: "modal.closeButtonLabel" })}
-                  >
-                    <Icon type="cross" />
-                  </button>
+                  {onCancel && (
+                    <button
+                      className={styles.card__closeButton}
+                      onClick={onModalCancel}
+                      aria-label={formatMessage({ id: "modal.closeButtonLabel" })}
+                    >
+                      <Icon type="cross" />
+                    </button>
+                  )}
                 </FlexContainer>
               </div>
               {children}

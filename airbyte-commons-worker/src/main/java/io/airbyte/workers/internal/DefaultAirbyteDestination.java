@@ -18,6 +18,7 @@ import io.airbyte.commons.logging.MdcScope.Builder;
 import io.airbyte.commons.protocol.DefaultProtocolSerializer;
 import io.airbyte.commons.protocol.ProtocolSerializer;
 import io.airbyte.config.WorkerDestinationConfig;
+import io.airbyte.metrics.lib.MetricClient;
 import io.airbyte.protocol.models.AirbyteMessage;
 import io.airbyte.protocol.models.AirbyteMessage.Type;
 import io.airbyte.workers.WorkerUtils;
@@ -56,6 +57,7 @@ public class DefaultAirbyteDestination implements AirbyteDestination {
   private final AirbyteStreamFactory streamFactory;
   private final AirbyteMessageBufferedWriterFactory messageWriterFactory;
   private final ProtocolSerializer protocolSerializer;
+  private final MessageMetricsTracker messageMetricsTracker;
 
   private final AtomicBoolean inputHasEnded = new AtomicBoolean(false);
 
@@ -66,18 +68,19 @@ public class DefaultAirbyteDestination implements AirbyteDestination {
   private final DestinationTimeoutMonitor destinationTimeoutMonitor;
 
   @VisibleForTesting
-  public DefaultAirbyteDestination(final IntegrationLauncher integrationLauncher, final DestinationTimeoutMonitor destinationTimeoutMonitor) {
+  public DefaultAirbyteDestination(final IntegrationLauncher integrationLauncher,
+                                   final DestinationTimeoutMonitor destinationTimeoutMonitor,
+                                   final MetricClient metricClient) {
     this(integrationLauncher,
         VersionedAirbyteStreamFactory.noMigrationVersionedAirbyteStreamFactory(
             LOGGER,
             CONTAINER_LOG_MDC_BUILDER,
-            Optional.empty(),
-            Runtime.getRuntime().maxMemory(),
-            new VersionedAirbyteStreamFactory.InvalidLineFailureConfiguration(false, false, false),
+            new VersionedAirbyteStreamFactory.InvalidLineFailureConfiguration(false),
             new GsonPksExtractor()),
         new DefaultAirbyteMessageBufferedWriterFactory(),
         new DefaultProtocolSerializer(),
-        destinationTimeoutMonitor);
+        destinationTimeoutMonitor,
+        metricClient);
   }
 
   @SuppressWarnings({"PMD.ArrayIsStoredDirectly", "PMD.UseVarargs"})
@@ -85,17 +88,23 @@ public class DefaultAirbyteDestination implements AirbyteDestination {
                                    final AirbyteStreamFactory streamFactory,
                                    final AirbyteMessageBufferedWriterFactory messageWriterFactory,
                                    final ProtocolSerializer protocolSerializer,
-                                   final DestinationTimeoutMonitor destinationTimeoutMonitor) {
+                                   final DestinationTimeoutMonitor destinationTimeoutMonitor,
+                                   final MetricClient metricClient) {
     this.integrationLauncher = integrationLauncher;
     this.streamFactory = streamFactory;
     this.messageWriterFactory = messageWriterFactory;
     this.protocolSerializer = protocolSerializer;
     this.destinationTimeoutMonitor = destinationTimeoutMonitor;
+    this.messageMetricsTracker = new MessageMetricsTracker(metricClient);
   }
 
   @Override
   public void start(final WorkerDestinationConfig destinationConfig, final Path jobRoot) throws IOException, WorkerException {
     Preconditions.checkState(destinationProcess == null);
+
+    if (destinationConfig.getConnectionId() != null) {
+      messageMetricsTracker.trackConnectionId(destinationConfig.getConnectionId());
+    }
 
     LOGGER.info("Running destination...");
     destinationProcess = integrationLauncher.write(
@@ -117,6 +126,7 @@ public class DefaultAirbyteDestination implements AirbyteDestination {
 
   @Override
   public void accept(final AirbyteMessage message) throws IOException {
+    messageMetricsTracker.trackDestSent(message.getType());
     destinationTimeoutMonitor.startAcceptTimer();
     acceptWithNoTimeoutMonitor(message);
     destinationTimeoutMonitor.resetAcceptTimer();
@@ -149,6 +159,8 @@ public class DefaultAirbyteDestination implements AirbyteDestination {
 
   @Override
   public void close() throws Exception {
+    emitDestinationMessageCountMetrics();
+
     if (destinationProcess == null) {
       LOGGER.debug("Destination process already exited");
       return;
@@ -169,6 +181,8 @@ public class DefaultAirbyteDestination implements AirbyteDestination {
 
   @Override
   public void cancel() throws Exception {
+    emitDestinationMessageCountMetrics();
+
     LOGGER.info("Attempting to cancel destination process...");
 
     if (destinationProcess == null) {
@@ -206,7 +220,16 @@ public class DefaultAirbyteDestination implements AirbyteDestination {
   public Optional<AirbyteMessage> attemptRead() {
     Preconditions.checkState(destinationProcess != null);
 
-    return Optional.ofNullable(messageIterator.hasNext() ? messageIterator.next() : null);
+    final Optional<AirbyteMessage> m = Optional.ofNullable(messageIterator.hasNext() ? messageIterator.next() : null);
+    if (m.isPresent()) {
+      messageMetricsTracker.trackDestRead(m.get().getType());
+    }
+    return m;
+  }
+
+  private void emitDestinationMessageCountMetrics() {
+    messageMetricsTracker.flushDestReadCountMetric();
+    messageMetricsTracker.flushDestSentCountMetric();
   }
 
 }

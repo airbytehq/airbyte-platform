@@ -5,11 +5,10 @@
 package io.airbyte.workload.launcher.pipeline
 
 import fixtures.RecordFixtures
+import io.airbyte.api.client.WorkloadApiClient
 import io.airbyte.config.Configs
-import io.airbyte.workload.api.client.generated.WorkloadApi
 import io.airbyte.workload.launcher.ClaimedProcessor
 import io.airbyte.workload.launcher.client.LogContextFactory
-import io.airbyte.workload.launcher.client.WorkloadApiClient
 import io.airbyte.workload.launcher.fixtures.SharedMocks.Companion.metricPublisher
 import io.airbyte.workload.launcher.fixtures.TestStage
 import io.airbyte.workload.launcher.pipeline.LogPathTest.Fixtures.inputMsgs
@@ -32,6 +31,7 @@ import java.util.Optional
 import java.util.function.Function
 import java.util.stream.Stream
 import kotlin.io.path.Path
+import io.airbyte.workload.launcher.client.WorkloadApiClient as LauncherWorkloadApiClient
 
 class LogPathTest {
   @ParameterizedTest
@@ -68,10 +68,14 @@ class LogPathTest {
     parallelism: Int,
   ) {
     val pipeline = launchPipeline(testErrorCase)
+    val workloadApiClient =
+      mockk<WorkloadApiClient> {
+        every { workloadApi } returns mockk()
+      }
 
     val processor =
       ClaimedProcessor(
-        mockk<WorkloadApi>(),
+        workloadApiClient,
         pipeline,
         metricPublisher,
         "dataplane_id",
@@ -113,7 +117,7 @@ class LogPathTest {
   }
 
   object Fixtures {
-    private val mockApiClient: WorkloadApiClient =
+    private val mockApiClient: LauncherWorkloadApiClient =
       mockk {
         every { reportFailure(any()) } returns Unit
       }

@@ -7,13 +7,13 @@ package io.airbyte.commons.server.errors;
 import io.airbyte.api.model.generated.InvalidInputExceptionInfo;
 import io.airbyte.api.model.generated.InvalidInputProperty;
 import io.airbyte.commons.json.Jsons;
+import jakarta.validation.ConstraintViolation;
+import jakarta.validation.ConstraintViolationException;
+import jakarta.ws.rs.core.Response;
+import jakarta.ws.rs.ext.ExceptionMapper;
+import jakarta.ws.rs.ext.Provider;
 import java.util.ArrayList;
 import java.util.List;
-import javax.validation.ConstraintViolation;
-import javax.validation.ConstraintViolationException;
-import javax.ws.rs.core.Response;
-import javax.ws.rs.ext.ExceptionMapper;
-import javax.ws.rs.ext.Provider;
 import org.apache.logging.log4j.core.util.Throwables;
 
 /**

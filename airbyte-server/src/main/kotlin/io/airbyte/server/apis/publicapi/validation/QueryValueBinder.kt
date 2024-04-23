@@ -16,7 +16,7 @@ import java.util.Optional
  * https://github.com/micronaut-projects/micronaut-core/issues/5135. Should be replaced when
  * micronaut validation is improved. https://github.com/micronaut-projects/micronaut-core/pull/6808
  */
-class QueryValueBinder<T>(conversionService: ConversionService<*>?) : QueryValueArgumentBinder<T>(conversionService) {
+class QueryValueBinder<T>(conversionService: ConversionService?) : QueryValueArgumentBinder<T>(conversionService) {
   override fun doConvert(
     value: Any?,
     context: ArgumentConversionContext<T>,

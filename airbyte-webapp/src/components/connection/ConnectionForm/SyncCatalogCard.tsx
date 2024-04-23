@@ -11,11 +11,11 @@ import { Button } from "components/ui/Button";
 import { Card } from "components/ui/Card";
 import { FlexContainer } from "components/ui/Flex";
 import { Heading } from "components/ui/Heading";
-import { Icon } from "components/ui/Icon";
 import { LoadingBackdrop } from "components/ui/LoadingBackdrop";
 
 import { naturalComparatorBy } from "core/utils/objects";
 import { useConnectionFormService } from "hooks/services/ConnectionForm/ConnectionFormService";
+import { useExperiment } from "hooks/services/Experiment";
 
 import { FormConnectionFormValues, SyncStreamFieldWithId } from "./formConfig";
 import { useRefreshSourceSchemaWithConfirmationOnDirty } from "./refreshSourceSchemaWithConfirmationOnDirty";
@@ -46,6 +46,7 @@ export const SyncCatalogCard: React.FC = () => {
     name: "syncCatalog.streams",
     control,
   });
+  const isSimplifiedCreation = useExperiment("connection.simplifiedCreation", false);
 
   const watchedPrefix = useWatch<FormConnectionFormValues>({ name: "prefix", control });
   const watchedNamespaceDefinition = useWatch<FormConnectionFormValues>({ name: "namespaceDefinition", control });
@@ -87,12 +88,17 @@ export const SyncCatalogCard: React.FC = () => {
     };
   }, [locationState?.action, locationState?.namespace, locationState?.streamName, filteredStreams]);
 
+  let cardTitle = mode === "readonly" ? "form.dataSync.readonly" : "form.dataSync";
+  if (isSimplifiedCreation) {
+    cardTitle = mode === "readonly" ? "connectionForm.selectStreams.readonly" : "connectionForm.selectStreams";
+  }
+
   return (
     <Card noPadding>
       <Box m="xl">
         <FlexContainer justifyContent="space-between" alignItems="center">
           <Heading as="h2" size="sm">
-            <FormattedMessage id={mode === "readonly" ? "form.dataSync.readonly" : "form.dataSync"} />
+            <FormattedMessage id={cardTitle} />
           </Heading>
           {mode !== "readonly" && (
             <Button
@@ -101,7 +107,7 @@ export const SyncCatalogCard: React.FC = () => {
               variant="secondary"
               data-testid="refresh-source-schema-btn"
               disabled={isSubmitting}
-              icon={<Icon type="sync" />}
+              icon="sync"
             >
               <FormattedMessage id="connection.updateSchema" />
             </Button>

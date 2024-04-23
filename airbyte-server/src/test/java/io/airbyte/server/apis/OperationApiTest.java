@@ -12,7 +12,6 @@ import io.airbyte.api.model.generated.OperationRead;
 import io.airbyte.api.model.generated.OperationReadList;
 import io.airbyte.api.model.generated.OperationUpdate;
 import io.airbyte.api.model.generated.OperatorConfiguration;
-import io.airbyte.commons.json.Jsons;
 import io.airbyte.config.persistence.ConfigNotFoundException;
 import io.airbyte.validation.json.JsonValidationException;
 import io.micronaut.context.annotation.Requires;
@@ -35,7 +34,7 @@ class OperationApiTest extends BaseControllerTest {
         .thenReturn(new CheckOperationRead());
     final String path = "/api/v1/operations/check";
     testEndpointStatus(
-        HttpRequest.POST(path, Jsons.serialize(new OperatorConfiguration())),
+        HttpRequest.POST(path, new OperatorConfiguration()),
         HttpStatus.OK);
   }
 
@@ -45,7 +44,7 @@ class OperationApiTest extends BaseControllerTest {
         .thenReturn(new OperationRead());
     final String path = "/api/v1/operations/create";
     testEndpointStatus(
-        HttpRequest.POST(path, Jsons.serialize(new OperationCreate())),
+        HttpRequest.POST(path, new OperationCreate()),
         HttpStatus.OK);
   }
 
@@ -56,7 +55,7 @@ class OperationApiTest extends BaseControllerTest {
 
     final String path = "/api/v1/operations/delete";
     testEndpointStatus(
-        HttpRequest.POST(path, Jsons.serialize(new OperationIdRequestBody())),
+        HttpRequest.POST(path, new OperationIdRequestBody()),
         HttpStatus.NO_CONTENT);
   }
 
@@ -67,10 +66,10 @@ class OperationApiTest extends BaseControllerTest {
         .thenThrow(new ConfigNotFoundException("", ""));
     final String path = "/api/v1/operations/get";
     testEndpointStatus(
-        HttpRequest.POST(path, Jsons.serialize(new OperationIdRequestBody())),
+        HttpRequest.POST(path, new OperationIdRequestBody()),
         HttpStatus.OK);
     testErrorEndpointStatus(
-        HttpRequest.POST(path, Jsons.serialize(new OperationIdRequestBody())),
+        HttpRequest.POST(path, new OperationIdRequestBody()),
         HttpStatus.NOT_FOUND);
   }
 
@@ -81,10 +80,10 @@ class OperationApiTest extends BaseControllerTest {
         .thenThrow(new ConfigNotFoundException("", ""));
     final String path = "/api/v1/operations/list";
     testEndpointStatus(
-        HttpRequest.POST(path, Jsons.serialize(new ConnectionIdRequestBody())),
+        HttpRequest.POST(path, new ConnectionIdRequestBody()),
         HttpStatus.OK);
     testErrorEndpointStatus(
-        HttpRequest.POST(path, Jsons.serialize(new ConnectionIdRequestBody())),
+        HttpRequest.POST(path, new ConnectionIdRequestBody()),
         HttpStatus.NOT_FOUND);
   }
 
@@ -95,10 +94,10 @@ class OperationApiTest extends BaseControllerTest {
         .thenThrow(new ConfigNotFoundException("", ""));
     final String path = "/api/v1/operations/update";
     testEndpointStatus(
-        HttpRequest.POST(path, Jsons.serialize(new OperationUpdate())),
+        HttpRequest.POST(path, new OperationUpdate()),
         HttpStatus.OK);
     testErrorEndpointStatus(
-        HttpRequest.POST(path, Jsons.serialize(new OperationUpdate())),
+        HttpRequest.POST(path, new OperationUpdate()),
         HttpStatus.NOT_FOUND);
   }
 

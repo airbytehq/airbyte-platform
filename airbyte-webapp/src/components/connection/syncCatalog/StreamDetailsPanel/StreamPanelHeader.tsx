@@ -1,25 +1,23 @@
-import React, { ReactNode, useMemo } from "react";
+import React, { ReactNode } from "react";
 import { FormattedMessage } from "react-intl";
 
 import { Box } from "components/ui/Box";
 import { Button } from "components/ui/Button";
 import { FlexContainer, FlexItem } from "components/ui/Flex";
-import { Icon } from "components/ui/Icon";
 import { Switch } from "components/ui/Switch";
 import { Text } from "components/ui/Text";
 
 import { AirbyteStream, AirbyteStreamConfiguration } from "core/api/types/AirbyteClient";
-import { useExperiment } from "hooks/services/Experiment";
 
 import styles from "./StreamPanelHeader.module.scss";
 import { SyncModeSelect, SyncModeValue } from "../SyncModeSelect";
 
 interface StreamPanelHeaderProps {
-  config?: AirbyteStreamConfiguration;
+  stream: AirbyteStream;
+  config: AirbyteStreamConfiguration;
   disabled?: boolean;
   onClose: () => void;
   onSelectedChange: () => void;
-  stream?: AirbyteStream;
   onSelectSyncMode: (option: SyncModeValue) => void;
   availableSyncModes: SyncModeValue[];
 }
@@ -42,21 +40,9 @@ export const StreamProperty: React.FC<StreamPropertyProps> = ({ messageId, value
 );
 
 const NamespaceProperty: React.FC<{ namespace?: string }> = ({ namespace }) => {
-  const isSimplifiedCatalogRowEnabled = useExperiment("connection.syncCatalog.simplifiedCatalogRow", true);
-
-  if (isSimplifiedCatalogRowEnabled) {
-    return namespace ? (
-      <StreamProperty messageId="form.sourceNamespace" value={namespace} data-testid="stream-details-namespace" />
-    ) : null;
-  }
-
-  return (
-    <StreamProperty
-      messageId="form.namespace"
-      value={namespace ?? <FormattedMessage id="form.noNamespace" />}
-      data-testid="stream-details-namespace"
-    />
-  );
+  return namespace ? (
+    <StreamProperty messageId="form.sourceNamespace" value={namespace} data-testid="stream-details-namespace" />
+  ) : null;
 };
 
 export const StreamPanelHeader: React.FC<StreamPanelHeaderProps> = ({
@@ -68,37 +54,19 @@ export const StreamPanelHeader: React.FC<StreamPanelHeaderProps> = ({
   availableSyncModes,
   onSelectSyncMode,
 }) => {
-  const isSimplifiedCatalogRowEnabled = useExperiment("connection.syncCatalog.simplifiedCatalogRow", true);
-
-  const syncSchema: SyncModeValue | undefined = useMemo(() => {
-    if (!config) {
-      return undefined;
-    }
-    const { syncMode, destinationSyncMode } = config;
-    return { syncMode, destinationSyncMode };
-  }, [config]);
-
-  const syncMode = (
-    <>
-      {config?.syncMode && <FormattedMessage id={`syncMode.${config.syncMode}`} />}
-      {` | `}
-      {config?.destinationSyncMode && <FormattedMessage id={`destinationSyncMode.${config.destinationSyncMode}`} />}
-    </>
-  );
+  const { syncMode, destinationSyncMode, selected: isStreamSelectedForSync } = config ?? {};
 
   return (
     <Box pt="lg" pb="md" pr="sm" pl="md" className={styles.container}>
       <FlexContainer justifyContent="space-between" alignItems="center" data-testid="stream-details-header">
         <FlexContainer gap="md" alignItems="center" className={styles.leftActions}>
-          <div>
-            <Switch
-              size="sm"
-              checked={config?.selected}
-              onChange={onSelectedChange}
-              disabled={disabled}
-              data-testid="stream-details-sync-stream-switch"
-            />
-          </div>
+          <Switch
+            size="sm"
+            checked={isStreamSelectedForSync}
+            onChange={onSelectedChange}
+            disabled={disabled}
+            data-testid="stream-details-sync-stream-switch"
+          />
           <Text color="grey300" size="xs">
             <FormattedMessage id="form.stream.sync" />
           </Text>
@@ -106,26 +74,24 @@ export const StreamPanelHeader: React.FC<StreamPanelHeaderProps> = ({
         <FlexContainer className={styles.properties} alignItems="center" justifyContent="center" gap="xl">
           <NamespaceProperty namespace={stream?.namespace} />
           <StreamProperty messageId="form.streamName" value={stream?.name} data-testid="stream-details-stream-name" />
-          <FlexItem className={styles.syncModeProperty} alignSelf="center">
-            {isSimplifiedCatalogRowEnabled ? (
+          {isStreamSelectedForSync && (
+            <FlexItem className={styles.syncModeProperty} alignSelf="center">
               <SyncModeSelect
                 options={availableSyncModes}
                 onChange={onSelectSyncMode}
-                value={syncSchema}
+                value={{ syncMode, destinationSyncMode }}
                 variant="grey"
                 disabled={disabled}
               />
-            ) : (
-              <StreamProperty messageId="form.syncMode" value={syncMode} data-testid="stream-details-sync-mode" />
-            )}
-          </FlexItem>
+            </FlexItem>
+          )}
         </FlexContainer>
         <FlexContainer className={styles.rightActions} justifyContent="flex-end">
           <Button
             variant="clear"
             onClick={onClose}
             className={styles.crossIcon}
-            icon={<Icon type="cross" />}
+            icon="cross"
             data-testid="stream-details-close-button"
           />
         </FlexContainer>

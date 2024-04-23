@@ -42,6 +42,7 @@ import jakarta.inject.Singleton;
 import java.io.IOException;
 import javax.sql.DataSource;
 import org.flywaydb.core.Flyway;
+import org.flywaydb.database.postgresql.PostgreSQLConfigurationExtension;
 import org.jooq.DSLContext;
 
 /**
@@ -57,13 +58,13 @@ public class DatabaseBeanFactory {
 
   @Singleton
   @Named("configDatabase")
-  public Database configDatabase(@Named("config") final DSLContext dslContext) throws IOException {
+  public Database configDatabase(@Named("config") final DSLContext dslContext) {
     return new Database(unwrapContext(dslContext));
   }
 
   @Singleton
   @Named("jobsDatabase")
-  public Database jobsDatabase(@Named("jobs") final DSLContext dslContext) throws IOException {
+  public Database jobsDatabase(@Named("jobs") final DSLContext dslContext) {
     return new Database(unwrapContext(dslContext));
   }
 
@@ -103,14 +104,21 @@ public class DatabaseBeanFactory {
   public Flyway jobsFlyway(@Named("jobs") final FlywayConfigurationProperties jobsFlywayConfigurationProperties,
                            @Named("jobs") final DataSource jobsDataSource,
                            @Value("${airbyte.bootloader.migration-baseline-version}") final String baselineVersion) {
-    return jobsFlywayConfigurationProperties.getFluentConfiguration()
+    final var flywayConfiguration = jobsFlywayConfigurationProperties.getFluentConfiguration()
         .dataSource(unwrapDataSource(jobsDataSource))
         .baselineVersion(baselineVersion)
         .baselineDescription(BASELINE_DESCRIPTION)
         .baselineOnMigrate(BASELINE_ON_MIGRATION)
         .installedBy(INSTALLED_BY)
-        .table(String.format("airbyte_%s_migrations", "jobs"))
-        .load();
+        .table(String.format("airbyte_%s_migrations", "jobs"));
+
+    // Setting the transactional lock to false allows us run queries outside transactions
+    // without hanging. This enables creating indexes concurrently (i.e. without locking tables)
+    flywayConfiguration.getPluginRegister()
+        .getPlugin(PostgreSQLConfigurationExtension.class)
+        .setTransactionalLock(false);
+
+    return flywayConfiguration.load();
   }
 
   @Singleton

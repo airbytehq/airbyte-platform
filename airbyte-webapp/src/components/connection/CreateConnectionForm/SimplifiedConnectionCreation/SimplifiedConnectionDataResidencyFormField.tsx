@@ -11,7 +11,7 @@ import { Text } from "components/ui/Text";
 
 import { InputContainer } from "./InputContainer";
 
-export const SimplfiedConnectionDataResidencyFormField = () => {
+export const SimplfiedConnectionDataResidencyFormField: React.FC<{ disabled: boolean }> = ({ disabled }) => {
   const { control } = useFormContext<FormConnectionFormValues>();
   const [controlId] = useState(`input-control-${uniqueId()}`);
 
@@ -30,7 +30,7 @@ export const SimplfiedConnectionDataResidencyFormField = () => {
             }
           />
           <InputContainer>
-            <StandaloneDataResidencyDropdown<FormConnectionFormValues> name={field.name} />
+            <StandaloneDataResidencyDropdown<FormConnectionFormValues> name={field.name} disabled={disabled} />
           </InputContainer>
         </FormFieldLayout>
       )}

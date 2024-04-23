@@ -7,13 +7,13 @@ import io.airbyte.workload.launcher.pipeline.stages.model.LaunchStageIO
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
+import jakarta.ws.rs.ClientErrorException
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertDoesNotThrow
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.ValueSource
 import java.util.Optional
 import java.util.function.Function
-import javax.ws.rs.ClientErrorException
 
 class SuccessHandlerTest {
   @ParameterizedTest
@@ -31,7 +31,6 @@ class SuccessHandlerTest {
 
     every {
       metricClient.count(
-        any(),
         any(),
         any(),
         any(),
@@ -66,7 +65,6 @@ class SuccessHandlerTest {
 
     every {
       metricClient.count(
-        any(),
         any(),
         any(),
         any(),

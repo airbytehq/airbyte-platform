@@ -54,19 +54,19 @@ public class V0_44_4_001__AddUserAndPermissionTables extends BaseJavaMigration {
 
   private static void createStatusEnumType(final DSLContext ctx) {
     ctx.createType(Status.NAME)
-        .asEnum(Arrays.stream(Status.values()).map(Status::getLiteral).toList())
+        .asEnum(Arrays.stream(Status.values()).map(Status::getLiteral).toArray(String[]::new))
         .execute();
   }
 
   private static void createAuthProviderEnumType(final DSLContext ctx) {
     ctx.createType(AuthProvider.NAME)
-        .asEnum(Arrays.stream(AuthProvider.values()).map(AuthProvider::getLiteral).toList())
+        .asEnum(Arrays.stream(AuthProvider.values()).map(AuthProvider::getLiteral).toArray(String[]::new))
         .execute();
   }
 
   private static void createPermissionTypeEnumType(final DSLContext ctx) {
     ctx.createType(PermissionType.NAME)
-        .asEnum(Arrays.stream(PermissionType.values()).map(PermissionType::getLiteral).toList())
+        .asEnum(Arrays.stream(PermissionType.values()).map(PermissionType::getLiteral).toArray(String[]::new))
         .execute();
   }
 

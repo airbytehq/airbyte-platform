@@ -32,7 +32,7 @@ class BasicAirbyteMessageValidatorTest {
   void testObviousInvalid() {
     final Optional<AirbyteMessage> bad = Jsons.tryDeserializeExact("{}", AirbyteMessage.class);
 
-    final var m = BasicAirbyteMessageValidator.validate(bad.get(), Optional.empty(), false);
+    final var m = BasicAirbyteMessageValidator.validate(bad.get(), Optional.empty());
     assertTrue(m.isEmpty());
   }
 
@@ -40,7 +40,7 @@ class BasicAirbyteMessageValidatorTest {
   void testValidRecord() {
     final AirbyteMessage rec = AirbyteMessageUtils.createRecordMessage(STREAM_1, DATA_KEY_1, DATA_VALUE);
 
-    final var m = BasicAirbyteMessageValidator.validate(rec, Optional.empty(), false);
+    final var m = BasicAirbyteMessageValidator.validate(rec, Optional.empty());
     assertTrue(m.isPresent());
     assertEquals(rec, m.get());
   }
@@ -49,7 +49,7 @@ class BasicAirbyteMessageValidatorTest {
   void testSubtleInvalidRecord() {
     final Optional<AirbyteMessage> bad = Jsons.tryDeserializeExact("{\"type\": \"RECORD\", \"record\": {}}", AirbyteMessage.class);
 
-    final var m = BasicAirbyteMessageValidator.validate(bad.get(), Optional.empty(), false);
+    final var m = BasicAirbyteMessageValidator.validate(bad.get(), Optional.empty());
     assertTrue(m.isEmpty());
   }
 
@@ -57,7 +57,7 @@ class BasicAirbyteMessageValidatorTest {
   void testValidState() {
     final AirbyteMessage rec = AirbyteMessageUtils.createStateMessage(1);
 
-    final var m = BasicAirbyteMessageValidator.validate(rec, Optional.empty(), false);
+    final var m = BasicAirbyteMessageValidator.validate(rec, Optional.empty());
     assertTrue(m.isPresent());
     assertEquals(rec, m.get());
   }
@@ -66,7 +66,7 @@ class BasicAirbyteMessageValidatorTest {
   void testSubtleInvalidState() {
     final Optional<AirbyteMessage> bad = Jsons.tryDeserializeExact("{\"type\": \"STATE\", \"control\": {}}", AirbyteMessage.class);
 
-    final var m = BasicAirbyteMessageValidator.validate(bad.get(), Optional.empty(), false);
+    final var m = BasicAirbyteMessageValidator.validate(bad.get(), Optional.empty());
     assertTrue(m.isEmpty());
   }
 
@@ -74,7 +74,7 @@ class BasicAirbyteMessageValidatorTest {
   void testValidControl() {
     final AirbyteMessage rec = AirbyteMessageUtils.createConfigControlMessage(new Config(), 1000.0);
 
-    final var m = BasicAirbyteMessageValidator.validate(rec, Optional.empty(), false);
+    final var m = BasicAirbyteMessageValidator.validate(rec, Optional.empty());
     assertTrue(m.isPresent());
     assertEquals(rec, m.get());
   }
@@ -83,7 +83,7 @@ class BasicAirbyteMessageValidatorTest {
   void testSubtleInvalidControl() {
     final Optional<AirbyteMessage> bad = Jsons.tryDeserializeExact("{\"type\": \"CONTROL\", \"state\": {}}", AirbyteMessage.class);
 
-    final var m = BasicAirbyteMessageValidator.validate(bad.get(), Optional.empty(), false);
+    final var m = BasicAirbyteMessageValidator.validate(bad.get(), Optional.empty());
     assertTrue(m.isEmpty());
   }
 
@@ -92,7 +92,7 @@ class BasicAirbyteMessageValidatorTest {
     final AirbyteMessage bad = AirbyteMessageUtils.createRecordMessage(STREAM_1, DATA_KEY_1, DATA_VALUE);
 
     final var m = BasicAirbyteMessageValidator.validate(bad, Optional.of(
-        getCatalogWithPk(STREAM_1, List.of(List.of(DATA_KEY_1)))), true);
+        getCatalogWithPk(STREAM_1, List.of(List.of(DATA_KEY_1)))));
     assertTrue(m.isPresent());
   }
 
@@ -101,7 +101,7 @@ class BasicAirbyteMessageValidatorTest {
     final AirbyteMessage bad = AirbyteMessageUtils.createRecordMessage(STREAM_1, DATA_KEY_1, DATA_VALUE);
 
     final var m = BasicAirbyteMessageValidator.validate(bad, Optional.of(
-        getCatalogWithPk(STREAM_1, List.of(List.of(DATA_KEY_1), List.of("not_field_1")))), true);
+        getCatalogWithPk(STREAM_1, List.of(List.of(DATA_KEY_1), List.of("not_field_1")))));
     assertTrue(m.isPresent());
   }
 
@@ -110,13 +110,11 @@ class BasicAirbyteMessageValidatorTest {
     final AirbyteMessage bad = AirbyteMessageUtils.createRecordMessage(STREAM_1, DATA_KEY_1, DATA_VALUE);
 
     var m = BasicAirbyteMessageValidator.validate(bad, Optional.of(
-        getCatalogNonIncremental(STREAM_1)),
-        true);
+        getCatalogNonIncremental(STREAM_1)));
     assertTrue(m.isPresent());
 
     m = BasicAirbyteMessageValidator.validate(bad, Optional.of(
-        getCatalogNonIncrementalDedup(STREAM_1)),
-        true);
+        getCatalogNonIncrementalDedup(STREAM_1)));
     assertTrue(m.isPresent());
   }
 
@@ -125,7 +123,7 @@ class BasicAirbyteMessageValidatorTest {
     final AirbyteMessage bad = AirbyteMessageUtils.createRecordMessage(STREAM_1, DATA_KEY_1, DATA_VALUE);
 
     assertThrows(SourceException.class, () -> BasicAirbyteMessageValidator.validate(bad, Optional.of(
-        getCatalogWithPk(STREAM_1, List.of(List.of("not_field_1")))), true));
+        getCatalogWithPk(STREAM_1, List.of(List.of("not_field_1"))))));
   }
 
   @Test
@@ -133,16 +131,7 @@ class BasicAirbyteMessageValidatorTest {
     final AirbyteMessage bad = AirbyteMessageUtils.createRecordMessage(STREAM_1, DATA_KEY_1, DATA_VALUE);
 
     assertThrows(SourceException.class, () -> BasicAirbyteMessageValidator.validate(bad, Optional.of(
-        getCatalogWithPk("stream_2", List.of(List.of(DATA_KEY_1)))), true));
-  }
-
-  @Test
-  void testInvalidPkWithoutFlag() {
-    final AirbyteMessage bad = AirbyteMessageUtils.createRecordMessage(STREAM_1, DATA_KEY_1, DATA_VALUE);
-
-    final var m = BasicAirbyteMessageValidator.validate(bad, Optional.of(
-        getCatalogWithPk(STREAM_1, List.of(List.of("not_field_1")))), false);
-    assertTrue(m.isPresent());
+        getCatalogWithPk("stream_2", List.of(List.of(DATA_KEY_1))))));
   }
 
   private ConfiguredAirbyteCatalog getCatalogWithPk(final String streamName,

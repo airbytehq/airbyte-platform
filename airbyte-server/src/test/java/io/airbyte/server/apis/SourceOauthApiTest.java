@@ -8,7 +8,6 @@ import io.airbyte.api.model.generated.CompleteOAuthResponse;
 import io.airbyte.api.model.generated.OAuthConsentRead;
 import io.airbyte.api.model.generated.SourceDefinitionIdRequestBody;
 import io.airbyte.api.model.generated.SourceIdRequestBody;
-import io.airbyte.commons.json.Jsons;
 import io.airbyte.config.persistence.ConfigNotFoundException;
 import io.airbyte.validation.json.JsonValidationException;
 import io.micronaut.context.annotation.Requires;
@@ -32,10 +31,10 @@ class SourceOauthApiTest extends BaseControllerTest {
         .thenThrow(new ConfigNotFoundException("", ""));
     final String path = "/api/v1/source_oauths/complete_oauth";
     testEndpointStatus(
-        HttpRequest.POST(path, Jsons.serialize(new SourceIdRequestBody())),
+        HttpRequest.POST(path, new SourceIdRequestBody()),
         HttpStatus.OK);
     testErrorEndpointStatus(
-        HttpRequest.POST(path, Jsons.serialize(new SourceDefinitionIdRequestBody())),
+        HttpRequest.POST(path, new SourceDefinitionIdRequestBody()),
         HttpStatus.NOT_FOUND);
   }
 
@@ -46,10 +45,10 @@ class SourceOauthApiTest extends BaseControllerTest {
         .thenThrow(new ConfigNotFoundException("", ""));
     final String path = "/api/v1/source_oauths/get_consent_url";
     testEndpointStatus(
-        HttpRequest.POST(path, Jsons.serialize(new SourceIdRequestBody())),
+        HttpRequest.POST(path, new SourceIdRequestBody()),
         HttpStatus.OK);
     testErrorEndpointStatus(
-        HttpRequest.POST(path, Jsons.serialize(new SourceDefinitionIdRequestBody())),
+        HttpRequest.POST(path, new SourceDefinitionIdRequestBody()),
         HttpStatus.NOT_FOUND);
   }
 
@@ -60,7 +59,7 @@ class SourceOauthApiTest extends BaseControllerTest {
 
     final String path = "/api/v1/source_oauths/oauth_params/create";
     testEndpointStatus(
-        HttpRequest.POST(path, Jsons.serialize(new SourceIdRequestBody())),
+        HttpRequest.POST(path, new SourceIdRequestBody()),
         HttpStatus.OK);
   }
 

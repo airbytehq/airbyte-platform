@@ -1,7 +1,6 @@
 package io.airbyte.cron.jobs
 
-import io.airbyte.featureflag.FeatureFlagClient
-import io.airbyte.featureflag.TestClient
+import io.airbyte.api.client.WorkloadApiClient
 import io.airbyte.metrics.lib.MetricAttribute
 import io.airbyte.metrics.lib.MetricClient
 import io.airbyte.metrics.lib.MetricTags
@@ -32,8 +31,8 @@ class WorkloadMonitorTest {
   lateinit var currentTime: OffsetDateTime
   lateinit var metricClient: MetricClient
   lateinit var workloadApi: WorkloadApi
+  lateinit var workloadApiClient: WorkloadApiClient
   lateinit var workloadMonitor: WorkloadMonitor
-  lateinit var featureFlagClient: FeatureFlagClient
 
   @BeforeEach
   fun beforeEach() {
@@ -41,14 +40,14 @@ class WorkloadMonitorTest {
       mockk<MetricClient>().also {
         every { it.count(any(), any(), *anyVararg()) } returns Unit
       }
-    featureFlagClient = TestClient(emptyMap())
     workloadApi = mockk()
+    workloadApiClient = mockk()
+    every { workloadApiClient.workloadApi } returns workloadApi
     workloadMonitor =
       WorkloadMonitor(
-        workloadApi = workloadApi,
+        workloadApiClient = workloadApiClient,
         nonSyncWorkloadTimeout = nonSyncTimeout,
         syncWorkloadTimeout = syncTimeout,
-        featureFlagClient = featureFlagClient,
         metricClient = metricClient,
         timeProvider = { _: ZoneId -> currentTime },
       )
@@ -59,7 +58,7 @@ class WorkloadMonitorTest {
     val expiredWorkloads = WorkloadListResponse(workloads = listOf(getWorkload("1"), getWorkload("2"), getWorkload("3")))
     currentTime = OffsetDateTime.now()
     every { workloadApi.workloadListWithExpiredDeadline(any()) } returns expiredWorkloads
-    every { workloadApi.workloadCancel(any()) } returns Unit andThenThrows ServerException() andThen Unit
+    every { workloadApi.workloadFailure(any()) } returns Unit andThenThrows ServerException() andThen Unit
 
     workloadMonitor.cancelNotStartedWorkloads()
 
@@ -69,9 +68,9 @@ class WorkloadMonitorTest {
           it.status == listOf(WorkloadStatus.CLAIMED) && it.deadline == currentTime
         },
       )
-      workloadApi.workloadCancel(match { it.workloadId == "1" })
-      workloadApi.workloadCancel(match { it.workloadId == "2" })
-      workloadApi.workloadCancel(match { it.workloadId == "3" })
+      workloadApi.workloadFailure(match { it.workloadId == "1" })
+      workloadApi.workloadFailure(match { it.workloadId == "2" })
+      workloadApi.workloadFailure(match { it.workloadId == "3" })
     }
     verify(exactly = 2) {
       metricClient.count(
@@ -98,7 +97,7 @@ class WorkloadMonitorTest {
     val expiredWorkloads = WorkloadListResponse(workloads = listOf(getWorkload("a"), getWorkload("b"), getWorkload("c")))
     currentTime = OffsetDateTime.now()
     every { workloadApi.workloadListWithExpiredDeadline(any()) } returns expiredWorkloads
-    every { workloadApi.workloadCancel(any()) } throws ServerException() andThen Unit andThen Unit
+    every { workloadApi.workloadFailure(any()) } throws ServerException() andThen Unit andThen Unit
 
     workloadMonitor.cancelNotClaimedWorkloads()
 
@@ -108,9 +107,9 @@ class WorkloadMonitorTest {
           it.status == listOf(WorkloadStatus.PENDING) && it.deadline == currentTime
         },
       )
-      workloadApi.workloadCancel(match { it.workloadId == "a" })
-      workloadApi.workloadCancel(match { it.workloadId == "b" })
-      workloadApi.workloadCancel(match { it.workloadId == "c" })
+      workloadApi.workloadFailure(match { it.workloadId == "a" })
+      workloadApi.workloadFailure(match { it.workloadId == "b" })
+      workloadApi.workloadFailure(match { it.workloadId == "c" })
     }
     verify(exactly = 2) {
       metricClient.count(
@@ -144,7 +143,7 @@ class WorkloadMonitorTest {
         ),
       )
     } returns expiredWorkloads
-    every { workloadApi.workloadCancel(any()) } returns Unit andThenThrows ServerException() andThen Unit
+    every { workloadApi.workloadFailure(any()) } returns Unit andThenThrows ServerException() andThen Unit
 
     workloadMonitor.cancelNotHeartbeatingWorkloads()
 
@@ -154,9 +153,9 @@ class WorkloadMonitorTest {
           it.status == listOf(WorkloadStatus.RUNNING, WorkloadStatus.LAUNCHED) && it.deadline == currentTime
         },
       )
-      workloadApi.workloadCancel(match { it.workloadId == "3" })
-      workloadApi.workloadCancel(match { it.workloadId == "4" })
-      workloadApi.workloadCancel(match { it.workloadId == "5" })
+      workloadApi.workloadFailure(match { it.workloadId == "3" })
+      workloadApi.workloadFailure(match { it.workloadId == "4" })
+      workloadApi.workloadFailure(match { it.workloadId == "5" })
     }
     verify(exactly = 2) {
       metricClient.count(
@@ -183,7 +182,7 @@ class WorkloadMonitorTest {
     val expiredWorkloads = WorkloadListResponse(workloads = listOf(getWorkload("3"), getWorkload("4"), getWorkload("5")))
     currentTime = OffsetDateTime.now()
     every { workloadApi.workloadListOldNonSync(any()) } returns expiredWorkloads
-    every { workloadApi.workloadCancel(any()) } returns Unit andThenThrows ServerException() andThen Unit
+    every { workloadApi.workloadFailure(any()) } returns Unit andThenThrows ServerException() andThen Unit
 
     workloadMonitor.cancelRunningForTooLongNonSyncWorkloads()
 
@@ -193,9 +192,9 @@ class WorkloadMonitorTest {
           it.createdBefore == currentTime.minus(nonSyncTimeout)
         },
       )
-      workloadApi.workloadCancel(match { it.workloadId == "3" })
-      workloadApi.workloadCancel(match { it.workloadId == "4" })
-      workloadApi.workloadCancel(match { it.workloadId == "5" })
+      workloadApi.workloadFailure(match { it.workloadId == "3" })
+      workloadApi.workloadFailure(match { it.workloadId == "4" })
+      workloadApi.workloadFailure(match { it.workloadId == "5" })
     }
     verify(exactly = 2) {
       metricClient.count(
@@ -222,7 +221,7 @@ class WorkloadMonitorTest {
     val expiredWorkloads = WorkloadListResponse(workloads = listOf(getWorkload("3"), getWorkload("4"), getWorkload("5")))
     currentTime = OffsetDateTime.now()
     every { workloadApi.workloadListOldSync(any()) } returns expiredWorkloads
-    every { workloadApi.workloadCancel(any()) } returns Unit andThenThrows ServerException() andThen Unit
+    every { workloadApi.workloadFailure(any()) } returns Unit andThenThrows ServerException() andThen Unit
 
     workloadMonitor.cancelRunningForTooLongSyncWorkloads()
 
@@ -232,9 +231,9 @@ class WorkloadMonitorTest {
           it.createdBefore == currentTime.minus(syncTimeout)
         },
       )
-      workloadApi.workloadCancel(match { it.workloadId == "3" })
-      workloadApi.workloadCancel(match { it.workloadId == "4" })
-      workloadApi.workloadCancel(match { it.workloadId == "5" })
+      workloadApi.workloadFailure(match { it.workloadId == "3" })
+      workloadApi.workloadFailure(match { it.workloadId == "4" })
+      workloadApi.workloadFailure(match { it.workloadId == "5" })
     }
     verify(exactly = 2) {
       metricClient.count(

@@ -76,11 +76,13 @@ import io.airbyte.config.StandardSourceDefinition;
 import io.airbyte.config.StandardSync;
 import io.airbyte.config.StandardSyncOperation;
 import io.airbyte.config.StandardWorkspace;
+import io.airbyte.config.WorkloadPriority;
 import io.airbyte.config.helpers.ResourceRequirementsUtils;
 import io.airbyte.config.persistence.ActorDefinitionVersionHelper;
 import io.airbyte.config.persistence.ConfigNotFoundException;
 import io.airbyte.config.persistence.ConfigRepository;
 import io.airbyte.config.persistence.StreamResetPersistence;
+import io.airbyte.config.persistence.domain.StreamRefresh;
 import io.airbyte.config.secrets.SecretsRepositoryWriter;
 import io.airbyte.config.secrets.persistence.RuntimeSecretPersistence;
 import io.airbyte.data.services.SecretPersistenceConfigService;
@@ -114,13 +116,13 @@ import io.airbyte.protocol.models.StreamDescriptor;
 import io.airbyte.validation.json.JsonSchemaValidator;
 import io.airbyte.validation.json.JsonValidationException;
 import jakarta.inject.Singleton;
+import jakarta.validation.constraints.NotNull;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.stream.Collectors;
-import javax.validation.constraints.NotNull;
 import lombok.extern.slf4j.Slf4j;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -160,6 +162,7 @@ public class SchedulerHandler {
   private final ConnectorDefinitionSpecificationHandler connectorDefinitionSpecificationHandler;
   private final WorkspaceService workspaceService;
   private final SecretPersistenceConfigService secretPersistenceConfigService;
+  private final StreamRefreshesHandler streamRefreshesHandler;
 
   @VisibleForTesting
   public SchedulerHandler(final ConfigRepository configRepository,
@@ -183,7 +186,8 @@ public class SchedulerHandler {
                           final JobTracker jobTracker,
                           final ConnectorDefinitionSpecificationHandler connectorDefinitionSpecificationHandler,
                           final WorkspaceService workspaceService,
-                          final SecretPersistenceConfigService secretPersistenceConfigService) {
+                          final SecretPersistenceConfigService secretPersistenceConfigService,
+                          final StreamRefreshesHandler streamRefreshesHandler) {
     this.configRepository = configRepository;
     this.secretsRepositoryWriter = secretsRepositoryWriter;
     this.synchronousSchedulerClient = synchronousSchedulerClient;
@@ -209,6 +213,7 @@ public class SchedulerHandler {
         configRepository,
         jobNotifier,
         jobTracker);
+    this.streamRefreshesHandler = streamRefreshesHandler;
   }
 
   public CheckConnectionRead checkSourceConnectionFromSourceId(final SourceIdRequestBody sourceIdRequestBody)
@@ -366,7 +371,9 @@ public class SchedulerHandler {
               source,
               sourceVersion,
               isCustomConnector,
-              resourceRequirements);
+              resourceRequirements,
+              discoverSchemaRequestBody.getPriority() == null ? WorkloadPriority.HIGH
+                  : WorkloadPriority.fromValue(discoverSchemaRequestBody.getPriority().toString()));
       final SourceDiscoverSchemaRead discoveredSchema = retrieveDiscoveredSchema(persistedCatalogId, sourceVersion);
 
       if (persistedCatalogId.isSuccess() && discoverSchemaRequestBody.getConnectionId() != null) {
@@ -457,7 +464,7 @@ public class SchedulerHandler {
             && !result.appliedDiff().getTransforms().isEmpty()
             && (Boolean.TRUE == connectionRead.getNotifySchemaChanges())) {
           notifySchemaPropagated(notificationSettings, diff, workspace, connectionRead, source,
-              workspace.getEmail(), result);
+              workspace.getEmail());
         }
       } else {
         LOGGER.info("Not propagating changes for connectionId: '{}', new catalogId '{}'",
@@ -471,8 +478,7 @@ public class SchedulerHandler {
                                      final StandardWorkspace workspace,
                                      final ConnectionRead connection,
                                      final SourceConnection source,
-                                     final String email,
-                                     final UpdateSchemaResult result)
+                                     final String email)
       throws IOException {
     final NotificationItem item;
 
@@ -540,7 +546,8 @@ public class SchedulerHandler {
         source,
         sourceVersion,
         isCustomConnector,
-        resourceRequirements);
+        resourceRequirements,
+        WorkloadPriority.HIGH);
     return retrieveDiscoveredSchema(response, sourceVersion);
   }
 
@@ -582,6 +589,7 @@ public class SchedulerHandler {
     final StandardSync standardSync = configRepository.getStandardSync(jobCreate.getConnectionId());
     final List<StreamDescriptor> streamsToReset = streamResetPersistence.getStreamResets(jobCreate.getConnectionId());
     log.info("Found the following streams to reset for connection {}: {}", jobCreate.getConnectionId(), streamsToReset);
+    final List<StreamRefresh> streamsToRefresh = streamRefreshesHandler.getRefreshesForConnection(jobCreate.getConnectionId());
 
     if (!streamsToReset.isEmpty()) {
       final DestinationConnection destination = configRepository.getDestinationConnection(standardSync.getDestinationId());
@@ -629,8 +637,16 @@ public class SchedulerHandler {
           : jobIdOptional.get();
 
       return jobConverter.getJobInfoRead(jobPersistence.getJob(jobId));
+    } else if (!streamsToRefresh.isEmpty()) {
+      final long jobId = jobFactory.createRefresh(jobCreate.getConnectionId(), streamsToRefresh);
+
+      log.info("New refresh job created, with id: " + jobId);
+      final Job job = jobPersistence.getJob(jobId);
+      jobCreationAndStatusUpdateHelper.emitJobToReleaseStagesMetric(OssMetricsRegistry.JOB_CREATED_BY_RELEASE_STAGE, job);
+
+      return jobConverter.getJobInfoRead(jobPersistence.getJob(jobId));
     } else {
-      final long jobId = jobFactory.create(jobCreate.getConnectionId());
+      final long jobId = jobFactory.createSync(jobCreate.getConnectionId());
 
       log.info("New job created, with id: " + jobId);
       final Job job = jobPersistence.getJob(jobId);

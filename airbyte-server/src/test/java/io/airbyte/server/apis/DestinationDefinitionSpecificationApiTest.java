@@ -6,7 +6,6 @@ package io.airbyte.server.apis;
 
 import io.airbyte.api.model.generated.DestinationDefinitionIdWithWorkspaceId;
 import io.airbyte.api.model.generated.DestinationDefinitionSpecificationRead;
-import io.airbyte.commons.json.Jsons;
 import io.airbyte.config.persistence.ConfigNotFoundException;
 import io.airbyte.validation.json.JsonValidationException;
 import io.micronaut.context.annotation.Requires;
@@ -30,10 +29,10 @@ class DestinationDefinitionSpecificationApiTest extends BaseControllerTest {
         .thenThrow(new ConfigNotFoundException("", ""));
     final String path = "/api/v1/destination_definition_specifications/get";
     testEndpointStatus(
-        HttpRequest.POST(path, Jsons.serialize(new DestinationDefinitionIdWithWorkspaceId())),
+        HttpRequest.POST(path, new DestinationDefinitionIdWithWorkspaceId()),
         HttpStatus.OK);
     testErrorEndpointStatus(
-        HttpRequest.POST(path, Jsons.serialize(new DestinationDefinitionIdWithWorkspaceId())),
+        HttpRequest.POST(path, new DestinationDefinitionIdWithWorkspaceId()),
         HttpStatus.NOT_FOUND);
   }
 

@@ -8,11 +8,13 @@ import io.airbyte.api.generated.InstanceConfigurationApi;
 import io.airbyte.api.model.generated.InstanceConfigurationResponse;
 import io.airbyte.api.model.generated.InstanceConfigurationSetupRequestBody;
 import io.airbyte.commons.server.handlers.InstanceConfigurationHandler;
+import io.micronaut.http.annotation.Body;
 import io.micronaut.http.annotation.Controller;
 import io.micronaut.http.annotation.Get;
 import io.micronaut.security.annotation.Secured;
 import io.micronaut.security.rules.SecurityRule;
 
+// this controller is only usable in self-managed versions of Airbyte. Not Cloud!
 @Controller("/api/v1/instance_configuration")
 @Secured(SecurityRule.IS_ANONYMOUS)
 public class InstanceConfigurationApiController implements InstanceConfigurationApi {
@@ -29,8 +31,9 @@ public class InstanceConfigurationApiController implements InstanceConfiguration
     return ApiHelper.execute(instanceConfigurationHandler::getInstanceConfiguration);
   }
 
+  @SuppressWarnings("LineLength")
   @Override
-  public InstanceConfigurationResponse setupInstanceConfiguration(InstanceConfigurationSetupRequestBody instanceConfigurationSetupRequestBody) {
+  public InstanceConfigurationResponse setupInstanceConfiguration(@Body final InstanceConfigurationSetupRequestBody instanceConfigurationSetupRequestBody) {
     return ApiHelper.execute(() -> instanceConfigurationHandler.setupInstanceConfiguration(instanceConfigurationSetupRequestBody));
   }
 

@@ -22,13 +22,13 @@ import io.airbyte.db.instance.DatabaseMigrator;
 import io.airbyte.persistence.job.JobPersistence;
 import io.airbyte.validation.json.JsonValidationException;
 import io.micronaut.context.annotation.Value;
+import jakarta.annotation.Nullable;
 import jakarta.inject.Named;
 import jakarta.inject.Singleton;
 import java.io.IOException;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
-import javax.annotation.Nullable;
 import lombok.extern.slf4j.Slf4j;
 
 /**

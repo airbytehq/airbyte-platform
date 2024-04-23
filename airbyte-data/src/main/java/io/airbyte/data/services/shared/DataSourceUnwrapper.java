@@ -5,7 +5,7 @@
 package io.airbyte.data.services.shared;
 
 import io.airbyte.db.factory.DSLContextFactory;
-import io.micronaut.transaction.jdbc.DelegatingDataSource;
+import io.micronaut.data.connection.jdbc.advice.DelegatingDataSource;
 import javax.sql.DataSource;
 import org.jooq.DSLContext;
 import org.jooq.SQLDialect;

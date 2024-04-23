@@ -33,6 +33,8 @@ class KeycloakSetupTest {
   private KeycloakServer keycloakServer;
   @Mock
   private AirbyteKeycloakConfiguration keycloakConfiguration;
+  @Mock
+  private ConfigDbResetHelper configDbResetHelper;
 
   private KeycloakSetup keycloakSetup;
 
@@ -45,17 +47,18 @@ class KeycloakSetupTest {
     when(blockingHttpClient.exchange(any(HttpRequest.class), eq(String.class)))
         .thenReturn(HttpResponse.ok());
 
-    keycloakSetup = new KeycloakSetup(httpClient, keycloakServer, keycloakConfiguration);
+    keycloakSetup = new KeycloakSetup(httpClient, keycloakServer, keycloakConfiguration, configDbResetHelper);
   }
 
   @Test
-  void testRun() {
+  void testRun() throws Exception {
     keycloakSetup.run();
 
     verify(httpClient).toBlocking();
     verify(blockingHttpClient).exchange(any(HttpRequest.class), eq(String.class));
-    verify(keycloakServer).createAirbyteRealm();
+    verify(keycloakServer).setupAirbyteRealm();
     verify(keycloakServer).closeKeycloakAdminClient();
+    verify(configDbResetHelper, never()).deleteConfigDbUsers();
   }
 
   @Test
@@ -67,18 +70,19 @@ class KeycloakSetupTest {
 
     verify(keycloakServer).getKeycloakServerUrl();
     verify(httpClient.toBlocking()).exchange(any(HttpRequest.class), eq(String.class));
-    verify(keycloakServer, never()).createAirbyteRealm(); // Should not be called if exception is thrown
+    verify(keycloakServer, never()).setupAirbyteRealm(); // Should not be called if exception is thrown
     verify(keycloakServer).closeKeycloakAdminClient();
   }
 
   @Test
-  void testResetRealm() {
+  void testResetRealm() throws Exception {
     when(keycloakConfiguration.getResetRealm()).thenReturn(true);
 
     keycloakSetup.run();
 
-    verify(keycloakServer, times(0)).createAirbyteRealm();
-    verify(keycloakServer, times(1)).recreateAirbyteRealm();
+    verify(keycloakServer, times(0)).setupAirbyteRealm();
+    verify(keycloakServer, times(1)).destroyAndRecreateAirbyteRealm();
+    verify(configDbResetHelper, times(1)).deleteConfigDbUsers();
   }
 
 }

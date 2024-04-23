@@ -2,7 +2,7 @@
  * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
  */
 
-package services
+package io.airbyte.server.apis.publicapi.services
 
 import io.airbyte.api.model.generated.DestinationCreate
 import io.airbyte.api.model.generated.DestinationDefinitionIdWithWorkspaceId
@@ -26,7 +26,6 @@ import io.airbyte.server.apis.publicapi.helpers.getActorDefinitionIdFromActorNam
 import io.airbyte.server.apis.publicapi.mappers.DESTINATION_NAME_TO_DEFINITION_ID
 import io.airbyte.server.apis.publicapi.mappers.DestinationReadMapper
 import io.airbyte.server.apis.publicapi.mappers.DestinationsResponseMapper
-import io.airbyte.server.apis.publicapi.services.UserService
 import io.micronaut.context.annotation.Secondary
 import io.micronaut.context.annotation.Value
 import jakarta.inject.Singleton
@@ -51,7 +50,7 @@ interface DestinationService {
     destinationPatchRequest: DestinationPatchRequest,
   ): DestinationResponse
 
-  fun deleteDestination(connectionId: UUID)
+  fun deleteDestination(destinationId: UUID)
 
   fun listDestinationsForWorkspaces(
     workspaceIds: List<UUID>,

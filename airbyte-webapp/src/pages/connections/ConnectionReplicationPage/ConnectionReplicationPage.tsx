@@ -28,23 +28,18 @@ import {
   WebBackendConnectionRead,
   WebBackendConnectionUpdate,
 } from "core/api/types/AirbyteClient";
-import {
-  getFrequencyFromScheduleData,
-  Action,
-  Namespace,
-  PageTrackingCodes,
-  useAnalyticsService,
-  useTrackPage,
-} from "core/services/analytics";
+import { PageTrackingCodes, useTrackPage } from "core/services/analytics";
 import { equal } from "core/utils/objects";
 import { useConfirmCatalogDiff } from "hooks/connection/useConfirmCatalogDiff";
 import { useSchemaChanges } from "hooks/connection/useSchemaChanges";
 import { useConnectionEditService } from "hooks/services/ConnectionEdit/ConnectionEditService";
 import { useConnectionFormService } from "hooks/services/ConnectionForm/ConnectionFormService";
+import { useExperiment } from "hooks/services/Experiment";
 import { useModalService } from "hooks/services/Modal";
 
 import styles from "./ConnectionReplicationPage.module.scss";
 import { ResetWarningModal } from "./ResetWarningModal";
+import { useAnalyticsTrackFunctions } from "./useAnalyticsTrackFunctions";
 
 const toWebBackendConnectionUpdate = (connection: WebBackendConnectionRead): WebBackendConnectionUpdate => ({
   name: connection.name,
@@ -100,8 +95,8 @@ const SchemaChangeMessage: React.FC = () => {
 };
 
 export const ConnectionReplicationPage: React.FC = () => {
-  const analyticsService = useAnalyticsService();
   useTrackPage(PageTrackingCodes.CONNECTIONS_ITEM_REPLICATION);
+  const { trackSchemaEdit } = useAnalyticsTrackFunctions();
 
   const getStateType = useGetStateTypeQuery();
 
@@ -113,10 +108,7 @@ export const ConnectionReplicationPage: React.FC = () => {
   const validationSchema = useConnectionValidationSchema();
 
   const saveConnection = useCallback(
-    async (
-      values: ConnectionValues,
-      { skipReset, catalogHasChanged }: { skipReset: boolean; catalogHasChanged: boolean }
-    ) => {
+    async (values: ConnectionValues, skipReset: boolean) => {
       const connectionAsUpdate = toWebBackendConnectionUpdate(connection);
 
       await updateConnection({
@@ -125,26 +117,14 @@ export const ConnectionReplicationPage: React.FC = () => {
         connectionId: connection.connectionId,
         skipReset,
       });
-
-      if (catalogHasChanged) {
-        // TODO (https://github.com/airbytehq/airbyte/issues/17666): Move this into a useTrackChangedCatalog method (name pending) post Vlad's analytics hook work
-        analyticsService.track(Namespace.CONNECTION, Action.EDIT_SCHEMA, {
-          actionDescription: "Connection saved with catalog changes",
-          connector_source: connection.source.sourceName,
-          connector_source_definition_id: connection.source.sourceDefinitionId,
-          connector_destination: connection.destination.destinationName,
-          connector_destination_definition_id: connection.destination.destinationDefinitionId,
-          frequency: getFrequencyFromScheduleData(connection.scheduleData),
-        });
-      }
     },
-    [analyticsService, connection, updateConnection]
+    [connection, updateConnection]
   );
 
   const onFormSubmit = useCallback(
     async (values: FormConnectionFormValues) => {
       // Check if the user refreshed the catalog and there was any change in a currently enabled stream
-      const hasDiffInEnabledStream = connection.catalogDiff?.transforms.some(({ streamDescriptor }) => {
+      const hasCatalogDiffInEnabledStream = connection.catalogDiff?.transforms.some(({ streamDescriptor }) => {
         // Find the stream for this transform in our form's syncCatalog
         const stream = values.syncCatalog.streams.find(
           ({ stream }) => streamDescriptor.name === stream?.name && streamDescriptor.namespace === stream.namespace
@@ -166,28 +146,31 @@ export const ConnectionReplicationPage: React.FC = () => {
       const getStreamId = (stream: AirbyteStreamAndConfiguration) => {
         return `${stream.stream?.namespace ?? ""}-${stream.stream?.name}`;
       };
+
       const lookupConnectionValuesStreamById = connection.syncCatalog.streams.reduce<
         Record<string, AirbyteStreamAndConfiguration>
       >((agg, stream) => {
         agg[getStreamId(stream)] = stream;
         return agg;
       }, {});
-      const hasUserChangesInEnabledStreamsRequiringReset = values.syncCatalog.streams.some((_stream) => {
-        const formStream = structuredClone(_stream);
-        const connectionStream = structuredClone(lookupConnectionValuesStreamById[getStreamId(formStream)]);
 
-        return !compareObjectsByFields<AirbyteStreamConfiguration>(formStream.config, connectionStream.config, [
-          "cursorField",
-          "destinationSyncMode",
-          "primaryKey",
-          "selectedFields",
-          "syncMode",
-          "aliasName",
-        ]);
-      });
+      const hasUserChangesInEnabledStreamsRequiringReset = values.syncCatalog.streams
+        .filter((streamNode) => streamNode.config?.selected)
+        .some((streamNode) => {
+          const formStream = structuredClone(streamNode);
+          const connectionStream = structuredClone(lookupConnectionValuesStreamById[getStreamId(formStream)]);
 
-      const catalogHasChanged = hasDiffInEnabledStream || hasUserChangesInEnabledStreams;
-      const catalogChangesRequireReset = hasDiffInEnabledStream || hasUserChangesInEnabledStreamsRequiringReset;
+          return !compareObjectsByFields<AirbyteStreamConfiguration>(formStream.config, connectionStream.config, [
+            "cursorField",
+            "destinationSyncMode",
+            "primaryKey",
+            "selectedFields",
+            "syncMode",
+            "aliasName",
+          ]);
+        });
+
+      const catalogChangesRequireReset = hasCatalogDiffInEnabledStream || hasUserChangesInEnabledStreamsRequiringReset;
 
       setSubmitError(null);
 
@@ -202,35 +185,29 @@ export const ConnectionReplicationPage: React.FC = () => {
             size: "md",
             content: (props) => <ResetWarningModal {...props} stateType={stateType} />,
           });
-          if (result.type === "closed" && isBoolean(result.reason)) {
+          if (result.type === "completed" && isBoolean(result.reason)) {
             // Save the connection taking into account the correct skipReset value from the dialog choice.
-            await saveConnection(values, {
-              skipReset: result.reason,
-              catalogHasChanged,
-            });
+            await saveConnection(values, !result.reason /* skipReset */);
           } else {
             // We don't want to set saved to true or schema has been refreshed to false.
             return Promise.reject();
           }
         } else {
           // The catalog hasn't changed, or only added/removed stream(s). We don't need to ask for any confirmation and can simply save.
-          await saveConnection(values, { skipReset: true, catalogHasChanged });
+          await saveConnection(values, true /* skipReset */);
         }
+
+        /* analytics */
+        if (hasCatalogDiffInEnabledStream || hasUserChangesInEnabledStreams) {
+          trackSchemaEdit(connection);
+        }
+
         return Promise.resolve();
       } catch (e) {
         setSubmitError(e);
       }
     },
-    [
-      connection.catalogDiff?.transforms,
-      connection.syncCatalog.streams,
-      connection.connectionId,
-      setSubmitError,
-      getStateType,
-      openModal,
-      formatMessage,
-      saveConnection,
-    ]
+    [connection, setSubmitError, getStateType, openModal, formatMessage, saveConnection, trackSchemaEdit]
   );
 
   useConfirmCatalogDiff();
@@ -245,6 +222,8 @@ export const ConnectionReplicationPage: React.FC = () => {
       refreshSchema();
     }
   }, [refreshSchema, state]);
+
+  const isSimpliedCreation = useExperiment("connection.simplifiedCreation", false);
 
   return (
     <FlexContainer direction="column" className={styles.content}>
@@ -261,7 +240,7 @@ export const ConnectionReplicationPage: React.FC = () => {
           <FlexContainer direction="column">
             <SchemaChangeMessage />
             <SchemaChangeBackdrop>
-              <ConnectionConfigurationCard />
+              {!isSimpliedCreation && <ConnectionConfigurationCard />}
               <SyncCatalogCard />
               <div className={styles.editControlsContainer}>
                 <UpdateConnectionFormControls onCancel={discardRefreshedSchema} />

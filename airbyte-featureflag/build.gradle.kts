@@ -6,17 +6,17 @@ plugins {
 }
 
 dependencies {
-  kapt(platform(libs.micronaut.bom))
+  kapt(platform(libs.micronaut.platform))
   kapt(libs.bundles.micronaut.annotation.processor)
 
-  implementation(platform(libs.micronaut.bom))
+  implementation(platform(libs.micronaut.platform))
   implementation(libs.micronaut.inject)
   implementation(libs.launchdarkly)
   implementation(libs.jackson.databind)
   implementation(libs.jackson.dataformat)
   implementation(libs.jackson.kotlin)
 
-  kaptTest(platform(libs.micronaut.bom))
+  kaptTest(platform(libs.micronaut.platform))
   kaptTest(libs.bundles.micronaut.test.annotation.processor)
 
   testImplementation(kotlin("test"))

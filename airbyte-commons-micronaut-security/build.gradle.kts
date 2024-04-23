@@ -1,29 +1,30 @@
 plugins {
-    id("io.airbyte.gradle.jvm.lib")
-    id("io.airbyte.gradle.publish")
+  id("io.airbyte.gradle.jvm.lib")
+  id("io.airbyte.gradle.publish")
 }
 
 dependencies {
-    annotationProcessor(platform(libs.micronaut.bom))
-    annotationProcessor(libs.bundles.micronaut.annotation.processor)
+  compileOnly(libs.lombok)
+  annotationProcessor(libs.lombok)     // Lombok must be added BEFORE Micronaut
 
-    implementation(platform(libs.micronaut.bom))
-    implementation(libs.bundles.micronaut)
-    implementation(libs.micronaut.security)
-    compileOnly(libs.lombok)
-    annotationProcessor(libs.lombok)
+  annotationProcessor(platform(libs.micronaut.platform))
+  annotationProcessor(libs.bundles.micronaut.annotation.processor)
 
-    implementation(project(":airbyte-commons"))
+  implementation(platform(libs.micronaut.platform))
+  implementation(libs.bundles.micronaut)
+  implementation(libs.micronaut.security)
 
-    testAnnotationProcessor(platform(libs.micronaut.bom))
-    testAnnotationProcessor(libs.bundles.micronaut.test.annotation.processor)
-    testCompileOnly(libs.lombok)
-    testAnnotationProcessor(libs.lombok)
+  implementation(project(":airbyte-commons"))
 
-    testImplementation(libs.bundles.micronaut.test)
-    testImplementation(libs.mockito.inline)
+  testCompileOnly(libs.lombok)
+  testAnnotationProcessor(libs.lombok)
+  testAnnotationProcessor(platform(libs.micronaut.platform))
+  testAnnotationProcessor(libs.bundles.micronaut.test.annotation.processor)
+
+  testImplementation(libs.bundles.micronaut.test)
+  testImplementation(libs.mockito.inline)
 }
 
 tasks.named<Test>("test") {
-    maxHeapSize = "2g"
+  maxHeapSize = "2g"
 }

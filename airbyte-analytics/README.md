@@ -28,6 +28,17 @@ environment variable. In addition to the type of analytics tracker, the followin
 In order to use this module in a service at runtime,  add the following configuration to the service's `application.yml` file:
 
 ```yaml
+micronaut:
+  caches:
+    # used by the analytics tracking client to cache calls to resolve the deployment and identity (workspace) for
+    # track events
+    analytics-tracking-deployments:
+      charset: "UTF-8"
+      expire-after-access: 10m
+    analytics-tracking-identity:
+      charset: "UTF-8"
+      expire-after-access: 10m
+      
 airbyte:
   deployment-mode: ${DEPLOYMENT_MODE:OSS}
   role: ${AIRBYTE_ROLE:dev}

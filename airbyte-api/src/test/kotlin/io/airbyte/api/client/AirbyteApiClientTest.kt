@@ -1,0 +1,112 @@
+/*
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ */
+
+package io.airbyte.api.client2
+
+import dev.failsafe.RetryPolicy
+import io.mockk.mockk
+import okhttp3.OkHttpClient
+import okhttp3.Response
+import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertNotNull
+import org.junit.jupiter.api.Test
+
+class AirbyteApiClientTest {
+  @Test
+  fun `test that the Airbyte API client creates the underlying API objects with the provided configuration`() {
+    val basePath = "base-path"
+    val client: OkHttpClient = mockk()
+    val policy: RetryPolicy<Response> = mockk()
+
+    val airbyteApiClient = AirbyteApiClient2(basePath, policy, client)
+    assertNotNull(airbyteApiClient.attemptApi)
+    assertEquals(client, airbyteApiClient.attemptApi.client)
+    assertEquals(policy, airbyteApiClient.attemptApi.policy)
+    assertEquals(basePath, airbyteApiClient.attemptApi.baseUrl)
+    assertNotNull(airbyteApiClient.connectionApi)
+    assertEquals(client, airbyteApiClient.connectionApi.client)
+    assertEquals(policy, airbyteApiClient.connectionApi.policy)
+    assertEquals(basePath, airbyteApiClient.connectionApi.baseUrl)
+    assertNotNull(airbyteApiClient.connectorBuilderProjectApi)
+    assertEquals(client, airbyteApiClient.connectorBuilderProjectApi.client)
+    assertEquals(policy, airbyteApiClient.connectorBuilderProjectApi.policy)
+    assertEquals(basePath, airbyteApiClient.connectorBuilderProjectApi.baseUrl)
+    assertNotNull(airbyteApiClient.deploymentMetadataApi)
+    assertEquals(client, airbyteApiClient.deploymentMetadataApi.client)
+    assertEquals(policy, airbyteApiClient.deploymentMetadataApi.policy)
+    assertEquals(basePath, airbyteApiClient.deploymentMetadataApi.baseUrl)
+    assertNotNull(airbyteApiClient.destinationApi)
+    assertEquals(client, airbyteApiClient.destinationApi.client)
+    assertEquals(policy, airbyteApiClient.destinationApi.policy)
+    assertEquals(basePath, airbyteApiClient.destinationApi.baseUrl)
+    assertNotNull(airbyteApiClient.destinationDefinitionApi)
+    assertEquals(client, airbyteApiClient.destinationDefinitionApi.client)
+    assertEquals(policy, airbyteApiClient.destinationDefinitionApi.policy)
+    assertEquals(basePath, airbyteApiClient.destinationDefinitionApi.baseUrl)
+    assertNotNull(airbyteApiClient.destinationDefinitionSpecificationApi)
+    assertEquals(client, airbyteApiClient.destinationDefinitionSpecificationApi.client)
+    assertEquals(policy, airbyteApiClient.destinationDefinitionSpecificationApi.policy)
+    assertEquals(basePath, airbyteApiClient.destinationDefinitionSpecificationApi.baseUrl)
+    assertNotNull(airbyteApiClient.healthApi)
+    assertEquals(client, airbyteApiClient.healthApi.client)
+    assertEquals(policy, airbyteApiClient.healthApi.policy)
+    assertEquals(basePath, airbyteApiClient.healthApi.baseUrl)
+    assertNotNull(airbyteApiClient.jobsApi)
+    assertEquals(client, airbyteApiClient.jobsApi.client)
+    assertEquals(policy, airbyteApiClient.jobsApi.policy)
+    assertEquals(basePath, airbyteApiClient.jobsApi.baseUrl)
+    assertNotNull(airbyteApiClient.jobRetryStatesApi)
+    assertEquals(client, airbyteApiClient.jobRetryStatesApi.client)
+    assertEquals(policy, airbyteApiClient.jobRetryStatesApi.policy)
+    assertEquals(basePath, airbyteApiClient.jobRetryStatesApi.baseUrl)
+    assertNotNull(airbyteApiClient.operationApi)
+    assertEquals(client, airbyteApiClient.operationApi.client)
+    assertEquals(policy, airbyteApiClient.operationApi.policy)
+    assertEquals(basePath, airbyteApiClient.operationApi.baseUrl)
+    assertNotNull(airbyteApiClient.organizationApi)
+    assertEquals(client, airbyteApiClient.organizationApi.client)
+    assertEquals(policy, airbyteApiClient.organizationApi.policy)
+    assertEquals(basePath, airbyteApiClient.organizationApi.baseUrl)
+    assertNotNull(airbyteApiClient.permissionApi)
+    assertEquals(client, airbyteApiClient.permissionApi.client)
+    assertEquals(policy, airbyteApiClient.permissionApi.policy)
+    assertEquals(basePath, airbyteApiClient.permissionApi.baseUrl)
+    assertNotNull(airbyteApiClient.secretPersistenceConfigApi)
+    assertEquals(client, airbyteApiClient.secretPersistenceConfigApi.client)
+    assertEquals(policy, airbyteApiClient.secretPersistenceConfigApi.policy)
+    assertEquals(basePath, airbyteApiClient.secretPersistenceConfigApi.baseUrl)
+    assertNotNull(airbyteApiClient.sourceApi)
+    assertEquals(client, airbyteApiClient.sourceApi.client)
+    assertEquals(policy, airbyteApiClient.sourceApi.policy)
+    assertEquals(basePath, airbyteApiClient.sourceApi.baseUrl)
+    assertNotNull(airbyteApiClient.sourceDefinitionApi)
+    assertEquals(client, airbyteApiClient.sourceDefinitionApi.client)
+    assertEquals(policy, airbyteApiClient.sourceDefinitionApi.policy)
+    assertEquals(basePath, airbyteApiClient.sourceDefinitionApi.baseUrl)
+    assertNotNull(airbyteApiClient.sourceDefinitionSpecificationApi)
+    assertEquals(client, airbyteApiClient.sourceDefinitionSpecificationApi.client)
+    assertEquals(policy, airbyteApiClient.sourceDefinitionSpecificationApi.policy)
+    assertEquals(basePath, airbyteApiClient.sourceDefinitionSpecificationApi.baseUrl)
+    assertNotNull(airbyteApiClient.stateApi)
+    assertEquals(client, airbyteApiClient.stateApi.client)
+    assertEquals(policy, airbyteApiClient.stateApi.policy)
+    assertEquals(basePath, airbyteApiClient.stateApi.baseUrl)
+    assertNotNull(airbyteApiClient.streamStatusesApi)
+    assertEquals(client, airbyteApiClient.streamStatusesApi.client)
+    assertEquals(policy, airbyteApiClient.streamStatusesApi.policy)
+    assertEquals(basePath, airbyteApiClient.streamStatusesApi.baseUrl)
+    assertNotNull(airbyteApiClient.userApi)
+    assertEquals(client, airbyteApiClient.userApi.client)
+    assertEquals(policy, airbyteApiClient.userApi.policy)
+    assertEquals(basePath, airbyteApiClient.userApi.baseUrl)
+    assertNotNull(airbyteApiClient.webBackendApi)
+    assertEquals(client, airbyteApiClient.webBackendApi.client)
+    assertEquals(policy, airbyteApiClient.webBackendApi.policy)
+    assertEquals(basePath, airbyteApiClient.webBackendApi.baseUrl)
+    assertNotNull(airbyteApiClient.workspaceApi)
+    assertEquals(client, airbyteApiClient.workspaceApi.client)
+    assertEquals(policy, airbyteApiClient.workspaceApi.policy)
+    assertEquals(basePath, airbyteApiClient.workspaceApi.baseUrl)
+  }
+}

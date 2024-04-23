@@ -7,6 +7,7 @@ package io.airbyte.container_orchestrator;
 import io.airbyte.commons.temporal.TemporalUtils;
 import io.airbyte.config.EnvConfigs;
 import io.airbyte.config.helpers.LogClientSingleton;
+import io.airbyte.config.helpers.LogConfigs;
 import io.airbyte.persistence.job.models.JobRunConfig;
 import io.airbyte.workers.sync.OrchestratorConstants;
 import io.micronaut.runtime.event.annotation.EventListener;
@@ -32,11 +33,15 @@ public class EventListeners {
   private final Map<String, String> envVars;
   private final EnvConfigs configs;
   private final JobRunConfig jobRunConfig;
+  private final LogConfigs logConfigs;
   private final BiFunction<String, String, Void> propertySetter;
 
   @Inject
-  EventListeners(@Named("envVars") final Map<String, String> envVars, final EnvConfigs configs, final JobRunConfig jobRunConfig) {
-    this(envVars, configs, jobRunConfig, (name, value) -> {
+  EventListeners(@Named("envVars") final Map<String, String> envVars,
+                 final EnvConfigs configs,
+                 final JobRunConfig jobRunConfig,
+                 final LogConfigs logConfigs) {
+    this(envVars, configs, jobRunConfig, logConfigs, (name, value) -> {
       System.setProperty(name, value);
       return null;
     });
@@ -45,13 +50,15 @@ public class EventListeners {
   /**
    * Exists only for overriding the default property setter for testing.
    */
-  EventListeners(@Named("envVars") final Map<String, String> envVars,
-                 final EnvConfigs configs,
-                 final JobRunConfig jobRunConfig,
-                 final BiFunction<String, String, Void> propertySetter) {
+  protected EventListeners(@Named("envVars") final Map<String, String> envVars,
+                           final EnvConfigs configs,
+                           final JobRunConfig jobRunConfig,
+                           final LogConfigs logConfigs,
+                           final BiFunction<String, String, Void> propertySetter) {
     this.envVars = envVars;
     this.configs = configs;
     this.jobRunConfig = jobRunConfig;
+    this.logConfigs = logConfigs;
     this.propertySetter = propertySetter;
   }
 
@@ -86,7 +93,7 @@ public class EventListeners {
 
     LogClientSingleton.getInstance().setJobMdc(
         configs.getWorkerEnvironment(),
-        configs.getLogConfigs(),
+        logConfigs,
         TemporalUtils.getJobRoot(configs.getWorkspaceRoot(), jobRunConfig.getJobId(), jobRunConfig.getAttemptId()));
   }
 

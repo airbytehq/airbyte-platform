@@ -7,10 +7,9 @@ import { PageContainer } from "components/PageContainer";
 import { SelectConnector } from "components/source/SelectConnector";
 import { Box } from "components/ui/Box";
 import { Button } from "components/ui/Button";
-import { Icon } from "components/ui/Icon";
 
 import { useSuggestedDestinations } from "area/connector/utils";
-import { useDestinationDefinitionList, useCreateDestination } from "core/api";
+import { useCreateDestination, useDestinationDefinitionList } from "core/api";
 import { AppActionCodes, useAppMonitoringService } from "hooks/services/AppMonitoringService";
 import { useFormChangeTrackerService } from "hooks/services/FormChangeTracker";
 
@@ -65,7 +64,7 @@ export const CreateNewDestination: React.FC = () => {
       <Box px="md">
         <PageContainer centered>
           <Box mb="md">
-            <Button variant="clear" onClick={onGoBack} icon={<Icon type="chevronLeft" size="lg" />}>
+            <Button variant="clear" onClick={onGoBack} icon="chevronLeft" iconSize="lg">
               <FormattedMessage id="connectorBuilder.backButtonLabel" />
             </Button>
           </Box>

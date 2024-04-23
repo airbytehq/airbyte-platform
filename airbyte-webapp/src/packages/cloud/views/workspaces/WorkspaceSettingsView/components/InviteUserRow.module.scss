@@ -1,0 +1,51 @@
+@use "scss/mixins";
+@use "scss/colors";
+@use "scss/variables";
+
+.inviteUserRow {
+  border-bottom: variables.$border-thin solid colors.$grey-50;
+
+  &__label {
+    padding: variables.$spacing-md 0;
+    display: inline-block;
+    width: 100%;
+    cursor: pointer;
+    padding-left: variables.$spacing-md;
+    padding-right: variables.$spacing-md;
+    height: 60px;
+
+    &:hover {
+      background-color: colors.$grey-50;
+    }
+  }
+
+  &__labelContent {
+    height: 100%;
+  }
+
+  &__dot {
+    flex: 0 0 auto;
+    line-height: 0;
+  }
+
+  &__hiddenInput {
+    @include mixins.visually-hidden;
+
+    &:focus-visible {
+      + .inviteUserRow__label {
+        outline: variables.$border-thin solid colors.$blue-900;
+      }
+    }
+  }
+
+  &__listBoxButton {
+    border: none;
+    border-radius: variables.$border-radius-sm;
+    background-color: transparent;
+    cursor: pointer;
+  }
+
+  &__listBoxButton:hover {
+    background-color: colors.$grey-100;
+  }
+}

@@ -5,6 +5,7 @@
 package io.airbyte.commons.server.handlers;
 
 import static io.airbyte.featureflag.ContextKt.ANONYMOUS;
+import static io.airbyte.persistence.job.models.Job.SYNC_REPLICATION_TYPES;
 
 import com.google.common.base.Preconditions;
 import io.airbyte.api.model.generated.AttemptInfoRead;
@@ -62,7 +63,6 @@ import io.airbyte.validation.json.JsonValidationException;
 import jakarta.inject.Singleton;
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -140,6 +140,7 @@ public class JobHistoryHandler {
         .stream()
         .map(type -> Enums.convertTo(type, JobConfig.ConfigType.class))
         .collect(Collectors.toSet());
+
     final String configId = request.getConfigId();
 
     final int pageSize = (request.getPagination() != null && request.getPagination().getPageSize() != null) ? request.getPagination().getPageSize()
@@ -341,9 +342,17 @@ public class JobHistoryHandler {
   }
 
   private static List<ConfiguredAirbyteStream> extractStreams(Job job) {
-    return job.getConfig().getSync() != null
-        ? job.getConfig().getSync().getConfiguredAirbyteCatalog().getStreams()
-        : List.of();
+    if (job.getConfigType() == ConfigType.SYNC) {
+      return job.getConfig().getSync() != null
+          ? job.getConfig().getSync().getConfiguredAirbyteCatalog().getStreams()
+          : List.of();
+    } else if (job.getConfigType() == ConfigType.REFRESH) {
+      return job.getConfig().getRefresh() != null
+          ? job.getConfig().getRefresh().getConfiguredAirbyteCatalog().getStreams()
+          : List.of();
+    } else {
+      return List.of();
+    }
   }
 
   public JobInfoRead getJobInfo(final JobIdRequestBody jobIdRequestBody) throws IOException {
@@ -353,7 +362,13 @@ public class JobHistoryHandler {
 
   public JobInfoRead getJobInfoWithoutLogs(final JobIdRequestBody jobIdRequestBody) throws IOException {
     final Job job = jobPersistence.getJob(jobIdRequestBody.getId());
-    return jobConverter.getJobInfoWithoutLogsRead(job);
+
+    final JobWithAttemptsRead jobWithAttemptsRead = JobConverter.getJobWithAttemptsRead(job);
+    hydrateWithStats(List.of(jobWithAttemptsRead), List.of(job), true);
+
+    return new JobInfoRead()
+        .job(jobWithAttemptsRead.getJob())
+        .attempts(job.getAttempts().stream().map(JobConverter::getAttemptInfoWithoutLogsRead).collect(Collectors.toList()));
   }
 
   public JobInfoLightRead getJobInfoLight(final JobIdRequestBody jobIdRequestBody) throws IOException {
@@ -396,7 +411,7 @@ public class JobHistoryHandler {
   public Optional<JobRead> getLatestRunningSyncJob(final UUID connectionId) throws IOException {
     final List<Job> nonTerminalSyncJobsForConnection = jobPersistence.listJobsForConnectionWithStatuses(
         connectionId,
-        Collections.singleton(ConfigType.SYNC),
+        SYNC_REPLICATION_TYPES,
         JobStatus.NON_TERMINAL_STATUSES);
 
     // there *should* only be a single running sync job for a connection, but

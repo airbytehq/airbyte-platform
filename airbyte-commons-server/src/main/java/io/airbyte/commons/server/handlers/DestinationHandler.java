@@ -38,6 +38,7 @@ import io.airbyte.config.persistence.ConfigNotFoundException;
 import io.airbyte.config.persistence.ConfigRepository;
 import io.airbyte.config.persistence.ConfigRepository.ResourcesQueryPaginated;
 import io.airbyte.config.secrets.JsonSecretsProcessor;
+import io.airbyte.data.helpers.ActorDefinitionVersionUpdater;
 import io.airbyte.data.services.DestinationService;
 import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.featureflag.UseIconUrlInApiResponse;
@@ -73,6 +74,7 @@ public class DestinationHandler {
   private final DestinationService destinationService;
   private final FeatureFlagClient featureFlagClient;
   private final ActorDefinitionHandlerHelper actorDefinitionHandlerHelper;
+  private final ActorDefinitionVersionUpdater actorDefinitionVersionUpdater;
 
   @VisibleForTesting
   public DestinationHandler(final ConfigRepository configRepository,
@@ -85,7 +87,8 @@ public class DestinationHandler {
                             final ActorDefinitionVersionHelper actorDefinitionVersionHelper,
                             final DestinationService destinationService,
                             final FeatureFlagClient featureFlagClient,
-                            final ActorDefinitionHandlerHelper actorDefinitionHandlerHelper) {
+                            final ActorDefinitionHandlerHelper actorDefinitionHandlerHelper,
+                            final ActorDefinitionVersionUpdater actorDefinitionVersionUpdater) {
     this.configRepository = configRepository;
     this.validator = integrationSchemaValidation;
     this.connectionsHandler = connectionsHandler;
@@ -97,6 +100,7 @@ public class DestinationHandler {
     this.destinationService = destinationService;
     this.featureFlagClient = featureFlagClient;
     this.actorDefinitionHandlerHelper = actorDefinitionHandlerHelper;
+    this.actorDefinitionVersionUpdater = actorDefinitionVersionUpdater;
   }
 
   public DestinationRead createDestination(final DestinationCreate destinationCreate)
@@ -231,7 +235,7 @@ public class DestinationHandler {
     final DestinationConnection destinationConnection = configRepository.getDestinationConnection(destinationIdRequestBody.getDestinationId());
     final StandardDestinationDefinition destinationDefinition =
         configRepository.getStandardDestinationDefinition(destinationConnection.getDestinationDefinitionId());
-    configRepository.setActorDefaultVersion(destinationIdRequestBody.getDestinationId(), destinationDefinition.getDefaultVersionId());
+    actorDefinitionVersionUpdater.upgradeActorVersion(destinationConnection, destinationDefinition);
   }
 
   public DestinationRead getDestination(final DestinationIdRequestBody destinationIdRequestBody)

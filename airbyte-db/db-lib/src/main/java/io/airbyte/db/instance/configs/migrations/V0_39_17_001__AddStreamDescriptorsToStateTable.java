@@ -46,7 +46,7 @@ public class V0_39_17_001__AddStreamDescriptorsToStateTable extends BaseJavaMigr
 
   private static void createStateTypeEnum(final DSLContext ctx) {
     ctx.createType(StateType.NAME)
-        .asEnum(Arrays.stream(StateType.values()).map(StateType::getLiteral).toList())
+        .asEnum(Arrays.stream(StateType.values()).map(StateType::getLiteral).toArray(String[]::new))
         .execute();
   }
 

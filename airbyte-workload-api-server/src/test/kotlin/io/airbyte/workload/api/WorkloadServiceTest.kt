@@ -1,6 +1,7 @@
 package io.airbyte.workload.api
 
 import io.airbyte.commons.temporal.queue.TemporalMessageProducer
+import io.airbyte.config.WorkloadPriority
 import io.airbyte.config.WorkloadType
 import io.airbyte.config.messages.LauncherInputMessage
 import io.airbyte.featureflag.FeatureFlagClient
@@ -48,11 +49,12 @@ class WorkloadServiceTest {
   @MethodSource("expectedQueueArgsMatrix")
   fun `Use the right queue`(
     workloadType: WorkloadType,
+    priority: WorkloadPriority,
     expectedQueue: String,
   ) {
     val workloadService = WorkloadService(messageProducer, metricPublisher, featureFlagClient)
 
-    workloadService.create(workloadId, workloadInput, labels, logPath, geography, mutexKey, workloadType, autoId)
+    workloadService.create(workloadId, workloadInput, labels, logPath, geography, mutexKey, workloadType, autoId, priority)
 
     verify { messageProducer.publish(eq(expectedQueue), any(), eq("wl-create_$workloadId")) }
   }
@@ -64,8 +66,11 @@ class WorkloadServiceTest {
     @JvmStatic
     fun expectedQueueArgsMatrix(): Stream<Arguments> {
       return Stream.of(
-        Arguments.of(WorkloadType.SYNC, REGULAR_QUEUE),
-        Arguments.of(WorkloadType.CHECK, HIGH_PRIORITY_QUEUE),
+        Arguments.of(WorkloadType.SYNC, WorkloadPriority.DEFAULT, REGULAR_QUEUE),
+        Arguments.of(WorkloadType.CHECK, WorkloadPriority.HIGH, HIGH_PRIORITY_QUEUE),
+        Arguments.of(WorkloadType.CHECK, WorkloadPriority.DEFAULT, REGULAR_QUEUE),
+        Arguments.of(WorkloadType.DISCOVER, WorkloadPriority.HIGH, HIGH_PRIORITY_QUEUE),
+        Arguments.of(WorkloadType.DISCOVER, WorkloadPriority.DEFAULT, REGULAR_QUEUE),
       )
     }
   }

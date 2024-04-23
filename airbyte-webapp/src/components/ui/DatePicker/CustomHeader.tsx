@@ -1,4 +1,4 @@
-import { getYear, getMonth } from "date-fns";
+import { getMonth, getYear } from "date-fns";
 import range from "lodash/range";
 import React from "react";
 import { ReactDatePickerCustomHeaderProps, ReactDatePickerProps } from "react-datepicker";
@@ -6,7 +6,6 @@ import { ReactDatePickerCustomHeaderProps, ReactDatePickerProps } from "react-da
 import styles from "./CustomHeader.module.scss";
 import { Button } from "../Button";
 import { FlexContainer } from "../Flex";
-import { Icon } from "../Icon";
 import { Text } from "../Text";
 
 /**
@@ -50,7 +49,8 @@ export const CustomHeader: React.FC<
       <FlexContainer justifyContent="space-between" alignItems="center" className={styles.currentMonthYearContainer}>
         <Button
           aria-label="Previous Month"
-          icon={<Icon type="arrowLeft" size="lg" />}
+          icon="arrowLeft"
+          iconSize="lg"
           variant="clear"
           style={(selectsRange && customHeaderCount === 1) || prevMonthButtonDisabled ? { visibility: "hidden" } : {}}
           type="button"
@@ -65,7 +65,8 @@ export const CustomHeader: React.FC<
         </Text>
         <Button
           aria-label="Next Month"
-          icon={<Icon type="arrowRight" size="lg" />}
+          icon="arrowRight"
+          iconSize="lg"
           variant="clear"
           style={(selectsRange && customHeaderCount === 0) || nextMonthButtonDisabled ? { visibility: "hidden" } : {}}
           type="button"

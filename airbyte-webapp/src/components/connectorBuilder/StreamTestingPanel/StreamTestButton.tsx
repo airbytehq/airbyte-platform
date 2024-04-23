@@ -1,11 +1,10 @@
 import { FormattedMessage } from "react-intl";
 
 import { Button } from "components/ui/Button";
-import { Icon } from "components/ui/Icon";
 import { Text } from "components/ui/Text";
 import { Tooltip } from "components/ui/Tooltip";
 
-import { useConnectorBuilderFormState, BuilderView } from "services/connectorBuilder/ConnectorBuilderStateService";
+import { BuilderView, useConnectorBuilderFormState } from "services/connectorBuilder/ConnectorBuilderStateService";
 
 import styles from "./StreamTestButton.module.scss";
 import { useBuilderWatch } from "../types";
@@ -49,7 +48,7 @@ export const StreamTestButton: React.FC<StreamTestButtonProps> = ({
   let showWarningIcon = false;
   let tooltipContent = undefined;
 
-  if (isResolving && mode === "yaml") {
+  if (isResolving) {
     buttonDisabled = true;
     tooltipContent = <FormattedMessage id="connectorBuilder.resolvingStreamList" />;
   }
@@ -76,15 +75,7 @@ export const StreamTestButton: React.FC<StreamTestButtonProps> = ({
       disabled={buttonDisabled}
       type="button"
       data-testid="read-stream"
-      icon={
-        showWarningIcon ? (
-          <Icon type="warningOutline" />
-        ) : (
-          <div>
-            <Icon type="rotate" />
-          </div>
-        )
-      }
+      icon={showWarningIcon ? "warningOutline" : "rotate"}
     >
       <Text className={styles.testButtonText} size="sm" bold>
         <FormattedMessage id="connectorBuilder.testButton" />

@@ -7,6 +7,7 @@ export const mockProInstanceConfig: InstanceConfigurationResponse = {
   },
   webappUrl: "http://test-airbyte-webapp-url.com",
   edition: "pro",
+  version: "0.50.1",
   licenseType: "pro",
   initialSetupComplete: true,
   defaultUserId: "00000000-0000-0000-0000-000000000000",

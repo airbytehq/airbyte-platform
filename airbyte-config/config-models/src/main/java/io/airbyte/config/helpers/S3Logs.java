@@ -7,9 +7,6 @@ package io.airbyte.config.helpers;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.Lists;
 import io.airbyte.commons.string.Strings;
-import io.airbyte.config.storage.CloudStorageConfigs;
-import io.airbyte.config.storage.CloudStorageConfigs.S3ApiWorkerStorageConfig;
-import io.airbyte.config.storage.CloudStorageConfigs.WorkerStorageType;
 import java.io.BufferedReader;
 import java.io.ByteArrayInputStream;
 import java.io.File;
@@ -51,18 +48,6 @@ public class S3Logs implements CloudLogs {
     return getFile(configs, logPath, LogClientSingleton.DEFAULT_PAGE_SIZE);
   }
 
-  private static String getBucketName(final CloudStorageConfigs configs) {
-    final S3ApiWorkerStorageConfig config;
-    if (configs.getType() == WorkerStorageType.S3) {
-      config = configs.getS3Config();
-    } else if (configs.getType() == WorkerStorageType.MINIO) {
-      config = configs.getMinioConfig();
-    } else {
-      throw new IllegalArgumentException("config must be of type S3 or MINIO");
-    }
-    return config.getBucketName();
-  }
-
   private File getFile(final LogConfigs configs, final String logPath, final int pageSize) throws IOException {
     return getFile(getOrCreateS3Client(), configs, logPath, pageSize);
   }
@@ -71,7 +56,7 @@ public class S3Logs implements CloudLogs {
   static File getFile(final S3Client s3Client, final LogConfigs configs, final String logPath, final int pageSize) throws IOException {
     LOGGER.debug("Retrieving logs from S3 path: {}", logPath);
 
-    final var s3Bucket = getBucketName(configs.getStorageConfigs());
+    final var s3Bucket = configs.getStorageConfig().getBuckets().getLog();
     final var randomName = Strings.addRandomSuffix("logs", "-", 5);
     final var tmpOutputFile = new File("/tmp/" + randomName);
     final var os = new FileOutputStream(tmpOutputFile);
@@ -102,7 +87,7 @@ public class S3Logs implements CloudLogs {
     LOGGER.debug("Tailing logs from S3 path: {}", logPath);
     final S3Client s3Client = getOrCreateS3Client();
 
-    final var s3Bucket = getBucketName(configs.getStorageConfigs());
+    final var s3Bucket = configs.getStorageConfig().getBuckets().getLog();
     LOGGER.debug("Start making S3 list request.");
     final List<String> ascendingTimestampKeys = getAscendingObjectKeys(s3Client, logPath, s3Bucket);
     final var descendingTimestampKeys = Lists.reverse(ascendingTimestampKeys);
@@ -132,7 +117,7 @@ public class S3Logs implements CloudLogs {
     LOGGER.debug("Deleting logs from S3 path: {}", logPath);
     final S3Client s3Client = getOrCreateS3Client();
 
-    final var s3Bucket = getBucketName(configs.getStorageConfigs());
+    final var s3Bucket = configs.getStorageConfig().getBuckets().getLog();
     final var keys = getAscendingObjectKeys(s3Client, logPath, s3Bucket)
         .stream().map(key -> ObjectIdentifier.builder().key(key).build())
         .collect(Collectors.toList());

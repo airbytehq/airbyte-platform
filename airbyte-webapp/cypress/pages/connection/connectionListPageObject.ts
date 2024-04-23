@@ -1,9 +1,10 @@
 import { WebBackendConnectionListItem } from "@src/core/api/types/AirbyteClient";
 import { getWorkspaceId } from "commands/api/workspace";
 
-const statusCell = (connectionId: string) => `[data-testId='statusCell-${connectionId}']`;
+const schemaChangeCell = (connectionId: string) => `[data-testid='link-replication-${connectionId}']`;
+
 const changesStatusIcon = (type: string) => `[data-testId='changesStatusIcon-${type}']`;
-const manualSyncButton = "button[data-testId='manual-sync-button']";
+const connectionStateSwitch = (connectionId: string) => `[data-testId='connection-state-switch-${connectionId}']`;
 const newConnectionButton = "[data-testid='new-connection-button']";
 
 export const visit = () => {
@@ -13,10 +14,10 @@ export const visit = () => {
 };
 
 export const getSchemaChangeIcon = (connection: WebBackendConnectionListItem, type: "breaking" | "non_breaking") =>
-  cy.get(`${statusCell(connection.connectionId)} ${changesStatusIcon(type)}`);
+  cy.get(`${schemaChangeCell(connection.connectionId)} ${changesStatusIcon(type)}`);
 
-export const getManualSyncButton = (connection: WebBackendConnectionListItem) =>
-  cy.get(`${statusCell(connection.connectionId)} ${manualSyncButton}`);
+export const getConnectionStateSwitch = (connection: WebBackendConnectionListItem) =>
+  cy.get(`${connectionStateSwitch(connection.connectionId)}`);
 
 export const clickNewConnectionButton = () => {
   cy.get(newConnectionButton).click();

@@ -6,6 +6,7 @@ package io.airbyte.workload.api
 
 import datadog.trace.api.Trace
 import io.airbyte.commons.temporal.queue.TemporalMessageProducer
+import io.airbyte.config.WorkloadPriority
 import io.airbyte.config.WorkloadType
 import io.airbyte.config.messages.LauncherInputMessage
 import io.airbyte.featureflag.Connection
@@ -51,10 +52,11 @@ open class WorkloadService(
     mutexKey: String?,
     workloadType: WorkloadType,
     autoId: UUID,
+    priority: WorkloadPriority,
   ) {
     // TODO feature flag geography
     ApmTraceUtils.addTagsToTrace(mutableMapOf(WORKLOAD_ID_TAG to workloadId) as Map<String, Any>?)
-    val queue = getQueueName(geography, workloadType, labels)
+    val queue = getQueueName(geography, labels, priority)
     // TODO: We could pass through created_at, but I'm use using system time for now.
     // This may get just replaced by tracing at some point if we manage to set it up properly.
     val startTimeMs = System.currentTimeMillis()
@@ -73,11 +75,11 @@ open class WorkloadService(
 
   private fun getQueueName(
     geography: String,
-    workloadType: WorkloadType,
     labels: Map<String, String>,
+    priority: WorkloadPriority,
   ): String {
     val context = mutableListOf<Context>(Geography(geography))
-    if (workloadType != WorkloadType.SYNC) {
+    if (WorkloadPriority.HIGH.equals(priority)) {
       context.add(Priority(HIGH_PRIORITY))
     }
     labels[CONNECTION_ID_LABEL_KEY]?.let {

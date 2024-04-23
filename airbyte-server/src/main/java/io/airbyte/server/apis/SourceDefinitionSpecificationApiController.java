@@ -12,6 +12,7 @@ import io.airbyte.api.model.generated.SourceDefinitionSpecificationRead;
 import io.airbyte.api.model.generated.SourceIdRequestBody;
 import io.airbyte.commons.server.handlers.ConnectorDefinitionSpecificationHandler;
 import io.airbyte.commons.server.scheduling.AirbyteTaskExecutors;
+import io.micronaut.http.annotation.Body;
 import io.micronaut.http.annotation.Controller;
 import io.micronaut.http.annotation.Post;
 import io.micronaut.scheduling.annotation.ExecuteOn;
@@ -24,7 +25,7 @@ public class SourceDefinitionSpecificationApiController implements SourceDefinit
 
   private final ConnectorDefinitionSpecificationHandler connectorDefinitionSpecificationHandler;
 
-  public SourceDefinitionSpecificationApiController(ConnectorDefinitionSpecificationHandler connectorDefinitionSpecificationHandler) {
+  public SourceDefinitionSpecificationApiController(final ConnectorDefinitionSpecificationHandler connectorDefinitionSpecificationHandler) {
     this.connectorDefinitionSpecificationHandler = connectorDefinitionSpecificationHandler;
   }
 
@@ -33,7 +34,7 @@ public class SourceDefinitionSpecificationApiController implements SourceDefinit
   @Secured({AUTHENTICATED_USER})
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @Override
-  public SourceDefinitionSpecificationRead getSourceDefinitionSpecification(final SourceDefinitionIdWithWorkspaceId sourceDefinitionIdWithWorkspaceId) {
+  public SourceDefinitionSpecificationRead getSourceDefinitionSpecification(@Body final SourceDefinitionIdWithWorkspaceId sourceDefinitionIdWithWorkspaceId) {
     return ApiHelper.execute(() -> connectorDefinitionSpecificationHandler.getSourceDefinitionSpecification(sourceDefinitionIdWithWorkspaceId));
   }
 
@@ -41,7 +42,7 @@ public class SourceDefinitionSpecificationApiController implements SourceDefinit
   @Secured({AUTHENTICATED_USER})
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @Override
-  public SourceDefinitionSpecificationRead getSpecificationForSourceId(final SourceIdRequestBody sourceIdRequestBody) {
+  public SourceDefinitionSpecificationRead getSpecificationForSourceId(@Body final SourceIdRequestBody sourceIdRequestBody) {
     return ApiHelper.execute(() -> connectorDefinitionSpecificationHandler.getSpecificationForSourceId(sourceIdRequestBody));
   }
 

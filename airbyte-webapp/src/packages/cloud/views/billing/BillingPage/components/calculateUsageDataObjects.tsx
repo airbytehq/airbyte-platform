@@ -21,23 +21,22 @@ export const generateArrayForTimeWindow = (timeWindow?: ConsumptionTimeWindow) =
   const usagePerTimeChunk: UsagePerTimeChunk = [];
 
   // base case: lastMonth, which returns past 30 days of usage
-  let start = dayjs().subtract(29, "day");
+  const end = dayjs();
+  let start = end.subtract(29, "day");
   let aggregation: ManipulateType = "day";
   let formatterString = "MMM DD";
 
   if (timeWindow === "lastSixMonths") {
     aggregation = "week";
     formatterString = "MMM DD";
-    start = dayjs().subtract(6, "month").startOf(aggregation);
+    start = end.subtract(6, "month").startOf(aggregation);
   } else if (timeWindow === "lastYear") {
     aggregation = "month";
     formatterString = "MMM 'YY";
-    start = dayjs().subtract(1, "year").startOf(aggregation);
+    start = end.subtract(1, "year").startOf(aggregation);
   }
 
-  const end = dayjs();
-
-  for (let current = start; !current.isAfter(end); current = current.add(1, aggregation)) {
+  for (let current = start; !current.isAfter(end.endOf(aggregation)); current = current.add(1, aggregation)) {
     usagePerTimeChunk.push({
       timeChunkLabel: current.format(formatterString),
       billedCost: 0,

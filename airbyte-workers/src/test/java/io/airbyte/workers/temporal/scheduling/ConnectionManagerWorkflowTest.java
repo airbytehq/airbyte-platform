@@ -4,8 +4,11 @@
 
 package io.airbyte.workers.temporal.scheduling;
 
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.reset;
+import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.timeout;
 import static org.mockito.Mockito.when;
 
@@ -420,7 +423,9 @@ class ConnectionManagerWorkflowTest {
       startWorkflowAndWaitUntilReady(workflow, input);
       testEnv.sleep(Duration.ofMinutes(1L)); // any value here, just so it's started
       workflow.submitManualSync();
-      Thread.sleep(500);
+
+      Mockito.verify(mJobCreationAndStatusUpdateActivity, VERIFY_TIMEOUT)
+          .jobSuccessWithAttemptNumber(any());
 
       final Queue<ChangedStateEvent> events = testStateListener.events(testId);
 
@@ -468,8 +473,14 @@ class ConnectionManagerWorkflowTest {
 
       startWorkflowAndWaitUntilReady(workflow, input);
       testEnv.sleep(Duration.ofSeconds(30L));
+
+      reset(mConfigFetchActivity);
+      when(mConfigFetchActivity.getTimeToWait(Mockito.any())).thenReturn(new ScheduleRetrieverOutput(
+          Duration.ofDays(100 * 365)));
       workflow.connectionUpdated();
-      Thread.sleep(500);
+
+      Mockito.verify(mConfigFetchActivity, VERIFY_TIMEOUT)
+          .getTimeToWait(any());
 
       final Queue<ChangedStateEvent> events = testStateListener.events(testId);
 
@@ -549,7 +560,7 @@ class ConnectionManagerWorkflowTest {
       returnTrueForLastJobOrAttemptFailure();
       final UUID testId = UUID.randomUUID();
       final TestStateListener testStateListener = new TestStateListener();
-      final WorkflowState workflowState = new WorkflowState(testId, testStateListener);
+      final WorkflowState workflowState = spy(new WorkflowState(testId, testStateListener));
 
       final ConnectionUpdaterInput input = ConnectionUpdaterInput.builder()
           .connectionId(UUID.randomUUID())
@@ -563,7 +574,8 @@ class ConnectionManagerWorkflowTest {
       startWorkflowAndWaitUntilReady(workflow, input);
       testEnv.sleep(Duration.ofSeconds(30L));
       workflow.deleteConnection();
-      Thread.sleep(500);
+
+      waitUntilDeleted(workflow);
 
       final Queue<ChangedStateEvent> events = testStateListener.events(testId);
 
@@ -573,11 +585,11 @@ class ConnectionManagerWorkflowTest {
 
       Assertions.assertThat(events)
           .filteredOn(changedStateEvent -> changedStateEvent.getField() == StateField.DELETED && changedStateEvent.isValue())
-          .hasSize(1);
+          .hasSizeGreaterThan(1);
 
       Assertions.assertThat(events)
           .filteredOn(changedStateEvent -> changedStateEvent.getField() == StateField.DONE_WAITING && changedStateEvent.isValue())
-          .hasSize(1);
+          .hasSizeGreaterThan(1);
 
       Assertions.assertThat(events)
           .filteredOn(
@@ -786,7 +798,8 @@ class ConnectionManagerWorkflowTest {
       startWorkflowAndWaitUntilReady(workflow, input);
       testEnv.sleep(Duration.ofMinutes(5L));
       workflow.resetConnection();
-      Thread.sleep(500);
+      Mockito.verify(mJobCreationAndStatusUpdateActivity, VERIFY_TIMEOUT)
+          .createNewAttemptNumber(any());
 
       final Queue<ChangedStateEvent> events = testStateListener.events(testId);
 
@@ -819,7 +832,8 @@ class ConnectionManagerWorkflowTest {
       startWorkflowAndWaitUntilReady(workflow, input);
       testEnv.sleep(Duration.ofMinutes(5L));
       workflow.resetConnectionAndSkipNextScheduling();
-      Thread.sleep(500);
+      Mockito.verify(mJobCreationAndStatusUpdateActivity, VERIFY_TIMEOUT)
+          .createNewAttemptNumber(any());
 
       final Queue<ChangedStateEvent> events = testStateListener.events(testId);
 
@@ -1914,6 +1928,20 @@ class ConnectionManagerWorkflowTest {
     while (!isReady) {
       try {
         isReady = workflow.getState() != null;
+      } catch (final Exception e) {
+        log.info("retrying...");
+        Thread.sleep(100);
+      }
+    }
+  }
+
+  private static void waitUntilDeleted(final ConnectionManagerWorkflow workflow)
+      throws InterruptedException {
+    boolean isDeleted = false;
+
+    while (!isDeleted) {
+      try {
+        isDeleted = workflow.getState() != null && workflow.getState().isDeleted();
       } catch (final Exception e) {
         log.info("retrying...");
         Thread.sleep(100);

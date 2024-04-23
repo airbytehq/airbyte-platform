@@ -11,7 +11,6 @@ import {
   useGetDestinationDefinitionSpecification,
   useSourceDefinition,
   useDestinationDefinition,
-  SchemaError,
 } from "core/api";
 import {
   ActorDefinitionVersionRead,
@@ -23,6 +22,8 @@ import {
 } from "core/api/types/AirbyteClient";
 import { FormError, generateMessageFromError } from "core/utils/errorStatusMessage";
 
+import { useExperiment } from "../Experiment";
+
 export type ConnectionFormMode = "create" | "edit" | "readonly";
 
 export type ConnectionOrPartialConnection =
@@ -32,7 +33,7 @@ export type ConnectionOrPartialConnection =
 interface ConnectionServiceProps {
   connection: ConnectionOrPartialConnection;
   mode: ConnectionFormMode;
-  schemaError?: SchemaError | null;
+  schemaError?: Error | null;
   refreshSchema: () => Promise<void>;
 }
 
@@ -46,7 +47,7 @@ interface ConnectionFormHook {
   destDefinitionVersion: ActorDefinitionVersionRead;
   destDefinitionSpecification: DestinationDefinitionSpecificationRead;
   initialValues: FormConnectionFormValues;
-  schemaError?: SchemaError;
+  schemaError?: Error | null;
   refreshSchema: () => Promise<void>;
   setSubmitError: (submitError: FormError | null) => void;
   getErrorMessage: (formValid: boolean, errors?: FieldErrors<FormConnectionFormValues>) => string | JSX.Element | null;
@@ -74,9 +75,10 @@ const useConnectionForm = ({
     connection.destinationId
   );
 
-  const initialValues = useInitialFormValues(connection, destDefinitionVersion, mode !== "create");
+  const initialValues = useInitialFormValues(connection, destDefinitionVersion, mode === "edit");
   const { formatMessage } = useIntl();
   const [submitError, setSubmitError] = useState<FormError | null>(null);
+  const isSimplifiedCreation = useExperiment("connection.simplifiedCreation", false);
 
   const getErrorMessage = useCallback<ConnectionFormHook["getErrorMessage"]>(
     (formValid, errors) => {
@@ -86,14 +88,17 @@ const useConnectionForm = ({
 
       if (!formValid) {
         const hasNoStreamsSelectedError = errors?.syncCatalog?.streams?.message === "connectionForm.streams.required";
+        const validationErrorMessage = isSimplifiedCreation
+          ? "connectionForm.validation.creationError"
+          : "connectionForm.validation.error";
         return formatMessage({
-          id: hasNoStreamsSelectedError ? "connectionForm.streams.required" : "connectionForm.validation.error",
+          id: hasNoStreamsSelectedError ? "connectionForm.streams.required" : validationErrorMessage,
         });
       }
 
       return null;
     },
-    [formatMessage, submitError]
+    [formatMessage, submitError, isSimplifiedCreation]
   );
 
   return {

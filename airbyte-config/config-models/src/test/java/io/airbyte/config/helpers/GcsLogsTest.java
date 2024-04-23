@@ -16,8 +16,7 @@ import com.google.cloud.storage.Blob;
 import com.google.cloud.storage.Blob.BlobSourceOption;
 import com.google.cloud.storage.Storage;
 import com.google.common.io.Files;
-import io.airbyte.config.storage.CloudStorageConfigs;
-import io.airbyte.config.storage.CloudStorageConfigs.GcsConfig;
+import io.airbyte.config.storage.GcsStorageConfig;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.nio.charset.StandardCharsets;
@@ -26,6 +25,7 @@ import java.util.function.Consumer;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.Answers;
 import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.MockitoAnnotations;
@@ -45,10 +45,8 @@ class GcsLogsTest {
   Storage storage;
   @Mock
   LogConfigs logConfigs;
-  @Mock
-  CloudStorageConfigs cloudStorageConfigs;
-  @Mock
-  GcsConfig gcsConfig;
+  @Mock(answer = Answers.RETURNS_DEEP_STUBS)
+  GcsStorageConfig storageConfig;
   @Mock
   Page<Blob> page;
   @Mock
@@ -59,9 +57,8 @@ class GcsLogsTest {
   @BeforeEach
   void setup() {
     closeable = MockitoAnnotations.openMocks(this);
-    when(logConfigs.getStorageConfigs()).thenReturn(cloudStorageConfigs);
-    when(cloudStorageConfigs.getGcsConfig()).thenReturn(gcsConfig);
-    when(gcsConfig.getBucketName()).thenReturn(bucketName);
+    when(logConfigs.getStorageConfig()).thenReturn(storageConfig);
+    when(storageConfig.getBuckets().getLog()).thenReturn(bucketName);
   }
 
   @AfterEach

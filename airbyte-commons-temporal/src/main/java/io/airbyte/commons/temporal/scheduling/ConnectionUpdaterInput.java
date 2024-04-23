@@ -5,8 +5,8 @@
 package io.airbyte.commons.temporal.scheduling;
 
 import io.airbyte.commons.temporal.scheduling.state.WorkflowState;
+import jakarta.annotation.Nullable;
 import java.util.UUID;
-import javax.annotation.Nullable;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;

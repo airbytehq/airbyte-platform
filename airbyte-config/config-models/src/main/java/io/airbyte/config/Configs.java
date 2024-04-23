@@ -43,55 +43,15 @@ public interface Configs {
   String getAirbyteVersionOrWarning();
 
   /**
-   * Distinguishes internal Airbyte deployments. Internal-use only.
-   */
-  DeploymentMode getDeploymentMode();
-
-  /**
    * Defines if the deployment is Docker or Kubernetes. Airbyte behaves accordingly.
    */
   WorkerEnvironment getWorkerEnvironment();
-
-  /**
-   * Defines the configs directory. Applies only to Docker, and is present in Kubernetes for backward
-   * compatibility.
-   */
-  Path getConfigRoot();
 
   /**
    * Defines the Airbyte workspace directory. Applies only to Docker, and is present in Kubernetes for
    * backward compatibility.
    */
   Path getWorkspaceRoot();
-
-  // Docker Only
-
-  /**
-   * Defines the name of the Airbyte docker volume.
-   */
-  String getWorkspaceDockerMount();
-
-  /**
-   * Defines the name of the docker mount that is used for local file handling. On Docker, this allows
-   * connector pods to interact with a volume for "local file" operations.
-   */
-  String getLocalDockerMount();
-
-  /**
-   * Defines the docker network jobs are launched on with the new scheduler.
-   */
-  String getDockerNetwork();
-
-  Path getLocalRoot();
-
-  // Secrets
-
-  /**
-   * Defines the Secret Persistence type. None by default. Set to GOOGLE_SECRET_MANAGER to use Google
-   * Secret Manager. Set to TESTING_CONFIG_DB_TABLE to use the database as a test. Set to VAULT to use
-   * Hashicorp Vault. Alpha support. Undefined behavior will result if this is turned on and then off.
-   */
-  SecretPersistenceType getSecretPersistenceType();
 
   // Database
 
@@ -111,48 +71,6 @@ public interface Configs {
    * password.
    */
   String getDatabaseUrl();
-
-  /**
-   * Define the number of retention days for the temporal history.
-   */
-  int getTemporalRetentionInDays();
-
-  /**
-   * Define the number of minutes a retry job will attempt to run before timing out.
-   */
-  int getJobInitRetryTimeoutMinutes();
-
-  /**
-   * Defines whether job creation uses connector-specific resource requirements when spawning jobs.
-   * Works on both Docker and Kubernetes. Defaults to false for ease of use in OSS trials of Airbyte
-   * but recommended for production deployments.
-   */
-  boolean connectorSpecificResourceDefaultsEnabled();
-
-  /**
-   * Get datadog or OTEL metric client for Airbyte to emit metrics. Allows empty value
-   */
-  String getMetricClient();
-
-  /**
-   * If choosing OTEL as the metric client, Airbyte will emit metrics and traces to this provided
-   * endpoint.
-   */
-  String getOtelCollectorEndpoint();
-
-  /**
-   * If using a LaunchDarkly feature flag client, this API key will be used.
-   *
-   * @return LaunchDarkly API key as a string.
-   */
-  String getLaunchDarklyKey();
-
-  /**
-   * Get the type of feature flag client to use.
-   *
-   * @return feature flag client
-   */
-  String getFeatureFlagClient();
 
   /**
    * Defines a default map of environment variables to use for any launched job containers. The
@@ -184,21 +102,6 @@ public interface Configs {
    * Define if we want to run custom connector related jobs in a separate node pool.
    */
   boolean getUseCustomKubeNodeSelector();
-
-  /**
-   * Define node selectors for Spec job pods specifically. Each kv-pair is separated by a `,`.
-   */
-  Map<String, String> getSpecJobKubeNodeSelectors();
-
-  /**
-   * Define node selectors for Check job pods specifically. Each kv-pair is separated by a `,`.
-   */
-  Map<String, String> getCheckJobKubeNodeSelectors();
-
-  /**
-   * Define node selectors for Discover job pods specifically. Each kv-pair is separated by a `,`.
-   */
-  Map<String, String> getDiscoverJobKubeNodeSelectors();
 
   /**
    * Define one or more Job pod annotations. Each kv-pair is separated by a `,`. Used for the sync job
@@ -248,11 +151,6 @@ public interface Configs {
   String getSidecarKubeCpuLimit();
 
   /**
-   * Define the CPU request for the SOCAT Sidecar.
-   */
-  String getJobKubeSocatImage();
-
-  /**
    * Define the CPU limit for the SOCAT Sidecar.
    */
   String getSocatSidecarKubeCpuLimit();
@@ -262,21 +160,6 @@ public interface Configs {
    */
   String getSocatSidecarKubeCpuRequest();
 
-  /**
-   * Define the Job pod busybox image.
-   */
-  String getJobKubeBusyboxImage();
-
-  /**
-   * Define the Job pod curl image pull.
-   */
-  String getJobKubeCurlImage();
-
-  /**
-   * Define the Kubernetes namespace Job pods are created in.
-   */
-  String getJobKubeNamespace();
-
   // Logging/Monitoring/Tracking
 
   /**
@@ -284,71 +167,6 @@ public interface Configs {
    * involved here. Please see {@link CloudStorageConfigs} for more info.
    */
   LogConfigs getLogConfigs();
-
-  /**
-   * Defines the optional Google application credentials used for logging.
-   */
-  String getGoogleApplicationCredentials();
-
-  /**
-   * Define either S3, Minio or GCS as a state storage backend. Multiple variables are involved here.
-   * Please see {@link CloudStorageConfigs} for more info.
-   */
-  CloudStorageConfigs getStateStorageCloudConfigs();
-
-  /**
-   * Determine if Datadog tracking events should be published. Mainly for Airbyte internal use.
-   */
-  boolean getPublishMetrics();
-
-  /**
-   * Set the Agent to publish Datadog metrics to. Only relevant if metrics should be published. Mainly
-   * for Airbyte internal use.
-   */
-  String getDDAgentHost();
-
-  /**
-   * Set the port to publish Datadog metrics to. Only relevant if metrics should be published. Mainly
-   * for Airbyte internal use.
-   */
-  String getDDDogStatsDPort();
-
-  /**
-   * Set constant tags to be attached to all metrics. Useful for distinguishing between environments.
-   * Example: airbyte_instance:dev,k8s-cluster:aws-dev
-   */
-  List<String> getDDConstantTags();
-
-  /**
-   * Define whether to send job failure events to Sentry or log-only. Airbyte internal use.
-   */
-  JobErrorReportingStrategy getJobErrorReportingStrategy();
-
-  /**
-   * Determines the Sentry DSN that should be used when reporting connector job failures to Sentry.
-   * Used with SENTRY error reporting strategy. Airbyte internal use.
-   */
-  String getJobErrorReportingSentryDSN();
-
-  // APPLICATIONS
-  // Worker
-
-  /**
-   * Connector Builder configs.
-   */
-  String getCdkPython();
-
-  String getCdkEntrypoint();
-
-  String getCustomerIoKey();
-
-  /**
-   * Job error reporting strategy.
-   */
-  enum JobErrorReportingStrategy {
-    SENTRY,
-    LOGGING
-  }
 
   /**
    * Worker environment.

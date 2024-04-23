@@ -8,7 +8,6 @@ import io.airbyte.api.model.generated.NotificationRead;
 import io.airbyte.api.model.generated.NotificationTrigger;
 import io.airbyte.api.model.generated.NotificationWebhookConfigValidationRequestBody;
 import io.airbyte.api.model.generated.SlackNotificationConfiguration;
-import io.airbyte.commons.json.Jsons;
 import io.micronaut.context.annotation.Requires;
 import io.micronaut.context.env.Environment;
 import io.micronaut.http.HttpRequest;
@@ -29,8 +28,8 @@ class NotificationApiTest extends BaseControllerTest {
     final String path = "/api/v1/notifications/try_webhook";
     testEndpointStatus(
         HttpRequest.POST(path,
-            Jsons.serialize(new NotificationWebhookConfigValidationRequestBody().notificationTrigger(NotificationTrigger.SYNC_SUCCESS)
-                .slackConfiguration(new SlackNotificationConfiguration().webhook("webhook")))),
+            new NotificationWebhookConfigValidationRequestBody().notificationTrigger(NotificationTrigger.SYNC_SUCCESS)
+                .slackConfiguration(new SlackNotificationConfiguration().webhook("webhook"))),
         HttpStatus.OK);
   }
 

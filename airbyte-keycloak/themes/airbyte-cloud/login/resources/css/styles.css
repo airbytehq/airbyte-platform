@@ -1,0 +1,77 @@
+#kc-social-providers ul {
+  justify-content: center;
+  flex-direction: row;
+}
+
+#kc-registration {
+  margin-top: var(--spacing-xl);
+  display: flex;
+  justify-content: center;
+}
+
+#kc-registration a {
+  border: none;
+}
+
+#kc-social-providers ul {
+  gap: var(--spacing-xl);
+}
+
+#kc-social-providers ul a {
+  border: none;
+  width: 24px;
+  height: 24px;
+  font-size: 0;
+  background-repeat: no-repeat;
+  background-size: contain;
+  padding: 0;
+}
+
+#kc-social-providers ul a#social-github {
+  background-image: url(../img/github-logo.svg);
+}
+
+#kc-social-providers ul a#social-google {
+  background-image: url(../img/google-logo.svg);
+}
+
+#kc-registration {
+  font-size: var(--font-size-sm);
+}
+
+#kc-registration a {
+  display: inline-block;
+  color: var(--color-grey-400);
+  border: 1px solid var(--color-grey-300);
+  border-radius: 6px;
+  padding: 8px 10px;
+  text-decoration: none;
+  font-size: var(--font-size-sm);
+  margin-left: var(--spacing-md);
+}
+
+#kc-page-title {
+  display: block;
+  font-weight: 500;
+  font-size: 16px;
+  text-align: center;
+  margin-top: 0;
+  margin-bottom: var(--spacing-2xl);
+}
+
+.ab-terms-of-service {
+  color: var(--color-text);
+  font-size: var(--font-size-md);
+}
+
+.ab-login-page .ab-terms-of-service a:link,
+.ab-login-page .ab-terms-of-service a:visited {
+  color: var(--color-blue-400);
+  text-decoration: none;
+}
+
+.ab-login-page .checkbox label {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-sm);
+}

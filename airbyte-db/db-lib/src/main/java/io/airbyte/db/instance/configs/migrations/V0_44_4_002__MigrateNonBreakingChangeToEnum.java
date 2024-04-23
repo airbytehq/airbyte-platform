@@ -93,7 +93,9 @@ public class V0_44_4_002__MigrateNonBreakingChangeToEnum extends BaseJavaMigrati
   private static void migrateExistingDisableConnection(final DSLContext ctx) {
     final List<UUID> disabledConnectionIds = ctx.select(ID_COLUMN)
         .from(CONNECTION_TABLE)
-        .where(DSL.field("non_breaking_change_preference").eq("disable"))
+        .where(DSL.field("non_breaking_change_preference")
+            .eq(DSL.cast("disable",
+                SQLDataType.VARCHAR.asEnumDataType(V0_40_11_002__AddSchemaChangeColumnsToConnections.NonBreakingChangePreferenceType.class))))
         .stream()
         .map(record -> record.getValue(ID_COLUMN))
         .toList();

@@ -10,6 +10,8 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 
+import io.airbyte.api.client.WorkloadApiClient;
+import io.airbyte.commons.envvar.EnvVar;
 import io.airbyte.commons.features.FeatureFlags;
 import io.airbyte.commons.workers.config.WorkerConfigs;
 import io.airbyte.commons.workers.config.WorkerConfigsProvider;
@@ -28,7 +30,6 @@ import io.airbyte.workers.sync.NormalizationLauncherWorker;
 import io.airbyte.workers.sync.ReplicationLauncherWorker;
 import io.airbyte.workers.workload.JobOutputDocStore;
 import io.airbyte.workers.workload.WorkloadIdGenerator;
-import io.airbyte.workload.api.client.generated.WorkloadApi;
 import io.micronaut.context.annotation.Bean;
 import io.micronaut.context.annotation.Replaces;
 import io.micronaut.context.env.Environment;
@@ -68,7 +69,7 @@ class ContainerOrchestratorFactoryTest {
   JobRunConfig jobRunConfig;
 
   @Inject
-  WorkloadApi workloadApi;
+  WorkloadApiClient workloadApiClient;
 
   @Inject
   ReplicationWorkerFactory replicationWorkerFactory;
@@ -78,7 +79,7 @@ class ContainerOrchestratorFactoryTest {
   // Tests will fail if this is uncommented, due to how the implementation of the DocumentStoreClient
   // is being created
   // @Inject
-  // DocumentStoreClient documentStoreClient;
+  // DocumentStoreClient storageClient;
 
   // @Inject
   JobOutputDocStore jobOutputDocStore;
@@ -97,7 +98,7 @@ class ContainerOrchestratorFactoryTest {
   @Test
   void envConfigs() {
     // check one random environment variable to ensure the EnvConfigs was created correctly
-    assertEquals("/tmp/airbyte_local", envConfigs.getEnv(EnvConfigs.LOCAL_DOCKER_MOUNT));
+    assertEquals("/tmp/airbyte_local", envConfigs.getEnv(EnvVar.LOCAL_DOCKER_MOUNT));
   }
 
   @Test
@@ -123,29 +124,29 @@ class ContainerOrchestratorFactoryTest {
 
     final var repl = factory.jobOrchestrator(
         ReplicationLauncherWorker.REPLICATION, configDir, envConfigs, processFactory, workerConfigsProvider, jobRunConfig, replicationWorkerFactory,
-        asyncStateManager, workloadApi, new WorkloadIdGenerator(), false, jobOutputDocStore);
+        asyncStateManager, workloadApiClient, new WorkloadIdGenerator(), false, jobOutputDocStore);
     assertEquals("Replication", repl.getOrchestratorName());
 
     final var norm = factory.jobOrchestrator(
         NormalizationLauncherWorker.NORMALIZATION, configDir, envConfigs, processFactory, workerConfigsProvider, jobRunConfig,
         replicationWorkerFactory,
-        asyncStateManager, workloadApi, new WorkloadIdGenerator(), false, jobOutputDocStore);
+        asyncStateManager, workloadApiClient, new WorkloadIdGenerator(), false, jobOutputDocStore);
     assertEquals("Normalization", norm.getOrchestratorName());
 
     final var dbt = factory.jobOrchestrator(
         DbtLauncherWorker.DBT, configDir, envConfigs, processFactory, workerConfigsProvider, jobRunConfig,
-        replicationWorkerFactory, asyncStateManager, workloadApi, new WorkloadIdGenerator(), false, jobOutputDocStore);
+        replicationWorkerFactory, asyncStateManager, workloadApiClient, new WorkloadIdGenerator(), false, jobOutputDocStore);
     assertEquals("DBT Transformation", dbt.getOrchestratorName());
 
     final var noop = factory.jobOrchestrator(
         AsyncOrchestratorPodProcess.NO_OP, configDir, envConfigs, processFactory, workerConfigsProvider, jobRunConfig, replicationWorkerFactory,
-        asyncStateManager, workloadApi, new WorkloadIdGenerator(), false, jobOutputDocStore);
+        asyncStateManager, workloadApiClient, new WorkloadIdGenerator(), false, jobOutputDocStore);
     assertEquals("NO_OP", noop.getOrchestratorName());
 
     var caught = false;
     try {
       factory.jobOrchestrator("does not exist", configDir, envConfigs, processFactory, workerConfigsProvider, jobRunConfig, replicationWorkerFactory,
-          asyncStateManager, workloadApi, new WorkloadIdGenerator(), false, jobOutputDocStore);
+          asyncStateManager, workloadApiClient, new WorkloadIdGenerator(), false, jobOutputDocStore);
     } catch (final Exception e) {
       caught = true;
     }

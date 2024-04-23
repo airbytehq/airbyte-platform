@@ -68,8 +68,28 @@ public class LineGobbler implements VoidCallable {
    * @param mdcScopeBuilder mdc scope to be used during consumption
    */
   public static void gobble(final InputStream is, final Consumer<String> consumer, final String caller, final MdcScope.Builder mdcScopeBuilder) {
+    gobble(is, consumer, caller, mdcScopeBuilder, Executors.newSingleThreadExecutor());
+  }
+
+  /**
+   * Connect an input stream to be consumed by consumer with an {@link MdcScope}, caller label, and
+   * executor.
+   *
+   * Passing the executor lets you wait to ensure that all lines have been gobbled, since it happens
+   * asynchronously.
+   *
+   * @param is input stream
+   * @param consumer consumer
+   * @param caller name of caller
+   * @param mdcScopeBuilder mdc scope to be used during consumption
+   * @param executor executor to run gobbling
+   */
+  public static void gobble(final InputStream is,
+                            final Consumer<String> consumer,
+                            final String caller,
+                            final MdcScope.Builder mdcScopeBuilder,
+                            final ExecutorService executor) {
     if (is != null) {
-      final ExecutorService executor = Executors.newSingleThreadExecutor();
       final Map<String, String> mdc = MDC.getCopyOfContextMap();
       final var gobbler = new LineGobbler(is, consumer, executor, mdc, caller, mdcScopeBuilder);
       executor.submit(gobbler);
@@ -119,14 +139,6 @@ public class LineGobbler implements VoidCallable {
               final ExecutorService executor,
               final Map<String, String> mdc) {
     this(is, consumer, executor, mdc, GENERIC, MdcScope.DEFAULT_BUILDER);
-  }
-
-  LineGobbler(final InputStream is,
-              final Consumer<String> consumer,
-              final ExecutorService executor,
-              final Map<String, String> mdc,
-              final MdcScope.Builder mdcScopeBuilder) {
-    this(is, consumer, executor, mdc, GENERIC, mdcScopeBuilder);
   }
 
   LineGobbler(final InputStream is,

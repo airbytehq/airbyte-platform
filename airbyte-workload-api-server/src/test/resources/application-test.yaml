@@ -3,6 +3,14 @@ micronaut:
     enabled: false
   security:
     enabled: false
+  netty:
+    event-loops:
+      other:
+        num-threads: 1
+        prefer-native-transport: true
+  http:
+    client:
+      event-loop-group: other
 
 airbyte:
   flyway:
@@ -30,3 +38,5 @@ jooq:
 logger:
   levels:
     io.micronaut.context.condition: INFO
+    io.micronaut.data.query: TRACE
+    io.micronaut.http.client: TRACE

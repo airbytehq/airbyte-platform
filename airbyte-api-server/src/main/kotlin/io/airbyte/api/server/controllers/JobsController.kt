@@ -28,14 +28,14 @@ import io.airbyte.api.server.services.JobService
 import io.airbyte.api.server.services.UserService
 import io.airbyte.commons.enums.Enums
 import io.micronaut.http.annotation.Controller
+import jakarta.ws.rs.DELETE
+import jakarta.ws.rs.GET
+import jakarta.ws.rs.HeaderParam
+import jakarta.ws.rs.Path
+import jakarta.ws.rs.PathParam
+import jakarta.ws.rs.core.Response
 import java.time.OffsetDateTime
 import java.util.UUID
-import javax.ws.rs.DELETE
-import javax.ws.rs.GET
-import javax.ws.rs.HeaderParam
-import javax.ws.rs.Path
-import javax.ws.rs.PathParam
-import javax.ws.rs.core.Response
 
 @Controller(JOBS_PATH)
 open class JobsController(
@@ -273,7 +273,7 @@ open class JobsController(
     var field: OrderByFieldEnum = OrderByFieldEnum.CREATEDAT
     var method: OrderByMethodEnum = OrderByMethodEnum.ASC
     if (orderBy != null) {
-      val pattern: java.util.regex.Pattern = java.util.regex.Pattern.compile("([a-zA-Z0-9]+)|(ASC|DESC)")
+      val pattern: java.util.regex.Pattern = java.util.regex.Pattern.compile("([a-zA-Z0-9]+)\\|(ASC|DESC)")
       val matcher: java.util.regex.Matcher = pattern.matcher(orderBy)
       if (!matcher.find()) {
         throw BadRequestProblem("Invalid order by clause provided: $orderBy")

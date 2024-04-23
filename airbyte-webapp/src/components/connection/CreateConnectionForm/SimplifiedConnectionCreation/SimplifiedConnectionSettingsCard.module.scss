@@ -1,0 +1,28 @@
+@use "scss/colors";
+@use "scss/variables";
+
+.advancedSettings {
+  cursor: pointer;
+  background: transparent;
+  border: none;
+  text-decoration: underline;
+  color: colors.$blue;
+  font-size: variables.$font-size-md;
+  font-weight: 600;
+  padding: 0;
+  transition: color 0.2s ease-in;
+
+  &:hover,
+  &:focus {
+    color: colors.$blue-300;
+  }
+}
+
+.hideOverflow {
+  // keep the hr under advanced settings from overflowing
+  overflow-x: hidden;
+}
+
+.hidden {
+  display: none;
+}

@@ -1,11 +1,12 @@
 import classNames from "classnames";
-import React from "react";
+import React, { useState } from "react";
 
 import { Icon, IconType } from "components/ui/Icon";
 import { Text } from "components/ui/Text";
 
 import styles from "./Message.module.scss";
 import { Button, ButtonProps } from "../Button";
+import { FlexContainer } from "../Flex";
 
 export type MessageType = "warning" | "success" | "error" | "info";
 
@@ -23,6 +24,7 @@ export interface MessageProps {
   hideIcon?: boolean;
   iconOverride?: keyof typeof ICON_MAPPING;
   textClassName?: string;
+  isExpandable?: boolean;
 }
 
 const ICON_MAPPING: Readonly<Record<MessageType, IconType>> = {
@@ -65,14 +67,18 @@ export const Message: React.FC<React.PropsWithChildren<MessageProps>> = ({
   children,
   iconOverride,
   textClassName,
+  isExpandable = false,
 }) => {
+  const [isExpanded, setIsExpanded] = useState(false);
+
+  const handleToggleExpand = () => {
+    setIsExpanded((isExpanded) => !isExpanded);
+  };
+
+  const isRenderingChildren = children && (!isExpandable || isExpanded);
+
   const mainMessage = (
-    <div
-      className={classNames(className, styles.messageContainer, STYLES_BY_TYPE[type], {
-        [styles.messageContainerWithChildren]: Boolean(children),
-      })}
-      data-testid={testId}
-    >
+    <>
       {!hideIcon && (
         <div className={classNames(styles.iconContainer)}>
           <Icon type={iconOverride ? ICON_MAPPING[iconOverride] : ICON_MAPPING[type]} className={styles.messageIcon} />
@@ -86,38 +92,44 @@ export const Message: React.FC<React.PropsWithChildren<MessageProps>> = ({
           </Text>
         )}
       </div>
-      {onAction && (
-        <Button
-          type="button"
-          {...actionBtnProps}
-          variant="primaryDark"
-          onClick={onAction}
-          data-testid={testId ? `${testId}-button` : undefined}
-        >
-          {actionBtnText}
-        </Button>
+      {(onAction || isExpandable || onClose) && (
+        <FlexContainer direction="row" alignItems="flex-end" className={styles.alignRightColumn}>
+          {onAction && (
+            <Button
+              type="button"
+              {...actionBtnProps}
+              variant="primaryDark"
+              onClick={onAction}
+              data-testid={testId ? `${testId}-button` : undefined}
+            >
+              {actionBtnText}
+            </Button>
+          )}
+          {isExpandable && (
+            <Button type="button" variant="clear" onClick={handleToggleExpand}>
+              <Icon color="affordance" type={isExpanded ? "chevronDown" : "chevronRight"} size="lg" />
+            </Button>
+          )}
+          {onClose && (
+            <Button type="button" variant="clear" onClick={onClose} size="xs" icon="cross" iconColor="affordance" />
+          )}
+        </FlexContainer>
       )}
-      {onClose && (
-        <Button
-          type="button"
-          variant="clear"
-          className={styles.closeButton}
-          onClick={onClose}
-          size="xs"
-          icon={<Icon type="cross" />}
-        />
-      )}
-    </div>
+    </>
   );
 
-  if (!children) {
-    return mainMessage;
-  }
-
   return (
-    <div>
-      {mainMessage}
-      <div className={classNames(styles.childrenContainer, childrenClassName, STYLES_BY_TYPE[type])}>{children}</div>
-    </div>
+    <FlexContainer
+      direction="column"
+      className={classNames(className, styles.messageContainer, STYLES_BY_TYPE[type])}
+      data-testid={testId}
+    >
+      <FlexContainer alignItems="flex-start" gap="xs">
+        {mainMessage}
+      </FlexContainer>
+      {isRenderingChildren && (
+        <div className={classNames(styles.childrenContainer, childrenClassName, STYLES_BY_TYPE[type])}>{children}</div>
+      )}
+    </FlexContainer>
   );
 };

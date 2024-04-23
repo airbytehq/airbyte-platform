@@ -8,6 +8,7 @@ import {
   useListJobsForConnectionStatus,
   jobsKeys,
   prependArtificialJobToStatus,
+  useRefreshConnectionStreams,
   useResetConnectionStream,
 } from "core/api";
 import {
@@ -26,6 +27,8 @@ interface ConnectionSyncContext {
   jobSyncRunning: boolean;
   cancelJob: (() => Promise<void>) | undefined;
   cancelStarting: boolean;
+  refreshStreams: (streams?: ConnectionStream[]) => Promise<void>;
+  refreshStarting: boolean;
   resetStreams: (streams?: ConnectionStream[]) => Promise<void>;
   resetStarting: boolean;
   jobResetRunning: boolean;
@@ -68,6 +71,10 @@ const useConnectionSyncContextInit = (connection: WebBackendConnectionRead): Con
 
   const { mutateAsync: doResetConnection, isLoading: resetStarting } = useResetConnection();
   const { mutateAsync: resetStream } = useResetConnectionStream(connection.connectionId);
+  const { mutateAsync: refreshStreams, isLoading: refreshStarting } = useRefreshConnectionStreams(
+    connection.connectionId
+  );
+
   const resetStreams = useCallback(
     async (streams?: ConnectionStream[]) => {
       if (streams) {
@@ -99,6 +106,8 @@ const useConnectionSyncContextInit = (connection: WebBackendConnectionRead): Con
     jobSyncRunning,
     cancelJob,
     cancelStarting,
+    refreshStreams,
+    refreshStarting,
     resetStreams,
     resetStarting,
     jobResetRunning,

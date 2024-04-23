@@ -97,7 +97,7 @@ public class SecretsPersistenceConfigApiController implements SecretsPersistence
   @Post("/get")
   @Secured({ADMIN})
   @Override
-  public SecretPersistenceConfig getSecretsPersistenceConfig(final SecretPersistenceConfigGetRequestBody requestBody) {
+  public SecretPersistenceConfig getSecretsPersistenceConfig(@Body final SecretPersistenceConfigGetRequestBody requestBody) {
     if (Objects.requireNonNull(requestBody.getScopeType()) == io.airbyte.api.model.generated.ScopeType.WORKSPACE) {
       ApiHelper.execute(() -> {
         throw new BadObjectSchemaKnownException(

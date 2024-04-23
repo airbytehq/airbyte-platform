@@ -4,25 +4,31 @@
 
 package io.airbyte.workers.process;
 
+import static io.airbyte.commons.workers.config.WorkerConfigs.DEFAULT_JOB_KUBE_BUSYBOX_IMAGE;
+
 import io.airbyte.commons.io.IOs;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.config.ResourceRequirements;
 import io.airbyte.config.TolerationPOJO;
-import io.airbyte.config.helpers.LogClientSingleton;
 import io.airbyte.metrics.lib.MetricAttribute;
 import io.airbyte.metrics.lib.MetricClient;
 import io.airbyte.metrics.lib.MetricTags;
 import io.airbyte.metrics.lib.OssMetricsRegistry;
-import io.airbyte.workers.storage.DocumentStoreClient;
+import io.airbyte.workers.storage.StorageClient;
 import io.airbyte.workers.workload.JobOutputDocStore;
 import io.airbyte.workers.workload.exception.DocStoreAccessException;
+import io.fabric8.kubernetes.api.model.CapabilitiesBuilder;
 import io.fabric8.kubernetes.api.model.ContainerBuilder;
 import io.fabric8.kubernetes.api.model.ContainerPort;
 import io.fabric8.kubernetes.api.model.DeletionPropagation;
 import io.fabric8.kubernetes.api.model.EnvVar;
 import io.fabric8.kubernetes.api.model.Pod;
 import io.fabric8.kubernetes.api.model.PodBuilder;
+import io.fabric8.kubernetes.api.model.PodSecurityContextBuilder;
+import io.fabric8.kubernetes.api.model.SeccompProfileBuilder;
 import io.fabric8.kubernetes.api.model.SecretVolumeSourceBuilder;
+import io.fabric8.kubernetes.api.model.SecurityContext;
+import io.fabric8.kubernetes.api.model.SecurityContextBuilder;
 import io.fabric8.kubernetes.api.model.StatusDetails;
 import io.fabric8.kubernetes.api.model.Toleration;
 import io.fabric8.kubernetes.api.model.TolerationBuilder;
@@ -45,6 +51,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
@@ -72,7 +79,7 @@ public class AsyncOrchestratorPodProcess implements KubePod {
   private static final String JAVA_OOM_EXCEPTION_STRING = "java.lang.OutOfMemoryError";
 
   private final KubePodInfo kubePodInfo;
-  private final DocumentStoreClient documentStoreClient;
+  private final StorageClient storageClient;
   private final KubernetesClient kubernetesClient;
   private final String secretName;
   private final String secretMountPath;
@@ -92,7 +99,7 @@ public class AsyncOrchestratorPodProcess implements KubePod {
 
   public AsyncOrchestratorPodProcess(
                                      final KubePodInfo kubePodInfo,
-                                     final DocumentStoreClient documentStoreClient,
+                                     final StorageClient storageClient,
                                      final KubernetesClient kubernetesClient,
                                      final String secretName,
                                      final String secretMountPath,
@@ -109,7 +116,7 @@ public class AsyncOrchestratorPodProcess implements KubePod {
                                      final JobOutputDocStore jobOutputDocStore,
                                      final String workloadId) {
     this.kubePodInfo = kubePodInfo;
-    this.documentStoreClient = documentStoreClient;
+    this.storageClient = storageClient;
     this.kubernetesClient = kubernetesClient;
     this.secretName = secretName;
     this.secretMountPath = secretMountPath;
@@ -392,7 +399,7 @@ public class AsyncOrchestratorPodProcess implements KubePod {
   }
 
   private Optional<String> getDocument(final String key) {
-    return documentStoreClient.read(getInfo().namespace() + "/" + getInfo().name() + "/" + key);
+    return Optional.ofNullable(storageClient.read(getInfo().namespace() + "/" + getInfo().name() + "/" + key));
   }
 
   private boolean checkStatus(final AsyncKubePodStatus status) {
@@ -464,7 +471,7 @@ public class AsyncOrchestratorPodProcess implements KubePod {
           .withMountPath(secretMountPath)
           .build());
 
-      envVars.add(new EnvVar(LogClientSingleton.GOOGLE_APPLICATION_CREDENTIALS, googleApplicationCredentials, null));
+      envVars.add(new EnvVar(io.airbyte.commons.envvar.EnvVar.GOOGLE_APPLICATION_CREDENTIALS.name(), googleApplicationCredentials, null));
 
     }
 
@@ -489,9 +496,11 @@ public class AsyncOrchestratorPodProcess implements KubePod {
     final List<ContainerPort> containerPorts = KubePodProcess.createContainerPortList(portMap);
     containerPorts.add(new ContainerPort(serverPort, null, null, null, null));
 
+    final String initImageName = resolveInitContainerImageName();
+
     final var initContainer = new ContainerBuilder()
         .withName(KubePodProcess.INIT_CONTAINER_NAME)
-        .withImage("busybox:1.35")
+        .withImage(initImageName)
         .withVolumeMounts(volumeMounts)
         .withCommand(List.of(
             "sh",
@@ -514,6 +523,7 @@ public class AsyncOrchestratorPodProcess implements KubePod {
                           """,
                 KubePodProcess.CONFIG_DIR,
                 KubePodProcess.SUCCESS_FILE_NAME)))
+        .withSecurityContext(containerSecurityContext())
         .build();
 
     final var mainContainer = new ContainerBuilder()
@@ -524,6 +534,7 @@ public class AsyncOrchestratorPodProcess implements KubePod {
         .withEnv(envVars)
         .withPorts(containerPorts)
         .withVolumeMounts(volumeMounts)
+        .withSecurityContext(containerSecurityContext())
         .build();
 
     final Pod podToCreate = new PodBuilder()
@@ -544,6 +555,7 @@ public class AsyncOrchestratorPodProcess implements KubePod {
         .withVolumes(volumes)
         .withNodeSelector(nodeSelectors)
         .withTolerations(buildPodTolerations(tolerations))
+        .withSecurityContext(new PodSecurityContextBuilder().withFsGroup(1000L).build())
         .endSpec()
         .build();
 
@@ -581,6 +593,11 @@ public class AsyncOrchestratorPodProcess implements KubePod {
     updatedFileMap.put(KUBE_POD_INFO, Jsons.serialize(kubePodInfo));
 
     copyFilesToKubeConfigVolumeMain(createdPod, updatedFileMap);
+  }
+
+  private String resolveInitContainerImageName() {
+    final String initImageNameFromEnv = environmentVariables.get(io.airbyte.commons.envvar.EnvVar.JOB_KUBE_BUSYBOX_IMAGE.toString());
+    return Objects.requireNonNullElse(initImageNameFromEnv, DEFAULT_JOB_KUBE_BUSYBOX_IMAGE);
   }
 
   private Toleration[] buildPodTolerations(final List<TolerationPOJO> tolerations) {
@@ -639,6 +656,26 @@ public class AsyncOrchestratorPodProcess implements KubePod {
         }
       }
     }
+  }
+
+  /**
+   * Returns a SecurityContext specific to containers.
+   *
+   * @return SecurityContext if ROOTLESS_WORKLOAD is enabled, null otherwise.
+   */
+  private SecurityContext containerSecurityContext() {
+    if (Boolean.parseBoolean(io.airbyte.commons.envvar.EnvVar.ROOTLESS_WORKLOAD.fetch("false"))) {
+      return new SecurityContextBuilder()
+          .withAllowPrivilegeEscalation(false)
+          .withRunAsGroup(1000L)
+          .withRunAsUser(1000L)
+          .withReadOnlyRootFilesystem(false)
+          .withRunAsNonRoot(true)
+          .withCapabilities(new CapabilitiesBuilder().addAllToDrop(List.of("ALL")).build())
+          .withSeccompProfile(new SeccompProfileBuilder().withType("RuntimeDefault").build())
+          .build();
+    }
+    return null;
   }
 
 }

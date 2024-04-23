@@ -21,6 +21,7 @@ import io.airbyte.commons.auth.config.AirbyteKeycloakConfiguration;
 import io.airbyte.commons.license.ActiveAirbyteLicense;
 import io.airbyte.commons.license.AirbyteLicense;
 import io.airbyte.commons.license.AirbyteLicense.LicenseType;
+import io.airbyte.commons.version.AirbyteVersion;
 import io.airbyte.config.Configs.AirbyteEdition;
 import io.airbyte.config.Organization;
 import io.airbyte.config.StandardWorkspace;
@@ -92,6 +93,7 @@ class InstanceConfigurationHandlerTest {
 
     final InstanceConfigurationResponse expected = new InstanceConfigurationResponse()
         .edition(isPro ? EditionEnum.PRO : EditionEnum.COMMUNITY)
+        .version("0.50.1")
         .webappUrl(WEBAPP_URL)
         .licenseType(isPro ? LicenseTypeEnum.PRO : null)
         .auth(isPro ? new AuthConfiguration()
@@ -126,6 +128,7 @@ class InstanceConfigurationHandlerTest {
         WEBAPP_URL,
         envValue,
         AirbyteEdition.COMMUNITY,
+        new AirbyteVersion("0.50.1"),
         Optional.empty(),
         Optional.empty(),
         mWorkspacePersistence,
@@ -185,6 +188,7 @@ class InstanceConfigurationHandlerTest {
 
     final InstanceConfigurationResponse expected = new InstanceConfigurationResponse()
         .edition(EditionEnum.PRO)
+        .version("0.50.1")
         .webappUrl(WEBAPP_URL)
         .licenseType(LicenseTypeEnum.PRO)
         .auth(new AuthConfiguration()
@@ -258,6 +262,7 @@ class InstanceConfigurationHandlerTest {
         WEBAPP_URL,
         "logging",
         isPro ? AirbyteEdition.PRO : AirbyteEdition.COMMUNITY,
+        new AirbyteVersion("0.50.1"),
         isPro ? Optional.of(keycloakConfiguration) : Optional.empty(),
         isPro ? Optional.of(activeAirbyteLicense) : Optional.empty(),
         mWorkspacePersistence,

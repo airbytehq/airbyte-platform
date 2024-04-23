@@ -38,9 +38,7 @@ public class RbacRoleHelper {
     this.permissionPersistence = permissionPersistence;
   }
 
-  public Collection<String> getRbacRoles(final String authUserId, final HttpRequest<?> request) {
-    final Map<String, String> headerMap = request.getHeaders().asMap(String.class, String.class);
-
+  public Collection<String> getRbacRoles(final String authUserId, Map<String, String> headerMap) {
     final List<UUID> workspaceIds = headerResolver.resolveWorkspace(headerMap);
     final List<UUID> organizationIds = headerResolver.resolveOrganization(headerMap);
     final Set<String> targetAuthUserIds = headerResolver.resolveAuthUserIds(headerMap);
@@ -66,6 +64,11 @@ public class RbacRoleHelper {
     }
 
     return roles;
+  }
+
+  public Collection<String> getRbacRoles(final String authUserId, final HttpRequest<?> request) {
+    final Map<String, String> headerMap = request.getHeaders().asMap(String.class, String.class);
+    return getRbacRoles(authUserId, headerMap);
   }
 
   public static Set<String> getInstanceAdminRoles() {

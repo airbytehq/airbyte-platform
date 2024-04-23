@@ -3,6 +3,7 @@ import { useIntl } from "react-intl";
 
 import { Option } from "components/ui/ListBox";
 
+import { ConnectorIds } from "area/connector/utils";
 import { ConnectionScheduleDataBasicSchedule, WebBackendConnectionRead } from "core/api/types/AirbyteClient";
 
 export const BASIC_FREQUENCY_DEFAULT_VALUE: ConnectionScheduleDataBasicSchedule = { units: 24, timeUnit: "hours" };
@@ -33,6 +34,10 @@ export const frequencyConfig: ConnectionScheduleDataBasicSchedule[] = [
   },
   BASIC_FREQUENCY_DEFAULT_VALUE,
 ];
+
+export const SOURCE_SPECIFIC_FREQUENCY_DEFAULT: Record<string, ConnectionScheduleDataBasicSchedule> = {
+  [ConnectorIds.Sources.MongoDb]: { units: 6, timeUnit: "hours" },
+};
 
 export const useBasicFrequencyDropdownData = (
   additionalFrequency: WebBackendConnectionRead["scheduleData"]

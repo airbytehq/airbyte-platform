@@ -3,11 +3,10 @@ import { FormattedMessage } from "react-intl";
 import { Box } from "components/ui/Box";
 import { Button } from "components/ui/Button";
 import { CopyButton } from "components/ui/CopyButton";
-import { Icon } from "components/ui/Icon";
 import { Message } from "components/ui/Message";
 import { ModalBody, ModalFooter } from "components/ui/Modal";
 
-import { FILE_TYPE_DOWNLOAD, downloadFile, fileizeString } from "core/utils/file";
+import { downloadFile, FILE_TYPE_DOWNLOAD, fileizeString } from "core/utils/file";
 
 import styles from "./TokenModal.module.scss";
 
@@ -35,7 +34,7 @@ export const TokenModalBody: React.FC<{ token: string }> = ({ token }) => {
         <CopyButton content={token}>
           <FormattedMessage id="copyButton.title" />
         </CopyButton>
-        <Button onClick={downloadFileWithToken} icon={<Icon type="download" size="xs" />}>
+        <Button onClick={downloadFileWithToken} icon="download" iconSize="xs">
           <FormattedMessage id="settings.applications.token.download" />
         </Button>
       </ModalFooter>

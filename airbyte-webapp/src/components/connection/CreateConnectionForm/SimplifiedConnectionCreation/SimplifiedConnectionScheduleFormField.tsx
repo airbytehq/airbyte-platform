@@ -32,21 +32,24 @@ import { useConnectionFormService } from "hooks/services/ConnectionForm/Connecti
 import { InputContainer } from "./InputContainer";
 import styles from "./SimplifiedConnectionScheduleFormField.module.scss";
 
-export const SimplifiedConnectionScheduleFormField = () => {
+export const SimplifiedConnectionScheduleFormField: React.FC<{ disabled: boolean }> = ({ disabled }) => {
   const watchedScheduleType = useWatch<FormConnectionFormValues>({ name: "scheduleType" });
 
   return (
     <>
-      <SimplfieidScheduleTypeFormControl />
-      {watchedScheduleType === ConnectionScheduleType.basic && <SimplifiedBasicScheduleFormControl />}
-      {watchedScheduleType === ConnectionScheduleType.cron && <SimplifiedCronScheduleFormControl />}
+      <SimplifiedScheduleTypeFormControl disabled={disabled} />
+      {watchedScheduleType === ConnectionScheduleType.basic && (
+        <SimplifiedBasicScheduleFormControl disabled={disabled} />
+      )}
+      {watchedScheduleType === ConnectionScheduleType.cron && <SimplifiedCronScheduleFormControl disabled={disabled} />}
     </>
   );
 };
 
-const SimplfieidScheduleTypeFormControl = () => {
+const SimplifiedScheduleTypeFormControl: React.FC<{ disabled: boolean }> = ({ disabled }) => {
   const { formatMessage } = useIntl();
   const { setValue, control } = useFormContext<FormConnectionFormValues>();
+  const { defaultValues } = useFormState<FormConnectionFormValues>();
   const [controlId] = useState(`input-control-${uniqueId()}`);
 
   const scheduleTypeOptions: Array<Option<ConnectionScheduleType>> = [
@@ -74,19 +77,33 @@ const SimplfieidScheduleTypeFormControl = () => {
   ];
 
   const onScheduleTypeSelect = (value: ConnectionScheduleType): void => {
+    setValue("scheduleType", value, { shouldValidate: true });
+
     // reset scheduleData since we don't need it for manual
     if (value === ConnectionScheduleType.manual) {
-      setValue("scheduleData", undefined, { shouldValidate: true });
+      setValue("scheduleData", undefined, { shouldValidate: true, shouldDirty: true });
       return;
     }
     // set default basic schedule
     if (value === ConnectionScheduleType.basic) {
-      setValue("scheduleData", { basicSchedule: BASIC_FREQUENCY_DEFAULT_VALUE }, { shouldValidate: true });
+      setValue(
+        "scheduleData",
+        // @ts-expect-error react-hook-form makes every value in defaultValues optional
+        // which doesn't match our types or usage
+        { basicSchedule: defaultValues?.scheduleData?.basicSchedule ?? BASIC_FREQUENCY_DEFAULT_VALUE },
+        { shouldValidate: true, shouldDirty: true }
+      );
       return;
     }
     // set default cron schedule
     if (value === ConnectionScheduleType.cron) {
-      setValue("scheduleData", { cron: CRON_DEFAULT_VALUE }, { shouldValidate: true });
+      setValue(
+        "scheduleData",
+        // @ts-expect-error react-hook-form makes every value in defaultValues optional
+        // which doesn't match our types or usage
+        { cron: defaultValues?.scheduleData?.cron ?? CRON_DEFAULT_VALUE },
+        { shouldValidate: true, shouldDirty: true }
+      );
     }
   };
 
@@ -99,7 +116,7 @@ const SimplfieidScheduleTypeFormControl = () => {
           <ControlLabels
             htmlFor={controlId}
             label={
-              <FlexContainer direction="column">
+              <FlexContainer direction="column" gap="sm">
                 <Text bold>
                   <FormattedMessage id="form.scheduleType" />
                 </Text>
@@ -109,12 +126,12 @@ const SimplfieidScheduleTypeFormControl = () => {
               </FlexContainer>
             }
           />
-          <InputContainer>
+          <InputContainer highlightAfterRedirect>
             <ListBox<ConnectionScheduleType>
+              isDisabled={disabled}
               id={controlId}
               options={scheduleTypeOptions}
               onSelect={(value) => {
-                field.onChange(value);
                 onScheduleTypeSelect(value);
               }}
               selectedValue={field.value}
@@ -127,7 +144,7 @@ const SimplfieidScheduleTypeFormControl = () => {
   );
 };
 
-const SimplifiedBasicScheduleFormControl: React.FC = () => {
+const SimplifiedBasicScheduleFormControl: React.FC<{ disabled: boolean }> = ({ disabled }) => {
   const { connection } = useConnectionFormService();
   const { setValue, control } = useFormContext<FormConnectionFormValues>();
   const [controlId] = useState(`input-control-${uniqueId()}`);
@@ -150,7 +167,7 @@ const SimplifiedBasicScheduleFormControl: React.FC = () => {
           <ControlLabels
             htmlFor={controlId}
             label={
-              <FlexContainer direction="column">
+              <FlexContainer direction="column" gap="sm">
                 <Text bold>
                   <FormattedMessage id="form.frequency" />
                 </Text>
@@ -162,6 +179,7 @@ const SimplifiedBasicScheduleFormControl: React.FC = () => {
           />
           <InputContainer>
             <ListBox<ConnectionScheduleDataBasicSchedule>
+              isDisabled={disabled}
               id={controlId}
               options={frequencies}
               onSelect={onBasicScheduleSelect}
@@ -175,7 +193,7 @@ const SimplifiedBasicScheduleFormControl: React.FC = () => {
   );
 };
 
-const SimplifiedCronScheduleFormControl: React.FC = () => {
+const SimplifiedCronScheduleFormControl: React.FC<{ disabled: boolean }> = ({ disabled }) => {
   const [debouncedErrorMessage, setDebouncedErrorMessage] = useState("");
   const [debouncedCronDescription, setDebouncedCronDescription] = useState("");
   const [controlId] = useState(`input-control-${uniqueId()}`);
@@ -218,7 +236,7 @@ const SimplifiedCronScheduleFormControl: React.FC = () => {
           <ControlLabels
             htmlFor={controlId}
             label={
-              <FlexContainer direction="column">
+              <FlexContainer direction="column" gap="sm">
                 <Text bold>
                   <FormattedMessage id="form.cronExpression" />
                 </Text>
@@ -232,6 +250,7 @@ const SimplifiedCronScheduleFormControl: React.FC = () => {
             <FlexContainer alignItems="flex-start">
               <InputContainer>
                 <Input
+                  disabled={disabled}
                   id={controlId}
                   placeholder={formatMessage({
                     id: "form.cronExpression.placeholder",
@@ -242,6 +261,7 @@ const SimplifiedCronScheduleFormControl: React.FC = () => {
                 />
               </InputContainer>
               <ListBox
+                isDisabled={disabled}
                 options={cronTimeZones}
                 adaptiveWidth
                 selectedValue={cronTimeZone}

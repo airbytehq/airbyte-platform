@@ -13,10 +13,14 @@ import io.airbyte.validation.json.JsonValidationException
 import io.github.oshai.kotlinlogging.KotlinLogging
 import io.micronaut.context.annotation.Requires
 import jakarta.inject.Singleton
+import java.time.Duration
+import java.time.Instant
 import java.util.Optional
 import java.util.UUID
 
 private val logger = KotlinLogging.logger {}
+
+private val EPHEMERAL_SECRET_LIFE_DURATION = Duration.ofHours(2)
 
 /**
  * This class takes secrets as arguments but never returns a secrets as return values (even the ones
@@ -178,6 +182,8 @@ open class SecretsRepositoryWriter(
    * Takes in a connector configuration with secrets. Saves the secrets and returns the configuration
    * object with the secrets removed and replaced with pointers to the environment secret persistence.
    *
+   * This method is intended for ephemeral secrets, hence the lack of workspace.
+   *
    * @param fullConfig full config
    * @param spec connector specification
    * @return partial config
@@ -186,12 +192,20 @@ open class SecretsRepositoryWriter(
     fullConfig: JsonNode,
     spec: ConnectorSpecification,
   ): JsonNode {
-    return splitSecretConfig(NO_WORKSPACE, fullConfig, spec, secretPersistence)
+    return splitSecretConfig(
+      NO_WORKSPACE,
+      fullConfig,
+      spec,
+      secretPersistence,
+      Instant.now().plus(EPHEMERAL_SECRET_LIFE_DURATION),
+    )
   }
 
   /**
    * Takes in a connector configuration with secrets. Saves the secrets and returns the configuration
    * object with the secrets removed and replaced with pointers to the provided runtime secret persistence.
+   *
+   * This method is intended for ephemeral secrets, hence the lack of workspace.
    *
    * @param fullConfig full config
    * @param spec connector specification
@@ -203,7 +217,13 @@ open class SecretsRepositoryWriter(
     spec: ConnectorSpecification,
     runtimeSecretPersistence: RuntimeSecretPersistence,
   ): JsonNode {
-    return splitSecretConfig(NO_WORKSPACE, fullConfig, spec, runtimeSecretPersistence)
+    return splitSecretConfig(
+      NO_WORKSPACE,
+      fullConfig,
+      spec,
+      runtimeSecretPersistence,
+      Instant.now().plus(EPHEMERAL_SECRET_LIFE_DURATION),
+    )
   }
 
   private fun splitSecretConfig(
@@ -211,6 +231,7 @@ open class SecretsRepositoryWriter(
     fullConfig: JsonNode,
     spec: ConnectorSpecification,
     secretPersistence: SecretPersistence,
+    expireTime: Instant? = null,
   ): JsonNode {
     val splitSecretConfig: SplitSecretConfig =
       SecretsHelpers.splitConfig(
@@ -219,8 +240,9 @@ open class SecretsRepositoryWriter(
         spec.connectionSpecification,
         secretPersistence,
       )
+    // modify this to add expire time
     splitSecretConfig.getCoordinateToPayload().forEach { (coordinate: SecretCoordinate, payload: String) ->
-      secretPersistence.write(coordinate, payload)
+      secretPersistence.writeWithExpiry(coordinate, payload, expireTime)
     }
     return splitSecretConfig.partialConfig
   }

@@ -6,6 +6,9 @@ package io.airbyte.server.apis.publicapi.controllers
 
 import com.fasterxml.jackson.databind.node.ObjectNode
 import io.airbyte.api.model.generated.PermissionType
+import io.airbyte.commons.server.authorization.ApiAuthorizationHelper
+import io.airbyte.commons.server.authorization.Scope
+import io.airbyte.commons.server.errors.problems.UnprocessableEntityProblem
 import io.airbyte.commons.server.scheduling.AirbyteTaskExecutors
 import io.airbyte.commons.server.support.CurrentUserService
 import io.airbyte.public_api.generated.PublicSourcesApi
@@ -14,8 +17,6 @@ import io.airbyte.public_api.model.generated.SourceCreateRequest
 import io.airbyte.public_api.model.generated.SourcePatchRequest
 import io.airbyte.public_api.model.generated.SourcePutRequest
 import io.airbyte.server.apis.publicapi.apiTracking.TrackingHelper
-import io.airbyte.server.apis.publicapi.authorization.AirbyteApiAuthorizationHelper
-import io.airbyte.server.apis.publicapi.authorization.Scope
 import io.airbyte.server.apis.publicapi.constants.DELETE
 import io.airbyte.server.apis.publicapi.constants.GET
 import io.airbyte.server.apis.publicapi.constants.PATCH
@@ -27,16 +28,15 @@ import io.airbyte.server.apis.publicapi.constants.SOURCE_TYPE
 import io.airbyte.server.apis.publicapi.helpers.getActorDefinitionIdFromActorName
 import io.airbyte.server.apis.publicapi.helpers.removeSourceTypeNode
 import io.airbyte.server.apis.publicapi.mappers.SOURCE_NAME_TO_DEFINITION_ID
-import io.airbyte.server.apis.publicapi.problems.UnprocessableEntityProblem
 import io.airbyte.server.apis.publicapi.services.SourceService
 import io.micronaut.http.annotation.Controller
 import io.micronaut.http.annotation.Patch
 import io.micronaut.scheduling.annotation.ExecuteOn
 import io.micronaut.security.annotation.Secured
 import io.micronaut.security.rules.SecurityRule
+import jakarta.ws.rs.Path
+import jakarta.ws.rs.core.Response
 import java.util.UUID
-import javax.ws.rs.Path
-import javax.ws.rs.core.Response
 
 // Marked as open because when not marked, micronaut failed to start up because generated beans couldn't extend this one since it was "final"
 @Controller(SOURCES_PATH)
@@ -44,13 +44,13 @@ import javax.ws.rs.core.Response
 open class SourcesController(
   private val sourceService: SourceService,
   private val trackingHelper: TrackingHelper,
-  private val airbyteApiAuthorizationHelper: AirbyteApiAuthorizationHelper,
+  private val apiAuthorizationHelper: ApiAuthorizationHelper,
   private val currentUserService: CurrentUserService,
 ) : PublicSourcesApi {
-  @ExecuteOn(AirbyteTaskExecutors.IO)
+  @ExecuteOn(AirbyteTaskExecutors.PUBLIC_API)
   override fun publicCreateSource(sourceCreateRequest: SourceCreateRequest): Response {
     val userId: UUID = currentUserService.currentUser.userId
-    airbyteApiAuthorizationHelper.checkWorkspacePermissions(
+    apiAuthorizationHelper.checkWorkspacePermissions(
       listOf(sourceCreateRequest.workspaceId.toString()),
       Scope.WORKSPACE,
       userId,
@@ -102,10 +102,10 @@ open class SourcesController(
       .build()
   }
 
-  @ExecuteOn(AirbyteTaskExecutors.IO)
+  @ExecuteOn(AirbyteTaskExecutors.PUBLIC_API)
   override fun publicDeleteSource(sourceId: UUID): Response {
     val userId: UUID = currentUserService.currentUser.userId
-    airbyteApiAuthorizationHelper.checkWorkspacePermissions(
+    apiAuthorizationHelper.checkWorkspacePermissions(
       listOf(sourceId.toString()),
       Scope.SOURCE,
       userId,
@@ -135,10 +135,10 @@ open class SourcesController(
       .build()
   }
 
-  @ExecuteOn(AirbyteTaskExecutors.IO)
+  @ExecuteOn(AirbyteTaskExecutors.PUBLIC_API)
   override fun publicGetSource(sourceId: UUID): Response {
     val userId: UUID = currentUserService.currentUser.userId
-    airbyteApiAuthorizationHelper.checkWorkspacePermissions(
+    apiAuthorizationHelper.checkWorkspacePermissions(
       listOf(sourceId.toString()),
       Scope.SOURCE,
       userId,
@@ -168,10 +168,10 @@ open class SourcesController(
       .build()
   }
 
-  @ExecuteOn(AirbyteTaskExecutors.IO)
+  @ExecuteOn(AirbyteTaskExecutors.PUBLIC_API)
   override fun initiateOAuth(initiateOauthRequest: InitiateOauthRequest): Response {
     val userId: UUID = currentUserService.currentUser.userId
-    airbyteApiAuthorizationHelper.checkWorkspacePermissions(
+    apiAuthorizationHelper.checkWorkspacePermissions(
       listOf(initiateOauthRequest.workspaceId.toString()),
       Scope.WORKSPACE,
       userId,
@@ -180,7 +180,7 @@ open class SourcesController(
     return sourceService.controllerInitiateOAuth(initiateOauthRequest)
   }
 
-  @ExecuteOn(AirbyteTaskExecutors.IO)
+  @ExecuteOn(AirbyteTaskExecutors.PUBLIC_API)
   override fun listSources(
     workspaceIds: MutableList<UUID>?,
     includeDeleted: Boolean?,
@@ -188,8 +188,8 @@ open class SourcesController(
     offset: Int?,
   ): Response {
     val userId: UUID = currentUserService.currentUser.userId
-    airbyteApiAuthorizationHelper.checkWorkspacePermissions(
-      workspaceIds?.map { toString() } ?: emptyList(),
+    apiAuthorizationHelper.checkWorkspacePermissions(
+      workspaceIds?.map { it.toString() } ?: emptyList(),
       Scope.WORKSPACES,
       userId,
       PermissionType.WORKSPACE_READER,
@@ -219,13 +219,13 @@ open class SourcesController(
 
   @Patch
   @Path("/{sourceId}")
-  @ExecuteOn(AirbyteTaskExecutors.IO)
+  @ExecuteOn(AirbyteTaskExecutors.PUBLIC_API)
   override fun patchSource(
     sourceId: UUID,
     sourcePatchRequest: SourcePatchRequest,
   ): Response {
     val userId: UUID = currentUserService.currentUser.userId
-    airbyteApiAuthorizationHelper.checkWorkspacePermissions(
+    apiAuthorizationHelper.checkWorkspacePermissions(
       listOf(sourceId.toString()),
       Scope.SOURCE,
       userId,
@@ -259,13 +259,13 @@ open class SourcesController(
   }
 
   @Path("/{sourceId}")
-  @ExecuteOn(AirbyteTaskExecutors.IO)
+  @ExecuteOn(AirbyteTaskExecutors.PUBLIC_API)
   override fun putSource(
     sourceId: UUID,
     sourcePutRequest: SourcePutRequest,
   ): Response {
     val userId: UUID = currentUserService.currentUser.userId
-    airbyteApiAuthorizationHelper.checkWorkspacePermissions(
+    apiAuthorizationHelper.checkWorkspacePermissions(
       listOf(sourceId.toString()),
       Scope.SOURCE,
       userId,

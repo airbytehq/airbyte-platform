@@ -8,6 +8,7 @@ import { Icon } from "components/ui/Icon";
 import { Text } from "components/ui/Text";
 import { Tooltip } from "components/ui/Tooltip";
 
+import { Action, Namespace, useAnalyticsService } from "core/services/analytics";
 import { links } from "core/utils/links";
 import { useConnectorBuilderFormState } from "services/connectorBuilder/ConnectorBuilderStateService";
 
@@ -27,14 +28,30 @@ interface SidebarProps {
 }
 
 export const Sidebar: React.FC<React.PropsWithChildren<SidebarProps>> = ({ className, yamlSelected, children }) => {
-  const { toggleUI } = useConnectorBuilderFormState();
+  const analyticsService = useAnalyticsService();
+  const { toggleUI, isResolving } = useConnectorBuilderFormState();
   const formValues = useBuilderWatch("formValues");
   const showSavingIndicator = yamlSelected || formValues.streams.length > 0;
-  const OnUiToggleClick = () => toggleUI(yamlSelected ? "ui" : "yaml");
+  const OnUiToggleClick = () => {
+    toggleUI(yamlSelected ? "ui" : "yaml");
+    analyticsService.track(Namespace.CONNECTOR_BUILDER, Action.TOGGLE_UI_YAML, {
+      actionDescription: "User clicked the UI | YAML toggle button",
+      current_view: yamlSelected ? "yaml" : "ui",
+      new_view: yamlSelected ? "ui" : "yaml",
+    });
+  };
 
   return (
     <FlexContainer direction="column" alignItems="stretch" gap="xl" className={classnames(className, styles.container)}>
-      <UiYamlToggleButton yamlSelected={yamlSelected} onClick={OnUiToggleClick} />
+      <UiYamlToggleButton
+        yamlSelected={yamlSelected}
+        onClick={OnUiToggleClick}
+        size="sm"
+        disabled={yamlSelected && isResolving}
+        tooltip={
+          yamlSelected && isResolving ? <FormattedMessage id="connectorBuilder.resolvingStreamList" /> : undefined
+        }
+      />
 
       <FlexContainer direction="column" alignItems="center">
         <ConnectorImage />

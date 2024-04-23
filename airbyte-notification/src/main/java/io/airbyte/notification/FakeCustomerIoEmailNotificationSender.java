@@ -4,7 +4,6 @@
 
 package io.airbyte.notification;
 
-import io.micronaut.context.annotation.Requires;
 import jakarta.inject.Singleton;
 import lombok.extern.slf4j.Slf4j;
 
@@ -13,7 +12,6 @@ import lombok.extern.slf4j.Slf4j;
  */
 @Slf4j
 @Singleton
-@Requires(env = "local-test")
 public class FakeCustomerIoEmailNotificationSender extends CustomerIoEmailNotificationSender {
 
   FakeCustomerIoEmailNotificationSender() {

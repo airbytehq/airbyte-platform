@@ -79,15 +79,6 @@ class SlackNotificationClientTest {
   }
 
   @Test
-  void testBadResponseWrongNotificationMessage() throws IOException, InterruptedException {
-    final String message = UUID.randomUUID().toString();
-    server.createContext(TEST_PATH, new ServerHandler("Message mismatched"));
-    final SlackNotificationClient client =
-        new SlackNotificationClient(new SlackNotificationConfiguration().withWebhook(WEBHOOK_URL + server.getAddress().getPort() + TEST_PATH));
-    assertThrows(IOException.class, () -> client.notifyFailure(message));
-  }
-
-  @Test
   void testBadWebhookUrl() {
     final SlackNotificationClient client =
         new SlackNotificationClient(new SlackNotificationConfiguration().withWebhook(WEBHOOK_URL + server.getAddress().getPort() + "/bad"));
@@ -123,16 +114,6 @@ class SlackNotificationClientTest {
         .jobId(JOB_ID)
         .build();
     assertFalse(client.notifyJobFailure(summary, null));
-  }
-
-  @Test
-  void testNotify() throws IOException, InterruptedException {
-    final String message = UUID.randomUUID().toString();
-    server.createContext(TEST_PATH, new ServerHandler(message));
-    final SlackNotificationClient client =
-        new SlackNotificationClient(new SlackNotificationConfiguration().withWebhook(WEBHOOK_URL + server.getAddress().getPort() + TEST_PATH));
-    assertTrue(client.notifyFailure(message));
-    assertTrue(client.notifySuccess(message));
   }
 
   @Test
@@ -188,7 +169,14 @@ class SlackNotificationClientTest {
     server.createContext(TEST_PATH, new ServerHandler(expectedNotificationMessage));
     final SlackNotificationClient client =
         new SlackNotificationClient(new SlackNotificationConfiguration().withWebhook(WEBHOOK_URL + server.getAddress().getPort() + TEST_PATH));
-    assertTrue(client.notifyConnectionDisabled("", SOURCE_TEST, DESTINATION_TEST, "job description.", WORKSPACE_ID, CONNECTION_ID));
+    SyncSummary summary = SyncSummary.builder()
+        .workspace(WorkspaceInfo.builder().id(WORKSPACE_ID).build())
+        .destination(DestinationInfo.builder().name(DESTINATION_TEST).build())
+        .source(SourceInfo.builder().name(SOURCE_TEST).build())
+        .connection(ConnectionInfo.builder().id(CONNECTION_ID).name(CONNECTION_NAME).url("http://connection").build())
+        .errorMessage("job description.")
+        .build();
+    assertTrue(client.notifyConnectionDisabled(summary, ""));
   }
 
   @SuppressWarnings("LineLength")
@@ -208,7 +196,14 @@ class SlackNotificationClientTest {
     server.createContext(TEST_PATH, new ServerHandler(expectedNotificationWarningMessage));
     final SlackNotificationClient client =
         new SlackNotificationClient(new SlackNotificationConfiguration().withWebhook(WEBHOOK_URL + server.getAddress().getPort() + TEST_PATH));
-    assertTrue(client.notifyConnectionDisableWarning("", SOURCE_TEST, DESTINATION_TEST, "job description.", WORKSPACE_ID, CONNECTION_ID));
+    SyncSummary summary = SyncSummary.builder()
+        .workspace(WorkspaceInfo.builder().id(WORKSPACE_ID).build())
+        .destination(DestinationInfo.builder().name(DESTINATION_TEST).build())
+        .source(SourceInfo.builder().name(SOURCE_TEST).build())
+        .connection(ConnectionInfo.builder().id(CONNECTION_ID).name(CONNECTION_NAME).url("http://connection").build())
+        .errorMessage("job description.")
+        .build();
+    assertTrue(client.notifyConnectionDisableWarning(summary, ""));
   }
 
   @Test
@@ -364,7 +359,7 @@ class SlackNotificationClientTest {
         response = "No notification message or message missing `text` node";
         t.sendResponseHeaders(500, response.length());
       } else {
-        response = String.format("Wrong notification messge: %s", message.get("text").asText());
+        response = String.format("Wrong notification message: %s", message.get("text").asText());
         t.sendResponseHeaders(500, response.length());
       }
       final OutputStream os = t.getResponseBody();

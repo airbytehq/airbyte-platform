@@ -6,7 +6,7 @@ package io.airbyte.workers;
 
 import com.google.common.annotations.VisibleForTesting;
 import io.airbyte.config.Configs.WorkerEnvironment;
-import io.airbyte.workers.storage.DocumentStoreClient;
+import io.airbyte.workers.storage.StorageClient;
 import io.airbyte.workers.workload.JobOutputDocStore;
 import io.fabric8.kubernetes.client.KubernetesClient;
 import java.util.Map;
@@ -15,7 +15,7 @@ import java.util.Map;
  * Configuration for Container Orchestrator.
  *
  * @param namespace kube namespace
- * @param documentStoreClient document store client
+ * @param storageClient document store client
  * @param environmentVariables env variable
  * @param kubernetesClient kube clinet
  * @param secretName secret ?
@@ -31,7 +31,7 @@ import java.util.Map;
  */
 public record ContainerOrchestratorConfig(
                                           String namespace,
-                                          DocumentStoreClient documentStoreClient,
+                                          StorageClient storageClient,
                                           Map<String, String> environmentVariables,
                                           KubernetesClient kubernetesClient,
                                           String secretName,

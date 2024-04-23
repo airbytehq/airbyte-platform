@@ -7,7 +7,6 @@ package io.airbyte.metrics.lib;
 import com.google.common.annotations.VisibleForTesting;
 import com.timgroup.statsd.NonBlockingStatsDClientBuilder;
 import com.timgroup.statsd.StatsDClient;
-import io.airbyte.config.Configs;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import lombok.extern.slf4j.Slf4j;
@@ -20,7 +19,8 @@ import lombok.extern.slf4j.Slf4j;
  * <p>
  * Open source users are free to turn this on and consume the same metrics.
  * <p>
- * This class is intended to be used in conjunction with {@link Configs#getPublishMetrics()}.
+ * This class is intended to be used in conjunction with
+ * {@link io.airbyte.commons.envvar.EnvVar#PUBLISH_METRICS}.
  * <p>
  * Any {@link MetricAttribute}s provided with the metric data are sent as tags created by joining
  * the {@code key} and {@code value} property of each {@link MetricAttribute} with a
@@ -44,18 +44,18 @@ public class DogStatsDMetricClient implements MetricClient {
       throw new RuntimeException("You cannot initialize configuration more than once.");
     }
 
-    if (!config.publish) {
+    if (!config.getPublish()) {
       // do nothing if we do not want to publish. All metrics methods also do nothing.
       return;
     }
 
     log.info("Starting DogStatsD client..");
-    instancePublish = config.publish;
+    instancePublish = config.getPublish();
     statsDClient = new NonBlockingStatsDClientBuilder()
         .prefix(app.getApplicationName())
-        .hostname(config.ddAgentHost)
-        .port(Integer.parseInt(config.ddPort))
-        .constantTags(config.constantTags.toArray(new String[0]))
+        .hostname(config.getDdAgentHost())
+        .port(Integer.parseInt(config.getDdPort()))
+        .constantTags(config.getConstantTags().toArray(new String[0]))
         .build();
   }
 

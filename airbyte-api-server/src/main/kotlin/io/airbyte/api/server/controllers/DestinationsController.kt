@@ -27,8 +27,8 @@ import io.airbyte.api.server.services.DestinationService
 import io.airbyte.api.server.services.UserService
 import io.micronaut.http.annotation.Controller
 import io.micronaut.http.annotation.Patch
+import jakarta.ws.rs.core.Response
 import java.util.UUID
-import javax.ws.rs.core.Response
 
 @Controller(DESTINATIONS_PATH)
 open class DestinationsController(

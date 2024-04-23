@@ -6,6 +6,16 @@ x-logging: &default-logging
     max-file: "5"
   driver: json-file
 services:
+  docker-proxy:
+      image: alpine/socat
+      command: -t 900 TCP-LISTEN:2375,fork,reuseaddr UNIX-CONNECT:/var/run/docker.sock
+      ports: 
+        - "2375"
+      user: root
+      volumes: 
+        - ${DOCKER_SOCKET:-/var/run/docker.sock}:/var/run/docker.sock
+      networks:
+        - airbyte_internal
   # hook in case we need to add init behavior
   # every root service (no depends_on) should depend on init
   init:
@@ -80,6 +90,7 @@ services:
       - DEPLOYMENT_MODE=${DEPLOYMENT_MODE}
       - DD_AGENT_HOST=${DD_AGENT_HOST}
       - DD_DOGSTATSD_PORT=${DD_DOGSTATSD_PORT}
+      - DOCKER_HOST=docker-proxy:2375
       - FEATURE_FLAG_CLIENT=${FEATURE_FLAG_CLIENT}
       - FIELD_SELECTION_WORKSPACES=${FIELD_SELECTION_WORKSPACES}
       - INTERNAL_API_HOST=${INTERNAL_API_HOST}
@@ -121,8 +132,11 @@ services:
       - TEMPORAL_HOST=${TEMPORAL_HOST}
       - TRACKING_STRATEGY=${TRACKING_STRATEGY}
       - WEBAPP_URL=${WEBAPP_URL}
-      - WORKER_LOGS_STORAGE_TYPE=${WORKER_LOGS_STORAGE_TYPE}
-      - WORKER_STATE_STORAGE_TYPE=${WORKER_STATE_STORAGE_TYPE}
+      - STORAGE_BUCKET_ACTIVITY_PAYLOAD=${STORAGE_BUCKET_ACTIVITY_PAYLOAD}
+      - STORAGE_BUCKET_LOG=${STORAGE_BUCKET_LOG}
+      - STORAGE_BUCKET_STATE=${STORAGE_BUCKET_STATE}
+      - STORAGE_BUCKET_WORKLOAD_OUTPUT=${STORAGE_BUCKET_WORKLOAD_OUTPUT}
+      - STORAGE_TYPE=${STORAGE_TYPE}
       - WORKFLOW_FAILURE_RESTART_DELAY_SECONDS=${WORKFLOW_FAILURE_RESTART_DELAY_SECONDS}
       - WORKLOAD_API_HOST=${WORKLOAD_API_URL}
       - WORKSPACE_DOCKER_MOUNT=${WORKSPACE_DOCKER_MOUNT}
@@ -130,9 +144,8 @@ services:
     configs:
       - flags
     volumes:
-      - ${DOCKER_SOCKET:-/var/run/docker.sock}:/var/run/docker.sock
       - workspace:${WORKSPACE_ROOT}
-      - ${LOCAL_ROOT}:${LOCAL_ROOT}
+      - local_root:${LOCAL_ROOT}
     ports:
       - "9000"
     networks:
@@ -183,6 +196,11 @@ services:
       - SHOULD_RUN_NOTIFY_WORKFLOWS=${SHOULD_RUN_NOTIFY_WORKFLOWS}
       - STATSD_HOST=${STATSD_HOST}
       - STATSD_PORT=${STATSD_PORT}
+      - STORAGE_BUCKET_ACTIVITY_PAYLOAD=${STORAGE_BUCKET_ACTIVITY_PAYLOAD}
+      - STORAGE_BUCKET_LOG=${STORAGE_BUCKET_LOG}
+      - STORAGE_BUCKET_STATE=${STORAGE_BUCKET_STATE}
+      - STORAGE_BUCKET_WORKLOAD_OUTPUT=${STORAGE_BUCKET_WORKLOAD_OUTPUT}
+      - STORAGE_TYPE=${STORAGE_TYPE}
       - TEMPORAL_HOST=${TEMPORAL_HOST}
       - TRACKING_STRATEGY=${TRACKING_STRATEGY}
       - WEBAPP_URL=${WEBAPP_URL}
@@ -196,7 +214,7 @@ services:
     volumes:
       - workspace:${WORKSPACE_ROOT}
       - data:${CONFIG_ROOT}
-      - ${LOCAL_ROOT}:${LOCAL_ROOT}
+      - local_root:${LOCAL_ROOT}
       - ./configs:/app/configs:ro
     networks:
       - airbyte_internal
@@ -302,7 +320,7 @@ services:
     container_name: airbyte-connector-builder-server
     restart: unless-stopped
     ports:
-      - 80
+      - 8080
     environment:
       - AIRBYTE_VERSION=${VERSION}
       - CDK_VERSION=${CDK_VERSION}
@@ -343,6 +361,8 @@ services:
 volumes:
   workspace:
     name: ${WORKSPACE_DOCKER_MOUNT}
+  local_root:
+    name: ${LOCAL_DOCKER_MOUNT}
   # the data volume is only needed for backward compatibility; when users upgrade
   # from an old Airbyte version that relies on file-based configs, the server needs
   # to read this volume to copy their configs to the database

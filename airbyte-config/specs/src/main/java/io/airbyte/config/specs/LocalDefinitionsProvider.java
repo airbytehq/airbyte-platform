@@ -5,10 +5,11 @@
 package io.airbyte.config.specs;
 
 import com.google.common.io.Resources;
+import io.airbyte.commons.constants.AirbyteCatalogConstants;
+import io.airbyte.commons.envvar.EnvVar;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.commons.version.AirbyteProtocolVersion;
 import io.airbyte.config.ActorType;
-import io.airbyte.config.CatalogDefinitionsConfig;
 import io.airbyte.config.ConnectorRegistry;
 import io.airbyte.config.ConnectorRegistryDestinationDefinition;
 import io.airbyte.config.ConnectorRegistrySourceDefinition;
@@ -29,7 +30,8 @@ public final class LocalDefinitionsProvider implements DefinitionsProvider {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(LocalDefinitionsProvider.class);
 
-  private static final String LOCAL_CONNECTOR_REGISTRY_PATH = CatalogDefinitionsConfig.getLocalConnectorCatalogPath();
+  private static final String LOCAL_CONNECTOR_REGISTRY_PATH =
+      EnvVar.LOCAL_CONNECTOR_CATALOG_PATH.fetch(AirbyteCatalogConstants.DEFAULT_LOCAL_CONNECTOR_CATALOG_PATH);
 
   /**
    * Get connector registry.

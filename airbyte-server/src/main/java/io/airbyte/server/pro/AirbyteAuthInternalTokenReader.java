@@ -4,9 +4,9 @@
 
 package io.airbyte.server.pro;
 
+import io.airbyte.commons.auth.AirbyteAuthConstants;
 import io.airbyte.commons.license.annotation.RequiresAirbyteProEnabled;
 import io.micronaut.security.token.reader.HttpHeaderTokenReader;
-import io.micronaut.security.token.reader.TokenReader;
 import jakarta.inject.Singleton;
 
 /**
@@ -18,7 +18,7 @@ import jakarta.inject.Singleton;
  */
 @Singleton
 @RequiresAirbyteProEnabled
-public class AirbyteAuthInternalTokenReader extends HttpHeaderTokenReader implements TokenReader {
+public class AirbyteAuthInternalTokenReader extends HttpHeaderTokenReader {
 
   // This is set higher than other token readers so that it is checked last.
   // The BearerTokenReader, for instance, should take precedence over this one.
@@ -26,12 +26,12 @@ public class AirbyteAuthInternalTokenReader extends HttpHeaderTokenReader implem
 
   @Override
   protected String getPrefix() {
-    return AirbyteAuthConstants.AIRBYTE_AUTH_HEADER_INTERNAL_PREFIX;
+    return AirbyteAuthConstants.X_AIRBYTE_AUTH_HEADER_INTERNAL_PREFIX;
   }
 
   @Override
   protected String getHeaderName() {
-    return AirbyteAuthConstants.AIRBYTE_AUTH_HEADER;
+    return AirbyteAuthConstants.X_AIRBYTE_AUTH_HEADER;
   }
 
   @Override

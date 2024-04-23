@@ -57,9 +57,6 @@ jest.mock("../ConnectorDocumentationLayout/DocumentationPanelContext", () => {
 
 jest.setTimeout(40000);
 
-const oauthPopupIdentifier = "123456789";
-jest.mock("uuid", () => ({ v4: () => oauthPopupIdentifier }));
-
 const nextTick = () => new Promise((r) => setTimeout(r, 0));
 
 const connectorDefinition = {
@@ -131,7 +128,7 @@ async function executeOAuthFlow(container: HTMLElement) {
   // mock the message coming from the separate oauth window
   const bc = new BroadcastChannel(OAUTH_BROADCAST_CHANNEL_NAME);
   bc.postMessage({
-    airbyte_oauth_popup_identifier: oauthPopupIdentifier,
+    type: "completed",
     query: {},
   });
   // mock the complete oauth request
@@ -306,7 +303,6 @@ describe("Connector form", () => {
         renderFooter={() => <button type="submit">Submit</button>}
         selectedConnectorDefinition={connectorDefinition}
         selectedConnectorDefinitionSpecification={
-          // @ts-expect-error Partial objects for testing
           {
             sourceDefinitionId: "test-service-type",
             documentationUrl: "",
@@ -318,7 +314,7 @@ describe("Connector form", () => {
               },
             },
             ...specificationOverride,
-          } as DestinationDefinitionSpecificationRead
+          } as unknown as DestinationDefinitionSpecificationRead
         }
       />,
       undefined,

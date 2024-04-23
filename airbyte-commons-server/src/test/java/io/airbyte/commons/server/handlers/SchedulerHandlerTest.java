@@ -102,11 +102,13 @@ import io.airbyte.config.StandardSourceDefinition;
 import io.airbyte.config.StandardSync;
 import io.airbyte.config.StandardSyncOperation;
 import io.airbyte.config.StandardWorkspace;
+import io.airbyte.config.WorkloadPriority;
 import io.airbyte.config.helpers.LogConfigs;
 import io.airbyte.config.persistence.ActorDefinitionVersionHelper;
 import io.airbyte.config.persistence.ConfigNotFoundException;
 import io.airbyte.config.persistence.ConfigRepository;
 import io.airbyte.config.persistence.StreamResetPersistence;
+import io.airbyte.config.persistence.domain.StreamRefresh;
 import io.airbyte.config.secrets.SecretsRepositoryWriter;
 import io.airbyte.data.services.SecretPersistenceConfigService;
 import io.airbyte.data.services.WorkspaceService;
@@ -264,6 +266,7 @@ class SchedulerHandlerTest {
   private ConnectorDefinitionSpecificationHandler connectorDefinitionSpecificationHandler;
   private WorkspaceService workspaceService;
   private SecretPersistenceConfigService secretPersistenceConfigService;
+  private StreamRefreshesHandler streamRefreshesHandler;
 
   @BeforeEach
   void setup() throws JsonValidationException, ConfigNotFoundException, IOException {
@@ -312,6 +315,9 @@ class SchedulerHandlerTest {
         .supportedDestinationSyncModes(
             List.of(io.airbyte.api.model.generated.DestinationSyncMode.OVERWRITE, io.airbyte.api.model.generated.DestinationSyncMode.APPEND)));
 
+    streamRefreshesHandler = mock(StreamRefreshesHandler.class);
+    when(streamRefreshesHandler.getRefreshesForConnection(any())).thenReturn(new ArrayList<>());
+
     schedulerHandler = new SchedulerHandler(
         configRepository,
         secretsRepositoryWriter,
@@ -334,13 +340,14 @@ class SchedulerHandlerTest {
         jobTracker,
         connectorDefinitionSpecificationHandler,
         workspaceService,
-        secretPersistenceConfigService);
+        secretPersistenceConfigService,
+        streamRefreshesHandler);
   }
 
   @Test
   @DisplayName("Test job creation")
   void createJob() throws JsonValidationException, ConfigNotFoundException, IOException {
-    Mockito.when(jobFactory.create(CONNECTION_ID))
+    Mockito.when(jobFactory.createSync(CONNECTION_ID))
         .thenReturn(JOB_ID);
     Mockito.when(configRepository.getStandardSync(CONNECTION_ID))
         .thenReturn(Mockito.mock(StandardSync.class));
@@ -351,6 +358,27 @@ class SchedulerHandlerTest {
 
     final JobInfoRead output = schedulerHandler.createJob(new JobCreate().connectionId(CONNECTION_ID));
 
+    Assertions.assertThat(output.getJob().getId()).isEqualTo(JOB_ID);
+  }
+
+  @Test
+  @DisplayName("Test refresh job creation")
+  void createRefreshJob() throws JsonValidationException, ConfigNotFoundException, IOException {
+    when(jobFactory.createRefresh(eq(CONNECTION_ID), any()))
+        .thenReturn(JOB_ID);
+    when(configRepository.getStandardSync(CONNECTION_ID))
+        .thenReturn(mock(StandardSync.class));
+    when(jobPersistence.getJob(JOB_ID))
+        .thenReturn(job);
+    when(jobConverter.getJobInfoRead(job))
+        .thenReturn(new JobInfoRead().job(new JobRead().id(JOB_ID)));
+    when(streamRefreshesHandler.getRefreshesForConnection(CONNECTION_ID))
+        .thenReturn(List.of(
+            new StreamRefresh(UUID.randomUUID(), CONNECTION_ID, "name", "namespace", null)));
+
+    final JobInfoRead output = schedulerHandler.createJob(new JobCreate().connectionId(CONNECTION_ID));
+
+    verify(jobFactory).createRefresh(eq(CONNECTION_ID), any());
     Assertions.assertThat(output.getJob().getId()).isEqualTo(JOB_ID);
   }
 
@@ -765,7 +793,7 @@ class SchedulerHandlerTest {
         .thenReturn(sourceVersion);
     when(configRepository.getSourceConnection(source.getSourceId())).thenReturn(source);
     when(configRepository.getActorCatalog(any(), any(), any())).thenReturn(Optional.empty());
-    when(synchronousSchedulerClient.createDiscoverSchemaJob(source, sourceVersion, false, RESOURCE_REQUIREMENT))
+    when(synchronousSchedulerClient.createDiscoverSchemaJob(source, sourceVersion, false, RESOURCE_REQUIREMENT, WorkloadPriority.HIGH))
         .thenReturn(discoverResponse);
 
     final SourceDiscoverSchemaRead actual = schedulerHandler.discoverSchemaForSourceFromSourceId(request);
@@ -777,7 +805,7 @@ class SchedulerHandlerTest {
     verify(configRepository).getSourceConnection(source.getSourceId());
     verify(configRepository).getActorCatalog(eq(request.getSourceId()), eq(SOURCE_DOCKER_TAG), any());
     verify(actorDefinitionVersionHelper).getSourceVersion(sourceDefinition, source.getWorkspaceId(), source.getSourceId());
-    verify(synchronousSchedulerClient).createDiscoverSchemaJob(source, sourceVersion, false, RESOURCE_REQUIREMENT);
+    verify(synchronousSchedulerClient).createDiscoverSchemaJob(source, sourceVersion, false, RESOURCE_REQUIREMENT, WorkloadPriority.HIGH);
   }
 
   @Test
@@ -816,7 +844,7 @@ class SchedulerHandlerTest {
     verify(configRepository).getActorCatalog(eq(request.getSourceId()), any(), any());
     verify(configRepository, never()).writeActorCatalogFetchEvent(any(), any(), any(), any());
     verify(actorDefinitionVersionHelper).getSourceVersion(sourceDefinition, source.getWorkspaceId(), source.getSourceId());
-    verify(synchronousSchedulerClient, never()).createDiscoverSchemaJob(any(), any(), anyBoolean(), any());
+    verify(synchronousSchedulerClient, never()).createDiscoverSchemaJob(any(), any(), anyBoolean(), any(), any());
   }
 
   @Test
@@ -848,7 +876,7 @@ class SchedulerHandlerTest {
         .withCatalogHash("")
         .withId(discoveredCatalogId);
     when(configRepository.getActorCatalogById(discoveredCatalogId)).thenReturn(actorCatalog);
-    when(synchronousSchedulerClient.createDiscoverSchemaJob(source, sourceVersion, false, null))
+    when(synchronousSchedulerClient.createDiscoverSchemaJob(source, sourceVersion, false, null, WorkloadPriority.HIGH))
         .thenReturn(discoverResponse);
 
     final SourceDiscoverSchemaRead actual = schedulerHandler.discoverSchemaForSourceFromSourceId(request);
@@ -859,7 +887,7 @@ class SchedulerHandlerTest {
     verify(configRepository).getSourceConnection(source.getSourceId());
     verify(configRepository).getActorCatalog(eq(request.getSourceId()), any(), any());
     verify(actorDefinitionVersionHelper).getSourceVersion(sourceDefinition, source.getWorkspaceId(), source.getSourceId());
-    verify(synchronousSchedulerClient).createDiscoverSchemaJob(source, sourceVersion, false, null);
+    verify(synchronousSchedulerClient).createDiscoverSchemaJob(source, sourceVersion, false, null, WorkloadPriority.HIGH);
   }
 
   @Test
@@ -878,7 +906,7 @@ class SchedulerHandlerTest {
     when(actorDefinitionVersionHelper.getSourceVersion(sourceDefinition, source.getWorkspaceId(), source.getSourceId()))
         .thenReturn(sourceVersion);
     when(configRepository.getSourceConnection(source.getSourceId())).thenReturn(source);
-    when(synchronousSchedulerClient.createDiscoverSchemaJob(source, sourceVersion, false, null))
+    when(synchronousSchedulerClient.createDiscoverSchemaJob(source, sourceVersion, false, null, WorkloadPriority.HIGH))
         .thenReturn((SynchronousResponse<UUID>) jobResponse);
     when(job.getSuccessOutput()).thenReturn(Optional.empty());
     when(job.getStatus()).thenReturn(JobStatus.FAILED);
@@ -890,7 +918,7 @@ class SchedulerHandlerTest {
     assertFalse(actual.getJobInfo().getSucceeded());
     verify(configRepository).getSourceConnection(source.getSourceId());
     verify(actorDefinitionVersionHelper).getSourceVersion(sourceDefinition, source.getWorkspaceId(), source.getSourceId());
-    verify(synchronousSchedulerClient).createDiscoverSchemaJob(source, sourceVersion, false, null);
+    verify(synchronousSchedulerClient).createDiscoverSchemaJob(source, sourceVersion, false, null, WorkloadPriority.HIGH);
   }
 
   @Test
@@ -916,7 +944,7 @@ class SchedulerHandlerTest {
     when(actorDefinitionVersionHelper.getSourceVersion(sourceDef, source.getWorkspaceId(), source.getSourceId()))
         .thenReturn(sourceVersion);
     when(configRepository.getSourceConnection(source.getSourceId())).thenReturn(source);
-    when(synchronousSchedulerClient.createDiscoverSchemaJob(source, sourceVersion, false, null))
+    when(synchronousSchedulerClient.createDiscoverSchemaJob(source, sourceVersion, false, null, WorkloadPriority.HIGH))
         .thenReturn(discoverResponse);
     when(webUrlHelper.getConnectionReplicationPageUrl(source.getWorkspaceId(), connectionId)).thenReturn(CONNECTION_URL);
 
@@ -977,7 +1005,7 @@ class SchedulerHandlerTest {
     when(actorDefinitionVersionHelper.getSourceVersion(sourceDef, source.getWorkspaceId(), source.getSourceId()))
         .thenReturn(sourceVersion);
     when(configRepository.getSourceConnection(source.getSourceId())).thenReturn(source);
-    when(synchronousSchedulerClient.createDiscoverSchemaJob(source, sourceVersion, false, null))
+    when(synchronousSchedulerClient.createDiscoverSchemaJob(source, sourceVersion, false, null, WorkloadPriority.HIGH))
         .thenReturn(discoverResponse);
     when(webUrlHelper.getConnectionReplicationPageUrl(source.getWorkspaceId(), connectionId)).thenReturn(CONNECTION_URL);
 
@@ -1039,7 +1067,7 @@ class SchedulerHandlerTest {
     when(actorDefinitionVersionHelper.getSourceVersion(sourceDef, source.getWorkspaceId(), source.getSourceId()))
         .thenReturn(sourceVersion);
     when(configRepository.getSourceConnection(source.getSourceId())).thenReturn(source);
-    when(synchronousSchedulerClient.createDiscoverSchemaJob(source, sourceVersion, false, null))
+    when(synchronousSchedulerClient.createDiscoverSchemaJob(source, sourceVersion, false, null, WorkloadPriority.HIGH))
         .thenReturn(discoverResponse);
 
     when(discoverResponse.isSuccess()).thenReturn(true);
@@ -1101,7 +1129,7 @@ class SchedulerHandlerTest {
     when(actorDefinitionVersionHelper.getSourceVersion(sourceDef, source.getWorkspaceId(), source.getSourceId()))
         .thenReturn(sourceVersion);
     when(configRepository.getSourceConnection(source.getSourceId())).thenReturn(source);
-    when(synchronousSchedulerClient.createDiscoverSchemaJob(source, sourceVersion, false, null))
+    when(synchronousSchedulerClient.createDiscoverSchemaJob(source, sourceVersion, false, null, WorkloadPriority.HIGH))
         .thenReturn(discoverResponse);
     when(webUrlHelper.getConnectionReplicationPageUrl(source.getWorkspaceId(), connectionId)).thenReturn(CONNECTION_URL);
 
@@ -1167,7 +1195,7 @@ class SchedulerHandlerTest {
     when(actorDefinitionVersionHelper.getSourceVersion(sourceDef, source.getWorkspaceId(), source.getSourceId()))
         .thenReturn(sourceVersion);
     when(configRepository.getSourceConnection(source.getSourceId())).thenReturn(source);
-    when(synchronousSchedulerClient.createDiscoverSchemaJob(source, sourceVersion, false, null))
+    when(synchronousSchedulerClient.createDiscoverSchemaJob(source, sourceVersion, false, null, WorkloadPriority.HIGH))
         .thenReturn(discoverResponse);
     when(webUrlHelper.getConnectionReplicationPageUrl(source.getWorkspaceId(), connectionId)).thenReturn(CONNECTION_URL);
 
@@ -1229,7 +1257,7 @@ class SchedulerHandlerTest {
     when(actorDefinitionVersionHelper.getSourceVersion(sourceDef, source.getWorkspaceId(), source.getSourceId()))
         .thenReturn(sourceVersion);
     when(configRepository.getSourceConnection(source.getSourceId())).thenReturn(source);
-    when(synchronousSchedulerClient.createDiscoverSchemaJob(source, sourceVersion, false, null))
+    when(synchronousSchedulerClient.createDiscoverSchemaJob(source, sourceVersion, false, null, WorkloadPriority.HIGH))
         .thenReturn(discoverResponse);
 
     when(discoverResponse.isSuccess()).thenReturn(true);
@@ -1302,7 +1330,7 @@ class SchedulerHandlerTest {
     when(actorDefinitionVersionHelper.getSourceVersion(sourceDef, source.getWorkspaceId(), source.getSourceId()))
         .thenReturn(sourceVersion);
     when(configRepository.getSourceConnection(source.getSourceId())).thenReturn(source);
-    when(synchronousSchedulerClient.createDiscoverSchemaJob(source, sourceVersion, false, null))
+    when(synchronousSchedulerClient.createDiscoverSchemaJob(source, sourceVersion, false, null, WorkloadPriority.HIGH))
         .thenReturn(discoverResponse);
     when(webUrlHelper.getConnectionReplicationPageUrl(source.getWorkspaceId(), connectionId)).thenReturn(CONNECTION_URL);
     when(webUrlHelper.getConnectionReplicationPageUrl(source.getWorkspaceId(), connectionId2)).thenReturn(CONNECTION_URL);
@@ -1386,7 +1414,7 @@ class SchedulerHandlerTest {
     when(discoverResponse.isSuccess()).thenReturn(false);
     when(discoverResponse.getMetadata()).thenReturn(metadata);
     when(metadata.isSucceeded()).thenReturn(false);
-    when(synchronousSchedulerClient.createDiscoverSchemaJob(source, sourceVersion, false, null))
+    when(synchronousSchedulerClient.createDiscoverSchemaJob(source, sourceVersion, false, null, WorkloadPriority.HIGH))
         .thenReturn(discoverResponse);
 
     final SourceDiscoverSchemaRead actual = schedulerHandler.discoverSchemaForSourceFromSourceId(request);
@@ -1394,7 +1422,7 @@ class SchedulerHandlerTest {
     assertNull(actual.getCatalog());
     assertNotNull(actual.getJobInfo());
     assertFalse(actual.getJobInfo().getSucceeded());
-    verify(synchronousSchedulerClient).createDiscoverSchemaJob(source, sourceVersion, false, null);
+    verify(synchronousSchedulerClient).createDiscoverSchemaJob(source, sourceVersion, false, null, WorkloadPriority.HIGH);
   }
 
   @Test
@@ -1431,7 +1459,7 @@ class SchedulerHandlerTest {
         .withProtocolVersion(SOURCE_PROTOCOL_VERSION);
     when(actorDefinitionVersionHelper.getSourceVersion(sourceDefinition, source.getWorkspaceId(), null))
         .thenReturn(sourceVersion);
-    when(synchronousSchedulerClient.createDiscoverSchemaJob(source, sourceVersion, false, null))
+    when(synchronousSchedulerClient.createDiscoverSchemaJob(source, sourceVersion, false, null, WorkloadPriority.HIGH))
         .thenReturn(discoverResponse);
     when(secretsRepositoryWriter.statefulSplitSecretsToDefaultSecretPersistence(
         eq(source.getConfiguration()),
@@ -1443,7 +1471,7 @@ class SchedulerHandlerTest {
     assertNotNull(actual.getJobInfo());
     assertEquals(actual.getCatalogId(), discoverResponse.getOutput());
     assertTrue(actual.getJobInfo().getSucceeded());
-    verify(synchronousSchedulerClient).createDiscoverSchemaJob(source, sourceVersion, false, null);
+    verify(synchronousSchedulerClient).createDiscoverSchemaJob(source, sourceVersion, false, null, WorkloadPriority.HIGH);
     verify(actorDefinitionVersionHelper).getSourceVersion(sourceDefinition, source.getWorkspaceId(), null);
   }
 
@@ -1468,7 +1496,7 @@ class SchedulerHandlerTest {
         .withProtocolVersion(SOURCE_PROTOCOL_VERSION);
     when(actorDefinitionVersionHelper.getSourceVersion(sourceDefinition, source.getWorkspaceId(), null))
         .thenReturn(sourceVersion);
-    when(synchronousSchedulerClient.createDiscoverSchemaJob(source, sourceVersion, false, null))
+    when(synchronousSchedulerClient.createDiscoverSchemaJob(source, sourceVersion, false, null, WorkloadPriority.HIGH))
         .thenReturn((SynchronousResponse<UUID>) jobResponse);
     when(secretsRepositoryWriter.statefulSplitSecretsToDefaultSecretPersistence(
         eq(source.getConfiguration()),
@@ -1481,7 +1509,7 @@ class SchedulerHandlerTest {
     assertNull(actual.getCatalog());
     assertNotNull(actual.getJobInfo());
     assertFalse(actual.getJobInfo().getSucceeded());
-    verify(synchronousSchedulerClient).createDiscoverSchemaJob(source, sourceVersion, false, null);
+    verify(synchronousSchedulerClient).createDiscoverSchemaJob(source, sourceVersion, false, null, WorkloadPriority.HIGH);
   }
 
   @Test
@@ -1886,7 +1914,7 @@ class SchedulerHandlerTest {
         .catalog(newCatalog);
     spySchedulerHandler.applySchemaChangeForSource(request);
     verify(connectionsHandler).updateConnection(any());
-    verify(spySchedulerHandler, never()).notifySchemaPropagated(any(), any(), any(), any(), any(), any(), any());
+    verify(spySchedulerHandler, never()).notifySchemaPropagated(any(), any(), any(), any(), any(), any());
   }
 
   @Test
@@ -1960,7 +1988,7 @@ class SchedulerHandlerTest {
     when(configRepository.getActorCatalogById(any())).thenReturn(actorCatalog);
     when(discoverResponse.getMetadata()).thenReturn(metadata);
     when(metadata.isSucceeded()).thenReturn(true);
-    when(synchronousSchedulerClient.createDiscoverSchemaJob(source, sourceVersion, false, null))
+    when(synchronousSchedulerClient.createDiscoverSchemaJob(source, sourceVersion, false, null, WorkloadPriority.HIGH))
         .thenReturn(discoverResponse);
     return newSourceCatalogId;
   }
