@@ -8294,11 +8294,14 @@ components:
         - streamNamespace
         - recordsExtracted
         - recordsLoaded
-        - syncTimeElapsed
-        - progressPercentage
-        - lastCommittedTimestamp
-        - lastCursorValue
+        - bytesExtracted
+        - bytesLoaded
+        - syncStartedAt
+        - jobId
       properties:
+        jobId:
+          type: integer
+          format: int64
         streamName:
           type: string
         streamNamespace:
@@ -8306,10 +8309,16 @@ components:
         recordsExtracted:
           type: integer
           format: int64
+        bytesExtracted:
+          type: integer
+          format: int64
         recordsLoaded:
           type: integer
           format: int64
-        syncTimeElapsed:
+        bytesLoaded:
+          type: integer
+          format: int64
+        syncStartedAt:
           type: integer
           format: int64
         progressPercentage:
