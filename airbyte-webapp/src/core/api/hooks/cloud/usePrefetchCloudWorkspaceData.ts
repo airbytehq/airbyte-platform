@@ -1,12 +1,7 @@
 import { useQueries } from "@tanstack/react-query";
 
 import { useCurrentWorkspaceId } from "area/workspace/utils";
-import {
-  getConnectionListQueryKey,
-  getListPermissionsQueryKey,
-  useConnectionListQuery,
-  useListPermissionsQuery,
-} from "core/api";
+import { getListPermissionsQueryKey, useListPermissionsQuery } from "core/api";
 import { useCurrentUser } from "core/services/auth";
 
 import {
@@ -28,12 +23,6 @@ export const usePrefetchCloudWorkspaceData = () => {
       {
         queryKey: getWorkspaceQueryKey(workspaceId),
         queryFn: useGetWorkspaceQuery(workspaceId),
-        suspense: true,
-        staleTime: 10000,
-      },
-      {
-        queryKey: getConnectionListQueryKey(),
-        queryFn: useConnectionListQuery(workspaceId),
         suspense: true,
         staleTime: 10000,
       },

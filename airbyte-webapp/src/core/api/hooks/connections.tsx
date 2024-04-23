@@ -395,63 +395,48 @@ export const useRemoveConnectionsFromList = (): ((connectionIds: string[]) => vo
   );
 };
 
-export const getConnectionListQueryKey = (connectorIds?: string[]) => {
-  return !connectorIds?.length
-    ? [...connectionsKeys.lists(connectorIds), "empty"]
-    : connectionsKeys.lists(connectorIds);
-};
-
-export const useConnectionListQuery = (
-  workspaceId: string,
-  sourceId?: string[],
-  destinationId?: string[]
-): (() => Promise<ConnectionListTransformed>) => {
-  const requestOptions = useRequestOptions();
-
-  return async () => {
-    const { connections } = await webBackendListConnectionsForWorkspace(
-      { workspaceId, sourceId, destinationId },
-      requestOptions
-    );
-    const connectionsByConnectorId = new Map<string, WebBackendConnectionListItem[]>();
-    connections.forEach((connection) => {
-      connectionsByConnectorId.set(connection.source.sourceId, [
-        ...(connectionsByConnectorId.get(connection.source.sourceId) || []),
-        connection,
-      ]);
-      connectionsByConnectorId.set(connection.destination.destinationId, [
-        ...(connectionsByConnectorId.get(connection.destination.destinationId) || []),
-        connection,
-      ]);
-    });
-    return {
-      connections,
-      connectionsByConnectorId,
-    };
-  };
-};
-
 interface ConnectionListTransformed {
   connections: WebBackendConnectionListItem[];
   connectionsByConnectorId: Map<string, WebBackendConnectionListItem[]>;
 }
 
-export const useConnectionList = (
-  payload: Pick<WebBackendConnectionListRequestBody, "destinationId" | "sourceId"> = {}
-) => {
+export const useConnectionList = ({
+  sourceId,
+  destinationId,
+}: Pick<WebBackendConnectionListRequestBody, "destinationId" | "sourceId"> = {}) => {
   const workspace = useCurrentWorkspace();
+  const requestOptions = useRequestOptions();
   const REFETCH_CONNECTION_LIST_INTERVAL = 60_000;
-  const connectorIds = [
-    ...(payload.destinationId ? payload.destinationId : []),
-    ...(payload.sourceId ? payload.sourceId : []),
-  ];
-  const queryKey = getConnectionListQueryKey(connectorIds);
-  const queryFn = useConnectionListQuery(workspace.workspaceId, payload.sourceId, payload.destinationId);
+  const connectorIds = [...(destinationId ? destinationId : []), ...(sourceId ? sourceId : [])];
 
-  return useQuery(queryKey, queryFn, {
-    refetchInterval: REFETCH_CONNECTION_LIST_INTERVAL,
-    suspense: true,
-  }).data as ConnectionListTransformed;
+  return useQuery(
+    connectionsKeys.lists(connectorIds.length > 0 ? connectorIds : ["no-filter"]),
+    async (): Promise<ConnectionListTransformed> => {
+      const { connections } = await webBackendListConnectionsForWorkspace(
+        { workspaceId: workspace.workspaceId, sourceId, destinationId },
+        requestOptions
+      );
+      const connectionsByConnectorId = new Map<string, WebBackendConnectionListItem[]>();
+      connections.forEach((connection) => {
+        connectionsByConnectorId.set(connection.source.sourceId, [
+          ...(connectionsByConnectorId.get(connection.source.sourceId) || []),
+          connection,
+        ]);
+        connectionsByConnectorId.set(connection.destination.destinationId, [
+          ...(connectionsByConnectorId.get(connection.destination.destinationId) || []),
+          connection,
+        ]);
+      });
+      return {
+        connections,
+        connectionsByConnectorId,
+      };
+    },
+    {
+      refetchInterval: REFETCH_CONNECTION_LIST_INTERVAL,
+      suspense: true,
+    }
+  ).data;
 };
 
 export const useGetConnectionState = (connectionId: string) => {
