@@ -5,6 +5,7 @@ micronaut:
     port: 9002
 
 airbyte:
+  airbyte-url: ${AIRBYTE_URL:}
   keycloak:
     protocol: ${KEYCLOAK_PROTOCOL:http}
     host: ${KEYCLOAK_INTERNAL_HOST:}

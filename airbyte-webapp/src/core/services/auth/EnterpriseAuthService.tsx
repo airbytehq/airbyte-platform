@@ -16,14 +16,14 @@ import { AuthContext } from "./AuthContext";
 
 // This wrapper is conditionally present if the KeycloakAuthentication feature is enabled
 export const EnterpriseAuthService: React.FC<PropsWithChildren<unknown>> = ({ children }) => {
-  const { auth, webappUrl } = useGetInstanceConfiguration();
+  const { auth, airbyteUrl } = useGetInstanceConfiguration();
 
   if (!auth) {
     throw new Error("Authentication is enabled, but the server returned an invalid auth configuration: ", auth);
   }
 
   const oidcConfig = {
-    authority: `${webappUrl}/auth/realms/${auth.defaultRealm}`,
+    authority: `${airbyteUrl}/auth/realms/${auth.defaultRealm}`,
     client_id: auth.clientId,
     redirect_uri: createUriWithoutSsoParams(),
     onSigninCallback: () => {

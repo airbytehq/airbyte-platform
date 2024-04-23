@@ -5,7 +5,7 @@
 package io.airbyte.keycloak.setup;
 
 import io.airbyte.commons.auth.config.AirbyteKeycloakConfiguration;
-import io.micronaut.context.annotation.Value;
+import jakarta.inject.Named;
 import jakarta.inject.Singleton;
 import jakarta.ws.rs.core.Response;
 import java.util.HashMap;
@@ -29,11 +29,11 @@ public class WebClientConfigurator {
   private static final String LOCAL_CLOUD_DEV_URI = "https://localhost:3001/*";
 
   private final AirbyteKeycloakConfiguration keycloakConfiguration;
-  private final String webappUrl;
+  private final String airbyteUrl;
 
-  public WebClientConfigurator(@Value("${airbyte.webapp-url}") final String webappUrl,
+  public WebClientConfigurator(@Named("airbyteUrl") final String airbyteUrl,
                                final AirbyteKeycloakConfiguration keycloakConfiguration) {
-    this.webappUrl = webappUrl;
+    this.airbyteUrl = airbyteUrl;
     this.keycloakConfiguration = keycloakConfiguration;
   }
 
@@ -66,7 +66,7 @@ public class WebClientConfigurator {
     client.setClientId(keycloakConfiguration.getWebClientId());
     client.setPublicClient(true); // Client authentication disabled
     client.setDirectAccessGrantsEnabled(true); // Standard flow authentication
-    client.setRedirectUris(getWebClientRedirectUris(webappUrl));
+    client.setRedirectUris(getWebClientRedirectUris(airbyteUrl));
     client.setAttributes(getClientAttributes());
 
     return client;
@@ -74,7 +74,7 @@ public class WebClientConfigurator {
 
   private ClientRepresentation applyConfigToExistingClientRepresentation(final ClientRepresentation clientRepresentation) {
     // only change the attributes that come from external configuration
-    clientRepresentation.setRedirectUris(getWebClientRedirectUris(webappUrl));
+    clientRepresentation.setRedirectUris(getWebClientRedirectUris(airbyteUrl));
     return clientRepresentation;
   }
 
@@ -84,8 +84,8 @@ public class WebClientConfigurator {
     return attributeMap;
   }
 
-  private List<String> getWebClientRedirectUris(final String webappUrl) {
-    final String normalizedWebappUrl = webappUrl.endsWith("/") ? webappUrl : webappUrl + "/";
+  private List<String> getWebClientRedirectUris(final String airbyteUrl) {
+    final String normalizedWebappUrl = airbyteUrl.endsWith("/") ? airbyteUrl : airbyteUrl + "/";
     return List.of(normalizedWebappUrl + "*", LOCAL_OSS_DEV_URI, LOCAL_CLOUD_DEV_URI);
   }
 

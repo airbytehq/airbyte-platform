@@ -10811,7 +10811,7 @@ components:
       required:
         - edition
         - version
-        - webappUrl
+        - airbyteUrl
         - initialSetupComplete
         - defaultUserId
         - defaultOrganizationId
@@ -10834,7 +10834,7 @@ components:
           nullable: true
         auth:
           $ref: "#/components/schemas/AuthConfiguration"
-        webappUrl:
+        airbyteUrl:
           type: string
         initialSetupComplete:
           type: boolean

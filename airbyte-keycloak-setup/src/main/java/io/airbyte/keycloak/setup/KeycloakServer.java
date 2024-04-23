@@ -5,7 +5,7 @@
 package io.airbyte.keycloak.setup;
 
 import io.airbyte.commons.auth.config.AirbyteKeycloakConfiguration;
-import io.micronaut.context.annotation.Value;
+import jakarta.inject.Named;
 import jakarta.inject.Singleton;
 import java.util.Map;
 import lombok.extern.slf4j.Slf4j;
@@ -30,7 +30,7 @@ public class KeycloakServer {
   private final WebClientConfigurator webClientConfigurator;
   private final IdentityProvidersConfigurator identityProvidersConfigurator;
   private final ClientScopeConfigurator clientScopeConfigurator;
-  private final String webappUrl;
+  private final String airbyteUrl;
 
   public KeycloakServer(final KeycloakAdminClientProvider keycloakAdminClientProvider,
                         final AirbyteKeycloakConfiguration keycloakConfiguration,
@@ -38,7 +38,7 @@ public class KeycloakServer {
                         final WebClientConfigurator webClientConfigurator,
                         final IdentityProvidersConfigurator identityProvidersConfigurator,
                         final ClientScopeConfigurator clientScopeConfigurator,
-                        @Value("${airbyte.webapp-url}") final String webappUrl) {
+                        @Named("airbyteUrl") final String airbyteUrl) {
     this.keycloakAdminClientProvider = keycloakAdminClientProvider;
     this.keycloakConfiguration = keycloakConfiguration;
     this.userConfigurator = userConfigurator;
@@ -46,7 +46,7 @@ public class KeycloakServer {
     this.identityProvidersConfigurator = identityProvidersConfigurator;
     this.clientScopeConfigurator = clientScopeConfigurator;
     this.keycloakAdminClient = initializeKeycloakAdminClient();
-    this.webappUrl = webappUrl;
+    this.airbyteUrl = airbyteUrl;
   }
 
   public void setupAirbyteRealm() {
@@ -74,7 +74,7 @@ public class KeycloakServer {
     final RealmResource airbyteRealm = keycloakAdminClient.realm(keycloakConfiguration.getAirbyteRealm());
 
     // ensure webapp-url is applied as the frontendUrl before other configurations are updated
-    updateRealmFrontendUrl(airbyteRealm, webappUrl);
+    updateRealmFrontendUrl(airbyteRealm);
 
     userConfigurator.configureUser(airbyteRealm);
     webClientConfigurator.configureWebClient(airbyteRealm);
@@ -90,10 +90,10 @@ public class KeycloakServer {
     return airbyteRealmRepresentation;
   }
 
-  private void updateRealmFrontendUrl(final RealmResource realm, final String webappUrl) {
+  private void updateRealmFrontendUrl(final RealmResource realm) {
     final RealmRepresentation realmRep = realm.toRepresentation();
     final Map<String, String> attributes = realmRep.getAttributesOrEmpty();
-    attributes.put(FRONTEND_URL_ATTRIBUTE, webappUrl + keycloakConfiguration.getBasePath());
+    attributes.put(FRONTEND_URL_ATTRIBUTE, airbyteUrl + keycloakConfiguration.getBasePath());
     realmRep.setAttributes(attributes);
     realm.update(realmRep);
   }

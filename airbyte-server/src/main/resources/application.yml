@@ -73,6 +73,7 @@ micronaut:
         prefer-native-transport: true
 
 airbyte:
+  airbyte-url: ${AIRBYTE_URL:}
   edition: ${AIRBYTE_EDITION:COMMUNITY}
   shutdown:
     delay_ms: 20000

@@ -5,7 +5,7 @@ export const mockProInstanceConfig: InstanceConfigurationResponse = {
     clientId: "test-client-id",
     defaultRealm: "test-default-realm",
   },
-  webappUrl: "http://test-airbyte-webapp-url.com",
+  airbyteUrl: "http://test-airbyte-webapp-url.com",
   edition: "pro",
   version: "0.50.1",
   licenseType: "pro",

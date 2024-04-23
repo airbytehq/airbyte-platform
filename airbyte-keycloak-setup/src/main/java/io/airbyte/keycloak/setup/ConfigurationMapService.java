@@ -6,7 +6,7 @@ package io.airbyte.keycloak.setup;
 
 import io.airbyte.commons.auth.config.AirbyteKeycloakConfiguration;
 import io.airbyte.commons.auth.config.OidcConfig;
-import io.micronaut.context.annotation.Value;
+import jakarta.inject.Named;
 import jakarta.inject.Singleton;
 import java.util.HashMap;
 import java.util.Map;
@@ -21,12 +21,12 @@ public class ConfigurationMapService {
 
   public static final String HTTPS_PREFIX = "https://";
   public static final String WELL_KNOWN_OPENID_CONFIGURATION_SUFFIX = ".well-known/openid-configuration";
-  private final String webappUrl;
+  private final String airbyteUrl;
   private final AirbyteKeycloakConfiguration keycloakConfiguration;
 
-  public ConfigurationMapService(@Value("${airbyte.webapp-url}") final String webappUrl,
+  public ConfigurationMapService(@Named("airbyteUrl") final String airbyteUrl,
                                  final AirbyteKeycloakConfiguration keycloakConfiguration) {
-    this.webappUrl = webappUrl;
+    this.airbyteUrl = airbyteUrl;
     this.keycloakConfiguration = keycloakConfiguration;
   }
 
@@ -56,8 +56,8 @@ public class ConfigurationMapService {
   }
 
   private String getProviderRedirectUrl(final OidcConfig oidcConfig) {
-    final String webappUrlWithTrailingSlash = webappUrl.endsWith("/") ? webappUrl : webappUrl + "/";
-    return webappUrlWithTrailingSlash + "auth/realms/" + keycloakConfiguration.getAirbyteRealm() + "/broker/" + oidcConfig.appName() + "/endpoint";
+    final String airbyteUrlWithTrailingSlash = airbyteUrl.endsWith("/") ? airbyteUrl : airbyteUrl + "/";
+    return airbyteUrlWithTrailingSlash + "auth/realms/" + keycloakConfiguration.getAirbyteRealm() + "/broker/" + oidcConfig.appName() + "/endpoint";
   }
 
   private String getProviderDiscoveryUrl(final OidcConfig oidcConfig) {

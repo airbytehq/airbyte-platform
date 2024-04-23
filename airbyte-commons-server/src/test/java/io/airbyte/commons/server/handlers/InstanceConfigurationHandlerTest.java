@@ -45,7 +45,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 @ExtendWith(MockitoExtension.class)
 class InstanceConfigurationHandlerTest {
 
-  private static final String WEBAPP_URL = "http://localhost:8000";
+  private static final String AIRBYTE_URL = "http://localhost:8000";
   private static final String AIRBYTE_REALM = "airbyte";
   private static final String WEB_CLIENT_ID = "airbyte-webapp";
   private static final UUID WORKSPACE_ID = UUID.randomUUID();
@@ -94,7 +94,7 @@ class InstanceConfigurationHandlerTest {
     final InstanceConfigurationResponse expected = new InstanceConfigurationResponse()
         .edition(isPro ? EditionEnum.PRO : EditionEnum.COMMUNITY)
         .version("0.50.1")
-        .webappUrl(WEBAPP_URL)
+        .airbyteUrl(AIRBYTE_URL)
         .licenseType(isPro ? LicenseTypeEnum.PRO : null)
         .auth(isPro ? new AuthConfiguration()
             .clientId(WEB_CLIENT_ID)
@@ -125,7 +125,7 @@ class InstanceConfigurationHandlerTest {
     when(mWorkspacePersistence.getInitialSetupComplete()).thenReturn(true);
 
     final var handler = new InstanceConfigurationHandler(
-        WEBAPP_URL,
+        AIRBYTE_URL,
         envValue,
         AirbyteEdition.COMMUNITY,
         new AirbyteVersion("0.50.1"),
@@ -189,7 +189,7 @@ class InstanceConfigurationHandlerTest {
     final InstanceConfigurationResponse expected = new InstanceConfigurationResponse()
         .edition(EditionEnum.PRO)
         .version("0.50.1")
-        .webappUrl(WEBAPP_URL)
+        .airbyteUrl(AIRBYTE_URL)
         .licenseType(LicenseTypeEnum.PRO)
         .auth(new AuthConfiguration()
             .clientId(WEB_CLIENT_ID)
@@ -259,7 +259,7 @@ class InstanceConfigurationHandlerTest {
 
   private InstanceConfigurationHandler getInstanceConfigurationHandler(final boolean isPro) {
     return new InstanceConfigurationHandler(
-        WEBAPP_URL,
+        AIRBYTE_URL,
         "logging",
         isPro ? AirbyteEdition.PRO : AirbyteEdition.COMMUNITY,
         new AirbyteVersion("0.50.1"),
