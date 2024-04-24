@@ -450,7 +450,17 @@ public enum OssMetricsRegistry implements MetricsRegistry {
 
   PAYLOAD_VALIDATION_RESULT(MetricEmittingApps.WORKER,
       "payload_validation_result",
-      "The result of the comparing the payload in object storage to the one passed from temporal.");
+      "The result of the comparing the payload in object storage to the one passed from temporal."),
+
+  CREATE_SECRET_DEFAULT_STORE(MetricEmittingApps.SERVER,
+      "create_secret_default_store",
+      "A secret was created in the default configured secret store."),
+  UPDATE_SECRET_DEFAULT_STORE(MetricEmittingApps.SERVER,
+      "create_secret_default_store",
+      "A secret was created in the default configured secret store."),
+  DELETE_SECRET_DEFAULT_STORE(MetricEmittingApps.SERVER,
+      "delete_secret_default_store",
+      "A secret was created in the default configured secret store.");
 
   private final MetricEmittingApp application;
   private final String metricName;
