@@ -139,19 +139,49 @@ tasks.register<PnpmTask>("cypressCloud") {
     outputs.upToDateWhen { false }
 }
 
-//tasks.register<PnpmTask>("validateLinks") {
-//    dependsOn(tasks.named("pnpmInstall"))
-//
-//    args = listOf("run", "validate-links")
-//
-//    inputs.file("scripts/validate-links.ts")
-//    inputs.file("src/core/utils/links.ts")
-//
-//    // Configure the up-to-date check to always run in CI environments
-//    outputs.upToDateWhen {
-//        System.getenv("CI") == null
-//    }
-//}
+tasks.register<PnpmTask>("licenseCheck") {
+    dependsOn(tasks.named("pnpmInstall"))
+
+    args = listOf("run", "license-check")
+
+    inputs.file("package.json")
+    inputs.file("pnpm-lock.yaml")
+    inputs.file("scripts/license-check.js")
+
+    outputs.upToDateWhen { true }
+}
+
+tasks.register<PnpmTask>("validateLock") {
+    dependsOn(tasks.named("pnpmInstall"))
+
+    args = listOf("run", "validate-lock")
+
+    inputs.files(allFiles)
+
+    outputs.upToDateWhen { true }
+}
+
+tasks.register<PnpmTask>("validateLinks") {
+   dependsOn(tasks.named("pnpmInstall"))
+
+   args = listOf("run", "validate-links")
+
+   inputs.file("scripts/validate-links.ts")
+   inputs.file("src/core/utils/links.ts")
+
+   // Configure the up-to-date check to always run again, since it checks availability of URLs
+   outputs.upToDateWhen { false }
+}
+
+tasks.register<PnpmTask>("unusedCode") {
+    dependsOn(tasks.named("pnpmInstall"))
+
+    args = listOf("run", "unused-code")
+
+    inputs.files(allFiles, outsideWebappDependencies)
+
+    outputs.upToDateWhen { true }
+}
 
 tasks.register<PnpmTask>("buildStorybook") {
     dependsOn(tasks.named("pnpmInstall"))
@@ -183,7 +213,12 @@ tasks.register<Copy>("copyNginx") {
 
 // Those tasks should be run as part of the "check" task
 tasks.named("check") {
-    dependsOn(/* tasks.named("validateLinks"), */ tasks.named("test"))
+    dependsOn(tasks.named("licenseCheck"), tasks.named("validateLock"), tasks.named("unusedCode"), tasks.named("test"))
+}
+
+// Some check tasks only should be run on CI, thus a separate ciCheck task
+tasks.register("ciCheck") {
+    dependsOn(tasks.named("check"), tasks.named("validateLinks"))
 }
 
 tasks.named("build") {
