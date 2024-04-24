@@ -6,6 +6,7 @@ package io.airbyte.server.apis.publicapi.controllers
 
 import io.airbyte.api.model.generated.AirbyteCatalog
 import io.airbyte.api.model.generated.AirbyteStreamAndConfiguration
+import io.airbyte.api.model.generated.DestinationRead
 import io.airbyte.api.model.generated.DestinationSyncMode
 import io.airbyte.api.model.generated.PermissionType
 import io.airbyte.api.model.generated.SourceDiscoverSchemaRead
@@ -16,7 +17,6 @@ import io.airbyte.commons.server.support.CurrentUserService
 import io.airbyte.public_api.generated.PublicConnectionsApi
 import io.airbyte.public_api.model.generated.ConnectionCreateRequest
 import io.airbyte.public_api.model.generated.ConnectionResponse
-import io.airbyte.public_api.model.generated.DestinationResponse
 import io.airbyte.server.apis.publicapi.apiTracking.TrackingHelper
 import io.airbyte.server.apis.publicapi.constants.CONNECTIONS_PATH
 import io.airbyte.server.apis.publicapi.constants.CONNECTIONS_WITH_ID_PATH
@@ -69,13 +69,13 @@ open class ConnectionsController(
     }, CONNECTIONS_PATH, POST, userId)
 
     // get destination response to retrieve workspace id as well as input for destination sync modes
-    val destinationResponse: DestinationResponse =
+    val destinationRead: DestinationRead =
       trackingHelper.callWithTracker(
-        { destinationService.getDestination(connectionCreateRequest.destinationId) },
+        { destinationService.getDestinationRead(connectionCreateRequest.destinationId) },
         CONNECTIONS_PATH,
         POST,
         userId,
-      ) as DestinationResponse
+      )
 
     // get source schema for catalog id and airbyte catalog
     val schemaResponse: SourceDiscoverSchemaRead =
@@ -128,7 +128,7 @@ open class ConnectionsController(
 
         val validDestinationSyncModes =
           trackingHelper.callWithTracker(
-            { destinationService.getDestinationSyncModes(destinationResponse) },
+            { destinationService.getDestinationSyncModes(destinationRead) },
             CONNECTIONS_PATH,
             POST,
             userId,
@@ -161,14 +161,14 @@ open class ConnectionsController(
           connectionCreateRequest,
           catalogId!!,
           finalConfiguredCatalog!!,
-          destinationResponse.workspaceId,
+          destinationRead.workspaceId,
         )
       }, CONNECTIONS_PATH, POST, userId)!!
     trackingHelper.trackSuccess(
       CONNECTIONS_PATH,
       POST,
       userId,
-      destinationResponse.workspaceId,
+      destinationRead.workspaceId,
     )
     return Response
       .status(Response.Status.OK.statusCode)
@@ -311,13 +311,13 @@ open class ConnectionsController(
       ) as ConnectionResponse
 
     // get destination response to retrieve workspace id as well as input for destination sync modes
-    val destinationResponse: DestinationResponse =
+    val destinationRead: DestinationRead =
       trackingHelper.callWithTracker(
-        { destinationService.getDestination(currentConnection.destinationId) },
+        { destinationService.getDestinationRead(currentConnection.destinationId) },
         CONNECTIONS_WITH_ID_PATH,
         PUT,
         userId,
-      ) as DestinationResponse
+      )
 
     // get source schema for catalog id and airbyte catalog
     val schemaResponse =
@@ -370,7 +370,7 @@ open class ConnectionsController(
 
         val validDestinationSyncModes =
           trackingHelper.callWithTracker(
-            { destinationService.getDestinationSyncModes(destinationResponse) },
+            { destinationService.getDestinationSyncModes(destinationRead) },
             CONNECTIONS_PATH,
             POST,
             userId,
@@ -405,7 +405,7 @@ open class ConnectionsController(
             connectionPatchRequest,
             catalogId!!,
             finalConfiguredCatalog,
-            destinationResponse.workspaceId,
+            destinationRead.workspaceId,
           )
         },
         CONNECTIONS_PATH,
@@ -417,7 +417,7 @@ open class ConnectionsController(
       CONNECTIONS_WITH_ID_PATH,
       PUT,
       userId,
-      destinationResponse.workspaceId,
+      destinationRead.workspaceId,
     )
     return Response
       .status(Response.Status.OK.statusCode)

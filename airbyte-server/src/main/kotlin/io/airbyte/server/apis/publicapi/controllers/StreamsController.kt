@@ -61,12 +61,14 @@ class StreamsController(
       userId,
       PermissionType.WORKSPACE_READER,
     )
-    apiAuthorizationHelper.checkWorkspacePermissions(
-      listOf(destinationId!!.toString()),
-      Scope.DESTINATION,
-      userId,
-      PermissionType.WORKSPACE_READER,
-    )
+    destinationId?.apply {
+      apiAuthorizationHelper.checkWorkspacePermissions(
+        listOf(destinationId.toString()),
+        Scope.DESTINATION,
+        userId,
+        PermissionType.WORKSPACE_READER,
+      )
+    }
     val httpResponse =
       trackingHelper.callWithTracker(
         {
@@ -79,17 +81,21 @@ class StreamsController(
         GET,
         userId,
       )
-    val destinationSyncModes =
-      trackingHelper.callWithTracker(
-        {
-          destinationService.getDestinationSyncModes(
-            destinationId,
-          )
-        },
-        STREAMS_PATH,
-        GET,
-        userId,
-      )
+    val destinationSyncModes: List<DestinationSyncMode> =
+      if (destinationId != null) {
+        trackingHelper.callWithTracker(
+          {
+            destinationService.getDestinationSyncModes(
+              destinationId,
+            )
+          },
+          STREAMS_PATH,
+          GET,
+          userId,
+        )
+      } else {
+        emptyList()
+      }
     val streamList =
       httpResponse.catalog!!.streams.stream()
         .map { obj: AirbyteStreamAndConfiguration -> obj.stream }
@@ -167,7 +173,10 @@ class StreamsController(
   private fun getValidSyncModes(
     sourceSyncModes: List<SyncMode>,
     destinationSyncModes: List<DestinationSyncMode>,
-  ): List<ConnectionSyncModeEnum> {
+  ): List<ConnectionSyncModeEnum>? {
+    if (destinationSyncModes.isEmpty()) {
+      return null
+    }
     val connectionSyncModes: MutableList<ConnectionSyncModeEnum> = emptyList<ConnectionSyncModeEnum>().toMutableList()
     if (sourceSyncModes.contains(SyncMode.FULL_REFRESH)) {
       if (destinationSyncModes.contains(DestinationSyncMode.APPEND)) {

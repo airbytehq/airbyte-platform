@@ -5768,7 +5768,7 @@ paths:
             format: UUID
             type: string
           in: "query"
-          required: true
+          required: false
         - name: "ignoreCache"
           description: "If true pull the latest schema from the source, else pull from cache (default false)"
           schema:
@@ -12159,12 +12159,9 @@ components:
       x-sdk-component: true
     StreamPropertiesResponse:
       description: A list of stream properties.
-      type: object
-      properties:
-        streams:
-          type: array
-          items:
-            $ref: "#/components/schemas/StreamProperties"
+      type: array
+      items:
+        $ref: "#/components/schemas/StreamProperties"
       x-sdk-component: true
     StreamProperties:
       description: The stream properties associated with a connection.
