@@ -7,6 +7,7 @@ micronaut:
     netty:
       aggregator:
         max-content-length: 52428800 # 50MB
+    max-request-size: 10485760 # 10MB the micronaut default. If we want to bump, double check it works for nginx.
     port: 9000
   caches:
     # used by the analytics tracking client to cache calls to resolve the deployment and identity (workspace) for

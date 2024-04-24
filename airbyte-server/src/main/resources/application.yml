@@ -54,13 +54,15 @@ micronaut:
         web:
           allowed-origins-regex:
             - ^.*$
+    idle-timeout: ${HTTP_IDLE_TIMEOUT:5m}
     netty:
-      aggregator:
-        max-content-length: 52428800 # 50MB
       access-logger:
         enabled: ${HTTP_ACCESS_LOG_ENABLED:true}
+      aggregator:
+        max-content-length: 52428800 # 50MB
       max-header-size: ${NETTY_MAX_HEADER_SIZE:32768}
-    idle-timeout: ${HTTP_IDLE_TIMEOUT:5m}
+    max-request-size: 10485760 # 10MB the micronaut default. If we want to bump, double check it works for nginx.
+
   http:
     client:
       read-timeout: ${READ_TIMEOUT:10m}
