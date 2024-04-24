@@ -460,7 +460,15 @@ public enum OssMetricsRegistry implements MetricsRegistry {
       "A secret was created in the default configured secret store."),
   DELETE_SECRET_DEFAULT_STORE(MetricEmittingApps.SERVER,
       "delete_secret_default_store",
-      "A secret was created in the default configured secret store.");
+      "A secret was created in the default configured secret store."),
+
+  CATALOG_SIZE_VALIDATION_ERROR(MetricEmittingApps.SERVER,
+      "catalog_size_validation_error",
+      "The catalog provided by the user was larger than our limit and rejected."),
+
+  EXCESSIVE_CATALOG_SIZE(MetricEmittingApps.SERVER,
+      "excessive_catalog_size",
+      "Distribution of input catalog field counts that exceed the configured limit.");
 
   private final MetricEmittingApp application;
   private final String metricName;

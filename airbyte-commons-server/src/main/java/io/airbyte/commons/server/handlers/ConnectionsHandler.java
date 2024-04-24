@@ -47,12 +47,14 @@ import io.airbyte.commons.enums.Enums;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.commons.server.converters.ApiPojoConverters;
 import io.airbyte.commons.server.converters.CatalogDiffConverters;
+import io.airbyte.commons.server.errors.BadRequestException;
 import io.airbyte.commons.server.handlers.helpers.AutoPropagateSchemaChangeHelper;
 import io.airbyte.commons.server.handlers.helpers.AutoPropagateSchemaChangeHelper.UpdateSchemaResult;
 import io.airbyte.commons.server.handlers.helpers.CatalogConverter;
 import io.airbyte.commons.server.handlers.helpers.ConnectionScheduleHelper;
 import io.airbyte.commons.server.handlers.helpers.PaginationHelper;
 import io.airbyte.commons.server.scheduler.EventRunner;
+import io.airbyte.commons.server.validation.CatalogValidator;
 import io.airbyte.config.ActorCatalog;
 import io.airbyte.config.ActorDefinitionVersion;
 import io.airbyte.config.BasicSchedule;
@@ -151,6 +153,7 @@ public class ConnectionsHandler {
   private final StreamRefreshesHandler streamRefreshesHandler;
   private final StreamGenerationRepository streamGenerationRepository;
   private final CatalogGenerationSetter catalogGenerationSetter;
+  private final CatalogValidator catalogValidator;
 
   @Inject
   public ConnectionsHandler(final StreamRefreshesHandler streamRefreshesHandler,
@@ -165,10 +168,11 @@ public class ConnectionsHandler {
                             final ActorDefinitionVersionHelper actorDefinitionVersionHelper,
                             final ConnectorDefinitionSpecificationHandler connectorSpecHandler,
                             final JobNotifier jobNotifier,
-                            @Value("${airbyte.server.connection.disable.max-days}") final Integer maxDaysOfOnlyFailedJobsBeforeConnectionDisable,
-                            @Value("${airbyte.server.connection.disable.max-jobs}") final Integer maxFailedJobsInARowBeforeConnectionDisable,
+                            @Value("${airbyte.server.connection.limits.max-days}") final Integer maxDaysOfOnlyFailedJobsBeforeConnectionDisable,
+                            @Value("${airbyte.server.connection.limits.max-jobs}") final Integer maxFailedJobsInARowBeforeConnectionDisable,
                             final StreamGenerationRepository streamGenerationRepository,
-                            final CatalogGenerationSetter catalogGenerationSetter) {
+                            final CatalogGenerationSetter catalogGenerationSetter,
+                            final CatalogValidator catalogValidator) {
     this.jobPersistence = jobPersistence;
     this.configRepository = configRepository;
     this.uuidGenerator = uuidGenerator;
@@ -185,13 +189,15 @@ public class ConnectionsHandler {
     this.streamRefreshesHandler = streamRefreshesHandler;
     this.streamGenerationRepository = streamGenerationRepository;
     this.catalogGenerationSetter = catalogGenerationSetter;
+    this.catalogValidator = catalogValidator;
   }
 
   /**
    * Modifies the given StandardSync by applying changes from a partially-filled ConnectionUpdate
    * patch. Any fields that are null in the patch will be left unchanged.
    */
-  private static void applyPatchToStandardSync(final StandardSync sync, final ConnectionUpdate patch) throws JsonValidationException {
+  private void applyPatchToStandardSync(final StandardSync sync, final ConnectionUpdate patch, final UUID workspaceId)
+      throws JsonValidationException {
     // update the sync's schedule using the patch's scheduleType and scheduleData. validations occur in
     // the helper to ensure both fields
     // make sense together.
@@ -205,6 +211,8 @@ public class ConnectionsHandler {
 
     if (patch.getSyncCatalog() != null) {
       validateCatalogDoesntContainDuplicateStreamNames(patch.getSyncCatalog());
+      validateCatalogSize(patch.getSyncCatalog(), workspaceId, "update");
+
       sync.setCatalog(CatalogConverter.toConfiguredProtocol(patch.getSyncCatalog()));
       sync.withFieldSelectionData(CatalogConverter.getFieldSelectionData(patch.getSyncCatalog()));
     }
@@ -452,6 +460,7 @@ public class ConnectionsHandler {
         connectionCreate.getDestinationId(),
         operationIds);
 
+    final UUID workspaceId = workspaceHelper.getWorkspaceForDestinationId(connectionCreate.getDestinationId());
     final UUID connectionId = uuidGenerator.get();
 
     // If not specified, default the NamespaceDefinition to 'source'
@@ -485,6 +494,8 @@ public class ConnectionsHandler {
     // TODO Undesirable behavior: sending a null configured catalog should not be valid?
     if (connectionCreate.getSyncCatalog() != null) {
       validateCatalogDoesntContainDuplicateStreamNames(connectionCreate.getSyncCatalog());
+      validateCatalogSize(connectionCreate.getSyncCatalog(), workspaceId, "create");
+
       standardSync.withCatalog(CatalogConverter.toConfiguredProtocol(connectionCreate.getSyncCatalog()));
       standardSync.withFieldSelectionData(CatalogConverter.getFieldSelectionData(connectionCreate.getSyncCatalog()));
     } else {
@@ -502,7 +513,6 @@ public class ConnectionsHandler {
     } else {
       populateSyncFromLegacySchedule(standardSync, connectionCreate);
     }
-    final UUID workspaceId = workspaceHelper.getWorkspaceForDestinationId(connectionCreate.getDestinationId());
     if (workspaceId != null && featureFlagClient.boolVariation(CheckWithCatalog.INSTANCE, new Workspace(workspaceId))) {
       // TODO this is the hook for future check with catalog work
       LOGGER.info("Entered into Dark Launch Code for Check with Catalog");
@@ -609,8 +619,9 @@ public class ConnectionsHandler {
       throws ConfigNotFoundException, IOException, JsonValidationException {
 
     final UUID connectionId = connectionPatch.getConnectionId();
+    final UUID workspaceId = workspaceHelper.getWorkspaceForConnectionId(connectionId);
 
-    LOGGER.debug("Starting updateConnection for connectionId {}...", connectionId);
+    LOGGER.debug("Starting updateConnection for connectionId {}, workspaceId {}...", connectionId, workspaceId);
     LOGGER.debug("incoming connectionPatch: {}", connectionPatch);
 
     final StandardSync sync = configRepository.getStandardSync(connectionId);
@@ -621,7 +632,7 @@ public class ConnectionsHandler {
     final ConnectionRead initialConnectionRead = ApiPojoConverters.internalToConnectionRead(sync);
     LOGGER.debug("initial ConnectionRead: {}", initialConnectionRead);
 
-    applyPatchToStandardSync(sync, connectionPatch);
+    applyPatchToStandardSync(sync, connectionPatch, workspaceId);
 
     LOGGER.debug("patched StandardSync before persisting: {}", sync);
     configRepository.writeStandardSync(sync);
@@ -1142,6 +1153,20 @@ public class ConnectionsHandler {
     updateObject.setSourceCatalogId(sourceCatalogId);
     trackSchemaChange(workspaceId, connectionId, propagateResult);
     return propagateResult.appliedDiff();
+  }
+
+  private void validateCatalogSize(final AirbyteCatalog catalog, final UUID workspaceId, final String operationName) {
+    final var validationContext = new Workspace(workspaceId);
+    final var validationError = catalogValidator.fieldCount(catalog, validationContext);
+    if (validationError != null) {
+      MetricClientFactory.getMetricClient().count(
+          OssMetricsRegistry.CATALOG_SIZE_VALIDATION_ERROR,
+          1,
+          new MetricAttribute(MetricTags.CRUD_OPERATION, operationName),
+          new MetricAttribute(MetricTags.WORKSPACE_ID, workspaceId.toString()));
+
+      throw new BadRequestException(validationError.getMessage());
+    }
   }
 
   public void trackSchemaChange(final UUID workspaceId, final UUID connectionId, final UpdateSchemaResult propagateResult) {

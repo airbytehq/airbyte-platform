@@ -25,6 +25,7 @@ public class MetricTags {
   public static final String CANCELLATION_SOURCE = "cancellation_source";
   public static final String CONNECTION_ID = "connection_id";
   public static final String CRON_TYPE = "cron_type";
+  public static final String CRUD_OPERATION = "crud_operation";
   public static final String DESTINATION_ID = "destination_id";
   public static final String DESTINATION_IMAGE = "destination_image";
   public static final String EXPIRE_SECRET = "expire_secret";
