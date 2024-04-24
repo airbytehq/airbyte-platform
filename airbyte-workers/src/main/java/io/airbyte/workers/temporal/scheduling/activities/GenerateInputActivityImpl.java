@@ -59,12 +59,6 @@ public class GenerateInputActivityImpl implements GenerateInputActivity {
             .attemptNumber(input.getAttemptId())),
         "Create job input."), JobInput.class);
 
-    // We now fetch the state and catalog until right before we launch the sync pods.
-    // This is done via the ReplicationInputHydrator#getHydratedInput method.
-    // Null-ing these out helps avoid Temporal payload size limitations.
-    jobInput.getSyncInput().setCatalog(null);
-    jobInput.getSyncInput().setState(null);
-
     MetricAttribute[] attrs = new MetricAttribute[0];
     try {
       attrs = new MetricAttribute[] {

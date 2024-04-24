@@ -834,25 +834,6 @@ public class ConfigRepository {
   }
 
   /**
-   * Delete a source by id.
-   *
-   * @param sourceId source id
-   * @return true if a source was deleted, false otherwise.
-   * @throws JsonValidationException - throws if returned sources are invalid
-   * @throws io.airbyte.data.exceptions.ConfigNotFoundException - throws if no source with that id can
-   *         be found.
-   * @throws IOException - you never know when you IO
-   */
-  @Deprecated
-  public boolean deleteSource(final UUID sourceId) throws JsonValidationException, ConfigNotFoundException, IOException {
-    try {
-      return sourceService.deleteSource(sourceId);
-    } catch (final io.airbyte.data.exceptions.ConfigNotFoundException e) {
-      throw new ConfigNotFoundException(e.getType(), e.getConfigId());
-    }
-  }
-
-  /**
    * Returns all sources in the database. Does not contain secrets. To hydrate with secrets see the
    * config-secrets module.
    *

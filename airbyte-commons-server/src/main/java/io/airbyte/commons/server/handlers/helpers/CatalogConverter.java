@@ -73,7 +73,10 @@ public class CatalogConverter {
                   .primaryKey(configuredStream.getPrimaryKey())
                   .aliasName(Names.toAlphanumericAndUnderscore(configuredStream.getStream().getName()))
                   .selected(true)
-                  .fieldSelectionEnabled(getStreamHasFieldSelectionEnabled(fieldSelectionData, streamDescriptor));
+                  .fieldSelectionEnabled(getStreamHasFieldSelectionEnabled(fieldSelectionData, streamDescriptor))
+                  .generationId(configuredStream.getGenerationId())
+                  .minimumGenerationId(configuredStream.getMinimumGenerationId())
+                  .syncId(configuredStream.getSyncId());
           if (configuration.getFieldSelectionEnabled()) {
             final List<String> selectedColumns = new ArrayList<>();
             // TODO(mfsiega-airbyte): support nested fields here.

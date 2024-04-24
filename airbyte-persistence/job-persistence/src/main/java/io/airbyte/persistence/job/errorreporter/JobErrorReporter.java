@@ -56,7 +56,7 @@ public class JobErrorReporter {
   private static final String JOB_ID_KEY = "job_id";
 
   private static final ImmutableSet<FailureType> UNSUPPORTED_FAILURETYPES =
-      ImmutableSet.of(FailureType.CONFIG_ERROR, FailureType.MANUAL_CANCELLATION);
+      ImmutableSet.of(FailureType.CONFIG_ERROR, FailureType.MANUAL_CANCELLATION, FailureType.TRANSIENT_ERROR);
 
   private final ConfigRepository configRepository;
   private final DeploymentMode deploymentMode;

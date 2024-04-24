@@ -7,6 +7,7 @@ package io.airbyte.config.secrets.persistence
 import com.google.api.gax.core.FixedCredentialsProvider
 import com.google.api.gax.rpc.NotFoundException
 import com.google.auth.oauth2.ServiceAccountCredentials
+import com.google.cloud.Timestamp
 import com.google.cloud.secretmanager.v1.ProjectName
 import com.google.cloud.secretmanager.v1.Replication
 import com.google.cloud.secretmanager.v1.Secret
@@ -17,6 +18,10 @@ import com.google.cloud.secretmanager.v1.SecretPayload
 import com.google.cloud.secretmanager.v1.SecretVersionName
 import com.google.protobuf.ByteString
 import io.airbyte.config.secrets.SecretCoordinate
+import io.airbyte.metrics.lib.MetricAttribute
+import io.airbyte.metrics.lib.MetricClient
+import io.airbyte.metrics.lib.MetricTags
+import io.airbyte.metrics.lib.OssMetricsRegistry
 import io.github.oshai.kotlinlogging.KotlinLogging
 import io.micronaut.context.annotation.Requires
 import io.micronaut.context.annotation.Value
@@ -24,6 +29,7 @@ import jakarta.inject.Named
 import jakarta.inject.Singleton
 import java.io.ByteArrayInputStream
 import java.nio.charset.StandardCharsets
+import java.time.Instant
 
 private val logger = KotlinLogging.logger {}
 
@@ -43,6 +49,7 @@ private val logger = KotlinLogging.logger {}
 class GoogleSecretManagerPersistence(
   @Value("\${airbyte.secret.store.gcp.project-id}") val gcpProjectId: String,
   private val googleSecretManagerServiceClient: GoogleSecretManagerServiceClient,
+  private val metricClient: MetricClient,
 ) : SecretPersistence {
   override fun read(coordinate: SecretCoordinate): String {
     try {
@@ -52,7 +59,7 @@ class GoogleSecretManagerPersistence(
         return response.payload.data.toStringUtf8()
       }
     } catch (e: NotFoundException) {
-      logger.warn(e) { "Unable to locate secret for coordinate ${coordinate.fullCoordinate}." }
+      logger.warn { "Unable to locate secret for coordinate ${coordinate.fullCoordinate}." }
       return ""
     } catch (e: Exception) {
       logger.error(e) { "Unable to read secret for coordinate ${coordinate.fullCoordinate}. " }
@@ -64,15 +71,7 @@ class GoogleSecretManagerPersistence(
     coordinate: SecretCoordinate,
     payload: String,
   ) {
-    googleSecretManagerServiceClient.createClient().use { client ->
-      if (read(coordinate).isEmpty()) {
-        val secretBuilder = Secret.newBuilder().setReplication(replicationPolicy)
-        client.createSecret(ProjectName.of(gcpProjectId), coordinate.fullCoordinate, secretBuilder.build())
-      }
-      val name = SecretName.of(gcpProjectId, coordinate.fullCoordinate)
-      val secretPayload = SecretPayload.newBuilder().setData(ByteString.copyFromUtf8(payload)).build()
-      client.addSecretVersion(name, secretPayload)
-    }
+    writeWithExpiry(coordinate, payload)
   }
 
   companion object {
@@ -87,6 +86,40 @@ class GoogleSecretManagerPersistence(
       Replication.newBuilder()
         .setAutomatic(Replication.Automatic.newBuilder().build())
         .build()
+  }
+
+  override fun writeWithExpiry(
+    coordinate: SecretCoordinate,
+    payload: String,
+    expiry: Instant?,
+  ) {
+    googleSecretManagerServiceClient.createClient().use { client ->
+      if (read(coordinate).isEmpty()) {
+        val secretBuilder = Secret.newBuilder().setReplication(replicationPolicy)
+
+        var expTag = listOf(MetricAttribute(MetricTags.EXPIRE_SECRET, "false"))
+        expiry?.let {
+          val expireTime = com.google.protobuf.Timestamp.newBuilder().setSeconds(it.epochSecond).build()
+          secretBuilder.setExpireTime(expireTime)
+          expTag = listOf(MetricAttribute(MetricTags.EXPIRE_SECRET, "true"))
+        }
+
+        metricClient.count(OssMetricsRegistry.CREATE_SECRET_DEFAULT_STORE, 1, *expTag.toTypedArray())
+        client.createSecret(ProjectName.of(gcpProjectId), coordinate.fullCoordinate, secretBuilder.build())
+      }
+
+      val name = SecretName.of(gcpProjectId, coordinate.fullCoordinate)
+      val secretPayload = SecretPayload.newBuilder().setData(ByteString.copyFromUtf8(payload)).build()
+      client.addSecretVersion(name, secretPayload)
+    }
+  }
+
+  override fun delete(coordinate: SecretCoordinate) {
+    googleSecretManagerServiceClient.createClient().use { client ->
+      val secretName = SecretName.of(gcpProjectId, coordinate.fullCoordinate)
+      client.deleteSecret(secretName)
+      metricClient.count(OssMetricsRegistry.DELETE_SECRET_DEFAULT_STORE, 1)
+    }
   }
 }
 

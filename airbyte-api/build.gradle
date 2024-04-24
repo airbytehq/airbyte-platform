@@ -16,7 +16,7 @@ def workloadSpecFile = "$projectDir/src/main/openapi/workload-openapi.yaml"
 def connectorBuilderServerSpecFile = project(":airbyte-connector-builder-server").file("src/main/openapi/openapi.yaml").getPath()
 
 def genApiServer = tasks.register("generateApiServer", GenerateTask) {
-    def serverOutputDir = "$buildDir/generated/api/server"
+    def serverOutputDir = "${getLayout().buildDirectory.get()}/generated/api/server"
 
     inputs.file specFile
     outputs.dir serverOutputDir
@@ -69,7 +69,7 @@ def genApiServer = tasks.register("generateApiServer", GenerateTask) {
 }
 
 def genApiClient = tasks.register("generateApiClient", GenerateTask) {
-    def clientOutputDir = "$buildDir/generated/api/client"
+    def clientOutputDir = "${getLayout().buildDirectory.get()}/generated/api/client"
 
     inputs.file specFile
     outputs.dir clientOutputDir
@@ -107,7 +107,7 @@ def genApiClient = tasks.register("generateApiClient", GenerateTask) {
 }
 
 def genApiClient2 = tasks.register("genApiClient2", GenerateTask) {
-    def clientOutputDir = "$buildDir/generated/api/client2"
+    def clientOutputDir = "${getLayout().buildDirectory.get()}/generated/api/client2"
 
     inputs.file specFile
     outputs.dir clientOutputDir
@@ -136,22 +136,23 @@ def genApiClient2 = tasks.register("genApiClient2", GenerateTask) {
     generateApiDocumentation = false
 
     configOptions = [
+            enumPropertyNaming  : "UPPERCASE",
             generatePom         : "false",
             interfaceOnly       : "true"
     ]
 
     doLast {
-        def apiClientPath = 'build/generated/api/client2/src/main/kotlin/org/openapitools/client/infrastructure/ApiClient.kt'
+        def apiClientPath = "${clientOutputDir}/src/main/kotlin/org/openapitools/client/infrastructure/ApiClient.kt"
         updateApiClientWithFailsafe(apiClientPath)
-        updateDomainClientsWithFailsafe('build/generated/api/client2/src/main/kotlin/io/airbyte/api/client2/generated')
+        updateDomainClientsWithFailsafe("${clientOutputDir}/src/main/kotlin/io/airbyte/api/client2/generated")
 
         // a JsonNode adapter needs to be added to the kotlin client's serializer to handle JsonNode fields in requests
-        updateApiClientSerializerWithJsonNodeAdapter('build/generated/api/client2/src/main/kotlin/org/openapitools/client/infrastructure/Serializer.kt')
+        updateApiClientSerializerWithJsonNodeAdapter("${clientOutputDir}/src/main/kotlin/org/openapitools/client/infrastructure/Serializer.kt")
     }
 }
 
 def genApiDocs = tasks.register("generateApiDocs", GenerateTask) {
-    def docsOutputDir = "$buildDir/generated/api/docs"
+    def docsOutputDir = "${getLayout().buildDirectory.get()}/generated/api/docs"
 
     generatorName = "html"
     inputSpec = specFile
@@ -183,7 +184,7 @@ def genApiDocs = tasks.register("generateApiDocs", GenerateTask) {
 }
 
 def genPublicApiServer = tasks.register('generatePublicApiServer', GenerateTask) {
-    def serverOutputDir = "$buildDir/generated/public_api/server"
+    def serverOutputDir = "${getLayout().buildDirectory.get()}/generated/public_api/server"
 
     inputs.file specFile
     outputs.dir serverOutputDir
@@ -227,7 +228,7 @@ def genPublicApiServer = tasks.register('generatePublicApiServer', GenerateTask)
 }
 
 def genAirbyteApiServer = tasks.register('generateAirbyteApiServer', GenerateTask) {
-    def serverOutputDir = "$buildDir/generated/airbyte_api/server"
+    def serverOutputDir = "${getLayout().buildDirectory.get()}/generated/airbyte_api/server"
 
     inputs.file airbyteApiSpecFile
     outputs.dir serverOutputDir
@@ -270,7 +271,7 @@ def genAirbyteApiServer = tasks.register('generateAirbyteApiServer', GenerateTas
 
 // TODO: Linked to document okhhtp
 def genWorkloadApiClient = tasks.register("genWorkloadApiClient", GenerateTask) {
-    def clientOutputDir = "$buildDir/generated/workloadapi/client"
+    def clientOutputDir = "${getLayout().buildDirectory.get()}/generated/workloadapi/client"
 
     inputs.file workloadSpecFile
     outputs.dir clientOutputDir
@@ -304,9 +305,9 @@ def genWorkloadApiClient = tasks.register("genWorkloadApiClient", GenerateTask) 
     ]
 
     doLast {
-        def apiClientPath = 'build/generated/workloadapi/client/src/main/kotlin/io/airbyte/workload/api/client/generated/infrastructure/ApiClient.kt'
+        def apiClientPath = "${clientOutputDir}/src/main/kotlin/io/airbyte/workload/api/client/generated/infrastructure/ApiClient.kt"
         updateApiClientWithFailsafe(apiClientPath)
-        def generatedDomainClientsPath = 'build/generated/workloadapi/client/src/main/kotlin/io/airbyte/workload/api/client/generated'
+        def generatedDomainClientsPath = "${clientOutputDir}/src/main/kotlin/io/airbyte/workload/api/client/generated"
         updateDomainClientsWithFailsafe(generatedDomainClientsPath)
         // the kotlin client (as opposed to the java client) doesn't include the response body in the exception message.
         updateDomainClientsToIncludeHttpResponseBodyOnClientException(generatedDomainClientsPath)
@@ -316,7 +317,7 @@ def genWorkloadApiClient = tasks.register("genWorkloadApiClient", GenerateTask) 
 }
 
 def genConnectorBuilderServerApiClient = tasks.register("genConnectorBuilderServerApiClient", GenerateTask) {
-    def clientOutputDir = "$buildDir/generated/connectorbuilderserverapi/client"
+    def clientOutputDir = "${getLayout().buildDirectory.get()}/generated/connectorbuilderserverapi/client"
 
     inputs.file connectorBuilderServerSpecFile
     outputs.dir clientOutputDir
@@ -345,9 +346,9 @@ def genConnectorBuilderServerApiClient = tasks.register("genConnectorBuilderServ
 
     doLast {
         // Delete file generated by the client2 task
-        def dir = file('build/generated/connectorbuilderserverapi/client/src/main/kotlin/org').deleteDir()
+        def dir = file("${clientOutputDir}/src/main/kotlin/org").deleteDir()
 
-        def generatedDomainClientsPath = 'build/generated/connectorbuilderserverapi/client/src/main/kotlin/io/airbyte/connectorbuilderserver/api/client/generated'
+        def generatedDomainClientsPath = "${clientOutputDir}/src/main/kotlin/io/airbyte/connectorbuilderserver/api/client/generated"
         updateDomainClientsWithFailsafe(generatedDomainClientsPath)
         // the kotlin client (as opposed to the java client) doesn't include the response body in the exception message.
         updateDomainClientsToIncludeHttpResponseBodyOnClientException(generatedDomainClientsPath)
@@ -385,20 +386,24 @@ dependencies {
     kapt libs.v3.swagger.annotations
 
     api libs.bundles.micronaut.annotation
-    api(libs.kotlin.logging)
+    api libs.micronaut.http
+    api libs.bundles.micronaut.metrics
+    api libs.failsafe.okhttp
+    api libs.okhttp
+    api libs.guava
+    api libs.java.jwt
+    api libs.google.auth.library.oauth2.http
+    api libs.kotlin.logging
 
     implementation platform(libs.micronaut.platform)
     implementation libs.bundles.micronaut
     implementation libs.commons.io
-    implementation libs.failsafe.okhttp
-    implementation libs.guava
     implementation libs.jakarta.annotation.api
     implementation libs.jakarta.ws.rs.api
     implementation libs.jakarta.validation.api
     implementation libs.jackson.datatype
     implementation libs.jackson.databind
     implementation libs.moshi.kotlin
-    implementation libs.okhttp
     implementation libs.openapi.jackson.databind.nullable
     implementation libs.reactor.core
     implementation libs.slf4j.api

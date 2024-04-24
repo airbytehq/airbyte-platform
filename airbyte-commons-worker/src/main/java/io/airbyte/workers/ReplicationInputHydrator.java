@@ -11,6 +11,7 @@ import io.airbyte.api.client.generated.JobsApi;
 import io.airbyte.api.client.generated.SecretsPersistenceConfigApi;
 import io.airbyte.api.client.generated.StateApi;
 import io.airbyte.api.client.invoker.generated.ApiException;
+import io.airbyte.api.client.model.generated.ConnectionAndJobIdRequestBody;
 import io.airbyte.api.client.model.generated.ConnectionIdRequestBody;
 import io.airbyte.api.client.model.generated.ConnectionRead;
 import io.airbyte.api.client.model.generated.ConnectionState;
@@ -32,8 +33,11 @@ import io.airbyte.config.StateWrapper;
 import io.airbyte.config.helpers.StateMessageHelper;
 import io.airbyte.config.secrets.SecretsRepositoryReader;
 import io.airbyte.config.secrets.persistence.RuntimeSecretPersistence;
+import io.airbyte.featureflag.ActivateRefreshes;
 import io.airbyte.featureflag.AutoBackfillOnNewColumns;
+import io.airbyte.featureflag.Connection;
 import io.airbyte.featureflag.FeatureFlagClient;
+import io.airbyte.featureflag.Multi;
 import io.airbyte.featureflag.Organization;
 import io.airbyte.featureflag.UseRuntimeSecretPersistence;
 import io.airbyte.featureflag.Workspace;
@@ -42,6 +46,7 @@ import io.airbyte.protocol.models.ConfiguredAirbyteCatalog;
 import io.airbyte.workers.helper.BackfillHelper;
 import io.airbyte.workers.models.RefreshSchemaActivityOutput;
 import io.airbyte.workers.models.ReplicationActivityInput;
+import java.util.List;
 import java.util.UUID;
 import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
@@ -83,12 +88,23 @@ public class ReplicationInputHydrator {
    * @throws Exception from the Airbyte API
    */
   public ReplicationInput getHydratedReplicationInput(final ReplicationActivityInput replicationActivityInput) throws Exception {
+
+    final boolean canRunRefreshes = featureFlagClient.boolVariation(ActivateRefreshes.INSTANCE, new Multi(
+        List.of(
+            new Workspace(replicationActivityInput.getWorkspaceId()),
+            new Connection(replicationActivityInput.getConnectionId()))));
     // Retrieve the connection, which we need in a few places.
-    final ConnectionRead connectionInfo =
-        AirbyteApiClient
+    final ConnectionRead connectionInfo = canRunRefreshes ? AirbyteApiClient
+        .retryWithJitterThrows(
+            () -> connectionApi.getConnectionForJob(new ConnectionAndJobIdRequestBody()
+                .connectionId(replicationActivityInput.getConnectionId())
+                .jobId(Long.parseLong(replicationActivityInput.getJobRunConfig().getJobId()))),
+            "retrieve the connection")
+        : AirbyteApiClient
             .retryWithJitterThrows(
                 () -> connectionApi.getConnection(new ConnectionIdRequestBody().connectionId(replicationActivityInput.getConnectionId())),
                 "retrieve the connection");
+
     final ConfiguredAirbyteCatalog catalog = retrieveCatalog(connectionInfo);
     if (replicationActivityInput.getIsReset()) {
       // If this is a reset, we need to set the streams being reset to Full Refresh | Overwrite.

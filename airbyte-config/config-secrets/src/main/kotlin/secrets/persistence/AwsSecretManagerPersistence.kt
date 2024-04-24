@@ -118,7 +118,7 @@ class AwsSecretManagerPersistence(private val awsClient: AwsClient, private val 
    *
    * @param coordinate SecretCoordinate to delete.
    */
-  private fun deleteSecret(coordinate: SecretCoordinate) {
+  override fun delete(coordinate: SecretCoordinate) {
     awsClient.client.deleteSecret(
       DeleteSecretRequest()
         .withSecretId(coordinate.coordinateBase)

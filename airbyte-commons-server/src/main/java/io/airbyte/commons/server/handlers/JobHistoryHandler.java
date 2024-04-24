@@ -5,6 +5,7 @@
 package io.airbyte.commons.server.handlers;
 
 import static io.airbyte.featureflag.ContextKt.ANONYMOUS;
+import static io.airbyte.persistence.job.models.Job.SYNC_REPLICATION_TYPES;
 
 import com.google.common.base.Preconditions;
 import io.airbyte.api.model.generated.AttemptInfoRead;
@@ -14,6 +15,7 @@ import io.airbyte.api.model.generated.AttemptStats;
 import io.airbyte.api.model.generated.AttemptStreamStats;
 import io.airbyte.api.model.generated.ConnectionIdRequestBody;
 import io.airbyte.api.model.generated.ConnectionRead;
+import io.airbyte.api.model.generated.ConnectionSyncProgressReadItem;
 import io.airbyte.api.model.generated.DestinationDefinitionIdRequestBody;
 import io.airbyte.api.model.generated.DestinationDefinitionRead;
 import io.airbyte.api.model.generated.DestinationIdRequestBody;
@@ -140,6 +142,7 @@ public class JobHistoryHandler {
         .stream()
         .map(type -> Enums.convertTo(type, JobConfig.ConfigType.class))
         .collect(Collectors.toSet());
+
     final String configId = request.getConfigId();
 
     final int pageSize = (request.getPagination() != null && request.getPagination().getPageSize() != null) ? request.getPagination().getPageSize()
@@ -341,9 +344,17 @@ public class JobHistoryHandler {
   }
 
   private static List<ConfiguredAirbyteStream> extractStreams(Job job) {
-    return job.getConfig().getSync() != null
-        ? job.getConfig().getSync().getConfiguredAirbyteCatalog().getStreams()
-        : List.of();
+    if (job.getConfigType() == ConfigType.SYNC) {
+      return job.getConfig().getSync() != null
+          ? job.getConfig().getSync().getConfiguredAirbyteCatalog().getStreams()
+          : List.of();
+    } else if (job.getConfigType() == ConfigType.REFRESH) {
+      return job.getConfig().getRefresh() != null
+          ? job.getConfig().getRefresh().getConfiguredAirbyteCatalog().getStreams()
+          : List.of();
+    } else {
+      return List.of();
+    }
   }
 
   public JobInfoRead getJobInfo(final JobIdRequestBody jobIdRequestBody) throws IOException {
@@ -402,13 +413,40 @@ public class JobHistoryHandler {
   public Optional<JobRead> getLatestRunningSyncJob(final UUID connectionId) throws IOException {
     final List<Job> nonTerminalSyncJobsForConnection = jobPersistence.listJobsForConnectionWithStatuses(
         connectionId,
-        Collections.singleton(ConfigType.SYNC),
+        SYNC_REPLICATION_TYPES,
         JobStatus.NON_TERMINAL_STATUSES);
 
     // there *should* only be a single running sync job for a connection, but
     // jobPersistence.listJobsForConnectionWithStatuses orders by created_at desc so
     // .findFirst will always return what we want.
     return nonTerminalSyncJobsForConnection.stream().map(JobConverter::getJobRead).findFirst();
+  }
+
+  public List<ConnectionSyncProgressReadItem> getConnectionSyncProgress(final ConnectionIdRequestBody connectionIdRequestBody) throws IOException {
+    final List<Job> jobs = jobPersistence.getRunningSyncJobForConnections(List.of(connectionIdRequestBody.getConnectionId()));
+
+    if (jobs.isEmpty()) {
+      return Collections.emptyList();
+    }
+
+    final List<JobWithAttemptsRead> jobReads = jobs.stream()
+        .map(JobConverter::getJobWithAttemptsRead)
+        .collect(Collectors.toList());
+
+    hydrateWithStats(jobReads, jobs, featureFlagClient.boolVariation(HydrateAggregatedStats.INSTANCE, new Workspace(ANONYMOUS)));
+
+    return jobReads.stream()
+        .flatMap(job -> job.getJob().getStreamAggregatedStats().stream())
+        .map(streamStats -> new ConnectionSyncProgressReadItem()
+            .jobId(jobReads.getFirst().getJob().getId())
+            .streamName(streamStats.getStreamName())
+            .streamNamespace(streamStats.getStreamNamespace())
+            .recordsExtracted(streamStats.getRecordsEmitted())
+            .recordsLoaded(streamStats.getRecordsCommitted())
+            .bytesExtracted(streamStats.getBytesEmitted())
+            .bytesLoaded(streamStats.getBytesCommitted())
+            .syncStartedAt(jobReads.getFirst().getJob().getStartedAt()))
+        .collect(Collectors.toList());
   }
 
   public Optional<JobRead> getLatestSyncJob(final UUID connectionId) throws IOException {

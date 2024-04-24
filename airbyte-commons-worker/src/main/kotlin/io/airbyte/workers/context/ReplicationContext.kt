@@ -16,6 +16,8 @@ import java.util.UUID
  * @param workspaceId The workspace ID associated with the sync.
  * @param sourceImage The name and version of the source image.
  * @param destinationImage The name and version of the destination image.
+ * @param sourceDefinitionId The source definition ID associated with the sync
+ * @param destinationDefinitionId The source definition ID associated with the sync
  */
 data class ReplicationContext(
   val isReset: Boolean,
@@ -27,4 +29,6 @@ data class ReplicationContext(
   val workspaceId: UUID,
   val sourceImage: String,
   val destinationImage: String,
+  val sourceDefinitionId: UUID,
+  val destinationDefinitionId: UUID,
 )

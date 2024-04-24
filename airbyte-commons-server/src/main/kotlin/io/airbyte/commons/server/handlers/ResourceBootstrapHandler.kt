@@ -36,7 +36,7 @@ open class ResourceBootstrapHandler(
   private val permissionService: PermissionService,
   private val currentUserService: CurrentUserService,
   private val apiAuthorizationHelper: ApiAuthorizationHelper,
-) {
+) : ResourceBootstrapHandlerInterface {
   companion object {
     val LOGGER = LoggerFactory.getLogger(ResourceBootstrapHandler::class.java)
   }
@@ -44,7 +44,7 @@ open class ResourceBootstrapHandler(
   /**
    * This is for bootstrapping a workspace and all the necessary links (organization) and permissions (workspace & organization).
    */
-  fun bootStrapWorkspaceForCurrentUser(workspaceCreateWithId: WorkspaceCreateWithId): WorkspaceRead {
+  override fun bootStrapWorkspaceForCurrentUser(workspaceCreateWithId: WorkspaceCreateWithId): WorkspaceRead {
     val user = currentUserService.getCurrentUser()
     // The organization to use to set up the new workspace
     val organization =
@@ -81,7 +81,7 @@ open class ResourceBootstrapHandler(
     return WorkspaceConverter.domainToApiModel(standardWorkspace)
   }
 
-  private fun findOrCreateOrganizationAndPermission(user: User): Organization {
+  public fun findOrCreateOrganizationAndPermission(user: User): Organization {
     findExistingOrganization(user)?.let { return it }
 
     val organization =

@@ -23,14 +23,21 @@ class PaginationMapperTest {
 
   @Test
   fun `test that it can generate next URLs`() {
-    var noOffsetBuilder = PaginationMapper.getBuilder(publicApiHost, removePublicApiPathPrefix(SOURCES_PATH))
-    PaginationMapper.getNextUrl(listOf("a", "b", "c"), 4, 0, noOffsetBuilder)
+    val lessResultsBuilder = PaginationMapper.getBuilder(publicApiHost, removePublicApiPathPrefix(SOURCES_PATH))
+    PaginationMapper.getNextUrl(listOf("a", "b", "c"), 4, 0, lessResultsBuilder)
     assertEquals(
-      "$publicApiHost/v1/sources",
-      noOffsetBuilder.build().toString(),
+      "$publicApiHost/v1/sources?limit=4&offset=4",
+      lessResultsBuilder.build().toString(),
     )
 
-    var offsetLimitBuilder = PaginationMapper.getBuilder(publicApiHost, removePublicApiPathPrefix(SOURCES_PATH))
+    val noResultsBuilder = PaginationMapper.getBuilder(publicApiHost, removePublicApiPathPrefix(SOURCES_PATH))
+    PaginationMapper.getNextUrl(emptyList<Any>(), 4, 0, noResultsBuilder)
+    assertEquals(
+      "$publicApiHost/v1/sources",
+      noResultsBuilder.build().toString(),
+    )
+
+    val offsetLimitBuilder = PaginationMapper.getBuilder(publicApiHost, removePublicApiPathPrefix(SOURCES_PATH))
     PaginationMapper.getNextUrl(listOf("a", "b", "c"), 2, 0, offsetLimitBuilder)
     assertEquals(
       "$publicApiHost/v1/sources?limit=2&offset=2",

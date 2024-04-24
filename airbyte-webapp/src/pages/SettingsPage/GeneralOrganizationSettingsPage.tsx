@@ -14,6 +14,7 @@ import { UpdateOrganizationSettingsForm } from "./UpdateOrganizationSettingsForm
 export const GeneralOrganizationSettingsPage: React.FC = () => {
   useTrackPage(PageTrackingCodes.SETTINGS_ORGANIZATION);
   const isAccessManagementEnabled = useFeature(FeatureItem.RBAC);
+  const displayOrganizationUsers = useFeature(FeatureItem.DisplayOrganizationUsers);
 
   return (
     <FlexContainer direction="column" gap="xl">
@@ -22,7 +23,7 @@ export const GeneralOrganizationSettingsPage: React.FC = () => {
       </Heading>
       <UpdateOrganizationSettingsForm />
 
-      {isAccessManagementEnabled && (
+      {isAccessManagementEnabled && displayOrganizationUsers && (
         <>
           <Separator />
           <OrganizationAccessManagementSection />

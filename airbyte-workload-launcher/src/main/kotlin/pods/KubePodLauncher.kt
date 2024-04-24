@@ -2,6 +2,9 @@ package io.airbyte.workload.launcher.pods
 
 import dev.failsafe.Failsafe
 import dev.failsafe.RetryPolicy
+import io.airbyte.featureflag.FeatureFlagClient
+import io.airbyte.featureflag.PlaneName
+import io.airbyte.featureflag.UseCustomK8sInitCheck
 import io.airbyte.metrics.lib.MetricAttribute
 import io.airbyte.metrics.lib.MetricClient
 import io.airbyte.metrics.lib.OssMetricsRegistry
@@ -9,6 +12,7 @@ import io.airbyte.workers.process.KubePodResourceHelper
 import io.airbyte.workload.launcher.pods.KubePodLauncher.Constants.KUBECTL_COMPLETED_VALUE
 import io.airbyte.workload.launcher.pods.KubePodLauncher.Constants.KUBECTL_PHASE_FIELD_NAME
 import io.airbyte.workload.launcher.pods.KubePodLauncher.Constants.MAX_DELETION_TIMEOUT
+import io.fabric8.kubernetes.api.model.ContainerState
 import io.fabric8.kubernetes.api.model.DeletionPropagation
 import io.fabric8.kubernetes.api.model.Pod
 import io.fabric8.kubernetes.api.model.PodList
@@ -17,7 +21,9 @@ import io.fabric8.kubernetes.client.KubernetesClient
 import io.fabric8.kubernetes.client.dsl.FilterWatchListDeletable
 import io.fabric8.kubernetes.client.dsl.PodResource
 import io.fabric8.kubernetes.client.readiness.Readiness
+import io.fabric8.kubernetes.client.utils.PodStatusUtil
 import io.github.oshai.kotlinlogging.KotlinLogging
+import io.micronaut.context.annotation.Property
 import io.micronaut.context.annotation.Value
 import jakarta.inject.Named
 import jakarta.inject.Singleton
@@ -38,6 +44,8 @@ class KubePodLauncher(
   private val kubeCopyClient: KubeCopyClient,
   @Value("\${airbyte.worker.job.kube.namespace}") private val namespace: String?,
   @Named("kubernetesClientRetryPolicy") private val kubernetesClientRetryPolicy: RetryPolicy<Any>,
+  private val featureFlagClient: FeatureFlagClient,
+  @Property(name = "airbyte.data-plane-name") private val dataPlaneName: String?,
 ) {
   fun create(pod: Pod): Pod {
     return runKubeCommand(
@@ -52,6 +60,44 @@ class KubePodLauncher(
   }
 
   fun waitForPodInit(
+    pod: Pod,
+    waitDuration: Duration,
+  ) {
+    if (shouldUseCustomK8sInitCheck()) {
+      return waitForPodInitCustomCheck(pod, waitDuration)
+    } else {
+      return waitForPodInitDefaultCheck(pod, waitDuration)
+    }
+  }
+
+  private fun shouldUseCustomK8sInitCheck() =
+    dataPlaneName.isNullOrBlank() ||
+      featureFlagClient.boolVariation(
+        UseCustomK8sInitCheck,
+        PlaneName(dataPlaneName),
+      )
+
+  private fun waitForPodInitDefaultCheck(
+    pod: Pod,
+    waitDuration: Duration,
+  ) {
+    runKubeCommand(
+      {
+        kubernetesClient
+          .resource(pod)
+          .waitUntilCondition(
+            { p: Pod ->
+              PodStatusUtil.isInitializing(p)
+            },
+            waitDuration.toMinutes(),
+            TimeUnit.MINUTES,
+          )
+      },
+      "wait",
+    )
+  }
+
+  private fun waitForPodInitCustomCheck(
     pod: Pod,
     waitDuration: Duration,
   ) {
@@ -74,7 +120,7 @@ class KubePodLauncher(
         "wait",
       )
 
-    val containerState =
+    val containerState: ContainerState =
       initializedPod
         .status
         .initContainerStatuses[0]

@@ -5,6 +5,8 @@ import React, { useMemo } from "react";
 import { FormattedMessage } from "react-intl";
 import { useToggle } from "react-use";
 
+import { useConnectionStatus } from "components/connection/ConnectionStatus/useConnectionStatus";
+import { ConnectionStatusIndicatorStatus } from "components/connection/ConnectionStatusIndicator";
 import { StreamStatusIndicator } from "components/connection/StreamStatusIndicator";
 import { Box } from "components/ui/Box";
 import { Card } from "components/ui/Card";
@@ -16,6 +18,7 @@ import { Text } from "components/ui/Text";
 
 import { ConnectionStatus } from "core/api/types/AirbyteClient";
 import { useConnectionEditService } from "hooks/services/ConnectionEdit/ConnectionEditService";
+import { useExperiment } from "hooks/services/Experiment";
 
 import { StreamActionsMenu } from "./StreamActionsMenu";
 import { StreamSearchFiltering } from "./StreamSearchFiltering";
@@ -48,6 +51,7 @@ const LastSync: React.FC<{ transitionedAt: number | undefined; showRelativeTime:
 };
 
 export const StreamsList = () => {
+  const useSimpliedCreation = useExperiment("connection.simplifiedCreation", false);
   const [showRelativeTime, setShowRelativeTime] = useToggle(true);
 
   const { filteredStreams } = useStreamsListContext();
@@ -102,6 +106,7 @@ export const StreamsList = () => {
   );
 
   const { connection } = useConnectionEditService();
+  const { status, nextSync } = useConnectionStatus(connection.connectionId);
 
   const showTable = connection.status !== ConnectionStatus.inactive;
 
@@ -109,9 +114,35 @@ export const StreamsList = () => {
     <Card noPadding>
       <Box p="xl" className={styles.cardHeader}>
         <FlexContainer justifyContent="space-between" alignItems="center">
-          <Heading as="h5" size="sm">
-            <FormattedMessage id="connection.stream.status.title" />
-          </Heading>
+          {useSimpliedCreation ? (
+            <FlexContainer alignItems="center">
+              <Heading as="h5" size="sm">
+                <FormattedMessage id="connection.stream.status.title" />
+              </Heading>
+              <Box as="span" ml="md">
+                <Text color="grey" bold size="sm" as="span">
+                  {status === ConnectionStatusIndicatorStatus.OnTime && nextSync && (
+                    <FormattedMessage
+                      id="connection.stream.status.nextSync"
+                      values={{ sync: dayjs(nextSync).fromNow() }}
+                    />
+                  )}
+                  {(status === ConnectionStatusIndicatorStatus.Late ||
+                    status === ConnectionStatusIndicatorStatus.OnTrack) &&
+                    nextSync && (
+                      <FormattedMessage
+                        id="connection.stream.status.nextTry"
+                        values={{ sync: dayjs(nextSync).fromNow() }}
+                      />
+                    )}
+                </Text>
+              </Box>
+            </FlexContainer>
+          ) : (
+            <Heading as="h5" size="sm">
+              <FormattedMessage id="connection.stream.status.title" />
+            </Heading>
+          )}
           <StreamSearchFiltering className={styles.search} />
         </FlexContainer>
       </Box>

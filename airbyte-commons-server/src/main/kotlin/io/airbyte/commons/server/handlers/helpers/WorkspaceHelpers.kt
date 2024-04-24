@@ -11,8 +11,11 @@ import io.airbyte.commons.server.converters.WorkspaceWebhookConfigsConverter
 import io.airbyte.config.Geography
 import io.airbyte.config.Organization
 import io.airbyte.config.StandardWorkspace
+import java.util.Optional
 import java.util.UUID
 import java.util.function.Supplier
+
+// These helpers exist so that we can get some of the utility of working with workspaces but without needing to inject WorkspacesHandler
 
 fun buildStandardWorkspace(
   workspaceCreateWithId: WorkspaceCreateWithId,
@@ -40,8 +43,7 @@ fun buildStandardWorkspace(
   val notificationSettings: NotificationSettings = patchNotificationSettingsWithDefaultValue(workspaceCreateWithId)
 
   return StandardWorkspace().apply {
-    this.workspaceId = uuidSupplier.get()
-    this.workspaceId = workspaceCreateWithId.id
+    this.workspaceId = workspaceCreateWithId.id ?: uuidSupplier.get()
     this.customerId = uuidSupplier.get() // "customer_id" should be deprecated
     this.name = workspaceCreateWithId.name
     this.slug = uuidSupplier.get().toString()
@@ -77,4 +79,26 @@ private fun patchNotificationSettingsWithDefaultValue(workspaceCreateWithId: Wor
     this.sendOnBreakingChangeSyncsDisabled =
       workspaceCreateWithId.notificationSettings?.sendOnBreakingChangeSyncsDisabled ?: defaultNotificationType
   }
+}
+
+fun getDefaultWorkspaceName(
+  organization: Optional<Organization>,
+  companyName: String?,
+  email: String,
+): String {
+  var defaultWorkspaceName = ""
+  if (organization.isPresent) {
+    // use organization name as default workspace name
+    defaultWorkspaceName = organization.get().name.trim()
+  }
+  // if organization name is not available or empty, use user's company name (note: this is an
+  // optional field)
+  if (defaultWorkspaceName.isEmpty() && companyName != null) {
+    defaultWorkspaceName = companyName.trim()
+  }
+  // if company name is still empty, use user's email (note: this is a required field)
+  if (defaultWorkspaceName.isEmpty()) {
+    defaultWorkspaceName = email
+  }
+  return defaultWorkspaceName
 }

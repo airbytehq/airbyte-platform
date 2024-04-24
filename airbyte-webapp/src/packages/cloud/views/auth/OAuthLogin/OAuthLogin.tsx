@@ -76,8 +76,8 @@ export const OAuthLogin: React.FC<OAuthLoginProps> = ({ loginWithOAuth, type }) 
   const [searchParams] = useSearchParams();
   const loginRedirect = searchParams.get("loginRedirect");
   const navigate = useNavigate();
-  const [keycloakAuthEnabledLocalStorage] = useLocalStorage("airbyte_keycloak-auth-ui", false);
-  const keycloakAuthEnabledExperiment = useExperiment("authPage.keycloak", false);
+  const [keycloakAuthEnabledLocalStorage] = useLocalStorage("airbyte_keycloak-auth-ui", true);
+  const keycloakAuthEnabledExperiment = useExperiment("authPage.keycloak", true);
   const keycloakAuthEnabled = keycloakAuthEnabledExperiment || keycloakAuthEnabledLocalStorage;
   const {
     redirectToSignInWithGithub,

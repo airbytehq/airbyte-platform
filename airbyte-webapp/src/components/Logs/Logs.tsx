@@ -7,6 +7,7 @@ import styles from "./Logs.module.scss";
 interface LogsProps {
   logsArray?: string[];
   maxRows?: number;
+  follow?: boolean;
 }
 
 const ROW_HEIGHT = 19;
@@ -19,7 +20,7 @@ function trimLogs(logs: string[]) {
   return trimmedLogs;
 }
 
-const Logs: React.FC<LogsProps> = ({ logsArray, maxRows = 21 }) => {
+const Logs: React.FC<LogsProps> = ({ logsArray, maxRows = 21, follow }) => {
   const trimmedLogs = trimLogs(logsArray || []);
   const logsJoin = trimmedLogs.length ? trimmedLogs.join("\n") : "No logs available";
 
@@ -41,7 +42,7 @@ const Logs: React.FC<LogsProps> = ({ logsArray, maxRows = 21 }) => {
           lineClassName={styles.logLine}
           highlightLineClassName={styles.highlightLogLine}
           selectableLines
-          follow
+          follow={follow}
           style={{ background: "transparent" }}
           scrollToLine={undefined}
           highlight={[]}

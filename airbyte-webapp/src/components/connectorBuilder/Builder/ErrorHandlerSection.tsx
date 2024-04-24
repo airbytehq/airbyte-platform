@@ -44,6 +44,8 @@ export const ErrorHandlerSection: React.FC<ErrorHandlerSectionProps> = (props) =
           type="number"
           path={buildPath("backoff_strategy.backoff_time_in_seconds")}
           manifestPath="ConstantBackoffStrategy.properties.backoff_time_in_seconds"
+          step={1}
+          min={0}
         />
       ),
     },

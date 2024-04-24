@@ -8,11 +8,14 @@ $default-padding: variables.$spacing-xl;
 .cardHeader {
   display: flex;
   justify-content: space-between;
-  align-items: center;
   color: colors.$dark-blue;
   padding: $default-padding $default-padding 0 $default-padding;
   border-top-left-radius: $default-border-radius;
   border-top-right-radius: $default-border-radius;
+
+  .helpText {
+    color: colors.$grey-400;
+  }
 
   &.withBorderBottom {
     border-bottom: colors.$grey-100 variables.$border-thin solid;
@@ -36,10 +39,6 @@ $default-padding: variables.$spacing-xl;
   width: auto;
   background: colors.$foreground;
   border-radius: variables.$border-radius-lg;
-
-  .infoTooltip {
-    color: colors.$foreground;
-  }
 
   &:has(.cardBody:empty) .cardHeader {
     // apply the bottom border to the header only if it has a rendered sibling (the card content)
@@ -74,4 +73,8 @@ $default-padding: variables.$spacing-xl;
 
 .noPadding {
   padding: 0;
+}
+
+.infoTooltip {
+  color: colors.$foreground;
 }

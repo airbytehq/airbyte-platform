@@ -765,18 +765,22 @@ exports[`ConnectionReplicationPage should show an error if there is a schemaErro
               >
                 <div
                   class="<removed-for-snapshot-test>"
-                  data-icon="status-error"
-                  data-testid="mocksvg"
-                />
-              </div>
-              <div
-                class="<removed-for-snapshot-test>"
-              >
-                <span
+                >
+                  <div
+                    class="<removed-for-snapshot-test>"
+                    data-icon="status-error"
+                    data-testid="mocksvg"
+                  />
+                </div>
+                <div
                   class="<removed-for-snapshot-test>"
                 >
-                  Sorry. Something went wrong...
-                </span>
+                  <span
+                    class="<removed-for-snapshot-test>"
+                  >
+                    Sorry. Something went wrong...
+                  </span>
+                </div>
               </div>
             </div>
           </div>

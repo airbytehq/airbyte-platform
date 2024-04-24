@@ -4,6 +4,8 @@
 
 package io.airbyte.persistence.job.tracker;
 
+import static io.airbyte.persistence.job.models.Job.REPLICATION_TYPES;
+import static io.airbyte.persistence.job.models.Job.SYNC_REPLICATION_TYPES;
 import static java.util.Collections.emptyMap;
 import static java.util.Collections.singletonMap;
 
@@ -52,6 +54,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 
 /**
@@ -211,7 +214,7 @@ public class JobTracker {
   public void trackSync(final Job job, final JobState jobState) {
     Exceptions.swallow(() -> {
       final ConfigType configType = job.getConfigType();
-      final boolean allowedJob = configType == ConfigType.SYNC || configType == ConfigType.RESET_CONNECTION;
+      final boolean allowedJob = REPLICATION_TYPES.contains(configType);
       Preconditions.checkArgument(allowedJob, "Job type " + configType + " is not allowed!");
       final long jobId = job.getId();
       final Optional<Attempt> lastAttempt = job.getLastAttempt();
@@ -227,7 +230,12 @@ public class JobTracker {
       final ActorDefinitionVersion destinationVersion =
           actorDefinitionVersionHelper.getDestinationVersion(destinationDefinition, workspaceId, standardSync.getDestinationId());
 
-      final Map<String, Object> jobMetadata = generateJobMetadata(String.valueOf(jobId), configType, job.getAttemptsCount());
+      final List<Job> jobsHistory = jobPersistence.listJobsIncludingId(
+          Set.of(ConfigType.SYNC, ConfigType.RESET_CONNECTION, ConfigType.REFRESH), connectionId.toString(), jobId, 2);
+
+      final Optional<Job> previousJob = jobsHistory.stream().filter(jobHistory -> jobHistory.getId() != jobId).findFirst();
+
+      final Map<String, Object> jobMetadata = generateJobMetadata(String.valueOf(jobId), configType, job.getAttemptsCount(), previousJob);
       final Map<String, Object> jobAttemptMetadata = generateJobAttemptMetadata(jobId, jobState);
       final Map<String, Object> sourceDefMetadata = generateSourceDefinitionMetadata(sourceDefinition, sourceVersion);
       final Map<String, Object> destinationDefMetadata = generateDestinationDefinitionMetadata(destinationDefinition, destinationVersion);
@@ -276,7 +284,7 @@ public class JobTracker {
       final ActorDefinitionVersion destinationVersion =
           actorDefinitionVersionHelper.getDestinationVersion(destinationDefinition, workspaceId, standardSync.getDestinationId());
 
-      final Map<String, Object> jobMetadata = generateJobMetadata(String.valueOf(jobId), null, attempts);
+      final Map<String, Object> jobMetadata = generateJobMetadata(String.valueOf(jobId), null, attempts, Optional.empty());
       final Map<String, Object> jobAttemptMetadata = generateJobAttemptMetadata(jobId, jobState);
       final Map<String, Object> sourceDefMetadata = generateSourceDefinitionMetadata(sourceDefinition, sourceVersion);
       final Map<String, Object> destinationDefMetadata = generateDestinationDefinitionMetadata(destinationDefinition, destinationVersion);
@@ -303,7 +311,7 @@ public class JobTracker {
                                                          @Nullable final AttemptSyncConfig attemptSyncConfig,
                                                          final JsonNode sourceConfigSchema,
                                                          final JsonNode destinationConfigSchema) {
-    if (config.getConfigType() == ConfigType.SYNC) {
+    if (SYNC_REPLICATION_TYPES.contains(config.getConfigType())) {
       final Map<String, Object> actorConfigMetadata = new HashMap<>();
 
       if (attemptSyncConfig != null) {
@@ -317,7 +325,15 @@ public class JobTracker {
             mapToJsonString(configToMetadata(destinationConfiguration, destinationConfigSchema)));
       }
 
-      final Map<String, Object> catalogMetadata = getCatalogMetadata(config.getSync().getConfiguredAirbyteCatalog());
+      final Map<String, Object> catalogMetadata;
+      if (config.getConfigType() == ConfigType.SYNC) {
+        catalogMetadata = getCatalogMetadata(config.getSync().getConfiguredAirbyteCatalog());
+      } else if (config.getConfigType() == ConfigType.REFRESH) {
+        catalogMetadata = getCatalogMetadata(config.getRefresh().getConfiguredAirbyteCatalog());
+      } else {
+        // This is not possible
+        throw new IllegalStateException("This should not be reacheable");
+      }
       return MoreMaps.merge(actorConfigMetadata, catalogMetadata);
     } else {
       return emptyMap();
@@ -498,17 +514,25 @@ public class JobTracker {
   }
 
   private Map<String, Object> generateJobMetadata(final String jobId, final ConfigType configType) {
-    return generateJobMetadata(jobId, configType, 0);
+    return generateJobMetadata(jobId, configType, 0, Optional.empty());
   }
 
-  private Map<String, Object> generateJobMetadata(final String jobId, final @Nullable ConfigType configType, final int attempt) {
+  @VisibleForTesting
+  Map<String, Object> generateJobMetadata(final String jobId,
+                                          final @Nullable ConfigType configType,
+                                          final int attempt,
+                                          final Optional<Job> previousJob) {
     final Map<String, Object> metadata = new HashMap<>();
     if (configType != null) {
       metadata.put("job_type", configType);
     }
     metadata.put("job_id", jobId);
     metadata.put("attempt_id", attempt);
-
+    previousJob.ifPresent(job -> {
+      if (job.getConfigType() != null) {
+        metadata.put("previous_job_type", job.getConfigType());
+      }
+    });
     return Collections.unmodifiableMap(metadata);
   }
 

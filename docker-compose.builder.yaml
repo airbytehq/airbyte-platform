@@ -8,3 +8,8 @@ services:
       - PATH_TO_CONNECTORS=${PATH_TO_CONNECTORS}
     volumes:
       - ${PATH_TO_CONNECTORS}:/connectors
+  server:
+    environment:
+      - PATH_TO_CONNECTORS=${PATH_TO_CONNECTORS}
+    volumes:
+      - ${PATH_TO_CONNECTORS}:/connectors

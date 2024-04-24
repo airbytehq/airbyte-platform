@@ -7,16 +7,22 @@ package io.airbyte.config.secrets
 import com.fasterxml.jackson.databind.JsonNode
 import io.airbyte.config.secrets.persistence.RuntimeSecretPersistence
 import io.airbyte.config.secrets.persistence.SecretPersistence
+import io.airbyte.metrics.lib.MetricClient
+import io.airbyte.metrics.lib.OssMetricsRegistry
 import io.airbyte.protocol.models.ConnectorSpecification
 import io.airbyte.validation.json.JsonSchemaValidator
 import io.airbyte.validation.json.JsonValidationException
 import io.github.oshai.kotlinlogging.KotlinLogging
 import io.micronaut.context.annotation.Requires
 import jakarta.inject.Singleton
+import java.time.Duration
+import java.time.Instant
 import java.util.Optional
 import java.util.UUID
 
 private val logger = KotlinLogging.logger {}
+
+private val EPHEMERAL_SECRET_LIFE_DURATION = Duration.ofHours(2)
 
 /**
  * This class takes secrets as arguments but never returns a secrets as return values (even the ones
@@ -28,6 +34,7 @@ private val logger = KotlinLogging.logger {}
 @Requires(bean = SecretPersistence::class)
 open class SecretsRepositoryWriter(
   private val secretPersistence: SecretPersistence,
+  private val metricClient: MetricClient,
 ) {
   val validator: JsonSchemaValidator = JsonSchemaValidator()
 
@@ -100,8 +107,9 @@ open class SecretsRepositoryWriter(
     if (validate) {
       validator.ensure(spec, fullConfig)
     }
+    val update = oldConfig.isPresent
     val splitSecretConfig: SplitSecretConfig =
-      if (oldConfig.isPresent) {
+      if (update) {
         SecretsHelpers.splitAndUpdateConfig(
           workspaceId,
           oldConfig.get(),
@@ -117,8 +125,12 @@ open class SecretsRepositoryWriter(
           secretPersistence,
         )
       }
+
     splitSecretConfig.getCoordinateToPayload()
       .forEach { (coordinate: SecretCoordinate, payload: String) ->
+        if (update) {
+          metricClient.count(OssMetricsRegistry.UPDATE_SECRET_DEFAULT_STORE, 1)
+        }
         secretPersistence.write(coordinate, payload)
       }
     return splitSecretConfig.partialConfig
@@ -178,6 +190,8 @@ open class SecretsRepositoryWriter(
    * Takes in a connector configuration with secrets. Saves the secrets and returns the configuration
    * object with the secrets removed and replaced with pointers to the environment secret persistence.
    *
+   * This method is intended for ephemeral secrets, hence the lack of workspace.
+   *
    * @param fullConfig full config
    * @param spec connector specification
    * @return partial config
@@ -186,12 +200,20 @@ open class SecretsRepositoryWriter(
     fullConfig: JsonNode,
     spec: ConnectorSpecification,
   ): JsonNode {
-    return splitSecretConfig(NO_WORKSPACE, fullConfig, spec, secretPersistence)
+    return splitSecretConfig(
+      NO_WORKSPACE,
+      fullConfig,
+      spec,
+      secretPersistence,
+      Instant.now().plus(EPHEMERAL_SECRET_LIFE_DURATION),
+    )
   }
 
   /**
    * Takes in a connector configuration with secrets. Saves the secrets and returns the configuration
    * object with the secrets removed and replaced with pointers to the provided runtime secret persistence.
+   *
+   * This method is intended for ephemeral secrets, hence the lack of workspace.
    *
    * @param fullConfig full config
    * @param spec connector specification
@@ -203,7 +225,13 @@ open class SecretsRepositoryWriter(
     spec: ConnectorSpecification,
     runtimeSecretPersistence: RuntimeSecretPersistence,
   ): JsonNode {
-    return splitSecretConfig(NO_WORKSPACE, fullConfig, spec, runtimeSecretPersistence)
+    return splitSecretConfig(
+      NO_WORKSPACE,
+      fullConfig,
+      spec,
+      runtimeSecretPersistence,
+      Instant.now().plus(EPHEMERAL_SECRET_LIFE_DURATION),
+    )
   }
 
   private fun splitSecretConfig(
@@ -211,6 +239,7 @@ open class SecretsRepositoryWriter(
     fullConfig: JsonNode,
     spec: ConnectorSpecification,
     secretPersistence: SecretPersistence,
+    expireTime: Instant? = null,
   ): JsonNode {
     val splitSecretConfig: SplitSecretConfig =
       SecretsHelpers.splitConfig(
@@ -219,8 +248,9 @@ open class SecretsRepositoryWriter(
         spec.connectionSpecification,
         secretPersistence,
       )
+    // modify this to add expire time
     splitSecretConfig.getCoordinateToPayload().forEach { (coordinate: SecretCoordinate, payload: String) ->
-      secretPersistence.write(coordinate, payload)
+      secretPersistence.writeWithExpiry(coordinate, payload, expireTime)
     }
     return splitSecretConfig.partialConfig
   }

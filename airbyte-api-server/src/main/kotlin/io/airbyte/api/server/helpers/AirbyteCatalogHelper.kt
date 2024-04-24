@@ -56,9 +56,19 @@ object AirbyteCatalogHelper {
    *
    * @param config config to be set
    */
-  fun setConfigDefaultFullRefreshOverwrite(config: AirbyteStreamConfiguration?) {
-    config!!.syncMode = SyncMode.FULL_REFRESH
-    config.destinationSyncMode = DestinationSyncMode.OVERWRITE
+  fun updateConfigDefaultFullRefreshOverwrite(config: AirbyteStreamConfiguration?): AirbyteStreamConfiguration {
+    val updatedStreamConfiguration = AirbyteStreamConfiguration()
+    config?.let {
+      updatedStreamConfiguration.aliasName = config.aliasName
+      updatedStreamConfiguration.cursorField = config.cursorField
+      updatedStreamConfiguration.fieldSelectionEnabled = config.fieldSelectionEnabled
+      updatedStreamConfiguration.selected = config.selected
+      updatedStreamConfiguration.selectedFields = config.selectedFields
+      updatedStreamConfiguration.suggested = config.suggested
+    }
+    updatedStreamConfiguration.destinationSyncMode = DestinationSyncMode.OVERWRITE
+    updatedStreamConfiguration.syncMode = SyncMode.FULL_REFRESH
+    return updatedStreamConfiguration
   }
 
   /**
@@ -66,11 +76,20 @@ object AirbyteCatalogHelper {
    *
    * @param airbyteCatalog The catalog to be modified
    */
-  fun setAllStreamsFullRefreshOverwrite(airbyteCatalog: AirbyteCatalog) {
-    for (schemaStreams in airbyteCatalog.streams) {
-      val config = schemaStreams.config!!
-      setConfigDefaultFullRefreshOverwrite(config)
+  fun updateAllStreamsFullRefreshOverwrite(airbyteCatalog: AirbyteCatalog?): AirbyteCatalog {
+    val updatedAirbyteCatalog = AirbyteCatalog()
+    airbyteCatalog?.let {
+      updatedAirbyteCatalog.streams =
+        it.streams.stream().map { stream: AirbyteStreamAndConfiguration ->
+          val updatedAirbyteStreamAndConfiguration =
+            AirbyteStreamAndConfiguration()
+          updatedAirbyteStreamAndConfiguration.config = updateConfigDefaultFullRefreshOverwrite(stream.config)
+          updatedAirbyteStreamAndConfiguration.stream = stream.stream
+          updatedAirbyteStreamAndConfiguration
+        }.toList()
     }
+
+    return updatedAirbyteCatalog
   }
 
   /**
@@ -154,6 +173,85 @@ object AirbyteCatalogHelper {
     // check that the first seconds and hour values are not *
   }
 
+  fun updateAirbyteStreamConfiguration(
+    config: AirbyteStreamConfiguration?,
+    airbyteStream: AirbyteStream?,
+    streamConfiguration: StreamConfiguration,
+  ): AirbyteStreamConfiguration {
+    val updatedStreamConfiguration = AirbyteStreamConfiguration()
+    // Set stream config as selected
+    updatedStreamConfiguration.selected = true
+    updatedStreamConfiguration.aliasName = config?.aliasName
+    updatedStreamConfiguration.fieldSelectionEnabled = config?.fieldSelectionEnabled
+    updatedStreamConfiguration.suggested = config?.suggested
+
+    if (streamConfiguration.syncMode == null) {
+      updatedStreamConfiguration.syncMode = SyncMode.FULL_REFRESH
+      updatedStreamConfiguration.destinationSyncMode = DestinationSyncMode.OVERWRITE
+      updatedStreamConfiguration.cursorField = config?.cursorField
+      updatedStreamConfiguration.primaryKey = config?.primaryKey
+    } else {
+      when (streamConfiguration.syncMode) {
+        ConnectionSyncModeEnum.FULL_REFRESH_APPEND -> {
+          updatedStreamConfiguration.syncMode = SyncMode.FULL_REFRESH
+          updatedStreamConfiguration.destinationSyncMode = DestinationSyncMode.APPEND
+          updatedStreamConfiguration.cursorField = config?.cursorField
+          updatedStreamConfiguration.primaryKey = config?.primaryKey
+        }
+
+        ConnectionSyncModeEnum.INCREMENTAL_APPEND -> {
+          updatedStreamConfiguration.syncMode(SyncMode.INCREMENTAL)
+          updatedStreamConfiguration.destinationSyncMode(DestinationSyncMode.APPEND)
+          updatedStreamConfiguration.cursorField(selectCursorField(airbyteStream, streamConfiguration))
+          updatedStreamConfiguration.primaryKey(selectPrimaryKey(airbyteStream, streamConfiguration))
+        }
+
+        ConnectionSyncModeEnum.INCREMENTAL_DEDUPED_HISTORY -> {
+          updatedStreamConfiguration.syncMode = SyncMode.INCREMENTAL
+          updatedStreamConfiguration.destinationSyncMode = DestinationSyncMode.APPEND_DEDUP
+          updatedStreamConfiguration.cursorField = selectCursorField(airbyteStream, streamConfiguration)
+          updatedStreamConfiguration.primaryKey = selectPrimaryKey(airbyteStream, streamConfiguration)
+        }
+
+        else -> {
+          updatedStreamConfiguration.syncMode = SyncMode.FULL_REFRESH
+          updatedStreamConfiguration.destinationSyncMode = DestinationSyncMode.OVERWRITE
+          updatedStreamConfiguration.cursorField = config?.cursorField
+          updatedStreamConfiguration.primaryKey = config?.primaryKey
+        }
+      }
+    }
+
+    return updatedStreamConfiguration
+  }
+
+  private fun selectCursorField(
+    airbyteStream: AirbyteStream?,
+    streamConfiguration: StreamConfiguration,
+  ): List<String>? {
+    return if (airbyteStream?.sourceDefinedCursor != null && airbyteStream.sourceDefinedCursor!!) {
+      airbyteStream.defaultCursorField
+    } else if (streamConfiguration.cursorField != null && streamConfiguration.cursorField.isNotEmpty()) {
+      streamConfiguration.cursorField
+    } else {
+      airbyteStream?.defaultCursorField
+    }
+  }
+
+  private fun selectPrimaryKey(
+    airbyteStream: AirbyteStream?,
+    streamConfiguration: StreamConfiguration,
+  ): List<List<String>>? {
+    // if no source defined primary key
+    return if (airbyteStream?.sourceDefinedPrimaryKey == null || airbyteStream.sourceDefinedPrimaryKey!!.isEmpty()) {
+      streamConfiguration.primaryKey
+    } else if (streamConfiguration.primaryKey == null || streamConfiguration.primaryKey.isEmpty()) {
+      airbyteStream.sourceDefinedPrimaryKey
+    } else {
+      listOf()
+    }
+  }
+
   /**
    * Validates a stream's configurations and sets those configurations in the
    * `AirbyteStreamConfiguration` object. Logic comes from
@@ -162,19 +260,14 @@ object AirbyteCatalogHelper {
    * @param streamConfiguration The configuration input of a specific stream provided by the caller.
    * @param validDestinationSyncModes All the valid destination sync modes for a destination
    * @param airbyteStream The immutable schema defined by the source
-   * @param config The configuration of a stream consumed by the config-api
    * @return True if no exceptions. Needed so it can be used inside TrackingHelper.callWithTracker
    */
-  fun setAndValidateStreamConfig(
+  fun validateStreamConfig(
     streamConfiguration: StreamConfiguration,
-    validDestinationSyncModes: List<DestinationSyncMode>,
+    validDestinationSyncModes: List<DestinationSyncMode?>,
     airbyteStream: AirbyteStream,
-    config: AirbyteStreamConfiguration,
   ): Boolean {
-    // Set stream config as selected
-    config.selected = true
     if (streamConfiguration.syncMode == null) {
-      setConfigDefaultFullRefreshOverwrite(config)
       return true
     }
 
@@ -187,46 +280,33 @@ object AirbyteCatalogHelper {
         validCombinedSyncModes,
       )
     }
-    when (streamConfiguration.syncMode) {
-      ConnectionSyncModeEnum.FULL_REFRESH_APPEND -> {
-        config.syncMode = SyncMode.FULL_REFRESH
-        config.destinationSyncMode = DestinationSyncMode.APPEND
-      }
 
+    when (streamConfiguration.syncMode) {
       ConnectionSyncModeEnum.INCREMENTAL_APPEND -> {
-        config.syncMode = SyncMode.INCREMENTAL
-        config.destinationSyncMode = DestinationSyncMode.APPEND
-        setAndValidateCursorField(streamConfiguration.cursorField, airbyteStream, config)
+        validateCursorField(streamConfiguration.cursorField, airbyteStream)
       }
 
       ConnectionSyncModeEnum.INCREMENTAL_DEDUPED_HISTORY -> {
-        config.syncMode = SyncMode.INCREMENTAL
-        config.destinationSyncMode = DestinationSyncMode.APPEND_DEDUP
-        setAndValidateCursorField(streamConfiguration.cursorField, airbyteStream, config)
-        setAndValidatePrimaryKey(streamConfiguration.primaryKey, airbyteStream, config)
+        validateCursorField(streamConfiguration.cursorField, airbyteStream)
+        validatePrimaryKey(streamConfiguration.primaryKey, airbyteStream)
       }
 
-      else -> {
-        // always valid
-        setConfigDefaultFullRefreshOverwrite(config)
-      }
+      else -> {}
     }
     return true
   }
 
-  private fun setAndValidateCursorField(
+  private fun validateCursorField(
     cursorField: List<String>?,
     airbyteStream: AirbyteStream,
-    config: AirbyteStreamConfiguration,
   ) {
     if (airbyteStream.sourceDefinedCursor != null && airbyteStream.sourceDefinedCursor!!) {
       if (!cursorField.isNullOrEmpty()) {
         // if cursor given is not empty and is NOT the same as the default, throw error
-        if (java.util.Set.copyOf<String>(cursorField) != java.util.Set.copyOf<String>(airbyteStream.defaultCursorField)) {
+        if (cursorField != airbyteStream.defaultCursorField) {
           throw ConnectionConfigurationProblem.sourceDefinedCursorFieldProblem(airbyteStream.name, airbyteStream.defaultCursorField!!)
         }
       }
-      config.cursorField = airbyteStream.defaultCursorField // this probably isn't necessary and should be already set
     } else {
       if (!cursorField.isNullOrEmpty()) {
         // validate cursor field
@@ -234,26 +314,24 @@ object AirbyteCatalogHelper {
         if (!validCursorFields.contains(cursorField)) {
           throw ConnectionConfigurationProblem.invalidCursorField(airbyteStream.name, validCursorFields)
         }
-        config.cursorField = cursorField
       } else {
         // no default or given cursor field
         if (airbyteStream.defaultCursorField == null || airbyteStream.defaultCursorField!!.isEmpty()) {
           throw ConnectionConfigurationProblem.missingCursorField(airbyteStream.name)
         }
-        config.cursorField = airbyteStream.defaultCursorField // this probably isn't necessary and should be already set
       }
     }
   }
 
-  private fun setAndValidatePrimaryKey(
+  private fun validatePrimaryKey(
     primaryKey: List<List<String>>?,
     airbyteStream: AirbyteStream,
-    config: AirbyteStreamConfiguration,
   ) {
     // if no source defined primary key
     if (airbyteStream.sourceDefinedPrimaryKey == null || airbyteStream.sourceDefinedPrimaryKey!!.isEmpty()) {
       if (!primaryKey.isNullOrEmpty()) {
         // validate primary key
+
         val validPrimaryKey: List<List<String>> = getStreamFields(airbyteStream.jsonSchema!!)
 
         // todo maybe check that they don't provide the same primary key twice?
@@ -262,7 +340,6 @@ object AirbyteCatalogHelper {
             throw ConnectionConfigurationProblem.invalidPrimaryKey(airbyteStream.name, validPrimaryKey)
           }
         }
-        config.primaryKey = primaryKey
       } else {
         throw ConnectionConfigurationProblem.missingPrimaryKey(airbyteStream.name)
       }
@@ -270,8 +347,6 @@ object AirbyteCatalogHelper {
       // source defined primary key exists
       if (!primaryKey.isNullOrEmpty()) {
         throw ConnectionConfigurationProblem.primaryKeyAlreadyDefined(airbyteStream.name)
-      } else {
-        config.primaryKey = airbyteStream.sourceDefinedPrimaryKey // this probably isn't necessary and should be already set
       }
     }
   }
@@ -287,7 +362,7 @@ object AirbyteCatalogHelper {
     validSourceSyncModes: List<SyncMode?>?,
     validDestinationSyncModes: List<DestinationSyncMode?>,
   ): Set<ConnectionSyncModeEnum> {
-    val validCombinedSyncModes: MutableSet<ConnectionSyncModeEnum> = HashSet<ConnectionSyncModeEnum>()
+    val validCombinedSyncModes: MutableSet<ConnectionSyncModeEnum> = mutableSetOf()
     for (sourceSyncMode in validSourceSyncModes!!) {
       for (destinationSyncMode in validDestinationSyncModes) {
         val combinedSyncMode: ConnectionSyncModeEnum? =
@@ -313,8 +388,7 @@ object AirbyteCatalogHelper {
   fun getStreamFields(connectorSchema: JsonNode): List<List<String>> {
     val yamlMapper = ObjectMapper(YAMLFactory())
     val streamFields: MutableList<List<String>> = ArrayList()
-    val spec: JsonNode
-    spec =
+    val spec: JsonNode =
       try {
         yamlMapper.readTree<JsonNode>(connectorSchema.traverse())
       } catch (e: IOException) {
@@ -328,14 +402,14 @@ object AirbyteCatalogHelper {
         val propertyFields = paths.fields()
         while (propertyFields.hasNext()) {
           val (propertyName, nestedProperties) = propertyFields.next()
-          streamFields.add(java.util.List.of(propertyName))
+          streamFields.add(listOf(propertyName))
 
           // retrieve nested paths
           for (entry in getStreamFields(nestedProperties)) {
             if (entry.isEmpty()) {
               continue
             }
-            val streamFieldPath: MutableList<String> = ArrayList(java.util.List.of(propertyName))
+            val streamFieldPath: MutableList<String> = mutableListOf(propertyName)
             streamFieldPath.addAll(entry)
             streamFields.add(streamFieldPath)
           }

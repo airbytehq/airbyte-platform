@@ -23,4 +23,10 @@ public interface AirbyteTaskExecutors extends TaskExecutors {
    */
   String SCHEDULER = "scheduler";
 
+  /**
+   * The name of the {@link java.util.concurrent.ExecutorService} used for endpoints that belong to
+   * the public API.
+   */
+  String PUBLIC_API = "public-api";
+
 }

@@ -13,12 +13,16 @@ micronaut:
   env:
     cloud-deduction: true
   executors:
+    # We set our max pool size for the config DB to 20 in 10-values.yml files at the time of writing this.
     health:
       type: fixed
-      n-threads: ${HEALTH_TASK_EXECUTOR_THREADS:10} # Match the data source max pool size below
+      n-threads: ${HEALTH_TASK_EXECUTOR_THREADS:3}
     io:
       type: fixed
-      n-threads: ${IO_TASK_EXECUTOR_THREADS:10} # Match the data source max pool size below
+      n-threads: ${IO_TASK_EXECUTOR_THREADS:10}
+    public-api:
+      type: fixed
+      n-threads: ${PUBLIC_API_EXECUTOR_THREADS:5}
     scheduler:
       type: fixed
       n-threads: ${SCHEDULER_TASK_EXECUTOR_THREADS:25}
@@ -55,6 +59,7 @@ micronaut:
         max-content-length: 52428800 # 50MB
       access-logger:
         enabled: ${HTTP_ACCESS_LOG_ENABLED:true}
+      max-header-size: ${NETTY_MAX_HEADER_SIZE:32768}
     idle-timeout: ${HTTP_IDLE_TIMEOUT:5m}
   http:
     client:
@@ -68,6 +73,7 @@ micronaut:
         prefer-native-transport: true
 
 airbyte:
+  airbyte-url: ${AIRBYTE_URL:}
   edition: ${AIRBYTE_EDITION:COMMUNITY}
   shutdown:
     delay_ms: 20000

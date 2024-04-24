@@ -32,6 +32,7 @@ import {
   useAnalyticsService,
 } from "core/services/analytics";
 import { useConnectionEditService } from "hooks/services/ConnectionEdit/ConnectionEditService";
+import { useExperiment } from "hooks/services/Experiment";
 
 import styles from "./ConnectionJobHistoryPage.module.scss";
 import JobsList from "./JobsList";
@@ -49,6 +50,7 @@ interface JobHistoryFilterValues {
 }
 
 export const ConnectionJobHistoryPage: React.FC = () => {
+  const isSimplifiedCreation = useExperiment("connection.simplifiedCreation", false);
   const { connection } = useConnectionEditService();
   useTrackPage(PageTrackingCodes.CONNECTIONS_ITEM_STATUS);
   const [filterValues, setFilterValue, setFilters] = useFilters<JobHistoryFilterValues>({
@@ -127,7 +129,9 @@ export const ConnectionJobHistoryPage: React.FC = () => {
                 <Heading as="h5" size="sm">
                   <FormattedMessage id="connectionForm.jobHistory" />
                 </Heading>
-                <ConnectionSyncButtons buttonText={<FormattedMessage id="connection.startSync" />} />
+                {!isSimplifiedCreation && (
+                  <ConnectionSyncButtons buttonText={<FormattedMessage id="connection.startSync" />} />
+                )}
               </FlexContainer>
               <FlexContainer alignItems="center">
                 <ListBox

@@ -17,8 +17,6 @@ object LogConnectorMessages : EnvVar(envVar = "LOG_CONNECTOR_MESSAGES")
 
 object AutoDetectSchema : EnvVar(envVar = "AUTO_DETECT_SCHEMA")
 
-object NeedStateValidation : EnvVar(envVar = "NEED_STATE_VALIDATION")
-
 object RemoveValidationLimit : Temporary<Boolean>(key = "validation.removeValidationLimit", default = false)
 
 object NormalizationInDestination : Temporary<String>(key = "connectors.normalizationInDestination", default = "")
@@ -76,8 +74,6 @@ object ConcurrentSourceStreamRead : Temporary<Boolean>(key = "concurrent.source.
 object ReplicationWorkerImpl : Permanent<String>(key = "platform.replication-worker-impl", default = "buffered")
 
 object UseResourceRequirementsVariant : Permanent<String>(key = "platform.resource-requirements-variant", default = "default")
-
-object UseParallelStreamStatsTracker : Temporary<Boolean>(key = "platform.use-parallel-stream-stats-tracker", default = false)
 
 object SuccessiveCompleteFailureLimit : Temporary<Int>(key = "complete-failures.max-successive", default = -1)
 
@@ -188,14 +184,18 @@ object FailSyncOnInvalidChecksum : Temporary<Boolean>(key = "platform.fail-sync-
 
 object HydrateAggregatedStats : Temporary<Boolean>(key = "platform.hydrate-aggregated-stats", default = true)
 
-object BillingCronScopeChangeTimestamp : Permanent<String>(key = "platform.billing-cron-scope-change-timestamp", default = "1735711200")
-
 object UseWorkloadApiForDiscover : Temporary<Boolean>(key = "platform.use-workload-api-for-discover", default = false)
 
 object UseWorkloadApiForSpec : Temporary<Boolean>(key = "platform.use-workload-api-for-spec", default = false)
 
-object EnforceMutexKeyOnCreate : Temporary<Boolean>(key = "platform.enforce-mutex-key-on-create", default = false)
-
 object ActivateRefreshes : Temporary<Boolean>(key = "platform.activate-refreshes", default = false)
 
-object WriteReplicationOutputToObjectStorage : Temporary<Boolean>(key = "platform.write-replication-output-to-object-storage", default = false)
+object WriteOutputCatalogToObjectStorage : Temporary<Boolean>(key = "platform.write-output-catalog-to-object-storage", default = false)
+
+object NullOutputCatalogOnSyncOutput : Temporary<Boolean>(key = "platform.null-output-catalog-on-sync-output", default = false)
+
+object UseCustomK8sInitCheck : Temporary<Boolean>(key = "platform.use-custom-k8s-init-check", default = true)
+
+object DeleteFullRefreshState : Temporary<Boolean>(key = "platform.delete-full-refresh-state", default = false)
+
+object UseClear : Temporary<Boolean>(key = "connection.clearNotReset", default = false)

@@ -30,10 +30,11 @@ class ConfigReplacerTest {
   @SuppressWarnings("PMD.AvoidUsingHardCodedIP")
   void getAllowedHostsGeneralTest() throws IOException {
     final AllowedHosts allowedHosts = new AllowedHosts();
-    final List<String> hosts = new ArrayList();
+    final List<String> hosts = new ArrayList<>();
     hosts.add("localhost");
     hosts.add("static-site.com");
     hosts.add("${host}");
+    hosts.add("${host_with_extras}");
     hosts.add("${number}");
     hosts.add("${subdomain}.vendor.com");
     hosts.add("${tunnel_method.tunnel_host}");
@@ -43,6 +44,7 @@ class ConfigReplacerTest {
     expected.add("localhost");
     expected.add("static-site.com");
     expected.add("foo.com");
+    expected.add("protected-site.com");
     expected.add("123");
     expected.add("account.vendor.com");
     expected.add("1.2.3.4");
@@ -50,6 +52,7 @@ class ConfigReplacerTest {
 
     final String configJson =
         "{\"host\": \"foo.com\", "
+            + "\"host_with_extras\": \"ftp://user:password@protected-site.com/some-route\", "
             + "\"number\": 123, "
             + "\"subdomain\": \"account\", "
             + "\"password\": \"abc123\", "
@@ -57,6 +60,7 @@ class ConfigReplacerTest {
     final JsonNode config = mapper.readValue(configJson, JsonNode.class);
     final AllowedHosts response = replacer.getAllowedHosts(allowedHosts, config);
 
+    System.out.println(response.getHosts());
     assertThat(response.getHosts()).isEqualTo(expected);
   }
 
@@ -113,6 +117,16 @@ class ConfigReplacerTest {
     } catch (final Exception e) {
       assertThat(e).isInstanceOf(UnsupportedOperationException.class);
     }
+  }
+
+  @Test
+  void sanitization() {
+    assertThat(replacer.sanitize("basic.com")).isEqualTo("basic.com");
+    assertThat(replacer.sanitize("http://basic.com")).isEqualTo("basic.com");
+    assertThat(replacer.sanitize("http://user@basic.com")).isEqualTo("basic.com");
+    assertThat(replacer.sanitize("http://user:password@basic.com")).isEqualTo("basic.com");
+    assertThat(replacer.sanitize("http://user:password@basic.com/some/path")).isEqualTo("basic.com");
+    assertThat(replacer.sanitize("mongo+srv://user:password@basic.com/some/path")).isEqualTo("basic.com");
   }
 
 }

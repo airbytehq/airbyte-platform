@@ -23,6 +23,7 @@ import io.airbyte.config.secrets.SecretsRepositoryWriter;
 import io.airbyte.data.helpers.ActorDefinitionVersionUpdater;
 import io.airbyte.data.services.ActorDefinitionService;
 import io.airbyte.data.services.ConnectionService;
+import io.airbyte.data.services.OrganizationService;
 import io.airbyte.data.services.ScopedConfigurationService;
 import io.airbyte.data.services.SecretPersistenceConfigService;
 import io.airbyte.data.services.impls.jooq.ActorDefinitionServiceJooqImpl;
@@ -31,6 +32,7 @@ import io.airbyte.data.services.impls.jooq.ConnectorBuilderServiceJooqImpl;
 import io.airbyte.data.services.impls.jooq.DestinationServiceJooqImpl;
 import io.airbyte.data.services.impls.jooq.OAuthServiceJooqImpl;
 import io.airbyte.data.services.impls.jooq.OperationServiceJooqImpl;
+import io.airbyte.data.services.impls.jooq.OrganizationServiceJooqImpl;
 import io.airbyte.data.services.impls.jooq.SourceServiceJooqImpl;
 import io.airbyte.data.services.impls.jooq.WorkspaceServiceJooqImpl;
 import io.airbyte.featureflag.FeatureFlagClient;
@@ -84,6 +86,7 @@ class DeclarativeManifestPersistenceTest extends BaseConfigDatabaseTest {
     final ConnectionService connectionService = mock(ConnectionService.class);
     final ScopedConfigurationService scopedConfigurationService = mock(ScopedConfigurationService.class);
     final ActorDefinitionService actorDefinitionService = new ActorDefinitionServiceJooqImpl(database);
+    final OrganizationService organizationService = new OrganizationServiceJooqImpl(database);
     final ActorDefinitionVersionUpdater actorDefinitionVersionUpdater =
         new ActorDefinitionVersionUpdater(featureFlagClient, connectionService, actorDefinitionService, scopedConfigurationService);
     configRepository = new ConfigRepository(
@@ -115,6 +118,7 @@ class DeclarativeManifestPersistenceTest extends BaseConfigDatabaseTest {
             secretsRepositoryReader,
             secretsRepositoryWriter,
             secretPersistenceConfigService));
+    organizationService.writeOrganization(MockData.defaultOrganization());
   }
 
   @Test

@@ -17,7 +17,6 @@ import styles from "./BuilderSidebar.module.scss";
 import { Sidebar } from "../Sidebar";
 import { useBuilderWatch } from "../types";
 import { useBuilderErrors } from "../useBuilderErrors";
-import { useInferredInputs } from "../useInferredInputs";
 
 interface ViewSelectButtonProps {
   className?: string;
@@ -66,8 +65,6 @@ export const BuilderSidebar: React.FC<BuilderSidebarProps> = () => {
     setValue("view", selectedView);
   };
 
-  const inferredInputsLength = useInferredInputs().length;
-
   return (
     <Sidebar yamlSelected={false}>
       <FlexContainer direction="column" alignItems="stretch" gap="none">
@@ -104,7 +101,7 @@ export const BuilderSidebar: React.FC<BuilderSidebarProps> = () => {
             <FormattedMessage
               id="connectorBuilder.userInputs"
               values={{
-                number: formValues.inputs.length + inferredInputsLength,
+                number: formValues.inputs.length,
               }}
             />
           </Text>

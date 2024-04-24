@@ -84,6 +84,7 @@
     "date-fns": "^2.29.3",
     "dayjs": "^1.11.3",
     "diff": "^5.1.0",
+    "escape-string-regexp": "^5.0.0",
     "firebase": "^10.5.0",
     "framer-motion": "^6.3.11",
     "js-yaml": "^4.1.0",

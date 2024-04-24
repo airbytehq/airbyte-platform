@@ -52,7 +52,7 @@ open class ConnectionsController(
   private val apiAuthorizationHelper: ApiAuthorizationHelper,
   private val currentUserService: CurrentUserService,
 ) : PublicConnectionsApi {
-  @ExecuteOn(AirbyteTaskExecutors.IO)
+  @ExecuteOn(AirbyteTaskExecutors.PUBLIC_API)
   override fun publicCreateConnection(connectionCreateRequest: ConnectionCreateRequest): Response {
     val userId: UUID = currentUserService.currentUser.userId
     apiAuthorizationHelper.checkWorkspacePermissions(
@@ -95,7 +95,7 @@ open class ConnectionsController(
 
     val validStreams: Map<String, AirbyteStreamAndConfiguration> =
       AirbyteCatalogHelper.getValidStreams(
-        Objects.requireNonNull<AirbyteCatalog?>(airbyteCatalogFromDiscoverSchema),
+        Objects.requireNonNull(airbyteCatalogFromDiscoverSchema),
       )
 
     // check user configs
@@ -117,7 +117,14 @@ open class ConnectionsController(
       for (streamConfiguration in connectionCreateRequest.configurations.streams) {
         val validStreamAndConfig = validStreams[streamConfiguration.name]
         val schemaStream = validStreamAndConfig!!.stream
-        val schemaConfig = validStreamAndConfig.config
+        val updatedValidStreamAndConfig = AirbyteStreamAndConfiguration()
+        updatedValidStreamAndConfig.stream = schemaStream
+        updatedValidStreamAndConfig.config =
+          AirbyteCatalogHelper.updateAirbyteStreamConfiguration(
+            validStreamAndConfig.config,
+            schemaStream,
+            streamConfiguration,
+          )
 
         val validDestinationSyncModes =
           trackingHelper.callWithTracker(
@@ -130,23 +137,21 @@ open class ConnectionsController(
         // set user configs
         trackingHelper.callWithTracker(
           {
-            AirbyteCatalogHelper.setAndValidateStreamConfig(
-              streamConfiguration,
-              validDestinationSyncModes,
-              schemaStream!!,
-              schemaConfig!!,
+            AirbyteCatalogHelper.validateStreamConfig(
+              streamConfiguration = streamConfiguration,
+              validDestinationSyncModes = validDestinationSyncModes,
+              airbyteStream = schemaStream,
             )
           },
           CONNECTIONS_PATH,
           POST,
           userId,
         )
-        configuredCatalog!!.addStreamsItem(validStreamAndConfig)
+        configuredCatalog!!.addStreamsItem(updatedValidStreamAndConfig)
       }
     } else {
       // no user supplied stream configs, return all streams with full refresh overwrite
-      configuredCatalog = airbyteCatalogFromDiscoverSchema
-      AirbyteCatalogHelper.setAllStreamsFullRefreshOverwrite(configuredCatalog!!)
+      configuredCatalog = AirbyteCatalogHelper.updateAllStreamsFullRefreshOverwrite(airbyteCatalogFromDiscoverSchema!!)
     }
 
     val finalConfiguredCatalog = configuredCatalog
@@ -172,7 +177,7 @@ open class ConnectionsController(
   }
 
   @Path("/{connectionId}")
-  @ExecuteOn(AirbyteTaskExecutors.IO)
+  @ExecuteOn(AirbyteTaskExecutors.PUBLIC_API)
   override fun publicDeleteConnection(connectionId: UUID): Response {
     val userId: UUID = currentUserService.currentUser.userId
     apiAuthorizationHelper.checkWorkspacePermissions(
@@ -205,7 +210,7 @@ open class ConnectionsController(
   }
 
   @Path("/{connectionId}")
-  @ExecuteOn(AirbyteTaskExecutors.IO)
+  @ExecuteOn(AirbyteTaskExecutors.PUBLIC_API)
   override fun publicGetConnection(connectionId: UUID): Response {
     val userId: UUID = currentUserService.currentUser.userId
     apiAuthorizationHelper.checkWorkspacePermissions(
@@ -232,7 +237,7 @@ open class ConnectionsController(
       .build()
   }
 
-  @ExecuteOn(AirbyteTaskExecutors.IO)
+  @ExecuteOn(AirbyteTaskExecutors.PUBLIC_API)
   override fun listConnections(
     workspaceIds: List<UUID>?,
     includeDeleted: Boolean?,
@@ -270,7 +275,7 @@ open class ConnectionsController(
 
   @Patch
   @Path("/{connectionId}")
-  @ExecuteOn(AirbyteTaskExecutors.IO)
+  @ExecuteOn(AirbyteTaskExecutors.PUBLIC_API)
   override fun patchConnection(
     @PathParam(value = "connectionId") connectionId: UUID,
     @Valid @Body @NotNull connectionPatchRequest:
@@ -332,7 +337,7 @@ open class ConnectionsController(
 
     val validStreams: Map<String, AirbyteStreamAndConfiguration> =
       AirbyteCatalogHelper.getValidStreams(
-        Objects.requireNonNull<AirbyteCatalog?>(airbyteCatalogFromDiscoverSchema),
+        Objects.requireNonNull(airbyteCatalogFromDiscoverSchema),
       )
 
     // check user configs
@@ -354,7 +359,14 @@ open class ConnectionsController(
       for (streamConfiguration in connectionPatchRequest.configurations.streams) {
         val validStreamAndConfig = validStreams[streamConfiguration.name]
         val schemaStream = validStreamAndConfig!!.stream
-        val schemaConfig = validStreamAndConfig.config
+        val updatedValidStreamAndConfig = AirbyteStreamAndConfiguration()
+        updatedValidStreamAndConfig.stream = schemaStream
+        updatedValidStreamAndConfig.config =
+          AirbyteCatalogHelper.updateAirbyteStreamConfiguration(
+            validStreamAndConfig.config,
+            schemaStream,
+            streamConfiguration,
+          )
 
         val validDestinationSyncModes =
           trackingHelper.callWithTracker(
@@ -367,18 +379,17 @@ open class ConnectionsController(
         // set user configs
         trackingHelper.callWithTracker(
           {
-            AirbyteCatalogHelper.setAndValidateStreamConfig(
-              streamConfiguration,
-              validDestinationSyncModes,
-              schemaStream!!,
-              schemaConfig!!,
+            AirbyteCatalogHelper.validateStreamConfig(
+              streamConfiguration = streamConfiguration,
+              validDestinationSyncModes = validDestinationSyncModes,
+              airbyteStream = schemaStream,
             )
           },
           CONNECTIONS_PATH,
           POST,
           userId,
         )
-        configuredCatalog!!.addStreamsItem(validStreamAndConfig)
+        configuredCatalog!!.addStreamsItem(updatedValidStreamAndConfig)
       }
     } else {
       // no user supplied stream configs, return all existing streams

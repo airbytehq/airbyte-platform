@@ -2,6 +2,7 @@ import { useMemo } from "react";
 import { FormattedMessage, useIntl } from "react-intl";
 import { useParams } from "react-router-dom";
 
+import { ConnectionSyncContextProvider } from "components/connection/ConnectionSync/ConnectionSyncContext";
 import { ChangesStatusIcon } from "components/EntityTable/components/ChangesStatusIcon";
 import { FlexContainer } from "components/ui/Flex";
 import { PageHeaderWithNavigation } from "components/ui/PageHeader";
@@ -12,6 +13,7 @@ import { useExperiment } from "hooks/services/Experiment";
 import { RoutePaths, ConnectionRoutePaths } from "pages/routePaths";
 
 import { ConnectionTitleBlock } from "./ConnectionTitleBlock";
+import { ConnectionTitleBlockNext } from "./ConnectionTitleBlockNext";
 
 export const ConnectionPageHeader = () => {
   const params = useParams<{ workspaceId: string; connectionId: string; "*": ConnectionRoutePaths }>();
@@ -73,7 +75,13 @@ export const ConnectionPageHeader = () => {
 
   return (
     <PageHeaderWithNavigation breadcrumbsData={breadcrumbsData}>
-      <ConnectionTitleBlock />
+      {isSimplifiedCreation ? (
+        <ConnectionSyncContextProvider>
+          <ConnectionTitleBlockNext />
+        </ConnectionSyncContextProvider>
+      ) : (
+        <ConnectionTitleBlock />
+      )}
       <Tabs>
         {tabsData.map((tabItem) => (
           <LinkTab

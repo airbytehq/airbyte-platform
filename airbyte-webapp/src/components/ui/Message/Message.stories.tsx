@@ -98,3 +98,18 @@ WithChildren.args = {
     </FlexContainer>
   ),
 };
+
+export const WithExpandableChildren = Template.bind({});
+WithExpandableChildren.args = {
+  text: "This is an error with more details, but you have to expand to see them.",
+  secondaryText: "This is a secondary text",
+  type: "error",
+  children: (
+    <FlexContainer direction="column" gap="sm">
+      <FlexItem>Learn More</FlexItem>
+      <FlexItem>Stacktrace</FlexItem>
+      <FlexItem>Logs</FlexItem>
+    </FlexContainer>
+  ),
+  isExpandable: true,
+};

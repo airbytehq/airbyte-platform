@@ -43,8 +43,6 @@ public interface SourceService {
 
   void writeSourceConnectionNoSecrets(SourceConnection partialSource) throws IOException;
 
-  boolean deleteSource(UUID sourceId) throws JsonValidationException, ConfigNotFoundException, IOException;
-
   List<SourceConnection> listSourceConnection() throws IOException;
 
   List<SourceConnection> listWorkspaceSourceConnection(UUID workspaceId) throws IOException;

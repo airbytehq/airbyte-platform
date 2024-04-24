@@ -3,12 +3,12 @@ import { useFormContext } from "react-hook-form";
 import { FormattedMessage } from "react-intl";
 
 import { FormConnectionFormValues } from "components/connection/ConnectionForm/formConfig";
-import { FormFieldLayout } from "components/connection/ConnectionForm/FormFieldLayout";
 import { RadioButtonTiles } from "components/connection/CreateConnection/RadioButtonTiles";
 import { updateStreamSyncMode } from "components/connection/syncCatalog/SyncCatalog/updateStreamSyncMode";
 import { SyncModeValue } from "components/connection/syncCatalog/SyncModeSelect";
 import { ControlLabels } from "components/LabeledControl";
 import { Badge } from "components/ui/Badge";
+import { Box } from "components/ui/Box";
 import { FlexContainer } from "components/ui/Flex";
 import { Icon } from "components/ui/Icon";
 import { Text } from "components/ui/Text";
@@ -144,7 +144,7 @@ export const SimplifiedSchemaQuestionnaire = () => {
   const enforcedSelectedDelivery = getEnforcedDelivery(questionnaireOutcomes);
   const enforcedIncrementOrRefresh = getEnforcedIncrementOrRefresh(supportedSyncModes);
 
-  const [selectedDelivery, _setSelectedDelivery] = useState<Delivery | undefined>(enforcedSelectedDelivery);
+  const [selectedDelivery, _setSelectedDelivery] = useState<Delivery>(enforcedSelectedDelivery ?? "mirrorSource");
   const [selectedIncrementOrRefresh, _setSelectedIncrementOrRefresh] = useState<IncrementOrRefresh | undefined>(
     enforcedIncrementOrRefresh
   );
@@ -197,12 +197,6 @@ export const SimplifiedSchemaQuestionnaire = () => {
     }
     return [];
   }, [selectedDelivery, questionnaireOutcomes.mirrorSource, selectedIncrementOrRefresh]);
-
-  // if a source & destination sync mode selection has been made (by default or by the user), show the result
-  let selectionMessage;
-  if (selectedModes.length) {
-    selectionMessage = <FormattedMessage id="connectionForm.questionnaire.result" />;
-  }
 
   // when a sync mode is selected, choose it for all streams
   const { trigger, getValues, setValue } = useFormContext<FormConnectionFormValues>();
@@ -265,12 +259,9 @@ export const SimplifiedSchemaQuestionnaire = () => {
   }, [showSecondQuestion, analyticsService]);
 
   return (
-    <FlexContainer
-      direction="column"
-      gap={showSecondQuestion ? "xl" : "md" /* maintain consistent spacing between the first question & message */}
-    >
+    <FlexContainer direction="column" gap="md">
       {showFirstQuestion && (
-        <FormFieldLayout alignItems="flex-start" nextSizing>
+        <FlexContainer direction="column">
           <ControlLabels
             label={
               <FlexContainer direction="column">
@@ -281,42 +272,37 @@ export const SimplifiedSchemaQuestionnaire = () => {
             }
           />
           <RadioButtonTiles
-            direction="column"
+            direction="row"
             name="delivery"
             options={deliveryOptions}
             selectedValue={selectedDelivery ?? ""}
             onSelectRadioButton={setSelectedDelivery}
           />
-        </FormFieldLayout>
+        </FlexContainer>
       )}
 
       <div className={showSecondQuestion ? styles.expandedQuestion : styles.collapsedQuestion}>
-        <FormFieldLayout alignItems="flex-start" nextSizing>
-          <ControlLabels
-            label={
-              <FlexContainer direction="column">
-                <Text>
-                  <FormattedMessage id="connectionForm.questionnaire.incrementOrRefresh" />
-                </Text>
-              </FlexContainer>
-            }
-          />
-          <RadioButtonTiles
-            direction="column"
-            name="delectedRecords"
-            options={deletionRecordsOptions}
-            selectedValue={selectedIncrementOrRefresh ?? ""}
-            onSelectRadioButton={setSelectedIncrementOrRefresh}
-          />
-        </FormFieldLayout>
+        <Box mt="md">
+          <FlexContainer direction="column">
+            <ControlLabels
+              label={
+                <FlexContainer direction="column">
+                  <Text>
+                    <FormattedMessage id="connectionForm.questionnaire.incrementOrRefresh" />
+                  </Text>
+                </FlexContainer>
+              }
+            />
+            <RadioButtonTiles
+              direction="row"
+              name="delectedRecords"
+              options={deletionRecordsOptions}
+              selectedValue={selectedIncrementOrRefresh ?? ""}
+              onSelectRadioButton={setSelectedIncrementOrRefresh}
+            />
+          </FlexContainer>
+        </Box>
       </div>
-
-      {selectionMessage && (
-        <FormFieldLayout alignItems="flex-start" nextSizing>
-          <ControlLabels label="" />
-          <Text color="blue">{selectionMessage}</Text>
-        </FormFieldLayout>
-      )}
     </FlexContainer>
   );
 };

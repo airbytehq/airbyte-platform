@@ -145,7 +145,7 @@ public class DefaultDiscoverCatalogWorker implements DiscoverCatalogWorker {
   private String validatePath(final JsonNode jsonSchema, final List<String> path) {
     for (final String key : path) {
       if (!jsonSchema.has(key)) {
-        return String.format("key: '%s' of path: '%s' not found in schema: %s", key, path, jsonSchema);
+        return String.format("key: '%s' of path: '%s' not found in schema", key, path);
       }
     }
 

@@ -55,8 +55,8 @@ export const LoginPage: React.FC = () => {
   const { registerNotification } = useNotificationService();
   const { trackError } = useAppMonitoringService();
   const [searchParams] = useSearchParams();
-  const [keycloakAuthEnabledLocalStorage] = useLocalStorage("airbyte_keycloak-auth-ui", false);
-  const keycloakAuthEnabledExperiment = useExperiment("authPage.keycloak", false);
+  const [keycloakAuthEnabledLocalStorage] = useLocalStorage("airbyte_keycloak-auth-ui", true);
+  const keycloakAuthEnabledExperiment = useExperiment("authPage.keycloak", true);
   const keycloakAuthEnabled = keycloakAuthEnabledExperiment || keycloakAuthEnabledLocalStorage;
   const loginRedirectString = searchParams.get("loginRedirect");
   const isAcceptingInvitation = loginRedirectString?.includes("accept-invite");

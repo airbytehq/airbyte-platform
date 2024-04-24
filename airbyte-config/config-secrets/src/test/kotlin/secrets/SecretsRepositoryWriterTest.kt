@@ -10,6 +10,7 @@ import io.airbyte.config.DestinationConnection
 import io.airbyte.config.SourceConnection
 import io.airbyte.config.persistence.ConfigRepository
 import io.airbyte.config.secrets.hydration.RealSecretsHydrator
+import io.airbyte.metrics.lib.MetricClient
 import io.airbyte.protocol.models.ConnectorSpecification
 import io.airbyte.validation.json.JsonSchemaValidator
 import io.mockk.mockk
@@ -28,9 +29,11 @@ internal class SecretsRepositoryWriterTest {
   fun setup() {
     configRepository = mockk()
     secretPersistence = MemorySecretPersistence()
+    val metricClient: MetricClient = mockk()
     secretsRepositoryWriter =
       SecretsRepositoryWriter(
         secretPersistence,
+        metricClient,
       )
     secretsHydrator = RealSecretsHydrator(secretPersistence)
     secretsRepositoryReader = SecretsRepositoryReader(secretsHydrator)

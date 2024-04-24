@@ -17,6 +17,7 @@ import io.airbyte.protocol.models.AirbyteTraceMessage;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Set;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.exception.ExceptionUtils;
 
 /**
@@ -28,6 +29,10 @@ public class FailureHelper {
   private static final String ATTEMPT_NUMBER_METADATA_KEY = "attemptNumber";
   private static final String TRACE_MESSAGE_METADATA_KEY = "from_trace_message";
   private static final String CONNECTOR_COMMAND_METADATA_KEY = "connector_command";
+  // For limiting strings passed from connectors to the platform.
+  private static final String ATTRIBUTION_MESSAGE = "Remainder truncated by the Airbyte platform.";
+  static final int MAX_MSG_LENGTH = 50000;
+  static final int MAX_STACK_TRACE_LENGTH = 100000;
 
   /**
    * Connector Commands.
@@ -110,10 +115,16 @@ public class FailureHelper {
           .withName(m.getError().getStreamDescriptor().getName());
     }
 
+    // for strings coming from outside the platform (namely, from community connectors)
+    // we want to ensure a max string length to keep payloads of reasonable size.
+    final var internalMsg = truncateWithPlatformMessage(m.getError().getInternalMessage(), MAX_MSG_LENGTH);
+    final var externalMsg = truncateWithPlatformMessage(m.getError().getMessage(), MAX_MSG_LENGTH);
+    final var stackTrace = truncateWithPlatformMessage(m.getError().getStackTrace(), MAX_STACK_TRACE_LENGTH);
+
     return new FailureReason()
-        .withInternalMessage(m.getError().getInternalMessage())
-        .withExternalMessage(m.getError().getMessage())
-        .withStacktrace(m.getError().getStackTrace())
+        .withInternalMessage(internalMsg)
+        .withExternalMessage(externalMsg)
+        .withStacktrace(stackTrace)
         .withTimestamp(m.getEmittedAt().longValue())
         .withStreamDescriptor(streamDescriptor)
         .withFailureType(failureType)
@@ -429,7 +440,7 @@ public class FailureHelper {
   public static FailureReason platformFailure(final Throwable t, final Long jobId, final Integer attemptNumber) {
     final String externalMessage =
         exceptionChainContains(t, SizeLimitException.class)
-            ? "Size limit exceeded, please check your configuration, this is often related to a high number of streams."
+            ? "Size limit exceeded, please check your configuration, this is often related to a high number of fields."
             : "Something went wrong within the airbyte platform";
     return genericFailure(t, jobId, attemptNumber)
         .withFailureOrigin(FailureOrigin.AIRBYTE_PLATFORM)
@@ -491,6 +502,25 @@ public class FailureHelper {
       tp = tp.getCause();
     }
     return false;
+  }
+
+  /**
+   * Utility function for truncating strings with attribution to the platform for debugging purposes.
+   * Factor out into separate class as necessary.
+   */
+  @VisibleForTesting
+  static String truncateWithPlatformMessage(final String str, final int maxWidth) {
+    if (str == null || str.length() <= maxWidth) {
+      return str;
+    }
+
+    final var maxWidthAdjusted = maxWidth - ATTRIBUTION_MESSAGE.length() - 1;
+    // 4 is the min maxWidth of the Apache Lib we are using.
+    if (maxWidthAdjusted < 4) {
+      return str;
+    }
+
+    return StringUtils.abbreviate(str, maxWidthAdjusted) + " " + ATTRIBUTION_MESSAGE;
   }
 
 }

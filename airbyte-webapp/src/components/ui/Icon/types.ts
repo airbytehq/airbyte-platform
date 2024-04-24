@@ -42,6 +42,7 @@ export type IconType =
   | "errorFilled"
   | "errorOutline"
   | "expand"
+  | "export"
   | "eye"
   | "eyeSlash"
   | "file"

@@ -43,7 +43,7 @@ class InstanceConfigurationApiControllerTest extends BaseControllerTest {
   static String PATH = "/api/v1/instance_configuration";
 
   @Test
-  void testGetInstanceConfiguration() throws ConfigNotFoundException, IOException {
+  void testGetInstanceConfiguration() throws IOException {
     when(instanceConfigurationHandler.getInstanceConfiguration())
         .thenReturn(new InstanceConfigurationResponse());
 

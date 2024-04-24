@@ -9,19 +9,11 @@ import { Heading } from "components/ui/Heading";
 import { SearchInput } from "components/ui/SearchInput";
 import { Text } from "components/ui/Text";
 
-import {
-  useCurrentOrganizationInfo,
-  useCurrentWorkspace,
-  useListUserInvitations,
-  useListWorkspaceAccessUsers,
-} from "core/api";
+import { useCurrentWorkspace, useListUserInvitations, useListWorkspaceAccessUsers } from "core/api";
 import { useIntent } from "core/utils/rbac";
-import { useExperiment } from "hooks/services/Experiment";
 import { useModalService } from "hooks/services/Modal";
 import { AddUserModal } from "packages/cloud/views/workspaces/WorkspaceSettingsView/components/AddUserModal";
-import { FirebaseInviteUserButton } from "packages/cloud/views/workspaces/WorkspaceSettingsView/components/FirebaseInviteUserButton";
 
-import { AddUserControl } from "./components/AddUserControl";
 import { UnifiedWorkspaceUserModel, unifyWorkspaceUserData } from "./components/useGetAccessManagementData";
 import styles from "./WorkspaceAccessManagementSection.module.scss";
 import { WorkspaceUsersTable } from "./WorkspaceUsersTable";
@@ -30,8 +22,6 @@ const SEARCH_PARAM = "search";
 
 const WorkspaceAccessManagementSection: React.FC = () => {
   const workspace = useCurrentWorkspace();
-  const organization = useCurrentOrganizationInfo();
-  const canViewOrgMembers = useIntent("ListOrganizationMembers", { organizationId: organization?.organizationId });
   const canUpdateWorkspacePermissions = useIntent("UpdateWorkspacePermissions", { workspaceId: workspace.workspaceId });
   const { openModal } = useModalService();
 
@@ -48,10 +38,6 @@ const WorkspaceAccessManagementSection: React.FC = () => {
   const [userFilter, setUserFilter] = React.useState(filterParam ?? "");
   const debouncedUserFilter = useDeferredValue(userFilter);
   const { formatMessage } = useIntl();
-
-  const showAddUserButton = organization?.sso && canUpdateWorkspacePermissions && canViewOrgMembers;
-  const showFirebaseInviteButton = !organization?.sso && canUpdateWorkspacePermissions;
-  const invitationSystemv2 = useExperiment("settings.invitationSystemv2", false);
 
   const onOpenInviteUsersModal = () =>
     openModal<void>({
@@ -87,16 +73,9 @@ const WorkspaceAccessManagementSection: React.FC = () => {
         <FlexItem className={styles.searchInputWrapper}>
           <SearchInput value={userFilter} onChange={(e) => setUserFilter(e.target.value)} />
         </FlexItem>
-        {!invitationSystemv2 ? (
-          <>
-            {showFirebaseInviteButton && <FirebaseInviteUserButton />}
-            {showAddUserButton && <AddUserControl />}
-          </>
-        ) : (
-          <Button onClick={onOpenInviteUsersModal} disabled={!canUpdateWorkspacePermissions} icon="plus">
-            <FormattedMessage id="userInvitations.newMember" />
-          </Button>
-        )}
+        <Button onClick={onOpenInviteUsersModal} disabled={!canUpdateWorkspacePermissions} icon="plus">
+          <FormattedMessage id="userInvitations.newMember" />
+        </Button>
       </FlexContainer>
       {filteredWorkspaceUsers && filteredWorkspaceUsers.length > 0 ? (
         <WorkspaceUsersTable users={filteredWorkspaceUsers} />

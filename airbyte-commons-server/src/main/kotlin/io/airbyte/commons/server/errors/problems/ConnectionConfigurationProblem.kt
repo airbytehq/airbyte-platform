@@ -73,9 +73,12 @@ class ConnectionConfigurationProblem private constructor(message: String) : Abst
       )
     }
 
-    fun primaryKeyAlreadyDefined(streamName: String): ConnectionConfigurationProblem {
+    fun primaryKeyAlreadyDefined(
+      streamName: String,
+      allowedPrimaryKey: List<List<String>>,
+    ): ConnectionConfigurationProblem {
       return ConnectionConfigurationProblem(
-        "Primary key for stream: $streamName is already pre-defined. Please do NOT include a primary key configuration for this stream.",
+        "Primary key for stream: $streamName is already pre-defined. Please remove the primaryKey or provide the value as $allowedPrimaryKey.",
       )
     }
 
@@ -85,6 +88,15 @@ class ConnectionConfigurationProblem private constructor(message: String) : Abst
     ): ConnectionConfigurationProblem {
       return ConnectionConfigurationProblem(
         "Invalid cursor field for stream: $streamName. The list of valid primary keys fields: $validFields.",
+      )
+    }
+
+    fun duplicatePrimaryKey(
+      streamName: String,
+      key: List<List<String?>?>,
+    ): ConnectionConfigurationProblem {
+      return ConnectionConfigurationProblem(
+        "Duplicate primary key detected for stream: $streamName, please don't provide the same column more than once. Key: $key",
       )
     }
 
