@@ -37,6 +37,7 @@ class ClaimedProcessor(
   private val metricPublisher: CustomMetricPublisher,
   @Value("\${airbyte.data-plane-id}") private val dataplaneId: String,
   @Value("\${airbyte.workload-launcher.temporal.default-queue.parallelism}") parallelism: Int,
+  private val claimProcessorTracker: ClaimProcessorTracker,
 ) {
   private val scheduler = Schedulers.newParallel("process-claimed-scheduler", parallelism)
 
@@ -53,6 +54,7 @@ class ClaimedProcessor(
       apiClient.workloadApi.workloadList(workloadListRequest)
 
     logger.info { "Re-hydrating ${workloadList.workloads.size} workload claim(s)..." }
+    claimProcessorTracker.trackNumberOfClaimsToResume(workloadList.workloads.size)
 
     val msgs = workloadList.workloads.map { it.toLauncherInput() }
 
@@ -74,6 +76,7 @@ class ClaimedProcessor(
       MetricAttribute(MeterFilterFactory.WORKLOAD_TYPE_TAG, msg.workloadType.toString()),
     )
     return pipe.buildPipeline(msg)
+      .doOnTerminate(claimProcessorTracker::trackResumed)
       .subscribeOn(scheduler)
   }
 

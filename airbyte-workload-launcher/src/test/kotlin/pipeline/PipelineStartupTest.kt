@@ -4,8 +4,10 @@
 
 package io.airbyte.workload.launcher.pipeline
 
+import io.airbyte.workload.launcher.ClaimProcessorTracker
 import io.airbyte.workload.launcher.ClaimedProcessor
 import io.airbyte.workload.launcher.StartupApplicationEventListener
+import io.mockk.Ordering
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
@@ -18,22 +20,29 @@ class PipelineStartupTest {
     val workerFactory: WorkerFactory = mockk()
     val highPriorityworkerFactory: WorkerFactory = mockk()
     val claimedProcessor: ClaimedProcessor = mockk()
+    val claimProcessorTracker: ClaimProcessorTracker = mockk()
 
     every { claimedProcessor.retrieveAndProcess() } returns Unit
     every { workerFactory.start() } returns Unit
+    every { claimProcessorTracker.await() } returns Unit
 
     val listener =
       StartupApplicationEventListener(
         claimedProcessor,
         workerFactory,
         highPriorityworkerFactory,
+        claimProcessorTracker,
+        mockk(),
       )
 
     listener.onApplicationEvent(null)
     listener.mainThread?.join()
 
     verify { claimedProcessor.retrieveAndProcess() }
-    verify { workerFactory.start() }
-    verify { highPriorityworkerFactory.start() }
+    verify(ordering = Ordering.ORDERED) {
+      claimProcessorTracker.await()
+      workerFactory.start()
+      highPriorityworkerFactory.start()
+    }
   }
 }
