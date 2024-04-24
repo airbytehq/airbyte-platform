@@ -101,19 +101,18 @@ tasks.register<PnpmTask>("test") {
     outputs.upToDateWhen { true }
 }
 
-tasks.register<PnpmTask>("e2etest") {
+tasks.register<PnpmTask>("cypress") {
     dependsOn(tasks.named("pnpmInstall"))
 
     /*
-    If the cypressWebappKey property has been set from the outside (see tools/bin/e2e_test.sh)
+    If the cypressWebappKey property has been set from the outside via the workflow file
     we'll record the cypress session, otherwise we're not recording
     */
-    val recordCypress = project.hasProperty("cypressWebappKey") && project.property("cypressWebappKey") as Boolean
-    if (recordCypress) {
-        environment.put("CYPRESS_KEY", project.property("cypressWebappKey") as String)
-        args = listOf("run", "cypress:ci:record")
+    val hasRecordingKey = !System.getenv("CYPRESS_RECORD_KEY").isNullOrEmpty()
+    args = if (hasRecordingKey) {
+        listOf("run", "cypress:run", "--record")
     } else {
-        args = listOf("run", "cypress:ci")
+        listOf("run", "cypress:run")
     }
 
     /*
@@ -123,14 +122,14 @@ tasks.register<PnpmTask>("e2etest") {
     outputs.upToDateWhen { false }
 }
 
-tasks.register<PnpmTask>("cloudE2eTest") {
+tasks.register<PnpmTask>("cypressCloud") {
     dependsOn(tasks.named("pnpmInstall"))
-    val recordCypress = project.hasProperty("cypressCloudWebappKey") && project.property("cypressCloudWebappKey") as Boolean
-    if (recordCypress) {
-        environment.put("CYPRESS_KEY", project.property("cypressCloudWebappKey") as String)
-        args = listOf("run", "cloud-test:stage:record")
+
+    val hasRecordingKey = !System.getenv("CYPRESS_RECORD_KEY").isNullOrEmpty()
+    args = if (hasRecordingKey) {
+        listOf("run", "cloud-test:stage", "--record")
     } else {
-        args = listOf("run", "cloud-test:stage")
+        listOf("run", "cloud-test:stage")
     }
 
     /*
