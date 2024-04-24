@@ -132,7 +132,7 @@ webapp:
     fsGroup: 101
 
   containerSecurityContext:
-    allowPrivilegeEscalation: false 
+    allowPrivilegeEscalation: false
     runAsNonRoot: true
     # uid=101(nginx)
     runAsUser: 101
@@ -179,6 +179,8 @@ webapp:
     type: ClusterIP
     # -- The service port to expose the webapp on
     port: 80
+    # -- The target port of the webapp service - useful in situations where it needs to be proxied via another pod
+    targetPort: http
     # -- Annotations for the webapp service resource
     annotations: {}
 
@@ -358,7 +360,7 @@ pod-sweeper:
     fsGroup: 1001
 
   containerSecurityContext:
-    allowPrivilegeEscalation: false 
+    allowPrivilegeEscalation: false
     runAsNonRoot: true
     # uid=1001(anon)
     runAsUser: 1001
@@ -466,7 +468,7 @@ server:
     fsGroup: 1000
 
   containerSecurityContext:
-    allowPrivilegeEscalation: false 
+    allowPrivilegeEscalation: false
     runAsNonRoot: true
     # uid=1000(airbyte)
     runAsUser: 1000
@@ -648,7 +650,7 @@ worker:
     fsGroup: 1000
 
   containerSecurityContext:
-    allowPrivilegeEscalation: false 
+    allowPrivilegeEscalation: false
     runAsNonRoot: true
     # uid=1000(airbyte)
     runAsUser: 1000
@@ -787,7 +789,7 @@ workload-launcher:
     fsGroup: 1000
 
   containerSecurityContext:
-    allowPrivilegeEscalation: false 
+    allowPrivilegeEscalation: false
     runAsNonRoot: true
     # uid=1000(airbyte)
     runAsUser: 1000
@@ -929,7 +931,7 @@ metrics:
     fsGroup: 1000
 
   containerSecurityContext:
-    allowPrivilegeEscalation: false 
+    allowPrivilegeEscalation: false
     runAsNonRoot: true
     # uid=1000(airbyte)
     runAsUser: 1000
@@ -1051,7 +1053,7 @@ airbyte-bootloader:
     fsGroup: 1000
 
   containerSecurityContext:
-    allowPrivilegeEscalation: false 
+    allowPrivilegeEscalation: false
     runAsNonRoot: true
     # uid=1000(airbyte)
     runAsUser: 1000
@@ -1182,7 +1184,7 @@ temporal:
     fsGroup: 1000
 
   containerSecurityContext:
-    allowPrivilegeEscalation: false 
+    allowPrivilegeEscalation: false
     runAsNonRoot: true
     # uid=1000(temporal)
     runAsUser: 1000
@@ -1300,7 +1302,7 @@ postgresql:
     fsGroup: 70
   containerSecurityContext:
     # -- Ensures the container will run with a non-root user
-    allowPrivilegeEscalation: false 
+    allowPrivilegeEscalation: false
     runAsNonRoot: true
     # uid=70(postgres)
     runAsUser: 70
@@ -1394,7 +1396,7 @@ cron:
     fsGroup: 1000
 
   containerSecurityContext:
-    allowPrivilegeEscalation: false 
+    allowPrivilegeEscalation: false
     runAsNonRoot: true
     # uid=1000(airbyte)
     runAsUser: 1000
@@ -1565,7 +1567,7 @@ connector-builder-server:
     fsGroup: 1000
 
   containerSecurityContext:
-    allowPrivilegeEscalation: false 
+    allowPrivilegeEscalation: false
     runAsNonRoot: true
     # uid=1000(airbyte)
     runAsUser: 1000
@@ -1660,7 +1662,7 @@ airbyte-api-server:
     fsGroup: 1000
 
   containerSecurityContext:
-    allowPrivilegeEscalation: false 
+    allowPrivilegeEscalation: false
     runAsNonRoot: true
     # uid=1000(airbyte)
     runAsUser: 1000
@@ -1774,7 +1776,7 @@ keycloak:
     fsGroup: 0
 
   initContainerSecurityContext:
-    allowPrivilegeEscalation: false 
+    allowPrivilegeEscalation: false
     runAsNonRoot: true
     # uid=70(postgres)
     runAsUser: 70
@@ -1785,9 +1787,9 @@ keycloak:
       drop: ["ALL"]
     seccompProfile:
       type: RuntimeDefault
-    
+
   containerSecurityContext:
-    allowPrivilegeEscalation: false 
+    allowPrivilegeEscalation: false
     runAsNonRoot: true
     # uid=1000(keycloak)
     runAsUser: 1000
@@ -1819,7 +1821,7 @@ keycloak-setup:
     fsGroup: 1000
 
   initContainerSecurityContext:
-    allowPrivilegeEscalation: false 
+    allowPrivilegeEscalation: false
     runAsNonRoot: true
     # gid=100(curl_user)
     runAsUser: 100
@@ -1832,7 +1834,7 @@ keycloak-setup:
       type: RuntimeDefault
 
   containerSecurityContext:
-    allowPrivilegeEscalation: false 
+    allowPrivilegeEscalation: false
     runAsNonRoot: true
     # uid=1000(airbyte)
     runAsUser: 1000
@@ -1874,7 +1876,7 @@ workload-api-server:
     fsGroup: 1000
 
   containerSecurityContext:
-    allowPrivilegeEscalation: false 
+    allowPrivilegeEscalation: false
     runAsNonRoot: true
     # uid=1000(airbyte)
     runAsUser: 1000

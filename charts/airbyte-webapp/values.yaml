@@ -73,10 +73,12 @@ readinessProbe:
 
 ##  webapp.service.type The service type to use for the webapp service
 ##  webapp.service.port The service port to expose the webapp on
+##  webapp.service.targetPort The target port of the webapp service - useful in situations where it needs to be proxied via another pod
 ##  webapp.service.annotations Annotations for the webapp service resource
 service:
   type: ClusterIP
   port: 80
+  targetPort: http
   annotations: {}
 
 ## Web app resource requests and limits
@@ -145,7 +147,6 @@ api:
 ##  webapp.fullstory.enabled Whether or not to enable fullstory
 fullstory:
   enabled: false
-
 
 ##  webapp.extraVolumeMounts [array] Additional volumeMounts for webapp container(s).
 ## Examples (when using `webapp.containerSecurityContext.readOnlyRootFilesystem=true`):
@@ -243,9 +244,6 @@ secrets: {}
 #   INTERNAL_API_HOST: airbyte-server-svc:8001
 
 env_vars: {}
-
-
-
 
 ## extraSelectorLabels [object] - use to specify own additional selector labels for deployment
 extraSelectorLabels: {}

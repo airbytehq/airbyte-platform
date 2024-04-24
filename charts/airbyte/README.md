@@ -343,6 +343,7 @@ Helm chart to deploy airbyte
 | webapp.secrets | object | `{}` | Supply additional secrets to container |
 | webapp.service.annotations | object | `{}` | Annotations for the webapp service resource |
 | webapp.service.port | int | `80` | The service port to expose the webapp on |
+| webapp.service.targetPort | string OR int | `"http"` |  |
 | webapp.service.type | string | `"ClusterIP"` | The service type to use for the webapp service |
 | webapp.tolerations | list | `[]` | Tolerations for webapp pod assignment, see https://kubernetes.io/docs/concepts/configuration/taint-and-toleration/ |
 | worker.activityInitialDelayBetweenAttemptsSeconds | string | `""` |  |
