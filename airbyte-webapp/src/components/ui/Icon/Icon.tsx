@@ -140,6 +140,7 @@ const colorMap: Record<IconColor, string> = {
   error: styles[`icon--error`],
   action: styles[`icon--action`],
   affordance: styles[`icon--affordance`],
+  foreground: styles[`icon--foreground`],
 };
 
 const sizeMap: Record<NonNullable<IconProps["size"]>, string> = {
