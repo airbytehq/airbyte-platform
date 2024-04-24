@@ -7,6 +7,7 @@ import {
   BEARER_AUTHENTICATOR,
   BuilderFormAuthenticator,
   BuilderFormInput,
+  BuilderFormValues,
   BuilderStream,
   NO_AUTH,
   OAUTH_AUTHENTICATOR,
@@ -80,10 +81,10 @@ export const useGetUniqueKey = () => {
 };
 
 export function getKeyToDesiredLockedInput(
-  authenticator: BuilderFormAuthenticator,
+  authenticator: BuilderFormValues["global"]["authenticator"],
   streams: BuilderStream[]
 ): Record<string, BuilderFormInput> {
-  const authKeyToDesiredInput = getAuthKeyToDesiredLockedInput(authenticator);
+  const authKeyToDesiredInput = isYamlString(authenticator) ? {} : getAuthKeyToDesiredLockedInput(authenticator);
 
   const incrementalStartDateKeys = new Set<string>();
   const incrementalEndDateKeys = new Set<string>();
@@ -124,7 +125,9 @@ export function getKeyToDesiredLockedInput(
   };
 }
 
-function getAuthKeyToDesiredLockedInput(authenticator: BuilderFormAuthenticator): Record<string, BuilderFormInput> {
+export function getAuthKeyToDesiredLockedInput(
+  authenticator: BuilderFormAuthenticator
+): Record<string, BuilderFormInput> {
   switch (authenticator.type) {
     case API_KEY_AUTHENTICATOR:
     case BEARER_AUTHENTICATOR:

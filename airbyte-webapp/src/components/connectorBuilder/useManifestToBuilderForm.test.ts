@@ -5,17 +5,24 @@ import {
   DeclarativeStream,
   DeclarativeStreamIncrementalSync,
   HttpRequesterErrorHandler,
+  SessionTokenAuthenticator,
   SimpleRetrieverPaginator,
   Spec,
 } from "core/api/types/ConnectorManifest";
 import { removeEmptyProperties } from "core/utils/form";
 
 import {
+  manifestAuthenticatorToBuilder,
   manifestErrorHandlerToBuilder,
   manifestIncrementalSyncToBuilder,
   manifestPaginatorToBuilder,
 } from "./convertManifestToBuilderForm";
-import { DEFAULT_BUILDER_FORM_VALUES, DEFAULT_CONNECTOR_NAME, OLDEST_SUPPORTED_CDK_VERSION } from "./types";
+import {
+  DEFAULT_BUILDER_FORM_VALUES,
+  DEFAULT_CONNECTOR_NAME,
+  OLDEST_SUPPORTED_CDK_VERSION,
+  isYamlString,
+} from "./types";
 import { convertToBuilderFormValues } from "./useManifestToBuilderForm";
 import { formatJson } from "./utils";
 
@@ -29,17 +36,10 @@ const baseManifest: ConnectorManifest = {
   streams: [],
 };
 
-const apiAuthRetriever = {
-  retriever: {
-    type: "SimpleRetriever",
-    requester: {
-      authenticator: {
-        type: "ApiKeyAuthenticator",
-        api_token: "{{ config['api_token'] }}",
-        header: "API_KEY",
-      },
-    },
-  },
+const apiTokenAuthenticator = {
+  type: "ApiKeyAuthenticator" as const,
+  api_token: "{{ config['api_token'] }}",
+  header: "API_KEY",
 };
 
 const apiTokenSpec: Spec = {
@@ -55,6 +55,19 @@ const apiTokenSpec: Spec = {
       },
     },
   },
+};
+
+const oauthAuthenticator = {
+  type: "OAuthAuthenticator" as const,
+  client_id: "{{ config['client_id'] }}",
+  client_secret: "{{ config['client_secret'] }}",
+  refresh_token: "{{ config['client_refresh_token'] }}",
+  refresh_request_body: {
+    key1: "val1",
+    key2: "val2",
+  },
+  token_refresh_endpoint: "https://api.com/refresh_token",
+  grant_type: "refresh_token",
 };
 
 const oauthSpec: Spec = {
@@ -179,244 +192,135 @@ describe("Conversion throws error when", () => {
   });
 
   it("manifest has an authenticator with a non-interpolated secret key", async () => {
-    const convert = async () => {
-      const manifest: ConnectorManifest = {
-        ...baseManifest,
-        streams: [
-          merge({}, stream1, {
-            retriever: {
-              requester: {
-                authenticator: {
-                  type: "ApiKeyAuthenticator",
-                  api_token: "abcd1234",
-                  header: "API_KEY",
-                },
-              },
-            },
-          }),
-        ],
+    const convert = () => {
+      const authenticator = {
+        type: "ApiKeyAuthenticator" as const,
+        api_token: "abcd1234",
+        header: "API_KEY",
       };
-      return convertToBuilderFormValues(noOpResolve, manifest, DEFAULT_CONNECTOR_NAME);
+      return manifestAuthenticatorToBuilder(authenticator, undefined);
     };
-    await expect(convert).rejects.toThrow('ApiKeyAuthenticator.api_token must be of the form {{ config["key"] }}');
-  });
-
-  it("manifest has an authenticator with a interpolated secret key of type config.<config key>", async () => {
-    const manifest: ConnectorManifest = {
-      ...baseManifest,
-      streams: [
-        merge({}, stream1, {
-          retriever: {
-            requester: {
-              authenticator: {
-                type: "ApiKeyAuthenticator",
-                api_token: "{{ config.api_token }}",
-                header: "API_KEY",
-              },
-            },
-          },
-        }),
-      ],
-      spec: apiTokenSpec,
-    };
-    const formValues = await convertToBuilderFormValues(noOpResolve, manifest, DEFAULT_CONNECTOR_NAME);
-    if (formValues.global.authenticator.type !== "ApiKeyAuthenticator") {
-      throw new Error("Has to be ApiKeyAuthenticator");
-    }
-    expect(formValues.global.authenticator.api_token).toEqual('{{ config["api_token"] }}');
-  });
-
-  it("manifest has an authenticator with a interpolated secret key of type config['config key']", async () => {
-    const manifest: ConnectorManifest = {
-      ...baseManifest,
-      streams: [
-        merge({}, stream1, {
-          retriever: {
-            requester: {
-              authenticator: {
-                type: "ApiKeyAuthenticator",
-                api_token: "{{ config['api_token'] }}",
-                header: "API_KEY",
-              },
-            },
-          },
-        }),
-      ],
-      spec: apiTokenSpec,
-    };
-    const formValues = await convertToBuilderFormValues(noOpResolve, manifest, DEFAULT_CONNECTOR_NAME);
-    if (formValues.global.authenticator.type !== "ApiKeyAuthenticator") {
-      throw new Error("Has to be ApiKeyAuthenticator");
-    }
-    expect(formValues.global.authenticator.api_token).toEqual('{{ config["api_token"] }}');
+    expect(convert).toThrow('ApiKeyAuthenticator.api_token must be of the form {{ config["key"] }}');
   });
 
   it("manifest has an authenticator with an interpolated key that doesn't match any spec key", async () => {
-    const convert = async () => {
-      const manifest: ConnectorManifest = {
-        ...baseManifest,
-        streams: [merge({}, stream1, apiAuthRetriever)],
-      };
-      return convertToBuilderFormValues(noOpResolve, manifest, DEFAULT_CONNECTOR_NAME);
-    };
-    await expect(convert).rejects.toThrow(
+    const convert = () => manifestAuthenticatorToBuilder(apiTokenAuthenticator, undefined);
+    expect(convert).toThrow(
       'ApiKeyAuthenticator.api_token references spec key "api_token", which must appear in the spec'
     );
   });
 
   it("manifest has an authenticator with a required interpolated key that is not required in the spec", async () => {
-    const convert = async () => {
-      const manifest: ConnectorManifest = {
-        ...baseManifest,
-        streams: [merge({}, stream1, apiAuthRetriever)],
-        spec: {
-          type: "Spec",
-          connection_specification: {
-            type: "object",
-            properties: {
-              api_token: {
-                type: "string",
-                title: "API Token",
-                airbyte_secret: true,
-              },
+    const convert = () =>
+      manifestAuthenticatorToBuilder(apiTokenAuthenticator, {
+        type: "Spec",
+        connection_specification: {
+          type: "object",
+          properties: {
+            api_token: {
+              type: "string",
+              title: "API Token",
+              airbyte_secret: true,
             },
           },
         },
-      };
-      return convertToBuilderFormValues(noOpResolve, manifest, DEFAULT_CONNECTOR_NAME);
-    };
-    await expect(convert).rejects.toThrow(
+      });
+    expect(convert).toThrow(
       'ApiKeyAuthenticator.api_token references spec key "api_token", which must be required in the spec'
     );
   });
 
   it("manifest has an authenticator with an interpolated key that is not type string in the spec", async () => {
-    const convert = async () => {
-      const manifest: ConnectorManifest = {
-        ...baseManifest,
-        streams: [merge({}, stream1, apiAuthRetriever)],
-        spec: {
-          type: "Spec",
-          connection_specification: {
-            type: "object",
-            required: ["api_token"],
-            properties: {
-              api_token: {
-                type: "integer",
-                title: "API Token",
-                airbyte_secret: true,
-              },
+    const convert = () =>
+      manifestAuthenticatorToBuilder(apiTokenAuthenticator, {
+        type: "Spec",
+        connection_specification: {
+          type: "object",
+          required: ["api_token"],
+          properties: {
+            api_token: {
+              type: "integer",
+              title: "API Token",
+              airbyte_secret: true,
             },
           },
         },
-      };
-      return convertToBuilderFormValues(noOpResolve, manifest, DEFAULT_CONNECTOR_NAME);
-    };
-    await expect(convert).rejects.toThrow(
+      });
+    expect(convert).toThrow(
       'ApiKeyAuthenticator.api_token references spec key "api_token", which must be of type string'
     );
   });
 
   it("manifest has an authenticator with an interpolated secret key that is not secret in the spec", async () => {
-    const convert = async () => {
-      const manifest: ConnectorManifest = {
-        ...baseManifest,
-        streams: [merge({}, stream1, apiAuthRetriever)],
-        spec: {
-          type: "Spec",
-          connection_specification: {
-            type: "object",
-            required: ["api_token"],
-            properties: {
-              api_token: {
-                type: "string",
-                title: "API Token",
-              },
+    const convert = () =>
+      manifestAuthenticatorToBuilder(apiTokenAuthenticator, {
+        type: "Spec",
+        connection_specification: {
+          type: "object",
+          required: ["api_token"],
+          properties: {
+            api_token: {
+              type: "string",
+              title: "API Token",
             },
           },
         },
-      };
-      return convertToBuilderFormValues(noOpResolve, manifest, DEFAULT_CONNECTOR_NAME);
-    };
-    await expect(convert).rejects.toThrow(
+      });
+    expect(convert).toThrow(
       'ApiKeyAuthenticator.api_token references spec key "api_token", which must have airbyte_secret set to true'
     );
   });
 
   it("manifest has an OAuthAuthenticator with a refresh_request_body containing non-string values", async () => {
     const convert = () => {
-      const manifest: ConnectorManifest = {
-        ...baseManifest,
-        streams: [
-          merge({}, stream1, {
-            retriever: {
-              requester: {
-                authenticator: {
-                  type: "OAuthAuthenticator",
-                  client_id: "{{ config['client_id'] }}",
-                  client_secret: "{{ config['client_secret'] }}",
-                  refresh_token: "{{ config['client_refresh_token'] }}",
-                  refresh_request_body: {
-                    key1: "val1",
-                    key2: {
-                      a: 1,
-                      b: 2,
-                    },
-                  },
-                  token_refresh_endpoint: "https://api.com/refresh_token",
-                  grant_type: "client_credentials",
-                },
-              },
-            },
-          }),
-        ],
+      const authenticator = {
+        type: "OAuthAuthenticator" as const,
+        client_id: "{{ config['client_id'] }}",
+        client_secret: "{{ config['client_secret'] }}",
+        refresh_token: "{{ config['client_refresh_token'] }}",
+        refresh_request_body: {
+          key1: "val1",
+          key2: {
+            a: 1,
+            b: 2,
+          },
+        },
+        token_refresh_endpoint: "https://api.com/refresh_token",
+        grant_type: "client_credentials",
       };
-      return convertToBuilderFormValues(noOpResolve, manifest, DEFAULT_CONNECTOR_NAME);
+      return manifestAuthenticatorToBuilder(authenticator, oauthSpec);
     };
-    await expect(convert).rejects.toThrow("OAuthAuthenticator contains a refresh_request_body with non-string values");
+    expect(convert).toThrow("OAuthAuthenticator contains a refresh_request_body with non-string values");
   });
 
   it("manifest has a SessionTokenAuthenticator with an unsupported login_requester authenticator type", async () => {
     const convert = () => {
-      const manifest: ConnectorManifest = {
-        ...baseManifest,
-        streams: [
-          merge({}, stream1, {
-            retriever: {
-              requester: {
-                authenticator: {
-                  type: "SessionTokenAuthenticator",
-                  login_requester: {
-                    type: "HttpRequester",
-                    url_base: "https://api.com/",
-                    path: "/session",
-                    authenticator: {
-                      type: "OAuthAuthenticator",
-                    },
-                    http_method: "POST",
-                    request_parameters: {},
-                    request_headers: {},
-                    request_body_json: {},
-                  },
-                  session_token_path: ["id"],
-                  expiration_duration: "P2W",
-                  request_authentication: {
-                    type: "ApiKey",
-                    inject_into: {
-                      type: "RequestOption",
-                      field_name: "X-Session-Token",
-                      inject_into: "header",
-                    },
-                  },
-                },
-              },
-            },
-          }),
-        ],
+      const authenticator: SessionTokenAuthenticator = {
+        type: "SessionTokenAuthenticator",
+        login_requester: {
+          type: "HttpRequester",
+          url_base: "https://api.com/",
+          path: "/session",
+          authenticator: oauthAuthenticator,
+          http_method: "POST",
+          request_parameters: {},
+          request_headers: {},
+          request_body_json: {},
+        },
+        session_token_path: ["id"],
+        expiration_duration: "P2W",
+        request_authentication: {
+          type: "ApiKey",
+          inject_into: {
+            type: "RequestOption",
+            field_name: "X-Session-Token",
+            inject_into: "header",
+          },
+        },
       };
-      return convertToBuilderFormValues(noOpResolve, manifest, DEFAULT_CONNECTOR_NAME);
+      return manifestAuthenticatorToBuilder(authenticator, undefined);
     };
-    await expect(convert).rejects.toThrow(
+    expect(convert).toThrow(
       "SessionTokenAuthenticator login_requester.authenticator must have one of the following types"
     );
   });
@@ -428,7 +332,7 @@ describe("Conversion throws error when", () => {
       };
       return manifestPaginatorToBuilder(paginator as SimpleRetrieverPaginator);
     };
-    expect(convert).toThrow("doesn't use a DefaultPaginato");
+    expect(convert).toThrow("doesn't use a DefaultPaginator");
   });
 
   it("manifest has an error handler with an unsupported type", async () => {
@@ -556,6 +460,7 @@ describe("Conversion successfully results in", () => {
       },
     };
     const formValues = await convertToBuilderFormValues(noOpResolve, manifest, DEFAULT_CONNECTOR_NAME);
+    console.log(formValues);
     expect(formValues.inputs).toEqual([
       {
         key: "api_key",
@@ -823,7 +728,7 @@ describe("Conversion successfully results in", () => {
     });
   });
 
-  it("OAuth authenticator refresh_request_body converted to array", async () => {
+  it('authenticator with a interpolated secret key of type config.key converted to config["key"]', async () => {
     const manifest: ConnectorManifest = {
       ...baseManifest,
       streams: [
@@ -831,17 +736,34 @@ describe("Conversion successfully results in", () => {
           retriever: {
             requester: {
               authenticator: {
-                type: "OAuthAuthenticator",
-                client_id: "{{ config['client_id'] }}",
-                client_secret: "{{ config['client_secret'] }}",
-                refresh_token: "{{ config['client_refresh_token'] }}",
-                refresh_request_body: {
-                  key1: "val1",
-                  key2: "val2",
-                },
-                token_refresh_endpoint: "https://api.com/refresh_token",
-                grant_type: "refresh_token",
+                type: "ApiKeyAuthenticator",
+                api_token: "{{ config.api_token }}",
+                header: "API_KEY",
               },
+            },
+          },
+        }),
+      ],
+      spec: apiTokenSpec,
+    };
+    const formValues = await convertToBuilderFormValues(noOpResolve, manifest, DEFAULT_CONNECTOR_NAME);
+    if (isYamlString(formValues.global.authenticator)) {
+      throw new Error("Authenticator should not be a YAML string");
+    }
+    if (formValues.global.authenticator.type !== "ApiKeyAuthenticator") {
+      throw new Error("Authenticator should have type ApiKeyAuthenticator");
+    }
+    expect(formValues.global.authenticator.api_token).toEqual('{{ config["api_token"] }}');
+  });
+
+  it("OAuth authenticator refresh_request_body converted to array", async () => {
+    const manifest: ConnectorManifest = {
+      ...baseManifest,
+      streams: [
+        merge({}, stream1, {
+          retriever: {
+            requester: {
+              authenticator: oauthAuthenticator,
             },
           },
         }),

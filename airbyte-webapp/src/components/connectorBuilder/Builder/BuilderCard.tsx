@@ -46,6 +46,7 @@ interface BuilderCardProps {
     yamlConfig?: {
       builderToManifest(builderValue: unknown): unknown;
       manifestToBuilder(manifestValue: unknown): unknown;
+      getLockedInputKeys?(builderValue: unknown): string[];
     };
   };
 }
@@ -67,6 +68,7 @@ export const BuilderCard: React.FC<React.PropsWithChildren<BuilderCardProps>> = 
       defaultValue={inputsConfig.defaultValue}
       builderToManifest={inputsConfig.yamlConfig.builderToManifest}
       manifestToBuilder={inputsConfig.yamlConfig.manifestToBuilder}
+      getLockedInputKeys={inputsConfig.yamlConfig.getLockedInputKeys}
     >
       {children}
     </YamlEditableComponent>
@@ -117,8 +119,9 @@ export const BuilderCard: React.FC<React.PropsWithChildren<BuilderCardProps>> = 
 interface YamlEditableComponentProps {
   path: FieldPath<BuilderState>;
   defaultValue: unknown;
-  builderToManifest(builderValue: unknown): unknown;
-  manifestToBuilder(manifestValue: unknown): unknown;
+  builderToManifest: (builderValue: unknown) => unknown;
+  manifestToBuilder: (manifestValue: unknown) => unknown;
+  getLockedInputKeys?: (builderValue: unknown) => string[];
 }
 
 const YamlEditableComponent: React.FC<React.PropsWithChildren<YamlEditableComponentProps>> = ({
@@ -127,6 +130,7 @@ const YamlEditableComponent: React.FC<React.PropsWithChildren<YamlEditableCompon
   defaultValue,
   builderToManifest,
   manifestToBuilder,
+  getLockedInputKeys,
 }) => {
   const { resolveErrorMessage } = useConnectorBuilderFormState();
   const { openConfirmationModal, closeConfirmationModal } = useConfirmationModalService();
@@ -147,6 +151,7 @@ const YamlEditableComponent: React.FC<React.PropsWithChildren<YamlEditableCompon
       }, 500),
     [setValue]
   );
+  const inputs = useBuilderWatch("formValues.inputs");
 
   const elementRef = useRef<HTMLDivElement | null>(null);
   const { handleScrollToField } = useConnectorBuilderFormManagementState();
@@ -154,6 +159,26 @@ const YamlEditableComponent: React.FC<React.PropsWithChildren<YamlEditableCompon
     // Call handler in here to make sure it handles new scrollToField value from the context
     handleScrollToField(elementRef, pathString);
   }, [handleScrollToField, pathString]);
+
+  const toggleLockedInputs = useCallback(
+    (builderFormValue: unknown, setTo: "locked" | "unlocked") => {
+      if (getLockedInputKeys) {
+        const keysToToggle = getLockedInputKeys(builderFormValue);
+        setValue(
+          "formValues.inputs",
+          inputs.map((input) =>
+            keysToToggle.includes(input.key)
+              ? {
+                  ...input,
+                  isLocked: setTo === "locked",
+                }
+              : input
+          )
+        );
+      }
+    },
+    [getLockedInputKeys, inputs, setValue]
+  );
 
   const confirmDiscardYaml = useCallback(
     (errorMessage?: string) => {
@@ -180,6 +205,8 @@ const YamlEditableComponent: React.FC<React.PropsWithChildren<YamlEditableCompon
         text,
         submitButtonText: "connectorBuilder.yamlComponent.discardChanges.confirm",
         onSubmit: () => {
+          // lock the required inputs so they aren't duplicated when switching to UI
+          toggleLockedInputs(previousUiValue, "locked");
           setValue(path, previousUiValue, {
             shouldValidate: true,
             shouldDirty: true,
@@ -189,7 +216,7 @@ const YamlEditableComponent: React.FC<React.PropsWithChildren<YamlEditableCompon
         },
       });
     },
-    [closeConfirmationModal, openConfirmationModal, path, previousUiValue, setValue]
+    [closeConfirmationModal, openConfirmationModal, path, previousUiValue, setValue, toggleLockedInputs]
   );
 
   return (
@@ -245,6 +272,8 @@ const YamlEditableComponent: React.FC<React.PropsWithChildren<YamlEditableCompon
               return;
             }
 
+            // lock the required inputs so they aren't duplicated when switching to UI
+            toggleLockedInputs(builderFormValue, "locked");
             setValue(path, builderFormValue, {
               shouldValidate: true,
               shouldDirty: true,
@@ -255,6 +284,8 @@ const YamlEditableComponent: React.FC<React.PropsWithChildren<YamlEditableCompon
             const manifestValue = builderToManifest(formValue);
             const yaml = dump(manifestValue);
             setLocalYamlValue(yaml);
+            // unlock the locked inputs so they don't disappear when switching to YAML
+            toggleLockedInputs(formValue, "unlocked");
             setValue(path, yaml, {
               shouldValidate: true,
               shouldDirty: true,

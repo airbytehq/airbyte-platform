@@ -16,7 +16,7 @@ import {
   convertToManifest,
   DEFAULT_BUILDER_FORM_VALUES,
   DEFAULT_JSON_MANIFEST_VALUES,
-  getManifestValuePerComponentPerStream,
+  getYamlValuePerComponent,
   useBuilderWatch,
 } from "components/connectorBuilder/types";
 import { useUpdateLockedInputs } from "components/connectorBuilder/useLockedInputs";
@@ -238,8 +238,8 @@ export const InternalConnectorBuilderFormStateProvider: React.FC<
   const mode = useBuilderWatch("mode");
   const name = useBuilderWatch("name");
 
-  const manifestValuePerComponentPerStream = useMemo(
-    () => (mode === "ui" ? getManifestValuePerComponentPerStream(jsonManifest) : undefined),
+  const yamlValuePerComponent = useMemo(
+    () => (mode === "ui" ? getYamlValuePerComponent(jsonManifest) : undefined),
     [jsonManifest, mode]
   );
 
@@ -257,7 +257,7 @@ export const InternalConnectorBuilderFormStateProvider: React.FC<
     },
     // In UI mode, we only need to call resolve if we have YAML components
     mode === "yaml" || (mode === "ui" && !!jsonManifest.metadata?.yamlComponents),
-    manifestValuePerComponentPerStream
+    yamlValuePerComponent
   );
   const unknownErrorMessage = formatMessage({ id: "connectorBuilder.unknownError" });
   const resolveErrorMessage = isResolveError
@@ -329,7 +329,7 @@ export const InternalConnectorBuilderFormStateProvider: React.FC<
             return;
           }
           if (isResolveError) {
-            confirmDiscard(resolveErrorMessage!);
+            confirmDiscard(resolveErrorMessage ?? "");
             return;
           }
           const convertedFormValues = convertToBuilderFormValuesSync(resolvedManifest);
