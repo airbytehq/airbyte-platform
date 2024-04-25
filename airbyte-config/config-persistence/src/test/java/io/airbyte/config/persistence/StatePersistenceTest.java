@@ -760,6 +760,39 @@ class StatePersistenceTest extends BaseConfigDatabaseTest {
     assertEquals(globalToModify, untouched.get());
   }
 
+  @Test
+  void testBulkDeleteNoStreamsNoDelete() throws IOException, JsonValidationException {
+    final StateWrapper globalToModify = new StateWrapper()
+        .withStateType(StateType.GLOBAL)
+        .withGlobal(new AirbyteStateMessage()
+            .withType(AirbyteStateType.GLOBAL)
+            .withGlobal(new AirbyteGlobalState()
+                .withSharedState(Jsons.deserialize("\"woot\""))
+                .withStreamStates(Arrays.asList(
+                    new AirbyteStreamState()
+                        .withStreamDescriptor(new StreamDescriptor().withName("del-1").withNamespace("del-n1"))
+                        .withStreamState(Jsons.deserialize("")),
+                    new AirbyteStreamState()
+                        .withStreamDescriptor(new StreamDescriptor().withName("keep-1"))
+                        .withStreamState(Jsons.deserialize("")),
+                    new AirbyteStreamState()
+                        .withStreamDescriptor(new StreamDescriptor().withName("del-2"))
+                        .withStreamState(Jsons.deserialize(""))))));
+
+    statePersistence.updateOrCreateState(connectionId, clone(globalToModify));
+
+    final var secondConn = setupSecondConnection();
+    statePersistence.updateOrCreateState(secondConn, clone(globalToModify));
+
+    statePersistence.bulkDelete(connectionId, Set.of());
+
+    var curr = statePersistence.getCurrentState(connectionId);
+    assertEquals(clone(globalToModify), curr.get());
+
+    var untouched = statePersistence.getCurrentState(secondConn);
+    assertEquals(globalToModify, untouched.get());
+  }
+
   private UUID setupSecondConnection() throws JsonValidationException, IOException {
     final FeatureFlagClient featureFlagClient = mock(TestClient.class);
     final SecretsRepositoryReader secretsRepositoryReader = mock(SecretsRepositoryReader.class);

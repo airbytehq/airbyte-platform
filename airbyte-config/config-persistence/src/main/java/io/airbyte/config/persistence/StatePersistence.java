@@ -111,8 +111,12 @@ public class StatePersistence {
     });
   }
 
-  public void bulkDelete(final UUID connectionId, final Set<StreamDescriptor> fullRefreshStreams) throws IOException {
-    final var conditions = fullRefreshStreams.stream().map(stream -> {
+  public void bulkDelete(final UUID connectionId, final Set<StreamDescriptor> streamsToDelete) throws IOException {
+    if (streamsToDelete == null || streamsToDelete.isEmpty()) {
+      return;
+    }
+
+    final var conditions = streamsToDelete.stream().map(stream -> {
       var nameCondition = DSL.field(DSL.name(STATE.STREAM_NAME.getName())).eq(stream.getName());
       var connCondition = DSL.field(DSL.name(STATE.CONNECTION_ID.getName())).eq(connectionId);
       var namespaceCondition = stream.getNamespace() == null
