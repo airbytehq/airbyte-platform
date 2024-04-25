@@ -3,8 +3,11 @@ import { useCallback } from "react";
 import { FormattedMessage, useIntl } from "react-intl";
 import { useNavigate } from "react-router-dom";
 
+import { ExternalLink } from "components/ui/Link";
+
 import { useCurrentWorkspaceId } from "area/workspace/utils";
 import { getFrequencyFromScheduleData, useAnalyticsService, Action, Namespace } from "core/services/analytics";
+import { links } from "core/utils/links";
 import { useAppMonitoringService } from "hooks/services/AppMonitoringService";
 import { useExperiment } from "hooks/services/Experiment";
 import { useNotificationService } from "hooks/services/Notification";
@@ -13,6 +16,7 @@ import { RoutePaths } from "pages/routePaths";
 
 import { jobsKeys } from "./jobs";
 import { useCurrentWorkspace, useInvalidateWorkspaceStateQuery } from "./workspaces";
+import { HttpError } from "../errors";
 import {
   getConnectionStatuses,
   createOrUpdateStateSafe,
@@ -366,6 +370,31 @@ export const useUpdateConnection = () => {
             text: <FormattedMessage id="connection.enable.creditsProblem" />,
             actionBtnText: <FormattedMessage id="connection.enable.creditsProblem.cta" />,
             onAction: () => navigate(`/${RoutePaths.Workspaces}/${workspaceId}/${CloudRoutes.Billing}`),
+          });
+        }
+
+        if (error instanceof HttpError) {
+          if (error.response.message.toLowerCase().includes("invalid cron expression")) {
+            return registerNotification({
+              id: "update-connection-cron-error",
+              type: "error",
+              text: (
+                <FormattedMessage
+                  id="form.cronExpression.invalid"
+                  values={{
+                    lnk: (btnText: React.ReactNode) => (
+                      <ExternalLink href={links.cronReferenceLink}>{btnText}</ExternalLink>
+                    ),
+                  }}
+                />
+              ),
+            });
+          }
+
+          return registerNotification({
+            id: "update-connection-error",
+            type: "error",
+            text: <FormattedMessage id={error.i18nKey} values={error.i18nParams} />,
           });
         }
 

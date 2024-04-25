@@ -83,7 +83,7 @@ const useConnectionForm = ({
   const getErrorMessage = useCallback<ConnectionFormHook["getErrorMessage"]>(
     (formValid, errors) => {
       if (submitError) {
-        return generateMessageFromError(submitError);
+        return generateMessageFromError(submitError, formatMessage);
       }
 
       if (!formValid) {

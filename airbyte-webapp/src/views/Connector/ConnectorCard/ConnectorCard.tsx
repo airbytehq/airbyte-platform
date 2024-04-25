@@ -88,6 +88,7 @@ export const ConnectorCard: React.FC<ConnectorCardCreateProps | ConnectorCardEdi
   ...props
 }) => {
   const [errorStatusRequest, setErrorStatusRequest] = useState<Error | null>(null);
+  const { formatMessage } = useIntl();
 
   const { setDocumentationPanelOpen, setSelectedConnectorDefinition } = useDocumentationPanelContext();
   const {
@@ -244,7 +245,7 @@ export const ConnectorCard: React.FC<ConnectorCardCreateProps | ConnectorCardEdi
               isTestConnectionInProgress={isTestConnectionInProgress}
               onCancelTesting={onStopTesting}
               isSubmitting={isSubmitting || isTestConnectionInProgress}
-              errorMessage={error && generateMessageFromError(error)}
+              errorMessage={error && generateMessageFromError(error, formatMessage)}
               formType={props.formType}
               hasDefinition={Boolean(selectedConnectorDefinitionId)}
               onRetestClick={() => {
