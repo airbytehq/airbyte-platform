@@ -28,8 +28,6 @@ import io.airbyte.config.StreamSyncStats;
 import io.airbyte.config.SyncStats;
 import io.airbyte.config.helpers.LogClientSingleton;
 import io.airbyte.config.persistence.StatePersistence;
-import io.airbyte.featureflag.Connection;
-import io.airbyte.featureflag.DeleteFullRefreshState;
 import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.metrics.lib.OssMetricsRegistry;
 import io.airbyte.persistence.job.JobPersistence;
@@ -96,12 +94,9 @@ public class AttemptHandler {
     final var removeFullRefreshStreamState =
         job.getConfigType().equals(JobConfig.ConfigType.SYNC) || job.getConfigType().equals(JobConfig.ConfigType.REFRESH);
     if (removeFullRefreshStreamState) {
-      if (featureFlagClient.boolVariation(DeleteFullRefreshState.INSTANCE, new Connection(job.getScope()))) {
-        LOGGER.info("Clearing full refresh state..");
-        final var stateToClear = getFullRefreshStreams(job.getConfig().getSync().getConfiguredAirbyteCatalog(), job.getId());
-        if (!stateToClear.isEmpty()) {
-          statePersistence.bulkDelete(UUID.fromString(job.getScope()), stateToClear);
-        }
+      final var stateToClear = getFullRefreshStreams(job.getConfig().getSync().getConfiguredAirbyteCatalog(), job.getId());
+      if (!stateToClear.isEmpty()) {
+        statePersistence.bulkDelete(UUID.fromString(job.getScope()), stateToClear);
       }
     }
 
