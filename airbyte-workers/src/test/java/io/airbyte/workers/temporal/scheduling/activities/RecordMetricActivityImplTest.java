@@ -9,6 +9,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import io.airbyte.api.client.AirbyteApiClient;
 import io.airbyte.api.client.generated.WorkspaceApi;
 import io.airbyte.api.client.invoker.generated.ApiException;
 import io.airbyte.api.client.model.generated.ConnectionIdRequestBody;
@@ -35,12 +36,14 @@ class RecordMetricActivityImplTest {
   private static final UUID WORKSPACE_ID = UUID.randomUUID();
   private static final OssMetricsRegistry METRIC_NAME = OssMetricsRegistry.TEMPORAL_WORKFLOW_ATTEMPT;
 
+  private AirbyteApiClient airbyteApiClient;
   private MetricClient metricClient;
   private ConnectionUpdaterInput connectionUpdaterInput;
   private RecordMetricActivityImpl activity;
 
   @BeforeEach
   void setup() throws ApiException {
+    airbyteApiClient = mock(AirbyteApiClient.class);
     metricClient = mock(MetricClient.class);
     final WorkspaceApi workspaceApi = mock(WorkspaceApi.class);
     connectionUpdaterInput = mock(ConnectionUpdaterInput.class);
@@ -50,8 +53,9 @@ class RecordMetricActivityImplTest {
         .thenReturn(new WorkspaceRead().workspaceId(WORKSPACE_ID));
     when(workspaceApi.getWorkspaceByConnectionId(new ConnectionIdRequestBody().connectionId(CONNECTION_ID_WITHOUT_WORKSPACE)))
         .thenThrow(new ApiException(404, "Not Found"));
+    when(airbyteApiClient.getWorkspaceApi()).thenReturn(workspaceApi);
 
-    activity = new RecordMetricActivityImpl(metricClient, workspaceApi);
+    activity = new RecordMetricActivityImpl(airbyteApiClient, metricClient);
   }
 
   @Test

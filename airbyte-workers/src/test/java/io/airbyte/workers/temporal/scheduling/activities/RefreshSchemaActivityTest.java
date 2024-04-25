@@ -13,6 +13,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.mockito.Mockito.withSettings;
 
+import io.airbyte.api.client.AirbyteApiClient;
 import io.airbyte.api.client.generated.ConnectionApi;
 import io.airbyte.api.client.generated.SourceApi;
 import io.airbyte.api.client.generated.WorkspaceApi;
@@ -62,6 +63,7 @@ import org.mockito.quality.Strictness;
 @ExtendWith(MockitoExtension.class)
 class RefreshSchemaActivityTest {
 
+  private AirbyteApiClient mAirbyteApiClient;
   private SourceApi mSourceApi;
   private ConnectionApi mConnectionApi;
   private WorkspaceApi mWorkspaceApi;
@@ -87,7 +89,7 @@ class RefreshSchemaActivityTest {
 
   @BeforeEach
   void setUp() throws ApiException {
-    mSourceApi = mock(SourceApi.class);
+    mAirbyteApiClient = mock(AirbyteApiClient.class);
     mEnvVariableFeatureFlags = mock(EnvVariableFeatureFlags.class);
     mSourceApi = mock(SourceApi.class, withSettings().strictness(Strictness.LENIENT));
     mConnectionApi = mock(ConnectionApi.class);
@@ -107,8 +109,9 @@ class RefreshSchemaActivityTest {
                     .catalogDiff(CATALOG_DIFF)
                     .catalogId(CATALOG_ID)
                     .jobInfo(new SynchronousJobRead().succeeded(true)));
+    when(mAirbyteApiClient.getSourceApi()).thenReturn(mSourceApi);
     refreshSchemaActivity =
-        new RefreshSchemaActivityImpl(mSourceApi, mConnectionApi, mWorkspaceApi, mEnvVariableFeatureFlags, mFeatureFlagClient, mPayloadChecker);
+        new RefreshSchemaActivityImpl(mAirbyteApiClient, mEnvVariableFeatureFlags, mFeatureFlagClient, mPayloadChecker);
   }
 
   @Test
@@ -157,6 +160,7 @@ class RefreshSchemaActivityTest {
   void testRefreshSchema() throws Exception {
     final List<Context> expectedRefreshFeatureFlagContexts = List.of(new SourceDefinition(SOURCE_DEFINITION_ID), new Connection(CONNECTION_ID));
 
+    when(mAirbyteApiClient.getWorkspaceApi()).thenReturn(mWorkspaceApi);
     when(mFeatureFlagClient.boolVariation(ShouldRunRefreshSchema.INSTANCE, new Multi(expectedRefreshFeatureFlagContexts))).thenReturn(true);
 
     refreshSchemaActivity.refreshSchema(SOURCE_ID, CONNECTION_ID);
@@ -210,6 +214,7 @@ class RefreshSchemaActivityTest {
   void testRefreshSchemaForAutoBackfillOnNewColumns() throws Exception {
     // Test the version of schema refresh that will be used when we want to run backfills.
 
+    when(mAirbyteApiClient.getConnectionApi()).thenReturn(mConnectionApi);
     when(mFeatureFlagClient.boolVariation(eq(ShouldRunRefreshSchema.INSTANCE), any())).thenReturn(true);
     when(mFeatureFlagClient.boolVariation(eq(AutoBackfillOnNewColumns.INSTANCE), any())).thenReturn(true);
 
@@ -233,6 +238,7 @@ class RefreshSchemaActivityTest {
 
   @Test
   void refreshV2ValidatesPayloadSize() throws Exception {
+    when(mAirbyteApiClient.getConnectionApi()).thenReturn(mConnectionApi);
     when(mFeatureFlagClient.boolVariation(eq(ShouldRunRefreshSchema.INSTANCE), any())).thenReturn(true);
     when(mFeatureFlagClient.boolVariation(eq(AutoBackfillOnNewColumns.INSTANCE), any())).thenReturn(true);
     when(mConnectionApi.applySchemaChangeForConnection(new ConnectionAutoPropagateSchemaChange()

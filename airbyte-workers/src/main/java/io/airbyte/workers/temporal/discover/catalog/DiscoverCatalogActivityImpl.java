@@ -308,7 +308,7 @@ public class DiscoverCatalogActivityImpl implements DiscoverCatalogActivity {
           new VersionedAirbyteStreamFactory<>(serDeProvider, migratorFactory, launcherConfig.getProtocolVersion(), Optional.empty(),
               Optional.empty(), new VersionedAirbyteStreamFactory.InvalidLineFailureConfiguration(false), gsonPksExtractor);
       final ConnectorConfigUpdater connectorConfigUpdater =
-          new ConnectorConfigUpdater(airbyteApiClient.getSourceApi(), airbyteApiClient.getDestinationApi());
+          new ConnectorConfigUpdater(airbyteApiClient);
       return new DefaultDiscoverCatalogWorker(airbyteApiClient, integrationLauncher, connectorConfigUpdater, streamFactory);
     };
   }

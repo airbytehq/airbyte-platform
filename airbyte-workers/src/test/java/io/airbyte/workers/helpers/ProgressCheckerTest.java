@@ -6,8 +6,10 @@ package io.airbyte.workers.helpers;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
+import io.airbyte.api.client.AirbyteApiClient;
 import io.airbyte.api.client.generated.AttemptApi;
 import io.airbyte.api.client.invoker.generated.ApiException;
 import io.airbyte.api.client.model.generated.AttemptStats;
@@ -22,6 +24,9 @@ import org.mockito.Mockito;
 class ProgressCheckerTest {
 
   @Mock
+  private AirbyteApiClient mAirbyteApiClient;
+
+  @Mock
   private AttemptApi mAttemptApi;
 
   @Mock
@@ -29,13 +34,16 @@ class ProgressCheckerTest {
 
   @BeforeEach
   public void setup() {
-    mAttemptApi = Mockito.mock(AttemptApi.class);
-    mPredicates = Mockito.mock(ProgressCheckerPredicates.class);
+    mAirbyteApiClient = mock(AirbyteApiClient.class);
+    mAttemptApi = mock(AttemptApi.class);
+    mPredicates = mock(ProgressCheckerPredicates.class);
+
+    when(mAirbyteApiClient.getAttemptApi()).thenReturn(mAttemptApi);
   }
 
   @Test
   void noRespReturnsFalse() throws Exception {
-    final ProgressChecker activity = new ProgressChecker(mAttemptApi, mPredicates);
+    final ProgressChecker activity = new ProgressChecker(mAirbyteApiClient, mPredicates);
     when(mAttemptApi.getAttemptCombinedStats(Mockito.any()))
         .thenReturn(null);
 
@@ -47,7 +55,7 @@ class ProgressCheckerTest {
   @ParameterizedTest
   @ValueSource(booleans = {true, false})
   void respReturnsCheckedValue(final boolean madeProgress) throws Exception {
-    final ProgressChecker activity = new ProgressChecker(mAttemptApi, mPredicates);
+    final ProgressChecker activity = new ProgressChecker(mAirbyteApiClient, mPredicates);
     when(mAttemptApi.getAttemptCombinedStats(Mockito.any()))
         .thenReturn(new AttemptStats());
     when(mPredicates.test(Mockito.any()))
@@ -60,7 +68,7 @@ class ProgressCheckerTest {
 
   @Test
   void notFoundsAreTreatedAsNoProgress() throws Exception {
-    final ProgressChecker activity = new ProgressChecker(mAttemptApi, mPredicates);
+    final ProgressChecker activity = new ProgressChecker(mAirbyteApiClient, mPredicates);
     when(mAttemptApi.getAttemptCombinedStats(Mockito.any()))
         .thenThrow(new ApiException(HttpStatus.NOT_FOUND.getCode(), "Not Found."));
 

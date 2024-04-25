@@ -7,8 +7,6 @@ package io.airbyte.commons.converters;
 import com.google.common.hash.Hashing;
 import datadog.trace.api.Trace;
 import io.airbyte.api.client.AirbyteApiClient;
-import io.airbyte.api.client.generated.DestinationApi;
-import io.airbyte.api.client.generated.SourceApi;
 import io.airbyte.api.client.model.generated.DestinationIdRequestBody;
 import io.airbyte.api.client.model.generated.DestinationRead;
 import io.airbyte.api.client.model.generated.DestinationUpdate;
@@ -36,12 +34,10 @@ public class ConnectorConfigUpdater {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(ConnectorConfigUpdater.class);
 
-  private final SourceApi sourceApi;
-  private final DestinationApi destinationApi;
+  private final AirbyteApiClient airbyteApiClient;
 
-  public ConnectorConfigUpdater(final SourceApi sourceApi, final DestinationApi destinationApi) {
-    this.sourceApi = sourceApi;
-    this.destinationApi = destinationApi;
+  public ConnectorConfigUpdater(final AirbyteApiClient airbyteApiClient) {
+    this.airbyteApiClient = airbyteApiClient;
   }
 
   /**
@@ -51,11 +47,11 @@ public class ConnectorConfigUpdater {
   @Trace
   public void updateSource(final UUID sourceId, final Config config) {
     final SourceRead source = AirbyteApiClient.retryWithJitter(
-        () -> sourceApi.getSource(new SourceIdRequestBody().sourceId(sourceId)),
+        () -> airbyteApiClient.getSourceApi().getSource(new SourceIdRequestBody().sourceId(sourceId)),
         "get source");
 
     final SourceRead updatedSource = AirbyteApiClient.retryWithJitter(
-        () -> sourceApi
+        () -> airbyteApiClient.getSourceApi()
             .updateSource(new SourceUpdate()
                 .sourceId(sourceId)
                 .name(source.getName())
@@ -73,11 +69,11 @@ public class ConnectorConfigUpdater {
    */
   public void updateDestination(final UUID destinationId, final Config config) {
     final DestinationRead destination = AirbyteApiClient.retryWithJitter(
-        () -> destinationApi.getDestination(new DestinationIdRequestBody().destinationId(destinationId)),
+        () -> airbyteApiClient.getDestinationApi().getDestination(new DestinationIdRequestBody().destinationId(destinationId)),
         "get destination");
 
     final DestinationRead updatedDestination = AirbyteApiClient.retryWithJitter(
-        () -> destinationApi
+        () -> airbyteApiClient.getDestinationApi()
             .updateDestination(new DestinationUpdate()
                 .destinationId(destinationId)
                 .name(destination.getName())

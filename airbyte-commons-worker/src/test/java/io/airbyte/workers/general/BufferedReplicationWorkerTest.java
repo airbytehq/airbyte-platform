@@ -30,7 +30,7 @@ class BufferedReplicationWorkerTest extends ReplicationWorkerTest {
     replicationWorkerHelper = spy(new ReplicationWorkerHelper(airbyteMessageDataExtractor, fieldSelector, mapper, messageTracker, syncPersistence,
         replicationAirbyteMessageEventPublishingHelper, new ThreadedTimeTracker(), onReplicationRunning, workloadApiClient, false,
         analyticsMessageTracker,
-        Optional.empty(), sourceApi, destinationApi, streamStatusCompletionTracker));
+        Optional.empty(), airbyteApiClient, streamStatusCompletionTracker));
     return new BufferedReplicationWorker(
         JOB_ID,
         JOB_ATTEMPT,

@@ -9,7 +9,7 @@ import static io.airbyte.metrics.lib.ApmTraceConstants.Tags.CONNECTION_ID_KEY;
 
 import com.google.common.annotations.VisibleForTesting;
 import datadog.trace.api.Trace;
-import io.airbyte.api.client.generated.ConnectionApi;
+import io.airbyte.api.client.AirbyteApiClient;
 import io.airbyte.api.client.invoker.generated.ApiException;
 import io.airbyte.api.client.model.generated.GetTaskQueueNameRequest;
 import io.airbyte.commons.temporal.TemporalJobType;
@@ -27,10 +27,10 @@ import lombok.extern.slf4j.Slf4j;
 @Singleton
 public class RouteToSyncTaskQueueActivityImpl implements RouteToSyncTaskQueueActivity {
 
-  private final ConnectionApi connectionApi;
+  private final AirbyteApiClient airbyteApiClient;
 
-  public RouteToSyncTaskQueueActivityImpl(final ConnectionApi connectionApi) {
-    this.connectionApi = connectionApi;
+  public RouteToSyncTaskQueueActivityImpl(final AirbyteApiClient airbyteApiClient) {
+    this.airbyteApiClient = airbyteApiClient;
   }
 
   @Trace(operationName = ACTIVITY_TRACE_OPERATION_NAME)
@@ -60,7 +60,7 @@ public class RouteToSyncTaskQueueActivityImpl implements RouteToSyncTaskQueueAct
         .temporalJobType(jobType.toString());
 
     try {
-      final var resp = connectionApi.getTaskQueueName(req);
+      final var resp = airbyteApiClient.getConnectionApi().getTaskQueueName(req);
 
       return new RouteToSyncTaskQueueOutput(resp.getTaskQueueName());
     } catch (final ApiException e) {

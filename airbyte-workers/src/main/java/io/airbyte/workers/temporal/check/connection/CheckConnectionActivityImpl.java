@@ -145,7 +145,7 @@ public class CheckConnectionActivityImpl implements CheckConnectionActivity {
         new CheckConnectionInputHydrator(
             new ConnectorSecretsHydrator(
                 secretsRepositoryReader,
-                airbyteApiClient.getSecretPersistenceConfigApi(),
+                airbyteApiClient,
                 featureFlagClient)),
         metricClient,
         activityOptions);
@@ -333,9 +333,7 @@ public class CheckConnectionActivityImpl implements CheckConnectionActivity {
           Collections.emptyMap(),
           Collections.emptyMap());
 
-      final ConnectorConfigUpdater connectorConfigUpdater = new ConnectorConfigUpdater(
-          airbyteApiClient.getSourceApi(),
-          airbyteApiClient.getDestinationApi());
+      final ConnectorConfigUpdater connectorConfigUpdater = new ConnectorConfigUpdater(airbyteApiClient);
 
       final var protocolVersion =
           launcherConfig.getProtocolVersion() != null ? launcherConfig.getProtocolVersion() : AirbyteProtocolVersion.DEFAULT_AIRBYTE_PROTOCOL_VERSION;

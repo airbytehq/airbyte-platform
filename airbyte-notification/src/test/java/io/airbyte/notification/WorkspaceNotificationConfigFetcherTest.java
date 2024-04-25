@@ -8,6 +8,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
+import io.airbyte.api.client.AirbyteApiClient;
 import io.airbyte.api.client.generated.WorkspaceApi;
 import io.airbyte.api.client.invoker.generated.ApiException;
 import io.airbyte.api.client.model.generated.ConnectionIdRequestBody;
@@ -17,13 +18,22 @@ import io.airbyte.api.client.model.generated.NotificationType;
 import io.airbyte.api.client.model.generated.WorkspaceRead;
 import io.airbyte.notification.WorkspaceNotificationConfigFetcher.NotificationItemWithCustomerIoConfig;
 import java.util.UUID;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 class WorkspaceNotificationConfigFetcherTest {
 
-  private final WorkspaceApi workspaceApi = mock(WorkspaceApi.class);
+  private AirbyteApiClient airbyteApiClient;
+  private WorkspaceApi workspaceApi;
+  private WorkspaceNotificationConfigFetcher workspaceNotificationConfigFetcher;
 
-  private final WorkspaceNotificationConfigFetcher workspaceNotificationConfigFetcher = new WorkspaceNotificationConfigFetcher(workspaceApi);
+  @BeforeEach
+  void setup() {
+    airbyteApiClient = mock(AirbyteApiClient.class);
+    workspaceApi = mock(WorkspaceApi.class);
+    when(airbyteApiClient.getWorkspaceApi()).thenReturn(workspaceApi);
+    workspaceNotificationConfigFetcher = new WorkspaceNotificationConfigFetcher(airbyteApiClient);
+  }
 
   @Test
   void testReturnTheRightConfig() throws ApiException {

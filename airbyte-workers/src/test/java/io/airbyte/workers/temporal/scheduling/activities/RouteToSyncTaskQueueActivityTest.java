@@ -12,6 +12,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import io.airbyte.api.client.AirbyteApiClient;
 import io.airbyte.api.client.generated.ConnectionApi;
 import io.airbyte.api.client.invoker.generated.ApiException;
 import io.airbyte.api.client.model.generated.GetTaskQueueNameRequest;
@@ -35,14 +36,18 @@ import org.mockito.ArgumentCaptor;
  */
 class RouteToSyncTaskQueueActivityTest {
 
+  private AirbyteApiClient mAirbyteApiClient;
   private ConnectionApi mConnectionApi;
   private RouteToSyncTaskQueueActivityImpl activity;
 
   @BeforeEach
   public void setup() throws Exception {
+    mAirbyteApiClient = mock(AirbyteApiClient.class);
     mConnectionApi = mock(ConnectionApi.class);
 
-    activity = new RouteToSyncTaskQueueActivityImpl(mConnectionApi);
+    when(mAirbyteApiClient.getConnectionApi()).thenReturn(mConnectionApi);
+
+    activity = new RouteToSyncTaskQueueActivityImpl(mAirbyteApiClient);
   }
 
   @ParameterizedTest

@@ -5,7 +5,6 @@
 package io.airbyte.notification;
 
 import io.airbyte.api.client.AirbyteApiClient;
-import io.airbyte.api.client.generated.WorkspaceApi;
 import io.airbyte.api.client.model.generated.ConnectionIdRequestBody;
 import io.airbyte.api.client.model.generated.NotificationItem;
 import io.airbyte.api.client.model.generated.WorkspaceRead;
@@ -20,10 +19,10 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 public class WorkspaceNotificationConfigFetcher {
 
-  private final WorkspaceApi workspaceApi;
+  private final AirbyteApiClient airbyteApiClient;
 
-  public WorkspaceNotificationConfigFetcher(WorkspaceApi workspaceApi) {
-    this.workspaceApi = workspaceApi;
+  public WorkspaceNotificationConfigFetcher(final AirbyteApiClient airbyteApiClient) {
+    this.airbyteApiClient = airbyteApiClient;
   }
 
   class NotificationItemWithCustomerIoConfig {
@@ -51,7 +50,7 @@ public class WorkspaceNotificationConfigFetcher {
    */
   public NotificationItemWithCustomerIoConfig fetchNotificationConfig(final UUID connectionId, NotificationEvent notificationEvent) {
     final WorkspaceRead workspaceRead = AirbyteApiClient.retryWithJitter(
-        () -> workspaceApi.getWorkspaceByConnectionId(new ConnectionIdRequestBody().connectionId(connectionId)),
+        () -> airbyteApiClient.getWorkspaceApi().getWorkspaceByConnectionId(new ConnectionIdRequestBody().connectionId(connectionId)),
         "retrieve workspace for notification use.",
         /* jitterMaxIntervalSecs= */10,
         /* finalInternvalSecs= */10,

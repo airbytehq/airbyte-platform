@@ -107,10 +107,7 @@ public class ReplicationActivityImpl implements ReplicationActivity {
                                  final PayloadChecker payloadChecker,
                                  @Named("outputStateClient") final OutputStorageClient<State> stateStorageClient,
                                  @Named("outputCatalogClient") final OutputStorageClient<ConfiguredAirbyteCatalog> catalogStorageClient) {
-    this.replicationInputHydrator = new ReplicationInputHydrator(airbyteApiClient.getConnectionApi(),
-        airbyteApiClient.getJobsApi(),
-        airbyteApiClient.getStateApi(),
-        airbyteApiClient.getSecretPersistenceConfigApi(), secretsRepositoryReader,
+    this.replicationInputHydrator = new ReplicationInputHydrator(airbyteApiClient, secretsRepositoryReader,
         featureFlagClient);
     this.workspaceRoot = workspaceRoot;
     this.workerEnvironment = workerEnvironment;

@@ -8,13 +8,16 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
+import io.airbyte.api.client.AirbyteApiClient;
 import io.airbyte.api.client.generated.JobsApi;
 import io.airbyte.api.client.invoker.generated.ApiException;
 import io.airbyte.api.client.model.generated.DeleteStreamResetRecordsForJobRequest;
 import io.airbyte.commons.temporal.exception.RetryableException;
 import io.airbyte.workers.temporal.scheduling.activities.StreamResetActivity.DeleteStreamResetRecordsForJobInput;
 import java.util.UUID;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
@@ -27,9 +30,16 @@ import org.mockito.junit.jupiter.MockitoExtension;
 class StreamResetActivityTest {
 
   @Mock
+  private AirbyteApiClient airbyteApiClient;
+  @Mock
   private JobsApi jobsApi;
   @InjectMocks
   private StreamResetActivityImpl streamResetActivity;
+
+  @BeforeEach
+  void setup() {
+    when(airbyteApiClient.getJobsApi()).thenReturn(jobsApi);
+  }
 
   @Test
   void deleteStreamResetRecordsForJobSuccess() throws ApiException {

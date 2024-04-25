@@ -21,6 +21,7 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import io.airbyte.api.client.AirbyteApiClient;
 import io.airbyte.api.client.generated.AttemptApi;
 import io.airbyte.api.client.generated.StateApi;
 import io.airbyte.api.client.invoker.generated.ApiException;
@@ -65,6 +66,7 @@ class SyncPersistenceImplTest {
   private Long jobId;
   private Integer attemptNumber;
   private ConfiguredAirbyteCatalog catalog;
+  private AirbyteApiClient airbyteApiClient;
 
   @BeforeEach
   void beforeEach() {
@@ -73,6 +75,7 @@ class SyncPersistenceImplTest {
     jobId = (long) (Math.random() * Long.MAX_VALUE);
     attemptNumber = (int) (Math.random() * Integer.MAX_VALUE);
     catalog = mock(ConfiguredAirbyteCatalog.class);
+    airbyteApiClient = mock(AirbyteApiClient.class);
 
     // Setting up an ArgumentCaptor to be able to manually trigger the actual flush method rather than
     // relying on the ScheduledExecutorService and having to deal with Thread.sleep in the tests.
@@ -88,7 +91,9 @@ class SyncPersistenceImplTest {
     // Setting syncPersistence
     stateApi = mock(StateApi.class);
     attemptApi = mock(AttemptApi.class);
-    syncPersistence = new SyncPersistenceImpl(stateApi, attemptApi, new StateAggregatorFactory(), syncStatsTracker, executorService,
+    when(airbyteApiClient.getAttemptApi()).thenReturn(attemptApi);
+    when(airbyteApiClient.getStateApi()).thenReturn(stateApi);
+    syncPersistence = new SyncPersistenceImpl(airbyteApiClient, new StateAggregatorFactory(), syncStatsTracker, executorService,
         flushPeriod, new RetryWithJitterConfig(1, 1, 4),
         connectionId, workspaceId, jobId, attemptNumber, catalog);
   }

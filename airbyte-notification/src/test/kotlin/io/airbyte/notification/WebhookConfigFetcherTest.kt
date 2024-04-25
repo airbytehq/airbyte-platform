@@ -1,5 +1,6 @@
 package io.airbyte.notification
 
+import io.airbyte.api.client.AirbyteApiClient
 import io.airbyte.api.client.generated.WorkspaceApi
 import io.airbyte.api.client.model.generated.ConnectionIdRequestBody
 import io.airbyte.api.client.model.generated.Notification
@@ -9,19 +10,27 @@ import io.airbyte.api.client.model.generated.WorkspaceRead
 import io.mockk.every
 import io.mockk.mockk
 import org.junit.jupiter.api.Assertions
+import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import java.util.UUID
 
-class WebhookConfigFetcherTest {
-  private val workspaceApiClient: WorkspaceApi = mockk()
+internal class WebhookConfigFetcherTest {
+  private val airbyteApiClient: AirbyteApiClient = mockk()
+  private val workspaceApi: WorkspaceApi = mockk()
   private val connectionId: UUID = UUID.randomUUID()
   private val connectionIdRequestBody = ConnectionIdRequestBody().connectionId(connectionId)
-  private val webhookConfigFetcher: WebhookConfigFetcher = WebhookConfigFetcher(workspaceApiClient)
+  private lateinit var webhookConfigFetcher: WebhookConfigFetcher
+
+  @BeforeEach
+  internal fun setup() {
+    every { airbyteApiClient.workspaceApi } returns workspaceApi
+    webhookConfigFetcher = WebhookConfigFetcher(airbyteApiClient = airbyteApiClient)
+  }
 
   @Test
   fun testNoWorkspace() {
     every {
-      workspaceApiClient.getWorkspaceByConnectionId(connectionIdRequestBody)
+      workspaceApi.getWorkspaceByConnectionId(connectionIdRequestBody)
     } returns null
 
     val webhookConfig: WebhookConfig? = webhookConfigFetcher.fetchConfig(connectionId)
@@ -35,7 +44,7 @@ class WebhookConfigFetcherTest {
     workspaceRead.notifications = null
 
     every {
-      workspaceApiClient.getWorkspaceByConnectionId(connectionIdRequestBody)
+      workspaceApi.getWorkspaceByConnectionId(connectionIdRequestBody)
     } returns workspaceRead
 
     val webhookConfig: WebhookConfig? = webhookConfigFetcher.fetchConfig(connectionId)
@@ -54,7 +63,7 @@ class WebhookConfigFetcherTest {
       )
 
     every {
-      workspaceApiClient.getWorkspaceByConnectionId(connectionIdRequestBody)
+      workspaceApi.getWorkspaceByConnectionId(connectionIdRequestBody)
     } returns workspaceRead
 
     val webhookConfig: WebhookConfig? = webhookConfigFetcher.fetchConfig(connectionId)
@@ -75,7 +84,7 @@ class WebhookConfigFetcherTest {
       )
 
     every {
-      workspaceApiClient.getWorkspaceByConnectionId(connectionIdRequestBody)
+      workspaceApi.getWorkspaceByConnectionId(connectionIdRequestBody)
     } returns workspaceRead
 
     val webhookConfig: WebhookConfig? = webhookConfigFetcher.fetchConfig(connectionId)

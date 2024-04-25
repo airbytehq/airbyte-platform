@@ -143,12 +143,7 @@ class ReplicationInputHydratorTest {
   }
 
   private ReplicationInputHydrator getReplicationInputHydrator() {
-    return new ReplicationInputHydrator(
-        airbyteApiClient.getConnectionApi(),
-        airbyteApiClient.getJobsApi(),
-        airbyteApiClient.getStateApi(),
-        secretsPersistenceConfigApi, secretsRepositoryReader,
-        featureFlagClient);
+    return new ReplicationInputHydrator(airbyteApiClient, secretsRepositoryReader, featureFlagClient);
   }
 
   private ReplicationActivityInput getDefaultReplicationActivityInputForTest() {

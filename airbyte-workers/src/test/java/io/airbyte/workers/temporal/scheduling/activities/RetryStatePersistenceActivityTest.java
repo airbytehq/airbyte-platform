@@ -7,10 +7,12 @@ package io.airbyte.workers.temporal.scheduling.activities;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import io.airbyte.api.client.AirbyteApiClient;
 import io.airbyte.api.client.generated.WorkspaceApi;
 import io.airbyte.api.client.model.generated.WorkspaceRead;
 import io.airbyte.commons.temporal.scheduling.retries.RetryManager;
@@ -30,6 +32,9 @@ import org.mockito.Mockito;
 class RetryStatePersistenceActivityTest {
 
   @Mock
+  private AirbyteApiClient mAirbyteApiClient;
+
+  @Mock
   private RetryStateClient mRetryStateClient;
 
   @Mock
@@ -37,17 +42,18 @@ class RetryStatePersistenceActivityTest {
 
   @BeforeEach
   public void setup() throws Exception {
-    mRetryStateClient = Mockito.mock(RetryStateClient.class);
-    mWorkspaceApi = Mockito.mock(WorkspaceApi.class);
-
+    mAirbyteApiClient = mock(AirbyteApiClient.class);
+    mRetryStateClient = mock(RetryStateClient.class);
+    mWorkspaceApi = mock(WorkspaceApi.class);
     when(mWorkspaceApi.getWorkspaceByConnectionId(any())).thenReturn(new WorkspaceRead().workspaceId(UUID.randomUUID()));
+    when(mAirbyteApiClient.getWorkspaceApi()).thenReturn(mWorkspaceApi);
   }
 
   @ParameterizedTest
   @ValueSource(longs = {124, 541, 12, 2, 1})
   void hydrateDelegatesToRetryStatePersistence(final long jobId) {
     final var manager = RetryManager.builder().build();
-    final RetryStatePersistenceActivityImpl activity = new RetryStatePersistenceActivityImpl(mRetryStateClient, mWorkspaceApi);
+    final RetryStatePersistenceActivityImpl activity = new RetryStatePersistenceActivityImpl(mAirbyteApiClient, mRetryStateClient);
     when(mRetryStateClient.hydrateRetryState(eq(jobId), Mockito.any())).thenReturn(manager);
 
     final HydrateInput input = new HydrateInput(jobId, UUID.randomUUID());
@@ -63,7 +69,7 @@ class RetryStatePersistenceActivityTest {
   void persistDelegatesToRetryStatePersistence(final long jobId, final UUID connectionId) {
     final var success = true;
     final var manager = RetryManager.builder().build();
-    final RetryStatePersistenceActivityImpl activity = new RetryStatePersistenceActivityImpl(mRetryStateClient, mWorkspaceApi);
+    final RetryStatePersistenceActivityImpl activity = new RetryStatePersistenceActivityImpl(mAirbyteApiClient, mRetryStateClient);
     when(mRetryStateClient.persistRetryState(jobId, connectionId, manager)).thenReturn(success);
 
     final PersistInput input = new PersistInput(jobId, connectionId, manager);

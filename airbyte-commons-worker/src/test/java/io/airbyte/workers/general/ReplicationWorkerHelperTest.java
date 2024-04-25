@@ -17,6 +17,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
+import io.airbyte.api.client.AirbyteApiClient;
 import io.airbyte.api.client.WorkloadApiClient;
 import io.airbyte.api.client.generated.DestinationApi;
 import io.airbyte.api.client.generated.SourceApi;
@@ -60,6 +61,7 @@ class ReplicationWorkerHelperTest {
   private AnalyticsMessageTracker analyticsMessageTracker;
   private StreamStatusCompletionTracker streamStatusCompletionTracker;
   private WorkloadApiClient workloadApiClient;
+  private AirbyteApiClient airbyteApiClient;
 
   @BeforeEach
   void setUp() {
@@ -70,8 +72,11 @@ class ReplicationWorkerHelperTest {
     analyticsMessageTracker = mock(AnalyticsMessageTracker.class);
     streamStatusCompletionTracker = mock(StreamStatusCompletionTracker.class);
     workloadApiClient = mock(WorkloadApiClient.class);
+    airbyteApiClient = mock(AirbyteApiClient.class);
     when(messageTracker.getSyncStatsTracker()).thenReturn(syncStatsTracker);
     when(workloadApiClient.getWorkloadApi()).thenReturn(mock(WorkloadApi.class));
+    when(airbyteApiClient.getDestinationApi()).thenReturn(mock(DestinationApi.class));
+    when(airbyteApiClient.getSourceApi()).thenReturn(mock(SourceApi.class));
     replicationWorkerHelper = spy(new ReplicationWorkerHelper(
         mock(AirbyteMessageDataExtractor.class),
         mock(FieldSelector.class),
@@ -85,8 +90,7 @@ class ReplicationWorkerHelperTest {
         false,
         analyticsMessageTracker,
         Optional.empty(),
-        mock(SourceApi.class),
-        mock(DestinationApi.class),
+        airbyteApiClient,
         streamStatusCompletionTracker));
   }
 
