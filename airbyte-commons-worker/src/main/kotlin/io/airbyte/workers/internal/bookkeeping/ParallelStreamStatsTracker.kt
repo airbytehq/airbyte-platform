@@ -7,7 +7,6 @@ import io.airbyte.config.SyncStats
 import io.airbyte.featureflag.Connection
 import io.airbyte.featureflag.EmitStateStatsToSegment
 import io.airbyte.featureflag.FeatureFlagClient
-import io.airbyte.featureflag.LogsForStripeChecksumDebugging
 import io.airbyte.featureflag.Multi
 import io.airbyte.featureflag.Workspace
 import io.airbyte.metrics.lib.MetricAttribute
@@ -56,11 +55,6 @@ class ParallelStreamStatsTracker(
   private val emitStatsCounterFlag: Boolean by lazy {
     val connectionContext = Multi(listOf(Connection(connectionId), Workspace(workspaceId)))
     featureFlagClient.boolVariation(EmitStateStatsToSegment, connectionContext)
-  }
-
-  private val logsForStripeChecksumDebugging: Boolean by lazy {
-    val connectionContext = Multi(listOf(Connection(connectionId), Workspace(workspaceId)))
-    featureFlagClient.boolVariation(LogsForStripeChecksumDebugging, connectionContext)
   }
 
   @Volatile
@@ -558,7 +552,6 @@ class ParallelStreamStatsTracker(
       return StreamStatsTracker(
         nameNamespacePair = pair,
         metricClient = metricClient,
-        logsForStripeChecksumDebugging = logsForStripeChecksumDebugging,
       ).also { streamTrackers[pair] = it }
     }
   }
