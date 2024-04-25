@@ -15,9 +15,9 @@ import { useConfirmationModalService } from "hooks/services/ConfirmationModal";
 import { useConnectionFormService } from "hooks/services/ConnectionForm/ConnectionFormService";
 import { useExperiment } from "hooks/services/Experiment";
 import { useModalService } from "hooks/services/Modal";
-import { ConnectionRefreshStreamModal } from "pages/connections/StreamStatusPage/ConnectionRefreshStreamModal";
 import { ConnectionRoutePaths } from "pages/routePaths";
 
+import { ConnectionRefreshStreamModal } from "./ConnectionRefreshStreamModal";
 import styles from "./StreamActionsMenu.module.scss";
 
 interface StreamActionsMenuProps {
@@ -27,16 +27,14 @@ interface StreamActionsMenuProps {
 export const StreamActionsMenu: React.FC<StreamActionsMenuProps> = ({ streamState }) => {
   const { formatMessage } = useIntl();
   const navigate = useNavigate();
-  const sayClearInsteadOfReset = useExperiment("connection.clearNotReset", false);
+  const { syncStarting, jobSyncRunning, resetStarting, jobResetRunning, resetStreams, refreshStreams } =
+    useConnectionSyncContext();
   const newRefreshTypes = useExperiment("platform.activate-refreshes", false);
   const destinationSupportsTruncateRefreshes = false; // for local testing.  this will be flagged on _only_ for a dev destination starting later in q1b.
   const destinationSupportsMergeRefreshes = false; // for local testing.  this will be flagged on _only_ for a dev destination starting later in q1b.
-
-  const { syncStarting, jobSyncRunning, resetStarting, jobResetRunning, resetStreams, refreshStreams } =
-    useConnectionSyncContext();
+  const { openModal } = useModalService();
   const { mode, connection } = useConnectionFormService();
   const { openConfirmationModal, closeConfirmationModal } = useConfirmationModalService();
-  const { openModal } = useModalService();
 
   const catalogStream = connection.syncCatalog.streams.find(
     (catalogStream) =>
@@ -72,15 +70,6 @@ export const StreamActionsMenu: React.FC<StreamActionsMenuProps> = ({ streamStat
   }
 
   const options: DropdownMenuOptionType[] = [
-    ...(sayClearInsteadOfReset
-      ? []
-      : [
-          {
-            displayName: formatMessage({ id: "connection.stream.actions.resetThisStream" }),
-            value: "resetThisStream",
-            disabled: syncStarting || jobSyncRunning || resetStarting || jobResetRunning || mode === "readonly",
-          },
-        ]),
     {
       displayName: formatMessage({ id: "connection.stream.actions.showInReplicationTable" }),
       value: "showInReplicationTable",
@@ -98,53 +87,20 @@ export const StreamActionsMenu: React.FC<StreamActionsMenuProps> = ({ streamStat
           },
         ]
       : []),
-    ...(!sayClearInsteadOfReset
-      ? []
-      : [
-          {
-            displayName: formatMessage({
-              id: "connection.stream.actions.clearData",
-            }),
-            value: "clearStreamData",
-            disabled: syncStarting || jobSyncRunning || resetStarting || jobResetRunning || mode === "readonly",
-            className: classNames(styles.streamActionsMenu__clearDataLabel),
-          },
-        ]),
+    {
+      displayName: formatMessage({
+        id: "connection.stream.actions.clearData",
+      }),
+      value: "clearStreamData",
+      disabled: syncStarting || jobSyncRunning || resetStarting || jobResetRunning || mode === "readonly",
+      className: classNames(styles.streamActionsMenu__clearDataLabel),
+    },
   ];
 
   const onOptionClick = async ({ value }: DropdownMenuOptionType) => {
     if (value === "showInReplicationTable" || value === "openDetails") {
       navigate(`../${ConnectionRoutePaths.Replication}`, {
         state: { namespace: streamState?.streamNamespace, streamName: streamState?.streamName, action: value },
-      });
-    }
-
-    if (value === "clearStreamData") {
-      openConfirmationModal({
-        title: (
-          <FormattedMessage
-            id="connection.stream.actions.clearData.confirm.title"
-            values={{
-              streamName: (
-                <span className={styles.streamActionsMenu__clearDataModalStreamName}>{streamState.streamName}</span>
-              ),
-            }}
-          />
-        ),
-        text: "connection.stream.actions.clearData.confirm.text",
-        additionalContent: (
-          <Box pt="xl">
-            <Text color="grey400">
-              <FormattedMessage id="connection.stream.actions.clearData.confirm.additionalText" />
-            </Text>
-          </Box>
-        ),
-        submitButtonText: "connection.stream.actions.clearData.confirm.submit",
-        cancelButtonText: "connection.stream.actions.clearData.confirm.cancel",
-        onSubmit: async () => {
-          await resetStreams([{ streamNamespace: streamState.streamNamespace, streamName: streamState.streamName }]);
-          closeConfirmationModal();
-        },
       });
     }
 
@@ -177,8 +133,33 @@ export const StreamActionsMenu: React.FC<StreamActionsMenuProps> = ({ streamStat
       });
     }
 
-    if (value === "resetThisStream" && streamState) {
-      await resetStreams([{ streamNamespace: streamState.streamNamespace, streamName: streamState.streamName }]);
+    if (value === "clearStreamData") {
+      openConfirmationModal({
+        title: (
+          <FormattedMessage
+            id="connection.stream.actions.clearData.confirm.title"
+            values={{
+              streamName: (
+                <span className={styles.streamActionsMenu__clearDataModalStreamName}>{streamState.streamName}</span>
+              ),
+            }}
+          />
+        ),
+        text: "connection.stream.actions.clearData.confirm.text",
+        additionalContent: (
+          <Box pt="xl">
+            <Text color="grey400">
+              <FormattedMessage id="connection.stream.actions.clearData.confirm.additionalText" />
+            </Text>
+          </Box>
+        ),
+        submitButtonText: "connection.stream.actions.clearData.confirm.submit",
+        cancelButtonText: "connection.stream.actions.clearData.confirm.cancel",
+        onSubmit: async () => {
+          await resetStreams([{ streamNamespace: streamState.streamNamespace, streamName: streamState.streamName }]);
+          closeConfirmationModal();
+        },
+      });
     }
   };
 

@@ -12,7 +12,6 @@ import { Text } from "components/ui/Text";
 import { ConnectionStatus } from "core/api/types/AirbyteClient";
 import { useConfirmationModalService } from "hooks/services/ConfirmationModal";
 import { useConnectionFormService } from "hooks/services/ConnectionForm/ConnectionFormService";
-import { useExperiment } from "hooks/services/Experiment";
 import { useDeleteModal } from "hooks/useDeleteModal";
 
 interface DeleteBlockProps {
@@ -24,41 +23,28 @@ interface DeleteBlockProps {
 export const ConnectionDangerBlock: React.FC<DeleteBlockProps> = ({ onDelete, onReset }) => {
   const { mode, connection } = useConnectionFormService();
   const onDeleteButtonClick = useDeleteModal("connection", onDelete, undefined, connection?.name);
-  const sayClearInsteadOfReset = useExperiment("connection.clearNotReset", false);
   const connectionStatus = useConnectionStatus(connection.connectionId ?? "");
 
   const { openConfirmationModal, closeConfirmationModal } = useConfirmationModalService();
   const resetWithModal = useCallback(() => {
-    sayClearInsteadOfReset
-      ? openConfirmationModal({
-          title: "connection.actions.clearData.confirm.title",
-          text: "connection.actions.clearData.confirm.text",
-          additionalContent: (
-            <Box pt="xl">
-              <Text color="grey400">
-                <FormattedMessage id="connection.stream.actions.clearData.confirm.additionalText" />
-              </Text>
-            </Box>
-          ),
-          submitButtonText: "connection.stream.actions.clearData.confirm.submit",
-          cancelButtonText: "connection.stream.actions.clearData.confirm.cancel",
-          onSubmit: async () => {
-            await onReset();
-            closeConfirmationModal();
-          },
-        })
-      : openConfirmationModal({
-          text: `form.resetDataText`,
-          title: `form.resetData`,
-          submitButtonText: "form.reset",
-          cancelButtonText: "form.noNeed",
-          onSubmit: async () => {
-            await onReset();
-            closeConfirmationModal();
-          },
-          submitButtonDataId: "reset",
-        });
-  }, [closeConfirmationModal, onReset, openConfirmationModal, sayClearInsteadOfReset]);
+    openConfirmationModal({
+      title: "connection.actions.clearData.confirm.title",
+      text: "connection.actions.clearData.confirm.text",
+      additionalContent: (
+        <Box pt="xl">
+          <Text color="grey400">
+            <FormattedMessage id="connection.stream.actions.clearData.confirm.additionalText" />
+          </Text>
+        </Box>
+      ),
+      submitButtonText: "connection.stream.actions.clearData.confirm.submit",
+      cancelButtonText: "connection.stream.actions.clearData.confirm.cancel",
+      onSubmit: async () => {
+        await onReset();
+        closeConfirmationModal();
+      },
+    });
+  }, [closeConfirmationModal, onReset, openConfirmationModal]);
 
   const onResetButtonClick = () => {
     resetWithModal();
@@ -70,14 +56,10 @@ export const ConnectionDangerBlock: React.FC<DeleteBlockProps> = ({ onDelete, on
         <FormFieldLayout alignItems="center" nextSizing>
           <FlexContainer direction="column">
             <Text size="lg">
-              <FormattedMessage
-                id={sayClearInsteadOfReset ? "connection.stream.actions.clearData" : "form.resetData"}
-              />
+              <FormattedMessage id="connection.stream.actions.clearData" />
             </Text>
             <Text size="xs" color="grey">
-              <FormattedMessage
-                id={sayClearInsteadOfReset ? "connection.actions.clearData" : "form.resetData.description"}
-              />
+              <FormattedMessage id="connection.actions.clearData" />
             </Text>
           </FlexContainer>
           <Button
@@ -88,7 +70,7 @@ export const ConnectionDangerBlock: React.FC<DeleteBlockProps> = ({ onDelete, on
               mode === "readonly" || connectionStatus.isRunning || connection.status !== ConnectionStatus.active
             }
           >
-            <FormattedMessage id={sayClearInsteadOfReset ? "connection.stream.actions.clearData" : "form.resetData"} />
+            <FormattedMessage id="connection.stream.actions.clearData" />
           </Button>
         </FormFieldLayout>
 

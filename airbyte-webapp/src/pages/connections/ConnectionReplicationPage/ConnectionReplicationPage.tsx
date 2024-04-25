@@ -181,7 +181,7 @@ export const ConnectionReplicationPage: React.FC = () => {
         if (catalogChangesRequireReset) {
           const stateType = await getStateType(connection.connectionId);
           const result = await openModal<boolean>({
-            title: formatMessage({ id: "connection.resetModalTitle" }),
+            title: formatMessage({ id: "connection.clearDataModalTitle" }),
             size: "md",
             content: (props) => <ResetWarningModal {...props} stateType={stateType} />,
           });

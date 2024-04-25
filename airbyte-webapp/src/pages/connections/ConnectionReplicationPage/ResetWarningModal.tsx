@@ -8,7 +8,6 @@ import { ModalBody, ModalFooter } from "components/ui/Modal";
 import { Text } from "components/ui/Text";
 
 import { ConnectionStateType } from "core/api/types/AirbyteClient";
-import { useExperiment } from "hooks/services/Experiment";
 
 interface ResetWarningModalProps {
   onComplete: (withReset: boolean) => void;
@@ -20,28 +19,21 @@ export const ResetWarningModal: React.FC<ResetWarningModalProps> = ({ onCancel, 
   const { formatMessage } = useIntl();
   const [withReset, setWithReset] = useState(true);
   const requireFullReset = stateType === ConnectionStateType.legacy;
-  const sayClearInsteadOfReset = useExperiment("connection.clearNotReset", false);
-  const checkboxLabel = sayClearInsteadOfReset
-    ? requireFullReset
-      ? "connection.saveWithFullDataClear"
-      : "connection.saveWithDataClear"
-    : requireFullReset
-    ? "connection.saveWithFullReset"
-    : "connection.saveWithReset";
+
+  const checkboxLabel = requireFullReset ? "connection.saveWithFullDataClear" : "connection.saveWithDataClear";
 
   return (
     <>
       <ModalBody>
         <Text>
-          <FormattedMessage id={sayClearInsteadOfReset ? "connection.clearDataHint" : "connection.streamResetHint"} />
+          <FormattedMessage id="connection.clearDataHint" />
         </Text>
-        {sayClearInsteadOfReset && (
-          <Box pt="md">
-            <Text italicized>
-              <FormattedMessage id="connection.clearDataHint.emphasized" />
-            </Text>
-          </Box>
-        )}
+        <Box pt="md">
+          <Text italicized>
+            <FormattedMessage id="connection.clearDataHint.emphasized" />
+          </Text>
+        </Box>
+
         <p>
           <LabeledSwitch
             name="reset"

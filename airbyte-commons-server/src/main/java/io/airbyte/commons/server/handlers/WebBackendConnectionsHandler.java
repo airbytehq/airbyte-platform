@@ -63,11 +63,7 @@ import io.airbyte.config.persistence.ActorDefinitionVersionHelper;
 import io.airbyte.config.persistence.ConfigNotFoundException;
 import io.airbyte.config.persistence.ConfigRepository;
 import io.airbyte.config.persistence.ConfigRepository.StandardSyncQuery;
-import io.airbyte.featureflag.Connection;
 import io.airbyte.featureflag.FeatureFlagClient;
-import io.airbyte.featureflag.Multi;
-import io.airbyte.featureflag.UseClear;
-import io.airbyte.featureflag.Workspace;
 import io.airbyte.persistence.job.models.JobStatusSummary;
 import io.airbyte.protocol.models.ConfiguredAirbyteCatalog;
 import io.airbyte.validation.json.JsonValidationException;
@@ -561,7 +557,6 @@ public class WebBackendConnectionsHandler {
     final UUID connectionId = webBackendConnectionPatch.getConnectionId();
     final ConnectionRead originalConnectionRead = connectionsHandler.getConnection(connectionId);
     boolean breakingChange = originalConnectionRead.getBreakingChange() != null && originalConnectionRead.getBreakingChange();
-    boolean shouldRunSyncAfterClear = false;
 
     // If there have been changes to the sync catalog, check whether these changes result in or fix a
     // broken connection
@@ -586,10 +581,6 @@ public class WebBackendConnectionsHandler {
             connectionsHandler.getDiff(newAirbyteCatalog, CatalogConverter.toApi(mostRecentAirbyteCatalog, sourceVersion),
                 CatalogConverter.toConfiguredProtocol(newAirbyteCatalog));
         breakingChange = containsBreakingChange(catalogDiff);
-
-        shouldRunSyncAfterClear = !featureFlagClient.boolVariation(UseClear.INSTANCE, new Multi(List.of(
-            new Connection(connectionId),
-            new Workspace(source.getWorkspaceId()))));
       }
     }
 
@@ -608,7 +599,7 @@ public class WebBackendConnectionsHandler {
     final ConnectionRead updatedConnectionRead = connectionsHandler.updateConnection(connectionPatch);
 
     // detect if any streams need to be reset based on the patch and initial catalog, if so, reset them
-    resetStreamsIfNeeded(webBackendConnectionPatch, oldConfiguredCatalog, updatedConnectionRead, originalConnectionRead, shouldRunSyncAfterClear);
+    resetStreamsIfNeeded(webBackendConnectionPatch, oldConfiguredCatalog, updatedConnectionRead, originalConnectionRead);
     /*
      * This catalog represents the full catalog that was used to create the configured catalog. It will
      * have all streams that were present at the time. It will have no configuration set.
@@ -634,8 +625,7 @@ public class WebBackendConnectionsHandler {
   private void resetStreamsIfNeeded(final WebBackendConnectionUpdate webBackendConnectionPatch,
                                     final ConfiguredAirbyteCatalog oldConfiguredCatalog,
                                     final ConnectionRead updatedConnectionRead,
-                                    final ConnectionRead oldConnectionRead,
-                                    final boolean shouldRunSyncAfterClear)
+                                    final ConnectionRead oldConnectionRead)
       throws IOException, JsonValidationException, ConfigNotFoundException {
 
     final UUID connectionId = webBackendConnectionPatch.getConnectionId();
@@ -662,10 +652,9 @@ public class WebBackendConnectionsHandler {
         if (stateType == ConnectionStateType.LEGACY || stateType == ConnectionStateType.NOT_SET) {
           streamsToReset = configRepositoryDoNotUse.getAllStreamsForConnection(connectionId);
         }
-        eventRunner.resetConnection(
+        eventRunner.resetConnectionAsync(
             connectionId,
-            streamsToReset,
-            shouldRunSyncAfterClear);
+            streamsToReset);
       }
     }
   }

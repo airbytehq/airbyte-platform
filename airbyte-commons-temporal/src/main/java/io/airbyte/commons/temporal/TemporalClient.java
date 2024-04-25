@@ -296,17 +296,26 @@ public class TemporalClient {
         Optional.of(jobId), Optional.empty());
   }
 
+  public void resetConnectionAsync(final UUID connectionId,
+                                   final List<StreamDescriptor> streamsToReset) {
+    try {
+      streamResetPersistence.createStreamResets(connectionId, streamsToReset);
+      connectionManagerUtils.signalWorkflowAndRepairIfNecessary(connectionId, workflow -> workflow::resetConnection);
+    } catch (IOException | DeletedWorkflowException e) {
+      log.error("Not able to properly create a reset");
+      throw new RuntimeException(e);
+    }
+  }
+
   /**
    * Submit a reset connection job to temporal.
    *
    * @param connectionId connection id
    * @param streamsToReset streams that should be rest on the connection
-   * @param syncImmediatelyAfter whether another sync job should be triggered immediately after
    * @return result of reset connection
    */
   public ManualOperationResult resetConnection(final UUID connectionId,
-                                               final List<StreamDescriptor> streamsToReset,
-                                               final boolean syncImmediatelyAfter) {
+                                               final List<StreamDescriptor> streamsToReset) {
     log.info("reset sync request");
 
     try {
@@ -322,11 +331,7 @@ public class TemporalClient {
     final long oldJobId = connectionManagerUtils.getCurrentJobId(connectionId);
 
     try {
-      if (syncImmediatelyAfter) {
-        connectionManagerUtils.signalWorkflowAndRepairIfNecessary(connectionId, workflow -> workflow::resetConnectionAndSkipNextScheduling);
-      } else {
-        connectionManagerUtils.signalWorkflowAndRepairIfNecessary(connectionId, workflow -> workflow::resetConnection);
-      }
+      connectionManagerUtils.signalWorkflowAndRepairIfNecessary(connectionId, workflow -> workflow::resetConnection);
     } catch (final DeletedWorkflowException e) {
       log.error("Can't reset a deleted workflow", e);
       return new ManualOperationResult(

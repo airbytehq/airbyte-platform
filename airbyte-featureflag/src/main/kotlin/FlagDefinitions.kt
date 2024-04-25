@@ -192,6 +192,4 @@ object WriteOutputCatalogToObjectStorage : Temporary<Boolean>(key = "platform.wr
 
 object UseCustomK8sInitCheck : Temporary<Boolean>(key = "platform.use-custom-k8s-init-check", default = true)
 
-object UseClear : Temporary<Boolean>(key = "connection.clearNotReset", default = false)
-
 object ConnectionFieldLimitOverride : Permanent<Int>(key = "connection-field-limit-override", default = -1)

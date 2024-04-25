@@ -13,7 +13,6 @@ import { ConnectionStatus } from "core/api/types/AirbyteClient";
 import { useSchemaChanges } from "hooks/connection/useSchemaChanges";
 import { useConnectionEditService } from "hooks/services/ConnectionEdit/ConnectionEditService";
 import { useConnectionFormService } from "hooks/services/ConnectionForm/ConnectionFormService";
-import { useExperiment } from "hooks/services/Experiment";
 import { ConnectionRoutePaths } from "pages/routePaths";
 
 import styles from "./ConnectionHeaderControls.module.scss";
@@ -27,8 +26,6 @@ export const ConnectionHeaderControls: React.FC = () => {
   const { connection, updateConnectionStatus, connectionUpdating } = useConnectionEditService();
   const { hasBreakingSchemaChange } = useSchemaChanges(connection.schemaChange);
   const navigate = useNavigate();
-  const sayClearInsteadOfReset = useExperiment("connection.clearNotReset", false);
-
   const connectionStatus = useConnectionStatus(connection.connectionId ?? "");
   const isReadOnly = mode === "readonly";
 
@@ -90,13 +87,7 @@ export const ConnectionHeaderControls: React.FC = () => {
         >
           <Text size="md" color="red" bold>
             <FormattedMessage
-              id={
-                resetStarting || jobResetRunning
-                  ? sayClearInsteadOfReset
-                    ? "connection.cancelDataClear"
-                    : "connection.cancelReset"
-                  : "connection.cancelSync"
-              }
+              id={resetStarting || jobResetRunning ? "connection.cancelDataClear" : "connection.cancelSync"}
             />
           </Text>
         </Button>

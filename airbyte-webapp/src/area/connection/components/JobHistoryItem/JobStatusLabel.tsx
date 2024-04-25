@@ -5,23 +5,18 @@ import { Text } from "components/ui/Text";
 import { JobWithAttempts } from "area/connection/types/jobs";
 import { isJobPartialSuccess, getJobAttempts, getJobStatus } from "area/connection/utils/jobs";
 import { JobStatus } from "core/api/types/AirbyteClient";
-import { useExperiment } from "hooks/services/Experiment";
 
 interface JobStatusLabelProps {
   jobWithAttempts: JobWithAttempts;
 }
 
 export const JobStatusLabel: React.FC<JobStatusLabelProps> = ({ jobWithAttempts }) => {
-  const sayClearInsteadOfReset = useExperiment("connection.clearNotReset", false);
-
   const attempts = getJobAttempts(jobWithAttempts);
   const jobStatus = getJobStatus(jobWithAttempts);
   const jobIsPartialSuccess = isJobPartialSuccess(attempts);
   const streamsToReset = "job" in jobWithAttempts ? jobWithAttempts.job.resetConfig?.streamsToReset : undefined;
   const jobConfigType =
-    sayClearInsteadOfReset && jobWithAttempts.job.configType === "reset_connection"
-      ? "clear_data"
-      : jobWithAttempts.job.configType;
+    jobWithAttempts.job.configType === "reset_connection" ? "clear_data" : jobWithAttempts.job.configType;
 
   let status = "";
   if (jobIsPartialSuccess) {

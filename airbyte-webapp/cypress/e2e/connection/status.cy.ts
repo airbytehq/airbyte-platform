@@ -78,7 +78,7 @@ describe("Status tab", () => {
     });
   });
 
-  it("should allow resetting a sync", () => {
+  it("should allow clearing data", () => {
     cy.get<WebBackendConnectionRead>("@connection").then((connection) => {
       cy.visit(`/${RoutePaths.Connections}/${connection.connectionId}/${ConnectionRoutePaths.Status}/`);
 

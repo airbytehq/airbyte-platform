@@ -1588,7 +1588,7 @@ class SchedulerHandlerTest {
     when(configRepository.getAllStreamsForConnection(connectionId))
         .thenReturn(streamDescriptors);
 
-    when(eventRunner.resetConnection(connectionId, streamDescriptors, false))
+    when(eventRunner.resetConnection(connectionId, streamDescriptors))
         .thenReturn(manualOperationResult);
 
     doReturn(new JobInfoRead())
@@ -1596,7 +1596,7 @@ class SchedulerHandlerTest {
 
     schedulerHandler.resetConnection(new ConnectionIdRequestBody().connectionId(connectionId));
 
-    verify(eventRunner).resetConnection(connectionId, streamDescriptors, false);
+    verify(eventRunner).resetConnection(connectionId, streamDescriptors);
   }
 
   @Test
@@ -1616,7 +1616,7 @@ class SchedulerHandlerTest {
         .connectionId(connectionId)
         .streams(List.of(new ConnectionStream().streamName(streamName).streamNamespace(streamNamespace)));
 
-    when(eventRunner.resetConnection(connectionId, streamDescriptors, false))
+    when(eventRunner.resetConnection(connectionId, streamDescriptors))
         .thenReturn(manualOperationResult);
 
     doReturn(new JobInfoRead())
@@ -1625,7 +1625,7 @@ class SchedulerHandlerTest {
     schedulerHandler
         .resetConnectionStream(connectionStreamRequestBody);
 
-    verify(eventRunner).resetConnection(connectionId, streamDescriptors, false);
+    verify(eventRunner).resetConnection(connectionId, streamDescriptors);
   }
 
   @Test
