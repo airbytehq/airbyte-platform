@@ -10,6 +10,8 @@ import io.airbyte.commons.server.validation.CatalogValidator.Constants.PROPERTIE
 import io.airbyte.commons.server.validation.CatalogValidatorTest.Fixtures.CTX
 import io.airbyte.commons.server.validation.CatalogValidatorTest.Fixtures.MAX_FIELD_LIMIT
 import io.airbyte.commons.server.validation.CatalogValidatorTest.Fixtures.buildCatalog
+import io.airbyte.commons.server.validation.CatalogValidatorTest.Fixtures.buildStreamFieldSelection
+import io.airbyte.commons.server.validation.CatalogValidatorTest.Fixtures.buildStreamNoFieldSelection
 import io.airbyte.featureflag.ANONYMOUS
 import io.airbyte.featureflag.ConnectionFieldLimitOverride
 import io.airbyte.featureflag.TestClient
@@ -69,6 +71,46 @@ class CatalogValidatorTest {
     assertNotNull(validator.fieldCount(buildCatalog(1, override + 1), CTX))
   }
 
+  @Test
+  fun `ignores unselected streams`() {
+    // build a catalog with 50 fields, 1/5 of which are selected and 1/2 of which use explicit field selection
+    // selected fields should be 10 total
+    val rows = 10
+    val cols = 5
+    val streams = mutableListOf<AirbyteStreamAndConfiguration>()
+    repeat(rows) {
+      val useFieldSelection = it % 2 == 0
+      val selectStream = it % 5 == 0
+      val stream =
+        if (useFieldSelection) {
+          buildStreamFieldSelection(cols, selectStream)
+        } else {
+          buildStreamNoFieldSelection(cols, selectStream)
+        }
+
+      streams.add(stream)
+    }
+    val catalog = AirbyteCatalog().streams(streams)
+
+    val validator1 = CatalogValidator(10, metricClient, featureFlagClient)
+    val validator2 = CatalogValidator(11, metricClient, featureFlagClient)
+    val validator3 = CatalogValidator(100, metricClient, featureFlagClient)
+    val validator4 = CatalogValidator(20000, metricClient, featureFlagClient)
+    val validator5 = CatalogValidator(0, metricClient, featureFlagClient)
+    val validator6 = CatalogValidator(1, metricClient, featureFlagClient)
+    val validator7 = CatalogValidator(9, metricClient, featureFlagClient)
+    val validator8 = CatalogValidator(4, metricClient, featureFlagClient)
+
+    assertNull(validator1.fieldCount(catalog, CTX))
+    assertNull(validator2.fieldCount(catalog, CTX))
+    assertNull(validator3.fieldCount(catalog, CTX))
+    assertNull(validator4.fieldCount(catalog, CTX))
+    assertNotNull(validator5.fieldCount(catalog, CTX))
+    assertNotNull(validator6.fieldCount(catalog, CTX))
+    assertNotNull(validator7.fieldCount(catalog, CTX))
+    assertNotNull(validator8.fieldCount(catalog, CTX))
+  }
+
   companion object {
     @JvmStatic
     fun validSizeCatalogMatrix(): Stream<Arguments> {
@@ -125,20 +167,34 @@ class CatalogValidatorTest {
       return AirbyteCatalog().streams(streams)
     }
 
-    private fun buildStreamFieldSelection(cols: Int): AirbyteStreamAndConfiguration {
-      val config = AirbyteStreamConfiguration().fieldSelectionEnabled(true)
+    fun buildStreamFieldSelection(
+      cols: Int,
+      selected: Boolean = true,
+    ): AirbyteStreamAndConfiguration {
+      val stream = AirbyteStream()
+      val config =
+        AirbyteStreamConfiguration()
+          .fieldSelectionEnabled(true)
+          .selected(selected)
 
       repeat(cols) {
         config.addSelectedFieldsItem(SelectedFieldInfo())
       }
 
       return AirbyteStreamAndConfiguration()
-        .stream(AirbyteStream())
+        .stream(stream)
         .config(config)
     }
 
-    private fun buildStreamNoFieldSelection(cols: Int): AirbyteStreamAndConfiguration {
+    fun buildStreamNoFieldSelection(
+      cols: Int,
+      selected: Boolean = true,
+    ): AirbyteStreamAndConfiguration {
       val stream = AirbyteStream()
+      val config =
+        AirbyteStreamConfiguration()
+          .fieldSelectionEnabled(false)
+          .selected(selected)
 
       // Unfortunately, we define our data model as a JsonNode in json schema format
       val jsonSchemaNode = MAPPER.createObjectNode()
@@ -155,7 +211,7 @@ class CatalogValidatorTest {
 
       return AirbyteStreamAndConfiguration()
         .stream(stream)
-        .config(AirbyteStreamConfiguration().fieldSelectionEnabled(false))
+        .config(config)
     }
   }
 }

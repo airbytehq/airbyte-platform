@@ -29,15 +29,17 @@ class CatalogValidator(
   ): ValidationError? {
     val fieldLimit = resolveLimit(ctx)
     val fieldCount =
-      catalog.streams.sumOf { s ->
-        if (s.config.fieldSelectionEnabled == true) {
-          s.config.selectedFields.size
-        } else {
-          Iterators.size(
-            s.stream.jsonSchema.get(PROPERTIES_KEY).fieldNames(),
-          )
+      catalog.streams
+        .filter { s -> s.config.selected }
+        .sumOf { s ->
+          if (s.config.fieldSelectionEnabled == true) {
+            s.config.selectedFields.size
+          } else {
+            Iterators.size(
+              s.stream.jsonSchema.get(PROPERTIES_KEY).fieldNames(),
+            )
+          }
         }
-      }
 
     if (fieldCount <= fieldLimit) return null
 
