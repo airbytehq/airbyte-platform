@@ -19,6 +19,6 @@ val copyScripts = tasks.register<Copy>("copyScripts") {
   into("build/airbyte/docker/bin/scripts")
 }
 
-tasks.named("dockerBuildImage") {
+tasks.named("dockerCopyDistribution") {
   dependsOn(copyScripts, copyTheme)
 }

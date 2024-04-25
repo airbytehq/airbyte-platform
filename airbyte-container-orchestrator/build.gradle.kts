@@ -118,7 +118,7 @@ val generateWellKnownTypes = tasks.register("generateWellKnownTypes") {
   }
 }
 
-tasks.named("dockerBuildImage") {
+tasks.named("dockerCopyDistribution") {
   dependsOn(generateWellKnownTypes)
 }
 

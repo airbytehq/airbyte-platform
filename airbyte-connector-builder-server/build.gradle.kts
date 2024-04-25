@@ -148,7 +148,9 @@ tasks.named<DockerBuildImage>("dockerBuildImage") {
   // Current CDK version(used by the Connector Builder and workers running Connector Builder connectors
   val cdkVersion: String = File(project.projectDir.parentFile, "airbyte-connector-builder-resources/CDK_VERSION").readText().trim()
   buildArgs.put("CDK_VERSION", cdkVersion)
+}
 
+tasks.named("dockerCopyDistribution") {
   dependsOn(copyPythonDeps, generateOpenApiServer)
 }
 
