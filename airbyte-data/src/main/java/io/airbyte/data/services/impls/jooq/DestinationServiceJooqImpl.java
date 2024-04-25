@@ -453,6 +453,18 @@ public class DestinationServiceJooqImpl implements DestinationService {
     return result.stream().map(DbConverter::buildDestinationConnection).toList();
   }
 
+  @Override
+  public List<DestinationConnection> listDestinationsWithIds(
+                                                             final List<UUID> destinationIds)
+      throws IOException {
+    final Result<Record> result = database.query(ctx -> ctx.select(asterisk())
+        .from(ACTOR)
+        .where(ACTOR.ACTOR_TYPE.eq(ActorType.destination))
+        .and(ACTOR.ID.in(destinationIds))
+        .andNot(ACTOR.TOMBSTONE).fetch());
+    return result.stream().map(DbConverter::buildDestinationConnection).toList();
+  }
+
   private int writeActorDefinitionWorkspaceGrant(final UUID actorDefinitionId,
                                                  final UUID scopeId,
                                                  final io.airbyte.db.instance.configs.jooq.generated.enums.ScopeType scopeType,

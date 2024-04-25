@@ -69,6 +69,8 @@ public interface DestinationService {
 
   List<DestinationConnection> listDestinationsWithVersionIds(final List<UUID> actorDefinitionVersionIds) throws IOException;
 
+  List<DestinationConnection> listDestinationsWithIds(final List<UUID> destinationIds) throws IOException;
+
   DestinationConnection getDestinationConnectionWithSecrets(UUID destinationId) throws JsonValidationException, ConfigNotFoundException, IOException;
 
   void writeDestinationConnectionWithSecrets(

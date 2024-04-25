@@ -442,6 +442,16 @@ public class SourceServiceJooqImpl implements SourceService {
     return result.stream().map(DbConverter::buildSourceConnection).toList();
   }
 
+  @Override
+  public List<SourceConnection> listSourcesWithIds(final List<UUID> sourceIds) throws IOException {
+    final Result<Record> result = database.query(ctx -> ctx.select(asterisk())
+        .from(ACTOR)
+        .where(ACTOR.ACTOR_TYPE.eq(ActorType.source))
+        .and(ACTOR.ID.in(sourceIds))
+        .andNot(ACTOR.TOMBSTONE).fetch());
+    return result.stream().map(DbConverter::buildSourceConnection).toList();
+  }
+
   /**
    * Retrieve from Launch Darkly the default max seconds between messages for a given source. This
    * allows us to dynamically change the default max seconds between messages for a source.

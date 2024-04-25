@@ -16,7 +16,6 @@ import io.airbyte.config.Configs.DeploymentMode;
 import io.airbyte.config.StandardDestinationDefinition;
 import io.airbyte.config.StandardSourceDefinition;
 import io.airbyte.config.init.BreakingChangeNotificationHelper.BreakingChangeNotificationData;
-import io.airbyte.config.persistence.ActorDefinitionVersionHelper;
 import io.airbyte.config.persistence.BreakingChangesHelper;
 import io.airbyte.data.exceptions.ConfigNotFoundException;
 import io.airbyte.data.services.ActorDefinitionService;
@@ -25,7 +24,6 @@ import io.airbyte.data.services.SourceService;
 import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.featureflag.NotifyBreakingChangesOnSupportStateUpdate;
 import io.airbyte.featureflag.Workspace;
-import io.airbyte.validation.json.JsonValidationException;
 import jakarta.inject.Singleton;
 import java.io.IOException;
 import java.time.LocalDate;
@@ -70,14 +68,14 @@ public class SupportStateUpdater {
   private final SourceService sourceService;
   private final DestinationService destinationService;
   private final FeatureFlagClient featureFlagClient;
-  private final ActorDefinitionVersionHelper actorDefinitionVersionHelper;
+  private final BreakingChangesHelper breakingChangesHelper;
   private final BreakingChangeNotificationHelper breakingChangeNotificationHelper;
 
   public SupportStateUpdater(final ActorDefinitionService actorDefinitionService,
                              final SourceService sourceService,
                              final DestinationService destinationService,
                              final DeploymentMode deploymentMode,
-                             final ActorDefinitionVersionHelper actorDefinitionVersionHelper,
+                             final BreakingChangesHelper breakingChangesHelper,
                              final BreakingChangeNotificationHelper breakingChangeNotificationHelper,
                              final FeatureFlagClient featureFlagClient) {
     this.deploymentMode = deploymentMode;
@@ -85,7 +83,7 @@ public class SupportStateUpdater {
     this.sourceService = sourceService;
     this.destinationService = destinationService;
     this.featureFlagClient = featureFlagClient;
-    this.actorDefinitionVersionHelper = actorDefinitionVersionHelper;
+    this.breakingChangesHelper = breakingChangesHelper;
     this.breakingChangeNotificationHelper = breakingChangeNotificationHelper;
   }
 
@@ -149,8 +147,7 @@ public class SupportStateUpdater {
   /**
    * Updates the version support states for all source and destination definitions.
    */
-  public void updateSupportStates()
-      throws IOException, JsonValidationException, ConfigNotFoundException, io.airbyte.config.persistence.ConfigNotFoundException {
+  public void updateSupportStates() throws IOException, ConfigNotFoundException {
     updateSupportStates(LocalDate.now());
   }
 
@@ -159,8 +156,7 @@ public class SupportStateUpdater {
    * reference date, and disables syncs with unsupported versions.
    */
   @VisibleForTesting
-  void updateSupportStates(final LocalDate referenceDate)
-      throws IOException, JsonValidationException, ConfigNotFoundException, io.airbyte.config.persistence.ConfigNotFoundException {
+  void updateSupportStates(final LocalDate referenceDate) throws IOException, ConfigNotFoundException {
     log.info("Updating support states for all definitions");
     final List<StandardSourceDefinition> sourceDefinitions = sourceService.listPublicSourceDefinitions(false);
     final List<StandardDestinationDefinition> destinationDefinitions = destinationService.listPublicDestinationDefinitions(false);
@@ -226,10 +222,11 @@ public class SupportStateUpdater {
                                                              final ActorDefinitionBreakingChange breakingChange,
                                                              final List<ActorDefinitionVersion> versionsBeforeUpdate,
                                                              final SupportStateUpdate supportStateUpdate)
-      throws JsonValidationException, ConfigNotFoundException, IOException, io.airbyte.config.persistence.ConfigNotFoundException {
+      throws IOException {
     final List<UUID> newlyDeprecatedVersionIds = getNewlyDeprecatedVersionIds(versionsBeforeUpdate, supportStateUpdate);
     final List<Pair<UUID, List<UUID>>> workspaceSyncIds =
-        actorDefinitionVersionHelper.getActiveWorkspaceSyncsWithSourceVersionIds(sourceDefinition, newlyDeprecatedVersionIds);
+        breakingChangesHelper.getBreakingActiveSyncsPerWorkspace(ActorType.SOURCE, sourceDefinition.getSourceDefinitionId(),
+            newlyDeprecatedVersionIds);
     final List<UUID> workspaceIds = workspaceSyncIds.stream().map(Pair::getFirst).toList();
     return new BreakingChangeNotificationData(
         ActorType.SOURCE,
@@ -243,10 +240,11 @@ public class SupportStateUpdater {
                                                                   final ActorDefinitionBreakingChange breakingChange,
                                                                   final List<ActorDefinitionVersion> versionsBeforeUpdate,
                                                                   final SupportStateUpdate supportStateUpdate)
-      throws JsonValidationException, ConfigNotFoundException, IOException, io.airbyte.config.persistence.ConfigNotFoundException {
+      throws IOException {
     final List<UUID> newlyDeprecatedVersionIds = getNewlyDeprecatedVersionIds(versionsBeforeUpdate, supportStateUpdate);
     final List<Pair<UUID, List<UUID>>> workspaceSyncIds =
-        actorDefinitionVersionHelper.getActiveWorkspaceSyncsWithDestinationVersionIds(destinationDefinition, newlyDeprecatedVersionIds);
+        breakingChangesHelper.getBreakingActiveSyncsPerWorkspace(ActorType.DESTINATION, destinationDefinition.getDestinationDefinitionId(),
+            newlyDeprecatedVersionIds);
     final List<UUID> workspaceIds = workspaceSyncIds.stream().map(Pair::getFirst).toList();
     return new BreakingChangeNotificationData(
         ActorType.DESTINATION,

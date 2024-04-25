@@ -115,6 +115,18 @@ interface ScopedConfigurationService {
   ): List<ScopedConfiguration>
 
   /**
+   * List scoped configurations with a given origin type and values.
+   */
+  fun listScopedConfigurationsWithValues(
+    key: String,
+    resourceType: ConfigResourceType,
+    resourceId: UUID,
+    scopeType: ConfigScopeType,
+    originType: ConfigOriginType,
+    values: List<String>,
+  ): List<ScopedConfiguration>
+
+  /**
    * Delete a scoped configuration by id.
    */
   fun deleteScopedConfiguration(configId: UUID)

@@ -53,6 +53,8 @@ public interface SourceService {
 
   List<SourceAndDefinition> getSourceAndDefinitionsFromSourceIds(List<UUID> sourceIds) throws IOException;
 
+  List<SourceConnection> listSourcesWithIds(final List<UUID> sourceIds) throws IOException;
+
   void writeConnectorMetadata(final StandardSourceDefinition sourceDefinition,
                               final ActorDefinitionVersion actorDefinitionVersion,
                               final List<ActorDefinitionBreakingChange> breakingChangesForDefinition)
