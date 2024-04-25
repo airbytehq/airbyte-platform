@@ -6,7 +6,7 @@ import java.io.FileReader
 
 plugins {
     id("base")
-    id("com.bmuschko.docker-remote-api")
+    id("io.airbyte.gradle.docker")
     alias(libs.plugins.node.gradle)
 }
 
@@ -49,6 +49,12 @@ configure<NodeExtension> {
     version = nodeVersion
     pnpmVersion = pnpmVer
     distBaseUrl = "https://nodejs.org/dist"
+}
+
+airbyte {
+    docker {
+        imageName = "webapp"
+    }
 }
 
 tasks.named("pnpmInstall") {
@@ -198,17 +204,15 @@ tasks.register<PnpmTask>("buildStorybook") {
 }
 
 tasks.register<Copy>("copyBuildOutput") {
-    dependsOn(tasks.named("copyDocker"), tasks.named("pnpmBuild"))
+    dependsOn(tasks.named("pnpmBuild"))
 
     from("${project.projectDir}/build/app")
-    into("build/docker/bin/build")
+    into("build/airbyte/docker/bin/build")
 }
 
 tasks.register<Copy>("copyNginx") {
-    dependsOn(tasks.named("copyDocker"))
-
     from("${project.projectDir}/nginx")
-    into("build/docker/bin/nginx")
+    into("build/airbyte/docker/bin/nginx")
 }
 
 // Those tasks should be run as part of the "check" task
@@ -225,8 +229,9 @@ tasks.named("build") {
     dependsOn(tasks.named("buildStorybook"))
 }
 
-tasks.named("buildDockerImage") {
-    dependsOn(tasks.named("copyDocker"), tasks.named("copyNginx"), tasks.named("copyBuildOutput"))
+tasks.named("dockerCopyDistribution") {
+        dependsOn(tasks.named("copyNginx"), tasks.named("copyBuildOutput"))
+
 }
 
 // Include some cloud-specific tasks only in the airbyte-platform-internal environment
