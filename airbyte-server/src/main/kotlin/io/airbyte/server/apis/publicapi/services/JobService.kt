@@ -202,7 +202,7 @@ class JobServiceImpl(
     val result =
       kotlin.runCatching { jobHistoryHandler.listJobsForWorkspaces(requestBody) }
         .onFailure {
-          log.error("Error getting job list $it")
+          log.error("Error getting job list:", it)
           ConfigClientErrorHandler.handleError(it, workspaceIds.toString())
         }
 

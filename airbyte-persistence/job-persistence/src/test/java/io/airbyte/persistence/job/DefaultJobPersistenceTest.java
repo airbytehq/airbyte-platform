@@ -2085,11 +2085,11 @@ class DefaultJobPersistenceTest {
 
       String configId = null;
       final List<Job> updatedAtJobs =
-          jobPersistence.listJobs(Set.of(SPEC_JOB_CONFIG.getConfigType()), configId, 1, 0, null, null, null, null, null, "UPDATED_AT", "ASC");
+          jobPersistence.listJobs(Set.of(SPEC_JOB_CONFIG.getConfigType()), configId, 1, 0, null, null, null, null, null, "updatedAt", "ASC");
       assertEquals(1, updatedAtJobs.size());
       assertEquals(jobId2, updatedAtJobs.get(0).getId());
       final List<Job> createdAtJobs =
-          jobPersistence.listJobs(Set.of(SPEC_JOB_CONFIG.getConfigType()), configId, 1, 0, null, null, null, null, null, "CREATED_AT", "ASC");
+          jobPersistence.listJobs(Set.of(SPEC_JOB_CONFIG.getConfigType()), configId, 1, 0, null, null, null, null, null, "createdAt", "ASC");
       assertEquals(1, createdAtJobs.size());
       assertEquals(jobId1, createdAtJobs.get(0).getId());
     }
