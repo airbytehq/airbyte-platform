@@ -50,7 +50,8 @@ public class MockSynchronousPythonCdkCommandRunner extends SynchronousPythonCdkC
   AirbyteCdkProcess start(
                           final String cdkCommand,
                           final String configFilepath,
-                          final String catalogFilepath)
+                          final String catalogFilepath,
+                          final String stateFilepath)
       throws AirbyteCdkInvalidInputException, IOException {
     if (this.shouldThrow) {
       throw new IOException();

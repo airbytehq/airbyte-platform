@@ -60,9 +60,11 @@ public class SynchronousPythonCdkCommandRunner implements SynchronousCdkCommandR
   public AirbyteRecordMessage runCommand(
                                          final String cdkCommand,
                                          final String configContents,
-                                         final String catalogContents)
+                                         final String catalogContents,
+                                         final String stateContents)
       throws IOException {
-    try (final AirbyteCdkProcess cdkProcess = this.start(cdkCommand, configContents, catalogContents)) {
+    try (final AirbyteCdkProcess cdkProcess = this.start(cdkCommand, configContents, catalogContents,
+        stateContents)) {
       return new ProcessOutputParser().parse(cdkProcess.getProcess(), this.streamFactory, cdkCommand);
     }
   }
@@ -75,10 +77,12 @@ public class SynchronousPythonCdkCommandRunner implements SynchronousCdkCommandR
   AirbyteCdkProcess start(
                           final String cdkCommand,
                           final String configContents,
-                          final String catalogContents)
+                          final String catalogContents,
+                          final String stateContents)
       throws IOException {
     final AirbyteArgument catalog = this.write("catalog", catalogContents);
     final AirbyteArgument config = this.write("config", configContents);
+    final AirbyteArgument state = this.write("state", stateContents);
 
     final List<String> command = Lists.newArrayList(
         this.python,
@@ -87,7 +91,9 @@ public class SynchronousPythonCdkCommandRunner implements SynchronousCdkCommandR
         "--config",
         config.getFilepath(),
         "--catalog",
-        catalog.getFilepath());
+        catalog.getFilepath(),
+        "--state",
+        state.getFilepath());
     LOGGER.debug("Preparing command for {}: {}", cdkCommand, Joiner.on(" ").join(command));
     final ProcessBuilder processBuilder = new ProcessBuilder(command);
     addPythonPathToSubprocessEnvironment(processBuilder);

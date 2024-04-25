@@ -21,6 +21,7 @@ import io.airbyte.connector_builder.exceptions.ConnectorBuilderException;
 import io.airbyte.connector_builder.requester.AirbyteCdkRequester;
 import java.io.IOException;
 import java.util.List;
+import org.assertj.core.util.Lists;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -50,6 +51,7 @@ class StreamHandlerTest {
   private final StreamRead streamRead = new StreamRead().logs(logs).slices(slices);
   private static final JsonNode A_CONFIG;
   private static final JsonNode A_MANIFEST;
+  private static final List<JsonNode> A_STATE;
   private static final String A_STREAM = "test";
   private static final Integer A_LIMIT = 1;
 
@@ -57,6 +59,7 @@ class StreamHandlerTest {
     try {
       A_CONFIG = new ObjectMapper().readTree("{\"config\": 1}");
       A_MANIFEST = new ObjectMapper().readTree("{\"manifest\": 1}");
+      A_STATE = Lists.newArrayList(new ObjectMapper().readTree("{}"));
     } catch (final JsonProcessingException e) {
       throw new RuntimeException(e);
     }
@@ -75,22 +78,24 @@ class StreamHandlerTest {
 
   @Test
   void whenReadStreamThenReturnRequesterResponse() throws Exception {
-    when(requester.readStream(A_MANIFEST, A_CONFIG, A_STREAM, A_LIMIT, A_LIMIT, A_LIMIT)).thenReturn(streamRead);
+    when(requester.readStream(A_MANIFEST, A_CONFIG, A_STATE, A_STREAM, A_LIMIT, A_LIMIT, A_LIMIT)).thenReturn(streamRead);
     final StreamRead response =
-        handler.readStream(new StreamReadRequestBody().manifest(A_MANIFEST).config(A_CONFIG).stream(A_STREAM).recordLimit(A_LIMIT).pageLimit(A_LIMIT)
-            .sliceLimit(A_LIMIT));
+        handler.readStream(
+            new StreamReadRequestBody().manifest(A_MANIFEST).config(A_CONFIG).state(A_STATE).stream(A_STREAM).recordLimit(A_LIMIT).pageLimit(A_LIMIT)
+                .sliceLimit(A_LIMIT));
     assertEquals(streamRead, response);
   }
 
   @Test
   void givenIOExceptionWhenReadStreamThenRaiseConnectorBuilderException() throws Exception {
-    when(requester.readStream(A_MANIFEST, A_CONFIG, A_STREAM, A_LIMIT, A_LIMIT, A_LIMIT)).thenThrow(IOException.class);
+    when(requester.readStream(A_MANIFEST, A_CONFIG, A_STATE, A_STREAM, A_LIMIT, A_LIMIT, A_LIMIT)).thenThrow(IOException.class);
     assertThrows(ConnectorBuilderException.class,
         () -> handler.readStream(
             new StreamReadRequestBody()
                 .manifest(A_MANIFEST)
                 .config(A_CONFIG)
                 .stream(A_STREAM)
+                .state(A_STATE)
                 .recordLimit(A_LIMIT)
                 .pageLimit(A_LIMIT)
                 .sliceLimit(A_LIMIT)));
@@ -98,13 +103,14 @@ class StreamHandlerTest {
 
   @Test
   void givenAirbyteCdkInvalidInputExceptionWhenReadStreamThenRaiseConnectorBuilderException() throws Exception {
-    when(requester.readStream(A_MANIFEST, A_CONFIG, A_STREAM, A_LIMIT, A_LIMIT, A_LIMIT)).thenThrow(AirbyteCdkInvalidInputException.class);
+    when(requester.readStream(A_MANIFEST, A_CONFIG, A_STATE, A_STREAM, A_LIMIT, A_LIMIT, A_LIMIT)).thenThrow(AirbyteCdkInvalidInputException.class);
     assertThrows(AirbyteCdkInvalidInputException.class,
         () -> handler.readStream(
             new StreamReadRequestBody()
                 .manifest(A_MANIFEST)
                 .config(A_CONFIG)
                 .stream(A_STREAM)
+                .state(A_STATE)
                 .recordLimit(A_LIMIT)
                 .pageLimit(A_LIMIT)
                 .sliceLimit(A_LIMIT)));

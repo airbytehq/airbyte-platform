@@ -93,12 +93,11 @@ val generateOpenApiServer = tasks.register<GenerateTask>("generateOpenApiServer"
   invokerPackage = "io.airbyte.connector_builder.api.invoker.generated"
   modelPackage = "io.airbyte.connector_builder.api.model.generated"
 
-  schemaMappings.putAll(
-    mapOf(
-      "ConnectorConfig" to "com.fasterxml.jackson.databind.JsonNode",
-      "ConnectorManifest" to "com.fasterxml.jackson.databind.JsonNode",
-    )
-  )
+    schemaMappings.putAll(mapOf(
+            "ConnectorConfig"  to "com.fasterxml.jackson.databind.JsonNode",
+            "ConnectorManifest" to "com.fasterxml.jackson.databind.JsonNode",
+            "AirbyteStateMessage" to "com.fasterxml.jackson.databind.JsonNode",
+    ))
 
   // Our spec does not have nullable, but if it changes, this would be a gotcha that we would want to avoid)
   configOptions.putAll(

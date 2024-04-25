@@ -10,6 +10,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.ObjectWriter;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
+import com.google.common.annotations.VisibleForTesting;
 import datadog.trace.api.Trace;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.connector_builder.TracingHelper;
@@ -23,6 +24,7 @@ import io.airbyte.connector_builder.exceptions.CdkProcessException;
 import io.airbyte.protocol.models.AirbyteRecordMessage;
 import jakarta.inject.Singleton;
 import java.io.IOException;
+import java.util.Collections;
 import java.util.List;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -75,6 +77,7 @@ public class AirbyteCdkRequesterImpl implements AirbyteCdkRequester {
   @Trace(operationName = TracingHelper.CONNECTOR_BUILDER_OPERATION_NAME)
   public StreamRead readStream(final JsonNode manifest,
                                final JsonNode config,
+                               final List<JsonNode> state,
                                final String stream,
                                final Integer recordLimit,
                                final Integer pageLimit,
@@ -83,7 +86,7 @@ public class AirbyteCdkRequesterImpl implements AirbyteCdkRequester {
     if (stream == null) {
       throw new AirbyteCdkInvalidInputException("Missing required `stream` field.");
     }
-    final AirbyteRecordMessage record = request(manifest, config, readStreamCommand, stream, recordLimit, pageLimit, sliceLimit);
+    final AirbyteRecordMessage record = request(manifest, config, state, readStreamCommand, stream, recordLimit, pageLimit, sliceLimit);
     return recordToResponse(record);
   }
 
@@ -122,11 +125,12 @@ public class AirbyteCdkRequesterImpl implements AirbyteCdkRequester {
                                        final String cdkCommand)
       throws IOException, AirbyteCdkInvalidInputException, CdkProcessException {
     LOGGER.debug("Creating CDK process: {}.", cdkCommand);
-    return this.commandRunner.runCommand(cdkCommand, this.adaptConfig(manifest, config, cdkCommand), "");
+    return this.commandRunner.runCommand(cdkCommand, this.adaptConfig(manifest, config, cdkCommand), "", "");
   }
 
   private AirbyteRecordMessage request(final JsonNode manifest,
                                        final JsonNode config,
+                                       final List<JsonNode> state,
                                        final String cdkCommand,
                                        final String stream,
                                        final Integer recordLimit,
@@ -136,11 +140,20 @@ public class AirbyteCdkRequesterImpl implements AirbyteCdkRequester {
     LOGGER.debug("Creating CDK process: {}.", cdkCommand);
     return this.commandRunner.runCommand(cdkCommand,
         this.adaptConfig(manifest, config, cdkCommand, recordLimit, pageLimit, sliceLimit),
-        this.adaptCatalog(stream));
+        this.adaptCatalog(stream), this.adaptState(state));
   }
 
   private String adaptCatalog(final String stream) {
     return String.format(catalogTemplate, stream);
+  }
+
+  @VisibleForTesting
+  String adaptState(final List<JsonNode> state) throws IOException {
+    if (state == null || state.isEmpty()) {
+      return OBJECT_WRITER.writeValueAsString(Collections.emptyList());
+    } else {
+      return OBJECT_WRITER.writeValueAsString(state);
+    }
   }
 
   private String adaptConfig(final JsonNode manifest, final JsonNode config, final String command) throws IOException {

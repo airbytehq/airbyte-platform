@@ -15,6 +15,6 @@ public interface SynchronousCdkCommandRunner {
   /**
    * Launch a CDK process responsible for handling requests.
    */
-  AirbyteRecordMessage runCommand(final String command, final String config, final String catalog) throws IOException;
+  AirbyteRecordMessage runCommand(final String command, final String config, final String catalog, final String state) throws IOException;
 
 }
