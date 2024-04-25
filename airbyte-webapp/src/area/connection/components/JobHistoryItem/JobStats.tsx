@@ -25,7 +25,7 @@ export const JobStats: React.FC<JobStatsProps> = ({ jobWithAttempts }) => {
   const [showExtendedStats] = useLocalStorage("airbyte_extended-attempts-stats", false);
 
   const { job, attempts } = jobWithAttempts;
-  const lastAttempt = attempts && attempts[attempts.length - 1];
+  const lastAttempt = attempts?.at(-1); // even if attempts is present it might be empty, which `.at` propagates to `lastAttempt`
 
   const start = dayjs(job.createdAt * 1000);
   const end = dayjs(job.updatedAt * 1000);
@@ -33,12 +33,13 @@ export const JobStats: React.FC<JobStatsProps> = ({ jobWithAttempts }) => {
   const minutes = Math.abs(end.diff(start, "minute")) - hours * 60;
   const seconds = Math.abs(end.diff(start, "second")) - minutes * 60 - hours * 3600;
 
-  const failureUiDetails = failureUiDetailsFromReason(lastAttempt.failureSummary?.failures[0], formatMessage);
   const [isSecondaryMessageExpanded, setIsSecondaryMessageExpanded] = useState(false);
 
   if (job.status === "running") {
     return null;
   }
+
+  const failureUiDetails = failureUiDetailsFromReason(lastAttempt?.failureSummary?.failures[0], formatMessage);
 
   return (
     <>

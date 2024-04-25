@@ -5768,7 +5768,7 @@ paths:
             format: UUID
             type: string
           in: "query"
-          required: true
+          required: false
         - name: "ignoreCache"
           description: "If true pull the latest schema from the source, else pull from cache (default false)"
           schema:
@@ -8294,11 +8294,14 @@ components:
         - streamNamespace
         - recordsExtracted
         - recordsLoaded
-        - syncTimeElapsed
-        - progressPercentage
-        - lastCommittedTimestamp
-        - lastCursorValue
+        - bytesExtracted
+        - bytesLoaded
+        - syncStartedAt
+        - jobId
       properties:
+        jobId:
+          type: integer
+          format: int64
         streamName:
           type: string
         streamNamespace:
@@ -8306,10 +8309,16 @@ components:
         recordsExtracted:
           type: integer
           format: int64
+        bytesExtracted:
+          type: integer
+          format: int64
         recordsLoaded:
           type: integer
           format: int64
-        syncTimeElapsed:
+        bytesLoaded:
+          type: integer
+          format: int64
+        syncStartedAt:
           type: integer
           format: int64
         progressPercentage:
@@ -10810,7 +10819,8 @@ components:
       type: object
       required:
         - edition
-        - webappUrl
+        - version
+        - airbyteUrl
         - initialSetupComplete
         - defaultUserId
         - defaultOrganizationId
@@ -10822,6 +10832,9 @@ components:
           enum:
             - community
             - pro
+        version:
+          description: release version for the corresponding edition
+          type: string
         licenseType:
           type: string
           enum:
@@ -10830,7 +10843,7 @@ components:
           nullable: true
         auth:
           $ref: "#/components/schemas/AuthConfiguration"
-        webappUrl:
+        airbyteUrl:
           type: string
         initialSetupComplete:
           type: boolean
@@ -12146,12 +12159,9 @@ components:
       x-sdk-component: true
     StreamPropertiesResponse:
       description: A list of stream properties.
-      type: object
-      properties:
-        streams:
-          type: array
-          items:
-            $ref: "#/components/schemas/StreamProperties"
+      type: array
+      items:
+        $ref: "#/components/schemas/StreamProperties"
       x-sdk-component: true
     StreamProperties:
       description: The stream properties associated with a connection.

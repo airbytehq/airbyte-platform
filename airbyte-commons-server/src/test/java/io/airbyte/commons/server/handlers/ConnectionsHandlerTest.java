@@ -71,10 +71,13 @@ import io.airbyte.commons.enums.Enums;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.commons.server.converters.ApiPojoConverters;
 import io.airbyte.commons.server.converters.ConfigurationUpdate;
+import io.airbyte.commons.server.errors.BadRequestException;
 import io.airbyte.commons.server.handlers.helpers.ActorDefinitionHandlerHelper;
 import io.airbyte.commons.server.handlers.helpers.CatalogConverter;
 import io.airbyte.commons.server.helpers.ConnectionHelpers;
 import io.airbyte.commons.server.scheduler.EventRunner;
+import io.airbyte.commons.server.validation.CatalogValidator;
+import io.airbyte.commons.server.validation.ValidationError;
 import io.airbyte.config.ActorDefinitionVersion;
 import io.airbyte.config.ActorType;
 import io.airbyte.config.AttemptFailureSummary;
@@ -222,7 +225,7 @@ class ConnectionsHandlerTest {
   private ActorDefinitionVersionUpdater actorDefinitionVersionUpdater;
   private ConnectorDefinitionSpecificationHandler connectorDefinitionSpecificationHandler;
 
-  private JsonSchemaValidator validator;
+  private JsonSchemaValidator jsonSchemaValidator;
   private JsonSecretsProcessor secretsProcessor;
   private ConfigurationUpdate configurationUpdate;
   private OAuthConfigSupplier oAuthConfigSupplier;
@@ -241,6 +244,7 @@ class ConnectionsHandlerTest {
   private Job job;
   private StreamGenerationRepository streamGenerationRepository;
   private CatalogGenerationSetter catalogGenerationSetter;
+  private CatalogValidator catalogValidator;
 
   @SuppressWarnings("unchecked")
   @BeforeEach
@@ -336,7 +340,7 @@ class ConnectionsHandlerTest {
     actorDefinitionVersionHelper = mock(ActorDefinitionVersionHelper.class);
     actorDefinitionVersionUpdater = mock(ActorDefinitionVersionUpdater.class);
     connectorDefinitionSpecificationHandler = mock(ConnectorDefinitionSpecificationHandler.class);
-    validator = mock(JsonSchemaValidator.class);
+    jsonSchemaValidator = mock(JsonSchemaValidator.class);
     secretsProcessor = mock(JsonSecretsProcessor.class);
     configurationUpdate = mock(ConfigurationUpdate.class);
     oAuthConfigSupplier = mock(OAuthConfigSupplier.class);
@@ -352,7 +356,7 @@ class ConnectionsHandlerTest {
 
     destinationHandler =
         new DestinationHandler(configRepository,
-            validator,
+            jsonSchemaValidator,
             connectionsHandler,
             uuidGenerator,
             secretsProcessor,
@@ -365,7 +369,7 @@ class ConnectionsHandlerTest {
             actorDefinitionVersionUpdater);
     sourceHandler = new SourceHandler(configRepository,
         secretsRepositoryReader,
-        validator,
+        jsonSchemaValidator,
         connectionsHandler,
         uuidGenerator,
         secretsProcessor,
@@ -381,6 +385,7 @@ class ConnectionsHandlerTest {
     job = mock(Job.class);
     streamGenerationRepository = mock(StreamGenerationRepository.class);
     catalogGenerationSetter = mock(CatalogGenerationSetter.class);
+    catalogValidator = mock(CatalogValidator.class);
     when(workspaceHelper.getWorkspaceForSourceIdIgnoreExceptions(sourceId)).thenReturn(workspaceId);
     when(workspaceHelper.getWorkspaceForDestinationIdIgnoreExceptions(destinationId)).thenReturn(workspaceId);
     when(workspaceHelper.getWorkspaceForOperationIdIgnoreExceptions(operationId)).thenReturn(workspaceId);
@@ -408,7 +413,8 @@ class ConnectionsHandlerTest {
           MAX_DAYS_OF_ONLY_FAILED_JOBS,
           MAX_FAILURE_JOBS_IN_A_ROW,
           streamGenerationRepository,
-          catalogGenerationSetter);
+          catalogGenerationSetter,
+          catalogValidator);
 
       when(uuidGenerator.get()).thenReturn(standardSync.getConnectionId());
       final StandardSourceDefinition sourceDefinition = new StandardSourceDefinition()
@@ -976,6 +982,14 @@ class ConnectionsHandlerTest {
     @Nested
     class CreateConnection {
 
+      @BeforeEach
+      void setup() throws IOException, JsonValidationException, ConfigNotFoundException {
+        // for create calls
+        when(workspaceHelper.getWorkspaceForDestinationId(standardSync.getDestinationId())).thenReturn(workspaceId);
+        // for update calls
+        when(workspaceHelper.getWorkspaceForConnectionId(standardSync.getConnectionId())).thenReturn(workspaceId);
+      }
+
       private ConnectionCreate buildConnectionCreateRequest(final StandardSync standardSync, final AirbyteCatalog catalog) {
         return new ConnectionCreate()
             .sourceId(standardSync.getSourceId())
@@ -1235,13 +1249,26 @@ class ConnectionsHandlerTest {
             .syncCatalog(catalog);
 
         assertThrows(ConfigNotFoundException.class, () -> connectionsHandler.createConnection(connectionCreateBadDestination));
+      }
 
+      @Test
+      void throwsBadRequestExceptionOnCatalogSizeValidationError() {
+        final AirbyteCatalog catalog = ConnectionHelpers.generateBasicApiCatalog();
+        final ConnectionCreate request = buildConnectionCreateRequest(standardSync, catalog);
+        when(catalogValidator.fieldCount(eq(catalog), any())).thenReturn(new ValidationError("bad catalog"));
+
+        assertThrows(BadRequestException.class, () -> connectionsHandler.createConnection(request));
       }
 
     }
 
     @Nested
     class UpdateConnection {
+
+      @BeforeEach
+      void setup() throws IOException, JsonValidationException, ConfigNotFoundException {
+        when(workspaceHelper.getWorkspaceForConnectionId(standardSync.getConnectionId())).thenReturn(workspaceId);
+      }
 
       @Test
       void testUpdateConnectionPatchSingleField() throws Exception {
@@ -1561,6 +1588,18 @@ class ConnectionsHandlerTest {
         assertThrows(IllegalArgumentException.class, () -> connectionsHandler.updateConnection(connectionUpdate));
       }
 
+      @Test
+      void throwsBadRequestExceptionOnCatalogSizeValidationError() {
+        final AirbyteCatalog catalog = ConnectionHelpers.generateBasicApiCatalog();
+        final ConnectionUpdate request = new ConnectionUpdate()
+            .connectionId(standardSync.getConnectionId())
+            .syncCatalog(catalog)
+            .name("newName");
+        when(catalogValidator.fieldCount(eq(catalog), any())).thenReturn(new ValidationError("bad catalog"));
+
+        assertThrows(BadRequestException.class, () -> connectionsHandler.updateConnection(request));
+      }
+
     }
 
   }
@@ -1586,7 +1625,8 @@ class ConnectionsHandlerTest {
           MAX_DAYS_OF_ONLY_FAILED_JOBS,
           MAX_FAILURE_JOBS_IN_A_ROW,
           streamGenerationRepository,
-          catalogGenerationSetter);
+          catalogGenerationSetter,
+          catalogValidator);
     }
 
     private Attempt generateMockAttempt(final Instant attemptTime, final long recordsSynced) {
@@ -1839,7 +1879,8 @@ class ConnectionsHandlerTest {
           MAX_DAYS_OF_ONLY_FAILED_JOBS,
           MAX_FAILURE_JOBS_IN_A_ROW,
           streamGenerationRepository,
-          catalogGenerationSetter);
+          catalogGenerationSetter,
+          catalogValidator);
     }
 
     @Test
@@ -2310,6 +2351,7 @@ class ConnectionsHandlerTest {
               .thenReturn(new DestinationDefinitionSpecificationRead().supportedDestinationSyncModes(List.of(DestinationSyncMode.OVERWRITE)));
       when(workspaceHelper.getWorkspaceForSourceIdIgnoreExceptions(SOURCE_ID)).thenReturn(WORKSPACE_ID);
       when(workspaceHelper.getWorkspaceForDestinationIdIgnoreExceptions(DESTINATION_ID)).thenReturn(WORKSPACE_ID);
+      when(workspaceHelper.getWorkspaceForConnectionId(CONNECTION_ID)).thenReturn(WORKSPACE_ID);
       connectionsHandler = new ConnectionsHandler(
           streamRefreshesHandler,
           jobPersistence,
@@ -2326,7 +2368,8 @@ class ConnectionsHandlerTest {
           MAX_DAYS_OF_ONLY_FAILED_JOBS,
           MAX_FAILURE_JOBS_IN_A_ROW,
           streamGenerationRepository,
-          catalogGenerationSetter);
+          catalogGenerationSetter,
+          catalogValidator);
     }
 
     @Test

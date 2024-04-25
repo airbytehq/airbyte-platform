@@ -5,6 +5,7 @@ micronaut:
     port: 9002
 
 airbyte:
+  airbyte-url: ${AIRBYTE_URL:}
   keycloak:
     protocol: ${KEYCLOAK_PROTOCOL:http}
     host: ${KEYCLOAK_INTERNAL_HOST:}
@@ -14,7 +15,6 @@ airbyte:
     client-id: ${KEYCLOAK_CLIENT_ID:admin-cli}
     redirect-uri: ${KEYCLOAK_REDIRECT_URI:`http://localhost:8000/*`}
     web-client-id: ${KEYCLOAK_WEB_CLIENT_ID:airbyte-webapp}
-    account-client-id: ${KEYCLOAK_ACCOUNT_CLIENT_ID:account}
     username: ${KEYCLOAK_ADMIN_USER:}
     password: ${KEYCLOAK_ADMIN_PASSWORD:}
     reset-realm: ${KEYCLOAK_RESET_REALM:false}

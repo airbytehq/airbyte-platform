@@ -10,6 +10,7 @@ import io.airbyte.config.Configs.DeploymentMode;
 import io.micronaut.context.annotation.Factory;
 import io.micronaut.context.annotation.Value;
 import io.micronaut.core.util.StringUtils;
+import jakarta.inject.Named;
 import jakarta.inject.Singleton;
 import java.util.Locale;
 import java.util.function.Function;
@@ -40,6 +41,18 @@ public class AirbyteConfigurationBeanFactory {
   @Singleton
   public AirbyteEdition airbyteEdition(@Value("${airbyte.edition:COMMUNITY}") final String airbyteEdition) {
     return convertToEnum(airbyteEdition.toUpperCase(), AirbyteEdition::valueOf, AirbyteEdition.COMMUNITY);
+  }
+
+  /**
+   * This method provides the airbyte url by preferring the `airbyte.airbyte-url` property over the
+   * deprecated `airbyte.webapp-url` property. For backwards compatibility, if `airbyte.airbyte-url`
+   * is not provided, this method falls back on `airbyte.webapp-url`.
+   */
+  @Singleton
+  @Named("airbyteUrl")
+  public String airbyteUrl(@Value("${airbyte.airbyte-url:null}") final String airbyteUrl,
+                           @Value("${airbyte.webapp-url:null}") final String webappUrl) {
+    return airbyteUrl == null || airbyteUrl.isEmpty() ? webappUrl : airbyteUrl;
   }
 
 }

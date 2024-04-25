@@ -118,7 +118,7 @@ export type BuilderFormOAuthAuthenticator = Omit<
 export interface BuilderFormValues {
   global: {
     urlBase: string;
-    authenticator: BuilderFormAuthenticator;
+    authenticator: BuilderFormAuthenticator | YamlString;
   };
   inputs: BuilderFormInput[];
   streams: BuilderStream[];
@@ -245,43 +245,65 @@ export interface BuilderStream {
 
 type StreamName = string;
 // todo: add more component names to this type as more components support in YAML
-export type YamlSupportedComponentName = "paginator" | "errorHandler" | "transformations" | "incrementalSync";
+export interface YamlSupportedComponentName {
+  stream: "paginator" | "errorHandler" | "transformations" | "incrementalSync";
+  global: "authenticator";
+}
 
 export interface BuilderMetadata {
   autoImportSchema: Record<StreamName, boolean>;
   yamlComponents?: {
-    streams: Record<StreamName, YamlSupportedComponentName[]>;
+    streams?: Record<StreamName, Array<YamlSupportedComponentName["stream"]>>;
+    global?: Array<YamlSupportedComponentName["global"]>;
   };
 }
 
-export type ManifestValuePerComponentPerStream = Record<StreamName, Record<YamlSupportedComponentName, unknown>>;
-export const getManifestValuePerComponentPerStream = (
-  manifest: ConnectorManifest
-): ManifestValuePerComponentPerStream => {
+export interface YamlValuePerComponent {
+  streams?: Record<StreamName, Record<YamlSupportedComponentName["stream"], unknown>>;
+  global?: Record<YamlSupportedComponentName["global"], unknown>;
+}
+export const getYamlValuePerComponent = (manifest: ConnectorManifest): YamlValuePerComponent => {
   if (manifest.metadata === undefined) {
     return {};
   }
   const metadata = manifest.metadata as BuilderMetadata;
-  if (metadata?.yamlComponents?.streams === undefined) {
+  if (metadata?.yamlComponents === undefined) {
     return {};
   }
-  return Object.fromEntries(
-    Object.entries(metadata?.yamlComponents?.streams).map(([streamName, yamlComponentNames]) => {
-      // this method is only called in UI mode, so we can assume full streams are found in definitions
-      const stream = manifest.definitions?.streams?.[streamName];
-      const manifestValuePerComponent = Object.fromEntries(
-        yamlComponentNames.map((yamlComponentName) =>
-          match(yamlComponentName)
-            .with("paginator", (name) => [name, stream?.retriever?.paginator])
-            .with("errorHandler", (name) => [name, stream?.retriever?.requester?.error_handler])
-            .with("transformations", (name) => [name, stream?.transformations])
-            .with("incrementalSync", (name) => [name, stream?.incremental_sync])
-            .otherwise(() => [])
-        )
-      );
-      return [streamName, manifestValuePerComponent];
-    })
-  );
+
+  const yamlValuePerComponent: YamlValuePerComponent = {};
+
+  if (metadata.yamlComponents.global) {
+    yamlValuePerComponent.global = Object.fromEntries(
+      metadata.yamlComponents.global.map((yamlComponentName) =>
+        match(yamlComponentName)
+          .with("authenticator", (name) => [name, manifest.definitions?.base_requester?.authenticator])
+          .exhaustive()
+      )
+    );
+  }
+
+  if (metadata.yamlComponents.streams) {
+    yamlValuePerComponent.streams = Object.fromEntries(
+      Object.entries(metadata?.yamlComponents?.streams).map(([streamName, yamlComponentNames]) => {
+        // this method is only called in UI mode, so we can assume full streams are found in definitions
+        const stream = manifest.definitions?.streams?.[streamName];
+        const manifestValuePerComponent = Object.fromEntries(
+          yamlComponentNames.map((yamlComponentName) =>
+            match(yamlComponentName)
+              .with("paginator", (name) => [name, stream?.retriever?.paginator])
+              .with("errorHandler", (name) => [name, stream?.retriever?.requester?.error_handler])
+              .with("transformations", (name) => [name, stream?.transformations])
+              .with("incrementalSync", (name) => [name, stream?.incremental_sync])
+              .exhaustive()
+          )
+        );
+        return [streamName, manifestValuePerComponent];
+      })
+    );
+  }
+
+  return yamlValuePerComponent;
 };
 
 // 0.29.0 is the version where breaking changes got introduced - older states can't be supported
@@ -473,6 +495,25 @@ const schemaIfRangeFilter = (schema: yup.AnySchema) =>
     then: schema,
   });
 
+const maybeYamlSchema = (schema: yup.BaseSchema) => {
+  return yup.lazy((val) =>
+    isYamlString(val)
+      ? // eslint-disable-next-line no-template-curly-in-string
+        yup.string().test("is-valid-yaml", "${path} is not valid YAML", (value) => {
+          if (!value) {
+            return true;
+          }
+          try {
+            load(value);
+            return true;
+          } catch {
+            return false;
+          }
+        })
+      : schema
+  );
+};
+
 const jsonString = yup.string().test({
   test: (val: string | undefined) => {
     if (!val) {
@@ -629,27 +670,8 @@ export const authenticatorSchema = yup.object({
 
 export const globalSchema = yup.object().shape({
   urlBase: yup.string().required(REQUIRED_ERROR),
-  authenticator: authenticatorSchema,
+  authenticator: maybeYamlSchema(authenticatorSchema),
 });
-
-const maybeYamlSchema = (schema: yup.BaseSchema) => {
-  return yup.lazy((val) =>
-    isYamlString(val)
-      ? // eslint-disable-next-line no-template-curly-in-string
-        yup.string().test("is-valid-yaml", "${path} is not valid YAML", (value) => {
-          if (!value) {
-            return true;
-          }
-          try {
-            load(value);
-            return true;
-          } catch {
-            return false;
-          }
-        })
-      : schema
-  );
-};
 
 export const streamSchema = yup.object().shape({
   name: yup.string().required(REQUIRED_ERROR),
@@ -837,9 +859,9 @@ function splitUrl(url: string): { base: string; path: string } {
 }
 
 function convertOrLoadYamlString<BuilderInput, ManifestOutput>(
-  builderValue: BuilderInput | YamlString | undefined,
-  convertFn: (builderValue: BuilderInput | undefined) => ManifestOutput | undefined
-) {
+  builderValue: BuilderInput | YamlString,
+  convertFn: (builderValue: BuilderInput) => ManifestOutput
+): ManifestOutput | undefined {
   if (builderValue === undefined) {
     return undefined;
   }
@@ -849,63 +871,58 @@ function convertOrLoadYamlString<BuilderInput, ManifestOutput>(
   return convertFn(builderValue);
 }
 
-function builderAuthenticatorToManifest(
-  globalSettings: BuilderFormValues["global"]
+export function builderAuthenticatorToManifest(
+  authenticator: BuilderFormAuthenticator
 ): HttpRequesterAuthenticator | undefined {
-  if (globalSettings.authenticator.type === "NoAuth") {
+  if (authenticator.type === "NoAuth") {
     return undefined;
   }
-  if (globalSettings.authenticator.type === "OAuthAuthenticator") {
-    const { access_token, token_expiry_date, ...refresh_token_updater } =
-      globalSettings.authenticator.refresh_token_updater ?? {};
+  if (authenticator.type === "OAuthAuthenticator") {
+    const { access_token, token_expiry_date, ...refresh_token_updater } = authenticator.refresh_token_updater ?? {};
     return {
-      ...globalSettings.authenticator,
-      refresh_token:
-        globalSettings.authenticator.grant_type === "client_credentials"
-          ? undefined
-          : globalSettings.authenticator.refresh_token,
+      ...authenticator,
+      refresh_token: authenticator.grant_type === "client_credentials" ? undefined : authenticator.refresh_token,
       refresh_token_updater:
-        globalSettings.authenticator.grant_type === "client_credentials" ||
-        !globalSettings.authenticator.refresh_token_updater
+        authenticator.grant_type === "client_credentials" || !authenticator.refresh_token_updater
           ? undefined
           : {
               ...refresh_token_updater,
               access_token_config_path: [
-                extractInterpolatedConfigKey(globalSettings.authenticator.refresh_token_updater.access_token),
+                extractInterpolatedConfigKey(authenticator.refresh_token_updater.access_token),
               ],
               token_expiry_date_config_path: [
-                extractInterpolatedConfigKey(globalSettings.authenticator.refresh_token_updater.token_expiry_date),
+                extractInterpolatedConfigKey(authenticator.refresh_token_updater.token_expiry_date),
               ],
-              refresh_token_config_path: [extractInterpolatedConfigKey(globalSettings.authenticator.refresh_token!)],
+              refresh_token_config_path: [extractInterpolatedConfigKey(authenticator.refresh_token!)],
             },
-      refresh_request_body: Object.fromEntries(globalSettings.authenticator.refresh_request_body),
+      refresh_request_body: Object.fromEntries(authenticator.refresh_request_body),
     };
   }
-  if (globalSettings.authenticator.type === "ApiKeyAuthenticator") {
+  if (authenticator.type === "ApiKeyAuthenticator") {
     return {
-      ...globalSettings.authenticator,
+      ...authenticator,
       header: undefined,
-      api_token: globalSettings.authenticator.api_token,
+      api_token: authenticator.api_token,
     };
   }
-  if (globalSettings.authenticator.type === "BearerAuthenticator") {
+  if (authenticator.type === "BearerAuthenticator") {
     return {
-      ...globalSettings.authenticator,
-      api_token: globalSettings.authenticator.api_token,
+      ...authenticator,
+      api_token: authenticator.api_token,
     };
   }
-  if (globalSettings.authenticator.type === "BasicHttpAuthenticator") {
+  if (authenticator.type === "BasicHttpAuthenticator") {
     return {
-      ...globalSettings.authenticator,
-      username: globalSettings.authenticator.username,
-      password: globalSettings.authenticator.password,
+      ...authenticator,
+      username: authenticator.username,
+      password: authenticator.password,
     };
   }
-  if (globalSettings.authenticator.type === "SessionTokenAuthenticator") {
-    const builderLoginRequester = globalSettings.authenticator.login_requester;
+  if (authenticator.type === "SessionTokenAuthenticator") {
+    const builderLoginRequester = authenticator.login_requester;
     const { base, path } = splitUrl(builderLoginRequester.url ?? "");
     return {
-      ...globalSettings.authenticator,
+      ...authenticator,
       login_requester: {
         type: "HttpRequester",
         url_base: base,
@@ -919,7 +936,7 @@ function builderAuthenticatorToManifest(
       },
     };
   }
-  return globalSettings.authenticator as HttpRequesterAuthenticator;
+  return authenticator as HttpRequesterAuthenticator;
 }
 
 function pathToSafeJinjaAccess(path: string[]): string {
@@ -1227,10 +1244,14 @@ function builderStreamToDeclarativeSteam(
 }
 
 export const builderFormValuesToMetadata = (values: BuilderFormValues): BuilderMetadata => {
-  const componentNameIfString = (componentName: YamlSupportedComponentName, value: unknown) =>
-    isYamlString(value) ? [componentName] : [];
+  const componentNameIfString = <
+    ComponentName extends YamlSupportedComponentName["stream"] | YamlSupportedComponentName["global"],
+  >(
+    componentName: ComponentName,
+    value: unknown
+  ) => (isYamlString(value) ? [componentName] : []);
 
-  const yamlComponentsPerStream = {} as Record<string, YamlSupportedComponentName[]>;
+  const yamlComponentsPerStream = {} as Record<string, Array<YamlSupportedComponentName["stream"]>>;
   values.streams.forEach((stream) => {
     const yamlComponents = [
       ...componentNameIfString("paginator", stream.paginator),
@@ -1242,14 +1263,21 @@ export const builderFormValuesToMetadata = (values: BuilderFormValues): BuilderM
       yamlComponentsPerStream[stream.name] = yamlComponents;
     }
   });
+  const hasStreamYamlComponents = Object.keys(yamlComponentsPerStream).length > 0;
 
-  const hasYamlComponents = Object.keys(yamlComponentsPerStream).length > 0;
+  const globalYamlComponents = [...componentNameIfString("authenticator", values.global.authenticator)];
+  const hasGlobalYamlComponents = globalYamlComponents.length > 0;
 
   return {
     autoImportSchema: Object.fromEntries(values.streams.map((stream) => [stream.name, stream.autoImportSchema])),
-    ...(hasYamlComponents && {
+    ...((hasStreamYamlComponents || hasGlobalYamlComponents) && {
       yamlComponents: {
-        streams: yamlComponentsPerStream,
+        ...(hasStreamYamlComponents && {
+          streams: yamlComponentsPerStream,
+        }),
+        ...(hasGlobalYamlComponents && {
+          global: globalYamlComponents,
+        }),
       },
     }),
   };
@@ -1294,7 +1322,7 @@ export const convertToManifest = (values: BuilderFormValues): ConnectorManifest 
   const baseRequester: BaseRequester = {
     type: "HttpRequester",
     url_base: values.global?.urlBase?.trim(),
-    authenticator: builderAuthenticatorToManifest(values.global),
+    authenticator: convertOrLoadYamlString(values.global.authenticator, builderAuthenticatorToManifest),
   };
 
   return {

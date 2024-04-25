@@ -32,7 +32,6 @@ public class AirbyteKeycloakConfiguration {
   String clientId;
   String redirectUri;
   String webClientId;
-  String accountClientId;
   String username;
   String password;
   Boolean resetRealm;

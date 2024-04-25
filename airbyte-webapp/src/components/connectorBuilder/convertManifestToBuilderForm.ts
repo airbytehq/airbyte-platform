@@ -29,7 +29,6 @@ import {
   BearerAuthenticator,
   OAuthAuthenticator,
   DefaultPaginator,
-  DeclarativeComponentSchemaMetadata,
   HttpRequesterErrorHandler,
   NoAuth,
   SessionTokenAuthenticator,
@@ -44,7 +43,9 @@ import {
   BuilderErrorHandler,
   BuilderFormAuthenticator,
   BuilderFormInput,
+  BuilderFormValues,
   BuilderIncrementalSync,
+  BuilderMetadata,
   BuilderPaginator,
   BuilderRequestBody,
   BuilderStream,
@@ -84,6 +85,7 @@ export const convertToBuilderFormValuesSync = (resolvedManifest: ConnectorManife
   assertType<HttpRequester>(streams[0].retriever.requester, "HttpRequester", streams[0].name);
   builderFormValues.global.urlBase = streams[0].retriever.requester.url_base;
 
+  const builderMetadata = resolvedManifest.metadata ? (resolvedManifest.metadata as BuilderMetadata) : undefined;
   const serializedStreamToIndex = Object.fromEntries(streams.map((stream, index) => [formatJson(stream, true), index]));
   builderFormValues.streams = streams.map((stream, index) =>
     manifestStreamToBuilder(
@@ -92,15 +94,23 @@ export const convertToBuilderFormValuesSync = (resolvedManifest: ConnectorManife
       serializedStreamToIndex,
       streams[0].retriever.requester.url_base,
       streams[0].retriever.requester.authenticator,
-      resolvedManifest.metadata,
+      builderMetadata,
       resolvedManifest.spec
     )
   );
 
-  builderFormValues.global.authenticator = manifestAuthenticatorToBuilder(
+  builderFormValues.global.authenticator = convertOrDumpAsString(
     streams[0].retriever.requester.authenticator,
+    (authenticator: HttpRequesterAuthenticator | undefined, _streamName?: string, spec?: Spec) =>
+      manifestAuthenticatorToBuilder(authenticator, spec),
+    {
+      name: "authenticator",
+      streamName: undefined,
+    },
+    builderMetadata,
     resolvedManifest.spec
   );
+
   builderFormValues.inputs = manifestSpecToBuilderInputs(
     resolvedManifest.spec,
     builderFormValues.global.authenticator,
@@ -148,7 +158,7 @@ const manifestStreamToBuilder = (
   serializedStreamToIndex: Record<string, number>,
   firstStreamUrlBase: string,
   firstStreamAuthenticator?: HttpRequesterAuthenticator,
-  metadata?: DeclarativeComponentSchemaMetadata,
+  metadata?: BuilderMetadata,
   spec?: Spec
 ): BuilderStream => {
   assertType<SimpleRetriever>(stream.retriever, "SimpleRetriever", stream.name);
@@ -184,10 +194,11 @@ const manifestStreamToBuilder = (
     stream.name
   );
 
+  const streamName = stream.name ?? `stream_${index}`;
   return {
     ...DEFAULT_BUILDER_STREAM_VALUES,
     id: index.toString(),
-    name: stream.name ?? `stream_${index}`,
+    name: streamName,
     urlPath: requester.path,
     httpMethod: requester.http_method === "POST" ? "POST" : "GET",
     fieldPointer: retriever.record_selector.extractor.field_path as string[],
@@ -200,15 +211,19 @@ const manifestStreamToBuilder = (
     paginator: convertOrDumpAsString(
       retriever.paginator,
       manifestPaginatorToBuilder,
-      "paginator",
-      stream.name,
+      {
+        name: "paginator",
+        streamName,
+      },
       metadata
     ),
     incrementalSync: convertOrDumpAsString(
       stream.incremental_sync,
       manifestIncrementalSyncToBuilder,
-      "incrementalSync",
-      stream.name,
+      {
+        name: "incrementalSync",
+        streamName,
+      },
       metadata,
       spec
     ),
@@ -218,15 +233,19 @@ const manifestStreamToBuilder = (
     errorHandler: convertOrDumpAsString(
       requester.error_handler,
       manifestErrorHandlerToBuilder,
-      "errorHandler",
-      stream.name,
+      {
+        name: "errorHandler",
+        streamName,
+      },
       metadata
     ),
     transformations: convertOrDumpAsString(
       stream.transformations,
       manifestTransformationsToBuilder,
-      "transformations",
-      stream.name,
+      {
+        name: "transformations",
+        streamName,
+      },
       metadata
     ),
     unsupportedFields: {
@@ -684,19 +703,18 @@ function isSupportedAuthenticator(authenticator: HttpRequesterAuthenticator): au
   return supportedAuthTypes.includes(authenticator.type);
 }
 
-function manifestAuthenticatorToBuilder(
+export function manifestAuthenticatorToBuilder(
   authenticator: HttpRequesterAuthenticator | undefined,
-  spec: Spec | undefined,
-  streamName?: string
+  spec: Spec | undefined
 ): BuilderFormAuthenticator {
   if (authenticator === undefined) {
     return {
       type: NO_AUTH,
     };
   } else if (authenticator.type === undefined) {
-    throw new ManifestCompatibilityError(streamName, "Authenticator has no type");
+    throw new ManifestCompatibilityError(undefined, "Authenticator has no type");
   } else if (!isSupportedAuthenticator(authenticator)) {
-    throw new ManifestCompatibilityError(streamName, `Unsupported authenticator type: ${authenticator.type}`);
+    throw new ManifestCompatibilityError(undefined, `Unsupported authenticator type: ${authenticator.type}`);
   }
 
   switch (authenticator.type) {
@@ -714,22 +732,22 @@ function manifestAuthenticatorToBuilder(
           field_name: authenticator.header || "",
           inject_into: "header",
         },
-        api_token: interpolateConfigKey(extractAndValidateAuthKey(["api_token"], authenticator, spec, streamName)),
+        api_token: interpolateConfigKey(extractAndValidateAuthKey(["api_token"], authenticator, spec)),
       };
     }
 
     case BEARER_AUTHENTICATOR: {
       return {
         ...authenticator,
-        api_token: interpolateConfigKey(extractAndValidateAuthKey(["api_token"], authenticator, spec, streamName)),
+        api_token: interpolateConfigKey(extractAndValidateAuthKey(["api_token"], authenticator, spec)),
       };
     }
 
     case BASIC_AUTHENTICATOR: {
       return {
         ...authenticator,
-        username: interpolateConfigKey(extractAndValidateAuthKey(["username"], authenticator, spec, streamName)),
-        password: interpolateConfigKey(extractAndValidateAuthKey(["password"], authenticator, spec, streamName)),
+        username: interpolateConfigKey(extractAndValidateAuthKey(["username"], authenticator, spec)),
+        password: interpolateConfigKey(extractAndValidateAuthKey(["password"], authenticator, spec)),
       };
     }
 
@@ -738,7 +756,7 @@ function manifestAuthenticatorToBuilder(
         Object.values(authenticator.refresh_request_body ?? {}).filter((value) => typeof value !== "string").length > 0
       ) {
         throw new ManifestCompatibilityError(
-          streamName,
+          undefined,
           "OAuthAuthenticator contains a refresh_request_body with non-string values"
         );
       }
@@ -748,7 +766,7 @@ function manifestAuthenticatorToBuilder(
         authenticator.grant_type !== "client_credentials"
       ) {
         throw new ManifestCompatibilityError(
-          streamName,
+          undefined,
           "OAuthAuthenticator sets custom grant_type, but it must be one of 'refresh_token' or 'client_credentials'"
         );
       }
@@ -758,14 +776,12 @@ function manifestAuthenticatorToBuilder(
         refresh_request_body: Object.entries(authenticator.refresh_request_body ?? {}),
         grant_type: authenticator.grant_type ?? "refresh_token",
         refresh_token_updater: undefined,
-        client_id: interpolateConfigKey(extractAndValidateAuthKey(["client_id"], authenticator, spec, streamName)),
-        client_secret: interpolateConfigKey(
-          extractAndValidateAuthKey(["client_secret"], authenticator, spec, streamName)
-        ),
+        client_id: interpolateConfigKey(extractAndValidateAuthKey(["client_id"], authenticator, spec)),
+        client_secret: interpolateConfigKey(extractAndValidateAuthKey(["client_secret"], authenticator, spec)),
       };
 
       if (!authenticator.grant_type || authenticator.grant_type === "refresh_token") {
-        const refreshTokenSpecKey = extractAndValidateAuthKey(["refresh_token"], authenticator, spec, streamName);
+        const refreshTokenSpecKey = extractAndValidateAuthKey(["refresh_token"], authenticator, spec);
         builderAuthenticator = {
           ...builderAuthenticator,
           refresh_token: interpolateConfigKey(refreshTokenSpecKey),
@@ -774,7 +790,7 @@ function manifestAuthenticatorToBuilder(
         if (authenticator.refresh_token_updater) {
           if (!isEqual(authenticator.refresh_token_updater?.refresh_token_config_path, [refreshTokenSpecKey])) {
             throw new ManifestCompatibilityError(
-              streamName,
+              undefined,
               "OAuthAuthenticator refresh_token_config_path needs to match the config path used for refresh_token"
             );
           }
@@ -789,19 +805,13 @@ function manifestAuthenticatorToBuilder(
             refresh_token_updater: {
               ...refresh_token_updater,
               access_token: interpolateConfigKey(
-                extractAndValidateAuthKey(
-                  ["refresh_token_updater", "access_token_config_path"],
-                  authenticator,
-                  spec,
-                  streamName
-                )
+                extractAndValidateAuthKey(["refresh_token_updater", "access_token_config_path"], authenticator, spec)
               ),
               token_expiry_date: interpolateConfigKey(
                 extractAndValidateAuthKey(
                   ["refresh_token_updater", "token_expiry_date_config_path"],
                   authenticator,
-                  spec,
-                  streamName
+                  spec
                 )
               ),
             },
@@ -822,14 +832,13 @@ function manifestAuthenticatorToBuilder(
         manifestLoginRequester.authenticator?.type !== BASIC_AUTHENTICATOR
       ) {
         throw new ManifestCompatibilityError(
-          streamName,
+          undefined,
           `SessionTokenAuthenticator login_requester.authenticator must have one of the following types: ${NO_AUTH}, ${API_KEY_AUTHENTICATOR}, ${BEARER_AUTHENTICATOR}, ${BASIC_AUTHENTICATOR}`
         );
       }
       const builderLoginRequesterAuthenticator = manifestAuthenticatorToBuilder(
         manifestLoginRequester.authenticator,
-        spec,
-        streamName
+        spec
       );
 
       return {
@@ -857,7 +866,7 @@ function manifestAuthenticatorToBuilder(
 
 function manifestSpecToBuilderInputs(
   manifestSpec: Spec | undefined,
-  authenticator: BuilderFormAuthenticator,
+  authenticator: BuilderFormValues["global"]["authenticator"],
   streams: BuilderStream[]
 ) {
   if (manifestSpec === undefined) {
@@ -920,18 +929,27 @@ export function isManifestCompatibilityError(error: { __type?: string }): error 
 
 function convertOrDumpAsString<ManifestInput, BuilderOutput>(
   manifestValue: ManifestInput,
-  convertFn: (manifestValue: ManifestInput, streamName?: string, spec?: Spec) => BuilderOutput | undefined,
-  componentName: YamlSupportedComponentName,
-  streamName?: string | undefined,
-  metadata?: DeclarativeComponentSchemaMetadata,
+  convertFn: (manifestValue: ManifestInput, streamName?: string, spec?: Spec) => BuilderOutput,
+  component:
+    | {
+        name: YamlSupportedComponentName["stream"];
+        streamName: string;
+      }
+    | {
+        name: YamlSupportedComponentName["global"];
+        streamName: undefined;
+      },
+  metadata?: BuilderMetadata,
   spec?: Spec
-): BuilderOutput | YamlString | undefined {
-  if (streamName && metadata?.yamlComponents?.streams?.[streamName]?.includes(componentName)) {
+): BuilderOutput | YamlString {
+  if (component.streamName && metadata?.yamlComponents?.streams?.[component.streamName]?.includes(component.name)) {
+    return dump(manifestValue);
+  } else if (component.streamName === undefined && metadata?.yamlComponents?.global?.includes(component.name)) {
     return dump(manifestValue);
   }
 
   try {
-    return convertFn(manifestValue, streamName, spec);
+    return convertFn(manifestValue, component.streamName, spec);
   } catch (e) {
     if (isManifestCompatibilityError(e)) {
       return dump(manifestValue);

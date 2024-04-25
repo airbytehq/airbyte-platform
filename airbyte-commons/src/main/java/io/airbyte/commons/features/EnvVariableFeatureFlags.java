@@ -18,7 +18,6 @@ public class EnvVariableFeatureFlags implements FeatureFlags {
   // Set this value to true to see all messages from the source to destination, set to one second
   // emission
   public static final String LOG_CONNECTOR_MESSAGES = "LOG_CONNECTOR_MESSAGES";
-  public static final String NEED_STATE_VALIDATION = "NEED_STATE_VALIDATION";
   public static final String APPLY_FIELD_SELECTION = "APPLY_FIELD_SELECTION";
 
   public static final String FIELD_SELECTION_WORKSPACES = "FIELD_SELECTION_WORKSPACES";
@@ -41,11 +40,6 @@ public class EnvVariableFeatureFlags implements FeatureFlags {
   @Override
   public boolean logConnectorMessages() {
     return getEnvOrDefault(LOG_CONNECTOR_MESSAGES, false, Boolean::parseBoolean);
-  }
-
-  @Override
-  public boolean needStateValidation() {
-    return getEnvOrDefault(NEED_STATE_VALIDATION, true, Boolean::parseBoolean);
   }
 
   @Override

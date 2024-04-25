@@ -10,6 +10,21 @@ plugins {
     alias(libs.plugins.node.gradle)
 }
 
+/**
+ * Utility function to parse a .gitignore file into a list of ignore pattern entries
+ */
+fun parseIgnoreFile(f: File): List<String> {
+    val ignores = mutableListOf<String>()
+    f.forEachLine { line ->
+        //ignore comments and empty lines
+        if (!line.startsWith('#') && line.isNotEmpty()) {
+            ignores.add(line)
+        }
+    }
+    return ignores
+}
+
+
 // Use the node version that's defined in the .nvmrc file
 val nodeVersion = file("${projectDir}/.nvmrc").readText().trim()
 
@@ -18,17 +33,15 @@ val parsedJson = JsonSlurper().parse(FileReader("${projectDir}/package.json")) a
 val engines = parsedJson["engines"] as? Map<*, *>  // Safely cast to Map if 'engines' exists
 val pnpmVer = engines?.get("pnpm")?.toString()?.trim()  // Extract 'pnpm' as String and trim
 
-/*
-This array should contain a path to all configs that are common to most build tasks and
-might affect them (i.e. if any of those files change we want to rerun most tasks)
-*/
-val commonConfigs = listOf(
-    ".env",
-    ".env.production",
-    "package.json",
-    "pnpm-lock.yaml",
-    "tsconfig.json",
-    ".prettierrc.js"
+/**
+ * A list of all files outside the webapp folder, that the webapp build depends on, i.e.
+ * if those change we can't reuse a cached build.
+ */
+val outsideWebappDependencies = listOf(
+    "../airbyte-api/src/main/openapi/config.yaml",
+    "../airbyte-api/src/main/openapi/cloud-config.yaml",
+    "../airbyte-connector-builder-server/src/main/openapi/openapi.yaml",
+    "../airbyte-connector-builder-resources/CDK_VERSION",
 )
 
 configure<NodeExtension> {
@@ -51,45 +64,35 @@ val nodeModules = fileTree("node_modules") {
     exclude(".cache")
 }
 
-/*
-fileTree to watch the public dir but exclude the auto generated buildInfo.json. It's content is anyway a
-content hash, depending on the other files.
-*/
-val publicDir = fileTree("public") {
-    exclude("buildInfo.json")
+/**
+ * All files inside the webapp folder that aren't gitignored
+ */
+val allFiles = fileTree(".") {
+    exclude(parseIgnoreFile(file("../.gitignore")))
+    exclude(parseIgnoreFile(file(".gitignore")))
+    exclude(parseIgnoreFile(file("./src/core/api/generated/.gitignore")))
+    exclude(parseIgnoreFile(file("./src/core/api/types/.gitignore")))
 }
 
 tasks.register<PnpmTask>("pnpmBuild") {
     dependsOn(tasks.named("pnpmInstall"))
 
-
     environment.put("VERSION", rootProject.ext.get("version") as String)
 
     args = listOf("build")
 
+    // The WEBAPP_BUILD_CLOUD_ENV environment variable is an input for this task, since it changes for which env we're building the webapp
     inputs.property("cloudEnv", System.getenv("WEBAPP_BUILD_CLOUD_ENV") ?: "")
-    inputs.files(commonConfigs)
-    inputs.files(nodeModules)
-    inputs.files(publicDir)
-    inputs.file(".eslintrc.js")
-    inputs.file(".stylelintrc")
-    inputs.file("orval.config.ts")
-    inputs.file("vite.config.mts")
-    inputs.file("index.html")
-    inputs.dir("scripts")
-    inputs.dir("src")
+    inputs.files(allFiles, outsideWebappDependencies)
 
     outputs.dir("build/app")
 }
 
 tasks.register<PnpmTask>("test") {
-    dependsOn(tasks.named("assemble"))
-
+    dependsOn(tasks.named("pnpmInstall"))
+    
     args = listOf("run", "test:ci")
-    inputs.files(commonConfigs)
-    inputs.file("jest.config.ts")
-    inputs.file("babel.config.js")
-    inputs.dir("src")
+    inputs.files(allFiles, outsideWebappDependencies)
 
     /*
     The test has no outputs, thus we always treat the outputs up to date
@@ -98,19 +101,18 @@ tasks.register<PnpmTask>("test") {
     outputs.upToDateWhen { true }
 }
 
-tasks.register<PnpmTask>("e2etest") {
+tasks.register<PnpmTask>("cypress") {
     dependsOn(tasks.named("pnpmInstall"))
 
     /*
-    If the cypressWebappKey property has been set from the outside (see tools/bin/e2e_test.sh)
+    If the cypressWebappKey property has been set from the outside via the workflow file
     we'll record the cypress session, otherwise we're not recording
     */
-    val recordCypress = project.hasProperty("cypressWebappKey") && project.property("cypressWebappKey") as Boolean
-    if (recordCypress) {
-        environment.put("CYPRESS_KEY", project.property("cypressWebappKey") as String)
-        args = listOf("run", "cypress:ci:record")
+    val hasRecordingKey = !System.getenv("CYPRESS_RECORD_KEY").isNullOrEmpty()
+    args = if (hasRecordingKey) {
+        listOf("run", "cypress:run", "--record")
     } else {
-        args = listOf("run", "cypress:ci")
+        listOf("run", "cypress:run")
     }
 
     /*
@@ -120,14 +122,14 @@ tasks.register<PnpmTask>("e2etest") {
     outputs.upToDateWhen { false }
 }
 
-tasks.register<PnpmTask>("cloudE2eTest") {
+tasks.register<PnpmTask>("cypressCloud") {
     dependsOn(tasks.named("pnpmInstall"))
-    val recordCypress = project.hasProperty("cypressCloudWebappKey") && project.property("cypressCloudWebappKey") as Boolean
-    if (recordCypress) {
-        environment.put("CYPRESS_KEY", project.property("cypressCloudWebappKey") as String)
-        args = listOf("run", "cloud-test:stage:record")
+
+    val hasRecordingKey = !System.getenv("CYPRESS_RECORD_KEY").isNullOrEmpty()
+    args = if (hasRecordingKey) {
+        listOf("run", "cloud-test:stage", "--record")
     } else {
-        args = listOf("run", "cloud-test:stage")
+        listOf("run", "cloud-test:stage")
     }
 
     /*
@@ -137,31 +139,56 @@ tasks.register<PnpmTask>("cloudE2eTest") {
     outputs.upToDateWhen { false }
 }
 
-//tasks.register<PnpmTask>("validateLinks") {
-//    dependsOn(tasks.named("pnpmInstall"))
-//
-//    args = listOf("run", "validate-links")
-//
-//    inputs.file("scripts/validate-links.ts")
-//    inputs.file("src/core/utils/links.ts")
-//
-//    // Configure the up-to-date check to always run in CI environments
-//    outputs.upToDateWhen {
-//        System.getenv("CI") == null
-//    }
-//}
+tasks.register<PnpmTask>("licenseCheck") {
+    dependsOn(tasks.named("pnpmInstall"))
 
+    args = listOf("run", "license-check")
+
+    inputs.file("package.json")
+    inputs.file("pnpm-lock.yaml")
+    inputs.file("scripts/license-check.js")
+
+    outputs.upToDateWhen { true }
+}
+
+tasks.register<PnpmTask>("validateLock") {
+    dependsOn(tasks.named("pnpmInstall"))
+
+    args = listOf("run", "validate-lock")
+
+    inputs.files(allFiles)
+
+    outputs.upToDateWhen { true }
+}
+
+tasks.register<PnpmTask>("validateLinks") {
+   dependsOn(tasks.named("pnpmInstall"))
+
+   args = listOf("run", "validate-links")
+
+   inputs.file("scripts/validate-links.ts")
+   inputs.file("src/core/utils/links.ts")
+
+   // Configure the up-to-date check to always run again, since it checks availability of URLs
+   outputs.upToDateWhen { false }
+}
+
+tasks.register<PnpmTask>("unusedCode") {
+    dependsOn(tasks.named("pnpmInstall"))
+
+    args = listOf("run", "unused-code")
+
+    inputs.files(allFiles, outsideWebappDependencies)
+
+    outputs.upToDateWhen { true }
+}
 
 tasks.register<PnpmTask>("buildStorybook") {
     dependsOn(tasks.named("pnpmInstall"))
 
     args = listOf("run", "build:storybook")
 
-    inputs.files(commonConfigs)
-    inputs.files(nodeModules)
-    inputs.files(publicDir)
-    inputs.dir(".storybook")
-    inputs.dir("src")
+    inputs.files(allFiles, outsideWebappDependencies)
 
     outputs.dir("build/storybook")
 
@@ -186,7 +213,12 @@ tasks.register<Copy>("copyNginx") {
 
 // Those tasks should be run as part of the "check" task
 tasks.named("check") {
-    dependsOn(/* tasks.named("validateLinks"), */ tasks.named("test"))
+    dependsOn(tasks.named("licenseCheck"), tasks.named("validateLock"), tasks.named("unusedCode"), tasks.named("test"))
+}
+
+// Some check tasks only should be run on CI, thus a separate ciCheck task
+tasks.register("ciCheck") {
+    dependsOn(tasks.named("check"), tasks.named("validateLinks"))
 }
 
 tasks.named("build") {

@@ -18,6 +18,10 @@ import com.google.cloud.secretmanager.v1.SecretPayload
 import com.google.cloud.secretmanager.v1.SecretVersionName
 import com.google.protobuf.ByteString
 import io.airbyte.config.secrets.SecretCoordinate
+import io.airbyte.metrics.lib.MetricAttribute
+import io.airbyte.metrics.lib.MetricClient
+import io.airbyte.metrics.lib.MetricTags
+import io.airbyte.metrics.lib.OssMetricsRegistry
 import io.github.oshai.kotlinlogging.KotlinLogging
 import io.micronaut.context.annotation.Requires
 import io.micronaut.context.annotation.Value
@@ -45,6 +49,7 @@ private val logger = KotlinLogging.logger {}
 class GoogleSecretManagerPersistence(
   @Value("\${airbyte.secret.store.gcp.project-id}") val gcpProjectId: String,
   private val googleSecretManagerServiceClient: GoogleSecretManagerServiceClient,
+  private val metricClient: MetricClient,
 ) : SecretPersistence {
   override fun read(coordinate: SecretCoordinate): String {
     try {
@@ -92,11 +97,14 @@ class GoogleSecretManagerPersistence(
       if (read(coordinate).isEmpty()) {
         val secretBuilder = Secret.newBuilder().setReplication(replicationPolicy)
 
+        var expTag = listOf(MetricAttribute(MetricTags.EXPIRE_SECRET, "false"))
         expiry?.let {
           val expireTime = com.google.protobuf.Timestamp.newBuilder().setSeconds(it.epochSecond).build()
           secretBuilder.setExpireTime(expireTime)
+          expTag = listOf(MetricAttribute(MetricTags.EXPIRE_SECRET, "true"))
         }
 
+        metricClient.count(OssMetricsRegistry.CREATE_SECRET_DEFAULT_STORE, 1, *expTag.toTypedArray())
         client.createSecret(ProjectName.of(gcpProjectId), coordinate.fullCoordinate, secretBuilder.build())
       }
 
@@ -110,6 +118,7 @@ class GoogleSecretManagerPersistence(
     googleSecretManagerServiceClient.createClient().use { client ->
       val secretName = SecretName.of(gcpProjectId, coordinate.fullCoordinate)
       client.deleteSecret(secretName)
+      metricClient.count(OssMetricsRegistry.DELETE_SECRET_DEFAULT_STORE, 1)
     }
   }
 }

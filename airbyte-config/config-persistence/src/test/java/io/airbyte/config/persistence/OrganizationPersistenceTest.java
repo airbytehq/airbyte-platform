@@ -132,16 +132,6 @@ class OrganizationPersistenceTest extends BaseConfigDatabaseTest {
   }
 
   @Test
-  void getOrganizationByWorkspaceId_notInAnOrg() throws IOException, JsonValidationException {
-    // write a workspace that does not belong to an org
-    final StandardWorkspace workspace = MockData.standardWorkspaces().get(0);
-    workspaceService.writeStandardWorkspaceNoSecrets(workspace);
-
-    final Optional<Organization> result = organizationPersistence.getOrganizationByWorkspaceId(MockData.WORKSPACE_ID_1);
-    assertTrue(result.isEmpty());
-  }
-
-  @Test
   void getSsoConfigForOrganization() throws Exception {
     final Optional<SsoConfig> result = organizationPersistence.getSsoConfigForOrganization(MockData.ORGANIZATION_ID_1);
     assertTrue(result.isPresent());

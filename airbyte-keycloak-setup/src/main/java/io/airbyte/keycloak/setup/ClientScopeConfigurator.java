@@ -8,6 +8,7 @@ import jakarta.inject.Singleton;
 import jakarta.ws.rs.core.Response;
 import java.util.Arrays;
 import java.util.Map;
+import java.util.Optional;
 import lombok.extern.slf4j.Slf4j;
 import org.keycloak.admin.client.resource.RealmResource;
 import org.keycloak.representations.idm.ClientScopeRepresentation;
@@ -19,7 +20,7 @@ import org.keycloak.representations.idm.ProtocolMapperRepresentation;
  */
 @Singleton
 @Slf4j
-public class ClientScopeCreator {
+public class ClientScopeConfigurator {
 
   public static final int HTTP_STATUS_CREATED = 201;
 
@@ -28,14 +29,27 @@ public class ClientScopeCreator {
    *
    * @param keycloakRealm the realm to create the client scope in
    */
-  public void createClientScope(final RealmResource keycloakRealm) {
+  public void configureClientScope(final RealmResource keycloakRealm) {
     final ClientScopeRepresentation clientScopeRepresentation = createClientScopeRepresentation();
-    final Response response = keycloakRealm.clientScopes().create(clientScopeRepresentation);
 
-    if (response.getStatus() == HTTP_STATUS_CREATED) {
-      log.info("ClientScope {} created successfully.", clientScopeRepresentation.getName());
+    final Optional<ClientScopeRepresentation> existingClientScope = keycloakRealm.clientScopes().findAll().stream()
+        .filter(scope -> scope.getName().equals(clientScopeRepresentation.getName()))
+        .findFirst();
+
+    if (existingClientScope.isPresent()) {
+      clientScopeRepresentation.setId(existingClientScope.get().getId());
+      keycloakRealm.clientScopes().get(existingClientScope.get().getId()).update(clientScopeRepresentation);
     } else {
-      log.info("Failed to create Client Scope. Status: " + response.getStatusInfo().getReasonPhrase());
+      try (final Response response = keycloakRealm.clientScopes().create(clientScopeRepresentation)) {
+        if (response.getStatus() == HTTP_STATUS_CREATED) {
+          log.info("ClientScope {} created successfully.", clientScopeRepresentation.getName());
+        } else {
+          final String errorMessage = String.format("Failed to create Client Scope.\nReason: %s\n Response: %s",
+              response.getStatusInfo().getReasonPhrase(), response.readEntity(String.class));
+          log.error(errorMessage);
+          throw new RuntimeException(errorMessage);
+        }
+      }
     }
   }
 

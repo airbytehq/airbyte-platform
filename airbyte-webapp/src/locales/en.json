@@ -1742,6 +1742,8 @@
 
   "workspace.adminWorkspaceWarning": "Admin",
   "workspace.adminWorkspaceWarningTooltip": "You are not a member of this workspace. Be careful when making changes!",
+  "workspace.viewing": "Viewing",
+  "workspace.editing": "Editing",
 
   "enterprise.enterprise": "Enterprise",
 

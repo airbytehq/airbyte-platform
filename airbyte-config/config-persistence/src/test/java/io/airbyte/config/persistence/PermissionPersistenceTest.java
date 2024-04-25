@@ -87,6 +87,8 @@ class PermissionPersistenceTest extends BaseConfigDatabaseTest {
             secretsRepositoryWriter,
             secretPersistenceConfigService));
 
+    organizationPersistence.createOrganization(MockData.defaultOrganization());
+
     // write workspace table
     for (final StandardWorkspace workspace : MockData.standardWorkspaces()) {
       configRepository.writeStandardWorkspaceNoSecrets(workspace);

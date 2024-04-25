@@ -41,6 +41,7 @@ import io.airbyte.api.model.generated.TaskQueueNameRead;
 import io.airbyte.api.model.generated.WorkspaceIdRequestBody;
 import io.airbyte.commons.server.errors.BadRequestException;
 import io.airbyte.commons.server.handlers.ConnectionsHandler;
+import io.airbyte.commons.server.handlers.JobHistoryHandler;
 import io.airbyte.commons.server.handlers.MatchSearchHandler;
 import io.airbyte.commons.server.handlers.OperationsHandler;
 import io.airbyte.commons.server.handlers.SchedulerHandler;
@@ -75,6 +76,7 @@ public class ConnectionApiController implements ConnectionApi {
   private final StreamStatusesHandler streamStatusesHandler;
   private final MatchSearchHandler matchSearchHandler;
   private final StreamRefreshesHandler streamRefreshesHandler;
+  private final JobHistoryHandler jobHistoryHandler;
 
   public ConnectionApiController(final ConnectionsHandler connectionsHandler,
                                  final OperationsHandler operationsHandler,
@@ -82,7 +84,8 @@ public class ConnectionApiController implements ConnectionApi {
                                  final RouterService routerService,
                                  final StreamStatusesHandler streamStatusesHandler,
                                  final MatchSearchHandler matchSearchHandler,
-                                 final StreamRefreshesHandler streamRefreshesHandler) {
+                                 final StreamRefreshesHandler streamRefreshesHandler,
+                                 final JobHistoryHandler jobHistoryHandler) {
     this.connectionsHandler = connectionsHandler;
     this.operationsHandler = operationsHandler;
     this.schedulerHandler = schedulerHandler;
@@ -90,6 +93,7 @@ public class ConnectionApiController implements ConnectionApi {
     this.streamStatusesHandler = streamStatusesHandler;
     this.matchSearchHandler = matchSearchHandler;
     this.streamRefreshesHandler = streamRefreshesHandler;
+    this.jobHistoryHandler = jobHistoryHandler;
   }
 
   @Override
@@ -214,7 +218,7 @@ public class ConnectionApiController implements ConnectionApi {
   @Secured({WORKSPACE_READER, ORGANIZATION_READER})
   @ExecuteOn(AirbyteTaskExecutors.IO)
   public List<ConnectionSyncProgressReadItem> getConnectionSyncProgress(@Body final ConnectionIdRequestBody connectionIdRequestBody) {
-    return null;
+    return ApiHelper.execute(() -> jobHistoryHandler.getConnectionSyncProgress(connectionIdRequestBody));
   }
 
   @SuppressWarnings("LineLength")

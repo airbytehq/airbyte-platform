@@ -34,6 +34,7 @@ dependencies {
    */
   implementation(project(":airbyte-config:config-models"))
   implementation(project(":airbyte-json-validation"))
+  implementation(project(":airbyte-metrics:metrics-lib"))
 
   testAnnotationProcessor(platform(libs.micronaut.platform))
   testAnnotationProcessor(libs.bundles.micronaut.test.annotation.processor)

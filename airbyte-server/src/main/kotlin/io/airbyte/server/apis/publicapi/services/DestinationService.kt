@@ -7,6 +7,7 @@ package io.airbyte.server.apis.publicapi.services
 import io.airbyte.api.model.generated.DestinationCreate
 import io.airbyte.api.model.generated.DestinationDefinitionIdWithWorkspaceId
 import io.airbyte.api.model.generated.DestinationIdRequestBody
+import io.airbyte.api.model.generated.DestinationRead
 import io.airbyte.api.model.generated.DestinationSyncMode
 import io.airbyte.api.model.generated.DestinationUpdate
 import io.airbyte.api.model.generated.ListResourcesForWorkspacesRequestBody
@@ -22,8 +23,6 @@ import io.airbyte.public_api.model.generated.DestinationResponse
 import io.airbyte.public_api.model.generated.DestinationsResponse
 import io.airbyte.server.apis.publicapi.constants.HTTP_RESPONSE_BODY_DEBUG_MESSAGE
 import io.airbyte.server.apis.publicapi.errorHandlers.ConfigClientErrorHandler
-import io.airbyte.server.apis.publicapi.helpers.getActorDefinitionIdFromActorName
-import io.airbyte.server.apis.publicapi.mappers.DESTINATION_NAME_TO_DEFINITION_ID
 import io.airbyte.server.apis.publicapi.mappers.DestinationReadMapper
 import io.airbyte.server.apis.publicapi.mappers.DestinationsResponseMapper
 import io.micronaut.context.annotation.Secondary
@@ -59,9 +58,11 @@ interface DestinationService {
     offset: Int = 0,
   ): DestinationsResponse?
 
+  fun getDestinationRead(destinationId: UUID): DestinationRead
+
   fun getDestinationSyncModes(destinationId: UUID): List<DestinationSyncMode>
 
-  fun getDestinationSyncModes(destinationResponse: DestinationResponse): List<DestinationSyncMode>
+  fun getDestinationSyncModes(destinationRead: DestinationRead): List<DestinationSyncMode>
 }
 
 @Singleton
@@ -116,13 +117,33 @@ class DestinationServiceImpl(
       kotlin.runCatching {
         destinationHandler.getDestination(destinationIdRequestBody)
       }.onFailure {
-        log.error("Error while listing connections for workspaces: ", it)
+        log.error("Error while getting destination: ", it)
         ConfigClientErrorHandler.handleError(it, destinationId.toString())
       }
 
     log.debug(HTTP_RESPONSE_BODY_DEBUG_MESSAGE + result)
     val destinationRead = result.getOrNull()!!
     return DestinationReadMapper.from(destinationRead)
+  }
+
+  /**
+   * Gets a DestinationRead by ID.
+   */
+  override fun getDestinationRead(destinationId: UUID): DestinationRead {
+    val destinationIdRequestBody = DestinationIdRequestBody()
+    destinationIdRequestBody.destinationId = destinationId
+
+    val result =
+      kotlin.runCatching {
+        destinationHandler.getDestination(destinationIdRequestBody)
+      }.onFailure {
+        log.error("Error while getting destination: ", it)
+        ConfigClientErrorHandler.handleError(it, destinationId.toString())
+      }
+
+    log.debug(HTTP_RESPONSE_BODY_DEBUG_MESSAGE + result)
+    val destinationRead = result.getOrThrow()
+    return destinationRead
   }
 
   /**
@@ -225,16 +246,15 @@ class DestinationServiceImpl(
   }
 
   override fun getDestinationSyncModes(destinationId: UUID): List<DestinationSyncMode> {
-    val destinationResponse: DestinationResponse = getDestination(destinationId)
-    return getDestinationSyncModes(destinationResponse)
+    val destinationRead: DestinationRead = getDestinationRead(destinationId)
+    return getDestinationSyncModes(destinationRead)
   }
 
-  override fun getDestinationSyncModes(destinationResponse: DestinationResponse): List<DestinationSyncMode> {
-    val destinationDefinitionId: UUID =
-      getActorDefinitionIdFromActorName(DESTINATION_NAME_TO_DEFINITION_ID, destinationResponse.destinationType)
+  override fun getDestinationSyncModes(destinationRead: DestinationRead): List<DestinationSyncMode> {
+    val destinationDefinitionId: UUID = destinationRead.destinationDefinitionId
     val destinationDefinitionIdWithWorkspaceId = DestinationDefinitionIdWithWorkspaceId()
     destinationDefinitionIdWithWorkspaceId.destinationDefinitionId = destinationDefinitionId
-    destinationDefinitionIdWithWorkspaceId.workspaceId = destinationResponse.workspaceId
+    destinationDefinitionIdWithWorkspaceId.workspaceId = destinationRead.workspaceId
 
     val result =
       kotlin.runCatching {

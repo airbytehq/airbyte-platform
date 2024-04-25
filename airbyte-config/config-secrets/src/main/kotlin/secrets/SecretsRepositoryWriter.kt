@@ -7,6 +7,8 @@ package io.airbyte.config.secrets
 import com.fasterxml.jackson.databind.JsonNode
 import io.airbyte.config.secrets.persistence.RuntimeSecretPersistence
 import io.airbyte.config.secrets.persistence.SecretPersistence
+import io.airbyte.metrics.lib.MetricClient
+import io.airbyte.metrics.lib.OssMetricsRegistry
 import io.airbyte.protocol.models.ConnectorSpecification
 import io.airbyte.validation.json.JsonSchemaValidator
 import io.airbyte.validation.json.JsonValidationException
@@ -32,6 +34,7 @@ private val EPHEMERAL_SECRET_LIFE_DURATION = Duration.ofHours(2)
 @Requires(bean = SecretPersistence::class)
 open class SecretsRepositoryWriter(
   private val secretPersistence: SecretPersistence,
+  private val metricClient: MetricClient,
 ) {
   val validator: JsonSchemaValidator = JsonSchemaValidator()
 
@@ -104,8 +107,9 @@ open class SecretsRepositoryWriter(
     if (validate) {
       validator.ensure(spec, fullConfig)
     }
+    val update = oldConfig.isPresent
     val splitSecretConfig: SplitSecretConfig =
-      if (oldConfig.isPresent) {
+      if (update) {
         SecretsHelpers.splitAndUpdateConfig(
           workspaceId,
           oldConfig.get(),
@@ -121,8 +125,12 @@ open class SecretsRepositoryWriter(
           secretPersistence,
         )
       }
+
     splitSecretConfig.getCoordinateToPayload()
       .forEach { (coordinate: SecretCoordinate, payload: String) ->
+        if (update) {
+          metricClient.count(OssMetricsRegistry.UPDATE_SECRET_DEFAULT_STORE, 1)
+        }
         secretPersistence.write(coordinate, payload)
       }
     return splitSecretConfig.partialConfig
