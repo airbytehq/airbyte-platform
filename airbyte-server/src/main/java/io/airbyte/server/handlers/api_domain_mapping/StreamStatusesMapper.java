@@ -32,7 +32,7 @@ public class StreamStatusesMapper {
 
   // API to Domain
   public StreamStatus map(final StreamStatusCreateRequestBody api) {
-    final var domain = StreamStatus.builder()
+    final var domain = new StreamStatus.StreamStatusBuilder()
         .runState(map(api.getRunState()))
         .transitionedAt(fromMills(api.getTransitionedAt()))
         .workspaceId(api.getWorkspaceId())
@@ -51,7 +51,7 @@ public class StreamStatusesMapper {
   }
 
   public StreamStatus map(final StreamStatusUpdateRequestBody api) {
-    final var domain = StreamStatus.builder()
+    final var domain = new StreamStatus.StreamStatusBuilder()
         .runState(map(api.getRunState()))
         .transitionedAt(fromMills(api.getTransitionedAt()))
         .workspaceId(api.getWorkspaceId())
@@ -71,38 +71,33 @@ public class StreamStatusesMapper {
   }
 
   public JobStreamStatusJobType map(final StreamStatusJobType apiEnum) {
-    return JobStreamStatusJobType.lookupLiteral(apiEnum.name().toLowerCase());
+    return apiEnum != null ? JobStreamStatusJobType.lookupLiteral(apiEnum.name().toLowerCase()) : null;
   }
 
   public JobStreamStatusRunState map(final StreamStatusRunState apiEnum) {
-    return JobStreamStatusRunState.lookupLiteral(apiEnum.name().toLowerCase());
+    return apiEnum != null ? JobStreamStatusRunState.lookupLiteral(apiEnum.name().toLowerCase()) : null;
   }
 
   public JobStreamStatusIncompleteRunCause map(final StreamStatusIncompleteRunCause apiEnum) {
-    return JobStreamStatusIncompleteRunCause.lookupLiteral(apiEnum.name().toLowerCase());
+    return apiEnum != null ? JobStreamStatusIncompleteRunCause.lookupLiteral(apiEnum.name().toLowerCase()) : null;
   }
 
   public StreamStatusesRepository.Pagination map(final Pagination api) {
-    return new StreamStatusesRepository.Pagination(
+    return api != null ? new StreamStatusesRepository.Pagination(
         api.getRowOffset() / api.getPageSize(),
-        api.getPageSize());
+        api.getPageSize()) : null;
   }
 
   public StreamStatusesRepository.FilterParams map(final StreamStatusListRequestBody api) {
-    final var domain = StreamStatusesRepository.FilterParams.builder()
-        .workspaceId(api.getWorkspaceId())
-        .connectionId(api.getConnectionId())
-        .jobId(api.getJobId())
-        .attemptNumber(api.getAttemptNumber())
-        .streamName(api.getStreamName())
-        .streamNamespace(api.getStreamNamespace())
-        .pagination(map(api.getPagination()));
-
-    if (null != api.getJobType()) {
-      domain.jobType(map(api.getJobType()));
-    }
-
-    return domain.build();
+    return new StreamStatusesRepository.FilterParams(
+        api.getWorkspaceId(),
+        api.getConnectionId(),
+        api.getJobId(),
+        api.getStreamNamespace(),
+        api.getStreamName(),
+        api.getAttemptNumber(),
+        map(api.getJobType()),
+        map(api.getPagination()));
   }
 
   // Domain to API

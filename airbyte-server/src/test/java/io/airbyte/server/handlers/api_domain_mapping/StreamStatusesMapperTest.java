@@ -98,16 +98,15 @@ public class StreamStatusesMapperTest {
           .streamNamespace(streamNamespace)
           .streamName(streamName)
           .pagination(pagination);
-      final var domain = StreamStatusesRepository.FilterParams.builder()
-          .workspaceId(workspaceId)
-          .connectionId(connectionId)
-          .jobId(jobId)
-          .jobType(jobType != null ? mapper.map(jobType) : null)
-          .attemptNumber(attemptNumber)
-          .streamNamespace(streamNamespace)
-          .streamName(streamName)
-          .pagination(mapper.map(pagination))
-          .build();
+      final var domain = new StreamStatusesRepository.FilterParams(
+          workspaceId,
+          connectionId,
+          jobId,
+          streamNamespace,
+          streamName,
+          attemptNumber,
+          jobType != null ? mapper.map(jobType) : null,
+          mapper.map(pagination));
 
       Assertions.assertEquals(domain, mapper.map(api));
     }
@@ -133,7 +132,7 @@ public class StreamStatusesMapperTest {
           .streamNamespace(streamNamespace)
           .streamName(streamName)
           .transitionedAt(transitionedAt);
-      final var domain = StreamStatus.builder()
+      final var domain = new StreamStatus.StreamStatusBuilder()
           .runState(mapper.map(StreamStatusRunState.INCOMPLETE))
           .incompleteRunCause(mapper.map(StreamStatusIncompleteRunCause.FAILED))
           .jobType(mapper.map(StreamStatusJobType.SYNC))
@@ -186,7 +185,7 @@ public class StreamStatusesMapperTest {
           .streamName(streamName)
           .transitionedAt(transitionedAt)
           .id(id);
-      final var domain = StreamStatus.builder()
+      final var domain = new StreamStatus.StreamStatusBuilder()
           .runState(mapper.map(StreamStatusRunState.INCOMPLETE))
           .incompleteRunCause(mapper.map(StreamStatusIncompleteRunCause.FAILED))
           .jobType(mapper.map(StreamStatusJobType.SYNC))
@@ -254,7 +253,7 @@ public class StreamStatusesMapperTest {
                              final String streamName) {
       final UUID id = UUID.randomUUID();
       final long transitionedAt = System.currentTimeMillis();
-      final var domain = StreamStatus.builder()
+      final var domain = new StreamStatus.StreamStatusBuilder()
           .runState(mapper.map(StreamStatusRunState.INCOMPLETE))
           .incompleteRunCause(mapper.map(StreamStatusIncompleteRunCause.FAILED))
           .jobType(mapper.map(StreamStatusJobType.SYNC))

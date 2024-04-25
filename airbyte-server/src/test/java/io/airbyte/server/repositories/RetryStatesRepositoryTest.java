@@ -226,7 +226,7 @@ class RetryStatesRepositoryTest {
     static Long jobId4 = ThreadLocalRandom.current().nextLong();
 
     static RetryStateBuilder state() {
-      return RetryState.builder()
+      return new RetryState.RetryStateBuilder()
           .connectionId(connectionId1)
           .jobId(jobId1)
           .successiveCompleteFailures(0)
@@ -236,7 +236,7 @@ class RetryStatesRepositoryTest {
     }
 
     static RetryStateBuilder stateFrom(final RetryState s) {
-      return RetryState.builder()
+      return new RetryState.RetryStateBuilder()
           .connectionId(s.getConnectionId())
           .jobId(s.getJobId())
           .successiveCompleteFailures(s.getSuccessiveCompleteFailures())

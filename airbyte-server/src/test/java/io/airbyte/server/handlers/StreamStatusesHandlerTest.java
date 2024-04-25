@@ -49,7 +49,7 @@ class StreamStatusesHandlerTest {
   @Test
   void testCreate() {
     final var apiReq = new StreamStatusCreateRequestBody();
-    final var domain = StreamStatus.builder().build();
+    final var domain = new StreamStatus.StreamStatusBuilder().build();
     final var apiResp = new StreamStatusRead();
 
     when(mapper.map(apiReq))
@@ -65,7 +65,7 @@ class StreamStatusesHandlerTest {
   @Test
   void testUpdate() {
     final var apiReq = new StreamStatusUpdateRequestBody();
-    final var domain = StreamStatus.builder().build();
+    final var domain = new StreamStatus.StreamStatusBuilder().build();
     final var apiResp = new StreamStatusRead();
 
     when(mapper.map(apiReq))
@@ -81,8 +81,8 @@ class StreamStatusesHandlerTest {
   @Test
   void testList() {
     final var apiReq = new StreamStatusListRequestBody();
-    final var domainFilters = FilterParams.builder().build();
-    final var domainItem = StreamStatus.builder().build();
+    final var domainFilters = new FilterParams(null, null, null, null, null, null, null, null);
+    final var domainItem = new StreamStatus.StreamStatusBuilder().build();
     final var apiItem = new StreamStatusRead();
     final var apiResp = new StreamStatusReadList().streamStatuses(List.of(apiItem));
 
@@ -103,7 +103,7 @@ class StreamStatusesHandlerTest {
   void testListPerRunState() {
     final var connectionId = UUID.randomUUID();
     final var apiReq = new ConnectionIdRequestBody().connectionId(connectionId);
-    final var domainItem = StreamStatus.builder().build();
+    final var domainItem = new StreamStatus.StreamStatusBuilder().build();
     final var apiItem = new StreamStatusRead();
     final var apiResp = new StreamStatusReadList().streamStatuses(List.of(apiItem));
 
@@ -122,7 +122,7 @@ class StreamStatusesHandlerTest {
     final ConnectionUptimeHistoryRequestBody apiReq = new ConnectionUptimeHistoryRequestBody()
         .connectionId(connectionId)
         .timezone(timezone.getId());
-    final StreamStatus domainItem = StreamStatus.builder().build();
+    final StreamStatus domainItem = new StreamStatus.StreamStatusBuilder().build();
 
     final StreamStatusRead apiItem = new StreamStatusRead();
     apiItem.setTransitionedAt(Instant.now().toEpochMilli());
