@@ -16,7 +16,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/WorkloadCancelRequest'
+              $ref: "#/components/schemas/WorkloadCancelRequest"
         required: true
       responses:
         "204":
@@ -26,13 +26,13 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/KnownExceptionInfo'
+                $ref: "#/components/schemas/KnownExceptionInfo"
         "410":
           description: "Workload is in terminal state, it cannot be cancelled."
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/KnownExceptionInfo'
+                $ref: "#/components/schemas/KnownExceptionInfo"
   /api/v1/workload/claim:
     put:
       tags:
@@ -43,7 +43,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/WorkloadClaimRequest'
+              $ref: "#/components/schemas/WorkloadClaimRequest"
         required: true
       responses:
         "200":
@@ -52,19 +52,19 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ClaimResponse'
+                $ref: "#/components/schemas/ClaimResponse"
         "404":
           description: Workload with given id was not found.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/KnownExceptionInfo'
+                $ref: "#/components/schemas/KnownExceptionInfo"
         "410":
           description: Workload is in terminal state. It cannot be claimed.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/KnownExceptionInfo'
+                $ref: "#/components/schemas/KnownExceptionInfo"
   /api/v1/workload/create:
     post:
       tags:
@@ -75,7 +75,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/WorkloadCreateRequest'
+              $ref: "#/components/schemas/WorkloadCreateRequest"
         required: true
       responses:
         "204":
@@ -96,7 +96,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/ExpiredDeadlineWorkloadListRequest'
+              $ref: "#/components/schemas/ExpiredDeadlineWorkloadListRequest"
         required: true
       responses:
         "200":
@@ -104,7 +104,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/WorkloadListResponse'
+                $ref: "#/components/schemas/WorkloadListResponse"
   /api/v1/workload/failure:
     put:
       tags:
@@ -115,7 +115,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/WorkloadFailureRequest'
+              $ref: "#/components/schemas/WorkloadFailureRequest"
         required: true
       responses:
         "204":
@@ -125,13 +125,13 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/KnownExceptionInfo'
+                $ref: "#/components/schemas/KnownExceptionInfo"
         "410":
           description: "Workload is not in an active state, it cannot be failed."
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/KnownExceptionInfo'
+                $ref: "#/components/schemas/KnownExceptionInfo"
   /api/v1/workload/heartbeat:
     put:
       tags:
@@ -142,7 +142,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/WorkloadHeartbeatRequest'
+              $ref: "#/components/schemas/WorkloadHeartbeatRequest"
         required: true
       responses:
         "204":
@@ -152,14 +152,14 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/KnownExceptionInfo'
+                $ref: "#/components/schemas/KnownExceptionInfo"
         "410":
           description: Workload should stop because it is no longer expected to be
             running.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/KnownExceptionInfo'
+                $ref: "#/components/schemas/KnownExceptionInfo"
   /api/v1/workload/launched:
     put:
       tags:
@@ -170,7 +170,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/WorkloadLaunchedRequest'
+              $ref: "#/components/schemas/WorkloadLaunchedRequest"
         required: true
       responses:
         "204":
@@ -180,13 +180,13 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/KnownExceptionInfo'
+                $ref: "#/components/schemas/KnownExceptionInfo"
         "410":
           description: Workload is not in claimed state. It cannot be set to launched.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/KnownExceptionInfo'
+                $ref: "#/components/schemas/KnownExceptionInfo"
   /api/v1/workload/list:
     post:
       tags:
@@ -197,7 +197,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/WorkloadListRequest'
+              $ref: "#/components/schemas/WorkloadListRequest"
         required: true
       responses:
         "200":
@@ -205,7 +205,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/WorkloadListResponse'
+                $ref: "#/components/schemas/WorkloadListResponse"
   /api/v1/workload/list_long_running_non_sync:
     post:
       tags:
@@ -216,7 +216,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/LongRunningWorkloadRequest'
+              $ref: "#/components/schemas/LongRunningWorkloadRequest"
         required: true
       responses:
         "200":
@@ -224,7 +224,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/WorkloadListResponse'
+                $ref: "#/components/schemas/WorkloadListResponse"
   /api/v1/workload/list_long_running_sync:
     post:
       tags:
@@ -235,7 +235,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/LongRunningWorkloadRequest'
+              $ref: "#/components/schemas/LongRunningWorkloadRequest"
         required: true
       responses:
         "200":
@@ -243,7 +243,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/WorkloadListResponse'
+                $ref: "#/components/schemas/WorkloadListResponse"
   /api/v1/workload/running:
     put:
       tags:
@@ -254,7 +254,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/WorkloadRunningRequest'
+              $ref: "#/components/schemas/WorkloadRunningRequest"
         required: true
       responses:
         "204":
@@ -264,13 +264,13 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/KnownExceptionInfo'
+                $ref: "#/components/schemas/KnownExceptionInfo"
         "410":
           description: "Workload is not in pending state, it cannot be set to running."
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/KnownExceptionInfo'
+                $ref: "#/components/schemas/KnownExceptionInfo"
   /api/v1/workload/success:
     put:
       tags:
@@ -281,7 +281,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/WorkloadSuccessRequest'
+              $ref: "#/components/schemas/WorkloadSuccessRequest"
         required: true
       responses:
         "204":
@@ -291,13 +291,13 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/KnownExceptionInfo'
+                $ref: "#/components/schemas/KnownExceptionInfo"
         "410":
           description: "Workload is not in an active state, it cannot be succeeded."
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/KnownExceptionInfo'
+                $ref: "#/components/schemas/KnownExceptionInfo"
   /api/v1/workload/{workloadId}:
     get:
       tags:
@@ -316,13 +316,13 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Workload'
+                $ref: "#/components/schemas/Workload"
         "404":
           description: Workload with given id was not found.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/KnownExceptionInfo'
+                $ref: "#/components/schemas/KnownExceptionInfo"
 components:
   schemas:
     ClaimResponse:
@@ -346,7 +346,7 @@ components:
           type: array
           nullable: true
           items:
-            $ref: '#/components/schemas/WorkloadStatus'
+            $ref: "#/components/schemas/WorkloadStatus"
         deadline:
           type: string
           format: date-time
@@ -388,11 +388,11 @@ components:
         status:
           nullable: true
           allOf:
-          - $ref: '#/components/schemas/WorkloadStatus'
+          - $ref: "#/components/schemas/WorkloadStatus"
         labels:
           type: array
           items:
-            $ref: '#/components/schemas/WorkloadLabel'
+            $ref: "#/components/schemas/WorkloadLabel"
         inputPayload:
           type: string
         logPath:
@@ -403,7 +403,7 @@ components:
           type: string
           nullable: true
         type:
-          $ref: '#/components/schemas/WorkloadType'
+          $ref: "#/components/schemas/WorkloadType"
         terminationSource:
           type: string
           nullable: true
@@ -460,7 +460,7 @@ components:
         labels:
           type: array
           items:
-            $ref: '#/components/schemas/WorkloadLabel'
+            $ref: "#/components/schemas/WorkloadLabel"
         workloadInput:
           type: string
         logPath:
@@ -471,13 +471,13 @@ components:
           type: string
           nullable: true
         type:
-          $ref: '#/components/schemas/WorkloadType'
+          $ref: "#/components/schemas/WorkloadType"
         deadline:
           type: string
           format: date-time
           nullable: true
         priority:
-          $ref: '#/components/schemas/WorkloadPriority'
+          $ref: "#/components/schemas/WorkloadPriority"
     WorkloadFailureRequest:
       required:
       - workloadId
@@ -535,7 +535,7 @@ components:
           type: array
           nullable: true
           items:
-            $ref: '#/components/schemas/WorkloadStatus'
+            $ref: "#/components/schemas/WorkloadStatus"
         updatedBefore:
           type: string
           format: date-time
@@ -548,7 +548,7 @@ components:
         workloads:
           type: array
           items:
-            $ref: '#/components/schemas/Workload'
+            $ref: "#/components/schemas/Workload"
     WorkloadPriority:
       type: string
       enum:
