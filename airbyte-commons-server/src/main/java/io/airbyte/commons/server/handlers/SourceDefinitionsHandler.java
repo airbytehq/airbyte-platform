@@ -35,6 +35,7 @@ import io.airbyte.config.ScopeType;
 import io.airbyte.config.StandardSourceDefinition;
 import io.airbyte.config.helpers.ConnectorRegistryConverters;
 import io.airbyte.config.init.SupportStateUpdater;
+import io.airbyte.config.persistence.ActorDefinitionVersionHelper;
 import io.airbyte.config.persistence.ConfigNotFoundException;
 import io.airbyte.config.persistence.ConfigRepository;
 import io.airbyte.config.specs.RemoteDefinitionsProvider;
@@ -52,6 +53,7 @@ import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -71,6 +73,7 @@ public class SourceDefinitionsHandler {
   private final Supplier<UUID> uuidSupplier;
   private final RemoteDefinitionsProvider remoteDefinitionsProvider;
   private final ActorDefinitionHandlerHelper actorDefinitionHandlerHelper;
+  private final ActorDefinitionVersionHelper actorDefinitionVersionHelper;
   private final SourceHandler sourceHandler;
   private final SupportStateUpdater supportStateUpdater;
   private final FeatureFlagClient featureFlagClient;
@@ -82,7 +85,8 @@ public class SourceDefinitionsHandler {
                                   final RemoteDefinitionsProvider remoteDefinitionsProvider,
                                   final SourceHandler sourceHandler,
                                   final SupportStateUpdater supportStateUpdater,
-                                  final FeatureFlagClient featureFlagClient) {
+                                  final FeatureFlagClient featureFlagClient,
+                                  final ActorDefinitionVersionHelper actorDefinitionVersionHelper) {
     this.configRepository = configRepository;
     this.uuidSupplier = uuidSupplier;
     this.actorDefinitionHandlerHelper = actorDefinitionHandlerHelper;
@@ -90,6 +94,7 @@ public class SourceDefinitionsHandler {
     this.sourceHandler = sourceHandler;
     this.supportStateUpdater = supportStateUpdater;
     this.featureFlagClient = featureFlagClient;
+    this.actorDefinitionVersionHelper = actorDefinitionVersionHelper;
   }
 
   @VisibleForTesting
@@ -170,7 +175,7 @@ public class SourceDefinitionsHandler {
   }
 
   public SourceDefinitionReadList listSourceDefinitionsForWorkspace(final WorkspaceIdRequestBody workspaceIdRequestBody)
-      throws IOException {
+      throws IOException, JsonValidationException, ConfigNotFoundException {
     final List<StandardSourceDefinition> sourceDefs = Stream.concat(
         configRepository.listPublicSourceDefinitions(false).stream(),
         configRepository.listGrantedSourceDefinitions(workspaceIdRequestBody.getWorkspaceId(), false).stream()).toList();
@@ -181,7 +186,11 @@ public class SourceDefinitionsHandler {
         new Multi(List.of(new SourceDefinition(sourceDefinition.getSourceDefinitionId()), new Workspace(workspaceIdRequestBody.getWorkspaceId())))))
         .toList();
 
-    final Map<UUID, ActorDefinitionVersion> sourceDefVersionMap = getVersionsForSourceDefinitions(shownSourceDefs);
+    final Map<UUID, ActorDefinitionVersion> sourceDefVersionMap = new HashMap<>();
+    for (var definition : shownSourceDefs) {
+      sourceDefVersionMap.put(definition.getSourceDefinitionId(),
+          actorDefinitionVersionHelper.getSourceVersion(definition, workspaceIdRequestBody.getWorkspaceId()));
+    }
     return toSourceDefinitionReadList(shownSourceDefs, sourceDefVersionMap);
   }
 

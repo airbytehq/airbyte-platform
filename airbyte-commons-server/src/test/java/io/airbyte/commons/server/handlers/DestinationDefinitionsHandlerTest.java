@@ -52,6 +52,7 @@ import io.airbyte.config.ScopeType;
 import io.airbyte.config.StandardDestinationDefinition;
 import io.airbyte.config.helpers.ConnectorRegistryConverters;
 import io.airbyte.config.init.SupportStateUpdater;
+import io.airbyte.config.persistence.ActorDefinitionVersionHelper;
 import io.airbyte.config.persistence.ConfigNotFoundException;
 import io.airbyte.config.persistence.ConfigRepository;
 import io.airbyte.config.specs.RemoteDefinitionsProvider;
@@ -101,6 +102,7 @@ class DestinationDefinitionsHandlerTest {
   private UUID workspaceId;
   private UUID organizationId;
   private FeatureFlagClient featureFlagClient;
+  private ActorDefinitionVersionHelper actorDefinitionVersionHelper;
 
   @SuppressWarnings("unchecked")
   @BeforeEach
@@ -118,6 +120,7 @@ class DestinationDefinitionsHandlerTest {
     workspaceId = UUID.randomUUID();
     organizationId = UUID.randomUUID();
     featureFlagClient = mock(TestClient.class);
+    actorDefinitionVersionHelper = mock(ActorDefinitionVersionHelper.class);
     destinationDefinitionsHandler = new DestinationDefinitionsHandler(
         configRepository,
         uuidSupplier,
@@ -125,7 +128,8 @@ class DestinationDefinitionsHandlerTest {
         remoteDefinitionsProvider,
         destinationHandler,
         supportStateUpdater,
-        featureFlagClient);
+        featureFlagClient,
+        actorDefinitionVersionHelper);
   }
 
   private StandardDestinationDefinition generateDestinationDefinition() {
@@ -243,14 +247,14 @@ class DestinationDefinitionsHandlerTest {
 
   @Test
   @DisplayName("listDestinationDefinitionsForWorkspace should return the right list")
-  void testListDestinationDefinitionsForWorkspace() throws IOException, URISyntaxException {
+  void testListDestinationDefinitionsForWorkspace() throws IOException, URISyntaxException, JsonValidationException, ConfigNotFoundException {
     when(featureFlagClient.boolVariation(eq(HideActorDefinitionFromList.INSTANCE), any())).thenReturn(false);
     when(configRepository.listPublicDestinationDefinitions(false)).thenReturn(Lists.newArrayList(destinationDefinition));
     when(configRepository.listGrantedDestinationDefinitions(workspaceId, false))
         .thenReturn(Lists.newArrayList(destinationDefinitionWithNormalization));
-    when(configRepository.getActorDefinitionVersions(
-        List.of(destinationDefinition.getDefaultVersionId(), destinationDefinitionWithNormalization.getDefaultVersionId())))
-            .thenReturn(Lists.newArrayList(destinationDefinitionVersion, destinationDefinitionVersionWithNormalization));
+    when(actorDefinitionVersionHelper.getDestinationVersion(destinationDefinition, workspaceId)).thenReturn(destinationDefinitionVersion);
+    when(actorDefinitionVersionHelper.getDestinationVersion(destinationDefinitionWithNormalization, workspaceId))
+        .thenReturn(destinationDefinitionVersionWithNormalization);
 
     final DestinationDefinitionRead expectedDestinationDefinitionRead1 = new DestinationDefinitionRead()
         .destinationDefinitionId(destinationDefinition.getDestinationDefinitionId())
@@ -301,7 +305,7 @@ class DestinationDefinitionsHandlerTest {
 
   @Test
   @DisplayName("listDestinationDefinitionsForWorkspace should return the right list, filtering out hidden connectors")
-  void testListDestinationDefinitionsForWorkspaceWithHiddenConnectors() throws IOException {
+  void testListDestinationDefinitionsForWorkspaceWithHiddenConnectors() throws IOException, JsonValidationException, ConfigNotFoundException {
     final StandardDestinationDefinition hiddenDestinationDefinition = generateDestinationDefinition();
 
     when(featureFlagClient.boolVariation(eq(HideActorDefinitionFromList.INSTANCE), any())).thenReturn(false);
@@ -312,9 +316,9 @@ class DestinationDefinitionsHandlerTest {
     when(configRepository.listPublicDestinationDefinitions(false)).thenReturn(Lists.newArrayList(destinationDefinition, hiddenDestinationDefinition));
     when(configRepository.listGrantedDestinationDefinitions(workspaceId, false))
         .thenReturn(Lists.newArrayList(destinationDefinitionWithNormalization));
-    when(configRepository.getActorDefinitionVersions(
-        List.of(destinationDefinition.getDefaultVersionId(), destinationDefinitionWithNormalization.getDefaultVersionId())))
-            .thenReturn(Lists.newArrayList(destinationDefinitionVersion, destinationDefinitionVersionWithNormalization));
+    when(actorDefinitionVersionHelper.getDestinationVersion(destinationDefinition, workspaceId)).thenReturn(destinationDefinitionVersion);
+    when(actorDefinitionVersionHelper.getDestinationVersion(destinationDefinitionWithNormalization, workspaceId))
+        .thenReturn(destinationDefinitionVersionWithNormalization);
 
     final DestinationDefinitionReadList actualDestinationDefinitionReadList = destinationDefinitionsHandler
         .listDestinationDefinitionsForWorkspace(new WorkspaceIdRequestBody().workspaceId(workspaceId));

@@ -142,7 +142,7 @@ class SourceDefinitionApiTest extends BaseControllerTest {
   }
 
   @Test
-  void testListSourceDefinitionsForWorkspace() throws IOException {
+  void testListSourceDefinitionsForWorkspace() throws IOException, JsonValidationException, ConfigNotFoundException {
     Mockito.when(sourceDefinitionsHandler.listSourceDefinitionsForWorkspace(Mockito.any()))
         .thenReturn(new SourceDefinitionReadList());
     final String path = "/api/v1/source_definitions/list_for_workspace";
