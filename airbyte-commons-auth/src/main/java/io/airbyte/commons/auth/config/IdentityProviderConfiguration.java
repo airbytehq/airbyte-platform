@@ -36,7 +36,6 @@ public class IdentityProviderConfiguration {
   // For now, we want to support airbyte.auth.identity-providers for backwards-compatibility.
   public OidcConfig toOidcConfig() {
     final OidcConfig oidcConfig = new OidcConfig(domain, appName, clientId, clientSecret);
-    log.info("Converted IdentityProviderConfiguration to OidcConfig: {}", oidcConfig);
     return oidcConfig;
   }
 
