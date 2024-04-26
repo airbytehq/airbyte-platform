@@ -110,6 +110,8 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
+import org.junit.jupiter.api.parallel.Execution;
+import org.junit.jupiter.api.parallel.ExecutionMode;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
@@ -126,6 +128,9 @@ import org.mockito.verification.VerificationMode;
  * repeated cases, just in case there's a regression where a race condition is added back to a test.
  */
 @Slf4j
+// Forcing SAME_THREAD execution as we seem to face the issues described in
+// https://github.com/mockito/mockito/wiki/FAQ#is-mockito-thread-safe
+@Execution(ExecutionMode.SAME_THREAD)
 class ConnectionManagerWorkflowTest {
 
   private static final long JOB_ID = 1L;
