@@ -312,9 +312,12 @@ public class ConnectionManagerWorkflowImpl implements ConnectionManagerWorkflow 
 
           standardSyncOutput = runChildWorkflow(jobInputs);
           workflowState.setFailed(getFailStatus(standardSyncOutput));
+          workflowState.setCancelled(getCancelledStatus(standardSyncOutput));
 
           if (workflowState.isFailed()) {
             reportFailure(connectionUpdaterInput, standardSyncOutput, FailureCause.UNKNOWN);
+          } else if (workflowState.isCancelled()) {
+            reportCancelled(connectionId);
           } else {
             reportSuccess(connectionUpdaterInput, standardSyncOutput);
           }
@@ -1026,7 +1029,7 @@ public class ConnectionManagerWorkflowImpl implements ConnectionManagerWorkflow 
   /**
    * Set the internal status as failed and save the failures reasons.
    *
-   * @return True if the job failed, false otherwise
+   * @return true if the job failed, false otherwise
    */
   private boolean getFailStatus(final StandardSyncOutput standardSyncOutput) {
     final StandardSyncSummary standardSyncSummary = standardSyncOutput.getStandardSyncSummary();
@@ -1047,6 +1050,16 @@ public class ConnectionManagerWorkflowImpl implements ConnectionManagerWorkflow 
     }
 
     return false;
+  }
+
+  /**
+   * Extracts whether the job was cancelled from the output.
+   *
+   * @return true if the job was cancelled, false otherwise
+   */
+  private boolean getCancelledStatus(final StandardSyncOutput standardSyncOutput) {
+    final StandardSyncSummary summary = standardSyncOutput.getStandardSyncSummary();
+    return summary != null && summary.getStatus() == ReplicationStatus.CANCELLED;
   }
 
   /*
