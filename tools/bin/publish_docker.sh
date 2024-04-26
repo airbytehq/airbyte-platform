@@ -55,16 +55,6 @@ for workdir in "${projectDir[@]}"
         ;;
     esac
 
-    case $workdir in
-      "webapp")
-        dockerDir="build/docker"
-        ;;
-
-      *)
-        dockerDir="build/airbyte/docker"
-        ;;
-    esac
-
     echo "Publishing airbyte/$artifactName..."
     sleep 1
 
@@ -76,6 +66,6 @@ for workdir in "${projectDir[@]}"
       --build-arg POSTGRES_IMAGE=$POSTGRES_IMAGE            \
       --build-arg JDK_VERSION=$JDK_VERSION                  \
       --push                                                \
-      airbyte-$workdir/$dockerDir
+      airbyte-$workdir/build/airbyte/docker
     docker buildx rm $artifactName
 done
