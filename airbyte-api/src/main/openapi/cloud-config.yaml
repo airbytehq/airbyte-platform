@@ -1216,6 +1216,7 @@ components:
       type: object
       required:
         - workspaceId
+        - organizationId
       properties:
         name:
           type: string

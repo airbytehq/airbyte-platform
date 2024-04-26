@@ -6413,6 +6413,7 @@ components:
       type: object
       required:
         - workspaceId
+        - organizationId
         - customerId
         - name
         - slug
