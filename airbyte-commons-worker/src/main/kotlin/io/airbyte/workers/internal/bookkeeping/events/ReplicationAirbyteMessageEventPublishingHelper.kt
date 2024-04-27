@@ -50,7 +50,7 @@ class ReplicationAirbyteMessageEventPublishingHelper(
     stream: StreamDescriptor,
     ctx: ReplicationContext,
     origin: AirbyteMessageOrigin,
-    incompleteRunCause: StreamStatusIncompleteRunCause?,
+    incompleteRunCause: StreamStatusIncompleteRunCause,
   ) = publishStatusEvent(
     stream = stream,
     ctx = ctx,
