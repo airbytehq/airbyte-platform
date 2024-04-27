@@ -456,7 +456,7 @@ public enum OssMetricsRegistry implements MetricsRegistry {
       "create_secret_default_store",
       "A secret was created in the default configured secret store."),
   UPDATE_SECRET_DEFAULT_STORE(MetricEmittingApps.SERVER,
-      "create_secret_default_store",
+      "update_secret_default_store",
       "A secret was created in the default configured secret store."),
   DELETE_SECRET_DEFAULT_STORE(MetricEmittingApps.SERVER,
       "delete_secret_default_store",
