@@ -2,7 +2,7 @@ package io.airbyte.connectorSidecar
 
 import com.fasterxml.jackson.databind.JsonNode
 import com.google.common.annotations.VisibleForTesting
-import io.airbyte.api.client.generated.SourceApi
+import io.airbyte.api.client.AirbyteApiClient
 import io.airbyte.api.client.model.generated.SourceDiscoverSchemaWriteRequestBody
 import io.airbyte.commons.converters.CatalogClientConverters
 import io.airbyte.commons.converters.ConnectorConfigUpdater
@@ -40,7 +40,7 @@ private val logger = KotlinLogging.logger {}
 @Singleton
 class ConnectorMessageProcessor(
   val connectorConfigUpdater: ConnectorConfigUpdater,
-  val sourceApi: SourceApi,
+  val airbyteApiClient: AirbyteApiClient,
 ) {
   data class OperationResult(
     val connectionStatus: AirbyteConnectionStatus? = null,
@@ -161,7 +161,7 @@ class ConnectorMessageProcessor(
       OperationType.DISCOVER ->
         if (result.catalog != null && input.discoveryInput != null) {
           val apiResult =
-            sourceApi
+            airbyteApiClient.sourceApi
               .writeDiscoverCatalogResult(buildSourceDiscoverSchemaWriteRequestBody(input.discoveryInput, result.catalog))
           jobOutput.discoverCatalogId = apiResult.catalogId
         } else if (failureReason.isEmpty) {

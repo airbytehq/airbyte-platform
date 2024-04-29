@@ -35,6 +35,7 @@ jest.mock("core/api", () => ({
   useGetDestinationDefinitionSpecification: () => mockDestinationDefinitionSpecification,
   useSourceDefinition: () => mockSourceDefinition,
   useDestinationDefinition: () => mockDestinationDefinition,
+  HttpError: jest.fn(),
 }));
 
 describe("ConnectionFormService", () => {

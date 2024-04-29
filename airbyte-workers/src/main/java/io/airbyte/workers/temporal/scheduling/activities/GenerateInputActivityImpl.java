@@ -14,7 +14,6 @@ import static io.airbyte.metrics.lib.MetricTags.JOB_ID;
 
 import datadog.trace.api.Trace;
 import io.airbyte.api.client.AirbyteApiClient;
-import io.airbyte.api.client.generated.JobsApi;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.commons.temporal.config.WorkerMode;
 import io.airbyte.commons.temporal.utils.PayloadChecker;
@@ -33,20 +32,20 @@ import java.util.Map;
 @Requires(env = WorkerMode.CONTROL_PLANE)
 public class GenerateInputActivityImpl implements GenerateInputActivity {
 
-  private final JobsApi jobsApi;
+  private final AirbyteApiClient airbyteApiClient;
 
   private final PayloadChecker payloadChecker;
 
   @SuppressWarnings("ParameterName")
-  public GenerateInputActivityImpl(final JobsApi jobsApi, final PayloadChecker payloadChecker) {
-    this.jobsApi = jobsApi;
+  public GenerateInputActivityImpl(final AirbyteApiClient airbyteApiClient, final PayloadChecker payloadChecker) {
+    this.airbyteApiClient = airbyteApiClient;
     this.payloadChecker = payloadChecker;
   }
 
   @Override
   public SyncJobCheckConnectionInputs getCheckConnectionInputs(final SyncInputWithAttemptNumber input) {
     return payloadChecker.validatePayloadSize(Jsons.convertValue(AirbyteApiClient.retryWithJitter(
-        () -> jobsApi.getCheckInput(new io.airbyte.api.client.model.generated.CheckInput().jobId(input.getJobId())
+        () -> airbyteApiClient.getJobsApi().getCheckInput(new io.airbyte.api.client.model.generated.CheckInput().jobId(input.getJobId())
             .attemptNumber(input.getAttemptNumber())),
         "Create check job input."), SyncJobCheckConnectionInputs.class));
   }
@@ -55,7 +54,7 @@ public class GenerateInputActivityImpl implements GenerateInputActivity {
   @Override
   public JobInput getSyncWorkflowInput(final SyncInput input) {
     final var jobInput = Jsons.convertValue(AirbyteApiClient.retryWithJitter(
-        () -> jobsApi.getJobInput(new io.airbyte.api.client.model.generated.SyncInput().jobId(input.getJobId())
+        () -> airbyteApiClient.getJobsApi().getJobInput(new io.airbyte.api.client.model.generated.SyncInput().jobId(input.getJobId())
             .attemptNumber(input.getAttemptId())),
         "Create job input."), JobInput.class);
 

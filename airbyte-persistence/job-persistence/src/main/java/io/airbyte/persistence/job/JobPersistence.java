@@ -417,6 +417,8 @@ public interface JobPersistence {
 
   List<AttemptNormalizationStatus> getAttemptNormalizationStatusesForJob(final Long jobId) throws IOException;
 
+  void updateJobConfig(Long jobId, JobConfig config) throws IOException;
+
   /**
    * Convenience POJO for various stats data structures.
    *

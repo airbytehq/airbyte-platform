@@ -450,7 +450,25 @@ public enum OssMetricsRegistry implements MetricsRegistry {
 
   PAYLOAD_VALIDATION_RESULT(MetricEmittingApps.WORKER,
       "payload_validation_result",
-      "The result of the comparing the payload in object storage to the one passed from temporal.");
+      "The result of the comparing the payload in object storage to the one passed from temporal."),
+
+  CREATE_SECRET_DEFAULT_STORE(MetricEmittingApps.SERVER,
+      "create_secret_default_store",
+      "A secret was created in the default configured secret store."),
+  UPDATE_SECRET_DEFAULT_STORE(MetricEmittingApps.SERVER,
+      "update_secret_default_store",
+      "A secret was created in the default configured secret store."),
+  DELETE_SECRET_DEFAULT_STORE(MetricEmittingApps.SERVER,
+      "delete_secret_default_store",
+      "A secret was created in the default configured secret store."),
+
+  CATALOG_SIZE_VALIDATION_ERROR(MetricEmittingApps.SERVER,
+      "catalog_size_validation_error",
+      "The catalog provided by the user was larger than our limit and rejected."),
+
+  EXCESSIVE_CATALOG_SIZE(MetricEmittingApps.SERVER,
+      "excessive_catalog_size",
+      "Distribution of input catalog field counts that exceed the configured limit.");
 
   private final MetricEmittingApp application;
   private final String metricName;

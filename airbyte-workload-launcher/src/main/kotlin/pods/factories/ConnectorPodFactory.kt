@@ -115,12 +115,15 @@ class ConnectorPodFactory(
     val mainCommand =
       """
       pwd
-
-      eval "${'$'}AIRBYTE_ENTRYPOINT $operationCommand $configArg" > ${KubePodProcess.CONFIG_DIR}/${OrchestratorConstants.JOB_OUTPUT_FILENAME}
       
-      cat ${KubePodProcess.CONFIG_DIR}/${OrchestratorConstants.JOB_OUTPUT_FILENAME}
+      eval "${'$'}AIRBYTE_ENTRYPOINT $operationCommand $configArg" > ${KubePodProcess.CONFIG_DIR}/${OrchestratorConstants.JOB_OUTPUT_FILENAME}
+      exit_code=${'$'}?
+      
+      echo ${'$'}exit_code > ${KubePodProcess.CONFIG_DIR}/${OrchestratorConstants.EXIT_CODE_FILE}
 
-      echo $? > ${KubePodProcess.CONFIG_DIR}/${OrchestratorConstants.EXIT_CODE_FILE}
+      cat ${KubePodProcess.CONFIG_DIR}/${OrchestratorConstants.JOB_OUTPUT_FILENAME}
+      
+      exit ${'$'}exit_code
       """.trimIndent()
 
     return ContainerBuilder()

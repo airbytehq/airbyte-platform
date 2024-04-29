@@ -138,7 +138,10 @@ public class CatalogClientConverters {
         .withSyncMode(Enums.convertTo(config.getSyncMode(), io.airbyte.protocol.models.SyncMode.class))
         .withDestinationSyncMode(Enums.convertTo(config.getDestinationSyncMode(), io.airbyte.protocol.models.DestinationSyncMode.class))
         .withPrimaryKey(config.getPrimaryKey())
-        .withCursorField(config.getCursorField());
+        .withCursorField(config.getCursorField())
+        .withGenerationId(config.getGenerationId())
+        .withMinimumGenerationId(config.getMinimumGenerationId())
+        .withSyncId(config.getSyncId());
   }
 
   /**

@@ -37,7 +37,7 @@ open class WorkspacesController(
   private val currentUserService: CurrentUserService,
 ) : PublicWorkspacesApi {
   @Path("/{workspaceId}/oauthCredentials")
-  @ExecuteOn(AirbyteTaskExecutors.IO)
+  @ExecuteOn(AirbyteTaskExecutors.PUBLIC_API)
   override fun createOrUpdateWorkspaceOAuthCredentials(
     workspaceId: UUID?,
     workspaceOAuthCredentialsRequest: WorkspaceOAuthCredentialsRequest?,
@@ -55,7 +55,7 @@ open class WorkspacesController(
     )
   }
 
-  @ExecuteOn(AirbyteTaskExecutors.IO)
+  @ExecuteOn(AirbyteTaskExecutors.PUBLIC_API)
   override fun publicCreateWorkspace(workspaceCreateRequest: WorkspaceCreateRequest?): Response {
     // Now that we have orgs everywhere, ensure the user is at least an organization editor
     apiAuthorizationHelper.ensureUserHasAnyRequiredRoleOrThrow(
@@ -67,7 +67,7 @@ open class WorkspacesController(
   }
 
   @Path("/{workspaceId}")
-  @ExecuteOn(AirbyteTaskExecutors.IO)
+  @ExecuteOn(AirbyteTaskExecutors.PUBLIC_API)
   override fun publicDeleteWorkspace(workspaceId: UUID?): Response {
     val userId: UUID = currentUserService.currentUser.userId
     apiAuthorizationHelper.checkWorkspacePermissions(
@@ -80,7 +80,7 @@ open class WorkspacesController(
   }
 
   @Path("/{workspaceId}")
-  @ExecuteOn(AirbyteTaskExecutors.IO)
+  @ExecuteOn(AirbyteTaskExecutors.PUBLIC_API)
   override fun publicGetWorkspace(workspaceId: UUID?): Response {
     val userId: UUID = currentUserService.currentUser.userId
     apiAuthorizationHelper.checkWorkspacePermissions(
@@ -92,7 +92,7 @@ open class WorkspacesController(
     return workspaceService.controllerGetWorkspace(workspaceId)
   }
 
-  @ExecuteOn(AirbyteTaskExecutors.IO)
+  @ExecuteOn(AirbyteTaskExecutors.PUBLIC_API)
   override fun publicListWorkspaces(
     workspaceIds: MutableList<UUID>?,
     includeDeleted: Boolean?,
@@ -117,7 +117,7 @@ open class WorkspacesController(
 
   @Patch
   @Path("/{workspaceId}")
-  @ExecuteOn(AirbyteTaskExecutors.IO)
+  @ExecuteOn(AirbyteTaskExecutors.PUBLIC_API)
   override fun publicUpdateWorkspace(
     workspaceId: UUID?,
     workspaceUpdateRequest: WorkspaceUpdateRequest?,

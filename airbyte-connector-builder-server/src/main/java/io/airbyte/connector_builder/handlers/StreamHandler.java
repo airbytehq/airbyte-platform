@@ -45,6 +45,7 @@ public class StreamHandler {
       return this.requester.readStream(
           streamReadRequestBody.getManifest(),
           streamReadRequestBody.getConfig(),
+          streamReadRequestBody.getState(),
           streamReadRequestBody.getStream(),
           streamReadRequestBody.getRecordLimit(),
           streamReadRequestBody.getPageLimit(),

@@ -83,7 +83,7 @@ export const startManualSync = () => {
 export const startManualReset = () => {
   cy.get(statusPage.jobHistoryDropdownMenu).click();
   cy.get(statusPage.resetDataDropdownOption).click();
-  cy.get("[data-id='reset']").click();
+  cy.get("[data-id='clear-data']").click();
 };
 
 export const createPokeApiSourceViaApi = () => {

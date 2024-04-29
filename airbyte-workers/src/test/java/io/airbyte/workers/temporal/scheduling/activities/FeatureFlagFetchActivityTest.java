@@ -5,7 +5,9 @@
 package io.airbyte.workers.temporal.scheduling.activities;
 
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
+import io.airbyte.api.client.AirbyteApiClient;
 import io.airbyte.api.client.generated.WorkspaceApi;
 import io.airbyte.featureflag.FeatureFlagClient;
 import java.util.Map;
@@ -18,14 +20,17 @@ class FeatureFlagFetchActivityTest {
 
   private static final UUID CONNECTION_ID = UUID.randomUUID();
 
-  FeatureFlagFetchActivity featureFlagFetchActivity;
-  FeatureFlagClient featureFlagClient;
+  private AirbyteApiClient mAirbyteApiClient;
+  private WorkspaceApi mWorkspaceApi;
+  private FeatureFlagFetchActivity featureFlagFetchActivity;
+  private FeatureFlagClient featureFlagClient;
 
   @BeforeEach
   void setUp() {
-    final WorkspaceApi workspaceApi = mock(WorkspaceApi.class);
-
-    featureFlagFetchActivity = new FeatureFlagFetchActivityImpl(workspaceApi);
+    mWorkspaceApi = mock(WorkspaceApi.class);
+    mAirbyteApiClient = mock(AirbyteApiClient.class);
+    when(mAirbyteApiClient.getWorkspaceApi()).thenReturn(mWorkspaceApi);
+    featureFlagFetchActivity = new FeatureFlagFetchActivityImpl(mAirbyteApiClient);
   }
 
   @Test

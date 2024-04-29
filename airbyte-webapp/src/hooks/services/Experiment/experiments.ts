@@ -13,7 +13,6 @@ export interface Experiments {
   "authPage.signup.hideName": boolean;
   "billing.early-sync-enabled": boolean;
   "billing.autoRecharge": boolean;
-  "connection.clearNotReset": boolean;
   "connection.columnSelection": boolean;
   "connection.simplifiedCreation": boolean;
   "connection.onboarding.destinations": string;
@@ -26,6 +25,7 @@ export interface Experiments {
   "connector.suggestedSourceConnectors": string;
   "connector.suggestedDestinationConnectors": string;
   "platform.auto-backfill-on-new-columns": boolean;
+  "platform.activate-refreshes": boolean;
   "settings.breakingChangeNotifications": boolean;
   "settings.token-management-ui": boolean;
   "settings.showAdvancedSettings": boolean;

@@ -8,11 +8,13 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
+import io.airbyte.api.client.AirbyteApiClient;
 import io.airbyte.api.client.generated.WorkspaceApi;
 import io.airbyte.api.client.invoker.generated.ApiException;
 import io.airbyte.api.client.model.generated.ConnectionIdRequestBody;
 import io.airbyte.api.client.model.generated.WorkspaceRead;
 import java.util.UUID;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 /**
@@ -20,9 +22,17 @@ import org.junit.jupiter.api.Test;
  */
 class CustomerIoEmailConfigFetcherTest {
 
-  private final WorkspaceApi workspaceApi = mock(WorkspaceApi.class);
+  private AirbyteApiClient airbyteApiClient;
+  private WorkspaceApi workspaceApi;
+  private CustomerIoEmailConfigFetcher cloudCustomerIoEmailConfigFetcher;
 
-  private final CustomerIoEmailConfigFetcher cloudCustomerIoEmailConfigFetcher = new CustomerIoEmailConfigFetcherImpl(workspaceApi);
+  @BeforeEach
+  void setup() {
+    airbyteApiClient = mock(AirbyteApiClient.class);
+    workspaceApi = mock(WorkspaceApi.class);
+    when(airbyteApiClient.getWorkspaceApi()).thenReturn(workspaceApi);
+    cloudCustomerIoEmailConfigFetcher = new CustomerIoEmailConfigFetcherImpl(airbyteApiClient);
+  }
 
   @Test
   void testReturnTheRightConfig() throws ApiException {

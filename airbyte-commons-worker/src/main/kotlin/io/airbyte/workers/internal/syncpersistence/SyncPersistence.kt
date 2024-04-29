@@ -2,8 +2,6 @@ package io.airbyte.workers.internal.syncpersistence
 
 import datadog.trace.api.Trace
 import io.airbyte.api.client.AirbyteApiClient
-import io.airbyte.api.client.generated.AttemptApi
-import io.airbyte.api.client.generated.StateApi
 import io.airbyte.api.client.model.generated.AttemptStats
 import io.airbyte.api.client.model.generated.AttemptStreamStats
 import io.airbyte.api.client.model.generated.ConnectionState
@@ -62,8 +60,7 @@ data class RetryWithJitterConfig(val jitterMaxIntervalSecs: Int, val finalInterv
 class SyncPersistenceImpl
   @Creator
   constructor(
-    private val stateApi: StateApi,
-    private val attemptApi: AttemptApi,
+    private val airbyteApiClient: AirbyteApiClient,
     private val stateAggregatorFactory: StateAggregatorFactory,
     @Named("syncPersistenceExecutorService") private val stateFlushExecutorService: ScheduledExecutorService,
     @Value("\${airbyte.worker.replication.persistence-flush-period-sec}") private val stateFlushPeriodInSeconds: Long,
@@ -83,8 +80,7 @@ class SyncPersistenceImpl
     private var retryWithJitterConfig: RetryWithJitterConfig? = null
 
     protected constructor(
-      stateApi: StateApi,
-      attemptApi: AttemptApi,
+      airbyteApiClient: AirbyteApiClient,
       stateAggregatorFactory: StateAggregatorFactory,
       syncStatsTracker: SyncStatsTracker,
       scheduledExecutorService: ScheduledExecutorService,
@@ -96,8 +92,7 @@ class SyncPersistenceImpl
       attemptNumber: Int,
       catalog: ConfiguredAirbyteCatalog,
     ) : this(
-      stateApi = stateApi,
-      attemptApi = attemptApi,
+      airbyteApiClient = airbyteApiClient,
       stateAggregatorFactory = stateAggregatorFactory,
       stateFlushExecutorService = scheduledExecutorService,
       stateFlushPeriodInSeconds = stateFlushPeriodInSeconds,
@@ -273,7 +268,7 @@ class SyncPersistenceImpl
       // This design favoring accuracy of committed data counters over freshness of emitted data counters.
       if (isReceivingStats && stateToFlush?.isEmpty() == false) {
         // TODO figure out a way to remove the double-bangs
-        statsToPersist = buildSaveStatsRequest(syncStatsTracker, jobId!!, attemptNumber!!)
+        statsToPersist = buildSaveStatsRequest(syncStatsTracker, jobId, attemptNumber, connectionId)
       }
     }
 
@@ -293,7 +288,7 @@ class SyncPersistenceImpl
           .connectionState(StateConverter.toClient(connectionId, maybeStateWrapper))
 
       try {
-        stateApi.createOrUpdateState(stateApiRequest)
+        airbyteApiClient.stateApi.createOrUpdateState(stateApiRequest)
       } catch (e: Exception) {
         metricClient.count(OssMetricsRegistry.STATE_COMMIT_ATTEMPT_FAILED, 1)
         throw e
@@ -311,7 +306,7 @@ class SyncPersistenceImpl
 
       metricClient.count(OssMetricsRegistry.STATS_COMMIT_ATTEMPT, 1)
       try {
-        attemptApi.saveStats(statsToPersist)
+        airbyteApiClient.attemptApi.saveStats(statsToPersist)
       } catch (e: Exception) {
         metricClient.count(OssMetricsRegistry.STATS_COMMIT_ATTEMPT_FAILED, 1)
         throw e
@@ -368,6 +363,7 @@ private fun buildSaveStatsRequest(
   syncStatsTracker: SyncStatsTracker,
   jobId: Long,
   attemptNumber: Int,
+  connectionId: UUID,
 ): SaveStatsRequestBody {
   val totalSyncStats = syncStatsTracker.getTotalStats(false)
   val streamSyncStats = syncStatsTracker.getPerStreamStats(false)
@@ -376,6 +372,7 @@ private fun buildSaveStatsRequest(
     .jobId(jobId)
     .attemptNumber(attemptNumber)
     .stats(totalSyncStats.toAttemptStats())
+    .connectionId(connectionId)
     .streamStats(
       streamSyncStats.map {
         AttemptStreamStats()

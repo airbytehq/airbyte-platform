@@ -47,19 +47,20 @@ import io.airbyte.commons.enums.Enums;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.commons.server.converters.ApiPojoConverters;
 import io.airbyte.commons.server.converters.CatalogDiffConverters;
+import io.airbyte.commons.server.errors.BadRequestException;
 import io.airbyte.commons.server.handlers.helpers.AutoPropagateSchemaChangeHelper;
 import io.airbyte.commons.server.handlers.helpers.AutoPropagateSchemaChangeHelper.UpdateSchemaResult;
 import io.airbyte.commons.server.handlers.helpers.CatalogConverter;
 import io.airbyte.commons.server.handlers.helpers.ConnectionScheduleHelper;
 import io.airbyte.commons.server.handlers.helpers.PaginationHelper;
 import io.airbyte.commons.server.scheduler.EventRunner;
+import io.airbyte.commons.server.validation.CatalogValidator;
 import io.airbyte.config.ActorCatalog;
 import io.airbyte.config.ActorDefinitionVersion;
 import io.airbyte.config.BasicSchedule;
 import io.airbyte.config.DestinationConnection;
 import io.airbyte.config.FieldSelectionData;
 import io.airbyte.config.Geography;
-import io.airbyte.config.JobConfig;
 import io.airbyte.config.JobConfig.ConfigType;
 import io.airbyte.config.JobOutput;
 import io.airbyte.config.JobSyncConfig.NamespaceDefinitionType;
@@ -77,6 +78,9 @@ import io.airbyte.config.helpers.ScheduleHelpers;
 import io.airbyte.config.persistence.ActorDefinitionVersionHelper;
 import io.airbyte.config.persistence.ConfigNotFoundException;
 import io.airbyte.config.persistence.ConfigRepository;
+import io.airbyte.config.persistence.StreamGenerationRepository;
+import io.airbyte.config.persistence.domain.Generation;
+import io.airbyte.config.persistence.helper.CatalogGenerationSetter;
 import io.airbyte.featureflag.CheckWithCatalog;
 import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.featureflag.Workspace;
@@ -147,6 +151,9 @@ public class ConnectionsHandler {
   private final Integer maxFailedJobsInARowBeforeConnectionDisable;
   private final int maxJobLookback = 10;
   private final StreamRefreshesHandler streamRefreshesHandler;
+  private final StreamGenerationRepository streamGenerationRepository;
+  private final CatalogGenerationSetter catalogGenerationSetter;
+  private final CatalogValidator catalogValidator;
 
   @Inject
   public ConnectionsHandler(final StreamRefreshesHandler streamRefreshesHandler,
@@ -161,8 +168,11 @@ public class ConnectionsHandler {
                             final ActorDefinitionVersionHelper actorDefinitionVersionHelper,
                             final ConnectorDefinitionSpecificationHandler connectorSpecHandler,
                             final JobNotifier jobNotifier,
-                            @Value("${airbyte.server.connection.disable.max-days}") final Integer maxDaysOfOnlyFailedJobsBeforeConnectionDisable,
-                            @Value("${airbyte.server.connection.disable.max-jobs}") final Integer maxFailedJobsInARowBeforeConnectionDisable) {
+                            @Value("${airbyte.server.connection.limits.max-days}") final Integer maxDaysOfOnlyFailedJobsBeforeConnectionDisable,
+                            @Value("${airbyte.server.connection.limits.max-jobs}") final Integer maxFailedJobsInARowBeforeConnectionDisable,
+                            final StreamGenerationRepository streamGenerationRepository,
+                            final CatalogGenerationSetter catalogGenerationSetter,
+                            final CatalogValidator catalogValidator) {
     this.jobPersistence = jobPersistence;
     this.configRepository = configRepository;
     this.uuidGenerator = uuidGenerator;
@@ -177,13 +187,17 @@ public class ConnectionsHandler {
     this.maxDaysOfOnlyFailedJobsBeforeConnectionDisable = maxDaysOfOnlyFailedJobsBeforeConnectionDisable;
     this.maxFailedJobsInARowBeforeConnectionDisable = maxFailedJobsInARowBeforeConnectionDisable;
     this.streamRefreshesHandler = streamRefreshesHandler;
+    this.streamGenerationRepository = streamGenerationRepository;
+    this.catalogGenerationSetter = catalogGenerationSetter;
+    this.catalogValidator = catalogValidator;
   }
 
   /**
    * Modifies the given StandardSync by applying changes from a partially-filled ConnectionUpdate
    * patch. Any fields that are null in the patch will be left unchanged.
    */
-  private static void applyPatchToStandardSync(final StandardSync sync, final ConnectionUpdate patch) throws JsonValidationException {
+  private void applyPatchToStandardSync(final StandardSync sync, final ConnectionUpdate patch, final UUID workspaceId)
+      throws JsonValidationException {
     // update the sync's schedule using the patch's scheduleType and scheduleData. validations occur in
     // the helper to ensure both fields
     // make sense together.
@@ -197,6 +211,8 @@ public class ConnectionsHandler {
 
     if (patch.getSyncCatalog() != null) {
       validateCatalogDoesntContainDuplicateStreamNames(patch.getSyncCatalog());
+      validateCatalogSize(patch.getSyncCatalog(), workspaceId, "update");
+
       sync.setCatalog(CatalogConverter.toConfiguredProtocol(patch.getSyncCatalog()));
       sync.withFieldSelectionData(CatalogConverter.getFieldSelectionData(patch.getSyncCatalog()));
     }
@@ -444,6 +460,7 @@ public class ConnectionsHandler {
         connectionCreate.getDestinationId(),
         operationIds);
 
+    final UUID workspaceId = workspaceHelper.getWorkspaceForDestinationId(connectionCreate.getDestinationId());
     final UUID connectionId = uuidGenerator.get();
 
     // If not specified, default the NamespaceDefinition to 'source'
@@ -477,6 +494,8 @@ public class ConnectionsHandler {
     // TODO Undesirable behavior: sending a null configured catalog should not be valid?
     if (connectionCreate.getSyncCatalog() != null) {
       validateCatalogDoesntContainDuplicateStreamNames(connectionCreate.getSyncCatalog());
+      validateCatalogSize(connectionCreate.getSyncCatalog(), workspaceId, "create");
+
       standardSync.withCatalog(CatalogConverter.toConfiguredProtocol(connectionCreate.getSyncCatalog()));
       standardSync.withFieldSelectionData(CatalogConverter.getFieldSelectionData(connectionCreate.getSyncCatalog()));
     } else {
@@ -494,7 +513,6 @@ public class ConnectionsHandler {
     } else {
       populateSyncFromLegacySchedule(standardSync, connectionCreate);
     }
-    final UUID workspaceId = workspaceHelper.getWorkspaceForDestinationId(connectionCreate.getDestinationId());
     if (workspaceId != null && featureFlagClient.boolVariation(CheckWithCatalog.INSTANCE, new Workspace(workspaceId))) {
       // TODO this is the hook for future check with catalog work
       LOGGER.info("Entered into Dark Launch Code for Check with Catalog");
@@ -601,8 +619,9 @@ public class ConnectionsHandler {
       throws ConfigNotFoundException, IOException, JsonValidationException {
 
     final UUID connectionId = connectionPatch.getConnectionId();
+    final UUID workspaceId = workspaceHelper.getWorkspaceForConnectionId(connectionId);
 
-    LOGGER.debug("Starting updateConnection for connectionId {}...", connectionId);
+    LOGGER.debug("Starting updateConnection for connectionId {}, workspaceId {}...", connectionId, workspaceId);
     LOGGER.debug("incoming connectionPatch: {}", connectionPatch);
 
     final StandardSync sync = configRepository.getStandardSync(connectionId);
@@ -613,7 +632,7 @@ public class ConnectionsHandler {
     final ConnectionRead initialConnectionRead = ApiPojoConverters.internalToConnectionRead(sync);
     LOGGER.debug("initial ConnectionRead: {}", initialConnectionRead);
 
-    applyPatchToStandardSync(sync, connectionPatch);
+    applyPatchToStandardSync(sync, connectionPatch, workspaceId);
 
     LOGGER.debug("patched StandardSync before persisting: {}", sync);
     configRepository.writeStandardSync(sync);
@@ -708,6 +727,11 @@ public class ConnectionsHandler {
   public ConnectionRead getConnection(final UUID connectionId)
       throws JsonValidationException, IOException, ConfigNotFoundException {
     return buildConnectionRead(connectionId);
+  }
+
+  public ConnectionRead getConnectionForJob(final UUID connectionId, final Long jobId)
+      throws JsonValidationException, IOException, ConfigNotFoundException {
+    return buildConnectionRead(connectionId, jobId);
   }
 
   public CatalogDiff getDiff(final AirbyteCatalog oldCatalog, final AirbyteCatalog newCatalog, final ConfiguredAirbyteCatalog configuredCatalog)
@@ -806,6 +830,31 @@ public class ConnectionsHandler {
     return ApiPojoConverters.internalToConnectionRead(standardSync);
   }
 
+  private ConnectionRead buildConnectionRead(final UUID connectionId, final Long jobId)
+      throws ConfigNotFoundException, IOException, JsonValidationException {
+    final StandardSync standardSync = configRepository.getStandardSync(connectionId);
+    final Job job = jobPersistence.getJob(jobId);
+    final List<Generation> generations = streamGenerationRepository.getMaxGenerationOfStreamsForConnectionId(connectionId);
+    final Optional<ConfiguredAirbyteCatalog> catalogWithGeneration;
+    if (job.getConfigType() == ConfigType.SYNC) {
+      catalogWithGeneration = Optional.of(catalogGenerationSetter.updateCatalogWithGenerationAndSyncInformation(
+          standardSync.getCatalog(),
+          jobId,
+          List.of(),
+          generations));
+    } else if (job.getConfigType() == ConfigType.REFRESH) {
+      catalogWithGeneration = Optional.of(catalogGenerationSetter.updateCatalogWithGenerationAndSyncInformation(
+          standardSync.getCatalog(),
+          jobId,
+          job.getConfig().getRefresh().getStreamsToRefresh(),
+          generations));
+    } else {
+      catalogWithGeneration = Optional.empty();
+    }
+    catalogWithGeneration.ifPresent(updatedCatalog -> standardSync.setCatalog(updatedCatalog));
+    return ApiPojoConverters.internalToConnectionRead(standardSync);
+  }
+
   public ConnectionReadList listConnectionsForWorkspaces(final ListConnectionsForWorkspacesRequestBody listConnectionsForWorkspacesRequestBody)
       throws IOException {
 
@@ -863,7 +912,7 @@ public class ConnectionsHandler {
     final List<UUID> connectionIds = connectionStatusesRequestBody.getConnectionIds();
     final List<ConnectionStatusRead> result = new ArrayList<>();
     for (final UUID connectionId : connectionIds) {
-      final List<Job> jobs = jobPersistence.listJobs(Set.of(JobConfig.ConfigType.SYNC, JobConfig.ConfigType.RESET_CONNECTION),
+      final List<Job> jobs = jobPersistence.listJobs(REPLICATION_TYPES,
           connectionId.toString(),
           maxJobLookback);
       final boolean isRunning = jobs.stream().anyMatch(job -> JobStatus.NON_TERMINAL_STATUSES.contains(job.getStatus()));
@@ -1106,6 +1155,20 @@ public class ConnectionsHandler {
     return propagateResult.appliedDiff();
   }
 
+  private void validateCatalogSize(final AirbyteCatalog catalog, final UUID workspaceId, final String operationName) {
+    final var validationContext = new Workspace(workspaceId);
+    final var validationError = catalogValidator.fieldCount(catalog, validationContext);
+    if (validationError != null) {
+      MetricClientFactory.getMetricClient().count(
+          OssMetricsRegistry.CATALOG_SIZE_VALIDATION_ERROR,
+          1,
+          new MetricAttribute(MetricTags.CRUD_OPERATION, operationName),
+          new MetricAttribute(MetricTags.WORKSPACE_ID, workspaceId.toString()));
+
+      throw new BadRequestException(validationError.getMessage());
+    }
+  }
+
   public void trackSchemaChange(final UUID workspaceId, final UUID connectionId, final UpdateSchemaResult propagateResult) {
     try {
       final String changeEventTimeline = Instant.now().toString();
@@ -1115,8 +1178,11 @@ public class ConnectionsHandler {
         payload.put("connection_id", connectionId);
         payload.put("schema_change_event_date", changeEventTimeline);
         payload.put("stream_change_type", streamTransform.getTransformType().toString());
-        payload.put("stream_namespace", streamTransform.getStreamDescriptor().getNamespace());
-        payload.put("stream_name", streamTransform.getStreamDescriptor().getName());
+        StreamDescriptor streamDescriptor = streamTransform.getStreamDescriptor();
+        if (streamDescriptor.getNamespace() != null) {
+          payload.put("stream_namespace", streamDescriptor.getNamespace());
+        }
+        payload.put("stream_name", streamDescriptor.getName());
         if (streamTransform.getTransformType() == TransformTypeEnum.UPDATE_STREAM) {
           payload.put("stream_field_changes", Jsons.serialize(streamTransform.getUpdateStream()));
         }

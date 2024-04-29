@@ -1,7 +1,7 @@
 package io.airbyte.workers
 
 import com.fasterxml.jackson.databind.JsonNode
-import io.airbyte.api.client.generated.SecretsPersistenceConfigApi
+import io.airbyte.api.client.AirbyteApiClient
 import io.airbyte.api.client.invoker.generated.ApiException
 import io.airbyte.api.client.model.generated.ScopeType
 import io.airbyte.api.client.model.generated.SecretPersistenceConfig
@@ -19,7 +19,7 @@ import java.util.UUID
  */
 class ConnectorSecretsHydrator(
   private val secretsRepositoryReader: SecretsRepositoryReader,
-  private val secretsApiClient: SecretsPersistenceConfigApi,
+  private val airbyteApiClient: AirbyteApiClient,
   private val featureFlagClient: FeatureFlagClient,
 ) {
   fun hydrateConfig(
@@ -44,7 +44,7 @@ class ConnectorSecretsHydrator(
     val secretPersistenceConfig: SecretPersistenceConfig
     try {
       secretPersistenceConfig =
-        secretsApiClient.getSecretsPersistenceConfig(
+        airbyteApiClient.secretPersistenceConfigApi.getSecretsPersistenceConfig(
           SecretPersistenceConfigGetRequestBody()
             .scopeType(ScopeType.ORGANIZATION)
             .scopeId(organizationId),

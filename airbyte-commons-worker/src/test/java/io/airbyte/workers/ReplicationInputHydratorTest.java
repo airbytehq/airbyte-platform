@@ -5,6 +5,8 @@
 package io.airbyte.workers;
 
 import static org.junit.Assert.assertEquals;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -21,6 +23,7 @@ import io.airbyte.api.client.model.generated.AirbyteStream;
 import io.airbyte.api.client.model.generated.AirbyteStreamAndConfiguration;
 import io.airbyte.api.client.model.generated.AirbyteStreamConfiguration;
 import io.airbyte.api.client.model.generated.CatalogDiff;
+import io.airbyte.api.client.model.generated.ConnectionAndJobIdRequestBody;
 import io.airbyte.api.client.model.generated.ConnectionIdRequestBody;
 import io.airbyte.api.client.model.generated.ConnectionRead;
 import io.airbyte.api.client.model.generated.ConnectionState;
@@ -39,6 +42,7 @@ import io.airbyte.config.State;
 import io.airbyte.config.SyncResourceRequirements;
 import io.airbyte.config.helpers.StateMessageHelper;
 import io.airbyte.config.secrets.SecretsRepositoryReader;
+import io.airbyte.featureflag.ActivateRefreshes;
 import io.airbyte.featureflag.AutoBackfillOnNewColumns;
 import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.featureflag.Flag;
@@ -51,7 +55,8 @@ import io.airbyte.workers.models.ReplicationActivityInput;
 import java.util.List;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
 /**
  * Tests for the replication activity specifically.
@@ -99,7 +104,8 @@ class ReplicationInputHydratorTest {
         }
       }]
       """));
-  private static final JobRunConfig JOB_RUN_CONFIG = new JobRunConfig();
+  private static final Long JOB_ID = 123L;
+  private static final JobRunConfig JOB_RUN_CONFIG = new JobRunConfig().withJobId(JOB_ID.toString());
   private static final IntegrationLauncherConfig DESTINATION_LAUNCHER_CONFIG = new IntegrationLauncherConfig();
   private static final IntegrationLauncherConfig SOURCE_LAUNCHER_CONFIG = new IntegrationLauncherConfig();
   private static final SyncResourceRequirements SYNC_RESOURCE_REQUIREMENTS = new SyncResourceRequirements();
@@ -133,19 +139,11 @@ class ReplicationInputHydratorTest {
     when(airbyteApiClient.getStateApi()).thenReturn(stateApi);
     when(airbyteApiClient.getJobsApi()).thenReturn(jobsApi);
     when(airbyteApiClient.getSecretPersistenceConfigApi()).thenReturn(secretsPersistenceConfigApi);
-    when(connectionApi.getConnection(new ConnectionIdRequestBody().connectionId(CONNECTION_ID))).thenReturn(new ConnectionRead()
-        .connectionId(CONNECTION_ID)
-        .syncCatalog(SYNC_CATALOG));
     when(stateApi.getState(new ConnectionIdRequestBody().connectionId(CONNECTION_ID))).thenReturn(CONNECTION_STATE_RESPONSE);
   }
 
   private ReplicationInputHydrator getReplicationInputHydrator() {
-    return new ReplicationInputHydrator(
-        airbyteApiClient.getConnectionApi(),
-        airbyteApiClient.getJobsApi(),
-        airbyteApiClient.getStateApi(),
-        secretsPersistenceConfigApi, secretsRepositoryReader,
-        featureFlagClient);
+    return new ReplicationInputHydrator(airbyteApiClient, secretsRepositoryReader, featureFlagClient);
   }
 
   private ReplicationActivityInput getDefaultReplicationActivityInputForTest() {
@@ -172,8 +170,14 @@ class ReplicationInputHydratorTest {
         false);
   }
 
-  @Test
-  void testGenerateReplicationInputRetrievesInputs() throws Exception {
+  @ParameterizedTest
+  @ValueSource(booleans = {true, false})
+  void testGenerateReplicationInputRetrievesInputs(final boolean withRefresh) throws Exception {
+    if (withRefresh) {
+      mockRefresh();
+    } else {
+      mockNonRefresh();
+    }
     // Verify that we get the state and catalog from the API.
     final ReplicationInputHydrator replicationInputHydrator = getReplicationInputHydrator();
 
@@ -184,8 +188,14 @@ class ReplicationInputHydratorTest {
     assertEquals(TEST_STREAM_NAME, replicationInput.getCatalog().getStreams().get(0).getStream().getName());
   }
 
-  @Test
-  void testGenerateReplicationInputHandlesResets() throws Exception {
+  @ParameterizedTest
+  @ValueSource(booleans = {true, false})
+  void testGenerateReplicationInputHandlesResets(final boolean withRefresh) throws Exception {
+    if (withRefresh) {
+      mockRefresh();
+    } else {
+      mockNonRefresh();
+    }
     // Verify that if the sync is a reset, we retrieve the job info and handle the streams accordingly.
     final ReplicationInputHydrator replicationInputHydrator = getReplicationInputHydrator();
     final ReplicationActivityInput input = getDefaultReplicationActivityInputForTest();
@@ -193,20 +203,23 @@ class ReplicationInputHydratorTest {
     when(jobsApi.getLastReplicationJob(new ConnectionIdRequestBody().connectionId(CONNECTION_ID))).thenReturn(
         new JobOptionalRead().job(new JobRead().resetConfig(new ResetConfig().streamsToReset(List.of(
             new StreamDescriptor().name(TEST_STREAM_NAME).namespace(TEST_STREAM_NAMESPACE))))));
-    when(connectionApi.getConnection(new ConnectionIdRequestBody().connectionId(CONNECTION_ID))).thenReturn(new ConnectionRead()
-        .connectionId(CONNECTION_ID)
-        .syncCatalog(SYNC_CATALOG));
     final var replicationInput = replicationInputHydrator.getHydratedReplicationInput(input);
     assertEquals(1, replicationInput.getCatalog().getStreams().size());
     assertEquals(io.airbyte.protocol.models.SyncMode.FULL_REFRESH, replicationInput.getCatalog().getStreams().get(0).getSyncMode());
   }
 
-  @Test
-  void testGenerateReplicationInputHandlesBackfills() throws Exception {
+  @ParameterizedTest
+  @ValueSource(booleans = {true, false})
+  void testGenerateReplicationInputHandlesBackfills(final boolean withRefresh) throws Exception {
+    if (withRefresh) {
+      mockRefresh();
+    } else {
+      mockNonRefresh();
+    }
     // Verify that if backfill is enabled, and we have an appropriate diff, then we clear the state for
     // the affected streams.
     mockEnableFeatureFlagForWorkspace(AutoBackfillOnNewColumns.INSTANCE, WORKSPACE_ID);
-    mockEnableBackfillForConnection();
+    mockEnableBackfillForConnection(withRefresh);
     final ReplicationInputHydrator replicationInputHydrator = getReplicationInputHydrator();
     final ReplicationActivityInput input = getDefaultReplicationActivityInputForTest();
     input.setSchemaRefreshOutput(new RefreshSchemaActivityOutput(CATALOG_DIFF));
@@ -219,11 +232,36 @@ class ReplicationInputHydratorTest {
     when(featureFlagClient.boolVariation(flag, new Workspace(workspaceId))).thenReturn(true);
   }
 
-  private void mockEnableBackfillForConnection() throws ApiException {
-    when(connectionApi.getConnection(new ConnectionIdRequestBody().connectionId(CONNECTION_ID))).thenReturn(new ConnectionRead()
-        .connectionId(CONNECTION_ID)
-        .syncCatalog(SYNC_CATALOG)
-        .backfillPreference(SchemaChangeBackfillPreference.ENABLED));
+  private void mockEnableBackfillForConnection(final boolean withRefresh) throws ApiException {
+    if (withRefresh) {
+      when(connectionApi.getConnectionForJob(new ConnectionAndJobIdRequestBody().connectionId(CONNECTION_ID).jobId(JOB_ID)))
+          .thenReturn(new ConnectionRead()
+              .connectionId(CONNECTION_ID)
+              .syncCatalog(SYNC_CATALOG)
+              .backfillPreference(SchemaChangeBackfillPreference.ENABLED));
+    } else {
+      when(connectionApi.getConnection(new ConnectionIdRequestBody().connectionId(CONNECTION_ID)))
+          .thenReturn(new ConnectionRead()
+              .connectionId(CONNECTION_ID)
+              .syncCatalog(SYNC_CATALOG)
+              .backfillPreference(SchemaChangeBackfillPreference.ENABLED));
+    }
+  }
+
+  private void mockRefresh() throws ApiException {
+    when(featureFlagClient.boolVariation(eq(ActivateRefreshes.INSTANCE), any())).thenReturn(true);
+    when(connectionApi.getConnectionForJob(new ConnectionAndJobIdRequestBody().connectionId(CONNECTION_ID).jobId(JOB_ID)))
+        .thenReturn(new ConnectionRead()
+            .connectionId(CONNECTION_ID)
+            .syncCatalog(SYNC_CATALOG));
+  }
+
+  private void mockNonRefresh() throws ApiException {
+    when(featureFlagClient.boolVariation(eq(ActivateRefreshes.INSTANCE), any())).thenReturn(false);
+    when(connectionApi.getConnection(new ConnectionIdRequestBody().connectionId(CONNECTION_ID)))
+        .thenReturn(new ConnectionRead()
+            .connectionId(CONNECTION_ID)
+            .syncCatalog(SYNC_CATALOG));
   }
 
 }

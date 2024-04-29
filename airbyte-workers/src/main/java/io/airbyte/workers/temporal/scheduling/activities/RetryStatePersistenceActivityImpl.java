@@ -9,7 +9,7 @@ import static io.airbyte.metrics.lib.ApmTraceConstants.Tags.CONNECTION_ID_KEY;
 import static io.airbyte.metrics.lib.ApmTraceConstants.Tags.WORKSPACE_ID_KEY;
 
 import datadog.trace.api.Trace;
-import io.airbyte.api.client.generated.WorkspaceApi;
+import io.airbyte.api.client.AirbyteApiClient;
 import io.airbyte.api.client.invoker.generated.ApiException;
 import io.airbyte.api.client.model.generated.ConnectionIdRequestBody;
 import io.airbyte.api.client.model.generated.WorkspaceRead;
@@ -27,13 +27,12 @@ import java.util.UUID;
 @Singleton
 public class RetryStatePersistenceActivityImpl implements RetryStatePersistenceActivity {
 
-  final RetryStateClient client;
-  final WorkspaceApi workspaceApi;
+  private final AirbyteApiClient airbyteApiClient;
+  private final RetryStateClient client;
 
-  public RetryStatePersistenceActivityImpl(final RetryStateClient client,
-                                           final WorkspaceApi workspaceApi) {
+  public RetryStatePersistenceActivityImpl(final AirbyteApiClient airbyteApiClient, final RetryStateClient client) {
+    this.airbyteApiClient = airbyteApiClient;
     this.client = client;
-    this.workspaceApi = workspaceApi;
   }
 
   @Trace(operationName = ACTIVITY_TRACE_OPERATION_NAME)
@@ -57,7 +56,8 @@ public class RetryStatePersistenceActivityImpl implements RetryStatePersistenceA
 
   private UUID getWorkspaceId(final UUID connectionId) {
     try {
-      final WorkspaceRead workspace = workspaceApi.getWorkspaceByConnectionId(new ConnectionIdRequestBody().connectionId(connectionId));
+      final WorkspaceRead workspace =
+          airbyteApiClient.getWorkspaceApi().getWorkspaceByConnectionId(new ConnectionIdRequestBody().connectionId(connectionId));
       return workspace.getWorkspaceId();
     } catch (final ApiException e) {
       throw new RetryableException(e);

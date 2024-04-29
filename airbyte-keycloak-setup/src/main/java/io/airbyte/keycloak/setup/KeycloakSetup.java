@@ -47,8 +47,8 @@ public class KeycloakSetup {
       log.info("Starting admin Keycloak client with url: {}", keycloakUrl);
 
       if (keycloakConfiguration.getResetRealm()) {
-        keycloakServer.recreateAirbyteRealm();
-        log.info("Successfully recreated Airbyte Realm. Now deleting Airbyte User/Permission records...");
+        keycloakServer.destroyAndRecreateAirbyteRealm();
+        log.info("Successfully destroyed and recreated Airbyte Realm. Now deleting Airbyte User/Permission records...");
         try {
           configDbResetHelper.deleteConfigDbUsers();
         } catch (SQLException e) {
@@ -58,7 +58,7 @@ public class KeycloakSetup {
         }
         log.info("Successfully cleaned existing Airbyte User/Permission records. Reset finished successfully.");
       } else {
-        keycloakServer.createAirbyteRealm();
+        keycloakServer.setupAirbyteRealm();
       }
     } finally {
       keycloakServer.closeKeycloakAdminClient();

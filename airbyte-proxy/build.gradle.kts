@@ -19,7 +19,7 @@ val prepareBuild = tasks.register<Copy>("prepareBuild") {
   into(layout.buildDirectory.dir("airbyte/docker"))
 }
 
-tasks.named("dockerBuildImage") {
+tasks.named("dockerCopyDistribution") {
   dependsOn(prepareBuild)
   inputs.file("../.env")
 }

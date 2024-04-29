@@ -434,21 +434,14 @@ public class DestinationServiceJooqImpl implements DestinationService {
     actorDefinitionVersionUpdater.updateDestinationDefaultVersion(destinationDefinition, actorDefinitionVersion, breakingChangesForDefinition);
   }
 
-  /**
-   * Returns all active destinations whose default_version_id is in a given list of version IDs.
-   *
-   * @param actorDefinitionVersionIds - list of actor definition version ids
-   * @return list of DestinationConnections
-   * @throws IOException - you never know when you IO
-   */
   @Override
-  public List<DestinationConnection> listDestinationsWithVersionIds(
-                                                                    final List<UUID> actorDefinitionVersionIds)
+  public List<DestinationConnection> listDestinationsWithIds(
+                                                             final List<UUID> destinationIds)
       throws IOException {
     final Result<Record> result = database.query(ctx -> ctx.select(asterisk())
         .from(ACTOR)
         .where(ACTOR.ACTOR_TYPE.eq(ActorType.destination))
-        .and(ACTOR.DEFAULT_VERSION_ID.in(actorDefinitionVersionIds))
+        .and(ACTOR.ID.in(destinationIds))
         .andNot(ACTOR.TOMBSTONE).fetch());
     return result.stream().map(DbConverter::buildDestinationConnection).toList();
   }
@@ -647,6 +640,8 @@ public class DestinationServiceJooqImpl implements DestinationService {
             .set(Tables.ACTOR_DEFINITION.RESOURCE_REQUIREMENTS,
                 standardDestinationDefinition.getResourceRequirements() == null ? null
                     : JSONB.valueOf(Jsons.serialize(standardDestinationDefinition.getResourceRequirements())))
+            .set(ACTOR_DEFINITION.SUPPORT_REFRESHES, standardDestinationDefinition.getSupportRefreshes() == null ? false
+                : standardDestinationDefinition.getSupportRefreshes())
             .set(Tables.ACTOR_DEFINITION.UPDATED_AT, timestamp)
             .where(Tables.ACTOR_DEFINITION.ID.eq(standardDestinationDefinition.getDestinationDefinitionId()))
             .execute();
@@ -665,6 +660,8 @@ public class DestinationServiceJooqImpl implements DestinationService {
             .set(Tables.ACTOR_DEFINITION.RESOURCE_REQUIREMENTS,
                 standardDestinationDefinition.getResourceRequirements() == null ? null
                     : JSONB.valueOf(Jsons.serialize(standardDestinationDefinition.getResourceRequirements())))
+            .set(ACTOR_DEFINITION.SUPPORT_REFRESHES, standardDestinationDefinition.getSupportRefreshes() == null ? false
+                : standardDestinationDefinition.getSupportRefreshes())
             .set(Tables.ACTOR_DEFINITION.CREATED_AT, timestamp)
             .set(Tables.ACTOR_DEFINITION.UPDATED_AT, timestamp)
             .execute();

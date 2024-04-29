@@ -22,7 +22,7 @@ import io.airbyte.config.StandardDestinationDefinition;
 import io.airbyte.config.StandardSourceDefinition;
 import io.airbyte.config.init.BreakingChangeNotificationHelper.BreakingChangeNotificationData;
 import io.airbyte.config.init.SupportStateUpdater.SupportStateUpdate;
-import io.airbyte.config.persistence.ActorDefinitionVersionHelper;
+import io.airbyte.config.persistence.BreakingChangesHelper;
 import io.airbyte.data.exceptions.ConfigNotFoundException;
 import io.airbyte.data.services.ActorDefinitionService;
 import io.airbyte.data.services.DestinationService;
@@ -52,7 +52,7 @@ class SupportStateUpdaterTest {
   private ActorDefinitionService mActorDefinitionService;
   private SourceService mSourceService;
   private DestinationService mDestinationService;
-  private ActorDefinitionVersionHelper mActorDefinitionVersionHelper;
+  private BreakingChangesHelper mBreakingChangesHelper;
   private BreakingChangeNotificationHelper mBreakingChangeNotificationHelper;
 
   private SupportStateUpdater supportStateUpdater;
@@ -63,13 +63,13 @@ class SupportStateUpdaterTest {
     mSourceService = mock(SourceService.class);
     mDestinationService = mock(DestinationService.class);
     mBreakingChangeNotificationHelper = mock(BreakingChangeNotificationHelper.class);
-    mActorDefinitionVersionHelper = mock(ActorDefinitionVersionHelper.class);
+    mBreakingChangesHelper = mock(BreakingChangesHelper.class);
 
     final FeatureFlagClient featureFlagClient = mock(TestClient.class);
     when(featureFlagClient.boolVariation(NotifyBreakingChangesOnSupportStateUpdate.INSTANCE, new Workspace(ANONYMOUS)))
         .thenReturn(true);
     supportStateUpdater = new SupportStateUpdater(mActorDefinitionService, mSourceService, mDestinationService,
-        DeploymentMode.CLOUD, mActorDefinitionVersionHelper,
+        DeploymentMode.CLOUD, mBreakingChangesHelper,
         mBreakingChangeNotificationHelper, featureFlagClient);
   }
 
@@ -193,8 +193,9 @@ class SupportStateUpdaterTest {
     when(mActorDefinitionService.getActorDefinitionVersion(DEST_V1_0_0.getVersionId())).thenReturn(DEST_V1_0_0);
 
     final List<UUID> workspaceIdsToNotify = List.of(UUID.randomUUID(), UUID.randomUUID());
-    when(mActorDefinitionVersionHelper.getActiveWorkspaceSyncsWithDestinationVersionIds(destinationDefinition, List.of(DEST_V0_1_0.getVersionId())))
-        .thenReturn(workspaceIdsToNotify.stream().map(id -> new Pair<>(id, List.of(UUID.randomUUID()))).toList());
+    when(mBreakingChangesHelper.getBreakingActiveSyncsPerWorkspace(ActorType.DESTINATION, destinationDefinition.getDestinationDefinitionId(),
+        List.of(DEST_V0_1_0.getVersionId())))
+            .thenReturn(workspaceIdsToNotify.stream().map(id -> new Pair<>(id, List.of(UUID.randomUUID()))).toList());
 
     supportStateUpdater.updateSupportStates(LocalDate.parse("2020-01-15"));
 
@@ -212,10 +213,10 @@ class SupportStateUpdaterTest {
     verify(mActorDefinitionService).listActorDefinitionVersionsForDefinition(ACTOR_DEFINITION_ID);
     verify(mActorDefinitionService).listActorDefinitionVersionsForDefinition(destinationDefinitionId);
     verify(mActorDefinitionService).getActorDefinitionVersion(DEST_V1_0_0.getVersionId());
-    verify(mActorDefinitionVersionHelper).getActiveWorkspaceSyncsWithDestinationVersionIds(destinationDefinition,
+    verify(mBreakingChangesHelper).getBreakingActiveSyncsPerWorkspace(ActorType.DESTINATION, destinationDefinition.getDestinationDefinitionId(),
         List.of(DEST_V0_1_0.getVersionId()));
     verifyNoMoreInteractions(mActorDefinitionService, mSourceService, mDestinationService);
-    verifyNoMoreInteractions(mActorDefinitionVersionHelper);
+    verifyNoMoreInteractions(mBreakingChangesHelper);
     verifyNoMoreInteractions(mBreakingChangeNotificationHelper);
   }
 
@@ -319,8 +320,9 @@ class SupportStateUpdaterTest {
         new SupportStateUpdate(List.of(), List.of(ADV_1_0_0.getVersionId(), ADV_3_0_0.getVersionId()), List.of());
 
     final List<UUID> workspaceIds = List.of(UUID.randomUUID(), UUID.randomUUID());
-    when(mActorDefinitionVersionHelper.getActiveWorkspaceSyncsWithSourceVersionIds(sourceDefinition, List.of(ADV_3_0_0.getVersionId())))
-        .thenReturn(workspaceIds.stream().map(id -> new Pair<>(id, List.of(UUID.randomUUID(), UUID.randomUUID()))).toList());
+    when(mBreakingChangesHelper.getBreakingActiveSyncsPerWorkspace(ActorType.SOURCE, sourceDefinition.getSourceDefinitionId(),
+        List.of(ADV_3_0_0.getVersionId())))
+            .thenReturn(workspaceIds.stream().map(id -> new Pair<>(id, List.of(UUID.randomUUID(), UUID.randomUUID()))).toList());
 
     final ActorDefinitionBreakingChange latestBreakingChange = new ActorDefinitionBreakingChange()
         .withMessage("Test Breaking Change");
@@ -331,7 +333,8 @@ class SupportStateUpdaterTest {
         supportStateUpdater.buildSourceNotificationData(sourceDefinition, latestBreakingChange, versionsBeforeUpdate, supportStateUpdate);
     assertEquals(expectedNotificationData, notificationData);
 
-    verify(mActorDefinitionVersionHelper).getActiveWorkspaceSyncsWithSourceVersionIds(sourceDefinition, List.of(ADV_3_0_0.getVersionId()));
+    verify(mBreakingChangesHelper).getBreakingActiveSyncsPerWorkspace(ActorType.SOURCE, sourceDefinition.getSourceDefinitionId(),
+        List.of(ADV_3_0_0.getVersionId()));
   }
 
   @Test
@@ -350,8 +353,9 @@ class SupportStateUpdaterTest {
         new SupportStateUpdate(List.of(), List.of(ADV_1_0_0.getVersionId(), ADV_3_0_0.getVersionId()), List.of());
 
     final List<UUID> workspaceIds = List.of(UUID.randomUUID(), UUID.randomUUID());
-    when(mActorDefinitionVersionHelper.getActiveWorkspaceSyncsWithDestinationVersionIds(destinationDefinition, List.of(ADV_3_0_0.getVersionId())))
-        .thenReturn(workspaceIds.stream().map(id -> new Pair<>(id, List.of(UUID.randomUUID(), UUID.randomUUID()))).toList());
+    when(mBreakingChangesHelper.getBreakingActiveSyncsPerWorkspace(ActorType.DESTINATION, destinationDefinition.getDestinationDefinitionId(),
+        List.of(ADV_3_0_0.getVersionId())))
+            .thenReturn(workspaceIds.stream().map(id -> new Pair<>(id, List.of(UUID.randomUUID(), UUID.randomUUID()))).toList());
 
     final ActorDefinitionBreakingChange latestBreakingChange = new ActorDefinitionBreakingChange()
         .withMessage("Test Breaking Change 2");
@@ -362,7 +366,8 @@ class SupportStateUpdaterTest {
         supportStateUpdater.buildDestinationNotificationData(destinationDefinition, latestBreakingChange, versionsBeforeUpdate, supportStateUpdate);
     assertEquals(expectedNotificationData, notificationData);
 
-    verify(mActorDefinitionVersionHelper).getActiveWorkspaceSyncsWithDestinationVersionIds(destinationDefinition, List.of(ADV_3_0_0.getVersionId()));
+    verify(mBreakingChangesHelper).getBreakingActiveSyncsPerWorkspace(ActorType.DESTINATION, destinationDefinition.getDestinationDefinitionId(),
+        List.of(ADV_3_0_0.getVersionId()));
   }
 
 }

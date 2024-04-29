@@ -210,11 +210,13 @@ const SimplifiedConnectionSettingsPage = () => {
   const onReset = useCallback(async () => {
     await doResetConnection(connection.connectionId);
     registerNotification({
-      id: "connection_reset_start_success",
-      text: formatMessage({ id: "form.resetData.successfulStart" }),
+      id: "clearData.successfulStart",
+      text: formatMessage({
+        id: "form.clearData.successfulStart",
+      }),
       type: "success",
     });
-  }, [doResetConnection, connection.connectionId, formatMessage, registerNotification]);
+  }, [doResetConnection, connection.connectionId, registerNotification, formatMessage]);
 
   const onSuccess = () => {
     registerNotification({

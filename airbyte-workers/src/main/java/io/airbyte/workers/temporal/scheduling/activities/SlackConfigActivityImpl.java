@@ -22,7 +22,7 @@ public class SlackConfigActivityImpl implements SlackConfigActivity {
 
   private final AirbyteApiClient airbyteApiClient;
 
-  public SlackConfigActivityImpl(AirbyteApiClient airbyteApiClient) {
+  public SlackConfigActivityImpl(final AirbyteApiClient airbyteApiClient) {
     this.airbyteApiClient = airbyteApiClient;
   }
 

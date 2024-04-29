@@ -4,6 +4,7 @@
 
 package io.airbyte.commons.server.handlers;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
@@ -13,7 +14,9 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.fasterxml.jackson.databind.JsonNode;
@@ -38,17 +41,27 @@ import io.airbyte.commons.temporal.TemporalUtils;
 import io.airbyte.config.AttemptFailureSummary;
 import io.airbyte.config.FailureReason;
 import io.airbyte.config.FailureReason.FailureOrigin;
+import io.airbyte.config.JobConfig;
 import io.airbyte.config.JobOutput;
+import io.airbyte.config.JobSyncConfig;
 import io.airbyte.config.NormalizationSummary;
 import io.airbyte.config.StandardSyncOutput;
 import io.airbyte.config.StandardSyncSummary;
 import io.airbyte.config.StandardSyncSummary.ReplicationStatus;
 import io.airbyte.config.SyncStats;
 import io.airbyte.config.helpers.LogClientSingleton;
+import io.airbyte.config.persistence.StatePersistence;
+import io.airbyte.featureflag.FeatureFlagClient;
+import io.airbyte.featureflag.TestClient;
 import io.airbyte.persistence.job.JobPersistence;
 import io.airbyte.persistence.job.models.Attempt;
 import io.airbyte.persistence.job.models.AttemptStatus;
 import io.airbyte.persistence.job.models.Job;
+import io.airbyte.protocol.models.AirbyteStream;
+import io.airbyte.protocol.models.ConfiguredAirbyteCatalog;
+import io.airbyte.protocol.models.ConfiguredAirbyteStream;
+import io.airbyte.protocol.models.StreamDescriptor;
+import io.airbyte.protocol.models.SyncMode;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.time.Instant;
@@ -56,14 +69,17 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Stream;
 import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mockito;
 
@@ -71,9 +87,11 @@ class AttemptHandlerTest {
 
   JobConverter jobConverter;
   JobPersistence jobPersistence;
+  StatePersistence statePersistence;
   Path path;
   AttemptHandler handler;
   JobCreationAndStatusUpdateHelper helper;
+  FeatureFlagClient ffClient;
 
   private static final UUID CONNECTION_ID = UUID.randomUUID();
   private static final long JOB_ID = 10002L;
@@ -96,11 +114,14 @@ class AttemptHandlerTest {
 
   @BeforeEach
   public void init() {
-    jobPersistence = Mockito.mock(JobPersistence.class);
-    jobConverter = Mockito.mock(JobConverter.class);
-    path = Mockito.mock(Path.class);
-    helper = Mockito.mock(JobCreationAndStatusUpdateHelper.class);
-    handler = new AttemptHandler(jobPersistence, jobConverter, helper, path);
+    jobPersistence = mock(JobPersistence.class);
+    statePersistence = mock(StatePersistence.class);
+    jobConverter = mock(JobConverter.class);
+    path = mock(Path.class);
+    helper = mock(JobCreationAndStatusUpdateHelper.class);
+    ffClient = mock(TestClient.class);
+
+    handler = new AttemptHandler(jobPersistence, statePersistence, jobConverter, ffClient, helper, path);
   }
 
   @Test
@@ -118,7 +139,7 @@ class AttemptHandlerTest {
 
     assertTrue(handler.setWorkflowInAttempt(requestBody).getSucceeded());
 
-    Mockito.verify(jobPersistence).setAttemptTemporalWorkflowInfo(jobIdCapture.capture(), attemptNumberCapture.capture(), workflowIdCapture.capture(),
+    verify(jobPersistence).setAttemptTemporalWorkflowInfo(jobIdCapture.capture(), attemptNumberCapture.capture(), workflowIdCapture.capture(),
         queueCapture.capture());
 
     assertEquals(ATTEMPT_NUMBER, attemptNumberCapture.getValue());
@@ -145,7 +166,7 @@ class AttemptHandlerTest {
 
     assertFalse(handler.setWorkflowInAttempt(requestBody).getSucceeded());
 
-    Mockito.verify(jobPersistence).setAttemptTemporalWorkflowInfo(jobIdCapture.capture(), attemptNumberCapture.capture(), workflowIdCapture.capture(),
+    verify(jobPersistence).setAttemptTemporalWorkflowInfo(jobIdCapture.capture(), attemptNumberCapture.capture(), workflowIdCapture.capture(),
         queueCapture.capture());
 
     assertEquals(ATTEMPT_NUMBER, attemptNumberCapture.getValue());
@@ -180,7 +201,7 @@ class AttemptHandlerTest {
 
     assertTrue(handler.saveSyncConfig(requestBody).getSucceeded());
 
-    Mockito.verify(jobPersistence).writeAttemptSyncConfig(jobIdCapture.capture(), attemptNumberCapture.capture(), attemptSyncConfigCapture.capture());
+    verify(jobPersistence).writeAttemptSyncConfig(jobIdCapture.capture(), attemptNumberCapture.capture(), attemptSyncConfigCapture.capture());
 
     final io.airbyte.config.AttemptSyncConfig expectedAttemptSyncConfig = ApiPojoConverters.attemptSyncConfigToInternal(attemptSyncConfig);
 
@@ -192,33 +213,121 @@ class AttemptHandlerTest {
   @Test
   void createAttemptNumber() throws IOException {
     final int attemptNumber = 1;
-    final Job mJob = Mockito.mock(Job.class);
-    Mockito.when(mJob.getAttemptsCount())
-        .thenReturn(ATTEMPT_NUMBER);
+    final var connId = UUID.randomUUID();
+    final Job mJob = mock(Job.class);
+    when(mJob.getConfigType()).thenReturn(JobConfig.ConfigType.SYNC);
+    when(mJob.getAttemptsCount()).thenReturn(ATTEMPT_NUMBER);
+    when(mJob.getScope()).thenReturn(connId.toString());
 
-    Mockito.when(jobPersistence.getJob(JOB_ID))
-        .thenReturn(mJob);
+    final var mConfig = mock(JobConfig.class);
+    when(mJob.getConfig()).thenReturn(mConfig);
 
-    Mockito.when(path.resolve(Mockito.anyString()))
-        .thenReturn(path);
+    final var mDyncConfig = mock(JobSyncConfig.class);
+    when(mConfig.getSync()).thenReturn(mDyncConfig);
+    when(mDyncConfig.getWorkspaceId()).thenReturn(UUID.randomUUID());
 
-    final Path expectedRoot = TemporalUtils.getJobRoot(path, String.valueOf(JOB_ID), (long) ATTEMPT_NUMBER);
+    final var mCatalog = mock(ConfiguredAirbyteCatalog.class);
+    when(mDyncConfig.getConfiguredAirbyteCatalog()).thenReturn(mCatalog);
+
+    when(jobPersistence.getJob(JOB_ID)).thenReturn(mJob);
+    when(path.resolve(Mockito.anyString())).thenReturn(path);
+
+    final Path expectedRoot = TemporalUtils.getJobRoot(path, String.valueOf(JOB_ID), ATTEMPT_NUMBER);
     final Path expectedLogPath = expectedRoot.resolve(LogClientSingleton.LOG_FILENAME);
 
-    Mockito.when(jobPersistence.createAttempt(JOB_ID, expectedLogPath))
+    when(jobPersistence.createAttempt(JOB_ID, expectedLogPath))
         .thenReturn(attemptNumber);
+    when(ffClient.boolVariation(any(), any())).thenReturn(true);
 
     final CreateNewAttemptNumberResponse output = handler.createNewAttemptNumber(JOB_ID);
-    Assertions.assertThat(output.getAttemptNumber()).isEqualTo(attemptNumber);
+    assertThat(output.getAttemptNumber()).isEqualTo(attemptNumber);
+  }
+
+  @Nested
+  class ClearFullRefreshStreamStateFirstAttempt {
+
+    @Test
+    void getFullRefreshStreamsShouldOnlyReturnFullRefreshStreams() {
+      final var connId = UUID.randomUUID();
+      final Job mJob = mock(Job.class);
+      when(mJob.getConfigType()).thenReturn(JobConfig.ConfigType.SYNC);
+      when(mJob.getScope()).thenReturn(connId.toString());
+
+      final var mJobConfig = mock(JobConfig.class);
+      when(mJob.getConfig()).thenReturn(mJobConfig);
+
+      final var mSyncConfig = mock(JobSyncConfig.class);
+      when(mJobConfig.getSync()).thenReturn(mSyncConfig);
+
+      final var mCatalog = mock(ConfiguredAirbyteCatalog.class);
+      when(mSyncConfig.getConfiguredAirbyteCatalog()).thenReturn(mCatalog);
+
+      when(mCatalog.getStreams()).thenReturn(List.of(
+          new ConfiguredAirbyteStream().withSyncMode(SyncMode.FULL_REFRESH).withStream(new AirbyteStream().withName("full")),
+          new ConfiguredAirbyteStream().withSyncMode(SyncMode.INCREMENTAL).withStream(new AirbyteStream().withName("incre")),
+          new ConfiguredAirbyteStream().withSyncMode(SyncMode.FULL_REFRESH).withStream(new AirbyteStream().withName("full").withNamespace("name")),
+          new ConfiguredAirbyteStream().withSyncMode(SyncMode.INCREMENTAL).withStream(new AirbyteStream().withName("incre").withNamespace("name"))));
+
+      final var streams = handler.getFullRefreshStreams(mCatalog, 1);
+      final var exp = Set.of(new StreamDescriptor().withName("full"), new StreamDescriptor().withName("full").withNamespace("name"));
+      assertEquals(exp, streams);
+    }
+
+    @ParameterizedTest()
+    @ValueSource(ints = {0, 1, 2, 3}) // six numbers
+    void createAttemptShouldAlwaysDeleteFullRefreshStreamState(int attemptNumber) throws IOException {
+      final var connId = UUID.randomUUID();
+      final Job mJob = mock(Job.class);
+      when(mJob.getConfigType()).thenReturn(JobConfig.ConfigType.SYNC);
+      when(mJob.getAttemptsCount()).thenReturn(0);
+      when(mJob.getScope()).thenReturn(connId.toString());
+
+      final var mConfig = mock(JobConfig.class);
+      when(mJob.getConfig()).thenReturn(mConfig);
+
+      final var mDyncConfig = mock(JobSyncConfig.class);
+      when(mConfig.getSync()).thenReturn(mDyncConfig);
+      when(mDyncConfig.getWorkspaceId()).thenReturn(UUID.randomUUID());
+
+      when(jobPersistence.getJob(JOB_ID)).thenReturn(mJob);
+
+      when(path.resolve(Mockito.anyString())).thenReturn(path);
+      when(ffClient.boolVariation(any(), any())).thenReturn(true);
+
+      final Path expectedRoot = TemporalUtils.getJobRoot(path, String.valueOf(JOB_ID), ATTEMPT_NUMBER);
+      final Path expectedLogPath = expectedRoot.resolve(LogClientSingleton.LOG_FILENAME);
+
+      final var mCatalog = mock(ConfiguredAirbyteCatalog.class);
+      when(mDyncConfig.getConfiguredAirbyteCatalog()).thenReturn(mCatalog);
+
+      when(mCatalog.getStreams()).thenReturn(List.of(
+          new ConfiguredAirbyteStream().withSyncMode(SyncMode.FULL_REFRESH).withStream(new AirbyteStream().withName("full")),
+          new ConfiguredAirbyteStream().withSyncMode(SyncMode.INCREMENTAL).withStream(new AirbyteStream().withName("incre")),
+          new ConfiguredAirbyteStream().withSyncMode(SyncMode.FULL_REFRESH).withStream(new AirbyteStream().withName("full").withNamespace("name")),
+          new ConfiguredAirbyteStream().withSyncMode(SyncMode.INCREMENTAL).withStream(new AirbyteStream().withName("incre").withNamespace("name"))));
+
+      when(jobPersistence.createAttempt(JOB_ID, expectedLogPath)).thenReturn(attemptNumber);
+
+      final CreateNewAttemptNumberResponse output = handler.createNewAttemptNumber(JOB_ID);
+      assertThat(output.getAttemptNumber()).isEqualTo(attemptNumber);
+
+      ArgumentCaptor<UUID> captor1 = ArgumentCaptor.forClass(UUID.class);
+      ArgumentCaptor<Set<StreamDescriptor>> captor2 = ArgumentCaptor.forClass(Set.class);
+      verify(statePersistence).bulkDelete(captor1.capture(), captor2.capture());
+      assertEquals(connId, captor1.getValue());
+      assertEquals(Set.of(new StreamDescriptor().withName("full"), new StreamDescriptor().withName("full").withNamespace("name")),
+          captor2.getValue());
+    }
+
   }
 
   @Test
-  void createAttemptNumberWithUnownJobId() throws IOException {
-    final Job mJob = Mockito.mock(Job.class);
-    Mockito.when(mJob.getAttemptsCount())
+  void createAttemptNumberWithUnknownJobId() throws IOException {
+    final Job mJob = mock(Job.class);
+    when(mJob.getAttemptsCount())
         .thenReturn(ATTEMPT_NUMBER);
 
-    Mockito.when(jobPersistence.getJob(JOB_ID))
+    when(jobPersistence.getJob(JOB_ID))
         .thenThrow(new RuntimeException("unknown jobId " + JOB_ID));
 
     Assertions.assertThatThrownBy(() -> handler.createNewAttemptNumber(JOB_ID))
@@ -299,27 +408,27 @@ class AttemptHandlerTest {
   void failAttemptSyncSummaryOutputPresent() throws IOException {
     handler.failAttempt(ATTEMPT_NUMBER, JOB_ID, failureSummary, standardSyncOutput);
 
-    Mockito.verify(jobPersistence).failAttempt(JOB_ID, ATTEMPT_NUMBER);
-    Mockito.verify(jobPersistence).writeOutput(JOB_ID, ATTEMPT_NUMBER, jobOutput);
-    Mockito.verify(jobPersistence).writeAttemptFailureSummary(JOB_ID, ATTEMPT_NUMBER, failureSummary);
+    verify(jobPersistence).failAttempt(JOB_ID, ATTEMPT_NUMBER);
+    verify(jobPersistence).writeOutput(JOB_ID, ATTEMPT_NUMBER, jobOutput);
+    verify(jobPersistence).writeAttemptFailureSummary(JOB_ID, ATTEMPT_NUMBER, failureSummary);
   }
 
   @Test
   void failAttemptSyncSummaryOutputNotPresent() throws IOException {
     handler.failAttempt(ATTEMPT_NUMBER, JOB_ID, failureSummary, null);
 
-    Mockito.verify(jobPersistence).failAttempt(JOB_ID, ATTEMPT_NUMBER);
-    Mockito.verify(jobPersistence, never()).writeOutput(JOB_ID, ATTEMPT_NUMBER, jobOutput);
-    Mockito.verify(jobPersistence).writeAttemptFailureSummary(JOB_ID, ATTEMPT_NUMBER, failureSummary);
+    verify(jobPersistence).failAttempt(JOB_ID, ATTEMPT_NUMBER);
+    verify(jobPersistence, never()).writeOutput(JOB_ID, ATTEMPT_NUMBER, jobOutput);
+    verify(jobPersistence).writeAttemptFailureSummary(JOB_ID, ATTEMPT_NUMBER, failureSummary);
   }
 
   @Test
   void failAttemptSyncSummaryNotPresent() throws IOException {
     handler.failAttempt(ATTEMPT_NUMBER, JOB_ID, null, standardSyncOutput);
 
-    Mockito.verify(jobPersistence).failAttempt(JOB_ID, ATTEMPT_NUMBER);
-    Mockito.verify(jobPersistence).writeOutput(JOB_ID, ATTEMPT_NUMBER, jobOutput);
-    Mockito.verify(jobPersistence).writeAttemptFailureSummary(JOB_ID, ATTEMPT_NUMBER, null);
+    verify(jobPersistence).failAttempt(JOB_ID, ATTEMPT_NUMBER);
+    verify(jobPersistence).writeOutput(JOB_ID, ATTEMPT_NUMBER, jobOutput);
+    verify(jobPersistence).writeAttemptFailureSummary(JOB_ID, ATTEMPT_NUMBER, null);
   }
 
   @ParameterizedTest

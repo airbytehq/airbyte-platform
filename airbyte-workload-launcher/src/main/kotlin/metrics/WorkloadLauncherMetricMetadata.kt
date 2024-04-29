@@ -12,6 +12,10 @@ enum class WorkloadLauncherMetricMetadata(
     "workload_launcher_poller_status",
     "tracks the status of the workload task poller",
   ),
+  WORKLOAD_LAUNCHER_REHYDRATE_FAILURE(
+    "workload_launcher_rehydrate_failure",
+    "tracks whenever the launcher rehydrate process failed",
+  ),
   WORKLOAD_QUEUE_SIZE(
     "workload_queue_size",
     "used to track the queue size launcher does not processes a workload successfully",

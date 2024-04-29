@@ -4,6 +4,7 @@
 
 package io.airbyte.config.persistence;
 
+import static io.airbyte.config.persistence.OrganizationPersistence.DEFAULT_ORGANIZATION_ID;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -28,6 +29,7 @@ import io.airbyte.config.secrets.SecretsRepositoryWriter;
 import io.airbyte.data.helpers.ActorDefinitionVersionUpdater;
 import io.airbyte.data.services.ActorDefinitionService;
 import io.airbyte.data.services.ConnectionService;
+import io.airbyte.data.services.OrganizationService;
 import io.airbyte.data.services.ScopedConfigurationService;
 import io.airbyte.data.services.SecretPersistenceConfigService;
 import io.airbyte.data.services.impls.jooq.ActorDefinitionServiceJooqImpl;
@@ -37,6 +39,7 @@ import io.airbyte.data.services.impls.jooq.ConnectorBuilderServiceJooqImpl;
 import io.airbyte.data.services.impls.jooq.DestinationServiceJooqImpl;
 import io.airbyte.data.services.impls.jooq.OAuthServiceJooqImpl;
 import io.airbyte.data.services.impls.jooq.OperationServiceJooqImpl;
+import io.airbyte.data.services.impls.jooq.OrganizationServiceJooqImpl;
 import io.airbyte.data.services.impls.jooq.SourceServiceJooqImpl;
 import io.airbyte.data.services.impls.jooq.WorkspaceServiceJooqImpl;
 import io.airbyte.featureflag.FeatureFlagClient;
@@ -65,7 +68,7 @@ class ActorDefinitionPersistenceTest extends BaseConfigDatabaseTest {
   private ConfigRepository configRepository;
 
   @BeforeEach
-  void setup() throws SQLException {
+  void setup() throws SQLException, IOException {
     truncateAllTables();
 
     final FeatureFlagClient featureFlagClient = mock(TestClient.class);
@@ -81,6 +84,7 @@ class ActorDefinitionPersistenceTest extends BaseConfigDatabaseTest {
     final ActorDefinitionService actorDefinitionService = new ActorDefinitionServiceJooqImpl(database);
     final ActorDefinitionVersionUpdater actorDefinitionVersionUpdater =
         new ActorDefinitionVersionUpdater(featureFlagClient, connectionService, actorDefinitionService, scopedConfigurationService);
+    final OrganizationService organizationService = new OrganizationServiceJooqImpl(database);
     configRepository = spy(
         new ConfigRepository(
             new ActorDefinitionServiceJooqImpl(database),
@@ -111,6 +115,8 @@ class ActorDefinitionPersistenceTest extends BaseConfigDatabaseTest {
                 secretsRepositoryReader,
                 secretsRepositoryWriter,
                 secretPersistenceConfigService)));
+
+    organizationService.writeOrganization(MockData.defaultOrganization());
   }
 
   @Test
@@ -247,6 +253,11 @@ class ActorDefinitionPersistenceTest extends BaseConfigDatabaseTest {
   @Test
   void testDestinationDefinitionWithFalseTombstone() throws JsonValidationException, ConfigNotFoundException, IOException {
     assertReturnsDestDef(createBaseDestDef().withTombstone(false));
+  }
+
+  @Test
+  void testDestinationDefinitionWithSupportRefresh() throws JsonValidationException, ConfigNotFoundException, IOException {
+    assertReturnsDestDef(createBaseDestDef().withSupportRefreshes(true));
   }
 
   void assertReturnsDestDef(final StandardDestinationDefinition destDef) throws ConfigNotFoundException, IOException, JsonValidationException {
@@ -522,7 +533,8 @@ class ActorDefinitionPersistenceTest extends BaseConfigDatabaseTest {
     return new StandardDestinationDefinition()
         .withName("source-def-" + id)
         .withDestinationDefinitionId(id)
-        .withTombstone(false);
+        .withTombstone(false)
+        .withSupportRefreshes(false);
   }
 
   private static StandardWorkspace createBaseStandardWorkspace() {
@@ -532,7 +544,8 @@ class ActorDefinitionPersistenceTest extends BaseConfigDatabaseTest {
         .withSlug("workspace-a-slug")
         .withInitialSetupComplete(false)
         .withTombstone(false)
-        .withDefaultGeography(Geography.AUTO);
+        .withDefaultGeography(Geography.AUTO)
+        .withOrganizationId(DEFAULT_ORGANIZATION_ID);
   }
 
 }

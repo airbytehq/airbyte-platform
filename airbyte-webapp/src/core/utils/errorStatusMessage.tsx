@@ -2,13 +2,32 @@ import type { useIntl } from "react-intl";
 
 import { FormattedMessage } from "react-intl";
 
+import { ExternalLink } from "components/ui/Link";
+
+import { HttpError } from "core/api";
 import { FailureOrigin, FailureReason } from "core/api/types/AirbyteClient";
+
+import { links } from "./links";
 
 export class FormError extends Error {
   status?: number;
 }
 
-export const generateMessageFromError = (error: FormError): JSX.Element | string | null => {
+export const generateMessageFromError = (
+  error: FormError,
+  formatMessage: ReturnType<typeof useIntl>["formatMessage"]
+): JSX.Element | string | null => {
+  if (error instanceof HttpError) {
+    if (error.response.message.toLowerCase().includes("invalid cron expression")) {
+      return formatMessage(
+        { id: "form.cronExpression.invalid" },
+        { lnk: (btnText: React.ReactNode) => <ExternalLink href={links.cronReferenceLink}>{btnText}</ExternalLink> }
+      ) as string;
+    }
+
+    return formatMessage({ id: error.i18nKey }, error.i18nParams) as string;
+  }
+
   if (error.message) {
     return error.message;
   }

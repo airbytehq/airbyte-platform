@@ -195,6 +195,7 @@ public class DefaultJobCreator implements JobCreator {
     if (maybeJobId.isPresent()) {
       final long jobId = maybeJobId.get();
       generationBumper.updateGenerationForStreams(standardSync.getConnectionId(), jobId, streamsToRefresh);
+
       final Optional<StateWrapper> currentState = statePersistence.getCurrentState(standardSync.getConnectionId());
       updateStateAndDeleteRefreshes(standardSync.getConnectionId(), streamsToRefresh, currentState);
     }

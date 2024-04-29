@@ -42,6 +42,7 @@ export type IconType =
   | "errorFilled"
   | "errorOutline"
   | "expand"
+  | "export"
   | "eye"
   | "eyeSlash"
   | "file"
@@ -126,7 +127,15 @@ export type IconType =
   | "warningOutline"
   | "wrench";
 
-export type IconColor = "primary" | "disabled" | "action" | "success" | "error" | "warning" | "affordance";
+export type IconColor =
+  | "primary"
+  | "disabled"
+  | "action"
+  | "success"
+  | "error"
+  | "warning"
+  | "affordance"
+  | "foreground";
 export type IconSize = "xs" | "sm" | "md" | "lg" | "xl";
 
 export interface IconProps {

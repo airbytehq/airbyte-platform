@@ -480,4 +480,116 @@ internal class ScopedConfigurationRepositoryTest : AbstractConfigRepositoryTest<
     val persistedIds = findConfigsResult.map { it.id }
     assert(persistedIds.containsAll(listOf(config.id, config2.id, config3.id)))
   }
+
+  @Test
+  fun `test db find by value in list`() {
+    val resourceId = UUID.randomUUID()
+    val valueA = "version-1"
+    val bcConfig1 =
+      ScopedConfiguration(
+        id = UUID.randomUUID(),
+        key = CONFIG_KEY,
+        value = valueA,
+        scopeType = ConfigScopeType.actor,
+        scopeId = UUID.randomUUID(),
+        resourceType = ConfigResourceType.actor_definition,
+        resourceId = resourceId,
+        originType = ConfigOriginType.breaking_change,
+        origin = "origin",
+      )
+
+    repository.save(bcConfig1)
+
+    val bcConfig2 =
+      ScopedConfiguration(
+        id = UUID.randomUUID(),
+        key = CONFIG_KEY,
+        value = valueA,
+        scopeType = ConfigScopeType.actor,
+        scopeId = UUID.randomUUID(),
+        resourceType = ConfigResourceType.actor_definition,
+        resourceId = resourceId,
+        originType = ConfigOriginType.breaking_change,
+        origin = "origin",
+      )
+
+    repository.save(bcConfig2)
+
+    val bcConfigOnOtherScopeType =
+      ScopedConfiguration(
+        id = UUID.randomUUID(),
+        key = CONFIG_KEY,
+        value = valueA,
+        scopeType = ConfigScopeType.workspace,
+        scopeId = UUID.randomUUID(),
+        resourceType = ConfigResourceType.actor_definition,
+        resourceId = resourceId,
+        originType = ConfigOriginType.breaking_change,
+        origin = "origin",
+      )
+
+    repository.save(bcConfigOnOtherScopeType)
+
+    val userConfig =
+      ScopedConfiguration(
+        id = UUID.randomUUID(),
+        key = CONFIG_KEY,
+        value = valueA,
+        scopeType = ConfigScopeType.actor,
+        scopeId = UUID.randomUUID(),
+        resourceType = ConfigResourceType.actor_definition,
+        resourceId = resourceId,
+        originType = ConfigOriginType.user,
+        origin = "origin",
+      )
+
+    repository.save(userConfig)
+
+    val valueB = "version-2"
+    val bcConfig3 =
+      ScopedConfiguration(
+        id = UUID.randomUUID(),
+        key = CONFIG_KEY,
+        value = valueB,
+        scopeType = ConfigScopeType.actor,
+        scopeId = UUID.randomUUID(),
+        resourceType = ConfigResourceType.actor_definition,
+        resourceId = resourceId,
+        originType = ConfigOriginType.breaking_change,
+        origin = "origin2",
+      )
+
+    repository.save(bcConfig3)
+
+    val valueC = "version-3"
+    val bcConfig4 =
+      ScopedConfiguration(
+        id = UUID.randomUUID(),
+        key = CONFIG_KEY,
+        value = valueC,
+        scopeType = ConfigScopeType.organization,
+        scopeId = bcConfig1.scopeId,
+        resourceType = ConfigResourceType.actor_definition,
+        resourceId = resourceId,
+        originType = ConfigOriginType.breaking_change,
+        origin = "origin3",
+      )
+
+    repository.save(bcConfig4)
+    assert(repository.count() == 6L)
+
+    val findConfigsResult =
+      repository.findByKeyAndResourceTypeAndResourceIdAndScopeTypeAndOriginTypeAndValueInList(
+        CONFIG_KEY,
+        ConfigResourceType.actor_definition,
+        resourceId,
+        ConfigScopeType.actor,
+        ConfigOriginType.breaking_change,
+        listOf(valueA, valueB),
+      )
+    assert(findConfigsResult.size == 3)
+
+    val persistedIds = findConfigsResult.map { it.id }
+    assert(persistedIds.containsAll(listOf(bcConfig1.id, bcConfig2.id, bcConfig3.id)))
+  }
 }

@@ -8,6 +8,7 @@ import com.google.common.annotations.VisibleForTesting;
 import io.airbyte.api.client.generated.AttemptApi;
 import io.airbyte.api.client.generated.ConnectionApi;
 import io.airbyte.api.client.generated.ConnectorBuilderProjectApi;
+import io.airbyte.api.client.generated.DeploymentMetadataApi;
 import io.airbyte.api.client.generated.DestinationApi;
 import io.airbyte.api.client.generated.DestinationDefinitionApi;
 import io.airbyte.api.client.generated.DestinationDefinitionSpecificationApi;
@@ -24,6 +25,7 @@ import io.airbyte.api.client.generated.SourceDefinitionSpecificationApi;
 import io.airbyte.api.client.generated.StateApi;
 import io.airbyte.api.client.generated.StreamStatusesApi;
 import io.airbyte.api.client.generated.UserApi;
+import io.airbyte.api.client.generated.WebBackendApi;
 import io.airbyte.api.client.generated.WorkspaceApi;
 import io.airbyte.api.client.invoker.generated.ApiClient;
 import java.util.Random;
@@ -32,7 +34,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * DEPRECATED. USE {@link io.airbyte.api.client2.AirbyteApiClient2}.
+ * DEPRECATED. USE {@link io.airbyte.api.client2.AirbyteApiClient}.
  * <p>
  * This class is meant to consolidate all our API endpoints into a fluent-ish client. Currently, all
  * open API generators create a separate class per API "root-route". For example, if our API has two
@@ -45,7 +47,7 @@ import org.slf4j.LoggerFactory;
  * <p>
  * This is currently manually maintained. We could look into autogenerating it if needed.
  *
- * @deprecated Replaced by {@link io.airbyte.api.client2.AirbyteApiClient2}
+ * @deprecated Replaced by {@link io.airbyte.api.client2.AirbyteApiClient}
  */
 @Deprecated
 public class AirbyteApiClient {
@@ -57,48 +59,56 @@ public class AirbyteApiClient {
   public static final int DEFAULT_RETRY_INTERVAL_SECS = 10;
   public static final int DEFAULT_FINAL_INTERVAL_SECS = 10 * 60;
 
+  private final AttemptApi attemptApi;
   private final ConnectionApi connectionApi;
   private final ConnectorBuilderProjectApi connectorBuilderProjectApi;
-  private final DestinationDefinitionApi destinationDefinitionApi;
   private final DestinationApi destinationApi;
+  private final DeploymentMetadataApi deploymentMetadataApi;
+  private final DestinationDefinitionApi destinationDefinitionApi;
   private final DestinationDefinitionSpecificationApi destinationSpecificationApi;
+  private final HealthApi healthApi;
   private final JobsApi jobsApi;
   private final JobRetryStatesApi jobRetryStatesApi;
   private final OperationApi operationApi;
-  private final SourceDefinitionApi sourceDefinitionApi;
+  private final OrganizationApi organizationApi;
+  private final PermissionApi permissionApi;
+  private final SecretsPersistenceConfigApi secretPersistenceConfigApi;
   private final SourceApi sourceApi;
+  private final SourceDefinitionApi sourceDefinitionApi;
   private final SourceDefinitionSpecificationApi sourceDefinitionSpecificationApi;
-  private final WorkspaceApi workspaceApi;
-  private final HealthApi healthApi;
-  private final AttemptApi attemptApi;
   private final StateApi stateApi;
   private final StreamStatusesApi streamStatusesApi;
   private final UserApi userApi;
-  private final PermissionApi permissionApi;
-  private final OrganizationApi organizationApi;
-  private final SecretsPersistenceConfigApi secretPersistenceConfigApi;
+  private final WebBackendApi webBackendApi;
+  private final WorkspaceApi workspaceApi;
 
   public AirbyteApiClient(final ApiClient apiClient) {
+    attemptApi = new AttemptApi(apiClient);
     connectionApi = new ConnectionApi(apiClient);
     connectorBuilderProjectApi = new ConnectorBuilderProjectApi(apiClient);
-    destinationDefinitionApi = new DestinationDefinitionApi(apiClient);
+    deploymentMetadataApi = new DeploymentMetadataApi(apiClient);
     destinationApi = new DestinationApi(apiClient);
+    destinationDefinitionApi = new DestinationDefinitionApi(apiClient);
     destinationSpecificationApi = new DestinationDefinitionSpecificationApi(apiClient);
+    healthApi = new HealthApi(apiClient);
     jobsApi = new JobsApi(apiClient);
     jobRetryStatesApi = new JobRetryStatesApi(apiClient);
     operationApi = new OperationApi(apiClient);
-    sourceDefinitionApi = new SourceDefinitionApi(apiClient);
+    organizationApi = new OrganizationApi(apiClient);
+    permissionApi = new PermissionApi(apiClient);
+    secretPersistenceConfigApi = new SecretsPersistenceConfigApi(apiClient);
     sourceApi = new SourceApi(apiClient);
+    sourceDefinitionApi = new SourceDefinitionApi(apiClient);
     sourceDefinitionSpecificationApi = new SourceDefinitionSpecificationApi(apiClient);
-    workspaceApi = new WorkspaceApi(apiClient);
-    healthApi = new HealthApi(apiClient);
-    attemptApi = new AttemptApi(apiClient);
     stateApi = new StateApi(apiClient);
     streamStatusesApi = new StreamStatusesApi(apiClient);
     userApi = new UserApi(apiClient);
-    permissionApi = new PermissionApi(apiClient);
-    organizationApi = new OrganizationApi(apiClient);
-    secretPersistenceConfigApi = new SecretsPersistenceConfigApi(apiClient);
+    webBackendApi = new WebBackendApi(apiClient);
+    workspaceApi = new WorkspaceApi(apiClient);
+  }
+
+  public AttemptApi getAttemptApi() {
+    return attemptApi;
   }
 
   public ConnectionApi getConnectionApi() {
@@ -109,16 +119,24 @@ public class AirbyteApiClient {
     return connectorBuilderProjectApi;
   }
 
-  public DestinationDefinitionApi getDestinationDefinitionApi() {
-    return destinationDefinitionApi;
+  public DeploymentMetadataApi getDeploymentMetadataApi() {
+    return deploymentMetadataApi;
   }
 
   public DestinationApi getDestinationApi() {
     return destinationApi;
   }
 
+  public DestinationDefinitionApi getDestinationDefinitionApi() {
+    return destinationDefinitionApi;
+  }
+
   public DestinationDefinitionSpecificationApi getDestinationDefinitionSpecificationApi() {
     return destinationSpecificationApi;
+  }
+
+  public HealthApi getHealthApi() {
+    return healthApi;
   }
 
   public JobsApi getJobsApi() {
@@ -129,32 +147,32 @@ public class AirbyteApiClient {
     return jobRetryStatesApi;
   }
 
-  public SourceDefinitionApi getSourceDefinitionApi() {
-    return sourceDefinitionApi;
+  public OperationApi getOperationApi() {
+    return operationApi;
+  }
+
+  public OrganizationApi getOrganizationApi() {
+    return organizationApi;
+  }
+
+  public PermissionApi getPermissionApi() {
+    return permissionApi;
+  }
+
+  public SecretsPersistenceConfigApi getSecretPersistenceConfigApi() {
+    return secretPersistenceConfigApi;
   }
 
   public SourceApi getSourceApi() {
     return sourceApi;
   }
 
+  public SourceDefinitionApi getSourceDefinitionApi() {
+    return sourceDefinitionApi;
+  }
+
   public SourceDefinitionSpecificationApi getSourceDefinitionSpecificationApi() {
     return sourceDefinitionSpecificationApi;
-  }
-
-  public WorkspaceApi getWorkspaceApi() {
-    return workspaceApi;
-  }
-
-  public OperationApi getOperationApi() {
-    return operationApi;
-  }
-
-  public HealthApi getHealthApi() {
-    return healthApi;
-  }
-
-  public AttemptApi getAttemptApi() {
-    return attemptApi;
   }
 
   public StateApi getStateApi() {
@@ -165,24 +183,20 @@ public class AirbyteApiClient {
     return streamStatusesApi;
   }
 
-  public PermissionApi getPermissionApi() {
-    return permissionApi;
-  }
-
   public UserApi getUserApi() {
     return userApi;
   }
 
-  public OrganizationApi getOrganizationApi() {
-    return organizationApi;
+  public WebBackendApi getWebBackendApi() {
+    return webBackendApi;
   }
 
-  public SecretsPersistenceConfigApi getSecretPersistenceConfigApi() {
-    return secretPersistenceConfigApi;
+  public WorkspaceApi getWorkspaceApi() {
+    return workspaceApi;
   }
 
   /**
-   * DEPRECATED: Use {@link io.airbyte.api.client2.AirbyteApiClient2} instead.
+   * DEPRECATED: Use {@link io.airbyte.api.client2.AirbyteApiClient} instead.
    * <p>
    * Default to 4 retries with a randomised 1 - 10 seconds interval between the first two retries and
    * an 10-minute wait for the last retry.
@@ -193,7 +207,7 @@ public class AirbyteApiClient {
    * @param desc short readable explanation of why this method is executed
    * @param <T> type of return type
    * @return value returned by method
-   * @deprecated replaced by {@link io.airbyte.api.client2.AirbyteApiClient2}
+   * @deprecated replaced by {@link io.airbyte.api.client2.AirbyteApiClient}
    */
   @Deprecated
   public static <T> T retryWithJitter(final Callable<T> call, final String desc) {
@@ -201,7 +215,7 @@ public class AirbyteApiClient {
   }
 
   /**
-   * DEPRECATED: Use {@link io.airbyte.api.client2.AirbyteApiClient2} instead.
+   * DEPRECATED: Use {@link io.airbyte.api.client2.AirbyteApiClient} instead.
    * <p>
    * Provides a simple retry wrapper for api calls. This retry behaviour is slightly different from
    * generally available retries libraries - the last retry is able to wait an interval inconsistent
@@ -217,7 +231,7 @@ public class AirbyteApiClient {
    * @param desc short readable explanation of why this method is executed
    * @param jitterMaxIntervalSecs upper limit of the randomised retry interval. Minimum value is 1.
    * @param finalIntervalSecs retry interval before the last retry.
-   * @deprecated replaced by {@link io.airbyte.api.client2.AirbyteApiClient2}
+   * @deprecated replaced by {@link io.airbyte.api.client2.AirbyteApiClient}
    */
   @Deprecated
   @VisibleForTesting
@@ -238,7 +252,7 @@ public class AirbyteApiClient {
   }
 
   /**
-   * DEPRECATED: Use {@link io.airbyte.api.client2.AirbyteApiClient2} instead.
+   * DEPRECATED: Use {@link io.airbyte.api.client2.AirbyteApiClient} instead.
    * <p>
    * Default to 4 retries with a randomised 1 - 10 seconds interval between the first two retries and
    * an 10-minute wait for the last retry.
@@ -248,7 +262,7 @@ public class AirbyteApiClient {
    * @param <T> type of return type
    * @return value returned by method
    * @throws Exception exception while jittering
-   * @deprecated replaced by {@link io.airbyte.api.client2.AirbyteApiClient2}
+   * @deprecated replaced by {@link io.airbyte.api.client2.AirbyteApiClient}
    */
   @Deprecated
   public static <T> T retryWithJitterThrows(final Callable<T> call, final String desc) throws Exception {
@@ -256,7 +270,7 @@ public class AirbyteApiClient {
   }
 
   /**
-   * DEPRECATED: Use {@link io.airbyte.api.client2.AirbyteApiClient2} instead.
+   * DEPRECATED: Use {@link io.airbyte.api.client2.AirbyteApiClient} instead.
    * <p>
    * Provides a simple retry wrapper for api calls. This retry behaviour is slightly different from
    * generally available retries libraries - the last retry is able to wait an interval inconsistent
@@ -270,7 +284,7 @@ public class AirbyteApiClient {
    * @param desc short readable explanation of why this method is executed
    * @param jitterMaxIntervalSecs upper limit of the randomised retry interval. Minimum value is 1.
    * @param finalIntervalSecs retry interval before the last retry.
-   * @deprecated replaced by {@link io.airbyte.api.client2.AirbyteApiClient2}
+   * @deprecated replaced by {@link io.airbyte.api.client2.AirbyteApiClient}
    */
   @VisibleForTesting
   @Deprecated

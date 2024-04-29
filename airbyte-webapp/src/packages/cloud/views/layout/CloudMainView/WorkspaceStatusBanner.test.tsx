@@ -13,7 +13,7 @@ import messages from "locales/en.json";
 
 import { WorkspaceStatusBanner } from "./WorkspaceStatusBanner";
 
-const defaultCloudWorkspace = { workspaceId: "123" };
+const defaultCloudWorkspace = { workspaceId: "123", organizationId: "9f05431f-1822-4f29-8238-9c9ac2bb5357" };
 
 const renderWorkspaceBanner = (cloudWorkspace: CloudWorkspaceRead) => {
   return render(

@@ -8,6 +8,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
+import io.airbyte.api.client.AirbyteApiClient;
 import io.airbyte.api.client.generated.ConnectionApi;
 import io.airbyte.api.client.generated.JobsApi;
 import io.airbyte.api.client.generated.WorkspaceApi;
@@ -23,16 +24,12 @@ import io.airbyte.api.client.model.generated.ConnectionStatus;
 import io.airbyte.api.client.model.generated.JobOptionalRead;
 import io.airbyte.api.client.model.generated.JobRead;
 import io.airbyte.api.client.model.generated.WorkspaceRead;
-import io.airbyte.config.persistence.ConfigNotFoundException;
 import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.featureflag.TestClient;
 import io.airbyte.featureflag.UseNewCronScheduleCalculation;
-import io.airbyte.validation.json.JsonValidationException;
-import io.airbyte.workers.helpers.CronSchedulingHelper;
 import io.airbyte.workers.helpers.ScheduleJitterHelper;
 import io.airbyte.workers.temporal.scheduling.activities.ConfigFetchActivity.ScheduleRetrieverInput;
 import io.airbyte.workers.temporal.scheduling.activities.ConfigFetchActivity.ScheduleRetrieverOutput;
-import java.io.IOException;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.Calendar;
@@ -53,6 +50,9 @@ import org.mockito.junit.jupiter.MockitoExtension;
 class ConfigFetchActivityTest {
 
   private static final Integer SYNC_JOB_MAX_ATTEMPTS = 3;
+
+  @Mock
+  private AirbyteApiClient mAirbyteApiClient;
 
   @Mock
   private JobsApi mJobsApi;
@@ -134,13 +134,16 @@ class ConfigFetchActivityTest {
 
       @BeforeEach
       void setup() {
-        configFetchActivity = new ConfigFetchActivityImpl(mJobsApi, mWorkspaceApi, SYNC_JOB_MAX_ATTEMPTS, currentSecondsSupplier, mConnectionApi,
+        when(mAirbyteApiClient.getConnectionApi()).thenReturn(mConnectionApi);
+        when(mAirbyteApiClient.getWorkspaceApi()).thenReturn(mWorkspaceApi);
+        configFetchActivity = new ConfigFetchActivityImpl(mAirbyteApiClient, SYNC_JOB_MAX_ATTEMPTS, currentSecondsSupplier,
             mFeatureFlagClient, mScheduleJitterHelper);
       }
 
       @Test
       @DisplayName("Test that the job gets scheduled if it is not manual and if it is the first run with legacy schedule schema")
-      void testFirstJobNonManual() throws IOException, JsonValidationException, ConfigNotFoundException, ApiException {
+      void testFirstJobNonManual() throws ApiException {
+        when(mAirbyteApiClient.getJobsApi()).thenReturn(mJobsApi);
         when(mJobsApi.getLastReplicationJob(any()))
             .thenReturn(new JobOptionalRead());
 
@@ -199,9 +202,10 @@ class ConfigFetchActivityTest {
 
       @Test
       @DisplayName("Test we will wait the required amount of time with legacy config")
-      void testWait() throws IOException, JsonValidationException, ConfigNotFoundException, ApiException {
+      void testWait() throws ApiException {
+        when(mAirbyteApiClient.getJobsApi()).thenReturn(mJobsApi);
         configFetchActivity =
-            new ConfigFetchActivityImpl(mJobsApi, mWorkspaceApi, SYNC_JOB_MAX_ATTEMPTS, () -> 60L * 3, mConnectionApi, mFeatureFlagClient,
+            new ConfigFetchActivityImpl(mAirbyteApiClient, SYNC_JOB_MAX_ATTEMPTS, () -> 60L * 3, mFeatureFlagClient,
                 mScheduleJitterHelper);
 
         when(mJobRead.getStartedAt()).thenReturn(null);
@@ -224,9 +228,10 @@ class ConfigFetchActivityTest {
 
       @Test
       @DisplayName("Test we will not wait if we are late in the legacy schedule schema")
-      void testNotWaitIfLate() throws IOException, ApiException {
+      void testNotWaitIfLate() throws ApiException {
+        when(mAirbyteApiClient.getJobsApi()).thenReturn(mJobsApi);
         configFetchActivity =
-            new ConfigFetchActivityImpl(mJobsApi, mWorkspaceApi, SYNC_JOB_MAX_ATTEMPTS, () -> 60L * 10, mConnectionApi, mFeatureFlagClient,
+            new ConfigFetchActivityImpl(mAirbyteApiClient, SYNC_JOB_MAX_ATTEMPTS, () -> 60L * 10, mFeatureFlagClient,
                 mScheduleJitterHelper);
 
         when(mJobRead.getStartedAt()).thenReturn(null);
@@ -263,7 +268,8 @@ class ConfigFetchActivityTest {
 
       @Test
       @DisplayName("Test that the job will be immediately scheduled if it is a BASIC_SCHEDULE type on the first run")
-      void testBasicScheduleTypeFirstRun() throws IOException, ApiException {
+      void testBasicScheduleTypeFirstRun() throws ApiException {
+        when(mAirbyteApiClient.getJobsApi()).thenReturn(mJobsApi);
         when(mJobsApi.getLastReplicationJob(any()))
             .thenReturn(new JobOptionalRead());
 
@@ -280,8 +286,9 @@ class ConfigFetchActivityTest {
 
       @Test
       @DisplayName("Test that we will wait the required amount of time with a BASIC_SCHEDULE type on a subsequent run")
-      void testBasicScheduleSubsequentRun() throws IOException, ApiException {
-        configFetchActivity = new ConfigFetchActivityImpl(mJobsApi, mWorkspaceApi, SYNC_JOB_MAX_ATTEMPTS, () -> 60L * 3, mConnectionApi,
+      void testBasicScheduleSubsequentRun() throws ApiException {
+        when(mAirbyteApiClient.getJobsApi()).thenReturn(mJobsApi);
+        configFetchActivity = new ConfigFetchActivityImpl(mAirbyteApiClient, SYNC_JOB_MAX_ATTEMPTS, () -> 60L * 3,
             mFeatureFlagClient, mScheduleJitterHelper);
 
         when(mJobRead.getStartedAt()).thenReturn(null);
@@ -307,6 +314,13 @@ class ConfigFetchActivityTest {
     @Nested
     class TestCronSchedule {
 
+      @BeforeEach
+      void setup() {
+        when(mAirbyteApiClient.getConnectionApi()).thenReturn(mConnectionApi);
+        when(mAirbyteApiClient.getJobsApi()).thenReturn(mJobsApi);
+        when(mAirbyteApiClient.getWorkspaceApi()).thenReturn(mWorkspaceApi);
+      }
+
       @Test
       @DisplayName("Test that the job will wait to be scheduled if it is a CRON type, and the prior job ran recently")
       void testCronScheduleSubsequentRunPriorJobRanRecently() throws ApiException {
@@ -318,8 +332,8 @@ class ConfigFetchActivityTest {
         final Supplier<Long> currentSecondsSupplier = () -> mockRightNow.getTimeInMillis() / 1000L;
 
         configFetchActivity =
-            new ConfigFetchActivityImpl(mJobsApi, mWorkspaceApi, SYNC_JOB_MAX_ATTEMPTS,
-                currentSecondsSupplier, mConnectionApi, mFeatureFlagClient, mScheduleJitterHelper);
+            new ConfigFetchActivityImpl(mAirbyteApiClient, SYNC_JOB_MAX_ATTEMPTS,
+                currentSecondsSupplier, mFeatureFlagClient, mScheduleJitterHelper);
 
         when(mJobsApi.getLastReplicationJob(any()))
             .thenReturn(new JobOptionalRead().job(mJobRead));
@@ -352,8 +366,8 @@ class ConfigFetchActivityTest {
         final Supplier<Long> currentSecondsSupplier = () -> mockRightNow.getTimeInMillis() / 1000L;
 
         configFetchActivity =
-            new ConfigFetchActivityImpl(mJobsApi, mWorkspaceApi, SYNC_JOB_MAX_ATTEMPTS,
-                currentSecondsSupplier, mConnectionApi, mFeatureFlagClient, mScheduleJitterHelper);
+            new ConfigFetchActivityImpl(mAirbyteApiClient, SYNC_JOB_MAX_ATTEMPTS,
+                currentSecondsSupplier, mFeatureFlagClient, mScheduleJitterHelper);
 
         when(mJobsApi.getLastReplicationJob(any()))
             .thenReturn(new JobOptionalRead().job(mJobRead));
@@ -377,7 +391,7 @@ class ConfigFetchActivityTest {
 
       @Test
       @DisplayName("Test that the job will only be scheduled once per minimum cron interval")
-      void testCronScheduleMinimumInterval() throws IOException, JsonValidationException, ConfigNotFoundException, ApiException {
+      void testCronScheduleMinimumInterval() throws ApiException {
         final Calendar mockRightNow = Calendar.getInstance(TimeZone.getTimeZone(UTC));
         mockRightNow.set(Calendar.HOUR_OF_DAY, 12);
         mockRightNow.set(Calendar.MINUTE, 0);
@@ -386,8 +400,8 @@ class ConfigFetchActivityTest {
         final Supplier<Long> currentSecondsSupplier = () -> mockRightNow.getTimeInMillis() / 1000L;
 
         configFetchActivity =
-            new ConfigFetchActivityImpl(mJobsApi, mWorkspaceApi, SYNC_JOB_MAX_ATTEMPTS,
-                currentSecondsSupplier, mConnectionApi, mFeatureFlagClient, mScheduleJitterHelper);
+            new ConfigFetchActivityImpl(mAirbyteApiClient, SYNC_JOB_MAX_ATTEMPTS,
+                currentSecondsSupplier, mFeatureFlagClient, mScheduleJitterHelper);
 
         when(mJobRead.getStartedAt()).thenReturn(null);
         when(mJobRead.getCreatedAt()).thenReturn(mockRightNow.getTimeInMillis() / 1000L);
@@ -407,7 +421,7 @@ class ConfigFetchActivityTest {
 
       @Test
       @DisplayName("Test that for specific workspace ids, we add some noise in the cron scheduling")
-      void testCronSchedulingNoise() throws IOException, JsonValidationException, ConfigNotFoundException, ApiException {
+      void testCronSchedulingNoise() throws ApiException {
         final Calendar mockRightNow = Calendar.getInstance(TimeZone.getTimeZone(UTC));
         mockRightNow.set(Calendar.HOUR_OF_DAY, 0);
         mockRightNow.set(Calendar.MINUTE, 0);
@@ -419,8 +433,8 @@ class ConfigFetchActivityTest {
             .thenReturn(new WorkspaceRead().workspaceId(UUID.fromString("226edbc1-4a9c-4401-95a9-90435d667d9d")));
 
         configFetchActivity =
-            new ConfigFetchActivityImpl(mJobsApi, mWorkspaceApi, SYNC_JOB_MAX_ATTEMPTS,
-                currentSecondsSupplier, mConnectionApi, mFeatureFlagClient, mScheduleJitterHelper);
+            new ConfigFetchActivityImpl(mAirbyteApiClient, SYNC_JOB_MAX_ATTEMPTS,
+                currentSecondsSupplier, mFeatureFlagClient, mScheduleJitterHelper);
 
         when(mJobRead.getStartedAt()).thenReturn(null);
         when(mJobRead.getCreatedAt()).thenReturn(mockRightNow.getTimeInMillis() / 1000L);
@@ -445,15 +459,12 @@ class ConfigFetchActivityTest {
   @Nested
   class TestGetMaxAttempt {
 
-    @Mock
-    private CronSchedulingHelper mCronSchedulingHelper;
-
     @Test
     @DisplayName("Test that we are using to right service to get the maximum amount of attempt")
     void testGetMaxAttempt() {
       final int maxAttempt = 15031990;
       configFetchActivity =
-          new ConfigFetchActivityImpl(mJobsApi, mWorkspaceApi, maxAttempt, () -> Instant.now().getEpochSecond(), mConnectionApi, mFeatureFlagClient,
+          new ConfigFetchActivityImpl(mAirbyteApiClient, maxAttempt, () -> Instant.now().getEpochSecond(), mFeatureFlagClient,
               mScheduleJitterHelper);
       Assertions.assertThat(configFetchActivity.getMaxAttempt().getMaxAttempt())
           .isEqualTo(maxAttempt);

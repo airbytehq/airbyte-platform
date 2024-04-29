@@ -17,7 +17,7 @@ import java.util.UUID
 
 interface UserService {
   fun getAllWorkspaceIdsForUser(
-    authorization: String,
+    authorization: String?,
     userInfo: String?,
   ): List<UUID>
 
@@ -35,7 +35,7 @@ open class UserServiceImpl(private val configApiClient: ConfigApiClient) : UserS
    * Hits the listAllWorkspaces endpoint since OSS has only one user.
    */
   override fun getAllWorkspaceIdsForUser(
-    authorization: String,
+    authorization: String?,
     userInfo: String?,
   ): List<UUID> {
     val response =

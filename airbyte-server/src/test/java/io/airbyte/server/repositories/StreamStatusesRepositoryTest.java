@@ -13,7 +13,6 @@ import io.airbyte.db.instance.jobs.jooq.generated.enums.JobStreamStatusJobType;
 import io.airbyte.db.instance.jobs.jooq.generated.enums.JobStreamStatusRunState;
 import io.airbyte.db.instance.test.TestDatabaseProviders;
 import io.airbyte.server.repositories.StreamStatusesRepository.FilterParams;
-import io.airbyte.server.repositories.StreamStatusesRepository.FilterParams.FilterParamsBuilder;
 import io.airbyte.server.repositories.StreamStatusesRepository.Pagination;
 import io.airbyte.server.repositories.domain.StreamStatus;
 import io.airbyte.server.repositories.domain.StreamStatus.StreamStatusBuilder;
@@ -246,8 +245,8 @@ class StreamStatusesRepositoryTest {
     final var result = repo.findAllFiltered(new FilterParams(Fixtures.workspaceId1, null, null, null, null, null, null, null));
 
     Assertions.assertEquals(1, result.getContent().size());
-    Assertions.assertEquals(inserted1.getId(), result.getContent().get(0).getId());
-    Assertions.assertNotEquals(inserted2.getId(), result.getContent().get(0).getId());
+    Assertions.assertEquals(inserted1.getId(), result.getContent().getFirst().getId());
+    Assertions.assertNotEquals(inserted2.getId(), result.getContent().getFirst().getId());
   }
 
   @Test
@@ -272,23 +271,23 @@ class StreamStatusesRepositoryTest {
     repo.saveAll(List.of(s1, s2, s3, s4, s5, s6, s7, s8, s9, s10, s11, s12, s13, s14, s15));
 
     // create some filter params on various properties
-    final var f1 = Fixtures.filters().workspaceId(Fixtures.workspaceId1).build();
-    final var f2 = Fixtures.filters().workspaceId(Fixtures.workspaceId2).build();
-    final var f3 = Fixtures.filters().workspaceId(Fixtures.workspaceId3).build();
-    final var f4 = Fixtures.filters().connectionId(Fixtures.connectionId1).build();
-    final var f5 = Fixtures.filters().connectionId(Fixtures.connectionId2).build();
-    final var f6 = Fixtures.filters().connectionId(Fixtures.connectionId1).streamNamespace(Fixtures.namespace).build();
+    final var f1 = Fixtures.filters(Fixtures.workspaceId1, null, null, null, null, null, null, null);
+    final var f2 = Fixtures.filters(Fixtures.workspaceId2, null, null, null, null, null, null, null);
+    final var f3 = Fixtures.filters(Fixtures.workspaceId3, null, null, null, null, null, null, null);
+    final var f4 = Fixtures.filters(Fixtures.workspaceId1, Fixtures.connectionId1, null, null, null, null, null, null);
+    final var f5 = Fixtures.filters(Fixtures.workspaceId1, Fixtures.connectionId2, null, null, null, null, null, null);
+    final var f6 = Fixtures.filters(Fixtures.workspaceId1, Fixtures.connectionId1, null, Fixtures.namespace, null, null, null, null);
     final var f7 =
-        Fixtures.filters().connectionId(Fixtures.connectionId1).streamNamespace(Fixtures.namespace).streamName(Fixtures.name1).build();
-    final var f8 = Fixtures.filters().jobId(Fixtures.jobId1).build();
-    final var f9 = Fixtures.filters().jobId(Fixtures.jobId2).build();
-    final var f10 = Fixtures.filters().jobId(Fixtures.jobId3).build();
-    final var f11 = Fixtures.filters().jobId(Fixtures.jobId1).streamNamespace(Fixtures.namespace).streamName(Fixtures.name1).build();
-    final var f12 = Fixtures.filters().jobId(Fixtures.jobId1).streamNamespace(Fixtures.namespace).streamName(Fixtures.name2).build();
+        Fixtures.filters(Fixtures.workspaceId1, Fixtures.connectionId1, null, Fixtures.namespace, Fixtures.name1, null, null, null);
+    final var f8 = Fixtures.filters(Fixtures.workspaceId1, null, Fixtures.jobId1, null, null, null, null, null);
+    final var f9 = Fixtures.filters(Fixtures.workspaceId1, null, Fixtures.jobId2, null, null, null, null, null);
+    final var f10 = Fixtures.filters(Fixtures.workspaceId1, null, Fixtures.jobId3, null, null, null, null, null);
+    final var f11 = Fixtures.filters(Fixtures.workspaceId1, null, Fixtures.jobId1, Fixtures.namespace, Fixtures.name1, null, null, null);
+    final var f12 = Fixtures.filters(Fixtures.workspaceId1, null, Fixtures.jobId1, Fixtures.namespace, Fixtures.name2, null, null, null);
     final var f13 =
-        Fixtures.filters().jobId(Fixtures.jobId1).streamNamespace(Fixtures.namespace).streamName(Fixtures.name1).attemptNumber(2).build();
-    final var f14 = Fixtures.filters().workspaceId(Fixtures.workspaceId1).jobType(JobStreamStatusJobType.sync).build();
-    final var f15 = Fixtures.filters().workspaceId(Fixtures.workspaceId1).jobType(JobStreamStatusJobType.reset).build();
+        Fixtures.filters(Fixtures.workspaceId1, null, Fixtures.jobId1, Fixtures.namespace, Fixtures.name1, 2, null, null);
+    final var f14 = Fixtures.filters(Fixtures.workspaceId1, null, null, null, null, null, JobStreamStatusJobType.sync, null);
+    final var f15 = Fixtures.filters(Fixtures.workspaceId1, null, null, null, null, null, JobStreamStatusJobType.reset, null);
 
     assertContainsSameElements(List.of(s1, s2, s3, s4, s5, s8, s9, s10, s11, s12, s13, s14, s15), repo.findAllFiltered(f1).getContent());
     assertContainsSameElements(List.of(s6), repo.findAllFiltered(f2).getContent());
@@ -324,20 +323,20 @@ class StreamStatusesRepositoryTest {
     repo.saveAll(List.of(s1, s2, s3, s4, s5, s6, s7, s8, s9, s10));
 
     // paginate by 10 at a time
-    final var f1 = Fixtures.filters().pagination(new Pagination(0, 10)).build();
-    final var f2 = Fixtures.filters().pagination(new Pagination(1, 10)).build();
+    final var f1 = Fixtures.filters(Fixtures.workspaceId1, null, null, null, null, null, null, new Pagination(0, 10));
+    final var f2 = Fixtures.filters(Fixtures.workspaceId1, null, null, null, null, null, null, new Pagination(1, 10));
 
     // paginate by 5
-    final var f3 = Fixtures.filters().pagination(new Pagination(0, 5)).build();
-    final var f4 = Fixtures.filters().pagination(new Pagination(1, 5)).build();
-    final var f5 = Fixtures.filters().pagination(new Pagination(2, 5)).build();
+    final var f3 = Fixtures.filters(Fixtures.workspaceId1, null, null, null, null, null, null, new Pagination(0, 5));
+    final var f4 = Fixtures.filters(Fixtures.workspaceId1, null, null, null, null, null, null, new Pagination(1, 5));
+    final var f5 = Fixtures.filters(Fixtures.workspaceId1, null, null, null, null, null, null, new Pagination(2, 5));
 
     // paginate by 3
-    final var f6 = Fixtures.filters().pagination(new Pagination(0, 3)).build();
-    final var f7 = Fixtures.filters().pagination(new Pagination(1, 3)).build();
-    final var f8 = Fixtures.filters().pagination(new Pagination(2, 3)).build();
-    final var f9 = Fixtures.filters().pagination(new Pagination(3, 3)).build();
-    final var f10 = Fixtures.filters().pagination(new Pagination(4, 3)).build();
+    final var f6 = Fixtures.filters(Fixtures.workspaceId1, null, null, null, null, null, null, new Pagination(0, 3));
+    final var f7 = Fixtures.filters(Fixtures.workspaceId1, null, null, null, null, null, null, new Pagination(1, 3));
+    final var f8 = Fixtures.filters(Fixtures.workspaceId1, null, null, null, null, null, null, new Pagination(2, 3));
+    final var f9 = Fixtures.filters(Fixtures.workspaceId1, null, null, null, null, null, null, new Pagination(3, 3));
+    final var f10 = Fixtures.filters(Fixtures.workspaceId1, null, null, null, null, null, null, new Pagination(4, 3));
 
     assertContainsSameElements(List.of(s1, s2, s3, s4, s5, s6, s7, s8, s9, s10), repo.findAllFiltered(f1).getContent());
     assertContainsSameElements(List.of(), repo.findAllFiltered(f2).getContent());
@@ -468,7 +467,7 @@ class StreamStatusesRepositoryTest {
     }
 
     static StreamStatusBuilder status() {
-      return StreamStatus.builder()
+      return new StreamStatus.StreamStatusBuilder()
           .workspaceId(workspaceId1)
           .connectionId(connectionId1)
           .jobId(jobId1)
@@ -481,7 +480,7 @@ class StreamStatusesRepositoryTest {
     }
 
     static StreamStatusBuilder statusFrom(final StreamStatus s) {
-      return StreamStatus.builder()
+      return new StreamStatus.StreamStatusBuilder()
           .id(s.getId())
           .workspaceId(s.getWorkspaceId())
           .connectionId(s.getConnectionId())
@@ -530,9 +529,25 @@ class StreamStatusesRepositoryTest {
           .runState(JobStreamStatusRunState.complete);
     }
 
-    static FilterParamsBuilder filters() {
-      return FilterParams.builder()
-          .workspaceId(workspaceId1);
+    static FilterParams filters(
+                                final UUID workspaceId,
+                                final UUID connectionId,
+                                final Long jobId,
+                                final String streamNamespace,
+                                final String streamName,
+                                final Integer attemptNumber,
+                                final JobStreamStatusJobType jobType,
+                                final StreamStatusesRepository.Pagination pagination) {
+      return new FilterParams(
+          workspaceId,
+          connectionId,
+          jobId,
+          streamNamespace,
+          streamName,
+          attemptNumber,
+          jobType,
+          pagination);
+
     }
 
   }

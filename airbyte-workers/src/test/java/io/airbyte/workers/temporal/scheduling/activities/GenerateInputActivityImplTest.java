@@ -4,6 +4,9 @@
 
 package io.airbyte.workers.temporal.scheduling.activities;
 
+import static org.mockito.Mockito.when;
+
+import io.airbyte.api.client.AirbyteApiClient;
 import io.airbyte.api.client.generated.JobsApi;
 import io.airbyte.commons.temporal.utils.PayloadChecker;
 import org.junit.jupiter.api.BeforeEach;
@@ -15,6 +18,9 @@ import org.mockito.junit.jupiter.MockitoExtension;
 class GenerateInputActivityImplTest {
 
   @Mock
+  private AirbyteApiClient mAirbyteApiClient;
+
+  @Mock
   private JobsApi mJobsApi;
 
   @Mock
@@ -24,7 +30,8 @@ class GenerateInputActivityImplTest {
 
   @BeforeEach
   void setUp() {
-    activity = new GenerateInputActivityImpl(mJobsApi, mPayloadChecker);
+    when(mAirbyteApiClient.getJobsApi()).thenReturn(mJobsApi);
+    activity = new GenerateInputActivityImpl(mAirbyteApiClient, mPayloadChecker);
   }
 
 }

@@ -9,6 +9,7 @@ import io.airbyte.config.StandardSourceDefinition
 import io.airbyte.config.StandardSync
 import io.airbyte.config.StandardWorkspace
 import io.airbyte.config.SupportLevel
+import io.airbyte.config.persistence.OrganizationPersistence.DEFAULT_ORGANIZATION_ID
 import io.airbyte.data.helpers.ActorDefinitionVersionUpdater
 import io.airbyte.data.services.impls.jooq.ActorDefinitionServiceJooqImpl
 import io.airbyte.data.services.impls.jooq.DestinationServiceJooqImpl
@@ -87,7 +88,8 @@ open class RepositoryTestSetup {
           .withDefaultGeography(Geography.US)
           .withName("")
           .withSlug("")
-          .withInitialSetupComplete(true),
+          .withInitialSetupComplete(true)
+          .withOrganizationId(DEFAULT_ORGANIZATION_ID),
       )
 
       val actorDefinitionUpdate: ActorDefinitionVersionUpdater = mockk()

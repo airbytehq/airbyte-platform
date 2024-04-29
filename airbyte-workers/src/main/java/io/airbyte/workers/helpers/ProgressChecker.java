@@ -4,7 +4,7 @@
 
 package io.airbyte.workers.helpers;
 
-import io.airbyte.api.client.generated.AttemptApi;
+import io.airbyte.api.client.AirbyteApiClient;
 import io.airbyte.api.client.invoker.generated.ApiException;
 import io.airbyte.api.client.model.generated.AttemptStats;
 import io.airbyte.api.client.model.generated.GetAttemptStatsRequestBody;
@@ -21,11 +21,11 @@ import lombok.extern.slf4j.Slf4j;
 @Singleton
 public class ProgressChecker {
 
-  private final AttemptApi attemptApi;
+  private final AirbyteApiClient airbyteApiClient;
   private final ProgressCheckerPredicates predicate;
 
-  public ProgressChecker(final AttemptApi attemptApi, final ProgressCheckerPredicates predicate) {
-    this.attemptApi = attemptApi;
+  public ProgressChecker(final AirbyteApiClient airbyteApiClient, final ProgressCheckerPredicates predicate) {
+    this.airbyteApiClient = airbyteApiClient;
     this.predicate = predicate;
   }
 
@@ -52,7 +52,7 @@ public class ProgressChecker {
     AttemptStats resp;
 
     try {
-      resp = attemptApi.getAttemptCombinedStats(req);
+      resp = airbyteApiClient.getAttemptApi().getAttemptCombinedStats(req);
     } catch (final ApiException e) {
       // Retry unexpected 4xx/5xx status codes.
       // 404 is an expected status code and should not be retried.

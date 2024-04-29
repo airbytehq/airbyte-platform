@@ -7,8 +7,10 @@ package io.airbyte.workers.helpers;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
+import io.airbyte.api.client.AirbyteApiClient;
 import io.airbyte.api.client.generated.JobRetryStatesApi;
 import io.airbyte.api.client.generated.WorkspaceApi;
 import io.airbyte.api.client.invoker.generated.ApiException;
@@ -34,6 +36,9 @@ import org.mockito.Mockito;
 class RetryStateClientTest {
 
   @Mock
+  private AirbyteApiClient mAirbyteApiClient;
+
+  @Mock
   private JobRetryStatesApi mJobRetryStatesApi;
 
   @Mock
@@ -44,17 +49,19 @@ class RetryStateClientTest {
 
   @BeforeEach
   public void setup() {
-    mJobRetryStatesApi = Mockito.mock(JobRetryStatesApi.class);
-    mWorkspaceApi = Mockito.mock(WorkspaceApi.class);
-    mFeatureFlagClient = Mockito.mock(TestClient.class);
+    mAirbyteApiClient = mock(AirbyteApiClient.class);
+    mJobRetryStatesApi = mock(JobRetryStatesApi.class);
+    mWorkspaceApi = mock(WorkspaceApi.class);
+    mFeatureFlagClient = mock(TestClient.class);
+    when(mAirbyteApiClient.getJobRetryStatesApi()).thenReturn(mJobRetryStatesApi);
+    when(mAirbyteApiClient.getWorkspaceApi()).thenReturn(mWorkspaceApi);
     when(mFeatureFlagClient.intVariation(Mockito.any(), Mockito.any())).thenReturn(-1);
   }
 
   @Test
   void hydratesBackoffAndLimitsFromConstructor() {
     final var client = new RetryStateClient(
-        mJobRetryStatesApi,
-        mWorkspaceApi,
+        mAirbyteApiClient,
         mFeatureFlagClient,
         Fixtures.successiveCompleteFailureLimit,
         Fixtures.totalCompleteFailureLimit,
@@ -80,8 +87,7 @@ class RetryStateClientTest {
   @Test
   void featureFlagsOverrideValues() {
     final var client = new RetryStateClient(
-        mJobRetryStatesApi,
-        mWorkspaceApi,
+        mAirbyteApiClient,
         mFeatureFlagClient,
         Fixtures.successiveCompleteFailureLimit,
         Fixtures.totalCompleteFailureLimit,
@@ -128,8 +134,7 @@ class RetryStateClientTest {
         .thenReturn(retryStateRead);
 
     final var client = new RetryStateClient(
-        mJobRetryStatesApi,
-        mWorkspaceApi,
+        mAirbyteApiClient,
         mFeatureFlagClient,
         Fixtures.successiveCompleteFailureLimit,
         Fixtures.totalCompleteFailureLimit,
@@ -153,8 +158,7 @@ class RetryStateClientTest {
         .thenThrow(new ApiException(HttpStatus.NOT_FOUND.getCode(), "Not Found."));
 
     final var client = new RetryStateClient(
-        mJobRetryStatesApi,
-        mWorkspaceApi,
+        mAirbyteApiClient,
         mFeatureFlagClient,
         Fixtures.successiveCompleteFailureLimit,
         Fixtures.totalCompleteFailureLimit,
@@ -175,8 +179,7 @@ class RetryStateClientTest {
   @Test
   void initializesFailureCountsFreshWhenJobIdNull() {
     final var client = new RetryStateClient(
-        mJobRetryStatesApi,
-        mWorkspaceApi,
+        mAirbyteApiClient,
         mFeatureFlagClient,
         Fixtures.successiveCompleteFailureLimit,
         Fixtures.totalCompleteFailureLimit,

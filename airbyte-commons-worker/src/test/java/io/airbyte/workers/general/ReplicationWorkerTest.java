@@ -31,6 +31,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import io.airbyte.api.client.AirbyteApiClient;
 import io.airbyte.api.client.WorkloadApiClient;
 import io.airbyte.api.client.generated.DestinationApi;
 import io.airbyte.api.client.generated.SourceApi;
@@ -186,7 +187,7 @@ abstract class ReplicationWorkerTest {
   protected ReplicationWorkerHelper replicationWorkerHelper;
   protected WorkloadApi workloadApi;
   protected WorkloadApiClient workloadApiClient;
-
+  protected AirbyteApiClient airbyteApiClient;
   protected AnalyticsMessageTracker analyticsMessageTracker;
   protected SourceApi sourceApi;
   protected DestinationApi destinationApi;
@@ -236,6 +237,7 @@ abstract class ReplicationWorkerTest {
     replicationAirbyteMessageEventPublishingHelper = mock(ReplicationAirbyteMessageEventPublishingHelper.class);
     workloadApi = mock(WorkloadApi.class);
     workloadApiClient = mock(WorkloadApiClient.class);
+    airbyteApiClient = mock(AirbyteApiClient.class);
     when(workloadApiClient.getWorkloadApi()).thenReturn(workloadApi);
 
     analyticsMessageTracker = mock(AnalyticsMessageTracker.class);
@@ -245,6 +247,9 @@ abstract class ReplicationWorkerTest {
     destinationApi = mock(DestinationApi.class);
     when(destinationApi.getDestination(any())).thenReturn(new DestinationRead().destinationDefinitionId(DESTINATION_DEFINITION_ID));
     streamStatusCompletionTracker = mock(StreamStatusCompletionTracker.class);
+
+    when(airbyteApiClient.getDestinationApi()).thenReturn(destinationApi);
+    when(airbyteApiClient.getSourceApi()).thenReturn(sourceApi);
 
     when(messageTracker.getSyncStatsTracker()).thenReturn(syncStatsTracker);
 

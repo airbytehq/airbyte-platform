@@ -14,6 +14,7 @@ import io.airbyte.api.model.generated.WorkspaceUpdate;
 import io.airbyte.commons.auth.config.AirbyteKeycloakConfiguration;
 import io.airbyte.commons.enums.Enums;
 import io.airbyte.commons.license.ActiveAirbyteLicense;
+import io.airbyte.commons.version.AirbyteVersion;
 import io.airbyte.config.Configs.AirbyteEdition;
 import io.airbyte.config.Organization;
 import io.airbyte.config.StandardWorkspace;
@@ -24,6 +25,7 @@ import io.airbyte.config.persistence.UserPersistence;
 import io.airbyte.config.persistence.WorkspacePersistence;
 import io.airbyte.validation.json.JsonValidationException;
 import io.micronaut.context.annotation.Value;
+import jakarta.inject.Named;
 import jakarta.inject.Singleton;
 import java.io.IOException;
 import java.util.Optional;
@@ -38,8 +40,9 @@ import lombok.extern.slf4j.Slf4j;
 @Singleton
 public class InstanceConfigurationHandler {
 
-  private final String webappUrl;
+  private final String airbyteUrl;
   private final AirbyteEdition airbyteEdition;
+  private final AirbyteVersion airbyteVersion;
   private final Optional<AirbyteKeycloakConfiguration> airbyteKeycloakConfiguration;
   private final Optional<ActiveAirbyteLicense> activeAirbyteLicense;
   private final WorkspacePersistence workspacePersistence;
@@ -49,21 +52,20 @@ public class InstanceConfigurationHandler {
 
   private final String trackingStrategy;
 
-  // the injected webapp-url value defaults to `null` to preserve backwards compatibility.
-  // TODO remove the default value once configurations are standardized to always include a
-  // webapp-url.
-  public InstanceConfigurationHandler(@Value("${airbyte.webapp-url:null}") final String webappUrl,
+  public InstanceConfigurationHandler(@Named("airbyteUrl") final String airbyteUrl,
                                       @Value("${airbyte.tracking.strategy:}") final String trackingStrategy,
                                       final AirbyteEdition airbyteEdition,
+                                      final AirbyteVersion airbyteVersion,
                                       final Optional<AirbyteKeycloakConfiguration> airbyteKeycloakConfiguration,
                                       final Optional<ActiveAirbyteLicense> activeAirbyteLicense,
                                       final WorkspacePersistence workspacePersistence,
                                       final WorkspacesHandler workspacesHandler,
                                       final UserPersistence userPersistence,
                                       final OrganizationPersistence organizationPersistence) {
-    this.webappUrl = webappUrl;
+    this.airbyteUrl = airbyteUrl;
     this.trackingStrategy = trackingStrategy;
     this.airbyteEdition = airbyteEdition;
+    this.airbyteVersion = airbyteVersion;
     this.airbyteKeycloakConfiguration = airbyteKeycloakConfiguration;
     this.activeAirbyteLicense = activeAirbyteLicense;
     this.workspacePersistence = workspacePersistence;
@@ -77,8 +79,9 @@ public class InstanceConfigurationHandler {
     final Boolean initialSetupComplete = workspacePersistence.getInitialSetupComplete();
 
     return new InstanceConfigurationResponse()
-        .webappUrl(webappUrl)
+        .airbyteUrl(airbyteUrl)
         .edition(Enums.convertTo(airbyteEdition, EditionEnum.class))
+        .version(airbyteVersion.serialize())
         .licenseType(getLicenseType())
         .auth(getAuthConfiguration())
         .initialSetupComplete(initialSetupComplete)

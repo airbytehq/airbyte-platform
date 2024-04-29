@@ -10,7 +10,7 @@ import static io.airbyte.metrics.lib.ApmTraceConstants.Tags.JOB_ID_KEY;
 import static io.airbyte.metrics.lib.ApmTraceConstants.Tags.WORKSPACE_ID_KEY;
 
 import datadog.trace.api.Trace;
-import io.airbyte.api.client.generated.WorkspaceApi;
+import io.airbyte.api.client.AirbyteApiClient;
 import io.airbyte.api.client.invoker.generated.ApiException;
 import io.airbyte.api.client.model.generated.ConnectionIdRequestBody;
 import io.airbyte.api.client.model.generated.WorkspaceRead;
@@ -43,12 +43,12 @@ import lombok.extern.slf4j.Slf4j;
 @Requires(env = WorkerMode.CONTROL_PLANE)
 public class RecordMetricActivityImpl implements RecordMetricActivity {
 
+  private final AirbyteApiClient airbyteApiClient;
   private final MetricClient metricClient;
-  private final WorkspaceApi workspaceApi;
 
-  public RecordMetricActivityImpl(final MetricClient metricClient, final WorkspaceApi workspaceApi) {
+  public RecordMetricActivityImpl(final AirbyteApiClient airbyteApiClient, final MetricClient metricClient) {
+    this.airbyteApiClient = airbyteApiClient;
     this.metricClient = metricClient;
-    this.workspaceApi = workspaceApi;
   }
 
   /**
@@ -121,7 +121,8 @@ public class RecordMetricActivityImpl implements RecordMetricActivity {
   String getWorkspaceId(final UUID connectionId) {
     try {
       log.debug("Calling workspaceApi to fetch workspace ID for connection ID {}", connectionId);
-      final WorkspaceRead workspaceRead = workspaceApi.getWorkspaceByConnectionId(new ConnectionIdRequestBody().connectionId(connectionId));
+      final WorkspaceRead workspaceRead =
+          airbyteApiClient.getWorkspaceApi().getWorkspaceByConnectionId(new ConnectionIdRequestBody().connectionId(connectionId));
       return workspaceRead.getWorkspaceId().toString();
     } catch (final ApiException e) {
       if (e.getCode() == HttpStatus.NOT_FOUND.getCode()) {

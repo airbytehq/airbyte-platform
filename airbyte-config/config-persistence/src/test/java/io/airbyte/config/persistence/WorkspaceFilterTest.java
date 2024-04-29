@@ -4,6 +4,7 @@
 
 package io.airbyte.config.persistence;
 
+import static io.airbyte.config.persistence.OrganizationPersistence.DEFAULT_ORGANIZATION_ID;
 import static io.airbyte.db.instance.configs.jooq.generated.Tables.ACTOR;
 import static io.airbyte.db.instance.configs.jooq.generated.Tables.ACTOR_DEFINITION;
 import static io.airbyte.db.instance.configs.jooq.generated.Tables.ACTOR_DEFINITION_VERSION;
@@ -24,6 +25,7 @@ import io.airbyte.data.services.impls.jooq.ConnectorBuilderServiceJooqImpl;
 import io.airbyte.data.services.impls.jooq.DestinationServiceJooqImpl;
 import io.airbyte.data.services.impls.jooq.OAuthServiceJooqImpl;
 import io.airbyte.data.services.impls.jooq.OperationServiceJooqImpl;
+import io.airbyte.data.services.impls.jooq.OrganizationServiceJooqImpl;
 import io.airbyte.data.services.impls.jooq.SourceServiceJooqImpl;
 import io.airbyte.data.services.impls.jooq.WorkspaceServiceJooqImpl;
 import io.airbyte.db.instance.configs.jooq.generated.enums.ActorType;
@@ -67,7 +69,7 @@ class WorkspaceFilterTest extends BaseConfigDatabaseTest {
   private ConfigRepository configRepository;
 
   @BeforeAll
-  static void setUpAll() throws SQLException {
+  static void setUpAll() throws SQLException, IOException {
     // create actor_definition
     database.transaction(ctx -> ctx.insertInto(ACTOR_DEFINITION, ACTOR_DEFINITION.ID, ACTOR_DEFINITION.NAME, ACTOR_DEFINITION.ACTOR_TYPE)
         .values(SRC_DEF_ID, "srcDef", ActorType.source)
@@ -82,13 +84,17 @@ class WorkspaceFilterTest extends BaseConfigDatabaseTest {
         .values(DST_DEF_VER_ID, DST_DEF_ID, "airbyte/destination", "tag", JSONB.valueOf("{}"), SupportLevel.community)
         .execute());
 
+    new OrganizationServiceJooqImpl(database).writeOrganization(MockData.defaultOrganization());
+
     // create workspace
     database.transaction(
-        ctx -> ctx.insertInto(WORKSPACE, WORKSPACE.ID, WORKSPACE.NAME, WORKSPACE.SLUG, WORKSPACE.INITIAL_SETUP_COMPLETE, WORKSPACE.TOMBSTONE)
-            .values(WORKSPACE_ID_0, "ws-0", "ws-0", true, false)
-            .values(WORKSPACE_ID_1, "ws-1", "ws-1", true, false)
-            .values(WORKSPACE_ID_2, "ws-2", "ws-2", true, true) // note that workspace 2 is tombstoned!
-            .values(WORKSPACE_ID_3, "ws-3", "ws-3", true, true) // note that workspace 3 is tombstoned!
+        ctx -> ctx
+            .insertInto(WORKSPACE, WORKSPACE.ID, WORKSPACE.NAME, WORKSPACE.SLUG, WORKSPACE.INITIAL_SETUP_COMPLETE, WORKSPACE.TOMBSTONE,
+                WORKSPACE.ORGANIZATION_ID)
+            .values(WORKSPACE_ID_0, "ws-0", "ws-0", true, false, DEFAULT_ORGANIZATION_ID)
+            .values(WORKSPACE_ID_1, "ws-1", "ws-1", true, false, DEFAULT_ORGANIZATION_ID)
+            .values(WORKSPACE_ID_2, "ws-2", "ws-2", true, true, DEFAULT_ORGANIZATION_ID) // note that workspace 2 is tombstoned!
+            .values(WORKSPACE_ID_3, "ws-3", "ws-3", true, true, DEFAULT_ORGANIZATION_ID) // note that workspace 3 is tombstoned!
             .execute());
     // create actors
     database.transaction(

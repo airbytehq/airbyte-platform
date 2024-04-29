@@ -9,7 +9,6 @@ import static io.airbyte.metrics.lib.ApmTraceConstants.Tags.CONNECTION_ID_KEY;
 
 import datadog.trace.api.Trace;
 import io.airbyte.api.client.AirbyteApiClient;
-import io.airbyte.api.client.generated.ConnectionApi;
 import io.airbyte.api.client.model.generated.ConnectionIdRequestBody;
 import io.airbyte.api.client.model.generated.InternalOperationResult;
 import io.airbyte.commons.features.FeatureFlags;
@@ -28,12 +27,12 @@ import java.util.Map;
 public class AutoDisableConnectionActivityImpl implements AutoDisableConnectionActivity {
 
   private final FeatureFlags featureFlags;
-  private final ConnectionApi connectionApi;
+  private final AirbyteApiClient airbyteApiClient;
 
   @SuppressWarnings("LineLength")
-  public AutoDisableConnectionActivityImpl(final FeatureFlags featureFlags, final ConnectionApi connectionApi) {
+  public AutoDisableConnectionActivityImpl(final FeatureFlags featureFlags, final AirbyteApiClient airbyteApiClient) {
     this.featureFlags = featureFlags;
-    this.connectionApi = connectionApi;
+    this.airbyteApiClient = airbyteApiClient;
   }
 
   // Given a connection id, this activity will make an api call that will set a connection
@@ -47,7 +46,7 @@ public class AutoDisableConnectionActivityImpl implements AutoDisableConnectionA
     if (featureFlags.autoDisablesFailingConnections()) {
       try {
         final InternalOperationResult autoDisableConnection = AirbyteApiClient.retryWithJitterThrows(
-            () -> connectionApi.autoDisableConnection(new ConnectionIdRequestBody()
+            () -> airbyteApiClient.getConnectionApi().autoDisableConnection(new ConnectionIdRequestBody()
                 .connectionId(input.getConnectionId())),
             "auto disable connection");
         return new AutoDisableConnectionOutput(autoDisableConnection.getSucceeded());

@@ -101,7 +101,8 @@ public class ApplicationBeanFactory {
                                              final StatePersistence statePersistence,
                                              final RefreshJobStateUpdater refreshJobStateUpdater,
                                              final StreamRefreshesRepository streamRefreshesRepository) {
-    return new DefaultJobCreator(jobPersistence, workerConfigsProvider, featureFlagClient, generationBumper, statePersistence, refreshJobStateUpdater,
+    return new DefaultJobCreator(jobPersistence, workerConfigsProvider, featureFlagClient, generationBumper,
+        statePersistence, refreshJobStateUpdater,
         streamRefreshesRepository);
   }
 

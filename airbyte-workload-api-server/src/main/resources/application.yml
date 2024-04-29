@@ -48,12 +48,13 @@ micronaut:
         web:
           allowed-origins-regex:
             - ^.*$
+    idle-timeout: ${HTTP_IDLE_TIMEOUT:5m}
     netty:
-      aggregator:
-        max-content-length: 52428800 # 50MB
       access-logger:
         enabled: ${HTTP_ACCESS_LOG_ENABLED:true}
-    idle-timeout: ${HTTP_IDLE_TIMEOUT:5m}
+      aggregator:
+        max-content-length: 52428800 # 50MB
+    max-request-size: 10485760 # 10MB the micronaut default. If we want to bump, double check it works for nginx.
 
 airbyte:
   feature-flag:

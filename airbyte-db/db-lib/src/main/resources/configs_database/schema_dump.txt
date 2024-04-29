@@ -55,6 +55,7 @@ create table "public"."actor_definition" (
   "max_seconds_between_messages" int,
   "default_version_id" uuid,
   "icon_url" varchar(256),
+  "support_refreshes" boolean not null default false,
   constraint "actor_definition_pkey" primary key ("id")
 );
 create table "public"."actor_definition_breaking_change" (
@@ -427,7 +428,7 @@ create table "public"."workspace" (
   "geography" geography_type not null default cast('AUTO' as geography_type),
   "webhook_operation_configs" jsonb,
   "notification_settings" jsonb,
-  "organization_id" uuid,
+  "organization_id" uuid not null,
   constraint "workspace_pkey" primary key ("id")
 );
 create table "public"."workspace_service_account" (

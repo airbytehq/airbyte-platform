@@ -4,7 +4,7 @@
 
 package io.airbyte.workers.temporal.scheduling.activities;
 
-import io.airbyte.api.client.generated.WorkspaceApi;
+import io.airbyte.api.client.AirbyteApiClient;
 import io.airbyte.api.client.invoker.generated.ApiException;
 import io.airbyte.api.client.model.generated.ConnectionIdRequestBody;
 import io.airbyte.api.client.model.generated.WorkspaceRead;
@@ -20,10 +20,10 @@ import lombok.extern.slf4j.Slf4j;
 @Singleton
 public class FeatureFlagFetchActivityImpl implements FeatureFlagFetchActivity {
 
-  private final WorkspaceApi workspaceApi;
+  private final AirbyteApiClient airbyteApiClient;
 
-  public FeatureFlagFetchActivityImpl(final WorkspaceApi workspaceApi) {
-    this.workspaceApi = workspaceApi;
+  public FeatureFlagFetchActivityImpl(final AirbyteApiClient airbyteApiClient) {
+    this.airbyteApiClient = airbyteApiClient;
   }
 
   /**
@@ -34,7 +34,8 @@ public class FeatureFlagFetchActivityImpl implements FeatureFlagFetchActivity {
    */
   public UUID getWorkspaceId(final UUID connectionId) {
     try {
-      final WorkspaceRead workspace = workspaceApi.getWorkspaceByConnectionId(new ConnectionIdRequestBody().connectionId(connectionId));
+      final WorkspaceRead workspace =
+          airbyteApiClient.getWorkspaceApi().getWorkspaceByConnectionId(new ConnectionIdRequestBody().connectionId(connectionId));
       return workspace.getWorkspaceId();
     } catch (final ApiException e) {
       throw new RuntimeException("Unable to get workspace ID for connection", e);

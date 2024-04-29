@@ -70,6 +70,7 @@ airbyte:
   workload-launcher:
     geography: ${WORKLOAD_LAUNCHER_GEOGRAPHY:auto}
     workload-start-timeout: ${WORKLOAD_LAUNCHER_WORKLOAD_START_TIMEOUT:PT5H}
+    parallelism-max-surge: ${WORKLOAD_PARALLELISM_MAX_SURGE:10}
     temporal:
       default-queue:
         parallelism: ${WORKLOAD_LAUNCHER_PARALLELISM:10}

@@ -4,6 +4,8 @@
 
 package io.airbyte.config.persistence;
 
+import static io.airbyte.config.persistence.OrganizationPersistence.DEFAULT_ORGANIZATION_ID;
+
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -379,7 +381,8 @@ public class MockData {
         .withFeedbackDone(true)
         .withDefaultGeography(Geography.US)
         .withWebhookOperationConfigs(Jsons.jsonNode(
-            new WebhookOperationConfigs().withWebhookConfigs(List.of(new WebhookConfig().withId(WEBHOOK_CONFIG_ID).withName("name")))));
+            new WebhookOperationConfigs().withWebhookConfigs(List.of(new WebhookConfig().withId(WEBHOOK_CONFIG_ID).withName("name")))))
+        .withOrganizationId(DEFAULT_ORGANIZATION_ID);
 
     final StandardWorkspace workspace2 = new StandardWorkspace()
         .withWorkspaceId(WORKSPACE_ID_2)
@@ -387,7 +390,8 @@ public class MockData {
         .withSlug("another-workspace")
         .withInitialSetupComplete(true)
         .withTombstone(false)
-        .withDefaultGeography(Geography.AUTO);
+        .withDefaultGeography(Geography.AUTO)
+        .withOrganizationId(DEFAULT_ORGANIZATION_ID);
 
     final StandardWorkspace workspace3 = new StandardWorkspace()
         .withWorkspaceId(WORKSPACE_ID_3)
@@ -395,7 +399,8 @@ public class MockData {
         .withSlug("tombstoned")
         .withInitialSetupComplete(true)
         .withTombstone(true)
-        .withDefaultGeography(Geography.AUTO);
+        .withDefaultGeography(Geography.AUTO)
+        .withOrganizationId(DEFAULT_ORGANIZATION_ID);
 
     return Arrays.asList(workspace1, workspace2, workspace3);
   }
@@ -499,7 +504,8 @@ public class MockData {
         .withTombstone(false)
         .withPublic(true)
         .withCustom(false)
-        .withResourceRequirements(new ActorDefinitionResourceRequirements().withDefault(new ResourceRequirements().withCpuRequest("2")));
+        .withResourceRequirements(new ActorDefinitionResourceRequirements().withDefault(new ResourceRequirements().withCpuRequest("2")))
+        .withSupportRefreshes(false);
   }
 
   public static StandardDestinationDefinition grantableDestinationDefinition1() {
@@ -510,7 +516,8 @@ public class MockData {
         .withIcon("icon-4")
         .withTombstone(false)
         .withPublic(false)
-        .withCustom(false);
+        .withCustom(false)
+        .withSupportRefreshes(false);
   }
 
   public static StandardDestinationDefinition grantableDestinationDefinition2() {
@@ -521,7 +528,8 @@ public class MockData {
         .withIcon("icon-3")
         .withTombstone(false)
         .withPublic(false)
-        .withCustom(false);
+        .withCustom(false)
+        .withSupportRefreshes(false);
   }
 
   public static StandardDestinationDefinition customDestinationDefinition() {
@@ -532,7 +540,8 @@ public class MockData {
         .withIcon("icon-4")
         .withTombstone(false)
         .withPublic(false)
-        .withCustom(true);
+        .withCustom(true)
+        .withSupportRefreshes(false);
   }
 
   public static List<StandardDestinationDefinition> standardDestinationDefinitions() {
@@ -898,6 +907,16 @@ public class MockData {
         .withConfigHash(CONFIG_HASH)
         .withConnectorVersion(CONNECTOR_VERSION);
     return Arrays.asList(actorCatalogFetchEvent1, actorCatalogFetchEvent2);
+  }
+
+  public static Organization defaultOrganization() {
+    return new Organization()
+        .withOrganizationId(DEFAULT_ORGANIZATION_ID)
+        .withName("default org")
+        .withEmail("test@test.com")
+        .withPba(false)
+        .withOrgLevelBilling(false);
+
   }
 
   @Data

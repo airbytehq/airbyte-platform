@@ -110,6 +110,6 @@ val copyInitSql = tasks.register<Copy>("copyInitSql") {
   into("build/airbyte/docker/bin")
 }
 
-tasks.named("dockerBuildImage") {
+tasks.named("dockerCopyDistribution") {
   dependsOn(copyInitSql)
 }

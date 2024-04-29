@@ -109,7 +109,8 @@ class StreamStatusTracker(private val airbyteApiClient: AirbyteApiClient) {
           ctx = ctx,
           transition = transition,
           origin = origin,
-          incompleteCause = incompleteRunCause,
+          // the api will not accept a null incompleteCause — so if null we assume failure
+          incompleteCause = incompleteRunCause ?: StreamStatusIncompleteRunCause.FAILED,
         )
       else -> logger.warn { "Invalid stream status '${streamStatus.status}' for message $streamStatus" }
     }
@@ -200,7 +201,7 @@ class StreamStatusTracker(private val airbyteApiClient: AirbyteApiClient) {
     origin: AirbyteMessageOrigin,
     ctx: ReplicationContext,
     transition: Duration,
-    incompleteCause: StreamStatusIncompleteRunCause?,
+    incompleteCause: StreamStatusIncompleteRunCause,
   ) {
     if (origin == AirbyteMessageOrigin.INTERNAL) {
       forceStatusForConnection(

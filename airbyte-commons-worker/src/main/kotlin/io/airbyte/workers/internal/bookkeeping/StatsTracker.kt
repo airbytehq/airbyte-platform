@@ -94,7 +94,6 @@ private val logger = KotlinLogging.logger { }
 class StreamStatsTracker(
   val nameNamespacePair: AirbyteStreamNameNamespacePair,
   private val metricClient: MetricClient,
-  private val logsForStripeChecksumDebugging: Boolean,
 ) {
   val streamStats = StreamStatsCounters()
   private val stateIds = ConcurrentHashMap.newKeySet<Int>()
@@ -102,7 +101,6 @@ class StreamStatsTracker(
   private var emittedStats = EmittedStatsCounters()
   private var previousEmittedStats = EmittedStatsCounters()
   private var previousStateMessageReceivedAt: LocalDateTime? = null
-  private var alreadyLogged: Boolean = false
 
   /**
    * Bookkeeping for when a record message is read.
@@ -130,14 +128,6 @@ class StreamStatsTracker(
     with(streamStats) {
       emittedRecordsCount.incrementAndGet()
       emittedBytesCount.addAndGet(estimatedBytesSize)
-    }
-
-    if (logsForStripeChecksumDebugging && !alreadyLogged && stateIds.size > 0) {
-      logger.info {
-        "Received records for the stream ${nameNamespacePair.namespace}:${nameNamespacePair.name}, " +
-          " after receiving a state message"
-      }
-      alreadyLogged = true
     }
   }
 
@@ -256,14 +246,6 @@ class StreamStatsTracker(
 
       if (stagedStats.stateId == stateId) {
         break
-      }
-    }
-
-    if (logsForStripeChecksumDebugging) {
-      logger.info {
-        "Received state message back from destination for the stream , " +
-          "${nameNamespacePair.namespace}:${nameNamespacePair.name}, " +
-          "committed record count is ${streamStats.committedRecordsCount} , total records at this point is ${streamStats.emittedRecordsCount} "
       }
     }
 

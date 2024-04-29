@@ -2218,6 +2218,29 @@ paths:
           $ref: "#/components/responses/NotFoundResponse"
         "422":
           $ref: "#/components/responses/InvalidInputResponse"
+  /v1/connections/getForJob:
+    post:
+      tags:
+        - connection
+      summary: Get a connection for a given jobId
+      operationId: getConnectionForJob
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ConnectionAndJobIdRequestBody"
+        required: true
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConnectionRead"
+        "404":
+          $ref: "#/components/responses/NotFoundResponse"
+        "422":
+          $ref: "#/components/responses/InvalidInputResponse"
   /v1/connections/list_by_actor_definition:
     post:
       tags:
@@ -5745,7 +5768,7 @@ paths:
             format: UUID
             type: string
           in: "query"
-          required: true
+          required: false
         - name: "ignoreCache"
           description: "If true pull the latest schema from the source, else pull from cache (default false)"
           schema:
@@ -6390,6 +6413,7 @@ components:
       type: object
       required:
         - workspaceId
+        - organizationId
         - customerId
         - name
         - slug
@@ -6747,8 +6771,10 @@ components:
           maximum: 20
           description: Maximum number of slices that will be returned to the client from connector builder test reads
         state:
-          type: object
-          description: The AirbyteStateMessage object to use as the starting state for this read
+          type: array
+          items:
+            type: object
+            description: The AirbyteStateMessage object to use as the starting state for this read
     ConnectorBuilderProjectStreamRead:
       type: object
       required:
@@ -6790,8 +6816,10 @@ components:
                 type: object
                 description: "An object describing the current slice. This can be omitted if a stream slicer is not configured."
               state:
-                type: object
-                description: The STATE AirbyteMessage emitted at the end of this slice. This can be omitted if a stream slicer is not configured.
+                type: array
+                items:
+                  type: object
+                  description: The STATE AirbyteMessage emitted at the end of this slice. This can be omitted if a stream slicer is not configured.
         test_read_limit_reached:
           type: boolean
           description: Whether the maximum number of request per slice or the maximum number of slices queried has been reached
@@ -7468,6 +7496,7 @@ components:
         - documentationUrl
         - supportsDbt
         - normalizationConfig
+        - supportRefreshes
       properties:
         destinationDefinitionId:
           $ref: "#/components/schemas/DestinationDefinitionId"
@@ -7504,6 +7533,9 @@ components:
           description: an optional flag indicating whether DBT is used in the normalization. If the flag value is NULL - DBT is not used.
         normalizationConfig:
           $ref: "#/components/schemas/NormalizationDestinationDefinitionConfig"
+        supportRefreshes:
+          description: Indicated that the actor supports the refreshes
+          type: boolean
     DestinationDefinitionReadList:
       type: object
       required:
@@ -7842,6 +7874,16 @@ components:
       properties:
         connectionId:
           $ref: "#/components/schemas/ConnectionId"
+    ConnectionAndJobIdRequestBody:
+      type: object
+      required:
+        - connectionId
+        - jobId
+      properties:
+        connectionId:
+          $ref: "#/components/schemas/ConnectionId"
+        jobId:
+          $ref: "#/components/schemas/JobId"
     ConnectionUptimeHistoryRequestBody:
       type: object
       required:
@@ -8261,11 +8303,14 @@ components:
         - streamNamespace
         - recordsExtracted
         - recordsLoaded
-        - syncTimeElapsed
-        - progressPercentage
-        - lastCommittedTimestamp
-        - lastCursorValue
+        - bytesExtracted
+        - bytesLoaded
+        - syncStartedAt
+        - jobId
       properties:
+        jobId:
+          type: integer
+          format: int64
         streamName:
           type: string
         streamNamespace:
@@ -8273,10 +8318,16 @@ components:
         recordsExtracted:
           type: integer
           format: int64
+        bytesExtracted:
+          type: integer
+          format: int64
         recordsLoaded:
           type: integer
           format: int64
-        syncTimeElapsed:
+        bytesLoaded:
+          type: integer
+          format: int64
+        syncStartedAt:
           type: integer
           format: int64
         progressPercentage:
@@ -9189,6 +9240,18 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/SelectedFieldInfo"
+        minimumGenerationId:
+          type: integer
+          format: int64
+          description: The minimum generation Id of the stream
+        generationId:
+          type: integer
+          format: int64
+          description: Generation Id of the stream
+        syncId:
+          type: integer
+          format: int64
+          description: Sync id of the stream.
     SelectedFieldInfo:
       type: object
       # TODO(mfsiega-airbyte): point to thorough documentation on nested fields and paths.
@@ -10585,6 +10648,8 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/AttemptStreamStats"
+        connectionId:
+          $ref: "#/components/schemas/ConnectionId"
     AttemptSyncConfig:
       type: object
       required:
@@ -10765,7 +10830,8 @@ components:
       type: object
       required:
         - edition
-        - webappUrl
+        - version
+        - airbyteUrl
         - initialSetupComplete
         - defaultUserId
         - defaultOrganizationId
@@ -10777,6 +10843,9 @@ components:
           enum:
             - community
             - pro
+        version:
+          description: release version for the corresponding edition
+          type: string
         licenseType:
           type: string
           enum:
@@ -10785,7 +10854,7 @@ components:
           nullable: true
         auth:
           $ref: "#/components/schemas/AuthConfiguration"
-        webappUrl:
+        airbyteUrl:
           type: string
         initialSetupComplete:
           type: boolean
@@ -12101,12 +12170,9 @@ components:
       x-sdk-component: true
     StreamPropertiesResponse:
       description: A list of stream properties.
-      type: object
-      properties:
-        streams:
-          type: array
-          items:
-            $ref: "#/components/schemas/StreamProperties"
+      type: array
+      items:
+        $ref: "#/components/schemas/StreamProperties"
       x-sdk-component: true
     StreamProperties:
       description: The stream properties associated with a connection.

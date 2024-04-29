@@ -41,18 +41,18 @@ export const useAcceptUserInvitation = (inviteCode?: string | null): UserInvitat
           queryClient.invalidateQueries(workspaceKeys.lists());
           return response;
         })
-        .catch((err: { message: string; status?: number }) => {
-          const getNotificationFromError = (err: { message: string; status?: number }): Notification => {
+        .catch((err: { response: { message: string }; status?: number }) => {
+          const getNotificationFromError = (err: { response: { message: string }; status?: number }): Notification => {
             let notificationId = "userInvitations.accept.error";
             let notificationType: MessageType = "error";
 
             if (err.status === 403) {
               notificationId = "userInvitations.accept.error.email";
-            } else if (err.message.endsWith("Status: expired")) {
+            } else if (err.response.message.endsWith("Status: expired")) {
               notificationId = "userInvitations.accept.error.expired";
-            } else if (err.message.endsWith("Status: cancelled")) {
+            } else if (err.response.message.endsWith("Status: cancelled")) {
               notificationId = "userInvitations.accept.error.cancelled";
-            } else if (err.message.endsWith("Status: accepted")) {
+            } else if (err.response.message.endsWith("Status: accepted")) {
               notificationId = "userInvitations.accept.warning.alreadyAccepted";
               notificationType = "info";
             }

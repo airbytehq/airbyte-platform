@@ -17,7 +17,7 @@ open class DefaultController() : PublicRootApi {
   @Value("\${airbyte.internal.documentation.host}")
   var documentationHost: String? = null
 
-  @ExecuteOn(AirbyteTaskExecutors.IO)
+  @ExecuteOn(AirbyteTaskExecutors.PUBLIC_API)
   override fun getDocumentation(): Response {
     return Response
       .status(302)

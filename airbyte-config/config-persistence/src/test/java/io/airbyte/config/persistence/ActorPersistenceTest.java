@@ -4,6 +4,7 @@
 
 package io.airbyte.config.persistence;
 
+import static io.airbyte.config.persistence.OrganizationPersistence.DEFAULT_ORGANIZATION_ID;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.mockito.Mockito.mock;
@@ -21,6 +22,7 @@ import io.airbyte.config.secrets.SecretsRepositoryWriter;
 import io.airbyte.data.helpers.ActorDefinitionVersionUpdater;
 import io.airbyte.data.services.ActorDefinitionService;
 import io.airbyte.data.services.ConnectionService;
+import io.airbyte.data.services.OrganizationService;
 import io.airbyte.data.services.ScopedConfigurationService;
 import io.airbyte.data.services.SecretPersistenceConfigService;
 import io.airbyte.data.services.impls.jooq.ActorDefinitionServiceJooqImpl;
@@ -29,6 +31,7 @@ import io.airbyte.data.services.impls.jooq.ConnectorBuilderServiceJooqImpl;
 import io.airbyte.data.services.impls.jooq.DestinationServiceJooqImpl;
 import io.airbyte.data.services.impls.jooq.OAuthServiceJooqImpl;
 import io.airbyte.data.services.impls.jooq.OperationServiceJooqImpl;
+import io.airbyte.data.services.impls.jooq.OrganizationServiceJooqImpl;
 import io.airbyte.data.services.impls.jooq.SourceServiceJooqImpl;
 import io.airbyte.data.services.impls.jooq.WorkspaceServiceJooqImpl;
 import io.airbyte.featureflag.FeatureFlagClient;
@@ -37,9 +40,7 @@ import io.airbyte.test.utils.BaseConfigDatabaseTest;
 import io.airbyte.validation.json.JsonValidationException;
 import java.io.IOException;
 import java.sql.SQLException;
-import java.util.List;
 import java.util.UUID;
-import java.util.stream.Stream;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -65,6 +66,7 @@ class ActorPersistenceTest extends BaseConfigDatabaseTest {
     final ConnectionService connectionService = mock(ConnectionService.class);
     final ScopedConfigurationService scopedConfigurationService = mock(ScopedConfigurationService.class);
     final ActorDefinitionService actorDefinitionService = new ActorDefinitionServiceJooqImpl(database);
+    final OrganizationService organizationService = new OrganizationServiceJooqImpl(database);
     final ActorDefinitionVersionUpdater actorDefinitionVersionUpdater =
         new ActorDefinitionVersionUpdater(featureFlagClient, connectionService, actorDefinitionService, scopedConfigurationService);
     configRepository = spy(
@@ -105,13 +107,15 @@ class ActorPersistenceTest extends BaseConfigDatabaseTest {
     configRepository.writeConnectorMetadata(standardDestinationDefinition, MockData.actorDefinitionVersion()
         .withActorDefinitionId(standardDestinationDefinition.getDestinationDefinitionId())
         .withVersionId(standardDestinationDefinition.getDefaultVersionId()));
+    organizationService.writeOrganization(MockData.defaultOrganization());
     configRepository.writeStandardWorkspaceNoSecrets(new StandardWorkspace()
         .withWorkspaceId(WORKSPACE_ID)
         .withName("default")
         .withSlug("workspace-slug")
         .withInitialSetupComplete(false)
         .withTombstone(false)
-        .withDefaultGeography(Geography.US));
+        .withDefaultGeography(Geography.US)
+        .withOrganizationId(DEFAULT_ORGANIZATION_ID));
   }
 
   @Test
@@ -178,102 +182,6 @@ class ActorPersistenceTest extends BaseConfigDatabaseTest {
 
     final DestinationConnection destinationConnectionFromDb = configRepository.getDestinationConnection(destinationConnection.getDestinationId());
     assertEquals(newActorDefinitionVersion.getVersionId(), destinationConnectionFromDb.getDefaultVersionId());
-  }
-
-  @Test
-  void testGetSourcesWithVersions() throws IOException {
-    final SourceConnection sourceConnection1 = new SourceConnection()
-        .withSourceId(UUID.randomUUID())
-        .withSourceDefinitionId(standardSourceDefinition.getSourceDefinitionId())
-        .withWorkspaceId(WORKSPACE_ID)
-        .withName(SOURCE_NAME);
-    configRepository.writeSourceConnectionNoSecrets(sourceConnection1);
-
-    final SourceConnection sourceConnection2 = new SourceConnection()
-        .withSourceId(UUID.randomUUID())
-        .withSourceDefinitionId(standardSourceDefinition.getSourceDefinitionId())
-        .withWorkspaceId(WORKSPACE_ID)
-        .withName(SOURCE_NAME);
-    configRepository.writeSourceConnectionNoSecrets(sourceConnection2);
-
-    final List<SourceConnection> sourceConnections =
-        configRepository.listSourcesWithVersionIds(List.of(standardSourceDefinition.getDefaultVersionId()));
-    assertEquals(2, sourceConnections.size());
-    assertEquals(
-        Stream.of(sourceConnection1.getSourceId(), sourceConnection2.getSourceId()).sorted().toList(),
-        sourceConnections.stream().map(SourceConnection::getSourceId).sorted().toList());
-
-    final ActorDefinitionVersion newActorDefinitionVersion = configRepository.writeActorDefinitionVersion(MockData.actorDefinitionVersion()
-        .withActorDefinitionId(standardSourceDefinition.getSourceDefinitionId())
-        .withVersionId(UUID.randomUUID())
-        .withDockerImageTag(UPGRADE_IMAGE_TAG));
-
-    configRepository.setActorDefaultVersion(sourceConnection1.getSourceId(), newActorDefinitionVersion.getVersionId());
-
-    final List<SourceConnection> sourcesWithNewVersion =
-        configRepository.listSourcesWithVersionIds(List.of(newActorDefinitionVersion.getVersionId()));
-    assertEquals(1, sourcesWithNewVersion.size());
-    assertEquals(sourceConnection1.getSourceId(), sourcesWithNewVersion.get(0).getSourceId());
-
-    final List<SourceConnection> sourcesWithOldVersion =
-        configRepository.listSourcesWithVersionIds(List.of(standardSourceDefinition.getDefaultVersionId()));
-    assertEquals(1, sourcesWithOldVersion.size());
-    assertEquals(sourceConnection2.getSourceId(), sourcesWithOldVersion.get(0).getSourceId());
-
-    final List<SourceConnection> sourcesWithBothVersions =
-        configRepository.listSourcesWithVersionIds(List.of(standardSourceDefinition.getDefaultVersionId(), newActorDefinitionVersion.getVersionId()));
-    assertEquals(2, sourcesWithBothVersions.size());
-    assertEquals(
-        Stream.of(sourceConnection1.getSourceId(), sourceConnection2.getSourceId()).sorted().toList(),
-        sourcesWithBothVersions.stream().map(SourceConnection::getSourceId).sorted().toList());
-  }
-
-  @Test
-  void testGetDestinationsWithVersions() throws IOException {
-    final DestinationConnection destinationConnection1 = new DestinationConnection()
-        .withDestinationId(UUID.randomUUID())
-        .withDestinationDefinitionId(standardDestinationDefinition.getDestinationDefinitionId())
-        .withWorkspaceId(WORKSPACE_ID)
-        .withName(DESTINATION_NAME);
-    configRepository.writeDestinationConnectionNoSecrets(destinationConnection1);
-
-    final DestinationConnection destinationConnection2 = new DestinationConnection()
-        .withDestinationId(UUID.randomUUID())
-        .withDestinationDefinitionId(standardDestinationDefinition.getDestinationDefinitionId())
-        .withWorkspaceId(WORKSPACE_ID)
-        .withName(DESTINATION_NAME);
-    configRepository.writeDestinationConnectionNoSecrets(destinationConnection2);
-
-    final List<DestinationConnection> destinationConnections =
-        configRepository.listDestinationsWithVersionIds(List.of(standardDestinationDefinition.getDefaultVersionId()));
-    assertEquals(2, destinationConnections.size());
-    assertEquals(
-        Stream.of(destinationConnection1.getDestinationId(), destinationConnection2.getDestinationId()).sorted().toList(),
-        destinationConnections.stream().map(DestinationConnection::getDestinationId).sorted().toList());
-
-    final ActorDefinitionVersion newActorDefinitionVersion = configRepository.writeActorDefinitionVersion(MockData.actorDefinitionVersion()
-        .withActorDefinitionId(standardDestinationDefinition.getDestinationDefinitionId())
-        .withVersionId(UUID.randomUUID())
-        .withDockerImageTag(UPGRADE_IMAGE_TAG));
-
-    configRepository.setActorDefaultVersion(destinationConnection1.getDestinationId(), newActorDefinitionVersion.getVersionId());
-
-    final List<DestinationConnection> destinationsWithNewVersion =
-        configRepository.listDestinationsWithVersionIds(List.of(newActorDefinitionVersion.getVersionId()));
-    assertEquals(1, destinationsWithNewVersion.size());
-    assertEquals(destinationConnection1.getDestinationId(), destinationsWithNewVersion.get(0).getDestinationId());
-
-    final List<DestinationConnection> destinationsWithOldVersion =
-        configRepository.listDestinationsWithVersionIds(List.of(standardDestinationDefinition.getDefaultVersionId()));
-    assertEquals(1, destinationsWithOldVersion.size());
-    assertEquals(destinationConnection2.getDestinationId(), destinationsWithOldVersion.get(0).getDestinationId());
-
-    final List<DestinationConnection> destinationsWithBothVersions = configRepository
-        .listDestinationsWithVersionIds(List.of(standardDestinationDefinition.getDefaultVersionId(), newActorDefinitionVersion.getVersionId()));
-    assertEquals(2, destinationsWithBothVersions.size());
-    assertEquals(
-        Stream.of(destinationConnection1.getDestinationId(), destinationConnection2.getDestinationId()).sorted().toList(),
-        destinationsWithBothVersions.stream().map(DestinationConnection::getDestinationId).sorted().toList());
   }
 
 }

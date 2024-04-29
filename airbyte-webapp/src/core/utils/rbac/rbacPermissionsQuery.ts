@@ -1,4 +1,4 @@
-import { useGetWorkspace } from "core/api";
+import { useGetWorkspace, useIsInstanceAdminEnabled } from "core/api";
 import { PermissionRead } from "core/api/types/AirbyteClient";
 
 export const RbacResourceHierarchy = ["INSTANCE", "ORGANIZATION", "WORKSPACE"] as const;
@@ -37,13 +37,23 @@ export const partitionPermissionType = (permissionType: RbacPermission["permissi
 /**
  * Don't call this outside of `core/utils/rbac`. Always use the `useRbac()` or (better) `useIntent()` hook instead.
  */
-export const useRbacPermissionsQuery = (permissions: RbacPermission[], query: RbacQuery) => {
+export const useRbacPermissionsQuery = (allPermissions: RbacPermission[], query: RbacQuery) => {
   const queryRoleHierarchy = RbacRoleHierarchy.indexOf(query.role);
   const queryResourceHierarchy = RbacResourceHierarchy.indexOf(query.resourceType);
 
   const owningOrganizationId = useGetWorkspace(query.resourceId ?? "", {
     enabled: query.resourceType === "WORKSPACE" && !!query.resourceId,
   })?.organizationId;
+
+  const isInstanceAdminEnabled = useIsInstanceAdminEnabled();
+  let permissions = allPermissions;
+  if (!isInstanceAdminEnabled) {
+    const isInstanceAdminIdx = allPermissions.findIndex((permission) => permission.permissionType === "instance_admin");
+    if (isInstanceAdminIdx !== -1) {
+      permissions = [...allPermissions];
+      permissions.splice(isInstanceAdminIdx, 1);
+    }
+  }
 
   return permissions.some((permission) => {
     const [permissionResource, permissionRole] = partitionPermissionType(permission.permissionType);

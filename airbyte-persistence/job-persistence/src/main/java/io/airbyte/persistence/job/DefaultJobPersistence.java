@@ -9,6 +9,7 @@ import static io.airbyte.db.instance.jobs.jooq.generated.Tables.JOBS;
 import static io.airbyte.db.instance.jobs.jooq.generated.Tables.NORMALIZATION_SUMMARIES;
 import static io.airbyte.db.instance.jobs.jooq.generated.Tables.STREAM_STATS;
 import static io.airbyte.db.instance.jobs.jooq.generated.Tables.SYNC_STATS;
+import static io.airbyte.persistence.job.models.JobStatus.TERMINAL_STATUSES;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -38,6 +39,7 @@ import io.airbyte.config.persistence.PersistenceHelpers;
 import io.airbyte.db.Database;
 import io.airbyte.db.ExceptionWrappingDatabase;
 import io.airbyte.db.instance.configs.jooq.generated.Tables;
+import io.airbyte.db.instance.jobs.jooq.generated.tables.records.JobsRecord;
 import io.airbyte.persistence.job.models.Attempt;
 import io.airbyte.persistence.job.models.AttemptNormalizationStatus;
 import io.airbyte.persistence.job.models.AttemptStatus;
@@ -79,6 +81,8 @@ import org.jooq.Query;
 import org.jooq.Record;
 import org.jooq.RecordMapper;
 import org.jooq.Result;
+import org.jooq.SortField;
+import org.jooq.TableField;
 import org.jooq.conf.ParamType;
 import org.jooq.impl.DSL;
 import org.slf4j.Logger;
@@ -403,6 +407,10 @@ public class DefaultJobPersistence implements JobPersistence {
       // TODO feature flag this for data types rollout
       // CatalogMigrationV1Helper.upgradeSchemaIfNeeded(jobConfig.getResetConnection().getConfiguredAirbyteCatalog());
       CatalogMigrationV1Helper.downgradeSchemaIfNeeded(jobConfig.getResetConnection().getConfiguredAirbyteCatalog());
+    } else if (jobConfig.getConfigType() == ConfigType.REFRESH && jobConfig.getRefresh() != null) {
+      // TODO feature flag this for data types rollout
+      // CatalogMigrationV1Helper.upgradeSchemaIfNeeded(jobConfig.getRefresh().getConfiguredAirbyteCatalog());
+      CatalogMigrationV1Helper.downgradeSchemaIfNeeded(jobConfig.getRefresh().getConfiguredAirbyteCatalog());
     }
     return jobConfig;
   }
@@ -516,7 +524,7 @@ public class DefaultJobPersistence implements JobPersistence {
         ? String.format("WHERE NOT EXISTS (SELECT 1 FROM jobs WHERE config_type IN (%s) AND scope = '%s' AND status NOT IN (%s)) ",
             Job.REPLICATION_TYPES.stream().map(DefaultJobPersistence::toSqlName).map(Names::singleQuote).collect(Collectors.joining(",")),
             scope,
-            JobStatus.TERMINAL_STATUSES.stream().map(DefaultJobPersistence::toSqlName).map(Names::singleQuote).collect(Collectors.joining(",")))
+            TERMINAL_STATUSES.stream().map(DefaultJobPersistence::toSqlName).map(Names::singleQuote).collect(Collectors.joining(",")))
         : "";
 
     return jobDatabase.query(
@@ -917,6 +925,7 @@ public class DefaultJobPersistence implements JobPersistence {
                             final String orderByField,
                             final String orderByMethod)
       throws IOException {
+    final SortField<OffsetDateTime> orderBy = getJobOrderBy(orderByField, orderByMethod);
     return jobDatabase.query(ctx -> {
       final String jobsSubquery = "(" + ctx.select(DSL.asterisk()).from(JOBS)
           .where(JOBS.CONFIG_TYPE.in(configTypeSqlNames(configTypes)))
@@ -930,11 +939,14 @@ public class DefaultJobPersistence implements JobPersistence {
           .and(createdAtEnd == null ? DSL.noCondition() : JOBS.CREATED_AT.le(createdAtEnd))
           .and(updatedAtStart == null ? DSL.noCondition() : JOBS.UPDATED_AT.ge(updatedAtStart))
           .and(updatedAtEnd == null ? DSL.noCondition() : JOBS.UPDATED_AT.le(updatedAtEnd))
-          .orderBy(JOBS.CREATED_AT.desc(), JOBS.ID.desc())
+          .orderBy(orderBy)
+          .limit(limit)
+          .offset(offset)
           .getSQL(ParamType.INLINED) + ") AS jobs";
 
-      LOGGER.debug("jobs subquery: {}", jobsSubquery);
-      return getJobsFromResult(ctx.fetch(jobSelectAndJoin(jobsSubquery) + buildJobOrderByString(orderByField, orderByMethod, limit, offset)));
+      final String fullQuery = jobSelectAndJoin(jobsSubquery) + getJobOrderBySql(orderBy);
+      LOGGER.debug("jobs query: {}", fullQuery);
+      return getJobsFromResult(ctx.fetch(fullQuery));
     });
   }
 
@@ -951,7 +963,7 @@ public class DefaultJobPersistence implements JobPersistence {
                             final String orderByField,
                             final String orderByMethod)
       throws IOException {
-
+    final SortField<OffsetDateTime> orderBy = getJobOrderBy(orderByField, orderByMethod);
     return jobDatabase.query(ctx -> {
       final String jobsSubquery = "(" + ctx.select(JOBS.asterisk()).from(JOBS)
           .join(Tables.CONNECTION)
@@ -968,10 +980,14 @@ public class DefaultJobPersistence implements JobPersistence {
           .and(createdAtEnd == null ? DSL.noCondition() : JOBS.CREATED_AT.le(createdAtEnd))
           .and(updatedAtStart == null ? DSL.noCondition() : JOBS.UPDATED_AT.ge(updatedAtStart))
           .and(updatedAtEnd == null ? DSL.noCondition() : JOBS.UPDATED_AT.le(updatedAtEnd))
-          .orderBy(JOBS.CREATED_AT.desc(), JOBS.ID.desc())
+          .orderBy(getJobOrderBy(orderByField, orderByMethod))
+          .limit(limit)
+          .offset(offset)
           .getSQL(ParamType.INLINED) + ") AS jobs";
 
-      return getJobsFromResult(ctx.fetch(jobSelectAndJoin(jobsSubquery) + buildJobOrderByString(orderByField, orderByMethod, limit, offset)));
+      final String fullQuery = jobSelectAndJoin(jobsSubquery) + getJobOrderBySql(orderBy);
+      LOGGER.debug("jobs query: {}", fullQuery);
+      return getJobsFromResult(ctx.fetch(fullQuery));
     });
   }
 
@@ -1083,12 +1099,11 @@ public class DefaultJobPersistence implements JobPersistence {
             + "FROM jobs "
             + "JOIN attempts ON jobs.id = attempts.job_id "
             + WHERE
-            + "CAST(config_type AS VARCHAR) = ? AND "
+            + "CAST(jobs.config_type AS VARCHAR) in " + toSqlInFragment(Job.SYNC_REPLICATION_TYPES) + AND
             + SCOPE_CLAUSE
             + "CAST(jobs.status AS VARCHAR) = ? AND "
             + "attempts.ended_at > ? "
             + "ORDER BY attempts.ended_at ASC",
-        toSqlName(ConfigType.SYNC),
         connectionId.toString(),
         toSqlName(JobStatus.SUCCEEDED),
         timeConvertedIntoLocalDateTime))
@@ -1148,10 +1163,9 @@ public class DefaultJobPersistence implements JobPersistence {
   public Optional<Job> getLastSyncJob(final UUID connectionId) throws IOException {
     return jobDatabase.query(ctx -> ctx
         .fetch(BASE_JOB_SELECT_AND_JOIN + WHERE
-            + "CAST(jobs.config_type AS VARCHAR) = ? " + AND
+            + "CAST(jobs.config_type AS VARCHAR) in " + toSqlInFragment(Job.SYNC_REPLICATION_TYPES) + AND
             + "scope = ? "
             + ORDER_BY_JOB_CREATED_AT_DESC + LIMIT_1,
-            toSqlName(ConfigType.SYNC),
             connectionId.toString())
         .stream()
         .findFirst()
@@ -1171,10 +1185,9 @@ public class DefaultJobPersistence implements JobPersistence {
     return jobDatabase.query(ctx -> ctx
         .fetch("SELECT DISTINCT ON (scope) jobs.scope, jobs.created_at, jobs.status "
             + " FROM jobs "
-            + WHERE + "CAST(jobs.config_type AS VARCHAR) = ? "
+            + WHERE + "CAST(jobs.config_type AS VARCHAR) in " + toSqlInFragment(Job.SYNC_REPLICATION_TYPES)
             + AND + scopeInList(connectionIds)
-            + "ORDER BY scope, created_at DESC",
-            toSqlName(ConfigType.SYNC))
+            + "ORDER BY scope, created_at DESC")
         .stream()
         .map(r -> new JobStatusSummary(UUID.fromString(r.get("scope", String.class)), getEpoch(r, "created_at"),
             JobStatus.valueOf(r.get("status", String.class).toUpperCase())))
@@ -1193,11 +1206,10 @@ public class DefaultJobPersistence implements JobPersistence {
 
     return jobDatabase.query(ctx -> ctx
         .fetch("SELECT DISTINCT ON (scope) * FROM jobs "
-            + WHERE + "CAST(jobs.config_type AS VARCHAR) = ? "
+            + WHERE + "CAST(jobs.config_type AS VARCHAR) in " + toSqlInFragment(Job.SYNC_REPLICATION_TYPES)
             + AND + scopeInList(connectionIds)
             + AND + JOB_STATUS_IS_NON_TERMINAL
-            + "ORDER BY scope, created_at DESC",
-            toSqlName(ConfigType.SYNC))
+            + "ORDER BY scope, created_at DESC")
         .stream()
         .flatMap(r -> getJobOptional(ctx, r.get("id", Long.class)).stream())
         .collect(Collectors.toList()));
@@ -1265,6 +1277,19 @@ public class DefaultJobPersistence implements JobPersistence {
             .where(ATTEMPTS.JOB_ID.eq(jobId))
             .fetch(record -> new AttemptNormalizationStatus(record.get(ATTEMPTS.ATTEMPT_NUMBER),
                 Optional.ofNullable(record.get(SYNC_STATS.RECORDS_COMMITTED)), record.get(NORMALIZATION_SUMMARIES.FAILURES) != null)));
+  }
+
+  @Override
+  public void updateJobConfig(Long jobId, JobConfig config) throws IOException {
+    jobDatabase.query(ctx -> {
+
+      ctx.update(JOBS)
+          .set(JOBS.CONFIG, JSONB.valueOf(Jsons.serialize(config)))
+          .set(JOBS.UPDATED_AT, OffsetDateTime.now())
+          .where(JOBS.ID.eq(jobId))
+          .execute();
+      return null;
+    });
   }
 
   @Override
@@ -1429,27 +1454,36 @@ public class DefaultJobPersistence implements JobPersistence {
     return value != null ? value.replaceAll("\\u0000|\\\\u0000", "") : null;
   }
 
-  private String buildJobOrderByString(final String orderByField, final String orderByMethod, final int limit, final int offset) {
-    // Set up maps and values
-    final Map<OrderByField, String> fieldMap = Map.of(
-        OrderByField.CREATED_AT, JOBS.CREATED_AT.getName(),
-        OrderByField.UPDATED_AT, JOBS.UPDATED_AT.getName());
+  /**
+   * Needed to get the jooq sort field for the subquery job order by clause.
+   */
+  private SortField<OffsetDateTime> getJobOrderBy(final String orderByField, final String orderByMethod) {
+    // Default case
+    if (orderByField == null) {
+      return JOBS.CREATED_AT.desc();
+    }
 
-    // get field w/ default
-    final String field;
-    if (orderByField == null || Arrays.stream(OrderByField.values()).noneMatch(enumField -> enumField.name().equals(orderByField))) {
-      field = fieldMap.get(OrderByField.CREATED_AT);
-    } else {
-      field = fieldMap.get(OrderByField.valueOf(orderByField));
+    // get order by field w/ default
+    final Map<String, TableField<JobsRecord, OffsetDateTime>> fieldMap = Map.of(
+        OrderByField.CREATED_AT.getName(), JOBS.CREATED_AT,
+        OrderByField.UPDATED_AT.getName(), JOBS.UPDATED_AT);
+    final TableField<JobsRecord, OffsetDateTime> field = fieldMap.get(orderByField);
+
+    if (field == null) {
+      throw new IllegalArgumentException(String.format("Value '%s' is not valid for jobs orderByField", orderByField));
     }
 
     // get sort method w/ default
-    String sortMethod = OrderByMethod.DESC.name();
-    if (orderByMethod != null && OrderByMethod.contains(orderByMethod.toUpperCase())) {
-      sortMethod = orderByMethod.toUpperCase();
-    }
+    return OrderByMethod.ASC.name().equals(orderByMethod) ? field.asc() : field.desc();
+  }
 
-    return String.format("ORDER BY jobs.%s %s LIMIT %d OFFSET %d", field, sortMethod, limit, offset);
+  /**
+   * Needed to get the SQL string for sorting the outer query. If we don't have this, we lose ordering
+   * after the subquery because Postgres does not guarantee sort order unless you explicitly specify
+   * it.
+   */
+  private String getJobOrderBySql(final SortField<OffsetDateTime> orderBy) {
+    return String.format(" ORDER BY jobs.%s %s", orderBy.getName(), orderBy.getOrder().toSQL());
   }
 
   private enum OrderByField {
@@ -1457,10 +1491,14 @@ public class DefaultJobPersistence implements JobPersistence {
     CREATED_AT("createdAt"),
     UPDATED_AT("updatedAt");
 
-    private final String field;
+    private final String name;
 
-    OrderByField(final String field) {
-      this.field = field;
+    OrderByField(final String name) {
+      this.name = name;
+    }
+
+    public String getName() {
+      return name;
     }
 
   }

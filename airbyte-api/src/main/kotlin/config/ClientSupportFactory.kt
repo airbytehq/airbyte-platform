@@ -5,9 +5,9 @@
 package io.airbyte.api.client.config
 
 import dev.failsafe.RetryPolicy
-import io.airbyte.api.client.ThrowOn5xxInterceptor
+import io.airbyte.api.client.UserAgentInterceptor
+import io.airbyte.api.client.auth.AirbyteApiInterceptor
 import io.airbyte.api.client.auth.AirbyteAuthHeaderInterceptor
-import io.airbyte.api.client.auth.InternalApiAuthenticationInterceptor
 import io.airbyte.api.client.auth.WorkloadApiAuthenticationInterceptor
 import io.github.oshai.kotlinlogging.KotlinLogging
 import io.micrometer.core.instrument.MeterRegistry
@@ -46,14 +46,10 @@ class ClientSupportFactory {
   fun defaultAirbyteApiOkHttpClient(
     @Value("\${airbyte.internal-api.connect-timeout-seconds}") connectTimeoutSeconds: Long,
     @Value("\${airbyte.internal-api.read-timeout-seconds}") readTimeoutSeconds: Long,
-    internalApiAuthenticationInterceptor: InternalApiAuthenticationInterceptor,
-    airbyteAuthHeaderInterceptor: AirbyteAuthHeaderInterceptor,
-    @Named("throwOn5xxInterceptor") throwOn5xxInterceptor: Optional<ThrowOn5xxInterceptor>,
+    interceptors: List<AirbyteApiInterceptor>,
   ): OkHttpClient {
     val builder: OkHttpClient.Builder = OkHttpClient.Builder()
-    builder.addInterceptor(internalApiAuthenticationInterceptor)
-    builder.addInterceptor(airbyteAuthHeaderInterceptor)
-    throwOn5xxInterceptor.ifPresent { builder.addInterceptor(it) }
+    interceptors.forEach(builder::addInterceptor)
     builder.readTimeout(Duration.ofSeconds(readTimeoutSeconds))
     builder.connectTimeout(Duration.ofSeconds(connectTimeoutSeconds))
     return builder.build()
@@ -76,12 +72,14 @@ class ClientSupportFactory {
   fun defaultWorkloadApiOkHttpClient(
     @Value("\${airbyte.workload-api.connect-timeout-seconds}") connectTimeoutSeconds: Long,
     @Value("\${airbyte.workload-api.read-timeout-seconds}") readTimeoutSeconds: Long,
-    workloadApiAuthenticationInterceptor: WorkloadApiAuthenticationInterceptor,
-    airbyteAuthHeaderInterceptor: AirbyteAuthHeaderInterceptor,
+    @Named("workloadApiAuthenticationInterceptor") workloadApiAuthenticationInterceptor: WorkloadApiAuthenticationInterceptor,
+    @Named("userAgentInterceptor") userAgentInterceptor: UserAgentInterceptor,
+    @Named("airbyteAuthHeaderInterceptor") airbyteAuthHeaderInterceptor: AirbyteAuthHeaderInterceptor,
   ): OkHttpClient {
     val builder: OkHttpClient.Builder = OkHttpClient.Builder()
     builder.addInterceptor(workloadApiAuthenticationInterceptor)
     builder.addInterceptor(airbyteAuthHeaderInterceptor)
+    builder.addInterceptor(userAgentInterceptor)
     builder.readTimeout(Duration.ofSeconds(readTimeoutSeconds))
     builder.connectTimeout(Duration.ofSeconds(connectTimeoutSeconds))
     return builder.build()

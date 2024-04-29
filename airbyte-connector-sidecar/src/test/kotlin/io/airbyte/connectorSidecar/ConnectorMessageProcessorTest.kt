@@ -1,6 +1,7 @@
 package io.airbyte.connectorSidecar
 
 import com.fasterxml.jackson.databind.JsonNode
+import io.airbyte.api.client.AirbyteApiClient
 import io.airbyte.api.client.generated.SourceApi
 import io.airbyte.api.client.model.generated.DiscoverCatalogResult
 import io.airbyte.commons.converters.ConnectorConfigUpdater
@@ -41,6 +42,9 @@ import java.util.stream.Stream
 @ExtendWith(MockKExtension::class)
 class ConnectorMessageProcessorTest {
   @MockK
+  private lateinit var airbyteApiClient: AirbyteApiClient
+
+  @MockK
   private lateinit var streamFactory: AirbyteStreamFactory
 
   @MockK
@@ -53,7 +57,8 @@ class ConnectorMessageProcessorTest {
 
   @BeforeEach
   fun init() {
-    connectorMessageProcessor = ConnectorMessageProcessor(connectorConfigUpdater, sourceApi)
+    every { airbyteApiClient.sourceApi } returns sourceApi
+    connectorMessageProcessor = ConnectorMessageProcessor(connectorConfigUpdater, airbyteApiClient)
   }
 
   @Test

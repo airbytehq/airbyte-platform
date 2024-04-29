@@ -26,7 +26,6 @@ export const ConnectionHeaderControls: React.FC = () => {
   const { connection, updateConnectionStatus, connectionUpdating } = useConnectionEditService();
   const { hasBreakingSchemaChange } = useSchemaChanges(connection.schemaChange);
   const navigate = useNavigate();
-
   const connectionStatus = useConnectionStatus(connection.connectionId ?? "");
   const isReadOnly = mode === "readonly";
 
@@ -88,7 +87,7 @@ export const ConnectionHeaderControls: React.FC = () => {
         >
           <Text size="md" color="red" bold>
             <FormattedMessage
-              id={resetStarting || jobResetRunning ? "connection.cancelReset" : "connection.cancelSync"}
+              id={resetStarting || jobResetRunning ? "connection.cancelDataClear" : "connection.cancelSync"}
             />
           </Text>
         </Button>

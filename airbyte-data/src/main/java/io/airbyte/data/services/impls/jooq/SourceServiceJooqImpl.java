@@ -10,7 +10,6 @@ import static io.airbyte.db.instance.configs.jooq.generated.Tables.ACTOR_DEFINIT
 import static io.airbyte.db.instance.configs.jooq.generated.Tables.WORKSPACE;
 import static io.airbyte.featureflag.ContextKt.ANONYMOUS;
 import static org.jooq.impl.DSL.asterisk;
-import static org.jooq.impl.DSL.field;
 import static org.jooq.impl.DSL.noCondition;
 import static org.jooq.impl.DSL.select;
 
@@ -74,7 +73,6 @@ import org.jooq.Record;
 import org.jooq.Record1;
 import org.jooq.Result;
 import org.jooq.SelectJoinStep;
-import org.jooq.Table;
 import org.jooq.impl.DSL;
 
 @Slf4j
@@ -288,21 +286,6 @@ public class SourceServiceJooqImpl implements SourceService {
   }
 
   /**
-   * Delete a source by id.
-   *
-   * @param sourceId
-   * @return true if a source was deleted, false otherwise.
-   * @throws JsonValidationException - throws if returned sources are invalid
-   * @throws ConfigNotFoundException - throws if no source with that id can be found.
-   * @throws IOException - you never know when you IO
-   */
-  @Override
-  public boolean deleteSource(final UUID sourceId)
-      throws JsonValidationException, ConfigNotFoundException, IOException {
-    return deleteById(ACTOR, sourceId);
-  }
-
-  /**
    * Returns all sources in the database. Does not contain secrets.
    *
    * @return sources
@@ -440,21 +423,12 @@ public class SourceServiceJooqImpl implements SourceService {
     actorDefinitionVersionUpdater.updateSourceDefaultVersion(sourceDefinition, defaultVersion, List.of());
   }
 
-  /**
-   * Returns all active sources whose default_version_id is in a given list of version IDs.
-   *
-   * @param actorDefinitionVersionIds - list of actor definition version ids
-   * @return list of SourceConnections
-   * @throws IOException - you never know when you IO
-   */
   @Override
-  public List<SourceConnection> listSourcesWithVersionIds(
-                                                          final List<UUID> actorDefinitionVersionIds)
-      throws IOException {
+  public List<SourceConnection> listSourcesWithIds(final List<UUID> sourceIds) throws IOException {
     final Result<Record> result = database.query(ctx -> ctx.select(asterisk())
         .from(ACTOR)
         .where(ACTOR.ACTOR_TYPE.eq(ActorType.source))
-        .and(ACTOR.DEFAULT_VERSION_ID.in(actorDefinitionVersionIds))
+        .and(ACTOR.ID.in(sourceIds))
         .andNot(ACTOR.TOMBSTONE).fetch());
     return result.stream().map(DbConverter::buildSourceConnection).toList();
   }
@@ -567,7 +541,7 @@ public class SourceServiceJooqImpl implements SourceService {
         .fetch());
   }
 
-  public Optional<UUID> getOrganizationIdFromWorkspaceId(final UUID scopeId) throws IOException {
+  private Optional<UUID> getOrganizationIdFromWorkspaceId(final UUID scopeId) throws IOException {
     final Optional<Record1<UUID>> optionalRecord = database.query(ctx -> ctx.select(WORKSPACE.ORGANIZATION_ID).from(WORKSPACE)
         .where(WORKSPACE.ID.eq(scopeId)).fetchOptional());
     return optionalRecord.map(Record1::value1);
@@ -580,7 +554,7 @@ public class SourceServiceJooqImpl implements SourceService {
     return Map.entry(actorDefinition, granted);
   }
 
-  static void writeStandardSourceDefinition(final List<StandardSourceDefinition> configs, final DSLContext ctx) {
+  private static void writeStandardSourceDefinition(final List<StandardSourceDefinition> configs, final DSLContext ctx) {
     final OffsetDateTime timestamp = OffsetDateTime.now();
     configs.forEach((standardSourceDefinition) -> {
       final boolean isExistingConfig = ctx.fetchExists(DSL.select()
@@ -680,19 +654,6 @@ public class SourceServiceJooqImpl implements SourceService {
     return ConnectorMetadataJooqHelper.getDefaultVersionForActorDefinitionIdOptional(actorDefinitionId, ctx).orElseThrow();
   }
 
-  /**
-   * Deletes all records with given id. If it deletes anything, returns true. Otherwise, false.
-   *
-   * @param table - table from which to delete the record
-   * @param id - id of the record to delete
-   * @return true if anything was deleted, otherwise false.
-   * @throws IOException - you never know when you io
-   */
-  @SuppressWarnings("SameParameterValue")
-  private boolean deleteById(final Table<?> table, final UUID id) throws IOException {
-    return database.transaction(ctx -> ctx.deleteFrom(table)).where(field(DSL.name(PRIMARY_KEY)).eq(id)).execute() > 0;
-  }
-
   private Stream<SourceConnection> listSourceQuery(final Optional<UUID> configId) throws IOException {
     final Result<Record> result = database.query(ctx -> {
       final SelectJoinStep<Record> query = ctx.select(asterisk()).from(ACTOR);
@@ -777,7 +738,7 @@ public class SourceServiceJooqImpl implements SourceService {
     writeSourceConnectionNoSecrets(partialSource);
   }
 
-  public Optional<SourceConnection> getSourceIfExists(final UUID sourceId) {
+  private Optional<SourceConnection> getSourceIfExists(final UUID sourceId) {
     try {
       return Optional.of(getSourceConnection(sourceId));
     } catch (final ConfigNotFoundException | JsonValidationException | IOException e) {

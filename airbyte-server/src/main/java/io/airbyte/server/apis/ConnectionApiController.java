@@ -13,6 +13,7 @@ import static io.airbyte.commons.auth.AuthRoleConstants.WORKSPACE_READER;
 import io.airbyte.api.generated.ConnectionApi;
 import io.airbyte.api.model.generated.ActorDefinitionRequestBody;
 import io.airbyte.api.model.generated.BooleanRead;
+import io.airbyte.api.model.generated.ConnectionAndJobIdRequestBody;
 import io.airbyte.api.model.generated.ConnectionAutoPropagateResult;
 import io.airbyte.api.model.generated.ConnectionAutoPropagateSchemaChange;
 import io.airbyte.api.model.generated.ConnectionCreate;
@@ -40,6 +41,7 @@ import io.airbyte.api.model.generated.TaskQueueNameRead;
 import io.airbyte.api.model.generated.WorkspaceIdRequestBody;
 import io.airbyte.commons.server.errors.BadRequestException;
 import io.airbyte.commons.server.handlers.ConnectionsHandler;
+import io.airbyte.commons.server.handlers.JobHistoryHandler;
 import io.airbyte.commons.server.handlers.MatchSearchHandler;
 import io.airbyte.commons.server.handlers.OperationsHandler;
 import io.airbyte.commons.server.handlers.SchedulerHandler;
@@ -59,10 +61,12 @@ import io.micronaut.security.annotation.Secured;
 import io.micronaut.security.rules.SecurityRule;
 import java.util.ArrayList;
 import java.util.List;
+import lombok.extern.slf4j.Slf4j;
 
 @Controller("/api/v1/connections")
 @Context
 @Secured(SecurityRule.IS_AUTHENTICATED)
+@Slf4j
 public class ConnectionApiController implements ConnectionApi {
 
   private final ConnectionsHandler connectionsHandler;
@@ -72,6 +76,7 @@ public class ConnectionApiController implements ConnectionApi {
   private final StreamStatusesHandler streamStatusesHandler;
   private final MatchSearchHandler matchSearchHandler;
   private final StreamRefreshesHandler streamRefreshesHandler;
+  private final JobHistoryHandler jobHistoryHandler;
 
   public ConnectionApiController(final ConnectionsHandler connectionsHandler,
                                  final OperationsHandler operationsHandler,
@@ -79,7 +84,8 @@ public class ConnectionApiController implements ConnectionApi {
                                  final RouterService routerService,
                                  final StreamStatusesHandler streamStatusesHandler,
                                  final MatchSearchHandler matchSearchHandler,
-                                 final StreamRefreshesHandler streamRefreshesHandler) {
+                                 final StreamRefreshesHandler streamRefreshesHandler,
+                                 final JobHistoryHandler jobHistoryHandler) {
     this.connectionsHandler = connectionsHandler;
     this.operationsHandler = operationsHandler;
     this.schedulerHandler = schedulerHandler;
@@ -87,6 +93,7 @@ public class ConnectionApiController implements ConnectionApi {
     this.streamStatusesHandler = streamStatusesHandler;
     this.matchSearchHandler = matchSearchHandler;
     this.streamRefreshesHandler = streamRefreshesHandler;
+    this.jobHistoryHandler = jobHistoryHandler;
   }
 
   @Override
@@ -180,6 +187,15 @@ public class ConnectionApiController implements ConnectionApi {
   }
 
   @Override
+  @Post(uri = "/getForJob")
+  @Secured({WORKSPACE_READER, ORGANIZATION_READER})
+  @ExecuteOn(AirbyteTaskExecutors.IO)
+  public ConnectionRead getConnectionForJob(@Body final ConnectionAndJobIdRequestBody connectionAndJobIdRequestBody) {
+    return ApiHelper.execute(
+        () -> connectionsHandler.getConnectionForJob(connectionAndJobIdRequestBody.getConnectionId(), connectionAndJobIdRequestBody.getJobId()));
+  }
+
+  @Override
   @Post(uri = "/status")
   @Secured({WORKSPACE_READER, ORGANIZATION_READER})
   @ExecuteOn(AirbyteTaskExecutors.IO)
@@ -202,7 +218,7 @@ public class ConnectionApiController implements ConnectionApi {
   @Secured({WORKSPACE_READER, ORGANIZATION_READER})
   @ExecuteOn(AirbyteTaskExecutors.IO)
   public List<ConnectionSyncProgressReadItem> getConnectionSyncProgress(@Body final ConnectionIdRequestBody connectionIdRequestBody) {
-    return null;
+    return ApiHelper.execute(() -> jobHistoryHandler.getConnectionSyncProgress(connectionIdRequestBody));
   }
 
   @SuppressWarnings("LineLength")

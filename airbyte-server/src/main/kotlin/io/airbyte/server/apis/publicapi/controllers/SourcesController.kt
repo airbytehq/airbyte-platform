@@ -8,6 +8,7 @@ import com.fasterxml.jackson.databind.node.ObjectNode
 import io.airbyte.api.model.generated.PermissionType
 import io.airbyte.commons.server.authorization.ApiAuthorizationHelper
 import io.airbyte.commons.server.authorization.Scope
+import io.airbyte.commons.server.errors.problems.UnknownValueProblem
 import io.airbyte.commons.server.errors.problems.UnprocessableEntityProblem
 import io.airbyte.commons.server.scheduling.AirbyteTaskExecutors
 import io.airbyte.commons.server.support.CurrentUserService
@@ -25,7 +26,6 @@ import io.airbyte.server.apis.publicapi.constants.PUT
 import io.airbyte.server.apis.publicapi.constants.SOURCES_PATH
 import io.airbyte.server.apis.publicapi.constants.SOURCES_WITH_ID_PATH
 import io.airbyte.server.apis.publicapi.constants.SOURCE_TYPE
-import io.airbyte.server.apis.publicapi.helpers.getActorDefinitionIdFromActorName
 import io.airbyte.server.apis.publicapi.helpers.removeSourceTypeNode
 import io.airbyte.server.apis.publicapi.mappers.SOURCE_NAME_TO_DEFINITION_ID
 import io.airbyte.server.apis.publicapi.services.SourceService
@@ -47,7 +47,7 @@ open class SourcesController(
   private val apiAuthorizationHelper: ApiAuthorizationHelper,
   private val currentUserService: CurrentUserService,
 ) : PublicSourcesApi {
-  @ExecuteOn(AirbyteTaskExecutors.IO)
+  @ExecuteOn(AirbyteTaskExecutors.PUBLIC_API)
   override fun publicCreateSource(sourceCreateRequest: SourceCreateRequest): Response {
     val userId: UUID = currentUserService.currentUser.userId
     apiAuthorizationHelper.checkWorkspacePermissions(
@@ -72,7 +72,7 @@ open class SourcesController(
             throw unprocessableEntityProblem
           }
           val sourceName = configurationJsonNode.findValue(SOURCE_TYPE).toString().replace("\"", "")
-          getActorDefinitionIdFromActorName(SOURCE_NAME_TO_DEFINITION_ID, sourceName)
+          SOURCE_NAME_TO_DEFINITION_ID[sourceName] ?: throw UnknownValueProblem(sourceName)
         }
 
     removeSourceTypeNode(sourceCreateRequest)
@@ -102,7 +102,7 @@ open class SourcesController(
       .build()
   }
 
-  @ExecuteOn(AirbyteTaskExecutors.IO)
+  @ExecuteOn(AirbyteTaskExecutors.PUBLIC_API)
   override fun publicDeleteSource(sourceId: UUID): Response {
     val userId: UUID = currentUserService.currentUser.userId
     apiAuthorizationHelper.checkWorkspacePermissions(
@@ -135,7 +135,7 @@ open class SourcesController(
       .build()
   }
 
-  @ExecuteOn(AirbyteTaskExecutors.IO)
+  @ExecuteOn(AirbyteTaskExecutors.PUBLIC_API)
   override fun publicGetSource(sourceId: UUID): Response {
     val userId: UUID = currentUserService.currentUser.userId
     apiAuthorizationHelper.checkWorkspacePermissions(
@@ -168,7 +168,7 @@ open class SourcesController(
       .build()
   }
 
-  @ExecuteOn(AirbyteTaskExecutors.IO)
+  @ExecuteOn(AirbyteTaskExecutors.PUBLIC_API)
   override fun initiateOAuth(initiateOauthRequest: InitiateOauthRequest): Response {
     val userId: UUID = currentUserService.currentUser.userId
     apiAuthorizationHelper.checkWorkspacePermissions(
@@ -180,7 +180,7 @@ open class SourcesController(
     return sourceService.controllerInitiateOAuth(initiateOauthRequest)
   }
 
-  @ExecuteOn(AirbyteTaskExecutors.IO)
+  @ExecuteOn(AirbyteTaskExecutors.PUBLIC_API)
   override fun listSources(
     workspaceIds: MutableList<UUID>?,
     includeDeleted: Boolean?,
@@ -219,7 +219,7 @@ open class SourcesController(
 
   @Patch
   @Path("/{sourceId}")
-  @ExecuteOn(AirbyteTaskExecutors.IO)
+  @ExecuteOn(AirbyteTaskExecutors.PUBLIC_API)
   override fun patchSource(
     sourceId: UUID,
     sourcePatchRequest: SourcePatchRequest,
@@ -259,7 +259,7 @@ open class SourcesController(
   }
 
   @Path("/{sourceId}")
-  @ExecuteOn(AirbyteTaskExecutors.IO)
+  @ExecuteOn(AirbyteTaskExecutors.PUBLIC_API)
   override fun putSource(
     sourceId: UUID,
     sourcePutRequest: SourcePutRequest,

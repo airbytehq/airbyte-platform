@@ -299,7 +299,8 @@ public class DbConverter {
         .withCustom(record.get(ACTOR_DEFINITION.CUSTOM))
         .withResourceRequirements(record.get(ACTOR_DEFINITION.RESOURCE_REQUIREMENTS) == null
             ? null
-            : Jsons.deserialize(record.get(ACTOR_DEFINITION.RESOURCE_REQUIREMENTS).data(), ActorDefinitionResourceRequirements.class));
+            : Jsons.deserialize(record.get(ACTOR_DEFINITION.RESOURCE_REQUIREMENTS).data(), ActorDefinitionResourceRequirements.class))
+        .withSupportRefreshes(record.get(ACTOR_DEFINITION.SUPPORT_REFRESHES));
   }
 
   /**

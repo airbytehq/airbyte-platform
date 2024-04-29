@@ -122,7 +122,6 @@ manifest should match snapshot:
       JOB_MAIN_CONTAINER_MEMORY_LIMIT: ""
       JOB_MAIN_CONTAINER_MEMORY_REQUEST: ""
       JOBS_DATABASE_MINIMUM_FLYWAY_MIGRATION_VERSION: 0.29.15.001
-      KEYCLOAK_HOSTNAME_URL: '%!s(<nil>)/auth'
       KEYCLOAK_INTERNAL_HOST: RELEASE-NAME-airbyte-keycloak-svc:9000
       KEYCLOAK_PORT: "9000"
       LOCAL_ROOT: /tmp/airbyte_local

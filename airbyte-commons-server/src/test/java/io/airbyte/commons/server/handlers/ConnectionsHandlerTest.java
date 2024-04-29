@@ -71,10 +71,13 @@ import io.airbyte.commons.enums.Enums;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.commons.server.converters.ApiPojoConverters;
 import io.airbyte.commons.server.converters.ConfigurationUpdate;
+import io.airbyte.commons.server.errors.BadRequestException;
 import io.airbyte.commons.server.handlers.helpers.ActorDefinitionHandlerHelper;
 import io.airbyte.commons.server.handlers.helpers.CatalogConverter;
 import io.airbyte.commons.server.helpers.ConnectionHelpers;
 import io.airbyte.commons.server.scheduler.EventRunner;
+import io.airbyte.commons.server.validation.CatalogValidator;
+import io.airbyte.commons.server.validation.ValidationError;
 import io.airbyte.config.ActorDefinitionVersion;
 import io.airbyte.config.ActorType;
 import io.airbyte.config.AttemptFailureSummary;
@@ -91,6 +94,7 @@ import io.airbyte.config.JobConfig.ConfigType;
 import io.airbyte.config.JobOutput;
 import io.airbyte.config.JobOutput.OutputType;
 import io.airbyte.config.JobSyncConfig;
+import io.airbyte.config.RefreshConfig;
 import io.airbyte.config.Schedule;
 import io.airbyte.config.Schedule.TimeUnit;
 import io.airbyte.config.ScheduleData;
@@ -109,6 +113,9 @@ import io.airbyte.config.persistence.ActorDefinitionVersionHelper;
 import io.airbyte.config.persistence.ActorDefinitionVersionHelper.ActorDefinitionVersionWithOverrideStatus;
 import io.airbyte.config.persistence.ConfigNotFoundException;
 import io.airbyte.config.persistence.ConfigRepository;
+import io.airbyte.config.persistence.StreamGenerationRepository;
+import io.airbyte.config.persistence.domain.Generation;
+import io.airbyte.config.persistence.helper.CatalogGenerationSetter;
 import io.airbyte.config.secrets.JsonSecretsProcessor;
 import io.airbyte.config.secrets.SecretsRepositoryReader;
 import io.airbyte.data.helpers.ActorDefinitionVersionUpdater;
@@ -218,7 +225,7 @@ class ConnectionsHandlerTest {
   private ActorDefinitionVersionUpdater actorDefinitionVersionUpdater;
   private ConnectorDefinitionSpecificationHandler connectorDefinitionSpecificationHandler;
 
-  private JsonSchemaValidator validator;
+  private JsonSchemaValidator jsonSchemaValidator;
   private JsonSecretsProcessor secretsProcessor;
   private ConfigurationUpdate configurationUpdate;
   private OAuthConfigSupplier oAuthConfigSupplier;
@@ -235,6 +242,9 @@ class ConnectionsHandlerTest {
   private StreamRefreshesHandler streamRefreshesHandler;
   private JobNotifier jobNotifier;
   private Job job;
+  private StreamGenerationRepository streamGenerationRepository;
+  private CatalogGenerationSetter catalogGenerationSetter;
+  private CatalogValidator catalogValidator;
 
   @SuppressWarnings("unchecked")
   @BeforeEach
@@ -330,7 +340,7 @@ class ConnectionsHandlerTest {
     actorDefinitionVersionHelper = mock(ActorDefinitionVersionHelper.class);
     actorDefinitionVersionUpdater = mock(ActorDefinitionVersionUpdater.class);
     connectorDefinitionSpecificationHandler = mock(ConnectorDefinitionSpecificationHandler.class);
-    validator = mock(JsonSchemaValidator.class);
+    jsonSchemaValidator = mock(JsonSchemaValidator.class);
     secretsProcessor = mock(JsonSecretsProcessor.class);
     configurationUpdate = mock(ConfigurationUpdate.class);
     oAuthConfigSupplier = mock(OAuthConfigSupplier.class);
@@ -346,7 +356,7 @@ class ConnectionsHandlerTest {
 
     destinationHandler =
         new DestinationHandler(configRepository,
-            validator,
+            jsonSchemaValidator,
             connectionsHandler,
             uuidGenerator,
             secretsProcessor,
@@ -359,7 +369,7 @@ class ConnectionsHandlerTest {
             actorDefinitionVersionUpdater);
     sourceHandler = new SourceHandler(configRepository,
         secretsRepositoryReader,
-        validator,
+        jsonSchemaValidator,
         connectionsHandler,
         uuidGenerator,
         secretsProcessor,
@@ -373,6 +383,9 @@ class ConnectionsHandlerTest {
     jobNotifier = mock(JobNotifier.class);
     featureFlagClient = mock(TestClient.class);
     job = mock(Job.class);
+    streamGenerationRepository = mock(StreamGenerationRepository.class);
+    catalogGenerationSetter = mock(CatalogGenerationSetter.class);
+    catalogValidator = mock(CatalogValidator.class);
     when(workspaceHelper.getWorkspaceForSourceIdIgnoreExceptions(sourceId)).thenReturn(workspaceId);
     when(workspaceHelper.getWorkspaceForDestinationIdIgnoreExceptions(destinationId)).thenReturn(workspaceId);
     when(workspaceHelper.getWorkspaceForOperationIdIgnoreExceptions(operationId)).thenReturn(workspaceId);
@@ -398,7 +411,10 @@ class ConnectionsHandlerTest {
           connectorDefinitionSpecificationHandler,
           jobNotifier,
           MAX_DAYS_OF_ONLY_FAILED_JOBS,
-          MAX_FAILURE_JOBS_IN_A_ROW);
+          MAX_FAILURE_JOBS_IN_A_ROW,
+          streamGenerationRepository,
+          catalogGenerationSetter,
+          catalogValidator);
 
       when(uuidGenerator.get()).thenReturn(standardSync.getConnectionId());
       final StandardSourceDefinition sourceDefinition = new StandardSourceDefinition()
@@ -427,6 +443,70 @@ class ConnectionsHandlerTest {
           .thenReturn(standardSync);
 
       final ConnectionRead actualConnectionRead = connectionsHandler.getConnection(standardSync.getConnectionId());
+
+      assertEquals(ConnectionHelpers.generateExpectedConnectionRead(standardSync), actualConnectionRead);
+    }
+
+    @Test
+    void testGetConnectionForJob() throws JsonValidationException, ConfigNotFoundException, IOException {
+      final Long jobId = 456L;
+
+      when(configRepository.getStandardSync(standardSync.getConnectionId()))
+          .thenReturn(standardSync);
+      when(jobPersistence.getJob(jobId)).thenReturn(new Job(
+          jobId,
+          ConfigType.SYNC,
+          null,
+          null,
+          null,
+          null,
+          null,
+          0,
+          0));
+      List<Generation> generations = List.of(new Generation("name", null, 1));
+      when(streamGenerationRepository.getMaxGenerationOfStreamsForConnectionId(standardSync.getConnectionId())).thenReturn(generations);
+      when(catalogGenerationSetter.updateCatalogWithGenerationAndSyncInformation(
+          standardSync.getCatalog(),
+          jobId,
+          List.of(),
+          generations)).thenReturn(standardSync.getCatalog());
+
+      final ConnectionRead actualConnectionRead = connectionsHandler.getConnectionForJob(standardSync.getConnectionId(), jobId);
+
+      assertEquals(ConnectionHelpers.generateExpectedConnectionRead(standardSync), actualConnectionRead);
+    }
+
+    @Test
+    void testGetConnectionForJobWithRefresh() throws JsonValidationException, ConfigNotFoundException, IOException {
+      final Long jobId = 456L;
+
+      List<io.airbyte.protocol.models.StreamDescriptor> refreshStreamDescriptors =
+          List.of(new io.airbyte.protocol.models.StreamDescriptor().withName("name"));
+
+      final JobConfig config = new JobConfig()
+          .withRefresh(new RefreshConfig().withStreamsToRefresh(refreshStreamDescriptors));
+
+      when(configRepository.getStandardSync(standardSync.getConnectionId()))
+          .thenReturn(standardSync);
+      when(jobPersistence.getJob(jobId)).thenReturn(new Job(
+          jobId,
+          ConfigType.REFRESH,
+          null,
+          config,
+          null,
+          null,
+          null,
+          0,
+          0));
+      List<Generation> generations = List.of(new Generation("name", null, 1));
+      when(streamGenerationRepository.getMaxGenerationOfStreamsForConnectionId(standardSync.getConnectionId())).thenReturn(generations);
+      when(catalogGenerationSetter.updateCatalogWithGenerationAndSyncInformation(
+          standardSync.getCatalog(),
+          jobId,
+          refreshStreamDescriptors,
+          generations)).thenReturn(standardSync.getCatalog());
+
+      final ConnectionRead actualConnectionRead = connectionsHandler.getConnectionForJob(standardSync.getConnectionId(), jobId);
 
       assertEquals(ConnectionHelpers.generateExpectedConnectionRead(standardSync), actualConnectionRead);
     }
@@ -902,6 +982,14 @@ class ConnectionsHandlerTest {
     @Nested
     class CreateConnection {
 
+      @BeforeEach
+      void setup() throws IOException, JsonValidationException, ConfigNotFoundException {
+        // for create calls
+        when(workspaceHelper.getWorkspaceForDestinationId(standardSync.getDestinationId())).thenReturn(workspaceId);
+        // for update calls
+        when(workspaceHelper.getWorkspaceForConnectionId(standardSync.getConnectionId())).thenReturn(workspaceId);
+      }
+
       private ConnectionCreate buildConnectionCreateRequest(final StandardSync standardSync, final AirbyteCatalog catalog) {
         return new ConnectionCreate()
             .sourceId(standardSync.getSourceId())
@@ -1161,13 +1249,26 @@ class ConnectionsHandlerTest {
             .syncCatalog(catalog);
 
         assertThrows(ConfigNotFoundException.class, () -> connectionsHandler.createConnection(connectionCreateBadDestination));
+      }
 
+      @Test
+      void throwsBadRequestExceptionOnCatalogSizeValidationError() {
+        final AirbyteCatalog catalog = ConnectionHelpers.generateBasicApiCatalog();
+        final ConnectionCreate request = buildConnectionCreateRequest(standardSync, catalog);
+        when(catalogValidator.fieldCount(eq(catalog), any())).thenReturn(new ValidationError("bad catalog"));
+
+        assertThrows(BadRequestException.class, () -> connectionsHandler.createConnection(request));
       }
 
     }
 
     @Nested
     class UpdateConnection {
+
+      @BeforeEach
+      void setup() throws IOException, JsonValidationException, ConfigNotFoundException {
+        when(workspaceHelper.getWorkspaceForConnectionId(standardSync.getConnectionId())).thenReturn(workspaceId);
+      }
 
       @Test
       void testUpdateConnectionPatchSingleField() throws Exception {
@@ -1487,6 +1588,18 @@ class ConnectionsHandlerTest {
         assertThrows(IllegalArgumentException.class, () -> connectionsHandler.updateConnection(connectionUpdate));
       }
 
+      @Test
+      void throwsBadRequestExceptionOnCatalogSizeValidationError() {
+        final AirbyteCatalog catalog = ConnectionHelpers.generateBasicApiCatalog();
+        final ConnectionUpdate request = new ConnectionUpdate()
+            .connectionId(standardSync.getConnectionId())
+            .syncCatalog(catalog)
+            .name("newName");
+        when(catalogValidator.fieldCount(eq(catalog), any())).thenReturn(new ValidationError("bad catalog"));
+
+        assertThrows(BadRequestException.class, () -> connectionsHandler.updateConnection(request));
+      }
+
     }
 
   }
@@ -1510,7 +1623,10 @@ class ConnectionsHandlerTest {
           connectorDefinitionSpecificationHandler,
           jobNotifier,
           MAX_DAYS_OF_ONLY_FAILED_JOBS,
-          MAX_FAILURE_JOBS_IN_A_ROW);
+          MAX_FAILURE_JOBS_IN_A_ROW,
+          streamGenerationRepository,
+          catalogGenerationSetter,
+          catalogValidator);
     }
 
     private Attempt generateMockAttempt(final Instant attemptTime, final long recordsSynced) {
@@ -1761,7 +1877,10 @@ class ConnectionsHandlerTest {
           connectorDefinitionSpecificationHandler,
           jobNotifier,
           MAX_DAYS_OF_ONLY_FAILED_JOBS,
-          MAX_FAILURE_JOBS_IN_A_ROW);
+          MAX_FAILURE_JOBS_IN_A_ROW,
+          streamGenerationRepository,
+          catalogGenerationSetter,
+          catalogValidator);
     }
 
     @Test
@@ -2151,8 +2270,9 @@ class ConnectionsHandlerTest {
           new Job(0L, JobConfig.ConfigType.SYNC, connectionId.toString(), null, null, JobStatus.RUNNING, 1001L, 1000L, 1002L),
           new Job(0L, JobConfig.ConfigType.SYNC, connectionId.toString(), null, List.of(failedAttempt), JobStatus.FAILED, 901L, 900L, 902L),
           new Job(0L, JobConfig.ConfigType.SYNC, connectionId.toString(), null, null, JobStatus.SUCCEEDED, 801L, 800L, 802L));
-      when(jobPersistence.listJobs(Set.of(JobConfig.ConfigType.SYNC, JobConfig.ConfigType.RESET_CONNECTION), connectionId.toString(), 10))
-          .thenReturn(jobs);
+      when(jobPersistence.listJobs(REPLICATION_TYPES,
+          connectionId.toString(), 10))
+              .thenReturn(jobs);
       final ConnectionStatusesRequestBody req = new ConnectionStatusesRequestBody().connectionIds(List.of(connectionId));
       final List<ConnectionStatusRead> status = connectionsHandler.getConnectionStatuses(req);
       assertEquals(1, status.size());
@@ -2231,6 +2351,7 @@ class ConnectionsHandlerTest {
               .thenReturn(new DestinationDefinitionSpecificationRead().supportedDestinationSyncModes(List.of(DestinationSyncMode.OVERWRITE)));
       when(workspaceHelper.getWorkspaceForSourceIdIgnoreExceptions(SOURCE_ID)).thenReturn(WORKSPACE_ID);
       when(workspaceHelper.getWorkspaceForDestinationIdIgnoreExceptions(DESTINATION_ID)).thenReturn(WORKSPACE_ID);
+      when(workspaceHelper.getWorkspaceForConnectionId(CONNECTION_ID)).thenReturn(WORKSPACE_ID);
       connectionsHandler = new ConnectionsHandler(
           streamRefreshesHandler,
           jobPersistence,
@@ -2245,7 +2366,10 @@ class ConnectionsHandlerTest {
           connectorDefinitionSpecificationHandler,
           jobNotifier,
           MAX_DAYS_OF_ONLY_FAILED_JOBS,
-          MAX_FAILURE_JOBS_IN_A_ROW);
+          MAX_FAILURE_JOBS_IN_A_ROW,
+          streamGenerationRepository,
+          catalogGenerationSetter,
+          catalogValidator);
     }
 
     @Test

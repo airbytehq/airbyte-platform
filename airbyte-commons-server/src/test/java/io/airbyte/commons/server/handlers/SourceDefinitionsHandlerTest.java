@@ -53,6 +53,7 @@ import io.airbyte.config.StandardSourceDefinition;
 import io.airbyte.config.SuggestedStreams;
 import io.airbyte.config.helpers.ConnectorRegistryConverters;
 import io.airbyte.config.init.SupportStateUpdater;
+import io.airbyte.config.persistence.ActorDefinitionVersionHelper;
 import io.airbyte.config.persistence.ConfigNotFoundException;
 import io.airbyte.config.persistence.ConfigRepository;
 import io.airbyte.config.specs.RemoteDefinitionsProvider;
@@ -99,6 +100,7 @@ class SourceDefinitionsHandlerTest {
   private UUID workspaceId;
   private UUID organizationId;
   private FeatureFlagClient featureFlagClient;
+  private ActorDefinitionVersionHelper actorDefinitionVersionHelper;
 
   @SuppressWarnings("unchecked")
   @BeforeEach
@@ -114,9 +116,11 @@ class SourceDefinitionsHandlerTest {
     sourceDefinition = generateSourceDefinition();
     sourceDefinitionVersion = generateVersionFromSourceDefinition(sourceDefinition);
     featureFlagClient = mock(TestClient.class);
+    actorDefinitionVersionHelper = mock(ActorDefinitionVersionHelper.class);
+
     sourceDefinitionsHandler =
         new SourceDefinitionsHandler(configRepository, uuidSupplier, actorDefinitionHandlerHelper, remoteDefinitionsProvider, sourceHandler,
-            supportStateUpdater, featureFlagClient);
+            supportStateUpdater, featureFlagClient, actorDefinitionVersionHelper);
   }
 
   private StandardSourceDefinition generateSourceDefinition() {
@@ -217,15 +221,16 @@ class SourceDefinitionsHandlerTest {
 
   @Test
   @DisplayName("listSourceDefinitionsForWorkspace should return the right list")
-  void testListSourceDefinitionsForWorkspace() throws IOException, URISyntaxException {
+  void testListSourceDefinitionsForWorkspace() throws IOException, URISyntaxException, JsonValidationException, ConfigNotFoundException {
     final StandardSourceDefinition sourceDefinition2 = generateSourceDefinition();
     final ActorDefinitionVersion sourceDefinitionVersion2 = generateVersionFromSourceDefinition(sourceDefinition2);
 
     when(featureFlagClient.boolVariation(eq(HideActorDefinitionFromList.INSTANCE), any())).thenReturn(false);
     when(configRepository.listPublicSourceDefinitions(false)).thenReturn(Lists.newArrayList(sourceDefinition));
     when(configRepository.listGrantedSourceDefinitions(workspaceId, false)).thenReturn(Lists.newArrayList(sourceDefinition2));
-    when(configRepository.getActorDefinitionVersions(List.of(sourceDefinition.getDefaultVersionId(), sourceDefinition2.getDefaultVersionId())))
-        .thenReturn(Lists.newArrayList(sourceDefinitionVersion, sourceDefinitionVersion2));
+    when(actorDefinitionVersionHelper.getSourceVersion(sourceDefinition, workspaceId)).thenReturn(sourceDefinitionVersion);
+    when(actorDefinitionVersionHelper.getSourceVersion(sourceDefinition2, workspaceId))
+        .thenReturn(sourceDefinitionVersion2);
 
     final SourceDefinitionRead expectedSourceDefinitionRead1 = new SourceDefinitionRead()
         .sourceDefinitionId(sourceDefinition.getSourceDefinitionId())
@@ -267,7 +272,7 @@ class SourceDefinitionsHandlerTest {
 
   @Test
   @DisplayName("listSourceDefinitionsForWorkspace should return the right list, filtering out hidden connectors")
-  void testListSourceDefinitionsForWorkspaceWithHiddenConnectors() throws IOException {
+  void testListSourceDefinitionsForWorkspaceWithHiddenConnectors() throws IOException, JsonValidationException, ConfigNotFoundException {
     final StandardSourceDefinition hiddenSourceDefinition = generateSourceDefinition();
     final StandardSourceDefinition sourceDefinition2 = generateSourceDefinition();
     final ActorDefinitionVersion sourceDefinitionVersion2 = generateVersionFromSourceDefinition(sourceDefinition2);
@@ -278,8 +283,9 @@ class SourceDefinitionsHandlerTest {
 
     when(configRepository.listPublicSourceDefinitions(false)).thenReturn(Lists.newArrayList(hiddenSourceDefinition, sourceDefinition));
     when(configRepository.listGrantedSourceDefinitions(workspaceId, false)).thenReturn(Lists.newArrayList(sourceDefinition2));
-    when(configRepository.getActorDefinitionVersions(List.of(sourceDefinition.getDefaultVersionId(), sourceDefinition2.getDefaultVersionId())))
-        .thenReturn(Lists.newArrayList(sourceDefinitionVersion, sourceDefinitionVersion2));
+    when(actorDefinitionVersionHelper.getSourceVersion(sourceDefinition, workspaceId)).thenReturn(sourceDefinitionVersion);
+    when(actorDefinitionVersionHelper.getSourceVersion(sourceDefinition2, workspaceId))
+        .thenReturn(sourceDefinitionVersion2);
 
     final SourceDefinitionReadList actualSourceDefinitionReadList =
         sourceDefinitionsHandler.listSourceDefinitionsForWorkspace(new WorkspaceIdRequestBody().workspaceId(workspaceId));

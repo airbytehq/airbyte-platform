@@ -7,9 +7,8 @@ package io.airbyte.workers.general
 import com.fasterxml.jackson.core.JsonProcessingException
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.google.common.annotations.VisibleForTesting
+import io.airbyte.api.client.AirbyteApiClient
 import io.airbyte.api.client.WorkloadApiClient
-import io.airbyte.api.client.generated.DestinationApi
-import io.airbyte.api.client.generated.SourceApi
 import io.airbyte.api.client.model.generated.DestinationIdRequestBody
 import io.airbyte.api.client.model.generated.SourceIdRequestBody
 import io.airbyte.api.client.model.generated.StreamStatusIncompleteRunCause
@@ -90,8 +89,7 @@ class ReplicationWorkerHelper(
   private val workloadEnabled: Boolean,
   private val analyticsMessageTracker: AnalyticsMessageTracker,
   private val workloadId: Optional<String>,
-  private val sourceApi: SourceApi,
-  private val destinationApi: DestinationApi,
+  private val airbyteApiClient: AirbyteApiClient,
   private val streamStatusCompletionTracker: StreamStatusCompletionTracker,
 ) {
   private val metricClient = MetricClientFactory.getMetricClient()
@@ -447,11 +445,11 @@ class ReplicationWorkerHelper(
   }
 
   fun getSourceDefinitionIdForSourceId(sourceId: UUID): UUID {
-    return sourceApi.getSource(SourceIdRequestBody().sourceId(sourceId)).sourceDefinitionId
+    return airbyteApiClient.sourceApi.getSource(SourceIdRequestBody().sourceId(sourceId)).sourceDefinitionId
   }
 
   fun getDestinationDefinitionIdForDestinationId(destinationId: UUID): UUID {
-    return destinationApi.getDestination(DestinationIdRequestBody().destinationId(destinationId)).destinationDefinitionId
+    return airbyteApiClient.destinationApi.getDestination(DestinationIdRequestBody().destinationId(destinationId)).destinationDefinitionId
   }
 
   private fun getTotalStats(

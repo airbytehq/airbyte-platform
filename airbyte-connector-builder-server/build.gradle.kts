@@ -93,12 +93,11 @@ val generateOpenApiServer = tasks.register<GenerateTask>("generateOpenApiServer"
   invokerPackage = "io.airbyte.connector_builder.api.invoker.generated"
   modelPackage = "io.airbyte.connector_builder.api.model.generated"
 
-  schemaMappings.putAll(
-    mapOf(
-      "ConnectorConfig" to "com.fasterxml.jackson.databind.JsonNode",
-      "ConnectorManifest" to "com.fasterxml.jackson.databind.JsonNode",
-    )
-  )
+    schemaMappings.putAll(mapOf(
+            "ConnectorConfig"  to "com.fasterxml.jackson.databind.JsonNode",
+            "ConnectorManifest" to "com.fasterxml.jackson.databind.JsonNode",
+            "AirbyteStateMessage" to "com.fasterxml.jackson.databind.JsonNode",
+    ))
 
   // Our spec does not have nullable, but if it changes, this would be a gotcha that we would want to avoid)
   configOptions.putAll(
@@ -149,7 +148,9 @@ tasks.named<DockerBuildImage>("dockerBuildImage") {
   // Current CDK version(used by the Connector Builder and workers running Connector Builder connectors
   val cdkVersion: String = File(project.projectDir.parentFile, "airbyte-connector-builder-resources/CDK_VERSION").readText().trim()
   buildArgs.put("CDK_VERSION", cdkVersion)
+}
 
+tasks.named("dockerCopyDistribution") {
   dependsOn(copyPythonDeps, generateOpenApiServer)
 }
 

@@ -9,17 +9,6 @@ import com.auth0.jwt.JWTCreator;
 import com.auth0.jwt.algorithms.Algorithm;
 import com.google.auth.oauth2.ServiceAccountCredentials;
 import io.airbyte.api.client.AirbyteApiClient;
-import io.airbyte.api.client.generated.AttemptApi;
-import io.airbyte.api.client.generated.ConnectionApi;
-import io.airbyte.api.client.generated.DeploymentMetadataApi;
-import io.airbyte.api.client.generated.DestinationApi;
-import io.airbyte.api.client.generated.JobRetryStatesApi;
-import io.airbyte.api.client.generated.JobsApi;
-import io.airbyte.api.client.generated.SecretsPersistenceConfigApi;
-import io.airbyte.api.client.generated.SourceApi;
-import io.airbyte.api.client.generated.SourceDefinitionApi;
-import io.airbyte.api.client.generated.StateApi;
-import io.airbyte.api.client.generated.WorkspaceApi;
 import io.airbyte.api.client.invoker.generated.ApiClient;
 import io.airbyte.commons.temporal.config.WorkerMode;
 import io.micronaut.context.BeanProvider;
@@ -78,61 +67,6 @@ public class ApiClientBeanFactory {
   @Singleton
   public AirbyteApiClient airbyteApiClient(final ApiClient apiClient) {
     return new AirbyteApiClient(apiClient);
-  }
-
-  @Singleton
-  public SourceApi sourceApi(@Named("apiClient") final ApiClient apiClient) {
-    return new SourceApi(apiClient);
-  }
-
-  @Singleton
-  public JobsApi jobsApi(@Named("apiClient") final ApiClient apiClient) {
-    return new JobsApi(apiClient);
-  }
-
-  @Singleton
-  public DeploymentMetadataApi deploymentMetadataApi(final ApiClient apiClient) {
-    return new DeploymentMetadataApi(apiClient);
-  }
-
-  @Singleton
-  public DestinationApi destinationApi(final ApiClient apiClient) {
-    return new DestinationApi(apiClient);
-  }
-
-  @Singleton
-  public ConnectionApi connectionApi(final ApiClient apiClient) {
-    return new ConnectionApi(apiClient);
-  }
-
-  @Singleton
-  public WorkspaceApi workspaceApi(final ApiClient apiClient) {
-    return new WorkspaceApi(apiClient);
-  }
-
-  @Singleton
-  public AttemptApi attemptApi(final ApiClient apiClient) {
-    return new AttemptApi(apiClient);
-  }
-
-  @Singleton
-  public StateApi stateApi(final ApiClient apiClient) {
-    return new StateApi(apiClient);
-  }
-
-  @Singleton
-  public JobRetryStatesApi jobRetryStatesApi(final ApiClient apiClient) {
-    return new JobRetryStatesApi(apiClient);
-  }
-
-  @Singleton
-  public SourceDefinitionApi sourceDefinitionApi(final ApiClient apiClient) {
-    return new SourceDefinitionApi(apiClient);
-  }
-
-  @Singleton
-  public SecretsPersistenceConfigApi secretsPersistenceConfigApi(final ApiClient apiClient) {
-    return new SecretsPersistenceConfigApi(apiClient);
   }
 
   @Singleton

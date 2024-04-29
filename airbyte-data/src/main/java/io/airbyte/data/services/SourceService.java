@@ -43,8 +43,6 @@ public interface SourceService {
 
   void writeSourceConnectionNoSecrets(SourceConnection partialSource) throws IOException;
 
-  boolean deleteSource(UUID sourceId) throws JsonValidationException, ConfigNotFoundException, IOException;
-
   List<SourceConnection> listSourceConnection() throws IOException;
 
   List<SourceConnection> listWorkspaceSourceConnection(UUID workspaceId) throws IOException;
@@ -54,6 +52,8 @@ public interface SourceService {
   List<SourceConnection> listSourcesForDefinition(UUID definitionId) throws IOException;
 
   List<SourceAndDefinition> getSourceAndDefinitionsFromSourceIds(List<UUID> sourceIds) throws IOException;
+
+  List<SourceConnection> listSourcesWithIds(final List<UUID> sourceIds) throws IOException;
 
   void writeConnectorMetadata(final StandardSourceDefinition sourceDefinition,
                               final ActorDefinitionVersion actorDefinitionVersion,
@@ -65,8 +65,6 @@ public interface SourceService {
                                     final UUID scopeId,
                                     final io.airbyte.config.ScopeType scopeType)
       throws IOException;
-
-  List<SourceConnection> listSourcesWithVersionIds(final List<UUID> actorDefinitionVersionIds) throws IOException;
 
   SourceConnection getSourceConnectionWithSecrets(UUID sourceId) throws JsonValidationException, ConfigNotFoundException, IOException;
 

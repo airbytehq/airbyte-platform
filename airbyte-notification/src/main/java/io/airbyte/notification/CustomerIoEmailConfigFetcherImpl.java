@@ -4,7 +4,7 @@
 
 package io.airbyte.notification;
 
-import io.airbyte.api.client.generated.WorkspaceApi;
+import io.airbyte.api.client.AirbyteApiClient;
 import io.airbyte.api.client.invoker.generated.ApiException;
 import io.airbyte.api.client.model.generated.ConnectionIdRequestBody;
 import io.micronaut.context.annotation.Requires;
@@ -23,10 +23,10 @@ import org.jetbrains.annotations.Nullable;
 @Slf4j
 public class CustomerIoEmailConfigFetcherImpl implements CustomerIoEmailConfigFetcher {
 
-  private final WorkspaceApi workspaceApi;
+  private final AirbyteApiClient airbyteApiClient;
 
-  public CustomerIoEmailConfigFetcherImpl(WorkspaceApi workspaceApi) {
-    this.workspaceApi = workspaceApi;
+  public CustomerIoEmailConfigFetcherImpl(final AirbyteApiClient airbyteApiClient) {
+    this.airbyteApiClient = airbyteApiClient;
   }
 
   @Nullable
@@ -35,7 +35,7 @@ public class CustomerIoEmailConfigFetcherImpl implements CustomerIoEmailConfigFe
     ConnectionIdRequestBody connectionIdRequestBody = new ConnectionIdRequestBody().connectionId(connectionId);
 
     try {
-      return new CustomerIoEmailConfig(workspaceApi.getWorkspaceByConnectionId(connectionIdRequestBody).getEmail());
+      return new CustomerIoEmailConfig(airbyteApiClient.getWorkspaceApi().getWorkspaceByConnectionId(connectionIdRequestBody).getEmail());
     } catch (ApiException e) {
       log.error("Unable to fetch workspace by connection");
       throw new RuntimeException(e);

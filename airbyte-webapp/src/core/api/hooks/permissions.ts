@@ -12,7 +12,7 @@ import {
   updatePermission,
 } from "../generated/AirbyteClient";
 import { PermissionCreate, PermissionRead, PermissionUpdate } from "../generated/AirbyteClient.schemas";
-import { SCOPE_USER } from "../scopes";
+import { SCOPE_INSTANCE, SCOPE_USER } from "../scopes";
 import { useRequestOptions } from "../useRequestOptions";
 import { useSuspenseQuery } from "../useSuspenseQuery";
 
@@ -125,4 +125,29 @@ export const useDeletePermissions = () => {
       });
     },
   });
+};
+
+let currentIsInstanceAdminEnabled = false;
+export const useIsInstanceAdminEnabled = () => {
+  return useSuspenseQuery([SCOPE_INSTANCE, "isInstanceAdminEnabled"], () => currentIsInstanceAdminEnabled, {
+    initialData: currentIsInstanceAdminEnabled,
+    cacheTime: Infinity,
+  });
+};
+
+export const useSetIsInstanceAdminEnabled = () => {
+  const queryClient = useQueryClient();
+  return (isEnabled: boolean) => {
+    /*
+    react-query docs for setQueryData say
+
+    > If the query is not utilized by a query hook in the default cacheTime of 5 minutes,
+    > the query will be garbage collected.
+
+    unclear if the actually uses the default vs the cacheTime of Infinity used by the query, so
+    just in case we'll track the current value and return it from the query function if its called again
+    */
+    currentIsInstanceAdminEnabled = isEnabled;
+    queryClient.setQueryData([SCOPE_INSTANCE, "isInstanceAdminEnabled"], isEnabled);
+  };
 };

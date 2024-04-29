@@ -5,8 +5,6 @@
 package io.airbyte.workers.helpers;
 
 import io.airbyte.api.client.AirbyteApiClient;
-import io.airbyte.api.client.generated.JobRetryStatesApi;
-import io.airbyte.api.client.generated.WorkspaceApi;
 import io.airbyte.api.client.invoker.generated.ApiException;
 import io.airbyte.api.client.model.generated.JobIdRequestBody;
 import io.airbyte.api.client.model.generated.JobRetryStateRequestBody;
@@ -43,8 +41,7 @@ import lombok.extern.slf4j.Slf4j;
 @Singleton
 public class RetryStateClient {
 
-  final JobRetryStatesApi jobRetryStatesApi;
-  final WorkspaceApi workspaceApi;
+  final AirbyteApiClient airbyteApiClient;
   final FeatureFlagClient featureFlagClient;
   final Integer successiveCompleteFailureLimit;
   final Integer totalCompleteFailureLimit;
@@ -54,8 +51,7 @@ public class RetryStateClient {
   final Integer maxInterval;
   final Integer backoffBase;
 
-  public RetryStateClient(final JobRetryStatesApi jobRetryStatesApi,
-                          final WorkspaceApi workspaceApi,
+  public RetryStateClient(final AirbyteApiClient airbyteApiClient,
                           final FeatureFlagClient featureFlagClient,
                           @Value("${airbyte.retries.complete-failures.max-successive}") final Integer successiveCompleteFailureLimit,
                           @Value("${airbyte.retries.complete-failures.max-total}") final Integer totalCompleteFailureLimit,
@@ -64,8 +60,7 @@ public class RetryStateClient {
                           @Value("${airbyte.retries.complete-failures.backoff.min-interval-s}") final Integer minInterval,
                           @Value("${airbyte.retries.complete-failures.backoff.max-interval-s}") final Integer maxInterval,
                           @Value("${airbyte.retries.complete-failures.backoff.base}") final Integer backoffBase) {
-    this.jobRetryStatesApi = jobRetryStatesApi;
-    this.workspaceApi = workspaceApi;
+    this.airbyteApiClient = airbyteApiClient;
     this.featureFlagClient = featureFlagClient;
     this.successiveCompleteFailureLimit = successiveCompleteFailureLimit;
     this.totalCompleteFailureLimit = totalCompleteFailureLimit;
@@ -112,7 +107,7 @@ public class RetryStateClient {
   private UUID fetchOrganizationId(final UUID workspaceId) {
     UUID organizationId = null;
     try {
-      final var workspaceRead = workspaceApi.getWorkspace(new WorkspaceIdRequestBody().workspaceId(workspaceId));
+      final var workspaceRead = airbyteApiClient.getWorkspaceApi().getWorkspace(new WorkspaceIdRequestBody().workspaceId(workspaceId));
       if (workspaceRead != null) {
         organizationId = workspaceRead.getOrganizationId();
       }
@@ -171,7 +166,7 @@ public class RetryStateClient {
     RetryStateRead resp;
 
     try {
-      resp = jobRetryStatesApi.get(req);
+      resp = airbyteApiClient.getJobRetryStatesApi().get(req);
     } catch (final ApiException e) {
       if (e.getCode() != HttpStatus.NOT_FOUND.getCode()) {
         throw new RetryableException(e);
@@ -201,7 +196,7 @@ public class RetryStateClient {
 
     final var result = AirbyteApiClient.retryWithJitter(
         () -> {
-          jobRetryStatesApi.createOrUpdateWithHttpInfo(req);
+          airbyteApiClient.getJobRetryStatesApi().createOrUpdateWithHttpInfo(req);
           return true;
         }, // retryWithJitter doesn't like `void` "consumer" fn's
         String.format("Persisting retry state for job: %d connection: %s", req.getJobId(), req.getConnectionId()));

@@ -184,12 +184,15 @@ public abstract class ReplicationWorkerPerformanceTest {
     final FieldSelector fieldSelector = new FieldSelector(validator, metricReporter, fieldSelectionEnabled, false);
     final WorkloadApiClient workloadApiClient = mock(WorkloadApiClient.class);
     when(workloadApiClient.getWorkloadApi()).thenReturn(mock(WorkloadApi.class));
+    final AirbyteApiClient airbyteApiClient = mock(AirbyteApiClient.class);
+    when(airbyteApiClient.getDestinationApi()).thenReturn(mock(DestinationApi.class));
+    when(airbyteApiClient.getSourceApi()).thenReturn(mock(SourceApi.class));
 
     final ReplicationWorkerHelper replicationWorkerHelper =
         new ReplicationWorkerHelper(airbyteMessageDataExtractor, fieldSelector, dstNamespaceMapper, messageTracker, syncPersistence,
             replicationAirbyteMessageEventPublishingHelper, new ThreadedTimeTracker(), () -> {}, workloadApiClient, false,
             analyticsMessageTracker,
-            Optional.empty(), mock(SourceApi.class), mock(DestinationApi.class), mock(StreamStatusCompletionTracker.class));
+            Optional.empty(), airbyteApiClient, mock(StreamStatusCompletionTracker.class));
     final StreamStatusCompletionTracker streamStatusCompletionTracker = mock(StreamStatusCompletionTracker.class);
 
     final var worker = getReplicationWorker("1", 0,

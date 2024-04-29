@@ -791,17 +791,15 @@ public class SchedulerHandler {
   }
 
   private JobInfoRead submitResetConnectionToWorker(final UUID connectionId) throws IOException, IllegalStateException, ConfigNotFoundException {
-    return submitResetConnectionToWorker(connectionId, configRepository.getAllStreamsForConnection(connectionId), false);
+    return submitResetConnectionToWorker(connectionId, configRepository.getAllStreamsForConnection(connectionId));
   }
 
   private JobInfoRead submitResetConnectionToWorker(final UUID connectionId,
-                                                    final List<StreamDescriptor> streamsToReset,
-                                                    final boolean runSyncImmediately)
+                                                    final List<StreamDescriptor> streamsToReset)
       throws IOException {
     final ManualOperationResult resetConnectionResult = eventRunner.resetConnection(
         connectionId,
-        streamsToReset,
-        runSyncImmediately);
+        streamsToReset);
 
     return readJobFromResult(resetConnectionResult);
   }
@@ -810,8 +808,7 @@ public class SchedulerHandler {
       throws IOException, IllegalStateException {
     return submitResetConnectionToWorker(connectionId,
         streams.stream().map(s -> new StreamDescriptor().withName(s.getStreamName()).withNamespace(s.getStreamNamespace())).collect(
-            Collectors.toList()),
-        false);
+            Collectors.toList()));
   }
 
   private JobInfoRead readJobFromResult(final ManualOperationResult manualOperationResult) throws IOException, IllegalStateException {

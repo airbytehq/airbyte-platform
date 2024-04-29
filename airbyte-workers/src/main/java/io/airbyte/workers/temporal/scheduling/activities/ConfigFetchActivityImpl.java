@@ -10,9 +10,6 @@ import static io.airbyte.metrics.lib.ApmTraceConstants.Tags.CONNECTION_ID_KEY;
 import com.google.common.annotations.VisibleForTesting;
 import datadog.trace.api.Trace;
 import io.airbyte.api.client.AirbyteApiClient;
-import io.airbyte.api.client.generated.ConnectionApi;
-import io.airbyte.api.client.generated.JobsApi;
-import io.airbyte.api.client.generated.WorkspaceApi;
 import io.airbyte.api.client.invoker.generated.ApiException;
 import io.airbyte.api.client.model.generated.ConnectionIdRequestBody;
 import io.airbyte.api.client.model.generated.ConnectionRead;
@@ -75,27 +72,21 @@ public class ConfigFetchActivityImpl implements ConfigFetchActivity {
       UUID.fromString("226edbc1-4a9c-4401-95a9-90435d667d9d"));
   private static final long SCHEDULING_NOISE_CONSTANT = 15;
 
-  private final JobsApi jobsApi;
-  private final WorkspaceApi workspaceApi;
+  private final AirbyteApiClient airbyteApiClient;
   private final Integer syncJobMaxAttempts;
   private final Supplier<Long> currentSecondsSupplier;
-  private final ConnectionApi connectionApi;
   private final FeatureFlagClient featureFlagClient;
   private final ScheduleJitterHelper scheduleJitterHelper;
 
   @VisibleForTesting
-  protected ConfigFetchActivityImpl(final JobsApi jobsApi,
-                                    final WorkspaceApi workspaceApi,
+  protected ConfigFetchActivityImpl(final AirbyteApiClient airbyteApiClient,
                                     @Value("${airbyte.worker.sync.max-attempts}") final Integer syncJobMaxAttempts,
                                     @Named("currentSecondsSupplier") final Supplier<Long> currentSecondsSupplier,
-                                    final ConnectionApi connectionApi,
                                     final FeatureFlagClient featureFlagClient,
                                     final ScheduleJitterHelper scheduleJitterHelper) {
-    this.jobsApi = jobsApi;
-    this.workspaceApi = workspaceApi;
+    this.airbyteApiClient = airbyteApiClient;
     this.syncJobMaxAttempts = syncJobMaxAttempts;
     this.currentSecondsSupplier = currentSecondsSupplier;
-    this.connectionApi = connectionApi;
     this.featureFlagClient = featureFlagClient;
     this.scheduleJitterHelper = scheduleJitterHelper;
   }
@@ -106,8 +97,8 @@ public class ConfigFetchActivityImpl implements ConfigFetchActivity {
     try {
       ApmTraceUtils.addTagsToTrace(Map.of(CONNECTION_ID_KEY, input.getConnectionId()));
       final ConnectionIdRequestBody connectionIdRequestBody = new ConnectionIdRequestBody().connectionId(input.getConnectionId());
-      final ConnectionRead connectionRead = connectionApi.getConnection(connectionIdRequestBody);
-      final UUID workspaceId = workspaceApi.getWorkspaceByConnectionId(connectionIdRequestBody).getWorkspaceId();
+      final ConnectionRead connectionRead = airbyteApiClient.getConnectionApi().getConnection(connectionIdRequestBody);
+      final UUID workspaceId = airbyteApiClient.getWorkspaceApi().getWorkspaceByConnectionId(connectionIdRequestBody).getWorkspaceId();
       final Duration timeToWait = connectionRead.getScheduleType() != null
           ? getTimeToWaitFromScheduleType(connectionRead, input.getConnectionId(), workspaceId)
           : getTimeToWaitFromLegacy(connectionRead, input.getConnectionId());
@@ -148,7 +139,8 @@ public class ConfigFetchActivityImpl implements ConfigFetchActivity {
       return Duration.ofDays(100 * 365);
     }
 
-    final JobOptionalRead previousJobOptional = jobsApi.getLastReplicationJob(new ConnectionIdRequestBody().connectionId(connectionId));
+    final JobOptionalRead previousJobOptional =
+        airbyteApiClient.getJobsApi().getLastReplicationJob(new ConnectionIdRequestBody().connectionId(connectionId));
 
     if (connectionRead.getScheduleType() == ConnectionScheduleType.BASIC) {
       if (previousJobOptional.getJob() == null) {
@@ -226,7 +218,8 @@ public class ConfigFetchActivityImpl implements ConfigFetchActivity {
       return Duration.ofDays(100 * 365);
     }
 
-    final JobOptionalRead previousJobOptional = jobsApi.getLastReplicationJob(new ConnectionIdRequestBody().connectionId(connectionId));
+    final JobOptionalRead previousJobOptional =
+        airbyteApiClient.getJobsApi().getLastReplicationJob(new ConnectionIdRequestBody().connectionId(connectionId));
 
     if (previousJobOptional.getJob() == null && connectionRead.getSchedule() != null) {
       // Non-manual syncs don't wait for their first run
@@ -252,7 +245,8 @@ public class ConfigFetchActivityImpl implements ConfigFetchActivity {
   @Override
   public Boolean isWorkspaceTombstone(UUID connectionId) {
     try {
-      WorkspaceRead workspaceRead = workspaceApi.getWorkspaceByConnectionIdWithTombstone(new ConnectionIdRequestBody().connectionId(connectionId));
+      WorkspaceRead workspaceRead =
+          airbyteApiClient.getWorkspaceApi().getWorkspaceByConnectionIdWithTombstone(new ConnectionIdRequestBody().connectionId(connectionId));
       return workspaceRead.getTombstone();
     } catch (ApiException e) {
       log.warn("Fail to get the workspace.", e);
@@ -266,7 +260,7 @@ public class ConfigFetchActivityImpl implements ConfigFetchActivity {
       final io.airbyte.api.client.model.generated.ConnectionIdRequestBody requestBody =
           new io.airbyte.api.client.model.generated.ConnectionIdRequestBody().connectionId(connectionId);
       final ConnectionRead connectionRead = AirbyteApiClient.retryWithJitter(
-          () -> connectionApi.getConnection(requestBody),
+          () -> airbyteApiClient.getConnectionApi().getConnection(requestBody),
           "Get a connection by connection Id");
       return Optional.ofNullable(connectionRead.getSourceId());
     } catch (final Exception e) {
@@ -281,7 +275,7 @@ public class ConfigFetchActivityImpl implements ConfigFetchActivity {
       final io.airbyte.api.client.model.generated.ConnectionIdRequestBody requestBody =
           new io.airbyte.api.client.model.generated.ConnectionIdRequestBody().connectionId(connectionId);
       final ConnectionRead connectionRead = AirbyteApiClient.retryWithJitter(
-          () -> connectionApi.getConnection(requestBody),
+          () -> airbyteApiClient.getConnectionApi().getConnection(requestBody),
           "Get a connection by connection Id");
       return Optional.ofNullable(connectionRead.getStatus());
     } catch (final Exception e) {
@@ -296,7 +290,7 @@ public class ConfigFetchActivityImpl implements ConfigFetchActivity {
       final io.airbyte.api.client.model.generated.ConnectionIdRequestBody requestBody =
           new io.airbyte.api.client.model.generated.ConnectionIdRequestBody().connectionId(connectionId);
       final ConnectionRead connectionRead = AirbyteApiClient.retryWithJitter(
-          () -> connectionApi.getConnection(requestBody),
+          () -> airbyteApiClient.getConnectionApi().getConnection(requestBody),
           "Get a connection by connection Id");
       return Optional.ofNullable(connectionRead.getBreakingChange());
     } catch (final Exception e) {

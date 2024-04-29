@@ -10,7 +10,6 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
-import io.airbyte.bootloader.helpers.NoOpDefinitionVersionOverrideProvider;
 import io.airbyte.commons.features.FeatureFlags;
 import io.airbyte.commons.resources.MoreResources;
 import io.airbyte.commons.version.AirbyteProtocolVersionRange;
@@ -23,7 +22,7 @@ import io.airbyte.config.init.CdkVersionProvider;
 import io.airbyte.config.init.DeclarativeSourceUpdater;
 import io.airbyte.config.init.PostLoadExecutor;
 import io.airbyte.config.init.SupportStateUpdater;
-import io.airbyte.config.persistence.ActorDefinitionVersionHelper;
+import io.airbyte.config.persistence.BreakingChangesHelper;
 import io.airbyte.config.persistence.ConfigRepository;
 import io.airbyte.config.persistence.OrganizationPersistence;
 import io.airbyte.config.secrets.SecretsRepositoryReader;
@@ -97,7 +96,7 @@ class BootloaderTest {
 
   // ⚠️ This line should change with every new migration to show that you meant to make a new
   // migration to the prod database
-  private static final String CURRENT_CONFIGS_MIGRATION_VERSION = "0.55.1.003";
+  private static final String CURRENT_CONFIGS_MIGRATION_VERSION = "0.57.4.001";
   private static final String CURRENT_JOBS_MIGRATION_VERSION = "0.57.2.001";
   private static final String CDK_VERSION = "1.2.3";
 
@@ -168,6 +167,11 @@ class BootloaderTest {
         secretPersistenceConfigService,
         connectionService,
         actorDefinitionVersionUpdater);
+    val workspaceService = new WorkspaceServiceJooqImpl(configDatabase,
+        featureFlagClient,
+        secretsRepositoryReader,
+        secretsRepositoryWriter,
+        secretPersistenceConfigService);
     val configRepository = new ConfigRepository(
         new ActorDefinitionServiceJooqImpl(configDatabase),
         new CatalogServiceJooqImpl(configDatabase),
@@ -180,11 +184,7 @@ class BootloaderTest {
             secretPersistenceConfigService),
         new OperationServiceJooqImpl(configDatabase),
         sourceService,
-        new WorkspaceServiceJooqImpl(configDatabase,
-            featureFlagClient,
-            secretsRepositoryReader,
-            secretsRepositoryWriter,
-            secretPersistenceConfigService));
+        workspaceService);
     val configsDatabaseInitializationTimeoutMs = TimeUnit.SECONDS.toMillis(60L);
     val configDatabaseInitializer = DatabaseCheckFactory.createConfigsDatabaseInitializer(configsDslContext,
         configsDatabaseInitializationTimeoutMs, MoreResources.readResource(DatabaseConstants.CONFIGS_INITIAL_SCHEMA_PATH));
@@ -198,13 +198,10 @@ class BootloaderTest {
     val organizationPersistence = new OrganizationPersistence(jobDatabase);
     val protocolVersionChecker = new ProtocolVersionChecker(jobsPersistence, airbyteProtocolRange, configRepository, definitionsProvider);
     val breakingChangeNotificationHelper = new BreakingChangeNotificationHelper(configRepository, featureFlagClient);
-    val actorDefinitionVersionHelper =
-        new ActorDefinitionVersionHelper(configRepository, new NoOpDefinitionVersionOverrideProvider(), new NoOpDefinitionVersionOverrideProvider(),
-            featureFlagClient);
+    val breakingChangeHelper = new BreakingChangesHelper(scopedConfigurationService, workspaceService, destinationService, sourceService);
     val supportStateUpdater =
-        new SupportStateUpdater(actorDefinitionService, sourceService, destinationService, DeploymentMode.OSS,
-            actorDefinitionVersionHelper, breakingChangeNotificationHelper,
-            featureFlagClient);
+        new SupportStateUpdater(actorDefinitionService, sourceService, destinationService, DeploymentMode.OSS, breakingChangeHelper,
+            breakingChangeNotificationHelper, featureFlagClient);
     val metricClient = new NotImplementedMetricClient();
     val applyDefinitionsHelper =
         new ApplyDefinitionsHelper(definitionsProvider, jobsPersistence, actorDefinitionService, sourceService, destinationService,
@@ -261,50 +258,6 @@ class BootloaderTest {
         connectionService,
         actorDefinitionService,
         scopedConfigurationService);
-    val configRepository = new ConfigRepository(
-        new ActorDefinitionServiceJooqImpl(configDatabase),
-        new CatalogServiceJooqImpl(configDatabase),
-        connectionService,
-        new ConnectorBuilderServiceJooqImpl(configDatabase),
-        new DestinationServiceJooqImpl(configDatabase,
-            featureFlagClient,
-            mock(SecretsRepositoryReader.class),
-            mock(SecretsRepositoryWriter.class),
-            mock(SecretPersistenceConfigService.class),
-            connectionService,
-            actorDefinitionVersionUpdater),
-        new OAuthServiceJooqImpl(configDatabase,
-            featureFlagClient,
-            mock(SecretsRepositoryReader.class),
-            mock(SecretPersistenceConfigService.class)),
-        new OperationServiceJooqImpl(configDatabase),
-        new SourceServiceJooqImpl(configDatabase,
-            featureFlagClient,
-            mock(SecretsRepositoryReader.class),
-            mock(SecretsRepositoryWriter.class),
-            mock(SecretPersistenceConfigService.class),
-            connectionService,
-            actorDefinitionVersionUpdater),
-        new WorkspaceServiceJooqImpl(configDatabase,
-            featureFlagClient,
-            mock(SecretsRepositoryReader.class),
-            mock(SecretsRepositoryWriter.class),
-            mock(SecretPersistenceConfigService.class)));
-    val configsDatabaseInitializationTimeoutMs = TimeUnit.SECONDS.toMillis(60L);
-    val configDatabaseInitializer = DatabaseCheckFactory.createConfigsDatabaseInitializer(configsDslContext,
-        configsDatabaseInitializationTimeoutMs, MoreResources.readResource(DatabaseConstants.CONFIGS_INITIAL_SCHEMA_PATH));
-    val configsDatabaseMigrator = new ConfigsDatabaseMigrator(configDatabase, configsFlyway);
-    final DefinitionsProvider definitionsProvider = new LocalDefinitionsProvider();
-    val jobsDatabaseInitializationTimeoutMs = TimeUnit.SECONDS.toMillis(60L);
-    val jobsDatabaseInitializer = DatabaseCheckFactory.createJobsDatabaseInitializer(jobsDslContext,
-        jobsDatabaseInitializationTimeoutMs, MoreResources.readResource(DatabaseConstants.JOBS_INITIAL_SCHEMA_PATH));
-    val jobsDatabaseMigrator = new JobsDatabaseMigrator(jobDatabase, jobsFlyway);
-    val jobsPersistence = new DefaultJobPersistence(jobDatabase);
-    val organizationPersistence = new OrganizationPersistence(jobDatabase);
-    val breakingChangeNotificationHelper = new BreakingChangeNotificationHelper(configRepository, featureFlagClient);
-    val actorDefinitionVersionHelper =
-        new ActorDefinitionVersionHelper(configRepository, new NoOpDefinitionVersionOverrideProvider(), new NoOpDefinitionVersionOverrideProvider(),
-            featureFlagClient);
     val sourceService = new SourceServiceJooqImpl(configDatabase,
         featureFlagClient,
         mock(SecretsRepositoryReader.class),
@@ -319,8 +272,39 @@ class BootloaderTest {
         mock(SecretPersistenceConfigService.class),
         connectionService,
         actorDefinitionVersionUpdater);
+    val workspaceService = new WorkspaceServiceJooqImpl(configDatabase,
+        featureFlagClient,
+        mock(SecretsRepositoryReader.class),
+        mock(SecretsRepositoryWriter.class),
+        mock(SecretPersistenceConfigService.class));
+    val configRepository = new ConfigRepository(
+        new ActorDefinitionServiceJooqImpl(configDatabase),
+        new CatalogServiceJooqImpl(configDatabase),
+        connectionService,
+        new ConnectorBuilderServiceJooqImpl(configDatabase),
+        destinationService,
+        new OAuthServiceJooqImpl(configDatabase,
+            featureFlagClient,
+            mock(SecretsRepositoryReader.class),
+            mock(SecretPersistenceConfigService.class)),
+        new OperationServiceJooqImpl(configDatabase),
+        sourceService,
+        workspaceService);
+    val configsDatabaseInitializationTimeoutMs = TimeUnit.SECONDS.toMillis(60L);
+    val configDatabaseInitializer = DatabaseCheckFactory.createConfigsDatabaseInitializer(configsDslContext,
+        configsDatabaseInitializationTimeoutMs, MoreResources.readResource(DatabaseConstants.CONFIGS_INITIAL_SCHEMA_PATH));
+    val configsDatabaseMigrator = new ConfigsDatabaseMigrator(configDatabase, configsFlyway);
+    final DefinitionsProvider definitionsProvider = new LocalDefinitionsProvider();
+    val jobsDatabaseInitializationTimeoutMs = TimeUnit.SECONDS.toMillis(60L);
+    val jobsDatabaseInitializer = DatabaseCheckFactory.createJobsDatabaseInitializer(jobsDslContext,
+        jobsDatabaseInitializationTimeoutMs, MoreResources.readResource(DatabaseConstants.JOBS_INITIAL_SCHEMA_PATH));
+    val jobsDatabaseMigrator = new JobsDatabaseMigrator(jobDatabase, jobsFlyway);
+    val jobsPersistence = new DefaultJobPersistence(jobDatabase);
+    val organizationPersistence = new OrganizationPersistence(jobDatabase);
+    val breakingChangeNotificationHelper = new BreakingChangeNotificationHelper(configRepository, featureFlagClient);
+    val breakingChangesHelper = new BreakingChangesHelper(scopedConfigurationService, workspaceService, destinationService, sourceService);
     val supportStateUpdater =
-        new SupportStateUpdater(actorDefinitionService, sourceService, destinationService, DeploymentMode.OSS, actorDefinitionVersionHelper,
+        new SupportStateUpdater(actorDefinitionService, sourceService, destinationService, DeploymentMode.OSS, breakingChangesHelper,
             breakingChangeNotificationHelper, featureFlagClient);
     val protocolVersionChecker = new ProtocolVersionChecker(jobsPersistence, airbyteProtocolRange, configRepository, definitionsProvider);
     val metricClient = new NotImplementedMetricClient();

@@ -60,6 +60,7 @@ import io.airbyte.config.persistence.WorkspacePersistence;
 import io.airbyte.config.secrets.SecretsRepositoryWriter;
 import io.airbyte.config.secrets.persistence.SecretPersistence;
 import io.airbyte.data.services.WorkspaceService;
+import io.airbyte.metrics.lib.MetricClient;
 import io.airbyte.validation.json.JsonValidationException;
 import java.io.IOException;
 import java.util.Collections;
@@ -122,7 +123,7 @@ class WorkspacesHandlerTest {
     organizationPersistence = mock(OrganizationPersistence.class);
     secretPersistence = mock(SecretPersistence.class);
     permissionPersistence = mock(PermissionPersistence.class);
-    secretsRepositoryWriter = new SecretsRepositoryWriter(secretPersistence);
+    secretsRepositoryWriter = new SecretsRepositoryWriter(secretPersistence, mock(MetricClient.class));
     connectionsHandler = mock(ConnectionsHandler.class);
     destinationHandler = mock(DestinationHandler.class);
     sourceHandler = mock(SourceHandler.class);
