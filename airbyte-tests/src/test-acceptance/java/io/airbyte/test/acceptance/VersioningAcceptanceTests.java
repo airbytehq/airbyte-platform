@@ -8,7 +8,7 @@ import static io.airbyte.test.acceptance.AcceptanceTestConstants.IS_ENTERPRISE_T
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import dev.failsafe.RetryPolicy;
-import io.airbyte.api.client2.AirbyteApiClient2;
+import io.airbyte.api.client2.AirbyteApiClient;
 import io.airbyte.api.client2.model.generated.CustomDestinationDefinitionCreate;
 import io.airbyte.api.client2.model.generated.CustomSourceDefinitionCreate;
 import io.airbyte.api.client2.model.generated.DestinationDefinitionCreate;
@@ -33,7 +33,7 @@ import org.junit.jupiter.params.provider.CsvSource;
 @TestInstance(Lifecycle.PER_CLASS)
 class VersioningAcceptanceTests {
 
-  private static AirbyteApiClient2 apiClient2;
+  private static AirbyteApiClient apiClient2;
   private static UUID workspaceId;
   private static final String AIRBYTE_SERVER_HOST = Optional.ofNullable(System.getenv("AIRBYTE_SERVER_HOST")).orElse("http://localhost:8001");
 
@@ -52,7 +52,7 @@ class VersioningAcceptanceTests {
       clientBuilder.addInterceptor(new AcceptanceTestAuthHeaderInterceptor());
     }
 
-    apiClient2 = new AirbyteApiClient2(String.format("%s/api", AIRBYTE_SERVER_HOST), policy, clientBuilder.build());
+    apiClient2 = new AirbyteApiClient(String.format("%s/api", AIRBYTE_SERVER_HOST), policy, clientBuilder.build());
 
     workspaceId = apiClient2.getWorkspaceApi().listWorkspaces().getWorkspaces().get(0).getWorkspaceId();
   }
