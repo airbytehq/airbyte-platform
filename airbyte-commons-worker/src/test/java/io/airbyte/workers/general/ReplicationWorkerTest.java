@@ -266,6 +266,7 @@ abstract class ReplicationWorkerTest {
 
   @AfterEach
   void tearDown() {
+    Mockito.framework().clearInlineMocks();
     MDC.clear();
   }
 

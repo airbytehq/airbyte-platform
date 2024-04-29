@@ -48,8 +48,10 @@ import io.airbyte.workload.api.client.generated.WorkloadApi;
 import java.nio.file.Path;
 import java.util.Optional;
 import java.util.UUID;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.Mockito;
 
 class ReplicationWorkerHelperTest {
 
@@ -92,6 +94,11 @@ class ReplicationWorkerHelperTest {
         Optional.empty(),
         airbyteApiClient,
         streamStatusCompletionTracker));
+  }
+
+  @AfterEach
+  void tearDown() {
+    Mockito.framework().clearInlineMocks();
   }
 
   @Test
