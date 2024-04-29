@@ -597,7 +597,8 @@ class DestinationDefinitionsHandlerTest {
         .resourceRequirements(new io.airbyte.api.model.generated.ActorDefinitionResourceRequirements()
             ._default(new io.airbyte.api.model.generated.ResourceRequirements()
                 .cpuRequest(newDestinationDefinition.getResourceRequirements().getDefault().getCpuRequest()))
-            .jobSpecific(Collections.emptyList()));
+            .jobSpecific(Collections.emptyList()))
+        .supportRefreshes(false);
 
     final DestinationDefinitionRead actualRead = destinationDefinitionsHandler.createCustomDestinationDefinition(customCreate);
 
@@ -609,7 +610,8 @@ class DestinationDefinitionsHandlerTest {
         newDestinationDefinition
             .withCustom(true)
             .withDefaultVersionId(null)
-            .withIconUrl(null),
+            .withIconUrl(null)
+            .withSupportRefreshes(false),
         destinationDefinitionVersion,
         workspaceId,
         ScopeType.WORKSPACE);
@@ -663,7 +665,8 @@ class DestinationDefinitionsHandlerTest {
         .resourceRequirements(new io.airbyte.api.model.generated.ActorDefinitionResourceRequirements()
             ._default(new io.airbyte.api.model.generated.ResourceRequirements()
                 .cpuRequest(newDestinationDefinition.getResourceRequirements().getDefault().getCpuRequest()))
-            .jobSpecific(Collections.emptyList()));
+            .jobSpecific(Collections.emptyList()))
+        .supportRefreshes(false);
 
     final DestinationDefinitionRead actualRead =
         destinationDefinitionsHandler.createCustomDestinationDefinition(customCreateForWorkspace);
@@ -676,7 +679,8 @@ class DestinationDefinitionsHandlerTest {
         newDestinationDefinition
             .withCustom(true)
             .withDefaultVersionId(null)
-            .withIconUrl(null),
+            .withIconUrl(null)
+            .withSupportRefreshes(false),
         destinationDefinitionVersion,
         workspaceId,
         ScopeType.WORKSPACE);

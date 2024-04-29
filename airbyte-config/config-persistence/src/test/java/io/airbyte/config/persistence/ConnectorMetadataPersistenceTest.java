@@ -587,7 +587,8 @@ class ConnectorMetadataPersistenceTest extends BaseConfigDatabaseTest {
     return new StandardDestinationDefinition()
         .withName("source-def-" + id)
         .withDestinationDefinitionId(id)
-        .withTombstone(false);
+        .withTombstone(false)
+        .withSupportRefreshes(false);
   }
 
   private static SourceConnection createBaseSourceActor(final UUID actorDefinitionId) {

@@ -22,6 +22,7 @@ export const mockDestinationDefinition: DestinationDefinitionRead = {
     normalizationTag: "0.2.25",
     normalizationIntegrationType: "postgres",
   },
+  supportRefreshes: false,
 };
 
 export const mockDestinationDefinitionVersion: ActorDefinitionVersionRead = {

@@ -66,7 +66,8 @@ public class ConnectorRegistryConverters {
         .withTombstone(def.getTombstone())
         .withPublic(def.getPublic())
         .withCustom(def.getCustom())
-        .withResourceRequirements(def.getResourceRequirements());
+        .withResourceRequirements(def.getResourceRequirements())
+        .withSupportRefreshes(def.getSupportsRefreshes());
   }
 
   /**

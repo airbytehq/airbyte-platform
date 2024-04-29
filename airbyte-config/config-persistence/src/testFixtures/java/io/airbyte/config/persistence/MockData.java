@@ -504,7 +504,8 @@ public class MockData {
         .withTombstone(false)
         .withPublic(true)
         .withCustom(false)
-        .withResourceRequirements(new ActorDefinitionResourceRequirements().withDefault(new ResourceRequirements().withCpuRequest("2")));
+        .withResourceRequirements(new ActorDefinitionResourceRequirements().withDefault(new ResourceRequirements().withCpuRequest("2")))
+        .withSupportRefreshes(false);
   }
 
   public static StandardDestinationDefinition grantableDestinationDefinition1() {
@@ -515,7 +516,8 @@ public class MockData {
         .withIcon("icon-4")
         .withTombstone(false)
         .withPublic(false)
-        .withCustom(false);
+        .withCustom(false)
+        .withSupportRefreshes(false);
   }
 
   public static StandardDestinationDefinition grantableDestinationDefinition2() {
@@ -526,7 +528,8 @@ public class MockData {
         .withIcon("icon-3")
         .withTombstone(false)
         .withPublic(false)
-        .withCustom(false);
+        .withCustom(false)
+        .withSupportRefreshes(false);
   }
 
   public static StandardDestinationDefinition customDestinationDefinition() {
@@ -537,7 +540,8 @@ public class MockData {
         .withIcon("icon-4")
         .withTombstone(false)
         .withPublic(false)
-        .withCustom(true);
+        .withCustom(true)
+        .withSupportRefreshes(false);
   }
 
   public static List<StandardDestinationDefinition> standardDestinationDefinitions() {
