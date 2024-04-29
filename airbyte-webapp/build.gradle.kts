@@ -10,6 +10,10 @@ plugins {
     alias(libs.plugins.node.gradle)
 }
 
+ext {
+    set("appBuildDir", "build/app")
+}
+
 /**
  * Utility function to parse a .gitignore file into a list of ignore pattern entries
  */
@@ -91,7 +95,7 @@ tasks.register<PnpmTask>("pnpmBuild") {
     inputs.property("cloudEnv", System.getenv("WEBAPP_BUILD_CLOUD_ENV") ?: "")
     inputs.files(allFiles, outsideWebappDependencies)
 
-    outputs.dir("build/app")
+    outputs.dir(project.ext.get("appBuildDir") as String)
 }
 
 tasks.register<PnpmTask>("test") {
@@ -206,7 +210,7 @@ tasks.register<PnpmTask>("buildStorybook") {
 tasks.register<Copy>("copyBuildOutput") {
     dependsOn(tasks.named("pnpmBuild"))
 
-    from("${project.projectDir}/build/app")
+    from("${project.projectDir}/${project.ext.get("appBuildDir")}")
     into("build/airbyte/docker/bin/build")
 }
 
@@ -230,7 +234,7 @@ tasks.named("build") {
 }
 
 tasks.named("dockerCopyDistribution") {
-        dependsOn(tasks.named("copyNginx"), tasks.named("copyBuildOutput"))
+    dependsOn(tasks.named("copyNginx"), tasks.named("copyBuildOutput"))
 
 }
 
