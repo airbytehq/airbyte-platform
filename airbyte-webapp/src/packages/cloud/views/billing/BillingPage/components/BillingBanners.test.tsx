@@ -46,7 +46,6 @@ function mockWorkspace(
 ) {
   mocked(useGetCloudWorkspace).mockReturnValue({
     workspaceId: "123",
-    organizationId: "aa00cf13-8998-4b05-8616-3b5fcd2f4c5c",
     remainingCredits: credits,
     creditStatus,
     workspaceTrialStatus: trialStatus,
