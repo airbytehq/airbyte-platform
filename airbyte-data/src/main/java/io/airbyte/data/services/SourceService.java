@@ -66,8 +66,6 @@ public interface SourceService {
                                     final io.airbyte.config.ScopeType scopeType)
       throws IOException;
 
-  List<SourceConnection> listSourcesWithVersionIds(final List<UUID> actorDefinitionVersionIds) throws IOException;
-
   SourceConnection getSourceConnectionWithSecrets(UUID sourceId) throws JsonValidationException, ConfigNotFoundException, IOException;
 
   void writeSourceConnectionWithSecrets(final SourceConnection source,

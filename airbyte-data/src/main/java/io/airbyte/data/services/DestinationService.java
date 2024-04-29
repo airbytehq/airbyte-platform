@@ -67,8 +67,6 @@ public interface DestinationService {
                               final List<ActorDefinitionBreakingChange> breakingChangesForDefinition)
       throws IOException;
 
-  List<DestinationConnection> listDestinationsWithVersionIds(final List<UUID> actorDefinitionVersionIds) throws IOException;
-
   List<DestinationConnection> listDestinationsWithIds(final List<UUID> destinationIds) throws IOException;
 
   DestinationConnection getDestinationConnectionWithSecrets(UUID destinationId) throws JsonValidationException, ConfigNotFoundException, IOException;

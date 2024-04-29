@@ -423,25 +423,6 @@ public class SourceServiceJooqImpl implements SourceService {
     actorDefinitionVersionUpdater.updateSourceDefaultVersion(sourceDefinition, defaultVersion, List.of());
   }
 
-  /**
-   * Returns all active sources whose default_version_id is in a given list of version IDs.
-   *
-   * @param actorDefinitionVersionIds - list of actor definition version ids
-   * @return list of SourceConnections
-   * @throws IOException - you never know when you IO
-   */
-  @Override
-  public List<SourceConnection> listSourcesWithVersionIds(
-                                                          final List<UUID> actorDefinitionVersionIds)
-      throws IOException {
-    final Result<Record> result = database.query(ctx -> ctx.select(asterisk())
-        .from(ACTOR)
-        .where(ACTOR.ACTOR_TYPE.eq(ActorType.source))
-        .and(ACTOR.DEFAULT_VERSION_ID.in(actorDefinitionVersionIds))
-        .andNot(ACTOR.TOMBSTONE).fetch());
-    return result.stream().map(DbConverter::buildSourceConnection).toList();
-  }
-
   @Override
   public List<SourceConnection> listSourcesWithIds(final List<UUID> sourceIds) throws IOException {
     final Result<Record> result = database.query(ctx -> ctx.select(asterisk())

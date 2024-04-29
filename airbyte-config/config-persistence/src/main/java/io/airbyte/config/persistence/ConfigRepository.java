@@ -976,30 +976,6 @@ public class ConfigRepository {
   }
 
   /**
-   * Returns all active sources whose default_version_id is in a given list of version IDs.
-   *
-   * @param actorDefinitionVersionIds - list of actor definition version ids
-   * @return list of SourceConnections
-   * @throws IOException - you never know when you IO
-   */
-  @Deprecated
-  public List<SourceConnection> listSourcesWithVersionIds(final List<UUID> actorDefinitionVersionIds) throws IOException {
-    return sourceService.listSourcesWithVersionIds(actorDefinitionVersionIds);
-  }
-
-  /**
-   * Returns all active destinations whose default_version_id is in a given list of version IDs.
-   *
-   * @param actorDefinitionVersionIds - list of actor definition version ids
-   * @return list of DestinationConnections
-   * @throws IOException - you never know when you IO
-   */
-  @Deprecated
-  public List<DestinationConnection> listDestinationsWithVersionIds(final List<UUID> actorDefinitionVersionIds) throws IOException {
-    return destinationService.listDestinationsWithVersionIds(actorDefinitionVersionIds);
-  }
-
-  /**
    * Returns all active destinations using a definition.
    *
    * @param definitionId - id for the definition

@@ -434,25 +434,6 @@ public class DestinationServiceJooqImpl implements DestinationService {
     actorDefinitionVersionUpdater.updateDestinationDefaultVersion(destinationDefinition, actorDefinitionVersion, breakingChangesForDefinition);
   }
 
-  /**
-   * Returns all active destinations whose default_version_id is in a given list of version IDs.
-   *
-   * @param actorDefinitionVersionIds - list of actor definition version ids
-   * @return list of DestinationConnections
-   * @throws IOException - you never know when you IO
-   */
-  @Override
-  public List<DestinationConnection> listDestinationsWithVersionIds(
-                                                                    final List<UUID> actorDefinitionVersionIds)
-      throws IOException {
-    final Result<Record> result = database.query(ctx -> ctx.select(asterisk())
-        .from(ACTOR)
-        .where(ACTOR.ACTOR_TYPE.eq(ActorType.destination))
-        .and(ACTOR.DEFAULT_VERSION_ID.in(actorDefinitionVersionIds))
-        .andNot(ACTOR.TOMBSTONE).fetch());
-    return result.stream().map(DbConverter::buildDestinationConnection).toList();
-  }
-
   @Override
   public List<DestinationConnection> listDestinationsWithIds(
                                                              final List<UUID> destinationIds)
