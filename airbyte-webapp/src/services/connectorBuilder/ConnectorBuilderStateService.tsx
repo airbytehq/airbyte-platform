@@ -122,6 +122,8 @@ export interface TestReadContext {
     setSliceLimit: (newSliceLimit: number) => void;
     defaultLimits: TestReadLimits;
   };
+  testState: string;
+  setTestState: (newState: string) => void;
   schemaWarnings: {
     schemaDifferences: boolean;
     incompatibleSchemaErrors: string[] | undefined;
@@ -710,6 +712,7 @@ export const ConnectorBuilderTestReadProvider: React.FC<React.PropsWithChildren<
   const [pageLimit, setPageLimit] = useState(DEFAULT_PAGE_LIMIT);
   const [sliceLimit, setSliceLimit] = useState(DEFAULT_SLICE_LIMIT);
   const [recordLimit, setRecordLimit] = useState(DEFAULT_RECORD_LIMIT);
+  const [testState, setTestState] = useState("");
 
   const testReadLimits = {
     pageLimit,
@@ -725,6 +728,9 @@ export const ConnectorBuilderTestReadProvider: React.FC<React.PropsWithChildren<
     },
   };
 
+  const testStateParsed = testState ? JSON.parse(testState) : undefined;
+  const testStateArray = testStateParsed && !Array.isArray(testStateParsed) ? [testStateParsed] : testStateParsed;
+
   const streamRead = useBuilderProjectReadStream(
     {
       builderProjectId: projectId,
@@ -733,6 +739,7 @@ export const ConnectorBuilderTestReadProvider: React.FC<React.PropsWithChildren<
       recordLimit,
       pageLimit,
       sliceLimit,
+      state: testStateArray,
       workspaceId,
       formGeneratedManifest: mode === "ui",
     },
@@ -749,6 +756,8 @@ export const ConnectorBuilderTestReadProvider: React.FC<React.PropsWithChildren<
     streamRead,
     testReadLimits,
     schemaWarnings,
+    testState,
+    setTestState,
   };
 
   return <ConnectorBuilderTestReadContext.Provider value={ctx}>{children}</ConnectorBuilderTestReadContext.Provider>;

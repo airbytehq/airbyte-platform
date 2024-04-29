@@ -1,4 +1,5 @@
 import classNames from "classnames";
+import { FormattedMessage } from "react-intl";
 
 import { Paginator } from "components/ui/Paginator";
 import { Text } from "components/ui/Text";
@@ -22,6 +23,7 @@ export const ResultDisplay: React.FC<ResultDisplayProps> = ({ slices, className,
   const slice = slices[selectedSlice];
   const numPages = slice.pages.length;
   const page = slice.pages[selectedPage];
+  const state = slice.state;
 
   return (
     <div className={classNames(className, styles.container)}>
@@ -33,10 +35,12 @@ export const ResultDisplay: React.FC<ResultDisplayProps> = ({ slices, className,
           onSelect={setSelectedSlice}
         />
       )}
-      <PageDisplay className={styles.pageDisplay} page={page} inferredSchema={inferredSchema} />
+      <PageDisplay className={styles.pageDisplay} page={page} inferredSchema={inferredSchema} state={state} />
       {slice.pages.length > 1 && (
         <div className={styles.paginator} data-testid="test-pages">
-          <Text className={styles.pageLabel}>Page:</Text>
+          <Text className={styles.pageLabel}>
+            <FormattedMessage id="connectorBuilder.pageLabel" />
+          </Text>
           <Paginator numPages={numPages} onPageChange={setSelectedPage} selectedPage={selectedPage} />
         </div>
       )}

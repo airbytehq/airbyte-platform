@@ -5,6 +5,7 @@ import * as yup from "yup";
 
 import { ControlLabels } from "components/LabeledControl";
 import { Button } from "components/ui/Button";
+import { CodeEditor } from "components/ui/CodeEditor";
 import { FlexContainer, FlexItem } from "components/ui/Flex";
 import { Input } from "components/ui/Input";
 import { Modal, ModalBody, ModalFooter } from "components/ui/Modal";
@@ -12,7 +13,8 @@ import { Tooltip } from "components/ui/Tooltip";
 
 import { TestReadContext, useConnectorBuilderTestRead } from "services/connectorBuilder/ConnectorBuilderStateService";
 
-import styles from "./TestReadLimits.module.scss";
+import styles from "./AdvancedTestSettings.module.scss";
+import { jsonString } from "../types";
 
 const MAX_RECORD_LIMIT = 5000;
 const MAX_PAGE_LIMIT = 20;
@@ -27,16 +29,19 @@ const testReadLimitsValidation = yup.object({
   recordLimit: numericCountField.label("Record limit").max(MAX_RECORD_LIMIT),
   pageLimit: numericCountField.label("Page limit").max(MAX_PAGE_LIMIT),
   sliceLimit: numericCountField.label("Partition limit").max(MAX_SLICE_LIMIT),
+  testState: jsonString,
 });
 
-interface TestReadLimitsProps {
+interface AdvancedTestSettingsProps {
   isOpen: boolean;
   setIsOpen: (open: boolean) => void;
 }
 
-export const TestReadLimits: React.FC<TestReadLimitsProps> = ({ isOpen, setIsOpen }) => {
+export const AdvancedTestSettings: React.FC<AdvancedTestSettingsProps> = ({ isOpen, setIsOpen }) => {
   const {
     testReadLimits: { recordLimit, setRecordLimit, pageLimit, setPageLimit, sliceLimit, setSliceLimit, defaultLimits },
+    testState,
+    setTestState,
     streamRead: { isFetching },
   } = useConnectorBuilderTestRead();
 
@@ -58,7 +63,7 @@ export const TestReadLimits: React.FC<TestReadLimitsProps> = ({ isOpen, setIsOpe
         <FormattedMessage id="connectorBuilder.testReadSettings.button" />
       </Tooltip>
       {isOpen && (
-        <TestReadLimitsModal
+        <AdvancedTestSettingsModal
           defaultLimits={defaultLimits}
           recordLimit={recordLimit}
           setRecordLimit={setRecordLimit}
@@ -66,6 +71,8 @@ export const TestReadLimits: React.FC<TestReadLimitsProps> = ({ isOpen, setIsOpe
           setPageLimit={setPageLimit}
           sliceLimit={sliceLimit}
           setSliceLimit={setSliceLimit}
+          testState={testState}
+          setTestState={setTestState}
           setIsOpen={setIsOpen}
         />
       )}
@@ -73,7 +80,11 @@ export const TestReadLimits: React.FC<TestReadLimitsProps> = ({ isOpen, setIsOpe
   );
 };
 
-const TestReadLimitsModal: React.FC<Pick<TestReadLimitsProps, "setIsOpen"> & TestReadContext["testReadLimits"]> = ({
+const AdvancedTestSettingsModal: React.FC<
+  Pick<AdvancedTestSettingsProps, "setIsOpen"> &
+    TestReadContext["testReadLimits"] &
+    Pick<TestReadContext, "testState" | "setTestState">
+> = ({
   defaultLimits,
   recordLimit,
   setRecordLimit,
@@ -81,18 +92,23 @@ const TestReadLimitsModal: React.FC<Pick<TestReadLimitsProps, "setIsOpen"> & Tes
   setPageLimit,
   sliceLimit,
   setSliceLimit,
+  testState,
+  setTestState,
   setIsOpen,
 }) => {
   const {
     register,
     handleSubmit,
     reset,
-    formState: { isDirty, errors },
+    formState: { errors, isValid },
+    watch,
+    setValue,
   } = useForm({
     defaultValues: {
       recordLimit,
       pageLimit,
       sliceLimit,
+      testState,
     },
     resolver: yupResolver(testReadLimitsValidation),
   });
@@ -100,7 +116,7 @@ const TestReadLimitsModal: React.FC<Pick<TestReadLimitsProps, "setIsOpen"> & Tes
 
   return (
     <Modal
-      size="sm"
+      size="md"
       onCancel={() => setIsOpen(false)}
       title={formatMessage({ id: "connectorBuilder.testReadSettings.modalTitle" })}
     >
@@ -109,37 +125,52 @@ const TestReadLimitsModal: React.FC<Pick<TestReadLimitsProps, "setIsOpen"> & Tes
           setRecordLimit(data.recordLimit);
           setSliceLimit(data.sliceLimit);
           setPageLimit(data.pageLimit);
+          setTestState(data.testState);
           setIsOpen(false);
         })}
       >
-        <ModalBody>
-          <div>
-            <ControlLabels
-              label={formatMessage({ id: "connectorBuilder.testReadSettings.recordLimit" })}
-              error={Boolean(errors.recordLimit)}
-              message={errors.recordLimit?.message}
-              className={styles.input}
-            >
-              {/* Adding step="50" would make this input's arrow buttons useful, but the browser validation is a bad UX */}
-              <Input {...register("recordLimit")} type="number" />
-            </ControlLabels>
-            <ControlLabels
-              label={formatMessage({ id: "connectorBuilder.testReadSettings.pageLimit" })}
-              error={Boolean(errors.pageLimit)}
-              message={errors.pageLimit?.message}
-              className={styles.input}
-            >
-              <Input {...register("pageLimit")} type="number" />
-            </ControlLabels>
-            <ControlLabels
-              label={formatMessage({ id: "connectorBuilder.testReadSettings.sliceLimit" })}
-              error={Boolean(errors.sliceLimit)}
-              message={errors.sliceLimit?.message}
-              className={styles.input}
-            >
-              <Input {...register("sliceLimit")} type="number" />
-            </ControlLabels>
-          </div>
+        <ModalBody className={styles.body}>
+          <ControlLabels
+            label={formatMessage({ id: "connectorBuilder.testReadSettings.recordLimit" })}
+            error={Boolean(errors.recordLimit)}
+            message={errors.recordLimit?.message}
+          >
+            {/* Adding step="50" would make this input's arrow buttons useful, but the browser validation is a bad UX */}
+            <Input {...register("recordLimit")} type="number" />
+          </ControlLabels>
+          <ControlLabels
+            label={formatMessage({ id: "connectorBuilder.testReadSettings.pageLimit" })}
+            error={Boolean(errors.pageLimit)}
+            message={errors.pageLimit?.message}
+          >
+            <Input {...register("pageLimit")} type="number" />
+          </ControlLabels>
+          <ControlLabels
+            label={formatMessage({ id: "connectorBuilder.testReadSettings.sliceLimit" })}
+            error={Boolean(errors.sliceLimit)}
+            message={errors.sliceLimit?.message}
+          >
+            <Input {...register("sliceLimit")} type="number" />
+          </ControlLabels>
+          <ControlLabels
+            label={formatMessage({ id: "connectorBuilder.testReadSettings.testState" })}
+            error={Boolean(errors.testState)}
+            message={errors.testState ? formatMessage({ id: errors.testState.message }) : undefined}
+            className={styles.stateEditorContainer}
+          >
+            <CodeEditor
+              value={watch("testState")}
+              language="json"
+              automaticLayout
+              onChange={(val: string | undefined) => {
+                setValue("testState", val ?? "", {
+                  shouldValidate: true,
+                  shouldDirty: true,
+                  shouldTouch: true,
+                });
+              }}
+            />
+          </ControlLabels>
         </ModalBody>
         <ModalFooter>
           <FlexContainer className={styles.footer}>
@@ -151,6 +182,7 @@ const TestReadLimitsModal: React.FC<Pick<TestReadLimitsProps, "setIsOpen"> & Tes
                   setRecordLimit(defaultLimits.recordLimit);
                   setSliceLimit(defaultLimits.sliceLimit);
                   setPageLimit(defaultLimits.pageLimit);
+                  setTestState("");
                   reset({ ...defaultLimits });
                 }}
               >
@@ -167,7 +199,7 @@ const TestReadLimitsModal: React.FC<Pick<TestReadLimitsProps, "setIsOpen"> & Tes
             >
               <FormattedMessage id="form.cancel" />
             </Button>
-            <Button type="submit" disabled={!isDirty}>
+            <Button type="submit" disabled={!isValid}>
               <FormattedMessage id="form.saveChanges" />
             </Button>
           </FlexContainer>

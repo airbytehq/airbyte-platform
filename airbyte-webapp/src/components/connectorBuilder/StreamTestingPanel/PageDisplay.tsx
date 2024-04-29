@@ -9,12 +9,16 @@ import { Text } from "components/ui/Text";
 import { InfoTooltip, Tooltip } from "components/ui/Tooltip";
 
 import {
+  AirbyteStateMessage,
   StreamReadInferredSchema,
   StreamReadSlicesItemPagesItem,
   StreamReadSlicesItemPagesItemRecordsItem,
 } from "core/api/types/ConnectorBuilderClient";
 import { useLocalStorage } from "core/utils/useLocalStorage";
-import { useConnectorBuilderTestRead } from "services/connectorBuilder/ConnectorBuilderStateService";
+import {
+  useConnectorBuilderFormManagementState,
+  useConnectorBuilderTestRead,
+} from "services/connectorBuilder/ConnectorBuilderStateService";
 
 import styles from "./PageDisplay.module.scss";
 import { RecordTable } from "./RecordTable";
@@ -29,9 +33,10 @@ interface PageDisplayProps {
   page: StreamReadSlicesItemPagesItem;
   inferredSchema?: StreamReadInferredSchema;
   className?: string;
+  state?: AirbyteStateMessage[];
 }
 
-export const PageDisplay: React.FC<PageDisplayProps> = ({ page, className, inferredSchema }) => {
+export const PageDisplay: React.FC<PageDisplayProps> = ({ page, className, inferredSchema, state }) => {
   const { formatMessage } = useIntl();
 
   const mode = useBuilderWatch("mode");
@@ -40,7 +45,9 @@ export const PageDisplay: React.FC<PageDisplayProps> = ({ page, className, infer
     streamRead,
     schemaWarnings: { incompatibleSchemaErrors, schemaDifferences },
     testReadLimits: { recordLimit, pageLimit, sliceLimit },
+    setTestState,
   } = useConnectorBuilderTestRead();
+  const { setTestReadSettingsOpen } = useConnectorBuilderFormManagementState();
 
   const autoImportSchema = useAutoImportSchema(testStreamIndex);
 
@@ -103,6 +110,30 @@ export const PageDisplay: React.FC<PageDisplayProps> = ({ page, className, infer
               />
             ),
             "data-testid": "tag-tab-detected-schema",
+          },
+        ]
+      : []),
+    ...(state
+      ? [
+          {
+            key: "state",
+            title: <FormattedMessage id="connectorBuilder.stateTab" />,
+            content: (
+              <FlexContainer direction="column">
+                <Pre>{formatJson(state, false)}</Pre>
+                <Button
+                  className={styles.importStateButton}
+                  type="button"
+                  variant="secondary"
+                  onClick={() => {
+                    setTestState(formatJson(state, false));
+                    setTestReadSettingsOpen(true);
+                  }}
+                >
+                  <FormattedMessage id="connectorBuilder.importState" />
+                </Button>
+              </FlexContainer>
+            ),
           },
         ]
       : []),

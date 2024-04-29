@@ -514,7 +514,7 @@ const maybeYamlSchema = (schema: yup.BaseSchema) => {
   );
 };
 
-const jsonString = yup.string().test({
+export const jsonString = yup.string().test({
   test: (val: string | undefined) => {
     if (!val) {
       return true;
