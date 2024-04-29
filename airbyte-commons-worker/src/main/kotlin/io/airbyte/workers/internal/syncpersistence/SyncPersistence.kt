@@ -268,7 +268,7 @@ class SyncPersistenceImpl
       // This design favoring accuracy of committed data counters over freshness of emitted data counters.
       if (isReceivingStats && stateToFlush?.isEmpty() == false) {
         // TODO figure out a way to remove the double-bangs
-        statsToPersist = buildSaveStatsRequest(syncStatsTracker, jobId, attemptNumber)
+        statsToPersist = buildSaveStatsRequest(syncStatsTracker, jobId, attemptNumber, connectionId)
       }
     }
 
@@ -363,6 +363,7 @@ private fun buildSaveStatsRequest(
   syncStatsTracker: SyncStatsTracker,
   jobId: Long,
   attemptNumber: Int,
+  connectionId: UUID,
 ): SaveStatsRequestBody {
   val totalSyncStats = syncStatsTracker.getTotalStats(false)
   val streamSyncStats = syncStatsTracker.getPerStreamStats(false)
@@ -371,6 +372,7 @@ private fun buildSaveStatsRequest(
     .jobId(jobId)
     .attemptNumber(attemptNumber)
     .stats(totalSyncStats.toAttemptStats())
+    .connectionId(connectionId)
     .streamStats(
       streamSyncStats.map {
         AttemptStreamStats()

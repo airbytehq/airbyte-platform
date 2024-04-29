@@ -10644,6 +10644,8 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/AttemptStreamStats"
+        connectionId:
+          $ref: "#/components/schemas/ConnectionId"
     AttemptSyncConfig:
       type: object
       required:
