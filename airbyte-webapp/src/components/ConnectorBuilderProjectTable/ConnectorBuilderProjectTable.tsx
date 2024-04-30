@@ -233,7 +233,6 @@ export const ConnectorBuilderProjectTable = ({
                       type="button"
                       variant="clear"
                       disabled={Boolean(props.row.original.sourceDefinitionId)}
-                      data-testid={`delete-project-button_${props.row.original.name}`}
                       icon="trash"
                       onClick={() => {
                         unregisterNotificationById(NOTIFICATION_ID);

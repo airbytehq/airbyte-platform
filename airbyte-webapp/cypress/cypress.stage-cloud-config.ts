@@ -6,8 +6,6 @@ import baseConfig from "./cypress.cloud-config";
 export default defineConfig(
   merge({}, baseConfig, {
     projectId: "8qdqa1",
-    viewportHeight: 800,
-    viewportWidth: 1280,
     e2e: {
       baseUrl: "https://stage-cloud.airbyte.com",
       env: {
