@@ -10,6 +10,7 @@ import { Button } from "components/ui/Button";
 import { DropdownMenu, DropdownMenuOptionType } from "components/ui/DropdownMenu";
 import { Text } from "components/ui/Text";
 
+import { ConnectorIds } from "area/connector/utils";
 import { DestinationSyncMode, SyncMode } from "core/api/types/AirbyteClient";
 import { useConfirmationModalService } from "hooks/services/ConfirmationModal";
 import { useConnectionFormService } from "hooks/services/ConnectionForm/ConnectionFormService";
@@ -27,13 +28,22 @@ interface StreamActionsMenuProps {
 export const StreamActionsMenu: React.FC<StreamActionsMenuProps> = ({ streamState }) => {
   const { formatMessage } = useIntl();
   const navigate = useNavigate();
-  const { syncStarting, jobSyncRunning, resetStarting, jobResetRunning, resetStreams, refreshStreams } =
-    useConnectionSyncContext();
+  const { mode, connection } = useConnectionFormService();
+  const {
+    syncStarting,
+    jobSyncRunning,
+    resetStarting,
+    jobResetRunning,
+    refreshStarting,
+    jobRefreshRunning,
+    resetStreams,
+    refreshStreams,
+  } = useConnectionSyncContext();
   const newRefreshTypes = useExperiment("platform.activate-refreshes", false);
-  const destinationSupportsTruncateRefreshes = false; // for local testing.  this will be flagged on _only_ for a dev destination starting later in q1b.
+  const destinationSupportsTruncateRefreshes =
+    connection.destination.destinationDefinitionId === ConnectorIds.Destinations.E2ETesting; // this is the only destination supporting this, metadata support for this is forthcoming!
   const destinationSupportsMergeRefreshes = false; // for local testing.  this will be flagged on _only_ for a dev destination starting later in q1b.
   const { openModal } = useModalService();
-  const { mode, connection } = useConnectionFormService();
   const { openConfirmationModal, closeConfirmationModal } = useConfirmationModalService();
 
   const catalogStream = connection.syncCatalog.streams.find(
@@ -41,6 +51,15 @@ export const StreamActionsMenu: React.FC<StreamActionsMenuProps> = ({ streamStat
       catalogStream.stream?.name === streamState.streamName &&
       catalogStream.stream?.namespace === streamState.streamNamespace
   );
+
+  const disableSyncActions =
+    syncStarting ||
+    jobSyncRunning ||
+    resetStarting ||
+    jobResetRunning ||
+    refreshStarting ||
+    jobRefreshRunning ||
+    mode === "readonly";
 
   /**
    * In order to refresh a stream, both the destination AND the sync mode must support one of the refresh modes
@@ -83,7 +102,7 @@ export const StreamActionsMenu: React.FC<StreamActionsMenuProps> = ({ streamStat
           {
             displayName: formatMessage({ id: "connection.stream.actions.refreshStream" }),
             value: "refreshStream",
-            disabled: syncStarting || jobSyncRunning || resetStarting || jobResetRunning || mode === "readonly",
+            disabled: disableSyncActions,
           },
         ]
       : []),

@@ -32,6 +32,7 @@ interface ConnectionSyncContext {
   resetStreams: (streams?: ConnectionStream[]) => Promise<void>;
   resetStarting: boolean;
   jobResetRunning: boolean;
+  jobRefreshRunning: boolean;
 }
 
 export const jobStatusesIndicatingFinishedExecution: string[] = [
@@ -94,10 +95,8 @@ const useConnectionSyncContextInit = (connection: WebBackendConnectionRead): Con
       (mostRecentJob?.status === JobStatus.running || mostRecentJob?.status === JobStatus.incomplete),
     [mostRecentJob?.configType, mostRecentJob?.status]
   );
-  const jobResetRunning = useMemo(
-    () => mostRecentJob?.status === "running" && mostRecentJob.configType === "reset_connection",
-    [mostRecentJob?.configType, mostRecentJob?.status]
-  );
+  const jobResetRunning = mostRecentJob?.status === "running" && mostRecentJob.configType === "reset_connection";
+  const jobRefreshRunning = mostRecentJob?.status === "running" && mostRecentJob.configType === "refresh";
 
   return {
     syncConnection,
@@ -108,6 +107,7 @@ const useConnectionSyncContextInit = (connection: WebBackendConnectionRead): Con
     cancelStarting,
     refreshStreams,
     refreshStarting,
+    jobRefreshRunning,
     resetStreams,
     resetStarting,
     jobResetRunning,

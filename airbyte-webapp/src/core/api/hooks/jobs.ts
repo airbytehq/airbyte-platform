@@ -91,7 +91,7 @@ export const useListJobsForConnectionStatus = (connectionId: string) => {
       listJobsFor(
         {
           configId: connectionId,
-          configTypes: ["sync", "reset_connection"],
+          configTypes: ["sync", "reset_connection", "refresh"],
           pagination: {
             // This is an arbitrary number. We have to look back at several jobs to determine the current status of the connection. Just knowing whether it's running or not is not sufficient, we want to know the status of the last completed job as well.
             pageSize: 3,

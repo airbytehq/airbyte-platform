@@ -29,8 +29,17 @@ export const ConnectionHeaderControls: React.FC = () => {
   const connectionStatus = useConnectionStatus(connection.connectionId ?? "");
   const isReadOnly = mode === "readonly";
 
-  const { syncStarting, cancelStarting, cancelJob, syncConnection, connectionEnabled, resetStarting, jobResetRunning } =
-    useConnectionSyncContext();
+  const {
+    syncStarting,
+    cancelStarting,
+    cancelJob,
+    syncConnection,
+    connectionEnabled,
+    resetStarting,
+    refreshStarting,
+    jobResetRunning,
+    jobRefreshRunning,
+  } = useConnectionSyncContext();
 
   const onScheduleBtnClick = () => {
     navigate(`${ConnectionRoutePaths.Settings}`, {
@@ -41,7 +50,7 @@ export const ConnectionHeaderControls: React.FC = () => {
   const onChangeStatus = async (checked: boolean) =>
     await updateConnectionStatus(checked ? ConnectionStatus.active : ConnectionStatus.inactive);
 
-  const isDisabled = isReadOnly || syncStarting || cancelStarting || resetStarting;
+  const isDisabled = isReadOnly || syncStarting || cancelStarting || resetStarting || refreshStarting;
   const isStartSyncBtnDisabled = isDisabled || !connectionEnabled;
   const isCancelBtnDisabled = isDisabled || connectionUpdating;
   const isSwitchDisabled = isDisabled || hasBreakingSchemaChange;
@@ -87,7 +96,13 @@ export const ConnectionHeaderControls: React.FC = () => {
         >
           <Text size="md" color="red" bold>
             <FormattedMessage
-              id={resetStarting || jobResetRunning ? "connection.cancelDataClear" : "connection.cancelSync"}
+              id={
+                resetStarting || jobResetRunning
+                  ? "connection.cancelDataClear"
+                  : jobRefreshRunning || refreshStarting
+                  ? "connection.cancelRefresh"
+                  : "connection.cancelSync"
+              }
             />
           </Text>
         </Button>
