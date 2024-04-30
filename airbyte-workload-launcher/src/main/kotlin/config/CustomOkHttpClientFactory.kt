@@ -30,7 +30,8 @@ class CustomOkHttpClientFactory(
       connectionPool(ConnectionPool(maxIdleConnections.toInt(), keepAliveDuration.toLong(), TimeUnit.SECONDS))
       connectTimeout(connectTimeout.toLong(), TimeUnit.SECONDS)
       readTimeout(readTimeout.toLong(), TimeUnit.SECONDS)
-      retryOnConnectionFailure(false)
+      // Retry on Connectivity issues (Unreachable IP/Proxy, Stale Pool Connection)
+      retryOnConnectionFailure(true)
       writeTimeout(writeTimeout.toLong(), TimeUnit.SECONDS)
     }
   }
