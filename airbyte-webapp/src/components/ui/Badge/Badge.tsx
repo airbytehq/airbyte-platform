@@ -4,7 +4,7 @@ import styles from "./Badge.module.scss";
 
 interface BadgeProps {
   className?: string;
-  variant: "blue" | "grey" | "green";
+  variant: "blue" | "grey" | "green" | "darkBlue" | "lightBlue";
 }
 
 export const Badge: React.FC<React.PropsWithChildren<BadgeProps>> = ({ children, className, variant = "grey" }) => {
@@ -14,6 +14,7 @@ export const Badge: React.FC<React.PropsWithChildren<BadgeProps>> = ({ children,
         [styles["badge--blue"]]: variant === "blue",
         [styles["badge--grey"]]: variant === "grey",
         [styles["badge--green"]]: variant === "green",
+        [styles["badge--darkBlue"]]: variant === "darkBlue",
       })}
     >
       {children}

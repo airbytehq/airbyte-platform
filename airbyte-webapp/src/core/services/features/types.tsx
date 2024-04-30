@@ -16,6 +16,7 @@ export enum FeatureItem {
   AllowSyncSubOneHourCronExpressions = "ALLOW_SYNC_SUB_ONE_HOUR_CRON_EXPRESSIONS",
   APITokenManagement = "API_TOKEN_MANAGEMENT",
   Billing = "BILLING",
+  CloudForTeamsBranding = "CLOUD_FOR_TEAMS_BRANDING",
   ConnectionHistoryGraphs = "CONNECTION_HISTORY_GRAPHS",
   ConnectorBreakingChangeDeadlines = "CONNECTOR_BREAKING_CHANGE_DEADLINES",
   DisplayOrganizationUsers = "DISPLAY_ORGANIZATION_USERS",

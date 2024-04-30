@@ -1737,6 +1737,8 @@
   "workspace.viewing": "Viewing",
   "workspace.editing": "Editing",
 
+  "cloud.cloudForTeams": "Teams",
+
   "enterprise.enterprise": "Enterprise",
 
   "userInvitations.accept.success": "Invitation accepted successfully",
