@@ -19,7 +19,7 @@ class AirbyteApiClientTest {
     val client: OkHttpClient = mockk()
     val policy: RetryPolicy<Response> = mockk()
 
-    val airbyteApiClient = AirbyteApiClient(basePath, policy, client)
+    val airbyteApiClient = AirbyteApiClient2(basePath, policy, client)
     assertNotNull(airbyteApiClient.attemptApi)
     assertEquals(client, airbyteApiClient.attemptApi.client)
     assertEquals(policy, airbyteApiClient.attemptApi.policy)

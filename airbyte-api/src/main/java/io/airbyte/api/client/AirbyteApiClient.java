@@ -34,7 +34,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * DEPRECATED. USE {@link io.airbyte.api.client2.AirbyteApiClient}.
+ * DEPRECATED. USE {@link io.airbyte.api.client2.AirbyteApiClient2}.
  * <p>
  * This class is meant to consolidate all our API endpoints into a fluent-ish client. Currently, all
  * open API generators create a separate class per API "root-route". For example, if our API has two
@@ -47,7 +47,7 @@ import org.slf4j.LoggerFactory;
  * <p>
  * This is currently manually maintained. We could look into autogenerating it if needed.
  *
- * @deprecated Replaced by {@link io.airbyte.api.client2.AirbyteApiClient}
+ * @deprecated Replaced by {@link io.airbyte.api.client2.AirbyteApiClient2}
  */
 @Deprecated
 public class AirbyteApiClient {
@@ -196,7 +196,7 @@ public class AirbyteApiClient {
   }
 
   /**
-   * DEPRECATED: Use {@link io.airbyte.api.client2.AirbyteApiClient} instead.
+   * DEPRECATED: Use {@link io.airbyte.api.client2.AirbyteApiClient2} instead.
    * <p>
    * Default to 4 retries with a randomised 1 - 10 seconds interval between the first two retries and
    * an 10-minute wait for the last retry.
@@ -207,7 +207,7 @@ public class AirbyteApiClient {
    * @param desc short readable explanation of why this method is executed
    * @param <T> type of return type
    * @return value returned by method
-   * @deprecated replaced by {@link io.airbyte.api.client2.AirbyteApiClient}
+   * @deprecated replaced by {@link io.airbyte.api.client2.AirbyteApiClient2}
    */
   @Deprecated
   public static <T> T retryWithJitter(final Callable<T> call, final String desc) {
@@ -215,7 +215,7 @@ public class AirbyteApiClient {
   }
 
   /**
-   * DEPRECATED: Use {@link io.airbyte.api.client2.AirbyteApiClient} instead.
+   * DEPRECATED: Use {@link io.airbyte.api.client2.AirbyteApiClient2} instead.
    * <p>
    * Provides a simple retry wrapper for api calls. This retry behaviour is slightly different from
    * generally available retries libraries - the last retry is able to wait an interval inconsistent
@@ -231,7 +231,7 @@ public class AirbyteApiClient {
    * @param desc short readable explanation of why this method is executed
    * @param jitterMaxIntervalSecs upper limit of the randomised retry interval. Minimum value is 1.
    * @param finalIntervalSecs retry interval before the last retry.
-   * @deprecated replaced by {@link io.airbyte.api.client2.AirbyteApiClient}
+   * @deprecated replaced by {@link io.airbyte.api.client2.AirbyteApiClient2}
    */
   @Deprecated
   @VisibleForTesting
@@ -252,7 +252,7 @@ public class AirbyteApiClient {
   }
 
   /**
-   * DEPRECATED: Use {@link io.airbyte.api.client2.AirbyteApiClient} instead.
+   * DEPRECATED: Use {@link io.airbyte.api.client2.AirbyteApiClient2} instead.
    * <p>
    * Default to 4 retries with a randomised 1 - 10 seconds interval between the first two retries and
    * an 10-minute wait for the last retry.
@@ -262,7 +262,7 @@ public class AirbyteApiClient {
    * @param <T> type of return type
    * @return value returned by method
    * @throws Exception exception while jittering
-   * @deprecated replaced by {@link io.airbyte.api.client2.AirbyteApiClient}
+   * @deprecated replaced by {@link io.airbyte.api.client2.AirbyteApiClient2}
    */
   @Deprecated
   public static <T> T retryWithJitterThrows(final Callable<T> call, final String desc) throws Exception {
@@ -270,7 +270,7 @@ public class AirbyteApiClient {
   }
 
   /**
-   * DEPRECATED: Use {@link io.airbyte.api.client2.AirbyteApiClient} instead.
+   * DEPRECATED: Use {@link io.airbyte.api.client2.AirbyteApiClient2} instead.
    * <p>
    * Provides a simple retry wrapper for api calls. This retry behaviour is slightly different from
    * generally available retries libraries - the last retry is able to wait an interval inconsistent
@@ -284,7 +284,7 @@ public class AirbyteApiClient {
    * @param desc short readable explanation of why this method is executed
    * @param jitterMaxIntervalSecs upper limit of the randomised retry interval. Minimum value is 1.
    * @param finalIntervalSecs retry interval before the last retry.
-   * @deprecated replaced by {@link io.airbyte.api.client2.AirbyteApiClient}
+   * @deprecated replaced by {@link io.airbyte.api.client2.AirbyteApiClient2}
    */
   @VisibleForTesting
   @Deprecated

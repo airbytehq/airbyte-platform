@@ -57,7 +57,7 @@ import okhttp3.Response
 @Suppress("MemberVisibilityCanBePrivate")
 @Singleton
 @Requires(property = "airbyte.internal-api.base-path")
-class AirbyteApiClient
+class AirbyteApiClient2
   @JvmOverloads
   constructor(
     @Value("\${airbyte.internal-api.base-path}") basePath: String,
