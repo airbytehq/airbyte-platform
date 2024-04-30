@@ -53,6 +53,7 @@ import java.nio.file.Path;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 /**
@@ -224,9 +225,10 @@ public class JobConverter {
     if (failureSummary == null) {
       return null;
     }
-
     return new AttemptFailureSummary()
-        .failures(failureSummary.getFailures().stream().map(JobConverter::getFailureReason).collect(Collectors.toList()))
+        .failures(failureSummary.getFailures().stream()
+            .map(failureReason -> getFailureReason(failureReason, TimeUnit.SECONDS.toMillis(attempt.getUpdatedAtInSecond())))
+            .toList())
         .partialSuccess(failureSummary.getPartialSuccess());
   }
 
@@ -238,7 +240,7 @@ public class JobConverter {
     }
   }
 
-  private static FailureReason getFailureReason(final @Nullable io.airbyte.config.FailureReason failureReason) {
+  private static FailureReason getFailureReason(final @Nullable io.airbyte.config.FailureReason failureReason, final long defaultTimestamp) {
     if (failureReason == null) {
       return null;
     }
@@ -248,7 +250,7 @@ public class JobConverter {
         .externalMessage(failureReason.getExternalMessage())
         .internalMessage(failureReason.getInternalMessage())
         .stacktrace(failureReason.getStacktrace())
-        .timestamp(failureReason.getTimestamp())
+        .timestamp(failureReason.getTimestamp() != null ? failureReason.getTimestamp() : defaultTimestamp)
         .retryable(failureReason.getRetryable());
   }
 
@@ -268,7 +270,7 @@ public class JobConverter {
         .succeeded(metadata.isSucceeded())
         .connectorConfigurationUpdated(metadata.isConnectorConfigurationUpdated())
         .logs(getLogRead(metadata.getLogPath()))
-        .failureReason(getFailureReason(metadata.getFailureReason()));
+        .failureReason(getFailureReason(metadata.getFailureReason(), TimeUnit.SECONDS.toMillis(metadata.getEndedAt())));
   }
 
   public static AttemptNormalizationStatusRead convertAttemptNormalizationStatus(
