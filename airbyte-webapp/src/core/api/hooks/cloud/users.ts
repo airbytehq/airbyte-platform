@@ -4,8 +4,6 @@ import { useIntl } from "react-intl";
 
 import { useCurrentWorkspaceId } from "area/workspace/utils";
 import { useAuthService, useCurrentUser } from "core/services/auth";
-import { trackAction } from "core/utils/datadog";
-import { AppActionCodes } from "hooks/services/AppMonitoringService";
 import { useNotificationService } from "hooks/services/Notification";
 
 import {
@@ -15,7 +13,6 @@ import {
   webBackendListUsersByWorkspace,
   updateUser,
   webBackendRevokeUserSession,
-  createKeycloakUser,
   sendVerificationEmail,
 } from "../../generated/CloudApi";
 import { SCOPE_WORKSPACE } from "../../scopes";
@@ -167,16 +164,8 @@ export const useResendSigninLink = () => {
 };
 
 export const useCreateKeycloakUser = () => {
-  return useMutation(
-    ({
-      authUserId,
-      password,
-      getAccessToken,
-    }: CreateKeycloakUserRequestBody & { getAccessToken: () => Promise<string> }) =>
-      createKeycloakUser({ authUserId, password }, { getAccessToken }).catch(() => {
-        trackAction(AppActionCodes.KEYCLOAK_USER_CREATION_FAILURE, { authUserId });
-        console.warn("Failed to create keycloak user");
-      })
+  return useMutation((_: CreateKeycloakUserRequestBody & { getAccessToken: () => Promise<string> }) =>
+    Promise.resolve()
   );
 };
 
