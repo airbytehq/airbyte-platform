@@ -112,7 +112,7 @@ export const useInitialFormValues = (
 ): FormConnectionFormValues => {
   const workspace = useCurrentWorkspace();
   const { catalogDiff, syncCatalog, schemaChange } = connection;
-  const useSimpliedCreation = useExperiment("connection.simplifiedCreation", false);
+  const useSimpliedCreation = useExperiment("connection.simplifiedCreation", true);
 
   const defaultNonBreakingChangesPreference = NonBreakingChangesPreference.propagate_columns;
 

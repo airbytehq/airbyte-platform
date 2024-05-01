@@ -44,10 +44,12 @@ export async function render<
 
 interface TestWrapperOptions {
   features?: FeatureItem[];
+  route?: string;
 }
 export const TestWrapper: React.FC<React.PropsWithChildren<TestWrapperOptions>> = ({
   children,
   features = defaultOssFeatures,
+  route,
 }) => (
   <IntlProvider locale="en" messages={en} onError={() => null}>
     <NotificationService>
@@ -55,7 +57,7 @@ export const TestWrapper: React.FC<React.PropsWithChildren<TestWrapperOptions>> 
         <ModalServiceProvider>
           <ConfirmationModalService>
             <QueryClientProvider client={new QueryClient()}>
-              <MemoryRouter>{children}</MemoryRouter>
+              <MemoryRouter initialEntries={route ? [route] : undefined}>{children}</MemoryRouter>
             </QueryClientProvider>
           </ConfirmationModalService>
         </ModalServiceProvider>

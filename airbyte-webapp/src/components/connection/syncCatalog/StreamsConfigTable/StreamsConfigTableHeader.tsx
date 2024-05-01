@@ -52,7 +52,7 @@ export const StreamsConfigTableHeader: React.FC<StreamsConfigTableHeaderProps> =
   const { mode } = useConnectionFormService();
   const { openModal } = useModalService();
   const { setValue } = useFormContext<FormConnectionFormValues>();
-  const isSimplifiedCreation = useExperiment("connection.simplifiedCreation", false);
+  const isSimplifiedCreation = useExperiment("connection.simplifiedCreation", true);
 
   const destinationNamespaceChange = (value: DestinationNamespaceFormValues) => {
     setValue("namespaceDefinition", value.namespaceDefinition, { shouldDirty: true });

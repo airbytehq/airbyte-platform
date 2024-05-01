@@ -89,6 +89,7 @@ export const SimplfiedSchemaChangesFormField: React.FC<{ isCreating: boolean; di
                   setValue("nonBreakingChangesPreference", value, { shouldDirty: true })
                 }
                 selectedValue={field.value}
+                data-testid="nonBreakingChangesPreference"
               />
             </InputContainer>
           )}

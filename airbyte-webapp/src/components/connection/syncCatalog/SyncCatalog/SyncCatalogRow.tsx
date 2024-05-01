@@ -69,7 +69,7 @@ export const SyncCatalogRow: React.FC<SyncCatalogRowProps & { className?: string
     [streamNode, updateStreamNode]
   );
 
-  const isSimplifiedCreation = useExperiment("connection.simplifiedCreation", false);
+  const isSimplifiedCreation = useExperiment("connection.simplifiedCreation", true);
   const analyticsService = useAnalyticsService();
   const onSelectSyncMode = useCallback(
     (syncMode: SyncModeValue) => {

@@ -32,6 +32,7 @@ const mockBaseUseDiscoverSchema = {
 
 jest.mock("area/workspace/utils", () => ({
   useCurrentWorkspaceId: () => "workspace-id",
+  useCurrentWorkspaceLink: () => () => "/link/to/workspace",
 }));
 
 jest.mock("core/api", () => ({
@@ -113,7 +114,7 @@ describe("CreateConnectionForm", () => {
 
     it("should display an error for an invalid cron expression", async () => {
       const container = tlr(
-        <TestWrapper>
+        <TestWrapper route="/continued">
           <CreateConnectionForm />
         </TestWrapper>
       );
@@ -133,7 +134,7 @@ describe("CreateConnectionForm", () => {
 
     it("should allow cron expressions under one hour when feature enabled", async () => {
       const container = tlr(
-        <TestWrapper>
+        <TestWrapper route="/continued">
           <CreateConnectionForm />
         </TestWrapper>
       );
@@ -155,7 +156,7 @@ describe("CreateConnectionForm", () => {
       const featuresToInject = defaultOssFeatures.filter((f) => f !== FeatureItem.AllowSyncSubOneHourCronExpressions);
 
       const container = tlr(
-        <TestWrapper features={featuresToInject}>
+        <TestWrapper features={featuresToInject} route="/continued">
           <CreateConnectionForm />
         </TestWrapper>
       );

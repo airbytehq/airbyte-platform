@@ -23,7 +23,7 @@ export const CreateConnectionFormControls: React.FC = () => {
   const { trigger } = useFormContext<FormConnectionFormValues>();
   const { getErrorMessage } = useConnectionFormService();
   const errorMessage = getErrorMessage(isValid, errors);
-  const isSimplifiedCreation = useExperiment("connection.simplifiedCreation", false);
+  const isSimplifiedCreation = useExperiment("connection.simplifiedCreation", true);
 
   const watchedScheduleType = useWatch<FormConnectionFormValues>({ name: "scheduleType" });
   const willSyncAfterCreation = watchedScheduleType === ConnectionScheduleType.basic;

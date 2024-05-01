@@ -58,6 +58,7 @@ export const SimplifiedConnectionsSettingsCard: React.FC<SimplifiedConnectionsSe
         <span
           className={styles.advancedSettings}
           role="button"
+          data-testid="advanced-settings-button"
           tabIndex={0}
           onClick={() => setIsAdvancedOpen((isAdvancedOpen) => !isAdvancedOpen)}
           onKeyUp={(e) =>

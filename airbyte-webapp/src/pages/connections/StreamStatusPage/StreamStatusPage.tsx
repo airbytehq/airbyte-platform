@@ -10,7 +10,7 @@ import { StreamsList } from "./StreamsList";
 import { StreamsListContextProvider } from "./StreamsListContext";
 
 export const StreamStatusPage = () => {
-  const isSimplifiedCreation = useExperiment("connection.simplifiedCreation", false);
+  const isSimplifiedCreation = useExperiment("connection.simplifiedCreation", true);
   return (
     <ConnectionSyncContextProvider>
       <StreamsListContextProvider>

@@ -46,7 +46,7 @@ export const SyncCatalogCard: React.FC = () => {
     name: "syncCatalog.streams",
     control,
   });
-  const isSimplifiedCreation = useExperiment("connection.simplifiedCreation", false);
+  const isSimplifiedCreation = useExperiment("connection.simplifiedCreation", true);
 
   const watchedPrefix = useWatch<FormConnectionFormValues>({ name: "prefix", control });
   const watchedNamespaceDefinition = useWatch<FormConnectionFormValues>({ name: "namespaceDefinition", control });

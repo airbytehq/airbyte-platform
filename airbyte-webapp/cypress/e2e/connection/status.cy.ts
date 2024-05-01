@@ -56,7 +56,7 @@ describe("Status tab", () => {
   it("should initialize as pending", () => {
     cy.get<WebBackendConnectionRead>("@connection").then((connection) => {
       cy.visit(`/${RoutePaths.Connections}/${connection.connectionId}/${ConnectionRoutePaths.Status}/`);
-      cy.get(statusPage.connectionStatusText).contains("Pending").should("exist");
+      statusPage.connectionStatusShouldBe("pending");
     });
   });
 
@@ -78,7 +78,8 @@ describe("Status tab", () => {
     });
   });
 
-  it("should allow clearing data", () => {
+  // skipping for now, these controls have gone away but the logic is still a useful thing to test
+  it.skip("should allow clearing data", () => {
     cy.get<WebBackendConnectionRead>("@connection").then((connection) => {
       cy.visit(`/${RoutePaths.Connections}/${connection.connectionId}/${ConnectionRoutePaths.Status}/`);
 

@@ -15,106 +15,6 @@ exports[`ConnectionReplicationPage should render 1`] = `
           >
             <div
               class="<removed-for-snapshot-test>"
-              data-testid="configuration"
-            >
-              <button
-                class="<removed-for-snapshot-test>"
-                data-testid="configuration-card-expand-arrow"
-                type="button"
-              >
-                <div
-                  class="<removed-for-snapshot-test>"
-                >
-                  <div
-                    class="<removed-for-snapshot-test>"
-                  >
-                    <h5
-                      class="<removed-for-snapshot-test>"
-                    >
-                      Configuration
-                    </h5>
-                  </div>
-                  <div
-                    class="<removed-for-snapshot-test>"
-                    data-icon="chevron-right"
-                    data-testid="mocksvg"
-                  />
-                </div>
-                <div
-                  class="<removed-for-snapshot-test>"
-                >
-                  <div
-                    class="<removed-for-snapshot-test>"
-                  >
-                    <div>
-                      <p
-                        class="<removed-for-snapshot-test>"
-                        data-type="text"
-                      >
-                        Replication frequency
-                        :
-                      </p>
-                      <p
-                        class="<removed-for-snapshot-test>"
-                        data-type="text"
-                      >
-                        Manual
-                      </p>
-                    </div>
-                    <div>
-                      <p
-                        class="<removed-for-snapshot-test>"
-                        data-type="text"
-                      >
-                        Destination Namespace
-                        :
-                      </p>
-                      <p
-                        class="<removed-for-snapshot-test>"
-                        data-type="text"
-                      >
-                        Mirror source structure
-                      </p>
-                    </div>
-                    <div>
-                      <p
-                        class="<removed-for-snapshot-test>"
-                        data-type="text"
-                      >
-                        Destination Stream Prefix
-                        :
-                      </p>
-                      <p
-                        class="<removed-for-snapshot-test>"
-                        data-type="text"
-                      >
-                        Mirror source name
-                      </p>
-                    </div>
-                    <div>
-                      <p
-                        class="<removed-for-snapshot-test>"
-                        data-type="text"
-                      >
-                        Detect and propagate schema changes
-                        :
-                      </p>
-                      <p
-                        class="<removed-for-snapshot-test>"
-                        data-type="text"
-                      >
-                        Detect changes and manually approve
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              </button>
-              <div
-                class="<removed-for-snapshot-test>"
-              />
-            </div>
-            <div
-              class="<removed-for-snapshot-test>"
             >
               <div
                 class="<removed-for-snapshot-test>"
@@ -128,7 +28,7 @@ exports[`ConnectionReplicationPage should render 1`] = `
                     <h2
                       class="<removed-for-snapshot-test>"
                     >
-                      Activate the streams you want to sync
+                      Select streams
                     </h2>
                     <button
                       class="<removed-for-snapshot-test>"
@@ -234,7 +134,7 @@ exports[`ConnectionReplicationPage should render 1`] = `
                           class="<removed-for-snapshot-test>"
                           data-type="text"
                         >
-                          Data destination
+                          Namespace
                           <button
                             class="<removed-for-snapshot-test>"
                             type="button"

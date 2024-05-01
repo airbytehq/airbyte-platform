@@ -39,7 +39,7 @@ interface ConnectionSteps {
 }
 
 const useCalculateStepStatuses = (source: string | null, destination: string | null): ConnectionSteps | undefined => {
-  const isSimplifiedCreation = useExperiment("connection.simplifiedCreation", false);
+  const isSimplifiedCreation = useExperiment("connection.simplifiedCreation", true);
   const location = useLocation();
   const isOnContinuedSimplifiedStep = location.pathname.endsWith("/continued");
 

@@ -47,7 +47,7 @@ const CreateConnectionFormInner: React.FC = () => {
 
   const validationSchema = useConnectionValidationSchema();
 
-  const isSimplifiedCreation = useExperiment("connection.simplifiedCreation", false);
+  const isSimplifiedCreation = useExperiment("connection.simplifiedCreation", true);
 
   const onSubmit = useCallback(
     async ({ normalization, transformations, ...restFormValues }: FormConnectionFormValues) => {

@@ -56,6 +56,8 @@ export const ConnectionStatusIndicator: React.FC<ConnectionStatusIndicatorProps>
   <div
     className={classNames(styles.status, STYLE_BY_STATUS[status], { [BOX_STYLE_BY_STATUS[status]]: withBox })}
     data-loading={loading}
+    data-testid="connection-status-indicator"
+    data-status={status}
   >
     <div className={styles.icon}>{ICON_BY_STATUS[status]}</div>
     {loading && <LoadingSpinner className={styles.spinner} />}

@@ -50,7 +50,7 @@ interface JobHistoryFilterValues {
 }
 
 export const ConnectionJobHistoryPage: React.FC = () => {
-  const isSimplifiedCreation = useExperiment("connection.simplifiedCreation", false);
+  const isSimplifiedCreation = useExperiment("connection.simplifiedCreation", true);
   const { connection } = useConnectionEditService();
   useTrackPage(PageTrackingCodes.CONNECTIONS_ITEM_STATUS);
   const [filterValues, setFilterValue, setFilters] = useFilters<JobHistoryFilterValues>({

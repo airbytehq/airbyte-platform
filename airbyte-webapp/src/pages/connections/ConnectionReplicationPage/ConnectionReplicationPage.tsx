@@ -223,7 +223,7 @@ export const ConnectionReplicationPage: React.FC = () => {
     }
   }, [refreshSchema, state]);
 
-  const isSimpliedCreation = useExperiment("connection.simplifiedCreation", false);
+  const isSimpliedCreation = useExperiment("connection.simplifiedCreation", true);
 
   return (
     <FlexContainer direction="column" className={styles.content}>

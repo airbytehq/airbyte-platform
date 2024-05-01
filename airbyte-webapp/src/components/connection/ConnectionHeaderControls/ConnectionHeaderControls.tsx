@@ -114,6 +114,7 @@ export const ConnectionHeaderControls: React.FC = () => {
           loading={connectionUpdating}
           disabled={isSwitchDisabled}
           className={styles.switch}
+          testId="connection-status-switch"
         />
       </Box>
     </FlexContainer>

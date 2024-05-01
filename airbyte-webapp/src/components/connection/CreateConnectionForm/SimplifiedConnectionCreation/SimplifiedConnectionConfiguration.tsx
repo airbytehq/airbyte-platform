@@ -157,11 +157,12 @@ const FirstNav: React.FC = () => {
               // we're navigating to the next step which retains the creation form's state
               clearFormChange(CREATE_CONNECTION_FORM_ID);
             }}
+            data-testid="next-creation-page"
           >
             <FormattedMessage id="connectionForm.nextButton" />
           </Link>
         ) : (
-          <Button disabled>
+          <Button disabled data-testid="next-creation-page">
             <FormattedMessage id="connectionForm.nextButton" />
           </Button>
         )}

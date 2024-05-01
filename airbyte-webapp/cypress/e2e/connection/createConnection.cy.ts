@@ -9,7 +9,7 @@ import { openSourceConnectionsPage, goToSourcePage } from "@cy/pages/sourcePage"
 import { WebBackendConnectionRead, DestinationRead, SourceRead } from "@src/core/api/types/AirbyteClient";
 import { RoutePaths, ConnectionRoutePaths } from "@src/pages/routePaths";
 import { requestDeleteConnection, requestDeleteDestination, requestDeleteSource } from "commands/api";
-import { appendRandomString, submitButtonClick, getSubmitButton } from "commands/common";
+import { appendRandomString, submitButtonClick } from "commands/common";
 import { runDbQuery } from "commands/db/db";
 import {
   createUsersTableQuery,
@@ -30,6 +30,7 @@ import {
 
 import * as connectionConfigurationForm from "pages/connection/connectionFormPageObject";
 import * as connectionListPage from "pages/connection/connectionListPageObject";
+import * as replicationPage from "pages/connection/connectionReplicationPageObject";
 import * as newConnectionPage from "pages/connection/createConnectionPageObject";
 import { streamDetails } from "pages/connection/StreamDetailsPageObject";
 import { StreamRowPageObject } from "pages/connection/StreamRowPageObject";
@@ -246,7 +247,7 @@ describe("Connection - Create new connection", { testIsolation: false }, () => {
     const usersStreamRow = new StreamRowPageObject("public", "users");
 
     it("should have no streams checked by default", () => {
-      getSubmitButton().should("be.disabled");
+      cy.get(replicationPage.nextButtonOrLink).should("be.disabled");
       newConnectionPage.getNoStreamsSelectedError().should("exist");
 
       // filter table for an sample stream
@@ -274,7 +275,7 @@ describe("Connection - Create new connection", { testIsolation: false }, () => {
     it("should enable form submit after a stream is selected", () => {
       usersStreamRow.toggleStreamSync();
       newConnectionPage.getNoStreamsSelectedError().should("not.exist");
-      getSubmitButton().should("be.enabled");
+      cy.get(replicationPage.nextButtonOrLink).should("not.be.disabled");
     });
 
     it("should have data destination name", () => {

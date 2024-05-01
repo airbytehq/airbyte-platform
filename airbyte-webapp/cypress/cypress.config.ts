@@ -35,6 +35,13 @@ export default defineConfig({
           return db.any(query).finally(db.$pool.end);
         },
       });
+
+      on("before:browser:launch", (browser, launchOptions) => {
+        if (browser.family === "chromium" && browser.name !== "electron") {
+          launchOptions.args.push("--incognito");
+        }
+        return launchOptions;
+      });
     },
   },
   retries: {

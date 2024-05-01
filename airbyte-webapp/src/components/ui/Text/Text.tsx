@@ -34,6 +34,7 @@ export type TextProps = HTMLAttributes<TextHTMLElement> & {
   gradient?: boolean;
   align?: TextAlignment;
   italicized?: boolean;
+  "data-testid"?: string;
 };
 
 const sizes: Record<TextSize, string> = {

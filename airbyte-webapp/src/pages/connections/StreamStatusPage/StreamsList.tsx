@@ -51,7 +51,7 @@ const LastSync: React.FC<{ transitionedAt: number | undefined; showRelativeTime:
 };
 
 export const StreamsList = () => {
-  const useSimpliedCreation = useExperiment("connection.simplifiedCreation", false);
+  const useSimpliedCreation = useExperiment("connection.simplifiedCreation", true);
   const [showRelativeTime, setShowRelativeTime] = useToggle(true);
 
   const { filteredStreams } = useStreamsListContext();

@@ -12,6 +12,7 @@ import {
   selectScheduleType,
   setupDestinationNamespaceSourceFormat,
 } from "pages/connection/connectionFormPageObject";
+import { nextButtonOrLink } from "pages/connection/connectionReplicationPageObject";
 import { openCreateConnection } from "pages/destinationPage";
 
 import {
@@ -67,10 +68,13 @@ export const createTestConnection = (sourceName: string, destinationName: string
 
   cy.get("div").contains(sourceName).click();
   cy.wait("@discoverSchema", { timeout: 60000 });
+
+  cy.get(nextButtonOrLink).click();
+
   enterConnectionName("Connection name");
   selectScheduleType("Manual");
+  setupDestinationNamespaceSourceFormat(true);
 
-  setupDestinationNamespaceSourceFormat();
   submitButtonClick();
 
   cy.wait("@createConnection", { requestTimeout: 10000 });

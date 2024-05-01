@@ -113,7 +113,7 @@ export const ConnectionSettingsPage: React.FC = () => {
     return defaultValues;
   };
 
-  const isSimplifiedCreation = useExperiment("connection.simplifiedCreation", false);
+  const isSimplifiedCreation = useExperiment("connection.simplifiedCreation", true);
 
   if (isSimplifiedCreation) {
     return <SimplifiedConnectionSettingsPage />;
