@@ -719,7 +719,7 @@ public class SourceServiceJooqImpl implements SourceService {
     if (organizationId.isPresent() && featureFlagClient.boolVariation(UseRuntimeSecretPersistence.INSTANCE, new Organization(organizationId.get()))) {
       final SecretPersistenceConfig secretPersistenceConfig =
           secretPersistenceConfigService.getSecretPersistenceConfig(ScopeType.ORGANIZATION, organizationId.get());
-      partialConfig = secretsRepositoryWriter.statefulUpdateSecretsToRuntimeSecretPersistence(
+      partialConfig = secretsRepositoryWriter.statefulUpdateSecrets(
           source.getWorkspaceId(),
           previousSourceConnection,
           source.getConfiguration(),
@@ -727,12 +727,12 @@ public class SourceServiceJooqImpl implements SourceService {
           validate(source),
           new RuntimeSecretPersistence(secretPersistenceConfig));
     } else {
-      partialConfig = secretsRepositoryWriter.statefulUpdateSecretsToDefaultSecretPersistence(
+      partialConfig = secretsRepositoryWriter.statefulUpdateSecrets(
           source.getWorkspaceId(),
           previousSourceConnection,
           source.getConfiguration(),
           connectorSpecification.getConnectionSpecification(),
-          validate(source));
+          validate(source), null);
     }
     final SourceConnection partialSource = Jsons.clone(source).withConfiguration(partialConfig);
     writeSourceConnectionNoSecrets(partialSource);

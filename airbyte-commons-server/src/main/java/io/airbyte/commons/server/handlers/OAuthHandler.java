@@ -549,7 +549,7 @@ public class OAuthHandler {
         try {
           final SecretPersistenceConfig secretPersistenceConfig =
               secretPersistenceConfigService.getSecretPersistenceConfig(ScopeType.ORGANIZATION, organizationId.get());
-          secretCoordinate = secretsRepositoryWriter.storeSecretToRuntimeSecretPersistence(
+          secretCoordinate = secretsRepositoryWriter.storeSecret(
               generateOAuthSecretCoordinate(workspaceId),
               payloadString,
               new RuntimeSecretPersistence(secretPersistenceConfig));
@@ -557,9 +557,9 @@ public class OAuthHandler {
           throw new ConfigNotFoundException(e.getType(), e.getConfigId());
         }
       } else {
-        secretCoordinate = secretsRepositoryWriter.storeSecretToDefaultSecretPersistence(
+        secretCoordinate = secretsRepositoryWriter.storeSecret(
             generateOAuthSecretCoordinate(workspaceId),
-            payloadString);
+            payloadString, null);
       }
       return mapToCompleteOAuthResponse(Map.of("secretId", secretCoordinate.getFullCoordinate()));
 
@@ -726,7 +726,7 @@ public class OAuthHandler {
         final SecretPersistenceConfig secretPersistenceConfig =
             secretPersistenceConfigService.getSecretPersistenceConfig(ScopeType.ORGANIZATION, organizationId.get());
 
-        return secretsRepositoryWriter.statefulSplitSecretsToRuntimeSecretPersistence(
+        return secretsRepositoryWriter.statefulSplitSecrets(
             workspaceId,
             oauthParamConfiguration,
             connectorSpecification,
@@ -735,7 +735,7 @@ public class OAuthHandler {
         throw new ConfigNotFoundException(e.getType(), e.getConfigId());
       }
     } else {
-      return secretsRepositoryWriter.statefulSplitSecretsToDefaultSecretPersistence(workspaceId, oauthParamConfiguration, connectorSpecification);
+      return secretsRepositoryWriter.statefulSplitSecrets(workspaceId, oauthParamConfiguration, connectorSpecification, null);
     }
   }
 

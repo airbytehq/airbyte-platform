@@ -732,7 +732,7 @@ public class WorkspaceServiceJooqImpl implements WorkspaceService {
       if (organizationId != null && featureFlagClient.boolVariation(UseRuntimeSecretPersistence.INSTANCE, new Organization(organizationId))) {
         final SecretPersistenceConfig secretPersistenceConfig =
             secretPersistenceConfigService.getSecretPersistenceConfig(io.airbyte.config.ScopeType.ORGANIZATION, organizationId);
-        partialConfig = secretsRepositoryWriter.statefulUpdateSecretsToRuntimeSecretPersistence(
+        partialConfig = secretsRepositoryWriter.statefulUpdateSecrets(
             workspace.getWorkspaceId(),
             previousWebhookConfigs,
             workspace.getWebhookOperationConfigs(),
@@ -740,12 +740,12 @@ public class WorkspaceServiceJooqImpl implements WorkspaceService {
             true,
             new RuntimeSecretPersistence(secretPersistenceConfig));
       } else {
-        partialConfig = secretsRepositoryWriter.statefulUpdateSecretsToDefaultSecretPersistence(
+        partialConfig = secretsRepositoryWriter.statefulUpdateSecrets(
             workspace.getWorkspaceId(),
             previousWebhookConfigs,
             workspace.getWebhookOperationConfigs(),
             webhookConfigSchema,
-            true);
+            true, null);
       }
     }
     final StandardWorkspace partialWorkspace = Jsons.clone(workspace);

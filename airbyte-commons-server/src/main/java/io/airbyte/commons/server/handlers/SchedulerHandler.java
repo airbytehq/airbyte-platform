@@ -827,7 +827,7 @@ public class SchedulerHandler {
 
   /**
    * Wrapper around
-   * {@link SecretsRepositoryWriter#statefulSplitSecretsToDefaultSecretPersistence(JsonNode, ConnectorSpecification)}.
+   * {@link SecretsRepositoryWriter#statefulSplitEphemeralSecrets(JsonNode, ConnectorSpecification)}.
    *
    * @param workspaceId workspaceId
    * @param connectionConfiguration connectionConfiguration
@@ -848,14 +848,15 @@ public class SchedulerHandler {
       } catch (final io.airbyte.data.exceptions.ConfigNotFoundException e) {
         throw new ConfigNotFoundException(e.getType(), e.getConfigId());
       }
-      return secretsRepositoryWriter.statefulSplitSecretsToRuntimeSecretPersistence(
+      return secretsRepositoryWriter.statefulSplitEphemeralSecrets(
           connectionConfiguration,
           connectorSpecification,
           new RuntimeSecretPersistence(secretPersistenceConfig));
     } else {
-      return secretsRepositoryWriter.statefulSplitSecretsToDefaultSecretPersistence(
+      return secretsRepositoryWriter.statefulSplitEphemeralSecrets(
           connectionConfiguration,
-          connectorSpecification);
+          connectorSpecification,
+          null);
     }
   }
 

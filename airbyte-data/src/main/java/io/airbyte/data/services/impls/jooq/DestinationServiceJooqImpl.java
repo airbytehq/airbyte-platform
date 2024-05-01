@@ -715,7 +715,7 @@ public class DestinationServiceJooqImpl implements DestinationService {
     if (organizationId.isPresent() && featureFlagClient.boolVariation(UseRuntimeSecretPersistence.INSTANCE, new Organization(organizationId.get()))) {
       final SecretPersistenceConfig secretPersistenceConfig =
           secretPersistenceConfigService.getSecretPersistenceConfig(ScopeType.ORGANIZATION, organizationId.get());
-      partialConfig = secretsRepositoryWriter.statefulUpdateSecretsToRuntimeSecretPersistence(
+      partialConfig = secretsRepositoryWriter.statefulUpdateSecrets(
           destination.getWorkspaceId(),
           previousDestinationConnection,
           destination.getConfiguration(),
@@ -723,12 +723,12 @@ public class DestinationServiceJooqImpl implements DestinationService {
           validate(destination),
           new RuntimeSecretPersistence(secretPersistenceConfig));
     } else {
-      partialConfig = secretsRepositoryWriter.statefulUpdateSecretsToDefaultSecretPersistence(
+      partialConfig = secretsRepositoryWriter.statefulUpdateSecrets(
           destination.getWorkspaceId(),
           previousDestinationConnection,
           destination.getConfiguration(),
           connectorSpecification.getConnectionSpecification(),
-          validate(destination));
+          validate(destination), null);
     }
     final DestinationConnection partialSource = Jsons.clone(destination).withConfiguration(partialConfig);
     writeDestinationConnectionNoSecrets(partialSource);

@@ -408,19 +408,19 @@ public class ConnectorBuilderProjectsHandler {
                                                    final Optional<SecretPersistenceConfig> secretPersistenceConfig)
       throws JsonValidationException {
     return secretPersistenceConfig.isPresent()
-        ? secretsRepositoryWriter.statefulUpdateSecretsToRuntimeSecretPersistence(
+        ? secretsRepositoryWriter.statefulUpdateSecrets(
             workspaceId,
             existingTestingValues,
             updatedTestingValues,
             spec,
             true,
             new RuntimeSecretPersistence(secretPersistenceConfig.get()))
-        : secretsRepositoryWriter.statefulUpdateSecretsToDefaultSecretPersistence(
+        : secretsRepositoryWriter.statefulUpdateSecrets(
             workspaceId,
             existingTestingValues,
             updatedTestingValues,
             spec,
-            true);
+            true, null);
   }
 
   private Optional<SecretPersistenceConfig> getSecretPersistenceConfig(final UUID workspaceId) throws IOException, ConfigNotFoundException {
