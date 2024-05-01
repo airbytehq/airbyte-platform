@@ -7,6 +7,8 @@
         <!--Logs the timestamp and log_source/application name in the beginning of the line if it exists with a > separator, and then always the rest of the line.-->
         <Property name="simple-pattern">%d{yyyy-MM-dd HH:mm:ss}{GMT+0}%replace{ %X{log_source}}{^ -}{} > %replace{%m}{apikey=[\w\-]*}{apikey=*****}%n</Property>
 
+        <Property name="route-ttl">${env:LOG_IDLE_ROUTE_TTL:-15}</Property>
+
         <!-- Always log INFO by default. -->
         <Property name="log-level">${sys:LOG_LEVEL:-${env:LOG_LEVEL:-INFO}}</Property>
     </Properties>
@@ -72,7 +74,7 @@
                     </File>
                 </Route>
             </Routes>
-            <IdlePurgePolicy timeToLive="15" timeUnit="minutes"/>
+            <IdlePurgePolicy timeToLive="${route-ttl}" timeUnit="minutes"/>
         </Routing>
 
         <Routing name="SimpleLogSplit">
@@ -90,7 +92,7 @@
                     </File>
                 </Route>
             </Routes>
-            <IdlePurgePolicy timeToLive="15" timeUnit="minutes"/>
+            <IdlePurgePolicy timeToLive="${route-ttl}" timeUnit="minutes"/>
         </Routing>
 
         <!--
@@ -115,7 +117,7 @@
                     </Log4j2Appender>
                 </Route>
             </Routes>
-            <IdlePurgePolicy timeToLive="15" timeUnit="minutes"/>
+            <IdlePurgePolicy timeToLive="${route-ttl}" timeUnit="minutes"/>
         </Routing>
 
         <Routing name="SimpleLogSplitCloud">
@@ -134,7 +136,7 @@
                     </Log4j2Appender>
                 </Route>
             </Routes>
-            <IdlePurgePolicy timeToLive="15" timeUnit="minutes"/>
+            <IdlePurgePolicy timeToLive="${route-ttl}" timeUnit="minutes"/>
         </Routing>
 
         <Routing name="AppLogSplit">
@@ -157,7 +159,7 @@
                     </RollingFile>
                 </Route>
             </Routes>
-            <IdlePurgePolicy timeToLive="15" timeUnit="minutes"/>
+            <IdlePurgePolicy timeToLive="${route-ttl}" timeUnit="minutes"/>
         </Routing>
         <Routing name="AppLogSplitCloud">
             <Routes pattern="$${ctx:cloud_workspace_app_root}">
@@ -172,7 +174,7 @@
                     </Log4j2Appender>
                 </Route>
             </Routes>
-            <IdlePurgePolicy timeToLive="15" timeUnit="minutes"/>
+            <IdlePurgePolicy timeToLive="${route-ttl}" timeUnit="minutes"/>
         </Routing>
 
         <Routing name="ConsoleRouter">

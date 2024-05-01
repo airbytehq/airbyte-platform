@@ -10,6 +10,8 @@
         <!-- Always log INFO by default. -->
         <Property name="log-level">${sys:LOG_LEVEL:-${env:LOG_LEVEL:-INFO}}</Property>
 
+        <Property name="route-ttl">${env:LOG_IDLE_ROUTE_TTL:-15}</Property>
+
         <!-- Note that logging to S3 will leverage the DefaultAWSCredentialsProviderChain for auth. -->
         <Property name="s3-bucket">${sys:STORAGE_BUCKET_LOG:-${env:STORAGE_BUCKET_LOG:-}}</Property>
         <Property name="s3-minio-endpoint">${sys:MINIO_ENDPOINT:-${env:MINIO_ENDPOINT}}</Property>
@@ -77,7 +79,7 @@
                     </File>
                 </Route>
             </Routes>
-            <IdlePurgePolicy timeToLive="15" timeUnit="minutes"/>
+            <IdlePurgePolicy timeToLive="${route-ttl}" timeUnit="minutes"/>
         </Routing>
 
         <Routing name="SimpleLogSplit">
@@ -95,7 +97,7 @@
                     </File>
                 </Route>
             </Routes>
-            <IdlePurgePolicy timeToLive="15" timeUnit="minutes"/>
+            <IdlePurgePolicy timeToLive="${route-ttl}" timeUnit="minutes"/>
         </Routing>
 
         <!--
@@ -122,7 +124,7 @@
                     </Log4j2Appender>
                 </Route>
             </Routes>
-            <IdlePurgePolicy timeToLive="15" timeUnit="minutes"/>
+            <IdlePurgePolicy timeToLive="${route-ttl}" timeUnit="minutes"/>
         </Routing>
 
         <Routing name="SimpleLogSplitCloud">
@@ -144,7 +146,7 @@
                     </Log4j2Appender>
                 </Route>
             </Routes>
-            <IdlePurgePolicy timeToLive="15" timeUnit="minutes"/>
+            <IdlePurgePolicy timeToLive="${route-ttl}" timeUnit="minutes"/>
         </Routing>
 
         <Routing name="AppLogSplit">
@@ -167,7 +169,7 @@
                     </RollingFile>
                 </Route>
             </Routes>
-            <IdlePurgePolicy timeToLive="15" timeUnit="minutes"/>
+            <IdlePurgePolicy timeToLive="${route-ttl}" timeUnit="minutes"/>
         </Routing>
         <Routing name="AppLogSplitCloud">
             <Routes pattern="$${ctx:cloud_workspace_app_root}">
@@ -184,7 +186,7 @@
                     </Log4j2Appender>
                 </Route>
             </Routes>
-            <IdlePurgePolicy timeToLive="15" timeUnit="minutes"/>
+            <IdlePurgePolicy timeToLive="${route-ttl}" timeUnit="minutes"/>
         </Routing>
 
         <Routing name="ConsoleRouter">
