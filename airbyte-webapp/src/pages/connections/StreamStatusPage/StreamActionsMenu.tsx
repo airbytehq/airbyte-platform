@@ -10,7 +10,7 @@ import { Button } from "components/ui/Button";
 import { DropdownMenu, DropdownMenuOptionType } from "components/ui/DropdownMenu";
 import { Text } from "components/ui/Text";
 
-import { ConnectorIds } from "area/connector/utils";
+import { useDestinationDefinition } from "core/api";
 import { DestinationSyncMode, SyncMode } from "core/api/types/AirbyteClient";
 import { useConfirmationModalService } from "hooks/services/ConfirmationModal";
 import { useConnectionFormService } from "hooks/services/ConnectionForm/ConnectionFormService";
@@ -18,8 +18,8 @@ import { useExperiment } from "hooks/services/Experiment";
 import { useModalService } from "hooks/services/Modal";
 import { ConnectionRoutePaths } from "pages/routePaths";
 
-import { ConnectionRefreshStreamModal } from "./ConnectionRefreshStreamModal";
 import styles from "./StreamActionsMenu.module.scss";
+import { ConnectionRefreshModal } from "../ConnectionSettingsPage/ConnectionRefreshModal";
 
 interface StreamActionsMenuProps {
   streamState: StreamWithStatus;
@@ -39,12 +39,13 @@ export const StreamActionsMenu: React.FC<StreamActionsMenuProps> = ({ streamStat
     resetStreams,
     refreshStreams,
   } = useConnectionSyncContext();
+
   const newRefreshTypes = useExperiment("platform.activate-refreshes", false);
-  const destinationSupportsTruncateRefreshes =
-    connection.destination.destinationDefinitionId === ConnectorIds.Destinations.E2ETesting; // this is the only destination supporting this, metadata support for this is forthcoming!
-  const destinationSupportsMergeRefreshes = false; // for local testing.  this will be flagged on _only_ for a dev destination starting later in q1b.
-  const { openModal } = useModalService();
+  const { supportRefreshes: destinationSupportsRefreshes } = useDestinationDefinition(
+    connection.destination.destinationDefinitionId
+  );
   const { openConfirmationModal, closeConfirmationModal } = useConfirmationModalService();
+  const { openModal } = useModalService();
 
   const catalogStream = connection.syncCatalog.streams.find(
     (catalogStream) =>
@@ -71,15 +72,10 @@ export const StreamActionsMenu: React.FC<StreamActionsMenuProps> = ({ streamStat
     const hasAppendDedupe = catalogStream?.config?.destinationSyncMode === DestinationSyncMode.append_dedup;
 
     return {
-      canMerge: hasIncremental && destinationSupportsMergeRefreshes,
-      canTruncate: hasIncremental && hasAppendDedupe && destinationSupportsTruncateRefreshes,
+      canMerge: hasIncremental && destinationSupportsRefreshes,
+      canTruncate: hasIncremental && hasAppendDedupe && destinationSupportsRefreshes,
     };
-  }, [
-    catalogStream?.config?.destinationSyncMode,
-    catalogStream?.config?.syncMode,
-    destinationSupportsMergeRefreshes,
-    destinationSupportsTruncateRefreshes,
-  ]);
+  }, [catalogStream?.config?.destinationSyncMode, catalogStream?.config?.syncMode, destinationSupportsRefreshes]);
 
   // the platform must support refresh operations AND the stream must support at least one of the refresh types
   const showRefreshOption = newRefreshTypes && (canMerge || canTruncate);
@@ -138,13 +134,18 @@ export const StreamActionsMenu: React.FC<StreamActionsMenuProps> = ({ streamStat
         ),
         content: ({ onComplete, onCancel }) => {
           return (
-            <ConnectionRefreshStreamModal
+            <ConnectionRefreshModal
+              refreshScope="stream"
               onComplete={onComplete}
               onCancel={onCancel}
-              canTruncate={canTruncate}
-              canMerge={canMerge}
-              streamNamespace={streamState.streamNamespace}
-              streamName={streamState.streamName}
+              streamsSupportingMergeRefresh={
+                canMerge ? [{ streamNamespace: streamState.streamNamespace, streamName: streamState.streamName }] : []
+              }
+              streamsSupportingTruncateRefresh={
+                canTruncate
+                  ? [{ streamNamespace: streamState.streamNamespace, streamName: streamState.streamName }]
+                  : []
+              }
               refreshStreams={refreshStreams}
             />
           );

@@ -7,32 +7,37 @@ import { Form } from "components/forms";
 import { FormSubmissionButtons } from "components/forms/FormSubmissionButtons";
 import { Box } from "components/ui/Box";
 import { Button } from "components/ui/Button";
+import { FlexContainer } from "components/ui/Flex";
 import { Text } from "components/ui/Text";
 
+import { ConnectionStream } from "core/api/types/AirbyteClient";
 import { FeatureItem, useFeature } from "core/services/features";
 import { useZendesk } from "packages/cloud/services/thirdParty/zendesk";
 
-interface ConnectionRefreshStreamModalProps {
+import { StreamsRefreshListBlock } from "./StreamsRefreshListBlock";
+
+interface ConnectionRefreshModalProps {
+  refreshScope: "connection" | "stream";
   onComplete: () => void;
   onCancel: () => void;
-  canMerge: boolean;
-  canTruncate: boolean;
-  streamNamespace?: string;
-  streamName: string;
-  refreshStreams: (streams: Array<{ streamName: string; streamNamespace?: string }>) => Promise<void>;
+  streamsSupportingMergeRefresh: ConnectionStream[];
+  streamsSupportingTruncateRefresh: ConnectionStream[];
+  refreshStreams: (streams?: Array<{ streamName: string; streamNamespace?: string }>) => Promise<void>;
+  totalEnabledStreams?: number;
 }
 
-export interface ConnectionRefreshStreamFormValues {
+export interface ConnectionRefreshFormValues {
   refreshType: "merge" | "truncate";
-  streamName: string;
-  streamNamespace?: string;
+  streams?: ConnectionStream[];
 }
 
-const MergeTruncateRadioButtons: React.FC = () => {
-  const { setValue, control } = useFormContext<ConnectionRefreshStreamFormValues>();
+const MergeTruncateRadioButtons: React.FC<{
+  refreshScope: "connection" | "stream";
+}> = ({ refreshScope }) => {
+  const { setValue, control } = useFormContext<ConnectionRefreshFormValues>();
 
   return (
-    <div>
+    <Box pt="sm">
       <Controller
         control={control}
         name="refreshType"
@@ -44,12 +49,18 @@ const MergeTruncateRadioButtons: React.FC = () => {
               options={[
                 {
                   value: "merge",
-                  label: <FormattedMessage id="connection.stream.actions.refreshStream.merge.label" />,
+                  label: (
+                    <FormattedMessage
+                      id="connection.actions.refreshStream.merge.label"
+                      values={{ value: refreshScope === "connection" ? 2 : 1 }}
+                    />
+                  ),
                   description: (
                     <Text color="grey400" size="sm" as="span">
                       <FormattedMessage
-                        id="connection.stream.actions.refreshStream.merge.description"
+                        id="connection.actions.refreshStream.merge.description"
                         values={{
+                          value: refreshScope === "connection" ? 2 : 1,
                           bold: (children) => (
                             <Text as="span" bold color="grey400" size="sm">
                               {children}
@@ -62,12 +73,18 @@ const MergeTruncateRadioButtons: React.FC = () => {
                 },
                 {
                   value: "truncate",
-                  label: <FormattedMessage id="connection.stream.actions.refreshStream.truncate.label" />,
+                  label: (
+                    <FormattedMessage
+                      id="connection.actions.refreshStream.truncate.label"
+                      values={{ value: refreshScope === "connection" ? 2 : 1 }}
+                    />
+                  ),
                   description: (
                     <Text color="grey400" size="sm">
                       <FormattedMessage
-                        id="connection.stream.actions.refreshStream.truncate.description"
+                        id="connection.actions.refreshStream.truncate.description"
                         values={{
+                          value: refreshScope === "connection" ? 2 : 1,
                           bold: (children) => (
                             <Text as="span" bold color="grey400" size="sm">
                               {children}
@@ -88,39 +105,46 @@ const MergeTruncateRadioButtons: React.FC = () => {
           );
         }}
       />
-    </div>
+    </Box>
   );
 };
 
-export const ConnectionRefreshStreamModal: React.FC<ConnectionRefreshStreamModalProps> = ({
-  canTruncate,
-  canMerge,
-  refreshStreams,
-  streamName,
-  streamNamespace,
+export const ConnectionRefreshModal: React.FC<ConnectionRefreshModalProps> = ({
+  refreshScope,
+  streamsSupportingMergeRefresh,
+  streamsSupportingTruncateRefresh,
+  totalEnabledStreams,
   onComplete,
   onCancel,
+  refreshStreams,
 }) => {
   const { openZendesk } = useZendesk();
   const allowSupportChat = useFeature(FeatureItem.AllowInAppSupportChat);
+  const canMerge = streamsSupportingMergeRefresh.length > 0;
+  const canTruncate = streamsSupportingTruncateRefresh.length > 0;
 
-  const onSubmitRefreshStreamForm = async (values: ConnectionRefreshStreamFormValues) => {
-    await refreshStreams([{ streamName: values.streamName, streamNamespace: values.streamNamespace }]);
+  const onSubmitRefreshStreamForm = async (values: ConnectionRefreshFormValues) => {
+    await refreshStreams(
+      values.refreshType === "merge" ? streamsSupportingMergeRefresh : streamsSupportingTruncateRefresh
+    );
     onComplete();
   };
 
   const refreshConnectionFormSchema = yup.object().shape({
-    refreshType: yup.mixed<ConnectionRefreshStreamFormValues["refreshType"]>().oneOf(["merge", "truncate"]).required(),
-    streamNamespace: yup.string().trim(),
-    streamName: yup.string().trim().required(),
+    refreshType: yup.mixed<ConnectionRefreshFormValues["refreshType"]>().oneOf(["merge", "truncate"]).required(),
+    streams: yup.array().when("refreshScope", {
+      is: "connection",
+      then: yup.array().strip(),
+      otherwise: yup.array().min(1),
+    }),
   });
 
   return (
-    <>
-      <Box p="xl">
+    <FlexContainer direction="column">
+      <Box px="xl" pt="xl">
         <Text>
           <FormattedMessage
-            id="connection.stream.actions.refreshStream.description"
+            id="connection.actions.refreshStream.description"
             values={{
               Bold: (children) => (
                 <Text as="span" bold>
@@ -131,7 +155,7 @@ export const ConnectionRefreshStreamModal: React.FC<ConnectionRefreshStreamModal
           />
           {canMerge && canTruncate && (
             <Text as="span">
-              <FormattedMessage id="connection.stream.actions.refreshStream.options" />
+              <FormattedMessage id="connection.actions.refreshStream.considerOptions" />
             </Text>
           )}
         </Text>
@@ -139,7 +163,7 @@ export const ConnectionRefreshStreamModal: React.FC<ConnectionRefreshStreamModal
           <Box pt="xs">
             <Text>
               <FormattedMessage
-                id="connection.stream.actions.refreshStream.chatWithUs"
+                id="connection.actions.refreshStream.chatWithUs"
                 values={{
                   ChatWithUsLink: (children) => (
                     <Button variant="link" onClick={openZendesk}>
@@ -152,26 +176,31 @@ export const ConnectionRefreshStreamModal: React.FC<ConnectionRefreshStreamModal
           </Box>
         )}
       </Box>
-      <Form<ConnectionRefreshStreamFormValues>
+      <Form<ConnectionRefreshFormValues>
         schema={refreshConnectionFormSchema}
         onSubmit={async (values) => {
           await onSubmitRefreshStreamForm(values);
         }}
         defaultValues={{
-          streamName,
-          streamNamespace,
           refreshType: canMerge ? "merge" : "truncate",
+          streams:
+            refreshScope === "connection"
+              ? undefined
+              : canMerge
+              ? streamsSupportingMergeRefresh
+              : streamsSupportingTruncateRefresh,
         }}
       >
         {canMerge ? (
           canTruncate ? (
-            <MergeTruncateRadioButtons />
+            <MergeTruncateRadioButtons refreshScope={refreshScope} />
           ) : (
-            <Box px="xl" pb="md">
+            <Box px="xl">
               <Text color="grey400">
                 <FormattedMessage
-                  id="connection.stream.actions.refreshStream.merge.description"
+                  id="connection.actions.refreshStream.merge.description"
                   values={{
+                    value: streamsSupportingMergeRefresh.length,
                     bold: (children) => (
                       <Text as="span" bold color="grey400" size="sm">
                         {children}
@@ -183,11 +212,12 @@ export const ConnectionRefreshStreamModal: React.FC<ConnectionRefreshStreamModal
             </Box>
           )
         ) : (
-          <Box px="xl" pb="md">
+          <Box px="xl">
             <Text color="grey400">
               <FormattedMessage
-                id="connection.stream.actions.refreshStream.truncate.description"
+                id="connection.actions.refreshStream.truncate.description"
                 values={{
+                  count: streamsSupportingTruncateRefresh.length,
                   bold: (children) => (
                     <Text as="span" bold color="grey400" size="sm">
                       {children}
@@ -198,15 +228,28 @@ export const ConnectionRefreshStreamModal: React.FC<ConnectionRefreshStreamModal
             </Text>
           </Box>
         )}
+        {refreshScope === "connection" && totalEnabledStreams && (
+          <Box pt="lg" px="lg">
+            <StreamsRefreshListBlock
+              streamsSupportingMergeRefresh={streamsSupportingMergeRefresh}
+              streamsSupportingTruncateRefresh={streamsSupportingTruncateRefresh}
+              totalStreams={totalEnabledStreams}
+            />
+          </Box>
+        )}
         <Box p="lg">
           <FormSubmissionButtons
-            submitKey="connection.stream.actions.refreshStream.confirm.submit"
+            submitKey={
+              refreshScope === "connection"
+                ? "connection.actions.refreshConnection"
+                : "connection.stream.actions.refreshStream"
+            }
             onCancelClickCallback={onCancel}
             allowNonDirtyCancel
             allowNonDirtySubmit
           />
         </Box>
       </Form>
-    </>
+    </FlexContainer>
   );
 };

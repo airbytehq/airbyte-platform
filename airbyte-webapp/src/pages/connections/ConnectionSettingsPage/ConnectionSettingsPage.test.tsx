@@ -8,6 +8,7 @@ import {
   mockDestinationDefinitionSpecification,
   mockDestinationDefinitionVersion,
 } from "test-utils/mock-data/mockDestination";
+import { mockJobList } from "test-utils/mock-data/mockJobsList";
 import {
   mockSourceDefinition,
   mockSourceDefinitionSpecification,
@@ -42,6 +43,23 @@ jest.mock("core/api", () => ({
   }),
   useResetConnection: () => ({
     mutateAsync: jest.fn(),
+  }),
+  useListJobsForConnectionStatus: () => mockJobList,
+  useSyncConnection: () => ({
+    mutateAsync: jest.fn(),
+    isLoading: false,
+  }),
+  useCancelJob: () => ({
+    mutateAsync: jest.fn(),
+    isLoading: false,
+  }),
+  useRefreshConnectionStreams: () => ({
+    mutateAsync: jest.fn(),
+    isLoading: false,
+  }),
+  useResetConnectionStream: () => ({
+    mutateAsync: jest.fn(),
+    isLoading: false,
   }),
 }));
 

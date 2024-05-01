@@ -54,7 +54,7 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>((props, r
       {icon &&
         iconPosition === "left" &&
         React.cloneElement(<Icon type={icon} size={iconSize} color={iconColor} className={iconClassName} />, {
-          className: classNames(styles.buttonIcon, {
+          className: classNames(iconClassName, styles.buttonIcon, {
             [styles.positionLeft]: true,
             [styles.isRegularIcon]: true,
             [styles.withLabel]: Boolean(children),
@@ -64,7 +64,7 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>((props, r
       {icon &&
         iconPosition === "right" &&
         React.cloneElement(<Icon type={icon} size={iconSize} color={iconColor} className={iconClassName} />, {
-          className: classNames(styles.buttonIcon, {
+          className: classNames(iconClassName, styles.buttonIcon, {
             [styles.positionRight]: true,
             [styles.isRegularIcon]: true,
             [styles.withLabel]: Boolean(children),
