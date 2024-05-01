@@ -41,7 +41,7 @@ export const CloudWorkspacesCreateControl: React.FC = () => {
   const [isEditMode, toggleMode] = useToggle(false);
   const { registerNotification } = useNotificationService();
   const { workspaces } = useListWorkspaces();
-  const { organizationsToCreateIn, hasOrganization } = useOrganizationsToCreateWorkspaces();
+  const { organizationsToCreateIn } = useOrganizationsToCreateWorkspaces();
 
   const isFirstWorkspace = workspaces.length === 0;
 
@@ -69,7 +69,7 @@ export const CloudWorkspacesCreateControl: React.FC = () => {
   };
 
   // if user is in an organization, but does not have adequate permissions, do not permit workspace creation
-  if (organizationsToCreateIn.length === 0 && hasOrganization) {
+  if (organizationsToCreateIn.length === 0) {
     return null;
   }
 

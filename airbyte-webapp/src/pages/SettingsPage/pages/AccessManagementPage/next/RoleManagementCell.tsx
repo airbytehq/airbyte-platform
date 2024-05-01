@@ -6,7 +6,7 @@ import { FlexContainer } from "components/ui/Flex";
 import { Text } from "components/ui/Text";
 import { Tooltip } from "components/ui/Tooltip";
 
-import { useCurrentOrganizationInfo, useCurrentWorkspace } from "core/api";
+import { useCurrentWorkspace } from "core/api";
 import { useCurrentUser } from "core/services/auth";
 import { FeatureItem, useFeature } from "core/services/features";
 import { useIntent } from "core/utils/rbac";
@@ -38,17 +38,16 @@ interface RoleManagementCellProps {
 }
 
 export const RoleManagementCell: React.FC<RoleManagementCellProps> = ({ user, resourceType }) => {
-  const { workspaceId } = useCurrentWorkspace();
-  const organizationInfo = useCurrentOrganizationInfo();
+  const { workspaceId, organizationId } = useCurrentWorkspace();
   const highestPermissionType = getWorkspaceAccessLevel(user);
   const currentUser = useCurrentUser();
   const orgPermissionType = user.organizationPermission ? user.organizationPermission.permissionType : undefined;
   const canEditPermissions = useIntent(
     resourceType === "workspace" ? "UpdateWorkspacePermissions" : "UpdateOrganizationPermissions",
-    { workspaceId, organizationId: organizationInfo?.organizationId }
+    { workspaceId, organizationId }
   );
   const canListOrganizationUsers = useIntent("ListOrganizationMembers", {
-    organizationId: organizationInfo?.organizationId,
+    organizationId,
   });
   const indicateGuestUsers = useFeature(FeatureItem.IndicateGuestUsers);
   const cannotDemoteUser = resourceType === "workspace" && orgPermissionType === "organization_admin";
@@ -79,8 +78,8 @@ export const RoleManagementCell: React.FC<RoleManagementCellProps> = ({ user, re
           <FormattedMessage id="role.organizationAdmin" />
         </Badge>
       )}
-      {canListOrganizationUsers && organizationInfo?.organizationId && indicateGuestUsers && (
-        <GuestBadge userId={user.id} organizationId={organizationInfo.organizationId} />
+      {canListOrganizationUsers && indicateGuestUsers && (
+        <GuestBadge userId={user.id} organizationId={organizationId} />
       )}
       {user.invitationStatus === "pending" && (
         <Tooltip

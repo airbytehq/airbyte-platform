@@ -5,13 +5,14 @@ import { useEffectOnce } from "react-use";
 import LoadingPage from "components/LoadingPage";
 
 import { useCurrentWorkspaceId } from "area/workspace/utils";
-import { useCurrentOrganizationInfo, useCurrentWorkspace, useInvalidateAllWorkspaceScopeOnChange } from "core/api";
+import { useCurrentWorkspace, useInvalidateAllWorkspaceScopeOnChange } from "core/api";
 import { usePrefetchCloudWorkspaceData } from "core/api/cloud";
 import { DefaultErrorBoundary } from "core/errors";
 import { useAnalyticsIdentifyUser, useAnalyticsRegisterValues } from "core/services/analytics/useAnalyticsService";
 import { useAuthService } from "core/services/auth";
 import { FeatureItem, useFeature } from "core/services/features";
 import { isCorporateEmail } from "core/utils/freeEmailProviders";
+import { useIntent } from "core/utils/rbac";
 import { storeUtmFromQuery } from "core/utils/utmStorage";
 import { useExperiment, useExperimentContext } from "hooks/services/Experiment";
 import { useBuildUpdateCheck } from "hooks/services/useBuildUpdateCheck";
@@ -70,9 +71,10 @@ const AdvancedSettingsPage = React.lazy(() => import("pages/SettingsPage/pages/A
 
 const MainRoutes: React.FC = () => {
   const workspace = useCurrentWorkspace();
-  const organization = useCurrentOrganizationInfo();
   const isTokenManagementEnabled = useExperiment("settings.token-management-ui", false);
-  useExperimentContext("organization", organization?.organizationId);
+  const canViewOrgSettings = useIntent("ViewOrganizationSettings", { organizationId: workspace.organizationId });
+
+  useExperimentContext("organization", workspace.organizationId);
 
   const analyticsContext = useMemo(
     () => ({
@@ -123,7 +125,7 @@ const MainRoutes: React.FC = () => {
           {supportsCloudDbtIntegration && (
             <Route path={CloudSettingsRoutePaths.DbtCloud} element={<DbtCloudSettingsView />} />
           )}
-          {organization && (
+          {canViewOrgSettings && (
             <Route path={CloudSettingsRoutePaths.Organization} element={<GeneralOrganizationSettingsPage />} />
           )}
           <Route path={CloudSettingsRoutePaths.Advanced} element={<AdvancedSettingsPage />} />

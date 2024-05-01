@@ -111,7 +111,7 @@ const MainViewRoutes: React.FC = () => {
             )}
             <Route path={SettingsRoutePaths.Notifications} element={<NotificationPage />} />
             <Route path={SettingsRoutePaths.Metrics} element={<MetricsPage />} />
-            {multiWorkspaceUI && organizationId && canViewOrganizationSettings && (
+            {multiWorkspaceUI && canViewOrganizationSettings && (
               <Route path={SettingsRoutePaths.Organization} element={<GeneralOrganizationSettingsPage />} />
             )}
             <Route path={SettingsRoutePaths.Advanced} element={<AdvancedSettingsPage />} />

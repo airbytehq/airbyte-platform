@@ -11,10 +11,9 @@ import { Button } from "components/ui/Button";
 import { ModalFooter } from "components/ui/Modal";
 import { SearchInput } from "components/ui/SearchInput";
 
-import { useCurrentWorkspaceId } from "area/workspace/utils";
 import {
   useCreateUserInvitation,
-  useCurrentOrganizationInfo,
+  useCurrentWorkspace,
   useListUsersInOrganization,
   useListWorkspaceAccessUsers,
 } from "core/api";
@@ -47,14 +46,11 @@ const SubmissionButton: React.FC = () => {
 
 export const AddUserModal: React.FC<{ onSubmit: () => void }> = ({ onSubmit }) => {
   const { formatMessage } = useIntl();
-  const workspaceId = useCurrentWorkspaceId();
-  const organizationInfo = useCurrentOrganizationInfo();
+  const { workspaceId, organizationId } = useCurrentWorkspace();
   const canListUsersInOrganization = useIntent("ListOrganizationMembers", {
-    organizationId: organizationInfo?.organizationId,
+    organizationId,
   });
-  const { users } = useListUsersInOrganization(
-    canListUsersInOrganization ? organizationInfo?.organizationId : undefined
-  );
+  const { users } = useListUsersInOrganization(canListUsersInOrganization ? organizationId : undefined);
   const [searchValue, setSearchValue] = useState("");
   const deferredSearchValue = useDeferredValue(searchValue);
   const [selectedRow, setSelectedRow] = useState<string | null>(null);

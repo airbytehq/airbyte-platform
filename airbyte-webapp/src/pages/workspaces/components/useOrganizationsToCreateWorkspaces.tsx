@@ -7,14 +7,8 @@ export const useOrganizationsToCreateWorkspaces = () => {
   const creatableOrganizationIds: string[] = [];
   const memberOrganizationIds: string[] = [];
 
-  // this variable is to support the interim state where not all users/workspaces in cloud are within an organization.
-  // once that migration is complete, we can remove this and its accompanying checks, as workspace creation will be solely dependent
-  // upon having adequate permissions in 1+ organization.
-  let hasOrganization = false;
-
   for (const permission of permissions) {
     if (permission.organizationId) {
-      hasOrganization = true;
       if (permission.permissionType === "organization_admin" || permission.permissionType === "organization_editor") {
         creatableOrganizationIds.push(permission.organizationId);
       }
@@ -26,7 +20,6 @@ export const useOrganizationsToCreateWorkspaces = () => {
   }
 
   return {
-    hasOrganization,
     organizationsToCreateIn: useListOrganizationsById(creatableOrganizationIds),
     organizationsMemberOnly: useListOrganizationsById(memberOrganizationIds),
   };

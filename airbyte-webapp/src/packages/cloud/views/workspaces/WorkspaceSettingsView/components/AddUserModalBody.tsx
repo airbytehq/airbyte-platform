@@ -6,7 +6,6 @@ import { Box } from "components/ui/Box";
 import { ModalBody } from "components/ui/Modal";
 import { Text } from "components/ui/Text";
 
-import { useCurrentOrganizationInfo } from "core/api";
 import { PermissionType, WorkspaceUserAccessInfoRead } from "core/api/types/AirbyteClient";
 
 import { AddUserFormValues } from "./AddUserModal";
@@ -30,7 +29,6 @@ export const AddUserModalBody: React.FC<AddUserModalBodyProps> = ({
   canInviteExternalUsers,
 }) => {
   const { getValues, setValue } = useFormContext<AddUserFormValues>();
-  const organizationInfo = useCurrentOrganizationInfo();
 
   // handle when the selected option is no longer visible
   useEffect(() => {
@@ -60,9 +58,9 @@ export const AddUserModalBody: React.FC<AddUserModalBodyProps> = ({
             <FormattedMessage
               id={
                 canInviteExternalUsers
-                  ? !organizationInfo?.organizationId && !deferredSearchValue.length
-                    ? "userInvitations.create.modal.emptyList.noOrganization" // can invite external users no org and no search value
-                    : "userInvitations.create.modal.emptyList.canInvite" // can invite external users + has an org
+                  ? !deferredSearchValue.length
+                    ? "userInvitations.create.modal.emptyList.canInvite" // can invite external users no org members and no search value
+                    : "userInvitations.create.modal.emptyList.canInviteNoResults" // can invite external users + has an org
                   : "userInvitations.create.modal.emptyList" // cannot invite external users
               }
             />

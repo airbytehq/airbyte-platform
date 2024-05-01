@@ -1,11 +1,9 @@
 import { renderHook } from "@testing-library/react";
 
-import { mocked } from "test-utils";
 import { mockUser } from "test-utils/mock-data/mockUser";
 
 import { useRbac } from "./rbac";
 import { useRbacPermissionsQuery } from "./rbacPermissionsQuery";
-import { isCloudApp } from "../app";
 
 jest.mock("../app", () => ({
   isCloudApp: jest.fn(() => false),
@@ -87,36 +85,21 @@ describe("useRbac", () => {
     it("throws an error when instance query includes a resourceId", () => {
       expect(() =>
         renderHook(() => useRbac({ resourceType: "INSTANCE", role: "ADMIN", resourceId: "some-workspace" }))
-      ).toThrow("Invalid RBAC query: resource INSTANCE with resourceId some-workspace");
+      ).toThrow("Invalid RBAC query: Passed resource id some-workspace for INSTANCE query");
     });
 
     it("throws an error when an workspaceId is missing", () => {
       mockUseRbacPermissionsQuery.mockClear();
       expect(() => renderHook(() => useRbac({ resourceType: "WORKSPACE", role: "ADMIN" }))).toThrow(
-        "Invalid RBAC query: resource WORKSPACE with resourceId undefined"
+        "Invalid RBAC query: Missing id for resource WORKSPACE"
       );
     });
 
-    // TODO: Update test to throw once cloud workspaces are migrated to organizations + rbac.ts invariant is adjusted to require organization id
-    it("does not throw an error when an organizationId is missing in Cloud", () => {
-      mocked(isCloudApp).mockReturnValue(true);
-      mockUseRbacPermissionsQuery.mockClear();
-      renderHook(() => useRbac({ resourceType: "ORGANIZATION", role: "ADMIN", resourceId: undefined }));
-
-      expect(mockUseRbacPermissionsQuery).toHaveBeenCalledTimes(1);
-      expect(mockUseRbacPermissionsQuery.mock.lastCall?.[1]).toEqual({
-        resourceType: "ORGANIZATION",
-        role: "ADMIN",
-        resourceId: "",
-      });
-    });
-
-    it("does throw an error when an organizationId is missing in OSS", () => {
-      mocked(isCloudApp).mockReturnValue(false);
+    it("does throw an error when an organizationId is missing", () => {
       mockUseRbacPermissionsQuery.mockClear();
       expect(() =>
         renderHook(() => useRbac({ resourceType: "ORGANIZATION", role: "ADMIN", resourceId: undefined }))
-      ).toThrow("Invalid RBAC query: resource ORGANIZATION with resourceId undefined");
+      ).toThrow("Invalid RBAC query: Missing id for resource ORGANIZATION");
     });
   });
 });

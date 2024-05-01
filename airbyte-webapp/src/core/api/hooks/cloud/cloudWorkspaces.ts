@@ -182,7 +182,6 @@ export const useIsForeignWorkspace = () => {
   const { workspaceId, organizationId } = useCurrentWorkspace();
 
   return !permissions.some(
-    (permission) =>
-      permission.workspaceId === workspaceId || (organizationId && permission.organizationId === organizationId)
+    (permission) => permission.workspaceId === workspaceId || permission.organizationId === organizationId
   );
 };

@@ -1,6 +1,6 @@
 import classNames from "classnames";
 
-import { useCreatePermission, useCurrentOrganizationInfo, useCurrentWorkspace, useUpdatePermissions } from "core/api";
+import { useCreatePermission, useCurrentWorkspace, useUpdatePermissions } from "core/api";
 import { PermissionType } from "core/api/types/AirbyteClient";
 import { useCurrentUser } from "core/services/auth";
 
@@ -15,8 +15,7 @@ const useCreateOrUpdateRole = (
 ) => {
   const { mutateAsync: createPermission } = useCreatePermission();
   const { mutateAsync: updatePermission } = useUpdatePermissions();
-  const { workspaceId } = useCurrentWorkspace();
-  const organizationInfo = useCurrentOrganizationInfo();
+  const { workspaceId, organizationId } = useCurrentWorkspace();
 
   const existingPermissionIdForResourceType =
     resourceType === "organization"
@@ -28,13 +27,10 @@ const useCreateOrUpdateRole = (
   return async () => {
     if (!existingPermissionIdForResourceType) {
       if (resourceType === "organization") {
-        if (!organizationInfo) {
-          throw new Error("Organization info not found");
-        }
         return createPermission({
           userId: user.id,
           permissionType,
-          organizationId: organizationInfo.organizationId,
+          organizationId,
         });
       }
       return createPermission({ userId: user.id, permissionType, workspaceId });
