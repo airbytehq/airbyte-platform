@@ -45,6 +45,7 @@ import io.airbyte.api.model.generated.WorkspaceIdRequestBody;
 import io.airbyte.commons.converters.ConnectionHelper;
 import io.airbyte.commons.enums.Enums;
 import io.airbyte.commons.json.Jsons;
+import io.airbyte.commons.protocol.CatalogDiffHelpers;
 import io.airbyte.commons.server.converters.ApiPojoConverters;
 import io.airbyte.commons.server.converters.CatalogDiffConverters;
 import io.airbyte.commons.server.errors.BadRequestException;
@@ -736,7 +737,7 @@ public class ConnectionsHandler {
 
   public CatalogDiff getDiff(final AirbyteCatalog oldCatalog, final AirbyteCatalog newCatalog, final ConfiguredAirbyteCatalog configuredCatalog)
       throws JsonValidationException {
-    return new CatalogDiff().transforms(CatalogHelpers.getCatalogDiff(
+    return new CatalogDiff().transforms(CatalogDiffHelpers.getCatalogDiff(
         CatalogHelpers.configuredCatalogToCatalog(CatalogConverter.toProtocolKeepAllStreams(oldCatalog)),
         CatalogHelpers.configuredCatalogToCatalog(CatalogConverter.toProtocolKeepAllStreams(newCatalog)), configuredCatalog)
         .stream()
@@ -1178,7 +1179,7 @@ public class ConnectionsHandler {
         payload.put("connection_id", connectionId);
         payload.put("schema_change_event_date", changeEventTimeline);
         payload.put("stream_change_type", streamTransform.getTransformType().toString());
-        StreamDescriptor streamDescriptor = streamTransform.getStreamDescriptor();
+        final StreamDescriptor streamDescriptor = streamTransform.getStreamDescriptor();
         if (streamDescriptor.getNamespace() != null) {
           payload.put("stream_namespace", streamDescriptor.getNamespace());
         }

@@ -52,6 +52,7 @@ dependencies {
   implementation(project(":airbyte-commons-auth"))
   implementation(project(":airbyte-commons-converters"))
   implementation(project(":airbyte-commons-license"))
+  implementation(project(":airbyte-commons-protocol"))
   implementation(project(":airbyte-commons-temporal"))
   implementation(project(":airbyte-commons-temporal-core"))
   implementation(project(":airbyte-commons-with-dependencies"))
