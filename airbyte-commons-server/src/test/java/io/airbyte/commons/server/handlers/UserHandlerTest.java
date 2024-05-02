@@ -34,7 +34,7 @@ import io.airbyte.api.model.generated.WorkspaceReadList;
 import io.airbyte.api.model.generated.WorkspaceUserAccessInfoReadList;
 import io.airbyte.api.model.generated.WorkspaceUserRead;
 import io.airbyte.api.model.generated.WorkspaceUserReadList;
-import io.airbyte.commons.auth.config.InitialUserConfiguration;
+import io.airbyte.commons.auth.config.InitialUserConfig;
 import io.airbyte.commons.enums.Enums;
 import io.airbyte.commons.server.support.JwtUserAuthenticationResolver;
 import io.airbyte.config.AuthProvider;
@@ -82,7 +82,7 @@ class UserHandlerTest {
   OrganizationPersistence organizationPersistence;
   OrganizationsHandler organizationsHandler;
   JwtUserAuthenticationResolver jwtUserAuthenticationResolver;
-  InitialUserConfiguration initialUserConfiguration;
+  InitialUserConfig initialUserConfig;
   PermissionService permissionService;
 
   private static final UUID USER_ID = UUID.randomUUID();
@@ -112,12 +112,12 @@ class UserHandlerTest {
     organizationsHandler = mock(OrganizationsHandler.class);
     uuidSupplier = mock(Supplier.class);
     jwtUserAuthenticationResolver = mock(JwtUserAuthenticationResolver.class);
-    initialUserConfiguration = mock(InitialUserConfiguration.class);
+    initialUserConfig = mock(InitialUserConfig.class);
     resourceBootstrapHandler = mock(ResourceBootstrapHandler.class);
 
     userHandler =
         new UserHandler(userPersistence, permissionPersistence, permissionService, organizationPersistence, permissionHandler, workspacesHandler,
-            uuidSupplier, jwtUserAuthenticationResolver, Optional.of(initialUserConfiguration), resourceBootstrapHandler);
+            uuidSupplier, jwtUserAuthenticationResolver, Optional.of(initialUserConfig), resourceBootstrapHandler);
   }
 
   @Test
@@ -351,7 +351,7 @@ class UserHandlerTest {
 
         if (initialUserPresent) {
           if (initialUserEmail != null) {
-            when(initialUserConfiguration.getEmail()).thenReturn(initialUserEmail);
+            when(initialUserConfig.getEmail()).thenReturn(initialUserEmail);
           }
         } else {
           // replace default user handler with one that doesn't use initial user config (ie to test what

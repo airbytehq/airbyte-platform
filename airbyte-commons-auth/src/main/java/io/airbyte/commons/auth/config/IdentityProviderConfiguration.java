@@ -14,7 +14,7 @@ import lombok.extern.slf4j.Slf4j;
  * It can be injected as a single dependency, rather than injecting each individual value
  * separately.
  */
-@EachProperty(value = "airbyte.auth.identity-providers",
+@EachProperty(value = "airbyte-yml.auth.identity-providers",
               list = true)
 @Getter
 @Slf4j
@@ -35,8 +35,7 @@ public class IdentityProviderConfiguration {
   // Eventually, AuthOidcConfiguration will simply replace this class.
   // For now, we want to support airbyte.auth.identity-providers for backwards-compatibility.
   public OidcConfig toOidcConfig() {
-    final OidcConfig oidcConfig = new OidcConfig(domain, appName, clientId, clientSecret);
-    return oidcConfig;
+    return new OidcConfig(domain, appName, clientId, clientSecret);
   }
 
 }

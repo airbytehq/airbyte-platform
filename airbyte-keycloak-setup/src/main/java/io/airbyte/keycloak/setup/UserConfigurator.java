@@ -4,7 +4,7 @@
 
 package io.airbyte.keycloak.setup;
 
-import io.airbyte.commons.auth.config.InitialUserConfiguration;
+import io.airbyte.commons.auth.config.InitialUserConfig;
 import jakarta.inject.Singleton;
 import jakarta.ws.rs.core.Response;
 import java.util.Arrays;
@@ -23,10 +23,10 @@ public class UserConfigurator {
 
   public static final int HTTP_STATUS_CREATED = 201;
 
-  private final InitialUserConfiguration initialUserConfiguration;
+  private final InitialUserConfig initialUserConfig;
 
-  public UserConfigurator(final InitialUserConfiguration initialUserConfiguration) {
-    this.initialUserConfiguration = initialUserConfiguration;
+  public UserConfigurator(final InitialUserConfig initialUserConfig) {
+    this.initialUserConfig = initialUserConfig;
   }
 
   public void configureUser(final RealmResource keycloakRealm) {
@@ -55,11 +55,11 @@ public class UserConfigurator {
 
   UserRepresentation getUserRepresentationFromConfig() {
     final UserRepresentation user = new UserRepresentation();
-    user.setUsername(initialUserConfiguration.getEmail());
+    user.setUsername(initialUserConfig.getEmail());
     user.setEnabled(true);
-    user.setEmail(initialUserConfiguration.getEmail());
-    user.setFirstName(initialUserConfiguration.getFirstName());
-    user.setLastName(initialUserConfiguration.getLastName());
+    user.setEmail(initialUserConfig.getEmail());
+    user.setFirstName(initialUserConfig.getFirstName());
+    user.setLastName(initialUserConfig.getLastName());
     user.setCredentials(Arrays.asList(createCredentialRepresentation()));
     return user;
   }
@@ -68,7 +68,7 @@ public class UserConfigurator {
     final CredentialRepresentation password = new CredentialRepresentation();
     password.setTemporary(false);
     password.setType(CredentialRepresentation.PASSWORD);
-    password.setValue(initialUserConfiguration.getPassword());
+    password.setValue(initialUserConfig.getPassword());
     return password;
   }
 

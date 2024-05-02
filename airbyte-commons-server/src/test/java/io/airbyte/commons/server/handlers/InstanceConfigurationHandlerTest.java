@@ -125,7 +125,7 @@ class InstanceConfigurationHandlerTest {
     when(mWorkspacePersistence.getInitialSetupComplete()).thenReturn(true);
 
     final var handler = new InstanceConfigurationHandler(
-        AIRBYTE_URL,
+        Optional.of(AIRBYTE_URL),
         envValue,
         AirbyteEdition.COMMUNITY,
         new AirbyteVersion("0.50.1"),
@@ -259,7 +259,7 @@ class InstanceConfigurationHandlerTest {
 
   private InstanceConfigurationHandler getInstanceConfigurationHandler(final boolean isPro) {
     return new InstanceConfigurationHandler(
-        AIRBYTE_URL,
+        Optional.of(AIRBYTE_URL),
         "logging",
         isPro ? AirbyteEdition.PRO : AirbyteEdition.COMMUNITY,
         new AirbyteVersion("0.50.1"),

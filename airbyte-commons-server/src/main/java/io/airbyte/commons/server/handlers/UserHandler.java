@@ -33,7 +33,7 @@ import io.airbyte.api.model.generated.WorkspaceUserAccessInfoRead;
 import io.airbyte.api.model.generated.WorkspaceUserAccessInfoReadList;
 import io.airbyte.api.model.generated.WorkspaceUserRead;
 import io.airbyte.api.model.generated.WorkspaceUserReadList;
-import io.airbyte.commons.auth.config.InitialUserConfiguration;
+import io.airbyte.commons.auth.config.InitialUserConfig;
 import io.airbyte.commons.enums.Enums;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.commons.server.errors.ConflictException;
@@ -85,7 +85,7 @@ public class UserHandler {
   private final OrganizationPersistence organizationPersistence;
 
   private final UserAuthenticationResolver userAuthenticationResolver;
-  private final Optional<InitialUserConfiguration> initialUserConfiguration;
+  private final Optional<InitialUserConfig> initialUserConfig;
   private final ResourceBootstrapHandlerInterface resourceBootstrapHandler;
 
   @VisibleForTesting
@@ -98,7 +98,7 @@ public class UserHandler {
                      final WorkspacesHandler workspacesHandler,
                      @Named("uuidGenerator") final Supplier<UUID> uuidGenerator,
                      final UserAuthenticationResolver userAuthenticationResolver,
-                     final Optional<InitialUserConfiguration> initialUserConfiguration,
+                     final Optional<InitialUserConfig> initialUserConfig,
                      final ResourceBootstrapHandlerInterface resourceBootstrapHandler) {
     this.uuidGenerator = uuidGenerator;
     this.userPersistence = userPersistence;
@@ -108,7 +108,7 @@ public class UserHandler {
     this.workspacesHandler = workspacesHandler;
     this.permissionHandler = permissionHandler;
     this.userAuthenticationResolver = userAuthenticationResolver;
-    this.initialUserConfiguration = initialUserConfiguration;
+    this.initialUserConfig = initialUserConfig;
     this.resourceBootstrapHandler = resourceBootstrapHandler;
   }
 
@@ -483,12 +483,12 @@ public class UserHandler {
   }
 
   private void createInstanceAdminPermissionIfInitialUser(final UserRead createdUser) {
-    if (initialUserConfiguration.isEmpty()) {
+    if (initialUserConfig.isEmpty()) {
       // do nothing if initial_user bean is not present.
       return;
     }
 
-    final String initialEmailFromConfig = initialUserConfiguration.get().getEmail();
+    final String initialEmailFromConfig = initialUserConfig.get().getEmail();
 
     if (initialEmailFromConfig == null || initialEmailFromConfig.isEmpty()) {
       // do nothing if there is no initial_user email configured.

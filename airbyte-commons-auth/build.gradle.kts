@@ -7,11 +7,15 @@ plugins {
 
 dependencies {
   compileOnly(libs.lombok)
-  annotationProcessor(libs.lombok)     // Lombok must be added BEFORE Micronaut
+  annotationProcessor(libs.lombok) // Lombok must be added BEFORE Micronaut
   annotationProcessor(platform(libs.micronaut.platform))
   annotationProcessor(libs.bundles.micronaut.annotation.processor)
 
+  kapt(platform(libs.micronaut.platform))
   kapt(libs.bundles.micronaut.annotation.processor)
+
+  kaptTest(platform(libs.micronaut.platform))
+  kaptTest(libs.bundles.micronaut.test.annotation.processor)
 
   implementation(platform(libs.micronaut.platform))
   implementation(libs.bundles.keycloak.client)

@@ -17,22 +17,22 @@ public class IdentityProviderConfigurationTest {
   IdentityProviderConfiguration identityProviderConfiguration;
 
   @Test
-  @Property(name = "airbyte.auth.identity-providers[0].type",
+  @Property(name = "airbyte-yml.auth.identity-providers[0].type",
             value = "oidc")
-  @Property(name = "airbyte.auth.identity-providers[0].domain",
+  @Property(name = "airbyte-yml.auth.identity-providers[0].domain",
             value = "testdomain")
-  @Property(name = "airbyte.auth.identity-providers[0].appName",
+  @Property(name = "airbyte-yml.auth.identity-providers[0].appName",
             value = "testApp")
-  @Property(name = "airbyte.auth.identity-providers[0].clientId",
+  @Property(name = "airbyte-yml.auth.identity-providers[0].clientId",
             value = "testClientId")
-  @Property(name = "airbyte.auth.identity-providers[0].clientSecret",
+  @Property(name = "airbyte-yml.auth.identity-providers[0].clientSecret",
             value = "testClientSecret")
   void testToAuthOidcConfiguration() {
     final OidcConfig result = identityProviderConfiguration.toOidcConfig();
-    Assertions.assertEquals("testdomain", result.domain());
-    Assertions.assertEquals("testApp", result.appName());
-    Assertions.assertEquals("testClientId", result.clientId());
-    Assertions.assertEquals("testClientSecret", result.clientSecret());
+    Assertions.assertEquals("testdomain", result.getDomain());
+    Assertions.assertEquals("testApp", result.getAppName());
+    Assertions.assertEquals("testClientId", result.getClientId());
+    Assertions.assertEquals("testClientSecret", result.getClientSecret());
   }
 
 }

@@ -77,11 +77,18 @@ micronaut:
 airbyte:
   airbyte-url: ${AIRBYTE_URL:}
   edition: ${AIRBYTE_EDITION:COMMUNITY}
+  license-key: ${AIRBYTE_LICENSE_KEY:}
   shutdown:
     delay_ms: 20000
   notification:
     customerio:
       apikey: ${CUSTOMERIO_API_KEY:}
+  auth:
+    initial-user:
+      email: ${INITIAL_USER_EMAIL:}
+      first-name: ${INITIAL_USER_FIRST_NAME:}
+      last-name: ${INITIAL_USER_LAST_NAME:}
+      password: ${INITIAL_USER_PASSWORD:}
   cloud:
     storage:
       type: ${STORAGE_TYPE}

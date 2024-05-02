@@ -40,13 +40,12 @@ public class ConfigurationMapService {
   }
 
   public Map<String, String> setupProviderConfig(final OidcConfig oidcConfig, Map<String, String> configMap) {
-    Map<String, String> config = new HashMap<>();
-
     // Copy all keys from configMap to the result map
-    config.putAll(configMap);
+    final Map<String, String> config = new HashMap<>(configMap);
+
     // Explicitly set required keys
-    config.put("clientId", oidcConfig.clientId());
-    config.put("clientSecret", oidcConfig.clientSecret());
+    config.put("clientId", oidcConfig.getClientId());
+    config.put("clientSecret", oidcConfig.getClientSecret());
     config.put("defaultScope", "openid email profile");
     config.put("redirectUris", getProviderRedirectUrl(oidcConfig));
     config.put("backchannelSupported", "true");
@@ -57,11 +56,12 @@ public class ConfigurationMapService {
 
   private String getProviderRedirectUrl(final OidcConfig oidcConfig) {
     final String airbyteUrlWithTrailingSlash = airbyteUrl.endsWith("/") ? airbyteUrl : airbyteUrl + "/";
-    return airbyteUrlWithTrailingSlash + "auth/realms/" + keycloakConfiguration.getAirbyteRealm() + "/broker/" + oidcConfig.appName() + "/endpoint";
+    return airbyteUrlWithTrailingSlash + "auth/realms/" + keycloakConfiguration.getAirbyteRealm() + "/broker/" + oidcConfig.getAppName()
+        + "/endpoint";
   }
 
   private String getProviderDiscoveryUrl(final OidcConfig oidcConfig) {
-    String domain = oidcConfig.domain();
+    String domain = oidcConfig.getDomain();
     if (!domain.startsWith(HTTPS_PREFIX)) {
       domain = HTTPS_PREFIX + domain;
     }

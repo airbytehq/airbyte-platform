@@ -14,7 +14,7 @@ configurations.all {
 }
 dependencies {
   compileOnly(libs.lombok)
-  annotationProcessor(libs.lombok)     // Lombok must be added BEFORE Micronaut
+  annotationProcessor(libs.lombok) // Lombok must be added BEFORE Micronaut
 
   kapt(platform(libs.micronaut.platform))
   kapt(libs.bundles.micronaut.annotation.processor)
@@ -95,6 +95,6 @@ tasks.named("spotbugsMain") {
   enabled = false
 }
 
-tasks.withType<Jar>() {
+tasks.withType<Jar> {
   duplicatesStrategy = DuplicatesStrategy.EXCLUDE
 }

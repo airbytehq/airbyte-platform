@@ -40,7 +40,7 @@ import lombok.extern.slf4j.Slf4j;
 @Singleton
 public class InstanceConfigurationHandler {
 
-  private final String airbyteUrl;
+  private final Optional<String> airbyteUrl;
   private final AirbyteEdition airbyteEdition;
   private final AirbyteVersion airbyteVersion;
   private final Optional<AirbyteKeycloakConfiguration> airbyteKeycloakConfiguration;
@@ -52,7 +52,7 @@ public class InstanceConfigurationHandler {
 
   private final String trackingStrategy;
 
-  public InstanceConfigurationHandler(@Named("airbyteUrl") final String airbyteUrl,
+  public InstanceConfigurationHandler(@Named("airbyteUrl") final Optional<String> airbyteUrl,
                                       @Value("${airbyte.tracking.strategy:}") final String trackingStrategy,
                                       final AirbyteEdition airbyteEdition,
                                       final AirbyteVersion airbyteVersion,
@@ -79,7 +79,7 @@ public class InstanceConfigurationHandler {
     final Boolean initialSetupComplete = workspacePersistence.getInitialSetupComplete();
 
     return new InstanceConfigurationResponse()
-        .airbyteUrl(airbyteUrl)
+        .airbyteUrl(airbyteUrl.orElse("airbyte-url-not-configured"))
         .edition(Enums.convertTo(airbyteEdition, EditionEnum.class))
         .version(airbyteVersion.serialize())
         .licenseType(getLicenseType())

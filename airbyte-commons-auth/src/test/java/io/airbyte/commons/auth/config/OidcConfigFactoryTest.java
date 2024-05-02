@@ -25,75 +25,112 @@ public class OidcConfigFactoryTest {
   }
 
   @Test
+  // factory should prefer these properties
   @Property(name = "airbyte.auth.identity-provider.type",
             value = "oidc")
   @Property(name = "airbyte.auth.identity-provider.oidc.domain",
             value = "https://testdomain.com")
-  @Property(name = "airbyte.auth.identity-provider.oidc.appName",
+  @Property(name = "airbyte.auth.identity-provider.oidc.app-name",
             value = "testApp")
-  @Property(name = "airbyte.auth.identity-provider.oidc.clientId",
+  @Property(name = "airbyte.auth.identity-provider.oidc.client-id",
             value = "testClientId")
-  @Property(name = "airbyte.auth.identity-provider.oidc.clientSecret",
+  @Property(name = "airbyte.auth.identity-provider.oidc.client-secret",
             value = "testClientSecret")
-  @Property(name = "airbyte.auth.identity-providers[0].type",
+  // below should all be ignored because they're from airbyte.yml
+  @Property(name = "airbyte-yml.auth.identity-provider.type",
             value = "oidc")
-  @Property(name = "airbyte.auth.identity-providers[0].domain",
-            value = "https://ignoreddomain.com")
-  @Property(name = "airbyte.auth.identity-providers[0].appName",
+  @Property(name = "airbyte-yml.auth.identity-provider.oidc.domain",
+            value = "https://ignored.com")
+  @Property(name = "airbyte-yml.auth.identity-provider.oidc.appName",
             value = "ignoredApp")
-  @Property(name = "airbyte.auth.identity-providers[0].clientId",
+  @Property(name = "airbyte-yml.auth.identity-provider.oidc.clientId",
             value = "ignoredClientId")
-  @Property(name = "airbyte.auth.identity-providers[0].clientSecret",
+  @Property(name = "airbyte-yml.auth.identity-provider.oidc.clientSecret",
             value = "ignoredClientSecret")
-  void testCreateOidcConfig() {
+  @Property(name = "airbyte-yml.auth.identity-providers[0].domain",
+            value = "https://ignored.com")
+  @Property(name = "airbyte-yml.auth.identity-providers[0].appName",
+            value = "ignoredApp")
+  @Property(name = "airbyte-yml.auth.identity-providers[0].clientId",
+            value = "ignoredClientId")
+  @Property(name = "airbyte-yml.auth.identity-providers[0].clientSecret",
+            value = "ignoredClientSecret")
+  void testCreateOidcConfigFromEnvConfig() {
     final Optional<OidcConfig> oidcConfig = beanContext.findBean(OidcConfig.class);
     Assertions.assertTrue(oidcConfig.isPresent());
-    Assertions.assertEquals("https://testdomain.com", oidcConfig.get().domain());
-    Assertions.assertEquals("testApp", oidcConfig.get().appName());
-    Assertions.assertEquals("testClientId", oidcConfig.get().clientId());
-    Assertions.assertEquals("testClientSecret", oidcConfig.get().clientSecret());
+    Assertions.assertEquals("https://testdomain.com", oidcConfig.get().getDomain());
+    Assertions.assertEquals("testApp", oidcConfig.get().getAppName());
+    Assertions.assertEquals("testClientId", oidcConfig.get().getClientId());
+    Assertions.assertEquals("testClientSecret", oidcConfig.get().getClientSecret());
   }
 
   @Test
-  @Property(name = "airbyte.auth.identity-providers[0].type",
+  // factory should prefer these properties
+  @Property(name = "airbyte-yml.auth.identity-provider.type",
             value = "oidc")
-  @Property(name = "airbyte.auth.identity-providers[0].domain",
+  @Property(name = "airbyte-yml.auth.identity-provider.oidc.domain",
             value = "https://testdomain.com")
-  @Property(name = "airbyte.auth.identity-providers[0].appName",
+  @Property(name = "airbyte-yml.auth.identity-provider.oidc.appName",
             value = "testApp")
-  @Property(name = "airbyte.auth.identity-providers[0].clientId",
+  @Property(name = "airbyte-yml.auth.identity-provider.oidc.clientId",
             value = "testClientId")
-  @Property(name = "airbyte.auth.identity-providers[0].clientSecret",
+  @Property(name = "airbyte-yml.auth.identity-provider.oidc.clientSecret",
+            value = "testClientSecret")
+  // below should all be ignored because they're list-style properties
+  // which are ignored if the single-style properties are set in airbyte.yml
+  @Property(name = "airbyte-yml.auth.identity-providers[0].domain",
+            value = "https://ignoreddomain.com")
+  @Property(name = "airbyte-yml.auth.identity-providers[0].appName",
+            value = "ignoredApp")
+  @Property(name = "airbyte-yml.auth.identity-providers[0].clientId",
+            value = "ignoredClientId")
+  @Property(name = "airbyte-yml.auth.identity-providers[0].clientSecret",
+            value = "ignoredClientSecret")
+  void testCreateOidcConfigFromSingleAirbyteYmlIdp() {
+    final Optional<OidcConfig> oidcConfig = beanContext.findBean(OidcConfig.class);
+    Assertions.assertTrue(oidcConfig.isPresent());
+    Assertions.assertEquals("https://testdomain.com", oidcConfig.get().getDomain());
+    Assertions.assertEquals("testApp", oidcConfig.get().getAppName());
+    Assertions.assertEquals("testClientId", oidcConfig.get().getClientId());
+    Assertions.assertEquals("testClientSecret", oidcConfig.get().getClientSecret());
+  }
+
+  @Test
+  @Property(name = "airbyte-yml.auth.identity-providers[0].domain",
+            value = "https://testdomain.com")
+  @Property(name = "airbyte-yml.auth.identity-providers[0].appName",
+            value = "testApp")
+  @Property(name = "airbyte-yml.auth.identity-providers[0].clientId",
+            value = "testClientId")
+  @Property(name = "airbyte-yml.auth.identity-providers[0].clientSecret",
             value = "testClientSecret")
   void testCreateOidcConfigFromIdentityProviderConfigurations() {
     final Optional<OidcConfig> oidcConfig = beanContext.findBean(OidcConfig.class);
     Assertions.assertTrue(oidcConfig.isPresent());
-    Assertions.assertEquals("https://testdomain.com", oidcConfig.get().domain());
-    Assertions.assertEquals("testApp", oidcConfig.get().appName());
-    Assertions.assertEquals("testClientId", oidcConfig.get().clientId());
-    Assertions.assertEquals("testClientSecret", oidcConfig.get().clientSecret());
+    Assertions.assertEquals("https://testdomain.com", oidcConfig.get().getDomain());
+    Assertions.assertEquals("testApp", oidcConfig.get().getAppName());
+    Assertions.assertEquals("testClientId", oidcConfig.get().getClientId());
+    Assertions.assertEquals("testClientSecret", oidcConfig.get().getClientSecret());
   }
 
   @Test
-  @Property(name = "airbyte.auth.identity-providers[0].type",
-            value = "oidc")
-  @Property(name = "airbyte.auth.identity-providers[0].domain",
+  @Property(name = "airbyte-yml.auth.identity-providers[0].domain",
             value = "https://testdomain.com")
-  @Property(name = "airbyte.auth.identity-providers[0].appName",
+  @Property(name = "airbyte-yml.auth.identity-providers[0].appName",
             value = "testApp")
-  @Property(name = "airbyte.auth.identity-providers[0].clientId",
+  @Property(name = "airbyte-yml.auth.identity-providers[0].clientId",
             value = "testClientId")
-  @Property(name = "airbyte.auth.identity-providers[0].clientSecret",
+  @Property(name = "airbyte-yml.auth.identity-providers[0].clientSecret",
             value = "testClientSecret")
-  @Property(name = "airbyte.auth.identity-providers[1].type",
+  @Property(name = "airbyte-yml.auth.identity-providers[1].type",
             value = "oidc")
-  @Property(name = "airbyte.auth.identity-providers[1].domain",
+  @Property(name = "airbyte-yml.auth.identity-providers[1].domain",
             value = "https://testdomain2.com")
-  @Property(name = "airbyte.auth.identity-providers[1].appName",
+  @Property(name = "airbyte-yml.auth.identity-providers[1].appName",
             value = "testApp2")
-  @Property(name = "airbyte.auth.identity-providers[1].clientId",
+  @Property(name = "airbyte-yml.auth.identity-providers[1].clientId",
             value = "testClientId2")
-  @Property(name = "airbyte.auth.identity-providers[1].clientSecret",
+  @Property(name = "airbyte-yml.auth.identity-providers[1].clientSecret",
             value = "testClientSecret2")
   void testCreateOidcConfigFromIdentityProviderConfigurationsThrowsIfMultiple() {
     Assertions.assertThrows(RuntimeException.class, () -> beanContext.findBean(OidcConfig.class));
