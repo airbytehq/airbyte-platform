@@ -8,6 +8,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.Sets;
 import io.airbyte.commons.protocol.transform_models.FieldTransform;
+import io.airbyte.commons.protocol.transform_models.StreamAttributeTransform;
 import io.airbyte.commons.protocol.transform_models.StreamTransform;
 import io.airbyte.commons.protocol.transform_models.UpdateFieldSchemaTransform;
 import io.airbyte.commons.protocol.transform_models.UpdateStreamTransform;
@@ -183,7 +184,7 @@ public class CatalogDiffHelpers {
             // but there are a number of reasons the streams might be different (such as a source-defined
             // primary key or cursor changing). These should not be expressed as "stream updates".
             final UpdateStreamTransform streamTransform = getStreamDiff(streamOld, streamNew, stream);
-            if (streamTransform.getFieldTransforms().size() > 0) {
+            if (!streamTransform.getFieldTransforms().isEmpty() || !streamTransform.getAttributeTransforms().isEmpty()) {
               streamTransforms.add(StreamTransform.createUpdateStreamTransform(descriptor, streamTransform));
             }
           }
@@ -195,6 +196,15 @@ public class CatalogDiffHelpers {
   private static UpdateStreamTransform getStreamDiff(final AirbyteStream streamOld,
                                                      final AirbyteStream streamNew,
                                                      final Optional<ConfiguredAirbyteStream> configuredStream) {
+
+    final Set<StreamAttributeTransform> attributeTransforms = new HashSet<>();
+    if (!streamOld.getSourceDefinedPrimaryKey().equals(streamNew.getSourceDefinedPrimaryKey())) {
+      attributeTransforms.add(StreamAttributeTransform.createUpdatePrimaryKeyTransform(
+          streamOld.getSourceDefinedPrimaryKey(),
+          streamNew.getSourceDefinedPrimaryKey(),
+          CatalogDiffHelpers.primaryKeyTransformBreaksConnection(configuredStream, streamNew.getSourceDefinedPrimaryKey())));
+    }
+
     final Set<FieldTransform> fieldTransforms = new HashSet<>();
     final Map<List<String>, JsonNode> fieldNameToTypeOld = getFullyQualifiedFieldNamesWithTypes(
         streamOld.getJsonSchema())
@@ -215,7 +225,7 @@ public class CatalogDiffHelpers {
         .forEach(fieldName -> {
           fieldTransforms.add(FieldTransform.createRemoveFieldTransform(fieldName,
               fieldNameToTypeOld.get(fieldName),
-              transformBreaksConnection(configuredStream, fieldName)));
+              fieldTransformBreaksConnection(configuredStream, fieldName)));
         });
     Sets.difference(fieldNameToTypeNew.keySet(), fieldNameToTypeOld.keySet())
         .forEach(fieldName -> fieldTransforms.add(
@@ -231,7 +241,7 @@ public class CatalogDiffHelpers {
           }
         });
 
-    return new UpdateStreamTransform(fieldTransforms);
+    return new UpdateStreamTransform(fieldTransforms, attributeTransforms);
   }
 
   @VisibleForTesting
@@ -259,8 +269,22 @@ public class CatalogDiffHelpers {
     });
   }
 
-  static boolean transformBreaksConnection(final Optional<ConfiguredAirbyteStream> configuredStream,
-                                           final List<String> fieldName) {
+  static boolean primaryKeyTransformBreaksConnection(final Optional<ConfiguredAirbyteStream> configuredStream,
+                                                     final List<List<String>> newSourceDefinedPK) {
+    if (configuredStream.isEmpty() || newSourceDefinedPK.isEmpty()) {
+      return false;
+    }
+
+    final ConfiguredAirbyteStream streamConfig = configuredStream.get();
+    final DestinationSyncMode destinationSyncMode = streamConfig.getDestinationSyncMode();
+
+    // Change is breaking if deduping and new source-defined PK was not the previously defined PK
+    return DestinationSyncMode.APPEND_DEDUP == destinationSyncMode
+        && !streamConfig.getPrimaryKey().equals(newSourceDefinedPK);
+  }
+
+  static boolean fieldTransformBreaksConnection(final Optional<ConfiguredAirbyteStream> configuredStream,
+                                                final List<String> fieldName) {
     if (configuredStream.isEmpty()) {
       return false;
     }

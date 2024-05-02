@@ -19,9 +19,14 @@ import lombok.ToString;
 public class UpdateStreamTransform {
 
   private final Set<FieldTransform> fieldTransforms;
+  private final Set<StreamAttributeTransform> attributeTransforms;
 
   public Set<FieldTransform> getFieldTransforms() {
     return new HashSet<>(fieldTransforms);
+  }
+
+  public Set<StreamAttributeTransform> getAttributeTransforms() {
+    return new HashSet<>(attributeTransforms);
   }
 
 }

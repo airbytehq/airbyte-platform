@@ -9,6 +9,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.google.common.io.Resources;
 import io.airbyte.commons.protocol.transform_models.FieldTransform;
+import io.airbyte.commons.protocol.transform_models.StreamAttributeTransform;
 import io.airbyte.commons.protocol.transform_models.StreamTransform;
 import io.airbyte.commons.protocol.transform_models.StreamTransformType;
 import io.airbyte.commons.protocol.transform_models.UpdateFieldSchemaTransform;
@@ -33,6 +34,9 @@ import java.util.stream.Stream;
 import org.assertj.core.api.Assertions;
 import org.assertj.core.api.Condition;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 
 @SuppressWarnings("PMD.JUnitTestsShouldIncludeAssert")
 class CatalogDiffHelpersTest {
@@ -47,6 +51,8 @@ class CatalogDiffHelpersTest {
   private static final String USERS = "users";
   private static final String DATE = "date";
   private static final String SALES = "sales";
+  private static final List<List<String>> ID_PK = List.of(List.of("id"));
+  private static final List<List<String>> DATE_PK = List.of(List.of(DATE));
   private static final String COMPANIES_VALID = "diffs/companies_schema.json";
   private static final String COMPANIES_INVALID = "diffs/companies_schema_invalid.json";
   private static final String VALID_SCHEMA_JSON = "diffs/valid_schema.json";
@@ -106,7 +112,8 @@ class CatalogDiffHelpersTest {
             FieldTransform.createRemoveFieldTransform(List.of(SOME_ARRAY, ITEMS, "oldName"),
                 schema1.get(PROPERTIES).get(SOME_ARRAY).get(ITEMS).get(PROPERTIES).get("oldName"), false),
             FieldTransform.createAddFieldTransform(List.of(SOME_ARRAY, ITEMS, "newName"),
-                schema2.get(PROPERTIES).get(SOME_ARRAY).get(ITEMS).get(PROPERTIES).get("newName"))))))
+                schema2.get(PROPERTIES).get(SOME_ARRAY).get(ITEMS).get(PROPERTIES).get("newName"))),
+            Set.of())))
         .sorted(STREAM_TRANSFORM_COMPARATOR)
         .toList();
 
@@ -196,7 +203,7 @@ class CatalogDiffHelpersTest {
     final List<StreamTransform> expectedDiff = Stream.of(
         StreamTransform.createUpdateStreamTransform(new StreamDescriptor().withName(USERS), new UpdateStreamTransform(Set.of(
             FieldTransform.createRemoveFieldTransform(List.of(DATE), schema1.get(PROPERTIES).get(DATE), true),
-            FieldTransform.createRemoveFieldTransform(List.of("id"), schema1.get(PROPERTIES).get("id"), true)))))
+            FieldTransform.createRemoveFieldTransform(List.of("id"), schema1.get(PROPERTIES).get("id"), true)), Set.of())))
         .toList();
 
     Assertions.assertThat(diff).containsAll(expectedDiff);
@@ -222,11 +229,11 @@ class CatalogDiffHelpersTest {
   }
 
   @Test
-  void testCatalogDiffStreamChangeWithNoFieldTransform() throws IOException {
+  void testCatalogDiffStreamChangeWithNoTransforms() throws IOException {
     final JsonNode schema1 = Jsons.deserialize(readResource(VALID_SCHEMA_JSON));
 
     final AirbyteCatalog catalog1 = new AirbyteCatalog().withStreams(List.of(
-        new AirbyteStream().withName(USERS).withJsonSchema(schema1),
+        new AirbyteStream().withName(USERS).withJsonSchema(schema1).withSourceDefinedPrimaryKey(List.of(List.of("id"))),
         new AirbyteStream().withName(SALES).withJsonSchema(schema1)));
     final AirbyteCatalog catalog2 = new AirbyteCatalog().withStreams(List.of(
         new AirbyteStream().withName(USERS).withJsonSchema(schema1).withSourceDefinedPrimaryKey(List.of(List.of("id")))));
@@ -242,7 +249,64 @@ class CatalogDiffHelpersTest {
         StreamTransform.createRemoveStreamTransform(new StreamDescriptor().withName(SALES)))
         .toList();
 
-    Assertions.assertThat(actualDiff).containsExactlyInAnyOrderElementsOf(expectedDiff);
+    Assertions.assertThat(actualDiff).containsExactlyElementsOf(expectedDiff);
+  }
+
+  private static Stream<Arguments> testCatalogDiffWithSourceDefinedPrimaryKeyChangeMethodSource() {
+    return Stream.of(
+        // Should be breaking in DEDUP mode if the previous PK is not the new source-defined PK
+        Arguments.of(DestinationSyncMode.APPEND_DEDUP, ID_PK, ID_PK, DATE_PK, true),
+        Arguments.of(DestinationSyncMode.APPEND_DEDUP, ID_PK, List.of(), DATE_PK, true),
+
+        // Should not be breaking in other sync modes
+        Arguments.of(DestinationSyncMode.APPEND, ID_PK, ID_PK, DATE_PK, false),
+        Arguments.of(DestinationSyncMode.OVERWRITE, ID_PK, ID_PK, DATE_PK, false),
+        Arguments.of(DestinationSyncMode.APPEND, ID_PK, List.of(), DATE_PK, false),
+        Arguments.of(DestinationSyncMode.OVERWRITE, ID_PK, List.of(), DATE_PK, false),
+
+        // Should not be breaking if added source-defined PK is already the manually set PK
+        Arguments.of(DestinationSyncMode.APPEND, ID_PK, List.of(), ID_PK, false),
+        Arguments.of(DestinationSyncMode.APPEND_DEDUP, ID_PK, List.of(), ID_PK, false),
+        Arguments.of(DestinationSyncMode.OVERWRITE, ID_PK, List.of(), ID_PK, false),
+
+        // Removing source-defined PK should not be breaking
+        Arguments.of(DestinationSyncMode.APPEND, ID_PK, ID_PK, List.of(), false),
+        Arguments.of(DestinationSyncMode.APPEND_DEDUP, ID_PK, ID_PK, List.of(), false),
+        Arguments.of(DestinationSyncMode.OVERWRITE, ID_PK, ID_PK, List.of(), false));
+  }
+
+  @ParameterizedTest
+  @MethodSource("testCatalogDiffWithSourceDefinedPrimaryKeyChangeMethodSource")
+  void testCatalogDiffWithSourceDefinedPrimaryKeyChange(final DestinationSyncMode destSyncMode,
+                                                        final List<List<String>> configuredPK,
+                                                        final List<List<String>> prevSourcePK,
+                                                        final List<List<String>> newSourcePK,
+                                                        final boolean isBreaking)
+      throws IOException {
+    final JsonNode schema = Jsons.deserialize(readResource(VALID_SCHEMA_JSON));
+
+    final AirbyteStream stream = new AirbyteStream().withName(USERS).withJsonSchema(schema).withSourceDefinedPrimaryKey(prevSourcePK);
+    final AirbyteStream refreshedStream = new AirbyteStream().withName(USERS).withJsonSchema(schema).withSourceDefinedPrimaryKey(newSourcePK);
+
+    final AirbyteCatalog initialCatalog = new AirbyteCatalog().withStreams(List.of(stream));
+    final AirbyteCatalog refreshedCatalog = new AirbyteCatalog().withStreams(List.of(refreshedStream));
+
+    final ConfiguredAirbyteStream configuredStream = new ConfiguredAirbyteStream()
+        .withStream(stream)
+        .withSyncMode(SyncMode.INCREMENTAL)
+        .withDestinationSyncMode(destSyncMode)
+        .withPrimaryKey(configuredPK);
+
+    final ConfiguredAirbyteCatalog configuredCatalog = new ConfiguredAirbyteCatalog().withStreams(List.of(configuredStream));
+
+    final Set<StreamTransform> actualDiff = CatalogDiffHelpers.getCatalogDiff(initialCatalog, refreshedCatalog, configuredCatalog);
+
+    final List<StreamTransform> expectedDiff = List.of(
+        StreamTransform.createUpdateStreamTransform(new StreamDescriptor().withName(USERS),
+            new UpdateStreamTransform(Set.of(),
+                Set.of(StreamAttributeTransform.createUpdatePrimaryKeyTransform(prevSourcePK, newSourcePK, isBreaking)))));
+
+    Assertions.assertThat(actualDiff).containsExactlyElementsOf(expectedDiff);
   }
 
 }
