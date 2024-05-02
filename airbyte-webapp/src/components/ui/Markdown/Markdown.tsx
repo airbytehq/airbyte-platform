@@ -65,6 +65,13 @@ function preprocessMarkdown(markdown: string): string {
   // And likewise for <Tabs>
   preprocessed = surroundTagWithNewlines("Tabs", preprocessed);
 
+  // Add an empty line before any code block that isn't already preceded by one, since
+  // without it the code block is just rendered as plain text.
+  preprocessed = preprocessed.replace(
+    /(?<preceding>[^\n])\n(?<whitespace>\s*)```/g,
+    "$<preceding>\n\n$<whitespace>```"
+  );
+
   // Apply remark plugins to the markdown.
   // This should be ran last so that remarkGfm doesn't interfere with the above.
   preprocessed = remark().use(remarkGfm).processSync(preprocessed).toString();
