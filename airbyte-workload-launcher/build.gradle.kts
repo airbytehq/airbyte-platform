@@ -97,12 +97,3 @@ airbyte {
     imageName.set("workload-launcher")
   }
 }
-
-// This is a workaround related to kaptBuild errors. It seems to be because there are no tests in cloud-airbyte-api-server.
-// TODO: this should be removed when we move to kotlin 1.9.20
-// TODO: we should write tests
-afterEvaluate {
-  tasks.named("kaptGenerateStubsTestKotlin") {
-    enabled = false
-  }
-}
