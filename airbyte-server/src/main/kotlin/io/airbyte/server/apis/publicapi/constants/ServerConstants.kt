@@ -22,6 +22,7 @@ const val OAUTH_PATH = "$ROOT_PATH/v1/oauth"
 const val WORKSPACES_PATH = "$ROOT_PATH/v1/workspaces"
 const val WORKSPACES_WITH_ID_PATH = "$WORKSPACES_PATH/{workspaceId}"
 const val WORKSPACES_WITH_ID_AND_OAUTH_PATH = "$WORKSPACES_WITH_ID_PATH/oauth_credentials"
+const val PERMISSIONS_PATH = "$ROOT_PATH/v1/permissions"
 
 val POST = io.micronaut.http.HttpMethod.POST.name
 val GET = io.micronaut.http.HttpMethod.GET.name

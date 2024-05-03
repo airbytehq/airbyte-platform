@@ -5978,6 +5978,46 @@ paths:
         in: path
         required: true
 
+  # Public APIs - Permissions
+  /public/v1/permissions:
+    post:
+      tags:
+        - public_permissions
+        - public
+        - Permissions
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PermissionCreateRequest"
+            examples:
+              Permission Creation Request Example:
+                value:
+                  permissionType: workspace_admin
+                  userId: 7d08fd6c-531e-4a00-937e-3d355f253e63
+                  workspaceId: 9924bcd0-99be-453d-ba47-c2c9766f7da5
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PermissionResponse"
+              examples:
+                Permission Creation Response Example:
+                  value:
+                    permissionId: 9924bcd0-99be-453d-ba47-c2c9766f7da5
+                    permissionType: workspace_admin
+                    userId: 7d08fd6c-531e-4a00-937e-3d355f253e63
+          description: Successful operation
+        "400":
+          description: Invalid data
+        "403":
+          description: Not allowed
+      operationId: publicCreatePermission
+      summary: Create a permission
+      x-sdk-entity-operation: Permission#create
+
 components:
   securitySchemes:
     bearerAuth:
@@ -6180,6 +6220,7 @@ components:
     WorkspaceId:
       type: string
       format: uuid
+      x-sdk-component: true
     CustomerId:
       type: string
       format: uuid
@@ -8714,6 +8755,7 @@ components:
     OrganizationId:
       type: string
       format: uuid
+      x-sdk-component: true
     OrganizationIdRequestBody:
       type: object
       required:
@@ -8923,7 +8965,7 @@ components:
         - workspace_admin # Permission to create, read, delete, and edit a specific workspace, and also can grant other users permissions to this workspace
         - workspace_editor # Permission to create and edit connections within the workspace, but cannot update workspace name or delete the workspace
         - workspace_reader # Permission to read connections, sync details, logs within the workspace, but cannot modify anything
-
+      x-sdk-component: true
     PermissionCheckRequest:
       type: object
       required:
@@ -8970,6 +9012,7 @@ components:
       type: string
       description: Internal Airbyte user ID
       format: uuid
+      x-sdk-component: true
 
     UserIdRequestBody:
       type: object
@@ -12073,6 +12116,49 @@ components:
       x-sdk-entity: Workspace
       x-sdk-param-suppress-computed-diff: true
       x-sdk-component: true
+
+    # Public APIs - Permissions
+    PermissionCreateRequest:
+      required:
+        - permissionType # which role will be given, e.g. workspace_admin, organization_editor, etc.
+        - userId # which user will be given this permission
+      type: object
+      properties:
+        permissionType:
+          $ref: "#/components/schemas/PermissionType"
+        userId:
+          $ref: "#/components/schemas/UserId"
+        workspaceId:
+          $ref: "#/components/schemas/WorkspaceId"
+        organizationId:
+          $ref: "#/components/schemas/OrganizationId"
+      x-sdk-entity: Permission
+      x-sdk-param-suppress-computed-diff: true
+      x-sdk-component: true
+    PermissionResponse:
+      title: Root Type for PermissionResponse
+      description: Provides details of a single permission.
+      type: object
+      required:
+        - permissionId
+        - permissionType
+        - userId
+      properties:
+        permissionId:
+          type: string
+          format: uuid
+        permissionType:
+          $ref: "#/components/schemas/PermissionType"
+        userId:
+          $ref: "#/components/schemas/UserId"
+        workspaceId:
+          $ref: "#/components/schemas/WorkspaceId"
+        organizationId:
+          $ref: "#/components/schemas/OrganizationId"
+      x-sdk-entity: Permission
+      x-sdk-param-suppress-computed-diff: true
+      x-sdk-component: true
+
     ConnectionsResponse:
       title: Root Type for ConnectionsResponse
       description: ""
