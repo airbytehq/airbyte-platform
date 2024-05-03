@@ -1,6 +1,7 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useIntl } from "react-intl";
 
+import { FeatureItem, useFeature } from "core/services/features";
 import { useNotificationService } from "hooks/services/Notification";
 
 import { organizationKeys } from "./organizations";
@@ -128,9 +129,11 @@ export const useDeletePermissions = () => {
 };
 
 let currentIsInstanceAdminEnabled = false;
+
 export const useIsInstanceAdminEnabled = () => {
+  const showInstanceAdminWarning = useFeature(FeatureItem.ShowAdminWarningInWorkspace); // we only want to use the "viewonly" mode if we in an env that shows the banner (ie: for now, cloud only)
   return useSuspenseQuery([SCOPE_INSTANCE, "isInstanceAdminEnabled"], () => currentIsInstanceAdminEnabled, {
-    initialData: currentIsInstanceAdminEnabled,
+    initialData: showInstanceAdminWarning ? currentIsInstanceAdminEnabled : true,
     cacheTime: Infinity,
   });
 };
