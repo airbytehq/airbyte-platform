@@ -7980,13 +7980,21 @@ components:
       type: object
       required:
         - connectionId
+        - refreshMode
       properties:
         connectionId:
           $ref: "#/components/schemas/ConnectionId"
+        refreshMode:
+          $ref: "#/components/schemas/RefreshMode"
         streams:
           type: array
           items:
             $ref: "#/components/schemas/ConnectionStream"
+    RefreshMode:
+      enum:
+        - Truncate
+        - Merge
+      type: string
     DbMigrationRequestBody:
       type: object
       required:

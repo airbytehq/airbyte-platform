@@ -49,6 +49,7 @@ import {
   JobWithAttemptsRead,
   NamespaceDefinitionType,
   OperationCreate,
+  RefreshMode,
   SourceDefinitionRead,
   SourceRead,
   WebBackendConnectionListItem,
@@ -214,7 +215,7 @@ export const useRefreshConnectionStreams = (connectionId: string) => {
         return;
       }
 
-      await refreshConnectionStream({ connectionId, streams }, requestOptions);
+      await refreshConnectionStream({ connectionId, streams, refreshMode: RefreshMode.Merge }, requestOptions);
     },
     {
       onSuccess: () => {
