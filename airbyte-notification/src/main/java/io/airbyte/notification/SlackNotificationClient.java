@@ -67,7 +67,9 @@ public class SlackNotificationClient extends NotificationClient {
         summary.getErrorMessage(),
         summary.getConnection().getUrl(),
         String.valueOf(summary.getJobId()));
-    return notifyJson(buildJobCompletedNotification(summary, "Sync failure occurred", legacyMessage, Optional.empty()).toJsonNode());
+    Notification notification = buildJobCompletedNotification(summary, "Sync failure occurred", legacyMessage, Optional.empty());
+    notification.setData(summary);
+    return notifyJson(notification.toJsonNode());
   }
 
   @Override
@@ -82,7 +84,9 @@ public class SlackNotificationClient extends NotificationClient {
         summary.getErrorMessage(),
         summary.getConnection().getUrl(),
         String.valueOf(summary.getJobId()));
-    return notifyJson(buildJobCompletedNotification(summary, "Sync completed", legacyMessage, Optional.empty()).toJsonNode());
+    Notification notification = buildJobCompletedNotification(summary, "Sync completed", legacyMessage, Optional.empty());
+    notification.setData(summary);
+    return notifyJson(notification.toJsonNode());
   }
 
   @NotNull

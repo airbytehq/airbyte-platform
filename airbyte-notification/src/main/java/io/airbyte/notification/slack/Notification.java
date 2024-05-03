@@ -5,23 +5,44 @@
 package io.airbyte.notification.slack;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.List;
 
 public class Notification {
 
+  private static final ObjectMapper MAPPER = new ObjectMapper();
+
+  static {
+    DateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd hh:mm:ss");
+    MAPPER.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
+    MAPPER.setDateFormat(dateFormat);
+    MAPPER.registerModule(new JavaTimeModule());
+  }
+
   private String text;
   private final List<Block> blocks;
 
+  private Object data;
+
   public Notification() {
     blocks = new ArrayList<>();
+    data = null;
   }
 
   public void setText(String text) {
     this.text = text;
+  }
+
+  public void setData(Object data) {
+    this.data = data;
   }
 
   public Section addSection() {
@@ -47,6 +68,9 @@ public class Notification {
         blocksNode.add(block.toJsonNode());
       }
       node.put("blocks", blocksNode);
+    }
+    if (data != null) {
+      node.put("data", MAPPER.valueToTree(data));
     }
     return node;
   }
