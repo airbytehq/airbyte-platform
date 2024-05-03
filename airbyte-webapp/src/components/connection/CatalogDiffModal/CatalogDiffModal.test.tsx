@@ -1,4 +1,4 @@
-import { cleanup, render, screen } from "@testing-library/react";
+import { act, cleanup, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { IntlProvider } from "react-intl";
 
@@ -273,6 +273,94 @@ describe("catalog diff modal", () => {
     await userEvent.click(accordionHeader);
     const nullAccordionBodyAgain = screen.queryByRole("table", { name: /removed fields/ });
     expect(nullAccordionBodyAgain).not.toBeInTheDocument();
-    mockCatalogDiff.transforms = [];
+  });
+
+  describe("source defined key changes", () => {
+    it("renders source defined primary key changes", async () => {
+      const updateWithPrimaryKeyChange: StreamTransform = {
+        transformType: "update_stream",
+        streamDescriptor: { namespace: "apple", name: "harissa_paste" },
+        updateStream: {
+          streamAttributeTransforms: [
+            {
+              transformType: "update_primary_key",
+              breaking: true,
+              updatePrimaryKey: {
+                oldPrimaryKey: [["old_key"]],
+                newPrimaryKey: [["prefix"], ["new", "key"]],
+              },
+            },
+          ],
+          fieldTransforms: [],
+        },
+      };
+      mockCatalogDiff.transforms.push(updateWithPrimaryKeyChange);
+
+      render(
+        <IntlProvider messages={messages} locale="en">
+          <ModalServiceProvider>
+            <CatalogDiffModal
+              catalogDiff={mockCatalogDiff}
+              catalog={mockCatalog}
+              onComplete={() => {
+                return null;
+              }}
+            />
+          </ModalServiceProvider>
+        </IntlProvider>
+      );
+
+      act(() => {
+        screen.getByTestId(`toggle-accordion-harissa_paste-stream`).click();
+      });
+
+      const primaryKeyTable = screen.queryByTestId("streamAttributeTable-update_primary_key");
+      expect(primaryKeyTable).toBeInTheDocument();
+
+      expect(within(primaryKeyTable!).getByTestId("fieldRow")).toHaveAttribute("title", "old_key -> [prefix, new.key]");
+    });
+
+    it("renders source defined primary key changes without old primary key", async () => {
+      const updateWithPrimaryKeyChange: StreamTransform = {
+        transformType: "update_stream",
+        streamDescriptor: { namespace: "apple", name: "harissa_paste" },
+        updateStream: {
+          streamAttributeTransforms: [
+            {
+              transformType: "update_primary_key",
+              breaking: true,
+              updatePrimaryKey: {
+                newPrimaryKey: [["prefix"], ["new", "key"]],
+              },
+            },
+          ],
+          fieldTransforms: [],
+        },
+      };
+      mockCatalogDiff.transforms.push(updateWithPrimaryKeyChange);
+
+      render(
+        <IntlProvider messages={messages} locale="en">
+          <ModalServiceProvider>
+            <CatalogDiffModal
+              catalogDiff={mockCatalogDiff}
+              catalog={mockCatalog}
+              onComplete={() => {
+                return null;
+              }}
+            />
+          </ModalServiceProvider>
+        </IntlProvider>
+      );
+
+      act(() => {
+        screen.getByTestId(`toggle-accordion-harissa_paste-stream`).click();
+      });
+
+      const primaryKeyTable = screen.queryByTestId("streamAttributeTable-update_primary_key");
+      expect(primaryKeyTable).toBeInTheDocument();
+
+      expect(within(primaryKeyTable!).getByTestId("fieldRow")).toHaveAttribute("title", "(none) -> [prefix, new.key]");
+    });
   });
 });

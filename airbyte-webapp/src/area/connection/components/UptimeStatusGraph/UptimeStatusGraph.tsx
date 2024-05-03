@@ -14,6 +14,7 @@ import { ConnectionStatusIndicatorStatus } from "components/connection/Connectio
 import { getStreamKey } from "area/connection/utils";
 import { useGetConnectionUptimeHistory } from "core/api";
 import { JobStatus } from "core/api/types/AirbyteClient";
+import { assertNever } from "core/utils/asserts";
 import { useConnectionEditService } from "hooks/services/ConnectionEdit/ConnectionEditService";
 import { useAirbyteTheme } from "hooks/theme/useAirbyteTheme";
 
@@ -51,8 +52,6 @@ const sortStreams = (a: SortableStream, b: SortableStream) => {
 
   return nameA.localeCompare(nameB);
 };
-
-function assertNever(_x: never) {}
 
 const formatDataForChart = (data: ReturnType<typeof useGetConnectionUptimeHistory>) => {
   // bucket entries by their timestamp and collect all stream identities so we can fill in gaps

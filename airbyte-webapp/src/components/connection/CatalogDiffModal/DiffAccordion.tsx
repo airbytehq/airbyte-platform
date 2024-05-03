@@ -6,6 +6,7 @@ import { StreamTransform } from "core/api/types/AirbyteClient";
 import styles from "./DiffAccordion.module.scss";
 import { DiffAccordionHeader } from "./DiffAccordionHeader";
 import { DiffFieldTable } from "./DiffFieldTable";
+import { DiffStreamAttribute } from "./DiffStreamAttribute";
 import { getSortedDiff } from "./utils";
 
 interface DiffAccordionProps {
@@ -34,11 +35,16 @@ export const DiffAccordion: React.FC<DiffAccordionProps> = ({ streamTransform })
                 streamDescriptor={streamTransform.streamDescriptor}
                 removedCount={removedItems.length}
                 newCount={newItems.length}
-                changedCount={changedItems.length}
+                changedCount={
+                  changedItems.length + (streamTransform.updateStream?.streamAttributeTransforms?.length ?? 0)
+                }
                 open={open}
               />
             </Disclosure.Button>
             <Disclosure.Panel className={styles.accordionPanel}>
+              {streamTransform.updateStream?.streamAttributeTransforms?.length && (
+                <DiffStreamAttribute transforms={streamTransform.updateStream.streamAttributeTransforms} />
+              )}
               {removedItems.length > 0 && <DiffFieldTable fieldTransforms={removedItems} diffVerb="removed" />}
               {newItems.length > 0 && <DiffFieldTable fieldTransforms={newItems} diffVerb="new" />}
               {changedItems.length > 0 && <DiffFieldTable fieldTransforms={changedItems} diffVerb="changed" />}
