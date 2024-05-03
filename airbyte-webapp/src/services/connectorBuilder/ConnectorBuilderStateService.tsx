@@ -749,6 +749,11 @@ export const ConnectorBuilderTestReadProvider: React.FC<React.PropsWithChildren<
       }
     }
   );
+  // additionalProperties is automatically set to true on the schema when saving it to the manifest,
+  // so set it to true on the inferred schema as well to avoid unnecessary diffs
+  if (streamRead.data?.inferred_schema) {
+    streamRead.data.inferred_schema.additionalProperties = true;
+  }
 
   const schemaWarnings = useSchemaWarnings(streamRead, testStreamIndex, streamName);
 

@@ -31,11 +31,12 @@ export const ParameterizedRequestsSection: React.FC<ParameterizedRequestsSection
   currentStreamIndex,
 }) => {
   const { formatMessage } = useIntl();
+  const label = formatMessage({ id: "connectorBuilder.parameterizedRequests.label" });
 
   return (
     <BuilderCard
       docLink={links.connectorBuilderParameterizedRequests}
-      label={formatMessage({ id: "connectorBuilder.parameterizedRequests.label" })}
+      label={label}
       tooltip={formatMessage({ id: "connectorBuilder.parameterizedRequests.tooltip" })}
       inputsConfig={{
         toggleable: true,
@@ -45,8 +46,7 @@ export const ParameterizedRequestsSection: React.FC<ParameterizedRequestsSection
       copyConfig={{
         path: "parameterizedRequests",
         currentStreamIndex,
-        copyFromLabel: formatMessage({ id: "connectorBuilder.copyFromParameterizedRequestsTitle" }),
-        copyToLabel: formatMessage({ id: "connectorBuilder.copyToParameterizedRequestsTitle" }),
+        componentName: label,
       }}
     >
       <BuilderList

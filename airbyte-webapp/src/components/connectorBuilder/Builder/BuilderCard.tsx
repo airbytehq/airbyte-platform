@@ -35,8 +35,7 @@ interface BuilderCardProps {
   copyConfig?: {
     path: string;
     currentStreamIndex: number;
-    copyToLabel: string;
-    copyFromLabel: string;
+    componentName: string;
   };
   docLink?: string;
   inputsConfig?: {
@@ -333,6 +332,7 @@ const CardToggle = ({ path, defaultValue }: { path: FieldPath<BuilderState>; def
 };
 
 const CopyButtons = ({ copyConfig }: Pick<BuilderCardProps, "copyConfig">) => {
+  const { formatMessage } = useIntl();
   const [isCopyToOpen, setCopyToOpen] = useState(false);
   const [isCopyFromOpen, setCopyFromOpen] = useState(false);
   const copyValueIncludingArrays = useCopyValueIncludingArrays();
@@ -378,7 +378,7 @@ const CopyButtons = ({ copyConfig }: Pick<BuilderCardProps, "copyConfig">) => {
             setCopyToOpen(false);
           }}
           currentStreamIndex={copyConfig.currentStreamIndex}
-          title={copyConfig.copyToLabel}
+          title={formatMessage({ id: "connectorBuilder.copyToTitle" }, { componentName: copyConfig.componentName })}
         />
       )}
       {isCopyFromOpen && (
@@ -393,7 +393,7 @@ const CopyButtons = ({ copyConfig }: Pick<BuilderCardProps, "copyConfig">) => {
             setCopyFromOpen(false);
           }}
           currentStreamIndex={copyConfig.currentStreamIndex}
-          title={copyConfig.copyFromLabel}
+          title={formatMessage({ id: "connectorBuilder.copyFromTitle" }, { componentName: copyConfig.componentName })}
         />
       )}
     </div>

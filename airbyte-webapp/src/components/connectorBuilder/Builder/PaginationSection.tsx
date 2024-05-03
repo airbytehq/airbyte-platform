@@ -35,11 +35,12 @@ export const PaginationSection: React.FC<PaginationSectionProps> = ({ streamFiel
   const { setValue } = useFormContext();
   const pageSize = useBuilderWatch(streamFieldPath("paginator.strategy.page_size"));
   const pageSizeOptionPath = streamFieldPath("paginator.pageSizeOption");
+  const label = formatMessage({ id: "connectorBuilder.pagination.label" });
 
   return (
     <BuilderCard
       docLink={links.connectorBuilderPagination}
-      label={formatMessage({ id: "connectorBuilder.pagination.label" })}
+      label={label}
       tooltip={formatMessage({ id: "connectorBuilder.pagination.tooltip" })}
       inputsConfig={{
         toggleable: true,
@@ -67,8 +68,7 @@ export const PaginationSection: React.FC<PaginationSectionProps> = ({ streamFiel
       copyConfig={{
         path: "paginator",
         currentStreamIndex,
-        copyFromLabel: formatMessage({ id: "connectorBuilder.copyFromPaginationTitle" }),
-        copyToLabel: formatMessage({ id: "connectorBuilder.copyToPaginationTitle" }),
+        componentName: label,
       }}
     >
       <BuilderOneOf<BuilderPaginator["strategy"]>
@@ -245,6 +245,7 @@ export const PaginationSection: React.FC<PaginationSectionProps> = ({ streamFiel
                             type="string"
                             path={streamFieldPath("paginator.strategy.cursor.stop_condition")}
                             manifestPath="CursorPagination.properties.stop_condition"
+                            pattern={formatMessage({ id: "connectorBuilder.condition.pattern" })}
                             optional
                           />
                         </>

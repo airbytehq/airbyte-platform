@@ -33,6 +33,7 @@ import {
   NoAuth,
   SessionTokenAuthenticator,
   DatetimeBasedCursorType,
+  RecordSelector,
 } from "core/api/types/ConnectorManifest";
 import { removeEmptyProperties } from "core/utils/form";
 
@@ -47,6 +48,7 @@ import {
   BuilderIncrementalSync,
   BuilderMetadata,
   BuilderPaginator,
+  BuilderRecordSelector,
   BuilderRequestBody,
   BuilderStream,
   BuilderTransformation,
@@ -201,13 +203,21 @@ const manifestStreamToBuilder = (
     name: streamName,
     urlPath: requester.path,
     httpMethod: requester.http_method === "POST" ? "POST" : "GET",
-    fieldPointer: retriever.record_selector.extractor.field_path as string[],
     requestOptions: {
       requestParameters: Object.entries(requester.request_parameters ?? {}),
       requestHeaders: Object.entries(requester.request_headers ?? {}),
       requestBody: requesterToRequestBody(requester),
     },
     primaryKey: manifestPrimaryKeyToBuilder(stream),
+    recordSelector: convertOrDumpAsString(
+      retriever.record_selector,
+      manifestRecordSelectorToBuilder,
+      {
+        name: "recordSelector",
+        streamName,
+      },
+      metadata
+    ),
     paginator: convertOrDumpAsString(
       retriever.paginator,
       manifestPaginatorToBuilder,
@@ -248,13 +258,6 @@ const manifestStreamToBuilder = (
       },
       metadata
     ),
-    unsupportedFields: {
-      retriever: {
-        record_selector: {
-          record_filter: stream.retriever.record_selector.record_filter,
-        },
-      },
-    },
     autoImportSchema: metadata?.autoImportSchema?.[stream.name ?? ""] === true,
   };
 };
@@ -278,6 +281,31 @@ function requesterToRequestBody(requester: HttpRequester): BuilderRequestBody {
     value: isString(requester.request_body_json)
       ? requester.request_body_json
       : formatJson(requester.request_body_json),
+  };
+}
+
+export function manifestRecordSelectorToBuilder(
+  recordSelector: RecordSelector,
+  streamName?: string
+): BuilderRecordSelector | undefined {
+  assertType(recordSelector, "RecordSelector", streamName);
+  assertType(recordSelector.extractor, "DpathExtractor", streamName);
+  if (recordSelector.record_filter) {
+    assertType(recordSelector.record_filter, "RecordFilter", streamName);
+  }
+
+  if (
+    recordSelector.extractor.field_path.length === 0 &&
+    !recordSelector.record_filter &&
+    (!recordSelector.schema_normalization || recordSelector.schema_normalization === "None")
+  ) {
+    return undefined;
+  }
+
+  return {
+    fieldPath: recordSelector.extractor.field_path as string[],
+    filterCondition: recordSelector.record_filter?.condition,
+    normalizeToSchema: recordSelector.schema_normalization === "Default",
   };
 }
 

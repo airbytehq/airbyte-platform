@@ -51,6 +51,7 @@ import {
   NoAuthType,
   HttpRequester,
   OAuthAuthenticatorRefreshTokenUpdater,
+  RecordSelector,
 } from "core/api/types/ConnectorManifest";
 
 import { CDK_VERSION } from "./cdk";
@@ -221,6 +222,12 @@ export type BuilderRequestBody =
       value: string;
     };
 
+export interface BuilderRecordSelector {
+  fieldPath: string[];
+  filterCondition?: string;
+  normalizeToSchema: boolean;
+}
+
 export type YamlString = string;
 export const isYamlString = (value: unknown): value is YamlString => isString(value);
 
@@ -228,10 +235,10 @@ export interface BuilderStream {
   id: string;
   name: string;
   urlPath: string;
-  fieldPointer: string[];
   primaryKey: string[];
   httpMethod: BuilderHttpMethod;
   requestOptions: BuilderRequestOptions;
+  recordSelector?: BuilderRecordSelector | YamlString;
   paginator?: BuilderPaginator | YamlString;
   transformations?: BuilderTransformation[] | YamlString;
   incrementalSync?: BuilderIncrementalSync | YamlString;
@@ -239,14 +246,13 @@ export interface BuilderStream {
   parameterizedRequests?: BuilderParameterizedRequests[];
   errorHandler?: BuilderErrorHandler[] | YamlString;
   schema?: string;
-  unsupportedFields?: Record<string, object>;
   autoImportSchema: boolean;
 }
 
 type StreamName = string;
 // todo: add more component names to this type as more components support in YAML
 export interface YamlSupportedComponentName {
-  stream: "paginator" | "errorHandler" | "transformations" | "incrementalSync";
+  stream: "paginator" | "errorHandler" | "transformations" | "incrementalSync" | "recordSelector";
   global: "authenticator";
 }
 
@@ -295,6 +301,7 @@ export const getYamlValuePerComponent = (manifest: ConnectorManifest): YamlValue
               .with("errorHandler", (name) => [name, stream?.retriever?.requester?.error_handler])
               .with("transformations", (name) => [name, stream?.transformations])
               .with("incrementalSync", (name) => [name, stream?.incremental_sync])
+              .with("recordSelector", (name) => [name, stream?.retriever?.record_selector])
               .exhaustive()
           )
         );
@@ -373,7 +380,6 @@ export const isEmptyOrDefault = (schema?: string) => {
 export const DEFAULT_BUILDER_STREAM_VALUES: Omit<BuilderStream, "id"> = {
   name: "",
   urlPath: "",
-  fieldPointer: [],
   primaryKey: [],
   httpMethod: "GET",
   schema: DEFAULT_SCHEMA,
@@ -514,6 +520,10 @@ const maybeYamlSchema = (schema: yup.BaseSchema) => {
   );
 };
 
+const interpolationString = yup
+  .string()
+  .matches(INTERPOLATION_PATTERN, { message: FORM_PATTERN_ERROR, excludeEmptyString: true });
+
 export const jsonString = yup.string().test({
   test: (val: string | undefined) => {
     if (!val) {
@@ -568,7 +578,7 @@ const errorHandlerSchema = yup
         .object()
         .shape({
           error_message_contains: yup.string(),
-          predicate: yup.string().matches(INTERPOLATION_PATTERN, FORM_PATTERN_ERROR),
+          predicate: interpolationString,
           http_codes: yup.array(yup.string()).notRequired().default(undefined),
           error_message: yup.string(),
         })
@@ -676,11 +686,17 @@ export const globalSchema = yup.object().shape({
 export const streamSchema = yup.object().shape({
   name: yup.string().required(REQUIRED_ERROR),
   urlPath: yup.string().required(REQUIRED_ERROR),
-  fieldPointer: yup.array().of(yup.string()),
   primaryKey: yup.array().of(yup.string()),
   httpMethod: httpMethodSchema,
   requestOptions: requestOptionsSchema,
   schema: jsonString,
+  recordSelector: maybeYamlSchema(
+    yup.object().shape({
+      fieldPath: yup.array().of(yup.string()),
+      filterCondition: interpolationString.notRequired().default(undefined),
+      normalizeToSchema: yup.boolean().default(false),
+    })
+  ),
   paginator: maybeYamlSchema(
     yup
       .object()
@@ -715,7 +731,7 @@ export const streamSchema = yup.object().shape({
                 }),
                 stop_condition: yup.mixed().when("type", {
                   is: "custom",
-                  then: yup.string(),
+                  then: interpolationString,
                   otherwise: strip,
                 }),
                 path: yup.mixed().when("type", {
@@ -861,10 +877,7 @@ function splitUrl(url: string): { base: string; path: string } {
 function convertOrLoadYamlString<BuilderInput, ManifestOutput>(
   builderValue: BuilderInput | YamlString,
   convertFn: (builderValue: BuilderInput) => ManifestOutput
-): ManifestOutput | undefined {
-  if (builderValue === undefined) {
-    return undefined;
-  }
+): ManifestOutput {
   if (isYamlString(builderValue)) {
     return load(builderValue) as ManifestOutput;
   }
@@ -1193,6 +1206,31 @@ function builderRequestBodyToStreamRequestBody(builderRequestBody: BuilderReques
   }
 }
 
+export function builderRecordSelectorToManifest(recordSelector: BuilderRecordSelector | undefined): RecordSelector {
+  const defaultRecordSelector: RecordSelector = {
+    type: "RecordSelector",
+    extractor: {
+      type: "DpathExtractor",
+      field_path: [],
+    },
+  };
+  if (!recordSelector) {
+    return defaultRecordSelector;
+  }
+  return merge(defaultRecordSelector, {
+    extractor: {
+      field_path: recordSelector.fieldPath,
+    },
+    record_filter: recordSelector.filterCondition
+      ? {
+          type: "RecordFilter",
+          condition: recordSelector.filterCondition,
+        }
+      : undefined,
+    schema_normalization: recordSelector.normalizeToSchema ? "Default" : undefined,
+  });
+}
+
 type BaseRequester = Pick<HttpRequester, "type" | "url_base" | "authenticator">;
 
 function builderStreamToDeclarativeSteam(
@@ -1205,7 +1243,7 @@ function builderStreamToDeclarativeSteam(
     $ref: "#/definitions/base_requester",
   } as unknown as BaseRequester;
 
-  const declarativeStream: DeclarativeStream = {
+  return {
     type: "DeclarativeStream",
     name: stream.name,
     primary_key: stream.primaryKey.length > 0 ? stream.primaryKey : undefined,
@@ -1220,13 +1258,7 @@ function builderStreamToDeclarativeSteam(
         ...builderRequestBodyToStreamRequestBody(stream.requestOptions.requestBody),
         error_handler: convertOrLoadYamlString(stream.errorHandler, builderErrorHandlersToManifest),
       },
-      record_selector: {
-        type: "RecordSelector",
-        extractor: {
-          type: "DpathExtractor",
-          field_path: stream.fieldPointer,
-        },
-      },
+      record_selector: convertOrLoadYamlString(stream.recordSelector, builderRecordSelectorToManifest),
       paginator: convertOrLoadYamlString(stream.paginator, builderPaginatorToManifest),
       partition_router: builderStreamPartitionRouterToManifest(
         values,
@@ -1239,8 +1271,6 @@ function builderStreamToDeclarativeSteam(
     transformations: convertOrLoadYamlString(stream.transformations, builderTransformationsToManifest),
     schema_loader: { type: "InlineSchemaLoader", schema: schemaRef(stream.name) },
   };
-
-  return merge({}, declarativeStream, stream.unsupportedFields);
 }
 
 export const builderFormValuesToMetadata = (values: BuilderFormValues): BuilderMetadata => {
@@ -1258,6 +1288,7 @@ export const builderFormValuesToMetadata = (values: BuilderFormValues): BuilderM
       ...componentNameIfString("errorHandler", stream.errorHandler),
       ...componentNameIfString("transformations", stream.transformations),
       ...componentNameIfString("incrementalSync", stream.incrementalSync),
+      ...componentNameIfString("recordSelector", stream.recordSelector),
     ];
     if (yamlComponents.length > 0) {
       yamlComponentsPerStream[stream.name] = yamlComponents;

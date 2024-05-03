@@ -176,7 +176,7 @@ export const ErrorHandlerSection: React.FC<ErrorHandlerSectionProps> = (props) =
                     type="string"
                     path={buildPath("response_filter.predicate")}
                     optional
-                    pattern={formatMessage({ id: "connectorBuilder.errorHandler.responseFilter.predicate.pattern" })}
+                    pattern={formatMessage({ id: "connectorBuilder.condition.pattern" })}
                     manifestPath="HttpResponseFilter.properties.predicate"
                   />
                   <BuilderField
@@ -207,6 +207,7 @@ export const ErrorHandlerSection: React.FC<ErrorHandlerSectionProps> = (props) =
     </>
   );
 
+  const label = formatMessage({ id: "connectorBuilder.errorHandler.label" });
   return props.inline ? (
     <FlexContainer direction="column" gap="xl">
       {content}
@@ -214,7 +215,7 @@ export const ErrorHandlerSection: React.FC<ErrorHandlerSectionProps> = (props) =
   ) : (
     <BuilderCard
       docLink={links.connectorBuilderErrorHandler}
-      label={formatMessage({ id: "connectorBuilder.errorHandler.label" })}
+      label={label}
       tooltip={getDescriptionByManifest("DefaultErrorHandler")}
       inputsConfig={{
         toggleable: true,
@@ -232,8 +233,7 @@ export const ErrorHandlerSection: React.FC<ErrorHandlerSectionProps> = (props) =
       copyConfig={{
         path: "errorHandler",
         currentStreamIndex: props.currentStreamIndex,
-        copyFromLabel: formatMessage({ id: "connectorBuilder.copyFromErrorHandlerTitle" }),
-        copyToLabel: formatMessage({ id: "connectorBuilder.copyToErrorHandlerTitle" }),
+        componentName: label,
       }}
     >
       {content}

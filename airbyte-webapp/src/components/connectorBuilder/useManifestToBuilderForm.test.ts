@@ -5,6 +5,7 @@ import {
   DeclarativeStream,
   DeclarativeStreamIncrementalSync,
   HttpRequesterErrorHandler,
+  RecordSelector,
   SessionTokenAuthenticator,
   SimpleRetrieverPaginator,
   Spec,
@@ -16,6 +17,7 @@ import {
   manifestErrorHandlerToBuilder,
   manifestIncrementalSyncToBuilder,
   manifestPaginatorToBuilder,
+  manifestRecordSelectorToBuilder,
 } from "./convertManifestToBuilderForm";
 import {
   DEFAULT_BUILDER_FORM_VALUES,
@@ -356,6 +358,46 @@ describe("Conversion throws error when", () => {
     };
     expect(convert).toThrow("doesn't use a DatetimeBasedCursor");
   });
+
+  it("manifest has a record selector with an unsupported type", async () => {
+    const convert = () => {
+      const recordSelector = {
+        type: "UnsupportedRecordSelector",
+      };
+      return manifestRecordSelectorToBuilder(recordSelector as RecordSelector);
+    };
+    expect(convert).toThrow("doesn't use a RecordSelector");
+  });
+
+  it("manifest has a record extractor with an unsupported type", async () => {
+    const convert = () => {
+      const recordSelector = {
+        type: "RecordSelector",
+        extractor: {
+          type: "UnsupportedExtractor",
+        },
+      };
+      return manifestRecordSelectorToBuilder(recordSelector as RecordSelector);
+    };
+    expect(convert).toThrow("doesn't use a DpathExtractor");
+  });
+
+  it("manifest has a record filter with an unsupported type", async () => {
+    const convert = () => {
+      const recordSelector = {
+        type: "RecordSelector",
+        extractor: {
+          type: "DpathExtractor",
+          field_path: [],
+        },
+        record_filter: {
+          type: "UnsupportedRecordFilter",
+        },
+      };
+      return manifestRecordSelectorToBuilder(recordSelector as RecordSelector);
+    };
+    expect(convert).toThrow("doesn't use a RecordFilter");
+  });
 });
 
 describe("Conversion successfully results in", () => {
@@ -576,6 +618,36 @@ describe("Conversion successfully results in", () => {
     });
   });
 
+  it("record selector converted to builder record selector", async () => {
+    const manifest: ConnectorManifest = {
+      ...baseManifest,
+      streams: [
+        merge({}, stream1, {
+          retriever: {
+            record_selector: {
+              type: "RecordSelector",
+              extractor: {
+                type: "DpathExtractor",
+                field_path: ["a", "b"],
+              },
+              record_filter: {
+                type: "RecordFilter",
+                condition: "{{ record.c > 1 }}",
+              },
+              schema_normalization: "Default",
+            },
+          },
+        }),
+      ],
+    };
+    const formValues = await convertToBuilderFormValues(noOpResolve, manifest, DEFAULT_CONNECTOR_NAME);
+    expect(formValues.streams[0].recordSelector).toEqual({
+      fieldPath: ["a", "b"],
+      filterCondition: "{{ record.c > 1 }}",
+      normalizeToSchema: true,
+    });
+  });
+
   it("string body converted to string", async () => {
     const manifest: ConnectorManifest = {
       ...baseManifest,
@@ -700,32 +772,6 @@ describe("Conversion successfully results in", () => {
   "b": "yyy"
 }`
     );
-  });
-
-  it("stores unsupported fields", async () => {
-    const manifest: ConnectorManifest = {
-      ...baseManifest,
-      streams: [
-        merge({}, stream1, {
-          retriever: {
-            record_selector: {
-              record_filter: {
-                type: "RecordFilter",
-                condition: "true",
-              },
-            },
-          },
-        }),
-      ],
-    };
-    const formValues = await convertToBuilderFormValues(noOpResolve, manifest, DEFAULT_CONNECTOR_NAME);
-    expect(formValues.streams[0].unsupportedFields).toEqual({
-      retriever: {
-        record_selector: {
-          record_filter: manifest.streams[0].retriever.record_selector.record_filter,
-        },
-      },
-    });
   });
 
   it('authenticator with a interpolated secret key of type config.key converted to config["key"]', async () => {

@@ -27,11 +27,12 @@ const EMPTY_PARENT_STREAM: BuilderParentStream = {
 
 export const ParentStreamsSection: React.FC<ParentStreamsSectionProps> = ({ streamFieldPath, currentStreamIndex }) => {
   const { formatMessage } = useIntl();
+  const label = formatMessage({ id: "connectorBuilder.parentStreams.label" });
 
   return (
     <BuilderCard
       docLink={links.connectorBuilderParentStream}
-      label={formatMessage({ id: "connectorBuilder.parentStreams.label" })}
+      label={label}
       tooltip={formatMessage({ id: "connectorBuilder.parentStreams.tooltip" })}
       inputsConfig={{
         toggleable: true,
@@ -41,8 +42,7 @@ export const ParentStreamsSection: React.FC<ParentStreamsSectionProps> = ({ stre
       copyConfig={{
         path: "parentStreams",
         currentStreamIndex,
-        copyFromLabel: formatMessage({ id: "connectorBuilder.copyFromParentStreamsTitle" }),
-        copyToLabel: formatMessage({ id: "connectorBuilder.copyToParentStreamsTitle" }),
+        componentName: label,
       }}
     >
       <BuilderList

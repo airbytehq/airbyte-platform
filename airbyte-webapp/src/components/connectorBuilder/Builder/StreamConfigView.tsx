@@ -30,6 +30,7 @@ import { getOptionsByManifest } from "./manifestHelpers";
 import { PaginationSection } from "./PaginationSection";
 import { ParameterizedRequestsSection } from "./ParameterizedRequestsSection";
 import { ParentStreamsSection } from "./ParentStreamsSection";
+import { RecordSelectorSection } from "./RecordSelectorSection";
 import { RequestOptionSection } from "./RequestOptionSection";
 import styles from "./StreamConfigView.module.scss";
 import { TransformationSection } from "./TransformationSection";
@@ -87,13 +88,6 @@ export const StreamConfigView: React.FC<StreamConfigViewProps> = React.memo(({ s
             />
             <BuilderField
               type="array"
-              path={streamFieldPath("fieldPointer")}
-              label={formatMessage({ id: "connectorBuilder.streamConfigView.fieldPointer" })}
-              manifestPath="DpathExtractor.properties.field_path"
-              optional
-            />
-            <BuilderField
-              type="array"
               path={streamFieldPath("primaryKey")}
               label={formatMessage({ id: "connectorBuilder.streamConfigView.primaryKey.label" })}
               tooltip={formatMessage({ id: "connectorBuilder.streamConfigView.primaryKey.tooltip" })}
@@ -101,6 +95,7 @@ export const StreamConfigView: React.FC<StreamConfigViewProps> = React.memo(({ s
               optional
             />
           </BuilderCard>
+          <RecordSelectorSection streamFieldPath={streamFieldPath} currentStreamIndex={streamNum} />
           <RequestOptionSection
             inline={false}
             basePath={streamFieldPath("requestOptions")}
