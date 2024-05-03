@@ -490,7 +490,11 @@ public class WebBackendConnectionsHandler {
         }
 
         outputStreamConfig.setDestinationSyncMode(originalStreamConfig.getDestinationSyncMode());
-        if (originalStreamConfig.getPrimaryKey().size() > 0) {
+
+        final boolean hasSourceDefinedPK = stream.getSourceDefinedPrimaryKey() != null && !stream.getSourceDefinedPrimaryKey().isEmpty();
+        if (hasSourceDefinedPK) {
+          outputStreamConfig.setPrimaryKey(stream.getSourceDefinedPrimaryKey());
+        } else if (originalStreamConfig.getPrimaryKey().size() > 0) {
           outputStreamConfig.setPrimaryKey(originalStreamConfig.getPrimaryKey());
         } else {
           outputStreamConfig.setPrimaryKey(discoveredStreamConfig.getPrimaryKey());

@@ -7,6 +7,7 @@ package io.airbyte.commons.server.handlers;
 import static io.airbyte.featureflag.ContextKt.ANONYMOUS;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
@@ -1390,6 +1391,41 @@ class WebBackendConnectionsHandlerTest {
     final AirbyteCatalog actual = WebBackendConnectionsHandler.updateSchemaWithRefreshedDiscoveredCatalog(original, original, discovered);
 
     assertEquals(expected, actual);
+  }
+
+  @Test
+  void testUpdateSchemaWithDiscoveryWithChangedSourceDefinedPK() {
+    final AirbyteCatalog original = ConnectionHelpers.generateBasicApiCatalog();
+    original.getStreams().getFirst().getStream()
+        .sourceDefinedPrimaryKey(List.of(List.of(FIELD1)));
+    original.getStreams().getFirst().getConfig()
+        .primaryKey(List.of(List.of(FIELD1)));
+
+    final AirbyteCatalog discovered = ConnectionHelpers.generateBasicApiCatalog();
+    discovered.getStreams().getFirst().getStream()
+        .sourceDefinedPrimaryKey(List.of(List.of(FIELD2)));
+    discovered.getStreams().getFirst().getConfig()
+        .primaryKey(List.of(List.of(FIELD2)));
+
+    final AirbyteCatalog actual = WebBackendConnectionsHandler.updateSchemaWithRefreshedDiscoveredCatalog(original, original, discovered);
+
+    // Use new value for source-defined PK
+    assertEquals(List.of(List.of(FIELD2)), actual.getStreams().getFirst().getConfig().getPrimaryKey());
+  }
+
+  @Test
+  void testUpdateSchemaWithDiscoveryWithNoSourceDefinedPK() {
+    final AirbyteCatalog original = ConnectionHelpers.generateBasicApiCatalog();
+    original.getStreams().getFirst().getConfig()
+        .primaryKey(List.of(List.of(FIELD1)));
+
+    final AirbyteCatalog discovered = ConnectionHelpers.generateBasicApiCatalog();
+    assertNotEquals(original.getStreams().getFirst().getConfig().getPrimaryKey(), discovered.getStreams().getFirst().getConfig().getPrimaryKey());
+
+    final AirbyteCatalog actual = WebBackendConnectionsHandler.updateSchemaWithRefreshedDiscoveredCatalog(original, original, discovered);
+
+    // Keep previously-configured PK
+    assertEquals(List.of(List.of(FIELD1)), actual.getStreams().getFirst().getConfig().getPrimaryKey());
   }
 
   @Test
