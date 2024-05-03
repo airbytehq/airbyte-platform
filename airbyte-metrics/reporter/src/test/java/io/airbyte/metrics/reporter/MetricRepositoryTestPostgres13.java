@@ -17,6 +17,7 @@ import static io.airbyte.db.instance.configs.jooq.generated.Tables.WORKSPACE;
 
 import io.airbyte.db.factory.DSLContextFactory;
 import io.airbyte.db.init.DatabaseInitializationException;
+import io.airbyte.db.instance.DatabaseConstants;
 import io.airbyte.db.instance.configs.jooq.generated.enums.ActorType;
 import io.airbyte.db.instance.configs.jooq.generated.enums.SupportLevel;
 import io.airbyte.db.instance.test.TestDatabaseProviders;
@@ -32,7 +33,7 @@ public class MetricRepositoryTestPostgres13 extends MetricRepositoryTest {
 
   @BeforeAll
   public static void setUpAll() throws DatabaseInitializationException, IOException {
-    final var psqlContainer = new PostgreSQLContainer<>("postgres:13-alpine")
+    final var psqlContainer = new PostgreSQLContainer<>(DatabaseConstants.DEFAULT_DATABASE_VERSION)
         .withUsername("user")
         .withPassword("hunter2");
     psqlContainer.start();

@@ -1,6 +1,7 @@
 package io.airbyte.data.repositories
 
 import io.airbyte.db.factory.DSLContextFactory
+import io.airbyte.db.instance.DatabaseConstants
 import io.airbyte.db.instance.test.TestDatabaseProviders
 import io.micronaut.context.ApplicationContext
 import io.micronaut.data.connection.jdbc.advice.DelegatingDataSource
@@ -29,7 +30,7 @@ abstract class AbstractConfigRepositoryTest<T : CrudRepository<*, *>>(
 
     // we run against an actual database to ensure micronaut data and jooq properly integrate
     private val container: PostgreSQLContainer<*> =
-      PostgreSQLContainer("postgres:13-alpine")
+      PostgreSQLContainer(DatabaseConstants.DEFAULT_DATABASE_VERSION)
         .withDatabaseName("airbyte")
         .withUsername("docker")
         .withPassword("docker")

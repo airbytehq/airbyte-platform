@@ -6,6 +6,7 @@ package io.airbyte.server.repositories;
 
 import io.airbyte.db.factory.DSLContextFactory;
 import io.airbyte.db.init.DatabaseInitializationException;
+import io.airbyte.db.instance.DatabaseConstants;
 import io.airbyte.db.instance.jobs.jooq.generated.Keys;
 import io.airbyte.db.instance.jobs.jooq.generated.Tables;
 import io.airbyte.db.instance.jobs.jooq.generated.enums.JobStreamStatusIncompleteRunCause;
@@ -54,7 +55,7 @@ class StreamStatusesRepositoryTest {
   static DSLContext jooqDslContext;
 
   // we run against an actual database to ensure micronaut data and jooq properly integrate
-  static PostgreSQLContainer<?> container = new PostgreSQLContainer<>("postgres:13-alpine")
+  static PostgreSQLContainer<?> container = new PostgreSQLContainer<>(DatabaseConstants.DEFAULT_DATABASE_VERSION)
       .withDatabaseName("airbyte")
       .withUsername("docker")
       .withPassword("docker");

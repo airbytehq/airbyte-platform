@@ -14,6 +14,11 @@ import java.util.Set;
 public final class DatabaseConstants {
 
   /**
+   * Default Postgres version Airbyte supports.
+   */
+  public static final String DEFAULT_DATABASE_VERSION = "postgres:15-alpine";
+
+  /**
    * Logical name of the Configurations database.
    */
   public static final String CONFIGS_DATABASE_LOGGING_NAME = "airbyte configs";

@@ -18,6 +18,7 @@ import static org.mockito.Mockito.when;
 import io.airbyte.api.client.AirbyteApiClient;
 import io.airbyte.api.client.generated.AttemptApi;
 import io.airbyte.config.Configs;
+import io.airbyte.db.instance.DatabaseConstants;
 import io.airbyte.persistence.job.models.JobRunConfig;
 import io.airbyte.workers.Worker;
 import java.io.IOException;
@@ -59,7 +60,7 @@ class TemporalAttemptExecutionTest {
 
   @BeforeAll
   static void setUpAll() {
-    container = new PostgreSQLContainer<>("postgres:13-alpine")
+    container = new PostgreSQLContainer<>(DatabaseConstants.DEFAULT_DATABASE_VERSION)
         .withUsername(SOURCE_USERNAME)
         .withPassword(SOURCE_PASSWORD);
     container.start();

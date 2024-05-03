@@ -102,7 +102,7 @@ class BootloaderTest {
 
   @BeforeEach
   void setup() {
-    container = new PostgreSQLContainer<>("postgres:13-alpine")
+    container = new PostgreSQLContainer<>(DatabaseConstants.DEFAULT_DATABASE_VERSION)
         .withDatabaseName("public")
         .withUsername(DOCKER)
         .withPassword(DOCKER);
