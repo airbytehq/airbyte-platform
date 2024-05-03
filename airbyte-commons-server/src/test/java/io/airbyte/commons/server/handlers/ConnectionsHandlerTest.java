@@ -64,6 +64,7 @@ import io.airbyte.api.model.generated.SelectedFieldInfo;
 import io.airbyte.api.model.generated.SourceSearch;
 import io.airbyte.api.model.generated.StreamDescriptor;
 import io.airbyte.api.model.generated.StreamTransform;
+import io.airbyte.api.model.generated.StreamTransformUpdateStream;
 import io.airbyte.api.model.generated.SyncMode;
 import io.airbyte.api.model.generated.WorkspaceIdRequestBody;
 import io.airbyte.commons.converters.ConnectionHelper;
@@ -463,7 +464,7 @@ class ConnectionsHandlerTest {
           null,
           0,
           0));
-      List<Generation> generations = List.of(new Generation("name", null, 1));
+      final List<Generation> generations = List.of(new Generation("name", null, 1));
       when(streamGenerationRepository.getMaxGenerationOfStreamsForConnectionId(standardSync.getConnectionId())).thenReturn(generations);
       when(catalogGenerationSetter.updateCatalogWithGenerationAndSyncInformation(
           standardSync.getCatalog(),
@@ -480,7 +481,7 @@ class ConnectionsHandlerTest {
     void testGetConnectionForJobWithRefresh() throws JsonValidationException, ConfigNotFoundException, IOException {
       final Long jobId = 456L;
 
-      List<io.airbyte.protocol.models.StreamDescriptor> refreshStreamDescriptors =
+      final List<io.airbyte.protocol.models.StreamDescriptor> refreshStreamDescriptors =
           List.of(new io.airbyte.protocol.models.StreamDescriptor().withName("name"));
 
       final JobConfig config = new JobConfig()
@@ -498,7 +499,7 @@ class ConnectionsHandlerTest {
           null,
           0,
           0));
-      List<Generation> generations = List.of(new Generation("name", null, 1));
+      final List<Generation> generations = List.of(new Generation("name", null, 1));
       when(streamGenerationRepository.getMaxGenerationOfStreamsForConnectionId(standardSync.getConnectionId())).thenReturn(generations);
       when(catalogGenerationSetter.updateCatalogWithGenerationAndSyncInformation(
           standardSync.getCatalog(),
@@ -2427,11 +2428,11 @@ class ConnectionsHandlerTest {
           new CatalogDiff().addTransformsItem(new StreamTransform()
               .transformType(StreamTransform.TransformTypeEnum.UPDATE_STREAM)
               .streamDescriptor(new StreamDescriptor().namespace(null).name(SHOES))
-              .addUpdateStreamItem(new FieldTransform()
+              .updateStream(new StreamTransformUpdateStream().addFieldTransformsItem(new FieldTransform()
                   .addField(new FieldAdd().schema(Jsons.deserialize("{\"type\": \"string\"}")))
                   .fieldName(List.of(newField.getName()))
                   .breaking(false)
-                  .transformType(FieldTransform.TransformTypeEnum.ADD_FIELD)));
+                  .transformType(FieldTransform.TransformTypeEnum.ADD_FIELD))));
       assertEquals(expectedDiff, actualResult.getPropagatedDiff());
     }
 

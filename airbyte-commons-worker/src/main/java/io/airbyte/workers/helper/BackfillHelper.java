@@ -58,7 +58,7 @@ public class BackfillHelper {
    * @param streamsToBackfill the list of streams that need backfill
    * @return the modified state if any streams were cleared, else null
    */
-  public static State clearStateForStreamsToBackfill(State inputState, List<StreamDescriptor> streamsToBackfill) {
+  public static State clearStateForStreamsToBackfill(final State inputState, final List<StreamDescriptor> streamsToBackfill) {
     if (inputState == null) {
       // This would be the case for a Full Refresh sync.
       return null;
@@ -96,7 +96,7 @@ public class BackfillHelper {
    * @param catalog the entire catalog
    * @return any streams that need to be backfilled
    */
-  public static List<StreamDescriptor> getStreamsToBackfill(CatalogDiff appliedDiff, ConfiguredAirbyteCatalog catalog) {
+  public static List<StreamDescriptor> getStreamsToBackfill(final CatalogDiff appliedDiff, final ConfiguredAirbyteCatalog catalog) {
     if (appliedDiff == null || appliedDiff.getTransforms().isEmpty()) {
       // No diff, so no streams to backfill.
       return List.of();
@@ -117,7 +117,7 @@ public class BackfillHelper {
    * @param streamsToBackfill the streams to backfill
    * @param syncOutput output param, where we indicate the backfilled streams
    */
-  public static void markBackfilledStreams(List<StreamDescriptor> streamsToBackfill, StandardSyncOutput syncOutput) {
+  public static void markBackfilledStreams(final List<StreamDescriptor> streamsToBackfill, final StandardSyncOutput syncOutput) {
     if (syncOutput.getStandardSyncSummary().getStreamStats() == null) {
       return; // No stream stats, no backfill.
     }
@@ -139,9 +139,9 @@ public class BackfillHelper {
 
     final var streamOptional = catalog.getStreams().stream().filter(
         stream -> {
-          String streamName = stream.getStream().getName();
-          String streamNamespace = Optional.ofNullable(stream.getStream().getNamespace()).orElse("");
-          String transformNamespace = Optional.ofNullable(transform.getStreamDescriptor().getNamespace()).orElse("");
+          final String streamName = stream.getStream().getName();
+          final String streamNamespace = Optional.ofNullable(stream.getStream().getNamespace()).orElse("");
+          final String transformNamespace = Optional.ofNullable(transform.getStreamDescriptor().getNamespace()).orElse("");
 
           return streamName.equals(transform.getStreamDescriptor().getName())
               && streamNamespace.equals(transformNamespace);
@@ -157,7 +157,7 @@ public class BackfillHelper {
       // anyway.
       return false;
     }
-    for (FieldTransform fieldTransform : transform.getUpdateStream()) {
+    for (final FieldTransform fieldTransform : transform.getUpdateStream().getFieldTransforms()) {
       // TODO: we'll add other cases here, when we develop the config options further.
       if (FieldTransform.TransformTypeEnum.ADD_FIELD.equals(fieldTransform.getTransformType())) {
         return true;

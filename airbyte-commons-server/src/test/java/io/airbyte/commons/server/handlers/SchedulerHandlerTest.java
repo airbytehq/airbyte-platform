@@ -61,6 +61,7 @@ import io.airbyte.api.model.generated.SourceIdRequestBody;
 import io.airbyte.api.model.generated.SourceUpdate;
 import io.airbyte.api.model.generated.StreamTransform;
 import io.airbyte.api.model.generated.StreamTransform.TransformTypeEnum;
+import io.airbyte.api.model.generated.StreamTransformUpdateStream;
 import io.airbyte.api.model.generated.SyncMode;
 import io.airbyte.api.model.generated.SynchronousJobRead;
 import io.airbyte.commons.enums.Enums;
@@ -1114,8 +1115,9 @@ class SchedulerHandlerTest {
     final SourceDiscoverSchemaRequestBody request =
         new SourceDiscoverSchemaRequestBody().sourceId(source.getSourceId()).connectionId(connectionId).disableCache(true).notifySchemaChange(true);
     final StreamTransform streamTransform = new StreamTransform().transformType(TransformTypeEnum.UPDATE_STREAM)
-        .streamDescriptor(new io.airbyte.api.model.generated.StreamDescriptor().name(DOGS)).addUpdateStreamItem(new FieldTransform().transformType(
-            FieldTransform.TransformTypeEnum.REMOVE_FIELD).breaking(true));
+        .streamDescriptor(new io.airbyte.api.model.generated.StreamDescriptor().name(DOGS))
+        .updateStream(new StreamTransformUpdateStream().addFieldTransformsItem(new FieldTransform().transformType(
+            FieldTransform.TransformTypeEnum.REMOVE_FIELD).breaking(true)));
     final CatalogDiff catalogDiff = new CatalogDiff().addTransformsItem(streamTransform);
     final StandardSourceDefinition sourceDef = new StandardSourceDefinition()
         .withSourceDefinitionId(source.getSourceDefinitionId());
@@ -1179,8 +1181,9 @@ class SchedulerHandlerTest {
     final SourceDiscoverSchemaRequestBody request =
         new SourceDiscoverSchemaRequestBody().sourceId(source.getSourceId()).connectionId(connectionId).disableCache(true).notifySchemaChange(true);
     final StreamTransform streamTransform = new StreamTransform().transformType(TransformTypeEnum.UPDATE_STREAM)
-        .streamDescriptor(new io.airbyte.api.model.generated.StreamDescriptor().name(DOGS)).addUpdateStreamItem(new FieldTransform().transformType(
-            FieldTransform.TransformTypeEnum.REMOVE_FIELD).breaking(true));
+        .streamDescriptor(new io.airbyte.api.model.generated.StreamDescriptor().name(DOGS))
+        .updateStream(new StreamTransformUpdateStream().addFieldTransformsItem(new FieldTransform().transformType(
+            FieldTransform.TransformTypeEnum.REMOVE_FIELD).breaking(true)));
     final CatalogDiff catalogDiff = new CatalogDiff().addTransformsItem(streamTransform);
     final StandardSourceDefinition sourceDef = new StandardSourceDefinition()
         .withSourceDefinitionId(source.getSourceDefinitionId());
@@ -1308,11 +1311,13 @@ class SchedulerHandlerTest {
     // 3 connections use the same source. 2 will generate catalog diffs that are non-breaking, 1 will
     // generate a breaking catalog diff
     final StreamTransform nonBreakingStreamTransform = new StreamTransform().transformType(TransformTypeEnum.UPDATE_STREAM)
-        .streamDescriptor(new io.airbyte.api.model.generated.StreamDescriptor().name(DOGS)).addUpdateStreamItem(new FieldTransform().transformType(
-            FieldTransform.TransformTypeEnum.REMOVE_FIELD).breaking(false));
+        .streamDescriptor(new io.airbyte.api.model.generated.StreamDescriptor().name(DOGS))
+        .updateStream(new StreamTransformUpdateStream().addFieldTransformsItem(new FieldTransform().transformType(
+            FieldTransform.TransformTypeEnum.REMOVE_FIELD).breaking(false)));
     final StreamTransform breakingStreamTransform = new StreamTransform().transformType(TransformTypeEnum.UPDATE_STREAM)
-        .streamDescriptor(new io.airbyte.api.model.generated.StreamDescriptor().name(DOGS)).addUpdateStreamItem(new FieldTransform().transformType(
-            FieldTransform.TransformTypeEnum.REMOVE_FIELD).breaking(true));
+        .streamDescriptor(new io.airbyte.api.model.generated.StreamDescriptor().name(DOGS))
+        .updateStream(new StreamTransformUpdateStream().addFieldTransformsItem(new FieldTransform().transformType(
+            FieldTransform.TransformTypeEnum.REMOVE_FIELD).breaking(true)));
 
     final CatalogDiff catalogDiff1 = new CatalogDiff().addTransformsItem(nonBreakingStreamTransform);
     final CatalogDiff catalogDiff2 = new CatalogDiff().addTransformsItem(nonBreakingStreamTransform);
@@ -1882,12 +1887,12 @@ class SchedulerHandlerTest {
     final io.airbyte.api.model.generated.AirbyteCatalog newCatalog = new io.airbyte.api.model.generated.AirbyteCatalog()
         .addStreamsItem(new AirbyteStreamAndConfiguration().stream(new AirbyteStream().name("foo").namespace("ns")));
 
-    NotificationSettings notificationSettings = new NotificationSettings().withSendOnConnectionUpdate(new NotificationItem());
+    final NotificationSettings notificationSettings = new NotificationSettings().withSendOnConnectionUpdate(new NotificationItem());
     when(configRepository.getStandardWorkspaceNoSecrets(workspaceId, true))
         .thenReturn(new StandardWorkspace().withWorkspaceId(workspaceId).withNotificationSettings(notificationSettings));
     when(configRepository.getSourceConnection(sourceId))
         .thenReturn(new SourceConnection().withSourceId(sourceId));
-    ConnectionRead connectionRead = new ConnectionRead()
+    final ConnectionRead connectionRead = new ConnectionRead()
         .connectionId(connectionId)
         .sourceId(sourceId)
         .syncCatalog(configuredCatalog)
@@ -1897,7 +1902,7 @@ class SchedulerHandlerTest {
     when(connectionsHandler.getConnectionAirbyteCatalog(connectionId))
         .thenReturn(Optional.of(oldCatalog));
 
-    var diff = new CatalogDiff().addTransformsItem(new StreamTransform()
+    final var diff = new CatalogDiff().addTransformsItem(new StreamTransform()
         .transformType(TransformTypeEnum.ADD_STREAM)
         .streamDescriptor(new io.airbyte.api.model.generated.StreamDescriptor().name("new_stream")));
     when(connectionsHandler.getDiff(any(), any(), any()))
@@ -1905,7 +1910,7 @@ class SchedulerHandlerTest {
 
     when(featureFlagClient.boolVariation(eq(FieldSelectionWorkspaces.UseNewSchemaUpdateNotification.INSTANCE), eq(new Workspace(workspaceId))))
         .thenReturn(true);
-    var spySchedulerHandler = spy(schedulerHandler);
+    final var spySchedulerHandler = spy(schedulerHandler);
     final SourceAutoPropagateChange request = new SourceAutoPropagateChange()
         .sourceId(sourceId)
         .workspaceId(workspaceId)
@@ -2029,10 +2034,11 @@ class SchedulerHandlerTest {
     final CatalogDiff catalogDiff = new CatalogDiff().transforms(List.of(
         new StreamTransform().transformType(TransformTypeEnum.UPDATE_STREAM)
             .streamDescriptor(new io.airbyte.api.model.generated.StreamDescriptor().name(SHOES))
-            .addUpdateStreamItem(new FieldTransform().transformType(FieldTransform.TransformTypeEnum.ADD_FIELD)
-                .fieldName(List.of("aDifferentField"))
-                .addField(new FieldAdd().schema(Jsons.deserialize("\"id\": {\"type\": [\"null\", \"integer\"]}")))
-                .breaking(false))));
+            .updateStream(new StreamTransformUpdateStream()
+                .addFieldTransformsItem(new FieldTransform().transformType(FieldTransform.TransformTypeEnum.ADD_FIELD)
+                    .fieldName(List.of("aDifferentField"))
+                    .addField(new FieldAdd().schema(Jsons.deserialize("\"id\": {\"type\": [\"null\", \"integer\"]}")))
+                    .breaking(false)))));
     when(connectionsHandler.getDiff(any(), any(), any())).thenReturn(catalogDiff);
   }
 
@@ -2040,10 +2046,11 @@ class SchedulerHandlerTest {
     final CatalogDiff catalogDiff = new CatalogDiff().transforms(List.of(
         new StreamTransform().transformType(TransformTypeEnum.UPDATE_STREAM)
             .streamDescriptor(new io.airbyte.api.model.generated.StreamDescriptor().name(SHOES))
-            .addUpdateStreamItem(new FieldTransform().transformType(FieldTransform.TransformTypeEnum.ADD_FIELD)
-                .fieldName(List.of("aDifferentField"))
-                .addField(new FieldAdd().schema(Jsons.deserialize("\"id\": {\"type\": [\"null\", \"integer\"]}")))
-                .breaking(false)),
+            .updateStream(new StreamTransformUpdateStream()
+                .addFieldTransformsItem(new FieldTransform().transformType(FieldTransform.TransformTypeEnum.ADD_FIELD)
+                    .fieldName(List.of("aDifferentField"))
+                    .addField(new FieldAdd().schema(Jsons.deserialize("\"id\": {\"type\": [\"null\", \"integer\"]}")))
+                    .breaking(false))),
         new StreamTransform().transformType(TransformTypeEnum.ADD_STREAM).streamDescriptor(
             new io.airbyte.api.model.generated.StreamDescriptor().name(A_DIFFERENT_STREAM))));
     when(connectionsHandler.getDiff(any(), any(), any())).thenReturn(catalogDiff);

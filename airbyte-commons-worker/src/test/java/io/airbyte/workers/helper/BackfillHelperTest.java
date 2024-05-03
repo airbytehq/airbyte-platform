@@ -12,6 +12,7 @@ import io.airbyte.api.client.model.generated.CatalogDiff;
 import io.airbyte.api.client.model.generated.FieldTransform;
 import io.airbyte.api.client.model.generated.StreamDescriptor;
 import io.airbyte.api.client.model.generated.StreamTransform;
+import io.airbyte.api.client.model.generated.StreamTransformUpdateStream;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.config.State;
 import io.airbyte.config.helpers.StateMessageHelper;
@@ -44,13 +45,13 @@ class BackfillHelperTest {
       .withSyncMode(SyncMode.FULL_REFRESH);
   private static final ConfiguredAirbyteCatalog INCREMENTAL_CATALOG = new ConfiguredAirbyteCatalog()
       .withStreams(List.of(INCREMENTAL_STREAM));
-  private static CatalogDiff SINGLE_STREAM_ADD_COLUMN_DIFF = new CatalogDiff()
+  private static final CatalogDiff SINGLE_STREAM_ADD_COLUMN_DIFF = new CatalogDiff()
       .addTransformsItem(addFieldForStream(STREAM_DESCRIPTOR));
-  private static CatalogDiff TWO_STREAMS_ADD_COLUMN_DIFF = new CatalogDiff()
+  private static final CatalogDiff TWO_STREAMS_ADD_COLUMN_DIFF = new CatalogDiff()
       .addTransformsItem(addFieldForStream(STREAM_DESCRIPTOR))
       .addTransformsItem(addFieldForStream(ANOTHER_STREAM_DESCRIPTOR));
 
-  private static State STATE = new State().withState(Jsons.deserialize(
+  private static final State STATE = new State().withState(Jsons.deserialize(
       String.format("""
                     [{
                       "type":"STREAM",
@@ -68,8 +69,8 @@ class BackfillHelperTest {
     return new StreamTransform()
         .streamDescriptor(streamDescriptor)
         .transformType(StreamTransform.TransformTypeEnum.UPDATE_STREAM)
-        .addUpdateStreamItem(new FieldTransform()
-            .transformType(FieldTransform.TransformTypeEnum.ADD_FIELD));
+        .updateStream(new StreamTransformUpdateStream().addFieldTransformsItem(new FieldTransform()
+            .transformType(FieldTransform.TransformTypeEnum.ADD_FIELD)));
   }
 
   @Test
@@ -93,7 +94,7 @@ class BackfillHelperTest {
 
   @Test
   void testClearStateForStreamsToBackfill() {
-    List<StreamDescriptor> streamsToBackfill = List.of(STREAM_DESCRIPTOR);
+    final List<StreamDescriptor> streamsToBackfill = List.of(STREAM_DESCRIPTOR);
     final State updatedState = BackfillHelper.clearStateForStreamsToBackfill(STATE, streamsToBackfill);
     assertNotNull(updatedState);
     final var typedState = StateMessageHelper.getTypedState(updatedState.getState());

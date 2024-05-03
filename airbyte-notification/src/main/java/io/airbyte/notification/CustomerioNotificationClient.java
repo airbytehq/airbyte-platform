@@ -83,7 +83,7 @@ public class CustomerioNotificationClient extends NotificationClient {
   private final String apiToken;
 
   static {
-    DateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd hh:mm:ss");
+    final DateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd hh:mm:ss");
     MAPPER.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
     MAPPER.setDateFormat(dateFormat);
     MAPPER.registerModule(new JavaTimeModule());
@@ -138,8 +138,8 @@ public class CustomerioNotificationClient extends NotificationClient {
   public boolean notifyJobFailure(final SyncSummary summary,
                                   final String receiverEmail)
       throws IOException {
-    ObjectNode node = buildSyncCompletedJson(summary, receiverEmail, SYNC_FAILURE_MESSAGE_ID);
-    String payload = Jsons.serialize(node);
+    final ObjectNode node = buildSyncCompletedJson(summary, receiverEmail, SYNC_FAILURE_MESSAGE_ID);
+    final String payload = Jsons.serialize(node);
     return notifyByEmail(payload);
   }
 
@@ -147,8 +147,8 @@ public class CustomerioNotificationClient extends NotificationClient {
   public boolean notifyJobSuccess(final SyncSummary summary,
                                   final String receiverEmail)
       throws IOException {
-    ObjectNode node = buildSyncCompletedJson(summary, receiverEmail, SYNC_SUCCEED_MESSAGE_ID);
-    String payload = Jsons.serialize(node);
+    final ObjectNode node = buildSyncCompletedJson(summary, receiverEmail, SYNC_SUCCEED_MESSAGE_ID);
+    final String payload = Jsons.serialize(node);
     return notifyByEmail(payload);
   }
 
@@ -159,8 +159,8 @@ public class CustomerioNotificationClient extends NotificationClient {
   public boolean notifyConnectionDisabled(final SyncSummary summary,
                                           final String receiverEmail)
       throws IOException {
-    ObjectNode node = buildSyncCompletedJson(summary, receiverEmail, AUTO_DISABLE_TRANSACTION_MESSAGE_ID);
-    String payload = Jsons.serialize(node);
+    final ObjectNode node = buildSyncCompletedJson(summary, receiverEmail, AUTO_DISABLE_TRANSACTION_MESSAGE_ID);
+    final String payload = Jsons.serialize(node);
     return notifyByEmail(payload);
   }
 
@@ -168,8 +168,8 @@ public class CustomerioNotificationClient extends NotificationClient {
   public boolean notifyConnectionDisableWarning(final SyncSummary summary,
                                                 final String receiverEmail)
       throws IOException {
-    ObjectNode node = buildSyncCompletedJson(summary, receiverEmail, AUTO_DISABLE_WARNING_TRANSACTION_MESSAGE_ID);
-    String payload = Jsons.serialize(node);
+    final ObjectNode node = buildSyncCompletedJson(summary, receiverEmail, AUTO_DISABLE_WARNING_TRANSACTION_MESSAGE_ID);
+    final String payload = Jsons.serialize(node);
     return notifyByEmail(payload);
   }
 
@@ -206,23 +206,23 @@ public class CustomerioNotificationClient extends NotificationClient {
   public boolean notifySchemaPropagated(final SchemaUpdateNotification notification,
                                         final String recipient)
       throws IOException {
-    String transactionalMessageId = notification.isBreakingChange() ? SCHEMA_BREAKING_CHANGE_TRANSACTION_ID : SCHEMA_CHANGE_TRANSACTION_ID;
+    final String transactionalMessageId = notification.isBreakingChange() ? SCHEMA_BREAKING_CHANGE_TRANSACTION_ID : SCHEMA_CHANGE_TRANSACTION_ID;
 
-    ObjectNode node =
+    final ObjectNode node =
         buildSchemaPropagationJson(notification, recipient, transactionalMessageId);
 
-    String payload = Jsons.serialize(node);
+    final String payload = Jsons.serialize(node);
     return notifyByEmail(payload);
   }
 
   static ObjectNode buildSyncCompletedJson(final SyncSummary syncSummary,
                                            final String recipient,
                                            final String transactionMessageId) {
-    ObjectNode node = MAPPER.createObjectNode();
+    final ObjectNode node = MAPPER.createObjectNode();
     node.put("transactional_message_id", transactionMessageId);
     node.put("to", recipient);
 
-    ObjectNode identifiersNode = MAPPER.createObjectNode();
+    final ObjectNode identifiersNode = MAPPER.createObjectNode();
     identifiersNode.put("email", recipient);
     node.set("identifiers", identifiersNode);
 
@@ -241,57 +241,57 @@ public class CustomerioNotificationClient extends NotificationClient {
   static ObjectNode buildSchemaPropagationJson(final SchemaUpdateNotification notification,
                                                final String recipient,
                                                final String transactionalMessageId) {
-    ObjectNode node = MAPPER.createObjectNode();
+    final ObjectNode node = MAPPER.createObjectNode();
     node.put("transactional_message_id", transactionalMessageId);
     node.put("to", recipient);
 
-    ObjectNode identifiersNode = MAPPER.createObjectNode();
+    final ObjectNode identifiersNode = MAPPER.createObjectNode();
     identifiersNode.put("email", recipient);
     node.set("identifiers", identifiersNode);
 
-    ObjectNode messageDataNode = MAPPER.createObjectNode();
+    final ObjectNode messageDataNode = MAPPER.createObjectNode();
     messageDataNode.put("connection_name", notification.getConnectionInfo().getName());
     messageDataNode.put("connection_id", notification.getConnectionInfo().getId().toString());
     messageDataNode.put("workspace_id", notification.getWorkspace().getId().toString());
     messageDataNode.put("workspace_name", notification.getWorkspace().getName());
 
-    ObjectNode changesNode = MAPPER.createObjectNode();
+    final ObjectNode changesNode = MAPPER.createObjectNode();
     messageDataNode.set("changes", changesNode);
 
-    var diff = notification.getCatalogDiff();
-    var newStreams = diff.getTransforms().stream().filter((t) -> t.getTransformType() == StreamTransform.TransformTypeEnum.ADD_STREAM).toList();
-    ArrayNode newStreamsNodes = MAPPER.createArrayNode();
+    final var diff = notification.getCatalogDiff();
+    final var newStreams = diff.getTransforms().stream().filter((t) -> t.getTransformType() == StreamTransform.TransformTypeEnum.ADD_STREAM).toList();
+    final ArrayNode newStreamsNodes = MAPPER.createArrayNode();
     changesNode.set("new_streams", newStreamsNodes);
-    for (var stream : newStreams) {
+    for (final var stream : newStreams) {
       newStreamsNodes.add(StreamDescriptorUtils.buildFullyQualifiedName(stream.getStreamDescriptor()));
     }
 
-    var deletedStreams =
+    final var deletedStreams =
         diff.getTransforms().stream().filter((t) -> t.getTransformType() == StreamTransform.TransformTypeEnum.REMOVE_STREAM).toList();
-    ArrayNode deletedStreamsNodes = MAPPER.createArrayNode();
+    final ArrayNode deletedStreamsNodes = MAPPER.createArrayNode();
     changesNode.set("deleted_streams", deletedStreamsNodes);
-    for (var stream : deletedStreams) {
+    for (final var stream : deletedStreams) {
       deletedStreamsNodes.add(StreamDescriptorUtils.buildFullyQualifiedName(stream.getStreamDescriptor()));
     }
 
-    var alteredStreams =
+    final var alteredStreams =
         diff.getTransforms().stream().filter((t) -> t.getTransformType() == StreamTransform.TransformTypeEnum.UPDATE_STREAM).toList();
-    ObjectNode modifiedStreamsNodes = MAPPER.createObjectNode();
+    final ObjectNode modifiedStreamsNodes = MAPPER.createObjectNode();
     changesNode.set("modified_streams", modifiedStreamsNodes);
-    for (var stream : alteredStreams) {
+    for (final var stream : alteredStreams) {
 
-      var streamNode = MAPPER.createObjectNode();
+      final var streamNode = MAPPER.createObjectNode();
       modifiedStreamsNodes.set(StreamDescriptorUtils.buildFullyQualifiedName(stream.getStreamDescriptor()), streamNode);
-      ArrayNode newFields = MAPPER.createArrayNode();
-      ArrayNode deletedFields = MAPPER.createArrayNode();
-      ArrayNode modifiedFields = MAPPER.createArrayNode();
+      final ArrayNode newFields = MAPPER.createArrayNode();
+      final ArrayNode deletedFields = MAPPER.createArrayNode();
+      final ArrayNode modifiedFields = MAPPER.createArrayNode();
 
       streamNode.set("new", newFields);
       streamNode.set("deleted", deletedFields);
       streamNode.set("altered", modifiedFields);
 
-      for (var fieldChange : stream.getUpdateStream()) {
-        String fieldName = StreamDescriptorUtils.buildFieldName(fieldChange.getFieldName());
+      for (final var fieldChange : stream.getUpdateStream().getFieldTransforms()) {
+        final String fieldName = StreamDescriptorUtils.buildFieldName(fieldChange.getFieldName());
         switch (fieldChange.getTransformType()) {
           case ADD_FIELD -> newFields.add(fieldName);
           case REMOVE_FIELD -> deletedFields.add(fieldName);

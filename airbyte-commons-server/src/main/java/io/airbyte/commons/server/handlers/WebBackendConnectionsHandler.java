@@ -21,7 +21,6 @@ import io.airbyte.api.model.generated.ConnectionUpdate;
 import io.airbyte.api.model.generated.DestinationIdRequestBody;
 import io.airbyte.api.model.generated.DestinationRead;
 import io.airbyte.api.model.generated.DestinationSnippetRead;
-import io.airbyte.api.model.generated.FieldTransform;
 import io.airbyte.api.model.generated.JobRead;
 import io.airbyte.api.model.generated.JobStatus;
 import io.airbyte.api.model.generated.OperationCreate;
@@ -36,7 +35,6 @@ import io.airbyte.api.model.generated.SourceRead;
 import io.airbyte.api.model.generated.SourceSnippetRead;
 import io.airbyte.api.model.generated.StreamDescriptor;
 import io.airbyte.api.model.generated.StreamTransform;
-import io.airbyte.api.model.generated.StreamTransform.TransformTypeEnum;
 import io.airbyte.api.model.generated.WebBackendConnectionCreate;
 import io.airbyte.api.model.generated.WebBackendConnectionListItem;
 import io.airbyte.api.model.generated.WebBackendConnectionListRequestBody;
@@ -52,6 +50,7 @@ import io.airbyte.commons.enums.Enums;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.commons.lang.MoreBooleans;
 import io.airbyte.commons.server.converters.ApiPojoConverters;
+import io.airbyte.commons.server.handlers.helpers.AutoPropagateSchemaChangeHelper;
 import io.airbyte.commons.server.handlers.helpers.CatalogConverter;
 import io.airbyte.commons.server.scheduler.EventRunner;
 import io.airbyte.config.ActorCatalog;
@@ -580,7 +579,7 @@ public class WebBackendConnectionsHandler {
         final CatalogDiff catalogDiff =
             connectionsHandler.getDiff(newAirbyteCatalog, CatalogConverter.toApi(mostRecentAirbyteCatalog, sourceVersion),
                 CatalogConverter.toConfiguredProtocol(newAirbyteCatalog));
-        breakingChange = containsBreakingChange(catalogDiff);
+        breakingChange = AutoPropagateSchemaChangeHelper.containsBreakingChange(catalogDiff);
       }
     }
 
@@ -800,22 +799,6 @@ public class WebBackendConnectionsHandler {
    */
   private record Stream(String name, String namespace) {
 
-  }
-
-  @VisibleForTesting
-  protected boolean containsBreakingChange(final CatalogDiff diff) {
-    for (final StreamTransform streamTransform : diff.getTransforms()) {
-      if (streamTransform.getTransformType() != TransformTypeEnum.UPDATE_STREAM) {
-        continue;
-      }
-
-      final boolean anyBreakingFieldTransforms = streamTransform.getUpdateStream().stream().anyMatch(FieldTransform::getBreaking);
-      if (anyBreakingFieldTransforms) {
-        return true;
-      }
-    }
-
-    return false;
   }
 
 }

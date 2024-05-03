@@ -10,7 +10,6 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -62,6 +61,7 @@ import io.airbyte.api.model.generated.SourceRead;
 import io.airbyte.api.model.generated.StreamDescriptor;
 import io.airbyte.api.model.generated.StreamTransform;
 import io.airbyte.api.model.generated.StreamTransform.TransformTypeEnum;
+import io.airbyte.api.model.generated.StreamTransformUpdateStream;
 import io.airbyte.api.model.generated.SyncMode;
 import io.airbyte.api.model.generated.SynchronousJobRead;
 import io.airbyte.api.model.generated.WebBackendConnectionCreate;
@@ -584,9 +584,13 @@ class WebBackendConnectionsHandlerTest {
     final SourceDiscoverSchemaRead schemaRead =
         new SourceDiscoverSchemaRead()
             .catalogDiff(
-                new CatalogDiff().addTransformsItem(new StreamTransform().addUpdateStreamItem(new FieldTransform().transformType(
-                    FieldTransform.TransformTypeEnum.ADD_FIELD).addFieldNameItem("a-new-field").breaking(false)
-                    .addField(new FieldAdd().schema(newFieldSchema)))))
+                new CatalogDiff()
+                    .addTransformsItem(
+                        new StreamTransform().updateStream(new StreamTransformUpdateStream().addFieldTransformsItem(new FieldTransform()
+                            .transformType(
+                                FieldTransform.TransformTypeEnum.ADD_FIELD)
+                            .addFieldNameItem("a-new-field").breaking(false)
+                            .addField(new FieldAdd().schema(newFieldSchema))))))
             .catalog(newCatalogToDiscover)
             .breakingChange(false)
             .connectionStatus(ConnectionStatus.ACTIVE);
@@ -630,9 +634,11 @@ class WebBackendConnectionsHandlerTest {
     final JsonNode removedFieldSchema = Jsons.deserialize("{\"type\": \"string\"}");
     final SourceDiscoverSchemaRead schemaRead =
         new SourceDiscoverSchemaRead()
-            .catalogDiff(new CatalogDiff().addTransformsItem(new StreamTransform().addUpdateStreamItem(
-                new FieldTransform().transformType(FieldTransform.TransformTypeEnum.REMOVE_FIELD).addFieldNameItem(ConnectionHelpers.FIELD_NAME + "2")
-                    .breaking(false).removeField(new FieldRemove().schema(removedFieldSchema)))))
+            .catalogDiff(
+                new CatalogDiff().addTransformsItem(new StreamTransform().updateStream(new StreamTransformUpdateStream().addFieldTransformsItem(
+                    new FieldTransform().transformType(FieldTransform.TransformTypeEnum.REMOVE_FIELD)
+                        .addFieldNameItem(ConnectionHelpers.FIELD_NAME + "2")
+                        .breaking(false).removeField(new FieldRemove().schema(removedFieldSchema))))))
             .catalog(newCatalogToDiscover)
             .breakingChange(false)
             .connectionStatus(ConnectionStatus.ACTIVE);
@@ -1018,7 +1024,8 @@ class WebBackendConnectionsHandlerTest {
     final StreamTransform streamTransformRemove =
         new StreamTransform().streamDescriptor(streamDescriptorRemove).transformType(TransformTypeEnum.REMOVE_STREAM);
     final StreamTransform streamTransformUpdate =
-        new StreamTransform().streamDescriptor(streamDescriptorUpdate).transformType(TransformTypeEnum.UPDATE_STREAM);
+        new StreamTransform().streamDescriptor(streamDescriptorUpdate).transformType(TransformTypeEnum.UPDATE_STREAM)
+            .updateStream(new StreamTransformUpdateStream());
 
     final CatalogDiff catalogDiff = new CatalogDiff().transforms(List.of(streamTransformAdd, streamTransformRemove, streamTransformUpdate));
     when(connectionsHandler.getDiff(any(), any(), any())).thenReturn(catalogDiff);
@@ -1047,7 +1054,6 @@ class WebBackendConnectionsHandlerTest {
     when(eventRunner.startNewManualSync(any())).thenReturn(successfulResult);
 
     when(configRepository.getMostRecentActorCatalogForSource(any())).thenReturn(Optional.of(new ActorCatalog().withCatalog(Jsons.emptyObject())));
-    doReturn(false).when(wbHandler).containsBreakingChange(any());
 
     final WebBackendConnectionRead result = wbHandler.webBackendUpdateConnection(updateBody);
 

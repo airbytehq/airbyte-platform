@@ -34,6 +34,7 @@ import io.airbyte.api.client.model.generated.ResetConfig;
 import io.airbyte.api.client.model.generated.SchemaChangeBackfillPreference;
 import io.airbyte.api.client.model.generated.StreamDescriptor;
 import io.airbyte.api.client.model.generated.StreamTransform;
+import io.airbyte.api.client.model.generated.StreamTransformUpdateStream;
 import io.airbyte.api.client.model.generated.SyncMode;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.config.ConnectionContext;
@@ -116,8 +117,8 @@ class ReplicationInputHydratorTest {
               .name(SYNC_CATALOG.getStreams().get(0).getStream().getName())
               .namespace(SYNC_CATALOG.getStreams().get(0).getStream().getNamespace()))
           .transformType(StreamTransform.TransformTypeEnum.UPDATE_STREAM)
-          .addUpdateStreamItem(new FieldTransform()
-              .transformType(FieldTransform.TransformTypeEnum.ADD_FIELD)));
+          .updateStream(new StreamTransformUpdateStream().addFieldTransformsItem(new FieldTransform()
+              .transformType(FieldTransform.TransformTypeEnum.ADD_FIELD))));
   private static SecretsRepositoryReader secretsRepositoryReader;
   private static AirbyteApiClient airbyteApiClient;
   private static ConnectionApi connectionApi;

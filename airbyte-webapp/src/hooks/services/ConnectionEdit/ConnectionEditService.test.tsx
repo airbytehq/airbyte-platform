@@ -268,7 +268,10 @@ describe("ConnectionEditServiceProvider", () => {
                   namespace: "test_namespace",
                 },
                 transformType: "update_stream",
-                updateStream: [],
+                updateStream: {
+                  fieldTransforms: [],
+                  streamAttributeTransforms: [],
+                },
               },
             ],
           },

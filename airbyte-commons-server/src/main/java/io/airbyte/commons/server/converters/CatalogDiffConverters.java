@@ -8,12 +8,15 @@ import io.airbyte.api.model.generated.FieldAdd;
 import io.airbyte.api.model.generated.FieldRemove;
 import io.airbyte.api.model.generated.FieldSchemaUpdate;
 import io.airbyte.api.model.generated.FieldTransform;
+import io.airbyte.api.model.generated.StreamAttributePrimaryKeyUpdate;
+import io.airbyte.api.model.generated.StreamAttributeTransform;
 import io.airbyte.api.model.generated.StreamTransform;
+import io.airbyte.api.model.generated.StreamTransformUpdateStream;
 import io.airbyte.commons.converters.ProtocolConverters;
 import io.airbyte.commons.enums.Enums;
 import io.airbyte.commons.protocol.transform_models.FieldTransformType;
+import io.airbyte.commons.protocol.transform_models.StreamAttributeTransformType;
 import io.airbyte.commons.protocol.transform_models.StreamTransformType;
-import java.util.List;
 import java.util.Optional;
 
 /**
@@ -28,16 +31,31 @@ public class CatalogDiffConverters {
         .updateStream(updateStreamToApi(transform).orElse(null));
   }
 
-  public static Optional<List<FieldTransform>> updateStreamToApi(final io.airbyte.commons.protocol.transform_models.StreamTransform transform) {
+  @SuppressWarnings("LineLength")
+  public static Optional<StreamTransformUpdateStream> updateStreamToApi(final io.airbyte.commons.protocol.transform_models.StreamTransform transform) {
     if (transform.getTransformType() == StreamTransformType.UPDATE_STREAM) {
-      return Optional.ofNullable(transform.getUpdateStreamTransform()
-          .getFieldTransforms()
-          .stream()
-          .map(CatalogDiffConverters::fieldTransformToApi)
-          .toList());
+      return Optional.of(new StreamTransformUpdateStream()
+          .streamAttributeTransforms(transform.getUpdateStreamTransform()
+              .getAttributeTransforms()
+              .stream()
+              .map(CatalogDiffConverters::streamAttributeTransformToApi)
+              .toList())
+          .fieldTransforms(transform.getUpdateStreamTransform()
+              .getFieldTransforms()
+              .stream()
+              .map(CatalogDiffConverters::fieldTransformToApi)
+              .toList()));
     } else {
       return Optional.empty();
     }
+  }
+
+  @SuppressWarnings("LineLength")
+  public static StreamAttributeTransform streamAttributeTransformToApi(final io.airbyte.commons.protocol.transform_models.StreamAttributeTransform transform) {
+    return new StreamAttributeTransform()
+        .transformType(Enums.convertTo(transform.getTransformType(), StreamAttributeTransform.TransformTypeEnum.class))
+        .breaking(transform.isBreaking())
+        .updatePrimaryKey(updatePrimaryKeyToApi(transform).orElse(null));
   }
 
   public static FieldTransform fieldTransformToApi(final io.airbyte.commons.protocol.transform_models.FieldTransform transform) {
@@ -48,6 +66,17 @@ public class CatalogDiffConverters {
         .addField(addFieldToApi(transform).orElse(null))
         .removeField(removeFieldToApi(transform).orElse(null))
         .updateFieldSchema(updateFieldToApi(transform).orElse(null));
+  }
+
+  @SuppressWarnings("LineLength")
+  private static Optional<StreamAttributePrimaryKeyUpdate> updatePrimaryKeyToApi(final io.airbyte.commons.protocol.transform_models.StreamAttributeTransform transform) {
+    if (transform.getTransformType() == StreamAttributeTransformType.UPDATE_PRIMARY_KEY) {
+      return Optional.of(new StreamAttributePrimaryKeyUpdate()
+          .newPrimaryKey(transform.getUpdatePrimaryKeyTransform().getNewPrimaryKey())
+          .oldPrimaryKey(transform.getUpdatePrimaryKeyTransform().getOldPrimaryKey()));
+    } else {
+      return Optional.empty();
+    }
   }
 
   private static Optional<FieldAdd> addFieldToApi(final io.airbyte.commons.protocol.transform_models.FieldTransform transform) {

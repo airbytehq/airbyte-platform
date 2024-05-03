@@ -14,7 +14,7 @@ interface DiffAccordionProps {
 
 export const DiffAccordion: React.FC<DiffAccordionProps> = ({ streamTransform }) => {
   const { newItems, removedItems, changedItems } = useMemo(
-    () => getSortedDiff(streamTransform.updateStream),
+    () => getSortedDiff(streamTransform.updateStream?.fieldTransforms),
     [streamTransform.updateStream]
   );
 
