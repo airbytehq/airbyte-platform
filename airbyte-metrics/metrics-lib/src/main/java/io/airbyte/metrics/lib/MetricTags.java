@@ -26,6 +26,7 @@ public class MetricTags {
   public static final String CONNECTION_ID = "connection_id";
   public static final String CRON_TYPE = "cron_type";
   public static final String CRUD_OPERATION = "crud_operation";
+  public static final String DESTINATION_CONNECTOR_NAME = "destination";
   public static final String DESTINATION_ID = "destination_id";
   public static final String DESTINATION_IMAGE = "destination_image";
   public static final String EXPIRE_SECRET = "expire_secret";
@@ -49,6 +50,7 @@ public class MetricTags {
   public static final String NOTIFICATION_CLIENT = "notification_client";
   public static final String RECORD_COUNT_TYPE = "record_count_type";
   public static final String RELEASE_STAGE = "release_stage";
+  public static final String SOURCE_CONNECTOR_NAME = "source";
   public static final String SOURCE_ID = "source_id";
   public static final String SOURCE_IMAGE = "source_image";
   public static final String STATUS = "status";
