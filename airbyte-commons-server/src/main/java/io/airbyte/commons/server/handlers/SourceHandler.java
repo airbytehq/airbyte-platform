@@ -546,7 +546,7 @@ public class SourceHandler {
     if (organizationId != null && featureFlagClient.boolVariation(UseRuntimeSecretPersistence.INSTANCE, new Organization(organizationId))) {
       final SecretPersistenceConfig secretPersistenceConfig;
       try {
-        secretPersistenceConfig = secretPersistenceConfigService.getSecretPersistenceConfig(ScopeType.ORGANIZATION, organizationId);
+        secretPersistenceConfig = secretPersistenceConfigService.get(ScopeType.ORGANIZATION, organizationId);
       } catch (final io.airbyte.data.exceptions.ConfigNotFoundException e) {
         throw new ConfigNotFoundException(e.getType(), e.getConfigId());
       }
@@ -557,20 +557,6 @@ public class SourceHandler {
     }
     final CompleteOAuthResponse completeOAuthResponse = Jsons.object(secret, CompleteOAuthResponse.class);
     return Jsons.jsonNode(completeOAuthResponse.getAuthPayload());
-  }
-
-  @VisibleForTesting
-  JsonNode hydrateConnectionConfiguration(final UUID sourceDefinitionId,
-                                          final UUID workspaceId,
-                                          final String secretId,
-                                          final JsonNode dehydratedConnectionConfiguration)
-      throws JsonValidationException, ConfigNotFoundException, IOException {
-    final JsonNode hydratedSecret = hydrateOAuthResponseSecret(secretId, workspaceId);
-    final ConnectorSpecification spec =
-        getSpecFromSourceDefinitionIdForWorkspace(sourceDefinitionId, workspaceId);
-    // add OAuth Response data to connection configuration
-
-    return OAuthSecretHelper.setSecretsInConnectionConfiguration(spec, hydratedSecret, dehydratedConnectionConfiguration);
   }
 
 }

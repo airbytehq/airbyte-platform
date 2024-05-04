@@ -92,6 +92,7 @@ open class SecretsRepositoryWriter(
     if (validate) {
       validator.ensure(spec, fullConfig)
     }
+
     val update = oldConfig.isPresent
     val splitSecretConfig: SplitSecretConfig =
       if (update) {

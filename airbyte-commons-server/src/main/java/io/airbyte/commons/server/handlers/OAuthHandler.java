@@ -548,7 +548,7 @@ public class OAuthHandler {
           && featureFlagClient.boolVariation(UseRuntimeSecretPersistence.INSTANCE, new Organization(organizationId.get()))) {
         try {
           final SecretPersistenceConfig secretPersistenceConfig =
-              secretPersistenceConfigService.getSecretPersistenceConfig(ScopeType.ORGANIZATION, organizationId.get());
+              secretPersistenceConfigService.get(ScopeType.ORGANIZATION, organizationId.get());
           secretCoordinate = secretsRepositoryWriter.storeSecret(
               generateOAuthSecretCoordinate(workspaceId),
               payloadString,
@@ -724,7 +724,7 @@ public class OAuthHandler {
     if (organizationId.isPresent() && featureFlagClient.boolVariation(UseRuntimeSecretPersistence.INSTANCE, new Organization(organizationId.get()))) {
       try {
         final SecretPersistenceConfig secretPersistenceConfig =
-            secretPersistenceConfigService.getSecretPersistenceConfig(ScopeType.ORGANIZATION, organizationId.get());
+            secretPersistenceConfigService.get(ScopeType.ORGANIZATION, organizationId.get());
 
         return secretsRepositoryWriter.statefulSplitSecrets(
             workspaceId,

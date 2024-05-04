@@ -683,7 +683,7 @@ public class DestinationServiceJooqImpl implements DestinationService {
     final JsonNode hydratedConfig;
     if (organizationId.isPresent() && featureFlagClient.boolVariation(UseRuntimeSecretPersistence.INSTANCE, new Organization(organizationId.get()))) {
       final SecretPersistenceConfig secretPersistenceConfig =
-          secretPersistenceConfigService.getSecretPersistenceConfig(ScopeType.ORGANIZATION, organizationId.get());
+          secretPersistenceConfigService.get(ScopeType.ORGANIZATION, organizationId.get());
       hydratedConfig = secretsRepositoryReader.hydrateConfigFromRuntimeSecretPersistence(destination.getConfiguration(),
           new RuntimeSecretPersistence(secretPersistenceConfig));
     } else {
@@ -709,27 +709,19 @@ public class DestinationServiceJooqImpl implements DestinationService {
     final Optional<JsonNode> previousDestinationConnection =
         getDestinationIfExists(destination.getDestinationId()).map(DestinationConnection::getConfiguration);
 
-    // strip secrets
     final Optional<UUID> organizationId = getOrganizationIdFromWorkspaceId(destination.getWorkspaceId());
-    final JsonNode partialConfig;
+    RuntimeSecretPersistence secretPersistence = null;
     if (organizationId.isPresent() && featureFlagClient.boolVariation(UseRuntimeSecretPersistence.INSTANCE, new Organization(organizationId.get()))) {
-      final SecretPersistenceConfig secretPersistenceConfig =
-          secretPersistenceConfigService.getSecretPersistenceConfig(ScopeType.ORGANIZATION, organizationId.get());
-      partialConfig = secretsRepositoryWriter.statefulUpdateSecrets(
-          destination.getWorkspaceId(),
-          previousDestinationConnection,
-          destination.getConfiguration(),
-          connectorSpecification.getConnectionSpecification(),
-          validate(destination),
-          new RuntimeSecretPersistence(secretPersistenceConfig));
-    } else {
-      partialConfig = secretsRepositoryWriter.statefulUpdateSecrets(
-          destination.getWorkspaceId(),
-          previousDestinationConnection,
-          destination.getConfiguration(),
-          connectorSpecification.getConnectionSpecification(),
-          validate(destination), null);
+      final SecretPersistenceConfig secretPersistenceConfig = secretPersistenceConfigService.get(ScopeType.ORGANIZATION, organizationId.get());
+      secretPersistence = new RuntimeSecretPersistence(secretPersistenceConfig);
     }
+
+    final JsonNode partialConfig = secretsRepositoryWriter.statefulUpdateSecrets(destination.getWorkspaceId(),
+        previousDestinationConnection,
+        destination.getConfiguration(),
+        connectorSpecification.getConnectionSpecification(),
+        validate(destination), secretPersistence);
+
     final DestinationConnection partialSource = Jsons.clone(destination).withConfiguration(partialConfig);
     writeDestinationConnectionNoSecrets(partialSource);
   }

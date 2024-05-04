@@ -86,7 +86,7 @@ public class SecretsPersistenceConfigApiController implements SecretsPersistence
               secretCoordinate,
               Jsons.serialize(requestBody.getConfiguration()));
 
-          return secretPersistenceConfigService.createOrUpdateSecretPersistenceConfig(
+          return secretPersistenceConfigService.createOrUpdate(
               Enums.convertTo(requestBody.getScope(), io.airbyte.config.ScopeType.class),
               requestBody.getScopeId(),
               Enums.convertTo(requestBody.getSecretPersistenceType(), io.airbyte.config.SecretPersistenceConfig.SecretPersistenceType.class),
@@ -107,7 +107,7 @@ public class SecretsPersistenceConfigApiController implements SecretsPersistence
     return ApiHelper.execute(
         () -> {
           final io.airbyte.config.SecretPersistenceConfig secretPersistenceConfig =
-              secretPersistenceConfigService.getSecretPersistenceConfig(ScopeType.ORGANIZATION, requestBody.getScopeId());
+              secretPersistenceConfigService.get(ScopeType.ORGANIZATION, requestBody.getScopeId());
           return secretPersistenceConfigHandler.buildSecretPersistenceConfigResponse(secretPersistenceConfig);
         });
   }

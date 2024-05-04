@@ -41,8 +41,6 @@ public interface SourceService {
 
   SourceConnection getSourceConnection(UUID sourceId) throws JsonValidationException, ConfigNotFoundException, IOException;
 
-  void writeSourceConnectionNoSecrets(SourceConnection partialSource) throws IOException;
-
   List<SourceConnection> listSourceConnection() throws IOException;
 
   List<SourceConnection> listWorkspaceSourceConnection(UUID workspaceId) throws IOException;
@@ -67,6 +65,8 @@ public interface SourceService {
       throws IOException;
 
   SourceConnection getSourceConnectionWithSecrets(UUID sourceId) throws JsonValidationException, ConfigNotFoundException, IOException;
+
+  void writeSourceConnectionNoSecrets(SourceConnection partialSource) throws IOException;
 
   void writeSourceConnectionWithSecrets(final SourceConnection source,
                                         final ConnectorSpecification connectorSpecification)

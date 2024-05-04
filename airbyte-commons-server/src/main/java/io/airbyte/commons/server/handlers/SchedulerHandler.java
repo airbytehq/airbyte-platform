@@ -844,7 +844,7 @@ public class SchedulerHandler {
     if (organizationId.isPresent() && featureFlagClient.boolVariation(UseRuntimeSecretPersistence.INSTANCE, new Organization(organizationId.get()))) {
       final SecretPersistenceConfig secretPersistenceConfig;
       try {
-        secretPersistenceConfig = secretPersistenceConfigService.getSecretPersistenceConfig(ScopeType.ORGANIZATION, organizationId.get());
+        secretPersistenceConfig = secretPersistenceConfigService.get(ScopeType.ORGANIZATION, organizationId.get());
       } catch (final io.airbyte.data.exceptions.ConfigNotFoundException e) {
         throw new ConfigNotFoundException(e.getType(), e.getConfigId());
       }

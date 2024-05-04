@@ -700,7 +700,7 @@ public class WorkspaceServiceJooqImpl implements WorkspaceService {
     final UUID organizationId = workspace.getOrganizationId();
     if (organizationId != null && featureFlagClient.boolVariation(UseRuntimeSecretPersistence.INSTANCE, new Organization(organizationId))) {
       final SecretPersistenceConfig secretPersistenceConfig =
-          secretPersistenceConfigService.getSecretPersistenceConfig(io.airbyte.config.ScopeType.ORGANIZATION, organizationId);
+          secretPersistenceConfigService.get(io.airbyte.config.ScopeType.ORGANIZATION, organizationId);
       webhookConfigs =
           secretsRepositoryReader.hydrateConfigFromRuntimeSecretPersistence(workspace.getWebhookOperationConfigs(),
               new RuntimeSecretPersistence(secretPersistenceConfig));
@@ -714,44 +714,38 @@ public class WorkspaceServiceJooqImpl implements WorkspaceService {
   @Override
   public void writeWorkspaceWithSecrets(final StandardWorkspace workspace) throws JsonValidationException, IOException, ConfigNotFoundException {
     // Get the schema for the webhook config, so we can split out any secret fields.
-    final JsonNode webhookConfigSchema =
-        Yamls.deserialize(ConfigSchema.WORKSPACE_WEBHOOK_OPERATION_CONFIGS.getConfigSchemaFile());
+    final JsonNode webhookConfigSchema = Yamls.deserialize(ConfigSchema.WORKSPACE_WEBHOOK_OPERATION_CONFIGS.getConfigSchemaFile());
     // Check if there's an existing config, so we can re-use the secret coordinates.
     final Optional<StandardWorkspace> previousWorkspace = getWorkspaceIfExists(workspace.getWorkspaceId(), false);
     Optional<JsonNode> previousWebhookConfigs = Optional.empty();
+
     if (previousWorkspace.isPresent() && previousWorkspace.get().getWebhookOperationConfigs() != null) {
       previousWebhookConfigs = Optional.of(previousWorkspace.get().getWebhookOperationConfigs());
     }
-    // Split out the secrets from the webhook config.
-    final JsonNode partialConfig;
-    if (workspace.getWebhookOperationConfigs() == null) {
-      partialConfig = null;
-    } else {
-      // strip secrets
+
+    final StandardWorkspace partialWorkspace = Jsons.clone(workspace);
+
+    if (workspace.getWebhookOperationConfigs() != null) {
       final UUID organizationId = workspace.getOrganizationId();
+      RuntimeSecretPersistence secretPersistence = null;
+
       if (organizationId != null && featureFlagClient.boolVariation(UseRuntimeSecretPersistence.INSTANCE, new Organization(organizationId))) {
         final SecretPersistenceConfig secretPersistenceConfig =
-            secretPersistenceConfigService.getSecretPersistenceConfig(io.airbyte.config.ScopeType.ORGANIZATION, organizationId);
-        partialConfig = secretsRepositoryWriter.statefulUpdateSecrets(
-            workspace.getWorkspaceId(),
-            previousWebhookConfigs,
-            workspace.getWebhookOperationConfigs(),
-            webhookConfigSchema,
-            true,
-            new RuntimeSecretPersistence(secretPersistenceConfig));
-      } else {
-        partialConfig = secretsRepositoryWriter.statefulUpdateSecrets(
-            workspace.getWorkspaceId(),
-            previousWebhookConfigs,
-            workspace.getWebhookOperationConfigs(),
-            webhookConfigSchema,
-            true, null);
+            secretPersistenceConfigService.get(io.airbyte.config.ScopeType.ORGANIZATION, organizationId);
+        secretPersistence = new RuntimeSecretPersistence(secretPersistenceConfig);
       }
-    }
-    final StandardWorkspace partialWorkspace = Jsons.clone(workspace);
-    if (partialConfig != null) {
+
+      JsonNode partialConfig;
+      partialConfig = secretsRepositoryWriter.statefulUpdateSecrets(
+          workspace.getWorkspaceId(),
+          previousWebhookConfigs,
+          workspace.getWebhookOperationConfigs(),
+          webhookConfigSchema,
+          true, secretPersistence);
+
       partialWorkspace.withWebhookOperationConfigs(partialConfig);
     }
+
     writeStandardWorkspaceNoSecrets(partialWorkspace);
   }
 

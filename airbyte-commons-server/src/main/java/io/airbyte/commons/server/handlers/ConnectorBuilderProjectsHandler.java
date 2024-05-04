@@ -407,20 +407,9 @@ public class ConnectorBuilderProjectsHandler {
                                                    final UUID workspaceId,
                                                    final Optional<SecretPersistenceConfig> secretPersistenceConfig)
       throws JsonValidationException {
-    return secretPersistenceConfig.isPresent()
-        ? secretsRepositoryWriter.statefulUpdateSecrets(
-            workspaceId,
-            existingTestingValues,
-            updatedTestingValues,
-            spec,
-            true,
-            new RuntimeSecretPersistence(secretPersistenceConfig.get()))
-        : secretsRepositoryWriter.statefulUpdateSecrets(
-            workspaceId,
-            existingTestingValues,
-            updatedTestingValues,
-            spec,
-            true, null);
+
+    var secretPersistence = secretPersistenceConfig.map(RuntimeSecretPersistence::new).orElse(null);
+    return secretsRepositoryWriter.statefulUpdateSecrets(workspaceId, existingTestingValues, updatedTestingValues, spec, true, secretPersistence);
   }
 
   private Optional<SecretPersistenceConfig> getSecretPersistenceConfig(final UUID workspaceId) throws IOException, ConfigNotFoundException {
@@ -428,7 +417,7 @@ public class ConnectorBuilderProjectsHandler {
       final Optional<UUID> organizationId = workspaceService.getOrganizationIdFromWorkspaceId(workspaceId);
       return organizationId.isPresent()
           && featureFlagClient.boolVariation(UseRuntimeSecretPersistence.INSTANCE, new Organization(organizationId.get()))
-              ? Optional.of(secretPersistenceConfigService.getSecretPersistenceConfig(ScopeType.ORGANIZATION, organizationId.get()))
+              ? Optional.of(secretPersistenceConfigService.get(ScopeType.ORGANIZATION, organizationId.get()))
               : Optional.empty();
     } catch (final io.airbyte.data.exceptions.ConfigNotFoundException e) {
       throw new ConfigNotFoundException(e.getType(), e.getConfigId());

@@ -58,7 +58,7 @@ public class SecretPersistenceConfigServiceJooqImpl implements SecretPersistence
   }
 
   @Override
-  public SecretPersistenceConfig getSecretPersistenceConfig(final ScopeType scope, final UUID scopeId) throws IOException, ConfigNotFoundException {
+  public SecretPersistenceConfig get(final ScopeType scope, final UUID scopeId) throws IOException, ConfigNotFoundException {
     final Optional<SecretPersistenceCoordinate> secretPersistenceCoordinate = getSecretPersistenceCoordinate(scope, scopeId);
     if (secretPersistenceCoordinate.isPresent()) {
       final JsonNode configuration = secretsRepositoryReader.fetchSecretFromDefaultSecretPersistence(
@@ -74,10 +74,10 @@ public class SecretPersistenceConfigServiceJooqImpl implements SecretPersistence
   }
 
   @Override
-  public Optional<SecretPersistenceCoordinate> createOrUpdateSecretPersistenceConfig(final ScopeType scope,
-                                                                                     final UUID scopeId,
-                                                                                     final SecretPersistenceType secretPersistenceType,
-                                                                                     final String secretPersistenceConfigCoordinate)
+  public Optional<SecretPersistenceCoordinate> createOrUpdate(final ScopeType scope,
+                                                              final UUID scopeId,
+                                                              final SecretPersistenceType secretPersistenceType,
+                                                              final String secretPersistenceConfigCoordinate)
       throws IOException {
     io.airbyte.db.instance.configs.jooq.generated.enums.SecretPersistenceType dbSecretPersistenceType =
         io.airbyte.db.instance.configs.jooq.generated.enums.SecretPersistenceType.valueOf(secretPersistenceType.value());
