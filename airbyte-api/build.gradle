@@ -384,6 +384,7 @@ dependencies {
     kapt platform(libs.micronaut.platform)
     kapt libs.bundles.micronaut.annotation.processor
     kapt libs.v3.swagger.annotations
+    kapt libs.moshi.kotlin
 
     api libs.bundles.micronaut.annotation
     api libs.micronaut.http
@@ -394,6 +395,7 @@ dependencies {
     api libs.java.jwt
     api libs.google.auth.library.oauth2.http
     api libs.kotlin.logging
+    api libs.moshi.kotlin
 
     implementation platform(libs.micronaut.platform)
     implementation libs.bundles.micronaut
@@ -403,7 +405,6 @@ dependencies {
     implementation libs.jakarta.validation.api
     implementation libs.jackson.datatype
     implementation libs.jackson.databind
-    implementation libs.moshi.kotlin
     implementation libs.openapi.jackson.databind.nullable
     implementation libs.reactor.core
     implementation libs.slf4j.api
