@@ -9,7 +9,6 @@ import {
   deleteWorkspace,
   getWorkspace,
   listAccessInfoByWorkspaceId,
-  listWorkspaces,
   listWorkspacesByUser,
   updateWorkspace,
   updateWorkspaceName,
@@ -98,22 +97,6 @@ export const useInvalidateWorkspaceStateQuery = () => {
   return useCallback(() => {
     queryClient.invalidateQueries(workspaceKeys.state(workspaceId));
   }, [queryClient, workspaceId]);
-};
-
-// todo: after merging https://github.com/airbytehq/airbyte-platform-internal/pull/7779 this should get workspace by user id
-export const useListWorkspaces = () => {
-  const requestOptions = useRequestOptions();
-  return useSuspenseQuery(workspaceKeys.lists(), () => listWorkspaces(requestOptions));
-};
-
-export const getListWorkspacesAsyncQueryKey = () => {
-  return workspaceKeys.lists();
-};
-
-export const useListWorkspacesAsyncQuery = () => {
-  const requestOptions = useRequestOptions();
-
-  return () => listWorkspaces(requestOptions);
 };
 
 export const getWorkspaceQueryKey = (workspaceId: string) => {

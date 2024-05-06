@@ -20,7 +20,6 @@ import { Button } from "components/ui/Button";
 import { Card } from "components/ui/Card";
 import { Text } from "components/ui/Text";
 
-import { useListWorkspaces } from "core/api";
 import { OrganizationRead, WorkspaceCreate, WorkspaceRead } from "core/api/types/AirbyteClient";
 import { trackError } from "core/utils/datadog";
 import { useNotificationService } from "hooks/services/Notification";
@@ -49,8 +48,6 @@ export const WorkspacesCreateControl: React.FC<OrganizationWorkspacesCreateContr
   const { formatMessage } = useIntl();
   const [isEditMode, toggleMode] = useToggle(false);
   const { registerNotification } = useNotificationService();
-  const { workspaces } = useListWorkspaces();
-  const isFirstWorkspace = workspaces.length === 0;
 
   // if the user does not have create permissions in any organizations, do not show the control at all
   if (organizationsToCreateIn.length === 0) {
@@ -107,7 +104,7 @@ export const WorkspacesCreateControl: React.FC<OrganizationWorkspacesCreateContr
             icon="plus"
             className={styles.createButton}
           >
-            <FormattedMessage id={isFirstWorkspace ? "workspaces.createFirst" : "workspaces.createNew"} />
+            <FormattedMessage id="workspaces.createNew" />
           </Button>
         </Box>
       )}

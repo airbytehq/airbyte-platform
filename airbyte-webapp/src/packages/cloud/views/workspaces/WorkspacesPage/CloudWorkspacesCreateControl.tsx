@@ -11,7 +11,6 @@ import { Button } from "components/ui/Button";
 import { Card } from "components/ui/Card";
 import { Text } from "components/ui/Text";
 
-import { useListWorkspaces } from "core/api";
 import { useCreateCloudWorkspace } from "core/api/cloud";
 import { OrganizationRead } from "core/api/types/AirbyteClient";
 import { trackError } from "core/utils/datadog";
@@ -40,10 +39,7 @@ export const CloudWorkspacesCreateControl: React.FC = () => {
   const { formatMessage } = useIntl();
   const [isEditMode, toggleMode] = useToggle(false);
   const { registerNotification } = useNotificationService();
-  const { workspaces } = useListWorkspaces();
   const { organizationsToCreateIn } = useOrganizationsToCreateWorkspaces();
-
-  const isFirstWorkspace = workspaces.length === 0;
 
   const onSubmit = async (values: CreateCloudWorkspaceFormValues) => {
     const newWorkspace = await createWorkspace(values);
@@ -101,7 +97,7 @@ export const CloudWorkspacesCreateControl: React.FC = () => {
             icon="plus"
             className={styles.createButton}
           >
-            <FormattedMessage id={isFirstWorkspace ? "workspaces.createFirst" : "workspaces.createNew"} />
+            <FormattedMessage id="workspaces.createNew" />
           </Button>
         </Box>
       )}
