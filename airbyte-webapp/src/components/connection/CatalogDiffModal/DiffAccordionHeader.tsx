@@ -10,7 +10,7 @@ import { DiffIconBlock } from "./DiffIconBlock";
 
 interface DiffAccordionHeaderProps {
   open: boolean;
-
+  hasBreakingChanges: boolean;
   streamDescriptor: StreamDescriptor;
   removedCount: number;
   newCount: number;
@@ -18,6 +18,7 @@ interface DiffAccordionHeaderProps {
 }
 export const DiffAccordionHeader: React.FC<DiffAccordionHeaderProps> = ({
   open,
+  hasBreakingChanges,
   streamDescriptor,
   removedCount,
   newCount,
@@ -44,7 +45,12 @@ export const DiffAccordionHeader: React.FC<DiffAccordionHeaderProps> = ({
           {streamDescriptor.name}
         </div>
       </div>
-      <DiffIconBlock removedCount={removedCount} newCount={newCount} changedCount={changedCount} />
+      <DiffIconBlock
+        hasBreakingChanges={hasBreakingChanges}
+        removedCount={removedCount}
+        newCount={newCount}
+        changedCount={changedCount}
+      />
     </>
   );
 };

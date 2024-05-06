@@ -275,6 +275,87 @@ describe("catalog diff modal", () => {
     expect(nullAccordionBodyAgain).not.toBeInTheDocument();
   });
 
+  it("renders breaking a breaking change icon on streams with braeking changes", async () => {
+    mockCatalogDiff.transforms.push(
+      {
+        transformType: "update_stream",
+        streamDescriptor: { namespace: "apple", name: "stream1" },
+        updateStream: {
+          streamAttributeTransforms: [
+            {
+              transformType: "update_primary_key",
+              breaking: true,
+              updatePrimaryKey: {
+                newPrimaryKey: [["prefix"], ["new", "key"]],
+              },
+            },
+          ],
+          fieldTransforms: [],
+        },
+      },
+      {
+        transformType: "update_stream",
+        streamDescriptor: { namespace: "apple", name: "stream2" },
+        updateStream: {
+          streamAttributeTransforms: [
+            {
+              transformType: "update_primary_key",
+              breaking: false,
+              updatePrimaryKey: {
+                newPrimaryKey: [["prefix"], ["new", "key"]],
+              },
+            },
+          ],
+          fieldTransforms: [{ transformType: "remove_field", fieldName: ["users", "lastName"], breaking: true }],
+        },
+      },
+      {
+        transformType: "update_stream",
+        streamDescriptor: { namespace: "apple", name: "stream3" },
+        updateStream: {
+          streamAttributeTransforms: [
+            {
+              transformType: "update_primary_key",
+              breaking: false,
+              updatePrimaryKey: {
+                newPrimaryKey: [["prefix"], ["new", "key"]],
+              },
+            },
+          ],
+          fieldTransforms: [{ transformType: "remove_field", fieldName: ["users", "lastName"], breaking: false }],
+        },
+      }
+    );
+
+    render(
+      <IntlProvider messages={messages} locale="en">
+        <ModalServiceProvider>
+          <CatalogDiffModal
+            catalogDiff={mockCatalogDiff}
+            catalog={mockCatalog}
+            onComplete={() => {
+              return null;
+            }}
+          />
+        </ModalServiceProvider>
+      </IntlProvider>
+    );
+
+    screen.debug();
+
+    expect(
+      within(screen.getByTestId(`toggle-accordion-stream1-stream`)).queryByTestId("breakingChangeStream")
+    ).toBeInTheDocument();
+
+    expect(
+      within(screen.getByTestId(`toggle-accordion-stream2-stream`)).queryByTestId("breakingChangeStream")
+    ).toBeInTheDocument();
+
+    expect(
+      within(screen.getByTestId(`toggle-accordion-stream3-stream`)).queryByTestId("breakingChangeStream")
+    ).not.toBeInTheDocument();
+  });
+
   describe("source defined key changes", () => {
     it("renders source defined primary key changes", async () => {
       const updateWithPrimaryKeyChange: StreamTransform = {

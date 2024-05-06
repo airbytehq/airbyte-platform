@@ -13,6 +13,13 @@ interface DiffAccordionProps {
   streamTransform: StreamTransform;
 }
 
+const hasBreakingChanges: (streamTransform: StreamTransform) => boolean = (streamTransform) => {
+  return !!(
+    streamTransform.updateStream?.fieldTransforms?.some((t) => t.breaking) ||
+    streamTransform.updateStream?.streamAttributeTransforms?.some((t) => t.breaking)
+  );
+};
+
 export const DiffAccordion: React.FC<DiffAccordionProps> = ({ streamTransform }) => {
   const { newItems, removedItems, changedItems } = useMemo(
     () => getSortedDiff(streamTransform.updateStream?.fieldTransforms),
@@ -32,6 +39,7 @@ export const DiffAccordion: React.FC<DiffAccordionProps> = ({ streamTransform })
               data-testid={`toggle-accordion-${streamTransform.streamDescriptor.name}-stream`}
             >
               <DiffAccordionHeader
+                hasBreakingChanges={hasBreakingChanges(streamTransform)}
                 streamDescriptor={streamTransform.streamDescriptor}
                 removedCount={removedItems.length}
                 newCount={newItems.length}
