@@ -50,6 +50,15 @@ interface FailureUiDetails {
   message: string;
   secondaryMessage?: string;
 }
+
+export const getFailureType = (failure: FailureReason): "error" | "warning" => {
+  const isConfigError = failure.failureType === "config_error";
+  const isSourceError = failure.failureOrigin === FailureOrigin.source;
+  const isDestinationError = failure.failureOrigin === FailureOrigin.destination;
+
+  return isConfigError && (isSourceError || isDestinationError) ? "error" : "warning";
+};
+
 export const failureUiDetailsFromReason = <
   T extends FailureReason | undefined | null,
   RetVal = T extends FailureReason ? FailureUiDetails : null,
@@ -61,12 +70,9 @@ export const failureUiDetailsFromReason = <
     return null as RetVal;
   }
 
-  const isConfigError = reason.failureType === "config_error";
-  const isSourceError = reason.failureOrigin === FailureOrigin.source;
-  const isDestinationError = reason.failureOrigin === FailureOrigin.destination;
-
+  const type = getFailureType(reason);
   const origin = reason.failureOrigin;
-  const type = isConfigError && (isSourceError || isDestinationError) ? "error" : "warning";
+
   const typeLabel = formatMessage(
     { id: type === "error" ? "failureMessage.type.error" : "failureMessage.type.warning" },
     { origin }
