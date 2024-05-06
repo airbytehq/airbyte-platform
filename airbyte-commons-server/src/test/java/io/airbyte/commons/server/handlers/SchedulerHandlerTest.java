@@ -475,7 +475,8 @@ class SchedulerHandlerTest {
     final ActorDefinitionVersion sourceVersion = new ActorDefinitionVersion()
         .withDockerRepository(SOURCE_DOCKER_REPO)
         .withDockerImageTag(SOURCE_DOCKER_TAG)
-        .withProtocolVersion(SOURCE_PROTOCOL_VERSION);
+        .withProtocolVersion(SOURCE_PROTOCOL_VERSION)
+        .withSpec(CONNECTOR_SPECIFICATION);
     when(actorDefinitionVersionHelper.getSourceVersion(sourceDefinition, source.getWorkspaceId(), null)).thenReturn(sourceVersion);
     when(secretsRepositoryWriter.statefulSplitEphemeralSecrets(
         eq(source.getConfiguration()),
@@ -571,7 +572,8 @@ class SchedulerHandlerTest {
     final ActorDefinitionVersion destinationVersion = new ActorDefinitionVersion()
         .withDockerRepository(DESTINATION_DOCKER_REPO)
         .withDockerImageTag(DESTINATION_DOCKER_TAG)
-        .withProtocolVersion(DESTINATION_PROTOCOL_VERSION);
+        .withProtocolVersion(DESTINATION_PROTOCOL_VERSION)
+        .withSpec(CONNECTOR_SPECIFICATION);
     when(actorDefinitionVersionHelper.getDestinationVersion(destinationDefinition, destination.getWorkspaceId(), null))
         .thenReturn(destinationVersion);
 
@@ -744,7 +746,8 @@ class SchedulerHandlerTest {
     final ActorDefinitionVersion sourceVersion = new ActorDefinitionVersion()
         .withDockerRepository(SOURCE_DOCKER_REPO)
         .withDockerImageTag(SOURCE_DOCKER_TAG)
-        .withProtocolVersion(SOURCE_PROTOCOL_VERSION);
+        .withProtocolVersion(SOURCE_PROTOCOL_VERSION)
+        .withSpec(CONNECTOR_SPECIFICATION);
     when(actorDefinitionVersionHelper.getSourceVersion(sourceDefinition, source.getWorkspaceId(), source.getSourceId()))
         .thenReturn(sourceVersion);
     when(secretsRepositoryWriter.statefulSplitEphemeralSecrets(
@@ -1460,7 +1463,8 @@ class SchedulerHandlerTest {
     final ActorDefinitionVersion sourceVersion = new ActorDefinitionVersion()
         .withDockerRepository(SOURCE_DOCKER_REPO)
         .withDockerImageTag(SOURCE_DOCKER_TAG)
-        .withProtocolVersion(SOURCE_PROTOCOL_VERSION);
+        .withProtocolVersion(SOURCE_PROTOCOL_VERSION)
+        .withSpec(CONNECTOR_SPECIFICATION);
     when(actorDefinitionVersionHelper.getSourceVersion(sourceDefinition, source.getWorkspaceId(), null))
         .thenReturn(sourceVersion);
     when(synchronousSchedulerClient.createDiscoverSchemaJob(source, sourceVersion, false, null, WorkloadPriority.HIGH))
@@ -1497,7 +1501,8 @@ class SchedulerHandlerTest {
     final ActorDefinitionVersion sourceVersion = new ActorDefinitionVersion()
         .withDockerRepository(SOURCE_DOCKER_REPO)
         .withDockerImageTag(SOURCE_DOCKER_TAG)
-        .withProtocolVersion(SOURCE_PROTOCOL_VERSION);
+        .withProtocolVersion(SOURCE_PROTOCOL_VERSION)
+        .withSpec(CONNECTOR_SPECIFICATION);
     when(actorDefinitionVersionHelper.getSourceVersion(sourceDefinition, source.getWorkspaceId(), null))
         .thenReturn(sourceVersion);
     when(synchronousSchedulerClient.createDiscoverSchemaJob(source, sourceVersion, false, null, WorkloadPriority.HIGH))

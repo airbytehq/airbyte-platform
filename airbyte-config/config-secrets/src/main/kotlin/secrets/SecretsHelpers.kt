@@ -16,7 +16,6 @@ import io.airbyte.commons.json.JsonSchemas
 import io.airbyte.commons.json.Jsons
 import io.airbyte.commons.util.MoreIterators
 import io.airbyte.config.secrets.persistence.ReadOnlySecretPersistence
-import io.airbyte.config.secrets.persistence.RuntimeSecretPersistence
 import io.airbyte.config.secrets.persistence.SecretPersistence
 import io.github.oshai.kotlinlogging.KotlinLogging
 import java.util.UUID
@@ -88,7 +87,7 @@ object SecretsHelpers {
    * @param spec specification for the config
    * @return a partial config + a map of coordinates to secret payloads
    */
-  public fun splitConfig(
+  fun splitConfig(
     uuidSupplier: Supplier<UUID>,
     workspaceId: UUID,
     fullConfig: JsonNode,
@@ -139,20 +138,9 @@ object SecretsHelpers {
   }
 
   /**
-   * Take a full configuration and old one. Save any secrets that are present in the new config.
-   * Return a SplitSecretConfig with the partial config and coordinate set after the old and new
-   * configs have merged.
-   *
-   * @param uuidSupplier provided to allow a test case to produce known UUIDs in order for easy
-   * fixture creation.
-   * @param workspaceId workspace id
-   * @param oldPartialConfig old partial config
-   * @param newFullConfig new config (prefer its value to the old one)
-   * @param spec spec for the config
-   * @param secretReader secret reader to get existing secrets
-   * @return results of merging old and new config with secrets removed and replaced with secret
-   * coordinates
+   * Identical to [SecretsHelpers.splitAndUpdateConfig] with UUID supplier for testing.
    */
+  @VisibleForTesting
   fun splitAndUpdateConfig(
     uuidSupplier: Supplier<UUID>,
     workspaceId: UUID,
@@ -218,6 +206,7 @@ object SecretsHelpers {
    * This returns all the unique path to the airbyte secrets based on a schema spec. The path will be
    * return in an ascending alphabetical order.
    */
+  @VisibleForTesting
   fun getSortedSecretPaths(spec: JsonNode?): List<String> {
     return JsonSchemas.collectPathsThatMeetCondition(
       spec,
@@ -285,7 +274,7 @@ object SecretsHelpers {
    * @param spec config specification
    * @return a partial config + a map of coordinates to secret payloads
    */
-  fun internalSplitAndUpdateConfig(
+  private fun internalSplitAndUpdateConfig(
     uuidSupplier: Supplier<UUID>,
     workspaceId: UUID,
     secretReader: ReadOnlySecretPersistence,
@@ -309,66 +298,6 @@ object SecretsHelpers {
           val coordinate: SecretCoordinate =
             getOrCreateCoordinate(
               secretReader,
-              workspaceId,
-              uuidSupplier,
-              json,
-              persistedNode.orElse(null),
-            )
-          secretMap[coordinate] = json.asText()
-          Jsons.jsonNode(
-            mapOf(COORDINATE_FIELD to coordinate.fullCoordinate),
-          )
-        }
-    }
-    return SplitSecretConfig(fullConfigCopy, secretMap)
-  }
-
-  /**
-   * Internal method used to support both "split config" and "split and update config" operations.
-   *
-   * For splits that don't have a prior partial config (such as when a connector is created for a
-   * source or destination for the first time), the secret reader and old partial config can be set to
-   * empty (see [SecretsHelpers.splitConfig]).
-   *
-   * IMPORTANT: This is used recursively. In the process, the partial config, full config, and spec
-   * inputs will represent internal json structures, not the entire configs/specs.
-   *
-   * @param uuidSupplier provided to allow a test case to produce known UUIDs in order for easy
-   * fixture creation
-   * @param workspaceId workspace that will contain the source or destination this config will be
-   * stored for
-   * @param secretReader provides a way to determine if a secret is the same or updated at a specific
-   * location in a config
-   * @param persistedPartialConfig previous partial config for this specific configuration
-   * @param newFullConfig new config containing secrets that will be used to update the partial config
-   * @param spec config specification
-   * @return a partial config + a map of coordinates to secret payloads
-   */
-  fun internalSplitAndUpdateConfigToRuntimeSecretPersistence(
-    uuidSupplier: Supplier<UUID>,
-    workspaceId: UUID,
-    secretReader: ReadOnlySecretPersistence,
-    persistedPartialConfig: JsonNode?,
-    newFullConfig: JsonNode,
-    spec: JsonNode?,
-    runtimeSecretPersistence: RuntimeSecretPersistence,
-  ): SplitSecretConfig {
-    var fullConfigCopy = newFullConfig.deepCopy<JsonNode>()
-    val secretMap: HashMap<SecretCoordinate, String> =
-      HashMap<SecretCoordinate, String>()
-    val paths = getSortedSecretPaths(spec)
-    logger.debug { "SortedSecretPaths: $paths" }
-    for (path in paths) {
-      fullConfigCopy =
-        JsonPaths.replaceAt(
-          fullConfigCopy,
-          path,
-        ) { json: JsonNode, pathOfNode: String? ->
-          val persistedNode =
-            JsonPaths.getSingleValue(persistedPartialConfig, pathOfNode)
-          val coordinate: SecretCoordinate =
-            getOrCreateCoordinate(
-              runtimeSecretPersistence,
               workspaceId,
               uuidSupplier,
               json,

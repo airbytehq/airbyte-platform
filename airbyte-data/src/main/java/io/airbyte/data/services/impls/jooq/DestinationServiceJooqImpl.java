@@ -716,11 +716,18 @@ public class DestinationServiceJooqImpl implements DestinationService {
       secretPersistence = new RuntimeSecretPersistence(secretPersistenceConfig);
     }
 
-    final JsonNode partialConfig = secretsRepositoryWriter.statefulUpdateSecrets(destination.getWorkspaceId(),
-        previousDestinationConnection,
-        destination.getConfiguration(),
-        connectorSpecification.getConnectionSpecification(),
-        validate(destination), secretPersistence);
+    JsonNode partialConfig;
+    if (previousDestinationConnection.isPresent()) {
+      partialConfig = secretsRepositoryWriter.statefulUpdateSecrets(destination.getWorkspaceId(),
+          previousDestinationConnection.get(),
+          destination.getConfiguration(),
+          connectorSpecification.getConnectionSpecification(), secretPersistence);
+    } else {
+      partialConfig = secretsRepositoryWriter.statefulSplitSecrets(destination.getWorkspaceId(),
+          destination.getConfiguration(),
+          connectorSpecification.getConnectionSpecification(),
+          secretPersistence);
+    }
 
     final DestinationConnection partialSource = Jsons.clone(destination).withConfiguration(partialConfig);
     writeDestinationConnectionNoSecrets(partialSource);
@@ -733,10 +740,6 @@ public class DestinationServiceJooqImpl implements DestinationService {
       log.warn("Unable to find destination with ID {}", destinationId);
       return Optional.empty();
     }
-  }
-
-  private boolean validate(final DestinationConnection destination) {
-    return destination.getTombstone() == null || !destination.getTombstone();
   }
 
 }

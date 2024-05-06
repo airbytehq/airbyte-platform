@@ -729,13 +729,14 @@ public class OAuthHandler {
         return secretsRepositoryWriter.statefulSplitSecrets(
             workspaceId,
             oauthParamConfiguration,
-            connectorSpecification,
+            connectorSpecification.getConnectionSpecification(),
             new RuntimeSecretPersistence(secretPersistenceConfig));
       } catch (final io.airbyte.data.exceptions.ConfigNotFoundException e) {
         throw new ConfigNotFoundException(e.getType(), e.getConfigId());
       }
     } else {
-      return secretsRepositoryWriter.statefulSplitSecrets(workspaceId, oauthParamConfiguration, connectorSpecification, null);
+      return secretsRepositoryWriter.statefulSplitSecrets(workspaceId, oauthParamConfiguration, connectorSpecification.getConnectionSpecification(),
+          null);
     }
   }
 

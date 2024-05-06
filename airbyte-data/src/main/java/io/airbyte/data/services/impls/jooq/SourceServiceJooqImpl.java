@@ -79,8 +79,6 @@ import org.jooq.impl.DSL;
 @Singleton
 public class SourceServiceJooqImpl implements SourceService {
 
-  public static final String PRIMARY_KEY = "id";
-
   private final ExceptionWrappingDatabase database;
   private final FeatureFlagClient featureFlagClient;
   private final SecretsRepositoryReader secretRepositoryReader;
@@ -721,12 +719,20 @@ public class SourceServiceJooqImpl implements SourceService {
       secretPersistence = new RuntimeSecretPersistence(secretPersistenceConfig);
     }
 
-    final JsonNode partialConfig = secretsRepositoryWriter.statefulUpdateSecrets(
-        source.getWorkspaceId(),
-        previousSourceConnection,
-        source.getConfiguration(),
-        connectorSpecification.getConnectionSpecification(),
-        validate(source), secretPersistence);
+    JsonNode partialConfig;
+    if (previousSourceConnection.isPresent()) {
+      partialConfig = secretsRepositoryWriter.statefulUpdateSecrets(
+          source.getWorkspaceId(),
+          previousSourceConnection.get(),
+          source.getConfiguration(),
+          connectorSpecification.getConnectionSpecification(), secretPersistence);
+    } else {
+      partialConfig = secretsRepositoryWriter.statefulSplitSecrets(
+          source.getWorkspaceId(),
+          source.getConfiguration(),
+          connectorSpecification.getConnectionSpecification(),
+          secretPersistence);
+    }
 
     final SourceConnection partialSource = Jsons.clone(source).withConfiguration(partialConfig);
     writeSourceConnectionNoSecrets(partialSource);
@@ -739,10 +745,6 @@ public class SourceServiceJooqImpl implements SourceService {
       log.warn("Unable to find source with ID {}", sourceId);
       return Optional.empty();
     }
-  }
-
-  private boolean validate(final SourceConnection source) {
-    return source.getTombstone() == null || !source.getTombstone();
   }
 
 }

@@ -826,8 +826,7 @@ public class SchedulerHandler {
   }
 
   /**
-   * Wrapper around
-   * {@link SecretsRepositoryWriter#statefulSplitEphemeralSecrets(JsonNode, ConnectorSpecification)}.
+   * Wrapper around {@link SecretsRepositoryWriter#statefulSplitSecrets}.
    *
    * @param workspaceId workspaceId
    * @param connectionConfiguration connectionConfiguration
@@ -850,12 +849,12 @@ public class SchedulerHandler {
       }
       return secretsRepositoryWriter.statefulSplitEphemeralSecrets(
           connectionConfiguration,
-          connectorSpecification,
+          connectorSpecification.getConnectionSpecification(),
           new RuntimeSecretPersistence(secretPersistenceConfig));
     } else {
       return secretsRepositoryWriter.statefulSplitEphemeralSecrets(
           connectionConfiguration,
-          connectorSpecification,
+          connectorSpecification.getConnectionSpecification(),
           null);
     }
   }

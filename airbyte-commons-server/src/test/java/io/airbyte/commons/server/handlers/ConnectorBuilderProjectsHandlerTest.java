@@ -79,7 +79,6 @@ import java.io.IOException;
 import java.net.URI;
 import java.util.Collections;
 import java.util.List;
-import java.util.Optional;
 import java.util.UUID;
 import java.util.function.Supplier;
 import java.util.stream.Stream;
@@ -537,7 +536,7 @@ class ConnectorBuilderProjectsHandlerTest {
         }""");
 
     when(connectorBuilderService.getConnectorBuilderProject(project.getBuilderProjectId(), false)).thenReturn(project);
-    when(secretsRepositoryWriter.statefulUpdateSecrets(workspaceId, Optional.empty(), testingValues, spec, true, null))
+    when(secretsRepositoryWriter.statefulSplitSecrets(workspaceId, testingValues, spec, null))
         .thenReturn(testingValuesWithSecretCoordinates);
     when(secretsProcessor.prepareSecretsForOutput(testingValuesWithSecretCoordinates, spec)).thenReturn(testingValuesWithObfuscatedSecrets);
 
@@ -570,8 +569,8 @@ class ConnectorBuilderProjectsHandlerTest {
     when(connectorBuilderService.getConnectorBuilderProject(project.getBuilderProjectId(), false)).thenReturn(project);
     when(secretsRepositoryReader.hydrateConfigFromDefaultSecretPersistence(testingValuesWithSecretCoordinates)).thenReturn(testingValues);
     when(secretsProcessor.copySecrets(testingValues, newTestingValues, spec)).thenReturn(newTestingValues);
-    when(secretsRepositoryWriter.statefulUpdateSecrets(workspaceId, Optional.of(testingValuesWithSecretCoordinates),
-        newTestingValues, spec, true, null)).thenReturn(newTestingValuesWithSecretCoordinates);
+    when(secretsRepositoryWriter.statefulUpdateSecrets(workspaceId, testingValuesWithSecretCoordinates,
+        newTestingValues, spec, null)).thenReturn(newTestingValuesWithSecretCoordinates);
     when(secretsProcessor.prepareSecretsForOutput(newTestingValuesWithSecretCoordinates, spec)).thenReturn(testingValuesWithObfuscatedSecrets);
 
     final JsonNode response = connectorBuilderProjectsHandler.updateConnectorBuilderProjectTestingValues(
@@ -697,8 +696,8 @@ class ConnectorBuilderProjectsHandlerTest {
 
     when(connectorBuilderService.getConnectorBuilderProject(project.getBuilderProjectId(), false)).thenReturn(project);
     when(connectorBuilderServerApiClient.readStream(streamReadRequestBody)).thenReturn(streamRead);
-    when(secretsRepositoryWriter.statefulUpdateSecrets(workspaceId, Optional.of(testingValuesWithSecretCoordinates),
-        newTestingValues, spec, true, null)).thenReturn(newTestingValuesWithSecretCoordinates);
+    when(secretsRepositoryWriter.statefulUpdateSecrets(workspaceId, testingValuesWithSecretCoordinates, newTestingValues, spec, null))
+        .thenReturn(newTestingValuesWithSecretCoordinates);
     when(secretsProcessor.prepareSecretsForOutput(newTestingValuesWithSecretCoordinates, spec)).thenReturn(newTestingValuesWithObfuscatedSecrets);
 
     final ConnectorBuilderProjectStreamRead projectStreamRead =

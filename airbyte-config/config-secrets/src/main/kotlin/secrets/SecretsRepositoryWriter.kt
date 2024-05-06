@@ -9,7 +9,6 @@ import io.airbyte.config.secrets.persistence.RuntimeSecretPersistence
 import io.airbyte.config.secrets.persistence.SecretPersistence
 import io.airbyte.metrics.lib.MetricClient
 import io.airbyte.metrics.lib.OssMetricsRegistry
-import io.airbyte.protocol.models.ConnectorSpecification
 import io.airbyte.validation.json.JsonSchemaValidator
 import io.airbyte.validation.json.JsonValidationException
 import io.github.oshai.kotlinlogging.KotlinLogging
@@ -17,7 +16,6 @@ import io.micronaut.context.annotation.Requires
 import jakarta.inject.Singleton
 import java.time.Duration
 import java.time.Instant
-import java.util.Optional
 import java.util.UUID
 
 private val logger = KotlinLogging.logger {}
@@ -53,11 +51,11 @@ open class SecretsRepositoryWriter(
   fun statefulSplitSecrets(
     workspaceId: UUID,
     fullConfig: JsonNode,
-    spec: ConnectorSpecification,
+    connSpec: JsonNode,
     runtimeSecretPersistence: RuntimeSecretPersistence? = null,
   ): JsonNode {
     val activePersistence = runtimeSecretPersistence ?: secretPersistence
-    return splitSecretConfig(workspaceId, fullConfig, spec, activePersistence)
+    return splitSecretConfig(workspaceId, fullConfig, connSpec, activePersistence)
   }
 
   // todo (cgardens) - the contract on this method is hard to follow, because it sometimes returns
@@ -76,48 +74,25 @@ open class SecretsRepositoryWriter(
    * @param oldConfig old full config
    * @param fullConfig new full config
    * @param spec connector specification
-   * @param validate should the spec be validated, tombstone entries should not be validated
    * @param runtimeSecretPersistence to use as an override
    * @return partial config
    */
   @Throws(JsonValidationException::class)
   fun statefulUpdateSecrets(
     workspaceId: UUID,
-    oldConfig: Optional<JsonNode>,
+    oldConfig: JsonNode,
     fullConfig: JsonNode,
     spec: JsonNode,
-    validate: Boolean,
     runtimeSecretPersistence: RuntimeSecretPersistence? = null,
   ): JsonNode {
-    if (validate) {
-      validator.ensure(spec, fullConfig)
-    }
+    validator.ensure(spec, fullConfig)
 
-    val update = oldConfig.isPresent
     val splitSecretConfig: SplitSecretConfig =
-      if (update) {
-        SecretsHelpers.splitAndUpdateConfig(
-          workspaceId,
-          oldConfig.get(),
-          fullConfig,
-          spec,
-          secretPersistence,
-        )
-      } else {
-        SecretsHelpers.splitConfig(
-          workspaceId,
-          fullConfig,
-          spec,
-          secretPersistence,
-        )
-      }
+      SecretsHelpers.splitAndUpdateConfig(workspaceId, oldConfig, fullConfig, spec, secretPersistence)
 
     splitSecretConfig.getCoordinateToPayload()
       .forEach { (coordinate: SecretCoordinate, payload: String) ->
-        if (update) {
-          metricClient.count(OssMetricsRegistry.UPDATE_SECRET_DEFAULT_STORE, 1)
-        }
-
+        metricClient.count(OssMetricsRegistry.UPDATE_SECRET_DEFAULT_STORE, 1)
         runtimeSecretPersistence?.write(coordinate, payload) ?: secretPersistence.write(coordinate, payload)
       }
     return splitSecretConfig.partialConfig
@@ -138,14 +113,14 @@ open class SecretsRepositoryWriter(
    */
   fun statefulSplitEphemeralSecrets(
     fullConfig: JsonNode,
-    spec: ConnectorSpecification,
+    connSpec: JsonNode,
     runtimeSecretPersistence: RuntimeSecretPersistence? = null,
   ): JsonNode {
     val activePersistence = runtimeSecretPersistence ?: secretPersistence
     return splitSecretConfig(
       NO_WORKSPACE,
       fullConfig,
-      spec,
+      connSpec,
       activePersistence,
       Instant.now().plus(EPHEMERAL_SECRET_LIFE_DURATION),
     )
@@ -154,7 +129,7 @@ open class SecretsRepositoryWriter(
   private fun splitSecretConfig(
     workspaceId: UUID,
     fullConfig: JsonNode,
-    spec: ConnectorSpecification,
+    connSpec: JsonNode,
     secretPersistence: SecretPersistence,
     expireTime: Instant? = null,
   ): JsonNode {
@@ -162,7 +137,7 @@ open class SecretsRepositoryWriter(
       SecretsHelpers.splitConfig(
         workspaceId,
         fullConfig,
-        spec.connectionSpecification,
+        connSpec,
         secretPersistence,
       )
     // modify this to add expire time
