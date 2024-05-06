@@ -49,8 +49,6 @@ object HeartbeatMaxSecondsBetweenMessages : Permanent<String>(key = "heartbeat-m
 
 object ShouldFailSyncIfHeartbeatFailure : Permanent<Boolean>(key = "heartbeat.failSync", default = false)
 
-object ConnectorVersionOverride : Permanent<String>(key = "connectors.versionOverrides", default = "")
-
 object DestinationTimeoutEnabled : Permanent<Boolean>(key = "destination-timeout-enabled", default = true)
 
 object ShouldFailSyncOnDestinationTimeout : Permanent<Boolean>(key = "destination-timeout.failSync", default = true)

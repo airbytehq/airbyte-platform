@@ -48,21 +48,17 @@ public class ActorDefinitionVersionHelper {
 
   private final ConfigRepository configRepository;
   private final DefinitionVersionOverrideProvider configOverrideProvider;
-  private final DefinitionVersionOverrideProvider ffOverrideProvider;
   private final FeatureFlagClient featureFlagClient;
 
   public ActorDefinitionVersionHelper(final ConfigRepository configRepository,
                                       @Named("configurationVersionOverrideProvider") final DefinitionVersionOverrideProvider configOverrideProvider,
-                                      @Named("ffVersionOverrideProvider") final DefinitionVersionOverrideProvider ffOverrideProvider,
                                       final FeatureFlagClient featureFlagClient) {
     this.configOverrideProvider = configOverrideProvider;
-    this.ffOverrideProvider = ffOverrideProvider;
     this.featureFlagClient = featureFlagClient;
     this.configRepository = configRepository;
 
-    LOGGER.info("ActorDefinitionVersionHelper initialized with override providers: {}, {}",
-        configOverrideProvider.getClass().getSimpleName(),
-        ffOverrideProvider.getClass().getSimpleName());
+    LOGGER.info("ActorDefinitionVersionHelper initialized with override provider: {}",
+        configOverrideProvider.getClass().getSimpleName());
   }
 
   private ActorDefinitionVersion getDefaultSourceVersion(final StandardSourceDefinition sourceDefinition,
@@ -131,15 +127,6 @@ public class ActorDefinitionVersionHelper {
           defaultVersion);
     }
 
-    if (versionOverride.isEmpty()) {
-      versionOverride = ffOverrideProvider.getOverride(
-          ActorType.SOURCE,
-          sourceDefinition.getSourceDefinitionId(),
-          workspaceId,
-          actorId,
-          defaultVersion);
-    }
-
     return versionOverride.orElse(new ActorDefinitionVersionWithOverrideStatus(defaultVersion, false));
   }
 
@@ -188,15 +175,6 @@ public class ActorDefinitionVersionHelper {
 
     if (featureFlagClient.boolVariation(EnableConfigurationOverrideProvider.INSTANCE, new Workspace(workspaceId))) {
       versionOverride = configOverrideProvider.getOverride(
-          ActorType.DESTINATION,
-          destinationDefinition.getDestinationDefinitionId(),
-          workspaceId,
-          actorId,
-          defaultVersion);
-    }
-
-    if (versionOverride.isEmpty()) {
-      versionOverride = ffOverrideProvider.getOverride(
           ActorType.DESTINATION,
           destinationDefinition.getDestinationDefinitionId(),
           workspaceId,
