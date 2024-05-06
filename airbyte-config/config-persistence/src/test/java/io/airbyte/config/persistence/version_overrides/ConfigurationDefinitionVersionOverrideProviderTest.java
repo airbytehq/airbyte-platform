@@ -7,8 +7,6 @@ package io.airbyte.config.persistence.version_overrides;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
@@ -36,12 +34,7 @@ import io.airbyte.data.services.WorkspaceService;
 import io.airbyte.data.services.shared.ConnectorVersionKey;
 import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.featureflag.TestClient;
-import io.airbyte.featureflag.UseActorScopedDefaultVersions;
-import io.airbyte.featureflag.UseBreakingChangeScopedConfigs;
-import io.airbyte.featureflag.Workspace;
-import io.airbyte.metrics.lib.MetricAttribute;
 import io.airbyte.metrics.lib.MetricClient;
-import io.airbyte.metrics.lib.OssMetricsRegistry;
 import io.airbyte.protocol.models.ConnectorSpecification;
 import io.airbyte.validation.json.JsonValidationException;
 import java.io.IOException;
@@ -119,17 +112,10 @@ class ConfigurationDefinitionVersionOverrideProviderTest {
     mScopedConfigurationService = mock(ScopedConfigurationService.class);
     mFeatureFlagClient = mock(TestClient.class);
     mMetricClient = mock(MetricClient.class);
-    overrideProvider = new ConfigurationDefinitionVersionOverrideProvider(mWorkspaceService, mActorDefinitionService, mScopedConfigurationService,
-        mFeatureFlagClient, mMetricClient);
+    overrideProvider = new ConfigurationDefinitionVersionOverrideProvider(mWorkspaceService, mActorDefinitionService, mScopedConfigurationService);
 
     when(mWorkspaceService.getStandardWorkspaceNoSecrets(WORKSPACE_ID, true))
         .thenReturn(new StandardWorkspace().withOrganizationId(ORGANIZATION_ID));
-
-    when(mFeatureFlagClient.boolVariation(eq(UseActorScopedDefaultVersions.INSTANCE), any()))
-        .thenReturn(true);
-
-    when(mFeatureFlagClient.boolVariation(eq(UseBreakingChangeScopedConfigs.INSTANCE), any()))
-        .thenReturn(true);
   }
 
   @Test
@@ -295,46 +281,6 @@ class ConfigurationDefinitionVersionOverrideProviderTest {
 
     assertTrue(optResult.isPresent());
     assertEquals(OVERRIDE_VERSION, optResult.get().actorDefinitionVersion());
-
-    verify(mMetricClient).count(OssMetricsRegistry.CONNECTOR_BREAKING_CHANGE_PIN_SERVED, 1,
-        new MetricAttribute("workspace_id", WORKSPACE_ID.toString()),
-        new MetricAttribute("actor_id", ACTOR_ID.toString()),
-        new MetricAttribute("actor_default_version", defaultVersion.getVersionId().toString()),
-        new MetricAttribute("pinned_version", versionId.toString()),
-        new MetricAttribute("status", withMismatchedVersions ? "invalid" : "ok"));
-  }
-
-  @Test
-  void testBCPinIntegrityMetricsNotEmittedWhenFFOff() throws ConfigNotFoundException, IOException {
-    when(mFeatureFlagClient.boolVariation(UseActorScopedDefaultVersions.INSTANCE, new Workspace(WORKSPACE_ID)))
-        .thenReturn(false);
-
-    final UUID versionId = OVERRIDE_VERSION.getVersionId();
-    final ScopedConfiguration breakingChangePin = new ScopedConfiguration()
-        .withId(UUID.randomUUID())
-        .withScopeType(ConfigScopeType.WORKSPACE)
-        .withScopeId(WORKSPACE_ID)
-        .withResourceType(ConfigResourceType.ACTOR_DEFINITION)
-        .withResourceId(ACTOR_DEFINITION_ID)
-        .withValue(versionId.toString())
-        .withOriginType(ConfigOriginType.BREAKING_CHANGE);
-
-    when(mScopedConfigurationService.getScopedConfiguration(ConnectorVersionKey.INSTANCE, ConfigResourceType.ACTOR_DEFINITION, ACTOR_DEFINITION_ID,
-        Map.of(
-            ConfigScopeType.ORGANIZATION, ORGANIZATION_ID,
-            ConfigScopeType.WORKSPACE, WORKSPACE_ID,
-            ConfigScopeType.ACTOR, ACTOR_ID)))
-                .thenReturn(Optional.of(breakingChangePin));
-
-    when(mActorDefinitionService.getActorDefinitionVersion(versionId)).thenReturn(OVERRIDE_VERSION);
-
-    final Optional<ActorDefinitionVersionWithOverrideStatus> optResult =
-        overrideProvider.getOverride(ActorType.SOURCE, ACTOR_DEFINITION_ID, WORKSPACE_ID, ACTOR_ID, DEFAULT_VERSION);
-
-    assertTrue(optResult.isPresent());
-    assertEquals(OVERRIDE_VERSION, optResult.get().actorDefinitionVersion());
-
-    verifyNoInteractions(mMetricClient);
   }
 
 }

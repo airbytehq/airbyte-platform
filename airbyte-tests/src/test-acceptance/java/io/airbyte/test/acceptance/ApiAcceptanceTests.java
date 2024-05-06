@@ -113,7 +113,7 @@ class ApiAcceptanceTests {
                                  disabledReason = DUPLICATE_TEST_IN_GKE)
   void testGetSourceSpec() {
     final UUID sourceDefId = testHarness.getPostgresSourceDefinitionId();
-    final SourceDefinitionSpecificationRead spec = testHarness.getSourceDefinitionSpec(sourceDefId);
+    final SourceDefinitionSpecificationRead spec = testHarness.getSourceDefinitionSpec(sourceDefId, workspaceId);
     assertNotNull(spec.getConnectionSpecification());
   }
 

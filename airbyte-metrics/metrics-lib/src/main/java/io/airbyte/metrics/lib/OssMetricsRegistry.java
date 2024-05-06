@@ -122,10 +122,6 @@ public enum OssMetricsRegistry implements MetricsRegistry {
       MetricEmittingApps.CRON, // Actually `cron` or `bootloader` based on which metric client calls the code
       "connector_registry_definition_processed",
       "increments when a connector registry definition is processed by the ApplyDefinitionsHelper"),
-  CONNECTOR_BREAKING_CHANGE_PIN_SERVED(
-      MetricEmittingApps.SERVER,
-      "connector_breaking_change_pin_served",
-      "increments when a breaking change pin is served"),
   EST_NUM_METRICS_EMITTED_BY_REPORTER(
       MetricEmittingApps.METRICS_REPORTER,
       "est_num_metrics_emitted_by_reporter",

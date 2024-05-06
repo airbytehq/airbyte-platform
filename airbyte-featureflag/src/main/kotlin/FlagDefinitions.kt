@@ -55,10 +55,6 @@ object ShouldFailSyncOnDestinationTimeout : Permanent<Boolean>(key = "destinatio
 
 object DestinationTimeoutSeconds : Permanent<Int>(key = "destination-timeout.seconds", default = 7200)
 
-object UseActorScopedDefaultVersions : Temporary<Boolean>(key = "connectors.useActorScopedDefaultVersions", default = true)
-
-object EnableConfigurationOverrideProvider : Temporary<Boolean>(key = "connectors.enableConfigurationOverrideProvider", default = false)
-
 object NotifyOnConnectorBreakingChanges : Temporary<Boolean>(key = "connectors.notifyOnConnectorBreakingChanges", default = true)
 
 object NotifyBreakingChangesOnSupportStateUpdate : Temporary<Boolean>(key = "connectors.notifyBreakingChangesOnSupportStateUpdate", default = true)
@@ -104,8 +100,6 @@ object SourceResourceOverrides : Temporary<String>(key = "source-resource-overri
 object ConnectorApmEnabled : Permanent<Boolean>(key = "connectors.apm-enabled", default = false)
 
 object AutoRechargeEnabled : Permanent<Boolean>(key = "billing.autoRecharge", default = false)
-
-object UseBreakingChangeScopedConfigs : Temporary<Boolean>(key = "connectors.useBreakingChangeScopedConfigs", default = false)
 
 // NOTE: this is deprecated in favor of FieldSelectionEnabled and will be removed once that flag is fully deployed.
 object FieldSelectionWorkspaces : EnvVar(envVar = "FIELD_SELECTION_WORKSPACES") {

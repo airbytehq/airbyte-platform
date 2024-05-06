@@ -6,16 +6,11 @@ package io.airbyte.config.persistence;
 
 import io.airbyte.config.ActorDefinitionVersion;
 import io.airbyte.config.ActorType;
-import io.airbyte.config.DestinationConnection;
 import io.airbyte.config.ReleaseStage;
-import io.airbyte.config.SourceConnection;
 import io.airbyte.config.StandardDestinationDefinition;
 import io.airbyte.config.StandardSourceDefinition;
 import io.airbyte.config.persistence.version_overrides.DefinitionVersionOverrideProvider;
-import io.airbyte.featureflag.EnableConfigurationOverrideProvider;
 import io.airbyte.featureflag.FeatureFlagClient;
-import io.airbyte.featureflag.UseActorScopedDefaultVersions;
-import io.airbyte.featureflag.Workspace;
 import io.airbyte.validation.json.JsonValidationException;
 import jakarta.annotation.Nullable;
 import jakarta.inject.Named;
@@ -61,42 +56,25 @@ public class ActorDefinitionVersionHelper {
         configOverrideProvider.getClass().getSimpleName());
   }
 
-  private ActorDefinitionVersion getDefaultSourceVersion(final StandardSourceDefinition sourceDefinition,
-                                                         final UUID workspaceId,
-                                                         @Nullable final UUID sourceId)
-      throws IOException, ConfigNotFoundException, JsonValidationException {
-
-    final UUID versionId;
-    if (sourceId != null && featureFlagClient.boolVariation(UseActorScopedDefaultVersions.INSTANCE, new Workspace(workspaceId))) {
-      final SourceConnection source = configRepository.getSourceConnection(sourceId);
-      versionId = source.getDefaultVersionId();
-    } else {
-      versionId = sourceDefinition.getDefaultVersionId();
-    }
+  private ActorDefinitionVersion getDefaultSourceVersion(final StandardSourceDefinition sourceDefinition)
+      throws IOException, ConfigNotFoundException {
+    final UUID versionId = sourceDefinition.getDefaultVersionId();
 
     if (versionId == null) {
-      throw new RuntimeException(String.format("Default version for source is not set (Definition ID: %s, Source ID: %s)",
-          sourceDefinition.getSourceDefinitionId(), sourceId));
+      throw new RuntimeException(String.format("Default version for source is not set (Definition ID: %s)",
+          sourceDefinition.getSourceDefinitionId()));
     }
 
     return configRepository.getActorDefinitionVersion(versionId);
   }
 
-  private ActorDefinitionVersion getDefaultDestinationVersion(final StandardDestinationDefinition destinationDefinition,
-                                                              final UUID workspaceId,
-                                                              @Nullable final UUID destinationId)
-      throws ConfigNotFoundException, IOException, JsonValidationException {
-    final UUID versionId;
-    if (destinationId != null && featureFlagClient.boolVariation(UseActorScopedDefaultVersions.INSTANCE, new Workspace(workspaceId))) {
-      final DestinationConnection destination = configRepository.getDestinationConnection(destinationId);
-      versionId = destination.getDefaultVersionId();
-    } else {
-      versionId = destinationDefinition.getDefaultVersionId();
-    }
+  private ActorDefinitionVersion getDefaultDestinationVersion(final StandardDestinationDefinition destinationDefinition)
+      throws ConfigNotFoundException, IOException {
+    final UUID versionId = destinationDefinition.getDefaultVersionId();
 
     if (versionId == null) {
-      throw new RuntimeException(String.format("Default version for destination is not set (Definition ID: %s, Destination ID: %s)",
-          destinationDefinition.getDestinationDefinitionId(), destinationId));
+      throw new RuntimeException(String.format("Default version for destination is not set (Definition ID: %s)",
+          destinationDefinition.getDestinationDefinitionId()));
     }
 
     return configRepository.getActorDefinitionVersion(versionId);
@@ -114,18 +92,14 @@ public class ActorDefinitionVersionHelper {
                                                                                      final UUID workspaceId,
                                                                                      @Nullable final UUID actorId)
       throws ConfigNotFoundException, IOException, JsonValidationException {
-    final ActorDefinitionVersion defaultVersion = getDefaultSourceVersion(sourceDefinition, workspaceId, actorId);
+    final ActorDefinitionVersion defaultVersion = getDefaultSourceVersion(sourceDefinition);
 
-    Optional<ActorDefinitionVersionWithOverrideStatus> versionOverride = Optional.empty();
-
-    if (featureFlagClient.boolVariation(EnableConfigurationOverrideProvider.INSTANCE, new Workspace(workspaceId))) {
-      versionOverride = configOverrideProvider.getOverride(
-          ActorType.SOURCE,
-          sourceDefinition.getSourceDefinitionId(),
-          workspaceId,
-          actorId,
-          defaultVersion);
-    }
+    final Optional<ActorDefinitionVersionWithOverrideStatus> versionOverride = configOverrideProvider.getOverride(
+        ActorType.SOURCE,
+        sourceDefinition.getSourceDefinitionId(),
+        workspaceId,
+        actorId,
+        defaultVersion);
 
     return versionOverride.orElse(new ActorDefinitionVersionWithOverrideStatus(defaultVersion, false));
   }
@@ -169,18 +143,14 @@ public class ActorDefinitionVersionHelper {
                                                                                           final UUID workspaceId,
                                                                                           @Nullable final UUID actorId)
       throws ConfigNotFoundException, IOException, JsonValidationException {
-    final ActorDefinitionVersion defaultVersion = getDefaultDestinationVersion(destinationDefinition, workspaceId, actorId);
+    final ActorDefinitionVersion defaultVersion = getDefaultDestinationVersion(destinationDefinition);
 
-    Optional<ActorDefinitionVersionWithOverrideStatus> versionOverride = Optional.empty();
-
-    if (featureFlagClient.boolVariation(EnableConfigurationOverrideProvider.INSTANCE, new Workspace(workspaceId))) {
-      versionOverride = configOverrideProvider.getOverride(
-          ActorType.DESTINATION,
-          destinationDefinition.getDestinationDefinitionId(),
-          workspaceId,
-          actorId,
-          defaultVersion);
-    }
+    final Optional<ActorDefinitionVersionWithOverrideStatus> versionOverride = configOverrideProvider.getOverride(
+        ActorType.DESTINATION,
+        destinationDefinition.getDestinationDefinitionId(),
+        workspaceId,
+        actorId,
+        defaultVersion);
 
     return versionOverride.orElse(new ActorDefinitionVersionWithOverrideStatus(defaultVersion, false));
   }

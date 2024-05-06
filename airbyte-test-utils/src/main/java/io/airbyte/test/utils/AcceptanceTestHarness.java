@@ -215,9 +215,9 @@ public class AcceptanceTestHarness {
   private String destinationDatabaseName;
 
   private AirbyteTestContainer airbyteTestContainer;
-  private AirbyteApiClient apiClient;
+  private final AirbyteApiClient apiClient;
 
-  private WebBackendApi webBackendApi;
+  private final WebBackendApi webBackendApi;
   private final UUID defaultWorkspaceId;
   private final String postgresSqlInitFile;
 
@@ -532,10 +532,10 @@ public class AcceptanceTestHarness {
         "get destination definition spec", JITTER_MAX_INTERVAL_SECS, FINAL_INTERVAL_SECS, MAX_TRIES);
   }
 
-  public SourceDefinitionSpecificationRead getSourceDefinitionSpec(final UUID sourceDefinitionId) {
+  public SourceDefinitionSpecificationRead getSourceDefinitionSpec(final UUID sourceDefinitionId, final UUID workspaceId) {
     return AirbyteApiClient.retryWithJitter(() -> apiClient.getSourceDefinitionSpecificationApi()
         .getSourceDefinitionSpecification(
-            new SourceDefinitionIdWithWorkspaceId().sourceDefinitionId(sourceDefinitionId).workspaceId(UUID.randomUUID())),
+            new SourceDefinitionIdWithWorkspaceId().sourceDefinitionId(sourceDefinitionId).workspaceId(workspaceId)),
         "get source definition spec", JITTER_MAX_INTERVAL_SECS, FINAL_INTERVAL_SECS, MAX_TRIES);
   }
 
@@ -681,7 +681,7 @@ public class AcceptanceTestHarness {
         .syncCatalog(catalog));
   }
 
-  public ConnectionRead updateConnectionSourceCatalogId(final UUID connectionId, UUID sourceCatalogId) throws Exception {
+  public ConnectionRead updateConnectionSourceCatalogId(final UUID connectionId, final UUID sourceCatalogId) throws Exception {
     return updateConnection(
         new ConnectionUpdate()
             .connectionId(connectionId)
@@ -1134,7 +1134,7 @@ public class AcceptanceTestHarness {
     assertEquals(JobStatus.SUCCEEDED, job.getStatus());
   }
 
-  public JobRead waitUntilTheNextJobIsStarted(final UUID connectionId, Long previousJobId) throws Exception {
+  public JobRead waitUntilTheNextJobIsStarted(final UUID connectionId, final Long previousJobId) throws Exception {
 
     JobRead mostRecentSyncJob = getMostRecentSyncForConnection(connectionId);
     int count = 0;
@@ -1159,30 +1159,30 @@ public class AcceptanceTestHarness {
             new DestinationDefinitionIdWithWorkspaceId().destinationDefinitionId(UUID.randomUUID()).workspaceId(UUID.randomUUID()));
   }
 
-  public WorkspaceRead updateWorkspaceWebhookConfigs(UUID workspaceId, List<WebhookConfigWrite> webhookConfigs) throws Exception {
+  public WorkspaceRead updateWorkspaceWebhookConfigs(final UUID workspaceId, final List<WebhookConfigWrite> webhookConfigs) throws Exception {
     return AirbyteApiClient.retryWithJitterThrows(() -> apiClient.getWorkspaceApi().updateWorkspace(new WorkspaceUpdate()
         .workspaceId(workspaceId)
         .webhookConfigs(webhookConfigs)), "update workspace webhook configs", JITTER_MAX_INTERVAL_SECS, FINAL_INTERVAL_SECS, MAX_TRIES);
   }
 
-  public SourceDefinitionRead getSourceDefinition(UUID sourceDefinitionId) throws Exception {
+  public SourceDefinitionRead getSourceDefinition(final UUID sourceDefinitionId) throws Exception {
     return AirbyteApiClient.retryWithJitterThrows(() -> apiClient.getSourceDefinitionApi().getSourceDefinition(
         new SourceDefinitionIdRequestBody().sourceDefinitionId(sourceDefinitionId)),
         "get source definition", JITTER_MAX_INTERVAL_SECS, FINAL_INTERVAL_SECS, MAX_TRIES);
   }
 
-  public ConnectionState getConnectionState(UUID connectionId) throws Exception {
+  public ConnectionState getConnectionState(final UUID connectionId) throws Exception {
     return AirbyteApiClient.retryWithJitterThrows(() -> apiClient.getStateApi().getState(
         new ConnectionIdRequestBody().connectionId(connectionId)),
         "get state", JITTER_MAX_INTERVAL_SECS, FINAL_INTERVAL_SECS, MAX_TRIES);
   }
 
-  public void webBackendUpdateConnection(WebBackendConnectionUpdate update) throws Exception {
+  public void webBackendUpdateConnection(final WebBackendConnectionUpdate update) throws Exception {
     AirbyteApiClient.retryWithJitterThrows(() -> webBackendApi.webBackendUpdateConnection(update), "web backend update", JITTER_MAX_INTERVAL_SECS,
         FINAL_INTERVAL_SECS, MAX_TRIES);
   }
 
-  public List<JobWithAttemptsRead> listSyncsForWorkspaces(List<UUID> workspaceIds) throws Exception {
+  public List<JobWithAttemptsRead> listSyncsForWorkspaces(final List<UUID> workspaceIds) throws Exception {
     return AirbyteApiClient.retryWithJitterThrows(() -> apiClient.getJobsApi().listJobsForWorkspaces(
         new JobListForWorkspacesRequestBody()
             .workspaceIds(workspaceIds)
@@ -1191,25 +1191,25 @@ public class AcceptanceTestHarness {
         .getJobs();
   }
 
-  public ConnectionReadList listAllConnectionsForWorkspace(UUID workspaceId) throws Exception {
+  public ConnectionReadList listAllConnectionsForWorkspace(final UUID workspaceId) throws Exception {
     return AirbyteApiClient.retryWithJitterThrows(() -> apiClient.getConnectionApi().listAllConnectionsForWorkspace(
         new WorkspaceIdRequestBody().workspaceId(workspaceId)), "list all connections for workspace", JITTER_MAX_INTERVAL_SECS, FINAL_INTERVAL_SECS,
         MAX_TRIES);
   }
 
-  public SourceReadList listSourcesForWorkspace(UUID workspaceId) throws Exception {
+  public SourceReadList listSourcesForWorkspace(final UUID workspaceId) throws Exception {
     return AirbyteApiClient.retryWithJitterThrows(() -> apiClient.getSourceApi().listSourcesForWorkspace(
         new WorkspaceIdRequestBody().workspaceId(workspaceId)), "list sources", JITTER_MAX_INTERVAL_SECS, FINAL_INTERVAL_SECS, MAX_TRIES);
   }
 
-  public SourceReadList listSourcesForWorkspacePaginated(List<UUID> workspaceIds) throws Exception {
+  public SourceReadList listSourcesForWorkspacePaginated(final List<UUID> workspaceIds) throws Exception {
     return AirbyteApiClient.retryWithJitterThrows(() -> apiClient.getSourceApi().listSourcesForWorkspacePaginated(
         new ListResourcesForWorkspacesRequestBody().workspaceIds(workspaceIds)
             .pagination(new Pagination().pageSize(1000).rowOffset(0))),
         "list sources", JITTER_MAX_INTERVAL_SECS, FINAL_INTERVAL_SECS, MAX_TRIES);
   }
 
-  public void deleteWorkspace(UUID workspaceId) throws Exception {
+  public void deleteWorkspace(final UUID workspaceId) throws Exception {
     AirbyteApiClient.retryWithJitterThrows(() -> {
       apiClient.getWorkspaceApi().deleteWorkspace(new io.airbyte.api.client.model.generated.WorkspaceIdRequestBody().workspaceId(workspaceId));
       return null;
@@ -1217,7 +1217,7 @@ public class AcceptanceTestHarness {
         "list sources", JITTER_MAX_INTERVAL_SECS, FINAL_INTERVAL_SECS, MAX_TRIES);
   }
 
-  public void deleteSourceDefinition(UUID sourceDefinitionId) throws Exception {
+  public void deleteSourceDefinition(final UUID sourceDefinitionId) throws Exception {
     AirbyteApiClient.retryWithJitterThrows(() -> {
       apiClient.getSourceDefinitionApi().deleteSourceDefinition(new SourceDefinitionIdRequestBody().sourceDefinitionId(sourceDefinitionId));
       return null;
@@ -1235,13 +1235,13 @@ public class AcceptanceTestHarness {
             .backfillPreference(backfillPreference));
   }
 
-  public WebBackendConnectionRead webBackendGetConnectionAndRefreshSchema(UUID connectionId) throws Exception {
+  public WebBackendConnectionRead webBackendGetConnectionAndRefreshSchema(final UUID connectionId) throws Exception {
     return AirbyteApiClient.retryWithJitterThrows(() -> webBackendApi.webBackendGetConnection(
         new WebBackendConnectionRequestBody().connectionId(connectionId).withRefreshedCatalog(true)),
         "get connection and refresh schema", JITTER_MAX_INTERVAL_SECS, FINAL_INTERVAL_SECS, MAX_TRIES);
   }
 
-  public void createWorkspaceWithId(UUID workspaceId) throws Exception {
+  public void createWorkspaceWithId(final UUID workspaceId) throws Exception {
     AirbyteApiClient.retryWithJitterThrows(() -> apiClient.getWorkspaceApi()
         .createWorkspaceIfNotExist(new WorkspaceCreateWithId()
             .id(workspaceId)
@@ -1250,7 +1250,8 @@ public class AcceptanceTestHarness {
         "create workspace", 10, FINAL_INTERVAL_SECS, MAX_TRIES);
   }
 
-  public StreamStatusReadList getStreamStatuses(UUID connectionId, Long jobId, Integer attempt, UUID workspaceId) throws Exception {
+  public StreamStatusReadList getStreamStatuses(final UUID connectionId, final Long jobId, final Integer attempt, final UUID workspaceId)
+      throws Exception {
     return AirbyteApiClient.retryWithJitterThrows(() -> apiClient.getStreamStatusesApi().getStreamStatuses(new StreamStatusListRequestBody()
         .connectionId(connectionId)
         .jobId(jobId)
@@ -1289,7 +1290,7 @@ public class AcceptanceTestHarness {
         .skipReset(false);
   }
 
-  public void compareCatalog(AirbyteCatalog actual) {
+  public void compareCatalog(final AirbyteCatalog actual) {
     final JsonNode expectedSchema = Jsons.deserialize("""
                                                       {
                                                         "type": "object",
