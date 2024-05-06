@@ -1,5 +1,5 @@
 upstream api-server {
-    server $INTERNAL_API_HOST;
+    server $AIRBYTE_SERVER_HOST;
 }
 
 upstream connector-builder-server {

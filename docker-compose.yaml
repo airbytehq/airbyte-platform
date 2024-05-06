@@ -227,7 +227,7 @@ services:
     container_name: airbyte-webapp
     restart: unless-stopped
     environment:
-      - INTERNAL_API_HOST=${INTERNAL_API_HOST}
+      - AIRBYTE_SERVER_HOST=${AIRBYTE_SERVER_HOST}
       - CONNECTOR_BUILDER_API_HOST=${CONNECTOR_BUILDER_API_HOST}
       - KEYCLOAK_INTERNAL_HOST=localhost # placeholder to ensure the webapp's nginx config is valid
     networks:

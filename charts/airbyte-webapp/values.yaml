@@ -240,7 +240,7 @@ secrets: {}
 #   # Miscellaneous
 #   TRACKING_STRATEGY: segment
 #   API_URL: /api/v1/
-#   INTERNAL_API_HOST: airbyte-server-svc:8001
+#   AIRBYTE_SERVER_HOST: airbyte-server-svc:8001
 
 env_vars: {}
 
