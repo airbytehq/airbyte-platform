@@ -2,6 +2,7 @@ package io.airbyte.workers.internal.bookkeeping
 
 import com.google.common.hash.Hashing
 import io.airbyte.analytics.TrackingClient
+import io.airbyte.config.Configs
 import io.airbyte.config.StreamSyncStats
 import io.airbyte.config.SyncStats
 import io.airbyte.featureflag.Connection
@@ -43,6 +44,7 @@ class ParallelStreamStatsTracker(
   private val metricClient: MetricClient,
   private val trackingClient: TrackingClient,
   private val featureFlagClient: FeatureFlagClient,
+  private val deploymentMode: Configs.DeploymentMode,
   @param:Parameter private val connectionId: UUID,
   @param:Parameter private val workspaceId: UUID,
   @param:Parameter private val jobId: Long,
@@ -300,7 +302,7 @@ class ParallelStreamStatsTracker(
   }
 
   private fun shouldEmitStateStatsToSegment(stateMessage: AirbyteStateMessage): Boolean {
-    return emitStatsCounterFlag &&
+    return emitStatsCounterFlag && deploymentMode == Configs.DeploymentMode.CLOUD &&
       (
         stateMessage.type == AirbyteStateMessage.AirbyteStateType.STREAM ||
           stateMessage.type == AirbyteStateMessage.AirbyteStateType.GLOBAL

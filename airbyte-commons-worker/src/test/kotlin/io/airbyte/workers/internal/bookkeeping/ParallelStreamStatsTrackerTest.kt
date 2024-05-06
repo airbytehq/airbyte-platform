@@ -7,6 +7,7 @@ import io.airbyte.analytics.TrackingIdentityFetcher
 import io.airbyte.api.client.model.generated.DeploymentMetadataRead
 import io.airbyte.api.client.model.generated.WorkspaceRead
 import io.airbyte.commons.json.Jsons
+import io.airbyte.config.Configs
 import io.airbyte.config.StreamSyncStats
 import io.airbyte.config.SyncStats
 import io.airbyte.featureflag.FeatureFlagClient
@@ -76,7 +77,17 @@ class ParallelStreamStatsTrackerTest {
     metricClient = Mockito.mock(MetricClient::class.java)
     trackingClient = LoggingTrackingClient(DeploymentFetcher { DeploymentMetadataRead() }, TrackingIdentityFetcher { _ -> WorkspaceRead() })
     featureFlagClient = TestClient(mapOf("platform.emit-state-stats-segment" to true))
-    statsTracker = ParallelStreamStatsTracker(metricClient, trackingClient, featureFlagClient, CONNECTION_ID, WORKSPACE_ID, JOB_ID, ATTEMPT_NUMBER)
+    statsTracker =
+      ParallelStreamStatsTracker(
+        metricClient,
+        trackingClient,
+        featureFlagClient,
+        Configs.DeploymentMode.CLOUD,
+        CONNECTION_ID,
+        WORKSPACE_ID,
+        JOB_ID,
+        ATTEMPT_NUMBER,
+      )
   }
 
   @Test
