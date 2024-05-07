@@ -3,6 +3,7 @@ import { FieldErrors } from "react-hook-form";
 import { useIntl } from "react-intl";
 
 import { FormConnectionFormValues, useInitialFormValues } from "components/connection/ConnectionForm/formConfig";
+import { ExternalLink } from "components/ui/Link";
 
 import {
   useSourceDefinitionVersion,
@@ -11,6 +12,7 @@ import {
   useGetDestinationDefinitionSpecification,
   useSourceDefinition,
   useDestinationDefinition,
+  HttpError,
 } from "core/api";
 import {
   ActorDefinitionVersionRead,
@@ -20,7 +22,9 @@ import {
   SourceDefinitionSpecificationRead,
   WebBackendConnectionRead,
 } from "core/api/types/AirbyteClient";
-import { FormError, generateMessageFromError } from "core/utils/errorStatusMessage";
+import { useFormatError } from "core/errors";
+import { FormError } from "core/utils/errorStatusMessage";
+import { links } from "core/utils/links";
 
 import { useExperiment } from "../Experiment";
 
@@ -50,7 +54,7 @@ interface ConnectionFormHook {
   schemaError?: Error | null;
   refreshSchema: () => Promise<void>;
   setSubmitError: (submitError: FormError | null) => void;
-  getErrorMessage: (formValid: boolean, errors?: FieldErrors<FormConnectionFormValues>) => string | JSX.Element | null;
+  getErrorMessage: (formValid: boolean, errors?: FieldErrors<FormConnectionFormValues>) => React.ReactNode;
 }
 
 const useConnectionForm = ({
@@ -63,6 +67,8 @@ const useConnectionForm = ({
     source: { sourceId, sourceDefinitionId },
     destination: { destinationId, destinationDefinitionId },
   } = connection;
+
+  const formatError = useFormatError();
 
   const sourceDefinition = useSourceDefinition(sourceDefinitionId);
   const sourceDefinitionVersion = useSourceDefinitionVersion(sourceId);
@@ -83,7 +89,18 @@ const useConnectionForm = ({
   const getErrorMessage = useCallback<ConnectionFormHook["getErrorMessage"]>(
     (formValid, errors) => {
       if (submitError) {
-        return generateMessageFromError(submitError, formatMessage);
+        if (
+          submitError instanceof HttpError &&
+          submitError.response.message.toLowerCase().includes("invalid cron expression")
+        ) {
+          // Handle cron expressions errors with an explicit error
+          return formatMessage(
+            { id: "form.cronExpression.invalid" },
+            { lnk: (btnText: React.ReactNode) => <ExternalLink href={links.cronReferenceLink}>{btnText}</ExternalLink> }
+          ) as string;
+        }
+
+        return formatError(submitError);
       }
 
       if (!formValid) {
@@ -98,7 +115,7 @@ const useConnectionForm = ({
 
       return null;
     },
-    [formatMessage, submitError, isSimplifiedCreation]
+    [submitError, formatError, formatMessage, isSimplifiedCreation]
   );
 
   return {

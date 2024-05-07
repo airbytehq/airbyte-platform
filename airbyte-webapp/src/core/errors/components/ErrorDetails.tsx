@@ -1,5 +1,5 @@
 import { useCallback, useMemo } from "react";
-import { FormattedMessage, useIntl } from "react-intl";
+import { FormattedMessage } from "react-intl";
 
 import Logs from "components/Logs";
 import { Box } from "components/ui/Box";
@@ -15,7 +15,7 @@ import { useGetAllExperiments } from "hooks/services/Experiment";
 
 import styles from "./ErrorDetails.module.scss";
 import octavia from "./pixel-octavia.png";
-import { I18nError } from "../I18nError";
+import { useFormatError } from "../formatErrors";
 
 type FullStoryGlobal = (method: "getSession", options: { format: "url.now" }) => string;
 
@@ -26,7 +26,7 @@ interface ErrorDetailsProps {
 const jsonReplacer = (_: string, value: unknown) => (typeof value === "function" ? `[Function ${value.name}]` : value);
 
 export const ErrorDetails: React.FC<ErrorDetailsProps> = ({ error }) => {
-  const { formatMessage } = useIntl();
+  const formatError = useFormatError();
   const getAllExperiments = useGetAllExperiments();
   const getErrorDetails = useCallback(
     () =>
@@ -63,7 +63,7 @@ export const ErrorDetails: React.FC<ErrorDetailsProps> = ({ error }) => {
                   <FormattedMessage id="errors.title" />
                 </Text>
               </FlexContainer>
-              <Text size="lg">{error instanceof I18nError ? error.translate(formatMessage) : error.message}</Text>
+              <Text size="lg">{formatError(error)}</Text>
             </FlexContainer>
           </FlexItem>
         </FlexContainer>

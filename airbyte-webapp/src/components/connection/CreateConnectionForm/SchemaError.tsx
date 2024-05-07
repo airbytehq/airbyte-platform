@@ -6,6 +6,7 @@ import { Card } from "components/ui/Card";
 import { FlexContainer } from "components/ui/Flex";
 
 import { ErrorWithJobInfo } from "core/api";
+import { useFormatError } from "core/errors";
 
 import styles from "./SchemaError.module.scss";
 
@@ -17,6 +18,7 @@ export const SchemaError = ({
   refreshSchema: () => Promise<void>;
 }) => {
   const job = ErrorWithJobInfo.getJobInfo(schemaError);
+  const formatError = useFormatError();
 
   return (
     <Card className={styles.card}>
@@ -26,7 +28,7 @@ export const SchemaError = ({
             <FormattedMessage id="form.tryAgain" />
           </Button>
         </FlexContainer>
-        <JobFailure job={job} fallbackMessage={schemaError.message} />
+        <JobFailure job={job} fallbackMessage={formatError(schemaError)} />
       </FlexContainer>
     </Card>
   );

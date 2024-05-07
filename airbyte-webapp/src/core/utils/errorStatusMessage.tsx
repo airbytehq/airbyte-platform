@@ -2,30 +2,22 @@ import type { useIntl } from "react-intl";
 
 import { FormattedMessage } from "react-intl";
 
-import { ExternalLink } from "components/ui/Link";
-
-import { HttpError } from "core/api";
 import { FailureOrigin, FailureReason } from "core/api/types/AirbyteClient";
-
-import { links } from "./links";
+import { I18nError } from "core/errors";
 
 export class FormError extends Error {
   status?: number;
 }
 
+/**
+ * @deprecated Use the `useFormatError` hook from `core/errors` instead.
+ */
 export const generateMessageFromError = (
   error: FormError,
   formatMessage: ReturnType<typeof useIntl>["formatMessage"]
-): JSX.Element | string | null => {
-  if (error instanceof HttpError) {
-    if (error.response.message.toLowerCase().includes("invalid cron expression")) {
-      return formatMessage(
-        { id: "form.cronExpression.invalid" },
-        { lnk: (btnText: React.ReactNode) => <ExternalLink href={links.cronReferenceLink}>{btnText}</ExternalLink> }
-      ) as string;
-    }
-
-    return formatMessage({ id: error.i18nKey }, error.i18nParams) as string;
+): React.ReactNode => {
+  if (error instanceof I18nError) {
+    return error.translate(formatMessage);
   }
 
   if (error.message) {

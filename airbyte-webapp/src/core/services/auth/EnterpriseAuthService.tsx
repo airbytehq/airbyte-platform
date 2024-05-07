@@ -9,6 +9,7 @@ import { Text } from "components/ui/Text";
 
 import { useGetInstanceConfiguration, useGetOrCreateUser } from "core/api";
 import { UserRead } from "core/api/types/AirbyteClient";
+import { useFormatError } from "core/errors";
 import { useNotificationService } from "hooks/services/Notification";
 import { createUriWithoutSsoParams } from "packages/cloud/services/auth/KeycloakService";
 
@@ -51,6 +52,7 @@ export const EnterpriseAuthService: React.FC<PropsWithChildren<unknown>> = ({ ch
 // While auth status is loading we want to suspend rendering of the app
 const LoginRedirectCheck: React.FC<PropsWithChildren<unknown>> = ({ children }) => {
   const auth = useAuth();
+  const formatError = useFormatError();
 
   if (auth.isLoading) {
     return <LoadingPage />;
@@ -61,7 +63,7 @@ const LoginRedirectCheck: React.FC<PropsWithChildren<unknown>> = ({ children }) 
       <FlexContainer justifyContent="center">
         <FlexContainer direction="column" justifyContent="center" style={{ height: "100vh" }}>
           <Text>
-            <FormattedMessage id="auth.authError" values={{ errorMessage: auth.error.message }} />
+            <FormattedMessage id="auth.authError" values={{ errorMessage: formatError(auth.error) }} />
           </Text>
           <div>
             <Button onClick={() => auth.signinRedirect()}>

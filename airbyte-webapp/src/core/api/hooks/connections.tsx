@@ -6,6 +6,7 @@ import { useNavigate } from "react-router-dom";
 import { ExternalLink } from "components/ui/Link";
 
 import { useCurrentWorkspaceId } from "area/workspace/utils";
+import { useFormatError } from "core/errors";
 import { getFrequencyFromScheduleData, useAnalyticsService, Action, Namespace } from "core/services/analytics";
 import { links } from "core/utils/links";
 import { useAppMonitoringService } from "hooks/services/AppMonitoringService";
@@ -94,6 +95,7 @@ interface CreateConnectionProps {
 
 export const useSyncConnection = () => {
   const requestOptions = useRequestOptions();
+  const formatError = useFormatError();
   const { trackError } = useAppMonitoringService();
   const queryClient = useQueryClient();
   const analyticsService = useAnalyticsService();
@@ -126,7 +128,7 @@ export const useSyncConnection = () => {
         trackError(error);
         registerNotification({
           id: `tables.startSyncError.${error.message}`,
-          text: `${formatMessage({ id: "connection.startSyncError" })}: ${error.message}`,
+          text: `${formatMessage({ id: "connection.startSyncError" })}: ${formatError(error)}`,
           type: "error",
         });
       },
@@ -340,6 +342,7 @@ export const useDeleteConnection = () => {
 
 export const useUpdateConnection = () => {
   const navigate = useNavigate();
+  const formatError = useFormatError();
   const queryClient = useQueryClient();
   const requestOptions = useRequestOptions();
   const workspaceId = useCurrentWorkspaceId();
@@ -404,7 +407,7 @@ export const useUpdateConnection = () => {
         registerNotification({
           id: "update-connection-error",
           type: "error",
-          text: fallbackKey ? <FormattedMessage id={fallbackKey} /> : error.message,
+          text: fallbackKey ? <FormattedMessage id={fallbackKey} /> : formatError(error),
         });
       },
     }
@@ -481,6 +484,7 @@ export const useGetStateTypeQuery = () => {
 
 export const useCreateOrUpdateState = () => {
   const requestOptions = useRequestOptions();
+  const formatError = useFormatError();
   const { formatMessage } = useIntl();
   const queryClient = useQueryClient();
   const analyticsService = useAnalyticsService();
@@ -508,7 +512,7 @@ export const useCreateOrUpdateState = () => {
         trackError(error);
         registerNotification({
           id: `connection.stateUpdateError.${error.message}`,
-          text: error.message,
+          text: formatError(error),
           type: "error",
         });
       },

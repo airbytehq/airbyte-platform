@@ -1,5 +1,4 @@
-import type React from "react";
-import type { useIntl } from "react-intl";
+import { useIntl } from "react-intl";
 
 type FormatMessageFn = ReturnType<typeof useIntl>["formatMessage"];
 
@@ -17,7 +16,9 @@ export class I18nError extends Error {
     this.name = "I18nError";
   }
 
-  translate(formatMessage: ReturnType<typeof useIntl>["formatMessage"]): React.ReactNode {
+  translate(
+    formatMessage: ReturnType<typeof useIntl>["formatMessage"]
+  ): ReturnType<ReturnType<typeof useIntl>["formatMessage"]> {
     return formatMessage({ id: this.i18nKey }, this.i18nParams);
   }
 }
