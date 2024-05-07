@@ -9,6 +9,7 @@ fasterxml_version = "2.17.0"
 failsafe = "3.3.2"
 flyway = "10.10.0"
 glassfish_version = "2.31"
+grpc_version = "1.62.2"
 hikaricp = "5.0.1"
 jax-rs = "3.1.0"
 jna = "5.8.0"
@@ -88,6 +89,7 @@ google-cloud-storage = { module = "com.google.cloud:google-cloud-storage", versi
 google-cloud-storage-secretmanager = { module = "com.google.cloud:google-cloud-secretmanager", version = "2.0.5" }
 google-cloud-sqladmin = { module = "com.google.apis:google-api-services-sqladmin", version = "v1-rev20240317-2.0.0" }
 google-cloud-api-client = { module = "com.google.api-client:google-api-client", version = "2.4.0" }
+grpc-inprocess = { module = "io.grpc:grpc-inprocess", version.ref = "grpc_version" }
 guava = { module = "com.google.guava:guava", version = "33.1.0-jre" }
 gson = { module = "com.google.code.gson:gson", version = "2.10.1" }
 hamcrest-all = { module = "org.hamcrest:hamcrest-all", version = "1.3" }

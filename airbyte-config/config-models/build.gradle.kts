@@ -20,6 +20,8 @@ dependencies {
 
   implementation(project(":airbyte-json-validation"))
   implementation(project(":airbyte-commons"))
+  implementation(project(":airbyte-featureflag"))
+
 
   implementation(platform(libs.fasterxml))
   implementation(libs.bundles.jackson)
