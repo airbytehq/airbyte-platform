@@ -137,4 +137,6 @@ logger:
 #      com.zaxxer.hikari: TRACE
 
 jackson:
+  mapper:
+    ACCEPT_CASE_INSENSITIVE_ENUMS: true
   serialization-inclusion: always

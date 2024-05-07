@@ -412,6 +412,10 @@ flyway:
       locations:
         - "classpath:io/airbyte/db/instance/jobs/migrations"
 
+jackson:
+  mapper:
+    ACCEPT_CASE_INSENSITIVE_ENUMS: true
+
 jooq:
   datasources:
     config:

@@ -131,6 +131,10 @@ endpoints:
     enabled: true
     sensitive: true
 
+jackson:
+  mapper:
+    ACCEPT_CASE_INSENSITIVE_ENUMS: true
+
 logger:
   levels:
 #   Uncomment to help resolve issues with conditional beans
