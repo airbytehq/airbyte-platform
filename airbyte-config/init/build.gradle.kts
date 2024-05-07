@@ -2,13 +2,17 @@ plugins {
   id("io.airbyte.gradle.jvm.lib")
   id("io.airbyte.gradle.docker")
   id("io.airbyte.gradle.publish")
+  id("org.jetbrains.kotlin.jvm")
+  id("org.jetbrains.kotlin.kapt")
 }
 
 dependencies {
   compileOnly(libs.lombok)
   annotationProcessor(libs.lombok)     // Lombok must be added BEFORE Micronaut
-  annotationProcessor(libs.bundles.micronaut.annotation.processor)
   api(libs.bundles.micronaut.annotation)
+
+  kapt(platform(libs.micronaut.platform))
+  kapt(libs.bundles.micronaut.annotation.processor)
 
   implementation(project(":airbyte-commons"))
   implementation("commons-cli:commons-cli:1.4")
@@ -29,6 +33,7 @@ dependencies {
   testImplementation(libs.bundles.junit)
   testImplementation(libs.assertj.core)
   testImplementation(libs.junit.pioneer)
+  testImplementation(libs.mockk)
 }
 
 airbyte {
