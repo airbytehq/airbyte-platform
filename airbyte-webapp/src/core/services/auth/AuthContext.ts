@@ -6,7 +6,6 @@ import { SignupFormValues } from "packages/cloud/views/auth/SignupPage/component
 
 export type AuthUpdatePassword = (email: string, currentPassword: string, newPassword: string) => Promise<void>;
 
-export type AuthRequirePasswordReset = (email: string) => Promise<void>;
 export type AuthConfirmPasswordReset = (code: string, newPassword: string) => Promise<void>;
 
 export type AuthLogin = (values: { email: string; password: string }) => Promise<void>;
@@ -51,7 +50,6 @@ export interface AuthContextApi {
   signUp?: AuthSignUp;
   updatePassword?: AuthUpdatePassword;
   updateName?: AuthChangeName;
-  requirePasswordReset?: AuthRequirePasswordReset;
   confirmPasswordReset?: AuthConfirmPasswordReset;
   sendEmailVerification?: AuthSendEmailVerification;
   verifyEmail?: AuthVerifyEmail;

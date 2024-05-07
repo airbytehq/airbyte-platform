@@ -32,7 +32,6 @@ import { CloudRoutes } from "./cloudRoutePaths";
 import { LDExperimentServiceProvider } from "./services/thirdParty/launchdarkly";
 import { SSOBookmarkPage } from "./views/auth/SSOBookmarkPage";
 import { SSOIdentifierPage } from "./views/auth/SSOIdentifierPage";
-import { FirebaseActionRoute } from "./views/FirebaseActionRoute";
 import { DbtCloudSettingsView } from "./views/settings/integrations/DbtCloudSettingsView";
 import { CloudSettingsRoutePaths } from "./views/settings/routePaths";
 import { AccountSettingsView } from "./views/users/AccountSettingsView";
@@ -41,7 +40,6 @@ import { DataResidencyView } from "./views/workspaces/DataResidencyView";
 import { WorkspaceSettingsView } from "./views/workspaces/WorkspaceSettingsView";
 
 const LoginPage = React.lazy(() => import("./views/auth/LoginPage"));
-const ResetPasswordPage = React.lazy(() => import("./views/auth/ResetPasswordPage"));
 const SignupPage = React.lazy(() => import("./views/auth/SignupPage"));
 const CloudMainView = React.lazy(() => import("packages/cloud/views/layout/CloudMainView"));
 const CloudWorkspacesPage = React.lazy(() => import("packages/cloud/views/workspaces"));
@@ -174,7 +172,7 @@ const CloudWorkspaceDataPrefetcher: React.FC<PropsWithChildren<unknown>> = ({ ch
 };
 
 export const Routing: React.FC = () => {
-  const { user, inited, providers, provider, loggedOut, requirePasswordReset } = useAuthService();
+  const { user, inited, providers, provider, loggedOut } = useAuthService();
   const workspaceId = useCurrentWorkspaceId();
   const { pathname: originalPathname, search, hash } = useLocation();
 
@@ -232,11 +230,6 @@ export const Routing: React.FC = () => {
     <LDExperimentServiceProvider>
       <Suspense fallback={<LoadingPage />}>
         <Routes>
-          {/*
-            The firebase callback action route is available no matter wheter a user is logged in or not, since
-            the verify email action need to work in both cases.
-          */}
-          <Route path={CloudRoutes.FirebaseAction} element={<FirebaseActionRoute />} />
           <Route
             path="*"
             element={
@@ -250,12 +243,6 @@ export const Routing: React.FC = () => {
                         <Route path={CloudRoutes.Sso} element={<SSOIdentifierPage />} />
                         <Route path={CloudRoutes.Login} element={<LoginPage />} />
                         <Route path={CloudRoutes.Signup} element={<SignupPage />} />
-                        {requirePasswordReset && (
-                          <Route
-                            path={CloudRoutes.ResetPassword}
-                            element={<ResetPasswordPage requirePasswordReset={requirePasswordReset} />}
-                          />
-                        )}
                         {/* In case a not logged in user tries to access anything else navigate them to login */}
                         <Route path="*" element={<Navigate to={loginRedirectTo} />} />
                       </Routes>

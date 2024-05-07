@@ -17,7 +17,6 @@ import {
   updatePassword,
   updateProfile,
   signInWithEmailAndPassword,
-  sendPasswordResetEmail,
 } from "firebase/auth";
 import React, { PropsWithChildren, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { FormattedMessage } from "react-intl";
@@ -282,9 +281,6 @@ export const CloudAuthService: React.FC<PropsWithChildren> = ({ children }) => {
           state.error(e);
         }
         return state.asObservable();
-      },
-      requirePasswordReset: (email: string) => {
-        return sendPasswordResetEmail(firebaseAuth, email);
       },
       confirmPasswordReset: async (code: string, newPassword: string) => {
         try {
