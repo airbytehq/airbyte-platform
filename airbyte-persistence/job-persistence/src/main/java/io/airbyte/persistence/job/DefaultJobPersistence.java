@@ -128,7 +128,6 @@ public class DefaultJobPersistence implements JobPersistence {
   static final String BASE_JOB_SELECT_AND_JOIN = jobSelectAndJoin("jobs");
   private static final String ATTEMPT_SELECT =
       "SELECT job_id," + ATTEMPT_FIELDS + "FROM attempts WHERE job_id = ? AND attempt_number = ?";
-  private static final ZoneOffset SYSTEM_OFFSET = ZonedDateTime.now().getOffset();
   // not static because job history test case manipulates these.
   private final int jobHistoryMinimumAgeInDays;
   private final int jobHistoryMinimumRecency;
@@ -502,6 +501,14 @@ public class DefaultJobPersistence implements JobPersistence {
     return record.get(fieldName, OffsetDateTime.class).toEpochSecond();
   }
 
+  private LocalDateTime getCurrentTime() {
+    return LocalDateTime.ofInstant(timeSupplier.get(), ZoneId.systemDefault());
+  }
+
+  private LocalDateTime convertInstantToLocalDataTime(Instant instant) {
+    return LocalDateTime.ofInstant(instant, ZoneId.systemDefault());
+  }
+
   /**
    * Enqueue a job for a given scope (i.e. almost always at this point just means enqueue a sync or
    * reset job for a connection).
@@ -518,7 +525,7 @@ public class DefaultJobPersistence implements JobPersistence {
     LOGGER.info("enqueuing pending job for scope: {}", scope);
     // TODO: stop using LocalDateTime
     // https://github.com/airbytehq/airbyte-platform-internal/issues/10815
-    final LocalDateTime now = LocalDateTime.ofInstant(timeSupplier.get(), ZoneId.systemDefault());
+    final LocalDateTime now = getCurrentTime();
 
     final String queueingRequest = Job.REPLICATION_TYPES.contains(jobConfig.getConfigType())
         ? String.format("WHERE NOT EXISTS (SELECT 1 FROM jobs WHERE config_type IN (%s) AND scope = '%s' AND status NOT IN (%s)) ",
@@ -548,9 +555,8 @@ public class DefaultJobPersistence implements JobPersistence {
   public void resetJob(final long jobId) throws IOException {
     // TODO: stop using LocalDateTime
     // https://github.com/airbytehq/airbyte-platform-internal/issues/10815
-    final LocalDateTime now = LocalDateTime.ofInstant(timeSupplier.get(), SYSTEM_OFFSET);
     jobDatabase.query(ctx -> {
-      updateJobStatus(ctx, jobId, JobStatus.PENDING, now);
+      updateJobStatus(ctx, jobId, JobStatus.PENDING);
       return null;
     });
   }
@@ -559,9 +565,8 @@ public class DefaultJobPersistence implements JobPersistence {
   public void cancelJob(final long jobId) throws IOException {
     // TODO: stop using LocalDateTime
     // https://github.com/airbytehq/airbyte-platform-internal/issues/10815
-    final LocalDateTime now = LocalDateTime.ofInstant(timeSupplier.get(), SYSTEM_OFFSET);
     jobDatabase.query(ctx -> {
-      updateJobStatus(ctx, jobId, JobStatus.CANCELLED, now);
+      updateJobStatus(ctx, jobId, JobStatus.CANCELLED);
       return null;
     });
   }
@@ -570,34 +575,35 @@ public class DefaultJobPersistence implements JobPersistence {
   public void failJob(final long jobId) throws IOException {
     // TODO: stop using LocalDateTime
     // https://github.com/airbytehq/airbyte-platform-internal/issues/10815
-    final LocalDateTime now = LocalDateTime.ofInstant(timeSupplier.get(), SYSTEM_OFFSET);
     jobDatabase.query(ctx -> {
-      updateJobStatus(ctx, jobId, JobStatus.FAILED, now);
+      updateJobStatus(ctx, jobId, JobStatus.FAILED);
       return null;
     });
   }
 
   // TODO: stop using LocalDateTime
   // https://github.com/airbytehq/airbyte-platform-internal/issues/10815
-  private void updateJobStatus(final DSLContext ctx, final long jobId, final JobStatus newStatus, final LocalDateTime now) {
+  // returns the new updated_at time for the job
+  private LocalDateTime updateJobStatus(final DSLContext ctx, final long jobId, final JobStatus newStatus) {
+    var now = getCurrentTime();
     final Job job = getJob(ctx, jobId);
     if (job.isJobInTerminalState()) {
       // If the job is already terminal, no need to set a new status
-      return;
+      return now;
     }
     job.validateStatusTransition(newStatus);
     ctx.execute(
         "UPDATE jobs SET status = CAST(? as JOB_STATUS), updated_at = ? WHERE id = ?",
         toSqlName(newStatus),
-        now,
+        getCurrentTime(),
         jobId);
+    return now;
   }
 
   @Override
   public int createAttempt(final long jobId, final Path logPath) throws IOException {
     // TODO: stop using LocalDateTime
     // https://github.com/airbytehq/airbyte-platform-internal/issues/10815
-    final LocalDateTime now = LocalDateTime.ofInstant(timeSupplier.get(), ZoneId.systemDefault());
 
     return jobDatabase.transaction(ctx -> {
       final Job job = getJob(ctx, jobId);
@@ -615,7 +621,7 @@ public class DefaultJobPersistence implements JobPersistence {
         throw new IllegalStateException(errMsg);
       }
 
-      updateJobStatus(ctx, jobId, JobStatus.RUNNING, now);
+      var now = updateJobStatus(ctx, jobId, JobStatus.RUNNING);
 
       // will fail if attempt number already exists for the job id.
       return ctx.fetch(
@@ -639,9 +645,8 @@ public class DefaultJobPersistence implements JobPersistence {
   public void failAttempt(final long jobId, final int attemptNumber) throws IOException {
     // TODO: stop using LocalDateTime
     // https://github.com/airbytehq/airbyte-platform-internal/issues/10815
-    final LocalDateTime now = LocalDateTime.ofInstant(timeSupplier.get(), ZoneId.systemDefault());
     jobDatabase.transaction(ctx -> {
-      updateJobStatus(ctx, jobId, JobStatus.INCOMPLETE, now);
+      final LocalDateTime now = updateJobStatus(ctx, jobId, JobStatus.INCOMPLETE);
 
       ctx.execute(
           "UPDATE attempts SET status = CAST(? as ATTEMPT_STATUS), updated_at = ? , ended_at = ? WHERE job_id = ? AND attempt_number = ?",
@@ -658,9 +663,8 @@ public class DefaultJobPersistence implements JobPersistence {
   public void succeedAttempt(final long jobId, final int attemptNumber) throws IOException {
     // TODO: stop using LocalDateTime
     // https://github.com/airbytehq/airbyte-platform-internal/issues/10815
-    final LocalDateTime now = LocalDateTime.ofInstant(timeSupplier.get(), ZoneId.systemDefault());
     jobDatabase.transaction(ctx -> {
-      updateJobStatus(ctx, jobId, JobStatus.SUCCEEDED, now);
+      final LocalDateTime now = updateJobStatus(ctx, jobId, JobStatus.SUCCEEDED);
 
       ctx.execute(
           "UPDATE attempts SET status = CAST(? as ATTEMPT_STATUS), updated_at = ? , ended_at = ? WHERE job_id = ? AND attempt_number = ?",
@@ -995,7 +999,7 @@ public class DefaultJobPersistence implements JobPersistence {
   public List<Job> listJobs(final ConfigType configType, final Instant attemptEndedAtTimestamp) throws IOException {
     // TODO: stop using LocalDateTime
     // https://github.com/airbytehq/airbyte-platform-internal/issues/10815
-    final LocalDateTime timeConvertedIntoLocalDateTime = LocalDateTime.ofInstant(attemptEndedAtTimestamp, SYSTEM_OFFSET);
+    final LocalDateTime timeConvertedIntoLocalDateTime = convertInstantToLocalDataTime(attemptEndedAtTimestamp);
     return jobDatabase.query(ctx -> getJobsFromResult(ctx
         .fetch(BASE_JOB_SELECT_AND_JOIN + WHERE
             + "CAST(config_type AS VARCHAR) =  ? AND "
@@ -1071,7 +1075,7 @@ public class DefaultJobPersistence implements JobPersistence {
       throws IOException {
     // TODO: stop using LocalDateTime
     // https://github.com/airbytehq/airbyte-platform-internal/issues/10815
-    final LocalDateTime timeConvertedIntoLocalDateTime = LocalDateTime.ofInstant(attemptEndedAtTimestamp, SYSTEM_OFFSET);
+    final LocalDateTime timeConvertedIntoLocalDateTime = convertInstantToLocalDataTime(attemptEndedAtTimestamp);
 
     return jobDatabase.query(ctx -> getAttemptsWithJobsFromResult(ctx.fetch(
         BASE_JOB_SELECT_AND_JOIN + WHERE + "CAST(config_type AS VARCHAR) =  ? AND " + "scope = ? AND " + "CAST(jobs.status AS VARCHAR) = ? AND "
@@ -1088,7 +1092,7 @@ public class DefaultJobPersistence implements JobPersistence {
       throws IOException {
     // TODO: stop using LocalDateTime
     // https://github.com/airbytehq/airbyte-platform-internal/issues/10815
-    final LocalDateTime timeConvertedIntoLocalDateTime = LocalDateTime.ofInstant(attemptEndedAtTimestamp, SYSTEM_OFFSET);
+    final LocalDateTime timeConvertedIntoLocalDateTime = convertInstantToLocalDataTime(attemptEndedAtTimestamp);
 
     return jobDatabase.query(ctx -> ctx.fetch(
         "SELECT "
@@ -1127,7 +1131,7 @@ public class DefaultJobPersistence implements JobPersistence {
       throws IOException {
     // TODO: stop using LocalDateTime
     // https://github.com/airbytehq/airbyte-platform-internal/issues/10815
-    final LocalDateTime timeConvertedIntoLocalDateTime = LocalDateTime.ofInstant(jobCreatedAtTimestamp, SYSTEM_OFFSET);
+    final LocalDateTime timeConvertedIntoLocalDateTime = convertInstantToLocalDataTime(jobCreatedAtTimestamp);
 
     final String JobStatusSelect = "SELECT id, status, created_at, updated_at FROM jobs ";
     return jobDatabase.query(ctx -> ctx
@@ -1259,7 +1263,7 @@ public class DefaultJobPersistence implements JobPersistence {
       throws IOException {
     // TODO: stop using LocalDateTime
     // https://github.com/airbytehq/airbyte-platform-internal/issues/10815
-    final LocalDateTime timeConvertedIntoLocalDateTime = LocalDateTime.ofInstant(attemptEndedAtTimestamp, SYSTEM_OFFSET);
+    final LocalDateTime timeConvertedIntoLocalDateTime = convertInstantToLocalDataTime(attemptEndedAtTimestamp);
     return jobDatabase.query(ctx -> getAttemptsWithJobsFromResult(ctx.fetch(
         BASE_JOB_SELECT_AND_JOIN + WHERE + "CAST(config_type AS VARCHAR) =  ? AND " + " attempts.ended_at > ? ORDER BY attempts.ended_at ASC LIMIT ?",
         toSqlName(configType),
