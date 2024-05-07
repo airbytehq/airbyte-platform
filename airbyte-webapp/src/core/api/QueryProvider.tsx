@@ -13,17 +13,23 @@ const queryClient = new QueryClient({
       refetchOnWindowFocus: false,
       refetchOnReconnect: false,
       retry: (failureCount, error) => {
-        if (
-          failureCount < RETRY_COUNT &&
-          error instanceof HttpError &&
-          (error.status === 502 || error.status === 503)
-        ) {
-          console.log(
-            `🔁 Retrying request to ${error.request.url} due to temporarily unavailable server (HTTP ${
-              error.status
-            }). Retry ${failureCount + 1}/${RETRY_COUNT}`
-          );
-          return true;
+        if (failureCount < RETRY_COUNT && error instanceof HttpError) {
+          if (error.status === 502 || error.status === 503) {
+            console.log(
+              `🔁 Retrying request to ${error.request.url} due to temporarily unavailable server (HTTP ${
+                error.status
+              }). Retry ${failureCount + 1}/${RETRY_COUNT}`
+            );
+            return true;
+          }
+          if (error.status === 401) {
+            console.log(
+              `🔁 Retrying request to ${error.request.url} due to unauthorized (HTTP 401). Retry ${
+                failureCount + 1
+              }/${RETRY_COUNT}`
+            );
+            return true;
+          }
         }
         return false;
       },
