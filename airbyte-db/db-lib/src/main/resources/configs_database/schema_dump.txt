@@ -339,6 +339,7 @@ create table "public"."stream_refreshes" (
   "stream_name" varchar(2147483647) not null,
   "stream_namespace" varchar(2147483647),
   "created_at" timestamp(6) with time zone not null default current_timestamp,
+  "refresh_type" "public"."refresh_type" not null,
   constraint "stream_refreshes_pkey" primary key ("id")
 );
 create table "public"."stream_reset" (

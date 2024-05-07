@@ -4,6 +4,7 @@ import io.airbyte.config.persistence.StreamGenerationRepository
 import io.airbyte.config.persistence.domain.Generation
 import io.airbyte.config.persistence.domain.StreamGeneration
 import io.airbyte.config.persistence.domain.StreamRefresh
+import io.airbyte.db.instance.configs.jooq.generated.enums.RefreshType
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.slot
@@ -47,6 +48,7 @@ class GenerationBumperTest {
           connectionId = connectionId,
           streamName = "name1",
           streamNamespace = "namespace1",
+          refreshType = RefreshType.TRUNCATE,
         ),
       ),
     )
@@ -75,6 +77,7 @@ class GenerationBumperTest {
           connectionId = connectionId,
           streamName = "name3",
           streamNamespace = "namespace3",
+          refreshType = RefreshType.TRUNCATE,
         ),
       ),
     )

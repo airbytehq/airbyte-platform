@@ -65,6 +65,7 @@ dependencies {
   implementation(project(":airbyte-featureflag"))
   implementation(project(":airbyte-metrics:metrics-lib"))
   implementation(project(":airbyte-db:db-lib"))
+  implementation(project(":airbyte-db:jooq"))
   implementation(project(":airbyte-json-validation"))
   implementation(project(":airbyte-oauth"))
   implementation(libs.airbyte.protocol)

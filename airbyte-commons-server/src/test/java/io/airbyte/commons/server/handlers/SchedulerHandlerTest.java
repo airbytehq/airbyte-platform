@@ -113,6 +113,7 @@ import io.airbyte.config.persistence.domain.StreamRefresh;
 import io.airbyte.config.secrets.SecretsRepositoryWriter;
 import io.airbyte.data.services.SecretPersistenceConfigService;
 import io.airbyte.data.services.WorkspaceService;
+import io.airbyte.db.instance.configs.jooq.generated.enums.RefreshType;
 import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.featureflag.FieldSelectionWorkspaces;
 import io.airbyte.featureflag.TestClient;
@@ -375,7 +376,7 @@ class SchedulerHandlerTest {
         .thenReturn(new JobInfoRead().job(new JobRead().id(JOB_ID)));
     when(streamRefreshesHandler.getRefreshesForConnection(CONNECTION_ID))
         .thenReturn(List.of(
-            new StreamRefresh(UUID.randomUUID(), CONNECTION_ID, "name", "namespace", null)));
+            new StreamRefresh(UUID.randomUUID(), CONNECTION_ID, "name", "namespace", null, RefreshType.TRUNCATE)));
 
     final JobInfoRead output = schedulerHandler.createJob(new JobCreate().connectionId(CONNECTION_ID));
 
