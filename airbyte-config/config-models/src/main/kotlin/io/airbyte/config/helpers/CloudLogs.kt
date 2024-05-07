@@ -6,6 +6,7 @@ import io.airbyte.config.storage.GcsStorageConfig
 import io.airbyte.config.storage.MinioS3ClientFactory
 import io.airbyte.config.storage.MinioStorageConfig
 import io.airbyte.config.storage.S3StorageConfig
+import io.airbyte.featureflag.FeatureFlagClient
 import java.io.IOException
 
 /**
@@ -25,6 +26,7 @@ interface CloudLogs {
     configs: LogConfigs,
     logPath: String,
     numLines: Int,
+    featureFlagClient: FeatureFlagClient,
   ): List<String>
 
   fun deleteLogs(

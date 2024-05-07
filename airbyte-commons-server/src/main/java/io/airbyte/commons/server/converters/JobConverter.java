@@ -43,6 +43,7 @@ import io.airbyte.config.StreamSyncStats;
 import io.airbyte.config.SyncStats;
 import io.airbyte.config.helpers.LogClientSingleton;
 import io.airbyte.config.helpers.LogConfigs;
+import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.persistence.job.models.Attempt;
 import io.airbyte.persistence.job.models.AttemptNormalizationStatus;
 import io.airbyte.persistence.job.models.Job;
@@ -64,10 +65,14 @@ public class JobConverter {
 
   private final WorkerEnvironment workerEnvironment;
   private final LogConfigs logConfigs;
+  private final FeatureFlagClient featureFlagClient;
 
-  public JobConverter(final WorkerEnvironment workerEnvironment, final LogConfigs logConfigs) {
+  public JobConverter(final WorkerEnvironment workerEnvironment,
+                      final LogConfigs logConfigs,
+                      final FeatureFlagClient featureFlagClient) {
     this.workerEnvironment = workerEnvironment;
     this.logConfigs = logConfigs;
+    this.featureFlagClient = featureFlagClient;
   }
 
   public JobInfoRead getJobInfoRead(final Job job) {
@@ -234,7 +239,7 @@ public class JobConverter {
 
   public LogRead getLogRead(final Path logPath) {
     try {
-      return new LogRead().logLines(LogClientSingleton.getInstance().getJobLogFile(workerEnvironment, logConfigs, logPath));
+      return new LogRead().logLines(LogClientSingleton.getInstance().getJobLogFile(workerEnvironment, logConfigs, logPath, featureFlagClient));
     } catch (final IOException e) {
       throw new RuntimeException(e);
     }

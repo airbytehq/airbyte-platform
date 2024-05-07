@@ -307,7 +307,7 @@ class SchedulerHandlerTest {
     jobTracker = mock(JobTracker.class);
     connectorDefinitionSpecificationHandler = mock(ConnectorDefinitionSpecificationHandler.class);
 
-    jobConverter = spy(new JobConverter(WorkerEnvironment.DOCKER, LogConfigs.EMPTY));
+    jobConverter = spy(new JobConverter(WorkerEnvironment.DOCKER, LogConfigs.EMPTY, new TestClient()));
 
     featureFlagClient = mock(TestClient.class);
     workspaceService = mock(WorkspaceService.class);

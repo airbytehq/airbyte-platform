@@ -22,7 +22,6 @@ dependencies {
   implementation(project(":airbyte-commons"))
   implementation(project(":airbyte-featureflag"))
 
-
   implementation(platform(libs.fasterxml))
   implementation(libs.bundles.jackson)
   implementation(libs.spotbugs.annotations)

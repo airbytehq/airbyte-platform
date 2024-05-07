@@ -7,6 +7,7 @@ package io.airbyte.config.helpers;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.Lists;
 import io.airbyte.commons.string.Strings;
+import io.airbyte.featureflag.FeatureFlagClient;
 import java.io.BufferedReader;
 import java.io.ByteArrayInputStream;
 import java.io.File;
@@ -78,7 +79,11 @@ public class S3Logs implements CloudLogs {
   }
 
   @Override
-  public List<String> tailCloudLog(final LogConfigs configs, final String logPath, final int numLines) throws IOException {
+  public List<String> tailCloudLog(final LogConfigs configs,
+                                   final String logPath,
+                                   final int numLines,
+                                   final FeatureFlagClient featureFlagClient)
+      throws IOException {
     LOGGER.debug("Tailing logs from S3 path: {}", logPath);
     final S3Client s3Client = getOrCreateS3Client();
 

@@ -47,6 +47,7 @@ import io.airbyte.config.StandardSyncSummary;
 import io.airbyte.config.StreamSyncStats;
 import io.airbyte.config.SyncStats;
 import io.airbyte.config.helpers.LogConfigs;
+import io.airbyte.featureflag.TestClient;
 import io.airbyte.persistence.job.models.Attempt;
 import io.airbyte.persistence.job.models.AttemptStatus;
 import io.airbyte.persistence.job.models.Job;
@@ -201,7 +202,7 @@ class JobConverterTest {
 
     @BeforeEach
     public void setUp() {
-      jobConverter = new JobConverter(WorkerEnvironment.DOCKER, LogConfigs.EMPTY);
+      jobConverter = new JobConverter(WorkerEnvironment.DOCKER, LogConfigs.EMPTY, new TestClient());
       job = mock(Job.class);
       final Attempt attempt = mock(Attempt.class);
       when(job.getId()).thenReturn(JOB_ID);
@@ -317,7 +318,7 @@ class JobConverterTest {
 
     @BeforeEach
     public void setUp() {
-      jobConverter = new JobConverter(WorkerEnvironment.DOCKER, LogConfigs.EMPTY);
+      jobConverter = new JobConverter(WorkerEnvironment.DOCKER, LogConfigs.EMPTY, new TestClient());
       metadata = mock(SynchronousJobMetadata.class);
       when(metadata.getId()).thenReturn(JOB_ID);
       when(metadata.getConfigType()).thenReturn(CONFIG_TYPE);

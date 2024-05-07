@@ -106,7 +106,7 @@ public class JobHistoryHandler {
                            final TemporalClient temporalClient,
                            final FeatureFlagClient featureFlagClient) {
     this.featureFlagClient = featureFlagClient;
-    jobConverter = new JobConverter(workerEnvironment, logConfigs);
+    jobConverter = new JobConverter(workerEnvironment, logConfigs, featureFlagClient);
     workflowStateConverter = new WorkflowStateConverter();
     this.jobPersistence = jobPersistence;
     this.connectionsHandler = connectionsHandler;
