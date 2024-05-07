@@ -84,7 +84,7 @@ class BootloaderTest {
   private FeatureFlagClient featureFlagClient;
   private static final String DEFAULT_REALM = "airbyte";
   private static final String DOCKER = "docker";
-  private static final String PROTOCOL_VERSION_123 = "1.2.3";
+  private static final String PROTOCOL_VERSION_001 = "0.0.1";
   private static final String PROTOCOL_VERSION_124 = "1.2.4";
   private static final String VERSION_0330_ALPHA = "0.33.0-alpha";
   private static final String VERSION_0320_ALPHA = "0.32.0-alpha";
@@ -129,7 +129,9 @@ class BootloaderTest {
   @Test
   void testBootloaderAppBlankDb() throws Exception {
     val currentAirbyteVersion = new AirbyteVersion(VERSION_0330_ALPHA);
-    val airbyteProtocolRange = new AirbyteProtocolVersionRange(new Version(PROTOCOL_VERSION_123), new Version(PROTOCOL_VERSION_124));
+    // The protocol version range should contain our default protocol version since many definitions we
+    // load don't provide a protocol version.
+    val airbyteProtocolRange = new AirbyteProtocolVersionRange(new Version(PROTOCOL_VERSION_001), new Version(PROTOCOL_VERSION_124));
     val mockedFeatureFlags = mock(FeatureFlags.class);
     val runMigrationOnStartup = true;
 
@@ -141,7 +143,6 @@ class BootloaderTest {
 
     val configDatabase = new ConfigsDatabaseTestProvider(configsDslContext, configsFlyway).create(false);
     val jobDatabase = new JobsDatabaseTestProvider(jobsDslContext, jobsFlyway).create(false);
-    final FeatureFlagClient featureFlagClient = mock(TestClient.class);
     final SecretsRepositoryReader secretsRepositoryReader = mock(SecretsRepositoryReader.class);
     final SecretsRepositoryWriter secretsRepositoryWriter = mock(SecretsRepositoryWriter.class);
     final SecretPersistenceConfigService secretPersistenceConfigService = mock(SecretPersistenceConfigService.class);
@@ -225,7 +226,7 @@ class BootloaderTest {
     assertEquals(CURRENT_CONFIGS_MIGRATION_VERSION, configsMigrator.getLatestMigration().getVersion().getVersion());
 
     assertEquals(VERSION_0330_ALPHA, jobsPersistence.getVersion().get());
-    assertEquals(new Version(PROTOCOL_VERSION_123), jobsPersistence.getAirbyteProtocolVersionMin().get());
+    assertEquals(new Version(PROTOCOL_VERSION_001), jobsPersistence.getAirbyteProtocolVersionMin().get());
     assertEquals(new Version(PROTOCOL_VERSION_124), jobsPersistence.getAirbyteProtocolVersionMax().get());
 
     assertNotEquals(Optional.empty(), jobsPersistence.getDeployment());
@@ -238,7 +239,7 @@ class BootloaderTest {
   @Test
   void testRequiredVersionUpgradePredicate() throws Exception {
     val currentAirbyteVersion = new AirbyteVersion(VERSION_0330_ALPHA);
-    val airbyteProtocolRange = new AirbyteProtocolVersionRange(new Version(PROTOCOL_VERSION_123), new Version(PROTOCOL_VERSION_124));
+    val airbyteProtocolRange = new AirbyteProtocolVersionRange(new Version(PROTOCOL_VERSION_001), new Version(PROTOCOL_VERSION_124));
     val mockedFeatureFlags = mock(FeatureFlags.class);
     val runMigrationOnStartup = true;
 
@@ -372,7 +373,7 @@ class BootloaderTest {
   void testPostLoadExecutionExecutes() throws Exception {
     final var testTriggered = new AtomicBoolean();
     val currentAirbyteVersion = new AirbyteVersion(VERSION_0330_ALPHA);
-    val airbyteProtocolRange = new AirbyteProtocolVersionRange(new Version(PROTOCOL_VERSION_123), new Version(PROTOCOL_VERSION_124));
+    val airbyteProtocolRange = new AirbyteProtocolVersionRange(new Version(PROTOCOL_VERSION_001), new Version(PROTOCOL_VERSION_124));
     val mockedFeatureFlags = mock(FeatureFlags.class);
     val runMigrationOnStartup = true;
 
