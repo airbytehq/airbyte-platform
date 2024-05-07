@@ -43,11 +43,6 @@ public class S3Logs implements CloudLogs {
     this.s3ClientFactory = s3ClientFactory;
   }
 
-  @Override
-  public File downloadCloudLog(final LogConfigs configs, final String logPath) throws IOException {
-    return getFile(configs, logPath, LogClientSingleton.DEFAULT_PAGE_SIZE);
-  }
-
   private File getFile(final LogConfigs configs, final String logPath, final int pageSize) throws IOException {
     return getFile(getOrCreateS3Client(), configs, logPath, pageSize);
   }

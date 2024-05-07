@@ -1,11 +1,13 @@
 package io.airbyte.commons.server.handlers
 
 import io.airbyte.api.model.generated.ConnectionStream
+import io.airbyte.api.model.generated.RefreshMode
 import io.airbyte.commons.server.scheduler.EventRunner
 import io.airbyte.config.persistence.StreamRefreshesRepository
 import io.airbyte.config.persistence.domain.StreamRefresh
 import io.airbyte.data.services.ConnectionService
 import io.airbyte.data.services.WorkspaceService
+import io.airbyte.db.instance.configs.jooq.generated.enums.RefreshType
 import io.airbyte.featureflag.ActivateRefreshes
 import io.airbyte.featureflag.Connection
 import io.airbyte.featureflag.FeatureFlagClient
@@ -29,6 +31,7 @@ class StreamRefreshesHandler(
 
   open fun createRefreshesForConnection(
     connectionId: UUID,
+    refreshMode: RefreshMode,
     streams: List<ConnectionStream>,
   ): Boolean {
     val workspaceId = workspaceService.getStandardWorkspaceFromConnection(connectionId, false).workspaceId
@@ -54,7 +57,7 @@ class StreamRefreshesHandler(
         connectionService.getAllStreamsForConnection(connectionId)
       }
 
-    createRefreshesForStreams(connectionId, streamDescriptors)
+    createRefreshesForStreams(connectionId, refreshMode, streamDescriptors)
 
     eventRunner.startNewManualSync(connectionId)
 
@@ -67,9 +70,10 @@ class StreamRefreshesHandler(
 
   private fun createRefreshesForStreams(
     connectionId: UUID,
+    refreshMode: RefreshMode,
     streams: List<StreamDescriptor>,
   ) {
-    val streamRefreshes: List<StreamRefresh> = streamDescriptorsToStreamRefreshes(connectionId, streams)
+    val streamRefreshes: List<StreamRefresh> = streamDescriptorsToStreamRefreshes(connectionId, refreshMode, streams)
 
     streamRefreshesRepository.saveAll(streamRefreshes)
   }
@@ -85,11 +89,23 @@ class StreamRefreshesHandler(
 
     open fun streamDescriptorsToStreamRefreshes(
       connectionId: UUID,
+      refreshMode: RefreshMode,
       streamDescriptors: List<StreamDescriptor>,
     ): List<StreamRefresh> {
       return streamDescriptors.map { streamDescriptor ->
-        StreamRefresh(connectionId = connectionId, streamName = streamDescriptor.name, streamNamespace = streamDescriptor.namespace)
+        StreamRefresh(
+          connectionId = connectionId,
+          streamName = streamDescriptor.name,
+          streamNamespace = streamDescriptor.namespace,
+          refreshType = refreshMode.toDBO(),
+        )
       }
     }
+
+    private fun RefreshMode.toDBO(): RefreshType =
+      when (this) {
+        RefreshMode.MERGE -> RefreshType.MERGE
+        RefreshMode.TRUNCATE -> RefreshType.TRUNCATE
+      }
   }
 }

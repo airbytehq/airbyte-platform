@@ -10,10 +10,7 @@ import com.google.cloud.storage.Blob.BlobSourceOption;
 import com.google.cloud.storage.Storage;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.Lists;
-import io.airbyte.commons.string.Strings;
 import java.io.ByteArrayOutputStream;
-import java.io.File;
-import java.io.FileOutputStream;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
@@ -35,36 +32,6 @@ public class GcsLogs implements CloudLogs {
 
   public GcsLogs(final Supplier<Storage> gcsClientFactory) {
     this.gcsClientFactory = gcsClientFactory;
-  }
-
-  @Override
-  public File downloadCloudLog(final LogConfigs configs, final String logPath) throws IOException {
-    return getFile(configs, logPath, LogClientSingleton.DEFAULT_PAGE_SIZE);
-  }
-
-  private File getFile(final LogConfigs configs, final String logPath, final int pageSize) throws IOException {
-    return getFile(getOrCreateGcsClient(), configs, logPath, pageSize);
-  }
-
-  @VisibleForTesting
-  static File getFile(final Storage gcsClient, final LogConfigs configs, final String logPath, final int pageSize) throws IOException {
-    LOGGER.debug("Retrieving logs from GCS path: {}", logPath);
-
-    LOGGER.debug("Start GCS list request.");
-    final Page<Blob> blobs = gcsClient.list(
-        configs.getStorageConfig().getBuckets().getLog(),
-        Storage.BlobListOption.prefix(logPath),
-        Storage.BlobListOption.pageSize(pageSize));
-
-    final var randomName = Strings.addRandomSuffix("logs", "-", 5);
-    final var tmpOutputFile = new File("/tmp/" + randomName);
-    final var os = new FileOutputStream(tmpOutputFile);
-    LOGGER.debug("Start getting GCS objects.");
-    // Objects are returned in lexicographical order.
-    blobs.iterateAll().forEach(blob -> blob.downloadTo(os));
-    os.close();
-    LOGGER.debug("Done retrieving GCS logs: {}.", logPath);
-    return tmpOutputFile;
   }
 
   @Override

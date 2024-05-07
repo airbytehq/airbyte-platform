@@ -53,6 +53,7 @@ import io.airbyte.config.persistence.domain.StreamRefresh;
 import io.airbyte.config.persistence.helper.CatalogGenerationSetter;
 import io.airbyte.config.persistence.helper.GenerationBumper;
 import io.airbyte.config.provider.ResourceRequirementsProvider;
+import io.airbyte.db.instance.configs.jooq.generated.enums.RefreshType;
 import io.airbyte.featureflag.ActivateRefreshes;
 import io.airbyte.featureflag.DestResourceOverrides;
 import io.airbyte.featureflag.FeatureFlagClient;
@@ -295,7 +296,7 @@ class DefaultJobCreatorTest {
     when(jobPersistence.enqueueJob(expectedScope, jobConfig)).thenReturn(Optional.of(JOB_ID));
 
     List<StreamRefresh> refreshes =
-        List.of(new StreamRefresh(UUID.randomUUID(), STANDARD_SYNC.getConnectionId(), streamToRefresh, streamNamespace, null));
+        List.of(new StreamRefresh(UUID.randomUUID(), STANDARD_SYNC.getConnectionId(), streamToRefresh, streamNamespace, null, RefreshType.TRUNCATE));
     List<StreamDescriptor> refreshesSD =
         List.of(new StreamDescriptor().withName(streamToRefresh).withNamespace(streamNamespace));
 

@@ -13,10 +13,7 @@ import io.airbyte.commons.envvar.EnvVar;
 import io.airbyte.config.storage.DefaultGcsClientFactory;
 import io.airbyte.config.storage.GcsStorageConfig;
 import io.airbyte.config.storage.StorageBucketConfig;
-import java.io.File;
 import java.io.IOException;
-import java.nio.file.Files;
-import java.util.ArrayList;
 import java.util.List;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
@@ -24,6 +21,8 @@ import org.mockito.Mockito;
 
 @Tag("logger-client")
 class GcsLogsIntTest {
+
+  private final GcsLogs gcsLogs = new GcsLogs(GcsLogsIntTest::getClientFactory);
 
   private static Storage getClientFactory() {
     return new DefaultGcsClientFactory(new GcsStorageConfig(
@@ -43,10 +42,7 @@ class GcsLogsIntTest {
     when(logConfigs.getStorageConfig()).thenReturn(gcsConfig);
     when(gcsConfig.getBuckets().getLog()).thenReturn(System.getenv(EnvVar.STORAGE_BUCKET_LOG.name()));
 
-    final File data;
-    data = GcsLogs.getFile(getClientFactory(), logConfigs, "paginate", 6);
-    final var retrieved = new ArrayList<String>();
-    Files.lines(data.toPath()).forEach(retrieved::add);
+    final var retrieved = gcsLogs.tailCloudLog(logConfigs, "paginate", 6);
 
     final var expected = List.of("Line 0", "Line 1", "Line 2", "Line 3", "Line 4", "Line 5", "Line 6", "Line 7", "Line 8");
 
@@ -68,7 +64,7 @@ class GcsLogsIntTest {
     when(logConfigs.getStorageConfig()).thenReturn(gcsConfig);
     when(gcsConfig.getBuckets().getLog()).thenReturn(System.getenv(EnvVar.STORAGE_BUCKET_LOG.name()));
 
-    final var data = new GcsLogs(GcsLogsIntTest::getClientFactory).tailCloudLog(logConfigs, "tail", 6);
+    final var data = gcsLogs.tailCloudLog(logConfigs, "tail", 6);
 
     final var expected = List.of("Line 4", "Line 5", "Line 6", "Line 7", "Line 8", "Line 9");
     assertEquals(data, expected);

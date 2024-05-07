@@ -15,7 +15,6 @@ import com.google.api.gax.paging.Page;
 import com.google.cloud.storage.Blob;
 import com.google.cloud.storage.Blob.BlobSourceOption;
 import com.google.cloud.storage.Storage;
-import com.google.common.io.Files;
 import io.airbyte.config.storage.GcsStorageConfig;
 import java.io.IOException;
 import java.io.OutputStream;
@@ -184,10 +183,8 @@ class GcsLogsTest {
       return null;
     }).when(blob3).downloadTo(Mockito.any(OutputStream.class));
 
-    when(storage.list(
-        bucketName,
-        Storage.BlobListOption.prefix(logPath),
-        Storage.BlobListOption.pageSize(LogClientSingleton.DEFAULT_PAGE_SIZE))).thenReturn(page);
+    when(storage.list(bucketName, Storage.BlobListOption.prefix(logPath))).thenReturn(page);
+    when(page.iterateAll()).thenReturn(iterable);
 
     when(page.iterateAll()).thenReturn(iterable);
     // Ensure the mock iterable's forEach method returns all three mocked blobs.
@@ -199,11 +196,11 @@ class GcsLogsTest {
     }).when(iterable).forEach(Mockito.any(Consumer.class));
 
     final var gcsLogs = new GcsLogs(() -> storage);
-    final var logs = gcsLogs.downloadCloudLog(logConfigs, logPath);
+    final var logs = gcsLogs.tailCloudLog(logConfigs, logPath, Integer.MAX_VALUE);
     assertNotNull(logs, "log must not be null");
 
     final var expected = List.of("line 1", "line 2", "line 3", "line 4", "line 5", "line 6", "line 7", "line 8", "line 9");
-    assertEquals(expected, Files.readLines(logs, StandardCharsets.UTF_8));
+    assertEquals(expected, logs);
   }
 
 }

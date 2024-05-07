@@ -13,6 +13,7 @@ import io.airbyte.commons.json.Jsons;
 import io.airbyte.config.StateType;
 import io.airbyte.config.StateWrapper;
 import io.airbyte.config.persistence.domain.StreamRefresh;
+import io.airbyte.db.instance.configs.jooq.generated.enums.RefreshType;
 import io.airbyte.protocol.models.AirbyteGlobalState;
 import io.airbyte.protocol.models.AirbyteStateMessage;
 import io.airbyte.protocol.models.AirbyteStreamState;
@@ -58,7 +59,7 @@ public class RefreshJobStateUpdaterTest {
         .withStateMessages(Arrays.asList(stateMessageFromRefreshStream, stateMessageFromNonRefreshStream));
 
     refreshJobStateUpdater.updateStateWrapperForRefresh(connectionId, stateWrapper,
-        List.of(new StreamRefresh(UUID.randomUUID(), connectionId, streamToRefresh, streamNamespace, null)));
+        List.of(new StreamRefresh(UUID.randomUUID(), connectionId, streamToRefresh, streamNamespace, null, RefreshType.TRUNCATE)));
     final StateWrapper expected =
         new StateWrapper().withStateType(StateType.STREAM).withStateMessages(Collections.singletonList(stateMessageFromNonRefreshStream));
     verify(statePersistence).updateOrCreateState(connectionId, expected);
@@ -92,7 +93,7 @@ public class RefreshJobStateUpdaterTest {
             new AirbyteGlobalState().withSharedState(sharedState).withStreamStates(Collections.singletonList(stateMessageFromNonRefreshStream)));
 
     refreshJobStateUpdater.updateStateWrapperForRefresh(connectionId, stateWrapper,
-        List.of(new StreamRefresh(UUID.randomUUID(), connectionId, streamToRefresh, streamNamespace, null)));
+        List.of(new StreamRefresh(UUID.randomUUID(), connectionId, streamToRefresh, streamNamespace, null, RefreshType.TRUNCATE)));
 
     final StateWrapper expected = new StateWrapper().withStateType(StateType.GLOBAL).withGlobal(expectedStateMessage);
     verify(statePersistence).updateOrCreateState(connectionId, expected);
@@ -123,8 +124,8 @@ public class RefreshJobStateUpdaterTest {
     final StateWrapper stateWrapper = new StateWrapper().withStateType(StateType.GLOBAL).withGlobal(existingStateMessage);
 
     refreshJobStateUpdater.updateStateWrapperForRefresh(connectionId, stateWrapper,
-        List.of(new StreamRefresh(UUID.randomUUID(), connectionId, streamToRefresh, streamNamespace, null),
-            new StreamRefresh(UUID.randomUUID(), connectionId, streamToRefresh2, streamNamespace, null)));
+        List.of(new StreamRefresh(UUID.randomUUID(), connectionId, streamToRefresh, streamNamespace, null, RefreshType.TRUNCATE),
+            new StreamRefresh(UUID.randomUUID(), connectionId, streamToRefresh2, streamNamespace, null, RefreshType.TRUNCATE)));
     final AirbyteStateMessage expectedStateMessage = new AirbyteStateMessage()
         .withType(AirbyteStateMessage.AirbyteStateType.GLOBAL)
         .withGlobal(new AirbyteGlobalState().withSharedState(null).withStreamStates(Collections.emptyList()));

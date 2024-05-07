@@ -145,6 +145,7 @@ public class ConnectionApiController implements ConnectionApi {
   public BooleanRead refreshConnectionStream(@Body final ConnectionStreamRefreshRequestBody connectionStreamRefreshRequestBody) {
     return ApiHelper.execute(() -> new BooleanRead().value(streamRefreshesHandler.createRefreshesForConnection(
         connectionStreamRefreshRequestBody.getConnectionId(),
+        connectionStreamRefreshRequestBody.getRefreshMode(),
         connectionStreamRefreshRequestBody.getStreams() != null ? connectionStreamRefreshRequestBody.getStreams() : new ArrayList<>())));
   }
 

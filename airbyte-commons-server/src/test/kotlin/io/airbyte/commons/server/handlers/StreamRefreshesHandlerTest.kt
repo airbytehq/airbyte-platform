@@ -1,6 +1,7 @@
 package io.airbyte.commons.server.handlers
 
 import io.airbyte.api.model.generated.ConnectionStream
+import io.airbyte.api.model.generated.RefreshMode
 import io.airbyte.commons.server.handlers.StreamRefreshesHandler.Companion.connectionStreamsToStreamDescriptors
 import io.airbyte.commons.server.handlers.StreamRefreshesHandler.Companion.streamDescriptorsToStreamRefreshes
 import io.airbyte.commons.server.scheduler.EventRunner
@@ -9,6 +10,7 @@ import io.airbyte.config.persistence.StreamRefreshesRepository
 import io.airbyte.config.persistence.domain.StreamRefresh
 import io.airbyte.data.services.ConnectionService
 import io.airbyte.data.services.WorkspaceService
+import io.airbyte.db.instance.configs.jooq.generated.enums.RefreshType
 import io.airbyte.featureflag.ActivateRefreshes
 import io.airbyte.featureflag.Connection
 import io.airbyte.featureflag.FeatureFlagClient
@@ -26,6 +28,8 @@ import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.params.ParameterizedTest
+import org.junit.jupiter.params.provider.EnumSource
 import java.util.UUID
 
 internal class StreamRefreshesHandlerTest {
@@ -76,7 +80,7 @@ internal class StreamRefreshesHandlerTest {
   fun `test that nothing is submitted if the flag is disabled`() {
     every { featureFlagClient.boolVariation(ActivateRefreshes, ffContext) } returns false
 
-    val result = streamRefreshesHandler.createRefreshesForConnection(connectionId, listOf())
+    val result = streamRefreshesHandler.createRefreshesForConnection(connectionId, RefreshMode.TRUNCATE, listOf())
 
     assertFalse(result)
 
@@ -94,7 +98,7 @@ internal class StreamRefreshesHandlerTest {
     every { streamRefreshesRepository.saveAll(any<List<StreamRefresh>>()) } returns listOf()
     every { eventRunner.startNewManualSync(connectionId) } returns null
 
-    val result = streamRefreshesHandler.createRefreshesForConnection(connectionId, connectionStream)
+    val result = streamRefreshesHandler.createRefreshesForConnection(connectionId, RefreshMode.TRUNCATE, connectionStream)
 
     assertTrue(result)
 
@@ -111,7 +115,7 @@ internal class StreamRefreshesHandlerTest {
     every { eventRunner.startNewManualSync(connectionId) } returns null
     every { connectionService.getAllStreamsForConnection(connectionId) } returns streamDescriptors
 
-    val result = streamRefreshesHandler.createRefreshesForConnection(connectionId, listOf())
+    val result = streamRefreshesHandler.createRefreshesForConnection(connectionId, RefreshMode.TRUNCATE, listOf())
 
     assertTrue(result)
 
@@ -128,19 +132,21 @@ internal class StreamRefreshesHandlerTest {
     assertEquals(streamDescriptors, result)
   }
 
-  @Test
-  fun `test the conversion from stream descriptors to stream refreshes`() {
-    val expected =
-      listOf(
-        StreamRefresh(connectionId = connectionId, streamName = "name1", streamNamespace = "namespace1"),
-        StreamRefresh(connectionId = connectionId, streamName = "name2", streamNamespace = null),
-      )
+  @ParameterizedTest
+  @EnumSource(RefreshMode::class)
+  fun `test the conversion from stream descriptors to stream refreshes`(refreshMode: RefreshMode) {
+    val expectedRefreshType =
+      when (refreshMode) {
+        RefreshMode.TRUNCATE -> RefreshType.TRUNCATE
+        RefreshMode.MERGE -> RefreshType.MERGE
+      }
 
-    val result = streamDescriptorsToStreamRefreshes(connectionId, streamDescriptors)
+    val result = streamDescriptorsToStreamRefreshes(connectionId, refreshMode, streamDescriptors)
 
     assertEquals(2, result.size)
     result.stream().forEach({
       assertEquals(connectionId, it.connectionId)
+      assertEquals(expectedRefreshType, it.refreshType)
       if (it.streamNamespace == null) {
         assertEquals("name2", it.streamName)
       } else if (it.streamNamespace == "namespace1") {
