@@ -66,6 +66,7 @@ class ActorDefinitionPersistenceTest extends BaseConfigDatabaseTest {
   private static final String DOCKER_IMAGE_TAG = "0.0.1";
 
   private ConfigRepository configRepository;
+  private ActorDefinitionService actorDefinitionService;
 
   @BeforeEach
   void setup() throws SQLException, IOException {
@@ -81,7 +82,7 @@ class ActorDefinitionPersistenceTest extends BaseConfigDatabaseTest {
     final ScopedConfigurationService scopedConfigurationService = mock(ScopedConfigurationService.class);
 
     final ConnectionService connectionService = new ConnectionServiceJooqImpl(database);
-    final ActorDefinitionService actorDefinitionService = new ActorDefinitionServiceJooqImpl(database);
+    actorDefinitionService = new ActorDefinitionServiceJooqImpl(database);
     final ActorDefinitionVersionUpdater actorDefinitionVersionUpdater =
         new ActorDefinitionVersionUpdater(featureFlagClient, connectionService, actorDefinitionService, scopedConfigurationService);
     final OrganizationService organizationService = new OrganizationServiceJooqImpl(database);
@@ -352,7 +353,7 @@ class ActorDefinitionPersistenceTest extends BaseConfigDatabaseTest {
     configRepository.writeConnectorMetadata(sourceDef2, sourceVer2);
     configRepository.writeConnectorMetadata(sourceDef3, sourceVer3);
 
-    final int updatedDefinitions = configRepository
+    final int updatedDefinitions = actorDefinitionService
         .updateActorDefinitionsDockerImageTag(List.of(sourceDef1.getSourceDefinitionId(), sourceDef2.getSourceDefinitionId()), targetImageTag);
 
     assertEquals(1, updatedDefinitions);

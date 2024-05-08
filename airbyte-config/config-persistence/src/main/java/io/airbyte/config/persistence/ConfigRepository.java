@@ -39,7 +39,6 @@ import io.airbyte.data.services.SourceService;
 import io.airbyte.data.services.WorkspaceService;
 import io.airbyte.protocol.models.AirbyteCatalog;
 import io.airbyte.protocol.models.ConfiguredAirbyteCatalog;
-import io.airbyte.protocol.models.ConnectorSpecification;
 import io.airbyte.protocol.models.StreamDescriptor;
 import io.airbyte.validation.json.JsonValidationException;
 import jakarta.annotation.Nonnull;
@@ -469,18 +468,6 @@ public class ConfigRepository {
     } catch (final io.airbyte.data.exceptions.ConfigNotFoundException e) {
       throw new ConfigNotFoundException(e.getType(), e.getConfigId());
     }
-  }
-
-  /**
-   * Update the docker image tag for multiple actor definitions at once.
-   *
-   * @param actorDefinitionIds the list of actor definition ids to update
-   * @param targetImageTag the new docker image tag for these actor definitions
-   * @throws IOException - you never know when you IO
-   */
-  @Deprecated
-  public int updateActorDefinitionsDockerImageTag(final List<UUID> actorDefinitionIds, final String targetImageTag) throws IOException {
-    return actorDefinitionService.updateActorDefinitionsDockerImageTag(actorDefinitionIds, targetImageTag);
   }
 
   /**
@@ -1756,91 +1743,6 @@ public class ConfigRepository {
   }
 
   /**
-   * Update an actor_definition, active_declarative_manifest and create declarative_manifest.
-   * <p>
-   * Note that based on this signature, two problems might occur if the user of this method is not
-   * diligent. This was done because we value more separation of concerns than consistency of the API
-   * of this method. The problems are:
-   *
-   * <pre>
-   * <ul>
-   *   <li>DeclarativeManifest.manifest could be different from the one injected ActorDefinitionConfigInjection.</li>
-   *   <li>DeclarativeManifest.spec could be different from ConnectorSpecification.connectionSpecification</li>
-   * </ul>
-   * </pre>
-   * <p>
-   * Since we decided not to validate this using the signature of the method, we will validate that
-   * runtime and IllegalArgumentException if there is a mismatch.
-   * <p>
-   * The reasoning behind this reasoning is the following: Benefits: Alignment with platform's
-   * definition of the repository. Drawbacks: We will need a method
-   * configRepository.setDeclarativeSourceActiveVersion(sourceDefinitionId, version, manifest, spec);
-   * where version and (manifest, spec) might not be consistent i.e. that a user of this method could
-   * call it with configRepository.setDeclarativeSourceActiveVersion(sourceDefinitionId, version_10,
-   * manifest_of_version_7, spec_of_version_12); However, we agreed that this was very unlikely.
-   * <p>
-   * Note that this is all in the context of data consistency i.e. that we want to do this in one
-   * transaction. When we split this in many services, we will need to rethink data consistency.
-   *
-   * @param declarativeManifest declarative manifest version to create and make active
-   * @param configInjection configInjection for the manifest
-   * @param connectorSpecification connectorSpecification associated with the declarativeManifest
-   *        being created
-   * @throws IOException exception while interacting with db
-   * @throws IllegalArgumentException if there is a mismatch between the different arguments
-   */
-  @Deprecated
-  public void createDeclarativeManifestAsActiveVersion(final DeclarativeManifest declarativeManifest,
-                                                       final ActorDefinitionConfigInjection configInjection,
-                                                       final ConnectorSpecification connectorSpecification)
-      throws IOException {
-    connectorBuilderService.createDeclarativeManifestAsActiveVersion(declarativeManifest, configInjection, connectorSpecification);
-  }
-
-  /**
-   * Update an actor_definition, active_declarative_manifest and create declarative_manifest.
-   * <p>
-   * Note that based on this signature, two problems might occur if the user of this method is not
-   * diligent. This was done because we value more separation of concerns than consistency of the API
-   * of this method. The problems are:
-   *
-   * <pre>
-   * <ul>
-   *   <li>DeclarativeManifest.manifest could be different from the one injected ActorDefinitionConfigInjection.</li>
-   *   <li>DeclarativeManifest.spec could be different from ConnectorSpecification.connectionSpecification</li>
-   * </ul>
-   * </pre>
-   * <p>
-   * At that point, we can only hope the user won't cause data consistency issue using this method
-   * <p>
-   * The reasoning behind this reasoning is the following: Benefits: Alignment with platform's
-   * definition of the repository. Drawbacks: We will need a method
-   * configRepository.setDeclarativeSourceActiveVersion(sourceDefinitionId, version, manifest, spec);
-   * where version and (manifest, spec) might not be consistent i.e. that a user of this method could
-   * call it with configRepository.setDeclarativeSourceActiveVersion(sourceDefinitionId, version_10,
-   * manifest_of_version_7, spec_of_version_12); However, we agreed that this was very unlikely.
-   * <p>
-   * Note that this is all in the context of data consistency i.e. that we want to do this in one
-   * transaction. When we split this in many services, we will need to rethink data consistency.
-   *
-   * @param sourceDefinitionId actor definition to update
-   * @param version the version of the manifest to make active. declarative_manifest.version must
-   *        already exist
-   * @param configInjection configInjection for the manifest
-   * @param connectorSpecification connectorSpecification associated with the declarativeManifest
-   *        being made active
-   * @throws IOException exception while interacting with db
-   */
-  @Deprecated
-  public void setDeclarativeSourceActiveVersion(final UUID sourceDefinitionId,
-                                                final Long version,
-                                                final ActorDefinitionConfigInjection configInjection,
-                                                final ConnectorSpecification connectorSpecification)
-      throws IOException {
-    connectorBuilderService.setDeclarativeSourceActiveVersion(sourceDefinitionId, version, configInjection, connectorSpecification);
-  }
-
-  /**
    * Load all config injection for an actor definition.
    *
    * @param actorDefinitionId id of the actor definition to fetch
@@ -1866,18 +1768,6 @@ public class ConfigRepository {
   }
 
   /**
-   * Insert a declarative manifest. If DECLARATIVE_MANIFEST.ACTOR_DEFINITION_ID and
-   * DECLARATIVE_MANIFEST.VERSION is already in the DB, an exception will be thrown
-   *
-   * @param declarativeManifest declarative manifest to insert
-   * @throws IOException exception while interacting with db
-   */
-  @Deprecated
-  public void insertDeclarativeManifest(final DeclarativeManifest declarativeManifest) throws IOException {
-    connectorBuilderService.insertDeclarativeManifest(declarativeManifest);
-  }
-
-  /**
    * Insert a declarative manifest and its associated active declarative manifest. If
    * DECLARATIVE_MANIFEST.ACTOR_DEFINITION_ID and DECLARATIVE_MANIFEST.VERSION is already in the DB,
    * an exception will be thrown
@@ -1888,36 +1778,6 @@ public class ConfigRepository {
   @Deprecated
   public void insertActiveDeclarativeManifest(final DeclarativeManifest declarativeManifest) throws IOException {
     connectorBuilderService.insertActiveDeclarativeManifest(declarativeManifest);
-  }
-
-  /**
-   * Read all declarative manifests by actor definition id without the manifest column.
-   *
-   * @param actorDefinitionId actor definition id
-   * @throws IOException exception while interacting with db
-   */
-  @Deprecated
-  public Stream<DeclarativeManifest> getDeclarativeManifestsByActorDefinitionId(final UUID actorDefinitionId) throws IOException {
-    return connectorBuilderService.getDeclarativeManifestsByActorDefinitionId(actorDefinitionId);
-  }
-
-  /**
-   * Read declarative manifest by actor definition id and version with manifest column.
-   *
-   * @param actorDefinitionId actor definition id
-   * @param version the version of the declarative manifest
-   * @throws IOException exception while interacting with db
-   * @throws ConfigNotFoundException exception if no match on DECLARATIVE_MANIFEST.ACTOR_DEFINITION_ID
-   *         and DECLARATIVE_MANIFEST.VERSION
-   */
-  @Deprecated
-  public DeclarativeManifest getDeclarativeManifestByActorDefinitionIdAndVersion(final UUID actorDefinitionId, final long version)
-      throws IOException, ConfigNotFoundException {
-    try {
-      return connectorBuilderService.getDeclarativeManifestByActorDefinitionIdAndVersion(actorDefinitionId, version);
-    } catch (final io.airbyte.data.exceptions.ConfigNotFoundException e) {
-      throw new ConfigNotFoundException(e.getType(), e.getConfigId());
-    }
   }
 
   /**
@@ -1937,16 +1797,6 @@ public class ConfigRepository {
     } catch (final io.airbyte.data.exceptions.ConfigNotFoundException e) {
       throw new ConfigNotFoundException(e.getType(), e.getConfigId());
     }
-  }
-
-  /**
-   * Read all actor definition ids which have an active declarative manifest pointing to them.
-   *
-   * @throws IOException exception while interacting with db
-   */
-  @Deprecated
-  public Stream<UUID> getActorDefinitionIdsWithActiveDeclarativeManifest() throws IOException {
-    return connectorBuilderService.getActorDefinitionIdsWithActiveDeclarativeManifest();
   }
 
   /**

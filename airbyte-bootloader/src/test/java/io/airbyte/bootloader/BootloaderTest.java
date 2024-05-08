@@ -149,6 +149,7 @@ class BootloaderTest {
     val connectionService = new ConnectionServiceJooqImpl(configDatabase);
     val actorDefinitionService = new ActorDefinitionServiceJooqImpl(configDatabase);
     val scopedConfigurationService = mock(ScopedConfigurationService.class);
+    val connectorBuilderService = new ConnectorBuilderServiceJooqImpl(configDatabase);
     val actorDefinitionVersionUpdater = new ActorDefinitionVersionUpdater(
         featureFlagClient,
         connectionService,
@@ -177,7 +178,7 @@ class BootloaderTest {
         new ActorDefinitionServiceJooqImpl(configDatabase),
         new CatalogServiceJooqImpl(configDatabase),
         connectionService,
-        new ConnectorBuilderServiceJooqImpl(configDatabase),
+        connectorBuilderService,
         destinationService,
         new OAuthServiceJooqImpl(configDatabase,
             featureFlagClient,
@@ -209,7 +210,7 @@ class BootloaderTest {
             metricClient, supportStateUpdater);
     final CdkVersionProvider cdkVersionProvider = mock(CdkVersionProvider.class);
     when(cdkVersionProvider.getCdkVersion()).thenReturn(CDK_VERSION);
-    val declarativeSourceUpdater = new DeclarativeSourceUpdater(configRepository, cdkVersionProvider);
+    val declarativeSourceUpdater = new DeclarativeSourceUpdater(connectorBuilderService, actorDefinitionService, cdkVersionProvider);
     val postLoadExecutor =
         new DefaultPostLoadExecutor(applyDefinitionsHelper, declarativeSourceUpdater);
 
@@ -254,6 +255,7 @@ class BootloaderTest {
     val connectionService = new ConnectionServiceJooqImpl(configDatabase);
     val actorDefinitionService = new ActorDefinitionServiceJooqImpl(configDatabase);
     val scopedConfigurationService = mock(ScopedConfigurationService.class);
+    val connectorBuilderService = new ConnectorBuilderServiceJooqImpl(configDatabase);
     val actorDefinitionVersionUpdater = new ActorDefinitionVersionUpdater(
         featureFlagClient,
         connectionService,
@@ -282,7 +284,7 @@ class BootloaderTest {
         new ActorDefinitionServiceJooqImpl(configDatabase),
         new CatalogServiceJooqImpl(configDatabase),
         connectionService,
-        new ConnectorBuilderServiceJooqImpl(configDatabase),
+        connectorBuilderService,
         destinationService,
         new OAuthServiceJooqImpl(configDatabase,
             featureFlagClient,
@@ -314,7 +316,7 @@ class BootloaderTest {
             metricClient, supportStateUpdater);
     final CdkVersionProvider cdkVersionProvider = mock(CdkVersionProvider.class);
     when(cdkVersionProvider.getCdkVersion()).thenReturn(CDK_VERSION);
-    val declarativeSourceUpdater = new DeclarativeSourceUpdater(configRepository, cdkVersionProvider);
+    val declarativeSourceUpdater = new DeclarativeSourceUpdater(connectorBuilderService, actorDefinitionService, cdkVersionProvider);
     val postLoadExecutor = new DefaultPostLoadExecutor(applyDefinitionsHelper, declarativeSourceUpdater);
 
     val bootloader =
@@ -388,6 +390,7 @@ class BootloaderTest {
     val connectionService = new ConnectionServiceJooqImpl(configDatabase);
     val actorDefinitionService = new ActorDefinitionServiceJooqImpl(configDatabase);
     val scopedConfigurationService = mock(ScopedConfigurationService.class);
+    val connectorBuilderService = new ConnectorBuilderServiceJooqImpl(configDatabase);
     val actorDefinitionVersionUpdater = new ActorDefinitionVersionUpdater(
         featureFlagClient,
         connectionService,
@@ -397,7 +400,7 @@ class BootloaderTest {
         new ActorDefinitionServiceJooqImpl(configDatabase),
         new CatalogServiceJooqImpl(configDatabase),
         connectionService,
-        new ConnectorBuilderServiceJooqImpl(configDatabase),
+        connectorBuilderService,
         new DestinationServiceJooqImpl(configDatabase,
             featureFlagClient,
             mock(SecretsRepositoryReader.class),
