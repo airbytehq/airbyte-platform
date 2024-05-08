@@ -6,6 +6,7 @@ package io.airbyte.commons.jackson;
 
 import com.fasterxml.jackson.core.JsonGenerator.Feature;
 import com.fasterxml.jackson.databind.DeserializationFeature;
+import com.fasterxml.jackson.databind.MapperFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 
@@ -23,10 +24,23 @@ public class MoreMappers {
    * @return object mapper
    */
   public static ObjectMapper initMapper() {
-    final ObjectMapper result = new ObjectMapper().registerModule(new JavaTimeModule());
-    result.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
-    result.configure(Feature.WRITE_BIGDECIMAL_AS_PLAIN, true);
-    return result;
+    return configure(new ObjectMapper());
+  }
+
+  /**
+   * Configures the {@link ObjectMapper}.
+   *
+   * @param objectMapper An {@link ObjectMapper}.
+   * @return The configured {@link ObjectMapper} if not {@code null}.
+   */
+  public static ObjectMapper configure(final ObjectMapper objectMapper) {
+    if (objectMapper != null) {
+      objectMapper.registerModule(new JavaTimeModule())
+          .enable(MapperFeature.ACCEPT_CASE_INSENSITIVE_ENUMS)
+          .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false)
+          .configure(Feature.WRITE_BIGDECIMAL_AS_PLAIN, true);
+    }
+    return objectMapper;
   }
 
 }

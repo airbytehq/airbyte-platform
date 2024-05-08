@@ -8,16 +8,19 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import io.airbyte.micronaut.temporal.TemporalProxyHelper;
+import io.airbyte.workers.temporal.converter.AirbyteTemporalDataConverter;
 import io.airbyte.workers.temporal.sync.SyncWorkflowImpl;
 import io.micronaut.context.BeanRegistration;
 import io.micronaut.inject.BeanIdentifier;
 import io.temporal.activity.ActivityOptions;
 import io.temporal.common.RetryOptions;
+import io.temporal.common.converter.GlobalDataConverter;
 import io.temporal.testing.WorkflowReplayer;
 import java.io.File;
 import java.net.URL;
 import java.time.Duration;
 import java.util.List;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -26,6 +29,12 @@ import org.junit.jupiter.api.Test;
 class WorkflowReplayingTest {
 
   private TemporalProxyHelper temporalProxyHelper;
+
+  @BeforeAll
+  static void beforeAll() {
+    // Register the custom data converter configured to work with Airbyte JSON
+    GlobalDataConverter.register(new AirbyteTemporalDataConverter());
+  }
 
   @BeforeEach
   void setUp() {
