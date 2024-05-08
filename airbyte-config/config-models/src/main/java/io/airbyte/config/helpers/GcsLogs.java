@@ -147,7 +147,6 @@ public class GcsLogs implements CloudLogs {
   }
 
   @Override
-  @Trace
   public List<String> tailCloudLog(final LogConfigs configs,
                                    final String logPath,
                                    final int numLines,
@@ -168,17 +167,13 @@ public class GcsLogs implements CloudLogs {
     LOGGER.debug("Start getting GCS objects.");
     final List<String> retVal;
     if (featureFlagClient.boolVariation(DownloadGcsLogsInParallel.INSTANCE, new Workspace(ANONYMOUS))) {
-      retVal = tailCloudLogInParallel(descending, logPath, numLines);
+      return tailCloudLogInParallel(descending, logPath, numLines);
     } else {
-      retVal = tailCloudLogSerially(descending, logPath, numLines);
+      return tailCloudLogSerially(descending, logPath, numLines);
     }
-    final var activeSpan = GlobalTracer.get().activeSpan();
-    activeSpan.setTag("airbyte.metadata.logPath", logPath);
-    activeSpan.setTag("airbyte.metadata.requestedLineCount", numLines);
-    activeSpan.setTag("airbyte.metadata.returnedLineCount", retVal.size());
-    return retVal;
   }
 
+  @Trace
   private List<String> tailCloudLogSerially(final List<Blob> descendingTimestampBlobs, final String logPath, final int numLines) throws IOException {
     final var inMemoryData = new ByteArrayOutputStream();
     final List<String> lines = new ArrayList<>();
@@ -205,9 +200,15 @@ public class GcsLogs implements CloudLogs {
 
     LOGGER.debug("Done retrieving GCS logs: {}.", logPath);
     // finally reverse the lines so they're returned in ascending order
+    final var activeSpan = GlobalTracer.get().activeSpan();
+    activeSpan.setTag("airbyte.metadata.logPath", logPath);
+    activeSpan.setTag("airbyte.metadata.requestedLineCount", numLines);
+    activeSpan.setTag("airbyte.metadata.returnedLineCount", lines.size());
+    activeSpan.setTag("airbyte.metadata.blobCount", descendingTimestampBlobs.size());
     return Lists.reverse(lines);
   }
 
+  @Trace
   private List<String> tailCloudLogInParallel(final List<Blob> descendingTimestampBlobs, final String logPath, final int numLines)
       throws IOException {
     LOGGER.debug("Tailing {} lines from logs from GCS path: {}", numLines, logPath);
@@ -246,6 +247,12 @@ public class GcsLogs implements CloudLogs {
         lines.addAll(0, linesInCurrentBlob);
         LOGGER.debug("read {} lines so far", lines.size());
       }
+
+      final var activeSpan = GlobalTracer.get().activeSpan();
+      activeSpan.setTag("airbyte.metadata.logPath", logPath);
+      activeSpan.setTag("airbyte.metadata.requestedLineCount", numLines);
+      activeSpan.setTag("airbyte.metadata.returnedLineCount", lines.size());
+      activeSpan.setTag("airbyte.metadata.blobCount", descendingTimestampBlobs.size());
     }
 
     LOGGER.debug("Done retrieving GCS logs: {}. Read {} lines, needed {}", logPath, lines.size(), numLines);
