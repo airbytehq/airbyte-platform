@@ -65,7 +65,7 @@ import { useSuspenseQuery } from "../useSuspenseQuery";
 
 const connectionsKeys = {
   all: [SCOPE_WORKSPACE, "connections"] as const,
-  lists: (sourceOrDestinationIds: string[] = []) => [...connectionsKeys.all, "list", ...sourceOrDestinationIds],
+  lists: (filters: string[] = []) => [...connectionsKeys.all, "list", ...filters],
   detail: (connectionId: string) => [...connectionsKeys.all, "details", connectionId] as const,
   dataHistory: (connectionId: string) => [...connectionsKeys.all, "dataHistory", connectionId] as const,
   uptimeHistory: (connectionId: string) => [...connectionsKeys.all, "uptimeHistory", connectionId] as const,
@@ -304,9 +304,10 @@ export const useCreateConnection = () => {
     },
     {
       onSuccess: (data) => {
-        queryClient.setQueryData<WebBackendConnectionReadList>(connectionsKeys.lists(), (lst) => ({
+        queryClient.setQueriesData<WebBackendConnectionReadList>(connectionsKeys.lists(), (lst) => ({
           connections: [data, ...(lst?.connections ?? [])],
         }));
+
         invalidateWorkspaceSummary();
       },
     }
@@ -332,7 +333,7 @@ export const useDeleteConnection = () => {
         });
 
         queryClient.removeQueries(connectionsKeys.detail(connection.connectionId));
-        queryClient.setQueryData<WebBackendConnectionReadList>(connectionsKeys.lists(), (lst) => ({
+        queryClient.setQueriesData<WebBackendConnectionReadList>(connectionsKeys.lists(), (lst) => ({
           connections: lst?.connections.filter((conn) => conn.connectionId !== connection.connectionId) ?? [],
         }));
       },
@@ -354,16 +355,18 @@ export const useUpdateConnection = () => {
       onSuccess: (updatedConnection) => {
         queryClient.setQueryData(connectionsKeys.detail(updatedConnection.connectionId), updatedConnection);
         // Update the connection inside the connections list response
-        queryClient.setQueryData<WebBackendConnectionReadList>(connectionsKeys.lists(), (ls) => ({
-          ...ls,
-          connections:
-            ls?.connections.map((conn) => {
-              if (conn.connectionId === updatedConnection.connectionId) {
-                return updatedConnection;
-              }
-              return conn;
-            }) ?? [],
-        }));
+        queryClient.setQueriesData<WebBackendConnectionReadList>(connectionsKeys.lists(), (ls) => {
+          return {
+            ...ls,
+            connections:
+              ls?.connections.map((conn) => {
+                if (conn.connectionId === updatedConnection.connectionId) {
+                  return updatedConnection;
+                }
+                return conn;
+              }) ?? [],
+          };
+        });
       },
       onError: (error: Error) => {
         // catch error when credits are not enough to enable the connection
@@ -419,7 +422,7 @@ export const useRemoveConnectionsFromList = (): ((connectionIds: string[]) => vo
 
   return useCallback(
     (connectionIds: string[]) => {
-      queryClient.setQueryData<WebBackendConnectionReadList>(connectionsKeys.lists(), (ls) => ({
+      queryClient.setQueriesData<WebBackendConnectionReadList>(connectionsKeys.lists(), (ls) => ({
         ...ls,
         connections: ls?.connections.filter((c) => !connectionIds.includes(c.connectionId)) ?? [],
       }));
