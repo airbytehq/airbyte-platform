@@ -13,12 +13,8 @@ import { useIntent } from "core/utils/rbac";
 
 import { GuestBadge } from "./GuestBadge";
 import { RoleManagementMenu } from "./RoleManagementMenu";
-import {
-  ResourceType,
-  UnifiedWorkspaceUserModel,
-  getWorkspaceAccessLevel,
-} from "../components/useGetAccessManagementData";
-import { UserRoleText } from "../components/UserRoleText";
+import { ResourceType, UnifiedWorkspaceUserModel, getWorkspaceAccessLevel } from "./useGetAccessManagementData";
+import { UserRoleText } from "./UserRoleText";
 
 const ViewOnlyRoleBox: React.FC<{ highestPermissionType: "MEMBER" | "ADMIN" | "READER" | "EDITOR" }> = ({
   highestPermissionType,

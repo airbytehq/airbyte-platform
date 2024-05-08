@@ -8,9 +8,9 @@ import { useCurrentUser } from "core/services/auth";
 import { FeatureItem, useFeature } from "core/services/features";
 import { RbacRoleHierarchy } from "core/utils/rbac/rbacPermissionsQuery";
 
+import { RoleManagementCell } from "./components/RoleManagementCell";
 import { getWorkspaceAccessLevel, UnifiedWorkspaceUserModel } from "./components/useGetAccessManagementData";
 import { UserCell } from "./components/UserCell";
-import { RoleManagementCell } from "./next/RoleManagementCell";
 
 export const WorkspaceUsersTable: React.FC<{
   users: UnifiedWorkspaceUserModel[];

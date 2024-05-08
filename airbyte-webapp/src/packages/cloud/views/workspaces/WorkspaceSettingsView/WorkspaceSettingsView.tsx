@@ -9,9 +9,11 @@ import { useCurrentWorkspace } from "core/api";
 import { useTrackPage, PageTrackingCodes } from "core/services/analytics";
 import { FeatureItem, useFeature } from "core/services/features";
 import { useIntent } from "core/utils/rbac";
+import {
+  DeleteCloudWorkspace,
+  UpdateCloudWorkspaceName,
+} from "pages/SettingsPage/pages/AccessManagementPage/components";
 import WorkspaceAccessManagementSection from "pages/SettingsPage/pages/AccessManagementPage/WorkspaceAccessManagementSection";
-
-import { DeleteCloudWorkspace, UpdateCloudWorkspaceName } from "./components";
 
 export const WorkspaceSettingsView: React.FC = () => {
   useTrackPage(PageTrackingCodes.SETTINGS_WORKSPACE);

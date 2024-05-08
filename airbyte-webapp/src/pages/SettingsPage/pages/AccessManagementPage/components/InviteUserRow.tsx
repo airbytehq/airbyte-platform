@@ -13,17 +13,17 @@ import { PermissionType, WorkspaceUserAccessInfoRead } from "core/api/types/Airb
 import { useCurrentUser } from "core/services/auth";
 import { FeatureItem, useFeature } from "core/services/features";
 import { partitionPermissionType } from "core/utils/rbac/rbacPermissionsQuery";
+
+import { AddUserFormValues } from "./AddUserModal";
+import { disallowedRoles } from "./ChangeRoleMenuItem";
+import { ChangeRoleMenuItemContent } from "./ChangeRoleMenuItemContent";
+import styles from "./InviteUserRow.module.scss";
 import {
   getWorkspaceAccessLevel,
   permissionsByResourceType,
   unifyWorkspaceUserData,
-} from "pages/SettingsPage/pages/AccessManagementPage/components/useGetAccessManagementData";
-import { UserRoleText } from "pages/SettingsPage/pages/AccessManagementPage/components/UserRoleText";
-import { disallowedRoles } from "pages/SettingsPage/pages/AccessManagementPage/next/ChangeRoleMenuItem";
-import { ChangeRoleMenuItemContent } from "pages/SettingsPage/pages/AccessManagementPage/next/ChangeRoleMenuItemContent";
-
-import { AddUserFormValues } from "./AddUserModal";
-import styles from "./InviteUserRow.module.scss";
+} from "./useGetAccessManagementData";
+import { UserRoleText } from "./UserRoleText";
 import { ViewOnlyUserRow } from "./ViewOnlyUserRow";
 
 interface InviteUserRowProps {

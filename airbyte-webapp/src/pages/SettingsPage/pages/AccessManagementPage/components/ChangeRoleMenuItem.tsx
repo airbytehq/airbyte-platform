@@ -6,7 +6,7 @@ import { useCurrentUser } from "core/services/auth";
 
 import styles from "./ChangeRoleMenuItem.module.scss";
 import { ChangeRoleMenuItemContent } from "./ChangeRoleMenuItemContent";
-import { ResourceType, UnifiedWorkspaceUserModel } from "../components/useGetAccessManagementData";
+import { ResourceType, UnifiedWorkspaceUserModel } from "./useGetAccessManagementData";
 
 const useCreateOrUpdateRole = (
   user: UnifiedWorkspaceUserModel,

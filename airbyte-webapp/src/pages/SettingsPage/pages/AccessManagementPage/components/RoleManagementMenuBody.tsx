@@ -14,7 +14,7 @@ import {
   UnifiedWorkspaceUserModel,
   permissionStringDictionary,
   permissionsByResourceType,
-} from "../components/useGetAccessManagementData";
+} from "./useGetAccessManagementData";
 interface RoleManagementMenuBodyProps {
   user: UnifiedWorkspaceUserModel;
   resourceType: ResourceType;
