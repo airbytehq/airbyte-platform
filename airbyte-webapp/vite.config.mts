@@ -1,4 +1,4 @@
-import path from "path";
+import path from "node:path";
 
 import viteYaml from "@modyfi/vite-plugin-yaml";
 import basicSsl from "@vitejs/plugin-basic-ssl";
@@ -76,6 +76,27 @@ export default defineConfig(() => {
     clearScreen: false,
     build: {
       outDir: "build/app",
+      rollupOptions: {
+        output: {
+          chunkFileNames(chunkInfo) {
+            if (chunkInfo.name === "index") {
+              // In case the chunk name would be index, we try to find the next file that this
+              // index file is importing (call stack is in order in chunkInfo.moduleIds) and
+              // use that files name instead.
+              const module = chunkInfo.moduleIds.at(-2);
+              return `assets/${module ? path.basename(module, path.extname(module)) : "[name]"}-[hash].js`;
+            }
+            return "assets/[name]-[hash].js";
+          },
+          manualChunks: (id) => {
+            // Make sure all of `src/core` (and its dependencies) are within one chunk
+            if (id.includes("src/core/")) {
+              return "core";
+            }
+            return null;
+          },
+        },
+      },
     },
     server: {
       host: true,
