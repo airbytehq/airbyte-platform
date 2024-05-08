@@ -36,10 +36,10 @@ describe("pruneUnsupportedModes", () => {
 });
 
 describe("getEnforcedDelivery", () => {
-  it("selects appendChanges when there are no mirrorSource options", () => {
+  it("selects appendChanges when there are no replicateSource options", () => {
     expect(
       getEnforcedDelivery({
-        mirrorSource: [],
+        replicateSource: [],
         appendChanges: [
           [SyncMode.incremental, DestinationSyncMode.append],
           [SyncMode.full_refresh, DestinationSyncMode.append],
@@ -48,41 +48,41 @@ describe("getEnforcedDelivery", () => {
     ).toEqual("appendChanges");
   });
 
-  it("selects nothing when both mirrorSource and appendChanges are empty", () => {
+  it("selects nothing when both replicateSource and appendChanges are empty", () => {
     expect(
       getEnforcedDelivery({
-        mirrorSource: [],
+        replicateSource: [],
         appendChanges: [],
       })
     ).toEqual(undefined);
   });
 
-  it("selects mirrorSource when there are no appendChanges choices", () => {
+  it("selects replicateSource when there are no appendChanges choices", () => {
     expect(
       getEnforcedDelivery({
-        mirrorSource: [
+        replicateSource: [
           [SyncMode.incremental, DestinationSyncMode.append_dedup],
           [SyncMode.full_refresh, DestinationSyncMode.overwrite],
           [SyncMode.incremental, DestinationSyncMode.append],
         ],
         appendChanges: [],
       })
-    ).toEqual("mirrorSource");
+    ).toEqual("replicateSource");
   });
 
-  it("selects the singular option when both mirrorSource and appendChanges provide one option", () => {
+  it("selects the singular option when both replicateSource and appendChanges provide one option", () => {
     expect(
       getEnforcedDelivery({
-        mirrorSource: [[SyncMode.incremental, DestinationSyncMode.append]],
+        replicateSource: [[SyncMode.incremental, DestinationSyncMode.append]],
         appendChanges: [[SyncMode.incremental, DestinationSyncMode.append]],
       })
-    ).toEqual("mirrorSource");
+    ).toEqual("replicateSource");
   });
 
-  it("selects nothing when both mirrorSource and appendChanges each have one option but they differ", () => {
+  it("selects nothing when both replicateSource and appendChanges each have one option but they differ", () => {
     expect(
       getEnforcedDelivery({
-        mirrorSource: [[SyncMode.full_refresh, DestinationSyncMode.overwrite]],
+        replicateSource: [[SyncMode.full_refresh, DestinationSyncMode.overwrite]],
         appendChanges: [[SyncMode.full_refresh, DestinationSyncMode.append]],
       })
     ).toEqual(undefined);
@@ -91,7 +91,7 @@ describe("getEnforcedDelivery", () => {
   it("selects nothing when there are decisions to be made", () => {
     expect(
       getEnforcedDelivery({
-        mirrorSource: [
+        replicateSource: [
           [SyncMode.incremental, DestinationSyncMode.append_dedup],
           [SyncMode.full_refresh, DestinationSyncMode.overwrite],
           [SyncMode.incremental, DestinationSyncMode.append],
@@ -105,7 +105,7 @@ describe("getEnforcedDelivery", () => {
 
     expect(
       getEnforcedDelivery({
-        mirrorSource: [
+        replicateSource: [
           [SyncMode.incremental, DestinationSyncMode.append_dedup],
           [SyncMode.full_refresh, DestinationSyncMode.overwrite],
           [SyncMode.incremental, DestinationSyncMode.append],
@@ -116,7 +116,7 @@ describe("getEnforcedDelivery", () => {
 
     expect(
       getEnforcedDelivery({
-        mirrorSource: [[SyncMode.incremental, DestinationSyncMode.append_dedup]],
+        replicateSource: [[SyncMode.incremental, DestinationSyncMode.append_dedup]],
         appendChanges: [
           [SyncMode.incremental, DestinationSyncMode.append],
           [SyncMode.full_refresh, DestinationSyncMode.append],

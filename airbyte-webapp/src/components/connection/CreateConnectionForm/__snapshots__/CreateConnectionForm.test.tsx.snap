@@ -79,15 +79,15 @@ exports[`CreateConnectionForm should render 1`] = `
                       <input
                         checked=""
                         class="<removed-for-snapshot-test>"
-                        data-testid="radio-button-tile-delivery-mirrorSource"
-                        id="delivery-mirrorSource"
+                        data-testid="radio-button-tile-delivery-replicateSource"
+                        id="delivery-replicateSource"
                         name="delivery"
                         type="radio"
-                        value="mirrorSource"
+                        value="replicateSource"
                       />
                       <label
                         class="<removed-for-snapshot-test>"
-                        for="delivery-mirrorSource"
+                        for="delivery-replicateSource"
                       >
                         <div
                           class="<removed-for-snapshot-test>"
@@ -113,7 +113,7 @@ exports[`CreateConnectionForm should render 1`] = `
                               class="<removed-for-snapshot-test>"
                               data-type="text"
                             >
-                              Mirror Source 
+                              Replicate Source 
                               <span
                                 class="<removed-for-snapshot-test>"
                               >
