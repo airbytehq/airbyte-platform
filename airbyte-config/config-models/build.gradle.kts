@@ -23,6 +23,7 @@ dependencies {
   implementation(project(":airbyte-featureflag"))
 
   implementation(platform(libs.fasterxml))
+  implementation(libs.bundles.datadog)
   implementation(libs.bundles.jackson)
   implementation(libs.spotbugs.annotations)
   implementation(libs.guava)

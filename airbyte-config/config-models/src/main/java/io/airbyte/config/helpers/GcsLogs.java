@@ -12,9 +12,11 @@ import com.google.cloud.storage.Blob.BlobSourceOption;
 import com.google.cloud.storage.Storage;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.Lists;
+import datadog.trace.api.Trace;
 import io.airbyte.featureflag.DownloadGcsLogsInParallel;
 import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.featureflag.Workspace;
+import io.opentracing.util.GlobalTracer;
 import java.io.BufferedReader;
 import java.io.ByteArrayOutputStream;
 import java.io.FileReader;
@@ -145,12 +147,13 @@ public class GcsLogs implements CloudLogs {
   }
 
   @Override
+  @Trace
   public List<String> tailCloudLog(final LogConfigs configs,
                                    final String logPath,
                                    final int numLines,
                                    final FeatureFlagClient featureFlagClient)
       throws IOException {
-    LOGGER.info("Tailing {} lines from logs from GCS path: {}", numLines, logPath);
+    LOGGER.debug("Tailing {} lines from logs from GCS path: {}", numLines, logPath);
     final Storage gcsClient = getOrCreateGcsClient();
 
     LOGGER.debug("Start GCS list request.");
@@ -163,11 +166,17 @@ public class GcsLogs implements CloudLogs {
         .forEach(descending::addFirst);
 
     LOGGER.debug("Start getting GCS objects.");
+    final List<String> retVal;
     if (featureFlagClient.boolVariation(DownloadGcsLogsInParallel.INSTANCE, new Workspace(ANONYMOUS))) {
-      return tailCloudLogInParallel(descending, logPath, numLines);
+      retVal = tailCloudLogInParallel(descending, logPath, numLines);
     } else {
-      return tailCloudLogSerially(descending, logPath, numLines);
+      retVal = tailCloudLogSerially(descending, logPath, numLines);
     }
+    final var activeSpan = GlobalTracer.get().activeSpan();
+    activeSpan.setTag("airbyte.metadata.logPath", logPath);
+    activeSpan.setTag("airbyte.metadata.requestedLineCount", numLines);
+    activeSpan.setTag("airbyte.metadata.returnedLineCount", retVal.size());
+    return retVal;
   }
 
   private List<String> tailCloudLogSerially(final List<Blob> descendingTimestampBlobs, final String logPath, final int numLines) throws IOException {
@@ -201,18 +210,18 @@ public class GcsLogs implements CloudLogs {
 
   private List<String> tailCloudLogInParallel(final List<Blob> descendingTimestampBlobs, final String logPath, final int numLines)
       throws IOException {
-    LOGGER.info("Tailing {} lines from logs from GCS path: {}", numLines, logPath);
+    LOGGER.debug("Tailing {} lines from logs from GCS path: {}", numLines, logPath);
     final Storage gcsClient = getOrCreateGcsClient();
 
-    LOGGER.info("Start GCS list request.");
+    LOGGER.debug("Start GCS list request.");
 
     final var lines = new ArrayList<String>();
 
-    LOGGER.info("Start getting GCS objects.");
+    LOGGER.debug("Start getting GCS objects.");
     try (BlobQueue blobQueue = new BlobQueue(descendingTimestampBlobs)) {
       int i = 0;
       while (blobQueue.hasMore || !blobQueue.blobContents.isEmpty()) {
-        LOGGER.info("reading GCS object {}/{}. Got {} lines so far. Need {}", i++, descendingTimestampBlobs.size(), lines.size(), numLines);
+        LOGGER.debug("reading GCS object {}/{}. Got {} lines so far. Need {}", i++, descendingTimestampBlobs.size(), lines.size(), numLines);
         if (lines.size() >= numLines) {
           LOGGER.debug("exiting. Got {} lines, needed {}", lines.size(), numLines);
           break;
@@ -239,7 +248,7 @@ public class GcsLogs implements CloudLogs {
       }
     }
 
-    LOGGER.info("Done retrieving GCS logs: {}. Read {} lines, needed {}", logPath, lines.size(), numLines);
+    LOGGER.debug("Done retrieving GCS logs: {}. Read {} lines, needed {}", logPath, lines.size(), numLines);
     return lines;
   }
 
