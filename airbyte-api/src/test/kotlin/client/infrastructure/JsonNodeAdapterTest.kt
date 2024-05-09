@@ -103,7 +103,6 @@ internal class JsonNodeAdapterTest {
       )
     val adapter = Serializer.moshi.adapter<TestResponse>()
     val json = adapter.toJson(resp)
-    println(json)
     assertEquals(resp, adapter.fromJson(json))
   }
 

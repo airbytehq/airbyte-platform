@@ -541,14 +541,18 @@ private def updateApiClientSerializerWithJsonNodeAdapter(def serializerPath) {
     def serializerFile = file(serializerPath)
     def serializerFileText = serializerFile.text
 
-    // add import if not exists
-    if (!serializerFileText.contains("import io.airbyte.api.client.infrastructure.JsonNodeAdapter")) {
-        def newImport = "import io.airbyte.api.client.infrastructure.JsonNodeAdapter"
-        serializerFileText = serializerFileText.replaceFirst('import ', newImport + '\nimport ')
+    // add imports if not present
+    if (!serializerFileText.contains('import io.airbyte.api.client.infrastructure')) {
+        def newImports = [
+                'import io.airbyte.api.client.infrastructure.LocalDateAdapter',
+                'import io.airbyte.api.client.infrastructure.JsonNodeAdapter',
+        ]
+        serializerFileText = serializerFileText.replaceFirst('import ', "${newImports.join('\n')}\nimport ")
     }
 
     // add JsonNode adapter to builder
     serializerFileText = serializerFileText.replace("Moshi.Builder()", '''Moshi.Builder()
+        .add(LocalDateAdapter())
         .add(JsonNodeAdapter())''')
 
     serializerFile.write(serializerFileText)

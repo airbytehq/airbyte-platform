@@ -1,0 +1,918 @@
+{
+  "destinationDefinitions": [
+    {
+      "destinationDefinitionId": "4528e960-6f7b-4412-8555-7e0097e1da17",
+      "name": "Starburst Galaxy",
+      "dockerRepository": "airbyte/destination-starburst-galaxy",
+      "dockerImageTag": "0.0.1",
+      "documentationUrl": "https://docs.airbyte.com/integrations/destinations/starburst-galaxy",
+      "icon": "https://connectors.airbyte.com/files/metadata/airbyte/destination-starburst-galaxy/latest/icon.svg",
+      "protocolVersion": "0.2.0",
+      "custom": false,
+      "supportLevel": "community",
+      "releaseStage": "alpha",
+      "supportsDbt": false,
+      "normalizationConfig": {
+        "supported": false
+      },
+      "supportRefreshes": false
+    },
+    {
+      "destinationDefinitionId": "d4353156-9217-4cad-8dd7-c108fd4f74cf",
+      "name": "MS SQL Server",
+      "dockerRepository": "airbyte/destination-mssql",
+      "dockerImageTag": "1.0.0",
+      "documentationUrl": "https://docs.airbyte.com/integrations/destinations/mssql",
+      "icon": "https://connectors.airbyte.com/files/metadata/airbyte/destination-mssql/latest/icon.svg",
+      "protocolVersion": "0.2.0",
+      "custom": false,
+      "supportLevel": "community",
+      "releaseStage": "alpha",
+      "supportsDbt": true,
+      "normalizationConfig": {
+        "supported": false
+      },
+      "supportRefreshes": false
+    },
+    {
+      "destinationDefinitionId": "ca81ee7c-3163-4246-af40-094cc31e5e42",
+      "name": "MySQL",
+      "dockerRepository": "airbyte/destination-mysql",
+      "dockerImageTag": "1.0.0",
+      "documentationUrl": "https://docs.airbyte.com/integrations/destinations/mysql",
+      "icon": "https://connectors.airbyte.com/files/metadata/airbyte/destination-mysql/latest/icon.svg",
+      "protocolVersion": "0.2.0",
+      "custom": false,
+      "supportLevel": "community",
+      "releaseStage": "alpha",
+      "supportsDbt": true,
+      "normalizationConfig": {
+        "supported": false
+      },
+      "supportRefreshes": false
+    },
+    {
+      "destinationDefinitionId": "356668e2-7e34-47f3-a3b0-67a8a481b692",
+      "name": "Google PubSub",
+      "dockerRepository": "airbyte/destination-pubsub",
+      "dockerImageTag": "0.2.0",
+      "documentationUrl": "https://docs.airbyte.com/integrations/destinations/pubsub",
+      "icon": "https://connectors.airbyte.com/files/metadata/airbyte/destination-pubsub/latest/icon.svg",
+      "protocolVersion": "0.2.0",
+      "custom": false,
+      "supportLevel": "community",
+      "releaseStage": "alpha",
+      "supportsDbt": false,
+      "normalizationConfig": {
+        "supported": false
+      },
+      "supportRefreshes": false
+    },
+    {
+      "destinationDefinitionId": "9f760101-60ae-462f-9ee6-b7a9dafd454d",
+      "name": "Kafka",
+      "dockerRepository": "airbyte/destination-kafka",
+      "dockerImageTag": "0.1.10",
+      "documentationUrl": "https://docs.airbyte.com/integrations/destinations/kafka",
+      "icon": "https://connectors.airbyte.com/files/metadata/airbyte/destination-kafka/latest/icon.svg",
+      "protocolVersion": "0.2.0",
+      "custom": false,
+      "supportLevel": "community",
+      "releaseStage": "alpha",
+      "supportsDbt": false,
+      "normalizationConfig": {
+        "supported": false
+      },
+      "supportRefreshes": false
+    },
+    {
+      "destinationDefinitionId": "7b7d7a0d-954c-45a0-bcfc-39a634b97736",
+      "name": "Weaviate",
+      "dockerRepository": "airbyte/destination-weaviate",
+      "dockerImageTag": "0.2.17",
+      "documentationUrl": "https://docs.airbyte.com/integrations/destinations/weaviate",
+      "icon": "https://connectors.airbyte.com/files/metadata/airbyte/destination-weaviate/latest/icon.svg",
+      "protocolVersion": "0.2.0",
+      "custom": false,
+      "supportLevel": "certified",
+      "releaseStage": "alpha",
+      "resourceRequirements": {
+        "jobSpecific": [
+          {
+            "jobType": "sync",
+            "resourceRequirements": {
+              "memory_request": "2Gi",
+              "memory_limit": "2Gi"
+            }
+          }
+        ]
+      },
+      "supportsDbt": false,
+      "normalizationConfig": {
+        "supported": false
+      },
+      "supportRefreshes": false
+    },
+    {
+      "destinationDefinitionId": "8b746512-8c2e-6ac1-4adc-b59faafd473c",
+      "name": "MongoDB",
+      "dockerRepository": "airbyte/destination-mongodb",
+      "dockerImageTag": "0.2.0",
+      "documentationUrl": "https://docs.airbyte.com/integrations/destinations/mongodb",
+      "icon": "https://connectors.airbyte.com/files/metadata/airbyte/destination-mongodb/latest/icon.svg",
+      "protocolVersion": "0.2.0",
+      "custom": false,
+      "supportLevel": "community",
+      "releaseStage": "alpha",
+      "supportsDbt": false,
+      "normalizationConfig": {
+        "supported": false
+      },
+      "supportRefreshes": false
+    },
+    {
+      "destinationDefinitionId": "102900e7-a236-4c94-83e4-a4189b99adc2",
+      "name": "Vectara",
+      "dockerRepository": "airbyte/destination-vectara",
+      "dockerImageTag": "0.2.3",
+      "documentationUrl": "https://docs.airbyte.com/integrations/destinations/vectara",
+      "icon": "https://connectors.airbyte.com/files/metadata/airbyte/destination-vectara/latest/icon.svg",
+      "protocolVersion": "0.2.0",
+      "custom": false,
+      "supportLevel": "community",
+      "releaseStage": "alpha",
+      "releaseDate": [2023, 12, 16],
+      "supportsDbt": false,
+      "normalizationConfig": {
+        "supported": false
+      },
+      "supportRefreshes": false
+    },
+    {
+      "destinationDefinitionId": "471e5cab-8ed1-49f3-ba11-79c687784737",
+      "name": "S3 Glue",
+      "dockerRepository": "airbyte/destination-s3-glue",
+      "dockerImageTag": "0.1.8",
+      "documentationUrl": "https://docs.airbyte.com/integrations/destinations/s3-glue",
+      "icon": "https://connectors.airbyte.com/files/metadata/airbyte/destination-s3-glue/latest/icon.svg",
+      "protocolVersion": "0.2.0",
+      "custom": false,
+      "supportLevel": "community",
+      "releaseStage": "alpha",
+      "supportsDbt": false,
+      "normalizationConfig": {
+        "supported": false
+      },
+      "supportRefreshes": false
+    },
+    {
+      "destinationDefinitionId": "8be1cf83-fde1-477f-a4ad-318d23c9f3c6",
+      "name": "Local CSV",
+      "dockerRepository": "airbyte/destination-csv",
+      "dockerImageTag": "1.0.0",
+      "documentationUrl": "https://docs.airbyte.com/integrations/destinations/csv",
+      "icon": "https://connectors.airbyte.com/files/metadata/airbyte/destination-csv/latest/icon.svg",
+      "protocolVersion": "0.2.0",
+      "custom": false,
+      "supportLevel": "community",
+      "releaseStage": "alpha",
+      "supportsDbt": false,
+      "normalizationConfig": {
+        "supported": false
+      },
+      "supportRefreshes": false
+    },
+    {
+      "destinationDefinitionId": "3eb4d99c-11fa-4561-a259-fc88e0c2f8f4",
+      "name": "Convex",
+      "dockerRepository": "airbyte/destination-convex",
+      "dockerImageTag": "0.2.0",
+      "documentationUrl": "https://docs.airbyte.com/integrations/destinations/convex",
+      "icon": "https://connectors.airbyte.com/files/metadata/airbyte/destination-convex/latest/icon.svg",
+      "protocolVersion": "0.2.0",
+      "custom": false,
+      "supportLevel": "community",
+      "releaseStage": "alpha",
+      "supportsDbt": false,
+      "normalizationConfig": {
+        "supported": false
+      },
+      "supportRefreshes": false
+    },
+    {
+      "destinationDefinitionId": "27dc7500-6d1b-40b1-8b07-e2f2aea3c9f4",
+      "name": "Google Firestore",
+      "dockerRepository": "airbyte/destination-firestore",
+      "dockerImageTag": "0.1.1",
+      "documentationUrl": "https://docs.airbyte.com/integrations/destinations/firestore",
+      "icon": "https://connectors.airbyte.com/files/metadata/airbyte/destination-firestore/latest/icon.svg",
+      "protocolVersion": "0.2.0",
+      "custom": false,
+      "supportLevel": "community",
+      "releaseStage": "alpha",
+      "supportsDbt": false,
+      "normalizationConfig": {
+        "supported": false
+      },
+      "supportRefreshes": false
+    },
+    {
+      "destinationDefinitionId": "f7a7d195-377f-cf5b-70a5-be6b819019dc",
+      "name": "Redshift",
+      "dockerRepository": "airbyte/destination-redshift",
+      "dockerImageTag": "2.5.0",
+      "documentationUrl": "https://docs.airbyte.com/integrations/destinations/redshift",
+      "icon": "https://connectors.airbyte.com/files/metadata/airbyte/destination-redshift/latest/icon.svg",
+      "protocolVersion": "0.2.0",
+      "custom": false,
+      "supportLevel": "certified",
+      "releaseStage": "generally_available",
+      "resourceRequirements": {
+        "jobSpecific": [
+          {
+            "jobType": "sync",
+            "resourceRequirements": {
+              "memory_request": "1Gi",
+              "memory_limit": "1Gi"
+            }
+          }
+        ]
+      },
+      "supportsDbt": true,
+      "normalizationConfig": {
+        "supported": false
+      },
+      "supportRefreshes": false
+    },
+    {
+      "destinationDefinitionId": "8ccd8909-4e99-4141-b48d-4984b70b2d89",
+      "name": "DynamoDB",
+      "dockerRepository": "airbyte/destination-dynamodb",
+      "dockerImageTag": "0.1.8",
+      "documentationUrl": "https://docs.airbyte.com/integrations/destinations/dynamodb",
+      "icon": "https://connectors.airbyte.com/files/metadata/airbyte/destination-dynamodb/latest/icon.svg",
+      "protocolVersion": "0.2.0",
+      "custom": false,
+      "supportLevel": "community",
+      "releaseStage": "alpha",
+      "supportsDbt": false,
+      "normalizationConfig": {
+        "supported": false
+      },
+      "supportRefreshes": false
+    },
+    {
+      "destinationDefinitionId": "e06ad785-ad6f-4647-b2e8-3027a5c59454",
+      "name": "RabbitMQ",
+      "dockerRepository": "airbyte/destination-rabbitmq",
+      "dockerImageTag": "0.1.3",
+      "documentationUrl": "https://docs.airbyte.com/integrations/destinations/rabbitmq",
+      "icon": "https://connectors.airbyte.com/files/metadata/airbyte/destination-rabbitmq/latest/icon.svg",
+      "protocolVersion": "0.2.0",
+      "custom": false,
+      "supportLevel": "community",
+      "releaseStage": "alpha",
+      "supportsDbt": false,
+      "normalizationConfig": {
+        "supported": false
+      },
+      "supportRefreshes": false
+    },
+    {
+      "destinationDefinitionId": "b76be0a6-27dc-4560-95f6-2623da0bd7b6",
+      "name": "Local SQLite",
+      "dockerRepository": "airbyte/destination-sqlite",
+      "dockerImageTag": "0.1.0",
+      "documentationUrl": "https://docs.airbyte.com/integrations/destinations/sqlite",
+      "icon": "https://connectors.airbyte.com/files/metadata/airbyte/destination-sqlite/latest/icon.svg",
+      "protocolVersion": "0.2.0",
+      "custom": false,
+      "supportLevel": "community",
+      "releaseStage": "alpha",
+      "supportsDbt": false,
+      "normalizationConfig": {
+        "supported": false
+      },
+      "supportRefreshes": false
+    },
+    {
+      "destinationDefinitionId": "6eb1198a-6d38-43e5-aaaa-dccd8f71db2b",
+      "name": "Qdrant",
+      "dockerRepository": "airbyte/destination-qdrant",
+      "dockerImageTag": "0.0.11",
+      "documentationUrl": "https://docs.airbyte.com/integrations/destinations/qdrant",
+      "icon": "https://connectors.airbyte.com/files/metadata/airbyte/destination-qdrant/latest/icon.svg",
+      "protocolVersion": "0.2.0",
+      "custom": false,
+      "supportLevel": "community",
+      "releaseStage": "alpha",
+      "releaseDate": [2023, 9, 22],
+      "resourceRequirements": {
+        "jobSpecific": [
+          {
+            "jobType": "sync",
+            "resourceRequirements": {
+              "memory_request": "2Gi",
+              "memory_limit": "2Gi"
+            }
+          }
+        ]
+      },
+      "supportsDbt": false,
+      "normalizationConfig": {
+        "supported": false
+      },
+      "supportRefreshes": false
+    },
+    {
+      "destinationDefinitionId": "424892c4-daac-4491-b35d-c6688ba547ba",
+      "name": "Snowflake",
+      "dockerRepository": "airbyte/destination-snowflake",
+      "dockerImageTag": "3.7.3",
+      "documentationUrl": "https://docs.airbyte.com/integrations/destinations/snowflake",
+      "icon": "https://connectors.airbyte.com/files/metadata/airbyte/destination-snowflake/latest/icon.svg",
+      "protocolVersion": "0.2.0",
+      "custom": false,
+      "supportLevel": "certified",
+      "releaseStage": "generally_available",
+      "resourceRequirements": {
+        "jobSpecific": [
+          {
+            "jobType": "sync",
+            "resourceRequirements": {
+              "memory_request": "2Gi",
+              "memory_limit": "2Gi"
+            }
+          }
+        ]
+      },
+      "supportsDbt": true,
+      "normalizationConfig": {
+        "supported": false
+      },
+      "supportRefreshes": false
+    },
+    {
+      "destinationDefinitionId": "072d5540-f236-4294-ba7c-ade8fd918496",
+      "name": "Databricks Lakehouse",
+      "dockerRepository": "airbyte/destination-databricks",
+      "dockerImageTag": "1.1.0",
+      "documentationUrl": "https://docs.airbyte.com/integrations/destinations/databricks",
+      "icon": "https://connectors.airbyte.com/files/metadata/airbyte/destination-databricks/latest/icon.svg",
+      "protocolVersion": "0.2.0",
+      "custom": false,
+      "supportLevel": "community",
+      "releaseStage": "alpha",
+      "supportsDbt": false,
+      "normalizationConfig": {
+        "supported": false
+      },
+      "supportRefreshes": false
+    },
+    {
+      "destinationDefinitionId": "3986776d-2319-4de9-8af8-db14c0996e72",
+      "name": "Oracle",
+      "dockerRepository": "airbyte/destination-oracle",
+      "dockerImageTag": "1.0.0",
+      "documentationUrl": "https://docs.airbyte.com/integrations/destinations/oracle",
+      "icon": "https://connectors.airbyte.com/files/metadata/airbyte/destination-oracle/latest/icon.svg",
+      "protocolVersion": "0.2.0",
+      "custom": false,
+      "supportLevel": "community",
+      "releaseStage": "alpha",
+      "supportsDbt": true,
+      "normalizationConfig": {
+        "supported": false
+      },
+      "supportRefreshes": false
+    },
+    {
+      "destinationDefinitionId": "99878c90-0fbd-46d3-9d98-ffde879d17fc",
+      "name": "AWS Datalake",
+      "dockerRepository": "airbyte/destination-aws-datalake",
+      "dockerImageTag": "0.1.7",
+      "documentationUrl": "https://docs.airbyte.com/integrations/destinations/aws-datalake",
+      "icon": "https://connectors.airbyte.com/files/metadata/airbyte/destination-aws-datalake/latest/icon.svg",
+      "protocolVersion": "0.2.0",
+      "custom": false,
+      "supportLevel": "community",
+      "releaseStage": "alpha",
+      "supportsDbt": false,
+      "normalizationConfig": {
+        "supported": false
+      },
+      "supportRefreshes": false
+    },
+    {
+      "destinationDefinitionId": "eebd85cf-60b2-4af6-9ba0-edeca01437b0",
+      "name": "Streamr",
+      "dockerRepository": "ghcr.io/devmate-cloud/streamr-airbyte-connectors",
+      "dockerImageTag": "0.0.1",
+      "documentationUrl": "https://docs.airbyte.com/integrations/destinations/streamr",
+      "icon": "https://storage.googleapis.com/prod-airbyte-cloud-connector-metadata-service/metadata/ghcr.io/devmate-cloud/streamr-airbyte-connectors/latest/icon.svg",
+      "protocolVersion": "0.2.0",
+      "custom": false,
+      "supportLevel": "none",
+      "releaseStage": "alpha",
+      "supportsDbt": false,
+      "normalizationConfig": {
+        "supported": false
+      },
+      "supportRefreshes": false
+    },
+    {
+      "destinationDefinitionId": "65de8962-48c9-11ee-be56-0242ac120002",
+      "name": "Milvus",
+      "dockerRepository": "airbyte/destination-milvus",
+      "dockerImageTag": "0.0.14",
+      "documentationUrl": "https://docs.airbyte.com/integrations/destinations/milvus",
+      "icon": "https://connectors.airbyte.com/files/metadata/airbyte/destination-milvus/latest/icon.svg",
+      "protocolVersion": "0.2.0",
+      "custom": false,
+      "supportLevel": "certified",
+      "releaseStage": "alpha",
+      "releaseDate": [2023, 8, 15],
+      "resourceRequirements": {
+        "jobSpecific": [
+          {
+            "jobType": "sync",
+            "resourceRequirements": {
+              "memory_request": "2Gi",
+              "memory_limit": "2Gi"
+            }
+          }
+        ]
+      },
+      "supportsDbt": false,
+      "normalizationConfig": {
+        "supported": false
+      },
+      "supportRefreshes": false
+    },
+    {
+      "destinationDefinitionId": "a4cbd2d1-8dbe-4818-b8bc-b90ad782d12a",
+      "name": "Google Sheets",
+      "dockerRepository": "airbyte/destination-google-sheets",
+      "dockerImageTag": "0.2.3",
+      "documentationUrl": "https://docs.airbyte.com/integrations/destinations/google-sheets",
+      "icon": "https://connectors.airbyte.com/files/metadata/airbyte/destination-google-sheets/latest/icon.svg",
+      "protocolVersion": "0.2.0",
+      "custom": false,
+      "supportLevel": "community",
+      "releaseStage": "alpha",
+      "supportsDbt": false,
+      "normalizationConfig": {
+        "supported": false
+      },
+      "supportRefreshes": false
+    },
+    {
+      "destinationDefinitionId": "042ce96f-1158-4662-9543-e2ff015be97a",
+      "name": "Astra DB",
+      "dockerRepository": "airbyte/destination-astra",
+      "dockerImageTag": "0.1.3",
+      "documentationUrl": "https://docs.airbyte.com/integrations/destinations/astra",
+      "icon": "https://connectors.airbyte.com/files/metadata/airbyte/destination-astra/latest/icon.svg",
+      "protocolVersion": "0.2.0",
+      "custom": false,
+      "supportLevel": "community",
+      "releaseStage": "alpha",
+      "releaseDate": [2024, 1, 10],
+      "supportsDbt": false,
+      "normalizationConfig": {
+        "supported": false
+      },
+      "supportRefreshes": false
+    },
+    {
+      "destinationDefinitionId": "0b75218b-f702-4a28-85ac-34d3d84c0fc2",
+      "name": "Chroma",
+      "dockerRepository": "airbyte/destination-chroma",
+      "dockerImageTag": "0.0.10",
+      "documentationUrl": "https://docs.airbyte.com/integrations/destinations/chroma",
+      "icon": "https://connectors.airbyte.com/files/metadata/airbyte/destination-chroma/latest/icon.svg",
+      "protocolVersion": "0.2.0",
+      "custom": false,
+      "supportLevel": "community",
+      "releaseStage": "alpha",
+      "releaseDate": [2023, 9, 13],
+      "supportsDbt": false,
+      "normalizationConfig": {
+        "supported": false
+      },
+      "supportRefreshes": false
+    },
+    {
+      "destinationDefinitionId": "58e6f9da-904e-11ed-a1eb-0242ac120002",
+      "name": "Teradata Vantage",
+      "dockerRepository": "airbyte/destination-teradata",
+      "dockerImageTag": "0.1.5",
+      "documentationUrl": "https://docs.airbyte.com/integrations/destinations/teradata",
+      "icon": "https://connectors.airbyte.com/files/metadata/airbyte/destination-teradata/latest/icon.svg",
+      "protocolVersion": "0.2.0",
+      "custom": false,
+      "supportLevel": "community",
+      "releaseStage": "alpha",
+      "supportsDbt": false,
+      "normalizationConfig": {
+        "supported": false
+      },
+      "supportRefreshes": false
+    },
+    {
+      "destinationDefinitionId": "a625d593-bba5-4a1c-a53d-2d246268a816",
+      "name": "Local JSON",
+      "dockerRepository": "airbyte/destination-local-json",
+      "dockerImageTag": "0.2.11",
+      "documentationUrl": "https://docs.airbyte.com/integrations/destinations/local-json",
+      "icon": "https://connectors.airbyte.com/files/metadata/airbyte/destination-local-json/latest/icon.svg",
+      "protocolVersion": "0.2.0",
+      "custom": false,
+      "supportLevel": "community",
+      "releaseStage": "alpha",
+      "supportsDbt": false,
+      "normalizationConfig": {
+        "supported": false
+      },
+      "supportRefreshes": false
+    },
+    {
+      "destinationDefinitionId": "3d2b6f84-7f0d-4e3f-a5e5-7c7d4b50eabd",
+      "name": "Pinecone",
+      "dockerRepository": "airbyte/destination-pinecone",
+      "dockerImageTag": "0.1.0",
+      "documentationUrl": "https://docs.airbyte.com/integrations/destinations/pinecone",
+      "icon": "https://connectors.airbyte.com/files/metadata/airbyte/destination-pinecone/latest/icon.svg",
+      "protocolVersion": "0.2.0",
+      "custom": false,
+      "supportLevel": "certified",
+      "releaseStage": "beta",
+      "releaseDate": [2023, 8, 15],
+      "resourceRequirements": {
+        "jobSpecific": [
+          {
+            "jobType": "sync",
+            "resourceRequirements": {
+              "memory_request": "2Gi",
+              "memory_limit": "2Gi"
+            }
+          }
+        ]
+      },
+      "supportsDbt": false,
+      "normalizationConfig": {
+        "supported": false
+      },
+      "supportRefreshes": false
+    },
+    {
+      "destinationDefinitionId": "ca8f6566-e555-4b40-943a-545bf123117a",
+      "name": "Google Cloud Storage (GCS)",
+      "dockerRepository": "airbyte/destination-gcs",
+      "dockerImageTag": "0.4.6",
+      "documentationUrl": "https://docs.airbyte.com/integrations/destinations/gcs",
+      "icon": "https://connectors.airbyte.com/files/metadata/airbyte/destination-gcs/latest/icon.svg",
+      "protocolVersion": "0.2.0",
+      "custom": false,
+      "supportLevel": "community",
+      "releaseStage": "beta",
+      "resourceRequirements": {
+        "jobSpecific": [
+          {
+            "jobType": "sync",
+            "resourceRequirements": {
+              "memory_request": "1Gi",
+              "memory_limit": "1Gi"
+            }
+          }
+        ]
+      },
+      "supportsDbt": false,
+      "normalizationConfig": {
+        "supported": false
+      },
+      "supportRefreshes": false
+    },
+    {
+      "destinationDefinitionId": "ce0d828e-1dc4-496c-b122-2da42e637e48",
+      "name": "Clickhouse",
+      "dockerRepository": "airbyte/destination-clickhouse",
+      "dockerImageTag": "1.0.0",
+      "documentationUrl": "https://docs.airbyte.com/integrations/destinations/clickhouse",
+      "icon": "https://connectors.airbyte.com/files/metadata/airbyte/destination-clickhouse/latest/icon.svg",
+      "protocolVersion": "0.2.0",
+      "custom": false,
+      "supportLevel": "community",
+      "releaseStage": "alpha",
+      "supportsDbt": false,
+      "normalizationConfig": {
+        "supported": false
+      },
+      "supportRefreshes": false
+    },
+    {
+      "destinationDefinitionId": "25c5221d-dce2-4163-ade9-739ef790f503",
+      "name": "Postgres",
+      "dockerRepository": "airbyte/destination-postgres",
+      "dockerImageTag": "2.0.10",
+      "documentationUrl": "https://docs.airbyte.com/integrations/destinations/postgres",
+      "icon": "https://connectors.airbyte.com/files/metadata/airbyte/destination-postgres/latest/icon.svg",
+      "protocolVersion": "0.2.0",
+      "custom": false,
+      "supportLevel": "certified",
+      "releaseStage": "generally_available",
+      "supportsDbt": true,
+      "normalizationConfig": {
+        "supported": false
+      },
+      "supportRefreshes": false
+    },
+    {
+      "destinationDefinitionId": "2eb65e87-983a-4fd7-b3e3-9d9dc6eb8537",
+      "name": "E2E Testing",
+      "dockerRepository": "airbyte/destination-e2e-test",
+      "dockerImageTag": "0.3.5",
+      "documentationUrl": "https://docs.airbyte.com/integrations/destinations/e2e-test",
+      "icon": "https://connectors.airbyte.com/files/metadata/airbyte/destination-e2e-test/latest/icon.svg",
+      "protocolVersion": "0.2.1",
+      "custom": false,
+      "supportLevel": "community",
+      "releaseStage": "alpha",
+      "supportsDbt": false,
+      "normalizationConfig": {
+        "supported": false
+      },
+      "supportRefreshes": true
+    },
+    {
+      "destinationDefinitionId": "94bd199c-2ff0-4aa2-b98e-17f0acb72610",
+      "name": "DuckDB",
+      "dockerRepository": "airbyte/destination-duckdb",
+      "dockerImageTag": "0.3.5",
+      "documentationUrl": "https://docs.airbyte.com/integrations/destinations/duckdb",
+      "icon": "https://connectors.airbyte.com/files/metadata/airbyte/destination-duckdb/latest/icon.svg",
+      "protocolVersion": "0.2.0",
+      "custom": false,
+      "supportLevel": "community",
+      "releaseStage": "alpha",
+      "resourceRequirements": {
+        "jobSpecific": [
+          {
+            "jobType": "check_connection",
+            "resourceRequirements": {
+              "memory_request": "2Gi",
+              "memory_limit": "2Gi"
+            }
+          },
+          {
+            "jobType": "sync",
+            "resourceRequirements": {
+              "memory_request": "2Gi",
+              "memory_limit": "2Gi"
+            }
+          }
+        ]
+      },
+      "supportsDbt": false,
+      "normalizationConfig": {
+        "supported": false
+      },
+      "supportRefreshes": false
+    },
+    {
+      "destinationDefinitionId": "da8090c6-7cb3-422d-810f-af8c2af243c5",
+      "name": "Dest E2E Test Connector",
+      "dockerRepository": "airbyte/source-e2e-test",
+      "dockerImageTag": "2.1.1",
+      "documentationUrl": "https://hub.docker.com/r/airbyte/destination-e2e-test",
+      "protocolVersion": "0.2.0",
+      "custom": true,
+      "supportLevel": "none",
+      "releaseStage": "custom",
+      "supportsDbt": false,
+      "normalizationConfig": {
+        "supported": false
+      },
+      "supportRefreshes": false
+    },
+    {
+      "destinationDefinitionId": "8ffe9e04-9092-41d5-9b62-b81c0a4a5b42",
+      "name": "Dest E2E Test Connector",
+      "dockerRepository": "airbyte/source-e2e-test",
+      "dockerImageTag": "2.1.1",
+      "documentationUrl": "https://hub.docker.com/r/airbyte/destination-e2e-test",
+      "protocolVersion": "0.2.0",
+      "custom": true,
+      "supportLevel": "none",
+      "releaseStage": "custom",
+      "supportsDbt": false,
+      "normalizationConfig": {
+        "supported": false
+      },
+      "supportRefreshes": false
+    },
+    {
+      "destinationDefinitionId": "4816b78f-1489-44c1-9060-4b19d5fa9362",
+      "name": "S3",
+      "dockerRepository": "airbyte/destination-s3",
+      "dockerImageTag": "0.6.1",
+      "documentationUrl": "https://docs.airbyte.com/integrations/destinations/s3",
+      "icon": "https://connectors.airbyte.com/files/metadata/airbyte/destination-s3/latest/icon.svg",
+      "protocolVersion": "0.2.0",
+      "custom": false,
+      "supportLevel": "certified",
+      "releaseStage": "generally_available",
+      "resourceRequirements": {
+        "jobSpecific": [
+          {
+            "jobType": "sync",
+            "resourceRequirements": {
+              "memory_request": "1Gi",
+              "memory_limit": "1Gi"
+            }
+          }
+        ]
+      },
+      "supportsDbt": false,
+      "normalizationConfig": {
+        "supported": false
+      },
+      "supportRefreshes": false
+    },
+    {
+      "destinationDefinitionId": "d4d3fef9-e319-45c2-881a-bd02ce44cc9f",
+      "name": "Redis",
+      "dockerRepository": "airbyte/destination-redis",
+      "dockerImageTag": "0.1.4",
+      "documentationUrl": "https://docs.airbyte.com/integrations/destinations/redis",
+      "icon": "https://connectors.airbyte.com/files/metadata/airbyte/destination-redis/latest/icon.svg",
+      "protocolVersion": "0.2.0",
+      "custom": false,
+      "supportLevel": "community",
+      "releaseStage": "alpha",
+      "supportsDbt": false,
+      "normalizationConfig": {
+        "supported": false
+      },
+      "supportRefreshes": false
+    },
+    {
+      "destinationDefinitionId": "36be8dc6-9851-49af-b776-9d4c30e4ab6a",
+      "name": "Typesense",
+      "dockerRepository": "airbyte/destination-typesense",
+      "dockerImageTag": "0.1.4",
+      "documentationUrl": "https://docs.airbyte.com/integrations/destinations/typesense",
+      "icon": "https://connectors.airbyte.com/files/metadata/airbyte/destination-typesense/latest/icon.svg",
+      "protocolVersion": "0.2.0",
+      "custom": false,
+      "supportLevel": "community",
+      "releaseStage": "alpha",
+      "supportsDbt": false,
+      "normalizationConfig": {
+        "supported": false
+      },
+      "supportRefreshes": false
+    },
+    {
+      "destinationDefinitionId": "68f351a7-2745-4bef-ad7f-996b8e51bb8c",
+      "name": "ElasticSearch",
+      "dockerRepository": "airbyte/destination-elasticsearch",
+      "dockerImageTag": "0.1.6",
+      "documentationUrl": "https://docs.airbyte.com/integrations/destinations/elasticsearch",
+      "icon": "https://connectors.airbyte.com/files/metadata/airbyte/destination-elasticsearch/latest/icon.svg",
+      "protocolVersion": "0.2.0",
+      "custom": false,
+      "supportLevel": "community",
+      "releaseStage": "alpha",
+      "supportsDbt": false,
+      "normalizationConfig": {
+        "supported": false
+      },
+      "supportRefreshes": false
+    },
+    {
+      "destinationDefinitionId": "b4c5d105-31fd-4817-96b6-cb923bfc04cb",
+      "name": "Azure Blob Storage",
+      "dockerRepository": "airbyte/destination-azure-blob-storage",
+      "dockerImageTag": "0.2.1",
+      "documentationUrl": "https://docs.airbyte.com/integrations/destinations/azure-blob-storage",
+      "icon": "https://connectors.airbyte.com/files/metadata/airbyte/destination-azure-blob-storage/latest/icon.svg",
+      "protocolVersion": "0.2.0",
+      "custom": false,
+      "supportLevel": "community",
+      "releaseStage": "alpha",
+      "resourceRequirements": {
+        "jobSpecific": [
+          {
+            "jobType": "sync",
+            "resourceRequirements": {
+              "memory_request": "1Gi",
+              "memory_limit": "1Gi"
+            }
+          }
+        ]
+      },
+      "supportsDbt": false,
+      "normalizationConfig": {
+        "supported": false
+      },
+      "supportRefreshes": false
+    },
+    {
+      "destinationDefinitionId": "cf98d52c-ba5a-4dfd-8ada-c1baebfa6e73",
+      "name": "Vector Database (powered by LangChain)",
+      "dockerRepository": "airbyte/destination-langchain",
+      "dockerImageTag": "0.1.2",
+      "documentationUrl": "https://docs.airbyte.com/integrations/destinations/langchain",
+      "icon": "https://connectors.airbyte.com/files/metadata/airbyte/destination-langchain/latest/icon.svg",
+      "protocolVersion": "0.2.0",
+      "custom": false,
+      "supportLevel": "community",
+      "releaseStage": "alpha",
+      "releaseDate": [2023, 7, 15],
+      "supportsDbt": false,
+      "normalizationConfig": {
+        "supported": false
+      },
+      "supportRefreshes": false
+    },
+    {
+      "destinationDefinitionId": "1f7bac7e-53ff-4e0b-b6df-b74aa85cf703",
+      "name": "Yellowbrick",
+      "dockerRepository": "airbyte/destination-yellowbrick",
+      "dockerImageTag": "0.0.1",
+      "documentationUrl": "https://docs.airbyte.com/integrations/destinations/yellowbrick",
+      "icon": "https://connectors.airbyte.com/files/metadata/airbyte/destination-yellowbrick/latest/icon.svg",
+      "protocolVersion": "0.2.0",
+      "custom": false,
+      "supportLevel": "community",
+      "releaseStage": "alpha",
+      "supportsDbt": false,
+      "normalizationConfig": {
+        "supported": false
+      },
+      "supportRefreshes": false
+    },
+    {
+      "destinationDefinitionId": "df65a8f3-9908-451b-aa9b-445462803560",
+      "name": "Apache Iceberg",
+      "dockerRepository": "airbyte/destination-iceberg",
+      "dockerImageTag": "0.1.6",
+      "documentationUrl": "https://docs.airbyte.com/integrations/destinations/iceberg",
+      "protocolVersion": "0.2.0",
+      "custom": false,
+      "supportLevel": "community",
+      "releaseStage": "alpha",
+      "supportsDbt": false,
+      "normalizationConfig": {
+        "supported": false
+      },
+      "supportRefreshes": false
+    },
+    {
+      "destinationDefinitionId": "e9810f61-4bab-46d2-bb22-edfc902e0644",
+      "name": "SFTP-JSON",
+      "dockerRepository": "airbyte/destination-sftp-json",
+      "dockerImageTag": "0.1.0",
+      "documentationUrl": "https://docs.airbyte.com/integrations/destinations/sftp-json",
+      "icon": "https://connectors.airbyte.com/files/metadata/airbyte/destination-sftp-json/latest/icon.svg",
+      "protocolVersion": "0.2.0",
+      "custom": false,
+      "supportLevel": "community",
+      "releaseStage": "alpha",
+      "supportsDbt": false,
+      "normalizationConfig": {
+        "supported": false
+      },
+      "supportRefreshes": false
+    },
+    {
+      "destinationDefinitionId": "22f6c74f-5699-40ff-833c-4a879ea40133",
+      "name": "BigQuery",
+      "dockerRepository": "airbyte/destination-bigquery",
+      "dockerImageTag": "2.4.15",
+      "documentationUrl": "https://docs.airbyte.com/integrations/destinations/bigquery",
+      "icon": "https://connectors.airbyte.com/files/metadata/airbyte/destination-bigquery/latest/icon.svg",
+      "protocolVersion": "0.2.0",
+      "custom": false,
+      "supportLevel": "certified",
+      "releaseStage": "generally_available",
+      "resourceRequirements": {
+        "jobSpecific": [
+          {
+            "jobType": "sync",
+            "resourceRequirements": {
+              "memory_request": "1Gi",
+              "memory_limit": "1Gi"
+            }
+          }
+        ]
+      },
+      "supportsDbt": true,
+      "normalizationConfig": {
+        "supported": false
+      },
+      "supportRefreshes": false
+    }
+  ]
+}
