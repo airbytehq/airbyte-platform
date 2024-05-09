@@ -118,7 +118,8 @@ public class DestinationDefinitionsHandler {
           .normalizationConfig(
               ApiPojoConverters.normalizationDestinationDefinitionConfigToApi(destinationVersion.getNormalizationConfig()))
           .resourceRequirements(ApiPojoConverters.actorDefResourceReqsToApi(standardDestinationDefinition.getResourceRequirements()))
-          .supportRefreshes(standardDestinationDefinition.getSupportRefreshes());
+          .supportRefreshes(
+              standardDestinationDefinition.getSupportRefreshes() != null ? standardDestinationDefinition.getSupportRefreshes() : false);
     } catch (final URISyntaxException | NullPointerException e) {
       throw new InternalServerKnownException("Unable to process retrieved latest destination definitions list", e);
     }

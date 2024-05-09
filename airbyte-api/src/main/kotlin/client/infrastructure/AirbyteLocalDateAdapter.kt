@@ -28,14 +28,26 @@ import java.time.format.DateTimeFormatter
  * used by the client and server code.  If/when everything is standardized on the same language and SerDe
  * library, this adapter may no longer be necessary.
  */
-class LocalDateAdapter {
+class AirbyteLocalDateAdapter {
   @ToJson
   fun toJson(value: LocalDate): String {
     return DateTimeFormatter.ISO_LOCAL_DATE.format(value)
   }
 
   @FromJson
-  fun fromJson(value: Array<String>): LocalDate {
-    return LocalDate.parse(value.joinToString(separator = "-"), DateTimeFormatter.ofPattern("yyyy-M-d"))
+  fun fromJson(value: Any): LocalDate {
+    val localDateString =
+      if (value is List<*>) {
+        value.joinToString(separator = "-", transform = { i ->
+          if (i is Number) {
+            i.toInt().toString()
+          } else {
+            i.toString()
+          }
+        })
+      } else {
+        value.toString()
+      }
+    return LocalDate.parse(localDateString, DateTimeFormatter.ofPattern("yyyy-M-d"))
   }
 }
