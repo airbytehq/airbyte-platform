@@ -1,5 +1,6 @@
 package io.airbyte.config.persistence.helper
 
+import io.airbyte.config.RefreshStream
 import io.airbyte.config.persistence.domain.Generation
 import io.airbyte.protocol.models.AirbyteStream
 import io.airbyte.protocol.models.ConfiguredAirbyteCatalog
@@ -74,8 +75,12 @@ class CatalogGenerationSetterTest {
         jobId = jobId,
         streamRefreshes =
           listOf(
-            StreamDescriptor().withName("name1").withNamespace("namespace1"),
-            StreamDescriptor().withName("name2").withNamespace("namespace2"),
+            RefreshStream()
+              .withRefreshType(RefreshStream.RefreshType.TRUNCATE)
+              .withStreamDescriptor(StreamDescriptor().withName("name1").withNamespace("namespace1")),
+            RefreshStream()
+              .withRefreshType(RefreshStream.RefreshType.TRUNCATE)
+              .withStreamDescriptor(StreamDescriptor().withName("name2").withNamespace("namespace2")),
           ),
         generations = generations,
       )
@@ -92,13 +97,46 @@ class CatalogGenerationSetterTest {
       catalogGenerationSetter.updateCatalogWithGenerationAndSyncInformation(
         catalog = catalog,
         jobId = jobId,
-        streamRefreshes = listOf(StreamDescriptor().withName("name1").withNamespace("namespace1")),
+        streamRefreshes =
+          listOf(
+            RefreshStream()
+              .withRefreshType(RefreshStream.RefreshType.TRUNCATE)
+              .withStreamDescriptor(StreamDescriptor().withName("name1").withNamespace("namespace1")),
+          ),
         generations = generations,
       )
 
     updatedCatalog.streams.forEach {
       if (it.stream.name == "name1" && it.stream.namespace == "namespace1") {
         assertEquals(it.generationId, it.minimumGenerationId)
+        assertEquals(jobId, it.syncId)
+        assertEquals(1L, it.generationId)
+      } else {
+        assertEquals(0L, it.minimumGenerationId)
+        assertEquals(jobId, it.syncId)
+        assertEquals(2L, it.generationId)
+      }
+    }
+  }
+
+  @Test
+  fun `test that min gen is 0 for merge`() {
+    val updatedCatalog =
+      catalogGenerationSetter.updateCatalogWithGenerationAndSyncInformation(
+        catalog = catalog,
+        jobId = jobId,
+        streamRefreshes =
+          listOf(
+            RefreshStream()
+              .withRefreshType(RefreshStream.RefreshType.MERGE)
+              .withStreamDescriptor(StreamDescriptor().withName("name1").withNamespace("namespace1")),
+          ),
+        generations = generations,
+      )
+
+    updatedCatalog.streams.forEach {
+      if (it.stream.name == "name1" && it.stream.namespace == "namespace1") {
+        assertEquals(0L, it.minimumGenerationId)
         assertEquals(jobId, it.syncId)
         assertEquals(1L, it.generationId)
       } else {

@@ -1,6 +1,7 @@
 package io.airbyte.config.persistence.helper
 
 import io.airbyte.commons.json.Jsons
+import io.airbyte.config.RefreshStream
 import io.airbyte.config.persistence.domain.Generation
 import io.airbyte.config.persistence.domain.StreamRefresh
 import io.airbyte.protocol.models.ConfiguredAirbyteCatalog
@@ -12,12 +13,13 @@ class CatalogGenerationSetter {
   fun updateCatalogWithGenerationAndSyncInformation(
     catalog: ConfiguredAirbyteCatalog,
     jobId: Long,
-    streamRefreshes: List<StreamDescriptor>,
+    streamRefreshes: List<RefreshStream>,
     generations: List<Generation>,
   ): ConfiguredAirbyteCatalog {
     val generationByStreamDescriptor: Map<StreamDescriptor, Long> = getCurrentGenerationByStreamDescriptor(generations)
 
     val catalogCopy = Jsons.clone(catalog)
+    val refreshTypeByStream = streamRefreshes.associate { it.streamDescriptor to it.refreshType }
 
     catalogCopy.streams.forEach {
         configuredAirbyteStream ->
@@ -26,11 +28,11 @@ class CatalogGenerationSetter {
           configuredAirbyteStream.stream.name,
         ).withNamespace(configuredAirbyteStream.stream.namespace)
       val currentGeneration = generationByStreamDescriptor.getOrDefault(streamDescriptor, 0)
-      val isRefresh = streamRefreshes.contains(streamDescriptor)
+      val shouldTruncate: Boolean = refreshTypeByStream[streamDescriptor] == RefreshStream.RefreshType.TRUNCATE
 
       configuredAirbyteStream.syncId = jobId
       configuredAirbyteStream.generationId = currentGeneration
-      configuredAirbyteStream.minimumGenerationId = if (isRefresh) currentGeneration else 0
+      configuredAirbyteStream.minimumGenerationId = if (shouldTruncate) currentGeneration else 0
     }
 
     return catalogCopy

@@ -32,6 +32,7 @@ import io.airbyte.config.JobTypeResourceLimit.JobType;
 import io.airbyte.config.OperatorNormalization;
 import io.airbyte.config.OperatorNormalization.Option;
 import io.airbyte.config.RefreshConfig;
+import io.airbyte.config.RefreshStream;
 import io.airbyte.config.ResetSourceConfiguration;
 import io.airbyte.config.ResourceRequirements;
 import io.airbyte.config.ResourceRequirementsType;
@@ -80,6 +81,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.EnumSource;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.junit.platform.commons.util.StringUtils;
 import org.mockito.ArgumentCaptor;
@@ -241,8 +243,9 @@ class DefaultJobCreatorTest {
             streamRefreshesRepository);
   }
 
-  @Test
-  void testCreateRefreshJob() throws IOException {
+  @ParameterizedTest
+  @EnumSource(RefreshStream.RefreshType.class)
+  void testCreateRefreshJob(final RefreshStream.RefreshType refreshType) throws IOException {
     final String streamToRefresh = "name";
     final String streamNamespace = "namespace";
 
@@ -286,7 +289,9 @@ class DefaultJobCreatorTest {
         srcStdoutResourceRequirements);
 
     final RefreshConfig refreshConfig = getRefreshConfig(expectedSyncResourceRequirements, List.of(
-        new StreamDescriptor().withName(streamToRefresh).withNamespace(streamNamespace)));
+        new RefreshStream()
+            .withRefreshType(refreshType)
+            .withStreamDescriptor(new StreamDescriptor().withName(streamToRefresh).withNamespace(streamNamespace))));
 
     final JobConfig jobConfig = new JobConfig()
         .withConfigType(ConfigType.REFRESH)
@@ -295,10 +300,9 @@ class DefaultJobCreatorTest {
     final String expectedScope = STANDARD_SYNC.getConnectionId().toString();
     when(jobPersistence.enqueueJob(expectedScope, jobConfig)).thenReturn(Optional.of(JOB_ID));
 
+    final RefreshType expectedRefreshType = refreshType == RefreshStream.RefreshType.TRUNCATE ? RefreshType.TRUNCATE : RefreshType.MERGE;
     List<StreamRefresh> refreshes =
-        List.of(new StreamRefresh(UUID.randomUUID(), STANDARD_SYNC.getConnectionId(), streamToRefresh, streamNamespace, null, RefreshType.TRUNCATE));
-    List<StreamDescriptor> refreshesSD =
-        List.of(new StreamDescriptor().withName(streamToRefresh).withNamespace(streamNamespace));
+        List.of(new StreamRefresh(UUID.randomUUID(), STANDARD_SYNC.getConnectionId(), streamToRefresh, streamNamespace, null, expectedRefreshType));
 
     when(catalogGenerationSetter.updateCatalogWithGenerationAndSyncInformation(any(), anyLong(), any(), any()))
         .thenReturn(STANDARD_SYNC.getCatalog());
@@ -330,7 +334,7 @@ class DefaultJobCreatorTest {
   }
 
   private static RefreshConfig getRefreshConfig(final SyncResourceRequirements expectedSyncResourceRequirements,
-                                                final List<StreamDescriptor> streamToRefresh) {
+                                                final List<RefreshStream> streamToRefresh) {
     return new RefreshConfig()
         .withNamespaceDefinition(STANDARD_SYNC.getNamespaceDefinition())
         .withNamespaceFormat(STANDARD_SYNC.getNamespaceFormat())

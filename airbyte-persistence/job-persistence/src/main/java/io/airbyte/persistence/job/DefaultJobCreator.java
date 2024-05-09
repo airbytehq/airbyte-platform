@@ -15,6 +15,8 @@ import io.airbyte.config.JobResetConnectionConfig;
 import io.airbyte.config.JobSyncConfig;
 import io.airbyte.config.JobTypeResourceLimit.JobType;
 import io.airbyte.config.RefreshConfig;
+import io.airbyte.config.RefreshStream;
+import io.airbyte.config.RefreshStream.RefreshType;
 import io.airbyte.config.ResetSourceConfiguration;
 import io.airbyte.config.ResourceRequirements;
 import io.airbyte.config.ResourceRequirementsType;
@@ -182,9 +184,12 @@ public class DefaultJobCreator implements JobCreator {
         .withSourceDefinitionVersionId(sourceDefinitionVersion.getVersionId())
         .withDestinationDefinitionVersionId(destinationDefinitionVersion.getVersionId())
         .withStreamsToRefresh(
-            streamsToRefresh.stream().map(streamRefresh -> new StreamDescriptor()
-                .withName(streamRefresh.getStreamName())
-                .withNamespace(streamRefresh.getStreamNamespace())).toList());
+            streamsToRefresh.stream().map(streamRefresh -> new RefreshStream()
+                .withRefreshType(convertToApi(streamRefresh.getRefreshType()))
+                .withStreamDescriptor(new StreamDescriptor()
+                    .withName(streamRefresh.getStreamName())
+                    .withNamespace(streamRefresh.getStreamNamespace())))
+                .toList());
 
     final JobConfig jobConfig = new JobConfig()
         .withConfigType(ConfigType.REFRESH)
@@ -403,6 +408,18 @@ public class DefaultJobCreator implements JobCreator {
       return Optional.empty();
     }
     return Optional.ofNullable(sourceDefinition.getSourceType()).map(SourceType::toString);
+  }
+
+  private static RefreshType convertToApi(final io.airbyte.db.instance.configs.jooq.generated.enums.RefreshType type) {
+    switch (type) {
+      case MERGE -> {
+        return RefreshType.MERGE;
+      }
+      case TRUNCATE -> {
+        return RefreshType.TRUNCATE;
+      }
+      default -> throw new IllegalStateException("Unsupported enum value: " + type.getLiteral());
+    }
   }
 
 }

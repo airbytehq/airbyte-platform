@@ -96,6 +96,8 @@ import io.airbyte.config.JobOutput;
 import io.airbyte.config.JobOutput.OutputType;
 import io.airbyte.config.JobSyncConfig;
 import io.airbyte.config.RefreshConfig;
+import io.airbyte.config.RefreshStream;
+import io.airbyte.config.RefreshStream.RefreshType;
 import io.airbyte.config.Schedule;
 import io.airbyte.config.Schedule.TimeUnit;
 import io.airbyte.config.ScheduleData;
@@ -481,8 +483,9 @@ class ConnectionsHandlerTest {
     void testGetConnectionForJobWithRefresh() throws JsonValidationException, ConfigNotFoundException, IOException {
       final Long jobId = 456L;
 
-      final List<io.airbyte.protocol.models.StreamDescriptor> refreshStreamDescriptors =
-          List.of(new io.airbyte.protocol.models.StreamDescriptor().withName("name"));
+      final List<RefreshStream> refreshStreamDescriptors =
+          List.of(new RefreshStream().withRefreshType(RefreshType.TRUNCATE)
+              .withStreamDescriptor(new io.airbyte.protocol.models.StreamDescriptor().withName("name")));
 
       final JobConfig config = new JobConfig()
           .withRefresh(new RefreshConfig().withStreamsToRefresh(refreshStreamDescriptors));
