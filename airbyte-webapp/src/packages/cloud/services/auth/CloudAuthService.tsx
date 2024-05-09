@@ -1,52 +1,30 @@
 import { useQueryClient } from "@tanstack/react-query";
 import {
   AuthErrorCodes,
-  EmailAuthProvider,
   User as FirebaseUser,
-  GithubAuthProvider,
-  GoogleAuthProvider,
   applyActionCode,
   confirmPasswordReset,
-  createUserWithEmailAndPassword,
   getIdToken,
-  reauthenticateWithCredential,
   reload,
   sendEmailVerification,
-  signInWithEmailLink,
-  signInWithPopup,
-  updatePassword,
   updateProfile,
   signInWithEmailAndPassword,
 } from "firebase/auth";
 import React, { PropsWithChildren, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { FormattedMessage } from "react-intl";
 import { useNavigate } from "react-router-dom";
-import { Observable, Subject } from "rxjs";
 
 import { LoadingPage } from "components";
 
 import { useGetOrCreateUser } from "core/api";
-import { useCreateKeycloakUser, useResendSigninLink, useRevokeUserSession, useUpdateUser } from "core/api/cloud";
+import { useCreateKeycloakUser, useRevokeUserSession, useUpdateUser } from "core/api/cloud";
 import { AuthProvider, UserRead } from "core/api/types/AirbyteClient";
-import { AuthContext, AuthContextApi, OAuthLoginState } from "core/services/auth";
+import { AuthContext, AuthContextApi } from "core/services/auth";
 import { useNotificationService } from "hooks/services/Notification";
-import { SignupFormValues } from "packages/cloud/views/auth/SignupPage/components/SignupForm";
 import { useAuth } from "packages/firebaseReact";
 
 import { useKeycloakService } from "./KeycloakService";
-import {
-  EmailLinkErrorCodes,
-  LoginFormErrorCodes,
-  ResetPasswordConfirmErrorCodes,
-  SignUpFormErrorCodes,
-} from "./types";
-
-export enum FirebaseAuthMessageId {
-  NetworkFailure = "firebase.auth.error.networkRequestFailed",
-  TooManyRequests = "firebase.auth.error.tooManyRequests",
-  InvalidPassword = "firebase.auth.error.invalidPassword",
-  DefaultError = "firebase.auth.error.default",
-}
+import { LoginFormErrorCodes, ResetPasswordConfirmErrorCodes } from "./types";
 
 // Checks for a valid auth session with either keycloak or firebase, and returns the user if found.
 export const CloudAuthService: React.FC<PropsWithChildren> = ({ children }) => {
@@ -56,7 +34,6 @@ export const CloudAuthService: React.FC<PropsWithChildren> = ({ children }) => {
   const { registerNotification } = useNotificationService();
   const { mutateAsync: updateAirbyteUser } = useUpdateUser();
   const { mutateAsync: getAirbyteUser } = useGetOrCreateUser();
-  const { mutateAsync: resendWithSignInLink } = useResendSigninLink();
   const { mutateAsync: revokeUserSession } = useRevokeUserSession();
   const { mutateAsync: createKeycloakUser } = useCreateKeycloakUser();
   const keycloakAuth = useKeycloakService();
@@ -162,23 +139,6 @@ export const CloudAuthService: React.FC<PropsWithChildren> = ({ children }) => {
             getAccessToken: () => firebaseUser.getIdToken(),
           }).then(() => setAirbyteUser({ ...airbyteUser, name }));
         },
-        updatePassword: async (email: string, currentPassword: string, newPassword: string) => {
-          // re-authentication may be needed before updating password
-          // https://firebase.google.com/docs/auth/web/manage-users#re-authenticate_a_user
-          if (firebaseUser === null) {
-            throw new Error("You must log in first to reauthenticate!");
-          }
-          const credential = EmailAuthProvider.credential(email, currentPassword);
-          await reauthenticateWithCredential(firebaseUser, credential);
-          return updatePassword(firebaseUser, newPassword).then(() => {
-            createKeycloakUser({
-              authUserId: firebaseUser.uid,
-              getAccessToken: () => firebaseUser.getIdToken(),
-              password: newPassword,
-            });
-          });
-        },
-        hasPasswordLogin: () => !!firebaseUser.providerData.filter(({ providerId }) => providerId === "password"),
         providers: firebaseUser.providerData.map(({ providerId }) => providerId),
         provider: null,
         sendEmailVerification: async () => {
@@ -256,32 +216,6 @@ export const CloudAuthService: React.FC<PropsWithChildren> = ({ children }) => {
             throw err;
           });
       },
-      loginWithOAuth(provider): Observable<OAuthLoginState> {
-        const state = new Subject<OAuthLoginState>();
-        try {
-          // Clear any password that might have been set during a password login/registration attempt
-          passwordRef.current = undefined;
-          state.next("waiting");
-          // Instantiate the appropriate auth provider. For Google we're specifying the `hd` parameter, to only show
-          // Google accounts in the selector that are linked to a business (GSuite) account.
-          const authProvider =
-            provider === "github"
-              ? new GithubAuthProvider()
-              : new GoogleAuthProvider().setCustomParameters({ hd: "*" });
-          signInWithPopup(firebaseAuth, authProvider)
-            .then(async () => {
-              state.next("loading");
-              if (firebaseAuth.currentUser) {
-                state.next("done");
-                state.complete();
-              }
-            })
-            .catch((e) => state.error(e));
-        } catch (e) {
-          state.error(e);
-        }
-        return state.asObservable();
-      },
       confirmPasswordReset: async (code: string, newPassword: string) => {
         try {
           await confirmPasswordReset(firebaseAuth, code, newPassword);
@@ -306,60 +240,6 @@ export const CloudAuthService: React.FC<PropsWithChildren> = ({ children }) => {
           throw e;
         }
       },
-      signUp: async ({ email, password }: SignupFormValues) => {
-        try {
-          const { user } = await createUserWithEmailAndPassword(firebaseAuth, email, password);
-          // Store the password in a ref so that we can use it to create a keycloak user after the firebase user is created
-          passwordRef.current = password;
-
-          // Send verification mail via firebase
-          await sendEmailVerification(user);
-        } catch (err) {
-          // Clear the password ref if the user creation fails
-          passwordRef.current = undefined;
-          switch (err.code) {
-            case AuthErrorCodes.EMAIL_EXISTS:
-              throw new Error(SignUpFormErrorCodes.EMAIL_DUPLICATE);
-            case AuthErrorCodes.INVALID_EMAIL:
-              throw new Error(SignUpFormErrorCodes.EMAIL_INVALID);
-            case AuthErrorCodes.WEAK_PASSWORD:
-              throw new Error(SignUpFormErrorCodes.PASSWORD_WEAK);
-          }
-
-          throw err;
-        }
-      },
-      signUpWithEmailLink: async ({ name, email, password, news }) => {
-        let firebaseUser: FirebaseUser;
-
-        try {
-          ({ user: firebaseUser } = await signInWithEmailLink(firebaseAuth, email));
-          await updatePassword(firebaseUser, password).then(() => {
-            createKeycloakUser({
-              authUserId: firebaseUser.uid,
-              getAccessToken: () => firebaseUser.getIdToken(),
-              password,
-            });
-          });
-        } catch (e) {
-          await firebaseAuth.signOut();
-          if (e.message === EmailLinkErrorCodes.LINK_EXPIRED) {
-            await resendWithSignInLink(email);
-          }
-          throw e;
-        }
-
-        if (firebaseUser) {
-          const airbyteUser = await getAirbyteUser({
-            authUserId: firebaseUser.uid,
-            getAccessToken: () => firebaseUser.getIdToken(),
-          });
-          await updateAirbyteUser({
-            userUpdate: { userId: airbyteUser.userId, authUserId: firebaseUser.uid, name, news },
-            getAccessToken: () => firebaseUser.getIdToken(),
-          });
-        }
-      },
       verifyEmail: verifyFirebaseEmail,
     };
   }, [
@@ -368,10 +248,8 @@ export const CloudAuthService: React.FC<PropsWithChildren> = ({ children }) => {
     firebaseAuth,
     firebaseInitialized,
     firebaseUser,
-    getAirbyteUser,
     keycloakAuth,
     logout,
-    resendWithSignInLink,
     updateAirbyteUser,
     verifyFirebaseEmail,
   ]);

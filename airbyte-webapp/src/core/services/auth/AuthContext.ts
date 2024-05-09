@@ -2,16 +2,11 @@ import React, { useContext } from "react";
 import { Observable } from "rxjs";
 
 import { UserRead, UserReadMetadata } from "core/api/types/AirbyteClient";
-import { SignupFormValues } from "packages/cloud/views/auth/SignupPage/components/SignupForm";
-
-export type AuthUpdatePassword = (email: string, currentPassword: string, newPassword: string) => Promise<void>;
 
 export type AuthConfirmPasswordReset = (code: string, newPassword: string) => Promise<void>;
 
 export type AuthLogin = (values: { email: string; password: string }) => Promise<void>;
 export type AuthOAuthLogin = (provider: OAuthProviders) => Observable<OAuthLoginState>;
-
-export type AuthSignUp = (form: SignupFormValues) => Promise<void>;
 
 export type AuthChangeName = (name: string) => Promise<void>;
 
@@ -43,12 +38,7 @@ export interface AuthContextApi {
   providers: string[] | null;
   provider: string | null;
   getAccessToken?: () => Promise<string | null>;
-  hasPasswordLogin?: () => boolean;
   login?: AuthLogin;
-  loginWithOAuth?: AuthOAuthLogin;
-  signUpWithEmailLink?: (form: { name: string; email: string; password: string; news: boolean }) => Promise<void>;
-  signUp?: AuthSignUp;
-  updatePassword?: AuthUpdatePassword;
   updateName?: AuthChangeName;
   confirmPasswordReset?: AuthConfirmPasswordReset;
   sendEmailVerification?: AuthSendEmailVerification;

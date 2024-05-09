@@ -11,5 +11,4 @@ export enum CloudRoutes {
   Login = "/login",
   Sso = "/sso",
   SsoBookmark = "/sso/:companyIdentifier",
-  ResetPassword = "/reset-password",
 }
