@@ -61,7 +61,7 @@ class ConnectorMessageProcessor(
     operationType: OperationType,
   ): ConnectorJobOutput {
     if (exitCode != 0) {
-      throw WorkerException("Check operation returned a non zero exit code, the exit code is: $exitCode")
+      throw WorkerException("$operationType operation returned a non zero exit code, the exit code is: $exitCode")
     }
 
     try {
