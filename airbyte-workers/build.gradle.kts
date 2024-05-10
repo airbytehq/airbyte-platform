@@ -31,13 +31,8 @@ val airbyteProtocol by configurations.creating
 val jdbc by configurations.creating
 
 configurations.all {
-  // The quartz-scheduler brings in a really old version(of hikari, we do not want to inherit this version.)
+  // The quartz-scheduler brings in an outdated version(of hikari, we do not want to inherit this version.)
   exclude(group = "com.zaxxer", module = "HikariCP-java7")
-  resolutionStrategy {
-    // Ensure that the versions defined in deps.toml are used)
-    // instead of versions from transitive dependencies)
-    force(libs.flyway.core, libs.jooq, libs.s3, libs.aws.java.sdk.s3, libs.sts, libs.aws.java.sdk.sts)
-  }
 }
 
 dependencies {

@@ -6,12 +6,6 @@ plugins {
   alias(libs.plugins.nu.studer.jooq)
 }
 
-configurations.all {
-  resolutionStrategy {
-    force(libs.platform.testcontainers.postgresql)
-  }
-}
-
 dependencies {
   implementation(libs.jooq.meta)
   implementation(libs.jooq)

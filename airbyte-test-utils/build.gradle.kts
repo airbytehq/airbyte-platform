@@ -6,11 +6,6 @@ plugins {
 configurations.all {
   exclude(group = "io.micronaut.jaxrs")
   exclude(group = "io.micronaut.sql")
-
-  resolutionStrategy {
-    // Force to avoid(updated version(brought in transitively from Micronaut)
-    force(libs.platform.testcontainers.postgresql)
-  }
 }
 
 dependencies {

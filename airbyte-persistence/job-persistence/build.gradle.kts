@@ -5,12 +5,6 @@ plugins {
   kotlin("kapt")
 }
 
-configurations.all {
-  resolutionStrategy {
-    force(libs.platform.testcontainers.postgresql)
-  }
-}
-
 dependencies {
   compileOnly(libs.lombok)
   annotationProcessor(libs.lombok)     // Lombok must be added BEFORE Micronaut

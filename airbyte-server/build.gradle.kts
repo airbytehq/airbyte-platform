@@ -8,16 +8,6 @@ plugins {
   kotlin("kapt")
 }
 
-configurations.all {
-  resolutionStrategy {
-    // Ensure that the versions defined in deps.toml are used)
-    // instead of versions from transitive dependencies)
-    // Force to avoid updated version(brought in transitively from Micronaut 3.8+)
-    // that is incompatible with our current Helm setup)
-    force(libs.flyway.core, libs.s3, libs.aws.java.sdk.s3, libs.sts, libs.aws.java.sdk.sts)
-  }
-}
-
 dependencies {
   compileOnly(libs.lombok)
   annotationProcessor(libs.lombok)     // Lombok must be added BEFORE Micronaut
