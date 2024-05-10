@@ -14,6 +14,7 @@ spec:
     matchLabels:
       {{ include "airbyte.minioSelectorLabels" . | nindent 6 }}
   serviceName: airbyte-minio-svc
+  {{- if not .Values.minio.persistence.existingClaim }}
   volumeClaimTemplates:
       - metadata:
           name: airbyte-minio-pv-claim
@@ -22,6 +23,7 @@ spec:
           resources:
             requests:
               storage: {{ .Values.minio.storage.volumeClaimValue  }}
+  {{- end }}
   template:
     metadata:
       labels:
@@ -67,7 +69,7 @@ spec:
               type: RuntimeDefault
 
           volumeMounts:
-            - name: airbyte-minio-pv-claim # must match the volume name, above
+            - name: {{ if .Values.minio.persistence.existingClaim }}{{ .Values.minio.persistence.existingClaim }}{{ else }}airbyte-minio-pv-claim{{ end }}
               mountPath: "/storage"
       {{- with .Values.minio.nodeSelector }}
       nodeSelector:
