@@ -47,6 +47,7 @@ import io.airbyte.commons.version.AirbyteVersion;
 import io.airbyte.config.Configs.WorkerEnvironment;
 import io.airbyte.config.JobConfig;
 import io.airbyte.config.JobConfig.ConfigType;
+import io.airbyte.config.JobConfigProxy;
 import io.airbyte.config.StreamSyncStats;
 import io.airbyte.config.helpers.LogConfigs;
 import io.airbyte.config.persistence.ConfigNotFoundException;
@@ -344,17 +345,8 @@ public class JobHistoryHandler {
   }
 
   private static List<ConfiguredAirbyteStream> extractStreams(Job job) {
-    if (job.getConfigType() == ConfigType.SYNC) {
-      return job.getConfig().getSync() != null
-          ? job.getConfig().getSync().getConfiguredAirbyteCatalog().getStreams()
-          : List.of();
-    } else if (job.getConfigType() == ConfigType.REFRESH) {
-      return job.getConfig().getRefresh() != null
-          ? job.getConfig().getRefresh().getConfiguredAirbyteCatalog().getStreams()
-          : List.of();
-    } else {
-      return List.of();
-    }
+    final var configuredCatalog = new JobConfigProxy(job.getConfig()).getConfiguredCatalog();
+    return configuredCatalog != null ? configuredCatalog.getStreams() : List.of();
   }
 
   public JobInfoRead getJobInfo(final JobIdRequestBody jobIdRequestBody) throws IOException {

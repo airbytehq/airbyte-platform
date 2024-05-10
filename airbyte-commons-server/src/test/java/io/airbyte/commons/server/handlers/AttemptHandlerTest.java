@@ -42,6 +42,7 @@ import io.airbyte.config.AttemptFailureSummary;
 import io.airbyte.config.FailureReason;
 import io.airbyte.config.FailureReason.FailureOrigin;
 import io.airbyte.config.JobConfig;
+import io.airbyte.config.JobConfig.ConfigType;
 import io.airbyte.config.JobOutput;
 import io.airbyte.config.JobSyncConfig;
 import io.airbyte.config.NormalizationSummary;
@@ -220,6 +221,7 @@ class AttemptHandlerTest {
     when(mJob.getScope()).thenReturn(connId.toString());
 
     final var mConfig = mock(JobConfig.class);
+    when(mConfig.getConfigType()).thenReturn(ConfigType.SYNC);
     when(mJob.getConfig()).thenReturn(mConfig);
 
     final var mDyncConfig = mock(JobSyncConfig.class);
@@ -283,6 +285,7 @@ class AttemptHandlerTest {
       when(mJob.getScope()).thenReturn(connId.toString());
 
       final var mConfig = mock(JobConfig.class);
+      when(mConfig.getConfigType()).thenReturn(ConfigType.SYNC);
       when(mJob.getConfig()).thenReturn(mConfig);
 
       final var mDyncConfig = mock(JobSyncConfig.class);

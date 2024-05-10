@@ -25,6 +25,7 @@ import io.airbyte.config.ConnectorJobOutput;
 import io.airbyte.config.FailureReason;
 import io.airbyte.config.JobConfig;
 import io.airbyte.config.JobConfig.ConfigType;
+import io.airbyte.config.JobConfigProxy;
 import io.airbyte.config.StandardCheckConnectionOutput;
 import io.airbyte.config.StandardDestinationDefinition;
 import io.airbyte.config.StandardSourceDefinition;
@@ -325,11 +326,10 @@ public class JobTracker {
             mapToJsonString(configToMetadata(destinationConfiguration, destinationConfigSchema)));
       }
 
+      final var configuredCatalog = new JobConfigProxy(config).getConfiguredCatalog();
       final Map<String, Object> catalogMetadata;
-      if (config.getConfigType() == ConfigType.SYNC) {
-        catalogMetadata = getCatalogMetadata(config.getSync().getConfiguredAirbyteCatalog());
-      } else if (config.getConfigType() == ConfigType.REFRESH) {
-        catalogMetadata = getCatalogMetadata(config.getRefresh().getConfiguredAirbyteCatalog());
+      if (configuredCatalog != null) {
+        catalogMetadata = getCatalogMetadata(configuredCatalog);
       } else {
         // This is not possible
         throw new IllegalStateException("This should not be reacheable");
