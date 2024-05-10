@@ -40,6 +40,7 @@ dependencies {
   jooqGenerator(libs.postgresql)
   jooqGenerator(libs.slf4j.simple)
   jooqGenerator(libs.platform.testcontainers.postgresql)
+  jooqGenerator(libs.jackson.kotlin)
 }
 
 jooq {

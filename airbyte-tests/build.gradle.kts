@@ -20,8 +20,6 @@ testing {
     implementation(project(":airbyte-test-utils"))
     implementation(project(":airbyte-commons-worker"))
 
-
-
     implementation(libs.failsafe)
     implementation(libs.jackson.databind)
     implementation(libs.okhttp)

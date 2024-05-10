@@ -1,6 +1,8 @@
 plugins {
   id("io.airbyte.gradle.jvm.lib")
   id("io.airbyte.gradle.publish")
+  kotlin("kapt")
+  kotlin("jvm")
 }
 
 configurations.all {
@@ -9,22 +11,25 @@ configurations.all {
 }
 
 dependencies {
+  api(libs.junit.jupiter.api)
+  api(libs.kotlin.logging)
+  api(libs.failsafe)
+  api(libs.okhttp)
   api(project(":airbyte-db:db-lib"))
   api(project(":airbyte-db:jooq"))
   api(project(":airbyte-config:config-models"))
   api(project(":airbyte-config:config-persistence"))
+
   implementation(project(":airbyte-commons"))
   implementation(project(":airbyte-api"))
+  implementation(project(":airbyte-commons-auth"))
   implementation(project(":airbyte-commons-temporal"))
   implementation(project(":airbyte-commons-worker"))
-
   implementation(libs.bundles.kubernetes.client)
   implementation(libs.bundles.flyway)
   implementation(libs.temporal.sdk)
   implementation(libs.google.cloud.api.client)
   implementation(libs.google.cloud.sqladmin)
-
-  api(libs.junit.jupiter.api)
 
   // Mark as compile only(to avoid leaking transitively to connectors
   compileOnly(libs.platform.testcontainers.postgresql)

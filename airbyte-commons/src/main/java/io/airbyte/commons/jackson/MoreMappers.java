@@ -9,6 +9,7 @@ import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.MapperFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
+import com.fasterxml.jackson.module.kotlin.KotlinModule;
 
 /**
  * The {@link JavaTimeModule} allows mappers to accommodate different varieties of serialised date
@@ -35,10 +36,12 @@ public class MoreMappers {
    */
   public static ObjectMapper configure(final ObjectMapper objectMapper) {
     if (objectMapper != null) {
-      objectMapper.registerModule(new JavaTimeModule())
+      objectMapper
           .enable(MapperFeature.ACCEPT_CASE_INSENSITIVE_ENUMS)
           .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false)
-          .configure(Feature.WRITE_BIGDECIMAL_AS_PLAIN, true);
+          .configure(Feature.WRITE_BIGDECIMAL_AS_PLAIN, true)
+          .registerModule(new KotlinModule.Builder().build())
+          .registerModule(new JavaTimeModule());
     }
     return objectMapper;
   }

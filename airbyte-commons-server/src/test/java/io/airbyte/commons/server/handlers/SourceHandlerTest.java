@@ -509,17 +509,19 @@ class SourceHandlerTest {
     final UUID catalogId = UUID.randomUUID();
     final String connectorVersion = "0.0.1";
     final String hashValue = "0123456789abcd";
+    final AirbyteCatalog expectedCatalog = Jsons.clone(airbyteCatalog);
+    expectedCatalog.getStreams().forEach(s -> s.withSourceDefinedCursor(false));
 
     final SourceDiscoverSchemaWriteRequestBody request = new SourceDiscoverSchemaWriteRequestBody()
-        .catalog(CatalogConverter.toApi(airbyteCatalog, new ActorDefinitionVersion()))
+        .catalog(CatalogConverter.toApi(expectedCatalog, new ActorDefinitionVersion()))
         .sourceId(actorId)
         .connectorVersion(connectorVersion)
         .configurationHash(hashValue);
 
-    when(configRepository.writeActorCatalogFetchEvent(airbyteCatalog, actorId, connectorVersion, hashValue)).thenReturn(catalogId);
+    when(configRepository.writeActorCatalogFetchEvent(expectedCatalog, actorId, connectorVersion, hashValue)).thenReturn(catalogId);
     final DiscoverCatalogResult result = sourceHandler.writeDiscoverCatalogResult(request);
 
-    verify(configRepository).writeActorCatalogFetchEvent(airbyteCatalog, actorId, connectorVersion, hashValue);
+    verify(configRepository).writeActorCatalogFetchEvent(expectedCatalog, actorId, connectorVersion, hashValue);
     assert (result.getCatalogId()).equals(catalogId);
   }
 

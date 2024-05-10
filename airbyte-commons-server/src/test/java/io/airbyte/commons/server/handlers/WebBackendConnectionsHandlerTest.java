@@ -1259,7 +1259,9 @@ class WebBackendConnectionsHandlerTest {
         .destinationSyncMode(DestinationSyncMode.OVERWRITE)
         .primaryKey(Collections.emptyList())
         .aliasName(STREAM1)
-        .setSelected(false);
+        .selected(false)
+        .suggested(false)
+        .selectedFields(List.of());
 
     final AirbyteCatalog actual = WebBackendConnectionsHandler.updateSchemaWithRefreshedDiscoveredCatalog(original, original, discovered);
 
@@ -1309,7 +1311,9 @@ class WebBackendConnectionsHandlerTest {
         .destinationSyncMode(DestinationSyncMode.OVERWRITE)
         .primaryKey(Collections.emptyList())
         .aliasName(STREAM1)
-        .setSelected(false);
+        .selected(false)
+        .suggested(false)
+        .selectedFields(List.of());
 
     final AirbyteCatalog actual = WebBackendConnectionsHandler.updateSchemaWithRefreshedDiscoveredCatalog(original, original, discovered);
 
@@ -1372,7 +1376,9 @@ class WebBackendConnectionsHandlerTest {
         .destinationSyncMode(DestinationSyncMode.APPEND)
         .primaryKey(Collections.emptyList())
         .aliasName("renamed_stream")
-        .setSelected(true);
+        .selected(true)
+        .suggested(false)
+        .selectedFields(List.of());
     final AirbyteStreamAndConfiguration expectedNewStream = ConnectionHelpers.generateBasicApiCatalog().getStreams().get(0);
     expectedNewStream.getStream()
         .name(STREAM2)
@@ -1385,7 +1391,9 @@ class WebBackendConnectionsHandlerTest {
         .destinationSyncMode(DestinationSyncMode.OVERWRITE)
         .primaryKey(Collections.emptyList())
         .aliasName(STREAM2)
-        .setSelected(false);
+        .selected(false)
+        .suggested(false)
+        .selectedFields(List.of());
     expected.getStreams().add(expectedNewStream);
 
     final AirbyteCatalog actual = WebBackendConnectionsHandler.updateSchemaWithRefreshedDiscoveredCatalog(original, original, discovered);
@@ -1469,7 +1477,9 @@ class WebBackendConnectionsHandlerTest {
         .destinationSyncMode(DestinationSyncMode.OVERWRITE)
         .primaryKey(Collections.emptyList())
         .aliasName(STREAM1)
-        .setSelected(false);
+        .selected(false)
+        .suggested(false)
+        .selectedFields(List.of());
 
     final AirbyteCatalog actual = WebBackendConnectionsHandler.updateSchemaWithRefreshedDiscoveredCatalog(original, original, discovered);
 

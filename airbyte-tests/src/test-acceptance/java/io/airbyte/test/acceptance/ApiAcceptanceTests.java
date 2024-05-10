@@ -4,12 +4,13 @@
 
 package io.airbyte.test.acceptance;
 
-import static io.airbyte.test.acceptance.AcceptanceTestsResources.IS_GKE;
 import static io.airbyte.test.acceptance.AcceptanceTestsResources.TRUE;
 import static io.airbyte.test.acceptance.AcceptanceTestsResources.WITHOUT_SCD_TABLE;
 import static io.airbyte.test.utils.AcceptanceTestHarness.COLUMN_ID;
 import static io.airbyte.test.utils.AcceptanceTestHarness.COLUMN_NAME;
 import static io.airbyte.test.utils.AcceptanceTestHarness.PUBLIC_SCHEMA_NAME;
+import static io.airbyte.test.utils.AcceptanceTestUtils.IS_GKE;
+import static io.airbyte.test.utils.AcceptanceTestUtils.modifyCatalog;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -17,33 +18,36 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
-import io.airbyte.api.client.invoker.generated.ApiException;
-import io.airbyte.api.client.model.generated.AirbyteCatalog;
-import io.airbyte.api.client.model.generated.ConnectionStatus;
-import io.airbyte.api.client.model.generated.DestinationDefinitionSpecificationRead;
-import io.airbyte.api.client.model.generated.DestinationRead;
-import io.airbyte.api.client.model.generated.DestinationSyncMode;
-import io.airbyte.api.client.model.generated.JobInfoRead;
-import io.airbyte.api.client.model.generated.JobStatus;
-import io.airbyte.api.client.model.generated.OperationRead;
-import io.airbyte.api.client.model.generated.SourceDefinitionSpecificationRead;
-import io.airbyte.api.client.model.generated.SourceDiscoverSchemaRead;
-import io.airbyte.api.client.model.generated.SourceRead;
-import io.airbyte.api.client.model.generated.SyncMode;
-import io.airbyte.api.client.model.generated.WebhookConfigWrite;
-import io.airbyte.api.client.model.generated.WorkspaceRead;
+import io.airbyte.api.client2.model.generated.AirbyteCatalog;
+import io.airbyte.api.client2.model.generated.ConnectionStatus;
+import io.airbyte.api.client2.model.generated.DestinationDefinitionSpecificationRead;
+import io.airbyte.api.client2.model.generated.DestinationRead;
+import io.airbyte.api.client2.model.generated.DestinationSyncMode;
+import io.airbyte.api.client2.model.generated.JobInfoRead;
+import io.airbyte.api.client2.model.generated.JobStatus;
+import io.airbyte.api.client2.model.generated.OperationRead;
+import io.airbyte.api.client2.model.generated.SourceDefinitionSpecificationRead;
+import io.airbyte.api.client2.model.generated.SourceDiscoverSchemaRead;
+import io.airbyte.api.client2.model.generated.SourceRead;
+import io.airbyte.api.client2.model.generated.SyncMode;
+import io.airbyte.api.client2.model.generated.WebhookConfigWrite;
+import io.airbyte.api.client2.model.generated.WorkspaceRead;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.db.jdbc.JdbcUtils;
 import io.airbyte.test.utils.AcceptanceTestHarness;
 import io.airbyte.test.utils.Asserts;
 import io.airbyte.test.utils.TestConnectionCreate;
+import io.micronaut.http.HttpStatus;
+import java.io.IOException;
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.DisabledIfEnvironmentVariable;
+import org.openapitools.client.infrastructure.ClientException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -93,7 +97,7 @@ class ApiAcceptanceTests {
   }
 
   @Test
-  void testGetDestinationSpec() {
+  void testGetDestinationSpec() throws IOException {
     final UUID destinationDefinitionId = testHarness.getPostgresDestinationDefinitionId();
     final DestinationDefinitionSpecificationRead spec = testHarness.getDestinationDefinitionSpec(destinationDefinitionId,
         workspaceId);
@@ -103,15 +107,15 @@ class ApiAcceptanceTests {
 
   @Test
   void testFailedGet404() {
-    final var e = assertThrows(ApiException.class, () -> testHarness.getNonExistentResource());
-    assertEquals(404, e.getCode());
+    final var e = assertThrows(ClientException.class, () -> testHarness.getNonExistentResource());
+    assertEquals(HttpStatus.NOT_FOUND.getCode(), e.getStatusCode());
   }
 
   @Test
   @DisabledIfEnvironmentVariable(named = IS_GKE,
                                  matches = TRUE,
                                  disabledReason = DUPLICATE_TEST_IN_GKE)
-  void testGetSourceSpec() {
+  void testGetSourceSpec() throws IOException {
     final UUID sourceDefId = testHarness.getPostgresSourceDefinitionId();
     final SourceDefinitionSpecificationRead spec = testHarness.getSourceDefinitionSpec(sourceDefId, workspaceId);
     assertNotNull(spec.getConnectionSpecification());
@@ -121,7 +125,7 @@ class ApiAcceptanceTests {
   @DisabledIfEnvironmentVariable(named = IS_GKE,
                                  matches = TRUE,
                                  disabledReason = DUPLICATE_TEST_IN_GKE)
-  void testCreateDestination() {
+  void testCreateDestination() throws IOException {
     final UUID destinationDefId = testHarness.getPostgresDestinationDefinitionId();
     final JsonNode destinationConfig = testHarness.getDestinationDbConfig();
     final String name = "AccTestDestinationDb-" + UUID.randomUUID();
@@ -131,18 +135,26 @@ class ApiAcceptanceTests {
         workspaceId,
         destinationDefId,
         destinationConfig);
+    final var expectedConfig = testHarness.getDestinationDbConfigWithHiddenPassword();
+    final var configKeys = List.of("schema", "password", "database", "port", "host", "ssl", "username");
 
     assertEquals(name, createdDestination.getName());
     assertEquals(destinationDefId, createdDestination.getDestinationDefinitionId());
     assertEquals(workspaceId, createdDestination.getWorkspaceId());
-    assertEquals(testHarness.getDestinationDbConfigWithHiddenPassword(), createdDestination.getConnectionConfiguration());
+    configKeys.forEach((key) -> {
+      if (expectedConfig.get(key).isNumber()) {
+        assertEquals(expectedConfig.get(key).asInt(), createdDestination.getConnectionConfiguration().get(key).asInt());
+      } else {
+        assertEquals(expectedConfig.get(key).asText(), createdDestination.getConnectionConfiguration().get(key).asText());
+      }
+    });
   }
 
   @Test
   @DisabledIfEnvironmentVariable(named = IS_GKE,
                                  matches = TRUE,
                                  disabledReason = DUPLICATE_TEST_IN_GKE)
-  void testCreateSource() {
+  void testCreateSource() throws IOException {
     final String dbName = "acc-test-db";
     final UUID postgresSourceDefinitionId = testHarness.getPostgresSourceDefinitionId();
     final JsonNode sourceDbConfig = testHarness.getSourceDbConfig();
@@ -152,20 +164,28 @@ class ApiAcceptanceTests {
         postgresSourceDefinitionId,
         sourceDbConfig);
 
-    final JsonNode expectedConfig = Jsons.jsonNode(sourceDbConfig);
+    final var expectedConfig = Jsons.jsonNode(sourceDbConfig);
+    final var configKeys = List.of("password", "database", "port", "host", "ssl", "username");
+
     // expect replacement of secret with magic string.
     ((ObjectNode) expectedConfig).put(JdbcUtils.PASSWORD_KEY, "**********");
     assertEquals(dbName, response.getName());
     assertEquals(workspaceId, response.getWorkspaceId());
     assertEquals(postgresSourceDefinitionId, response.getSourceDefinitionId());
-    assertEquals(expectedConfig, response.getConnectionConfiguration());
+    configKeys.forEach((key) -> {
+      if (expectedConfig.get(key).isNumber()) {
+        assertEquals(expectedConfig.get(key).asInt(), response.getConnectionConfiguration().get(key).asInt());
+      } else {
+        assertEquals(expectedConfig.get(key).asText(), response.getConnectionConfiguration().get(key).asText());
+      }
+    });
   }
 
   @Test
   @DisabledIfEnvironmentVariable(named = IS_GKE,
                                  matches = TRUE,
                                  disabledReason = DUPLICATE_TEST_IN_GKE)
-  void testDiscoverSourceSchema() {
+  void testDiscoverSourceSchema() throws IOException {
     final UUID sourceId = testHarness.createPostgresSource().getSourceId();
 
     final AirbyteCatalog actual = testHarness.discoverSourceSchema(sourceId);
@@ -178,15 +198,21 @@ class ApiAcceptanceTests {
     final UUID sourceId = testHarness.createPostgresSource().getSourceId();
     final UUID destinationId = testHarness.createPostgresDestination().getDestinationId();
     final SourceDiscoverSchemaRead discoverResult = testHarness.discoverSourceSchemaWithId(sourceId);
-    final AirbyteCatalog catalog = discoverResult.getCatalog();
     final SyncMode srcSyncMode = SyncMode.INCREMENTAL;
     final DestinationSyncMode dstSyncMode = DestinationSyncMode.APPEND_DEDUP;
-    catalog.getStreams().forEach(s -> s.getConfig()
-        .syncMode(srcSyncMode)
-        .selected(true)
-        .cursorField(List.of(COLUMN_ID))
-        .destinationSyncMode(dstSyncMode)
-        .primaryKey(List.of(List.of(COLUMN_NAME))));
+    final AirbyteCatalog catalog = modifyCatalog(
+        discoverResult.getCatalog(),
+        Optional.of(srcSyncMode),
+        Optional.of(dstSyncMode),
+        Optional.of(List.of(COLUMN_ID)),
+        Optional.of(List.of(List.of(COLUMN_NAME))),
+        Optional.of(true),
+        Optional.empty(),
+        Optional.empty(),
+        Optional.empty(),
+        Optional.empty(),
+        Optional.empty(),
+        Optional.empty());
 
     final UUID connectionId =
         testHarness.createConnection(new TestConnectionCreate.Builder(
@@ -241,7 +267,8 @@ class ApiAcceptanceTests {
                                  disabledReason = "GKE deployment applies extra validation")
   void testWebhookOperationExecutesSuccessfully() throws Exception {
     // create workspace webhook config
-    final WorkspaceRead workspaceRead = testHarness.updateWorkspaceWebhookConfigs(workspaceId, List.of(new WebhookConfigWrite().name("reqres test")));
+    final WorkspaceRead workspaceRead =
+        testHarness.updateWorkspaceWebhookConfigs(workspaceId, List.of(new WebhookConfigWrite("reqres test", null, null)));
     // create a webhook operation
     final OperationRead operationRead = testHarness.createDbtCloudWebhookOperation(workspaceId, workspaceRead.getWebhookConfigs().get(0).getId());
     // create a connection with the new operation.
@@ -250,10 +277,21 @@ class ApiAcceptanceTests {
     // NOTE: this is a normalization operation.
     final UUID normalizationOpId = testHarness.createNormalizationOperation().getOperationId();
     final SourceDiscoverSchemaRead discoverResult = testHarness.discoverSourceSchemaWithId(sourceId);
-    final AirbyteCatalog catalog = discoverResult.getCatalog();
     final SyncMode srcSyncMode = SyncMode.FULL_REFRESH;
     final DestinationSyncMode dstSyncMode = DestinationSyncMode.OVERWRITE;
-    catalog.getStreams().forEach(s -> s.getConfig().syncMode(srcSyncMode).selected(true).destinationSyncMode(dstSyncMode));
+    final AirbyteCatalog catalog = modifyCatalog(
+        discoverResult.getCatalog(),
+        Optional.of(srcSyncMode),
+        Optional.of(dstSyncMode),
+        Optional.empty(),
+        Optional.empty(),
+        Optional.of(true),
+        Optional.empty(),
+        Optional.empty(),
+        Optional.empty(),
+        Optional.empty(),
+        Optional.empty(),
+        Optional.empty());
     final var conn =
         testHarness.createConnection(new TestConnectionCreate.Builder(
             sourceId,
