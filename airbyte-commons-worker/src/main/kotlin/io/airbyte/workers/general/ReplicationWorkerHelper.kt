@@ -143,7 +143,7 @@ class ReplicationWorkerHelper(
             if (workloadId.isEmpty) {
               throw RuntimeException("workloadId should always be present")
             }
-            logger.info { "Sending workload heartbeat" }
+            logger.debug { "Sending workload heartbeat" }
             workloadApiClient.workloadApi.workloadHeartbeat(
               WorkloadHeartbeatRequest(workloadId.get()),
             )

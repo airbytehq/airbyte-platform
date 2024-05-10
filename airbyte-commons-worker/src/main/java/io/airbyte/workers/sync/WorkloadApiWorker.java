@@ -148,7 +148,11 @@ public class WorkloadApiWorker implements Worker<ReplicationInput, ReplicationOu
 
         if (i % 5 == 0) {
           i++;
-          log.info("Workload {} is {}", workloadId, workload.getStatus());
+          // Since syncs are mostly in a running state this can spam logs
+          // while providing no actionable information
+          if (workload.getStatus() != WorkloadStatus.RUNNING) {
+            log.info("Workload {} is {}", workloadId, workload.getStatus());
+          }
         }
         i++;
       }
