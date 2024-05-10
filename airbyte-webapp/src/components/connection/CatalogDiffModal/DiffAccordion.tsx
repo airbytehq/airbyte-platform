@@ -50,7 +50,7 @@ export const DiffAccordion: React.FC<DiffAccordionProps> = ({ streamTransform })
               />
             </Disclosure.Button>
             <Disclosure.Panel className={styles.accordionPanel}>
-              {streamTransform.updateStream?.streamAttributeTransforms?.length && (
+              {!!streamTransform.updateStream?.streamAttributeTransforms?.length && (
                 <DiffStreamAttribute transforms={streamTransform.updateStream.streamAttributeTransforms} />
               )}
               {removedItems.length > 0 && <DiffFieldTable fieldTransforms={removedItems} diffVerb="removed" />}
