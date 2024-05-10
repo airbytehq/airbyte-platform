@@ -159,6 +159,7 @@ services:
     container_name: airbyte-server
     restart: unless-stopped
     environment:
+      - AIRBYTE_API_HOST=${AIRBYTE_API_HOST}
       - AIRBYTE_ROLE=${AIRBYTE_ROLE:-}
       - AIRBYTE_VERSION=${VERSION}
       - AUTO_DETECT_SCHEMA=${AUTO_DETECT_SCHEMA}
