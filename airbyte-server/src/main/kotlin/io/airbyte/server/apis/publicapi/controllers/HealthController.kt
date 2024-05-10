@@ -4,8 +4,11 @@
 
 package io.airbyte.server.apis.publicapi.controllers
 
+import io.airbyte.commons.server.errors.problems.UnexpectedProblem
+import io.airbyte.commons.server.handlers.HealthCheckHandler
 import io.airbyte.commons.server.scheduling.AirbyteTaskExecutors
 import io.micronaut.http.HttpResponse
+import io.micronaut.http.HttpStatus
 import io.micronaut.http.annotation.Controller
 import io.micronaut.scheduling.annotation.ExecuteOn
 import io.micronaut.security.annotation.Secured
@@ -17,9 +20,9 @@ import jakarta.ws.rs.GET
 /**
  * Health endpoint used by kubernetes and the gcp load balancer.
  */
-@Controller("/public/api/v1/health")
+@Controller("/api/public/v1/health")
 @Secured(SecurityRule.IS_ANONYMOUS)
-class HealthController {
+class HealthController(private val healthCheckHandler: HealthCheckHandler) {
   @GET
   @ApiResponses(
     value = [
@@ -32,6 +35,9 @@ class HealthController {
   )
   @ExecuteOn(AirbyteTaskExecutors.HEALTH)
   fun healthCheck(): HttpResponse<String> {
-    return HttpResponse.ok<String?>().body("Successful operation")
+    if (healthCheckHandler.health().available) {
+      return HttpResponse.ok<String?>().body("Successful operation")
+    }
+    throw UnexpectedProblem(HttpStatus.SERVICE_UNAVAILABLE)
   }
 }

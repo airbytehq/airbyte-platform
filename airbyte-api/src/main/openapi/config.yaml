@@ -12091,6 +12091,10 @@ components:
         name:
           description: Name of the workspace
           type: string
+        organizationId:
+          description: ID of organization to add workspace to.
+          format: uuid
+          type: string
       x-sdk-entity: Workspace
       x-sdk-param-suppress-computed-diff: true
       x-sdk-component: true
