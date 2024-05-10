@@ -6,7 +6,11 @@
 
   &--full {
     height: 260px;
-    padding: variables.$spacing-md;
+  }
+
+  &--minimized {
+    width: 100px;
+    height: 30px;
   }
 }
 
