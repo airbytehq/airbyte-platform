@@ -776,7 +776,7 @@ class JobTrackerTest {
 
   private ImmutableMap<String, Object> getJobMetadata(final ConfigType configType, final long jobId) {
     return ImmutableMap.<String, Object>builder()
-        .put(JOB_TYPE, configType)
+        .put(JOB_TYPE, configType != ConfigType.RESET_CONNECTION ? configType : ConfigType.CLEAR)
         .put(JOB_ID_KEY, String.valueOf(jobId))
         .put(ATTEMPT_ID, 700)
         .put("connection_id", CONNECTION_ID)

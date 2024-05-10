@@ -524,7 +524,12 @@ public class JobTracker {
                                           final Optional<Job> previousJob) {
     final Map<String, Object> metadata = new HashMap<>();
     if (configType != null) {
-      metadata.put("job_type", configType);
+      // This is a cosmetic fix for our job tracking.
+      // https://github.com/airbytehq/airbyte-internal-issues/issues/7671 tracks the more complete
+      // refactoring. Once that is done, this should no longer be needed as we can directly log
+      // configType.
+      final var eventConfigType = configType == ConfigType.RESET_CONNECTION ? ConfigType.CLEAR : configType;
+      metadata.put("job_type", eventConfigType);
     }
     metadata.put("job_id", jobId);
     metadata.put("attempt_id", attempt);

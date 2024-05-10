@@ -9367,6 +9367,7 @@ components:
         - sync
         - reset_connection
         - refresh
+        - clear
     JobCreate:
       type: object
       required:
