@@ -5,13 +5,6 @@ plugins {
   kotlin("kapt")
 }
 
-configurations.all {
-  resolutionStrategy {
-    // Ensure that the versions defined in deps.toml are used
-    // instead of versions from transitive dependencies
-    force(libs.flyway.core, libs.s3, libs.aws.java.sdk.s3)
-  }
-}
 dependencies {
   compileOnly(libs.lombok)
   annotationProcessor(libs.lombok) // Lombok must be added BEFORE Micronaut

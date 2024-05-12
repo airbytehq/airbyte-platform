@@ -43,7 +43,7 @@ class WorkloadTokenValidator(
   }
 
   private fun authenticateRequest(token: String): Boolean {
-    return Base64.getDecoder().decode(token).decodeToString().trim() == bearerSecret
+    return Base64.getUrlDecoder().decode(token).decodeToString().trim() == bearerSecret
   }
 
   companion object {

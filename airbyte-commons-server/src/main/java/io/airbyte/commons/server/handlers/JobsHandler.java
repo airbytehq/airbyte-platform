@@ -19,6 +19,7 @@ import io.airbyte.commons.server.handlers.helpers.StatsAggregationHelper;
 import io.airbyte.config.AttemptFailureSummary;
 import io.airbyte.config.AttemptSyncConfig;
 import io.airbyte.config.JobConfig;
+import io.airbyte.config.JobConfigProxy;
 import io.airbyte.config.JobOutput;
 import io.airbyte.config.JobResetConnectionConfig;
 import io.airbyte.config.JobSyncConfig;
@@ -198,7 +199,8 @@ public class JobsHandler {
 
   @VisibleForTesting
   LoadedStats buildLoadedStats(final Job job, final List<JobPersistence.AttemptStats> attemptStats) {
-    final List<ConfiguredAirbyteStream> streams = job.getConfig().getSync().getConfiguredAirbyteCatalog().getStreams();
+    final var configuredCatalog = new JobConfigProxy(job.getConfig()).getConfiguredCatalog();
+    final List<ConfiguredAirbyteStream> streams = configuredCatalog != null ? configuredCatalog.getStreams() : List.of();
 
     long bytesLoaded = 0;
     long recordsLoaded = 0;

@@ -22,6 +22,7 @@ import io.airbyte.commons.server.handlers.helpers.JobCreationAndStatusUpdateHelp
 import io.airbyte.commons.temporal.TemporalUtils;
 import io.airbyte.config.AttemptFailureSummary;
 import io.airbyte.config.JobConfig;
+import io.airbyte.config.JobConfigProxy;
 import io.airbyte.config.JobOutput;
 import io.airbyte.config.StandardSyncOutput;
 import io.airbyte.config.StreamSyncStats;
@@ -94,7 +95,7 @@ public class AttemptHandler {
     final var removeFullRefreshStreamState =
         job.getConfigType().equals(JobConfig.ConfigType.SYNC) || job.getConfigType().equals(JobConfig.ConfigType.REFRESH);
     if (removeFullRefreshStreamState) {
-      final var stateToClear = getFullRefreshStreams(job.getConfig().getSync().getConfiguredAirbyteCatalog(), job.getId());
+      final var stateToClear = getFullRefreshStreams(new JobConfigProxy(job.getConfig()).getConfiguredCatalog(), job.getId());
       if (!stateToClear.isEmpty()) {
         statePersistence.bulkDelete(UUID.fromString(job.getScope()), stateToClear);
       }

@@ -502,8 +502,9 @@ public class WebBackendConnectionsHandler {
 
         outputStreamConfig.setAliasName(originalStreamConfig.getAliasName());
         outputStreamConfig.setSelected(originalConfiguredStream.getConfig().getSelected());
-
+        outputStreamConfig.setSuggested(originalConfiguredStream.getConfig().getSuggested());
         outputStreamConfig.setFieldSelectionEnabled(originalStreamConfig.getFieldSelectionEnabled());
+
         if (outputStreamConfig.getFieldSelectionEnabled()) {
           // TODO(mfsiega-airbyte): support nested fields.
           // If field selection is enabled, populate the selected fields.
@@ -524,6 +525,8 @@ public class WebBackendConnectionsHandler {
               outputStreamConfig.addSelectedFieldsItem(new SelectedFieldInfo().addFieldPathItem(discoveredField));
             }
           }
+        } else {
+          outputStreamConfig.setSelectedFields(List.of());
         }
 
       } else {

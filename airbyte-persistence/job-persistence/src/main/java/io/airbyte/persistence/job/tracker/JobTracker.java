@@ -25,6 +25,7 @@ import io.airbyte.config.ConnectorJobOutput;
 import io.airbyte.config.FailureReason;
 import io.airbyte.config.JobConfig;
 import io.airbyte.config.JobConfig.ConfigType;
+import io.airbyte.config.JobConfigProxy;
 import io.airbyte.config.StandardCheckConnectionOutput;
 import io.airbyte.config.StandardDestinationDefinition;
 import io.airbyte.config.StandardSourceDefinition;
@@ -325,11 +326,10 @@ public class JobTracker {
             mapToJsonString(configToMetadata(destinationConfiguration, destinationConfigSchema)));
       }
 
+      final var configuredCatalog = new JobConfigProxy(config).getConfiguredCatalog();
       final Map<String, Object> catalogMetadata;
-      if (config.getConfigType() == ConfigType.SYNC) {
-        catalogMetadata = getCatalogMetadata(config.getSync().getConfiguredAirbyteCatalog());
-      } else if (config.getConfigType() == ConfigType.REFRESH) {
-        catalogMetadata = getCatalogMetadata(config.getRefresh().getConfiguredAirbyteCatalog());
+      if (configuredCatalog != null) {
+        catalogMetadata = getCatalogMetadata(configuredCatalog);
       } else {
         // This is not possible
         throw new IllegalStateException("This should not be reacheable");
@@ -524,7 +524,12 @@ public class JobTracker {
                                           final Optional<Job> previousJob) {
     final Map<String, Object> metadata = new HashMap<>();
     if (configType != null) {
-      metadata.put("job_type", configType);
+      // This is a cosmetic fix for our job tracking.
+      // https://github.com/airbytehq/airbyte-internal-issues/issues/7671 tracks the more complete
+      // refactoring. Once that is done, this should no longer be needed as we can directly log
+      // configType.
+      final var eventConfigType = configType == ConfigType.RESET_CONNECTION ? ConfigType.CLEAR : configType;
+      metadata.put("job_type", eventConfigType);
     }
     metadata.put("job_id", jobId);
     metadata.put("attempt_id", attempt);

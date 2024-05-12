@@ -26,15 +26,6 @@ buildscript {
 }
 
 val airbyteProtocol by configurations.creating
-configurations.all {
-  resolutionStrategy {
-    // Ensure that the versions defined in deps.toml are used)
-    // instead of versions from transitive dependencies)
-    // Force to avoid(updated version brought in transitively from Micronaut 3.8+)
-    // that is incompatible with our current Helm setup)
-    force(libs.s3, libs.aws.java.sdk.s3)
-  }
-}
 
 configurations.all {
   exclude(group = "io.micronaut", module = "micronaut-http-server-netty")

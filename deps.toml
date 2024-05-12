@@ -56,8 +56,6 @@ apache-commons-collections = { module = "org.apache.commons:commons-collections4
 apache-commons-lang = { module = "org.apache.commons:commons-lang3", version = "3.11" }
 apache-commons-text = { module = "org.apache.commons:commons-text", version = "1.10.0" }
 apache-cxf-core = { module = "org.apache.cxf:cxf-core", version = "3.4.2" }
-# Following is a custom JAR that was uploaded in Airbyte's mycloud repo. Edit this once the PR https://github.com/bluedenim/log4j-s3-search/pull/149
-# is merged and released
 appender-log4j2 = { module = "com.therealvan:appender-log4j2", version = "5.2.2" }
 assertj-core = { module = "org.assertj:assertj-core", version = "3.21.0" }
 aws-java-sdk-s3 = { module = "com.amazonaws:aws-java-sdk-s3", version = "1.12.701" }
@@ -76,6 +74,7 @@ datadog-trace-api = { module = "com.datadoghq:dd-trace-api", version.ref = "data
 datadog-trace-ot = { module = "com.datadoghq:dd-trace-ot", version.ref = "datadog-version" }
 docker-java = { module = "com.github.docker-java:docker-java", version.ref = "docker-java" }
 docker-java-transport-httpclient5 = { module = "com.github.docker-java:docker-java-transport-httpclient5", version.ref = "docker.java" }
+elasticsearch = { module = "org.elasticsearch:elasticsearch", version = "7.17.21" }
 fasterxml = { module = "com.fasterxml.jackson:jackson-bom", version.ref = "fasterxml_version" }
 failsafe = { module = "dev.failsafe:failsafe", version.ref = "failsafe" }
 failsafe-okhttp = { module = "dev.failsafe:failsafe-okhttp", version.ref = "failsafe" }

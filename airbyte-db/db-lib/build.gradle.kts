@@ -11,9 +11,6 @@ val migrations by configurations.creating {
 
 configurations.all {
   exclude(group = "io.micronaut.flyway")
-  resolutionStrategy {
-    force(libs.platform.testcontainers.postgresql)
-  }
 }
 
 airbyte {

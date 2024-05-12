@@ -6,12 +6,6 @@ plugins {
   alias(libs.plugins.nu.studer.jooq)
 }
 
-configurations.all {
-  resolutionStrategy {
-    force(libs.platform.testcontainers.postgresql)
-  }
-}
-
 dependencies {
   implementation(libs.jooq.meta)
   implementation(libs.jooq)
@@ -46,6 +40,7 @@ dependencies {
   jooqGenerator(libs.postgresql)
   jooqGenerator(libs.slf4j.simple)
   jooqGenerator(libs.platform.testcontainers.postgresql)
+  jooqGenerator(libs.jackson.kotlin)
 }
 
 jooq {

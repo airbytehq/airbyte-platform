@@ -8,12 +8,6 @@ configurations {
   create("jdbc")
 }
 
-configurations.all {
-  resolutionStrategy {
-    force(libs.jooq)
-  }
-}
-
 dependencies {
   annotationProcessor(platform(libs.micronaut.platform))
   annotationProcessor(libs.bundles.micronaut.annotation.processor)

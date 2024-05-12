@@ -2381,7 +2381,8 @@ class ConnectionsHandlerTest {
       final io.airbyte.api.model.generated.AirbyteCatalog catalogWithDiff =
           CatalogConverter.toApi(Jsons.clone(airbyteCatalog), SOURCE_VERSION);
       catalogWithDiff.addStreamsItem(new AirbyteStreamAndConfiguration()
-          .stream(new AirbyteStream().name(A_DIFFERENT_STREAM).namespace(A_DIFFERENT_NAMESPACE).supportedSyncModes(List.of(SyncMode.FULL_REFRESH)))
+          .stream(new AirbyteStream().name(A_DIFFERENT_STREAM).namespace(A_DIFFERENT_NAMESPACE).sourceDefinedCursor(false)
+              .supportedSyncModes(List.of(SyncMode.FULL_REFRESH)))
           .config(new AirbyteStreamConfiguration().selected(true)));
 
       final ConnectionAutoPropagateSchemaChange request = new ConnectionAutoPropagateSchemaChange()
@@ -2397,9 +2398,11 @@ class ConnectionsHandlerTest {
               .streamDescriptor(new StreamDescriptor().namespace(A_DIFFERENT_NAMESPACE).name(A_DIFFERENT_STREAM)));
       assertEquals(expectedDiff, actualResult.getPropagatedDiff());
       final ConfiguredAirbyteCatalog expectedCatalog = Jsons.clone(configuredAirbyteCatalog);
+      expectedCatalog.getStreams().forEach(s -> s.getStream().withSourceDefinedCursor(false));
       expectedCatalog.getStreams()
           .add(new ConfiguredAirbyteStream().withStream(new io.airbyte.protocol.models.AirbyteStream().withName(A_DIFFERENT_STREAM)
               .withNamespace(A_DIFFERENT_NAMESPACE).withSupportedSyncModes(List.of(io.airbyte.protocol.models.SyncMode.FULL_REFRESH))
+              .withSourceDefinedCursor(false)
               .withDefaultCursorField(null))
               .withDestinationSyncMode(io.airbyte.protocol.models.DestinationSyncMode.OVERWRITE)
               .withSyncMode(io.airbyte.protocol.models.SyncMode.FULL_REFRESH)

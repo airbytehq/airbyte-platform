@@ -4,50 +4,48 @@
 
 package io.airbyte.test.acceptance;
 
-import static io.airbyte.commons.auth.AirbyteAuthConstants.X_AIRBYTE_AUTH_HEADER;
 import static io.airbyte.config.persistence.OrganizationPersistence.DEFAULT_ORGANIZATION_ID;
-import static io.airbyte.test.acceptance.AcceptanceTestConstants.IS_ENTERPRISE_TRUE;
-import static io.airbyte.test.acceptance.AcceptanceTestConstants.X_AIRBYTE_AUTH_HEADER_TEST_CLIENT_VALUE;
+import static io.airbyte.test.utils.AcceptanceTestUtils.createAirbyteApiClient;
+import static io.airbyte.test.utils.AcceptanceTestUtils.modifyCatalog;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
-import io.airbyte.api.client.AirbyteApiClient;
-import io.airbyte.api.client.generated.WebBackendApi;
-import io.airbyte.api.client.invoker.generated.ApiClient;
-import io.airbyte.api.client.invoker.generated.ApiException;
-import io.airbyte.api.client.model.generated.AirbyteCatalog;
-import io.airbyte.api.client.model.generated.AirbyteStream;
-import io.airbyte.api.client.model.generated.ConnectionScheduleData;
-import io.airbyte.api.client.model.generated.ConnectionScheduleDataBasicSchedule;
-import io.airbyte.api.client.model.generated.ConnectionScheduleDataBasicSchedule.TimeUnitEnum;
-import io.airbyte.api.client.model.generated.DestinationDefinitionIdRequestBody;
-import io.airbyte.api.client.model.generated.DestinationDefinitionRead;
-import io.airbyte.api.client.model.generated.DestinationSyncMode;
-import io.airbyte.api.client.model.generated.JobInfoRead;
-import io.airbyte.api.client.model.generated.JobRead;
-import io.airbyte.api.client.model.generated.JobStatus;
-import io.airbyte.api.client.model.generated.SourceDefinitionIdRequestBody;
-import io.airbyte.api.client.model.generated.SourceDefinitionRead;
-import io.airbyte.api.client.model.generated.SourceDiscoverSchemaRead;
-import io.airbyte.api.client.model.generated.StreamStatusJobType;
-import io.airbyte.api.client.model.generated.StreamStatusRunState;
-import io.airbyte.api.client.model.generated.SyncMode;
-import io.airbyte.api.client.model.generated.WorkspaceCreate;
+import dev.failsafe.Failsafe;
+import dev.failsafe.RetryPolicy;
+import io.airbyte.api.client2.AirbyteApiClient;
+import io.airbyte.api.client2.model.generated.AirbyteCatalog;
+import io.airbyte.api.client2.model.generated.AirbyteStream;
+import io.airbyte.api.client2.model.generated.ConnectionScheduleData;
+import io.airbyte.api.client2.model.generated.ConnectionScheduleDataBasicSchedule;
+import io.airbyte.api.client2.model.generated.ConnectionScheduleDataBasicSchedule.TimeUnit;
+import io.airbyte.api.client2.model.generated.DestinationDefinitionIdRequestBody;
+import io.airbyte.api.client2.model.generated.DestinationDefinitionRead;
+import io.airbyte.api.client2.model.generated.DestinationSyncMode;
+import io.airbyte.api.client2.model.generated.JobInfoRead;
+import io.airbyte.api.client2.model.generated.JobRead;
+import io.airbyte.api.client2.model.generated.JobStatus;
+import io.airbyte.api.client2.model.generated.SourceDefinitionIdRequestBody;
+import io.airbyte.api.client2.model.generated.SourceDefinitionRead;
+import io.airbyte.api.client2.model.generated.SourceDiscoverSchemaRead;
+import io.airbyte.api.client2.model.generated.StreamStatusJobType;
+import io.airbyte.api.client2.model.generated.StreamStatusRunState;
+import io.airbyte.api.client2.model.generated.SyncMode;
+import io.airbyte.api.client2.model.generated.WorkspaceCreate;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.db.Database;
 import io.airbyte.test.utils.AcceptanceTestHarness;
 import io.airbyte.test.utils.Asserts;
 import io.airbyte.test.utils.TestConnectionCreate.Builder;
 import java.io.IOException;
-import java.net.URI;
 import java.net.URISyntaxException;
 import java.security.GeneralSecurityException;
 import java.sql.SQLException;
 import java.time.Duration;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 import org.junit.jupiter.api.Assertions;
@@ -73,7 +71,6 @@ public class AcceptanceTestsResources {
   static final String AIRBYTE_SERVER_HOST = Optional.ofNullable(System.getenv("AIRBYTE_SERVER_HOST")).orElse("http://localhost:8001");
   static final UUID POSTGRES_SOURCE_DEF_ID = UUID.fromString("decd338e-5647-4c0b-adf4-da0e75f5a750");
   static final UUID POSTGRES_DEST_DEF_ID = UUID.fromString("25c5221d-dce2-4163-ade9-739ef790f503");
-  public static final String IS_GKE = "IS_GKE";
   public static final String KUBE = "KUBE";
   public static final String TRUE = "true";
   static final String DISABLE_TEMPORAL_TESTS_IN_GKE =
@@ -104,8 +101,9 @@ public class AcceptanceTestsResources {
   }
 
   public AcceptanceTestsResources() {
-    this.basicScheduleData = new ConnectionScheduleData().basicSchedule(
-        new ConnectionScheduleDataBasicSchedule().units(1L).timeUnit(TimeUnitEnum.HOURS));
+    this.basicScheduleData = new ConnectionScheduleData(
+        new ConnectionScheduleDataBasicSchedule(TimeUnit.HOURS, 1L),
+        null);
   }
 
   /**
@@ -136,22 +134,29 @@ public class AcceptanceTestsResources {
     final UUID sourceId = testHarness.createPostgresSource(workspaceId).getSourceId();
     final UUID destinationId = testHarness.createPostgresDestination(workspaceId).getDestinationId();
     final SourceDiscoverSchemaRead discoverResult = testHarness.discoverSourceSchemaWithId(sourceId);
-    final AirbyteCatalog catalog = discoverResult.getCatalog();
-    final AirbyteStream stream = catalog.getStreams().get(0).getStream();
+    final AirbyteCatalog retrievedCatalog = discoverResult.getCatalog();
+    final AirbyteStream stream = retrievedCatalog.getStreams().get(0).getStream();
 
     Assertions.assertEquals(Lists.newArrayList(SyncMode.FULL_REFRESH, SyncMode.INCREMENTAL), stream.getSupportedSyncModes());
-    // instead of assertFalse to avoid NPE from unboxed.
-    Assertions.assertNull(stream.getSourceDefinedCursor());
+    Assertions.assertFalse(stream.getSourceDefinedCursor());
     Assertions.assertTrue(stream.getDefaultCursorField().isEmpty());
     Assertions.assertTrue(stream.getSourceDefinedPrimaryKey().isEmpty());
 
     final SyncMode srcSyncMode = SyncMode.INCREMENTAL;
     final DestinationSyncMode dstSyncMode = DestinationSyncMode.APPEND;
-    catalog.getStreams().forEach(s -> s.getConfig()
-        .syncMode(srcSyncMode)
-        .selected(true)
-        .cursorField(List.of(AcceptanceTestHarness.COLUMN_ID))
-        .destinationSyncMode(dstSyncMode));
+    final AirbyteCatalog catalog = modifyCatalog(
+        retrievedCatalog,
+        Optional.of(srcSyncMode),
+        Optional.of(dstSyncMode),
+        Optional.of(List.of(AcceptanceTestHarness.COLUMN_ID)),
+        Optional.empty(),
+        Optional.of(true),
+        Optional.empty(),
+        Optional.empty(),
+        Optional.empty(),
+        Optional.empty(),
+        Optional.empty(),
+        Optional.empty());
     final var conn =
         testHarness.createConnection(new Builder(
             sourceId,
@@ -214,12 +219,13 @@ public class AcceptanceTestsResources {
     // testHarness.assertStreamStatuses(workspaceId, connectionId, StreamStatusRunState.COMPLETE,
     // StreamStatusJobType.RESET);
 
-    // NOTE: this is a weird usage of retryWithJitter, but we've seen flakes where the destination still
+    // NOTE: this is a weird usage of retry policy, but we've seen flakes where the destination still
     // has records even though the reset job is successful.
-    AirbyteApiClient.retryWithJitter(() -> {
-      Asserts.assertRawDestinationContains(dst, Collections.emptyList(), conn.getNamespaceFormat(), AcceptanceTestHarness.STREAM_NAME);
-      return null;
-    }, "assert destination contains", JITTER_MAX_INTERVAL_SECS, FINAL_INTERVAL_SECS, MAX_TRIES);
+    Failsafe.with(RetryPolicy.builder()
+        .withBackoff(Duration.ofSeconds(10), Duration.ofSeconds(600))
+        .withMaxRetries(4)
+        .build())
+        .run(() -> Asserts.assertRawDestinationContains(dst, Collections.emptyList(), conn.getNamespaceFormat(), AcceptanceTestHarness.STREAM_NAME));
 
     // sync one more time. verify it is the equivalent of a full refresh.
     LOGGER.info("Starting testIncrementalSync() sync 3");
@@ -239,22 +245,29 @@ public class AcceptanceTestsResources {
     final UUID sourceId = testHarness.createPostgresSource(workspaceId).getSourceId();
     final UUID destinationId = testHarness.createPostgresDestination(workspaceId).getDestinationId();
     final SourceDiscoverSchemaRead discoverResult = testHarness.discoverSourceSchemaWithId(sourceId);
-    final AirbyteCatalog catalog = discoverResult.getCatalog();
-    final AirbyteStream stream = catalog.getStreams().get(0).getStream();
+    final AirbyteCatalog retrievedCatalog = discoverResult.getCatalog();
+    final AirbyteStream stream = retrievedCatalog.getStreams().get(0).getStream();
 
     Assertions.assertEquals(Lists.newArrayList(SyncMode.FULL_REFRESH, SyncMode.INCREMENTAL), stream.getSupportedSyncModes());
-    // instead of assertFalse to avoid NPE from unboxed.
-    Assertions.assertNull(stream.getSourceDefinedCursor());
+    Assertions.assertFalse(stream.getSourceDefinedCursor());
     Assertions.assertTrue(stream.getDefaultCursorField().isEmpty());
     Assertions.assertTrue(stream.getSourceDefinedPrimaryKey().isEmpty());
 
     final SyncMode srcSyncMode = SyncMode.INCREMENTAL;
     final DestinationSyncMode dstSyncMode = DestinationSyncMode.APPEND;
-    catalog.getStreams().forEach(s -> s.getConfig()
-        .syncMode(srcSyncMode)
-        .selected(true)
-        .cursorField(List.of(AcceptanceTestHarness.COLUMN_ID))
-        .destinationSyncMode(dstSyncMode));
+    final AirbyteCatalog catalog = modifyCatalog(
+        retrievedCatalog,
+        Optional.of(srcSyncMode),
+        Optional.of(dstSyncMode),
+        Optional.of(List.of(AcceptanceTestHarness.COLUMN_ID)),
+        Optional.empty(),
+        Optional.of(true),
+        Optional.empty(),
+        Optional.empty(),
+        Optional.empty(),
+        Optional.empty(),
+        Optional.empty(),
+        Optional.empty());
     final var conn =
         testHarness.createConnection(new Builder(
             sourceId,
@@ -278,69 +291,42 @@ public class AcceptanceTestsResources {
         StreamStatusJobType.SYNC);
   }
 
-  void init() throws URISyntaxException, IOException, InterruptedException, ApiException, GeneralSecurityException {
-    // TODO(mfsiega-airbyte): clean up and centralize the way we do config.
-    final boolean isGke = System.getenv().containsKey(IS_GKE);
-    // Set up the API client.
-    final URI url = new URI(AIRBYTE_SERVER_HOST);
-    final var underlyingApiClient = new ApiClient().setScheme(url.getScheme())
-        .setHost(url.getHost())
-        .setPort(url.getPort())
-        .setBasePath("/api");
-    if (isGke) {
-      underlyingApiClient.setRequestInterceptor(builder -> builder.setHeader(GATEWAY_AUTH_HEADER, CLOUD_API_USER_HEADER_VALUE));
-    }
-    if (IS_ENTERPRISE_TRUE) {
-      // In Enterprise, auth features are enabled. Add this header
-      // so that the API client can auth as an instance admin.
-
-      underlyingApiClient.setRequestInterceptor(builder -> builder.setHeader(X_AIRBYTE_AUTH_HEADER, X_AIRBYTE_AUTH_HEADER_TEST_CLIENT_VALUE).build());
-    }
-    final var apiClient = new AirbyteApiClient(underlyingApiClient);
-
-    // Set up the WebBackend API client.
-    final var underlyingWebBackendApiClient = new ApiClient().setScheme(url.getScheme())
-        .setHost(url.getHost())
-        .setPort(url.getPort())
-        .setBasePath("/api");
-    if (isGke) {
-      underlyingWebBackendApiClient.setRequestInterceptor(builder -> builder.setHeader(GATEWAY_AUTH_HEADER, CLOUD_API_USER_HEADER_VALUE).build());
-    }
-    if (IS_ENTERPRISE_TRUE) {
-      // In Enterprise, auth features are enabled. Add this header
-      // so that the API client can auth as an instance admin.
-      underlyingWebBackendApiClient
-          .setRequestInterceptor(builder -> builder.setHeader(X_AIRBYTE_AUTH_HEADER, X_AIRBYTE_AUTH_HEADER_TEST_CLIENT_VALUE).build());
-    }
-    final var webBackendApi = new WebBackendApi(underlyingWebBackendApiClient);
+  void init() throws URISyntaxException, IOException, InterruptedException, GeneralSecurityException {
+    final AirbyteApiClient airbyteApiClient =
+        createAirbyteApiClient(AIRBYTE_SERVER_HOST + "/api",
+            Map.of(GATEWAY_AUTH_HEADER, CLOUD_API_USER_HEADER_VALUE));
 
     // If a workspace id is passed, use that. Otherwise, create a new workspace.
     // NOTE: we want to sometimes use a pre-configured workspace e.g., if we run against a production
     // deployment where we don't want to create workspaces.
     // NOTE: the API client can't create workspaces in GKE deployments, so we need to provide a
     // workspace ID in that environment.
-    workspaceId = System.getenv(AIRBYTE_ACCEPTANCE_TEST_WORKSPACE_ID) == null ? apiClient.getWorkspaceApi()
-        .createWorkspace(new WorkspaceCreate().email("acceptance-tests@airbyte.io").name("Airbyte Acceptance Tests" + UUID.randomUUID())
-            .organizationId(DEFAULT_ORGANIZATION_ID))
-        .getWorkspaceId()
-        : UUID.fromString(System.getenv(AIRBYTE_ACCEPTANCE_TEST_WORKSPACE_ID));
-    LOGGER.info("workspaceId = " + workspaceId);
+    workspaceId = System.getenv(AIRBYTE_ACCEPTANCE_TEST_WORKSPACE_ID) == null ? airbyteApiClient.getWorkspaceApi()
+        .createWorkspace(
+            new WorkspaceCreate(
+                "Airbyte Acceptance Tests" + UUID.randomUUID(),
+                DEFAULT_ORGANIZATION_ID,
+                "acceptance-tests@airbyte.io",
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null))
+        .getWorkspaceId() : UUID.fromString(System.getenv(AIRBYTE_ACCEPTANCE_TEST_WORKSPACE_ID));
+    LOGGER.info("workspaceId = {}", workspaceId);
 
     // log which connectors are being used.
-    final SourceDefinitionRead sourceDef = AirbyteApiClient.retryWithJitter(() -> apiClient.getSourceDefinitionApi()
-        .getSourceDefinition(new SourceDefinitionIdRequestBody()
-            .sourceDefinitionId(POSTGRES_SOURCE_DEF_ID)),
-        "get source definition",
-        JITTER_MAX_INTERVAL_SECS, FINAL_INTERVAL_SECS, MAX_TRIES);
-    final DestinationDefinitionRead destinationDef = AirbyteApiClient.retryWithJitter(() -> apiClient.getDestinationDefinitionApi()
-        .getDestinationDefinition(new DestinationDefinitionIdRequestBody()
-            .destinationDefinitionId(POSTGRES_DEST_DEF_ID)),
-        "get destination definition",
-        JITTER_MAX_INTERVAL_SECS, FINAL_INTERVAL_SECS, MAX_TRIES);
+    final SourceDefinitionRead sourceDef =
+        airbyteApiClient.getSourceDefinitionApi().getSourceDefinition(new SourceDefinitionIdRequestBody(POSTGRES_SOURCE_DEF_ID));
+    final DestinationDefinitionRead destinationDef =
+        airbyteApiClient.getDestinationDefinitionApi().getDestinationDefinition(new DestinationDefinitionIdRequestBody(POSTGRES_DEST_DEF_ID));
     LOGGER.info("pg source definition: {}", sourceDef.getDockerImageTag());
     LOGGER.info("pg destination definition: {}", destinationDef.getDockerImageTag());
 
-    testHarness = new AcceptanceTestHarness(apiClient, webBackendApi, workspaceId);
+    testHarness = new AcceptanceTestHarness(airbyteApiClient, workspaceId);
 
     testHarness.ensureCleanSlate();
   }
@@ -350,7 +336,7 @@ public class AcceptanceTestsResources {
     testHarness.stopDbAndContainers();
   }
 
-  void setup() throws SQLException, URISyntaxException, IOException, ApiException {
+  void setup() throws SQLException, URISyntaxException, IOException {
     LOGGER.debug("Executing test case setup");
     testHarness.setup();
   }

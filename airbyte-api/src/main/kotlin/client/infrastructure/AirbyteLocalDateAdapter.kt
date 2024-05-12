@@ -10,7 +10,7 @@ import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 
 /**
- * Custom Moshi adapter to handle JSON responses that contain a {@link LocalDate} value
+ * Custom Moshi adapter to handle JSON responses that contain a [LocalDate] value
  * that is represented as an array in the JSON payload:
  * <p>
  *   <code>

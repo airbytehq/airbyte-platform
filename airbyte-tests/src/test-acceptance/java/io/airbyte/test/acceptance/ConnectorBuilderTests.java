@@ -5,35 +5,38 @@
 package io.airbyte.test.acceptance;
 
 import static io.airbyte.config.persistence.OrganizationPersistence.DEFAULT_ORGANIZATION_ID;
+import static io.airbyte.test.utils.AcceptanceTestUtils.createAirbyteApiClient;
+import static io.airbyte.test.utils.AcceptanceTestUtils.modifyCatalog;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
-import io.airbyte.api.client.AirbyteApiClient;
-import io.airbyte.api.client.invoker.generated.ApiClient;
-import io.airbyte.api.client.invoker.generated.ApiException;
-import io.airbyte.api.client.model.generated.AirbyteCatalog;
-import io.airbyte.api.client.model.generated.ConnectionCreate;
-import io.airbyte.api.client.model.generated.ConnectionIdRequestBody;
-import io.airbyte.api.client.model.generated.ConnectionRead;
-import io.airbyte.api.client.model.generated.ConnectionStatus;
-import io.airbyte.api.client.model.generated.ConnectorBuilderProjectDetails;
-import io.airbyte.api.client.model.generated.ConnectorBuilderProjectIdWithWorkspaceId;
-import io.airbyte.api.client.model.generated.ConnectorBuilderProjectWithWorkspaceId;
-import io.airbyte.api.client.model.generated.ConnectorBuilderPublishRequestBody;
-import io.airbyte.api.client.model.generated.DeclarativeSourceManifest;
-import io.airbyte.api.client.model.generated.JobInfoRead;
-import io.airbyte.api.client.model.generated.SourceCreate;
-import io.airbyte.api.client.model.generated.SourceDefinitionIdRequestBody;
-import io.airbyte.api.client.model.generated.SourceRead;
-import io.airbyte.api.client.model.generated.WorkspaceCreate;
+import io.airbyte.api.client2.AirbyteApiClient;
+import io.airbyte.api.client2.model.generated.AirbyteCatalog;
+import io.airbyte.api.client2.model.generated.ConnectionCreate;
+import io.airbyte.api.client2.model.generated.ConnectionIdRequestBody;
+import io.airbyte.api.client2.model.generated.ConnectionRead;
+import io.airbyte.api.client2.model.generated.ConnectionStatus;
+import io.airbyte.api.client2.model.generated.ConnectorBuilderProjectDetails;
+import io.airbyte.api.client2.model.generated.ConnectorBuilderProjectIdWithWorkspaceId;
+import io.airbyte.api.client2.model.generated.ConnectorBuilderProjectWithWorkspaceId;
+import io.airbyte.api.client2.model.generated.ConnectorBuilderPublishRequestBody;
+import io.airbyte.api.client2.model.generated.DeclarativeSourceManifest;
+import io.airbyte.api.client2.model.generated.JobInfoRead;
+import io.airbyte.api.client2.model.generated.SourceCreate;
+import io.airbyte.api.client2.model.generated.SourceDefinitionIdRequestBody;
+import io.airbyte.api.client2.model.generated.SourceRead;
+import io.airbyte.api.client2.model.generated.WorkspaceCreate;
+import io.airbyte.api.client2.model.generated.WorkspaceIdRequestBody;
 import io.airbyte.db.Database;
 import io.airbyte.test.utils.AcceptanceTestHarness;
 import io.airbyte.test.utils.Databases;
 import io.airbyte.test.utils.SchemaTableNamePair;
-import java.net.URI;
+import java.io.IOException;
+import java.sql.SQLException;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
@@ -165,17 +168,22 @@ public class ConnectorBuilderTests {
 
   @BeforeAll
   static void init() throws Exception {
-    final URI url = new URI(AIRBYTE_SERVER_HOST);
-    final var underlyingApiClient = new ApiClient().setScheme(url.getScheme())
-        .setHost(url.getHost())
-        .setPort(url.getPort())
-        .setBasePath("/api");
-    apiClient = new AirbyteApiClient(underlyingApiClient);
+    apiClient = createAirbyteApiClient(AIRBYTE_SERVER_HOST + "/api", Map.of());
     workspaceId = apiClient.getWorkspaceApi()
-        .createWorkspace(new WorkspaceCreate().email("acceptance-tests@airbyte.io").name("Airbyte Acceptance Tests" + UUID.randomUUID().toString())
-            .organizationId(DEFAULT_ORGANIZATION_ID))
+        .createWorkspace(new WorkspaceCreate(
+            "Airbyte Acceptance Tests" + UUID.randomUUID(),
+            DEFAULT_ORGANIZATION_ID,
+            "acceptance-tests@airbyte.io",
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null))
         .getWorkspaceId();
-    testHarness = new AcceptanceTestHarness(apiClient, null, workspaceId);
+    testHarness = new AcceptanceTestHarness(apiClient, workspaceId);
     testHarness.setup();
 
     echoServer = new GenericContainer(DockerImageName.parse(ECHO_SERVER_IMAGE)).withExposedPorts(8080);
@@ -183,13 +191,13 @@ public class ConnectorBuilderTests {
   }
 
   @AfterAll
-  static void cleanUp() throws ApiException {
-    apiClient.getWorkspaceApi().deleteWorkspace(new io.airbyte.api.client.model.generated.WorkspaceIdRequestBody().workspaceId(workspaceId));
+  static void cleanUp() throws IOException {
+    apiClient.getWorkspaceApi().deleteWorkspace(new WorkspaceIdRequestBody(workspaceId, false));
     echoServer.stop();
   }
 
   @Test
-  void testConnectorBuilderPublish() throws Exception {
+  void testConnectorBuilderPublish() throws IOException, InterruptedException, SQLException {
     final UUID sourceDefinitionId = publishSourceDefinitionThroughConnectorBuilder();
     final SourceRead sourceRead = createSource(sourceDefinitionId);
     try {
@@ -203,53 +211,80 @@ public class ConnectorBuilderTests {
       assertEquals(3, Databases.retrieveDestinationRecords(destination, destinationTables.iterator().next().getFullyQualifiedTableName()).size());
     } finally {
       // clean up
-      apiClient.getSourceDefinitionApi().deleteSourceDefinition(new SourceDefinitionIdRequestBody().sourceDefinitionId(sourceDefinitionId));
+      apiClient.getSourceDefinitionApi().deleteSourceDefinition(new SourceDefinitionIdRequestBody(sourceDefinitionId));
     }
   }
 
-  private UUID publishSourceDefinitionThroughConnectorBuilder() throws ApiException {
+  private UUID publishSourceDefinitionThroughConnectorBuilder() throws IOException {
     final JsonNode manifest = A_DECLARATIVE_MANIFEST.deepCopy();
     ((ObjectNode) manifest.at("/streams/0/retriever/requester")).put("url_base", getEchoServerUrl());
 
     final ConnectorBuilderProjectIdWithWorkspaceId connectorBuilderProject = apiClient.getConnectorBuilderProjectApi()
-        .createConnectorBuilderProject(new ConnectorBuilderProjectWithWorkspaceId()
-            .workspaceId(workspaceId)
-            .builderProject(new ConnectorBuilderProjectDetails().name("A custom declarative source")));
+        .createConnectorBuilderProject(new ConnectorBuilderProjectWithWorkspaceId(
+            workspaceId,
+            new ConnectorBuilderProjectDetails("A custom declarative source", null, null)));
     return apiClient.getConnectorBuilderProjectApi()
-        .publishConnectorBuilderProject(new ConnectorBuilderPublishRequestBody()
-            .workspaceId(workspaceId)
-            .builderProjectId(connectorBuilderProject.getBuilderProjectId())
-            .name("A custom declarative source")
-            .initialDeclarativeManifest(new DeclarativeSourceManifest()
-                .manifest(manifest)
-                .spec(A_SPEC)
-                .description("A description")
-                .version(1L)))
+        .publishConnectorBuilderProject(new ConnectorBuilderPublishRequestBody(
+            workspaceId,
+            connectorBuilderProject.getBuilderProjectId(),
+            "A custom declarative source",
+            new DeclarativeSourceManifest(
+                "A description",
+                manifest,
+                A_SPEC,
+                1L)))
         .getSourceDefinitionId();
   }
 
-  private static SourceRead createSource(final UUID sourceDefinitionId) throws ApiException, JsonProcessingException {
-    return apiClient.getSourceApi().createSource(new SourceCreate()
-        .sourceDefinitionId(sourceDefinitionId)
-        .name("A custom declarative source")
-        .workspaceId(workspaceId)
-        .connectionConfiguration(new ObjectMapper().readTree("{\"__injected_declarative_manifest\": {}\n}")));
+  private static SourceRead createSource(final UUID sourceDefinitionId) throws IOException {
+    return apiClient.getSourceApi().createSource(
+        new SourceCreate(
+            sourceDefinitionId,
+            new ObjectMapper().readTree("{\"__injected_declarative_manifest\": {}\n}"),
+            workspaceId,
+            "A custom declarative source",
+            null));
   }
 
-  private static ConnectionRead createConnection(final UUID sourceId, final UUID destinationId) throws ApiException {
-    final AirbyteCatalog syncCatalog = testHarness.discoverSourceSchemaWithoutCache(sourceId);
-    syncCatalog.getStreams().forEach(s -> s.getConfig().selected(true));
-    return apiClient.getConnectionApi().createConnection(new ConnectionCreate()
-        .name("name")
-        .sourceId(sourceId)
-        .destinationId(destinationId)
-        .status(ConnectionStatus.ACTIVE)
-        .syncCatalog(syncCatalog));
+  private static ConnectionRead createConnection(final UUID sourceId, final UUID destinationId) throws IOException {
+    final AirbyteCatalog syncCatalog = modifyCatalog(
+        testHarness.discoverSourceSchemaWithoutCache(sourceId),
+        Optional.empty(),
+        Optional.empty(),
+        Optional.empty(),
+        Optional.empty(),
+        Optional.of(true),
+        Optional.empty(),
+        Optional.empty(),
+        Optional.empty(),
+        Optional.empty(),
+        Optional.empty(),
+        Optional.empty());
+    return apiClient.getConnectionApi().createConnection(
+        new ConnectionCreate(
+            sourceId,
+            destinationId,
+            ConnectionStatus.ACTIVE,
+            "name",
+            null,
+            null,
+            null,
+            null,
+            syncCatalog,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null));
   }
 
-  private static void runConnection(final UUID connectionId) throws ApiException, InterruptedException {
-    final JobInfoRead connectionSyncRead = apiClient.getConnectionApi()
-        .syncConnection(new ConnectionIdRequestBody().connectionId(connectionId));
+  private static void runConnection(final UUID connectionId) throws IOException, InterruptedException {
+    final JobInfoRead connectionSyncRead = apiClient.getConnectionApi().syncConnection(new ConnectionIdRequestBody(connectionId));
     testHarness.waitForSuccessfulJob(connectionSyncRead.getJob());
   }
 

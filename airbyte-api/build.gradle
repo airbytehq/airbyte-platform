@@ -416,6 +416,7 @@ dependencies {
 
     testRuntimeOnly libs.junit.jupiter.engine
     testImplementation libs.bundles.junit
+    testImplementation libs.bundles.jackson
     testImplementation libs.assertj.core
     testImplementation libs.junit.pioneer
     testImplementation libs.mockk
@@ -545,6 +546,7 @@ private def updateApiClientSerializerWithJsonNodeAdapter(def serializerPath) {
     if (!serializerFileText.contains('import io.airbyte.api.client.infrastructure')) {
         def newImports = [
                 'import io.airbyte.api.client.infrastructure.AirbyteLocalDateAdapter',
+                'import io.airbyte.api.client.infrastructure.ConnectorBuilderPublishRequestBodyAdapter',
                 'import io.airbyte.api.client.infrastructure.JsonNodeAdapter',
         ]
         serializerFileText = serializerFileText.replaceFirst('import ', "${newImports.join('\n')}\nimport ")
@@ -553,6 +555,7 @@ private def updateApiClientSerializerWithJsonNodeAdapter(def serializerPath) {
     // add JsonNode adapter to builder
     serializerFileText = serializerFileText.replace("Moshi.Builder()", '''Moshi.Builder()
         .add(AirbyteLocalDateAdapter())
+        .add(ConnectorBuilderPublishRequestBodyAdapter())
         .add(JsonNodeAdapter())''')
 
     serializerFile.write(serializerFileText)

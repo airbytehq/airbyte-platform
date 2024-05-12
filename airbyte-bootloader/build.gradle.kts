@@ -6,12 +6,6 @@ plugins {
   id("io.airbyte.gradle.publish")
 }
 
-configurations.all {
-  resolutionStrategy {
-    force(libs.flyway.core, libs.jooq)
-  }
-}
-
 dependencies {
   compileOnly(libs.lombok)
   annotationProcessor(libs.lombok)     // Lombok must be added BEFORE Micronaut

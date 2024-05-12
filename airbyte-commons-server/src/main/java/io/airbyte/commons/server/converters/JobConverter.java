@@ -35,6 +35,7 @@ import io.airbyte.commons.server.scheduler.SynchronousResponse;
 import io.airbyte.commons.version.AirbyteVersion;
 import io.airbyte.config.Configs.WorkerEnvironment;
 import io.airbyte.config.JobConfig.ConfigType;
+import io.airbyte.config.JobConfigProxy;
 import io.airbyte.config.JobOutput;
 import io.airbyte.config.ResetSourceConfiguration;
 import io.airbyte.config.StandardSyncOutput;
@@ -288,8 +289,9 @@ public class JobConverter {
   }
 
   private static List<StreamDescriptor> extractEnabledStreams(final Job job) {
-    return job.getConfig().getSync() != null
-        ? job.getConfig().getSync().getConfiguredAirbyteCatalog().getStreams().stream()
+    final var configuredCatalog = new JobConfigProxy(job.getConfig()).getConfiguredCatalog();
+    return configuredCatalog != null
+        ? configuredCatalog.getStreams().stream()
             .map(s -> new StreamDescriptor().name(s.getStream().getName()).namespace(s.getStream().getNamespace())).collect(Collectors.toList())
         : List.of();
   }

@@ -601,6 +601,16 @@ public class Jsons {
   }
 
   /**
+   * Convert a {@link JsonNode} as a string-to-string map.
+   *
+   * @param json to convert
+   * @return json as string-to-string map
+   */
+  public static Map<String, Object> deserializeToMap(final JsonNode json) {
+    return OBJECT_MAPPER.convertValue(json, new TypeReference<>() {});
+  }
+
+  /**
    * By the Jackson DefaultPrettyPrinter prints objects with an extra space as follows: {"name" :
    * "airbyte"}. We prefer {"name": "airbyte"}.
    */

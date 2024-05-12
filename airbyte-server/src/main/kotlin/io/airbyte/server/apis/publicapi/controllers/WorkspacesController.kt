@@ -33,7 +33,7 @@ val logger = KotlinLogging.logger {}
 @Secured(SecurityRule.IS_AUTHENTICATED)
 open class WorkspacesController(
   protected val workspaceService: WorkspaceService,
-  private val apiAuthorizationHelper: ApiAuthorizationHelper,
+  protected val apiAuthorizationHelper: ApiAuthorizationHelper,
   private val currentUserService: CurrentUserService,
 ) : PublicWorkspacesApi {
   @Path("/{workspaceId}/oauthCredentials")
@@ -56,14 +56,14 @@ open class WorkspacesController(
   }
 
   @ExecuteOn(AirbyteTaskExecutors.PUBLIC_API)
-  override fun publicCreateWorkspace(workspaceCreateRequest: WorkspaceCreateRequest?): Response {
+  override fun publicCreateWorkspace(workspaceCreateRequest: WorkspaceCreateRequest): Response {
     // Now that we have orgs everywhere, ensure the user is at least an organization editor
     apiAuthorizationHelper.ensureUserHasAnyRequiredRoleOrThrow(
       Scope.ORGANIZATION,
       listOf(DEFAULT_ORGANIZATION_ID.toString()),
       setOf(OrganizationAuthRole.ORGANIZATION_EDITOR),
     )
-    return workspaceService.controllerCreateWorkspace(workspaceCreateRequest!!)
+    return workspaceService.controllerCreateWorkspace(workspaceCreateRequest)
   }
 
   @Path("/{workspaceId}")

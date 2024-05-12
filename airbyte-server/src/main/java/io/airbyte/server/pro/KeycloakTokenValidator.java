@@ -72,7 +72,7 @@ public class KeycloakTokenValidator implements TokenValidator<HttpRequest<?>> {
     final Collection<String> roles = new HashSet<>();
 
     try {
-      final String jwtPayloadString = new String(Base64.getDecoder().decode(payload), StandardCharsets.UTF_8);
+      final String jwtPayloadString = new String(Base64.getUrlDecoder().decode(payload), StandardCharsets.UTF_8);
       final JsonNode jwtPayload = Jsons.deserialize(jwtPayloadString);
       log.debug("jwtPayload: {}", jwtPayload);
 
