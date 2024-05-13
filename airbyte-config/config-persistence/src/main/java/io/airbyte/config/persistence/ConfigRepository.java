@@ -1871,17 +1871,6 @@ public class ConfigRepository {
   }
 
   /**
-   * Set the default version for an actor.
-   *
-   * @param actorId - actor id
-   * @param actorDefinitionVersionId - actor definition version id
-   */
-  @Deprecated
-  public void setActorDefaultVersion(final UUID actorId, final UUID actorDefinitionVersionId) throws IOException {
-    actorDefinitionService.setActorDefaultVersion(actorId, actorDefinitionVersionId);
-  }
-
-  /**
    * Get the list of breaking changes available affecting an actor definition.
    *
    * @param actorDefinitionId - actor definition id

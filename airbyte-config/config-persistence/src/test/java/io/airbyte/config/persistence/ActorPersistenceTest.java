@@ -10,7 +10,6 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.spy;
 
-import io.airbyte.config.ActorDefinitionVersion;
 import io.airbyte.config.DestinationConnection;
 import io.airbyte.config.Geography;
 import io.airbyte.config.SourceConnection;
@@ -142,46 +141,6 @@ class ActorPersistenceTest extends BaseConfigDatabaseTest {
     final DestinationConnection destinationConnectionFromDb = configRepository.getDestinationConnection(destinationConnection.getDestinationId());
     assertNotNull(destinationConnectionFromDb.getDefaultVersionId());
     assertEquals(standardDestinationDefinition.getDefaultVersionId(), destinationConnectionFromDb.getDefaultVersionId());
-  }
-
-  @Test
-  void testSetSourceDefaultVersion() throws IOException, JsonValidationException, ConfigNotFoundException {
-    final ActorDefinitionVersion newActorDefinitionVersion = configRepository.writeActorDefinitionVersion(MockData.actorDefinitionVersion()
-        .withActorDefinitionId(standardSourceDefinition.getSourceDefinitionId())
-        .withVersionId(UUID.randomUUID())
-        .withDockerImageTag(UPGRADE_IMAGE_TAG));
-
-    final SourceConnection sourceConnection = new SourceConnection()
-        .withSourceId(UUID.randomUUID())
-        .withSourceDefinitionId(standardSourceDefinition.getSourceDefinitionId())
-        .withWorkspaceId(WORKSPACE_ID)
-        .withName(SOURCE_NAME);
-    configRepository.writeSourceConnectionNoSecrets(sourceConnection);
-
-    configRepository.setActorDefaultVersion(sourceConnection.getSourceId(), newActorDefinitionVersion.getVersionId());
-
-    final SourceConnection sourceConnectionFromDb = configRepository.getSourceConnection(sourceConnection.getSourceId());
-    assertEquals(newActorDefinitionVersion.getVersionId(), sourceConnectionFromDb.getDefaultVersionId());
-  }
-
-  @Test
-  void testSetDestinationDefaultVersion() throws IOException, JsonValidationException, ConfigNotFoundException {
-    final ActorDefinitionVersion newActorDefinitionVersion = configRepository.writeActorDefinitionVersion(MockData.actorDefinitionVersion()
-        .withActorDefinitionId(standardDestinationDefinition.getDestinationDefinitionId())
-        .withVersionId(UUID.randomUUID())
-        .withDockerImageTag(UPGRADE_IMAGE_TAG));
-
-    final DestinationConnection destinationConnection = new DestinationConnection()
-        .withDestinationId(UUID.randomUUID())
-        .withDestinationDefinitionId(standardDestinationDefinition.getDestinationDefinitionId())
-        .withWorkspaceId(WORKSPACE_ID)
-        .withName(DESTINATION_NAME);
-    configRepository.writeDestinationConnectionNoSecrets(destinationConnection);
-
-    configRepository.setActorDefaultVersion(destinationConnection.getDestinationId(), newActorDefinitionVersion.getVersionId());
-
-    final DestinationConnection destinationConnectionFromDb = configRepository.getDestinationConnection(destinationConnection.getDestinationId());
-    assertEquals(newActorDefinitionVersion.getVersionId(), destinationConnectionFromDb.getDefaultVersionId());
   }
 
 }

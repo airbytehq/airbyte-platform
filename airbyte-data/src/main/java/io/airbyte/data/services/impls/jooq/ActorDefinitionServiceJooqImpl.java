@@ -275,42 +275,6 @@ public class ActorDefinitionServiceJooqImpl implements ActorDefinitionService {
         .collect(Collectors.toList());
   }
 
-  /**
-   * Set the default version for an actor.
-   *
-   * @param actorId - actor id
-   * @param actorDefinitionVersionId - actor definition version id
-   */
-  @Override
-  public void setActorDefaultVersion(final UUID actorId, final UUID actorDefinitionVersionId)
-      throws IOException {
-    database.query(ctx -> ctx.update(Tables.ACTOR)
-        .set(Tables.ACTOR.DEFAULT_VERSION_ID, actorDefinitionVersionId)
-        .set(Tables.ACTOR.UPDATED_AT, OffsetDateTime.now())
-        .where(Tables.ACTOR.ID.eq(actorId))
-        .execute());
-  }
-
-  @Override
-  public void setActorDefaultVersions(final List<UUID> actorIds, final UUID actorDefinitionVersionId) throws IOException {
-    database.query(ctx -> ctx.update(Tables.ACTOR)
-        .set(Tables.ACTOR.DEFAULT_VERSION_ID, actorDefinitionVersionId)
-        .set(Tables.ACTOR.UPDATED_AT, OffsetDateTime.now())
-        .where(Tables.ACTOR.ID.in(actorIds))
-        .execute());
-  }
-
-  @Override
-  public Set<UUID> getActorsWithDefaultVersionId(final UUID defaultVersionId) throws IOException {
-    return database.query(ctx -> ctx.select(ACTOR.ID)
-        .from(ACTOR)
-        .where(ACTOR.DEFAULT_VERSION_ID.eq(defaultVersionId))
-        .fetch()
-        .stream()
-        .map(r -> r.get(ACTOR.ID))
-        .collect(Collectors.toSet()));
-  }
-
   @Override
   public List<ActorWorkspaceOrganizationIds> getActorIdsForDefinition(final UUID actorDefinitionId) throws IOException {
     return database.query(ctx -> ctx.select(ACTOR.ID, ACTOR.WORKSPACE_ID, WORKSPACE.ORGANIZATION_ID)

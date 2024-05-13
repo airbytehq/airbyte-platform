@@ -49,12 +49,6 @@ public interface ActorDefinitionService {
 
   Optional<ActorDefinitionVersion> getDefaultVersionForActorDefinitionIdOptional(final UUID actorDefinitionId) throws IOException;
 
-  void setActorDefaultVersion(UUID actorId, UUID actorDefinitionVersionId) throws IOException;
-
-  void setActorDefaultVersions(List<UUID> actorId, UUID actorDefinitionVersionId) throws IOException;
-
-  Set<UUID> getActorsWithDefaultVersionId(UUID defaultVersionId) throws IOException;
-
   List<ActorWorkspaceOrganizationIds> getActorIdsForDefinition(UUID actorDefinitionId) throws IOException;
 
   List<ActorDefinitionBreakingChange> listBreakingChangesForActorDefinition(UUID actorDefinitionId) throws IOException;
