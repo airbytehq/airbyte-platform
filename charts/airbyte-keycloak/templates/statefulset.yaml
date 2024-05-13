@@ -56,31 +56,8 @@ spec:
             - >
               PGPASSWORD=$DATABASE_PASSWORD psql -h $DATABASE_HOST -p $DATABASE_PORT -U $DATABASE_USER -d $DATABASE_DB -c "CREATE SCHEMA IF NOT EXISTS keycloak";
           env:
-            - name: DATABASE_HOST
-              valueFrom:
-                configMapKeyRef:
-                  name: {{ .Release.Name }}-airbyte-env
-                  key: DATABASE_HOST
-            - name: DATABASE_PORT
-              valueFrom:
-                configMapKeyRef:
-                  name: {{ .Release.Name }}-airbyte-env
-                  key: DATABASE_PORT
-            - name: DATABASE_DB
-              valueFrom:
-                configMapKeyRef:
-                  name: {{ .Release.Name }}-airbyte-env
-                  key: DATABASE_DB
-            - name: DATABASE_USER
-              valueFrom:
-                secretKeyRef:
-                  name: {{ .Values.global.secretName | default (printf "%s-airbyte-secrets" .Release.Name) }}
-                  key: DATABASE_USER
-            - name: DATABASE_PASSWORD
-              valueFrom:
-                secretKeyRef:
-                  name: {{ .Values.global.database.secretName | default (printf "%s-airbyte-secrets" .Release.Name ) }}
-                  key: {{ .Values.global.database.secretValue | default "DATABASE_PASSWORD" }}
+            {{- include "airbyte.database.envs" . | nindent 12 }}
+
           securityContext: 
             {{- toYaml .Values.initContainerSecurityContext | nindent 14 }}
         {{- end }}
@@ -103,21 +80,6 @@ spec:
                 secretKeyRef:
                   name: {{ .Values.global.secretName | default (printf "%s-airbyte-secrets" .Release.Name) }}
                   key: KEYCLOAK_ADMIN_PASSWORD
-            - name: KEYCLOAK_DATABASE_URL
-              valueFrom:
-                configMapKeyRef:
-                  name: {{ .Release.Name }}-airbyte-env
-                  key: KEYCLOAK_DATABASE_URL
-            - name: KEYCLOAK_DATABASE_USERNAME
-              valueFrom:
-                secretKeyRef:
-                  name: {{ .Values.global.secretName | default (printf "%s-airbyte-secrets" .Release.Name) }}
-                  key: DATABASE_USER
-            - name: KEYCLOAK_DATABASE_PASSWORD
-              valueFrom:
-                secretKeyRef:
-                  name: {{ .Values.global.database.secretName | default (printf "%s-airbyte-secrets" .Release.Name ) }}
-                  key: {{ .Values.global.database.secretValue | default "DATABASE_PASSWORD" }}
             - name: KEYCLOAK_PORT
               valueFrom:
                 configMapKeyRef:
@@ -128,7 +90,10 @@ spec:
                 configMapKeyRef:
                   name: {{ .Release.Name }}-airbyte-env
                   key: KEYCLOAK_JAVA_OPTS_APPEND
+            {{- include "airbyte.keycloak.database.envs" . | nindent 12 }}
             {{- end }}
+
+
             {{- if .Values.extraEnv }}
             {{ .Values.extraEnv | toYaml | nindent 12 }}
             {{- end }}
