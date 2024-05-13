@@ -25,6 +25,7 @@ import io.airbyte.config.persistence.StatePersistence;
 import io.airbyte.config.persistence.StreamRefreshesRepository;
 import io.airbyte.config.persistence.helper.GenerationBumper;
 import io.airbyte.config.secrets.JsonSecretsProcessor;
+import io.airbyte.data.services.ConnectorBuilderService;
 import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.metrics.lib.MetricClient;
 import io.airbyte.metrics.lib.MetricClientFactory;
@@ -179,9 +180,9 @@ public class ApplicationBeanFactory {
   }
 
   @Singleton
-  public BuilderProjectUpdater builderProjectUpdater(ConfigRepository configRepository) {
+  public BuilderProjectUpdater builderProjectUpdater(final ConnectorBuilderService connectorBuilderService) {
     final var pathToConnectors = io.airbyte.commons.envvar.EnvVar.PATH_TO_CONNECTORS.fetch();
-    ConfigRepositoryBuilderProjectUpdater configRepositoryProjectUpdater = new ConfigRepositoryBuilderProjectUpdater(configRepository);
+    final ConfigRepositoryBuilderProjectUpdater configRepositoryProjectUpdater = new ConfigRepositoryBuilderProjectUpdater(connectorBuilderService);
     if (pathToConnectors == null || pathToConnectors.isEmpty()) {
       return configRepositoryProjectUpdater;
     } else {

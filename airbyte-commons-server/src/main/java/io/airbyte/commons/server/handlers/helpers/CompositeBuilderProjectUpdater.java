@@ -5,7 +5,7 @@
 package io.airbyte.commons.server.handlers.helpers;
 
 import io.airbyte.api.model.generated.ExistingConnectorBuilderProjectWithWorkspaceId;
-import io.airbyte.config.persistence.ConfigNotFoundException;
+import io.airbyte.data.exceptions.ConfigNotFoundException;
 import java.io.IOException;
 import java.util.List;
 
@@ -23,8 +23,9 @@ public class CompositeBuilderProjectUpdater implements BuilderProjectUpdater {
   }
 
   @Override
-  public void persistBuilderProjectUpdate(ExistingConnectorBuilderProjectWithWorkspaceId projectUpdate) throws ConfigNotFoundException, IOException {
-    for (BuilderProjectUpdater updater : updaters) {
+  public void persistBuilderProjectUpdate(final ExistingConnectorBuilderProjectWithWorkspaceId projectUpdate)
+      throws IOException, ConfigNotFoundException {
+    for (final BuilderProjectUpdater updater : updaters) {
       updater.persistBuilderProjectUpdate(projectUpdate);
     }
   }
