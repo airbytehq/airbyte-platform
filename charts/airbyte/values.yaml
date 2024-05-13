@@ -1,5 +1,6 @@
 ### TEST FOR RELEASE WORKFLOW
 
+
 # Global params that are overwritten with umbrella chart
 global:
   # -- Service Account name override
@@ -8,17 +9,68 @@ global:
   deploymentMode: "oss"
   # -- Edition; "community" or "pro"
   edition: "community"
-  # -- Log4j configuration file, if not using minio, update to "log4j2-no-minio.xml"
-  log4jConfig: "log4j2.xml"
+
+  airbyteYml: ""
+
+  enterprise:
+    # -- Secret name where an Airbyte license key is stored
+    licenseKeySecretName: "airbyte-config-secrets"
+    # -- The key within `licenseKeySecretName` where the Airbyte license key is stored
+    licenseKeySecretKey: "license-key"
+
+  # -- The URL where Airbyte will be reached; This should match your Ingress host
+  airbyteUrl: ""
+
+  # -- Auth configuration
+  auth:
+    # -- Admin user configuration
+    instanceAdmin:
+      # -- The first name of the initial user
+      firstName: ""
+      # -- The last name of the initial user
+      lastName:  ""
+
+      # -- Secret name where the initial user's email is stored
+      emailSecretName: "airbyte-config-secrets"
+      # -- The key within `emailSecretName` where the initial user's email is stored
+      emailSecretKey: "initial-user-email"
+
+      # -- Secret name where the initial user's password is stored
+      passwordSecretName: "airbyte-config-secrets"
+      # -- The key within `passwordSecretName` where the initial user's password is stored
+      passwordSecretKey: "initial-user-password"
+    
+    # -- SSO Identify Provder configuration; (requires Enterprise)
+    #identityProvider:
+    #  # -- The identity provider type (e.g. oidc)
+    #  type: ""
+    #  # -- OIDC configuration (required if `auth.identityProvider.type` is "oidc")
+    #  oidc:
+    #    # -- OIDC application domain
+    #    domain: ""
+    #    # -- OIDC application name
+    #    appName: ""
+
+    #    # -- Secret name where the OIDC client id is stored
+    #    clientIdSecretName: "airbyte-config-secrets"
+    #    # -- The key within `clientIdSecretName` where the OIDC client id is stored
+    #    clientIdSecretKey: "client-id"
+
+    #    # -- Secret name where the OIDC client secret is stored
+    #    clientSecretSecretName: "airbyte-config-secrets"
+    #    # -- The key within `clientSecretSecretName` where the OIDC client secret is stored
+    #    clientSecretSecretKey: "client-secret"
 
   # -- Environment variables
   env_vars: {}
+
   # Database configuration override
   database:
     # -- Secret name where database credentials are stored
     secretName: ""
     # -- Secret value for database password
     secretValue: ""
+
   # todo: remove so there is no need to create secrets for gcs if not using gcs
   storage:
     type: minio # default storage used

@@ -82,6 +82,11 @@ spec:
             configMapKeyRef:
               name: {{ .Release.Name }}-airbyte-env
               key: AIRBYTE_EDITION
+        - name: AIRBYTE_URL 
+          valueFrom:
+            configMapKeyRef:
+              name: {{ .Values.global.configMapName | default (printf "%s-airbyte-env" .Release.Name) }}
+              key: AIRBYTE_URL 
         - name: AUTO_DETECT_SCHEMA
           valueFrom:
             configMapKeyRef:
@@ -377,7 +382,12 @@ spec:
               key: GOOGLE_APPLICATION_CREDENTIALS
         {{- end }}
 
+        {{- include "airbyte.enterprise.instanceAdmin" . | nindent 8 }} 
+        {{- include "airbyte.enterprise.identityProvider" . | nindent 8 }} 
+        {{- include "airbyte.enterprise.license" . | nindent 8 }}
+
         {{- end }}
+
         # Values from secret
         {{- if .Values.secrets }}
         {{- range $k, $v := .Values.secrets }}
@@ -446,10 +456,12 @@ spec:
           mountPath: /secrets/gcs-log-creds
           readOnly: true
         {{- end }}
+        {{- if .Values.global.airbyteYml }}
         - name: airbyte-yml-volume
           mountPath: /app/configs/airbyte.yml
           subPath: fileContents
           readOnly: true
+        {{- end }}
       {{- end }}
 
         {{- if .Values.extraVolumeMounts }}
@@ -473,9 +485,11 @@ spec:
           secretName: {{ ternary (printf "%s-gcs-log-creds" ( .Release.Name )) .Values.global.storage.storageSecretName (not ((.Values.global.storage).storageSecretName)) }}
       {{- end }}
 
+      {{- if .Values.global.airbyteYml }}
       - name: airbyte-yml-volume
         secret:
           secretName: {{ .Release.Name }}-airbyte-yml
+      {{- end }}
     {{- end }}
       {{- if .Values.extraVolumes }}
 {{ toYaml .Values.extraVolumes | nindent 6 }}
