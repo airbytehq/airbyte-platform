@@ -92,15 +92,19 @@ export const computeStreamStatus = ({
   scheduleType,
   scheduleData,
   hasBreakingSchemaChange,
+  hasRecordsExtracted,
   lateMultiplier,
   errorMultiplier,
+  showSyncProgress,
 }: {
   statuses: StreamStatusRead[];
   scheduleType?: ConnectionScheduleType;
   scheduleData?: ConnectionScheduleData;
+  hasRecordsExtracted: boolean;
   hasBreakingSchemaChange: boolean;
   lateMultiplier: number;
   errorMultiplier: number;
+  showSyncProgress: boolean;
 }): UIStreamStatus => {
   if (statuses == null || statuses.length === 0) {
     return { status: undefined, isRunning: false, lastSuccessfulSync: undefined };
@@ -111,6 +115,16 @@ export const computeStreamStatus = ({
   const lastSuccessfulSync = statuses.find(
     ({ jobType, runState }) => jobType === StreamStatusJobType.SYNC && runState === StreamStatusRunState.COMPLETE
   );
+
+  if (showSyncProgress) {
+    if (isRunning && !hasRecordsExtracted) {
+      return { status: ConnectionStatusIndicatorStatus.Queued, isRunning, lastSuccessfulSync };
+    }
+
+    if (isRunning && hasRecordsExtracted) {
+      return { status: ConnectionStatusIndicatorStatus.Syncing, isRunning, lastSuccessfulSync };
+    }
+  }
 
   // breaking schema change means user action is required
   if (hasBreakingSchemaChange) {

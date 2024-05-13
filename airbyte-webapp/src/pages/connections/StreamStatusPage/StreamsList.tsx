@@ -15,8 +15,10 @@ import { Heading } from "components/ui/Heading";
 import { Icon } from "components/ui/Icon";
 import { Table } from "components/ui/Table";
 import { Text } from "components/ui/Text";
+import { InfoTooltip } from "components/ui/Tooltip";
 
-import { ConnectionStatus } from "core/api/types/AirbyteClient";
+import { useGetConnectionSyncProgress } from "core/api";
+import { ConnectionStatus, ConnectionSyncProgressReadItem, StreamStatusRunState } from "core/api/types/AirbyteClient";
 import { useConnectionEditService } from "hooks/services/ConnectionEdit/ConnectionEditService";
 import { useExperiment } from "hooks/services/Experiment";
 
@@ -24,11 +26,14 @@ import { StreamActionsMenu } from "./StreamActionsMenu";
 import { StreamSearchFiltering } from "./StreamSearchFiltering";
 import styles from "./StreamsList.module.scss";
 import { useStreamsListContext } from "./StreamsListContext";
+import { SyncProgressItem } from "./SyncProgressItem";
 
 const LastSync: React.FC<{ transitionedAt: number | undefined; showRelativeTime: boolean }> = ({
   transitionedAt,
   showRelativeTime,
 }) => {
+  const showSyncProgress = useExperiment("connection.syncProgress", false);
+
   const lastSyncDisplayText = useMemo(() => {
     if (transitionedAt) {
       const lastSync = dayjs(transitionedAt);
@@ -38,8 +43,10 @@ const LastSync: React.FC<{ transitionedAt: number | undefined; showRelativeTime:
       }
       return lastSync.format("MM.DD.YY HH:mm:ss");
     }
-    return null;
-  }, [transitionedAt, showRelativeTime]);
+
+    return showSyncProgress ? <FormattedMessage id="general.dash" /> : null;
+  }, [transitionedAt, showSyncProgress, showRelativeTime]);
+
   if (lastSyncDisplayText) {
     return (
       <Text size="xs" color="grey300">
@@ -51,17 +58,36 @@ const LastSync: React.FC<{ transitionedAt: number | undefined; showRelativeTime:
 };
 
 export const StreamsList = () => {
-  const useSimpliedCreation = useExperiment("connection.simplifiedCreation", true);
+  const useSimplifiedCreation = useExperiment("connection.simplifiedCreation", true);
+  const showSyncProgress = useExperiment("connection.syncProgress", false);
+
   const [showRelativeTime, setShowRelativeTime] = useToggle(true);
-
-  const { filteredStreams } = useStreamsListContext();
-
-  const streamEntries = filteredStreams.map((stream) => {
-    return {
-      name: stream.streamName,
-      state: stream,
-    };
-  });
+  const { connection } = useConnectionEditService();
+  const { filteredStreamsByName, filteredStreamsByStatus } = useStreamsListContext();
+  const { isRunning } = useConnectionStatus(connection.connectionId);
+  const { data: connectionSyncProgress } = useGetConnectionSyncProgress(
+    connection.connectionId,
+    showSyncProgress && isRunning
+  );
+  const streamsList = showSyncProgress ? filteredStreamsByName : filteredStreamsByStatus;
+  const streamEntries = useMemo(
+    () =>
+      streamsList.map((stream) => {
+        const syncProgress = connectionSyncProgress?.find(
+          (progressItem: ConnectionSyncProgressReadItem) =>
+            progressItem.streamName === stream.streamName && progressItem.streamNamespace === stream.streamNamespace
+        );
+        return {
+          name: stream.streamName,
+          ...syncProgress,
+          state: {
+            ...stream,
+            lastSuccessfulSyncAt: stream.lastSuccessfulSyncAt,
+          },
+        };
+      }),
+    [connectionSyncProgress, streamsList]
+  );
 
   const columnHelper = useMemo(() => createColumnHelper<(typeof streamEntries)[number]>(), []);
   const columns = useMemo(
@@ -81,6 +107,35 @@ export const StreamsList = () => {
         header: () => <FormattedMessage id="connection.stream.status.table.streamName" />,
         cell: (props) => <>{props.cell.getValue()}</>,
       }),
+      ...(showSyncProgress
+        ? [
+            columnHelper.accessor("bytesLoaded", {
+              id: "syncProgress",
+              header: () => (
+                <>
+                  <FormattedMessage id="connection.stream.status.table.latestSync" />
+                  <InfoTooltip>
+                    <FormattedMessage id="sources.updatesEveryMinute" />
+                  </InfoTooltip>
+                </>
+              ),
+              cell: (props) => {
+                const syncStartedAt =
+                  props.row.original.state.relevantHistory[0]?.runState === StreamStatusRunState.RUNNING
+                    ? props.row.original.state.relevantHistory[0]?.transitionedAt
+                    : undefined;
+
+                return (
+                  <SyncProgressItem
+                    recordsLoaded={props.row.original.recordsLoaded}
+                    recordsExtracted={props.row.original.recordsExtracted}
+                    syncStartedAt={syncStartedAt}
+                  />
+                );
+              },
+            }),
+          ]
+        : []),
       columnHelper.accessor("state", {
         id: "lastSync",
         header: () => (
@@ -102,10 +157,9 @@ export const StreamsList = () => {
         },
       }),
     ],
-    [columnHelper, setShowRelativeTime, showRelativeTime]
+    [columnHelper, setShowRelativeTime, showRelativeTime, showSyncProgress]
   );
 
-  const { connection } = useConnectionEditService();
   const { status, nextSync } = useConnectionStatus(connection.connectionId);
 
   const showTable = connection.status !== ConnectionStatus.inactive;
@@ -114,7 +168,7 @@ export const StreamsList = () => {
     <Card noPadding>
       <Box p="xl" className={styles.cardHeader}>
         <FlexContainer justifyContent="space-between" alignItems="center">
-          {useSimpliedCreation ? (
+          {useSimplifiedCreation ? (
             <FlexContainer alignItems="center">
               <Heading as="h5" size="sm">
                 <FormattedMessage id="connection.stream.status.title" />
@@ -153,7 +207,12 @@ export const StreamsList = () => {
               columns={columns}
               data={streamEntries}
               variant="inBlock"
-              getRowClassName={(data) => classNames({ [styles.syncing]: data.state?.isRunning })}
+              getRowClassName={(data) =>
+                classNames(styles.row, {
+                  [styles.syncing]: !showSyncProgress && data.state?.status === ConnectionStatusIndicatorStatus.Syncing,
+                  [styles["syncing--next"]]: showSyncProgress && data.state?.isRunning,
+                })
+              }
               sorting={false}
             />
           )}

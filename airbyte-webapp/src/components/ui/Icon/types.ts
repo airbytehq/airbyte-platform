@@ -108,6 +108,7 @@ export type IconType =
   | "statusError"
   | "statusInactive"
   | "statusInProgress"
+  | "statusQueued"
   | "statusSleep"
   | "statusSuccess"
   | "statusWarning"

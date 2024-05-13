@@ -112,6 +112,7 @@ import StatusCancelledIcon from "./icons/statusCancelledIcon.svg?react";
 import StatusErrorIcon from "./icons/statusErrorIcon.svg?react";
 import StatusInactiveIcon from "./icons/statusInactiveIcon.svg?react";
 import StatusInProgressIcon from "./icons/statusInProgressIcon.svg?react";
+import StatusQueuedIcon from "./icons/statusQueuedIcon.svg?react";
 import StatusSleepIcon from "./icons/statusSleepIcon.svg?react";
 import StatusSuccessIcon from "./icons/statusSuccessIcon.svg?react";
 import StatusWarningIcon from "./icons/statusWarningIcon.svg?react";
@@ -261,6 +262,7 @@ export const Icons: Record<IconType, React.FC<React.SVGProps<SVGSVGElement>>> = 
   statusError: StatusErrorIcon,
   statusInactive: StatusInactiveIcon,
   statusInProgress: StatusInProgressIcon,
+  statusQueued: StatusQueuedIcon,
   statusSleep: StatusSleepIcon,
   statusSuccess: StatusSuccessIcon,
   statusWarning: StatusWarningIcon,

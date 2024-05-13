@@ -8,8 +8,8 @@ import {
   useLateMultiplierExperiment,
 } from "components/connection/StreamStatus/streamStatusUtils";
 
-import { useListStreamsStatuses, useGetConnection } from "core/api";
-import { StreamStatusJobType, StreamStatusRead } from "core/api/types/AirbyteClient";
+import { useListStreamsStatuses, useGetConnection, useGetConnectionSyncProgress } from "core/api";
+import { ConnectionSyncProgressReadItem, StreamStatusJobType, StreamStatusRead } from "core/api/types/AirbyteClient";
 import { useSchemaChanges } from "hooks/connection/useSchemaChanges";
 import { useExperiment } from "hooks/services/Experiment";
 
@@ -50,11 +50,15 @@ export const useStreamsStatuses = (
 
   const connection = useGetConnection(connectionId);
   const { hasBreakingSchemaChange } = useSchemaChanges(connection.schemaChange);
+  const showSyncProgress = useExperiment("connection.syncProgress", false);
   const lateMultiplier = useLateMultiplierExperiment();
   const errorMultiplier = useErrorMultiplierExperiment();
-
   const connectionStatus = useConnectionStatus(connectionId);
   const isConnectionDisabled = connectionStatus.status === ConnectionStatusIndicatorStatus.Disabled;
+  const { data: connectionSyncProgress } = useGetConnectionSyncProgress(
+    connectionId,
+    showSyncProgress && connectionStatus.isRunning
+  );
 
   const enabledStreams: AirbyteStreamAndConfigurationWithEnforcedStream[] = connection.syncCatalog.streams.filter(
     (stream) => stream.config?.selected && stream.stream
@@ -98,11 +102,16 @@ export const useStreamsStatuses = (
           : ConnectionStatusIndicatorStatus.Pending,
         isRunning: false,
         relevantHistory: [],
+        hasRecordsExtracted: false,
       };
 
       if (hasPerStreamStatuses === false) {
         streamStatus.status = connectionStatus.status;
         streamStatus.isRunning = connectionStatus.isRunning;
+        streamStatus.hasRecordsExtracted =
+          (connectionSyncProgress?.filter(
+            (progress: ConnectionSyncProgressReadItem) => progress.streamName === enabledStream.stream.name
+          )[0]?.recordsExtracted ?? 0) > 0;
         streamStatus.lastSuccessfulSyncAt = connectionStatus.lastSuccessfulSync
           ? connectionStatus.lastSuccessfulSync * 1000 // unix timestamp in seconds -> milliseconds
           : undefined;
@@ -128,16 +137,21 @@ export const useStreamsStatuses = (
       enabledStreams.reduce((streamStatuses, enabledStream) => {
         const streamKey = getStreamKey(enabledStream.stream);
         const mappedStreamStatus = streamStatuses.get(streamKey);
-
+        const hasRecordsExtracted =
+          (connectionSyncProgress?.find(
+            (progress: ConnectionSyncProgressReadItem) => progress.streamName === enabledStream.stream.name
+          )?.recordsExtracted ?? 0) > 0;
         if (mappedStreamStatus) {
           mappedStreamStatus.relevantHistory.sort(sortStreamStatuses); // put the histories are in order
           const detectedStatus = computeStreamStatus({
             statuses: mappedStreamStatus.relevantHistory,
             scheduleType: connection.scheduleType,
             scheduleData: connection.scheduleData,
+            hasRecordsExtracted,
             hasBreakingSchemaChange,
             lateMultiplier,
             errorMultiplier,
+            showSyncProgress,
           });
 
           if (detectedStatus.status != null) {
