@@ -44,13 +44,15 @@ public interface ConnectorBuilderService {
 
   void createDeclarativeManifestAsActiveVersion(DeclarativeManifest declarativeManifest,
                                                 ActorDefinitionConfigInjection configInjection,
-                                                ConnectorSpecification connectorSpecification)
+                                                ConnectorSpecification connectorSpecification,
+                                                String cdkVersion)
       throws IOException;
 
   void setDeclarativeSourceActiveVersion(UUID sourceDefinitionId,
                                          Long version,
                                          ActorDefinitionConfigInjection configInjection,
-                                         ConnectorSpecification connectorSpecification)
+                                         ConnectorSpecification connectorSpecification,
+                                         String cdkVersion)
       throws IOException;
 
   Stream<ActorDefinitionConfigInjection> getActorDefinitionConfigInjections(UUID actorDefinitionId) throws IOException;

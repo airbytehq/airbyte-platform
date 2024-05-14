@@ -13,6 +13,7 @@ import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -49,6 +50,7 @@ class DeclarativeSourceDefinitionsHandlerTest {
   private static final Long A_VERSION = 32L;
   private static final Long ANOTHER_VERSION = 99L;
   private static final String A_DESCRIPTION = "a description";
+  private static final String A_CDK_VERSION = "0.70.0";
   private static final JsonNode A_MANIFEST;
   private static final JsonNode A_SPEC;
 
@@ -116,6 +118,7 @@ class DeclarativeSourceDefinitionsHandlerTest {
     givenSourceIsDeclarative();
     when(manifestInjector.createDeclarativeManifestConnectorSpecification(A_SPEC)).thenReturn(adaptedConnectorSpecification);
     when(manifestInjector.createConfigInjection(A_SOURCE_DEFINITION_ID, A_MANIFEST)).thenReturn(configInjection);
+    when(manifestInjector.getCdkVersion(A_MANIFEST)).thenReturn(A_CDK_VERSION);
 
     handler.createDeclarativeSourceDefinitionManifest(new DeclarativeSourceDefinitionCreateManifestRequestBody()
         .sourceDefinitionId(A_SOURCE_DEFINITION_ID)
@@ -123,6 +126,7 @@ class DeclarativeSourceDefinitionsHandlerTest {
         .declarativeManifest(anyDeclarativeManifest().manifest(A_MANIFEST).spec(A_SPEC).version(A_VERSION).description(A_DESCRIPTION)));
 
     verify(manifestInjector, times(1)).addInjectedDeclarativeManifest(A_SPEC);
+    verify(manifestInjector, times(1)).getCdkVersion(A_MANIFEST);
     verify(connectorBuilderService, times(1)).createDeclarativeManifestAsActiveVersion(eq(new DeclarativeManifest()
         .withActorDefinitionId(A_SOURCE_DEFINITION_ID)
         .withVersion(A_VERSION)
@@ -130,7 +134,8 @@ class DeclarativeSourceDefinitionsHandlerTest {
         .withManifest(A_MANIFEST)
         .withSpec(A_SPEC)),
         eq(configInjection),
-        eq(adaptedConnectorSpecification));
+        eq(adaptedConnectorSpecification),
+        eq(A_CDK_VERSION));
   }
 
   @Test
@@ -149,7 +154,8 @@ class DeclarativeSourceDefinitionsHandlerTest {
         .withDescription(A_DESCRIPTION)
         .withManifest(A_MANIFEST)
         .withSpec(A_SPEC)));
-    verify(connectorBuilderService, times(0)).createDeclarativeManifestAsActiveVersion(any(), any(), any());
+    verify(manifestInjector, never()).getCdkVersion(any());
+    verify(connectorBuilderService, times(0)).createDeclarativeManifestAsActiveVersion(any(), any(), any(), any());
   }
 
   @Test
@@ -204,12 +210,14 @@ class DeclarativeSourceDefinitionsHandlerTest {
             .withSpec(A_SPEC));
     when(manifestInjector.createConfigInjection(A_SOURCE_DEFINITION_ID, A_MANIFEST)).thenReturn(configInjection);
     when(manifestInjector.createDeclarativeManifestConnectorSpecification(A_SPEC)).thenReturn(adaptedConnectorSpecification);
+    when(manifestInjector.getCdkVersion(A_MANIFEST)).thenReturn(A_CDK_VERSION);
 
     handler.updateDeclarativeManifestVersion(
         new UpdateActiveManifestRequestBody().sourceDefinitionId(A_SOURCE_DEFINITION_ID).workspaceId(A_WORKSPACE_ID).version(A_VERSION));
 
+    verify(manifestInjector, times(1)).getCdkVersion(A_MANIFEST);
     verify(connectorBuilderService, times(1)).setDeclarativeSourceActiveVersion(A_SOURCE_DEFINITION_ID, A_VERSION, configInjection,
-        adaptedConnectorSpecification);
+        adaptedConnectorSpecification, A_CDK_VERSION);
   }
 
   @Test

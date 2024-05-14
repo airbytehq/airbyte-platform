@@ -40,7 +40,6 @@ import io.airbyte.config.SecretPersistenceConfig;
 import io.airbyte.config.StandardSourceDefinition;
 import io.airbyte.config.StandardSourceDefinition.SourceType;
 import io.airbyte.config.SupportLevel;
-import io.airbyte.config.init.CdkVersionProvider;
 import io.airbyte.config.secrets.JsonSecretsProcessor;
 import io.airbyte.config.secrets.SecretsRepositoryReader;
 import io.airbyte.config.secrets.SecretsRepositoryWriter;
@@ -82,7 +81,6 @@ public class ConnectorBuilderProjectsHandler {
   private final BuilderProjectUpdater buildProjectUpdater;
   private final Supplier<UUID> uuidSupplier;
   private final DeclarativeSourceManifestInjector manifestInjector;
-  private final CdkVersionProvider cdkVersionProvider;
   private final WorkspaceService workspaceService;
   private final FeatureFlagClient featureFlagClient;
   private final SecretsRepositoryReader secretsRepositoryReader;
@@ -98,7 +96,6 @@ public class ConnectorBuilderProjectsHandler {
   @Inject
   public ConnectorBuilderProjectsHandler(final ConnectorBuilderService connectorBuilderService,
                                          final BuilderProjectUpdater builderProjectUpdater,
-                                         final CdkVersionProvider cdkVersionProvider,
                                          @Named("uuidGenerator") final Supplier<UUID> uuidSupplier,
                                          final DeclarativeSourceManifestInjector manifestInjector,
                                          final WorkspaceService workspaceService,
@@ -111,7 +108,6 @@ public class ConnectorBuilderProjectsHandler {
                                          final ConnectorBuilderServerApi connectorBuilderServerApiClient) {
     this.connectorBuilderService = connectorBuilderService;
     this.buildProjectUpdater = builderProjectUpdater;
-    this.cdkVersionProvider = cdkVersionProvider;
     this.uuidSupplier = uuidSupplier;
     this.manifestInjector = manifestInjector;
     this.workspaceService = workspaceService;
@@ -283,7 +279,7 @@ public class ConnectorBuilderProjectsHandler {
 
     final ActorDefinitionVersion defaultVersion = new ActorDefinitionVersion()
         .withActorDefinitionId(actorDefinitionId)
-        .withDockerImageTag(cdkVersionProvider.getCdkVersion())
+        .withDockerImageTag(manifestInjector.getCdkVersion(manifest))
         .withDockerRepository("airbyte/source-declarative-manifest")
         .withSpec(connectorSpecification)
         .withProtocolVersion(DEFAULT_AIRBYTE_PROTOCOL_VERSION.serialize())

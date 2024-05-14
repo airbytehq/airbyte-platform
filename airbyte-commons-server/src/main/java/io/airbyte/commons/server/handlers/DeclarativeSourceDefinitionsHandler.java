@@ -69,8 +69,8 @@ public class DeclarativeSourceDefinitionsHandler {
         .withSpec(spec);
     if (requestBody.getSetAsActiveManifest()) {
       connectorBuilderService.createDeclarativeManifestAsActiveVersion(declarativeManifest,
-          manifestInjector.createConfigInjection(requestBody.getSourceDefinitionId(), requestBody.getDeclarativeManifest().getManifest()),
-          manifestInjector.createDeclarativeManifestConnectorSpecification(spec));
+          manifestInjector.createConfigInjection(requestBody.getSourceDefinitionId(), declarativeManifest.getManifest()),
+          manifestInjector.createDeclarativeManifestConnectorSpecification(spec), manifestInjector.getCdkVersion(declarativeManifest.getManifest()));
     } else {
       connectorBuilderService.insertDeclarativeManifest(declarativeManifest);
     }
@@ -90,7 +90,8 @@ public class DeclarativeSourceDefinitionsHandler {
     connectorBuilderService.setDeclarativeSourceActiveVersion(requestBody.getSourceDefinitionId(),
         declarativeManifest.getVersion(),
         manifestInjector.createConfigInjection(declarativeManifest.getActorDefinitionId(), declarativeManifest.getManifest()),
-        manifestInjector.createDeclarativeManifestConnectorSpecification(declarativeManifest.getSpec()));
+        manifestInjector.createDeclarativeManifestConnectorSpecification(declarativeManifest.getSpec()),
+        manifestInjector.getCdkVersion(declarativeManifest.getManifest()));
   }
 
   private Collection<Long> fetchAvailableManifestVersions(final UUID sourceDefinitionId) throws IOException {

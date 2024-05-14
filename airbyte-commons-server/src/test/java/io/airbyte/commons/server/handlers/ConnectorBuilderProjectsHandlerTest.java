@@ -54,7 +54,6 @@ import io.airbyte.config.ScopeType;
 import io.airbyte.config.StandardSourceDefinition;
 import io.airbyte.config.StandardSourceDefinition.SourceType;
 import io.airbyte.config.SupportLevel;
-import io.airbyte.config.init.CdkVersionProvider;
 import io.airbyte.config.secrets.JsonSecretsProcessor;
 import io.airbyte.config.secrets.SecretsRepositoryReader;
 import io.airbyte.config.secrets.SecretsRepositoryWriter;
@@ -94,6 +93,7 @@ class ConnectorBuilderProjectsHandlerTest {
   private static final UUID A_WORKSPACE_ID = UUID.randomUUID();
   private static final Long A_VERSION = 32L;
   private static final Long ACTIVE_MANIFEST_VERSION = 865L;
+  private static final String A_CDK_VERSION = "0.79.0";
   private static final String A_DESCRIPTION = "a description";
   private static final String A_SOURCE_NAME = "a source name";
   private static final String A_NAME = "a name";
@@ -101,7 +101,6 @@ class ConnectorBuilderProjectsHandlerTest {
   private static final JsonNode A_MANIFEST;
   private static final JsonNode A_SPEC;
   private static final ActorDefinitionConfigInjection A_CONFIG_INJECTION = new ActorDefinitionConfigInjection().withInjectionPath("something");
-  private static final String CDK_VERSION = "8.9.10";
 
   static {
     try {
@@ -117,7 +116,6 @@ class ConnectorBuilderProjectsHandlerTest {
   private ConnectorBuilderProjectsHandler connectorBuilderProjectsHandler;
   private Supplier<UUID> uuidSupplier;
   private DeclarativeSourceManifestInjector manifestInjector;
-  private CdkVersionProvider cdkVersionProvider;
   private WorkspaceService workspaceService;
   private FeatureFlagClient featureFlagClient;
   private SecretsRepositoryReader secretsRepositoryReader;
@@ -171,7 +169,6 @@ class ConnectorBuilderProjectsHandlerTest {
     builderProjectUpdater = mock(BuilderProjectUpdater.class);
     uuidSupplier = mock(Supplier.class);
     manifestInjector = mock(DeclarativeSourceManifestInjector.class);
-    cdkVersionProvider = mock(CdkVersionProvider.class);
     workspaceService = mock(WorkspaceService.class);
     featureFlagClient = mock(TestClient.class);
     secretsRepositoryReader = mock(SecretsRepositoryReader.class);
@@ -180,19 +177,18 @@ class ConnectorBuilderProjectsHandlerTest {
     sourceService = mock(SourceService.class);
     secretsProcessor = mock(JsonSecretsProcessor.class);
     connectorBuilderServerApiClient = mock(ConnectorBuilderServerApi.class);
-    when(cdkVersionProvider.getCdkVersion()).thenReturn(CDK_VERSION);
     adaptedConnectorSpecification = mock(ConnectorSpecification.class);
     setupConnectorSpecificationAdapter(any(), "");
     workspaceId = UUID.randomUUID();
 
     connectorBuilderProjectsHandler =
-        new ConnectorBuilderProjectsHandler(connectorBuilderService, builderProjectUpdater, cdkVersionProvider, uuidSupplier, manifestInjector,
+        new ConnectorBuilderProjectsHandler(connectorBuilderService, builderProjectUpdater, uuidSupplier, manifestInjector,
             workspaceService, featureFlagClient,
             secretsRepositoryReader, secretsRepositoryWriter, secretPersistenceConfigService, sourceService, secretsProcessor,
             connectorBuilderServerApiClient);
   }
 
-  private ConnectorBuilderProject generateBuilderProject() throws JsonProcessingException {
+  private ConnectorBuilderProject generateBuilderProject() {
     final UUID projectId = UUID.randomUUID();
     return new ConnectorBuilderProject().withBuilderProjectId(projectId).withWorkspaceId(workspaceId).withName("Test project")
         .withHasDraft(true).withManifestDraft(draftManifest);
@@ -466,6 +462,7 @@ class ConnectorBuilderProjectsHandlerTest {
   void whenPublishConnectorBuilderProjectThenCreateActorDefinition() throws IOException {
     when(uuidSupplier.get()).thenReturn(A_SOURCE_DEFINITION_ID);
     when(manifestInjector.createConfigInjection(A_SOURCE_DEFINITION_ID, A_MANIFEST)).thenReturn(A_CONFIG_INJECTION);
+    when(manifestInjector.getCdkVersion(A_MANIFEST)).thenReturn(A_CDK_VERSION);
     setupConnectorSpecificationAdapter(A_SPEC, A_DOCUMENTATION_URL);
 
     connectorBuilderProjectsHandler.publishConnectorBuilderProject(anyConnectorBuilderProjectRequest().workspaceId(workspaceId).name(A_SOURCE_NAME)
@@ -482,7 +479,7 @@ class ConnectorBuilderProjectsHandlerTest {
             new ActorDefinitionVersion()
                 .withActorDefinitionId(A_SOURCE_DEFINITION_ID)
                 .withDockerRepository("airbyte/source-declarative-manifest")
-                .withDockerImageTag(CDK_VERSION)
+                .withDockerImageTag(A_CDK_VERSION)
                 .withSpec(adaptedConnectorSpecification)
                 .withSupportLevel(SupportLevel.NONE)
                 .withReleaseStage(ReleaseStage.CUSTOM)
@@ -714,10 +711,6 @@ class ConnectorBuilderProjectsHandlerTest {
 
   private static DeclarativeSourceManifest anyInitialManifest() {
     return new DeclarativeSourceManifest().version(A_VERSION);
-  }
-
-  private static ConnectorBuilderProject anyBuilderProject() {
-    return new ConnectorBuilderProject();
   }
 
   private void setupConnectorSpecificationAdapter(final JsonNode spec, final String documentationUrl) {

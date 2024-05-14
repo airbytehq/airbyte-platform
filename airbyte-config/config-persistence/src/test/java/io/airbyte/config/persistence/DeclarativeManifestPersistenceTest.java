@@ -55,6 +55,7 @@ class DeclarativeManifestPersistenceTest extends BaseConfigDatabaseTest {
   private static final UUID ANOTHER_ACTOR_DEFINITION_ID = UUID.randomUUID();
   private static final Long A_VERSION = 1L;
   private static final Long ANOTHER_VERSION = 2L;
+  private static final String A_CDK_VERSION = "0.29.0";
   private static final JsonNode A_MANIFEST;
   private static final JsonNode ANOTHER_MANIFEST;
   private static final JsonNode A_SPEC;
@@ -63,7 +64,8 @@ class DeclarativeManifestPersistenceTest extends BaseConfigDatabaseTest {
   static {
     try {
       A_MANIFEST = new ObjectMapper().readTree("{\"a_manifest\": \"manifest_value\"}");
-      ANOTHER_MANIFEST = new ObjectMapper().readTree("{\"another_manifest\": \"another_manifest_value\"}");
+      ANOTHER_MANIFEST =
+          new ObjectMapper().readTree("{\"another_manifest\": \"another_manifest_value\"}");
       A_SPEC = new ObjectMapper().readTree("{\"a_spec\": \"spec_value\"}");
       ANOTHER_SPEC = new ObjectMapper().readTree("{\"another_spec\": \"another_spec_value\"}");
     } catch (final JsonProcessingException e) {
@@ -213,10 +215,11 @@ class DeclarativeManifestPersistenceTest extends BaseConfigDatabaseTest {
         .withJsonToInject(A_MANIFEST);
     final ConnectorSpecification connectorSpecification = MockData.connectorSpecification().withConnectionSpecification(A_SPEC);
 
-    connectorBuilderService.createDeclarativeManifestAsActiveVersion(declarativeManifest, configInjection, connectorSpecification);
+    connectorBuilderService.createDeclarativeManifestAsActiveVersion(declarativeManifest, configInjection, connectorSpecification, A_CDK_VERSION);
 
     final StandardSourceDefinition sourceDefinition = sourceService.getStandardSourceDefinition(AN_ACTOR_DEFINITION_ID);
     assertEquals(connectorSpecification, actorDefinitionService.getActorDefinitionVersion(sourceDefinition.getDefaultVersionId()).getSpec());
+    assertEquals(A_CDK_VERSION, actorDefinitionService.getActorDefinitionVersion(sourceDefinition.getDefaultVersionId()).getDockerImageTag());
     assertEquals(List.of(configInjection), connectorBuilderService.getActorDefinitionConfigInjections(AN_ACTOR_DEFINITION_ID).toList());
     assertEquals(declarativeManifest, connectorBuilderService.getCurrentlyActiveDeclarativeManifestsByActorDefinitionId(AN_ACTOR_DEFINITION_ID));
   }
@@ -226,7 +229,7 @@ class DeclarativeManifestPersistenceTest extends BaseConfigDatabaseTest {
     assertThrows(DataAccessException.class, () -> connectorBuilderService.createDeclarativeManifestAsActiveVersion(
         MockData.declarativeManifest().withActorDefinitionId(AN_ACTOR_DEFINITION_ID).withManifest(A_MANIFEST).withSpec(createSpec(A_SPEC)),
         MockData.actorDefinitionConfigInjection().withActorDefinitionId(AN_ACTOR_DEFINITION_ID).withJsonToInject(A_MANIFEST),
-        MockData.connectorSpecification().withConnectionSpecification(A_SPEC)));
+        MockData.connectorSpecification().withConnectionSpecification(A_SPEC), A_CDK_VERSION));
   }
 
   @Test
@@ -234,7 +237,7 @@ class DeclarativeManifestPersistenceTest extends BaseConfigDatabaseTest {
     assertThrows(IllegalArgumentException.class, () -> connectorBuilderService.createDeclarativeManifestAsActiveVersion(
         MockData.declarativeManifest().withActorDefinitionId(AN_ACTOR_DEFINITION_ID).withManifest(A_MANIFEST).withSpec(createSpec(A_SPEC)),
         MockData.actorDefinitionConfigInjection().withActorDefinitionId(ANOTHER_ACTOR_DEFINITION_ID).withJsonToInject(A_MANIFEST),
-        MockData.connectorSpecification().withConnectionSpecification(A_SPEC)));
+        MockData.connectorSpecification().withConnectionSpecification(A_SPEC), A_CDK_VERSION));
   }
 
   @Test
@@ -242,7 +245,7 @@ class DeclarativeManifestPersistenceTest extends BaseConfigDatabaseTest {
     assertThrows(IllegalArgumentException.class, () -> connectorBuilderService.createDeclarativeManifestAsActiveVersion(
         MockData.declarativeManifest().withActorDefinitionId(AN_ACTOR_DEFINITION_ID).withManifest(A_MANIFEST).withSpec(createSpec(A_SPEC)),
         MockData.actorDefinitionConfigInjection().withActorDefinitionId(AN_ACTOR_DEFINITION_ID).withJsonToInject(ANOTHER_MANIFEST),
-        MockData.connectorSpecification().withConnectionSpecification(A_SPEC)));
+        MockData.connectorSpecification().withConnectionSpecification(A_SPEC), A_CDK_VERSION));
   }
 
   @Test
@@ -250,7 +253,7 @@ class DeclarativeManifestPersistenceTest extends BaseConfigDatabaseTest {
     assertThrows(IllegalArgumentException.class, () -> connectorBuilderService.createDeclarativeManifestAsActiveVersion(
         MockData.declarativeManifest().withActorDefinitionId(AN_ACTOR_DEFINITION_ID).withManifest(A_MANIFEST).withSpec(createSpec(A_SPEC)),
         MockData.actorDefinitionConfigInjection().withActorDefinitionId(AN_ACTOR_DEFINITION_ID).withJsonToInject(A_MANIFEST),
-        MockData.connectorSpecification().withConnectionSpecification(ANOTHER_SPEC)));
+        MockData.connectorSpecification().withConnectionSpecification(ANOTHER_SPEC), A_CDK_VERSION));
   }
 
   @Test
@@ -265,10 +268,12 @@ class DeclarativeManifestPersistenceTest extends BaseConfigDatabaseTest {
         .withJsonToInject(A_MANIFEST);
     final ConnectorSpecification connectorSpecification = MockData.connectorSpecification().withConnectionSpecification(A_SPEC);
 
-    connectorBuilderService.setDeclarativeSourceActiveVersion(AN_ACTOR_DEFINITION_ID, A_VERSION, configInjection, connectorSpecification);
+    connectorBuilderService.setDeclarativeSourceActiveVersion(AN_ACTOR_DEFINITION_ID, A_VERSION, configInjection, connectorSpecification,
+        A_CDK_VERSION);
 
     final StandardSourceDefinition sourceDefinition = sourceService.getStandardSourceDefinition(AN_ACTOR_DEFINITION_ID);
     assertEquals(connectorSpecification, actorDefinitionService.getActorDefinitionVersion(sourceDefinition.getDefaultVersionId()).getSpec());
+    assertEquals(A_CDK_VERSION, actorDefinitionService.getActorDefinitionVersion(sourceDefinition.getDefaultVersionId()).getDockerImageTag());
     assertEquals(List.of(configInjection), connectorBuilderService.getActorDefinitionConfigInjections(AN_ACTOR_DEFINITION_ID).toList());
     assertEquals(A_VERSION, connectorBuilderService.getCurrentlyActiveDeclarativeManifestsByActorDefinitionId(AN_ACTOR_DEFINITION_ID).getVersion());
   }
@@ -278,7 +283,7 @@ class DeclarativeManifestPersistenceTest extends BaseConfigDatabaseTest {
     assertThrows(DataAccessException.class, () -> connectorBuilderService.setDeclarativeSourceActiveVersion(AN_ACTOR_DEFINITION_ID,
         A_VERSION,
         MockData.actorDefinitionConfigInjection(),
-        MockData.connectorSpecification()));
+        MockData.connectorSpecification(), A_CDK_VERSION));
   }
 
   @Test
@@ -287,7 +292,7 @@ class DeclarativeManifestPersistenceTest extends BaseConfigDatabaseTest {
     assertThrows(DataAccessException.class, () -> connectorBuilderService.setDeclarativeSourceActiveVersion(AN_ACTOR_DEFINITION_ID,
         A_VERSION,
         MockData.actorDefinitionConfigInjection().withActorDefinitionId(AN_ACTOR_DEFINITION_ID),
-        MockData.connectorSpecification()));
+        MockData.connectorSpecification(), A_CDK_VERSION));
   }
 
   void givenActiveDeclarativeManifestWithActorDefinitionId(final UUID actorDefinitionId) throws IOException {

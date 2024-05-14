@@ -29,7 +29,7 @@ class DeclarativeSourceManifestInjectorTest {
     try {
       A_SPEC = new ObjectMapper().readTree(
           "{\"connectionSpecification\":{\"$schema\":\"http://json-schema.org/draft-07/schema#\",\"type\":\"object\",\"required\":[],\"properties\":{},\"additionalProperties\":true}}\n");
-      A_MANIFEST = new ObjectMapper().readTree("{\"manifest_key\": \"manifest value\"}");
+      A_MANIFEST = new ObjectMapper().readTree("{\"manifest_key\": \"manifest value\", \"version\": \"1.0.0\"}");
     } catch (final JsonProcessingException e) {
       throw new RuntimeException(e);
     }
@@ -75,6 +75,11 @@ class DeclarativeSourceManifestInjectorTest {
     final JsonNode spec = givenSpecWithDocumentationUrl(DOCUMENTATION_URL);
     final ConnectorSpecification connectorSpecification = injector.createDeclarativeManifestConnectorSpecification(spec);
     assertEquals(DOCUMENTATION_URL, connectorSpecification.getDocumentationUrl());
+  }
+
+  @Test
+  void testGetCdkVersion() {
+    assertEquals("1.0.0", injector.getCdkVersion(A_MANIFEST));
   }
 
   private JsonNode givenSpecWithDocumentationUrl(final URI documentationUrl) {

@@ -64,4 +64,14 @@ public class DeclarativeSourceManifestInjector {
         .withConnectionSpecification(declarativeManifestSpec.get("connectionSpecification"));
   }
 
+  /**
+   * Get the CDK version form the manifest.
+   *
+   * @param manifest to extract the CDK version from
+   * @return the CDK version
+   */
+  public String getCdkVersion(final JsonNode manifest) {
+    return manifest.get("version").asText();
+  }
+
 }
