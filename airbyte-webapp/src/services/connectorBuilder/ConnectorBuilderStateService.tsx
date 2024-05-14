@@ -10,6 +10,7 @@ import { useParams } from "react-router-dom";
 import { useDebounce } from "react-use";
 
 import { WaitForSavingModal } from "components/connectorBuilder/Builder/WaitForSavingModal";
+import { CDK_VERSION } from "components/connectorBuilder/cdk";
 import { convertToBuilderFormValuesSync } from "components/connectorBuilder/convertManifestToBuilderForm";
 import {
   BuilderState,
@@ -103,6 +104,7 @@ interface FormStateContext {
   toggleUI: (newMode: BuilderState["mode"]) => Promise<void>;
   setFormValuesValid: (value: boolean) => void;
   updateTestingValues: TestingValuesUpdate;
+  updateYamlCdkVersion: (currentManifest: ConnectorManifest) => ConnectorManifest;
 }
 
 interface TestReadLimits {
@@ -363,6 +365,18 @@ export const InternalConnectorBuilderFormStateProvider: React.FC<
     ]
   );
 
+  const updateYamlCdkVersion = useCallback(
+    (currentManifest: ConnectorManifest) => {
+      if (mode === "yaml") {
+        const newManifest = { ...currentManifest, version: CDK_VERSION };
+        setValue("yaml", convertJsonToYaml(newManifest));
+        return newManifest;
+      }
+      return currentManifest;
+    },
+    [mode, setValue]
+  );
+
   const [persistedState, setPersistedState] = useState<BuilderProjectWithManifest>(() => ({
     manifest: jsonManifest,
     name: builderProject.builderProject.name,
@@ -418,19 +432,23 @@ export const InternalConnectorBuilderFormStateProvider: React.FC<
 
   const publishProject = useCallback(
     async (options: BuilderProjectPublishBody) => {
-      const result = await sendPublishRequest(options);
+      // update the version so that the manifest reflects which CDK version was used to build it
+      const updatedManifest = updateYamlCdkVersion(jsonManifest);
+      const result = await sendPublishRequest({ ...options, manifest: updatedManifest });
       setDisplayedVersion(1);
       return result;
     },
-    [sendPublishRequest]
+    [jsonManifest, sendPublishRequest, updateYamlCdkVersion]
   );
 
   const releaseNewVersion = useCallback(
     async (options: NewVersionBody) => {
-      await sendNewVersionRequest(options);
+      // update the version so that the manifest reflects which CDK version was used to build it
+      const updatedManifest = updateYamlCdkVersion(jsonManifest);
+      await sendNewVersionRequest({ ...options, manifest: updatedManifest });
       setDisplayedVersion(options.version);
     },
-    [sendNewVersionRequest]
+    [jsonManifest, sendNewVersionRequest, updateYamlCdkVersion]
   );
 
   const formAndResolveValid = useMemo(() => formValuesValid && resolveError === null, [formValuesValid, resolveError]);
@@ -524,6 +542,7 @@ export const InternalConnectorBuilderFormStateProvider: React.FC<
     toggleUI,
     setFormValuesValid,
     updateTestingValues,
+    updateYamlCdkVersion,
   };
 
   return (
@@ -685,7 +704,7 @@ function getSavingState(
 
 export const ConnectorBuilderTestReadProvider: React.FC<React.PropsWithChildren<unknown>> = ({ children }) => {
   const workspaceId = useCurrentWorkspaceId();
-  const { projectId, resolvedManifest } = useConnectorBuilderFormState();
+  const { projectId, resolvedManifest, jsonManifest, updateYamlCdkVersion } = useConnectorBuilderFormState();
   const { setValue } = useFormContext();
   const mode = useBuilderWatch("mode");
   const view = useBuilderWatch("view");
@@ -747,6 +766,8 @@ export const ConnectorBuilderTestReadProvider: React.FC<React.PropsWithChildren<
       if (result.latest_config_update) {
         setValue("testingValues", result.latest_config_update);
       }
+      // update the version so that it is clear which CDK version was used to test the connector
+      updateYamlCdkVersion(jsonManifest);
     }
   );
   // additionalProperties is automatically set to true on the schema when saving it to the manifest,
