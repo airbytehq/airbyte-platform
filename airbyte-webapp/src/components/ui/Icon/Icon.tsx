@@ -23,6 +23,7 @@ import ChevronUpDownIcon from "./icons/chevronUpDownIcon.svg?react";
 import ChevronUpIcon from "./icons/chevronUpIcon.svg?react";
 import ClockFilledIcon from "./icons/clockFilledIcon.svg?react";
 import ClockOutlineIcon from "./icons/clockOutlineIcon.svg?react";
+import CollapseAllIcon from "./icons/collapseAllIcon.svg?react";
 import CommentsIcon from "./icons/commentsIcon.svg?react";
 import CommunityIcon from "./icons/communityIcon.svg?react";
 import ConnectionIcon from "./icons/connectionIcon.svg?react";
@@ -30,6 +31,7 @@ import ContractIcon from "./icons/contractIcon.svg?react";
 import CopyIcon from "./icons/copyIcon.svg?react";
 import CreditsIcon from "./icons/creditsIcon.svg?react";
 import CrossIcon from "./icons/crossIcon.svg?react";
+import CursorIcon from "./icons/cursorIcon.svg?react";
 import DatabaseIcon from "./icons/databaseIcon.svg?react";
 import DayIcon from "./icons/dayIcon.svg?react";
 import DbtCloudIcon from "./icons/dbtCloudIcon.svg?react";
@@ -45,6 +47,7 @@ import EnvelopeIcon from "./icons/envelopeIcon.svg?react";
 import EqualIcon from "./icons/equalIcon.svg?react";
 import ErrorFilledIcon from "./icons/errorFilledIcon.svg?react";
 import ErrorOutlineIcon from "./icons/errorOutlineIcon.svg?react";
+import ExpandAllIcon from "./icons/expandAllIcon.svg?react";
 import ExpandIcon from "./icons/expandIcon.svg?react";
 import ExportIcon from "./icons/exportIcon.svg?react";
 import EyeIcon from "./icons/eyeIcon.svg?react";
@@ -177,9 +180,11 @@ export const Icons: Record<IconType, React.FC<React.SVGProps<SVGSVGElement>>> = 
   community: CommunityIcon,
   connection: ConnectionIcon,
   contract: ContractIcon,
+  collapseAll: CollapseAllIcon,
   copy: CopyIcon,
   credits: CreditsIcon,
   cross: CrossIcon,
+  cursor: CursorIcon,
   database: DatabaseIcon,
   day: DayIcon,
   dbtCloud: DbtCloudIcon,
@@ -196,6 +201,7 @@ export const Icons: Record<IconType, React.FC<React.SVGProps<SVGSVGElement>>> = 
   errorFilled: ErrorFilledIcon,
   errorOutline: ErrorOutlineIcon,
   expand: ExpandIcon,
+  expandAll: ExpandAllIcon,
   export: ExportIcon,
   eye: EyeIcon,
   eyeSlash: EyeSlashIcon,

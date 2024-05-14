@@ -13,6 +13,7 @@ import {
 import { useRefreshSourceSchemaWithConfirmationOnDirty } from "components/connection/ConnectionForm/refreshSourceSchemaWithConfirmationOnDirty";
 import { SchemaChangeBackdrop } from "components/connection/ConnectionForm/SchemaChangeBackdrop";
 import { SyncCatalogCard } from "components/connection/ConnectionForm/SyncCatalogCard";
+import { SyncCatalogCardNext } from "components/connection/ConnectionForm/SyncCatalogCardNext";
 import { UpdateConnectionFormControls } from "components/connection/ConnectionForm/UpdateConnectionFormControls";
 import { SchemaError } from "components/connection/CreateConnectionForm/SchemaError";
 import { compareObjectsByFields } from "components/connection/syncCatalog/utils";
@@ -96,6 +97,7 @@ const SchemaChangeMessage: React.FC = () => {
 
 export const ConnectionReplicationPage: React.FC = () => {
   useTrackPage(PageTrackingCodes.CONNECTIONS_ITEM_REPLICATION);
+  const isSyncCatalogV2Enabled = useExperiment("connection.syncCatalogV2", false);
   const { trackSchemaEdit } = useAnalyticsTrackFunctions();
 
   const getStateType = useGetStateTypeQuery();
@@ -241,7 +243,7 @@ export const ConnectionReplicationPage: React.FC = () => {
             <SchemaChangeMessage />
             <SchemaChangeBackdrop>
               {!isSimpliedCreation && <ConnectionConfigurationCard />}
-              <SyncCatalogCard />
+              {isSyncCatalogV2Enabled ? <SyncCatalogCardNext /> : <SyncCatalogCard />}
               <div className={styles.editControlsContainer}>
                 <UpdateConnectionFormControls onCancel={discardRefreshedSchema} />
               </div>

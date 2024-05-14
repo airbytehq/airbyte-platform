@@ -28,4 +28,5 @@ export interface Experiments {
   "settings.token-management-ui": boolean;
   "settings.showAdvancedSettings": boolean;
   "upcomingFeaturesPage.url": string;
+  "connection.syncCatalogV2": boolean;
 }
