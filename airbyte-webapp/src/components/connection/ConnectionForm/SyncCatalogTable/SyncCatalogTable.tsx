@@ -340,7 +340,7 @@ export const SyncCatalogTable: FC = () => {
         <StreamsFilterTabs columnFilters={columnFilters} onTabSelect={onTabSelect} />
       </Box>
       <TableVirtuoso<SyncCatalogUIModel>
-        style={{ height: "45vh" }}
+        style={{ height: "50vh" }}
         totalCount={rows.length}
         components={{
           Table,

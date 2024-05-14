@@ -244,9 +244,11 @@ export const ConnectionReplicationPage: React.FC = () => {
             <SchemaChangeBackdrop>
               {!isSimpliedCreation && <ConnectionConfigurationCard />}
               {isSyncCatalogV2Enabled ? <SyncCatalogCardNext /> : <SyncCatalogCard />}
-              <div className={styles.editControlsContainer}>
-                <UpdateConnectionFormControls onCancel={discardRefreshedSchema} />
-              </div>
+              {!isSyncCatalogV2Enabled && (
+                <div className={styles.editControlsContainer}>
+                  <UpdateConnectionFormControls onCancel={discardRefreshedSchema} />
+                </div>
+              )}
             </SchemaChangeBackdrop>
           </FlexContainer>
         </Form>
