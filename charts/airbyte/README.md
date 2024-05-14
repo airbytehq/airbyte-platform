@@ -289,7 +289,7 @@ Helm chart to deploy airbyte
 | temporal.extraVolumes | list | `[]` | Additional volumes for temporal pods |
 | temporal.image.pullPolicy | string | `"IfNotPresent"` | The pull policy for the temporal image |
 | temporal.image.repository | string | `"temporalio/auto-setup"` | The temporal image repository to use |
-| temporal.image.tag | string | `"1.20.1"` | The temporal image tag to use |
+| temporal.image.tag | string | `"1.23"` | The temporal image tag to use |
 | temporal.livenessProbe.enabled | bool | `false` | Enable livenessProbe on the temporal |
 | temporal.nodeSelector | object | `{}` | Node labels for temporal pod assignment, see https://kubernetes.io/docs/user-guide/node-selection/ |
 | temporal.podAnnotations | object | `{}` | Add extra annotations to the temporal pod |
