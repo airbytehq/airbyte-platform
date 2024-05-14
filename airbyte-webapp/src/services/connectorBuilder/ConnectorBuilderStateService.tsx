@@ -21,7 +21,7 @@ import {
   useBuilderWatch,
 } from "components/connectorBuilder/types";
 import { useUpdateLockedInputs } from "components/connectorBuilder/useLockedInputs";
-import { formatJson } from "components/connectorBuilder/utils";
+import { formatJson, streamNameOrDefault } from "components/connectorBuilder/utils";
 
 import { useCurrentWorkspaceId } from "area/workspace/utils";
 import {
@@ -858,12 +858,10 @@ export const useConnectorBuilderFormState = (): FormStateContext => {
 };
 
 export const useSelectedPageAndSlice = () => {
-  const {
-    resolvedManifest: { streams },
-  } = useConnectorBuilderFormState();
+  const { streamNames } = useConnectorBuilderFormState();
   const testStreamIndex = useBuilderWatch("testStreamIndex");
 
-  const selectedStreamName = streams[testStreamIndex]?.name ?? "";
+  const selectedStreamName = streamNameOrDefault(streamNames[testStreamIndex], testStreamIndex);
 
   const [streamToSelectedSlice, setStreamToSelectedSlice] = useState({ [selectedStreamName]: 0 });
   const setSelectedSlice = (sliceIndex: number) => {

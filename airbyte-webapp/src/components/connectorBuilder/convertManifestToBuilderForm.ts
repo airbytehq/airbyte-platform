@@ -20,7 +20,6 @@ import {
   SimpleRetriever,
   SimpleRetrieverPaginator,
   SimpleRetrieverPartitionRouter,
-  SimpleRetrieverPartitionRouterAnyOfItem,
   Spec,
   DatetimeBasedCursorEndDatetime,
   DatetimeBasedCursorStartDatetime,
@@ -34,6 +33,7 @@ import {
   SessionTokenAuthenticator,
   DatetimeBasedCursorType,
   RecordSelector,
+  SimpleRetrieverPartitionRouterAnyOfItem,
 } from "core/api/types/ConnectorManifest";
 import { removeEmptyProperties } from "core/utils/form";
 
@@ -48,6 +48,8 @@ import {
   BuilderIncrementalSync,
   BuilderMetadata,
   BuilderPaginator,
+  BuilderParameterizedRequests,
+  BuilderParentStream,
   BuilderRecordSelector,
   BuilderRequestBody,
   BuilderStream,
@@ -70,7 +72,7 @@ import {
   LOCKED_INPUT_BY_FIELD_NAME_BY_AUTH_TYPE,
   LOCKED_INPUT_BY_INCREMENTAL_FIELD_NAME,
 } from "./useLockedInputs";
-import { formatJson } from "./utils";
+import { filterPartitionRouterToType, formatJson, streamNameOrDefault, streamRef } from "./utils";
 import { AirbyteJSONSchema } from "../../core/jsonSchema/types";
 
 export const convertToBuilderFormValuesSync = (resolvedManifest: ConnectorManifest) => {
@@ -88,12 +90,24 @@ export const convertToBuilderFormValuesSync = (resolvedManifest: ConnectorManife
   builderFormValues.global.urlBase = streams[0].retriever.requester.url_base;
 
   const builderMetadata = resolvedManifest.metadata ? (resolvedManifest.metadata as BuilderMetadata) : undefined;
-  const serializedStreamToIndex = Object.fromEntries(streams.map((stream, index) => [formatJson(stream, true), index]));
+
+  const getStreamName = (stream: DeclarativeStream, index: number) => streamNameOrDefault(stream.name, index);
+
+  const streamNameToIndex = streams.reduce((acc, stream, index) => {
+    const streamName = getStreamName(stream, index);
+    return { ...acc, [streamName]: index.toString() };
+  }, {});
+
+  const serializedStreamToName = Object.fromEntries(
+    streams.map((stream, index) => [formatJson(stream, true), getStreamName(stream, index)])
+  );
   builderFormValues.streams = streams.map((stream, index) =>
     manifestStreamToBuilder(
       stream,
-      index,
-      serializedStreamToIndex,
+      getStreamName(stream, index),
+      index.toString(),
+      streamNameToIndex,
+      serializedStreamToName,
       streams[0].retriever.requester.url_base,
       streams[0].retriever.requester.authenticator,
       builderMetadata,
@@ -156,8 +170,10 @@ const authenticatorKeysToCheck: Readonly<Array<(typeof RELEVANT_AUTHENTICATOR_KE
 
 const manifestStreamToBuilder = (
   stream: DeclarativeStream,
-  index: number,
-  serializedStreamToIndex: Record<string, number>,
+  streamName: string,
+  streamId: string,
+  streamNameToId: Record<string, string>,
+  serializedStreamToName: Record<string, string>,
   firstStreamUrlBase: string,
   firstStreamAuthenticator?: HttpRequesterAuthenticator,
   metadata?: BuilderMetadata,
@@ -176,7 +192,6 @@ const manifestStreamToBuilder = (
       ? requester.authenticator && requester.authenticator.type !== "NoAuth"
       : !isEqual(cleanedAuthenticator, cleanedFirstStreamAuthenticator)
   ) {
-    console.log("authenticator", cleanedAuthenticator, cleanedFirstStreamAuthenticator);
     throw new ManifestCompatibilityError(stream.name, "authenticator does not match the first stream's");
   }
 
@@ -190,16 +205,14 @@ const manifestStreamToBuilder = (
 
   assertType<DpathExtractor>(retriever.record_selector.extractor, "DpathExtractor", stream.name);
 
-  const { parentStreams, parameterizedRequests } = manifestPartitionRouterToBuilder(
-    retriever.partition_router,
-    serializedStreamToIndex,
-    stream.name
-  );
+  const substreamPartitionRouterToBuilder = (
+    partitionRouter: SimpleRetrieverPartitionRouter | undefined,
+    streamName?: string
+  ) => manifestSubstreamPartitionRouterToBuilder(partitionRouter, streamNameToId, streamName);
 
-  const streamName = stream.name ?? `stream_${index}`;
   return {
     ...DEFAULT_BUILDER_STREAM_VALUES,
-    id: index.toString(),
+    id: streamId,
     name: streamName,
     urlPath: requester.path,
     httpMethod: requester.http_method === "POST" ? "POST" : "GET",
@@ -237,8 +250,28 @@ const manifestStreamToBuilder = (
       metadata,
       spec
     ),
-    parentStreams,
-    parameterizedRequests,
+    parentStreams: convertOrDumpAsString(
+      replaceParentStreamsWithRefs(
+        filterPartitionRouterToType(retriever.partition_router, ["SubstreamPartitionRouter", "CustomPartitionRouter"]),
+        serializedStreamToName,
+        streamName
+      ),
+      substreamPartitionRouterToBuilder,
+      {
+        name: "parentStreams",
+        streamName,
+      },
+      metadata
+    ),
+    parameterizedRequests: convertOrDumpAsString(
+      filterPartitionRouterToType(retriever.partition_router, ["ListPartitionRouter"]),
+      manifestListPartitionRouterToBuilder,
+      {
+        name: "parameterizedRequests",
+        streamName,
+      },
+      metadata
+    ),
     schema: manifestSchemaLoaderToBuilderSchema(stream.schema_loader),
     errorHandler: convertOrDumpAsString(
       requester.error_handler,
@@ -258,7 +291,7 @@ const manifestStreamToBuilder = (
       },
       metadata
     ),
-    autoImportSchema: metadata?.autoImportSchema?.[stream.name ?? ""] === true,
+    autoImportSchema: metadata?.autoImportSchema?.[streamName] === true,
   };
 };
 
@@ -309,89 +342,130 @@ export function manifestRecordSelectorToBuilder(
   };
 }
 
-function manifestPartitionRouterToBuilder(
-  partitionRouter: SimpleRetrieverPartitionRouter | SimpleRetrieverPartitionRouterAnyOfItem | undefined,
-  serializedStreamToIndex: Record<string, number>,
+export function manifestListPartitionRouterToBuilder(
+  partitionRouter: SimpleRetrieverPartitionRouter | undefined,
   streamName?: string
-): { parentStreams: BuilderStream["parentStreams"]; parameterizedRequests: BuilderStream["parameterizedRequests"] } {
+): BuilderParameterizedRequests[] | undefined {
   if (partitionRouter === undefined) {
-    return { parentStreams: undefined, parameterizedRequests: undefined };
+    return undefined;
   }
 
   if (Array.isArray(partitionRouter)) {
-    const convertedPartitionRouters = partitionRouter.map((subRouter) =>
-      manifestPartitionRouterToBuilder(subRouter, serializedStreamToIndex, streamName)
-    );
-    const parentStreams = convertedPartitionRouters.flatMap(
-      (convertedPartitionRouter) => convertedPartitionRouter.parentStreams ?? []
-    );
-    const parameterizedRequests = convertedPartitionRouters.flatMap(
-      (convertedPartitionRouter) => convertedPartitionRouter.parameterizedRequests ?? []
-    );
-    return {
-      parentStreams: parentStreams.length === 0 ? undefined : parentStreams,
-      parameterizedRequests: parameterizedRequests.length === 0 ? undefined : parameterizedRequests,
-    };
+    const builderParameterizedRequests = partitionRouter
+      .map((subRouter) => manifestListPartitionRouterToBuilder(subRouter, streamName))
+      .flatMap((subRouter) => subRouter ?? []);
+    return builderParameterizedRequests.length === 0 ? undefined : builderParameterizedRequests;
   }
 
-  if (partitionRouter.type === undefined) {
-    throw new ManifestCompatibilityError(streamName, "partition_router has no type");
+  if (partitionRouter.type !== "ListPartitionRouter") {
+    throw new ManifestCompatibilityError(streamName, "a non-ListPartitionRouter is used");
   }
 
-  if (partitionRouter.type === "CustomPartitionRouter") {
-    throw new ManifestCompatibilityError(streamName, "partition_router contains a CustomPartitionRouter");
-  }
+  return [
+    {
+      ...partitionRouter,
+      values: isString(partitionRouter.values)
+        ? {
+            value: partitionRouter.values,
+            type: "variable" as const,
+          }
+        : {
+            value: partitionRouter.values,
+            type: "list" as const,
+          },
+    },
+  ];
+}
 
-  if (partitionRouter.type === "ListPartitionRouter") {
-    return {
-      parentStreams: undefined,
-      parameterizedRequests: [
-        {
-          ...partitionRouter,
-          values: isString(partitionRouter.values)
-            ? {
-                value: partitionRouter.values,
-                type: "variable" as const,
-              }
-            : {
-                value: partitionRouter.values,
-                type: "list" as const,
-              },
-        },
-      ],
-    };
-  }
-
-  if (partitionRouter.type === "SubstreamPartitionRouter") {
-    const manifestSubstreamPartitionRouter = partitionRouter;
-
-    if (manifestSubstreamPartitionRouter.parent_stream_configs.length > 1) {
-      throw new ManifestCompatibilityError(streamName, "SubstreamPartitionRouter has more than one parent stream");
+function replaceParentStreamsWithRefs(
+  partitionRouters: SimpleRetrieverPartitionRouterAnyOfItem[] | undefined,
+  serializedStreamToName: Record<string, string>,
+  streamName?: string
+) {
+  return partitionRouters?.map((router) => {
+    if (router.type === "SubstreamPartitionRouter") {
+      return {
+        ...router,
+        parent_stream_configs: router.parent_stream_configs.map((parentStreamConfig) => {
+          const parentStreamName = serializedStreamToName[formatJson(parentStreamConfig.stream, true)];
+          if (!parentStreamName) {
+            throw new ManifestCompatibilityError(
+              streamName,
+              "SubstreamPartitionRouter's parent stream doesn't match any other stream"
+            );
+          }
+          return {
+            ...parentStreamConfig,
+            stream: streamRef(parentStreamName),
+          };
+        }),
+      };
     }
-    const parentStreamConfig = manifestSubstreamPartitionRouter.parent_stream_configs[0];
+    return router;
+  });
+}
 
-    const matchingStreamIndex = serializedStreamToIndex[formatJson(parentStreamConfig.stream, true)];
-    if (matchingStreamIndex === undefined) {
-      throw new ManifestCompatibilityError(
-        streamName,
-        "SubstreamPartitionRouter's parent stream doesn't match any other stream"
-      );
-    }
-
-    return {
-      parameterizedRequests: undefined,
-      parentStreams: [
-        {
-          parent_key: parentStreamConfig.parent_key,
-          partition_field: parentStreamConfig.partition_field,
-          parentStreamReference: matchingStreamIndex.toString(),
-          request_option: parentStreamConfig.request_option,
-        },
-      ],
-    };
+export function manifestSubstreamPartitionRouterToBuilder(
+  partitionRouter: SimpleRetrieverPartitionRouter | undefined,
+  streamNameToId: Record<string, string>,
+  streamName?: string
+): BuilderParentStream[] | undefined {
+  if (partitionRouter === undefined) {
+    return undefined;
   }
 
-  throw new ManifestCompatibilityError(streamName, "partition_router type is unsupported");
+  if (Array.isArray(partitionRouter)) {
+    return partitionRouter
+      .map((subRouter) => manifestSubstreamPartitionRouterToBuilder(subRouter, streamNameToId, streamName))
+      .flatMap((subRouter) => subRouter ?? []);
+  }
+
+  if (partitionRouter.type !== "SubstreamPartitionRouter") {
+    throw new ManifestCompatibilityError(streamName, "a non-SubstreamPartitionRouter is used");
+  }
+
+  if (partitionRouter.parent_stream_configs.length < 1) {
+    throw new ManifestCompatibilityError(streamName, "SubstreamPartitionRouter has no parent streams");
+  }
+
+  if (partitionRouter.parent_stream_configs.length > 1) {
+    throw new ManifestCompatibilityError(streamName, "SubstreamPartitionRouter has more than one parent stream");
+  }
+  const parentStreamConfig = partitionRouter.parent_stream_configs[0];
+
+  if (!parentStreamConfig.stream.$ref) {
+    throw new ManifestCompatibilityError(
+      streamName,
+      "SubstreamPartitionRouter.parent_stream_configs.stream must use $ref"
+    );
+  }
+  const streamRefPattern = /^#\/definitions\/streams\/([^/]+)$/;
+  const match = streamRefPattern.exec(parentStreamConfig.stream.$ref);
+
+  if (!match) {
+    throw new ManifestCompatibilityError(
+      streamName,
+      "SubstreamPartitionRouter's parent stream reference must match the pattern '#/definitions/streams/streamName'"
+    );
+  }
+
+  const parentStreamName = match[1];
+  const parentStreamId = streamNameToId[parentStreamName];
+  if (!parentStreamId) {
+    throw new ManifestCompatibilityError(
+      streamName,
+      `SubstreamPartitionRouter references parent stream name '${parentStreamName}' which could not be found`
+    );
+  }
+
+  return [
+    {
+      parent_key: parentStreamConfig.parent_key,
+      partition_field: parentStreamConfig.partition_field,
+      parentStreamReference: parentStreamId,
+      request_option: parentStreamConfig.request_option,
+    },
+  ];
 }
 
 export function manifestErrorHandlerToBuilder(

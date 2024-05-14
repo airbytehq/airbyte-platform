@@ -16,6 +16,7 @@ import { Modal, ModalBody, ModalFooter } from "components/ui/Modal";
 import { Pre } from "components/ui/Pre";
 import { Text } from "components/ui/Text";
 
+import { useFormatError } from "core/errors";
 import { useConfirmationModalService } from "hooks/services/ConfirmationModal";
 import {
   useConnectorBuilderFormManagementState,
@@ -131,10 +132,13 @@ const YamlEditableComponent: React.FC<React.PropsWithChildren<YamlEditableCompon
   manifestToBuilder,
   getLockedInputKeys,
 }) => {
+  const { formatMessage } = useIntl();
+  const formatError = useFormatError();
   const { resolveErrorMessage } = useConnectorBuilderFormState();
   const { openConfirmationModal, closeConfirmationModal } = useConfirmationModalService();
-  const { setValue, register } = useFormContext();
+  const { setValue, register, unregister, getFieldState } = useFormContext();
   const formValue = useBuilderWatch(path);
+  const { error } = getFieldState(path);
   const pathString = path as string;
   const isYaml = isYamlString(formValue);
   const [previousUiValue, setPreviousUiValue] = useState(isYaml ? defaultValue : formValue);
@@ -192,7 +196,11 @@ const YamlEditableComponent: React.FC<React.PropsWithChildren<YamlEditableCompon
               }
             />
           </FlexItem>
-          {errorMessage && <Pre className={styles.discardYamlError}>{errorMessage}</Pre>}
+          {errorMessage && (
+            <Pre className={styles.discardYamlError} wrapText>
+              {errorMessage}
+            </Pre>
+          )}
           <FlexItem>
             <FormattedMessage id="connectorBuilder.yamlComponent.discardChanges.errorOutro" />
           </FlexItem>
@@ -221,31 +229,42 @@ const YamlEditableComponent: React.FC<React.PropsWithChildren<YamlEditableCompon
   return (
     <>
       {isYaml ? (
-        <div
-          className={styles.yamlEditor}
-          ref={(ref) => {
-            elementRef.current = ref;
-            // Call handler in here to make sure it handles new refs
-            handleScrollToField(elementRef, path);
-          }}
-        >
-          <YamlEditor
-            value={localYamlValue}
-            onChange={(val: string | undefined) => {
-              setLocalYamlValue(val ?? "");
-              setLocalYamlIsDirty(true);
-              debouncedSetValue(path, val, {
-                shouldValidate: true,
-                shouldDirty: true,
-                shouldTouch: true,
-              });
+        <>
+          <div
+            className={styles.yamlEditor}
+            ref={(ref) => {
+              elementRef.current = ref;
+              // Call handler in here to make sure it handles new refs
+              handleScrollToField(elementRef, path);
             }}
-            onMount={(_) => {
-              // register path so that validation rules are applied
-              register(path);
-            }}
-          />
-        </div>
+          >
+            <YamlEditor
+              value={localYamlValue}
+              onChange={(val: string | undefined) => {
+                setLocalYamlValue(val ?? "");
+                setLocalYamlIsDirty(true);
+                debouncedSetValue(path, val, {
+                  shouldValidate: true,
+                  shouldDirty: true,
+                  shouldTouch: true,
+                });
+              }}
+              onMount={(_) => {
+                // register path so that validation rules are applied
+                register(path);
+              }}
+            />
+          </div>
+          {error && (
+            <Text color="red" className={styles.yamlError}>
+              {formatError({
+                ...error,
+                name: "YamlComponentError",
+                message: error.message || formatMessage({ id: "connectorBuilder.defaultYamlError" }),
+              })}
+            </Text>
+          )}
+        </>
       ) : (
         children
       )}
@@ -285,6 +304,8 @@ const YamlEditableComponent: React.FC<React.PropsWithChildren<YamlEditableCompon
             setLocalYamlValue(yaml);
             // unlock the locked inputs so they don't disappear when switching to YAML
             toggleLockedInputs(formValue, "unlocked");
+            // unregister the path so that the YAML editor can properly register on mount
+            unregister(path);
             setValue(path, yaml, {
               shouldValidate: true,
               shouldDirty: true,

@@ -13,7 +13,13 @@ import { BuilderList } from "./BuilderList";
 import { BuilderOneOf } from "./BuilderOneOf";
 import { BuilderRequestInjection } from "./BuilderRequestInjection";
 import { ToggleGroupField } from "./ToggleGroupField";
-import { LIST_PARTITION_ROUTER, StreamPathFn, BuilderParameterizedRequests } from "../types";
+import { manifestListPartitionRouterToBuilder } from "../convertManifestToBuilderForm";
+import {
+  LIST_PARTITION_ROUTER,
+  StreamPathFn,
+  BuilderParameterizedRequests,
+  builderParameterizedRequestsToManifest,
+} from "../types";
 
 interface ParameterizedRequestsSectionProps {
   streamFieldPath: StreamPathFn;
@@ -42,6 +48,10 @@ export const ParameterizedRequestsSection: React.FC<ParameterizedRequestsSection
         toggleable: true,
         path: streamFieldPath("parameterizedRequests"),
         defaultValue: [EMPTY_PARAMETERIZED_REQUEST],
+        yamlConfig: {
+          builderToManifest: builderParameterizedRequestsToManifest,
+          manifestToBuilder: manifestListPartitionRouterToBuilder,
+        },
       }}
       copyConfig={{
         path: "parameterizedRequests",

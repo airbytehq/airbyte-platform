@@ -14,7 +14,7 @@ import { Tooltip } from "components/ui/Tooltip";
 import { TestReadContext, useConnectorBuilderTestRead } from "services/connectorBuilder/ConnectorBuilderStateService";
 
 import styles from "./AdvancedTestSettings.module.scss";
-import { jsonString } from "../types";
+import { jsonString } from "../useBuilderValidationSchema";
 
 const MAX_RECORD_LIMIT = 5000;
 const MAX_PAGE_LIMIT = 20;
