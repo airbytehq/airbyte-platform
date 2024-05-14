@@ -185,5 +185,3 @@ object WriteOutputCatalogToObjectStorage : Temporary<Boolean>(key = "platform.wr
 object UseCustomK8sInitCheck : Temporary<Boolean>(key = "platform.use-custom-k8s-init-check", default = true)
 
 object ConnectionFieldLimitOverride : Permanent<Int>(key = "connection-field-limit-override", default = -1)
-
-object DownloadGcsLogsInParallel : Temporary<Boolean>(key = "platform.parallel-gcs-logs-download", default = false)
