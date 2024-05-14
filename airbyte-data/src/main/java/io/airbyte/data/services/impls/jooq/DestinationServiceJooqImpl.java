@@ -571,8 +571,6 @@ public class DestinationServiceJooqImpl implements DestinationService {
             .execute();
 
       } else {
-        final UUID actorDefinitionDefaultVersionId =
-            getDefaultVersionForActorDefinitionId(destinationConnection.getDestinationDefinitionId(), ctx).getVersionId();
         ctx.insertInto(ACTOR)
             .set(ACTOR.ID, destinationConnection.getDestinationId())
             .set(ACTOR.WORKSPACE_ID, destinationConnection.getWorkspaceId())
@@ -581,16 +579,11 @@ public class DestinationServiceJooqImpl implements DestinationService {
             .set(ACTOR.CONFIGURATION, JSONB.valueOf(Jsons.serialize(destinationConnection.getConfiguration())))
             .set(ACTOR.ACTOR_TYPE, ActorType.destination)
             .set(ACTOR.TOMBSTONE, destinationConnection.getTombstone() != null && destinationConnection.getTombstone())
-            .set(ACTOR.DEFAULT_VERSION_ID, actorDefinitionDefaultVersionId)
             .set(ACTOR.CREATED_AT, timestamp)
             .set(ACTOR.UPDATED_AT, timestamp)
             .execute();
       }
     });
-  }
-
-  private ActorDefinitionVersion getDefaultVersionForActorDefinitionId(final UUID actorDefinitionId, final DSLContext ctx) {
-    return ConnectorMetadataJooqHelper.getDefaultVersionForActorDefinitionIdOptional(actorDefinitionId, ctx).orElseThrow();
   }
 
   private Condition includeTombstones(final Field<Boolean> tombstoneField, final boolean includeTombstones) {

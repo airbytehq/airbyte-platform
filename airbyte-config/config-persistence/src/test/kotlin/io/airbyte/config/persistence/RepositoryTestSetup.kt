@@ -138,7 +138,6 @@ open class RepositoryTestSetup {
           .withSourceId(sourceId)
           .withName("source")
           .withSourceDefinitionId(sourceDefinitionId)
-          .withDefaultVersionId(sourceDefinitionVersionId)
           .withWorkspaceId(workspaceId),
       )
 
@@ -177,7 +176,6 @@ open class RepositoryTestSetup {
           .withDestinationId(destinationId)
           .withName("destination")
           .withDestinationDefinitionId(destinationDefinitionId)
-          .withDefaultVersionId(destinationDefinitionVersionId)
           .withWorkspaceId(workspaceId),
       )
 
