@@ -5,7 +5,9 @@ import io.airbyte.config.persistence.domain.Generation
 import io.airbyte.protocol.models.AirbyteStream
 import io.airbyte.protocol.models.ConfiguredAirbyteCatalog
 import io.airbyte.protocol.models.ConfiguredAirbyteStream
+import io.airbyte.protocol.models.DestinationSyncMode
 import io.airbyte.protocol.models.StreamDescriptor
+import io.airbyte.protocol.models.SyncMode
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
@@ -137,6 +139,49 @@ class CatalogGenerationSetterTest {
     updatedCatalog.streams.forEach {
       if (it.stream.name == "name1" && it.stream.namespace == "namespace1") {
         assertEquals(0L, it.minimumGenerationId)
+        assertEquals(jobId, it.syncId)
+        assertEquals(1L, it.generationId)
+      } else {
+        assertEquals(0L, it.minimumGenerationId)
+        assertEquals(jobId, it.syncId)
+        assertEquals(2L, it.generationId)
+      }
+    }
+  }
+
+  @Test
+  fun `test that min gen is 0 for full refresh overwrite`() {
+    val catalog =
+      ConfiguredAirbyteCatalog().withStreams(
+        listOf(
+          ConfiguredAirbyteStream().withStream(
+            AirbyteStream()
+              .withName("name1")
+              .withNamespace("namespace1"),
+          )
+            .withSyncMode(SyncMode.FULL_REFRESH)
+            .withDestinationSyncMode(DestinationSyncMode.OVERWRITE),
+          ConfiguredAirbyteStream().withStream(
+            AirbyteStream()
+              .withName("name2")
+              .withNamespace("namespace2"),
+          )
+            .withSyncMode(SyncMode.FULL_REFRESH)
+            .withDestinationSyncMode(DestinationSyncMode.APPEND),
+        ),
+      )
+
+    val updatedCatalog =
+      catalogGenerationSetter.updateCatalogWithGenerationAndSyncInformation(
+        catalog = catalog,
+        jobId = jobId,
+        streamRefreshes = listOf(),
+        generations = generations,
+      )
+
+    updatedCatalog.streams.forEach {
+      if (it.stream.name == "name1" && it.stream.namespace == "namespace1") {
+        assertEquals(1L, it.minimumGenerationId)
         assertEquals(jobId, it.syncId)
         assertEquals(1L, it.generationId)
       } else {
