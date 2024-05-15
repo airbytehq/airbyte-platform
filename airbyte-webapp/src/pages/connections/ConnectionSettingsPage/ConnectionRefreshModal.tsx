@@ -1,4 +1,4 @@
-import { Controller, useFormContext } from "react-hook-form";
+import { Controller, useFormContext, useWatch } from "react-hook-form";
 import { FormattedMessage } from "react-intl";
 import * as yup from "yup";
 
@@ -6,13 +6,10 @@ import { RadioButtonTiles } from "components/connection/CreateConnection/RadioBu
 import { Form } from "components/forms";
 import { FormSubmissionButtons } from "components/forms/FormSubmissionButtons";
 import { Box } from "components/ui/Box";
-import { Button } from "components/ui/Button";
 import { FlexContainer } from "components/ui/Flex";
 import { Text } from "components/ui/Text";
 
-import { ConnectionStream } from "core/api/types/AirbyteClient";
-import { FeatureItem, useFeature } from "core/services/features";
-import { useZendesk } from "packages/cloud/services/thirdParty/zendesk";
+import { ConnectionStream, RefreshMode } from "core/api/types/AirbyteClient";
 
 import { StreamsRefreshListBlock } from "./StreamsRefreshListBlock";
 
@@ -22,14 +19,37 @@ interface ConnectionRefreshModalProps {
   onCancel: () => void;
   streamsSupportingMergeRefresh: ConnectionStream[];
   streamsSupportingTruncateRefresh: ConnectionStream[];
-  refreshStreams: (streams?: Array<{ streamName: string; streamNamespace?: string }>) => Promise<void>;
+  refreshStreams: ({
+    streams,
+    refreshMode,
+  }: {
+    streams?: ConnectionStream[];
+    refreshMode: RefreshMode;
+  }) => Promise<void>;
   totalEnabledStreams?: number;
 }
 
 export interface ConnectionRefreshFormValues {
-  refreshType: "merge" | "truncate";
+  refreshMode: RefreshMode;
   streams?: ConnectionStream[];
 }
+
+const ConnectionRefreshModalStreamsListBlock: React.FC<{
+  streamsSupportingMergeRefresh: ConnectionStream[];
+  streamsSupportingTruncateRefresh: ConnectionStream[];
+  totalEnabledStreams: number;
+}> = ({ streamsSupportingMergeRefresh, streamsSupportingTruncateRefresh, totalEnabledStreams }) => {
+  const refreshMode = useWatch<ConnectionRefreshFormValues, "refreshMode">({ name: "refreshMode" });
+
+  return (
+    <StreamsRefreshListBlock
+      streamsToList={
+        refreshMode === RefreshMode.Merge ? streamsSupportingMergeRefresh : streamsSupportingTruncateRefresh
+      }
+      totalStreams={totalEnabledStreams}
+    />
+  );
+};
 
 const MergeTruncateRadioButtons: React.FC<{
   refreshScope: "connection" | "stream";
@@ -40,7 +60,7 @@ const MergeTruncateRadioButtons: React.FC<{
     <Box pt="sm">
       <Controller
         control={control}
-        name="refreshType"
+        name="refreshMode"
         render={({ field }) => {
           return (
             <RadioButtonTiles
@@ -48,7 +68,7 @@ const MergeTruncateRadioButtons: React.FC<{
               direction="column"
               options={[
                 {
-                  value: "merge",
+                  value: RefreshMode.Merge,
                   label: (
                     <FormattedMessage
                       id="connection.actions.refreshStream.merge.label"
@@ -72,7 +92,7 @@ const MergeTruncateRadioButtons: React.FC<{
                   ),
                 },
                 {
-                  value: "truncate",
+                  value: RefreshMode.Truncate,
                   label: (
                     <FormattedMessage
                       id="connection.actions.refreshStream.truncate.label"
@@ -98,9 +118,9 @@ const MergeTruncateRadioButtons: React.FC<{
               ]}
               selectedValue={field.value ?? ""}
               onSelectRadioButton={(value) => {
-                setValue("refreshType", value, { shouldDirty: true });
+                setValue("refreshMode", value, { shouldDirty: true });
               }}
-              name="refreshType"
+              name="refreshMode"
             />
           );
         }}
@@ -118,20 +138,20 @@ export const ConnectionRefreshModal: React.FC<ConnectionRefreshModalProps> = ({
   onCancel,
   refreshStreams,
 }) => {
-  const { openZendesk } = useZendesk();
-  const allowSupportChat = useFeature(FeatureItem.AllowInAppSupportChat);
   const canMerge = streamsSupportingMergeRefresh.length > 0;
   const canTruncate = streamsSupportingTruncateRefresh.length > 0;
 
   const onSubmitRefreshStreamForm = async (values: ConnectionRefreshFormValues) => {
-    await refreshStreams(
-      values.refreshType === "merge" ? streamsSupportingMergeRefresh : streamsSupportingTruncateRefresh
-    );
+    await refreshStreams({
+      streams:
+        values.refreshMode === RefreshMode.Merge ? streamsSupportingMergeRefresh : streamsSupportingTruncateRefresh,
+      refreshMode: values.refreshMode,
+    });
     onComplete();
   };
 
   const refreshConnectionFormSchema = yup.object().shape({
-    refreshType: yup.mixed<ConnectionRefreshFormValues["refreshType"]>().oneOf(["merge", "truncate"]).required(),
+    refreshMode: yup.mixed<ConnectionRefreshFormValues["refreshMode"]>().required(),
     streams: yup.array().when("refreshScope", {
       is: "connection",
       then: yup.array().strip(),
@@ -159,22 +179,6 @@ export const ConnectionRefreshModal: React.FC<ConnectionRefreshModalProps> = ({
             </Text>
           )}
         </Text>
-        {allowSupportChat && (
-          <Box pt="xs">
-            <Text>
-              <FormattedMessage
-                id="connection.actions.refreshStream.chatWithUs"
-                values={{
-                  ChatWithUsLink: (children) => (
-                    <Button variant="link" onClick={openZendesk}>
-                      {children}
-                    </Button>
-                  ),
-                }}
-              />
-            </Text>
-          </Box>
-        )}
       </Box>
       <Form<ConnectionRefreshFormValues>
         schema={refreshConnectionFormSchema}
@@ -182,7 +186,7 @@ export const ConnectionRefreshModal: React.FC<ConnectionRefreshModalProps> = ({
           await onSubmitRefreshStreamForm(values);
         }}
         defaultValues={{
-          refreshType: canMerge ? "merge" : "truncate",
+          refreshMode: canMerge ? RefreshMode.Merge : RefreshMode.Truncate,
           streams:
             refreshScope === "connection"
               ? undefined
@@ -230,10 +234,10 @@ export const ConnectionRefreshModal: React.FC<ConnectionRefreshModalProps> = ({
         )}
         {refreshScope === "connection" && totalEnabledStreams && (
           <Box pt="lg" px="lg">
-            <StreamsRefreshListBlock
+            <ConnectionRefreshModalStreamsListBlock
+              totalEnabledStreams={totalEnabledStreams}
               streamsSupportingMergeRefresh={streamsSupportingMergeRefresh}
               streamsSupportingTruncateRefresh={streamsSupportingTruncateRefresh}
-              totalStreams={totalEnabledStreams}
             />
           </Box>
         )}

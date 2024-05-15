@@ -231,12 +231,12 @@ export const useRefreshConnectionStreams = (connectionId: string) => {
   const { formatMessage } = useIntl();
 
   return useMutation(
-    async (streams?: ConnectionStream[]) => {
+    async ({ streams, refreshMode }: { streams?: ConnectionStream[]; refreshMode: RefreshMode }) => {
       if (!platformSupportsRefresh) {
         return;
       }
 
-      await refreshConnectionStream({ connectionId, streams, refreshMode: RefreshMode.Merge }, requestOptions);
+      await refreshConnectionStream({ connectionId, streams, refreshMode }, requestOptions);
     },
     {
       onSuccess: () => {
