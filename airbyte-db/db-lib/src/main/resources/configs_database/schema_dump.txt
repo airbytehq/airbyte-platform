@@ -19,7 +19,6 @@ create table "public"."actor" (
   "tombstone" boolean not null default false,
   "created_at" timestamp(6) with time zone not null default current_timestamp,
   "updated_at" timestamp(6) with time zone not null default current_timestamp,
-  "default_version_id" uuid not null,
   constraint "actor_pkey" primary key ("id")
 );
 create table "public"."actor_catalog" (
@@ -486,7 +485,6 @@ create index "workload_status_idx" on "public"."workload"("status" asc);
 create index "workload_label_workload_id_idx" on "public"."workload_label"("workload_id" asc);
 alter table "public"."active_declarative_manifest" add constraint "active_declarative_manifest_actor_definition_id_version_fkey" foreign key ("actor_definition_id", "version") references "public"."declarative_manifest" ("actor_definition_id", "version");
 alter table "public"."actor" add constraint "actor_actor_definition_id_fkey" foreign key ("actor_definition_id") references "public"."actor_definition" ("id");
-alter table "public"."actor" add constraint "actor_default_version_id_fkey" foreign key ("default_version_id") references "public"."actor_definition_version" ("id");
 alter table "public"."actor" add constraint "actor_workspace_id_fkey" foreign key ("workspace_id") references "public"."workspace" ("id");
 alter table "public"."actor_catalog_fetch_event" add constraint "actor_catalog_fetch_event_actor_catalog_id_fkey" foreign key ("actor_catalog_id") references "public"."actor_catalog" ("id");
 alter table "public"."actor_catalog_fetch_event" add constraint "actor_catalog_fetch_event_actor_id_fkey" foreign key ("actor_id") references "public"."actor" ("id");

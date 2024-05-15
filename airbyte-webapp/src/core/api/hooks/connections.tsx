@@ -23,6 +23,7 @@ import {
   createOrUpdateStateSafe,
   deleteConnection,
   getConnectionDataHistory,
+  getConnectionSyncProgress,
   getConnectionUptimeHistory,
   getState,
   getStateType,
@@ -71,6 +72,7 @@ const connectionsKeys = {
   uptimeHistory: (connectionId: string) => [...connectionsKeys.all, "uptimeHistory", connectionId] as const,
   getState: (connectionId: string) => [...connectionsKeys.all, "getState", connectionId] as const,
   statuses: (connectionIds: string[]) => [...connectionsKeys.all, "status", connectionIds],
+  syncProgress: (connectionId: string) => [...connectionsKeys.all, "syncProgress", connectionId] as const,
 };
 
 export interface ConnectionValues {
@@ -92,6 +94,23 @@ interface CreateConnectionProps {
   destinationDefinition?: { name: string; destinationDefinitionId: string };
   sourceCatalogId: string | undefined;
 }
+
+export const useGetConnectionSyncProgress = (connectionId: string, enabled: boolean) => {
+  const requestOptions = useRequestOptions();
+
+  return useQuery(
+    connectionsKeys.syncProgress(connectionId),
+    async () => await getConnectionSyncProgress({ connectionId }, requestOptions),
+    {
+      enabled,
+      // poll every 5 seconds until we start getting data so we can show it ASAP when it's available
+      // then, because the stats are only written every minute, just poll once every 60 seconds
+      refetchInterval: (data) => {
+        return data && data.length > 0 ? 60000 : 5000;
+      },
+    }
+  );
+};
 
 export const useSyncConnection = () => {
   const requestOptions = useRequestOptions();

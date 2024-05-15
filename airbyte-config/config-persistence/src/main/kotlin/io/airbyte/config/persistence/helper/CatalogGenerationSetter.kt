@@ -5,7 +5,9 @@ import io.airbyte.config.RefreshStream
 import io.airbyte.config.persistence.domain.Generation
 import io.airbyte.config.persistence.domain.StreamRefresh
 import io.airbyte.protocol.models.ConfiguredAirbyteCatalog
+import io.airbyte.protocol.models.DestinationSyncMode
 import io.airbyte.protocol.models.StreamDescriptor
+import io.airbyte.protocol.models.SyncMode
 import jakarta.inject.Singleton
 
 @Singleton
@@ -28,7 +30,9 @@ class CatalogGenerationSetter {
           configuredAirbyteStream.stream.name,
         ).withNamespace(configuredAirbyteStream.stream.namespace)
       val currentGeneration = generationByStreamDescriptor.getOrDefault(streamDescriptor, 0)
-      val shouldTruncate: Boolean = refreshTypeByStream[streamDescriptor] == RefreshStream.RefreshType.TRUNCATE
+      val shouldTruncate: Boolean =
+        refreshTypeByStream[streamDescriptor] == RefreshStream.RefreshType.TRUNCATE ||
+          (configuredAirbyteStream.syncMode == SyncMode.FULL_REFRESH && configuredAirbyteStream.destinationSyncMode == DestinationSyncMode.OVERWRITE)
 
       configuredAirbyteStream.syncId = jobId
       configuredAirbyteStream.generationId = currentGeneration

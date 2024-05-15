@@ -557,7 +557,6 @@ public class MockData {
         .withName("source-1")
         .withTombstone(false)
         .withSourceDefinitionId(SOURCE_DEFINITION_ID_1)
-        .withDefaultVersionId(SOURCE_DEFINITION_VERSION_ID_1)
         .withWorkspaceId(WORKSPACE_ID_1)
         .withConfiguration(Jsons.deserialize(CONNECTION_SPECIFICATION))
         .withSourceId(SOURCE_ID_1);
@@ -565,7 +564,6 @@ public class MockData {
         .withName("source-2")
         .withTombstone(false)
         .withSourceDefinitionId(SOURCE_DEFINITION_ID_2)
-        .withDefaultVersionId(SOURCE_DEFINITION_VERSION_ID_2)
         .withWorkspaceId(WORKSPACE_ID_1)
         .withConfiguration(Jsons.deserialize(CONNECTION_SPECIFICATION))
         .withSourceId(SOURCE_ID_2);
@@ -573,7 +571,6 @@ public class MockData {
         .withName("source-3")
         .withTombstone(false)
         .withSourceDefinitionId(SOURCE_DEFINITION_ID_1)
-        .withDefaultVersionId(SOURCE_DEFINITION_VERSION_ID_1)
         .withWorkspaceId(WORKSPACE_ID_2)
         .withConfiguration(Jsons.emptyObject())
         .withSourceId(SOURCE_ID_3);
@@ -585,7 +582,6 @@ public class MockData {
         .withName("destination-1")
         .withTombstone(false)
         .withDestinationDefinitionId(DESTINATION_DEFINITION_ID_1)
-        .withDefaultVersionId(DESTINATION_DEFINITION_VERSION_ID_1)
         .withWorkspaceId(WORKSPACE_ID_1)
         .withConfiguration(Jsons.deserialize(CONNECTION_SPECIFICATION))
         .withDestinationId(DESTINATION_ID_1);
@@ -593,7 +589,6 @@ public class MockData {
         .withName("destination-2")
         .withTombstone(false)
         .withDestinationDefinitionId(DESTINATION_DEFINITION_ID_2)
-        .withDefaultVersionId(DESTINATION_DEFINITION_VERSION_ID_2)
         .withWorkspaceId(WORKSPACE_ID_1)
         .withConfiguration(Jsons.deserialize(CONNECTION_SPECIFICATION))
         .withDestinationId(DESTINATION_ID_2);
@@ -601,7 +596,6 @@ public class MockData {
         .withName("destination-3")
         .withTombstone(true)
         .withDestinationDefinitionId(DESTINATION_DEFINITION_ID_2)
-        .withDefaultVersionId(DESTINATION_DEFINITION_VERSION_ID_2)
         .withWorkspaceId(WORKSPACE_ID_2)
         .withConfiguration(Jsons.emptyObject())
         .withDestinationId(DESTINATION_ID_3);

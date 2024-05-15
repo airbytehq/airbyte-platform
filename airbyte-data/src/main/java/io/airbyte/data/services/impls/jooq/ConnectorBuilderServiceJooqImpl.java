@@ -71,8 +71,8 @@ public class ConnectorBuilderServiceJooqImpl implements ConnectorBuilderService 
    * @throws ConfigNotFoundException if build project is not found
    */
   @Override
-  public ConnectorBuilderProject getConnectorBuilderProject(UUID builderProjectId,
-                                                            boolean fetchManifestDraft)
+  public ConnectorBuilderProject getConnectorBuilderProject(final UUID builderProjectId,
+                                                            final boolean fetchManifestDraft)
       throws IOException, ConfigNotFoundException {
     final Optional<ConnectorBuilderProject> projectOptional = database.query(ctx -> {
       final List columnsToFetch =
@@ -109,8 +109,8 @@ public class ConnectorBuilderServiceJooqImpl implements ConnectorBuilderService 
    */
   @Override
   public ConnectorBuilderProjectVersionedManifest getVersionedConnectorBuilderProject(
-                                                                                      UUID builderProjectId,
-                                                                                      Long version)
+                                                                                      final UUID builderProjectId,
+                                                                                      final Long version)
       throws ConfigNotFoundException, IOException {
     final Optional<ConnectorBuilderProjectVersionedManifest> projectOptional = database.query(ctx -> ctx
         .select(CONNECTOR_BUILDER_PROJECT.ID,
@@ -143,7 +143,7 @@ public class ConnectorBuilderServiceJooqImpl implements ConnectorBuilderService 
    * @throws IOException exception while interacting with db
    */
   @Override
-  public Stream<ConnectorBuilderProject> getConnectorBuilderProjectsByWorkspace(UUID workspaceId)
+  public Stream<ConnectorBuilderProject> getConnectorBuilderProjectsByWorkspace(final UUID workspaceId)
       throws IOException {
     final Condition matchByWorkspace = CONNECTOR_BUILDER_PROJECT.WORKSPACE_ID.eq(workspaceId);
 
@@ -169,7 +169,7 @@ public class ConnectorBuilderServiceJooqImpl implements ConnectorBuilderService 
    * @throws IOException exception while interacting with db
    */
   @Override
-  public boolean deleteBuilderProject(UUID builderProjectId) throws IOException {
+  public boolean deleteBuilderProject(final UUID builderProjectId) throws IOException {
     return database.transaction(ctx -> ctx.update(CONNECTOR_BUILDER_PROJECT).set(CONNECTOR_BUILDER_PROJECT.TOMBSTONE, true)
         .set(CONNECTOR_BUILDER_PROJECT.UPDATED_AT, OffsetDateTime.now())
         .where(CONNECTOR_BUILDER_PROJECT.ID.eq(builderProjectId)).execute()) > 0;
@@ -186,10 +186,10 @@ public class ConnectorBuilderServiceJooqImpl implements ConnectorBuilderService 
    * @throws IOException exception while interacting with db
    */
   @Override
-  public void writeBuilderProjectDraft(UUID projectId,
-                                       UUID workspaceId,
-                                       String name,
-                                       JsonNode manifestDraft)
+  public void writeBuilderProjectDraft(final UUID projectId,
+                                       final UUID workspaceId,
+                                       final String name,
+                                       final JsonNode manifestDraft)
       throws IOException {
     database.transaction(ctx -> {
       writeBuilderProjectDraft(projectId, workspaceId, name, manifestDraft, ctx);
@@ -204,7 +204,7 @@ public class ConnectorBuilderServiceJooqImpl implements ConnectorBuilderService 
    * @throws IOException exception while interacting with db
    */
   @Override
-  public void deleteBuilderProjectDraft(UUID projectId) throws IOException {
+  public void deleteBuilderProjectDraft(final UUID projectId) throws IOException {
     database.transaction(ctx -> {
       ctx.update(CONNECTOR_BUILDER_PROJECT)
           .setNull(CONNECTOR_BUILDER_PROJECT.MANIFEST_DRAFT)
@@ -224,7 +224,7 @@ public class ConnectorBuilderServiceJooqImpl implements ConnectorBuilderService 
    * @throws IOException exception while interacting with db
    */
   @Override
-  public void deleteManifestDraftForActorDefinition(UUID actorDefinitionId, UUID workspaceId)
+  public void deleteManifestDraftForActorDefinition(final UUID actorDefinitionId, final UUID workspaceId)
       throws IOException {
     database.transaction(ctx -> {
       ctx.update(CONNECTOR_BUILDER_PROJECT)
@@ -255,11 +255,11 @@ public class ConnectorBuilderServiceJooqImpl implements ConnectorBuilderService 
    * @throws IOException exception while interacting with db
    */
   @Override
-  public void updateBuilderProjectAndActorDefinition(UUID projectId,
-                                                     UUID workspaceId,
-                                                     String name,
-                                                     JsonNode manifestDraft,
-                                                     UUID actorDefinitionId)
+  public void updateBuilderProjectAndActorDefinition(final UUID projectId,
+                                                     final UUID workspaceId,
+                                                     final String name,
+                                                     final JsonNode manifestDraft,
+                                                     final UUID actorDefinitionId)
       throws IOException {
     database.transaction(ctx -> {
       writeBuilderProjectDraft(projectId, workspaceId, name, manifestDraft, ctx);
@@ -280,8 +280,8 @@ public class ConnectorBuilderServiceJooqImpl implements ConnectorBuilderService 
    * @throws IOException exception while interacting with db
    */
   @Override
-  public void assignActorDefinitionToConnectorBuilderProject(UUID builderProjectId,
-                                                             UUID actorDefinitionId)
+  public void assignActorDefinitionToConnectorBuilderProject(final UUID builderProjectId,
+                                                             final UUID actorDefinitionId)
       throws IOException {
     database.transaction(ctx -> {
       ctx.update(CONNECTOR_BUILDER_PROJECT)
@@ -328,9 +328,10 @@ public class ConnectorBuilderServiceJooqImpl implements ConnectorBuilderService 
    * @throws IllegalArgumentException if there is a mismatch between the different arguments
    */
   @Override
-  public void createDeclarativeManifestAsActiveVersion(DeclarativeManifest declarativeManifest,
-                                                       ActorDefinitionConfigInjection configInjection,
-                                                       ConnectorSpecification connectorSpecification)
+  public void createDeclarativeManifestAsActiveVersion(final DeclarativeManifest declarativeManifest,
+                                                       final ActorDefinitionConfigInjection configInjection,
+                                                       final ConnectorSpecification connectorSpecification,
+                                                       final String cdkVersion)
       throws IOException {
     if (!declarativeManifest.getActorDefinitionId().equals(configInjection.getActorDefinitionId())) {
       throw new IllegalArgumentException("DeclarativeManifest.actorDefinitionId must match ActorDefinitionConfigInjection.actorDefinitionId");
@@ -343,7 +344,7 @@ public class ConnectorBuilderServiceJooqImpl implements ConnectorBuilderService 
     }
 
     database.transaction(ctx -> {
-      updateDeclarativeActorDefinition(configInjection, connectorSpecification, ctx);
+      updateDeclarativeActorDefinitionVersion(configInjection, connectorSpecification, cdkVersion, ctx);
       insertActiveDeclarativeManifest(declarativeManifest, ctx);
       return null;
     });
@@ -384,13 +385,14 @@ public class ConnectorBuilderServiceJooqImpl implements ConnectorBuilderService 
    * @throws IOException exception while interacting with db
    */
   @Override
-  public void setDeclarativeSourceActiveVersion(UUID sourceDefinitionId,
-                                                Long version,
-                                                ActorDefinitionConfigInjection configInjection,
-                                                ConnectorSpecification connectorSpecification)
+  public void setDeclarativeSourceActiveVersion(final UUID sourceDefinitionId,
+                                                final Long version,
+                                                final ActorDefinitionConfigInjection configInjection,
+                                                final ConnectorSpecification connectorSpecification,
+                                                final String cdkVersion)
       throws IOException {
     database.transaction(ctx -> {
-      updateDeclarativeActorDefinition(configInjection, connectorSpecification, ctx);
+      updateDeclarativeActorDefinitionVersion(configInjection, connectorSpecification, cdkVersion, ctx);
       upsertActiveDeclarativeManifest(new ActiveDeclarativeManifest().withActorDefinitionId(sourceDefinitionId).withVersion(version), ctx);
       return null;
     });
@@ -405,7 +407,7 @@ public class ConnectorBuilderServiceJooqImpl implements ConnectorBuilderService 
    */
   @Override
   public Stream<ActorDefinitionConfigInjection> getActorDefinitionConfigInjections(
-                                                                                   UUID actorDefinitionId)
+                                                                                   final UUID actorDefinitionId)
       throws IOException {
     return database.query(ctx -> ctx.select(ACTOR_DEFINITION_CONFIG_INJECTION.asterisk())
         .from(ACTOR_DEFINITION_CONFIG_INJECTION)
@@ -425,7 +427,7 @@ public class ConnectorBuilderServiceJooqImpl implements ConnectorBuilderService 
    */
   @Override
   public void writeActorDefinitionConfigInjectionForPath(
-                                                         ActorDefinitionConfigInjection actorDefinitionConfigInjection)
+                                                         final ActorDefinitionConfigInjection actorDefinitionConfigInjection)
       throws IOException {
     database.transaction(ctx -> {
       writeActorDefinitionConfigInjectionForPath(actorDefinitionConfigInjection, ctx);
@@ -441,7 +443,7 @@ public class ConnectorBuilderServiceJooqImpl implements ConnectorBuilderService 
    * @throws IOException exception while interacting with db
    */
   @Override
-  public void insertDeclarativeManifest(DeclarativeManifest declarativeManifest)
+  public void insertDeclarativeManifest(final DeclarativeManifest declarativeManifest)
       throws IOException {
     database.transaction(ctx -> {
       insertDeclarativeManifest(declarativeManifest, ctx);
@@ -458,7 +460,7 @@ public class ConnectorBuilderServiceJooqImpl implements ConnectorBuilderService 
    * @throws IOException exception while interacting with db
    */
   @Override
-  public void insertActiveDeclarativeManifest(DeclarativeManifest declarativeManifest)
+  public void insertActiveDeclarativeManifest(final DeclarativeManifest declarativeManifest)
       throws IOException {
     database.transaction(ctx -> {
       insertDeclarativeManifest(declarativeManifest, ctx);
@@ -476,7 +478,7 @@ public class ConnectorBuilderServiceJooqImpl implements ConnectorBuilderService 
    */
   @Override
   public Stream<DeclarativeManifest> getDeclarativeManifestsByActorDefinitionId(
-                                                                                UUID actorDefinitionId)
+                                                                                final UUID actorDefinitionId)
       throws IOException {
     return database
         .query(ctx -> ctx
@@ -500,8 +502,8 @@ public class ConnectorBuilderServiceJooqImpl implements ConnectorBuilderService 
    */
   @Override
   public DeclarativeManifest getDeclarativeManifestByActorDefinitionIdAndVersion(
-                                                                                 UUID actorDefinitionId,
-                                                                                 long version)
+                                                                                 final UUID actorDefinitionId,
+                                                                                 final long version)
       throws IOException, ConfigNotFoundException {
     final Optional<DeclarativeManifest> declarativeManifest = database
         .query(ctx -> ctx
@@ -526,7 +528,7 @@ public class ConnectorBuilderServiceJooqImpl implements ConnectorBuilderService 
    */
   @Override
   public DeclarativeManifest getCurrentlyActiveDeclarativeManifestsByActorDefinitionId(
-                                                                                       UUID actorDefinitionId)
+                                                                                       final UUID actorDefinitionId)
       throws IOException, ConfigNotFoundException {
     final Optional<DeclarativeManifest> declarativeManifest = database
         .query(ctx -> ctx
@@ -637,14 +639,16 @@ public class ConnectorBuilderServiceJooqImpl implements ConnectorBuilderService 
         .execute();
   }
 
-  private void updateDeclarativeActorDefinition(final ActorDefinitionConfigInjection configInjection,
-                                                final ConnectorSpecification spec,
-                                                final DSLContext ctx) {
+  private void updateDeclarativeActorDefinitionVersion(final ActorDefinitionConfigInjection configInjection,
+                                                       final ConnectorSpecification spec,
+                                                       final String cdkVersion,
+                                                       final DSLContext ctx) {
     // We are updating the same version since connector builder projects have a different concept of
     // versioning.
     ctx.update(ACTOR_DEFINITION_VERSION)
         .set(ACTOR_DEFINITION_VERSION.UPDATED_AT, OffsetDateTime.now())
         .set(ACTOR_DEFINITION_VERSION.SPEC, JSONB.valueOf(Jsons.serialize(spec)))
+        .set(ACTOR_DEFINITION_VERSION.DOCKER_IMAGE_TAG, cdkVersion)
         .where(ACTOR_DEFINITION_VERSION.ACTOR_DEFINITION_ID.eq(configInjection.getActorDefinitionId()))
         .execute();
 

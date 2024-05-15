@@ -1,5 +1,6 @@
 ### TEST FOR RELEASE WORKFLOW
 
+
 # Global params that are overwritten with umbrella chart
 global:
   # -- Service Account name override
@@ -8,20 +9,89 @@ global:
   deploymentMode: "oss"
   # -- Edition; "community" or "pro"
   edition: "community"
-  # -- Log4j configuration file, if not using minio, update to "log4j2-no-minio.xml"
-  log4jConfig: "log4j2.xml"
+
+  airbyteYml: ""
+
+  enterprise:
+    # -- Secret name where an Airbyte license key is stored
+    secretName: "airbyte-config-secrets"
+    # -- The key within `licenseKeySecretName` where the Airbyte license key is stored
+    licenseKeySecretKey: "license-key"
+
+  # -- The URL where Airbyte will be reached; This should match your Ingress host
+  airbyteUrl: ""
+
+  # -- Auth configuration
+  auth:
+    # -- Admin user configuration
+    instanceAdmin:
+      # -- Secret name where the instanceAdmin configuration is stored
+      secretName: "airbyte-config-secrets"
+      # -- The first name of the initial user
+      firstName: ""
+      # -- The last name of the initial user
+      lastName:  ""
+      # -- The key within `emailSecretName` where the initial user's email is stored
+      emailSecretKey: "instance-admin-email"
+      # -- The key within `passwordSecretName` where the initial user's password is stored
+      passwordSecretKey: "instance-admin-password"
+    
+    # -- SSO Identify Provider configuration; (requires Enterprise)
+    #identityProvider:
+    #  # -- Secret name where the OIDC configuration is stored
+    #  secretName: "airbyte-config-secrets"
+    #  # -- The identity provider type (e.g. oidc)
+    #  type: ""
+    #  # -- OIDC configuration (required if `auth.identityProvider.type` is "oidc")
+    #  oidc:
+    #    # -- OIDC application domain
+    #    domain: ""
+    #    # -- OIDC application name
+    #    appName: ""
+    #    # -- The key within `clientIdSecretName` where the OIDC client id is stored
+    #    clientIdSecretKey: "client-id"
+    #    # -- The key within `clientSecretSecretName` where the OIDC client secret is stored
+    #    clientSecretSecretKey: "client-secret"
 
   # -- Environment variables
   env_vars: {}
-  # Database configuration override
+
+  # -- Database configuration
   database:
+    # TODO: Document that this is NOOP for now, but best to set in preparation for a future change. Defaults to 'internal'
+    type: "internal" # "external"
+
     # -- Secret name where database credentials are stored
-    secretName: ""
-    # -- Secret value for database password
-    secretValue: ""
-  # todo: remove so there is no need to create secrets for gcs if not using gcs
+    secretName: "" # e.g. "airbyte-config-secrets"
+
+    # -- The database host
+    host: ""
+    # -- The key within `secretName` where host is stored
+    #hostSecretKey: "" # e.g. "database-host"
+
+    # -- The database port
+    port: ""
+    # -- The key within `secretName` where port is stored
+    #portSecretKey: "" # e.g. "database-port" 
+
+    # -- The database name
+    database: ""
+    # -- The key within `secretName` where the database name is stored
+    #databaseSecretKey: "" # e.g. "database-name" 
+
+    # -- The database user
+    user: ""
+    # -- The key within `secretName` where the user is stored
+    #userSecretKey: "" # e.g. "database-user"
+
+    # -- The database password
+    password: ""
+    # -- The key within `secretName` where the password is stored
+    #passwordSecretKey: "" # e.g."database-password"
+
   storage:
     type: minio # default storage used
+    # TODO: Add full configuration here
 
   metrics:
     # -- The metric client to configure globally. Supports "otel"
@@ -1162,7 +1232,7 @@ temporal:
     # -- The pull policy for the temporal image
     pullPolicy: IfNotPresent
     # -- The temporal image tag to use
-    tag: "1.20.1"
+    tag: "1.23"
 
   service:
     # -- The Kubernetes Service Type
@@ -1197,7 +1267,7 @@ temporal:
   ## Examples (when using `temporal.containerSecurityContext.readOnlyRootFilesystem=true`):
   ## extraInitContainers:
   ##   - name: config-loader
-  ##     image: temporalio/auto-setup:1.20.1
+  ##     image: temporalio/auto-setup:1.23
   ##     command:
   ##       - /bin/sh
   ##       - -c
@@ -1330,9 +1400,9 @@ postgresql:
 # External PostgreSQL configuration, All of these values are only used when postgresql.enabled is set to false
 externalDatabase:
   # -- Database host
-  host: localhost
+  host: ""
   # -- non-root Username for Airbyte Database
-  user: airbyte
+  user: ""
   # -- Database password
   password: ""
   # -- Name of an existing secret resource containing the DB password
@@ -1340,9 +1410,9 @@ externalDatabase:
   # -- Name of an existing secret key containing the DB password
   existingSecretPasswordKey: ""
   # -- Database name
-  database: db-airbyte
+  database: ""
   # -- Database port number
-  port: 5432
+  port: ""
   # -- Database full JDBL URL (ex: jdbc:postgresql://host:port/db?parameters)
   jdbcUrl: ""
 

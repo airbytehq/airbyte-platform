@@ -28,6 +28,7 @@ const ImplementationTable: React.FC<ImplementationTableProps> = ({ data, entity 
         meta: {
           thClassName: styles.thEntityName,
           noPadding: true,
+          responsive: true,
         },
         cell: (props) => (
           <Link to={props.row.original.entityId} variant="primary" className={styles.cellContent}>

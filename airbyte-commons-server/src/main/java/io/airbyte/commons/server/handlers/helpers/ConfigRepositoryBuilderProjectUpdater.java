@@ -6,31 +6,33 @@ package io.airbyte.commons.server.handlers.helpers;
 
 import io.airbyte.api.model.generated.ExistingConnectorBuilderProjectWithWorkspaceId;
 import io.airbyte.config.ConnectorBuilderProject;
-import io.airbyte.config.persistence.ConfigNotFoundException;
-import io.airbyte.config.persistence.ConfigRepository;
+import io.airbyte.data.exceptions.ConfigNotFoundException;
+import io.airbyte.data.services.ConnectorBuilderService;
 import java.io.IOException;
 
 public class ConfigRepositoryBuilderProjectUpdater implements BuilderProjectUpdater {
 
-  private final ConfigRepository configRepository;
+  private final ConnectorBuilderService connectorBuilderService;
 
-  public ConfigRepositoryBuilderProjectUpdater(final ConfigRepository configRepository) {
+  public ConfigRepositoryBuilderProjectUpdater(final ConnectorBuilderService connectorBuilderService) {
 
-    this.configRepository = configRepository;
+    this.connectorBuilderService = connectorBuilderService;
   }
 
   @Override
-  public void persistBuilderProjectUpdate(ExistingConnectorBuilderProjectWithWorkspaceId projectUpdate) throws ConfigNotFoundException, IOException {
-    final ConnectorBuilderProject connectorBuilderProject = configRepository.getConnectorBuilderProject(projectUpdate.getBuilderProjectId(), false);
+  public void persistBuilderProjectUpdate(final ExistingConnectorBuilderProjectWithWorkspaceId projectUpdate)
+      throws IOException, ConfigNotFoundException {
+    final ConnectorBuilderProject connectorBuilderProject =
+        connectorBuilderService.getConnectorBuilderProject(projectUpdate.getBuilderProjectId(), false);
 
     if (connectorBuilderProject.getActorDefinitionId() != null) {
-      configRepository.updateBuilderProjectAndActorDefinition(projectUpdate.getBuilderProjectId(),
+      connectorBuilderService.updateBuilderProjectAndActorDefinition(projectUpdate.getBuilderProjectId(),
           projectUpdate.getWorkspaceId(),
           projectUpdate.getBuilderProject().getName(),
           projectUpdate.getBuilderProject().getDraftManifest(),
           connectorBuilderProject.getActorDefinitionId());
     } else {
-      configRepository.writeBuilderProjectDraft(projectUpdate.getBuilderProjectId(),
+      connectorBuilderService.writeBuilderProjectDraft(projectUpdate.getBuilderProjectId(),
           projectUpdate.getWorkspaceId(),
           projectUpdate.getBuilderProject().getName(),
           projectUpdate.getBuilderProject().getDraftManifest());

@@ -5,7 +5,7 @@ import {
   useLateMultiplierExperiment,
 } from "components/connection/StreamStatus/streamStatusUtils";
 
-import { useGetConnection, useListConnectionsStatuses } from "core/api";
+import { useGetConnection, useGetConnectionSyncProgress, useListConnectionsStatuses } from "core/api";
 import {
   ConnectionScheduleType,
   ConnectionStatus,
@@ -16,6 +16,7 @@ import {
 } from "core/api/types/AirbyteClient";
 import { moveTimeToFutureByPeriod } from "core/utils/time";
 import { useSchemaChanges } from "hooks/connection/useSchemaChanges";
+import { useExperiment } from "hooks/services/Experiment";
 
 import { ConnectionStatusIndicatorStatus } from "../ConnectionStatusIndicator";
 
@@ -66,6 +67,7 @@ export interface UIConnectionStatus {
 
 export const useConnectionStatus = (connectionId: string): UIConnectionStatus => {
   const connection = useGetConnection(connectionId);
+  const showSyncProgress = useExperiment("connection.syncProgress", false);
 
   const connectionStatuses = useListConnectionsStatuses([connectionId]);
   const connectionStatus = connectionStatuses[0];
@@ -79,6 +81,8 @@ export const useConnectionStatus = (connectionId: string): UIConnectionStatus =>
     lastSyncJobId,
     lastSyncAttemptNumber,
   } = connectionStatus;
+
+  const { data: syncProgress } = useGetConnectionSyncProgress(connectionId, showSyncProgress && isRunning);
 
   const hasConfigError = failureReason?.failureType === FailureType.config_error;
 
@@ -99,6 +103,21 @@ export const useConnectionStatus = (connectionId: string): UIConnectionStatus =>
       connection.scheduleData.basicSchedule.units,
       connection.scheduleData.basicSchedule.timeUnit
     ).valueOf();
+  }
+
+  if (isRunning && showSyncProgress) {
+    const hasRecordsExtracted = syncProgress?.some((progress) => progress.recordsExtracted > 0);
+
+    return {
+      status: hasRecordsExtracted ? ConnectionStatusIndicatorStatus.Syncing : ConnectionStatusIndicatorStatus.Queued,
+      lastSyncJobStatus,
+      nextSync,
+      lastSuccessfulSync,
+      isRunning,
+      failureReason,
+      lastSyncJobId,
+      lastSyncAttemptNumber,
+    };
   }
 
   if (hasBreakingSchemaChange || hasConfigError) {

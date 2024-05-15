@@ -26,6 +26,8 @@ const MESSAGE_BY_STATUS: Readonly<Record<ConnectionStatusIndicatorStatus, string
   error: "connection.status.error",
   actionRequired: "connection.status.actionRequired",
   disabled: "connection.status.disabled",
+  syncing: "connection.status.syncing",
+  queued: "connection.status.queued",
 };
 
 export const ConnectionStatusOverview: React.FC = () => {

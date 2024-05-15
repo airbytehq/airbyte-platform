@@ -30,11 +30,13 @@ import { CreateConnectionFormControls } from "../ConnectionForm/CreateConnection
 import { FormConnectionFormValues, useConnectionValidationSchema } from "../ConnectionForm/formConfig";
 import { OperationsSectionCard } from "../ConnectionForm/OperationsSectionCard";
 import { SyncCatalogCard } from "../ConnectionForm/SyncCatalogCard";
+import { SyncCatalogCardNext } from "../ConnectionForm/SyncCatalogCardNext";
 import { mapFormValuesToOperations } from "../ConnectionForm/utils";
 
 export const CREATE_CONNECTION_FORM_ID = "create-connection-form";
 
 const CreateConnectionFormInner: React.FC = () => {
+  const isSyncCatalogV2Enabled = useExperiment("connection.syncCatalogV2", false);
   const navigate = useNavigate();
   const workspaceId = useCurrentWorkspaceId();
   const { clearAllFormChanges } = useFormChangeTrackerService();
@@ -119,7 +121,7 @@ const CreateConnectionFormInner: React.FC = () => {
               <ConnectionNameCard />
               {canEditDataGeographies && <DataResidencyCard />}
               <ConnectionConfigurationCard />
-              <SyncCatalogCard />
+              {isSyncCatalogV2Enabled ? <SyncCatalogCardNext /> : <SyncCatalogCard />}
               <OperationsSectionCard />
               <CreateConnectionFormControls />
             </>

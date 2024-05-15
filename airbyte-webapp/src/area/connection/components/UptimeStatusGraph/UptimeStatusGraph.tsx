@@ -83,6 +83,8 @@ const formatDataForChart = (data: ReturnType<typeof useGetConnectionUptimeHistor
             status = ConnectionStatusIndicatorStatus.Error;
             break;
           case JobStatus.running:
+            status = ConnectionStatusIndicatorStatus.Syncing;
+            break;
           case JobStatus.cancelled:
           case JobStatus.incomplete:
           case JobStatus.pending:

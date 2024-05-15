@@ -18,6 +18,7 @@ export interface Experiments {
   "connection.streamCentricUI.lateMultiplier": number;
   "connection.streamCentricUI.v2": boolean;
   "connection.streamCentricUI.historicalOverview": boolean;
+  "connection.syncProgress": boolean;
   "connector.airbyteCloudIpAddresses": string;
   "connector.suggestedSourceConnectors": string;
   "connector.suggestedDestinationConnectors": string;
@@ -27,4 +28,5 @@ export interface Experiments {
   "settings.token-management-ui": boolean;
   "settings.showAdvancedSettings": boolean;
   "upcomingFeaturesPage.url": string;
+  "connection.syncCatalogV2": boolean;
 }

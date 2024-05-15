@@ -4,6 +4,8 @@ import React, { useCallback } from "react";
 import styles from "./ButtonTab.module.scss";
 import { Text } from "../Text";
 
+// TODO: add generic type to restrict using the same exact id: "id:T" and "onSelect(id: T)"
+// issue: https://github.com/airbytehq/airbyte-internal-issues/issues/7520
 interface ButtonTabProps {
   id: string;
   name: string | React.ReactNode;
@@ -17,6 +19,7 @@ export const ButtonTab: React.FC<ButtonTabProps> = ({ name, id, isActive, onSele
 
   return (
     <button
+      type="button"
       disabled={!onSelect || disabled}
       onClick={onItemClickItem}
       className={classNames(styles.tabContainer, {

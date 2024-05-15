@@ -18,6 +18,7 @@ import {
   manifestIncrementalSyncToBuilder,
   manifestPaginatorToBuilder,
   manifestRecordSelectorToBuilder,
+  manifestSubstreamPartitionRouterToBuilder,
 } from "./convertManifestToBuilderForm";
 import {
   DEFAULT_BUILDER_FORM_VALUES,
@@ -397,6 +398,68 @@ describe("Conversion throws error when", () => {
       return manifestRecordSelectorToBuilder(recordSelector as RecordSelector);
     };
     expect(convert).toThrow("doesn't use a RecordFilter");
+  });
+
+  it("SubstreamPartitionRouter doesn't use a $ref for the parent stream", async () => {
+    const convert = () => {
+      const partitionRouter = {
+        type: "SubstreamPartitionRouter" as const,
+        parent_stream_configs: [
+          {
+            type: "ParentStreamConfig" as const,
+            parent_key: "id",
+            partition_field: "parent_id",
+            stream: stream2,
+          },
+        ],
+      };
+      return manifestSubstreamPartitionRouterToBuilder(partitionRouter, { stream2: "stream2" });
+    };
+    expect(convert).toThrow("SubstreamPartitionRouter.parent_stream_configs.stream must use $ref");
+  });
+
+  it("SubstreamPartitionRouter's parent stream $ref does not point to a stream definition", async () => {
+    const convert = () => {
+      const partitionRouter = {
+        type: "SubstreamPartitionRouter" as const,
+        parent_stream_configs: [
+          {
+            type: "ParentStreamConfig" as const,
+            parent_key: "id",
+            partition_field: "parent_id",
+            stream: {
+              $ref: "#/definitions/notAStream",
+            } as unknown as DeclarativeStream,
+          },
+        ],
+      };
+      return manifestSubstreamPartitionRouterToBuilder(partitionRouter, { stream2: "stream2" });
+    };
+    expect(convert).toThrow(
+      "SubstreamPartitionRouter's parent stream reference must match the pattern '#/definitions/streams/streamName'"
+    );
+  });
+
+  it("SubstreamPartitionRouter's parent stream $ref does not match any stream name", async () => {
+    const convert = () => {
+      const partitionRouter = {
+        type: "SubstreamPartitionRouter" as const,
+        parent_stream_configs: [
+          {
+            type: "ParentStreamConfig" as const,
+            parent_key: "id",
+            partition_field: "parent_id",
+            stream: {
+              $ref: "#/definitions/streams/stream1",
+            } as unknown as DeclarativeStream,
+          },
+        ],
+      };
+      return manifestSubstreamPartitionRouterToBuilder(partitionRouter, { stream2: "stream2" });
+    };
+    expect(convert).toThrow(
+      "SubstreamPartitionRouter references parent stream name 'stream1' which could not be found"
+    );
   });
 });
 

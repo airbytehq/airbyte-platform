@@ -40,9 +40,6 @@ import io.airbyte.config.SecretPersistenceConfig;
 import io.airbyte.config.StandardSourceDefinition;
 import io.airbyte.config.StandardSourceDefinition.SourceType;
 import io.airbyte.config.SupportLevel;
-import io.airbyte.config.init.CdkVersionProvider;
-import io.airbyte.config.persistence.ConfigNotFoundException;
-import io.airbyte.config.persistence.ConfigRepository;
 import io.airbyte.config.secrets.JsonSecretsProcessor;
 import io.airbyte.config.secrets.SecretsRepositoryReader;
 import io.airbyte.config.secrets.SecretsRepositoryWriter;
@@ -52,8 +49,10 @@ import io.airbyte.connectorbuilderserver.api.client.model.generated.HttpRequest;
 import io.airbyte.connectorbuilderserver.api.client.model.generated.HttpResponse;
 import io.airbyte.connectorbuilderserver.api.client.model.generated.StreamRead;
 import io.airbyte.connectorbuilderserver.api.client.model.generated.StreamReadRequestBody;
+import io.airbyte.data.exceptions.ConfigNotFoundException;
 import io.airbyte.data.services.ConnectorBuilderService;
 import io.airbyte.data.services.SecretPersistenceConfigService;
+import io.airbyte.data.services.SourceService;
 import io.airbyte.data.services.WorkspaceService;
 import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.featureflag.Organization;
@@ -77,18 +76,17 @@ import java.util.stream.Stream;
 @Singleton
 public class ConnectorBuilderProjectsHandler {
 
-  private final ConfigRepository configRepository;
+  private final ConnectorBuilderService connectorBuilderService;
 
   private final BuilderProjectUpdater buildProjectUpdater;
   private final Supplier<UUID> uuidSupplier;
   private final DeclarativeSourceManifestInjector manifestInjector;
-  private final CdkVersionProvider cdkVersionProvider;
   private final WorkspaceService workspaceService;
   private final FeatureFlagClient featureFlagClient;
   private final SecretsRepositoryReader secretsRepositoryReader;
   private final SecretsRepositoryWriter secretsRepositoryWriter;
   private final SecretPersistenceConfigService secretPersistenceConfigService;
-  private final ConnectorBuilderService connectorBuilderService;
+  private final SourceService sourceService;
   private final JsonSecretsProcessor secretsProcessor;
   private final ConnectorBuilderServerApi connectorBuilderServerApiClient;
 
@@ -96,9 +94,8 @@ public class ConnectorBuilderProjectsHandler {
   public static final String CONNECTION_SPECIFICATION_FIELD = "connection_specification";
 
   @Inject
-  public ConnectorBuilderProjectsHandler(final ConfigRepository configRepository,
+  public ConnectorBuilderProjectsHandler(final ConnectorBuilderService connectorBuilderService,
                                          final BuilderProjectUpdater builderProjectUpdater,
-                                         final CdkVersionProvider cdkVersionProvider,
                                          @Named("uuidGenerator") final Supplier<UUID> uuidSupplier,
                                          final DeclarativeSourceManifestInjector manifestInjector,
                                          final WorkspaceService workspaceService,
@@ -106,12 +103,11 @@ public class ConnectorBuilderProjectsHandler {
                                          final SecretsRepositoryReader secretsRepositoryReader,
                                          final SecretsRepositoryWriter secretsRepositoryWriter,
                                          final SecretPersistenceConfigService secretPersistenceConfigService,
-                                         final ConnectorBuilderService connectorBuilderService,
+                                         final SourceService sourceService,
                                          @Named("jsonSecretsProcessorWithCopy") final JsonSecretsProcessor secretsProcessor,
                                          final ConnectorBuilderServerApi connectorBuilderServerApiClient) {
-    this.configRepository = configRepository;
+    this.connectorBuilderService = connectorBuilderService;
     this.buildProjectUpdater = builderProjectUpdater;
-    this.cdkVersionProvider = cdkVersionProvider;
     this.uuidSupplier = uuidSupplier;
     this.manifestInjector = manifestInjector;
     this.workspaceService = workspaceService;
@@ -119,7 +115,7 @@ public class ConnectorBuilderProjectsHandler {
     this.secretsRepositoryReader = secretsRepositoryReader;
     this.secretsRepositoryWriter = secretsRepositoryWriter;
     this.secretPersistenceConfigService = secretPersistenceConfigService;
-    this.connectorBuilderService = connectorBuilderService;
+    this.sourceService = sourceService;
     this.secretsProcessor = secretsProcessor;
     this.connectorBuilderServerApiClient = connectorBuilderServerApiClient;
   }
@@ -137,7 +133,7 @@ public class ConnectorBuilderProjectsHandler {
   }
 
   private void validateProjectUnderRightWorkspace(final UUID projectId, final UUID workspaceId) throws ConfigNotFoundException, IOException {
-    final ConnectorBuilderProject project = configRepository.getConnectorBuilderProject(projectId, false);
+    final ConnectorBuilderProject project = connectorBuilderService.getConnectorBuilderProject(projectId, false);
     validateProjectUnderRightWorkspace(project, workspaceId);
   }
 
@@ -152,7 +148,7 @@ public class ConnectorBuilderProjectsHandler {
       throws IOException {
     final UUID id = uuidSupplier.get();
 
-    configRepository.writeBuilderProjectDraft(id, projectCreate.getWorkspaceId(), projectCreate.getBuilderProject().getName(),
+    connectorBuilderService.writeBuilderProjectDraft(id, projectCreate.getWorkspaceId(), projectCreate.getBuilderProject().getName(),
         new ObjectMapper().valueToTree(projectCreate.getBuilderProject().getDraftManifest()));
 
     return buildIdResponseFromId(id, projectCreate.getWorkspaceId());
@@ -161,7 +157,8 @@ public class ConnectorBuilderProjectsHandler {
   public void updateConnectorBuilderProject(final ExistingConnectorBuilderProjectWithWorkspaceId projectUpdate)
       throws ConfigNotFoundException, IOException {
 
-    final ConnectorBuilderProject connectorBuilderProject = configRepository.getConnectorBuilderProject(projectUpdate.getBuilderProjectId(), false);
+    final ConnectorBuilderProject connectorBuilderProject =
+        connectorBuilderService.getConnectorBuilderProject(projectUpdate.getBuilderProjectId(), false);
     validateProjectUnderRightWorkspace(connectorBuilderProject, projectUpdate.getWorkspaceId());
 
     buildProjectUpdater.persistBuilderProjectUpdate(projectUpdate);
@@ -170,7 +167,7 @@ public class ConnectorBuilderProjectsHandler {
   public void deleteConnectorBuilderProject(final ConnectorBuilderProjectIdWithWorkspaceId projectDelete)
       throws IOException, ConfigNotFoundException {
     validateProjectUnderRightWorkspace(projectDelete.getBuilderProjectId(), projectDelete.getWorkspaceId());
-    configRepository.deleteBuilderProject(projectDelete.getBuilderProjectId());
+    connectorBuilderService.deleteBuilderProject(projectDelete.getBuilderProjectId());
   }
 
   public ConnectorBuilderProjectRead getConnectorBuilderProjectWithManifest(final ConnectorBuilderProjectIdWithWorkspaceId request)
@@ -179,7 +176,7 @@ public class ConnectorBuilderProjectsHandler {
     if (request.getVersion() != null) {
       validateProjectUnderRightWorkspace(request.getBuilderProjectId(), request.getWorkspaceId());
       return buildConnectorBuilderProjectVersionManifestRead(
-          configRepository.getVersionedConnectorBuilderProject(request.getBuilderProjectId(), request.getVersion()));
+          connectorBuilderService.getVersionedConnectorBuilderProject(request.getBuilderProjectId(), request.getVersion()));
     }
 
     return getWithManifestWithoutVersion(request);
@@ -187,7 +184,7 @@ public class ConnectorBuilderProjectsHandler {
 
   private ConnectorBuilderProjectRead getWithManifestWithoutVersion(final ConnectorBuilderProjectIdWithWorkspaceId request)
       throws IOException, ConfigNotFoundException {
-    final ConnectorBuilderProject project = configRepository.getConnectorBuilderProject(request.getBuilderProjectId(), true);
+    final ConnectorBuilderProject project = connectorBuilderService.getConnectorBuilderProject(request.getBuilderProjectId(), true);
     validateProjectUnderRightWorkspace(project, request.getWorkspaceId());
     final ConnectorBuilderProjectRead response = new ConnectorBuilderProjectRead().builderProject(builderProjectToDetailsRead(project));
 
@@ -197,7 +194,7 @@ public class ConnectorBuilderProjectsHandler {
           .isDraft(true));
       response.setTestingValues(maskSecrets(project.getTestingValues(), project.getManifestDraft()));
     } else if (project.getActorDefinitionId() != null) {
-      final DeclarativeManifest declarativeManifest = configRepository.getCurrentlyActiveDeclarativeManifestsByActorDefinitionId(
+      final DeclarativeManifest declarativeManifest = connectorBuilderService.getCurrentlyActiveDeclarativeManifestsByActorDefinitionId(
           project.getActorDefinitionId());
       response.setDeclarativeManifest(new DeclarativeManifestRead()
           .isDraft(false)
@@ -239,7 +236,8 @@ public class ConnectorBuilderProjectsHandler {
   public ConnectorBuilderProjectReadList listConnectorBuilderProjects(final WorkspaceIdRequestBody workspaceIdRequestBody)
       throws IOException {
 
-    final Stream<ConnectorBuilderProject> projects = configRepository.getConnectorBuilderProjectsByWorkspace(workspaceIdRequestBody.getWorkspaceId());
+    final Stream<ConnectorBuilderProject> projects =
+        connectorBuilderService.getConnectorBuilderProjectsByWorkspace(workspaceIdRequestBody.getWorkspaceId());
 
     return new ConnectorBuilderProjectReadList().projects(projects.map(ConnectorBuilderProjectsHandler::builderProjectToDetailsRead).toList());
   }
@@ -260,9 +258,10 @@ public class ConnectorBuilderProjectsHandler {
         .withDescription(connectorBuilderPublishRequestBody.getInitialDeclarativeManifest().getDescription())
         .withManifest(manifest)
         .withSpec(spec);
-    configRepository.insertActiveDeclarativeManifest(declarativeManifest);
-    configRepository.assignActorDefinitionToConnectorBuilderProject(connectorBuilderPublishRequestBody.getBuilderProjectId(), actorDefinitionId);
-    configRepository.deleteBuilderProjectDraft(connectorBuilderPublishRequestBody.getBuilderProjectId());
+    connectorBuilderService.insertActiveDeclarativeManifest(declarativeManifest);
+    connectorBuilderService.assignActorDefinitionToConnectorBuilderProject(connectorBuilderPublishRequestBody.getBuilderProjectId(),
+        actorDefinitionId);
+    connectorBuilderService.deleteBuilderProjectDraft(connectorBuilderPublishRequestBody.getBuilderProjectId());
 
     return new SourceDefinitionIdBody().sourceDefinitionId(actorDefinitionId);
   }
@@ -280,7 +279,7 @@ public class ConnectorBuilderProjectsHandler {
 
     final ActorDefinitionVersion defaultVersion = new ActorDefinitionVersion()
         .withActorDefinitionId(actorDefinitionId)
-        .withDockerImageTag(cdkVersionProvider.getCdkVersion())
+        .withDockerImageTag(manifestInjector.getCdkVersion(manifest))
         .withDockerRepository("airbyte/source-declarative-manifest")
         .withSpec(connectorSpecification)
         .withProtocolVersion(DEFAULT_AIRBYTE_PROTOCOL_VERSION.serialize())
@@ -288,8 +287,9 @@ public class ConnectorBuilderProjectsHandler {
         .withSupportLevel(SupportLevel.NONE)
         .withDocumentationUrl(connectorSpecification.getDocumentationUrl().toString());
 
-    configRepository.writeCustomConnectorMetadata(source, defaultVersion, workspaceId, ScopeType.WORKSPACE);
-    configRepository.writeActorDefinitionConfigInjectionForPath(manifestInjector.createConfigInjection(source.getSourceDefinitionId(), manifest));
+    sourceService.writeCustomConnectorMetadata(source, defaultVersion, workspaceId, ScopeType.WORKSPACE);
+    connectorBuilderService
+        .writeActorDefinitionConfigInjectionForPath(manifestInjector.createConfigInjection(source.getSourceDefinitionId(), manifest));
 
     return source.getSourceDefinitionId();
   }
@@ -408,7 +408,7 @@ public class ConnectorBuilderProjectsHandler {
                                                    final Optional<SecretPersistenceConfig> secretPersistenceConfig)
       throws JsonValidationException {
 
-    var secretPersistence = secretPersistenceConfig.map(RuntimeSecretPersistence::new).orElse(null);
+    final var secretPersistence = secretPersistenceConfig.map(RuntimeSecretPersistence::new).orElse(null);
     if (existingTestingValues.isPresent()) {
       return secretsRepositoryWriter.statefulUpdateSecrets(workspaceId, existingTestingValues.get(), updatedTestingValues, spec, secretPersistence);
     }

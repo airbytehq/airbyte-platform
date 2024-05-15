@@ -630,8 +630,6 @@ public class SourceServiceJooqImpl implements SourceService {
             .where(ACTOR.ID.eq(sourceConnection.getSourceId()))
             .execute();
       } else {
-        final UUID actorDefinitionDefaultVersionId =
-            getDefaultVersionForActorDefinitionId(sourceConnection.getSourceDefinitionId(), ctx).getVersionId();
         ctx.insertInto(ACTOR)
             .set(ACTOR.ID, sourceConnection.getSourceId())
             .set(ACTOR.WORKSPACE_ID, sourceConnection.getWorkspaceId())
@@ -640,16 +638,11 @@ public class SourceServiceJooqImpl implements SourceService {
             .set(ACTOR.CONFIGURATION, JSONB.valueOf(Jsons.serialize(sourceConnection.getConfiguration())))
             .set(ACTOR.ACTOR_TYPE, ActorType.source)
             .set(ACTOR.TOMBSTONE, sourceConnection.getTombstone() != null && sourceConnection.getTombstone())
-            .set(ACTOR.DEFAULT_VERSION_ID, actorDefinitionDefaultVersionId)
             .set(ACTOR.CREATED_AT, timestamp)
             .set(ACTOR.UPDATED_AT, timestamp)
             .execute();
       }
     });
-  }
-
-  private ActorDefinitionVersion getDefaultVersionForActorDefinitionId(final UUID actorDefinitionId, final DSLContext ctx) {
-    return ConnectorMetadataJooqHelper.getDefaultVersionForActorDefinitionIdOptional(actorDefinitionId, ctx).orElseThrow();
   }
 
   private Stream<SourceConnection> listSourceQuery(final Optional<UUID> configId) throws IOException {

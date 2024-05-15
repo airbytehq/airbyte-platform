@@ -23,7 +23,34 @@ func baseHelmOptions() *helm.Options {
 		Logger:        logger.Discard,
 		SetValues:     make(map[string]string),
 		SetJsonValues: make(map[string]string),
+		ExtraArgs:     make(map[string][]string),
 	}
+}
+
+func baseHelmOptionsForEnterprise() *helm.Options {
+	opts := baseHelmOptions()
+	opts.SetValues["global.edition"] = "enterprise"
+
+	return opts
+}
+
+func baseHelmOptionsForEnterpriseWithValues() *helm.Options {
+	opts := baseHelmOptions()
+	opts.SetValues["global.edition"] = "enterprise"
+	opts.SetValues["global.auth.instanceAdmin.firstName"] = "Octavia"
+	opts.SetValues["global.auth.instanceAdmin.lastName"] = "Squidington"
+
+	return opts
+}
+
+func baseHelmOptionsForEnterpriseWithAirbyteYml() *helm.Options {
+	opts := baseHelmOptions()
+	opts.SetValues["global.edition"] = "enterprise"
+	opts.SetFiles = map[string]string{
+		"global.airbyteYml": "fixtures/airbyte.yaml",
+	}
+
+	return opts
 }
 
 func baseHelmOptionsForStorageType(t string) *helm.Options {

@@ -67,33 +67,15 @@ describe("computeStreamStatus", () => {
     it('returns "undefined" when there are no statuses', () => {
       const result = computeStreamStatus({
         statuses: [],
+        hasRecordsExtracted: false,
         scheduleType: undefined,
         scheduleData: undefined,
         hasBreakingSchemaChange: false,
         lateMultiplier: 2,
         errorMultiplier: 2,
+        showSyncProgress: false,
       });
       expect(result).toEqual({ status: undefined, isRunning: false, lastSuccessfulSync: undefined });
-    });
-
-    it('returns "undefined" with only a currently running sync (not enough history)', () => {
-      const status = buildStreamStatusRead({
-        runState: StreamStatusRunState.RUNNING,
-        transitionedAt: oneHourAgo,
-      });
-      const result = computeStreamStatus({
-        statuses: [status],
-        scheduleType: ConnectionScheduleType.basic,
-        scheduleData: basicScheduleData,
-        hasBreakingSchemaChange: false,
-        lateMultiplier: 2,
-        errorMultiplier: 2,
-      });
-      expect(result).toEqual({
-        status: undefined,
-        isRunning: true,
-        lastSuccessfulSync: undefined,
-      });
     });
   });
 
@@ -102,11 +84,13 @@ describe("computeStreamStatus", () => {
       const status = buildStreamStatusRead({ runState: StreamStatusRunState.PENDING });
       const result = computeStreamStatus({
         statuses: [status],
+        hasRecordsExtracted: false,
         scheduleType: undefined,
         scheduleData: undefined,
         hasBreakingSchemaChange: false,
         lateMultiplier: 2,
         errorMultiplier: 2,
+        showSyncProgress: false,
       });
       expect(result).toEqual({
         status: ConnectionStatusIndicatorStatus.Pending,
@@ -122,11 +106,13 @@ describe("computeStreamStatus", () => {
       });
       const result = computeStreamStatus({
         statuses: [status],
+        hasRecordsExtracted: false,
         scheduleType: undefined,
         scheduleData: undefined,
         hasBreakingSchemaChange: false,
         lateMultiplier: 2,
         errorMultiplier: 2,
+        showSyncProgress: false,
       });
       expect(result).toEqual({
         status: ConnectionStatusIndicatorStatus.Pending,
@@ -142,11 +128,13 @@ describe("computeStreamStatus", () => {
       });
       const result = computeStreamStatus({
         statuses: [status],
+        hasRecordsExtracted: false,
         scheduleType: undefined,
         scheduleData: undefined,
         hasBreakingSchemaChange: false,
         lateMultiplier: 2,
         errorMultiplier: 2,
+        showSyncProgress: false,
       });
       expect(result).toEqual({
         status: ConnectionStatusIndicatorStatus.Pending,
@@ -161,11 +149,13 @@ describe("computeStreamStatus", () => {
       const status = buildStreamStatusRead({ runState: StreamStatusRunState.COMPLETE });
       const result = computeStreamStatus({
         statuses: [status],
+        hasRecordsExtracted: true,
         scheduleType: undefined,
         scheduleData: undefined,
         hasBreakingSchemaChange: false,
         lateMultiplier: 2,
         errorMultiplier: 2,
+        showSyncProgress: false,
       });
       expect(result).toEqual({
         status: ConnectionStatusIndicatorStatus.OnTime,
@@ -178,11 +168,13 @@ describe("computeStreamStatus", () => {
       const status = buildStreamStatusRead({ runState: StreamStatusRunState.COMPLETE, transitionedAt: oneYearAgo });
       const result = computeStreamStatus({
         statuses: [status],
+        hasRecordsExtracted: true,
         scheduleType: ConnectionScheduleType.cron,
         scheduleData: cronScheduleData,
         hasBreakingSchemaChange: false,
         lateMultiplier: 2,
         errorMultiplier: 2,
+        showSyncProgress: false,
       });
       expect(result).toEqual({
         status: ConnectionStatusIndicatorStatus.OnTime,
@@ -195,11 +187,13 @@ describe("computeStreamStatus", () => {
       const status = buildStreamStatusRead({ runState: StreamStatusRunState.COMPLETE, transitionedAt: oneHourAgo });
       const result = computeStreamStatus({
         statuses: [status],
+        hasRecordsExtracted: true,
         scheduleType: ConnectionScheduleType.basic,
         scheduleData: basicScheduleData,
         hasBreakingSchemaChange: false,
         lateMultiplier: 2,
         errorMultiplier: 2,
+        showSyncProgress: false,
       });
       expect(result).toEqual({
         status: ConnectionStatusIndicatorStatus.OnTime,
@@ -220,11 +214,13 @@ describe("computeStreamStatus", () => {
       });
       const result = computeStreamStatus({
         statuses: [cancelStatus, successStatus],
+        hasRecordsExtracted: true,
         scheduleType: ConnectionScheduleType.basic,
         scheduleData: basicScheduleData,
         hasBreakingSchemaChange: false,
         lateMultiplier: 2,
         errorMultiplier: 2,
+        showSyncProgress: false,
       });
       expect(result).toEqual({
         status: ConnectionStatusIndicatorStatus.OnTime,
@@ -239,11 +235,13 @@ describe("computeStreamStatus", () => {
       const status = buildStreamStatusRead({ runState: StreamStatusRunState.COMPLETE, transitionedAt: threeHoursAgo });
       const result = computeStreamStatus({
         statuses: [status],
+        hasRecordsExtracted: true,
         scheduleType: ConnectionScheduleType.basic,
         scheduleData: basicScheduleData,
         hasBreakingSchemaChange: false,
         lateMultiplier: 2,
         errorMultiplier: 2,
+        showSyncProgress: false,
       });
       expect(result).toEqual({
         status: ConnectionStatusIndicatorStatus.OnTrack,
@@ -256,11 +254,13 @@ describe("computeStreamStatus", () => {
       const status = buildStreamStatusRead({ runState: StreamStatusRunState.COMPLETE, transitionedAt: fiveHoursAgo });
       const result = computeStreamStatus({
         statuses: [status],
+        hasRecordsExtracted: true,
         scheduleType: ConnectionScheduleType.basic,
         scheduleData: basicScheduleData,
         hasBreakingSchemaChange: false,
         lateMultiplier: 2,
         errorMultiplier: 2,
+        showSyncProgress: false,
       });
       expect(result).toEqual({
         status: ConnectionStatusIndicatorStatus.Late,
@@ -275,10 +275,12 @@ describe("computeStreamStatus", () => {
       const status = buildStreamStatusRead({ runState: StreamStatusRunState.COMPLETE, transitionedAt: oneHourAgo });
       const result = computeStreamStatus({
         statuses: [status],
+        hasRecordsExtracted: true,
         scheduleType: ConnectionScheduleType.basic,
         scheduleData: basicScheduleData,
         hasBreakingSchemaChange: true,
         lateMultiplier: 2,
+        showSyncProgress: false,
         errorMultiplier: 2,
       });
       expect(result).toEqual({
@@ -296,16 +298,230 @@ describe("computeStreamStatus", () => {
       });
       const result = computeStreamStatus({
         statuses: [status],
+        hasRecordsExtracted: true,
         scheduleType: ConnectionScheduleType.basic,
         scheduleData: basicScheduleData,
         hasBreakingSchemaChange: true,
         lateMultiplier: 2,
         errorMultiplier: 2,
+        showSyncProgress: false,
       });
       expect(result).toEqual({
         status: ConnectionStatusIndicatorStatus.ActionRequired,
         isRunning: false,
         lastSuccessfulSync: undefined,
+      });
+    });
+  });
+  describe("without sync progress shown", () => {
+    describe("queued", () => {
+      it("returns undefined with only a currently running sync (no history)", () => {
+        const runningStatus = buildStreamStatusRead({
+          runState: StreamStatusRunState.RUNNING,
+          transitionedAt: oneHourAgo,
+        });
+        const cancelStatus = buildStreamStatusRead({
+          runState: StreamStatusRunState.INCOMPLETE,
+          incompleteRunCause: StreamStatusIncompleteRunCause.CANCELED,
+          transitionedAt: fiveHoursAgo,
+        });
+
+        const result = computeStreamStatus({
+          statuses: [runningStatus, cancelStatus],
+          hasRecordsExtracted: false,
+          scheduleType: ConnectionScheduleType.basic,
+          scheduleData: basicScheduleData,
+          hasBreakingSchemaChange: false,
+          lateMultiplier: 2,
+          errorMultiplier: 2,
+          showSyncProgress: false,
+        });
+        expect(result).toEqual({
+          status: undefined,
+          isRunning: true,
+          lastSuccessfulSync: undefined,
+        });
+      });
+      it("returns late with a currently running sync that is behind schedule", () => {
+        const status = buildStreamStatusRead({ runState: StreamStatusRunState.RUNNING, transitionedAt: oneHourAgo });
+        const prevStatus = buildStreamStatusRead({
+          runState: StreamStatusRunState.COMPLETE,
+          transitionedAt: fiveHoursAgo,
+        });
+
+        const result = computeStreamStatus({
+          statuses: [status, prevStatus],
+          hasRecordsExtracted: false,
+          scheduleType: ConnectionScheduleType.basic,
+          scheduleData: basicScheduleData,
+          hasBreakingSchemaChange: false,
+          lateMultiplier: 2,
+          errorMultiplier: 2,
+          showSyncProgress: false,
+        });
+        expect(result).toEqual({
+          status: ConnectionStatusIndicatorStatus.Late,
+          isRunning: true,
+          lastSuccessfulSync: prevStatus,
+        });
+      });
+    });
+    describe("syncing", () => {
+      it('returns "undefined" if records were extracted - with only a currently running sync (no history)', () => {
+        const runningStatus = buildStreamStatusRead({
+          runState: StreamStatusRunState.RUNNING,
+          transitionedAt: oneHourAgo,
+        });
+        const cancelStatus = buildStreamStatusRead({
+          runState: StreamStatusRunState.INCOMPLETE,
+          incompleteRunCause: StreamStatusIncompleteRunCause.CANCELED,
+          transitionedAt: fiveHoursAgo,
+        });
+
+        const result = computeStreamStatus({
+          statuses: [runningStatus, cancelStatus],
+          hasRecordsExtracted: true,
+          scheduleType: ConnectionScheduleType.basic,
+          scheduleData: basicScheduleData,
+          hasBreakingSchemaChange: false,
+          lateMultiplier: 2,
+          errorMultiplier: 2,
+          showSyncProgress: false,
+        });
+        expect(result).toEqual({
+          status: undefined,
+          isRunning: true,
+          lastSuccessfulSync: undefined,
+        });
+      });
+      it('returns "queued" if records were extracted - with a currently running sync', () => {
+        const status = buildStreamStatusRead({ runState: StreamStatusRunState.RUNNING, transitionedAt: oneHourAgo });
+        const prevStatus = buildStreamStatusRead({
+          runState: StreamStatusRunState.COMPLETE,
+          transitionedAt: fiveHoursAgo,
+        });
+
+        const result = computeStreamStatus({
+          statuses: [status, prevStatus],
+          hasRecordsExtracted: true,
+          scheduleType: ConnectionScheduleType.basic,
+          scheduleData: basicScheduleData,
+          hasBreakingSchemaChange: false,
+          lateMultiplier: 2,
+          errorMultiplier: 2,
+          showSyncProgress: true,
+        });
+        expect(result).toEqual({
+          status: ConnectionStatusIndicatorStatus.Syncing,
+          isRunning: true,
+          lastSuccessfulSync: prevStatus,
+        });
+      });
+    });
+  });
+  describe("with sync progress shown", () => {
+    describe("queued", () => {
+      it('returns "queued" with only a currently running sync (no history)', () => {
+        const runningStatus = buildStreamStatusRead({
+          runState: StreamStatusRunState.RUNNING,
+          transitionedAt: oneHourAgo,
+        });
+        const cancelStatus = buildStreamStatusRead({
+          runState: StreamStatusRunState.INCOMPLETE,
+          incompleteRunCause: StreamStatusIncompleteRunCause.CANCELED,
+          transitionedAt: fiveHoursAgo,
+        });
+
+        const result = computeStreamStatus({
+          statuses: [runningStatus, cancelStatus],
+          hasRecordsExtracted: false,
+          scheduleType: ConnectionScheduleType.basic,
+          scheduleData: basicScheduleData,
+          hasBreakingSchemaChange: false,
+          lateMultiplier: 2,
+          errorMultiplier: 2,
+          showSyncProgress: true,
+        });
+        expect(result).toEqual({
+          status: ConnectionStatusIndicatorStatus.Queued,
+          isRunning: true,
+          lastSuccessfulSync: undefined,
+        });
+      });
+      it('returns "queued" with a currently running sync', () => {
+        const status = buildStreamStatusRead({ runState: StreamStatusRunState.RUNNING, transitionedAt: oneHourAgo });
+        const prevStatus = buildStreamStatusRead({
+          runState: StreamStatusRunState.COMPLETE,
+          transitionedAt: fiveHoursAgo,
+        });
+
+        const result = computeStreamStatus({
+          statuses: [status, prevStatus],
+          hasRecordsExtracted: false,
+          scheduleType: ConnectionScheduleType.basic,
+          scheduleData: basicScheduleData,
+          hasBreakingSchemaChange: false,
+          lateMultiplier: 2,
+          errorMultiplier: 2,
+          showSyncProgress: true,
+        });
+        expect(result).toEqual({
+          status: ConnectionStatusIndicatorStatus.Queued,
+          isRunning: true,
+          lastSuccessfulSync: prevStatus,
+        });
+      });
+    });
+    describe("syncing", () => {
+      it('returns "syncing" if records were extracted - with only a currently running sync (no history)', () => {
+        const runningStatus = buildStreamStatusRead({
+          runState: StreamStatusRunState.RUNNING,
+          transitionedAt: oneHourAgo,
+        });
+        const cancelStatus = buildStreamStatusRead({
+          runState: StreamStatusRunState.INCOMPLETE,
+          incompleteRunCause: StreamStatusIncompleteRunCause.CANCELED,
+          transitionedAt: fiveHoursAgo,
+        });
+
+        const result = computeStreamStatus({
+          statuses: [runningStatus, cancelStatus],
+          hasRecordsExtracted: true,
+          scheduleType: ConnectionScheduleType.basic,
+          scheduleData: basicScheduleData,
+          hasBreakingSchemaChange: false,
+          lateMultiplier: 2,
+          errorMultiplier: 2,
+          showSyncProgress: true,
+        });
+        expect(result).toEqual({
+          status: ConnectionStatusIndicatorStatus.Syncing,
+          isRunning: true,
+          lastSuccessfulSync: undefined,
+        });
+      });
+      it('returns "syncing" if records were extracted - with a currently running sync', () => {
+        const status = buildStreamStatusRead({ runState: StreamStatusRunState.RUNNING, transitionedAt: oneHourAgo });
+        const prevStatus = buildStreamStatusRead({
+          runState: StreamStatusRunState.COMPLETE,
+          transitionedAt: fiveHoursAgo,
+        });
+
+        const result = computeStreamStatus({
+          statuses: [status, prevStatus],
+          hasRecordsExtracted: true,
+          scheduleType: ConnectionScheduleType.basic,
+          scheduleData: basicScheduleData,
+          hasBreakingSchemaChange: false,
+          lateMultiplier: 2,
+          errorMultiplier: 2,
+          showSyncProgress: true,
+        });
+        expect(result).toEqual({
+          status: ConnectionStatusIndicatorStatus.Syncing,
+          isRunning: true,
+          lastSuccessfulSync: prevStatus,
+        });
       });
     });
   });

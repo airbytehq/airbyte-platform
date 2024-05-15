@@ -18,13 +18,17 @@ type PresentingStatuses =
   | ConnectionStatusIndicatorStatus.OnTime
   | ConnectionStatusIndicatorStatus.Late
   | ConnectionStatusIndicatorStatus.Error
-  | ConnectionStatusIndicatorStatus.ActionRequired;
+  | ConnectionStatusIndicatorStatus.ActionRequired
+  | ConnectionStatusIndicatorStatus.Syncing
+  | ConnectionStatusIndicatorStatus.Queued;
 
 const MESSAGE_BY_STATUS: Readonly<Record<PresentingStatuses, string>> = {
   onTime: "connection.uptimeStatus.onTime",
   late: "connection.uptimeStatus.late",
   error: "connection.uptimeStatus.error",
   actionRequired: "connection.uptimeStatus.actionRequired",
+  syncing: "connection.uptimeStatus.syncing",
+  queued: "connection.uptimeStatus.queued",
 };
 
 export const UptimeStatusGraphTooltip: ContentType<number, string> = ({ active, payload }) => {
@@ -55,6 +59,8 @@ export const UptimeStatusGraphTooltip: ContentType<number, string> = ({ active, 
       [ConnectionStatusIndicatorStatus.Late]: 0,
       [ConnectionStatusIndicatorStatus.Error]: 0,
       [ConnectionStatusIndicatorStatus.ActionRequired]: 0,
+      [ConnectionStatusIndicatorStatus.Syncing]: 0,
+      [ConnectionStatusIndicatorStatus.Queued]: 0,
     }
   );
 
