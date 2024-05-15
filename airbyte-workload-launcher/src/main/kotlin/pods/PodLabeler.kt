@@ -13,6 +13,8 @@ import io.airbyte.workers.process.Metadata.WRITE_STEP
 import io.airbyte.workers.process.ProcessFactory
 import io.airbyte.workload.launcher.pods.PodLabeler.LabelKeys.AUTO_ID
 import io.airbyte.workload.launcher.pods.PodLabeler.LabelKeys.MUTEX_KEY
+import io.airbyte.workload.launcher.pods.PodLabeler.LabelKeys.SWEEPER_LABEL_KEY
+import io.airbyte.workload.launcher.pods.PodLabeler.LabelKeys.SWEEPER_LABEL_VALUE
 import io.airbyte.workload.launcher.pods.PodLabeler.LabelKeys.WORKLOAD_ID
 import jakarta.inject.Named
 import jakarta.inject.Singleton
@@ -85,18 +87,30 @@ class PodLabeler(
     )
   }
 
+  fun getPodSweeperLabels(): Map<String, String> {
+    return mapOf(
+      SWEEPER_LABEL_KEY to SWEEPER_LABEL_VALUE,
+    )
+  }
+
   fun getSharedLabels(
     workloadId: String?,
     mutexKey: String?,
     passThroughLabels: Map<String, String>,
     autoId: UUID,
   ): Map<String, String> {
-    return passThroughLabels + getMutexLabels(mutexKey) + getWorkloadLabels(workloadId) + getAutoIdLabels(autoId)
+    return passThroughLabels +
+      getMutexLabels(mutexKey) +
+      getWorkloadLabels(workloadId) +
+      getAutoIdLabels(autoId) +
+      getPodSweeperLabels()
   }
 
   object LabelKeys {
     const val AUTO_ID = "auto_id"
     const val MUTEX_KEY = "mutex_key"
     const val WORKLOAD_ID = "workload_id"
+    const val SWEEPER_LABEL_KEY = "airbyte"
+    const val SWEEPER_LABEL_VALUE = "job-pod"
   }
 }
