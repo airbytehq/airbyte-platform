@@ -35,6 +35,7 @@ dependencies {
   implementation(libs.airbyte.protocol)
   // For Keycloak Application Management
   implementation(libs.bundles.keycloak.client)
+  implementation(libs.micronaut.security.jwt)
 
   testCompileOnly(libs.lombok)
   testAnnotationProcessor(libs.lombok)

@@ -1,0 +1,7 @@
+airbyte:
+  auth:
+    instanceAdmin:
+      username: test
+      password: test-password
+      clientId: test-client-id
+      clientSecret: test-client-secret

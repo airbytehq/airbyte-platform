@@ -11,6 +11,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import io.airbyte.api.model.generated.AuthConfiguration;
+import io.airbyte.api.model.generated.AuthConfiguration.ModeEnum;
 import io.airbyte.api.model.generated.InstanceConfigurationResponse;
 import io.airbyte.api.model.generated.InstanceConfigurationResponse.EditionEnum;
 import io.airbyte.api.model.generated.InstanceConfigurationResponse.LicenseTypeEnum;
@@ -97,8 +98,9 @@ class InstanceConfigurationHandlerTest {
         .airbyteUrl(AIRBYTE_URL)
         .licenseType(isPro ? LicenseTypeEnum.PRO : null)
         .auth(isPro ? new AuthConfiguration()
+            .mode(ModeEnum.OIDC)
             .clientId(WEB_CLIENT_ID)
-            .defaultRealm(AIRBYTE_REALM) : null)
+            .defaultRealm(AIRBYTE_REALM) : new AuthConfiguration().mode(ModeEnum.NONE))
         .initialSetupComplete(isInitialSetupComplete)
         .defaultUserId(USER_ID)
         .defaultOrganizationId(ORGANIZATION_ID)
@@ -134,7 +136,8 @@ class InstanceConfigurationHandlerTest {
         mWorkspacePersistence,
         mWorkspacesHandler,
         mUserPersistence,
-        mOrganizationPersistence);
+        mOrganizationPersistence,
+        ModeEnum.NONE);
 
     final var result = handler.getInstanceConfiguration();
 
@@ -192,6 +195,7 @@ class InstanceConfigurationHandlerTest {
         .airbyteUrl(AIRBYTE_URL)
         .licenseType(LicenseTypeEnum.PRO)
         .auth(new AuthConfiguration()
+            .mode(ModeEnum.OIDC)
             .clientId(WEB_CLIENT_ID)
             .defaultRealm(AIRBYTE_REALM))
         .initialSetupComplete(true)
@@ -268,7 +272,8 @@ class InstanceConfigurationHandlerTest {
         mWorkspacePersistence,
         mWorkspacesHandler,
         mUserPersistence,
-        mOrganizationPersistence);
+        mOrganizationPersistence,
+        isPro ? ModeEnum.OIDC : ModeEnum.NONE);
   }
 
 }

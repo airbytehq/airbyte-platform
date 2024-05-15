@@ -11042,9 +11042,14 @@ components:
     AuthConfiguration:
       type: object
       required:
-        - clientId
-        - defaultRealm
+        - mode
       properties:
+        mode:
+          type: string
+          enum:
+            - none
+            - simple
+            - oidc
         clientId:
           type: string
           default: "airbyte-webapp"
@@ -11054,14 +11059,15 @@ components:
     InstanceConfigurationResponse:
       type: object
       required:
-        - edition
-        - version
         - airbyteUrl
-        - initialSetupComplete
-        - defaultUserId
+        - auth
         - defaultOrganizationId
+        - defaultUserId
         - defaultWorkspaceId
+        - edition
+        - initialSetupComplete
         - trackingStrategy
+        - version
       properties:
         edition:
           type: string

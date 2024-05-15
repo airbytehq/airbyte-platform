@@ -9,6 +9,8 @@ import io.airbyte.commons.license.annotation.RequiresAirbyteProEnabled;
 import io.airbyte.config.Application;
 import io.airbyte.config.User;
 import io.airbyte.data.services.ApplicationService;
+import io.airbyte.data.services.impls.micronaut.ApplicationServiceMicronautImpl;
+import io.micronaut.context.annotation.Replaces;
 import jakarta.annotation.Nonnull;
 import jakarta.inject.Singleton;
 import jakarta.ws.rs.BadRequestException;
@@ -35,6 +37,7 @@ import org.keycloak.representations.idm.ClientRepresentation;
  */
 @Singleton
 @RequiresAirbyteProEnabled
+@Replaces(ApplicationServiceMicronautImpl.class)
 public class ApplicationServiceKeycloakImpl implements ApplicationService {
 
   // This number should be kept low or this code will start to do a lot of work.
