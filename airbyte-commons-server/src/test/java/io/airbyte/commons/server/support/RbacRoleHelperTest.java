@@ -84,6 +84,9 @@ class RbacRoleHelperTest {
 
       // expect all org roles that are editor and below
       expectedRoles.addAll(OrganizationAuthRole.buildOrganizationAuthRolesSet(OrganizationAuthRole.ORGANIZATION_EDITOR));
+      // org editor role also grants workspace editor and workspace reader roles
+      expectedRoles.add(PermissionType.WORKSPACE_READER.name());
+      expectedRoles.add(PermissionType.WORKSPACE_EDITOR.name());
     }
     if (userMatchesTargetUser) {
       when(mHeaderResolver.resolveAuthUserIds(any())).thenReturn(Set.of(AUTH_USER_ID, UUID.randomUUID().toString()));
@@ -223,6 +226,28 @@ class RbacRoleHelperTest {
 
     final Set<String> actualRoles = RbacRoleHelper.getInstanceAdminRoles();
 
+    Assertions.assertEquals(expectedRoles, actualRoles);
+  }
+
+  @Test
+  void getRbacRolesFromOrganizationLevel() throws IOException {
+    // You're an organization admin ONLY, and we require workspace admin -> pass (because org_admin will
+    // grant workspace_admin role)
+    final UUID organizationId = UUID.randomUUID();
+
+    when(mHeaderResolver.resolveOrganization(any())).thenReturn(List.of(organizationId));
+    when(mPermissionPersistence.findPermissionTypeForUserAndOrganization(organizationId, AUTH_USER_ID))
+        .thenReturn(PermissionType.ORGANIZATION_ADMIN);
+
+    final Set<String> actualRoles = new HashSet<>(rbacRoleHelper.getRbacRoles(AUTH_USER_ID, mRequest));
+    final Set<String> expectedRoles = Set.of(
+        WorkspaceAuthRole.WORKSPACE_ADMIN.getLabel(),
+        WorkspaceAuthRole.WORKSPACE_EDITOR.getLabel(),
+        WorkspaceAuthRole.WORKSPACE_READER.getLabel(),
+        OrganizationAuthRole.ORGANIZATION_ADMIN.getLabel(),
+        OrganizationAuthRole.ORGANIZATION_EDITOR.getLabel(),
+        OrganizationAuthRole.ORGANIZATION_READER.getLabel(),
+        OrganizationAuthRole.ORGANIZATION_MEMBER.getLabel());
     Assertions.assertEquals(expectedRoles, actualRoles);
   }
 
