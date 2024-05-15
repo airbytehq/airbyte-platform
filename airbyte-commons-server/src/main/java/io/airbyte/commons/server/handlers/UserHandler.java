@@ -59,6 +59,7 @@ import jakarta.inject.Named;
 import jakarta.inject.Singleton;
 import java.io.IOException;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.function.Supplier;
@@ -211,7 +212,7 @@ public class UserHandler {
         .status(Enums.convertTo(user.getStatus(), UserStatus.class))
         .companyName(user.getCompanyName())
         .email(user.getEmail())
-        .metadata(user.getUiMetadata())
+        .metadata(user.getUiMetadata() != null ? user.getUiMetadata() : Map.of())
         .news(user.getNews())
         .defaultWorkspaceId(user.getDefaultWorkspaceId());
   }
@@ -282,6 +283,7 @@ public class UserHandler {
         .withStatus(Enums.convertTo(userRead.getStatus(), Status.class))
         .withCompanyName(userRead.getCompanyName())
         .withEmail(userRead.getEmail())
+        .withUiMetadata(Jsons.jsonNode(userRead.getMetadata() != null ? userRead.getMetadata() : Map.of()))
         .withNews(userRead.getNews());
   }
 
