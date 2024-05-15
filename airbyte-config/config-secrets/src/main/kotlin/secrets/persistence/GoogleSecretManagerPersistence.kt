@@ -118,7 +118,6 @@ class GoogleSecretManagerPersistence(
     googleSecretManagerServiceClient.createClient().use { client ->
       val secretName = SecretName.of(gcpProjectId, coordinate.fullCoordinate)
       client.deleteSecret(secretName)
-      metricClient.count(OssMetricsRegistry.DELETE_SECRET_DEFAULT_STORE, 1)
     }
   }
 }

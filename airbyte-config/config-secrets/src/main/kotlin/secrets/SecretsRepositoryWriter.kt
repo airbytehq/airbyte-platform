@@ -5,8 +5,12 @@
 package io.airbyte.config.secrets
 
 import com.fasterxml.jackson.databind.JsonNode
+import io.airbyte.commons.json.JsonPaths
 import io.airbyte.config.secrets.persistence.RuntimeSecretPersistence
 import io.airbyte.config.secrets.persistence.SecretPersistence
+import io.airbyte.featureflag.DeleteDanglingSecrets
+import io.airbyte.featureflag.FeatureFlagClient
+import io.airbyte.featureflag.Workspace
 import io.airbyte.metrics.lib.MetricClient
 import io.airbyte.metrics.lib.OssMetricsRegistry
 import io.airbyte.validation.json.JsonSchemaValidator
@@ -33,6 +37,7 @@ private val EPHEMERAL_SECRET_LIFE_DURATION = Duration.ofHours(2)
 open class SecretsRepositoryWriter(
   private val secretPersistence: SecretPersistence,
   private val metricClient: MetricClient,
+  private val featureFlagClient: FeatureFlagClient,
 ) {
   val validator: JsonSchemaValidator = JsonSchemaValidator()
 
@@ -40,7 +45,7 @@ open class SecretsRepositoryWriter(
    * Detects secrets in the configuration. Writes them to the secrets store. It returns the config
    * stripped of secrets (replaced with pointers to the secrets store).
    *
-   * Uses the environment secret persistence to store secrets.
+   * Uses the environment secret persistence if needed.
    *
    * @param workspaceId workspace id for the config
    * @param fullConfig full config
@@ -68,11 +73,13 @@ open class SecretsRepositoryWriter(
    * secrets with the passed in config. If there is no secrets store, it just returns the passed in
    * config. Also validates the config.
    *
-   * Uses the environment secret persistence to store secrets.
+   * Finally, delete the old versioned secrets.
+   *
+   * Uses the environment secret persistence if needed.
    *
    * @param workspaceId workspace id for the config
-   * @param oldConfig old full config
-   * @param fullConfig new full config
+   * @param oldPartialConfig old partial config (no secrets)
+   * @param fullConfig new full config (with secrets)
    * @param spec connector specification
    * @param runtimeSecretPersistence to use as an override
    * @return partial config
@@ -80,22 +87,32 @@ open class SecretsRepositoryWriter(
   @Throws(JsonValidationException::class)
   fun statefulUpdateSecrets(
     workspaceId: UUID,
-    oldConfig: JsonNode,
+    oldPartialConfig: JsonNode,
     fullConfig: JsonNode,
     spec: JsonNode,
     runtimeSecretPersistence: RuntimeSecretPersistence? = null,
   ): JsonNode {
     validator.ensure(spec, fullConfig)
 
-    val splitSecretConfig: SplitSecretConfig =
-      SecretsHelpers.splitAndUpdateConfig(workspaceId, oldConfig, fullConfig, spec, secretPersistence)
-
-    splitSecretConfig.getCoordinateToPayload()
+    val updatedSplitConfig: SplitSecretConfig =
+      SecretsHelpers.splitAndUpdateConfig(workspaceId, oldPartialConfig, fullConfig, spec, secretPersistence)
+    updatedSplitConfig.getCoordinateToPayload()
       .forEach { (coordinate: SecretCoordinate, payload: String) ->
         metricClient.count(OssMetricsRegistry.UPDATE_SECRET_DEFAULT_STORE, 1)
         runtimeSecretPersistence?.write(coordinate, payload) ?: secretPersistence.write(coordinate, payload)
       }
-    return splitSecretConfig.partialConfig
+
+    SecretsHelpers.getSortedSecretPaths(spec).forEach { path ->
+      JsonPaths.getValues(oldPartialConfig, path).forEach { jsonWithCoordinate ->
+        SecretsHelpers.getExistingCoordinateIfExists(jsonWithCoordinate)?.let { coordinate ->
+          featureFlagClient.boolVariation(DeleteDanglingSecrets, Workspace(workspaceId))
+          val secretCoord = SecretCoordinate.fromFullCoordinate(coordinate)
+          metricClient.count(OssMetricsRegistry.DELETE_SECRET_DEFAULT_STORE, 1)
+          (runtimeSecretPersistence ?: secretPersistence).delete(secretCoord)
+        }
+      }
+    }
+    return updatedSplitConfig.partialConfig
   }
 
   /**
