@@ -716,7 +716,7 @@ public class WorkspaceServiceJooqImpl implements WorkspaceService {
     // Get the schema for the webhook config, so we can split out any secret fields.
     final JsonNode webhookConfigSchema = Yamls.deserialize(ConfigSchema.WORKSPACE_WEBHOOK_OPERATION_CONFIGS.getConfigSchemaFile());
     // Check if there's an existing config, so we can re-use the secret coordinates.
-    final Optional<StandardWorkspace> previousWorkspace = getWorkspaceIfExists(workspace.getWorkspaceId());
+    final Optional<StandardWorkspace> previousWorkspace = getWorkspaceIfExists(workspace.getWorkspaceId(), false);
     Optional<JsonNode> previousWebhookConfigs = Optional.empty();
 
     if (previousWorkspace.isPresent() && previousWorkspace.get().getWebhookOperationConfigs() != null) {
@@ -755,9 +755,9 @@ public class WorkspaceServiceJooqImpl implements WorkspaceService {
     writeStandardWorkspaceNoSecrets(partialWorkspace);
   }
 
-  private Optional<StandardWorkspace> getWorkspaceIfExists(final UUID workspaceId) {
+  private Optional<StandardWorkspace> getWorkspaceIfExists(final UUID workspaceId, final boolean tombstone) {
     try {
-      return Optional.of(getStandardWorkspaceNoSecrets(workspaceId, false));
+      return Optional.of(getStandardWorkspaceNoSecrets(workspaceId, tombstone));
     } catch (final ConfigNotFoundException | JsonValidationException | IOException e) {
       log.warn("Unable to find workspace with ID {}", workspaceId);
       return Optional.empty();

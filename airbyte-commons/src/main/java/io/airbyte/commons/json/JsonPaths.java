@@ -145,7 +145,7 @@ public class JsonPaths {
    * @param jsonPath - path into the json object. must be in the format of JSONPath.
    * @return all values that match the input query
    */
-  public static List<JsonNode> getValues(final JsonNode json, final String jsonPath) {
+  private static List<JsonNode> getValues(final JsonNode json, final String jsonPath) {
     return getInternal(Configuration.defaultConfiguration(), json, jsonPath);
   }
 

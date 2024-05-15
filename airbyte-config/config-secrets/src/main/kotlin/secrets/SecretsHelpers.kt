@@ -228,7 +228,7 @@ object SecretsHelpers {
       .toList()
   }
 
-  fun getExistingCoordinateIfExists(json: JsonNode?): String? {
+  private fun getExistingCoordinateIfExists(json: JsonNode?): String? {
     return if (json != null && json.has(COORDINATE_FIELD)) {
       json[COORDINATE_FIELD].asText()
     } else {

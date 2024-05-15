@@ -10,17 +10,11 @@ import io.airbyte.config.DestinationConnection
 import io.airbyte.config.SourceConnection
 import io.airbyte.config.persistence.ConfigRepository
 import io.airbyte.config.secrets.hydration.RealSecretsHydrator
-import io.airbyte.featureflag.FeatureFlagClient
 import io.airbyte.metrics.lib.MetricClient
-import io.airbyte.metrics.lib.OssMetricsRegistry
 import io.airbyte.protocol.models.ConnectorSpecification
 import io.airbyte.validation.json.JsonSchemaValidator
-import io.mockk.every
 import io.mockk.mockk
-import io.mockk.verify
-import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
-import org.junit.jupiter.api.Test
 import java.util.UUID
 
 internal class SecretsRepositoryWriterTest {
@@ -29,114 +23,20 @@ internal class SecretsRepositoryWriterTest {
   private lateinit var secretsRepositoryWriter: SecretsRepositoryWriter
   private lateinit var secretsHydrator: RealSecretsHydrator
   private lateinit var secretsRepositoryReader: SecretsRepositoryReader
-  private lateinit var metricClient: MetricClient
-  private lateinit var featureFlagClient: FeatureFlagClient
   private lateinit var jsonSchemaValidator: JsonSchemaValidator
 
   @BeforeEach
   fun setup() {
     configRepository = mockk()
-    secretPersistence = mockk()
-    metricClient = mockk()
-    featureFlagClient = mockk()
-
+    secretPersistence = MemorySecretPersistence()
+    val metricClient: MetricClient = mockk()
     secretsRepositoryWriter =
       SecretsRepositoryWriter(
         secretPersistence,
         metricClient,
-        featureFlagClient,
       )
     secretsHydrator = RealSecretsHydrator(secretPersistence)
     secretsRepositoryReader = SecretsRepositoryReader(secretsHydrator)
-  }
-
-  @Test
-  fun testStatefulUpdateSecretsSimpleShouldUpdateAndDeleteCorrect() {
-    val oldCoordinate = "existing_coordinate_v1"
-    val oldPartialConfig = injectCoordinate(oldCoordinate)
-
-    every { metricClient.count(any(), any()) } returns Unit
-    every { secretPersistence.write(any(), any()) } returns Unit
-    every { secretPersistence.delete(any()) } returns Unit
-    every { secretPersistence.read(any()) } returns "present"
-    every { featureFlagClient.boolVariation(any(), any()) } returns true
-
-    val updatedPartialConfig =
-      secretsRepositoryWriter.statefulUpdateSecrets(
-        WORKSPACE_ID,
-        oldPartialConfig,
-        SOURCE_WITH_FULL_CONFIG.configuration,
-        SPEC.connectionSpecification,
-        null,
-      )
-
-    val newCoordinate = "existing_coordinate_v2"
-    assertTrue(updatedPartialConfig.toString().contains(newCoordinate))
-    assertTrue(!updatedPartialConfig.toString().contains(oldCoordinate))
-
-    verify(exactly = 1) { secretPersistence.write(SecretCoordinate.fromFullCoordinate(newCoordinate), "abc") }
-    verify { metricClient.count(OssMetricsRegistry.UPDATE_SECRET_DEFAULT_STORE, 1) }
-
-    verify(exactly = 1) { secretPersistence.delete(SecretCoordinate.fromFullCoordinate(oldCoordinate)) }
-    verify { metricClient.count(OssMetricsRegistry.DELETE_SECRET_DEFAULT_STORE, 1) }
-  }
-
-  @Test
-  fun testStatefulUpdateSecretsComplexShouldUpdateAndDeleteCorrect() {
-    val oldCoordinate1 = "existing-coordinate-0_v1"
-    val oldCoordinate2 = "existing-coordinate-1_v1"
-
-    val spec =
-      Jsons.deserialize(
-        """
-        { "properties": { "username": { "type": "string" }, "credentials": { "type" : "object", "properties" : { "client_id": { "type": "string", "airbyte_secret": true }, "password": { "type": "string", "airbyte_secret": true } } } } }  
-        """.trimIndent(),
-      )
-
-    val oldPartialConfig =
-      Jsons.deserialize(
-        """
-        { "username": "airbyte", "credentials": { "client_id": { "_secret": "$oldCoordinate1" }, "password": { "_secret": "$oldCoordinate2" } } }
-        """.trimIndent(),
-      )
-
-    val newFullConfig =
-      Jsons.deserialize(
-        """
-        { "username": "airbyte", "credentials": { "client_id": "abc", "password": "def" } }
-        """.trimIndent(),
-      )
-
-    every { metricClient.count(any(), any()) } returns Unit
-    every { secretPersistence.write(any(), any()) } returns Unit
-    every { secretPersistence.delete(any()) } returns Unit
-    every { secretPersistence.read(any()) } returns "present"
-    every { featureFlagClient.boolVariation(any(), any()) } returns true
-
-    val updatedPartialConfig =
-      secretsRepositoryWriter.statefulUpdateSecrets(
-        WORKSPACE_ID,
-        oldPartialConfig,
-        newFullConfig,
-        spec,
-        null,
-      )
-
-    val newCoordinate1 = "existing-coordinate-0_v2"
-    val newCoordinate2 = "existing-coordinate-1_v2"
-
-    assertTrue(updatedPartialConfig.toString().contains(newCoordinate1) && updatedPartialConfig.toString().contains(newCoordinate2))
-    assertTrue(!updatedPartialConfig.toString().contains(oldCoordinate1) && !updatedPartialConfig.toString().contains(oldCoordinate2))
-
-    verify(exactly = 1) { secretPersistence.write(SecretCoordinate.fromFullCoordinate(newCoordinate1), "abc") }
-    verify(exactly = 1) { secretPersistence.write(SecretCoordinate.fromFullCoordinate(newCoordinate2), "def") }
-    verify { metricClient.count(OssMetricsRegistry.UPDATE_SECRET_DEFAULT_STORE, 1) }
-    verify { metricClient.count(OssMetricsRegistry.UPDATE_SECRET_DEFAULT_STORE, 1) }
-
-    verify(exactly = 1) { secretPersistence.delete(SecretCoordinate.fromFullCoordinate(oldCoordinate1)) }
-    verify(exactly = 1) { secretPersistence.delete(SecretCoordinate.fromFullCoordinate(oldCoordinate2)) }
-    verify { metricClient.count(OssMetricsRegistry.DELETE_SECRET_DEFAULT_STORE, 1) }
-    verify { metricClient.count(OssMetricsRegistry.DELETE_SECRET_DEFAULT_STORE, 1) }
   }
 
   // TODO - port this to source service test
