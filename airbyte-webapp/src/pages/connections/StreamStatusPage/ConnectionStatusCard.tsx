@@ -33,7 +33,7 @@ export const ConnectionStatusCard: React.FC = () => {
           <ConnectionSyncButtons buttonText={<FormattedMessage id="connection.startSync" values={{ streamCount }} />} />
         </FlexContainer>
       </Box>
-      <Box p="lg">
+      <Box p="lg" className={styles.collapseEmpty}>
         <ConnectionStatusMessages />
       </Box>
       {showHistoricalOverview && <HistoricalOverview />}
