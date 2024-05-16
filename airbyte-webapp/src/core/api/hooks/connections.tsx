@@ -542,31 +542,21 @@ export const useCreateOrUpdateState = () => {
   );
 };
 
-export const useGetConnectionDataHistory = (connectionId: string) => {
+const DEFAULT_NUMBER_OF_HISTORY_JOBS = 8;
+
+export const useGetConnectionDataHistory = (connectionId: string, numberOfJobs = DEFAULT_NUMBER_OF_HISTORY_JOBS) => {
   const options = useRequestOptions();
 
   return useSuspenseQuery(connectionsKeys.dataHistory(connectionId), () =>
-    getConnectionDataHistory(
-      {
-        connectionId,
-        timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
-      },
-      options
-    )
+    getConnectionDataHistory({ connectionId, numberOfJobs }, options)
   );
 };
 
-export const useGetConnectionUptimeHistory = (connectionId: string) => {
+export const useGetConnectionUptimeHistory = (connectionId: string, numberOfJobs = DEFAULT_NUMBER_OF_HISTORY_JOBS) => {
   const options = useRequestOptions();
 
   return useSuspenseQuery(connectionsKeys.uptimeHistory(connectionId), () =>
-    getConnectionUptimeHistory(
-      {
-        connectionId,
-        timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
-      },
-      options
-    )
+    getConnectionUptimeHistory({ connectionId, numberOfJobs }, options)
   );
 };
 

@@ -4,17 +4,36 @@
 
 package io.airbyte.commons.server.handlers.helpers;
 
+import io.airbyte.api.model.generated.AttemptRead;
+import io.airbyte.api.model.generated.AttemptStreamStats;
+import io.airbyte.api.model.generated.JobAggregatedStats;
+import io.airbyte.api.model.generated.JobWithAttemptsRead;
+import io.airbyte.api.model.generated.StreamStats;
+import io.airbyte.commons.server.converters.JobConverter;
+import io.airbyte.commons.server.handlers.JobHistoryHandler;
+import io.airbyte.commons.server.handlers.JobHistoryHandler.StreamNameAndNamespace;
 import io.airbyte.config.StreamSyncStats;
 import io.airbyte.config.SyncStats;
+import io.airbyte.persistence.job.JobPersistence;
+import io.airbyte.persistence.job.JobPersistence.AttemptStats;
+import io.airbyte.persistence.job.JobPersistence.JobAttemptPair;
+import io.airbyte.persistence.job.models.Job;
 import io.airbyte.protocol.models.SyncMode;
+import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
+import java.util.stream.Collectors;
+import lombok.extern.slf4j.Slf4j;
 
 /**
  * Helper class to aggregate stream stats. The class is meant to be used to aggregate stats for a
  * single stream across multiple attempts
  */
+@Slf4j
 public class StatsAggregationHelper {
 
   /**
@@ -85,6 +104,140 @@ public class StatsAggregationHelper {
     }
 
     return Optional.empty();
+  }
+
+  public static void hydrateWithStats(List<JobWithAttemptsRead> jobReads,
+                                      List<Job> jobs,
+                                      boolean hydrateAggregatedStats,
+                                      JobPersistence jobPersistence)
+      throws IOException {
+
+    final var jobIds = jobReads.stream().map(r -> r.getJob().getId()).toList();
+    final Map<JobAttemptPair, AttemptStats> stats = jobPersistence.getAttemptStats(jobIds);
+
+    Map<Long, Map<StreamNameAndNamespace, List<StreamSyncStats>>> jobToStreamStats = new HashMap<>();
+    for (final JobWithAttemptsRead jwar : jobReads) {
+      Map<StreamNameAndNamespace, List<StreamSyncStats>> streamAttemptStats = new HashMap<>();
+      jobToStreamStats.putIfAbsent(jwar.getJob().getId(), streamAttemptStats);
+      for (final AttemptRead attempt : jwar.getAttempts()) {
+        final var stat = stats.get(new JobAttemptPair(jwar.getJob().getId(), attempt.getId().intValue()));
+        if (stat == null) {
+          log.warn("Missing stats for job {} attempt {}", jwar.getJob().getId(), attempt.getId().intValue());
+          continue;
+        }
+
+        hydrateWithStats(attempt, stat);
+        if (hydrateAggregatedStats) {
+          stat.perStreamStats().forEach(s -> {
+            final var streamNameAndNamespace = new StreamNameAndNamespace(s.getStreamName(), s.getStreamNamespace());
+            streamAttemptStats.putIfAbsent(streamNameAndNamespace, new ArrayList<>());
+            streamAttemptStats.get(streamNameAndNamespace).add(s);
+          });
+        }
+      }
+    }
+
+    if (hydrateAggregatedStats) {
+      Map<Long, Map<StreamNameAndNamespace, SyncMode>> jobToStreamSyncMode = jobs.stream()
+          .collect(Collectors.toMap(Job::getId, JobHistoryHandler::getStreamsToSyncMode));
+
+      jobReads.forEach(job -> {
+        Map<StreamNameAndNamespace, List<StreamSyncStats>> streamToAttemptStats = jobToStreamStats.get(job.getJob().getId());
+        Map<StreamNameAndNamespace, SyncMode> streamToSyncMode = jobToStreamSyncMode.get(job.getJob().getId());
+        hydrateWithAggregatedStats(job, streamToAttemptStats, streamToSyncMode);
+      });
+    }
+  }
+
+  /**
+   * Retrieve stats for a given job id and attempt number and hydrate the api model with the retrieved
+   * information.
+   *
+   * @param a the attempt to hydrate stats for.
+   */
+  public static void hydrateWithStats(final AttemptRead a, final JobPersistence.AttemptStats attemptStats) {
+    a.setTotalStats(new io.airbyte.api.model.generated.AttemptStats());
+
+    final var combinedStats = attemptStats.combinedStats();
+    if (combinedStats == null) {
+      // If overall stats are missing, assume stream stats are also missing, since overall stats are
+      // easier to produce than stream stats. Exit early.
+      return;
+    }
+
+    a.getTotalStats()
+        .estimatedBytes(combinedStats.getEstimatedBytes())
+        .estimatedRecords(combinedStats.getEstimatedRecords())
+        .bytesEmitted(combinedStats.getBytesEmitted())
+        .recordsEmitted(combinedStats.getRecordsEmitted())
+        .recordsCommitted(combinedStats.getRecordsCommitted());
+
+    final var streamStats = attemptStats.perStreamStats().stream().map(s -> new AttemptStreamStats()
+        .streamName(s.getStreamName())
+        .streamNamespace(s.getStreamNamespace())
+        .stats(new io.airbyte.api.model.generated.AttemptStats()
+            .bytesEmitted(s.getStats().getBytesEmitted())
+            .recordsEmitted(s.getStats().getRecordsEmitted())
+            .recordsCommitted(s.getStats().getRecordsCommitted())
+            .estimatedBytes(s.getStats().getEstimatedBytes())
+            .estimatedRecords(s.getStats().getEstimatedRecords())))
+        .collect(Collectors.toList());
+    a.setStreamStats(streamStats);
+  }
+
+  // WARNING!!!!! These stats are used for billing, be careful when changing this logic.
+  private static void hydrateWithAggregatedStats(
+                                                 JobWithAttemptsRead job,
+                                                 Map<StreamNameAndNamespace, List<StreamSyncStats>> streamToAttemptStats,
+                                                 Map<StreamNameAndNamespace, SyncMode> streamToSyncMode) {
+
+    List<StreamStatsRecord> streamAggregatedStats = new ArrayList<>();
+    streamToSyncMode.keySet().forEach(streamNameAndNamespace -> {
+      if (!streamToAttemptStats.containsKey(streamNameAndNamespace)) {
+        log.info("No stats have been persisted for job {} stream {}.", job.getJob().getId(), streamNameAndNamespace);
+        return;
+      }
+
+      List<StreamSyncStats> streamStats = streamToAttemptStats.get(streamNameAndNamespace);
+      SyncMode syncMode = streamToSyncMode.get(streamNameAndNamespace);
+
+      StreamStatsRecord aggregatedStats = StatsAggregationHelper.getAggregatedStats(syncMode, streamStats);
+      streamAggregatedStats.add(aggregatedStats);
+    });
+
+    JobAggregatedStats jobAggregatedStats = getJobAggregatedStats(streamAggregatedStats);
+    job.getJob().setAggregatedStats(jobAggregatedStats);
+    job.getJob().setStreamAggregatedStats(streamAggregatedStats.stream().map(s -> new StreamStats()
+        .streamName(s.streamName())
+        .streamNamespace(s.streamNamespace())
+        .recordsEmitted(s.recordsEmitted())
+        .bytesEmitted(s.bytesEmitted())
+        .recordsCommitted(s.recordsCommitted())
+        .bytesCommitted(s.bytesCommitted())
+        .wasBackfilled(s.wasBackfilled().orElse(null)))
+        .collect(Collectors.toList()));
+  }
+
+  private static JobAggregatedStats getJobAggregatedStats(List<StreamStatsRecord> streamStats) {
+    return new JobAggregatedStats()
+        .recordsEmitted(streamStats.stream().mapToLong(StreamStatsRecord::recordsEmitted).sum())
+        .bytesEmitted(streamStats.stream().mapToLong(StreamStatsRecord::bytesEmitted).sum())
+        .recordsCommitted(streamStats.stream().mapToLong(StreamStatsRecord::recordsCommitted).sum())
+        .bytesCommitted(streamStats.stream().mapToLong(StreamStatsRecord::bytesCommitted).sum());
+  }
+
+  public static Map<Long, JobWithAttemptsRead> getJobIdToJobWithAttemptsReadMap(final List<Job> jobs, final JobPersistence jobPersistence) {
+    if (jobs.isEmpty()) {
+      return Collections.emptyMap();
+    }
+    try {
+      final List<JobWithAttemptsRead> jobReads = jobs.stream().map(JobConverter::getJobWithAttemptsRead).collect(Collectors.toList());
+
+      StatsAggregationHelper.hydrateWithStats(jobReads, jobs, true, jobPersistence);
+      return jobReads.stream().collect(Collectors.toMap(j -> j.getJob().getId(), j -> j));
+    } catch (IOException e) {
+      throw new RuntimeException(e);
+    }
   }
 
   public record StreamStatsRecord(String streamName,

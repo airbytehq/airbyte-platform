@@ -1,7 +1,7 @@
 import classNames from "classnames";
-import React from "react";
+import React, { cloneElement } from "react";
 
-import { Icon } from "components/ui/Icon";
+import { Icon, IconProps } from "components/ui/Icon";
 import { CircleLoader } from "components/ui/StatusIcon/CircleLoader";
 
 import { useExperiment } from "hooks/services/Experiment";
@@ -22,13 +22,13 @@ export enum ConnectionStatusIndicatorStatus {
 }
 
 const ICON_BY_STATUS: Readonly<Record<ConnectionStatusIndicatorStatus, JSX.Element>> = {
-  onTime: <Icon type="statusSuccess" size="lg" />,
-  onTrack: <Icon type="statusSuccess" size="lg" />,
-  error: <Icon type="statusWarning" size="lg" />,
-  disabled: <Icon type="statusInactive" size="lg" />,
-  pending: <Icon type="statusInactive" size="lg" />,
-  late: <Icon type="clockFilled" size="lg" />,
-  actionRequired: <Icon type="statusError" size="lg" />,
+  onTime: <Icon type="statusSuccess" size="md" />,
+  onTrack: <Icon type="statusSuccess" size="md" />,
+  error: <Icon type="statusWarning" size="md" />,
+  disabled: <Icon type="statusInactive" size="md" />,
+  pending: <Icon type="statusInactive" size="md" />,
+  late: <Icon type="clockFilled" size="md" />,
+  actionRequired: <Icon type="statusError" size="md" />,
   syncing: <CircleLoader />,
   queued: <CircleLoader />,
 };
@@ -61,9 +61,15 @@ interface ConnectionStatusIndicatorProps {
   status: ConnectionStatusIndicatorStatus;
   loading?: boolean;
   withBox?: boolean;
+  size?: IconProps["size"];
 }
 
-export const ConnectionStatusIndicator: React.FC<ConnectionStatusIndicatorProps> = ({ status, loading, withBox }) => {
+export const ConnectionStatusIndicator: React.FC<ConnectionStatusIndicatorProps> = ({
+  status,
+  loading,
+  withBox,
+  size,
+}) => {
   const showSyncProgress = useExperiment("connection.syncProgress", false);
 
   return (
@@ -73,7 +79,7 @@ export const ConnectionStatusIndicator: React.FC<ConnectionStatusIndicatorProps>
       data-testid="connection-status-indicator"
       data-status={status}
     >
-      <div className={styles.icon}>{ICON_BY_STATUS[status]}</div>
+      <div className={styles.icon}>{cloneElement(ICON_BY_STATUS[status], { [size ? "size" : ""]: size })}</div>
       {!showSyncProgress && loading && <StreamStatusLoadingSpinner className={styles.spinner} />}
     </div>
   );

@@ -676,6 +676,7 @@
   "connection.status.onTrack.failureDescription": "The previous sync encountered an issue but is expected to automatically recover in the next sync.",
   "connection.status.onTrack.delayedDescription": "The connection is delayed but is expected to catch up before the next sync.",
 
+  "connection.actions.clearData": "Clearing your data will delete all data in your destination.",
   "connection.uptimeStatus.onTime": "On time",
   "connection.uptimeStatus.late": "Behind schedule",
   "connection.uptimeStatus.error": "Stopped due to error(s)",
@@ -739,11 +740,25 @@
   "connection.stream.status.nextSync": "Next sync {sync}",
   "connection.stream.status.nextTry": "Next try {sync}",
 
-  "connection.overview.graph.noData": "No data from the last 30 days",
-  "connection.overview.graph.uptimeStatus": "Streams",
+  "connection.overview.graph.noData": "No syncs to show data from",
+  "connection.overview.graph.volume": "Volume",
+  "connection.overview.graph.recordsEmitted": "{value, plural, one {# record} other {# records}} extracted",
+  "connection.overview.graph.recordsLoaded": "{value, plural, one {# record} other {# records}} loaded",
+  "connection.overview.graph.clickThrough": "Click to go to job →",
+
   "connection.overview.graph.dataMoved": "Records",
   "connection.overview.graph.dataMoved.tooltipLabel": "{value, plural, one {<b>#</b> record} other {<b>#</b> records}} committed",
   "connection.overview.graph.dataMoved.tooltipLabelExtra": "Click to see jobs from this day",
+
+  "connection.overview.graph.uptimeStatus": "Streams",
+  "connection.overview.graph.uptimeStatus.more": "+{moreCount} more",
+
+  "connection.overview.graph.uptimeStatus.onTime": "{count, plural, one {# stream} other {# streams}} synced",
+  "connection.overview.graph.uptimeStatus.late": "{count, plural, one {# stream} other {# streams}} behind schedule",
+  "connection.overview.graph.uptimeStatus.error": "{count, plural, one {# stream} other {# streams}} failed",
+  "connection.overview.graph.uptimeStatus.actionRequired": "{count, plural, one {# stream} other {# streams}} stopped (action required)",
+  "connection.overview.graph.uptimeStatus.syncing": "Syncing",
+  "connection.overview.graph.uptimeStatus.queued": "Queued",
 
   "form.scheduleType": "Schedule type",
   "form.scheduleTypeNext": "Sync schedule",

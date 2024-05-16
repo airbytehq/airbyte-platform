@@ -416,41 +416,48 @@ class StreamStatusesRepositoryTest {
   }
 
   @Test
-  void testFindLatestTerminalStatusPerStreamByConnectionIdAndDayAfterTimestamp() {
-    final long now = Instant.now().toEpochMilli();
-    final OffsetDateTime time1 = Fixtures.timestamp(now);
-    final OffsetDateTime time2 = Fixtures.timestamp(now + 1);
-    final OffsetDateTime time3 = Fixtures.timestamp(now + 2);
-    final OffsetDateTime time4 = Fixtures.timestamp(now + 3);
-
+  void testFindLatestTerminalStatusPerStreamByConnectionId() {
     // connection 1
-    final var p1 = Fixtures.pending().transitionedAt(time1).connectionId(Fixtures.connectionId1).build();
-    final var c1 = Fixtures.complete().transitionedAt(time3).connectionId(Fixtures.connectionId1).build();
+    final var p1 = Fixtures.pending().connectionId(Fixtures.connectionId1).jobId(Fixtures.jobId1).build();
+    final var c1 = Fixtures.complete().connectionId(Fixtures.connectionId1).attemptNumber(5).jobId(Fixtures.jobId1).build();
 
-    final var c2 = Fixtures.complete().transitionedAt(time2).connectionId(Fixtures.connectionId1).streamName(Fixtures.name2).build();
-    final var r1 = Fixtures.reset().transitionedAt(time3).connectionId(Fixtures.connectionId1).streamName(Fixtures.name2).build();
+    final var c2 =
+        Fixtures.complete().connectionId(Fixtures.connectionId1).streamName(Fixtures.name2).jobId(Fixtures.jobId2).attemptNumber(3).build();
+    final var r1 = Fixtures.reset().connectionId(Fixtures.connectionId1).streamName(Fixtures.name2).jobId(Fixtures.jobId2).attemptNumber(5).build();
 
-    final var p2 = Fixtures.pending().transitionedAt(time1).connectionId(Fixtures.connectionId1).streamName(Fixtures.name3).build();
-    final var f1 = Fixtures.failed().transitionedAt(time2).connectionId(Fixtures.connectionId1).streamName(Fixtures.name3).build();
-    final var r2 = Fixtures.reset().transitionedAt(time3).connectionId(Fixtures.connectionId1).streamName(Fixtures.name3).build();
-    final var p3 = Fixtures.pending().transitionedAt(time4).connectionId(Fixtures.connectionId1).streamName(Fixtures.name3).build();
+    final var p2 = Fixtures.pending().connectionId(Fixtures.connectionId1).streamName(Fixtures.name3).build();
+    final var f1 = Fixtures.failed().connectionId(Fixtures.connectionId1).streamName(Fixtures.name3).jobId(Fixtures.jobId3).attemptNumber(3).build();
+    final var r2 = Fixtures.reset().connectionId(Fixtures.connectionId1).streamName(Fixtures.name3).jobId(Fixtures.jobId3).attemptNumber(5).build();
+    final var p3 = Fixtures.pending().connectionId(Fixtures.connectionId1).streamName(Fixtures.name3).build();
 
     // connection 2
-    final var p4 = Fixtures.pending().transitionedAt(time1).connectionId(Fixtures.connectionId2).build();
+    final var p4 = Fixtures.pending().connectionId(Fixtures.connectionId2).build();
 
-    final var r3 = Fixtures.reset().transitionedAt(time2).connectionId(Fixtures.connectionId2).streamName(Fixtures.name2).build();
-    final var f2 = Fixtures.failed().transitionedAt(time3).connectionId(Fixtures.connectionId2).streamName(Fixtures.name2).build();
+    final var r3 = Fixtures.reset().connectionId(Fixtures.connectionId2).streamName(Fixtures.name2).attemptNumber(1)
+        .jobId(Fixtures.jobId4).build();
+    final var f2 = Fixtures.failed().connectionId(Fixtures.connectionId2).streamName(Fixtures.name2).attemptNumber(2)
+        .jobId(Fixtures.jobId4).build();
 
-    final var c3 = Fixtures.complete().transitionedAt(time1).connectionId(Fixtures.connectionId2).streamName(Fixtures.name3).build();
-    final var f3 = Fixtures.failed().transitionedAt(time2).connectionId(Fixtures.connectionId2).streamName(Fixtures.name3).build();
-    final var run1 = Fixtures.running().transitionedAt(time3).connectionId(Fixtures.connectionId2).streamName(Fixtures.name3).build();
+    final var c3 = Fixtures.complete().connectionId(Fixtures.connectionId2).streamName(Fixtures.name3).attemptNumber(1)
+        .jobId(Fixtures.jobId5).build();
+    final var f3 = Fixtures.failed().connectionId(Fixtures.connectionId2).streamName(Fixtures.name3).attemptNumber(3)
+        .jobId(Fixtures.jobId5).build();
 
-    repo.saveAll(List.of(p1, p2, p3, p4, r1, r2, r3, c1, c2, c3, f1, f2, f3, r1, r2, r3, run1));
+    jooqDslContext.execute(
+        "insert into jobs (id, scope, status, config_type) values (" + Fixtures.jobId1 + ", '" + Fixtures.connectionId1 + "', 'succeeded', 'sync')");
+    jooqDslContext.execute(
+        "insert into jobs (id, scope, status, config_type) values (" + Fixtures.jobId2 + ", '" + Fixtures.connectionId1 + "', 'succeeded', 'sync')");
+    jooqDslContext.execute(
+        "insert into jobs (id, scope, status, config_type) values (" + Fixtures.jobId3 + ", '" + Fixtures.connectionId1 + "', 'succeeded', 'sync')");
+    jooqDslContext.execute(
+        "insert into jobs (id, scope, status, config_type) values (" + Fixtures.jobId4 + ", '" + Fixtures.connectionId2 + "', 'succeeded', 'sync')");
+    jooqDslContext.execute(
+        "insert into jobs (id, scope, status, config_type) values (" + Fixtures.jobId5 + ", '" + Fixtures.connectionId2 + "', 'succeeded', 'sync')");
 
-    final var results1 = repo.findLatestTerminalStatusPerStreamByConnectionIdAndDayAfterTimestamp(Fixtures.connectionId1,
-        time1, ZoneId.systemDefault().getId());
-    final var results2 = repo.findLatestTerminalStatusPerStreamByConnectionIdAndDayAfterTimestamp(Fixtures.connectionId2,
-        time1, ZoneId.systemDefault().getId());
+    repo.saveAll(List.of(p1, p2, p3, p4, r1, r2, r3, c1, c2, c3, f1, f2, f3));
+
+    final var results1 = repo.findLastAttemptsOfLastXJobsForConnection(Fixtures.connectionId1, 3);
+    final var results2 = repo.findLastAttemptsOfLastXJobsForConnection(Fixtures.connectionId2, 2);
 
     assertContainsSameElements(List.of(c1, r1, r2), results1);
     assertContainsSameElements(List.of(f2, f3), results2);
@@ -475,6 +482,8 @@ class StreamStatusesRepositoryTest {
     static Long jobId1 = ThreadLocalRandom.current().nextLong();
     static Long jobId2 = ThreadLocalRandom.current().nextLong();
     static Long jobId3 = ThreadLocalRandom.current().nextLong();
+    static Long jobId4 = ThreadLocalRandom.current().nextLong();
+    static Long jobId5 = ThreadLocalRandom.current().nextLong();
 
     // java defaults to 9 precision while postgres defaults to 6
     // this provides us with 6 decimal precision for comparison purposes

@@ -226,6 +226,9 @@ dependencies:
   uuid:
     specifier: ^9.0.1
     version: 9.0.1
+  victory-vendor:
+    specifier: 36.6.8
+    version: 36.6.8
   yup:
     specifier: ^0.32.11
     version: 0.32.11

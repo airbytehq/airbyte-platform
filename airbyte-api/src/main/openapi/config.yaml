@@ -2167,7 +2167,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ConnectionDataHistoryRead"
+                $ref: "#/components/schemas/ConnectionUptimeHistoryRead"
         "404":
           $ref: "#/components/responses/NotFoundResponse"
         "422":
@@ -8103,22 +8103,21 @@ components:
       type: object
       required:
         - connectionId
-        - timezone
       properties:
         connectionId:
           $ref: "#/components/schemas/ConnectionId"
-        timezone:
-          type: string
+        numberOfJobs:
+          type: integer
     ConnectionDataHistoryRequestBody:
       type: object
       required:
         - connectionId
-        - timezone
+        - numberOfJobs
       properties:
         connectionId:
           $ref: "#/components/schemas/ConnectionId"
-        timezone:
-          type: string
+        numberOfJobs:
+          type: integer
     ConnectionStreamHistoryRequestBody:
       type: object
       required:
@@ -8564,18 +8563,53 @@ components:
     ConnectionUptimeHistoryRead:
       type: array
       items:
-        $ref: "#/components/schemas/ConnectionSyncResultRead"
+        $ref: "#/components/schemas/JobSyncResultRead"
+    JobSyncResultRead:
+      type: object
+      required:
+        - jobId
+        - jobCreatedAt
+        - jobUpdatedAt
+        - streamStatuses
+        - configType
+        - recordsEmitted
+        - recordsCommitted
+        - bytesEmitted
+        - bytesCommitted
+      properties:
+        jobId:
+          $ref: "#/components/schemas/JobId"
+        jobCreatedAt:
+          type: integer
+          format: int64
+        jobUpdatedAt:
+          type: integer
+          format: int64
+        streamStatuses:
+          type: array
+          items:
+            $ref: "#/components/schemas/ConnectionSyncResultRead"
+        configType:
+          $ref: "#/components/schemas/JobConfigType"
+        recordsEmitted:
+          type: integer
+          format: int64
+        recordsCommitted:
+          type: integer
+          format: int64
+        bytesEmitted:
+          type: integer
+          format: int64
+        bytesCommitted:
+          type: integer
+          format: int64
     ConnectionSyncResultRead:
       type: object
       required:
-        - timestamp
         - status
         - streamName
         - streamNamespace
       properties:
-        timestamp:
-          type: integer
-          format: int64
         status:
           $ref: "#/components/schemas/JobStatus"
         streamName:
@@ -8596,6 +8630,12 @@ components:
           type: integer
           format: int
         recordsCommitted:
+          type: integer
+          format: int64
+        recordsEmitted:
+          type: integer
+          format: int64
+        jobId:
           type: integer
           format: int64
     ConnectionStreamHistoryRead:
