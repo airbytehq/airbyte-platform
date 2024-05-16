@@ -103,7 +103,9 @@ class WorkloadClient(private val workloadApiClient: WorkloadApiClient, private v
                 else -> FailureReason.FailureOrigin.AIRBYTE_PLATFORM
               },
             )
-            .withExternalMessage("Workload terminated by ${workload.terminationSource}")
+            .withExternalMessage(
+              "Workload ${if (workload.status == WorkloadStatus.CANCELLED) "cancelled by" else "failed, source:"} ${workload.terminationSource}",
+            )
             .withInternalMessage(workload.terminationReason)
 
         // We should never be in this situation, workload is still running not having an output is expected,
