@@ -28,7 +28,7 @@ export const UpdateConnectionFormControls: React.FC<UpdateConnectionFormControls
   const { reset, trigger } = useFormContext<FormConnectionFormValues>();
 
   // for cancel and submit buttons
-  const isControlDisabled = isSubmitting || (!isDirty && !(schemaHasBeenRefreshed || isDirty));
+  const isControlDisabled = isSubmitting || (!isDirty && !schemaHasBeenRefreshed);
   const isSubmitDisabled = !isValid || mode === "readonly";
   const errorMessage = isDirty && getErrorMessage(isValid, errors);
   const successMessage = isSubmitSuccessful && !isDirty && <FormattedMessage id="form.changesSaved" />;

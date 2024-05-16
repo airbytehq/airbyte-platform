@@ -196,6 +196,7 @@ export const ConnectionReplicationPage: React.FC = () => {
         return Promise.resolve();
       } catch (e) {
         setSubmitError(e);
+        throw new Error(e); // we _do_ need this to throw in order for isSubmitSuccessful to be false
       }
     },
     [
