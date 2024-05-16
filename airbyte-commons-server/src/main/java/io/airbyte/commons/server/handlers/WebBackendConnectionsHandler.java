@@ -632,7 +632,7 @@ public class WebBackendConnectionsHandler {
                                     final ConfiguredAirbyteCatalog oldConfiguredCatalog,
                                     final ConnectionRead updatedConnectionRead,
                                     final ConnectionRead oldConnectionRead)
-      throws IOException, JsonValidationException, ConfigNotFoundException {
+      throws JsonValidationException {
 
     final UUID connectionId = webBackendConnectionPatch.getConnectionId();
     final Boolean skipReset = webBackendConnectionPatch.getSkipReset() != null ? webBackendConnectionPatch.getSkipReset() : false;
@@ -652,12 +652,6 @@ public class WebBackendConnectionsHandler {
           allStreamToReset.stream().map(ProtocolConverters::streamDescriptorToProtocol).toList();
 
       if (!streamsToReset.isEmpty()) {
-        final ConnectionIdRequestBody connectionIdRequestBody = new ConnectionIdRequestBody().connectionId(connectionId);
-        final ConnectionStateType stateType = getStateType(connectionIdRequestBody);
-
-        if (stateType == ConnectionStateType.LEGACY || stateType == ConnectionStateType.NOT_SET) {
-          streamsToReset = configRepositoryDoNotUse.getAllStreamsForConnection(connectionId);
-        }
         eventRunner.resetConnectionAsync(
             connectionId,
             streamsToReset);

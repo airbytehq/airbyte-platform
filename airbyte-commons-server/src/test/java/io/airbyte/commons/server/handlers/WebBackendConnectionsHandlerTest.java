@@ -938,68 +938,6 @@ class WebBackendConnectionsHandlerTest {
   }
 
   @Test
-  void testUpdateConnectionWithUpdatedSchemaLegacy() throws JsonValidationException, ConfigNotFoundException, IOException {
-    final WebBackendConnectionUpdate updateBody = new WebBackendConnectionUpdate()
-        .namespaceDefinition(expected.getNamespaceDefinition())
-        .namespaceFormat(expected.getNamespaceFormat())
-        .prefix(expected.getPrefix())
-        .connectionId(expected.getConnectionId())
-        .schedule(expected.getSchedule())
-        .status(expected.getStatus())
-        .syncCatalog(expectedWithNewSchema.getSyncCatalog());
-
-    final ConnectionIdRequestBody connectionIdRequestBody = new ConnectionIdRequestBody().connectionId(expected.getConnectionId());
-
-    when(stateHandler.getState(connectionIdRequestBody)).thenReturn(new ConnectionState().stateType(ConnectionStateType.LEGACY));
-    when(configRepository.getConfiguredCatalogForConnection(expected.getConnectionId()))
-        .thenReturn(ConnectionHelpers.generateBasicConfiguredAirbyteCatalog());
-
-    final StreamDescriptor streamDescriptorAdd = new StreamDescriptor().name("addStream");
-    final StreamTransform streamTransformAdd =
-        new StreamTransform().streamDescriptor(streamDescriptorAdd).transformType(TransformTypeEnum.ADD_STREAM);
-
-    final CatalogDiff catalogDiff = new CatalogDiff().transforms(List.of(streamTransformAdd));
-    when(connectionsHandler.getDiff(any(), any(), any())).thenReturn(catalogDiff);
-
-    when(operationsHandler.listOperationsForConnection(any())).thenReturn(operationReadList);
-    when(connectionsHandler.getConnection(expected.getConnectionId())).thenReturn(
-        new ConnectionRead().connectionId(expected.getConnectionId()));
-    final ConnectionRead connectionRead = new ConnectionRead()
-        .connectionId(expected.getConnectionId())
-        .sourceId(expected.getSourceId())
-        .destinationId(expected.getDestinationId())
-        .name(expected.getName())
-        .namespaceDefinition(expected.getNamespaceDefinition())
-        .namespaceFormat(expected.getNamespaceFormat())
-        .prefix(expected.getPrefix())
-        .syncCatalog(expectedWithNewSchema.getSyncCatalog())
-        .status(expected.getStatus())
-        .schedule(expected.getSchedule()).breakingChange(false);
-    when(connectionsHandler.updateConnection(any())).thenReturn(connectionRead);
-    when(connectionsHandler.getConnection(expected.getConnectionId())).thenReturn(connectionRead);
-
-    final List<io.airbyte.protocol.models.StreamDescriptor> connectionStreams = List.of(ConnectionHelpers.STREAM_DESCRIPTOR);
-    when(configRepository.getAllStreamsForConnection(expected.getConnectionId())).thenReturn(connectionStreams);
-
-    final ManualOperationResult successfulResult = ManualOperationResult.builder().jobId(Optional.empty()).failingReason(Optional.empty()).build();
-    when(eventRunner.resetConnection(any(), any())).thenReturn(successfulResult);
-    when(eventRunner.startNewManualSync(any())).thenReturn(successfulResult);
-
-    when(configRepository.getMostRecentActorCatalogForSource(any())).thenReturn(Optional.of(new ActorCatalog().withCatalog(Jsons.emptyObject())));
-
-    final WebBackendConnectionRead result = wbHandler.webBackendUpdateConnection(updateBody);
-
-    assertEquals(expectedWithNewSchema.getSyncCatalog(), result.getSyncCatalog());
-
-    final ConnectionIdRequestBody connectionId = new ConnectionIdRequestBody().connectionId(result.getConnectionId());
-    verify(schedulerHandler, times(0)).resetConnection(connectionId);
-    verify(schedulerHandler, times(0)).syncConnection(connectionId);
-    verify(connectionsHandler, times(1)).updateConnection(any());
-    final InOrder orderVerifier = inOrder(eventRunner);
-    orderVerifier.verify(eventRunner, times(1)).resetConnectionAsync(connectionId.getConnectionId(), connectionStreams);
-  }
-
-  @Test
   void testUpdateConnectionWithUpdatedSchemaPerStream() throws JsonValidationException, ConfigNotFoundException, IOException {
     final WebBackendConnectionUpdate updateBody = new WebBackendConnectionUpdate()
         .namespaceDefinition(expected.getNamespaceDefinition())
