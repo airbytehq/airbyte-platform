@@ -100,6 +100,7 @@ create table "public"."stream_statuses" (
   "run_state" "public"."job_stream_status_run_state" not null,
   "incomplete_run_cause" "public"."job_stream_status_incomplete_run_cause",
   "transitioned_at" timestamp(6) with time zone not null,
+  "metadata" jsonb,
   constraint "stream_statuses_pkey" primary key ("id")
 );
 create table "public"."sync_stats" (
