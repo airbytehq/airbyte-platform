@@ -18,7 +18,9 @@
 
 .focusable {
   scroll-margin-top: variables.$spacing-2xl;
-  transition: background-color 1s, box-shadow 1s ease;
+  transition:
+    background-color 1s,
+    box-shadow 1s ease;
 
   &--focused {
     background-color: colors.$yellow-50;

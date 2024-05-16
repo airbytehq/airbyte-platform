@@ -10,10 +10,17 @@ interface FieldSelectionStatusCellProps {
 }
 
 export const SelectedFieldsCell: React.FC<FieldSelectionStatusCellProps> = ({ row }) => {
-  const { streamNode, traversedFields } = row.original;
+  const {
+    streamNode: { config },
+    traversedFields,
+  } = row.original;
 
-  const selectedFieldCount = streamNode.config?.selectedFields?.length ?? (traversedFields?.length || 0);
   const totalFieldCount = traversedFields?.length || 0;
+  const selectedFieldCount = config?.fieldSelectionEnabled
+    ? config?.selectedFields?.length === 0
+      ? totalFieldCount
+      : config?.selectedFields?.length
+    : totalFieldCount;
 
   return (
     <Text>
