@@ -44,7 +44,7 @@ class KubePodClient(
   @Named("specPodFactory") private val specPodFactory: ConnectorPodFactory,
 ) : PodClient {
   override fun podsExistForAutoId(autoId: UUID): Boolean {
-    return kubePodLauncher.podsExist(labeler.getAutoIdLabels(autoId))
+    return kubePodLauncher.podsRunning(labeler.getAutoIdLabels(autoId))
   }
 
   @Trace(operationName = LAUNCH_REPLICATION_OPERATION_NAME)
