@@ -48,9 +48,6 @@ import io.airbyte.config.SyncStats;
 import io.airbyte.config.persistence.ActorDefinitionVersionHelper;
 import io.airbyte.config.persistence.ConfigNotFoundException;
 import io.airbyte.config.persistence.ConfigRepository;
-import io.airbyte.config.persistence.StreamRefreshesRepository;
-import io.airbyte.config.persistence.domain.StreamRefresh;
-import io.airbyte.db.instance.configs.jooq.generated.enums.RefreshType;
 import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.featureflag.TestClient;
 import io.airbyte.persistence.job.JobPersistence;
@@ -58,6 +55,7 @@ import io.airbyte.persistence.job.WorkspaceHelper;
 import io.airbyte.persistence.job.models.Attempt;
 import io.airbyte.persistence.job.models.Job;
 import io.airbyte.persistence.job.tracker.JobTracker.JobState;
+import io.airbyte.protocol.models.AirbyteStream;
 import io.airbyte.protocol.models.CatalogHelpers;
 import io.airbyte.protocol.models.ConfiguredAirbyteCatalog;
 import io.airbyte.protocol.models.ConfiguredAirbyteStream;
@@ -65,10 +63,10 @@ import io.airbyte.protocol.models.ConnectorSpecification;
 import io.airbyte.protocol.models.DestinationSyncMode;
 import io.airbyte.protocol.models.Field;
 import io.airbyte.protocol.models.JsonSchemaType;
+import io.airbyte.protocol.models.StreamDescriptor;
 import io.airbyte.protocol.models.SyncMode;
 import io.airbyte.validation.json.JsonValidationException;
 import java.io.IOException;
-import java.time.OffsetDateTime;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
@@ -202,7 +200,6 @@ class JobTrackerTest {
   private WorkspaceHelper workspaceHelper;
   private ActorDefinitionVersionHelper actorDefinitionVersionHelper;
   private FeatureFlagClient featureFlagClient;
-  private StreamRefreshesRepository streamRefreshesRepository;
   private JobTracker jobTracker;
 
   @BeforeEach
@@ -213,9 +210,7 @@ class JobTrackerTest {
     trackingClient = mock(TrackingClient.class);
     actorDefinitionVersionHelper = mock(ActorDefinitionVersionHelper.class);
     featureFlagClient = mock(TestClient.class);
-    streamRefreshesRepository = mock(StreamRefreshesRepository.class);
-    jobTracker = new JobTracker(configRepository, jobPersistence, workspaceHelper, trackingClient, actorDefinitionVersionHelper, featureFlagClient,
-        streamRefreshesRepository);
+    jobTracker = new JobTracker(configRepository, jobPersistence, workspaceHelper, trackingClient, actorDefinitionVersionHelper, featureFlagClient);
   }
 
   @Test
@@ -340,20 +335,6 @@ class JobTrackerTest {
 
   @Test
   void testTrackRefresh() throws ConfigNotFoundException, IOException, JsonValidationException {
-    final var streamRefreshes = CATALOG
-        .getStreams()
-        .stream()
-        .map(
-            s -> new StreamRefresh(
-                UUID.randomUUID(),
-                CONNECTION_ID,
-                s.getStream().getName(),
-                s.getStream().getNamespace(),
-                OffsetDateTime.now(),
-                RefreshType.TRUNCATE))
-        .toList();
-    when(streamRefreshesRepository.findByConnectionId(any()))
-        .thenReturn(streamRefreshes);
     final Map<String, Object> expectedExtraMetadata = MoreMaps.merge(
         SYNC_CONFIG_METADATA,
         Map.of("refresh_types", List.of(RefreshStream.RefreshType.TRUNCATE.toString())));
@@ -659,6 +640,7 @@ class JobTrackerTest {
 
     final ConfiguredAirbyteCatalog catalog = new ConfiguredAirbyteCatalog().withStreams(List.of(
         new ConfiguredAirbyteStream()
+            .withStream(new AirbyteStream().withName("stream").withNamespace("namespace"))
             .withSyncMode(SyncMode.FULL_REFRESH)
             .withDestinationSyncMode(DestinationSyncMode.APPEND)));
 
@@ -676,7 +658,13 @@ class JobTrackerTest {
     }
     if (configType == ConfigType.REFRESH) {
       final RefreshConfig refreshConfig = new RefreshConfig()
-          .withConfiguredAirbyteCatalog(catalog);
+          .withConfiguredAirbyteCatalog(catalog)
+          .withStreamsToRefresh(
+              catalog.getStreams()
+                  .stream()
+                  .map(s -> new RefreshStream().withRefreshType(RefreshStream.RefreshType.TRUNCATE)
+                      .withStreamDescriptor(new StreamDescriptor().withName(s.getStream().getName()).withNamespace(s.getStream().getNamespace())))
+                  .toList());
       when(jobConfig.getRefresh()).thenReturn(refreshConfig);
     }
 
