@@ -57,6 +57,11 @@ import io.airbyte.api.model.generated.DestinationSyncMode;
 import io.airbyte.api.model.generated.FieldAdd;
 import io.airbyte.api.model.generated.FieldTransform;
 import io.airbyte.api.model.generated.InternalOperationResult;
+import io.airbyte.api.model.generated.JobAggregatedStats;
+import io.airbyte.api.model.generated.JobConfigType;
+import io.airbyte.api.model.generated.JobRead;
+import io.airbyte.api.model.generated.JobSyncResultRead;
+import io.airbyte.api.model.generated.JobWithAttemptsRead;
 import io.airbyte.api.model.generated.NamespaceDefinitionType;
 import io.airbyte.api.model.generated.ResourceRequirements;
 import io.airbyte.api.model.generated.SchemaChangeBackfillPreference;
@@ -75,6 +80,7 @@ import io.airbyte.commons.server.converters.ConfigurationUpdate;
 import io.airbyte.commons.server.errors.BadRequestException;
 import io.airbyte.commons.server.handlers.helpers.ActorDefinitionHandlerHelper;
 import io.airbyte.commons.server.handlers.helpers.CatalogConverter;
+import io.airbyte.commons.server.handlers.helpers.StatsAggregationHelper;
 import io.airbyte.commons.server.helpers.ConnectionHelpers;
 import io.airbyte.commons.server.scheduler.EventRunner;
 import io.airbyte.commons.server.validation.CatalogValidator;
@@ -137,7 +143,6 @@ import io.airbyte.persistence.job.models.AttemptWithJobInfo;
 import io.airbyte.persistence.job.models.Job;
 import io.airbyte.persistence.job.models.JobStatus;
 import io.airbyte.persistence.job.models.JobWithStatusAndTimestamp;
-import io.airbyte.persistence.job.models.JobsRecordsCommitted;
 import io.airbyte.protocol.models.CatalogHelpers;
 import io.airbyte.protocol.models.ConfiguredAirbyteCatalog;
 import io.airbyte.protocol.models.ConfiguredAirbyteStream;
@@ -149,9 +154,7 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.time.LocalDate;
-import java.time.LocalTime;
 import java.time.ZoneId;
-import java.time.ZonedDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -170,6 +173,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
+import org.mockito.MockedStatic;
 import org.mockito.Mockito;
 
 class ConnectionsHandlerTest {
@@ -1680,80 +1684,74 @@ class ConnectionsHandlerTest {
     class GetConnectionDataHistory {
 
       @Test
-      @DisplayName("Handles empty history response")
-      void testDataHistoryWithEmptyResponse() throws IOException {
-        // test that when getConnectionDataHistory is returned an empty list of attempts, the response
-        // contains 30 entries all set to 0 recordsCommitted
-        final ConnectionRead connectionRead = new ConnectionRead()
-            .connectionId(UUID.randomUUID())
-            .syncCatalog(new AirbyteCatalog().streams(Collections.emptyList()));
-        final ConnectionDataHistoryRequestBody requestBody = new ConnectionDataHistoryRequestBody()
-            .connectionId(connectionRead.getConnectionId())
-            .timezone(TIMEZONE_LOS_ANGELES);
-        final LocalDate startDate = Instant.now().atZone(ZoneId.of(requestBody.getTimezone())).minusDays(29).toLocalDate();
-        final LocalDate endDate = LocalDate.now(ZoneId.of(requestBody.getTimezone()));
+      void testGetConnectionDataHistory() throws IOException {
+        final var connectionId = UUID.randomUUID();
+        final var numJobs = 10;
+        final ConnectionDataHistoryRequestBody apiReq = new ConnectionDataHistoryRequestBody().numberOfJobs(numJobs).connectionId(connectionId);
+        final long jobOneId = 1L;
+        final long jobTwoId = 2L;
 
-        final List<ConnectionDataHistoryReadItem> actual = connectionsHandler.getConnectionDataHistory(requestBody);
-        // expected should be a list of items that has 30 entries, all with 0 recordsCommitted and each with
-        // a
-        // timestamp that is 1 day apart
-        final List<ConnectionDataHistoryReadItem> expected = generateEmptyConnectionDataHistoryReadList(startDate, endDate,
-            requestBody.getTimezone());
+        final Job jobOne = new Job(1, ConfigType.SYNC, connectionId.toString(), null, List.of(), JobStatus.SUCCEEDED, 0L, 0L, 0L);
+        final Job jobTwo = new Job(2, ConfigType.SYNC, connectionId.toString(), null, List.of(), JobStatus.FAILED, 0L, 0L, 0L);
 
-        assertEquals(expected, actual);
-      }
+        when(jobPersistence.listJobs(
+            Set.of(ConfigType.SYNC),
+            Set.of(JobStatus.SUCCEEDED, JobStatus.FAILED),
+            apiReq.getConnectionId().toString(),
+            apiReq.getNumberOfJobs())).thenReturn(List.of(jobOne, jobTwo));
 
-      @Test
-      @DisplayName("Aggregates data correctly")
-      void testDataHistoryAggregation() throws IOException {
-        final UUID connectionId = UUID.randomUUID();
+        final long jobOneBytesCommitted = 12345L;
+        final long jobOneBytesEmitted = 23456L;
+        final long jobOneRecordsCommitted = 19L;
+        final long jobOneRecordsEmmitted = 20L;
+        final long jobOneCreatedAt = 1000L;
+        final long jobOneUpdatedAt = 2000L;
+        final long jobTwoCreatedAt = 3000L;
+        final long jobTwoUpdatedAt = 4000L;
+        final long jobTwoBytesCommitted = 98765L;
+        final long jobTwoBytesEmmitted = 87654L;
+        final long jobTwoRecordsCommitted = 50L;
+        final long jobTwoRecordsEmittted = 60L;
+        try (MockedStatic<StatsAggregationHelper> mockStatsAggregationHelper = Mockito.mockStatic(StatsAggregationHelper.class)) {
+          mockStatsAggregationHelper.when(() -> StatsAggregationHelper.getJobIdToJobWithAttemptsReadMap(Mockito.any(), Mockito.any()))
+              .thenReturn(Map.of(
+                  jobOneId, new JobWithAttemptsRead().job(
+                      new JobRead().createdAt(jobOneCreatedAt).updatedAt(jobOneUpdatedAt).configType(JobConfigType.SYNC).aggregatedStats(
+                          new JobAggregatedStats()
+                              .bytesCommitted(jobOneBytesCommitted)
+                              .bytesEmitted(jobOneBytesEmitted)
+                              .recordsCommitted(jobOneRecordsCommitted)
+                              .recordsEmitted(jobOneRecordsEmmitted))),
+                  jobTwoId, new JobWithAttemptsRead().job(
+                      new JobRead().createdAt(jobTwoCreatedAt).updatedAt(jobTwoUpdatedAt).configType(JobConfigType.SYNC).aggregatedStats(
+                          new JobAggregatedStats()
+                              .bytesCommitted(jobTwoBytesCommitted)
+                              .bytesEmitted(jobTwoBytesEmmitted)
+                              .recordsCommitted(jobTwoRecordsCommitted)
+                              .recordsEmitted(jobTwoRecordsEmittted)))));
 
-        final ZonedDateTime endTimeZoned = ZonedDateTime.now(ZoneId.of(TIMEZONE_LOS_ANGELES)).with(LocalTime.MAX);
-        final Instant endTime = endTimeZoned.toInstant();
+          List<JobSyncResultRead> expected = List.of(
+              new JobSyncResultRead()
+                  .configType(JobConfigType.SYNC)
+                  .jobId(jobOneId)
+                  .bytesCommitted(jobOneBytesCommitted)
+                  .bytesEmitted(jobOneBytesEmitted)
+                  .recordsCommitted(jobOneRecordsCommitted)
+                  .recordsEmitted(jobOneRecordsEmmitted)
+                  .jobCreatedAt(jobOneCreatedAt)
+                  .jobUpdatedAt(jobOneUpdatedAt),
+              new JobSyncResultRead()
+                  .configType(JobConfigType.SYNC)
+                  .jobId(jobTwoId)
+                  .bytesCommitted(jobTwoBytesCommitted)
+                  .bytesEmitted(jobTwoBytesEmmitted)
+                  .recordsCommitted(jobTwoRecordsCommitted)
+                  .recordsEmitted(jobTwoRecordsEmittted)
+                  .jobCreatedAt(jobTwoCreatedAt)
+                  .jobUpdatedAt(jobTwoUpdatedAt));
 
-        final ZonedDateTime startTimeZoned = endTimeZoned.minusDays(29).with(LocalTime.MIN);
-        final Instant startTime = startTimeZoned.toInstant();
-
-        final long attempt1Records = 100L;
-        final long attempt2Records = 150L;
-        final long attempt3Records = 200L;
-
-        // First Attempt - Day 1
-        final Attempt attempt1 = generateMockAttempt(startTime.plus(1, ChronoUnit.DAYS), attempt1Records); // 100 records
-        final AttemptWithJobInfo attemptWithJobInfo1 = new AttemptWithJobInfo(attempt1, generateMockJob(connectionId, attempt1));
-
-        // Second Attempt - Same Day as First
-        final Attempt attempt2 = generateMockAttempt(startTime.plus(1, ChronoUnit.DAYS), attempt2Records); // 150 records
-        final AttemptWithJobInfo attemptWithJobInfo2 = new AttemptWithJobInfo(attempt2, generateMockJob(connectionId, attempt2));
-
-        // Third Attempt - Different Day
-        final Attempt attempt3 = generateMockAttempt(startTime.plus(2, ChronoUnit.DAYS), attempt3Records); // 200 records
-        final AttemptWithJobInfo attemptWithJobInfo3 = new AttemptWithJobInfo(attempt3, generateMockJob(connectionId, attempt3));
-
-        final List<AttemptWithJobInfo> attempts = Arrays.asList(attemptWithJobInfo1, attemptWithJobInfo2, attemptWithJobInfo3);
-        final List<JobsRecordsCommitted> jobsAndRecords = attempts.stream().map(attempt -> new JobsRecordsCommitted(
-            attempt.getAttempt().getAttemptNumber(),
-            attempt.getJobInfo().getId(),
-            attempt.getAttempt().getOutput().map(output -> output.getSync().getStandardSyncSummary().getTotalStats().getRecordsCommitted())
-                .orElse(0L),
-            attempt.getAttempt().getEndedAtInSecond().orElse(0L))).toList();
-
-        when(jobPersistence.listRecordsCommittedForConnectionAfterTimestamp(eq(connectionId), any(Instant.class)))
-            .thenReturn(jobsAndRecords);
-
-        final ConnectionDataHistoryRequestBody requestBody = new ConnectionDataHistoryRequestBody()
-            .connectionId(connectionId)
-            .timezone(TIMEZONE_LOS_ANGELES);
-        final List<ConnectionDataHistoryReadItem> actual = connectionsHandler.getConnectionDataHistory(requestBody);
-
-        final List<ConnectionDataHistoryReadItem> expected = generateEmptyConnectionDataHistoryReadList(
-            startTime.atZone(ZoneId.of(requestBody.getTimezone())).toLocalDate(),
-            endTime.atZone(ZoneId.of(requestBody.getTimezone())).toLocalDate(),
-            requestBody.getTimezone());
-        expected.get(1).setRecordsCommitted(attempt1Records + attempt2Records);
-        expected.get(2).setRecordsCommitted(attempt3Records);
-
-        assertEquals(expected, actual);
+          assertEquals(expected, connectionsHandler.getConnectionDataHistory(apiReq));
+        }
       }
 
     }

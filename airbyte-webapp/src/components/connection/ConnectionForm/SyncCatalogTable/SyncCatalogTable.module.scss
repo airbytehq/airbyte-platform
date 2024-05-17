@@ -26,7 +26,7 @@ $row-height: 40px;
   padding: variables.$spacing-md variables.$spacing-lg;
   white-space: nowrap;
   background-color: colors.$grey-50;
-  border-top: variables.$border-thin solid colors.$grey-200 ;
+  border-top: variables.$border-thin solid colors.$grey-200;
 }
 
 // --------- <tr/> ---------
@@ -68,14 +68,14 @@ $row-height: 40px;
   min-width: 270px;
 }
 
-.pkCell, .cursorCell {
+.pkCell,
+.cursorCell {
   width: 10%;
 }
 
 .amountOfFieldsCell {
   width: 5%;
 }
-
 
 // checkbox
 .indeterminate {

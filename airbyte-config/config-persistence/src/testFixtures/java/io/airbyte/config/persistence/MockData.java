@@ -147,6 +147,7 @@ public class MockData {
   static final UUID PERMISSION_ID_5 = UUID.randomUUID();
   static final UUID PERMISSION_ID_6 = UUID.randomUUID();
   static final UUID PERMISSION_ID_7 = UUID.randomUUID();
+  static final UUID PERMISSION_ID_8 = UUID.randomUUID();
 
   static final UUID ORGANIZATION_ID_1 = UUID.randomUUID();
   static final UUID ORGANIZATION_ID_2 = UUID.randomUUID();
@@ -235,6 +236,12 @@ public class MockData {
       .withUserId(CREATOR_USER_ID_5)
       .withOrganizationId(ORGANIZATION_ID_2)
       .withPermissionType(PermissionType.ORGANIZATION_READER);
+
+  public static final Permission permission8 = new Permission()
+      .withPermissionId(PERMISSION_ID_8)
+      .withUserId(CREATOR_USER_ID_1)
+      .withOrganizationId(DEFAULT_ORGANIZATION_ID)
+      .withPermissionType(PermissionType.ORGANIZATION_ADMIN);
 
   public static List<User> users() {
     final User user1 = new User()
@@ -329,7 +336,7 @@ public class MockData {
   }
 
   public static List<Permission> permissions() {
-    return Arrays.asList(permission1, permission2, permission3, permission4, permission5, permission6, permission7);
+    return Arrays.asList(permission1, permission2, permission3, permission4, permission5, permission6, permission7, permission8);
   }
 
   public static List<Organization> organizations() {

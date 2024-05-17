@@ -17,6 +17,7 @@ import {
   JobStatus,
   WebBackendConnectionRead,
   JobReadList,
+  RefreshMode,
 } from "core/api/types/AirbyteClient";
 import { useConnectionEditService } from "hooks/services/ConnectionEdit/ConnectionEditService";
 
@@ -27,7 +28,13 @@ interface ConnectionSyncContext {
   jobSyncRunning: boolean;
   cancelJob: (() => Promise<void>) | undefined;
   cancelStarting: boolean;
-  refreshStreams: (streams?: ConnectionStream[]) => Promise<void>;
+  refreshStreams: ({
+    streams,
+    refreshMode,
+  }: {
+    streams?: ConnectionStream[];
+    refreshMode: RefreshMode;
+  }) => Promise<void>;
   refreshStarting: boolean;
   resetStreams: (streams?: ConnectionStream[]) => Promise<void>;
   resetStarting: boolean;

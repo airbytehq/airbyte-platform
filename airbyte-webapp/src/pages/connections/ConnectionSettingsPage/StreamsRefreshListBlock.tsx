@@ -1,6 +1,5 @@
 import classNames from "classnames";
 import React, { useState } from "react";
-import { useFormContext } from "react-hook-form";
 import { FormattedMessage } from "react-intl";
 import { Virtuoso } from "react-virtuoso";
 
@@ -10,25 +9,16 @@ import { Text } from "components/ui/Text";
 
 import { ConnectionStream } from "core/api/types/AirbyteClient";
 
-import { ConnectionRefreshFormValues } from "./ConnectionRefreshModal";
 import styles from "./StreamsRefreshListBlock.module.scss";
 
 interface StreamsRefreshListBlockProps {
-  streamsSupportingMergeRefresh: ConnectionStream[];
-  streamsSupportingTruncateRefresh: ConnectionStream[];
+  streamsToList: ConnectionStream[];
   totalStreams: number;
 }
 
-export const StreamsRefreshListBlock: React.FC<StreamsRefreshListBlockProps> = ({
-  streamsSupportingMergeRefresh,
-  streamsSupportingTruncateRefresh,
-  totalStreams,
-}) => {
+export const StreamsRefreshListBlock: React.FC<StreamsRefreshListBlockProps> = ({ streamsToList, totalStreams }) => {
   const [isExpanded, setIsExpanded] = useState(false);
-  const { watch } = useFormContext<ConnectionRefreshFormValues>();
-  const refreshType = watch("refreshType");
 
-  const streamsToList = refreshType === "merge" ? streamsSupportingMergeRefresh : streamsSupportingTruncateRefresh;
   const initialStreamsCount = 5;
 
   const visibleStreams = isExpanded ? streamsToList : streamsToList.slice(0, initialStreamsCount);

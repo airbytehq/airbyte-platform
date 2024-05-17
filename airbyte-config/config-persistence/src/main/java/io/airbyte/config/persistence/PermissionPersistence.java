@@ -149,6 +149,17 @@ public class PermissionPersistence {
         .and(PERMISSION.USER_ID.eq(userId)));
   }
 
+  public Boolean isUserOrganizationAdmin(final UUID userId) throws IOException {
+    return this.database.query(ctx -> isUserOrganizationAdmin(ctx, userId));
+  }
+
+  private Boolean isUserOrganizationAdmin(final DSLContext ctx, final UUID userId) {
+    return ctx.fetchExists(select()
+        .from(PERMISSION)
+        .where(PERMISSION.PERMISSION_TYPE.eq(io.airbyte.db.instance.configs.jooq.generated.enums.PermissionType.organization_admin))
+        .and(PERMISSION.USER_ID.eq(userId)));
+  }
+
   public Boolean isAuthUserInstanceAdmin(final String authUserId) throws IOException {
     return this.database.query(ctx -> isAuthUserInstanceAdmin(ctx, authUserId));
   }

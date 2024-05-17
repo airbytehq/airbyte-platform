@@ -239,6 +239,8 @@ public interface JobPersistence {
    */
   List<Job> listJobs(Set<ConfigType> configTypes, String configId, int limit) throws IOException;
 
+  List<Job> listJobs(Set<ConfigType> configTypes, Set<JobStatus> jobStatuses, String configId, int pagesize) throws IOException;
+
   /**
    * List jobs with filters. Pageable.
    *
@@ -291,6 +293,15 @@ public interface JobPersistence {
    * @return List of jobs that have attempts after the provided timestamp
    */
   List<Job> listJobs(ConfigType configType, Instant attemptEndedAtTimestamp) throws IOException;
+
+  /**
+   * List jobs based on job IDs, nothing more.
+   *
+   * @param jobIds the set of Job ids to list jobs for
+   * @return list of jobs
+   * @throws IOException you never know
+   */
+  List<Job> listJobs(final Set<Long> jobIds) throws IOException;
 
   /**
    * List jobs with id.

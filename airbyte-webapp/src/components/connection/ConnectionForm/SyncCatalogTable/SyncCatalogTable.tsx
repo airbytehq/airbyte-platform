@@ -12,7 +12,7 @@ import {
 } from "@tanstack/react-table";
 import classnames from "classnames";
 import set from "lodash/set";
-import React, { FC, useCallback, useEffect, useMemo, useState } from "react";
+import React, { FC, useCallback, useEffect, useMemo, useState, useDeferredValue } from "react";
 import { useFieldArray, useFormContext, useWatch } from "react-hook-form";
 import { FormattedMessage, useIntl } from "react-intl";
 import { ItemProps, TableComponents, TableVirtuoso } from "react-virtuoso";
@@ -89,6 +89,7 @@ export const SyncCatalogTable: FC = () => {
   const [expanded, setExpanded] = React.useState<ExpandedState>({});
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
   const [filtering, setFiltering] = useState("");
+  const deferredFilteringValue = useDeferredValue(filtering);
 
   // Update stream
   const onUpdateStreamConfigWithStreamNode = useCallback(
@@ -201,7 +202,7 @@ export const SyncCatalogTable: FC = () => {
       getSubRows: getStreamFieldRows,
       state: {
         expanded,
-        globalFilter: filtering,
+        globalFilter: deferredFilteringValue,
         columnFilters,
         columnVisibility: {
           "stream.selected": false,

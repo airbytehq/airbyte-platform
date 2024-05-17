@@ -33,6 +33,7 @@ import io.airbyte.config.JobSyncConfig.NamespaceDefinitionType;
 import io.airbyte.config.Metadata;
 import io.airbyte.config.NormalizationSummary;
 import io.airbyte.config.RefreshConfig;
+import io.airbyte.config.RefreshStream;
 import io.airbyte.config.Schedule;
 import io.airbyte.config.Schedule.TimeUnit;
 import io.airbyte.config.StandardCheckConnectionOutput;
@@ -47,6 +48,9 @@ import io.airbyte.config.SyncStats;
 import io.airbyte.config.persistence.ActorDefinitionVersionHelper;
 import io.airbyte.config.persistence.ConfigNotFoundException;
 import io.airbyte.config.persistence.ConfigRepository;
+import io.airbyte.config.persistence.StreamRefreshesRepository;
+import io.airbyte.config.persistence.domain.StreamRefresh;
+import io.airbyte.db.instance.configs.jooq.generated.enums.RefreshType;
 import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.featureflag.TestClient;
 import io.airbyte.persistence.job.JobPersistence;
@@ -64,6 +68,7 @@ import io.airbyte.protocol.models.JsonSchemaType;
 import io.airbyte.protocol.models.SyncMode;
 import io.airbyte.validation.json.JsonValidationException;
 import java.io.IOException;
+import java.time.OffsetDateTime;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
@@ -197,6 +202,7 @@ class JobTrackerTest {
   private WorkspaceHelper workspaceHelper;
   private ActorDefinitionVersionHelper actorDefinitionVersionHelper;
   private FeatureFlagClient featureFlagClient;
+  private StreamRefreshesRepository streamRefreshesRepository;
   private JobTracker jobTracker;
 
   @BeforeEach
@@ -207,7 +213,9 @@ class JobTrackerTest {
     trackingClient = mock(TrackingClient.class);
     actorDefinitionVersionHelper = mock(ActorDefinitionVersionHelper.class);
     featureFlagClient = mock(TestClient.class);
-    jobTracker = new JobTracker(configRepository, jobPersistence, workspaceHelper, trackingClient, actorDefinitionVersionHelper, featureFlagClient);
+    streamRefreshesRepository = mock(StreamRefreshesRepository.class);
+    jobTracker = new JobTracker(configRepository, jobPersistence, workspaceHelper, trackingClient, actorDefinitionVersionHelper, featureFlagClient,
+        streamRefreshesRepository);
   }
 
   @Test
@@ -332,7 +340,24 @@ class JobTrackerTest {
 
   @Test
   void testTrackRefresh() throws ConfigNotFoundException, IOException, JsonValidationException {
-    testAsynchronous(ConfigType.REFRESH, SYNC_CONFIG_METADATA);
+    final var streamRefreshes = CATALOG
+        .getStreams()
+        .stream()
+        .map(
+            s -> new StreamRefresh(
+                UUID.randomUUID(),
+                CONNECTION_ID,
+                s.getStream().getName(),
+                s.getStream().getNamespace(),
+                OffsetDateTime.now(),
+                RefreshType.TRUNCATE))
+        .toList();
+    when(streamRefreshesRepository.findByConnectionId(any()))
+        .thenReturn(streamRefreshes);
+    final Map<String, Object> expectedExtraMetadata = MoreMaps.merge(
+        SYNC_CONFIG_METADATA,
+        Map.of("refresh_types", List.of(RefreshStream.RefreshType.TRUNCATE.toString())));
+    testAsynchronous(ConfigType.REFRESH, expectedExtraMetadata);
   }
 
   @Test

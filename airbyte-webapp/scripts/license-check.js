@@ -35,6 +35,7 @@ const ALLOWED_LICENSES = [
   "CC-BY-4.0",
   "ISC",
   "MIT",
+  "MIT AND ISC",
   "MPL-2.0",
   "Public Domain",
   "Python-2.0",

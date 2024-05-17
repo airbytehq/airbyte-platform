@@ -193,14 +193,17 @@ describe("Connection - sync modes", () => {
       });
       streamDetails.close();
 
-      saveConnectionAndAssertStreams({
-        namespace: "public",
-        name: "users",
-        config: {
-          syncMode: SyncMode.full_refresh,
-          destinationSyncMode: DestinationSyncMode.append,
+      saveConnectionAndAssertStreams(
+        {
+          namespace: "public",
+          name: "users",
+          config: {
+            syncMode: SyncMode.full_refresh,
+            destinationSyncMode: DestinationSyncMode.append,
+          },
         },
-      });
+        { expectModal: false }
+      );
 
       // Verify changes after save
       usersStreamRow.hasSelectedSyncMode(SyncMode.full_refresh, DestinationSyncMode.append);

@@ -54,6 +54,7 @@ import io.airbyte.validation.json.JsonValidationException;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.function.Supplier;
@@ -142,7 +143,8 @@ class UserHandlerTest {
         .email(USER_EMAIL)
         .companyName(null)
         .metadata(null)
-        .news(false);
+        .news(false)
+        .metadata(Map.of());
 
     assertEquals(expectedRead, actualRead);
   }

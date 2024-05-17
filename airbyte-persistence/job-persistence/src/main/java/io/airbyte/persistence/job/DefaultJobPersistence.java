@@ -917,6 +917,26 @@ public class DefaultJobPersistence implements JobPersistence {
   }
 
   @Override
+  public List<Job> listJobs(final Set<ConfigType> configTypes, final Set<JobStatus> jobStatuses, final String configId, final int pagesize)
+      throws IOException {
+    return jobDatabase.query(ctx -> {
+      final String jobsSubquery = "(" + ctx.select(DSL.asterisk()).from(JOBS)
+          .where(JOBS.CONFIG_TYPE.in(configTypeSqlNames(configTypes)))
+          .and(configId == null ? DSL.noCondition()
+              : JOBS.SCOPE.eq(configId))
+          .and(jobStatuses == null ? DSL.noCondition()
+              : JOBS.STATUS.in(jobStatuses.stream()
+                  .map(status -> io.airbyte.db.instance.jobs.jooq.generated.enums.JobStatus.lookupLiteral(toSqlName(status)))
+                  .collect(Collectors.toList())))
+          .orderBy(JOBS.CREATED_AT.desc(), JOBS.ID.desc())
+          .limit(pagesize)
+          .getSQL(ParamType.INLINED) + ") AS jobs";
+
+      return getJobsFromResult(ctx.fetch(jobSelectAndJoin(jobsSubquery) + ORDER_BY_JOB_TIME_ATTEMPT_TIME));
+    });
+  }
+
+  @Override
   public List<Job> listJobs(final Set<ConfigType> configTypes,
                             final String configId,
                             final int limit,
@@ -1005,6 +1025,18 @@ public class DefaultJobPersistence implements JobPersistence {
             + "CAST(config_type AS VARCHAR) =  ? AND "
             + " attempts.ended_at > ? ORDER BY jobs.created_at ASC, attempts.created_at ASC", toSqlName(configType),
             timeConvertedIntoLocalDateTime)));
+  }
+
+  @Override
+  public List<Job> listJobs(final Set<Long> jobIds) throws IOException {
+    return jobDatabase.query(ctx -> {
+      final String jobsSubquery = "(" + ctx.select(DSL.asterisk()).from(JOBS)
+          .where(JOBS.ID.in(jobIds))
+          .orderBy(JOBS.CREATED_AT.desc(), JOBS.ID.desc())
+          .getSQL(ParamType.INLINED) + ") AS jobs";
+
+      return getJobsFromResult(ctx.fetch(jobSelectAndJoin(jobsSubquery)));
+    });
   }
 
   @Override

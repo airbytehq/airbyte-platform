@@ -12,6 +12,7 @@ import io.airbyte.commons.server.support.AuthenticationHttpHeaders.CONNECTION_ID
 import io.airbyte.commons.server.support.AuthenticationHttpHeaders.DESTINATION_ID_HEADER
 import io.airbyte.commons.server.support.AuthenticationHttpHeaders.JOB_ID_HEADER
 import io.airbyte.commons.server.support.AuthenticationHttpHeaders.ORGANIZATION_ID_HEADER
+import io.airbyte.commons.server.support.AuthenticationHttpHeaders.PERMISSION_ID_HEADER
 import io.airbyte.commons.server.support.AuthenticationHttpHeaders.SOURCE_ID_HEADER
 import io.airbyte.commons.server.support.AuthenticationHttpHeaders.WORKSPACE_IDS_HEADER
 import io.airbyte.commons.server.support.CurrentUserService
@@ -59,6 +60,9 @@ class ApiAuthorizationHelper(
         }
         Scope.ORGANIZATION -> {
           throw ForbiddenProblem("Cannot resolve organization Ids to workspace Ids.")
+        }
+        Scope.PERMISSION -> {
+          buildPropertiesMapForPermission(ids.first())
         }
       }
     return authorizationHeaderResolver.resolveWorkspace(properties)
@@ -169,6 +173,17 @@ class ApiAuthorizationHelper(
     }
   }
 
+  fun isUserOrganizationAdminOrThrow(userId: UUID) {
+    if (permissionHandler.isUserInstanceAdmin(userId)) {
+      logger.debug { "User $userId is an instance admin, short circuiting auth check." }
+      return
+    }
+    if (permissionHandler.isUserOrganizationAdmin(userId)) {
+      return
+    }
+    throw ForbiddenProblem("User does not have the required permissions to fulfill the request.")
+  }
+
   private fun checkIfAnyPermissionGranted(
     resolvedWorkspaceIds: List<UUID>,
     userId: UUID,
@@ -236,7 +251,14 @@ class ApiAuthorizationHelper(
       Scope.ORGANIZATION -> {
         buildPropertiesMapForOrganization(ids.first())
       }
+      Scope.PERMISSION -> {
+        buildPropertiesMapForPermission(ids.first())
+      }
     }
+  }
+
+  private fun buildPropertiesMapForPermission(id: String): Map<String, String> {
+    return mapOf(Scope.PERMISSION.mappedHeaderProperty to id)
   }
 
   private fun buildPropertiesMapForOrganization(id: String): Map<String, String> {
@@ -272,4 +294,5 @@ enum class Scope(val mappedHeaderProperty: String) {
   DESTINATION(DESTINATION_ID_HEADER),
   JOB(JOB_ID_HEADER),
   ORGANIZATION(ORGANIZATION_ID_HEADER),
+  PERMISSION(PERMISSION_ID_HEADER),
 }

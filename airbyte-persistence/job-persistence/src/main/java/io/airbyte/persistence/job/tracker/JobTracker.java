@@ -23,7 +23,6 @@ import io.airbyte.config.ActorDefinitionVersion;
 import io.airbyte.config.AttemptSyncConfig;
 import io.airbyte.config.ConnectorJobOutput;
 import io.airbyte.config.FailureReason;
-import io.airbyte.config.JobConfig;
 import io.airbyte.config.JobConfig.ConfigType;
 import io.airbyte.config.JobConfigProxy;
 import io.airbyte.config.StandardCheckConnectionOutput;
@@ -35,6 +34,9 @@ import io.airbyte.config.StandardWorkspace;
 import io.airbyte.config.persistence.ActorDefinitionVersionHelper;
 import io.airbyte.config.persistence.ConfigNotFoundException;
 import io.airbyte.config.persistence.ConfigRepository;
+import io.airbyte.config.persistence.StreamRefreshesRepository;
+import io.airbyte.config.persistence.domain.StreamRefresh;
+import io.airbyte.db.instance.configs.jooq.generated.enums.RefreshType;
 import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.featureflag.UseWorkloadApiForCheck;
 import io.airbyte.featureflag.UseWorkloadApiForDiscover;
@@ -57,6 +59,7 @@ import java.util.Map.Entry;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 /**
  * Tracking calls to each job type.
@@ -90,14 +93,16 @@ public class JobTracker {
   private final TrackingClient trackingClient;
   private final ActorDefinitionVersionHelper actorDefinitionVersionHelper;
   private final FeatureFlagClient featureFlagClient;
+  private final StreamRefreshesRepository streamRefreshesRepository;
 
   public JobTracker(final ConfigRepository configRepository,
                     final JobPersistence jobPersistence,
                     final TrackingClient trackingClient,
                     final ActorDefinitionVersionHelper actorDefinitionVersionHelper,
-                    final FeatureFlagClient featureFlagClient) {
+                    final FeatureFlagClient featureFlagClient,
+                    final StreamRefreshesRepository streamRefreshesRepository) {
     this(configRepository, jobPersistence, new WorkspaceHelper(configRepository, jobPersistence), trackingClient, actorDefinitionVersionHelper,
-        featureFlagClient);
+        featureFlagClient, streamRefreshesRepository);
   }
 
   @VisibleForTesting
@@ -106,13 +111,15 @@ public class JobTracker {
              final WorkspaceHelper workspaceHelper,
              final TrackingClient trackingClient,
              final ActorDefinitionVersionHelper actorDefinitionVersionHelper,
-             final FeatureFlagClient featureFlagClient) {
+             final FeatureFlagClient featureFlagClient,
+             final StreamRefreshesRepository streamRefreshesRepository) {
     this.configRepository = configRepository;
     this.jobPersistence = jobPersistence;
     this.workspaceHelper = workspaceHelper;
     this.trackingClient = trackingClient;
     this.actorDefinitionVersionHelper = actorDefinitionVersionHelper;
     this.featureFlagClient = featureFlagClient;
+    this.streamRefreshesRepository = streamRefreshesRepository;
   }
 
   /**
@@ -214,6 +221,7 @@ public class JobTracker {
    */
   public void trackSync(final Job job, final JobState jobState) {
     Exceptions.swallow(() -> {
+      final JobConfigProxy jobConfig = new JobConfigProxy(job.getConfig());
       final ConfigType configType = job.getConfigType();
       final boolean allowedJob = REPLICATION_TYPES.contains(configType);
       Preconditions.checkArgument(allowedJob, "Job type " + configType + " is not allowed!");
@@ -230,6 +238,7 @@ public class JobTracker {
       final StandardDestinationDefinition destinationDefinition = configRepository.getDestinationDefinitionFromConnection(connectionId);
       final ActorDefinitionVersion destinationVersion =
           actorDefinitionVersionHelper.getDestinationVersion(destinationDefinition, workspaceId, standardSync.getDestinationId());
+      final List<StreamRefresh> streamRefreshes = streamRefreshesRepository.findByConnectionId(connectionId);
 
       final List<Job> jobsHistory = jobPersistence.listJobsIncludingId(
           Set.of(ConfigType.SYNC, ConfigType.RESET_CONNECTION, ConfigType.REFRESH), connectionId.toString(), jobId, 2);
@@ -243,10 +252,11 @@ public class JobTracker {
       final Map<String, Object> syncMetadata = generateSyncMetadata(standardSync);
       final Map<String, Object> stateMetadata = generateStateMetadata(jobState);
       final Map<String, Object> syncConfigMetadata = generateSyncConfigMetadata(
-          job.getConfig(),
+          jobConfig,
           attemptSyncConfig.orElse(null),
           sourceVersion.getSpec().getConnectionSpecification(),
           destinationVersion.getSpec().getConnectionSpecification());
+      final Map<String, Object> refreshMetadata = generateRefreshMetadata(jobConfig, streamRefreshes);
 
       track(workspaceId,
           SYNC_EVENT,
@@ -257,7 +267,8 @@ public class JobTracker {
               destinationDefMetadata,
               syncMetadata,
               stateMetadata,
-              syncConfigMetadata));
+              syncConfigMetadata,
+              refreshMetadata));
     });
   }
 
@@ -307,8 +318,22 @@ public class JobTracker {
     });
   }
 
+  private Map<String, Object> generateRefreshMetadata(final JobConfigProxy jobConfig, final List<StreamRefresh> streamRefreshes) {
+    if (jobConfig.getConfigType() == ConfigType.REFRESH) {
+      final List<String> refreshTypes = streamRefreshes
+          .stream()
+          .map(r -> r.getRefreshType())
+          .collect(Collectors.toSet())
+          .stream()
+          .map(RefreshType::getLiteral)
+          .toList();
+      return Map.of("refresh_types", refreshTypes);
+    }
+    return Map.of();
+  }
+
   private Map<String, Object> generateSyncConfigMetadata(
-                                                         final JobConfig config,
+                                                         final JobConfigProxy config,
                                                          @Nullable final AttemptSyncConfig attemptSyncConfig,
                                                          final JsonNode sourceConfigSchema,
                                                          final JsonNode destinationConfigSchema) {
@@ -326,7 +351,7 @@ public class JobTracker {
             mapToJsonString(configToMetadata(destinationConfiguration, destinationConfigSchema)));
       }
 
-      final var configuredCatalog = new JobConfigProxy(config).getConfiguredCatalog();
+      final var configuredCatalog = config.getConfiguredCatalog();
       final Map<String, Object> catalogMetadata;
       if (configuredCatalog != null) {
         catalogMetadata = getCatalogMetadata(configuredCatalog);

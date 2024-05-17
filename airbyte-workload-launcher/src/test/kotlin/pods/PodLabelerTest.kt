@@ -139,7 +139,8 @@ class PodLabelerTest {
         passThroughLabels +
         labeler.getWorkloadLabels(workloadId) +
         labeler.getMutexLabels(mutexKey) +
-        labeler.getAutoIdLabels(autoId),
+        labeler.getAutoIdLabels(autoId) +
+        labeler.getPodSweeperLabels(),
     )
   }
 

@@ -125,7 +125,8 @@
     "ts-pattern": "^4.2.1",
     "typesafe-actions": "^5.1.0",
     "uuid": "^9.0.1",
-    "yup": "^0.32.11"
+    "yup": "^0.32.11",
+    "victory-vendor": "36.6.8"
   },
   "devDependencies": {
     "@airbyte/eslint-plugin": "link:packages/eslint-plugin",

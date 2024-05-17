@@ -1,6 +1,7 @@
 import type { Dayjs, ManipulateType } from "dayjs";
 
 import dayjs from "dayjs";
+import { useIntl } from "react-intl";
 
 /**
  * Given a `time`, this effectively increments the time forward in steps of `${value}${unit}` until the future is reached (I hope there's flying cars!
@@ -19,4 +20,19 @@ export const moveTimeToFutureByPeriod = (time: Dayjs, value: number, unit: Manip
     return time.add(msNeeded, "millisecond");
   }
   return time;
+};
+
+export const useFormatLengthOfTime = (lengthOfTimeMs: number) => {
+  const { formatMessage } = useIntl();
+
+  const start = dayjs(0);
+  const end = dayjs(lengthOfTimeMs);
+  const hours = Math.abs(end.diff(start, "hour"));
+  const minutes = Math.abs(end.diff(start, "minute")) - hours * 60;
+  const seconds = Math.abs(end.diff(start, "second")) - minutes * 60 - hours * 3600;
+
+  const strHours = hours ? formatMessage({ id: "sources.hour" }, { hour: hours }) : "";
+  const strMinutes = hours || minutes ? formatMessage({ id: "sources.minute" }, { minute: minutes }) : "";
+  const strSeconds = formatMessage({ id: "sources.second" }, { second: seconds });
+  return `${strHours}${strMinutes}${strSeconds}`;
 };
