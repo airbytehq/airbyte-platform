@@ -185,6 +185,7 @@ public class AttemptHandler {
           stats.getEstimatedRecords(), stats.getEstimatedBytes(),
           stats.getRecordsEmitted(), stats.getBytesEmitted(),
           stats.getRecordsCommitted(), stats.getBytesCommitted(),
+          requestBody.getConnectionId(),
           streamStats);
 
     } catch (final IOException ioe) {

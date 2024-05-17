@@ -214,6 +214,7 @@ public class DefaultJobPersistence implements JobPersistence {
   private static void saveToStreamStatsTableBatch(final OffsetDateTime now,
                                                   final List<StreamSyncStats> perStreamStats,
                                                   final Long attemptId,
+                                                  final UUID connectionId,
                                                   final DSLContext ctx) {
     final List<Query> queries = new ArrayList<>();
 
@@ -253,6 +254,7 @@ public class DefaultJobPersistence implements JobPersistence {
                 ctx.insertInto(STREAM_STATS)
                     .set(STREAM_STATS.ID, UUID.randomUUID())
                     .set(STREAM_STATS.ATTEMPT_ID, attemptId)
+                    .set(STREAM_STATS.CONNECTION_ID, connectionId)
                     .set(STREAM_STATS.STREAM_NAME, streamStats.getStreamName())
                     .set(STREAM_STATS.STREAM_NAMESPACE, streamStats.getStreamNamespace())
                     .set(STREAM_STATS.CREATED_AT, now)
@@ -720,6 +722,8 @@ public class DefaultJobPersistence implements JobPersistence {
       throws IOException {
     final OffsetDateTime now = OffsetDateTime.ofInstant(timeSupplier.get(), ZoneOffset.UTC);
 
+    final Job job = getJob(jobId);
+    final UUID connectionId = UUID.fromString(job.getScope());
     jobDatabase.transaction(ctx -> {
       ctx.update(ATTEMPTS)
           .set(ATTEMPTS.OUTPUT, JSONB.valueOf(Jsons.serialize(output)))
@@ -735,7 +739,7 @@ public class DefaultJobPersistence implements JobPersistence {
 
       final List<StreamSyncStats> streamSyncStats = output.getSync().getStandardSyncSummary().getStreamStats();
       if (CollectionUtils.isNotEmpty(streamSyncStats)) {
-        saveToStreamStatsTableBatch(now, output.getSync().getStandardSyncSummary().getStreamStats(), attemptId, ctx);
+        saveToStreamStatsTableBatch(now, output.getSync().getStandardSyncSummary().getStreamStats(), attemptId, connectionId, ctx);
       }
 
       final NormalizationSummary normalizationSummary = output.getSync().getNormalizationSummary();
@@ -765,6 +769,7 @@ public class DefaultJobPersistence implements JobPersistence {
                          final Long bytesEmitted,
                          final Long recordsCommitted,
                          final Long bytesCommitted,
+                         final UUID connectionId,
                          final List<StreamSyncStats> streamStats)
       throws IOException {
     final OffsetDateTime now = OffsetDateTime.ofInstant(timeSupplier.get(), ZoneOffset.UTC);
@@ -780,7 +785,7 @@ public class DefaultJobPersistence implements JobPersistence {
           .withBytesCommitted(bytesCommitted);
       saveToSyncStatsTable(now, syncStats, attemptId, ctx);
 
-      saveToStreamStatsTableBatch(now, streamStats, attemptId, ctx);
+      saveToStreamStatsTableBatch(now, streamStats, attemptId, connectionId, ctx);
       return null;
     });
 
