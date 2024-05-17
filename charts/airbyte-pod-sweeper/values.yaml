@@ -103,8 +103,9 @@ affinity: {}
 ##  podSweeper.timeToDeletePods.unsuccessful Time to remove pods on neither running nor succeeded status (minutes).
 timeToDeletePods:
   running: ""
-  succeeded: 120
-  unsuccessful: 1440
+  succeeded: 10
+  ## 2 hours - generally long enough for someone trying to reproduce an error to debug.
+  unsuccessful: 120
 
 replicaCount: 1
 
