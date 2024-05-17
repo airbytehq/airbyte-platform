@@ -3,6 +3,11 @@ import { useFormContext } from "react-hook-form";
 import { FormattedMessage } from "react-intl";
 
 import { FormConnectionFormValues } from "components/connection/ConnectionForm/formConfig";
+import {
+  appendChangesModes,
+  pruneUnsupportedModes,
+  replicateSourceModes,
+} from "components/connection/ConnectionForm/preferredSyncModes";
 import { RadioButtonTiles } from "components/connection/CreateConnection/RadioButtonTiles";
 import { updateStreamSyncMode } from "components/connection/syncCatalog/SyncCatalog/updateStreamSyncMode";
 import { SyncModeValue } from "components/connection/syncCatalog/SyncModeSelect";
@@ -68,16 +73,6 @@ const deletionRecordsOptions: ComponentProps<typeof RadioButtonTiles<IncrementOr
   },
 ];
 
-export const pruneUnsupportedModes = (
-  modes: Array<[SyncMode, DestinationSyncMode]>,
-  supportedSyncModes: SyncMode[],
-  supportedDestinationSyncModes: DestinationSyncMode[] | undefined
-) => {
-  return modes.filter(([syncMode, destinationSyncMode]) => {
-    return supportedSyncModes.includes(syncMode) && supportedDestinationSyncModes?.includes(destinationSyncMode);
-  });
-};
-
 export const getEnforcedDelivery = (outcomes: QuestionnaireOutcomes): Delivery | undefined => {
   if (outcomes.replicateSource.length === 0) {
     // there are no replicateSource choices; return appendChanges if present otherwise choice valid
@@ -120,23 +115,8 @@ export const SimplifiedSchemaQuestionnaire = () => {
 
   const questionnaireOutcomes = useMemo<QuestionnaireOutcomes>(
     () => ({
-      replicateSource: pruneUnsupportedModes(
-        [
-          [SyncMode.incremental, DestinationSyncMode.append_dedup],
-          [SyncMode.full_refresh, DestinationSyncMode.overwrite],
-          [SyncMode.incremental, DestinationSyncMode.append],
-        ],
-        supportedSyncModes,
-        supportedDestinationSyncModes
-      ),
-      appendChanges: pruneUnsupportedModes(
-        [
-          [SyncMode.incremental, DestinationSyncMode.append],
-          [SyncMode.full_refresh, DestinationSyncMode.append],
-        ],
-        supportedSyncModes,
-        supportedDestinationSyncModes
-      ),
+      replicateSource: pruneUnsupportedModes(replicateSourceModes, supportedSyncModes, supportedDestinationSyncModes),
+      appendChanges: pruneUnsupportedModes(appendChangesModes, supportedSyncModes, supportedDestinationSyncModes),
     }),
     [supportedSyncModes, supportedDestinationSyncModes]
   );
