@@ -59,9 +59,6 @@ spec:
           name: sweep-pod-script
         - mountPath: /.kube
           name: kube-config
-        {{- if .Values.extraVolumeMounts }}
-  {{ toYaml .Values.extraVolumeMounts | nindent 8 }}
-        {{- end }}
         command: ["/bin/bash", "-c", /script/sweep-pod.sh]
         {{- if .Values.resources }}
         resources: {{- toYaml .Values.resources | nindent 10 }}
@@ -100,6 +97,3 @@ spec:
         configMap:
           name: {{ include "common.names.fullname" . }}-sweep-pod-script
           defaultMode: 0755
-      {{- if .Values.extraVolumes }}
-{{ toYaml .Values.extraVolumes | nindent 6 }}
-      {{- end }}
