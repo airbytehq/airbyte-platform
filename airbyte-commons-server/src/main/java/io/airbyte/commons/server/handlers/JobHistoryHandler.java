@@ -63,6 +63,7 @@ import io.airbyte.validation.json.JsonValidationException;
 import jakarta.inject.Singleton;
 import java.io.IOException;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -147,7 +148,12 @@ public class JobHistoryHandler {
         : DEFAULT_PAGE_SIZE;
     final List<Job> jobs;
 
-    ApmTraceUtils.addTagsToTrace(Map.of(MetricTags.CONFIG_TYPES, configTypes.toString(), MetricTags.CONNECTION_ID, configId));
+    final HashMap<String, Object> tags = new HashMap<>(Map.of(MetricTags.CONFIG_TYPES, configTypes.toString()));
+    if (configId != null) {
+      tags.put(MetricTags.CONNECTION_ID, configId);
+    }
+    ApmTraceUtils.addTagsToTrace(tags);
+
     if (request.getIncludingJobId() != null) {
       jobs = jobPersistence.listJobsIncludingId(
           configTypes,
