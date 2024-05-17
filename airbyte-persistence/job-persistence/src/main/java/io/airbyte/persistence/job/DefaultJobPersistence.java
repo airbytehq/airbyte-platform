@@ -16,11 +16,13 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
+import datadog.trace.api.Trace;
 import io.airbyte.commons.enums.Enums;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.commons.protocol.migrations.v1.CatalogMigrationV1Helper;
 import io.airbyte.commons.resources.MoreResources;
 import io.airbyte.commons.text.Names;
+import io.airbyte.commons.timer.Stopwatch;
 import io.airbyte.commons.version.AirbyteProtocolVersion;
 import io.airbyte.commons.version.AirbyteProtocolVersionRange;
 import io.airbyte.commons.version.AirbyteVersion;
@@ -40,6 +42,7 @@ import io.airbyte.db.Database;
 import io.airbyte.db.ExceptionWrappingDatabase;
 import io.airbyte.db.instance.configs.jooq.generated.Tables;
 import io.airbyte.db.instance.jobs.jooq.generated.tables.records.JobsRecord;
+import io.airbyte.metrics.lib.ApmTraceUtils;
 import io.airbyte.persistence.job.models.Attempt;
 import io.airbyte.persistence.job.models.AttemptNormalizationStatus;
 import io.airbyte.persistence.job.models.AttemptStatus;
@@ -418,7 +421,7 @@ public class DefaultJobPersistence implements JobPersistence {
 
   private static Attempt getAttemptFromRecord(final Record record) {
     final String attemptOutputString = record.get("attempt_output", String.class);
-    return new Attempt(
+    final Attempt attempt = new Attempt(
         record.get(ATTEMPT_NUMBER, int.class),
         record.get(JOB_ID, Long.class),
         Path.of(record.get("log_path", String.class)),
@@ -434,6 +437,7 @@ public class DefaultJobPersistence implements JobPersistence {
         Optional.ofNullable(record.get("attempt_ended_at"))
             .map(value -> getEpoch(record, "attempt_ended_at"))
             .orElse(null));
+    return attempt;
   }
 
   private static JobOutput parseJobOutputFromString(final String jobOutputString) {
@@ -459,16 +463,23 @@ public class DefaultJobPersistence implements JobPersistence {
     // keeps results strictly in order so the sql query controls the sort
     final List<Job> jobs = new ArrayList<>();
     Job currentJob = null;
+    final Stopwatch jobStopwatch = new Stopwatch();
+    final Stopwatch attemptStopwatch = new Stopwatch();
     for (final Record entry : result) {
       if (currentJob == null || currentJob.getId() != entry.get(JOB_ID, Long.class)) {
-        currentJob = getJobFromRecord(entry);
+        try (var ignored = jobStopwatch.start()) {
+          currentJob = getJobFromRecord(entry);
+        }
         jobs.add(currentJob);
       }
       if (entry.getValue(ATTEMPT_NUMBER) != null) {
-        currentJob.getAttempts().add(getAttemptFromRecord(entry));
+        try (var ignored = attemptStopwatch.start()) {
+          currentJob.getAttempts().add(getAttemptFromRecord(entry));
+        }
       }
     }
-
+    ApmTraceUtils.addTagsToTrace(Map.of("get_job_from_record_time_in_nanos", jobStopwatch));
+    ApmTraceUtils.addTagsToTrace(Map.of("get_attempt_from_record_time_in_nanos", attemptStopwatch));
     return jobs;
   }
 
@@ -942,6 +953,7 @@ public class DefaultJobPersistence implements JobPersistence {
   }
 
   @Override
+  @Trace
   public List<Job> listJobs(final Set<ConfigType> configTypes,
                             final String configId,
                             final int limit,
@@ -1045,6 +1057,7 @@ public class DefaultJobPersistence implements JobPersistence {
   }
 
   @Override
+  @Trace
   public List<Job> listJobsIncludingId(final Set<ConfigType> configTypes, final String connectionId, final long includingJobId, final int pagesize)
       throws IOException {
     final Optional<OffsetDateTime> includingJobCreatedAt = jobDatabase.query(ctx -> ctx.select(JOBS.CREATED_AT).from(JOBS)

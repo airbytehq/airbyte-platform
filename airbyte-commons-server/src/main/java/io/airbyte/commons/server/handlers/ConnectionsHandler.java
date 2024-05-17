@@ -13,6 +13,7 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableMap.Builder;
 import com.google.common.collect.Lists;
+import datadog.trace.api.Trace;
 import io.airbyte.analytics.TrackingClient;
 import io.airbyte.api.model.generated.ActorDefinitionRequestBody;
 import io.airbyte.api.model.generated.AirbyteCatalog;
@@ -89,6 +90,7 @@ import io.airbyte.config.persistence.helper.CatalogGenerationSetter;
 import io.airbyte.featureflag.CheckWithCatalog;
 import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.featureflag.Workspace;
+import io.airbyte.metrics.lib.ApmTraceUtils;
 import io.airbyte.metrics.lib.MetricAttribute;
 import io.airbyte.metrics.lib.MetricClientFactory;
 import io.airbyte.metrics.lib.MetricTags;
@@ -685,11 +687,14 @@ public class ConnectionsHandler {
     }
   }
 
+  @Trace
   public ConnectionReadList listConnectionsForWorkspace(final WorkspaceIdRequestBody workspaceIdRequestBody)
       throws JsonValidationException, IOException, ConfigNotFoundException {
+    ApmTraceUtils.addTagsToTrace(Map.of(MetricTags.WORKSPACE_ID, workspaceIdRequestBody.getWorkspaceId().toString()));
     return listConnectionsForWorkspace(workspaceIdRequestBody, false);
   }
 
+  @Trace
   public ConnectionReadList listConnectionsForWorkspace(final WorkspaceIdRequestBody workspaceIdRequestBody, final boolean includeDeleted)
       throws JsonValidationException, IOException, ConfigNotFoundException {
     final List<ConnectionRead> connectionReads = Lists.newArrayList();
@@ -727,6 +732,7 @@ public class ConnectionsHandler {
     return new ConnectionReadList().connections(connectionReads);
   }
 
+  @Trace
   public ConnectionRead getConnection(final UUID connectionId)
       throws JsonValidationException, IOException, ConfigNotFoundException {
     return buildConnectionRead(connectionId);
@@ -909,9 +915,11 @@ public class ConnectionsHandler {
     return failureReason;
   }
 
+  @Trace
   public List<ConnectionStatusRead> getConnectionStatuses(
                                                           final ConnectionStatusesRequestBody connectionStatusesRequestBody)
-      throws IOException, JsonValidationException, ConfigNotFoundException {
+      throws IOException {
+    ApmTraceUtils.addTagsToTrace(Map.of(MetricTags.CONNECTION_IDS, connectionStatusesRequestBody.getConnectionIds().toString()));
     final List<UUID> connectionIds = connectionStatusesRequestBody.getConnectionIds();
     final List<ConnectionStatusRead> result = new ArrayList<>();
     for (final UUID connectionId : connectionIds) {

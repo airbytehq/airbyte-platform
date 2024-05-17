@@ -8,6 +8,7 @@ import static java.util.stream.Collectors.toMap;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.Lists;
+import datadog.trace.api.Trace;
 import io.airbyte.api.model.generated.AirbyteCatalog;
 import io.airbyte.api.model.generated.AirbyteStream;
 import io.airbyte.api.model.generated.AirbyteStreamAndConfiguration;
@@ -63,6 +64,8 @@ import io.airbyte.config.persistence.ConfigNotFoundException;
 import io.airbyte.config.persistence.ConfigRepository;
 import io.airbyte.config.persistence.ConfigRepository.StandardSyncQuery;
 import io.airbyte.featureflag.FeatureFlagClient;
+import io.airbyte.metrics.lib.ApmTraceUtils;
+import io.airbyte.metrics.lib.MetricTags;
 import io.airbyte.persistence.job.models.JobStatusSummary;
 import io.airbyte.protocol.models.ConfiguredAirbyteCatalog;
 import io.airbyte.validation.json.JsonValidationException;
@@ -351,8 +354,10 @@ public class WebBackendConnectionsHandler {
 
   // todo (cgardens) - This logic is a headache to follow it stems from the internal data model not
   // tracking selected streams in any reasonable way. We should update that.
+  @Trace
   public WebBackendConnectionRead webBackendGetConnection(final WebBackendConnectionRequestBody webBackendConnectionRequestBody)
       throws ConfigNotFoundException, IOException, JsonValidationException {
+    ApmTraceUtils.addTagsToTrace(Map.of(MetricTags.CONNECTION_ID, webBackendConnectionRequestBody.getConnectionId().toString()));
     final ConnectionIdRequestBody connectionIdRequestBody = new ConnectionIdRequestBody()
         .connectionId(webBackendConnectionRequestBody.getConnectionId());
 
