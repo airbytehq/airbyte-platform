@@ -1,0 +1,7 @@
+@use "scss/variables";
+@use "scss/colors";
+
+.highlight {
+  background-color: colors.$blue-100;
+  color: colors.$inverse;
+}

@@ -17,10 +17,10 @@ public class LocalFileSystemBuilderProjectUpdater implements BuilderProjectUpdat
   private static final Logger LOGGER = LoggerFactory.getLogger(LocalFileSystemBuilderProjectUpdater.class);
 
   @Override
-  public void persistBuilderProjectUpdate(ExistingConnectorBuilderProjectWithWorkspaceId projectUpdate) throws IOException {
+  public void persistBuilderProjectUpdate(final ExistingConnectorBuilderProjectWithWorkspaceId projectUpdate) {
     try {
       writeJsonNodeToYamlFile(projectUpdate.getBuilderProject().getYamlManifest(), "/connectors", projectUpdate.getBuilderProject().getName());
-    } catch (Exception e) {
+    } catch (final Exception e) {
       /*
        * While this flow is only meant to be used for local development, we swallow all exceptions to
        * ensure this cannot affect the platform. Users can look through the logs if they suspect this is
@@ -30,12 +30,12 @@ public class LocalFileSystemBuilderProjectUpdater implements BuilderProjectUpdat
     }
   }
 
-  public static void writeJsonNodeToYamlFile(String manifest, String basePath, String projectName) throws IOException {
+  public static void writeJsonNodeToYamlFile(final String manifest, final String basePath, final String projectName) throws IOException {
 
     // Construct the file path
-    String filePath = Paths.get(basePath, "source-" + projectName, "source_" + projectName, "manifest.yaml").toString();
+    final String filePath = Paths.get(basePath, "source-" + projectName, "source_" + projectName, "manifest.yaml").toString();
 
-    File file = new File(filePath);
+    final File file = new File(filePath);
 
     // Only try writing the file already exists
     // This isn't meant to be used for creating new connectors

@@ -360,6 +360,10 @@ public class PermissionHandler {
     return permissionPersistence.isAuthUserInstanceAdmin(authUserId);
   }
 
+  public Boolean isUserOrganizationAdmin(final UUID userId) throws IOException {
+    return permissionPersistence.isUserOrganizationAdmin(userId);
+  }
+
   /**
    * Lists the permissions for a workspace.
    *

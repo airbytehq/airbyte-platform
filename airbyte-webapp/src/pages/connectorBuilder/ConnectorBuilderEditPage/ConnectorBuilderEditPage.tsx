@@ -8,7 +8,8 @@ import { AnyObjectSchema } from "yup";
 import { HeadTitle } from "components/common/HeadTitle";
 import { Builder } from "components/connectorBuilder/Builder/Builder";
 import { StreamTestingPanel } from "components/connectorBuilder/StreamTestingPanel";
-import { BuilderState, builderStateValidationSchema, useBuilderWatch } from "components/connectorBuilder/types";
+import { BuilderState, useBuilderWatch } from "components/connectorBuilder/types";
+import { useBuilderValidationSchema } from "components/connectorBuilder/useBuilderValidationSchema";
 import { YamlManifestEditor } from "components/connectorBuilder/YamlEditor";
 import { ResizablePanels } from "components/ui/ResizablePanels";
 
@@ -63,6 +64,8 @@ export const ConnectorBuilderEditPage: React.FC = () => (
 );
 
 const BaseForm = React.memo(({ defaultValues }: { defaultValues: React.MutableRefObject<BuilderState> }) => {
+  const { builderStateValidationSchema } = useBuilderValidationSchema();
+
   // if this component re-renders, everything subscribed to rhf rerenders because the context object is a new one
   // Do prevent this, the hook is placed in its own memoized component which only re-renders when necessary
   const methods = useForm({

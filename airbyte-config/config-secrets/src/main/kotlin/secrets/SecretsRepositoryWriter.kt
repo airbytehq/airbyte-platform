@@ -87,8 +87,7 @@ open class SecretsRepositoryWriter(
   ): JsonNode {
     validator.ensure(spec, fullConfig)
 
-    val splitSecretConfig: SplitSecretConfig =
-      SecretsHelpers.splitAndUpdateConfig(workspaceId, oldConfig, fullConfig, spec, secretPersistence)
+    val splitSecretConfig: SplitSecretConfig = SecretsHelpers.splitAndUpdateConfig(workspaceId, oldConfig, fullConfig, spec, secretPersistence)
 
     splitSecretConfig.getCoordinateToPayload()
       .forEach { (coordinate: SecretCoordinate, payload: String) ->

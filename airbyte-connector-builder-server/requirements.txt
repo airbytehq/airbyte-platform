@@ -4,9 +4,9 @@
 #
 #    pip-compile
 #
-airbyte-cdk==0.85.0
+airbyte-cdk==0.89.0
     # via -r requirements.in
-airbyte-protocol-models==0.9.0
+airbyte-protocol-models==0.10.0
     # via airbyte-cdk
 attrs==23.2.0
     # via
@@ -27,7 +27,7 @@ cffi==1.16.0
     # via cryptography
 charset-normalizer==3.3.2
     # via requests
-cryptography==42.0.5
+cryptography==42.0.7
     # via airbyte-cdk
 deprecated==1.2.14
     # via airbyte-cdk
@@ -41,7 +41,7 @@ idna==3.7
     # via requests
 isodate==0.6.1
     # via airbyte-cdk
-jinja2==3.1.3
+jinja2==3.1.4
     # via airbyte-cdk
 jsonpatch==1.33
     # via langchain-core
@@ -53,11 +53,11 @@ jsonschema==3.2.0
     # via airbyte-cdk
 langchain-core==0.1.42
     # via airbyte-cdk
-langsmith==0.1.50
+langsmith==0.1.57
     # via langchain-core
 markupsafe==2.1.5
     # via jinja2
-orjson==3.10.1
+orjson==3.10.3
     # via langsmith
 packaging==23.2
     # via langchain-core
@@ -83,6 +83,8 @@ python-dateutil==2.9.0.post0
     # via
     #   airbyte-cdk
     #   pendulum
+pytz==2024.1
+    # via airbyte-cdk
 pytzdata==2020.1
     # via pendulum
 pyyaml==6.0.1
@@ -102,7 +104,7 @@ six==1.16.0
     #   jsonschema
     #   python-dateutil
     #   url-normalize
-tenacity==8.2.3
+tenacity==8.3.0
     # via langchain-core
 typing-extensions==4.11.0
     # via

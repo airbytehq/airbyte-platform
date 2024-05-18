@@ -835,7 +835,7 @@ public class AcceptanceTestHarness {
             workspaceId,
             name,
             destinationDefId,
-            Jsons.jsonNode(destinationConfig)));
+            destinationConfig));
     destinationIds.add(destination.getDestinationId());
     return destination;
   }

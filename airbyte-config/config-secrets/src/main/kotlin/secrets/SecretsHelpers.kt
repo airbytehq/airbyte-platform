@@ -14,7 +14,6 @@ import io.airbyte.commons.constants.AirbyteSecretConstants
 import io.airbyte.commons.json.JsonPaths
 import io.airbyte.commons.json.JsonSchemas
 import io.airbyte.commons.json.Jsons
-import io.airbyte.commons.util.MoreIterators
 import io.airbyte.config.secrets.persistence.ReadOnlySecretPersistence
 import io.airbyte.config.secrets.persistence.SecretPersistence
 import io.github.oshai.kotlinlogging.KotlinLogging
@@ -149,14 +148,7 @@ object SecretsHelpers {
     spec: JsonNode?,
     secretReader: ReadOnlySecretPersistence,
   ): SplitSecretConfig {
-    return internalSplitAndUpdateConfig(
-      uuidSupplier,
-      workspaceId,
-      secretReader,
-      oldPartialConfig,
-      newFullConfig,
-      spec,
-    )
+    return internalSplitAndUpdateConfig(uuidSupplier, workspaceId, secretReader, oldPartialConfig, newFullConfig, spec)
   }
 
   /**
@@ -177,8 +169,7 @@ object SecretsHelpers {
       // if the entire config is a secret coordinate object
       if (config.has(COORDINATE_FIELD)) {
         val coordinateNode = config[COORDINATE_FIELD]
-        val coordinate: SecretCoordinate =
-          getCoordinateFromTextNode(coordinateNode)
+        val coordinate: SecretCoordinate = getCoordinateFromTextNode(coordinateNode)
         return TextNode(getOrThrowSecretValue(secretPersistence, coordinate))
       }
 
@@ -186,14 +177,10 @@ object SecretsHelpers {
       config.fields().forEachRemaining { (fieldName, fieldNode): Map.Entry<String, JsonNode> ->
         if (fieldNode is ArrayNode) {
           for (i in 0 until fieldNode.size()) {
-            fieldNode[i] =
-              combineConfig(fieldNode[i], secretPersistence)
+            fieldNode[i] = combineConfig(fieldNode[i], secretPersistence)
           }
         } else if (fieldNode is ObjectNode) {
-          (config as ObjectNode).replace(
-            fieldName,
-            combineConfig(fieldNode, secretPersistence),
-          )
+          (config as ObjectNode).replace(fieldName, combineConfig(fieldNode, secretPersistence))
         }
       }
       config
@@ -211,9 +198,7 @@ object SecretsHelpers {
     return JsonSchemas.collectPathsThatMeetCondition(
       spec,
     ) { node: JsonNode ->
-      MoreIterators.toList(
-        node.fields(),
-      )
+      node.fields().asSequence().toList()
         .stream()
         .anyMatch { (key): Map.Entry<String, JsonNode> -> AirbyteSecretConstants.AIRBYTE_SECRET_FIELD == key }
     }
@@ -228,29 +213,12 @@ object SecretsHelpers {
       .toList()
   }
 
-  private fun getExistingCoordinateIfExists(json: JsonNode?): String? {
+  fun getExistingCoordinateIfExists(json: JsonNode?): String? {
     return if (json != null && json.has(COORDINATE_FIELD)) {
       json[COORDINATE_FIELD].asText()
     } else {
       null
     }
-  }
-
-  private fun getOrCreateCoordinate(
-    secretReader: ReadOnlySecretPersistence,
-    workspaceId: UUID,
-    uuidSupplier: Supplier<UUID>,
-    newJson: JsonNode,
-    persistedJson: JsonNode?,
-  ): SecretCoordinate {
-    val existingCoordinate = getExistingCoordinateIfExists(persistedJson)
-    return getCoordinate(
-      newJson.asText(),
-      secretReader,
-      workspaceId,
-      uuidSupplier,
-      existingCoordinate,
-    )
   }
 
   /**
@@ -283,30 +251,17 @@ object SecretsHelpers {
     spec: JsonNode?,
   ): SplitSecretConfig {
     var fullConfigCopy = newFullConfig.deepCopy<JsonNode>()
-    val secretMap: HashMap<SecretCoordinate, String> =
-      HashMap<SecretCoordinate, String>()
+    val secretMap: HashMap<SecretCoordinate, String> = HashMap()
     val paths = getSortedSecretPaths(spec)
     logger.debug { "SortedSecretPaths: $paths" }
     for (path in paths) {
       fullConfigCopy =
-        JsonPaths.replaceAt(
-          fullConfigCopy,
-          path,
-        ) { json: JsonNode, pathOfNode: String? ->
-          val persistedNode =
-            JsonPaths.getSingleValue(persistedPartialConfig, pathOfNode)
-          val coordinate: SecretCoordinate =
-            getOrCreateCoordinate(
-              secretReader,
-              workspaceId,
-              uuidSupplier,
-              json,
-              persistedNode.orElse(null),
-            )
+        JsonPaths.replaceAt(fullConfigCopy, path) { json: JsonNode, pathOfNode: String? ->
+          val persistedNode = JsonPaths.getSingleValue(persistedPartialConfig, pathOfNode).orElse(null)
+          val existingCoordinate = getExistingCoordinateIfExists(persistedNode)
+          val coordinate: SecretCoordinate = getCoordinate(secretReader, workspaceId, uuidSupplier, existingCoordinate)
           secretMap[coordinate] = json.asText()
-          Jsons.jsonNode(
-            mapOf(COORDINATE_FIELD to coordinate.fullCoordinate),
-          )
+          Jsons.jsonNode(mapOf(COORDINATE_FIELD to coordinate.fullCoordinate))
         }
     }
     return SplitSecretConfig(fullConfigCopy, secretMap)
@@ -344,28 +299,9 @@ object SecretsHelpers {
   }
 
   /**
-   * Determines which coordinate base and version to use based off of an old version that may exist in
-   * the secret persistence.
-   *
-   * If the secret does not exist in the persistence, version 1 will be used.
-   *
-   * If the new secret value is the same as the old version stored in the persistence, the returned
-   * coordinate will be the same as the previous version.
-   *
-   * If the new secret value is different from the old version stored in the persistence, the returned
-   * coordinate will increase the version.
-   *
-   * @param newSecret new value of a secret provides a way to determine if a secret is the same or
-   * updated at a specific location in a config
-   * @param workspaceId workspace used for this config
-   * @param uuidSupplier provided to allow a test case to produce known UUIDs in order for easy
-   * fixture creation.
-   * @param oldSecretFullCoordinate a nullable full coordinate (base+version) retrieved from the
-   * previous config
-   * @return a coordinate (versioned reference to where the secret is stored in the persistence)
+   * Same as #getCoordinate but with a consistent base. For Production use.
    */
   internal fun getCoordinate(
-    newSecret: String,
     secretReader: ReadOnlySecretPersistence,
     workspaceId: UUID,
     uuidSupplier: Supplier<UUID>,
@@ -373,7 +309,6 @@ object SecretsHelpers {
   ): SecretCoordinate {
     return getSecretCoordinate(
       "airbyte_workspace_",
-      newSecret,
       secretReader,
       workspaceId,
       uuidSupplier,
@@ -381,48 +316,58 @@ object SecretsHelpers {
     )
   }
 
-  fun getCoordinatorBase(
-    secretBasePrefix: String,
-    secretBaseId: UUID,
-    uuidSupplier: Supplier<UUID>,
-  ): String {
-    return secretBasePrefix + secretBaseId + "_secret_" + uuidSupplier.get()
-  }
-
+  /**
+   * Determines which coordinate base and version to use based off of an old version that may exist in
+   * the secret persistence.
+   *
+   * If the secret does not exist in the persistence, version 1 will be used.
+   *
+   * If the previous secret exists, return the version incremented by 1.
+   *
+   * @param secretBasePrefix prefix for the secret base
+   * @param secretReader secret persistence
+   * @param workspaceId workspace used for this config
+   * @param uuidSupplier provided to allow a test case to produce known UUIDs in order for easy
+   * fixture creation.
+   * @param oldSecretFullCoordinate a nullable full coordinate (base+version) retrieved from the
+   * previous config
+   * @return a coordinate (versioned reference to where the secret is stored in the persistence)
+   */
   @VisibleForTesting
   fun getSecretCoordinate(
     secretBasePrefix: String,
-    newSecret: String,
     secretReader: ReadOnlySecretPersistence,
     secretBaseId: UUID,
     uuidSupplier: Supplier<UUID>,
     oldSecretFullCoordinate: String?,
   ): SecretCoordinate {
     var coordinateBase: String? = null
-    var version: Long? = null
+    var version = 1L
+
     if (oldSecretFullCoordinate != null) {
-      val oldCoordinate: SecretCoordinate =
-        SecretCoordinate.fromFullCoordinate(oldSecretFullCoordinate)
+      val oldCoordinate: SecretCoordinate = SecretCoordinate.fromFullCoordinate(oldSecretFullCoordinate)
       coordinateBase = oldCoordinate.coordinateBase
       val oldSecretValue: String = secretReader.read(oldCoordinate)
       if (oldSecretValue.isNotEmpty()) {
-        version =
-          if (oldSecretValue == newSecret) {
-            oldCoordinate.version
-          } else {
-            oldCoordinate.version + 1
-          }
+        version = oldCoordinate.version.inc()
       }
     }
+
     if (coordinateBase == null) {
       // IMPORTANT: format of this cannot be changed without introducing migrations for secrets
       // persistence
       coordinateBase = getCoordinatorBase(secretBasePrefix, secretBaseId, uuidSupplier)
     }
-    if (version == null) {
-      version = 1L
-    }
+
     return SecretCoordinate(coordinateBase, version)
+  }
+
+  fun getCoordinatorBase(
+    secretBasePrefix: String,
+    secretBaseId: UUID,
+    uuidSupplier: Supplier<UUID>,
+  ): String {
+    return "${secretBasePrefix}${secretBaseId}_secret_${uuidSupplier.get()}"
   }
 
   /**

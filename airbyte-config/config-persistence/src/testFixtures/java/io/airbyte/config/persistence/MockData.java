@@ -147,6 +147,7 @@ public class MockData {
   static final UUID PERMISSION_ID_5 = UUID.randomUUID();
   static final UUID PERMISSION_ID_6 = UUID.randomUUID();
   static final UUID PERMISSION_ID_7 = UUID.randomUUID();
+  static final UUID PERMISSION_ID_8 = UUID.randomUUID();
 
   static final UUID ORGANIZATION_ID_1 = UUID.randomUUID();
   static final UUID ORGANIZATION_ID_2 = UUID.randomUUID();
@@ -235,6 +236,12 @@ public class MockData {
       .withUserId(CREATOR_USER_ID_5)
       .withOrganizationId(ORGANIZATION_ID_2)
       .withPermissionType(PermissionType.ORGANIZATION_READER);
+
+  public static final Permission permission8 = new Permission()
+      .withPermissionId(PERMISSION_ID_8)
+      .withUserId(CREATOR_USER_ID_1)
+      .withOrganizationId(DEFAULT_ORGANIZATION_ID)
+      .withPermissionType(PermissionType.ORGANIZATION_ADMIN);
 
   public static List<User> users() {
     final User user1 = new User()
@@ -329,7 +336,7 @@ public class MockData {
   }
 
   public static List<Permission> permissions() {
-    return Arrays.asList(permission1, permission2, permission3, permission4, permission5, permission6, permission7);
+    return Arrays.asList(permission1, permission2, permission3, permission4, permission5, permission6, permission7, permission8);
   }
 
   public static List<Organization> organizations() {
@@ -557,7 +564,6 @@ public class MockData {
         .withName("source-1")
         .withTombstone(false)
         .withSourceDefinitionId(SOURCE_DEFINITION_ID_1)
-        .withDefaultVersionId(SOURCE_DEFINITION_VERSION_ID_1)
         .withWorkspaceId(WORKSPACE_ID_1)
         .withConfiguration(Jsons.deserialize(CONNECTION_SPECIFICATION))
         .withSourceId(SOURCE_ID_1);
@@ -565,7 +571,6 @@ public class MockData {
         .withName("source-2")
         .withTombstone(false)
         .withSourceDefinitionId(SOURCE_DEFINITION_ID_2)
-        .withDefaultVersionId(SOURCE_DEFINITION_VERSION_ID_2)
         .withWorkspaceId(WORKSPACE_ID_1)
         .withConfiguration(Jsons.deserialize(CONNECTION_SPECIFICATION))
         .withSourceId(SOURCE_ID_2);
@@ -573,7 +578,6 @@ public class MockData {
         .withName("source-3")
         .withTombstone(false)
         .withSourceDefinitionId(SOURCE_DEFINITION_ID_1)
-        .withDefaultVersionId(SOURCE_DEFINITION_VERSION_ID_1)
         .withWorkspaceId(WORKSPACE_ID_2)
         .withConfiguration(Jsons.emptyObject())
         .withSourceId(SOURCE_ID_3);
@@ -585,7 +589,6 @@ public class MockData {
         .withName("destination-1")
         .withTombstone(false)
         .withDestinationDefinitionId(DESTINATION_DEFINITION_ID_1)
-        .withDefaultVersionId(DESTINATION_DEFINITION_VERSION_ID_1)
         .withWorkspaceId(WORKSPACE_ID_1)
         .withConfiguration(Jsons.deserialize(CONNECTION_SPECIFICATION))
         .withDestinationId(DESTINATION_ID_1);
@@ -593,7 +596,6 @@ public class MockData {
         .withName("destination-2")
         .withTombstone(false)
         .withDestinationDefinitionId(DESTINATION_DEFINITION_ID_2)
-        .withDefaultVersionId(DESTINATION_DEFINITION_VERSION_ID_2)
         .withWorkspaceId(WORKSPACE_ID_1)
         .withConfiguration(Jsons.deserialize(CONNECTION_SPECIFICATION))
         .withDestinationId(DESTINATION_ID_2);
@@ -601,7 +603,6 @@ public class MockData {
         .withName("destination-3")
         .withTombstone(true)
         .withDestinationDefinitionId(DESTINATION_DEFINITION_ID_2)
-        .withDefaultVersionId(DESTINATION_DEFINITION_VERSION_ID_2)
         .withWorkspaceId(WORKSPACE_ID_2)
         .withConfiguration(Jsons.emptyObject())
         .withDestinationId(DESTINATION_ID_3);

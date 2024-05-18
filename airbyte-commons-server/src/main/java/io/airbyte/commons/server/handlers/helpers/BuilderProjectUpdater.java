@@ -5,11 +5,11 @@
 package io.airbyte.commons.server.handlers.helpers;
 
 import io.airbyte.api.model.generated.ExistingConnectorBuilderProjectWithWorkspaceId;
-import io.airbyte.config.persistence.ConfigNotFoundException;
+import io.airbyte.data.exceptions.ConfigNotFoundException;
 import java.io.IOException;
 
 public interface BuilderProjectUpdater {
 
-  void persistBuilderProjectUpdate(final ExistingConnectorBuilderProjectWithWorkspaceId projectUpdate) throws ConfigNotFoundException, IOException;
+  void persistBuilderProjectUpdate(final ExistingConnectorBuilderProjectWithWorkspaceId projectUpdate) throws IOException, ConfigNotFoundException;
 
 }

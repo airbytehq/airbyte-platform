@@ -420,8 +420,6 @@ class PermissionHandlerTest {
 
       if (userPermissionType == PermissionType.WORKSPACE_OWNER) {
         assertEquals(StatusEnum.SUCCEEDED,
-            permissionHandler.checkPermissions(getWorkspacePermissionCheck(PermissionType.WORKSPACE_OWNER)).getStatus());
-        assertEquals(StatusEnum.SUCCEEDED,
             permissionHandler.checkPermissions(getWorkspacePermissionCheck(PermissionType.WORKSPACE_ADMIN)).getStatus());
         assertEquals(StatusEnum.SUCCEEDED,
             permissionHandler.checkPermissions(getWorkspacePermissionCheck(PermissionType.WORKSPACE_EDITOR)).getStatus());
@@ -440,8 +438,6 @@ class PermissionHandlerTest {
 
       if (userPermissionType == PermissionType.WORKSPACE_ADMIN) {
         assertEquals(StatusEnum.SUCCEEDED,
-            permissionHandler.checkPermissions(getWorkspacePermissionCheck(PermissionType.WORKSPACE_OWNER)).getStatus());
-        assertEquals(StatusEnum.SUCCEEDED,
             permissionHandler.checkPermissions(getWorkspacePermissionCheck(PermissionType.WORKSPACE_ADMIN)).getStatus());
         assertEquals(StatusEnum.SUCCEEDED,
             permissionHandler.checkPermissions(getWorkspacePermissionCheck(PermissionType.WORKSPACE_EDITOR)).getStatus());
@@ -459,7 +455,6 @@ class PermissionHandlerTest {
       }
 
       if (userPermissionType == PermissionType.WORKSPACE_EDITOR) {
-        assertEquals(StatusEnum.FAILED, permissionHandler.checkPermissions(getWorkspacePermissionCheck(PermissionType.WORKSPACE_OWNER)).getStatus());
         assertEquals(StatusEnum.FAILED, permissionHandler.checkPermissions(getWorkspacePermissionCheck(PermissionType.WORKSPACE_ADMIN)).getStatus());
         assertEquals(StatusEnum.SUCCEEDED,
             permissionHandler.checkPermissions(getWorkspacePermissionCheck(PermissionType.WORKSPACE_EDITOR)).getStatus());
@@ -477,7 +472,6 @@ class PermissionHandlerTest {
       }
 
       if (userPermissionType == PermissionType.WORKSPACE_READER) {
-        assertEquals(StatusEnum.FAILED, permissionHandler.checkPermissions(getWorkspacePermissionCheck(PermissionType.WORKSPACE_OWNER)).getStatus());
         assertEquals(StatusEnum.FAILED, permissionHandler.checkPermissions(getWorkspacePermissionCheck(PermissionType.WORKSPACE_ADMIN)).getStatus());
         assertEquals(StatusEnum.FAILED, permissionHandler.checkPermissions(getWorkspacePermissionCheck(PermissionType.WORKSPACE_EDITOR)).getStatus());
         assertEquals(StatusEnum.SUCCEEDED,
@@ -509,8 +503,6 @@ class PermissionHandlerTest {
 
       if (userPermissionType == PermissionType.ORGANIZATION_ADMIN) {
         assertEquals(StatusEnum.SUCCEEDED,
-            permissionHandler.checkPermissions(getWorkspacePermissionCheck(PermissionType.WORKSPACE_OWNER)).getStatus());
-        assertEquals(StatusEnum.SUCCEEDED,
             permissionHandler.checkPermissions(getWorkspacePermissionCheck(PermissionType.WORKSPACE_ADMIN)).getStatus());
         assertEquals(StatusEnum.SUCCEEDED,
             permissionHandler.checkPermissions(getWorkspacePermissionCheck(PermissionType.WORKSPACE_EDITOR)).getStatus());
@@ -528,7 +520,6 @@ class PermissionHandlerTest {
       }
 
       if (userPermissionType == PermissionType.ORGANIZATION_EDITOR) {
-        assertEquals(StatusEnum.FAILED, permissionHandler.checkPermissions(getWorkspacePermissionCheck(PermissionType.WORKSPACE_OWNER)).getStatus());
         assertEquals(StatusEnum.FAILED, permissionHandler.checkPermissions(getWorkspacePermissionCheck(PermissionType.WORKSPACE_ADMIN)).getStatus());
         assertEquals(StatusEnum.SUCCEEDED,
             permissionHandler.checkPermissions(getWorkspacePermissionCheck(PermissionType.WORKSPACE_EDITOR)).getStatus());
@@ -546,7 +537,6 @@ class PermissionHandlerTest {
       }
 
       if (userPermissionType == PermissionType.ORGANIZATION_READER) {
-        assertEquals(StatusEnum.FAILED, permissionHandler.checkPermissions(getWorkspacePermissionCheck(PermissionType.WORKSPACE_OWNER)).getStatus());
         assertEquals(StatusEnum.FAILED, permissionHandler.checkPermissions(getWorkspacePermissionCheck(PermissionType.WORKSPACE_ADMIN)).getStatus());
         assertEquals(StatusEnum.FAILED, permissionHandler.checkPermissions(getWorkspacePermissionCheck(PermissionType.WORKSPACE_EDITOR)).getStatus());
         assertEquals(StatusEnum.SUCCEEDED,
@@ -563,7 +553,6 @@ class PermissionHandlerTest {
       }
 
       if (userPermissionType == PermissionType.ORGANIZATION_MEMBER) {
-        assertEquals(StatusEnum.FAILED, permissionHandler.checkPermissions(getWorkspacePermissionCheck(PermissionType.WORKSPACE_OWNER)).getStatus());
         assertEquals(StatusEnum.FAILED, permissionHandler.checkPermissions(getWorkspacePermissionCheck(PermissionType.WORKSPACE_ADMIN)).getStatus());
         assertEquals(StatusEnum.FAILED, permissionHandler.checkPermissions(getWorkspacePermissionCheck(PermissionType.WORKSPACE_EDITOR)).getStatus());
         assertEquals(StatusEnum.FAILED,
@@ -590,7 +579,6 @@ class PermissionHandlerTest {
           .permissionType(io.airbyte.api.model.generated.PermissionType.INSTANCE_ADMIN)
           .userId(USER_ID)).getStatus());
 
-      assertEquals(StatusEnum.SUCCEEDED, permissionHandler.checkPermissions(getWorkspacePermissionCheck(PermissionType.WORKSPACE_OWNER)).getStatus());
       assertEquals(StatusEnum.SUCCEEDED, permissionHandler.checkPermissions(getWorkspacePermissionCheck(PermissionType.WORKSPACE_ADMIN)).getStatus());
       assertEquals(StatusEnum.SUCCEEDED,
           permissionHandler.checkPermissions(getWorkspacePermissionCheck(PermissionType.WORKSPACE_EDITOR)).getStatus());

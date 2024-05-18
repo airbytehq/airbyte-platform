@@ -197,7 +197,10 @@ public class ConnectionManagerWorkflowImpl implements ConnectionManagerWorkflow 
 
       if (workflowState.isDeleted()) {
         if (workflowState.isRunning()) {
-          log.info("Cancelling the current running job because a connection deletion was requested");
+          log.info(
+              "Cancelling jobId '{}' because connection '{}' was deleted",
+              Objects.toString(connectionUpdaterInput.getJobId(), "null"),
+              connectionUpdaterInput.getConnectionId());
           // This call is not needed anymore since this will be cancel using the cancellation state
           reportCancelled(connectionId);
         }

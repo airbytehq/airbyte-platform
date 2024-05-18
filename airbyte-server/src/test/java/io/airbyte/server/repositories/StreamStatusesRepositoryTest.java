@@ -4,6 +4,7 @@
 
 package io.airbyte.server.repositories;
 
+import io.airbyte.commons.json.Jsons;
 import io.airbyte.db.factory.DSLContextFactory;
 import io.airbyte.db.init.DatabaseInitializationException;
 import io.airbyte.db.instance.DatabaseConstants;
@@ -131,13 +132,23 @@ class StreamStatusesRepositoryTest {
     repo.update(running);
     final var found2 = repo.findById(id);
 
+    final var rateLimitedAt = Fixtures.now();
+    final var rateLimited = Fixtures.statusFrom(running)
+        .runState(JobStreamStatusRunState.rate_limited)
+        .transitionedAt(rateLimitedAt)
+        .metadata(Jsons.jsonNode(Map.of("quota_reset", Fixtures.now())))
+        .build();
+    repo.update(rateLimited);
+    final var found3 = repo.findById(id);
+
     final var completedAt = Fixtures.now();
-    final var completed = Fixtures.statusFrom(running)
+    final var completed = Fixtures.statusFrom(rateLimited)
         .runState(JobStreamStatusRunState.complete)
+        .metadata(null)
         .transitionedAt(completedAt)
         .build();
     repo.update(completed);
-    final var found3 = repo.findById(id);
+    final var found4 = repo.findById(id);
 
     Assertions.assertTrue(found1.isPresent());
     Assertions.assertEquals(pendingAt, found1.get().getTransitionedAt());
@@ -148,8 +159,12 @@ class StreamStatusesRepositoryTest {
     Assertions.assertEquals(JobStreamStatusRunState.running, found2.get().getRunState());
 
     Assertions.assertTrue(found3.isPresent());
-    Assertions.assertEquals(completedAt, found3.get().getTransitionedAt());
-    Assertions.assertEquals(JobStreamStatusRunState.complete, found3.get().getRunState());
+    Assertions.assertEquals(rateLimitedAt, found3.get().getTransitionedAt());
+    Assertions.assertEquals(JobStreamStatusRunState.rate_limited, found3.get().getRunState());
+
+    Assertions.assertTrue(found4.isPresent());
+    Assertions.assertEquals(completedAt, found4.get().getTransitionedAt());
+    Assertions.assertEquals(JobStreamStatusRunState.complete, found4.get().getRunState());
   }
 
   @Test
@@ -365,6 +380,12 @@ class StreamStatusesRepositoryTest {
     final var r3 = Fixtures.running().transitionedAt(Fixtures.timestamp(3)).connectionId(Fixtures.connectionId2).streamName(Fixtures.name2).build();
     final var r4 = Fixtures.running().transitionedAt(Fixtures.timestamp(4)).connectionId(Fixtures.connectionId2).build();
 
+    final var rate1 = Fixtures.rateLimited().transitionedAt(Fixtures.timestamp(1)).connectionId(Fixtures.connectionId1).build();
+    final var rate2 = Fixtures.rateLimited().transitionedAt(Fixtures.timestamp(2)).connectionId(Fixtures.connectionId1).build();
+    final var rate3 =
+        Fixtures.rateLimited().transitionedAt(Fixtures.timestamp(3)).connectionId(Fixtures.connectionId2).streamName(Fixtures.name2).build();
+    final var rate4 = Fixtures.rateLimited().transitionedAt(Fixtures.timestamp(4)).connectionId(Fixtures.connectionId2).build();
+
     final var c1 = Fixtures.complete().transitionedAt(Fixtures.timestamp(1)).connectionId(Fixtures.connectionId1).build();
     final var c2 = Fixtures.complete().transitionedAt(Fixtures.timestamp(2)).connectionId(Fixtures.connectionId2).build();
     final var c3 = Fixtures.complete().transitionedAt(Fixtures.timestamp(3)).connectionId(Fixtures.connectionId2).streamName(Fixtures.name2).build();
@@ -383,51 +404,60 @@ class StreamStatusesRepositoryTest {
     final var reset1 = Fixtures.reset().transitionedAt(Fixtures.timestamp(1)).connectionId(Fixtures.connectionId1).build();
     final var reset2 = Fixtures.reset().transitionedAt(Fixtures.timestamp(2)).connectionId(Fixtures.connectionId1).build();
 
-    repo.saveAll(List.of(p1, p2, p3, p4, r1, r2, r3, r4, c1, c2, c3, c4, if1, if2, if3, if4, ic1, ic2, ic3, ic4, reset1, reset2));
+    repo.saveAll(
+        List.of(p1, p2, p3, p4, r1, r2, r3, r4, rate1, rate2, rate3, rate4, c1,
+            c2, c3, c4, if1, if2, if3, if4, ic1, ic2, ic3, ic4, reset1, reset2));
 
     final var results1 = repo.findAllPerRunStateByConnectionId(Fixtures.connectionId1);
     final var results2 = repo.findAllPerRunStateByConnectionId(Fixtures.connectionId2);
 
-    assertContainsSameElements(List.of(p2, p3, r2, c1, if3, if4, ic3, ic4, reset2), results1);
-    assertContainsSameElements(List.of(p4, r3, r4, c3, c4, if2), results2);
+    assertContainsSameElements(List.of(p2, p3, r2, rate2, c1, if3, if4, ic3, ic4, reset2), results1);
+    assertContainsSameElements(List.of(p4, r3, r4, rate3, rate4, c3, c4, if2), results2);
   }
 
   @Test
-  void testFindLatestTerminalStatusPerStreamByConnectionIdAndDayAfterTimestamp() {
-    final long now = Instant.now().toEpochMilli();
-    final OffsetDateTime time1 = Fixtures.timestamp(now);
-    final OffsetDateTime time2 = Fixtures.timestamp(now + 1);
-    final OffsetDateTime time3 = Fixtures.timestamp(now + 2);
-    final OffsetDateTime time4 = Fixtures.timestamp(now + 3);
-
+  void testFindLatestTerminalStatusPerStreamByConnectionId() {
     // connection 1
-    final var p1 = Fixtures.pending().transitionedAt(time1).connectionId(Fixtures.connectionId1).build();
-    final var c1 = Fixtures.complete().transitionedAt(time3).connectionId(Fixtures.connectionId1).build();
+    final var p1 = Fixtures.pending().connectionId(Fixtures.connectionId1).jobId(Fixtures.jobId1).build();
+    final var c1 = Fixtures.complete().connectionId(Fixtures.connectionId1).attemptNumber(5).jobId(Fixtures.jobId1).build();
 
-    final var c2 = Fixtures.complete().transitionedAt(time2).connectionId(Fixtures.connectionId1).streamName(Fixtures.name2).build();
-    final var r1 = Fixtures.reset().transitionedAt(time3).connectionId(Fixtures.connectionId1).streamName(Fixtures.name2).build();
+    final var c2 =
+        Fixtures.complete().connectionId(Fixtures.connectionId1).streamName(Fixtures.name2).jobId(Fixtures.jobId2).attemptNumber(3).build();
+    final var r1 = Fixtures.reset().connectionId(Fixtures.connectionId1).streamName(Fixtures.name2).jobId(Fixtures.jobId2).attemptNumber(5).build();
 
-    final var p2 = Fixtures.pending().transitionedAt(time1).connectionId(Fixtures.connectionId1).streamName(Fixtures.name3).build();
-    final var f1 = Fixtures.failed().transitionedAt(time2).connectionId(Fixtures.connectionId1).streamName(Fixtures.name3).build();
-    final var r2 = Fixtures.reset().transitionedAt(time3).connectionId(Fixtures.connectionId1).streamName(Fixtures.name3).build();
-    final var p3 = Fixtures.pending().transitionedAt(time4).connectionId(Fixtures.connectionId1).streamName(Fixtures.name3).build();
+    final var p2 = Fixtures.pending().connectionId(Fixtures.connectionId1).streamName(Fixtures.name3).build();
+    final var f1 = Fixtures.failed().connectionId(Fixtures.connectionId1).streamName(Fixtures.name3).jobId(Fixtures.jobId3).attemptNumber(3).build();
+    final var r2 = Fixtures.reset().connectionId(Fixtures.connectionId1).streamName(Fixtures.name3).jobId(Fixtures.jobId3).attemptNumber(5).build();
+    final var p3 = Fixtures.pending().connectionId(Fixtures.connectionId1).streamName(Fixtures.name3).build();
 
     // connection 2
-    final var p4 = Fixtures.pending().transitionedAt(time1).connectionId(Fixtures.connectionId2).build();
+    final var p4 = Fixtures.pending().connectionId(Fixtures.connectionId2).build();
 
-    final var r3 = Fixtures.reset().transitionedAt(time2).connectionId(Fixtures.connectionId2).streamName(Fixtures.name2).build();
-    final var f2 = Fixtures.failed().transitionedAt(time3).connectionId(Fixtures.connectionId2).streamName(Fixtures.name2).build();
+    final var r3 = Fixtures.reset().connectionId(Fixtures.connectionId2).streamName(Fixtures.name2).attemptNumber(1)
+        .jobId(Fixtures.jobId4).build();
+    final var f2 = Fixtures.failed().connectionId(Fixtures.connectionId2).streamName(Fixtures.name2).attemptNumber(2)
+        .jobId(Fixtures.jobId4).build();
 
-    final var c3 = Fixtures.complete().transitionedAt(time1).connectionId(Fixtures.connectionId2).streamName(Fixtures.name3).build();
-    final var f3 = Fixtures.failed().transitionedAt(time2).connectionId(Fixtures.connectionId2).streamName(Fixtures.name3).build();
-    final var run1 = Fixtures.running().transitionedAt(time3).connectionId(Fixtures.connectionId2).streamName(Fixtures.name3).build();
+    final var c3 = Fixtures.complete().connectionId(Fixtures.connectionId2).streamName(Fixtures.name3).attemptNumber(1)
+        .jobId(Fixtures.jobId5).build();
+    final var f3 = Fixtures.failed().connectionId(Fixtures.connectionId2).streamName(Fixtures.name3).attemptNumber(3)
+        .jobId(Fixtures.jobId5).build();
 
-    repo.saveAll(List.of(p1, p2, p3, p4, r1, r2, r3, c1, c2, c3, f1, f2, f3, r1, r2, r3, run1));
+    jooqDslContext.execute(
+        "insert into jobs (id, scope, status, config_type) values (" + Fixtures.jobId1 + ", '" + Fixtures.connectionId1 + "', 'succeeded', 'sync')");
+    jooqDslContext.execute(
+        "insert into jobs (id, scope, status, config_type) values (" + Fixtures.jobId2 + ", '" + Fixtures.connectionId1 + "', 'succeeded', 'sync')");
+    jooqDslContext.execute(
+        "insert into jobs (id, scope, status, config_type) values (" + Fixtures.jobId3 + ", '" + Fixtures.connectionId1 + "', 'succeeded', 'sync')");
+    jooqDslContext.execute(
+        "insert into jobs (id, scope, status, config_type) values (" + Fixtures.jobId4 + ", '" + Fixtures.connectionId2 + "', 'succeeded', 'sync')");
+    jooqDslContext.execute(
+        "insert into jobs (id, scope, status, config_type) values (" + Fixtures.jobId5 + ", '" + Fixtures.connectionId2 + "', 'succeeded', 'sync')");
 
-    final var results1 = repo.findLatestTerminalStatusPerStreamByConnectionIdAndDayAfterTimestamp(Fixtures.connectionId1,
-        time1, ZoneId.systemDefault().getId());
-    final var results2 = repo.findLatestTerminalStatusPerStreamByConnectionIdAndDayAfterTimestamp(Fixtures.connectionId2,
-        time1, ZoneId.systemDefault().getId());
+    repo.saveAll(List.of(p1, p2, p3, p4, r1, r2, r3, c1, c2, c3, f1, f2, f3));
+
+    final var results1 = repo.findLastAttemptsOfLastXJobsForConnection(Fixtures.connectionId1, 3);
+    final var results2 = repo.findLastAttemptsOfLastXJobsForConnection(Fixtures.connectionId2, 2);
 
     assertContainsSameElements(List.of(c1, r1, r2), results1);
     assertContainsSameElements(List.of(f2, f3), results2);
@@ -452,6 +482,8 @@ class StreamStatusesRepositoryTest {
     static Long jobId1 = ThreadLocalRandom.current().nextLong();
     static Long jobId2 = ThreadLocalRandom.current().nextLong();
     static Long jobId3 = ThreadLocalRandom.current().nextLong();
+    static Long jobId4 = ThreadLocalRandom.current().nextLong();
+    static Long jobId5 = ThreadLocalRandom.current().nextLong();
 
     // java defaults to 9 precision while postgres defaults to 6
     // this provides us with 6 decimal precision for comparison purposes
@@ -494,7 +526,8 @@ class StreamStatusesRepositoryTest {
           .incompleteRunCause(s.getIncompleteRunCause())
           .createdAt(s.getCreatedAt())
           .updatedAt(s.getUpdatedAt())
-          .transitionedAt(s.getTransitionedAt());
+          .transitionedAt(s.getTransitionedAt())
+          .metadata(s.getMetadata());
     }
 
     static StreamStatusBuilder pending() {
@@ -505,6 +538,12 @@ class StreamStatusesRepositoryTest {
     static StreamStatusBuilder running() {
       return status()
           .runState(JobStreamStatusRunState.running);
+    }
+
+    static StreamStatusBuilder rateLimited() {
+      return status()
+          .runState(JobStreamStatusRunState.rate_limited)
+          .metadata(Jsons.jsonNode(Map.of("quota_reset", now())));
     }
 
     static StreamStatusBuilder complete() {

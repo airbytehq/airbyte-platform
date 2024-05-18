@@ -54,17 +54,30 @@ object AcceptanceTestUtils {
   }
 
   @JvmStatic
+  @JvmOverloads
   fun createAirbyteApiClient(
     basePath: String,
     headers: Map<String, String> = mapOf(),
+    applyHeaders: Boolean = System.getenv().containsKey(IS_GKE),
   ): AirbyteApiClient {
     // Set up the API client.
-    return AirbyteApiClient(basePath = basePath, policy = createRetryPolicy(), httpClient = createOkHttpClient(headers = headers))
+    return AirbyteApiClient(
+      basePath = basePath,
+      policy = createRetryPolicy(),
+      httpClient =
+        createOkHttpClient(
+          applyHeaders = applyHeaders,
+          headers = headers,
+        ),
+    )
   }
 
   @JvmStatic
-  fun createOkHttpClient(headers: Map<String, String> = mapOf()): OkHttpClient {
-    val applyHeaders = System.getenv().containsKey(IS_GKE)
+  @JvmOverloads
+  fun createOkHttpClient(
+    applyHeaders: Boolean = System.getenv().containsKey(IS_GKE),
+    headers: Map<String, String> = mapOf(),
+  ): OkHttpClient {
     val okHttpClient: OkHttpClient =
       OkHttpClient.Builder()
         .addInterceptor(

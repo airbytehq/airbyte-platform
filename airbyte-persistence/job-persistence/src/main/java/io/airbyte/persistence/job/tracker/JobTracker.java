@@ -23,9 +23,10 @@ import io.airbyte.config.ActorDefinitionVersion;
 import io.airbyte.config.AttemptSyncConfig;
 import io.airbyte.config.ConnectorJobOutput;
 import io.airbyte.config.FailureReason;
-import io.airbyte.config.JobConfig;
 import io.airbyte.config.JobConfig.ConfigType;
 import io.airbyte.config.JobConfigProxy;
+import io.airbyte.config.RefreshStream;
+import io.airbyte.config.RefreshStream.RefreshType;
 import io.airbyte.config.StandardCheckConnectionOutput;
 import io.airbyte.config.StandardDestinationDefinition;
 import io.airbyte.config.StandardSourceDefinition;
@@ -57,6 +58,7 @@ import java.util.Map.Entry;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 /**
  * Tracking calls to each job type.
@@ -214,6 +216,7 @@ public class JobTracker {
    */
   public void trackSync(final Job job, final JobState jobState) {
     Exceptions.swallow(() -> {
+      final JobConfigProxy jobConfig = new JobConfigProxy(job.getConfig());
       final ConfigType configType = job.getConfigType();
       final boolean allowedJob = REPLICATION_TYPES.contains(configType);
       Preconditions.checkArgument(allowedJob, "Job type " + configType + " is not allowed!");
@@ -243,10 +246,11 @@ public class JobTracker {
       final Map<String, Object> syncMetadata = generateSyncMetadata(standardSync);
       final Map<String, Object> stateMetadata = generateStateMetadata(jobState);
       final Map<String, Object> syncConfigMetadata = generateSyncConfigMetadata(
-          job.getConfig(),
+          jobConfig,
           attemptSyncConfig.orElse(null),
           sourceVersion.getSpec().getConnectionSpecification(),
           destinationVersion.getSpec().getConnectionSpecification());
+      final Map<String, Object> refreshMetadata = generateRefreshMetadata(jobConfig);
 
       track(workspaceId,
           SYNC_EVENT,
@@ -257,7 +261,8 @@ public class JobTracker {
               destinationDefMetadata,
               syncMetadata,
               stateMetadata,
-              syncConfigMetadata));
+              syncConfigMetadata,
+              refreshMetadata));
     });
   }
 
@@ -307,8 +312,25 @@ public class JobTracker {
     });
   }
 
+  private Map<String, Object> generateRefreshMetadata(final JobConfigProxy jobConfig) {
+    if (jobConfig.getConfigType() == ConfigType.REFRESH) {
+      final List<String> refreshTypes = jobConfig
+          .getRaw()
+          .getRefresh()
+          .getStreamsToRefresh()
+          .stream()
+          .map(RefreshStream::getRefreshType)
+          .collect(Collectors.toSet())
+          .stream()
+          .map(RefreshType::value)
+          .toList();
+      return Map.of("refresh_types", refreshTypes);
+    }
+    return Map.of();
+  }
+
   private Map<String, Object> generateSyncConfigMetadata(
-                                                         final JobConfig config,
+                                                         final JobConfigProxy config,
                                                          @Nullable final AttemptSyncConfig attemptSyncConfig,
                                                          final JsonNode sourceConfigSchema,
                                                          final JsonNode destinationConfigSchema) {
@@ -326,7 +348,7 @@ public class JobTracker {
             mapToJsonString(configToMetadata(destinationConfiguration, destinationConfigSchema)));
       }
 
-      final var configuredCatalog = new JobConfigProxy(config).getConfiguredCatalog();
+      final var configuredCatalog = config.getConfiguredCatalog();
       final Map<String, Object> catalogMetadata;
       if (configuredCatalog != null) {
         catalogMetadata = getCatalogMetadata(configuredCatalog);

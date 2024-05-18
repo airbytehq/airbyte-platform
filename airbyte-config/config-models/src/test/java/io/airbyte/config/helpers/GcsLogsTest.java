@@ -16,7 +16,6 @@ import com.google.cloud.storage.Blob;
 import com.google.cloud.storage.Blob.BlobSourceOption;
 import com.google.cloud.storage.Storage;
 import io.airbyte.config.storage.GcsStorageConfig;
-import io.airbyte.featureflag.DownloadGcsLogsInParallel;
 import io.airbyte.featureflag.TestClient;
 import java.io.IOException;
 import java.io.OutputStream;
@@ -25,7 +24,6 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.IntStream;
 import kotlin.Pair;
@@ -147,12 +145,9 @@ class GcsLogsTest {
   }
 
   void checkCloudLogTail(GcsLogs gcsLogs, List<String> expectedLogs, int numLines, int latencyMs) throws IOException {
-    assertEquals(expectedLogs,
-        gcsLogs.tailCloudLog(logConfigs, logPath, numLines, new TestClient(Map.of(DownloadGcsLogsInParallel.INSTANCE.getKey(), true))),
-        "items should have been returned in the correct order");
     if (latencyMs == 0 || expectedLogs.size() < 100) {
       assertEquals(expectedLogs,
-          gcsLogs.tailCloudLog(logConfigs, logPath, numLines, new TestClient(Map.of(DownloadGcsLogsInParallel.INSTANCE.getKey(), false))),
+          gcsLogs.tailCloudLog(logConfigs, logPath, numLines, new TestClient()),
           "items should have been returned in the correct order");
     }
   }
@@ -197,13 +192,9 @@ class GcsLogsTest {
     when(page.iterateAll()).thenReturn(linesAndBlobs.getSecond());
 
     final var gcsLogs = new GcsLogs(() -> storage);
-    final var configKey = DownloadGcsLogsInParallel.INSTANCE.getKey();
-    var logs = gcsLogs.tailCloudLog(logConfigs, logPath, Integer.MAX_VALUE, new TestClient(Map.of(configKey, true)));
-    assertNotNull(logs, "log must not be null");
-    assertEquals(linesAndBlobs.getFirst(), logs);
 
     if (latencyMs == 0 || blobCount < 100) {
-      logs = gcsLogs.tailCloudLog(logConfigs, logPath, Integer.MAX_VALUE, new TestClient(Map.of(configKey, false)));
+      var logs = gcsLogs.tailCloudLog(logConfigs, logPath, Integer.MAX_VALUE, new TestClient());
       assertNotNull(logs, "log must not be null");
       assertEquals(linesAndBlobs.getFirst(), logs);
     }

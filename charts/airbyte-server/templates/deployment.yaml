@@ -97,21 +97,6 @@ spec:
             configMapKeyRef:
               name: {{ .Release.Name }}-airbyte-env
               key: CONFIG_ROOT
-        - name: DATABASE_PASSWORD
-          valueFrom:
-            secretKeyRef:
-              name: {{ .Values.global.database.secretName | default (printf "%s-airbyte-secrets" .Release.Name ) }}
-              key: {{ .Values.global.database.secretValue | default "DATABASE_PASSWORD" }}
-        - name: DATABASE_URL
-          valueFrom:
-            configMapKeyRef:
-              name: {{ .Release.Name }}-airbyte-env
-              key: DATABASE_URL
-        - name: DATABASE_USER
-          valueFrom:
-            secretKeyRef:
-              name: {{ .Release.Name }}-airbyte-secrets
-              key: DATABASE_USER
         - name: LOG4J_CONFIGURATION_FILE
           valueFrom:
             configMapKeyRef:
@@ -382,12 +367,13 @@ spec:
               key: GOOGLE_APPLICATION_CREDENTIALS
         {{- end }}
 
+        {{- include "airbyte.database.envs" . | nindent 8 }}
         {{- include "airbyte.enterprise.instanceAdmin" . | nindent 8 }} 
         {{- include "airbyte.enterprise.identityProvider" . | nindent 8 }} 
         {{- include "airbyte.enterprise.license" . | nindent 8 }}
 
         {{- end }}
-
+        
         # Values from secret
         {{- if .Values.secrets }}
         {{- range $k, $v := .Values.secrets }}

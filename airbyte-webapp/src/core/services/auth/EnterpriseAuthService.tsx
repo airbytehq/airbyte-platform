@@ -8,7 +8,7 @@ import { FlexContainer } from "components/ui/Flex";
 import { Text } from "components/ui/Text";
 
 import { useGetInstanceConfiguration, useGetOrCreateUser } from "core/api";
-import { UserRead } from "core/api/types/AirbyteClient";
+import { AuthConfigurationMode, UserRead } from "core/api/types/AirbyteClient";
 import { useFormatError } from "core/errors";
 import { useNotificationService } from "hooks/services/Notification";
 import { createUriWithoutSsoParams } from "packages/cloud/services/auth/KeycloakService";
@@ -19,8 +19,8 @@ import { AuthContext } from "./AuthContext";
 export const EnterpriseAuthService: React.FC<PropsWithChildren<unknown>> = ({ children }) => {
   const { auth, airbyteUrl } = useGetInstanceConfiguration();
 
-  if (!auth) {
-    throw new Error("Authentication is enabled, but the server returned an invalid auth configuration: ", auth);
+  if (auth.mode !== AuthConfigurationMode.oidc || !auth.defaultRealm || !auth.clientId) {
+    throw new Error(`Authentication is enabled, but the server returned an invalid auth configuration: ${auth}`);
   }
 
   const oidcConfig = {

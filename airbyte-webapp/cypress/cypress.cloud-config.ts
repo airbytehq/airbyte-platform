@@ -12,4 +12,8 @@ export default defineConfig({
       LOGIN_URL: "https://frontend-dev-cloud.airbyte.com",
     },
   },
+  retries: {
+    runMode: 5,
+    openMode: 0,
+  },
 });

@@ -60,6 +60,7 @@ const StreamsConfigTableRowInner: React.FC<StreamsConfigTableRowInnerProps & { c
     destinationSyncMode,
     selectedFields,
     selected: isStreamSelectedForSync,
+    fieldSelectionEnabled,
   } = stream.config ?? {};
 
   const pathDisplayName = (path: Path): string => path.join(".");
@@ -112,7 +113,12 @@ const StreamsConfigTableRowInner: React.FC<StreamsConfigTableRowInnerProps & { c
   }, [syncMode, destinationSyncMode]);
 
   const fieldCount = fields?.length ?? 0;
-  const selectedFieldCount = selectedFields?.length ?? fieldCount;
+  const selectedFieldCount = fieldSelectionEnabled
+    ? selectedFields?.length === 0
+      ? fieldCount
+      : selectedFields?.length
+    : fieldCount;
+
   const onRowClick: React.MouseEventHandler<HTMLElement> | undefined =
     fieldCount > 0
       ? (e) => {

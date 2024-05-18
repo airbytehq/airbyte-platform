@@ -1,5 +1,4 @@
 import classNames from "classnames";
-import dayjs from "dayjs";
 import { useState } from "react";
 import { FormattedMessage, useIntl } from "react-intl";
 
@@ -11,6 +10,7 @@ import { Text } from "components/ui/Text";
 import { JobWithAttempts } from "area/connection/types/jobs";
 import { failureUiDetailsFromReason } from "core/utils/errorStatusMessage";
 import { formatBytes } from "core/utils/numberHelper";
+import { useFormatLengthOfTime } from "core/utils/time";
 import { useLocalStorage } from "core/utils/useLocalStorage";
 
 import styles from "./JobStats.module.scss";
@@ -27,11 +27,7 @@ export const JobStats: React.FC<JobStatsProps> = ({ jobWithAttempts }) => {
   const { job, attempts } = jobWithAttempts;
   const lastAttempt = attempts?.at(-1); // even if attempts is present it might be empty, which `.at` propagates to `lastAttempt`
 
-  const start = dayjs(job.createdAt * 1000);
-  const end = dayjs(job.updatedAt * 1000);
-  const hours = Math.abs(end.diff(start, "hour"));
-  const minutes = Math.abs(end.diff(start, "minute")) - hours * 60;
-  const seconds = Math.abs(end.diff(start, "second")) - minutes * 60 - hours * 3600;
+  const jobRunTime = useFormatLengthOfTime((job.updatedAt - job.createdAt) * 1000);
 
   const [isSecondaryMessageExpanded, setIsSecondaryMessageExpanded] = useState(false);
 
@@ -76,9 +72,7 @@ export const JobStats: React.FC<JobStatsProps> = ({ jobWithAttempts }) => {
               |
             </Text>
             <Text as="span" color="grey500" size="sm">
-              {hours ? <FormattedMessage id="sources.hour" values={{ hour: hours }} /> : null}
-              {hours || minutes ? <FormattedMessage id="sources.minute" values={{ minute: minutes }} /> : null}
-              <FormattedMessage id="sources.second" values={{ second: seconds }} />
+              {jobRunTime}
             </Text>
             {showExtendedStats && (
               <>

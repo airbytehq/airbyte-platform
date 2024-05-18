@@ -104,6 +104,7 @@ allprojects {
                     libs.sts,
                     libs.aws.java.sdk.sts,
                     libs.elasticsearch,
+                    libs.apache.mime4j.core, // Force upgrade to remediate GHSA-jw7r-rxff-gv24
                     libs.platform.testcontainers.postgresql)
         }
     }

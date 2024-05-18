@@ -46,6 +46,7 @@ import io.airbyte.commons.server.converters.JobConverter;
 import io.airbyte.commons.server.helpers.ConnectionHelpers;
 import io.airbyte.commons.server.helpers.DestinationHelpers;
 import io.airbyte.commons.server.helpers.SourceHelpers;
+import io.airbyte.commons.temporal.TemporalClient;
 import io.airbyte.commons.version.AirbyteVersion;
 import io.airbyte.config.Configs.WorkerEnvironment;
 import io.airbyte.config.DestinationConnection;
@@ -61,6 +62,8 @@ import io.airbyte.config.StreamSyncStats;
 import io.airbyte.config.SyncStats;
 import io.airbyte.config.helpers.LogConfigs;
 import io.airbyte.config.persistence.ConfigNotFoundException;
+import io.airbyte.data.services.ConnectionService;
+import io.airbyte.data.services.impls.jooq.ConnectionServiceJooqImpl;
 import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.featureflag.HydrateAggregatedStats;
 import io.airbyte.featureflag.TestClient;
@@ -199,13 +202,14 @@ class JobHistoryHandlerTest {
               .bytesEmitted(2000L)
               .recordsCommitted(5000L)));
 
-  private ConnectionsHandler connectionsHandler;
+  private ConnectionService connectionService;
   private SourceHandler sourceHandler;
   private DestinationHandler destinationHandler;
   private Attempt testJobAttempt;
   private JobPersistence jobPersistence;
   private FeatureFlagClient featureFlagClient;
   private JobHistoryHandler jobHistoryHandler;
+  private TemporalClient temporalClient;
 
   private static JobRead toJobInfo(final Job job) {
     return new JobRead().id(job.getId())
@@ -254,11 +258,12 @@ class JobHistoryHandlerTest {
   void setUp() {
     testJobAttempt = createAttempt(0, JOB_ID, CREATED_AT, AttemptStatus.SUCCEEDED);
 
-    connectionsHandler = mock(ConnectionsHandler.class);
+    connectionService = mock(ConnectionServiceJooqImpl.class);
     sourceHandler = mock(SourceHandler.class);
     destinationHandler = mock(DestinationHandler.class);
     jobPersistence = mock(JobPersistence.class);
     featureFlagClient = mock(TestClient.class);
+    temporalClient = mock(TemporalClient.class);
     final SourceDefinitionsHandler sourceDefinitionsHandler = mock(SourceDefinitionsHandler.class);
     final DestinationDefinitionsHandler destinationDefinitionsHandler = mock(DestinationDefinitionsHandler.class);
     final AirbyteVersion airbyteVersion = mock(AirbyteVersion.class);
@@ -266,12 +271,13 @@ class JobHistoryHandlerTest {
         jobPersistence,
         WorkerEnvironment.DOCKER,
         LogConfigs.EMPTY,
-        connectionsHandler,
+        connectionService,
         sourceHandler,
         sourceDefinitionsHandler,
         destinationHandler,
         destinationDefinitionsHandler,
         airbyteVersion,
+        temporalClient,
         featureFlagClient);
   }
 
@@ -558,7 +564,8 @@ class JobHistoryHandlerTest {
 
   @Test
   @DisplayName("Should return the right info to debug this job")
-  void testGetDebugJobInfo() throws IOException, JsonValidationException, ConfigNotFoundException {
+  void testGetDebugJobInfo()
+      throws IOException, JsonValidationException, ConfigNotFoundException, io.airbyte.data.exceptions.ConfigNotFoundException {
     Job job = new Job(JOB_ID, JOB_CONFIG.getConfigType(), JOB_CONFIG_ID, JOB_CONFIG, ImmutableList.of(testJobAttempt), JOB_STATUS, null, CREATED_AT,
         CREATED_AT);
     final StandardSourceDefinition standardSourceDefinition = new StandardSourceDefinition()
@@ -575,7 +582,7 @@ class JobHistoryHandlerTest {
 
     final StandardSync standardSync = ConnectionHelpers.generateSyncWithSourceId(source.getSourceId());
     final ConnectionRead connectionRead = ConnectionHelpers.generateExpectedConnectionRead(standardSync);
-    when(connectionsHandler.getConnection(UUID.fromString(job.getScope()))).thenReturn(connectionRead);
+    when(connectionService.getStandardSync(UUID.fromString(job.getScope()))).thenReturn(standardSync);
 
     final SourceIdRequestBody sourceIdRequestBody = new SourceIdRequestBody();
     sourceIdRequestBody.setSourceId(connectionRead.getSourceId());

@@ -112,7 +112,7 @@ class StreamStatusTrackerTest {
         .jobType(StreamStatusTrackerKt.jobType(replicationContext))
         .connectionId(CONNECTION_ID)
         .attemptNumber(ATTEMPT)
-        .runState(StreamStatusRunState.PENDING)
+        .runState(StreamStatusRunState.RUNNING)
         .transitionedAt(TIMESTAMP.toMillis())
         .workspaceId(WORKSPACE_ID);
     final StreamStatusKey streamStatusKey = new StreamStatusKey(streamDescriptor.getName(), streamDescriptor.getNamespace(),
@@ -123,7 +123,7 @@ class StreamStatusTrackerTest {
         .id(STREAM_ID)
         .jobId(JOB_ID)
         .jobType(StreamStatusJobType.SYNC)
-        .runState(StreamStatusRunState.PENDING)
+        .runState(StreamStatusRunState.RUNNING)
         .streamName(streamDescriptor.getName())
         .streamNamespace(streamDescriptor.getNamespace())
         .transitionedAt(TIMESTAMP.toMillis())
@@ -772,7 +772,7 @@ class StreamStatusTrackerTest {
         .jobType(StreamStatusJobType.SYNC)
         .connectionId(CONNECTION_ID)
         .attemptNumber(ATTEMPT)
-        .runState(StreamStatusRunState.PENDING)
+        .runState(StreamStatusRunState.RUNNING)
         .transitionedAt(TIMESTAMP.toMillis())
         .workspaceId(WORKSPACE_ID);
     final StreamStatusKey streamStatusKey = new StreamStatusKey(streamDescriptor.getName(), streamDescriptor.getNamespace(),

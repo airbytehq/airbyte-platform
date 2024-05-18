@@ -17,7 +17,7 @@ const STYLES_BY_VARIANT: Readonly<Record<FieldSelectionStatusVariant, string>> =
 };
 
 interface FieldSelectionStatusProps {
-  selectedFieldCount: number;
+  selectedFieldCount?: number;
   totalFieldCount: number;
   variant: FieldSelectionStatusVariant;
 }

@@ -147,7 +147,7 @@ class ApiAuthorizationHelperTest {
     // You're a workspace admin ONLY, and we require either org admin OR workspace admin -> pass
     every {
       rbacRoleHelper.getRbacRoles(authUserId.toString(), mapOf(ORGANIZATION_ID_HEADER to organizationId.toString()))
-    } returns setOf(WorkspaceAuthRole.WORKSPACE_ADMIN.label)
+    } returns setOf(WorkspaceAuthRole.WORKSPACE_ADMIN.label, OrganizationAuthRole.NONE.label)
     assertDoesNotThrow {
       apiAuthorizationHelper.ensureUserHasAnyRequiredRoleOrThrow(Scope.ORGANIZATION, listOf(organizationId.toString()), requiredRoles)
     }
@@ -155,7 +155,7 @@ class ApiAuthorizationHelperTest {
     // You're an organization admin, and we require either org or workspace admin -> pass
     every {
       rbacRoleHelper.getRbacRoles(authUserId.toString(), mapOf(ORGANIZATION_ID_HEADER to organizationId.toString()))
-    } returns setOf(OrganizationAuthRole.ORGANIZATION_ADMIN.label)
+    } returns setOf(WorkspaceAuthRole.NONE.label, OrganizationAuthRole.ORGANIZATION_ADMIN.label)
     assertDoesNotThrow {
       apiAuthorizationHelper.ensureUserHasAnyRequiredRoleOrThrow(Scope.ORGANIZATION, listOf(organizationId.toString()), requiredRoles)
     }

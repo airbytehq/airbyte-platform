@@ -15,7 +15,7 @@ interface ResetWarningModalProps {
   stateType: ConnectionStateType;
 }
 
-export const ResetWarningModal: React.FC<ResetWarningModalProps> = ({ onCancel, onComplete, stateType }) => {
+export const ClearDataWarningModal: React.FC<ResetWarningModalProps> = ({ onCancel, onComplete, stateType }) => {
   const { formatMessage } = useIntl();
   const [withReset, setWithReset] = useState(true);
   const requireFullReset = stateType === ConnectionStateType.legacy;

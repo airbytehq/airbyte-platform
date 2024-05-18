@@ -130,10 +130,10 @@ class StreamStatusTracker(private val airbyteApiClient: AirbyteApiClient) {
     }
 
     val streamStatusRead: StreamStatusRead =
-      StreamStatusCreateRequestBody(ctx = ctx, descriptor = descriptor, transition = transition).let { requestBody ->
+      StreamStatusCreateRequestBody(ctx, descriptor, transition, StreamStatusRunState.RUNNING).let { requestBody ->
         AirbyteApiClient.retryWithJitterThrows(
           { airbyteApiClient.streamStatusesApi.createStreamStatus(requestBody) },
-          "stream status started ${descriptor.namespace}:${descriptor.name}",
+          "stream status running ${descriptor.namespace}:${descriptor.name}",
         )
       }
 
@@ -143,7 +143,8 @@ class StreamStatusTracker(private val airbyteApiClient: AirbyteApiClient) {
       .also { currentStreamStatuses[key] = it }
 
     logger.debug {
-      "Stream status for stream ${descriptor.namespace}:${descriptor.name} set to STARTED (id = ${streamStatusRead.id}, context = $ctx)"
+      "STARTED event received. " +
+        "Stream status for stream ${descriptor.namespace}:${descriptor.name} set to RUNNING (id = ${streamStatusRead.id}, context = $ctx)"
     }
   }
 
@@ -512,6 +513,7 @@ private fun StreamStatusCreateRequestBody(
   ctx: ReplicationContext,
   descriptor: StreamDescriptor,
   transition: Duration,
+  runState: StreamStatusRunState,
 ) = StreamStatusCreateRequestBody()
   .streamName(descriptor.name)
   .streamNamespace(descriptor.namespace)
@@ -519,6 +521,6 @@ private fun StreamStatusCreateRequestBody(
   .jobType(ctx.jobType())
   .connectionId(ctx.connectionId)
   .attemptNumber(ctx.attempt)
-  .runState(StreamStatusRunState.PENDING)
+  .runState(runState)
   .transitionedAt(transition.inWholeMilliseconds)
   .workspaceId(ctx.workspaceId)

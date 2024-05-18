@@ -1,6 +1,6 @@
 # temporal
 
-![Version: 0.50.14](https://img.shields.io/badge/Version-0.50.14-informational?style=flat-square) ![Type: application](https://img.shields.io/badge/Type-application-informational?style=flat-square) ![AppVersion: dev](https://img.shields.io/badge/AppVersion-dev-informational?style=flat-square)
+![Version: 0.67.17](https://img.shields.io/badge/Version-0.67.17-informational?style=flat-square) ![Type: application](https://img.shields.io/badge/Type-application-informational?style=flat-square) ![AppVersion: dev](https://img.shields.io/badge/AppVersion-dev-informational?style=flat-square)
 
 Helm chart to deploy airbyte-temporal
 
@@ -36,7 +36,7 @@ Helm chart to deploy airbyte-temporal
 | global.serviceAccountName | string | `"placeholderServiceAccount"` |  |
 | image.pullPolicy | string | `"IfNotPresent"` |  |
 | image.repository | string | `"temporalio/auto-setup"` |  |
-| image.tag | string | `"1.20.1"` |  |
+| image.tag | string | `"1.23"` |  |
 | livenessProbe.enabled | bool | `true` |  |
 | livenessProbe.failureThreshold | int | `3` |  |
 | livenessProbe.initialDelaySeconds | int | `5` |  |

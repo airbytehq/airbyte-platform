@@ -17,7 +17,6 @@ import io.airbyte.featureflag.FeatureFlagClient
 import io.airbyte.featureflag.Multi
 import io.airbyte.featureflag.Workspace
 import io.airbyte.protocol.models.StreamDescriptor
-import io.mockk.called
 import io.mockk.clearAllMocks
 import io.mockk.every
 import io.mockk.mockk
@@ -84,12 +83,8 @@ internal class StreamRefreshesHandlerTest {
 
     assertFalse(result)
 
-    verify {
-      listOf(
-        streamRefreshesRepository.saveAll(any<List<StreamRefresh>>()),
-        eventRunner.startNewManualSync(connectionId),
-      ) wasNot called
-    }
+    verify(exactly = 0) { streamRefreshesRepository.saveAll(any<List<StreamRefresh>>()) }
+    verify(exactly = 0) { eventRunner.startNewManualSync(connectionId) }
   }
 
   @Test
@@ -144,17 +139,15 @@ internal class StreamRefreshesHandlerTest {
     val result = streamDescriptorsToStreamRefreshes(connectionId, refreshMode, streamDescriptors)
 
     assertEquals(2, result.size)
-    result.stream().forEach({
+    result.stream().forEach {
       assertEquals(connectionId, it.connectionId)
       assertEquals(expectedRefreshType, it.refreshType)
-      if (it.streamNamespace == null) {
-        assertEquals("name2", it.streamName)
-      } else if (it.streamNamespace == "namespace1") {
-        assertEquals("name1", it.streamName)
-      } else {
-        throw RuntimeException("Unexpected streamNamespace {${it.streamNamespace}}")
+      when (it.streamNamespace) {
+        null -> assertEquals("name2", it.streamName)
+        "namespace1" -> assertEquals("name1", it.streamName)
+        else -> throw RuntimeException("Unexpected streamNamespace {${it.streamNamespace}}")
       }
-    })
+    }
   }
 
   @Test

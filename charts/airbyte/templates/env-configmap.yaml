@@ -31,11 +31,8 @@ data:
   CONFIGS_DATABASE_MINIMUM_FLYWAY_MIGRATION_VERSION: "0.35.15.001"
   DATA_DOCKER_MOUNT: airbyte_data
   DB_DOCKER_MOUNT: airbyte_db
-  DATABASE_DB: {{ include "airbyte.database.name" . }}
-  DATABASE_HOST: {{ include "airbyte.database.host" . }} # todo: database information into secrets
-  DATABASE_PORT: {{ include "airbyte.database.port" . | quote }}
-  DATABASE_URL: {{ include "airbyte.database.url" . | quote }}
-  KEYCLOAK_DATABASE_URL: {{ include "keycloak.database.url" . | quote }}
+  {{- include "airbyte.database.configVars" . | nindent 2 }}
+  KEYCLOAK_DATABASE_URL: {{ include "airbyte.keycloak.database.url" . | quote }}
   GOOGLE_APPLICATION_CREDENTIALS: {{ include "airbyte.gcpLogCredentialsPath" . | quote }}
   INTERNAL_API_HOST: {{ .Release.Name }}-airbyte-server-svc:{{ .Values.server.service.port }}
 

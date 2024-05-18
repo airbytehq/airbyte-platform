@@ -415,6 +415,7 @@ flyway:
 jackson:
   mapper:
     ACCEPT_CASE_INSENSITIVE_ENUMS: true
+  serialization-inclusion: NON_ABSENT
 
 jooq:
   datasources:

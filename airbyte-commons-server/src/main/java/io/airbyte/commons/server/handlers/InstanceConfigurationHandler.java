@@ -5,6 +5,7 @@
 package io.airbyte.commons.server.handlers;
 
 import io.airbyte.api.model.generated.AuthConfiguration;
+import io.airbyte.api.model.generated.AuthConfiguration.ModeEnum;
 import io.airbyte.api.model.generated.InstanceConfigurationResponse;
 import io.airbyte.api.model.generated.InstanceConfigurationResponse.EditionEnum;
 import io.airbyte.api.model.generated.InstanceConfigurationResponse.LicenseTypeEnum;
@@ -49,8 +50,8 @@ public class InstanceConfigurationHandler {
   private final WorkspacesHandler workspacesHandler;
   private final UserPersistence userPersistence;
   private final OrganizationPersistence organizationPersistence;
-
   private final String trackingStrategy;
+  private final ModeEnum authMode;
 
   public InstanceConfigurationHandler(@Named("airbyteUrl") final Optional<String> airbyteUrl,
                                       @Value("${airbyte.tracking.strategy:}") final String trackingStrategy,
@@ -61,7 +62,8 @@ public class InstanceConfigurationHandler {
                                       final WorkspacePersistence workspacePersistence,
                                       final WorkspacesHandler workspacesHandler,
                                       final UserPersistence userPersistence,
-                                      final OrganizationPersistence organizationPersistence) {
+                                      final OrganizationPersistence organizationPersistence,
+                                      final ModeEnum authMode) {
     this.airbyteUrl = airbyteUrl;
     this.trackingStrategy = trackingStrategy;
     this.airbyteEdition = airbyteEdition;
@@ -72,6 +74,7 @@ public class InstanceConfigurationHandler {
     this.workspacesHandler = workspacesHandler;
     this.userPersistence = userPersistence;
     this.organizationPersistence = organizationPersistence;
+    this.authMode = authMode;
   }
 
   public InstanceConfigurationResponse getInstanceConfiguration() throws IOException {
@@ -121,13 +124,16 @@ public class InstanceConfigurationHandler {
   }
 
   private AuthConfiguration getAuthConfiguration() {
-    if (airbyteEdition.equals(AirbyteEdition.PRO) && airbyteKeycloakConfiguration.isPresent()) {
-      return new AuthConfiguration()
-          .clientId(airbyteKeycloakConfiguration.get().getWebClientId())
-          .defaultRealm(airbyteKeycloakConfiguration.get().getAirbyteRealm());
-    } else {
-      return null;
+    final AuthConfiguration authConfig = new AuthConfiguration().mode(authMode);
+
+    // if Enterprise configurations are present, set OIDC configs and override the mode
+    if (authMode.equals(ModeEnum.OIDC)) {
+      airbyteKeycloakConfiguration.orElseThrow(() -> new IllegalStateException("Keycloak configuration is required for OIDC mode."));
+      authConfig.setClientId(airbyteKeycloakConfiguration.get().getWebClientId());
+      authConfig.setDefaultRealm(airbyteKeycloakConfiguration.get().getAirbyteRealm());
     }
+
+    return authConfig;
   }
 
   private UUID getDefaultUserId() throws IOException {

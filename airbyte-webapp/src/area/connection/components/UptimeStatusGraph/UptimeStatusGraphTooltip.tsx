@@ -1,4 +1,4 @@
-import { useIntl } from "react-intl";
+import { FormattedMessage, FormattedTime, useIntl } from "react-intl";
 import { ContentType } from "recharts/types/component/Tooltip";
 
 import {
@@ -7,8 +7,10 @@ import {
 } from "components/connection/ConnectionStatusIndicator";
 import { Box } from "components/ui/Box";
 import { Card } from "components/ui/Card";
-import { FlexContainer, FlexItem } from "components/ui/Flex";
+import { FlexContainer } from "components/ui/Flex";
 import { Text } from "components/ui/Text";
+
+import { useFormatLengthOfTime } from "core/utils/time";
 
 import styles from "./UptimeStatusGraphTooltip.module.scss";
 import { ChartStream } from "./WaffleChart";
@@ -23,26 +25,32 @@ type PresentingStatuses =
   | ConnectionStatusIndicatorStatus.Queued;
 
 const MESSAGE_BY_STATUS: Readonly<Record<PresentingStatuses, string>> = {
-  onTime: "connection.uptimeStatus.onTime",
-  late: "connection.uptimeStatus.late",
-  error: "connection.uptimeStatus.error",
-  actionRequired: "connection.uptimeStatus.actionRequired",
-  syncing: "connection.uptimeStatus.syncing",
-  queued: "connection.uptimeStatus.queued",
+  onTime: "connection.overview.graph.uptimeStatus.onTime",
+  late: "connection.overview.graph.uptimeStatus.late",
+  error: "connection.overview.graph.uptimeStatus.error",
+  actionRequired: "connection.overview.graph.uptimeStatus.actionRequired",
+  syncing: "connection.overview.graph.uptimeStatus.syncing",
+  queued: "connection.overview.graph.uptimeStatus.queued",
 };
 
 export const UptimeStatusGraphTooltip: ContentType<number, string> = ({ active, payload }) => {
   const { formatMessage } = useIntl();
+  const jobRunTime: number = payload?.[0]?.payload?.runtimeMs;
+  const formattedJobRunTime = useFormatLengthOfTime(jobRunTime);
 
   if (!active) {
     return null;
   }
 
-  const date: number = payload?.[0]?.payload?.date;
+  const date = payload?.[0]?.payload?.date;
+  const recordsEmitted = payload?.[0]?.payload?.recordsEmitted;
+  const recordsCommitted = payload?.[0]?.payload?.recordsCommitted;
   const streams: ChartStream[] = payload?.[0]?.payload?.streams;
 
-  const statusesByCount = streams?.reduce<Record<PresentingStatuses, number>>(
-    (acc, { status }) => {
+  const statusesByCount = streams?.reduce<Record<PresentingStatuses, ChartStream[]>>(
+    (acc, stream) => {
+      let { status } = stream;
+
       if (status === ConnectionStatusIndicatorStatus.OnTrack) {
         status = ConnectionStatusIndicatorStatus.OnTime;
       } else if (status === ConnectionStatusIndicatorStatus.Pending) {
@@ -50,44 +58,91 @@ export const UptimeStatusGraphTooltip: ContentType<number, string> = ({ active, 
       } else if (status === ConnectionStatusIndicatorStatus.Disabled) {
         return acc;
       }
-      acc[status]++;
+      acc[status].push(stream);
       return acc;
     },
     {
       // Order here determines the display order in the tooltip
-      [ConnectionStatusIndicatorStatus.OnTime]: 0,
-      [ConnectionStatusIndicatorStatus.Late]: 0,
-      [ConnectionStatusIndicatorStatus.Error]: 0,
-      [ConnectionStatusIndicatorStatus.ActionRequired]: 0,
-      [ConnectionStatusIndicatorStatus.Syncing]: 0,
-      [ConnectionStatusIndicatorStatus.Queued]: 0,
+      [ConnectionStatusIndicatorStatus.OnTime]: [],
+      [ConnectionStatusIndicatorStatus.Late]: [],
+      [ConnectionStatusIndicatorStatus.Error]: [],
+      [ConnectionStatusIndicatorStatus.ActionRequired]: [],
+      [ConnectionStatusIndicatorStatus.Syncing]: [],
+      [ConnectionStatusIndicatorStatus.Queued]: [],
     }
   );
 
   return (
-    <Card>
-      <Box pb="md">
-        <Text size="md">{new Date(date).toLocaleDateString()}</Text>
-      </Box>
+    <Card noPadding>
+      <Box p="md">
+        <FlexContainer direction="column">
+          <Text size="md">
+            <FormattedTime value={date} year="numeric" month="short" day="numeric" />
+            &nbsp;
+            <FormattedMessage id="general.unicodeBullet" />
+            &nbsp;
+            {formattedJobRunTime}
+          </Text>
 
-      {Object.entries(statusesByCount ?? []).map(([_status, count]) => {
-        const status = _status as PresentingStatuses;
-        return count === 0 ? null : (
-          <FlexContainer key={status} alignItems="center" gap="sm" className={styles.statusLine}>
-            <FlexItem>
-              <ConnectionStatusIndicator withBox status={status} />
-            </FlexItem>
-            <FlexItem>
-              <Text size="lg">
-                <strong>{count}</strong>
-              </Text>
-            </FlexItem>
-            <FlexItem>
-              <Text size="md">{formatMessage({ id: MESSAGE_BY_STATUS[status] })}</Text>
-            </FlexItem>
+          <FlexContainer direction="column" gap="sm">
+            <Text smallcaps bold color="grey">
+              <FormattedMessage id="connection.overview.graph.volume" />
+            </Text>
+            <Text color="grey" size="sm">
+              <FormattedMessage id="connection.overview.graph.recordsEmitted" values={{ value: recordsEmitted }} />
+            </Text>
+            <Text color="grey" size="sm">
+              <FormattedMessage id="connection.overview.graph.recordsLoaded" values={{ value: recordsCommitted }} />
+            </Text>
           </FlexContainer>
-        );
-      })}
+
+          {!!streams?.length && (
+            <FlexContainer direction="column" gap="sm">
+              <Text smallcaps bold color="grey">
+                <FormattedMessage id="connection.overview.graph.uptimeStatus" />
+              </Text>
+              {Object.entries(statusesByCount ?? []).map(([_status, streams]) => {
+                const status = _status as PresentingStatuses;
+                return streams.length === 0 ? null : (
+                  <FlexContainer key={status} gap="sm">
+                    <Box mt="xs">
+                      <ConnectionStatusIndicator size="xs" status={status} />
+                    </Box>
+                    <FlexContainer direction="column" gap="none">
+                      <Text color="grey" size="sm" className={styles.alignText} as="span">
+                        {formatMessage({ id: MESSAGE_BY_STATUS[status] }, { count: streams.length })}
+                      </Text>
+                      {status === ConnectionStatusIndicatorStatus.Error && (
+                        <>
+                          {streams
+                            .filter((_, idx) => idx < 3)
+                            .map(({ streamName }) => (
+                              <Text key={streamName} color="red" size="sm" className={styles.alignText}>
+                                {streamName}
+                              </Text>
+                            ))}
+                          {streams.length > 3 && (
+                            <Text color="red" size="sm" className={styles.alignText}>
+                              <FormattedMessage
+                                id="connection.overview.graph.uptimeStatus.more"
+                                values={{ moreCount: streams.length - 3 }}
+                              />
+                            </Text>
+                          )}
+                        </>
+                      )}
+                    </FlexContainer>
+                  </FlexContainer>
+                );
+              })}
+            </FlexContainer>
+          )}
+
+          <Text color="blue" size="sm">
+            <FormattedMessage id="connection.overview.graph.clickThrough" />
+          </Text>
+        </FlexContainer>
+      </Box>
     </Card>
   );
 };

@@ -37,7 +37,8 @@ public class DefaultPostLoadExecutor implements PostLoadExecutor {
   @Override
   public void execute() throws Exception {
     applyDefinitionsHelper.apply();
-    declarativeSourceUpdater.apply();
+    // TODO (ella): Temporarily disabled until semver upgrading is implemented
+    // declarativeSourceUpdater.apply();
 
     log.info("Loaded seed data.");
   }

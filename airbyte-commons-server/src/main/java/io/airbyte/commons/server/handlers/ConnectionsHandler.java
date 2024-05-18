@@ -13,6 +13,7 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableMap.Builder;
 import com.google.common.collect.Lists;
+import datadog.trace.api.Trace;
 import io.airbyte.analytics.TrackingClient;
 import io.airbyte.api.model.generated.ActorDefinitionRequestBody;
 import io.airbyte.api.model.generated.AirbyteCatalog;
@@ -21,7 +22,6 @@ import io.airbyte.api.model.generated.CatalogDiff;
 import io.airbyte.api.model.generated.ConnectionAutoPropagateResult;
 import io.airbyte.api.model.generated.ConnectionAutoPropagateSchemaChange;
 import io.airbyte.api.model.generated.ConnectionCreate;
-import io.airbyte.api.model.generated.ConnectionDataHistoryReadItem;
 import io.airbyte.api.model.generated.ConnectionDataHistoryRequestBody;
 import io.airbyte.api.model.generated.ConnectionRead;
 import io.airbyte.api.model.generated.ConnectionReadList;
@@ -36,6 +36,10 @@ import io.airbyte.api.model.generated.FailureOrigin;
 import io.airbyte.api.model.generated.FailureReason;
 import io.airbyte.api.model.generated.FailureType;
 import io.airbyte.api.model.generated.InternalOperationResult;
+import io.airbyte.api.model.generated.JobAggregatedStats;
+import io.airbyte.api.model.generated.JobRead;
+import io.airbyte.api.model.generated.JobSyncResultRead;
+import io.airbyte.api.model.generated.JobWithAttemptsRead;
 import io.airbyte.api.model.generated.ListConnectionsForWorkspacesRequestBody;
 import io.airbyte.api.model.generated.NonBreakingChangesPreference;
 import io.airbyte.api.model.generated.StreamDescriptor;
@@ -54,6 +58,7 @@ import io.airbyte.commons.server.handlers.helpers.AutoPropagateSchemaChangeHelpe
 import io.airbyte.commons.server.handlers.helpers.CatalogConverter;
 import io.airbyte.commons.server.handlers.helpers.ConnectionScheduleHelper;
 import io.airbyte.commons.server.handlers.helpers.PaginationHelper;
+import io.airbyte.commons.server.handlers.helpers.StatsAggregationHelper;
 import io.airbyte.commons.server.scheduler.EventRunner;
 import io.airbyte.commons.server.validation.CatalogValidator;
 import io.airbyte.config.ActorCatalog;
@@ -85,6 +90,7 @@ import io.airbyte.config.persistence.helper.CatalogGenerationSetter;
 import io.airbyte.featureflag.CheckWithCatalog;
 import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.featureflag.Workspace;
+import io.airbyte.metrics.lib.ApmTraceUtils;
 import io.airbyte.metrics.lib.MetricAttribute;
 import io.airbyte.metrics.lib.MetricClientFactory;
 import io.airbyte.metrics.lib.MetricTags;
@@ -97,7 +103,6 @@ import io.airbyte.persistence.job.models.AttemptWithJobInfo;
 import io.airbyte.persistence.job.models.Job;
 import io.airbyte.persistence.job.models.JobStatus;
 import io.airbyte.persistence.job.models.JobWithStatusAndTimestamp;
-import io.airbyte.persistence.job.models.JobsRecordsCommitted;
 import io.airbyte.protocol.models.CatalogHelpers;
 import io.airbyte.protocol.models.ConfiguredAirbyteCatalog;
 import io.airbyte.validation.json.JsonValidationException;
@@ -108,7 +113,6 @@ import jakarta.inject.Singleton;
 import java.io.IOException;
 import java.time.Instant;
 import java.time.LocalDate;
-import java.time.LocalTime;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.util.ArrayList;
@@ -683,11 +687,14 @@ public class ConnectionsHandler {
     }
   }
 
+  @Trace
   public ConnectionReadList listConnectionsForWorkspace(final WorkspaceIdRequestBody workspaceIdRequestBody)
       throws JsonValidationException, IOException, ConfigNotFoundException {
+    ApmTraceUtils.addTagsToTrace(Map.of(MetricTags.WORKSPACE_ID, workspaceIdRequestBody.getWorkspaceId().toString()));
     return listConnectionsForWorkspace(workspaceIdRequestBody, false);
   }
 
+  @Trace
   public ConnectionReadList listConnectionsForWorkspace(final WorkspaceIdRequestBody workspaceIdRequestBody, final boolean includeDeleted)
       throws JsonValidationException, IOException, ConfigNotFoundException {
     final List<ConnectionRead> connectionReads = Lists.newArrayList();
@@ -725,6 +732,7 @@ public class ConnectionsHandler {
     return new ConnectionReadList().connections(connectionReads);
   }
 
+  @Trace
   public ConnectionRead getConnection(final UUID connectionId)
       throws JsonValidationException, IOException, ConfigNotFoundException {
     return buildConnectionRead(connectionId);
@@ -907,9 +915,11 @@ public class ConnectionsHandler {
     return failureReason;
   }
 
+  @Trace
   public List<ConnectionStatusRead> getConnectionStatuses(
                                                           final ConnectionStatusesRequestBody connectionStatusesRequestBody)
-      throws IOException, JsonValidationException, ConfigNotFoundException {
+      throws IOException {
+    ApmTraceUtils.addTagsToTrace(Map.of(MetricTags.CONNECTION_IDS, connectionStatusesRequestBody.getConnectionIds().toString()));
     final List<UUID> connectionIds = connectionStatusesRequestBody.getConnectionIds();
     final List<ConnectionStatusRead> result = new ArrayList<>();
     for (final UUID connectionId : connectionIds) {
@@ -954,58 +964,45 @@ public class ConnectionsHandler {
   }
 
   /**
-   * Returns bytes committed per day for the given connection for the last 30 days in the given
-   * timezone.
+   * Returns data history for the given connection for requested number of jobs.
    *
-   * @param connectionDataHistoryRequestBody the connectionId and timezone string
-   * @return list of ConnectionDataHistoryReadItems (timestamp and bytes committed)
+   * @param connectionDataHistoryRequestBody connection Id and number of jobs
+   * @return list of JobSyncResultRead
    */
-  public List<ConnectionDataHistoryReadItem> getConnectionDataHistory(final ConnectionDataHistoryRequestBody connectionDataHistoryRequestBody)
-      throws IOException {
+  public List<JobSyncResultRead> getConnectionDataHistory(final ConnectionDataHistoryRequestBody connectionDataHistoryRequestBody) {
 
-    final ZoneId requestZone = ZoneId.of(connectionDataHistoryRequestBody.getTimezone());
-
-    // Start time in designated timezone
-    final ZonedDateTime endTimeInUserTimeZone = Instant.now().atZone(requestZone).toLocalDate().atTime(LocalTime.MAX).atZone(requestZone);
-    final ZonedDateTime startTimeInUserTimeZone = endTimeInUserTimeZone.toLocalDate().atStartOfDay(requestZone).minusDays(29);
-    // Convert start time to UTC (since that's what the database uses)
-    final Instant startTimeInUTC = startTimeInUserTimeZone.toInstant();
-
-    final List<JobsRecordsCommitted> attempts = jobPersistence.listRecordsCommittedForConnectionAfterTimestamp(
-        connectionDataHistoryRequestBody.getConnectionId(),
-        startTimeInUTC);
-
-    // we want an entry per day - even if it's empty
-    final Map<LocalDate, ConnectionDataHistoryReadItem> connectionDataHistoryReadItemsByDate = new HashMap<>();
-    final LocalDate startDate = startTimeInUserTimeZone.toLocalDate();
-    final LocalDate endDate = endTimeInUserTimeZone.toLocalDate();
-    for (LocalDate date = startDate; !date.isAfter(endDate); date = date.plusDays(1)) {
-      connectionDataHistoryReadItemsByDate.put(date, new ConnectionDataHistoryReadItem()
-          .timestamp(Math.toIntExact(date.atStartOfDay(requestZone).toEpochSecond()))
-          .recordsCommitted(0L));
+    List<Job> jobs;
+    try {
+      jobs = jobPersistence.listJobs(
+          Set.of(ConfigType.SYNC),
+          Set.of(JobStatus.SUCCEEDED, JobStatus.FAILED),
+          connectionDataHistoryRequestBody.getConnectionId().toString(),
+          connectionDataHistoryRequestBody.getNumberOfJobs());
+    } catch (IOException e) {
+      throw new RuntimeException(e);
     }
+    Map<Long, JobWithAttemptsRead> jobIdToJobRead = StatsAggregationHelper.getJobIdToJobWithAttemptsReadMap(jobs, jobPersistence);
 
-    for (final JobsRecordsCommitted attempt : attempts) {
-      final Optional<Long> endedAtOptional = attempt.getEndedAtInSecond();
-
-      if (endedAtOptional.isPresent()) {
-        // Convert the endedAt timestamp from the database to the designated timezone
-        final Instant attemptEndedAt = Instant.ofEpochSecond(endedAtOptional.get());
-        final LocalDate attemptDateInUserTimeZone = attemptEndedAt.atZone(requestZone)
-            .toLocalDate();
-
-        // Merge it with the bytes synced from the attempt
-        final long recordsCommitted = attempt.getRecordsCommitted().orElse(0L);
-
-        // Update the bytes synced for the corresponding day
-        final ConnectionDataHistoryReadItem existingItem = connectionDataHistoryReadItemsByDate.get(attemptDateInUserTimeZone);
-        existingItem.setRecordsCommitted(existingItem.getRecordsCommitted() + recordsCommitted);
-      }
-    }
+    final List<JobSyncResultRead> result = new ArrayList<>();
+    jobs.forEach((job) -> {
+      final Long jobId = job.getId();
+      final JobRead jobRead = jobIdToJobRead.get(jobId).getJob();
+      final JobAggregatedStats aggregatedStats = jobRead.getAggregatedStats();
+      final JobSyncResultRead jobResult = new JobSyncResultRead()
+          .jobId(jobId)
+          .configType(jobRead.getConfigType())
+          .jobCreatedAt(jobRead.getCreatedAt())
+          .jobUpdatedAt(jobRead.getUpdatedAt())
+          .bytesEmitted(aggregatedStats.getBytesEmitted())
+          .bytesCommitted(aggregatedStats.getBytesCommitted())
+          .recordsEmitted(aggregatedStats.getRecordsEmitted())
+          .recordsCommitted(aggregatedStats.getRecordsCommitted());
+      result.add(jobResult);
+    });
 
     // Sort the results by date
-    return connectionDataHistoryReadItemsByDate.values().stream()
-        .sorted(Comparator.comparing(ConnectionDataHistoryReadItem::getTimestamp))
+    return result.stream()
+        .sorted(Comparator.comparing(JobSyncResultRead::getJobUpdatedAt))
         .collect(Collectors.toList());
   }
 

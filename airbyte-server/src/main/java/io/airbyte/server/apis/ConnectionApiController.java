@@ -17,7 +17,6 @@ import io.airbyte.api.model.generated.ConnectionAndJobIdRequestBody;
 import io.airbyte.api.model.generated.ConnectionAutoPropagateResult;
 import io.airbyte.api.model.generated.ConnectionAutoPropagateSchemaChange;
 import io.airbyte.api.model.generated.ConnectionCreate;
-import io.airbyte.api.model.generated.ConnectionDataHistoryReadItem;
 import io.airbyte.api.model.generated.ConnectionDataHistoryRequestBody;
 import io.airbyte.api.model.generated.ConnectionIdRequestBody;
 import io.airbyte.api.model.generated.ConnectionRead;
@@ -30,12 +29,12 @@ import io.airbyte.api.model.generated.ConnectionStreamHistoryRequestBody;
 import io.airbyte.api.model.generated.ConnectionStreamRefreshRequestBody;
 import io.airbyte.api.model.generated.ConnectionStreamRequestBody;
 import io.airbyte.api.model.generated.ConnectionSyncProgressReadItem;
-import io.airbyte.api.model.generated.ConnectionSyncResultRead;
 import io.airbyte.api.model.generated.ConnectionUpdate;
 import io.airbyte.api.model.generated.ConnectionUptimeHistoryRequestBody;
 import io.airbyte.api.model.generated.GetTaskQueueNameRequest;
 import io.airbyte.api.model.generated.InternalOperationResult;
 import io.airbyte.api.model.generated.JobInfoRead;
+import io.airbyte.api.model.generated.JobSyncResultRead;
 import io.airbyte.api.model.generated.ListConnectionsForWorkspacesRequestBody;
 import io.airbyte.api.model.generated.TaskQueueNameRead;
 import io.airbyte.api.model.generated.WorkspaceIdRequestBody;
@@ -183,7 +182,7 @@ public class ConnectionApiController implements ConnectionApi {
   @Post(uri = "/history/data")
   @Secured({WORKSPACE_READER, ORGANIZATION_READER})
   @ExecuteOn(AirbyteTaskExecutors.IO)
-  public List<ConnectionDataHistoryReadItem> getConnectionDataHistory(@Body final ConnectionDataHistoryRequestBody connectionDataHistoryRequestBody) {
+  public List<JobSyncResultRead> getConnectionDataHistory(@Body final ConnectionDataHistoryRequestBody connectionDataHistoryRequestBody) {
     return ApiHelper.execute(() -> connectionsHandler.getConnectionDataHistory(connectionDataHistoryRequestBody));
   }
 
@@ -227,7 +226,7 @@ public class ConnectionApiController implements ConnectionApi {
   @Post(uri = "/history/uptime")
   @Secured({WORKSPACE_READER, ORGANIZATION_READER})
   @ExecuteOn(AirbyteTaskExecutors.IO)
-  public List<ConnectionSyncResultRead> getConnectionUptimeHistory(@Body final ConnectionUptimeHistoryRequestBody connectionUptimeHistoryRequestBody) {
+  public List<JobSyncResultRead> getConnectionUptimeHistory(@Body final ConnectionUptimeHistoryRequestBody connectionUptimeHistoryRequestBody) {
     return ApiHelper.execute(() -> streamStatusesHandler.getConnectionUptimeHistory(connectionUptimeHistoryRequestBody));
   }
 
