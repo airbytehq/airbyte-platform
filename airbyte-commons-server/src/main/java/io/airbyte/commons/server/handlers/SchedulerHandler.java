@@ -53,6 +53,7 @@ import io.airbyte.commons.server.handlers.helpers.AutoPropagateSchemaChangeHelpe
 import io.airbyte.commons.server.handlers.helpers.AutoPropagateSchemaChangeHelper.UpdateSchemaResult;
 import io.airbyte.commons.server.handlers.helpers.CatalogConverter;
 import io.airbyte.commons.server.handlers.helpers.JobCreationAndStatusUpdateHelper;
+import io.airbyte.commons.server.handlers.helpers.NotificationHelper;
 import io.airbyte.commons.server.scheduler.EventRunner;
 import io.airbyte.commons.server.scheduler.SynchronousResponse;
 import io.airbyte.commons.server.scheduler.SynchronousSchedulerClient;
@@ -63,8 +64,6 @@ import io.airbyte.config.ActorCatalog;
 import io.airbyte.config.ActorDefinitionVersion;
 import io.airbyte.config.DestinationConnection;
 import io.airbyte.config.JobTypeResourceLimit.JobType;
-import io.airbyte.config.Notification.NotificationType;
-import io.airbyte.config.NotificationItem;
 import io.airbyte.config.NotificationSettings;
 import io.airbyte.config.ResourceRequirements;
 import io.airbyte.config.ScopeType;
@@ -96,12 +95,6 @@ import io.airbyte.metrics.lib.MetricAttribute;
 import io.airbyte.metrics.lib.MetricClientFactory;
 import io.airbyte.metrics.lib.MetricTags;
 import io.airbyte.metrics.lib.OssMetricsRegistry;
-import io.airbyte.notification.CustomerioNotificationClient;
-import io.airbyte.notification.SlackNotificationClient;
-import io.airbyte.notification.messages.ConnectionInfo;
-import io.airbyte.notification.messages.SchemaUpdateNotification;
-import io.airbyte.notification.messages.SourceInfo;
-import io.airbyte.notification.messages.WorkspaceInfo;
 import io.airbyte.persistence.job.JobCreator;
 import io.airbyte.persistence.job.JobNotifier;
 import io.airbyte.persistence.job.JobPersistence;
@@ -163,6 +156,7 @@ public class SchedulerHandler {
   private final WorkspaceService workspaceService;
   private final SecretPersistenceConfigService secretPersistenceConfigService;
   private final StreamRefreshesHandler streamRefreshesHandler;
+  private final NotificationHelper notificationHelper;
 
   @VisibleForTesting
   public SchedulerHandler(final ConfigRepository configRepository,
@@ -187,7 +181,8 @@ public class SchedulerHandler {
                           final ConnectorDefinitionSpecificationHandler connectorDefinitionSpecificationHandler,
                           final WorkspaceService workspaceService,
                           final SecretPersistenceConfigService secretPersistenceConfigService,
-                          final StreamRefreshesHandler streamRefreshesHandler) {
+                          final StreamRefreshesHandler streamRefreshesHandler,
+                          final NotificationHelper notificationHelper) {
     this.configRepository = configRepository;
     this.secretsRepositoryWriter = secretsRepositoryWriter;
     this.synchronousSchedulerClient = synchronousSchedulerClient;
@@ -214,6 +209,7 @@ public class SchedulerHandler {
         jobNotifier,
         jobTracker);
     this.streamRefreshesHandler = streamRefreshesHandler;
+    this.notificationHelper = notificationHelper;
   }
 
   public CheckConnectionRead checkSourceConnectionFromSourceId(final SourceIdRequestBody sourceIdRequestBody)
@@ -463,59 +459,12 @@ public class SchedulerHandler {
             && notificationSettings.getSendOnConnectionUpdate() != null
             && !result.appliedDiff().getTransforms().isEmpty()
             && (Boolean.TRUE == connectionRead.getNotifySchemaChanges())) {
-          notifySchemaPropagated(notificationSettings, diff, workspace, connectionRead, source,
+          notificationHelper.notifySchemaPropagated(notificationSettings, diff, workspace, connectionRead, source,
               workspace.getEmail());
         }
       } else {
         LOGGER.info("Not propagating changes for connectionId: '{}', new catalogId '{}'",
             connectionRead.getConnectionId(), sourceAutoPropagateChange.getCatalogId());
-      }
-    }
-  }
-
-  public void notifySchemaPropagated(final NotificationSettings notificationSettings,
-                                     final CatalogDiff diff,
-                                     final StandardWorkspace workspace,
-                                     final ConnectionRead connection,
-                                     final SourceConnection source,
-                                     final String email)
-      throws IOException {
-    final NotificationItem item;
-
-    final String connectionUrl = webUrlHelper.getConnectionUrl(workspace.getWorkspaceId(), connection.getConnectionId());
-    final String workspaceUrl = webUrlHelper.getWorkspaceUrl(workspace.getWorkspaceId());
-    final String sourceUrl = webUrlHelper.getSourceUrl(workspace.getWorkspaceId(), source.getSourceId());
-    final boolean isBreakingChange = AutoPropagateSchemaChangeHelper.containsBreakingChange(diff);
-
-    SchemaUpdateNotification notification = SchemaUpdateNotification.builder()
-        .sourceInfo(SourceInfo.builder().name(source.getName()).id(source.getSourceId()).url(sourceUrl).build())
-        .connectionInfo(ConnectionInfo.builder().name(connection.getName()).id(connection.getConnectionId()).url(connectionUrl).build())
-        .workspace(WorkspaceInfo.builder().name(workspace.getName()).id(workspace.getWorkspaceId()).url(workspaceUrl).build())
-        .catalogDiff(diff)
-        .isBreakingChange(isBreakingChange)
-        .build();
-    if (isBreakingChange) {
-      item = notificationSettings.getSendOnConnectionUpdateActionRequired();
-    } else {
-      item = notificationSettings.getSendOnConnectionUpdate();
-    }
-    for (final NotificationType type : item.getNotificationType()) {
-      try {
-        switch (type) {
-          case SLACK -> {
-            final SlackNotificationClient slackNotificationClient = new SlackNotificationClient(item.getSlackConfiguration());
-            slackNotificationClient.notifySchemaPropagated(notification, email);
-          }
-          case CUSTOMERIO -> {
-            final CustomerioNotificationClient emailNotificationClient = new CustomerioNotificationClient();
-            emailNotificationClient.notifySchemaPropagated(notification, email);
-          }
-          default -> {
-            LOGGER.warn("Notification type {} not supported", type);
-          }
-        }
-      } catch (final InterruptedException e) {
-        LOGGER.error("Failed to send notification for connectionId: '{}'", connection.getConnectionId(), e);
       }
     }
   }

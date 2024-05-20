@@ -72,6 +72,7 @@ import io.airbyte.commons.server.converters.ConfigurationUpdate;
 import io.airbyte.commons.server.converters.JobConverter;
 import io.airbyte.commons.server.errors.ValueConflictKnownException;
 import io.airbyte.commons.server.handlers.helpers.CatalogConverter;
+import io.airbyte.commons.server.handlers.helpers.NotificationHelper;
 import io.airbyte.commons.server.helpers.DestinationHelpers;
 import io.airbyte.commons.server.helpers.SourceHelpers;
 import io.airbyte.commons.server.scheduler.EventRunner;
@@ -269,6 +270,7 @@ class SchedulerHandlerTest {
   private WorkspaceService workspaceService;
   private SecretPersistenceConfigService secretPersistenceConfigService;
   private StreamRefreshesHandler streamRefreshesHandler;
+  private NotificationHelper notificationHelper;
 
   @BeforeEach
   void setup() throws JsonValidationException, ConfigNotFoundException, IOException {
@@ -319,6 +321,7 @@ class SchedulerHandlerTest {
 
     streamRefreshesHandler = mock(StreamRefreshesHandler.class);
     when(streamRefreshesHandler.getRefreshesForConnection(any())).thenReturn(new ArrayList<>());
+    notificationHelper = mock(NotificationHelper.class);
 
     schedulerHandler = new SchedulerHandler(
         configRepository,
@@ -343,7 +346,8 @@ class SchedulerHandlerTest {
         connectorDefinitionSpecificationHandler,
         workspaceService,
         secretPersistenceConfigService,
-        streamRefreshesHandler);
+        streamRefreshesHandler,
+        notificationHelper);
   }
 
   @Test
@@ -1924,7 +1928,7 @@ class SchedulerHandlerTest {
         .catalog(newCatalog);
     spySchedulerHandler.applySchemaChangeForSource(request);
     verify(connectionsHandler).updateConnection(any());
-    verify(spySchedulerHandler, never()).notifySchemaPropagated(any(), any(), any(), any(), any(), any());
+    verify(notificationHelper, never()).notifySchemaPropagated(any(), any(), any(), any(), any(), any());
   }
 
   @Test
