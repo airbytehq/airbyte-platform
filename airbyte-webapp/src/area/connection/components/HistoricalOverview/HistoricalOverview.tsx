@@ -5,6 +5,7 @@ import { LoadingPage } from "components";
 import { Box } from "components/ui/Box";
 import { Tabs, ButtonTab } from "components/ui/Tabs";
 
+import { DefaultErrorBoundary } from "core/errors";
 import { useExperiment } from "hooks/services/Experiment";
 
 import { DataMovedGraph } from "../DataMovedGraph";
@@ -35,10 +36,12 @@ export const HistoricalOverview: React.FC = () => {
         />
       </Tabs>
       <Box pt="sm">
-        <Suspense fallback={<LoadingPage />}>
-          {selectedTab === "uptimeStatus" && <UptimeStatusGraph />}
-          {selectedTab === "dataMoved" && <DataMovedGraph />}
-        </Suspense>
+        <DefaultErrorBoundary>
+          <Suspense fallback={<LoadingPage />}>
+            {selectedTab === "uptimeStatus" && <UptimeStatusGraph />}
+            {selectedTab === "dataMoved" && <DataMovedGraph />}
+          </Suspense>
+        </DefaultErrorBoundary>
       </Box>
     </Box>
   );
