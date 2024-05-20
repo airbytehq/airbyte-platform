@@ -52,6 +52,10 @@ data:
                 POD_STATUS=`echo $POD | cut -d " " -f 2`
                 POD_DATE_STR=`echo $POD | cut -d " " -f 3`
                 POD_START_DATE_STR=`echo $POD | cut -d " " -f 4`
+                if [ "$POD_STATUS" = "Pending" ] && [ -z "$POD_DATE_STR" ] && [ -z "$POD_START_DATE_STR" ]; then
+                  echo "Pod ${POD_NAME} hasn't started yet. Skipping..."
+                  continue
+                fi
                 POD_DATE=`date -d ${POD_DATE_STR:-$POD_START_DATE_STR} '+%s'`
                 if [ -n "${RUNNING_TTL_MINUTES}" ] && [ "$POD_STATUS" = "Running" ]; then
                   if [ "$POD_DATE" -lt "$RUNNING_DATE" ]; then
