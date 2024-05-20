@@ -115,6 +115,8 @@ interface WorkspaceService {
   ): Response
 }
 
+val DEFAULT_ORGANIZATION_ID = UUID.fromString("00000000-0000-0000-0000-000000000000")!!
+
 @Singleton
 @Secondary
 open class WorkspaceServiceImpl(
@@ -137,7 +139,9 @@ open class WorkspaceServiceImpl(
     authorization: String?,
     userInfo: String?,
   ): WorkspaceResponse {
-    val workspaceCreate = WorkspaceCreate().name(workspaceCreateRequest.name)
+    // For now this should always be true in OSS.
+    val organizationId = DEFAULT_ORGANIZATION_ID
+    val workspaceCreate = WorkspaceCreate().name(workspaceCreateRequest.name).organizationId(organizationId)
     val workspaceReadHttpResponse =
       try {
         configApiClient.createWorkspace(workspaceCreate, authorization, userInfo)
