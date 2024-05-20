@@ -20,7 +20,10 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import io.airbyte.api.client.AirbyteApiClient;
 import io.airbyte.api.client.WorkloadApiClient;
 import io.airbyte.api.client.generated.DestinationApi;
+import io.airbyte.api.client.generated.DestinationDefinitionApi;
 import io.airbyte.api.client.generated.SourceApi;
+import io.airbyte.api.client.invoker.generated.ApiException;
+import io.airbyte.api.client.model.generated.DestinationDefinitionRead;
 import io.airbyte.commons.concurrency.VoidCallable;
 import io.airbyte.commons.converters.ThreadedTimeTracker;
 import io.airbyte.persistence.job.models.ReplicationInput;
@@ -51,6 +54,8 @@ import java.util.UUID;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.Mockito;
 
 class ReplicationWorkerHelperTest {
@@ -64,6 +69,7 @@ class ReplicationWorkerHelperTest {
   private StreamStatusCompletionTracker streamStatusCompletionTracker;
   private WorkloadApiClient workloadApiClient;
   private AirbyteApiClient airbyteApiClient;
+  private DestinationDefinitionApi destinationDefinitionApi;
 
   @BeforeEach
   void setUp() {
@@ -79,6 +85,8 @@ class ReplicationWorkerHelperTest {
     when(workloadApiClient.getWorkloadApi()).thenReturn(mock(WorkloadApi.class));
     when(airbyteApiClient.getDestinationApi()).thenReturn(mock(DestinationApi.class));
     when(airbyteApiClient.getSourceApi()).thenReturn(mock(SourceApi.class));
+    destinationDefinitionApi = mock(DestinationDefinitionApi.class);
+    when(airbyteApiClient.getDestinationDefinitionApi()).thenReturn(destinationDefinitionApi);
     replicationWorkerHelper = spy(new ReplicationWorkerHelper(
         mock(AirbyteMessageDataExtractor.class),
         mock(FieldSelector.class),
@@ -101,8 +109,10 @@ class ReplicationWorkerHelperTest {
     Mockito.framework().clearInlineMocks();
   }
 
-  @Test
-  void testGetReplicationOutput() throws JsonProcessingException {
+  @ParameterizedTest
+  @ValueSource(booleans = {true, false})
+  void testGetReplicationOutput(final boolean supportRefreshes) throws JsonProcessingException, ApiException {
+    mockSupportRefreshes(supportRefreshes);
     // Need to pass in a replication context
     final ConfiguredAirbyteCatalog catalog = new ConfiguredAirbyteCatalog().withAdditionalProperty("test", "test");
     final ReplicationContext replicationContext = new ReplicationContext(true, UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), 0L,
@@ -112,7 +122,7 @@ class ReplicationWorkerHelperTest {
         mock(ReplicationFeatureFlags.class),
         mock(Path.class),
         catalog);
-    verify(streamStatusCompletionTracker).startTracking(catalog, replicationContext);
+    verify(streamStatusCompletionTracker).startTracking(catalog, replicationContext, supportRefreshes);
     // Need to have a configured catalog for getReplicationOutput
     replicationWorkerHelper.startDestination(
         mock(AirbyteDestination.class),
@@ -130,7 +140,8 @@ class ReplicationWorkerHelperTest {
   }
 
   @Test
-  void testAnalyticsMessageHandling() {
+  void testAnalyticsMessageHandling() throws ApiException {
+    mockSupportRefreshes(false);
     final ReplicationContext context =
         new ReplicationContext(true, UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), 0L,
             1, UUID.randomUUID(), SOURCE_IMAGE, DESTINATION_IMAGE, UUID.randomUUID(), UUID.randomUUID());
@@ -194,6 +205,10 @@ class ReplicationWorkerHelperTest {
     replicationWorkerHelper.processMessageFromDestination(destinationRawMessage);
 
     verify(replicationWorkerHelper, times(1)).internalProcessMessageFromDestination(mapRevertedDestinationMessage);
+  }
+
+  private void mockSupportRefreshes(final boolean supportRefreshes) throws ApiException {
+    when(destinationDefinitionApi.getDestinationDefinition(any())).thenReturn(new DestinationDefinitionRead().supportRefreshes(supportRefreshes));
   }
 
 }
