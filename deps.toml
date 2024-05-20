@@ -1,5 +1,5 @@
 [versions]
-airbyte-protocol = "0.9.0"
+airbyte-protocol = "0.11.0"
 bouncycastle = "1.70"
 commons_io = "2.7"
 connectors-testcontainers = "1.15.3"

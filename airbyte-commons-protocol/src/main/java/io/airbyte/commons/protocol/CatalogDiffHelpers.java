@@ -14,7 +14,6 @@ import io.airbyte.commons.protocol.transform_models.UpdateFieldSchemaTransform;
 import io.airbyte.commons.protocol.transform_models.UpdateStreamTransform;
 import io.airbyte.protocol.models.AirbyteCatalog;
 import io.airbyte.protocol.models.AirbyteStream;
-import io.airbyte.protocol.models.CatalogHelpers;
 import io.airbyte.protocol.models.ConfiguredAirbyteCatalog;
 import io.airbyte.protocol.models.ConfiguredAirbyteStream;
 import io.airbyte.protocol.models.DestinationSyncMode;
@@ -143,7 +142,12 @@ public class CatalogDiffHelpers {
   private static Map<StreamDescriptor, AirbyteStream> streamDescriptorToMap(final AirbyteCatalog catalog) {
     return catalog.getStreams()
         .stream()
-        .collect(Collectors.toMap(CatalogHelpers::extractStreamDescriptor, s -> s));
+        .collect(Collectors.toMap(CatalogDiffHelpers::extractStreamDescriptor, s -> s));
+  }
+
+  public static StreamDescriptor extractStreamDescriptor(final AirbyteStream airbyteStream) {
+    return new StreamDescriptor().withName(airbyteStream.getName())
+        .withNamespace(airbyteStream.getNamespace());
   }
 
   /**
