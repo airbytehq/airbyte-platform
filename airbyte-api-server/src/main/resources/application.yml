@@ -21,9 +21,9 @@ micronaut:
     binders:
       netty:
         bytebuf-allocators:
-          enabled: true
+          enabled: false
         channels:
-          enabled: true
+          enabled: false
         queues:
           enabled: true
     export:
