@@ -19,6 +19,7 @@ exports[`SchemaChangesBackdrop renders with breaking changes and prevents backgr
       </p>
       <button
         class="button sizeXS typePrimaryDark"
+        type="button"
       >
         <span
           class="childrenContainer"

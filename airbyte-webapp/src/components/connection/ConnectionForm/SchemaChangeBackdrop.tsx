@@ -19,10 +19,11 @@ export const SchemaChangeBackdrop: React.FC<React.PropsWithChildren<unknown>> = 
   } = useConnectionEditService();
 
   const { refreshSchema } = useConnectionFormService();
+  const { schemaRefreshing } = useConnectionEditService();
 
   const { hasBreakingSchemaChange } = useSchemaChanges(schemaChange);
 
-  if (!allowAutoDetectSchema || !hasBreakingSchemaChange || schemaHasBeenRefreshed) {
+  if (!allowAutoDetectSchema || !hasBreakingSchemaChange || schemaHasBeenRefreshed || schemaRefreshing) {
     return <>{children}</>;
   }
 
@@ -33,7 +34,7 @@ export const SchemaChangeBackdrop: React.FC<React.PropsWithChildren<unknown>> = 
           <Text align="center" size="lg">
             <FormattedMessage id="connectionForm.schemaChangesBackdrop.message" />
           </Text>
-          <Button variant="primaryDark" onClick={refreshSchema}>
+          <Button variant="primaryDark" type="button" onClick={refreshSchema}>
             <FormattedMessage id="connection.schemaChange.reviewAction" />
           </Button>
         </div>
