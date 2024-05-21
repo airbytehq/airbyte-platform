@@ -57,6 +57,7 @@ import io.airbyte.commons.server.handlers.helpers.AutoPropagateSchemaChangeHelpe
 import io.airbyte.commons.server.handlers.helpers.AutoPropagateSchemaChangeHelper.UpdateSchemaResult;
 import io.airbyte.commons.server.handlers.helpers.CatalogConverter;
 import io.airbyte.commons.server.handlers.helpers.ConnectionScheduleHelper;
+import io.airbyte.commons.server.handlers.helpers.NotificationHelper;
 import io.airbyte.commons.server.handlers.helpers.PaginationHelper;
 import io.airbyte.commons.server.handlers.helpers.StatsAggregationHelper;
 import io.airbyte.commons.server.scheduler.EventRunner;
@@ -159,6 +160,7 @@ public class ConnectionsHandler {
   private final StreamGenerationRepository streamGenerationRepository;
   private final CatalogGenerationSetter catalogGenerationSetter;
   private final CatalogValidator catalogValidator;
+  private final NotificationHelper notificationHelper;
 
   @Inject
   public ConnectionsHandler(final StreamRefreshesHandler streamRefreshesHandler,
@@ -177,7 +179,8 @@ public class ConnectionsHandler {
                             @Value("${airbyte.server.connection.limits.max-jobs}") final Integer maxFailedJobsInARowBeforeConnectionDisable,
                             final StreamGenerationRepository streamGenerationRepository,
                             final CatalogGenerationSetter catalogGenerationSetter,
-                            final CatalogValidator catalogValidator) {
+                            final CatalogValidator catalogValidator,
+                            final NotificationHelper notificationHelper) {
     this.jobPersistence = jobPersistence;
     this.configRepository = configRepository;
     this.uuidGenerator = uuidGenerator;
@@ -195,6 +198,7 @@ public class ConnectionsHandler {
     this.streamGenerationRepository = streamGenerationRepository;
     this.catalogGenerationSetter = catalogGenerationSetter;
     this.catalogValidator = catalogValidator;
+    this.notificationHelper = notificationHelper;
   }
 
   /**
@@ -1110,6 +1114,8 @@ public class ConnectionsHandler {
     final var supportedDestinationSyncModes =
         connectorSpecHandler.getDestinationSpecification(new DestinationDefinitionIdWithWorkspaceId().destinationDefinitionId(destinationDefinitionId)
             .workspaceId(request.getWorkspaceId())).getSupportedDestinationSyncModes();
+    final var workspace = configRepository.getStandardWorkspaceNoSecrets(request.getWorkspaceId(), false);
+    final var source = configRepository.getSourceConnection(connection.getSourceId());
     final CatalogDiff appliedDiff;
     if (AutoPropagateSchemaChangeHelper.shouldAutoPropagate(diffToApply, connection)) {
       // NOTE: appliedDiff is the part of the diff that were actually applied.
@@ -1124,6 +1130,13 @@ public class ConnectionsHandler {
       updateConnection(updateObject);
       LOGGER.info("Propagating changes for connectionId: '{}', new catalogId '{}'",
           connection.getConnectionId(), request.getCatalogId());
+      notificationHelper.notifySchemaPropagated(
+          workspace.getNotificationSettings(),
+          appliedDiff,
+          workspace,
+          connection,
+          source,
+          workspace.getEmail());
     } else {
       appliedDiff = null;
     }

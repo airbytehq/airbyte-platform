@@ -4,6 +4,7 @@
 
 package io.airbyte.commons.server.handlers;
 
+import static io.airbyte.commons.server.converters.ApiPojoConverters.internalToConnectionRead;
 import static io.airbyte.commons.server.helpers.ConnectionHelpers.FIELD_NAME;
 import static io.airbyte.commons.server.helpers.ConnectionHelpers.SECOND_FIELD_NAME;
 import static io.airbyte.config.EnvConfigs.DEFAULT_DAYS_OF_ONLY_FAILED_JOBS_BEFORE_CONNECTION_DISABLE;
@@ -80,6 +81,7 @@ import io.airbyte.commons.server.converters.ConfigurationUpdate;
 import io.airbyte.commons.server.errors.BadRequestException;
 import io.airbyte.commons.server.handlers.helpers.ActorDefinitionHandlerHelper;
 import io.airbyte.commons.server.handlers.helpers.CatalogConverter;
+import io.airbyte.commons.server.handlers.helpers.NotificationHelper;
 import io.airbyte.commons.server.handlers.helpers.StatsAggregationHelper;
 import io.airbyte.commons.server.helpers.ConnectionHelpers;
 import io.airbyte.commons.server.scheduler.EventRunner;
@@ -101,6 +103,7 @@ import io.airbyte.config.JobConfig.ConfigType;
 import io.airbyte.config.JobOutput;
 import io.airbyte.config.JobOutput.OutputType;
 import io.airbyte.config.JobSyncConfig;
+import io.airbyte.config.NotificationSettings;
 import io.airbyte.config.RefreshConfig;
 import io.airbyte.config.RefreshStream;
 import io.airbyte.config.RefreshStream.RefreshType;
@@ -252,6 +255,7 @@ class ConnectionsHandlerTest {
   private StreamGenerationRepository streamGenerationRepository;
   private CatalogGenerationSetter catalogGenerationSetter;
   private CatalogValidator catalogValidator;
+  private NotificationHelper notificationHelper;
 
   @SuppressWarnings("unchecked")
   @BeforeEach
@@ -393,6 +397,7 @@ class ConnectionsHandlerTest {
     streamGenerationRepository = mock(StreamGenerationRepository.class);
     catalogGenerationSetter = mock(CatalogGenerationSetter.class);
     catalogValidator = mock(CatalogValidator.class);
+    notificationHelper = mock(NotificationHelper.class);
     when(workspaceHelper.getWorkspaceForSourceIdIgnoreExceptions(sourceId)).thenReturn(workspaceId);
     when(workspaceHelper.getWorkspaceForDestinationIdIgnoreExceptions(destinationId)).thenReturn(workspaceId);
     when(workspaceHelper.getWorkspaceForOperationIdIgnoreExceptions(operationId)).thenReturn(workspaceId);
@@ -421,7 +426,8 @@ class ConnectionsHandlerTest {
           MAX_FAILURE_JOBS_IN_A_ROW,
           streamGenerationRepository,
           catalogGenerationSetter,
-          catalogValidator);
+          catalogValidator,
+          notificationHelper);
 
       when(uuidGenerator.get()).thenReturn(standardSync.getConnectionId());
       final StandardSourceDefinition sourceDefinition = new StandardSourceDefinition()
@@ -538,8 +544,8 @@ class ConnectionsHandlerTest {
       final ConnectionReadList actualConnectionReadListWithDeleted = connectionsHandler.listConnectionsForWorkspace(workspaceIdRequestBody, true);
       final List<ConnectionRead> connections = actualConnectionReadListWithDeleted.getConnections();
       assertEquals(2, connections.size());
-      assertEquals(ApiPojoConverters.internalToConnectionRead(standardSync), connections.get(0));
-      assertEquals(ApiPojoConverters.internalToConnectionRead(standardSyncDeleted), connections.get(1));
+      assertEquals(internalToConnectionRead(standardSync), connections.get(0));
+      assertEquals(internalToConnectionRead(standardSyncDeleted), connections.get(1));
 
     }
 
@@ -1634,7 +1640,8 @@ class ConnectionsHandlerTest {
           MAX_FAILURE_JOBS_IN_A_ROW,
           streamGenerationRepository,
           catalogGenerationSetter,
-          catalogValidator);
+          catalogValidator,
+          notificationHelper);
     }
 
     private Attempt generateMockAttempt(final Instant attemptTime, final long recordsSynced) {
@@ -1882,7 +1889,8 @@ class ConnectionsHandlerTest {
           MAX_FAILURE_JOBS_IN_A_ROW,
           streamGenerationRepository,
           catalogGenerationSetter,
-          catalogValidator);
+          catalogValidator,
+          notificationHelper);
     }
 
     @Test
@@ -2334,6 +2342,12 @@ class ConnectionsHandlerTest {
     private static final String A_DIFFERENT_NAMESPACE = "a-different-namespace";
     private static final String A_DIFFERENT_COLUMN = "a-different-column";
     private static StandardSync standardSync;
+    private static final NotificationSettings NOTIFICATION_SETTINGS = new NotificationSettings();
+    private static final String EMAIL = "WorkspaceEmail@Company.com";
+    private static final StandardWorkspace WORKSPACE = new StandardWorkspace()
+        .withWorkspaceId(WORKSPACE_ID)
+        .withEmail(EMAIL)
+        .withNotificationSettings(NOTIFICATION_SETTINGS);
 
     @BeforeEach
     void setup() throws IOException, JsonValidationException, ConfigNotFoundException {
@@ -2346,6 +2360,8 @@ class ConnectionsHandlerTest {
           .withManual(true)
           .withNonBreakingChangesPreference(StandardSync.NonBreakingChangesPreference.PROPAGATE_FULLY);
       when(configRepository.getStandardSync(CONNECTION_ID)).thenReturn(standardSync);
+      when(configRepository.getSourceConnection(SOURCE_ID)).thenReturn(source);
+      when(configRepository.getStandardWorkspaceNoSecrets(WORKSPACE_ID, false)).thenReturn(WORKSPACE);
       when(configRepository.getDestinationDefinitionFromConnection(CONNECTION_ID)).thenReturn(
           new StandardDestinationDefinition().withDestinationDefinitionId(DESTINATION_DEFINITION_ID));
       when(connectorDefinitionSpecificationHandler.getDestinationSpecification(new DestinationDefinitionIdWithWorkspaceId()
@@ -2371,11 +2387,15 @@ class ConnectionsHandlerTest {
           MAX_FAILURE_JOBS_IN_A_ROW,
           streamGenerationRepository,
           catalogGenerationSetter,
-          catalogValidator);
+          catalogValidator,
+          notificationHelper);
     }
 
     @Test
     void testAutoPropagateSchemaChange() throws IOException, ConfigNotFoundException, JsonValidationException {
+      // Somehow standardSync is being mutated in the test (the catalog is changed) and verifying that the
+      // notification function is called correctly requires the original object.
+      final StandardSync originalSync = Jsons.clone(standardSync);
       final io.airbyte.api.model.generated.AirbyteCatalog catalogWithDiff =
           CatalogConverter.toApi(Jsons.clone(airbyteCatalog), SOURCE_VERSION);
       catalogWithDiff.addStreamsItem(new AirbyteStreamAndConfiguration()
@@ -2409,10 +2429,17 @@ class ConnectionsHandlerTest {
       verify(configRepository).writeStandardSync(standardSyncArgumentCaptor.capture());
       final StandardSync actualStandardSync = standardSyncArgumentCaptor.getValue();
       assertEquals(Jsons.clone(standardSync).withCatalog(expectedCatalog), actualStandardSync);
+      // the notification function is being called with copy of the originalSync that does not contain the
+      // updated catalog
+      // This is ok as we only pass that object to get connectionId and connectionName
+      verify(notificationHelper).notifySchemaPropagated(NOTIFICATION_SETTINGS, expectedDiff, WORKSPACE, internalToConnectionRead(originalSync),
+          source, EMAIL);
     }
 
     @Test
     void testAutoPropagateColumnsOnly() throws JsonValidationException, ConfigNotFoundException, IOException {
+      // See test above for why this part is necessary.
+      final StandardSync originalSync = Jsons.clone(standardSync);
       final Field newField = Field.of(A_DIFFERENT_COLUMN, JsonSchemaType.STRING);
       final io.airbyte.api.model.generated.AirbyteCatalog catalogWithDiff = CatalogConverter.toApi(
           CatalogHelpers.createAirbyteCatalog(SHOES,
@@ -2438,6 +2465,8 @@ class ConnectionsHandlerTest {
                   .breaking(false)
                   .transformType(FieldTransform.TransformTypeEnum.ADD_FIELD))));
       assertEquals(expectedDiff, actualResult.getPropagatedDiff());
+      verify(notificationHelper).notifySchemaPropagated(NOTIFICATION_SETTINGS, expectedDiff, WORKSPACE, internalToConnectionRead(originalSync),
+          source, EMAIL);
     }
 
   }
