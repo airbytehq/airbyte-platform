@@ -10,13 +10,16 @@ class JobConfigProxy(private val jobConfig: JobConfig) {
   val configType: ConfigType
     get() = jobConfig.configType
 
+  val raw: JobConfig
+    get() = jobConfig
+
   val configuredCatalog: ConfiguredAirbyteCatalog?
     get() =
       when (jobConfig.configType) {
-        JobConfig.ConfigType.SYNC -> jobConfig.sync.configuredAirbyteCatalog
-        JobConfig.ConfigType.REFRESH -> jobConfig.refresh.configuredAirbyteCatalog
-        JobConfig.ConfigType.RESET_CONNECTION -> jobConfig.resetConnection.configuredAirbyteCatalog
-        JobConfig.ConfigType.CLEAR -> jobConfig.resetConnection.configuredAirbyteCatalog
+        ConfigType.SYNC -> jobConfig.sync.configuredAirbyteCatalog
+        ConfigType.REFRESH -> jobConfig.refresh.configuredAirbyteCatalog
+        ConfigType.RESET_CONNECTION -> jobConfig.resetConnection.configuredAirbyteCatalog
+        ConfigType.CLEAR -> jobConfig.resetConnection.configuredAirbyteCatalog
         else -> null
       }
 }

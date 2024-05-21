@@ -22,9 +22,9 @@ export const SelectedFieldsCell: React.FC<FieldSelectionStatusCellProps> = ({ ro
       : config?.selectedFields?.length
     : totalFieldCount;
 
-  return (
+  return config?.selected ? (
     <Text>
       {selectedFieldCount}/{totalFieldCount}
     </Text>
-  );
+  ) : null;
 };

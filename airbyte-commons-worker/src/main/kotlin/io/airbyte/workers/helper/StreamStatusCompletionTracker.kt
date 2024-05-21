@@ -29,8 +29,9 @@ class StreamStatusCompletionTracker(
   open fun startTracking(
     configuredAirbyteCatalog: ConfiguredAirbyteCatalog,
     replicationContext: ReplicationContext,
+    supportRefreshes: Boolean,
   ) {
-    shouldEmitStreamStatus =
+    shouldEmitStreamStatus = supportRefreshes &&
       featureFlagClient.boolVariation(
         ActivateRefreshes,
         Multi(

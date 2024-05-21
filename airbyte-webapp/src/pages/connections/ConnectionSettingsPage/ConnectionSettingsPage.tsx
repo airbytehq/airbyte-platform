@@ -192,7 +192,13 @@ const SimplifiedConnectionSettingsPage = () => {
 
   const { mode } = useConnectionFormService();
   const destDefinitionVersion = useDestinationDefinitionVersion(connection.destinationId);
-  const simplifiedInitialValues = useInitialFormValues(connection, destDefinitionVersion, mode === "edit");
+  const { destDefinitionSpecification } = useConnectionFormService();
+  const simplifiedInitialValues = useInitialFormValues(
+    connection,
+    destDefinitionVersion,
+    destDefinitionSpecification,
+    mode === "edit"
+  );
 
   const { workspaceId } = useCurrentWorkspace();
   const canEditConnection = useIntent("EditConnection", { workspaceId });

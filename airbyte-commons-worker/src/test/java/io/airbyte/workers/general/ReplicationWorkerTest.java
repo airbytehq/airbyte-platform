@@ -17,6 +17,7 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.atLeastOnce;
@@ -34,7 +35,9 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 import io.airbyte.api.client.AirbyteApiClient;
 import io.airbyte.api.client.WorkloadApiClient;
 import io.airbyte.api.client.generated.DestinationApi;
+import io.airbyte.api.client.generated.DestinationDefinitionApi;
 import io.airbyte.api.client.generated.SourceApi;
+import io.airbyte.api.client.model.generated.DestinationDefinitionRead;
 import io.airbyte.api.client.model.generated.DestinationRead;
 import io.airbyte.api.client.model.generated.SourceRead;
 import io.airbyte.api.client.model.generated.StreamStatusIncompleteRunCause;
@@ -192,6 +195,7 @@ abstract class ReplicationWorkerTest {
   protected SourceApi sourceApi;
   protected DestinationApi destinationApi;
   protected StreamStatusCompletionTracker streamStatusCompletionTracker;
+  protected DestinationDefinitionApi destinationDefinitionApi;
 
   ReplicationWorker getDefaultReplicationWorker() {
     return getDefaultReplicationWorker(false);
@@ -250,6 +254,10 @@ abstract class ReplicationWorkerTest {
 
     when(airbyteApiClient.getDestinationApi()).thenReturn(destinationApi);
     when(airbyteApiClient.getSourceApi()).thenReturn(sourceApi);
+
+    destinationDefinitionApi = mock(DestinationDefinitionApi.class);
+    when(destinationDefinitionApi.getDestinationDefinition(any())).thenReturn(new DestinationDefinitionRead().supportRefreshes(true));
+    when(airbyteApiClient.getDestinationDefinitionApi()).thenReturn(destinationDefinitionApi);
 
     when(messageTracker.getSyncStatsTracker()).thenReturn(syncStatsTracker);
 
@@ -1221,7 +1229,7 @@ abstract class ReplicationWorkerTest {
 
     worker.run(replicationInput, jobRoot);
 
-    verify(streamStatusCompletionTracker).startTracking(any(), any());
+    verify(streamStatusCompletionTracker).startTracking(any(), any(), anyBoolean());
 
     verify(streamStatusCompletionTracker).finalize(0, mapper);
   }
@@ -1237,7 +1245,7 @@ abstract class ReplicationWorkerTest {
 
     worker.run(replicationInput, jobRoot);
 
-    verify(streamStatusCompletionTracker).startTracking(any(), any());
+    verify(streamStatusCompletionTracker).startTracking(any(), any(), anyBoolean());
     verify(streamStatusCompletionTracker).track(streamStatus.getTrace().getStreamStatus());
     verify(streamStatusCompletionTracker).finalize(0, mapper);
   }

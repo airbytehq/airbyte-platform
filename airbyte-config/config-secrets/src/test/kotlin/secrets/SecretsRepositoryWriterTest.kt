@@ -11,10 +11,16 @@ import io.airbyte.config.SourceConnection
 import io.airbyte.config.persistence.ConfigRepository
 import io.airbyte.config.secrets.hydration.RealSecretsHydrator
 import io.airbyte.metrics.lib.MetricClient
+import io.airbyte.metrics.lib.OssMetricsRegistry
 import io.airbyte.protocol.models.ConnectorSpecification
 import io.airbyte.validation.json.JsonSchemaValidator
+import io.mockk.every
 import io.mockk.mockk
+import io.mockk.verify
+import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
+import org.junit.jupiter.api.Test
 import java.util.UUID
 
 internal class SecretsRepositoryWriterTest {
@@ -23,13 +29,14 @@ internal class SecretsRepositoryWriterTest {
   private lateinit var secretsRepositoryWriter: SecretsRepositoryWriter
   private lateinit var secretsHydrator: RealSecretsHydrator
   private lateinit var secretsRepositoryReader: SecretsRepositoryReader
+  private lateinit var metricClient: MetricClient
   private lateinit var jsonSchemaValidator: JsonSchemaValidator
 
   @BeforeEach
   fun setup() {
     configRepository = mockk()
     secretPersistence = MemorySecretPersistence()
-    val metricClient: MetricClient = mockk()
+    metricClient = mockk()
     secretsRepositoryWriter =
       SecretsRepositoryWriter(
         secretPersistence,
@@ -37,6 +44,82 @@ internal class SecretsRepositoryWriterTest {
       )
     secretsHydrator = RealSecretsHydrator(secretPersistence)
     secretsRepositoryReader = SecretsRepositoryReader(secretsHydrator)
+  }
+
+  @Test
+  fun testUpdateSecretSameValueShouldWriteNewCoordinate() {
+    val secret = "secret-1"
+    val oldCoordinate = "existing_coordinate_v1"
+    secretPersistence.write(SecretCoordinate.fromFullCoordinate(oldCoordinate), secret)
+
+    every { metricClient.count(any(), any()) } returns Unit
+
+    val updatedFullConfigNoSecretChange =
+      Jsons.deserialize(
+        """
+        { "username": "airbyte1", "password": "$secret"}
+        """.trimIndent(),
+      )
+
+    val oldPartialConfig = injectCoordinate(oldCoordinate)
+    val updatedPartialConfig =
+      secretsRepositoryWriter.statefulUpdateSecrets(
+        WORKSPACE_ID,
+        oldPartialConfig,
+        updatedFullConfigNoSecretChange,
+        SPEC.connectionSpecification,
+        null,
+      )
+
+    val newCoordinate = "existing_coordinate_v2"
+    val expPartialConfig =
+      Jsons.deserialize(
+        """
+        {"username":"airbyte1","password":{"_secret":"$newCoordinate"}}
+        """.trimIndent(),
+      )
+    assertEquals(expPartialConfig, updatedPartialConfig)
+
+    assertTrue(secretPersistence.read(SecretCoordinate.fromFullCoordinate(newCoordinate)) == secret)
+    verify { metricClient.count(OssMetricsRegistry.UPDATE_SECRET_DEFAULT_STORE, 1) }
+  }
+
+  @Test
+  fun testUpdateSecretNewValueShouldWriteNewCoordinate() {
+    val oldCoordinate = "existing_coordinate_v1"
+    secretPersistence.write(SecretCoordinate.fromFullCoordinate(oldCoordinate), "secret-1")
+
+    every { metricClient.count(any(), any()) } returns Unit
+
+    val newSecret = "secret-2"
+    val updatedFullConfigSecretChange =
+      Jsons.deserialize(
+        """
+        { "username": "airbyte", "password": "$newSecret"}
+        """.trimIndent(),
+      )
+
+    val oldPartialConfig = injectCoordinate(oldCoordinate)
+    val updatedPartialConfig =
+      secretsRepositoryWriter.statefulUpdateSecrets(
+        WORKSPACE_ID,
+        oldPartialConfig,
+        updatedFullConfigSecretChange,
+        SPEC.connectionSpecification,
+        null,
+      )
+
+    val newCoordinate = "existing_coordinate_v2"
+    val expPartialConfig =
+      Jsons.deserialize(
+        """
+        {"username":"airbyte","password":{"_secret":"$newCoordinate"}}
+        """.trimIndent(),
+      )
+    assertEquals(expPartialConfig, updatedPartialConfig)
+
+    assertTrue(secretPersistence.read(SecretCoordinate.fromFullCoordinate(newCoordinate)) == newSecret)
+    verify { metricClient.count(OssMetricsRegistry.UPDATE_SECRET_DEFAULT_STORE, 1) }
   }
 
   // TODO - port this to source service test

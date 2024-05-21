@@ -36,6 +36,7 @@ import styles from "./ConnectionReplicationPage.module.scss";
 import { recommendActionOnConnectionUpdate } from "./connectionUpdateHelpers";
 import { RecommendRefreshModal } from "./RecommendRefreshModal";
 import { useAnalyticsTrackFunctions } from "./useAnalyticsTrackFunctions";
+import { SchemaRefreshing } from "../../../components/connection/ConnectionForm/SchemaRefreshing";
 
 const toWebBackendConnectionUpdate = (connection: WebBackendConnectionRead): WebBackendConnectionUpdate => ({
   name: connection.name,
@@ -57,14 +58,14 @@ const SchemaChangeMessage: React.FC = () => {
   const refreshWithConfirm = useRefreshSourceSchemaWithConfirmationOnDirty(isDirty);
 
   const { refreshSchema } = useConnectionFormService();
-  const { connection, schemaHasBeenRefreshed } = useConnectionEditService();
+  const { connection, schemaHasBeenRefreshed, schemaRefreshing } = useConnectionEditService();
   const { hasNonBreakingSchemaChange, hasBreakingSchemaChange } = useSchemaChanges(connection.schemaChange);
 
   if (schemaHasBeenRefreshed) {
     return null;
   }
 
-  if (hasNonBreakingSchemaChange) {
+  if (hasNonBreakingSchemaChange && !schemaRefreshing) {
     return (
       <Message
         type="info"
@@ -76,7 +77,7 @@ const SchemaChangeMessage: React.FC = () => {
     );
   }
 
-  if (hasBreakingSchemaChange) {
+  if (hasBreakingSchemaChange && !schemaRefreshing) {
     return (
       <Message
         type="error"
@@ -227,34 +228,56 @@ export const ConnectionReplicationPage: React.FC = () => {
 
   const isSimplifiedCreation = useExperiment("connection.simplifiedCreation", true);
 
+  const newSyncCatalogV2Form = connection && (
+    <Form<FormConnectionFormValues>
+      defaultValues={initialValues}
+      reinitializeDefaultValues
+      schema={validationSchema}
+      onSubmit={onFormSubmit}
+      trackDirtyChanges
+      disabled={mode === "readonly"}
+    >
+      <FlexContainer direction="column">
+        <SchemaChangeMessage />
+        <SchemaChangeBackdrop>
+          {!isSimplifiedCreation && <ConnectionConfigurationCard />}
+          <SchemaRefreshing>
+            <SyncCatalogCardNext />
+          </SchemaRefreshing>
+        </SchemaChangeBackdrop>
+      </FlexContainer>
+    </Form>
+  );
+
+  const oldSyncCatalogForm =
+    schemaError && !schemaRefreshing ? (
+      <SchemaError schemaError={schemaError} refreshSchema={refreshSchema} />
+    ) : !schemaRefreshing && connection ? (
+      <Form<FormConnectionFormValues>
+        defaultValues={initialValues}
+        schema={validationSchema}
+        onSubmit={onFormSubmit}
+        trackDirtyChanges
+        disabled={mode === "readonly"}
+      >
+        <FlexContainer direction="column">
+          <SchemaChangeMessage />
+          <SchemaChangeBackdrop>
+            {!isSimplifiedCreation && <ConnectionConfigurationCard />}
+            <SyncCatalogCard />
+            <div className={styles.editControlsContainer}>
+              <UpdateConnectionFormControls onCancel={discardRefreshedSchema} />
+            </div>
+          </SchemaChangeBackdrop>
+        </FlexContainer>
+      </Form>
+    ) : (
+      <LoadingSchema />
+    );
+
   return (
     <FlexContainer direction="column" className={styles.content}>
-      {schemaError && !schemaRefreshing ? (
-        <SchemaError schemaError={schemaError} refreshSchema={refreshSchema} />
-      ) : !schemaRefreshing && connection ? (
-        <Form<FormConnectionFormValues>
-          defaultValues={initialValues}
-          schema={validationSchema}
-          onSubmit={onFormSubmit}
-          trackDirtyChanges
-          disabled={mode === "readonly"}
-        >
-          <FlexContainer direction="column">
-            <SchemaChangeMessage />
-            <SchemaChangeBackdrop>
-              {!isSimplifiedCreation && <ConnectionConfigurationCard />}
-              {isSyncCatalogV2Enabled ? <SyncCatalogCardNext /> : <SyncCatalogCard />}
-              {!isSyncCatalogV2Enabled && (
-                <div className={styles.editControlsContainer}>
-                  <UpdateConnectionFormControls onCancel={discardRefreshedSchema} />
-                </div>
-              )}
-            </SchemaChangeBackdrop>
-          </FlexContainer>
-        </Form>
-      ) : (
-        <LoadingSchema />
-      )}
+      {isSyncCatalogV2Enabled ? newSyncCatalogV2Form : oldSyncCatalogForm}
     </FlexContainer>
   );
 };

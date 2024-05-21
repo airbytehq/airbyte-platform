@@ -14,6 +14,7 @@ import { getDataType } from "area/connection/utils";
 import { AirbyteStreamConfiguration, DestinationSyncMode, SyncMode } from "core/api/types/AirbyteClient";
 import { SyncSchemaFieldObject } from "core/domain/catalog";
 import { useConnectionFormService } from "hooks/services/ConnectionForm/ConnectionFormService";
+import { useExperiment } from "hooks/services/Experiment";
 
 import { GlobalFilterHighlighter } from "./GlobalFilterHighlighter";
 import styles from "./StreamFieldCell.module.scss";
@@ -40,6 +41,7 @@ export const StreamFieldNameCell: React.FC<StreamFieldNameCellProps> = ({
   updateStreamField,
   globalFilterValue = "",
 }) => {
+  const isColumnSelectionEnabled = useExperiment("connection.columnSelection", true);
   const { formatMessage } = useIntl();
   const { mode } = useConnectionFormService();
 
@@ -101,7 +103,7 @@ export const StreamFieldNameCell: React.FC<StreamFieldNameCellProps> = ({
       <FlexContainer alignItems="center">
         <FlexContainer alignItems="center" gap="xs">
           {isNestedField && <Icon type="nested" color="disabled" size="lg" />}
-          {!showTooltip && !isNestedField && (
+          {!showTooltip && !isNestedField && isColumnSelectionEnabled && (
             <CheckBox
               checkboxSize="sm"
               checked={isFieldSelected}

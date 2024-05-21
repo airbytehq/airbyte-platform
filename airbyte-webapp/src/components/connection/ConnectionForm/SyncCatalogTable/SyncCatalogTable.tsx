@@ -20,14 +20,17 @@ import { ItemProps, TableComponents, TableVirtuoso } from "react-virtuoso";
 import { Box } from "components/ui/Box";
 import { FlexContainer } from "components/ui/Flex";
 import { SearchInput } from "components/ui/SearchInput";
+import { ColumnMeta } from "components/ui/Table/types";
 import { Text } from "components/ui/Text";
 
 import { AirbyteStreamConfiguration } from "core/api/types/AirbyteClient";
 import { SyncSchemaField } from "core/domain/catalog";
+import { useConnectionFormService } from "hooks/services/ConnectionForm/ConnectionFormService";
 
 import { CursorCell } from "./components/CursorCell";
 import { FieldCursorCell } from "./components/FieldCursorCell";
 import { FieldPKCell } from "./components/FieldPKCell";
+import { FormControls } from "./components/FormControls";
 import { PKCell } from "./components/PKCell";
 import { SelectedFieldsCell } from "./components/SelectedFieldsCell";
 import { StreamFieldNameCell } from "./components/StreamFieldCell";
@@ -37,7 +40,6 @@ import { SyncModeCell } from "./components/SyncModeCell";
 import { TableControls } from "./components/TableControls";
 import styles from "./SyncCatalogTable.module.scss";
 import { getStreamFieldRows, getStreamRows, isStreamRow } from "./utils";
-import { ColumnMeta } from "../../../ui/Table/types";
 import { FormConnectionFormValues, SyncStreamFieldWithId } from "../formConfig";
 
 export interface SyncCatalogUIModel {
@@ -77,12 +79,12 @@ export interface SyncCatalogUIModel {
 
 export const SyncCatalogTable: FC = () => {
   const { formatMessage } = useIntl();
+  const { mode } = useConnectionFormService();
   const { control, trigger } = useFormContext<FormConnectionFormValues>();
   const { fields: streams, update } = useFieldArray({
     name: "syncCatalog.streams",
     control,
   });
-
   const prefix = useWatch<FormConnectionFormValues>({ name: "prefix", control });
 
   const debugTable = false;
@@ -333,7 +335,21 @@ export const SyncCatalogTable: FC = () => {
             onChange={(e) => setFiltering(e.target.value)}
           />
           <FlexContainer>
-            <TableControls isAllRowsExpanded={getIsAllRowsExpanded()} toggleAllRowsExpanded={toggleAllRowsExpanded} />
+            <FlexContainer justifyContent="flex-end" alignItems="center" direction="row" gap="lg">
+              {mode === "create" ? (
+                <TableControls
+                  isAllRowsExpanded={getIsAllRowsExpanded()}
+                  toggleAllRowsExpanded={toggleAllRowsExpanded}
+                />
+              ) : (
+                <FormControls>
+                  <TableControls
+                    isAllRowsExpanded={getIsAllRowsExpanded()}
+                    toggleAllRowsExpanded={toggleAllRowsExpanded}
+                  />
+                </FormControls>
+              )}
+            </FlexContainer>
           </FlexContainer>
         </FlexContainer>
       </Box>

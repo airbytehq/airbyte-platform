@@ -17,17 +17,20 @@ import {
   NonBreakingChangesPreference,
   OperationRead,
   SchemaChangeBackfillPreference,
+  DestinationDefinitionSpecificationRead,
 } from "core/api/types/AirbyteClient";
 import { FeatureItem, useFeature } from "core/services/features";
 import { ConnectionOrPartialConnection } from "hooks/services/ConnectionForm/ConnectionFormService";
 import { useExperiment } from "hooks/services/Experiment";
 
 import { analyzeSyncCatalogBreakingChanges } from "./calculateInitialCatalog";
+import { pruneUnsupportedModes, replicateSourceModes } from "./preferredSyncModes";
 import {
   BASIC_FREQUENCY_DEFAULT_VALUE,
   SOURCE_SPECIFIC_FREQUENCY_DEFAULT,
 } from "./ScheduleFormField/useBasicFrequencyDropdownData";
 import { createConnectionValidationSchema } from "./schema";
+import { updateStreamSyncMode } from "../syncCatalog/SyncCatalog/updateStreamSyncMode";
 import { DbtOperationRead } from "../TransformationForm";
 
 /**
@@ -108,11 +111,48 @@ export const getInitialNormalization = (
 export const useInitialFormValues = (
   connection: ConnectionOrPartialConnection,
   destDefinitionVersion: ActorDefinitionVersionRead,
+  destDefinitionSpecification: DestinationDefinitionSpecificationRead,
   isEditMode?: boolean
 ): FormConnectionFormValues => {
   const workspace = useCurrentWorkspace();
   const { catalogDiff, syncCatalog, schemaChange } = connection;
   const useSimpliedCreation = useExperiment("connection.simplifiedCreation", true);
+
+  const supportedSyncModes: SyncMode[] = useMemo(() => {
+    const foundModes = new Set<SyncMode>();
+    for (let i = 0; i < connection.syncCatalog.streams.length; i++) {
+      const stream = connection.syncCatalog.streams[i];
+      stream.stream?.supportedSyncModes?.forEach((mode) => foundModes.add(mode));
+    }
+    return Array.from(foundModes);
+  }, [connection.syncCatalog.streams]);
+
+  if (isEditMode === false) {
+    const availableModes = pruneUnsupportedModes(
+      replicateSourceModes,
+      supportedSyncModes,
+      destDefinitionSpecification.supportedDestinationSyncModes
+    );
+
+    // when creating, apply the first applicable `replicateSourceModes` entry to each stream
+    syncCatalog.streams.forEach((airbyteStream) => {
+      for (let i = 0; i < availableModes.length; i++) {
+        const [syncMode, destinationSyncMode] = availableModes[i];
+
+        if (airbyteStream?.stream && airbyteStream?.config) {
+          if (!airbyteStream.stream?.supportedSyncModes?.includes(syncMode)) {
+            continue;
+          }
+
+          airbyteStream.config = updateStreamSyncMode(airbyteStream.stream, airbyteStream.config, {
+            syncMode,
+            destinationSyncMode,
+          });
+          break;
+        }
+      }
+    });
+  }
 
   const defaultNonBreakingChangesPreference = NonBreakingChangesPreference.propagate_columns;
 
@@ -149,8 +189,8 @@ export const useInitialFormValues = (
         ...(destDefinitionVersion.supportsDbt && {
           transformations: getInitialTransformations(connection.operations ?? []),
         }),
-        syncCatalog: analyzeSyncCatalogBreakingChanges(syncCatalog, catalogDiff, schemaChange),
       },
+      syncCatalog: analyzeSyncCatalogBreakingChanges(syncCatalog, catalogDiff, schemaChange),
       notifySchemaChanges: connection.notifySchemaChanges ?? useSimpliedCreation,
       backfillPreference: connection.backfillPreference ?? SchemaChangeBackfillPreference.disabled,
     };

@@ -83,6 +83,7 @@ create table "public"."stream_stats" (
   "updated_at" timestamp(6) with time zone not null default current_timestamp,
   "bytes_committed" bigint,
   "records_committed" bigint,
+  "connection_id" uuid,
   constraint "stream_stats_pkey" primary key ("id"),
   constraint "uniq_stream_attempt" unique ("attempt_id", "stream_name", "stream_namespace")
 );

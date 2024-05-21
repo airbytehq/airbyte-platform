@@ -78,7 +78,7 @@ internal class StreamStatusCompletionTrackerTest {
   fun `test that we get all the streams if the exit code is 0 and no stream status is send`() {
     every { featureFlagClient.boolVariation(ActivateRefreshes, featureFlagContext) } returns true
 
-    streamStatusCompletionTracker.startTracking(catalog, replicationContext)
+    streamStatusCompletionTracker.startTracking(catalog, replicationContext, true)
     val result = streamStatusCompletionTracker.finalize(0, mapper)
 
     assertEquals(
@@ -94,7 +94,7 @@ internal class StreamStatusCompletionTrackerTest {
   fun `test that we get all the streams if the exit code is 0 and some stream status is send`() {
     every { featureFlagClient.boolVariation(ActivateRefreshes, featureFlagContext) } returns true
 
-    streamStatusCompletionTracker.startTracking(catalog, replicationContext)
+    streamStatusCompletionTracker.startTracking(catalog, replicationContext, true)
     streamStatusCompletionTracker.track(getStreamStatusCompletedMessage("name1").trace.streamStatus)
     val result = streamStatusCompletionTracker.finalize(0, mapper)
 
@@ -111,7 +111,7 @@ internal class StreamStatusCompletionTrackerTest {
   fun `test that we get no streams if the exit code is 1 and no stream status is send`() {
     every { featureFlagClient.boolVariation(ActivateRefreshes, featureFlagContext) } returns true
 
-    streamStatusCompletionTracker.startTracking(catalog, replicationContext)
+    streamStatusCompletionTracker.startTracking(catalog, replicationContext, true)
     val result = streamStatusCompletionTracker.finalize(1, mapper)
 
     assertEquals(listOf<AirbyteMessage>(), result)
@@ -121,7 +121,7 @@ internal class StreamStatusCompletionTrackerTest {
   fun `test that we get the status of the streams that send a status if the exit code is 1 and no stream status is send`() {
     every { featureFlagClient.boolVariation(ActivateRefreshes, featureFlagContext) } returns true
 
-    streamStatusCompletionTracker.startTracking(catalog, replicationContext)
+    streamStatusCompletionTracker.startTracking(catalog, replicationContext, true)
     streamStatusCompletionTracker.track(getStreamStatusCompletedMessage("name1").trace.streamStatus)
     val result = streamStatusCompletionTracker.finalize(1, mapper)
 
@@ -137,7 +137,18 @@ internal class StreamStatusCompletionTrackerTest {
   fun `test that no message is send if the flag is false`() {
     every { featureFlagClient.boolVariation(ActivateRefreshes, featureFlagContext) } returns false
 
-    streamStatusCompletionTracker.startTracking(catalog, replicationContext)
+    streamStatusCompletionTracker.startTracking(catalog, replicationContext, true)
+    streamStatusCompletionTracker.track(getStreamStatusCompletedMessage("name1").trace.streamStatus)
+    val result = streamStatusCompletionTracker.finalize(0, mapper)
+
+    assertEquals(listOf<AirbyteMessage>(), result)
+  }
+
+  @Test
+  fun `test that no message is send if the destination doesn't support refreshes`() {
+    every { featureFlagClient.boolVariation(ActivateRefreshes, featureFlagContext) } returns true
+
+    streamStatusCompletionTracker.startTracking(catalog, replicationContext, false)
     streamStatusCompletionTracker.track(getStreamStatusCompletedMessage("name1").trace.streamStatus)
     val result = streamStatusCompletionTracker.finalize(0, mapper)
 

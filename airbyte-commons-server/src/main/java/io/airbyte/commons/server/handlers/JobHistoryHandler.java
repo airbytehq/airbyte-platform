@@ -9,6 +9,7 @@ import static io.airbyte.featureflag.ContextKt.ANONYMOUS;
 import static io.airbyte.persistence.job.models.Job.SYNC_REPLICATION_TYPES;
 
 import com.google.common.base.Preconditions;
+import datadog.trace.api.Trace;
 import io.airbyte.api.model.generated.AttemptInfoRead;
 import io.airbyte.api.model.generated.AttemptNormalizationStatusReadList;
 import io.airbyte.api.model.generated.ConnectionIdRequestBody;
@@ -50,6 +51,8 @@ import io.airbyte.data.services.ConnectionService;
 import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.featureflag.HydrateAggregatedStats;
 import io.airbyte.featureflag.Workspace;
+import io.airbyte.metrics.lib.ApmTraceUtils;
+import io.airbyte.metrics.lib.MetricTags;
 import io.airbyte.persistence.job.JobPersistence;
 import io.airbyte.persistence.job.models.Job;
 import io.airbyte.persistence.job.models.JobStatus;
@@ -60,6 +63,7 @@ import io.airbyte.validation.json.JsonValidationException;
 import jakarta.inject.Singleton;
 import java.io.IOException;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -128,6 +132,7 @@ public class JobHistoryHandler {
   }
 
   @SuppressWarnings("UnstableApiUsage")
+  @Trace
   public JobReadList listJobsFor(final JobListRequestBody request) throws IOException {
     Preconditions.checkNotNull(request.getConfigTypes(), "configType cannot be null.");
     Preconditions.checkState(!request.getConfigTypes().isEmpty(), "Must include at least one configType.");
@@ -142,6 +147,12 @@ public class JobHistoryHandler {
     final int pageSize = (request.getPagination() != null && request.getPagination().getPageSize() != null) ? request.getPagination().getPageSize()
         : DEFAULT_PAGE_SIZE;
     final List<Job> jobs;
+
+    final HashMap<String, Object> tags = new HashMap<>(Map.of(MetricTags.CONFIG_TYPES, configTypes.toString()));
+    if (configId != null) {
+      tags.put(MetricTags.CONNECTION_ID, configId);
+    }
+    ApmTraceUtils.addTagsToTrace(tags);
 
     if (request.getIncludingJobId() != null) {
       jobs = jobPersistence.listJobsIncludingId(

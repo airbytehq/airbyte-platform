@@ -272,8 +272,9 @@ describe("Connection - Create new connection", { testIsolation: false }, () => {
       usersStreamRow.hasAddedStyle(false);
     });
 
-    it("should enable form submit after a stream is selected", () => {
+    it("should enable form submit after a stream is selected and configured", () => {
       usersStreamRow.toggleStreamSync();
+      usersStreamRow.selectSyncMode("full_refresh", "overwrite");
       newConnectionPage.getNoStreamsSelectedError().should("not.exist");
       cy.get(replicationPage.nextButtonOrLink).should("not.be.disabled");
     });

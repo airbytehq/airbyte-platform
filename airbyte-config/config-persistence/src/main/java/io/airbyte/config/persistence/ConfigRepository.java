@@ -5,6 +5,7 @@
 package io.airbyte.config.persistence;
 
 import com.google.common.annotations.VisibleForTesting;
+import datadog.trace.api.Trace;
 import io.airbyte.commons.version.Version;
 import io.airbyte.config.ActorCatalog;
 import io.airbyte.config.ActorCatalogFetchEvent;
@@ -1031,6 +1032,7 @@ public class ConfigRepository {
    * @throws IOException if there is an issue while interacting with db.
    */
   @Deprecated
+  @Trace
   public List<StandardSync> listWorkspaceStandardSyncs(final UUID workspaceId, final boolean includeDeleted) throws IOException {
     return connectionService.listWorkspaceStandardSyncs(workspaceId, includeDeleted);
   }

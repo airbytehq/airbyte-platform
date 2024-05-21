@@ -29,8 +29,8 @@ const ICON_BY_STATUS: Readonly<Record<ConnectionStatusIndicatorStatus, JSX.Eleme
   pending: <Icon type="statusInactive" size="md" />,
   late: <Icon type="clockFilled" size="md" />,
   actionRequired: <Icon type="statusError" size="md" />,
-  syncing: <CircleLoader />,
-  queued: <CircleLoader />,
+  syncing: <CircleLoader className={styles.circleLoader} />,
+  queued: <CircleLoader className={styles.circleLoader} />,
 };
 
 const STYLE_BY_STATUS: Readonly<Record<ConnectionStatusIndicatorStatus, string>> = {

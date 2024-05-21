@@ -274,13 +274,11 @@ public class JobCreationAndStatusUpdateHelper {
       additionalAttributes.add(new MetricAttribute(MetricTags.SOURCE_IMAGE, sync.getSourceDockerImage()));
       additionalAttributes.add(new MetricAttribute(MetricTags.DESTINATION_IMAGE, sync.getDestinationDockerImage()));
       additionalAttributes.add(new MetricAttribute(MetricTags.WORKSPACE_ID, sync.getWorkspaceId().toString()));
-      additionalAttributes.add(new MetricAttribute(MetricTags.CONNECTION_ID, input.getConnectionId().toString()));
     } else if (job.getConfigType() == REFRESH) {
       final var refresh = job.getConfig().getRefresh();
       additionalAttributes.add(new MetricAttribute(MetricTags.SOURCE_IMAGE, refresh.getSourceDockerImage()));
       additionalAttributes.add(new MetricAttribute(MetricTags.DESTINATION_IMAGE, refresh.getDestinationDockerImage()));
       additionalAttributes.add(new MetricAttribute(MetricTags.WORKSPACE_ID, refresh.getWorkspaceId().toString()));
-      additionalAttributes.add(new MetricAttribute(MetricTags.CONNECTION_ID, input.getConnectionId().toString()));
     }
     emitToReleaseStagesMetricHelper(metric, job, additionalAttributes);
   }
@@ -292,7 +290,6 @@ public class JobCreationAndStatusUpdateHelper {
       additionalAttributes.add(new MetricAttribute(MetricTags.SOURCE_IMAGE, sync.getSourceDockerImage()));
       additionalAttributes.add(new MetricAttribute(MetricTags.DESTINATION_IMAGE, sync.getDestinationDockerImage()));
       additionalAttributes.add(new MetricAttribute(MetricTags.WORKSPACE_ID, sync.getWorkspaceId().toString()));
-      additionalAttributes.add(new MetricAttribute(MetricTags.CONNECTION_ID, input.getConnectionId().toString()));
       job.getLastAttempt().flatMap(Attempt::getFailureSummary)
           .ifPresent(attemptFailureSummary -> {
             for (FailureReason failureReason : attemptFailureSummary.getFailures()) {

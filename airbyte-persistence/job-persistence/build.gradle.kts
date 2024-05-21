@@ -41,6 +41,7 @@ dependencies {
   implementation(libs.otel.sdk)
   implementation(libs.otel.sdk.testing)
   implementation(libs.micrometer.statsd)
+  implementation(libs.bundles.datadog)
   implementation(platform(libs.otel.bom))
   implementation("io.opentelemetry:opentelemetry-api")
   implementation("io.opentelemetry:opentelemetry-sdk")

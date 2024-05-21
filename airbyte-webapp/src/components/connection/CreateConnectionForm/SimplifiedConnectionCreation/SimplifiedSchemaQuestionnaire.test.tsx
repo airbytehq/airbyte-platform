@@ -1,39 +1,6 @@
 import { DestinationSyncMode, SyncMode } from "core/api/types/AirbyteClient";
 
-import {
-  getEnforcedDelivery,
-  getEnforcedIncrementOrRefresh,
-  pruneUnsupportedModes,
-} from "./SimplifiedSchemaQuestionnaire";
-
-describe("pruneUnsupportedModes", () => {
-  const allModes: Array<[SyncMode, DestinationSyncMode]> = [
-    [SyncMode.incremental, DestinationSyncMode.append],
-    [SyncMode.incremental, DestinationSyncMode.append_dedup],
-    [SyncMode.full_refresh, DestinationSyncMode.append],
-    [SyncMode.full_refresh, DestinationSyncMode.overwrite],
-  ];
-
-  it("returns all modes when they are supported", () => {
-    expect(
-      pruneUnsupportedModes(
-        allModes,
-        [SyncMode.incremental, SyncMode.full_refresh],
-        [DestinationSyncMode.append, DestinationSyncMode.append_dedup, DestinationSyncMode.overwrite]
-      )
-    ).toEqual(allModes);
-  });
-
-  it("filters out unsupported modes", () => {
-    expect(pruneUnsupportedModes(allModes, [SyncMode.incremental], [DestinationSyncMode.append])).toEqual([
-      [SyncMode.incremental, DestinationSyncMode.append],
-    ]);
-  });
-
-  it("can return no modes", () => {
-    expect(pruneUnsupportedModes(allModes, [SyncMode.full_refresh], [DestinationSyncMode.append_dedup])).toEqual([]);
-  });
-});
+import { getEnforcedDelivery, getEnforcedIncrementOrRefresh } from "./SimplifiedSchemaQuestionnaire";
 
 describe("getEnforcedDelivery", () => {
   it("selects appendChanges when there are no replicateSource options", () => {
