@@ -105,6 +105,7 @@ export const ConnectionStatusMessages: React.FC = () => {
               : "connection.stream.status.checkDestinationSettings",
           }),
           type: "error",
+          "data-testid": `connection-status-message-error-${isSourceError ? "source" : "destination"}`,
         } as const;
 
         errorMessages.push(configError);
@@ -142,6 +143,7 @@ export const ConnectionStatusMessages: React.FC = () => {
           ),
           childrenClassName: styles.internalErrorMessage,
           isExpandable: hasInternalErrorMessage,
+          "data-testid": `connection-status-message-warning`,
         } as const;
         errorMessages.push(goToLogError);
       }
@@ -156,6 +158,7 @@ export const ConnectionStatusMessages: React.FC = () => {
         onAction: () => navigate(`../${ConnectionRoutePaths.Replication}`, { state: { triggerRefreshSchema: true } }),
         actionBtnText: formatMessage({ id: "connection.schemaChange.reviewAction" }),
         type: "error",
+        "data-testid": `connection-status-message-breaking-schema-change`,
       });
     }
 
