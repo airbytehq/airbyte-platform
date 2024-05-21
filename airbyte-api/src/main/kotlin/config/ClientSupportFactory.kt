@@ -61,8 +61,8 @@ class ClientSupportFactory {
   @Named("workloadApiClientRetryPolicy")
   @Requires(property = "airbyte.workload-api.base-path")
   fun defaultWorkloadApiRetryPolicy(
-    @Value("\${airbyte.internal-api.retries.delay-seconds:2}") retryDelaySeconds: Long,
-    @Value("\${airbyte.inernal-api.retries.max:5}") maxRetries: Int,
+    @Value("\${airbyte.workload-api.retries.delay-seconds:2}") retryDelaySeconds: Long,
+    @Value("\${airbyte.workload-api.retries.max:5}") maxRetries: Int,
     meterRegistry: Optional<MeterRegistry>,
   ): RetryPolicy<Response> {
     return generateDefaultRetryPolicy(retryDelaySeconds, maxRetries, meterRegistry, "workload-api-client")
