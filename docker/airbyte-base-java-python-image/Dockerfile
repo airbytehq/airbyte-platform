@@ -1,4 +1,4 @@
-ARG JDK_IMAGE=airbyte/airbyte-base-java-image:3.2.2
+ARG JDK_IMAGE=airbyte/airbyte-base-java-image:3.2.3
 FROM ${JDK_IMAGE}
 
 USER root

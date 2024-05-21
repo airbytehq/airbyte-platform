@@ -6,7 +6,7 @@ OS ?= $(shell uname | tr '[:upper:]' '[:lower:]')
 
 PUBLISH ?= false
 
-BASE_JAVA_IMAGE_VERSION ?= 3.2.2
+BASE_JAVA_IMAGE_VERSION ?= 3.2.3
 BASE_JAVA_IMAGE = airbyte/airbyte-base-java-image:$(BASE_JAVA_IMAGE_VERSION)
 BASE_SOCAT_IMAGE_VERSION ?= 1.8.0.0
 BASE_BUSYBOX_IMAGE_VERSION ?= 1.28
