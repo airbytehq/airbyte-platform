@@ -11,9 +11,7 @@ export type AuthOAuthLogin = (provider: OAuthProviders) => Observable<OAuthLogin
 export type AuthChangeName = (name: string) => Promise<void>;
 
 export type AuthSendEmailVerification = () => Promise<void>;
-export type AuthVerifyEmail = FirebaseVerifyEmail | KeycloakVerifyEmail;
-type FirebaseVerifyEmail = (code: string) => Promise<void>;
-type KeycloakVerifyEmail = () => Promise<void>;
+export type AuthVerifyEmail = () => Promise<void>;
 export type AuthLogout = () => Promise<void>;
 
 export type OAuthLoginState = "waiting" | "loading" | "done";
@@ -34,8 +32,6 @@ export interface AuthContextApi {
   inited: boolean;
   emailVerified: boolean;
   loggedOut: boolean;
-  /** @deprecated use `provider` instead */
-  providers: string[] | null;
   provider: string | null;
   getAccessToken?: () => Promise<string | null>;
   login?: AuthLogin;

@@ -14,7 +14,6 @@ export const CommunityAuthService: React.FC<PropsWithChildren<unknown>> = ({ chi
         user: defaultUser,
         inited: true,
         emailVerified: false,
-        providers: [],
         provider: null,
         loggedOut: false,
       }}

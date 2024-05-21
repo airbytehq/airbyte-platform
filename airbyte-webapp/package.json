@@ -83,7 +83,6 @@
     "dayjs": "^1.11.3",
     "diff": "^5.1.0",
     "escape-string-regexp": "^5.0.0",
-    "firebase": "^10.5.0",
     "framer-motion": "^6.3.11",
     "js-yaml": "^4.1.0",
     "json-schema": "^0.4.0",
@@ -125,8 +124,8 @@
     "ts-pattern": "^4.2.1",
     "typesafe-actions": "^5.1.0",
     "uuid": "^9.0.1",
-    "yup": "^0.32.11",
-    "victory-vendor": "36.6.8"
+    "victory-vendor": "36.6.8",
+    "yup": "^0.32.11"
   },
   "devDependencies": {
     "@airbyte/eslint-plugin": "link:packages/eslint-plugin",

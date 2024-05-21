@@ -3,7 +3,7 @@ import { useCallback, useMemo } from "react";
 import { useIntl } from "react-intl";
 
 import { useCurrentWorkspaceId } from "area/workspace/utils";
-import { useAuthService, useCurrentUser } from "core/services/auth";
+import { useCurrentUser } from "core/services/auth";
 import { useNotificationService } from "hooks/services/Notification";
 
 import {
@@ -12,11 +12,10 @@ import {
   webBackendInviteUserToWorkspaceWithSignInLink,
   webBackendListUsersByWorkspace,
   updateUser,
-  webBackendRevokeUserSession,
   sendVerificationEmail,
 } from "../../generated/CloudApi";
 import { SCOPE_WORKSPACE } from "../../scopes";
-import { CreateKeycloakUserRequestBody, UserUpdate } from "../../types/CloudApi";
+import { UserUpdate } from "../../types/CloudApi";
 import { useRequestOptions } from "../../useRequestOptions";
 import { useSuspenseQuery } from "../../useSuspenseQuery";
 import { workspaceKeys } from "../workspaces";
@@ -24,8 +23,6 @@ import { workspaceKeys } from "../workspaces";
 export const useGetUserService = () => {
   const requestOptions = useRequestOptions();
   const update = useCallback((params: UserUpdate) => updateUser(params, requestOptions), [requestOptions]);
-
-  const revokeUserSession = useCallback(() => webBackendRevokeUserSession(requestOptions), [requestOptions]);
 
   const remove = useCallback(
     (workspaceId: string, email: string) => webBackendRevokeUserFromWorkspace({ email, workspaceId }, requestOptions),
@@ -68,13 +65,12 @@ export const useGetUserService = () => {
   return useMemo(
     () => ({
       update,
-      revokeUserSession,
       remove,
       resendWithSignInLink,
       invite,
       listByWorkspaceId,
     }),
-    [update, revokeUserSession, remove, resendWithSignInLink, invite, listByWorkspaceId]
+    [update, remove, resendWithSignInLink, invite, listByWorkspaceId]
   );
 };
 
@@ -147,12 +143,6 @@ export const useUpdateUser = () => {
   );
 };
 
-export const useRevokeUserSession = () => {
-  return useMutation(({ getAccessToken }: { getAccessToken: () => Promise<string> }) =>
-    webBackendRevokeUserSession({ getAccessToken })
-  );
-};
-
 export const useResendSigninLink = () => {
   return useMutation((email: string) =>
     webBackendResendWithSigninLink(
@@ -163,28 +153,17 @@ export const useResendSigninLink = () => {
   );
 };
 
-export const useCreateKeycloakUser = () => {
-  return useMutation((_: CreateKeycloakUserRequestBody & { getAccessToken: () => Promise<string> }) =>
-    Promise.resolve()
-  );
-};
-
 const RESEND_EMAIL_TOAST_ID = "resendEmail";
 export const useResendEmailVerification = () => {
   const { userId } = useCurrentUser();
   const requestOptions = useRequestOptions();
-  const { sendEmailVerification } = useAuthService();
   const { registerNotification } = useNotificationService();
   const { formatMessage } = useIntl();
 
   const sendEmail = useMemo(() => {
-    // The old way to send a verification email with Firebase, via the AuthContext
-    if (sendEmailVerification) {
-      return sendEmailVerification;
-    }
     // The new way to send a verification email with Keycloak via our API
     return () => sendVerificationEmail({ userId }, requestOptions);
-  }, [sendEmailVerification, userId, requestOptions]);
+  }, [userId, requestOptions]);
 
   return useMutation(sendEmail, {
     onSuccess: () => {

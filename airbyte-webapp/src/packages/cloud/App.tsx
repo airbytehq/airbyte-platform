@@ -22,7 +22,8 @@ import { AirbyteThemeProvider } from "hooks/theme/useAirbyteTheme";
 import en from "locales/en.json";
 import { Routing } from "packages/cloud/cloudRoutes";
 
-import { AppServicesProvider } from "./services/AppServicesProvider";
+import { CloudAuthService } from "./services/auth/CloudAuthService";
+import { KeycloakService } from "./services/auth/KeycloakService";
 import { ZendeskProvider } from "./services/thirdParty/zendesk";
 
 const Services: React.FC<React.PropsWithChildren<unknown>> = ({ children }) => (
@@ -30,13 +31,15 @@ const Services: React.FC<React.PropsWithChildren<unknown>> = ({ children }) => (
     <ConfirmationModalService>
       <FormChangeTrackerService>
         <FeatureService features={defaultCloudFeatures}>
-          <AppServicesProvider>
-            <ModalServiceProvider>
-              <HelmetProvider>
-                <ZendeskProvider>{children}</ZendeskProvider>
-              </HelmetProvider>
-            </ModalServiceProvider>
-          </AppServicesProvider>
+          <KeycloakService>
+            <CloudAuthService>
+              <ModalServiceProvider>
+                <HelmetProvider>
+                  <ZendeskProvider>{children}</ZendeskProvider>
+                </HelmetProvider>
+              </ModalServiceProvider>
+            </CloudAuthService>
+          </KeycloakService>
         </FeatureService>
       </FormChangeTrackerService>
     </ConfirmationModalService>
