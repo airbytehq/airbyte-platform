@@ -9,7 +9,7 @@ import jakarta.inject.Singleton
 import java.util.UUID
 
 @Singleton
-class ConnectionTimelineEventServiceImpl(private val repository: ConnectionTimelineEventRepository) : ConnectionTimelineEventService {
+class ConnectionTimelineEventServiceDataImpl(private val repository: ConnectionTimelineEventRepository) : ConnectionTimelineEventService {
   override fun writeEvent(
     connectionId: UUID,
     connectionEvent: ConnectionEvent,

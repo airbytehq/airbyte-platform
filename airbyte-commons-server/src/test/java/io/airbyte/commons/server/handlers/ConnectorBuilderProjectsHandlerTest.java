@@ -6,9 +6,9 @@ package io.airbyte.commons.server.handlers;
 
 import static io.airbyte.commons.server.handlers.ConnectorBuilderProjectsHandler.CONNECTION_SPECIFICATION_FIELD;
 import static io.airbyte.commons.server.handlers.ConnectorBuilderProjectsHandler.SPEC_FIELD;
-import static org.junit.Assert.assertNull;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
@@ -81,7 +81,6 @@ import java.util.List;
 import java.util.UUID;
 import java.util.function.Supplier;
 import java.util.stream.Stream;
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -310,8 +309,8 @@ class ConnectorBuilderProjectsHandlerTest {
 
     assertEquals(project1.getActiveDeclarativeManifestVersion(), response.getProjects().get(0).getActiveDeclarativeManifestVersion());
     assertEquals(project1.getActorDefinitionId(), response.getProjects().get(0).getSourceDefinitionId());
-    Assertions.assertNull(project2.getActiveDeclarativeManifestVersion());
-    Assertions.assertNull(project2.getActorDefinitionId());
+    assertNull(project2.getActiveDeclarativeManifestVersion());
+    assertNull(project2.getActorDefinitionId());
 
     verify(connectorBuilderService, times(1))
         .getConnectorBuilderProjectsByWorkspace(
