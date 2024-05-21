@@ -564,7 +564,7 @@ internal class AirbyteCatalogHelperTest {
       )
     private val jsonSchemaString =
       """
-      "json_schema": {
+      {
           "type": "object",
           "properties": {
             "f1": {
@@ -648,9 +648,11 @@ internal class AirbyteCatalogHelperTest {
           io.airbyte.public_api.model.generated.SelectedFieldInfo().fieldPath(listOf("m1", "m3")),
           io.airbyte.public_api.model.generated.SelectedFieldInfo().fieldPath(listOf("b1")),
         )
-      assertThrows(ConnectionConfigurationProblem::class.java) {
-        AirbyteCatalogHelper.validateFieldSelection(streamConfiguration, sourceStream)
-      }
+      val throwable =
+        assertThrows(ConnectionConfigurationProblem::class.java) {
+          AirbyteCatalogHelper.validateFieldSelection(streamConfiguration, sourceStream)
+        }
+      assertEquals(true, throwable.message?.contains("Duplicate fields selected"))
     }
 
     @Test
@@ -663,34 +665,42 @@ internal class AirbyteCatalogHelperTest {
           io.airbyte.public_api.model.generated.SelectedFieldInfo().fieldPath(listOf("x1")),
           io.airbyte.public_api.model.generated.SelectedFieldInfo().fieldPath(listOf("b1")),
         )
-      assertThrows(ConnectionConfigurationProblem::class.java) {
-        AirbyteCatalogHelper.validateFieldSelection(streamConfiguration, sourceStream)
-      }
+      var throwable =
+        assertThrows(ConnectionConfigurationProblem::class.java) {
+          AirbyteCatalogHelper.validateFieldSelection(streamConfiguration, sourceStream)
+        }
+      assertEquals(true, throwable.message?.contains("Invalid field selected"))
     }
 
     @Test
     fun `Should throw error if primary key(s) are not selected`() {
       streamConfiguration.selectedFields =
         listOf(
+          // "f1" as primary key is missing
           io.airbyte.public_api.model.generated.SelectedFieldInfo().fieldPath(listOf("m1")),
           io.airbyte.public_api.model.generated.SelectedFieldInfo().fieldPath(listOf("b1")),
         )
-      assertThrows(ConnectionConfigurationProblem::class.java) {
-        AirbyteCatalogHelper.validateFieldSelection(streamConfiguration, sourceStream)
-      }
+      var throwable =
+        assertThrows(ConnectionConfigurationProblem::class.java) {
+          AirbyteCatalogHelper.validateFieldSelection(streamConfiguration, sourceStream)
+        }
+      assertEquals(true, throwable.message?.contains("Primary key fields are not selected properly"))
     }
 
     @Test
     fun `Should throw error if cursor field is not selected`() {
       streamConfiguration.selectedFields =
         listOf(
+          // "b1" as cursor field is missing
           io.airbyte.public_api.model.generated.SelectedFieldInfo().fieldPath(listOf("f1")),
           io.airbyte.public_api.model.generated.SelectedFieldInfo().fieldPath(listOf("m1")),
           io.airbyte.public_api.model.generated.SelectedFieldInfo().fieldPath(listOf("y1")),
         )
-      assertThrows(ConnectionConfigurationProblem::class.java) {
-        AirbyteCatalogHelper.validateFieldSelection(streamConfiguration, sourceStream)
-      }
+      var throwable =
+        assertThrows(ConnectionConfigurationProblem::class.java) {
+          AirbyteCatalogHelper.validateFieldSelection(streamConfiguration, sourceStream)
+        }
+      assertEquals(true, throwable.message?.contains("Cursor field is not selected properly"))
     }
   }
 
