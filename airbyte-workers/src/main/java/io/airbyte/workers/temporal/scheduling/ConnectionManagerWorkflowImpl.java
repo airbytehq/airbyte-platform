@@ -320,7 +320,7 @@ public class ConnectionManagerWorkflowImpl implements ConnectionManagerWorkflow 
           if (workflowState.isFailed()) {
             reportFailure(connectionUpdaterInput, standardSyncOutput, FailureCause.UNKNOWN);
           } else if (workflowState.isCancelled()) {
-            reportCancelled(connectionId);
+            reportCancelledAndContinueWith(false, connectionUpdaterInput);
           } else {
             reportSuccess(connectionUpdaterInput, standardSyncOutput);
           }
