@@ -8,7 +8,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
 
 import io.airbyte.commons.features.FeatureFlags;
 import io.airbyte.commons.resources.MoreResources;
@@ -18,7 +17,6 @@ import io.airbyte.commons.version.Version;
 import io.airbyte.config.Configs.DeploymentMode;
 import io.airbyte.config.init.ApplyDefinitionsHelper;
 import io.airbyte.config.init.BreakingChangeNotificationHelper;
-import io.airbyte.config.init.CdkVersionProvider;
 import io.airbyte.config.init.DeclarativeSourceUpdater;
 import io.airbyte.config.init.PostLoadExecutor;
 import io.airbyte.config.init.SupportStateUpdater;
@@ -208,9 +206,7 @@ class BootloaderTest {
     val applyDefinitionsHelper =
         new ApplyDefinitionsHelper(definitionsProvider, jobsPersistence, actorDefinitionService, sourceService, destinationService,
             metricClient, supportStateUpdater);
-    final CdkVersionProvider cdkVersionProvider = mock(CdkVersionProvider.class);
-    when(cdkVersionProvider.getCdkVersion()).thenReturn(CDK_VERSION);
-    val declarativeSourceUpdater = new DeclarativeSourceUpdater(connectorBuilderService, actorDefinitionService, cdkVersionProvider);
+    val declarativeSourceUpdater = new DeclarativeSourceUpdater(connectorBuilderService, actorDefinitionService);
     val postLoadExecutor =
         new DefaultPostLoadExecutor(applyDefinitionsHelper, declarativeSourceUpdater);
 
@@ -314,9 +310,8 @@ class BootloaderTest {
     val applyDefinitionsHelper =
         new ApplyDefinitionsHelper(definitionsProvider, jobsPersistence, actorDefinitionService, sourceService, destinationService,
             metricClient, supportStateUpdater);
-    final CdkVersionProvider cdkVersionProvider = mock(CdkVersionProvider.class);
-    when(cdkVersionProvider.getCdkVersion()).thenReturn(CDK_VERSION);
-    val declarativeSourceUpdater = new DeclarativeSourceUpdater(connectorBuilderService, actorDefinitionService, cdkVersionProvider);
+    val declarativeSourceUpdater =
+        new DeclarativeSourceUpdater(connectorBuilderService, actorDefinitionService);
     val postLoadExecutor = new DefaultPostLoadExecutor(applyDefinitionsHelper, declarativeSourceUpdater);
 
     val bootloader =
