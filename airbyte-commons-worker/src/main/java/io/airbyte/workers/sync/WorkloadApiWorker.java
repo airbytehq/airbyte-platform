@@ -6,6 +6,9 @@ package io.airbyte.workers.sync;
 
 import static io.airbyte.config.helpers.LogClientSingleton.fullLogPath;
 
+import dev.failsafe.Failsafe;
+import dev.failsafe.RetryPolicy;
+import dev.failsafe.function.CheckedSupplier;
 import io.airbyte.api.client.AirbyteApiClient;
 import io.airbyte.api.client.WorkloadApiClient;
 import io.airbyte.api.client.invoker.generated.ApiException;
@@ -19,6 +22,7 @@ import io.airbyte.featureflag.Destination;
 import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.featureflag.Multi;
 import io.airbyte.featureflag.Source;
+import io.airbyte.featureflag.WorkloadHeartbeatTimeout;
 import io.airbyte.featureflag.WorkloadPollingInterval;
 import io.airbyte.featureflag.Workspace;
 import io.airbyte.persistence.job.models.ReplicationInput;
@@ -239,11 +243,22 @@ public class WorkloadApiWorker implements Worker<ReplicationInput, ReplicationOu
   }
 
   private Workload getWorkload(final String workloadId) {
-    try {
-      return workloadApiClient.getWorkloadApi().workloadGet(workloadId);
-    } catch (final IOException e) {
-      throw new RuntimeException(e);
-    }
+    return callWithRetry(() -> workloadApiClient.getWorkloadApi().workloadGet(workloadId));
+  }
+
+  /**
+   * This method is aiming to mimic the behavior of the heartbeat which only fails after its timeout
+   * is reach. This allows to be more resilient to a workloadApi downtime
+   *
+   * @param workloadApiCall A supplier calling the API
+   * @return the result of the API call
+   */
+  private <T> T callWithRetry(CheckedSupplier<T> workloadApiCall) {
+    Duration timeoutDuration = Duration.ofMinutes(featureFlagClient.intVariation(WorkloadHeartbeatTimeout.INSTANCE, getFeatureFlagContext()));
+    return Failsafe.with(RetryPolicy.builder()
+        .withDelay(Duration.ofSeconds(30))
+        .withMaxDuration(timeoutDuration)
+        .build()).get(workloadApiCall);
   }
 
   private void sleep(final long millis) {
