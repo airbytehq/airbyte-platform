@@ -12,6 +12,7 @@ import com.cronutils.parser.CronParser
 import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory
+import com.google.common.annotations.VisibleForTesting
 import io.airbyte.api.model.generated.AirbyteCatalog
 import io.airbyte.api.model.generated.AirbyteStream
 import io.airbyte.api.model.generated.AirbyteStreamAndConfiguration
@@ -25,6 +26,7 @@ import io.airbyte.commons.server.errors.problems.UnexpectedProblem
 import io.airbyte.public_api.model.generated.AirbyteApiConnectionSchedule
 import io.airbyte.public_api.model.generated.ConnectionSyncModeEnum
 import io.airbyte.public_api.model.generated.ScheduleTypeEnum
+import io.airbyte.public_api.model.generated.SelectedFieldInfo
 import io.airbyte.public_api.model.generated.StreamConfiguration
 import io.airbyte.public_api.model.generated.StreamConfigurations
 import io.airbyte.server.apis.publicapi.mappers.ConnectionReadMapper
@@ -116,6 +118,47 @@ object AirbyteCatalogHelper {
   }
 
   /**
+   * Validate field selection for a single stream.
+   *
+   * @param streamConfiguration The configuration input of a specific stream provided by the caller.
+   * @param sourceStream The immutable schema defined by the source
+   */
+  @VisibleForTesting
+  fun validateFieldSelection(
+    streamConfiguration: StreamConfiguration,
+    sourceStream: AirbyteStream,
+  ) {
+    if (streamConfiguration.selectedFields.isNullOrEmpty()) {
+      log.debug("No fields selected specifically. Bypass validation.")
+      return
+    }
+
+    val allSelectedFields = streamConfiguration.selectedFields.mapNotNull { it.fieldPath?.firstOrNull() }
+    // 1. Avoid duplicate fields selection.
+    val allSelectedFieldsSet = allSelectedFields.toSet()
+    if (allSelectedFields.size != allSelectedFieldsSet.size) {
+      throw ConnectionConfigurationProblem.duplicateFieldsSelected(sourceStream.name)
+    }
+    // 2. Avoid non-existing fields selection.
+    val allTopLevelStreamFields = getStreamTopLevelFields(sourceStream.jsonSchema).toSet()
+    require(allSelectedFields.all { it in allTopLevelStreamFields }) {
+      throw ConnectionConfigurationProblem.invalidFieldName(sourceStream.name, allTopLevelStreamFields)
+    }
+    // 3. Selected fields must contain primary key(s).
+    val primaryKeys = selectPrimaryKey(sourceStream, streamConfiguration)
+    val primaryKeyFields = primaryKeys?.mapNotNull { it.firstOrNull() } ?: emptyList()
+    require(primaryKeyFields.all { it in allSelectedFieldsSet }) {
+      throw ConnectionConfigurationProblem.missingPrimaryKeySelected(sourceStream.name)
+    }
+    // 4. Selected fields must contain the cursor field.
+    val cursorField = selectCursorField(sourceStream, streamConfiguration)
+    if (!cursorField.isNullOrEmpty() && !allSelectedFieldsSet.contains(cursorField.first())) {
+      // first element is the top level field, and it has to be present in selected fields
+      throw ConnectionConfigurationProblem.missingCursorFieldSelected(sourceStream.name)
+    }
+  }
+
+  /**
    * Given an AirbyteCatalog, return a map of valid streams where key == name and value == the stream
    * config.
    *
@@ -171,6 +214,15 @@ object AirbyteCatalogHelper {
     // check that the first seconds and hour values are not *
   }
 
+  /**
+   * Convert proto/object from public_api model to airbyte_api model.
+   * */
+  private fun selectedFieldInfoConverter(publicApiSelectedFieldInfo: SelectedFieldInfo): io.airbyte.api.model.generated.SelectedFieldInfo {
+    return io.airbyte.api.model.generated.SelectedFieldInfo().apply {
+      fieldPath = publicApiSelectedFieldInfo.fieldPath
+    }
+  }
+
   fun updateAirbyteStreamConfiguration(
     config: AirbyteStreamConfiguration,
     airbyteStream: AirbyteStream,
@@ -181,6 +233,11 @@ object AirbyteCatalogHelper {
     updatedStreamConfiguration.selected = true
     updatedStreamConfiguration.aliasName = config.aliasName
     updatedStreamConfiguration.fieldSelectionEnabled = config.fieldSelectionEnabled
+    if (!streamConfiguration.selectedFields.isNullOrEmpty()) {
+      // We will ignore the null or empty input and sync all fields by default,
+      // which is consistent with Cloud UI where all fields are selected by default.
+      updatedStreamConfiguration.selectedFields = streamConfiguration.selectedFields.map { selectedFieldInfoConverter(it) }
+    }
     updatedStreamConfiguration.suggested = config.suggested
 
     if (streamConfiguration.syncMode == null) {
@@ -260,11 +317,13 @@ object AirbyteCatalogHelper {
     validDestinationSyncModes: List<DestinationSyncMode?>,
     airbyteStream: AirbyteStream,
   ): Boolean {
+    // 1. Validate field selection
+    validateFieldSelection(streamConfiguration, airbyteStream)
+
+    // 2. validate that sync and destination modes are valid
     if (streamConfiguration.syncMode == null) {
       return true
     }
-
-    // validate that sync and destination modes are valid
     val validCombinedSyncModes: Set<ConnectionSyncModeEnum> = validCombinedSyncModes(airbyteStream.supportedSyncModes, validDestinationSyncModes)
     if (!validCombinedSyncModes.contains(streamConfiguration.syncMode)) {
       throw ConnectionConfigurationProblem.handleSyncModeProblem(
@@ -376,6 +435,37 @@ object AirbyteCatalogHelper {
       }
     }
     return validCombinedSyncModes
+  }
+
+  /**
+   * Parses a connectorSchema to retrieve top level fields only, ignoring the nested fields.
+   *
+   * @param connectorSchema source or destination schema
+   * @return A list of top level fields, ignoring the nested fields.
+   */
+  @VisibleForTesting
+  private fun getStreamTopLevelFields(connectorSchema: JsonNode): List<String> {
+    val yamlMapper = ObjectMapper(YAMLFactory())
+    val streamFields: MutableList<String> = ArrayList()
+    val spec: JsonNode =
+      try {
+        yamlMapper.readTree(connectorSchema.traverse())
+      } catch (e: IOException) {
+        log.error("Error getting stream fields from schema", e)
+        throw UnexpectedProblem(HttpStatus.INTERNAL_SERVER_ERROR)
+      }
+    val fields = spec.fields()
+    while (fields.hasNext()) {
+      val (key, paths) = fields.next()
+      if ("properties" == key) {
+        val propertyFields = paths.fields()
+        while (propertyFields.hasNext()) {
+          val (propertyName, _) = propertyFields.next()
+          streamFields.add(propertyName)
+        }
+      }
+    }
+    return streamFields.toList()
   }
 
   /**

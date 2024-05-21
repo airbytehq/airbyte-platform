@@ -38,8 +38,21 @@ class ConnectionConfigurationProblem private constructor(message: String) : Abst
       )
     }
 
+    fun invalidFieldName(
+      streamName: String,
+      validFieldNames: Collection<String?>,
+    ): ConnectionConfigurationProblem {
+      return ConnectionConfigurationProblem(
+        "Invalid field selected in configuration for stream $streamName. The list of valid field names includes: $validFieldNames.",
+      )
+    }
+
     fun duplicateStream(streamName: String): ConnectionConfigurationProblem {
       return ConnectionConfigurationProblem("Duplicate stream found in configuration for: $streamName.")
+    }
+
+    fun duplicateFieldsSelected(streamName: String): ConnectionConfigurationProblem {
+      return ConnectionConfigurationProblem("Duplicate fields selected in configuration for stream: $streamName.")
     }
 
     fun sourceDefinedCursorFieldProblem(
@@ -58,6 +71,12 @@ class ConnectionConfigurationProblem private constructor(message: String) : Abst
       )
     }
 
+    fun missingCursorFieldSelected(streamName: String): ConnectionConfigurationProblem {
+      return ConnectionConfigurationProblem(
+        "Cursor field is not selected properly for stream: $streamName. Please include the cursor field in selected fields for this stream.",
+      )
+    }
+
     fun invalidCursorField(
       streamName: String,
       validFields: List<List<String?>?>,
@@ -70,6 +89,13 @@ class ConnectionConfigurationProblem private constructor(message: String) : Abst
     fun missingPrimaryKey(streamName: String): ConnectionConfigurationProblem {
       return ConnectionConfigurationProblem(
         "No default primary key for stream: $streamName. Please include a primary key configuration for this stream.",
+      )
+    }
+
+    fun missingPrimaryKeySelected(streamName: String): ConnectionConfigurationProblem {
+      return ConnectionConfigurationProblem(
+        "Primary key fields are not selected properly for stream: $streamName. " +
+          "Please include the primary key fields in selected fields for this stream.",
       )
     }
 

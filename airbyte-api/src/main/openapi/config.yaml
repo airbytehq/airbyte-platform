@@ -9501,10 +9501,8 @@ components:
           description: Whether field selection should be enabled. If this is true, only the properties in `selectedFields` will be included.
           type: boolean
         selectedFields:
-          description: Paths to the fields that will be included in the configured catalog. This must be set if `fieldSelectedEnabled` is set. An empty list indicates that no properties will be included.
-          type: array
-          items:
-            $ref: "#/components/schemas/SelectedFieldInfo"
+          description: This must be set if `fieldSelectedEnabled` is set. An empty list indicates that no properties will be included.
+          $ref: "#/components/schemas/SelectedFields"
         minimumGenerationId:
           type: integer
           format: int64
@@ -9526,6 +9524,13 @@ components:
           type: array
           items:
             type: string
+      x-sdk-component: true
+    SelectedFields:
+      description: Paths to the fields that will be included in the configured catalog.
+      type: array
+      items:
+        $ref: "#/components/schemas/SelectedFieldInfo"
+      x-sdk-component: true
     DataType:
       type: string
       enum:
@@ -12572,6 +12577,8 @@ components:
             type: array
             items:
               type: string
+        selectedFields:
+          $ref: "#/components/schemas/SelectedFields"
       x-sdk-component: true
     StreamConfigurations:
       description: A list of configured stream options for a connection.

@@ -24,6 +24,8 @@ import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Assertions.assertTrue
+import org.junit.jupiter.api.BeforeEach
+import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.EnumSource
@@ -549,6 +551,147 @@ internal class AirbyteCatalogHelperTest {
       )
     assertEquals(1, combinedSyncModes.size)
     assertEquals(listOf(ConnectionSyncModeEnum.FULL_REFRESH_OVERWRITE).first(), combinedSyncModes.first())
+  }
+
+  @Nested
+  inner class ValidateFieldSelection {
+    private val streamConfiguration = StreamConfiguration()
+    private val selectedFields =
+      listOf(
+        io.airbyte.public_api.model.generated.SelectedFieldInfo().fieldPath(listOf("f1", "f2", "f3")),
+        io.airbyte.public_api.model.generated.SelectedFieldInfo().fieldPath(listOf("m1", "m2")),
+        io.airbyte.public_api.model.generated.SelectedFieldInfo().fieldPath(listOf("y1")),
+      )
+    private val jsonSchemaString =
+      """
+      "json_schema": {
+          "type": "object",
+          "properties": {
+            "f1": {
+              "type": [
+                "null",
+                "string"
+              ]
+            },
+            "m1": {
+              "type": [
+                "null",
+                "string"
+              ]
+            },
+            "y1": {
+              "type": [
+                "null",
+                "string"
+              ],
+              "properties": {
+                  "url": {
+                    "type": ["null", "string"]
+                  }
+              }
+            },
+            "b1": {
+              "type": [
+                "null",
+                "string"
+              ]
+            }
+          }
+        }
+      """.trimIndent()
+
+    private val schemaConfiguration = AirbyteStreamConfiguration()
+    private val sourceStream = AirbyteStream()
+
+    @BeforeEach
+    fun setUp() {
+      streamConfiguration.name = "testStream"
+      schemaConfiguration.syncMode = SyncMode.FULL_REFRESH
+      schemaConfiguration.destinationSyncMode = DestinationSyncMode.OVERWRITE
+      sourceStream.name = "testStream"
+      sourceStream.jsonSchema = Jsons.deserialize(jsonSchemaString)
+      sourceStream.defaultCursorField = listOf("b1")
+      sourceStream.sourceDefinedPrimaryKey = listOf(listOf("f1"))
+    }
+
+    @Test
+    fun `Null selected fields should be excluded in the updated config`() {
+      streamConfiguration.selectedFields = null
+      val updatedConfig = AirbyteCatalogHelper.updateAirbyteStreamConfiguration(schemaConfiguration, sourceStream, streamConfiguration)
+      assertEquals(null, updatedConfig.selectedFields)
+    }
+
+    @Test
+    fun `Empty selected fields should be excluded in the updated config`() {
+      streamConfiguration.selectedFields = emptyList()
+      val updatedConfig = AirbyteCatalogHelper.updateAirbyteStreamConfiguration(schemaConfiguration, sourceStream, streamConfiguration)
+      assertEquals(null, updatedConfig.selectedFields)
+    }
+
+    @Test
+    fun `Non-empty selected fields should be included in the updated config`() {
+      streamConfiguration.selectedFields = selectedFields
+      val updatedConfig = AirbyteCatalogHelper.updateAirbyteStreamConfiguration(schemaConfiguration, sourceStream, streamConfiguration)
+      // test size
+      assertEquals(selectedFields.size, updatedConfig.selectedFields.size)
+      // test type converter
+      assertEquals(selectedFields[0].fieldPath[0], updatedConfig.selectedFields[0].fieldPath[0])
+    }
+
+    @Test
+    fun `Should throw error if input contains duplicate field names`() {
+      streamConfiguration.selectedFields =
+        listOf(
+          io.airbyte.public_api.model.generated.SelectedFieldInfo().fieldPath(listOf("f1", "f2", "f3")),
+          io.airbyte.public_api.model.generated.SelectedFieldInfo().fieldPath(listOf("m1", "m2")),
+          // `m1` is a dup field
+          io.airbyte.public_api.model.generated.SelectedFieldInfo().fieldPath(listOf("m1", "m3")),
+          io.airbyte.public_api.model.generated.SelectedFieldInfo().fieldPath(listOf("b1")),
+        )
+      assertThrows(ConnectionConfigurationProblem::class.java) {
+        AirbyteCatalogHelper.validateFieldSelection(streamConfiguration, sourceStream)
+      }
+    }
+
+    @Test
+    fun `Should throw error if input contains non-existed field names`() {
+      streamConfiguration.selectedFields =
+        listOf(
+          io.airbyte.public_api.model.generated.SelectedFieldInfo().fieldPath(listOf("f1")),
+          io.airbyte.public_api.model.generated.SelectedFieldInfo().fieldPath(listOf("m1")),
+          // `x1` is not existed in source schema
+          io.airbyte.public_api.model.generated.SelectedFieldInfo().fieldPath(listOf("x1")),
+          io.airbyte.public_api.model.generated.SelectedFieldInfo().fieldPath(listOf("b1")),
+        )
+      assertThrows(ConnectionConfigurationProblem::class.java) {
+        AirbyteCatalogHelper.validateFieldSelection(streamConfiguration, sourceStream)
+      }
+    }
+
+    @Test
+    fun `Should throw error if primary key(s) are not selected`() {
+      streamConfiguration.selectedFields =
+        listOf(
+          io.airbyte.public_api.model.generated.SelectedFieldInfo().fieldPath(listOf("m1")),
+          io.airbyte.public_api.model.generated.SelectedFieldInfo().fieldPath(listOf("b1")),
+        )
+      assertThrows(ConnectionConfigurationProblem::class.java) {
+        AirbyteCatalogHelper.validateFieldSelection(streamConfiguration, sourceStream)
+      }
+    }
+
+    @Test
+    fun `Should throw error if cursor field is not selected`() {
+      streamConfiguration.selectedFields =
+        listOf(
+          io.airbyte.public_api.model.generated.SelectedFieldInfo().fieldPath(listOf("f1")),
+          io.airbyte.public_api.model.generated.SelectedFieldInfo().fieldPath(listOf("m1")),
+          io.airbyte.public_api.model.generated.SelectedFieldInfo().fieldPath(listOf("y1")),
+        )
+      assertThrows(ConnectionConfigurationProblem::class.java) {
+        AirbyteCatalogHelper.validateFieldSelection(streamConfiguration, sourceStream)
+      }
+    }
   }
 
   private fun createAirbyteCatalog(): AirbyteCatalog {
