@@ -24,6 +24,8 @@ import org.openapitools.client.infrastructure.ServerException
 import java.io.IOException
 import java.time.Duration
 import java.util.Optional
+import io.airbyte.workload.api.client.generated.infrastructure.ClientException as WorkloadApiClientException
+import io.airbyte.workload.api.client.generated.infrastructure.ServerException as WorkloadApiServerException
 
 private val logger = KotlinLogging.logger {}
 
@@ -99,7 +101,9 @@ class ClientSupportFactory {
           IOException::class.java,
           UnsupportedOperationException::class.java,
           ClientException::class.java,
+          WorkloadApiClientException::class.java,
           ServerException::class.java,
+          WorkloadApiServerException::class.java,
         ),
       )
       // TODO move these metrics into a centralized metric registery as part of the MetricClient refactor/cleanup
