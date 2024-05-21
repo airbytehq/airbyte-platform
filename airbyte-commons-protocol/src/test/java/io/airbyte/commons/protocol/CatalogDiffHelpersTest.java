@@ -53,6 +53,7 @@ class CatalogDiffHelpersTest {
   private static final String SALES = "sales";
   private static final List<List<String>> ID_PK = List.of(List.of("id"));
   private static final List<List<String>> DATE_PK = List.of(List.of(DATE));
+  private static final List<List<String>> COMPOSITE_PK = List.of(List.of("id"), List.of(DATE));
   private static final String COMPANIES_VALID = "diffs/companies_schema.json";
   private static final String COMPANIES_INVALID = "diffs/companies_schema_invalid.json";
   private static final String VALID_SCHEMA_JSON = "diffs/valid_schema.json";
@@ -254,15 +255,22 @@ class CatalogDiffHelpersTest {
 
   private static Stream<Arguments> testCatalogDiffWithSourceDefinedPrimaryKeyChangeMethodSource() {
     return Stream.of(
-        // Should be breaking in DEDUP mode if the previous PK is not the new source-defined PK
+        // Should be breaking in DE-DUP mode if the previous PK is not the new source-defined PK
         Arguments.of(DestinationSyncMode.APPEND_DEDUP, ID_PK, ID_PK, DATE_PK, true),
         Arguments.of(DestinationSyncMode.APPEND_DEDUP, ID_PK, List.of(), DATE_PK, true),
+        Arguments.of(DestinationSyncMode.APPEND_DEDUP, COMPOSITE_PK, COMPOSITE_PK, ID_PK, true),
+
+        // Should not be breaking in DE-DUP mode if the previous and new source-defined PK contain the
+        // fields in a different order
+        Arguments.of(DestinationSyncMode.APPEND_DEDUP, COMPOSITE_PK, COMPOSITE_PK, COMPOSITE_PK.reversed(), false),
 
         // Should not be breaking in other sync modes
         Arguments.of(DestinationSyncMode.APPEND, ID_PK, ID_PK, DATE_PK, false),
         Arguments.of(DestinationSyncMode.OVERWRITE, ID_PK, ID_PK, DATE_PK, false),
         Arguments.of(DestinationSyncMode.APPEND, ID_PK, List.of(), DATE_PK, false),
         Arguments.of(DestinationSyncMode.OVERWRITE, ID_PK, List.of(), DATE_PK, false),
+        Arguments.of(DestinationSyncMode.APPEND, COMPOSITE_PK, COMPOSITE_PK, ID_PK, false),
+        Arguments.of(DestinationSyncMode.OVERWRITE, COMPOSITE_PK, COMPOSITE_PK, ID_PK, false),
 
         // Should not be breaking if added source-defined PK is already the manually set PK
         Arguments.of(DestinationSyncMode.APPEND, ID_PK, List.of(), ID_PK, false),
