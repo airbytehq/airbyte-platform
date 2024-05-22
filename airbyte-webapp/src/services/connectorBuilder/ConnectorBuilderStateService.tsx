@@ -341,7 +341,9 @@ export const InternalConnectorBuilderFormStateProvider: React.FC<
           // set jsonManifest first so that a save isn't triggered
           setJsonManifest(convertedManifest);
           setPersistedState({ name: currentProject.name, manifest: convertedManifest });
-          setValue("formValues", convertedFormValues, { shouldValidate: true });
+          // don't need to explicitly validate here, since automatic form validation will still prevent
+          // publishing if there are any form errors
+          setValue("formValues", convertedFormValues, { shouldValidate: false });
           setValue("mode", "ui");
         } catch (e) {
           confirmDiscard(e.message);
