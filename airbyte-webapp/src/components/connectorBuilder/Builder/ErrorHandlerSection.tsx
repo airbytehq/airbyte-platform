@@ -109,7 +109,7 @@ export const ErrorHandlerSection: React.FC<ErrorHandlerSectionProps> = (props) =
             manifestPath="WaitUntilTimeFromHeader.properties.regex"
           />
           <BuilderField
-            type="string"
+            type="number"
             path={buildPath("backoff_strategy.min_wait")}
             optional
             manifestPath="WaitUntilTimeFromHeader.properties.min_wait"
@@ -200,6 +200,14 @@ export const ErrorHandlerSection: React.FC<ErrorHandlerSectionProps> = (props) =
                   />
                 </>
               </ToggleGroupField>
+              <BuilderField
+                type="number"
+                step={1}
+                min={0}
+                path={buildPath("max_retries")}
+                optional
+                manifestPath="DefaultErrorHandler.properties.max_retries"
+              />
             </FlexContainer>
           </GroupControls>
         )}

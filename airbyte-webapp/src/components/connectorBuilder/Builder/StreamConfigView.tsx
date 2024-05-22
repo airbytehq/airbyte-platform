@@ -34,6 +34,7 @@ import { RecordSelectorSection } from "./RecordSelectorSection";
 import { RequestOptionSection } from "./RequestOptionSection";
 import styles from "./StreamConfigView.module.scss";
 import { TransformationSection } from "./TransformationSection";
+import { UnknownFieldsSection } from "./UnknownFieldsSection";
 import { SchemaConflictIndicator } from "../SchemaConflictIndicator";
 import { BuilderStream, StreamPathFn, isEmptyOrDefault, useBuilderWatch } from "../types";
 import { useAutoImportSchema } from "../useAutoImportSchema";
@@ -111,6 +112,7 @@ export const StreamConfigView: React.FC<StreamConfigViewProps> = React.memo(({ s
             currentStreamIndex={streamNum}
           />
           <TransformationSection streamFieldPath={streamFieldPath} currentStreamIndex={streamNum} />
+          <UnknownFieldsSection streamFieldPath={streamFieldPath} />
         </fieldset>
       ) : (
         <BuilderCard className={styles.schemaEditor}>

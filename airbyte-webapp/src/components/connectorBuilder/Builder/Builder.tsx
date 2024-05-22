@@ -56,7 +56,7 @@ export const Builder: React.FC<BuilderProps> = ({ hasMultipleStreams }) => {
       debounce((values) => {
         setFormValuesValid(builderFormValidationSchema.isValidSync(values));
         updateJsonManifest(convertToManifest(cleanedFormValues(values, builderFormValidationSchema)));
-      }, 200),
+      }, 500),
     [builderFormValidationSchema, setFormValuesValid, updateJsonManifest]
   );
 

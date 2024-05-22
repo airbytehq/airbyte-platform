@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 
-import { DEFAULT_JSON_MANIFEST_VALUES, YamlValuePerComponent } from "components/connectorBuilder/types";
+import { DEFAULT_JSON_MANIFEST_VALUES } from "components/connectorBuilder/types";
 
 import { useCurrentWorkspaceId } from "area/workspace/utils";
 import { HttpError } from "core/api";
@@ -26,9 +26,7 @@ const connectorBuilderKeys = {
   list: (manifest: ConnectorManifest, config: ConnectorConfig) =>
     [...connectorBuilderKeys.all, "list", { manifest, config }] as const,
   template: ["template"] as const,
-  resolveYaml: (manifest?: ConnectorManifest) => [...connectorBuilderKeys.all, "resolve", { manifest }] as const,
-  resolveUi: (yamlValuePerComponent: YamlValuePerComponent) =>
-    [...connectorBuilderKeys.all, "resolve", yamlValuePerComponent] as const,
+  resolve: (manifest?: ConnectorManifest) => [...connectorBuilderKeys.all, "resolve", { manifest }] as const,
   resolveSuspense: (manifest?: ConnectorManifest) =>
     [...connectorBuilderKeys.all, "resolveSuspense", { manifest }] as const,
 };
@@ -47,17 +45,11 @@ export const useBuilderReadStream = (
   });
 };
 
-export const useBuilderResolvedManifest = (
-  params: ResolveManifestRequestBody,
-  enabled = true,
-  yamlValuePerComponent?: YamlValuePerComponent
-) => {
+export const useBuilderResolvedManifest = (params: ResolveManifestRequestBody, enabled = true) => {
   const requestOptions = useRequestOptions();
 
   return useQuery<ResolveManifest, HttpError<KnownExceptionInfo>>(
-    yamlValuePerComponent === undefined
-      ? connectorBuilderKeys.resolveYaml(params.manifest)
-      : connectorBuilderKeys.resolveUi(yamlValuePerComponent),
+    connectorBuilderKeys.resolve(params.manifest),
     () => resolveManifest(params, requestOptions),
     {
       keepPreviousData: true,

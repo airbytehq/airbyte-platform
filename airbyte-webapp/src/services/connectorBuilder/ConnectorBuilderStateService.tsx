@@ -17,11 +17,11 @@ import {
   convertToManifest,
   DEFAULT_BUILDER_FORM_VALUES,
   DEFAULT_JSON_MANIFEST_VALUES,
-  getYamlValuePerComponent,
   useBuilderWatch,
 } from "components/connectorBuilder/types";
 import { useUpdateLockedInputs } from "components/connectorBuilder/useLockedInputs";
 import { formatJson, streamNameOrDefault } from "components/connectorBuilder/utils";
+import { useNoUiValueModal } from "components/connectorBuilder/YamlEditor/NoUiValueModal";
 
 import { useCurrentWorkspaceId } from "area/workspace/utils";
 import {
@@ -242,11 +242,6 @@ export const InternalConnectorBuilderFormStateProvider: React.FC<
   const mode = useBuilderWatch("mode");
   const name = useBuilderWatch("name");
 
-  const yamlValuePerComponent = useMemo(
-    () => (mode === "ui" ? getYamlValuePerComponent(jsonManifest) : undefined),
-    [jsonManifest, mode]
-  );
-
   const {
     data: resolveData,
     isError: isResolveError,
@@ -259,9 +254,8 @@ export const InternalConnectorBuilderFormStateProvider: React.FC<
       project_id: projectId,
       form_generated_manifest: mode === "ui",
     },
-    // In UI mode, we only need to call resolve if we have YAML components
-    mode === "yaml" || (mode === "ui" && !!jsonManifest.metadata?.yamlComponents),
-    yamlValuePerComponent
+    // In UI mode, only call resolve if the form is valid, since an invalid form is expected to not resolve
+    mode === "yaml" || (mode === "ui" && formValuesValid)
   );
   const unknownErrorMessage = formatMessage({ id: "connectorBuilder.unknownError" });
   const resolveErrorMessage = isResolveError
@@ -305,6 +299,9 @@ export const InternalConnectorBuilderFormStateProvider: React.FC<
     setStoredMode(mode);
   }, [mode, setStoredMode]);
 
+  const formValues = useBuilderWatch("formValues");
+  const openNoUiValueModal = useNoUiValueModal();
+
   const toggleUI = useCallback(
     async (newMode: BuilderState["mode"]) => {
       if (newMode === "yaml") {
@@ -312,21 +309,25 @@ export const InternalConnectorBuilderFormStateProvider: React.FC<
         setYamlIsValid(true);
         setValue("mode", "yaml");
       } else {
-        const confirmDiscard = (errorMessage: string) =>
-          openConfirmationModal({
-            text: "connectorBuilder.toggleModal.text",
-            textValues: { error: errorMessage },
-            title: "connectorBuilder.toggleModal.title",
-            submitButtonText: "connectorBuilder.toggleModal.submitButton",
-            onSubmit: () => {
-              setValue("mode", "ui");
-              closeConfirmationModal();
-              analyticsService.track(Namespace.CONNECTOR_BUILDER, Action.DISCARD_YAML_CHANGES, {
-                actionDescription: "YAML changes were discarded due to failure when converting from YAML to UI",
-              });
-            },
-          });
-
+        const confirmDiscard = (errorMessage: string) => {
+          if (isEqual(formValues, DEFAULT_BUILDER_FORM_VALUES)) {
+            openNoUiValueModal(errorMessage);
+          } else {
+            openConfirmationModal({
+              text: "connectorBuilder.toggleModal.text.uiValueAvailable",
+              textValues: { error: errorMessage },
+              title: "connectorBuilder.toggleModal.title",
+              submitButtonText: "connectorBuilder.toggleModal.submitButton",
+              onSubmit: () => {
+                setValue("mode", "ui");
+                closeConfirmationModal();
+                analyticsService.track(Namespace.CONNECTOR_BUILDER, Action.DISCARD_YAML_CHANGES, {
+                  actionDescription: "YAML changes were discarded due to failure when converting from YAML to UI",
+                });
+              },
+            });
+          }
+        };
         try {
           if (jsonManifest === DEFAULT_JSON_MANIFEST_VALUES) {
             setValue("mode", "ui");
@@ -358,9 +359,11 @@ export const InternalConnectorBuilderFormStateProvider: React.FC<
       analyticsService,
       closeConfirmationModal,
       currentProject.name,
+      formValues,
       isResolveError,
       jsonManifest,
       openConfirmationModal,
+      openNoUiValueModal,
       resolveErrorMessage,
       resolvedManifest,
       setValue,

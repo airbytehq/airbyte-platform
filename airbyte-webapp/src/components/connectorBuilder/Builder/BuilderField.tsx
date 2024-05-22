@@ -1,7 +1,7 @@
+import classNames from "classnames";
 import { ReactNode, useEffect, useRef } from "react";
 import { useController, useWatch } from "react-hook-form";
 import { FormattedMessage } from "react-intl";
-import { Rnd } from "react-rnd";
 
 import { ControlLabels } from "components/LabeledControl";
 import { LabeledSwitch } from "components/LabeledSwitch";
@@ -250,38 +250,16 @@ const InnerBuilderField: React.FC<BuilderFieldProps> = ({
         />
       )}
       {props.type === "jsoneditor" && (
-        <div style={{ position: "relative" }}>
-          <Rnd
-            disableDragging
-            enableResizing={{
-              top: false,
-              right: false,
-              bottom: true,
-              left: false,
-              topRight: false,
-              bottomRight: false,
-              bottomLeft: false,
-              topLeft: false,
+        <div className={classNames(props.className, styles.jsonEditor)}>
+          <CodeEditor
+            key={path}
+            automaticLayout
+            value={fieldValue || ""}
+            language="json"
+            onChange={(val: string | undefined) => {
+              setValue(val);
             }}
-            default={{
-              x: 0,
-              y: 0,
-              width: "100%",
-              height: 300,
-            }}
-            resizeHandleClasses={{ bottom: styles.draghandle }}
-            style={{ position: "relative" }}
-          >
-            <CodeEditor
-              key={path}
-              automaticLayout
-              value={fieldValue || ""}
-              language="json"
-              onChange={(val: string | undefined) => {
-                setValue(val);
-              }}
-            />
-          </Rnd>
+          />
         </div>
       )}
       {props.type === "array" && (

@@ -37,7 +37,6 @@ import {
   BasicHttpAuthenticatorType,
   DefaultErrorHandler,
   CompositeErrorHandler,
-  DefaultErrorHandlerBackoffStrategiesItem,
   DeclarativeStreamTransformationsItem,
   HttpResponseFilter,
   DefaultPaginator,
@@ -52,6 +51,10 @@ import {
   SimpleRetrieverPartitionRouter,
   SimpleRetrieverPartitionRouterAnyOfItem,
   CustomPartitionRouterType,
+  ConstantBackoffStrategy,
+  ExponentialBackoffStrategy,
+  WaitUntilTimeFromHeader,
+  WaitTimeFromHeader,
 } from "core/api/types/ConnectorManifest";
 
 import { CDK_VERSION } from "./cdk";
@@ -173,7 +176,11 @@ interface BuilderResponseFilter extends Omit<HttpResponseFilter, "http_codes"> {
 }
 
 export interface BuilderErrorHandler extends Omit<DefaultErrorHandler, "backoff_strategies" | "response_filters"> {
-  backoff_strategy?: DefaultErrorHandlerBackoffStrategiesItem;
+  backoff_strategy?:
+    | (Omit<ConstantBackoffStrategy, "backoff_time_in_seconds"> & { backoff_time_in_seconds: number })
+    | (Omit<ExponentialBackoffStrategy, "factor"> & { factor?: number })
+    | (Omit<WaitUntilTimeFromHeader, "min_wait"> & { min_wait?: number })
+    | WaitTimeFromHeader;
   response_filter?: BuilderResponseFilter;
 }
 
@@ -246,10 +253,11 @@ export interface BuilderStream {
   errorHandler?: BuilderErrorHandler[] | YamlString;
   schema?: string;
   autoImportSchema: boolean;
+  unknownFields?: YamlString;
 }
 
 type StreamName = string;
-// todo: add more component names to this type as more components support in YAML
+
 export interface YamlSupportedComponentName {
   stream:
     | "paginator"
@@ -269,66 +277,6 @@ export interface BuilderMetadata {
     global?: Array<YamlSupportedComponentName["global"]>;
   };
 }
-
-export interface YamlValuePerComponent {
-  streams?: Record<StreamName, Record<YamlSupportedComponentName["stream"], unknown>>;
-  global?: Record<YamlSupportedComponentName["global"], unknown>;
-}
-export const getYamlValuePerComponent = (manifest: ConnectorManifest): YamlValuePerComponent => {
-  if (manifest.metadata === undefined) {
-    return {};
-  }
-  const metadata = manifest.metadata as BuilderMetadata;
-  if (metadata?.yamlComponents === undefined) {
-    return {};
-  }
-
-  const yamlValuePerComponent: YamlValuePerComponent = {};
-
-  if (metadata.yamlComponents.global) {
-    yamlValuePerComponent.global = Object.fromEntries(
-      metadata.yamlComponents.global.map((yamlComponentName) =>
-        match(yamlComponentName)
-          .with("authenticator", (name) => [name, manifest.definitions?.base_requester?.authenticator])
-          .exhaustive()
-      )
-    );
-  }
-
-  if (metadata.yamlComponents.streams) {
-    yamlValuePerComponent.streams = Object.fromEntries(
-      Object.entries(metadata?.yamlComponents?.streams).map(([streamName, yamlComponentNames]) => {
-        // this method is only called in UI mode, so we can assume full streams are found in definitions
-        const stream = manifest.definitions?.streams?.[streamName];
-        const manifestValuePerComponent = Object.fromEntries(
-          yamlComponentNames.map((yamlComponentName) =>
-            match(yamlComponentName)
-              .with("paginator", (name) => [name, stream?.retriever?.paginator])
-              .with("errorHandler", (name) => [name, stream?.retriever?.requester?.error_handler])
-              .with("transformations", (name) => [name, stream?.transformations])
-              .with("incrementalSync", (name) => [name, stream?.incremental_sync])
-              .with("recordSelector", (name) => [name, stream?.retriever?.record_selector])
-              .with("parameterizedRequests", (name) => [
-                name,
-                filterPartitionRouterToType(stream?.retriever?.partition_router, ["ListPartitionRouter"]),
-              ])
-              .with("parentStreams", (name) => [
-                name,
-                filterPartitionRouterToType(stream?.retriever?.partition_router, [
-                  "SubstreamPartitionRouter",
-                  "CustomPartitionRouter",
-                ]),
-              ])
-              .exhaustive()
-          )
-        );
-        return [streamName, manifestValuePerComponent];
-      })
-    );
-  }
-
-  return yamlValuePerComponent;
-};
 
 // 0.29.0 is the version where breaking changes got introduced - older states can't be supported
 export const OLDEST_SUPPORTED_CDK_VERSION = "0.29.0";
@@ -775,7 +723,30 @@ export function builderErrorHandlersToManifest(
     type: "CompositeErrorHandler",
     error_handlers: errorHandlers.map((handler) => ({
       ...handler,
-      backoff_strategies: handler.backoff_strategy ? [handler.backoff_strategy] : undefined,
+      max_retries: handler.max_retries ? Number(handler.max_retries) : undefined,
+      backoff_strategies: match(handler.backoff_strategy)
+        .with(undefined, () => undefined)
+        // must explicitly cast fields that have "number | string" type in the declarative schema
+        // to "number", or else they will end up as strings when dumping YAML
+        .with({ type: "ConstantBackoffStrategy" }, (strategy) => [
+          {
+            ...strategy,
+            backoff_time_in_seconds: Number(strategy.backoff_time_in_seconds),
+          },
+        ])
+        .with({ type: "ExponentialBackoffStrategy" }, (strategy) => [
+          {
+            ...strategy,
+            factor: strategy.factor ? Number(strategy.factor) : undefined,
+          },
+        ])
+        .with({ type: "WaitUntilTimeFromHeader" }, (strategy) => [
+          {
+            ...strategy,
+            min_wait: strategy.min_wait ? Number(strategy.min_wait) : undefined,
+          },
+        ])
+        .otherwise((strategy) => [strategy]),
       response_filters: handler.response_filter
         ? [{ ...handler.response_filter, http_codes: handler.response_filter.http_codes?.map(Number) }]
         : undefined,
@@ -825,15 +796,19 @@ function builderRequestBodyToStreamRequestBody(builderRequestBody: BuilderReques
         builderRequestBody.type === "json_list"
           ? fromEntriesOrUndefined(builderRequestBody.values)
           : builderRequestBody.type === "json_freeform"
-          ? ((parsedJson) => (Object.keys(parsedJson).length > 0 ? parsedJson : undefined))(
-              JSON.parse(builderRequestBody.value)
-            )
+          ? isString(builderRequestBody.value)
+            ? undefined
+            : ((parsedJson) => (Object.keys(parsedJson).length > 0 ? parsedJson : undefined))(
+                JSON.parse(builderRequestBody.value)
+              )
           : undefined,
       request_body_data:
         builderRequestBody.type === "form_list"
           ? fromEntriesOrUndefined(builderRequestBody.values)
           : builderRequestBody.type === "string_freeform"
           ? builderRequestBody.value
+          : builderRequestBody.type === "json_freeform" && isString(builderRequestBody.value)
+          ? JSON.parse(builderRequestBody.value)
           : undefined,
     };
     return Object.keys(requestBody).length > 0 ? requestBody : undefined;
@@ -878,7 +853,7 @@ function builderStreamToDeclarativeSteam(stream: BuilderStream, allStreams: Buil
   const parentStreamsToManifest = (parentStreams: BuilderParentStream[] | undefined) =>
     builderParentStreamsToManifest(parentStreams, allStreams);
 
-  return {
+  return merge({} as DeclarativeStream, stream.unknownFields ? load(stream.unknownFields) : {}, {
     type: "DeclarativeStream",
     name: stream.name,
     primary_key: stream.primaryKey.length > 0 ? stream.primaryKey : undefined,
@@ -903,7 +878,7 @@ function builderStreamToDeclarativeSteam(stream: BuilderStream, allStreams: Buil
     incremental_sync: convertOrLoadYamlString(stream.incrementalSync, builderIncrementalSyncToManifest),
     transformations: convertOrLoadYamlString(stream.transformations, builderTransformationsToManifest),
     schema_loader: { type: "InlineSchemaLoader", schema: schemaRef(stream.name) },
-  };
+  });
 }
 
 export const builderFormValuesToMetadata = (values: BuilderFormValues): BuilderMetadata => {

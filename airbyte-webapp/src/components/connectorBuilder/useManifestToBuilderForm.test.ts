@@ -1,3 +1,4 @@
+import { dump } from "js-yaml";
 import merge from "lodash/merge";
 
 import {
@@ -19,6 +20,7 @@ import {
   manifestPaginatorToBuilder,
   manifestRecordSelectorToBuilder,
   manifestSubstreamPartitionRouterToBuilder,
+  manifestTransformationsToBuilder,
 } from "./convertManifestToBuilderForm";
 import {
   DEFAULT_BUILDER_FORM_VALUES,
@@ -324,7 +326,7 @@ describe("Conversion throws error when", () => {
       return manifestAuthenticatorToBuilder(authenticator, undefined);
     };
     expect(convert).toThrow(
-      "SessionTokenAuthenticator login_requester.authenticator must have one of the following types"
+      "SessionTokenAuthenticator.login_requester.authenticator must have one of the following types: NoAuth, ApiKeyAuthenticator, BearerAuthenticator, BasicHttpAuthenticator"
     );
   });
 
@@ -345,9 +347,7 @@ describe("Conversion throws error when", () => {
       };
       return manifestErrorHandlerToBuilder(errorHandler as HttpRequesterErrorHandler);
     };
-    expect(convert).toThrow(
-      "error handler type is unsupported; only CompositeErrorHandler and DefaultErrorHandler are supported"
-    );
+    expect(convert).toThrow("error handler type 'UnsupportedErrorHandler' is unsupported");
   });
 
   it("manifest has an incremental sync with an unsupported type", async () => {
@@ -461,6 +461,25 @@ describe("Conversion throws error when", () => {
       "SubstreamPartitionRouter references parent stream name 'stream1' which could not be found"
     );
   });
+
+  it("unknown fields are found on component", async () => {
+    const convert = () => {
+      const transformations = [
+        {
+          type: "AddFields" as const,
+          fields: [
+            {
+              path: ["path", "to", "field"],
+              value: "my_value",
+            },
+          ],
+          unsupported_field: "abc",
+        },
+      ];
+      return manifestTransformationsToBuilder(transformations);
+    };
+    expect(convert).toThrow("AddFields contains fields unsupported by the UI: unsupported_field");
+  });
 });
 
 describe("Conversion successfully results in", () => {
@@ -565,7 +584,6 @@ describe("Conversion successfully results in", () => {
       },
     };
     const formValues = await convertToBuilderFormValues(noOpResolve, manifest, DEFAULT_CONNECTOR_NAME);
-    console.log(formValues);
     expect(formValues.inputs).toEqual([
       {
         key: "api_key",
@@ -1027,5 +1045,30 @@ describe("Conversion successfully results in", () => {
         },
       },
     });
+  });
+
+  it("unrecognized stream fields are placed into unknownFields in BuilderStream", async () => {
+    const unknownFields = {
+      top_level_unknown_field: {
+        inner_unknown_field_1: "a",
+        inner_unknown_field_2: 1,
+      },
+      retriever: {
+        retriever_unknown_field: "b",
+        requester: {
+          requester_unknown_field: {
+            inner_requester_field_1: "c",
+            inner_requester_field_2: 2,
+          },
+        },
+      },
+    };
+    const manifest: ConnectorManifest = {
+      ...baseManifest,
+      streams: [merge({}, stream1, unknownFields)],
+      spec: apiTokenSpec,
+    };
+    const formValues = await convertToBuilderFormValues(noOpResolve, manifest, DEFAULT_CONNECTOR_NAME);
+    expect(formValues.streams[0].unknownFields).toEqual(dump(unknownFields));
   });
 });
