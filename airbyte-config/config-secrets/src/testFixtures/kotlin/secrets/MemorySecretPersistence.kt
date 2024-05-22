@@ -27,6 +27,11 @@ class MemorySecretPersistence : SecretPersistence {
     secretMap.remove(coordinate)
   }
 
+  override fun disable(coordinate: SecretCoordinate) {
+    // Mimic the behavior of the real implementation.
+    secretMap.remove(coordinate)
+  }
+
   val map: Map<SecretCoordinate, String>
     get() = secretMap.toMutableMap()
 }

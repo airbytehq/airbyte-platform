@@ -186,4 +186,6 @@ object UseCustomK8sInitCheck : Temporary<Boolean>(key = "platform.use-custom-k8s
 
 object ConnectionFieldLimitOverride : Permanent<Int>(key = "connection-field-limit-override", default = -1)
 
+object DeleteDanglingSecrets : Temporary<Boolean>(key = "platform.delete-dangling-secrets", default = false)
+
 object EnableResumableFullRefresh : Temporary<Boolean>(key = "platform.enable-resumable-full-refresh", default = true)

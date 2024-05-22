@@ -723,8 +723,7 @@ public class OAuthHandler {
     final Optional<UUID> organizationId = workspaceService.getOrganizationIdFromWorkspaceId(workspaceId);
     if (organizationId.isPresent() && featureFlagClient.boolVariation(UseRuntimeSecretPersistence.INSTANCE, new Organization(organizationId.get()))) {
       try {
-        final SecretPersistenceConfig secretPersistenceConfig =
-            secretPersistenceConfigService.get(ScopeType.ORGANIZATION, organizationId.get());
+        final SecretPersistenceConfig secretPersistenceConfig = secretPersistenceConfigService.get(ScopeType.ORGANIZATION, organizationId.get());
 
         return secretsRepositoryWriter.statefulSplitSecrets(
             workspaceId,
