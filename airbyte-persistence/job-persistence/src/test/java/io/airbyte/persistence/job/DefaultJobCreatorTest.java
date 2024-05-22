@@ -99,8 +99,10 @@ class DefaultJobCreatorTest {
   private static final StreamDescriptor STREAM2_DESCRIPTOR = new StreamDescriptor().withName(STREAM2_NAME).withNamespace(NAMESPACE);
 
   private static final String SOURCE_IMAGE_NAME = "daxtarity/sourceimagename";
+  private static final Boolean SOURCE_IMAGE_IS_DEFAULT = true;
   private static final Version SOURCE_PROTOCOL_VERSION = new Version("0.2.2");
   private static final String DESTINATION_IMAGE_NAME = "daxtarity/destinationimagename";
+  private static final Boolean DESTINATION_IMAGE_IS_DEFAULT = true;
   private static final Version DESTINATION_PROTOCOL_VERSION = new Version("0.2.3");
   private static final SourceConnection SOURCE_CONNECTION;
   private static final DestinationConnection DESTINATION_CONNECTION;
@@ -411,8 +413,10 @@ class DefaultJobCreatorTest {
         .withNamespaceFormat(STANDARD_SYNC.getNamespaceFormat())
         .withPrefix(STANDARD_SYNC.getPrefix())
         .withSourceDockerImage(SOURCE_IMAGE_NAME)
+        .withSourceDockerImageIsDefault(SOURCE_IMAGE_IS_DEFAULT)
         .withSourceProtocolVersion(SOURCE_PROTOCOL_VERSION)
         .withDestinationDockerImage(DESTINATION_IMAGE_NAME)
+        .withDestinationDockerImageIsDefault(DESTINATION_IMAGE_IS_DEFAULT)
         .withDestinationProtocolVersion(DESTINATION_PROTOCOL_VERSION)
         .withConfiguredAirbyteCatalog(STANDARD_SYNC.getCatalog())
         .withOperationSequence(List.of(STANDARD_SYNC_OPERATION))
@@ -433,8 +437,10 @@ class DefaultJobCreatorTest {
         DESTINATION_CONNECTION,
         STANDARD_SYNC,
         SOURCE_IMAGE_NAME,
+        SOURCE_IMAGE_IS_DEFAULT,
         SOURCE_PROTOCOL_VERSION,
         DESTINATION_IMAGE_NAME,
+        DESTINATION_IMAGE_IS_DEFAULT,
         DESTINATION_PROTOCOL_VERSION,
         List.of(STANDARD_SYNC_OPERATION),
         PERSISTED_WEBHOOK_CONFIGS,
@@ -502,8 +508,10 @@ class DefaultJobCreatorTest {
         .withNamespaceFormat(STANDARD_SYNC.getNamespaceFormat())
         .withPrefix(STANDARD_SYNC.getPrefix())
         .withSourceDockerImage(SOURCE_IMAGE_NAME)
+        .withSourceDockerImageIsDefault(SOURCE_IMAGE_IS_DEFAULT)
         .withDestinationProtocolVersion(SOURCE_PROTOCOL_VERSION)
         .withDestinationDockerImage(DESTINATION_IMAGE_NAME)
+        .withDestinationDockerImageIsDefault(DESTINATION_IMAGE_IS_DEFAULT)
         .withDestinationProtocolVersion(DESTINATION_PROTOCOL_VERSION)
         .withConfiguredAirbyteCatalog(STANDARD_SYNC.getCatalog())
         .withOperationSequence(List.of(STANDARD_SYNC_OPERATION))
@@ -522,8 +530,10 @@ class DefaultJobCreatorTest {
         DESTINATION_CONNECTION,
         STANDARD_SYNC,
         SOURCE_IMAGE_NAME,
+        SOURCE_IMAGE_IS_DEFAULT,
         SOURCE_PROTOCOL_VERSION,
         DESTINATION_IMAGE_NAME,
+        DESTINATION_IMAGE_IS_DEFAULT,
         DESTINATION_PROTOCOL_VERSION,
         List.of(STANDARD_SYNC_OPERATION),
         null,
@@ -541,8 +551,10 @@ class DefaultJobCreatorTest {
         DESTINATION_CONNECTION,
         STANDARD_SYNC,
         SOURCE_IMAGE_NAME,
+        SOURCE_IMAGE_IS_DEFAULT,
         SOURCE_PROTOCOL_VERSION,
         DESTINATION_IMAGE_NAME,
+        DESTINATION_IMAGE_IS_DEFAULT,
         DESTINATION_PROTOCOL_VERSION,
         List.of(STANDARD_SYNC_OPERATION),
         null,
@@ -569,8 +581,10 @@ class DefaultJobCreatorTest {
         .withNamespaceFormat(STANDARD_SYNC.getNamespaceFormat())
         .withPrefix(STANDARD_SYNC.getPrefix())
         .withSourceDockerImage(SOURCE_IMAGE_NAME)
+        .withSourceDockerImageIsDefault(SOURCE_IMAGE_IS_DEFAULT)
         .withSourceProtocolVersion(SOURCE_PROTOCOL_VERSION)
         .withDestinationDockerImage(DESTINATION_IMAGE_NAME)
+        .withDestinationDockerImageIsDefault(DESTINATION_IMAGE_IS_DEFAULT)
         .withDestinationProtocolVersion(DESTINATION_PROTOCOL_VERSION)
         .withConfiguredAirbyteCatalog(STANDARD_SYNC.getCatalog())
         .withOperationSequence(List.of(STANDARD_SYNC_OPERATION))
@@ -604,8 +618,10 @@ class DefaultJobCreatorTest {
         DESTINATION_CONNECTION,
         standardSync,
         SOURCE_IMAGE_NAME,
+        SOURCE_IMAGE_IS_DEFAULT,
         SOURCE_PROTOCOL_VERSION,
         DESTINATION_IMAGE_NAME,
+        DESTINATION_IMAGE_IS_DEFAULT,
         DESTINATION_PROTOCOL_VERSION,
         List.of(STANDARD_SYNC_OPERATION),
         null,
@@ -632,8 +648,10 @@ class DefaultJobCreatorTest {
         .withNamespaceFormat(STANDARD_SYNC.getNamespaceFormat())
         .withPrefix(STANDARD_SYNC.getPrefix())
         .withSourceDockerImage(SOURCE_IMAGE_NAME)
+        .withSourceDockerImageIsDefault(SOURCE_IMAGE_IS_DEFAULT)
         .withSourceProtocolVersion(SOURCE_PROTOCOL_VERSION)
         .withDestinationDockerImage(DESTINATION_IMAGE_NAME)
+        .withDestinationDockerImageIsDefault(DESTINATION_IMAGE_IS_DEFAULT)
         .withDestinationProtocolVersion(DESTINATION_PROTOCOL_VERSION)
         .withConfiguredAirbyteCatalog(STANDARD_SYNC.getCatalog())
         .withOperationSequence(List.of(STANDARD_SYNC_OPERATION))
@@ -671,8 +689,10 @@ class DefaultJobCreatorTest {
         DESTINATION_CONNECTION,
         STANDARD_SYNC,
         SOURCE_IMAGE_NAME,
+        SOURCE_IMAGE_IS_DEFAULT,
         SOURCE_PROTOCOL_VERSION,
         DESTINATION_IMAGE_NAME,
+        DESTINATION_IMAGE_IS_DEFAULT,
         DESTINATION_PROTOCOL_VERSION,
         List.of(STANDARD_SYNC_OPERATION),
         null,
@@ -702,8 +722,10 @@ class DefaultJobCreatorTest {
         .withNamespaceFormat(STANDARD_SYNC.getNamespaceFormat())
         .withPrefix(STANDARD_SYNC.getPrefix())
         .withSourceDockerImage(SOURCE_IMAGE_NAME)
+        .withSourceDockerImageIsDefault(SOURCE_IMAGE_IS_DEFAULT)
         .withSourceProtocolVersion(SOURCE_PROTOCOL_VERSION)
         .withDestinationDockerImage(DESTINATION_IMAGE_NAME)
+        .withDestinationDockerImageIsDefault(DESTINATION_IMAGE_IS_DEFAULT)
         .withDestinationProtocolVersion(DESTINATION_PROTOCOL_VERSION)
         .withConfiguredAirbyteCatalog(STANDARD_SYNC.getCatalog())
         .withOperationSequence(List.of(STANDARD_SYNC_OPERATION))
@@ -761,8 +783,10 @@ class DefaultJobCreatorTest {
         DESTINATION_CONNECTION,
         STANDARD_SYNC,
         SOURCE_IMAGE_NAME,
+        SOURCE_IMAGE_IS_DEFAULT,
         SOURCE_PROTOCOL_VERSION,
         DESTINATION_IMAGE_NAME,
+        DESTINATION_IMAGE_IS_DEFAULT,
         DESTINATION_PROTOCOL_VERSION,
         List.of(STANDARD_SYNC_OPERATION),
         null,
@@ -843,8 +867,10 @@ class DefaultJobCreatorTest {
         DESTINATION_CONNECTION,
         standardSync,
         SOURCE_IMAGE_NAME,
+        SOURCE_IMAGE_IS_DEFAULT,
         SOURCE_PROTOCOL_VERSION,
         DESTINATION_IMAGE_NAME,
+        DESTINATION_IMAGE_IS_DEFAULT,
         DESTINATION_PROTOCOL_VERSION,
         List.of(STANDARD_SYNC_OPERATION),
         null,
@@ -911,8 +937,10 @@ class DefaultJobCreatorTest {
         DESTINATION_CONNECTION,
         STANDARD_SYNC,
         SOURCE_IMAGE_NAME,
+        SOURCE_IMAGE_IS_DEFAULT,
         SOURCE_PROTOCOL_VERSION,
         DESTINATION_IMAGE_NAME,
+        DESTINATION_IMAGE_IS_DEFAULT,
         DESTINATION_PROTOCOL_VERSION,
         List.of(STANDARD_SYNC_OPERATION),
         null,
@@ -972,8 +1000,10 @@ class DefaultJobCreatorTest {
         DESTINATION_CONNECTION,
         STANDARD_SYNC,
         SOURCE_IMAGE_NAME,
+        SOURCE_IMAGE_IS_DEFAULT,
         SOURCE_PROTOCOL_VERSION,
         DESTINATION_IMAGE_NAME,
+        DESTINATION_IMAGE_IS_DEFAULT,
         DESTINATION_PROTOCOL_VERSION,
         List.of(STANDARD_SYNC_OPERATION),
         null,

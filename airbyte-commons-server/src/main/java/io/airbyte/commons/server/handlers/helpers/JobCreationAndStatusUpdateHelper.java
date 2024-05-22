@@ -272,7 +272,10 @@ public class JobCreationAndStatusUpdateHelper {
     if (job.getConfigType() == SYNC) {
       final var sync = job.getConfig().getSync();
       additionalAttributes.add(new MetricAttribute(MetricTags.SOURCE_IMAGE, sync.getSourceDockerImage()));
+      additionalAttributes.add(new MetricAttribute(MetricTags.SOURCE_IMAGE_IS_DEFAULT, String.valueOf(sync.getSourceDockerImageIsDefault())));
       additionalAttributes.add(new MetricAttribute(MetricTags.DESTINATION_IMAGE, sync.getDestinationDockerImage()));
+      additionalAttributes
+          .add(new MetricAttribute(MetricTags.DESTINATION_IMAGE_IS_DEFAULT, String.valueOf(sync.getDestinationDockerImageIsDefault())));
       additionalAttributes.add(new MetricAttribute(MetricTags.WORKSPACE_ID, sync.getWorkspaceId().toString()));
     } else if (job.getConfigType() == REFRESH) {
       final var refresh = job.getConfig().getRefresh();
@@ -288,7 +291,10 @@ public class JobCreationAndStatusUpdateHelper {
     if (job.getConfigType() == SYNC) {
       final var sync = job.getConfig().getSync();
       additionalAttributes.add(new MetricAttribute(MetricTags.SOURCE_IMAGE, sync.getSourceDockerImage()));
+      additionalAttributes.add(new MetricAttribute(MetricTags.SOURCE_IMAGE_IS_DEFAULT, String.valueOf(sync.getSourceDockerImageIsDefault())));
       additionalAttributes.add(new MetricAttribute(MetricTags.DESTINATION_IMAGE, sync.getDestinationDockerImage()));
+      additionalAttributes
+          .add(new MetricAttribute(MetricTags.DESTINATION_IMAGE_IS_DEFAULT, String.valueOf(sync.getDestinationDockerImageIsDefault())));
       additionalAttributes.add(new MetricAttribute(MetricTags.WORKSPACE_ID, sync.getWorkspaceId().toString()));
       job.getLastAttempt().flatMap(Attempt::getFailureSummary)
           .ifPresent(attemptFailureSummary -> {

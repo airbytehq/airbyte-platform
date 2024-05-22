@@ -99,8 +99,10 @@ public class DefaultJobCreator implements JobCreator {
                                       final DestinationConnection destination,
                                       final StandardSync standardSync,
                                       final String sourceDockerImageName,
+                                      final Boolean sourceDockerImageIsDefault,
                                       final Version sourceProtocolVersion,
                                       final String destinationDockerImageName,
+                                      final Boolean destinationDockerImageIsDefault,
                                       final Version destinationProtocolVersion,
                                       final List<StandardSyncOperation> standardSyncOperations,
                                       @Nullable final JsonNode webhookOperationConfigs,
@@ -118,8 +120,10 @@ public class DefaultJobCreator implements JobCreator {
         .withNamespaceFormat(standardSync.getNamespaceFormat())
         .withPrefix(standardSync.getPrefix())
         .withSourceDockerImage(sourceDockerImageName)
+        .withSourceDockerImageIsDefault(sourceDockerImageIsDefault)
         .withSourceProtocolVersion(sourceProtocolVersion)
         .withDestinationDockerImage(destinationDockerImageName)
+        .withDestinationDockerImageIsDefault(destinationDockerImageIsDefault)
         .withDestinationProtocolVersion(destinationProtocolVersion)
         .withOperationSequence(standardSyncOperations)
         .withWebhookOperationConfigs(webhookOperationConfigs)
