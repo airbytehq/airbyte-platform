@@ -11116,14 +11116,14 @@ components:
         workspaceId:
           $ref: "#/components/schemas/WorkspaceId"
     StreamStatusUpdateRequestBody:
-      type: object
       allOf:
         - $ref: "#/components/schemas/StreamStatusCreateRequestBody"
-      required:
-        - id
-      properties:
-        id:
-          $ref: "#/components/schemas/StreamStatusId"
+        - type: object
+          required:
+            - id
+          properties:
+            id:
+              $ref: "#/components/schemas/StreamStatusId"
     AuthConfiguration:
       type: object
       required:
