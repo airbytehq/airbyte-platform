@@ -22,6 +22,9 @@ var databaseClients = []struct {
 		kind: "Deployment",
 		name: "airbyte-server",
 		expectedEnvVars: map[string]expectedEnvVar{
+			"DATABASE_HOST":     expectedConfigMapVar().RefName("airbyte-airbyte-env").RefKey("DATABASE_HOST"),
+			"DATABASE_PORT":     expectedConfigMapVar().RefName("airbyte-airbyte-env").RefKey("DATABASE_PORT"),
+			"DATABASE_DB":       expectedConfigMapVar().RefName("airbyte-airbyte-env").RefKey("DATABASE_DB"),
 			"DATABASE_USER":     expectedSecretVar().RefName("airbyte-airbyte-secrets").RefKey("DATABASE_USER"),
 			"DATABASE_PASSWORD": expectedSecretVar().RefName("airbyte-airbyte-secrets").RefKey("DATABASE_PASSWORD"),
 			"DATABASE_URL":      expectedConfigMapVar().RefName("airbyte-airbyte-env").RefKey("DATABASE_URL"),
@@ -31,6 +34,9 @@ var databaseClients = []struct {
 		kind: "Deployment",
 		name: "airbyte-worker",
 		expectedEnvVars: map[string]expectedEnvVar{
+			"DATABASE_HOST":     expectedConfigMapVar().RefName("airbyte-airbyte-env").RefKey("DATABASE_HOST"),
+			"DATABASE_PORT":     expectedConfigMapVar().RefName("airbyte-airbyte-env").RefKey("DATABASE_PORT"),
+			"DATABASE_DB":       expectedConfigMapVar().RefName("airbyte-airbyte-env").RefKey("DATABASE_DB"),
 			"DATABASE_USER":     expectedSecretVar().RefName("airbyte-airbyte-secrets").RefKey("DATABASE_USER"),
 			"DATABASE_PASSWORD": expectedSecretVar().RefName("airbyte-airbyte-secrets").RefKey("DATABASE_PASSWORD"),
 			"DATABASE_URL":      expectedConfigMapVar().RefName("airbyte-airbyte-env").RefKey("DATABASE_URL"),
@@ -40,6 +46,21 @@ var databaseClients = []struct {
 		kind: "Deployment",
 		name: "airbyte-workload-api-server",
 		expectedEnvVars: map[string]expectedEnvVar{
+			"DATABASE_HOST":     expectedConfigMapVar().RefName("airbyte-airbyte-env").RefKey("DATABASE_HOST"),
+			"DATABASE_PORT":     expectedConfigMapVar().RefName("airbyte-airbyte-env").RefKey("DATABASE_PORT"),
+			"DATABASE_DB":       expectedConfigMapVar().RefName("airbyte-airbyte-env").RefKey("DATABASE_DB"),
+			"DATABASE_USER":     expectedSecretVar().RefName("airbyte-airbyte-secrets").RefKey("DATABASE_USER"),
+			"DATABASE_PASSWORD": expectedSecretVar().RefName("airbyte-airbyte-secrets").RefKey("DATABASE_PASSWORD"),
+			"DATABASE_URL":      expectedConfigMapVar().RefName("airbyte-airbyte-env").RefKey("DATABASE_URL"),
+		},
+	},
+	{
+		kind: "Deployment",
+		name: "airbyte-workload-launcher",
+		expectedEnvVars: map[string]expectedEnvVar{
+			"DATABASE_HOST":     expectedConfigMapVar().RefName("airbyte-airbyte-env").RefKey("DATABASE_HOST"),
+			"DATABASE_PORT":     expectedConfigMapVar().RefName("airbyte-airbyte-env").RefKey("DATABASE_PORT"),
+			"DATABASE_DB":       expectedConfigMapVar().RefName("airbyte-airbyte-env").RefKey("DATABASE_DB"),
 			"DATABASE_USER":     expectedSecretVar().RefName("airbyte-airbyte-secrets").RefKey("DATABASE_USER"),
 			"DATABASE_PASSWORD": expectedSecretVar().RefName("airbyte-airbyte-secrets").RefKey("DATABASE_PASSWORD"),
 			"DATABASE_URL":      expectedConfigMapVar().RefName("airbyte-airbyte-env").RefKey("DATABASE_URL"),
@@ -49,6 +70,9 @@ var databaseClients = []struct {
 		kind: "Deployment",
 		name: "airbyte-cron",
 		expectedEnvVars: map[string]expectedEnvVar{
+			"DATABASE_HOST":     expectedConfigMapVar().RefName("airbyte-airbyte-env").RefKey("DATABASE_HOST"),
+			"DATABASE_PORT":     expectedConfigMapVar().RefName("airbyte-airbyte-env").RefKey("DATABASE_PORT"),
+			"DATABASE_DB":       expectedConfigMapVar().RefName("airbyte-airbyte-env").RefKey("DATABASE_DB"),
 			"DATABASE_USER":     expectedSecretVar().RefName("airbyte-airbyte-secrets").RefKey("DATABASE_USER"),
 			"DATABASE_PASSWORD": expectedSecretVar().RefName("airbyte-airbyte-secrets").RefKey("DATABASE_PASSWORD"),
 			"DATABASE_URL":      expectedConfigMapVar().RefName("airbyte-airbyte-env").RefKey("DATABASE_URL"),
@@ -67,6 +91,9 @@ var databaseClients = []struct {
 		kind: "Job",
 		name: "airbyte-keycloak-setup",
 		expectedEnvVars: map[string]expectedEnvVar{
+			"DATABASE_HOST":     expectedConfigMapVar().RefName("airbyte-airbyte-env").RefKey("DATABASE_HOST"),
+			"DATABASE_PORT":     expectedConfigMapVar().RefName("airbyte-airbyte-env").RefKey("DATABASE_PORT"),
+			"DATABASE_DB":       expectedConfigMapVar().RefName("airbyte-airbyte-env").RefKey("DATABASE_DB"),
 			"DATABASE_USER":     expectedSecretVar().RefName("airbyte-airbyte-secrets").RefKey("DATABASE_USER"),
 			"DATABASE_PASSWORD": expectedSecretVar().RefName("airbyte-airbyte-secrets").RefKey("DATABASE_PASSWORD"),
 			"DATABASE_URL":      expectedConfigMapVar().RefName("airbyte-airbyte-env").RefKey("DATABASE_URL"),
@@ -76,6 +103,9 @@ var databaseClients = []struct {
 		kind: "Pod",
 		name: "airbyte-airbyte-bootloader",
 		expectedEnvVars: map[string]expectedEnvVar{
+			"DATABASE_HOST":     expectedConfigMapVar().RefName("airbyte-airbyte-env").RefKey("DATABASE_HOST"),
+			"DATABASE_PORT":     expectedConfigMapVar().RefName("airbyte-airbyte-env").RefKey("DATABASE_PORT"),
+			"DATABASE_DB":       expectedConfigMapVar().RefName("airbyte-airbyte-env").RefKey("DATABASE_DB"),
 			"DATABASE_USER":     expectedSecretVar().RefName("airbyte-airbyte-secrets").RefKey("DATABASE_USER"),
 			"DATABASE_PASSWORD": expectedSecretVar().RefName("airbyte-airbyte-secrets").RefKey("DATABASE_PASSWORD"),
 			"DATABASE_URL":      expectedConfigMapVar().RefName("airbyte-airbyte-env").RefKey("DATABASE_URL"),
@@ -85,6 +115,9 @@ var databaseClients = []struct {
 		kind: "Deployment",
 		name: "airbyte-metrics",
 		expectedEnvVars: map[string]expectedEnvVar{
+			"DATABASE_HOST":     expectedConfigMapVar().RefName("airbyte-airbyte-env").RefKey("DATABASE_HOST"),
+			"DATABASE_PORT":     expectedConfigMapVar().RefName("airbyte-airbyte-env").RefKey("DATABASE_PORT"),
+			"DATABASE_DB":       expectedConfigMapVar().RefName("airbyte-airbyte-env").RefKey("DATABASE_DB"),
 			"DATABASE_USER":     expectedSecretVar().RefName("airbyte-airbyte-secrets").RefKey("DATABASE_USER"),
 			"DATABASE_PASSWORD": expectedSecretVar().RefName("airbyte-airbyte-secrets").RefKey("DATABASE_PASSWORD"),
 			"DATABASE_URL":      expectedConfigMapVar().RefName("airbyte-airbyte-env").RefKey("DATABASE_URL"),
@@ -197,12 +230,17 @@ func TestExternalDatabaseConfiguration(t *testing.T) {
 		"global.database.host",
 		"global.database.port",
 		"global.database.user",
-		"global.database.password",
 		"global.database.database",
+		"global.database.password",
+	}
+
+	secretFields := []string{
+		"global.database.user",
+		"global.database.password",
 	}
 
 	t.Run("should require `global.database.secretName` if any secret key ref is set", func(t *testing.T) {
-		for _, f := range fields {
+		for _, f := range secretFields {
 			t.Run(f, func(t *testing.T) {
 				helmOpts := baseHelmOptionsForEnterpriseWithValues() // enable all the things
 				helmOpts.SetValues["metrics.enabled"] = "true"
@@ -214,7 +252,7 @@ func TestExternalDatabaseConfiguration(t *testing.T) {
 				// Loop through all the fields and set the plaintext form for all but the current key.
 				// For the current key we set the `xxxSecretKey` reference, to ensure they any of the secret key
 				// references trigger the requirement for `global.database.secretName`
-				for _, ff := range fields {
+				for _, ff := range secretFields {
 					if ff == f {
 						helmOpts.SetValues[ff+"SecretKey"] = ff + "-key"
 						continue
@@ -237,7 +275,7 @@ func TestExternalDatabaseConfiguration(t *testing.T) {
 			helmOpts.SetValues["postgresql.enabled"] = "false"
 			helmOpts.SetValues["global.database.secretName"] = ""
 
-			t.Run(fmt.Sprintf("`global.database.%s", f), func(t *testing.T) {
+			t.Run(f, func(t *testing.T) {
 				for _, ff := range fields {
 					if ff == f {
 						continue

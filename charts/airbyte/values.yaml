@@ -58,7 +58,6 @@ global:
 
   # -- Database configuration
   database:
-    # TODO: Document that this is NOOP for now, but best to set in preparation for a future change. Defaults to 'internal'
     type: "internal" # "external"
 
     # -- Secret name where database credentials are stored
@@ -66,18 +65,12 @@ global:
 
     # -- The database host
     host: ""
-    # -- The key within `secretName` where host is stored
-    #hostSecretKey: "" # e.g. "database-host"
 
     # -- The database port
     port: ""
-    # -- The key within `secretName` where port is stored
-    #portSecretKey: "" # e.g. "database-port" 
 
     # -- The database name
     database: ""
-    # -- The key within `secretName` where the database name is stored
-    #databaseSecretKey: "" # e.g. "database-name" 
 
     # -- The database user
     user: ""

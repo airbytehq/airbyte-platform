@@ -11,11 +11,7 @@ Renders the database host
     {{- else if .Values.global.database.host }}
         {{- .Values.global.database.host }}
     {{- else }}
-        {{- if .Values.global.database.hostSecretKey }}
-            {{ $secretName := .Values.global.database.secretName | required "You must set `global.database.secretName` when using an external database" }}
-        {{- else }} 
-            {{ $host := .Values.global.database.host | required "You must set `global.database.host` when using an external database" }}
-        {{- end }}
+        {{ $host := .Values.global.database.host | required "You must set `global.database.host` when using an external database" }}
     {{- end }}
 {{- end }}
 
@@ -25,15 +21,9 @@ Renders an environment variable definition that provides the database host
 {{- define "airbyte.database.host.env" }}
 - name: DATABASE_HOST
   valueFrom:
-    {{- if .Values.global.database.hostSecretKey }}
-    secretKeyRef:
-      name: {{ include "airbyte.database.secretName" . }}
-      key: {{ .Values.global.database.hostSecretKey }}
-    {{- else }}
     configMapKeyRef:
       name: {{ .Release.Name }}-airbyte-env
       key: DATABASE_HOST
-    {{- end }}
 {{- end }}
 
 {{/*
@@ -45,11 +35,7 @@ Renders the database port
     {{- else if .Values.global.database.port }}
         {{- .Values.global.database.port }}
     {{- else }}
-        {{- if .Values.global.database.portSecretKey }}
-            {{ $secretName := .Values.global.database.secretName | required "You must set `global.database.secretName` when using an external database" }}
-        {{- else }}
-            {{ $port := .Values.global.database.port | required "You must set `global.database.port` when using an external database" }}
-        {{- end }}
+        {{ $port := .Values.global.database.port | required "You must set `global.database.port` when using an external database" }}
     {{- end }}
 {{- end }}
 
@@ -59,15 +45,9 @@ Renders an environment variable definition that provides the database port
 {{- define "airbyte.database.port.env" }}
 - name: DATABASE_PORT
   valueFrom:
-    {{- if .Values.global.database.portSecretKey }}
-    secretKeyRef:
-      name: {{ include "airbyte.database.secretName" . }}
-      key: {{ .Values.global.database.portSecretKey }}
-    {{- else }}
     configMapKeyRef:
       name: {{ .Release.Name }}-airbyte-env
       key: DATABASE_PORT
-    {{- end }}
 {{- end }}
 
 {{/*
@@ -79,11 +59,7 @@ Renders the database name
     {{- else if .Values.global.database.database }}
         {{- .Values.global.database.database }}
     {{- else }}
-        {{- if .Values.global.database.databaseSecretKey }}
-            {{ $secretName := .Values.global.database.secretName | required "You must set `global.database.secretName` when using an external database" }}
-        {{- else }}
-            {{ $database := .Values.global.database.database | required "You must set `global.database.database` when using an external database" }}
-        {{- end }}
+        {{ $database := .Values.global.database.database | required "You must set `global.database.database` when using an external database" }}
     {{- end }}
 {{- end }}
 
@@ -93,15 +69,9 @@ Renders an environment variable definition that provides the database name
 {{- define "airbyte.database.name.env" }}
 - name: DATABASE_DB
   valueFrom:
-    {{- if .Values.global.database.databaseSecretKey }}
-    secretKeyRef:
-      name: {{ include "airbyte.database.secretName" . }}
-      key: {{ .Values.global.database.databaseSecretKey }}
-    {{- else }}
     configMapKeyRef:
       name: {{ .Release.Name }}-airbyte-env
       key: DATABASE_DB
-    {{- end }}
 {{- end }}
 
 {{/*
@@ -245,16 +215,8 @@ DATABASE_PASSWORD: {{ include "airbyte.database.password" . }}
 Renders a set of database configuration variables to be included in the shared Airbyte config map
 */}}
 {{- define "airbyte.database.configVars" }}
-{{- if not .Values.global.database.hostSecretKey }}
 DATABASE_HOST: {{ include "airbyte.database.host" . }}
-{{- end }}
-{{- if not .Values.global.database.portSecretKey }}
 DATABASE_PORT: {{ include "airbyte.database.port" . | quote }}
-{{- end }}
-{{- if not .Values.global.database.databaseSecretKey }}
 DATABASE_DB: {{ include "airbyte.database.name" . }}
-{{- end }}
-{{- if and (not .Values.global.database.hostSecretKey) (not .Values.global.database.portSecretKey) (not .Values.global.database.databaseSecretKey)}}
 DATABASE_URL: {{ include "airbyte.database.url" . }}
-{{- end }}
 {{- end }}
