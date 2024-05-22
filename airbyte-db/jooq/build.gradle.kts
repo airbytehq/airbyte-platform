@@ -95,7 +95,8 @@ sourceSets["main"].java {
 
 
 sourceSets["main"].java {
-  srcDirs("$buildDir/generated/configsDatabase/src/main/java", "$buildDir/generated/jobsDatabase/src/main/java")
+  srcDirs("${project.layout.buildDirectory.get()}/generated/configsDatabase/src/main/java",
+    "${project.layout.buildDirectory.get()}/generated/jobsDatabase/src/main/java")
 }
 
 tasks.named<JooqGenerate>("generateConfigsDatabaseJooq") {

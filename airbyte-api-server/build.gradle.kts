@@ -98,9 +98,9 @@ tasks.named<Test>("test") {
   )
 }
 
-// Even though Kotlin is excluded on Spotbugs, this projects)
-// still runs into spotbug issues. Working theory is that)
-// generated code is being picked up. Disable as a short-term fix.)
+// Even though Kotlin is excluded on Spotbugs, this projects
+// still runs into SpotBugs issues. Working theory is that
+// generated code is being picked up. Disable as a short-term fix.
 tasks.named("spotbugsMain") {
   enabled = false
 }

@@ -117,8 +117,9 @@ jna-platform = { module = "net.java.dev.jna:jna-platform", version.ref = "jna" }
 jooq = { module = "org.jooq:jooq", version.ref = "jooq" }
 jooq-codegen = { module = "org.jooq:jooq-codegen", version.ref = "jooq" }
 jooq-meta = { module = "org.jooq:jooq-meta", version.ref = "jooq" }
-json-path = { module = "com.jayway.jsonpath:json-path", version = "2.9.0" }
 json-assert = { module = "org.skyscreamer:jsonassert", version = "1.5.1" }
+json-path = { module = "com.jayway.jsonpath:json-path", version = "2.9.0" }
+json-simple = { module = "com.googlecode.json-simple:json-simple", version = "1.1.1" }
 jsoup = { module = "org.jsoup:jsoup", version = "1.17.2" }
 jul-to-slf4j = { module = "org.slf4j:jul-to-slf4j", version.ref = "slf4j" }
 junit-jupiter-api = { module = "org.junit.jupiter:junit-jupiter-api", version.ref = "junit-jupiter" }

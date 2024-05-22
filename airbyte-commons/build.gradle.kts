@@ -21,7 +21,7 @@ dependencies {
   implementation(libs.bundles.log4j)
   implementation(libs.airbyte.protocol)
 
-  // this dependency is an exception to the above rule because it is only used INTERNALLY to the commons library.
+  // this dependency is an exception to the above rule because it is only used INTERNALLY to the Commons library.
   implementation(libs.json.path)
 
   testImplementation(libs.bundles.junit)

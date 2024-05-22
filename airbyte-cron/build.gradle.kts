@@ -77,7 +77,7 @@ airbyte {
   }
 }
 
-// The DuplicatesStrategy will be required while this module is mixture of kotlin and java _with_ lombok dependencies.)
+// The DuplicatesStrategy will be required while this module is mixture of kotlin and java _with_ lombok dependencies.
 // Kapt, by default, runs all annotation(processors and disables annotation(processing by javac, however)
 // this default behavior breaks the lombok java annotation(processor.  To avoid(lombok breaking, kapt has)
 // keepJavacAnnotationProcessors enabled, which causes duplicate META-INF files to be generated.)

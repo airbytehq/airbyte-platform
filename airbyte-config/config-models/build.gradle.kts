@@ -48,7 +48,7 @@ dependencies {
 jsonSchema2Pojo {
   setSourceType(SourceType.YAMLSCHEMA.name)
   setSource(files("${sourceSets["main"].output.resourcesDir}/types"))
-  targetDirectory = file("$buildDir/generated/src/gen/java/")
+  targetDirectory = file("${project.layout.buildDirectory.get()}/generated/src/gen/java/")
 
   targetPackage = "io.airbyte.config"
   useLongIntegers = true

@@ -165,7 +165,7 @@ tasks.register<Test>("cloudStorageIntegrationTest") {
   }
 }
 
-// Duplicated in :airbyte-container-orchestrator, eventually, this should be handled in :airbyte-protocol)
+// Duplicated in :airbyte-container-orchestrator, eventually, this should be handled in :airbyte-protocol
 val generateWellKnownTypes = tasks.register("generateWellKnownTypes") {
   inputs.files(airbyteProtocol) // declaring inputs)
   val targetFile = project.file("build/airbyte/docker/WellKnownTypes.json")

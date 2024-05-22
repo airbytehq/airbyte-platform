@@ -104,7 +104,7 @@ dependencies {
 // we want to be able to access the generated db files from config/init when we build the server docker image.)
 val copySeed = tasks.register<Copy>("copySeed") {
   from("${project(":airbyte-config:init").buildDir}/resources/main/config")
-  into("$buildDir/config_init/resources/main/config")
+  into("${project.layout.buildDirectory.get()}/config_init/resources/main/config")
   dependsOn(project(":airbyte-config:init").tasks.named("processResources"))
 }
 

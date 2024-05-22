@@ -32,7 +32,7 @@ dependencies {
   testAnnotationProcessor(libs.bundles.micronaut.test.annotation.processor)
 
   testImplementation(libs.temporal.testing)
-  // Needed to be able to mock final class)
+  // Needed to be able to mock final class
   testImplementation(libs.mockito.inline)
   testRuntimeOnly(libs.junit.jupiter.engine)
   testImplementation(libs.bundles.junit)
