@@ -844,7 +844,8 @@ class DefaultJobPersistenceTest {
                   new SyncStats()
                       .withEstimatedBytes(10000L).withEstimatedRecords(2000L)
                       .withBytesEmitted(1000L).withRecordsEmitted(1000L)
-                      .withBytesCommitted(1000L).withRecordsCommitted(1000L)))),
+                      .withBytesCommitted(1000L).withRecordsCommitted(1000L))
+                  .withWasBackfilled(false))),
           new JobAttemptPair(jobOneId, jobOneAttemptNumberTwo),
           new AttemptStats(
               new SyncStats()
@@ -855,7 +856,8 @@ class DefaultJobPersistenceTest {
                   new SyncStats()
                       .withEstimatedBytes(10000L).withEstimatedRecords(2000L)
                       .withBytesEmitted(1000L).withRecordsEmitted(1000L)
-                      .withBytesCommitted(1000L).withRecordsCommitted(1000L)))),
+                      .withBytesCommitted(1000L).withRecordsCommitted(1000L))
+                  .withWasBackfilled(false))),
           new JobAttemptPair(jobTwoId, jobTwoAttemptNumberOne),
           new AttemptStats(
               new SyncStats()
@@ -865,7 +867,8 @@ class DefaultJobPersistenceTest {
               List.of(new StreamSyncStats().withStreamName("name1").withStats(
                   new SyncStats()
                       .withEstimatedBytes(10000L).withEstimatedRecords(2000L)
-                      .withBytesEmitted(1000L).withRecordsEmitted(1000L)))));
+                      .withBytesEmitted(1000L).withRecordsEmitted(1000L))
+                  .withWasBackfilled(false))));
 
       assertEquals(exp, stats);
 
@@ -895,17 +898,17 @@ class DefaultJobPersistenceTest {
 
       final var streamStatsUpdate1 = List.of(
           new StreamSyncStats().withStreamName(stream1).withStreamNamespace(namespace1)
-              .withStats(new SyncStats().withBytesEmitted(10L).withRecordsEmitted(1L)));
+              .withStats(new SyncStats().withBytesEmitted(10L).withRecordsEmitted(1L)).withWasBackfilled(false));
       jobPersistence.writeStats(jobOneId, jobOneAttemptNumberOne, null, null, 1L, 10L, 1000L, null, CONNECTION_ID, streamStatsUpdate1);
 
       final var streamStatsUpdate2 = List.of(
           new StreamSyncStats().withStreamName(stream2).withStreamNamespace(namespace2)
-              .withStats(new SyncStats().withBytesEmitted(20L).withRecordsEmitted(2L)));
+              .withStats(new SyncStats().withBytesEmitted(20L).withRecordsEmitted(2L)).withWasBackfilled(false));
       jobPersistence.writeStats(jobOneId, jobOneAttemptNumberOne, null, null, 3L, 30L, 1000L, null, CONNECTION_ID, streamStatsUpdate2);
 
       final var streamStatsUpdate3 = List.of(
           new StreamSyncStats().withStreamName(stream3).withStreamNamespace(namespace3)
-              .withStats(new SyncStats().withBytesEmitted(30L).withRecordsEmitted(3L)));
+              .withStats(new SyncStats().withBytesEmitted(30L).withRecordsEmitted(3L)).withWasBackfilled(false));
       jobPersistence.writeStats(jobOneId, jobOneAttemptNumberOne, null, null, 6L, 60L, 1000L, null, CONNECTION_ID, streamStatsUpdate3);
 
       final Map<JobAttemptPair, AttemptStats> stats = jobPersistence.getAttemptStats(List.of(jobOneId));

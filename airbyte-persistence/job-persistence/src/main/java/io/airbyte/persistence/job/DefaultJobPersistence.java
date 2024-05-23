@@ -67,6 +67,7 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -303,8 +304,27 @@ public class DefaultJobPersistence implements JobPersistence {
    * has prepopulated the map.
    */
   private static void hydrateStreamStats(final String jobIdsStr, final DSLContext ctx, final Map<JobAttemptPair, AttemptStats> attemptStats) {
+
+    final var attemptOutputs = ctx.fetch("SELECT id, output FROM attempts WHERE job_id in (%s);".formatted(jobIdsStr));
+    final Map<Long, Set<StreamDescriptor>> backFilledStreamsPerAttemptId = new HashMap<>();
+    for (final var result : attemptOutputs) {
+      final long attemptId = result.get(ATTEMPTS.ID);
+      final var backfilledStreams = backFilledStreamsPerAttemptId.computeIfAbsent(attemptId, (k) -> new HashSet<>());
+      final JSONB attemptOutput = result.get(ATTEMPTS.OUTPUT);
+      final JobOutput output = attemptOutput != null ? parseJobOutputFromString(attemptOutput.toString()) : null;
+      if (output != null && output.getSync() != null && output.getSync().getStandardSyncSummary() != null
+          && output.getSync().getStandardSyncSummary().getStreamStats() != null) {
+        for (final var streamSyncStats : output.getSync().getStandardSyncSummary().getStreamStats()) {
+          if (Boolean.TRUE == streamSyncStats.getWasBackfilled()) {
+            backfilledStreams
+                .add(new StreamDescriptor().withNamespace(streamSyncStats.getStreamNamespace()).withName(streamSyncStats.getStreamName()));
+          }
+        }
+      }
+    }
+
     final var streamResults = ctx.fetch(
-        "SELECT atmpt.attempt_number, atmpt.job_id, "
+        "SELECT atmpt.id, atmpt.attempt_number, atmpt.job_id, "
             + "stats.stream_name, stats.stream_namespace, stats.estimated_bytes, stats.estimated_records, stats.bytes_emitted, stats.records_emitted,"
             + "stats.bytes_committed, stats.records_committed "
             + "FROM stream_stats stats "
@@ -313,16 +333,23 @@ public class DefaultJobPersistence implements JobPersistence {
             + "( SELECT id FROM attempts WHERE job_id IN ( " + jobIdsStr + "));");
 
     streamResults.forEach(r -> {
+      final String streamNamespace = r.get(STREAM_STATS.STREAM_NAMESPACE);
+      final String streamName = r.get(STREAM_STATS.STREAM_NAME);
+      final long attemptId = r.get(ATTEMPTS.ID);
+      final var streamDescriptor = new StreamDescriptor().withName(streamName).withNamespace(streamNamespace);
+      final boolean wasBackfilled = backFilledStreamsPerAttemptId.getOrDefault(attemptId, new HashSet<>()).contains(streamDescriptor);
+
       final var streamSyncStats = new StreamSyncStats()
-          .withStreamNamespace(r.get(STREAM_STATS.STREAM_NAMESPACE))
-          .withStreamName(r.get(STREAM_STATS.STREAM_NAME))
+          .withStreamNamespace(streamNamespace)
+          .withStreamName(streamName)
           .withStats(new SyncStats()
               .withBytesEmitted(r.get(STREAM_STATS.BYTES_EMITTED))
               .withRecordsEmitted(r.get(STREAM_STATS.RECORDS_EMITTED))
               .withEstimatedRecords(r.get(STREAM_STATS.ESTIMATED_RECORDS))
               .withEstimatedBytes(r.get(STREAM_STATS.ESTIMATED_BYTES))
               .withBytesCommitted(r.get(STREAM_STATS.BYTES_COMMITTED))
-              .withRecordsCommitted(r.get(STREAM_STATS.RECORDS_COMMITTED)));
+              .withRecordsCommitted(r.get(STREAM_STATS.RECORDS_COMMITTED)))
+          .withWasBackfilled(wasBackfilled);
 
       final var key = new JobAttemptPair(r.get(ATTEMPTS.JOB_ID), r.get(ATTEMPTS.ATTEMPT_NUMBER));
       if (!attemptStats.containsKey(key)) {
