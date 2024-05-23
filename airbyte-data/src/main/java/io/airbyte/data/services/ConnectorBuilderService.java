@@ -70,6 +70,4 @@ public interface ConnectorBuilderService {
 
   DeclarativeManifest getCurrentlyActiveDeclarativeManifestsByActorDefinitionId(UUID actorDefinitionId) throws IOException, ConfigNotFoundException;
 
-  Stream<UUID> getActorDefinitionIdsWithActiveDeclarativeManifest() throws IOException;
-
 }

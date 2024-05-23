@@ -546,21 +546,6 @@ public class ConnectorBuilderServiceJooqImpl implements ConnectorBuilderService 
   }
 
   /**
-   * Read all actor definition ids which have an active declarative manifest pointing to them.
-   *
-   * @throws IOException exception while interacting with db
-   */
-  @Override
-  public Stream<UUID> getActorDefinitionIdsWithActiveDeclarativeManifest() throws IOException {
-    return database
-        .query(ctx -> ctx
-            .select(ACTIVE_DECLARATIVE_MANIFEST.ACTOR_DEFINITION_ID)
-            .from(ACTIVE_DECLARATIVE_MANIFEST)
-            .fetch())
-        .stream().map(record -> record.get(ACTIVE_DECLARATIVE_MANIFEST.ACTOR_DEFINITION_ID));
-  }
-
-  /**
    * Update the testing values of a connector builder project.
    *
    * @param projectId builder project to update

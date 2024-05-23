@@ -114,17 +114,17 @@ public class ActorDefinitionServiceJooqImpl implements ActorDefinitionService {
   }
 
   /**
-   * Update the docker image tag for multiple actor definitions at once.
+   * Update the docker image tag for multiple source-declarative-manifest actor definition versions at
+   * once.
    *
-   * @param actorDefinitionIds the list of actor definition ids to update
-   * @param targetImageTag the new docker image tag for these actor definitions
+   * @param currentImageTag the current docker image tag for these actor definition versions
+   * @param targetImageTag the new docker image tag for these actor definition versions
    * @throws IOException - you never know when you IO
    */
   @Override
-  public int updateActorDefinitionsDockerImageTag(final List<UUID> actorDefinitionIds,
-                                                  final String targetImageTag)
+  public int updateDeclarativeActorDefinitionVersions(final String currentImageTag, final String targetImageTag)
       throws IOException {
-    return database.transaction(ctx -> writeSourceDefinitionImageTag(actorDefinitionIds, targetImageTag, ctx));
+    return database.transaction(ctx -> updateDeclarativeSourceVersionsImageTags(currentImageTag, targetImageTag, ctx));
   }
 
   /**
@@ -441,15 +441,15 @@ public class ActorDefinitionServiceJooqImpl implements ActorDefinitionService {
         .stream();
   }
 
-  private int writeSourceDefinitionImageTag(final List<UUID> sourceDefinitionIds, final String targetImageTag, final DSLContext ctx) {
+  private int updateDeclarativeSourceVersionsImageTags(final String currentImageTag, final String targetImageTag, final DSLContext ctx) {
     final OffsetDateTime timestamp = OffsetDateTime.now();
 
-    // We are updating the same version since connector builder projects have a different concept of
-    // versioning
+    // We are updating the actor definition version itself instead of changing the actor definition's
+    // default version because connector builder projects have a different concept of versioning
     return ctx.update(ACTOR_DEFINITION_VERSION).set(ACTOR_DEFINITION_VERSION.DOCKER_IMAGE_TAG, targetImageTag)
         .set(ACTOR_DEFINITION_VERSION.UPDATED_AT, timestamp)
-        .where(
-            ACTOR_DEFINITION_VERSION.ACTOR_DEFINITION_ID.in(sourceDefinitionIds).andNot(ACTOR_DEFINITION_VERSION.DOCKER_IMAGE_TAG.eq(targetImageTag)))
+        .where(ACTOR_DEFINITION_VERSION.DOCKER_REPOSITORY.equal("airbyte/source-declarative-manifest")
+            .and(ACTOR_DEFINITION_VERSION.DOCKER_IMAGE_TAG.equal(currentImageTag)))
         .execute();
   }
 

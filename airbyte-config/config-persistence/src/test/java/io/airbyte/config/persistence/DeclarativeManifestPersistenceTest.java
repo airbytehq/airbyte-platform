@@ -190,19 +190,6 @@ class DeclarativeManifestPersistenceTest extends BaseConfigDatabaseTest {
   }
 
   @Test
-  void whenGetActorDefinitionIdsWithActiveDeclarativeManifestThenReturnActorDefinitionIds() throws IOException {
-    final UUID activeActorDefinitionId = UUID.randomUUID();
-    final UUID anotherActorDefinitionId = UUID.randomUUID();
-    givenActiveDeclarativeManifestWithActorDefinitionId(activeActorDefinitionId);
-    givenActiveDeclarativeManifestWithActorDefinitionId(anotherActorDefinitionId);
-
-    final List<UUID> results = connectorBuilderService.getActorDefinitionIdsWithActiveDeclarativeManifest().toList();
-
-    assertEquals(2, results.size());
-    assertEquals(results, List.of(activeActorDefinitionId, anotherActorDefinitionId));
-  }
-
-  @Test
   void whenCreateDeclarativeManifestAsActiveVersionThenUpdateSourceDefinitionAndConfigInjectionAndDeclarativeManifest()
       throws IOException, ConfigNotFoundException, JsonValidationException {
     givenSourceDefinition(AN_ACTOR_DEFINITION_ID);

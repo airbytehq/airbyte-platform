@@ -3,9 +3,13 @@
  */
 package io.airbyte.config.init.config
 
+import io.airbyte.config.init.DeclarativeManifestImageVersionsProvider
+import io.airbyte.config.init.DeclarativeSourceUpdater
 import io.airbyte.config.specs.DefinitionsProvider
 import io.airbyte.config.specs.LocalDefinitionsProvider
 import io.airbyte.config.specs.RemoteDefinitionsProvider
+import io.airbyte.data.services.ActorDefinitionService
+import io.airbyte.data.services.DeclarativeManifestImageVersionService
 import io.micronaut.context.annotation.Factory
 import io.micronaut.context.annotation.Value
 import io.micronaut.core.util.StringUtils
@@ -38,6 +42,16 @@ class SeedBeanFactory {
     }
 
     throw IllegalArgumentException("Invalid seed provider: $seedProvider")
+  }
+
+  @Singleton
+  @Named("localDeclarativeSourceUpdater")
+  fun localDeclarativeSourceUpdater(
+    @Named("localDeclarativeManifestImageVersionsProvider") declarativeManifestImageVersionsProvider: DeclarativeManifestImageVersionsProvider,
+    declarativeManifestImageVersionService: DeclarativeManifestImageVersionService,
+    actorDefinitionService: ActorDefinitionService,
+  ): DeclarativeSourceUpdater {
+    return DeclarativeSourceUpdater(declarativeManifestImageVersionsProvider, declarativeManifestImageVersionService, actorDefinitionService)
   }
 
   companion object {

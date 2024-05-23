@@ -4,30 +4,46 @@
 package io.airbyte.config.init
 
 import io.airbyte.data.services.ActorDefinitionService
-import io.airbyte.data.services.ConnectorBuilderService
-import io.airbyte.validation.json.JsonValidationException
-import jakarta.inject.Singleton
+import io.airbyte.data.services.DeclarativeManifestImageVersionService
 import org.slf4j.LoggerFactory
-import java.io.IOException
 
 /**
- * Helper class used to apply actor definitions from a DefinitionsProvider to the database. This is
- * here to enable easy reuse of definition application logic in bootloader and cron.
+ * Helper class used to apply updates to source-declarative-manifest actor definition versions when
+ * new versions of the image become available. This class is used by the bootloader and cron to
+ * ensure that the latest compatible versions of the source-declarative-manifest images are used.
+ * Versioning for builder sources is different from standard connectors.
  */
-@Singleton
 class DeclarativeSourceUpdater(
-  private val connectorBuilderService: ConnectorBuilderService,
+  private val declarativeManifestImageVersionsProvider: DeclarativeManifestImageVersionsProvider,
+  private val declarativeManifestImageVersionService: DeclarativeManifestImageVersionService,
   private val actorDefinitionService: ActorDefinitionService,
 ) {
   companion object {
     private val log = LoggerFactory.getLogger(DeclarativeSourceUpdater::class.java)
   }
 
-  /**
-   * Update all declarative sources with the most recent builder CDK version.
-   */
-  @Throws(JsonValidationException::class, IOException::class)
   fun apply() {
-    TODO("this method is not called and is changed upstack")
+    val currentDeclarativeManifestImageVersions = declarativeManifestImageVersionService.listDeclarativeManifestImageVersions()
+    val latestVersionsByMajor = declarativeManifestImageVersionsProvider.getLatestDeclarativeManifestImageVersions()
+    log.info("Latest source-declarative-manifest images by major: $latestVersionsByMajor")
+
+    // Versions which are not currently in the DB - either a version for a new major or a different version for an existing major
+    val versionsToPersist =
+      latestVersionsByMajor.filterNot {
+          (major, latestVersion) ->
+        currentDeclarativeManifestImageVersions.any { it.majorVersion == major && it.imageVersion == latestVersion }
+      }
+
+    versionsToPersist.forEach { (major, newVersion) ->
+      declarativeManifestImageVersionService.writeDeclarativeManifestImageVersion(major, newVersion)
+      val previousVersion = currentDeclarativeManifestImageVersions.find { it.majorVersion == major }?.imageVersion
+      if (previousVersion == null) {
+        log.info("Persisted declarative manifest image version for new major version $major: $newVersion")
+      } else {
+        log.info("Updating declarative manifest image version for major $major from $previousVersion to $newVersion")
+        val numUpdated = actorDefinitionService.updateDeclarativeActorDefinitionVersions(previousVersion, newVersion)
+        log.info("Updated $numUpdated declarative actor definitions from $previousVersion to $newVersion")
+      }
+    }
   }
 }

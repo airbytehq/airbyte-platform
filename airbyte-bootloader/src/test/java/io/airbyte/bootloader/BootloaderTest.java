@@ -17,7 +17,9 @@ import io.airbyte.commons.version.Version;
 import io.airbyte.config.Configs.DeploymentMode;
 import io.airbyte.config.init.ApplyDefinitionsHelper;
 import io.airbyte.config.init.BreakingChangeNotificationHelper;
+import io.airbyte.config.init.DeclarativeManifestImageVersionsProvider;
 import io.airbyte.config.init.DeclarativeSourceUpdater;
+import io.airbyte.config.init.LocalDeclarativeManifestImageVersionsProvider;
 import io.airbyte.config.init.PostLoadExecutor;
 import io.airbyte.config.init.SupportStateUpdater;
 import io.airbyte.config.persistence.BreakingChangesHelper;
@@ -28,6 +30,7 @@ import io.airbyte.config.secrets.SecretsRepositoryWriter;
 import io.airbyte.config.specs.DefinitionsProvider;
 import io.airbyte.config.specs.LocalDefinitionsProvider;
 import io.airbyte.data.helpers.ActorDefinitionVersionUpdater;
+import io.airbyte.data.services.DeclarativeManifestImageVersionService;
 import io.airbyte.data.services.ScopedConfigurationService;
 import io.airbyte.data.services.SecretPersistenceConfigService;
 import io.airbyte.data.services.impls.jooq.ActorDefinitionServiceJooqImpl;
@@ -206,7 +209,10 @@ class BootloaderTest {
     val applyDefinitionsHelper =
         new ApplyDefinitionsHelper(definitionsProvider, jobsPersistence, actorDefinitionService, sourceService, destinationService,
             metricClient, supportStateUpdater);
-    val declarativeSourceUpdater = new DeclarativeSourceUpdater(connectorBuilderService, actorDefinitionService);
+    final DeclarativeManifestImageVersionsProvider declarativeManifestImageVersionsProvider = new LocalDeclarativeManifestImageVersionsProvider();
+    val declarativeSourceUpdater =
+        new DeclarativeSourceUpdater(declarativeManifestImageVersionsProvider, mock(DeclarativeManifestImageVersionService.class),
+            actorDefinitionService);
     val postLoadExecutor =
         new DefaultPostLoadExecutor(applyDefinitionsHelper, declarativeSourceUpdater);
 
@@ -310,8 +316,10 @@ class BootloaderTest {
     val applyDefinitionsHelper =
         new ApplyDefinitionsHelper(definitionsProvider, jobsPersistence, actorDefinitionService, sourceService, destinationService,
             metricClient, supportStateUpdater);
+    final DeclarativeManifestImageVersionsProvider declarativeManifestImageVersionsProvider = new LocalDeclarativeManifestImageVersionsProvider();
     val declarativeSourceUpdater =
-        new DeclarativeSourceUpdater(connectorBuilderService, actorDefinitionService);
+        new DeclarativeSourceUpdater(declarativeManifestImageVersionsProvider, mock(DeclarativeManifestImageVersionService.class),
+            actorDefinitionService);
     val postLoadExecutor = new DefaultPostLoadExecutor(applyDefinitionsHelper, declarativeSourceUpdater);
 
     val bootloader =
