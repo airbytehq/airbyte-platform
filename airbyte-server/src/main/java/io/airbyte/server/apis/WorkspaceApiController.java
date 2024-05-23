@@ -6,10 +6,12 @@ package io.airbyte.server.apis;
 
 import static io.airbyte.commons.auth.AuthRoleConstants.ADMIN;
 import static io.airbyte.commons.auth.AuthRoleConstants.AUTHENTICATED_USER;
+import static io.airbyte.commons.auth.AuthRoleConstants.ORGANIZATION_ADMIN;
 import static io.airbyte.commons.auth.AuthRoleConstants.ORGANIZATION_EDITOR;
 import static io.airbyte.commons.auth.AuthRoleConstants.ORGANIZATION_READER;
 import static io.airbyte.commons.auth.AuthRoleConstants.READER;
 import static io.airbyte.commons.auth.AuthRoleConstants.SELF;
+import static io.airbyte.commons.auth.AuthRoleConstants.WORKSPACE_ADMIN;
 import static io.airbyte.commons.auth.AuthRoleConstants.WORKSPACE_EDITOR;
 import static io.airbyte.commons.auth.AuthRoleConstants.WORKSPACE_READER;
 
@@ -69,11 +71,11 @@ public class WorkspaceApiController implements WorkspaceApi {
   public WorkspaceRead createWorkspace(@Body final WorkspaceCreate workspaceCreate) {
     return ApiHelper.execute(() -> {
       // Verify that the user has permission to create a workspace in an organization,
-      // need to be at least an organization editor to do so.
+      // need to be at least an organization admin to do so.
       if (workspaceCreate.getOrganizationId() != null) {
         final StatusEnum permissionCheckStatus = permissionHandler.checkPermissions(new PermissionCheckRequest()
             .userId(currentUserService.getCurrentUser().getUserId())
-            .permissionType(PermissionType.ORGANIZATION_EDITOR)
+            .permissionType(PermissionType.ORGANIZATION_ADMIN)
             .organizationId(workspaceCreate.getOrganizationId()))
             .getStatus();
         if (!permissionCheckStatus.equals(StatusEnum.SUCCEEDED)) {
@@ -90,11 +92,11 @@ public class WorkspaceApiController implements WorkspaceApi {
   public WorkspaceRead createWorkspaceIfNotExist(@Body final WorkspaceCreateWithId workspaceCreateWithId) {
     return ApiHelper.execute(() -> {
       // Verify that the user has permission to create a workspace in an organization,
-      // need to be at least an organization editor to do so.
+      // need to be at least an organization admin to do so.
       if (workspaceCreateWithId.getOrganizationId() != null) {
         final StatusEnum permissionCheckStatus = permissionHandler.checkPermissions(new PermissionCheckRequest()
             .userId(currentUserService.getCurrentUser().getUserId())
-            .permissionType(PermissionType.ORGANIZATION_EDITOR)
+            .permissionType(PermissionType.ORGANIZATION_ADMIN)
             .organizationId(workspaceCreateWithId.getOrganizationId()))
             .getStatus();
         if (!permissionCheckStatus.equals(StatusEnum.SUCCEEDED)) {
@@ -107,7 +109,7 @@ public class WorkspaceApiController implements WorkspaceApi {
   }
 
   @Post("/delete")
-  @Secured({WORKSPACE_EDITOR, ORGANIZATION_EDITOR})
+  @Secured({WORKSPACE_ADMIN, ORGANIZATION_ADMIN})
   @Override
   @Status(HttpStatus.NO_CONTENT)
   public void deleteWorkspace(@Body final WorkspaceIdRequestBody workspaceIdRequestBody) {

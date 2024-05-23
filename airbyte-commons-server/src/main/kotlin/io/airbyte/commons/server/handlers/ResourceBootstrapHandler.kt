@@ -60,8 +60,11 @@ open class ResourceBootstrapHandler(
       }
 
     // Ensure user has the required permissions to create a workspace
-    val allowedRoles = setOf(OrganizationAuthRole.ORGANIZATION_ADMIN, OrganizationAuthRole.ORGANIZATION_EDITOR)
-    apiAuthorizationHelper.ensureUserHasAnyRequiredRoleOrThrow(Scope.ORGANIZATION, listOf(organization.organizationId.toString()), allowedRoles)
+    apiAuthorizationHelper.ensureUserHasAnyRequiredRoleOrThrow(
+      Scope.ORGANIZATION,
+      listOf(organization.organizationId.toString()),
+      setOf(OrganizationAuthRole.ORGANIZATION_ADMIN),
+    )
 
     val standardWorkspace = buildStandardWorkspace(workspaceCreateWithId, organization, uuidSupplier)
     workspaceService.writeWorkspaceWithSecrets(standardWorkspace)
@@ -81,7 +84,7 @@ open class ResourceBootstrapHandler(
     return WorkspaceConverter.domainToApiModel(standardWorkspace)
   }
 
-  public fun findOrCreateOrganizationAndPermission(user: User): Organization {
+  fun findOrCreateOrganizationAndPermission(user: User): Organization {
     findExistingOrganization(user)?.let { return it }
 
     val organization =
