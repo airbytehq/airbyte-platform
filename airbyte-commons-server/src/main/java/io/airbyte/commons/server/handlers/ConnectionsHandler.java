@@ -108,6 +108,7 @@ import io.airbyte.protocol.models.CatalogHelpers;
 import io.airbyte.protocol.models.ConfiguredAirbyteCatalog;
 import io.airbyte.validation.json.JsonValidationException;
 import io.micronaut.context.annotation.Value;
+import io.micronaut.core.util.CollectionUtils;
 import jakarta.inject.Inject;
 import jakarta.inject.Named;
 import jakarta.inject.Singleton;
@@ -242,7 +243,7 @@ public class ConnectionsHandler {
       sync.setPrefix(patch.getPrefix());
     }
 
-    if (patch.getOperationIds() != null) {
+    if (CollectionUtils.isNotEmpty(patch.getOperationIds())) {
       sync.setOperationIds(patch.getOperationIds());
     }
 

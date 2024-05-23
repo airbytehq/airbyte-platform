@@ -604,7 +604,7 @@ class ConnectorBuilderProjectsHandlerTest {
         .sliceLimit(null);
 
     final StreamReadRequestBody streamReadRequestBody = new StreamReadRequestBody(testingValues, project.getManifestDraft(), streamName, false,
-        project.getBuilderProjectId().toString(), null, null, null, null, project.getWorkspaceId().toString());
+        project.getBuilderProjectId().toString(), null, null, null, List.of(), project.getWorkspaceId().toString());
 
     final JsonNode record1 = Jsons.deserialize(
         """
@@ -660,6 +660,7 @@ class ConnectorBuilderProjectsHandlerTest {
         .builderProjectId(project.getBuilderProjectId())
         .manifest(project.getManifestDraft())
         .streamName(streamName)
+        .state(List.of())
         .workspaceId(project.getWorkspaceId())
         .formGeneratedManifest(false)
         .recordLimit(null)
@@ -667,7 +668,7 @@ class ConnectorBuilderProjectsHandlerTest {
         .sliceLimit(null);
 
     final StreamReadRequestBody streamReadRequestBody = new StreamReadRequestBody(testingValues, project.getManifestDraft(), streamName, false,
-        project.getBuilderProjectId().toString(), null, null, null, null, project.getWorkspaceId().toString());
+        project.getBuilderProjectId().toString(), null, null, null, List.of(), project.getWorkspaceId().toString());
 
     final JsonNode newTestingValues = Jsons.deserialize(
         """

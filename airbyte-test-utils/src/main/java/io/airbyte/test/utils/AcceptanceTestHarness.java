@@ -307,7 +307,7 @@ public class AcceptanceTestHarness {
         true,
         true,
         null,
-        null,
+        List.of(),
         null,
         null,
         null);

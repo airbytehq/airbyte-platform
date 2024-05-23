@@ -63,8 +63,12 @@ def genApiServer = tasks.register("generateApiServer", GenerateTask) {
     ]
 
     doLast {
-        updateToJakartaApi(file("${serverOutputDir}/src/gen/java/${apiPackage.get().replaceAll('\\.', '/').replaceAll('-', '_')}"))
-        updateToJakartaApi(file("${serverOutputDir}/src/gen/java/${modelPackage.get().replaceAll('\\.', '/').replaceAll('-', '_')}"))
+        // Remove unnecessary invoker classes to avoid Micronaut picking them up and registering them as beans
+        delete("${serverOutputDir}/src/gen/java/${invokerPackage.get().replaceAll("\\.", "/").replaceAll("-","_")}")
+        // Clean up any javax references
+        [apiPackage.get(), modelPackage.get()].each { sourceDir ->
+            updateToJakartaApi(file("${serverOutputDir}/src/gen/java/${sourceDir.replaceAll('\\.', '/').replaceAll('-', '_')}"))
+        }
     }
 }
 
@@ -102,8 +106,16 @@ def genApiClient = tasks.register("generateApiClient", GenerateTask) {
     configOptions = [
             dateLibrary  : "java8",
             generatePom  : "false",
-            interfaceOnly: "true"
+            interfaceOnly: "true",
+            supportUrlQuery: "false",
     ]
+
+    doLast {
+        // Clean up any javax references
+        [apiPackage.get(), invokerPackage.get(), modelPackage.get()].each { sourceDir ->
+            updateToJakartaApi(file("${clientOutputDir}/src/main/java/${sourceDir.replaceAll('\\.', '/').replaceAll('-', '_')}"))
+        }
+    }
 }
 
 def genApiClient2 = tasks.register("genApiClient2", GenerateTask) {
@@ -221,8 +233,12 @@ def genPublicApiServer = tasks.register('generatePublicApiServer', GenerateTask)
     ]
 
     doLast {
-        updateToJakartaApi(file("${serverOutputDir}/src/gen/java/${apiPackage.get().replaceAll('\\.', '/').replaceAll('-', '_')}"))
-        updateToJakartaApi(file("${serverOutputDir}/src/gen/java/${modelPackage.get().replaceAll('\\.', '/').replaceAll('-', '_')}"))
+        // Remove unnecessary invoker classes to avoid Micronaut picking them up and registering them as beans
+        delete("${serverOutputDir}/src/gen/java/${invokerPackage.get().replaceAll("\\.", "/").replaceAll("-","_")}")
+        // Clean up any javax references
+        [apiPackage.get(), modelPackage.get()].each { sourceDir ->
+            updateToJakartaApi(file("${serverOutputDir}/src/gen/java/${sourceDir.replaceAll('\\.', '/').replaceAll('-', '_')}"))
+        }
     }
 
 }
@@ -264,8 +280,12 @@ def genAirbyteApiServer = tasks.register('generateAirbyteApiServer', GenerateTas
     ]
 
     doLast {
-        updateToJakartaApi(file("${serverOutputDir}/src/gen/java/${apiPackage.get().replaceAll('\\.', '/').replaceAll('-', '_')}"))
-        updateToJakartaApi(file("${serverOutputDir}/src/gen/java/${modelPackage.get().replaceAll('\\.', '/').replaceAll('-', '_')}"))
+        // Remove unnecessary invoker classes to avoid Micronaut picking them up and registering them as beans
+        delete("${serverOutputDir}/src/gen/java/${invokerPackage.get().replaceAll("\\.", "/").replaceAll("-","_")}")
+        // Clean up any javax references
+        [apiPackage.get(), modelPackage.get()].each { sourceDir ->
+            updateToJakartaApi(file("${serverOutputDir}/src/gen/java/${sourceDir.replaceAll('\\.', '/').replaceAll('-', '_')}"))
+        }
     }
 }
 
@@ -568,7 +588,9 @@ private static def updateToJakartaApi(srcDir) {
             contents = contents
                     .replaceAll('javax\\.ws\\.rs', 'jakarta.ws.rs')
                     .replaceAll('javax\\.validation', 'jakarta.validation')
+                    .replaceAll('javax\\.annotation\\.processing', 'jakarta.annotation')
                     .replaceAll('javax\\.annotation', 'jakarta.annotation')
+                    .replaceAll('jakarta\\.annotation\\.processing', 'jakarta.annotation')
             file.write(contents)
         }
     }

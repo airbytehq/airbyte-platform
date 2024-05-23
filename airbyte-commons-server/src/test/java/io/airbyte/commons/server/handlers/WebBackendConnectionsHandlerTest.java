@@ -254,7 +254,7 @@ class WebBackendConnectionsHandlerTest {
     final StandardSync brokenStandardSync =
         ConnectionHelpers.generateSyncWithSourceAndDestinationId(source.getSourceId(), destination.getDestinationId(), true, Status.INACTIVE);
 
-    when(configRepository.listWorkspaceStandardSyncs(new StandardSyncQuery(sourceRead.getWorkspaceId(), null, null, false)))
+    when(configRepository.listWorkspaceStandardSyncs(new StandardSyncQuery(sourceRead.getWorkspaceId(), List.of(), List.of(), false)))
         .thenReturn(Collections.singletonList(standardSync));
     when(configRepository.getSourceAndDefinitionsFromSourceIds(Collections.singletonList(source.getSourceId())))
         .thenReturn(Collections.singletonList(new SourceAndDefinition(source, sourceDefinition)));
@@ -449,7 +449,7 @@ class WebBackendConnectionsHandlerTest {
   }
 
   @Test
-  void testWebBackendListConnectionsForWorkspace() throws IOException, JsonValidationException, ConfigNotFoundException {
+  void testWebBackendListConnectionsForWorkspace() throws IOException {
     final WebBackendConnectionListRequestBody webBackendConnectionListRequestBody = new WebBackendConnectionListRequestBody();
     webBackendConnectionListRequestBody.setWorkspaceId(sourceRead.getWorkspaceId());
 

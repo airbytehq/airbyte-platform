@@ -618,14 +618,14 @@ internal class AirbyteCatalogHelperTest {
     fun `Null selected fields should be excluded in the updated config`() {
       streamConfiguration.selectedFields = null
       val updatedConfig = AirbyteCatalogHelper.updateAirbyteStreamConfiguration(schemaConfiguration, sourceStream, streamConfiguration)
-      assertEquals(null, updatedConfig.selectedFields)
+      assertEquals(listOf<SelectedFieldInfo>(), updatedConfig.selectedFields)
     }
 
     @Test
     fun `Empty selected fields should be excluded in the updated config`() {
       streamConfiguration.selectedFields = emptyList()
       val updatedConfig = AirbyteCatalogHelper.updateAirbyteStreamConfiguration(schemaConfiguration, sourceStream, streamConfiguration)
-      assertEquals(null, updatedConfig.selectedFields)
+      assertEquals(listOf<SelectedFieldInfo>(), updatedConfig.selectedFields)
     }
 
     @Test

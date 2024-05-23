@@ -8,8 +8,10 @@ import static io.airbyte.featureflag.ContextKt.ANONYMOUS;
 import static io.airbyte.persistence.job.models.Job.SYNC_REPLICATION_TYPES;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -245,6 +247,7 @@ class JobHistoryHandlerTest {
     return new AttemptRead()
         .id((long) a.getAttemptNumber())
         .status(Enums.convertTo(a.getStatus(), io.airbyte.api.model.generated.AttemptStatus.class))
+        .streamStats(null)
         .createdAt(a.getCreatedAtInSecond())
         .updatedAt(a.getUpdatedAtInSecond())
         .endedAt(a.getEndedAtInSecond().orElse(null));
@@ -302,20 +305,21 @@ class JobHistoryHandlerTest {
           new Job(jobId2, JOB_CONFIG.getConfigType(), JOB_CONFIG_ID, JOB_CONFIG, Collections.emptyList(), JobStatus.PENDING,
               null, createdAt2, createdAt2);
 
-      when(jobPersistence.listJobs(Set.of(Enums.convertTo(CONFIG_TYPE_FOR_API, ConfigType.class)),
-          JOB_CONFIG_ID,
-          pagesize,
-          rowOffset,
-          null,
-          null,
-          null,
-          null,
-          null,
-          null,
-          null))
+      when(jobPersistence.listJobs(eq(Set.of(Enums.convertTo(CONFIG_TYPE_FOR_API, ConfigType.class))),
+          eq(JOB_CONFIG_ID),
+          eq(pagesize),
+          eq(rowOffset),
+          any(),
+          any(),
+          any(),
+          any(),
+          any(),
+          any(),
+          any()))
               .thenReturn(List.of(latestJobNoAttempt, successfulJob));
-      when(jobPersistence.getJobCount(Set.of(Enums.convertTo(CONFIG_TYPE_FOR_API, ConfigType.class)), JOB_CONFIG_ID, null, null, null, null, null))
-          .thenReturn(2L);
+      when(jobPersistence.getJobCount(eq(Set.of(Enums.convertTo(CONFIG_TYPE_FOR_API, ConfigType.class))), eq(JOB_CONFIG_ID), any(), any(), any(),
+          any(), any()))
+              .thenReturn(2L);
       when(jobPersistence.getAttemptStats(List.of(200L, 100L))).thenReturn(Map.of(
           new JobAttemptPair(100, 0), FIRST_ATTEMPT_STATS,
           new JobAttemptPair(100, 1), SECOND_ATTEMPT_STATS,
@@ -391,9 +395,9 @@ class JobHistoryHandlerTest {
       final var latestJob =
           new Job(latestJobId, ConfigType.SYNC, JOB_CONFIG_ID, JOB_CONFIG, Collections.emptyList(), JobStatus.PENDING, null, createdAt3, createdAt3);
 
-      when(jobPersistence.listJobs(configTypes, JOB_CONFIG_ID, pagesize, rowOffset, null, null, null, null, null, null, null))
+      when(jobPersistence.listJobs(eq(configTypes), eq(JOB_CONFIG_ID), eq(pagesize), eq(rowOffset), any(), any(), any(), any(), any(), any(), any()))
           .thenReturn(List.of(latestJob, secondJob, firstJob));
-      when(jobPersistence.getJobCount(configTypes, JOB_CONFIG_ID, null, null, null, null, null)).thenReturn(3L);
+      when(jobPersistence.getJobCount(eq(configTypes), eq(JOB_CONFIG_ID), any(), any(), any(), any(), any())).thenReturn(3L);
       when(jobPersistence.getAttemptStats(List.of(300L, 200L, 100L))).thenReturn(Map.of(
           new JobAttemptPair(100, 0), FIRST_ATTEMPT_STATS,
           new JobAttemptPair(secondJobId, 0), FIRST_ATTEMPT_STATS,
@@ -481,8 +485,9 @@ class JobHistoryHandlerTest {
 
       when(jobPersistence.listJobsIncludingId(Set.of(Enums.convertTo(CONFIG_TYPE_FOR_API, ConfigType.class)), JOB_CONFIG_ID, jobId2, pagesize))
           .thenReturn(List.of(latestJobNoAttempt, successfulJob));
-      when(jobPersistence.getJobCount(Set.of(Enums.convertTo(CONFIG_TYPE_FOR_API, ConfigType.class)), JOB_CONFIG_ID, null, null, null, null, null))
-          .thenReturn(2L);
+      when(jobPersistence.getJobCount(eq(Set.of(Enums.convertTo(CONFIG_TYPE_FOR_API, ConfigType.class))), eq(JOB_CONFIG_ID), any(), any(), any(),
+          any(), any()))
+              .thenReturn(2L);
       when(jobPersistence.getAttemptStats(List.of(200L, 100L))).thenReturn(Map.of(
           new JobAttemptPair(100, 0), FIRST_ATTEMPT_STATS,
           new JobAttemptPair(jobId2, 0), FIRST_ATTEMPT_STATS));

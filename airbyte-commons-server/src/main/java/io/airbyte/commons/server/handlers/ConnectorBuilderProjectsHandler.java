@@ -59,11 +59,13 @@ import io.airbyte.featureflag.Organization;
 import io.airbyte.featureflag.UseRuntimeSecretPersistence;
 import io.airbyte.protocol.models.ConnectorSpecification;
 import io.airbyte.validation.json.JsonValidationException;
+import io.micronaut.core.util.CollectionUtils;
 import jakarta.annotation.Nullable;
 import jakarta.inject.Inject;
 import jakarta.inject.Named;
 import jakarta.inject.Singleton;
 import java.io.IOException;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.function.Supplier;
@@ -364,20 +366,20 @@ public class ConnectorBuilderProjectsHandler {
         .logs(streamRead.getLogs())
         .slices(streamRead.getSlices().stream().map(slice -> new ConnectorBuilderProjectStreamReadSlicesInner()
             .sliceDescriptor(slice.getSliceDescriptor())
-            .state(slice.getState())
+            .state(CollectionUtils.isNotEmpty(slice.getState()) ? slice.getState() : List.of())
             .pages(slice.getPages().stream().map(page -> new ConnectorBuilderProjectStreamReadSlicesInnerPagesInner()
                 .records(page.getRecords())
                 .request(convertHttpRequest(page.getRequest()))
                 .response(convertHttpResponse(page.getResponse()))).toList()))
             .toList())
         .testReadLimitReached(streamRead.getTestReadLimitReached())
-        .auxiliaryRequests(streamRead.getAuxiliaryRequests() != null
+        .auxiliaryRequests(CollectionUtils.isNotEmpty(streamRead.getAuxiliaryRequests())
             ? streamRead.getAuxiliaryRequests().stream().map(auxRequest -> new ConnectorBuilderProjectStreamReadAuxiliaryRequestsInner()
                 .description(auxRequest.getDescription())
                 .request(convertHttpRequest(auxRequest.getRequest()))
                 .response(convertHttpResponse(auxRequest.getResponse()))
                 .title(auxRequest.getTitle())).toList()
-            : null)
+            : List.of())
         .inferredSchema(streamRead.getInferredSchema())
         .inferredDatetimeFormats(streamRead.getInferredDatetimeFormats());
   }

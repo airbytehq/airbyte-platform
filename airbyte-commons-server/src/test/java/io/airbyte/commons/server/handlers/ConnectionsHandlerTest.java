@@ -2421,10 +2421,10 @@ class ConnectionsHandlerTest {
           .add(new ConfiguredAirbyteStream().withStream(new io.airbyte.protocol.models.AirbyteStream().withName(A_DIFFERENT_STREAM)
               .withNamespace(A_DIFFERENT_NAMESPACE).withSupportedSyncModes(List.of(io.airbyte.protocol.models.SyncMode.FULL_REFRESH))
               .withSourceDefinedCursor(false)
-              .withDefaultCursorField(null))
+              .withDefaultCursorField(List.of()))
               .withDestinationSyncMode(io.airbyte.protocol.models.DestinationSyncMode.OVERWRITE)
               .withSyncMode(io.airbyte.protocol.models.SyncMode.FULL_REFRESH)
-              .withCursorField(null));
+              .withCursorField(List.of()));
       final ArgumentCaptor<StandardSync> standardSyncArgumentCaptor = ArgumentCaptor.forClass(StandardSync.class);
       verify(configRepository).writeStandardSync(standardSyncArgumentCaptor.capture());
       final StandardSync actualStandardSync = standardSyncArgumentCaptor.getValue();

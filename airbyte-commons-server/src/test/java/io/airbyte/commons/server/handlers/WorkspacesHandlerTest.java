@@ -845,6 +845,7 @@ class WorkspacesHandlerTest {
         .notificationSettings(NotificationSettingsConverter.toApi(workspace.getNotificationSettings()))
         .defaultGeography(GEOGRAPHY_AUTO)
         .organizationId(ORGANIZATION_ID)
+        .webhookConfigs(List.of())
         .tombstone(false);
 
     final WorkspaceRead actualWorkspaceRead = workspacesHandler.updateWorkspace(workspaceUpdate);

@@ -60,6 +60,7 @@ import io.airbyte.persistence.job.models.JobStatusSummary;
 import io.airbyte.protocol.models.ConfiguredAirbyteStream;
 import io.airbyte.protocol.models.SyncMode;
 import io.airbyte.validation.json.JsonValidationException;
+import io.micronaut.core.util.CollectionUtils;
 import jakarta.inject.Singleton;
 import java.io.IOException;
 import java.util.Collections;
@@ -163,7 +164,7 @@ public class JobHistoryHandler {
     } else {
       jobs = jobPersistence.listJobs(configTypes, configId, pageSize,
           (request.getPagination() != null && request.getPagination().getRowOffset() != null) ? request.getPagination().getRowOffset() : 0,
-          request.getStatuses() == null ? null : mapToDomainJobStatus(request.getStatuses()),
+          CollectionUtils.isEmpty(request.getStatuses()) ? null : mapToDomainJobStatus(request.getStatuses()),
           request.getCreatedAtStart(),
           request.getCreatedAtEnd(),
           request.getUpdatedAtStart(),
@@ -181,7 +182,7 @@ public class JobHistoryHandler {
         jobPersistence);
 
     final Long totalJobCount = jobPersistence.getJobCount(configTypes, configId,
-        request.getStatuses() == null ? null : mapToDomainJobStatus(request.getStatuses()),
+        CollectionUtils.isEmpty(request.getStatuses()) ? null : mapToDomainJobStatus(request.getStatuses()),
         request.getCreatedAtStart(),
         request.getCreatedAtEnd(),
         request.getUpdatedAtStart(),
@@ -211,7 +212,7 @@ public class JobHistoryHandler {
         request.getWorkspaceIds(),
         pageSize,
         offset,
-        request.getStatuses() == null ? null : mapToDomainJobStatus(request.getStatuses()),
+        CollectionUtils.isEmpty(request.getStatuses()) ? null : mapToDomainJobStatus(request.getStatuses()),
         request.getCreatedAtStart(),
         request.getCreatedAtEnd(),
         request.getUpdatedAtStart(),

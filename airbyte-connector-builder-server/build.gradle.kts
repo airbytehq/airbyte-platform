@@ -15,6 +15,8 @@ dependencies {
   annotationProcessor(libs.bundles.micronaut.annotation.processor)
 
   implementation(libs.jackson.datatype)
+  implementation(libs.jackson.databind)
+  implementation(libs.openapi.jackson.databind.nullable)
   implementation(libs.json.simple)
 
   // Cloud service dependencies. These are not strictly necessary yet, but likely needed for any full-fledged cloud service
@@ -28,9 +30,8 @@ dependencies {
   implementation(libs.micronaut.http)
   implementation(libs.micronaut.security)
   implementation(libs.jakarta.annotation.api)
+  implementation(libs.jakarta.validation.api)
   implementation(libs.jakarta.ws.rs.api)
-
-  implementation(project(":airbyte-commons"))
 
   // OpenAPI code generation(dependencies)
   implementation(libs.swagger.annotations)
@@ -85,8 +86,9 @@ airbyte {
 val generateOpenApiServer = tasks.register<GenerateTask>("generateOpenApiServer") {
   val specFile = "$projectDir/src/main/openapi/openapi.yaml"
   inputs.file(specFile)
-  inputSpec = specFile
   outputDir = "${project.layout.buildDirectory.get()}/generated/api/server"
+
+  inputSpec.set(specFile)
 
   generatorName = "jaxrs-spec"
   apiPackage = "io.airbyte.connector_builder.api.generated"
@@ -117,8 +119,12 @@ val generateOpenApiServer = tasks.register<GenerateTask>("generateOpenApiServer"
   )
 
   doLast {
-    updateToJakartaApi(file("${outputDir.get()}/src/gen/java/${apiPackage.get().replace(".", "/")}"))
-    updateToJakartaApi(file("${outputDir.get()}/src/gen/java/${modelPackage.get().replace(".", "/")}"))
+    // Remove unnecessary invoker classes to avoid Micronaut picking them up and registering them as beans
+    delete("${outputDir.get()}/src/gen/java/${invokerPackage.get().replace(".", "/")}")
+    // Clean up any javax references
+    listOf(apiPackage.get(), modelPackage.get()).forEach { sourceDir ->
+      updateToJakartaApi(file("${outputDir.get()}/src/gen/java/${sourceDir.replace(".", "/")}"))
+    }
   }
 }
 
@@ -160,7 +166,10 @@ private fun updateToJakartaApi(srcDir: File) {
       var contents = file.readText()
       contents = contents.replace("javax.ws.rs", "jakarta.ws.rs")
         .replace("javax.validation", "jakarta.validation")
+        .replace("javax.annotation.processing", "jakarta.annotation")
         .replace("javax.annotation", "jakarta.annotation")
+        .replace("jakarta.annotation.processing", "jakarta.annotation")
+        .replace("List<@Valid ", "List<")
       file.writeText(contents)
     }
   }
