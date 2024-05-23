@@ -201,6 +201,13 @@ create table "public"."declarative_manifest" (
   "created_at" timestamp(6) with time zone not null default current_timestamp,
   constraint "declarative_manifest_pkey" primary key ("actor_definition_id", "version")
 );
+create table "public"."declarative_manifest_image_version" (
+  "major_version" int not null,
+  "image_version" varchar(256) not null,
+  "created_at" timestamp(6) with time zone not null default current_timestamp,
+  "updated_at" timestamp(6) with time zone not null default current_timestamp,
+  constraint "declarative_manifest_image_version_pkey" primary key ("major_version")
+);
 create table "public"."notification_configuration" (
   "id" uuid not null,
   "enabled" boolean not null,

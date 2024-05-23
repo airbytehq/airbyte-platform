@@ -54,7 +54,7 @@ Check `io.airbyte.db.instance.configs` for example.
 public class V0_29_9_001__Add_active_column extends BaseJavaMigration {
 
   @Override
-  public void migrate(Context context) throws Exception {
+  public void migrate(final Context context) throws Exception {
     DSL.using(context.getConnection()).alterTable("airbyte_configs")
         .addColumn(field("active", SQLDataType.BOOLEAN.defaultValue(true).nullable(true)))
         .execute();
