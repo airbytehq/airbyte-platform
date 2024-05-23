@@ -791,24 +791,26 @@ function fromEntriesOrUndefined(...args: Parameters<typeof Object.fromEntries>) 
 
 function builderRequestBodyToStreamRequestBody(builderRequestBody: BuilderRequestBody) {
   try {
+    const parsedJson = builderRequestBody.type === "json_freeform" ? JSON.parse(builderRequestBody.value) : undefined;
+
     const requestBody = {
       request_body_json:
         builderRequestBody.type === "json_list"
           ? fromEntriesOrUndefined(builderRequestBody.values)
           : builderRequestBody.type === "json_freeform"
-          ? isString(builderRequestBody.value)
+          ? isString(parsedJson)
             ? undefined
-            : ((parsedJson) => (Object.keys(parsedJson).length > 0 ? parsedJson : undefined))(
-                JSON.parse(builderRequestBody.value)
-              )
+            : Object.keys(parsedJson).length > 0
+            ? parsedJson
+            : undefined
           : undefined,
       request_body_data:
         builderRequestBody.type === "form_list"
           ? fromEntriesOrUndefined(builderRequestBody.values)
           : builderRequestBody.type === "string_freeform"
           ? builderRequestBody.value
-          : builderRequestBody.type === "json_freeform" && isString(builderRequestBody.value)
-          ? JSON.parse(builderRequestBody.value)
+          : builderRequestBody.type === "json_freeform" && isString(parsedJson)
+          ? parsedJson
           : undefined,
     };
     return Object.keys(requestBody).length > 0 ? requestBody : undefined;
