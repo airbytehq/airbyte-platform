@@ -85,7 +85,7 @@ internal class DeclarativeManifestImageVersionServiceDataImplTest {
 
     every { declarativeManifestImageVersionRepository.findById(majorVersion) } returns Optional.empty()
 
-    assertThrows<IllegalArgumentException> { declarativeManifestImageVersionService.getImageVersionByMajorVersion(majorVersion) }
+    assertThrows<IllegalStateException> { declarativeManifestImageVersionService.getImageVersionByMajorVersion(majorVersion) }
 
     verify {
       declarativeManifestImageVersionRepository.findById(majorVersion)

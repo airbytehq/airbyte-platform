@@ -11,6 +11,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import io.airbyte.commons.version.Version;
 import io.airbyte.config.ActorDefinitionConfigInjection;
 import io.airbyte.protocol.models.ConnectorSpecification;
 import java.net.URI;
@@ -79,7 +80,7 @@ class DeclarativeSourceManifestInjectorTest {
 
   @Test
   void testGetCdkVersion() {
-    assertEquals("1.0.0", injector.getCdkVersion(A_MANIFEST));
+    assertEquals(new Version("1.0.0"), injector.getCdkVersion(A_MANIFEST));
   }
 
   private JsonNode givenSpecWithDocumentationUrl(final URI documentationUrl) {

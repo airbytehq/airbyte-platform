@@ -12,6 +12,7 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -44,6 +45,7 @@ import io.airbyte.api.model.generated.WorkspaceIdRequestBody;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.commons.server.handlers.helpers.BuilderProjectUpdater;
 import io.airbyte.commons.server.handlers.helpers.DeclarativeSourceManifestInjector;
+import io.airbyte.commons.version.Version;
 import io.airbyte.config.ActorDefinitionConfigInjection;
 import io.airbyte.config.ActorDefinitionVersion;
 import io.airbyte.config.ConnectorBuilderProject;
@@ -67,6 +69,7 @@ import io.airbyte.connectorbuilderserver.api.client.model.generated.StreamReadSl
 import io.airbyte.connectorbuilderserver.api.client.model.generated.StreamReadSlicesInnerPagesInner;
 import io.airbyte.data.exceptions.ConfigNotFoundException;
 import io.airbyte.data.services.ConnectorBuilderService;
+import io.airbyte.data.services.DeclarativeManifestImageVersionService;
 import io.airbyte.data.services.SecretPersistenceConfigService;
 import io.airbyte.data.services.SourceService;
 import io.airbyte.data.services.WorkspaceService;
@@ -92,7 +95,8 @@ class ConnectorBuilderProjectsHandlerTest {
   private static final UUID A_WORKSPACE_ID = UUID.randomUUID();
   private static final Long A_VERSION = 32L;
   private static final Long ACTIVE_MANIFEST_VERSION = 865L;
-  private static final String A_CDK_VERSION = "0.79.0";
+  private static final Version A_CDK_VERSION = new Version("0.0.1");
+  private static final String A_DECLARATIVE_MANIFEST_IMAGE_VERSION = "0.79.0";
   private static final String A_DESCRIPTION = "a description";
   private static final String A_SOURCE_NAME = "a source name";
   private static final String A_NAME = "a name";
@@ -110,6 +114,7 @@ class ConnectorBuilderProjectsHandlerTest {
     }
   }
 
+  private DeclarativeManifestImageVersionService declarativeManifestImageVersionService;
   private ConnectorBuilderService connectorBuilderService;
   private BuilderProjectUpdater builderProjectUpdater;
   private ConnectorBuilderProjectsHandler connectorBuilderProjectsHandler;
@@ -164,6 +169,7 @@ class ConnectorBuilderProjectsHandlerTest {
   @SuppressWarnings("unchecked")
   @BeforeEach
   void setUp() throws JsonProcessingException {
+    declarativeManifestImageVersionService = mock(DeclarativeManifestImageVersionService.class);
     connectorBuilderService = mock(ConnectorBuilderService.class);
     builderProjectUpdater = mock(BuilderProjectUpdater.class);
     uuidSupplier = mock(Supplier.class);
@@ -181,10 +187,15 @@ class ConnectorBuilderProjectsHandlerTest {
     workspaceId = UUID.randomUUID();
 
     connectorBuilderProjectsHandler =
-        new ConnectorBuilderProjectsHandler(connectorBuilderService, builderProjectUpdater, uuidSupplier, manifestInjector,
+        new ConnectorBuilderProjectsHandler(declarativeManifestImageVersionService, connectorBuilderService, builderProjectUpdater, uuidSupplier,
+            manifestInjector,
             workspaceService, featureFlagClient,
             secretsRepositoryReader, secretsRepositoryWriter, secretPersistenceConfigService, sourceService, secretsProcessor,
             connectorBuilderServerApiClient);
+
+    when(manifestInjector.getCdkVersion(any())).thenReturn(A_CDK_VERSION);
+    when(declarativeManifestImageVersionService.getImageVersionByMajorVersion(anyInt()))
+        .thenReturn(A_DECLARATIVE_MANIFEST_IMAGE_VERSION);
   }
 
   private ConnectorBuilderProject generateBuilderProject() {
@@ -213,6 +224,24 @@ class ConnectorBuilderProjectsHandlerTest {
     verify(connectorBuilderService, times(1))
         .writeBuilderProjectDraft(
             project.getBuilderProjectId(), project.getWorkspaceId(), project.getName(), project.getManifestDraft());
+  }
+
+  @Test
+  @DisplayName("publishConnectorBuilderProject throws a helpful error if no associated CDK version is found")
+  void testCreateConnectorBuilderProjectNoCdkVersion() {
+    final ConnectorBuilderProject project = generateBuilderProject();
+
+    when(uuidSupplier.get()).thenReturn(project.getBuilderProjectId());
+    when(declarativeManifestImageVersionService.getImageVersionByMajorVersion(anyInt()))
+        .thenThrow(new IllegalStateException("No declarative manifest image version found in database for major version 0"));
+
+    final ConnectorBuilderPublishRequestBody publish = new ConnectorBuilderPublishRequestBody()
+        .builderProjectId(project.getBuilderProjectId())
+        .workspaceId(workspaceId)
+        .initialDeclarativeManifest(new DeclarativeSourceManifest().spec(A_SPEC).manifest(A_MANIFEST));
+
+    assertEquals("No declarative manifest image version found in database for major version 0",
+        assertThrows(IllegalStateException.class, () -> connectorBuilderProjectsHandler.publishConnectorBuilderProject(publish)).getMessage());
   }
 
   @Test
@@ -461,7 +490,6 @@ class ConnectorBuilderProjectsHandlerTest {
   void whenPublishConnectorBuilderProjectThenCreateActorDefinition() throws IOException {
     when(uuidSupplier.get()).thenReturn(A_SOURCE_DEFINITION_ID);
     when(manifestInjector.createConfigInjection(A_SOURCE_DEFINITION_ID, A_MANIFEST)).thenReturn(A_CONFIG_INJECTION);
-    when(manifestInjector.getCdkVersion(A_MANIFEST)).thenReturn(A_CDK_VERSION);
     setupConnectorSpecificationAdapter(A_SPEC, A_DOCUMENTATION_URL);
 
     connectorBuilderProjectsHandler.publishConnectorBuilderProject(anyConnectorBuilderProjectRequest().workspaceId(workspaceId).name(A_SOURCE_NAME)
@@ -478,7 +506,7 @@ class ConnectorBuilderProjectsHandlerTest {
             new ActorDefinitionVersion()
                 .withActorDefinitionId(A_SOURCE_DEFINITION_ID)
                 .withDockerRepository("airbyte/source-declarative-manifest")
-                .withDockerImageTag(A_CDK_VERSION)
+                .withDockerImageTag(A_DECLARATIVE_MANIFEST_IMAGE_VERSION)
                 .withSpec(adaptedConnectorSpecification)
                 .withSupportLevel(SupportLevel.NONE)
                 .withReleaseStage(ReleaseStage.CUSTOM)

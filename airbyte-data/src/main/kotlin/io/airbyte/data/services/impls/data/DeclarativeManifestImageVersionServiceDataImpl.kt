@@ -23,7 +23,7 @@ class DeclarativeManifestImageVersionServiceDataImpl(
   override fun getImageVersionByMajorVersion(majorVersion: Int): String {
     val resolvedVersion =
       repository.findById(majorVersion).orElseThrow {
-        IllegalArgumentException("No declarative manifest image version found in database for major version $majorVersion")
+        IllegalStateException("No declarative manifest image version found in database for major version $majorVersion")
       }
     return resolvedVersion.imageVersion
   }

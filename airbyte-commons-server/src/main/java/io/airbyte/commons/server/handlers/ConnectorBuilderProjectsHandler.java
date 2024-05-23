@@ -29,6 +29,7 @@ import io.airbyte.api.model.generated.WorkspaceIdRequestBody;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.commons.server.handlers.helpers.BuilderProjectUpdater;
 import io.airbyte.commons.server.handlers.helpers.DeclarativeSourceManifestInjector;
+import io.airbyte.commons.version.Version;
 import io.airbyte.config.ActorDefinitionVersion;
 import io.airbyte.config.ConfigSchema;
 import io.airbyte.config.ConnectorBuilderProject;
@@ -51,6 +52,7 @@ import io.airbyte.connectorbuilderserver.api.client.model.generated.StreamRead;
 import io.airbyte.connectorbuilderserver.api.client.model.generated.StreamReadRequestBody;
 import io.airbyte.data.exceptions.ConfigNotFoundException;
 import io.airbyte.data.services.ConnectorBuilderService;
+import io.airbyte.data.services.DeclarativeManifestImageVersionService;
 import io.airbyte.data.services.SecretPersistenceConfigService;
 import io.airbyte.data.services.SourceService;
 import io.airbyte.data.services.WorkspaceService;
@@ -78,6 +80,7 @@ import java.util.stream.Stream;
 @Singleton
 public class ConnectorBuilderProjectsHandler {
 
+  private final DeclarativeManifestImageVersionService declarativeManifestImageVersionService;
   private final ConnectorBuilderService connectorBuilderService;
 
   private final BuilderProjectUpdater buildProjectUpdater;
@@ -96,7 +99,8 @@ public class ConnectorBuilderProjectsHandler {
   public static final String CONNECTION_SPECIFICATION_FIELD = "connection_specification";
 
   @Inject
-  public ConnectorBuilderProjectsHandler(final ConnectorBuilderService connectorBuilderService,
+  public ConnectorBuilderProjectsHandler(final DeclarativeManifestImageVersionService declarativeManifestImageVersionService,
+                                         final ConnectorBuilderService connectorBuilderService,
                                          final BuilderProjectUpdater builderProjectUpdater,
                                          @Named("uuidGenerator") final Supplier<UUID> uuidSupplier,
                                          final DeclarativeSourceManifestInjector manifestInjector,
@@ -108,6 +112,7 @@ public class ConnectorBuilderProjectsHandler {
                                          final SourceService sourceService,
                                          @Named("jsonSecretsProcessorWithCopy") final JsonSecretsProcessor secretsProcessor,
                                          final ConnectorBuilderServerApi connectorBuilderServerApiClient) {
+    this.declarativeManifestImageVersionService = declarativeManifestImageVersionService;
     this.connectorBuilderService = connectorBuilderService;
     this.buildProjectUpdater = builderProjectUpdater;
     this.uuidSupplier = uuidSupplier;
@@ -281,7 +286,7 @@ public class ConnectorBuilderProjectsHandler {
 
     final ActorDefinitionVersion defaultVersion = new ActorDefinitionVersion()
         .withActorDefinitionId(actorDefinitionId)
-        .withDockerImageTag(manifestInjector.getCdkVersion(manifest))
+        .withDockerImageTag(getImageVersionForManifest(manifest))
         .withDockerRepository("airbyte/source-declarative-manifest")
         .withSpec(connectorSpecification)
         .withProtocolVersion(DEFAULT_AIRBYTE_PROTOCOL_VERSION.serialize())
@@ -440,6 +445,12 @@ public class ConnectorBuilderProjectsHandler {
                 new RuntimeSecretPersistence(secretPersistenceConfigOptional.get())))
             : Optional.ofNullable(secretsRepositoryReader.hydrateConfigFromDefaultSecretPersistence(project.getTestingValues()))
         : Optional.empty();
+  }
+
+  private String getImageVersionForManifest(final JsonNode declarativeManifest) {
+    final Version manifestVersion = manifestInjector.getCdkVersion(declarativeManifest);
+    return declarativeManifestImageVersionService
+        .getImageVersionByMajorVersion(Integer.parseInt(manifestVersion.getMajorVersion()));
   }
 
 }

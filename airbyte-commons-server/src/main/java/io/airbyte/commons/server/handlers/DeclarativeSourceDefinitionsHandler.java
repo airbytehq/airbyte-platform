@@ -14,9 +14,11 @@ import io.airbyte.commons.server.errors.DeclarativeSourceNotFoundException;
 import io.airbyte.commons.server.errors.SourceIsNotDeclarativeException;
 import io.airbyte.commons.server.errors.ValueConflictKnownException;
 import io.airbyte.commons.server.handlers.helpers.DeclarativeSourceManifestInjector;
+import io.airbyte.commons.version.Version;
 import io.airbyte.config.DeclarativeManifest;
 import io.airbyte.data.exceptions.ConfigNotFoundException;
 import io.airbyte.data.services.ConnectorBuilderService;
+import io.airbyte.data.services.DeclarativeManifestImageVersionService;
 import io.airbyte.data.services.WorkspaceService;
 import jakarta.inject.Inject;
 import jakarta.inject.Singleton;
@@ -34,14 +36,17 @@ import java.util.stream.Stream;
 @Singleton
 public class DeclarativeSourceDefinitionsHandler {
 
+  private final DeclarativeManifestImageVersionService declarativeManifestImageVersionService;
   private final ConnectorBuilderService connectorBuilderService;
   private final WorkspaceService workspaceService;
   private final DeclarativeSourceManifestInjector manifestInjector;
 
   @Inject
-  public DeclarativeSourceDefinitionsHandler(final ConnectorBuilderService connectorBuilderService,
+  public DeclarativeSourceDefinitionsHandler(final DeclarativeManifestImageVersionService declarativeManifestImageVersionService,
+                                             final ConnectorBuilderService connectorBuilderService,
                                              final WorkspaceService workspaceService,
                                              final DeclarativeSourceManifestInjector manifestInjector) {
+    this.declarativeManifestImageVersionService = declarativeManifestImageVersionService;
     this.connectorBuilderService = connectorBuilderService;
     this.workspaceService = workspaceService;
     this.manifestInjector = manifestInjector;
@@ -70,7 +75,7 @@ public class DeclarativeSourceDefinitionsHandler {
     if (requestBody.getSetAsActiveManifest()) {
       connectorBuilderService.createDeclarativeManifestAsActiveVersion(declarativeManifest,
           manifestInjector.createConfigInjection(requestBody.getSourceDefinitionId(), declarativeManifest.getManifest()),
-          manifestInjector.createDeclarativeManifestConnectorSpecification(spec), manifestInjector.getCdkVersion(declarativeManifest.getManifest()));
+          manifestInjector.createDeclarativeManifestConnectorSpecification(spec), getImageVersionForManifest(declarativeManifest));
     } else {
       connectorBuilderService.insertDeclarativeManifest(declarativeManifest);
     }
@@ -91,7 +96,7 @@ public class DeclarativeSourceDefinitionsHandler {
         declarativeManifest.getVersion(),
         manifestInjector.createConfigInjection(declarativeManifest.getActorDefinitionId(), declarativeManifest.getManifest()),
         manifestInjector.createDeclarativeManifestConnectorSpecification(declarativeManifest.getSpec()),
-        manifestInjector.getCdkVersion(declarativeManifest.getManifest()));
+        getImageVersionForManifest(declarativeManifest));
   }
 
   private Collection<Long> fetchAvailableManifestVersions(final UUID sourceDefinitionId) throws IOException {
@@ -120,6 +125,12 @@ public class DeclarativeSourceDefinitionsHandler {
         .map(manifest -> new DeclarativeManifestVersionRead().description(
             manifest.getDescription()).version(manifest.getVersion()).isActive(manifest.getVersion().equals(activeVersion.getVersion())))
         .sorted(Comparator.comparingLong(DeclarativeManifestVersionRead::getVersion)).collect(Collectors.toList()));
+  }
+
+  private String getImageVersionForManifest(final DeclarativeManifest declarativeManifest) {
+    final Version manifestVersion = manifestInjector.getCdkVersion(declarativeManifest.getManifest());
+    return declarativeManifestImageVersionService
+        .getImageVersionByMajorVersion(Integer.parseInt(manifestVersion.getMajorVersion()));
   }
 
 }

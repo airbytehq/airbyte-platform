@@ -8,6 +8,7 @@ import static io.airbyte.commons.version.AirbyteProtocolVersion.DEFAULT_AIRBYTE_
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import io.airbyte.commons.version.Version;
 import io.airbyte.config.ActorDefinitionConfigInjection;
 import io.airbyte.protocol.models.ConnectorSpecification;
 import jakarta.inject.Singleton;
@@ -70,8 +71,8 @@ public class DeclarativeSourceManifestInjector {
    * @param manifest to extract the CDK version from
    * @return the CDK version
    */
-  public String getCdkVersion(final JsonNode manifest) {
-    return manifest.get("version").asText();
+  public Version getCdkVersion(final JsonNode manifest) {
+    return new Version(manifest.get("version").asText());
   }
 
 }
