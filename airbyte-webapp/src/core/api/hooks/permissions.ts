@@ -132,25 +132,19 @@ let currentIsInstanceAdminEnabled = false;
 
 export const useIsInstanceAdminEnabled = () => {
   const showInstanceAdminWarning = useFeature(FeatureItem.ShowAdminWarningInWorkspace); // we only want to use the "viewonly" mode if we in an env that shows the banner (ie: for now, cloud only)
-  return useSuspenseQuery([SCOPE_INSTANCE, "isInstanceAdminEnabled"], () => currentIsInstanceAdminEnabled, {
-    initialData: showInstanceAdminWarning ? currentIsInstanceAdminEnabled : true,
-    cacheTime: Infinity,
-  });
+  return useSuspenseQuery(
+    [SCOPE_INSTANCE, "isInstanceAdminEnabled"],
+    async () => (showInstanceAdminWarning ? currentIsInstanceAdminEnabled : true),
+    {
+      cacheTime: Infinity,
+    }
+  );
 };
 
 export const useSetIsInstanceAdminEnabled = () => {
   const queryClient = useQueryClient();
   return (isEnabled: boolean) => {
-    /*
-    react-query docs for setQueryData say
-
-    > If the query is not utilized by a query hook in the default cacheTime of 5 minutes,
-    > the query will be garbage collected.
-
-    unclear if the actually uses the default vs the cacheTime of Infinity used by the query, so
-    just in case we'll track the current value and return it from the query function if its called again
-    */
     currentIsInstanceAdminEnabled = isEnabled;
-    queryClient.setQueryData([SCOPE_INSTANCE, "isInstanceAdminEnabled"], isEnabled);
+    queryClient.invalidateQueries([SCOPE_INSTANCE, "isInstanceAdminEnabled"]);
   };
 };
