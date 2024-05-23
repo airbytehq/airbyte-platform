@@ -1,7 +1,9 @@
 package io.airbyte.config.persistence
 
+import io.airbyte.config.RefreshStream
 import io.airbyte.config.persistence.domain.StreamRefresh
 import io.airbyte.db.instance.configs.jooq.generated.enums.RefreshType
+import io.airbyte.protocol.models.StreamDescriptor
 import io.micronaut.context.env.Environment
 import io.micronaut.test.extensions.junit5.annotation.MicronautTest
 import org.junit.jupiter.api.AfterEach
@@ -146,5 +148,31 @@ class StreamRefreshesRepositoryTest : RepositoryTestSetup() {
       assertEquals(streamRefresh1.streamName, (it.streamName))
       assertEquals(streamRefresh1.streamNamespace, it.streamNamespace)
     }
+  }
+
+  @Test
+  fun `saveStreamsToRefresh generates the expected save call`() {
+    val streams =
+      listOf(
+        StreamDescriptor().withName("stream1").withNamespace("ns1"),
+        StreamDescriptor().withName("stream2").withNamespace("ns2"),
+      )
+
+    val repository = getRepository(StreamRefreshesRepository::class.java)
+    repository.saveStreamsToRefresh(connectionId1, streams, RefreshStream.RefreshType.TRUNCATE)
+    val refreshes: List<StreamRefresh> = repository.findByConnectionId(connectionId1)
+
+    val expectedRefreshType = RefreshType.TRUNCATE
+    assertEquals(
+      setOf(
+        StreamRefresh(null, connectionId1, "stream1", "ns1", null, expectedRefreshType),
+        StreamRefresh(null, connectionId1, "stream2", "ns2", null, expectedRefreshType),
+      ),
+      refreshes.map {
+        it.id = null
+        it.createdAt = null
+        it
+      }.toSet(),
+    )
   }
 }

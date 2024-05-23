@@ -3,11 +3,12 @@ package io.airbyte.commons.server.handlers
 import io.airbyte.api.model.generated.ConnectionStream
 import io.airbyte.api.model.generated.RefreshMode
 import io.airbyte.commons.server.scheduler.EventRunner
+import io.airbyte.config.RefreshStream
 import io.airbyte.config.persistence.StreamRefreshesRepository
 import io.airbyte.config.persistence.domain.StreamRefresh
+import io.airbyte.config.persistence.saveStreamsToRefresh
 import io.airbyte.data.services.ConnectionService
 import io.airbyte.data.services.WorkspaceService
-import io.airbyte.db.instance.configs.jooq.generated.enums.RefreshType
 import io.airbyte.featureflag.ActivateRefreshes
 import io.airbyte.featureflag.Connection
 import io.airbyte.featureflag.FeatureFlagClient
@@ -29,7 +30,7 @@ class StreamRefreshesHandler(
     streamRefreshesRepository.deleteByConnectionId(connectionId)
   }
 
-  open fun createRefreshesForConnection(
+  fun createRefreshesForConnection(
     connectionId: UUID,
     refreshMode: RefreshMode,
     streams: List<ConnectionStream>,
@@ -64,7 +65,7 @@ class StreamRefreshesHandler(
     return true
   }
 
-  open fun getRefreshesForConnection(connectionId: UUID): List<StreamRefresh> {
+  fun getRefreshesForConnection(connectionId: UUID): List<StreamRefresh> {
     return streamRefreshesRepository.findByConnectionId(connectionId)
   }
 
@@ -73,13 +74,11 @@ class StreamRefreshesHandler(
     refreshMode: RefreshMode,
     streams: List<StreamDescriptor>,
   ) {
-    val streamRefreshes: List<StreamRefresh> = streamDescriptorsToStreamRefreshes(connectionId, refreshMode, streams)
-
-    streamRefreshesRepository.saveAll(streamRefreshes)
+    streamRefreshesRepository.saveStreamsToRefresh(connectionId, streams, refreshMode.toConfigObject())
   }
 
   companion object {
-    open fun connectionStreamsToStreamDescriptors(connectionStreams: List<ConnectionStream>): List<StreamDescriptor> {
+    fun connectionStreamsToStreamDescriptors(connectionStreams: List<ConnectionStream>): List<StreamDescriptor> {
       return connectionStreams.map { connectionStream ->
         StreamDescriptor()
           .withName(connectionStream.streamName)
@@ -87,25 +86,10 @@ class StreamRefreshesHandler(
       }
     }
 
-    open fun streamDescriptorsToStreamRefreshes(
-      connectionId: UUID,
-      refreshMode: RefreshMode,
-      streamDescriptors: List<StreamDescriptor>,
-    ): List<StreamRefresh> {
-      return streamDescriptors.map { streamDescriptor ->
-        StreamRefresh(
-          connectionId = connectionId,
-          streamName = streamDescriptor.name,
-          streamNamespace = streamDescriptor.namespace,
-          refreshType = refreshMode.toDBO(),
-        )
-      }
-    }
-
-    private fun RefreshMode.toDBO(): RefreshType =
+    private fun RefreshMode.toConfigObject(): RefreshStream.RefreshType =
       when (this) {
-        RefreshMode.MERGE -> RefreshType.MERGE
-        RefreshMode.TRUNCATE -> RefreshType.TRUNCATE
+        RefreshMode.MERGE -> RefreshStream.RefreshType.MERGE
+        RefreshMode.TRUNCATE -> RefreshStream.RefreshType.TRUNCATE
       }
   }
 }

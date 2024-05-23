@@ -37,6 +37,7 @@ import io.airbyte.api.model.generated.ConnectionState;
 import io.airbyte.api.model.generated.ConnectionStateType;
 import io.airbyte.api.model.generated.ConnectionStatus;
 import io.airbyte.api.model.generated.ConnectionUpdate;
+import io.airbyte.api.model.generated.DestinationDefinitionRead;
 import io.airbyte.api.model.generated.DestinationRead;
 import io.airbyte.api.model.generated.DestinationSyncMode;
 import io.airbyte.api.model.generated.FieldAdd;
@@ -88,6 +89,7 @@ import io.airbyte.config.ActorCatalog;
 import io.airbyte.config.ActorCatalogFetchEvent;
 import io.airbyte.config.ActorDefinitionVersion;
 import io.airbyte.config.DestinationConnection;
+import io.airbyte.config.RefreshStream.RefreshType;
 import io.airbyte.config.SourceConnection;
 import io.airbyte.config.StandardDestinationDefinition;
 import io.airbyte.config.StandardSourceDefinition;
@@ -107,6 +109,7 @@ import io.airbyte.data.services.DestinationService;
 import io.airbyte.data.services.SecretPersistenceConfigService;
 import io.airbyte.data.services.SourceService;
 import io.airbyte.data.services.WorkspaceService;
+import io.airbyte.featureflag.ActivateRefreshes;
 import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.featureflag.TestClient;
 import io.airbyte.featureflag.UseIconUrlInApiResponse;
@@ -133,6 +136,8 @@ import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.ArgumentCaptor;
 import org.mockito.InOrder;
 
@@ -142,6 +147,8 @@ class WebBackendConnectionsHandlerTest {
   private OperationsHandler operationsHandler;
   private SchedulerHandler schedulerHandler;
   private StateHandler stateHandler;
+  private DestinationHandler destinationHandler;
+  private DestinationDefinitionsHandler destinationDefinitionsHandler;
   private WebBackendConnectionsHandler wbHandler;
   private SourceRead sourceRead;
   private ConnectionRead connectionRead;
@@ -197,7 +204,8 @@ class WebBackendConnectionsHandlerTest {
     when(featureFlagClient.boolVariation(UseIconUrlInApiResponse.INSTANCE, new Workspace(ANONYMOUS)))
         .thenReturn(true);
 
-    final DestinationHandler destinationHandler = new DestinationHandler(configRepository,
+    destinationDefinitionsHandler = mock(DestinationDefinitionsHandler.class);
+    destinationHandler = new DestinationHandler(configRepository,
         validator,
         connectionsHandler,
         uuidGenerator,
@@ -226,6 +234,7 @@ class WebBackendConnectionsHandlerTest {
         connectionsHandler,
         stateHandler,
         sourceHandler,
+        destinationDefinitionsHandler,
         destinationHandler,
         jobHistoryHandler,
         schedulerHandler,
@@ -853,7 +862,7 @@ class WebBackendConnectionsHandlerTest {
     when(stateHandler.getState(connectionIdRequestBody)).thenReturn(new ConnectionState().stateType(ConnectionStateType.LEGACY));
 
     when(connectionsHandler.getConnection(expected.getConnectionId())).thenReturn(
-        new ConnectionRead().connectionId(expected.getConnectionId()));
+        new ConnectionRead().connectionId(expected.getConnectionId()).sourceId(expected.getSourceId()));
     when(connectionsHandler.updateConnection(any())).thenReturn(
         new ConnectionRead()
             .connectionId(expected.getConnectionId())
@@ -913,6 +922,7 @@ class WebBackendConnectionsHandlerTest {
     when(connectionsHandler.getConnection(expected.getConnectionId())).thenReturn(
         new ConnectionRead()
             .connectionId(expected.getConnectionId())
+            .sourceId(expected.getSourceId())
             .operationIds(connectionRead.getOperationIds())
             .breakingChange(false));
     when(connectionsHandler.updateConnection(any())).thenReturn(
@@ -937,8 +947,15 @@ class WebBackendConnectionsHandlerTest {
     verify(operationsHandler, times(1)).updateOperation(operationUpdate);
   }
 
-  @Test
-  void testUpdateConnectionWithUpdatedSchemaPerStream() throws JsonValidationException, ConfigNotFoundException, IOException {
+  @ParameterizedTest
+  @ValueSource(booleans = {true, false})
+  void testUpdateConnectionWithUpdatedSchemaPerStream(final Boolean useRefresh) throws JsonValidationException, ConfigNotFoundException, IOException {
+    when(featureFlagClient.boolVariation(eq(ActivateRefreshes.INSTANCE), any())).thenReturn(useRefresh);
+    if (useRefresh) {
+      when(destinationDefinitionsHandler.getDestinationDefinition(any()))
+          .thenReturn(new DestinationDefinitionRead().supportRefreshes(true));
+    }
+
     final WebBackendConnectionUpdate updateBody = new WebBackendConnectionUpdate()
         .namespaceDefinition(expected.getNamespaceDefinition())
         .namespaceFormat(expected.getNamespaceFormat())
@@ -1003,11 +1020,20 @@ class WebBackendConnectionsHandlerTest {
     verify(schedulerHandler, times(0)).syncConnection(connectionId);
     verify(connectionsHandler, times(1)).updateConnection(any());
     final InOrder orderVerifier = inOrder(eventRunner);
-    orderVerifier.verify(eventRunner, times(1)).resetConnectionAsync(connectionId.getConnectionId(),
-        List.of(new io.airbyte.protocol.models.StreamDescriptor().withName("addStream"),
-            new io.airbyte.protocol.models.StreamDescriptor().withName("updateStream"),
-            new io.airbyte.protocol.models.StreamDescriptor().withName("configUpdateStream"),
-            new io.airbyte.protocol.models.StreamDescriptor().withName("removeStream")));
+    if (useRefresh) {
+      orderVerifier.verify(eventRunner, times(1)).refreshConnectionAsync(connectionId.getConnectionId(),
+          List.of(new io.airbyte.protocol.models.StreamDescriptor().withName("addStream"),
+              new io.airbyte.protocol.models.StreamDescriptor().withName("updateStream"),
+              new io.airbyte.protocol.models.StreamDescriptor().withName("configUpdateStream"),
+              new io.airbyte.protocol.models.StreamDescriptor().withName("removeStream")),
+          RefreshType.MERGE);
+    } else {
+      orderVerifier.verify(eventRunner, times(1)).resetConnectionAsync(connectionId.getConnectionId(),
+          List.of(new io.airbyte.protocol.models.StreamDescriptor().withName("addStream"),
+              new io.airbyte.protocol.models.StreamDescriptor().withName("updateStream"),
+              new io.airbyte.protocol.models.StreamDescriptor().withName("configUpdateStream"),
+              new io.airbyte.protocol.models.StreamDescriptor().withName("removeStream")));
+    }
   }
 
   @Test
@@ -1081,7 +1107,7 @@ class WebBackendConnectionsHandlerTest {
         .thenReturn(ConnectionHelpers.generateBasicConfiguredAirbyteCatalog());
     when(operationsHandler.listOperationsForConnection(any())).thenReturn(operationReadList);
     when(connectionsHandler.getConnection(expected.getConnectionId())).thenReturn(
-        new ConnectionRead().connectionId(expected.getConnectionId()));
+        new ConnectionRead().connectionId(expected.getConnectionId()).sourceId(expected.getSourceId()));
     final ConnectionRead connectionRead = new ConnectionRead()
         .connectionId(expected.getConnectionId())
         .sourceId(expected.getSourceId())

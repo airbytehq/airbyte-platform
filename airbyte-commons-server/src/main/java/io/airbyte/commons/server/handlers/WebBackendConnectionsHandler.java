@@ -19,6 +19,7 @@ import io.airbyte.api.model.generated.ConnectionIdRequestBody;
 import io.airbyte.api.model.generated.ConnectionRead;
 import io.airbyte.api.model.generated.ConnectionStateType;
 import io.airbyte.api.model.generated.ConnectionUpdate;
+import io.airbyte.api.model.generated.DestinationDefinitionIdRequestBody;
 import io.airbyte.api.model.generated.DestinationIdRequestBody;
 import io.airbyte.api.model.generated.DestinationRead;
 import io.airbyte.api.model.generated.DestinationSnippetRead;
@@ -57,13 +58,18 @@ import io.airbyte.commons.server.scheduler.EventRunner;
 import io.airbyte.config.ActorCatalog;
 import io.airbyte.config.ActorCatalogFetchEvent;
 import io.airbyte.config.ActorDefinitionVersion;
+import io.airbyte.config.RefreshStream.RefreshType;
 import io.airbyte.config.StandardSourceDefinition;
 import io.airbyte.config.StandardSync;
 import io.airbyte.config.persistence.ActorDefinitionVersionHelper;
 import io.airbyte.config.persistence.ConfigNotFoundException;
 import io.airbyte.config.persistence.ConfigRepository;
 import io.airbyte.config.persistence.ConfigRepository.StandardSyncQuery;
+import io.airbyte.featureflag.ActivateRefreshes;
+import io.airbyte.featureflag.Connection;
 import io.airbyte.featureflag.FeatureFlagClient;
+import io.airbyte.featureflag.Multi;
+import io.airbyte.featureflag.Workspace;
 import io.airbyte.metrics.lib.ApmTraceUtils;
 import io.airbyte.metrics.lib.MetricTags;
 import io.airbyte.persistence.job.models.JobStatusSummary;
@@ -95,6 +101,7 @@ public class WebBackendConnectionsHandler {
   private final ConnectionsHandler connectionsHandler;
   private final StateHandler stateHandler;
   private final SourceHandler sourceHandler;
+  private final DestinationDefinitionsHandler destinationDefinitionsHandler;
   private final DestinationHandler destinationHandler;
   private final JobHistoryHandler jobHistoryHandler;
   private final SchedulerHandler schedulerHandler;
@@ -109,6 +116,7 @@ public class WebBackendConnectionsHandler {
   public WebBackendConnectionsHandler(final ConnectionsHandler connectionsHandler,
                                       final StateHandler stateHandler,
                                       final SourceHandler sourceHandler,
+                                      final DestinationDefinitionsHandler destinationDefinitionsHandler,
                                       final DestinationHandler destinationHandler,
                                       final JobHistoryHandler jobHistoryHandler,
                                       final SchedulerHandler schedulerHandler,
@@ -120,6 +128,7 @@ public class WebBackendConnectionsHandler {
     this.connectionsHandler = connectionsHandler;
     this.stateHandler = stateHandler;
     this.sourceHandler = sourceHandler;
+    this.destinationDefinitionsHandler = destinationDefinitionsHandler;
     this.destinationHandler = destinationHandler;
     this.jobHistoryHandler = jobHistoryHandler;
     this.schedulerHandler = schedulerHandler;
@@ -568,6 +577,7 @@ public class WebBackendConnectionsHandler {
     final UUID connectionId = webBackendConnectionPatch.getConnectionId();
     final ConnectionRead originalConnectionRead = connectionsHandler.getConnection(connectionId);
     boolean breakingChange = originalConnectionRead.getBreakingChange() != null && originalConnectionRead.getBreakingChange();
+    final SourceRead source = getSourceRead(originalConnectionRead.getSourceId());
 
     // If there have been changes to the sync catalog, check whether these changes result in or fix a
     // broken connection
@@ -583,7 +593,6 @@ public class WebBackendConnectionsHandler {
             Jsons.object(mostRecentActorCatalog.get().getCatalog(), io.airbyte.protocol.models.AirbyteCatalog.class);
         final StandardSourceDefinition sourceDefinition =
             configRepositoryDoNotUse.getSourceDefinitionFromSource(originalConnectionRead.getSourceId());
-        final SourceRead source = getSourceRead(originalConnectionRead.getSourceId());
         final ActorDefinitionVersion sourceVersion = actorDefinitionVersionHelper.getSourceVersion(
             sourceDefinition,
             source.getWorkspaceId(),
@@ -610,7 +619,7 @@ public class WebBackendConnectionsHandler {
     final ConnectionRead updatedConnectionRead = connectionsHandler.updateConnection(connectionPatch);
 
     // detect if any streams need to be reset based on the patch and initial catalog, if so, reset them
-    resetStreamsIfNeeded(webBackendConnectionPatch, oldConfiguredCatalog, updatedConnectionRead, originalConnectionRead);
+    resetStreamsIfNeeded(webBackendConnectionPatch, oldConfiguredCatalog, updatedConnectionRead, originalConnectionRead, source.getWorkspaceId());
     /*
      * This catalog represents the full catalog that was used to create the configured catalog. It will
      * have all streams that were present at the time. It will have no configuration set.
@@ -636,8 +645,9 @@ public class WebBackendConnectionsHandler {
   private void resetStreamsIfNeeded(final WebBackendConnectionUpdate webBackendConnectionPatch,
                                     final ConfiguredAirbyteCatalog oldConfiguredCatalog,
                                     final ConnectionRead updatedConnectionRead,
-                                    final ConnectionRead oldConnectionRead)
-      throws JsonValidationException {
+                                    final ConnectionRead oldConnectionRead,
+                                    final UUID workspaceId)
+      throws JsonValidationException, ConfigNotFoundException, IOException {
 
     final UUID connectionId = webBackendConnectionPatch.getConnectionId();
     final Boolean skipReset = webBackendConnectionPatch.getSkipReset() != null ? webBackendConnectionPatch.getSkipReset() : false;
@@ -657,9 +667,23 @@ public class WebBackendConnectionsHandler {
           allStreamToReset.stream().map(ProtocolConverters::streamDescriptorToProtocol).toList();
 
       if (!streamsToReset.isEmpty()) {
-        eventRunner.resetConnectionAsync(
-            connectionId,
-            streamsToReset);
+        final boolean isRefreshEnabled = featureFlagClient.boolVariation(ActivateRefreshes.INSTANCE, new Multi(List.of(
+            new Connection(connectionId),
+            new Workspace(workspaceId))));
+        final var destinationRead =
+            destinationHandler.getDestination(new DestinationIdRequestBody().destinationId(oldConnectionRead.getDestinationId()));
+        final var destinationDef = destinationDefinitionsHandler
+            .getDestinationDefinition(new DestinationDefinitionIdRequestBody().destinationDefinitionId(destinationRead.getDestinationDefinitionId()));
+        if (isRefreshEnabled && destinationDef.getSupportRefreshes()) {
+          eventRunner.refreshConnectionAsync(
+              connectionId,
+              streamsToReset,
+              RefreshType.MERGE);
+        } else {
+          eventRunner.resetConnectionAsync(
+              connectionId,
+              streamsToReset);
+        }
       }
     }
   }

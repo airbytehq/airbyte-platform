@@ -20,9 +20,12 @@ import io.airbyte.config.ConnectorJobOutput;
 import io.airbyte.config.JobCheckConnectionConfig;
 import io.airbyte.config.JobDiscoverCatalogConfig;
 import io.airbyte.config.JobGetSpecConfig;
+import io.airbyte.config.RefreshStream.RefreshType;
 import io.airbyte.config.StandardCheckConnectionInput;
 import io.airbyte.config.StandardDiscoverCatalogInput;
 import io.airbyte.config.WorkloadPriority;
+import io.airbyte.config.persistence.StreamRefreshesRepository;
+import io.airbyte.config.persistence.StreamRefreshesRepositoryKt;
 import io.airbyte.config.persistence.StreamResetPersistence;
 import io.airbyte.metrics.lib.MetricAttribute;
 import io.airbyte.metrics.lib.MetricClient;
@@ -77,6 +80,7 @@ public class TemporalClient {
   private final WorkflowClientWrapped workflowClientWrapped;
   private final WorkflowServiceStubsWrapped serviceStubsWrapped;
   private final StreamResetPersistence streamResetPersistence;
+  private final StreamRefreshesRepository streamRefreshesRepository;
   private final ConnectionManagerUtils connectionManagerUtils;
   private final NotificationClient notificationClient;
   private final StreamResetRecordsHelper streamResetRecordsHelper;
@@ -86,6 +90,7 @@ public class TemporalClient {
                         final WorkflowClientWrapped workflowClientWrapped,
                         final WorkflowServiceStubsWrapped serviceStubsWrapped,
                         final StreamResetPersistence streamResetPersistence,
+                        final StreamRefreshesRepository streamRefreshesRepository,
                         final ConnectionManagerUtils connectionManagerUtils,
                         final NotificationClient notificationClient,
                         final StreamResetRecordsHelper streamResetRecordsHelper,
@@ -94,6 +99,7 @@ public class TemporalClient {
     this.workflowClientWrapped = workflowClientWrapped;
     this.serviceStubsWrapped = serviceStubsWrapped;
     this.streamResetPersistence = streamResetPersistence;
+    this.streamRefreshesRepository = streamRefreshesRepository;
     this.connectionManagerUtils = connectionManagerUtils;
     this.notificationClient = notificationClient;
     this.streamResetRecordsHelper = streamResetRecordsHelper;
@@ -302,6 +308,21 @@ public class TemporalClient {
       streamResetPersistence.createStreamResets(connectionId, streamsToReset);
       connectionManagerUtils.signalWorkflowAndRepairIfNecessary(connectionId, workflow -> workflow::resetConnection);
     } catch (IOException | DeletedWorkflowException e) {
+      log.error("Not able to properly create a reset");
+      throw new RuntimeException(e);
+    }
+  }
+
+  public void refreshConnectionAsync(final UUID connectionId,
+                                     final List<StreamDescriptor> streamsToRefresh,
+                                     final RefreshType refreshType) {
+    try {
+      StreamRefreshesRepositoryKt.saveStreamsToRefresh(streamRefreshesRepository, connectionId, streamsToRefresh, refreshType);
+      // This isn't actually doing a reset. workflow::resetConnection will cancel the current run if any
+      // and cause the workflow to run immediately. The next run will be a refresh because we just saved a
+      // refresh configuration.
+      connectionManagerUtils.signalWorkflowAndRepairIfNecessary(connectionId, workflow -> workflow::resetConnection);
+    } catch (DeletedWorkflowException e) {
       log.error("Not able to properly create a reset");
       throw new RuntimeException(e);
     }

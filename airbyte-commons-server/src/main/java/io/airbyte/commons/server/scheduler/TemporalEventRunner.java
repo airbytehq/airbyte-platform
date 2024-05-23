@@ -7,6 +7,7 @@ package io.airbyte.commons.server.scheduler;
 import datadog.trace.api.Trace;
 import io.airbyte.commons.temporal.TemporalClient;
 import io.airbyte.commons.temporal.TemporalClient.ManualOperationResult;
+import io.airbyte.config.RefreshStream.RefreshType;
 import io.airbyte.protocol.models.StreamDescriptor;
 import java.util.List;
 import java.util.Set;
@@ -44,6 +45,14 @@ public class TemporalEventRunner implements EventRunner {
   public ManualOperationResult resetConnection(final UUID connectionId,
                                                final List<StreamDescriptor> streamsToReset) {
     return temporalClient.resetConnection(connectionId, streamsToReset);
+  }
+
+  @Override
+  @Trace
+  public void refreshConnectionAsync(final UUID connectionId,
+                                     final List<StreamDescriptor> streamsToRefresh,
+                                     final RefreshType refreshType) {
+    temporalClient.refreshConnectionAsync(connectionId, streamsToRefresh, refreshType);
   }
 
   @Override
