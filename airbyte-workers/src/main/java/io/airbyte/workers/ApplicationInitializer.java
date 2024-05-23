@@ -16,7 +16,6 @@ import io.airbyte.config.helpers.LogConfigs;
 import io.airbyte.micronaut.temporal.TemporalProxyHelper;
 import io.airbyte.workers.process.KubePortManagerSingleton;
 import io.airbyte.workers.temporal.check.connection.CheckConnectionWorkflowImpl;
-import io.airbyte.workers.temporal.converter.AirbyteTemporalDataConverter;
 import io.airbyte.workers.temporal.discover.catalog.DiscoverCatalogWorkflowImpl;
 import io.airbyte.workers.temporal.scheduling.ConnectionManagerWorkflowImpl;
 import io.airbyte.workers.temporal.scheduling.NotificationWorkflowImpl;
@@ -31,7 +30,6 @@ import io.micronaut.context.event.ApplicationEventListener;
 import io.micronaut.core.util.StringUtils;
 import io.micronaut.discovery.event.ServiceReadyEvent;
 import io.micronaut.scheduling.TaskExecutors;
-import io.temporal.common.converter.GlobalDataConverter;
 import io.temporal.serviceclient.WorkflowServiceStubs;
 import io.temporal.worker.NonDeterministicException;
 import io.temporal.worker.Worker;
@@ -139,15 +137,12 @@ public class ApplicationInitializer implements ApplicationEventListener<ServiceR
   private String discoverTaskQueue;
   @Inject
   private Environment environment;
-  @Inject
-  private AirbyteTemporalDataConverter airbyteTemporalDataConverter;
 
   @Override
   public void onApplicationEvent(final ServiceReadyEvent event) {
     try {
       configureTracer();
       initializeCommonDependencies();
-      registerTemporalConverters();
 
       registerWorkerFactory(workerFactory,
           new MaxWorkersConfig(maxCheckWorkers, maxDiscoverWorkers, maxSpecWorkers,
@@ -161,15 +156,6 @@ public class ApplicationInitializer implements ApplicationEventListener<ServiceR
       log.error("Unable to initialize application.", e);
       throw new IllegalStateException(e);
     }
-  }
-
-  private void registerTemporalConverters() {
-    /*
-     * Override the data converter registered with Temporal so that we can control the configuration of
-     * the Jackson {@link ObjectMapper} used by Temporal to perform SerDe on the Airbyte payloads stored
-     * in the Temporal workflow history.
-     */
-    GlobalDataConverter.register(airbyteTemporalDataConverter);
   }
 
   private void configureTracer() {

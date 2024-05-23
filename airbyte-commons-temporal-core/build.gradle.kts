@@ -2,9 +2,15 @@ plugins {
   id("io.airbyte.gradle.jvm.lib")
   id("io.airbyte.gradle.publish")
   kotlin("jvm")
+  kotlin("kapt")
 }
 
 dependencies {
+  kapt(platform(libs.micronaut.platform))
+  kapt(libs.bundles.micronaut.annotation.processor)
+
+  api(libs.bundles.micronaut.annotation)
+  
   implementation(libs.bundles.temporal)
   implementation(libs.failsafe)
 

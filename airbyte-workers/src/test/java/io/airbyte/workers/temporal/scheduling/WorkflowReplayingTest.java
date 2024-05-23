@@ -7,8 +7,8 @@ package io.airbyte.workers.temporal.scheduling;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
+import io.airbyte.commons.temporal.converter.AirbyteTemporalDataConverter;
 import io.airbyte.micronaut.temporal.TemporalProxyHelper;
-import io.airbyte.workers.temporal.converter.AirbyteTemporalDataConverter;
 import io.airbyte.workers.temporal.sync.SyncWorkflowImpl;
 import io.micronaut.context.BeanRegistration;
 import io.micronaut.inject.BeanIdentifier;
