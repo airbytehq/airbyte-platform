@@ -8515,51 +8515,57 @@ components:
         failureReason:
           $ref: "#/components/schemas/FailureReason"
     ConnectionSyncProgressRead:
-      type: array
-      items:
-        $ref: "#/components/schemas/ConnectionSyncProgressReadItem"
-    ConnectionSyncProgressReadItem:
       type: object
       required:
-        - streamName
-        - streamNamespace
-        - recordsExtracted
-        - recordsLoaded
-        - bytesExtracted
-        - bytesLoaded
-        - syncStartedAt
-        - jobId
+        - connectionId
+        - streams
       properties:
+        connectionId:
+          type: string
+          format: uuid
         jobId:
           type: integer
           format: int64
-        streamName:
-          type: string
-        streamNamespace:
-          type: string
-        recordsExtracted:
+        streams:
+          type: array
+          items:
+            $ref: "#/components/schemas/StreamSyncProgressReadItem"
+        recordsEmitted:
           type: integer
           format: int64
-        bytesExtracted:
+        recordsCommitted:
           type: integer
           format: int64
-        recordsLoaded:
+        bytesEmitted:
           type: integer
           format: int64
-        bytesLoaded:
+        bytesCommitted:
           type: integer
           format: int64
         syncStartedAt:
           type: integer
           format: int64
-        progressPercentage:
-          type: integer
-          format: int32
-        lastCommittedTimestamp:
+    StreamSyncProgressReadItem:
+      type: object
+      required:
+        - streamName
+      properties:
+        streamName:
+          type: string
+        streamNamespace:
+          type: string
+        recordsEmitted:
           type: integer
           format: int64
-        lastCursorValue:
-          type: string
+        bytesEmitted:
+          type: integer
+          format: int64
+        recordsCommitted:
+          type: integer
+          format: int64
+        bytesCommitted:
+          type: integer
+          format: int64
     ConnectionUptimeHistoryRead:
       type: array
       items:

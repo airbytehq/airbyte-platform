@@ -9,7 +9,7 @@ import {
 } from "components/connection/StreamStatus/streamStatusUtils";
 
 import { useListStreamsStatuses, useGetConnection, useGetConnectionSyncProgress } from "core/api";
-import { ConnectionSyncProgressReadItem, StreamStatusJobType, StreamStatusRead } from "core/api/types/AirbyteClient";
+import { StreamSyncProgressReadItem, StreamStatusJobType, StreamStatusRead } from "core/api/types/AirbyteClient";
 import { useSchemaChanges } from "hooks/connection/useSchemaChanges";
 import { useExperiment } from "hooks/services/Experiment";
 
@@ -109,9 +109,9 @@ export const useStreamsStatuses = (
         streamStatus.status = connectionStatus.status;
         streamStatus.isRunning = connectionStatus.isRunning;
         streamStatus.hasRecordsExtracted =
-          (connectionSyncProgress?.filter(
-            (progress: ConnectionSyncProgressReadItem) => progress.streamName === enabledStream.stream.name
-          )[0]?.recordsExtracted ?? 0) > 0;
+          (connectionSyncProgress?.streams.filter(
+            (progress: StreamSyncProgressReadItem) => progress.streamName === enabledStream.stream.name
+          )[0]?.recordsEmitted ?? 0) > 0;
         streamStatus.lastSuccessfulSyncAt = connectionStatus.lastSuccessfulSync
           ? connectionStatus.lastSuccessfulSync * 1000 // unix timestamp in seconds -> milliseconds
           : undefined;
@@ -138,9 +138,9 @@ export const useStreamsStatuses = (
         const streamKey = getStreamKey(enabledStream.stream);
         const mappedStreamStatus = streamStatuses.get(streamKey);
         const hasRecordsExtracted =
-          (connectionSyncProgress?.find(
-            (progress: ConnectionSyncProgressReadItem) => progress.streamName === enabledStream.stream.name
-          )?.recordsExtracted ?? 0) > 0;
+          (connectionSyncProgress?.streams.find(
+            (progress: StreamSyncProgressReadItem) => progress.streamName === enabledStream.stream.name
+          )?.recordsEmitted ?? 0) > 0;
         if (mappedStreamStatus) {
           mappedStreamStatus.relevantHistory.sort(sortStreamStatuses); // put the histories are in order
           const detectedStatus = computeStreamStatus({

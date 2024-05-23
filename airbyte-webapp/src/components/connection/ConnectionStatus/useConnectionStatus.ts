@@ -106,7 +106,9 @@ export const useConnectionStatus = (connectionId: string): UIConnectionStatus =>
   }
 
   if (isRunning && showSyncProgress) {
-    const hasRecordsExtracted = syncProgress?.some((progress) => progress.recordsExtracted > 0);
+    const hasRecordsExtracted = syncProgress?.streams.some(
+      (progress) => progress.recordsEmitted && progress.recordsEmitted > 0
+    );
 
     return {
       status: hasRecordsExtracted ? ConnectionStatusIndicatorStatus.Syncing : ConnectionStatusIndicatorStatus.Queued,

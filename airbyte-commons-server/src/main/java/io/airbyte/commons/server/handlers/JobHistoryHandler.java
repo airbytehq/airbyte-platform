@@ -14,7 +14,7 @@ import io.airbyte.api.model.generated.AttemptInfoRead;
 import io.airbyte.api.model.generated.AttemptNormalizationStatusReadList;
 import io.airbyte.api.model.generated.ConnectionIdRequestBody;
 import io.airbyte.api.model.generated.ConnectionRead;
-import io.airbyte.api.model.generated.ConnectionSyncProgressReadItem;
+import io.airbyte.api.model.generated.ConnectionSyncProgressRead;
 import io.airbyte.api.model.generated.DestinationDefinitionIdRequestBody;
 import io.airbyte.api.model.generated.DestinationDefinitionRead;
 import io.airbyte.api.model.generated.DestinationIdRequestBody;
@@ -34,6 +34,8 @@ import io.airbyte.api.model.generated.SourceDefinitionIdRequestBody;
 import io.airbyte.api.model.generated.SourceDefinitionRead;
 import io.airbyte.api.model.generated.SourceIdRequestBody;
 import io.airbyte.api.model.generated.SourceRead;
+import io.airbyte.api.model.generated.StreamStats;
+import io.airbyte.api.model.generated.StreamSyncProgressReadItem;
 import io.airbyte.commons.enums.Enums;
 import io.airbyte.commons.server.converters.ApiPojoConverters;
 import io.airbyte.commons.server.converters.JobConverter;
@@ -70,6 +72,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
 
@@ -309,12 +312,8 @@ public class JobHistoryHandler {
     return nonTerminalSyncJobsForConnection.stream().map(JobConverter::getJobRead).findFirst();
   }
 
-  public List<ConnectionSyncProgressReadItem> getConnectionSyncProgress(final ConnectionIdRequestBody connectionIdRequestBody) throws IOException {
+  public ConnectionSyncProgressRead getConnectionSyncProgress(final ConnectionIdRequestBody connectionIdRequestBody) throws IOException {
     final List<Job> jobs = jobPersistence.getRunningSyncJobForConnections(List.of(connectionIdRequestBody.getConnectionId()));
-
-    if (jobs.isEmpty()) {
-      return Collections.emptyList();
-    }
 
     final List<JobWithAttemptsRead> jobReads = jobs.stream()
         .map(JobConverter::getJobWithAttemptsRead)
@@ -322,18 +321,48 @@ public class JobHistoryHandler {
 
     hydrateWithStats(jobReads, jobs, featureFlagClient.boolVariation(HydrateAggregatedStats.INSTANCE, new Workspace(ANONYMOUS)), jobPersistence);
 
-    return jobReads.stream()
-        .flatMap(job -> job.getJob().getStreamAggregatedStats().stream())
-        .map(streamStats -> new ConnectionSyncProgressReadItem()
-            .jobId(jobReads.getFirst().getJob().getId())
-            .streamName(streamStats.getStreamName())
-            .streamNamespace(streamStats.getStreamNamespace())
-            .recordsExtracted(streamStats.getRecordsEmitted())
-            .recordsLoaded(streamStats.getRecordsCommitted())
-            .bytesExtracted(streamStats.getBytesEmitted())
-            .bytesLoaded(streamStats.getBytesCommitted())
-            .syncStartedAt(jobReads.getFirst().getJob().getStartedAt()))
+    if (jobReads.isEmpty()) {
+      return new ConnectionSyncProgressRead().connectionId(connectionIdRequestBody.getConnectionId()).streams(Collections.emptyList());
+    }
+    final JobWithAttemptsRead runningJob = jobReads.getFirst();
+
+    // Create a map from the stream stats list
+    final Map<String, StreamStats> streamStatsMap = runningJob
+        .getJob().getStreamAggregatedStats().stream()
+        .collect(Collectors.toMap(
+            streamStats -> streamStats.getStreamName() + "-" + streamStats.getStreamNamespace(),
+            Function.identity()));
+
+    // Iterate through ALL enabled streams from the job, enriching with stream stats data
+    final List<StreamSyncProgressReadItem> finalStreamsWithStats = runningJob.getJob().getEnabledStreams().stream()
+        .map(enabledStream -> {
+          final String key = enabledStream.getName() + "-" + enabledStream.getNamespace();
+          final StreamStats streamStats = streamStatsMap.get(key);
+
+          final StreamSyncProgressReadItem item = new StreamSyncProgressReadItem()
+              .streamName(enabledStream.getName())
+              .streamNamespace(enabledStream.getNamespace());
+
+          if (streamStats != null) {
+            item.recordsEmitted(streamStats.getRecordsEmitted())
+                .recordsCommitted(streamStats.getRecordsCommitted())
+                .bytesEmitted(streamStats.getBytesEmitted())
+                .bytesCommitted(streamStats.getBytesCommitted());
+          }
+
+          return item;
+        })
         .collect(Collectors.toList());
+
+    return new ConnectionSyncProgressRead()
+        .connectionId(connectionIdRequestBody.getConnectionId())
+        .jobId(runningJob.getJob().getId())
+        .syncStartedAt(runningJob.getJob().getStartedAt())
+        .bytesEmitted(runningJob.getJob().getAggregatedStats().getBytesEmitted())
+        .bytesCommitted(runningJob.getJob().getAggregatedStats().getBytesCommitted())
+        .recordsEmitted(runningJob.getJob().getAggregatedStats().getRecordsEmitted())
+        .recordsCommitted(runningJob.getJob().getAggregatedStats().getRecordsCommitted())
+        .streams(finalStreamsWithStats);
   }
 
   public Optional<JobRead> getLatestSyncJob(final UUID connectionId) throws IOException {

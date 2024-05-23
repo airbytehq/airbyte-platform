@@ -23,7 +23,7 @@ import io.airbyte.api.model.generated.AttemptRead;
 import io.airbyte.api.model.generated.AttemptStreamStats;
 import io.airbyte.api.model.generated.ConnectionIdRequestBody;
 import io.airbyte.api.model.generated.ConnectionRead;
-import io.airbyte.api.model.generated.ConnectionSyncProgressReadItem;
+import io.airbyte.api.model.generated.ConnectionSyncProgressRead;
 import io.airbyte.api.model.generated.DestinationIdRequestBody;
 import io.airbyte.api.model.generated.DestinationRead;
 import io.airbyte.api.model.generated.JobAggregatedStats;
@@ -43,6 +43,7 @@ import io.airbyte.api.model.generated.SourceIdRequestBody;
 import io.airbyte.api.model.generated.SourceRead;
 import io.airbyte.api.model.generated.StreamDescriptor;
 import io.airbyte.api.model.generated.StreamStats;
+import io.airbyte.api.model.generated.StreamSyncProgressReadItem;
 import io.airbyte.commons.enums.Enums;
 import io.airbyte.commons.server.converters.JobConverter;
 import io.airbyte.commons.server.helpers.ConnectionHelpers;
@@ -661,15 +662,22 @@ class JobHistoryHandlerTest {
   class ConnectionSyncProgressTests {
 
     @Test
-    @DisplayName("Should return empty list when there are no running jobs")
+    @DisplayName("Should not throw with no running sync")
     void testGetConnectionSyncProgressNoJobs() throws IOException {
-      final ConnectionIdRequestBody request = new ConnectionIdRequestBody().connectionId(UUID.randomUUID());
+      final UUID connectionId = UUID.randomUUID();
 
-      assertTrue(jobHistoryHandler.getConnectionSyncProgress(request).isEmpty());
+      final ConnectionIdRequestBody request = new ConnectionIdRequestBody().connectionId(connectionId);
+
+      final ConnectionSyncProgressRead expectedSyncProgress =
+          new ConnectionSyncProgressRead().connectionId(connectionId).streams(Collections.emptyList());
+
+      final ConnectionSyncProgressRead actual = jobHistoryHandler.getConnectionSyncProgress(request);
+
+      assertEquals(expectedSyncProgress, actual);
     }
 
     @Test
-    @DisplayName("Should gather and return stream stats for a running sync")
+    @DisplayName("Should return data for a running sync")
     void testGetConnectionSyncProgressWithRunningJob() throws IOException {
       final UUID connectionId = UUID.randomUUID();
       final ConnectionIdRequestBody request = new ConnectionIdRequestBody().connectionId(connectionId);
@@ -678,10 +686,17 @@ class JobHistoryHandlerTest {
           CREATED_AT, CREATED_AT, CREATED_AT);
 
       final JobRead jobRead = toJobInfo(firstJob);
+      jobRead.setEnabledStreams(List.of(new StreamDescriptor().name("stream1").namespace("ns1"), new StreamDescriptor().name("stream2"),
+          new StreamDescriptor().name("stream3")));
+
       jobRead.setStreamAggregatedStats(List.of(
-          new StreamStats().streamName("stream2").recordsEmitted(50L).bytesEmitted(20L).recordsCommitted(50L).bytesCommitted(20L),
+          new StreamStats().streamName("stream2").recordsEmitted(50L).bytesEmitted(20L).recordsCommitted(45L).bytesCommitted(15L),
           new StreamStats().streamName("stream1").streamNamespace("ns1").recordsEmitted(5L).bytesEmitted(2L).recordsCommitted(5L)
               .bytesCommitted(2L)));
+
+      final JobAggregatedStats jobAggregatedStats =
+          new JobAggregatedStats().bytesCommitted(17L).recordsCommitted(50L).bytesEmitted(22L).recordsEmitted(55L);
+      jobRead.setAggregatedStats(jobAggregatedStats);
 
       final JobWithAttemptsRead firstJobWithAttemptRead = new JobWithAttemptsRead()
           .job(jobRead)
@@ -690,17 +705,34 @@ class JobHistoryHandlerTest {
       when(jobPersistence.getRunningSyncJobForConnections(List.of(connectionId))).thenReturn(List.of(firstJob));
       try (final MockedStatic<JobConverter> mockedConverter = Mockito.mockStatic(JobConverter.class)) {
         mockedConverter.when(() -> JobConverter.getJobWithAttemptsRead(firstJob)).thenReturn(firstJobWithAttemptRead);
-        final List<ConnectionSyncProgressReadItem> actual = jobHistoryHandler.getConnectionSyncProgress(request);
 
-        // Assertions
-        assertEquals(2, actual.size());
-        assertEquals("stream2", actual.getFirst().getStreamName());
-        assertEquals(50L, actual.getFirst().getRecordsExtracted());
-        assertEquals(20L, actual.getFirst().getBytesExtracted());
-        assertEquals("stream1", actual.get(1).getStreamName());
-        assertEquals("ns1", actual.get(1).getStreamNamespace());
-        assertEquals(5L, actual.get(1).getRecordsExtracted());
-        assertEquals(2L, actual.get(1).getBytesExtracted());
+        final ConnectionSyncProgressRead expected = new ConnectionSyncProgressRead()
+            .jobId(JOB_ID)
+            .connectionId(connectionId)
+            .bytesCommitted(jobAggregatedStats.getBytesCommitted())
+            .recordsCommitted(jobAggregatedStats.getRecordsCommitted())
+            .bytesEmitted(jobAggregatedStats.getBytesEmitted())
+            .recordsEmitted(jobAggregatedStats.getRecordsEmitted())
+            .streams(List.of(
+                new StreamSyncProgressReadItem()
+                    .streamName("stream1")
+                    .streamNamespace("ns1")
+                    .recordsEmitted(5L)
+                    .bytesEmitted(2L)
+                    .recordsCommitted(5L)
+                    .bytesCommitted(2L),
+                new StreamSyncProgressReadItem()
+                    .streamName("stream2")
+                    .recordsEmitted(50L)
+                    .bytesEmitted(20L)
+                    .recordsCommitted(45L)
+                    .bytesCommitted(15L),
+                new StreamSyncProgressReadItem()
+                    .streamName("stream3")));
+
+        final ConnectionSyncProgressRead actual = jobHistoryHandler.getConnectionSyncProgress(request);
+
+        assertEquals(expected, actual);
       }
     }
 

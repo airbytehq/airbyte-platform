@@ -28,7 +28,7 @@ import io.airbyte.api.model.generated.ConnectionStreamHistoryReadItem;
 import io.airbyte.api.model.generated.ConnectionStreamHistoryRequestBody;
 import io.airbyte.api.model.generated.ConnectionStreamRefreshRequestBody;
 import io.airbyte.api.model.generated.ConnectionStreamRequestBody;
-import io.airbyte.api.model.generated.ConnectionSyncProgressReadItem;
+import io.airbyte.api.model.generated.ConnectionSyncProgressRead;
 import io.airbyte.api.model.generated.ConnectionUpdate;
 import io.airbyte.api.model.generated.ConnectionUptimeHistoryRequestBody;
 import io.airbyte.api.model.generated.GetTaskQueueNameRequest;
@@ -217,7 +217,7 @@ public class ConnectionApiController implements ConnectionApi {
   @Post(uri = "/sync_progress")
   @Secured({WORKSPACE_READER, ORGANIZATION_READER})
   @ExecuteOn(AirbyteTaskExecutors.IO)
-  public List<ConnectionSyncProgressReadItem> getConnectionSyncProgress(@Body final ConnectionIdRequestBody connectionIdRequestBody) {
+  public ConnectionSyncProgressRead getConnectionSyncProgress(@Body final ConnectionIdRequestBody connectionIdRequestBody) {
     return ApiHelper.execute(() -> jobHistoryHandler.getConnectionSyncProgress(connectionIdRequestBody));
   }
 

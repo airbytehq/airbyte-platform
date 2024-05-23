@@ -88,7 +88,7 @@ const resetAndSetupMocks = ({
     hasBreakingSchemaChange,
   }));
   mockUseGetConnectionSyncProgress.mockReturnValue({
-    data: [],
+    data: { connectionId: mockConnection.connectionId, streams: [] },
   });
 };
 

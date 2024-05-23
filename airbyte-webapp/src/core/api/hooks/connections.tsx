@@ -103,11 +103,7 @@ export const useGetConnectionSyncProgress = (connectionId: string, enabled: bool
     async () => await getConnectionSyncProgress({ connectionId }, requestOptions),
     {
       enabled,
-      // poll every 5 seconds until we start getting data so we can show it ASAP when it's available
-      // then, because the stats are only written every minute, just poll once every 60 seconds
-      refetchInterval: (data) => {
-        return data && data.length > 0 ? 60000 : 5000;
-      },
+      refetchInterval: (data) => (data?.jobId ? 60000 : 5000),
     }
   );
 };

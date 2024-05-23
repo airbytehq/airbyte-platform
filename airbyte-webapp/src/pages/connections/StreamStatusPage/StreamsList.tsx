@@ -18,7 +18,7 @@ import { Text } from "components/ui/Text";
 import { InfoTooltip } from "components/ui/Tooltip";
 
 import { useGetConnectionSyncProgress } from "core/api";
-import { ConnectionStatus, ConnectionSyncProgressReadItem, StreamStatusRunState } from "core/api/types/AirbyteClient";
+import { ConnectionStatus, StreamStatusRunState, StreamSyncProgressReadItem } from "core/api/types/AirbyteClient";
 import { useConnectionEditService } from "hooks/services/ConnectionEdit/ConnectionEditService";
 import { useExperiment } from "hooks/services/Experiment";
 
@@ -73,8 +73,8 @@ export const StreamsList = () => {
   const streamEntries = useMemo(
     () =>
       streamsList.map((stream) => {
-        const syncProgress = connectionSyncProgress?.find(
-          (progressItem: ConnectionSyncProgressReadItem) =>
+        const syncProgress = connectionSyncProgress?.streams.find(
+          (progressItem: StreamSyncProgressReadItem) =>
             progressItem.streamName === stream.streamName && progressItem.streamNamespace === stream.streamNamespace
         );
         return {
@@ -109,7 +109,7 @@ export const StreamsList = () => {
       }),
       ...(showSyncProgress
         ? [
-            columnHelper.accessor("bytesLoaded", {
+            columnHelper.accessor("bytesCommitted", {
               id: "syncProgress",
               header: () => (
                 <>
@@ -127,8 +127,8 @@ export const StreamsList = () => {
 
                 return (
                   <SyncProgressItem
-                    recordsLoaded={props.row.original.recordsLoaded}
-                    recordsExtracted={props.row.original.recordsExtracted}
+                    recordsLoaded={props.row.original.recordsCommitted}
+                    recordsExtracted={props.row.original.recordsEmitted}
                     syncStartedAt={syncStartedAt}
                   />
                 );
