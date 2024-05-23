@@ -11047,11 +11047,13 @@ components:
           * `COMPLETE` - The stream operation ran successfully to completion
           * `INCOMPLETE` - The stream operation has terminated in an incomplete state.
           See StreamStatusIncompleteRunCause for more details.
+          * `RATE_LIMITED` - The stream is rate limited because the source has run out of API quota.
       enum:
         - PENDING
         - RUNNING
         - COMPLETE
         - INCOMPLETE
+        - RATE_LIMITED
     StreamStatusIncompleteRunCause:
       type: string
       description: >
@@ -11066,6 +11068,12 @@ components:
       enum:
         - SYNC
         - RESET
+    StreamStatusRateLimitedMetadata:
+      type: object
+      properties:
+        quotaReset:
+          type: integer
+          format: int64
     StreamStatusListRequestBody:
       type: object
       required:
@@ -11121,6 +11129,8 @@ components:
           format: int64
         workspaceId:
           $ref: "#/components/schemas/WorkspaceId"
+        metadata:
+          $ref: "#/components/schemas/StreamStatusRateLimitedMetadata"
     StreamStatusUpdateRequestBody:
       allOf:
         - $ref: "#/components/schemas/StreamStatusCreateRequestBody"
@@ -11253,6 +11263,8 @@ components:
           format: int64
         workspaceId:
           $ref: "#/components/schemas/WorkspaceId"
+        metadata:
+          $ref: "#/components/schemas/StreamStatusRateLimitedMetadata"
     StreamStatusReadList:
       type: object
       properties:

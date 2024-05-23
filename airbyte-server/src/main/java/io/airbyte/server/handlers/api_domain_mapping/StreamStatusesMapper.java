@@ -6,19 +6,23 @@ package io.airbyte.server.handlers.api_domain_mapping;
 
 import static java.time.ZoneOffset.UTC;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import io.airbyte.api.model.generated.Pagination;
 import io.airbyte.api.model.generated.StreamStatusCreateRequestBody;
 import io.airbyte.api.model.generated.StreamStatusIncompleteRunCause;
 import io.airbyte.api.model.generated.StreamStatusJobType;
 import io.airbyte.api.model.generated.StreamStatusListRequestBody;
+import io.airbyte.api.model.generated.StreamStatusRateLimitedMetadata;
 import io.airbyte.api.model.generated.StreamStatusRead;
 import io.airbyte.api.model.generated.StreamStatusRunState;
 import io.airbyte.api.model.generated.StreamStatusUpdateRequestBody;
+import io.airbyte.commons.json.Jsons;
 import io.airbyte.db.instance.jobs.jooq.generated.enums.JobStreamStatusIncompleteRunCause;
 import io.airbyte.db.instance.jobs.jooq.generated.enums.JobStreamStatusJobType;
 import io.airbyte.db.instance.jobs.jooq.generated.enums.JobStreamStatusRunState;
 import io.airbyte.server.repositories.StreamStatusesRepository;
 import io.airbyte.server.repositories.domain.StreamStatus;
+import io.airbyte.server.repositories.domain.StreamStatusRateLimitedMetadataRepositoryStructure;
 import jakarta.inject.Singleton;
 import java.time.Instant;
 import java.time.OffsetDateTime;
@@ -47,6 +51,10 @@ public class StreamStatusesMapper {
       domain.incompleteRunCause(map(api.getIncompleteRunCause()));
     }
 
+    if (null != api.getMetadata()) {
+      domain.metadata(map(api.getMetadata()));
+    }
+
     return domain.build();
   }
 
@@ -65,6 +73,10 @@ public class StreamStatusesMapper {
 
     if (null != api.getIncompleteRunCause()) {
       domain.incompleteRunCause(map(api.getIncompleteRunCause()));
+    }
+
+    if (null != api.getMetadata()) {
+      domain.metadata(map(api.getMetadata()));
     }
 
     return domain.build();
@@ -118,6 +130,10 @@ public class StreamStatusesMapper {
       api.setIncompleteRunCause(map(domain.getIncompleteRunCause()));
     }
 
+    if (null != domain.getMetadata()) {
+      api.setMetadata(map(domain.getMetadata()));
+    }
+
     return api;
   }
 
@@ -131,6 +147,18 @@ public class StreamStatusesMapper {
 
   public StreamStatusIncompleteRunCause map(final JobStreamStatusIncompleteRunCause domainEnum) {
     return StreamStatusIncompleteRunCause.fromValue(domainEnum.name().toUpperCase());
+  }
+
+  public StreamStatusRateLimitedMetadata map(final JsonNode rateLimitedMetadata) {
+    final StreamStatusRateLimitedMetadataRepositoryStructure rateLimitedInfo =
+        Jsons.object(rateLimitedMetadata, StreamStatusRateLimitedMetadataRepositoryStructure.class);
+    return new StreamStatusRateLimitedMetadata().quotaReset(rateLimitedInfo.getQuotaReset());
+  }
+
+  public JsonNode map(final StreamStatusRateLimitedMetadata rateLimitedMetadata) {
+    final StreamStatusRateLimitedMetadataRepositoryStructure streamStatusRateLimitedMetadataRepositoryStructure =
+        new StreamStatusRateLimitedMetadataRepositoryStructure(rateLimitedMetadata.getQuotaReset());
+    return Jsons.jsonNode(streamStatusRateLimitedMetadataRepositoryStructure);
   }
 
   OffsetDateTime fromMills(final Long millis) {

@@ -18,6 +18,7 @@ import io.airbyte.server.repositories.StreamStatusesRepository.FilterParams;
 import io.airbyte.server.repositories.StreamStatusesRepository.Pagination;
 import io.airbyte.server.repositories.domain.StreamStatus;
 import io.airbyte.server.repositories.domain.StreamStatus.StreamStatusBuilder;
+import io.airbyte.server.repositories.domain.StreamStatusRateLimitedMetadataRepositoryStructure;
 import io.micronaut.context.ApplicationContext;
 import io.micronaut.context.env.PropertySource;
 import io.micronaut.data.connection.jdbc.advice.DelegatingDataSource;
@@ -136,7 +137,7 @@ class StreamStatusesRepositoryTest {
     final var rateLimited = Fixtures.statusFrom(running)
         .runState(JobStreamStatusRunState.rate_limited)
         .transitionedAt(rateLimitedAt)
-        .metadata(Jsons.jsonNode(Map.of("quota_reset", Fixtures.now())))
+        .metadata(Jsons.jsonNode(new StreamStatusRateLimitedMetadataRepositoryStructure(Fixtures.now().toInstant().toEpochMilli())))
         .build();
     repo.update(rateLimited);
     final var found3 = repo.findById(id);
@@ -543,7 +544,7 @@ class StreamStatusesRepositoryTest {
     static StreamStatusBuilder rateLimited() {
       return status()
           .runState(JobStreamStatusRunState.rate_limited)
-          .metadata(Jsons.jsonNode(Map.of("quota_reset", now())));
+          .metadata(Jsons.jsonNode(new StreamStatusRateLimitedMetadataRepositoryStructure(Fixtures.now().toInstant().toEpochMilli())));
     }
 
     static StreamStatusBuilder complete() {
