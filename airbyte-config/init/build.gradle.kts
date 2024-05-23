@@ -27,6 +27,8 @@ dependencies {
   implementation(libs.airbyte.protocol)
   implementation(project(":airbyte-json-validation"))
   implementation(libs.guava)
+  implementation(libs.okhttp)
+  implementation(libs.bundles.jackson)
 
   testImplementation(project(":airbyte-test-utils"))
   testRuntimeOnly(libs.junit.jupiter.engine)
@@ -34,6 +36,7 @@ dependencies {
   testImplementation(libs.assertj.core)
   testImplementation(libs.junit.pioneer)
   testImplementation(libs.mockk)
+
 }
 
 airbyte {

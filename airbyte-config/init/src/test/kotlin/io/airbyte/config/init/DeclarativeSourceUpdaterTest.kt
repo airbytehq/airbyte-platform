@@ -14,7 +14,7 @@ import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 
 internal class DeclarativeSourceUpdaterTest {
-  private var mDeclarativeManifestImageVersionsProvider: DeclarativeManifestImageVersionsProvider = mockk()
+  private var mDeclarativeManifestImageVersionsProvider: RemoteDeclarativeManifestImageVersionsProvider = mockk()
   private var mDeclarativeManifestImageVersionService: DeclarativeManifestImageVersionService = mockk()
   private var mActorDefinitionService: ActorDefinitionService = mockk()
   private lateinit var declarativeSourceUpdater: DeclarativeSourceUpdater

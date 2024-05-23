@@ -15,6 +15,7 @@ import io.micronaut.context.annotation.Value
 import io.micronaut.core.util.StringUtils
 import jakarta.inject.Named
 import jakarta.inject.Singleton
+import okhttp3.OkHttpClient
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 
@@ -45,6 +46,16 @@ class SeedBeanFactory {
   }
 
   @Singleton
+  @Named("remoteDeclarativeSourceUpdater")
+  fun remoteDeclarativeSourceUpdater(
+    @Named("remoteDeclarativeManifestImageVersionsProvider") declarativeManifestImageVersionsProvider: DeclarativeManifestImageVersionsProvider,
+    declarativeManifestImageVersionService: DeclarativeManifestImageVersionService,
+    actorDefinitionService: ActorDefinitionService,
+  ): DeclarativeSourceUpdater {
+    return DeclarativeSourceUpdater(declarativeManifestImageVersionsProvider, declarativeManifestImageVersionService, actorDefinitionService)
+  }
+
+  @Singleton
   @Named("localDeclarativeSourceUpdater")
   fun localDeclarativeSourceUpdater(
     @Named("localDeclarativeManifestImageVersionsProvider") declarativeManifestImageVersionsProvider: DeclarativeManifestImageVersionsProvider,
@@ -52,6 +63,12 @@ class SeedBeanFactory {
     actorDefinitionService: ActorDefinitionService,
   ): DeclarativeSourceUpdater {
     return DeclarativeSourceUpdater(declarativeManifestImageVersionsProvider, declarativeManifestImageVersionService, actorDefinitionService)
+  }
+
+  @Singleton
+  @Named("dockerHubOkHttpClient")
+  fun okHttpClient(): OkHttpClient {
+    return OkHttpClient()
   }
 
   companion object {
