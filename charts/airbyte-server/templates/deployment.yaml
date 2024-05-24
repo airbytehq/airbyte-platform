@@ -112,6 +112,11 @@ spec:
             configMapKeyRef:
               name: {{ .Release.Name }}-airbyte-env
               key: MICROMETER_METRICS_STATSD_FLAVOR
+        - name: MICRONAUT_ENVIRONMENTS
+          valueFrom:
+            configMapKeyRef:
+              name: {{ .Release.Name }}-airbyte-env
+              key: SERVER_MICRONAUT_ENVIRONMENTS
         - name: SEGMENT_WRITE_KEY
           valueFrom:
             configMapKeyRef:

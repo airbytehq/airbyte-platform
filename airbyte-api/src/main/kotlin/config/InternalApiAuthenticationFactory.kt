@@ -26,8 +26,7 @@ private val logger = KotlinLogging.logger {}
 class InternalApiAuthenticationFactory {
   @Primary
   @Singleton
-  @Requires(property = "airbyte.internal-api.base-path")
-  @Requires(property = "airbyte.acceptance.test.enabled", value = "true")
+  @Requires(property = "airbyte.acceptance.test.enabled", value = "true", defaultValue = "false")
   @Named(INTERNAL_API_AUTH_TOKEN_BEAN_NAME)
   fun testInternalApiAuthToken(
     @Value("\${airbyte.internal-api.auth-header.value}") airbyteApiAuthHeaderValue: String,
@@ -36,8 +35,7 @@ class InternalApiAuthenticationFactory {
   }
 
   @Singleton
-  @Requires(property = "airbyte.internal-api.base-path")
-  @Requires(property = "airbyte.acceptance.test.enabled", value = "false")
+  @Requires(property = "airbyte.acceptance.test.enabled", value = "false", defaultValue = "false")
   @Requires(env = [CONTROL_PLANE])
   @Named(INTERNAL_API_AUTH_TOKEN_BEAN_NAME)
   fun controlPlaneInternalApiAuthToken(
@@ -56,8 +54,7 @@ class InternalApiAuthenticationFactory {
    * https://cloud.google.com/endpoints/docs/openapi/service-account-authentication
    */
   @Prototype
-  @Requires(property = "airbyte.internal-api.base-path")
-  @Requires(property = "airbyte.acceptance.test.enabled", value = "false")
+  @Requires(property = "airbyte.acceptance.test.enabled", value = "false", defaultValue = "false")
   @Requires(env = [DATA_PLANE])
   @Named(INTERNAL_API_AUTH_TOKEN_BEAN_NAME)
   fun dataPlaneInternalApiAuthToken(

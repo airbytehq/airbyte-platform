@@ -155,6 +155,7 @@ data:
   LAUNCHER_MICRONAUT_ENVIRONMENTS: "control-plane,oss"
   WORKERS_MICRONAUT_ENVIRONMENTS: "control-plane"
   CRON_MICRONAUT_ENVIRONMENTS: "control-plane"
+  SERVER_MICRONAUT_ENVIRONMENTS: "control-plane"
   SHOULD_RUN_NOTIFY_WORKFLOWS: "true"
   MAX_NOTIFY_WORKERS: {{ .Values.worker.maxNotifyWorkers | default "5" | quote }}
   KUBERNETES_CLIENT_MAX_IDLE_CONNECTIONS: ""

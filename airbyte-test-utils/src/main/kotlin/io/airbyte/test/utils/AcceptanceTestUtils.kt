@@ -111,8 +111,8 @@ object AcceptanceTestUtils {
           ServerException::class.java,
         ),
       )
-      .onRetry { _: ExecutionAttemptedEvent<Response> ->
-        logger.warn { "Retry attempt \${l.attemptCount} of \$maxRetries. Last response: \${l.lastResult}" }
+      .onRetry { l: ExecutionAttemptedEvent<Response> ->
+        logger.warn(l.lastException) { "Retry attempt ${l.attemptCount} of $MAX_TRIES. Last response: ${l.lastResult}" }
       }
       .onRetriesExceeded { l: ExecutionCompletedEvent<Response> ->
         logger.error(l.exception) { "Retry attempts exceeded." }

@@ -95,6 +95,7 @@ public class ApiClientBeanFactory {
     return airbyteApiAuthHeaderValue;
   }
 
+  @Primary
   @Singleton
   @Requires(property = "airbyte.acceptance.test.enabled",
             value = "false")
@@ -114,6 +115,7 @@ public class ApiClientBeanFactory {
    * https://cloud.google.com/endpoints/docs/openapi/service-account-authentication
    */
   @SuppressWarnings("LineLength")
+  @Primary
   @Prototype
   @Requires(property = "airbyte.acceptance.test.enabled",
             value = "false")
