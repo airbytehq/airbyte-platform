@@ -10,6 +10,7 @@ plugins {
 
 def specFile = "$projectDir/src/main/openapi/config.yaml"
 def airbyteApiSpecFile = "$projectDir/src/main/openapi/api.yaml"
+def airbyteApiProblemsSpecFile = "$projectDir/src/main/openapi/api-problems.yaml"
 def airbyteApiSpecTemplateDirApi = "$projectDir/src/main/resources/templates/jaxrs-spec-api"
 def publicApiSpecTemplateDirApi = "$projectDir/src/main/resources/templates/jaxrs-spec-api/public_api"
 def workloadSpecFile = "$projectDir/src/main/openapi/workload-openapi.yaml"
@@ -289,6 +290,39 @@ def genAirbyteApiServer = tasks.register('generateAirbyteApiServer', GenerateTas
     }
 }
 
+def genAirbyteApiProblems = tasks.register("genAirbyteApiProblems", GenerateTask) {
+    def serverOutputDir = "${getLayout().buildDirectory.get()}/generated/api/problems"
+
+    inputs.file airbyteApiProblemsSpecFile
+    outputs.dir serverOutputDir
+
+    generatorName = "jaxrs-spec"
+    inputSpec = airbyteApiProblemsSpecFile
+    outputDir = serverOutputDir
+    templateDir = publicApiSpecTemplateDirApi
+
+    packageName = "io.airbyte.api.problems"
+    invokerPackage = "io.airbyte.api.problems.invoker.generated"
+    modelPackage = "io.airbyte.api.problems.model.generated"
+
+    generateApiDocumentation = false
+
+    configOptions = [
+        enumPropertyNaming  : "UPPERCASE",
+        generatePom         : "false",
+        interfaceOnly       : "true",
+    ]
+
+    doLast {
+        // Remove unnecessary invoker classes to avoid Micronaut picking them up and registering them as beans
+        delete("${serverOutputDir}/src/gen/java/${invokerPackage.get().replaceAll("\\.", "/").replaceAll("-","_")}")
+
+        def generatedModelPath = "${serverOutputDir}/src/gen/java/${modelPackage.get().replaceAll('\\.', '/').replaceAll('-', '_')}"
+        updateToJakartaApi(file(generatedModelPath))
+        generateProblemThrowables(generatedModelPath)
+    }
+}
+
 // TODO: Linked to document okhhtp
 def genWorkloadApiClient = tasks.register("genWorkloadApiClient", GenerateTask) {
     def clientOutputDir = "${getLayout().buildDirectory.get()}/generated/workloadapi/client"
@@ -388,7 +422,7 @@ kapt {
 afterEvaluate {
     tasks.named('kaptGenerateStubsKotlin').configure {
         mustRunAfter genApiDocs, genApiClient, genApiClient2, genApiServer, genAirbyteApiServer, genPublicApiServer,
-                genWorkloadApiClient, genConnectorBuilderServerApiClient
+                genWorkloadApiClient, genConnectorBuilderServerApiClient, genAirbyteApiProblems
     }
 }
 
@@ -396,6 +430,7 @@ tasks.named("compileKotlin") {
     dependsOn tasks.named("genApiClient2")
     dependsOn tasks.named("genWorkloadApiClient")
     dependsOn tasks.named("genConnectorBuilderServerApiClient")
+    dependsOn tasks.named("genAirbyteApiProblems")
 }
 
 dependencies {
@@ -453,7 +488,9 @@ sourceSets {
                     "${project.layout.buildDirectory.get()}/generated/api/client/src/main/java",
                     "${project.layout.buildDirectory.get()}/generated/api/client2/src/main/kotlin",
                     "${project.layout.buildDirectory.get()}/generated/workloadapi/client/src/main/kotlin",
-                    "${project.layout.buildDirectory.get()}/generated/connectorbuilderserverapi/client/src/main/kotlin"
+                    "${project.layout.buildDirectory.get()}/generated/connectorbuilderserverapi/client/src/main/kotlin",
+                    "${project.layout.buildDirectory.get()}/generated/api/problems/src/gen/kotlin",
+                    "${project.layout.buildDirectory.get()}/generated/api/problems/src/gen/java",
             "$projectDir/src/main/java"
         }
         resources {
@@ -513,6 +550,43 @@ import dev.failsafe.okhttp.FailsafeCall'''
 
     }
     apiClientFile.write(apiClientFileText)
+}
+
+private def generateProblemThrowables(def problemsOutputDir) {
+    def dir = file(problemsOutputDir)
+
+    def throwableDir = new File("${getLayout().buildDirectory.get()}/generated/api/problems/src/gen/kotlin/throwable")
+    if (!throwableDir.exists()) {
+        throwableDir.mkdirs()
+    }
+
+    dir.eachFile { errorFile ->
+        if (errorFile.name.endsWith('ProblemResponse.java')) {
+            def errorFileText = errorFile.text
+
+            def problemName = (errorFileText =~ /public class (\S+)ProblemResponse /)[0][1] as String
+            def dataFieldType = (errorFileText =~ /private (@Valid )?\n(\S+) data;/)[0][2] as String
+            def dataFieldImport = "import io.airbyte.api.problems.model.generated.${dataFieldType}"
+
+            if (dataFieldType == "Object") {
+                dataFieldType = "Any"
+                dataFieldImport = ""
+            }
+
+            def responseClassName = "${problemName}ProblemResponse"
+            def throwableClassName = "${problemName}Problem"
+
+            def template = new File("${projectDir}/src/main/resources/templates/ThrowableProblem.kt.txt")
+            def throwableText = template.text
+                .replaceAll('<problem-class-name>', responseClassName)
+                .replaceAll('<problem-throwable-class-name>', throwableClassName)
+                .replaceAll('<problem-data-class-import>', dataFieldImport)
+                .replaceAll('<problem-data-class-name>', dataFieldType)
+
+            def throwableFile = new File(throwableDir, "${throwableClassName}.kt")
+            throwableFile.write(throwableText)
+        }
+    }
 }
 
 private def updateDomainClientsWithFailsafe(def clientPath) {

@@ -1,0 +1,57 @@
+openapi: 3.0.0
+info:
+  title: Airbyte API Problems
+  version: 1.0.0
+paths: {}
+components:
+  schemas:
+    BaseProblemFields:
+      type: object
+      required:
+        - type
+        - title
+      properties:
+        status:
+          type: integer
+          default: 500
+        type:
+          type: string
+        title:
+          type: string
+        detail:
+          type: string
+        documentationUrl:
+          type: string
+        data:
+          type: object
+    SyncConflictProblemResponse:
+      x-implements: io.airbyte.api.problems.ProblemResponse
+      type: object
+      allOf:
+        - $ref: "#/components/schemas/BaseProblemFields"
+        - type: object
+          properties:
+            status:
+              type: integer
+              default: 409
+            type:
+              type: string
+              default: error.sync_conflict
+            title:
+              type: string
+            documentationUrl:
+              type: string
+              default: https://api.airbyte.io/docs/api-errors/sync-conflict
+            detail:
+              type: string
+              default: A sync is already in progress for this connection.
+            data:
+              $ref: "#/components/schemas/ConnectionIdProblemData"
+    ConnectionIdProblemData:
+      type: object
+      required:
+        - connectionId
+      properties:
+        connectionId:
+          type: string
+          format: uuid
