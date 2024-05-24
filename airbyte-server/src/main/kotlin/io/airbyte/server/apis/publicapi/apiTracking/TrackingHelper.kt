@@ -69,6 +69,8 @@ class TrackingHelper(private val trackingClient: TrackingClient) {
     var statusCode = 0
     if (e is AbstractThrowableProblem) {
       statusCode = (e as AbstractThrowableProblem?)?.httpStatus?.code ?: 500
+    } else if (e is io.airbyte.api.problems.AbstractThrowableProblem) {
+      statusCode = (e as io.airbyte.api.problems.AbstractThrowableProblem?)?.problem?.status ?: 500
     } else if (e != null) {
       // also contains InvalidConsentUrlProblem
       statusCode = HttpStatus.INTERNAL_SERVER_ERROR.code
