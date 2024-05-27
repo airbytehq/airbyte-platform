@@ -5,7 +5,7 @@
 package io.airbyte.server.apis.publicapi.apiTracking
 
 import io.airbyte.analytics.TrackingClient
-import io.airbyte.commons.server.errors.problems.AbstractThrowableProblem
+import io.airbyte.api.problems.AbstractThrowableProblem
 import io.micronaut.http.HttpStatus
 import jakarta.inject.Singleton
 import jakarta.ws.rs.core.Response
@@ -68,9 +68,7 @@ class TrackingHelper(private val trackingClient: TrackingClient) {
   ) {
     var statusCode = 0
     if (e is AbstractThrowableProblem) {
-      statusCode = (e as AbstractThrowableProblem?)?.httpStatus?.code ?: 500
-    } else if (e is io.airbyte.api.problems.AbstractThrowableProblem) {
-      statusCode = (e as io.airbyte.api.problems.AbstractThrowableProblem?)?.problem?.status ?: 500
+      statusCode = (e as AbstractThrowableProblem?)?.problem?.status ?: 500
     } else if (e != null) {
       // also contains InvalidConsentUrlProblem
       statusCode = HttpStatus.INTERNAL_SERVER_ERROR.code
