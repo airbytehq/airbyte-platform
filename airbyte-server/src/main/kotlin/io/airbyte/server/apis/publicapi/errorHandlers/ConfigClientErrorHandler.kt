@@ -6,17 +6,18 @@
 
 package io.airbyte.server.apis.publicapi.errorHandlers
 
-import io.airbyte.commons.json.Jsons
+import io.airbyte.api.problems.AbstractThrowableProblem
+import io.airbyte.api.problems.model.generated.ProblemMessageData
+import io.airbyte.api.problems.model.generated.ProblemResourceData
+import io.airbyte.api.problems.throwable.generated.BadRequestProblem
+import io.airbyte.api.problems.throwable.generated.InvalidApiKeyProblem
+import io.airbyte.api.problems.throwable.generated.OAuthCallbackFailureProblem
+import io.airbyte.api.problems.throwable.generated.ResourceNotFoundProblem
+import io.airbyte.api.problems.throwable.generated.StateConflictProblem
+import io.airbyte.api.problems.throwable.generated.TryAgainLaterConflictProblem
+import io.airbyte.api.problems.throwable.generated.UnexpectedProblem
+import io.airbyte.api.problems.throwable.generated.UnprocessableEntityProblem
 import io.airbyte.commons.server.errors.ValueConflictKnownException
-import io.airbyte.commons.server.errors.problems.AbstractThrowableProblem
-import io.airbyte.commons.server.errors.problems.BadRequestProblem
-import io.airbyte.commons.server.errors.problems.ConflictProblem
-import io.airbyte.commons.server.errors.problems.InvalidApiKeyProblem
-import io.airbyte.commons.server.errors.problems.OAuthCallbackFailureProblem
-import io.airbyte.commons.server.errors.problems.ResourceNotFoundProblem
-import io.airbyte.commons.server.errors.problems.SyncConflictProblem
-import io.airbyte.commons.server.errors.problems.UnexpectedProblem
-import io.airbyte.commons.server.errors.problems.UnprocessableEntityProblem
 import io.airbyte.config.persistence.ConfigNotFoundException
 import io.airbyte.public_api.model.generated.ConnectionCreateRequest
 import io.airbyte.server.apis.publicapi.constants.MESSAGE
@@ -47,13 +48,13 @@ object ConfigClientErrorHandler {
     resourceId: String?,
   ) {
     when (response.status) {
-      HttpStatus.NOT_FOUND -> throw ResourceNotFoundProblem(resourceId)
+      HttpStatus.NOT_FOUND -> throw ResourceNotFoundProblem(ProblemResourceData().resourceId(resourceId))
       HttpStatus.CONFLICT -> {
         val message: String =
           response.getBody(MutableMap::class.java)
             .orElseGet { mutableMapOf(Pair(MESSAGE, DEFAULT_CONFLICT_MESSAGE)) }
             .getOrDefault(MESSAGE, DEFAULT_CONFLICT_MESSAGE).toString()
-        throw SyncConflictProblem(message)
+        throw TryAgainLaterConflictProblem(ProblemMessageData().message(message))
       }
 
       HttpStatus.UNAUTHORIZED -> throw InvalidApiKeyProblem()
@@ -63,7 +64,10 @@ object ConfigClientErrorHandler {
             .orElseGet { mutableMapOf(Pair(MESSAGE, DEFAULT_UNPROCESSABLE_ENTITY_MESSAGE)) }
             .getOrDefault(MESSAGE, DEFAULT_UNPROCESSABLE_ENTITY_MESSAGE).toString()
         // Exclude the part of a schema validation message that's ugly if it's there
-        throw UnprocessableEntityProblem(message.split("\nSchema".toRegex()).dropLastWhile { it.isEmpty() }.toTypedArray()[0])
+        throw UnprocessableEntityProblem(
+          ProblemMessageData()
+            .message(message.split("\nSchema".toRegex()).dropLastWhile { it.isEmpty() }.toTypedArray()[0]),
+        )
       }
 
       else -> passThroughBadStatusCode(response)
@@ -81,10 +85,10 @@ object ConfigClientErrorHandler {
     resourceId: String?,
   ) {
     when (throwable) {
-      is ConfigNotFoundException -> throw ResourceNotFoundProblem(resourceId)
+      is ConfigNotFoundException -> throw ResourceNotFoundProblem(ProblemResourceData().resourceType(throwable.type).resourceId(throwable.configId))
       is ValueConflictKnownException -> {
-        val message = Jsons.serialize(mapOf(MESSAGE to (throwable.message ?: DEFAULT_CONFLICT_MESSAGE)))
-        throw SyncConflictProblem(message)
+        val message = throwable.message ?: DEFAULT_CONFLICT_MESSAGE
+        throw TryAgainLaterConflictProblem(ProblemMessageData().message(message))
       }
 
       is IllegalStateException -> {
@@ -93,34 +97,33 @@ object ConfigClientErrorHandler {
         val isFailedCancellation = throwable.message?.contains("Failed to cancel")
         val message =
           if (isFailedCancellation == true) {
-            Jsons.serialize(mapOf(MESSAGE to JOB_NOT_RUNNING_MESSAGE))
+            JOB_NOT_RUNNING_MESSAGE
           } else {
-            Jsons.serialize(mapOf(MESSAGE to (throwable.message ?: DEFAULT_CONFLICT_MESSAGE)))
+            DEFAULT_CONFLICT_MESSAGE
           }
-        throw ConflictProblem(message)
+        throw StateConflictProblem(ProblemMessageData().message(message))
       }
 
       is JsonValidationException -> {
         val error = throwable.message?.substringBefore("\nSchema:") ?: DEFAULT_UNPROCESSABLE_ENTITY_MESSAGE
-        val message = Jsons.serialize(mapOf(MESSAGE to error))
-        throw UnprocessableEntityProblem(message)
+        throw UnprocessableEntityProblem(ProblemMessageData().message(error))
       }
 
       is IOException -> {
-        val message = Jsons.serialize(mapOf(MESSAGE to (throwable.message ?: DEFAULT_UNPROCESSABLE_ENTITY_MESSAGE)))
-        throw UnprocessableEntityProblem(message)
+        val message = throwable.message ?: DEFAULT_UNPROCESSABLE_ENTITY_MESSAGE
+        throw UnprocessableEntityProblem(ProblemMessageData().message(message))
       }
 
       is OAuthCallbackException -> {
-        throw OAuthCallbackFailureProblem(throwable.message)
+        throw OAuthCallbackFailureProblem(ProblemMessageData().message(throwable.message))
       }
 
       else -> {
         val message = throwable.message ?: DEFAULT_INTERNAL_SERVER_ERROR_MESSAGE
         if (message.contains("Could not find job with id")) {
-          throw ConflictProblem(JOB_NOT_RUNNING_MESSAGE)
+          throw StateConflictProblem(ProblemMessageData().message(JOB_NOT_RUNNING_MESSAGE))
         } else {
-          throw UnexpectedProblem(HttpStatus.INTERNAL_SERVER_ERROR, message)
+          throw UnexpectedProblem(ProblemMessageData().message(message))
         }
       }
     }
@@ -137,17 +140,17 @@ object ConfigClientErrorHandler {
     connectionCreate: ConnectionCreateRequest,
   ): AbstractThrowableProblem {
     return when (throwable) {
-      is JsonValidationException -> UnprocessableEntityProblem(throwable.message)
-      is IOException -> UnexpectedProblem(HttpStatus.INTERNAL_SERVER_ERROR, throwable.message)
+      is JsonValidationException -> UnexpectedProblem(ProblemMessageData().message(throwable.message))
+      is IOException -> UnexpectedProblem(ProblemMessageData().message(throwable.message))
       is ConfigNotFoundException ->
         if (throwable.toString().contains(connectionCreate.sourceId.toString())) {
-          ResourceNotFoundProblem(connectionCreate.sourceId.toString())
+          ResourceNotFoundProblem(ProblemResourceData().resourceType("source").resourceId(connectionCreate.sourceId.toString()))
         } else if (throwable.toString().contains(connectionCreate.destinationId.toString())) {
-          ResourceNotFoundProblem(connectionCreate.destinationId.toString())
+          ResourceNotFoundProblem(ProblemResourceData().resourceType("destination").resourceId(connectionCreate.destinationId.toString()))
         } else {
-          UnexpectedProblem(HttpStatus.INTERNAL_SERVER_ERROR)
+          UnexpectedProblem()
         }
-      else -> UnexpectedProblem(HttpStatus.INTERNAL_SERVER_ERROR)
+      else -> UnexpectedProblem()
     }
   }
 
@@ -158,9 +161,11 @@ object ConfigClientErrorHandler {
    */
   private fun passThroughBadStatusCode(response: HttpResponse<*>) {
     if (response.status.code >= HttpStatus.INTERNAL_SERVER_ERROR.code) {
-      throw UnexpectedProblem(response.status, response.body()?.toString())
+      // TODO pass status
+      throw UnexpectedProblem(ProblemMessageData().message(response.body.toString()))
+//      throw UnexpectedProblem(response.status, response.body()?.toString())
     } else if (response.status.code >= HttpStatus.BAD_REQUEST.code) {
-      throw BadRequestProblem("${response.status.reason}: ${response.body}")
+      throw BadRequestProblem(ProblemMessageData().message("${response.status.reason}: ${response.body}"))
     }
   }
 }

@@ -1,6 +1,6 @@
 package io.airbyte.server.apis.publicapi.helpers
 
-import io.airbyte.commons.server.errors.problems.InvalidRedirectUrlProblem
+import io.airbyte.api.problems.throwable.generated.InvalidRedirectUrlProblem
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertDoesNotThrow
 import org.junit.jupiter.api.assertThrows

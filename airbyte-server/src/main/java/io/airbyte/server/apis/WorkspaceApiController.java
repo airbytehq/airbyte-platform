@@ -34,7 +34,8 @@ import io.airbyte.api.model.generated.WorkspaceReadList;
 import io.airbyte.api.model.generated.WorkspaceUpdate;
 import io.airbyte.api.model.generated.WorkspaceUpdateName;
 import io.airbyte.api.model.generated.WorkspaceUpdateOrganization;
-import io.airbyte.commons.server.errors.problems.ForbiddenProblem;
+import io.airbyte.api.problems.model.generated.ProblemMessageData;
+import io.airbyte.api.problems.throwable.generated.ForbiddenProblem;
 import io.airbyte.commons.server.handlers.PermissionHandler;
 import io.airbyte.commons.server.handlers.WorkspacesHandler;
 import io.airbyte.commons.server.scheduling.AirbyteTaskExecutors;
@@ -79,7 +80,8 @@ public class WorkspaceApiController implements WorkspaceApi {
             .organizationId(workspaceCreate.getOrganizationId()))
             .getStatus();
         if (!permissionCheckStatus.equals(StatusEnum.SUCCEEDED)) {
-          throw new ForbiddenProblem("User does not have permission to create a workspace in organization " + workspaceCreate.getOrganizationId());
+          throw new ForbiddenProblem(new ProblemMessageData()
+              .message("User does not have permission to create a workspace in organization " + workspaceCreate.getOrganizationId()));
         }
       }
       return workspacesHandler.createWorkspace(workspaceCreate);
@@ -100,8 +102,8 @@ public class WorkspaceApiController implements WorkspaceApi {
             .organizationId(workspaceCreateWithId.getOrganizationId()))
             .getStatus();
         if (!permissionCheckStatus.equals(StatusEnum.SUCCEEDED)) {
-          throw new ForbiddenProblem(
-              "User does not have permission to create a workspace in organization " + workspaceCreateWithId.getOrganizationId());
+          throw new ForbiddenProblem(new ProblemMessageData().message(
+              "User does not have permission to create a workspace in organization " + workspaceCreateWithId.getOrganizationId()));
         }
       }
       return workspacesHandler.createWorkspaceIfNotExist(workspaceCreateWithId);

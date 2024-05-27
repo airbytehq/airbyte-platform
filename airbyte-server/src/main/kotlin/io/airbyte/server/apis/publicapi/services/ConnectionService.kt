@@ -10,7 +10,7 @@ import io.airbyte.api.model.generated.ConnectionRead
 import io.airbyte.api.model.generated.ConnectionUpdate
 import io.airbyte.api.model.generated.ListConnectionsForWorkspacesRequestBody
 import io.airbyte.api.model.generated.Pagination
-import io.airbyte.commons.server.errors.problems.UnexpectedProblem
+import io.airbyte.api.problems.throwable.generated.UnexpectedProblem
 import io.airbyte.commons.server.handlers.ConnectionsHandler
 import io.airbyte.commons.server.support.CurrentUserService
 import io.airbyte.public_api.model.generated.ConnectionCreateRequest
@@ -26,7 +26,6 @@ import io.airbyte.server.apis.publicapi.mappers.ConnectionUpdateMapper
 import io.airbyte.server.apis.publicapi.mappers.ConnectionsResponseMapper
 import io.micronaut.context.annotation.Secondary
 import io.micronaut.context.annotation.Value
-import io.micronaut.http.HttpStatus
 import jakarta.inject.Singleton
 import org.slf4j.LoggerFactory
 import java.util.Collections
@@ -102,7 +101,7 @@ class ConnectionServiceImpl(
       )
     } catch (e: Exception) {
       log.error("Error while reading response and converting to Connection read: ", e)
-      throw UnexpectedProblem(HttpStatus.INTERNAL_SERVER_ERROR)
+      throw UnexpectedProblem()
     }
   }
 
@@ -181,7 +180,7 @@ class ConnectionServiceImpl(
       )
     } catch (e: java.lang.Exception) {
       log.error("Error while reading and converting to Connection Response: ", e)
-      throw UnexpectedProblem(HttpStatus.INTERNAL_SERVER_ERROR)
+      throw UnexpectedProblem()
     }
   }
 

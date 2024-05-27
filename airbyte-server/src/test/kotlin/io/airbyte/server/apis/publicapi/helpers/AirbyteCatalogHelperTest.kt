@@ -11,8 +11,9 @@ import io.airbyte.api.model.generated.AirbyteStreamConfiguration
 import io.airbyte.api.model.generated.DestinationSyncMode
 import io.airbyte.api.model.generated.SelectedFieldInfo
 import io.airbyte.api.model.generated.SyncMode
+import io.airbyte.api.problems.model.generated.ProblemMessageData
+import io.airbyte.api.problems.throwable.generated.BadRequestProblem
 import io.airbyte.commons.json.Jsons
-import io.airbyte.commons.server.errors.problems.ConnectionConfigurationProblem
 import io.airbyte.public_api.model.generated.AirbyteApiConnectionSchedule
 import io.airbyte.public_api.model.generated.ConnectionSyncModeEnum
 import io.airbyte.public_api.model.generated.ScheduleTypeEnum
@@ -96,10 +97,11 @@ internal class AirbyteCatalogHelperTest {
     streamConfigurations.streams = listOf(streamConfiguration)
 
     val throwable =
-      assertThrows(ConnectionConfigurationProblem::class.java) {
+      assertThrows(BadRequestProblem::class.java) {
         AirbyteCatalogHelper.validateStreams(referenceCatalog = referenceCatalog, streamConfigurations = streamConfigurations)
       }
-    assertEquals(true, throwable.message?.contains("Invalid stream found"))
+    val problemData: ProblemMessageData = throwable.problem.data as ProblemMessageData
+    assertEquals(true, problemData.message.contains("Invalid stream found"))
   }
 
   @Test
@@ -113,10 +115,11 @@ internal class AirbyteCatalogHelperTest {
     streamConfigurations.streams = listOf(streamConfiguration1, streamConfiguration2)
 
     val throwable =
-      assertThrows(ConnectionConfigurationProblem::class.java) {
+      assertThrows(BadRequestProblem::class.java) {
         AirbyteCatalogHelper.validateStreams(referenceCatalog = referenceCatalog, streamConfigurations = streamConfigurations)
       }
-    assertEquals(true, throwable.message?.contains("Duplicate stream found in configuration"))
+    val problemData: ProblemMessageData = throwable.problem.data as ProblemMessageData
+    assertEquals(true, problemData.message.contains("Duplicate stream found in configuration"))
   }
 
   @Test
@@ -145,10 +148,11 @@ internal class AirbyteCatalogHelperTest {
     connectionSchedule.cronExpression = null
 
     val throwable =
-      assertThrows(ConnectionConfigurationProblem::class.java) {
+      assertThrows(BadRequestProblem::class.java) {
         AirbyteCatalogHelper.validateCronConfiguration(connectionSchedule = connectionSchedule)
       }
-    assertEquals(true, throwable.message?.contains("Missing cron expression in the schedule."))
+    val problemData: ProblemMessageData = throwable.problem.data as ProblemMessageData
+    assertEquals(true, problemData.message.contains("Missing cron expression in the schedule."))
   }
 
   @Test
@@ -158,10 +162,11 @@ internal class AirbyteCatalogHelperTest {
     connectionSchedule.cronExpression = "0 15 10 * * ? * * * *"
 
     val throwable =
-      assertThrows(ConnectionConfigurationProblem::class.java) {
+      assertThrows(BadRequestProblem::class.java) {
         AirbyteCatalogHelper.validateCronConfiguration(connectionSchedule = connectionSchedule)
       }
-    assertEquals(true, throwable.message?.contains("Cron expression contains 10 parts but we expect one of [6, 7]"))
+    val problemData: ProblemMessageData = throwable.problem.data as ProblemMessageData
+    assertEquals(true, problemData.message.contains("Cron expression contains 10 parts but we expect one of [6, 7]"))
   }
 
   @Test
@@ -171,10 +176,11 @@ internal class AirbyteCatalogHelperTest {
     connectionSchedule.cronExpression = "not a valid cron expression string"
 
     val throwable =
-      assertThrows(ConnectionConfigurationProblem::class.java) {
+      assertThrows(BadRequestProblem::class.java) {
         AirbyteCatalogHelper.validateCronConfiguration(connectionSchedule = connectionSchedule)
       }
-    assertEquals(true, throwable.message?.contains("Failed to parse cron expression. Invalid chars in expression!"))
+    val problemData: ProblemMessageData = throwable.problem.data as ProblemMessageData
+    assertEquals(true, problemData.message.contains("Failed to parse cron expression. Invalid chars in expression!"))
   }
 
   @ParameterizedTest
@@ -252,14 +258,15 @@ internal class AirbyteCatalogHelperTest {
     streamConfiguration.name = "stream-name"
 
     val throwable =
-      assertThrows(ConnectionConfigurationProblem::class.java) {
+      assertThrows(BadRequestProblem::class.java) {
         AirbyteCatalogHelper.validateStreamConfig(
           streamConfiguration = streamConfiguration,
           validDestinationSyncModes = listOf(DestinationSyncMode.OVERWRITE),
           airbyteStream = airbyteStream,
         )
       }
-    assertEquals(true, throwable.message?.contains("Cannot set sync mode to ${streamConfiguration.syncMode} for stream"))
+    val problemData: ProblemMessageData = throwable.problem.data as ProblemMessageData
+    assertEquals(true, problemData.message.contains("Cannot set sync mode to ${streamConfiguration.syncMode} for stream"))
   }
 
   @Test
@@ -355,14 +362,15 @@ internal class AirbyteCatalogHelperTest {
       )
 
     val throwable =
-      assertThrows(ConnectionConfigurationProblem::class.java) {
+      assertThrows(BadRequestProblem::class.java) {
         AirbyteCatalogHelper.validateStreamConfig(
           streamConfiguration = streamConfiguration,
           validDestinationSyncModes = listOf(DestinationSyncMode.APPEND),
           airbyteStream = airbyteStream,
         )
       }
-    assertEquals(true, throwable.message?.contains("Do not include a cursor field configuration for this stream"))
+    val problemData: ProblemMessageData = throwable.problem.data as ProblemMessageData
+    assertEquals(true, problemData.message.contains("Do not include a cursor field configuration for this stream"))
     assertEquals(SyncMode.INCREMENTAL, airbyteStreamConfiguration.syncMode)
     assertEquals(DestinationSyncMode.APPEND, airbyteStreamConfiguration.destinationSyncMode)
   }
@@ -418,16 +426,17 @@ internal class AirbyteCatalogHelperTest {
       )
 
     val throwable =
-      assertThrows(ConnectionConfigurationProblem::class.java) {
+      assertThrows(BadRequestProblem::class.java) {
         AirbyteCatalogHelper.validateStreamConfig(
           streamConfiguration = streamConfiguration,
           validDestinationSyncModes = listOf(DestinationSyncMode.APPEND),
           airbyteStream = airbyteStream,
         )
       }
+    val problemData: ProblemMessageData = throwable.problem.data as ProblemMessageData
     assertEquals(
       true,
-      throwable.message?.contains(
+      problemData.message.contains(
         "Invalid cursor field for stream: ${airbyteStream.name}. The list of valid cursor fields include: [[$otherCursorField]]",
       ),
     )
@@ -456,16 +465,17 @@ internal class AirbyteCatalogHelperTest {
       )
 
     val throwable =
-      assertThrows(ConnectionConfigurationProblem::class.java) {
+      assertThrows(BadRequestProblem::class.java) {
         AirbyteCatalogHelper.validateStreamConfig(
           streamConfiguration = streamConfiguration,
           validDestinationSyncModes = listOf(DestinationSyncMode.APPEND),
           airbyteStream = airbyteStream,
         )
       }
+    val problemData: ProblemMessageData = throwable.problem.data as ProblemMessageData
     assertEquals(
       true,
-      throwable.message?.contains(
+      problemData.message.contains(
         "No default cursor field for stream: ${airbyteStream.name}. Please include a cursor field configuration for this stream.",
       ),
     )
@@ -649,10 +659,11 @@ internal class AirbyteCatalogHelperTest {
           io.airbyte.public_api.model.generated.SelectedFieldInfo().fieldPath(listOf("b1")),
         )
       val throwable =
-        assertThrows(ConnectionConfigurationProblem::class.java) {
+        assertThrows(BadRequestProblem::class.java) {
           AirbyteCatalogHelper.validateFieldSelection(streamConfiguration, sourceStream)
         }
-      assertEquals(true, throwable.message?.contains("Duplicate fields selected"))
+      val problemData: ProblemMessageData = throwable.problem.data as ProblemMessageData
+      assertEquals(true, problemData.message.contains("Duplicate fields selected"))
     }
 
     @Test
@@ -666,10 +677,11 @@ internal class AirbyteCatalogHelperTest {
           io.airbyte.public_api.model.generated.SelectedFieldInfo().fieldPath(listOf("b1")),
         )
       var throwable =
-        assertThrows(ConnectionConfigurationProblem::class.java) {
+        assertThrows(BadRequestProblem::class.java) {
           AirbyteCatalogHelper.validateFieldSelection(streamConfiguration, sourceStream)
         }
-      assertEquals(true, throwable.message?.contains("Invalid field selected"))
+      val problemData: ProblemMessageData = throwable.problem.data as ProblemMessageData
+      assertEquals(true, problemData.message.contains("Invalid field selected"))
     }
 
     @Test
@@ -681,10 +693,11 @@ internal class AirbyteCatalogHelperTest {
           io.airbyte.public_api.model.generated.SelectedFieldInfo().fieldPath(listOf("b1")),
         )
       var throwable =
-        assertThrows(ConnectionConfigurationProblem::class.java) {
+        assertThrows(BadRequestProblem::class.java) {
           AirbyteCatalogHelper.validateFieldSelection(streamConfiguration, sourceStream)
         }
-      assertEquals(true, throwable.message?.contains("Primary key fields are not selected properly"))
+      val problemData: ProblemMessageData = throwable.problem.data as ProblemMessageData
+      assertEquals(true, problemData.message.contains("Primary key fields are not selected properly"))
     }
 
     @Test
@@ -697,10 +710,11 @@ internal class AirbyteCatalogHelperTest {
           io.airbyte.public_api.model.generated.SelectedFieldInfo().fieldPath(listOf("y1")),
         )
       var throwable =
-        assertThrows(ConnectionConfigurationProblem::class.java) {
+        assertThrows(BadRequestProblem::class.java) {
           AirbyteCatalogHelper.validateFieldSelection(streamConfiguration, sourceStream)
         }
-      assertEquals(true, throwable.message?.contains("Cursor field is not selected properly"))
+      val problemData: ProblemMessageData = throwable.problem.data as ProblemMessageData
+      assertEquals(true, problemData.message.contains("Cursor field is not selected properly"))
     }
   }
 

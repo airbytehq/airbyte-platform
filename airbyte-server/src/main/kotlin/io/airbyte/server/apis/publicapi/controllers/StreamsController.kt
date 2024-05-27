@@ -11,9 +11,9 @@ import io.airbyte.api.model.generated.AirbyteStreamAndConfiguration
 import io.airbyte.api.model.generated.DestinationSyncMode
 import io.airbyte.api.model.generated.PermissionType
 import io.airbyte.api.model.generated.SyncMode
+import io.airbyte.api.problems.throwable.generated.UnexpectedProblem
 import io.airbyte.commons.server.authorization.ApiAuthorizationHelper
 import io.airbyte.commons.server.authorization.Scope
-import io.airbyte.commons.server.errors.problems.UnexpectedProblem
 import io.airbyte.commons.server.scheduling.AirbyteTaskExecutors
 import io.airbyte.commons.server.support.CurrentUserService
 import io.airbyte.public_api.generated.PublicStreamsApi
@@ -144,7 +144,7 @@ class StreamsController(
         yamlMapper.readTree<JsonNode>(connectorSchema!!.traverse())
       } catch (e: IOException) {
         log?.error("Error getting stream fields from schema", e)
-        throw UnexpectedProblem(HttpStatus.INTERNAL_SERVER_ERROR)
+        throw UnexpectedProblem()
       }
     val fields = spec.fields()
     while (fields.hasNext()) {

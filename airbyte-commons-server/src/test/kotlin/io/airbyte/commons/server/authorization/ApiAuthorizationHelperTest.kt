@@ -2,9 +2,9 @@ package io.airbyte.commons.server.authorization
 
 import io.airbyte.api.model.generated.PermissionCheckRead
 import io.airbyte.api.model.generated.PermissionType
+import io.airbyte.api.problems.throwable.generated.ForbiddenProblem
 import io.airbyte.commons.auth.OrganizationAuthRole
 import io.airbyte.commons.auth.WorkspaceAuthRole
-import io.airbyte.commons.server.errors.problems.ForbiddenProblem
 import io.airbyte.commons.server.handlers.PermissionHandler
 import io.airbyte.commons.server.support.AuthenticationHeaderResolver
 import io.airbyte.commons.server.support.AuthenticationHttpHeaders.ORGANIZATION_ID_HEADER

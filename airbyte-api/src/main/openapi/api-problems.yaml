@@ -2,6 +2,10 @@ openapi: 3.0.0
 info:
   title: Airbyte API Problems
   version: 1.0.0
+  description: |
+    This file contains the definitions of the problems that the Airbyte APIs can return.
+    These problems are used to communicate errors to the client in a structured way, based on the RFC 9457 standard.
+    "default" values in ProblemResponse objects are considered constants for a given problem type.
 paths: {}
 components:
   schemas:
@@ -24,7 +28,152 @@ components:
           type: string
         data:
           type: object
-    SyncConflictProblemResponse:
+    InvalidApiKeyProblemResponse:
+      x-implements: io.airbyte.api.problems.ProblemResponse
+      type: object
+      allOf:
+        - $ref: "#/components/schemas/BaseProblemFields"
+        - type: object
+          properties:
+            status:
+              type: integer
+              default: 401
+            type:
+              type: string
+              default: https://reference.airbyte.com/reference/errors#invalid-api-key
+            title:
+              type: string
+              default: invalid-api-key
+            detail:
+              type: string
+              default: The API key in the Authorization header is invalid.
+    ForbiddenProblemResponse:
+      x-implements: io.airbyte.api.problems.ProblemResponse
+      type: object
+      allOf:
+        - $ref: "#/components/schemas/BaseProblemFields"
+        - type: object
+          properties:
+            status:
+              type: integer
+              default: 403
+            type:
+              type: string
+              default: https://reference.airbyte.com/reference/errors#forbidden
+            title:
+              type: string
+              default: forbidden
+            detail:
+              type: string
+              default: The request is forbidden.
+            data:
+              $ref: "#/components/schemas/ProblemMessageData"
+    OAuthCallbackFailureProblemResponse:
+      x-implements: io.airbyte.api.problems.ProblemResponse
+      type: object
+      allOf:
+        - $ref: "#/components/schemas/BaseProblemFields"
+        - type: object
+          properties:
+            status:
+              type: integer
+              default: 500
+            type:
+              type: string
+              default: https://reference.airbyte.com/reference/errors#oauth-callback-failure
+            title:
+              type: string
+              default: oauth-callback-failure
+            detail:
+              type: string
+              default: Unexpected problem completing OAuth
+            data:
+              $ref: "#/components/schemas/ProblemMessageData"
+    InvalidConsentUrlProblemResponse:
+      x-implements: io.airbyte.api.problems.ProblemResponse
+      type: object
+      allOf:
+        - $ref: "#/components/schemas/BaseProblemFields"
+        - type: object
+          properties:
+            status:
+              type: integer
+              default: 500
+            type:
+              type: string
+              default: https://reference.airbyte.com/reference/errors#invalid-consent-url
+            title:
+              type: string
+              default: invalid-consent-url
+            detail:
+              type: string
+              default: Unexpected problem generating consent URL
+            data:
+              $ref: "#/components/schemas/ProblemMessageData"
+    InvalidRedirectUrlProblemResponse:
+      x-implements: io.airbyte.api.problems.ProblemResponse
+      type: object
+      allOf:
+        - $ref: "#/components/schemas/BaseProblemFields"
+        - type: object
+          properties:
+            status:
+              type: integer
+              default: 422
+            type:
+              type: string
+              default: https://reference.airbyte.com/reference/errors#invalid-redirect-url
+            title:
+              type: string
+              default: invalid-redirect-url
+            detail:
+              type: string
+              default: Redirect URL format not understood. Please verify that it is a valid URI and uses HTTPS.
+            data:
+              $ref: "#/components/schemas/ProblemRedirectURLData"
+    UnprocessableEntityProblemResponse:
+      x-implements: io.airbyte.api.problems.ProblemResponse
+      type: object
+      allOf:
+        - $ref: "#/components/schemas/BaseProblemFields"
+        - type: object
+          properties:
+            status:
+              type: integer
+              default: 422
+            type:
+              type: string
+              default: https://reference.airbyte.com/reference/errors#unprocessable-entity
+            title:
+              type: string
+              default: unprocessable-entity
+            detail:
+              type: string
+              default: The body of hthe request was not understood
+            data:
+              $ref: "#/components/schemas/ProblemMessageData"
+    UnknownValueProblemResponse:
+      x-implements: io.airbyte.api.problems.ProblemResponse
+      type: object
+      allOf:
+        - $ref: "#/components/schemas/BaseProblemFields"
+        - type: object
+          properties:
+            status:
+              type: integer
+              default: 400
+            type:
+              type: string
+              default: https://reference.airbyte.com/reference/errors
+            title:
+              type: string
+              default: value-not-found
+            detail:
+              type: string
+              default: The submitted value could not be found.
+            data:
+              $ref: "#/components/schemas/ProblemValueData"
+    StateConflictProblemResponse:
       x-implements: io.airbyte.api.problems.ProblemResponse
       type: object
       allOf:
@@ -36,22 +185,145 @@ components:
               default: 409
             type:
               type: string
-              default: error.sync_conflict
+              default: https://reference.airbyte.com/reference/errors#409-state-conflict
             title:
               type: string
-            documentationUrl:
-              type: string
-              default: https://api.airbyte.io/docs/api-errors/sync-conflict
+              default: state-conflict
             detail:
               type: string
-              default: A sync is already in progress for this connection.
+              default: State conflict
             data:
-              $ref: "#/components/schemas/ConnectionIdProblemData"
-    ConnectionIdProblemData:
+              $ref: "#/components/schemas/ProblemMessageData"
+    TryAgainLaterConflictProblemResponse:
+      x-implements: io.airbyte.api.problems.ProblemResponse
+      type: object
+      allOf:
+        - $ref: "#/components/schemas/BaseProblemFields"
+        - type: object
+          properties:
+            status:
+              type: integer
+              default: 409
+            type:
+              type: string
+              default: https://reference.airbyte.com/reference/errors#try-again-later
+            title:
+              type: string
+              default: try-again-later
+            detail:
+              type: string
+              default: Please try again later.
+            data:
+              $ref: "#/components/schemas/ProblemMessageData"
+    UnexpectedProblemResponse:
+      x-implements: io.airbyte.api.problems.ProblemResponse
+      type: object
+      allOf:
+        - $ref: "#/components/schemas/BaseProblemFields"
+        - type: object
+          properties:
+            status:
+              type: integer
+              default: 500
+            type:
+              type: string
+              default: https://reference.airbyte.com/reference/errors
+            title:
+              type: string
+              default: unexpected-problem
+            detail:
+              type: string
+              default: An unexpected problem has occurred. If this is an error that needs to be addressed, please submit a pull request or github issue.
+            data:
+              $ref: "#/components/schemas/ProblemMessageData"
+    BadRequestProblemResponse:
+      x-implements: io.airbyte.api.problems.ProblemResponse
+      type: object
+      allOf:
+        - $ref: "#/components/schemas/BaseProblemFields"
+        - type: object
+          properties:
+            status:
+              type: integer
+              default: 400
+            type:
+              type: string
+              default: https://reference.airbyte.com/reference/errors#bad-request
+            title:
+              type: string
+              default: bad-request
+            detail:
+              type: string
+              default: The request could not be understood by the server due to malformed syntax.
+            data:
+              $ref: "#/components/schemas/ProblemMessageData"
+    ServiceUnavailableProblemResponse:
+      x-implements: io.airbyte.api.problems.ProblemResponse
+      type: object
+      allOf:
+        - $ref: "#/components/schemas/BaseProblemFields"
+        - type: object
+          properties:
+            status:
+              type: integer
+              default: 503
+            type:
+              type: string
+              default: https://reference.airbyte.com/reference/errors
+            title:
+              type: string
+              default: service-unavailable
+            detail:
+              type: string
+              default: The server is currently unable to handle the request.
+    ResourceNotFoundProblemResponse:
+      x-implements: io.airbyte.api.problems.ProblemResponse
+      type: object
+      allOf:
+        - $ref: "#/components/schemas/BaseProblemFields"
+        - type: object
+          properties:
+            status:
+              type: integer
+              default: 400
+            type:
+              type: string
+              default: https://reference.airbyte.com/reference/errors#resource-not-found
+            title:
+              type: string
+              default: resource-not-found
+            detail:
+              type: string
+              default: The requested resource could not be found.
+            data:
+              $ref: "#/components/schemas/ProblemResourceData"
+    ProblemRedirectURLData:
       type: object
       required:
-        - connectionId
+        - redirectUrl
       properties:
-        connectionId:
+        redirectUrl:
           type: string
-          format: uuid
+    ProblemMessageData:
+      type: object
+      required:
+        - message
+      properties:
+        message:
+          type: string
+    ProblemResourceData:
+      type: object
+      required:
+        - resourceId
+      properties:
+        resourceType:
+          type: string
+        resourceId:
+          type: string
+    ProblemValueData:
+      type: object
+      required:
+        - value
+      properties:
+        value:
+          type: string

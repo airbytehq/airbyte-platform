@@ -6,10 +6,11 @@ package io.airbyte.server.apis.publicapi.controllers
 
 import com.fasterxml.jackson.databind.node.ObjectNode
 import io.airbyte.api.model.generated.PermissionType
+import io.airbyte.api.problems.model.generated.ProblemValueData
+import io.airbyte.api.problems.throwable.generated.UnknownValueProblem
+import io.airbyte.api.problems.throwable.generated.UnprocessableEntityProblem
 import io.airbyte.commons.server.authorization.ApiAuthorizationHelper
 import io.airbyte.commons.server.authorization.Scope
-import io.airbyte.commons.server.errors.problems.UnknownValueProblem
-import io.airbyte.commons.server.errors.problems.UnprocessableEntityProblem
 import io.airbyte.commons.server.scheduling.AirbyteTaskExecutors
 import io.airbyte.commons.server.support.CurrentUserService
 import io.airbyte.public_api.generated.PublicSourcesApi
@@ -72,7 +73,9 @@ open class SourcesController(
             throw unprocessableEntityProblem
           }
           val sourceName = configurationJsonNode.findValue(SOURCE_TYPE).toString().replace("\"", "")
-          SOURCE_NAME_TO_DEFINITION_ID[sourceName] ?: throw UnknownValueProblem(sourceName)
+          SOURCE_NAME_TO_DEFINITION_ID[sourceName] ?: throw UnknownValueProblem(
+            ProblemValueData().value(sourceName),
+          )
         }
 
     removeSourceTypeNode(sourceCreateRequest)

@@ -13,8 +13,8 @@ import io.airbyte.api.model.generated.WebBackendConnectionReadList;
 import io.airbyte.api.model.generated.WebBackendConnectionRequestBody;
 import io.airbyte.api.model.generated.WebBackendGeographiesListResult;
 import io.airbyte.api.model.generated.WebBackendWorkspaceStateResult;
+import io.airbyte.api.problems.throwable.generated.ForbiddenProblem;
 import io.airbyte.commons.server.authorization.ApiAuthorizationHelper;
-import io.airbyte.commons.server.errors.problems.ForbiddenProblem;
 import io.airbyte.config.persistence.ConfigNotFoundException;
 import io.airbyte.validation.json.JsonValidationException;
 import io.micronaut.context.annotation.Primary;
@@ -99,7 +99,7 @@ class WebBackendApiTest extends BaseControllerTest {
     Mockito
         .doNothing() // first call that makes it here passes auth check
         .doNothing() // second call that makes it here passes auth check but 404s
-        .doThrow(new ForbiddenProblem("forbidden")) // third call fails auth check and 403s
+        .doThrow(new ForbiddenProblem()) // third call fails auth check and 403s
         .when(apiAuthorizationHelper).checkWorkspacePermissions(Mockito.anyString(), Mockito.any(), Mockito.any());
 
     // first call doesn't activate checkWorkspacePermissions because withRefreshedCatalog is false

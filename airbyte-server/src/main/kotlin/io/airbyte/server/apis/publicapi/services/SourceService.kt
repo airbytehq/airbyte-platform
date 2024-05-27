@@ -12,7 +12,8 @@ import io.airbyte.api.model.generated.SourceDiscoverSchemaRead
 import io.airbyte.api.model.generated.SourceDiscoverSchemaRequestBody
 import io.airbyte.api.model.generated.SourceIdRequestBody
 import io.airbyte.api.model.generated.SourceUpdate
-import io.airbyte.commons.server.errors.problems.UnexpectedProblem
+import io.airbyte.api.problems.model.generated.ProblemMessageData
+import io.airbyte.api.problems.throwable.generated.UnexpectedProblem
 import io.airbyte.commons.server.handlers.SchedulerHandler
 import io.airbyte.commons.server.handlers.SourceHandler
 import io.airbyte.commons.server.support.CurrentUserService
@@ -28,7 +29,6 @@ import io.airbyte.server.apis.publicapi.mappers.SourceReadMapper
 import io.airbyte.server.apis.publicapi.mappers.SourcesResponseMapper
 import io.micronaut.context.annotation.Secondary
 import io.micronaut.context.annotation.Value
-import io.micronaut.http.HttpStatus
 import jakarta.inject.Singleton
 import jakarta.ws.rs.core.Response
 import org.slf4j.LoggerFactory
@@ -212,7 +212,7 @@ open class SourceServiceImpl(
       } else if (sourceDefinitionSpecificationRead.jobInfo?.failureReason!!.internalMessage != null) {
         errorMessage += " logs:" + sourceDefinitionSpecificationRead.jobInfo!!.failureReason!!.internalMessage
       }
-      throw UnexpectedProblem(HttpStatus.BAD_REQUEST, errorMessage)
+      throw UnexpectedProblem(ProblemMessageData().message(errorMessage))
     }
     return result.getOrNull()!!
   }

@@ -4,11 +4,12 @@
 
 package io.airbyte.server.apis.publicapi.controllers
 
+import io.airbyte.api.problems.model.generated.ProblemMessageData
+import io.airbyte.api.problems.throwable.generated.BadRequestProblem
 import io.airbyte.commons.auth.OrganizationAuthRole
 import io.airbyte.commons.auth.WorkspaceAuthRole
 import io.airbyte.commons.server.authorization.ApiAuthorizationHelper
 import io.airbyte.commons.server.authorization.Scope
-import io.airbyte.commons.server.errors.problems.BadRequestProblem
 import io.airbyte.commons.server.scheduling.AirbyteTaskExecutors
 import io.airbyte.commons.server.support.CurrentUserService
 import io.airbyte.public_api.generated.PublicPermissionsApi
@@ -60,7 +61,8 @@ open class PermissionController(
         setOf(OrganizationAuthRole.ORGANIZATION_ADMIN),
       )
     } else {
-      val badRequestProblem = BadRequestProblem("Workspace ID or Organization ID must be provided in order to create a permission.")
+      val badRequestProblem =
+        BadRequestProblem(ProblemMessageData().message("Workspace ID or Organization ID must be provided in order to create a permission."))
       trackingHelper.trackFailuresIfAny(
         PERMISSIONS_PATH,
         POST,

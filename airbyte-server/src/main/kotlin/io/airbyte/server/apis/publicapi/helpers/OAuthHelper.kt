@@ -4,7 +4,8 @@
 
 package io.airbyte.server.apis.publicapi.helpers
 
-import io.airbyte.commons.server.errors.problems.InvalidRedirectUrlProblem
+import io.airbyte.api.problems.model.generated.ProblemRedirectURLData
+import io.airbyte.api.problems.throwable.generated.InvalidRedirectUrlProblem
 import org.slf4j.LoggerFactory
 import java.net.URI
 
@@ -25,17 +26,15 @@ object OAuthHelper {
    * problem.
    */
   fun validateRedirectUrl(redirectUrl: String?) {
-    if (redirectUrl == null) {
-      throw InvalidRedirectUrlProblem("Redirect URL cannot be null")
-    }
+    if (redirectUrl == null) throw InvalidRedirectUrlProblem()
     try {
       val uri = URI.create(redirectUrl)
       if (uri.scheme != HTTPS) {
-        throw InvalidRedirectUrlProblem("Redirect URL must use HTTPS")
+        throw InvalidRedirectUrlProblem(ProblemRedirectURLData().redirectUrl(redirectUrl))
       }
     } catch (e: IllegalArgumentException) {
       log.error(e.message)
-      throw InvalidRedirectUrlProblem("Redirect URL must conform to RFC 2396 - https://www.ietf.org/rfc/rfc2396.txt")
+      throw InvalidRedirectUrlProblem(ProblemRedirectURLData().redirectUrl(redirectUrl))
     }
   }
 }

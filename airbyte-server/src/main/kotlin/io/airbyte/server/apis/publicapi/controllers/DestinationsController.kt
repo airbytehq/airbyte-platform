@@ -6,10 +6,11 @@ package io.airbyte.server.apis.publicapi.controllers
 
 import com.fasterxml.jackson.databind.node.ObjectNode
 import io.airbyte.api.model.generated.PermissionType
+import io.airbyte.api.problems.model.generated.ProblemValueData
+import io.airbyte.api.problems.throwable.generated.UnknownValueProblem
+import io.airbyte.api.problems.throwable.generated.UnprocessableEntityProblem
 import io.airbyte.commons.server.authorization.ApiAuthorizationHelper
 import io.airbyte.commons.server.authorization.Scope
-import io.airbyte.commons.server.errors.problems.UnknownValueProblem
-import io.airbyte.commons.server.errors.problems.UnprocessableEntityProblem
 import io.airbyte.commons.server.scheduling.AirbyteTaskExecutors
 import io.airbyte.commons.server.support.CurrentUserService
 import io.airbyte.public_api.generated.PublicDestinationsApi
@@ -70,7 +71,9 @@ open class DestinationsController(
             throw unprocessableEntityProblem
           }
           val destinationName = configurationJsonNode.findValue(DESTINATION_TYPE).toString().replace("\"", "")
-          DESTINATION_NAME_TO_DEFINITION_ID[destinationName] ?: throw UnknownValueProblem(destinationName)
+          DESTINATION_NAME_TO_DEFINITION_ID[destinationName] ?: throw UnknownValueProblem(
+            ProblemValueData().value(destinationName),
+          )
         }
 
     removeDestinationType(destinationCreateRequest)

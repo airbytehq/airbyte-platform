@@ -4,11 +4,10 @@
 
 package io.airbyte.server.apis.publicapi.controllers
 
-import io.airbyte.commons.server.errors.problems.UnexpectedProblem
+import io.airbyte.api.problems.throwable.generated.ServiceUnavailableProblem
 import io.airbyte.commons.server.handlers.HealthCheckHandler
 import io.airbyte.commons.server.scheduling.AirbyteTaskExecutors
 import io.micronaut.http.HttpResponse
-import io.micronaut.http.HttpStatus
 import io.micronaut.http.annotation.Controller
 import io.micronaut.scheduling.annotation.ExecuteOn
 import io.micronaut.security.annotation.Secured
@@ -38,6 +37,6 @@ class HealthController(private val healthCheckHandler: HealthCheckHandler) {
     if (healthCheckHandler.health().available) {
       return HttpResponse.ok<String?>().body("Successful operation")
     }
-    throw UnexpectedProblem(HttpStatus.SERVICE_UNAVAILABLE)
+    throw ServiceUnavailableProblem()
   }
 }

@@ -19,10 +19,10 @@ import io.airbyte.api.model.generated.AirbyteStreamAndConfiguration
 import io.airbyte.api.model.generated.AirbyteStreamConfiguration
 import io.airbyte.api.model.generated.DestinationSyncMode
 import io.airbyte.api.model.generated.SyncMode
+import io.airbyte.api.problems.throwable.generated.UnexpectedProblem
 import io.airbyte.commons.server.errors.problems.ConnectionConfigurationProblem
 import io.airbyte.commons.server.errors.problems.ConnectionConfigurationProblem.Companion.duplicateStream
 import io.airbyte.commons.server.errors.problems.ConnectionConfigurationProblem.Companion.invalidStreamName
-import io.airbyte.commons.server.errors.problems.UnexpectedProblem
 import io.airbyte.public_api.model.generated.AirbyteApiConnectionSchedule
 import io.airbyte.public_api.model.generated.ConnectionSyncModeEnum
 import io.airbyte.public_api.model.generated.ScheduleTypeEnum
@@ -30,7 +30,6 @@ import io.airbyte.public_api.model.generated.SelectedFieldInfo
 import io.airbyte.public_api.model.generated.StreamConfiguration
 import io.airbyte.public_api.model.generated.StreamConfigurations
 import io.airbyte.server.apis.publicapi.mappers.ConnectionReadMapper
-import io.micronaut.http.HttpStatus
 import jakarta.validation.Valid
 import org.slf4j.LoggerFactory
 import java.io.IOException
@@ -452,7 +451,7 @@ object AirbyteCatalogHelper {
         yamlMapper.readTree(connectorSchema.traverse())
       } catch (e: IOException) {
         log.error("Error getting stream fields from schema", e)
-        throw UnexpectedProblem(HttpStatus.INTERNAL_SERVER_ERROR)
+        throw UnexpectedProblem()
       }
     val fields = spec.fields()
     while (fields.hasNext()) {
@@ -484,7 +483,7 @@ object AirbyteCatalogHelper {
         yamlMapper.readTree<JsonNode>(connectorSchema.traverse())
       } catch (e: IOException) {
         log.error("Error getting stream fields from schema", e)
-        throw UnexpectedProblem(HttpStatus.INTERNAL_SERVER_ERROR)
+        throw UnexpectedProblem()
       }
     val fields = spec.fields()
     while (fields.hasNext()) {

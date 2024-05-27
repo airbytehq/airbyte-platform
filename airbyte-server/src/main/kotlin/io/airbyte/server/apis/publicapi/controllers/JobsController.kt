@@ -5,9 +5,9 @@
 package io.airbyte.server.apis.publicapi.controllers
 
 import io.airbyte.api.model.generated.PermissionType
+import io.airbyte.api.problems.throwable.generated.UnprocessableEntityProblem
 import io.airbyte.commons.server.authorization.ApiAuthorizationHelper
 import io.airbyte.commons.server.authorization.Scope
-import io.airbyte.commons.server.errors.problems.UnprocessableEntityProblem
 import io.airbyte.commons.server.scheduling.AirbyteTaskExecutors
 import io.airbyte.commons.server.support.CurrentUserService
 import io.airbyte.public_api.generated.PublicJobsApi

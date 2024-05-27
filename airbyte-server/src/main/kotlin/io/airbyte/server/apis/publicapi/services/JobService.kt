@@ -12,7 +12,7 @@ import io.airbyte.api.model.generated.JobListForWorkspacesRequestBody.OrderByFie
 import io.airbyte.api.model.generated.JobListForWorkspacesRequestBody.OrderByMethodEnum
 import io.airbyte.api.model.generated.JobListRequestBody
 import io.airbyte.api.model.generated.Pagination
-import io.airbyte.commons.server.errors.problems.UnprocessableEntityProblem
+import io.airbyte.api.problems.throwable.generated.UnprocessableEntityProblem
 import io.airbyte.commons.server.handlers.JobHistoryHandler
 import io.airbyte.commons.server.handlers.SchedulerHandler
 import io.airbyte.commons.server.support.CurrentUserService
