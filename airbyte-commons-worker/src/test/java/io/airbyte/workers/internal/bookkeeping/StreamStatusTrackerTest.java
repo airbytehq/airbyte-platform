@@ -10,6 +10,7 @@ import static io.airbyte.protocol.models.AirbyteStreamStatusTraceMessage.Airbyte
 import static io.airbyte.protocol.models.AirbyteStreamStatusTraceMessage.AirbyteStreamStatus.STARTED;
 import static io.airbyte.workers.test_utils.TestConfigHelpers.DESTINATION_IMAGE;
 import static io.airbyte.workers.test_utils.TestConfigHelpers.SOURCE_IMAGE;
+import static org.junit.Assert.assertTrue;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -27,11 +28,16 @@ import io.airbyte.api.client.invoker.generated.ApiException;
 import io.airbyte.api.client.model.generated.StreamStatusCreateRequestBody;
 import io.airbyte.api.client.model.generated.StreamStatusIncompleteRunCause;
 import io.airbyte.api.client.model.generated.StreamStatusJobType;
+import io.airbyte.api.client.model.generated.StreamStatusRateLimitedMetadata;
 import io.airbyte.api.client.model.generated.StreamStatusRead;
 import io.airbyte.api.client.model.generated.StreamStatusRunState;
 import io.airbyte.api.client.model.generated.StreamStatusUpdateRequestBody;
+import io.airbyte.featureflag.FeatureFlagClient;
+import io.airbyte.featureflag.TestClient;
 import io.airbyte.protocol.models.AirbyteMessage;
 import io.airbyte.protocol.models.AirbyteMessage.Type;
+import io.airbyte.protocol.models.AirbyteStreamStatusRateLimitedReason;
+import io.airbyte.protocol.models.AirbyteStreamStatusReason;
 import io.airbyte.protocol.models.AirbyteStreamStatusTraceMessage;
 import io.airbyte.protocol.models.AirbyteStreamStatusTraceMessage.AirbyteStreamStatus;
 import io.airbyte.protocol.models.AirbyteTraceMessage;
@@ -39,8 +45,11 @@ import io.airbyte.protocol.models.StreamDescriptor;
 import io.airbyte.workers.context.ReplicationContext;
 import io.airbyte.workers.internal.bookkeeping.events.ReplicationAirbyteMessageEvent;
 import java.time.Duration;
+import java.time.Instant;
 import java.time.temporal.ChronoUnit;
+import java.util.Collections;
 import java.util.UUID;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -48,6 +57,7 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Captor;
+import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.slf4j.MDC;
 
@@ -72,7 +82,7 @@ class StreamStatusTrackerTest {
   private StreamDescriptor streamDescriptor;
   private StreamStatusesApi streamStatusesApi;
   private StreamStatusTracker streamStatusTracker;
-
+  private FeatureFlagClient featureFlagClient;
   @Captor
   private ArgumentCaptor<StreamStatusUpdateRequestBody> updateArgumentCaptor;
 
@@ -80,8 +90,15 @@ class StreamStatusTrackerTest {
   void setup() {
     streamStatusesApi = mock(StreamStatusesApi.class);
     airbyteApiClient = mock(AirbyteApiClient.class);
+    featureFlagClient = mock(TestClient.class);
+    when(featureFlagClient.boolVariation(any(), any())).thenReturn(true);
     streamDescriptor = new StreamDescriptor().withName("name").withNamespace("namespace");
-    streamStatusTracker = new StreamStatusTracker(airbyteApiClient);
+    streamStatusTracker = new StreamStatusTracker(airbyteApiClient, featureFlagClient);
+  }
+
+  @AfterEach
+  void resetMocks() {
+    Mockito.reset(streamStatusesApi, airbyteApiClient, featureFlagClient);
   }
 
   @Test
@@ -137,6 +154,128 @@ class StreamStatusTrackerTest {
     assertEquals(STARTED, streamStatusTracker.getAirbyteStreamStatus(streamStatusKey));
     verify(streamStatusesApi, times(1)).createStreamStatus(expected);
     verify(streamStatusesApi, times(0)).updateStreamStatus(any(StreamStatusUpdateRequestBody.class));
+  }
+
+  @Test
+  void testTrackingRateLimitedStatus() throws ApiException {
+    final AirbyteMessageOrigin airbyteMessageOrigin = AirbyteMessageOrigin.SOURCE;
+    final ReplicationContext replicationContext = getDefaultContext(false);
+
+    final Instant quotaReset = Instant.now();
+    final AirbyteMessage startedAirbyteMessage = createAirbyteMessage(streamDescriptor, STARTED, TIMESTAMP);
+    final AirbyteMessage rateLimitedMessage = createAirbyteMessageWithRateLimitedInfo(streamDescriptor, TIMESTAMP, quotaReset.toEpochMilli());
+
+    final ReplicationAirbyteMessageEvent startedEvent =
+        new ReplicationAirbyteMessageEvent(airbyteMessageOrigin, startedAirbyteMessage, replicationContext);
+    final ReplicationAirbyteMessageEvent rateLimitedEvent =
+        new ReplicationAirbyteMessageEvent(airbyteMessageOrigin, rateLimitedMessage, replicationContext);
+
+    final StreamStatusUpdateRequestBody expected = new StreamStatusUpdateRequestBody()
+        .streamName(streamDescriptor.getName())
+        .id(STREAM_ID)
+        .streamNamespace(streamDescriptor.getNamespace())
+        .jobId(JOB_ID)
+        .jobType(StreamStatusTrackerKt.jobType(replicationContext))
+        .connectionId(CONNECTION_ID)
+        .attemptNumber(ATTEMPT)
+        .runState(StreamStatusRunState.RATE_LIMITED)
+        .transitionedAt(TIMESTAMP.toMillis())
+        .workspaceId(WORKSPACE_ID)
+        .metadata(new StreamStatusRateLimitedMetadata().quotaReset(quotaReset.toEpochMilli()));
+
+    final StreamStatusKey streamStatusKey = new StreamStatusKey(streamDescriptor.getName(), streamDescriptor.getNamespace(),
+        replicationContext.getWorkspaceId(), replicationContext.getConnectionId(), replicationContext.getJobId(), replicationContext.getAttempt());
+
+    when(streamStatusesApi.createStreamStatus(any())).thenReturn(new StreamStatusRead().id(STREAM_ID));
+    when(airbyteApiClient.getStreamStatusesApi()).thenReturn(streamStatusesApi);
+
+    streamStatusTracker.track(startedEvent);
+    streamStatusTracker.track(rateLimitedEvent);
+
+    assertEquals(RUNNING, streamStatusTracker.getAirbyteStreamStatus(streamStatusKey));
+    verify(streamStatusesApi, times(1)).createStreamStatus(any(StreamStatusCreateRequestBody.class));
+    verify(streamStatusesApi, times(1)).updateStreamStatus(expected);
+    assertTrue(streamStatusTracker.getStreamsInRateLimitedStatus().contains(streamDescriptor));
+  }
+
+  @Test
+  void testTrackingRateLimitedAndRunningStatusTransition() throws ApiException {
+    final AirbyteMessageOrigin airbyteMessageOrigin = AirbyteMessageOrigin.SOURCE;
+    final ReplicationContext replicationContext = getDefaultContext(false);
+
+    final Instant quotaReset = Instant.now();
+    final AirbyteMessage startedAirbyteMessage = createAirbyteMessage(streamDescriptor, STARTED, TIMESTAMP);
+    final AirbyteMessage runningAirbyteMessage1 = createAirbyteMessage(streamDescriptor, AirbyteStreamStatus.RUNNING, TIMESTAMP);
+    final AirbyteMessage rateLimitedMessage = createAirbyteMessageWithRateLimitedInfo(streamDescriptor, TIMESTAMP, quotaReset.toEpochMilli());
+    final AirbyteMessage runningAirbyteMessage2 =
+        createAirbyteMessage(streamDescriptor, AirbyteStreamStatus.RUNNING, TIMESTAMP.plus(Duration.ofSeconds(1)));
+
+    final ReplicationAirbyteMessageEvent startedEvent =
+        new ReplicationAirbyteMessageEvent(airbyteMessageOrigin, startedAirbyteMessage, replicationContext);
+    final ReplicationAirbyteMessageEvent runningEvent1 =
+        new ReplicationAirbyteMessageEvent(airbyteMessageOrigin, runningAirbyteMessage1, replicationContext);
+    final ReplicationAirbyteMessageEvent rateLimitedEvent =
+        new ReplicationAirbyteMessageEvent(airbyteMessageOrigin, rateLimitedMessage, replicationContext);
+    final ReplicationAirbyteMessageEvent runningEvent2 =
+        new ReplicationAirbyteMessageEvent(airbyteMessageOrigin, runningAirbyteMessage2, replicationContext);
+
+    final StreamStatusUpdateRequestBody runningExpected = new StreamStatusUpdateRequestBody()
+        .streamName(streamDescriptor.getName())
+        .id(STREAM_ID)
+        .streamNamespace(streamDescriptor.getNamespace())
+        .jobId(JOB_ID)
+        .jobType(StreamStatusTrackerKt.jobType(replicationContext))
+        .connectionId(CONNECTION_ID)
+        .attemptNumber(ATTEMPT)
+        .runState(StreamStatusRunState.RUNNING)
+        .transitionedAt(TIMESTAMP.toMillis())
+        .workspaceId(WORKSPACE_ID)
+        .metadata(null);
+
+    final StreamStatusUpdateRequestBody runningExpected2 = new StreamStatusUpdateRequestBody()
+        .streamName(streamDescriptor.getName())
+        .id(STREAM_ID)
+        .streamNamespace(streamDescriptor.getNamespace())
+        .jobId(JOB_ID)
+        .jobType(StreamStatusTrackerKt.jobType(replicationContext))
+        .connectionId(CONNECTION_ID)
+        .attemptNumber(ATTEMPT)
+        .runState(StreamStatusRunState.RUNNING)
+        .transitionedAt(TIMESTAMP.plus(Duration.ofSeconds(1)).toMillis())
+        .workspaceId(WORKSPACE_ID)
+        .metadata(null);
+
+    final StreamStatusUpdateRequestBody rateLimitedExpected = new StreamStatusUpdateRequestBody()
+        .streamName(streamDescriptor.getName())
+        .id(STREAM_ID)
+        .streamNamespace(streamDescriptor.getNamespace())
+        .jobId(JOB_ID)
+        .jobType(StreamStatusTrackerKt.jobType(replicationContext))
+        .connectionId(CONNECTION_ID)
+        .attemptNumber(ATTEMPT)
+        .runState(StreamStatusRunState.RATE_LIMITED)
+        .transitionedAt(TIMESTAMP.toMillis())
+        .workspaceId(WORKSPACE_ID)
+        .metadata(new StreamStatusRateLimitedMetadata().quotaReset(quotaReset.toEpochMilli()));
+
+    final StreamStatusKey streamStatusKey = new StreamStatusKey(streamDescriptor.getName(), streamDescriptor.getNamespace(),
+        replicationContext.getWorkspaceId(), replicationContext.getConnectionId(), replicationContext.getJobId(), replicationContext.getAttempt());
+
+    when(streamStatusesApi.createStreamStatus(any())).thenReturn(new StreamStatusRead().id(STREAM_ID));
+    when(airbyteApiClient.getStreamStatusesApi()).thenReturn(streamStatusesApi);
+
+    streamStatusTracker.track(startedEvent);
+    streamStatusTracker.track(runningEvent1);
+    streamStatusTracker.track(rateLimitedEvent);
+    streamStatusTracker.track(runningEvent2);
+
+    assertEquals(RUNNING, streamStatusTracker.getAirbyteStreamStatus(streamStatusKey));
+    verify(streamStatusesApi, times(1)).createStreamStatus(any(StreamStatusCreateRequestBody.class));
+    verify(streamStatusesApi).updateStreamStatus(runningExpected);
+    verify(streamStatusesApi).updateStreamStatus(rateLimitedExpected);
+    verify(streamStatusesApi).updateStreamStatus(runningExpected2);
+    verify(streamStatusesApi, times(3)).updateStreamStatus(any(StreamStatusUpdateRequestBody.class));
+    assertFalse(streamStatusTracker.getStreamsInRateLimitedStatus().contains(streamDescriptor));
   }
 
   @Test
@@ -1139,7 +1278,7 @@ class StreamStatusTrackerTest {
 
   @ParameterizedTest
   @ValueSource(booleans = {true, false})
-  void incompleteEventsWithNoRunCauseDefaultTOfailedd(final boolean isReset) throws ApiException {
+  void incompleteEventsWithNoRunCauseDefaultToFailed(final boolean isReset) throws ApiException {
     final AirbyteMessageOrigin airbyteMessageOrigin = AirbyteMessageOrigin.SOURCE;
     final AirbyteMessage startedAirbyteMessage = createAirbyteMessage(streamDescriptor, STARTED, TIMESTAMP);
     final AirbyteMessage runningAirbyteMessage = createAirbyteMessage(streamDescriptor, AirbyteStreamStatus.RUNNING, TIMESTAMP);
@@ -1192,6 +1331,17 @@ class StreamStatusTrackerTest {
     final AirbyteTraceMessage traceMessage = new AirbyteTraceMessage().withType(AirbyteTraceMessage.Type.STREAM_STATUS)
         .withStreamStatus(statusTraceMessage).withEmittedAt(Long.valueOf(timestamp.toMillis()).doubleValue());
     return new AirbyteMessage().withType(Type.TRACE).withTrace(traceMessage);
+  }
+
+  private AirbyteMessage createAirbyteMessageWithRateLimitedInfo(final StreamDescriptor streamDescriptor,
+                                                                 final Duration timestamp,
+                                                                 final Long quotaRest) {
+    final AirbyteMessage airbyteMessage = createAirbyteMessage(streamDescriptor, RUNNING, timestamp);
+    airbyteMessage.getTrace().getStreamStatus().setReasons(Collections.singletonList(
+        new AirbyteStreamStatusReason()
+            .withType(AirbyteStreamStatusReason.AirbyteStreamStatusReasonType.RATE_LIMITED)
+            .withRateLimited(new AirbyteStreamStatusRateLimitedReason().withQuotaReset(quotaRest))));
+    return airbyteMessage;
   }
 
   private ReplicationContext getDefaultContext(boolean isReset) {

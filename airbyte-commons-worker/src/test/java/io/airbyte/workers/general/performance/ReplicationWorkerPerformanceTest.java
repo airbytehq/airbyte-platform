@@ -162,7 +162,7 @@ public abstract class ReplicationWorkerPerformanceTest {
         UUID.randomUUID(),
         "docker image",
         new NotImplementedMetricClient());
-    final StreamStatusTracker streamStatusTracker = new StreamStatusTracker(mock(AirbyteApiClient.class));
+    final StreamStatusTracker streamStatusTracker = new StreamStatusTracker(mock(AirbyteApiClient.class), mock(TestClient.class));
     final List<ApplicationEventListener<ReplicationAirbyteMessageEvent>> listeners = List.of(
         new AirbyteControlMessageEventListener(connectorConfigUpdater),
         new AirbyteStreamStatusMessageEventListener(streamStatusTracker));
@@ -192,7 +192,7 @@ public abstract class ReplicationWorkerPerformanceTest {
         new ReplicationWorkerHelper(airbyteMessageDataExtractor, fieldSelector, dstNamespaceMapper, messageTracker, syncPersistence,
             replicationAirbyteMessageEventPublishingHelper, new ThreadedTimeTracker(), () -> {}, workloadApiClient, false,
             analyticsMessageTracker,
-            Optional.empty(), airbyteApiClient, mock(StreamStatusCompletionTracker.class));
+            Optional.empty(), airbyteApiClient, mock(StreamStatusCompletionTracker.class), true);
     final StreamStatusCompletionTracker streamStatusCompletionTracker = mock(StreamStatusCompletionTracker.class);
 
     final var worker = getReplicationWorker("1", 0,

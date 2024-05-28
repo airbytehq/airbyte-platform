@@ -25,6 +25,7 @@ import io.airbyte.featureflag.DestinationTimeoutSeconds;
 import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.featureflag.FieldSelectionEnabled;
 import io.airbyte.featureflag.Multi;
+import io.airbyte.featureflag.ProcessRateLimitedMessage;
 import io.airbyte.featureflag.RemoveValidationLimit;
 import io.airbyte.featureflag.ReplicationWorkerImpl;
 import io.airbyte.featureflag.ShouldFailSyncOnDestinationTimeout;
@@ -324,6 +325,7 @@ public class ReplicationWorkerFactory {
                                                            final Clock clock) {
     final Context flagContext = getFeatureFlagContext(replicationInput);
     final String workerImpl = featureFlagClient.stringVariation(ReplicationWorkerImpl.INSTANCE, flagContext);
+    final Boolean processRateLimitedMessage = featureFlagClient.boolVariation(ProcessRateLimitedMessage.INSTANCE, flagContext);
     return buildReplicationWorkerInstance(
         workerImpl,
         jobRunConfig.getJobId(),
@@ -352,7 +354,8 @@ public class ReplicationWorkerFactory {
         featureFlagClient,
         airbyteApiClient,
         streamStatusCompletionTracker,
-        clock);
+        clock,
+        processRateLimitedMessage);
   }
 
   private static Context getFeatureFlagContext(final ReplicationInput replicationInput) {
@@ -401,11 +404,12 @@ public class ReplicationWorkerFactory {
                                                                   final FeatureFlagClient featureFlagClient,
                                                                   final AirbyteApiClient airbyteApiClient,
                                                                   final StreamStatusCompletionTracker streamStatusCompletionTracker,
-                                                                  final Clock clock) {
+                                                                  final Clock clock,
+                                                                  final Boolean processRateLimitedMessage) {
     final ReplicationWorkerHelper replicationWorkerHelper =
         new ReplicationWorkerHelper(airbyteMessageDataExtractor, fieldSelector, mapper, messageTracker, syncPersistence,
             messageEventPublishingHelper, new ThreadedTimeTracker(), onReplicationRunning, workloadApiClient,
-            workloadEnabled, analyticsMessageTracker, workloadId, airbyteApiClient, streamStatusCompletionTracker);
+            workloadEnabled, analyticsMessageTracker, workloadId, airbyteApiClient, streamStatusCompletionTracker, processRateLimitedMessage);
     final Optional<BufferedReplicationWorkerType> bufferedReplicationWorkerType = bufferedReplicationWorkerType(workerImpl);
 
     if (bufferedReplicationWorkerType.isPresent()) {

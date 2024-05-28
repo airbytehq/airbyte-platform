@@ -4,14 +4,24 @@ import io.airbyte.api.client.AirbyteApiClient
 import io.airbyte.api.client.model.generated.StreamStatusCreateRequestBody
 import io.airbyte.api.client.model.generated.StreamStatusIncompleteRunCause
 import io.airbyte.api.client.model.generated.StreamStatusJobType
+import io.airbyte.api.client.model.generated.StreamStatusRateLimitedMetadata
 import io.airbyte.api.client.model.generated.StreamStatusRead
 import io.airbyte.api.client.model.generated.StreamStatusRunState
 import io.airbyte.api.client.model.generated.StreamStatusUpdateRequestBody
+import io.airbyte.featureflag.Connection
+import io.airbyte.featureflag.Context
+import io.airbyte.featureflag.Destination
+import io.airbyte.featureflag.FeatureFlagClient
+import io.airbyte.featureflag.Multi
+import io.airbyte.featureflag.ProcessRateLimitedMessage
+import io.airbyte.featureflag.Source
+import io.airbyte.featureflag.Workspace
 import io.airbyte.protocol.models.AirbyteStreamStatusTraceMessage
 import io.airbyte.protocol.models.AirbyteStreamStatusTraceMessage.AirbyteStreamStatus
 import io.airbyte.protocol.models.AirbyteTraceMessage
 import io.airbyte.protocol.models.StreamDescriptor
 import io.airbyte.workers.context.ReplicationContext
+import io.airbyte.workers.general.RateLimitedMessageHandler
 import io.airbyte.workers.internal.bookkeeping.events.ReplicationAirbyteMessageEvent
 import io.airbyte.workers.internal.exception.StreamStatusException
 import io.github.oshai.kotlinlogging.KotlinLogging
@@ -20,6 +30,7 @@ import org.slf4j.MDC
 import java.util.Collections
 import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.ConcurrentHashMap.newKeySet
 import kotlin.time.Duration
 import kotlin.time.DurationUnit
 import kotlin.time.toDuration
@@ -32,8 +43,13 @@ private val logger = KotlinLogging.logger {}
  */
 
 @Singleton
-class StreamStatusTracker(private val airbyteApiClient: AirbyteApiClient) {
+class StreamStatusTracker(
+  private val airbyteApiClient: AirbyteApiClient,
+  private val featureFlagClient: FeatureFlagClient,
+) {
+  private var processRatelimitMessage: Boolean? = null
   private val currentStreamStatuses: MutableMap<StreamStatusKey, CurrentStreamStatus> = ConcurrentHashMap()
+  private val streamsInRateLimitedState = newKeySet<StreamDescriptor>()
   protected val mdc: Map<String, String>? by lazy { MDC.getCopyOfContextMap() }
 
   /**
@@ -41,6 +57,19 @@ class StreamStatusTracker(private val airbyteApiClient: AirbyteApiClient) {
    *
    * @param event The [ReplicationAirbyteMessageEvent] that contains a stream status message.
    */
+  private fun shouldProcessRateLimitedMessage(replicationContext: ReplicationContext): Boolean {
+    if (processRatelimitMessage == null) {
+      val contexts: MutableList<Context> = ArrayList()
+      contexts.add(Workspace(replicationContext.workspaceId.toString()))
+      contexts.add(Connection(replicationContext.connectionId.toString()))
+      contexts.add(Source(replicationContext.sourceId.toString()))
+      contexts.add(Destination(replicationContext.destinationId.toString()))
+      processRatelimitMessage = featureFlagClient.boolVariation(ProcessRateLimitedMessage, Multi(contexts))
+    }
+
+    return processRatelimitMessage ?: false
+  }
+
   fun track(event: ReplicationAirbyteMessageEvent) {
     // grab a copy of the context-map which will be reset in the finally block below
     val originalMdc: Map<String, String>? = MDC.getCopyOfContextMap()
@@ -62,6 +91,7 @@ class StreamStatusTracker(private val airbyteApiClient: AirbyteApiClient) {
         origin = event.airbyteMessageOrigin,
         ctx = event.replicationContext,
         incompleteRunCause = event.incompleteRunCause,
+        shouldProcessRateLimitedMessage = shouldProcessRateLimitedMessage(event.replicationContext),
       )
     } catch (e: Exception) {
       logger.error(e) { "Unable to update stream status for event $event" }
@@ -90,18 +120,28 @@ class StreamStatusTracker(private val airbyteApiClient: AirbyteApiClient) {
   @Deprecated("only used by tests - change currentStreamStatuses to internal when tests have been converted to kotlin")
   protected fun getAirbyteStreamStatus(key: StreamStatusKey): AirbyteStreamStatus? = currentStreamStatuses[key]?.getCurrentStatus()
 
+  @Deprecated("only used by tests - change streamsInRateLimitedState to internal when tests have been converted to kotlin")
+  protected fun getStreamsInRateLimitedStatus(): Set<StreamDescriptor> = streamsInRateLimitedState
+
   private fun handleStreamStatus(
     msg: AirbyteTraceMessage,
     origin: AirbyteMessageOrigin,
     ctx: ReplicationContext,
     incompleteRunCause: StreamStatusIncompleteRunCause?,
+    shouldProcessRateLimitedMessage: Boolean,
   ) {
     val streamStatus: AirbyteStreamStatusTraceMessage = msg.streamStatus
     val transition = msg.emittedAt.toLong().toDuration(DurationUnit.MILLISECONDS)
 
     when (streamStatus.status) {
       AirbyteStreamStatus.STARTED -> handleStreamStarted(msg = streamStatus, ctx = ctx, transition = transition)
-      AirbyteStreamStatus.RUNNING -> handleStreamRunning(msg = streamStatus, ctx = ctx, transition = transition)
+      AirbyteStreamStatus.RUNNING ->
+        handleStreamRunning(
+          msg = streamStatus,
+          ctx = ctx,
+          transition = transition,
+          shouldProcessRateLimitedMessage = shouldProcessRateLimitedMessage,
+        )
       AirbyteStreamStatus.COMPLETE -> handleStreamComplete(msg = streamStatus, ctx = ctx, transition = transition, origin = origin)
       AirbyteStreamStatus.INCOMPLETE ->
         handleStreamIncomplete(
@@ -156,10 +196,12 @@ class StreamStatusTracker(private val airbyteApiClient: AirbyteApiClient) {
   ) {
     if (origin == AirbyteMessageOrigin.INTERNAL) {
       forceStatusForConnection(ctx = ctx, transition = transition, streamStatusRunState = StreamStatusRunState.COMPLETE)
+      streamsInRateLimitedState.remove(msg.streamDescriptor)
       return
     }
 
     val descriptor = msg.streamDescriptor
+    streamsInRateLimitedState.remove(descriptor)
     val key = StreamStatusKey(ctx, descriptor)
     currentStreamStatuses[key]?.let { existingStreamStatus ->
       val updatedStreamStatus: CurrentStreamStatus = existingStreamStatus.copy().apply { setStatus(origin, msg) }
@@ -211,10 +253,12 @@ class StreamStatusTracker(private val airbyteApiClient: AirbyteApiClient) {
         streamStatusRunState = StreamStatusRunState.INCOMPLETE,
         streamStatusIncompleteRunCause = incompleteCause,
       )
+      streamsInRateLimitedState.remove(msg.streamDescriptor)
       return
     }
 
     val descriptor = msg.streamDescriptor
+    streamsInRateLimitedState.remove(descriptor)
     val key = StreamStatusKey(ctx, descriptor)
     currentStreamStatuses[key]?.let { existingStreamStatus ->
       if (existingStreamStatus.getCurrentStatus() != AirbyteStreamStatus.INCOMPLETE) {
@@ -255,21 +299,51 @@ class StreamStatusTracker(private val airbyteApiClient: AirbyteApiClient) {
     msg: AirbyteStreamStatusTraceMessage,
     ctx: ReplicationContext,
     transition: Duration,
+    shouldProcessRateLimitedMessage: Boolean,
   ) {
     val descriptor = msg.streamDescriptor
     val key = StreamStatusKey(ctx, descriptor)
-    currentStreamStatuses[key]?.takeIf { it.getCurrentStatus() == AirbyteStreamStatus.STARTED }
+    val isRateLimitedMessage = RateLimitedMessageHandler.isStreamStatusRateLimitedMessage(msg)
+    val isStreamRateLimited = streamsInRateLimitedState.contains(descriptor)
+    if (shouldProcessRateLimitedMessage && isRateLimitedMessage && isStreamRateLimited) {
+      return
+    }
+    currentStreamStatuses[key]?.takeIf {
+      (
+        it.getCurrentStatus() == AirbyteStreamStatus.STARTED ||
+          (shouldProcessRateLimitedMessage && it.getCurrentStatus() == AirbyteStreamStatus.RUNNING && isStreamRateLimited) ||
+          (shouldProcessRateLimitedMessage && !isStreamRateLimited && isRateLimitedMessage)
+      )
+    }
       ?.let { existingStreamStatus ->
+        val runState: StreamStatusRunState =
+          if (shouldProcessRateLimitedMessage && isRateLimitedMessage) {
+            StreamStatusRunState.RATE_LIMITED
+          } else {
+            StreamStatusRunState.RUNNING
+          }
+        val quotaResetFromMessage: Long? =
+          if (shouldProcessRateLimitedMessage && isRateLimitedMessage) {
+            RateLimitedMessageHandler.extractQuotaResetValue(msg)
+          } else {
+            null
+          }
         sendUpdate(
           statusId = existingStreamStatus.statusId,
           streamName = descriptor.name,
           streamNamespace = descriptor.namespace,
           transition = transition,
           ctx = ctx,
-          streamStatusRunState = StreamStatusRunState.RUNNING,
+          streamStatusRunState = runState,
           origin = AirbyteMessageOrigin.SOURCE,
+          quotaReset = quotaResetFromMessage,
         )
         existingStreamStatus.setStatus(AirbyteMessageOrigin.SOURCE, msg)
+        if (shouldProcessRateLimitedMessage && runState == StreamStatusRunState.RUNNING && isStreamRateLimited) {
+          streamsInRateLimitedState.remove(descriptor)
+        } else if (shouldProcessRateLimitedMessage && runState == StreamStatusRunState.RATE_LIMITED) {
+          streamsInRateLimitedState.add(descriptor)
+        }
         logger.debug {
           "Stream status for stream ${descriptor.namespace}:${descriptor.name} set to RUNNING (id = ${existingStreamStatus.statusId}, context = $ctx"
         }
@@ -301,6 +375,7 @@ class StreamStatusTracker(private val airbyteApiClient: AirbyteApiClient) {
     streamStatusRunState: StreamStatusRunState,
     origin: AirbyteMessageOrigin,
     incompleteRunCause: StreamStatusIncompleteRunCause? = null,
+    quotaReset: Long? = null,
   ) {
     if (statusId == null) {
       throw StreamStatusException("Stream status ID not present to perform update.", origin, ctx, streamName, streamNamespace)
@@ -321,6 +396,10 @@ class StreamStatusTracker(private val airbyteApiClient: AirbyteApiClient) {
         .apply {
           incompleteRunCause?.let {
             this.incompleteRunCause = it
+          }
+        }.apply {
+          quotaReset?.let {
+            this.metadata = StreamStatusRateLimitedMetadata().quotaReset(it)
           }
         }
 

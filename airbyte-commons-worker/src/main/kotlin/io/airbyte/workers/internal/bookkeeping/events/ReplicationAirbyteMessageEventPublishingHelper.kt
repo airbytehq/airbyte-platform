@@ -36,6 +36,13 @@ class ReplicationAirbyteMessageEventPublishingHelper(
     origin: AirbyteMessageOrigin,
   ): Unit = publishStatusEvent(stream = stream, ctx = ctx, origin = origin, streamStatus = AirbyteStreamStatus.COMPLETE)
 
+  fun publishRunningStatusEvent(
+    stream: StreamDescriptor,
+    ctx: ReplicationContext,
+    origin: AirbyteMessageOrigin,
+    emittedAt: Long,
+  ): Unit = publishStatusEvent(stream = stream, ctx = ctx, origin = origin, streamStatus = AirbyteStreamStatus.RUNNING, emittedAt = emittedAt)
+
   /**
    * Publishes an incomplete status event used to indicate that the source or destination has finished
    * its execution for the given stream unsuccessfully.
@@ -82,10 +89,11 @@ class ReplicationAirbyteMessageEventPublishingHelper(
     ctx: ReplicationContext,
     origin: AirbyteMessageOrigin,
     incompleteRunCause: StreamStatusIncompleteRunCause? = null,
+    emittedAt: Long? = System.currentTimeMillis(),
   ) {
     ReplicationAirbyteMessageEvent(
       airbyteMessageOrigin = origin,
-      airbyteMessage = AirbyteMessageUtils.createStatusTraceMessage(stream, streamStatus),
+      airbyteMessage = AirbyteMessageUtils.createStatusTraceMessage(stream, streamStatus, emittedAt),
       replicationContext = ctx,
       incompleteRunCause = incompleteRunCause,
     ).also {

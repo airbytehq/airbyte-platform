@@ -92,6 +92,7 @@ class ReplicationWorkerHelper(
   private val workloadId: Optional<String>,
   private val airbyteApiClient: AirbyteApiClient,
   private val streamStatusCompletionTracker: StreamStatusCompletionTracker,
+  processRateLimitedMessage: Boolean,
 ) {
   private val metricClient = MetricClientFactory.getMetricClient()
   private val metricAttrs: MutableList<MetricAttribute> = mutableListOf()
@@ -112,6 +113,12 @@ class ReplicationWorkerHelper(
   private var currentDestinationStream: StreamDescriptor? = null
   private var ctx: ReplicationContext? = null
   private lateinit var replicationFeatureFlags: ReplicationFeatureFlags
+  private val rateLimitedMessageHandler =
+    RateLimitedMessageHandler(
+      airbyteMessageDataExtractor,
+      replicationAirbyteMessageEventPublishingHelper,
+      processRateLimitedMessage,
+    )
 
   fun markCancelled(): Unit = _cancelled.set(true)
 
@@ -236,6 +243,7 @@ class ReplicationWorkerHelper(
   }
 
   fun endOfReplication() {
+    rateLimitedMessageHandler.clear()
     val context = requireNotNull(ctx)
     // Publish a complete status event for all streams associated with the connection.
     // This is to ensure that all streams end up in a terminal state and is necessary for
@@ -369,10 +377,7 @@ class ReplicationWorkerHelper(
       analyticsMessageTracker.addMessage(sourceRawMessage, AirbyteMessageOrigin.SOURCE)
     }
 
-    if (shouldPublishMessage(sourceRawMessage)) {
-      replicationAirbyteMessageEventPublishingHelper
-        .publishStatusEvent(ReplicationAirbyteMessageEvent(AirbyteMessageOrigin.SOURCE, sourceRawMessage, context))
-    }
+    handleControlAndStreamStatusMessages(sourceRawMessage, context)
 
     recordsRead += 1
     if (recordsRead % 5000 == 0L) {
@@ -388,6 +393,19 @@ class ReplicationWorkerHelper(
     }
 
     return sourceRawMessage
+  }
+
+  private fun handleControlAndStreamStatusMessages(
+    sourceRawMessage: AirbyteMessage,
+    context: ReplicationContext,
+  ) {
+    if (shouldPublishMessage(sourceRawMessage)) {
+      rateLimitedMessageHandler.moveStreamToRateLimitedStateIfApplicable(sourceRawMessage)
+      replicationAirbyteMessageEventPublishingHelper
+        .publishStatusEvent(ReplicationAirbyteMessageEvent(AirbyteMessageOrigin.SOURCE, sourceRawMessage, context))
+    } else {
+      rateLimitedMessageHandler.moveStreamOutOfRateLimitedStateIfApplicable(sourceRawMessage, context)
+    }
   }
 
   @VisibleForTesting
