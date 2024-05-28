@@ -145,6 +145,8 @@ export const computeStreamStatus = ({
     statuses[0].jobType === StreamStatusJobType.SYNC &&
     statuses[0].runState === StreamStatusRunState.INCOMPLETE &&
     statuses[0].incompleteRunCause === StreamStatusIncompleteRunCause.FAILED &&
+    scheduleType !== ConnectionScheduleType.basic &&
+    lastSuccessfulSync && // if there is no previous successful sync it can't be OnTrack - required as isStreamLate (correctly) returns false for this case, but there's more nuance here; more correctly isStreamLate would indicate `stream is not late because stream never succeeded` instead of `false`, but it can't so we test here
     !isStreamLate(statuses, scheduleType, scheduleData, errorMultiplier)
   ) {
     return { status: ConnectionStatusIndicatorStatus.OnTrack, isRunning, lastSuccessfulSync };

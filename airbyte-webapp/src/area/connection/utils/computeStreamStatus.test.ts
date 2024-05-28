@@ -313,6 +313,54 @@ describe("computeStreamStatus", () => {
       });
     });
   });
+
+  describe("error", () => {
+    it('returns "Error" when there is one INCOMPLETE stream status two steps outside the 2-hour window', () => {
+      const status = buildStreamStatusRead({
+        runState: StreamStatusRunState.INCOMPLETE,
+        incompleteRunCause: StreamStatusIncompleteRunCause.FAILED,
+        transitionedAt: fiveHoursAgo,
+      });
+      const result = computeStreamStatus({
+        statuses: [status],
+        hasRecordsExtracted: false,
+        scheduleType: ConnectionScheduleType.basic,
+        scheduleData: basicScheduleData,
+        hasBreakingSchemaChange: false,
+        lateMultiplier: 2,
+        showSyncProgress: false,
+        errorMultiplier: 2,
+      });
+      expect(result).toEqual({
+        status: ConnectionStatusIndicatorStatus.Error,
+        isRunning: false,
+        lastSuccessfulSync: undefined,
+      });
+    });
+
+    it('returns "Error" when there is one INCOMPLETE stream status and the connection frequency is manual', () => {
+      const status = buildStreamStatusRead({
+        runState: StreamStatusRunState.INCOMPLETE,
+        incompleteRunCause: StreamStatusIncompleteRunCause.FAILED,
+        transitionedAt: oneHourAgo,
+      });
+      const result = computeStreamStatus({
+        statuses: [status],
+        hasRecordsExtracted: false,
+        scheduleType: ConnectionScheduleType.manual,
+        hasBreakingSchemaChange: false,
+        lateMultiplier: 2,
+        showSyncProgress: false,
+        errorMultiplier: 2,
+      });
+      expect(result).toEqual({
+        status: ConnectionStatusIndicatorStatus.Error,
+        isRunning: false,
+        lastSuccessfulSync: undefined,
+      });
+    });
+  });
+
   describe("without sync progress shown", () => {
     describe("queued", () => {
       it("returns undefined with only a currently running sync (no history)", () => {
