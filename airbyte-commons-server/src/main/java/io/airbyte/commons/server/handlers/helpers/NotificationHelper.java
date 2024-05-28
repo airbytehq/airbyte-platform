@@ -40,6 +40,10 @@ public class NotificationHelper {
                                      final SourceConnection source,
                                      final String email) {
     try {
+      if (diff.getTransforms().isEmpty()) {
+        LOGGER.info("No diff to report for connection: '{}'; skipping notification.", connection.getConnectionId());
+        return;
+      }
       final NotificationItem item;
 
       final String connectionUrl = webUrlHelper.getConnectionUrl(workspace.getWorkspaceId(), connection.getConnectionId());
