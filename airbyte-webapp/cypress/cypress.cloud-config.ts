@@ -8,6 +8,8 @@ export default defineConfig({
     baseUrl: "https://localhost:3001/",
     specPattern: ["cypress/cloud-e2e/**/*.cy.ts"],
     supportFile: "cypress/support/cloud-e2e.ts",
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    setupNodeEvents: require("dd-trace/ci/cypress/plugin"),
     env: {
       LOGIN_URL: "https://frontend-dev-cloud.airbyte.com",
     },

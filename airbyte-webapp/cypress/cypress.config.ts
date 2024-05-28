@@ -20,6 +20,8 @@ export default defineConfig({
     specPattern: ["cypress/e2e/**/*.cy.ts"],
     supportFile: "cypress/support/e2e.ts",
     setupNodeEvents(on, config) {
+      // eslint-disable-next-line @typescript-eslint/no-var-requires
+      require("dd-trace/ci/cypress/plugin")(on, config);
       on("task", {
         dbQuery(params) {
           const { query, connection = DB_CONFIG } = params;

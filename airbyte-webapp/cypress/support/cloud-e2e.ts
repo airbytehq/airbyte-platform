@@ -15,6 +15,7 @@
 
 // Import commands.js using ES2015 syntax:
 import "commands/cloud";
+require("dd-trace/ci/cypress/support");
 
 // keep the command log readable
 beforeEach(() => {
