@@ -32,6 +32,7 @@
     "lint": "eslint --ext .js,.ts,.tsx --ignore-path .gitignore .",
     "stylelint": "stylelint 'src/**/*.{css,scss}'",
     "stylelint-check": "stylelint-config-prettier-scss-check",
+    "prettier:ci": "prettier --check  'src/**/*.{css,scss,md,json}'",
     "unused-code": "knip --production --reporter markdown || { echo '[^] The above files and dependencies are not used within the code base. Please delete them or explicitly ignore them in knip.jsonc.'; exit 1; }",
     "license-check": "node ./scripts/license-check.js",
     "generate-client": "./scripts/load-declarative-schema.sh && orval",

@@ -193,6 +193,16 @@ tasks.register<PnpmTask>("unusedCode") {
     outputs.upToDateWhen { true }
 }
 
+tasks.register<PnpmTask>("prettier") {
+    dependsOn(tasks.named("pnpmInstall"))
+
+    args = listOf("run", "prettier:ci")
+
+    inputs.files(allFiles)
+
+    outputs.upToDateWhen { true }
+}
+
 tasks.register<PnpmTask>("buildStorybook") {
     dependsOn(tasks.named("pnpmInstall"))
 
@@ -221,7 +231,7 @@ tasks.register<Copy>("copyNginx") {
 
 // Those tasks should be run as part of the "check" task
 tasks.named("check") {
-    dependsOn(tasks.named("licenseCheck"), tasks.named("validateLock"), tasks.named("unusedCode"), tasks.named("test"))
+    dependsOn(tasks.named("licenseCheck"), tasks.named("validateLock"), tasks.named("unusedCode"), tasks.named("prettier"), tasks.named("test"))
 }
 
 // Some check tasks only should be run on CI, thus a separate ciCheck task
