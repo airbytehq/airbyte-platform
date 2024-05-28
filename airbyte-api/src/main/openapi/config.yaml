@@ -9194,6 +9194,18 @@ components:
         - workspace_editor # Permission to create and edit connections within the workspace, but cannot update workspace name or delete the workspace
         - workspace_reader # Permission to read connections, sync details, logs within the workspace, but cannot modify anything
       x-sdk-component: true
+    PublicPermissionType:
+      type: string
+      description: Subset of `PermissionType` (removing `instance_admin`), could be used in public-api.
+      enum:
+        - organization_admin # Permission to update organization settings and manage user roles in an organization and all permissions below
+        - organization_editor # Permission to create, read, delete, and edit all workspaces within an organization
+        - organization_reader # Permission to read all workspaces within an organization
+        - organization_member # Permission to read organization basic information, not having permissions to any workspaces within an organization
+        - workspace_admin # Permission to create, read, delete, and edit a specific workspace, and also can grant other users permissions to this workspace
+        - workspace_editor # Permission to create and edit connections within the workspace, but cannot update workspace name or delete the workspace
+        - workspace_reader # Permission to read connections, sync details, logs within the workspace, but cannot modify anything
+      x-sdk-component: true
     PermissionCheckRequest:
       type: object
       required:
@@ -12383,7 +12395,7 @@ components:
       type: object
       properties:
         permissionType:
-          $ref: "#/components/schemas/PermissionType"
+          $ref: "#/components/schemas/PublicPermissionType"
         userId:
           $ref: "#/components/schemas/UserId"
         workspaceId:
