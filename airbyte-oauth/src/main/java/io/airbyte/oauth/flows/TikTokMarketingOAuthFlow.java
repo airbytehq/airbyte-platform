@@ -23,7 +23,7 @@ import org.apache.http.client.utils.URIBuilder;
  */
 public class TikTokMarketingOAuthFlow extends BaseOAuth2Flow {
 
-  private static final String ACCESS_TOKEN_URL = "https://ads.tiktok.com/open_api/v1.2/oauth2/access_token/";
+  private static final String ACCESS_TOKEN_URL = "https://business-api.tiktok.com/open_api/v1.3/oauth2/access_token/";
 
   @Override
   protected String getClientIdUnsafe(final JsonNode oauthConfig) {
@@ -41,7 +41,7 @@ public class TikTokMarketingOAuthFlow extends BaseOAuth2Flow {
 
   @VisibleForTesting
   public TikTokMarketingOAuthFlow(final HttpClient httpClient, final Supplier<String> stateSupplier) {
-    super(httpClient, stateSupplier);
+    super(httpClient, stateSupplier, TokenRequestContentType.JSON);
   }
 
   @Override
