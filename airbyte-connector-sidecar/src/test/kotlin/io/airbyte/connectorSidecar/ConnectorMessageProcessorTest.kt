@@ -20,7 +20,6 @@ import io.airbyte.protocol.models.AirbyteStream
 import io.airbyte.protocol.models.AirbyteTraceMessage
 import io.airbyte.protocol.models.Config
 import io.airbyte.protocol.models.ConnectorSpecification
-import io.airbyte.workers.exception.WorkerException
 import io.airbyte.workers.internal.AirbyteStreamFactory
 import io.airbyte.workers.models.SidecarInput
 import io.mockk.every
@@ -29,9 +28,9 @@ import io.mockk.junit5.MockKExtension
 import io.mockk.verify
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
+import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
-import org.junit.jupiter.api.assertThrows
 import org.junit.jupiter.api.extension.ExtendWith
 import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
@@ -358,15 +357,23 @@ class ConnectorMessageProcessorTest {
 
   @Test
   fun `fail if non 0 exit code`() {
-    assertThrows<WorkerException> {
+    every { streamFactory.create(any()) } returns Stream.of()
+
+    val jobOutput =
       connectorMessageProcessor.run(
         InputStream.nullInputStream(),
         streamFactory,
-        ConnectorMessageProcessor.OperationInput(StandardCheckConnectionInput()),
+        ConnectorMessageProcessor.OperationInput(
+          StandardCheckConnectionInput()
+            .withActorType(ActorType.SOURCE)
+            .withActorId(UUID.randomUUID())
+            .withConnectionConfiguration(Jsons.emptyObject()),
+        ),
         1,
         SidecarInput.OperationType.CHECK,
       )
-    }
+
+    assertTrue(jobOutput.failureReason != null)
   }
 
   @Test

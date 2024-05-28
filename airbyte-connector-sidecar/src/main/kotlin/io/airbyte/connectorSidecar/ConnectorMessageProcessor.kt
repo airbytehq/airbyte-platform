@@ -60,10 +60,6 @@ class ConnectorMessageProcessor(
     exitCode: Int,
     operationType: OperationType,
   ): ConnectorJobOutput {
-    if (exitCode != 0) {
-      throw WorkerException("$operationType operation returned a non zero exit code, the exit code is: $exitCode")
-    }
-
     try {
       val jobOutput: ConnectorJobOutput = createBaseOutput(operationType)
       val messagesByType: Map<AirbyteMessage.Type, List<AirbyteMessage>> = getMessagesByType(inputStream, streamFactory)
@@ -83,28 +79,30 @@ class ConnectorMessageProcessor(
       if (operationType != OperationType.SPEC) {
         updateConfigFromControlMessagePerMessageType(operationType, input, messagesByType, inputConfig, jobOutput)
       }
-      val failureReason = getJobFailureReasonFromMessages(ConnectorJobOutput.OutputType.CHECK_CONNECTION, messagesByType)
+      val failureReason = getJobFailureReasonFromMessages(operationType.toConnectorOutputType(), messagesByType)
       failureReason.ifPresent { failureReason: FailureReason? -> jobOutput.failureReason = failureReason }
 
-      setOutput(operationType, result, jobOutput, failureReason, input)
+      setOutput(operationType, result, jobOutput, failureReason, input, exitCode)
       return jobOutput
     } catch (e: IOException) {
       val errorMessage: String = String.format("Lost connection to the connector")
       throw WorkerException(errorMessage, e)
     } catch (e: Exception) {
-      throw WorkerException("Unexpected error performing $operationType.", e)
+      throw WorkerException("Unexpected error performing $operationType. The exit of the connector was: $exitCode", e)
     }
   }
 
   private fun createBaseOutput(operation: OperationType): ConnectorJobOutput {
     return ConnectorJobOutput()
-      .withOutputType(
-        when (operation) {
-          OperationType.CHECK -> ConnectorJobOutput.OutputType.CHECK_CONNECTION
-          OperationType.DISCOVER -> ConnectorJobOutput.OutputType.DISCOVER_CATALOG_ID
-          OperationType.SPEC -> ConnectorJobOutput.OutputType.SPEC
-        },
-      )
+      .withOutputType(operation.toConnectorOutputType())
+  }
+
+  private fun OperationType.toConnectorOutputType(): ConnectorJobOutput.OutputType {
+    return when (this) {
+      OperationType.CHECK -> ConnectorJobOutput.OutputType.CHECK_CONNECTION
+      OperationType.DISCOVER -> ConnectorJobOutput.OutputType.DISCOVER_CATALOG_ID
+      OperationType.SPEC -> ConnectorJobOutput.OutputType.SPEC
+    }
   }
 
   private fun updateConfigFromControlMessagePerMessageType(
@@ -145,6 +143,7 @@ class ConnectorMessageProcessor(
     jobOutput: ConnectorJobOutput,
     failureReason: Optional<FailureReason>,
     input: OperationInput,
+    exitCode: Int,
   ) {
     when (operationType) {
       OperationType.CHECK ->
@@ -154,8 +153,15 @@ class ConnectorMessageProcessor(
               .withStatus(Enums.convertTo(result.connectionStatus.status, StandardCheckConnectionOutput.Status::class.java))
               .withMessage(result.connectionStatus.message)
           jobOutput.checkConnection = output
-        } else if (failureReason.isEmpty) {
-          throw WorkerException("Error checking connection status: no status nor failure reason provided")
+        } else if (failureReason.isEmpty && exitCode == 0) {
+          throw WorkerException("Connector exited successfully without an output for $operationType.")
+        } else if (exitCode != 0) {
+          jobOutput.failureReason =
+            getFailureReasonForNon0ExitCode(
+              operationType,
+              exitCode,
+              if (input.checkInput!!.actorType == ActorType.SOURCE) FailureReason.FailureOrigin.SOURCE else FailureReason.FailureOrigin.DESTINATION,
+            )
         }
 
       OperationType.DISCOVER ->
@@ -164,15 +170,35 @@ class ConnectorMessageProcessor(
             airbyteApiClient.sourceApi
               .writeDiscoverCatalogResult(buildSourceDiscoverSchemaWriteRequestBody(input.discoveryInput, result.catalog))
           jobOutput.discoverCatalogId = apiResult.catalogId
-        } else if (failureReason.isEmpty) {
-          throw WorkerException("Error discovering catalog: no failure reason provided")
+        } else if (failureReason.isEmpty && exitCode == 0) {
+          throw WorkerException("Connector exited successfully without an output for $operationType.")
+        } else if (exitCode != 0) {
+          jobOutput.failureReason =
+            getFailureReasonForNon0ExitCode(operationType, exitCode, FailureReason.FailureOrigin.SOURCE)
         }
 
       OperationType.SPEC ->
         if (result.spec != null) {
           jobOutput.spec = result.spec
+        } else if (failureReason.isEmpty && exitCode == 0) {
+          throw WorkerException("Connector exited successfully without an output for $operationType.")
+        } else if (exitCode != 0) {
+          jobOutput.failureReason =
+            getFailureReasonForNon0ExitCode(operationType, exitCode, FailureReason.FailureOrigin.SOURCE)
         }
     }
+  }
+
+  private fun getFailureReasonForNon0ExitCode(
+    operationType: OperationType,
+    exitCode: Int,
+    failureOrigin: FailureReason.FailureOrigin,
+  ): FailureReason {
+    return FailureReason()
+      .withExternalMessage("The $operationType operation returned an exit code $exitCode")
+      .withExternalMessage("The main container of the $operationType operation returned an exit code $exitCode")
+      .withFailureType(FailureReason.FailureType.SYSTEM_ERROR)
+      .withFailureOrigin(failureOrigin)
   }
 
   private fun buildSourceDiscoverSchemaWriteRequestBody(
