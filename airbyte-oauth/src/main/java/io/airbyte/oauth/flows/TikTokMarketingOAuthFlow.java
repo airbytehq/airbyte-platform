@@ -103,7 +103,7 @@ public class TikTokMarketingOAuthFlow extends BaseOAuth2Flow {
     if ((data.has("data")) && (data.get("data").has("access_token"))) {
       result.put("access_token", data.get("data").get("access_token").asText());
     } else {
-      throw new IOException(String.format("Missing 'access_token' in query params from %s", accessTokenUrl));
+      throw new IOException(String.format("Missing 'access_token' in query params from %s, data: %s", accessTokenUrl, data.toString()));
     }
     return result;
   }
