@@ -58,8 +58,8 @@ class InitialUserConfigFactory {
 }
 
 data class InitialUserConfig(
-  val email: String?,
-  val firstName: String?,
-  val lastName: String?,
-  val password: String?,
+  var email: String,
+  var firstName: String?,
+  var lastName: String?,
+  var password: String,
 )

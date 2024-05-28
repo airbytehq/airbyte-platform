@@ -12,7 +12,8 @@ import io.airbyte.api.model.generated.InstanceConfigurationResponse.LicenseTypeE
 import io.airbyte.api.model.generated.InstanceConfigurationResponse.TrackingStrategyEnum;
 import io.airbyte.api.model.generated.InstanceConfigurationSetupRequestBody;
 import io.airbyte.api.model.generated.WorkspaceUpdate;
-import io.airbyte.commons.auth.config.AirbyteKeycloakConfiguration;
+import io.airbyte.commons.auth.config.AuthConfigs;
+import io.airbyte.commons.auth.config.AuthMode;
 import io.airbyte.commons.enums.Enums;
 import io.airbyte.commons.license.ActiveAirbyteLicense;
 import io.airbyte.commons.version.AirbyteVersion;
@@ -44,37 +45,34 @@ public class InstanceConfigurationHandler {
   private final Optional<String> airbyteUrl;
   private final AirbyteEdition airbyteEdition;
   private final AirbyteVersion airbyteVersion;
-  private final Optional<AirbyteKeycloakConfiguration> airbyteKeycloakConfiguration;
   private final Optional<ActiveAirbyteLicense> activeAirbyteLicense;
   private final WorkspacePersistence workspacePersistence;
   private final WorkspacesHandler workspacesHandler;
   private final UserPersistence userPersistence;
   private final OrganizationPersistence organizationPersistence;
   private final String trackingStrategy;
-  private final ModeEnum authMode;
+  private final AuthConfigs authConfigs;
 
   public InstanceConfigurationHandler(@Named("airbyteUrl") final Optional<String> airbyteUrl,
                                       @Value("${airbyte.tracking.strategy:}") final String trackingStrategy,
                                       final AirbyteEdition airbyteEdition,
                                       final AirbyteVersion airbyteVersion,
-                                      final Optional<AirbyteKeycloakConfiguration> airbyteKeycloakConfiguration,
                                       final Optional<ActiveAirbyteLicense> activeAirbyteLicense,
                                       final WorkspacePersistence workspacePersistence,
                                       final WorkspacesHandler workspacesHandler,
                                       final UserPersistence userPersistence,
                                       final OrganizationPersistence organizationPersistence,
-                                      final ModeEnum authMode) {
+                                      final AuthConfigs authConfigs) {
     this.airbyteUrl = airbyteUrl;
     this.trackingStrategy = trackingStrategy;
     this.airbyteEdition = airbyteEdition;
     this.airbyteVersion = airbyteVersion;
-    this.airbyteKeycloakConfiguration = airbyteKeycloakConfiguration;
     this.activeAirbyteLicense = activeAirbyteLicense;
     this.workspacePersistence = workspacePersistence;
     this.workspacesHandler = workspacesHandler;
     this.userPersistence = userPersistence;
     this.organizationPersistence = organizationPersistence;
-    this.authMode = authMode;
+    this.authConfigs = authConfigs;
   }
 
   public InstanceConfigurationResponse getInstanceConfiguration() throws IOException {
@@ -124,13 +122,16 @@ public class InstanceConfigurationHandler {
   }
 
   private AuthConfiguration getAuthConfiguration() {
-    final AuthConfiguration authConfig = new AuthConfiguration().mode(authMode);
+    final AuthConfiguration authConfig = new AuthConfiguration().mode(Enums.convertTo(authConfigs.getAuthMode(), ModeEnum.class));
 
-    // if Enterprise configurations are present, set OIDC configs and override the mode
-    if (authMode.equals(ModeEnum.OIDC)) {
-      airbyteKeycloakConfiguration.orElseThrow(() -> new IllegalStateException("Keycloak configuration is required for OIDC mode."));
-      authConfig.setClientId(airbyteKeycloakConfiguration.get().getWebClientId());
-      authConfig.setDefaultRealm(airbyteKeycloakConfiguration.get().getAirbyteRealm());
+    // if Enterprise configurations are present, set OIDC-specific configs
+    if (authConfigs.getAuthMode().equals(AuthMode.OIDC)) {
+      // OIDC depends on Keycloak configuration being present
+      if (authConfigs.getKeycloakConfig() == null) {
+        throw new IllegalStateException("Keycloak configuration is required for OIDC mode.");
+      }
+      authConfig.setClientId(authConfigs.getKeycloakConfig().getWebClientId());
+      authConfig.setDefaultRealm(authConfigs.getKeycloakConfig().getAirbyteRealm());
     }
 
     return authConfig;

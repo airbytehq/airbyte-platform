@@ -33,7 +33,7 @@ public class AirbyteConfigurationBeanFactory {
   }
 
   @Singleton
-  public DeploymentMode deploymentMode(@Value("${airbyte.deployment-mode}") final String deploymentMode) {
+  public DeploymentMode deploymentMode(@Value("${airbyte.deployment-mode:OSS}") final String deploymentMode) {
     return convertToEnum(deploymentMode, DeploymentMode::valueOf, DeploymentMode.OSS);
   }
 

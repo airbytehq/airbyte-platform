@@ -24,6 +24,8 @@ dependencies {
   implementation(libs.kotlin.logging)
   implementation(libs.okhttp)
   implementation(project(":airbyte-commons"))
+  implementation(project(":airbyte-commons-micronaut"))
+  implementation(project(":airbyte-config:config-models"))
 
   testAnnotationProcessor(platform(libs.micronaut.platform))
   testAnnotationProcessor(libs.bundles.micronaut.test.annotation.processor)

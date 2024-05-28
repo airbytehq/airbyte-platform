@@ -3,10 +3,11 @@
  */
 package io.airbyte.server
 
+import io.airbyte.commons.auth.RequiresAuthMode
+import io.airbyte.commons.auth.config.AuthMode
 import io.airbyte.commons.server.support.RbacRoleHelper
 import io.airbyte.config.persistence.UserPersistence
 import io.airbyte.data.config.InstanceAdminConfig
-import io.micronaut.context.annotation.Requires
 import io.micronaut.http.HttpRequest
 import io.micronaut.security.authentication.AuthenticationRequest
 import io.micronaut.security.authentication.AuthenticationResponse
@@ -17,8 +18,8 @@ import jakarta.inject.Singleton
  * This class is responsible for authenticating the user against the community provider.
  */
 @Singleton
-@Requires(env = ["community-auth"])
-class CommunityAuthProvider<B>(private val instanceAdminConfig: InstanceAdminConfig) : HttpRequestAuthenticationProvider<B> {
+@RequiresAuthMode(AuthMode.SIMPLE)
+class SimpleAuthProvider<B>(private val instanceAdminConfig: InstanceAdminConfig) : HttpRequestAuthenticationProvider<B> {
   override fun authenticate(
     requestContext: HttpRequest<B>?,
     authRequest: AuthenticationRequest<String, String>,

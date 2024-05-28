@@ -80,8 +80,8 @@ class OidcConfigFactory {
 }
 
 data class OidcConfig(
-  val domain: String,
-  val appName: String,
-  val clientId: String,
-  val clientSecret: String,
+  var domain: String,
+  var appName: String,
+  var clientId: String,
+  var clientSecret: String,
 )

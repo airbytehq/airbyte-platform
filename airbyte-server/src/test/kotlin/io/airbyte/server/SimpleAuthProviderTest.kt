@@ -13,13 +13,13 @@ import org.junit.jupiter.api.Test
 @MicronautTest(environments = ["community-auth"])
 @Property(name = "airbyte.auth.instanceAdmin.username", value = "test-username")
 @Property(name = "airbyte.auth.instanceAdmin.password", value = "test-password")
-class CommunityAuthProviderTest {
+class SimpleAuthProviderTest {
   @Inject
-  private lateinit var communityAuthProvider: CommunityAuthProvider<Nothing>
+  private lateinit var simpleAuthProvider: SimpleAuthProvider<Nothing>
 
   @Test
   fun `test authenticate with valid credentials`() {
-    val result = communityAuthProvider.authenticate(null, UsernamePasswordCredentials("test-username", "test-password"))
+    val result = simpleAuthProvider.authenticate(null, UsernamePasswordCredentials("test-username", "test-password"))
     assertTrue(result!!.isAuthenticated)
 
     val roles = result.authentication.get().roles
@@ -28,7 +28,7 @@ class CommunityAuthProviderTest {
 
   @Test
   fun `test authenticate with invalid credentials`() {
-    val result = communityAuthProvider.authenticate(null, UsernamePasswordCredentials("test-username", "invalid-password"))
+    val result = simpleAuthProvider.authenticate(null, UsernamePasswordCredentials("test-username", "invalid-password"))
     assertFalse(result!!.isAuthenticated)
   }
 }

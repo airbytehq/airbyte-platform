@@ -6,12 +6,13 @@ package io.airbyte.data.services.impls.micronaut;
 
 import io.airbyte.commons.auth.AuthRole;
 import io.airbyte.commons.auth.OrganizationAuthRole;
+import io.airbyte.commons.auth.RequiresAuthMode;
 import io.airbyte.commons.auth.WorkspaceAuthRole;
+import io.airbyte.commons.auth.config.AuthMode;
 import io.airbyte.config.Application;
 import io.airbyte.config.User;
 import io.airbyte.data.config.InstanceAdminConfig;
 import io.airbyte.data.services.ApplicationService;
-import io.micronaut.context.annotation.Requires;
 import io.micronaut.security.token.jwt.generator.JwtTokenGenerator;
 import jakarta.inject.Singleton;
 import jakarta.ws.rs.BadRequestException;
@@ -27,7 +28,7 @@ import java.util.UUID;
 import org.apache.commons.lang3.NotImplementedException;
 
 @Singleton
-@Requires(env = "community-auth")
+@RequiresAuthMode(AuthMode.SIMPLE)
 public class ApplicationServiceMicronautImpl implements ApplicationService {
 
   public static final UUID DEFAULT_AUTH_USER_ID = UUID.fromString("00000000-0000-0000-0000-000000000000");
