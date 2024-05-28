@@ -27,7 +27,6 @@ const AIRBYTE_CLOUD_REALM = "_airbyte-cloud-users";
 
 export type KeycloakServiceContext = {
   userManager: UserManager;
-  signin: () => Promise<void>;
   signout: () => Promise<void>;
   changeRealmAndRedirectToSignin: (realm: string) => Promise<void>;
   // The access token is stored in a ref so we don't cause a re-render each time it changes. Instead, we can use the current ref value when we call the API.
@@ -288,7 +287,6 @@ export const KeycloakService: React.FC<PropsWithChildren> = ({ children }) => {
     const value = {
       ...authState,
       userManager,
-      signin: () => userManager.signinRedirect(),
       signout: () => userManager.signoutRedirect({ post_logout_redirect_uri: window.location.origin }),
       updateAirbyteUser,
       isAuthenticated: authState.isAuthenticated,

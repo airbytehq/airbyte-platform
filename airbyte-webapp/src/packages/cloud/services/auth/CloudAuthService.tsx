@@ -4,8 +4,7 @@ import { useNavigate } from "react-router-dom";
 
 import { LoadingPage } from "components";
 
-import { useUpdateUser } from "core/api/cloud";
-import { AuthProvider } from "core/api/types/AirbyteClient";
+import { useUpdateUser } from "core/api";
 import { AuthContext, AuthContextApi } from "core/services/auth";
 
 import { useKeycloakService } from "./KeycloakService";
@@ -32,13 +31,9 @@ export const CloudAuthService: React.FC<PropsWithChildren> = ({ children }) => {
     // The context value for an authenticated Keycloak user.
     if (keycloakAuth.isAuthenticated) {
       return {
-        isAuthenticated: true,
         inited: true,
         user: keycloakAuth.airbyteUser,
-        authProvider: AuthProvider.keycloak,
-        displayName: keycloakAuth.keycloakUser?.profile.name ?? null,
         emailVerified: keycloakAuth.keycloakUser?.profile.email_verified ?? false,
-        email: keycloakAuth.keycloakUser?.profile.email ?? null,
         getAccessToken: () => Promise.resolve(keycloakAuth.accessTokenRef?.current),
         updateName: async (name: string) => {
           const user = keycloakAuth.airbyteUser;
@@ -54,7 +49,6 @@ export const CloudAuthService: React.FC<PropsWithChildren> = ({ children }) => {
         },
         logout,
         loggedOut: false,
-        providers: null,
         provider: keycloakAuth.isSso
           ? "sso"
           : (keycloakAuth.keycloakUser?.profile.identity_provider as string | undefined) ?? "none",
@@ -62,13 +56,10 @@ export const CloudAuthService: React.FC<PropsWithChildren> = ({ children }) => {
     }
     // The context value for an unauthenticated user
     return {
-      isAuthenticated: false,
       user: null,
       inited: keycloakAuth.didInitialize,
-      userId: null,
       emailVerified: false,
       loggedOut: true,
-      providers: null,
       provider: null,
     };
   }, [keycloakAuth, logout, updateAirbyteUser]);

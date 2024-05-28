@@ -1,51 +1,26 @@
 import React, { useContext } from "react";
-import { Observable } from "rxjs";
 
-import { UserRead, UserReadMetadata } from "core/api/types/AirbyteClient";
-
-export type AuthConfirmPasswordReset = (code: string, newPassword: string) => Promise<void>;
-
-export type AuthLogin = (values: { email: string; password: string }) => Promise<void>;
-export type AuthOAuthLogin = (provider: OAuthProviders) => Observable<OAuthLoginState>;
+import { UserRead } from "core/api/types/AirbyteClient";
 
 export type AuthChangeName = (name: string) => Promise<void>;
-
-export type AuthSendEmailVerification = () => Promise<void>;
-export type AuthVerifyEmail = () => Promise<void>;
+export type AuthGetAccessToken = () => Promise<string | null>;
 export type AuthLogout = () => Promise<void>;
 
-export type OAuthLoginState = "waiting" | "loading" | "done";
-
-export enum AuthProviders {
-  GoogleIdentityPlatform = "google_identity_platform",
-}
-
-export type OAuthProviders = "github" | "google";
-
-// This override is currently needed because the UserRead type is not consistent between OSS and Cloud
-export interface CommonUserRead extends Omit<UserRead, "metadata"> {
-  metadata?: UserReadMetadata;
-}
-
 export interface AuthContextApi {
-  user: CommonUserRead | null;
+  user: UserRead | null;
   inited: boolean;
   emailVerified: boolean;
   loggedOut: boolean;
   provider: string | null;
-  getAccessToken?: () => Promise<string | null>;
-  login?: AuthLogin;
+  getAccessToken?: AuthGetAccessToken;
   updateName?: AuthChangeName;
-  confirmPasswordReset?: AuthConfirmPasswordReset;
-  sendEmailVerification?: AuthSendEmailVerification;
-  verifyEmail?: AuthVerifyEmail;
   logout?: AuthLogout;
 }
 
-// The AuthContext is implemented differently in OSS vs. Cloud, but both implementations use the AuthContextApi interface
+// The AuthContext is implemented differently in Community vs. Self-Managed Enterprise vs. Cloud, but all implementations must fulfill the AuthContextApi interface
 export const AuthContext = React.createContext<AuthContextApi | null>(null);
 
-export const useCurrentUser = (): CommonUserRead => {
+export const useCurrentUser = (): UserRead => {
   const { user } = useAuthService();
   if (!user) {
     throw new Error("useCurrentUser must be used only within authorised flow");

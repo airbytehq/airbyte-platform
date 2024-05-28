@@ -129,7 +129,6 @@ const AuthServiceProvider: React.FC<PropsWithChildren<unknown>> = ({ children })
       user: airbyteUser,
       inited,
       emailVerified: false,
-      providers: [],
       provider: null,
       loggedOut: false,
       logout: keycloakAuth.signoutRedirect,
