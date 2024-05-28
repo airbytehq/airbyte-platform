@@ -595,6 +595,16 @@ public class ConnectionsHandler {
     }
   }
 
+  private void trackUpdateConnection(final StandardSync standardSync) {
+    try {
+      final UUID workspaceId = workspaceHelper.getWorkspaceForConnectionIdIgnoreExceptions(standardSync.getConnectionId());
+      final Builder<String, Object> metadataBuilder = generateMetadata(standardSync);
+      trackingClient.track(workspaceId, "Updated Connection - Backend", metadataBuilder.build());
+    } catch (final Exception e) {
+      LOGGER.error("failed while reporting usage.", e);
+    }
+  }
+
   private Builder<String, Object> generateMetadata(final StandardSync standardSync) {
     final Builder<String, Object> metadata = ImmutableMap.builder();
 
@@ -621,6 +631,12 @@ public class ConnectionsHandler {
       final long intervalInMinutes = TimeUnit.SECONDS.toMinutes(ScheduleHelpers.getIntervalInSecond(standardSync.getSchedule()));
       frequencyString = intervalInMinutes + " min";
     }
+    boolean fieldSelectionEnabled = false;
+    if (standardSync.getFieldSelectionData() != null && standardSync.getFieldSelectionData().getAdditionalProperties() != null) {
+      fieldSelectionEnabled = standardSync.getFieldSelectionData().getAdditionalProperties()
+          .entrySet().stream().anyMatch(Entry::getValue);
+    }
+    metadata.put("field_selection_active", fieldSelectionEnabled);
     metadata.put("frequency", frequencyString);
     return metadata;
   }
@@ -652,6 +668,7 @@ public class ConnectionsHandler {
     final ConnectionRead updatedRead = buildConnectionRead(connectionId);
     LOGGER.debug("final connectionRead: {}", updatedRead);
 
+    trackUpdateConnection(sync);
     return updatedRead;
   }
 
