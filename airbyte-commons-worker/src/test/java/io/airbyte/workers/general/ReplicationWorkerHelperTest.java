@@ -155,6 +155,8 @@ class ReplicationWorkerHelperTest {
   @Test
   void testRateLimitedStreamStatusMessages() throws ApiException {
     mockSupportRefreshes(false);
+    final Instant rateLimitedTimeStamp = Instant.parse("2024-05-29T09:25:27.000000Z");
+    final Instant recordMessageTimestamp = Instant.parse("2024-05-29T09:25:28.000000Z");
     final StreamDescriptor streamDescriptor = new StreamDescriptor().withNamespace("namespace").withName("name");
     final ReplicationContext context =
         new ReplicationContext(true, UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), 0L,
@@ -180,13 +182,13 @@ class ReplicationWorkerHelperTest {
         .withType(Type.TRACE)
         .withTrace(new AirbyteTraceMessage()
             .withType(AirbyteTraceMessage.Type.STREAM_STATUS)
-            .withEmittedAt((double) Instant.now().toEpochMilli())
+            .withEmittedAt((double) rateLimitedTimeStamp.toEpochMilli())
             .withStreamStatus(new AirbyteStreamStatusTraceMessage()
                 .withStreamDescriptor(streamDescriptor)
                 .withStatus(AirbyteStreamStatusTraceMessage.AirbyteStreamStatus.RUNNING)
                 .withReasons(Collections.singletonList(new AirbyteStreamStatusReason()
                     .withType(AirbyteStreamStatusReason.AirbyteStreamStatusReasonType.RATE_LIMITED)
-                    .withRateLimited(new AirbyteStreamStatusRateLimitedReason().withQuotaReset(Instant.now().toEpochMilli()))))));
+                    .withRateLimited(new AirbyteStreamStatusRateLimitedReason().withQuotaReset(rateLimitedTimeStamp.toEpochMilli()))))));
 
     final AirbyteMessage recordMessage = new AirbyteMessage()
         .withType(Type.RECORD)
@@ -194,7 +196,7 @@ class ReplicationWorkerHelperTest {
             .withNamespace(streamDescriptor.getNamespace())
             .withStream(streamDescriptor.getName())
             .withData(Jsons.jsonNode(ImmutableMap.of("col", 1)))
-            .withEmittedAt(Instant.now().toEpochMilli()));
+            .withEmittedAt(recordMessageTimestamp.toEpochMilli()));
 
     replicationWorkerHelper.internalProcessMessageFromSource(rateLimitedMessage);
     replicationWorkerHelper.internalProcessMessageFromSource(recordMessage);
