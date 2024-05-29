@@ -191,3 +191,5 @@ object ConnectionFieldLimitOverride : Permanent<Int>(key = "connection-field-lim
 object DeleteDanglingSecrets : Temporary<Boolean>(key = "platform.delete-dangling-secrets", default = false)
 
 object EnableResumableFullRefresh : Temporary<Boolean>(key = "platform.enable-resumable-full-refresh", default = true)
+
+object UseStreamStatusTracker2024 : Temporary<Boolean>(key = "use-stream-status-tracker-2024", default = false)

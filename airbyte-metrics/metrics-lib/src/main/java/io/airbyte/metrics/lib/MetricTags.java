@@ -63,6 +63,7 @@ public class MetricTags {
   public static final String UNKNOWN = "unknown";
   public static final String USER_TYPE = "user_type"; // real user, service account, data plane user, etc
   public static final String WILL_RETRY = "will_retry";
+  public static final String EMITTING_CLASS = "emitting_class";
 
   // payload metric tags
   public static final String URI_NULL = "uri_null";

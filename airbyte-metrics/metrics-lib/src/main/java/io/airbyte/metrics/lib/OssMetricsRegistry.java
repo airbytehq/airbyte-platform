@@ -461,7 +461,11 @@ public enum OssMetricsRegistry implements MetricsRegistry {
 
   EXCESSIVE_CATALOG_SIZE(MetricEmittingApps.SERVER,
       "excessive_catalog_size",
-      "Distribution of input catalog field counts that exceed the configured limit.");
+      "Distribution of input catalog field counts that exceed the configured limit."),
+
+  REPLICATION_CONTEXT_NOT_INITIALIZED_ERROR(MetricEmittingApps.ORCHESTRATOR,
+      "replication_context_not_initialized_error",
+      "The replication context was not initialized when it was expected to be.");
 
   private final MetricEmittingApp application;
   private final String metricName;

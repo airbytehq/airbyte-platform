@@ -100,6 +100,8 @@ import io.airbyte.workers.internal.bookkeeping.AirbyteMessageTracker;
 import io.airbyte.workers.internal.bookkeeping.SyncStatsTracker;
 import io.airbyte.workers.internal.bookkeeping.events.ReplicationAirbyteMessageEvent;
 import io.airbyte.workers.internal.bookkeeping.events.ReplicationAirbyteMessageEventPublishingHelper;
+import io.airbyte.workers.internal.bookkeeping.streamstatus.StreamStatusCachingApiClient;
+import io.airbyte.workers.internal.bookkeeping.streamstatus.StreamStatusTracker;
 import io.airbyte.workers.internal.exception.DestinationException;
 import io.airbyte.workers.internal.exception.SourceException;
 import io.airbyte.workers.internal.syncpersistence.SyncPersistence;
@@ -198,6 +200,8 @@ abstract class ReplicationWorkerTest {
   protected DestinationApi destinationApi;
   protected StreamStatusCompletionTracker streamStatusCompletionTracker;
   protected DestinationDefinitionApi destinationDefinitionApi;
+  protected StreamStatusTracker streamStatusTracker;
+  protected StreamStatusCachingApiClient streamStatusApiClient;
 
   ReplicationWorker getDefaultReplicationWorker() {
     return getDefaultReplicationWorker(false);
@@ -273,6 +277,8 @@ abstract class ReplicationWorkerTest {
         null,
         null));
     streamStatusCompletionTracker = mock(StreamStatusCompletionTracker.class);
+    streamStatusTracker = mock(StreamStatusTracker.class);
+    streamStatusApiClient = mock(StreamStatusCachingApiClient.class);
 
     when(airbyteApiClient.getDestinationApi()).thenReturn(destinationApi);
     when(airbyteApiClient.getSourceApi()).thenReturn(sourceApi);

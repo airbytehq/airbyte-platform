@@ -23,7 +23,7 @@ class DefaultReplicationWorkerTest extends ReplicationWorkerTest {
     replicationWorkerHelper = spy(new ReplicationWorkerHelper(airbyteMessageDataExtractor, fieldSelector, mapper, messageTracker, syncPersistence,
         replicationAirbyteMessageEventPublishingHelper, new ThreadedTimeTracker(), onReplicationRunning, workloadApiClient, false,
         analyticsMessageTracker,
-        Optional.empty(), airbyteApiClient, streamStatusCompletionTracker, true));
+        Optional.empty(), airbyteApiClient, streamStatusCompletionTracker, streamStatusTracker, streamStatusApiClient, true));
     return new DefaultReplicationWorker(
         JOB_ID,
         JOB_ATTEMPT,

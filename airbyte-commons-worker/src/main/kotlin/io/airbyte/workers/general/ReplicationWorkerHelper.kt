@@ -57,6 +57,8 @@ import io.airbyte.workers.internal.bookkeeping.events.ReplicationAirbyteMessageE
 import io.airbyte.workers.internal.bookkeeping.events.ReplicationAirbyteMessageEventPublishingHelper
 import io.airbyte.workers.internal.bookkeeping.getPerStreamStats
 import io.airbyte.workers.internal.bookkeeping.getTotalStats
+import io.airbyte.workers.internal.bookkeeping.streamstatus.StreamStatusCachingApiClient
+import io.airbyte.workers.internal.bookkeeping.streamstatus.StreamStatusTracker
 import io.airbyte.workers.internal.exception.DestinationException
 import io.airbyte.workers.internal.exception.SourceException
 import io.airbyte.workers.internal.syncpersistence.SyncPersistence
@@ -92,6 +94,8 @@ class ReplicationWorkerHelper(
   private val workloadId: Optional<String>,
   private val airbyteApiClient: AirbyteApiClient,
   private val streamStatusCompletionTracker: StreamStatusCompletionTracker,
+  private val streamStatusTracker: StreamStatusTracker,
+  private val streamStatusApiClient: StreamStatusCachingApiClient,
   processRateLimitedMessage: Boolean,
 ) {
   private val metricClient = MetricClientFactory.getMetricClient()
@@ -191,6 +195,8 @@ class ReplicationWorkerHelper(
 
     this.ctx = ctx
     this.replicationFeatureFlags = replicationFeatureFlags
+    this.streamStatusTracker.init(ctx)
+    this.streamStatusApiClient.init(ctx)
 
     analyticsMessageTracker.ctx = ctx
 
@@ -209,12 +215,12 @@ class ReplicationWorkerHelper(
 
   fun startDestination(
     destination: AirbyteDestination,
-    replicaitonInput: ReplicationInput,
+    replicationInput: ReplicationInput,
     jobRoot: Path,
   ) {
     timeTracker.trackDestinationWriteStartTime()
     destinationConfig =
-      WorkerUtils.syncToWorkerDestinationConfig(replicaitonInput)
+      WorkerUtils.syncToWorkerDestinationConfig(replicationInput)
         .apply { catalog = mapper.mapCatalog(catalog) }
 
     try {
@@ -373,6 +379,7 @@ class ReplicationWorkerHelper(
     fieldSelector.filterSelectedFields(sourceRawMessage)
     fieldSelector.validateSchema(sourceRawMessage)
     messageTracker.acceptFromSource(sourceRawMessage)
+    streamStatusTracker.track(sourceRawMessage)
     if (isAnalyticsMessage(sourceRawMessage)) {
       analyticsMessageTracker.addMessage(sourceRawMessage, AirbyteMessageOrigin.SOURCE)
     }
@@ -411,6 +418,8 @@ class ReplicationWorkerHelper(
   @VisibleForTesting
   fun internalProcessMessageFromDestination(destinationRawMessage: AirbyteMessage) {
     val context = requireNotNull(ctx)
+
+    streamStatusTracker.track(destinationRawMessage)
 
     logger.debug { "State in ReplicationWorkerHelper from destination: $destinationRawMessage" }
 

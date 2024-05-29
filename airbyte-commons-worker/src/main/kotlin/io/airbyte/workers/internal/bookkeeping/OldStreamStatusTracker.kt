@@ -42,8 +42,9 @@ private val logger = KotlinLogging.logger {}
  * source/destination messages.
  */
 
+@Deprecated("Replaced by io.airbyte.workers.internal.bookkeeping.streamstatus.StreamStatusTracker")
 @Singleton
-class StreamStatusTracker(
+class OldStreamStatusTracker(
   private val airbyteApiClient: AirbyteApiClient,
   private val featureFlagClient: FeatureFlagClient,
 ) {

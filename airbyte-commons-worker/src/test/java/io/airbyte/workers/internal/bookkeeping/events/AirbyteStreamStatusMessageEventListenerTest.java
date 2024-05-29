@@ -16,8 +16,10 @@ import io.airbyte.protocol.models.AirbyteMessage.Type;
 import io.airbyte.protocol.models.AirbyteStreamStatusTraceMessage;
 import io.airbyte.protocol.models.AirbyteTraceMessage;
 import io.airbyte.workers.context.ReplicationContext;
+import io.airbyte.workers.general.CachingFeatureFlagClient;
 import io.airbyte.workers.internal.bookkeeping.AirbyteMessageOrigin;
-import io.airbyte.workers.internal.bookkeeping.StreamStatusTracker;
+import io.airbyte.workers.internal.bookkeeping.OldStreamStatusTracker;
+import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -27,12 +29,17 @@ import org.junit.jupiter.api.Test;
 class AirbyteStreamStatusMessageEventListenerTest {
 
   private AirbyteStreamStatusMessageEventListener messageEventListener;
-  private StreamStatusTracker streamStatusTracker;
+  private OldStreamStatusTracker streamStatusTracker;
+  private CachingFeatureFlagClient ffClient;
+
+  private final ReplicationContext replicationContext = new ReplicationContext(true, UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), 0L,
+      1, UUID.randomUUID(), "SOURCE_IMAGE", "DESTINATION_IMAGE", UUID.randomUUID(), UUID.randomUUID());
 
   @BeforeEach
   void setup() {
-    streamStatusTracker = mock(StreamStatusTracker.class);
-    messageEventListener = new AirbyteStreamStatusMessageEventListener(streamStatusTracker);
+    streamStatusTracker = mock(OldStreamStatusTracker.class);
+    ffClient = mock(CachingFeatureFlagClient.class);
+    messageEventListener = new AirbyteStreamStatusMessageEventListener(streamStatusTracker, ffClient);
   }
 
   @Test
@@ -41,7 +48,6 @@ class AirbyteStreamStatusMessageEventListenerTest {
     final AirbyteStreamStatusTraceMessage airbyteStreamStatusTraceMessage = mock(AirbyteStreamStatusTraceMessage.class);
     final AirbyteTraceMessage airbyteTraceMessage = mock(AirbyteTraceMessage.class);
     final AirbyteMessage airbyteMessage = mock(AirbyteMessage.class);
-    final ReplicationContext ReplicationContext = mock(ReplicationContext.class);
 
     when(airbyteTraceMessage.getType()).thenReturn(AirbyteTraceMessage.Type.STREAM_STATUS);
     when(airbyteTraceMessage.getStreamStatus()).thenReturn(airbyteStreamStatusTraceMessage);
@@ -49,7 +55,7 @@ class AirbyteStreamStatusMessageEventListenerTest {
     when(airbyteMessage.getTrace()).thenReturn(airbyteTraceMessage);
 
     final ReplicationAirbyteMessageEvent replicationAirbyteMessageEvent =
-        new ReplicationAirbyteMessageEvent(airbyteMessageOrigin, airbyteMessage, ReplicationContext);
+        new ReplicationAirbyteMessageEvent(airbyteMessageOrigin, airbyteMessage, replicationContext);
     messageEventListener.onApplicationEvent(replicationAirbyteMessageEvent);
 
     verify(streamStatusTracker, times(1)).track(replicationAirbyteMessageEvent);
@@ -61,7 +67,6 @@ class AirbyteStreamStatusMessageEventListenerTest {
     final AirbyteStreamStatusTraceMessage airbyteStreamStatusTraceMessage = mock(AirbyteStreamStatusTraceMessage.class);
     final AirbyteTraceMessage airbyteTraceMessage = mock(AirbyteTraceMessage.class);
     final AirbyteMessage airbyteMessage = mock(AirbyteMessage.class);
-    final ReplicationContext ReplicationContext = mock(ReplicationContext.class);
 
     when(airbyteTraceMessage.getType()).thenReturn(AirbyteTraceMessage.Type.STREAM_STATUS);
     when(airbyteTraceMessage.getStreamStatus()).thenReturn(airbyteStreamStatusTraceMessage);
@@ -69,7 +74,7 @@ class AirbyteStreamStatusMessageEventListenerTest {
     when(airbyteMessage.getTrace()).thenReturn(airbyteTraceMessage);
 
     final ReplicationAirbyteMessageEvent replicationAirbyteMessageEvent =
-        new ReplicationAirbyteMessageEvent(airbyteMessageOrigin, airbyteMessage, ReplicationContext);
+        new ReplicationAirbyteMessageEvent(airbyteMessageOrigin, airbyteMessage, replicationContext);
     messageEventListener.onApplicationEvent(replicationAirbyteMessageEvent);
 
     verify(streamStatusTracker, times(1)).track(replicationAirbyteMessageEvent);
@@ -81,7 +86,6 @@ class AirbyteStreamStatusMessageEventListenerTest {
     final AirbyteStreamStatusTraceMessage airbyteStreamStatusTraceMessage = mock(AirbyteStreamStatusTraceMessage.class);
     final AirbyteTraceMessage airbyteTraceMessage = mock(AirbyteTraceMessage.class);
     final AirbyteMessage airbyteMessage = mock(AirbyteMessage.class);
-    final ReplicationContext ReplicationContext = mock(ReplicationContext.class);
 
     when(airbyteTraceMessage.getType()).thenReturn(AirbyteTraceMessage.Type.STREAM_STATUS);
     when(airbyteTraceMessage.getStreamStatus()).thenReturn(airbyteStreamStatusTraceMessage);
@@ -89,7 +93,7 @@ class AirbyteStreamStatusMessageEventListenerTest {
     when(airbyteMessage.getTrace()).thenReturn(airbyteTraceMessage);
 
     final ReplicationAirbyteMessageEvent replicationAirbyteMessageEvent =
-        new ReplicationAirbyteMessageEvent(airbyteMessageOrigin, airbyteMessage, ReplicationContext);
+        new ReplicationAirbyteMessageEvent(airbyteMessageOrigin, airbyteMessage, replicationContext);
     assertTrue(messageEventListener.supports(replicationAirbyteMessageEvent));
   }
 
@@ -98,14 +102,13 @@ class AirbyteStreamStatusMessageEventListenerTest {
     final AirbyteMessageOrigin airbyteMessageOrigin = AirbyteMessageOrigin.DESTINATION;
     final AirbyteMessage airbyteMessage = mock(AirbyteMessage.class);
     final AirbyteTraceMessage airbyteTraceMessage = mock(AirbyteTraceMessage.class);
-    final ReplicationContext ReplicationContext = mock(ReplicationContext.class);
 
     when(airbyteTraceMessage.getType()).thenReturn(AirbyteTraceMessage.Type.ERROR);
     when(airbyteMessage.getType()).thenReturn(Type.TRACE);
     when(airbyteMessage.getTrace()).thenReturn(airbyteTraceMessage);
 
     final ReplicationAirbyteMessageEvent replicationAirbyteMessageEvent =
-        new ReplicationAirbyteMessageEvent(airbyteMessageOrigin, airbyteMessage, ReplicationContext);
+        new ReplicationAirbyteMessageEvent(airbyteMessageOrigin, airbyteMessage, replicationContext);
     assertFalse(messageEventListener.supports(replicationAirbyteMessageEvent));
   }
 
@@ -113,12 +116,11 @@ class AirbyteStreamStatusMessageEventListenerTest {
   void testDoesNotSupportNonTraceEvent() {
     final AirbyteMessageOrigin airbyteMessageOrigin = AirbyteMessageOrigin.DESTINATION;
     final AirbyteMessage airbyteMessage = mock(AirbyteMessage.class);
-    final ReplicationContext ReplicationContext = mock(ReplicationContext.class);
 
     when(airbyteMessage.getType()).thenReturn(Type.STATE);
 
     final ReplicationAirbyteMessageEvent replicationAirbyteMessageEvent =
-        new ReplicationAirbyteMessageEvent(airbyteMessageOrigin, airbyteMessage, ReplicationContext);
+        new ReplicationAirbyteMessageEvent(airbyteMessageOrigin, airbyteMessage, replicationContext);
     assertFalse(messageEventListener.supports(replicationAirbyteMessageEvent));
   }
 
