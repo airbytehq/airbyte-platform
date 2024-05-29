@@ -1476,8 +1476,10 @@ class ConnectionManagerWorkflowTest {
           Arguments.of(new Thread(() -> Mockito.doThrow(ApplicationFailure.newNonRetryableFailure("", ""))
               .when(mJobCreationAndStatusUpdateActivity).reportJobStart(Mockito.any())), 0),
           Arguments.of(new Thread(
-              () -> when(mGenerateInputActivityImpl.getCheckConnectionInputs(Mockito.any(SyncInputWithAttemptNumber.class)))
-                  .thenThrow(ApplicationFailure.newNonRetryableFailure("", ""))),
+              () -> {
+                when(mGenerateInputActivityImpl.getCheckConnectionInputs(Mockito.any(SyncInputWithAttemptNumber.class)))
+                    .thenThrow(ApplicationFailure.newNonRetryableFailure("", ""));
+              }),
               1),
           Arguments.of(new Thread(
               () -> {

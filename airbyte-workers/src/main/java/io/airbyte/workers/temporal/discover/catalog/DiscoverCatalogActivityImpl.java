@@ -13,14 +13,13 @@ import static io.airbyte.metrics.lib.ApmTraceConstants.Tags.JOB_ID_KEY;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.google.common.annotations.VisibleForTesting;
 import datadog.trace.api.Trace;
-import io.airbyte.api.client.AirbyteApiClient;
-import io.airbyte.api.client.invoker.generated.ApiException;
-import io.airbyte.api.client.model.generated.ConnectionIdRequestBody;
-import io.airbyte.api.client.model.generated.Geography;
-import io.airbyte.api.client.model.generated.ScopeType;
-import io.airbyte.api.client.model.generated.SecretPersistenceConfig;
-import io.airbyte.api.client.model.generated.SecretPersistenceConfigGetRequestBody;
-import io.airbyte.api.client.model.generated.WorkspaceIdRequestBody;
+import io.airbyte.api.client2.AirbyteApiClient;
+import io.airbyte.api.client2.model.generated.ConnectionIdRequestBody;
+import io.airbyte.api.client2.model.generated.Geography;
+import io.airbyte.api.client2.model.generated.ScopeType;
+import io.airbyte.api.client2.model.generated.SecretPersistenceConfig;
+import io.airbyte.api.client2.model.generated.SecretPersistenceConfigGetRequestBody;
+import io.airbyte.api.client2.model.generated.WorkspaceIdRequestBody;
 import io.airbyte.commons.converters.ConnectorConfigUpdater;
 import io.airbyte.commons.features.FeatureFlags;
 import io.airbyte.commons.functional.CheckedSupplier;
@@ -78,6 +77,7 @@ import io.temporal.activity.Activity;
 import io.temporal.activity.ActivityExecutionContext;
 import jakarta.inject.Named;
 import jakarta.inject.Singleton;
+import java.io.IOException;
 import java.nio.file.Path;
 import java.util.Collections;
 import java.util.List;
@@ -159,11 +159,11 @@ public class DiscoverCatalogActivityImpl implements DiscoverCatalogActivity {
     if (organizationId != null && featureFlagClient.boolVariation(UseRuntimeSecretPersistence.INSTANCE, new Organization(organizationId))) {
       try {
         final SecretPersistenceConfig secretPersistenceConfig = airbyteApiClient.getSecretPersistenceConfigApi().getSecretsPersistenceConfig(
-            new SecretPersistenceConfigGetRequestBody().scopeType(ScopeType.ORGANIZATION).scopeId(organizationId));
+            new SecretPersistenceConfigGetRequestBody(ScopeType.ORGANIZATION, organizationId));
         final RuntimeSecretPersistence runtimeSecretPersistence =
             SecretPersistenceConfigHelper.fromApiSecretPersistenceConfig(secretPersistenceConfig);
         fullConfig = secretsRepositoryReader.hydrateConfigFromRuntimeSecretPersistence(config.getConnectionConfiguration(), runtimeSecretPersistence);
-      } catch (final ApiException e) {
+      } catch (final IOException e) {
         throw new RuntimeException(e);
       }
     } else {
@@ -268,17 +268,17 @@ public class DiscoverCatalogActivityImpl implements DiscoverCatalogActivity {
       return maybeConnectionId
           .map(connectionId -> {
             try {
-              return airbyteApiClient.getConnectionApi().getConnection(new ConnectionIdRequestBody().connectionId(connectionId)).getGeography();
-            } catch (final ApiException e) {
+              return airbyteApiClient.getConnectionApi().getConnection(new ConnectionIdRequestBody(connectionId)).getGeography();
+            } catch (final IOException e) {
               throw new RuntimeException(e);
             }
           }).orElse(
               maybeWorkspaceId.map(
                   workspaceId -> {
                     try {
-                      return airbyteApiClient.getWorkspaceApi().getWorkspace(new WorkspaceIdRequestBody().workspaceId(workspaceId))
+                      return airbyteApiClient.getWorkspaceApi().getWorkspace(new WorkspaceIdRequestBody(workspaceId, false))
                           .getDefaultGeography();
-                    } catch (final ApiException e) {
+                    } catch (final IOException e) {
                       throw new RuntimeException(e);
                     }
                   })

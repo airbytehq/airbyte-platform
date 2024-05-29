@@ -73,9 +73,14 @@ public class ContainerOrchestratorConfigBeanFactory {
                                                                            final FeatureFlags featureFlags,
                                                                            @Value("${airbyte.container.orchestrator.java-opts}") final String containerOrchestratorJavaOpts,
                                                                            final WorkerEnvironment workerEnvironment,
-                                                                           @Value("${airbyte.internal.api.host}") final String containerOrchestratorApiHost,
-                                                                           @Value("${airbyte.internal.api.auth-header.name}") final String containerOrchestratorApiAuthHeaderName,
-                                                                           @Value("${airbyte.internal.api.auth-header.value}") final String containerOrchestratorApiAuthHeaderValue,
+                                                                           /*
+                                                                            * Reference the environment variable, instead of the resolved property, so
+                                                                            * that the entry in the orchestrator's application.yml is consistent with
+                                                                            * all other services that use the Airbyte API client.
+                                                                            */
+                                                                           @Value("${INTERNAL_API_HOST}") final String containerOrchestratorInternalApiHost,
+                                                                           @Value("${airbyte.internal-api.auth-header.name}") final String containerOrchestratorInternalApiAuthHeaderName,
+                                                                           @Value("${airbyte.internal-api.auth-header.value}") final String containerOrchestratorInternalApiAuthHeaderValue,
                                                                            @Value("${airbyte.control.plane.auth-endpoint}") final String controlPlaneAuthEndpoint,
                                                                            @Value("${airbyte.data.plane.service-account.email}") final String dataPlaneServiceAccountEmail,
                                                                            @Value("${airbyte.data.plane.service-account.credentials-path}") final String dataPlaneServiceAccountCredentialsPath,
@@ -129,9 +134,9 @@ public class ContainerOrchestratorConfigBeanFactory {
     environmentVariables.put(CONTROL_PLANE_AUTH_ENDPOINT_ENV_VAR, controlPlaneAuthEndpoint);
     environmentVariables.put(DATA_PLANE_SERVICE_ACCOUNT_CREDENTIALS_PATH_ENV_VAR, dataPlaneServiceAccountCredentialsPath);
     environmentVariables.put(DATA_PLANE_SERVICE_ACCOUNT_EMAIL_ENV_VAR, dataPlaneServiceAccountEmail);
-    environmentVariables.put(AIRBYTE_API_AUTH_HEADER_NAME_ENV_VAR, containerOrchestratorApiAuthHeaderName);
-    environmentVariables.put(AIRBYTE_API_AUTH_HEADER_VALUE_ENV_VAR, containerOrchestratorApiAuthHeaderValue);
-    environmentVariables.put(INTERNAL_API_HOST_ENV_VAR, containerOrchestratorApiHost);
+    environmentVariables.put(AIRBYTE_API_AUTH_HEADER_NAME_ENV_VAR, containerOrchestratorInternalApiAuthHeaderName);
+    environmentVariables.put(AIRBYTE_API_AUTH_HEADER_VALUE_ENV_VAR, containerOrchestratorInternalApiAuthHeaderValue);
+    environmentVariables.put(INTERNAL_API_HOST_ENV_VAR, containerOrchestratorInternalApiHost);
 
     if (System.getenv(Environment.ENVIRONMENTS_ENV) != null) {
       environmentVariables.put(Environment.ENVIRONMENTS_ENV, System.getenv(Environment.ENVIRONMENTS_ENV));

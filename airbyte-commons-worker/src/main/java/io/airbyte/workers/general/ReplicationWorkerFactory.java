@@ -8,12 +8,11 @@ import static io.airbyte.workers.general.BufferedReplicationWorkerType.BUFFERED;
 import static io.airbyte.workers.general.BufferedReplicationWorkerType.BUFFERED_WITH_LINKED_BLOCKING_QUEUE;
 
 import io.airbyte.analytics.TrackingClient;
-import io.airbyte.api.client.AirbyteApiClient;
 import io.airbyte.api.client.WorkloadApiClient;
-import io.airbyte.api.client.generated.SourceDefinitionApi;
-import io.airbyte.api.client.invoker.generated.ApiException;
-import io.airbyte.api.client.model.generated.SourceDefinitionIdRequestBody;
-import io.airbyte.api.client.model.generated.SourceIdRequestBody;
+import io.airbyte.api.client2.AirbyteApiClient;
+import io.airbyte.api.client2.generated.SourceDefinitionApi;
+import io.airbyte.api.client2.model.generated.SourceDefinitionIdRequestBody;
+import io.airbyte.api.client2.model.generated.SourceIdRequestBody;
 import io.airbyte.commons.concurrency.VoidCallable;
 import io.airbyte.commons.converters.ThreadedTimeTracker;
 import io.airbyte.commons.features.FeatureFlags;
@@ -63,6 +62,7 @@ import io.airbyte.workers.process.AirbyteIntegrationLauncherFactory;
 import io.micronaut.context.annotation.Value;
 import io.micronaut.core.util.CollectionUtils;
 import jakarta.inject.Singleton;
+import java.io.IOException;
 import java.time.Clock;
 import java.time.Duration;
 import java.util.ArrayList;
@@ -137,11 +137,9 @@ public class ReplicationWorkerFactory {
                                   final IntegrationLauncherConfig destinationLauncherConfig,
                                   final VoidCallable onReplicationRunning,
                                   final Optional<String> workloadId)
-      throws ApiException {
-    final UUID sourceDefinitionId = AirbyteApiClient.retryWithJitter(
-        () -> airbyteApiClient.getSourceApi().getSource(
-            new SourceIdRequestBody().sourceId(replicationInput.getSourceId())).getSourceDefinitionId(),
-        "get the source definition for feature flag checks");
+      throws IOException {
+    final UUID sourceDefinitionId = airbyteApiClient.getSourceApi().getSource(
+        new SourceIdRequestBody(replicationInput.getSourceId())).getSourceDefinitionId();
     final HeartbeatMonitor heartbeatMonitor = createHeartbeatMonitor(sourceDefinitionId, airbyteApiClient.getSourceDefinitionApi());
     final HeartbeatTimeoutChaperone heartbeatTimeoutChaperone = createHeartbeatTimeoutChaperone(heartbeatMonitor,
         featureFlagClient, replicationInput, sourceLauncherConfig.getDockerImage(), metricClient);
@@ -219,9 +217,10 @@ public class ReplicationWorkerFactory {
    * Create HeartbeatMonitor.
    */
   private static HeartbeatMonitor createHeartbeatMonitor(final UUID sourceDefinitionId,
-                                                         final SourceDefinitionApi sourceDefinitionApi) {
-    final Long maxSecondsBetweenMessages = sourceDefinitionId != null ? AirbyteApiClient.retryWithJitter(() -> sourceDefinitionApi
-        .getSourceDefinition(new SourceDefinitionIdRequestBody().sourceDefinitionId(sourceDefinitionId)), "get the source definition")
+                                                         final SourceDefinitionApi sourceDefinitionApi)
+      throws IOException {
+    final Long maxSecondsBetweenMessages = sourceDefinitionId != null ? sourceDefinitionApi
+        .getSourceDefinition(new SourceDefinitionIdRequestBody(sourceDefinitionId))
         .getMaxSecondsBetweenMessages() : null;
 
     if (maxSecondsBetweenMessages != null) {

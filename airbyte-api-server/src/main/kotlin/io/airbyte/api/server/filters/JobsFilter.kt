@@ -6,7 +6,7 @@ package io.airbyte.api.server.filters
 
 import io.airbyte.airbyte_api.model.generated.JobStatusEnum
 import io.airbyte.airbyte_api.model.generated.JobTypeEnum
-import io.airbyte.api.client.model.generated.JobStatus
+import io.airbyte.api.client2.model.generated.JobStatus
 import io.micronaut.core.annotation.Nullable
 import java.time.OffsetDateTime
 
@@ -40,7 +40,7 @@ class JobsFilter(
     return if (status == null) {
       null
     } else {
-      JobStatus.fromValue(status.toString())
+      JobStatus.valueOf(status.toString())
     }
   }
 //    @Nullable fun getJobType(): JobTypeEnum {

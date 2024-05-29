@@ -7,18 +7,17 @@ package io.airbyte.workers.temporal.scheduling.activities;
 import static io.airbyte.metrics.lib.ApmTraceConstants.ACTIVITY_TRACE_OPERATION_NAME;
 
 import datadog.trace.api.Trace;
-import io.airbyte.api.client.AirbyteApiClient;
-import io.airbyte.api.client.invoker.generated.ApiException;
-import io.airbyte.api.client.model.generated.ConnectionIdRequestBody;
-import io.airbyte.api.client.model.generated.ConnectionJobRequestBody;
-import io.airbyte.api.client.model.generated.CreateNewAttemptNumberRequest;
-import io.airbyte.api.client.model.generated.FailAttemptRequest;
-import io.airbyte.api.client.model.generated.JobCreate;
-import io.airbyte.api.client.model.generated.JobFailureRequest;
-import io.airbyte.api.client.model.generated.JobInfoRead;
-import io.airbyte.api.client.model.generated.JobSuccessWithAttemptNumberRequest;
-import io.airbyte.api.client.model.generated.PersistCancelJobRequestBody;
-import io.airbyte.api.client.model.generated.ReportJobStartRequest;
+import io.airbyte.api.client2.AirbyteApiClient;
+import io.airbyte.api.client2.model.generated.ConnectionIdRequestBody;
+import io.airbyte.api.client2.model.generated.ConnectionJobRequestBody;
+import io.airbyte.api.client2.model.generated.CreateNewAttemptNumberRequest;
+import io.airbyte.api.client2.model.generated.FailAttemptRequest;
+import io.airbyte.api.client2.model.generated.JobCreate;
+import io.airbyte.api.client2.model.generated.JobFailureRequest;
+import io.airbyte.api.client2.model.generated.JobInfoRead;
+import io.airbyte.api.client2.model.generated.JobSuccessWithAttemptNumberRequest;
+import io.airbyte.api.client2.model.generated.PersistCancelJobRequestBody;
+import io.airbyte.api.client2.model.generated.ReportJobStartRequest;
 import io.airbyte.commons.temporal.config.WorkerMode;
 import io.airbyte.commons.temporal.exception.RetryableException;
 import io.airbyte.config.State;
@@ -30,7 +29,9 @@ import io.airbyte.workers.storage.activities.OutputStorageClient;
 import io.micronaut.context.annotation.Requires;
 import jakarta.inject.Named;
 import jakarta.inject.Singleton;
+import java.io.IOException;
 import lombok.extern.slf4j.Slf4j;
+import org.openapitools.client.infrastructure.ClientException;
 
 /**
  * JobCreationAndStatusUpdateActivityImpl.
@@ -60,7 +61,7 @@ public class JobCreationAndStatusUpdateActivityImpl implements JobCreationAndSta
   public JobCreationOutput createNewJob(final JobCreationInput input) {
     new AttemptContext(input.getConnectionId(), null, null).addTagsToTrace();
     try {
-      final JobInfoRead jobInfoRead = airbyteApiClient.getJobsApi().createJob(new JobCreate().connectionId(input.getConnectionId()));
+      final JobInfoRead jobInfoRead = airbyteApiClient.getJobsApi().createJob(new JobCreate(input.getConnectionId()));
       return new JobCreationOutput(jobInfoRead.getJob().getId());
     } catch (final Exception e) {
       ApmTraceUtils.addExceptionToTrace(e);
@@ -76,7 +77,7 @@ public class JobCreationAndStatusUpdateActivityImpl implements JobCreationAndSta
 
     try {
       final long jobId = input.getJobId();
-      final var response = airbyteApiClient.getAttemptApi().createNewAttemptNumber(new CreateNewAttemptNumberRequest().jobId(jobId));
+      final var response = airbyteApiClient.getAttemptApi().createNewAttemptNumber(new CreateNewAttemptNumberRequest(jobId));
       return new AttemptNumberCreationOutput(response.getAttemptNumber());
     } catch (final Exception e) {
       ApmTraceUtils.addExceptionToTrace(e);
@@ -93,13 +94,13 @@ public class JobCreationAndStatusUpdateActivityImpl implements JobCreationAndSta
     final var output = input.getStandardSyncOutput();
 
     try {
-      final var request = new JobSuccessWithAttemptNumberRequest()
-          .jobId(input.getJobId())
-          .attemptNumber(input.getAttemptNumber())
-          .connectionId(input.getConnectionId())
-          .standardSyncOutput(output);
+      final var request = new JobSuccessWithAttemptNumberRequest(
+          input.getJobId(),
+          input.getAttemptNumber(),
+          input.getConnectionId(),
+          output);
       airbyteApiClient.getJobsApi().jobSuccessWithAttemptNumber(request);
-    } catch (final ApiException e) {
+    } catch (final ClientException | IOException e) {
       ApmTraceUtils.addExceptionToTrace(e);
       log.error("jobSuccessWithAttemptNumber for job {} failed with exception: {}", input.getJobId(), e.getMessage(), e);
       throw new RetryableException(e);
@@ -112,13 +113,13 @@ public class JobCreationAndStatusUpdateActivityImpl implements JobCreationAndSta
     new AttemptContext(input.getConnectionId(), input.getJobId(), input.getAttemptNumber()).addTagsToTrace();
 
     try {
-      final var request = new JobFailureRequest()
-          .attemptNumber(input.getAttemptNumber())
-          .connectionId(input.getConnectionId())
-          .jobId(input.getJobId())
-          .reason(input.getReason());
+      final var request = new JobFailureRequest(
+          input.getJobId(),
+          input.getAttemptNumber(),
+          input.getConnectionId(),
+          input.getReason());
       airbyteApiClient.getJobsApi().jobFailure(request);
-    } catch (final ApiException e) {
+    } catch (final ClientException | IOException e) {
       log.error("jobFailure for job {} attempt {} failed with exception: {}", input.getJobId(), input.getAttemptNumber(), e.getMessage(), e);
       throw new RetryableException(e);
     }
@@ -132,14 +133,14 @@ public class JobCreationAndStatusUpdateActivityImpl implements JobCreationAndSta
     final var output = input.getStandardSyncOutput();
 
     try {
-      final var req = new FailAttemptRequest()
-          .attemptNumber(input.getAttemptNumber())
-          .jobId(input.getJobId())
-          .failureSummary(input.getAttemptFailureSummary())
-          .standardSyncOutput(output);
+      final var req = new FailAttemptRequest(
+          input.getJobId(),
+          input.getAttemptNumber(),
+          input.getAttemptFailureSummary(),
+          output);
 
       airbyteApiClient.getAttemptApi().failAttempt(req);
-    } catch (final ApiException e) {
+    } catch (final ClientException | IOException e) {
       log.error("attemptFailureWithAttemptNumber for job {} failed with exception: {}", input.getJobId(), e.getMessage(), e);
       throw new RetryableException(e);
     }
@@ -151,14 +152,14 @@ public class JobCreationAndStatusUpdateActivityImpl implements JobCreationAndSta
     new AttemptContext(input.getConnectionId(), input.getJobId(), input.getAttemptNumber()).addTagsToTrace();
 
     try {
-      final var req = new PersistCancelJobRequestBody()
-          .connectionId(input.getConnectionId())
-          .jobId(input.getJobId())
-          .attemptNumber(input.getAttemptNumber())
-          .attemptFailureSummary(input.getAttemptFailureSummary());
+      final var req = new PersistCancelJobRequestBody(
+          input.getAttemptFailureSummary(),
+          input.getAttemptNumber(),
+          input.getConnectionId(),
+          input.getJobId());
 
       airbyteApiClient.getJobsApi().persistJobCancellation(req);
-    } catch (final ApiException e) {
+    } catch (final ClientException | IOException e) {
       throw new RetryableException(e);
     }
   }
@@ -169,8 +170,8 @@ public class JobCreationAndStatusUpdateActivityImpl implements JobCreationAndSta
     new AttemptContext(input.getConnectionId(), input.getJobId(), null).addTagsToTrace();
 
     try {
-      airbyteApiClient.getJobsApi().reportJobStart(new ReportJobStartRequest().connectionId(input.getConnectionId()).jobId(input.getJobId()));
-    } catch (final ApiException e) {
+      airbyteApiClient.getJobsApi().reportJobStart(new ReportJobStartRequest(input.getJobId(), input.getConnectionId()));
+    } catch (final ClientException | IOException e) {
       throw new RetryableException(e);
     }
   }
@@ -180,8 +181,8 @@ public class JobCreationAndStatusUpdateActivityImpl implements JobCreationAndSta
   public void ensureCleanJobState(final EnsureCleanJobStateInput input) {
     new AttemptContext(input.getConnectionId(), null, null).addTagsToTrace();
     try {
-      airbyteApiClient.getJobsApi().failNonTerminalJobs(new ConnectionIdRequestBody().connectionId(input.getConnectionId()));
-    } catch (final ApiException e) {
+      airbyteApiClient.getJobsApi().failNonTerminalJobs(new ConnectionIdRequestBody(input.getConnectionId()));
+    } catch (final ClientException | IOException e) {
       throw new RetryableException(e);
     }
   }
@@ -203,13 +204,11 @@ public class JobCreationAndStatusUpdateActivityImpl implements JobCreationAndSta
 
     try {
       final var didSucceed = airbyteApiClient.getJobsApi().didPreviousJobSucceed(
-          new ConnectionJobRequestBody()
-              .connectionId(input.getConnectionId())
-              .jobId(input.getJobId()))
+          new ConnectionJobRequestBody(input.getConnectionId(), input.getJobId()))
           .getValue();
       // Treat anything other than an explicit success as a failure.
       return !didSucceed;
-    } catch (final ApiException e) {
+    } catch (final ClientException | IOException e) {
       throw new RetryableException(e);
     }
   }

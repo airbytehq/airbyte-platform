@@ -25,10 +25,10 @@ import static org.mockito.Mockito.when;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
-import io.airbyte.api.client.AirbyteApiClient;
-import io.airbyte.api.client.generated.SourceApi;
-import io.airbyte.api.client.model.generated.DiscoverCatalogResult;
-import io.airbyte.api.client.model.generated.SourceDiscoverSchemaWriteRequestBody;
+import io.airbyte.api.client2.AirbyteApiClient;
+import io.airbyte.api.client2.generated.SourceApi;
+import io.airbyte.api.client2.model.generated.DiscoverCatalogResult;
+import io.airbyte.api.client2.model.generated.SourceDiscoverSchemaWriteRequestBody;
 import io.airbyte.commons.constants.WorkerConstants;
 import io.airbyte.commons.converters.CatalogClientConverters;
 import io.airbyte.commons.converters.ConnectorConfigUpdater;
@@ -93,7 +93,7 @@ class DefaultDiscoverCatalogWorkerTest {
   private static final UUID CATALOG_ID = UUID.randomUUID();
 
   private static final DiscoverCatalogResult DISCOVER_CATALOG_RESULT =
-      new DiscoverCatalogResult().catalogId(CATALOG_ID);
+      new DiscoverCatalogResult(CATALOG_ID);
 
   private Path jobRoot;
   private IntegrationLauncher integrationLauncher;

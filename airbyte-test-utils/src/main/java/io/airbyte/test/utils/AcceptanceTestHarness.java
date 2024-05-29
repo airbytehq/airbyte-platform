@@ -548,12 +548,14 @@ public class AcceptanceTestHarness {
   }
 
   public SourceDiscoverSchemaRead discoverSourceSchemaWithId(final UUID sourceId) throws IOException {
-    final var result =
-        apiClient.getSourceApi().discoverSchemaForSource(new SourceDiscoverSchemaRequestBody(sourceId, null, true, null, null));
-    if (result.getCatalog() == null) {
-      throw new RuntimeException("no catalog returned, retrying...");
-    }
-    return result;
+    return Failsafe.with(retryPolicy).get(() -> {
+      final var result =
+          apiClient.getSourceApi().discoverSchemaForSource(new SourceDiscoverSchemaRequestBody(sourceId, null, true, null, null));
+      if (result.getCatalog() == null) {
+        throw new RuntimeException("no catalog returned, retrying...");
+      }
+      return result;
+    });
   }
 
   // Run check Connection workflow.
@@ -1033,7 +1035,7 @@ public class AcceptanceTestHarness {
         getSourceDbConfig());
   }
 
-  public SourceRead createSource(final String name, final UUID workspaceId, final UUID sourceDefId, final JsonNode sourceConfig) throws IOException {
+  public SourceRead createSource(final String name, final UUID workspaceId, final UUID sourceDefId, final JsonNode sourceConfig) {
     final SourceRead source = Failsafe.with(retryPolicy).get(() -> apiClient.getSourceApi().createSource(
         new SourceCreate(
             sourceDefId,
@@ -1045,11 +1047,11 @@ public class AcceptanceTestHarness {
     return source;
   }
 
-  public CheckConnectionRead checkSource(final UUID sourceId) throws IOException {
+  public CheckConnectionRead checkSource(final UUID sourceId) {
     return Failsafe.with(retryPolicy).get(() -> apiClient.getSourceApi().checkConnectionToSource(new SourceIdRequestBody(sourceId)));
   }
 
-  public UUID getPostgresSourceDefinitionId() throws IOException {
+  public UUID getPostgresSourceDefinitionId() {
     return Failsafe.with(retryPolicy).get(() -> apiClient.getSourceDefinitionApi().listSourceDefinitions().getSourceDefinitions()
         .stream()
         .filter(sourceRead -> "postgres".equalsIgnoreCase(sourceRead.getName()))
@@ -1062,7 +1064,7 @@ public class AcceptanceTestHarness {
     return getPostgresDestinationDefinition().getDestinationDefinitionId();
   }
 
-  public DestinationDefinitionRead getPostgresDestinationDefinition() throws IOException {
+  public DestinationDefinitionRead getPostgresDestinationDefinition() {
     return Failsafe.with(retryPolicy).get(() -> apiClient.getDestinationDefinitionApi().listDestinationDefinitions().getDestinationDefinitions()
         .stream()
         .filter(destRead -> "postgres".equalsIgnoreCase(destRead.getName()))

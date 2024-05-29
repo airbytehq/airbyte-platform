@@ -22,16 +22,15 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import io.airbyte.api.client.AirbyteApiClient;
-import io.airbyte.api.client.generated.StreamStatusesApi;
-import io.airbyte.api.client.invoker.generated.ApiException;
-import io.airbyte.api.client.model.generated.StreamStatusCreateRequestBody;
-import io.airbyte.api.client.model.generated.StreamStatusIncompleteRunCause;
-import io.airbyte.api.client.model.generated.StreamStatusJobType;
-import io.airbyte.api.client.model.generated.StreamStatusRateLimitedMetadata;
-import io.airbyte.api.client.model.generated.StreamStatusRead;
-import io.airbyte.api.client.model.generated.StreamStatusRunState;
-import io.airbyte.api.client.model.generated.StreamStatusUpdateRequestBody;
+import io.airbyte.api.client2.AirbyteApiClient;
+import io.airbyte.api.client2.generated.StreamStatusesApi;
+import io.airbyte.api.client2.model.generated.StreamStatusCreateRequestBody;
+import io.airbyte.api.client2.model.generated.StreamStatusIncompleteRunCause;
+import io.airbyte.api.client2.model.generated.StreamStatusJobType;
+import io.airbyte.api.client2.model.generated.StreamStatusRateLimitedMetadata;
+import io.airbyte.api.client2.model.generated.StreamStatusRead;
+import io.airbyte.api.client2.model.generated.StreamStatusRunState;
+import io.airbyte.api.client2.model.generated.StreamStatusUpdateRequestBody;
 import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.featureflag.TestClient;
 import io.airbyte.protocol.models.AirbyteMessage;
@@ -44,6 +43,7 @@ import io.airbyte.protocol.models.AirbyteTraceMessage;
 import io.airbyte.protocol.models.StreamDescriptor;
 import io.airbyte.workers.context.ReplicationContext;
 import io.airbyte.workers.internal.bookkeeping.events.ReplicationAirbyteMessageEvent;
+import java.io.IOException;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
@@ -117,34 +117,38 @@ class StreamStatusTrackerTest {
 
   @ParameterizedTest
   @ValueSource(booleans = {true, false})
-  void testTrackingStartedStatus(final boolean isReset) throws ApiException {
+  void testTrackingStartedStatus(final boolean isReset) throws IOException {
     final AirbyteMessageOrigin airbyteMessageOrigin = AirbyteMessageOrigin.SOURCE;
     final AirbyteMessage airbyteMessage = createAirbyteMessage(streamDescriptor, STARTED, TIMESTAMP);
     final ReplicationContext replicationContext = getDefaultContext(isReset);
     final ReplicationAirbyteMessageEvent event = new ReplicationAirbyteMessageEvent(airbyteMessageOrigin, airbyteMessage, replicationContext);
-    final StreamStatusCreateRequestBody expected = new StreamStatusCreateRequestBody()
-        .streamName(streamDescriptor.getName())
-        .streamNamespace(streamDescriptor.getNamespace())
-        .jobId(JOB_ID)
-        .jobType(StreamStatusTrackerKt.jobType(replicationContext))
-        .connectionId(CONNECTION_ID)
-        .attemptNumber(ATTEMPT)
-        .runState(StreamStatusRunState.RUNNING)
-        .transitionedAt(TIMESTAMP.toMillis())
-        .workspaceId(WORKSPACE_ID);
+    final StreamStatusCreateRequestBody expected = new StreamStatusCreateRequestBody(
+        ATTEMPT,
+        CONNECTION_ID,
+        JOB_ID,
+        StreamStatusTrackerKt.jobType(replicationContext),
+        StreamStatusRunState.RUNNING,
+        streamDescriptor.getName(),
+        TIMESTAMP.toMillis(),
+        WORKSPACE_ID,
+        null,
+        streamDescriptor.getNamespace(),
+        null);
     final StreamStatusKey streamStatusKey = new StreamStatusKey(streamDescriptor.getName(), streamDescriptor.getNamespace(),
         replicationContext.getWorkspaceId(), replicationContext.getConnectionId(), replicationContext.getJobId(), replicationContext.getAttempt());
-    final StreamStatusRead streamStatusRead = new StreamStatusRead()
-        .attemptNumber(ATTEMPT)
-        .connectionId(CONNECTION_ID)
-        .id(STREAM_ID)
-        .jobId(JOB_ID)
-        .jobType(StreamStatusJobType.SYNC)
-        .runState(StreamStatusRunState.RUNNING)
-        .streamName(streamDescriptor.getName())
-        .streamNamespace(streamDescriptor.getNamespace())
-        .transitionedAt(TIMESTAMP.toMillis())
-        .workspaceId(WORKSPACE_ID);
+    final StreamStatusRead streamStatusRead = new StreamStatusRead(
+        ATTEMPT,
+        CONNECTION_ID,
+        STREAM_ID,
+        JOB_ID,
+        StreamStatusJobType.SYNC,
+        StreamStatusRunState.RUNNING,
+        streamDescriptor.getName(),
+        streamDescriptor.getNamespace(),
+        TIMESTAMP.toMillis(),
+        WORKSPACE_ID,
+        null,
+        null);
 
     when(streamStatusesApi.createStreamStatus(any())).thenReturn(streamStatusRead);
     when(airbyteApiClient.getStreamStatusesApi()).thenReturn(streamStatusesApi);
@@ -157,7 +161,7 @@ class StreamStatusTrackerTest {
   }
 
   @Test
-  void testTrackingRateLimitedStatus() throws ApiException {
+  void testTrackingRateLimitedStatus() throws IOException {
     final AirbyteMessageOrigin airbyteMessageOrigin = AirbyteMessageOrigin.SOURCE;
     final ReplicationContext replicationContext = getDefaultContext(false);
 
@@ -170,23 +174,36 @@ class StreamStatusTrackerTest {
     final ReplicationAirbyteMessageEvent rateLimitedEvent =
         new ReplicationAirbyteMessageEvent(airbyteMessageOrigin, rateLimitedMessage, replicationContext);
 
-    final StreamStatusUpdateRequestBody expected = new StreamStatusUpdateRequestBody()
-        .streamName(streamDescriptor.getName())
-        .id(STREAM_ID)
-        .streamNamespace(streamDescriptor.getNamespace())
-        .jobId(JOB_ID)
-        .jobType(StreamStatusTrackerKt.jobType(replicationContext))
-        .connectionId(CONNECTION_ID)
-        .attemptNumber(ATTEMPT)
-        .runState(StreamStatusRunState.RATE_LIMITED)
-        .transitionedAt(TIMESTAMP.toMillis())
-        .workspaceId(WORKSPACE_ID)
-        .metadata(new StreamStatusRateLimitedMetadata().quotaReset(quotaReset.toEpochMilli()));
+    final StreamStatusUpdateRequestBody expected = new StreamStatusUpdateRequestBody(
+        ATTEMPT,
+        CONNECTION_ID,
+        JOB_ID,
+        StreamStatusTrackerKt.jobType(replicationContext),
+        StreamStatusRunState.RATE_LIMITED,
+        streamDescriptor.getName(),
+        TIMESTAMP.toMillis(),
+        WORKSPACE_ID,
+        STREAM_ID,
+        null,
+        streamDescriptor.getNamespace(),
+        new StreamStatusRateLimitedMetadata(quotaReset.toEpochMilli()));
 
     final StreamStatusKey streamStatusKey = new StreamStatusKey(streamDescriptor.getName(), streamDescriptor.getNamespace(),
         replicationContext.getWorkspaceId(), replicationContext.getConnectionId(), replicationContext.getJobId(), replicationContext.getAttempt());
 
-    when(streamStatusesApi.createStreamStatus(any())).thenReturn(new StreamStatusRead().id(STREAM_ID));
+    when(streamStatusesApi.createStreamStatus(any())).thenReturn(new StreamStatusRead(
+        ATTEMPT,
+        CONNECTION_ID,
+        STREAM_ID,
+        JOB_ID,
+        StreamStatusTrackerKt.jobType(replicationContext),
+        StreamStatusRunState.RATE_LIMITED,
+        streamDescriptor.getName(),
+        streamDescriptor.getNamespace(),
+        TIMESTAMP.toMillis(),
+        WORKSPACE_ID,
+        null,
+        new StreamStatusRateLimitedMetadata(quotaReset.toEpochMilli())));
     when(airbyteApiClient.getStreamStatusesApi()).thenReturn(streamStatusesApi);
 
     streamStatusTracker.track(startedEvent);
@@ -199,7 +216,7 @@ class StreamStatusTrackerTest {
   }
 
   @Test
-  void testTrackingRateLimitedAndRunningStatusTransition() throws ApiException {
+  void testTrackingRateLimitedAndRunningStatusTransition() throws IOException {
     final AirbyteMessageOrigin airbyteMessageOrigin = AirbyteMessageOrigin.SOURCE;
     final ReplicationContext replicationContext = getDefaultContext(false);
 
@@ -219,49 +236,64 @@ class StreamStatusTrackerTest {
     final ReplicationAirbyteMessageEvent runningEvent2 =
         new ReplicationAirbyteMessageEvent(airbyteMessageOrigin, runningAirbyteMessage2, replicationContext);
 
-    final StreamStatusUpdateRequestBody runningExpected = new StreamStatusUpdateRequestBody()
-        .streamName(streamDescriptor.getName())
-        .id(STREAM_ID)
-        .streamNamespace(streamDescriptor.getNamespace())
-        .jobId(JOB_ID)
-        .jobType(StreamStatusTrackerKt.jobType(replicationContext))
-        .connectionId(CONNECTION_ID)
-        .attemptNumber(ATTEMPT)
-        .runState(StreamStatusRunState.RUNNING)
-        .transitionedAt(TIMESTAMP.toMillis())
-        .workspaceId(WORKSPACE_ID)
-        .metadata(null);
+    final StreamStatusUpdateRequestBody runningExpected = new StreamStatusUpdateRequestBody(
+        ATTEMPT,
+        CONNECTION_ID,
+        JOB_ID,
+        StreamStatusTrackerKt.jobType(replicationContext),
+        StreamStatusRunState.RUNNING,
+        streamDescriptor.getName(),
+        TIMESTAMP.toMillis(),
+        WORKSPACE_ID,
+        STREAM_ID,
+        null,
+        streamDescriptor.getNamespace(),
+        null);
 
-    final StreamStatusUpdateRequestBody runningExpected2 = new StreamStatusUpdateRequestBody()
-        .streamName(streamDescriptor.getName())
-        .id(STREAM_ID)
-        .streamNamespace(streamDescriptor.getNamespace())
-        .jobId(JOB_ID)
-        .jobType(StreamStatusTrackerKt.jobType(replicationContext))
-        .connectionId(CONNECTION_ID)
-        .attemptNumber(ATTEMPT)
-        .runState(StreamStatusRunState.RUNNING)
-        .transitionedAt(TIMESTAMP.plus(Duration.ofSeconds(1)).toMillis())
-        .workspaceId(WORKSPACE_ID)
-        .metadata(null);
+    final StreamStatusUpdateRequestBody runningExpected2 = new StreamStatusUpdateRequestBody(
+        ATTEMPT,
+        CONNECTION_ID,
+        JOB_ID,
+        StreamStatusTrackerKt.jobType(replicationContext),
+        StreamStatusRunState.RUNNING,
+        streamDescriptor.getName(),
+        TIMESTAMP.plus(Duration.ofSeconds(1)).toMillis(),
+        WORKSPACE_ID,
+        STREAM_ID,
+        null,
+        streamDescriptor.getNamespace(),
+        null);
 
-    final StreamStatusUpdateRequestBody rateLimitedExpected = new StreamStatusUpdateRequestBody()
-        .streamName(streamDescriptor.getName())
-        .id(STREAM_ID)
-        .streamNamespace(streamDescriptor.getNamespace())
-        .jobId(JOB_ID)
-        .jobType(StreamStatusTrackerKt.jobType(replicationContext))
-        .connectionId(CONNECTION_ID)
-        .attemptNumber(ATTEMPT)
-        .runState(StreamStatusRunState.RATE_LIMITED)
-        .transitionedAt(TIMESTAMP.toMillis())
-        .workspaceId(WORKSPACE_ID)
-        .metadata(new StreamStatusRateLimitedMetadata().quotaReset(quotaReset.toEpochMilli()));
+    final StreamStatusUpdateRequestBody rateLimitedExpected = new StreamStatusUpdateRequestBody(
+        ATTEMPT,
+        CONNECTION_ID,
+        JOB_ID,
+        StreamStatusTrackerKt.jobType(replicationContext),
+        StreamStatusRunState.RATE_LIMITED,
+        streamDescriptor.getName(),
+        TIMESTAMP.toMillis(),
+        WORKSPACE_ID,
+        STREAM_ID,
+        null,
+        streamDescriptor.getNamespace(),
+        new StreamStatusRateLimitedMetadata(quotaReset.toEpochMilli()));
 
     final StreamStatusKey streamStatusKey = new StreamStatusKey(streamDescriptor.getName(), streamDescriptor.getNamespace(),
         replicationContext.getWorkspaceId(), replicationContext.getConnectionId(), replicationContext.getJobId(), replicationContext.getAttempt());
 
-    when(streamStatusesApi.createStreamStatus(any())).thenReturn(new StreamStatusRead().id(STREAM_ID));
+    when(streamStatusesApi.createStreamStatus(any())).thenReturn(new StreamStatusRead(
+        ATTEMPT,
+        CONNECTION_ID,
+        STREAM_ID,
+        JOB_ID,
+        StreamStatusTrackerKt.jobType(replicationContext),
+        StreamStatusRunState.RATE_LIMITED,
+        streamDescriptor.getName(),
+        streamDescriptor.getNamespace(),
+        TIMESTAMP.toMillis(),
+        WORKSPACE_ID,
+        null,
+        new StreamStatusRateLimitedMetadata(quotaReset.toEpochMilli())));
     when(airbyteApiClient.getStreamStatusesApi()).thenReturn(streamStatusesApi);
 
     streamStatusTracker.track(startedEvent);
@@ -279,7 +311,7 @@ class StreamStatusTrackerTest {
   }
 
   @Test
-  void testTrackingRunningStatus() throws ApiException {
+  void testTrackingRunningStatus() throws IOException {
     final AirbyteMessageOrigin airbyteMessageOrigin = AirbyteMessageOrigin.SOURCE;
     final AirbyteMessage startedAirbyteMessage = createAirbyteMessage(streamDescriptor, STARTED, TIMESTAMP);
     final AirbyteMessage runningAirbyteMessage = createAirbyteMessage(streamDescriptor, AirbyteStreamStatus.RUNNING, TIMESTAMP);
@@ -288,21 +320,35 @@ class StreamStatusTrackerTest {
         new ReplicationAirbyteMessageEvent(airbyteMessageOrigin, startedAirbyteMessage, replicationContext);
     final ReplicationAirbyteMessageEvent runningEvent =
         new ReplicationAirbyteMessageEvent(airbyteMessageOrigin, runningAirbyteMessage, replicationContext);
-    final StreamStatusUpdateRequestBody expected = new StreamStatusUpdateRequestBody()
-        .id(STREAM_ID)
-        .streamName(streamDescriptor.getName())
-        .streamNamespace(streamDescriptor.getNamespace())
-        .jobId(JOB_ID)
-        .jobType(StreamStatusJobType.SYNC)
-        .connectionId(CONNECTION_ID)
-        .attemptNumber(ATTEMPT)
-        .runState(StreamStatusRunState.RUNNING)
-        .transitionedAt(TIMESTAMP.toMillis())
-        .workspaceId(WORKSPACE_ID);
+    final StreamStatusUpdateRequestBody expected = new StreamStatusUpdateRequestBody(
+        ATTEMPT,
+        CONNECTION_ID,
+        JOB_ID,
+        StreamStatusJobType.SYNC,
+        StreamStatusRunState.RUNNING,
+        streamDescriptor.getName(),
+        TIMESTAMP.toMillis(),
+        WORKSPACE_ID,
+        STREAM_ID,
+        null,
+        streamDescriptor.getNamespace(),
+        null);
     final StreamStatusKey streamStatusKey = new StreamStatusKey(streamDescriptor.getName(), streamDescriptor.getNamespace(),
         replicationContext.getWorkspaceId(), replicationContext.getConnectionId(), replicationContext.getJobId(), replicationContext.getAttempt());
 
-    when(streamStatusesApi.createStreamStatus(any())).thenReturn(new StreamStatusRead().id(STREAM_ID));
+    when(streamStatusesApi.createStreamStatus(any())).thenReturn(new StreamStatusRead(
+        ATTEMPT,
+        CONNECTION_ID,
+        STREAM_ID,
+        JOB_ID,
+        StreamStatusJobType.SYNC,
+        StreamStatusRunState.RUNNING,
+        streamDescriptor.getName(),
+        streamDescriptor.getNamespace(),
+        TIMESTAMP.toMillis(),
+        WORKSPACE_ID,
+        null,
+        null));
     when(airbyteApiClient.getStreamStatusesApi()).thenReturn(streamStatusesApi);
 
     streamStatusTracker.track(startedEvent);
@@ -314,7 +360,7 @@ class StreamStatusTrackerTest {
   }
 
   @Test
-  void testTrackingCompleteSourceOnly() throws ApiException {
+  void testTrackingCompleteSourceOnly() throws IOException {
     final AirbyteMessageOrigin airbyteMessageOrigin = AirbyteMessageOrigin.SOURCE;
     final AirbyteMessage startedAirbyteMessage = createAirbyteMessage(streamDescriptor, STARTED, TIMESTAMP);
     final AirbyteMessage runningAirbyteMessage = createAirbyteMessage(streamDescriptor, AirbyteStreamStatus.RUNNING, TIMESTAMP);
@@ -329,7 +375,19 @@ class StreamStatusTrackerTest {
     final StreamStatusKey streamStatusKey = new StreamStatusKey(streamDescriptor.getName(), streamDescriptor.getNamespace(),
         replicationContext.getWorkspaceId(), replicationContext.getConnectionId(), replicationContext.getJobId(), replicationContext.getAttempt());
 
-    when(streamStatusesApi.createStreamStatus(any())).thenReturn(new StreamStatusRead().id(STREAM_ID));
+    when(streamStatusesApi.createStreamStatus(any())).thenReturn(new StreamStatusRead(
+        ATTEMPT,
+        CONNECTION_ID,
+        STREAM_ID,
+        JOB_ID,
+        StreamStatusJobType.SYNC,
+        StreamStatusRunState.RUNNING,
+        streamDescriptor.getName(),
+        streamDescriptor.getNamespace(),
+        TIMESTAMP.toMillis(),
+        WORKSPACE_ID,
+        null,
+        null));
     when(airbyteApiClient.getStreamStatusesApi()).thenReturn(streamStatusesApi);
 
     streamStatusTracker.track(startedEvent);
@@ -341,7 +399,7 @@ class StreamStatusTrackerTest {
   }
 
   @Test
-  void testTrackingCompleteDestinationOnly() throws ApiException {
+  void testTrackingCompleteDestinationOnly() throws IOException {
     final AirbyteMessageOrigin airbyteMessageOrigin = AirbyteMessageOrigin.SOURCE;
     final AirbyteMessage startedAirbyteMessage = createAirbyteMessage(streamDescriptor, STARTED, TIMESTAMP);
     final AirbyteMessage runningAirbyteMessage = createAirbyteMessage(streamDescriptor, AirbyteStreamStatus.RUNNING, TIMESTAMP);
@@ -356,7 +414,19 @@ class StreamStatusTrackerTest {
     final StreamStatusKey streamStatusKey = new StreamStatusKey(streamDescriptor.getName(), streamDescriptor.getNamespace(),
         replicationContext.getWorkspaceId(), replicationContext.getConnectionId(), replicationContext.getJobId(), replicationContext.getAttempt());
 
-    when(streamStatusesApi.createStreamStatus(any())).thenReturn(new StreamStatusRead().id(STREAM_ID));
+    when(streamStatusesApi.createStreamStatus(any())).thenReturn(new StreamStatusRead(
+        ATTEMPT,
+        CONNECTION_ID,
+        STREAM_ID,
+        JOB_ID,
+        StreamStatusJobType.SYNC,
+        StreamStatusRunState.COMPLETE,
+        streamDescriptor.getName(),
+        streamDescriptor.getNamespace(),
+        TIMESTAMP.toMillis(),
+        WORKSPACE_ID,
+        null,
+        null));
     when(airbyteApiClient.getStreamStatusesApi()).thenReturn(streamStatusesApi);
 
     streamStatusTracker.track(startedEvent);
@@ -369,7 +439,7 @@ class StreamStatusTrackerTest {
 
   @ParameterizedTest
   @ValueSource(booleans = {true, false})
-  void testTrackingCompleteSourceAndCompleteDestination(final boolean isReset) throws ApiException {
+  void testTrackingCompleteSourceAndCompleteDestination(final boolean isReset) throws IOException {
     final AirbyteMessageOrigin airbyteMessageOrigin = AirbyteMessageOrigin.SOURCE;
     final AirbyteMessage startedAirbyteMessage = createAirbyteMessage(streamDescriptor, STARTED, TIMESTAMP);
     final AirbyteMessage runningAirbyteMessage = createAirbyteMessage(streamDescriptor, AirbyteStreamStatus.RUNNING, TIMESTAMP);
@@ -384,21 +454,35 @@ class StreamStatusTrackerTest {
         new ReplicationAirbyteMessageEvent(AirbyteMessageOrigin.DESTINATION, destinationCompleteAirbyteMessage, replicationContext);
     final ReplicationAirbyteMessageEvent sourceEvent =
         new ReplicationAirbyteMessageEvent(airbyteMessageOrigin, sourceCompleteAirbyteMessage, replicationContext);
-    final StreamStatusUpdateRequestBody expected = new StreamStatusUpdateRequestBody()
-        .id(STREAM_ID)
-        .streamName(streamDescriptor.getName())
-        .streamNamespace(streamDescriptor.getNamespace())
-        .jobId(JOB_ID)
-        .jobType(StreamStatusTrackerKt.jobType(replicationContext))
-        .connectionId(CONNECTION_ID)
-        .attemptNumber(ATTEMPT)
-        .runState(StreamStatusRunState.COMPLETE)
-        .transitionedAt(TIMESTAMP.toMillis())
-        .workspaceId(WORKSPACE_ID);
+    final StreamStatusUpdateRequestBody expected = new StreamStatusUpdateRequestBody(
+        ATTEMPT,
+        CONNECTION_ID,
+        JOB_ID,
+        StreamStatusTrackerKt.jobType(replicationContext),
+        StreamStatusRunState.COMPLETE,
+        streamDescriptor.getName(),
+        TIMESTAMP.toMillis(),
+        WORKSPACE_ID,
+        STREAM_ID,
+        null,
+        streamDescriptor.getNamespace(),
+        null);
     final StreamStatusKey streamStatusKey = new StreamStatusKey(streamDescriptor.getName(), streamDescriptor.getNamespace(),
         replicationContext.getWorkspaceId(), replicationContext.getConnectionId(), replicationContext.getJobId(), replicationContext.getAttempt());
 
-    when(streamStatusesApi.createStreamStatus(any())).thenReturn(new StreamStatusRead().id(STREAM_ID));
+    when(streamStatusesApi.createStreamStatus(any())).thenReturn(new StreamStatusRead(
+        ATTEMPT,
+        CONNECTION_ID,
+        STREAM_ID,
+        JOB_ID,
+        StreamStatusTrackerKt.jobType(replicationContext),
+        StreamStatusRunState.COMPLETE,
+        streamDescriptor.getName(),
+        streamDescriptor.getNamespace(),
+        TIMESTAMP.toMillis(),
+        WORKSPACE_ID,
+        null,
+        null));
     when(airbyteApiClient.getStreamStatusesApi()).thenReturn(streamStatusesApi);
 
     streamStatusTracker.track(startedEvent);
@@ -416,7 +500,7 @@ class StreamStatusTrackerTest {
 
   @ParameterizedTest
   @ValueSource(booleans = {true, false})
-  void testTrackingCompleteDestinationAndCompleteSource(final boolean isReset) throws ApiException {
+  void testTrackingCompleteDestinationAndCompleteSource(final boolean isReset) throws IOException {
     final AirbyteMessageOrigin airbyteMessageOrigin = AirbyteMessageOrigin.SOURCE;
     final AirbyteMessage startedAirbyteMessage = createAirbyteMessage(streamDescriptor, STARTED, TIMESTAMP);
     final AirbyteMessage runningAirbyteMessage = createAirbyteMessage(streamDescriptor, AirbyteStreamStatus.RUNNING, TIMESTAMP);
@@ -431,21 +515,35 @@ class StreamStatusTrackerTest {
         new ReplicationAirbyteMessageEvent(AirbyteMessageOrigin.DESTINATION, destinationCompleteAirbyteMessage, replicationContext);
     final ReplicationAirbyteMessageEvent sourceEvent =
         new ReplicationAirbyteMessageEvent(airbyteMessageOrigin, sourceCompleteAirbyteMessage, replicationContext);
-    final StreamStatusUpdateRequestBody expected = new StreamStatusUpdateRequestBody()
-        .id(STREAM_ID)
-        .streamName(streamDescriptor.getName())
-        .streamNamespace(streamDescriptor.getNamespace())
-        .jobId(JOB_ID)
-        .jobType(StreamStatusTrackerKt.jobType(replicationContext))
-        .connectionId(CONNECTION_ID)
-        .attemptNumber(ATTEMPT)
-        .runState(StreamStatusRunState.COMPLETE)
-        .transitionedAt(TIMESTAMP.toMillis())
-        .workspaceId(WORKSPACE_ID);
+    final StreamStatusUpdateRequestBody expected = new StreamStatusUpdateRequestBody(
+        ATTEMPT,
+        CONNECTION_ID,
+        JOB_ID,
+        StreamStatusTrackerKt.jobType(replicationContext),
+        StreamStatusRunState.COMPLETE,
+        streamDescriptor.getName(),
+        TIMESTAMP.toMillis(),
+        WORKSPACE_ID,
+        STREAM_ID,
+        null,
+        streamDescriptor.getNamespace(),
+        null);
     final StreamStatusKey streamStatusKey = new StreamStatusKey(streamDescriptor.getName(), streamDescriptor.getNamespace(),
         replicationContext.getWorkspaceId(), replicationContext.getConnectionId(), replicationContext.getJobId(), replicationContext.getAttempt());
 
-    when(streamStatusesApi.createStreamStatus(any())).thenReturn(new StreamStatusRead().id(STREAM_ID));
+    when(streamStatusesApi.createStreamStatus(any())).thenReturn(new StreamStatusRead(
+        ATTEMPT,
+        CONNECTION_ID,
+        STREAM_ID,
+        JOB_ID,
+        StreamStatusTrackerKt.jobType(replicationContext),
+        StreamStatusRunState.COMPLETE,
+        streamDescriptor.getName(),
+        streamDescriptor.getNamespace(),
+        TIMESTAMP.toMillis(),
+        WORKSPACE_ID,
+        null,
+        null));
     when(airbyteApiClient.getStreamStatusesApi()).thenReturn(streamStatusesApi);
 
     streamStatusTracker.track(startedEvent);
@@ -468,7 +566,7 @@ class StreamStatusTrackerTest {
 
   @ParameterizedTest
   @ValueSource(booleans = {true, false})
-  void testTrackingIncompleteSourceOnly(final boolean isReset) throws ApiException {
+  void testTrackingIncompleteSourceOnly(final boolean isReset) throws IOException {
     final AirbyteMessageOrigin airbyteMessageOrigin = AirbyteMessageOrigin.SOURCE;
     final AirbyteMessage startedAirbyteMessage = createAirbyteMessage(streamDescriptor, STARTED, TIMESTAMP);
     final AirbyteMessage runningAirbyteMessage = createAirbyteMessage(streamDescriptor, AirbyteStreamStatus.RUNNING, TIMESTAMP);
@@ -481,22 +579,35 @@ class StreamStatusTrackerTest {
         new ReplicationAirbyteMessageEvent(airbyteMessageOrigin, runningAirbyteMessage, replicationContext);
     final ReplicationAirbyteMessageEvent sourceEvent =
         new ReplicationAirbyteMessageEvent(airbyteMessageOrigin, sourceIncompleteAirbyteMessage, replicationContext, incompleteRunCause);
-    final StreamStatusUpdateRequestBody expected = new StreamStatusUpdateRequestBody()
-        .id(STREAM_ID)
-        .streamName(streamDescriptor.getName())
-        .streamNamespace(streamDescriptor.getNamespace())
-        .jobId(JOB_ID)
-        .jobType(StreamStatusTrackerKt.jobType(replicationContext))
-        .connectionId(CONNECTION_ID)
-        .attemptNumber(ATTEMPT)
-        .runState(StreamStatusRunState.INCOMPLETE)
-        .incompleteRunCause(incompleteRunCause)
-        .transitionedAt(TIMESTAMP.toMillis())
-        .workspaceId(WORKSPACE_ID);
+    final StreamStatusUpdateRequestBody expected = new StreamStatusUpdateRequestBody(
+        ATTEMPT,
+        CONNECTION_ID,
+        JOB_ID,
+        StreamStatusTrackerKt.jobType(replicationContext),
+        StreamStatusRunState.INCOMPLETE,
+        streamDescriptor.getName(),
+        TIMESTAMP.toMillis(),
+        WORKSPACE_ID,
+        STREAM_ID,
+        incompleteRunCause,
+        streamDescriptor.getNamespace(),
+        null);
     final StreamStatusKey streamStatusKey = new StreamStatusKey(streamDescriptor.getName(), streamDescriptor.getNamespace(),
         replicationContext.getWorkspaceId(), replicationContext.getConnectionId(), replicationContext.getJobId(), replicationContext.getAttempt());
 
-    when(streamStatusesApi.createStreamStatus(any())).thenReturn(new StreamStatusRead().id(STREAM_ID));
+    when(streamStatusesApi.createStreamStatus(any())).thenReturn(new StreamStatusRead(
+        ATTEMPT,
+        CONNECTION_ID,
+        STREAM_ID,
+        JOB_ID,
+        StreamStatusTrackerKt.jobType(replicationContext),
+        StreamStatusRunState.INCOMPLETE,
+        streamDescriptor.getName(),
+        streamDescriptor.getNamespace(),
+        TIMESTAMP.toMillis(),
+        WORKSPACE_ID,
+        incompleteRunCause,
+        null));
     when(airbyteApiClient.getStreamStatusesApi()).thenReturn(streamStatusesApi);
 
     streamStatusTracker.track(startedEvent);
@@ -512,7 +623,7 @@ class StreamStatusTrackerTest {
 
   @ParameterizedTest
   @ValueSource(booleans = {true, false})
-  void testTrackingIncompleteDestinationOnly(final boolean isReset) throws ApiException {
+  void testTrackingIncompleteDestinationOnly(final boolean isReset) throws IOException {
     final AirbyteMessageOrigin airbyteMessageOrigin = AirbyteMessageOrigin.SOURCE;
     final AirbyteMessage startedAirbyteMessage = createAirbyteMessage(streamDescriptor, STARTED, TIMESTAMP);
     final AirbyteMessage runningAirbyteMessage = createAirbyteMessage(streamDescriptor, AirbyteStreamStatus.RUNNING, TIMESTAMP);
@@ -526,22 +637,35 @@ class StreamStatusTrackerTest {
     final ReplicationAirbyteMessageEvent destinationEvent =
         new ReplicationAirbyteMessageEvent(AirbyteMessageOrigin.DESTINATION, destinationIncompleteAirbyteMessage, replicationContext,
             incompleteRunCause);
-    final StreamStatusUpdateRequestBody expected = new StreamStatusUpdateRequestBody()
-        .id(STREAM_ID)
-        .streamName(streamDescriptor.getName())
-        .streamNamespace(streamDescriptor.getNamespace())
-        .jobId(JOB_ID)
-        .jobType(StreamStatusTrackerKt.jobType(replicationContext))
-        .connectionId(CONNECTION_ID)
-        .attemptNumber(ATTEMPT)
-        .runState(StreamStatusRunState.INCOMPLETE)
-        .incompleteRunCause(incompleteRunCause)
-        .transitionedAt(TIMESTAMP.toMillis())
-        .workspaceId(WORKSPACE_ID);
+    final StreamStatusUpdateRequestBody expected = new StreamStatusUpdateRequestBody(
+        ATTEMPT,
+        CONNECTION_ID,
+        JOB_ID,
+        StreamStatusTrackerKt.jobType(replicationContext),
+        StreamStatusRunState.INCOMPLETE,
+        streamDescriptor.getName(),
+        TIMESTAMP.toMillis(),
+        WORKSPACE_ID,
+        STREAM_ID,
+        incompleteRunCause,
+        streamDescriptor.getNamespace(),
+        null);
     final StreamStatusKey streamStatusKey = new StreamStatusKey(streamDescriptor.getName(), streamDescriptor.getNamespace(),
         replicationContext.getWorkspaceId(), replicationContext.getConnectionId(), replicationContext.getJobId(), replicationContext.getAttempt());
 
-    when(streamStatusesApi.createStreamStatus(any())).thenReturn(new StreamStatusRead().id(STREAM_ID));
+    when(streamStatusesApi.createStreamStatus(any())).thenReturn(new StreamStatusRead(
+        ATTEMPT,
+        CONNECTION_ID,
+        STREAM_ID,
+        JOB_ID,
+        StreamStatusTrackerKt.jobType(replicationContext),
+        StreamStatusRunState.INCOMPLETE,
+        streamDescriptor.getName(),
+        streamDescriptor.getNamespace(),
+        TIMESTAMP.toMillis(),
+        WORKSPACE_ID,
+        null,
+        null));
     when(airbyteApiClient.getStreamStatusesApi()).thenReturn(streamStatusesApi);
 
     streamStatusTracker.track(startedEvent);
@@ -557,57 +681,7 @@ class StreamStatusTrackerTest {
 
   @ParameterizedTest
   @ValueSource(booleans = {true, false})
-  void testTrackingIncompleteSourceAndIncompleteDestination(final boolean isReset) throws ApiException {
-    final AirbyteMessageOrigin airbyteMessageOrigin = AirbyteMessageOrigin.SOURCE;
-    final AirbyteMessage startedAirbyteMessage = createAirbyteMessage(streamDescriptor, STARTED, TIMESTAMP);
-    final AirbyteMessage runningAirbyteMessage = createAirbyteMessage(streamDescriptor, AirbyteStreamStatus.RUNNING, TIMESTAMP);
-    final AirbyteMessage destinationIncompleteAirbyteMessage = createAirbyteMessage(streamDescriptor, AirbyteStreamStatus.INCOMPLETE, TIMESTAMP);
-    final AirbyteMessage sourceIncompleteAirbyteMessage = createAirbyteMessage(streamDescriptor, AirbyteStreamStatus.INCOMPLETE, TIMESTAMP);
-    final ReplicationContext replicationContext = getDefaultContext(isReset);
-    final var incompleteRunCause = StreamStatusIncompleteRunCause.FAILED;
-    final ReplicationAirbyteMessageEvent startedEvent =
-        new ReplicationAirbyteMessageEvent(airbyteMessageOrigin, startedAirbyteMessage, replicationContext);
-    final ReplicationAirbyteMessageEvent runningEvent =
-        new ReplicationAirbyteMessageEvent(airbyteMessageOrigin, runningAirbyteMessage, replicationContext);
-    final ReplicationAirbyteMessageEvent destinationEvent =
-        new ReplicationAirbyteMessageEvent(AirbyteMessageOrigin.DESTINATION, destinationIncompleteAirbyteMessage, replicationContext,
-            incompleteRunCause);
-    final ReplicationAirbyteMessageEvent sourceEvent =
-        new ReplicationAirbyteMessageEvent(airbyteMessageOrigin, sourceIncompleteAirbyteMessage, replicationContext, incompleteRunCause);
-    final StreamStatusUpdateRequestBody expected = new StreamStatusUpdateRequestBody()
-        .id(STREAM_ID)
-        .streamName(streamDescriptor.getName())
-        .streamNamespace(streamDescriptor.getNamespace())
-        .jobId(JOB_ID)
-        .jobType(StreamStatusTrackerKt.jobType(replicationContext))
-        .connectionId(CONNECTION_ID)
-        .attemptNumber(ATTEMPT)
-        .runState(StreamStatusRunState.INCOMPLETE)
-        .incompleteRunCause(incompleteRunCause)
-        .transitionedAt(TIMESTAMP.toMillis())
-        .workspaceId(WORKSPACE_ID);
-    final StreamStatusKey streamStatusKey = new StreamStatusKey(streamDescriptor.getName(), streamDescriptor.getNamespace(),
-        replicationContext.getWorkspaceId(), replicationContext.getConnectionId(), replicationContext.getJobId(), replicationContext.getAttempt());
-
-    when(streamStatusesApi.createStreamStatus(any())).thenReturn(new StreamStatusRead().id(STREAM_ID));
-    when(airbyteApiClient.getStreamStatusesApi()).thenReturn(streamStatusesApi);
-
-    streamStatusTracker.track(startedEvent);
-    streamStatusTracker.track(runningEvent);
-    streamStatusTracker.track(sourceEvent);
-    assertEquals(INCOMPLETE, streamStatusTracker.getAirbyteStreamStatus(streamStatusKey));
-    streamStatusTracker.track(destinationEvent);
-    assertEquals(INCOMPLETE, streamStatusTracker.getAirbyteStreamStatus(streamStatusKey));
-    verify(streamStatusesApi, times(1)).createStreamStatus(any(StreamStatusCreateRequestBody.class));
-    verify(streamStatusesApi, times(2)).updateStreamStatus(updateArgumentCaptor.capture());
-
-    final StreamStatusUpdateRequestBody result = updateArgumentCaptor.getAllValues().get(updateArgumentCaptor.getAllValues().size() - 1);
-    assertEquals(expected, result);
-  }
-
-  @ParameterizedTest
-  @ValueSource(booleans = {true, false})
-  void testTrackingIncompleteDestinationAndIncompleteSource(final boolean isReset) throws ApiException {
+  void testTrackingIncompleteSourceAndIncompleteDestination(final boolean isReset) throws IOException {
     final AirbyteMessageOrigin airbyteMessageOrigin = AirbyteMessageOrigin.SOURCE;
     final AirbyteMessage startedAirbyteMessage = createAirbyteMessage(streamDescriptor, STARTED, TIMESTAMP);
     final AirbyteMessage runningAirbyteMessage = createAirbyteMessage(streamDescriptor, AirbyteStreamStatus.RUNNING, TIMESTAMP);
@@ -624,22 +698,98 @@ class StreamStatusTrackerTest {
             incompleteRunCause);
     final ReplicationAirbyteMessageEvent sourceEvent =
         new ReplicationAirbyteMessageEvent(airbyteMessageOrigin, sourceIncompleteAirbyteMessage, replicationContext, incompleteRunCause);
-    final StreamStatusUpdateRequestBody expected = new StreamStatusUpdateRequestBody()
-        .id(STREAM_ID)
-        .streamName(streamDescriptor.getName())
-        .streamNamespace(streamDescriptor.getNamespace())
-        .jobId(JOB_ID)
-        .jobType(StreamStatusTrackerKt.jobType(replicationContext))
-        .connectionId(CONNECTION_ID)
-        .attemptNumber(ATTEMPT)
-        .runState(StreamStatusRunState.INCOMPLETE)
-        .incompleteRunCause(incompleteRunCause)
-        .transitionedAt(TIMESTAMP.toMillis())
-        .workspaceId(WORKSPACE_ID);
+    final StreamStatusUpdateRequestBody expected = new StreamStatusUpdateRequestBody(
+        ATTEMPT,
+        CONNECTION_ID,
+        JOB_ID,
+        StreamStatusTrackerKt.jobType(replicationContext),
+        StreamStatusRunState.INCOMPLETE,
+        streamDescriptor.getName(),
+        TIMESTAMP.toMillis(),
+        WORKSPACE_ID,
+        STREAM_ID,
+        incompleteRunCause,
+        streamDescriptor.getNamespace(),
+        null);
     final StreamStatusKey streamStatusKey = new StreamStatusKey(streamDescriptor.getName(), streamDescriptor.getNamespace(),
         replicationContext.getWorkspaceId(), replicationContext.getConnectionId(), replicationContext.getJobId(), replicationContext.getAttempt());
 
-    when(streamStatusesApi.createStreamStatus(any())).thenReturn(new StreamStatusRead().id(STREAM_ID));
+    when(streamStatusesApi.createStreamStatus(any())).thenReturn(new StreamStatusRead(
+        ATTEMPT,
+        CONNECTION_ID,
+        STREAM_ID,
+        JOB_ID,
+        StreamStatusTrackerKt.jobType(replicationContext),
+        StreamStatusRunState.INCOMPLETE,
+        streamDescriptor.getName(),
+        streamDescriptor.getNamespace(),
+        TIMESTAMP.toMillis(),
+        WORKSPACE_ID,
+        incompleteRunCause,
+        null));
+    when(airbyteApiClient.getStreamStatusesApi()).thenReturn(streamStatusesApi);
+
+    streamStatusTracker.track(startedEvent);
+    streamStatusTracker.track(runningEvent);
+    streamStatusTracker.track(sourceEvent);
+    assertEquals(INCOMPLETE, streamStatusTracker.getAirbyteStreamStatus(streamStatusKey));
+    streamStatusTracker.track(destinationEvent);
+    assertEquals(INCOMPLETE, streamStatusTracker.getAirbyteStreamStatus(streamStatusKey));
+    verify(streamStatusesApi, times(1)).createStreamStatus(any(StreamStatusCreateRequestBody.class));
+    verify(streamStatusesApi, times(2)).updateStreamStatus(updateArgumentCaptor.capture());
+
+    final StreamStatusUpdateRequestBody result = updateArgumentCaptor.getAllValues().get(updateArgumentCaptor.getAllValues().size() - 1);
+    assertEquals(expected, result);
+  }
+
+  @ParameterizedTest
+  @ValueSource(booleans = {true, false})
+  void testTrackingIncompleteDestinationAndIncompleteSource(final boolean isReset) throws IOException {
+    final AirbyteMessageOrigin airbyteMessageOrigin = AirbyteMessageOrigin.SOURCE;
+    final AirbyteMessage startedAirbyteMessage = createAirbyteMessage(streamDescriptor, STARTED, TIMESTAMP);
+    final AirbyteMessage runningAirbyteMessage = createAirbyteMessage(streamDescriptor, AirbyteStreamStatus.RUNNING, TIMESTAMP);
+    final AirbyteMessage destinationIncompleteAirbyteMessage = createAirbyteMessage(streamDescriptor, AirbyteStreamStatus.INCOMPLETE, TIMESTAMP);
+    final AirbyteMessage sourceIncompleteAirbyteMessage = createAirbyteMessage(streamDescriptor, AirbyteStreamStatus.INCOMPLETE, TIMESTAMP);
+    final ReplicationContext replicationContext = getDefaultContext(isReset);
+    final var incompleteRunCause = StreamStatusIncompleteRunCause.FAILED;
+    final ReplicationAirbyteMessageEvent startedEvent =
+        new ReplicationAirbyteMessageEvent(airbyteMessageOrigin, startedAirbyteMessage, replicationContext);
+    final ReplicationAirbyteMessageEvent runningEvent =
+        new ReplicationAirbyteMessageEvent(airbyteMessageOrigin, runningAirbyteMessage, replicationContext);
+    final ReplicationAirbyteMessageEvent destinationEvent =
+        new ReplicationAirbyteMessageEvent(AirbyteMessageOrigin.DESTINATION, destinationIncompleteAirbyteMessage, replicationContext,
+            incompleteRunCause);
+    final ReplicationAirbyteMessageEvent sourceEvent =
+        new ReplicationAirbyteMessageEvent(airbyteMessageOrigin, sourceIncompleteAirbyteMessage, replicationContext, incompleteRunCause);
+    final StreamStatusUpdateRequestBody expected = new StreamStatusUpdateRequestBody(
+        ATTEMPT,
+        CONNECTION_ID,
+        JOB_ID,
+        StreamStatusTrackerKt.jobType(replicationContext),
+        StreamStatusRunState.INCOMPLETE,
+        streamDescriptor.getName(),
+        TIMESTAMP.toMillis(),
+        WORKSPACE_ID,
+        STREAM_ID,
+        incompleteRunCause,
+        streamDescriptor.getNamespace(),
+        null);
+    final StreamStatusKey streamStatusKey = new StreamStatusKey(streamDescriptor.getName(), streamDescriptor.getNamespace(),
+        replicationContext.getWorkspaceId(), replicationContext.getConnectionId(), replicationContext.getJobId(), replicationContext.getAttempt());
+
+    when(streamStatusesApi.createStreamStatus(any())).thenReturn(new StreamStatusRead(
+        ATTEMPT,
+        CONNECTION_ID,
+        STREAM_ID,
+        JOB_ID,
+        StreamStatusTrackerKt.jobType(replicationContext),
+        StreamStatusRunState.INCOMPLETE,
+        streamDescriptor.getName(),
+        streamDescriptor.getNamespace(),
+        TIMESTAMP.toMillis(),
+        WORKSPACE_ID,
+        incompleteRunCause,
+        null));
     when(airbyteApiClient.getStreamStatusesApi()).thenReturn(streamStatusesApi);
 
     streamStatusTracker.track(startedEvent);
@@ -657,7 +807,7 @@ class StreamStatusTrackerTest {
 
   @ParameterizedTest
   @ValueSource(booleans = {true, false})
-  void testTrackingIncompleteSourceAndCompleteDestination(final boolean isReset) throws ApiException {
+  void testTrackingIncompleteSourceAndCompleteDestination(final boolean isReset) throws IOException {
     final AirbyteMessageOrigin airbyteMessageOrigin = AirbyteMessageOrigin.SOURCE;
     final AirbyteMessage startedAirbyteMessage = createAirbyteMessage(streamDescriptor, STARTED, TIMESTAMP);
     final AirbyteMessage runningAirbyteMessage = createAirbyteMessage(streamDescriptor, AirbyteStreamStatus.RUNNING, TIMESTAMP);
@@ -673,22 +823,35 @@ class StreamStatusTrackerTest {
         new ReplicationAirbyteMessageEvent(AirbyteMessageOrigin.DESTINATION, destinationCompleteAirbyteMessage, replicationContext);
     final ReplicationAirbyteMessageEvent sourceEvent =
         new ReplicationAirbyteMessageEvent(airbyteMessageOrigin, sourceIncompleteAirbyteMessage, replicationContext, incompleteRunCause);
-    final StreamStatusUpdateRequestBody expected = new StreamStatusUpdateRequestBody()
-        .id(STREAM_ID)
-        .streamName(streamDescriptor.getName())
-        .streamNamespace(streamDescriptor.getNamespace())
-        .jobId(JOB_ID)
-        .jobType(StreamStatusTrackerKt.jobType(replicationContext))
-        .connectionId(CONNECTION_ID)
-        .attemptNumber(ATTEMPT)
-        .runState(StreamStatusRunState.INCOMPLETE)
-        .incompleteRunCause(incompleteRunCause)
-        .transitionedAt(TIMESTAMP.toMillis())
-        .workspaceId(WORKSPACE_ID);
+    final StreamStatusUpdateRequestBody expected = new StreamStatusUpdateRequestBody(
+        ATTEMPT,
+        CONNECTION_ID,
+        JOB_ID,
+        StreamStatusTrackerKt.jobType(replicationContext),
+        StreamStatusRunState.INCOMPLETE,
+        streamDescriptor.getName(),
+        TIMESTAMP.toMillis(),
+        WORKSPACE_ID,
+        STREAM_ID,
+        incompleteRunCause,
+        streamDescriptor.getNamespace(),
+        null);
     final StreamStatusKey streamStatusKey = new StreamStatusKey(streamDescriptor.getName(), streamDescriptor.getNamespace(),
         replicationContext.getWorkspaceId(), replicationContext.getConnectionId(), replicationContext.getJobId(), replicationContext.getAttempt());
 
-    when(streamStatusesApi.createStreamStatus(any())).thenReturn(new StreamStatusRead().id(STREAM_ID));
+    when(streamStatusesApi.createStreamStatus(any())).thenReturn(new StreamStatusRead(
+        ATTEMPT,
+        CONNECTION_ID,
+        STREAM_ID,
+        JOB_ID,
+        StreamStatusTrackerKt.jobType(replicationContext),
+        StreamStatusRunState.INCOMPLETE,
+        streamDescriptor.getName(),
+        streamDescriptor.getNamespace(),
+        TIMESTAMP.toMillis(),
+        WORKSPACE_ID,
+        incompleteRunCause,
+        null));
     when(airbyteApiClient.getStreamStatusesApi()).thenReturn(streamStatusesApi);
 
     streamStatusTracker.track(startedEvent);
@@ -706,7 +869,7 @@ class StreamStatusTrackerTest {
 
   @ParameterizedTest
   @ValueSource(booleans = {true, false})
-  void testTrackingCompleteDestinationAndIncompleteSource(final boolean isReset) throws ApiException {
+  void testTrackingCompleteDestinationAndIncompleteSource(final boolean isReset) throws IOException {
     final AirbyteMessageOrigin airbyteMessageOrigin = AirbyteMessageOrigin.SOURCE;
     final AirbyteMessage startedAirbyteMessage = createAirbyteMessage(streamDescriptor, STARTED, TIMESTAMP);
     final AirbyteMessage runningAirbyteMessage = createAirbyteMessage(streamDescriptor, AirbyteStreamStatus.RUNNING, TIMESTAMP);
@@ -722,22 +885,35 @@ class StreamStatusTrackerTest {
         new ReplicationAirbyteMessageEvent(AirbyteMessageOrigin.DESTINATION, destinationCompleteAirbyteMessage, replicationContext);
     final ReplicationAirbyteMessageEvent sourceEvent =
         new ReplicationAirbyteMessageEvent(airbyteMessageOrigin, sourceIncompleteAirbyteMessage, replicationContext, incompleteRunCause);
-    final StreamStatusUpdateRequestBody expected = new StreamStatusUpdateRequestBody()
-        .id(STREAM_ID)
-        .streamName(streamDescriptor.getName())
-        .streamNamespace(streamDescriptor.getNamespace())
-        .jobId(JOB_ID)
-        .jobType(StreamStatusTrackerKt.jobType(replicationContext))
-        .connectionId(CONNECTION_ID)
-        .attemptNumber(ATTEMPT)
-        .runState(StreamStatusRunState.INCOMPLETE)
-        .incompleteRunCause(incompleteRunCause)
-        .transitionedAt(TIMESTAMP.toMillis())
-        .workspaceId(WORKSPACE_ID);
+    final StreamStatusUpdateRequestBody expected = new StreamStatusUpdateRequestBody(
+        ATTEMPT,
+        CONNECTION_ID,
+        JOB_ID,
+        StreamStatusTrackerKt.jobType(replicationContext),
+        StreamStatusRunState.INCOMPLETE,
+        streamDescriptor.getName(),
+        TIMESTAMP.toMillis(),
+        WORKSPACE_ID,
+        STREAM_ID,
+        incompleteRunCause,
+        streamDescriptor.getNamespace(),
+        null);
     final StreamStatusKey streamStatusKey = new StreamStatusKey(streamDescriptor.getName(), streamDescriptor.getNamespace(),
         replicationContext.getWorkspaceId(), replicationContext.getConnectionId(), replicationContext.getJobId(), replicationContext.getAttempt());
 
-    when(streamStatusesApi.createStreamStatus(any())).thenReturn(new StreamStatusRead().id(STREAM_ID));
+    when(streamStatusesApi.createStreamStatus(any())).thenReturn(new StreamStatusRead(
+        ATTEMPT,
+        CONNECTION_ID,
+        STREAM_ID,
+        JOB_ID,
+        StreamStatusTrackerKt.jobType(replicationContext),
+        StreamStatusRunState.INCOMPLETE,
+        streamDescriptor.getName(),
+        streamDescriptor.getNamespace(),
+        TIMESTAMP.toMillis(),
+        WORKSPACE_ID,
+        incompleteRunCause,
+        null));
     when(airbyteApiClient.getStreamStatusesApi()).thenReturn(streamStatusesApi);
 
     streamStatusTracker.track(startedEvent);
@@ -755,7 +931,7 @@ class StreamStatusTrackerTest {
 
   @ParameterizedTest
   @ValueSource(booleans = {true, false})
-  void testTrackingCompleteSourceAndIncompleteDestination(final boolean isReset) throws ApiException {
+  void testTrackingCompleteSourceAndIncompleteDestination(final boolean isReset) throws IOException {
     final AirbyteMessageOrigin airbyteMessageOrigin = AirbyteMessageOrigin.SOURCE;
     final AirbyteMessage startedAirbyteMessage = createAirbyteMessage(streamDescriptor, STARTED, TIMESTAMP);
     final AirbyteMessage runningAirbyteMessage = createAirbyteMessage(streamDescriptor, AirbyteStreamStatus.RUNNING, TIMESTAMP);
@@ -772,22 +948,35 @@ class StreamStatusTrackerTest {
             incompleteRunCause);
     final ReplicationAirbyteMessageEvent sourceEvent =
         new ReplicationAirbyteMessageEvent(airbyteMessageOrigin, sourceCompleteAirbyteMessage, replicationContext);
-    final StreamStatusUpdateRequestBody expected = new StreamStatusUpdateRequestBody()
-        .id(STREAM_ID)
-        .streamName(streamDescriptor.getName())
-        .streamNamespace(streamDescriptor.getNamespace())
-        .jobId(JOB_ID)
-        .jobType(StreamStatusTrackerKt.jobType(replicationContext))
-        .connectionId(CONNECTION_ID)
-        .attemptNumber(ATTEMPT)
-        .runState(StreamStatusRunState.INCOMPLETE)
-        .incompleteRunCause(incompleteRunCause)
-        .transitionedAt(TIMESTAMP.toMillis())
-        .workspaceId(WORKSPACE_ID);
+    final StreamStatusUpdateRequestBody expected = new StreamStatusUpdateRequestBody(
+        ATTEMPT,
+        CONNECTION_ID,
+        JOB_ID,
+        StreamStatusTrackerKt.jobType(replicationContext),
+        StreamStatusRunState.INCOMPLETE,
+        streamDescriptor.getName(),
+        TIMESTAMP.toMillis(),
+        WORKSPACE_ID,
+        STREAM_ID,
+        incompleteRunCause,
+        streamDescriptor.getNamespace(),
+        null);
     final StreamStatusKey streamStatusKey = new StreamStatusKey(streamDescriptor.getName(), streamDescriptor.getNamespace(),
         replicationContext.getWorkspaceId(), replicationContext.getConnectionId(), replicationContext.getJobId(), replicationContext.getAttempt());
 
-    when(streamStatusesApi.createStreamStatus(any())).thenReturn(new StreamStatusRead().id(STREAM_ID));
+    when(streamStatusesApi.createStreamStatus(any())).thenReturn(new StreamStatusRead(
+        ATTEMPT,
+        CONNECTION_ID,
+        STREAM_ID,
+        JOB_ID,
+        StreamStatusTrackerKt.jobType(replicationContext),
+        StreamStatusRunState.INCOMPLETE,
+        streamDescriptor.getName(),
+        streamDescriptor.getNamespace(),
+        TIMESTAMP.toMillis(),
+        WORKSPACE_ID,
+        incompleteRunCause,
+        null));
     when(airbyteApiClient.getStreamStatusesApi()).thenReturn(streamStatusesApi);
 
     streamStatusTracker.track(startedEvent);
@@ -805,7 +994,7 @@ class StreamStatusTrackerTest {
 
   @ParameterizedTest
   @ValueSource(booleans = {true, false})
-  void testTrackingIncompleteDestinationAndCompleteSource(final boolean isReset) throws ApiException {
+  void testTrackingIncompleteDestinationAndCompleteSource(final boolean isReset) throws IOException {
     final AirbyteMessageOrigin airbyteMessageOrigin = AirbyteMessageOrigin.SOURCE;
     final AirbyteMessage startedAirbyteMessage = createAirbyteMessage(streamDescriptor, STARTED, TIMESTAMP);
     final AirbyteMessage runningAirbyteMessage = createAirbyteMessage(streamDescriptor, AirbyteStreamStatus.RUNNING, TIMESTAMP);
@@ -822,22 +1011,35 @@ class StreamStatusTrackerTest {
             incompleteRunCause);
     final ReplicationAirbyteMessageEvent sourceEvent =
         new ReplicationAirbyteMessageEvent(airbyteMessageOrigin, sourceCompleteAirbyteMessage, replicationContext);
-    final StreamStatusUpdateRequestBody expected = new StreamStatusUpdateRequestBody()
-        .id(STREAM_ID)
-        .streamName(streamDescriptor.getName())
-        .streamNamespace(streamDescriptor.getNamespace())
-        .jobId(JOB_ID)
-        .jobType(StreamStatusTrackerKt.jobType(replicationContext))
-        .connectionId(CONNECTION_ID)
-        .attemptNumber(ATTEMPT)
-        .runState(StreamStatusRunState.INCOMPLETE)
-        .incompleteRunCause(incompleteRunCause)
-        .transitionedAt(TIMESTAMP.toMillis())
-        .workspaceId(WORKSPACE_ID);
+    final StreamStatusUpdateRequestBody expected = new StreamStatusUpdateRequestBody(
+        ATTEMPT,
+        CONNECTION_ID,
+        JOB_ID,
+        StreamStatusTrackerKt.jobType(replicationContext),
+        StreamStatusRunState.INCOMPLETE,
+        streamDescriptor.getName(),
+        TIMESTAMP.toMillis(),
+        WORKSPACE_ID,
+        STREAM_ID,
+        incompleteRunCause,
+        streamDescriptor.getNamespace(),
+        null);
     final StreamStatusKey streamStatusKey = new StreamStatusKey(streamDescriptor.getName(), streamDescriptor.getNamespace(),
         replicationContext.getWorkspaceId(), replicationContext.getConnectionId(), replicationContext.getJobId(), replicationContext.getAttempt());
 
-    when(streamStatusesApi.createStreamStatus(any())).thenReturn(new StreamStatusRead().id(STREAM_ID));
+    when(streamStatusesApi.createStreamStatus(any())).thenReturn(new StreamStatusRead(
+        ATTEMPT,
+        CONNECTION_ID,
+        STREAM_ID,
+        JOB_ID,
+        StreamStatusTrackerKt.jobType(replicationContext),
+        StreamStatusRunState.INCOMPLETE,
+        streamDescriptor.getName(),
+        streamDescriptor.getNamespace(),
+        TIMESTAMP.toMillis(),
+        WORKSPACE_ID,
+        incompleteRunCause,
+        null));
     when(airbyteApiClient.getStreamStatusesApi()).thenReturn(streamStatusesApi);
 
     streamStatusTracker.track(startedEvent);
@@ -855,7 +1057,7 @@ class StreamStatusTrackerTest {
 
   @ParameterizedTest
   @ValueSource(booleans = {true, false})
-  void testTrackingInternalIncomplete(final boolean isReset) throws ApiException {
+  void testTrackingInternalIncomplete(final boolean isReset) throws IOException {
     final AirbyteMessageOrigin airbyteMessageOrigin = AirbyteMessageOrigin.SOURCE;
     final AirbyteMessage startedAirbyteMessage = createAirbyteMessage(streamDescriptor, STARTED, TIMESTAMP);
     final AirbyteMessage runningAirbyteMessage = createAirbyteMessage(streamDescriptor, AirbyteStreamStatus.RUNNING, TIMESTAMP);
@@ -868,22 +1070,35 @@ class StreamStatusTrackerTest {
         new ReplicationAirbyteMessageEvent(airbyteMessageOrigin, runningAirbyteMessage, replicationContext);
     final ReplicationAirbyteMessageEvent internalEvent =
         new ReplicationAirbyteMessageEvent(AirbyteMessageOrigin.INTERNAL, sourceIncompleteAirbyteMessage, replicationContext, incompleteRunCause);
-    final StreamStatusUpdateRequestBody expected = new StreamStatusUpdateRequestBody()
-        .id(STREAM_ID)
-        .streamName(streamDescriptor.getName())
-        .streamNamespace(streamDescriptor.getNamespace())
-        .jobId(JOB_ID)
-        .jobType(StreamStatusTrackerKt.jobType(replicationContext))
-        .connectionId(CONNECTION_ID)
-        .attemptNumber(ATTEMPT)
-        .runState(StreamStatusRunState.INCOMPLETE)
-        .incompleteRunCause(incompleteRunCause)
-        .transitionedAt(TIMESTAMP.toMillis())
-        .workspaceId(WORKSPACE_ID);
+    final StreamStatusUpdateRequestBody expected = new StreamStatusUpdateRequestBody(
+        ATTEMPT,
+        CONNECTION_ID,
+        JOB_ID,
+        StreamStatusTrackerKt.jobType(replicationContext),
+        StreamStatusRunState.INCOMPLETE,
+        streamDescriptor.getName(),
+        TIMESTAMP.toMillis(),
+        WORKSPACE_ID,
+        STREAM_ID,
+        incompleteRunCause,
+        streamDescriptor.getNamespace(),
+        null);
     final StreamStatusKey streamStatusKey = new StreamStatusKey(streamDescriptor.getName(), streamDescriptor.getNamespace(),
         replicationContext.getWorkspaceId(), replicationContext.getConnectionId(), replicationContext.getJobId(), replicationContext.getAttempt());
 
-    when(streamStatusesApi.createStreamStatus(any())).thenReturn(new StreamStatusRead().id(STREAM_ID));
+    when(streamStatusesApi.createStreamStatus(any())).thenReturn(new StreamStatusRead(
+        ATTEMPT,
+        CONNECTION_ID,
+        STREAM_ID,
+        JOB_ID,
+        StreamStatusTrackerKt.jobType(replicationContext),
+        StreamStatusRunState.INCOMPLETE,
+        streamDescriptor.getName(),
+        streamDescriptor.getNamespace(),
+        TIMESTAMP.toMillis(),
+        WORKSPACE_ID,
+        incompleteRunCause,
+        null));
     when(airbyteApiClient.getStreamStatusesApi()).thenReturn(streamStatusesApi);
 
     streamStatusTracker.track(startedEvent);
@@ -899,25 +1114,39 @@ class StreamStatusTrackerTest {
   }
 
   @Test
-  void testTrackingOutOfOrderStartedStatus() throws ApiException {
+  void testTrackingOutOfOrderStartedStatus() throws IOException {
     final AirbyteMessageOrigin airbyteMessageOrigin = AirbyteMessageOrigin.SOURCE;
     final AirbyteMessage airbyteMessage = createAirbyteMessage(streamDescriptor, STARTED, TIMESTAMP);
     final ReplicationContext replicationContext = getDefaultContext(false);
     final ReplicationAirbyteMessageEvent event = new ReplicationAirbyteMessageEvent(airbyteMessageOrigin, airbyteMessage, replicationContext);
-    final StreamStatusCreateRequestBody expected = new StreamStatusCreateRequestBody()
-        .streamName(streamDescriptor.getName())
-        .streamNamespace(streamDescriptor.getNamespace())
-        .jobId(JOB_ID)
-        .jobType(StreamStatusJobType.SYNC)
-        .connectionId(CONNECTION_ID)
-        .attemptNumber(ATTEMPT)
-        .runState(StreamStatusRunState.RUNNING)
-        .transitionedAt(TIMESTAMP.toMillis())
-        .workspaceId(WORKSPACE_ID);
+    final StreamStatusCreateRequestBody expected = new StreamStatusCreateRequestBody(
+        ATTEMPT,
+        CONNECTION_ID,
+        JOB_ID,
+        StreamStatusJobType.SYNC,
+        StreamStatusRunState.RUNNING,
+        streamDescriptor.getName(),
+        TIMESTAMP.toMillis(),
+        WORKSPACE_ID,
+        null,
+        streamDescriptor.getNamespace(),
+        null);
     final StreamStatusKey streamStatusKey = new StreamStatusKey(streamDescriptor.getName(), streamDescriptor.getNamespace(),
         replicationContext.getWorkspaceId(), replicationContext.getConnectionId(), replicationContext.getJobId(), replicationContext.getAttempt());
 
-    when(streamStatusesApi.createStreamStatus(any())).thenReturn(new StreamStatusRead().id(STREAM_ID));
+    when(streamStatusesApi.createStreamStatus(any())).thenReturn(new StreamStatusRead(
+        ATTEMPT,
+        CONNECTION_ID,
+        STREAM_ID,
+        JOB_ID,
+        StreamStatusJobType.SYNC,
+        StreamStatusRunState.RUNNING,
+        streamDescriptor.getName(),
+        streamDescriptor.getNamespace(),
+        TIMESTAMP.toMillis(),
+        WORKSPACE_ID,
+        null,
+        null));
     when(airbyteApiClient.getStreamStatusesApi()).thenReturn(streamStatusesApi);
 
     streamStatusTracker.track(event);
@@ -928,7 +1157,7 @@ class StreamStatusTrackerTest {
   }
 
   @Test
-  void testTrackingOutOfOrderRunningStatus() throws ApiException {
+  void testTrackingOutOfOrderRunningStatus() throws IOException {
     final AirbyteMessageOrigin airbyteMessageOrigin = AirbyteMessageOrigin.SOURCE;
     final AirbyteMessage startedAirbyteMessage = createAirbyteMessage(streamDescriptor, STARTED, TIMESTAMP);
     final AirbyteMessage runningAirbyteMessage = createAirbyteMessage(streamDescriptor, AirbyteStreamStatus.RUNNING, TIMESTAMP);
@@ -937,21 +1166,35 @@ class StreamStatusTrackerTest {
         new ReplicationAirbyteMessageEvent(airbyteMessageOrigin, startedAirbyteMessage, replicationContext);
     final ReplicationAirbyteMessageEvent runningEvent =
         new ReplicationAirbyteMessageEvent(airbyteMessageOrigin, runningAirbyteMessage, replicationContext);
-    final StreamStatusUpdateRequestBody expected = new StreamStatusUpdateRequestBody()
-        .id(STREAM_ID)
-        .streamName(streamDescriptor.getName())
-        .streamNamespace(streamDescriptor.getNamespace())
-        .jobId(JOB_ID)
-        .jobType(StreamStatusJobType.SYNC)
-        .connectionId(CONNECTION_ID)
-        .attemptNumber(ATTEMPT)
-        .runState(StreamStatusRunState.RUNNING)
-        .transitionedAt(TIMESTAMP.toMillis())
-        .workspaceId(WORKSPACE_ID);
+    final StreamStatusUpdateRequestBody expected = new StreamStatusUpdateRequestBody(
+        ATTEMPT,
+        CONNECTION_ID,
+        JOB_ID,
+        StreamStatusJobType.SYNC,
+        StreamStatusRunState.RUNNING,
+        streamDescriptor.getName(),
+        TIMESTAMP.toMillis(),
+        WORKSPACE_ID,
+        STREAM_ID,
+        null,
+        streamDescriptor.getNamespace(),
+        null);
     final StreamStatusKey streamStatusKey = new StreamStatusKey(streamDescriptor.getName(), streamDescriptor.getNamespace(),
         replicationContext.getWorkspaceId(), replicationContext.getConnectionId(), replicationContext.getJobId(), replicationContext.getAttempt());
 
-    when(streamStatusesApi.createStreamStatus(any())).thenReturn(new StreamStatusRead().id(STREAM_ID));
+    when(streamStatusesApi.createStreamStatus(any())).thenReturn(new StreamStatusRead(
+        ATTEMPT,
+        CONNECTION_ID,
+        STREAM_ID,
+        JOB_ID,
+        StreamStatusJobType.SYNC,
+        StreamStatusRunState.RUNNING,
+        streamDescriptor.getName(),
+        streamDescriptor.getNamespace(),
+        TIMESTAMP.toMillis(),
+        WORKSPACE_ID,
+        null,
+        null));
     when(airbyteApiClient.getStreamStatusesApi()).thenReturn(streamStatusesApi);
 
     streamStatusTracker.track(runningEvent);
@@ -966,7 +1209,7 @@ class StreamStatusTrackerTest {
   }
 
   @Test
-  void testTrackingOutOfOrderCompleteStatus() throws ApiException {
+  void testTrackingOutOfOrderCompleteStatus() throws IOException {
     final AirbyteMessageOrigin airbyteMessageOrigin = AirbyteMessageOrigin.SOURCE;
     final AirbyteMessage destinationStoppedAirbyteMessage = createAirbyteMessage(streamDescriptor, COMPLETE, TIMESTAMP);
     final AirbyteMessage sourceStoppedAirbyteMessage = createAirbyteMessage(streamDescriptor, COMPLETE, TIMESTAMP);
@@ -987,7 +1230,7 @@ class StreamStatusTrackerTest {
   }
 
   @Test
-  void testTrackingOutOfOrderIncompleteStatus() throws ApiException {
+  void testTrackingOutOfOrderIncompleteStatus() throws IOException {
     final AirbyteMessageOrigin airbyteMessageOrigin = AirbyteMessageOrigin.SOURCE;
     final AirbyteMessage destinationStoppedAirbyteMessage = createAirbyteMessage(streamDescriptor, AirbyteStreamStatus.INCOMPLETE, TIMESTAMP);
     final AirbyteMessage sourceStoppedAirbyteMessage = createAirbyteMessage(streamDescriptor, AirbyteStreamStatus.INCOMPLETE, TIMESTAMP);
@@ -1009,7 +1252,7 @@ class StreamStatusTrackerTest {
 
   @ParameterizedTest
   @ValueSource(booleans = {true, false})
-  void testForceCompletionRunning(final boolean isReset) throws ApiException {
+  void testForceCompletionRunning(final boolean isReset) throws IOException {
     final ReplicationContext replicationContext = getDefaultContext(isReset);
 
     final AirbyteMessage startedAirbyteMessage = createAirbyteMessage(streamDescriptor, STARTED, TIMESTAMP);
@@ -1022,21 +1265,35 @@ class StreamStatusTrackerTest {
         new ReplicationAirbyteMessageEvent(AirbyteMessageOrigin.SOURCE, runningAirbyteMessage, replicationContext);
     final ReplicationAirbyteMessageEvent forceCompletionEvent =
         new ReplicationAirbyteMessageEvent(AirbyteMessageOrigin.INTERNAL, forceCompletionMessage, replicationContext);
-    final StreamStatusUpdateRequestBody expected = new StreamStatusUpdateRequestBody()
-        .id(STREAM_ID)
-        .streamName(streamDescriptor.getName())
-        .streamNamespace(streamDescriptor.getNamespace())
-        .jobId(JOB_ID)
-        .jobType(StreamStatusTrackerKt.jobType(replicationContext))
-        .connectionId(CONNECTION_ID)
-        .attemptNumber(ATTEMPT)
-        .runState(StreamStatusRunState.COMPLETE)
-        .transitionedAt(TIMESTAMP.toMillis())
-        .workspaceId(WORKSPACE_ID);
+    final StreamStatusUpdateRequestBody expected = new StreamStatusUpdateRequestBody(
+        ATTEMPT,
+        CONNECTION_ID,
+        JOB_ID,
+        StreamStatusTrackerKt.jobType(replicationContext),
+        StreamStatusRunState.COMPLETE,
+        streamDescriptor.getName(),
+        TIMESTAMP.toMillis(),
+        WORKSPACE_ID,
+        STREAM_ID,
+        null,
+        streamDescriptor.getNamespace(),
+        null);
     final StreamStatusKey streamStatusKey = new StreamStatusKey(streamDescriptor.getName(), streamDescriptor.getNamespace(),
         replicationContext.getWorkspaceId(), replicationContext.getConnectionId(), replicationContext.getJobId(), replicationContext.getAttempt());
 
-    when(streamStatusesApi.createStreamStatus(any())).thenReturn(new StreamStatusRead().id(STREAM_ID));
+    when(streamStatusesApi.createStreamStatus(any())).thenReturn(new StreamStatusRead(
+        ATTEMPT,
+        CONNECTION_ID,
+        STREAM_ID,
+        JOB_ID,
+        StreamStatusTrackerKt.jobType(replicationContext),
+        StreamStatusRunState.COMPLETE,
+        streamDescriptor.getName(),
+        streamDescriptor.getNamespace(),
+        TIMESTAMP.toMillis(),
+        WORKSPACE_ID,
+        null,
+        null));
     when(airbyteApiClient.getStreamStatusesApi()).thenReturn(streamStatusesApi);
 
     streamStatusTracker.track(startedEvent);
@@ -1049,7 +1306,7 @@ class StreamStatusTrackerTest {
 
   @ParameterizedTest
   @ValueSource(booleans = {true, false})
-  void testForceCompletionPartiallyComplete(final boolean isReset) throws ApiException {
+  void testForceCompletionPartiallyComplete(final boolean isReset) throws IOException {
     final ReplicationContext replicationContext = getDefaultContext(isReset);
 
     final AirbyteMessage startedAirbyteMessage = createAirbyteMessage(streamDescriptor, STARTED, TIMESTAMP);
@@ -1065,21 +1322,35 @@ class StreamStatusTrackerTest {
         new ReplicationAirbyteMessageEvent(AirbyteMessageOrigin.SOURCE, sourceCompleteAirbyteMessage, replicationContext);
     final ReplicationAirbyteMessageEvent forceCompletionEvent =
         new ReplicationAirbyteMessageEvent(AirbyteMessageOrigin.INTERNAL, forceCompletionMessage, replicationContext);
-    final StreamStatusUpdateRequestBody expected = new StreamStatusUpdateRequestBody()
-        .id(STREAM_ID)
-        .streamName(streamDescriptor.getName())
-        .streamNamespace(streamDescriptor.getNamespace())
-        .jobId(JOB_ID)
-        .jobType(StreamStatusTrackerKt.jobType(replicationContext))
-        .connectionId(CONNECTION_ID)
-        .attemptNumber(ATTEMPT)
-        .runState(StreamStatusRunState.COMPLETE)
-        .transitionedAt(TIMESTAMP.toMillis())
-        .workspaceId(WORKSPACE_ID);
+    final StreamStatusUpdateRequestBody expected = new StreamStatusUpdateRequestBody(
+        ATTEMPT,
+        CONNECTION_ID,
+        JOB_ID,
+        StreamStatusTrackerKt.jobType(replicationContext),
+        StreamStatusRunState.COMPLETE,
+        streamDescriptor.getName(),
+        TIMESTAMP.toMillis(),
+        WORKSPACE_ID,
+        STREAM_ID,
+        null,
+        streamDescriptor.getNamespace(),
+        null);
     final StreamStatusKey streamStatusKey = new StreamStatusKey(streamDescriptor.getName(), streamDescriptor.getNamespace(),
         replicationContext.getWorkspaceId(), replicationContext.getConnectionId(), replicationContext.getJobId(), replicationContext.getAttempt());
 
-    when(streamStatusesApi.createStreamStatus(any())).thenReturn(new StreamStatusRead().id(STREAM_ID));
+    when(streamStatusesApi.createStreamStatus(any())).thenReturn(new StreamStatusRead(
+        ATTEMPT,
+        CONNECTION_ID,
+        STREAM_ID,
+        JOB_ID,
+        StreamStatusTrackerKt.jobType(replicationContext),
+        StreamStatusRunState.COMPLETE,
+        streamDescriptor.getName(),
+        streamDescriptor.getNamespace(),
+        TIMESTAMP.toMillis(),
+        WORKSPACE_ID,
+        null,
+        null));
     when(airbyteApiClient.getStreamStatusesApi()).thenReturn(streamStatusesApi);
 
     streamStatusTracker.track(startedEvent);
@@ -1096,7 +1367,7 @@ class StreamStatusTrackerTest {
 
   @ParameterizedTest
   @ValueSource(booleans = {true, false})
-  void testForceCompletionAlreadyIncomplete(final boolean isReset) throws ApiException {
+  void testForceCompletionAlreadyIncomplete(final boolean isReset) throws IOException {
     final ReplicationContext replicationContext = getDefaultContext(isReset);
 
     final AirbyteMessage startedAirbyteMessage = createAirbyteMessage(streamDescriptor, STARTED, TIMESTAMP);
@@ -1116,22 +1387,35 @@ class StreamStatusTrackerTest {
         new ReplicationAirbyteMessageEvent(AirbyteMessageOrigin.DESTINATION, destinationCompleteAirbyteMessage, replicationContext);
     final ReplicationAirbyteMessageEvent forceCompletionEvent =
         new ReplicationAirbyteMessageEvent(AirbyteMessageOrigin.INTERNAL, forceCompletionMessage, replicationContext);
-    final StreamStatusUpdateRequestBody expected = new StreamStatusUpdateRequestBody()
-        .id(STREAM_ID)
-        .streamName(streamDescriptor.getName())
-        .streamNamespace(streamDescriptor.getNamespace())
-        .jobId(JOB_ID)
-        .jobType(StreamStatusTrackerKt.jobType(replicationContext))
-        .connectionId(CONNECTION_ID)
-        .attemptNumber(ATTEMPT)
-        .runState(StreamStatusRunState.INCOMPLETE)
-        .incompleteRunCause(incompleteRunCause)
-        .transitionedAt(TIMESTAMP.toMillis())
-        .workspaceId(WORKSPACE_ID);
+    final StreamStatusUpdateRequestBody expected = new StreamStatusUpdateRequestBody(
+        ATTEMPT,
+        CONNECTION_ID,
+        JOB_ID,
+        StreamStatusTrackerKt.jobType(replicationContext),
+        StreamStatusRunState.INCOMPLETE,
+        streamDescriptor.getName(),
+        TIMESTAMP.toMillis(),
+        WORKSPACE_ID,
+        STREAM_ID,
+        incompleteRunCause,
+        streamDescriptor.getNamespace(),
+        null);
     final StreamStatusKey streamStatusKey = new StreamStatusKey(streamDescriptor.getName(), streamDescriptor.getNamespace(),
         replicationContext.getWorkspaceId(), replicationContext.getConnectionId(), replicationContext.getJobId(), replicationContext.getAttempt());
 
-    when(streamStatusesApi.createStreamStatus(any())).thenReturn(new StreamStatusRead().id(STREAM_ID));
+    when(streamStatusesApi.createStreamStatus(any())).thenReturn(new StreamStatusRead(
+        ATTEMPT,
+        CONNECTION_ID,
+        STREAM_ID,
+        JOB_ID,
+        StreamStatusTrackerKt.jobType(replicationContext),
+        StreamStatusRunState.INCOMPLETE,
+        streamDescriptor.getName(),
+        streamDescriptor.getNamespace(),
+        TIMESTAMP.toMillis(),
+        WORKSPACE_ID,
+        null,
+        null));
     when(airbyteApiClient.getStreamStatusesApi()).thenReturn(streamStatusesApi);
 
     streamStatusTracker.track(startedEvent);
@@ -1146,7 +1430,7 @@ class StreamStatusTrackerTest {
 
   @ParameterizedTest
   @ValueSource(booleans = {true, false})
-  void testForceCompletionAlreadyComplete(final boolean isReset) throws ApiException {
+  void testForceCompletionAlreadyComplete(final boolean isReset) throws IOException {
     final ReplicationContext replicationContext = getDefaultContext(isReset);
 
     final AirbyteMessage startedAirbyteMessage = createAirbyteMessage(streamDescriptor, STARTED, TIMESTAMP);
@@ -1165,21 +1449,35 @@ class StreamStatusTrackerTest {
         new ReplicationAirbyteMessageEvent(AirbyteMessageOrigin.DESTINATION, destinationCompleteAirbyteMessage, replicationContext);
     final ReplicationAirbyteMessageEvent forceCompletionEvent =
         new ReplicationAirbyteMessageEvent(AirbyteMessageOrigin.INTERNAL, forceCompletionMessage, replicationContext);
-    final StreamStatusUpdateRequestBody expected = new StreamStatusUpdateRequestBody()
-        .id(STREAM_ID)
-        .streamName(streamDescriptor.getName())
-        .streamNamespace(streamDescriptor.getNamespace())
-        .jobId(JOB_ID)
-        .jobType(StreamStatusTrackerKt.jobType(replicationContext))
-        .connectionId(CONNECTION_ID)
-        .attemptNumber(ATTEMPT)
-        .runState(StreamStatusRunState.COMPLETE)
-        .transitionedAt(TIMESTAMP.toMillis())
-        .workspaceId(WORKSPACE_ID);
+    final StreamStatusUpdateRequestBody expected = new StreamStatusUpdateRequestBody(
+        ATTEMPT,
+        CONNECTION_ID,
+        JOB_ID,
+        StreamStatusTrackerKt.jobType(replicationContext),
+        StreamStatusRunState.COMPLETE,
+        streamDescriptor.getName(),
+        TIMESTAMP.toMillis(),
+        WORKSPACE_ID,
+        STREAM_ID,
+        null,
+        streamDescriptor.getNamespace(),
+        null);
     final StreamStatusKey streamStatusKey = new StreamStatusKey(streamDescriptor.getName(), streamDescriptor.getNamespace(),
         replicationContext.getWorkspaceId(), replicationContext.getConnectionId(), replicationContext.getJobId(), replicationContext.getAttempt());
 
-    when(streamStatusesApi.createStreamStatus(any())).thenReturn(new StreamStatusRead().id(STREAM_ID));
+    when(streamStatusesApi.createStreamStatus(any())).thenReturn(new StreamStatusRead(
+        ATTEMPT,
+        CONNECTION_ID,
+        STREAM_ID,
+        JOB_ID,
+        StreamStatusTrackerKt.jobType(replicationContext),
+        StreamStatusRunState.COMPLETE,
+        streamDescriptor.getName(),
+        streamDescriptor.getNamespace(),
+        TIMESTAMP.toMillis(),
+        WORKSPACE_ID,
+        null,
+        null));
     when(airbyteApiClient.getStreamStatusesApi()).thenReturn(streamStatusesApi);
 
     streamStatusTracker.track(startedEvent);
@@ -1194,7 +1492,7 @@ class StreamStatusTrackerTest {
 
   @ParameterizedTest
   @ValueSource(booleans = {true, false})
-  void testForceCompletionDifferentConnectionId(final boolean isReset) throws ApiException {
+  void testForceCompletionDifferentConnectionId(final boolean isReset) throws IOException {
     final Integer attempt = 2;
     final Long jobId = 2L;
     final UUID connectionId = UUID.randomUUID();
@@ -1213,22 +1511,36 @@ class StreamStatusTrackerTest {
         new ReplicationAirbyteMessageEvent(AirbyteMessageOrigin.SOURCE, runningAirbyteMessage, replicationContext1);
     final ReplicationAirbyteMessageEvent forceCompletionEvent =
         new ReplicationAirbyteMessageEvent(AirbyteMessageOrigin.INTERNAL, forceCompletionMessage, replicationContext2);
-    final StreamStatusUpdateRequestBody expected = new StreamStatusUpdateRequestBody()
-        .id(STREAM_ID)
-        .streamName(streamDescriptor.getName())
-        .streamNamespace(streamDescriptor.getNamespace())
-        .jobId(jobId)
-        .jobType(StreamStatusTrackerKt.jobType(replicationContext1))
-        .connectionId(connectionId)
-        .attemptNumber(attempt)
-        .runState(StreamStatusRunState.COMPLETE)
-        .transitionedAt(TIMESTAMP.toMillis())
-        .workspaceId(WORKSPACE_ID);
+    final StreamStatusUpdateRequestBody expected = new StreamStatusUpdateRequestBody(
+        attempt,
+        connectionId,
+        jobId,
+        StreamStatusTrackerKt.jobType(replicationContext1),
+        StreamStatusRunState.COMPLETE,
+        streamDescriptor.getName(),
+        TIMESTAMP.toMillis(),
+        WORKSPACE_ID,
+        STREAM_ID,
+        null,
+        streamDescriptor.getNamespace(),
+        null);
     final StreamStatusKey streamStatusKey = new StreamStatusKey(streamDescriptor.getName(), streamDescriptor.getNamespace(),
         replicationContext1.getWorkspaceId(), replicationContext1.getConnectionId(), replicationContext1.getJobId(),
         replicationContext1.getAttempt());
 
-    when(streamStatusesApi.createStreamStatus(any())).thenReturn(new StreamStatusRead().id(STREAM_ID));
+    when(streamStatusesApi.createStreamStatus(any())).thenReturn(new StreamStatusRead(
+        attempt,
+        connectionId,
+        STREAM_ID,
+        jobId,
+        StreamStatusTrackerKt.jobType(replicationContext1),
+        StreamStatusRunState.COMPLETE,
+        streamDescriptor.getName(),
+        streamDescriptor.getNamespace(),
+        TIMESTAMP.toMillis(),
+        WORKSPACE_ID,
+        null,
+        null));
     when(airbyteApiClient.getStreamStatusesApi()).thenReturn(streamStatusesApi);
 
     streamStatusTracker.track(startedEvent);
@@ -1241,7 +1553,7 @@ class StreamStatusTrackerTest {
 
   @ParameterizedTest
   @ValueSource(booleans = {true, false})
-  void testForceCompletionHandleException(final boolean isReset) throws ApiException {
+  void testForceCompletionHandleException(final boolean isReset) throws IOException {
     final ReplicationContext replicationContext = getDefaultContext(isReset);
 
     final AirbyteMessage startedAirbyteMessage = createAirbyteMessage(streamDescriptor, STARTED, TIMESTAMP);
@@ -1251,34 +1563,48 @@ class StreamStatusTrackerTest {
         new ReplicationAirbyteMessageEvent(AirbyteMessageOrigin.SOURCE, startedAirbyteMessage, replicationContext);
     final ReplicationAirbyteMessageEvent forceCompletionEvent =
         new ReplicationAirbyteMessageEvent(AirbyteMessageOrigin.INTERNAL, forceCompletionMessage, replicationContext);
-    final StreamStatusUpdateRequestBody expected = new StreamStatusUpdateRequestBody()
-        .id(STREAM_ID)
-        .streamName(streamDescriptor.getName())
-        .streamNamespace(streamDescriptor.getNamespace())
-        .jobId(JOB_ID)
-        .jobType(StreamStatusTrackerKt.jobType(replicationContext))
-        .connectionId(CONNECTION_ID)
-        .attemptNumber(ATTEMPT)
-        .runState(StreamStatusRunState.COMPLETE)
-        .transitionedAt(TIMESTAMP.toMillis())
-        .workspaceId(WORKSPACE_ID);
+    final StreamStatusUpdateRequestBody expected = new StreamStatusUpdateRequestBody(
+        ATTEMPT,
+        CONNECTION_ID,
+        JOB_ID,
+        StreamStatusTrackerKt.jobType(replicationContext),
+        StreamStatusRunState.COMPLETE,
+        streamDescriptor.getName(),
+        TIMESTAMP.toMillis(),
+        WORKSPACE_ID,
+        STREAM_ID,
+        null,
+        streamDescriptor.getNamespace(),
+        null);
     final StreamStatusKey streamStatusKey = new StreamStatusKey(streamDescriptor.getName(), streamDescriptor.getNamespace(),
         replicationContext.getWorkspaceId(), replicationContext.getConnectionId(), replicationContext.getJobId(), replicationContext.getAttempt());
 
-    when(streamStatusesApi.createStreamStatus(any())).thenReturn(new StreamStatusRead());
+    when(streamStatusesApi.createStreamStatus(any())).thenReturn(new StreamStatusRead(
+        ATTEMPT,
+        CONNECTION_ID,
+        STREAM_ID,
+        JOB_ID,
+        StreamStatusTrackerKt.jobType(replicationContext),
+        StreamStatusRunState.COMPLETE,
+        streamDescriptor.getName(),
+        streamDescriptor.getNamespace(),
+        TIMESTAMP.toMillis(),
+        WORKSPACE_ID,
+        null,
+        null));
     when(airbyteApiClient.getStreamStatusesApi()).thenReturn(streamStatusesApi);
 
     assertDoesNotThrow(() -> {
       streamStatusTracker.track(startedEvent);
       streamStatusTracker.track(forceCompletionEvent);
-      assertNotNull(streamStatusTracker.getAirbyteStreamStatus(streamStatusKey));
-      verify(streamStatusesApi, times(0)).updateStreamStatus(expected);
+      assertNull(streamStatusTracker.getAirbyteStreamStatus(streamStatusKey));
+      verify(streamStatusesApi, times(1)).updateStreamStatus(expected);
     });
   }
 
   @ParameterizedTest
   @ValueSource(booleans = {true, false})
-  void incompleteEventsWithNoRunCauseDefaultToFailed(final boolean isReset) throws ApiException {
+  void incompleteEventsWithNoRunCauseDefaultToFailed(final boolean isReset) throws IOException {
     final AirbyteMessageOrigin airbyteMessageOrigin = AirbyteMessageOrigin.SOURCE;
     final AirbyteMessage startedAirbyteMessage = createAirbyteMessage(streamDescriptor, STARTED, TIMESTAMP);
     final AirbyteMessage runningAirbyteMessage = createAirbyteMessage(streamDescriptor, AirbyteStreamStatus.RUNNING, TIMESTAMP);
@@ -1294,22 +1620,35 @@ class StreamStatusTrackerTest {
             null);
     final ReplicationAirbyteMessageEvent sourceEvent =
         new ReplicationAirbyteMessageEvent(airbyteMessageOrigin, sourceIncompleteAirbyteMessage, replicationContext, null);
-    final StreamStatusUpdateRequestBody expected = new StreamStatusUpdateRequestBody()
-        .id(STREAM_ID)
-        .streamName(streamDescriptor.getName())
-        .streamNamespace(streamDescriptor.getNamespace())
-        .jobId(JOB_ID)
-        .jobType(StreamStatusTrackerKt.jobType(replicationContext))
-        .connectionId(CONNECTION_ID)
-        .attemptNumber(ATTEMPT)
-        .runState(StreamStatusRunState.INCOMPLETE)
-        .incompleteRunCause(StreamStatusIncompleteRunCause.FAILED)
-        .transitionedAt(TIMESTAMP.toMillis())
-        .workspaceId(WORKSPACE_ID);
+    final StreamStatusUpdateRequestBody expected = new StreamStatusUpdateRequestBody(
+        ATTEMPT,
+        CONNECTION_ID,
+        JOB_ID,
+        StreamStatusTrackerKt.jobType(replicationContext),
+        StreamStatusRunState.INCOMPLETE,
+        streamDescriptor.getName(),
+        TIMESTAMP.toMillis(),
+        WORKSPACE_ID,
+        STREAM_ID,
+        StreamStatusIncompleteRunCause.FAILED,
+        streamDescriptor.getNamespace(),
+        null);
     final StreamStatusKey streamStatusKey = new StreamStatusKey(streamDescriptor.getName(), streamDescriptor.getNamespace(),
         replicationContext.getWorkspaceId(), replicationContext.getConnectionId(), replicationContext.getJobId(), replicationContext.getAttempt());
 
-    when(streamStatusesApi.createStreamStatus(any())).thenReturn(new StreamStatusRead().id(STREAM_ID));
+    when(streamStatusesApi.createStreamStatus(any())).thenReturn(new StreamStatusRead(
+        ATTEMPT,
+        CONNECTION_ID,
+        STREAM_ID,
+        JOB_ID,
+        StreamStatusTrackerKt.jobType(replicationContext),
+        StreamStatusRunState.INCOMPLETE,
+        streamDescriptor.getName(),
+        streamDescriptor.getNamespace(),
+        TIMESTAMP.toMillis(),
+        WORKSPACE_ID,
+        StreamStatusIncompleteRunCause.FAILED,
+        null));
     when(airbyteApiClient.getStreamStatusesApi()).thenReturn(streamStatusesApi);
 
     streamStatusTracker.track(startedEvent);

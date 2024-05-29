@@ -4,8 +4,8 @@
 
 package io.airbyte.api.server.services
 
-import io.airbyte.api.client.model.generated.SourceDefinitionIdWithWorkspaceId
-import io.airbyte.api.client.model.generated.SourceDefinitionSpecificationRead
+import io.airbyte.api.client2.model.generated.SourceDefinitionIdWithWorkspaceId
+import io.airbyte.api.client2.model.generated.SourceDefinitionSpecificationRead
 import io.airbyte.api.server.constants.HTTP_RESPONSE_BODY_DEBUG_MESSAGE
 import io.airbyte.api.server.errorHandlers.ConfigClientErrorHandler
 import io.airbyte.api.server.forwardingClient.ConfigApiClient
@@ -40,7 +40,7 @@ class SourceDefinitionServiceImpl(private val configApiClient: ConfigApiClient) 
     authorization: String?,
     userInfo: String?,
   ): SourceDefinitionSpecificationRead? {
-    val sourceDefinitionIdWithWorkspaceId = SourceDefinitionIdWithWorkspaceId().sourceDefinitionId(sourceDefinitionId).workspaceId(workspaceId)
+    val sourceDefinitionIdWithWorkspaceId = SourceDefinitionIdWithWorkspaceId(sourceDefinitionId = sourceDefinitionId, workspaceId = workspaceId)
 
     var response: HttpResponse<SourceDefinitionSpecificationRead>
     try {
@@ -52,7 +52,7 @@ class SourceDefinitionServiceImpl(private val configApiClient: ConfigApiClient) 
     ConfigClientErrorHandler.handleError(response, sourceDefinitionId.toString())
     log.debug(HTTP_RESPONSE_BODY_DEBUG_MESSAGE + response.body())
     return SourceDefinitionSpecificationReadMapper.from(
-      Objects.requireNonNull<SourceDefinitionSpecificationRead?>(
+      Objects.requireNonNull(
         response.body(),
       ),
     )

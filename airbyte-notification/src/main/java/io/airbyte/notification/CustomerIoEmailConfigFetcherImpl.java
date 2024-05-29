@@ -4,11 +4,11 @@
 
 package io.airbyte.notification;
 
-import io.airbyte.api.client.AirbyteApiClient;
-import io.airbyte.api.client.invoker.generated.ApiException;
-import io.airbyte.api.client.model.generated.ConnectionIdRequestBody;
+import io.airbyte.api.client2.AirbyteApiClient;
+import io.airbyte.api.client2.model.generated.ConnectionIdRequestBody;
 import io.micronaut.context.annotation.Requires;
 import jakarta.inject.Singleton;
+import java.io.IOException;
 import java.util.UUID;
 import lombok.extern.slf4j.Slf4j;
 import org.jetbrains.annotations.NotNull;
@@ -32,11 +32,11 @@ public class CustomerIoEmailConfigFetcherImpl implements CustomerIoEmailConfigFe
   @Nullable
   @Override
   public CustomerIoEmailConfig fetchConfig(@NotNull final UUID connectionId) {
-    ConnectionIdRequestBody connectionIdRequestBody = new ConnectionIdRequestBody().connectionId(connectionId);
+    ConnectionIdRequestBody connectionIdRequestBody = new ConnectionIdRequestBody(connectionId);
 
     try {
       return new CustomerIoEmailConfig(airbyteApiClient.getWorkspaceApi().getWorkspaceByConnectionId(connectionIdRequestBody).getEmail());
-    } catch (ApiException e) {
+    } catch (IOException e) {
       log.error("Unable to fetch workspace by connection");
       throw new RuntimeException(e);
     }

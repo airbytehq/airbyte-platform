@@ -8,7 +8,7 @@ import static io.airbyte.workers.helpers.CronSchedulingHelper.MS_PER_SECOND;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
-import io.airbyte.api.client.model.generated.JobRead;
+import io.airbyte.api.client2.model.generated.JobRead;
 import java.text.ParseException;
 import java.time.Duration;
 import java.util.Date;

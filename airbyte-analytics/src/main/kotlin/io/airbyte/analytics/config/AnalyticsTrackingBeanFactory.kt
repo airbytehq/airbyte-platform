@@ -1,7 +1,7 @@
 package io.airbyte.analytics.config
 
-import io.airbyte.api.client.model.generated.DeploymentMetadataRead
-import io.airbyte.api.client.model.generated.WorkspaceRead
+import io.airbyte.api.client2.model.generated.DeploymentMetadataRead
+import io.airbyte.api.client2.model.generated.WorkspaceRead
 import io.airbyte.commons.version.AirbyteVersion
 import io.airbyte.config.Configs
 import io.micronaut.context.annotation.Factory
@@ -25,18 +25,29 @@ class AnalyticsTrackingBeanFactory {
     environment: Environment,
   ): Supplier<DeploymentMetadataRead> {
     return Supplier {
-      DeploymentMetadataRead()
-        .environment(getDeploymentEnvironment(environment))
-        .id(BLANK_UUID)
-        .mode(deploymentMode.name)
-        .version(airbyteVersion.serialize())
+      DeploymentMetadataRead(
+        environment = getDeploymentEnvironment(environment),
+        id = BLANK_UUID,
+        mode = deploymentMode.name,
+        version = airbyteVersion.serialize(),
+      )
     }
   }
 
   @Singleton
   @Named("workspaceFetcher")
   fun workspaceFetcher(): Function<UUID, WorkspaceRead> {
-    return Function { workspaceId: UUID -> WorkspaceRead().workspaceId(workspaceId).customerId(workspaceId) }
+    return Function {
+        workspaceId: UUID ->
+      WorkspaceRead(
+        workspaceId = workspaceId,
+        customerId = workspaceId,
+        name = "",
+        slug = "",
+        initialSetupComplete = true,
+        organizationId = workspaceId,
+      )
+    }
   }
 
   @Singleton

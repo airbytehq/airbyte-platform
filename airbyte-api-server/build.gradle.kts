@@ -25,6 +25,7 @@ dependencies {
   implementation(project(":airbyte-analytics"))
   implementation(project(":airbyte-api"))
   implementation(project(":airbyte-commons"))
+  implementation(project(":airbyte-commons-micronaut"))
   implementation(project(":airbyte-config:config-models"))
   implementation(platform(libs.micronaut.platform))
   implementation(libs.cron.utils)

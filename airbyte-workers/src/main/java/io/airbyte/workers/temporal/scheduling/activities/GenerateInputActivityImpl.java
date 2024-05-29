@@ -4,6 +4,7 @@
 
 package io.airbyte.workers.temporal.scheduling.activities;
 
+import static io.airbyte.api.client.infrastructure.JsonNodeAdapterKt.transformNumbersToInts;
 import static io.airbyte.metrics.lib.ApmTraceConstants.ACTIVITY_TRACE_OPERATION_NAME;
 import static io.airbyte.metrics.lib.ApmTraceConstants.Tags.DESTINATION_DOCKER_IMAGE_KEY;
 import static io.airbyte.metrics.lib.ApmTraceConstants.Tags.JOB_ID_KEY;
@@ -13,9 +14,11 @@ import static io.airbyte.metrics.lib.MetricTags.CONNECTION_ID;
 import static io.airbyte.metrics.lib.MetricTags.JOB_ID;
 
 import datadog.trace.api.Trace;
-import io.airbyte.api.client.AirbyteApiClient;
+import io.airbyte.api.client2.AirbyteApiClient;
+import io.airbyte.api.client2.model.generated.CheckInput;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.commons.temporal.config.WorkerMode;
+import io.airbyte.commons.temporal.exception.RetryableException;
 import io.airbyte.commons.temporal.utils.PayloadChecker;
 import io.airbyte.metrics.lib.ApmTraceUtils;
 import io.airbyte.metrics.lib.MetricAttribute;
@@ -23,7 +26,9 @@ import io.airbyte.workers.models.JobInput;
 import io.airbyte.workers.models.SyncJobCheckConnectionInputs;
 import io.micronaut.context.annotation.Requires;
 import jakarta.inject.Singleton;
+import java.io.IOException;
 import java.util.Map;
+import org.openapitools.client.infrastructure.ClientException;
 
 /**
  * Generate input for a workflow.
@@ -43,20 +48,25 @@ public class GenerateInputActivityImpl implements GenerateInputActivity {
   }
 
   @Override
+  @SuppressWarnings("UNCHECKED_CAST")
   public SyncJobCheckConnectionInputs getCheckConnectionInputs(final SyncInputWithAttemptNumber input) {
-    return payloadChecker.validatePayloadSize(Jsons.convertValue(AirbyteApiClient.retryWithJitter(
-        () -> airbyteApiClient.getJobsApi().getCheckInput(new io.airbyte.api.client.model.generated.CheckInput().jobId(input.getJobId())
-            .attemptNumber(input.getAttemptNumber())),
-        "Create check job input."), SyncJobCheckConnectionInputs.class));
+    try {
+      final var checkInput = airbyteApiClient.getJobsApi()
+          .getCheckInput(new CheckInput(input.getJobId(), input.getAttemptNumber()));
+      return payloadChecker.validatePayloadSize(
+          Jsons.convertValue(transformNumbersToInts((Map<String, ? extends Object>) checkInput), SyncJobCheckConnectionInputs.class));
+    } catch (final ClientException | IOException e) {
+      throw new RetryableException(e);
+    }
   }
 
   @Trace(operationName = ACTIVITY_TRACE_OPERATION_NAME)
   @Override
-  public JobInput getSyncWorkflowInput(final SyncInput input) {
-    final var jobInput = Jsons.convertValue(AirbyteApiClient.retryWithJitter(
-        () -> airbyteApiClient.getJobsApi().getJobInput(new io.airbyte.api.client.model.generated.SyncInput().jobId(input.getJobId())
-            .attemptNumber(input.getAttemptId())),
-        "Create job input."), JobInput.class);
+  @SuppressWarnings("UNCHECKED_CAST")
+  public JobInput getSyncWorkflowInput(final SyncInput input) throws IOException {
+    final var jobInputResult =
+        airbyteApiClient.getJobsApi().getJobInput(new io.airbyte.api.client2.model.generated.SyncInput(input.getJobId(), input.getAttemptId()));
+    final var jobInput = Jsons.convertValue(transformNumbersToInts((Map<String, ? extends Object>) jobInputResult), JobInput.class);
 
     MetricAttribute[] attrs = new MetricAttribute[0];
     try {
@@ -77,7 +87,7 @@ public class GenerateInputActivityImpl implements GenerateInputActivity {
 
   @Trace(operationName = ACTIVITY_TRACE_OPERATION_NAME)
   @Override
-  public JobInput getSyncWorkflowInputWithAttemptNumber(final SyncInputWithAttemptNumber input) {
+  public JobInput getSyncWorkflowInputWithAttemptNumber(final SyncInputWithAttemptNumber input) throws IOException {
     ApmTraceUtils.addTagsToTrace(Map.of(JOB_ID_KEY, input.getJobId()));
     return getSyncWorkflowInput(new SyncInput(
         input.getAttemptNumber(),

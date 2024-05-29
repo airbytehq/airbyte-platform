@@ -4,10 +4,10 @@
 
 package io.airbyte.workers.config
 
-import io.airbyte.api.client.AirbyteApiClient
-import io.airbyte.api.client.model.generated.DeploymentMetadataRead
-import io.airbyte.api.client.model.generated.WorkspaceIdRequestBody
-import io.airbyte.api.client.model.generated.WorkspaceRead
+import io.airbyte.api.client2.AirbyteApiClient
+import io.airbyte.api.client2.model.generated.DeploymentMetadataRead
+import io.airbyte.api.client2.model.generated.WorkspaceIdRequestBody
+import io.airbyte.api.client2.model.generated.WorkspaceRead
 import io.micronaut.context.annotation.Factory
 import io.micronaut.context.annotation.Replaces
 import io.micronaut.context.annotation.Requires
@@ -34,7 +34,9 @@ class AnalyticsTrackingBeanFactory {
   fun workspaceFetcher(airbyteApiClient: AirbyteApiClient): Function<UUID, WorkspaceRead> {
     return Function {
         workspaceId: UUID? ->
-      airbyteApiClient.workspaceApi.getWorkspace(WorkspaceIdRequestBody().workspaceId(workspaceId).includeTombstone(true))
+      workspaceId.let { wid ->
+        airbyteApiClient.workspaceApi.getWorkspace(WorkspaceIdRequestBody(workspaceId = wid!!, includeTombstone = true))
+      }
     }
   }
 }

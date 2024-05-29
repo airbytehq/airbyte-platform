@@ -7,8 +7,8 @@ package io.airbyte.workers.temporal.scheduling.activities;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
-import io.airbyte.api.client.AirbyteApiClient;
-import io.airbyte.api.client.generated.WorkspaceApi;
+import io.airbyte.api.client2.AirbyteApiClient;
+import io.airbyte.api.client2.generated.WorkspaceApi;
 import io.airbyte.featureflag.FeatureFlagClient;
 import java.util.Map;
 import java.util.UUID;

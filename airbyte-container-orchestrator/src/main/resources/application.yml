@@ -73,12 +73,16 @@ airbyte:
     client: ${FEATURE_FLAG_CLIENT:config}
     path: ${FEATURE_FLAG_PATH:/flags}
     api-key: ${LAUNCHDARKLY_KEY:}
-  internal:
-    api:
-      auth-header:
-        name: ${AIRBYTE_API_AUTH_HEADER_NAME:}
-        value: ${AIRBYTE_API_AUTH_HEADER_VALUE:}
-      host: ${INTERNAL_API_HOST}
+  internal-api:
+    auth-header:
+      name: ${AIRBYTE_API_AUTH_HEADER_NAME:}
+      value: ${AIRBYTE_API_AUTH_HEADER_VALUE:}
+    base-path: ${INTERNAL_API_HOST}/api
+    connect-timeout-seconds: ${AIRBYTE_API_CONNECT_TIMEOUT_SECONDS:30}
+    read-timeout-seconds: ${AIRBYTE_API_READ_TIMEOUT_SECONDS:300}
+    retries:
+      delay-seconds: ${AIRBYTE_API_RETRY_DELAY_SECONDS:2}
+      max: ${AIRBYTE_API_MAX_RETRIES:5}
   tracking:
     strategy: ${TRACKING_STRATEGY:LOGGING}
     write-key: ${SEGMENT_WRITE_KEY:}

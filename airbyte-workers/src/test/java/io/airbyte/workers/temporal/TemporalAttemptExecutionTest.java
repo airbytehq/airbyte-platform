@@ -15,8 +15,8 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import io.airbyte.api.client.AirbyteApiClient;
-import io.airbyte.api.client.generated.AttemptApi;
+import io.airbyte.api.client2.AirbyteApiClient;
+import io.airbyte.api.client2.generated.AttemptApi;
 import io.airbyte.config.Configs;
 import io.airbyte.db.instance.DatabaseConstants;
 import io.airbyte.persistence.job.models.JobRunConfig;
@@ -108,7 +108,7 @@ class TemporalAttemptExecutionTest {
     verify(worker).run(anyString(), any());
     verify(mdcSetter, atLeast(1)).accept(jobRoot);
     verify(attemptApi, times(1)).setWorkflowInAttempt(
-        argThat(request -> request.getAttemptNumber().equals(ATTEMPT_NUMBER) && request.getJobId().equals(Long.valueOf(JOB_ID))));
+        argThat(request -> request.getAttemptNumber() == ATTEMPT_NUMBER && request.getJobId() == Long.valueOf(JOB_ID)));
   }
 
   @Test
@@ -120,7 +120,7 @@ class TemporalAttemptExecutionTest {
     verify(worker).run(anyString(), any());
     verify(mdcSetter).accept(jobRoot);
     verify(attemptApi, times(1)).setWorkflowInAttempt(
-        argThat(request -> request.getAttemptNumber().equals(ATTEMPT_NUMBER) && request.getJobId().equals(Long.valueOf(JOB_ID))));
+        argThat(request -> request.getAttemptNumber() == ATTEMPT_NUMBER && request.getJobId() == Long.valueOf(JOB_ID)));
   }
 
 }

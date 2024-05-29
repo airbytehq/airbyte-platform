@@ -9,18 +9,19 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.fasterxml.jackson.databind.JsonNode;
-import io.airbyte.api.client.AirbyteApiClient;
-import io.airbyte.api.client.generated.DestinationApi;
-import io.airbyte.api.client.generated.SourceApi;
-import io.airbyte.api.client.invoker.generated.ApiException;
-import io.airbyte.api.client.model.generated.DestinationIdRequestBody;
-import io.airbyte.api.client.model.generated.DestinationRead;
-import io.airbyte.api.client.model.generated.DestinationUpdate;
-import io.airbyte.api.client.model.generated.SourceIdRequestBody;
-import io.airbyte.api.client.model.generated.SourceRead;
-import io.airbyte.api.client.model.generated.SourceUpdate;
+import io.airbyte.api.client2.AirbyteApiClient;
+import io.airbyte.api.client2.generated.DestinationApi;
+import io.airbyte.api.client2.generated.SourceApi;
+import io.airbyte.api.client2.model.generated.DestinationIdRequestBody;
+import io.airbyte.api.client2.model.generated.DestinationRead;
+import io.airbyte.api.client2.model.generated.DestinationUpdate;
+import io.airbyte.api.client2.model.generated.SourceIdRequestBody;
+import io.airbyte.api.client2.model.generated.SourceRead;
+import io.airbyte.api.client2.model.generated.SourceUpdate;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.protocol.models.Config;
+import java.io.IOException;
+import java.util.Map;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -40,16 +41,25 @@ class ConnectorConfigUpdaterTest {
   private ConnectorConfigUpdater connectorConfigUpdater;
 
   @BeforeEach
-  void setUp() throws ApiException {
-    when(mSourceApi.getSource(new SourceIdRequestBody()
-        .sourceId(SOURCE_ID))).thenReturn(new SourceRead()
-            .sourceId(SOURCE_ID)
-            .name(SOURCE_NAME));
+  void setUp() throws IOException {
+    when(mSourceApi.getSource(new SourceIdRequestBody(SOURCE_ID))).thenReturn(new SourceRead(
+        UUID.randomUUID(),
+        SOURCE_ID,
+        UUID.randomUUID(),
+        Jsons.jsonNode(Map.of()),
+        SOURCE_NAME,
+        SOURCE_NAME,
+        null, null, null, null));
 
-    when(mDestinationApi.getDestination(new DestinationIdRequestBody()
-        .destinationId(DESTINATION_ID))).thenReturn(new DestinationRead()
-            .destinationId(DESTINATION_ID)
-            .name(DESTINATION_NAME));
+    when(mDestinationApi.getDestination(new DestinationIdRequestBody(DESTINATION_ID)))
+        .thenReturn(new DestinationRead(
+            UUID.randomUUID(),
+            DESTINATION_ID,
+            UUID.randomUUID(),
+            Jsons.jsonNode(Map.of()),
+            DESTINATION_NAME,
+            DESTINATION_NAME,
+            null, null, null, null));;
 
     when(mAirbyteApiClient.getDestinationApi()).thenReturn(mDestinationApi);
     when(mAirbyteApiClient.getSourceApi()).thenReturn(mSourceApi);
@@ -58,32 +68,43 @@ class ConnectorConfigUpdaterTest {
   }
 
   @Test
-  void testPersistSourceConfig() throws ApiException {
+  void testPersistSourceConfig() throws IOException {
     final Config newConfiguration = new Config().withAdditionalProperty("key", "new_value");
     final JsonNode configJson = Jsons.jsonNode(newConfiguration.getAdditionalProperties());
 
-    final SourceUpdate expectedSourceUpdate = new SourceUpdate()
-        .sourceId(SOURCE_ID)
-        .name(SOURCE_NAME)
-        .connectionConfiguration(configJson);
+    final SourceUpdate expectedSourceUpdate = new SourceUpdate(SOURCE_ID, configJson, SOURCE_NAME, null);
 
-    when(mSourceApi.updateSource(Mockito.any())).thenReturn(new SourceRead().connectionConfiguration(configJson));
+    when(mSourceApi.updateSource(Mockito.any())).thenReturn(new SourceRead(
+        UUID.randomUUID(),
+        SOURCE_ID,
+        UUID.randomUUID(),
+        configJson,
+        SOURCE_NAME,
+        SOURCE_NAME,
+        null, null, null, null));
 
     connectorConfigUpdater.updateSource(SOURCE_ID, newConfiguration);
     verify(mSourceApi).updateSource(expectedSourceUpdate);
   }
 
   @Test
-  void testPersistDestinationConfig() throws ApiException {
+  void testPersistDestinationConfig() throws IOException {
     final Config newConfiguration = new Config().withAdditionalProperty("key", "new_value");
     final JsonNode configJson = Jsons.jsonNode(newConfiguration.getAdditionalProperties());
 
-    final DestinationUpdate expectedDestinationUpdate = new DestinationUpdate()
-        .destinationId(DESTINATION_ID)
-        .name(DESTINATION_NAME)
-        .connectionConfiguration(configJson);
+    final DestinationUpdate expectedDestinationUpdate = new DestinationUpdate(DESTINATION_ID, configJson, DESTINATION_NAME);
+    final DestinationRead destinationRead = new DestinationRead(
+        UUID.randomUUID(),
+        DESTINATION_ID,
+        UUID.randomUUID(),
+        configJson,
+        DESTINATION_NAME,
+        DESTINATION_NAME,
+        null, null, null, null);
 
-    when(mDestinationApi.updateDestination(Mockito.any())).thenReturn(new DestinationRead().connectionConfiguration(configJson));
+    when(mDestinationApi.getDestination(new DestinationIdRequestBody(DESTINATION_ID)))
+        .thenReturn(destinationRead);
+    when(mDestinationApi.updateDestination(expectedDestinationUpdate)).thenReturn(destinationRead);
 
     connectorConfigUpdater.updateDestination(DESTINATION_ID, newConfiguration);
     verify(mDestinationApi).updateDestination(expectedDestinationUpdate);

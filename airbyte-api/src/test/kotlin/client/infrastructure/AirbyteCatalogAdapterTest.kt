@@ -32,8 +32,7 @@ internal class AirbyteCatalogAdapterTest {
               "            \"incremental\"\n" +
               "          ],",
           newValue = "\"supportedSyncModes\": [\"full_refresh\", \"incremental\"],",
-        )
-        .trim(),
+        ),
     )
   }
 }

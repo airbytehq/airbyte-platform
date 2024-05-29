@@ -2,8 +2,8 @@ package io.airbyte.connectorSidecar
 
 import com.fasterxml.jackson.databind.JsonNode
 import com.google.common.annotations.VisibleForTesting
-import io.airbyte.api.client.AirbyteApiClient
-import io.airbyte.api.client.model.generated.SourceDiscoverSchemaWriteRequestBody
+import io.airbyte.api.client2.AirbyteApiClient
+import io.airbyte.api.client2.model.generated.SourceDiscoverSchemaWriteRequestBody
 import io.airbyte.commons.converters.CatalogClientConverters
 import io.airbyte.commons.converters.ConnectorConfigUpdater
 import io.airbyte.commons.enums.Enums
@@ -205,17 +205,12 @@ class ConnectorMessageProcessor(
     discoverSchemaInput: StandardDiscoverCatalogInput,
     catalog: AirbyteCatalog,
   ): SourceDiscoverSchemaWriteRequestBody {
-    return SourceDiscoverSchemaWriteRequestBody().catalog(
-      CatalogClientConverters.toAirbyteCatalogClientApi(catalog),
-    ).sourceId(
-      if (discoverSchemaInput.sourceId == null) null else UUID.fromString(discoverSchemaInput.sourceId),
+    return SourceDiscoverSchemaWriteRequestBody(
+      catalog = CatalogClientConverters.toAirbyteCatalogClientApi(catalog),
+      sourceId = if (discoverSchemaInput.sourceId == null) null else UUID.fromString(discoverSchemaInput.sourceId),
+      connectorVersion = if (discoverSchemaInput.connectorVersion == null) "" else discoverSchemaInput.connectorVersion,
+      configurationHash = discoverSchemaInput.configHash,
     )
-      .connectorVersion(
-        if (discoverSchemaInput.connectorVersion == null) "" else discoverSchemaInput.connectorVersion,
-      )
-      .configurationHash(
-        discoverSchemaInput.configHash,
-      )
   }
 
   @VisibleForTesting

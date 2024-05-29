@@ -5,7 +5,7 @@
 package io.airbyte.workload.launcher.config
 
 import dev.failsafe.RetryPolicy
-import io.airbyte.api.client.AirbyteApiClient
+import io.airbyte.api.client2.AirbyteApiClient
 import io.airbyte.commons.features.EnvVariableFeatureFlags
 import io.airbyte.commons.features.FeatureFlags
 import io.airbyte.config.secrets.SecretsRepositoryReader

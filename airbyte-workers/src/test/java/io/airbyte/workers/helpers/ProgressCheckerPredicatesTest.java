@@ -6,7 +6,7 @@ package io.airbyte.workers.helpers;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
-import io.airbyte.api.client.model.generated.AttemptStats;
+import io.airbyte.api.client2.model.generated.AttemptStats;
 import java.util.stream.Stream;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
@@ -24,11 +24,11 @@ class ProgressCheckerPredicatesTest {
 
   public static Stream<Arguments> statsProgressMatrix() {
     return Stream.of(
-        Arguments.of(new AttemptStats().recordsCommitted(0L), false),
-        Arguments.of(new AttemptStats().recordsCommitted(1L), true),
-        Arguments.of(new AttemptStats().recordsCommitted(3L), true),
-        Arguments.of(new AttemptStats().recordsCommitted(9999L), true),
-        Arguments.of(new AttemptStats().recordsCommitted(null), false));
+        Arguments.of(new AttemptStats(null, null, null, null, 0L, null, null), false),
+        Arguments.of(new AttemptStats(null, null, null, null, 1L, null, null), true),
+        Arguments.of(new AttemptStats(null, null, null, null, 3L, null, null), true),
+        Arguments.of(new AttemptStats(null, null, null, null, 9999L, null, null), true),
+        Arguments.of(new AttemptStats(null, null, null, null, null, null, null), false));
   }
 
 }

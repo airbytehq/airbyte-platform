@@ -1,11 +1,12 @@
 package io.airbyte.workers
 
 import com.fasterxml.jackson.databind.node.POJONode
-import io.airbyte.api.client.AirbyteApiClient
-import io.airbyte.api.client.generated.SecretsPersistenceConfigApi
-import io.airbyte.api.client.model.generated.ScopeType
-import io.airbyte.api.client.model.generated.SecretPersistenceConfig
-import io.airbyte.api.client.model.generated.SecretPersistenceType
+import io.airbyte.api.client2.AirbyteApiClient
+import io.airbyte.api.client2.generated.SecretsPersistenceConfigApi
+import io.airbyte.api.client2.model.generated.ScopeType
+import io.airbyte.api.client2.model.generated.SecretPersistenceConfig
+import io.airbyte.api.client2.model.generated.SecretPersistenceType
+import io.airbyte.commons.json.Jsons
 import io.airbyte.config.secrets.SecretsRepositoryReader
 import io.airbyte.config.secrets.persistence.RuntimeSecretPersistence
 import io.airbyte.featureflag.FeatureFlagClient
@@ -43,10 +44,12 @@ class ConnectorSecretsHydratorTest {
     val orgId = UUID.randomUUID()
 
     val secretConfig =
-      SecretPersistenceConfig()
-        .scopeId(orgId)
-        .scopeType(ScopeType.ORGANIZATION)
-        .secretPersistenceType(SecretPersistenceType.AWS)
+      SecretPersistenceConfig(
+        secretPersistenceType = SecretPersistenceType.AWS,
+        configuration = Jsons.jsonNode(mapOf<String, String>()),
+        scopeId = orgId,
+        scopeType = ScopeType.ORGANIZATION,
+      )
 
     val runtimeSecretPersistence = RuntimeSecretPersistence(mockk())
 

@@ -7,9 +7,9 @@ package io.airbyte.api.server.mappers
 import io.airbyte.airbyte_api.model.generated.JobResponse
 import io.airbyte.airbyte_api.model.generated.JobTypeEnum
 import io.airbyte.airbyte_api.model.generated.JobsResponse
-import io.airbyte.api.client.model.generated.JobConfigType
-import io.airbyte.api.client.model.generated.JobReadList
-import io.airbyte.api.client.model.generated.JobWithAttemptsRead
+import io.airbyte.api.client2.model.generated.JobConfigType
+import io.airbyte.api.client2.model.generated.JobReadList
+import io.airbyte.api.client2.model.generated.JobWithAttemptsRead
 import io.airbyte.api.server.constants.JOBS_PATH
 import java.util.UUID
 import java.util.function.Function

@@ -12,13 +12,14 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import io.airbyte.api.client.AirbyteApiClient;
-import io.airbyte.api.client.generated.WorkspaceApi;
-import io.airbyte.api.client.model.generated.WorkspaceRead;
+import io.airbyte.api.client2.AirbyteApiClient;
+import io.airbyte.api.client2.generated.WorkspaceApi;
+import io.airbyte.api.client2.model.generated.WorkspaceRead;
 import io.airbyte.commons.temporal.scheduling.retries.RetryManager;
 import io.airbyte.workers.helpers.RetryStateClient;
 import io.airbyte.workers.temporal.scheduling.activities.RetryStatePersistenceActivity.HydrateInput;
 import io.airbyte.workers.temporal.scheduling.activities.RetryStatePersistenceActivity.PersistInput;
+import java.io.IOException;
 import java.util.UUID;
 import java.util.stream.Stream;
 import org.junit.jupiter.api.BeforeEach;
@@ -45,7 +46,8 @@ class RetryStatePersistenceActivityTest {
     mAirbyteApiClient = mock(AirbyteApiClient.class);
     mRetryStateClient = mock(RetryStateClient.class);
     mWorkspaceApi = mock(WorkspaceApi.class);
-    when(mWorkspaceApi.getWorkspaceByConnectionId(any())).thenReturn(new WorkspaceRead().workspaceId(UUID.randomUUID()));
+    when(mWorkspaceApi.getWorkspaceByConnectionId(any())).thenReturn(new WorkspaceRead(UUID.randomUUID(), UUID.randomUUID(), "name", "slug", false,
+        UUID.randomUUID(), null, null, null, null, null, null, null, null, null, null, null, null));
     when(mAirbyteApiClient.getWorkspaceApi()).thenReturn(mWorkspaceApi);
   }
 
@@ -66,7 +68,7 @@ class RetryStatePersistenceActivityTest {
 
   @ParameterizedTest
   @MethodSource("persistMatrix")
-  void persistDelegatesToRetryStatePersistence(final long jobId, final UUID connectionId) {
+  void persistDelegatesToRetryStatePersistence(final long jobId, final UUID connectionId) throws IOException {
     final var success = true;
     final var manager = RetryManager.builder().build();
     final RetryStatePersistenceActivityImpl activity = new RetryStatePersistenceActivityImpl(mAirbyteApiClient, mRetryStateClient);

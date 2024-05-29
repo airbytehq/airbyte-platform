@@ -12,30 +12,33 @@ import static org.mockito.Mockito.when;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.JsonNodeFactory;
-import io.airbyte.api.client.AirbyteApiClient;
-import io.airbyte.api.client.generated.ConnectionApi;
-import io.airbyte.api.client.generated.JobsApi;
-import io.airbyte.api.client.generated.SecretsPersistenceConfigApi;
-import io.airbyte.api.client.generated.StateApi;
-import io.airbyte.api.client.invoker.generated.ApiException;
-import io.airbyte.api.client.model.generated.AirbyteCatalog;
-import io.airbyte.api.client.model.generated.AirbyteStream;
-import io.airbyte.api.client.model.generated.AirbyteStreamAndConfiguration;
-import io.airbyte.api.client.model.generated.AirbyteStreamConfiguration;
-import io.airbyte.api.client.model.generated.CatalogDiff;
-import io.airbyte.api.client.model.generated.ConnectionAndJobIdRequestBody;
-import io.airbyte.api.client.model.generated.ConnectionIdRequestBody;
-import io.airbyte.api.client.model.generated.ConnectionRead;
-import io.airbyte.api.client.model.generated.ConnectionState;
-import io.airbyte.api.client.model.generated.FieldTransform;
-import io.airbyte.api.client.model.generated.JobOptionalRead;
-import io.airbyte.api.client.model.generated.JobRead;
-import io.airbyte.api.client.model.generated.ResetConfig;
-import io.airbyte.api.client.model.generated.SchemaChangeBackfillPreference;
-import io.airbyte.api.client.model.generated.StreamDescriptor;
-import io.airbyte.api.client.model.generated.StreamTransform;
-import io.airbyte.api.client.model.generated.StreamTransformUpdateStream;
-import io.airbyte.api.client.model.generated.SyncMode;
+import io.airbyte.api.client2.AirbyteApiClient;
+import io.airbyte.api.client2.generated.ConnectionApi;
+import io.airbyte.api.client2.generated.JobsApi;
+import io.airbyte.api.client2.generated.SecretsPersistenceConfigApi;
+import io.airbyte.api.client2.generated.StateApi;
+import io.airbyte.api.client2.model.generated.AirbyteCatalog;
+import io.airbyte.api.client2.model.generated.AirbyteStream;
+import io.airbyte.api.client2.model.generated.AirbyteStreamAndConfiguration;
+import io.airbyte.api.client2.model.generated.AirbyteStreamConfiguration;
+import io.airbyte.api.client2.model.generated.CatalogDiff;
+import io.airbyte.api.client2.model.generated.ConnectionAndJobIdRequestBody;
+import io.airbyte.api.client2.model.generated.ConnectionIdRequestBody;
+import io.airbyte.api.client2.model.generated.ConnectionRead;
+import io.airbyte.api.client2.model.generated.ConnectionState;
+import io.airbyte.api.client2.model.generated.ConnectionStatus;
+import io.airbyte.api.client2.model.generated.DestinationSyncMode;
+import io.airbyte.api.client2.model.generated.FieldTransform;
+import io.airbyte.api.client2.model.generated.JobConfigType;
+import io.airbyte.api.client2.model.generated.JobOptionalRead;
+import io.airbyte.api.client2.model.generated.JobRead;
+import io.airbyte.api.client2.model.generated.JobStatus;
+import io.airbyte.api.client2.model.generated.ResetConfig;
+import io.airbyte.api.client2.model.generated.SchemaChangeBackfillPreference;
+import io.airbyte.api.client2.model.generated.StreamDescriptor;
+import io.airbyte.api.client2.model.generated.StreamTransform;
+import io.airbyte.api.client2.model.generated.StreamTransformUpdateStream;
+import io.airbyte.api.client2.model.generated.SyncMode;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.config.ConnectionContext;
 import io.airbyte.config.JobSyncConfig;
@@ -53,6 +56,7 @@ import io.airbyte.persistence.job.models.IntegrationLauncherConfig;
 import io.airbyte.persistence.job.models.JobRunConfig;
 import io.airbyte.workers.models.RefreshSchemaActivityOutput;
 import io.airbyte.workers.models.ReplicationActivityInput;
+import java.io.IOException;
 import java.util.List;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
@@ -69,12 +73,33 @@ class ReplicationInputHydratorTest {
   private static final UUID DESTINATION_ID = UUID.randomUUID();
   private static final JsonNode SOURCE_CONFIG = JsonNodeFactory.instance.objectNode();
   private static final JsonNode DESTINATION_CONFIG = JsonNodeFactory.instance.objectNode();
+  private static final String CONNECTION_NAME = "connection-name";
 
   private static final String TEST_STREAM_NAME = "test-stream-name";
   private static final String TEST_STREAM_NAMESPACE = "test-stream-namespace";
-  private static final AirbyteCatalog SYNC_CATALOG = new AirbyteCatalog().addStreamsItem(new AirbyteStreamAndConfiguration()
-      .stream(new AirbyteStream().addSupportedSyncModesItem(SyncMode.INCREMENTAL).name(TEST_STREAM_NAME).namespace(TEST_STREAM_NAMESPACE))
-      .config(new AirbyteStreamConfiguration().syncMode(SyncMode.INCREMENTAL)));
+  private static final AirbyteCatalog SYNC_CATALOG = new AirbyteCatalog(List.of(
+      new AirbyteStreamAndConfiguration(
+          new AirbyteStream(
+              TEST_STREAM_NAME,
+              null,
+              List.of(SyncMode.INCREMENTAL),
+              null,
+              null,
+              null,
+              TEST_STREAM_NAMESPACE),
+          new AirbyteStreamConfiguration(
+              SyncMode.INCREMENTAL,
+              DestinationSyncMode.APPEND,
+              null,
+              null,
+              null,
+              null,
+              null,
+              null,
+              null,
+              null,
+              null,
+              null))));
   private static final ConnectionState CONNECTION_STATE_RESPONSE = Jsons.deserialize(String
       .format("""
               {
@@ -111,14 +136,20 @@ class ReplicationInputHydratorTest {
   private static final IntegrationLauncherConfig SOURCE_LAUNCHER_CONFIG = new IntegrationLauncherConfig();
   private static final SyncResourceRequirements SYNC_RESOURCE_REQUIREMENTS = new SyncResourceRequirements();
   private static final UUID WORKSPACE_ID = UUID.randomUUID();
-  private static final CatalogDiff CATALOG_DIFF = new CatalogDiff()
-      .addTransformsItem(new StreamTransform()
-          .streamDescriptor(new StreamDescriptor()
-              .name(SYNC_CATALOG.getStreams().get(0).getStream().getName())
-              .namespace(SYNC_CATALOG.getStreams().get(0).getStream().getNamespace()))
-          .transformType(StreamTransform.TransformTypeEnum.UPDATE_STREAM)
-          .updateStream(new StreamTransformUpdateStream().addFieldTransformsItem(new FieldTransform()
-              .transformType(FieldTransform.TransformTypeEnum.ADD_FIELD))));
+  private static final CatalogDiff CATALOG_DIFF = new CatalogDiff(
+      List.of(
+          new StreamTransform(
+              StreamTransform.TransformType.UPDATE_STREAM,
+              new StreamDescriptor(SYNC_CATALOG.getStreams().getFirst().getStream().getName(),
+                  SYNC_CATALOG.getStreams().getFirst().getStream().getNamespace()),
+              new StreamTransformUpdateStream(List.of(new FieldTransform(
+                  FieldTransform.TransformType.ADD_FIELD,
+                  List.of(),
+                  false,
+                  null,
+                  null,
+                  null)),
+                  List.of()))));
   private static SecretsRepositoryReader secretsRepositoryReader;
   private static AirbyteApiClient airbyteApiClient;
   private static ConnectionApi connectionApi;
@@ -128,7 +159,7 @@ class ReplicationInputHydratorTest {
   private SecretsPersistenceConfigApi secretsPersistenceConfigApi;
 
   @BeforeEach
-  void setup() throws ApiException {
+  void setup() throws IOException {
     secretsRepositoryReader = mock(SecretsRepositoryReader.class);
     airbyteApiClient = mock(AirbyteApiClient.class);
     connectionApi = mock(ConnectionApi.class);
@@ -140,7 +171,7 @@ class ReplicationInputHydratorTest {
     when(airbyteApiClient.getStateApi()).thenReturn(stateApi);
     when(airbyteApiClient.getJobsApi()).thenReturn(jobsApi);
     when(airbyteApiClient.getSecretPersistenceConfigApi()).thenReturn(secretsPersistenceConfigApi);
-    when(stateApi.getState(new ConnectionIdRequestBody().connectionId(CONNECTION_ID))).thenReturn(CONNECTION_STATE_RESPONSE);
+    when(stateApi.getState(new ConnectionIdRequestBody(CONNECTION_ID))).thenReturn(CONNECTION_STATE_RESPONSE);
   }
 
   private ReplicationInputHydrator getReplicationInputHydrator() {
@@ -201,12 +232,22 @@ class ReplicationInputHydratorTest {
     final ReplicationInputHydrator replicationInputHydrator = getReplicationInputHydrator();
     final ReplicationActivityInput input = getDefaultReplicationActivityInputForTest();
     input.setIsReset(true);
-    when(jobsApi.getLastReplicationJob(new ConnectionIdRequestBody().connectionId(CONNECTION_ID))).thenReturn(
-        new JobOptionalRead().job(new JobRead().resetConfig(new ResetConfig().streamsToReset(List.of(
-            new StreamDescriptor().name(TEST_STREAM_NAME).namespace(TEST_STREAM_NAMESPACE))))));
+    when(jobsApi.getLastReplicationJob(new ConnectionIdRequestBody(CONNECTION_ID))).thenReturn(
+        new JobOptionalRead(new JobRead(
+            JOB_ID,
+            JobConfigType.SYNC,
+            CONNECTION_ID.toString(),
+            System.currentTimeMillis(),
+            System.currentTimeMillis(),
+            JobStatus.CANCELLED,
+            null,
+            null,
+            new ResetConfig(List.of(new StreamDescriptor(TEST_STREAM_NAME, TEST_STREAM_NAMESPACE))),
+            null,
+            null)));
     final var replicationInput = replicationInputHydrator.getHydratedReplicationInput(input);
     assertEquals(1, replicationInput.getCatalog().getStreams().size());
-    assertEquals(io.airbyte.protocol.models.SyncMode.FULL_REFRESH, replicationInput.getCatalog().getStreams().get(0).getSyncMode());
+    assertEquals(io.airbyte.protocol.models.SyncMode.FULL_REFRESH, replicationInput.getCatalog().getStreams().getFirst().getSyncMode());
   }
 
   @ParameterizedTest
@@ -233,36 +274,30 @@ class ReplicationInputHydratorTest {
     when(featureFlagClient.boolVariation(flag, new Workspace(workspaceId))).thenReturn(true);
   }
 
-  private void mockEnableBackfillForConnection(final boolean withRefresh) throws ApiException {
+  private void mockEnableBackfillForConnection(final boolean withRefresh) throws IOException {
     if (withRefresh) {
-      when(connectionApi.getConnectionForJob(new ConnectionAndJobIdRequestBody().connectionId(CONNECTION_ID).jobId(JOB_ID)))
-          .thenReturn(new ConnectionRead()
-              .connectionId(CONNECTION_ID)
-              .syncCatalog(SYNC_CATALOG)
-              .backfillPreference(SchemaChangeBackfillPreference.ENABLED));
+      when(connectionApi.getConnectionForJob(new ConnectionAndJobIdRequestBody(CONNECTION_ID, JOB_ID)))
+          .thenReturn(new ConnectionRead(CONNECTION_ID, CONNECTION_NAME, SOURCE_ID, DESTINATION_ID, SYNC_CATALOG, ConnectionStatus.ACTIVE, false,
+              null, null, null, null, null, null, null, null, null, null, null, null, null, null, SchemaChangeBackfillPreference.ENABLED, null));
     } else {
-      when(connectionApi.getConnection(new ConnectionIdRequestBody().connectionId(CONNECTION_ID)))
-          .thenReturn(new ConnectionRead()
-              .connectionId(CONNECTION_ID)
-              .syncCatalog(SYNC_CATALOG)
-              .backfillPreference(SchemaChangeBackfillPreference.ENABLED));
+      when(connectionApi.getConnection(new ConnectionIdRequestBody(CONNECTION_ID)))
+          .thenReturn(new ConnectionRead(CONNECTION_ID, CONNECTION_NAME, SOURCE_ID, DESTINATION_ID, SYNC_CATALOG, ConnectionStatus.ACTIVE, false,
+              null, null, null, null, null, null, null, null, null, null, null, null, null, null, SchemaChangeBackfillPreference.ENABLED, null));
     }
   }
 
-  private void mockRefresh() throws ApiException {
+  private void mockRefresh() throws IOException {
     when(featureFlagClient.boolVariation(eq(ActivateRefreshes.INSTANCE), any())).thenReturn(true);
-    when(connectionApi.getConnectionForJob(new ConnectionAndJobIdRequestBody().connectionId(CONNECTION_ID).jobId(JOB_ID)))
-        .thenReturn(new ConnectionRead()
-            .connectionId(CONNECTION_ID)
-            .syncCatalog(SYNC_CATALOG));
+    when(connectionApi.getConnectionForJob(new ConnectionAndJobIdRequestBody(CONNECTION_ID, JOB_ID)))
+        .thenReturn(new ConnectionRead(CONNECTION_ID, CONNECTION_NAME, SOURCE_ID, DESTINATION_ID, SYNC_CATALOG, ConnectionStatus.ACTIVE, false, null,
+            null, null, null, null, null, null, null, null, null, null, null, null, null, null, null));
   }
 
-  private void mockNonRefresh() throws ApiException {
+  private void mockNonRefresh() throws IOException {
     when(featureFlagClient.boolVariation(eq(ActivateRefreshes.INSTANCE), any())).thenReturn(false);
-    when(connectionApi.getConnection(new ConnectionIdRequestBody().connectionId(CONNECTION_ID)))
-        .thenReturn(new ConnectionRead()
-            .connectionId(CONNECTION_ID)
-            .syncCatalog(SYNC_CATALOG));
+    when(connectionApi.getConnection(new ConnectionIdRequestBody(CONNECTION_ID)))
+        .thenReturn(new ConnectionRead(CONNECTION_ID, CONNECTION_NAME, SOURCE_ID, DESTINATION_ID, SYNC_CATALOG, ConnectionStatus.ACTIVE, false, null,
+            null, null, null, null, null, null, null, null, null, null, null, null, null, null, null));
   }
 
 }

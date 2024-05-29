@@ -8,16 +8,18 @@ import static io.airbyte.metrics.lib.ApmTraceConstants.ACTIVITY_TRACE_OPERATION_
 import static io.airbyte.metrics.lib.ApmTraceConstants.Tags.CONNECTION_ID_KEY;
 
 import datadog.trace.api.Trace;
-import io.airbyte.api.client.AirbyteApiClient;
-import io.airbyte.api.client.model.generated.ConnectionIdRequestBody;
-import io.airbyte.api.client.model.generated.InternalOperationResult;
+import io.airbyte.api.client2.AirbyteApiClient;
+import io.airbyte.api.client2.model.generated.ConnectionIdRequestBody;
+import io.airbyte.api.client2.model.generated.InternalOperationResult;
 import io.airbyte.commons.features.FeatureFlags;
 import io.airbyte.commons.temporal.config.WorkerMode;
 import io.airbyte.commons.temporal.exception.RetryableException;
 import io.airbyte.metrics.lib.ApmTraceUtils;
 import io.micronaut.context.annotation.Requires;
 import jakarta.inject.Singleton;
+import java.io.IOException;
 import java.util.Map;
+import org.openapitools.client.infrastructure.ClientException;
 
 /**
  * AutoDisableConnectionActivityImpl.
@@ -45,12 +47,10 @@ public class AutoDisableConnectionActivityImpl implements AutoDisableConnectionA
     ApmTraceUtils.addTagsToTrace(Map.of(CONNECTION_ID_KEY, input.getConnectionId()));
     if (featureFlags.autoDisablesFailingConnections()) {
       try {
-        final InternalOperationResult autoDisableConnection = AirbyteApiClient.retryWithJitterThrows(
-            () -> airbyteApiClient.getConnectionApi().autoDisableConnection(new ConnectionIdRequestBody()
-                .connectionId(input.getConnectionId())),
-            "auto disable connection");
+        final InternalOperationResult autoDisableConnection =
+            airbyteApiClient.getConnectionApi().autoDisableConnection(new ConnectionIdRequestBody(input.getConnectionId()));
         return new AutoDisableConnectionOutput(autoDisableConnection.getSucceeded());
-      } catch (final Exception e) {
+      } catch (final ClientException | IOException e) {
         throw new RetryableException(e);
       }
     }

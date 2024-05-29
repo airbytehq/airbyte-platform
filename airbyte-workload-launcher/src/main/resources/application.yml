@@ -170,12 +170,16 @@ airbyte:
   metric:
     client: ${METRIC_CLIENT:}
     should-publish: ${PUBLISH_METRICS:false}
-  internal:
-    api:
-      host: ${INTERNAL_API_HOST}
-      auth-header:
-        name: ${AIRBYTE_API_AUTH_HEADER_NAME:}
-        value: ${AIRBYTE_API_AUTH_HEADER_VALUE:}
+  internal-api:
+    auth-header:
+      name: ${AIRBYTE_API_AUTH_HEADER_NAME:}
+      value: ${AIRBYTE_API_AUTH_HEADER_VALUE:}
+    base-path: ${INTERNAL_API_HOST}/api
+    connect-timeout-seconds: ${AIRBYTE_API_CONNECT_TIMEOUT_SECONDS:30}
+    read-timeout-seconds: ${AIRBYTE_API_READ_TIMEOUT_SECONDS:300}
+    retries:
+      delay-seconds: ${AIRBYTE_API_RETRY_DELAY_SECONDS:2}
+      max: ${AIRBYTE_API_MAX_RETRIES:5}
   data.plane.service-account:
     credentials-path: ${DATA_PLANE_SERVICE_ACCOUNT_CREDENTIALS_PATH:}
     email: ${DATA_PLANE_SERVICE_ACCOUNT_EMAIL:}

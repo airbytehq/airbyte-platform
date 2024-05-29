@@ -6,13 +6,13 @@ package io.airbyte.api.server.mappers
 
 import io.airbyte.airbyte_api.model.generated.ConnectionPatchRequest
 import io.airbyte.airbyte_api.model.generated.ScheduleTypeEnum
-import io.airbyte.api.client.model.generated.AirbyteCatalog
-import io.airbyte.api.client.model.generated.ConnectionScheduleData
-import io.airbyte.api.client.model.generated.ConnectionScheduleDataCron
-import io.airbyte.api.client.model.generated.ConnectionScheduleType
-import io.airbyte.api.client.model.generated.ConnectionStatus
-import io.airbyte.api.client.model.generated.ConnectionUpdate
-import io.airbyte.api.client.model.generated.Geography
+import io.airbyte.api.client2.model.generated.AirbyteCatalog
+import io.airbyte.api.client2.model.generated.ConnectionScheduleData
+import io.airbyte.api.client2.model.generated.ConnectionScheduleDataCron
+import io.airbyte.api.client2.model.generated.ConnectionScheduleType
+import io.airbyte.api.client2.model.generated.ConnectionStatus
+import io.airbyte.api.client2.model.generated.ConnectionUpdate
+import io.airbyte.api.client2.model.generated.Geography
 import io.airbyte.api.server.helpers.ConnectionHelper
 import jakarta.validation.constraints.NotBlank
 import java.util.UUID
@@ -31,62 +31,57 @@ object ConnectionUpdateMapper {
    * @return ConnectionCreate Response object to be sent to config api
    */
   fun from(
-    connectionId: @NotBlank UUID?,
+    connectionId: @NotBlank UUID,
     connectionPatchRequest: ConnectionPatchRequest,
     catalogId: UUID?,
     configuredCatalog: AirbyteCatalog?,
   ): ConnectionUpdate {
-    val connectionUpdateOss = ConnectionUpdate()
-    connectionUpdateOss.connectionId(connectionId)
-    connectionUpdateOss.setName(connectionPatchRequest.getName())
-    if (connectionPatchRequest.getNonBreakingSchemaUpdatesBehavior() != null) {
-      connectionUpdateOss.setNonBreakingChangesPreference(
-        ConnectionHelper.convertNonBreakingSchemaUpdatesBehaviorEnum(connectionPatchRequest.getNonBreakingSchemaUpdatesBehavior()),
-      )
-    }
-    if (connectionPatchRequest.getNamespaceDefinition() != null) {
-      connectionUpdateOss.setNamespaceDefinition(
-        ConnectionHelper.convertNamespaceDefinitionEnum(connectionPatchRequest.getNamespaceDefinition()),
-      )
-    }
-    if (connectionPatchRequest.getNamespaceFormat() != null) {
-      connectionUpdateOss.setNamespaceFormat(connectionPatchRequest.getNamespaceFormat())
-    }
-    if (connectionPatchRequest.getPrefix() != null) {
-      connectionUpdateOss.setPrefix(connectionPatchRequest.getPrefix())
-    }
-
-    // set geography
-    if (connectionPatchRequest.getDataResidency() != null) {
-      connectionUpdateOss.setGeography(Geography.fromValue(connectionPatchRequest.getDataResidency().toString()))
-    }
-
-    // set schedule
-    if (connectionPatchRequest.getSchedule() != null) {
-      connectionUpdateOss.setScheduleType(ConnectionScheduleType.fromValue(connectionPatchRequest.getSchedule().getScheduleType().toString()))
-      if (connectionPatchRequest.getSchedule().getScheduleType() !== ScheduleTypeEnum.MANUAL) {
-        // This should only be set if we're not manual
-        val connectionScheduleDataCron = ConnectionScheduleDataCron()
-        connectionScheduleDataCron.setCronExpression(connectionPatchRequest.getSchedule().getCronExpression())
-        connectionScheduleDataCron.setCronTimeZone("UTC")
-        val connectionScheduleData = ConnectionScheduleData()
-        connectionScheduleData.setCron(connectionScheduleDataCron)
-        connectionUpdateOss.setScheduleData(connectionScheduleData)
-      } else {
-        connectionUpdateOss.setScheduleType(ConnectionScheduleType.MANUAL)
-      }
-    }
-
-    // set streams
-    if (catalogId != null) {
-      connectionUpdateOss.setSourceCatalogId(catalogId)
-    }
-    if (configuredCatalog != null) {
-      connectionUpdateOss.setSyncCatalog(configuredCatalog)
-    }
-    if (connectionPatchRequest.getStatus() != null) {
-      connectionUpdateOss.setStatus(ConnectionStatus.fromValue(connectionPatchRequest.getStatus().toString()))
-    }
-    return connectionUpdateOss
+    return ConnectionUpdate(
+      connectionId = connectionId,
+      name = connectionPatchRequest.name,
+      nonBreakingChangesPreference =
+        connectionPatchRequest.nonBreakingSchemaUpdatesBehavior?.let {
+          ConnectionHelper.convertNonBreakingSchemaUpdatesBehaviorEnum(connectionPatchRequest.nonBreakingSchemaUpdatesBehavior)
+        } ?: null,
+      namespaceDefinition =
+        connectionPatchRequest.namespaceDefinition?.let {
+          ConnectionHelper.convertNamespaceDefinitionEnum(connectionPatchRequest.namespaceDefinition)
+        } ?: null,
+      namespaceFormat = connectionPatchRequest.namespaceFormat,
+      prefix = connectionPatchRequest.prefix,
+      geography =
+        connectionPatchRequest.dataResidency?.let {
+          Geography.valueOf(connectionPatchRequest.dataResidency.toString())
+        } ?: null,
+      scheduleType =
+        connectionPatchRequest.schedule?.let { schedule ->
+          if (schedule.scheduleType !== ScheduleTypeEnum.MANUAL) {
+            ConnectionScheduleType.valueOf(schedule.scheduleType.toString())
+          } else {
+            ConnectionScheduleType.MANUAL
+          }
+        } ?: null,
+      scheduleData =
+        connectionPatchRequest.schedule?.let { schedule ->
+          if (schedule.scheduleType !== ScheduleTypeEnum.MANUAL) {
+            ConnectionScheduleData(
+              basicSchedule = null,
+              cron =
+                ConnectionScheduleDataCron(
+                  cronExpression = schedule.cronExpression,
+                  cronTimeZone = "UTC",
+                ),
+            )
+          } else {
+            null
+          }
+        } ?: null,
+      sourceCatalogId = catalogId,
+      syncCatalog = configuredCatalog,
+      status =
+        connectionPatchRequest.status?.let {
+          ConnectionStatus.valueOf(connectionPatchRequest.status.toString())
+        } ?: null,
+    )
   }
 }

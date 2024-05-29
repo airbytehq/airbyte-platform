@@ -4,9 +4,12 @@
 
 package io.airbyte.workers.temporal.scheduling.activities;
 
+import io.airbyte.commons.temporal.exception.RetryableException;
 import io.airbyte.workers.helpers.ProgressChecker;
 import jakarta.inject.Singleton;
+import java.io.IOException;
 import lombok.extern.slf4j.Slf4j;
+import org.openapitools.client.infrastructure.ClientException;
 
 /**
  * Concrete CheckRunProgressActivity.
@@ -23,9 +26,13 @@ public class CheckRunProgressActivityImpl implements CheckRunProgressActivity {
 
   @Override
   public Output checkProgress(final Input input) {
-    final boolean result = checker.check(input.getJobId(), input.getAttemptNo());
+    try {
+      final boolean result = checker.check(input.getJobId(), input.getAttemptNo());
 
-    return new Output(result);
+      return new Output(result);
+    } catch (final ClientException | IOException e) {
+      throw new RetryableException(e);
+    }
   }
 
 }

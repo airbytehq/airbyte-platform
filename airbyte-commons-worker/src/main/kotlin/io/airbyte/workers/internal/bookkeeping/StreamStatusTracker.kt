@@ -1,13 +1,13 @@
 package io.airbyte.workers.internal.bookkeeping
 
-import io.airbyte.api.client.AirbyteApiClient
-import io.airbyte.api.client.model.generated.StreamStatusCreateRequestBody
-import io.airbyte.api.client.model.generated.StreamStatusIncompleteRunCause
-import io.airbyte.api.client.model.generated.StreamStatusJobType
-import io.airbyte.api.client.model.generated.StreamStatusRateLimitedMetadata
-import io.airbyte.api.client.model.generated.StreamStatusRead
-import io.airbyte.api.client.model.generated.StreamStatusRunState
-import io.airbyte.api.client.model.generated.StreamStatusUpdateRequestBody
+import io.airbyte.api.client2.AirbyteApiClient
+import io.airbyte.api.client2.model.generated.StreamStatusCreateRequestBody
+import io.airbyte.api.client2.model.generated.StreamStatusIncompleteRunCause
+import io.airbyte.api.client2.model.generated.StreamStatusJobType
+import io.airbyte.api.client2.model.generated.StreamStatusRateLimitedMetadata
+import io.airbyte.api.client2.model.generated.StreamStatusRead
+import io.airbyte.api.client2.model.generated.StreamStatusRunState
+import io.airbyte.api.client2.model.generated.StreamStatusUpdateRequestBody
 import io.airbyte.featureflag.Connection
 import io.airbyte.featureflag.Context
 import io.airbyte.featureflag.Destination
@@ -170,11 +170,13 @@ class StreamStatusTracker(
     }
 
     val streamStatusRead: StreamStatusRead =
-      StreamStatusCreateRequestBody(ctx, descriptor, transition, StreamStatusRunState.RUNNING).let { requestBody ->
-        AirbyteApiClient.retryWithJitterThrows(
-          { airbyteApiClient.streamStatusesApi.createStreamStatus(requestBody) },
-          "stream status running ${descriptor.namespace}:${descriptor.name}",
-        )
+      StreamStatusCreateRequestBody(
+        ctx = ctx,
+        descriptor = descriptor,
+        transition = transition,
+        runState = StreamStatusRunState.RUNNING,
+      ).let { requestBody ->
+        airbyteApiClient.streamStatusesApi.createStreamStatus(requestBody)
       }
 
     // add a new [CurrentStreamStatus] to the [currentStreamStatuses]
@@ -381,33 +383,23 @@ class StreamStatusTracker(
       throw StreamStatusException("Stream status ID not present to perform update.", origin, ctx, streamName, streamNamespace)
     }
 
-    val requestBody: StreamStatusUpdateRequestBody =
-      StreamStatusUpdateRequestBody()
-        .id(statusId)
-        .streamName(streamName)
-        .streamNamespace(streamNamespace)
-        .jobId(ctx.jobId)
-        .jobType(ctx.jobType())
-        .connectionId(ctx.connectionId)
-        .attemptNumber(ctx.attempt)
-        .runState(streamStatusRunState)
-        .transitionedAt(transition.inWholeMilliseconds)
-        .workspaceId(ctx.workspaceId)
-        .apply {
-          incompleteRunCause?.let {
-            this.incompleteRunCause = it
-          }
-        }.apply {
-          quotaReset?.let {
-            this.metadata = StreamStatusRateLimitedMetadata().quotaReset(it)
-          }
-        }
-
-    try {
-      AirbyteApiClient.retryWithJitterThrows(
-        { airbyteApiClient.streamStatusesApi.updateStreamStatus(requestBody) },
-        "update stream status ${streamStatusRunState.name.lowercase()} $streamNamespace:$streamName",
+    val requestBody =
+      StreamStatusUpdateRequestBody(
+        id = statusId,
+        attemptNumber = ctx.attempt,
+        connectionId = ctx.connectionId,
+        jobId = ctx.jobId,
+        jobType = ctx.jobType(),
+        runState = streamStatusRunState,
+        streamName = streamName,
+        streamNamespace = streamNamespace,
+        transitionedAt = transition.inWholeMilliseconds,
+        workspaceId = ctx.workspaceId,
+        incompleteRunCause = incompleteRunCause,
+        metadata = quotaReset?.let { StreamStatusRateLimitedMetadata(quotaReset = quotaReset) } ?: null,
       )
+    try {
+      airbyteApiClient.streamStatusesApi.updateStreamStatus(requestBody)
     } catch (e: Exception) {
       logger.error { "Unable to update status for stream $streamNamespace:$streamName (id = $statusId, origin = $origin, context = $ctx)" }
     }
@@ -560,7 +552,7 @@ data class CurrentStreamStatus(
   /**
    * Checks if the stream is incomplete based on the status of both the source and destination.
    *
-   * @return true if statu of the stream is INCOMPLETE, false otherwise
+   * @return true if status of the stream is INCOMPLETE, false otherwise
    */
   fun isIncomplete(): Boolean = sourceStatus?.status == AirbyteStreamStatus.INCOMPLETE && destinationStatus?.status == AirbyteStreamStatus.INCOMPLETE
 
@@ -593,13 +585,14 @@ private fun StreamStatusCreateRequestBody(
   descriptor: StreamDescriptor,
   transition: Duration,
   runState: StreamStatusRunState,
-) = StreamStatusCreateRequestBody()
-  .streamName(descriptor.name)
-  .streamNamespace(descriptor.namespace)
-  .jobId(ctx.jobId)
-  .jobType(ctx.jobType())
-  .connectionId(ctx.connectionId)
-  .attemptNumber(ctx.attempt)
-  .runState(runState)
-  .transitionedAt(transition.inWholeMilliseconds)
-  .workspaceId(ctx.workspaceId)
+) = StreamStatusCreateRequestBody(
+  streamNamespace = descriptor.namespace,
+  streamName = descriptor.name,
+  workspaceId = ctx.workspaceId,
+  connectionId = ctx.connectionId,
+  jobId = ctx.jobId,
+  attemptNumber = ctx.attempt,
+  jobType = ctx.jobType(),
+  runState = runState,
+  transitionedAt = transition.inWholeMilliseconds,
+)

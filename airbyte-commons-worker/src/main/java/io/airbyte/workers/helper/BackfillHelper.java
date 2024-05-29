@@ -5,12 +5,12 @@
 package io.airbyte.workers.helper;
 
 import com.fasterxml.jackson.databind.node.JsonNodeFactory;
-import io.airbyte.api.client.model.generated.CatalogDiff;
-import io.airbyte.api.client.model.generated.ConnectionRead;
-import io.airbyte.api.client.model.generated.FieldTransform;
-import io.airbyte.api.client.model.generated.SchemaChangeBackfillPreference;
-import io.airbyte.api.client.model.generated.StreamDescriptor;
-import io.airbyte.api.client.model.generated.StreamTransform;
+import io.airbyte.api.client2.model.generated.CatalogDiff;
+import io.airbyte.api.client2.model.generated.ConnectionRead;
+import io.airbyte.api.client2.model.generated.FieldTransform;
+import io.airbyte.api.client2.model.generated.SchemaChangeBackfillPreference;
+import io.airbyte.api.client2.model.generated.StreamDescriptor;
+import io.airbyte.api.client2.model.generated.StreamTransform;
 import io.airbyte.commons.converters.CatalogClientConverters;
 import io.airbyte.commons.converters.ProtocolConverters;
 import io.airbyte.config.StandardSyncOutput;
@@ -64,7 +64,7 @@ public class BackfillHelper {
       return null;
     }
     final var stateOptional = StateMessageHelper.getTypedState(inputState.getState());
-    if (!stateOptional.isPresent()) {
+    if (stateOptional.isEmpty()) {
       return null; // No state, no backfill.
     }
     final StateWrapper state = stateOptional.get();
@@ -103,7 +103,7 @@ public class BackfillHelper {
     }
     final List<StreamDescriptor> streamsToBackfill = new ArrayList<>();
     appliedDiff.getTransforms().forEach(transform -> {
-      if (StreamTransform.TransformTypeEnum.UPDATE_STREAM.equals(transform.getTransformType()) && shouldBackfillStream(transform, catalog)) {
+      if (StreamTransform.TransformType.UPDATE_STREAM.equals(transform.getTransformType()) && shouldBackfillStream(transform, catalog)) {
         streamsToBackfill.add(transform.getStreamDescriptor());
       }
     });
@@ -125,7 +125,7 @@ public class BackfillHelper {
       return; // No streams to backfill, no backfill.
     }
     for (final StreamSyncStats streamStat : syncOutput.getStandardSyncSummary().getStreamStats()) {
-      if (streamsToBackfill.contains(new StreamDescriptor().name(streamStat.getStreamName()).namespace(streamStat.getStreamNamespace()))) {
+      if (streamsToBackfill.contains(new StreamDescriptor(streamStat.getStreamName(), streamStat.getStreamNamespace()))) {
         streamStat.setWasBackfilled(true);
       }
     }
@@ -159,10 +159,10 @@ public class BackfillHelper {
     }
     for (final FieldTransform fieldTransform : transform.getUpdateStream().getFieldTransforms()) {
       // TODO: we'll add other cases here, when we develop the config options further.
-      if (FieldTransform.TransformTypeEnum.ADD_FIELD.equals(fieldTransform.getTransformType())) {
+      if (FieldTransform.TransformType.ADD_FIELD.equals(fieldTransform.getTransformType())) {
         return true;
       }
-      if (FieldTransform.TransformTypeEnum.UPDATE_FIELD_SCHEMA.equals(fieldTransform.getTransformType())) {
+      if (FieldTransform.TransformType.UPDATE_FIELD_SCHEMA.equals(fieldTransform.getTransformType())) {
         return true;
       }
     }

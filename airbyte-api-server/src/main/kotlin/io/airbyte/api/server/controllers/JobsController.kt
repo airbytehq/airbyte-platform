@@ -8,8 +8,8 @@ import io.airbyte.airbyte_api.model.generated.ConnectionResponse
 import io.airbyte.airbyte_api.model.generated.JobCreateRequest
 import io.airbyte.airbyte_api.model.generated.JobStatusEnum
 import io.airbyte.airbyte_api.model.generated.JobTypeEnum
-import io.airbyte.api.client.model.generated.JobListForWorkspacesRequestBody.OrderByFieldEnum
-import io.airbyte.api.client.model.generated.JobListForWorkspacesRequestBody.OrderByMethodEnum
+import io.airbyte.api.client2.model.generated.JobListForWorkspacesRequestBody.OrderByField
+import io.airbyte.api.client2.model.generated.JobListForWorkspacesRequestBody.OrderByMethod
 import io.airbyte.api.server.apiTracking.TrackingHelper
 import io.airbyte.api.server.constants.AUTH_HEADER
 import io.airbyte.api.server.constants.DELETE
@@ -269,9 +269,9 @@ open class JobsController(
       .build()
   }
 
-  private fun orderByToFieldAndMethod(orderBy: String?): Pair<OrderByFieldEnum, OrderByMethodEnum> {
-    var field: OrderByFieldEnum = OrderByFieldEnum.CREATEDAT
-    var method: OrderByMethodEnum = OrderByMethodEnum.ASC
+  private fun orderByToFieldAndMethod(orderBy: String?): Pair<OrderByField, OrderByMethod> {
+    var field: OrderByField = OrderByField.CREATED_AT
+    var method: OrderByMethod = OrderByMethod.ASC
     if (orderBy != null) {
       val pattern: java.util.regex.Pattern = java.util.regex.Pattern.compile("([a-zA-Z0-9]+)\\|(ASC|DESC)")
       val matcher: java.util.regex.Matcher = pattern.matcher(orderBy)
@@ -279,10 +279,10 @@ open class JobsController(
         throw BadRequestProblem("Invalid order by clause provided: $orderBy")
       }
       field =
-        Enums.toEnum(matcher.group(1), OrderByFieldEnum::class.java)
+        Enums.toEnum(matcher.group(1), OrderByField::class.java)
           .orElseThrow { BadRequestProblem("Invalid order by clause provided: $orderBy") }
       method =
-        Enums.toEnum(matcher.group(2), OrderByMethodEnum::class.java)
+        Enums.toEnum(matcher.group(2), OrderByMethod::class.java)
           .orElseThrow { BadRequestProblem("Invalid order by clause provided: $orderBy") }
     }
     return Pair(field, method)

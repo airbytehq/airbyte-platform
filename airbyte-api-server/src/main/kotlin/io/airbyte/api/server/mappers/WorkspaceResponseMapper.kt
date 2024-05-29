@@ -6,7 +6,7 @@ package io.airbyte.api.server.mappers
 
 import io.airbyte.airbyte_api.model.generated.GeographyEnum
 import io.airbyte.airbyte_api.model.generated.WorkspaceResponse
-import io.airbyte.api.client.model.generated.WorkspaceRead
+import io.airbyte.api.client2.model.generated.WorkspaceRead
 
 /**
  * Mappers that help convert models from the config api to models from the public api.

@@ -9,7 +9,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
-import io.airbyte.api.client.AirbyteApiClient;
+import io.airbyte.api.client2.AirbyteApiClient;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.config.ConnectionContext;
 import io.airbyte.config.OperatorWebhookInput;

@@ -5,13 +5,13 @@
 package io.airbyte.api.server.mappers
 
 import io.airbyte.airbyte_api.model.generated.ConnectionCreateRequest
-import io.airbyte.api.client.model.generated.AirbyteCatalog
-import io.airbyte.api.client.model.generated.ConnectionCreate
-import io.airbyte.api.client.model.generated.ConnectionScheduleData
-import io.airbyte.api.client.model.generated.ConnectionScheduleDataCron
-import io.airbyte.api.client.model.generated.ConnectionScheduleType
-import io.airbyte.api.client.model.generated.ConnectionStatus
-import io.airbyte.api.client.model.generated.Geography
+import io.airbyte.api.client2.model.generated.AirbyteCatalog
+import io.airbyte.api.client2.model.generated.ConnectionCreate
+import io.airbyte.api.client2.model.generated.ConnectionScheduleData
+import io.airbyte.api.client2.model.generated.ConnectionScheduleDataCron
+import io.airbyte.api.client2.model.generated.ConnectionScheduleType
+import io.airbyte.api.client2.model.generated.ConnectionStatus
+import io.airbyte.api.client2.model.generated.Geography
 import io.airbyte.api.server.helpers.ConnectionHelper
 import java.util.UUID
 
@@ -32,50 +32,33 @@ object ConnectionCreateMapper {
     catalogId: UUID?,
     configuredCatalog: AirbyteCatalog?,
   ): ConnectionCreate {
-    val connectionCreateOss = ConnectionCreate()
-    connectionCreateOss.sourceId = connectionCreateRequest.sourceId
-    connectionCreateOss.destinationId = connectionCreateRequest.destinationId
-    connectionCreateOss.name = connectionCreateRequest.name
-    connectionCreateOss.nonBreakingChangesPreference =
-      ConnectionHelper.convertNonBreakingSchemaUpdatesBehaviorEnum(
-        connectionCreateRequest.nonBreakingSchemaUpdatesBehavior,
-      )
-    connectionCreateOss.namespaceDefinition = ConnectionHelper.convertNamespaceDefinitionEnum(connectionCreateRequest.namespaceDefinition)
-    if (connectionCreateRequest.namespaceFormat != null) {
-      connectionCreateOss.namespaceFormat = connectionCreateRequest.namespaceFormat
-    }
-    if (connectionCreateRequest.prefix != null) {
-      connectionCreateOss.setPrefix(connectionCreateRequest.prefix)
-    }
-
-    // set geography
-    connectionCreateOss.setGeography(Geography.fromValue(connectionCreateRequest.dataResidency.toString()))
-
-    // set schedule
-    if (connectionCreateRequest.schedule != null) {
-      connectionCreateOss.scheduleType = ConnectionScheduleType.fromValue(connectionCreateRequest.schedule.scheduleType.toString())
-      val connectionScheduleDataCron = ConnectionScheduleDataCron()
-      connectionScheduleDataCron.cronExpression = connectionCreateRequest.schedule.cronExpression
-      connectionScheduleDataCron.setCronTimeZone("UTC")
-      val connectionScheduleData = ConnectionScheduleData()
-      connectionScheduleData.setCron(connectionScheduleDataCron)
-      connectionCreateOss.setScheduleData(connectionScheduleData)
-    } else {
-      connectionCreateOss.setScheduleType(ConnectionScheduleType.MANUAL)
-    }
-
-    // set streams
-    if (catalogId != null) {
-      connectionCreateOss.setSourceCatalogId(catalogId)
-    }
-    if (configuredCatalog != null) {
-      connectionCreateOss.setSyncCatalog(configuredCatalog)
-    }
-    if (connectionCreateRequest.status != null) {
-      connectionCreateOss.setStatus(ConnectionStatus.fromValue(connectionCreateRequest.status.toString()))
-    } else {
-      connectionCreateOss.setStatus(ConnectionStatus.ACTIVE)
-    }
-    return connectionCreateOss
+    return ConnectionCreate(
+      sourceId = connectionCreateRequest.sourceId,
+      destinationId = connectionCreateRequest.destinationId,
+      name = connectionCreateRequest.name,
+      nonBreakingChangesPreference =
+        ConnectionHelper.convertNonBreakingSchemaUpdatesBehaviorEnum(
+          connectionCreateRequest.nonBreakingSchemaUpdatesBehavior,
+        ),
+      namespaceDefinition = ConnectionHelper.convertNamespaceDefinitionEnum(connectionCreateRequest.namespaceDefinition),
+      namespaceFormat = connectionCreateRequest.namespaceFormat,
+      prefix = connectionCreateRequest.prefix,
+      geography = Geography.decode(connectionCreateRequest.dataResidency.toString()) ?: Geography.AUTO,
+      scheduleType =
+        connectionCreateRequest.schedule?.scheduleType?.let {
+            scheduleType ->
+          ConnectionScheduleType.decode(scheduleType.toString())
+        } ?: ConnectionScheduleType.MANUAL,
+      scheduleData =
+        connectionCreateRequest.schedule?.cronExpression?.let { cronExpression ->
+          ConnectionScheduleData(
+            basicSchedule = null,
+            cron = ConnectionScheduleDataCron(cronExpression = cronExpression, cronTimeZone = "UTC"),
+          )
+        },
+      sourceCatalogId = catalogId,
+      syncCatalog = configuredCatalog,
+      status = connectionCreateRequest.status?.let { status -> ConnectionStatus.decode(status.toString()) } ?: ConnectionStatus.ACTIVE,
+    )
   }
 }

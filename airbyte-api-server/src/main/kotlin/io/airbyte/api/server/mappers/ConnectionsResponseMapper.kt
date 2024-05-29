@@ -5,8 +5,8 @@
 package io.airbyte.api.server.mappers
 
 import io.airbyte.airbyte_api.model.generated.ConnectionsResponse
-import io.airbyte.api.client.model.generated.ConnectionRead
-import io.airbyte.api.client.model.generated.ConnectionReadList
+import io.airbyte.api.client2.model.generated.ConnectionRead
+import io.airbyte.api.client2.model.generated.ConnectionReadList
 import io.airbyte.api.server.constants.CONNECTIONS_PATH
 import io.airbyte.api.server.constants.INCLUDE_DELETED
 import io.airbyte.api.server.constants.WORKSPACE_IDS

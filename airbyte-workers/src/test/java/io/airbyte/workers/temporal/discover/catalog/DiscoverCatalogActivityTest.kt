@@ -3,9 +3,9 @@
  */
 package io.airbyte.workers.temporal.discover.catalog
 
-import io.airbyte.api.client.AirbyteApiClient
 import io.airbyte.api.client.WorkloadApiClient
-import io.airbyte.api.client.model.generated.Geography
+import io.airbyte.api.client2.AirbyteApiClient
+import io.airbyte.api.client2.model.generated.Geography
 import io.airbyte.commons.features.FeatureFlags
 import io.airbyte.commons.protocol.AirbyteMessageSerDeProvider
 import io.airbyte.commons.protocol.AirbyteProtocolVersionedMigratorFactory

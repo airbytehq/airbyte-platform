@@ -188,9 +188,14 @@ class EnvVarConfigBeanFactory {
   @Singleton
   @Named("apiClientEnvMap")
   fun apiClientEnvMap(
-    @Value("\${airbyte.internal.api.host}") apiHost: String,
-    @Value("\${airbyte.internal.api.auth-header.name}") apiAuthHeaderName: String,
-    @Value("\${airbyte.internal.api.auth-header.value}") apiAuthHeaderValue: String,
+    /*
+     * Reference the environment variable, instead of the resolved property, so that
+     * the entry in the orchestrator's application.yml is consistent with all other
+     * services that use the Airbyte API client.
+     */
+    @Value("\${INTERNAL_API_HOST}") internalApiHost: String,
+    @Value("\${airbyte.internal-api.auth-header.name}") apiAuthHeaderName: String,
+    @Value("\${airbyte.internal-api.auth-header.value}") apiAuthHeaderValue: String,
     @Value("\${airbyte.control.plane.auth-endpoint}") controlPlaneAuthEndpoint: String,
     @Value("\${airbyte.data.plane.service-account.email}") dataPlaneServiceAccountEmail: String,
     @Value("\${airbyte.data.plane.service-account.credentials-path}") dataPlaneServiceAccountCredentialsPath: String,
@@ -198,7 +203,7 @@ class EnvVarConfigBeanFactory {
   ): Map<String, String> {
     val envMap: MutableMap<String, String> = HashMap()
 
-    envMap[INTERNAL_API_HOST_ENV_VAR] = apiHost
+    envMap[INTERNAL_API_HOST_ENV_VAR] = internalApiHost
     envMap[AIRBYTE_API_AUTH_HEADER_NAME_ENV_VAR] = apiAuthHeaderName
     envMap[AIRBYTE_API_AUTH_HEADER_VALUE_ENV_VAR] = apiAuthHeaderValue
     envMap[CONTROL_PLANE_AUTH_ENDPOINT_ENV_VAR] = controlPlaneAuthEndpoint

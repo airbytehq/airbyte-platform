@@ -9,12 +9,12 @@ import io.airbyte.airbyte_api.model.generated.WorkspaceOAuthCredentialsRequest
 import io.airbyte.airbyte_api.model.generated.WorkspaceResponse
 import io.airbyte.airbyte_api.model.generated.WorkspaceUpdateRequest
 import io.airbyte.airbyte_api.model.generated.WorkspacesResponse
-import io.airbyte.api.client.model.generated.ListResourcesForWorkspacesRequestBody
-import io.airbyte.api.client.model.generated.Pagination
-import io.airbyte.api.client.model.generated.WorkspaceCreate
-import io.airbyte.api.client.model.generated.WorkspaceIdRequestBody
-import io.airbyte.api.client.model.generated.WorkspaceRead
-import io.airbyte.api.client.model.generated.WorkspaceReadList
+import io.airbyte.api.client2.model.generated.ListResourcesForWorkspacesRequestBody
+import io.airbyte.api.client2.model.generated.Pagination
+import io.airbyte.api.client2.model.generated.WorkspaceCreate
+import io.airbyte.api.client2.model.generated.WorkspaceIdRequestBody
+import io.airbyte.api.client2.model.generated.WorkspaceRead
+import io.airbyte.api.client2.model.generated.WorkspaceReadList
 import io.airbyte.api.server.apiTracking.TrackingHelper
 import io.airbyte.api.server.constants.AIRBYTE_API_AUTH_HEADER_VALUE
 import io.airbyte.api.server.constants.DELETE
@@ -141,7 +141,7 @@ open class WorkspaceServiceImpl(
   ): WorkspaceResponse {
     // For now this should always be true in OSS.
     val organizationId = DEFAULT_ORGANIZATION_ID
-    val workspaceCreate = WorkspaceCreate().name(workspaceCreateRequest.name).organizationId(organizationId)
+    val workspaceCreate = WorkspaceCreate(name = workspaceCreateRequest.name, organizationId = organizationId)
     val workspaceReadHttpResponse =
       try {
         configApiClient.createWorkspace(workspaceCreate, authorization, userInfo)
@@ -214,8 +214,7 @@ open class WorkspaceServiceImpl(
     authorization: String?,
     userInfo: String?,
   ): WorkspaceResponse {
-    val workspaceIdRequestBody = WorkspaceIdRequestBody()
-    workspaceIdRequestBody.workspaceId = workspaceId
+    val workspaceIdRequestBody = WorkspaceIdRequestBody(workspaceId = workspaceId)
     val response =
       try {
         configApiClient.getWorkspace(workspaceIdRequestBody, authorization, userInfo)
@@ -267,8 +266,7 @@ open class WorkspaceServiceImpl(
     authorization: String?,
     userInfo: String?,
   ) {
-    val workspaceIdRequestBody = WorkspaceIdRequestBody()
-    workspaceIdRequestBody.workspaceId = workspaceId
+    val workspaceIdRequestBody = WorkspaceIdRequestBody(workspaceId = workspaceId)
     val response =
       try {
         configApiClient.deleteWorkspace(workspaceIdRequestBody, authorization, userInfo)
@@ -317,17 +315,19 @@ open class WorkspaceServiceImpl(
     authorization: String?,
     userInfo: String?,
   ): WorkspacesResponse {
-    val pagination: Pagination = Pagination().pageSize(limit).rowOffset(offset)
+    val pagination = Pagination(pageSize = limit, rowOffset = offset)
 
     val workspaceIdsToQuery =
       workspaceIds.ifEmpty {
         userService.getAllWorkspaceIdsForUser(authorization ?: System.getenv(AIRBYTE_API_AUTH_HEADER_VALUE), userInfo)
       }
     log.debug("Workspaces to query: $workspaceIdsToQuery")
-    val listResourcesForWorkspacesRequestBody = ListResourcesForWorkspacesRequestBody()
-    listResourcesForWorkspacesRequestBody.includeDeleted = includeDeleted
-    listResourcesForWorkspacesRequestBody.pagination = pagination
-    listResourcesForWorkspacesRequestBody.workspaceIds = workspaceIdsToQuery
+    val listResourcesForWorkspacesRequestBody =
+      ListResourcesForWorkspacesRequestBody(
+        workspaceIds = workspaceIdsToQuery,
+        includeDeleted = includeDeleted,
+        pagination = pagination,
+      )
     val response =
       try {
         configApiClient.listWorkspaces(listResourcesForWorkspacesRequestBody, authorization, userInfo)

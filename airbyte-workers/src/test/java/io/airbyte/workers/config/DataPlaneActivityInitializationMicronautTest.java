@@ -31,8 +31,8 @@ import jakarta.inject.Inject;
 import org.junit.jupiter.api.Test;
 
 @MicronautTest(environments = {WorkerMode.DATA_PLANE})
-@Property(name = "airbyte.internal.api.host",
-          value = "airbyte.test:1337")
+@Property(name = "airbyte.internal-api.base-path",
+          value = "http://airbyte.test:1337")
 @Property(name = "airbyte.version",
           value = "0.4128173.0")
 @Property(name = "airbyte.local.root",

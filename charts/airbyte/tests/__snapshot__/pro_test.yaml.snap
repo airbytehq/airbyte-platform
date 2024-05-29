@@ -116,7 +116,7 @@ manifest should match snapshot:
       DATABASE_URL: jdbc:postgresql://airbyte-db-svc:5432/db-airbyte
       DB_DOCKER_MOUNT: airbyte_db
       GOOGLE_APPLICATION_CREDENTIALS: ""
-      INTERNAL_API_HOST: RELEASE-NAME-airbyte-server-svc:8001
+      INTERNAL_API_HOST: http://RELEASE-NAME-airbyte-server-svc:8001
       JOB_MAIN_CONTAINER_CPU_LIMIT: ""
       JOB_MAIN_CONTAINER_CPU_REQUEST: ""
       JOB_MAIN_CONTAINER_MEMORY_LIMIT: ""

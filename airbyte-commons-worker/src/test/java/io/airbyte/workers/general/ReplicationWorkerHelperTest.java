@@ -16,15 +16,13 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.google.common.collect.ImmutableMap;
-import io.airbyte.api.client.AirbyteApiClient;
 import io.airbyte.api.client.WorkloadApiClient;
-import io.airbyte.api.client.generated.DestinationApi;
-import io.airbyte.api.client.generated.DestinationDefinitionApi;
-import io.airbyte.api.client.generated.SourceApi;
-import io.airbyte.api.client.invoker.generated.ApiException;
-import io.airbyte.api.client.model.generated.DestinationDefinitionRead;
+import io.airbyte.api.client2.AirbyteApiClient;
+import io.airbyte.api.client2.generated.DestinationApi;
+import io.airbyte.api.client2.generated.DestinationDefinitionApi;
+import io.airbyte.api.client2.generated.SourceApi;
+import io.airbyte.api.client2.model.generated.DestinationDefinitionRead;
+import io.airbyte.api.client2.model.generated.NormalizationDestinationDefinitionConfig;
 import io.airbyte.commons.concurrency.VoidCallable;
 import io.airbyte.commons.converters.ThreadedTimeTracker;
 import io.airbyte.commons.json.Jsons;
@@ -56,9 +54,12 @@ import io.airbyte.workers.internal.bookkeeping.events.ReplicationAirbyteMessageE
 import io.airbyte.workers.internal.bookkeeping.events.ReplicationAirbyteMessageEventPublishingHelper;
 import io.airbyte.workers.internal.syncpersistence.SyncPersistence;
 import io.airbyte.workload.api.client.generated.WorkloadApi;
+import java.io.IOException;
+import java.net.URI;
 import java.nio.file.Path;
 import java.time.Instant;
 import java.util.Collections;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 import org.junit.jupiter.api.AfterEach;
@@ -124,7 +125,7 @@ class ReplicationWorkerHelperTest {
 
   @ParameterizedTest
   @ValueSource(booleans = {true, false})
-  void testGetReplicationOutput(final boolean supportRefreshes) throws JsonProcessingException, ApiException {
+  void testGetReplicationOutput(final boolean supportRefreshes) throws IOException {
     mockSupportRefreshes(supportRefreshes);
     // Need to pass in a replication context
     final ConfiguredAirbyteCatalog catalog = new ConfiguredAirbyteCatalog().withAdditionalProperty("test", "test");
@@ -153,7 +154,7 @@ class ReplicationWorkerHelperTest {
   }
 
   @Test
-  void testRateLimitedStreamStatusMessages() throws ApiException {
+  void testRateLimitedStreamStatusMessages() throws IOException {
     mockSupportRefreshes(false);
     final Instant rateLimitedTimeStamp = Instant.parse("2024-05-29T09:25:27.000000Z");
     final Instant recordMessageTimestamp = Instant.parse("2024-05-29T09:25:28.000000Z");
@@ -195,7 +196,7 @@ class ReplicationWorkerHelperTest {
         .withRecord(new AirbyteRecordMessage()
             .withNamespace(streamDescriptor.getNamespace())
             .withStream(streamDescriptor.getName())
-            .withData(Jsons.jsonNode(ImmutableMap.of("col", 1)))
+            .withData(Jsons.jsonNode(Map.of("col", 1)))
             .withEmittedAt(recordMessageTimestamp.toEpochMilli()));
 
     replicationWorkerHelper.internalProcessMessageFromSource(rateLimitedMessage);
@@ -209,7 +210,7 @@ class ReplicationWorkerHelperTest {
   }
 
   @Test
-  void testAnalyticsMessageHandling() throws ApiException {
+  void testAnalyticsMessageHandling() throws IOException {
     mockSupportRefreshes(false);
     final ReplicationContext context =
         new ReplicationContext(true, UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), 0L,
@@ -276,8 +277,24 @@ class ReplicationWorkerHelperTest {
     verify(replicationWorkerHelper, times(1)).internalProcessMessageFromDestination(mapRevertedDestinationMessage);
   }
 
-  private void mockSupportRefreshes(final boolean supportRefreshes) throws ApiException {
-    when(destinationDefinitionApi.getDestinationDefinition(any())).thenReturn(new DestinationDefinitionRead().supportRefreshes(supportRefreshes));
+  private void mockSupportRefreshes(final boolean supportRefreshes) throws IOException {
+    when(destinationDefinitionApi.getDestinationDefinition(any())).thenReturn(
+        new DestinationDefinitionRead(
+            UUID.randomUUID(),
+            "name",
+            "dockerRepository",
+            "dockerImageTag",
+            URI.create("http://localhost"),
+            false,
+            new NormalizationDestinationDefinitionConfig(),
+            supportRefreshes,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null));
   }
 
 }

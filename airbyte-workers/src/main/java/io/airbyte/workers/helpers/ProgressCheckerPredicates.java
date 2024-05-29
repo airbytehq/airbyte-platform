@@ -4,7 +4,7 @@
 
 package io.airbyte.workers.helpers;
 
-import io.airbyte.api.client.model.generated.AttemptStats;
+import io.airbyte.api.client2.model.generated.AttemptStats;
 import jakarta.annotation.Nonnull;
 import jakarta.inject.Singleton;
 import java.util.Objects;

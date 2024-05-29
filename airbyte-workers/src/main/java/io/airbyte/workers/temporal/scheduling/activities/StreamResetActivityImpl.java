@@ -9,16 +9,17 @@ import static io.airbyte.metrics.lib.ApmTraceConstants.Tags.CONNECTION_ID_KEY;
 import static io.airbyte.metrics.lib.ApmTraceConstants.Tags.JOB_ID_KEY;
 
 import datadog.trace.api.Trace;
-import io.airbyte.api.client.AirbyteApiClient;
-import io.airbyte.api.client.invoker.generated.ApiException;
-import io.airbyte.api.client.model.generated.DeleteStreamResetRecordsForJobRequest;
+import io.airbyte.api.client2.AirbyteApiClient;
+import io.airbyte.api.client2.model.generated.DeleteStreamResetRecordsForJobRequest;
 import io.airbyte.commons.temporal.config.WorkerMode;
 import io.airbyte.commons.temporal.exception.RetryableException;
 import io.airbyte.metrics.lib.ApmTraceUtils;
 import io.micronaut.context.annotation.Requires;
 import jakarta.inject.Singleton;
+import java.io.IOException;
 import java.util.Map;
 import lombok.extern.slf4j.Slf4j;
+import org.openapitools.client.infrastructure.ClientException;
 
 /**
  * StreamResetActivityImpl.
@@ -40,10 +41,9 @@ public class StreamResetActivityImpl implements StreamResetActivity {
     ApmTraceUtils.addTagsToTrace(Map.of(CONNECTION_ID_KEY, input.getConnectionId(), JOB_ID_KEY, input.getJobId()));
 
     try {
-      airbyteApiClient.getJobsApi().deleteStreamResetRecordsForJob(new DeleteStreamResetRecordsForJobRequest()
-          .connectionId(input.getConnectionId())
-          .jobId(input.getJobId()));
-    } catch (final ApiException e) {
+      airbyteApiClient.getJobsApi()
+          .deleteStreamResetRecordsForJob(new DeleteStreamResetRecordsForJobRequest(input.getConnectionId(), input.getJobId()));
+    } catch (final ClientException | IOException e) {
       throw new RetryableException(e);
     }
   }

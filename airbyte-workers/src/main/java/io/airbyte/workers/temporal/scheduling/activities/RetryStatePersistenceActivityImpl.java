@@ -9,16 +9,17 @@ import static io.airbyte.metrics.lib.ApmTraceConstants.Tags.CONNECTION_ID_KEY;
 import static io.airbyte.metrics.lib.ApmTraceConstants.Tags.WORKSPACE_ID_KEY;
 
 import datadog.trace.api.Trace;
-import io.airbyte.api.client.AirbyteApiClient;
-import io.airbyte.api.client.invoker.generated.ApiException;
-import io.airbyte.api.client.model.generated.ConnectionIdRequestBody;
-import io.airbyte.api.client.model.generated.WorkspaceRead;
+import io.airbyte.api.client2.AirbyteApiClient;
+import io.airbyte.api.client2.model.generated.ConnectionIdRequestBody;
+import io.airbyte.api.client2.model.generated.WorkspaceRead;
 import io.airbyte.commons.temporal.exception.RetryableException;
 import io.airbyte.metrics.lib.ApmTraceUtils;
 import io.airbyte.workers.helpers.RetryStateClient;
 import jakarta.inject.Singleton;
+import java.io.IOException;
 import java.util.Map;
 import java.util.UUID;
+import org.openapitools.client.infrastructure.ClientException;
 
 /**
  * Concrete implementation of RetryStatePersistenceActivity. Delegates to non-temporal business
@@ -49,17 +50,20 @@ public class RetryStatePersistenceActivityImpl implements RetryStatePersistenceA
 
   @Override
   public PersistOutput persistRetryState(final PersistInput input) {
-    final var success = client.persistRetryState(input.getJobId(), input.getConnectionId(), input.getManager());
-
-    return new PersistOutput(success);
+    try {
+      final var success = client.persistRetryState(input.getJobId(), input.getConnectionId(), input.getManager());
+      return new PersistOutput(success);
+    } catch (final ClientException | IOException e) {
+      throw new RetryableException(e);
+    }
   }
 
   private UUID getWorkspaceId(final UUID connectionId) {
     try {
       final WorkspaceRead workspace =
-          airbyteApiClient.getWorkspaceApi().getWorkspaceByConnectionId(new ConnectionIdRequestBody().connectionId(connectionId));
+          airbyteApiClient.getWorkspaceApi().getWorkspaceByConnectionId(new ConnectionIdRequestBody(connectionId));
       return workspace.getWorkspaceId();
-    } catch (final ApiException e) {
+    } catch (final ClientException | IOException e) {
       throw new RetryableException(e);
     }
   }

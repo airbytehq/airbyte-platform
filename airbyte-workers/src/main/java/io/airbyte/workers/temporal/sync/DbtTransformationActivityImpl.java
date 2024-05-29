@@ -11,11 +11,10 @@ import static io.airbyte.metrics.lib.ApmTraceConstants.Tags.JOB_ID_KEY;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import datadog.trace.api.Trace;
-import io.airbyte.api.client.AirbyteApiClient;
-import io.airbyte.api.client.invoker.generated.ApiException;
-import io.airbyte.api.client.model.generated.ScopeType;
-import io.airbyte.api.client.model.generated.SecretPersistenceConfig;
-import io.airbyte.api.client.model.generated.SecretPersistenceConfigGetRequestBody;
+import io.airbyte.api.client2.AirbyteApiClient;
+import io.airbyte.api.client2.model.generated.ScopeType;
+import io.airbyte.api.client2.model.generated.SecretPersistenceConfig;
+import io.airbyte.api.client2.model.generated.SecretPersistenceConfigGetRequestBody;
 import io.airbyte.commons.functional.CheckedSupplier;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.commons.temporal.HeartbeatUtils;
@@ -53,6 +52,7 @@ import io.temporal.activity.Activity;
 import io.temporal.activity.ActivityExecutionContext;
 import jakarta.inject.Named;
 import jakarta.inject.Singleton;
+import java.io.IOException;
 import java.nio.file.Path;
 import java.util.Map;
 import java.util.Optional;
@@ -132,12 +132,12 @@ public class DbtTransformationActivityImpl implements DbtTransformationActivity 
           if (organizationId != null && featureFlagClient.boolVariation(UseRuntimeSecretPersistence.INSTANCE, new Organization(organizationId))) {
             try {
               final SecretPersistenceConfig secretPersistenceConfig = airbyteApiClient.getSecretPersistenceConfigApi().getSecretsPersistenceConfig(
-                  new SecretPersistenceConfigGetRequestBody().scopeType(ScopeType.ORGANIZATION).scopeId(organizationId));
+                  new SecretPersistenceConfigGetRequestBody(ScopeType.ORGANIZATION, organizationId));
               final RuntimeSecretPersistence runtimeSecretPersistence =
                   SecretPersistenceConfigHelper.fromApiSecretPersistenceConfig(secretPersistenceConfig);
               fullDestinationConfig =
                   secretsRepositoryReader.hydrateConfigFromRuntimeSecretPersistence(input.getDestinationConfiguration(), runtimeSecretPersistence);
-            } catch (final ApiException e) {
+            } catch (final IOException e) {
               throw new RuntimeException(e);
             }
           } else {

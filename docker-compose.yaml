@@ -302,7 +302,7 @@ services:
       - AIRBYTE_API_HOST=${AIRBYTE_API_HOST}
       - AIRBYTE_VERSION=${VERSION}
       - DEPLOYMENT_MODE=${DEPLOYMENT_MODE}
-      - INTERNAL_API_HOST=${INTERNAL_API_URL} # Non-ideal, but the existing URL can't have https:// added because it's used for nginx conf
+      - INTERNAL_API_HOST=${INTERNAL_API_HOST} # Non-ideal, but the existing URL can't have https:// added because it's used for nginx conf
       - LOG_LEVEL=${LOG_LEVEL}
       - MICROMETER_METRICS_ENABLED=${MICROMETER_METRICS_ENABLED}
       - MICROMETER_METRICS_STATSD_FLAVOR=${MICROMETER_METRICS_STATSD_FLAVOR}

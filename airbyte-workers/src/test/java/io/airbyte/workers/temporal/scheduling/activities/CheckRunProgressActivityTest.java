@@ -11,6 +11,7 @@ import static org.mockito.Mockito.when;
 
 import io.airbyte.workers.helpers.ProgressChecker;
 import io.airbyte.workers.temporal.scheduling.activities.CheckRunProgressActivity.Input;
+import java.io.IOException;
 import java.util.UUID;
 import java.util.stream.Stream;
 import org.junit.jupiter.api.BeforeEach;
@@ -32,7 +33,7 @@ class CheckRunProgressActivityTest {
 
   @ParameterizedTest
   @MethodSource("jobAttemptMatrix")
-  void delegatesToProgressChecker(final long jobId, final int attemptNo, final boolean madeProgress) {
+  void delegatesToProgressChecker(final long jobId, final int attemptNo, final boolean madeProgress) throws IOException {
     final CheckRunProgressActivity activity = new CheckRunProgressActivityImpl(mProgressChecker);
     when(mProgressChecker.check(jobId, attemptNo)).thenReturn(madeProgress);
 

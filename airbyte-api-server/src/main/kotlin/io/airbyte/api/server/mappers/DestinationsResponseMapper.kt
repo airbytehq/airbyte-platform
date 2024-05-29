@@ -5,8 +5,8 @@
 package io.airbyte.api.server.mappers
 
 import io.airbyte.airbyte_api.model.generated.DestinationsResponse
-import io.airbyte.api.client.model.generated.DestinationRead
-import io.airbyte.api.client.model.generated.DestinationReadList
+import io.airbyte.api.client2.model.generated.DestinationRead
+import io.airbyte.api.client2.model.generated.DestinationReadList
 import io.airbyte.api.server.constants.DESTINATIONS_PATH
 import io.airbyte.api.server.constants.INCLUDE_DELETED
 import io.airbyte.api.server.constants.WORKSPACE_IDS

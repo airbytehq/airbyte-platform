@@ -6,8 +6,8 @@ package io.airbyte.workers.temporal.scheduling.activities;
 
 import static org.mockito.Mockito.when;
 
-import io.airbyte.api.client.AirbyteApiClient;
-import io.airbyte.api.client.generated.JobsApi;
+import io.airbyte.api.client2.AirbyteApiClient;
+import io.airbyte.api.client2.generated.JobsApi;
 import io.airbyte.commons.temporal.utils.PayloadChecker;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.extension.ExtendWith;

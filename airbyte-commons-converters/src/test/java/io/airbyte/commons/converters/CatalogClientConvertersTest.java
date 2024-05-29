@@ -31,33 +31,40 @@ class CatalogClientConvertersTest {
       .withSourceDefinedPrimaryKey(Collections.emptyList())
       .withSupportedSyncModes(List.of(SyncMode.FULL_REFRESH, SyncMode.INCREMENTAL));
 
-  private static final io.airbyte.api.client.model.generated.AirbyteStream CLIENT_STREAM =
-      new io.airbyte.api.client.model.generated.AirbyteStream()
-          .name(STREAM_NAME)
-          .jsonSchema(CatalogHelpers.fieldsToJsonSchema(Field.of(ID_FIELD_NAME, JsonSchemaType.STRING)))
-          .defaultCursorField(Lists.newArrayList(ID_FIELD_NAME))
-          .sourceDefinedCursor(false)
-          .sourceDefinedPrimaryKey(Collections.emptyList())
-          .supportedSyncModes(List.of(io.airbyte.api.client.model.generated.SyncMode.FULL_REFRESH,
-              io.airbyte.api.client.model.generated.SyncMode.INCREMENTAL));
-  private static final io.airbyte.api.client.model.generated.AirbyteStreamConfiguration CLIENT_DEFAULT_STREAM_CONFIGURATION =
-      new io.airbyte.api.client.model.generated.AirbyteStreamConfiguration()
-          .syncMode(io.airbyte.api.client.model.generated.SyncMode.FULL_REFRESH)
-          .cursorField(Lists.newArrayList(ID_FIELD_NAME))
-          .destinationSyncMode(io.airbyte.api.client.model.generated.DestinationSyncMode.APPEND)
-          .primaryKey(Collections.emptyList())
-          .aliasName(Names.toAlphanumericAndUnderscore(STREAM_NAME))
-          .selected(true);
+  private static final io.airbyte.api.client2.model.generated.AirbyteStream CLIENT_STREAM =
+      new io.airbyte.api.client2.model.generated.AirbyteStream(
+          STREAM_NAME,
+          CatalogHelpers.fieldsToJsonSchema(Field.of(ID_FIELD_NAME, JsonSchemaType.STRING)),
+          List.of(io.airbyte.api.client2.model.generated.SyncMode.FULL_REFRESH,
+              io.airbyte.api.client2.model.generated.SyncMode.INCREMENTAL),
+          false,
+          List.of(ID_FIELD_NAME),
+          List.of(),
+          null);
+  private static final io.airbyte.api.client2.model.generated.AirbyteStreamConfiguration CLIENT_DEFAULT_STREAM_CONFIGURATION =
+      new io.airbyte.api.client2.model.generated.AirbyteStreamConfiguration(
+          io.airbyte.api.client2.model.generated.SyncMode.FULL_REFRESH,
+          io.airbyte.api.client2.model.generated.DestinationSyncMode.APPEND,
+          List.of(ID_FIELD_NAME),
+          List.of(),
+          Names.toAlphanumericAndUnderscore(STREAM_NAME),
+          true,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null);
 
   private static final AirbyteCatalog BASIC_MODEL_CATALOG = new AirbyteCatalog().withStreams(
       Lists.newArrayList(STREAM));
 
-  private static final io.airbyte.api.client.model.generated.AirbyteCatalog EXPECTED_CLIENT_CATALOG =
-      new io.airbyte.api.client.model.generated.AirbyteCatalog()
-          .streams(Lists.newArrayList(
-              new io.airbyte.api.client.model.generated.AirbyteStreamAndConfiguration()
-                  .stream(CLIENT_STREAM)
-                  .config(CLIENT_DEFAULT_STREAM_CONFIGURATION)));
+  private static final io.airbyte.api.client2.model.generated.AirbyteCatalog EXPECTED_CLIENT_CATALOG =
+      new io.airbyte.api.client2.model.generated.AirbyteCatalog(
+          List.of(
+              new io.airbyte.api.client2.model.generated.AirbyteStreamAndConfiguration(
+                  CLIENT_STREAM,
+                  CLIENT_DEFAULT_STREAM_CONFIGURATION)));
 
   @Test
   void testConvertToClientAPI() {

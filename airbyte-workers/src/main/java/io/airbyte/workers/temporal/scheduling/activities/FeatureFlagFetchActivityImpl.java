@@ -4,14 +4,15 @@
 
 package io.airbyte.workers.temporal.scheduling.activities;
 
-import io.airbyte.api.client.AirbyteApiClient;
-import io.airbyte.api.client.invoker.generated.ApiException;
-import io.airbyte.api.client.model.generated.ConnectionIdRequestBody;
-import io.airbyte.api.client.model.generated.WorkspaceRead;
+import io.airbyte.api.client2.AirbyteApiClient;
+import io.airbyte.api.client2.model.generated.ConnectionIdRequestBody;
+import io.airbyte.api.client2.model.generated.WorkspaceRead;
 import jakarta.inject.Singleton;
+import java.io.IOException;
 import java.util.HashMap;
 import java.util.UUID;
 import lombok.extern.slf4j.Slf4j;
+import org.openapitools.client.infrastructure.ClientException;
 
 /**
  * Fetches feature flags to be used in temporal workflows.
@@ -35,9 +36,9 @@ public class FeatureFlagFetchActivityImpl implements FeatureFlagFetchActivity {
   public UUID getWorkspaceId(final UUID connectionId) {
     try {
       final WorkspaceRead workspace =
-          airbyteApiClient.getWorkspaceApi().getWorkspaceByConnectionId(new ConnectionIdRequestBody().connectionId(connectionId));
+          airbyteApiClient.getWorkspaceApi().getWorkspaceByConnectionId(new ConnectionIdRequestBody(connectionId));
       return workspace.getWorkspaceId();
-    } catch (final ApiException e) {
+    } catch (final ClientException | IOException e) {
       throw new RuntimeException("Unable to get workspace ID for connection", e);
     }
   }

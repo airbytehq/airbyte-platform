@@ -1,12 +1,12 @@
 package io.airbyte.workers.internal.syncpersistence
 
 import datadog.trace.api.Trace
-import io.airbyte.api.client.AirbyteApiClient
-import io.airbyte.api.client.model.generated.AttemptStats
-import io.airbyte.api.client.model.generated.AttemptStreamStats
-import io.airbyte.api.client.model.generated.ConnectionState
-import io.airbyte.api.client.model.generated.ConnectionStateCreateOrUpdate
-import io.airbyte.api.client.model.generated.SaveStatsRequestBody
+import io.airbyte.api.client2.AirbyteApiClient
+import io.airbyte.api.client2.model.generated.AttemptStats
+import io.airbyte.api.client2.model.generated.AttemptStreamStats
+import io.airbyte.api.client2.model.generated.ConnectionState
+import io.airbyte.api.client2.model.generated.ConnectionStateCreateOrUpdate
+import io.airbyte.api.client2.model.generated.SaveStatsRequestBody
 import io.airbyte.commons.converters.StateConverter
 import io.airbyte.config.SyncStats
 import io.airbyte.config.helpers.StateMessageHelper
@@ -190,9 +190,7 @@ class SyncPersistenceImpl
         // we still have data to flush
         prepareDataForFlush()
         try {
-          retryWithJitterThrows("Flush States from SyncPersistenceImpl") {
-            doFlushState()
-          }
+          doFlushState()
         } catch (e: Exception) {
           if (stateToFlush?.isEmpty() == false) {
             metricClient.emitFailedStateCloseMetrics(connectionId)
@@ -211,9 +209,7 @@ class SyncPersistenceImpl
       // states.
       if (hasStatsToFlush()) {
         try {
-          retryWithJitterThrows("Flush Stats from SyncPersistenceImpl") {
-            doFlushStats()
-          }
+          doFlushStats()
         } catch (e: Exception) {
           metricClient.emitFailedStatsCloseMetrics(connectionId)
           throw e
@@ -283,9 +279,7 @@ class SyncPersistenceImpl
       metricClient.count(OssMetricsRegistry.STATE_COMMIT_ATTEMPT, 1)
 
       val stateApiRequest =
-        ConnectionStateCreateOrUpdate()
-          .connectionId(connectionId)
-          .connectionState(StateConverter.toClient(connectionId, maybeStateWrapper))
+        ConnectionStateCreateOrUpdate(connectionId = connectionId, connectionState = StateConverter.toClient(connectionId, maybeStateWrapper))
 
       try {
         airbyteApiClient.stateApi.createOrUpdateState(stateApiRequest)
@@ -306,7 +300,7 @@ class SyncPersistenceImpl
 
       metricClient.count(OssMetricsRegistry.STATS_COMMIT_ATTEMPT, 1)
       try {
-        airbyteApiClient.attemptApi.saveStats(statsToPersist)
+        airbyteApiClient.attemptApi.saveStats(statsToPersist!!)
       } catch (e: Exception) {
         metricClient.count(OssMetricsRegistry.STATS_COMMIT_ATTEMPT_FAILED, 1)
         throw e
@@ -319,22 +313,6 @@ class SyncPersistenceImpl
     private fun hasStatesToFlush(): Boolean = !stateBuffer.isEmpty() || stateToFlush != null
 
     private fun hasStatsToFlush(): Boolean = isReceivingStats && statsToPersist != null
-
-    /**
-     * Wraps RetryWithJitterThrows for testing.
-     *
-     *
-     * This is because retryWithJitterThrows is a static method, in order to avoid waiting 10min to test
-     * failures, we can override the config with some values more appropriate for testing.
-     */
-    private fun retryWithJitterThrows(
-      desc: String,
-      call: () -> Unit,
-    ) {
-      retryWithJitterConfig?.let {
-        AirbyteApiClient.retryWithJitterThrows(call, desc, it.jitterMaxIntervalSecs, it.finalIntervalSecs, it.maxTries)
-      } ?: AirbyteApiClient.retryWithJitterThrows(call, desc)
-    }
 
     override fun updateStats(recordMessage: AirbyteRecordMessage) {
       isReceivingStats = true
@@ -368,29 +346,27 @@ private fun buildSaveStatsRequest(
   val totalSyncStats = syncStatsTracker.getTotalStats(false)
   val streamSyncStats = syncStatsTracker.getPerStreamStats(false)
 
-  return SaveStatsRequestBody()
-    .jobId(jobId)
-    .attemptNumber(attemptNumber)
-    .stats(totalSyncStats.toAttemptStats())
-    .connectionId(connectionId)
-    .streamStats(
+  return SaveStatsRequestBody(
+    jobId = jobId,
+    attemptNumber = attemptNumber,
+    stats = totalSyncStats.toAttemptStats(),
+    connectionId = connectionId,
+    streamStats =
       streamSyncStats.map {
-        AttemptStreamStats()
-          .streamName(it.streamName)
-          .streamNamespace(it.streamNamespace)
-          .stats(it.stats.toAttemptStats())
+        AttemptStreamStats(streamName = it.streamName, streamNamespace = it.streamNamespace, stats = it.stats.toAttemptStats())
       }.toList(),
-    )
+  )
 }
 
 private fun SyncStats.toAttemptStats(): AttemptStats =
-  AttemptStats()
-    .bytesEmitted(bytesEmitted)
-    .recordsEmitted(recordsEmitted)
-    .estimatedBytes(estimatedBytes)
-    .estimatedRecords(estimatedRecords)
-    .bytesCommitted(bytesCommitted)
-    .recordsCommitted(recordsCommitted)
+  AttemptStats(
+    recordsEmitted = recordsEmitted,
+    bytesEmitted = bytesEmitted,
+    estimatedBytes = estimatedBytes,
+    estimatedRecords = estimatedRecords,
+    bytesCommitted = bytesCommitted,
+    recordsCommitted = recordsCommitted,
+  )
 
 private fun MetricClient.emitFailedStateCloseMetrics(connectionId: UUID?) {
   val attribute: MetricAttribute? = connectionId?.let { MetricAttribute(MetricTags.CONNECTION_ID, it.toString()) }

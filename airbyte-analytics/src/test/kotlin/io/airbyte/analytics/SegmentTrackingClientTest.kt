@@ -7,7 +7,7 @@ package io.airbyte.analytics
 import com.segment.analytics.Analytics
 import com.segment.analytics.messages.IdentifyMessage
 import com.segment.analytics.messages.TrackMessage
-import io.airbyte.api.client.model.generated.DeploymentMetadataRead
+import io.airbyte.api.client2.model.generated.DeploymentMetadataRead
 import io.airbyte.commons.version.AirbyteVersion
 import io.airbyte.config.Configs
 import io.airbyte.config.Configs.WorkerEnvironment
@@ -28,9 +28,13 @@ class SegmentTrackingClientTest {
   private val airbyteVersion = AirbyteVersion("dev")
   private val deploymentId = UUID.randomUUID()
   private val deploymentMetadata: DeploymentMetadataRead =
-    DeploymentMetadataRead().id(
+    DeploymentMetadataRead(
+      id =
       deploymentId,
-    ).environment(WorkerEnvironment.KUBERNETES.name).mode(Configs.DeploymentMode.OSS.name).version(airbyteVersion.serialize())
+      environment = WorkerEnvironment.KUBERNETES.name,
+      mode = Configs.DeploymentMode.OSS.name,
+      version = airbyteVersion.serialize(),
+    )
   private val deployment: Deployment = Deployment(deploymentMetadata)
   private val identity =
     TrackingIdentity(

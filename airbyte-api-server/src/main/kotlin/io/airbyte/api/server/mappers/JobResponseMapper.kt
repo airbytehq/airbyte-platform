@@ -7,11 +7,11 @@ package io.airbyte.api.server.mappers
 import io.airbyte.airbyte_api.model.generated.JobResponse
 import io.airbyte.airbyte_api.model.generated.JobStatusEnum
 import io.airbyte.airbyte_api.model.generated.JobTypeEnum
-import io.airbyte.api.client.model.generated.JobConfigType
-import io.airbyte.api.client.model.generated.JobInfoRead
-import io.airbyte.api.client.model.generated.JobRead
-import io.airbyte.api.client.model.generated.JobStatus
-import io.airbyte.api.client.model.generated.JobWithAttemptsRead
+import io.airbyte.api.client2.model.generated.JobConfigType
+import io.airbyte.api.client2.model.generated.JobInfoRead
+import io.airbyte.api.client2.model.generated.JobRead
+import io.airbyte.api.client2.model.generated.JobStatus
+import io.airbyte.api.client2.model.generated.JobWithAttemptsRead
 import io.airbyte.api.server.mappers.JobsResponseMapper.ALLOWED_CONFIG_TYPES
 import java.time.Duration
 import java.time.Instant

@@ -14,12 +14,12 @@ import io.airbyte.airbyte_api.model.generated.NonBreakingSchemaUpdatesBehaviorEn
 import io.airbyte.airbyte_api.model.generated.ScheduleTypeWithBasicEnum
 import io.airbyte.airbyte_api.model.generated.StreamConfiguration
 import io.airbyte.airbyte_api.model.generated.StreamConfigurations
-import io.airbyte.api.client.model.generated.ConnectionRead
-import io.airbyte.api.client.model.generated.ConnectionScheduleType
-import io.airbyte.api.client.model.generated.DestinationSyncMode
-import io.airbyte.api.client.model.generated.NamespaceDefinitionType
-import io.airbyte.api.client.model.generated.NonBreakingChangesPreference
-import io.airbyte.api.client.model.generated.SyncMode
+import io.airbyte.api.client2.model.generated.ConnectionRead
+import io.airbyte.api.client2.model.generated.ConnectionScheduleType
+import io.airbyte.api.client2.model.generated.DestinationSyncMode
+import io.airbyte.api.client2.model.generated.NamespaceDefinitionType
+import io.airbyte.api.client2.model.generated.NonBreakingChangesPreference
+import io.airbyte.api.client2.model.generated.SyncMode
 import java.util.UUID
 
 /**

@@ -283,7 +283,8 @@ public class JobErrorReporter {
   }
 
   private Map<String, String> getFailureReasonMetadata(final FailureReason failureReason) {
-    final Map<String, Object> failureReasonAdditionalProps = failureReason.getMetadata().getAdditionalProperties();
+    final Map<String, Object> failureReasonAdditionalProps =
+        failureReason.getMetadata() != null ? failureReason.getMetadata().getAdditionalProperties() : Map.of();
     final Map<String, String> outMetadata = new HashMap<>();
 
     if (failureReasonAdditionalProps.containsKey(CONNECTOR_COMMAND_META_KEY)

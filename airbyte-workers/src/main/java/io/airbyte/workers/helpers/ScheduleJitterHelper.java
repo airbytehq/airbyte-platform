@@ -4,7 +4,7 @@
 
 package io.airbyte.workers.helpers;
 
-import io.airbyte.api.client.model.generated.ConnectionScheduleType;
+import io.airbyte.api.client2.model.generated.ConnectionScheduleType;
 import io.micronaut.context.annotation.Value;
 import jakarta.inject.Singleton;
 import java.time.Duration;
