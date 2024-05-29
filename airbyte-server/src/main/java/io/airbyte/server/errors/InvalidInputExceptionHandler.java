@@ -4,8 +4,9 @@
 
 package io.airbyte.server.errors;
 
+import io.airbyte.api.model.generated.InvalidInputExceptionInfo;
+import io.airbyte.api.model.generated.InvalidInputProperty;
 import io.airbyte.commons.json.Jsons;
-import io.airbyte.commons.server.errors.InvalidInputExceptionMapper;
 import io.micronaut.context.annotation.Replaces;
 import io.micronaut.context.annotation.Requires;
 import io.micronaut.http.HttpRequest;
@@ -16,7 +17,11 @@ import io.micronaut.http.annotation.Produces;
 import io.micronaut.http.server.exceptions.ExceptionHandler;
 import io.micronaut.validation.exceptions.ConstraintExceptionHandler;
 import jakarta.inject.Singleton;
+import jakarta.validation.ConstraintViolation;
 import jakarta.validation.ConstraintViolationException;
+import java.util.ArrayList;
+import java.util.List;
+import org.apache.logging.log4j.core.util.Throwables;
 
 /**
  * https://www.baeldung.com/jersey-bean-validation#custom-exception-handler. handles exceptions
@@ -34,8 +39,31 @@ public class InvalidInputExceptionHandler implements ExceptionHandler<Constraint
   @Override
   public HttpResponse handle(final HttpRequest request, final ConstraintViolationException exception) {
     return HttpResponse.status(HttpStatus.BAD_REQUEST)
-        .body(Jsons.serialize(InvalidInputExceptionMapper.infoFromConstraints(exception)))
+        .body(Jsons.serialize(infoFromConstraints(exception)))
         .contentType(MediaType.APPLICATION_JSON_TYPE);
+  }
+
+  /**
+   * Static factory for invalid input.
+   *
+   * @param cve exception with invalidity info
+   * @return exception
+   */
+  public static InvalidInputExceptionInfo infoFromConstraints(final ConstraintViolationException cve) {
+    final InvalidInputExceptionInfo exceptionInfo = new InvalidInputExceptionInfo()
+        .exceptionClassName(cve.getClass().getName())
+        .message("Some properties contained invalid input.")
+        .exceptionStack(Throwables.toStringList(cve));
+
+    final List<InvalidInputProperty> props = new ArrayList<InvalidInputProperty>();
+    for (final ConstraintViolation<?> cv : cve.getConstraintViolations()) {
+      props.add(new InvalidInputProperty()
+          .propertyPath(cv.getPropertyPath().toString())
+          .message(cv.getMessage())
+          .invalidValue(cv.getInvalidValue() != null ? cv.getInvalidValue().toString() : "null"));
+    }
+    exceptionInfo.validationErrors(props);
+    return exceptionInfo;
   }
 
 }

@@ -21,9 +21,9 @@ import org.slf4j.LoggerFactory;
 @Produces
 @Singleton
 @Requires(classes = IdNotFoundKnownException.class)
-public class IdNotFoundExceptionMapper implements ExceptionHandler<IdNotFoundKnownException, HttpResponse> {
+public class IdNotFoundExceptionHandler implements ExceptionHandler<IdNotFoundKnownException, HttpResponse> {
 
-  private static final Logger LOGGER = LoggerFactory.getLogger(IdNotFoundExceptionMapper.class);
+  private static final Logger LOGGER = LoggerFactory.getLogger(IdNotFoundExceptionHandler.class);
 
   @Override
   public HttpResponse handle(final HttpRequest request, final IdNotFoundKnownException exception) {
