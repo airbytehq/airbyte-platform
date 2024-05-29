@@ -95,8 +95,8 @@ open class SecretsRepositoryWriter(
 
     updatedSplitConfig.getCoordinateToPayload()
       .forEach { (coordinate: SecretCoordinate, payload: String) ->
-        metricClient.count(OssMetricsRegistry.UPDATE_SECRET_DEFAULT_STORE, 1)
         runtimeSecretPersistence?.write(coordinate, payload) ?: secretPersistence.write(coordinate, payload)
+        metricClient.count(OssMetricsRegistry.UPDATE_SECRET_DEFAULT_STORE, 1)
       }
 
     val pathToSecrets = SecretsHelpers.getSortedSecretPaths(spec)
@@ -106,9 +106,17 @@ open class SecretsRepositoryWriter(
 
           if (featureFlagClient.boolVariation(DeleteDanglingSecrets, Workspace(workspaceId))) {
             val secretCoord = SecretCoordinate.fromFullCoordinate(coordinate)
-            metricClient.count(OssMetricsRegistry.DELETE_SECRET_DEFAULT_STORE, 1)
             logger.info { "Disabling: ${secretCoord.fullCoordinate}" }
-            (runtimeSecretPersistence ?: secretPersistence).disable(secretCoord)
+            try {
+              (runtimeSecretPersistence ?: secretPersistence).disable(secretCoord)
+              metricClient.count(OssMetricsRegistry.DELETE_SECRET_DEFAULT_STORE, 1)
+            } catch (e: Exception) {
+              // Multiple versions within one secret is a legacy concern. This is no longer
+              // possible moving forward. Catch the exception to best-effort disable other secret versions.
+              // The other reason to catch this is propagating the exception prevents the database
+              // from being updated with the new coordinates.
+              logger.error(e) { "Error disabling secret: ${secretCoord.fullCoordinate}" }
+            }
           }
         }
       }

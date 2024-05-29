@@ -22,6 +22,7 @@ import io.mockk.verify
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.assertDoesNotThrow
 import java.util.UUID
 
 internal class SecretsRepositoryWriterTest {
@@ -242,6 +243,53 @@ internal class SecretsRepositoryWriterTest {
 
     verify(exactly = 0) { secretPersistence.disable(SecretCoordinate.fromFullCoordinate(oldCoordinate)) }
     assertEquals(secret, secretPersistence.read(SecretCoordinate.fromFullCoordinate(oldCoordinate)))
+    verify(exactly = 0) { metricClient.count(OssMetricsRegistry.DELETE_SECRET_DEFAULT_STORE, 1) }
+  }
+
+  @Test
+  fun testUpdateSecretDisableErrorShouldNotPropagate() {
+    secretPersistence = mockk()
+    secretsRepositoryWriter =
+      SecretsRepositoryWriter(
+        secretPersistence,
+        metricClient,
+        featureFlagClient,
+      )
+
+    every { secretPersistence.write(any(), any()) } returns Unit
+    every { secretPersistence.read(any()) } returns "something"
+    every { metricClient.count(any(), any()) } returns Unit
+    every { featureFlagClient.boolVariation(any(), any()) } returns true
+    every { secretPersistence.disable(any()) } throws RuntimeException("disable error")
+
+    val oldCoordinate = "existing_coordinate_v1"
+    val oldPartialConfig = injectCoordinate(oldCoordinate)
+
+    val newSecret = "secret-2"
+    val updatedFullConfigSecretChange =
+      Jsons.deserialize(
+        """
+        { "username": "airbyte", "password": "$newSecret"}
+        """.trimIndent(),
+      )
+
+    assertDoesNotThrow {
+      secretsRepositoryWriter.statefulUpdateSecrets(
+        WORKSPACE_ID,
+        oldPartialConfig,
+        updatedFullConfigSecretChange,
+        SPEC.connectionSpecification,
+        null,
+      )
+    }
+
+    // The new secret should still be written, despite the disable error.
+    val newCoordinate = "existing_coordinate_v2"
+    verify(exactly = 1) { secretPersistence.write(SecretCoordinate.fromFullCoordinate(newCoordinate), newSecret) }
+    verify(exactly = 1) { metricClient.count(OssMetricsRegistry.UPDATE_SECRET_DEFAULT_STORE, 1) }
+
+    verify(exactly = 1) { secretPersistence.disable(SecretCoordinate.fromFullCoordinate(oldCoordinate)) }
+    // No metric is emitted because we were not successful.
     verify(exactly = 0) { metricClient.count(OssMetricsRegistry.DELETE_SECRET_DEFAULT_STORE, 1) }
   }
 
