@@ -174,7 +174,6 @@ public class JobErrorReporter {
     final Map<String, String> metadata = MoreMaps.merge(
         getSourceMetadata(sourceDefinition, jobContext.dockerImage(), jobContext.releaseStage()),
         Map.of(JOB_ID_KEY, jobContext.jobId().toString()));
-    reportJobFailureReason(workspace, failureReason.withFailureOrigin(FailureOrigin.SOURCE), jobContext.dockerImage(), metadata, null);
   }
 
   /**
@@ -195,7 +194,6 @@ public class JobErrorReporter {
     final Map<String, String> metadata = MoreMaps.merge(
         getDestinationMetadata(destinationDefinition, jobContext.dockerImage(), jobContext.releaseStage()),
         Map.of(JOB_ID_KEY, jobContext.jobId().toString()));
-    reportJobFailureReason(workspace, failureReason.withFailureOrigin(FailureOrigin.DESTINATION), jobContext.dockerImage(), metadata, null);
   }
 
   /**
@@ -215,7 +213,6 @@ public class JobErrorReporter {
     final Map<String, String> metadata = MoreMaps.merge(
         getSourceMetadata(sourceDefinition, jobContext.dockerImage(), jobContext.releaseStage()),
         Map.of(JOB_ID_KEY, jobContext.jobId().toString()));
-    reportJobFailureReason(workspace, failureReason, jobContext.dockerImage(), metadata, null);
   }
 
   /**
@@ -230,7 +227,6 @@ public class JobErrorReporter {
     final Map<String, String> metadata = Map.of(
         JOB_ID_KEY, jobContext.jobId().toString(),
         CONNECTOR_REPOSITORY_META_KEY, connectorRepository);
-    reportJobFailureReason(null, failureReason, dockerImage, metadata, null);
   }
 
   private Map<String, String> getConnectionMetadata(final UUID workspaceId, final UUID connectionId) {
