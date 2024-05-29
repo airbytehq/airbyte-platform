@@ -134,7 +134,7 @@ export const ConnectionReplicationPage: React.FC = () => {
        * - save the connection (unless the user cancels the action via the recommendation modal)
        */
 
-      const { shouldTrackAction, streamsToRefresh } = recommendActionOnConnectionUpdate({
+      const { shouldTrackAction, shouldRecommendRefresh } = recommendActionOnConnectionUpdate({
         catalogDiff: connection.catalogDiff,
         formSyncCatalog: values.syncCatalog,
         storedSyncCatalog: connection.syncCatalog,
@@ -155,7 +155,7 @@ export const ConnectionReplicationPage: React.FC = () => {
       }
 
       try {
-        if (streamsToRefresh.length > 0) {
+        if (shouldRecommendRefresh) {
           if (
             !isRefreshConnectionEnabled ||
             (isRefreshConnectionEnabled && !destinationSupportsRefreshes) // if the destination doesn't support refreshes, we need to clear data instead
@@ -174,12 +174,7 @@ export const ConnectionReplicationPage: React.FC = () => {
               title: formatMessage({ id: "connection.streamConfigurationChanged" }),
               size: "md",
               content: ({ onCancel, onComplete }) => (
-                <RecommendRefreshModal
-                  onCancel={onCancel}
-                  onComplete={onComplete}
-                  streamsToRefresh={streamsToRefresh}
-                  totalStreams={values.syncCatalog.streams.filter((s) => s.config?.selected).length}
-                />
+                <RecommendRefreshModal onCancel={onCancel} onComplete={onComplete} />
               ),
             });
             await handleModalResult(result, values, saveConnection);

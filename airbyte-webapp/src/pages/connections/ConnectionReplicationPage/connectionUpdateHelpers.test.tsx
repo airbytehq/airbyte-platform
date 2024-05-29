@@ -1,6 +1,6 @@
 import { DestinationSyncMode, SyncMode } from "core/api/types/AirbyteClient";
 
-import { calculateStreamsToRefresh } from "./connectionUpdateHelpers";
+import { determineRecommendRefresh } from "./connectionUpdateHelpers";
 
 // guarantees we have the required properties for the functions called
 interface RequiredPartialStream {
@@ -68,7 +68,7 @@ const stream4: RequiredPartialStream = {
   },
 };
 
-describe("#calculateStreamsToRefresh", () => {
+describe("#determineRecommendRefresh", () => {
   const storedSyncCatalog = {
     streams: [stream1, stream2, stream3, stream4],
   };
@@ -90,8 +90,8 @@ describe("#calculateStreamsToRefresh", () => {
         streams: [updateStream(stream1), updateStream(stream2), updateStream(stream3), updateStream(stream4)],
       };
 
-      const result = calculateStreamsToRefresh(formSyncCatalog, storedSyncCatalog);
-      expect(result).toStrictEqual([{ streamName: "exampleStream1", streamNamespace: "exampleNamespace" }]);
+      const result = determineRecommendRefresh(formSyncCatalog, storedSyncCatalog);
+      expect(result).toBe(true);
     });
     it("Only recommend if full refresh | overwrite changing to incremental | append_dedupe", () => {
       const updateStream = (stream: RequiredPartialStream) => {
@@ -109,8 +109,8 @@ describe("#calculateStreamsToRefresh", () => {
         streams: [updateStream(stream1), updateStream(stream2), updateStream(stream3), updateStream(stream4)],
       };
 
-      const result = calculateStreamsToRefresh(formSyncCatalog, storedSyncCatalog);
-      expect(result).toStrictEqual([{ streamName: "exampleStream1", streamNamespace: "exampleNamespace" }]);
+      const result = determineRecommendRefresh(formSyncCatalog, storedSyncCatalog);
+      expect(result).toBe(true);
     });
   });
   describe("change sync mode to full refresh", () => {
@@ -130,8 +130,8 @@ describe("#calculateStreamsToRefresh", () => {
         streams: [updateStream(stream1), updateStream(stream2), updateStream(stream3), updateStream(stream4)],
       };
 
-      const result = calculateStreamsToRefresh(formSyncCatalog, storedSyncCatalog);
-      expect(result).toStrictEqual([]);
+      const result = determineRecommendRefresh(formSyncCatalog, storedSyncCatalog);
+      expect(result).toBe(false);
     });
     it("Does not recommend a refresh when changing to full refresh | append", () => {
       const updateStream = (stream: RequiredPartialStream) => {
@@ -149,8 +149,8 @@ describe("#calculateStreamsToRefresh", () => {
         streams: [updateStream(stream1), updateStream(stream2), updateStream(stream3), updateStream(stream4)],
       };
 
-      const result = calculateStreamsToRefresh(formSyncCatalog, storedSyncCatalog);
-      expect(result).toStrictEqual([]);
+      const result = determineRecommendRefresh(formSyncCatalog, storedSyncCatalog);
+      expect(result).toBe(false);
     });
   });
 
@@ -168,11 +168,8 @@ describe("#calculateStreamsToRefresh", () => {
     const formSyncCatalog = {
       streams: [updateStream(stream1), updateStream(stream2), updateStream(stream3), updateStream(stream4)],
     };
-    const result = calculateStreamsToRefresh(formSyncCatalog, storedSyncCatalog);
-    expect(result).toStrictEqual([
-      { streamName: "exampleStream3", streamNamespace: "exampleNamespace" },
-      { streamName: "exampleStream4", streamNamespace: "exampleNamespace" },
-    ]);
+    const result = determineRecommendRefresh(formSyncCatalog, storedSyncCatalog);
+    expect(result).toBe(true);
   });
 
   it("change in cursor field suggests refresh if incremental", () => {
@@ -189,11 +186,8 @@ describe("#calculateStreamsToRefresh", () => {
     const formSyncCatalog = {
       streams: [updateStream(stream1), updateStream(stream2), updateStream(stream3), updateStream(stream4)],
     };
-    const result = calculateStreamsToRefresh(formSyncCatalog, storedSyncCatalog);
-    expect(result).toStrictEqual([
-      { streamName: "exampleStream3", streamNamespace: "exampleNamespace" },
-      { streamName: "exampleStream4", streamNamespace: "exampleNamespace" },
-    ]);
+    const result = determineRecommendRefresh(formSyncCatalog, storedSyncCatalog);
+    expect(result).toBe(true);
   });
 
   it("changes in selected fields suggest refresh if incremental", () => {
@@ -210,11 +204,8 @@ describe("#calculateStreamsToRefresh", () => {
     const formSyncCatalog = {
       streams: [updateStream(stream1), updateStream(stream2), updateStream(stream3), updateStream(stream4)],
     };
-    const result = calculateStreamsToRefresh(formSyncCatalog, storedSyncCatalog);
-    expect(result).toStrictEqual([
-      { streamName: "exampleStream3", streamNamespace: "exampleNamespace" },
-      { streamName: "exampleStream4", streamNamespace: "exampleNamespace" },
-    ]);
+    const result = determineRecommendRefresh(formSyncCatalog, storedSyncCatalog);
+    expect(result).toBe(true);
   });
   it("changes in stream prefix do not suggest refresh", () => {
     const updateStream = (stream: RequiredPartialStream) => {
@@ -230,7 +221,7 @@ describe("#calculateStreamsToRefresh", () => {
     const formSyncCatalog = {
       streams: [updateStream(stream1), updateStream(stream2), updateStream(stream3), updateStream(stream4)],
     };
-    const result = calculateStreamsToRefresh(formSyncCatalog, storedSyncCatalog);
-    expect(result).toStrictEqual([]);
+    const result = determineRecommendRefresh(formSyncCatalog, storedSyncCatalog);
+    expect(result).toBe(false);
   });
 });

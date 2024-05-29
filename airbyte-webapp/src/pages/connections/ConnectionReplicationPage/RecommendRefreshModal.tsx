@@ -7,22 +7,11 @@ import { Button } from "components/ui/Button";
 import { ModalBody, ModalFooter } from "components/ui/Modal";
 import { Text } from "components/ui/Text";
 
-import { ConnectionStream } from "core/api/types/AirbyteClient";
-
-import { StreamsRefreshListBlock } from "../ConnectionSettingsPage/StreamsRefreshListBlock";
-
 interface RecommendedRefreshWarningProps {
   onCancel: () => void;
   onComplete: (withRefresh: boolean) => void;
-  streamsToRefresh: ConnectionStream[];
-  totalStreams: number;
 }
-export const RecommendRefreshModal: React.FC<RecommendedRefreshWarningProps> = ({
-  onCancel,
-  onComplete,
-  streamsToRefresh,
-  totalStreams,
-}) => {
+export const RecommendRefreshModal: React.FC<RecommendedRefreshWarningProps> = ({ onCancel, onComplete }) => {
   const [withRefresh, setWithRefresh] = useState(true);
   const { formatMessage } = useIntl();
   return (
@@ -31,9 +20,6 @@ export const RecommendRefreshModal: React.FC<RecommendedRefreshWarningProps> = (
         <Text>
           <FormattedMessage id="connection.refreshDataHint" />
         </Text>
-        <Box py="md">
-          <StreamsRefreshListBlock streamsToList={streamsToRefresh} totalStreams={totalStreams} />
-        </Box>
         <Box pt="md">
           <Text color="grey400" size="sm">
             <FormattedMessage id="connection.refreshDataHint.description" />

@@ -1,9 +1,4 @@
-import {
-  AirbyteCatalog,
-  AirbyteStreamAndConfiguration,
-  CatalogDiff,
-  ConnectionStream,
-} from "core/api/types/AirbyteClient";
+import { AirbyteCatalog, AirbyteStreamAndConfiguration, CatalogDiff } from "core/api/types/AirbyteClient";
 import { equal } from "core/utils/objects";
 
 const createLookupById = (catalog: AirbyteCatalog) => {
@@ -17,51 +12,32 @@ const createLookupById = (catalog: AirbyteCatalog) => {
   }, {});
 };
 
-export const calculateStreamsToRefresh = (formSyncCatalog: AirbyteCatalog, storedSyncCatalog: AirbyteCatalog) => {
+export const determineRecommendRefresh = (formSyncCatalog: AirbyteCatalog, storedSyncCatalog: AirbyteCatalog) => {
   const lookupConnectionValuesStreamById = createLookupById(storedSyncCatalog);
 
-  return formSyncCatalog.streams.reduce((acc, streamNode) => {
-    if (streamNode.config?.selected) {
-      const formStream = structuredClone(streamNode);
-      const connectionStream = structuredClone(
-        lookupConnectionValuesStreamById[`${formStream.stream?.namespace ?? ""}-${formStream.stream?.name}`]
-      );
-
-      const syncModeChangesSuggestRefresh =
-        formStream.config?.syncMode === "incremental" &&
-        connectionStream.config?.syncMode === "full_refresh" &&
-        connectionStream.config?.destinationSyncMode === "overwrite";
-
-      const selectedFieldsChangesSuggestRefresh =
-        connectionStream.config?.syncMode === "incremental" &&
-        formStream.config?.syncMode === "incremental" &&
-        !equal(formStream.config?.selectedFields, connectionStream.config?.selectedFields);
-
-      const pkChangeSuggestsRefresh =
-        formStream.config?.syncMode === "incremental" &&
-        connectionStream.config?.syncMode === "incremental" &&
-        !equal(formStream.config?.primaryKey, connectionStream.config?.primaryKey);
-
-      const cursorFieldChangeSuggestsRefresh =
-        formStream.config?.syncMode === "incremental" &&
-        connectionStream.config?.syncMode === "incremental" &&
-        !equal(formStream.config?.cursorField, connectionStream.config?.cursorField);
-
-      if (
-        syncModeChangesSuggestRefresh ||
-        selectedFieldsChangesSuggestRefresh ||
-        pkChangeSuggestsRefresh ||
-        cursorFieldChangeSuggestsRefresh
-      ) {
-        acc.push({
-          streamName: streamNode.stream?.name ?? "",
-          streamNamespace: streamNode.stream?.namespace,
-        });
-      }
+  return formSyncCatalog.streams.some((streamNode) => {
+    if (!streamNode.config?.selected) {
+      return false;
     }
 
-    return acc;
-  }, [] as ConnectionStream[]);
+    const formStream = structuredClone(streamNode);
+    const connectionStream = structuredClone(
+      lookupConnectionValuesStreamById[`${formStream.stream?.namespace ?? ""}-${formStream.stream?.name}`]
+    );
+
+    return (
+      // if we changed the stream to incremental from full refresh overwrite
+      (formStream.config?.syncMode === "incremental" &&
+        connectionStream.config?.syncMode === "full_refresh" &&
+        connectionStream.config?.destinationSyncMode === "overwrite") ||
+      (connectionStream.config?.syncMode === "incremental" &&
+        formStream.config?.syncMode === "incremental" &&
+        // if it was + is incremental but we change the selected fields, pk, or cursor
+        (!equal(formStream.config?.selectedFields, connectionStream.config?.selectedFields) ||
+          !equal(formStream.config?.primaryKey, connectionStream.config?.primaryKey) ||
+          !equal(formStream.config?.cursorField, connectionStream.config?.cursorField)))
+    );
+  });
 };
 
 export const recommendActionOnConnectionUpdate = ({
@@ -86,12 +62,12 @@ export const recommendActionOnConnectionUpdate = ({
   );
 
   // Using the new function to calculate streams to refresh
-  const streamsToRefresh = calculateStreamsToRefresh(formSyncCatalog, storedSyncCatalog);
+  const shouldRecommendRefresh = determineRecommendRefresh(formSyncCatalog, storedSyncCatalog);
 
   const shouldTrackAction = hasUserChangesInEnabledStreams || hasCatalogDiffInEnabledStream;
 
   return {
-    streamsToRefresh,
+    shouldRecommendRefresh,
     shouldTrackAction,
   };
 };
