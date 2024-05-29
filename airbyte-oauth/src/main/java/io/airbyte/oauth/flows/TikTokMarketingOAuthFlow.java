@@ -7,10 +7,14 @@ package io.airbyte.oauth.flows;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableMap;
+import io.airbyte.commons.json.Jsons;
 import io.airbyte.oauth.BaseOAuth2Flow;
 import java.io.IOException;
+import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
@@ -42,6 +46,31 @@ public class TikTokMarketingOAuthFlow extends BaseOAuth2Flow {
   @VisibleForTesting
   public TikTokMarketingOAuthFlow(final HttpClient httpClient, final Supplier<String> stateSupplier) {
     super(httpClient, stateSupplier, TokenRequestContentType.JSON);
+  }
+
+  @Override
+  protected Map<String, Object> completeOAuthFlow(final String clientId,
+                                                  final String clientSecret,
+                                                  final String authCode,
+                                                  final String redirectUrl,
+                                                  final JsonNode inputOAuthConfiguration,
+                                                  final JsonNode oauthParamConfig)
+      throws IOException {
+    final var accessTokenUrl = getAccessTokenUrl(inputOAuthConfiguration);
+    final HttpRequest request = HttpRequest.newBuilder()
+        .POST(HttpRequest.BodyPublishers
+            .ofString(tokenReqContentType.getConverter().apply(getAccessTokenQueryParameters(clientId, clientSecret, authCode, redirectUrl))))
+        .uri(URI.create(accessTokenUrl))
+        .header("Content-Type", "application/json")
+        .header("Accept", "application/json")
+        .build();
+    // TODO: Handle error response to report better messages
+    try {
+      final HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+      return extractOAuthOutput(Jsons.deserialize(response.body()), accessTokenUrl);
+    } catch (final InterruptedException e) {
+      throw new IOException("Failed to complete OAuth flow", e);
+    }
   }
 
   @Override
