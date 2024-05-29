@@ -4,8 +4,8 @@
 
 package io.airbyte.api.server.services
 
-import io.airbyte.api.client2.model.generated.SourceDefinitionIdWithWorkspaceId
-import io.airbyte.api.client2.model.generated.SourceDefinitionSpecificationRead
+import io.airbyte.api.client.model.generated.SourceDefinitionIdWithWorkspaceId
+import io.airbyte.api.client.model.generated.SourceDefinitionSpecificationRead
 import io.airbyte.api.server.constants.HTTP_RESPONSE_BODY_DEBUG_MESSAGE
 import io.airbyte.api.server.errorHandlers.ConfigClientErrorHandler
 import io.airbyte.api.server.forwardingClient.ConfigApiClient

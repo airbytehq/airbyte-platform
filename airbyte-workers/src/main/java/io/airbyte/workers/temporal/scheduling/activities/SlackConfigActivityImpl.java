@@ -4,10 +4,10 @@
 
 package io.airbyte.workers.temporal.scheduling.activities;
 
-import io.airbyte.api.client2.AirbyteApiClient;
-import io.airbyte.api.client2.model.generated.Notification;
-import io.airbyte.api.client2.model.generated.NotificationType;
-import io.airbyte.api.client2.model.generated.WorkspaceRead;
+import io.airbyte.api.client.AirbyteApiClient;
+import io.airbyte.api.client.model.generated.Notification;
+import io.airbyte.api.client.model.generated.NotificationType;
+import io.airbyte.api.client.model.generated.WorkspaceRead;
 import io.airbyte.config.SlackNotificationConfiguration;
 import jakarta.inject.Singleton;
 import java.io.IOException;
@@ -28,8 +28,8 @@ public class SlackConfigActivityImpl implements SlackConfigActivity {
 
   @Override
   public Optional<SlackNotificationConfiguration> fetchSlackConfiguration(UUID connectionId) throws IOException {
-    final io.airbyte.api.client2.model.generated.ConnectionIdRequestBody requestBody =
-        new io.airbyte.api.client2.model.generated.ConnectionIdRequestBody(connectionId);
+    final io.airbyte.api.client.model.generated.ConnectionIdRequestBody requestBody =
+        new io.airbyte.api.client.model.generated.ConnectionIdRequestBody(connectionId);
     final WorkspaceRead workspaceRead = airbyteApiClient.getWorkspaceApi().getWorkspaceByConnectionId(requestBody);
     for (Notification notification : workspaceRead.getNotifications()) {
       if (notification.getNotificationType() == NotificationType.SLACK) {

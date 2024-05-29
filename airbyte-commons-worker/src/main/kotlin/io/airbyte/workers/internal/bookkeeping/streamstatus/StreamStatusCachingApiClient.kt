@@ -1,12 +1,12 @@
 package io.airbyte.workers.internal.bookkeeping.streamstatus
 
 import com.google.common.annotations.VisibleForTesting
-import io.airbyte.api.client2.AirbyteApiClient
-import io.airbyte.api.client2.model.generated.StreamStatusCreateRequestBody
-import io.airbyte.api.client2.model.generated.StreamStatusIncompleteRunCause
-import io.airbyte.api.client2.model.generated.StreamStatusJobType
-import io.airbyte.api.client2.model.generated.StreamStatusRead
-import io.airbyte.api.client2.model.generated.StreamStatusUpdateRequestBody
+import io.airbyte.api.client.AirbyteApiClient
+import io.airbyte.api.client.model.generated.StreamStatusCreateRequestBody
+import io.airbyte.api.client.model.generated.StreamStatusIncompleteRunCause
+import io.airbyte.api.client.model.generated.StreamStatusJobType
+import io.airbyte.api.client.model.generated.StreamStatusRead
+import io.airbyte.api.client.model.generated.StreamStatusUpdateRequestBody
 import io.airbyte.metrics.lib.MetricAttribute
 import io.airbyte.metrics.lib.MetricClient
 import io.airbyte.metrics.lib.MetricTags
@@ -16,7 +16,7 @@ import io.github.oshai.kotlinlogging.KotlinLogging
 import jakarta.inject.Singleton
 import java.time.Clock
 import java.util.UUID
-import io.airbyte.api.client2.model.generated.StreamStatusRunState as ApiEnum
+import io.airbyte.api.client.model.generated.StreamStatusRunState as ApiEnum
 
 private val logger = KotlinLogging.logger {}
 

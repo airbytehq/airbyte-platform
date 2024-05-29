@@ -4,7 +4,7 @@
 
 package io.airbyte.workers.temporal.scheduling.activities;
 
-import io.airbyte.api.client2.model.generated.ConnectionStatus;
+import io.airbyte.api.client.model.generated.ConnectionStatus;
 import io.temporal.activity.ActivityInterface;
 import io.temporal.activity.ActivityMethod;
 import java.time.Duration;

@@ -14,8 +14,8 @@ import static io.airbyte.metrics.lib.MetricTags.CONNECTION_ID;
 import static io.airbyte.metrics.lib.MetricTags.JOB_ID;
 
 import datadog.trace.api.Trace;
-import io.airbyte.api.client2.AirbyteApiClient;
-import io.airbyte.api.client2.model.generated.CheckInput;
+import io.airbyte.api.client.AirbyteApiClient;
+import io.airbyte.api.client.model.generated.CheckInput;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.commons.temporal.config.WorkerMode;
 import io.airbyte.commons.temporal.exception.RetryableException;
@@ -65,7 +65,7 @@ public class GenerateInputActivityImpl implements GenerateInputActivity {
   @SuppressWarnings("UNCHECKED_CAST")
   public JobInput getSyncWorkflowInput(final SyncInput input) throws IOException {
     final var jobInputResult =
-        airbyteApiClient.getJobsApi().getJobInput(new io.airbyte.api.client2.model.generated.SyncInput(input.getJobId(), input.getAttemptId()));
+        airbyteApiClient.getJobsApi().getJobInput(new io.airbyte.api.client.model.generated.SyncInput(input.getJobId(), input.getAttemptId()));
     final var jobInput = Jsons.convertValue(transformNumbersToInts((Map<String, ? extends Object>) jobInputResult), JobInput.class);
 
     MetricAttribute[] attrs = new MetricAttribute[0];

@@ -1,6 +1,6 @@
 package io.airbyte.workers.internal.bookkeeping.streamstatus
 
-import io.airbyte.api.client2.model.generated.StreamStatusRunState
+import io.airbyte.api.client.model.generated.StreamStatusRunState
 import io.airbyte.workers.internal.bookkeeping.streamstatus.StreamStatusStateStoreTest.Fixtures.completeValue
 import io.airbyte.workers.internal.bookkeeping.streamstatus.StreamStatusStateStoreTest.Fixtures.incompleteValue
 import io.airbyte.workers.internal.bookkeeping.streamstatus.StreamStatusStateStoreTest.Fixtures.key1

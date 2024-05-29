@@ -7,11 +7,11 @@ package io.airbyte.workers.temporal.scheduling.activities;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
-import io.airbyte.api.client2.AirbyteApiClient;
-import io.airbyte.api.client2.generated.JobsApi;
-import io.airbyte.api.client2.model.generated.AttemptNormalizationStatusRead;
-import io.airbyte.api.client2.model.generated.AttemptNormalizationStatusReadList;
-import io.airbyte.api.client2.model.generated.JobIdRequestBody;
+import io.airbyte.api.client.AirbyteApiClient;
+import io.airbyte.api.client.generated.JobsApi;
+import io.airbyte.api.client.model.generated.AttemptNormalizationStatusRead;
+import io.airbyte.api.client.model.generated.AttemptNormalizationStatusReadList;
+import io.airbyte.api.client.model.generated.JobIdRequestBody;
 import io.airbyte.workers.temporal.sync.NormalizationSummaryCheckActivityImpl;
 import java.io.IOException;
 import java.util.List;

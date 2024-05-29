@@ -8,8 +8,8 @@ import io.airbyte.airbyte_api.model.generated.NamespaceDefinitionEnum
 import io.airbyte.airbyte_api.model.generated.NamespaceDefinitionEnumNoDefault
 import io.airbyte.airbyte_api.model.generated.NonBreakingSchemaUpdatesBehaviorEnum
 import io.airbyte.airbyte_api.model.generated.NonBreakingSchemaUpdatesBehaviorEnumNoDefault
-import io.airbyte.api.client2.model.generated.NamespaceDefinitionType
-import io.airbyte.api.client2.model.generated.NonBreakingChangesPreference
+import io.airbyte.api.client.model.generated.NamespaceDefinitionType
+import io.airbyte.api.client.model.generated.NonBreakingChangesPreference
 
 /**
  * Connection helpers.

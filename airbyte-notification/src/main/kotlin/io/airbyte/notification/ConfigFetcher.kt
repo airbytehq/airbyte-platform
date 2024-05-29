@@ -1,11 +1,11 @@
 package io.airbyte.notification
 
-import io.airbyte.api.client2.AirbyteApiClient
-import io.airbyte.api.client2.model.generated.ConnectionIdRequestBody
-import io.airbyte.api.client2.model.generated.WorkspaceRead
+import io.airbyte.api.client.AirbyteApiClient
+import io.airbyte.api.client.model.generated.ConnectionIdRequestBody
+import io.airbyte.api.client.model.generated.WorkspaceRead
 import jakarta.inject.Singleton
 import java.util.UUID
-import io.airbyte.api.client2.model.generated.NotificationType as ApiNotificationType
+import io.airbyte.api.client.model.generated.NotificationType as ApiNotificationType
 
 interface ConfigFetcher<T> {
   fun fetchConfig(connectionId: UUID): T?

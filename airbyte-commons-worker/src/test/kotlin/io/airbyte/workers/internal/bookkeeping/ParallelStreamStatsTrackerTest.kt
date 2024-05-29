@@ -4,8 +4,8 @@ import io.airbyte.analytics.DeploymentFetcher
 import io.airbyte.analytics.LoggingTrackingClient
 import io.airbyte.analytics.TrackingClient
 import io.airbyte.analytics.TrackingIdentityFetcher
-import io.airbyte.api.client2.model.generated.DeploymentMetadataRead
-import io.airbyte.api.client2.model.generated.WorkspaceRead
+import io.airbyte.api.client.model.generated.DeploymentMetadataRead
+import io.airbyte.api.client.model.generated.WorkspaceRead
 import io.airbyte.commons.json.Jsons
 import io.airbyte.config.Configs
 import io.airbyte.config.StreamSyncStats

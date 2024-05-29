@@ -8,10 +8,10 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
-import io.airbyte.api.client2.AirbyteApiClient;
-import io.airbyte.api.client2.generated.WorkspaceApi;
-import io.airbyte.api.client2.model.generated.ConnectionIdRequestBody;
-import io.airbyte.api.client2.model.generated.WorkspaceRead;
+import io.airbyte.api.client.AirbyteApiClient;
+import io.airbyte.api.client.generated.WorkspaceApi;
+import io.airbyte.api.client.model.generated.ConnectionIdRequestBody;
+import io.airbyte.api.client.model.generated.WorkspaceRead;
 import java.io.IOException;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;

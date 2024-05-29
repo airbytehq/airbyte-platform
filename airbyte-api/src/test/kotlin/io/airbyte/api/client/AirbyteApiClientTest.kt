@@ -2,7 +2,7 @@
  * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
-package io.airbyte.api.client2
+package io.airbyte.api.client
 
 import dev.failsafe.RetryPolicy
 import io.mockk.mockk

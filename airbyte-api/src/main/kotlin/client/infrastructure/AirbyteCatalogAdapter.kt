@@ -9,7 +9,7 @@ import com.squareup.moshi.Moshi
 import com.squareup.moshi.ToJson
 import com.squareup.moshi.adapter
 import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory
-import io.airbyte.api.client2.model.generated.AirbyteCatalog
+import io.airbyte.api.client.model.generated.AirbyteCatalog
 import io.airbyte.commons.json.Jsons
 import org.openapitools.client.infrastructure.BigDecimalAdapter
 import org.openapitools.client.infrastructure.BigIntegerAdapter

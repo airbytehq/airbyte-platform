@@ -4,8 +4,8 @@
 
 package io.airbyte.api.server.mappers
 
-import io.airbyte.api.client2.model.generated.SourceDefinitionSpecificationRead
-import io.airbyte.api.client2.model.generated.SynchronousJobRead
+import io.airbyte.api.client.model.generated.SourceDefinitionSpecificationRead
+import io.airbyte.api.client.model.generated.SynchronousJobRead
 
 /**
  * Mappers that help convert models from the config api to models from the public api.

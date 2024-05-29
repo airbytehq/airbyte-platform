@@ -4,10 +4,10 @@
 
 package io.airbyte.test.utils;
 
-import io.airbyte.api.client2.model.generated.AirbyteCatalog;
-import io.airbyte.api.client2.model.generated.ConnectionScheduleData;
-import io.airbyte.api.client2.model.generated.ConnectionScheduleType;
-import io.airbyte.api.client2.model.generated.Geography;
+import io.airbyte.api.client.model.generated.AirbyteCatalog;
+import io.airbyte.api.client.model.generated.ConnectionScheduleData;
+import io.airbyte.api.client.model.generated.ConnectionScheduleType;
+import io.airbyte.api.client.model.generated.Geography;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;

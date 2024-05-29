@@ -1,12 +1,12 @@
 package io.airbyte.workers.internal.sync
 
+import io.airbyte.api.client.AirbyteApiClient
 import io.airbyte.api.client.WorkloadApiClient
-import io.airbyte.api.client2.AirbyteApiClient
-import io.airbyte.api.client2.generated.ConnectionApi
-import io.airbyte.api.client2.model.generated.AirbyteCatalog
-import io.airbyte.api.client2.model.generated.ConnectionRead
-import io.airbyte.api.client2.model.generated.ConnectionStatus
-import io.airbyte.api.client2.model.generated.Geography
+import io.airbyte.api.client.generated.ConnectionApi
+import io.airbyte.api.client.model.generated.AirbyteCatalog
+import io.airbyte.api.client.model.generated.ConnectionRead
+import io.airbyte.api.client.model.generated.ConnectionStatus
+import io.airbyte.api.client.model.generated.Geography
 import io.airbyte.config.ReplicationAttemptSummary
 import io.airbyte.config.ReplicationOutput
 import io.airbyte.config.StandardSyncSummary

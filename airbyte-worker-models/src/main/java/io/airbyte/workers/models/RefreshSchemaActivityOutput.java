@@ -4,7 +4,7 @@
 
 package io.airbyte.workers.models;
 
-import io.airbyte.api.client2.model.generated.CatalogDiff;
+import io.airbyte.api.client.model.generated.CatalogDiff;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;

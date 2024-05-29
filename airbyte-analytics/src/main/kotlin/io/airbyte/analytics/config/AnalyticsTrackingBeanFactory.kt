@@ -1,7 +1,7 @@
 package io.airbyte.analytics.config
 
-import io.airbyte.api.client2.model.generated.DeploymentMetadataRead
-import io.airbyte.api.client2.model.generated.WorkspaceRead
+import io.airbyte.api.client.model.generated.DeploymentMetadataRead
+import io.airbyte.api.client.model.generated.WorkspaceRead
 import io.airbyte.commons.version.AirbyteVersion
 import io.airbyte.config.Configs
 import io.micronaut.context.annotation.Factory

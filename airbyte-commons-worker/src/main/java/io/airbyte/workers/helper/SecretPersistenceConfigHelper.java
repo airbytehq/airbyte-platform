@@ -4,7 +4,7 @@
 
 package io.airbyte.workers.helper;
 
-import io.airbyte.api.client2.model.generated.SecretPersistenceConfig;
+import io.airbyte.api.client.model.generated.SecretPersistenceConfig;
 import io.airbyte.commons.enums.Enums;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.config.ScopeType;

@@ -22,7 +22,7 @@ import io.airbyte.workers.models.StateWithId
 import io.github.oshai.kotlinlogging.KotlinLogging
 import io.micronaut.context.event.ApplicationEventPublisher
 import jakarta.inject.Singleton
-import io.airbyte.api.client2.model.generated.StreamStatusRunState as ApiEnum
+import io.airbyte.api.client.model.generated.StreamStatusRunState as ApiEnum
 import io.airbyte.protocol.models.AirbyteStreamStatusTraceMessage.AirbyteStreamStatus as ProtocolEnum
 
 private val logger = KotlinLogging.logger {}

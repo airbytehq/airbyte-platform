@@ -9,9 +9,9 @@ import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory
 import io.airbyte.airbyte_api.model.generated.ConnectionSyncModeEnum
 import io.airbyte.airbyte_api.model.generated.StreamProperties
-import io.airbyte.api.client2.model.generated.AirbyteStreamAndConfiguration
-import io.airbyte.api.client2.model.generated.DestinationSyncMode
-import io.airbyte.api.client2.model.generated.SyncMode
+import io.airbyte.api.client.model.generated.AirbyteStreamAndConfiguration
+import io.airbyte.api.client.model.generated.DestinationSyncMode
+import io.airbyte.api.client.model.generated.SyncMode
 import io.airbyte.api.server.apiTracking.TrackingHelper
 import io.airbyte.api.server.constants.GET
 import io.airbyte.api.server.constants.STREAMS_PATH

@@ -1,9 +1,9 @@
 package io.airbyte.connectorSidecar
 
 import com.fasterxml.jackson.databind.JsonNode
-import io.airbyte.api.client2.AirbyteApiClient
-import io.airbyte.api.client2.generated.SourceApi
-import io.airbyte.api.client2.model.generated.DiscoverCatalogResult
+import io.airbyte.api.client.AirbyteApiClient
+import io.airbyte.api.client.generated.SourceApi
+import io.airbyte.api.client.model.generated.DiscoverCatalogResult
 import io.airbyte.commons.converters.ConnectorConfigUpdater
 import io.airbyte.commons.json.Jsons
 import io.airbyte.config.ActorType

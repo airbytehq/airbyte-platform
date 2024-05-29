@@ -6,8 +6,8 @@ package io.airbyte.api.client.infrastructure
 
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.squareup.moshi.adapter
-import io.airbyte.api.client2.model.generated.ConnectorBuilderPublishRequestBody
-import io.airbyte.api.client2.model.generated.DeclarativeSourceManifest
+import io.airbyte.api.client.model.generated.ConnectorBuilderPublishRequestBody
+import io.airbyte.api.client.model.generated.DeclarativeSourceManifest
 import io.airbyte.commons.resources.MoreResources
 import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.Test

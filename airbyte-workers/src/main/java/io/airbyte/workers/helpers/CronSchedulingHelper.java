@@ -4,7 +4,7 @@
 
 package io.airbyte.workers.helpers;
 
-import io.airbyte.api.client2.model.generated.JobRead;
+import io.airbyte.api.client.model.generated.JobRead;
 import jakarta.annotation.Nullable;
 import java.time.Duration;
 import java.util.Date;

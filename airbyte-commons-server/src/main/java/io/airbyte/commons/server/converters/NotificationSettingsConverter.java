@@ -124,13 +124,13 @@ public class NotificationSettingsConverter {
         .webhook(notification.getWebhook());
   }
 
-  public static io.airbyte.api.client2.model.generated.NotificationSettings toClientApi(final io.airbyte.config.NotificationSettings notificationSettings) {
+  public static io.airbyte.api.client.model.generated.NotificationSettings toClientApi(final io.airbyte.config.NotificationSettings notificationSettings) {
     if (notificationSettings == null) {
-      return new io.airbyte.api.client2.model.generated.NotificationSettings(null, null, null, null, null, null, null, null);
+      return new io.airbyte.api.client.model.generated.NotificationSettings(null, null, null, null, null, null, null, null);
     }
 
-    final io.airbyte.api.client2.model.generated.NotificationSettings apiClientNotificationSettings =
-        new io.airbyte.api.client2.model.generated.NotificationSettings(
+    final io.airbyte.api.client.model.generated.NotificationSettings apiClientNotificationSettings =
+        new io.airbyte.api.client.model.generated.NotificationSettings(
             toClientApi(notificationSettings.getSendOnSuccess()),
             toClientApi(notificationSettings.getSendOnFailure()),
             toClientApi(notificationSettings.getSendOnSyncDisabled()),
@@ -143,12 +143,12 @@ public class NotificationSettingsConverter {
     return apiClientNotificationSettings;
   }
 
-  private static io.airbyte.api.client2.model.generated.NotificationItem toClientApi(final io.airbyte.config.NotificationItem notificationItem) {
-    return new io.airbyte.api.client2.model.generated.NotificationItem(
-        notificationItem.getNotificationType().stream().map(n -> Enums.convertTo(n, io.airbyte.api.client2.model.generated.NotificationType.class))
+  private static io.airbyte.api.client.model.generated.NotificationItem toClientApi(final io.airbyte.config.NotificationItem notificationItem) {
+    return new io.airbyte.api.client.model.generated.NotificationItem(
+        notificationItem.getNotificationType().stream().map(n -> Enums.convertTo(n, io.airbyte.api.client.model.generated.NotificationType.class))
             .toList(),
         notificationItem.getSlackConfiguration() != null
-            ? new io.airbyte.api.client2.model.generated.SlackNotificationConfiguration(notificationItem.getSlackConfiguration().getWebhook())
+            ? new io.airbyte.api.client.model.generated.SlackNotificationConfiguration(notificationItem.getSlackConfiguration().getWebhook())
             : null,
         null);
   }

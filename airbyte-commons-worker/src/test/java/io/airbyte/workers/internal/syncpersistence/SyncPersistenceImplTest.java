@@ -21,13 +21,13 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import io.airbyte.api.client2.AirbyteApiClient;
-import io.airbyte.api.client2.generated.AttemptApi;
-import io.airbyte.api.client2.generated.StateApi;
-import io.airbyte.api.client2.model.generated.ConnectionState;
-import io.airbyte.api.client2.model.generated.ConnectionStateCreateOrUpdate;
-import io.airbyte.api.client2.model.generated.ConnectionStateType;
-import io.airbyte.api.client2.model.generated.StreamState;
+import io.airbyte.api.client.AirbyteApiClient;
+import io.airbyte.api.client.generated.AttemptApi;
+import io.airbyte.api.client.generated.StateApi;
+import io.airbyte.api.client.model.generated.ConnectionState;
+import io.airbyte.api.client.model.generated.ConnectionStateCreateOrUpdate;
+import io.airbyte.api.client.model.generated.ConnectionStateType;
+import io.airbyte.api.client.model.generated.StreamState;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.protocol.models.AirbyteEstimateTraceMessage;
 import io.airbyte.protocol.models.AirbyteGlobalState;
@@ -513,7 +513,7 @@ class SyncPersistenceImplTest {
             connectionId,
             null,
             stateMessages.stream().map(s -> new StreamState(
-                new io.airbyte.api.client2.model.generated.StreamDescriptor(
+                new io.airbyte.api.client.model.generated.StreamDescriptor(
                     s.getStream().getStreamDescriptor().getName(),
                     s.getStream().getStreamDescriptor().getNamespace()),
                 s.getStream().getStreamState())).toList(),

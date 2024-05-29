@@ -15,9 +15,9 @@ import static io.airbyte.metrics.lib.ApmTraceConstants.Tags.REPLICATION_STATUS_K
 import static io.airbyte.metrics.lib.ApmTraceConstants.Tags.SOURCE_DOCKER_IMAGE_KEY;
 
 import datadog.trace.api.Trace;
+import io.airbyte.api.client.AirbyteApiClient;
 import io.airbyte.api.client.WorkloadApiClient;
-import io.airbyte.api.client2.AirbyteApiClient;
-import io.airbyte.api.client2.model.generated.StreamDescriptor;
+import io.airbyte.api.client.model.generated.StreamDescriptor;
 import io.airbyte.commons.functional.CheckedSupplier;
 import io.airbyte.commons.temporal.HeartbeatUtils;
 import io.airbyte.commons.temporal.utils.PayloadChecker;

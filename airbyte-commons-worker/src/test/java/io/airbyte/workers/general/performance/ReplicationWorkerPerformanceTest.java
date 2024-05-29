@@ -9,10 +9,10 @@ import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
+import io.airbyte.api.client.AirbyteApiClient;
 import io.airbyte.api.client.WorkloadApiClient;
-import io.airbyte.api.client2.AirbyteApiClient;
-import io.airbyte.api.client2.generated.DestinationApi;
-import io.airbyte.api.client2.generated.SourceApi;
+import io.airbyte.api.client.generated.DestinationApi;
+import io.airbyte.api.client.generated.SourceApi;
 import io.airbyte.commons.converters.ConnectorConfigUpdater;
 import io.airbyte.commons.converters.ThreadedTimeTracker;
 import io.airbyte.commons.features.EnvVariableFeatureFlags;

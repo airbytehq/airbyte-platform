@@ -6,8 +6,8 @@ package io.airbyte.api.server.services
 
 import com.fasterxml.jackson.databind.JsonNode
 import io.airbyte.airbyte_api.model.generated.ActorTypeEnum
-import io.airbyte.api.client2.model.generated.CompleteOAuthResponse
-import io.airbyte.api.client2.model.generated.OAuthConsentRead
+import io.airbyte.api.client.model.generated.CompleteOAuthResponse
+import io.airbyte.api.client.model.generated.OAuthConsentRead
 import io.micronaut.http.HttpResponse
 import jakarta.validation.constraints.NotBlank
 import java.util.UUID

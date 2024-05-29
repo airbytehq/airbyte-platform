@@ -15,7 +15,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.google.common.annotations.VisibleForTesting;
 import io.airbyte.analytics.TrackingClient;
-import io.airbyte.api.client2.model.generated.WorkspaceOverrideOauthParamsRequestBody;
+import io.airbyte.api.client.model.generated.WorkspaceOverrideOauthParamsRequestBody;
 import io.airbyte.api.model.generated.CompleteDestinationOAuthRequest;
 import io.airbyte.api.model.generated.CompleteOAuthResponse;
 import io.airbyte.api.model.generated.CompleteSourceOauthRequest;

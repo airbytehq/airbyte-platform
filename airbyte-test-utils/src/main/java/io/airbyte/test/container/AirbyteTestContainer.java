@@ -7,8 +7,8 @@ package io.airbyte.test.container;
 import static io.airbyte.test.utils.AcceptanceTestUtils.createAirbyteApiClient;
 
 import com.google.common.collect.Maps;
-import io.airbyte.api.client2.AirbyteApiClient;
-import io.airbyte.api.client2.generated.HealthApi;
+import io.airbyte.api.client.AirbyteApiClient;
+import io.airbyte.api.client.generated.HealthApi;
 import io.airbyte.test.concurrency.WaitingUtils;
 import java.io.File;
 import java.io.FileWriter;

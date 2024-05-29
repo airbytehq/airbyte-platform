@@ -25,7 +25,7 @@ import org.junit.jupiter.params.provider.Arguments
 import org.junit.jupiter.params.provider.MethodSource
 import java.util.UUID
 import java.util.stream.Stream
-import io.airbyte.api.client2.model.generated.StreamStatusRunState as ApiEnum
+import io.airbyte.api.client.model.generated.StreamStatusRunState as ApiEnum
 import io.airbyte.protocol.models.AirbyteStreamStatusTraceMessage.AirbyteStreamStatus as ProtocolEnum
 
 class StreamStatusTrackerTest {

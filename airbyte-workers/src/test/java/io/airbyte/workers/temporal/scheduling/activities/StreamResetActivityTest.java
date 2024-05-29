@@ -10,9 +10,9 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import io.airbyte.api.client2.AirbyteApiClient;
-import io.airbyte.api.client2.generated.JobsApi;
-import io.airbyte.api.client2.model.generated.DeleteStreamResetRecordsForJobRequest;
+import io.airbyte.api.client.AirbyteApiClient;
+import io.airbyte.api.client.generated.JobsApi;
+import io.airbyte.api.client.model.generated.DeleteStreamResetRecordsForJobRequest;
 import io.airbyte.commons.temporal.exception.RetryableException;
 import io.airbyte.workers.temporal.scheduling.activities.StreamResetActivity.DeleteStreamResetRecordsForJobInput;
 import java.io.IOException;

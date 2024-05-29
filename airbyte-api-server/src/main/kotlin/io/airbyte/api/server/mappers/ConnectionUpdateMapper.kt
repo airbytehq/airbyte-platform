@@ -6,13 +6,13 @@ package io.airbyte.api.server.mappers
 
 import io.airbyte.airbyte_api.model.generated.ConnectionPatchRequest
 import io.airbyte.airbyte_api.model.generated.ScheduleTypeEnum
-import io.airbyte.api.client2.model.generated.AirbyteCatalog
-import io.airbyte.api.client2.model.generated.ConnectionScheduleData
-import io.airbyte.api.client2.model.generated.ConnectionScheduleDataCron
-import io.airbyte.api.client2.model.generated.ConnectionScheduleType
-import io.airbyte.api.client2.model.generated.ConnectionStatus
-import io.airbyte.api.client2.model.generated.ConnectionUpdate
-import io.airbyte.api.client2.model.generated.Geography
+import io.airbyte.api.client.model.generated.AirbyteCatalog
+import io.airbyte.api.client.model.generated.ConnectionScheduleData
+import io.airbyte.api.client.model.generated.ConnectionScheduleDataCron
+import io.airbyte.api.client.model.generated.ConnectionScheduleType
+import io.airbyte.api.client.model.generated.ConnectionStatus
+import io.airbyte.api.client.model.generated.ConnectionUpdate
+import io.airbyte.api.client.model.generated.Geography
 import io.airbyte.api.server.helpers.ConnectionHelper
 import jakarta.validation.constraints.NotBlank
 import java.util.UUID

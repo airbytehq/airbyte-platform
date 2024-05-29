@@ -1,12 +1,12 @@
 package io.airbyte.notification
 
-import io.airbyte.api.client2.AirbyteApiClient
-import io.airbyte.api.client2.generated.WorkspaceApi
-import io.airbyte.api.client2.model.generated.ConnectionIdRequestBody
-import io.airbyte.api.client2.model.generated.Notification
-import io.airbyte.api.client2.model.generated.NotificationType
-import io.airbyte.api.client2.model.generated.SlackNotificationConfiguration
-import io.airbyte.api.client2.model.generated.WorkspaceRead
+import io.airbyte.api.client.AirbyteApiClient
+import io.airbyte.api.client.generated.WorkspaceApi
+import io.airbyte.api.client.model.generated.ConnectionIdRequestBody
+import io.airbyte.api.client.model.generated.Notification
+import io.airbyte.api.client.model.generated.NotificationType
+import io.airbyte.api.client.model.generated.SlackNotificationConfiguration
+import io.airbyte.api.client.model.generated.WorkspaceRead
 import io.micronaut.http.HttpStatus
 import io.mockk.every
 import io.mockk.mockk

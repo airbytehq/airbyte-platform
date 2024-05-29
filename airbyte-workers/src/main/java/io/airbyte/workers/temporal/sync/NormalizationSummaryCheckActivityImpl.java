@@ -9,10 +9,10 @@ import static io.airbyte.metrics.lib.ApmTraceConstants.Tags.ATTEMPT_NUMBER_KEY;
 import static io.airbyte.metrics.lib.ApmTraceConstants.Tags.JOB_ID_KEY;
 
 import datadog.trace.api.Trace;
-import io.airbyte.api.client2.AirbyteApiClient;
-import io.airbyte.api.client2.model.generated.AttemptNormalizationStatusRead;
-import io.airbyte.api.client2.model.generated.AttemptNormalizationStatusReadList;
-import io.airbyte.api.client2.model.generated.JobIdRequestBody;
+import io.airbyte.api.client.AirbyteApiClient;
+import io.airbyte.api.client.model.generated.AttemptNormalizationStatusRead;
+import io.airbyte.api.client.model.generated.AttemptNormalizationStatusReadList;
+import io.airbyte.api.client.model.generated.JobIdRequestBody;
 import io.airbyte.metrics.lib.ApmTraceUtils;
 import io.airbyte.metrics.lib.MetricClientFactory;
 import io.airbyte.metrics.lib.OssMetricsRegistry;

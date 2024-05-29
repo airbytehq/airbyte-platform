@@ -7,7 +7,7 @@ package io.airbyte.workers.helpers;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import io.airbyte.api.client2.model.generated.ConnectionScheduleType;
+import io.airbyte.api.client.model.generated.ConnectionScheduleType;
 import io.micronaut.context.annotation.Value;
 import io.micronaut.test.extensions.junit5.annotation.MicronautTest;
 import jakarta.inject.Inject;

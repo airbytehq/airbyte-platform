@@ -2,8 +2,8 @@ package io.airbyte.api.server.helpers
 
 import io.airbyte.airbyte_api.model.generated.NamespaceDefinitionEnum
 import io.airbyte.airbyte_api.model.generated.NonBreakingSchemaUpdatesBehaviorEnum
-import io.airbyte.api.client2.model.generated.NamespaceDefinitionType
-import io.airbyte.api.client2.model.generated.NonBreakingChangesPreference
+import io.airbyte.api.client.model.generated.NamespaceDefinitionType
+import io.airbyte.api.client.model.generated.NonBreakingChangesPreference
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 

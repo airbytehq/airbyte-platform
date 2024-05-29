@@ -10,9 +10,9 @@ import static io.airbyte.test.acceptance.AcceptanceTestsResources.TRUE;
 import static io.airbyte.test.utils.AcceptanceTestUtils.IS_GKE;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
-import io.airbyte.api.client2.model.generated.AirbyteCatalog;
-import io.airbyte.api.client2.model.generated.CheckConnectionRead;
-import io.airbyte.api.client2.model.generated.CheckConnectionRead.Status;
+import io.airbyte.api.client.model.generated.AirbyteCatalog;
+import io.airbyte.api.client.model.generated.CheckConnectionRead;
+import io.airbyte.api.client.model.generated.CheckConnectionRead.Status;
 import java.util.UUID;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;

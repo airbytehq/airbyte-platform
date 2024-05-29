@@ -11,9 +11,9 @@ import static io.airbyte.metrics.lib.ApmTraceConstants.WORKER_OPERATION_NAME;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import datadog.trace.api.Trace;
-import io.airbyte.api.client2.AirbyteApiClient;
-import io.airbyte.api.client2.model.generated.DiscoverCatalogResult;
-import io.airbyte.api.client2.model.generated.SourceDiscoverSchemaWriteRequestBody;
+import io.airbyte.api.client.AirbyteApiClient;
+import io.airbyte.api.client.model.generated.DiscoverCatalogResult;
+import io.airbyte.api.client.model.generated.SourceDiscoverSchemaWriteRequestBody;
 import io.airbyte.commons.constants.WorkerConstants;
 import io.airbyte.commons.converters.CatalogClientConverters;
 import io.airbyte.commons.converters.ConnectorConfigUpdater;

@@ -6,7 +6,7 @@ package io.airbyte.workers.helpers;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
-import io.airbyte.api.client2.model.generated.AttemptStats;
+import io.airbyte.api.client.model.generated.AttemptStats;
 import java.util.stream.Stream;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;

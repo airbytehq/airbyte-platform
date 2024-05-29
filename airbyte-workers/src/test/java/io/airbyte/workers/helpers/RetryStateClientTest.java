@@ -10,10 +10,10 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
-import io.airbyte.api.client2.AirbyteApiClient;
-import io.airbyte.api.client2.generated.JobRetryStatesApi;
-import io.airbyte.api.client2.generated.WorkspaceApi;
-import io.airbyte.api.client2.model.generated.RetryStateRead;
+import io.airbyte.api.client.AirbyteApiClient;
+import io.airbyte.api.client.generated.JobRetryStatesApi;
+import io.airbyte.api.client.generated.WorkspaceApi;
+import io.airbyte.api.client.model.generated.RetryStateRead;
 import io.airbyte.featureflag.CompleteFailureBackoffBase;
 import io.airbyte.featureflag.CompleteFailureBackoffMaxInterval;
 import io.airbyte.featureflag.CompleteFailureBackoffMinInterval;

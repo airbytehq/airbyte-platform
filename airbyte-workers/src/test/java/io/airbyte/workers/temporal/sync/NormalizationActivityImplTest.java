@@ -11,12 +11,12 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import io.airbyte.api.client2.AirbyteApiClient;
-import io.airbyte.api.client2.generated.ConnectionApi;
-import io.airbyte.api.client2.model.generated.AirbyteCatalog;
-import io.airbyte.api.client2.model.generated.ConnectionIdRequestBody;
-import io.airbyte.api.client2.model.generated.ConnectionRead;
-import io.airbyte.api.client2.model.generated.ConnectionStatus;
+import io.airbyte.api.client.AirbyteApiClient;
+import io.airbyte.api.client.generated.ConnectionApi;
+import io.airbyte.api.client.model.generated.AirbyteCatalog;
+import io.airbyte.api.client.model.generated.ConnectionIdRequestBody;
+import io.airbyte.api.client.model.generated.ConnectionRead;
+import io.airbyte.api.client.model.generated.ConnectionStatus;
 import io.airbyte.commons.workers.config.WorkerConfigs;
 import io.airbyte.commons.workers.config.WorkerConfigsProvider;
 import io.airbyte.config.AirbyteConfigValidator;

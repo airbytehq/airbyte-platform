@@ -63,7 +63,7 @@ open class NotificationHandler(
     notificationItem?.notificationType?.forEach { notificationType ->
       runCatching {
         if (maybeWebhookNotificationSender != null &&
-          notificationType == io.airbyte.api.client2.model.generated.NotificationType.SLACK
+          notificationType == io.airbyte.api.client.model.generated.NotificationType.SLACK
         ) {
           val webhookConfig =
             WebhookConfig(
@@ -79,7 +79,7 @@ open class NotificationHandler(
         }
 
         if (maybeCustomerIoNotificationSender != null &&
-          notificationType == io.airbyte.api.client2.model.generated.NotificationType.CUSTOMERIO
+          notificationType == io.airbyte.api.client.model.generated.NotificationType.CUSTOMERIO
         ) {
           maybeCustomerIoNotificationSender
             .sendNotification(notificationItemWithCustomerIoEmailConfig!!.customerIoEmailConfig, subject, message)

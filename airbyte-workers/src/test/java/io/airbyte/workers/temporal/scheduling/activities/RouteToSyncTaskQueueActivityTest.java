@@ -12,10 +12,10 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import io.airbyte.api.client2.AirbyteApiClient;
-import io.airbyte.api.client2.generated.ConnectionApi;
-import io.airbyte.api.client2.model.generated.GetTaskQueueNameRequest;
-import io.airbyte.api.client2.model.generated.TaskQueueNameRead;
+import io.airbyte.api.client.AirbyteApiClient;
+import io.airbyte.api.client.generated.ConnectionApi;
+import io.airbyte.api.client.model.generated.GetTaskQueueNameRequest;
+import io.airbyte.api.client.model.generated.TaskQueueNameRead;
 import io.airbyte.commons.temporal.TemporalJobType;
 import io.airbyte.commons.temporal.exception.RetryableException;
 import io.airbyte.workers.temporal.scheduling.activities.RouteToSyncTaskQueueActivity.RouteToSyncTaskQueueInput;

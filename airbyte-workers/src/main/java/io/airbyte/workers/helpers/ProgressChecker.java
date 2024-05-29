@@ -4,9 +4,9 @@
 
 package io.airbyte.workers.helpers;
 
-import io.airbyte.api.client2.AirbyteApiClient;
-import io.airbyte.api.client2.model.generated.AttemptStats;
-import io.airbyte.api.client2.model.generated.GetAttemptStatsRequestBody;
+import io.airbyte.api.client.AirbyteApiClient;
+import io.airbyte.api.client.model.generated.AttemptStats;
+import io.airbyte.api.client.model.generated.GetAttemptStatsRequestBody;
 import io.airbyte.commons.temporal.exception.RetryableException;
 import io.micronaut.http.HttpStatus;
 import jakarta.inject.Singleton;

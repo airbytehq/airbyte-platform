@@ -4,9 +4,9 @@
 
 package io.airbyte.workers.temporal.scheduling.activities;
 
-import io.airbyte.api.client2.AirbyteApiClient;
-import io.airbyte.api.client2.model.generated.ConnectionIdRequestBody;
-import io.airbyte.api.client2.model.generated.WorkspaceRead;
+import io.airbyte.api.client.AirbyteApiClient;
+import io.airbyte.api.client.model.generated.ConnectionIdRequestBody;
+import io.airbyte.api.client.model.generated.WorkspaceRead;
 import jakarta.inject.Singleton;
 import java.io.IOException;
 import java.util.HashMap;

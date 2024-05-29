@@ -2,8 +2,8 @@ package io.airbyte.connectorSidecar
 
 import com.fasterxml.jackson.databind.JsonNode
 import com.google.common.annotations.VisibleForTesting
-import io.airbyte.api.client2.AirbyteApiClient
-import io.airbyte.api.client2.model.generated.SourceDiscoverSchemaWriteRequestBody
+import io.airbyte.api.client.AirbyteApiClient
+import io.airbyte.api.client.model.generated.SourceDiscoverSchemaWriteRequestBody
 import io.airbyte.commons.converters.CatalogClientConverters
 import io.airbyte.commons.converters.ConnectorConfigUpdater
 import io.airbyte.commons.enums.Enums

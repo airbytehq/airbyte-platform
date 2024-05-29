@@ -1,11 +1,11 @@
 package io.airbyte.workers.internal.bookkeeping.streamstatus
 
-import io.airbyte.api.client2.AirbyteApiClient
-import io.airbyte.api.client2.generated.StreamStatusesApi
-import io.airbyte.api.client2.model.generated.StreamStatusIncompleteRunCause
-import io.airbyte.api.client2.model.generated.StreamStatusJobType
-import io.airbyte.api.client2.model.generated.StreamStatusRead
-import io.airbyte.api.client2.model.generated.StreamStatusRunState
+import io.airbyte.api.client.AirbyteApiClient
+import io.airbyte.api.client.generated.StreamStatusesApi
+import io.airbyte.api.client.model.generated.StreamStatusIncompleteRunCause
+import io.airbyte.api.client.model.generated.StreamStatusJobType
+import io.airbyte.api.client.model.generated.StreamStatusRead
+import io.airbyte.api.client.model.generated.StreamStatusRunState
 import io.airbyte.metrics.lib.MetricClient
 import io.airbyte.workers.context.ReplicationContext
 import io.mockk.every

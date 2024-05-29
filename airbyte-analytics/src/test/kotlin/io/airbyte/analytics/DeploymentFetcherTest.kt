@@ -4,7 +4,7 @@
 
 package io.airbyte.analytics
 
-import io.airbyte.api.client2.model.generated.DeploymentMetadataRead
+import io.airbyte.api.client.model.generated.DeploymentMetadataRead
 import io.airbyte.commons.version.AirbyteVersion
 import io.airbyte.config.Configs
 import org.junit.jupiter.api.Assertions.assertEquals

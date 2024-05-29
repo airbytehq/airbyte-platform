@@ -8,11 +8,11 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 import com.fasterxml.jackson.databind.node.JsonNodeFactory;
-import io.airbyte.api.client2.model.generated.CatalogDiff;
-import io.airbyte.api.client2.model.generated.FieldTransform;
-import io.airbyte.api.client2.model.generated.StreamDescriptor;
-import io.airbyte.api.client2.model.generated.StreamTransform;
-import io.airbyte.api.client2.model.generated.StreamTransformUpdateStream;
+import io.airbyte.api.client.model.generated.CatalogDiff;
+import io.airbyte.api.client.model.generated.FieldTransform;
+import io.airbyte.api.client.model.generated.StreamDescriptor;
+import io.airbyte.api.client.model.generated.StreamTransform;
+import io.airbyte.api.client.model.generated.StreamTransformUpdateStream;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.config.State;
 import io.airbyte.config.helpers.StateMessageHelper;

@@ -8,10 +8,10 @@ import io.airbyte.airbyte_api.model.generated.ConnectionCreateRequest
 import io.airbyte.airbyte_api.model.generated.ConnectionPatchRequest
 import io.airbyte.airbyte_api.model.generated.ConnectionResponse
 import io.airbyte.airbyte_api.model.generated.DestinationResponse
-import io.airbyte.api.client2.model.generated.AirbyteCatalog
-import io.airbyte.api.client2.model.generated.AirbyteStreamAndConfiguration
-import io.airbyte.api.client2.model.generated.DestinationSyncMode
-import io.airbyte.api.client2.model.generated.SourceDiscoverSchemaRead
+import io.airbyte.api.client.model.generated.AirbyteCatalog
+import io.airbyte.api.client.model.generated.AirbyteStreamAndConfiguration
+import io.airbyte.api.client.model.generated.DestinationSyncMode
+import io.airbyte.api.client.model.generated.SourceDiscoverSchemaRead
 import io.airbyte.api.server.apiTracking.TrackingHelper
 import io.airbyte.api.server.constants.CONNECTIONS_PATH
 import io.airbyte.api.server.constants.CONNECTIONS_WITH_ID_PATH

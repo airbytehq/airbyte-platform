@@ -5,8 +5,8 @@
 package io.airbyte.api.server.mappers
 
 import io.airbyte.airbyte_api.model.generated.SourcesResponse
-import io.airbyte.api.client2.model.generated.SourceRead
-import io.airbyte.api.client2.model.generated.SourceReadList
+import io.airbyte.api.client.model.generated.SourceRead
+import io.airbyte.api.client.model.generated.SourceReadList
 import io.airbyte.api.server.constants.INCLUDE_DELETED
 import io.airbyte.api.server.constants.SOURCES_PATH
 import io.airbyte.api.server.constants.WORKSPACE_IDS

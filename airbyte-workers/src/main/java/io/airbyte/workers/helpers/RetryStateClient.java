@@ -4,11 +4,11 @@
 
 package io.airbyte.workers.helpers;
 
-import io.airbyte.api.client2.AirbyteApiClient;
-import io.airbyte.api.client2.model.generated.JobIdRequestBody;
-import io.airbyte.api.client2.model.generated.JobRetryStateRequestBody;
-import io.airbyte.api.client2.model.generated.RetryStateRead;
-import io.airbyte.api.client2.model.generated.WorkspaceIdRequestBody;
+import io.airbyte.api.client.AirbyteApiClient;
+import io.airbyte.api.client.model.generated.JobIdRequestBody;
+import io.airbyte.api.client.model.generated.JobRetryStateRequestBody;
+import io.airbyte.api.client.model.generated.RetryStateRead;
+import io.airbyte.api.client.model.generated.WorkspaceIdRequestBody;
 import io.airbyte.commons.temporal.exception.RetryableException;
 import io.airbyte.commons.temporal.scheduling.retries.BackoffPolicy;
 import io.airbyte.commons.temporal.scheduling.retries.RetryManager;

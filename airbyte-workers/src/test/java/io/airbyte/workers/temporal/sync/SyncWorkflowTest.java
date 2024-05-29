@@ -16,7 +16,7 @@ import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 import com.fasterxml.jackson.databind.JsonNode;
-import io.airbyte.api.client2.model.generated.ConnectionStatus;
+import io.airbyte.api.client.model.generated.ConnectionStatus;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.commons.temporal.TemporalConstants;
 import io.airbyte.commons.temporal.scheduling.SyncWorkflow;

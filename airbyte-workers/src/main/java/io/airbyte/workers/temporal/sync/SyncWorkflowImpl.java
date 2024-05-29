@@ -12,7 +12,7 @@ import static io.airbyte.metrics.lib.ApmTraceConstants.Tags.SOURCE_DOCKER_IMAGE_
 import static io.airbyte.metrics.lib.ApmTraceConstants.WORKFLOW_TRACE_OPERATION_NAME;
 
 import datadog.trace.api.Trace;
-import io.airbyte.api.client2.model.generated.ConnectionStatus;
+import io.airbyte.api.client.model.generated.ConnectionStatus;
 import io.airbyte.commons.temporal.annotations.TemporalActivityStub;
 import io.airbyte.commons.temporal.scheduling.SyncWorkflow;
 import io.airbyte.config.NormalizationInput;

@@ -9,10 +9,10 @@ import static io.airbyte.metrics.lib.ApmTraceConstants.Tags.WEBHOOK_CONFIG_ID_KE
 
 import com.fasterxml.jackson.databind.JsonNode;
 import datadog.trace.api.Trace;
-import io.airbyte.api.client2.AirbyteApiClient;
-import io.airbyte.api.client2.model.generated.ScopeType;
-import io.airbyte.api.client2.model.generated.SecretPersistenceConfig;
-import io.airbyte.api.client2.model.generated.SecretPersistenceConfigGetRequestBody;
+import io.airbyte.api.client.AirbyteApiClient;
+import io.airbyte.api.client.model.generated.ScopeType;
+import io.airbyte.api.client.model.generated.SecretPersistenceConfig;
+import io.airbyte.api.client.model.generated.SecretPersistenceConfigGetRequestBody;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.config.OperatorWebhookInput;
 import io.airbyte.config.WebhookConfig;

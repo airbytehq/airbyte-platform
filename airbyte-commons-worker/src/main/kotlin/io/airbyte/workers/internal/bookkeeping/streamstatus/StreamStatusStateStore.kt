@@ -1,11 +1,11 @@
 package io.airbyte.workers.internal.bookkeeping.streamstatus
 
-import io.airbyte.api.client2.model.generated.StreamStatusRunState.COMPLETE
-import io.airbyte.api.client2.model.generated.StreamStatusRunState.INCOMPLETE
-import io.airbyte.api.client2.model.generated.StreamStatusRunState.RUNNING
+import io.airbyte.api.client.model.generated.StreamStatusRunState.COMPLETE
+import io.airbyte.api.client.model.generated.StreamStatusRunState.INCOMPLETE
+import io.airbyte.api.client.model.generated.StreamStatusRunState.RUNNING
 import io.github.oshai.kotlinlogging.KotlinLogging
 import jakarta.inject.Singleton
-import io.airbyte.api.client2.model.generated.StreamStatusRunState as ApiEnum
+import io.airbyte.api.client.model.generated.StreamStatusRunState as ApiEnum
 
 private val logger = KotlinLogging.logger {}
 

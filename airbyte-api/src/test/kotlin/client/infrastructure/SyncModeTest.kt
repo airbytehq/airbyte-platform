@@ -5,11 +5,11 @@
 package io.airbyte.api.client.infrastructure
 
 import com.squareup.moshi.adapter
-import io.airbyte.api.client2.model.generated.AirbyteStream
-import io.airbyte.api.client2.model.generated.AirbyteStreamConfiguration
-import io.airbyte.api.client2.model.generated.DestinationSyncMode
-import io.airbyte.api.client2.model.generated.SourceDiscoverSchemaWriteRequestBody
-import io.airbyte.api.client2.model.generated.SyncMode
+import io.airbyte.api.client.model.generated.AirbyteStream
+import io.airbyte.api.client.model.generated.AirbyteStreamConfiguration
+import io.airbyte.api.client.model.generated.DestinationSyncMode
+import io.airbyte.api.client.model.generated.SourceDiscoverSchemaWriteRequestBody
+import io.airbyte.api.client.model.generated.SyncMode
 import io.airbyte.commons.resources.MoreResources
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNotNull

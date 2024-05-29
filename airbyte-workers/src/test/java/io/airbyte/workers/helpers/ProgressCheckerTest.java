@@ -9,9 +9,9 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
-import io.airbyte.api.client2.AirbyteApiClient;
-import io.airbyte.api.client2.generated.AttemptApi;
-import io.airbyte.api.client2.model.generated.AttemptStats;
+import io.airbyte.api.client.AirbyteApiClient;
+import io.airbyte.api.client.generated.AttemptApi;
+import io.airbyte.api.client.model.generated.AttemptStats;
 import io.micronaut.http.HttpStatus;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;

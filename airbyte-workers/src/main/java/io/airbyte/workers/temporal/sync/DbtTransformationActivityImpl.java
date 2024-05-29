@@ -11,10 +11,10 @@ import static io.airbyte.metrics.lib.ApmTraceConstants.Tags.JOB_ID_KEY;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import datadog.trace.api.Trace;
-import io.airbyte.api.client2.AirbyteApiClient;
-import io.airbyte.api.client2.model.generated.ScopeType;
-import io.airbyte.api.client2.model.generated.SecretPersistenceConfig;
-import io.airbyte.api.client2.model.generated.SecretPersistenceConfigGetRequestBody;
+import io.airbyte.api.client.AirbyteApiClient;
+import io.airbyte.api.client.model.generated.ScopeType;
+import io.airbyte.api.client.model.generated.SecretPersistenceConfig;
+import io.airbyte.api.client.model.generated.SecretPersistenceConfigGetRequestBody;
 import io.airbyte.commons.functional.CheckedSupplier;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.commons.temporal.HeartbeatUtils;

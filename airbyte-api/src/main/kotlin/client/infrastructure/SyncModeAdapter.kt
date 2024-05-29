@@ -6,7 +6,7 @@ package io.airbyte.api.client.infrastructure
 
 import com.squareup.moshi.FromJson
 import com.squareup.moshi.ToJson
-import io.airbyte.api.client2.model.generated.SyncMode
+import io.airbyte.api.client.model.generated.SyncMode
 
 /**
  * Custom Moshi adapter that handles the use of [SyncMode].

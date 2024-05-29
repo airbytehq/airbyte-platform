@@ -4,10 +4,10 @@
 
 package io.airbyte.analytics
 
-import io.airbyte.api.client2.generated.WorkspaceApi
-import io.airbyte.api.client2.model.generated.Geography
-import io.airbyte.api.client2.model.generated.WorkspaceIdRequestBody
-import io.airbyte.api.client2.model.generated.WorkspaceRead
+import io.airbyte.api.client.generated.WorkspaceApi
+import io.airbyte.api.client.model.generated.Geography
+import io.airbyte.api.client.model.generated.WorkspaceIdRequestBody
+import io.airbyte.api.client.model.generated.WorkspaceRead
 import io.mockk.every
 import io.mockk.mockk
 import org.junit.jupiter.api.Assertions

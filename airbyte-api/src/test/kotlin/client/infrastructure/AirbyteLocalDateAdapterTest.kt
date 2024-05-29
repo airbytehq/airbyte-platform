@@ -5,8 +5,8 @@
 package io.airbyte.api.client.infrastructure
 
 import com.squareup.moshi.adapter
-import io.airbyte.api.client2.model.generated.DestinationDefinitionReadList
-import io.airbyte.api.client2.model.generated.SourceDefinitionReadList
+import io.airbyte.api.client.model.generated.DestinationDefinitionReadList
+import io.airbyte.api.client.model.generated.SourceDefinitionReadList
 import io.airbyte.commons.resources.MoreResources
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNotNull

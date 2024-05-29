@@ -9,18 +9,18 @@ import static io.airbyte.metrics.lib.ApmTraceConstants.Tags.CONNECTION_ID_KEY;
 
 import com.google.common.annotations.VisibleForTesting;
 import datadog.trace.api.Trace;
-import io.airbyte.api.client2.AirbyteApiClient;
-import io.airbyte.api.client2.model.generated.ConnectionIdRequestBody;
-import io.airbyte.api.client2.model.generated.ConnectionRead;
-import io.airbyte.api.client2.model.generated.ConnectionSchedule;
-import io.airbyte.api.client2.model.generated.ConnectionScheduleDataBasicSchedule;
-import io.airbyte.api.client2.model.generated.ConnectionScheduleDataBasicSchedule.TimeUnit;
-import io.airbyte.api.client2.model.generated.ConnectionScheduleDataCron;
-import io.airbyte.api.client2.model.generated.ConnectionScheduleType;
-import io.airbyte.api.client2.model.generated.ConnectionStatus;
-import io.airbyte.api.client2.model.generated.JobOptionalRead;
-import io.airbyte.api.client2.model.generated.JobRead;
-import io.airbyte.api.client2.model.generated.WorkspaceRead;
+import io.airbyte.api.client.AirbyteApiClient;
+import io.airbyte.api.client.model.generated.ConnectionIdRequestBody;
+import io.airbyte.api.client.model.generated.ConnectionRead;
+import io.airbyte.api.client.model.generated.ConnectionSchedule;
+import io.airbyte.api.client.model.generated.ConnectionScheduleDataBasicSchedule;
+import io.airbyte.api.client.model.generated.ConnectionScheduleDataBasicSchedule.TimeUnit;
+import io.airbyte.api.client.model.generated.ConnectionScheduleDataCron;
+import io.airbyte.api.client.model.generated.ConnectionScheduleType;
+import io.airbyte.api.client.model.generated.ConnectionStatus;
+import io.airbyte.api.client.model.generated.JobOptionalRead;
+import io.airbyte.api.client.model.generated.JobRead;
+import io.airbyte.api.client.model.generated.WorkspaceRead;
 import io.airbyte.commons.temporal.exception.RetryableException;
 import io.airbyte.featureflag.Connection;
 import io.airbyte.featureflag.FeatureFlagClient;
@@ -256,8 +256,8 @@ public class ConfigFetchActivityImpl implements ConfigFetchActivity {
   @Override
   public Optional<UUID> getSourceId(final UUID connectionId) {
     try {
-      final io.airbyte.api.client2.model.generated.ConnectionIdRequestBody requestBody =
-          new io.airbyte.api.client2.model.generated.ConnectionIdRequestBody(connectionId);
+      final io.airbyte.api.client.model.generated.ConnectionIdRequestBody requestBody =
+          new io.airbyte.api.client.model.generated.ConnectionIdRequestBody(connectionId);
       final ConnectionRead connectionRead = airbyteApiClient.getConnectionApi().getConnection(requestBody);
       return Optional.ofNullable(connectionRead.getSourceId());
     } catch (final ClientException | IOException e) {
@@ -269,8 +269,8 @@ public class ConfigFetchActivityImpl implements ConfigFetchActivity {
   @Override
   public Optional<ConnectionStatus> getStatus(final UUID connectionId) {
     try {
-      final io.airbyte.api.client2.model.generated.ConnectionIdRequestBody requestBody =
-          new io.airbyte.api.client2.model.generated.ConnectionIdRequestBody(connectionId);
+      final io.airbyte.api.client.model.generated.ConnectionIdRequestBody requestBody =
+          new io.airbyte.api.client.model.generated.ConnectionIdRequestBody(connectionId);
       final ConnectionRead connectionRead = airbyteApiClient.getConnectionApi().getConnection(requestBody);
       return Optional.ofNullable(connectionRead.getStatus());
     } catch (final ClientException | IOException e) {
@@ -282,8 +282,8 @@ public class ConfigFetchActivityImpl implements ConfigFetchActivity {
   @Override
   public Optional<Boolean> getBreakingChange(final UUID connectionId) {
     try {
-      final io.airbyte.api.client2.model.generated.ConnectionIdRequestBody requestBody =
-          new io.airbyte.api.client2.model.generated.ConnectionIdRequestBody(connectionId);
+      final io.airbyte.api.client.model.generated.ConnectionIdRequestBody requestBody =
+          new io.airbyte.api.client.model.generated.ConnectionIdRequestBody(connectionId);
       final ConnectionRead connectionRead = airbyteApiClient.getConnectionApi().getConnection(requestBody);
       return Optional.ofNullable(connectionRead.getBreakingChange());
     } catch (final ClientException | IOException e) {

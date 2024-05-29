@@ -4,9 +4,9 @@
 
 package io.airbyte.server.config;
 
-import io.airbyte.api.client2.model.generated.DeploymentMetadataRead;
-import io.airbyte.api.client2.model.generated.Geography;
-import io.airbyte.api.client2.model.generated.WorkspaceRead;
+import io.airbyte.api.client.model.generated.DeploymentMetadataRead;
+import io.airbyte.api.client.model.generated.Geography;
+import io.airbyte.api.client.model.generated.WorkspaceRead;
 import io.airbyte.commons.enums.Enums;
 import io.airbyte.commons.server.converters.NotificationConverter;
 import io.airbyte.commons.server.converters.NotificationSettingsConverter;

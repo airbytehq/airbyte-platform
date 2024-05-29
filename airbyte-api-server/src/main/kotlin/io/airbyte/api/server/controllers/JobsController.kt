@@ -8,8 +8,8 @@ import io.airbyte.airbyte_api.model.generated.ConnectionResponse
 import io.airbyte.airbyte_api.model.generated.JobCreateRequest
 import io.airbyte.airbyte_api.model.generated.JobStatusEnum
 import io.airbyte.airbyte_api.model.generated.JobTypeEnum
-import io.airbyte.api.client2.model.generated.JobListForWorkspacesRequestBody.OrderByField
-import io.airbyte.api.client2.model.generated.JobListForWorkspacesRequestBody.OrderByMethod
+import io.airbyte.api.client.model.generated.JobListForWorkspacesRequestBody.OrderByField
+import io.airbyte.api.client.model.generated.JobListForWorkspacesRequestBody.OrderByMethod
 import io.airbyte.api.server.apiTracking.TrackingHelper
 import io.airbyte.api.server.constants.AUTH_HEADER
 import io.airbyte.api.server.constants.DELETE

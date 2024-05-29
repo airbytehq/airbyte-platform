@@ -11,8 +11,8 @@ import com.segment.analytics.messages.AliasMessage
 import com.segment.analytics.messages.IdentifyMessage
 import com.segment.analytics.messages.Message
 import com.segment.analytics.messages.TrackMessage
-import io.airbyte.api.client2.model.generated.DeploymentMetadataRead
-import io.airbyte.api.client2.model.generated.WorkspaceRead
+import io.airbyte.api.client.model.generated.DeploymentMetadataRead
+import io.airbyte.api.client.model.generated.WorkspaceRead
 import io.github.oshai.kotlinlogging.KotlinLogging
 import io.micronaut.cache.annotation.CacheConfig
 import io.micronaut.cache.annotation.Cacheable

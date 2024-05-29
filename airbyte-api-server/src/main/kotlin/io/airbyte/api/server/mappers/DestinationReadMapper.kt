@@ -5,7 +5,7 @@
 package io.airbyte.api.server.mappers
 
 import io.airbyte.airbyte_api.model.generated.DestinationResponse
-import io.airbyte.api.client2.model.generated.DestinationRead
+import io.airbyte.api.client.model.generated.DestinationRead
 
 /**
  * Mappers that help convert models from the config api to models from the public api.

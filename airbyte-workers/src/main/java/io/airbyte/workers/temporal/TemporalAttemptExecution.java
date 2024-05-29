@@ -7,8 +7,8 @@ package io.airbyte.workers.temporal;
 import static io.airbyte.metrics.lib.ApmTraceConstants.Tags.ERROR_ACTUAL_TYPE_KEY;
 
 import com.google.common.annotations.VisibleForTesting;
-import io.airbyte.api.client2.AirbyteApiClient;
-import io.airbyte.api.client2.model.generated.SetWorkflowInAttemptRequestBody;
+import io.airbyte.api.client.AirbyteApiClient;
+import io.airbyte.api.client.model.generated.SetWorkflowInAttemptRequestBody;
 import io.airbyte.commons.logging.LoggingHelper;
 import io.airbyte.commons.logging.MdcScope;
 import io.airbyte.commons.temporal.TemporalUtils;

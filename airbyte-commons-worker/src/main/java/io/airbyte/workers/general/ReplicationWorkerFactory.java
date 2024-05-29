@@ -8,11 +8,11 @@ import static io.airbyte.workers.general.BufferedReplicationWorkerType.BUFFERED;
 import static io.airbyte.workers.general.BufferedReplicationWorkerType.BUFFERED_WITH_LINKED_BLOCKING_QUEUE;
 
 import io.airbyte.analytics.TrackingClient;
+import io.airbyte.api.client.AirbyteApiClient;
 import io.airbyte.api.client.WorkloadApiClient;
-import io.airbyte.api.client2.AirbyteApiClient;
-import io.airbyte.api.client2.generated.SourceDefinitionApi;
-import io.airbyte.api.client2.model.generated.SourceDefinitionIdRequestBody;
-import io.airbyte.api.client2.model.generated.SourceIdRequestBody;
+import io.airbyte.api.client.generated.SourceDefinitionApi;
+import io.airbyte.api.client.model.generated.SourceDefinitionIdRequestBody;
+import io.airbyte.api.client.model.generated.SourceIdRequestBody;
 import io.airbyte.commons.concurrency.VoidCallable;
 import io.airbyte.commons.converters.ThreadedTimeTracker;
 import io.airbyte.commons.features.FeatureFlags;

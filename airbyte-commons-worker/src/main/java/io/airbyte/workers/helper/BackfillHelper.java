@@ -5,12 +5,12 @@
 package io.airbyte.workers.helper;
 
 import com.fasterxml.jackson.databind.node.JsonNodeFactory;
-import io.airbyte.api.client2.model.generated.CatalogDiff;
-import io.airbyte.api.client2.model.generated.ConnectionRead;
-import io.airbyte.api.client2.model.generated.FieldTransform;
-import io.airbyte.api.client2.model.generated.SchemaChangeBackfillPreference;
-import io.airbyte.api.client2.model.generated.StreamDescriptor;
-import io.airbyte.api.client2.model.generated.StreamTransform;
+import io.airbyte.api.client.model.generated.CatalogDiff;
+import io.airbyte.api.client.model.generated.ConnectionRead;
+import io.airbyte.api.client.model.generated.FieldTransform;
+import io.airbyte.api.client.model.generated.SchemaChangeBackfillPreference;
+import io.airbyte.api.client.model.generated.StreamDescriptor;
+import io.airbyte.api.client.model.generated.StreamTransform;
 import io.airbyte.commons.converters.CatalogClientConverters;
 import io.airbyte.commons.converters.ProtocolConverters;
 import io.airbyte.config.StandardSyncOutput;

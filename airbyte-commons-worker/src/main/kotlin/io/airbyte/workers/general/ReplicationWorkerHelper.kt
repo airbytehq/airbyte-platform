@@ -7,12 +7,12 @@ package io.airbyte.workers.general
 import com.fasterxml.jackson.core.JsonProcessingException
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.google.common.annotations.VisibleForTesting
+import io.airbyte.api.client.AirbyteApiClient
 import io.airbyte.api.client.WorkloadApiClient
-import io.airbyte.api.client2.AirbyteApiClient
-import io.airbyte.api.client2.model.generated.DestinationDefinitionIdRequestBody
-import io.airbyte.api.client2.model.generated.DestinationIdRequestBody
-import io.airbyte.api.client2.model.generated.SourceIdRequestBody
-import io.airbyte.api.client2.model.generated.StreamStatusIncompleteRunCause
+import io.airbyte.api.client.model.generated.DestinationDefinitionIdRequestBody
+import io.airbyte.api.client.model.generated.DestinationIdRequestBody
+import io.airbyte.api.client.model.generated.SourceIdRequestBody
+import io.airbyte.api.client.model.generated.StreamStatusIncompleteRunCause
 import io.airbyte.commons.concurrency.VoidCallable
 import io.airbyte.commons.converters.ThreadedTimeTracker
 import io.airbyte.commons.io.LineGobbler

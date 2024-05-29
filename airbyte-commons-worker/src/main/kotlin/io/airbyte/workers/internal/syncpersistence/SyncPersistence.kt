@@ -1,12 +1,12 @@
 package io.airbyte.workers.internal.syncpersistence
 
 import datadog.trace.api.Trace
-import io.airbyte.api.client2.AirbyteApiClient
-import io.airbyte.api.client2.model.generated.AttemptStats
-import io.airbyte.api.client2.model.generated.AttemptStreamStats
-import io.airbyte.api.client2.model.generated.ConnectionState
-import io.airbyte.api.client2.model.generated.ConnectionStateCreateOrUpdate
-import io.airbyte.api.client2.model.generated.SaveStatsRequestBody
+import io.airbyte.api.client.AirbyteApiClient
+import io.airbyte.api.client.model.generated.AttemptStats
+import io.airbyte.api.client.model.generated.AttemptStreamStats
+import io.airbyte.api.client.model.generated.ConnectionState
+import io.airbyte.api.client.model.generated.ConnectionStateCreateOrUpdate
+import io.airbyte.api.client.model.generated.SaveStatsRequestBody
 import io.airbyte.commons.converters.StateConverter
 import io.airbyte.config.SyncStats
 import io.airbyte.config.helpers.StateMessageHelper
