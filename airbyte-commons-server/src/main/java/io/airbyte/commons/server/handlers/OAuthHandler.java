@@ -721,22 +721,19 @@ public class OAuthHandler {
   JsonNode statefulSplitSecrets(final UUID workspaceId, final JsonNode oauthParamConfiguration, final ConnectorSpecification connectorSpecification)
       throws IOException, ConfigNotFoundException {
     final Optional<UUID> organizationId = workspaceService.getOrganizationIdFromWorkspaceId(workspaceId);
+    RuntimeSecretPersistence secretPersistence = null;
+
     if (organizationId.isPresent() && featureFlagClient.boolVariation(UseRuntimeSecretPersistence.INSTANCE, new Organization(organizationId.get()))) {
       try {
         final SecretPersistenceConfig secretPersistenceConfig = secretPersistenceConfigService.get(ScopeType.ORGANIZATION, organizationId.get());
-
-        return secretsRepositoryWriter.statefulSplitSecrets(
-            workspaceId,
-            oauthParamConfiguration,
-            connectorSpecification.getConnectionSpecification(),
-            new RuntimeSecretPersistence(secretPersistenceConfig));
-      } catch (final io.airbyte.data.exceptions.ConfigNotFoundException e) {
+        secretPersistence = new RuntimeSecretPersistence(secretPersistenceConfig);
+      } catch (io.airbyte.data.exceptions.ConfigNotFoundException e) {
         throw new ConfigNotFoundException(e.getType(), e.getConfigId());
       }
-    } else {
-      return secretsRepositoryWriter.statefulSplitSecrets(workspaceId, oauthParamConfiguration, connectorSpecification.getConnectionSpecification(),
-          null);
     }
+
+    return secretsRepositoryWriter.statefulSplitSecrets(workspaceId, oauthParamConfiguration, connectorSpecification.getConnectionSpecification(),
+        secretPersistence);
   }
 
 }
