@@ -5,6 +5,7 @@ import io.airbyte.api.client.model.generated.StreamStatusRunState.INCOMPLETE
 import io.airbyte.api.client.model.generated.StreamStatusRunState.RUNNING
 import io.github.oshai.kotlinlogging.KotlinLogging
 import jakarta.inject.Singleton
+import java.util.concurrent.ConcurrentHashMap
 import io.airbyte.api.client.model.generated.StreamStatusRunState as ApiEnum
 
 private val logger = KotlinLogging.logger {}
@@ -18,7 +19,7 @@ private val logger = KotlinLogging.logger {}
  */
 @Singleton
 class StreamStatusStateStore {
-  private val store: MutableMap<StreamStatusKey, StreamStatusValue> = HashMap()
+  private val store: MutableMap<StreamStatusKey, StreamStatusValue> = ConcurrentHashMap()
 
   fun get(key: StreamStatusKey) = store[key]
 
@@ -59,8 +60,8 @@ class StreamStatusStateStore {
       store[key] = StreamStatusValue(latestStateId = stateId)
     } else if (value.latestStateId == null) {
       value.latestStateId = stateId
-    } else {
-      value.latestStateId = resolveStateId(value.latestStateId!!, stateId)
+    } else if (value.latestStateId!! < stateId) {
+      value.latestStateId = stateId
     }
 
     return store[key]!!
@@ -111,12 +112,5 @@ class StreamStatusStateStore {
         current
       }
     }
-  }
-
-  private fun resolveStateId(
-    current: Int,
-    incoming: Int,
-  ): Int {
-    return if (incoming > current) incoming else current
   }
 }
