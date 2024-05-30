@@ -26,6 +26,7 @@ fun transformNumbersToInts(value: Map<String, Any>): Map<String, Any> {
         is Number -> e.key to transformNumberValue(e.value)
         is Map.Entry<*, *> -> e.key to transformNumberValue(e.value)
         is Map<*, *> -> e.key to transformNumbersToInts(e.value as Map<String, Any>)
+        is List<*> -> e.key to transformNumberValue(e.value)
         else -> e.key to e.value
       }
     }.toMap()
@@ -37,6 +38,7 @@ fun transformNumberValue(value: Any): Any {
     is Number -> if (value.toDouble() % 1.0 == 0.0) value.toLong() else value
     is Map.Entry<*, *> -> transformNumberValue(value.value as Map.Entry<*, *>)
     is Map<*, *> -> transformNumbersToInts(value as Map<String, Any>)
+    is List<*> -> value.map { v -> transformNumberValue(v!!) }.toList()
     else -> value
   }
 }

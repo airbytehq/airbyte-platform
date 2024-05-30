@@ -19,6 +19,7 @@ import io.airbyte.api.client.model.generated.ConnectionStateType
 import io.airbyte.api.client.model.generated.ConnectionStatus
 import io.airbyte.api.client.model.generated.DestinationSyncMode
 import io.airbyte.api.client.model.generated.SourceCreate
+import io.airbyte.api.client.model.generated.SourceRead
 import io.airbyte.api.client.model.generated.StreamDescriptor
 import io.airbyte.api.client.model.generated.StreamState
 import io.airbyte.api.client.model.generated.SyncMode
@@ -157,6 +158,16 @@ internal class JsonNodeAdapterTest {
     val adapter = Serializer.moshi.adapter<Any>()
     val result = transformNumbersToInts(adapter.fromJson(json) as Map<String, Any>)
     assertEquals(62371L, ((result["sourceCheckConnectionInput"] as Map<String, Any>)["connectionConfiguration"] as Map<String, Any>)["port"])
+  }
+
+  @Test
+  @OptIn(ExperimentalStdlibApi::class)
+  @Suppress("UNCHECKED_CAST")
+  internal fun testHandlingOfNumbersInAListJsonNodes() {
+    val json = MoreResources.readResource("json/responses/source_read_response.json")
+    val adapter = Serializer.moshi.adapter<SourceRead>()
+    var result = adapter.fromJson(json)
+    assertEquals(1234567890, result?.connectionConfiguration?.get("account_ids")?.first()?.asInt())
   }
 
   @Test
