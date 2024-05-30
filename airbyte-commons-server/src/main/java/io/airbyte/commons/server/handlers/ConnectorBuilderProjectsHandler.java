@@ -417,9 +417,9 @@ public class ConnectorBuilderProjectsHandler {
 
     final var secretPersistence = secretPersistenceConfig.map(RuntimeSecretPersistence::new).orElse(null);
     if (existingTestingValues.isPresent()) {
-      return secretsRepositoryWriter.statefulUpdateSecrets(workspaceId, existingTestingValues.get(), updatedTestingValues, spec, secretPersistence);
+      return secretsRepositoryWriter.updateFromConfig(workspaceId, existingTestingValues.get(), updatedTestingValues, spec, secretPersistence);
     }
-    return secretsRepositoryWriter.statefulSplitSecrets(workspaceId, updatedTestingValues, spec, secretPersistence);
+    return secretsRepositoryWriter.createFromConfig(workspaceId, updatedTestingValues, spec, secretPersistence);
   }
 
   private Optional<SecretPersistenceConfig> getSecretPersistenceConfig(final UUID workspaceId) throws IOException, ConfigNotFoundException {

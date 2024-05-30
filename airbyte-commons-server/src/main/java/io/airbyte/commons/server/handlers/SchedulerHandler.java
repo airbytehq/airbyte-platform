@@ -775,7 +775,7 @@ public class SchedulerHandler {
   }
 
   /**
-   * Wrapper around {@link SecretsRepositoryWriter#statefulSplitSecrets}.
+   * Wrapper around {@link SecretsRepositoryWriter#createFromConfig}.
    *
    * @param workspaceId workspaceId
    * @param connectionConfiguration connectionConfiguration
@@ -796,12 +796,12 @@ public class SchedulerHandler {
       } catch (final io.airbyte.data.exceptions.ConfigNotFoundException e) {
         throw new ConfigNotFoundException(e.getType(), e.getConfigId());
       }
-      return secretsRepositoryWriter.statefulSplitEphemeralSecrets(
+      return secretsRepositoryWriter.createEphemeralFromConfig(
           connectionConfiguration,
           connectorSpecification.getConnectionSpecification(),
           new RuntimeSecretPersistence(secretPersistenceConfig));
     } else {
-      return secretsRepositoryWriter.statefulSplitEphemeralSecrets(
+      return secretsRepositoryWriter.createEphemeralFromConfig(
           connectionConfiguration,
           connectorSpecification.getConnectionSpecification(),
           null);

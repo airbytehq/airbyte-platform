@@ -70,7 +70,7 @@ internal class SecretsRepositoryWriterTest {
 
     val oldPartialConfig = injectCoordinate(oldCoordinate)
     val updatedPartialConfig =
-      secretsRepositoryWriter.statefulUpdateSecrets(
+      secretsRepositoryWriter.updateFromConfig(
         WORKSPACE_ID,
         oldPartialConfig,
         updatedFullConfigNoSecretChange,
@@ -114,7 +114,7 @@ internal class SecretsRepositoryWriterTest {
 
     val oldPartialConfig = injectCoordinate(oldCoordinate)
     val updatedPartialConfig =
-      secretsRepositoryWriter.statefulUpdateSecrets(
+      secretsRepositoryWriter.updateFromConfig(
         WORKSPACE_ID,
         oldPartialConfig,
         updatedFullConfigSecretChange,
@@ -173,7 +173,7 @@ internal class SecretsRepositoryWriterTest {
       )
 
     val updatedPartialConfig =
-      secretsRepositoryWriter.statefulUpdateSecrets(
+      secretsRepositoryWriter.updateFromConfig(
         WORKSPACE_ID,
         oldPartialConfig,
         newFullConfig,
@@ -220,7 +220,7 @@ internal class SecretsRepositoryWriterTest {
 
     val oldPartialConfig = injectCoordinate(oldCoordinate)
     val updatedPartialConfig =
-      secretsRepositoryWriter.statefulUpdateSecrets(
+      secretsRepositoryWriter.updateFromConfig(
         WORKSPACE_ID,
         oldPartialConfig,
         updatedFullConfigNoSecretChange,
@@ -274,7 +274,7 @@ internal class SecretsRepositoryWriterTest {
       )
 
     assertDoesNotThrow {
-      secretsRepositoryWriter.statefulUpdateSecrets(
+      secretsRepositoryWriter.updateFromConfig(
         WORKSPACE_ID,
         oldPartialConfig,
         updatedFullConfigSecretChange,

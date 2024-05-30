@@ -561,7 +561,7 @@ class ConnectorBuilderProjectsHandlerTest {
         }""");
 
     when(connectorBuilderService.getConnectorBuilderProject(project.getBuilderProjectId(), false)).thenReturn(project);
-    when(secretsRepositoryWriter.statefulSplitSecrets(workspaceId, testingValues, spec, null))
+    when(secretsRepositoryWriter.createFromConfig(workspaceId, testingValues, spec, null))
         .thenReturn(testingValuesWithSecretCoordinates);
     when(secretsProcessor.prepareSecretsForOutput(testingValuesWithSecretCoordinates, spec)).thenReturn(testingValuesWithObfuscatedSecrets);
 
@@ -594,7 +594,7 @@ class ConnectorBuilderProjectsHandlerTest {
     when(connectorBuilderService.getConnectorBuilderProject(project.getBuilderProjectId(), false)).thenReturn(project);
     when(secretsRepositoryReader.hydrateConfigFromDefaultSecretPersistence(testingValuesWithSecretCoordinates)).thenReturn(testingValues);
     when(secretsProcessor.copySecrets(testingValues, newTestingValues, spec)).thenReturn(newTestingValues);
-    when(secretsRepositoryWriter.statefulUpdateSecrets(workspaceId, testingValuesWithSecretCoordinates,
+    when(secretsRepositoryWriter.updateFromConfig(workspaceId, testingValuesWithSecretCoordinates,
         newTestingValues, spec, null)).thenReturn(newTestingValuesWithSecretCoordinates);
     when(secretsProcessor.prepareSecretsForOutput(newTestingValuesWithSecretCoordinates, spec)).thenReturn(testingValuesWithObfuscatedSecrets);
 
@@ -722,7 +722,7 @@ class ConnectorBuilderProjectsHandlerTest {
 
     when(connectorBuilderService.getConnectorBuilderProject(project.getBuilderProjectId(), false)).thenReturn(project);
     when(connectorBuilderServerApiClient.readStream(streamReadRequestBody)).thenReturn(streamRead);
-    when(secretsRepositoryWriter.statefulUpdateSecrets(workspaceId, testingValuesWithSecretCoordinates, newTestingValues, spec, null))
+    when(secretsRepositoryWriter.updateFromConfig(workspaceId, testingValuesWithSecretCoordinates, newTestingValues, spec, null))
         .thenReturn(newTestingValuesWithSecretCoordinates);
     when(secretsProcessor.prepareSecretsForOutput(newTestingValuesWithSecretCoordinates, spec)).thenReturn(newTestingValuesWithObfuscatedSecrets);
 

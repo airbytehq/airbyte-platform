@@ -714,13 +714,13 @@ public class SourceServiceJooqImpl implements SourceService {
 
     JsonNode partialConfig;
     if (previousSourceConnection.isPresent()) {
-      partialConfig = secretsRepositoryWriter.statefulUpdateSecrets(
+      partialConfig = secretsRepositoryWriter.updateFromConfig(
           source.getWorkspaceId(),
           previousSourceConnection.get(),
           source.getConfiguration(),
           connectorSpecification.getConnectionSpecification(), secretPersistence);
     } else {
-      partialConfig = secretsRepositoryWriter.statefulSplitSecrets(
+      partialConfig = secretsRepositoryWriter.createFromConfig(
           source.getWorkspaceId(),
           source.getConfiguration(),
           connectorSpecification.getConnectionSpecification(),

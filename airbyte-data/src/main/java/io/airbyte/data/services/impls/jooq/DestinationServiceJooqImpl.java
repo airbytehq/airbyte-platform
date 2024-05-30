@@ -711,12 +711,12 @@ public class DestinationServiceJooqImpl implements DestinationService {
 
     JsonNode partialConfig;
     if (previousDestinationConnection.isPresent()) {
-      partialConfig = secretsRepositoryWriter.statefulUpdateSecrets(destination.getWorkspaceId(),
+      partialConfig = secretsRepositoryWriter.updateFromConfig(destination.getWorkspaceId(),
           previousDestinationConnection.get(),
           destination.getConfiguration(),
           connectorSpecification.getConnectionSpecification(), secretPersistence);
     } else {
-      partialConfig = secretsRepositoryWriter.statefulSplitSecrets(destination.getWorkspaceId(),
+      partialConfig = secretsRepositoryWriter.createFromConfig(destination.getWorkspaceId(),
           destination.getConfiguration(),
           connectorSpecification.getConnectionSpecification(),
           secretPersistence);

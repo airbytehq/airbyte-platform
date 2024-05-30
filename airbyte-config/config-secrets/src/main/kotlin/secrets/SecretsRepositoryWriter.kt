@@ -53,7 +53,7 @@ open class SecretsRepositoryWriter(
    * @param runtimeSecretPersistence to use as an override
    * @return partial config
    */
-  fun statefulSplitSecrets(
+  fun createFromConfig(
     workspaceId: UUID,
     fullConfig: JsonNode,
     connSpec: JsonNode,
@@ -81,7 +81,7 @@ open class SecretsRepositoryWriter(
    * @return partial config
    */
   @Throws(JsonValidationException::class)
-  fun statefulUpdateSecrets(
+  fun updateFromConfig(
     workspaceId: UUID,
     oldPartialConfig: JsonNode,
     fullConfig: JsonNode,
@@ -137,7 +137,7 @@ open class SecretsRepositoryWriter(
    * @param runtimeSecretPersistence to use as an override
    * @return partial config
    */
-  fun statefulSplitEphemeralSecrets(
+  fun createEphemeralFromConfig(
     fullConfig: JsonNode,
     connSpec: JsonNode,
     runtimeSecretPersistence: RuntimeSecretPersistence? = null,
@@ -178,7 +178,7 @@ open class SecretsRepositoryWriter(
    *
    * @param runtimeSecretPersistence to use as an override
    */
-  fun storeSecret(
+  fun store(
     coordinate: SecretCoordinate,
     payload: String,
     runtimeSecretPersistence: RuntimeSecretPersistence? = null,
