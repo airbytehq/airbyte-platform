@@ -25,9 +25,9 @@ export const UpdateCloudWorkspaceName: React.FC = () => {
   const { mutateAsync: updateCloudWorkspace } = useUpdateCloudWorkspace();
   const { registerNotification } = useNotificationService();
   const { trackError } = useAppMonitoringService();
-  const { workspaceId, name, email } = useCurrentWorkspace();
+  const { workspaceId, organizationId, name, email } = useCurrentWorkspace();
   const invalidateWorkspace = useInvalidateWorkspace(workspaceId);
-  const canUpdateWorkspace = useIntent("UpdateWorkspace", { workspaceId });
+  const canUpdateWorkspace = useIntent("UpdateWorkspace", { workspaceId, organizationId });
 
   const onSubmit = async ({ name }: WorkspaceFormValues) => {
     await updateCloudWorkspace({

@@ -69,8 +69,11 @@ const ConnectorsView: React.FC<ConnectorsViewProps> = ({
   const hasUpdateConnectorsPermissions = useIntent("UpdateConnectorVersions", {
     organizationId: workspace.organizationId,
   });
+  const hasUploadCustomConnectorPermissions = useIntent("UploadCustomConnector", {
+    organizationId: workspace.organizationId,
+  });
   const allowUpdateConnectors = useFeature(FeatureItem.AllowUpdateConnectors) && hasUpdateConnectorsPermissions;
-  const allowUploadCustomImage = useFeature(FeatureItem.AllowUploadCustomImage);
+  const allowUploadCustomImage = useFeature(FeatureItem.AllowUploadCustomImage) && hasUploadCustomConnectorPermissions;
 
   const showVersionUpdateColumn = useCallback(
     (definitions: ConnectorDefinition[]) => {

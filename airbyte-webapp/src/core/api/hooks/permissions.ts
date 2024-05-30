@@ -6,13 +6,14 @@ import { useNotificationService } from "hooks/services/Notification";
 
 import { organizationKeys } from "./organizations";
 import { workspaceKeys } from "./workspaces";
+import { HttpError } from "../errors";
 import {
   createPermission,
   listPermissionsByUser,
   deletePermission,
   updatePermission,
 } from "../generated/AirbyteClient";
-import { PermissionCreate, PermissionRead, PermissionUpdate } from "../generated/AirbyteClient.schemas";
+import { PermissionCreate, PermissionRead, PermissionType, PermissionUpdate } from "../generated/AirbyteClient.schemas";
 import { SCOPE_INSTANCE, SCOPE_USER } from "../scopes";
 import { useRequestOptions } from "../useRequestOptions";
 import { useSuspenseQuery } from "../useSuspenseQuery";
@@ -32,7 +33,19 @@ export const useListPermissionsQuery = (userId: string) => {
 };
 
 export const useListPermissions = (userId: string) => {
-  return useSuspenseQuery(getListPermissionsQueryKey(userId), useListPermissionsQuery(userId));
+  const data = useSuspenseQuery(getListPermissionsQueryKey(userId), useListPermissionsQuery(userId));
+
+  const isInstanceAdminEnabled = useIsInstanceAdminEnabled();
+  if (!isInstanceAdminEnabled) {
+    const isInstanceAdminIdx = data.permissions.findIndex(
+      (permission) => permission.permissionType === "instance_admin"
+    );
+    if (isInstanceAdminIdx !== -1) {
+      data.permissions[isInstanceAdminIdx].permissionType = "instance_reader" as PermissionType; // isn't a value in the enum but it is supported by the webapp logic
+    }
+  }
+
+  return data;
 };
 
 export const useUpdatePermissions = () => {
@@ -55,10 +68,13 @@ export const useUpdatePermissions = () => {
         queryClient.invalidateQueries(organizationKeys.allListUsers);
         queryClient.invalidateQueries(workspaceKeys.allListAccessUsers);
       },
-      onError: () => {
+      onError: (e) => {
         registerNotification({
           id: "settings.accessManagement.permissionUpdate.error",
-          text: formatMessage({ id: "settings.accessManagement.permissionUpdate.error" }),
+          text:
+            e instanceof HttpError && e.status === 409
+              ? e.response.message
+              : formatMessage({ id: "settings.accessManagement.permissionUpdate.error" }),
           type: "error",
         });
       },

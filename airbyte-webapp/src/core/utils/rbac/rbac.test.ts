@@ -30,46 +30,54 @@ describe("useRbac", () => {
   describe("query assembly", () => {
     it("no permissions", () => {
       mockUseRbacPermissionsQuery.mockClear();
-      renderHook(() => useRbac({ resourceType: "INSTANCE", role: "ADMIN" }));
+      renderHook(() => useRbac([{ resourceType: "INSTANCE", role: "ADMIN" }]));
       expect(mockUseRbacPermissionsQuery).toHaveBeenCalledTimes(1);
-      expect(mockUseRbacPermissionsQuery.mock.lastCall?.[1]).toEqual({
-        resourceType: "INSTANCE",
-        role: "ADMIN",
-        resourceId: expect.anything(),
-      });
+      expect(mockUseRbacPermissionsQuery.mock.lastCall?.[1]).toEqual([
+        {
+          resourceType: "INSTANCE",
+          role: "ADMIN",
+        },
+      ]);
     });
 
     it("instance admin does not need to add details to the query", () => {
       mockUseRbacPermissionsQuery.mockClear();
-      renderHook(() => useRbac({ resourceType: "INSTANCE", role: "ADMIN" }));
+      renderHook(() => useRbac([{ resourceType: "INSTANCE", role: "ADMIN" }]));
       expect(mockUseRbacPermissionsQuery).toHaveBeenCalledTimes(1);
-      expect(mockUseRbacPermissionsQuery.mock.lastCall?.[1]).toEqual({
-        resourceType: "INSTANCE",
-        role: "ADMIN",
-        resourceId: expect.anything(),
-      });
+      expect(mockUseRbacPermissionsQuery.mock.lastCall?.[1]).toEqual([
+        {
+          resourceType: "INSTANCE",
+          role: "ADMIN",
+        },
+      ]);
     });
 
     it("organizationId can be provided directly", () => {
       mockUseRbacPermissionsQuery.mockClear();
-      renderHook(() => useRbac({ resourceType: "ORGANIZATION", role: "ADMIN", resourceId: "some-other-organization" }));
+      renderHook(() =>
+        useRbac([{ resourceType: "ORGANIZATION", role: "ADMIN", resourceId: "some-other-organization" }])
+      );
       expect(mockUseRbacPermissionsQuery).toHaveBeenCalledTimes(1);
-      expect(mockUseRbacPermissionsQuery.mock.lastCall?.[1]).toEqual({
-        resourceType: "ORGANIZATION",
-        role: "ADMIN",
-        resourceId: "some-other-organization",
-      });
+      expect(mockUseRbacPermissionsQuery.mock.lastCall?.[1]).toEqual([
+        {
+          resourceType: "ORGANIZATION",
+          role: "ADMIN",
+          resourceId: "some-other-organization",
+        },
+      ]);
     });
 
     it("workspaceId can be provided directly", () => {
       mockUseRbacPermissionsQuery.mockClear();
-      renderHook(() => useRbac({ resourceType: "WORKSPACE", role: "ADMIN", resourceId: "some-other-workspace" }));
+      renderHook(() => useRbac([{ resourceType: "WORKSPACE", role: "ADMIN", resourceId: "some-other-workspace" }]));
       expect(mockUseRbacPermissionsQuery).toHaveBeenCalledTimes(1);
-      expect(mockUseRbacPermissionsQuery.mock.lastCall?.[1]).toEqual({
-        resourceType: "WORKSPACE",
-        role: "ADMIN",
-        resourceId: "some-other-workspace",
-      });
+      expect(mockUseRbacPermissionsQuery.mock.lastCall?.[1]).toEqual([
+        {
+          resourceType: "WORKSPACE",
+          role: "ADMIN",
+          resourceId: "some-other-workspace",
+        },
+      ]);
     });
   });
 
@@ -84,13 +92,13 @@ describe("useRbac", () => {
 
     it("throws an error when instance query includes a resourceId", () => {
       expect(() =>
-        renderHook(() => useRbac({ resourceType: "INSTANCE", role: "ADMIN", resourceId: "some-workspace" }))
+        renderHook(() => useRbac([{ resourceType: "INSTANCE", role: "ADMIN", resourceId: "some-workspace" }]))
       ).toThrow("Invalid RBAC query: Passed resource id some-workspace for INSTANCE query");
     });
 
     it("throws an error when an workspaceId is missing", () => {
       mockUseRbacPermissionsQuery.mockClear();
-      expect(() => renderHook(() => useRbac({ resourceType: "WORKSPACE", role: "ADMIN" }))).toThrow(
+      expect(() => renderHook(() => useRbac([{ resourceType: "WORKSPACE", role: "ADMIN" }]))).toThrow(
         "Invalid RBAC query: Missing id for resource WORKSPACE"
       );
     });
@@ -98,7 +106,7 @@ describe("useRbac", () => {
     it("does throw an error when an organizationId is missing", () => {
       mockUseRbacPermissionsQuery.mockClear();
       expect(() =>
-        renderHook(() => useRbac({ resourceType: "ORGANIZATION", role: "ADMIN", resourceId: undefined }))
+        renderHook(() => useRbac([{ resourceType: "ORGANIZATION", role: "ADMIN", resourceId: undefined }]))
       ).toThrow("Invalid RBAC query: Missing id for resource ORGANIZATION");
     });
   });

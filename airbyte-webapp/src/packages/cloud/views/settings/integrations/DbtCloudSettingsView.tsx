@@ -34,8 +34,8 @@ export const DbtCloudSettingsView: React.FC = () => {
   const { formatMessage } = useIntl();
   const { hasExistingToken, saveToken } = useDbtCloudServiceToken();
   const { registerNotification } = useNotificationService();
-  const { workspaceId } = useCurrentWorkspace();
-  const canUpdateWorkspace = useIntent("UpdateWorkspace", { workspaceId });
+  const { workspaceId, organizationId } = useCurrentWorkspace();
+  const canUpdateWorkspace = useIntent("UpdateWorkspace", { workspaceId, organizationId });
 
   const onDeleteClick = useDbtTokenRemovalModal();
 

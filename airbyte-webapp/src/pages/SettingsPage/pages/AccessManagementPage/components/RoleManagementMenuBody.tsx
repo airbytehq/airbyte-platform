@@ -22,10 +22,6 @@ interface RoleManagementMenuBodyProps {
 }
 export const RoleManagementMenuBody: React.FC<RoleManagementMenuBodyProps> = ({ user, resourceType, close }) => {
   const areAllRbacRolesEnabled = useFeature(FeatureItem.AllowAllRBACRoles);
-  /** this will break when we add additional organization role types.
-      it would allow users an organization, but without the AllowAllRbacRoles feature to assign any
-      organization role. 
-      */
 
   const rolesToAllow =
     !user.invitationStatus && (areAllRbacRolesEnabled || resourceType === "organization")

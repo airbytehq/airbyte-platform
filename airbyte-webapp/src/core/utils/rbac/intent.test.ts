@@ -24,11 +24,13 @@ describe("useIntent", () => {
     mockUseRbac.mockClear();
     renderHook(() => useIntent("__Mock_OrganizationReader", { organizationId: undefined }));
     expect(mockUseRbac).toHaveBeenCalledTimes(1);
-    expect(mockUseRbac).toHaveBeenCalledWith({
-      resourceType: "ORGANIZATION",
-      role: "READER",
-      resourceId: undefined,
-    });
+    expect(mockUseRbac).toHaveBeenCalledWith([
+      {
+        resourceType: "ORGANIZATION",
+        role: "READER",
+        resourceId: undefined,
+      },
+    ]);
   });
 
   describe("applies overriding details", () => {
@@ -36,22 +38,26 @@ describe("useIntent", () => {
       mockUseRbac.mockClear();
       renderHook(() => useIntent("__Mock_OrganizationReader", { organizationId: "some-other-org" }));
       expect(mockUseRbac).toHaveBeenCalledTimes(1);
-      expect(mockUseRbac).toHaveBeenCalledWith({
-        resourceType: "ORGANIZATION",
-        role: "READER",
-        resourceId: "some-other-org",
-      });
+      expect(mockUseRbac).toHaveBeenCalledWith([
+        {
+          resourceType: "ORGANIZATION",
+          role: "READER",
+          resourceId: "some-other-org",
+        },
+      ]);
     });
 
     it("overrides the workspaceId", () => {
       mockUseRbac.mockClear();
       renderHook(() => useIntent("__Mock_WorkspaceReader", { workspaceId: "some-other-workspace" }));
       expect(mockUseRbac).toHaveBeenCalledTimes(1);
-      expect(mockUseRbac).toHaveBeenCalledWith({
-        resourceType: "WORKSPACE",
-        role: "READER",
-        resourceId: "some-other-workspace",
-      });
+      expect(mockUseRbac).toHaveBeenCalledWith([
+        {
+          resourceType: "WORKSPACE",
+          role: "READER",
+          resourceId: "some-other-workspace",
+        },
+      ]);
     });
 
     it("does not override a resourceId with that of a mismatched resource", () => {
@@ -61,19 +67,23 @@ describe("useIntent", () => {
         useIntent("__Mock_OrganizationReader", { workspaceId: "some-other-organization" }, mockUseRbac)
       );
       expect(mockUseRbac).toHaveBeenCalledTimes(1);
-      expect(mockUseRbac).toHaveBeenCalledWith({
-        resourceType: "ORGANIZATION",
-        role: "READER",
-      });
+      expect(mockUseRbac).toHaveBeenCalledWith([
+        {
+          resourceType: "ORGANIZATION",
+          role: "READER",
+        },
+      ]);
 
       mockUseRbac.mockClear();
       // @ts-expect-error we're testing invalid object shapes
       renderHook(() => useIntent("__Mock_WorkspaceReader", { organizationId: "some-other-workspace" }, mockUseRbac));
       expect(mockUseRbac).toHaveBeenCalledTimes(1);
-      expect(mockUseRbac).toHaveBeenCalledWith({
-        resourceType: "WORKSPACE",
-        role: "READER",
-      });
+      expect(mockUseRbac).toHaveBeenCalledWith([
+        {
+          resourceType: "WORKSPACE",
+          role: "READER",
+        },
+      ]);
     });
   });
 

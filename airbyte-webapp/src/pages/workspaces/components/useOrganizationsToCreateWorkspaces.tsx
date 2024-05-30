@@ -9,7 +9,7 @@ export const useOrganizationsToCreateWorkspaces = () => {
 
   for (const permission of permissions) {
     if (permission.organizationId) {
-      if (permission.permissionType === "organization_admin" || permission.permissionType === "organization_editor") {
+      if (permission.permissionType === "organization_admin") {
         creatableOrganizationIds.push(permission.organizationId);
       }
 

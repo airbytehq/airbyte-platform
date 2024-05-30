@@ -81,8 +81,7 @@ const PermissionQueryResult: React.FC<PermissionQueryResultProps> = ({
   role,
   permissions,
 }) => {
-  const query =
-    resourceType === "INSTANCE" ? { resourceType, role, resourceId: "" } : { resourceType, role, resourceId };
+  const query = resourceType === "INSTANCE" ? { resourceType, role } : { resourceType, role, resourceId };
 
   const hasMatchingPermissions = useRbacPermissionsQuery(
     permissions.map(({ resourceType, role, resourceId }) => {
@@ -96,7 +95,7 @@ const PermissionQueryResult: React.FC<PermissionQueryResultProps> = ({
         workspaceId: resourceType === "WORKSPACE" ? resourceId || undefined : undefined,
       };
     }),
-    query
+    [query]
   );
 
   return <span>{hasMatchingPermissions ? "✅" : "❌"}</span>;

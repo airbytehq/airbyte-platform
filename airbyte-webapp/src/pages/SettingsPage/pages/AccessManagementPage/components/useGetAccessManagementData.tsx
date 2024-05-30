@@ -30,15 +30,11 @@ export const permissionDescriptionDictionary: Record<PermissionType, PermissionD
   workspace_reader: { id: "role.reader.description", values: { resourceType: "workspace" } },
 };
 export const permissionsByResourceType: Record<ResourceType, PermissionType[]> = {
-  workspace: [
-    PermissionType.workspace_admin,
-    // PermissionType.workspace_editor,
-    PermissionType.workspace_reader,
-  ],
+  workspace: [PermissionType.workspace_admin, PermissionType.workspace_editor, PermissionType.workspace_reader],
   organization: [
     PermissionType.organization_admin,
-    // PermissionType.organization_editor,
-    // PermissionType.organization_reader,
+    PermissionType.organization_editor,
+    PermissionType.organization_reader,
     PermissionType.organization_member,
   ],
   instance: [PermissionType.instance_admin],

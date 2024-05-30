@@ -63,11 +63,14 @@ export const disallowedRoles = (
 
   const organizationRole = user?.organizationPermission?.permissionType;
 
-  if (organizationRole === "organization_editor") {
+  if (organizationRole === "organization_reader") {
     return ["workspace_reader"];
   }
-  if (organizationRole === "organization_admin") {
+  if (organizationRole === "organization_editor") {
     return ["workspace_editor", "workspace_reader"];
+  }
+  if (organizationRole === "organization_admin") {
+    return ["workspace_admin", "workspace_editor", "workspace_reader"];
   }
 
   return [];
@@ -95,8 +98,8 @@ export const ChangeRoleMenuItem: React.FC<RoleMenuItemProps> = ({ user, permissi
     <button
       disabled={roleIsInvalid || roleIsActive}
       onClick={async () => {
-        await createOrUpdateRole();
         onClose();
+        await createOrUpdateRole();
       }}
       className={classNames(styles.changeRoleMenuItem__button, {
         [styles["changeRoleMenuItem__button--active"]]: roleIsActive,

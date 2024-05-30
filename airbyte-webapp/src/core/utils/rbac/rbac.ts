@@ -1,32 +1,29 @@
 import { useListPermissions } from "core/api";
 import { useCurrentUser } from "core/services/auth";
 
-import { RbacQuery, RbacQueryWithoutResourceId, useRbacPermissionsQuery } from "./rbacPermissionsQuery";
+import { RbacQuery, useRbacPermissionsQuery } from "./rbacPermissionsQuery";
 
 /**
  * Takes a list of permissions and a full or partial query, returning a boolean representing if the user has any permissions satisfying the query
  */
-export const useRbac = (query: RbacQuery | RbacQueryWithoutResourceId) => {
-  const { resourceType, role } = query;
-  const resourceId = "resourceId" in query ? query.resourceId : undefined;
-
-  const queryUsesResourceId = resourceType !== "INSTANCE";
-
+export const useRbac = (queries: RbacQuery[]) => {
   const { userId } = useCurrentUser();
   const { permissions } = useListPermissions(userId);
 
-  if (queryUsesResourceId && !resourceId) {
-    throw new Error(`Invalid RBAC query: Missing id for resource ${resourceType}`);
-  }
+  queries.forEach((query) => {
+    const { resourceType } = query;
+    const resourceId = "resourceId" in query ? query.resourceId : undefined;
 
-  if (!queryUsesResourceId && resourceId) {
-    throw new Error(`Invalid RBAC query: Passed resource id ${resourceId} for ${resourceType} query`);
-  }
+    const queryUsesResourceId = resourceType !== "INSTANCE";
 
-  // above invariant guarantees resourceId is defined when needed
-  const assembledQuery = queryUsesResourceId
-    ? { resourceType, resourceId: resourceId ?? "", role }
-    : { resourceType, role, resourceId: "" };
+    if (queryUsesResourceId && !resourceId) {
+      throw new Error(`Invalid RBAC query: Missing id for resource ${resourceType}`);
+    }
 
-  return useRbacPermissionsQuery(permissions, assembledQuery);
+    if (!queryUsesResourceId && resourceId) {
+      throw new Error(`Invalid RBAC query: Passed resource id ${resourceId} for ${resourceType} query`);
+    }
+  });
+
+  return useRbacPermissionsQuery(permissions, queries);
 };

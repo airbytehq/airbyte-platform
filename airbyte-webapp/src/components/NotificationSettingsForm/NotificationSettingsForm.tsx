@@ -36,8 +36,8 @@ export const NotificationSettingsForm: React.FC = () => {
   const { formatMessage } = useIntl();
   const { registerNotification } = useNotificationService();
   const { trackError } = useAppMonitoringService();
-  const { workspaceId } = useCurrentWorkspace();
-  const canUpdateWorkspace = useIntent("UpdateWorkspace", { workspaceId });
+  const { workspaceId, organizationId } = useCurrentWorkspace();
+  const canUpdateWorkspace = useIntent("UpdateWorkspace", { workspaceId, organizationId });
 
   const onSubmit = async (
     values: NotificationSettingsFormValues,
