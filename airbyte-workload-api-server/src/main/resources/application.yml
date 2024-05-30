@@ -51,7 +51,7 @@ micronaut:
     idle-timeout: ${HTTP_IDLE_TIMEOUT:5m}
     netty:
       access-logger:
-        enabled: ${HTTP_ACCESS_LOG_ENABLED:true}
+        enabled: ${HTTP_ACCESS_LOG_ENABLED:false}
       aggregator:
         max-content-length: 52428800 # 50MB
     max-request-size: 10485760 # 10MB the micronaut default. If we want to bump, double check it works for nginx.
