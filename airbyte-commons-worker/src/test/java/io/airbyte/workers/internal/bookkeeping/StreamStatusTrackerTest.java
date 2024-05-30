@@ -144,10 +144,10 @@ class StreamStatusTrackerTest {
         StreamStatusJobType.SYNC,
         StreamStatusRunState.RUNNING,
         streamDescriptor.getName(),
-        streamDescriptor.getNamespace(),
         TIMESTAMP.toMillis(),
         WORKSPACE_ID,
         null,
+        streamDescriptor.getNamespace(),
         null);
 
     when(streamStatusesApi.createStreamStatus(any())).thenReturn(streamStatusRead);
@@ -199,10 +199,10 @@ class StreamStatusTrackerTest {
         OldStreamStatusTrackerKt.jobType(replicationContext),
         StreamStatusRunState.RATE_LIMITED,
         streamDescriptor.getName(),
-        streamDescriptor.getNamespace(),
         TIMESTAMP.toMillis(),
         WORKSPACE_ID,
         null,
+        streamDescriptor.getNamespace(),
         new StreamStatusRateLimitedMetadata(quotaReset.toEpochMilli())));
     when(airbyteApiClient.getStreamStatusesApi()).thenReturn(streamStatusesApi);
 
@@ -289,10 +289,10 @@ class StreamStatusTrackerTest {
         OldStreamStatusTrackerKt.jobType(replicationContext),
         StreamStatusRunState.RATE_LIMITED,
         streamDescriptor.getName(),
-        streamDescriptor.getNamespace(),
         TIMESTAMP.toMillis(),
         WORKSPACE_ID,
         null,
+        streamDescriptor.getNamespace(),
         new StreamStatusRateLimitedMetadata(quotaReset.toEpochMilli())));
     when(airbyteApiClient.getStreamStatusesApi()).thenReturn(streamStatusesApi);
 
@@ -344,10 +344,10 @@ class StreamStatusTrackerTest {
         StreamStatusJobType.SYNC,
         StreamStatusRunState.RUNNING,
         streamDescriptor.getName(),
-        streamDescriptor.getNamespace(),
         TIMESTAMP.toMillis(),
         WORKSPACE_ID,
         null,
+        streamDescriptor.getNamespace(),
         null));
     when(airbyteApiClient.getStreamStatusesApi()).thenReturn(streamStatusesApi);
 
@@ -383,10 +383,10 @@ class StreamStatusTrackerTest {
         StreamStatusJobType.SYNC,
         StreamStatusRunState.RUNNING,
         streamDescriptor.getName(),
-        streamDescriptor.getNamespace(),
         TIMESTAMP.toMillis(),
         WORKSPACE_ID,
         null,
+        streamDescriptor.getNamespace(),
         null));
     when(airbyteApiClient.getStreamStatusesApi()).thenReturn(streamStatusesApi);
 
@@ -422,10 +422,10 @@ class StreamStatusTrackerTest {
         StreamStatusJobType.SYNC,
         StreamStatusRunState.COMPLETE,
         streamDescriptor.getName(),
-        streamDescriptor.getNamespace(),
         TIMESTAMP.toMillis(),
         WORKSPACE_ID,
         null,
+        streamDescriptor.getNamespace(),
         null));
     when(airbyteApiClient.getStreamStatusesApi()).thenReturn(streamStatusesApi);
 
@@ -478,10 +478,10 @@ class StreamStatusTrackerTest {
         OldStreamStatusTrackerKt.jobType(replicationContext),
         StreamStatusRunState.COMPLETE,
         streamDescriptor.getName(),
-        streamDescriptor.getNamespace(),
         TIMESTAMP.toMillis(),
         WORKSPACE_ID,
         null,
+        streamDescriptor.getNamespace(),
         null));
     when(airbyteApiClient.getStreamStatusesApi()).thenReturn(streamStatusesApi);
 
@@ -539,10 +539,10 @@ class StreamStatusTrackerTest {
         OldStreamStatusTrackerKt.jobType(replicationContext),
         StreamStatusRunState.COMPLETE,
         streamDescriptor.getName(),
-        streamDescriptor.getNamespace(),
         TIMESTAMP.toMillis(),
         WORKSPACE_ID,
         null,
+        streamDescriptor.getNamespace(),
         null));
     when(airbyteApiClient.getStreamStatusesApi()).thenReturn(streamStatusesApi);
 
@@ -603,10 +603,10 @@ class StreamStatusTrackerTest {
         OldStreamStatusTrackerKt.jobType(replicationContext),
         StreamStatusRunState.INCOMPLETE,
         streamDescriptor.getName(),
-        streamDescriptor.getNamespace(),
         TIMESTAMP.toMillis(),
         WORKSPACE_ID,
         incompleteRunCause,
+        streamDescriptor.getNamespace(),
         null));
     when(airbyteApiClient.getStreamStatusesApi()).thenReturn(streamStatusesApi);
 
@@ -661,10 +661,10 @@ class StreamStatusTrackerTest {
         OldStreamStatusTrackerKt.jobType(replicationContext),
         StreamStatusRunState.INCOMPLETE,
         streamDescriptor.getName(),
-        streamDescriptor.getNamespace(),
         TIMESTAMP.toMillis(),
         WORKSPACE_ID,
         null,
+        streamDescriptor.getNamespace(),
         null));
     when(airbyteApiClient.getStreamStatusesApi()).thenReturn(streamStatusesApi);
 
@@ -722,10 +722,10 @@ class StreamStatusTrackerTest {
         OldStreamStatusTrackerKt.jobType(replicationContext),
         StreamStatusRunState.INCOMPLETE,
         streamDescriptor.getName(),
-        streamDescriptor.getNamespace(),
         TIMESTAMP.toMillis(),
         WORKSPACE_ID,
         incompleteRunCause,
+        streamDescriptor.getNamespace(),
         null));
     when(airbyteApiClient.getStreamStatusesApi()).thenReturn(streamStatusesApi);
 
@@ -785,10 +785,10 @@ class StreamStatusTrackerTest {
         OldStreamStatusTrackerKt.jobType(replicationContext),
         StreamStatusRunState.INCOMPLETE,
         streamDescriptor.getName(),
-        streamDescriptor.getNamespace(),
         TIMESTAMP.toMillis(),
         WORKSPACE_ID,
         incompleteRunCause,
+        streamDescriptor.getNamespace(),
         null));
     when(airbyteApiClient.getStreamStatusesApi()).thenReturn(streamStatusesApi);
 
@@ -847,10 +847,10 @@ class StreamStatusTrackerTest {
         OldStreamStatusTrackerKt.jobType(replicationContext),
         StreamStatusRunState.INCOMPLETE,
         streamDescriptor.getName(),
-        streamDescriptor.getNamespace(),
         TIMESTAMP.toMillis(),
         WORKSPACE_ID,
         incompleteRunCause,
+        streamDescriptor.getNamespace(),
         null));
     when(airbyteApiClient.getStreamStatusesApi()).thenReturn(streamStatusesApi);
 
@@ -909,10 +909,10 @@ class StreamStatusTrackerTest {
         OldStreamStatusTrackerKt.jobType(replicationContext),
         StreamStatusRunState.INCOMPLETE,
         streamDescriptor.getName(),
-        streamDescriptor.getNamespace(),
         TIMESTAMP.toMillis(),
         WORKSPACE_ID,
         incompleteRunCause,
+        streamDescriptor.getNamespace(),
         null));
     when(airbyteApiClient.getStreamStatusesApi()).thenReturn(streamStatusesApi);
 
@@ -972,10 +972,10 @@ class StreamStatusTrackerTest {
         OldStreamStatusTrackerKt.jobType(replicationContext),
         StreamStatusRunState.INCOMPLETE,
         streamDescriptor.getName(),
-        streamDescriptor.getNamespace(),
         TIMESTAMP.toMillis(),
         WORKSPACE_ID,
         incompleteRunCause,
+        streamDescriptor.getNamespace(),
         null));
     when(airbyteApiClient.getStreamStatusesApi()).thenReturn(streamStatusesApi);
 
@@ -1035,10 +1035,10 @@ class StreamStatusTrackerTest {
         OldStreamStatusTrackerKt.jobType(replicationContext),
         StreamStatusRunState.INCOMPLETE,
         streamDescriptor.getName(),
-        streamDescriptor.getNamespace(),
         TIMESTAMP.toMillis(),
         WORKSPACE_ID,
         incompleteRunCause,
+        streamDescriptor.getNamespace(),
         null));
     when(airbyteApiClient.getStreamStatusesApi()).thenReturn(streamStatusesApi);
 
@@ -1094,10 +1094,10 @@ class StreamStatusTrackerTest {
         OldStreamStatusTrackerKt.jobType(replicationContext),
         StreamStatusRunState.INCOMPLETE,
         streamDescriptor.getName(),
-        streamDescriptor.getNamespace(),
         TIMESTAMP.toMillis(),
         WORKSPACE_ID,
         incompleteRunCause,
+        streamDescriptor.getNamespace(),
         null));
     when(airbyteApiClient.getStreamStatusesApi()).thenReturn(streamStatusesApi);
 
@@ -1142,10 +1142,10 @@ class StreamStatusTrackerTest {
         StreamStatusJobType.SYNC,
         StreamStatusRunState.RUNNING,
         streamDescriptor.getName(),
-        streamDescriptor.getNamespace(),
         TIMESTAMP.toMillis(),
         WORKSPACE_ID,
         null,
+        streamDescriptor.getNamespace(),
         null));
     when(airbyteApiClient.getStreamStatusesApi()).thenReturn(streamStatusesApi);
 
@@ -1190,10 +1190,10 @@ class StreamStatusTrackerTest {
         StreamStatusJobType.SYNC,
         StreamStatusRunState.RUNNING,
         streamDescriptor.getName(),
-        streamDescriptor.getNamespace(),
         TIMESTAMP.toMillis(),
         WORKSPACE_ID,
         null,
+        streamDescriptor.getNamespace(),
         null));
     when(airbyteApiClient.getStreamStatusesApi()).thenReturn(streamStatusesApi);
 
@@ -1289,10 +1289,10 @@ class StreamStatusTrackerTest {
         OldStreamStatusTrackerKt.jobType(replicationContext),
         StreamStatusRunState.COMPLETE,
         streamDescriptor.getName(),
-        streamDescriptor.getNamespace(),
         TIMESTAMP.toMillis(),
         WORKSPACE_ID,
         null,
+        streamDescriptor.getNamespace(),
         null));
     when(airbyteApiClient.getStreamStatusesApi()).thenReturn(streamStatusesApi);
 
@@ -1346,10 +1346,10 @@ class StreamStatusTrackerTest {
         OldStreamStatusTrackerKt.jobType(replicationContext),
         StreamStatusRunState.COMPLETE,
         streamDescriptor.getName(),
-        streamDescriptor.getNamespace(),
         TIMESTAMP.toMillis(),
         WORKSPACE_ID,
         null,
+        streamDescriptor.getNamespace(),
         null));
     when(airbyteApiClient.getStreamStatusesApi()).thenReturn(streamStatusesApi);
 
@@ -1411,10 +1411,10 @@ class StreamStatusTrackerTest {
         OldStreamStatusTrackerKt.jobType(replicationContext),
         StreamStatusRunState.INCOMPLETE,
         streamDescriptor.getName(),
-        streamDescriptor.getNamespace(),
         TIMESTAMP.toMillis(),
         WORKSPACE_ID,
         null,
+        streamDescriptor.getNamespace(),
         null));
     when(airbyteApiClient.getStreamStatusesApi()).thenReturn(streamStatusesApi);
 
@@ -1473,10 +1473,10 @@ class StreamStatusTrackerTest {
         OldStreamStatusTrackerKt.jobType(replicationContext),
         StreamStatusRunState.COMPLETE,
         streamDescriptor.getName(),
-        streamDescriptor.getNamespace(),
         TIMESTAMP.toMillis(),
         WORKSPACE_ID,
         null,
+        streamDescriptor.getNamespace(),
         null));
     when(airbyteApiClient.getStreamStatusesApi()).thenReturn(streamStatusesApi);
 
@@ -1536,10 +1536,10 @@ class StreamStatusTrackerTest {
         OldStreamStatusTrackerKt.jobType(replicationContext1),
         StreamStatusRunState.COMPLETE,
         streamDescriptor.getName(),
-        streamDescriptor.getNamespace(),
         TIMESTAMP.toMillis(),
         WORKSPACE_ID,
         null,
+        streamDescriptor.getNamespace(),
         null));
     when(airbyteApiClient.getStreamStatusesApi()).thenReturn(streamStatusesApi);
 
@@ -1587,10 +1587,10 @@ class StreamStatusTrackerTest {
         OldStreamStatusTrackerKt.jobType(replicationContext),
         StreamStatusRunState.COMPLETE,
         streamDescriptor.getName(),
-        streamDescriptor.getNamespace(),
         TIMESTAMP.toMillis(),
         WORKSPACE_ID,
         null,
+        streamDescriptor.getNamespace(),
         null));
     when(airbyteApiClient.getStreamStatusesApi()).thenReturn(streamStatusesApi);
 
@@ -1644,10 +1644,10 @@ class StreamStatusTrackerTest {
         OldStreamStatusTrackerKt.jobType(replicationContext),
         StreamStatusRunState.INCOMPLETE,
         streamDescriptor.getName(),
-        streamDescriptor.getNamespace(),
         TIMESTAMP.toMillis(),
         WORKSPACE_ID,
         StreamStatusIncompleteRunCause.FAILED,
+        streamDescriptor.getNamespace(),
         null));
     when(airbyteApiClient.getStreamStatusesApi()).thenReturn(streamStatusesApi);
 
