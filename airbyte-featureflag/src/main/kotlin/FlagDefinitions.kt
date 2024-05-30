@@ -192,4 +192,6 @@ object DeleteDanglingSecrets : Temporary<Boolean>(key = "platform.delete-danglin
 
 object EnableResumableFullRefresh : Temporary<Boolean>(key = "platform.enable-resumable-full-refresh", default = true)
 
+object AlwaysRunCheckBeforeSync : Permanent<Boolean>(key = "platform.always-run-check-before-sync", default = false)
+
 object UseStreamStatusTracker2024 : Temporary<Boolean>(key = "use-stream-status-tracker-2024", default = false)

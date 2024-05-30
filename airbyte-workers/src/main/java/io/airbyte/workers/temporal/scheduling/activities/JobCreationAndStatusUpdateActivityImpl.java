@@ -21,6 +21,8 @@ import io.airbyte.api.client.model.generated.ReportJobStartRequest;
 import io.airbyte.commons.temporal.config.WorkerMode;
 import io.airbyte.commons.temporal.exception.RetryableException;
 import io.airbyte.config.State;
+import io.airbyte.featureflag.AlwaysRunCheckBeforeSync;
+import io.airbyte.featureflag.Connection;
 import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.metrics.lib.ApmTraceUtils;
 import io.airbyte.protocol.models.ConfiguredAirbyteCatalog;
@@ -30,6 +32,7 @@ import io.micronaut.context.annotation.Requires;
 import jakarta.inject.Named;
 import jakarta.inject.Singleton;
 import java.io.IOException;
+import java.util.UUID;
 import lombok.extern.slf4j.Slf4j;
 import org.openapitools.client.infrastructure.ClientException;
 
@@ -195,6 +198,11 @@ public class JobCreationAndStatusUpdateActivityImpl implements JobCreationAndSta
    */
   @Override
   public boolean isLastJobOrAttemptFailure(final JobCheckFailureInput input) {
+    // This is a hack to enforce check operation before every sync. Please be mindful of this logic.
+    // This is mainly for testing and to force our canary connections to always run CHECK
+    if (shouldAlwaysRunCheckBeforeSync(input.getConnectionId())) {
+      return true;
+    }
     // If there has been a previous attempt, that means it failed. We don't create subsequent attempts
     // on success.
     final var isNotFirstAttempt = input.getAttemptId() > 0;
@@ -210,6 +218,15 @@ public class JobCreationAndStatusUpdateActivityImpl implements JobCreationAndSta
       return !didSucceed;
     } catch (final ClientException | IOException e) {
       throw new RetryableException(e);
+    }
+  }
+
+  private boolean shouldAlwaysRunCheckBeforeSync(UUID connectionId) {
+    try {
+      return featureFlagClient.boolVariation(AlwaysRunCheckBeforeSync.INSTANCE,
+          new Connection(connectionId));
+    } catch (final Exception e) {
+      return false;
     }
   }
 
