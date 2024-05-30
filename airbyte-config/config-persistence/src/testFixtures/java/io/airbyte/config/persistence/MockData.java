@@ -137,6 +137,8 @@ public class MockData {
   static final UUID DUP_EMAIL_USER_ID_1 = UUID.randomUUID();
   static final UUID DUP_EMAIL_USER_ID_2 = UUID.randomUUID();
   static final String DUP_EMAIL = "dup-email@airbyte.io";
+  static final String EMAIL_1 = "user-1@whatever.com";
+  static final String EMAIL_2 = "user-2@whatever.com";
 
   // Permission
   static final UUID PERMISSION_ID_1 = UUID.randomUUID();
@@ -252,7 +254,7 @@ public class MockData {
         .withDefaultWorkspaceId(WORKSPACE_ID_1)
         .withStatus(User.Status.DISABLED)
         .withCompanyName("company-1")
-        .withEmail("user-1@whatever.com")
+        .withEmail(EMAIL_1)
         .withNews(true)
         .withUiMetadata(null);
 
@@ -264,7 +266,7 @@ public class MockData {
         .withDefaultWorkspaceId(WORKSPACE_ID_2)
         .withStatus(User.Status.INVITED)
         .withCompanyName("company-2")
-        .withEmail("user-2@whatever.com")
+        .withEmail(EMAIL_2)
         .withNews(false)
         .withUiMetadata(null);
 
