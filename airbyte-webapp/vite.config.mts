@@ -3,6 +3,7 @@ import path from "node:path";
 import viteYaml from "@modyfi/vite-plugin-yaml";
 import basicSsl from "@vitejs/plugin-basic-ssl";
 import react from "@vitejs/plugin-react";
+import express from "express";
 import { UserConfig, defineConfig } from "vite";
 import checker from "vite-plugin-checker";
 import svgrPlugin from "vite-plugin-svgr";
@@ -70,6 +71,13 @@ export default defineConfig(() => {
       docMiddleware(),
       experimentOverwrites(),
       preloadTags(),
+      {
+        name: "airbyte/auth-flow",
+        configureServer(server) {
+          // Make the /auth_flow URL resolve to the oauth-callback.html page during development. In prod this is handled by the nginx config.
+          server.middlewares.use("/auth_flow", express.static(path.resolve(__dirname, "./oauth-callback.html")));
+        },
+      },
     ],
     // Use `REACT_APP_` as a prefix for environment variables that should be accessible from within FE code.
     envPrefix: ["REACT_APP_"],
@@ -77,6 +85,11 @@ export default defineConfig(() => {
     build: {
       outDir: "build/app",
       rollupOptions: {
+        input: {
+          main: path.resolve(__dirname, "index.html"),
+          // Build a separate page for the oauth callback redirect_uri
+          oauthCallback: path.resolve(__dirname, "oauth-callback.html"),
+        },
         output: {
           chunkFileNames(chunkInfo) {
             if (chunkInfo.name === "index") {
@@ -92,6 +105,12 @@ export default defineConfig(() => {
             // Make sure all of `src/core` (and its dependencies) are within one chunk
             if (id.includes("src/core/")) {
               return "core";
+            }
+            // Force broadcast-channel to be in its own chunk, since it's used in the oauth-callback.html
+            // Otherwise it would land in the core chunk (by automatic detection) and the oauthCallback.ts file
+            // would import all of (the big) core chunk just to get the broadcast-channel dependency.
+            if (id.includes("broadcast-channel")) {
+              return "broadcast-channel";
             }
             return null;
           },

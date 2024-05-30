@@ -17,7 +17,6 @@ import { useApiHealthPoll } from "hooks/services/Health";
 import { useBuildUpdateCheck } from "hooks/services/useBuildUpdateCheck";
 import { useCurrentWorkspace } from "hooks/services/useWorkspace";
 import { ApplicationSettingsView } from "packages/cloud/views/users/ApplicationSettingsView/ApplicationSettingsView";
-import { CompleteOauthRequest } from "views/CompleteOauthRequest";
 import MainView from "views/layout/MainView";
 
 import { RoutePaths, DestinationPaths, SourcePaths, SettingsRoutePaths } from "./routePaths";
@@ -186,7 +185,6 @@ export const Routing: React.FC = () => {
 
   return (
     <Routes>
-      <Route path={RoutePaths.AuthFlow} element={<CompleteOauthRequest />} />
       {user && !initialSetupComplete ? (
         <Route path="*" element={<PreferencesRoutes />} />
       ) : (

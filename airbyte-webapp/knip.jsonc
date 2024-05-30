@@ -16,6 +16,9 @@
     "src/test-utils/**",
     "**/__mocks__/**",
     "**/*.mocks.{ts,tsx}",
+
+    // Ignore oauth-callback.html script
+    "src/area/connector/utils/oauthCallback.ts",
     
     // Debug utility meant to be used only temporary for local debugging
     "src/core/utils/useMemoDebug.ts"

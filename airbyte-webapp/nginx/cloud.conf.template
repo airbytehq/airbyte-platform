@@ -16,7 +16,11 @@ server {
     
     location / {
         root   /usr/share/nginx/html;
-        
+
+        location = /auth_flow {
+            try_files /oauth-callback.html =404;
+        }
+
         location ~ ^/docs/.* {
             try_files $uri $uri/ =404;
         }

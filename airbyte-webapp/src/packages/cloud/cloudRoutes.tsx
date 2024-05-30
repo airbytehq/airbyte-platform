@@ -25,7 +25,6 @@ import {
   DestinationsPage as SettingsDestinationsPage,
 } from "pages/SettingsPage/pages/ConnectorsPage";
 import { NotificationPage } from "pages/SettingsPage/pages/NotificationPage";
-import { CompleteOauthRequest } from "views/CompleteOauthRequest";
 
 import { AcceptInvitation } from "./AcceptInvitation";
 import { CloudRoutes } from "./cloudRoutePaths";
@@ -149,7 +148,6 @@ const CloudMainViewRoutes = () => {
     <Routes>
       <Route path={RoutePaths.SpeakeasyRedirect} element={<SpeakeasyRedirectPage />} />
       <Route path={RoutePaths.Workspaces} element={<CloudWorkspacesPage />} />
-      <Route path={CloudRoutes.AuthFlow} element={<CompleteOauthRequest />} />
       <Route path={CloudRoutes.AcceptInvitation} element={<AcceptInvitation />} />
       <Route
         path={`${RoutePaths.Workspaces}/:workspaceId/*`}
