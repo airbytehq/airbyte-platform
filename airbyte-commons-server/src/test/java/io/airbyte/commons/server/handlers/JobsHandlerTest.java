@@ -371,6 +371,7 @@ public class JobsHandlerTest {
     verify(jobPersistence).failJob(JOB_ID);
     verify(jobNotifier).failJob(Mockito.any(), any());
     verify(jobErrorReporter).reportSyncJobFailure(CONNECTION_ID, failureSummary, expectedReportingContext, expectedAttemptConfig);
+    verify(connectionTimelineEventService).writeEvent(eq(CONNECTION_ID), any());
   }
 
   @Test

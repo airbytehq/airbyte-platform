@@ -5,6 +5,7 @@ import java.util.UUID
 interface ConnectionEvent {
   enum class Type {
     SYNC_SUCCEEDED,
+    SYNC_FAILED,
   }
 
   fun getUserId(): UUID? {

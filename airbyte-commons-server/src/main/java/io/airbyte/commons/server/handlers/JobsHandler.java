@@ -18,6 +18,7 @@ import io.airbyte.commons.server.handlers.helpers.JobCreationAndStatusUpdateHelp
 import io.airbyte.commons.server.handlers.helpers.StatsAggregationHelper;
 import io.airbyte.config.AttemptFailureSummary;
 import io.airbyte.config.AttemptSyncConfig;
+import io.airbyte.config.FailureReason;
 import io.airbyte.config.JobConfig;
 import io.airbyte.config.JobConfigProxy;
 import io.airbyte.config.JobOutput;
@@ -25,6 +26,7 @@ import io.airbyte.config.JobResetConnectionConfig;
 import io.airbyte.config.JobSyncConfig;
 import io.airbyte.config.StandardSyncOutput;
 import io.airbyte.data.services.ConnectionTimelineEventService;
+import io.airbyte.data.services.shared.SyncFailedEvent;
 import io.airbyte.data.services.shared.SyncSucceededEvent;
 import io.airbyte.metrics.lib.MetricClientFactory;
 import io.airbyte.metrics.lib.OssMetricsRegistry;
@@ -88,9 +90,11 @@ public class JobsHandler {
       for (Attempt attempt : job.getAttempts()) {
         attemptStats.add(jobPersistence.getAttemptStats(jobId, attempt.getAttemptNumber()));
       }
-      if (!job.getConfigType().equals(JobConfig.ConfigType.RESET_CONNECTION)) {
+      if (job.getConfigType().equals(JobConfig.ConfigType.SYNC)) {
         jobNotifier.failJob(job, attemptStats);
+        storeSyncFailure(job, input.getConnectionId(), attemptStats);
       }
+
       jobCreationAndStatusUpdateHelper.emitJobToReleaseStagesMetric(OssMetricsRegistry.JOB_FAILED_BY_RELEASE_STAGE, job, input);
 
       final UUID connectionId = UUID.fromString(job.getScope());
@@ -168,9 +172,9 @@ public class JobsHandler {
       for (Attempt attempt : job.getAttempts()) {
         attemptStats.add(jobPersistence.getAttemptStats(jobId, attempt.getAttemptNumber()));
       }
-      if (!job.getConfigType().equals(JobConfig.ConfigType.RESET_CONNECTION)) {
+      if (job.getConfigType().equals(JobConfig.ConfigType.SYNC)) {
         jobNotifier.successJob(job, attemptStats);
-        storeSyncSuccess(job, input, attemptStats);
+        storeSyncSuccess(job, input.getConnectionId(), attemptStats);
       }
       jobCreationAndStatusUpdateHelper.emitJobToReleaseStagesMetric(OssMetricsRegistry.JOB_SUCCEEDED_BY_RELEASE_STAGE, job, input);
       jobCreationAndStatusUpdateHelper.trackCompletion(job, JobStatus.SUCCEEDED);
@@ -183,14 +187,31 @@ public class JobsHandler {
     }
   }
 
-  private void storeSyncSuccess(final Job job, final JobSuccessWithAttemptNumberRequest input, final List<JobPersistence.AttemptStats> attemptStats) {
+  private void storeSyncSuccess(final Job job, final UUID connectionId, final List<JobPersistence.AttemptStats> attemptStats) {
     final long jobId = job.getId();
     try {
       final LoadedStats stats = buildLoadedStats(job, attemptStats);
       final SyncSucceededEvent event = new SyncSucceededEvent(jobId, job.getCreatedAtInSecond(),
           job.getUpdatedAtInSecond(), stats.bytes, stats.records, job.getAttemptsCount());
-      connectionEventService.writeEvent(input.getConnectionId(), event);
-    } catch (Exception e) {
+      connectionEventService.writeEvent(connectionId, event);
+    } catch (final Exception e) {
+      log.warn("Failed to persist timeline event for job: {}", jobId, e);
+    }
+  }
+
+  private void storeSyncFailure(final Job job, final UUID connectionId, final List<JobPersistence.AttemptStats> attemptStats) {
+    final long jobId = job.getId();
+    try {
+      final LoadedStats stats = buildLoadedStats(job, attemptStats);
+
+      final Optional<AttemptFailureSummary> lastAttemptFailureSummary = job.getLastAttempt().flatMap(Attempt::getFailureSummary);
+      final Optional<FailureReason> firstFailureReasonOfLastAttempt =
+          lastAttemptFailureSummary.flatMap(summary -> summary.getFailures().stream().findFirst());
+
+      final SyncFailedEvent event = new SyncFailedEvent(jobId, job.getCreatedAtInSecond(),
+          job.getUpdatedAtInSecond(), stats.bytes, stats.records, job.getAttemptsCount(), firstFailureReasonOfLastAttempt);
+      connectionEventService.writeEvent(connectionId, event);
+    } catch (final Exception e) {
       log.warn("Failed to persist timeline event for job: {}", jobId, e);
     }
   }
