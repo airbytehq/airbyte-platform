@@ -7492,6 +7492,7 @@ components:
     SourceConfiguration:
       description: The values required to configure the source. The schema for this must match the schema return by source_definition_specifications/get for the source.
       example: { user: "charles" }
+      x-sdk-component: true
     SourceCoreConfig:
       type: object
       required:
@@ -7889,6 +7890,7 @@ components:
     DestinationConfiguration:
       description: The values required to configure the destination. The schema for this must match the schema return by destination_definition_specifications/get for the destinationDefinition.
       example: { user: "charles" }
+      x-sdk-component: true
     DestinationCoreConfig:
       type: object
       required:
