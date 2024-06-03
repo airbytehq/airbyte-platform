@@ -91,15 +91,17 @@ export default defineConfig(() => {
           oauthCallback: path.resolve(__dirname, "oauth-callback.html"),
         },
         output: {
+          hashCharacters: "base36",
+          assetFileNames: "assets/[name]-[hash:10][extname]",
           chunkFileNames(chunkInfo) {
             if (chunkInfo.name === "index") {
               // In case the chunk name would be index, we try to find the next file that this
               // index file is importing (call stack is in order in chunkInfo.moduleIds) and
               // use that files name instead.
               const module = chunkInfo.moduleIds.at(-2);
-              return `assets/${module ? path.basename(module, path.extname(module)) : "[name]"}-[hash].js`;
+              return `assets/${module ? path.basename(module, path.extname(module)) : "[name]"}-[hash:10].js`;
             }
-            return "assets/[name]-[hash].js";
+            return "assets/[name]-[hash:10].js";
           },
           manualChunks: (id) => {
             // Make sure all of `src/core` (and its dependencies) are within one chunk

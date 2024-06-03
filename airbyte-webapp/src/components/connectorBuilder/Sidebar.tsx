@@ -32,7 +32,6 @@ export const Sidebar: React.FC<React.PropsWithChildren<SidebarProps>> = ({ class
   const { toggleUI, isResolving } = useConnectorBuilderFormState();
   const formValues = useBuilderWatch("formValues");
   const showSavingIndicator = yamlSelected || formValues.streams.length > 0;
-  console.log("Sidebar");
 
   const OnUiToggleClick = () => {
     toggleUI(yamlSelected ? "ui" : "yaml");
