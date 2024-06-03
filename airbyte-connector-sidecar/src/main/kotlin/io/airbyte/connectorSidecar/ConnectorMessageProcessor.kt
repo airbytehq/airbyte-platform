@@ -156,6 +156,10 @@ class ConnectorMessageProcessor(
         } else if (failureReason.isEmpty && exitCode == 0) {
           throw WorkerException("Connector exited successfully without an output for $operationType.")
         } else if (exitCode != 0) {
+          jobOutput.checkConnection =
+            StandardCheckConnectionOutput()
+              .withStatus(StandardCheckConnectionOutput.Status.FAILED)
+              .withMessage("The connector running check exited with $exitCode exit code")
           jobOutput.failureReason =
             getFailureReasonForNon0ExitCode(
               operationType,

@@ -374,6 +374,7 @@ class ConnectorMessageProcessorTest {
       )
 
     assertTrue(jobOutput.failureReason != null)
+    assertEquals(StandardCheckConnectionOutput.Status.FAILED, jobOutput.checkConnection.status)
   }
 
   @Test
