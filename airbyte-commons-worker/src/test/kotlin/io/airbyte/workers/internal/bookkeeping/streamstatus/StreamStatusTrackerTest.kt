@@ -1,10 +1,13 @@
 package io.airbyte.workers.internal.bookkeeping.streamstatus
 
+import io.airbyte.api.client.model.generated.StreamStatusRateLimitedMetadata
 import io.airbyte.metrics.lib.MetricClient
 import io.airbyte.protocol.models.AirbyteMessage
 import io.airbyte.protocol.models.AirbyteRecordMessage
 import io.airbyte.protocol.models.AirbyteStateMessage
 import io.airbyte.protocol.models.AirbyteStreamState
+import io.airbyte.protocol.models.AirbyteStreamStatusRateLimitedReason
+import io.airbyte.protocol.models.AirbyteStreamStatusReason
 import io.airbyte.protocol.models.AirbyteStreamStatusTraceMessage
 import io.airbyte.protocol.models.AirbyteTraceMessage
 import io.airbyte.protocol.models.StreamDescriptor
@@ -136,11 +139,25 @@ class StreamStatusTrackerTest {
 
   @Test
   fun marksStreamNotEmptyOnRecord() {
+    every { store.isRateLimited(any()) } returns false
     every { store.markStreamNotEmpty(any()) } returns StreamStatusValue()
 
     tracker.track(Fixtures.recordMsg())
 
     verify(exactly = 1) { store.markStreamNotEmpty(Fixtures.key) }
+  }
+
+  @Test
+  fun setsStreamRunningIfRateLimited() {
+    every { store.isRateLimited(any()) } returns true
+    every { store.setRunState(any(), any()) } returns StreamStatusValue()
+    every { store.setMetadata(any(), any()) } returns StreamStatusValue()
+    every { store.markStreamNotEmpty(any()) } returns StreamStatusValue()
+
+    tracker.track(Fixtures.recordMsg())
+
+    verify(exactly = 1) { store.setRunState(Fixtures.key, ApiEnum.RUNNING) }
+    verify(exactly = 1) { store.setMetadata(Fixtures.key, null) }
   }
 
   @Test
@@ -151,6 +168,20 @@ class StreamStatusTrackerTest {
     tracker.track(Fixtures.stateMsg(id = 54321))
 
     verify(exactly = 1) { store.setLatestStateId(Fixtures.key, 54321) }
+  }
+
+  @Test
+  fun setsMetadataForRateLimited() {
+    every { store.setRunState(any(), any()) } returns StreamStatusValue()
+    every { store.setMetadata(any(), any()) } returns StreamStatusValue()
+
+    val quotaReset = 456L
+    tracker.track(Fixtures.rateLimitedMsg(quotaReset))
+
+    val expected = StreamStatusRateLimitedMetadata(quotaReset = quotaReset)
+
+    verify(exactly = 1) { store.setRunState(Fixtures.key, ApiEnum.RATE_LIMITED) }
+    verify(exactly = 1) { store.setMetadata(Fixtures.key, eq(expected)) }
   }
 
   @Test
@@ -194,8 +225,13 @@ class StreamStatusTrackerTest {
     fun runStateTransitionMatrix(): Stream<Arguments> {
       return Stream.of(
         Arguments.of(null, ApiEnum.RUNNING),
+        Arguments.of(null, ApiEnum.RATE_LIMITED),
         Arguments.of(null, ApiEnum.COMPLETE),
         Arguments.of(null, ApiEnum.INCOMPLETE),
+        Arguments.of(ApiEnum.RATE_LIMITED, ApiEnum.RUNNING),
+        Arguments.of(ApiEnum.RATE_LIMITED, ApiEnum.COMPLETE),
+        Arguments.of(ApiEnum.RATE_LIMITED, ApiEnum.INCOMPLETE),
+        Arguments.of(ApiEnum.RUNNING, ApiEnum.RATE_LIMITED),
         Arguments.of(ApiEnum.RUNNING, ApiEnum.COMPLETE),
         Arguments.of(ApiEnum.RUNNING, ApiEnum.INCOMPLETE),
       )
@@ -206,6 +242,7 @@ class StreamStatusTrackerTest {
       return Stream.of(
         Arguments.of(null),
         Arguments.of(ApiEnum.RUNNING),
+        Arguments.of(ApiEnum.RATE_LIMITED),
         Arguments.of(ApiEnum.COMPLETE),
         Arguments.of(ApiEnum.INCOMPLETE),
       )
@@ -267,6 +304,31 @@ class StreamStatusTrackerTest {
           AirbyteRecordMessage()
             .withStream(STREAM_NAME)
             .withNamespace(STREAM_NAMESPACE),
+        )
+
+    fun rateLimitedMsg(quotaReset: Long): AirbyteMessage =
+      AirbyteMessage()
+        .withType(AirbyteMessage.Type.TRACE)
+        .withTrace(
+          AirbyteTraceMessage()
+            .withType(AirbyteTraceMessage.Type.STREAM_STATUS)
+            .withEmittedAt(1.0)
+            .withStreamStatus(
+              AirbyteStreamStatusTraceMessage()
+                .withStatus(AirbyteStreamStatusTraceMessage.AirbyteStreamStatus.RUNNING)
+                .withStreamDescriptor(
+                  streamDescriptor,
+                )
+                .withReasons(
+                  listOf(
+                    AirbyteStreamStatusReason()
+                      .withType(AirbyteStreamStatusReason.AirbyteStreamStatusReasonType.RATE_LIMITED)
+                      .withRateLimited(
+                        AirbyteStreamStatusRateLimitedReason().withQuotaReset(quotaReset),
+                      ),
+                  ),
+                ),
+            ),
         )
 
     fun msg(type: AirbyteMessage.Type): AirbyteMessage =

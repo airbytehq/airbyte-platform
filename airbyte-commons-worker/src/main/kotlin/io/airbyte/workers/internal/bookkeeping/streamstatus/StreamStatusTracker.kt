@@ -1,8 +1,10 @@
 package io.airbyte.workers.internal.bookkeeping.streamstatus
 
 import com.google.common.annotations.VisibleForTesting
+import io.airbyte.api.client.model.generated.StreamStatusRateLimitedMetadata
 import io.airbyte.featureflag.Connection
 import io.airbyte.featureflag.Multi
+import io.airbyte.featureflag.ProcessRateLimitedMessage
 import io.airbyte.featureflag.UseStreamStatusTracker2024
 import io.airbyte.featureflag.Workspace
 import io.airbyte.metrics.lib.MetricAttribute
@@ -10,12 +12,12 @@ import io.airbyte.metrics.lib.MetricClient
 import io.airbyte.metrics.lib.MetricTags
 import io.airbyte.metrics.lib.OssMetricsRegistry
 import io.airbyte.protocol.models.AirbyteMessage
-import io.airbyte.protocol.models.AirbyteRecordMessage
 import io.airbyte.protocol.models.AirbyteStateMessage
 import io.airbyte.protocol.models.AirbyteStateMessage.AirbyteStateType
 import io.airbyte.protocol.models.AirbyteTraceMessage
 import io.airbyte.workers.context.ReplicationContext
 import io.airbyte.workers.general.CachingFeatureFlagClient
+import io.airbyte.workers.general.RateLimitedMessageHandler
 import io.airbyte.workers.helper.AirbyteMessageDataExtractor
 import io.airbyte.workers.internal.bookkeeping.events.StreamStatusUpdateEvent
 import io.airbyte.workers.models.StateWithId
@@ -90,7 +92,7 @@ class StreamStatusTracker(
             null
           }
         }
-        AirbyteMessage.Type.RECORD -> trackRecord(key, msg.record)
+        AirbyteMessage.Type.RECORD -> trackRecord(key)
         AirbyteMessage.Type.STATE -> {
           if (msg.state.type == AirbyteStateType.STREAM) {
             trackState(key, msg.state)
@@ -108,7 +110,7 @@ class StreamStatusTracker(
       }
 
     if (updatedStatus != null && updatedStatus.runState != currentRunState) {
-      sendUpdate(key, updatedStatus.runState!!)
+      sendUpdate(key, updatedStatus.runState!!, updatedStatus.metadata)
     }
   }
 
@@ -118,17 +120,27 @@ class StreamStatusTracker(
     msg: AirbyteTraceMessage,
   ): StreamStatusValue {
     return when (msg.streamStatus.status!!) {
-      ProtocolEnum.STARTED, ProtocolEnum.RUNNING -> store.setRunState(key, ApiEnum.RUNNING)
+      ProtocolEnum.STARTED -> store.setRunState(key, ApiEnum.RUNNING)
+      ProtocolEnum.RUNNING -> {
+        if (RateLimitedMessageHandler.isStreamStatusRateLimitedMessage(msg.streamStatus) && shouldProcessRateLimitedMessage()) {
+          store.setRunState(key, ApiEnum.RATE_LIMITED)
+          store.setMetadata(key, RateLimitedMessageHandler.apiFromProtocol(msg.streamStatus))
+        } else {
+          store.setRunState(key, ApiEnum.RUNNING)
+        }
+      }
       ProtocolEnum.INCOMPLETE -> store.setRunState(key, ApiEnum.INCOMPLETE)
       ProtocolEnum.COMPLETE -> store.markSourceComplete(key)
     }
   }
 
   @VisibleForTesting
-  fun trackRecord(
-    key: StreamStatusKey,
-    msg: AirbyteRecordMessage,
-  ): StreamStatusValue {
+  fun trackRecord(key: StreamStatusKey): StreamStatusValue {
+    if (store.isRateLimited(key)) {
+      store.setRunState(key, ApiEnum.RUNNING)
+      store.setMetadata(key, null)
+    }
+
     return store.markStreamNotEmpty(key)
   }
 
@@ -151,8 +163,9 @@ class StreamStatusTracker(
   private fun sendUpdate(
     key: StreamStatusKey,
     runState: ApiEnum,
+    metadata: StreamStatusRateLimitedMetadata?,
   ) {
-    eventPublisher.publishEvent(StreamStatusUpdateEvent(key, runState))
+    eventPublisher.publishEvent(StreamStatusUpdateEvent(key, runState, metadata))
   }
 
   private fun shouldAbortBecauseNotInitialized(): Boolean {
@@ -169,5 +182,10 @@ class StreamStatusTracker(
       MetricAttribute(MetricTags.EMITTING_CLASS, this.javaClass.simpleName),
     )
     return true
+  }
+
+  private fun shouldProcessRateLimitedMessage(): Boolean {
+    val ffCtx = Multi(listOf(Workspace(ctx.workspaceId), Connection(ctx.connectionId)))
+    return ffClient.boolVariation(ProcessRateLimitedMessage, ffCtx)
   }
 }

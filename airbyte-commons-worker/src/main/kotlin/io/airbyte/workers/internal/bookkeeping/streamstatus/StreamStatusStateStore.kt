@@ -1,7 +1,9 @@
 package io.airbyte.workers.internal.bookkeeping.streamstatus
 
+import io.airbyte.api.client.model.generated.StreamStatusRateLimitedMetadata
 import io.airbyte.api.client.model.generated.StreamStatusRunState.COMPLETE
 import io.airbyte.api.client.model.generated.StreamStatusRunState.INCOMPLETE
+import io.airbyte.api.client.model.generated.StreamStatusRunState.RATE_LIMITED
 import io.airbyte.api.client.model.generated.StreamStatusRunState.RUNNING
 import io.github.oshai.kotlinlogging.KotlinLogging
 import jakarta.inject.Singleton
@@ -67,6 +69,21 @@ class StreamStatusStateStore {
     return store[key]!!
   }
 
+  fun setMetadata(
+    key: StreamStatusKey,
+    metadata: StreamStatusRateLimitedMetadata?,
+  ): StreamStatusValue {
+    val value = store[key]
+
+    if (value == null) {
+      store[key] = StreamStatusValue(metadata = metadata)
+    } else {
+      value.metadata = metadata
+    }
+
+    return store[key]!!
+  }
+
   fun markSourceComplete(key: StreamStatusKey): StreamStatusValue {
     val value = store[key]
 
@@ -100,12 +117,26 @@ class StreamStatusStateStore {
     return value.sourceComplete && value.latestStateId == destStateId
   }
 
+  fun isRateLimited(key: StreamStatusKey): Boolean {
+    val value = store[key] ?: return false
+
+    val runState = value.runState ?: false
+
+    return runState == RATE_LIMITED
+  }
+
   private fun resolveRunState(
     current: ApiEnum,
     incoming: ApiEnum,
   ): ApiEnum {
     return when (current to incoming) {
-      RUNNING to COMPLETE, RUNNING to INCOMPLETE -> {
+      RUNNING to COMPLETE,
+      RUNNING to INCOMPLETE,
+      RUNNING to RATE_LIMITED,
+      RATE_LIMITED to RUNNING,
+      RATE_LIMITED to INCOMPLETE,
+      RATE_LIMITED to COMPLETE,
+      -> {
         incoming
       }
       else -> {

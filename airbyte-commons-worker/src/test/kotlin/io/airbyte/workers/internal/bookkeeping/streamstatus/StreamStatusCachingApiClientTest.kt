@@ -4,6 +4,7 @@ import io.airbyte.api.client.AirbyteApiClient
 import io.airbyte.api.client.generated.StreamStatusesApi
 import io.airbyte.api.client.model.generated.StreamStatusIncompleteRunCause
 import io.airbyte.api.client.model.generated.StreamStatusJobType
+import io.airbyte.api.client.model.generated.StreamStatusRateLimitedMetadata
 import io.airbyte.api.client.model.generated.StreamStatusRead
 import io.airbyte.api.client.model.generated.StreamStatusRunState
 import io.airbyte.metrics.lib.MetricClient
@@ -106,6 +107,18 @@ class StreamStatusCachingApiClientTest {
     Assertions.assertNull(createResult2.incompleteRunCause)
     Assertions.assertEquals(StreamStatusIncompleteRunCause.FAILED, updateResult1.incompleteRunCause)
     Assertions.assertNull(updateResult2.incompleteRunCause)
+  }
+
+  @Test
+  fun buildCreateAndUpdateReqHandleMetadata() {
+    val metadata1 = StreamStatusRateLimitedMetadata(quotaReset = 123L)
+    val metadata2 = StreamStatusRateLimitedMetadata(quotaReset = 456L)
+
+    val createResult1 = client.buildCreateReq("namespace", "name", StreamStatusRunState.INCOMPLETE, metadata1)
+    val updateResult1 = client.buildUpdateReq(UUID.randomUUID(), "namespace", "name", StreamStatusRunState.RUNNING, metadata2)
+
+    Assertions.assertEquals(metadata1, createResult1.metadata)
+    Assertions.assertEquals(metadata2, updateResult1.metadata)
   }
 
   object Fixtures {

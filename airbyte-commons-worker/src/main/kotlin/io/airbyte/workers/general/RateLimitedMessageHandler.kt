@@ -1,5 +1,6 @@
 package io.airbyte.workers.general
 
+import io.airbyte.api.client.model.generated.StreamStatusRateLimitedMetadata
 import io.airbyte.protocol.models.AirbyteMessage
 import io.airbyte.protocol.models.AirbyteStreamStatusReason
 import io.airbyte.protocol.models.AirbyteStreamStatusTraceMessage
@@ -68,6 +69,12 @@ class RateLimitedMessageHandler(
   }
 
   companion object {
+    fun apiFromProtocol(msg: AirbyteStreamStatusTraceMessage): StreamStatusRateLimitedMetadata? {
+      val quotaResetValue = extractQuotaResetValue(msg) ?: return null
+
+      return StreamStatusRateLimitedMetadata(quotaReset = quotaResetValue)
+    }
+
     internal fun isStreamStatusRateLimitedMessage(msg: AirbyteMessage): Boolean =
       when {
         msg.type != AirbyteMessage.Type.TRACE -> false

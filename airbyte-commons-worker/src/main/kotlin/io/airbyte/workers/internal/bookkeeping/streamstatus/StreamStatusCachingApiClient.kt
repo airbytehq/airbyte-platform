@@ -5,6 +5,7 @@ import io.airbyte.api.client.AirbyteApiClient
 import io.airbyte.api.client.model.generated.StreamStatusCreateRequestBody
 import io.airbyte.api.client.model.generated.StreamStatusIncompleteRunCause
 import io.airbyte.api.client.model.generated.StreamStatusJobType
+import io.airbyte.api.client.model.generated.StreamStatusRateLimitedMetadata
 import io.airbyte.api.client.model.generated.StreamStatusRead
 import io.airbyte.api.client.model.generated.StreamStatusUpdateRequestBody
 import io.airbyte.metrics.lib.MetricAttribute
@@ -51,6 +52,7 @@ class StreamStatusCachingApiClient(
   fun put(
     key: StreamStatusKey,
     runState: ApiEnum,
+    metadata: StreamStatusRateLimitedMetadata? = null,
   ) {
     logger.debug { "Stream Status Update Received: ${key.toDisplayName()} - $runState" }
 
@@ -62,13 +64,13 @@ class StreamStatusCachingApiClient(
 
     if (value == null) {
       logger.debug { "Creating status: ${key.toDisplayName()} - $runState" }
-      val req = buildCreateReq(key.streamNamespace, key.streamName, runState)
+      val req = buildCreateReq(key.streamNamespace, key.streamName, runState, metadata)
 
       val resp = airbyteApiClient.streamStatusesApi.createStreamStatus(req)
       cache[key] = resp
     } else if (value.runState != runState) {
       logger.debug { "Updating status: ${key.toDisplayName()} - $runState" }
-      val req = buildUpdateReq(value.id, key.streamNamespace, key.streamName, runState)
+      val req = buildUpdateReq(value.id, key.streamNamespace, key.streamName, runState, metadata)
 
       val resp = airbyteApiClient.streamStatusesApi.updateStreamStatus(req)
       cache[key] = resp
@@ -82,6 +84,7 @@ class StreamStatusCachingApiClient(
     streamNamespace: String?,
     streamName: String,
     runState: ApiEnum,
+    metadata: StreamStatusRateLimitedMetadata? = null,
   ): StreamStatusCreateRequestBody =
     StreamStatusCreateRequestBody(
       attemptNumber = ctx.attempt,
@@ -104,6 +107,7 @@ class StreamStatusCachingApiClient(
           null
         },
       streamNamespace = streamNamespace,
+      metadata = metadata,
     )
 
   @VisibleForTesting
@@ -112,6 +116,7 @@ class StreamStatusCachingApiClient(
     streamNamespace: String?,
     streamName: String,
     runState: ApiEnum,
+    metadata: StreamStatusRateLimitedMetadata? = null,
   ): StreamStatusUpdateRequestBody =
     StreamStatusUpdateRequestBody(
       id = id,
@@ -135,6 +140,7 @@ class StreamStatusCachingApiClient(
           null
         },
       streamNamespace = streamNamespace,
+      metadata = metadata,
     )
 
   private fun shouldAbortBecauseNotInitialized(): Boolean {

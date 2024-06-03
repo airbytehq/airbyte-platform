@@ -8,5 +8,5 @@ import jakarta.inject.Singleton
 class StreamStatusUpdateEventListener(
   private val streamStatusCacheClient: StreamStatusCachingApiClient,
 ) : ApplicationEventListener<StreamStatusUpdateEvent> {
-  override fun onApplicationEvent(event: StreamStatusUpdateEvent): Unit = streamStatusCacheClient.put(event.key, event.runState)
+  override fun onApplicationEvent(event: StreamStatusUpdateEvent): Unit = streamStatusCacheClient.put(event.key, event.runState, event.metadata)
 }

@@ -1,5 +1,6 @@
 package io.airbyte.workers.internal.bookkeeping.streamstatus
 
+import io.airbyte.api.client.model.generated.StreamStatusRateLimitedMetadata
 import io.airbyte.api.client.model.generated.StreamStatusRunState
 import io.airbyte.workers.internal.bookkeeping.streamstatus.StreamStatusStateStoreTest.Fixtures.completeValue
 import io.airbyte.workers.internal.bookkeeping.streamstatus.StreamStatusStateStoreTest.Fixtures.incompleteValue
@@ -9,10 +10,16 @@ import io.airbyte.workers.internal.bookkeeping.streamstatus.StreamStatusStateSto
 import io.airbyte.workers.internal.bookkeeping.streamstatus.StreamStatusStateStoreTest.Fixtures.key4
 import io.airbyte.workers.internal.bookkeeping.streamstatus.StreamStatusStateStoreTest.Fixtures.runningValue
 import io.airbyte.workers.internal.bookkeeping.streamstatus.StreamStatusStateStoreTest.Fixtures.tenStateIdValue
+import io.airbyte.workers.internal.bookkeeping.streamstatus.StreamStatusStateStoreTest.Fixtures.value
 import io.airbyte.workers.internal.bookkeeping.streamstatus.StreamStatusStateStoreTest.Fixtures.zeroStateIdValue
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.params.ParameterizedTest
+import org.junit.jupiter.params.provider.Arguments
+import org.junit.jupiter.params.provider.MethodSource
+import java.util.stream.Stream
+import io.airbyte.api.client.model.generated.StreamStatusRunState as ApiEnum
 
 class StreamStatusStateStoreTest {
   private lateinit var store: StreamStatusStateStore
@@ -56,52 +63,32 @@ class StreamStatusStateStoreTest {
     Assertions.assertEquals(StreamStatusRunState.RUNNING, store.get(key1)!!.runState)
   }
 
-  @Test
-  fun setRunStateAllowsValidStateTransitions() {
-    store.set(key1, runningValue())
-    store.set(key2, runningValue())
+  @ParameterizedTest
+  @MethodSource("runStateValidTransitionMatrix")
+  fun setRunStateAllowsValidStateTransitions(
+    currentRunState: ApiEnum?,
+    incomingRunState: ApiEnum,
+  ) {
+    store.set(key1, value(currentRunState))
 
-    val runningToComplete = store.setRunState(key1, StreamStatusRunState.COMPLETE)
-    val runningToIncomplete = store.setRunState(key2, StreamStatusRunState.INCOMPLETE)
-    val nullToComplete = store.setRunState(key3, StreamStatusRunState.COMPLETE)
-    val nullToIncomplete = store.setRunState(key4, StreamStatusRunState.INCOMPLETE)
+    val transitioned = store.setRunState(key1, incomingRunState)
 
-    Assertions.assertEquals(StreamStatusRunState.COMPLETE, runningToComplete.runState)
-    Assertions.assertEquals(StreamStatusRunState.COMPLETE, store.get(key1)!!.runState)
-
-    Assertions.assertEquals(StreamStatusRunState.INCOMPLETE, runningToIncomplete.runState)
-    Assertions.assertEquals(StreamStatusRunState.INCOMPLETE, store.get(key2)!!.runState)
-
-    Assertions.assertEquals(StreamStatusRunState.COMPLETE, nullToComplete.runState)
-    Assertions.assertEquals(StreamStatusRunState.COMPLETE, store.get(key3)!!.runState)
-
-    Assertions.assertEquals(StreamStatusRunState.INCOMPLETE, nullToIncomplete.runState)
-    Assertions.assertEquals(StreamStatusRunState.INCOMPLETE, store.get(key4)!!.runState)
+    Assertions.assertEquals(incomingRunState, transitioned.runState)
+    Assertions.assertEquals(incomingRunState, store.get(key1)!!.runState)
   }
 
-  @Test
-  fun setRunStateIgnoresInvalidStateTransitions() {
-    store.set(key1, completeValue())
-    store.set(key2, incompleteValue())
-    store.set(key3, completeValue())
-    store.set(key4, incompleteValue())
+  @ParameterizedTest
+  @MethodSource("runStateInvalidTransitionMatrix")
+  fun setRunStateIgnoresInvalidStateTransitions(
+    currentRunState: ApiEnum,
+    incomingRunState: ApiEnum,
+  ) {
+    store.set(key1, value(currentRunState))
 
-    val completeToRunning = store.setRunState(key1, StreamStatusRunState.RUNNING)
-    val incompleteToRunning = store.setRunState(key2, StreamStatusRunState.RUNNING)
-    val completeToIncomplete = store.setRunState(key3, StreamStatusRunState.INCOMPLETE)
-    val incompleteToComplete = store.setRunState(key4, StreamStatusRunState.COMPLETE)
+    val transitioned = store.setRunState(key1, incomingRunState)
 
-    Assertions.assertEquals(StreamStatusRunState.COMPLETE, completeToRunning.runState)
-    Assertions.assertEquals(StreamStatusRunState.COMPLETE, store.get(key1)!!.runState)
-
-    Assertions.assertEquals(StreamStatusRunState.INCOMPLETE, incompleteToRunning.runState)
-    Assertions.assertEquals(StreamStatusRunState.INCOMPLETE, store.get(key2)!!.runState)
-
-    Assertions.assertEquals(StreamStatusRunState.COMPLETE, completeToIncomplete.runState)
-    Assertions.assertEquals(StreamStatusRunState.COMPLETE, store.get(key3)!!.runState)
-
-    Assertions.assertEquals(StreamStatusRunState.INCOMPLETE, incompleteToComplete.runState)
-    Assertions.assertEquals(StreamStatusRunState.INCOMPLETE, store.get(key4)!!.runState)
+    Assertions.assertEquals(currentRunState, transitioned.runState)
+    Assertions.assertEquals(currentRunState, store.get(key1)!!.runState)
   }
 
   @Test
@@ -173,6 +160,44 @@ class StreamStatusStateStoreTest {
 
     Assertions.assertEquals(10, tenToOne.latestStateId)
     Assertions.assertEquals(10, store.get(key2)!!.latestStateId)
+  }
+
+  @Test
+  fun setMetadataHandlesNoValue() {
+    Assertions.assertNull(store.get(key1))
+
+    val metadata = StreamStatusRateLimitedMetadata(quotaReset = 123)
+    val result = store.setMetadata(key1, metadata)
+
+    Assertions.assertEquals(metadata, result.metadata)
+    Assertions.assertEquals(metadata, store.get(key1)!!.metadata)
+  }
+
+  @Test
+  fun setMetadataHandlesNullMetadata() {
+    val noMetadata = StreamStatusValue(null, 0, sourceComplete = false, streamEmpty = false, metadata = null)
+    store.set(key1, noMetadata)
+    Assertions.assertNull(store.get(key1)!!.metadata)
+
+    val metadata = StreamStatusRateLimitedMetadata(quotaReset = 123)
+    val result = store.setMetadata(key1, metadata)
+
+    Assertions.assertEquals(metadata, result.metadata)
+    Assertions.assertEquals(metadata, store.get(key1)!!.metadata)
+  }
+
+  @Test
+  fun setMetadataReplacesMetadata() {
+    val metadata1 = StreamStatusRateLimitedMetadata(quotaReset = 123)
+    val value = StreamStatusValue(null, 0, sourceComplete = false, streamEmpty = false, metadata = metadata1)
+    store.set(key1, value)
+    Assertions.assertEquals(metadata1, store.get(key1)!!.metadata)
+
+    val metadata2 = StreamStatusRateLimitedMetadata(quotaReset = 123)
+    val result = store.setMetadata(key1, metadata2)
+
+    Assertions.assertEquals(metadata2, result.metadata)
+    Assertions.assertEquals(metadata2, store.get(key1)!!.metadata)
   }
 
   @Test
@@ -265,11 +290,41 @@ class StreamStatusStateStoreTest {
     Assertions.assertTrue(result6)
   }
 
+  companion object {
+    @JvmStatic
+    fun runStateValidTransitionMatrix(): Stream<Arguments> {
+      return Stream.of(
+        Arguments.of(null, ApiEnum.RUNNING),
+        Arguments.of(null, ApiEnum.RATE_LIMITED),
+        Arguments.of(null, ApiEnum.COMPLETE),
+        Arguments.of(null, ApiEnum.INCOMPLETE),
+        Arguments.of(ApiEnum.RATE_LIMITED, ApiEnum.RUNNING),
+        Arguments.of(ApiEnum.RATE_LIMITED, ApiEnum.COMPLETE),
+        Arguments.of(ApiEnum.RATE_LIMITED, ApiEnum.INCOMPLETE),
+        Arguments.of(ApiEnum.RUNNING, ApiEnum.RATE_LIMITED),
+        Arguments.of(ApiEnum.RUNNING, ApiEnum.COMPLETE),
+        Arguments.of(ApiEnum.RUNNING, ApiEnum.INCOMPLETE),
+      )
+    }
+
+    @JvmStatic
+    fun runStateInvalidTransitionMatrix(): Stream<Arguments> {
+      return Stream.of(
+        Arguments.of(ApiEnum.COMPLETE, ApiEnum.RUNNING),
+        Arguments.of(ApiEnum.INCOMPLETE, ApiEnum.RUNNING),
+        Arguments.of(ApiEnum.COMPLETE, ApiEnum.RATE_LIMITED),
+        Arguments.of(ApiEnum.INCOMPLETE, ApiEnum.RATE_LIMITED),
+      )
+    }
+  }
+
   object Fixtures {
     val key1 = StreamStatusKey(streamName = "test-stream-1", streamNamespace = null)
     val key2 = StreamStatusKey(streamName = "test-stream-2", streamNamespace = "test-namespace-1")
     val key3 = StreamStatusKey(streamName = "test-stream-3", streamNamespace = null)
     val key4 = StreamStatusKey(streamName = "test-stream-4", streamNamespace = "test-namespace-2")
+
+    fun value(runState: StreamStatusRunState?) = StreamStatusValue(runState, 0, sourceComplete = false, streamEmpty = true)
 
     fun runningValue() = StreamStatusValue(StreamStatusRunState.RUNNING, 0, sourceComplete = false, streamEmpty = true)
 
