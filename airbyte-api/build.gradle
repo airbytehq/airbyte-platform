@@ -73,6 +73,48 @@ def genApiServer = tasks.register("generateApiServer", GenerateTask) {
     }
 }
 
+def genApiServer2 = tasks.register('genApiServer2', GenerateTask) {
+    def serverOutputDir = "${getLayout().buildDirectory.get()}/generated/api/server2"
+
+    inputs.file specFile
+    outputs.dir serverOutputDir
+
+    generatorName = "kotlin-server"
+    inputSpec = specFile
+    outputDir = serverOutputDir
+    templateDir = "$projectDir/src/main/resources/templates/kotlin-server/public-api"
+
+    packageName = "io.airbyte.api.server.generated"
+
+    generateApiDocumentation = false
+
+    configOptions = [
+            dateLibrary                   : "java8",
+            enumPropertyNaming            : "UPPERCASE",
+            generatePom                   : "false",
+            interfaceOnly                 : "true",
+            library                       : "jaxrs-spec",
+            returnResponse                : "false",
+            additionalModelTypeAnnotations: "\n@com.fasterxml.jackson.annotation.JsonInclude(com.fasterxml.jackson.annotation.JsonInclude.Include.NON_NULL)",
+            useTags                       : "true",
+            useJakartaEe                  : "true"
+    ]
+
+    schemaMappings = [
+            'OAuthConfiguration'                : 'com.fasterxml.jackson.databind.JsonNode',
+            'SourceDefinitionSpecification'     : 'com.fasterxml.jackson.databind.JsonNode',
+            'SourceConfiguration'               : 'com.fasterxml.jackson.databind.JsonNode',
+            'DestinationDefinitionSpecification': 'com.fasterxml.jackson.databind.JsonNode',
+            'DestinationConfiguration'          : 'com.fasterxml.jackson.databind.JsonNode',
+            'StreamJsonSchema'                  : 'com.fasterxml.jackson.databind.JsonNode',
+            'StateBlob'                         : 'com.fasterxml.jackson.databind.JsonNode',
+            'FieldSchema'                       : 'com.fasterxml.jackson.databind.JsonNode',
+            'DeclarativeManifest'               : 'com.fasterxml.jackson.databind.JsonNode',
+            'SecretPersistenceConfigurationJson': 'com.fasterxml.jackson.databind.JsonNode',
+            'ConnectorBuilderProjectTestingValues': 'com.fasterxml.jackson.databind.JsonNode',
+    ]
+}
+
 def genApiClient = tasks.register("genApiClient", GenerateTask) {
     def clientOutputDir = "${getLayout().buildDirectory.get()}/generated/api/client"
 
@@ -198,6 +240,45 @@ def genPublicApiServer = tasks.register('generatePublicApiServer', GenerateTask)
 
 }
 
+def genPublicApiServer2 = tasks.register('generatePublicApiServer2', GenerateTask) {
+    def serverOutputDir = "${getLayout().buildDirectory.get()}/generated/public_api/server2"
+
+    inputs.file specFile
+    outputs.dir serverOutputDir
+
+    generatorName = "kotlin-server"
+    inputSpec = specFile
+    outputDir = serverOutputDir
+    templateDir = "$projectDir/src/main/resources/templates/kotlin-server/public-api"
+
+    packageName = "io.airbyte.publicApi.server.generated"
+
+    generateApiDocumentation = false
+
+    configOptions = [
+            dateLibrary                   : "java8",
+            enumPropertyNaming            : "UPPERCASE",
+            generatePom                   : "false",
+            interfaceOnly                 : "true",
+            library                       : "jaxrs-spec",
+            returnResponse                : "true",
+            useBeanValidation             : "true",
+            performBeanValidation         : "true",
+            additionalModelTypeAnnotations: "@io.micronaut.core.annotation.Introspected",
+            additionalEnumTypeAnnotations : "@io.micronaut.core.annotation.Introspected",
+            useTags                       : "true",
+            useJakartaEe                  : "true"
+    ]
+
+    schemaMappings = [
+            'SourceConfiguration'          : 'com.fasterxml.jackson.databind.JsonNode',
+            'OAuthInputConfiguration'      : 'com.fasterxml.jackson.databind.JsonNode',
+            'OAuthCredentialsConfiguration': 'com.fasterxml.jackson.databind.JsonNode',
+            'DestinationConfiguration'     : 'com.fasterxml.jackson.databind.JsonNode',
+            'ConnectorBuilderProjectTestingValues': 'com.fasterxml.jackson.databind.JsonNode',
+    ]
+}
+
 def genAirbyteApiServer = tasks.register('generateAirbyteApiServer', GenerateTask) {
     def serverOutputDir = "${getLayout().buildDirectory.get()}/generated/airbyte_api/server"
 
@@ -242,6 +323,45 @@ def genAirbyteApiServer = tasks.register('generateAirbyteApiServer', GenerateTas
             updateToJakartaApi(file("${serverOutputDir}/src/gen/java/${sourceDir.replaceAll('\\.', '/').replaceAll('-', '_')}"))
         }
     }
+}
+
+def genAirbyteApiServer2 = tasks.register('generateAirbyteApiServer2', GenerateTask) {
+    def serverOutputDir = "${getLayout().buildDirectory.get()}/generated/airbyte_api/server2"
+
+    inputs.file airbyteApiSpecFile
+    outputs.dir serverOutputDir
+
+    generatorName = "kotlin-server"
+    inputSpec = specFile
+    outputDir = serverOutputDir
+    templateDir = "$projectDir/src/main/resources/templates/kotlin-server"
+
+    packageName = "io.airbyte.airbyteApi.server.generated"
+
+    generateApiDocumentation = false
+
+    configOptions = [
+            dateLibrary                   : "java8",
+            enumPropertyNaming            : "UPPERCASE",
+            generatePom                   : "false",
+            interfaceOnly                 : "true",
+            library                       : "jaxrs-spec",
+            returnResponse                : "true",
+            useBeanValidation             : "true",
+            performBeanValidation         : "true",
+            additionalModelTypeAnnotations: "@io.micronaut.core.annotation.Introspected",
+            additionalEnumTypeAnnotations : "@io.micronaut.core.annotation.Introspected",
+            useTags                       : "true",
+            useJakartaEe                  : "true"
+    ]
+
+    schemaMappings = [
+            'SourceConfiguration'          : 'com.fasterxml.jackson.databind.JsonNode',
+            'OAuthInputConfiguration'      : 'com.fasterxml.jackson.databind.JsonNode',
+            'OAuthCredentialsConfiguration': 'com.fasterxml.jackson.databind.JsonNode',
+            'DestinationConfiguration'     : 'com.fasterxml.jackson.databind.JsonNode',
+            'ConnectorBuilderProjectTestingValues': 'com.fasterxml.jackson.databind.JsonNode',
+    ]
 }
 
 def genAirbyteApiProblems = tasks.register("genAirbyteApiProblems", GenerateTask) {
@@ -366,7 +486,7 @@ def genConnectorBuilderServerApiClient = tasks.register("genConnectorBuilderServ
 }
 
 
-compileJava.dependsOn genApiDocs, genApiClient, genApiServer, genAirbyteApiServer, genPublicApiServer
+compileJava.dependsOn genApiDocs, genApiServer, genAirbyteApiServer, genPublicApiServer
 
 kapt {
     correctErrorTypes true
@@ -375,17 +495,17 @@ kapt {
 // uses afterEvaluate because at configuration time, the kaptGenerateStubsKotlin task does not exist.
 afterEvaluate {
     tasks.named('kaptGenerateStubsKotlin').configure {
-        mustRunAfter genApiDocs, genApiClient, genApiServer, genAirbyteApiServer, genPublicApiServer,
-                genWorkloadApiClient, genConnectorBuilderServerApiClient, genAirbyteApiProblems
+        mustRunAfter genApiDocs, genApiClient, genApiServer, genApiServer2, genAirbyteApiServer, genAirbyteApiServer2,
+                genPublicApiServer, genPublicApiServer2, genWorkloadApiClient, genConnectorBuilderServerApiClient,
+                genAirbyteApiProblems
     }
 }
 
 tasks.named("compileKotlin") {
-    dependsOn tasks.named("genApiClient")
-    dependsOn tasks.named("genWorkloadApiClient")
-    dependsOn tasks.named("genConnectorBuilderServerApiClient")
-    dependsOn tasks.named("genAirbyteApiProblems")
+    dependsOn(genApiClient, genWorkloadApiClient, genConnectorBuilderServerApiClient, genAirbyteApiProblems,
+            genApiServer2, genAirbyteApiServer2, genPublicApiServer2)
 }
+
 
 dependencies {
     annotationProcessor libs.micronaut.openapi
@@ -439,12 +559,18 @@ sourceSets {
             srcDirs "${project.layout.buildDirectory.get()}/generated/api/server/src/gen/java",
                     "${project.layout.buildDirectory.get()}/generated/airbyte_api/server/src/gen/java",
                     "${project.layout.buildDirectory.get()}/generated/public_api/server/src/gen/java",
-                    "${project.layout.buildDirectory.get()}/generated/api/client/src/main/kotlin",
-                    "${project.layout.buildDirectory.get()}/generated/workloadapi/client/src/main/kotlin",
-                    "${project.layout.buildDirectory.get()}/generated/connectorbuilderserverapi/client/src/main/kotlin",
                     "${project.layout.buildDirectory.get()}/generated/api/problems/src/gen/kotlin",
                     "${project.layout.buildDirectory.get()}/generated/api/problems/src/gen/java",
             "$projectDir/src/main/java"
+        }
+        kotlin {
+            srcDirs "${project.layout.buildDirectory.get()}/generated/workloadapi/client/src/main/kotlin",
+                    "${project.layout.buildDirectory.get()}/generated/api/server2/src/main/kotlin",
+                    "${project.layout.buildDirectory.get()}/generated/airbyte_api/server2/src/main/kotlin",
+                    "${project.layout.buildDirectory.get()}/generated/public_api/server2/src/main/kotlin",
+                    "${project.layout.buildDirectory.get()}/generated/connectorbuilderserverapi/client/src/main/kotlin",
+                    "${project.layout.buildDirectory.get()}/generated/api/client/src/main/kotlin",
+            "$projectDir/src/main/kotlin"
         }
         resources {
             srcDir "$projectDir/src/main/openapi/"
