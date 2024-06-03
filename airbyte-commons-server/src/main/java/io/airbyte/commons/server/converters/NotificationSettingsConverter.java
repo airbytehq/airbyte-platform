@@ -118,7 +118,7 @@ public class NotificationSettingsConverter {
 
   private static io.airbyte.api.model.generated.SlackNotificationConfiguration toApi(final io.airbyte.config.SlackNotificationConfiguration notification) {
     if (notification == null) {
-      return new io.airbyte.api.model.generated.SlackNotificationConfiguration();
+      return new io.airbyte.api.model.generated.SlackNotificationConfiguration().webhook("");
     }
     return new io.airbyte.api.model.generated.SlackNotificationConfiguration()
         .webhook(notification.getWebhook());
