@@ -2195,6 +2195,29 @@ paths:
           $ref: "#/components/responses/NotFoundResponse"
         "422":
           $ref: "#/components/responses/InvalidInputResponse"
+  /v1/connections/last_job_per_stream:
+    post:
+      tags:
+        - connection
+      summary: Get a summary of the last completed job for each indicated stream in the connection.
+      operationId: getConnectionLastJobPerStream
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ConnectionLastJobPerStreamRequestBody"
+        required: true
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConnectionLastJobPerStreamRead"
+        "404":
+          $ref: "#/components/responses/NotFoundResponse"
+        "422":
+          $ref: "#/components/responses/InvalidInputResponse"
   /v1/connections/get:
     post:
       tags:
@@ -8178,6 +8201,18 @@ components:
           $ref: "#/components/schemas/ConnectionId"
         timezone:
           type: string
+    ConnectionLastJobPerStreamRequestBody:
+      type: object
+      required:
+        - connectionId
+        - streams
+      properties:
+        connectionId:
+          $ref: "#/components/schemas/ConnectionId"
+        streams:
+          type: array
+          items:
+            $ref: "#/components/schemas/ConnectionStream"
     ConnectionStream:
       type: object
       required:
@@ -8714,6 +8749,45 @@ components:
         streamNamespace:
           type: string
         recordsCommitted:
+          type: integer
+          format: int64
+    ConnectionLastJobPerStreamRead:
+      type: array
+      items:
+        $ref: "#/components/schemas/ConnectionLastJobPerStreamReadItem"
+    ConnectionLastJobPerStreamReadItem:
+      type: object
+      required:
+        - streamName
+        - streamNamespace
+        - jobId
+        - configType
+        - jobStatus
+        - recordsCommitted
+        - bytesCommitted
+        - startedAt
+        - endedAt
+      properties:
+        streamName:
+          type: string
+        streamNamespace:
+          type: string
+        jobId:
+          $ref: "#/components/schemas/JobId"
+        configType:
+          $ref: "#/components/schemas/JobConfigType"
+        jobStatus:
+          $ref: "#/components/schemas/JobStatus"
+        recordsCommitted:
+          type: integer
+          format: int64
+        bytesCommitted:
+          type: integer
+          format: int64
+        startedAt:
+          type: integer
+          format: int64
+        endedAt:
           type: integer
           format: int64
     SchemaChange:

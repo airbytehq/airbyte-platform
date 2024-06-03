@@ -19,6 +19,8 @@ import io.airbyte.api.model.generated.ConnectionAutoPropagateSchemaChange;
 import io.airbyte.api.model.generated.ConnectionCreate;
 import io.airbyte.api.model.generated.ConnectionDataHistoryRequestBody;
 import io.airbyte.api.model.generated.ConnectionIdRequestBody;
+import io.airbyte.api.model.generated.ConnectionLastJobPerStreamReadItem;
+import io.airbyte.api.model.generated.ConnectionLastJobPerStreamRequestBody;
 import io.airbyte.api.model.generated.ConnectionRead;
 import io.airbyte.api.model.generated.ConnectionReadList;
 import io.airbyte.api.model.generated.ConnectionSearch;
@@ -33,7 +35,9 @@ import io.airbyte.api.model.generated.ConnectionUpdate;
 import io.airbyte.api.model.generated.ConnectionUptimeHistoryRequestBody;
 import io.airbyte.api.model.generated.GetTaskQueueNameRequest;
 import io.airbyte.api.model.generated.InternalOperationResult;
+import io.airbyte.api.model.generated.JobConfigType;
 import io.airbyte.api.model.generated.JobInfoRead;
+import io.airbyte.api.model.generated.JobStatus;
 import io.airbyte.api.model.generated.JobSyncResultRead;
 import io.airbyte.api.model.generated.ListConnectionsForWorkspacesRequestBody;
 import io.airbyte.api.model.generated.TaskQueueNameRead;
@@ -58,6 +62,7 @@ import io.micronaut.http.annotation.Status;
 import io.micronaut.scheduling.annotation.ExecuteOn;
 import io.micronaut.security.annotation.Secured;
 import io.micronaut.security.rules.SecurityRule;
+import java.time.OffsetDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import lombok.extern.slf4j.Slf4j;
@@ -193,6 +198,46 @@ public class ConnectionApiController implements ConnectionApi {
   public ConnectionRead getConnectionForJob(@Body final ConnectionAndJobIdRequestBody connectionAndJobIdRequestBody) {
     return ApiHelper.execute(
         () -> connectionsHandler.getConnectionForJob(connectionAndJobIdRequestBody.getConnectionId(), connectionAndJobIdRequestBody.getJobId()));
+  }
+
+  @Override
+  @Post(uri = "/last_job_per_stream")
+  @Secured({WORKSPACE_READER, ORGANIZATION_READER})
+  @ExecuteOn(AirbyteTaskExecutors.IO)
+  public List<ConnectionLastJobPerStreamReadItem> getConnectionLastJobPerStream(@Body final ConnectionLastJobPerStreamRequestBody requestBody) {
+
+    // TODO: implement real logic. Mock data for now to unblock frontend development
+    return List.of(
+        new ConnectionLastJobPerStreamReadItem()
+            .jobId(1L)
+            .configType(JobConfigType.SYNC)
+            .streamName("mock_stream_1")
+            .streamNamespace("mock_namespace")
+            .bytesCommitted(100L)
+            .recordsCommitted(10L)
+            .startedAt(OffsetDateTime.now().toEpochSecond() - 1000)
+            .endedAt(OffsetDateTime.now().toEpochSecond() - 500)
+            .jobStatus(JobStatus.SUCCEEDED),
+        new ConnectionLastJobPerStreamReadItem()
+            .jobId(2L)
+            .configType(JobConfigType.CLEAR)
+            .streamName("mock_stream_2")
+            .streamNamespace("mock_namespace")
+            .bytesCommitted(200L)
+            .recordsCommitted(20L)
+            .startedAt(OffsetDateTime.now().toEpochSecond() - 1000000)
+            .endedAt(OffsetDateTime.now().toEpochSecond() - 500000)
+            .jobStatus(JobStatus.FAILED),
+        new ConnectionLastJobPerStreamReadItem()
+            .jobId(3L)
+            .configType(JobConfigType.CLEAR)
+            .streamName("mock_stream_3")
+            .streamNamespace("mock_namespace")
+            .bytesCommitted(300L)
+            .recordsCommitted(30L)
+            .startedAt(OffsetDateTime.now().toEpochSecond() - 1000000000)
+            .endedAt(OffsetDateTime.now().toEpochSecond() - 500000000)
+            .jobStatus(JobStatus.CANCELLED));
   }
 
   @Override
