@@ -61,7 +61,7 @@ public class ApplicationBeanFactory {
   @Singleton
   @Named("uuidGenerator")
   public Supplier<UUID> randomUUIDSupplier() {
-    return () -> UUID.randomUUID();
+    return UUID::randomUUID;
   }
 
   @Singleton

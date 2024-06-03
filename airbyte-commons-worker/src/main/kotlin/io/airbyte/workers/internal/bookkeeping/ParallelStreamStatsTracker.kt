@@ -319,7 +319,7 @@ class ParallelStreamStatsTracker(
       if (!shouldEmitStateStatsToSegment(stateMessage)) {
         return
       }
-      val payload: MutableMap<String?, Any?> =
+      val payload: MutableMap<String, Any?> =
         mutableMapOf(
           "connection_id" to connectionId.toString(),
           "job_id" to jobId.toString(),
