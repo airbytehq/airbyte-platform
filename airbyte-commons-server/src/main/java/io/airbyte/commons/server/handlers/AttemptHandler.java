@@ -170,6 +170,11 @@ public class AttemptHandler {
       }
 
       statePersistence.bulkDelete(UUID.fromString(job.getScope()), fullRefreshes);
+    } else if (job.getConfigType() == JobConfig.ConfigType.CLEAR || job.getConfigType() == JobConfig.ConfigType.RESET_CONNECTION) {
+      final Set<StreamDescriptor> resetStreams = Set.copyOf(job.getConfig().getResetConnection().getResetSourceConfiguration().getStreamsToReset());
+
+      generationBumper.updateGenerationForStreams(connectionId, job.getId(), List.of(), resetStreams);
+      statePersistence.bulkDelete(UUID.fromString(job.getScope()), resetStreams);
     }
   }
 

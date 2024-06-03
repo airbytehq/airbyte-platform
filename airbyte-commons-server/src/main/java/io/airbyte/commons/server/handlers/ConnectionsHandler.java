@@ -879,9 +879,16 @@ public class ConnectionsHandler {
           jobId,
           job.getConfig().getRefresh().getStreamsToRefresh(),
           generations));
+    } else if (job.getConfigType() == ConfigType.RESET_CONNECTION || job.getConfigType() == ConfigType.CLEAR) {
+      catalogWithGeneration = Optional.of(catalogGenerationSetter.updateCatalogWithGenerationAndSyncInformationForClear(
+          standardSync.getCatalog(),
+          jobId,
+          Set.copyOf(job.getConfig().getResetConnection().getResetSourceConfiguration().getStreamsToReset()),
+          generations));
     } else {
       catalogWithGeneration = Optional.empty();
     }
+
     catalogWithGeneration.ifPresent(updatedCatalog -> standardSync.setCatalog(updatedCatalog));
     return ApiPojoConverters.internalToConnectionRead(standardSync);
   }

@@ -191,4 +191,50 @@ class CatalogGenerationSetterTest {
       }
     }
   }
+
+  @Test
+  fun `test that min gen is current gen for clear`() {
+    val catalog =
+      ConfiguredAirbyteCatalog().withStreams(
+        listOf(
+          ConfiguredAirbyteStream().withStream(
+            AirbyteStream()
+              .withName("name1")
+              .withNamespace("namespace1"),
+          )
+            .withSyncMode(SyncMode.INCREMENTAL)
+            .withDestinationSyncMode(DestinationSyncMode.APPEND),
+          ConfiguredAirbyteStream().withStream(
+            AirbyteStream()
+              .withName("name2")
+              .withNamespace("namespace2"),
+          )
+            .withSyncMode(SyncMode.FULL_REFRESH)
+            .withDestinationSyncMode(DestinationSyncMode.OVERWRITE),
+        ),
+      )
+
+    val updatedCatalog =
+      catalogGenerationSetter.updateCatalogWithGenerationAndSyncInformationForClear(
+        catalog = catalog,
+        jobId = jobId,
+        clearedStream =
+          setOf(
+            StreamDescriptor().withName("name1").withNamespace("namespace1"),
+          ),
+        generations = generations,
+      )
+
+    updatedCatalog.streams.forEach {
+      if (it.stream.name == "name1" && it.stream.namespace == "namespace1") {
+        assertEquals(1L, it.minimumGenerationId)
+        assertEquals(jobId, it.syncId)
+        assertEquals(1L, it.generationId)
+      } else {
+        assertEquals(0L, it.minimumGenerationId)
+        assertEquals(jobId, it.syncId)
+        assertEquals(2L, it.generationId)
+      }
+    }
+  }
 }
