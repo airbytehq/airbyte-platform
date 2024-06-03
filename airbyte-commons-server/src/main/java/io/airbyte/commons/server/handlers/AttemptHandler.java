@@ -24,22 +24,35 @@ import io.airbyte.config.AttemptFailureSummary;
 import io.airbyte.config.JobConfig;
 import io.airbyte.config.JobConfigProxy;
 import io.airbyte.config.JobOutput;
+import io.airbyte.config.StandardDestinationDefinition;
+import io.airbyte.config.StandardSync;
 import io.airbyte.config.StandardSyncOutput;
 import io.airbyte.config.StreamSyncStats;
 import io.airbyte.config.SyncStats;
 import io.airbyte.config.helpers.LogClientSingleton;
+import io.airbyte.config.persistence.ConfigNotFoundException;
 import io.airbyte.config.persistence.StatePersistence;
+import io.airbyte.config.persistence.helper.GenerationBumper;
+import io.airbyte.data.services.ConnectionService;
+import io.airbyte.data.services.DestinationService;
+import io.airbyte.featureflag.Connection;
+import io.airbyte.featureflag.Context;
+import io.airbyte.featureflag.EnableResumableFullRefresh;
 import io.airbyte.featureflag.FeatureFlagClient;
+import io.airbyte.featureflag.Multi;
+import io.airbyte.featureflag.Workspace;
 import io.airbyte.metrics.lib.OssMetricsRegistry;
 import io.airbyte.persistence.job.JobPersistence;
 import io.airbyte.persistence.job.models.Job;
 import io.airbyte.protocol.models.ConfiguredAirbyteCatalog;
 import io.airbyte.protocol.models.StreamDescriptor;
 import io.airbyte.protocol.models.SyncMode;
+import io.airbyte.validation.json.JsonValidationException;
 import jakarta.inject.Named;
 import jakarta.inject.Singleton;
 import java.io.IOException;
 import java.nio.file.Path;
+import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
@@ -63,22 +76,32 @@ public class AttemptHandler {
   private final JobCreationAndStatusUpdateHelper jobCreationAndStatusUpdateHelper;
   private final Path workspaceRoot;
   private final FeatureFlagClient featureFlagClient;
+  private final GenerationBumper generationBumper;
+  private final ConnectionService connectionService;
+  private final DestinationService destinationService;
 
   public AttemptHandler(final JobPersistence jobPersistence,
                         final StatePersistence statePersistence,
                         final JobConverter jobConverter,
                         final FeatureFlagClient featureFlagClient,
                         final JobCreationAndStatusUpdateHelper jobCreationAndStatusUpdateHelper,
-                        @Named("workspaceRoot") final Path workspaceRoot) {
+                        @Named("workspaceRoot") final Path workspaceRoot,
+                        final GenerationBumper generationBumper,
+                        final ConnectionService connectionService,
+                        final DestinationService destinationService) {
     this.jobPersistence = jobPersistence;
     this.statePersistence = statePersistence;
     this.jobConverter = jobConverter;
     this.jobCreationAndStatusUpdateHelper = jobCreationAndStatusUpdateHelper;
     this.featureFlagClient = featureFlagClient;
     this.workspaceRoot = workspaceRoot;
+    this.generationBumper = generationBumper;
+    this.connectionService = connectionService;
+    this.destinationService = destinationService;
   }
 
-  public CreateNewAttemptNumberResponse createNewAttemptNumber(final long jobId) throws IOException {
+  public CreateNewAttemptNumberResponse createNewAttemptNumber(final long jobId)
+      throws IOException, ConfigNotFoundException, JsonValidationException, io.airbyte.data.exceptions.ConfigNotFoundException {
     final Job job;
     try {
       job = jobPersistence.getJob(jobId);
@@ -90,15 +113,17 @@ public class AttemptHandler {
     final Path logFilePath = jobRoot.resolve(LogClientSingleton.LOG_FILENAME);
     final int persistedAttemptNumber = jobPersistence.createAttempt(jobId, logFilePath);
 
-    // We cannot easily do this in a transaction as the attempt and state tables are in separate logical
-    // databases.
-    final var removeFullRefreshStreamState =
-        job.getConfigType().equals(JobConfig.ConfigType.SYNC) || job.getConfigType().equals(JobConfig.ConfigType.REFRESH);
-    if (removeFullRefreshStreamState) {
-      final var stateToClear = getFullRefreshStreams(new JobConfigProxy(job.getConfig()).getConfiguredCatalog(), job.getId());
-      if (!stateToClear.isEmpty()) {
-        statePersistence.bulkDelete(UUID.fromString(job.getScope()), stateToClear);
-      }
+    final UUID connectionId = UUID.fromString(job.getScope());
+    final StandardSync standardSync = connectionService.getStandardSync(connectionId);
+    final StandardDestinationDefinition standardDestinationDefinition =
+        destinationService.getDestinationDefinitionFromDestination(standardSync.getDestinationId());
+    final boolean supportRefreshes = standardDestinationDefinition.getSupportRefreshes();
+
+    // Action done in the first attempt
+    if (persistedAttemptNumber == 0) {
+      updateGenerationAndStateForFirstAttempt(job, connectionId, supportRefreshes);
+    } else {
+      updateGenerationAndStateForSubsequentAttempts(job, supportRefreshes);
     }
 
     jobCreationAndStatusUpdateHelper.emitJobToReleaseStagesMetric(OssMetricsRegistry.ATTEMPT_CREATED_BY_RELEASE_STAGE, job);
@@ -107,8 +132,63 @@ public class AttemptHandler {
     return new CreateNewAttemptNumberResponse().attemptNumber(persistedAttemptNumber);
   }
 
+  private void updateGenerationAndStateForSubsequentAttempts(final Job job, final boolean supportRefreshes) throws IOException {
+    // Update done for every attempt
+    // We cannot easily do this in a transaction as the attempt and state tables are in separate logical
+    // databases.
+    final var removeFullRefreshStreamState =
+        job.getConfigType().equals(JobConfig.ConfigType.SYNC) || job.getConfigType().equals(JobConfig.ConfigType.REFRESH);
+    if (removeFullRefreshStreamState && supportRefreshes) {
+      boolean enableResumableFullRefresh = featureFlagClient.boolVariation(EnableResumableFullRefresh.INSTANCE, new Connection(job.getScope()));
+      final var stateToClear = getFullRefreshStreamsToClear(new JobConfigProxy(job.getConfig()).getConfiguredCatalog(),
+          job.getId(),
+          enableResumableFullRefresh);
+      if (!stateToClear.isEmpty()) {
+        generationBumper.updateGenerationForStreams(UUID.fromString(job.getScope()), job.getId(), List.of(), stateToClear);
+        statePersistence.bulkDelete(UUID.fromString(job.getScope()), stateToClear);
+      }
+    }
+  }
+
+  private void updateGenerationAndStateForFirstAttempt(final Job job, final UUID connectionId, final boolean supportRefreshes) throws IOException {
+    if (job.getConfigType() == JobConfig.ConfigType.REFRESH) {
+      if (!supportRefreshes) {
+        throw new IllegalStateException("Trying to create a refresh attempt for a destination which doesn't support refreshes");
+      }
+      final Set<StreamDescriptor> streamToReset = getFullRefresh(job.getConfig().getRefresh().getConfiguredAirbyteCatalog(), true);
+      streamToReset.addAll(job.getConfig().getRefresh().getStreamsToRefresh().stream().map(streamRefresh -> streamRefresh.getStreamDescriptor())
+          .collect(Collectors.toSet()));
+      if (supportRefreshes) {
+        generationBumper.updateGenerationForStreams(connectionId, job.getId(), List.of(), streamToReset);
+      }
+
+      statePersistence.bulkDelete(UUID.fromString(job.getScope()), streamToReset);
+    } else if (job.getConfigType() == JobConfig.ConfigType.SYNC) {
+      final Set<StreamDescriptor> fullRefreshes = getFullRefresh(job.getConfig().getSync().getConfiguredAirbyteCatalog(), true);
+      if (supportRefreshes) {
+        generationBumper.updateGenerationForStreams(connectionId, job.getId(), List.of(), fullRefreshes);
+      }
+
+      statePersistence.bulkDelete(UUID.fromString(job.getScope()), fullRefreshes);
+    }
+  }
+
   @VisibleForTesting
-  Set<StreamDescriptor> getFullRefreshStreams(ConfiguredAirbyteCatalog catalog, long id) {
+  Set<StreamDescriptor> getFullRefresh(final ConfiguredAirbyteCatalog catalog, final boolean supportResumableFullRefresh) {
+    if (!supportResumableFullRefresh) {
+      return Set.of();
+    }
+
+    return catalog.getStreams().stream()
+        .filter(stream -> stream.getSyncMode() == SyncMode.FULL_REFRESH)
+        .map(stream -> new StreamDescriptor()
+            .withName(stream.getStream().getName())
+            .withNamespace(stream.getStream().getNamespace()))
+        .collect(Collectors.toSet());
+  }
+
+  @VisibleForTesting
+  Set<StreamDescriptor> getFullRefreshStreamsToClear(final ConfiguredAirbyteCatalog catalog, final long id, final boolean excludeResumableStreams) {
     if (catalog == null) {
       throw new BadRequestException("Missing configured catalog for job: " + id);
     }
@@ -118,7 +198,17 @@ public class AttemptHandler {
     }
 
     return configuredStreams.stream()
-        .filter(s -> s.getSyncMode().equals(SyncMode.FULL_REFRESH))
+        .filter(s -> {
+          if (s.getSyncMode().equals(SyncMode.FULL_REFRESH)) {
+            if (excludeResumableStreams) {
+              return s.getStream().getIsResumable() == null || !s.getStream().getIsResumable();
+            } else {
+              return true;
+            }
+          } else {
+            return false;
+          }
+        })
         .map(s -> new StreamDescriptor().withName(s.getStream().getName()).withNamespace(s.getStream().getNamespace()))
         .collect(Collectors.toSet());
   }
@@ -242,6 +332,12 @@ public class AttemptHandler {
     final Job job = jobPersistence.getJob(jobId);
     jobCreationAndStatusUpdateHelper.emitJobToReleaseStagesMetric(OssMetricsRegistry.ATTEMPT_FAILED_BY_RELEASE_STAGE, job);
     jobCreationAndStatusUpdateHelper.trackFailures(failureSummary);
+  }
+
+  private Context buildFeatureFlagContext(final UUID workspaceId, final UUID connectionId) {
+    return new Multi(List.of(
+        new Workspace(workspaceId),
+        new Connection(connectionId)));
   }
 
 }

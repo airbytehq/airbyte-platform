@@ -5,6 +5,7 @@ import io.airbyte.config.persistence.domain.Generation
 import io.airbyte.config.persistence.domain.StreamGeneration
 import io.airbyte.config.persistence.domain.StreamRefresh
 import io.airbyte.db.instance.configs.jooq.generated.enums.RefreshType
+import io.airbyte.protocol.models.StreamDescriptor
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.slot
@@ -51,6 +52,30 @@ class GenerationBumperTest {
           refreshType = RefreshType.TRUNCATE,
         ),
       ),
+      setOf(),
+    )
+
+    val capturedStreamGenerations = generationSlot.captured
+    assertEquals(1, capturedStreamGenerations.size)
+
+    val streamGeneration = capturedStreamGenerations[0]
+    assertEquals("name1", streamGeneration.streamName)
+    assertEquals("namespace1", streamGeneration.streamNamespace)
+    assertEquals(43, streamGeneration.generationId)
+    assertEquals(jobId, streamGeneration.startJobId)
+  }
+
+  @Test
+  fun `increase the generation properly for full refresh stream`() {
+    every { streamGenerationRepository.getMaxGenerationOfStreamsForConnectionId(connectionId) } returns generations
+    val generationSlot = slot<List<StreamGeneration>>()
+    every { streamGenerationRepository.saveAll(capture(generationSlot)) } returns listOf()
+
+    generationBumper.updateGenerationForStreams(
+      connectionId,
+      jobId,
+      listOf(),
+      setOf(StreamDescriptor().withName("name1").withNamespace("namespace1")),
     )
 
     val capturedStreamGenerations = generationSlot.captured
@@ -80,6 +105,7 @@ class GenerationBumperTest {
           refreshType = RefreshType.TRUNCATE,
         ),
       ),
+      setOf(),
     )
 
     val capturedStreamGenerations = generationSlot.captured

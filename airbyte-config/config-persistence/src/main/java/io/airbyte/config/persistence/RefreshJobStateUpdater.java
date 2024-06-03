@@ -6,7 +6,6 @@ package io.airbyte.config.persistence;
 
 import io.airbyte.config.StateType;
 import io.airbyte.config.StateWrapper;
-import io.airbyte.config.persistence.domain.StreamRefresh;
 import io.airbyte.protocol.models.AirbyteGlobalState;
 import io.airbyte.protocol.models.AirbyteStateMessage;
 import io.airbyte.protocol.models.AirbyteStreamState;
@@ -17,7 +16,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
-import java.util.stream.Collectors;
 
 @Singleton
 public class RefreshJobStateUpdater {
@@ -28,13 +26,11 @@ public class RefreshJobStateUpdater {
     this.statePersistence = statePersistence;
   }
 
-  public void updateStateWrapperForRefresh(final UUID connectionId, final StateWrapper currentState, final List<StreamRefresh> streamsToRefresh)
+  public void updateStateWrapperForRefresh(final UUID connectionId,
+                                           final StateWrapper currentState,
+                                           final Set<StreamDescriptor> streamDescriptorsToClear)
       throws IOException {
     final StateWrapper updatedState = new StateWrapper();
-    final Set<StreamDescriptor> streamDescriptorsToRefresh = streamsToRefresh
-        .stream()
-        .map(c -> new StreamDescriptor().withName(c.getStreamName()).withNamespace(c.getStreamNamespace()))
-        .collect(Collectors.toSet());
 
     switch (currentState.getStateType()) {
       case GLOBAL -> {
@@ -43,7 +39,7 @@ public class RefreshJobStateUpdater {
         final List<AirbyteStreamState> currentStreamStates = currentGlobalStateMessage.getGlobal().getStreamStates();
         for (final AirbyteStreamState streamState : currentStreamStates) {
           final StreamDescriptor streamDescriptor = streamState.getStreamDescriptor();
-          if (!streamDescriptorsToRefresh.contains(streamDescriptor)) {
+          if (!streamDescriptorsToClear.contains(streamDescriptor)) {
             streamStatesToRetain.add(streamState);
           }
         }
@@ -59,7 +55,7 @@ public class RefreshJobStateUpdater {
         final List<AirbyteStateMessage> streamStatesToRetain = new ArrayList<>();
         for (final AirbyteStateMessage stateMessage : currentState.getStateMessages()) {
           final StreamDescriptor streamDescriptor = stateMessage.getStream().getStreamDescriptor();
-          if (!streamDescriptorsToRefresh.contains(streamDescriptor)) {
+          if (!streamDescriptorsToClear.contains(streamDescriptor)) {
             streamStatesToRetain.add(stateMessage);
           }
         }

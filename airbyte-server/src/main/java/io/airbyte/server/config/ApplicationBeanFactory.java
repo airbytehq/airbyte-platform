@@ -20,10 +20,7 @@ import io.airbyte.commons.workers.config.WorkerConfigsProvider;
 import io.airbyte.config.persistence.ActorDefinitionVersionHelper;
 import io.airbyte.config.persistence.ConfigInjector;
 import io.airbyte.config.persistence.ConfigRepository;
-import io.airbyte.config.persistence.RefreshJobStateUpdater;
-import io.airbyte.config.persistence.StatePersistence;
 import io.airbyte.config.persistence.StreamRefreshesRepository;
-import io.airbyte.config.persistence.helper.GenerationBumper;
 import io.airbyte.config.secrets.JsonSecretsProcessor;
 import io.airbyte.data.services.ConnectorBuilderService;
 import io.airbyte.featureflag.FeatureFlagClient;
@@ -98,13 +95,8 @@ public class ApplicationBeanFactory {
   public DefaultJobCreator defaultJobCreator(final JobPersistence jobPersistence,
                                              final WorkerConfigsProvider workerConfigsProvider,
                                              final FeatureFlagClient featureFlagClient,
-                                             final GenerationBumper generationBumper,
-                                             final StatePersistence statePersistence,
-                                             final RefreshJobStateUpdater refreshJobStateUpdater,
                                              final StreamRefreshesRepository streamRefreshesRepository) {
-    return new DefaultJobCreator(jobPersistence, workerConfigsProvider, featureFlagClient, generationBumper,
-        statePersistence, refreshJobStateUpdater,
-        streamRefreshesRepository);
+    return new DefaultJobCreator(jobPersistence, workerConfigsProvider, featureFlagClient, streamRefreshesRepository);
   }
 
   @SuppressWarnings("ParameterName")
