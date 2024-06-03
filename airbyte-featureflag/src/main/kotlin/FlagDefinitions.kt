@@ -156,7 +156,7 @@ object UseRuntimeSecretPersistence : Temporary<Boolean>(key = "platform.use-runt
 
 object UseWorkloadApi : Temporary<Boolean>(key = "platform.use-workload-api", default = false)
 
-object EmitStateStatsToSegment : Temporary<Boolean>(key = "platform.emit-state-stats-segment", default = true)
+object EmitStateStatsToSegment : Temporary<Boolean>(key = "platform.emit-state-stats-segment", default = false)
 
 object ProcessRateLimitedMessage : Temporary<Boolean>(key = "platform.process-rate-limited-message", default = true)
 
