@@ -19,6 +19,7 @@ import io.airbyte.commons.json.Jsons
  */
 class ConnectorBuilderPublishRequestBodyAdapter {
   @ToJson
+  @Suppress("UNCHECKED_CAST")
   fun toJson(value: ConnectorBuilderPublishRequestBody): Map<String, Any> {
     return Jsons.`object`(Jsons.jsonNode(value), Map::class.java) as Map<String, Any>
   }

@@ -22,7 +22,7 @@ import org.openapitools.client.infrastructure.UUIDAdapter
 
 /**
  * Custom Moshi adapter to handle the [Any] type "jsonSchema" property of the
- * [AirbyteStream] field that is part of the
+ * [io.airbyte.api.client.model.generated.AirbyteStream] field that is part of the
  * [AirbyteCatalog] generated API model class that is
  * really a [com.fasterxml.jackson.databind.JsonNode] object and needs
  * a custom adapter to handle the conversion to/from JSON.  This is necessary
@@ -52,6 +52,7 @@ class AirbyteCatalogAdapter {
 
   @ToJson
   @OptIn(ExperimentalStdlibApi::class)
+  @Suppress("UNCHECKED_CAST")
   fun toJson(value: AirbyteCatalog): Map<String, Any> {
     // Hack to ensure that enums in the catalog are written as lowercase to work with server-side models from Java
     val json = moshi.adapter<AirbyteCatalog>().toJson(value)

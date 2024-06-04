@@ -82,10 +82,10 @@ class InternalApiAuthenticationFactory {
       val cred = ServiceAccountCredentials.fromStream(stream)
       val key = cred.privateKey as RSAPrivateKey
       val algorithm: com.auth0.jwt.algorithms.Algorithm = com.auth0.jwt.algorithms.Algorithm.RSA256(null, key)
-      return "Bearer " + token.sign(algorithm)
+      "Bearer " + token.sign(algorithm)
     } catch (e: Exception) {
       logger.error(e) { "An issue occurred while generating a data plane auth token. Defaulting to empty string. Error Message: {}" }
-      return ""
+      ""
     }
   }
 
