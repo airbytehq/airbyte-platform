@@ -263,7 +263,7 @@ abstract class ReplicationWorkerTest {
         null,
         null,
         null,
-        null));
+        null, null));
     destinationApi = mock(DestinationApi.class);
     when(destinationApi.getDestination(any())).thenReturn(new DestinationRead(
         DESTINATION_DEFINITION_ID,
@@ -275,7 +275,7 @@ abstract class ReplicationWorkerTest {
         null,
         null,
         null,
-        null));
+        null, null));
     streamStatusCompletionTracker = mock(StreamStatusCompletionTracker.class);
     streamStatusTracker = mock(StreamStatusTracker.class);
     streamStatusApiClient = mock(StreamStatusCachingApiClient.class);
@@ -284,7 +284,7 @@ abstract class ReplicationWorkerTest {
     when(airbyteApiClient.getSourceApi()).thenReturn(sourceApi);
 
     destinationDefinitionApi = mock(DestinationDefinitionApi.class);
-    var destinationDefinitionRead = new DestinationDefinitionRead(
+    final var destinationDefinitionRead = new DestinationDefinitionRead(
         UUID.randomUUID(),
         "name",
         "dockerRepository",
@@ -1281,7 +1281,7 @@ abstract class ReplicationWorkerTest {
   @Test
   void testStreamStatusCompletionTrackingTrackSourceMessage() throws Exception {
 
-    AirbyteMessage streamStatus = AirbyteMessageUtils.createStatusTraceMessage(new StreamDescriptor().withName(STREAM_NAME),
+    final AirbyteMessage streamStatus = AirbyteMessageUtils.createStatusTraceMessage(new StreamDescriptor().withName(STREAM_NAME),
         AirbyteStreamStatusTraceMessage.AirbyteStreamStatus.COMPLETE);
     sourceStub.setMessages(RECORD_MESSAGE1, streamStatus);
 

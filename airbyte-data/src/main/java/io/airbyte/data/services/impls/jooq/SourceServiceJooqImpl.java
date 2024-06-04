@@ -7,6 +7,7 @@ package io.airbyte.data.services.impls.jooq;
 import static io.airbyte.db.instance.configs.jooq.generated.Tables.ACTOR;
 import static io.airbyte.db.instance.configs.jooq.generated.Tables.ACTOR_DEFINITION;
 import static io.airbyte.db.instance.configs.jooq.generated.Tables.ACTOR_DEFINITION_WORKSPACE_GRANT;
+import static io.airbyte.db.instance.configs.jooq.generated.Tables.CONNECTION;
 import static io.airbyte.db.instance.configs.jooq.generated.Tables.WORKSPACE;
 import static io.airbyte.featureflag.ContextKt.ANONYMOUS;
 import static org.jooq.impl.DSL.asterisk;
@@ -39,6 +40,7 @@ import io.airbyte.db.ExceptionWrappingDatabase;
 import io.airbyte.db.instance.configs.jooq.generated.Tables;
 import io.airbyte.db.instance.configs.jooq.generated.enums.ActorType;
 import io.airbyte.db.instance.configs.jooq.generated.enums.SourceType;
+import io.airbyte.db.instance.configs.jooq.generated.enums.StatusType;
 import io.airbyte.db.instance.configs.jooq.generated.tables.records.ActorDefinitionWorkspaceGrantRecord;
 import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.featureflag.HeartbeatMaxSecondsBetweenMessages;
@@ -309,6 +311,21 @@ public class SourceServiceJooqImpl implements SourceService {
         .and(ACTOR.WORKSPACE_ID.eq(workspaceId))
         .andNot(ACTOR.TOMBSTONE).fetch());
     return result.stream().map(DbConverter::buildSourceConnection).collect(Collectors.toList());
+  }
+
+  /**
+   * Returns if a source is active, i.e. the source has at least one active or manual connection.
+   *
+   * @param sourceId - id of the source
+   * @return boolean - if source is active or not
+   * @throws IOException - you never know when you IO
+   */
+  @Override
+  public Boolean isSourceActive(final UUID sourceId) throws IOException {
+    return database.query(ctx -> ctx.fetchExists(select()
+        .from(CONNECTION)
+        .where(CONNECTION.SOURCE_ID.eq(sourceId))
+        .and(CONNECTION.STATUS.eq(StatusType.active))));
   }
 
   /**
@@ -712,7 +729,7 @@ public class SourceServiceJooqImpl implements SourceService {
       secretPersistence = new RuntimeSecretPersistence(secretPersistenceConfig);
     }
 
-    JsonNode partialConfig;
+    final JsonNode partialConfig;
     if (previousSourceConnection.isPresent()) {
       partialConfig = secretsRepositoryWriter.updateFromConfig(
           source.getWorkspaceId(),

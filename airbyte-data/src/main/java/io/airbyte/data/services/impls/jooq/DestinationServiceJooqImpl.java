@@ -7,6 +7,7 @@ package io.airbyte.data.services.impls.jooq;
 import static io.airbyte.db.instance.configs.jooq.generated.Tables.ACTOR;
 import static io.airbyte.db.instance.configs.jooq.generated.Tables.ACTOR_DEFINITION;
 import static io.airbyte.db.instance.configs.jooq.generated.Tables.ACTOR_DEFINITION_WORKSPACE_GRANT;
+import static io.airbyte.db.instance.configs.jooq.generated.Tables.CONNECTION;
 import static io.airbyte.db.instance.configs.jooq.generated.Tables.WORKSPACE;
 import static org.jooq.impl.DSL.asterisk;
 import static org.jooq.impl.DSL.noCondition;
@@ -37,6 +38,7 @@ import io.airbyte.db.Database;
 import io.airbyte.db.ExceptionWrappingDatabase;
 import io.airbyte.db.instance.configs.jooq.generated.Tables;
 import io.airbyte.db.instance.configs.jooq.generated.enums.ActorType;
+import io.airbyte.db.instance.configs.jooq.generated.enums.StatusType;
 import io.airbyte.db.instance.configs.jooq.generated.tables.records.ActorDefinitionWorkspaceGrantRecord;
 import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.featureflag.Organization;
@@ -132,6 +134,22 @@ public class DestinationServiceJooqImpl implements DestinationService {
     } catch (final Exception e) {
       throw new RuntimeException(e);
     }
+  }
+
+  /**
+   * Returns if a destination is active, i.e. the destination has at least one active or manual
+   * connection.
+   *
+   * @param destinationId - id of the destination
+   * @return boolean - if destination is active or not
+   * @throws IOException - you never know when you IO
+   */
+  @Override
+  public Boolean isDestinationActive(final UUID destinationId) throws IOException {
+    return database.query(ctx -> ctx.fetchExists(select()
+        .from(CONNECTION)
+        .where(CONNECTION.DESTINATION_ID.eq(destinationId))
+        .and(CONNECTION.STATUS.eq(StatusType.active))));
   }
 
   /**
@@ -709,7 +727,7 @@ public class DestinationServiceJooqImpl implements DestinationService {
       secretPersistence = new RuntimeSecretPersistence(secretPersistenceConfig);
     }
 
-    JsonNode partialConfig;
+    final JsonNode partialConfig;
     if (previousDestinationConnection.isPresent()) {
       partialConfig = secretsRepositoryWriter.updateFromConfig(destination.getWorkspaceId(),
           previousDestinationConnection.get(),

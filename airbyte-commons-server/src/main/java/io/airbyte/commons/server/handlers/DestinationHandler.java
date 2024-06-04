@@ -11,6 +11,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.Lists;
 import io.airbyte.api.model.generated.ActorDefinitionVersionBreakingChanges;
+import io.airbyte.api.model.generated.ActorStatus;
 import io.airbyte.api.model.generated.ConnectionRead;
 import io.airbyte.api.model.generated.DestinationCloneConfiguration;
 import io.airbyte.api.model.generated.DestinationCloneRequestBody;
@@ -278,10 +279,22 @@ public class DestinationHandler {
     final List<DestinationConnection> destinationConnections =
         configRepository.listWorkspaceDestinationConnection(workspaceIdRequestBody.getWorkspaceId());
     for (final DestinationConnection destinationConnection : destinationConnections) {
-      destinationReads.add(buildDestinationRead(destinationConnection));
+      destinationReads.add(buildDestinationReadWithStatus(destinationConnection));
     }
 
     return new DestinationReadList().destinations(destinationReads);
+  }
+
+  private DestinationRead buildDestinationReadWithStatus(final DestinationConnection destinationConnection)
+      throws JsonValidationException, ConfigNotFoundException, IOException {
+    final DestinationRead destinationRead = buildDestinationRead(destinationConnection);
+    // add destination status into destinationRead
+    if (destinationService.isDestinationActive(destinationConnection.getDestinationId())) {
+      destinationRead.status(ActorStatus.ACTIVE);
+    } else {
+      destinationRead.status(ActorStatus.INACTIVE);
+    }
+    return destinationRead;
   }
 
   public DestinationReadList listDestinationsForWorkspaces(final ListResourcesForWorkspacesRequestBody listResourcesForWorkspacesRequestBody)
@@ -295,7 +308,7 @@ public class DestinationHandler {
             listResourcesForWorkspacesRequestBody.getPagination().getPageSize(),
             listResourcesForWorkspacesRequestBody.getPagination().getRowOffset(), null));
     for (final DestinationConnection destinationConnection : destinationConnections) {
-      reads.add(buildDestinationRead(destinationConnection));
+      reads.add(buildDestinationReadWithStatus(destinationConnection));
     }
     return new DestinationReadList().destinations(reads);
   }
