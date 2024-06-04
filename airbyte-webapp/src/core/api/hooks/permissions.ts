@@ -20,10 +20,10 @@ import { useSuspenseQuery } from "../useSuspenseQuery";
 
 export const permissionKeys = {
   all: [SCOPE_USER, "permissions"] as const,
-  listByUser: (userId: string) => [...permissionKeys.all, "listByUser", userId] as const,
+  listByUser: (userId?: string) => [...permissionKeys.all, "listByUser", ...(userId ? [userId] : [])] as const,
 };
 
-export const getListPermissionsQueryKey = (userId: string) => {
+export const getListPermissionsQueryKey = (userId?: string) => {
   return permissionKeys.listByUser(userId);
 };
 
@@ -162,5 +162,6 @@ export const useSetIsInstanceAdminEnabled = () => {
   return (isEnabled: boolean) => {
     currentIsInstanceAdminEnabled = isEnabled;
     queryClient.invalidateQueries([SCOPE_INSTANCE, "isInstanceAdminEnabled"]);
+    queryClient.invalidateQueries(getListPermissionsQueryKey());
   };
 };
