@@ -148,7 +148,8 @@ public class NotificationSettingsConverter {
         notificationItem.getNotificationType().stream().map(n -> Enums.convertTo(n, io.airbyte.api.client.model.generated.NotificationType.class))
             .toList(),
         notificationItem.getSlackConfiguration() != null
-            ? new io.airbyte.api.client.model.generated.SlackNotificationConfiguration(notificationItem.getSlackConfiguration().getWebhook())
+            ? new io.airbyte.api.client.model.generated.SlackNotificationConfiguration(
+                notificationItem.getSlackConfiguration().getWebhook() != null ? notificationItem.getSlackConfiguration().getWebhook() : "")
             : null,
         null);
   }
