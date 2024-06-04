@@ -28,6 +28,8 @@ public interface DestinationService {
 
   StandardDestinationDefinition getDestinationDefinitionFromDestination(UUID destinationId);
 
+  Boolean isDestinationActive(UUID destinationId) throws IOException;
+
   StandardDestinationDefinition getDestinationDefinitionFromConnection(UUID connectionId);
 
   List<StandardDestinationDefinition> listStandardDestinationDefinitions(boolean includeTombstone) throws IOException;

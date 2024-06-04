@@ -45,6 +45,8 @@ public interface SourceService {
 
   List<SourceConnection> listWorkspaceSourceConnection(UUID workspaceId) throws IOException;
 
+  Boolean isSourceActive(UUID sourceId) throws IOException;
+
   List<SourceConnection> listWorkspacesSourceConnections(ResourcesQueryPaginated resourcesQueryPaginated) throws IOException;
 
   List<SourceConnection> listSourcesForDefinition(UUID definitionId) throws IOException;
