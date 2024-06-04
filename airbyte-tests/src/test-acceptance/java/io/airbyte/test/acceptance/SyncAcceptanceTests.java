@@ -12,7 +12,6 @@ import static io.airbyte.test.acceptance.AcceptanceTestsResources.TRUE;
 import static io.airbyte.test.acceptance.AcceptanceTestsResources.WITHOUT_SCD_TABLE;
 import static io.airbyte.test.acceptance.AcceptanceTestsResources.WITH_SCD_TABLE;
 import static io.airbyte.test.utils.AcceptanceTestHarness.COLUMN_ID;
-import static io.airbyte.test.utils.AcceptanceTestHarness.COLUMN_NAME;
 import static io.airbyte.test.utils.AcceptanceTestHarness.PUBLIC;
 import static io.airbyte.test.utils.AcceptanceTestHarness.PUBLIC_SCHEMA_NAME;
 import static io.airbyte.test.utils.AcceptanceTestHarness.STREAM_NAME;
@@ -296,70 +295,6 @@ class SyncAcceptanceTests {
 
     // remove connection to avoid exception during tear down
     testHarness.removeConnection(connectionId);
-  }
-
-  @Test
-  @DisabledIfEnvironmentVariable(named = IS_GKE,
-                                 matches = TRUE,
-                                 disabledReason = SLOW_TEST_IN_GKE)
-  // NOTE: we also cover incremental dedupe syncs in testIncrementalDedupeSyncRemoveOneColumn below.
-  void testIncrementalDedupeSync() throws Exception {
-    final UUID sourceId = testHarness.createPostgresSource().getSourceId();
-    final UUID destinationId = testHarness.createPostgresDestination().getDestinationId();
-    final UUID normalizationOpId = testHarness.createNormalizationOperation().getOperationId();
-    final SourceDiscoverSchemaRead discoverResult = testHarness.discoverSourceSchemaWithId(sourceId);
-    final SyncMode srcSyncMode = SyncMode.INCREMENTAL;
-    final DestinationSyncMode dstSyncMode = DestinationSyncMode.APPEND_DEDUP;
-    final AirbyteCatalog catalog = modifyCatalog(
-        discoverResult.getCatalog(),
-        Optional.of(srcSyncMode),
-        Optional.of(dstSyncMode),
-        Optional.of(List.of(COLUMN_ID)),
-        Optional.of(List.of(List.of(COLUMN_NAME))),
-        Optional.of(true),
-        Optional.empty(),
-        Optional.empty(),
-        Optional.empty(),
-        Optional.empty(),
-        Optional.empty(),
-        Optional.empty());
-    final var conn =
-        testHarness.createConnection(new TestConnectionCreate.Builder(
-            sourceId,
-            destinationId,
-            catalog,
-            discoverResult.getCatalogId())
-                .setNormalizationOperationId(normalizationOpId)
-                .build());
-    final var connectionId = conn.getConnectionId();
-    // sync from start
-    final JobInfoRead connectionSyncRead1 = testHarness.syncConnection(connectionId);
-    testHarness.waitForSuccessfulJob(connectionSyncRead1.getJob());
-
-    final var dst = testHarness.getDestinationDatabase();
-    Asserts.assertSourceAndDestinationDbRawRecordsInSync(testHarness.getSourceDatabase(), dst, PUBLIC_SCHEMA_NAME, conn.getNamespaceFormat(), true,
-        WITH_SCD_TABLE);
-    Asserts.assertStreamStatuses(testHarness, workspaceId, connectionId, connectionSyncRead1.getJob().getId(), StreamStatusRunState.COMPLETE,
-        StreamStatusJobType.SYNC);
-
-    // add new records and run again.
-    final Database source = testHarness.getSourceDatabase();
-    final List<JsonNode> expectedRawRecords = testHarness.retrieveRecordsFromDatabase(source, STREAM_NAME);
-    expectedRawRecords.add(Jsons.jsonNode(ImmutableMap.builder().put(COLUMN_ID, 6).put(COLUMN_NAME, "sherif").build()));
-    expectedRawRecords.add(Jsons.jsonNode(ImmutableMap.builder().put(COLUMN_ID, 7).put(COLUMN_NAME, "chris").build()));
-    source.query(ctx -> ctx.execute("UPDATE id_and_name SET id=6 WHERE name='sherif'"));
-    source.query(ctx -> ctx.execute("INSERT INTO id_and_name(id, name) VALUES(7, 'chris')"));
-    // retrieve latest snapshot of source records after modifications; the deduplicated table in
-    // destination should mirror this latest state of records
-    final List<JsonNode> expectedNormalizedRecords = testHarness.retrieveRecordsFromDatabase(source, STREAM_NAME);
-
-    final JobInfoRead connectionSyncRead2 = testHarness.syncConnection(connectionId);
-    testHarness.waitForSuccessfulJob(connectionSyncRead2.getJob());
-
-    Asserts.assertRawDestinationContains(dst, expectedRawRecords, conn.getNamespaceFormat(), STREAM_NAME);
-    Asserts.assertNormalizedDestinationContains(dst, conn.getNamespaceFormat(), expectedNormalizedRecords);
-    Asserts.assertStreamStatuses(testHarness, workspaceId, connectionId, connectionSyncRead2.getJob().getId(), StreamStatusRunState.COMPLETE,
-        StreamStatusJobType.SYNC);
   }
 
   @Test
