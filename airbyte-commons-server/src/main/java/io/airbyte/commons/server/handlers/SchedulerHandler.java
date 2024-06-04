@@ -796,15 +796,10 @@ public class SchedulerHandler {
       } catch (final io.airbyte.data.exceptions.ConfigNotFoundException e) {
         throw new ConfigNotFoundException(e.getType(), e.getConfigId());
       }
-      return secretsRepositoryWriter.createEphemeralFromConfig(
-          connectionConfiguration,
-          connectorSpecification.getConnectionSpecification(),
+      return secretsRepositoryWriter.createEphemeralFromConfig(connectionConfiguration, connectorSpecification.getConnectionSpecification(),
           new RuntimeSecretPersistence(secretPersistenceConfig));
     } else {
-      return secretsRepositoryWriter.createEphemeralFromConfig(
-          connectionConfiguration,
-          connectorSpecification.getConnectionSpecification(),
-          null);
+      return secretsRepositoryWriter.createEphemeralFromConfig(connectionConfiguration, connectorSpecification.getConnectionSpecification(), null);
     }
   }
 

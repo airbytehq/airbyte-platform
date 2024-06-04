@@ -11,7 +11,9 @@ import io.airbyte.config.SourceConnection
 import io.airbyte.config.persistence.ConfigRepository
 import io.airbyte.config.secrets.hydration.RealSecretsHydrator
 import io.airbyte.featureflag.FeatureFlagClient
+import io.airbyte.metrics.lib.MetricAttribute
 import io.airbyte.metrics.lib.MetricClient
+import io.airbyte.metrics.lib.MetricTags
 import io.airbyte.metrics.lib.OssMetricsRegistry
 import io.airbyte.protocol.models.ConnectorSpecification
 import io.airbyte.validation.json.JsonSchemaValidator
@@ -59,6 +61,7 @@ internal class SecretsRepositoryWriterTest {
     secretPersistence.write(SecretCoordinate.fromFullCoordinate(oldCoordinate), secret)
 
     every { metricClient.count(any(), any()) } returns Unit
+    every { metricClient.count(any(), any(), any()) } returns Unit
     every { featureFlagClient.boolVariation(any(), any()) } returns true
 
     val updatedFullConfigNoSecretChange =
@@ -91,9 +94,9 @@ internal class SecretsRepositoryWriterTest {
     assertEquals(secret, secretPersistence.read(SecretCoordinate.fromFullCoordinate(newCoordinate)))
     verify { metricClient.count(OssMetricsRegistry.UPDATE_SECRET_DEFAULT_STORE, 1) }
 
-    verify(exactly = 1) { secretPersistence.disable(SecretCoordinate.fromFullCoordinate(oldCoordinate)) }
+    verify(exactly = 1) { secretPersistence.delete(SecretCoordinate.fromFullCoordinate(oldCoordinate)) }
     assertEquals("", secretPersistence.read(SecretCoordinate.fromFullCoordinate(oldCoordinate)))
-    verify { metricClient.count(OssMetricsRegistry.DELETE_SECRET_DEFAULT_STORE, 1) }
+    verify { metricClient.count(OssMetricsRegistry.DELETE_SECRET_DEFAULT_STORE, 1, MetricAttribute(MetricTags.SUCCESS, "true")) }
   }
 
   @Test
@@ -102,6 +105,7 @@ internal class SecretsRepositoryWriterTest {
     secretPersistence.write(SecretCoordinate.fromFullCoordinate(oldCoordinate), "secret-1")
 
     every { metricClient.count(any(), any()) } returns Unit
+    every { metricClient.count(any(), any(), any()) } returns Unit
     every { featureFlagClient.boolVariation(any(), any()) } returns true
 
     val newSecret = "secret-2"
@@ -135,9 +139,9 @@ internal class SecretsRepositoryWriterTest {
     assertEquals(newSecret, secretPersistence.read(SecretCoordinate.fromFullCoordinate(newCoordinate)))
     verify { metricClient.count(OssMetricsRegistry.UPDATE_SECRET_DEFAULT_STORE, 1) }
 
-    verify(exactly = 1) { secretPersistence.disable(SecretCoordinate.fromFullCoordinate(oldCoordinate)) }
+    verify(exactly = 1) { secretPersistence.delete(SecretCoordinate.fromFullCoordinate(oldCoordinate)) }
     assertEquals("", secretPersistence.read(SecretCoordinate.fromFullCoordinate(oldCoordinate)))
-    verify { metricClient.count(OssMetricsRegistry.DELETE_SECRET_DEFAULT_STORE, 1) }
+    verify { metricClient.count(OssMetricsRegistry.DELETE_SECRET_DEFAULT_STORE, 1, MetricAttribute(MetricTags.SUCCESS, "true")) }
   }
 
   @Test
@@ -149,6 +153,7 @@ internal class SecretsRepositoryWriterTest {
         """.trimIndent(),
       )
     every { metricClient.count(any(), any()) } returns Unit
+    every { metricClient.count(any(), any(), any()) } returns Unit
     every { featureFlagClient.boolVariation(any(), any()) } returns true
 
     val oldCoordinate1 = "existing-coordinate-0_v1"
@@ -196,10 +201,10 @@ internal class SecretsRepositoryWriterTest {
     verify { metricClient.count(OssMetricsRegistry.UPDATE_SECRET_DEFAULT_STORE, 1) }
     verify { metricClient.count(OssMetricsRegistry.UPDATE_SECRET_DEFAULT_STORE, 1) }
 
-    verify(exactly = 1) { secretPersistence.disable(SecretCoordinate.fromFullCoordinate(oldCoordinate1)) }
-    verify(exactly = 1) { secretPersistence.disable(SecretCoordinate.fromFullCoordinate(oldCoordinate2)) }
-    verify { metricClient.count(OssMetricsRegistry.DELETE_SECRET_DEFAULT_STORE, 1) }
-    verify { metricClient.count(OssMetricsRegistry.DELETE_SECRET_DEFAULT_STORE, 1) }
+    verify(exactly = 1) { secretPersistence.delete(SecretCoordinate.fromFullCoordinate(oldCoordinate1)) }
+    verify(exactly = 1) { secretPersistence.delete(SecretCoordinate.fromFullCoordinate(oldCoordinate2)) }
+    verify { metricClient.count(OssMetricsRegistry.DELETE_SECRET_DEFAULT_STORE, 1, MetricAttribute(MetricTags.SUCCESS, "true")) }
+    verify { metricClient.count(OssMetricsRegistry.DELETE_SECRET_DEFAULT_STORE, 1, MetricAttribute(MetricTags.SUCCESS, "true")) }
   }
 
   @Test
@@ -241,13 +246,13 @@ internal class SecretsRepositoryWriterTest {
     assertEquals(secret, secretPersistence.read(SecretCoordinate.fromFullCoordinate(newCoordinate)))
     verify { metricClient.count(OssMetricsRegistry.UPDATE_SECRET_DEFAULT_STORE, 1) }
 
-    verify(exactly = 0) { secretPersistence.disable(SecretCoordinate.fromFullCoordinate(oldCoordinate)) }
+    verify(exactly = 0) { secretPersistence.delete(SecretCoordinate.fromFullCoordinate(oldCoordinate)) }
     assertEquals(secret, secretPersistence.read(SecretCoordinate.fromFullCoordinate(oldCoordinate)))
     verify(exactly = 0) { metricClient.count(OssMetricsRegistry.DELETE_SECRET_DEFAULT_STORE, 1) }
   }
 
   @Test
-  fun testUpdateSecretDisableErrorShouldNotPropagate() {
+  fun testUpdateSecretDeleteErrorShouldNotPropagate() {
     secretPersistence = mockk()
     secretsRepositoryWriter =
       SecretsRepositoryWriter(
@@ -259,8 +264,9 @@ internal class SecretsRepositoryWriterTest {
     every { secretPersistence.write(any(), any()) } returns Unit
     every { secretPersistence.read(any()) } returns "something"
     every { metricClient.count(any(), any()) } returns Unit
+    every { metricClient.count(any(), any(), any()) } returns Unit
     every { featureFlagClient.boolVariation(any(), any()) } returns true
-    every { secretPersistence.disable(any()) } throws RuntimeException("disable error")
+    every { secretPersistence.delete(any()) } throws RuntimeException("disable error")
 
     val oldCoordinate = "existing_coordinate_v1"
     val oldPartialConfig = injectCoordinate(oldCoordinate)
@@ -288,9 +294,9 @@ internal class SecretsRepositoryWriterTest {
     verify(exactly = 1) { secretPersistence.write(SecretCoordinate.fromFullCoordinate(newCoordinate), newSecret) }
     verify(exactly = 1) { metricClient.count(OssMetricsRegistry.UPDATE_SECRET_DEFAULT_STORE, 1) }
 
-    verify(exactly = 1) { secretPersistence.disable(SecretCoordinate.fromFullCoordinate(oldCoordinate)) }
+    verify(exactly = 1) { secretPersistence.delete(SecretCoordinate.fromFullCoordinate(oldCoordinate)) }
     // No metric is emitted because we were not successful.
-    verify(exactly = 0) { metricClient.count(OssMetricsRegistry.DELETE_SECRET_DEFAULT_STORE, 1) }
+    verify(exactly = 1) { metricClient.count(OssMetricsRegistry.DELETE_SECRET_DEFAULT_STORE, 1, MetricAttribute(MetricTags.SUCCESS, "false")) }
   }
 
   // TODO - port this to source service test
