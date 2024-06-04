@@ -80,7 +80,6 @@ class ConnectorMessageProcessor(
         updateConfigFromControlMessagePerMessageType(operationType, input, messagesByType, inputConfig, jobOutput)
       }
       val failureReason = getJobFailureReasonFromMessages(operationType.toConnectorOutputType(), messagesByType)
-      failureReason.ifPresent { failureReason: FailureReason? -> jobOutput.failureReason = failureReason }
 
       setOutput(operationType, result, jobOutput, failureReason, input, exitCode)
       return jobOutput
@@ -137,7 +136,8 @@ class ConnectorMessageProcessor(
     }
   }
 
-  private fun setOutput(
+  @VisibleForTesting
+  fun setOutput(
     operationType: OperationType,
     result: OperationResult,
     jobOutput: ConnectorJobOutput,
@@ -160,11 +160,14 @@ class ConnectorMessageProcessor(
             StandardCheckConnectionOutput()
               .withStatus(StandardCheckConnectionOutput.Status.FAILED)
               .withMessage("The connector running check exited with $exitCode exit code")
+
           jobOutput.failureReason =
-            getFailureReasonForNon0ExitCode(
-              operationType,
-              exitCode,
-              if (input.checkInput!!.actorType == ActorType.SOURCE) FailureReason.FailureOrigin.SOURCE else FailureReason.FailureOrigin.DESTINATION,
+            failureReason.orElse(
+              getFailureReasonForNon0ExitCode(
+                operationType,
+                exitCode,
+                if (input.checkInput!!.actorType == ActorType.SOURCE) FailureReason.FailureOrigin.SOURCE else FailureReason.FailureOrigin.DESTINATION,
+              ),
             )
         }
 
@@ -177,8 +180,7 @@ class ConnectorMessageProcessor(
         } else if (failureReason.isEmpty && exitCode == 0) {
           throw WorkerException("Connector exited successfully without an output for $operationType.")
         } else if (exitCode != 0) {
-          jobOutput.failureReason =
-            getFailureReasonForNon0ExitCode(operationType, exitCode, FailureReason.FailureOrigin.SOURCE)
+          jobOutput.failureReason = failureReason.orElse(getFailureReasonForNon0ExitCode(operationType, exitCode, FailureReason.FailureOrigin.SOURCE))
         }
 
       OperationType.SPEC ->
@@ -187,8 +189,7 @@ class ConnectorMessageProcessor(
         } else if (failureReason.isEmpty && exitCode == 0) {
           throw WorkerException("Connector exited successfully without an output for $operationType.")
         } else if (exitCode != 0) {
-          jobOutput.failureReason =
-            getFailureReasonForNon0ExitCode(operationType, exitCode, FailureReason.FailureOrigin.SOURCE)
+          jobOutput.failureReason = failureReason.orElse(getFailureReasonForNon0ExitCode(operationType, exitCode, FailureReason.FailureOrigin.SOURCE))
         }
     }
   }

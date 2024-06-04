@@ -8,6 +8,7 @@ import io.airbyte.commons.converters.ConnectorConfigUpdater
 import io.airbyte.commons.json.Jsons
 import io.airbyte.config.ActorType
 import io.airbyte.config.ConnectorJobOutput
+import io.airbyte.config.FailureReason
 import io.airbyte.config.StandardCheckConnectionInput
 import io.airbyte.config.StandardCheckConnectionOutput
 import io.airbyte.config.StandardDiscoverCatalogInput
@@ -32,9 +33,12 @@ import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.ExtendWith
+import org.junit.jupiter.params.ParameterizedTest
+import org.junit.jupiter.params.provider.EnumSource
 import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
 import java.io.InputStream
+import java.util.Optional
 import java.util.UUID
 import java.util.stream.Stream
 
@@ -375,6 +379,29 @@ class ConnectorMessageProcessorTest {
 
     assertTrue(jobOutput.failureReason != null)
     assertEquals(StandardCheckConnectionOutput.Status.FAILED, jobOutput.checkConnection.status)
+  }
+
+  @ParameterizedTest
+  @EnumSource(value = SidecarInput.OperationType::class)
+  fun `do not override failure reason`(operationType: SidecarInput.OperationType) {
+    val operationInput =
+      if (operationType == SidecarInput.OperationType.CHECK) {
+        ConnectorMessageProcessor.OperationInput(checkInput = StandardCheckConnectionInput().withActorType(ActorType.SOURCE))
+      } else {
+        ConnectorMessageProcessor.OperationInput()
+      }
+    val failureReason = FailureReason().withExternalMessage("test")
+    val jobOutput = ConnectorJobOutput()
+    connectorMessageProcessor.setOutput(
+      operationType,
+      ConnectorMessageProcessor.OperationResult(),
+      jobOutput,
+      Optional.of(failureReason),
+      operationInput,
+      1,
+    )
+
+    assertEquals(failureReason, jobOutput.failureReason)
   }
 
   @Test
