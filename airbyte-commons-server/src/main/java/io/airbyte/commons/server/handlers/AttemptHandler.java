@@ -30,17 +30,14 @@ import io.airbyte.config.StandardSyncOutput;
 import io.airbyte.config.StreamSyncStats;
 import io.airbyte.config.SyncStats;
 import io.airbyte.config.helpers.LogClientSingleton;
-import io.airbyte.config.persistence.ConfigNotFoundException;
 import io.airbyte.config.persistence.StatePersistence;
 import io.airbyte.config.persistence.helper.GenerationBumper;
+import io.airbyte.data.exceptions.ConfigNotFoundException;
 import io.airbyte.data.services.ConnectionService;
 import io.airbyte.data.services.DestinationService;
 import io.airbyte.featureflag.Connection;
-import io.airbyte.featureflag.Context;
 import io.airbyte.featureflag.EnableResumableFullRefresh;
 import io.airbyte.featureflag.FeatureFlagClient;
-import io.airbyte.featureflag.Multi;
-import io.airbyte.featureflag.Workspace;
 import io.airbyte.metrics.lib.OssMetricsRegistry;
 import io.airbyte.persistence.job.JobPersistence;
 import io.airbyte.persistence.job.models.Job;
@@ -67,8 +64,6 @@ import org.slf4j.LoggerFactory;
 public class AttemptHandler {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(AttemptHandler.class);
-  private static final int FIRST_ATTEMPT = 0;
-
   private final JobPersistence jobPersistence;
   private final StatePersistence statePersistence;
 
@@ -101,7 +96,7 @@ public class AttemptHandler {
   }
 
   public CreateNewAttemptNumberResponse createNewAttemptNumber(final long jobId)
-      throws IOException, ConfigNotFoundException, JsonValidationException, io.airbyte.data.exceptions.ConfigNotFoundException {
+      throws IOException, JsonValidationException, ConfigNotFoundException {
     final Job job;
     try {
       job = jobPersistence.getJob(jobId);
@@ -158,16 +153,12 @@ public class AttemptHandler {
       final Set<StreamDescriptor> streamToReset = getFullRefresh(job.getConfig().getRefresh().getConfiguredAirbyteCatalog(), true);
       streamToReset.addAll(job.getConfig().getRefresh().getStreamsToRefresh().stream().map(streamRefresh -> streamRefresh.getStreamDescriptor())
           .collect(Collectors.toSet()));
-      if (supportRefreshes) {
-        generationBumper.updateGenerationForStreams(connectionId, job.getId(), List.of(), streamToReset);
-      }
+      generationBumper.updateGenerationForStreams(connectionId, job.getId(), List.of(), streamToReset);
 
       statePersistence.bulkDelete(UUID.fromString(job.getScope()), streamToReset);
     } else if (job.getConfigType() == JobConfig.ConfigType.SYNC) {
       final Set<StreamDescriptor> fullRefreshes = getFullRefresh(job.getConfig().getSync().getConfiguredAirbyteCatalog(), true);
-      if (supportRefreshes) {
-        generationBumper.updateGenerationForStreams(connectionId, job.getId(), List.of(), fullRefreshes);
-      }
+      generationBumper.updateGenerationForStreams(connectionId, job.getId(), List.of(), fullRefreshes);
 
       statePersistence.bulkDelete(UUID.fromString(job.getScope()), fullRefreshes);
     } else if (job.getConfigType() == JobConfig.ConfigType.CLEAR || job.getConfigType() == JobConfig.ConfigType.RESET_CONNECTION) {
@@ -337,12 +328,6 @@ public class AttemptHandler {
     final Job job = jobPersistence.getJob(jobId);
     jobCreationAndStatusUpdateHelper.emitJobToReleaseStagesMetric(OssMetricsRegistry.ATTEMPT_FAILED_BY_RELEASE_STAGE, job);
     jobCreationAndStatusUpdateHelper.trackFailures(failureSummary);
-  }
-
-  private Context buildFeatureFlagContext(final UUID workspaceId, final UUID connectionId) {
-    return new Multi(List.of(
-        new Workspace(workspaceId),
-        new Connection(connectionId)));
   }
 
 }
