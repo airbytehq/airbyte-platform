@@ -633,7 +633,6 @@
   "connection.refreshSchema": "Refresh schema",
   "connection.replication": "Replication",
   "connection.schema": "Schema",
-  "connection.syncStatusCard.title": "Sync Status",
   "connection.streams": "Streams",
   "connection.transfer": "Transfer",
   "connection.linkCopied": "Link copied!",
@@ -747,11 +746,11 @@
   "connection.overview.graph.recordsLoaded": "{value, plural, one {# record} other {# records}} loaded",
   "connection.overview.graph.clickThrough": "Click to go to job →",
 
-  "connection.overview.graph.dataMoved": "Records",
+  "connection.overview.graph.dataMoved": "Records loaded",
   "connection.overview.graph.dataMoved.tooltipLabel": "{value, plural, one {<b>#</b> record} other {<b>#</b> records}} committed",
   "connection.overview.graph.dataMoved.tooltipLabelExtra": "Click to see jobs from this day",
 
-  "connection.overview.graph.uptimeStatus": "Streams",
+  "connection.overview.graph.uptimeStatus": "Streams status",
   "connection.overview.graph.uptimeStatus.more": "+{moreCount} more",
 
   "connection.overview.graph.uptimeStatus.onTime": "{count, plural, one {# stream} other {# streams}} synced",
