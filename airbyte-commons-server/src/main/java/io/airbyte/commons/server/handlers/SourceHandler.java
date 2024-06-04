@@ -12,7 +12,6 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.Lists;
 import io.airbyte.api.model.generated.ActorCatalogWithUpdatedAt;
 import io.airbyte.api.model.generated.ActorDefinitionVersionBreakingChanges;
-import io.airbyte.api.model.generated.ActorStatus;
 import io.airbyte.api.model.generated.CompleteOAuthResponse;
 import io.airbyte.api.model.generated.ConnectionRead;
 import io.airbyte.api.model.generated.DiscoverCatalogResult;
@@ -300,7 +299,7 @@ public class SourceHandler {
 
     final List<SourceRead> reads = Lists.newArrayList();
     for (final SourceConnection sc : sourceConnections) {
-      reads.add(buildSourceReadWithStatus(sc));
+      reads.add(buildSourceRead(sc));
     }
 
     return new SourceReadList().sources(reads);
@@ -317,7 +316,7 @@ public class SourceHandler {
 
     final List<SourceRead> reads = Lists.newArrayList();
     for (final SourceConnection sc : sourceConnections) {
-      reads.add(buildSourceReadWithStatus(sc));
+      reads.add(buildSourceRead(sc));
     }
 
     return new SourceReadList().sources(reads);
@@ -408,18 +407,6 @@ public class SourceHandler {
         request.getSourceId(),
         request.getConnectorVersion(),
         request.getConfigurationHash());
-  }
-
-  private SourceRead buildSourceReadWithStatus(final SourceConnection sourceConnection)
-      throws JsonValidationException, ConfigNotFoundException, IOException {
-    final SourceRead sourceRead = buildSourceRead(sourceConnection);
-    // add source status into sourceRead
-    if (sourceService.isSourceActive(sourceConnection.getSourceId())) {
-      sourceRead.status(ActorStatus.ACTIVE);
-    } else {
-      sourceRead.status(ActorStatus.INACTIVE);
-    }
-    return sourceRead;
   }
 
   private SourceRead buildSourceRead(final UUID sourceId)

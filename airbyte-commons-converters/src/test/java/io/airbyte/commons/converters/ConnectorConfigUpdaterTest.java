@@ -49,7 +49,7 @@ class ConnectorConfigUpdaterTest {
         Jsons.jsonNode(Map.of()),
         SOURCE_NAME,
         SOURCE_NAME,
-        null, null, null, null, null));
+        null, null, null, null));
 
     when(mDestinationApi.getDestination(new DestinationIdRequestBody(DESTINATION_ID)))
         .thenReturn(new DestinationRead(
@@ -59,7 +59,7 @@ class ConnectorConfigUpdaterTest {
             Jsons.jsonNode(Map.of()),
             DESTINATION_NAME,
             DESTINATION_NAME,
-            null, null, null, null, null));;
+            null, null, null, null));;
 
     when(mAirbyteApiClient.getDestinationApi()).thenReturn(mDestinationApi);
     when(mAirbyteApiClient.getSourceApi()).thenReturn(mSourceApi);
@@ -81,7 +81,7 @@ class ConnectorConfigUpdaterTest {
         configJson,
         SOURCE_NAME,
         SOURCE_NAME,
-        null, null, null, null, null));
+        null, null, null, null));
 
     connectorConfigUpdater.updateSource(SOURCE_ID, newConfiguration);
     verify(mSourceApi).updateSource(expectedSourceUpdate);
@@ -100,7 +100,7 @@ class ConnectorConfigUpdaterTest {
         configJson,
         DESTINATION_NAME,
         DESTINATION_NAME,
-        null, null, null, null, null);
+        null, null, null, null);
 
     when(mDestinationApi.getDestination(new DestinationIdRequestBody(DESTINATION_ID)))
         .thenReturn(destinationRead);

@@ -14,7 +14,6 @@ import static org.mockito.Mockito.when;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.google.common.collect.Lists;
-import io.airbyte.api.model.generated.ActorStatus;
 import io.airbyte.api.model.generated.DestinationCloneConfiguration;
 import io.airbyte.api.model.generated.DestinationCloneRequestBody;
 import io.airbyte.api.model.generated.DestinationCreate;
@@ -308,8 +307,7 @@ class DestinationHandlerTest {
         .destinationName(standardDestinationDefinition.getName())
         .icon(ICON_URL)
         .isVersionOverrideApplied(IS_VERSION_OVERRIDE_APPLIED)
-        .supportState(SUPPORT_STATE)
-        .status(ActorStatus.INACTIVE);
+        .supportState(SUPPORT_STATE);
     final WorkspaceIdRequestBody workspaceIdRequestBody = new WorkspaceIdRequestBody().workspaceId(destinationConnection.getWorkspaceId());
 
     when(configRepository.getDestinationConnection(destinationConnection.getDestinationId())).thenReturn(destinationConnection);
