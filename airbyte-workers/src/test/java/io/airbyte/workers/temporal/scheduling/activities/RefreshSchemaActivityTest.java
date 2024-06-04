@@ -82,7 +82,8 @@ class RefreshSchemaActivityTest {
   private static final UUID CATALOG_ID = UUID.randomUUID();
   private static final UUID SOURCE_DEFINITION_ID = UUID.randomUUID();
   private static final AirbyteCatalog CATALOG =
-      new AirbyteCatalog(List.of(new AirbyteStreamAndConfiguration(new AirbyteStream("test stream", null, null, null, null, null, null), null)));
+      new AirbyteCatalog(
+          List.of(new AirbyteStreamAndConfiguration(new AirbyteStream("test stream", null, null, null, null, null, null, null), null)));
   private static final CatalogDiff CATALOG_DIFF =
       new CatalogDiff(List.of(new StreamTransform(StreamTransform.TransformType.UPDATE_STREAM, new StreamDescriptor("test stream", null), null)));
 

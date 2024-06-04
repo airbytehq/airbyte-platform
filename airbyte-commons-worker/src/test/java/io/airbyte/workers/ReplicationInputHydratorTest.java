@@ -86,7 +86,8 @@ class ReplicationInputHydratorTest {
               null,
               null,
               null,
-              TEST_STREAM_NAMESPACE),
+              TEST_STREAM_NAMESPACE,
+              null),
           new AirbyteStreamConfiguration(
               SyncMode.INCREMENTAL,
               DestinationSyncMode.APPEND,

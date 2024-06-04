@@ -127,7 +127,8 @@ public class CatalogClientConverters {
         .withDefaultCursorField(stream.getDefaultCursorField())
         .withSourceDefinedPrimaryKey(
             Optional.ofNullable(stream.getSourceDefinedPrimaryKey()).orElse(Collections.emptyList()))
-        .withNamespace(stream.getNamespace());
+        .withNamespace(stream.getNamespace())
+        .withIsResumable(stream.isResumable());
   }
 
   private static ConfiguredAirbyteStream toConfiguredStreamProtocol(final io.airbyte.api.client.model.generated.AirbyteStream stream,
@@ -185,7 +186,8 @@ public class CatalogClientConverters {
         stream.getSourceDefinedCursor(),
         stream.getDefaultCursorField(),
         stream.getSourceDefinedPrimaryKey(),
-        stream.getNamespace());
+        stream.getNamespace(),
+        stream.getIsResumable());
   }
 
 }
