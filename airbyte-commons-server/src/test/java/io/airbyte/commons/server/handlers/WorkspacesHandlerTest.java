@@ -51,6 +51,7 @@ import io.airbyte.config.NotificationSettings;
 import io.airbyte.config.Organization;
 import io.airbyte.config.SlackNotificationConfiguration;
 import io.airbyte.config.StandardWorkspace;
+import io.airbyte.config.WebhookOperationConfigs;
 import io.airbyte.config.persistence.ConfigNotFoundException;
 import io.airbyte.config.persistence.ConfigRepository;
 import io.airbyte.config.persistence.ConfigRepository.ResourcesByOrganizationQueryPaginated;
@@ -825,7 +826,8 @@ class WorkspacesHandlerTest {
         .anonymousDataCollection(true)
         .email(expectedNewEmail);
 
-    final StandardWorkspace expectedWorkspace = Jsons.clone(workspace).withEmail(expectedNewEmail).withAnonymousDataCollection(true);
+    final StandardWorkspace expectedWorkspace = Jsons.clone(workspace).withEmail(expectedNewEmail).withAnonymousDataCollection(true)
+        .withWebhookOperationConfigs(Jsons.jsonNode(new WebhookOperationConfigs().withWebhookConfigs(Collections.emptyList())));
     when(configRepository.getStandardWorkspaceNoSecrets(workspace.getWorkspaceId(), false))
         .thenReturn(workspace)
         .thenReturn(expectedWorkspace);

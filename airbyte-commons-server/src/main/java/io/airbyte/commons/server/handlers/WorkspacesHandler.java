@@ -548,7 +548,8 @@ public class WorkspacesHandler {
     if (workspacePatch.getDefaultGeography() != null) {
       workspace.setDefaultGeography(ApiPojoConverters.toPersistenceGeography(workspacePatch.getDefaultGeography()));
     }
-    if (CollectionUtils.isNotEmpty(workspacePatch.getWebhookConfigs())) {
+    // Empty List is a valid value for webhookConfigs
+    if (workspacePatch.getWebhookConfigs() != null) {
       workspace.setWebhookOperationConfigs(WorkspaceWebhookConfigsConverter.toPersistenceWrite(workspacePatch.getWebhookConfigs(), uuidSupplier));
     }
   }
