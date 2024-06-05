@@ -372,7 +372,7 @@ class SchemaManagementTests {
             List.of(),
             List.of(),
             "public",
-            null),
+            true),
         new AirbyteStreamConfiguration(
             SyncMode.FULL_REFRESH,
             DestinationSyncMode.OVERWRITE,

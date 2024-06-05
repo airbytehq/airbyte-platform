@@ -46,7 +46,8 @@ public class CatalogConverter {
         .sourceDefinedCursor(stream.getSourceDefinedCursor() != null ? stream.getSourceDefinedCursor() : false)
         .defaultCursorField(stream.getDefaultCursorField())
         .sourceDefinedPrimaryKey(stream.getSourceDefinedPrimaryKey())
-        .namespace(stream.getNamespace());
+        .namespace(stream.getNamespace())
+        .isResumable(stream.getIsResumable());
   }
 
   /**
@@ -183,7 +184,8 @@ public class CatalogConverter {
         .withSourceDefinedCursor(stream.getSourceDefinedCursor())
         .withDefaultCursorField(stream.getDefaultCursorField())
         .withSourceDefinedPrimaryKey(Optional.ofNullable(stream.getSourceDefinedPrimaryKey()).orElse(Collections.emptyList()))
-        .withNamespace(stream.getNamespace());
+        .withNamespace(stream.getNamespace())
+        .withIsResumable(stream.getIsResumable());
   }
 
   /**
