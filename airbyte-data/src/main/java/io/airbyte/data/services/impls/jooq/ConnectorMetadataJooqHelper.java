@@ -90,6 +90,8 @@ public class ConnectorMetadataJooqHelper {
           .set(Tables.ACTOR_DEFINITION_VERSION.SUGGESTED_STREAMS,
               actorDefinitionVersion.getSuggestedStreams() == null ? null
                   : JSONB.valueOf(Jsons.serialize(actorDefinitionVersion.getSuggestedStreams())))
+          .set(ACTOR_DEFINITION_VERSION.SUPPORTS_REFRESHES,
+              actorDefinitionVersion.getSupportsRefreshes() != null && actorDefinitionVersion.getSupportsRefreshes())
           .set(Tables.ACTOR_DEFINITION_VERSION.SUPPORT_STATE,
               Enums.toEnum(actorDefinitionVersion.getSupportState().value(), io.airbyte.db.instance.configs.jooq.generated.enums.SupportState.class)
                   .orElseThrow())
@@ -136,6 +138,8 @@ public class ConnectorMetadataJooqHelper {
           .set(Tables.ACTOR_DEFINITION_VERSION.SUGGESTED_STREAMS,
               actorDefinitionVersion.getSuggestedStreams() == null ? null
                   : JSONB.valueOf(Jsons.serialize(actorDefinitionVersion.getSuggestedStreams())))
+          .set(ACTOR_DEFINITION_VERSION.SUPPORTS_REFRESHES,
+              actorDefinitionVersion.getSupportsRefreshes() != null && actorDefinitionVersion.getSupportsRefreshes())
           .set(Tables.ACTOR_DEFINITION_VERSION.SUPPORT_STATE,
               Enums.toEnum(actorDefinitionVersion.getSupportState().value(), io.airbyte.db.instance.configs.jooq.generated.enums.SupportState.class)
                   .orElseThrow())

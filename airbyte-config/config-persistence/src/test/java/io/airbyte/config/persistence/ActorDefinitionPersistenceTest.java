@@ -256,11 +256,6 @@ class ActorDefinitionPersistenceTest extends BaseConfigDatabaseTest {
     assertReturnsDestDef(createBaseDestDef().withTombstone(false));
   }
 
-  @Test
-  void testDestinationDefinitionWithSupportRefresh() throws JsonValidationException, ConfigNotFoundException, IOException {
-    assertReturnsDestDef(createBaseDestDef().withSupportRefreshes(true));
-  }
-
   void assertReturnsDestDef(final StandardDestinationDefinition destDef) throws ConfigNotFoundException, IOException, JsonValidationException {
     final ActorDefinitionVersion actorDefinitionVersion = createBaseActorDefVersion(destDef.getDestinationDefinitionId());
     configRepository.writeConnectorMetadata(destDef, actorDefinitionVersion);
@@ -539,8 +534,7 @@ class ActorDefinitionPersistenceTest extends BaseConfigDatabaseTest {
     return new StandardDestinationDefinition()
         .withName("source-def-" + id)
         .withDestinationDefinitionId(id)
-        .withTombstone(false)
-        .withSupportRefreshes(false);
+        .withTombstone(false);
   }
 
   private static StandardWorkspace createBaseStandardWorkspace() {

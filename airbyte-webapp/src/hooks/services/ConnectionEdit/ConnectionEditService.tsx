@@ -5,7 +5,7 @@ import { useAsyncFn } from "react-use";
 
 import {
   useCurrentWorkspace,
-  useDestinationDefinition,
+  useDestinationDefinitionVersion,
   useGetConnection,
   useGetConnectionQuery,
   useUpdateConnection,
@@ -62,12 +62,12 @@ const useConnectionEdit = ({ connectionId }: ConnectionEditProps): ConnectionEdi
   const { registerNotification, unregisterNotificationById } = useNotificationService();
   const getConnectionQuery = useGetConnectionQuery();
   const [connection, setConnection] = useState(useGetConnection(connectionId));
-  const { supportRefreshes: destinationSupportsRefreshes } = useDestinationDefinition(
-    connection.destination.destinationDefinitionId
+  const { supportsRefreshes: destinationSupportsRefreshes } = useDestinationDefinitionVersion(
+    connection.destination.destinationId
   );
   const [catalog, setCatalog] = useState<ConnectionCatalog>(() => getConnectionCatalog(connection));
   const [schemaHasBeenRefreshed, setSchemaHasBeenRefreshed] = useState(false);
-  const platformSupportsRefreshes = useExperiment("platform.activate-refreshes", false);
+  const platformSupportsRefreshes = useExperiment("platform.activate-refreshes", true);
 
   const discardRefreshedSchema = useCallback(() => {
     setConnection((connection) => ({

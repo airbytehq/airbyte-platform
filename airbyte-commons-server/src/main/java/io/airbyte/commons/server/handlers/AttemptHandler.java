@@ -20,7 +20,9 @@ import io.airbyte.commons.server.errors.IdNotFoundKnownException;
 import io.airbyte.commons.server.errors.UnprocessableContentException;
 import io.airbyte.commons.server.handlers.helpers.JobCreationAndStatusUpdateHelper;
 import io.airbyte.commons.temporal.TemporalUtils;
+import io.airbyte.config.ActorDefinitionVersion;
 import io.airbyte.config.AttemptFailureSummary;
+import io.airbyte.config.DestinationConnection;
 import io.airbyte.config.JobConfig;
 import io.airbyte.config.JobConfigProxy;
 import io.airbyte.config.JobOutput;
@@ -30,6 +32,7 @@ import io.airbyte.config.StandardSyncOutput;
 import io.airbyte.config.StreamSyncStats;
 import io.airbyte.config.SyncStats;
 import io.airbyte.config.helpers.LogClientSingleton;
+import io.airbyte.config.persistence.ActorDefinitionVersionHelper;
 import io.airbyte.config.persistence.StatePersistence;
 import io.airbyte.config.persistence.helper.GenerationBumper;
 import io.airbyte.data.exceptions.ConfigNotFoundException;
@@ -74,6 +77,7 @@ public class AttemptHandler {
   private final GenerationBumper generationBumper;
   private final ConnectionService connectionService;
   private final DestinationService destinationService;
+  private final ActorDefinitionVersionHelper actorDefinitionVersionHelper;
 
   public AttemptHandler(final JobPersistence jobPersistence,
                         final StatePersistence statePersistence,
@@ -83,7 +87,8 @@ public class AttemptHandler {
                         @Named("workspaceRoot") final Path workspaceRoot,
                         final GenerationBumper generationBumper,
                         final ConnectionService connectionService,
-                        final DestinationService destinationService) {
+                        final DestinationService destinationService,
+                        final ActorDefinitionVersionHelper actorDefinitionVersionHelper) {
     this.jobPersistence = jobPersistence;
     this.statePersistence = statePersistence;
     this.jobConverter = jobConverter;
@@ -93,10 +98,11 @@ public class AttemptHandler {
     this.generationBumper = generationBumper;
     this.connectionService = connectionService;
     this.destinationService = destinationService;
+    this.actorDefinitionVersionHelper = actorDefinitionVersionHelper;
   }
 
   public CreateNewAttemptNumberResponse createNewAttemptNumber(final long jobId)
-      throws IOException, JsonValidationException, ConfigNotFoundException {
+      throws IOException, JsonValidationException, ConfigNotFoundException, io.airbyte.config.persistence.ConfigNotFoundException {
     final Job job;
     try {
       job = jobPersistence.getJob(jobId);
@@ -112,7 +118,11 @@ public class AttemptHandler {
     final StandardSync standardSync = connectionService.getStandardSync(connectionId);
     final StandardDestinationDefinition standardDestinationDefinition =
         destinationService.getDestinationDefinitionFromDestination(standardSync.getDestinationId());
-    final boolean supportRefreshes = standardDestinationDefinition.getSupportRefreshes();
+    final DestinationConnection destinationConnection = destinationService.getDestinationConnection(standardSync.getDestinationId());
+    final ActorDefinitionVersion destinationVersion =
+        actorDefinitionVersionHelper.getDestinationVersion(standardDestinationDefinition, destinationConnection.getWorkspaceId(),
+            destinationConnection.getDestinationId());
+    final boolean supportRefreshes = destinationVersion.getSupportsRefreshes();
 
     // Action done in the first attempt
     if (persistedAttemptNumber == 0) {

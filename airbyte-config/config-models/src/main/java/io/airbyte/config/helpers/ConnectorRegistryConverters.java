@@ -66,8 +66,7 @@ public class ConnectorRegistryConverters {
         .withTombstone(def.getTombstone())
         .withPublic(def.getPublic())
         .withCustom(def.getCustom())
-        .withResourceRequirements(def.getResourceRequirements())
-        .withSupportRefreshes(def.getSupportsRefreshes());
+        .withResourceRequirements(def.getResourceRequirements());
   }
 
   /**
@@ -116,7 +115,8 @@ public class ConnectorRegistryConverters {
         .withReleaseStage(def.getReleaseStage())
         .withSupportLevel(def.getSupportLevel() == null ? SupportLevel.NONE : def.getSupportLevel())
         .withNormalizationConfig(def.getNormalizationConfig())
-        .withSupportsDbt(def.getSupportsDbt());
+        .withSupportsDbt(def.getSupportsDbt())
+        .withSupportsRefreshes(def.getSupportsRefreshes() != null && def.getSupportsRefreshes());
   }
 
   /**

@@ -54,7 +54,6 @@ create table "public"."actor_definition" (
   "max_seconds_between_messages" int,
   "default_version_id" uuid,
   "icon_url" varchar(256),
-  "support_refreshes" boolean not null default false,
   constraint "actor_definition_pkey" primary key ("id")
 );
 create table "public"."actor_definition_breaking_change" (
@@ -96,6 +95,7 @@ create table "public"."actor_definition_version" (
   "release_stage" "public"."release_stage",
   "support_state" "public"."support_state" not null default cast('supported' as support_state),
   "support_level" "public"."support_level" not null,
+  "supports_refreshes" boolean not null default false,
   constraint "actor_definition_version_pkey" primary key ("id"),
   constraint "actor_definition_version_actor_definition_id_version_key" unique ("actor_definition_id", "docker_image_tag")
 );

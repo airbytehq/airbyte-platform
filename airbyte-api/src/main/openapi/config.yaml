@@ -7791,7 +7791,6 @@ components:
         - documentationUrl
         - supportsDbt
         - normalizationConfig
-        - supportRefreshes
       properties:
         destinationDefinitionId:
           $ref: "#/components/schemas/DestinationDefinitionId"
@@ -7828,9 +7827,6 @@ components:
           description: an optional flag indicating whether DBT is used in the normalization. If the flag value is NULL - DBT is not used.
         normalizationConfig:
           $ref: "#/components/schemas/NormalizationDestinationDefinitionConfig"
-        supportRefreshes:
-          description: Indicated that the actor supports the refreshes
-          type: boolean
     DestinationDefinitionReadList:
       type: object
       required:
@@ -8076,6 +8072,7 @@ components:
         - dockerRepository
         - dockerImageTag
         - supportsDbt
+        - supportsRefreshes
         - normalizationConfig
         - supportState
         - isVersionOverrideApplied
@@ -8085,6 +8082,8 @@ components:
         dockerImageTag:
           type: string
         supportsDbt:
+          type: boolean
+        supportsRefreshes:
           type: boolean
         normalizationConfig:
           $ref: "#/components/schemas/NormalizationDestinationDefinitionConfig"

@@ -9,7 +9,6 @@ import com.fasterxml.jackson.databind.ObjectMapper
 import com.google.common.annotations.VisibleForTesting
 import io.airbyte.api.client.AirbyteApiClient
 import io.airbyte.api.client.WorkloadApiClient
-import io.airbyte.api.client.model.generated.DestinationDefinitionIdRequestBody
 import io.airbyte.api.client.model.generated.DestinationIdRequestBody
 import io.airbyte.api.client.model.generated.SourceIdRequestBody
 import io.airbyte.api.client.model.generated.StreamStatusIncompleteRunCause
@@ -207,9 +206,9 @@ class ReplicationWorkerHelper(
 
     ApmTraceUtils.addTagsToTrace(ctx.connectionId, ctx.attempt.toLong(), ctx.jobId.toString(), jobRoot)
     val supportRefreshes =
-      airbyteApiClient.destinationDefinitionApi.getDestinationDefinition(
-        DestinationDefinitionIdRequestBody(destinationDefinitionId = ctx.destinationDefinitionId),
-      ).supportRefreshes
+      airbyteApiClient.actorDefinitionVersionApi.getActorDefinitionVersionForDestinationId(
+        DestinationIdRequestBody(destinationId = ctx.destinationId),
+      ).supportsRefreshes
     streamStatusCompletionTracker.startTracking(configuredAirbyteCatalog, ctx, supportRefreshes)
   }
 

@@ -222,7 +222,7 @@ export const useRefreshConnectionStreams = (connectionId: string) => {
   const queryClient = useQueryClient();
   const requestOptions = useRequestOptions();
   const setConnectionRunState = useSetConnectionRunState();
-  const platformSupportsRefresh = useExperiment("platform.activate-refreshes", false);
+  const platformSupportsRefresh = useExperiment("platform.activate-refreshes", true);
   const { registerNotification } = useNotificationService();
   const { formatMessage } = useIntl();
 

@@ -21,7 +21,7 @@ import LoadingSchema from "components/LoadingSchema";
 import { FlexContainer } from "components/ui/Flex";
 import { Message } from "components/ui/Message/Message";
 
-import { ConnectionValues, useDestinationDefinition, useGetStateTypeQuery } from "core/api";
+import { ConnectionValues, useDestinationDefinitionVersion, useGetStateTypeQuery } from "core/api";
 import { WebBackendConnectionRead, WebBackendConnectionUpdate } from "core/api/types/AirbyteClient";
 import { PageTrackingCodes, useTrackPage } from "core/services/analytics";
 import { useConfirmCatalogDiff } from "hooks/connection/useConfirmCatalogDiff";
@@ -95,7 +95,7 @@ export const ConnectionReplicationPage: React.FC = () => {
   useTrackPage(PageTrackingCodes.CONNECTIONS_ITEM_REPLICATION);
   const isSyncCatalogV2Enabled = useExperiment("connection.syncCatalogV2", false);
   const { trackSchemaEdit } = useAnalyticsTrackFunctions();
-  const isRefreshConnectionEnabled = useExperiment("platform.activate-refreshes", false);
+  const isRefreshConnectionEnabled = useExperiment("platform.activate-refreshes", true);
 
   const getStateType = useGetStateTypeQuery();
 
@@ -104,8 +104,8 @@ export const ConnectionReplicationPage: React.FC = () => {
 
   const { connection, schemaRefreshing, updateConnection, discardRefreshedSchema } = useConnectionEditService();
   const { initialValues, schemaError, setSubmitError, refreshSchema, mode } = useConnectionFormService();
-  const { supportRefreshes: destinationSupportsRefreshes } = useDestinationDefinition(
-    connection.destination.destinationDefinitionId
+  const { supportsRefreshes: destinationSupportsRefreshes } = useDestinationDefinitionVersion(
+    connection.destination.destinationId
   );
 
   const validationSchema = useConnectionValidationSchema();

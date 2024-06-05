@@ -19,7 +19,6 @@ import io.airbyte.api.model.generated.ConnectionIdRequestBody;
 import io.airbyte.api.model.generated.ConnectionRead;
 import io.airbyte.api.model.generated.ConnectionStateType;
 import io.airbyte.api.model.generated.ConnectionUpdate;
-import io.airbyte.api.model.generated.DestinationDefinitionIdRequestBody;
 import io.airbyte.api.model.generated.DestinationIdRequestBody;
 import io.airbyte.api.model.generated.DestinationRead;
 import io.airbyte.api.model.generated.DestinationSnippetRead;
@@ -98,6 +97,7 @@ import java.util.stream.Collectors;
 @Singleton
 public class WebBackendConnectionsHandler {
 
+  private final ActorDefinitionVersionHandler actorDefinitionVersionHandler;
   private final ConnectionsHandler connectionsHandler;
   private final StateHandler stateHandler;
   private final SourceHandler sourceHandler;
@@ -113,7 +113,8 @@ public class WebBackendConnectionsHandler {
   private final ActorDefinitionVersionHelper actorDefinitionVersionHelper;
   private final FeatureFlagClient featureFlagClient;
 
-  public WebBackendConnectionsHandler(final ConnectionsHandler connectionsHandler,
+  public WebBackendConnectionsHandler(final ActorDefinitionVersionHandler actorDefinitionVersionHandler,
+                                      final ConnectionsHandler connectionsHandler,
                                       final StateHandler stateHandler,
                                       final SourceHandler sourceHandler,
                                       final DestinationDefinitionsHandler destinationDefinitionsHandler,
@@ -125,6 +126,7 @@ public class WebBackendConnectionsHandler {
                                       final ConfigRepository configRepositoryDoNotUse,
                                       final ActorDefinitionVersionHelper actorDefinitionVersionHelper,
                                       final FeatureFlagClient featureFlagClient) {
+    this.actorDefinitionVersionHandler = actorDefinitionVersionHandler;
     this.connectionsHandler = connectionsHandler;
     this.stateHandler = stateHandler;
     this.sourceHandler = sourceHandler;
@@ -572,7 +574,7 @@ public class WebBackendConnectionsHandler {
    * request, and bundles those newly-created operationIds into the connection update.
    */
   public WebBackendConnectionRead webBackendUpdateConnection(final WebBackendConnectionUpdate webBackendConnectionPatch)
-      throws ConfigNotFoundException, IOException, JsonValidationException {
+      throws ConfigNotFoundException, IOException, JsonValidationException, io.airbyte.data.exceptions.ConfigNotFoundException {
 
     final UUID connectionId = webBackendConnectionPatch.getConnectionId();
     final ConnectionRead originalConnectionRead = connectionsHandler.getConnection(connectionId);
@@ -647,7 +649,7 @@ public class WebBackendConnectionsHandler {
                                     final ConnectionRead updatedConnectionRead,
                                     final ConnectionRead oldConnectionRead,
                                     final UUID workspaceId)
-      throws JsonValidationException, ConfigNotFoundException, IOException {
+      throws JsonValidationException, ConfigNotFoundException, IOException, io.airbyte.data.exceptions.ConfigNotFoundException {
 
     final UUID connectionId = webBackendConnectionPatch.getConnectionId();
     final Boolean skipReset = webBackendConnectionPatch.getSkipReset() != null ? webBackendConnectionPatch.getSkipReset() : false;
@@ -670,11 +672,9 @@ public class WebBackendConnectionsHandler {
         final boolean isRefreshEnabled = featureFlagClient.boolVariation(ActivateRefreshes.INSTANCE, new Multi(List.of(
             new Connection(connectionId),
             new Workspace(workspaceId))));
-        final var destinationRead =
-            destinationHandler.getDestination(new DestinationIdRequestBody().destinationId(oldConnectionRead.getDestinationId()));
-        final var destinationDef = destinationDefinitionsHandler
-            .getDestinationDefinition(new DestinationDefinitionIdRequestBody().destinationDefinitionId(destinationRead.getDestinationDefinitionId()));
-        if (isRefreshEnabled && destinationDef.getSupportRefreshes()) {
+        final var destinationVersion = actorDefinitionVersionHandler
+            .getActorDefinitionVersionForDestinationId(new DestinationIdRequestBody().destinationId(oldConnectionRead.getDestinationId()));
+        if (isRefreshEnabled && destinationVersion.getSupportsRefreshes()) {
           eventRunner.refreshConnectionAsync(
               connectionId,
               streamsToReset,

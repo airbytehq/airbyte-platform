@@ -39,7 +39,9 @@ import io.airbyte.commons.server.errors.IdNotFoundKnownException;
 import io.airbyte.commons.server.errors.UnprocessableContentException;
 import io.airbyte.commons.server.handlers.helpers.JobCreationAndStatusUpdateHelper;
 import io.airbyte.commons.temporal.TemporalUtils;
+import io.airbyte.config.ActorDefinitionVersion;
 import io.airbyte.config.AttemptFailureSummary;
+import io.airbyte.config.DestinationConnection;
 import io.airbyte.config.FailureReason;
 import io.airbyte.config.FailureReason.FailureOrigin;
 import io.airbyte.config.JobConfig;
@@ -50,7 +52,6 @@ import io.airbyte.config.JobSyncConfig;
 import io.airbyte.config.NormalizationSummary;
 import io.airbyte.config.RefreshConfig;
 import io.airbyte.config.ResetSourceConfiguration;
-import io.airbyte.config.StandardDestinationDefinition;
 import io.airbyte.config.StandardSync;
 import io.airbyte.config.StandardSyncOutput;
 import io.airbyte.config.StandardSyncSummary;
@@ -59,6 +60,7 @@ import io.airbyte.config.StateType;
 import io.airbyte.config.StateWrapper;
 import io.airbyte.config.SyncStats;
 import io.airbyte.config.helpers.LogClientSingleton;
+import io.airbyte.config.persistence.ActorDefinitionVersionHelper;
 import io.airbyte.config.persistence.ConfigNotFoundException;
 import io.airbyte.config.persistence.StatePersistence;
 import io.airbyte.config.persistence.helper.GenerationBumper;
@@ -108,6 +110,7 @@ class AttemptHandlerTest {
   private final GenerationBumper generationBumper = mock(GenerationBumper.class);
   private final ConnectionService connectionService = mock(ConnectionService.class);
   private final DestinationService destinationService = mock(DestinationService.class);
+  private final ActorDefinitionVersionHelper actorDefinitionVersionHelper = mock(ActorDefinitionVersionHelper.class);
 
   private final AttemptHandler handler = new AttemptHandler(jobPersistence,
       statePersistence,
@@ -117,9 +120,11 @@ class AttemptHandlerTest {
       path,
       generationBumper,
       connectionService,
-      destinationService);
+      destinationService,
+      actorDefinitionVersionHelper);
 
   private static final UUID CONNECTION_ID = UUID.randomUUID();
+  private static final UUID WORKSPACE_ID = UUID.randomUUID();
   private static final long JOB_ID = 10002L;
   private static final int ATTEMPT_NUMBER = 1;
   private static final String PROCESSING_TASK_QUEUE = "SYNC";
@@ -266,8 +271,10 @@ class AttemptHandlerTest {
     }
     final UUID destinationId = UUID.randomUUID();
     when(connectionService.getStandardSync(connId)).thenReturn(new StandardSync().withDestinationId(destinationId));
-    when(destinationService.getDestinationDefinitionFromDestination(destinationId))
-        .thenReturn(new StandardDestinationDefinition().withSupportRefreshes(enableRfr));
+    when(destinationService.getDestinationConnection(destinationId))
+        .thenReturn(new DestinationConnection().withWorkspaceId(WORKSPACE_ID));
+    when(actorDefinitionVersionHelper.getDestinationVersion(any(), any(), any()))
+        .thenReturn(new ActorDefinitionVersion().withSupportsRefreshes(enableRfr));
     final CreateNewAttemptNumberResponse output = handler.createNewAttemptNumber(JOB_ID);
     assertThat(output.getAttemptNumber()).isEqualTo(attemptNumber);
     if (enableRfr) {
@@ -314,8 +321,10 @@ class AttemptHandlerTest {
     when(ffClient.boolVariation(any(), any())).thenReturn(true);
     final UUID destinationId = UUID.randomUUID();
     when(connectionService.getStandardSync(connId)).thenReturn(new StandardSync().withDestinationId(destinationId));
-    when(destinationService.getDestinationDefinitionFromDestination(destinationId))
-        .thenReturn(new StandardDestinationDefinition().withSupportRefreshes(true));
+    when(destinationService.getDestinationConnection(destinationId))
+        .thenReturn(new DestinationConnection().withWorkspaceId(WORKSPACE_ID));
+    when(actorDefinitionVersionHelper.getDestinationVersion(any(), any(), any()))
+        .thenReturn(new ActorDefinitionVersion().withSupportsRefreshes(true));
     final CreateNewAttemptNumberResponse output = handler.createNewAttemptNumber(JOB_ID);
     assertThat(output.getAttemptNumber()).isEqualTo(attemptNumber);
     verify(generationBumper).updateGenerationForStreams(connId, JOB_ID, List.of(), Set.of(new StreamDescriptor().withName("rfrStream")));
@@ -361,8 +370,10 @@ class AttemptHandlerTest {
     when(ffClient.boolVariation(eq(EnableResumableFullRefresh.INSTANCE), any())).thenReturn(true);
     final UUID destinationId = UUID.randomUUID();
     when(connectionService.getStandardSync(connId)).thenReturn(new StandardSync().withDestinationId(destinationId));
-    when(destinationService.getDestinationDefinitionFromDestination(destinationId))
-        .thenReturn(new StandardDestinationDefinition().withSupportRefreshes(true));
+    when(destinationService.getDestinationConnection(destinationId))
+        .thenReturn(new DestinationConnection().withWorkspaceId(WORKSPACE_ID));
+    when(actorDefinitionVersionHelper.getDestinationVersion(any(), any(), any()))
+        .thenReturn(new ActorDefinitionVersion().withSupportsRefreshes(true));
     final CreateNewAttemptNumberResponse output = handler.createNewAttemptNumber(JOB_ID);
     assertThat(output.getAttemptNumber()).isEqualTo(attemptNumber);
     if (attemptNumber == 0) {
@@ -462,8 +473,10 @@ class AttemptHandlerTest {
 
       final UUID destinationId = UUID.randomUUID();
       when(connectionService.getStandardSync(connId)).thenReturn(new StandardSync().withDestinationId(destinationId));
-      when(destinationService.getDestinationDefinitionFromDestination(destinationId))
-          .thenReturn(new StandardDestinationDefinition().withSupportRefreshes(true));
+      when(destinationService.getDestinationConnection(destinationId))
+          .thenReturn(new DestinationConnection().withWorkspaceId(WORKSPACE_ID));
+      when(actorDefinitionVersionHelper.getDestinationVersion(any(), any(), any()))
+          .thenReturn(new ActorDefinitionVersion().withSupportsRefreshes(true));
 
       final CreateNewAttemptNumberResponse output = handler.createNewAttemptNumber(JOB_ID);
       assertThat(output.getAttemptNumber()).isEqualTo(attemptNumber);

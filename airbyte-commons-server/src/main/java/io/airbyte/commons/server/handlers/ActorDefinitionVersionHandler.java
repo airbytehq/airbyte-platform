@@ -130,6 +130,7 @@ public class ActorDefinitionVersionHandler {
         .dockerRepository(actorDefinitionVersion.getDockerRepository())
         .dockerImageTag(actorDefinitionVersion.getDockerImageTag())
         .supportsDbt(Objects.requireNonNullElse(actorDefinitionVersion.getSupportsDbt(), false))
+        .supportsRefreshes(actorDefinitionVersion.getSupportsRefreshes())
         .normalizationConfig(ApiPojoConverters.normalizationDestinationDefinitionConfigToApi(actorDefinitionVersion.getNormalizationConfig()))
         .supportState(toApiSupportState(actorDefinitionVersion.getSupportState()))
         .supportLevel(toApiSupportLevel(actorDefinitionVersion.getSupportLevel()))

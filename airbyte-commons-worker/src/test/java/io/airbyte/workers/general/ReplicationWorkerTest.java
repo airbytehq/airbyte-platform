@@ -34,14 +34,16 @@ import static org.mockito.Mockito.when;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import io.airbyte.api.client.AirbyteApiClient;
 import io.airbyte.api.client.WorkloadApiClient;
+import io.airbyte.api.client.generated.ActorDefinitionVersionApi;
 import io.airbyte.api.client.generated.DestinationApi;
-import io.airbyte.api.client.generated.DestinationDefinitionApi;
 import io.airbyte.api.client.generated.SourceApi;
-import io.airbyte.api.client.model.generated.DestinationDefinitionRead;
+import io.airbyte.api.client.model.generated.ActorDefinitionVersionRead;
 import io.airbyte.api.client.model.generated.DestinationRead;
 import io.airbyte.api.client.model.generated.NormalizationDestinationDefinitionConfig;
 import io.airbyte.api.client.model.generated.SourceRead;
 import io.airbyte.api.client.model.generated.StreamStatusIncompleteRunCause;
+import io.airbyte.api.client.model.generated.SupportLevel;
+import io.airbyte.api.client.model.generated.SupportState;
 import io.airbyte.commons.concurrency.VoidCallable;
 import io.airbyte.commons.converters.ConnectorConfigUpdater;
 import io.airbyte.commons.io.IOs;
@@ -109,7 +111,6 @@ import io.airbyte.workers.test_utils.AirbyteMessageUtils;
 import io.airbyte.workers.test_utils.TestConfigHelpers;
 import io.airbyte.workload.api.client.generated.WorkloadApi;
 import java.io.IOException;
-import java.net.URI;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Duration;
@@ -199,7 +200,7 @@ abstract class ReplicationWorkerTest {
   protected SourceApi sourceApi;
   protected DestinationApi destinationApi;
   protected StreamStatusCompletionTracker streamStatusCompletionTracker;
-  protected DestinationDefinitionApi destinationDefinitionApi;
+  protected ActorDefinitionVersionApi actorDefinitionVersionApi;
   protected StreamStatusTracker streamStatusTracker;
   protected StreamStatusCachingApiClient streamStatusApiClient;
 
@@ -283,25 +284,19 @@ abstract class ReplicationWorkerTest {
     when(airbyteApiClient.getDestinationApi()).thenReturn(destinationApi);
     when(airbyteApiClient.getSourceApi()).thenReturn(sourceApi);
 
-    destinationDefinitionApi = mock(DestinationDefinitionApi.class);
-    final var destinationDefinitionRead = new DestinationDefinitionRead(
-        UUID.randomUUID(),
-        "name",
+    actorDefinitionVersionApi = mock(ActorDefinitionVersionApi.class);
+    var actorDefinitionVersionRead = new ActorDefinitionVersionRead(
         "dockerRepository",
         "dockerImageTag",
-        URI.create("http://localhost"),
+        false,
         false,
         new NormalizationDestinationDefinitionConfig(),
-        true,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
+        false,
+        SupportState.SUPPORTED,
+        SupportLevel.NONE,
         null);
-    when(destinationDefinitionApi.getDestinationDefinition(any())).thenReturn(destinationDefinitionRead);
-    when(airbyteApiClient.getDestinationDefinitionApi()).thenReturn(destinationDefinitionApi);
+    when(actorDefinitionVersionApi.getActorDefinitionVersionForDestinationId(any())).thenReturn(actorDefinitionVersionRead);
+    when(airbyteApiClient.getActorDefinitionVersionApi()).thenReturn(actorDefinitionVersionApi);
 
     when(messageTracker.getSyncStatsTracker()).thenReturn(syncStatsTracker);
 

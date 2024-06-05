@@ -18,11 +18,13 @@ import static org.mockito.Mockito.when;
 
 import io.airbyte.api.client.AirbyteApiClient;
 import io.airbyte.api.client.WorkloadApiClient;
+import io.airbyte.api.client.generated.ActorDefinitionVersionApi;
 import io.airbyte.api.client.generated.DestinationApi;
-import io.airbyte.api.client.generated.DestinationDefinitionApi;
 import io.airbyte.api.client.generated.SourceApi;
-import io.airbyte.api.client.model.generated.DestinationDefinitionRead;
+import io.airbyte.api.client.model.generated.ActorDefinitionVersionRead;
 import io.airbyte.api.client.model.generated.NormalizationDestinationDefinitionConfig;
+import io.airbyte.api.client.model.generated.SupportLevel;
+import io.airbyte.api.client.model.generated.SupportState;
 import io.airbyte.commons.concurrency.VoidCallable;
 import io.airbyte.commons.converters.ThreadedTimeTracker;
 import io.airbyte.commons.json.Jsons;
@@ -57,7 +59,6 @@ import io.airbyte.workers.internal.bookkeeping.streamstatus.StreamStatusTracker;
 import io.airbyte.workers.internal.syncpersistence.SyncPersistence;
 import io.airbyte.workload.api.client.generated.WorkloadApi;
 import java.io.IOException;
-import java.net.URI;
 import java.nio.file.Path;
 import java.time.Instant;
 import java.util.Collections;
@@ -84,7 +85,7 @@ class ReplicationWorkerHelperTest {
   private StreamStatusCachingApiClient streamStatusApiClient;
   private WorkloadApiClient workloadApiClient;
   private AirbyteApiClient airbyteApiClient;
-  private DestinationDefinitionApi destinationDefinitionApi;
+  private ActorDefinitionVersionApi actorDefinitionVersionApi;
   private AirbyteMessageDataExtractor extractor;
 
   private ReplicationAirbyteMessageEventPublishingHelper replicationAirbyteMessageEventPublishingHelper;
@@ -109,8 +110,8 @@ class ReplicationWorkerHelperTest {
     when(workloadApiClient.getWorkloadApi()).thenReturn(mock(WorkloadApi.class));
     when(airbyteApiClient.getDestinationApi()).thenReturn(mock(DestinationApi.class));
     when(airbyteApiClient.getSourceApi()).thenReturn(mock(SourceApi.class));
-    destinationDefinitionApi = mock(DestinationDefinitionApi.class);
-    when(airbyteApiClient.getDestinationDefinitionApi()).thenReturn(destinationDefinitionApi);
+    actorDefinitionVersionApi = mock(ActorDefinitionVersionApi.class);
+    when(airbyteApiClient.getActorDefinitionVersionApi()).thenReturn(actorDefinitionVersionApi);
     extractor = mock(AirbyteMessageDataExtractor.class);
     replicationWorkerHelper = spy(new ReplicationWorkerHelper(
         extractor,
@@ -320,23 +321,17 @@ class ReplicationWorkerHelperTest {
     verify(streamStatusTracker, times(1)).track(message);
   }
 
-  private void mockSupportRefreshes(final boolean supportRefreshes) throws IOException {
-    when(destinationDefinitionApi.getDestinationDefinition(any())).thenReturn(
-        new DestinationDefinitionRead(
-            UUID.randomUUID(),
-            "name",
+  private void mockSupportRefreshes(final boolean supportsRefreshes) throws IOException {
+    when(actorDefinitionVersionApi.getActorDefinitionVersionForDestinationId(any())).thenReturn(
+        new ActorDefinitionVersionRead(
             "dockerRepository",
             "dockerImageTag",
-            URI.create("http://localhost"),
             false,
+            supportsRefreshes,
             new NormalizationDestinationDefinitionConfig(),
-            supportRefreshes,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
+            false,
+            SupportState.SUPPORTED,
+            SupportLevel.NONE,
             null));
   }
 

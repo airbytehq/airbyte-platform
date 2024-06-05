@@ -157,7 +157,8 @@ class WebBackendApiTest extends BaseControllerTest {
   }
 
   @Test
-  void testWebBackendUpdateConnection() throws IOException, JsonValidationException, ConfigNotFoundException {
+  void testWebBackendUpdateConnection()
+      throws IOException, JsonValidationException, ConfigNotFoundException, io.airbyte.data.exceptions.ConfigNotFoundException {
     Mockito.when(webBackendConnectionsHandler.webBackendUpdateConnection(Mockito.any()))
         .thenReturn(new WebBackendConnectionRead())
         .thenThrow(new ConfigNotFoundException("", ""));

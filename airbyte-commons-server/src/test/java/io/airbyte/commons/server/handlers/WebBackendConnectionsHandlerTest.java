@@ -22,6 +22,7 @@ import static org.mockito.Mockito.when;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.google.common.collect.Lists;
+import io.airbyte.api.model.generated.ActorDefinitionVersionRead;
 import io.airbyte.api.model.generated.AirbyteCatalog;
 import io.airbyte.api.model.generated.AirbyteStream;
 import io.airbyte.api.model.generated.AirbyteStreamAndConfiguration;
@@ -37,7 +38,6 @@ import io.airbyte.api.model.generated.ConnectionState;
 import io.airbyte.api.model.generated.ConnectionStateType;
 import io.airbyte.api.model.generated.ConnectionStatus;
 import io.airbyte.api.model.generated.ConnectionUpdate;
-import io.airbyte.api.model.generated.DestinationDefinitionRead;
 import io.airbyte.api.model.generated.DestinationRead;
 import io.airbyte.api.model.generated.DestinationSyncMode;
 import io.airbyte.api.model.generated.FieldAdd;
@@ -143,6 +143,7 @@ import org.mockito.InOrder;
 
 class WebBackendConnectionsHandlerTest {
 
+  private ActorDefinitionVersionHandler actorDefinitionVersionHandler;
   private ConnectionsHandler connectionsHandler;
   private OperationsHandler operationsHandler;
   private SchedulerHandler schedulerHandler;
@@ -178,6 +179,7 @@ class WebBackendConnectionsHandlerTest {
 
   @BeforeEach
   void setup() throws IOException, JsonValidationException, ConfigNotFoundException {
+    actorDefinitionVersionHandler = mock(ActorDefinitionVersionHandler.class);
     connectionsHandler = mock(ConnectionsHandler.class);
     stateHandler = mock(StateHandler.class);
     operationsHandler = mock(OperationsHandler.class);
@@ -231,6 +233,7 @@ class WebBackendConnectionsHandlerTest {
         actorDefinitionVersionUpdater);
 
     wbHandler = spy(new WebBackendConnectionsHandler(
+        actorDefinitionVersionHandler,
         connectionsHandler,
         stateHandler,
         sourceHandler,
@@ -840,7 +843,8 @@ class WebBackendConnectionsHandlerTest {
   }
 
   @Test
-  void testUpdateConnection() throws JsonValidationException, ConfigNotFoundException, IOException {
+  void testUpdateConnection()
+      throws JsonValidationException, ConfigNotFoundException, IOException, io.airbyte.data.exceptions.ConfigNotFoundException {
     final WebBackendConnectionUpdate updateBody = new WebBackendConnectionUpdate()
         .namespaceDefinition(expected.getNamespaceDefinition())
         .namespaceFormat(expected.getNamespaceFormat())
@@ -896,7 +900,8 @@ class WebBackendConnectionsHandlerTest {
   }
 
   @Test
-  void testUpdateConnectionWithOperations() throws JsonValidationException, ConfigNotFoundException, IOException {
+  void testUpdateConnectionWithOperations()
+      throws JsonValidationException, ConfigNotFoundException, IOException, io.airbyte.data.exceptions.ConfigNotFoundException {
     final WebBackendOperationCreateOrUpdate operationCreateOrUpdate = new WebBackendOperationCreateOrUpdate()
         .name("Test Operation")
         .operationId(connectionRead.getOperationIds().get(0));
@@ -949,11 +954,12 @@ class WebBackendConnectionsHandlerTest {
 
   @ParameterizedTest
   @ValueSource(booleans = {true, false})
-  void testUpdateConnectionWithUpdatedSchemaPerStream(final Boolean useRefresh) throws JsonValidationException, ConfigNotFoundException, IOException {
+  void testUpdateConnectionWithUpdatedSchemaPerStream(final Boolean useRefresh)
+      throws JsonValidationException, ConfigNotFoundException, IOException, io.airbyte.data.exceptions.ConfigNotFoundException {
     when(featureFlagClient.boolVariation(eq(ActivateRefreshes.INSTANCE), any())).thenReturn(useRefresh);
     if (useRefresh) {
-      when(destinationDefinitionsHandler.getDestinationDefinition(any()))
-          .thenReturn(new DestinationDefinitionRead().supportRefreshes(true));
+      when(actorDefinitionVersionHandler.getActorDefinitionVersionForDestinationId(any()))
+          .thenReturn(new ActorDefinitionVersionRead().supportsRefreshes(true));
     }
 
     final WebBackendConnectionUpdate updateBody = new WebBackendConnectionUpdate()
@@ -1037,7 +1043,8 @@ class WebBackendConnectionsHandlerTest {
   }
 
   @Test
-  void testUpdateConnectionNoStreamsToReset() throws JsonValidationException, ConfigNotFoundException, IOException {
+  void testUpdateConnectionNoStreamsToReset()
+      throws JsonValidationException, ConfigNotFoundException, IOException, io.airbyte.data.exceptions.ConfigNotFoundException {
     final WebBackendConnectionUpdate updateBody = new WebBackendConnectionUpdate()
         .namespaceDefinition(expected.getNamespaceDefinition())
         .namespaceFormat(expected.getNamespaceFormat())
@@ -1092,7 +1099,8 @@ class WebBackendConnectionsHandlerTest {
   }
 
   @Test
-  void testUpdateConnectionWithSkipReset() throws JsonValidationException, ConfigNotFoundException, IOException {
+  void testUpdateConnectionWithSkipReset()
+      throws JsonValidationException, ConfigNotFoundException, IOException, io.airbyte.data.exceptions.ConfigNotFoundException {
     final WebBackendConnectionUpdate updateBody = new WebBackendConnectionUpdate()
         .namespaceDefinition(expected.getNamespaceDefinition())
         .namespaceFormat(expected.getNamespaceFormat())
@@ -1135,7 +1143,8 @@ class WebBackendConnectionsHandlerTest {
   }
 
   @Test
-  void testUpdateConnectionFixingBreakingSchemaChange() throws JsonValidationException, ConfigNotFoundException, IOException {
+  void testUpdateConnectionFixingBreakingSchemaChange()
+      throws JsonValidationException, ConfigNotFoundException, IOException, io.airbyte.data.exceptions.ConfigNotFoundException {
     final WebBackendConnectionUpdate updateBody = new WebBackendConnectionUpdate()
         .namespaceDefinition(expected.getNamespaceDefinition())
         .namespaceFormat(expected.getNamespaceFormat())

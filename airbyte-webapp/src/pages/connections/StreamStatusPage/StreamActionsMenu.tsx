@@ -10,7 +10,7 @@ import { Button } from "components/ui/Button";
 import { DropdownMenu, DropdownMenuOptionType } from "components/ui/DropdownMenu";
 import { Text } from "components/ui/Text";
 
-import { useDestinationDefinition } from "core/api";
+import { useDestinationDefinitionVersion } from "core/api";
 import { DestinationSyncMode, SyncMode } from "core/api/types/AirbyteClient";
 import { useConfirmationModalService } from "hooks/services/ConfirmationModal";
 import { useConnectionFormService } from "hooks/services/ConnectionForm/ConnectionFormService";
@@ -40,9 +40,9 @@ export const StreamActionsMenu: React.FC<StreamActionsMenuProps> = ({ streamStat
     refreshStreams,
   } = useConnectionSyncContext();
 
-  const newRefreshTypes = useExperiment("platform.activate-refreshes", false);
-  const { supportRefreshes: destinationSupportsRefreshes } = useDestinationDefinition(
-    connection.destination.destinationDefinitionId
+  const newRefreshTypes = useExperiment("platform.activate-refreshes", true);
+  const { supportsRefreshes: destinationSupportsRefreshes } = useDestinationDefinitionVersion(
+    connection.destination.destinationId
   );
   const { openConfirmationModal, closeConfirmationModal } = useConfirmationModalService();
   const { openModal } = useModalService();

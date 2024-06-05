@@ -29,7 +29,7 @@ export const ConnectionActionsBlock: React.FC = () => {
   const { openModal } = useModalService();
   const { registerNotification } = useNotificationService();
   const { formatMessage } = useIntl();
-  const isRefreshEnabled = useExperiment("platform.activate-refreshes", false);
+  const isRefreshEnabled = useExperiment("platform.activate-refreshes", true);
 
   const { mutateAsync: deleteConnection } = useDeleteConnection();
   const onDelete = () => deleteConnection(connection);

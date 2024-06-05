@@ -36,6 +36,3 @@ properties:
     default: false
   resourceRequirements:
     "$ref": ActorDefinitionResourceRequirements.yaml
-  supportRefreshes:
-    description: Indicated that the actor support the refreshes
-    type: boolean

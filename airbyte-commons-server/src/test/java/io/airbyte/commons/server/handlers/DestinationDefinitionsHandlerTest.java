@@ -215,8 +215,7 @@ class DestinationDefinitionsHandlerTest {
         .resourceRequirements(new io.airbyte.api.model.generated.ActorDefinitionResourceRequirements()
             ._default(new io.airbyte.api.model.generated.ResourceRequirements()
                 .cpuRequest(destinationDefinition.getResourceRequirements().getDefault().getCpuRequest()))
-            .jobSpecific(Collections.emptyList()))
-        .supportRefreshes(false);
+            .jobSpecific(Collections.emptyList()));
 
     final DestinationDefinitionRead expectedDestinationDefinitionRead2 = new DestinationDefinitionRead()
         .destinationDefinitionId(destinationDefinitionWithNormalization.getDestinationDefinitionId())
@@ -237,8 +236,7 @@ class DestinationDefinitionsHandlerTest {
         .resourceRequirements(new io.airbyte.api.model.generated.ActorDefinitionResourceRequirements()
             ._default(new io.airbyte.api.model.generated.ResourceRequirements()
                 .cpuRequest(destinationDefinitionWithNormalization.getResourceRequirements().getDefault().getCpuRequest()))
-            .jobSpecific(Collections.emptyList()))
-        .supportRefreshes(false);
+            .jobSpecific(Collections.emptyList()));
 
     final DestinationDefinitionReadList actualDestinationDefinitionReadList = destinationDefinitionsHandler.listDestinationDefinitions();
 
@@ -274,8 +272,7 @@ class DestinationDefinitionsHandlerTest {
         .resourceRequirements(new io.airbyte.api.model.generated.ActorDefinitionResourceRequirements()
             ._default(new io.airbyte.api.model.generated.ResourceRequirements()
                 .cpuRequest(destinationDefinition.getResourceRequirements().getDefault().getCpuRequest()))
-            .jobSpecific(Collections.emptyList()))
-        .supportRefreshes(false);
+            .jobSpecific(Collections.emptyList()));
 
     final DestinationDefinitionRead expectedDestinationDefinitionRead2 = new DestinationDefinitionRead()
         .destinationDefinitionId(destinationDefinitionWithNormalization.getDestinationDefinitionId())
@@ -296,8 +293,7 @@ class DestinationDefinitionsHandlerTest {
         .resourceRequirements(new io.airbyte.api.model.generated.ActorDefinitionResourceRequirements()
             ._default(new io.airbyte.api.model.generated.ResourceRequirements()
                 .cpuRequest(destinationDefinitionWithNormalization.getResourceRequirements().getDefault().getCpuRequest()))
-            .jobSpecific(Collections.emptyList()))
-        .supportRefreshes(false);
+            .jobSpecific(Collections.emptyList()));
 
     final DestinationDefinitionReadList actualDestinationDefinitionReadList = destinationDefinitionsHandler
         .listDestinationDefinitionsForWorkspace(new WorkspaceIdRequestBody().workspaceId(workspaceId));
@@ -363,8 +359,7 @@ class DestinationDefinitionsHandlerTest {
         .resourceRequirements(new io.airbyte.api.model.generated.ActorDefinitionResourceRequirements()
             ._default(new io.airbyte.api.model.generated.ResourceRequirements()
                 .cpuRequest(destinationDefinition.getResourceRequirements().getDefault().getCpuRequest()))
-            .jobSpecific(Collections.emptyList()))
-        .supportRefreshes(false);
+            .jobSpecific(Collections.emptyList()));
 
     final DestinationDefinitionRead expectedDestinationDefinitionRead2 = new DestinationDefinitionRead()
         .destinationDefinitionId(destinationDefinitionWithNormalization.getDestinationDefinitionId())
@@ -385,8 +380,7 @@ class DestinationDefinitionsHandlerTest {
         .resourceRequirements(new io.airbyte.api.model.generated.ActorDefinitionResourceRequirements()
             ._default(new io.airbyte.api.model.generated.ResourceRequirements()
                 .cpuRequest(destinationDefinitionWithNormalization.getResourceRequirements().getDefault().getCpuRequest()))
-            .jobSpecific(Collections.emptyList()))
-        .supportRefreshes(false);
+            .jobSpecific(Collections.emptyList()));
 
     final PrivateDestinationDefinitionRead expectedDestinationDefinitionOptInRead1 =
         new PrivateDestinationDefinitionRead().destinationDefinition(expectedDestinationDefinitionRead1).granted(false);
@@ -427,8 +421,7 @@ class DestinationDefinitionsHandlerTest {
         .resourceRequirements(new io.airbyte.api.model.generated.ActorDefinitionResourceRequirements()
             ._default(new io.airbyte.api.model.generated.ResourceRequirements()
                 .cpuRequest(destinationDefinition.getResourceRequirements().getDefault().getCpuRequest()))
-            .jobSpecific(Collections.emptyList()))
-        .supportRefreshes(false);
+            .jobSpecific(Collections.emptyList()));
 
     final DestinationDefinitionIdRequestBody destinationDefinitionIdRequestBody = new DestinationDefinitionIdRequestBody()
         .destinationDefinitionId(destinationDefinition.getDestinationDefinitionId());
@@ -499,8 +492,7 @@ class DestinationDefinitionsHandlerTest {
         .resourceRequirements(new io.airbyte.api.model.generated.ActorDefinitionResourceRequirements()
             ._default(new io.airbyte.api.model.generated.ResourceRequirements()
                 .cpuRequest(destinationDefinition.getResourceRequirements().getDefault().getCpuRequest()))
-            .jobSpecific(Collections.emptyList()))
-        .supportRefreshes(false);
+            .jobSpecific(Collections.emptyList()));
 
     final DestinationDefinitionIdWithWorkspaceId destinationDefinitionIdWithWorkspaceId = new DestinationDefinitionIdWithWorkspaceId()
         .destinationDefinitionId(destinationDefinition.getDestinationDefinitionId())
@@ -540,8 +532,7 @@ class DestinationDefinitionsHandlerTest {
         .resourceRequirements(new io.airbyte.api.model.generated.ActorDefinitionResourceRequirements()
             ._default(new io.airbyte.api.model.generated.ResourceRequirements()
                 .cpuRequest(destinationDefinition.getResourceRequirements().getDefault().getCpuRequest()))
-            .jobSpecific(Collections.emptyList()))
-        .supportRefreshes(false);
+            .jobSpecific(Collections.emptyList()));
 
     final ActorDefinitionIdWithScope actorDefinitionIdWithScopeForWorkspace = new ActorDefinitionIdWithScope()
         .actorDefinitionId(destinationDefinition.getDestinationDefinitionId())
@@ -606,8 +597,7 @@ class DestinationDefinitionsHandlerTest {
         .resourceRequirements(new io.airbyte.api.model.generated.ActorDefinitionResourceRequirements()
             ._default(new io.airbyte.api.model.generated.ResourceRequirements()
                 .cpuRequest(newDestinationDefinition.getResourceRequirements().getDefault().getCpuRequest()))
-            .jobSpecific(Collections.emptyList()))
-        .supportRefreshes(false);
+            .jobSpecific(Collections.emptyList()));
 
     final DestinationDefinitionRead actualRead = destinationDefinitionsHandler.createCustomDestinationDefinition(customCreate);
 
@@ -619,8 +609,7 @@ class DestinationDefinitionsHandlerTest {
         newDestinationDefinition
             .withCustom(true)
             .withDefaultVersionId(null)
-            .withIconUrl(null)
-            .withSupportRefreshes(false),
+            .withIconUrl(null),
         destinationDefinitionVersion,
         workspaceId,
         ScopeType.WORKSPACE);
@@ -674,8 +663,7 @@ class DestinationDefinitionsHandlerTest {
         .resourceRequirements(new io.airbyte.api.model.generated.ActorDefinitionResourceRequirements()
             ._default(new io.airbyte.api.model.generated.ResourceRequirements()
                 .cpuRequest(newDestinationDefinition.getResourceRequirements().getDefault().getCpuRequest()))
-            .jobSpecific(Collections.emptyList()))
-        .supportRefreshes(false);
+            .jobSpecific(Collections.emptyList()));
 
     final DestinationDefinitionRead actualRead =
         destinationDefinitionsHandler.createCustomDestinationDefinition(customCreateForWorkspace);
@@ -688,8 +676,7 @@ class DestinationDefinitionsHandlerTest {
         newDestinationDefinition
             .withCustom(true)
             .withDefaultVersionId(null)
-            .withIconUrl(null)
-            .withSupportRefreshes(false),
+            .withIconUrl(null),
         destinationDefinitionVersion,
         workspaceId,
         ScopeType.WORKSPACE);
@@ -804,8 +791,7 @@ class DestinationDefinitionsHandlerTest {
         .resourceRequirements(new io.airbyte.api.model.generated.ActorDefinitionResourceRequirements()
             ._default(new io.airbyte.api.model.generated.ResourceRequirements()
                 .cpuRequest(destinationDefinition.getResourceRequirements().getDefault().getCpuRequest()))
-            .jobSpecific(Collections.emptyList()))
-        .supportRefreshes(false);
+            .jobSpecific(Collections.emptyList()));
 
     assertEquals(expectedDestinationDefinitionRead, destinationRead);
     verify(actorDefinitionHandlerHelper).defaultDefinitionVersionFromUpdate(destinationDefinitionVersion, ActorType.DESTINATION, newDockerImageTag,
@@ -891,8 +877,7 @@ class DestinationDefinitionsHandlerTest {
         .resourceRequirements(new io.airbyte.api.model.generated.ActorDefinitionResourceRequirements()
             ._default(new io.airbyte.api.model.generated.ResourceRequirements()
                 .cpuRequest(destinationDefinition.getResourceRequirements().getDefault().getCpuRequest()))
-            .jobSpecific(Collections.emptyList()))
-        .supportRefreshes(false);
+            .jobSpecific(Collections.emptyList()));
 
     final PrivateDestinationDefinitionRead expectedPrivateDestinationDefinitionRead =
         new PrivateDestinationDefinitionRead().destinationDefinition(expectedDestinationDefinitionRead).granted(true);
@@ -930,8 +915,7 @@ class DestinationDefinitionsHandlerTest {
         .resourceRequirements(new io.airbyte.api.model.generated.ActorDefinitionResourceRequirements()
             ._default(new io.airbyte.api.model.generated.ResourceRequirements()
                 .cpuRequest(destinationDefinition.getResourceRequirements().getDefault().getCpuRequest()))
-            .jobSpecific(Collections.emptyList()))
-        .supportRefreshes(false);
+            .jobSpecific(Collections.emptyList()));
 
     final PrivateDestinationDefinitionRead expectedPrivateDestinationDefinitionRead =
         new PrivateDestinationDefinitionRead().destinationDefinition(expectedDestinationDefinitionRead).granted(true);
