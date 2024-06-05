@@ -117,6 +117,8 @@ public class NotificationSettingsConverter {
   }
 
   private static io.airbyte.api.model.generated.SlackNotificationConfiguration toApi(final io.airbyte.config.SlackNotificationConfiguration notification) {
+    // webhook is non-nullable field in the OpenAPI spec and some configurations have been saved with
+    // a null webhook, so we must default to an empty string or we incur deser errors.
     if (notification == null || notification.getWebhook() == null) {
       return new io.airbyte.api.model.generated.SlackNotificationConfiguration()
           .webhook("");

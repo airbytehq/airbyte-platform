@@ -68,6 +68,14 @@ class NotificationSettingsConverterTest {
   @Test
   void testConvertToApi() {
     assertEquals(NotificationSettingsConverter.toApi(PROTOCOL_NOTIFICATION_SETTINGS), API_NOTIFICATION_SETTINGS);
+    final var api = NotificationSettingsConverter.toApi(EMPTY_CONFIG_NOTIFICATION_SETTINGS);
+    // validate we default the webhook to an empty string to satisfy the OpenAPI driven deserializers.
+    assertEquals("", api.getSendOnSuccess().getSlackConfiguration().getWebhook());
+    assertEquals("", api.getSendOnFailure().getSlackConfiguration().getWebhook());
+    assertEquals("", api.getSendOnConnectionUpdate().getSlackConfiguration().getWebhook());
+    assertEquals("", api.getSendOnSyncDisabled().getSlackConfiguration().getWebhook());
+    assertEquals("", api.getSendOnSyncDisabledWarning().getSlackConfiguration().getWebhook());
+    assertEquals("", api.getSendOnConnectionUpdateActionRequired().getSlackConfiguration().getWebhook());
   }
 
 }
