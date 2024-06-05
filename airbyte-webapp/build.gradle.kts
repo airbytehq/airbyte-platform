@@ -119,7 +119,7 @@ tasks.register<PnpmTask>("cypress") {
     we'll record the cypress session, otherwise we're not recording
     */
     val hasRecordingKey = !System.getenv("CYPRESS_RECORD_KEY").isNullOrEmpty()
-    args = if (hasRecordingKey) {
+    args = if (hasRecordingKey && System.getProperty("cypressRecord", "false") == "true") {
         listOf("run", "cypress:run", "--record")
     } else {
         listOf("run", "cypress:run")
@@ -136,7 +136,7 @@ tasks.register<PnpmTask>("cypressCloud") {
     dependsOn(tasks.named("pnpmInstall"))
 
     val hasRecordingKey = !System.getenv("CYPRESS_RECORD_KEY").isNullOrEmpty()
-    args = if (hasRecordingKey) {
+    args = if (hasRecordingKey && System.getProperty("cypressRecord", "false") == "true") {
         listOf("run", "cloud-test:stage", "--record")
     } else {
         listOf("run", "cloud-test:stage")
