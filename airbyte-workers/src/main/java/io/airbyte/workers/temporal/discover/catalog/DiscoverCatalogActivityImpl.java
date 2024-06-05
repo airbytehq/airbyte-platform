@@ -27,6 +27,7 @@ import io.airbyte.commons.json.Jsons;
 import io.airbyte.commons.protocol.AirbyteMessageSerDeProvider;
 import io.airbyte.commons.protocol.AirbyteProtocolVersionedMigratorFactory;
 import io.airbyte.commons.temporal.HeartbeatUtils;
+import io.airbyte.commons.temporal.TemporalUtils;
 import io.airbyte.commons.workers.config.WorkerConfigs;
 import io.airbyte.commons.workers.config.WorkerConfigsProvider;
 import io.airbyte.commons.workers.config.WorkerConfigsProvider.ResourceType;
@@ -220,7 +221,7 @@ public class DiscoverCatalogActivityImpl implements DiscoverCatalogActivity {
             new WorkloadLabel(Metadata.WORKSPACE_LABEL_KEY, workspaceId.toString()),
             new WorkloadLabel(Metadata.ACTOR_TYPE, String.valueOf(ActorType.SOURCE.toString()))),
         serializedInput,
-        fullLogPath(Path.of(workloadId)),
+        fullLogPath(TemporalUtils.getJobRoot(workspaceRoot, jobId, attemptNumber)),
         geo.getValue(),
         WorkloadType.DISCOVER,
         WorkloadPriority.Companion.decode(input.getLauncherConfig().getPriority().toString()),

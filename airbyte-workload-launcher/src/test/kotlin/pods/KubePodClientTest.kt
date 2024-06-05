@@ -131,9 +131,9 @@ class KubePodClientTest {
 
     every { mapper.toKubeInput(workloadId, replInput, sharedLabels) } returns replKubeInput
     every { mapper.toKubeInput(workloadId, resetInput, sharedLabels) } returns replKubeInput
-    every { mapper.toKubeInput(workloadId, checkInput, sharedLabels) } returns connectorKubeInput
-    every { mapper.toKubeInput(workloadId, discoverInput, sharedLabels) } returns connectorKubeInput
-    every { mapper.toKubeInput(workloadId, specInput, sharedLabels) } returns connectorKubeInput
+    every { mapper.toKubeInput(workloadId, checkInput, sharedLabels, "/log/path") } returns connectorKubeInput
+    every { mapper.toKubeInput(workloadId, discoverInput, sharedLabels, "/log/path") } returns connectorKubeInput
+    every { mapper.toKubeInput(workloadId, specInput, sharedLabels, "/log/path") } returns connectorKubeInput
 
     every {
       orchestratorPodFactory.create(

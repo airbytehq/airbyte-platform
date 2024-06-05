@@ -4,6 +4,9 @@
 
 package io.airbyte.workload.launcher.config
 
+import io.airbyte.commons.envvar.EnvVar.LOG4J_CONFIGURATION_FILE
+import io.airbyte.commons.envvar.EnvVar.LOG_LEVEL
+import io.airbyte.commons.envvar.EnvVar.S3_PATH_STYLE_ACCESS
 import io.airbyte.commons.workers.config.WorkerConfigs
 import io.airbyte.config.storage.StorageConfig
 import io.airbyte.workers.process.Metadata.AWS_ACCESS_KEY_ID
@@ -35,8 +38,11 @@ class EnvVarConfigBeanFactory {
     @Named("apiClientEnvMap") apiClientEnvMap: Map<String, String>,
     @Named("micronautEnvMap") micronautEnvMap: Map<String, String>,
     @Named("workloadApiSecretEnv") secretsEnvMap: Map<String, EnvVarSource>,
+    @Named("loggingEnvVars") loggingEnvMap: Map<String, String>,
   ): List<EnvVar> {
     val envMap: MutableMap<String, String> = HashMap()
+
+    envMap.putAll(loggingEnvMap)
 
     // Cloud storage configuration
     envMap.putAll(storageConfig.toEnvVarMap())
@@ -61,6 +67,16 @@ class EnvVarConfigBeanFactory {
         .toList()
 
     return envVars + secretEnvVars
+  }
+
+  @Singleton
+  @Named("loggingEnvVars")
+  fun checkEnvVars(): Map<String, String> {
+    return mapOf(
+      LOG_LEVEL.name to LOG_LEVEL.fetch("")!!,
+      S3_PATH_STYLE_ACCESS.name to S3_PATH_STYLE_ACCESS.fetch("")!!,
+      LOG4J_CONFIGURATION_FILE.name to LOG4J_CONFIGURATION_FILE.fetch("")!!,
+    )
   }
 
   /**

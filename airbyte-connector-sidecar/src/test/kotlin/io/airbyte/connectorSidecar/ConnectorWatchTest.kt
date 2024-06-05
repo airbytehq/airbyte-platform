@@ -58,6 +58,9 @@ class ConnectorWatchTest {
   private lateinit var jobOutputDocStore: JobOutputDocStore
 
   @MockK
+  private lateinit var logContextFactory: SidecarLogContextFactory
+
+  @MockK
   private lateinit var streamFactory: AirbyteStreamFactory
 
   private lateinit var connectorWatcher: ConnectorWatcher
@@ -84,6 +87,7 @@ class ConnectorWatchTest {
           gsonPksExtractor,
           workloadApiClient,
           jobOutputDocStore,
+          logContextFactory,
         ),
       )
 
@@ -98,6 +102,8 @@ class ConnectorWatchTest {
     every { connectorWatcher.exitInternalError() } returns Unit
 
     every { jobOutputDocStore.write(any(), any()) } returns Unit
+
+    every { logContextFactory.create(any()) } returns mapOf()
   }
 
   @ParameterizedTest
@@ -108,7 +114,7 @@ class ConnectorWatchTest {
         .withCheckConnection(StandardCheckConnectionOutput().withStatus(StandardCheckConnectionOutput.Status.SUCCEEDED))
 
     every { connectorWatcher.readFile(OrchestratorConstants.SIDECAR_INPUT) } returns
-      Jsons.serialize(SidecarInput(checkInput, discoveryInput, workloadId, IntegrationLauncherConfig(), operationType))
+      Jsons.serialize(SidecarInput(checkInput, discoveryInput, workloadId, IntegrationLauncherConfig(), operationType, ""))
 
     every { connectorMessageProcessor.run(any(), any(), any(), any(), eq(operationType)) } returns output
 
@@ -132,7 +138,7 @@ class ConnectorWatchTest {
         .withCheckConnection(StandardCheckConnectionOutput().withStatus(StandardCheckConnectionOutput.Status.FAILED))
 
     every { connectorWatcher.readFile(OrchestratorConstants.SIDECAR_INPUT) } returns
-      Jsons.serialize(SidecarInput(checkInput, discoveryInput, workloadId, IntegrationLauncherConfig(), operationType))
+      Jsons.serialize(SidecarInput(checkInput, discoveryInput, workloadId, IntegrationLauncherConfig(), operationType, ""))
 
     every { connectorMessageProcessor.run(any(), any(), any(), any(), eq(operationType)) } returns output
 
@@ -160,7 +166,7 @@ class ConnectorWatchTest {
       }
 
     every { connectorWatcher.readFile(OrchestratorConstants.SIDECAR_INPUT) } returns
-      Jsons.serialize(SidecarInput(checkInput, discoveryInput, workloadId, IntegrationLauncherConfig().withDockerImage(""), operationType))
+      Jsons.serialize(SidecarInput(checkInput, discoveryInput, workloadId, IntegrationLauncherConfig().withDockerImage(""), operationType, ""))
 
     every { connectorMessageProcessor.run(any(), any(), any(), any(), eq(operationType)) } throws exception
 
@@ -190,7 +196,7 @@ class ConnectorWatchTest {
   @EnumSource(OperationType::class)
   fun `run for failed with file timeout`(operationType: OperationType) {
     every { connectorWatcher.readFile(OrchestratorConstants.SIDECAR_INPUT) } returns
-      Jsons.serialize(SidecarInput(checkInput, discoveryInput, workloadId, IntegrationLauncherConfig(), operationType))
+      Jsons.serialize(SidecarInput(checkInput, discoveryInput, workloadId, IntegrationLauncherConfig(), operationType, ""))
 
     every { connectorWatcher.areNeededFilesPresent() } returns false
 

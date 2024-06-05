@@ -46,7 +46,7 @@ class DiscoverCatalogActivityTest {
   private val workerConfigsProvider: WorkerConfigsProvider = mockk()
   private val processFactory: ProcessFactory = mockk()
   private val secretsRepositoryReader: SecretsRepositoryReader = mockk()
-  private val workspaceRoot: Path = mockk()
+  private val workspaceRoot: Path = Path.of("workspace-root")
   private val workerEnvironment: WorkerEnvironment = mockk()
   private val logConfigs: LogConfigs = mockk()
   private val airbyteApiClient: AirbyteApiClient = mockk()

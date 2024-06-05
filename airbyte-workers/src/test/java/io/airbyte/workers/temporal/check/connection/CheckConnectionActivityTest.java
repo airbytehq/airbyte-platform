@@ -61,7 +61,7 @@ public class CheckConnectionActivityTest {
 
   private final WorkerConfigsProvider workerConfigsProvider = mock(WorkerConfigsProvider.class);
   private final ProcessFactory processFactory = mock(ProcessFactory.class);
-  private final Path workspaceRoot = mock(Path.class);
+  private final Path workspaceRoot = Path.of("workspace-root");
   private final Configs.WorkerEnvironment workerEnvironment = mock(Configs.WorkerEnvironment.class);
   private final LogConfigs logConfigs = mock(LogConfigs.class);
   private final AirbyteApiClient airbyteApiClient = mock(AirbyteApiClient.class);
