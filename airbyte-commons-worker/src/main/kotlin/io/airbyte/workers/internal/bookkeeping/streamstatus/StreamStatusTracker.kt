@@ -137,10 +137,10 @@ class StreamStatusTracker(
   @VisibleForTesting
   fun trackRecord(key: StreamStatusKey): StreamStatusValue {
     if (store.isRateLimited(key)) {
-      store.setRunState(key, ApiEnum.RUNNING)
       store.setMetadata(key, null)
     }
 
+    store.setRunState(key, ApiEnum.RUNNING)
     return store.markStreamNotEmpty(key)
   }
 

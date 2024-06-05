@@ -129,6 +129,18 @@ class StreamStatusTrackerTest {
   }
 
   @Test
+  fun setsRunStateToRunningForRecord() {
+    every { store.isRateLimited(any()) } returns false
+    every { store.setRunState(any(), any()) } returns StreamStatusValue()
+    every { store.setMetadata(any(), any()) } returns StreamStatusValue()
+    every { store.markStreamNotEmpty(any()) } returns StreamStatusValue()
+
+    tracker.track(Fixtures.recordMsg())
+
+    verify(exactly = 1) { store.setRunState(Fixtures.key, ApiEnum.RUNNING) }
+  }
+
+  @Test
   fun marksSourceCompleteForComplete() {
     every { store.markSourceComplete(any()) } returns StreamStatusValue()
 
@@ -140,6 +152,7 @@ class StreamStatusTrackerTest {
   @Test
   fun marksStreamNotEmptyOnRecord() {
     every { store.isRateLimited(any()) } returns false
+    every { store.setRunState(any(), any()) } returns StreamStatusValue()
     every { store.markStreamNotEmpty(any()) } returns StreamStatusValue()
 
     tracker.track(Fixtures.recordMsg())
@@ -148,7 +161,7 @@ class StreamStatusTrackerTest {
   }
 
   @Test
-  fun setsStreamRunningIfRateLimited() {
+  fun setsMetadataToNullIfRateLimited() {
     every { store.isRateLimited(any()) } returns true
     every { store.setRunState(any(), any()) } returns StreamStatusValue()
     every { store.setMetadata(any(), any()) } returns StreamStatusValue()
