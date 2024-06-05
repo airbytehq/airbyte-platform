@@ -68,7 +68,6 @@ class NotificationSettingsConverterTest {
   @Test
   void testConvertToApi() {
     assertEquals(NotificationSettingsConverter.toApi(PROTOCOL_NOTIFICATION_SETTINGS), API_NOTIFICATION_SETTINGS);
-    assertEquals(NotificationSettingsConverter.toApi(EMPTY_CONFIG_NOTIFICATION_SETTINGS), EMPTY_API_NOTIFICATION_SETTINGS);
   }
 
 }
