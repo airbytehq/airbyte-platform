@@ -7,6 +7,7 @@ export type AuthGetAccessToken = () => Promise<string | null>;
 export type AuthLogout = () => Promise<void>;
 
 export interface AuthContextApi {
+  authType: "none" | "oidc" | "cloud";
   user: UserRead | null;
   inited: boolean;
   emailVerified: boolean;
@@ -15,6 +16,11 @@ export interface AuthContextApi {
   getAccessToken?: AuthGetAccessToken;
   updateName?: AuthChangeName;
   logout?: AuthLogout;
+  changeRealmAndRedirectToSignin?: (realm: string) => Promise<void>;
+  redirectToSignInWithGoogle?: () => Promise<void>;
+  redirectToSignInWithGithub?: () => Promise<void>;
+  redirectToSignInWithPassword?: () => Promise<void>;
+  redirectToRegistrationWithPassword?: () => Promise<void>;
 }
 
 // The AuthContext is implemented differently in Community vs. Self-Managed Enterprise vs. Cloud, but all implementations must fulfill the AuthContextApi interface

@@ -13,9 +13,9 @@ import { Icon } from "components/ui/Icon";
 import { Link } from "components/ui/Link";
 import { Text } from "components/ui/Text";
 
+import { useAuthService } from "core/services/auth";
 import { links } from "core/utils/links";
 import { CloudRoutes } from "packages/cloud/cloudRoutePaths";
-import { useKeycloakService } from "packages/cloud/services/auth/KeycloakService";
 
 import styles from "./SSOIdentifierPage.module.scss";
 
@@ -28,8 +28,12 @@ const schema = yup.object().shape({
 });
 
 export const SSOIdentifierPage = () => {
-  const { changeRealmAndRedirectToSignin } = useKeycloakService();
+  const { changeRealmAndRedirectToSignin } = useAuthService();
   const { formatMessage } = useIntl();
+
+  if (!changeRealmAndRedirectToSignin) {
+    throw new Error("Rendered SSOIdentifierPage while AuthService does not provide changeRealmAndRedirectToSignin");
+  }
 
   const handleSubmit: FormSubmissionHandler<CompanyIdentifierValues> = async ({ companyIdentifier }, methods) => {
     try {

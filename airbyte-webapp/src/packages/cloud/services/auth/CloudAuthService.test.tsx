@@ -1,11 +1,25 @@
+import type { UserManager } from "oidc-client-ts";
+
 import { renderHook, waitFor } from "@testing-library/react";
 import { PropsWithChildren } from "react";
 
 import { TestWrapper } from "test-utils/testutils";
 
-import { KeycloakService, initializeUserManager, useKeycloakService } from "./KeycloakService";
+import { useAuthService } from "core/services/auth";
+
+import { initializeUserManager, CloudAuthService } from "./CloudAuthService";
 
 let windowSearchSpy: jest.SpyInstance;
+
+let mockUserManager: UserManager;
+
+jest.mock("oidc-client-ts", () => ({
+  UserManager: jest.fn().mockImplementation((options) => {
+    // Mock the UserManager contructor to store the latest created instance to access it for testing
+    return (mockUserManager = new (jest.requireActual("oidc-client-ts").UserManager)(options));
+  }),
+  WebStorageStateStore: jest.requireActual("oidc-client-ts").WebStorageStateStore,
+}));
 
 describe(`${initializeUserManager.name}()`, () => {
   beforeEach(() => {
@@ -18,7 +32,7 @@ describe(`${initializeUserManager.name}()`, () => {
 
   it("should initialize with the correct default realm", () => {
     const userManager = initializeUserManager();
-    expect(userManager.settings.authority).toMatch(/auth\/realms\/airbyte/);
+    expect(userManager.settings.authority).toMatch(/auth\/realms\/_airbyte-cloud-users/);
   });
 
   it("should initialize realm from query params", () => {
@@ -38,17 +52,17 @@ describe(`${initializeUserManager.name}()`, () => {
   });
 });
 
-describe(`${KeycloakService.name}`, () => {
+describe(`${CloudAuthService.name}`, () => {
   const wrapper: React.FC<PropsWithChildren> = ({ children }) => (
     <TestWrapper>
-      <KeycloakService>{children}</KeycloakService>
+      <CloudAuthService>{children}</CloudAuthService>
     </TestWrapper>
   );
 
   it("should initialize with the correct default realm", async () => {
-    const { result } = renderHook(() => useKeycloakService(), { wrapper });
+    renderHook(() => useAuthService(), { wrapper });
     await waitFor(() => {
-      expect(result?.current.userManager.settings.authority).toMatch(/auth\/realms\/airbyte/);
+      expect(mockUserManager.settings.authority).toMatch(/auth\/realms\/_airbyte-cloud-users/);
     });
   });
 
@@ -58,10 +72,10 @@ describe(`${KeycloakService.name}`, () => {
       search: "?realm=another-realm",
     }));
 
-    const { result } = renderHook(() => useKeycloakService(), { wrapper });
+    renderHook(() => useAuthService(), { wrapper });
 
     await waitFor(() => {
-      expect(result?.current.userManager.settings.authority).toMatch(/auth\/realms\/another-realm/);
+      expect(mockUserManager.settings.authority).toMatch(/auth\/realms\/another-realm/);
     });
 
     windowSearchSpy.mockRestore();
@@ -100,10 +114,10 @@ describe(`${KeycloakService.name}`, () => {
       })
     );
 
-    const { result } = renderHook(() => useKeycloakService(), { wrapper });
+    renderHook(() => useAuthService(), { wrapper });
 
     await waitFor(() => {
-      expect(result?.current.userManager.settings.authority).toMatch(/auth\/realms\/local-storage-realm/);
+      expect(mockUserManager.settings.authority).toMatch(/auth\/realms\/local-storage-realm/);
     });
   });
 });

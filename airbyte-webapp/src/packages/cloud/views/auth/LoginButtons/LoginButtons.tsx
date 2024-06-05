@@ -7,8 +7,8 @@ import { Icon } from "components/ui/Icon";
 import { Link } from "components/ui/Link";
 import { LoadingSpinner } from "components/ui/LoadingSpinner";
 
+import { useAuthService } from "core/services/auth";
 import { CloudRoutes } from "packages/cloud/cloudRoutePaths";
-import { useKeycloakService } from "packages/cloud/services/auth/KeycloakService";
 
 import githubLogo from "./assets/github-logo.svg";
 import googleLogo from "./assets/google-logo.svg";
@@ -74,31 +74,35 @@ export const LoginButtons: React.FC<LoginButtonsProps> = ({ type }) => {
     redirectToSignInWithGoogle,
     redirectToSignInWithPassword,
     redirectToRegistrationWithPassword,
-  } = useKeycloakService();
+  } = useAuthService();
 
   const doRedirectToSignInWithGithub = () => {
     setPendingRedirect("github");
-    redirectToSignInWithGithub().catch(() => setPendingRedirect(null));
+    redirectToSignInWithGithub?.().catch(() => setPendingRedirect(null));
   };
 
   const doRedirectToSignInWithGoogle = () => {
     setPendingRedirect("google");
-    redirectToSignInWithGoogle().catch(() => setPendingRedirect(null));
+    redirectToSignInWithGoogle?.().catch(() => setPendingRedirect(null));
   };
 
   const handleEmailButtonClick = () => {
     setPendingRedirect("password");
     if (type === "signup") {
-      redirectToRegistrationWithPassword().catch(() => setPendingRedirect(null));
+      redirectToRegistrationWithPassword?.().catch(() => setPendingRedirect(null));
     } else {
-      redirectToSignInWithPassword().catch(() => setPendingRedirect(null));
+      redirectToSignInWithPassword?.().catch(() => setPendingRedirect(null));
     }
   };
 
   return (
     <>
-      <GoogleButton onClick={() => doRedirectToSignInWithGoogle()} pendingRedirect={pendingRedirect} />
-      <GitHubButton onClick={() => doRedirectToSignInWithGithub()} pendingRedirect={pendingRedirect} />
+      {redirectToSignInWithGoogle && (
+        <GoogleButton onClick={() => doRedirectToSignInWithGoogle()} pendingRedirect={pendingRedirect} />
+      )}
+      {redirectToSignInWithGithub && (
+        <GitHubButton onClick={() => doRedirectToSignInWithGithub()} pendingRedirect={pendingRedirect} />
+      )}
       <SsoButton />
       {type === "login" ? (
         <SignInButton onClick={handleEmailButtonClick} pendingRedirect={pendingRedirect} />

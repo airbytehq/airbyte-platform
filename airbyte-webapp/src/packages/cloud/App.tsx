@@ -23,7 +23,6 @@ import en from "locales/en.json";
 import { Routing } from "packages/cloud/cloudRoutes";
 
 import { CloudAuthService } from "./services/auth/CloudAuthService";
-import { KeycloakService } from "./services/auth/KeycloakService";
 import { ZendeskProvider } from "./services/thirdParty/zendesk";
 
 const Services: React.FC<React.PropsWithChildren<unknown>> = ({ children }) => (
@@ -31,15 +30,13 @@ const Services: React.FC<React.PropsWithChildren<unknown>> = ({ children }) => (
     <ConfirmationModalService>
       <FormChangeTrackerService>
         <FeatureService features={defaultCloudFeatures}>
-          <KeycloakService>
-            <CloudAuthService>
-              <ModalServiceProvider>
-                <HelmetProvider>
-                  <ZendeskProvider>{children}</ZendeskProvider>
-                </HelmetProvider>
-              </ModalServiceProvider>
-            </CloudAuthService>
-          </KeycloakService>
+          <CloudAuthService>
+            <ModalServiceProvider>
+              <HelmetProvider>
+                <ZendeskProvider>{children}</ZendeskProvider>
+              </HelmetProvider>
+            </ModalServiceProvider>
+          </CloudAuthService>
         </FeatureService>
       </FormChangeTrackerService>
     </ConfirmationModalService>

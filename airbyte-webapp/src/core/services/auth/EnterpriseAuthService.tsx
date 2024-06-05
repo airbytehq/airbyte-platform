@@ -11,9 +11,9 @@ import { useGetInstanceConfiguration, useGetOrCreateUser } from "core/api";
 import { AuthConfigurationMode, UserRead } from "core/api/types/AirbyteClient";
 import { useFormatError } from "core/errors";
 import { useNotificationService } from "hooks/services/Notification";
-import { createUriWithoutSsoParams } from "packages/cloud/services/auth/KeycloakService";
+import { createUriWithoutSsoParams } from "packages/cloud/services/auth/CloudAuthService";
 
-import { AuthContext } from "./AuthContext";
+import { AuthContext, AuthContextApi } from "./AuthContext";
 
 // This wrapper is conditionally present if the KeycloakAuthentication feature is enabled
 export const EnterpriseAuthService: React.FC<PropsWithChildren<unknown>> = ({ children }) => {
@@ -124,8 +124,9 @@ const AuthServiceProvider: React.FC<PropsWithChildren<unknown>> = ({ children })
       }
     })();
   }, [formatMessage, getAirbyteUser, keycloakAuth.user, registerNotification]);
-  const contextValue = useMemo(() => {
+  const contextValue = useMemo((): AuthContextApi => {
     return {
+      authType: "oidc",
       user: airbyteUser,
       inited,
       emailVerified: false,
