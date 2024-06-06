@@ -58,6 +58,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 /**
  * Convert between API and internal versions of job models.
@@ -164,7 +165,7 @@ public class JobConverter {
   public static Optional<JobRefreshConfig> extractRefreshConfigIfNeeded(final Job job) {
     if (job.getConfigType() == ConfigType.REFRESH) {
       final List<StreamDescriptor> refreshedStreams = job.getConfig().getRefresh().getStreamsToRefresh()
-          .stream().map(refreshStream -> refreshStream.getStreamDescriptor())
+          .stream().flatMap(refreshStream -> Stream.ofNullable(refreshStream.getStreamDescriptor()))
           .map(ProtocolConverters::streamDescriptorToApi)
           .toList();
       if (refreshedStreams == null || refreshedStreams.isEmpty()) {

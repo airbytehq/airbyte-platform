@@ -109,7 +109,13 @@ class JobConverterTest {
                 .withRefresh(new RefreshConfig().withStreamsToRefresh(
                     List.of(new RefreshStream().withStreamDescriptor(new io.airbyte.protocol.models.StreamDescriptor().withName("test"))))),
                 null, null, null, 13, 37),
-            Optional.of(new JobRefreshConfig().streamsToRefresh(List.of(new StreamDescriptor().name("test"))))));
+            Optional.of(new JobRefreshConfig().streamsToRefresh(List.of(new StreamDescriptor().name("test"))))),
+        Arguments.of(
+            new Job(1, ConfigType.REFRESH, null, new JobConfig()
+                .withRefresh(new RefreshConfig().withStreamsToRefresh(
+                    List.of(new RefreshStream().withStreamDescriptor(null)))),
+                null, null, null, 13, 37),
+            Optional.empty()));
   }
 
   @ParameterizedTest
