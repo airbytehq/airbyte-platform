@@ -132,7 +132,7 @@ airbyte:
         base: ${SYNC_JOB_RETRIES_COMPLETE_FAILURES_BACKOFF_BASE:3} # 10s, 30s, 90s, 4.5m
     partial-failures:
       max-successive: ${SYNC_JOB_RETRIES_PARTIAL_FAILURES_MAX_SUCCESSIVE:1000}
-      max-total: ${SYNC_JOB_RETRIES_PARTIAL_FAILURES_MAX_TOTAL:10}
+      max-total: ${SYNC_JOB_RETRIES_PARTIAL_FAILURES_MAX_TOTAL:20}
   worker:
     kube-job-configs:
       default:
