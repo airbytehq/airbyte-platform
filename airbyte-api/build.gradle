@@ -4,8 +4,6 @@ plugins {
     id "io.airbyte.gradle.jvm.lib"
     id "io.airbyte.gradle.publish"
     id "org.openapi.generator"
-    id "org.jetbrains.kotlin.jvm"
-    id "org.jetbrains.kotlin.kapt"
 }
 
 def specFile = "$projectDir/src/main/openapi/config.yaml"
@@ -488,13 +486,9 @@ def genConnectorBuilderServerApiClient = tasks.register("genConnectorBuilderServ
 
 compileJava.dependsOn genApiDocs, genApiServer, genAirbyteApiServer, genPublicApiServer
 
-kapt {
-    correctErrorTypes true
-}
-
-// uses afterEvaluate because at configuration time, the kaptGenerateStubsKotlin task does not exist.
+// uses afterEvaluate because at configuration time, the kspKotlin task does not exist.
 afterEvaluate {
-    tasks.named('kaptGenerateStubsKotlin').configure {
+    tasks.named('kspKotlin').configure {
         mustRunAfter genApiDocs, genApiClient, genApiServer, genApiServer2, genAirbyteApiServer, genAirbyteApiServer2,
                 genPublicApiServer, genPublicApiServer2, genWorkloadApiClient, genConnectorBuilderServerApiClient,
                 genAirbyteApiProblems
@@ -509,11 +503,11 @@ tasks.named("compileKotlin") {
 
 dependencies {
     annotationProcessor libs.micronaut.openapi
-    kapt libs.micronaut.openapi
-    kapt platform(libs.micronaut.platform)
-    kapt libs.bundles.micronaut.annotation.processor
-    kapt libs.v3.swagger.annotations
-    kapt libs.moshi.kotlin
+    ksp libs.micronaut.openapi
+    ksp platform(libs.micronaut.platform)
+    ksp libs.bundles.micronaut.annotation.processor
+    ksp libs.v3.swagger.annotations
+    ksp libs.moshi.kotlin
 
     api libs.bundles.micronaut.annotation
     api libs.micronaut.http

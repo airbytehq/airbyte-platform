@@ -23,8 +23,6 @@ plugins {
   id("io.airbyte.gradle.jvm.app")
   id("io.airbyte.gradle.docker")
   id("io.airbyte.gradle.publish")
-  kotlin("jvm")
-  kotlin("kapt")
 }
 
 val airbyteProtocol by configurations.creating
@@ -41,8 +39,8 @@ dependencies {
   annotationProcessor(platform(libs.micronaut.platform))
   annotationProcessor(libs.bundles.micronaut.annotation.processor)
 
-  kapt(platform(libs.micronaut.platform))
-  kapt(libs.bundles.micronaut.annotation.processor)
+  ksp(platform(libs.micronaut.platform))
+  ksp(libs.bundles.micronaut.annotation.processor)
 
   implementation(libs.spotbugs.annotations)
   implementation(platform(libs.micronaut.platform))
@@ -194,11 +192,9 @@ fun yamlToJson(rawYaml: String): String {
   return ObjectMapper().registerKotlinModule().writeValueAsString(mappedYaml)
 }
 
-// The DuplicatesStrategy will be required while this module is mixture of kotlin and java _with_ lombok dependencies.)
-// Kapt, by default, runs all annotation(processors and disables annotation(processing by javac, however)
-// this default behavior(breaks the lombok java annotation(processor.  To avoid(lombok breaking, kapt(has)
-// keepJavacAnnotationProcessors enabled, which causes duplicate META-INF files to be generated.)
-// Once lombok has been removed, this can also be removed.)
+// The DuplicatesStrategy will be required while this module is mixture of kotlin and java _with_ lombok dependencies.
+// By default, runs all annotation(processors and disables annotation(processing by javac, however).  Once lombok has
+// been removed, this can also be removed.
 tasks.withType<Jar>().configureEach {
   duplicatesStrategy = DuplicatesStrategy.EXCLUDE
 }

@@ -5,18 +5,16 @@ plugins {
   id("io.airbyte.gradle.jvm.lib")
   id("io.airbyte.gradle.publish")
   id("io.airbyte.gradle.docker")
-  kotlin("jvm")
-  kotlin("kapt")
 }
 
 dependencies {
-  kapt(platform(libs.micronaut.platform))
-  kapt(libs.bundles.micronaut.annotation.processor)
-  kapt(libs.micronaut.jaxrs.processor)
+  ksp(platform(libs.micronaut.platform))
+  ksp(libs.bundles.micronaut.annotation.processor)
+  ksp(libs.micronaut.jaxrs.processor)
 
-  kaptTest(platform(libs.micronaut.platform))
-  kaptTest(libs.bundles.micronaut.test.annotation.processor)
-  kaptTest(libs.micronaut.jaxrs.processor)
+  kspTest(platform(libs.micronaut.platform))
+  kspTest(libs.bundles.micronaut.test.annotation.processor)
+  kspTest(libs.micronaut.jaxrs.processor)
 
   annotationProcessor(platform(libs.micronaut.platform))
   annotationProcessor(libs.bundles.micronaut.annotation.processor)
@@ -57,10 +55,6 @@ dependencies {
   testImplementation(libs.mockwebserver)
   testImplementation(libs.mockito.inline)
   testImplementation(libs.mockk)
-}
-
-kapt {
-  correctErrorTypes = true
 }
 
 val env = Properties().apply {

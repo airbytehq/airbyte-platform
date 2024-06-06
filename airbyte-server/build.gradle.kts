@@ -4,8 +4,6 @@ plugins {
   id("io.airbyte.gradle.jvm.app")
   id("io.airbyte.gradle.docker")
   id("io.airbyte.gradle.publish")
-  kotlin("jvm")
-  kotlin("kapt")
 }
 
 dependencies {
@@ -15,9 +13,9 @@ dependencies {
   annotationProcessor(libs.bundles.micronaut.annotation.processor)
   annotationProcessor(libs.micronaut.jaxrs.processor)
 
-  kapt(platform(libs.micronaut.platform))
-  kapt(libs.bundles.micronaut.annotation.processor)
-  kapt(libs.micronaut.jaxrs.processor)
+  ksp(platform(libs.micronaut.platform))
+  ksp(libs.bundles.micronaut.annotation.processor)
+  ksp(libs.micronaut.jaxrs.processor)
 
   implementation(platform(libs.micronaut.platform))
   implementation(libs.bundles.micronaut)
@@ -152,14 +150,16 @@ airbyte {
     imageName = "server"
   }
 
+  ksp {
+    annotations = listOf("io.airbyte.commons.auth.*", "io.airbyte.commons.license.annotation.*")
+  }
+
   spotbugs {
-    excludes = listOf(
-      "  <Match>\n" +
-        "    <Package name=\"io.airbyte.server.repositories.domain.*\" />\n" +
-        "    <!-- All args constructor used by builders trigger this error -->\n" +
-        "    <Bug pattern=\"NP_PARAMETER_MUST_BE_NONNULL_BUT_MARKED_AS_NULLABLE\" />\n" +
-        "  </Match>"
-    )
+      excludes = listOf("  <Match>\n" +
+              "    <Package name=\"io.airbyte.server.repositories.domain.*\" />\n" +
+              "    <!-- All args constructor used by builders trigger this error -->\n" +
+              "    <Bug pattern=\"NP_PARAMETER_MUST_BE_NONNULL_BUT_MARKED_AS_NULLABLE\" />\n" +
+              "  </Match>")
   }
 }
 
@@ -173,11 +173,9 @@ tasks.named<Test>("test") {
   )
 }
 
-// The DuplicatesStrategy will be required while this module is mixture of kotlin and java _with_ lombok dependencies.)
-// Kapt, by default, runs all annotation(processors and disables annotation(processing by javac, however)
-// this default behavior(breaks the lombok java annotation(processor.  To avoid(lombok breaking, kapt(has)
-// keepJavacAnnotationProcessors enabled, which causes duplicate META-INF files to be generated.)
-// Once lombok has been removed, this can also be removed.)
+// The DuplicatesStrategy will be required while this module is mixture of kotlin and java _with_ lombok dependencies.
+// By default, runs all annotation(processors and disables annotation(processing by javac, however).  Once lombok has
+// been removed, this can also be removed.
 tasks.withType<Jar>().configureEach {
   duplicatesStrategy = DuplicatesStrategy.EXCLUDE
 }

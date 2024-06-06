@@ -9,8 +9,6 @@ plugins {
   id("io.airbyte.gradle.jvm.app")
   id("io.airbyte.gradle.publish")
   id("io.airbyte.gradle.docker")
-  kotlin("jvm")
-  kotlin("kapt")
 }
 
 buildscript {
@@ -35,8 +33,8 @@ configurations.all {
 }
 
 dependencies {
-  kapt(platform(libs.micronaut.platform))
-  kapt(libs.bundles.micronaut.annotation.processor)
+  ksp(platform(libs.micronaut.platform))
+  ksp(libs.bundles.micronaut.annotation.processor)
 
   implementation(platform(libs.micronaut.platform))
   implementation(libs.bundles.log4j)
@@ -63,9 +61,9 @@ dependencies {
   runtimeOnly(libs.appender.log4j2)
   runtimeOnly(libs.bundles.bouncycastle) // cryptography package
 
-  kaptTest(platform(libs.micronaut.platform))
-  kaptTest(libs.bundles.micronaut.annotation.processor)
-  kaptTest(libs.bundles.micronaut.test.annotation.processor)
+  kspTest(platform(libs.micronaut.platform))
+  kspTest(libs.bundles.micronaut.annotation.processor)
+  kspTest(libs.bundles.micronaut.test.annotation.processor)
 
   testImplementation(libs.bundles.micronaut.test)
   testImplementation(libs.mockk)

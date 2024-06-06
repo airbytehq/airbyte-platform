@@ -6,8 +6,10 @@ package io.airbyte.api.server.controllers
 
 import io.airbyte.airbyte_api.model.generated.ConnectionResponse
 import io.airbyte.airbyte_api.model.generated.JobCreateRequest
+import io.airbyte.airbyte_api.model.generated.JobResponse
 import io.airbyte.airbyte_api.model.generated.JobStatusEnum
 import io.airbyte.airbyte_api.model.generated.JobTypeEnum
+import io.airbyte.airbyte_api.model.generated.JobsResponse
 import io.airbyte.api.client.model.generated.JobListForWorkspacesRequestBody.OrderByField
 import io.airbyte.api.client.model.generated.JobListForWorkspacesRequestBody.OrderByMethod
 import io.airbyte.api.server.apiTracking.TrackingHelper
@@ -35,6 +37,7 @@ import jakarta.ws.rs.Path
 import jakarta.ws.rs.PathParam
 import jakarta.ws.rs.core.Response
 import java.time.OffsetDateTime
+import java.util.Objects
 import java.util.UUID
 
 @Controller(JOBS_PATH)
@@ -53,7 +56,7 @@ open class JobsController(
   ): Response {
     val userId: UUID = userService.getUserIdFromUserInfoString(userInfo)
 
-    val jobResponse: Any? =
+    val jobResponse: JobResponse =
       trackingHelper.callWithTracker(
         {
           jobService.cancelJob(
@@ -74,7 +77,7 @@ open class JobsController(
     )
     return Response
       .status(Response.Status.OK.statusCode)
-      .entity(jobResponse)
+      .entity(KJobResponse(jobResponse))
       .build()
   }
 
@@ -102,7 +105,7 @@ open class JobsController(
 
     return when (jobCreateRequest.jobType) {
       JobTypeEnum.SYNC -> {
-        val jobResponse: Any =
+        val jobResponse: JobResponse =
           trackingHelper.callWithTracker({
             jobService.sync(
               jobCreateRequest.connectionId,
@@ -118,12 +121,12 @@ open class JobsController(
         )
         Response
           .status(Response.Status.OK.statusCode)
-          .entity(jobResponse)
+          .entity(KJobResponse(jobResponse))
           .build()
       }
 
       JobTypeEnum.RESET -> {
-        val jobResponse: Any =
+        val jobResponse: JobResponse =
           trackingHelper.callWithTracker({
             jobService.reset(
               jobCreateRequest.connectionId,
@@ -139,7 +142,7 @@ open class JobsController(
         )
         Response
           .status(Response.Status.OK.statusCode)
-          .entity(jobResponse)
+          .entity(KJobResponse(jobResponse))
           .build()
       }
 
@@ -165,7 +168,7 @@ open class JobsController(
   ): Response {
     val userId: UUID = userService.getUserIdFromUserInfoString(userInfo)
 
-    val jobResponse: Any? =
+    val jobResponse: JobResponse =
       trackingHelper.callWithTracker(
         {
           jobService.getJobInfoWithoutLogs(
@@ -186,7 +189,7 @@ open class JobsController(
     )
     return Response
       .status(Response.Status.OK.statusCode)
-      .entity(jobResponse)
+      .entity(KJobResponse(jobResponse))
       .build()
   }
 
@@ -265,7 +268,7 @@ open class JobsController(
     )
     return Response
       .status(Response.Status.OK.statusCode)
-      .entity(jobsResponse)
+      .entity(KJobsResponse(jobsResponse))
       .build()
   }
 
@@ -286,5 +289,132 @@ open class JobsController(
           .orElseThrow { BadRequestProblem("Invalid order by clause provided: $orderBy") }
     }
     return Pair(field, method)
+  }
+}
+
+/**
+ * Copy of the [JobsResponse] generated class to overcome issues with KSP stub
+ * generation.
+ */
+class KJobsResponse(
+  val previous: String,
+  val next: String,
+  val data: List<KJobResponse>,
+) {
+  constructor(jobsResponse: JobsResponse) : this(
+    jobsResponse.previous,
+    jobsResponse.next,
+    jobsResponse.data.map { d -> KJobResponse(d) }.toList(),
+  )
+
+  override fun equals(other: Any?): Boolean {
+    if (this === other) {
+      return true
+    }
+    if (other == null || javaClass != other.javaClass) {
+      return false
+    }
+    val jobsResponse = other as KJobsResponse
+    return this.previous == jobsResponse.previous && (this.next == jobsResponse.next) && (this.data == jobsResponse.data)
+  }
+
+  override fun hashCode(): Int {
+    return Objects.hash(previous, next, data)
+  }
+
+  override fun toString(): String {
+    val sb = java.lang.StringBuilder()
+    sb.append("class JobsResponse {\n")
+
+    sb.append("    previous: ").append(toIndentedString(previous)).append("\n")
+    sb.append("    next: ").append(toIndentedString(next)).append("\n")
+    sb.append("    data: ").append(toIndentedString(data)).append("\n")
+    sb.append("}")
+    return sb.toString()
+  }
+
+  /**
+   * Convert the given object to string with each line indented by 4 spaces
+   * (except the first line).
+   */
+  private fun toIndentedString(o: Any?): String {
+    if (o == null) {
+      return "null"
+    }
+    return o.toString().replace("\n", "\n    ")
+  }
+}
+
+/**
+ * Copy of the [JobResponse] generated class to overcome issues with KSP stub
+ * generation.
+ */
+class KJobResponse(
+  var jobId: Long,
+  val status: JobStatusEnum,
+  val jobType: JobTypeEnum,
+  val startTime: String,
+  val connectionId: UUID,
+  val lastUpdatedAt: String? = null,
+  val duration: String? = null,
+  val bytesSynced: Long? = null,
+  val rowsSynced: Long? = null,
+) {
+  constructor(jobResponse: JobResponse) : this(
+    jobResponse.jobId,
+    jobResponse.status,
+    jobResponse.jobType,
+    jobResponse.startTime,
+    jobResponse.connectionId,
+    jobResponse.lastUpdatedAt,
+    jobResponse.duration,
+    jobResponse.bytesSynced,
+    jobResponse.rowsSynced,
+  )
+
+  override fun equals(other: Any?): Boolean {
+    if (this === other) {
+      return true
+    }
+    if (other == null || javaClass != other.javaClass) {
+      return false
+    }
+    val jobResponse = other as KJobResponse
+    return this.jobId == jobResponse.jobId && (this.status == jobResponse.status) &&
+      (this.jobType == jobResponse.jobType) && (this.startTime == jobResponse.startTime) &&
+      (this.connectionId == jobResponse.connectionId) && (this.lastUpdatedAt == jobResponse.lastUpdatedAt) &&
+      (this.duration == jobResponse.duration) && (this.bytesSynced == jobResponse.bytesSynced) && (this.rowsSynced == jobResponse.rowsSynced)
+  }
+
+  override fun hashCode(): Int {
+    return Objects.hash(jobId, status, jobType, startTime, connectionId, lastUpdatedAt, duration, bytesSynced, rowsSynced)
+  }
+
+  override fun toString(): String {
+    val sb = StringBuilder()
+    sb.append("class JobResponse {\n")
+
+    sb.append("    jobId: ").append(toIndentedString(jobId)).append("\n")
+    sb.append("    status: ").append(toIndentedString(status)).append("\n")
+    sb.append("    jobType: ").append(toIndentedString(jobType)).append("\n")
+    sb.append("    startTime: ").append(toIndentedString(startTime)).append("\n")
+    sb.append("    connectionId: ").append(toIndentedString(connectionId)).append("\n")
+    sb.append("    lastUpdatedAt: ").append(toIndentedString(lastUpdatedAt)).append("\n")
+    sb.append("    duration: ").append(toIndentedString(duration)).append("\n")
+    sb.append("    bytesSynced: ").append(toIndentedString(bytesSynced)).append("\n")
+    sb.append("    rowsSynced: ").append(toIndentedString(rowsSynced)).append("\n")
+    sb.append("}")
+    return sb.toString()
+  }
+
+  /**
+   * Convert the given object to string with each line indented by 4 spaces
+   * (except the first line).
+   */
+  private fun toIndentedString(o: Any?): String {
+    if (o == null) {
+      return "null"
+    }
+    return o.toString().replace("\n", "\n    ")
   }
 }

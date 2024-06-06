@@ -1,8 +1,6 @@
 plugins {
   id("io.airbyte.gradle.jvm.lib")
   id("io.airbyte.gradle.publish")
-  kotlin("kapt")
-  kotlin("jvm")
 }
 
 configurations.all {

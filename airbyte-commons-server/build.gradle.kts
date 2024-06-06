@@ -1,20 +1,18 @@
 plugins {
   id("io.airbyte.gradle.jvm.lib")
   id("io.airbyte.gradle.publish")
-  kotlin("jvm")
-  kotlin("kapt")
 }
 
 dependencies {
   compileOnly(libs.lombok)
   annotationProcessor(libs.lombok) // Lombok must be added BEFORE Micronaut
 
-  kapt(platform(libs.micronaut.platform))
-  kapt(libs.bundles.micronaut.annotation.processor)
-  kapt(libs.micronaut.jaxrs.processor)
+  ksp(platform(libs.micronaut.platform))
+  ksp(libs.bundles.micronaut.annotation.processor)
+  ksp(libs.micronaut.jaxrs.processor)
 
-  kaptTest(platform(libs.micronaut.platform))
-  kaptTest(libs.bundles.micronaut.test.annotation.processor)
+  kspTest(platform(libs.micronaut.platform))
+  kspTest(libs.bundles.micronaut.test.annotation.processor)
 
   annotationProcessor(platform(libs.micronaut.platform))
   annotationProcessor(libs.bundles.micronaut.annotation.processor)
@@ -81,6 +79,12 @@ dependencies {
   testImplementation(libs.mockk)
 
   testRuntimeOnly(libs.junit.jupiter.engine)
+}
+
+airbyte {
+  ksp {
+    annotations = listOf("io.airbyte.commons.license.annotation.*")
+  }
 }
 
 // Even though Kotlin is excluded on Spotbugs, this project

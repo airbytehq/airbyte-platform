@@ -1,8 +1,6 @@
 plugins {
   id("io.airbyte.gradle.jvm.lib")
   id("io.airbyte.gradle.publish")
-  kotlin("jvm")
-  kotlin("kapt")
 }
 
 dependencies {
@@ -10,8 +8,8 @@ dependencies {
   annotationProcessor(libs.lombok)     // Lombok must be added BEFORE Micronaut
   annotationProcessor(libs.bundles.micronaut.annotation.processor)
 
-  kapt(platform(libs.micronaut.platform))
-  kapt(libs.bundles.micronaut.annotation.processor)
+  ksp(platform(libs.micronaut.platform))
+  ksp(libs.bundles.micronaut.annotation.processor)
 
   implementation(platform(libs.fasterxml))
   implementation(libs.bundles.jackson)

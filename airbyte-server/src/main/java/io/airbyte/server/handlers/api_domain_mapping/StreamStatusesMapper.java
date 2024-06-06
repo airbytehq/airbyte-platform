@@ -138,15 +138,15 @@ public class StreamStatusesMapper {
   }
 
   public StreamStatusJobType map(final JobStreamStatusJobType domainEnum) {
-    return StreamStatusJobType.fromValue(domainEnum.name().toUpperCase());
+    return domainEnum != null ? StreamStatusJobType.fromValue(domainEnum.name().toUpperCase()) : null;
   }
 
   public StreamStatusRunState map(final JobStreamStatusRunState domainEnum) {
-    return StreamStatusRunState.fromValue(domainEnum.name().toUpperCase());
+    return domainEnum != null ? StreamStatusRunState.fromValue(domainEnum.name().toUpperCase()) : null;
   }
 
   public StreamStatusIncompleteRunCause map(final JobStreamStatusIncompleteRunCause domainEnum) {
-    return StreamStatusIncompleteRunCause.fromValue(domainEnum.name().toUpperCase());
+    return domainEnum != null ? StreamStatusIncompleteRunCause.fromValue(domainEnum.name().toUpperCase()) : null;
   }
 
   public StreamStatusRateLimitedMetadata map(final JsonNode rateLimitedMetadata) {

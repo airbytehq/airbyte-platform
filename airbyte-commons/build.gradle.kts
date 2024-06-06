@@ -4,7 +4,6 @@ plugins {
   id("io.airbyte.gradle.jvm.lib")
   id("io.airbyte.gradle.publish")
   alias(libs.plugins.de.undercouch.download)
-  kotlin("jvm")
 }
 
 dependencies {

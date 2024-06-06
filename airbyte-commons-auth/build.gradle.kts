@@ -1,8 +1,6 @@
 plugins {
   id("io.airbyte.gradle.jvm.lib")
   id("io.airbyte.gradle.publish")
-  kotlin("jvm")
-  kotlin("kapt")
 }
 
 dependencies {
@@ -11,11 +9,11 @@ dependencies {
   annotationProcessor(platform(libs.micronaut.platform))
   annotationProcessor(libs.bundles.micronaut.annotation.processor)
 
-  kapt(platform(libs.micronaut.platform))
-  kapt(libs.bundles.micronaut.annotation.processor)
+  ksp(platform(libs.micronaut.platform))
+  ksp(libs.bundles.micronaut.annotation.processor)
 
-  kaptTest(platform(libs.micronaut.platform))
-  kaptTest(libs.bundles.micronaut.test.annotation.processor)
+  kspTest(platform(libs.micronaut.platform))
+  kspTest(libs.bundles.micronaut.test.annotation.processor)
 
   implementation(platform(libs.micronaut.platform))
   implementation(libs.bundles.keycloak.client)
@@ -40,9 +38,6 @@ tasks.named<Test>("test") {
 }
 
 // The DuplicatesStrategy will be required while this module is mixture of kotlin and java _with_ lombok dependencies.
-// Kapt, by default, runs all annotation processors and disables annotation processing by javac, however
-// this default behavior breaks the lombok java annotation processor.  To avoid lombok breaking, kapt has
-// keepJavacAnnotationProcessors enabled, which causes duplicate META-INF files to be generated.
 // Once lombok has been removed, this can also be removed.
 tasks.withType<Jar>().configureEach {
   duplicatesStrategy = DuplicatesStrategy.EXCLUDE

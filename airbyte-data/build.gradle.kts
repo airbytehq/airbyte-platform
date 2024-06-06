@@ -1,8 +1,6 @@
 plugins {
   id("io.airbyte.gradle.jvm.lib")
   id("io.airbyte.gradle.publish")
-  id("org.jetbrains.kotlin.jvm")
-  id("org.jetbrains.kotlin.kapt")
   `java-test-fixtures`
 }
 
@@ -12,11 +10,11 @@ dependencies {
 
   api(libs.bundles.micronaut.annotation)
 
-  kapt(platform(libs.micronaut.platform))
-  kapt(libs.bundles.micronaut.annotation.processor)
+  ksp(platform(libs.micronaut.platform))
+  ksp(libs.bundles.micronaut.annotation.processor)
 
-  kaptTest(platform(libs.micronaut.platform))
-  kaptTest(libs.bundles.micronaut.test.annotation.processor)
+  kspTest(platform(libs.micronaut.platform))
+  kspTest(libs.bundles.micronaut.test.annotation.processor)
 
   implementation(libs.bundles.apache)
   implementation(libs.bundles.jackson)
@@ -53,9 +51,22 @@ dependencies {
   testImplementation(testFixtures(project(":airbyte-config:config-persistence")))
 }
 
+airbyte {
+  ksp {
+    annotations = listOf("io.airbyte.commons.license.annotation.*")
+  }
+}
+
 // Even though Kotlin is excluded on Spotbugs, this project
 // still runs into SpotBugs issues. Working theory is that
 // generated code is being picked up. Disable as a short-term fix.
 tasks.named("spotbugsMain") {
   enabled = false
+}
+
+// The DuplicatesStrategy will be required while this module is mixture of kotlin and java _with_ lombok dependencies.
+// By default, runs all annotation(processors and disables annotation(processing by javac, however).  Once lombok has
+// been removed, this can also be removed.
+tasks.withType<Jar>().configureEach {
+  duplicatesStrategy = DuplicatesStrategy.EXCLUDE
 }

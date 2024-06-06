@@ -4,14 +4,12 @@ plugins {
   id("io.airbyte.gradle.jvm.app")
   id("io.airbyte.gradle.publish")
   id("io.airbyte.gradle.docker")
-  kotlin("kapt")
-  kotlin("jvm")
 }
 
 dependencies {
-  kapt(platform(libs.micronaut.platform))
-  kapt(libs.bundles.micronaut.annotation.processor)
-  kapt(libs.micronaut.openapi)
+  ksp(platform(libs.micronaut.platform))
+  ksp(libs.bundles.micronaut.annotation.processor)
+  ksp(libs.micronaut.openapi)
 
   implementation(libs.bundles.datadog)
   implementation(libs.bundles.kubernetes.client)
@@ -59,8 +57,8 @@ dependencies {
   runtimeOnly(libs.hikaricp)
   runtimeOnly(libs.h2.database)
 
-  kaptTest((platform(libs.micronaut.platform)))
-  kaptTest(libs.bundles.micronaut.test.annotation.processor)
+  kspTest((platform(libs.micronaut.platform)))
+  kspTest(libs.bundles.micronaut.test.annotation.processor)
   testAnnotationProcessor(platform(libs.micronaut.platform))
   testAnnotationProcessor(libs.bundles.micronaut.test.annotation.processor)
 

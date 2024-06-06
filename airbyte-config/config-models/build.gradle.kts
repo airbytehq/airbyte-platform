@@ -5,8 +5,6 @@ plugins {
   id("io.airbyte.gradle.jvm.lib")
   id("io.airbyte.gradle.publish")
   id("com.github.eirnym.js2p")
-  kotlin("jvm")
-  kotlin("kapt")
 }
 
 dependencies {
@@ -14,7 +12,7 @@ dependencies {
   annotationProcessor(libs.lombok)     // Lombok must be added BEFORE Micronaut
   annotationProcessor(libs.bundles.micronaut.annotation.processor)
 
-  kapt(libs.bundles.micronaut.annotation.processor)
+  ksp(libs.bundles.micronaut.annotation.processor)
 
   api(libs.bundles.micronaut.annotation)
 
@@ -86,11 +84,5 @@ tasks.register<Test>("logClientsIntegrationTest") {
   }
   testLogging {
     events = setOf(TestLogEvent.PASSED, TestLogEvent.SKIPPED, TestLogEvent.FAILED)
-  }
-}
-
-afterEvaluate {
-  tasks.named("kaptGenerateStubsKotlin") {
-    dependsOn(tasks.named("generateJsonSchema2Pojo"))
   }
 }

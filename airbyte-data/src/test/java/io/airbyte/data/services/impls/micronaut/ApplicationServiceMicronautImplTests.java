@@ -7,6 +7,9 @@ package io.airbyte.data.services.impls.micronaut;
 import static io.airbyte.data.services.impls.micronaut.ApplicationServiceMicronautImpl.DEFAULT_AUTH_USER_ID;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ArrayNode;
@@ -14,29 +17,39 @@ import io.airbyte.commons.auth.AuthRole;
 import io.airbyte.commons.auth.OrganizationAuthRole;
 import io.airbyte.commons.auth.WorkspaceAuthRole;
 import io.airbyte.commons.json.Jsons;
+import io.airbyte.commons.resources.MoreResources;
 import io.airbyte.config.User;
 import io.airbyte.data.config.InstanceAdminConfig;
-import io.micronaut.context.annotation.Requires;
-import io.micronaut.context.env.Environment;
 import io.micronaut.security.token.jwt.generator.JwtTokenGenerator;
-import io.micronaut.test.extensions.junit5.annotation.MicronautTest;
-import jakarta.inject.Inject;
 import jakarta.ws.rs.BadRequestException;
+import java.io.IOException;
 import java.util.Base64;
 import java.util.HashSet;
+import java.util.Optional;
 import java.util.Set;
 import org.apache.commons.lang3.NotImplementedException;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-@MicronautTest
-@Requires(env = {Environment.TEST})
 public class ApplicationServiceMicronautImplTests {
 
-  @Inject
   private InstanceAdminConfig instanceAdminConfig;
 
-  @Inject
   private JwtTokenGenerator tokenGenerator;
+
+  private String token;
+
+  @BeforeEach
+  void setup() throws IOException {
+    token = MoreResources.readResource("test.token");
+    instanceAdminConfig = new InstanceAdminConfig();
+    instanceAdminConfig.setUsername("test");
+    instanceAdminConfig.setPassword("test-password");
+    instanceAdminConfig.setClientId("test-client-id");
+    instanceAdminConfig.setClientSecret("test-client-secret");
+    tokenGenerator = mock(JwtTokenGenerator.class);
+    when(tokenGenerator.generateToken(any())).thenReturn(Optional.of(token));
+  }
 
   @Test
   void testGetToken() {
