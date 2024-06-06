@@ -9856,8 +9856,6 @@ components:
           $ref: "#/components/schemas/JobStatus"
         resetConfig:
           $ref: "#/components/schemas/ResetConfig"
-        refreshConfig:
-          $ref: "#/components/schemas/JobRefreshConfig"
         aggregatedStats:
           $ref: "#/components/schemas/JobAggregatedStats"
         streamAggregatedStats:
@@ -9940,14 +9938,6 @@ components:
       description: contains information about how a reset was configured. only populated if the job was a reset.
       properties:
         streamsToReset:
-          type: array
-          items:
-            $ref: "#/components/schemas/StreamDescriptor"
-    JobRefreshConfig:
-      type: object
-      description: contains information about how a refresh was configured. only populated if the job was a refresh.
-      properties:
-        streamsToRefresh:
           type: array
           items:
             $ref: "#/components/schemas/StreamDescriptor"
