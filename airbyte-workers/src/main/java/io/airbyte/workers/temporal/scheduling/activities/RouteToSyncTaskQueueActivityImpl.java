@@ -65,7 +65,7 @@ public class RouteToSyncTaskQueueActivityImpl implements RouteToSyncTaskQueueAct
     } catch (final ClientException e) {
       if (e.getStatusCode() == HttpStatus.NOT_FOUND.getCode()) {
         log.warn("Unable to find connectionId {}", input.getConnectionId(), e);
-        throw new RuntimeException(e);
+        throw e;
       }
 
       log.warn("Encountered an error while attempting to route connection {} to a task queue: \n{}", input.getConnectionId(), e);

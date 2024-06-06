@@ -9,7 +9,6 @@ import io.airbyte.workers.helpers.ProgressChecker;
 import jakarta.inject.Singleton;
 import java.io.IOException;
 import lombok.extern.slf4j.Slf4j;
-import org.openapitools.client.infrastructure.ClientException;
 
 /**
  * Concrete CheckRunProgressActivity.
@@ -30,7 +29,7 @@ public class CheckRunProgressActivityImpl implements CheckRunProgressActivity {
       final boolean result = checker.check(input.getJobId(), input.getAttemptNo());
 
       return new Output(result);
-    } catch (final ClientException | IOException e) {
+    } catch (final IOException e) {
       throw new RetryableException(e);
     }
   }

@@ -16,6 +16,7 @@ import io.airbyte.commons.temporal.config.WorkerMode;
 import io.airbyte.commons.temporal.exception.RetryableException;
 import io.airbyte.metrics.lib.ApmTraceUtils;
 import io.micronaut.context.annotation.Requires;
+import io.micronaut.http.HttpStatus;
 import jakarta.inject.Singleton;
 import java.io.IOException;
 import java.util.Map;
@@ -50,7 +51,12 @@ public class AutoDisableConnectionActivityImpl implements AutoDisableConnectionA
         final InternalOperationResult autoDisableConnection =
             airbyteApiClient.getConnectionApi().autoDisableConnection(new ConnectionIdRequestBody(input.getConnectionId()));
         return new AutoDisableConnectionOutput(autoDisableConnection.getSucceeded());
-      } catch (final ClientException | IOException e) {
+      } catch (final ClientException e) {
+        if (e.getStatusCode() == HttpStatus.NOT_FOUND.getCode()) {
+          throw e;
+        }
+        throw new RetryableException(e);
+      } catch (final IOException e) {
         throw new RetryableException(e);
       }
     }

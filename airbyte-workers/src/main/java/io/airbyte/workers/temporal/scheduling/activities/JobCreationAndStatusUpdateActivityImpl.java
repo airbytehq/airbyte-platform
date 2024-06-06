@@ -29,6 +29,7 @@ import io.airbyte.protocol.models.ConfiguredAirbyteCatalog;
 import io.airbyte.workers.context.AttemptContext;
 import io.airbyte.workers.storage.activities.OutputStorageClient;
 import io.micronaut.context.annotation.Requires;
+import io.micronaut.http.HttpStatus;
 import jakarta.inject.Named;
 import jakarta.inject.Singleton;
 import java.io.IOException;
@@ -66,6 +67,12 @@ public class JobCreationAndStatusUpdateActivityImpl implements JobCreationAndSta
     try {
       final JobInfoRead jobInfoRead = airbyteApiClient.getJobsApi().createJob(new JobCreate(input.getConnectionId()));
       return new JobCreationOutput(jobInfoRead.getJob().getId());
+    } catch (final ClientException e) {
+      if (e.getStatusCode() == HttpStatus.NOT_FOUND.getCode()) {
+        throw e;
+      }
+      log.error("Unable to create job for connection {}", input.getConnectionId(), e);
+      throw new RetryableException(e);
     } catch (final Exception e) {
       ApmTraceUtils.addExceptionToTrace(e);
       log.error("Unable to create job for connection {}", input.getConnectionId(), e);
@@ -82,6 +89,12 @@ public class JobCreationAndStatusUpdateActivityImpl implements JobCreationAndSta
       final long jobId = input.getJobId();
       final var response = airbyteApiClient.getAttemptApi().createNewAttemptNumber(new CreateNewAttemptNumberRequest(jobId));
       return new AttemptNumberCreationOutput(response.getAttemptNumber());
+    } catch (final ClientException e) {
+      if (e.getStatusCode() == HttpStatus.NOT_FOUND.getCode()) {
+        throw e;
+      }
+      log.error("createNewAttemptNumber for job {} failed with exception: {}", input.getJobId(), e.getMessage(), e);
+      throw new RetryableException(e);
     } catch (final Exception e) {
       ApmTraceUtils.addExceptionToTrace(e);
       log.error("createNewAttemptNumber for job {} failed with exception: {}", input.getJobId(), e.getMessage(), e);
@@ -103,7 +116,12 @@ public class JobCreationAndStatusUpdateActivityImpl implements JobCreationAndSta
           input.getConnectionId(),
           output);
       airbyteApiClient.getJobsApi().jobSuccessWithAttemptNumber(request);
-    } catch (final ClientException | IOException e) {
+    } catch (final ClientException e) {
+      if (e.getStatusCode() == HttpStatus.NOT_FOUND.getCode()) {
+        throw e;
+      }
+      throw new RetryableException(e);
+    } catch (final IOException e) {
       ApmTraceUtils.addExceptionToTrace(e);
       log.error("jobSuccessWithAttemptNumber for job {} failed with exception: {}", input.getJobId(), e.getMessage(), e);
       throw new RetryableException(e);
@@ -122,7 +140,12 @@ public class JobCreationAndStatusUpdateActivityImpl implements JobCreationAndSta
           input.getConnectionId(),
           input.getReason());
       airbyteApiClient.getJobsApi().jobFailure(request);
-    } catch (final ClientException | IOException e) {
+    } catch (final ClientException e) {
+      if (e.getStatusCode() == HttpStatus.NOT_FOUND.getCode()) {
+        throw e;
+      }
+      throw new RetryableException(e);
+    } catch (final IOException e) {
       log.error("jobFailure for job {} attempt {} failed with exception: {}", input.getJobId(), input.getAttemptNumber(), e.getMessage(), e);
       throw new RetryableException(e);
     }
@@ -143,7 +166,12 @@ public class JobCreationAndStatusUpdateActivityImpl implements JobCreationAndSta
           output);
 
       airbyteApiClient.getAttemptApi().failAttempt(req);
-    } catch (final ClientException | IOException e) {
+    } catch (final ClientException e) {
+      if (e.getStatusCode() == HttpStatus.NOT_FOUND.getCode()) {
+        throw e;
+      }
+      throw new RetryableException(e);
+    } catch (final IOException e) {
       log.error("attemptFailureWithAttemptNumber for job {} failed with exception: {}", input.getJobId(), e.getMessage(), e);
       throw new RetryableException(e);
     }
@@ -162,7 +190,12 @@ public class JobCreationAndStatusUpdateActivityImpl implements JobCreationAndSta
           input.getJobId());
 
       airbyteApiClient.getJobsApi().persistJobCancellation(req);
-    } catch (final ClientException | IOException e) {
+    } catch (final ClientException e) {
+      if (e.getStatusCode() == HttpStatus.NOT_FOUND.getCode()) {
+        throw e;
+      }
+      throw new RetryableException(e);
+    } catch (final IOException e) {
       throw new RetryableException(e);
     }
   }
@@ -174,7 +207,12 @@ public class JobCreationAndStatusUpdateActivityImpl implements JobCreationAndSta
 
     try {
       airbyteApiClient.getJobsApi().reportJobStart(new ReportJobStartRequest(input.getJobId(), input.getConnectionId()));
-    } catch (final ClientException | IOException e) {
+    } catch (final ClientException e) {
+      if (e.getStatusCode() == HttpStatus.NOT_FOUND.getCode()) {
+        throw e;
+      }
+      throw new RetryableException(e);
+    } catch (final IOException e) {
       throw new RetryableException(e);
     }
   }
@@ -185,7 +223,12 @@ public class JobCreationAndStatusUpdateActivityImpl implements JobCreationAndSta
     new AttemptContext(input.getConnectionId(), null, null).addTagsToTrace();
     try {
       airbyteApiClient.getJobsApi().failNonTerminalJobs(new ConnectionIdRequestBody(input.getConnectionId()));
-    } catch (final ClientException | IOException e) {
+    } catch (final ClientException e) {
+      if (e.getStatusCode() == HttpStatus.NOT_FOUND.getCode()) {
+        throw e;
+      }
+      throw new RetryableException(e);
+    } catch (final IOException e) {
       throw new RetryableException(e);
     }
   }
@@ -216,7 +259,12 @@ public class JobCreationAndStatusUpdateActivityImpl implements JobCreationAndSta
           .getValue();
       // Treat anything other than an explicit success as a failure.
       return !didSucceed;
-    } catch (final ClientException | IOException e) {
+    } catch (final ClientException e) {
+      if (e.getStatusCode() == HttpStatus.NOT_FOUND.getCode()) {
+        throw e;
+      }
+      throw new RetryableException(e);
+    } catch (final IOException e) {
       throw new RetryableException(e);
     }
   }

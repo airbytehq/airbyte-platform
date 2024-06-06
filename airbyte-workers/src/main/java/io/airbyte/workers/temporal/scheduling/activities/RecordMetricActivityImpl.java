@@ -126,6 +126,7 @@ public class RecordMetricActivityImpl implements RecordMetricActivity {
       return workspaceRead.getWorkspaceId().toString();
     } catch (final ClientException e) {
       if (e.getStatusCode() == HttpStatus.NOT_FOUND.getCode()) {
+        // Metric recording should not fail because of a 404
         return null;
       }
       throw new RetryableException(e);

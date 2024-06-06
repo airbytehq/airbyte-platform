@@ -13,9 +13,11 @@ import io.airbyte.api.client.AirbyteApiClient;
 import io.airbyte.api.client.model.generated.AttemptNormalizationStatusRead;
 import io.airbyte.api.client.model.generated.AttemptNormalizationStatusReadList;
 import io.airbyte.api.client.model.generated.JobIdRequestBody;
+import io.airbyte.commons.temporal.exception.RetryableException;
 import io.airbyte.metrics.lib.ApmTraceUtils;
 import io.airbyte.metrics.lib.MetricClientFactory;
 import io.airbyte.metrics.lib.OssMetricsRegistry;
+import io.micronaut.http.HttpStatus;
 import io.temporal.activity.Activity;
 import jakarta.inject.Singleton;
 import java.io.IOException;
@@ -57,7 +59,12 @@ public class NormalizationSummaryCheckActivityImpl implements NormalizationSumma
     final AttemptNormalizationStatusReadList AttemptNormalizationStatusReadList;
     try {
       AttemptNormalizationStatusReadList = airbyteApiClient.getJobsApi().getAttemptNormalizationStatusesForJob(new JobIdRequestBody(jobId));
-    } catch (final ClientException | IOException e) {
+    } catch (final ClientException e) {
+      if (e.getStatusCode() == HttpStatus.NOT_FOUND.getCode()) {
+        throw e;
+      }
+      throw new RetryableException(e);
+    } catch (final IOException e) {
       throw Activity.wrap(e);
     }
     final AtomicLong totalRecordsCommitted = new AtomicLong(0L);

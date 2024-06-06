@@ -7,6 +7,8 @@ package io.airbyte.workers.temporal.scheduling.activities;
 import io.airbyte.api.client.AirbyteApiClient;
 import io.airbyte.api.client.model.generated.ConnectionIdRequestBody;
 import io.airbyte.api.client.model.generated.WorkspaceRead;
+import io.airbyte.commons.temporal.exception.RetryableException;
+import io.micronaut.http.HttpStatus;
 import jakarta.inject.Singleton;
 import java.io.IOException;
 import java.util.HashMap;
@@ -38,7 +40,12 @@ public class FeatureFlagFetchActivityImpl implements FeatureFlagFetchActivity {
       final WorkspaceRead workspace =
           airbyteApiClient.getWorkspaceApi().getWorkspaceByConnectionId(new ConnectionIdRequestBody(connectionId));
       return workspace.getWorkspaceId();
-    } catch (final ClientException | IOException e) {
+    } catch (final ClientException e) {
+      if (e.getStatusCode() == HttpStatus.NOT_FOUND.getCode()) {
+        throw e;
+      }
+      throw new RetryableException(e);
+    } catch (final IOException e) {
       throw new RuntimeException("Unable to get workspace ID for connection", e);
     }
   }

@@ -15,6 +15,7 @@ import io.airbyte.api.client.model.generated.WorkspaceRead;
 import io.airbyte.commons.temporal.exception.RetryableException;
 import io.airbyte.metrics.lib.ApmTraceUtils;
 import io.airbyte.workers.helpers.RetryStateClient;
+import io.micronaut.http.HttpStatus;
 import jakarta.inject.Singleton;
 import java.io.IOException;
 import java.util.Map;
@@ -53,7 +54,12 @@ public class RetryStatePersistenceActivityImpl implements RetryStatePersistenceA
     try {
       final var success = client.persistRetryState(input.getJobId(), input.getConnectionId(), input.getManager());
       return new PersistOutput(success);
-    } catch (final ClientException | IOException e) {
+    } catch (final ClientException e) {
+      if (e.getStatusCode() == HttpStatus.NOT_FOUND.getCode()) {
+        throw e;
+      }
+      throw new RetryableException(e);
+    } catch (final IOException e) {
       throw new RetryableException(e);
     }
   }
@@ -63,7 +69,12 @@ public class RetryStatePersistenceActivityImpl implements RetryStatePersistenceA
       final WorkspaceRead workspace =
           airbyteApiClient.getWorkspaceApi().getWorkspaceByConnectionId(new ConnectionIdRequestBody(connectionId));
       return workspace.getWorkspaceId();
-    } catch (final ClientException | IOException e) {
+    } catch (final ClientException e) {
+      if (e.getStatusCode() == HttpStatus.NOT_FOUND.getCode()) {
+        throw e;
+      }
+      throw new RetryableException(e);
+    } catch (final IOException e) {
       throw new RetryableException(e);
     }
   }

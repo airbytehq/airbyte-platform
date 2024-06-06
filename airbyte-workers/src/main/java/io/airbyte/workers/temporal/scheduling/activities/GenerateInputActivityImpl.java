@@ -25,6 +25,7 @@ import io.airbyte.metrics.lib.MetricAttribute;
 import io.airbyte.workers.models.JobInput;
 import io.airbyte.workers.models.SyncJobCheckConnectionInputs;
 import io.micronaut.context.annotation.Requires;
+import io.micronaut.http.HttpStatus;
 import jakarta.inject.Singleton;
 import java.io.IOException;
 import java.util.Map;
@@ -55,7 +56,12 @@ public class GenerateInputActivityImpl implements GenerateInputActivity {
           .getCheckInput(new CheckInput(input.getJobId(), input.getAttemptNumber()));
       return payloadChecker.validatePayloadSize(
           Jsons.convertValue(transformNumbersToInts((Map<String, ? extends Object>) checkInput), SyncJobCheckConnectionInputs.class));
-    } catch (final ClientException | IOException e) {
+    } catch (final ClientException e) {
+      if (e.getStatusCode() == HttpStatus.NOT_FOUND.getCode()) {
+        throw e;
+      }
+      throw new RetryableException(e);
+    } catch (final IOException e) {
       throw new RetryableException(e);
     }
   }

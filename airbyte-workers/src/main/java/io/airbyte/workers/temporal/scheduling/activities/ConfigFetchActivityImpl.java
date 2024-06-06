@@ -32,6 +32,7 @@ import io.airbyte.metrics.lib.ApmTraceUtils;
 import io.airbyte.workers.helpers.CronSchedulingHelper;
 import io.airbyte.workers.helpers.ScheduleJitterHelper;
 import io.micronaut.context.annotation.Value;
+import io.micronaut.http.HttpStatus;
 import jakarta.inject.Named;
 import jakarta.inject.Singleton;
 import java.io.IOException;
@@ -104,7 +105,12 @@ public class ConfigFetchActivityImpl implements ConfigFetchActivity {
       final Duration timeToWaitWithSchedulingJitter =
           applyJitterRules(timeToWait, input.getConnectionId(), connectionRead.getScheduleType(), workspaceId);
       return new ScheduleRetrieverOutput(timeToWaitWithSchedulingJitter);
-    } catch (final ClientException | IOException e) {
+    } catch (final ClientException e) {
+      if (e.getStatusCode() == HttpStatus.NOT_FOUND.getCode()) {
+        throw e;
+      }
+      throw new RetryableException(e);
+    } catch (final IOException e) {
       throw new RetryableException(e);
     }
   }
@@ -247,7 +253,12 @@ public class ConfigFetchActivityImpl implements ConfigFetchActivity {
       WorkspaceRead workspaceRead =
           airbyteApiClient.getWorkspaceApi().getWorkspaceByConnectionIdWithTombstone(new ConnectionIdRequestBody(connectionId));
       return workspaceRead.getTombstone();
-    } catch (final ClientException | IOException e) {
+    } catch (final ClientException e) {
+      if (e.getStatusCode() == HttpStatus.NOT_FOUND.getCode()) {
+        throw e;
+      }
+      throw new RetryableException(e);
+    } catch (final IOException e) {
       log.warn("Fail to get the workspace.", e);
       return false;
     }
@@ -260,7 +271,12 @@ public class ConfigFetchActivityImpl implements ConfigFetchActivity {
           new io.airbyte.api.client.model.generated.ConnectionIdRequestBody(connectionId);
       final ConnectionRead connectionRead = airbyteApiClient.getConnectionApi().getConnection(requestBody);
       return Optional.ofNullable(connectionRead.getSourceId());
-    } catch (final ClientException | IOException e) {
+    } catch (final ClientException e) {
+      if (e.getStatusCode() == HttpStatus.NOT_FOUND.getCode()) {
+        throw e;
+      }
+      throw new RetryableException(e);
+    } catch (final IOException e) {
       log.info("Encountered an error fetching the connection's Source ID: ", e);
       return Optional.empty();
     }
@@ -273,7 +289,12 @@ public class ConfigFetchActivityImpl implements ConfigFetchActivity {
           new io.airbyte.api.client.model.generated.ConnectionIdRequestBody(connectionId);
       final ConnectionRead connectionRead = airbyteApiClient.getConnectionApi().getConnection(requestBody);
       return Optional.ofNullable(connectionRead.getStatus());
-    } catch (final ClientException | IOException e) {
+    } catch (final ClientException e) {
+      if (e.getStatusCode() == HttpStatus.NOT_FOUND.getCode()) {
+        throw e;
+      }
+      throw new RetryableException(e);
+    } catch (final IOException e) {
       log.info("Encountered an error fetching the connection's status: ", e);
       return Optional.empty();
     }
@@ -286,7 +307,12 @@ public class ConfigFetchActivityImpl implements ConfigFetchActivity {
           new io.airbyte.api.client.model.generated.ConnectionIdRequestBody(connectionId);
       final ConnectionRead connectionRead = airbyteApiClient.getConnectionApi().getConnection(requestBody);
       return Optional.ofNullable(connectionRead.getBreakingChange());
-    } catch (final ClientException | IOException e) {
+    } catch (final ClientException e) {
+      if (e.getStatusCode() == HttpStatus.NOT_FOUND.getCode()) {
+        throw e;
+      }
+      throw new RetryableException(e);
+    } catch (final IOException e) {
       log.info("Encountered an error fetching the connection's breaking change status: ", e);
       return Optional.empty();
     }
