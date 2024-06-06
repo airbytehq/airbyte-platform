@@ -118,7 +118,7 @@ class SegmentTrackingClient(
   private val trackingIdentityFetcher: TrackingIdentityFetcher,
   private val deploymentFetcher: DeploymentFetcher,
   @Value("\${airbyte.role}") val airbyteRole: String,
-  @Value("\${airbyte.installation_id}") val installationId: UUID? = null,
+  @Value("\${airbyte.installation-id}") val installationId: UUID? = null,
 ) : TrackingClient {
   override fun identify(workspaceId: UUID) {
     val deployment: Deployment = deploymentFetcher.get()
