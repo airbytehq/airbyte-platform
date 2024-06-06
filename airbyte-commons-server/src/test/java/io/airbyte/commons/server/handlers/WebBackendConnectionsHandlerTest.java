@@ -109,7 +109,6 @@ import io.airbyte.data.services.DestinationService;
 import io.airbyte.data.services.SecretPersistenceConfigService;
 import io.airbyte.data.services.SourceService;
 import io.airbyte.data.services.WorkspaceService;
-import io.airbyte.featureflag.ActivateRefreshes;
 import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.featureflag.TestClient;
 import io.airbyte.featureflag.UseIconUrlInApiResponse;
@@ -956,11 +955,8 @@ class WebBackendConnectionsHandlerTest {
   @ValueSource(booleans = {true, false})
   void testUpdateConnectionWithUpdatedSchemaPerStream(final Boolean useRefresh)
       throws JsonValidationException, ConfigNotFoundException, IOException, io.airbyte.data.exceptions.ConfigNotFoundException {
-    when(featureFlagClient.boolVariation(eq(ActivateRefreshes.INSTANCE), any())).thenReturn(useRefresh);
-    if (useRefresh) {
-      when(actorDefinitionVersionHandler.getActorDefinitionVersionForDestinationId(any()))
-          .thenReturn(new ActorDefinitionVersionRead().supportsRefreshes(true));
-    }
+    when(actorDefinitionVersionHandler.getActorDefinitionVersionForDestinationId(any()))
+        .thenReturn(new ActorDefinitionVersionRead().supportsRefreshes(useRefresh));
 
     final WebBackendConnectionUpdate updateBody = new WebBackendConnectionUpdate()
         .namespaceDefinition(expected.getNamespaceDefinition())

@@ -12,6 +12,7 @@ import io.airbyte.api.client.model.generated.ConnectionRead;
 import io.airbyte.api.client.model.generated.ConnectionState;
 import io.airbyte.api.client.model.generated.ConnectionStateCreateOrUpdate;
 import io.airbyte.api.client.model.generated.ConnectionStateType;
+import io.airbyte.api.client.model.generated.DestinationIdRequestBody;
 import io.airbyte.api.client.model.generated.JobOptionalRead;
 import io.airbyte.api.client.model.generated.ScopeType;
 import io.airbyte.api.client.model.generated.SecretPersistenceConfig;
@@ -28,11 +29,8 @@ import io.airbyte.config.StateWrapper;
 import io.airbyte.config.helpers.StateMessageHelper;
 import io.airbyte.config.secrets.SecretsRepositoryReader;
 import io.airbyte.config.secrets.persistence.RuntimeSecretPersistence;
-import io.airbyte.featureflag.ActivateRefreshes;
 import io.airbyte.featureflag.AutoBackfillOnNewColumns;
-import io.airbyte.featureflag.Connection;
 import io.airbyte.featureflag.FeatureFlagClient;
-import io.airbyte.featureflag.Multi;
 import io.airbyte.featureflag.Organization;
 import io.airbyte.featureflag.UseRuntimeSecretPersistence;
 import io.airbyte.featureflag.Workspace;
@@ -42,7 +40,6 @@ import io.airbyte.workers.helper.BackfillHelper;
 import io.airbyte.workers.models.RefreshSchemaActivityOutput;
 import io.airbyte.workers.models.ReplicationActivityInput;
 import java.io.IOException;
-import java.util.List;
 import java.util.UUID;
 import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
@@ -75,13 +72,11 @@ public class ReplicationInputHydrator {
    * @throws Exception from the Airbyte API
    */
   public ReplicationInput getHydratedReplicationInput(final ReplicationActivityInput replicationActivityInput) throws Exception {
+    final var destinationDefinition = airbyteApiClient.getActorDefinitionVersionApi().getActorDefinitionVersionForDestinationId(
+        new DestinationIdRequestBody(replicationActivityInput.getDestinationId()));
 
-    final boolean canRunRefreshes = featureFlagClient.boolVariation(ActivateRefreshes.INSTANCE, new Multi(
-        List.of(
-            new Workspace(replicationActivityInput.getWorkspaceId()),
-            new Connection(replicationActivityInput.getConnectionId()))));
     // Retrieve the connection, which we need in a few places.
-    final ConnectionRead connectionInfo = canRunRefreshes
+    final ConnectionRead connectionInfo = destinationDefinition.getSupportsRefreshes()
         ? airbyteApiClient.getConnectionApi().getConnectionForJob(new ConnectionAndJobIdRequestBody(replicationActivityInput.getConnectionId(),
             Long.parseLong(replicationActivityInput.getJobRunConfig().getJobId())))
         : airbyteApiClient.getConnectionApi().getConnection(new ConnectionIdRequestBody(replicationActivityInput.getConnectionId()));

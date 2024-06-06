@@ -5,18 +5,19 @@
 package io.airbyte.workers;
 
 import static org.junit.Assert.assertEquals;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import io.airbyte.api.client.AirbyteApiClient;
+import io.airbyte.api.client.generated.ActorDefinitionVersionApi;
 import io.airbyte.api.client.generated.ConnectionApi;
 import io.airbyte.api.client.generated.JobsApi;
 import io.airbyte.api.client.generated.SecretsPersistenceConfigApi;
 import io.airbyte.api.client.generated.StateApi;
+import io.airbyte.api.client.model.generated.ActorDefinitionVersionBreakingChanges;
+import io.airbyte.api.client.model.generated.ActorDefinitionVersionRead;
 import io.airbyte.api.client.model.generated.AirbyteCatalog;
 import io.airbyte.api.client.model.generated.AirbyteStream;
 import io.airbyte.api.client.model.generated.AirbyteStreamAndConfiguration;
@@ -27,17 +28,21 @@ import io.airbyte.api.client.model.generated.ConnectionIdRequestBody;
 import io.airbyte.api.client.model.generated.ConnectionRead;
 import io.airbyte.api.client.model.generated.ConnectionState;
 import io.airbyte.api.client.model.generated.ConnectionStatus;
+import io.airbyte.api.client.model.generated.DestinationIdRequestBody;
 import io.airbyte.api.client.model.generated.DestinationSyncMode;
 import io.airbyte.api.client.model.generated.FieldTransform;
 import io.airbyte.api.client.model.generated.JobConfigType;
 import io.airbyte.api.client.model.generated.JobOptionalRead;
 import io.airbyte.api.client.model.generated.JobRead;
 import io.airbyte.api.client.model.generated.JobStatus;
+import io.airbyte.api.client.model.generated.NormalizationDestinationDefinitionConfig;
 import io.airbyte.api.client.model.generated.ResetConfig;
 import io.airbyte.api.client.model.generated.SchemaChangeBackfillPreference;
 import io.airbyte.api.client.model.generated.StreamDescriptor;
 import io.airbyte.api.client.model.generated.StreamTransform;
 import io.airbyte.api.client.model.generated.StreamTransformUpdateStream;
+import io.airbyte.api.client.model.generated.SupportLevel;
+import io.airbyte.api.client.model.generated.SupportState;
 import io.airbyte.api.client.model.generated.SyncMode;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.config.ConnectionContext;
@@ -46,7 +51,6 @@ import io.airbyte.config.State;
 import io.airbyte.config.SyncResourceRequirements;
 import io.airbyte.config.helpers.StateMessageHelper;
 import io.airbyte.config.secrets.SecretsRepositoryReader;
-import io.airbyte.featureflag.ActivateRefreshes;
 import io.airbyte.featureflag.AutoBackfillOnNewColumns;
 import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.featureflag.Flag;
@@ -57,6 +61,7 @@ import io.airbyte.persistence.job.models.JobRunConfig;
 import io.airbyte.workers.models.RefreshSchemaActivityOutput;
 import io.airbyte.workers.models.ReplicationActivityInput;
 import java.io.IOException;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
@@ -158,6 +163,7 @@ class ReplicationInputHydratorTest {
   private static JobsApi jobsApi;
   private static FeatureFlagClient featureFlagClient;
   private SecretsPersistenceConfigApi secretsPersistenceConfigApi;
+  private ActorDefinitionVersionApi actorDefinitionVersionApi;
 
   @BeforeEach
   void setup() throws IOException {
@@ -168,10 +174,12 @@ class ReplicationInputHydratorTest {
     jobsApi = mock(JobsApi.class);
     featureFlagClient = mock(TestClient.class);
     secretsPersistenceConfigApi = mock(SecretsPersistenceConfigApi.class);
+    actorDefinitionVersionApi = mock(ActorDefinitionVersionApi.class);
     when(airbyteApiClient.getConnectionApi()).thenReturn(connectionApi);
     when(airbyteApiClient.getStateApi()).thenReturn(stateApi);
     when(airbyteApiClient.getJobsApi()).thenReturn(jobsApi);
     when(airbyteApiClient.getSecretPersistenceConfigApi()).thenReturn(secretsPersistenceConfigApi);
+    when(airbyteApiClient.getActorDefinitionVersionApi()).thenReturn(actorDefinitionVersionApi);
     when(stateApi.getState(new ConnectionIdRequestBody(CONNECTION_ID))).thenReturn(CONNECTION_STATE_RESPONSE);
   }
 
@@ -288,17 +296,23 @@ class ReplicationInputHydratorTest {
   }
 
   private void mockRefresh() throws IOException {
-    when(featureFlagClient.boolVariation(eq(ActivateRefreshes.INSTANCE), any())).thenReturn(true);
     when(connectionApi.getConnectionForJob(new ConnectionAndJobIdRequestBody(CONNECTION_ID, JOB_ID)))
         .thenReturn(new ConnectionRead(CONNECTION_ID, CONNECTION_NAME, SOURCE_ID, DESTINATION_ID, SYNC_CATALOG, ConnectionStatus.ACTIVE, false, null,
             null, null, null, null, null, null, null, null, null, null, null, null, null, null, null));
+
+    when(actorDefinitionVersionApi.getActorDefinitionVersionForDestinationId(new DestinationIdRequestBody(DESTINATION_ID)))
+        .thenReturn(new ActorDefinitionVersionRead("", "", false, true, new NormalizationDestinationDefinitionConfig(), false, SupportState.SUPPORTED,
+            SupportLevel.CERTIFIED, new ActorDefinitionVersionBreakingChanges(List.of(), LocalDate.EPOCH)));
   }
 
   private void mockNonRefresh() throws IOException {
-    when(featureFlagClient.boolVariation(eq(ActivateRefreshes.INSTANCE), any())).thenReturn(false);
     when(connectionApi.getConnection(new ConnectionIdRequestBody(CONNECTION_ID)))
         .thenReturn(new ConnectionRead(CONNECTION_ID, CONNECTION_NAME, SOURCE_ID, DESTINATION_ID, SYNC_CATALOG, ConnectionStatus.ACTIVE, false, null,
             null, null, null, null, null, null, null, null, null, null, null, null, null, null, null));
+
+    when(actorDefinitionVersionApi.getActorDefinitionVersionForDestinationId(new DestinationIdRequestBody(DESTINATION_ID)))
+        .thenReturn(new ActorDefinitionVersionRead("", "", false, false, new NormalizationDestinationDefinitionConfig(), false,
+            SupportState.SUPPORTED, SupportLevel.CERTIFIED, new ActorDefinitionVersionBreakingChanges(List.of(), LocalDate.EPOCH)));
   }
 
 }

@@ -8,8 +8,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.times;
@@ -53,7 +51,6 @@ import io.airbyte.config.persistence.StreamRefreshesRepository;
 import io.airbyte.config.persistence.domain.StreamRefresh;
 import io.airbyte.config.provider.ResourceRequirementsProvider;
 import io.airbyte.db.instance.configs.jooq.generated.enums.RefreshType;
-import io.airbyte.featureflag.ActivateRefreshes;
 import io.airbyte.featureflag.DestResourceOverrides;
 import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.featureflag.OrchestratorResourceOverrides;
@@ -251,7 +248,6 @@ class DefaultJobCreatorTest {
     final String streamToRefresh = "name";
     final String streamNamespace = "namespace";
 
-    doReturn(true).when(mFeatureFlagClient).boolVariation(eq(ActivateRefreshes.INSTANCE), any());
     when(jobPersistence.enqueueJob(any(), any())).thenReturn(Optional.of(1L));
 
     final StateWrapper stateWrapper = new StateWrapper().withStateType(StateType.STREAM)
@@ -312,7 +308,7 @@ class DefaultJobCreatorTest {
         STANDARD_SOURCE_DEFINITION_WITH_SOURCE_TYPE,
         STANDARD_DESTINATION_DEFINITION,
         SOURCE_DEFINITION_VERSION,
-        DESTINATION_DEFINITION_VERSION,
+        DESTINATION_DEFINITION_VERSION.withSupportsRefreshes(true),
         WORKSPACE_ID,
         refreshes);
 
@@ -344,7 +340,6 @@ class DefaultJobCreatorTest {
   @Test
   void testFailToCreateRefreshIfNotAllowed() {
     final FeatureFlagClient mFeatureFlagClient = mock(TestClient.class);
-    when(mFeatureFlagClient.boolVariation(eq(ActivateRefreshes.INSTANCE), any())).thenReturn(false);
     jobCreator =
         new DefaultJobCreator(jobPersistence, resourceRequirementsProvider, mFeatureFlagClient, streamRefreshesRepository);
 
@@ -359,7 +354,7 @@ class DefaultJobCreatorTest {
         STANDARD_SOURCE_DEFINITION_WITH_SOURCE_TYPE,
         STANDARD_DESTINATION_DEFINITION,
         SOURCE_DEFINITION_VERSION,
-        DESTINATION_DEFINITION_VERSION,
+        DESTINATION_DEFINITION_VERSION.withSupportsRefreshes(false),
         WORKSPACE_ID,
         List.of()));
   }

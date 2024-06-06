@@ -1268,7 +1268,7 @@ abstract class ReplicationWorkerTest {
 
     worker.run(replicationInput, jobRoot);
 
-    verify(streamStatusCompletionTracker).startTracking(any(), any(), anyBoolean());
+    verify(streamStatusCompletionTracker).startTracking(any(), anyBoolean());
 
     verify(streamStatusCompletionTracker).finalize(0, mapper);
   }
@@ -1284,7 +1284,7 @@ abstract class ReplicationWorkerTest {
 
     worker.run(replicationInput, jobRoot);
 
-    verify(streamStatusCompletionTracker).startTracking(any(), any(), anyBoolean());
+    verify(streamStatusCompletionTracker).startTracking(any(), anyBoolean());
     verify(streamStatusCompletionTracker).track(streamStatus.getTrace().getStreamStatus());
     verify(streamStatusCompletionTracker).finalize(0, mapper);
   }

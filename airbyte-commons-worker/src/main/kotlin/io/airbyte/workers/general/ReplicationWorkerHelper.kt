@@ -209,7 +209,7 @@ class ReplicationWorkerHelper(
       airbyteApiClient.actorDefinitionVersionApi.getActorDefinitionVersionForDestinationId(
         DestinationIdRequestBody(destinationId = ctx.destinationId),
       ).supportsRefreshes
-    streamStatusCompletionTracker.startTracking(configuredAirbyteCatalog, ctx, supportRefreshes)
+    streamStatusCompletionTracker.startTracking(configuredAirbyteCatalog, supportRefreshes)
   }
 
   fun startDestination(

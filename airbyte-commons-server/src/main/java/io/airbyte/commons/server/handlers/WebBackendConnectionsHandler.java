@@ -64,11 +64,7 @@ import io.airbyte.config.persistence.ActorDefinitionVersionHelper;
 import io.airbyte.config.persistence.ConfigNotFoundException;
 import io.airbyte.config.persistence.ConfigRepository;
 import io.airbyte.config.persistence.ConfigRepository.StandardSyncQuery;
-import io.airbyte.featureflag.ActivateRefreshes;
-import io.airbyte.featureflag.Connection;
 import io.airbyte.featureflag.FeatureFlagClient;
-import io.airbyte.featureflag.Multi;
-import io.airbyte.featureflag.Workspace;
 import io.airbyte.metrics.lib.ApmTraceUtils;
 import io.airbyte.metrics.lib.MetricTags;
 import io.airbyte.persistence.job.models.JobStatusSummary;
@@ -669,12 +665,9 @@ public class WebBackendConnectionsHandler {
           allStreamToReset.stream().map(ProtocolConverters::streamDescriptorToProtocol).toList();
 
       if (!streamsToReset.isEmpty()) {
-        final boolean isRefreshEnabled = featureFlagClient.boolVariation(ActivateRefreshes.INSTANCE, new Multi(List.of(
-            new Connection(connectionId),
-            new Workspace(workspaceId))));
         final var destinationVersion = actorDefinitionVersionHandler
             .getActorDefinitionVersionForDestinationId(new DestinationIdRequestBody().destinationId(oldConnectionRead.getDestinationId()));
-        if (isRefreshEnabled && destinationVersion.getSupportsRefreshes()) {
+        if (destinationVersion.getSupportsRefreshes()) {
           eventRunner.refreshConnectionAsync(
               connectionId,
               streamsToReset,

@@ -33,7 +33,6 @@ import io.airbyte.config.helpers.ResourceRequirementsUtils;
 import io.airbyte.config.persistence.StreamRefreshesRepository;
 import io.airbyte.config.persistence.domain.StreamRefresh;
 import io.airbyte.config.provider.ResourceRequirementsProvider;
-import io.airbyte.featureflag.ActivateRefreshes;
 import io.airbyte.featureflag.Connection;
 import io.airbyte.featureflag.Context;
 import io.airbyte.featureflag.DestResourceOverrides;
@@ -148,8 +147,7 @@ public class DefaultJobCreator implements JobCreator {
                                                 final UUID workspaceId,
                                                 final List<StreamRefresh> streamsToRefresh)
       throws IOException {
-    final var ffContext = buildFeatureFlagContext(workspaceId, standardSync, sourceDefinition, destinationDefinition);
-    final boolean canRunRefreshes = featureFlagClient.boolVariation(ActivateRefreshes.INSTANCE, ffContext);
+    final boolean canRunRefreshes = destinationDefinitionVersion.getSupportsRefreshes();
 
     if (!canRunRefreshes) {
       throw new IllegalStateException("Trying to create a refresh job for a destination which doesn't support refreshes");

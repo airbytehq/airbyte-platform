@@ -149,7 +149,7 @@ class ReplicationWorkerHelperTest {
         mock(ReplicationFeatureFlags.class),
         mock(Path.class),
         catalog);
-    verify(streamStatusCompletionTracker).startTracking(catalog, replicationContext, supportRefreshes);
+    verify(streamStatusCompletionTracker).startTracking(catalog, supportRefreshes);
     // Need to have a configured catalog for getReplicationOutput
     replicationWorkerHelper.startDestination(
         mock(AirbyteDestination.class),

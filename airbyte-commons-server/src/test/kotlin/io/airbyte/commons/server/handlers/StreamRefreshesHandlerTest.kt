@@ -1,19 +1,15 @@
 package io.airbyte.commons.server.handlers
 
+import io.airbyte.api.model.generated.ActorDefinitionVersionRead
 import io.airbyte.api.model.generated.ConnectionStream
+import io.airbyte.api.model.generated.DestinationIdRequestBody
 import io.airbyte.api.model.generated.RefreshMode
 import io.airbyte.commons.server.handlers.StreamRefreshesHandler.Companion.connectionStreamsToStreamDescriptors
 import io.airbyte.commons.server.scheduler.EventRunner
-import io.airbyte.config.StandardWorkspace
+import io.airbyte.config.StandardSync
 import io.airbyte.config.persistence.StreamRefreshesRepository
 import io.airbyte.config.persistence.domain.StreamRefresh
 import io.airbyte.data.services.ConnectionService
-import io.airbyte.data.services.WorkspaceService
-import io.airbyte.featureflag.ActivateRefreshes
-import io.airbyte.featureflag.Connection
-import io.airbyte.featureflag.FeatureFlagClient
-import io.airbyte.featureflag.Multi
-import io.airbyte.featureflag.Workspace
 import io.airbyte.protocol.models.StreamDescriptor
 import io.mockk.clearAllMocks
 import io.mockk.every
@@ -31,27 +27,18 @@ internal class StreamRefreshesHandlerTest {
   private val connectionService: ConnectionService = mockk()
   private val streamRefreshesRepository: StreamRefreshesRepository = mockk()
   private val eventRunner: EventRunner = mockk()
-  private val workspaceService: WorkspaceService = mockk()
-  private val featureFlagClient: FeatureFlagClient = mockk()
+  private val actorDefinitionVersionHandler: ActorDefinitionVersionHandler = mockk()
 
   private val streamRefreshesHandler =
     StreamRefreshesHandler(
       connectionService,
       streamRefreshesRepository,
       eventRunner,
-      workspaceService,
-      featureFlagClient,
+      actorDefinitionVersionHandler,
     )
 
-  private val workspaceId = UUID.randomUUID()
   private val connectionId = UUID.randomUUID()
-  private val ffContext =
-    Multi(
-      listOf(
-        Workspace(workspaceId),
-        Connection(connectionId),
-      ),
-    )
+  private val destinationId = UUID.randomUUID()
   private val connectionStream =
     listOf(
       ConnectionStream().streamName("name1").streamNamespace("namespace1"),
@@ -66,14 +53,11 @@ internal class StreamRefreshesHandlerTest {
   @BeforeEach
   fun reset() {
     clearAllMocks()
-    every {
-      workspaceService.getStandardWorkspaceFromConnection(connectionId, false)
-    } returns StandardWorkspace().withWorkspaceId(workspaceId)
   }
 
   @Test
-  fun `test that nothing is submitted if the flag is disabled`() {
-    every { featureFlagClient.boolVariation(ActivateRefreshes, ffContext) } returns false
+  fun `test that nothing is submitted if refreshes is not supported`() {
+    mockSupportRefresh(false)
 
     val result = streamRefreshesHandler.createRefreshesForConnection(connectionId, RefreshMode.TRUNCATE, listOf())
 
@@ -85,7 +69,8 @@ internal class StreamRefreshesHandlerTest {
 
   @Test
   fun `test that the refreshes entries are properly created`() {
-    every { featureFlagClient.boolVariation(ActivateRefreshes, ffContext) } returns true
+    mockSupportRefresh(true)
+
     every { streamRefreshesRepository.saveAll(any<List<StreamRefresh>>()) } returns listOf()
     every { eventRunner.startNewManualSync(connectionId) } returns null
 
@@ -101,7 +86,8 @@ internal class StreamRefreshesHandlerTest {
 
   @Test
   fun `test that the refreshes entries are properly created for all the streams if the provided list is empty`() {
-    every { featureFlagClient.boolVariation(ActivateRefreshes, ffContext) } returns true
+    mockSupportRefresh(true)
+
     every { streamRefreshesRepository.saveAll(any<List<StreamRefresh>>()) } returns listOf()
     every { eventRunner.startNewManualSync(connectionId) } returns null
     every { connectionService.getAllStreamsForConnection(connectionId) } returns streamDescriptors
@@ -129,5 +115,11 @@ internal class StreamRefreshesHandlerTest {
     every { streamRefreshesRepository.deleteByConnectionId(connectionId) }.returns(Unit)
     streamRefreshesHandler.deleteRefreshesForConnection(connectionId)
     verify { streamRefreshesRepository.deleteByConnectionId(connectionId) }
+  }
+
+  fun mockSupportRefresh(supportRefresh: Boolean) {
+    every { connectionService.getStandardSync(connectionId) } returns StandardSync().withDestinationId(destinationId)
+    every { actorDefinitionVersionHandler.getActorDefinitionVersionForDestinationId(DestinationIdRequestBody().destinationId(destinationId)) } returns
+      ActorDefinitionVersionRead().supportsRefreshes(supportRefresh)
   }
 }

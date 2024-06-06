@@ -360,7 +360,6 @@ public class ReplicationWorkerFactory {
         workloadEnabled,
         analyticsMessageTracker,
         workloadId,
-        featureFlagClient,
         airbyteApiClient,
         streamStatusCompletionTracker,
         streamStatusTracker,
@@ -412,7 +411,6 @@ public class ReplicationWorkerFactory {
                                                                   final boolean workloadEnabled,
                                                                   final AnalyticsMessageTracker analyticsMessageTracker,
                                                                   final Optional<String> workloadId,
-                                                                  final FeatureFlagClient featureFlagClient,
                                                                   final AirbyteApiClient airbyteApiClient,
                                                                   final StreamStatusCompletionTracker streamStatusCompletionTracker,
                                                                   final StreamStatusTracker streamStatusTracker,
@@ -436,7 +434,7 @@ public class ReplicationWorkerFactory {
       metricClient.count(OssMetricsRegistry.REPLICATION_WORKER_CREATED, 1, new MetricAttribute(MetricTags.IMPLEMENTATION, "default"));
       return new DefaultReplicationWorker(jobId, attempt, source, destination, syncPersistence, recordSchemaValidator,
           srcHeartbeatTimeoutChaperone, replicationFeatureFlagReader, replicationWorkerHelper, destinationTimeout,
-          new StreamStatusCompletionTracker(featureFlagClient, clock));
+          new StreamStatusCompletionTracker(clock));
     }
   }
 
