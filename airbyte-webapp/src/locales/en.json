@@ -690,7 +690,9 @@
   "connection.actions.error": "There was an error starting this job.  Please try again.",
   "connection.actions.refreshData": "Refresh your data",
   "connection.actions.refreshConnection": "Refresh connection",
-  "connection.actions.refreshData.notAvailable": "Refresh is not available for this connection",
+  "connection.actions.refreshData.notAvailable.destination": "Refreshes are not available for this destination",
+  "connection.actions.refreshData.notAvailable.streams": "Refreshes are only available for connections with incremental streams",
+
   "connection.actions.refreshData.description": "Refreshing your data will replace all data in your destination by reloading all data from the source.",
   "connection.actions.refreshData.confirm.title": "Are you sure you want to refresh this connection?",
   "connection.actions.refreshData.affectedStreamsList.title": "This refresh will affect the following {affected} / {total} enabled streams:",

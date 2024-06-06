@@ -11,7 +11,7 @@ import { FlexContainer } from "components/ui/Flex";
 import { Text } from "components/ui/Text";
 import { Tooltip } from "components/ui/Tooltip";
 
-import { useDeleteConnection, useResetConnection } from "core/api";
+import { useDeleteConnection, useDestinationDefinitionVersion, useResetConnection } from "core/api";
 import { ConnectionStatus } from "core/api/types/AirbyteClient";
 import { useConfirmationModalService } from "hooks/services/ConfirmationModal";
 import { useConnectionEditService } from "hooks/services/ConnectionEdit/ConnectionEditService";
@@ -30,6 +30,9 @@ export const ConnectionActionsBlock: React.FC = () => {
   const { registerNotification } = useNotificationService();
   const { formatMessage } = useIntl();
   const isRefreshEnabled = useExperiment("platform.activate-refreshes", true);
+  const { supportsRefreshes: destinationSupportsRefreshes } = useDestinationDefinitionVersion(
+    connection.destination.destinationId
+  );
 
   const { mutateAsync: deleteConnection } = useDeleteConnection();
   const onDelete = () => deleteConnection(connection);
@@ -144,7 +147,13 @@ export const ConnectionActionsBlock: React.FC = () => {
               <RefreshConnectionButton />
             ) : (
               <Tooltip control={<RefreshConnectionButton />}>
-                <FormattedMessage id="connection.actions.refreshData.notAvailable" />
+                <FormattedMessage
+                  id={
+                    destinationSupportsRefreshes
+                      ? "connection.actions.refreshData.notAvailable.streams"
+                      : "connection.actions.refreshData.notAvailable.destination"
+                  }
+                />
               </Tooltip>
             )}
           </FormFieldLayout>
