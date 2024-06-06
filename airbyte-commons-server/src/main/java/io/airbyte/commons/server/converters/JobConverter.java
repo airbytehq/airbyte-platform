@@ -21,6 +21,7 @@ import io.airbyte.api.model.generated.JobInfoLightRead;
 import io.airbyte.api.model.generated.JobInfoRead;
 import io.airbyte.api.model.generated.JobOptionalRead;
 import io.airbyte.api.model.generated.JobRead;
+import io.airbyte.api.model.generated.JobRefreshConfig;
 import io.airbyte.api.model.generated.JobStatus;
 import io.airbyte.api.model.generated.JobWithAttemptsRead;
 import io.airbyte.api.model.generated.LogRead;
@@ -123,6 +124,7 @@ public class JobConverter {
         .configType(configType)
         .enabledStreams(extractEnabledStreams(job))
         .resetConfig(extractResetConfigIfReset(job).orElse(null))
+        .refreshConfig(extractRefreshConfigIfNeeded(job).orElse(null))
         .createdAt(job.getCreatedAtInSecond())
         .updatedAt(job.getUpdatedAtInSecond())
         .startedAt(job.getStartedAtInSecond().isPresent() ? job.getStartedAtInSecond().get() : null)
@@ -147,6 +149,28 @@ public class JobConverter {
               .stream()
               .map(ProtocolConverters::streamDescriptorToApi)
               .toList()));
+    } else {
+      return Optional.empty();
+    }
+  }
+
+  /**
+   * If the job is of type RESET, extracts the part of the reset config that we expose in the API.
+   * Otherwise, returns empty optional.
+   *
+   * @param job - job
+   * @return api representation of refresh config
+   */
+  public static Optional<JobRefreshConfig> extractRefreshConfigIfNeeded(final Job job) {
+    if (job.getConfigType() == ConfigType.REFRESH) {
+      final List<StreamDescriptor> refreshedStreams = job.getConfig().getRefresh().getStreamsToRefresh()
+          .stream().map(refreshStream -> refreshStream.getStreamDescriptor())
+          .map(ProtocolConverters::streamDescriptorToApi)
+          .toList();
+      if (refreshedStreams == null || refreshedStreams.isEmpty()) {
+        return Optional.empty();
+      }
+      return Optional.ofNullable(new JobRefreshConfig().streamsToRefresh(refreshedStreams));
     } else {
       return Optional.empty();
     }
