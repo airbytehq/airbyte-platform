@@ -125,7 +125,7 @@ class JobCreationAndStatusUpdateActivityTest {
       when(airbyteApiClient.getJobsApi()).thenReturn(jobsApi);
       when(jobsApi.createJob(new JobCreate(CONNECTION_ID)))
           .thenReturn(new JobInfoRead(new JobRead(JOB_ID, JobConfigType.SYNC, CONNECTION_ID.toString(), System.currentTimeMillis(),
-              System.currentTimeMillis(), JobStatus.SUCCEEDED, null, null, null, null, null), List.of()));
+              System.currentTimeMillis(), JobStatus.SUCCEEDED, null, null, null, null, null, null), List.of()));
       final JobCreationOutput newJob = jobCreationAndStatusUpdateActivity.createNewJob(new JobCreationInput(CONNECTION_ID));
 
       assertEquals(JOB_ID, newJob.getJobId());

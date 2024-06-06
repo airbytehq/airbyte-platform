@@ -245,6 +245,7 @@ class ReplicationInputHydratorTest {
             null,
             new ResetConfig(List.of(new StreamDescriptor(TEST_STREAM_NAME, TEST_STREAM_NAMESPACE))),
             null,
+            null,
             null)));
     final var replicationInput = replicationInputHydrator.getHydratedReplicationInput(input);
     assertEquals(1, replicationInput.getCatalog().getStreams().size());
