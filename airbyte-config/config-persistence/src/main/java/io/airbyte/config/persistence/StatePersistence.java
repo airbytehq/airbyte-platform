@@ -111,6 +111,19 @@ public class StatePersistence {
     });
   }
 
+  /**
+   * Remove all states entry for a connection.
+   *
+   * @param connectionId the id of the connection
+   * @throws IOException if there is an issue while interacting with the db.
+   */
+  public void eraseState(final UUID connectionId) throws IOException {
+    this.database.transaction(ctx -> {
+      deleteStateRecords(ctx, connectionId);
+      return null;
+    });
+  }
+
   public void bulkDelete(final UUID connectionId, final Set<StreamDescriptor> streamsToDelete) throws IOException {
     if (streamsToDelete == null || streamsToDelete.isEmpty()) {
       return;
@@ -273,6 +286,17 @@ public class StatePersistence {
         .where(STATE.CONNECTION_ID.eq(connectionId))
         .fetch(getStateRecordMapper())
         .stream().toList();
+  }
+
+  /**
+   * Delete all connection state records from the DB.
+   *
+   * @param ctx A valid DSL context to use for the query
+   * @param connectionId the ID of the connection
+   */
+  private static void deleteStateRecords(final DSLContext ctx, final UUID connectionId) {
+    ctx.deleteFrom(STATE)
+        .where(STATE.CONNECTION_ID.eq(connectionId)).execute();
   }
 
   /**

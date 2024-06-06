@@ -793,6 +793,93 @@ class StatePersistenceTest extends BaseConfigDatabaseTest {
     assertEquals(globalToModify, untouched.get());
   }
 
+  @Test
+  void testEraseGlobalState() throws IOException, JsonValidationException {
+    final StateWrapper connectionState = new StateWrapper()
+        .withStateType(StateType.GLOBAL)
+        .withGlobal(new AirbyteStateMessage()
+            .withType(AirbyteStateType.GLOBAL)
+            .withGlobal(new AirbyteGlobalState()
+                .withSharedState(Jsons.deserialize("0"))
+                .withStreamStates(List.of(
+                    new AirbyteStreamState()
+                        .withStreamDescriptor(new StreamDescriptor().withName("user"))
+                        .withStreamState(Jsons.deserialize("99")),
+                    new AirbyteStreamState()
+                        .withStreamDescriptor(new StreamDescriptor().withName("order").withNamespace("business"))
+                        .withStreamState(Jsons.deserialize("99"))))));
+    final StateWrapper otherState = new StateWrapper()
+        .withStateType(StateType.GLOBAL)
+        .withGlobal(new AirbyteStateMessage()
+            .withType(AirbyteStateType.GLOBAL)
+            .withGlobal(new AirbyteGlobalState()
+                .withSharedState(Jsons.deserialize("\"2024-01-01\""))
+                .withStreamStates(List.of(
+                    new AirbyteStreamState()
+                        .withStreamDescriptor(new StreamDescriptor().withName("shop"))
+                        .withStreamState(Jsons.deserialize("\"test\"")),
+                    new AirbyteStreamState()
+                        .withStreamDescriptor(new StreamDescriptor().withName("seller"))
+                        .withStreamState(Jsons.deserialize("\"joe\""))))));
+
+    final UUID otherConnectionId = setupSecondConnection();
+    statePersistence.updateOrCreateState(connectionId, connectionState);
+    Assertions.assertTrue(statePersistence.getCurrentState(connectionId).isPresent(), "The main connection state is not present in database");
+    statePersistence.updateOrCreateState(otherConnectionId, otherState);
+    Assertions.assertTrue(statePersistence.getCurrentState(otherConnectionId).isPresent(), "The other connection state is not present in database");
+    assertEquals(otherState, statePersistence.getCurrentState(otherConnectionId).get(), "The other connection state is incorrect");
+
+    statePersistence.eraseState(connectionId);
+    Assertions.assertTrue(statePersistence.getCurrentState(connectionId).isEmpty(), "The main connection state is still present");
+    statePersistence.updateOrCreateState(otherConnectionId, otherState);
+    Assertions.assertTrue(statePersistence.getCurrentState(otherConnectionId).isPresent(),
+        "The other connection state is no longer present in database");
+    assertEquals(otherState, statePersistence.getCurrentState(otherConnectionId).get(), "the other connection state has been altered");
+
+  }
+
+  @Test
+  public void testEraseStreamState() throws JsonValidationException, IOException {
+    final StateWrapper connectionState = new StateWrapper()
+        .withStateType(StateType.STREAM)
+        .withStateMessages(List.of(
+            new AirbyteStateMessage().withType(AirbyteStateType.STREAM)
+                .withStream(new AirbyteStreamState()
+                    .withStreamDescriptor(new StreamDescriptor().withName("user"))
+                    .withStreamState(Jsons.deserialize("0"))),
+            new AirbyteStateMessage().withType(AirbyteStateType.STREAM)
+                .withStream(new AirbyteStreamState()
+                    .withStreamDescriptor(new StreamDescriptor().withName("order").withNamespace("business"))
+                    .withStreamState(Jsons.deserialize("10")))));
+    final StateWrapper otherState = new StateWrapper()
+        .withStateType(StateType.STREAM)
+        .withStateMessages(List.of(
+            new AirbyteStateMessage().withType(AirbyteStateType.STREAM)
+                .withStream(new AirbyteStreamState()
+                    .withStreamDescriptor(new StreamDescriptor().withName("shop"))
+                    .withStreamState(Jsons.deserialize("\"test\""))),
+            new AirbyteStateMessage().withType(AirbyteStateType.STREAM)
+                .withStream(new AirbyteStreamState()
+                    .withStreamDescriptor(new StreamDescriptor().withName("seller"))
+                    .withStreamState(Jsons.deserialize("\"joe\"")))
+
+        ));
+    final UUID otherConnectionId = setupSecondConnection();
+    statePersistence.updateOrCreateState(connectionId, connectionState);
+    Assertions.assertTrue(statePersistence.getCurrentState(connectionId).isPresent(), "The main connection state is not present in database");
+    statePersistence.updateOrCreateState(otherConnectionId, otherState);
+    Assertions.assertTrue(statePersistence.getCurrentState(otherConnectionId).isPresent(), "The other connection state is not present in database");
+    assertEquals(otherState, statePersistence.getCurrentState(otherConnectionId).get(), "The other connection state is incorrect");
+
+    statePersistence.eraseState(connectionId);
+    Assertions.assertTrue(statePersistence.getCurrentState(connectionId).isEmpty(), "The main connection state is still present");
+    statePersistence.updateOrCreateState(otherConnectionId, otherState);
+    Assertions.assertTrue(statePersistence.getCurrentState(otherConnectionId).isPresent(),
+        "The other connection state is no longer present in database");
+    assertEquals(otherState, statePersistence.getCurrentState(otherConnectionId).get(), "the other connection state has been altered");
+
+  }
+
   private UUID setupSecondConnection() throws JsonValidationException, IOException {
     final FeatureFlagClient featureFlagClient = mock(TestClient.class);
     final SecretsRepositoryReader secretsRepositoryReader = mock(SecretsRepositoryReader.class);
@@ -874,6 +961,10 @@ class StatePersistenceTest extends BaseConfigDatabaseTest {
 
   private void assertEquals(final StateWrapper lhs, final StateWrapper rhs) {
     Assertions.assertEquals(Jsons.serialize(lhs), Jsons.serialize(rhs));
+  }
+
+  private void assertEquals(final StateWrapper lhs, final StateWrapper rhs, final String message) {
+    Assertions.assertEquals(Jsons.serialize(lhs), Jsons.serialize(rhs), message);
   }
 
 }

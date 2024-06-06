@@ -54,4 +54,8 @@ public class StateHandler {
     return createOrUpdateState(connectionStateCreateOrUpdate);
   }
 
+  public void wipeState(final UUID connectionId) throws IOException {
+    statePersistence.eraseState(connectionId);
+  }
+
 }
