@@ -31,6 +31,7 @@ import {
   BuilderProjectWithManifest,
   HttpError,
   NewVersionBody,
+  StreamReadTransformedSlices,
   useBuilderProject,
   useBuilderProjectReadStream,
   useBuilderProjectUpdateTestingValues,
@@ -116,7 +117,7 @@ interface TestReadLimits {
 }
 
 export interface TestReadContext {
-  streamRead: UseQueryResult<StreamRead, unknown>;
+  streamRead: UseQueryResult<StreamReadTransformedSlices, unknown>;
   testReadLimits: {
     recordLimit: number;
     setRecordLimit: (newRecordLimit: number) => void;
@@ -270,8 +271,7 @@ export const InternalConnectorBuilderFormStateProvider: React.FC<
   // components in that case.
   // Using the resolve data manifest as the resolved manifest would introduce an unnecessary lag effect in UI mode, where
   // test reads would use the old manifest until the resolve call completes.
-  const resolvedManifest =
-    mode === "ui" ? jsonManifest : ((resolveData?.manifest ?? DEFAULT_JSON_MANIFEST_VALUES) as ConnectorManifest);
+  const resolvedManifest = (resolveData?.manifest ?? DEFAULT_JSON_MANIFEST_VALUES) as ConnectorManifest;
 
   const streams = useBuilderWatch("formValues.streams");
   const streamNames =
@@ -772,6 +772,7 @@ export const ConnectorBuilderTestReadProvider: React.FC<React.PropsWithChildren<
       workspaceId,
       formGeneratedManifest: mode === "ui",
     },
+    testStream,
     (result) => {
       if (result.latest_config_update) {
         setValue("testingValues", result.latest_config_update);

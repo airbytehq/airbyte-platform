@@ -4,7 +4,8 @@ import { FormattedMessage } from "react-intl";
 import { Paginator } from "components/ui/Paginator";
 import { Text } from "components/ui/Text";
 
-import { StreamReadInferredSchema, StreamReadSlicesItem } from "core/api/types/ConnectorBuilderClient";
+import { Slice } from "core/api";
+import { StreamReadInferredSchema } from "core/api/types/ConnectorBuilderClient";
 import { useSelectedPageAndSlice } from "services/connectorBuilder/ConnectorBuilderStateService";
 
 import { PageDisplay } from "./PageDisplay";
@@ -12,7 +13,7 @@ import styles from "./ResultDisplay.module.scss";
 import { SliceSelector } from "./SliceSelector";
 
 interface ResultDisplayProps {
-  slices: StreamReadSlicesItem[];
+  slices: Slice[];
   inferredSchema?: StreamReadInferredSchema;
   className?: string;
 }
@@ -23,7 +24,6 @@ export const ResultDisplay: React.FC<ResultDisplayProps> = ({ slices, className,
   const slice = slices[selectedSlice];
   const numPages = slice.pages.length;
   const page = slice.pages[selectedPage];
-  const state = slice.state;
 
   return (
     <div className={classNames(className, styles.container)}>
@@ -35,7 +35,7 @@ export const ResultDisplay: React.FC<ResultDisplayProps> = ({ slices, className,
           onSelect={setSelectedSlice}
         />
       )}
-      <PageDisplay className={styles.pageDisplay} page={page} inferredSchema={inferredSchema} state={state} />
+      {page && <PageDisplay className={styles.pageDisplay} page={page} inferredSchema={inferredSchema} />}
       {slice.pages.length > 1 && (
         <div className={styles.paginator} data-testid="test-pages">
           <Text className={styles.pageLabel}>

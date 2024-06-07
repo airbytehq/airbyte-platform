@@ -8,10 +8,9 @@ import { Pre } from "components/ui/Pre";
 import { Text } from "components/ui/Text";
 import { InfoTooltip, Tooltip } from "components/ui/Tooltip";
 
+import { Page } from "core/api";
 import {
-  AirbyteStateMessage,
   StreamReadInferredSchema,
-  StreamReadSlicesItemPagesItem,
   StreamReadSlicesItemPagesItemRecordsItem,
 } from "core/api/types/ConnectorBuilderClient";
 import { useLocalStorage } from "core/utils/useLocalStorage";
@@ -30,13 +29,12 @@ import { useAutoImportSchema } from "../useAutoImportSchema";
 import { formatForDisplay, formatJson } from "../utils";
 
 interface PageDisplayProps {
-  page: StreamReadSlicesItemPagesItem;
+  page: Page;
   inferredSchema?: StreamReadInferredSchema;
   className?: string;
-  state?: AirbyteStateMessage[];
 }
 
-export const PageDisplay: React.FC<PageDisplayProps> = ({ page, className, inferredSchema, state }) => {
+export const PageDisplay: React.FC<PageDisplayProps> = ({ page, className, inferredSchema }) => {
   const { formatMessage } = useIntl();
 
   const mode = useBuilderWatch("mode");
@@ -113,20 +111,20 @@ export const PageDisplay: React.FC<PageDisplayProps> = ({ page, className, infer
           },
         ]
       : []),
-    ...(state
+    ...(page.state
       ? [
           {
             key: "state",
             title: <FormattedMessage id="connectorBuilder.stateTab" />,
             content: (
               <FlexContainer direction="column">
-                <Pre>{formatJson(state, false)}</Pre>
+                <Pre>{formatJson(page.state, false)}</Pre>
                 <Button
                   className={styles.importStateButton}
                   type="button"
                   variant="secondary"
                   onClick={() => {
-                    setTestState(formatJson(state, false));
+                    setTestState(formatJson(page.state, false));
                     setTestReadSettingsOpen(true);
                   }}
                 >

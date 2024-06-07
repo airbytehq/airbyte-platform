@@ -1,4 +1,5 @@
 import { QueryClient, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import isArray from "lodash/isArray";
 
 import { useCurrentWorkspaceId } from "area/workspace/utils";
 import { sourceDefinitionKeys } from "core/api";
@@ -27,8 +28,11 @@ import {
   ConnectorBuilderProjectStreamRead,
   ConnectorBuilderProjectTestingValuesUpdate,
   ConnectorBuilderProjectTestingValues,
+  ConnectorBuilderProjectStreamReadSlicesItem,
+  ConnectorBuilderProjectStreamReadSlicesItemPagesItem,
+  ConnectorBuilderProjectStreamReadSlicesItemStateItem,
 } from "../types/AirbyteClient";
-import { DeclarativeComponentSchema } from "../types/ConnectorManifest";
+import { DeclarativeComponentSchema, DeclarativeStream, NoPaginationType } from "../types/ConnectorManifest";
 import { useRequestOptions } from "../useRequestOptions";
 import { useSuspenseQuery } from "../useSuspenseQuery";
 
@@ -403,19 +407,84 @@ export const useChangeBuilderProjectVersion = () => {
 
 export const useBuilderProjectReadStream = (
   params: ConnectorBuilderProjectStreamReadRequestBody,
+  testStream: DeclarativeStream,
   onSuccess: (data: ConnectorBuilderProjectStreamRead) => void
 ) => {
   const requestOptions = useRequestOptions();
 
-  return useQuery(
+  return useQuery<StreamReadTransformedSlices>(
     connectorBuilderProjectsKeys.read(params.builderProjectId, params.streamName),
-    () => readConnectorBuilderProjectStream(params, requestOptions),
+    () =>
+      readConnectorBuilderProjectStream(params, requestOptions).then((streamRead) =>
+        transformSlices(streamRead, testStream)
+      ),
     {
       refetchOnWindowFocus: false,
       enabled: false,
       onSuccess,
     }
   );
+};
+
+export type Page = ConnectorBuilderProjectStreamReadSlicesItemPagesItem & {
+  state?: ConnectorBuilderProjectStreamReadSlicesItemStateItem[];
+};
+
+export type Slice = Omit<ConnectorBuilderProjectStreamReadSlicesItem, "pages" | "state"> & {
+  pages: Page[];
+};
+
+export type StreamReadTransformedSlices = Omit<ConnectorBuilderProjectStreamRead, "slices"> & {
+  slices: Slice[];
+};
+
+const transformSlices = (
+  streamReadData: ConnectorBuilderProjectStreamRead,
+  stream: DeclarativeStream
+): StreamReadTransformedSlices => {
+  // With the addition of ResumableFullRefresh, when pagination is configured and both incremental_sync and
+  // partition_routers are NOT configured, the CDK splits up each page into a separate slice, each with its own state.
+  // This is to allow full refresh syncs to resume from the last page read in the event of a failure.
+  // To keep the Builder UI consistent and show the page selection controls whenever pagination is configured, we check
+  // for this scenario and if so, group all of the pages into a single slice, but with their individual states set
+  // on each page. This way, the user can still see the unique state of each page in the `State` tab, and will also
+  // always see the page selection controls when pagination is configured.
+  if (
+    stream.retriever?.paginator &&
+    stream.retriever?.paginator?.type !== NoPaginationType.NoPagination &&
+    !stream.incremental_sync &&
+    (!stream.retriever?.partition_router ||
+      (isArray(stream.retriever?.partition_router) && stream.retriever?.partition_router.length === 0)) &&
+    streamReadData.slices.every((slice) => slice.pages.length === 1)
+  ) {
+    return {
+      ...streamReadData,
+      slices: [
+        {
+          pages: streamReadData.slices.map((slice) => ({
+            ...slice.pages[0],
+            state: slice.state,
+          })),
+        },
+      ],
+    };
+  }
+
+  // Pages are grouped into slices normally, so just set the slice state on each inner page
+  return {
+    ...streamReadData,
+    slices: streamReadData.slices.map((slice) => {
+      return {
+        ...slice,
+        pages: slice.pages.map((page) => {
+          return {
+            ...page,
+            state: slice.state,
+          };
+        }),
+      };
+    }),
+  };
 };
 
 export const useBuilderProjectUpdateTestingValues = (
