@@ -47,7 +47,8 @@
 }
 
 .inputContainer {
-  flex-basis: 400px;
+  min-width: 0;
+  width: 100%;
   flex-grow: 1;
   flex-shrink: 1;
   border-color: colors.$grey-300;

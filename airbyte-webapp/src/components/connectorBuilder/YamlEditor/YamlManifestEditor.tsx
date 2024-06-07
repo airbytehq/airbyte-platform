@@ -11,7 +11,12 @@ import { Sidebar } from "../Sidebar";
 import { useBuilderWatch } from "../types";
 
 export const YamlManifestEditor: React.FC = () => {
-  const { setYamlEditorIsMounted, setYamlIsValid, updateJsonManifest } = useConnectorBuilderFormState();
+  const {
+    setYamlEditorIsMounted,
+    setYamlIsValid,
+    updateJsonManifest,
+    undoRedo: { clearHistory },
+  } = useConnectorBuilderFormState();
   const { setValue } = useFormContext();
   const yamlManifestValue = useBuilderWatch("yaml");
   // debounce the setJsonManifest calls so that it doesnt result in a network call for every keystroke
@@ -23,7 +28,10 @@ export const YamlManifestEditor: React.FC = () => {
       <div className={styles.editorContainer}>
         <YamlEditor
           value={yamlManifestValue}
-          onChange={(value: string | undefined) => setValue("yaml", value ?? "")}
+          onChange={(value: string | undefined) => {
+            setValue("yaml", value ?? "");
+            clearHistory();
+          }}
           onSuccessfulLoad={(json: unknown) => {
             setYamlIsValid(true);
             debouncedUpdateJsonManifest(json as ConnectorManifest);

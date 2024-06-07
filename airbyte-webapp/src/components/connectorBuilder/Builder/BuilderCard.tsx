@@ -59,6 +59,7 @@ export const BuilderCard: React.FC<React.PropsWithChildren<BuilderCardProps>> = 
   inputsConfig,
 }) => {
   const { formatMessage } = useIntl();
+  const { handleScrollToField } = useConnectorBuilderFormManagementState();
 
   const childElements = inputsConfig?.yamlConfig ? (
     <YamlEditableComponent
@@ -74,8 +75,16 @@ export const BuilderCard: React.FC<React.PropsWithChildren<BuilderCardProps>> = 
     children
   );
 
+  const elementRef = useRef<HTMLDivElement | null>(null);
+  useEffect(() => {
+    if (inputsConfig) {
+      // Call handler in here to make sure it handles new scrollToField value from the context
+      handleScrollToField(elementRef, inputsConfig.path);
+    }
+  }, [inputsConfig, handleScrollToField]);
+
   return (
-    <Card className={className} bodyClassName={classNames(styles.card)}>
+    <Card className={className} bodyClassName={classNames(styles.card)} ref={elementRef}>
       {(inputsConfig?.toggleable || label || docLink) && (
         <FlexContainer alignItems="center">
           <FlexItem grow>

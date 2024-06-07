@@ -1,4 +1,5 @@
 import debounce from "lodash/debounce";
+import isEqual from "lodash/isEqual";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useFormContext, FieldPath } from "react-hook-form";
 import { useIntl } from "react-intl";
@@ -44,20 +45,24 @@ export const BuilderYamlField: React.FC<BuilderYamlFieldProps> = ({ path, setLoc
     handleScrollToField(elementRef, pathString);
   }, [handleScrollToField, pathString]);
 
+  // Update the local value when the form value changes, so that undo/redo has an effect here
+  useEffect(() => {
+    setLocalYamlValue(formValue);
+  }, [formValue]);
+
   return (
     <>
-      <div
-        className={styles.yamlEditor}
-        ref={(ref) => {
-          elementRef.current = ref;
-          // Call handler in here to make sure it handles new refs
-          handleScrollToField(elementRef, path);
-        }}
-      >
+      <div className={styles.yamlEditor} ref={elementRef}>
         <YamlEditor
           value={localYamlValue}
           onChange={(val: string | undefined) => {
-            setLocalYamlValue(val ?? "");
+            setLocalYamlValue(val);
+            // If both values are empty or equal, don't set the form value to avoid triggering an unwanted form value change.
+            // This is needed because if the user undoes a change, causing the form value and this editor to be set to undefined/empty,
+            // then calling setValue would cause the empty string to be set on this field instead, which would delete the redo history.
+            if ((!val && !formValue) || isEqual(val, formValue)) {
+              return;
+            }
             setLocalYamlIsDirty?.(true);
             debouncedSetValue(path, val, {
               shouldValidate: true,

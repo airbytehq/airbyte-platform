@@ -20,6 +20,7 @@ import {
   useBuilderWatch,
 } from "components/connectorBuilder/types";
 import { useUpdateLockedInputs } from "components/connectorBuilder/useLockedInputs";
+import { UndoRedo, useUndoRedo } from "components/connectorBuilder/useUndoRedo";
 import { formatJson, streamNameOrDefault } from "components/connectorBuilder/utils";
 import { useNoUiValueModal } from "components/connectorBuilder/YamlEditor/NoUiValueModal";
 
@@ -94,6 +95,7 @@ interface FormStateContext {
   resolveError: HttpError<KnownExceptionInfo> | null;
   isResolving: boolean;
   streamNames: string[];
+  undoRedo: UndoRedo;
   setDisplayedVersion: (value: number | undefined, manifest: DeclarativeComponentSchema) => void;
   updateJsonManifest: (jsonValue: ConnectorManifest) => void;
   setYamlIsValid: (value: boolean) => void;
@@ -520,6 +522,8 @@ export const InternalConnectorBuilderFormStateProvider: React.FC<
 
   useUpdateLockedInputs();
 
+  const undoRedo = useUndoRedo();
+
   const ctx: FormStateContext = {
     jsonManifest,
     yamlEditorIsMounted,
@@ -537,6 +541,7 @@ export const InternalConnectorBuilderFormStateProvider: React.FC<
     resolveErrorMessage,
     isResolving,
     streamNames,
+    undoRedo,
     setDisplayedVersion: setToVersion,
     updateJsonManifest,
     setYamlIsValid,

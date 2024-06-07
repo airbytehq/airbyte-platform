@@ -39,7 +39,6 @@ import {
   DatetimeBasedCursor,
   DefaultErrorHandler,
 } from "core/api/types/ConnectorManifest";
-import { removeEmptyProperties } from "core/utils/form";
 
 import {
   API_KEY_AUTHENTICATOR,
@@ -88,7 +87,7 @@ export const convertToBuilderFormValuesSync = (resolvedManifest: ConnectorManife
   const streams = resolvedManifest.streams;
   if (streams === undefined || streams.length === 0) {
     builderFormValues.inputs = manifestSpecToBuilderInputs(resolvedManifest.spec, { type: NO_AUTH }, []);
-    return removeEmptyProperties(builderFormValues);
+    return builderFormValues;
   }
 
   assertType<SimpleRetriever>(streams[0].retriever, "SimpleRetriever", streams[0].name);
@@ -139,7 +138,7 @@ export const convertToBuilderFormValuesSync = (resolvedManifest: ConnectorManife
     builderFormValues.streams
   );
 
-  return removeEmptyProperties(builderFormValues);
+  return builderFormValues;
 };
 
 const RELEVANT_AUTHENTICATOR_KEYS = [

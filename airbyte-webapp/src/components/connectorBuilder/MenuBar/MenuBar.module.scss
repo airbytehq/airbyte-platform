@@ -28,15 +28,22 @@
   flex-shrink: 0;
 }
 
+.exitAndName {
+  min-width: 0;
+}
+
 .nameContainer {
-  flex-grow: 1;
+  min-width: 0;
   flex-shrink: 1;
-  min-width: 100px;
 }
 
 .connectorName {
   text-overflow: ellipsis;
   text-wrap: nowrap;
+}
+
+.undoButton {
+  transform: rotateY(180deg);
 }
 
 .helpButton {

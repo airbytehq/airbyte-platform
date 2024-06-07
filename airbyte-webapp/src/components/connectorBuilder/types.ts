@@ -357,6 +357,7 @@ export const DEFAULT_BUILDER_STREAM_VALUES: Omit<BuilderStream, "id"> = {
     },
   },
   autoImportSchema: true,
+  unknownFields: undefined,
 };
 
 export const LIST_PARTITION_ROUTER: ListPartitionRouterType = "ListPartitionRouter";

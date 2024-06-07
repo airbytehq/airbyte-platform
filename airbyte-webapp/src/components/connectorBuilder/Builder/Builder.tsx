@@ -1,3 +1,4 @@
+import cloneDeep from "lodash/cloneDeep";
 import debounce from "lodash/debounce";
 import React, { useEffect, useMemo } from "react";
 import { AnyObjectSchema } from "yup";
@@ -39,25 +40,32 @@ function getView(
   }
 }
 
-function cleanedFormValues(values: unknown, builderFormValidationSchema: AnyObjectSchema) {
-  return builderFormValidationSchema.cast(removeEmptyProperties(values)) as unknown as BuilderFormValues;
+function cleanFormValues(values: unknown, builderFormValidationSchema: AnyObjectSchema) {
+  return builderFormValidationSchema.cast(removeEmptyProperties(cloneDeep(values))) as unknown as BuilderFormValues;
 }
 
 export const Builder: React.FC<BuilderProps> = ({ hasMultipleStreams }) => {
   const { validateAndTouch } = useBuilderErrors();
-  const { blockedOnInvalidState, updateJsonManifest, setFormValuesValid } = useConnectorBuilderFormState();
+  const {
+    blockedOnInvalidState,
+    updateJsonManifest,
+    setFormValuesValid,
+    undoRedo: { registerChange },
+  } = useConnectorBuilderFormState();
   const formValues = useBuilderWatch("formValues");
   const view = useBuilderWatch("view");
+
   const streams = useBuilderWatch("formValues.streams");
   const { builderFormValidationSchema } = useBuilderValidationSchema();
 
   const debouncedUpdateJsonManifest = useMemo(
     () =>
-      debounce((values) => {
+      debounce((values: BuilderFormValues) => {
+        registerChange(cloneDeep(values));
         setFormValuesValid(builderFormValidationSchema.isValidSync(values));
-        updateJsonManifest(convertToManifest(cleanedFormValues(values, builderFormValidationSchema)));
+        updateJsonManifest(convertToManifest(cleanFormValues(values, builderFormValidationSchema)));
       }, 500),
-    [builderFormValidationSchema, setFormValuesValid, updateJsonManifest]
+    [builderFormValidationSchema, registerChange, setFormValuesValid, updateJsonManifest]
   );
 
   useEffect(() => {

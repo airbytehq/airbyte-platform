@@ -146,10 +146,9 @@ const InnerBuilderField: React.FC<BuilderFieldProps> = ({
     false,
     omitInterpolationContext
   );
+
   const { handleScrollToField } = useConnectorBuilderFormManagementState();
-
   const elementRef = useRef<HTMLDivElement | null>(null);
-
   useEffect(() => {
     // Call handler in here to make sure it handles new scrollToField value from the context
     handleScrollToField(elementRef, path);
@@ -161,11 +160,7 @@ const InnerBuilderField: React.FC<BuilderFieldProps> = ({
       <LabeledSwitch
         {...field}
         id={switchId}
-        ref={(ref) => {
-          elementRef.current = ref;
-          // Call handler in here to make sure it handles new refs
-          handleScrollToField(elementRef, path);
-        }}
+        ref={elementRef}
         checked={fieldValue as boolean}
         label={
           <ControlLabels
@@ -201,10 +196,7 @@ const InnerBuilderField: React.FC<BuilderFieldProps> = ({
       label={label}
       infoTooltipContent={tooltip}
       optional={optional}
-      ref={(ref) => {
-        elementRef.current = ref;
-        handleScrollToField(elementRef, path);
-      }}
+      ref={elementRef}
     >
       {(props.type === "number" || props.type === "string" || props.type === "integer") && (
         <Input
