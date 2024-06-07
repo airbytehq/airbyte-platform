@@ -64,7 +64,7 @@ import {
 import { useRequestOptions } from "../useRequestOptions";
 import { useSuspenseQuery } from "../useSuspenseQuery";
 
-const connectionsKeys = {
+export const connectionsKeys = {
   all: [SCOPE_WORKSPACE, "connections"] as const,
   lists: (filters: string[] = []) => [...connectionsKeys.all, "list", ...filters],
   detail: (connectionId: string) => [...connectionsKeys.all, "details", connectionId] as const,

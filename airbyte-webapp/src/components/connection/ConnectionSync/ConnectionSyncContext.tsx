@@ -10,6 +10,7 @@ import {
   prependArtificialJobToStatus,
   useRefreshConnectionStreams,
   useResetConnectionStream,
+  connectionsKeys,
 } from "core/api";
 import {
   ConnectionStatus,
@@ -74,6 +75,7 @@ const useConnectionSyncContextInit = (connection: WebBackendConnectionRead): Con
             prevJobList
           )
       );
+      queryClient.invalidateQueries(connectionsKeys.syncProgress(connection.connectionId));
     };
   }, [mostRecentJob, doCancelJob, connection.connectionId, queryClient]);
 

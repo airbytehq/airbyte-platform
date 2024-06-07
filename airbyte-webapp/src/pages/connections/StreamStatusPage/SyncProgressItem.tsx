@@ -1,35 +1,44 @@
 import dayjs from "dayjs";
-import { FormattedMessage } from "react-intl";
+import { FormattedMessage, FormattedNumber } from "react-intl";
 
+import { ConnectionStatusIndicatorStatus } from "components/connection/ConnectionStatusIndicator";
 import { Text } from "components/ui/Text";
 
 interface SyncProgressItemProps {
   recordsLoaded?: number;
   recordsExtracted?: number;
   syncStartedAt?: number;
+  status: ConnectionStatusIndicatorStatus;
 }
 
 export const SyncProgressItem: React.FC<SyncProgressItemProps> = ({
   recordsLoaded,
   recordsExtracted,
   syncStartedAt,
+  status,
 }) => {
-  if (!syncStartedAt) {
-    return null;
-  }
-
   const start = dayjs(syncStartedAt);
   const end = dayjs(Date.now());
   const hour = Math.abs(end.diff(start, "hour"));
   const minute = Math.abs(end.diff(start, "minute")) - hour * 60;
 
+  if (status !== ConnectionStatusIndicatorStatus.Syncing && status !== ConnectionStatusIndicatorStatus.Queued) {
+    return null;
+  }
+
   return (
     <>
       <Text color="grey" as="span">
         {recordsLoaded && recordsLoaded > 0 ? (
-          <FormattedMessage id="sources.countLoaded" values={{ count: recordsLoaded ?? 0 }} />
+          <FormattedMessage
+            id="sources.countLoaded"
+            values={{ count: <FormattedNumber value={recordsLoaded ?? 0} /> }}
+          />
         ) : recordsExtracted ? (
-          <FormattedMessage id="sources.countExtracted" values={{ count: recordsExtracted ?? 0 }} />
+          <FormattedMessage
+            id="sources.countExtracted"
+            values={{ count: <FormattedNumber value={recordsExtracted ?? 0} /> }}
+          />
         ) : (
           <FormattedMessage id="sources.queued" />
         )}
@@ -39,14 +48,14 @@ export const SyncProgressItem: React.FC<SyncProgressItemProps> = ({
         |{" "}
       </Text>
       <Text color="grey" as="span">
-        {hour > 0 || minute > 0 || recordsExtracted ? (
+        {(hour > 0 || minute > 0) && recordsExtracted ? (
           <FormattedMessage
             id="sources.elapsed"
             values={{
               time: (
                 <>
                   {hour ? <FormattedMessage id="sources.hour" values={{ hour }} /> : null}
-                  <FormattedMessage id="sources.minute" values={{ minute }} />
+                  {minute ? <FormattedMessage id="sources.minute" values={{ minute }} /> : null}
                 </>
               ),
             }}

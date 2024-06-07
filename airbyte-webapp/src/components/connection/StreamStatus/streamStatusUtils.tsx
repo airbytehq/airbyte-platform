@@ -10,9 +10,11 @@ export interface StreamWithStatus {
   streamNamespace?: string;
   status: ConnectionStatusIndicatorStatus;
   isRunning: boolean;
-  hasRecordsExtracted: boolean;
   relevantHistory: StreamStatusRead[];
   lastSuccessfulSyncAt?: StreamStatusRead["transitionedAt"];
+  streamSyncStartedAt?: number;
+  recordsLoaded: number | undefined;
+  recordsExtracted: number | undefined;
 }
 
 type StreamMapping = Record<ConnectionStatusIndicatorStatus, StreamWithStatus[]>;

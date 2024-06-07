@@ -17,8 +17,7 @@ import { Table } from "components/ui/Table";
 import { Text } from "components/ui/Text";
 import { InfoTooltip } from "components/ui/Tooltip";
 
-import { useGetConnectionSyncProgress } from "core/api";
-import { ConnectionStatus, StreamStatusRunState, StreamSyncProgressReadItem } from "core/api/types/AirbyteClient";
+import { ConnectionStatus } from "core/api/types/AirbyteClient";
 import { useConnectionEditService } from "hooks/services/ConnectionEdit/ConnectionEditService";
 import { useExperiment } from "hooks/services/Experiment";
 
@@ -26,6 +25,7 @@ import { StreamActionsMenu } from "./StreamActionsMenu";
 import { StreamSearchFiltering } from "./StreamSearchFiltering";
 import styles from "./StreamsList.module.scss";
 import { useStreamsListContext } from "./StreamsListContext";
+import { StreamsListSubtitle } from "./StreamsListSubtitle";
 import { SyncProgressItem } from "./SyncProgressItem";
 
 const LastSync: React.FC<{ transitionedAt: number | undefined; showRelativeTime: boolean }> = ({
@@ -64,29 +64,20 @@ export const StreamsList = () => {
   const [showRelativeTime, setShowRelativeTime] = useToggle(true);
   const { connection } = useConnectionEditService();
   const { filteredStreamsByName, filteredStreamsByStatus } = useStreamsListContext();
-  const { isRunning } = useConnectionStatus(connection.connectionId);
-  const { data: connectionSyncProgress } = useGetConnectionSyncProgress(
-    connection.connectionId,
-    showSyncProgress && isRunning
-  );
+
   const streamsList = showSyncProgress ? filteredStreamsByName : filteredStreamsByStatus;
   const streamEntries = useMemo(
     () =>
       streamsList.map((stream) => {
-        const syncProgress = connectionSyncProgress?.streams.find(
-          (progressItem: StreamSyncProgressReadItem) =>
-            progressItem.streamName === stream.streamName && progressItem.streamNamespace === stream.streamNamespace
-        );
         return {
           name: stream.streamName,
-          ...syncProgress,
           state: {
             ...stream,
             lastSuccessfulSyncAt: stream.lastSuccessfulSyncAt,
           },
         };
       }),
-    [connectionSyncProgress, streamsList]
+    [streamsList]
   );
 
   const columnHelper = useMemo(() => createColumnHelper<(typeof streamEntries)[number]>(), []);
@@ -109,7 +100,7 @@ export const StreamsList = () => {
       }),
       ...(showSyncProgress
         ? [
-            columnHelper.accessor("bytesCommitted", {
+            columnHelper.accessor("state.recordsLoaded", {
               id: "syncProgress",
               header: () => (
                 <>
@@ -120,16 +111,12 @@ export const StreamsList = () => {
                 </>
               ),
               cell: (props) => {
-                const syncStartedAt =
-                  props.row.original.state.relevantHistory[0]?.runState === StreamStatusRunState.RUNNING
-                    ? props.row.original.state.relevantHistory[0]?.transitionedAt
-                    : undefined;
-
                 return (
                   <SyncProgressItem
-                    recordsLoaded={props.row.original.recordsCommitted}
-                    recordsExtracted={props.row.original.recordsEmitted}
-                    syncStartedAt={syncStartedAt}
+                    recordsLoaded={props.row.original.state.recordsLoaded}
+                    recordsExtracted={props.row.original.state.recordsExtracted}
+                    syncStartedAt={props.row.original.state.streamSyncStartedAt}
+                    status={props.row.original.state.status}
                   />
                 );
               },
@@ -160,7 +147,7 @@ export const StreamsList = () => {
     [columnHelper, setShowRelativeTime, showRelativeTime, showSyncProgress]
   );
 
-  const { status, nextSync } = useConnectionStatus(connection.connectionId);
+  const { status, nextSync, recordsExtracted, recordsLoaded } = useConnectionStatus(connection.connectionId);
 
   const showTable = connection.status !== ConnectionStatus.inactive;
 
@@ -173,24 +160,12 @@ export const StreamsList = () => {
               <Heading as="h5" size="sm">
                 <FormattedMessage id="connection.stream.status.title" />
               </Heading>
-              <Box as="span" ml="md">
-                <Text color="grey" bold size="sm" as="span">
-                  {status === ConnectionStatusIndicatorStatus.OnTime && nextSync && (
-                    <FormattedMessage
-                      id="connection.stream.status.nextSync"
-                      values={{ sync: dayjs(nextSync).fromNow() }}
-                    />
-                  )}
-                  {(status === ConnectionStatusIndicatorStatus.Late ||
-                    status === ConnectionStatusIndicatorStatus.OnTrack) &&
-                    nextSync && (
-                      <FormattedMessage
-                        id="connection.stream.status.nextTry"
-                        values={{ sync: dayjs(nextSync).fromNow() }}
-                      />
-                    )}
-                </Text>
-              </Box>
+              <StreamsListSubtitle
+                connectionStatus={status}
+                nextSync={nextSync}
+                recordsLoaded={recordsLoaded}
+                recordsExtracted={recordsExtracted}
+              />
             </FlexContainer>
           ) : (
             <Heading as="h5" size="sm">

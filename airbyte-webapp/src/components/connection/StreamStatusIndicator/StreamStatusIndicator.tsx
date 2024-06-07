@@ -19,7 +19,7 @@ const ICON_BY_STATUS: Readonly<Record<ConnectionStatusIndicatorStatus, JSX.Eleme
   pending: <Icon type="pauseFilled" title="pending" />,
   onTime: <Icon type="successFilled" title="on-time" />,
   onTrack: <Icon type="successFilled" title="on-track" />,
-  syncing: <CircleLoader title="syncing" />,
+  syncing: <CircleLoader title="syncing" className={styles.syncingIcon} />,
   queued: <Icon type="statusQueued" title="queued" />,
 };
 

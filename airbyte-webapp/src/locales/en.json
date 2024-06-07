@@ -493,7 +493,7 @@
   "sources.countRecordsExtracted": "{count, plural, =0 {no records extracted} one {# record extracted} other {# records extracted}}",
   "sources.countRecordsLoaded": "{count, plural, =0 {no records loaded} one {# record loaded} other {# records loaded}}",
   "sources.countLoaded": "{count} loaded",
-  "sources.countExtracted": "{count} extracted",
+  "sources.countExtracted": "{count} loaded",
   "sources.countBytes": "{count, plural, =0 {0 Bytes} one {# Byte} other {# Bytes}}",
   "sources.countKB": "{count} KB",
   "sources.countMB": "{count} MB",
@@ -502,6 +502,7 @@
   "sources.queued": "Queued",
   "sources.syncing": "Syncing",
   "sources.starting": "Starting...",
+
   "sources.updatesEveryMinute": "Updates every minute",
   "sources.downloadLogs": "Download logs",
   "sources.debugInfoDetails": "Debug Info details",
@@ -726,6 +727,7 @@
   "connection.stream.status.table.lastRecord": "Last record loaded",
   "connection.stream.status.table.emptyTable.message": "Re-enable the connection to show stream sync progress",
   "connection.stream.status.table.emptyTable.callToAction": "Re-enable",
+  "connection.stream.status.table.syncStarting": "Sync starting...",
 
   "connection.stream.actions.refreshStream": "Refresh stream",
   "connection.stream.actions.refreshStream.confirm.title": "Are you sure you want to refresh the {streamName} stream?",
