@@ -2,7 +2,7 @@
  * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
-package io.airbyte.server.errors;
+package io.airbyte.commons.server.errors.handlers;
 
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.commons.server.errors.KnownException;
@@ -25,7 +25,7 @@ import jakarta.inject.Singleton;
 public class KnownExceptionHandler implements ExceptionHandler<KnownException, HttpResponse> {
 
   @Override
-  public HttpResponse handle(HttpRequest request, KnownException exception) {
+  public HttpResponse handle(final HttpRequest request, final KnownException exception) {
     return HttpResponse.status(HttpStatus.valueOf(exception.getHttpCode()))
         .body(Jsons.serialize(exception.getKnownExceptionInfo()))
         .contentType(MediaType.APPLICATION_JSON_TYPE);

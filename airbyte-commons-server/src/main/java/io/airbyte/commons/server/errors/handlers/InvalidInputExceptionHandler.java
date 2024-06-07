@@ -2,7 +2,7 @@
  * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
-package io.airbyte.server.errors;
+package io.airbyte.commons.server.errors.handlers;
 
 import io.airbyte.api.model.generated.InvalidInputExceptionInfo;
 import io.airbyte.api.model.generated.InvalidInputProperty;

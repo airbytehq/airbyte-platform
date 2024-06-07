@@ -2,7 +2,7 @@
  * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
-package io.airbyte.server.errors;
+package io.airbyte.commons.server.errors.handlers;
 
 import io.airbyte.commons.server.errors.IdNotFoundKnownException;
 import io.airbyte.commons.server.errors.KnownException;

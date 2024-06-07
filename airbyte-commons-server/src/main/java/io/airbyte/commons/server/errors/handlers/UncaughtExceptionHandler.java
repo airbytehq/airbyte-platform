@@ -2,8 +2,9 @@
  * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
-package io.airbyte.commons.server.errors;
+package io.airbyte.commons.server.errors.handlers;
 
+import io.airbyte.commons.server.errors.KnownException;
 import io.micronaut.context.annotation.Requires;
 import io.micronaut.http.HttpRequest;
 import io.micronaut.http.HttpResponse;
@@ -16,21 +17,19 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Handles a missing id.
+ * Unanticipated exception. Treat it like an Internal Server Error.
  */
 @Produces
 @Singleton
-@Requires(classes = IdNotFoundKnownException.class)
-public class IdNotFoundExceptionHandler implements ExceptionHandler<IdNotFoundKnownException, HttpResponse> {
+@Requires(classes = Throwable.class)
+public class UncaughtExceptionHandler implements ExceptionHandler<Throwable, HttpResponse> {
 
-  private static final Logger LOGGER = LoggerFactory.getLogger(IdNotFoundExceptionHandler.class);
+  private static final Logger LOGGER = LoggerFactory.getLogger(UncaughtExceptionHandler.class);
 
   @Override
-  public HttpResponse handle(final HttpRequest request, final IdNotFoundKnownException exception) {
-    final IdNotFoundKnownException idnf = new IdNotFoundKnownException("Id not found: " + exception.getMessage(), exception);
-    LOGGER.error("Not found exception", idnf.getNotFoundKnownExceptionInfo());
-
-    return HttpResponse.status(HttpStatus.NOT_FOUND)
+  public HttpResponse handle(final HttpRequest request, final Throwable exception) {
+    LOGGER.error("Uncaught exception", exception);
+    return HttpResponse.status(HttpStatus.INTERNAL_SERVER_ERROR)
         .body(KnownException.infoFromThrowableWithMessage(exception, "Internal Server Error: " + exception.getMessage()))
         .contentType(MediaType.APPLICATION_JSON);
   }

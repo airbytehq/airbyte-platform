@@ -2,7 +2,7 @@
  * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
-package io.airbyte.commons.server.errors;
+package io.airbyte.commons.server.errors.handlers;
 
 import io.airbyte.commons.json.Jsons;
 import io.micronaut.http.HttpRequest;
