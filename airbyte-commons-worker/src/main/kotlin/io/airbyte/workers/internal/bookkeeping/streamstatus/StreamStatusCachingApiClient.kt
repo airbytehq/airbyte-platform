@@ -63,19 +63,19 @@ class StreamStatusCachingApiClient(
     val value = cache[key]
 
     if (value == null) {
-      logger.debug { "Creating status: ${key.toDisplayName()} - $runState" }
+      logger.info { "Creating status: ${key.toDisplayName()} - $runState" }
       val req = buildCreateReq(key.streamNamespace, key.streamName, runState, metadata)
 
       val resp = airbyteApiClient.streamStatusesApi.createStreamStatus(req)
       cache[key] = resp
     } else if (value.runState != runState) {
-      logger.debug { "Updating status: ${key.toDisplayName()} - $runState" }
+      logger.info { "Updating status: ${key.toDisplayName()} - $runState" }
       val req = buildUpdateReq(value.id, key.streamNamespace, key.streamName, runState, metadata)
 
       val resp = airbyteApiClient.streamStatusesApi.updateStreamStatus(req)
       cache[key] = resp
     } else {
-      logger.debug { "Stream ${key.toDisplayName()} is already set to $runState. Ignoring..." }
+      logger.info { "Stream ${key.toDisplayName()} is already set to $runState. Ignoring..." }
     }
   }
 

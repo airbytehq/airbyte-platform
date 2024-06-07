@@ -119,10 +119,13 @@ class StreamStatusTracker(
     key: StreamStatusKey,
     msg: AirbyteTraceMessage,
   ): StreamStatusValue {
+    logger.info { "Stream status TRACE received of status: ${msg.streamStatus.status} for stream ${key.toDisplayName()}" }
+
     return when (msg.streamStatus.status!!) {
       ProtocolEnum.STARTED -> store.setRunState(key, ApiEnum.RUNNING)
       ProtocolEnum.RUNNING -> {
         if (RateLimitedMessageHandler.isStreamStatusRateLimitedMessage(msg.streamStatus) && shouldProcessRateLimitedMessage()) {
+          logger.info { "Stream status TRACE with status RUNNING received of sub-type: ${ApiEnum.RATE_LIMITED} for stream ${key.toDisplayName()}" }
           store.setRunState(key, ApiEnum.RATE_LIMITED)
           store.setMetadata(key, RateLimitedMessageHandler.apiFromProtocol(msg.streamStatus))
         } else {
@@ -150,12 +153,12 @@ class StreamStatusTracker(
     msg: AirbyteStateMessage,
   ): StreamStatusValue {
     val id = StateWithId.getIdFromStateMessage(msg)
-    logger.debug { "STATE with id $id for ${key.toDisplayName()}" }
+    logger.info { "STATE with id $id for ${key.toDisplayName()}" }
 
     return if (!store.isDestComplete(key, id)) {
       store.setLatestStateId(key, id)
     } else {
-      logger.debug { "Destination complete for ${key.toDisplayName()}" }
+      logger.info { "Destination complete for ${key.toDisplayName()}" }
       store.setRunState(key, ApiEnum.COMPLETE)
     }
   }
