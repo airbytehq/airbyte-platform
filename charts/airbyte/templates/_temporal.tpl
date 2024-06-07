@@ -31,7 +31,7 @@ Temporal Configuration
 {{- end }}
 
 {{- define "airbyte.temporal.database.user.env" }}
-- name: POSTGRES_USER 
+- name: POSTGRES_USER
   valueFrom:
     secretKeyRef:
     {{- if .Values.global.database.userSecretKey }}
@@ -43,11 +43,22 @@ Temporal Configuration
 {{- end }}
 
 {{- define "airbyte.temporal.database.password.env" }}
-- name: POSTGRES_PWD 
+- name: POSTGRES_PWD
   valueFrom:
     secretKeyRef:
       name: {{ include "airbyte.database.secretName" . }}
       key: {{ include "airbyte.database.passwordSecretKey" . }}
+{{- end }}
+
+{{- define "airbyte.temporal.database.ssl.env" }}
+{{- if include "postgresql.tlsEnabled" . }}
+- name: SQL_TLS_ENABLED
+  value: "true"
+{{- if not (include "postgresql.disableHostVerification" .) }}
+- name: SQL_TLS_DISABLE_HOST_VERIFICATION
+  value: "true"
+{{- end }}
+{{- end }}
 {{- end }}
 
 {{- define "airbyte.temporal.database.envs" }}

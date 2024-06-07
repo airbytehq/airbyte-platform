@@ -48,12 +48,31 @@ spec:
               value: {{ .Values.postgresql.postgresqlUsername }}
             - name: PGDATA
               value: /var/lib/postgresql/data/pgdata
+            {{- if include "postgresql.tlsEnabled" . }}
+            - name: PGSSLCERT
+              value: /etc/ssl/certs/cert.crt
+            - name: PGSSLKEY
+              value: /etc/ssl/private/cert.key
+            - name: PGSSLROOTCERT
+              value: /etc/ssl/certs/ca.crt
+            {{- end }}
           ports:
             - containerPort: 5432
           securityContext: {{- toYaml .Values.postgresql.containerSecurityContext | nindent 12 }}
           volumeMounts:
             - name: airbyte-volume-db
               mountPath: /var/lib/postgresql/data
+            {{- if include "postgresql.tlsEnabled" . }}
+            - name: certs
+              mountPath: /etc/ssl/certs
+              subPath: cert.crt
+            - name: certs
+              mountPath: /etc/ssl/private
+              subPath: cert.key
+            - name: certs
+              mountPath: /etc/ssl/certs
+              subPath: ca.crt
+            {{- end }}
       {{- with .Values.postgresql.nodeSelector }}
       nodeSelector:
         {{- toYaml . | nindent 8 }}
@@ -67,6 +86,13 @@ spec:
         {{- toYaml . | nindent 8 }}
       {{- end }}
       securityContext: {{- toYaml .Values.postgresql.podSecurityContext | nindent 8 }}
+
+      {{- if include "postgresql.tlsEnabled" . }}
+      volumes:
+        - name: tls-secret
+          secret:
+            secretName: certificates-tls-secret
+      {{- end }}
 
   volumeClaimTemplates:
   - metadata:

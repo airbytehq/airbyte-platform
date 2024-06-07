@@ -417,3 +417,9 @@ Convert tags to a comma-separated list of key=value pairs.
 {{- join "," $result -}}
 {{- end -}}
 
+{{/*
+Check if internal postgres is in use and TLS is enabled.
+*/}}
+{{- define "postgresql.tlsEnabled" -}}
+{{- and .Values.postgresql.enabled .Values.postgresql.tls.enabled -}}
+{{- end -}}
