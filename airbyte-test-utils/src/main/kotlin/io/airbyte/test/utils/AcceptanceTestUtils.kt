@@ -19,7 +19,6 @@ import okhttp3.Interceptor
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.Response
-import okio.Buffer
 import org.openapitools.client.infrastructure.ClientException
 import org.openapitools.client.infrastructure.ServerException
 import java.io.IOException
@@ -94,7 +93,6 @@ object AcceptanceTestUtils {
             chain.proceed(builder.build())
           },
         )
-        .addInterceptor(LoggingInterceptor)
         .connectTimeout(Duration.ofSeconds(DEFAULT_TIMEOUT))
         .readTimeout(Duration.ofSeconds(DEFAULT_TIMEOUT))
         .build()
@@ -163,37 +161,5 @@ object AcceptanceTestUtils {
         .filter(streamFilter.orElse { true })
         .toList()
     return AirbyteCatalog(updatedStreams)
-  }
-
-  // logs http requests and responses
-  private object LoggingInterceptor : Interceptor {
-    override fun intercept(chain: Interceptor.Chain): Response {
-      val request: Request = chain.request()
-      val requestLogMessage =
-        buildString {
-          append("Request: ${request.method} ${request.url}")
-          request.body?.let { body ->
-            val buffer = Buffer()
-            body.writeTo(buffer)
-            append(" body: ${buffer.readUtf8()}")
-          }
-        }
-      logger.info(requestLogMessage)
-
-      val response: Response = chain.proceed(request)
-      val responseLogMessage =
-        buildString {
-          append("Response: ${response.code} ${request.url} ")
-          response.body?.let { body ->
-            val source = body.source()
-            source.request(Long.MAX_VALUE) // Buffer the entire body.
-            val buffer = source.buffer()
-            append(" body: ${buffer.clone().readUtf8()}")
-          }
-        }
-      logger.info(responseLogMessage)
-
-      return response
-    }
   }
 }
