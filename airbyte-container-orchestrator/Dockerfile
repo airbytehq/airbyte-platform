@@ -7,7 +7,7 @@ ADD airbyte-app.tar /app
 FROM airbyte/airbyte-base-java-worker-image:${JAVA_WORKER_BASE_IMAGE_VERSION}
 
 # Don't change this manually.  Bump version expects to make moves based on this string
-ARG VERSION=dev
+ARG VERSION=0.62.3
 
 ENV APPLICATION airbyte-container-orchestrator
 ENV VERSION=${VERSION}
