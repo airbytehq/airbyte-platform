@@ -24,7 +24,6 @@ import { useIntent } from "core/utils/rbac";
 
 import { useAnalyticsTrackFunctions } from "./useAnalyticsTrackFunctions";
 import { ConnectionFormServiceProvider } from "../ConnectionForm/ConnectionFormService";
-import { useExperiment } from "../Experiment";
 import { useNotificationService } from "../Notification";
 
 interface ConnectionEditProps {
@@ -67,7 +66,6 @@ const useConnectionEdit = ({ connectionId }: ConnectionEditProps): ConnectionEdi
   );
   const [catalog, setCatalog] = useState<ConnectionCatalog>(() => getConnectionCatalog(connection));
   const [schemaHasBeenRefreshed, setSchemaHasBeenRefreshed] = useState(false);
-  const platformSupportsRefreshes = useExperiment("platform.activate-refreshes", true);
 
   const discardRefreshedSchema = useCallback(() => {
     setConnection((connection) => ({
@@ -174,10 +172,6 @@ const useConnectionEdit = ({ connectionId }: ConnectionEditProps): ConnectionEdi
     const streamsSupportingTruncateRefresh: ConnectionStream[] = [];
 
     for (const stream of catalog.syncCatalog.streams) {
-      if (!platformSupportsRefreshes) {
-        break;
-      }
-
       if (!stream.stream || !stream.config) {
         continue;
       }
@@ -211,7 +205,7 @@ const useConnectionEdit = ({ connectionId }: ConnectionEditProps): ConnectionEdi
       streamsSupportingMergeRefresh: sortedStreamsSupportingMergeRefresh,
       streamsSupportingTruncateRefresh: sortedStreamsSupportingTruncateRefresh,
     };
-  }, [catalog.syncCatalog.streams, destinationSupportsRefreshes, platformSupportsRefreshes]);
+  }, [catalog.syncCatalog.streams, destinationSupportsRefreshes]);
 
   return {
     connection,

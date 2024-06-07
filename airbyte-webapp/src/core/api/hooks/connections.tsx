@@ -222,16 +222,11 @@ export const useRefreshConnectionStreams = (connectionId: string) => {
   const queryClient = useQueryClient();
   const requestOptions = useRequestOptions();
   const setConnectionRunState = useSetConnectionRunState();
-  const platformSupportsRefresh = useExperiment("platform.activate-refreshes", true);
   const { registerNotification } = useNotificationService();
   const { formatMessage } = useIntl();
 
   return useMutation(
     async ({ streams, refreshMode }: { streams?: ConnectionStream[]; refreshMode: RefreshMode }) => {
-      if (!platformSupportsRefresh) {
-        return;
-      }
-
       await refreshConnectionStream({ connectionId, streams, refreshMode }, requestOptions);
     },
     {

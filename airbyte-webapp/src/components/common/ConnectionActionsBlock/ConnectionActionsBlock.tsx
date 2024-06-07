@@ -16,7 +16,6 @@ import { ConnectionStatus } from "core/api/types/AirbyteClient";
 import { useConfirmationModalService } from "hooks/services/ConfirmationModal";
 import { useConnectionEditService } from "hooks/services/ConnectionEdit/ConnectionEditService";
 import { useConnectionFormService } from "hooks/services/ConnectionForm/ConnectionFormService";
-import { useExperiment } from "hooks/services/Experiment";
 import { useModalService } from "hooks/services/Modal";
 import { useNotificationService } from "hooks/services/Notification";
 import { useDeleteModal } from "hooks/useDeleteModal";
@@ -29,7 +28,6 @@ export const ConnectionActionsBlock: React.FC = () => {
   const { openModal } = useModalService();
   const { registerNotification } = useNotificationService();
   const { formatMessage } = useIntl();
-  const isRefreshEnabled = useExperiment("platform.activate-refreshes", true);
   const { supportsRefreshes: destinationSupportsRefreshes } = useDestinationDefinitionVersion(
     connection.destination.destinationId
   );
@@ -132,32 +130,30 @@ export const ConnectionActionsBlock: React.FC = () => {
   return (
     <Card>
       <FlexContainer direction="column" gap="xl">
-        {isRefreshEnabled && (
-          <FormFieldLayout alignItems="center" nextSizing>
-            <FlexContainer direction="column" gap="xs">
-              <Text size="lg">
-                <FormattedMessage id="connection.actions.refreshData" />
-              </Text>
-              <Text size="xs" color="grey">
-                <FormattedMessage id="connection.actions.refreshData.description" />
-              </Text>
-            </FlexContainer>
-            {streamsByRefreshType.streamsSupportingMergeRefresh.length > 0 ||
-            streamsByRefreshType.streamsSupportingTruncateRefresh.length > 0 ? (
-              <RefreshConnectionButton />
-            ) : (
-              <Tooltip control={<RefreshConnectionButton />}>
-                <FormattedMessage
-                  id={
-                    destinationSupportsRefreshes
-                      ? "connection.actions.refreshData.notAvailable.streams"
-                      : "connection.actions.refreshData.notAvailable.destination"
-                  }
-                />
-              </Tooltip>
-            )}
-          </FormFieldLayout>
-        )}
+        <FormFieldLayout alignItems="center" nextSizing>
+          <FlexContainer direction="column" gap="xs">
+            <Text size="lg">
+              <FormattedMessage id="connection.actions.refreshData" />
+            </Text>
+            <Text size="xs" color="grey">
+              <FormattedMessage id="connection.actions.refreshData.description" />
+            </Text>
+          </FlexContainer>
+          {streamsByRefreshType.streamsSupportingMergeRefresh.length > 0 ||
+          streamsByRefreshType.streamsSupportingTruncateRefresh.length > 0 ? (
+            <RefreshConnectionButton />
+          ) : (
+            <Tooltip control={<RefreshConnectionButton />}>
+              <FormattedMessage
+                id={
+                  destinationSupportsRefreshes
+                    ? "connection.actions.refreshData.notAvailable.streams"
+                    : "connection.actions.refreshData.notAvailable.destination"
+                }
+              />
+            </Tooltip>
+          )}
+        </FormFieldLayout>
 
         <FormFieldLayout alignItems="center" nextSizing>
           <FlexContainer direction="column" gap="xs">

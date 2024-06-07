@@ -14,7 +14,6 @@ import { useDestinationDefinitionVersion } from "core/api";
 import { DestinationSyncMode, SyncMode } from "core/api/types/AirbyteClient";
 import { useConfirmationModalService } from "hooks/services/ConfirmationModal";
 import { useConnectionFormService } from "hooks/services/ConnectionForm/ConnectionFormService";
-import { useExperiment } from "hooks/services/Experiment";
 import { useModalService } from "hooks/services/Modal";
 import { ConnectionRoutePaths } from "pages/routePaths";
 
@@ -40,7 +39,6 @@ export const StreamActionsMenu: React.FC<StreamActionsMenuProps> = ({ streamStat
     refreshStreams,
   } = useConnectionSyncContext();
 
-  const newRefreshTypes = useExperiment("platform.activate-refreshes", true);
   const { supportsRefreshes: destinationSupportsRefreshes } = useDestinationDefinitionVersion(
     connection.destination.destinationId
   );
@@ -78,7 +76,7 @@ export const StreamActionsMenu: React.FC<StreamActionsMenuProps> = ({ streamStat
   }, [catalogStream?.config?.destinationSyncMode, catalogStream?.config?.syncMode, destinationSupportsRefreshes]);
 
   // the platform must support refresh operations AND the stream must support at least one of the refresh types
-  const showRefreshOption = newRefreshTypes && (canMerge || canTruncate);
+  const showRefreshOption = canMerge || canTruncate;
 
   if (!catalogStream) {
     return null;

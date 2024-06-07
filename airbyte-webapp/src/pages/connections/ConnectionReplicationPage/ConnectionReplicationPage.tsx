@@ -95,7 +95,6 @@ export const ConnectionReplicationPage: React.FC = () => {
   useTrackPage(PageTrackingCodes.CONNECTIONS_ITEM_REPLICATION);
   const isSyncCatalogV2Enabled = useExperiment("connection.syncCatalogV2", false);
   const { trackSchemaEdit } = useAnalyticsTrackFunctions();
-  const isRefreshConnectionEnabled = useExperiment("platform.activate-refreshes", true);
 
   const getStateType = useGetStateTypeQuery();
 
@@ -156,10 +155,8 @@ export const ConnectionReplicationPage: React.FC = () => {
 
       try {
         if (shouldRecommendRefresh) {
-          if (
-            !isRefreshConnectionEnabled ||
-            (isRefreshConnectionEnabled && !destinationSupportsRefreshes) // if the destination doesn't support refreshes, we need to clear data instead
-          ) {
+          // if the destination doesn't support refreshes, we need to clear data instead
+          if (!destinationSupportsRefreshes) {
             // recommend clearing data
             const stateType = await getStateType(connection.connectionId);
             const result = await openModal<boolean>({
@@ -198,7 +195,6 @@ export const ConnectionReplicationPage: React.FC = () => {
     [
       connection,
       setSubmitError,
-      isRefreshConnectionEnabled,
       destinationSupportsRefreshes,
       getStateType,
       openModal,
