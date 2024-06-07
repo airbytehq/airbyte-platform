@@ -301,6 +301,38 @@ describe("computeStreamStatus", () => {
       });
     });
 
+    it('returns "OnTrack" when the most recent sync failed but had a successful sync within the 2x window', () => {
+      const failedStatus = buildStreamStatusRead({
+        runState: StreamStatusRunState.INCOMPLETE,
+        incompleteRunCause: StreamStatusIncompleteRunCause.FAILED,
+        transitionedAt: oneHourAgo,
+      });
+      const successStatus = buildStreamStatusRead({
+        runState: StreamStatusRunState.COMPLETE,
+        transitionedAt: threeHoursAgo,
+      });
+      const result = computeStreamStatus({
+        statuses: [failedStatus, successStatus],
+        recordsExtracted: 0,
+        recordsLoaded: 0,
+        scheduleType: ConnectionScheduleType.basic,
+        scheduleData: basicScheduleData,
+        hasBreakingSchemaChange: false,
+        lateMultiplier: 2,
+        errorMultiplier: 2,
+        showSyncProgress: false,
+        isSyncing: false,
+      });
+      expect(result).toEqual({
+        status: ConnectionStatusIndicatorStatus.OnTrack,
+        isRunning: false,
+        lastSuccessfulSync: successStatus,
+        recordsExtracted: 0,
+        recordsLoaded: 0,
+        streamSyncStartedAt: undefined,
+      });
+    });
+
     it('returns "Late" when the most recent sync was successful but two late', () => {
       const status = buildStreamStatusRead({ runState: StreamStatusRunState.COMPLETE, transitionedAt: fiveHoursAgo });
       const result = computeStreamStatus({
@@ -430,6 +462,37 @@ describe("computeStreamStatus", () => {
         status: ConnectionStatusIndicatorStatus.Error,
         isRunning: false,
         lastSuccessfulSync: undefined,
+        recordsExtracted: 0,
+        recordsLoaded: 0,
+        streamSyncStartedAt: undefined,
+      });
+    });
+
+    it('returns "Error" as the most recent sync failed, even though there successful sync within the 2x window, as the scheduling is not basic', () => {
+      const failedStatus = buildStreamStatusRead({
+        runState: StreamStatusRunState.INCOMPLETE,
+        incompleteRunCause: StreamStatusIncompleteRunCause.FAILED,
+        transitionedAt: oneHourAgo,
+      });
+      const successStatus = buildStreamStatusRead({
+        runState: StreamStatusRunState.COMPLETE,
+        transitionedAt: threeHoursAgo,
+      });
+      const result = computeStreamStatus({
+        statuses: [failedStatus, successStatus],
+        recordsExtracted: 0,
+        recordsLoaded: 0,
+        scheduleType: ConnectionScheduleType.manual,
+        hasBreakingSchemaChange: false,
+        lateMultiplier: 2,
+        errorMultiplier: 2,
+        showSyncProgress: false,
+        isSyncing: false,
+      });
+      expect(result).toEqual({
+        status: ConnectionStatusIndicatorStatus.Error,
+        isRunning: false,
+        lastSuccessfulSync: successStatus,
         recordsExtracted: 0,
         recordsLoaded: 0,
         streamSyncStartedAt: undefined,

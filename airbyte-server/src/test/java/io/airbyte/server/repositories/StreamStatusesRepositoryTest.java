@@ -371,39 +371,52 @@ class StreamStatusesRepositoryTest {
 
   @Test
   void testFindAllPerRunStateByConnectionId() {
-    final var p1 = Fixtures.pending().transitionedAt(Fixtures.timestamp(1)).connectionId(Fixtures.connectionId1).build();
-    final var p2 = Fixtures.pending().transitionedAt(Fixtures.timestamp(2)).connectionId(Fixtures.connectionId1).streamName(Fixtures.name2).build();
-    final var p3 = Fixtures.pending().transitionedAt(Fixtures.timestamp(3)).connectionId(Fixtures.connectionId1).build();
-    final var p4 = Fixtures.pending().transitionedAt(Fixtures.timestamp(4)).connectionId(Fixtures.connectionId2).build();
+    final var p1 = Fixtures.pending().transitionedAt(Fixtures.timestamp(1)).connectionId(Fixtures.connectionId1).jobId(Fixtures.jobId6).build();
+    final var p2 = Fixtures.pending().transitionedAt(Fixtures.timestamp(2)).connectionId(Fixtures.connectionId1).jobId(Fixtures.jobId6)
+        .streamName(Fixtures.name2).build();
+    final var p3 = Fixtures.pending().transitionedAt(Fixtures.timestamp(3)).connectionId(Fixtures.connectionId1).jobId(Fixtures.jobId6).build();
+    final var p4 = Fixtures.pending().transitionedAt(Fixtures.timestamp(4)).connectionId(Fixtures.connectionId2).jobId(Fixtures.jobId6).build();
 
-    final var r1 = Fixtures.running().transitionedAt(Fixtures.timestamp(1)).connectionId(Fixtures.connectionId1).build();
-    final var r2 = Fixtures.running().transitionedAt(Fixtures.timestamp(2)).connectionId(Fixtures.connectionId1).build();
-    final var r3 = Fixtures.running().transitionedAt(Fixtures.timestamp(3)).connectionId(Fixtures.connectionId2).streamName(Fixtures.name2).build();
-    final var r4 = Fixtures.running().transitionedAt(Fixtures.timestamp(4)).connectionId(Fixtures.connectionId2).build();
+    final var r1 = Fixtures.running().transitionedAt(Fixtures.timestamp(1)).connectionId(Fixtures.connectionId1).jobId(Fixtures.jobId6).build();
+    final var r2 = Fixtures.running().transitionedAt(Fixtures.timestamp(2)).connectionId(Fixtures.connectionId1).jobId(Fixtures.jobId6).build();
+    final var r3 = Fixtures.running().transitionedAt(Fixtures.timestamp(3)).connectionId(Fixtures.connectionId2).jobId(Fixtures.jobId6)
+        .streamName(Fixtures.name2).build();
+    final var r4 = Fixtures.running().transitionedAt(Fixtures.timestamp(4)).connectionId(Fixtures.connectionId2).jobId(Fixtures.jobId6).build();
 
-    final var rate1 = Fixtures.rateLimited().transitionedAt(Fixtures.timestamp(1)).connectionId(Fixtures.connectionId1).build();
-    final var rate2 = Fixtures.rateLimited().transitionedAt(Fixtures.timestamp(2)).connectionId(Fixtures.connectionId1).build();
+    final var rate1 =
+        Fixtures.rateLimited().transitionedAt(Fixtures.timestamp(1)).connectionId(Fixtures.connectionId1).jobId(Fixtures.jobId6).build();
+    final var rate2 =
+        Fixtures.rateLimited().transitionedAt(Fixtures.timestamp(2)).connectionId(Fixtures.connectionId1).jobId(Fixtures.jobId6).build();
     final var rate3 =
-        Fixtures.rateLimited().transitionedAt(Fixtures.timestamp(3)).connectionId(Fixtures.connectionId2).streamName(Fixtures.name2).build();
-    final var rate4 = Fixtures.rateLimited().transitionedAt(Fixtures.timestamp(4)).connectionId(Fixtures.connectionId2).build();
+        Fixtures.rateLimited().transitionedAt(Fixtures.timestamp(3)).connectionId(Fixtures.connectionId2).streamName(Fixtures.name2)
+            .jobId(Fixtures.jobId6).build();
+    final var rate4 =
+        Fixtures.rateLimited().transitionedAt(Fixtures.timestamp(4)).connectionId(Fixtures.connectionId2).jobId(Fixtures.jobId6).build();
 
-    final var c1 = Fixtures.complete().transitionedAt(Fixtures.timestamp(1)).connectionId(Fixtures.connectionId1).build();
-    final var c2 = Fixtures.complete().transitionedAt(Fixtures.timestamp(2)).connectionId(Fixtures.connectionId2).build();
-    final var c3 = Fixtures.complete().transitionedAt(Fixtures.timestamp(3)).connectionId(Fixtures.connectionId2).streamName(Fixtures.name2).build();
-    final var c4 = Fixtures.complete().transitionedAt(Fixtures.timestamp(4)).connectionId(Fixtures.connectionId2).build();
+    final var c1 = Fixtures.complete().transitionedAt(Fixtures.timestamp(1)).connectionId(Fixtures.connectionId1).jobId(Fixtures.jobId6).build();
+    final var c2 = Fixtures.complete().transitionedAt(Fixtures.timestamp(2)).connectionId(Fixtures.connectionId2).jobId(Fixtures.jobId6).build();
+    final var c3 = Fixtures.complete().transitionedAt(Fixtures.timestamp(3)).connectionId(Fixtures.connectionId2).jobId(Fixtures.jobId6)
+        .streamName(Fixtures.name2).build();
+    final var c4 = Fixtures.complete().transitionedAt(Fixtures.timestamp(4)).connectionId(Fixtures.connectionId2).jobId(Fixtures.jobId6).build();
 
-    final var if1 = Fixtures.failed().transitionedAt(Fixtures.timestamp(1)).connectionId(Fixtures.connectionId2).build();
-    final var if2 = Fixtures.failed().transitionedAt(Fixtures.timestamp(2)).connectionId(Fixtures.connectionId2).build();
-    final var if3 = Fixtures.failed().transitionedAt(Fixtures.timestamp(3)).connectionId(Fixtures.connectionId1).streamNamespace("test2_").build();
-    final var if4 = Fixtures.failed().transitionedAt(Fixtures.timestamp(4)).connectionId(Fixtures.connectionId1).build();
+    final var if1 = Fixtures.failed().transitionedAt(Fixtures.timestamp(1)).connectionId(Fixtures.connectionId2).jobId(Fixtures.jobId6).build();
+    final var if2 = Fixtures.failed().transitionedAt(Fixtures.timestamp(2)).connectionId(Fixtures.connectionId2).jobId(Fixtures.jobId6).build();
+    final var if3 = Fixtures.failed().transitionedAt(Fixtures.timestamp(3)).connectionId(Fixtures.connectionId1).jobId(Fixtures.jobId6)
+        .streamNamespace("test2_").build();
+    final var if4 = Fixtures.failed().transitionedAt(Fixtures.timestamp(4)).connectionId(Fixtures.connectionId1).jobId(Fixtures.jobId6).build();
 
-    final var ic1 = Fixtures.canceled().transitionedAt(Fixtures.timestamp(1)).connectionId(Fixtures.connectionId1).build();
-    final var ic2 = Fixtures.canceled().transitionedAt(Fixtures.timestamp(2)).connectionId(Fixtures.connectionId1).streamName(Fixtures.name2).build();
-    final var ic3 = Fixtures.canceled().transitionedAt(Fixtures.timestamp(3)).connectionId(Fixtures.connectionId1).streamName(Fixtures.name2).build();
-    final var ic4 = Fixtures.canceled().transitionedAt(Fixtures.timestamp(4)).connectionId(Fixtures.connectionId1).build();
+    final var ic1 = Fixtures.canceled().transitionedAt(Fixtures.timestamp(1)).connectionId(Fixtures.connectionId1).jobId(Fixtures.jobId6).build();
+    final var ic2 = Fixtures.canceled().transitionedAt(Fixtures.timestamp(2)).connectionId(Fixtures.connectionId1).jobId(Fixtures.jobId6)
+        .streamName(Fixtures.name2).build();
+    final var ic3 = Fixtures.canceled().transitionedAt(Fixtures.timestamp(3)).connectionId(Fixtures.connectionId1).jobId(Fixtures.jobId6)
+        .streamName(Fixtures.name2).build();
+    final var ic4 = Fixtures.canceled().transitionedAt(Fixtures.timestamp(4)).connectionId(Fixtures.connectionId1).jobId(Fixtures.jobId6).build();
 
-    final var reset1 = Fixtures.reset().transitionedAt(Fixtures.timestamp(1)).connectionId(Fixtures.connectionId1).build();
-    final var reset2 = Fixtures.reset().transitionedAt(Fixtures.timestamp(2)).connectionId(Fixtures.connectionId1).build();
+    final var reset1 = Fixtures.reset().transitionedAt(Fixtures.timestamp(1)).connectionId(Fixtures.connectionId1).jobId(Fixtures.jobId6).build();
+    final var reset2 = Fixtures.reset().transitionedAt(Fixtures.timestamp(2)).connectionId(Fixtures.connectionId1).jobId(Fixtures.jobId6).build();
+
+    jooqDslContext.execute(
+        "insert into jobs (id, scope, status, config_type) values (" + Fixtures.jobId6 + ", '" + Fixtures.connectionId1 + "', 'running', 'sync')");
 
     repo.saveAll(
         List.of(p1, p2, p3, p4, r1, r2, r3, r4, rate1, rate2, rate3, rate4, c1,
@@ -485,6 +498,7 @@ class StreamStatusesRepositoryTest {
     static Long jobId3 = ThreadLocalRandom.current().nextLong();
     static Long jobId4 = ThreadLocalRandom.current().nextLong();
     static Long jobId5 = ThreadLocalRandom.current().nextLong();
+    static Long jobId6 = ThreadLocalRandom.current().nextLong();
 
     // java defaults to 9 precision while postgres defaults to 6
     // this provides us with 6 decimal precision for comparison purposes
