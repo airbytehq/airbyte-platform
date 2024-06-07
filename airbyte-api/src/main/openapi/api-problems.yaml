@@ -257,6 +257,109 @@ components:
               default: The request could not be understood by the server due to malformed syntax.
             data:
               $ref: "#/components/schemas/ProblemMessageData"
+    CronValidationMissingCronProblemResponse:
+      x-implements: io.airbyte.api.problems.ProblemResponse
+      type: object
+      allOf:
+        - $ref: "#/components/schemas/BaseProblemFields"
+        - type: object
+          properties:
+            status:
+              type: integer
+              default: 400
+            type:
+              type: string
+              default: error:cron-validation/missing-cron-data
+            title:
+              type: string
+              default: Cron data is missing
+            detail:
+              type: string
+              default: If schedule type is cron, scheduleData.cron must be provided.
+    CronValidationMissingComponentProblemResponse:
+      x-implements: io.airbyte.api.problems.ProblemResponse
+      type: object
+      allOf:
+        - $ref: "#/components/schemas/BaseProblemFields"
+        - type: object
+          properties:
+            status:
+              type: integer
+              default: 400
+            type:
+              type: string
+              default: error:cron-validation/missing-component
+            title:
+              type: string
+              default: Cron is missing a component
+            detail:
+              type: string
+              default: The cron must specify a cron expression and a timezone.
+            data:
+              $ref: "#/components/schemas/ProblemCronData"
+    CronValidationUnsupportedTimezoneProblemResponse:
+      x-implements: io.airbyte.api.problems.ProblemResponse
+      type: object
+      allOf:
+        - $ref: "#/components/schemas/BaseProblemFields"
+        - type: object
+          properties:
+            status:
+              type: integer
+              default: 400
+            type:
+              type: string
+              default: error:cron-validation/unsupported-timezone
+            title:
+              type: string
+              default: Unsupported cron timezone
+            detail:
+              type: string
+              default: Etc/ timezones are not supported
+            data:
+              $ref: "#/components/schemas/ProblemCronTimezoneData"
+    CronValidationInvalidExpressionProblemResponse:
+      x-implements: io.airbyte.api.problems.ProblemResponse
+      type: object
+      allOf:
+        - $ref: "#/components/schemas/BaseProblemFields"
+        - type: object
+          properties:
+            status:
+              type: integer
+              default: 400
+            type:
+              type: string
+              default: error:cron-validation/invalid-expression
+            title:
+              type: string
+              default: Invalid cron expression
+            detail:
+              type: string
+              default: The cron expression is invalid
+            data:
+              $ref: "#/components/schemas/ProblemCronExpressionData"
+    CronValidationInvalidTimezoneProblemResponse:
+      x-implements: io.airbyte.api.problems.ProblemResponse
+      type: object
+      allOf:
+        - $ref: "#/components/schemas/BaseProblemFields"
+        - type: object
+          properties:
+            status:
+              type: integer
+              default: 400
+            type:
+              type: string
+              default: error:cron-validation/invalid-timezone
+            title:
+              type: string
+              default: Invalid cron timezone
+            detail:
+              type: string
+              default: The specified cron timezone is invalid
+            data:
+              $ref: "#/components/schemas/ProblemCronTimezoneData"
     ServiceUnavailableProblemResponse:
       x-implements: io.airbyte.api.problems.ProblemResponse
       type: object
@@ -297,6 +400,35 @@ components:
               default: The requested resource could not be found.
             data:
               $ref: "#/components/schemas/ProblemResourceData"
+    ProblemCronData:
+      type: object
+      properties:
+        connectionId:
+          type: string
+        cronExpression:
+          type: string
+        cronTimezone:
+          type: string
+    ProblemCronExpressionData:
+      type: object
+      required:
+        - connectionId
+        - cronExpression
+      properties:
+        connectionId:
+          type: string
+        cronExpression:
+          type: string
+    ProblemCronTimezoneData:
+      type: object
+      required:
+        - connectionId
+        - cronTimezone
+      properties:
+        connectionId:
+          type: string
+        cronTimezone:
+          type: string
     ProblemRedirectURLData:
       type: object
       required:

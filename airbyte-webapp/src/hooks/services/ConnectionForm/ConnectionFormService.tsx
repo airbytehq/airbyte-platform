@@ -94,10 +94,7 @@ const useConnectionForm = ({
   const getErrorMessage = useCallback<ConnectionFormHook["getErrorMessage"]>(
     (formValid, errors) => {
       if (submitError) {
-        if (
-          submitError instanceof HttpError &&
-          submitError.response.message.toLowerCase().includes("invalid cron expression")
-        ) {
+        if (submitError instanceof HttpError && submitError.response.type?.includes("error:cron-validation")) {
           // Handle cron expressions errors with an explicit error
           return formatMessage(
             { id: "form.cronExpression.invalid" },

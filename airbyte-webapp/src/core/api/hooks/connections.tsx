@@ -391,7 +391,7 @@ export const useUpdateConnection = () => {
         }
 
         if (error instanceof HttpError) {
-          if (error.response.message.toLowerCase().includes("invalid cron expression")) {
+          if (error.response.type?.includes("error:cron-validation")) {
             return registerNotification({
               id: "update-connection-cron-error",
               type: "error",
