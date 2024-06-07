@@ -15,7 +15,8 @@ import io.airbyte.metrics.lib.OssMetricsRegistry;
 import io.micronaut.scheduling.annotation.Scheduled;
 import jakarta.inject.Named;
 import jakarta.inject.Singleton;
-import lombok.extern.slf4j.Slf4j;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Declarative Sources Updater.
@@ -23,8 +24,9 @@ import lombok.extern.slf4j.Slf4j;
  * Calls the DeclarativeSourceUpdater to update the declarative sources at an interval (10m).
  */
 @Singleton
-@Slf4j
 public class DeclarativeSourcesUpdater {
+
+  private static final Logger log = LoggerFactory.getLogger(DeclarativeSourcesUpdater.class);
 
   private final DeclarativeSourceUpdater declarativeSourceUpdater;
   private final MetricClient metricClient;

@@ -28,17 +28,19 @@ import java.time.OffsetDateTime;
 import java.util.Date;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
-import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.filefilter.AgeFileFilter;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Delete old files that accumulate in docker.
  */
 @Singleton
-@Slf4j
 @Requires(notEnv = Environment.KUBERNETES)
 public class WorkspaceCleaner {
+
+  private static final Logger log = LoggerFactory.getLogger(WorkspaceCleaner.class);
 
   private final Path workspaceRoot;
   private final long maxAgeFilesInDays;

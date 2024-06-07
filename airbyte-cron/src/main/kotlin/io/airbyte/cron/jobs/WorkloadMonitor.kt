@@ -159,7 +159,13 @@ open class WorkloadMonitor(
       var status = "fail"
       try {
         logger.info { "Cancelling workload ${it.id}, reason: $reason" }
-        workloadApiClient.workloadApi.workloadFailure(WorkloadFailureRequest(workloadId = it.id, reason = reason, source = source))
+        workloadApiClient.workloadApi.workloadFailure(
+          WorkloadFailureRequest(
+            workloadId = it.id,
+            reason = reason,
+            source = source,
+          ),
+        )
         status = "ok"
       } catch (e: Exception) {
         logger.warn(e) { "Failed to cancel workload ${it.id}" }

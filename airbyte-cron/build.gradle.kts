@@ -4,6 +4,7 @@ plugins {
   id("io.airbyte.gradle.jvm.app")
   id("io.airbyte.gradle.docker")
   id("io.airbyte.gradle.publish")
+  kotlin("kapt")
 }
 
 dependencies {
@@ -11,7 +12,9 @@ dependencies {
   annotationProcessor(libs.lombok) // Lombok must be added BEFORE Micronaut
   annotationProcessor(platform(libs.micronaut.platform))
   annotationProcessor(libs.bundles.micronaut.annotation.processor)
-  ksp(libs.bundles.micronaut.annotation.processor)
+
+  kapt(platform(libs.micronaut.platform))
+  kapt(libs.bundles.micronaut.annotation.processor)
 
   implementation(platform(libs.micronaut.platform))
   implementation(libs.bundles.micronaut)
@@ -73,6 +76,14 @@ airbyte {
   docker {
     imageName = "cron"
   }
+
+  ksp {
+    annotations = listOf("io.airbyte.metrics.annotations.Instrument", "io.airbyte.metrics.annotations.Tag")
+  }
+}
+
+kapt {
+  keepJavacAnnotationProcessors = true
 }
 
 // The DuplicatesStrategy will be required while this module is mixture of kotlin and java _with_ lombok dependencies.
