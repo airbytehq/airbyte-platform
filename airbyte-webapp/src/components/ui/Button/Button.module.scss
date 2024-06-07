@@ -254,6 +254,33 @@
     }
   }
 
+  &.typeClearDark {
+    background-color: colors.$transparentColor;
+    color: colors.$grey-500;
+    box-shadow: none;
+    padding: 0;
+
+    & .buttonIcon {
+      color: colors.$grey-400;
+    }
+
+    &:hover {
+      color: colors.$grey-600;
+
+      & .buttonIcon {
+        color: colors.$grey-500;
+      }
+    }
+
+    &:active {
+      color: colors.$grey-600;
+
+      & .buttonIcon {
+        color: colors.$grey-500;
+      }
+    }
+  }
+
   &.link {
     font: inherit;
     padding: 0;

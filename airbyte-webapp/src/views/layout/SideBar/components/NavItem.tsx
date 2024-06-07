@@ -32,7 +32,7 @@ interface ButtonNavItemProps extends NavItemBaseProps {
 type NavItemProps = LinkNavItemProps | ButtonNavItemProps;
 
 interface NavItemInnerProps {
-  label: React.ReactNode;
+  label?: React.ReactNode;
   icon: IconProps["type"];
   withNotification?: boolean;
   isActive?: boolean;
@@ -45,9 +45,11 @@ const NavItemInner: React.FC<NavItemInnerProps> = ({ icon, label, withNotificati
       <span className={styles.icon}>
         <Icon type={icon} />
       </span>
-      <Text size="sm" color={isActive ? "darkBlue" : "grey500"} bold className={styles.label}>
-        {label}
-      </Text>
+      {label && (
+        <Text size="sm" color={isActive ? "darkBlue" : "grey500"} bold className={styles.label}>
+          {label}
+        </Text>
+      )}
       {withBadge && (
         <Badge variant="blue" className={styles.badge}>
           {withBadge === "beta" && <FormattedMessage id="sidebar.beta" />}

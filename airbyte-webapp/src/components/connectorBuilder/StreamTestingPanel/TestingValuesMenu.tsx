@@ -75,7 +75,7 @@ export const TestingValuesMenu: React.FC<TestingValuesMenuProps> = ({ testingVal
             )}
           </>
         }
-        placement={mode === "yaml" ? "left" : "top"}
+        placement="left"
         containerClassName={styles.container}
       >
         {spec ? (

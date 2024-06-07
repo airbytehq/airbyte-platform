@@ -1,7 +1,8 @@
 import { appendRandomString } from "@cy/commands/common";
 
 const builderLink = "a[data-testid='builderLink']";
-const nameInput = "input[name='name']";
+const nameLabel = "[data-testid='connector-name-label']";
+const nameInput = "[data-testid='connector-name-input']";
 
 describe("running the connector builder on cloud", () => {
   let connectorName = "";
@@ -30,6 +31,7 @@ describe("running the connector builder on cloud", () => {
   // without needing to rely on an actual API or set up a mock server
   it("returns an error when trying to run against localhost", () => {
     cy.get("button[data-testid='start-from-scratch']", { timeout: Cypress.config("pageLoadTimeout") }).click();
+    cy.get(nameLabel).first().click();
     cy.get(nameInput, { timeout: Cypress.config("pageLoadTimeout") }).clear();
     cy.get(nameInput).type(connectorName);
     cy.get("input[name='formValues.global.urlBase']").type("https://localhost:8000");

@@ -2,6 +2,8 @@ import snakeCase from "lodash/snakeCase";
 import { FormattedMessage } from "react-intl";
 
 import { Button } from "components/ui/Button";
+import { FlexContainer } from "components/ui/Flex";
+import { Icon } from "components/ui/Icon";
 import { Tooltip } from "components/ui/Tooltip";
 
 import { Action, Namespace, useAnalyticsService } from "core/services/analytics";
@@ -12,8 +14,8 @@ import {
 } from "services/connectorBuilder/ConnectorBuilderStateService";
 
 import styles from "./DownloadYamlButton.module.scss";
-import { useBuilderWatch } from "./types";
-import { useBuilderErrors } from "./useBuilderErrors";
+import { useBuilderWatch } from "../types";
+import { useBuilderErrors } from "../useBuilderErrors";
 
 interface DownloadYamlButtonProps {
   className?: string;
@@ -71,7 +73,10 @@ export const DownloadYamlButton: React.FC<DownloadYamlButtonProps> = ({ classNam
       data-testid="download-yaml-button"
       type="button"
     >
-      <FormattedMessage id="connectorBuilder.downloadYaml" />
+      <FlexContainer alignItems="flex-end" gap="sm">
+        <FormattedMessage id="connectorBuilder.downloadYaml" />
+        <Icon type="export" size="sm" />
+      </FlexContainer>
     </Button>
   );
 

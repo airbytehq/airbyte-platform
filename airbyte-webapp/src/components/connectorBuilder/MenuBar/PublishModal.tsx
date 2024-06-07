@@ -15,10 +15,10 @@ import { Action, Namespace, useAnalyticsService } from "core/services/analytics"
 import { useNotificationService } from "hooks/services/Notification";
 import { useConnectorBuilderFormState } from "services/connectorBuilder/ConnectorBuilderStateService";
 
-import { BuilderField } from "./Builder/BuilderField";
-import { ConnectorImage } from "./ConnectorImage";
 import styles from "./PublishModal.module.scss";
-import { useBuilderWatch } from "./types";
+import { BuilderField } from "../Builder/BuilderField";
+import { ConnectorImage } from "../ConnectorImage";
+import { useBuilderWatch } from "../types";
 
 const NOTIFICATION_ID = "connectorBuilder.publish";
 

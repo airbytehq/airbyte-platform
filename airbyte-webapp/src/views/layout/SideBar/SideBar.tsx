@@ -1,6 +1,7 @@
 import classNames from "classnames";
 import { PropsWithChildren } from "react";
 import { FormattedMessage, useIntl } from "react-intl";
+import { matchPath, useLocation } from "react-router-dom";
 
 import { AdminWorkspaceWarning } from "components/ui/AdminWorkspaceWarning";
 import { FlexContainer } from "components/ui/Flex";
@@ -12,6 +13,7 @@ import type { WorkspaceFetcher } from "components/workspace/WorkspacesPickerList
 import { useAuthService } from "core/services/auth";
 import { FeatureItem, IfFeatureEnabled } from "core/services/features";
 import { CloudRoutes } from "packages/cloud/cloudRoutePaths";
+import { ConnectorBuilderRoutePaths } from "pages/connectorBuilder/ConnectorBuilderRoutes";
 import { RoutePaths } from "pages/routePaths";
 
 import { AirbyteHomeLink } from "./AirbyteHomeLink";
@@ -26,6 +28,10 @@ interface SideBarProps {
   settingHighlight?: boolean;
 }
 
+const HIDDEN_SIDEBAR_PATHS = [
+  `${RoutePaths.Workspaces}/:workspaceId/${RoutePaths.ConnectorBuilder}/${ConnectorBuilderRoutePaths.Edit}`,
+];
+
 export const SideBar: React.FC<PropsWithChildren<SideBarProps>> = ({
   workspaceFetcher,
   bottomSlot,
@@ -33,8 +39,12 @@ export const SideBar: React.FC<PropsWithChildren<SideBarProps>> = ({
 }) => {
   const { logout, user } = useAuthService();
   const { formatMessage } = useIntl();
+
+  const { pathname } = useLocation();
+  const isHidden = HIDDEN_SIDEBAR_PATHS.some((path) => !!matchPath(path, pathname));
+
   return (
-    <nav className={classNames(styles.sidebar)}>
+    <nav className={classNames(styles.sidebar, { [styles.hidden]: isHidden })}>
       <AirbyteHomeLink />
       <IfFeatureEnabled feature={FeatureItem.ShowAdminWarningInWorkspace}>
         <AdminWorkspaceWarning />

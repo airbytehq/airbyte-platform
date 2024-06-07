@@ -8,7 +8,7 @@ import { useConnectorBuilderFormState } from "services/connectorBuilder/Connecto
 
 import styles from "./PublishButton.module.scss";
 import { PublishModal } from "./PublishModal";
-import { useBuilderWatch } from "./types";
+import { useBuilderWatch } from "../types";
 
 interface PublishButtonProps {
   className?: string;

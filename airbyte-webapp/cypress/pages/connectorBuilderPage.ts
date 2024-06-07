@@ -1,7 +1,8 @@
 import { selectFromDropdown } from "@cy/commands/common";
 
 const startFromScratchButton = "[data-testid='start-from-scratch']";
-const nameInput = "input[name='name']";
+const nameLabel = "[data-testid='connector-name-label']";
+const nameInput = "[data-testid='connector-name-input']";
 const urlBaseInput = "input[name='formValues.global.urlBase']";
 const addStreamButton = "[data-testid='add-stream']";
 const apiKeyInput = "input[name='connectionConfiguration.api_key']";
@@ -41,6 +42,7 @@ export const startFromScratch = () => {
 };
 
 export const enterName = (name: string) => {
+  cy.get(nameLabel).first().click();
   cy.get(nameInput).clear();
   cy.get(nameInput).type(name);
 };
