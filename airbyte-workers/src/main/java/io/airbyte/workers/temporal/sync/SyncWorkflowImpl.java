@@ -218,16 +218,12 @@ public class SyncWorkflowImpl implements SyncWorkflow {
 
   private boolean checkUseWorkloadApiFlag(final StandardSyncInput syncInput) {
     return workloadFeatureFlagActivity.useWorkloadApi(new WorkloadFeatureFlagActivity.Input(
-        syncInput.getWorkspaceId(),
-        syncInput.getConnectionId(),
-        syncInput.getConnectionContext().getOrganizationId()));
+        syncInput.getWorkspaceId()));
   }
 
   private boolean checkUseWorkloadOutputFlag(final StandardSyncInput syncInput) {
     return workloadFeatureFlagActivity.useOutputDocStore(new WorkloadFeatureFlagActivity.Input(
-        syncInput.getWorkspaceId(),
-        syncInput.getConnectionId(),
-        syncInput.getConnectionContext().getOrganizationId()));
+        syncInput.getWorkspaceId()));
   }
 
 }
