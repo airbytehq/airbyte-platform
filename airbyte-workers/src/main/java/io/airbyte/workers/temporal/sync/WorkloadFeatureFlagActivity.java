@@ -21,6 +21,8 @@ public interface WorkloadFeatureFlagActivity {
   class Input {
 
     private UUID workspaceId;
+    private UUID connectionId;
+    private UUID organizationId;
 
   }
 
