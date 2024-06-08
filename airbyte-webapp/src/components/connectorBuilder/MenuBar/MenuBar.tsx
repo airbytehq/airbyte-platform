@@ -31,7 +31,14 @@ export const MenuBar: React.FC = () => {
       <FlexContainer direction="row" alignItems="center" className={styles.leftSide} gap="lg">
         <FlexContainer direction="row" alignItems="center" gap="md" className={styles.exitAndName}>
           <Link to={RoutePaths.ConnectorBuilder}>
-            <Button variant="clearDark" size="xs" icon="arrowLeft" iconSize="lg" type="button">
+            <Button
+              variant="clearDark"
+              size="xs"
+              icon="arrowLeft"
+              iconSize="lg"
+              type="button"
+              data-testid="exit-builder"
+            >
               <Text className={styles.backButtonText}>
                 <FormattedMessage id="connectorBuilder.exit" />
               </Text>

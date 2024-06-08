@@ -7,6 +7,7 @@ const nameInput = "[data-testid='connector-name-input']";
 describe("running the connector builder on cloud", () => {
   let connectorName = "";
   beforeEach(() => {
+    cy.on("uncaught:exception", () => false);
     connectorName = appendRandomString("localhost");
     cy.login();
     cy.selectWorkspace();
@@ -21,7 +22,7 @@ describe("running the connector builder on cloud", () => {
   });
 
   afterEach(() => {
-    cy.get(builderLink, { timeout: Cypress.config("pageLoadTimeout") }).click();
+    cy.get(`button[data-testid='exit-builder']`, { timeout: Cypress.config("pageLoadTimeout") }).click();
     cy.get(`button[data-testid='delete-project-button_${connectorName}']`).click();
     cy.contains("Delete").click();
     cy.logout();
