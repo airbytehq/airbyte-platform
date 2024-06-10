@@ -157,6 +157,11 @@ export const JobHistoryItem: React.FC<JobHistoryItemProps> = ({ jobWithAttempts 
     }
   };
 
+  const streamsToList =
+    jobWithAttempts.job.configType === "reset_connection"
+      ? jobWithAttempts.job.resetConfig?.streamsToReset?.map((stream) => stream.name)
+      : jobWithAttempts.job.refreshConfig?.streamsToRefresh?.map((stream) => stream.name);
+
   return (
     <div
       ref={wrapperRef}
@@ -173,10 +178,8 @@ export const JobHistoryItem: React.FC<JobHistoryItemProps> = ({ jobWithAttempts 
       <FlexContainer justifyContent="space-between" alignItems="center" className={styles.jobHistoryItem__main}>
         <Box className={styles.jobHistoryItem__summary}>
           <JobStatusLabel jobWithAttempts={jobWithAttempts} />
-          {jobWithAttempts.job.configType === "reset_connection" ? (
-            <ResetStreamsDetails
-              names={jobWithAttempts.job.resetConfig?.streamsToReset?.map((stream) => stream.name)}
-            />
+          {jobWithAttempts.job.configType === "reset_connection" || jobWithAttempts.job.configType === "refresh" ? (
+            <ResetStreamsDetails names={streamsToList} />
           ) : (
             <JobStats jobWithAttempts={jobWithAttempts} />
           )}

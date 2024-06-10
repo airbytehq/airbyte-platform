@@ -14,7 +14,13 @@ export const JobStatusLabel: React.FC<JobStatusLabelProps> = ({ jobWithAttempts 
   const attempts = getJobAttempts(jobWithAttempts);
   const jobStatus = getJobStatus(jobWithAttempts);
   const jobIsPartialSuccess = isJobPartialSuccess(attempts);
-  const streamsToReset = "job" in jobWithAttempts ? jobWithAttempts.job.resetConfig?.streamsToReset : undefined;
+  const streamsToList =
+    "job" in jobWithAttempts
+      ? jobWithAttempts.job.configType === "reset_connection"
+        ? jobWithAttempts.job.resetConfig?.streamsToReset
+        : jobWithAttempts.job.refreshConfig?.streamsToRefresh
+      : undefined;
+
   const jobConfigType =
     jobWithAttempts.job.configType === "reset_connection" ? "clear_data" : jobWithAttempts.job.configType;
 
@@ -35,7 +41,9 @@ export const JobStatusLabel: React.FC<JobStatusLabelProps> = ({ jobWithAttempts 
   return (
     <Text>
       <FormattedMessage
-        values={{ count: streamsToReset?.length || 0 }}
+        values={{
+          count: streamsToList?.length || 0,
+        }}
         id={`jobs.jobStatus.${jobConfigType}.${status}`}
       />
     </Text>
