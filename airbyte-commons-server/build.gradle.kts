@@ -81,12 +81,6 @@ dependencies {
   testRuntimeOnly(libs.junit.jupiter.engine)
 }
 
-airbyte {
-  ksp {
-    annotations = listOf("io.airbyte.commons.license.annotation.*")
-  }
-}
-
 // Even though Kotlin is excluded on Spotbugs, this project
 // still runs into spotbug issues. Working theory is that
 // generated code is being picked up. Disable as a short-term fix.

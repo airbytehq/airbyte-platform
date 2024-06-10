@@ -150,10 +150,6 @@ airbyte {
     imageName = "server"
   }
 
-  ksp {
-    annotations = listOf("io.airbyte.commons.auth.*", "io.airbyte.commons.license.annotation.*")
-  }
-
   spotbugs {
       excludes = listOf("  <Match>\n" +
               "    <Package name=\"io.airbyte.server.repositories.domain.*\" />\n" +

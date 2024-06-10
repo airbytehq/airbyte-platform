@@ -76,10 +76,6 @@ airbyte {
   docker {
     imageName = "cron"
   }
-
-  ksp {
-    annotations = listOf("io.airbyte.metrics.annotations.Instrument", "io.airbyte.metrics.annotations.Tag")
-  }
 }
 
 kapt {
