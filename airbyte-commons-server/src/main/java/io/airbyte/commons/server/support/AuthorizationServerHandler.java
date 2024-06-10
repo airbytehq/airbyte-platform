@@ -4,6 +4,7 @@
 
 package io.airbyte.commons.server.support;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import io.netty.channel.ChannelDuplexHandler;
 import io.netty.channel.ChannelHandler.Sharable;
 import io.netty.channel.ChannelHandlerContext;
@@ -52,11 +53,12 @@ public class AuthorizationServerHandler extends ChannelDuplexHandler {
    * @return The potentially modified raw HTTP request as a {@link FullHttpRequest}.
    */
   protected FullHttpRequest updateHeaders(final FullHttpRequest httpRequest) {
+    final String contentAsString = StandardCharsets.UTF_8.decode(httpRequest.content().nioBuffer()).toString();
+    final JsonNode contentAsJson = airbyteHttpRequestFieldExtractor.contentToJson(contentAsString).orElse(null);
     for (final AuthenticationId authenticationId : AuthenticationId.values()) {
-      final String contentAsString = StandardCharsets.UTF_8.decode(httpRequest.content().nioBuffer()).toString();
       log.debug("Checking HTTP request '{}' for field '{}'...", contentAsString, authenticationId.getFieldName());
       final Optional<String> id =
-          airbyteHttpRequestFieldExtractor.extractId(contentAsString, authenticationId.getFieldName());
+          airbyteHttpRequestFieldExtractor.extractId(contentAsJson, authenticationId.getFieldName());
       if (id.isPresent()) {
         log.debug("Found field '{}' with value '{}' in HTTP request body.", authenticationId.getFieldName(), id.get());
         addHeaderToRequest(authenticationId.getHttpHeader(), id.get(), httpRequest);
