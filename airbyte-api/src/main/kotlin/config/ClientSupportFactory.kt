@@ -36,10 +36,17 @@ class ClientSupportFactory {
   @Requires(property = "airbyte.internal-api.base-path")
   fun defaultAirbyteApiRetryPolicy(
     @Value("\${airbyte.internal-api.retries.delay-seconds:2}") retryDelaySeconds: Long,
-    @Value("\${airbyte.inernal-api.retries.max:5}") maxRetries: Int,
+    @Value("\${airbyte.internal-api.retries.max:5}") maxRetries: Int,
+    @Value("\${airbyte.internal-api.jitter-factor:.25}") jitterFactor: Double,
     meterRegistry: Optional<MeterRegistry>,
   ): RetryPolicy<Response> {
-    return generateDefaultRetryPolicy(retryDelaySeconds, maxRetries, meterRegistry, "airbyte-api-client")
+    return generateDefaultRetryPolicy(
+      retryDelaySeconds = retryDelaySeconds,
+      jitterFactor = jitterFactor,
+      maxRetries = maxRetries,
+      meterRegistry = meterRegistry,
+      metricPrefix = "airbyte-api-client",
+    )
   }
 
   @Singleton
@@ -63,9 +70,16 @@ class ClientSupportFactory {
   fun defaultWorkloadApiRetryPolicy(
     @Value("\${airbyte.workload-api.retries.delay-seconds:2}") retryDelaySeconds: Long,
     @Value("\${airbyte.workload-api.retries.max:5}") maxRetries: Int,
+    @Value("\${airbyte.workload-api.jitter-factor:.25}") jitterFactor: Double,
     meterRegistry: Optional<MeterRegistry>,
   ): RetryPolicy<Response> {
-    return generateDefaultRetryPolicy(retryDelaySeconds, maxRetries, meterRegistry, "workload-api-client")
+    return generateDefaultRetryPolicy(
+      retryDelaySeconds = retryDelaySeconds,
+      jitterFactor = jitterFactor,
+      maxRetries = maxRetries,
+      meterRegistry = meterRegistry,
+      metricPrefix = "workload-api-client",
+    )
   }
 
   @Singleton
@@ -89,6 +103,7 @@ class ClientSupportFactory {
 
   private fun generateDefaultRetryPolicy(
     retryDelaySeconds: Long,
+    jitterFactor: Double,
     maxRetries: Int,
     meterRegistry: Optional<MeterRegistry>,
     metricPrefix: String,
@@ -168,6 +183,7 @@ class ClientSupportFactory {
         }
       }
       .withDelay(Duration.ofSeconds(retryDelaySeconds))
+      .withJitter(jitterFactor)
       .withMaxRetries(maxRetries)
       .build()
   }
