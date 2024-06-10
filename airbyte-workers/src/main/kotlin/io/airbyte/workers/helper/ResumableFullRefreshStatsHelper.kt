@@ -7,7 +7,10 @@ import io.airbyte.config.StreamDescriptor
 import io.airbyte.config.StreamSyncStats
 import io.airbyte.config.helpers.StateMessageHelper
 import io.airbyte.persistence.job.models.ReplicationInput
+import io.github.oshai.kotlinlogging.KotlinLogging
 import jakarta.inject.Singleton
+
+private val logger = KotlinLogging.logger { }
 
 /**
  * Helper that mutates the StandardSyncOutput to keep track of whether a stream was resumed.
@@ -35,7 +38,10 @@ class ResumableFullRefreshStatsHelper {
     return when (stateWrapper.stateType) {
       StateType.STREAM -> stateWrapper.stateMessages.map { it.stream.streamDescriptor }
       StateType.GLOBAL -> stateWrapper.global.global.streamStates.map { s -> s.streamDescriptor }
-      else -> throw IllegalStateException("Legacy states are no longer supported")
+      else -> {
+        logger.warn { "Legacy states are no longer supported" }
+        listOf()
+      }
     }.map { it.toConfigObject() }
   }
 
