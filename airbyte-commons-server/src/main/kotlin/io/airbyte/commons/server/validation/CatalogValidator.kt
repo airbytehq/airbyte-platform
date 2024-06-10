@@ -35,9 +35,13 @@ class CatalogValidator(
           if (s.config.fieldSelectionEnabled == true) {
             s.config.selectedFields.size
           } else {
-            Iterators.size(
-              s.stream.jsonSchema.get(PROPERTIES_KEY).fieldNames(),
-            )
+            val fieldNames: Iterator<String> =
+              if (s.stream.jsonSchema.get(PROPERTIES_KEY) != null) {
+                s.stream.jsonSchema.get(PROPERTIES_KEY).fieldNames()
+              } else {
+                emptyList<String>().iterator()
+              }
+            Iterators.size(fieldNames)
           }
         }
 

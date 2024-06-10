@@ -6,6 +6,7 @@ import io.airbyte.api.model.generated.AirbyteStream
 import io.airbyte.api.model.generated.AirbyteStreamAndConfiguration
 import io.airbyte.api.model.generated.AirbyteStreamConfiguration
 import io.airbyte.api.model.generated.SelectedFieldInfo
+import io.airbyte.commons.json.Jsons
 import io.airbyte.commons.server.validation.CatalogValidator.Constants.PROPERTIES_KEY
 import io.airbyte.commons.server.validation.CatalogValidatorTest.Fixtures.CTX
 import io.airbyte.commons.server.validation.CatalogValidatorTest.Fixtures.MAX_FIELD_LIMIT
@@ -13,6 +14,7 @@ import io.airbyte.commons.server.validation.CatalogValidatorTest.Fixtures.buildC
 import io.airbyte.commons.server.validation.CatalogValidatorTest.Fixtures.buildStreamFieldSelection
 import io.airbyte.commons.server.validation.CatalogValidatorTest.Fixtures.buildStreamNoFieldSelection
 import io.airbyte.featureflag.ANONYMOUS
+import io.airbyte.featureflag.Connection
 import io.airbyte.featureflag.ConnectionFieldLimitOverride
 import io.airbyte.featureflag.TestClient
 import io.airbyte.featureflag.Workspace
@@ -20,6 +22,7 @@ import io.airbyte.metrics.lib.MetricClient
 import io.mockk.every
 import io.mockk.impl.annotations.MockK
 import io.mockk.junit5.MockKExtension
+import io.mockk.mockk
 import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.BeforeEach
@@ -31,7 +34,7 @@ import org.junit.jupiter.params.provider.MethodSource
 import java.util.stream.Stream
 
 @ExtendWith(MockKExtension::class)
-class CatalogValidatorTest {
+internal class CatalogValidatorTest {
   @MockK
   private lateinit var metricClient: MetricClient
 
@@ -41,7 +44,7 @@ class CatalogValidatorTest {
   private lateinit var validator: CatalogValidator
 
   @BeforeEach
-  fun setup() {
+  internal fun setup() {
     every { featureFlagClient.intVariation(ConnectionFieldLimitOverride, any()) } returns -1
     every { metricClient.distribution(any(), any(), *anyVararg()) } returns Unit
 
@@ -50,20 +53,20 @@ class CatalogValidatorTest {
 
   @ParameterizedTest
   @MethodSource("validSizeCatalogMatrix")
-  fun `returns null if catalog field count under limit`(catalog: AirbyteCatalog) {
+  internal fun `returns null if catalog field count under limit`(catalog: AirbyteCatalog) {
     val result = validator.fieldCount(catalog, CTX)
     assertNull(result)
   }
 
   @ParameterizedTest
   @MethodSource("tooLargeCatalogMatrix")
-  fun `returns ValidationError if catalog field count over limit`(catalog: AirbyteCatalog) {
+  internal fun `returns ValidationError if catalog field count over limit`(catalog: AirbyteCatalog) {
     val result = validator.fieldCount(catalog, CTX)
     assertNotNull(result)
   }
 
   @Test
-  fun `allows runtime override for max field limit`() {
+  internal fun `allows runtime override for max field limit`() {
     val override = MAX_FIELD_LIMIT * 2
     every { featureFlagClient.intVariation(ConnectionFieldLimitOverride, any()) } returns override
 
@@ -72,7 +75,7 @@ class CatalogValidatorTest {
   }
 
   @Test
-  fun `ignores unselected streams`() {
+  internal fun `ignores unselected streams`() {
     // build a catalog with 50 fields, 1/5 of which are selected and 1/2 of which use explicit field selection
     // selected fields should be 10 total
     val rows = 10
@@ -109,6 +112,18 @@ class CatalogValidatorTest {
     assertNotNull(validator6.fieldCount(catalog, CTX))
     assertNotNull(validator7.fieldCount(catalog, CTX))
     assertNotNull(validator8.fieldCount(catalog, CTX))
+  }
+
+  @Test
+  internal fun `test getting the field count when no fields are present`() {
+    val streamAndConfig =
+      AirbyteStreamAndConfiguration()
+        .stream(AirbyteStream().jsonSchema(Jsons.jsonNode(emptyMap<String, String>())))
+        .config(AirbyteStreamConfiguration().selected(true))
+    val streams = mutableListOf<AirbyteStreamAndConfiguration>(streamAndConfig)
+    val catalog = AirbyteCatalog().streams(streams)
+    val fieldCount = validator.fieldCount(catalog = catalog, ctx = mockk<Connection>())
+    assertNull(fieldCount)
   }
 
   companion object {
