@@ -2,7 +2,7 @@
  * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
-package io.airbyte.commons.server.support;
+package io.airbyte.commons.auth.support;
 
 import io.airbyte.config.User;
 import java.util.Optional;

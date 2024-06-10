@@ -5,6 +5,7 @@
 package io.airbyte.keycloak.setup;
 
 import io.airbyte.commons.auth.config.AirbyteKeycloakConfiguration;
+import io.airbyte.commons.auth.keycloak.ClientScopeConfigurator;
 import jakarta.inject.Named;
 import jakarta.inject.Singleton;
 import java.util.Map;

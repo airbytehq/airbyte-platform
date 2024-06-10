@@ -18,6 +18,7 @@ dependencies {
   implementation(platform(libs.micronaut.platform))
   implementation(libs.bundles.keycloak.client)
   implementation(libs.bundles.micronaut)
+  implementation(libs.micronaut.security)
   implementation(libs.failsafe.okhttp)
   implementation(libs.kotlin.logging)
   implementation(libs.okhttp)

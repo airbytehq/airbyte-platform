@@ -4,14 +4,15 @@
 
 package io.airbyte.commons.server.support;
 
-import static io.airbyte.commons.server.support.JwtTokenParser.JWT_AUTH_PROVIDER;
-import static io.airbyte.commons.server.support.JwtTokenParser.JWT_SSO_REALM;
-import static io.airbyte.commons.server.support.JwtTokenParser.JWT_USER_EMAIL;
-import static io.airbyte.commons.server.support.JwtTokenParser.JWT_USER_NAME;
+import static io.airbyte.commons.auth.support.JwtTokenParser.JWT_AUTH_PROVIDER;
+import static io.airbyte.commons.auth.support.JwtTokenParser.JWT_SSO_REALM;
+import static io.airbyte.commons.auth.support.JwtTokenParser.JWT_USER_EMAIL;
+import static io.airbyte.commons.auth.support.JwtTokenParser.JWT_USER_NAME;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
+import io.airbyte.commons.auth.support.JwtUserAuthenticationResolver;
 import io.airbyte.config.AuthProvider;
 import io.airbyte.config.User;
 import io.micronaut.security.authentication.Authentication;

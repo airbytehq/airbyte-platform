@@ -2,12 +2,12 @@
  * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
-package io.airbyte.commons.server.support;
+package io.airbyte.commons.auth.support;
 
-import static io.airbyte.commons.server.support.JwtTokenParser.JWT_AUTH_PROVIDER;
-import static io.airbyte.commons.server.support.JwtTokenParser.JWT_SSO_REALM;
-import static io.airbyte.commons.server.support.JwtTokenParser.JWT_USER_EMAIL;
-import static io.airbyte.commons.server.support.JwtTokenParser.JWT_USER_NAME;
+import static io.airbyte.commons.auth.support.JwtTokenParser.JWT_AUTH_PROVIDER;
+import static io.airbyte.commons.auth.support.JwtTokenParser.JWT_SSO_REALM;
+import static io.airbyte.commons.auth.support.JwtTokenParser.JWT_USER_EMAIL;
+import static io.airbyte.commons.auth.support.JwtTokenParser.JWT_USER_NAME;
 
 import io.airbyte.config.AuthProvider;
 import io.airbyte.config.User;
