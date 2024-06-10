@@ -58,8 +58,7 @@ public class StatsAggregationHelper {
   public static StreamStatsRecord getAggregatedStats(SyncMode syncMode, List<StreamSyncStats> streamStats) {
     switch (syncMode) {
       case FULL_REFRESH:
-        StreamSyncStats lastStreamSyncStats = streamStats.getLast();
-        return getAggregatedStats(Collections.singletonList(lastStreamSyncStats));
+        return getAggregatedStats(selectResumedStats(streamStats));
       case INCREMENTAL:
         return getAggregatedStats(streamStats);
       default:
@@ -88,7 +87,16 @@ public class StatsAggregationHelper {
         bytesEmitted,
         recordsCommitted,
         bytesCommitted,
-        wasBackfilled(streamStats));
+        wasBackfilled(streamStats),
+        wasResumed(streamStats));
+  }
+
+  private static List<StreamSyncStats> selectResumedStats(List<StreamSyncStats> streamSyncStats) {
+    int i = streamSyncStats.size() - 1;
+    while (i > 0 && Boolean.TRUE == streamSyncStats.get(i).getWasResumed()) {
+      i--;
+    }
+    return streamSyncStats.subList(i, streamSyncStats.size());
   }
 
   static Optional<Boolean> wasBackfilled(List<StreamSyncStats> streamStats) {
@@ -100,6 +108,21 @@ public class StatsAggregationHelper {
     // if no attempts were marked as backfill then either the stream is not a backfill or
     // the backfill flag hasn't been set yet (flag is set when the attempt completes)
     if (streamStats.stream().anyMatch(syncStats -> syncStats.getWasBackfilled() != null && !syncStats.getWasBackfilled())) {
+      return Optional.of(false);
+    }
+
+    return Optional.empty();
+  }
+
+  static Optional<Boolean> wasResumed(List<StreamSyncStats> streamStats) {
+    // if a stream was resumed, at least one attempt will be marked as resumed
+    if (streamStats.stream().anyMatch(syncStats -> syncStats.getWasResumed() != null && syncStats.getWasResumed())) {
+      return Optional.of(true);
+    }
+
+    // if no attempts were marked as resumed then either the stream is not resumed or
+    // the resumed flag hasn't been set yet (flag is set when the attempt completes)
+    if (streamStats.stream().anyMatch(syncStats -> syncStats.getWasResumed() != null && !syncStats.getWasResumed())) {
       return Optional.of(false);
     }
 
@@ -214,7 +237,8 @@ public class StatsAggregationHelper {
         .bytesEmitted(s.bytesEmitted())
         .recordsCommitted(s.recordsCommitted())
         .bytesCommitted(s.bytesCommitted())
-        .wasBackfilled(s.wasBackfilled().orElse(null)))
+        .wasBackfilled(s.wasBackfilled().orElse(null))
+        .wasResumed(s.wasResumed().orElse(null)))
         .collect(Collectors.toList()));
   }
 
@@ -246,6 +270,7 @@ public class StatsAggregationHelper {
                                   Long bytesEmitted,
                                   Long recordsCommitted,
                                   Long bytesCommitted,
-                                  Optional<Boolean> wasBackfilled) {}
+                                  Optional<Boolean> wasBackfilled,
+                                  Optional<Boolean> wasResumed) {}
 
 }

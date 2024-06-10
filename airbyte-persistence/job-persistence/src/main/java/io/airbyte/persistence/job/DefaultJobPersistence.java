@@ -307,9 +307,11 @@ public class DefaultJobPersistence implements JobPersistence {
 
     final var attemptOutputs = ctx.fetch("SELECT id, output FROM attempts WHERE job_id in (%s);".formatted(jobIdsStr));
     final Map<Long, Set<StreamDescriptor>> backFilledStreamsPerAttemptId = new HashMap<>();
+    final Map<Long, Set<StreamDescriptor>> resumedStreamsPerAttemptId = new HashMap<>();
     for (final var result : attemptOutputs) {
       final long attemptId = result.get(ATTEMPTS.ID);
       final var backfilledStreams = backFilledStreamsPerAttemptId.computeIfAbsent(attemptId, (k) -> new HashSet<>());
+      final var resumedStreams = resumedStreamsPerAttemptId.computeIfAbsent(attemptId, (k) -> new HashSet<>());
       final JSONB attemptOutput = result.get(ATTEMPTS.OUTPUT);
       final JobOutput output = attemptOutput != null ? parseJobOutputFromString(attemptOutput.toString()) : null;
       if (output != null && output.getSync() != null && output.getSync().getStandardSyncSummary() != null
@@ -318,6 +320,9 @@ public class DefaultJobPersistence implements JobPersistence {
           if (Boolean.TRUE == streamSyncStats.getWasBackfilled()) {
             backfilledStreams
                 .add(new StreamDescriptor().withNamespace(streamSyncStats.getStreamNamespace()).withName(streamSyncStats.getStreamName()));
+          }
+          if (Boolean.TRUE == streamSyncStats.getWasResumed()) {
+            resumedStreams.add(new StreamDescriptor().withNamespace(streamSyncStats.getStreamNamespace()).withName(streamSyncStats.getStreamName()));
           }
         }
       }
@@ -338,6 +343,7 @@ public class DefaultJobPersistence implements JobPersistence {
       final long attemptId = r.get(ATTEMPTS.ID);
       final var streamDescriptor = new StreamDescriptor().withName(streamName).withNamespace(streamNamespace);
       final boolean wasBackfilled = backFilledStreamsPerAttemptId.getOrDefault(attemptId, new HashSet<>()).contains(streamDescriptor);
+      final boolean wasResumed = resumedStreamsPerAttemptId.getOrDefault(attemptId, new HashSet<>()).contains(streamDescriptor);
 
       final var streamSyncStats = new StreamSyncStats()
           .withStreamNamespace(streamNamespace)
@@ -349,7 +355,8 @@ public class DefaultJobPersistence implements JobPersistence {
               .withEstimatedBytes(r.get(STREAM_STATS.ESTIMATED_BYTES))
               .withBytesCommitted(r.get(STREAM_STATS.BYTES_COMMITTED))
               .withRecordsCommitted(r.get(STREAM_STATS.RECORDS_COMMITTED)))
-          .withWasBackfilled(wasBackfilled);
+          .withWasBackfilled(wasBackfilled)
+          .withWasResumed(wasResumed);
 
       final var key = new JobAttemptPair(r.get(ATTEMPTS.JOB_ID), r.get(ATTEMPTS.ATTEMPT_NUMBER));
       if (!attemptStats.containsKey(key)) {

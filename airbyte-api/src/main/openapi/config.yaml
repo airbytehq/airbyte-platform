@@ -9913,6 +9913,8 @@ components:
           format: int64
         wasBackfilled:
           type: boolean
+        wasResumed:
+          type: boolean
     SyncInput:
       type: object
       required:
