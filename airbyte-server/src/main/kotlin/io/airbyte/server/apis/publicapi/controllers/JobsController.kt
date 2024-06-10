@@ -5,6 +5,7 @@
 package io.airbyte.server.apis.publicapi.controllers
 
 import io.airbyte.api.model.generated.PermissionType
+import io.airbyte.api.problems.model.generated.ProblemMessageData
 import io.airbyte.api.problems.throwable.generated.UnprocessableEntityProblem
 import io.airbyte.commons.server.authorization.ApiAuthorizationHelper
 import io.airbyte.commons.server.authorization.Scope
@@ -146,6 +147,36 @@ open class JobsController(
           .status(Response.Status.OK.statusCode)
           .entity(KJobResponse(jobResponse))
           .build()
+      }
+
+      JobTypeEnum.CLEAR -> {
+        val jobResponse: Any =
+          trackingHelper.callWithTracker({
+            jobService.reset(
+              jobCreateRequest.connectionId,
+            )
+          }, JOBS_PATH, POST, userId)!!
+        trackingHelper.trackSuccess(
+          JOBS_PATH,
+          POST,
+          userId,
+          workspaceId,
+        )
+        Response
+          .status(Response.Status.OK.statusCode)
+          .entity(jobResponse)
+          .build()
+      }
+
+      JobTypeEnum.REFRESH -> {
+        val unprocessableEntityProblem = UnprocessableEntityProblem(ProblemMessageData().message("Refreshes are not supported in the public API"))
+        trackingHelper.trackFailuresIfAny(
+          JOBS_PATH,
+          POST,
+          userId,
+          unprocessableEntityProblem,
+        )
+        throw unprocessableEntityProblem
       }
 
       else -> {

@@ -12124,6 +12124,8 @@ components:
       enum:
         - sync
         - reset
+        - refresh
+        - clear
       type: string
       x-sdk-component: true
     SourceCreateRequest:

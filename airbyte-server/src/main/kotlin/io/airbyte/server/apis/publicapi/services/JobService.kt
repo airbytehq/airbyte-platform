@@ -225,6 +225,8 @@ class JobServiceImpl(
       when (jobType) {
         JobTypeEnum.SYNC -> configTypes.add(JobConfigType.SYNC)
         JobTypeEnum.RESET -> configTypes.add(JobConfigType.RESET_CONNECTION)
+        JobTypeEnum.CLEAR -> configTypes.add(JobConfigType.CLEAR)
+        JobTypeEnum.REFRESH -> configTypes.add(JobConfigType.REFRESH)
         else -> throw UnprocessableEntityProblem()
       }
     }

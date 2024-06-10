@@ -57,6 +57,8 @@ object JobResponseMapper {
     when (jobRead.configType) {
       JobConfigType.SYNC -> jobResponse.jobType = JobTypeEnum.SYNC
       JobConfigType.RESET_CONNECTION -> jobResponse.jobType = JobTypeEnum.RESET
+      JobConfigType.CLEAR -> jobResponse.jobType = JobTypeEnum.CLEAR
+      JobConfigType.REFRESH -> jobResponse.jobType = JobTypeEnum.REFRESH
       else -> {
         assert(ALLOWED_CONFIG_TYPES.contains(jobRead.configType))
       }
