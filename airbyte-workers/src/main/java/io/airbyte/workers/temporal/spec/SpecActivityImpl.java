@@ -31,7 +31,7 @@ import io.airbyte.config.ConnectorJobOutput.OutputType;
 import io.airbyte.config.JobGetSpecConfig;
 import io.airbyte.config.helpers.LogConfigs;
 import io.airbyte.featureflag.FeatureFlagClient;
-import io.airbyte.featureflag.UseWorkloadApiForSpec;
+import io.airbyte.featureflag.UseWorkloadApi;
 import io.airbyte.featureflag.WorkloadCheckFrequencyInSeconds;
 import io.airbyte.featureflag.Workspace;
 import io.airbyte.metrics.lib.ApmTraceUtils;
@@ -202,7 +202,7 @@ public class SpecActivityImpl implements SpecActivity {
 
   @Override
   public boolean shouldUseWorkload(UUID workspaceId) {
-    return featureFlagClient.boolVariation(UseWorkloadApiForSpec.INSTANCE, new Workspace(workspaceId));
+    return featureFlagClient.boolVariation(UseWorkloadApi.INSTANCE, new Workspace(workspaceId));
   }
 
   @Override

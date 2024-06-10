@@ -37,8 +37,7 @@ import io.airbyte.config.persistence.ActorDefinitionVersionHelper;
 import io.airbyte.config.persistence.ConfigNotFoundException;
 import io.airbyte.config.persistence.ConfigRepository;
 import io.airbyte.featureflag.FeatureFlagClient;
-import io.airbyte.featureflag.UseWorkloadApiForCheck;
-import io.airbyte.featureflag.UseWorkloadApiForDiscover;
+import io.airbyte.featureflag.UseWorkloadApi;
 import io.airbyte.featureflag.Workspace;
 import io.airbyte.persistence.job.JobPersistence;
 import io.airbyte.persistence.job.WorkspaceHelper;
@@ -202,7 +201,7 @@ public class JobTracker {
       final Map<String, Object> sourceDefMetadata = generateSourceDefinitionMetadata(sourceDefinitionId, workspaceId, actorId);
       final Map<String, Object> stateMetadata = generateStateMetadata(jobState);
       final Map<String, Object> workloadMetadata =
-          Map.of("workload_enabled", featureFlagClient.boolVariation(UseWorkloadApiForDiscover.INSTANCE, new Workspace(workspaceId)));
+          Map.of("workload_enabled", featureFlagClient.boolVariation(UseWorkloadApi.INSTANCE, new Workspace(workspaceId)));
 
       track(workspaceId, DISCOVER_EVENT, MoreMaps.merge(jobMetadata, failureReasonMetadata, sourceDefMetadata, stateMetadata, workloadMetadata));
     });
@@ -491,7 +490,7 @@ public class JobTracker {
    */
   private Map<String, Object> generateCheckConnectionMetadata(final @Nullable StandardCheckConnectionOutput output, final UUID workspaceId) {
     final Map<String, Object> metadata = new HashMap<>();
-    metadata.put("workload_enabled", featureFlagClient.boolVariation(UseWorkloadApiForCheck.INSTANCE, new Workspace(workspaceId)));
+    metadata.put("workload_enabled", featureFlagClient.boolVariation(UseWorkloadApi.INSTANCE, new Workspace(workspaceId)));
 
     if (output == null) {
       return metadata;
