@@ -18,6 +18,7 @@ interface EntityTableDataItem {
   enabled: boolean;
   lastSync?: number | null;
   connectorIcon?: string;
+  isActive: boolean;
 }
 
 interface ConnectionTableDataItem {
