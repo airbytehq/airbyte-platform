@@ -101,6 +101,7 @@ public class JobErrorReporter {
 
         for (final FailureReason failureReason : traceMessageFailures) {
           final FailureOrigin failureOrigin = failureReason.getFailureOrigin();
+          LOGGER.info("Reporting failure for jobId '{}' connectionId '{}' origin '{}'", jobContext.jobId(), connectionId, failureOrigin);
 
           if (failureOrigin == FailureOrigin.SOURCE) {
             final StandardSourceDefinition sourceDefinition = configRepository.getSourceDefinitionFromConnection(connectionId);
@@ -157,6 +158,7 @@ public class JobErrorReporter {
         }
       } catch (final Exception e) {
         LOGGER.error("Failed to report status for jobId '{}' connectionId '{}': {}", jobContext.jobId(), connectionId, e);
+        throw e;
       }
     });
   }
