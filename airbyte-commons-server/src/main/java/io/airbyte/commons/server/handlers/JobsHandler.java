@@ -146,7 +146,12 @@ public class JobsHandler {
         }
 
         jobErrorReporter.reportSyncJobFailure(connectionId, failureSummary, jobContext, attemptConfig);
+        log.info("Successfully reported failure for job id '{}' connectionId: '{}'", job.getId(), connectionId);
+      } else {
+        log.info("Failure summary is missing, skipping reporting for jobId '{}', connectionId '{}'", job.getId(), connectionId);
       }
+    } else {
+      log.info("Last failed attempt is missing, skipping reporting for jobId '{}', connectionId '{}'", job.getId(), connectionId);
     }
   }
 
