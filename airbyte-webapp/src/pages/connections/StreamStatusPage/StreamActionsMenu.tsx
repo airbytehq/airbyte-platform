@@ -60,11 +60,6 @@ export const StreamActionsMenu: React.FC<StreamActionsMenuProps> = ({ streamStat
     jobRefreshRunning ||
     mode === "readonly";
 
-  /**
-   * In order to refresh a stream, both the destination AND the sync mode must support one of the refresh modes
-   * Currently, destination support is simply hardcoded in lines 32-33.  However, we will be moving to a feature flag
-   * and/or destination metadata support before release.
-   */
   const { canMerge, canTruncate } = useMemo(() => {
     const hasIncremental = catalogStream?.config?.syncMode === SyncMode.incremental;
     const hasAppendDedupe = catalogStream?.config?.destinationSyncMode === DestinationSyncMode.append_dedup;
@@ -75,7 +70,6 @@ export const StreamActionsMenu: React.FC<StreamActionsMenuProps> = ({ streamStat
     };
   }, [catalogStream?.config?.destinationSyncMode, catalogStream?.config?.syncMode, destinationSupportsRefreshes]);
 
-  // the platform must support refresh operations AND the stream must support at least one of the refresh types
   const showRefreshOption = canMerge || canTruncate;
 
   if (!catalogStream) {
