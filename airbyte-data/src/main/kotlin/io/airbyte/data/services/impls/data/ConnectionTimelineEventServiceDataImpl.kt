@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ */
+
 package io.airbyte.data.services.impls.data
 
 import com.fasterxml.jackson.databind.ObjectMapper
@@ -9,18 +13,17 @@ import jakarta.inject.Singleton
 import java.util.UUID
 
 @Singleton
-class ConnectionTimelineEventServiceDataImpl(private val repository: ConnectionTimelineEventRepository) : ConnectionTimelineEventService {
+class ConnectionTimelineEventServiceDataImpl(
+  private val repository: ConnectionTimelineEventRepository,
+  private val mapper: ObjectMapper,
+) : ConnectionTimelineEventService {
   override fun writeEvent(
     connectionId: UUID,
     connectionEvent: ConnectionEvent,
   ): ConnectionTimelineEvent {
-    val serializedEvent = MAPPER.writeValueAsString(connectionEvent)
+    val serializedEvent = mapper.writeValueAsString(connectionEvent)
     val event =
       ConnectionTimelineEvent(null, connectionId, connectionEvent.getUserId(), connectionEvent.getEventType().toString(), serializedEvent, null)
     return repository.save(event)
-  }
-
-  companion object {
-    private val MAPPER = ObjectMapper()
   }
 }

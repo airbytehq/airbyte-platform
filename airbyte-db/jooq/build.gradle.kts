@@ -37,6 +37,7 @@ dependencies {
   jooqGenerator(libs.guava)
   jooqGenerator(libs.hikaricp)
   jooqGenerator(libs.jackson.datatype)
+  jooqGenerator(libs.jackson.jdk.datatype)
   jooqGenerator(libs.postgresql)
   jooqGenerator(libs.slf4j.simple)
   jooqGenerator(libs.platform.testcontainers.postgresql)
