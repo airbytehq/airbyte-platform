@@ -90,6 +90,8 @@ public class JobErrorReporter {
                                    @Nullable final AttemptConfigReportingContext attemptConfig) {
     Exceptions.swallow(() -> {
       try {
+        LOGGER.info("{} failures incoming for jobId '{}' connectionId '{}'",
+            failureSummary.getFailures() == null ? 0 : failureSummary.getFailures().size(), jobContext.jobId(), connectionId);
         final List<FailureReason> traceMessageFailures = failureSummary.getFailures().stream()
             .filter(failure -> failure.getMetadata() != null && failure.getMetadata().getAdditionalProperties().containsKey(FROM_TRACE_MESSAGE))
             .toList();
@@ -99,6 +101,7 @@ public class JobErrorReporter {
             Map.of(JOB_ID_KEY, String.valueOf(jobContext.jobId())),
             getConnectionMetadata(workspace.getWorkspaceId(), connectionId));
 
+        LOGGER.info("{} failures to report for jobId '{}' connectionId '{}'", traceMessageFailures.size(), jobContext.jobId(), connectionId);
         for (final FailureReason failureReason : traceMessageFailures) {
           final FailureOrigin failureOrigin = failureReason.getFailureOrigin();
           LOGGER.info("Reporting failure for jobId '{}' connectionId '{}' origin '{}'", jobContext.jobId(), connectionId, failureOrigin);
