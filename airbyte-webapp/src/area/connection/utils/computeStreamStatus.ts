@@ -125,7 +125,10 @@ export const computeStreamStatus = ({
     };
   }
 
-  const isRunning = isSyncing || statuses[0].runState === StreamStatusRunState.RUNNING;
+  const isRunning =
+    isSyncing ||
+    statuses[0].runState === StreamStatusRunState.RUNNING ||
+    statuses[0].runState === StreamStatusRunState.RATE_LIMITED;
 
   const lastSuccessfulSync = statuses.find(
     ({ jobType, runState }) => jobType === StreamStatusJobType.SYNC && runState === StreamStatusRunState.COMPLETE
