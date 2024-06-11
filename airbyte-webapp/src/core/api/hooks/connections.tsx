@@ -17,7 +17,7 @@ import { RoutePaths } from "pages/routePaths";
 
 import { jobsKeys } from "./jobs";
 import { useCurrentWorkspace, useInvalidateWorkspaceStateQuery } from "./workspaces";
-import { HttpError } from "../errors";
+import { HttpError, HttpProblem } from "../errors";
 import {
   getConnectionStatuses,
   createOrUpdateStateSafe,
@@ -391,7 +391,7 @@ export const useUpdateConnection = () => {
         }
 
         if (error instanceof HttpError) {
-          if (error.response.type?.includes("error:cron-validation")) {
+          if (HttpProblem.isTypeOrSubtype(error, "error:cron-validation")) {
             return registerNotification({
               id: "update-connection-cron-error",
               type: "error",

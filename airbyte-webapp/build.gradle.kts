@@ -44,6 +44,7 @@ val pnpmVer = engines?.get("pnpm")?.toString()?.trim()  // Extract 'pnpm' as Str
 val outsideWebappDependencies = listOf(
     "../airbyte-api/src/main/openapi/config.yaml",
     "../airbyte-api/src/main/openapi/cloud-config.yaml",
+    "../airbyte-api/src/main/openapi/api-problems.yaml",
     "../airbyte-connector-builder-server/src/main/openapi/openapi.yaml",
     "../airbyte-connector-builder-resources/CDK_VERSION",
 )

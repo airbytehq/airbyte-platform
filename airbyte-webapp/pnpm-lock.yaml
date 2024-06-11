@@ -432,6 +432,9 @@ devDependencies:
   jest-environment-jsdom:
     specifier: ^29.7.0
     version: 29.7.0
+  json-schema-traverse:
+    specifier: ^1.0.0
+    version: 1.0.0
   knip:
     specifier: ^5.2.2
     version: 5.2.2(@types/node@18.16.3)(typescript@5.0.2)

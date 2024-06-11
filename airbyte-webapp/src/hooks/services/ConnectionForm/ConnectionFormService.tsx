@@ -12,7 +12,7 @@ import {
   useGetDestinationDefinitionSpecification,
   useSourceDefinition,
   useDestinationDefinition,
-  HttpError,
+  HttpProblem,
 } from "core/api";
 import {
   ActorDefinitionVersionRead,
@@ -94,7 +94,7 @@ const useConnectionForm = ({
   const getErrorMessage = useCallback<ConnectionFormHook["getErrorMessage"]>(
     (formValid, errors) => {
       if (submitError) {
-        if (submitError instanceof HttpError && submitError.response.type?.includes("error:cron-validation")) {
+        if (HttpProblem.isTypeOrSubtype(submitError, "error:cron-validation")) {
           // Handle cron expressions errors with an explicit error
           return formatMessage(
             { id: "form.cronExpression.invalid" },

@@ -36,6 +36,9 @@ jest.mock("core/api", () => ({
   useSourceDefinition: () => mockSourceDefinition,
   useDestinationDefinition: () => mockDestinationDefinition,
   HttpError: jest.fn(),
+  HttpProblem: {
+    isTypeOrSubtype: jest.fn(),
+  },
 }));
 
 describe("ConnectionFormService", () => {
