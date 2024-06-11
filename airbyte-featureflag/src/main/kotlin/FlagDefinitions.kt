@@ -37,7 +37,7 @@ object ShouldRunOnExpandedGkeDataplane : Temporary<Boolean>(key = "should-run-on
 
 object ShouldRunRefreshSchema : Temporary<Boolean>(key = "should-run-refresh-schema", default = true)
 
-object AutoBackfillOnNewColumns : Temporary<Boolean>(key = "platform.auto-backfill-on-new-columns", default = false)
+object AutoBackfillOnNewColumns : Temporary<Boolean>(key = "platform.auto-backfill-on-new-columns", default = true)
 
 object ResetBackfillState : Temporary<Boolean>(key = "platform.reset-backfill-state", default = false)
 

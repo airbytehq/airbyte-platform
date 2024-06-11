@@ -39,7 +39,7 @@ export const SimplifiedConnectionsSettingsCard: React.FC<SimplifiedConnectionsSe
 }) => {
   const [isAdvancedOpen, setIsAdvancedOpen] = useState(false);
   const canEditDataGeographies = useFeature(FeatureItem.AllowChangeDataGeographies);
-  const canBackfillNewColumns = useExperiment("platform.auto-backfill-on-new-columns", false);
+  const canBackfillNewColumns = useExperiment("platform.auto-backfill-on-new-columns", true);
 
   return (
     <Card title={title} className={styles.hideOverflow}>
