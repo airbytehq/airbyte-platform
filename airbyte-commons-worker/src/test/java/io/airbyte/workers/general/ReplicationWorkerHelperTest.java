@@ -27,22 +27,15 @@ import io.airbyte.api.client.model.generated.SupportLevel;
 import io.airbyte.api.client.model.generated.SupportState;
 import io.airbyte.commons.concurrency.VoidCallable;
 import io.airbyte.commons.converters.ThreadedTimeTracker;
-import io.airbyte.commons.json.Jsons;
 import io.airbyte.persistence.job.models.ReplicationInput;
 import io.airbyte.protocol.models.AirbyteAnalyticsTraceMessage;
 import io.airbyte.protocol.models.AirbyteLogMessage;
 import io.airbyte.protocol.models.AirbyteMessage;
 import io.airbyte.protocol.models.AirbyteMessage.Type;
-import io.airbyte.protocol.models.AirbyteRecordMessage;
-import io.airbyte.protocol.models.AirbyteStreamStatusRateLimitedReason;
-import io.airbyte.protocol.models.AirbyteStreamStatusReason;
-import io.airbyte.protocol.models.AirbyteStreamStatusTraceMessage;
 import io.airbyte.protocol.models.AirbyteTraceMessage;
 import io.airbyte.protocol.models.ConfiguredAirbyteCatalog;
-import io.airbyte.protocol.models.StreamDescriptor;
 import io.airbyte.workers.context.ReplicationContext;
 import io.airbyte.workers.context.ReplicationFeatureFlags;
-import io.airbyte.workers.helper.AirbyteMessageDataExtractor;
 import io.airbyte.workers.helper.StreamStatusCompletionTracker;
 import io.airbyte.workers.internal.AirbyteDestination;
 import io.airbyte.workers.internal.AirbyteMapper;
@@ -52,17 +45,13 @@ import io.airbyte.workers.internal.FieldSelector;
 import io.airbyte.workers.internal.bookkeeping.AirbyteMessageOrigin;
 import io.airbyte.workers.internal.bookkeeping.AirbyteMessageTracker;
 import io.airbyte.workers.internal.bookkeeping.SyncStatsTracker;
-import io.airbyte.workers.internal.bookkeeping.events.ReplicationAirbyteMessageEvent;
 import io.airbyte.workers.internal.bookkeeping.events.ReplicationAirbyteMessageEventPublishingHelper;
-import io.airbyte.workers.internal.bookkeeping.streamstatus.StreamStatusCachingApiClient;
 import io.airbyte.workers.internal.bookkeeping.streamstatus.StreamStatusTracker;
+import io.airbyte.workers.internal.bookkeeping.streamstatus.StreamStatusTrackerFactory;
 import io.airbyte.workers.internal.syncpersistence.SyncPersistence;
 import io.airbyte.workload.api.client.generated.WorkloadApi;
 import java.io.IOException;
 import java.nio.file.Path;
-import java.time.Instant;
-import java.util.Collections;
-import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 import org.junit.jupiter.api.AfterEach;
@@ -82,11 +71,10 @@ class ReplicationWorkerHelperTest {
   private AnalyticsMessageTracker analyticsMessageTracker;
   private StreamStatusCompletionTracker streamStatusCompletionTracker;
   private StreamStatusTracker streamStatusTracker;
-  private StreamStatusCachingApiClient streamStatusApiClient;
+  private StreamStatusTrackerFactory streamStatusTrackerFactory;
   private WorkloadApiClient workloadApiClient;
   private AirbyteApiClient airbyteApiClient;
   private ActorDefinitionVersionApi actorDefinitionVersionApi;
-  private AirbyteMessageDataExtractor extractor;
 
   private ReplicationAirbyteMessageEventPublishingHelper replicationAirbyteMessageEventPublishingHelper;
   private ReplicationContext replicationContext = new ReplicationContext(true, UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), 0L,
@@ -100,21 +88,19 @@ class ReplicationWorkerHelperTest {
     messageTracker = mock(AirbyteMessageTracker.class);
     analyticsMessageTracker = mock(AnalyticsMessageTracker.class);
     streamStatusCompletionTracker = mock(StreamStatusCompletionTracker.class);
-    streamStatusTracker = mock(StreamStatusTracker.class);
-    workloadApiClient = mock(WorkloadApiClient.class);
-    airbyteApiClient = mock(AirbyteApiClient.class);
     replicationAirbyteMessageEventPublishingHelper = mock(ReplicationAirbyteMessageEventPublishingHelper.class);
     streamStatusTracker = mock(StreamStatusTracker.class);
-    streamStatusApiClient = mock(StreamStatusCachingApiClient.class);
+    streamStatusTrackerFactory = mock(StreamStatusTrackerFactory.class);
+    workloadApiClient = mock(WorkloadApiClient.class);
+    airbyteApiClient = mock(AirbyteApiClient.class);
     when(messageTracker.getSyncStatsTracker()).thenReturn(syncStatsTracker);
     when(workloadApiClient.getWorkloadApi()).thenReturn(mock(WorkloadApi.class));
     when(airbyteApiClient.getDestinationApi()).thenReturn(mock(DestinationApi.class));
     when(airbyteApiClient.getSourceApi()).thenReturn(mock(SourceApi.class));
     actorDefinitionVersionApi = mock(ActorDefinitionVersionApi.class);
     when(airbyteApiClient.getActorDefinitionVersionApi()).thenReturn(actorDefinitionVersionApi);
-    extractor = mock(AirbyteMessageDataExtractor.class);
+    when(streamStatusTrackerFactory.create(any())).thenReturn(streamStatusTracker);
     replicationWorkerHelper = spy(new ReplicationWorkerHelper(
-        extractor,
         mock(FieldSelector.class),
         mapper,
         messageTracker,
@@ -128,9 +114,7 @@ class ReplicationWorkerHelperTest {
         Optional.empty(),
         airbyteApiClient,
         streamStatusCompletionTracker,
-        streamStatusTracker,
-        streamStatusApiClient,
-        true));
+        streamStatusTrackerFactory));
   }
 
   @AfterEach
@@ -164,61 +148,6 @@ class ReplicationWorkerHelperTest {
     final var summary = replicationWorkerHelper.getReplicationOutput();
     assertEquals(50L, summary.getReplicationAttemptSummary().getBytesSynced());
     assertEquals(5L, summary.getReplicationAttemptSummary().getRecordsSynced());
-  }
-
-  @Test
-  void testRateLimitedStreamStatusMessages() throws IOException {
-    mockSupportRefreshes(false);
-    final Instant rateLimitedTimeStamp = Instant.parse("2024-05-29T09:25:27.000000Z");
-    final Instant recordMessageTimestamp = Instant.parse("2024-05-29T09:25:28.000000Z");
-
-    final StreamDescriptor streamDescriptor = new StreamDescriptor().withNamespace("namespace").withName("name");
-    when(extractor.getStreamFromMessage(any())).thenReturn(streamDescriptor);
-    replicationWorkerHelper.initialize(
-        replicationContext,
-        mock(ReplicationFeatureFlags.class),
-        mock(Path.class),
-        mock(ConfiguredAirbyteCatalog.class));
-    // Need to have a configured catalog for getReplicationOutput
-    replicationWorkerHelper.startDestination(
-        mock(AirbyteDestination.class),
-        new ReplicationInput().withCatalog(new ConfiguredAirbyteCatalog()),
-        mock(Path.class));
-
-    replicationWorkerHelper.startSource(
-        mock(AirbyteSource.class),
-        new ReplicationInput().withCatalog(new ConfiguredAirbyteCatalog()),
-        mock(Path.class));
-
-    final AirbyteMessage rateLimitedMessage = new AirbyteMessage()
-        .withType(Type.TRACE)
-        .withTrace(new AirbyteTraceMessage()
-            .withType(AirbyteTraceMessage.Type.STREAM_STATUS)
-            .withEmittedAt((double) rateLimitedTimeStamp.toEpochMilli())
-            .withStreamStatus(new AirbyteStreamStatusTraceMessage()
-                .withStreamDescriptor(streamDescriptor)
-                .withStatus(AirbyteStreamStatusTraceMessage.AirbyteStreamStatus.RUNNING)
-                .withReasons(Collections.singletonList(new AirbyteStreamStatusReason()
-                    .withType(AirbyteStreamStatusReason.AirbyteStreamStatusReasonType.RATE_LIMITED)
-                    .withRateLimited(new AirbyteStreamStatusRateLimitedReason().withQuotaReset(rateLimitedTimeStamp.toEpochMilli()))))));
-
-    final AirbyteMessage recordMessage = new AirbyteMessage()
-        .withType(Type.RECORD)
-        .withRecord(new AirbyteRecordMessage()
-            .withNamespace(streamDescriptor.getNamespace())
-            .withStream(streamDescriptor.getName())
-            .withData(Jsons.jsonNode(Map.of("col", 1)))
-            .withEmittedAt(recordMessageTimestamp.toEpochMilli()));
-
-    replicationWorkerHelper.internalProcessMessageFromSource(rateLimitedMessage);
-    replicationWorkerHelper.internalProcessMessageFromSource(recordMessage);
-
-    final ReplicationAirbyteMessageEvent rateLimitedEvent = new ReplicationAirbyteMessageEvent(AirbyteMessageOrigin.SOURCE,
-        rateLimitedMessage, replicationContext);
-    verify(replicationAirbyteMessageEventPublishingHelper).publishStatusEvent(rateLimitedEvent);
-    verify(replicationAirbyteMessageEventPublishingHelper).publishRunningStatusEvent(streamDescriptor, replicationContext,
-        AirbyteMessageOrigin.SOURCE,
-        recordMessage.getRecord().getEmittedAt());
   }
 
   @Test

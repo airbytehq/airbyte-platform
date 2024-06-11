@@ -15,6 +15,10 @@ data class StreamStatusKey(
   }
 
   companion object {
-    fun fromProtocol(streamDesc: StreamDescriptor) = StreamStatusKey(streamDesc.namespace, streamDesc.name)
+    fun fromProtocol(streamDesc: StreamDescriptor) =
+      StreamStatusKey(
+        streamDesc.namespace,
+        streamDesc.name,
+      )
   }
 }

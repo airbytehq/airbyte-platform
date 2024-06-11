@@ -11,7 +11,6 @@ import io.airbyte.api.client.AirbyteApiClient
 import io.airbyte.api.client.WorkloadApiClient
 import io.airbyte.api.client.model.generated.DestinationIdRequestBody
 import io.airbyte.api.client.model.generated.SourceIdRequestBody
-import io.airbyte.api.client.model.generated.StreamStatusIncompleteRunCause
 import io.airbyte.commons.concurrency.VoidCallable
 import io.airbyte.commons.converters.ThreadedTimeTracker
 import io.airbyte.commons.io.LineGobbler
@@ -35,12 +34,10 @@ import io.airbyte.protocol.models.AirbyteStateMessage
 import io.airbyte.protocol.models.AirbyteStateStats
 import io.airbyte.protocol.models.AirbyteTraceMessage
 import io.airbyte.protocol.models.ConfiguredAirbyteCatalog
-import io.airbyte.protocol.models.StreamDescriptor
 import io.airbyte.workers.WorkerUtils
 import io.airbyte.workers.context.ReplicationContext
 import io.airbyte.workers.context.ReplicationFeatureFlags
 import io.airbyte.workers.exception.WorkloadHeartbeatException
-import io.airbyte.workers.helper.AirbyteMessageDataExtractor
 import io.airbyte.workers.helper.FailureHelper
 import io.airbyte.workers.helper.StreamStatusCompletionTracker
 import io.airbyte.workers.internal.AirbyteDestination
@@ -56,8 +53,8 @@ import io.airbyte.workers.internal.bookkeeping.events.ReplicationAirbyteMessageE
 import io.airbyte.workers.internal.bookkeeping.events.ReplicationAirbyteMessageEventPublishingHelper
 import io.airbyte.workers.internal.bookkeeping.getPerStreamStats
 import io.airbyte.workers.internal.bookkeeping.getTotalStats
-import io.airbyte.workers.internal.bookkeeping.streamstatus.StreamStatusCachingApiClient
 import io.airbyte.workers.internal.bookkeeping.streamstatus.StreamStatusTracker
+import io.airbyte.workers.internal.bookkeeping.streamstatus.StreamStatusTrackerFactory
 import io.airbyte.workers.internal.exception.DestinationException
 import io.airbyte.workers.internal.exception.SourceException
 import io.airbyte.workers.internal.syncpersistence.SyncPersistence
@@ -79,7 +76,6 @@ import io.airbyte.workload.api.client.generated.infrastructure.ClientException a
 private val logger = KotlinLogging.logger { }
 
 class ReplicationWorkerHelper(
-  private val airbyteMessageDataExtractor: AirbyteMessageDataExtractor,
   private val fieldSelector: FieldSelector,
   private val mapper: AirbyteMapper,
   private val messageTracker: AirbyteMessageTracker,
@@ -93,9 +89,7 @@ class ReplicationWorkerHelper(
   private val workloadId: Optional<String>,
   private val airbyteApiClient: AirbyteApiClient,
   private val streamStatusCompletionTracker: StreamStatusCompletionTracker,
-  private val streamStatusTracker: StreamStatusTracker,
-  private val streamStatusApiClient: StreamStatusCachingApiClient,
-  processRateLimitedMessage: Boolean,
+  private val streamStatusTrackerFactory: StreamStatusTrackerFactory,
 ) {
   private val metricClient = MetricClientFactory.getMetricClient()
   private val metricAttrs: MutableList<MetricAttribute> = mutableListOf()
@@ -113,15 +107,9 @@ class ReplicationWorkerHelper(
 
   private var recordsRead: Long = 0
   private var destinationConfig: WorkerDestinationConfig? = null
-  private var currentDestinationStream: StreamDescriptor? = null
   private var ctx: ReplicationContext? = null
   private lateinit var replicationFeatureFlags: ReplicationFeatureFlags
-  private val rateLimitedMessageHandler =
-    RateLimitedMessageHandler(
-      airbyteMessageDataExtractor,
-      replicationAirbyteMessageEventPublishingHelper,
-      processRateLimitedMessage,
-    )
+  private lateinit var streamStatusTracker: StreamStatusTracker
 
   fun markCancelled(): Unit = _cancelled.set(true)
 
@@ -194,8 +182,7 @@ class ReplicationWorkerHelper(
 
     this.ctx = ctx
     this.replicationFeatureFlags = replicationFeatureFlags
-    this.streamStatusTracker.init(ctx)
-    this.streamStatusApiClient.init(ctx)
+    this.streamStatusTracker = streamStatusTrackerFactory.create(ctx)
 
     analyticsMessageTracker.ctx = ctx
 
@@ -248,30 +235,6 @@ class ReplicationWorkerHelper(
   }
 
   fun endOfReplication() {
-    rateLimitedMessageHandler.clear()
-    val context = requireNotNull(ctx)
-    // Publish a complete status event for all streams associated with the connection.
-    // This is to ensure that all streams end up in a terminal state and is necessary for
-    // connections with destinations that do not emit messages to trigger the completion.
-
-    // If the sync has been cancelled, publish an incomplete event so that any streams in a non-terminal
-    // status will be moved to incomplete/cancelled. Otherwise, publish a complete event to move those
-    // streams to a complete status.
-    if (_cancelled.get()) {
-      replicationAirbyteMessageEventPublishingHelper.publishIncompleteStatusEvent(
-        stream = StreamDescriptor(),
-        ctx = context,
-        origin = AirbyteMessageOrigin.INTERNAL,
-        incompleteRunCause = StreamStatusIncompleteRunCause.CANCELED,
-      )
-    } else {
-      replicationAirbyteMessageEventPublishingHelper.publishCompleteStatusEvent(
-        stream = StreamDescriptor(),
-        ctx = context,
-        origin = AirbyteMessageOrigin.INTERNAL,
-      )
-    }
-
     timeTracker.trackReplicationEndTime()
     analyticsMessageTracker.flush()
   }
@@ -289,13 +252,6 @@ class ReplicationWorkerHelper(
   }
 
   fun endOfDestination() {
-    val context = requireNotNull(ctx)
-
-    // publish the completed state for the last stream, if present
-    currentDestinationStream?.let {
-      replicationAirbyteMessageEventPublishingHelper.publishCompleteStatusEvent(it, context, AirbyteMessageOrigin.DESTINATION)
-    }
-
     timeTracker.trackDestinationWriteEndTime()
   }
 
@@ -303,12 +259,6 @@ class ReplicationWorkerHelper(
     val context = requireNotNull(ctx)
 
     replicationFailures.add(getFailureReason(t, context.jobId, context.attempt))
-    replicationAirbyteMessageEventPublishingHelper.publishIncompleteStatusEvent(
-      stream = StreamDescriptor(),
-      ctx = context,
-      origin = AirbyteMessageOrigin.INTERNAL,
-      incompleteRunCause = StreamStatusIncompleteRunCause.FAILED,
-    )
   }
 
   fun processMessageFromDestination(destinationRawMessage: AirbyteMessage) {
@@ -383,7 +333,7 @@ class ReplicationWorkerHelper(
       analyticsMessageTracker.addMessage(sourceRawMessage, AirbyteMessageOrigin.SOURCE)
     }
 
-    handleControlAndStreamStatusMessages(sourceRawMessage, context)
+    handleControlMessage(sourceRawMessage, context, AirbyteMessageOrigin.SOURCE)
 
     recordsRead += 1
     if (recordsRead % 5000 == 0L) {
@@ -401,16 +351,14 @@ class ReplicationWorkerHelper(
     return sourceRawMessage
   }
 
-  private fun handleControlAndStreamStatusMessages(
-    sourceRawMessage: AirbyteMessage,
+  private fun handleControlMessage(
+    rawMessage: AirbyteMessage,
     context: ReplicationContext,
+    origin: AirbyteMessageOrigin,
   ) {
-    if (shouldPublishMessage(sourceRawMessage)) {
-      rateLimitedMessageHandler.moveStreamToRateLimitedStateIfApplicable(sourceRawMessage)
+    if (rawMessage.type == Type.CONTROL) {
       replicationAirbyteMessageEventPublishingHelper
-        .publishStatusEvent(ReplicationAirbyteMessageEvent(AirbyteMessageOrigin.SOURCE, sourceRawMessage, context))
-    } else {
-      rateLimitedMessageHandler.moveStreamOutOfRateLimitedStateIfApplicable(sourceRawMessage, context)
+        .publishEvent(ReplicationAirbyteMessageEvent(origin, rawMessage, context))
     }
   }
 
@@ -421,22 +369,6 @@ class ReplicationWorkerHelper(
     streamStatusTracker.track(destinationRawMessage)
 
     logger.debug { "State in ReplicationWorkerHelper from destination: $destinationRawMessage" }
-
-    val previousStream = currentDestinationStream
-
-    currentDestinationStream =
-      airbyteMessageDataExtractor.extractStreamDescriptor(destinationRawMessage, previousStream)
-        ?.also {
-          logger.debug { "DESTINATION > The current stream is ${it.namespace}:${it.name}" }
-
-          if (previousStream != null && previousStream != it) {
-            replicationAirbyteMessageEventPublishingHelper.publishCompleteStatusEvent(
-              previousStream,
-              context,
-              AirbyteMessageOrigin.DESTINATION,
-            )
-          }
-        }
 
     messageTracker.acceptFromDestination(destinationRawMessage)
     if (isAnalyticsMessage(destinationRawMessage)) {
@@ -450,14 +382,7 @@ class ReplicationWorkerHelper(
       metricClient.count(OssMetricsRegistry.STATE_PROCESSED_FROM_DESTINATION, 1, *metricAttrs.toTypedArray())
     }
 
-    if (shouldPublishMessage(destinationRawMessage)) {
-      currentDestinationStream?.let {
-        logger.debug { "Publishing destination event for stream ${it.namespace}:${it.name}..." }
-      }
-
-      replicationAirbyteMessageEventPublishingHelper
-        .publishStatusEvent(ReplicationAirbyteMessageEvent(AirbyteMessageOrigin.DESTINATION, destinationRawMessage, context))
-    }
+    handleControlMessage(destinationRawMessage, context, AirbyteMessageOrigin.DESTINATION)
   }
 
   // TODO convert to AirbyteMessage? when fully converted to kotlin
@@ -548,19 +473,6 @@ class ReplicationWorkerHelper(
       }
   }
 }
-
-/**
- * Tests whether the [AirbyteMessage] should be published via Micronaut's event publishing mechanism.
- *
- * @param msg The [AirbyteMessage] to be considered for event publishing.
- * @return true if the message should be published, false otherwise.
- */
-private fun shouldPublishMessage(msg: AirbyteMessage): Boolean =
-  when {
-    msg.type == Type.CONTROL -> true
-    msg.type == Type.TRACE && msg.trace.type == AirbyteTraceMessage.Type.STREAM_STATUS -> true
-    else -> false
-  }
 
 private fun isAnalyticsMessage(msg: AirbyteMessage): Boolean = msg.type == Type.TRACE && msg.trace.type == AirbyteTraceMessage.Type.ANALYTICS
 

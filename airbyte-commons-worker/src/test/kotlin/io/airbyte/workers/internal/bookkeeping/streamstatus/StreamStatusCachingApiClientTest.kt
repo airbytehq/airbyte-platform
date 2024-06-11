@@ -34,15 +34,14 @@ class StreamStatusCachingApiClientTest {
     clock = mockk()
     every { clock.millis() } returns Fixtures.nowMillis
 
-    client = StreamStatusCachingApiClient(rawClientWrapper, metricClient, clock)
-    client.init(Fixtures.syncCtx)
+    client = StreamStatusCachingApiClient(rawClientWrapper, clock)
   }
 
   @Test
   fun createsStatusIfNotPresentInCache() {
     every { rawClient.createStreamStatus(any()) } returns Fixtures.streamStatusRead(StreamStatusRunState.RUNNING)
 
-    client.put(Fixtures.key1, StreamStatusRunState.RUNNING)
+    client.put(Fixtures.cache(), Fixtures.key1, StreamStatusRunState.RUNNING, null, Fixtures.syncCtx)
 
     verify(exactly = 1) { rawClient.createStreamStatus(any()) }
   }
@@ -52,8 +51,10 @@ class StreamStatusCachingApiClientTest {
     every { rawClient.createStreamStatus(any()) } returns Fixtures.streamStatusRead(StreamStatusRunState.RUNNING)
     every { rawClient.updateStreamStatus(any()) } returns Fixtures.streamStatusRead(StreamStatusRunState.RUNNING)
 
-    client.put(Fixtures.key1, StreamStatusRunState.RUNNING)
-    client.put(Fixtures.key1, StreamStatusRunState.COMPLETE)
+    val cache = Fixtures.cache()
+
+    client.put(cache, Fixtures.key1, StreamStatusRunState.RUNNING, null, Fixtures.syncCtx)
+    client.put(cache, Fixtures.key1, StreamStatusRunState.COMPLETE, null, Fixtures.syncCtx)
 
     verify(exactly = 1) { rawClient.updateStreamStatus(any()) }
   }
@@ -62,34 +63,20 @@ class StreamStatusCachingApiClientTest {
   fun ignoresDuplicates() {
     every { rawClient.createStreamStatus(any()) } returns Fixtures.streamStatusRead(StreamStatusRunState.RUNNING)
 
-    client.put(Fixtures.key1, StreamStatusRunState.RUNNING)
-    client.put(Fixtures.key1, StreamStatusRunState.RUNNING)
+    client.put(Fixtures.cache(), Fixtures.key1, StreamStatusRunState.RUNNING, null, Fixtures.syncCtx)
+    client.put(Fixtures.cache(), Fixtures.key1, StreamStatusRunState.RUNNING, null, Fixtures.syncCtx)
 
     verify(exactly = 0) { rawClient.updateStreamStatus(any()) }
   }
 
   @Test
-  fun noopsAndRecordsMetricIfNotInitialized() {
-    every { metricClient.count(any(), any(), *anyVararg()) } returns Unit
-
-    val client1 = StreamStatusCachingApiClient(rawClientWrapper, metricClient, clock)
-    client1.put(Fixtures.key1, StreamStatusRunState.RUNNING)
-
-    verify(exactly = 0) { rawClient.createStreamStatus(any()) }
-    verify(exactly = 1) { metricClient.count(any(), any(), *anyVararg()) }
-  }
-
-  @Test
   fun buildCreateAndUpdateReqHandleJobType() {
-    val client1 = StreamStatusCachingApiClient(rawClientWrapper, metricClient, clock)
-    client1.init(Fixtures.resetCtx)
-    val client2 = StreamStatusCachingApiClient(rawClientWrapper, metricClient, clock)
-    client2.init(Fixtures.syncCtx)
+    val client1 = StreamStatusCachingApiClient(rawClientWrapper, clock)
 
-    val createResult1 = client1.buildCreateReq("namespace", "name", StreamStatusRunState.RUNNING)
-    val createResult2 = client2.buildCreateReq("namespace", "name", StreamStatusRunState.RUNNING)
-    val updateResult1 = client1.buildUpdateReq(UUID.randomUUID(), "namespace", "name", StreamStatusRunState.RUNNING)
-    val updateResult2 = client2.buildUpdateReq(UUID.randomUUID(), "namespace", "name", StreamStatusRunState.RUNNING)
+    val createResult1 = client1.buildCreateReq("namespace", "name", Fixtures.resetCtx, StreamStatusRunState.RUNNING)
+    val createResult2 = client1.buildCreateReq("namespace", "name", Fixtures.syncCtx, StreamStatusRunState.RUNNING)
+    val updateResult1 = client1.buildUpdateReq(UUID.randomUUID(), "namespace", "name", Fixtures.resetCtx, StreamStatusRunState.RUNNING)
+    val updateResult2 = client1.buildUpdateReq(UUID.randomUUID(), "namespace", "name", Fixtures.syncCtx, StreamStatusRunState.RUNNING)
     Assertions.assertEquals(StreamStatusJobType.RESET, createResult1.jobType)
     Assertions.assertEquals(StreamStatusJobType.SYNC, createResult2.jobType)
     Assertions.assertEquals(StreamStatusJobType.RESET, updateResult1.jobType)
@@ -98,10 +85,10 @@ class StreamStatusCachingApiClientTest {
 
   @Test
   fun buildCreateAndUpdateReqSetIncompleteRunCauseToFailed() {
-    val createResult1 = client.buildCreateReq("namespace", "name", StreamStatusRunState.INCOMPLETE)
-    val createResult2 = client.buildCreateReq("namespace", "name", StreamStatusRunState.RUNNING)
-    val updateResult1 = client.buildUpdateReq(UUID.randomUUID(), "namespace", "name", StreamStatusRunState.INCOMPLETE)
-    val updateResult2 = client.buildUpdateReq(UUID.randomUUID(), "namespace", "name", StreamStatusRunState.RUNNING)
+    val createResult1 = client.buildCreateReq("namespace", "name", Fixtures.syncCtx, StreamStatusRunState.INCOMPLETE)
+    val createResult2 = client.buildCreateReq("namespace", "name", Fixtures.syncCtx, StreamStatusRunState.RUNNING)
+    val updateResult1 = client.buildUpdateReq(UUID.randomUUID(), "namespace", "name", Fixtures.syncCtx, StreamStatusRunState.INCOMPLETE)
+    val updateResult2 = client.buildUpdateReq(UUID.randomUUID(), "namespace", "name", Fixtures.syncCtx, StreamStatusRunState.RUNNING)
 
     Assertions.assertEquals(StreamStatusIncompleteRunCause.FAILED, createResult1.incompleteRunCause)
     Assertions.assertNull(createResult2.incompleteRunCause)
@@ -114,8 +101,8 @@ class StreamStatusCachingApiClientTest {
     val metadata1 = StreamStatusRateLimitedMetadata(quotaReset = 123L)
     val metadata2 = StreamStatusRateLimitedMetadata(quotaReset = 456L)
 
-    val createResult1 = client.buildCreateReq("namespace", "name", StreamStatusRunState.INCOMPLETE, metadata1)
-    val updateResult1 = client.buildUpdateReq(UUID.randomUUID(), "namespace", "name", StreamStatusRunState.RUNNING, metadata2)
+    val createResult1 = client.buildCreateReq("namespace", "name", Fixtures.syncCtx, StreamStatusRunState.INCOMPLETE, metadata1)
+    val updateResult1 = client.buildUpdateReq(UUID.randomUUID(), "namespace", "name", Fixtures.syncCtx, StreamStatusRunState.RUNNING, metadata2)
 
     Assertions.assertEquals(metadata1, createResult1.metadata)
     Assertions.assertEquals(metadata2, updateResult1.metadata)
@@ -140,6 +127,8 @@ class StreamStatusCachingApiClientTest {
         incompleteRunCause = null,
         metadata = null,
       )
+
+    fun cache() = mutableMapOf<StreamStatusKey, StreamStatusRead>()
 
     val syncCtx = ctx(false)
     val resetCtx = ctx(true)

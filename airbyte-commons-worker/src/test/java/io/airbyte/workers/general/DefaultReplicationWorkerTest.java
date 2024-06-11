@@ -20,10 +20,10 @@ class DefaultReplicationWorkerTest extends ReplicationWorkerTest {
   @Override
   ReplicationWorker getDefaultReplicationWorker(final boolean fieldSelectionEnabled) {
     final var fieldSelector = new FieldSelector(recordSchemaValidator, workerMetricReporter, fieldSelectionEnabled, false);
-    replicationWorkerHelper = spy(new ReplicationWorkerHelper(airbyteMessageDataExtractor, fieldSelector, mapper, messageTracker, syncPersistence,
+    replicationWorkerHelper = spy(new ReplicationWorkerHelper(fieldSelector, mapper, messageTracker, syncPersistence,
         replicationAirbyteMessageEventPublishingHelper, new ThreadedTimeTracker(), onReplicationRunning, workloadApiClient, false,
         analyticsMessageTracker,
-        Optional.empty(), airbyteApiClient, streamStatusCompletionTracker, streamStatusTracker, streamStatusApiClient, true));
+        Optional.empty(), airbyteApiClient, streamStatusCompletionTracker, streamStatusTrackerFactory));
     return new DefaultReplicationWorker(
         JOB_ID,
         JOB_ATTEMPT,

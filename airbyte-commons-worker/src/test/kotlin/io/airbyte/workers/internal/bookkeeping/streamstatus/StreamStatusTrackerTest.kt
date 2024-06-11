@@ -1,7 +1,7 @@
 package io.airbyte.workers.internal.bookkeeping.streamstatus
 
 import io.airbyte.api.client.model.generated.StreamStatusRateLimitedMetadata
-import io.airbyte.metrics.lib.MetricClient
+import io.airbyte.api.client.model.generated.StreamStatusRead
 import io.airbyte.protocol.models.AirbyteMessage
 import io.airbyte.protocol.models.AirbyteRecordMessage
 import io.airbyte.protocol.models.AirbyteStateMessage
@@ -37,19 +37,18 @@ class StreamStatusTrackerTest {
   private lateinit var dataExtractor: AirbyteMessageDataExtractor
   private lateinit var store: StreamStatusStateStore
   private lateinit var eventPublisher: ApplicationEventPublisher<StreamStatusUpdateEvent>
-  private lateinit var metricClient: MetricClient
   private lateinit var ffClient: CachingFeatureFlagClient
+  private lateinit var apiCache: MutableMap<StreamStatusKey, StreamStatusRead>
 
   @BeforeEach
   fun setup() {
     dataExtractor = mockk()
     store = mockk()
     eventPublisher = mockk()
-    metricClient = mockk()
     ffClient = mockk()
+    apiCache = HashMap()
 
-    tracker = StreamStatusTracker(dataExtractor, store, eventPublisher, metricClient, ffClient)
-    tracker.init(Fixtures.ctx)
+    tracker = StreamStatusTracker(dataExtractor, store, eventPublisher, ffClient, Fixtures.ctx, apiCache)
 
     every { ffClient.boolVariation(any(), any()) } returns true
     every { dataExtractor.getStreamFromMessage(any()) } returns Fixtures.streamDescriptor
@@ -219,7 +218,18 @@ class StreamStatusTrackerTest {
 
     tracker.track(Fixtures.traceMsg())
 
-    verify(exactly = 1) { eventPublisher.publishEvent(eq(StreamStatusUpdateEvent(Fixtures.key, updatedRunState))) }
+    verify(exactly = 1) {
+      eventPublisher.publishEvent(
+        eq(
+          StreamStatusUpdateEvent(
+            key = Fixtures.key,
+            runState = updatedRunState,
+            ctx = Fixtures.ctx,
+            cache = apiCache,
+          ),
+        ),
+      )
+    }
   }
 
   @ParameterizedTest

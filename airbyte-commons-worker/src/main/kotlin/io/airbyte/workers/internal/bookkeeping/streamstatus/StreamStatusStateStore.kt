@@ -6,7 +6,6 @@ import io.airbyte.api.client.model.generated.StreamStatusRunState.INCOMPLETE
 import io.airbyte.api.client.model.generated.StreamStatusRunState.RATE_LIMITED
 import io.airbyte.api.client.model.generated.StreamStatusRunState.RUNNING
 import io.github.oshai.kotlinlogging.KotlinLogging
-import jakarta.inject.Singleton
 import java.util.concurrent.ConcurrentHashMap
 import io.airbyte.api.client.model.generated.StreamStatusRunState as ApiEnum
 
@@ -19,7 +18,6 @@ private val logger = KotlinLogging.logger {}
  *
  * State layer.
  */
-@Singleton
 class StreamStatusStateStore {
   private val store: MutableMap<StreamStatusKey, StreamStatusValue> = ConcurrentHashMap()
 
