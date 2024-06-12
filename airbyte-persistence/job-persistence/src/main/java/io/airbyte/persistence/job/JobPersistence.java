@@ -302,7 +302,7 @@ public interface JobPersistence {
    * @return list of jobs
    * @throws IOException you never know
    */
-  List<Job> listJobs(final Set<Long> jobIds) throws IOException;
+  List<Job> listJobsLight(final Set<Long> jobIds) throws IOException;
 
   List<Job> listJobsLight(Set<ConfigType> configTypes, String configId, int pagesize) throws IOException;
 

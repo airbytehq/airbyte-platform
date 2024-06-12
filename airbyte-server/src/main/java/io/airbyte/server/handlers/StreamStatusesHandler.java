@@ -123,7 +123,7 @@ public class StreamStatusesHandler {
 
     List<Job> jobs;
     try {
-      jobs = jobPersistence.listJobs(new HashSet<>(jobIdToStreamStatuses.keySet()));
+      jobs = jobPersistence.listJobsLight(new HashSet<>(jobIdToStreamStatuses.keySet()));
     } catch (IOException e) {
       throw new RuntimeException(e);
     }

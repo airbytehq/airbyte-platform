@@ -238,7 +238,7 @@ class StreamStatusesHandlerTest {
                       .streamNamespace("streamThreeNamespace"))));
 
       when(repo.findLastAttemptsOfLastXJobsForConnection(connectionId, numJobs)).thenReturn(List.of(ssOne, ssTwo, ssThree));
-      when(jobPersistence.listJobs(Set.of(jobOneId, jobTwoId))).thenReturn(List.of(jobOne, jobTwo));
+      when(jobPersistence.listJobsLight(Set.of(jobOneId, jobTwoId))).thenReturn(List.of(jobOne, jobTwo));
       var handlerWithRealMapper = new StreamStatusesHandler(repo, new StreamStatusesMapper(), jobHistoryHandler, jobPersistence);
       Assertions.assertEquals(expected, handlerWithRealMapper.getConnectionUptimeHistory(apiReq));
     }

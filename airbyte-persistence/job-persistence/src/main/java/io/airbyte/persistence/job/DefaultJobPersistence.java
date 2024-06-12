@@ -1175,14 +1175,14 @@ public class DefaultJobPersistence implements JobPersistence {
   }
 
   @Override
-  public List<Job> listJobs(final Set<Long> jobIds) throws IOException {
+  public List<Job> listJobsLight(final Set<Long> jobIds) throws IOException {
     return jobDatabase.query(ctx -> {
       final String jobsSubquery = "(" + ctx.select(DSL.asterisk()).from(JOBS)
           .where(JOBS.ID.in(jobIds))
           .orderBy(JOBS.CREATED_AT.desc(), JOBS.ID.desc())
           .getSQL(ParamType.INLINED) + ") AS jobs";
 
-      return getJobsFromResult(ctx.fetch(jobSelectAndJoin(jobsSubquery)));
+      return getJobsFromResultLight(ctx.fetch(jobSelectAndJoin(jobsSubquery)));
     });
   }
 
