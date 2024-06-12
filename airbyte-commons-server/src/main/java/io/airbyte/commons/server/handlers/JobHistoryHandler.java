@@ -19,6 +19,8 @@ import io.airbyte.api.model.generated.DestinationDefinitionIdRequestBody;
 import io.airbyte.api.model.generated.DestinationDefinitionRead;
 import io.airbyte.api.model.generated.DestinationIdRequestBody;
 import io.airbyte.api.model.generated.DestinationRead;
+import io.airbyte.api.model.generated.JobAggregatedStats;
+import io.airbyte.api.model.generated.JobConfigType;
 import io.airbyte.api.model.generated.JobDebugInfoRead;
 import io.airbyte.api.model.generated.JobDebugRead;
 import io.airbyte.api.model.generated.JobIdRequestBody;
@@ -34,6 +36,7 @@ import io.airbyte.api.model.generated.SourceDefinitionIdRequestBody;
 import io.airbyte.api.model.generated.SourceDefinitionRead;
 import io.airbyte.api.model.generated.SourceIdRequestBody;
 import io.airbyte.api.model.generated.SourceRead;
+import io.airbyte.api.model.generated.StreamDescriptor;
 import io.airbyte.api.model.generated.StreamStats;
 import io.airbyte.api.model.generated.StreamSyncProgressReadItem;
 import io.airbyte.commons.enums.Enums;
@@ -71,6 +74,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.SortedMap;
+import java.util.TreeMap;
 import java.util.UUID;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -95,6 +100,9 @@ public class JobHistoryHandler {
   private final AirbyteVersion airbyteVersion;
   private final TemporalClient temporalClient;
   private final FeatureFlagClient featureFlagClient;
+
+  private static final Set<JobConfigType> CONFIG_TYPE_SUPPORTING_PROGRESS =
+      Set.of(JobConfigType.SYNC, JobConfigType.REFRESH, JobConfigType.RESET_CONNECTION, JobConfigType.CLEAR);
 
   public JobHistoryHandler(final JobPersistence jobPersistence,
                            final WorkerEnvironment workerEnvironment,
@@ -377,7 +385,8 @@ public class JobHistoryHandler {
 
     hydrateWithStats(jobReads, jobs, featureFlagClient.boolVariation(HydrateAggregatedStats.INSTANCE, new Workspace(ANONYMOUS)), jobPersistence);
 
-    if (jobReads.isEmpty()) {
+    if (jobReads.isEmpty() || jobReads.getFirst() == null
+        || !CONFIG_TYPE_SUPPORTING_PROGRESS.contains(jobReads.getFirst().getJob().getConfigType())) {
       return new ConnectionSyncProgressRead().connectionId(connectionIdRequestBody.getConnectionId()).streams(Collections.emptyList());
     }
     final JobWithAttemptsRead runningJob = jobReads.getFirst();
@@ -390,34 +399,51 @@ public class JobHistoryHandler {
             Function.identity()));
 
     // Iterate through ALL enabled streams from the job, enriching with stream stats data
-    final List<StreamSyncProgressReadItem> finalStreamsWithStats = runningJob.getJob().getEnabledStreams().stream()
-        .map(enabledStream -> {
-          final String key = enabledStream.getName() + "-" + enabledStream.getNamespace();
-          final StreamStats streamStats = streamStatsMap.get(key);
+    final JobConfigType runningJobConfigType = runningJob.getJob().getConfigType();
+    final SortedMap<JobConfigType, List<StreamDescriptor>> streamToTrackPerConfigType = new TreeMap<>();
+    final var enabledStreams = runningJob.getJob().getEnabledStreams();
+    if (runningJobConfigType.equals(JobConfigType.SYNC)) {
+      streamToTrackPerConfigType.put(JobConfigType.SYNC, enabledStreams);
+    } else if (runningJobConfigType.equals(JobConfigType.REFRESH)) {
+      final List<StreamDescriptor> streamsToRefresh = runningJob.getJob().getRefreshConfig().getStreamsToRefresh();
+      streamToTrackPerConfigType.put(JobConfigType.REFRESH, streamsToRefresh);
+      streamToTrackPerConfigType.put(JobConfigType.SYNC, enabledStreams.stream().filter(s -> !streamsToRefresh.contains(s)).toList());
+    } else if (runningJobConfigType.equals(JobConfigType.RESET_CONNECTION) || runningJobConfigType.equals(JobConfigType.CLEAR)) {
+      streamToTrackPerConfigType.put(JobConfigType.CLEAR, runningJob.getJob().getResetConfig().getStreamsToReset());
+    }
 
-          final StreamSyncProgressReadItem item = new StreamSyncProgressReadItem()
-              .streamName(enabledStream.getName())
-              .streamNamespace(enabledStream.getNamespace());
+    final List<StreamSyncProgressReadItem> finalStreamsWithStats = streamToTrackPerConfigType.entrySet().stream()
+        .flatMap((entry) -> {
+          return entry.getValue().stream().map(stream -> {
+            final String key = stream.getName() + "-" + stream.getNamespace();
+            final StreamStats streamStats = streamStatsMap.get(key);
 
-          if (streamStats != null) {
-            item.recordsEmitted(streamStats.getRecordsEmitted())
-                .recordsCommitted(streamStats.getRecordsCommitted())
-                .bytesEmitted(streamStats.getBytesEmitted())
-                .bytesCommitted(streamStats.getBytesCommitted());
-          }
+            final StreamSyncProgressReadItem item = new StreamSyncProgressReadItem()
+                .streamName(stream.getName())
+                .streamNamespace(stream.getNamespace())
+                .configType(entry.getKey());
 
-          return item;
-        })
-        .collect(Collectors.toList());
+            if (streamStats != null) {
+              item.recordsEmitted(streamStats.getRecordsEmitted())
+                  .recordsCommitted(streamStats.getRecordsCommitted())
+                  .bytesEmitted(streamStats.getBytesEmitted())
+                  .bytesCommitted(streamStats.getBytesCommitted());
+            }
 
+            return item;
+          });
+        }).collect(Collectors.toList());
+
+    final JobAggregatedStats aggregatedStats = runningJob.getJob().getAggregatedStats();
     return new ConnectionSyncProgressRead()
         .connectionId(connectionIdRequestBody.getConnectionId())
         .jobId(runningJob.getJob().getId())
         .syncStartedAt(runningJob.getJob().getStartedAt())
-        .bytesEmitted(runningJob.getJob().getAggregatedStats().getBytesEmitted())
-        .bytesCommitted(runningJob.getJob().getAggregatedStats().getBytesCommitted())
-        .recordsEmitted(runningJob.getJob().getAggregatedStats().getRecordsEmitted())
-        .recordsCommitted(runningJob.getJob().getAggregatedStats().getRecordsCommitted())
+        .bytesEmitted(aggregatedStats == null ? null : aggregatedStats.getBytesEmitted())
+        .bytesCommitted(aggregatedStats == null ? null : aggregatedStats.getBytesCommitted())
+        .recordsEmitted(aggregatedStats == null ? null : aggregatedStats.getRecordsEmitted())
+        .recordsCommitted(aggregatedStats == null ? null : aggregatedStats.getRecordsCommitted())
+        .configType(runningJobConfigType)
         .streams(finalStreamsWithStats);
   }
 

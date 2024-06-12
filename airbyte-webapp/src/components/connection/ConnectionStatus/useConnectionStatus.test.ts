@@ -12,6 +12,7 @@ import {
   ConnectionStatusRead,
   ConnectionSyncProgressRead,
   FailureType,
+  JobConfigType,
   JobStatus,
   SchemaChange,
   WebBackendConnectionRead,
@@ -88,7 +89,7 @@ const resetAndSetupMocks = ({
     hasBreakingSchemaChange,
   }));
   mockUseGetConnectionSyncProgress.mockReturnValue({
-    data: { connectionId: mockConnection.connectionId, streams: [] },
+    data: { connectionId: mockConnection.connectionId, streams: [], configType: JobConfigType.sync },
   });
 };
 

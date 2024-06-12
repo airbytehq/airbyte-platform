@@ -36,9 +36,11 @@ import io.airbyte.api.model.generated.JobInfoRead;
 import io.airbyte.api.model.generated.JobListRequestBody;
 import io.airbyte.api.model.generated.JobRead;
 import io.airbyte.api.model.generated.JobReadList;
+import io.airbyte.api.model.generated.JobRefreshConfig;
 import io.airbyte.api.model.generated.JobWithAttemptsRead;
 import io.airbyte.api.model.generated.LogRead;
 import io.airbyte.api.model.generated.Pagination;
+import io.airbyte.api.model.generated.ResetConfig;
 import io.airbyte.api.model.generated.SourceIdRequestBody;
 import io.airbyte.api.model.generated.SourceRead;
 import io.airbyte.api.model.generated.StreamDescriptor;
@@ -713,6 +715,7 @@ class JobHistoryHandlerTest {
             .recordsCommitted(jobAggregatedStats.getRecordsCommitted())
             .bytesEmitted(jobAggregatedStats.getBytesEmitted())
             .recordsEmitted(jobAggregatedStats.getRecordsEmitted())
+            .configType(JobConfigType.SYNC)
             .streams(List.of(
                 new StreamSyncProgressReadItem()
                     .streamName("stream1")
@@ -720,15 +723,115 @@ class JobHistoryHandlerTest {
                     .recordsEmitted(5L)
                     .bytesEmitted(2L)
                     .recordsCommitted(5L)
-                    .bytesCommitted(2L),
+                    .bytesCommitted(2L)
+                    .configType(JobConfigType.SYNC),
                 new StreamSyncProgressReadItem()
                     .streamName("stream2")
                     .recordsEmitted(50L)
                     .bytesEmitted(20L)
                     .recordsCommitted(45L)
-                    .bytesCommitted(15L),
+                    .bytesCommitted(15L)
+                    .configType(JobConfigType.SYNC),
                 new StreamSyncProgressReadItem()
-                    .streamName("stream3")));
+                    .streamName("stream3")
+                    .configType(JobConfigType.SYNC)));
+
+        final ConnectionSyncProgressRead actual = jobHistoryHandler.getConnectionSyncProgress(request);
+
+        assertEquals(expected, actual);
+      }
+    }
+
+    @Test
+    @DisplayName("Should return data for a running refreshes")
+    void testGetConnectionSyncProgressWithRefresh() throws IOException {
+      final UUID connectionId = UUID.randomUUID();
+      final ConnectionIdRequestBody request = new ConnectionIdRequestBody().connectionId(connectionId);
+
+      final Job firstJob = new Job(JOB_ID, ConfigType.REFRESH, JOB_CONFIG_ID, JOB_CONFIG, ImmutableList.of(testJobAttempt), JobStatus.RUNNING,
+          CREATED_AT, CREATED_AT, CREATED_AT);
+
+      final JobRead jobRead = toJobInfo(firstJob);
+      jobRead.setEnabledStreams(List.of(new StreamDescriptor().name("stream2"),
+          new StreamDescriptor().name("stream3")));
+      jobRead.setRefreshConfig(new JobRefreshConfig().streamsToRefresh(List.of(
+          new StreamDescriptor().name("stream2"))));
+
+      jobRead.setStreamAggregatedStats(List.of(
+          new StreamStats().streamName("stream2").recordsEmitted(50L).bytesEmitted(20L).recordsCommitted(45L).bytesCommitted(15L),
+          new StreamStats().streamName("stream1").streamNamespace("ns1").recordsEmitted(5L).bytesEmitted(2L).recordsCommitted(5L)
+              .bytesCommitted(2L)));
+
+      final JobAggregatedStats jobAggregatedStats =
+          new JobAggregatedStats().bytesCommitted(17L).recordsCommitted(50L).bytesEmitted(22L).recordsEmitted(55L);
+      jobRead.setAggregatedStats(jobAggregatedStats);
+
+      final JobWithAttemptsRead firstJobWithAttemptRead = new JobWithAttemptsRead()
+          .job(jobRead)
+          .attempts(ImmutableList.of(toAttemptRead(testJobAttempt)));
+
+      when(jobPersistence.getRunningSyncJobForConnections(List.of(connectionId))).thenReturn(List.of(firstJob));
+      try (final MockedStatic<JobConverter> mockedConverter = Mockito.mockStatic(JobConverter.class)) {
+        mockedConverter.when(() -> JobConverter.getJobWithAttemptsRead(firstJob)).thenReturn(firstJobWithAttemptRead);
+
+        final ConnectionSyncProgressRead expected = new ConnectionSyncProgressRead()
+            .jobId(JOB_ID)
+            .connectionId(connectionId)
+            .bytesCommitted(jobAggregatedStats.getBytesCommitted())
+            .recordsCommitted(jobAggregatedStats.getRecordsCommitted())
+            .bytesEmitted(jobAggregatedStats.getBytesEmitted())
+            .recordsEmitted(jobAggregatedStats.getRecordsEmitted())
+            .configType(JobConfigType.REFRESH)
+            .streams(List.of(
+                new StreamSyncProgressReadItem()
+                    .streamName("stream3")
+                    .configType(JobConfigType.SYNC),
+                new StreamSyncProgressReadItem()
+                    .streamName("stream2")
+                    .recordsEmitted(50L)
+                    .bytesEmitted(20L)
+                    .recordsCommitted(45L)
+                    .bytesCommitted(15L)
+                    .configType(JobConfigType.REFRESH)));
+
+        final ConnectionSyncProgressRead actual = jobHistoryHandler.getConnectionSyncProgress(request);
+
+        assertEquals(expected.getStreams(), actual.getStreams());
+      }
+    }
+
+    @Test
+    @DisplayName("Should not return data for a running clear")
+    void testGetConnectionSyncProgressWithClear() throws IOException {
+      final UUID connectionId = UUID.randomUUID();
+      final ConnectionIdRequestBody request = new ConnectionIdRequestBody().connectionId(connectionId);
+
+      final Job firstJob = new Job(JOB_ID, ConfigType.CLEAR, JOB_CONFIG_ID, JOB_CONFIG, ImmutableList.of(testJobAttempt), JobStatus.RUNNING,
+          CREATED_AT, CREATED_AT, CREATED_AT);
+
+      final JobRead jobRead = toJobInfo(firstJob);
+      jobRead.setResetConfig(new ResetConfig().streamsToReset(List.of(
+          new StreamDescriptor().name("stream1").namespace("ns1"))));
+      jobRead.setEnabledStreams(List.of(new StreamDescriptor().name("stream1").namespace("ns1"), new StreamDescriptor().name("stream2"),
+          new StreamDescriptor().name("stream3")));
+
+      final JobWithAttemptsRead firstJobWithAttemptRead = new JobWithAttemptsRead()
+          .job(jobRead)
+          .attempts(ImmutableList.of(toAttemptRead(testJobAttempt)));
+
+      when(jobPersistence.getRunningSyncJobForConnections(List.of(connectionId))).thenReturn(List.of(firstJob));
+      try (final MockedStatic<JobConverter> mockedConverter = Mockito.mockStatic(JobConverter.class)) {
+        mockedConverter.when(() -> JobConverter.getJobWithAttemptsRead(firstJob)).thenReturn(firstJobWithAttemptRead);
+
+        final ConnectionSyncProgressRead expected = new ConnectionSyncProgressRead()
+            .connectionId(connectionId)
+            .jobId(JOB_ID)
+            .configType(JobConfigType.CLEAR)
+            .streams(List.of(
+                new StreamSyncProgressReadItem()
+                    .streamName("stream1")
+                    .streamNamespace("ns1")
+                    .configType(JobConfigType.CLEAR)));
 
         final ConnectionSyncProgressRead actual = jobHistoryHandler.getConnectionSyncProgress(request);
 

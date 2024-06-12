@@ -8619,6 +8619,7 @@ components:
       required:
         - connectionId
         - streams
+        - configType
       properties:
         connectionId:
           type: string
@@ -8645,10 +8646,13 @@ components:
         syncStartedAt:
           type: integer
           format: int64
+        configType:
+          $ref: "#/components/schemas/JobConfigType"
     StreamSyncProgressReadItem:
       type: object
       required:
         - streamName
+        - configType
       properties:
         streamName:
           type: string
@@ -8666,6 +8670,8 @@ components:
         bytesCommitted:
           type: integer
           format: int64
+        configType:
+          $ref: "#/components/schemas/JobConfigType"
     ConnectionUptimeHistoryRead:
       type: array
       items:
