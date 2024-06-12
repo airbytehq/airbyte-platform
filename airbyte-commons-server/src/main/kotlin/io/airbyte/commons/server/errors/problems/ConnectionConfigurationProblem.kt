@@ -2,7 +2,7 @@ package io.airbyte.commons.server.errors.problems
 
 import io.airbyte.api.problems.model.generated.ProblemMessageData
 import io.airbyte.api.problems.throwable.generated.BadRequestProblem
-import io.airbyte.public_api.model.generated.ConnectionSyncModeEnum
+import io.airbyte.publicApi.server.generated.models.ConnectionSyncModeEnum
 import jakarta.validation.Valid
 
 /**

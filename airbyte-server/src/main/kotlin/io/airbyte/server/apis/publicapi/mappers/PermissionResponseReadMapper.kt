@@ -5,8 +5,9 @@
 package io.airbyte.server.apis.publicapi.mappers
 
 import io.airbyte.api.model.generated.PermissionRead
-import io.airbyte.public_api.model.generated.PermissionResponseRead
-import io.airbyte.public_api.model.generated.PermissionScope
+import io.airbyte.publicApi.server.generated.models.PermissionResponseRead
+import io.airbyte.publicApi.server.generated.models.PermissionScope
+import java.util.UUID
 
 /**
  * Mappers that help convert models from the config api to models from the public api.
@@ -19,20 +20,26 @@ object PermissionResponseReadMapper {
    * @return PermissionResponseRead Response object with permission details
    */
   fun from(permissionRead: PermissionRead): PermissionResponseRead {
-    val permissionResponseRead = PermissionResponseRead()
-    permissionResponseRead.permissionId = permissionRead.permissionId
-    permissionResponseRead.permissionType = enumValueOf(permissionRead.permissionType.name)
-    permissionResponseRead.userId = permissionRead.userId
-    if (permissionRead.workspaceId != null) {
-      permissionResponseRead.scope = PermissionScope.WORKSPACE
-      permissionResponseRead.scopeId = permissionRead.workspaceId
-    } else if (permissionRead.organizationId != null) {
-      permissionResponseRead.scope = PermissionScope.ORGANIZATION
-      permissionResponseRead.scopeId = permissionRead.organizationId
-    } else {
-      permissionResponseRead.scope = PermissionScope.NONE
-      permissionResponseRead.scopeId = null
-    }
-    return permissionResponseRead
+    return PermissionResponseRead(
+      permissionId = permissionRead.permissionId,
+      permissionType = enumValueOf(permissionRead.permissionType.name),
+      userId = permissionRead.userId,
+      scope =
+        if (permissionRead.workspaceId != null) {
+          PermissionScope.WORKSPACE
+        } else if (permissionRead.organizationId != null) {
+          PermissionScope.ORGANIZATION
+        } else {
+          PermissionScope.NONE
+        },
+      scopeId =
+        if (permissionRead.workspaceId != null) {
+          permissionRead.workspaceId
+        } else if (permissionRead.organizationId != null) {
+          permissionRead.organizationId
+        } else {
+          UUID.fromString("00000000-0000-0000-0000-000000000000")
+        },
+    )
   }
 }

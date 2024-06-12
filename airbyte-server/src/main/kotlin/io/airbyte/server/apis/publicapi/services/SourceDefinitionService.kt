@@ -26,9 +26,9 @@ interface SourceDefinitionService {
 @Secondary
 class SourceDefinitionServiceImpl(
   private val sourceDefinitionSpecificationHandler: ConnectorDefinitionSpecificationHandler,
-) : io.airbyte.server.apis.publicapi.services.SourceDefinitionService {
+) : SourceDefinitionService {
   companion object {
-    private val log = LoggerFactory.getLogger(io.airbyte.server.apis.publicapi.services.SourceDefinitionServiceImpl::class.java)
+    private val log = LoggerFactory.getLogger(SourceDefinitionServiceImpl::class.java)
   }
 
   override fun getSourceDefinitionSpecification(
@@ -40,11 +40,11 @@ class SourceDefinitionServiceImpl(
     val result =
       kotlin.runCatching { sourceDefinitionSpecificationHandler.getSourceDefinitionSpecification(sourceDefinitionIdWithWorkspaceId) }
         .onFailure {
-          io.airbyte.server.apis.publicapi.services.SourceDefinitionServiceImpl.Companion.log.error("Error for getSourceDefinitionSpecification", it)
+          log.error("Error for getSourceDefinitionSpecification", it)
           ConfigClientErrorHandler.handleError(it, sourceDefinitionId.toString())
         }
 
-    io.airbyte.server.apis.publicapi.services.SourceDefinitionServiceImpl.Companion.log.debug(HTTP_RESPONSE_BODY_DEBUG_MESSAGE + result)
+    log.debug(HTTP_RESPONSE_BODY_DEBUG_MESSAGE + result)
     return SourceDefinitionSpecificationReadMapper.from(
       result.getOrNull()!!,
     )

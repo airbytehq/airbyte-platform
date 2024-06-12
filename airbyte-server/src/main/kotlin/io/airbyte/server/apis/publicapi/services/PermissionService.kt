@@ -8,10 +8,10 @@ import io.airbyte.api.model.generated.PermissionCreate
 import io.airbyte.api.model.generated.PermissionIdRequestBody
 import io.airbyte.api.model.generated.PermissionUpdate
 import io.airbyte.commons.server.handlers.PermissionHandler
-import io.airbyte.public_api.model.generated.PermissionCreateRequest
-import io.airbyte.public_api.model.generated.PermissionResponse
-import io.airbyte.public_api.model.generated.PermissionUpdateRequest
-import io.airbyte.public_api.model.generated.PermissionsResponse
+import io.airbyte.publicApi.server.generated.models.PermissionCreateRequest
+import io.airbyte.publicApi.server.generated.models.PermissionResponse
+import io.airbyte.publicApi.server.generated.models.PermissionUpdateRequest
+import io.airbyte.publicApi.server.generated.models.PermissionsResponse
 import io.airbyte.server.apis.publicapi.constants.HTTP_RESPONSE_BODY_DEBUG_MESSAGE
 import io.airbyte.server.apis.publicapi.errorHandlers.ConfigClientErrorHandler
 import io.airbyte.server.apis.publicapi.mappers.PermissionReadMapper
@@ -79,9 +79,9 @@ open class PermissionServiceImpl(
         }
     log.debug(HTTP_RESPONSE_BODY_DEBUG_MESSAGE + result)
     val permissionReadList = result.getOrThrow().permissions
-    val permissionsResponse = PermissionsResponse()
-    permissionsResponse.data = permissionReadList.mapNotNull { PermissionResponseReadMapper.from(it) }
-    return permissionsResponse
+    return PermissionsResponse(
+      data = permissionReadList.mapNotNull { PermissionResponseReadMapper.from(it) },
+    )
   }
 
   /**

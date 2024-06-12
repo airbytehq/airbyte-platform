@@ -9,7 +9,6 @@ import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.assertThrows
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.EnumSource
-import java.lang.AssertionError
 import java.util.UUID
 
 class JobResponseMapperTest {
@@ -27,7 +26,7 @@ class JobResponseMapperTest {
     // Then
     assertEquals(jobResponse.jobId, jobRead.id)
     assertEquals(jobResponse.status.toString(), jobRead.status.toString())
-    assertEquals(jobResponse.connectionId, UUID.fromString(jobRead.configId))
+    assertEquals(jobResponse.connectionId, jobRead.configId)
     assertEquals(jobResponse.jobType.toString(), if (jobConfigType == JobConfigType.RESET_CONNECTION) "reset" else jobRead.configType.toString())
     assertEquals(jobResponse.startTime, "1970-01-01T00:00:01Z")
     assertEquals(jobResponse.lastUpdatedAt, "1970-01-01T00:00:02Z")
@@ -43,7 +42,7 @@ class JobResponseMapperTest {
     val jobInfoRead = JobInfoRead()
     jobInfoRead.job = jobRead
 
-    assertThrows<AssertionError> { JobResponseMapper.from(jobInfoRead) }
+    assertThrows<IllegalArgumentException> { JobResponseMapper.from(jobInfoRead) }
   }
 
   private fun getJobRead(jobConfigType: JobConfigType): JobRead {

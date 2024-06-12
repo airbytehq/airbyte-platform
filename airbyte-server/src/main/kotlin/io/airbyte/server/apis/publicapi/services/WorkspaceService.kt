@@ -12,11 +12,11 @@ import io.airbyte.api.model.generated.WorkspaceUpdateName
 import io.airbyte.commons.server.handlers.WorkspacesHandler
 import io.airbyte.commons.server.support.CurrentUserService
 import io.airbyte.config.persistence.OrganizationPersistence.DEFAULT_ORGANIZATION_ID
-import io.airbyte.public_api.model.generated.WorkspaceCreateRequest
-import io.airbyte.public_api.model.generated.WorkspaceOAuthCredentialsRequest
-import io.airbyte.public_api.model.generated.WorkspaceResponse
-import io.airbyte.public_api.model.generated.WorkspaceUpdateRequest
-import io.airbyte.public_api.model.generated.WorkspacesResponse
+import io.airbyte.publicApi.server.generated.models.WorkspaceCreateRequest
+import io.airbyte.publicApi.server.generated.models.WorkspaceOAuthCredentialsRequest
+import io.airbyte.publicApi.server.generated.models.WorkspaceResponse
+import io.airbyte.publicApi.server.generated.models.WorkspaceUpdateRequest
+import io.airbyte.publicApi.server.generated.models.WorkspacesResponse
 import io.airbyte.server.apis.publicapi.apiTracking.TrackingHelper
 import io.airbyte.server.apis.publicapi.constants.DELETE
 import io.airbyte.server.apis.publicapi.constants.GET
@@ -127,7 +127,7 @@ open class WorkspaceServiceImpl(
       WORKSPACES_PATH,
       POST,
       userId,
-      workspaceResponse.workspaceId,
+      UUID.fromString(workspaceResponse.workspaceId),
     )
     return Response
       .status(Response.Status.OK.statusCode)

@@ -19,7 +19,7 @@ import io.airbyte.api.problems.throwable.generated.UnexpectedProblem
 import io.airbyte.api.problems.throwable.generated.UnprocessableEntityProblem
 import io.airbyte.commons.server.errors.ValueConflictKnownException
 import io.airbyte.config.persistence.ConfigNotFoundException
-import io.airbyte.public_api.model.generated.ConnectionCreateRequest
+import io.airbyte.publicApi.server.generated.models.ConnectionCreateRequest
 import io.airbyte.server.apis.publicapi.constants.MESSAGE
 import io.airbyte.server.apis.publicapi.exceptions.OAuthCallbackException
 import io.airbyte.validation.json.JsonValidationException

@@ -7,12 +7,12 @@ import io.airbyte.api.model.generated.ConnectionStatus
 import io.airbyte.api.model.generated.Geography
 import io.airbyte.api.model.generated.NamespaceDefinitionType
 import io.airbyte.api.model.generated.NonBreakingChangesPreference
-import io.airbyte.public_api.model.generated.AirbyteApiConnectionSchedule
-import io.airbyte.public_api.model.generated.ConnectionCreateRequest
-import io.airbyte.public_api.model.generated.ConnectionStatusEnum
-import io.airbyte.public_api.model.generated.GeographyEnum
-import io.airbyte.public_api.model.generated.NamespaceDefinitionEnum
-import io.airbyte.public_api.model.generated.ScheduleTypeEnum
+import io.airbyte.publicApi.server.generated.models.AirbyteApiConnectionSchedule
+import io.airbyte.publicApi.server.generated.models.ConnectionCreateRequest
+import io.airbyte.publicApi.server.generated.models.ConnectionStatusEnum
+import io.airbyte.publicApi.server.generated.models.GeographyEnum
+import io.airbyte.publicApi.server.generated.models.NamespaceDefinitionEnum
+import io.airbyte.publicApi.server.generated.models.ScheduleTypeEnum
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 import java.util.UUID
@@ -28,22 +28,22 @@ class ConnectionCreateMapperTest {
       }
 
     val connectionCreateRequest =
-      ConnectionCreateRequest().apply {
-        this.sourceId = UUID.randomUUID()
-        this.destinationId = UUID.randomUUID()
-        this.name = "test"
-        this.nonBreakingSchemaUpdatesBehavior = io.airbyte.public_api.model.generated.NonBreakingSchemaUpdatesBehaviorEnum.DISABLE_CONNECTION
-        this.namespaceDefinition = NamespaceDefinitionEnum.DESTINATION
-        this.namespaceFormat = "test"
-        this.prefix = "test"
-        this.dataResidency = GeographyEnum.US
-        this.schedule =
-          AirbyteApiConnectionSchedule().apply {
-            this.scheduleType = ScheduleTypeEnum.CRON
-            this.cronExpression = "0 0 0 0 0 0"
-          }
-        this.status = ConnectionStatusEnum.INACTIVE
-      }
+      ConnectionCreateRequest(
+        sourceId = UUID.randomUUID(),
+        destinationId = UUID.randomUUID(),
+        name = "test",
+        nonBreakingSchemaUpdatesBehavior = io.airbyte.publicApi.server.generated.models.NonBreakingSchemaUpdatesBehaviorEnum.DISABLE_CONNECTION,
+        namespaceDefinition = NamespaceDefinitionEnum.DESTINATION,
+        namespaceFormat = "test",
+        prefix = "test",
+        dataResidency = GeographyEnum.US,
+        schedule =
+          AirbyteApiConnectionSchedule(
+            scheduleType = ScheduleTypeEnum.CRON,
+            cronExpression = "0 0 0 0 0 0",
+          ),
+        status = ConnectionStatusEnum.INACTIVE,
+      )
 
     val expectedOssConnectionCreateRequest =
       ConnectionCreate().apply {

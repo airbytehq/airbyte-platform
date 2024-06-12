@@ -11,14 +11,14 @@ import io.airbyte.commons.server.authorization.ApiAuthorizationHelper
 import io.airbyte.commons.server.authorization.Scope
 import io.airbyte.commons.server.scheduling.AirbyteTaskExecutors
 import io.airbyte.commons.server.support.CurrentUserService
-import io.airbyte.public_api.generated.PublicJobsApi
-import io.airbyte.public_api.model.generated.ConnectionResponse
-import io.airbyte.public_api.model.generated.JobCreateRequest
-import io.airbyte.public_api.model.generated.JobResponse
-import io.airbyte.public_api.model.generated.JobStatusEnum
-import io.airbyte.public_api.model.generated.JobTypeEnum
-import io.airbyte.public_api.model.generated.JobsResponse
+import io.airbyte.publicApi.server.generated.apis.PublicJobsApi
+import io.airbyte.publicApi.server.generated.models.ConnectionResponse
+import io.airbyte.publicApi.server.generated.models.JobCreateRequest
+import io.airbyte.publicApi.server.generated.models.JobResponse
+import io.airbyte.publicApi.server.generated.models.JobStatusEnum
+import io.airbyte.publicApi.server.generated.models.JobTypeEnum
 import io.airbyte.server.apis.publicapi.apiTracking.TrackingHelper
+import io.airbyte.server.apis.publicapi.constants.API_PATH
 import io.airbyte.server.apis.publicapi.constants.DELETE
 import io.airbyte.server.apis.publicapi.constants.GET
 import io.airbyte.server.apis.publicapi.constants.JOBS_PATH
@@ -38,10 +38,9 @@ import jakarta.ws.rs.Path
 import jakarta.ws.rs.PathParam
 import jakarta.ws.rs.core.Response
 import java.time.OffsetDateTime
-import java.util.Objects
 import java.util.UUID
 
-@Controller(JOBS_PATH)
+@Controller(API_PATH)
 @Secured(SecurityRule.IS_AUTHENTICATED)
 open class JobsController(
   private val jobService: JobService,
@@ -51,7 +50,7 @@ open class JobsController(
   private val currentUserService: CurrentUserService,
 ) : PublicJobsApi {
   @DELETE
-  @Path("/{jobId}")
+  @Path("$JOBS_PATH/{jobId}")
   @ExecuteOn(AirbyteTaskExecutors.PUBLIC_API)
   override fun publicCancelJob(
     @PathParam("jobId") jobId: Long,
@@ -83,7 +82,7 @@ open class JobsController(
     )
     return Response
       .status(Response.Status.OK.statusCode)
-      .entity(jobResponse?.let { KJobResponse(jobResponse) })
+      .entity(jobResponse)
       .build()
   }
 
@@ -101,21 +100,21 @@ open class JobsController(
       trackingHelper.callWithTracker(
         {
           connectionService.getConnection(
-            jobCreateRequest.connectionId,
+            UUID.fromString(jobCreateRequest.connectionId),
           )
         },
         JOBS_PATH,
         POST,
         userId,
       ) as ConnectionResponse
-    val workspaceId: UUID = connectionResponse.workspaceId
+    val workspaceId: UUID = UUID.fromString(connectionResponse.workspaceId)
 
     return when (jobCreateRequest.jobType) {
       JobTypeEnum.SYNC -> {
         val jobResponse: JobResponse =
           trackingHelper.callWithTracker({
             jobService.sync(
-              jobCreateRequest.connectionId,
+              UUID.fromString(jobCreateRequest.connectionId),
             )
           }, JOBS_PATH, POST, userId)!!
         trackingHelper.trackSuccess(
@@ -126,7 +125,7 @@ open class JobsController(
         )
         Response
           .status(Response.Status.OK.statusCode)
-          .entity(KJobResponse(jobResponse))
+          .entity(jobResponse)
           .build()
       }
 
@@ -134,7 +133,7 @@ open class JobsController(
         val jobResponse: JobResponse =
           trackingHelper.callWithTracker({
             jobService.reset(
-              jobCreateRequest.connectionId,
+              UUID.fromString(jobCreateRequest.connectionId),
             )
           }, JOBS_PATH, POST, userId)!!
         trackingHelper.trackSuccess(
@@ -145,7 +144,7 @@ open class JobsController(
         )
         Response
           .status(Response.Status.OK.statusCode)
-          .entity(KJobResponse(jobResponse))
+          .entity(jobResponse)
           .build()
       }
 
@@ -153,7 +152,7 @@ open class JobsController(
         val jobResponse: Any =
           trackingHelper.callWithTracker({
             jobService.reset(
-              jobCreateRequest.connectionId,
+              UUID.fromString(jobCreateRequest.connectionId),
             )
           }, JOBS_PATH, POST, userId)!!
         trackingHelper.trackSuccess(
@@ -193,7 +192,7 @@ open class JobsController(
   }
 
   @GET
-  @Path("/{jobId}")
+  @Path("$JOBS_PATH/{jobId}")
   @ExecuteOn(AirbyteTaskExecutors.PUBLIC_API)
   override fun getJob(
     @PathParam("jobId") jobId: Long,
@@ -225,15 +224,15 @@ open class JobsController(
     )
     return Response
       .status(Response.Status.OK.statusCode)
-      .entity(jobResponse?.let { KJobResponse(jobResponse) })
+      .entity(jobResponse)
       .build()
   }
 
   @ExecuteOn(AirbyteTaskExecutors.PUBLIC_API)
   override fun listJobs(
-    connectionId: UUID?,
-    limit: Int?,
-    offset: Int?,
+    connectionId: String?,
+    limit: Int,
+    offset: Int,
     jobType: JobTypeEnum?,
     workspaceIds: List<UUID>?,
     status: JobStatusEnum?,
@@ -246,7 +245,7 @@ open class JobsController(
     val userId: UUID = currentUserService.currentUser.userId
     if (connectionId != null) {
       apiAuthorizationHelper.checkWorkspacePermissions(
-        listOf(connectionId.toString()),
+        listOf(connectionId),
         Scope.CONNECTION,
         userId,
         PermissionType.WORKSPACE_READER,
@@ -279,7 +278,7 @@ open class JobsController(
           trackingHelper.callWithTracker(
             {
               jobService.getJobList(
-                connectionId,
+                UUID.fromString(connectionId),
                 filter,
                 orderByField,
                 orderByMethod,
@@ -313,134 +312,7 @@ open class JobsController(
     )
     return Response
       .status(Response.Status.OK.statusCode)
-      .entity(KJobsResponse(jobsResponse))
+      .entity(jobsResponse)
       .build()
-  }
-}
-
-/**
- * Copy of the [JobsResponse] generated class to overcome issues with KSP stub
- * generation.
- */
-class KJobsResponse(
-  val previous: String,
-  val next: String,
-  val data: List<KJobResponse>,
-) {
-  constructor(jobsResponse: JobsResponse) : this(
-    jobsResponse.previous,
-    jobsResponse.next,
-    jobsResponse.data.map { d -> KJobResponse(d) }.toList(),
-  )
-
-  override fun equals(other: Any?): Boolean {
-    if (this === other) {
-      return true
-    }
-    if (other == null || javaClass != other.javaClass) {
-      return false
-    }
-    val jobsResponse = other as KJobsResponse
-    return this.previous == jobsResponse.previous && (this.next == jobsResponse.next) && (this.data == jobsResponse.data)
-  }
-
-  override fun hashCode(): Int {
-    return Objects.hash(previous, next, data)
-  }
-
-  override fun toString(): String {
-    val sb = java.lang.StringBuilder()
-    sb.append("class JobsResponse {\n")
-
-    sb.append("    previous: ").append(toIndentedString(previous)).append("\n")
-    sb.append("    next: ").append(toIndentedString(next)).append("\n")
-    sb.append("    data: ").append(toIndentedString(data)).append("\n")
-    sb.append("}")
-    return sb.toString()
-  }
-
-  /**
-   * Convert the given object to string with each line indented by 4 spaces
-   * (except the first line).
-   */
-  private fun toIndentedString(o: Any?): String {
-    if (o == null) {
-      return "null"
-    }
-    return o.toString().replace("\n", "\n    ")
-  }
-}
-
-/**
- * Copy of the [JobResponse] generated class to overcome issues with KSP stub
- * generation.
- */
-class KJobResponse(
-  var jobId: Long,
-  val status: JobStatusEnum,
-  val jobType: JobTypeEnum,
-  val startTime: String,
-  val connectionId: UUID,
-  val lastUpdatedAt: String? = null,
-  val duration: String? = null,
-  val bytesSynced: Long? = null,
-  val rowsSynced: Long? = null,
-) {
-  constructor(jobResponse: JobResponse) : this(
-    jobResponse.jobId,
-    jobResponse.status,
-    jobResponse.jobType,
-    jobResponse.startTime,
-    jobResponse.connectionId,
-    jobResponse.lastUpdatedAt,
-    jobResponse.duration,
-    jobResponse.bytesSynced,
-    jobResponse.rowsSynced,
-  )
-
-  override fun equals(other: Any?): Boolean {
-    if (this === other) {
-      return true
-    }
-    if (other == null || javaClass != other.javaClass) {
-      return false
-    }
-    val jobResponse = other as KJobResponse
-    return this.jobId == jobResponse.jobId && (this.status == jobResponse.status) &&
-      (this.jobType == jobResponse.jobType) && (this.startTime == jobResponse.startTime) &&
-      (this.connectionId == jobResponse.connectionId) && (this.lastUpdatedAt == jobResponse.lastUpdatedAt) &&
-      (this.duration == jobResponse.duration) && (this.bytesSynced == jobResponse.bytesSynced) && (this.rowsSynced == jobResponse.rowsSynced)
-  }
-
-  override fun hashCode(): Int {
-    return Objects.hash(jobId, status, jobType, startTime, connectionId, lastUpdatedAt, duration, bytesSynced, rowsSynced)
-  }
-
-  override fun toString(): String {
-    val sb = StringBuilder()
-    sb.append("class JobResponse {\n")
-
-    sb.append("    jobId: ").append(toIndentedString(jobId)).append("\n")
-    sb.append("    status: ").append(toIndentedString(status)).append("\n")
-    sb.append("    jobType: ").append(toIndentedString(jobType)).append("\n")
-    sb.append("    startTime: ").append(toIndentedString(startTime)).append("\n")
-    sb.append("    connectionId: ").append(toIndentedString(connectionId)).append("\n")
-    sb.append("    lastUpdatedAt: ").append(toIndentedString(lastUpdatedAt)).append("\n")
-    sb.append("    duration: ").append(toIndentedString(duration)).append("\n")
-    sb.append("    bytesSynced: ").append(toIndentedString(bytesSynced)).append("\n")
-    sb.append("    rowsSynced: ").append(toIndentedString(rowsSynced)).append("\n")
-    sb.append("}")
-    return sb.toString()
-  }
-
-  /**
-   * Convert the given object to string with each line indented by 4 spaces
-   * (except the first line).
-   */
-  private fun toIndentedString(o: Any?): String {
-    if (o == null) {
-      return "null"
-    }
-    return o.toString().replace("\n", "\n    ")
   }
 }

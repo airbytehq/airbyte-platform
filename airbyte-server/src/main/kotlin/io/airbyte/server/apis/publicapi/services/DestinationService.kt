@@ -16,11 +16,11 @@ import io.airbyte.api.model.generated.PartialDestinationUpdate
 import io.airbyte.commons.server.handlers.ConnectorDefinitionSpecificationHandler
 import io.airbyte.commons.server.handlers.DestinationHandler
 import io.airbyte.commons.server.support.CurrentUserService
-import io.airbyte.public_api.model.generated.DestinationCreateRequest
-import io.airbyte.public_api.model.generated.DestinationPatchRequest
-import io.airbyte.public_api.model.generated.DestinationPutRequest
-import io.airbyte.public_api.model.generated.DestinationResponse
-import io.airbyte.public_api.model.generated.DestinationsResponse
+import io.airbyte.publicApi.server.generated.models.DestinationCreateRequest
+import io.airbyte.publicApi.server.generated.models.DestinationPatchRequest
+import io.airbyte.publicApi.server.generated.models.DestinationPutRequest
+import io.airbyte.publicApi.server.generated.models.DestinationResponse
+import io.airbyte.publicApi.server.generated.models.DestinationsResponse
 import io.airbyte.server.apis.publicapi.constants.HTTP_RESPONSE_BODY_DEBUG_MESSAGE
 import io.airbyte.server.apis.publicapi.errorHandlers.ConfigClientErrorHandler
 import io.airbyte.server.apis.publicapi.mappers.DestinationReadMapper

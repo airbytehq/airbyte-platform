@@ -6,10 +6,10 @@ package io.airbyte.server.apis.publicapi.helpers
 
 import io.airbyte.api.model.generated.NamespaceDefinitionType
 import io.airbyte.api.model.generated.NonBreakingChangesPreference
-import io.airbyte.public_api.model.generated.NamespaceDefinitionEnum
-import io.airbyte.public_api.model.generated.NamespaceDefinitionEnumNoDefault
-import io.airbyte.public_api.model.generated.NonBreakingSchemaUpdatesBehaviorEnum
-import io.airbyte.public_api.model.generated.NonBreakingSchemaUpdatesBehaviorEnumNoDefault
+import io.airbyte.publicApi.server.generated.models.NamespaceDefinitionEnum
+import io.airbyte.publicApi.server.generated.models.NamespaceDefinitionEnumNoDefault
+import io.airbyte.publicApi.server.generated.models.NonBreakingSchemaUpdatesBehaviorEnum
+import io.airbyte.publicApi.server.generated.models.NonBreakingSchemaUpdatesBehaviorEnumNoDefault
 
 /**
  * Connection helpers.
@@ -18,7 +18,7 @@ object ConnectionHelper {
   /**
    * Convert namespace definition enum -> NamespaceDefinitionType.
    */
-  fun convertNamespaceDefinitionEnum(namespaceDefinitionEnum: NamespaceDefinitionEnum): NamespaceDefinitionType {
+  fun convertNamespaceDefinitionEnum(namespaceDefinitionEnum: NamespaceDefinitionEnum?): NamespaceDefinitionType {
     return if (namespaceDefinitionEnum === NamespaceDefinitionEnum.CUSTOM_FORMAT) {
       NamespaceDefinitionType.CUSTOMFORMAT
     } else {
@@ -29,7 +29,7 @@ object ConnectionHelper {
   /**
    * Convert namespace definition enum -> NamespaceDefinitionType.
    */
-  fun convertNamespaceDefinitionEnum(namespaceDefinitionEnum: NamespaceDefinitionEnumNoDefault): NamespaceDefinitionType {
+  fun convertNamespaceDefinitionEnum(namespaceDefinitionEnum: NamespaceDefinitionEnumNoDefault?): NamespaceDefinitionType {
     return if (namespaceDefinitionEnum === NamespaceDefinitionEnumNoDefault.CUSTOM_FORMAT) {
       NamespaceDefinitionType.CUSTOMFORMAT
     } else {
@@ -41,7 +41,7 @@ object ConnectionHelper {
    * Convert non-breaking schema updates behavior enum -> NonBreakingChangesPreference.
    */
   fun convertNonBreakingSchemaUpdatesBehaviorEnum(
-    nonBreakingSchemaUpdatesBehaviorEnum: NonBreakingSchemaUpdatesBehaviorEnum,
+    nonBreakingSchemaUpdatesBehaviorEnum: NonBreakingSchemaUpdatesBehaviorEnum?,
   ): NonBreakingChangesPreference {
     return if (nonBreakingSchemaUpdatesBehaviorEnum === NonBreakingSchemaUpdatesBehaviorEnum.DISABLE_CONNECTION) {
       NonBreakingChangesPreference.DISABLE
@@ -54,7 +54,7 @@ object ConnectionHelper {
    * Convert non-breaking schema updates behavior enum -> NonBreakingChangesPreference.
    */
   fun convertNonBreakingSchemaUpdatesBehaviorEnum(
-    nonBreakingSchemaUpdatesBehaviorEnum: NonBreakingSchemaUpdatesBehaviorEnumNoDefault,
+    nonBreakingSchemaUpdatesBehaviorEnum: NonBreakingSchemaUpdatesBehaviorEnumNoDefault?,
   ): NonBreakingChangesPreference {
     return if (nonBreakingSchemaUpdatesBehaviorEnum === NonBreakingSchemaUpdatesBehaviorEnumNoDefault.DISABLE_CONNECTION) {
       NonBreakingChangesPreference.DISABLE

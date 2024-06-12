@@ -23,10 +23,10 @@ class SourceReadMapperTest {
     val sourceResponse = SourceReadMapper.from(sourceRead)
 
     // Then
-    assertEquals(sourceRead.sourceId, sourceResponse.sourceId)
+    assertEquals(sourceRead.sourceId.toString(), sourceResponse.sourceId)
     assertEquals(sourceRead.name, sourceResponse.name)
-    assertEquals(DEFINITION_ID_TO_SOURCE_NAME[sourceRead.sourceDefinitionId], sourceResponse.sourceType)
-    assertEquals(sourceRead.workspaceId, sourceResponse.workspaceId)
+    assertEquals(DEFINITION_ID_TO_SOURCE_NAME.getOrDefault(sourceRead.sourceDefinitionId, ""), sourceResponse.sourceType)
+    assertEquals(sourceRead.workspaceId.toString(), sourceResponse.workspaceId)
     assertEquals(sourceRead.connectionConfiguration, sourceResponse.configuration)
   }
 }

@@ -13,11 +13,11 @@ import io.airbyte.api.model.generated.Pagination
 import io.airbyte.api.problems.throwable.generated.UnexpectedProblem
 import io.airbyte.commons.server.handlers.ConnectionsHandler
 import io.airbyte.commons.server.support.CurrentUserService
-import io.airbyte.public_api.model.generated.ConnectionCreateRequest
-import io.airbyte.public_api.model.generated.ConnectionPatchRequest
-import io.airbyte.public_api.model.generated.ConnectionResponse
-import io.airbyte.public_api.model.generated.ConnectionsResponse
-import io.airbyte.public_api.model.generated.SourceResponse
+import io.airbyte.publicApi.server.generated.models.ConnectionCreateRequest
+import io.airbyte.publicApi.server.generated.models.ConnectionPatchRequest
+import io.airbyte.publicApi.server.generated.models.ConnectionResponse
+import io.airbyte.publicApi.server.generated.models.ConnectionsResponse
+import io.airbyte.publicApi.server.generated.models.SourceResponse
 import io.airbyte.server.apis.publicapi.constants.HTTP_RESPONSE_BODY_DEBUG_MESSAGE
 import io.airbyte.server.apis.publicapi.errorHandlers.ConfigClientErrorHandler
 import io.airbyte.server.apis.publicapi.mappers.ConnectionCreateMapper
@@ -139,7 +139,7 @@ class ConnectionServiceImpl(
 
     return ConnectionReadMapper.from(
       connectionRead,
-      sourceResponse.workspaceId,
+      UUID.fromString(sourceResponse.workspaceId),
     )
   }
 

@@ -16,9 +16,9 @@ import io.airbyte.api.problems.throwable.generated.UnprocessableEntityProblem
 import io.airbyte.commons.server.handlers.JobHistoryHandler
 import io.airbyte.commons.server.handlers.SchedulerHandler
 import io.airbyte.commons.server.support.CurrentUserService
-import io.airbyte.public_api.model.generated.JobResponse
-import io.airbyte.public_api.model.generated.JobTypeEnum
-import io.airbyte.public_api.model.generated.JobsResponse
+import io.airbyte.publicApi.server.generated.models.JobResponse
+import io.airbyte.publicApi.server.generated.models.JobTypeEnum
+import io.airbyte.publicApi.server.generated.models.JobsResponse
 import io.airbyte.server.apis.publicapi.constants.HTTP_RESPONSE_BODY_DEBUG_MESSAGE
 import io.airbyte.server.apis.publicapi.errorHandlers.ConfigClientErrorHandler
 import io.airbyte.server.apis.publicapi.filters.JobsFilter

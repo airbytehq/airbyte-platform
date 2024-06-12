@@ -10,9 +10,10 @@ import io.airbyte.commons.server.authorization.ApiAuthorizationHelper
 import io.airbyte.commons.server.authorization.Scope
 import io.airbyte.commons.server.scheduling.AirbyteTaskExecutors
 import io.airbyte.commons.server.support.CurrentUserService
-import io.airbyte.public_api.generated.PublicUsersApi
-import io.airbyte.public_api.model.generated.UsersResponse
+import io.airbyte.publicApi.server.generated.apis.PublicUsersApi
+import io.airbyte.publicApi.server.generated.models.UsersResponse
 import io.airbyte.server.apis.publicapi.apiTracking.TrackingHelper
+import io.airbyte.server.apis.publicapi.constants.API_PATH
 import io.airbyte.server.apis.publicapi.constants.GET
 import io.airbyte.server.apis.publicapi.constants.USERS_PATH
 import io.airbyte.server.apis.publicapi.services.UserService
@@ -23,7 +24,7 @@ import io.micronaut.security.rules.SecurityRule
 import jakarta.ws.rs.core.Response
 import java.util.UUID
 
-@Controller(USERS_PATH)
+@Controller(API_PATH)
 @Secured(SecurityRule.IS_AUTHENTICATED)
 open class UserController(
   private val userService: UserService,
@@ -33,9 +34,9 @@ open class UserController(
 ) : PublicUsersApi {
   @ExecuteOn(AirbyteTaskExecutors.PUBLIC_API)
   override fun publicListUsers(
-    ids: List<UUID>?,
+    ids: List<String>?,
     emails: List<String>?,
-    organizationId: UUID,
+    organizationId: String?,
   ): Response {
     val userId: UUID = currentUserService.currentUser.userId
     if (!ids.isNullOrEmpty() && !emails.isNullOrEmpty()) {
@@ -61,7 +62,7 @@ open class UserController(
       usersResponse =
         trackingHelper.callWithTracker(
           {
-            userService.getAllUsers(organizationId)
+            userService.getAllUsers(UUID.fromString(organizationId))
           },
           USERS_PATH,
           GET,
@@ -71,7 +72,7 @@ open class UserController(
       usersResponse =
         trackingHelper.callWithTracker(
           {
-            userService.getUsersByUserIds(ids, organizationId)
+            userService.getUsersByUserIds(ids.map { UUID.fromString(it) }, UUID.fromString(organizationId))
           },
           USERS_PATH,
           GET,
@@ -81,7 +82,7 @@ open class UserController(
       usersResponse =
         trackingHelper.callWithTracker(
           {
-            userService.getUsersByUserEmails(emails!!, organizationId)
+            userService.getUsersByUserEmails(emails!!, UUID.fromString(organizationId))
           },
           USERS_PATH,
           GET,

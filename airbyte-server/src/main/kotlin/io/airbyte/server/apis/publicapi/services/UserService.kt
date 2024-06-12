@@ -9,7 +9,7 @@ import io.airbyte.api.model.generated.OrganizationIdRequestBody
 import io.airbyte.api.model.generated.WorkspaceReadList
 import io.airbyte.commons.server.handlers.UserHandler
 import io.airbyte.commons.server.handlers.WorkspacesHandler
-import io.airbyte.public_api.model.generated.UsersResponse
+import io.airbyte.publicApi.server.generated.models.UsersResponse
 import io.airbyte.server.apis.publicapi.constants.HTTP_RESPONSE_BODY_DEBUG_MESSAGE
 import io.airbyte.server.apis.publicapi.errorHandlers.ConfigClientErrorHandler
 import io.airbyte.server.apis.publicapi.mappers.UserResponseReadMapper
@@ -75,9 +75,9 @@ open class UserServiceImpl(
         }
     log.debug(HTTP_RESPONSE_BODY_DEBUG_MESSAGE + result)
     val userReadList = result.getOrThrow()
-    val usersResponse = UsersResponse()
-    usersResponse.data = userReadList.users?.filter { userIds.contains(it.userId) }?.mapNotNull { UserResponseReadMapper.from(it) }
-    return usersResponse
+    return UsersResponse(
+      data = userReadList.users?.filter { userIds.contains(it.userId) }?.mapNotNull { UserResponseReadMapper.from(it) } ?: listOf(),
+    )
   }
 
   override fun getUsersByUserEmails(
@@ -94,9 +94,9 @@ open class UserServiceImpl(
         }
     log.debug(HTTP_RESPONSE_BODY_DEBUG_MESSAGE + result)
     val userReadList = result.getOrThrow()
-    val usersResponse = UsersResponse()
-    usersResponse.data = userReadList.users?.filter { userEmails.contains(it.email) }?.mapNotNull { UserResponseReadMapper.from(it) }
-    return usersResponse
+    return UsersResponse(
+      data = userReadList.users?.filter { userEmails.contains(it.email) }?.mapNotNull { UserResponseReadMapper.from(it) } ?: listOf(),
+    )
   }
 
   override fun getAllUsers(organizationId: UUID): UsersResponse {
@@ -110,8 +110,8 @@ open class UserServiceImpl(
         }
     log.debug(HTTP_RESPONSE_BODY_DEBUG_MESSAGE + result)
     val userReadList = result.getOrThrow()
-    val usersResponse = UsersResponse()
-    usersResponse.data = userReadList.users?.mapNotNull { UserResponseReadMapper.from(it) }
-    return usersResponse
+    return UsersResponse(
+      data = userReadList.users?.mapNotNull { UserResponseReadMapper.from(it) } ?: listOf(),
+    )
   }
 }

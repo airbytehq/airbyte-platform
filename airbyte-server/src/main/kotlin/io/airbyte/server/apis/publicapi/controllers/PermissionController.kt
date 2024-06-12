@@ -12,10 +12,11 @@ import io.airbyte.commons.server.authorization.ApiAuthorizationHelper
 import io.airbyte.commons.server.authorization.Scope
 import io.airbyte.commons.server.scheduling.AirbyteTaskExecutors
 import io.airbyte.commons.server.support.CurrentUserService
-import io.airbyte.public_api.generated.PublicPermissionsApi
-import io.airbyte.public_api.model.generated.PermissionCreateRequest
-import io.airbyte.public_api.model.generated.PermissionUpdateRequest
+import io.airbyte.publicApi.server.generated.apis.PublicPermissionsApi
+import io.airbyte.publicApi.server.generated.models.PermissionCreateRequest
+import io.airbyte.publicApi.server.generated.models.PermissionUpdateRequest
 import io.airbyte.server.apis.publicapi.apiTracking.TrackingHelper
+import io.airbyte.server.apis.publicapi.constants.API_PATH
 import io.airbyte.server.apis.publicapi.constants.DELETE
 import io.airbyte.server.apis.publicapi.constants.GET
 import io.airbyte.server.apis.publicapi.constants.PATCH
@@ -32,7 +33,7 @@ import jakarta.ws.rs.Path
 import jakarta.ws.rs.core.Response
 import java.util.UUID
 
-@Controller(PERMISSIONS_PATH)
+@Controller(API_PATH)
 @Secured(SecurityRule.IS_AUTHENTICATED)
 open class PermissionController(
   private val permissionService: PermissionService,
@@ -89,22 +90,22 @@ open class PermissionController(
       .build()
   }
 
-  @Path("/{permissionId}")
+  @Path("$PERMISSIONS_PATH/{permissionId}")
   @ExecuteOn(AirbyteTaskExecutors.PUBLIC_API)
-  override fun publicDeletePermission(permissionId: UUID): Response {
+  override fun publicDeletePermission(permissionId: String): Response {
     val userId: UUID = currentUserService.currentUser.userId
     // auth check before processing the request
     apiAuthorizationHelper.ensureUserHasAnyRequiredRoleOrThrow(
       // current user should have at least a workspace_admin role to delete a workspace level permission
       // or at least an organization_admin role to delete an organization level permission
       Scope.PERMISSION,
-      listOf(permissionId.toString()),
+      listOf(permissionId),
       setOf(WorkspaceAuthRole.WORKSPACE_ADMIN, OrganizationAuthRole.ORGANIZATION_ADMIN),
     )
     // process and monitor the request
     trackingHelper.callWithTracker(
       {
-        permissionService.deletePermission(permissionId)
+        permissionService.deletePermission(UUID.fromString(permissionId))
       },
       PERMISSIONS_WITH_ID_PATH,
       DELETE,
@@ -115,22 +116,22 @@ open class PermissionController(
       .build()
   }
 
-  @Path("/{permissionId}")
+  @Path("$PERMISSIONS_PATH/{permissionId}")
   @ExecuteOn(AirbyteTaskExecutors.PUBLIC_API)
-  override fun publicGetPermission(permissionId: UUID): Response {
+  override fun publicGetPermission(permissionId: String): Response {
     val userId: UUID = currentUserService.currentUser.userId
     // auth check before processing the request
     apiAuthorizationHelper.ensureUserHasAnyRequiredRoleOrThrow(
       // current user should have either at least a workspace_reader role to get a workspace level permission
       // or at least an organization_read role to read an organization level permission
       Scope.PERMISSION,
-      listOf(permissionId.toString()),
+      listOf(permissionId),
       setOf(WorkspaceAuthRole.WORKSPACE_READER, OrganizationAuthRole.ORGANIZATION_READER),
     )
     val permissionResponse =
       trackingHelper.callWithTracker(
         {
-          permissionService.getPermission(permissionId)
+          permissionService.getPermission(UUID.fromString(permissionId))
         },
         PERMISSIONS_WITH_ID_PATH,
         GET,
@@ -143,9 +144,9 @@ open class PermissionController(
   }
 
   @ExecuteOn(AirbyteTaskExecutors.PUBLIC_API)
-  override fun publicListPermissionsByUserId(userId: UUID?): Response {
+  override fun publicListPermissionsByUserId(userId: String?): Response {
     val currentUserId: UUID = currentUserService.currentUser.userId
-    val permissionUserId = userId ?: currentUserId // if userId is not provided, then use current user ID by default
+    val permissionUserId = userId?.let { UUID.fromString(userId) } ?: currentUserId // if userId is not provided, then use current user ID by default
     // auth check before processing the request
     if (currentUserId != permissionUserId) {
       // then current user has to be organization_admin to access another user's permissions
@@ -169,10 +170,10 @@ open class PermissionController(
   }
 
   @Patch
-  @Path("/{permissionId}")
+  @Path("$PERMISSIONS_PATH/{permissionId}")
   @ExecuteOn(AirbyteTaskExecutors.PUBLIC_API)
   override fun publicUpdatePermission(
-    permissionId: UUID,
+    permissionId: String,
     permissionUpdateRequest: PermissionUpdateRequest,
   ): Response {
     val userId: UUID = currentUserService.currentUser.userId
@@ -181,14 +182,14 @@ open class PermissionController(
       // current user should have either at least a workspace_admin role to update a workspace level permission
       // or at least an organization_admin role to update an organization level permission
       Scope.PERMISSION,
-      listOf(permissionId.toString()),
+      listOf(permissionId),
       setOf(WorkspaceAuthRole.WORKSPACE_ADMIN, OrganizationAuthRole.ORGANIZATION_ADMIN),
     )
     // process and monitor the request
     val updatePermissionResponse =
       trackingHelper.callWithTracker(
         {
-          permissionService.updatePermission(permissionId, permissionUpdateRequest)
+          permissionService.updatePermission(UUID.fromString(permissionId), permissionUpdateRequest)
         },
         PERMISSIONS_WITH_ID_PATH,
         PATCH,

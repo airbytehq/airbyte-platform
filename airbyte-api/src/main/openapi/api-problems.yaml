@@ -149,7 +149,7 @@ components:
               default: unprocessable-entity
             detail:
               type: string
-              default: The body of hthe request was not understood
+              default: The body of the request was not understood
             data:
               $ref: "#/components/schemas/ProblemMessageData"
     UnknownValueProblemResponse:

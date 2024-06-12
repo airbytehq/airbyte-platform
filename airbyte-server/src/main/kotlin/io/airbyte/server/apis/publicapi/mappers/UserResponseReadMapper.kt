@@ -5,7 +5,7 @@
 package io.airbyte.server.apis.publicapi.mappers
 
 import io.airbyte.api.model.generated.OrganizationUserRead
-import io.airbyte.public_api.model.generated.UserResponse
+import io.airbyte.publicApi.server.generated.models.UserResponse
 
 /**
  * Mappers that help convert models from the config api to models from the public api.
@@ -18,10 +18,10 @@ object UserResponseReadMapper {
    * @return UserResponse Response object with permission details
    */
   fun from(userRead: OrganizationUserRead): UserResponse {
-    val userResponse = UserResponse()
-    userResponse.userId = userRead.userId
-    userResponse.name = userRead.name
-    userResponse.email = userRead.email
-    return userResponse
+    return UserResponse(
+      userId = userRead.userId,
+      name = userRead.name,
+      email = userRead.email,
+    )
   }
 }

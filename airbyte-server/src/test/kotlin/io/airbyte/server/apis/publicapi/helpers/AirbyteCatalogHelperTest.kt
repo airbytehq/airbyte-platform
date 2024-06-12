@@ -14,11 +14,11 @@ import io.airbyte.api.model.generated.SyncMode
 import io.airbyte.api.problems.model.generated.ProblemMessageData
 import io.airbyte.api.problems.throwable.generated.BadRequestProblem
 import io.airbyte.commons.json.Jsons
-import io.airbyte.public_api.model.generated.AirbyteApiConnectionSchedule
-import io.airbyte.public_api.model.generated.ConnectionSyncModeEnum
-import io.airbyte.public_api.model.generated.ScheduleTypeEnum
-import io.airbyte.public_api.model.generated.StreamConfiguration
-import io.airbyte.public_api.model.generated.StreamConfigurations
+import io.airbyte.publicApi.server.generated.models.AirbyteApiConnectionSchedule
+import io.airbyte.publicApi.server.generated.models.ConnectionSyncModeEnum
+import io.airbyte.publicApi.server.generated.models.ScheduleTypeEnum
+import io.airbyte.publicApi.server.generated.models.StreamConfiguration
+import io.airbyte.publicApi.server.generated.models.StreamConfigurations
 import io.mockk.every
 import io.mockk.mockk
 import org.junit.jupiter.api.Assertions.assertEquals
@@ -80,10 +80,8 @@ internal class AirbyteCatalogHelperTest {
   @Test
   internal fun `test that streams can be validated`() {
     val referenceCatalog = createAirbyteCatalog()
-    val streamConfiguration = StreamConfiguration()
-    streamConfiguration.name = "name1"
-    val streamConfigurations = StreamConfigurations()
-    streamConfigurations.streams = listOf(streamConfiguration)
+    val streamConfiguration = StreamConfiguration(name = "name1")
+    val streamConfigurations = StreamConfigurations(streams = listOf(streamConfiguration))
 
     assertTrue(AirbyteCatalogHelper.validateStreams(referenceCatalog = referenceCatalog, streamConfigurations = streamConfigurations))
   }
@@ -91,10 +89,8 @@ internal class AirbyteCatalogHelperTest {
   @Test
   internal fun `test that a stream with an invalid name is considered to be invalid`() {
     val referenceCatalog = createAirbyteCatalog()
-    val streamConfiguration = StreamConfiguration()
-    streamConfiguration.name = "unknown"
-    val streamConfigurations = StreamConfigurations()
-    streamConfigurations.streams = listOf(streamConfiguration)
+    val streamConfiguration = StreamConfiguration(name = "unknown")
+    val streamConfigurations = StreamConfigurations(streams = listOf(streamConfiguration))
 
     val throwable =
       assertThrows(BadRequestProblem::class.java) {
@@ -107,12 +103,9 @@ internal class AirbyteCatalogHelperTest {
   @Test
   internal fun `test that streams with duplicate streams is considered to be invalid`() {
     val referenceCatalog = createAirbyteCatalog()
-    val streamConfiguration1 = StreamConfiguration()
-    streamConfiguration1.name = "name1"
-    val streamConfiguration2 = StreamConfiguration()
-    streamConfiguration2.name = "name1"
-    val streamConfigurations = StreamConfigurations()
-    streamConfigurations.streams = listOf(streamConfiguration1, streamConfiguration2)
+    val streamConfiguration1 = StreamConfiguration(name = "name1")
+    val streamConfiguration2 = StreamConfiguration(name = "name1")
+    val streamConfigurations = StreamConfigurations(streams = listOf(streamConfiguration1, streamConfiguration2))
 
     val throwable =
       assertThrows(BadRequestProblem::class.java) {
@@ -131,21 +124,36 @@ internal class AirbyteCatalogHelperTest {
 
   @Test
   internal fun `test that the cron configuration can be validated`() {
-    val connectionSchedule = AirbyteApiConnectionSchedule()
-    connectionSchedule.scheduleType = ScheduleTypeEnum.CRON
-    connectionSchedule.cronExpression = "0 15 10 * * ? * UTC"
+    val connectionSchedule =
+      AirbyteApiConnectionSchedule(
+        scheduleType = ScheduleTypeEnum.CRON,
+        cronExpression = "0 15 10 * * ? * UTC",
+      )
     assertTrue(AirbyteCatalogHelper.validateCronConfiguration(connectionSchedule = connectionSchedule))
-    assertFalse(connectionSchedule.cronExpression.contains("UTC"))
 
-    connectionSchedule.scheduleType = ScheduleTypeEnum.MANUAL
-    assertTrue(AirbyteCatalogHelper.validateCronConfiguration(connectionSchedule = connectionSchedule))
+    val connectionSchedule2 =
+      AirbyteApiConnectionSchedule(
+        scheduleType = ScheduleTypeEnum.MANUAL,
+      )
+    assertTrue(AirbyteCatalogHelper.validateCronConfiguration(connectionSchedule = connectionSchedule2))
+  }
+
+  @Test
+  internal fun `test that the cron expression is normalized`() {
+    val connectionSchedule =
+      AirbyteApiConnectionSchedule(
+        scheduleType = ScheduleTypeEnum.CRON,
+        cronExpression = "0 15 10 * * ? * UTC",
+      )
+    assertFalse(AirbyteCatalogHelper.normalizeCronExpression(connectionSchedule)?.cronExpression?.contains("UTC") ?: false)
   }
 
   @Test
   internal fun `test that the cron configuration with a missing cron expression is invalid`() {
-    val connectionSchedule = AirbyteApiConnectionSchedule()
-    connectionSchedule.scheduleType = ScheduleTypeEnum.CRON
-    connectionSchedule.cronExpression = null
+    val connectionSchedule =
+      AirbyteApiConnectionSchedule(
+        scheduleType = ScheduleTypeEnum.CRON,
+      )
 
     val throwable =
       assertThrows(BadRequestProblem::class.java) {
@@ -157,9 +165,11 @@ internal class AirbyteCatalogHelperTest {
 
   @Test
   internal fun `test that the cron configuration with an invalid cron expression length is invalid`() {
-    val connectionSchedule = AirbyteApiConnectionSchedule()
-    connectionSchedule.scheduleType = ScheduleTypeEnum.CRON
-    connectionSchedule.cronExpression = "0 15 10 * * ? * * * *"
+    val connectionSchedule =
+      AirbyteApiConnectionSchedule(
+        scheduleType = ScheduleTypeEnum.CRON,
+        cronExpression = "0 15 10 * * ? * * * *",
+      )
 
     val throwable =
       assertThrows(BadRequestProblem::class.java) {
@@ -171,9 +181,11 @@ internal class AirbyteCatalogHelperTest {
 
   @Test
   internal fun `test that the cron configuration with an invalid cron expression is invalid`() {
-    val connectionSchedule = AirbyteApiConnectionSchedule()
-    connectionSchedule.scheduleType = ScheduleTypeEnum.CRON
-    connectionSchedule.cronExpression = "not a valid cron expression string"
+    val connectionSchedule =
+      AirbyteApiConnectionSchedule(
+        scheduleType = ScheduleTypeEnum.CRON,
+        cronExpression = "not a valid cron expression string",
+      )
 
     val throwable =
       assertThrows(BadRequestProblem::class.java) {
@@ -192,10 +204,13 @@ internal class AirbyteCatalogHelperTest {
     val primayKeyColumn = "primary"
     val airbyteStream = AirbyteStream()
     val airbyteStreamConfiguration = createAirbyteStreamConfiguration()
-    val streamConfiguration = StreamConfiguration()
-    streamConfiguration.syncMode = connectionSyncMode
-    streamConfiguration.cursorField = listOf(cursorField)
-    streamConfiguration.primaryKey = listOf(listOf(primayKeyColumn))
+    val streamConfiguration =
+      StreamConfiguration(
+        name = "name",
+        syncMode = connectionSyncMode,
+        cursorField = listOf(cursorField),
+        primaryKey = listOf(listOf(primayKeyColumn)),
+      )
 
     val updatedAirbyteStreamConfiguration =
       AirbyteCatalogHelper.updateAirbyteStreamConfiguration(
@@ -214,10 +229,13 @@ internal class AirbyteCatalogHelperTest {
     val primayKeyColumn = "primary"
     val airbyteStream = AirbyteStream()
     val airbyteStreamConfiguration = createAirbyteStreamConfiguration()
-    val streamConfiguration = StreamConfiguration()
-    streamConfiguration.syncMode = null
-    streamConfiguration.cursorField = listOf(cursorField)
-    streamConfiguration.primaryKey = listOf(listOf(primayKeyColumn))
+    val streamConfiguration =
+      StreamConfiguration(
+        name = "name",
+        syncMode = null,
+        cursorField = listOf(cursorField),
+        primaryKey = listOf(listOf(primayKeyColumn)),
+      )
 
     val updatedAirbyteStreamConfiguration =
       AirbyteCatalogHelper.updateAirbyteStreamConfiguration(
@@ -234,8 +252,10 @@ internal class AirbyteCatalogHelperTest {
   @Test
   internal fun `test that when validating a stream without a sync mode, the sync mode is set to full refresh and the stream is considered valid`() {
     val airbyteStream = AirbyteStream()
-    val streamConfiguration = StreamConfiguration()
-    streamConfiguration.syncMode = null
+    val streamConfiguration =
+      StreamConfiguration(
+        name = "name",
+      )
     val airbyteStreamConfiguration =
       AirbyteCatalogHelper.updateAirbyteStreamConfiguration(
         config = createAirbyteStreamConfiguration(),
@@ -252,11 +272,12 @@ internal class AirbyteCatalogHelperTest {
   @Test
   internal fun `test that if the stream configuration contains an invalid sync mode, the stream is considered invalid`() {
     val airbyteStream = AirbyteStream()
-    val streamConfiguration = StreamConfiguration()
     airbyteStream.supportedSyncModes = listOf(SyncMode.INCREMENTAL)
-    streamConfiguration.syncMode = ConnectionSyncModeEnum.FULL_REFRESH_OVERWRITE
-    streamConfiguration.name = "stream-name"
-
+    val streamConfiguration =
+      StreamConfiguration(
+        name = "stream-name",
+        syncMode = ConnectionSyncModeEnum.FULL_REFRESH_OVERWRITE,
+      )
     val throwable =
       assertThrows(BadRequestProblem::class.java) {
         AirbyteCatalogHelper.validateStreamConfig(
@@ -272,9 +293,12 @@ internal class AirbyteCatalogHelperTest {
   @Test
   internal fun `test that a stream configuration with FULL_REFRESH_APPEND is always considered to be valid`() {
     val airbyteStream = AirbyteStream()
-    val streamConfiguration = StreamConfiguration()
+    val streamConfiguration =
+      StreamConfiguration(
+        name = "name",
+        syncMode = ConnectionSyncModeEnum.FULL_REFRESH_APPEND,
+      )
     airbyteStream.supportedSyncModes = listOf(SyncMode.FULL_REFRESH)
-    streamConfiguration.syncMode = ConnectionSyncModeEnum.FULL_REFRESH_APPEND
     val airbyteStreamConfiguration =
       AirbyteCatalogHelper.updateAirbyteStreamConfiguration(
         createAirbyteStreamConfiguration(),
@@ -296,9 +320,12 @@ internal class AirbyteCatalogHelperTest {
   @Test
   internal fun `test that a stream configuration with FULL_REFRESH_OVERWRITE is always considered to be valid`() {
     val airbyteStream = AirbyteStream()
-    val streamConfiguration = StreamConfiguration()
+    val streamConfiguration =
+      StreamConfiguration(
+        name = "name",
+        syncMode = ConnectionSyncModeEnum.FULL_REFRESH_OVERWRITE,
+      )
     airbyteStream.supportedSyncModes = listOf(SyncMode.FULL_REFRESH)
-    streamConfiguration.syncMode = ConnectionSyncModeEnum.FULL_REFRESH_OVERWRITE
     val airbyteStreamConfiguration =
       AirbyteCatalogHelper.updateAirbyteStreamConfiguration(
         config = createAirbyteStreamConfiguration(),
@@ -322,12 +349,15 @@ internal class AirbyteCatalogHelperTest {
     val cursorField = "cursor"
     val airbyteStream = AirbyteStream()
     val airbyteStreamConfiguration = createAirbyteStreamConfiguration()
-    val streamConfiguration = StreamConfiguration()
+    val streamConfiguration =
+      StreamConfiguration(
+        name = "name",
+        syncMode = ConnectionSyncModeEnum.INCREMENTAL_APPEND,
+        cursorField = listOf(cursorField),
+      )
     airbyteStream.defaultCursorField = listOf(cursorField)
     airbyteStream.sourceDefinedCursor = true
     airbyteStream.supportedSyncModes = listOf(SyncMode.INCREMENTAL)
-    streamConfiguration.cursorField = listOf(cursorField)
-    streamConfiguration.syncMode = ConnectionSyncModeEnum.INCREMENTAL_APPEND
 
     assertTrue(
       AirbyteCatalogHelper.validateStreamConfig(
@@ -346,14 +376,16 @@ internal class AirbyteCatalogHelperTest {
     val cursorField = "cursor"
     val streamName = "stream-name"
     val airbyteStream = AirbyteStream()
-    val streamConfiguration = StreamConfiguration()
+    val streamConfiguration =
+      StreamConfiguration(
+        name = streamName,
+        syncMode = ConnectionSyncModeEnum.INCREMENTAL_APPEND,
+        cursorField = listOf("other"),
+      )
     airbyteStream.defaultCursorField = listOf(cursorField)
     airbyteStream.name = streamName
     airbyteStream.sourceDefinedCursor = true
     airbyteStream.supportedSyncModes = listOf(SyncMode.INCREMENTAL)
-    streamConfiguration.cursorField = listOf("other")
-    streamConfiguration.name = airbyteStream.name
-    streamConfiguration.syncMode = ConnectionSyncModeEnum.INCREMENTAL_APPEND
     val airbyteStreamConfiguration =
       AirbyteCatalogHelper.updateAirbyteStreamConfiguration(
         config = createAirbyteStreamConfiguration(),
@@ -379,13 +411,16 @@ internal class AirbyteCatalogHelperTest {
   internal fun `test that a stream configuration with INCREMENTAL_APPEND is only valid if the source cursor field is also valid`() {
     val cursorField = "cursor"
     val airbyteStream = AirbyteStream()
-    val streamConfiguration = StreamConfiguration()
+    val streamConfiguration =
+      StreamConfiguration(
+        name = "name",
+        syncMode = ConnectionSyncModeEnum.INCREMENTAL_APPEND,
+        cursorField = listOf(cursorField),
+      )
     airbyteStream.defaultCursorField = listOf(cursorField)
     airbyteStream.jsonSchema = Jsons.deserialize("{\"properties\": {\"$cursorField\": {}}}")
     airbyteStream.sourceDefinedCursor = false
     airbyteStream.supportedSyncModes = listOf(SyncMode.INCREMENTAL)
-    streamConfiguration.cursorField = listOf(cursorField)
-    streamConfiguration.syncMode = ConnectionSyncModeEnum.INCREMENTAL_APPEND
     val airbyteStreamConfiguration =
       AirbyteCatalogHelper.updateAirbyteStreamConfiguration(
         config = createAirbyteStreamConfiguration(),
@@ -410,14 +445,17 @@ internal class AirbyteCatalogHelperTest {
     val cursorField = "cursor"
     val otherCursorField = "other"
     val airbyteStream = AirbyteStream()
-    val streamConfiguration = StreamConfiguration()
+    val streamConfiguration =
+      StreamConfiguration(
+        name = "name",
+        syncMode = ConnectionSyncModeEnum.INCREMENTAL_APPEND,
+        cursorField = listOf(cursorField),
+      )
     airbyteStream.defaultCursorField = listOf(otherCursorField)
     airbyteStream.jsonSchema = Jsons.deserialize("{\"properties\": {\"$otherCursorField\": {}}}")
     airbyteStream.name = "name"
     airbyteStream.sourceDefinedCursor = false
     airbyteStream.supportedSyncModes = listOf(SyncMode.INCREMENTAL)
-    streamConfiguration.cursorField = listOf(cursorField)
-    streamConfiguration.syncMode = ConnectionSyncModeEnum.INCREMENTAL_APPEND
     val airbyteStreamConfiguration =
       AirbyteCatalogHelper.updateAirbyteStreamConfiguration(
         config = createAirbyteStreamConfiguration(),
@@ -449,14 +487,17 @@ internal class AirbyteCatalogHelperTest {
   internal fun `test that a stream configuration with INCREMENTAL_APPEND is invalid if there is no cursor field`() {
     val cursorField = "cursor"
     val airbyteStream = AirbyteStream()
-    val streamConfiguration = StreamConfiguration()
+    val streamConfiguration =
+      StreamConfiguration(
+        name = "name",
+        syncMode = ConnectionSyncModeEnum.INCREMENTAL_APPEND,
+        cursorField = listOf(),
+      )
     airbyteStream.defaultCursorField = listOf()
     airbyteStream.jsonSchema = Jsons.deserialize("{\"properties\": {\"$cursorField\": {}}}")
     airbyteStream.name = "name"
     airbyteStream.sourceDefinedCursor = false
     airbyteStream.supportedSyncModes = listOf(SyncMode.INCREMENTAL)
-    streamConfiguration.cursorField = listOf()
-    streamConfiguration.syncMode = ConnectionSyncModeEnum.INCREMENTAL_APPEND
     val airbyteStreamConfiguration =
       AirbyteCatalogHelper.updateAirbyteStreamConfiguration(
         config = createAirbyteStreamConfiguration(),
@@ -488,14 +529,17 @@ internal class AirbyteCatalogHelperTest {
     val cursorField = "cursor"
     val primaryKey = "primary"
     val airbyteStream = AirbyteStream()
-    val streamConfiguration = StreamConfiguration()
+    val streamConfiguration =
+      StreamConfiguration(
+        name = "name",
+        syncMode = ConnectionSyncModeEnum.INCREMENTAL_DEDUPED_HISTORY,
+        cursorField = listOf(cursorField),
+        primaryKey = listOf(listOf(primaryKey)),
+      )
     airbyteStream.defaultCursorField = listOf(cursorField)
     airbyteStream.jsonSchema = Jsons.deserialize("{\"properties\": {\"$cursorField\": {}, \"$primaryKey\": {}}}")
     airbyteStream.sourceDefinedCursor = true
     airbyteStream.supportedSyncModes = listOf(SyncMode.INCREMENTAL)
-    streamConfiguration.cursorField = listOf(cursorField)
-    streamConfiguration.primaryKey = listOf(listOf(primaryKey))
-    streamConfiguration.syncMode = ConnectionSyncModeEnum.INCREMENTAL_DEDUPED_HISTORY
     val airbyteStreamConfiguration =
       AirbyteCatalogHelper.updateAirbyteStreamConfiguration(
         config = createAirbyteStreamConfiguration(),
@@ -521,14 +565,17 @@ internal class AirbyteCatalogHelperTest {
     val cursorField = "cursor"
     val primaryKey = "primary"
     val airbyteStream = AirbyteStream()
-    val streamConfiguration = StreamConfiguration()
+    val streamConfiguration =
+      StreamConfiguration(
+        name = "name",
+        syncMode = ConnectionSyncModeEnum.INCREMENTAL_DEDUPED_HISTORY,
+        cursorField = listOf(cursorField),
+        primaryKey = listOf(listOf(primaryKey)),
+      )
     airbyteStream.defaultCursorField = listOf(cursorField)
     airbyteStream.jsonSchema = Jsons.deserialize("{\"properties\": {\"$cursorField\": {}, \"$primaryKey\": {}}}")
     airbyteStream.sourceDefinedCursor = false
     airbyteStream.supportedSyncModes = listOf(SyncMode.INCREMENTAL)
-    streamConfiguration.cursorField = listOf(cursorField)
-    streamConfiguration.primaryKey = listOf(listOf(primaryKey))
-    streamConfiguration.syncMode = ConnectionSyncModeEnum.INCREMENTAL_DEDUPED_HISTORY
     val airbyteStreamConfiguration =
       AirbyteCatalogHelper.updateAirbyteStreamConfiguration(
         config = createAirbyteStreamConfiguration(),
@@ -565,12 +612,11 @@ internal class AirbyteCatalogHelperTest {
 
   @Nested
   inner class ValidateFieldSelection {
-    private val streamConfiguration = StreamConfiguration()
     private val selectedFields =
       listOf(
-        io.airbyte.public_api.model.generated.SelectedFieldInfo().fieldPath(listOf("f1", "f2", "f3")),
-        io.airbyte.public_api.model.generated.SelectedFieldInfo().fieldPath(listOf("m1", "m2")),
-        io.airbyte.public_api.model.generated.SelectedFieldInfo().fieldPath(listOf("y1")),
+        io.airbyte.publicApi.server.generated.models.SelectedFieldInfo(fieldPath = (listOf("f1", "f2", "f3"))),
+        io.airbyte.publicApi.server.generated.models.SelectedFieldInfo(fieldPath = (listOf("m1", "m2"))),
+        io.airbyte.publicApi.server.generated.models.SelectedFieldInfo(fieldPath = (listOf("y1"))),
       )
     private val jsonSchemaString =
       """
@@ -615,7 +661,6 @@ internal class AirbyteCatalogHelperTest {
 
     @BeforeEach
     fun setUp() {
-      streamConfiguration.name = "testStream"
       schemaConfiguration.syncMode = SyncMode.FULL_REFRESH
       schemaConfiguration.destinationSyncMode = DestinationSyncMode.OVERWRITE
       sourceStream.name = "testStream"
@@ -626,37 +671,53 @@ internal class AirbyteCatalogHelperTest {
 
     @Test
     fun `Null selected fields should be excluded in the updated config`() {
-      streamConfiguration.selectedFields = null
+      val streamConfiguration =
+        StreamConfiguration(
+          name = "testStream",
+          selectedFields = null,
+        )
       val updatedConfig = AirbyteCatalogHelper.updateAirbyteStreamConfiguration(schemaConfiguration, sourceStream, streamConfiguration)
       assertEquals(listOf<SelectedFieldInfo>(), updatedConfig.selectedFields)
     }
 
     @Test
     fun `Empty selected fields should be excluded in the updated config`() {
-      streamConfiguration.selectedFields = emptyList()
+      val streamConfiguration =
+        StreamConfiguration(
+          name = "testStream",
+          selectedFields = emptyList(),
+        )
       val updatedConfig = AirbyteCatalogHelper.updateAirbyteStreamConfiguration(schemaConfiguration, sourceStream, streamConfiguration)
       assertEquals(listOf<SelectedFieldInfo>(), updatedConfig.selectedFields)
     }
 
     @Test
     fun `Non-empty selected fields should be included in the updated config`() {
-      streamConfiguration.selectedFields = selectedFields
+      val streamConfiguration =
+        StreamConfiguration(
+          name = "testStream",
+          selectedFields = selectedFields,
+        )
       val updatedConfig = AirbyteCatalogHelper.updateAirbyteStreamConfiguration(schemaConfiguration, sourceStream, streamConfiguration)
       // test size
       assertEquals(selectedFields.size, updatedConfig.selectedFields.size)
       // test type converter
-      assertEquals(selectedFields[0].fieldPath[0], updatedConfig.selectedFields[0].fieldPath[0])
+      assertEquals(selectedFields[0].fieldPath?.get(0), updatedConfig.selectedFields[0].fieldPath[0])
     }
 
     @Test
     fun `Should throw error if input contains duplicate field names`() {
-      streamConfiguration.selectedFields =
-        listOf(
-          io.airbyte.public_api.model.generated.SelectedFieldInfo().fieldPath(listOf("f1", "f2", "f3")),
-          io.airbyte.public_api.model.generated.SelectedFieldInfo().fieldPath(listOf("m1", "m2")),
-          // `m1` is a dup field
-          io.airbyte.public_api.model.generated.SelectedFieldInfo().fieldPath(listOf("m1", "m3")),
-          io.airbyte.public_api.model.generated.SelectedFieldInfo().fieldPath(listOf("b1")),
+      val streamConfiguration =
+        StreamConfiguration(
+          name = "testStream",
+          selectedFields =
+            listOf(
+              io.airbyte.publicApi.server.generated.models.SelectedFieldInfo(fieldPath = (listOf("f1", "f2", "f3"))),
+              io.airbyte.publicApi.server.generated.models.SelectedFieldInfo(fieldPath = (listOf("m1", "m2"))),
+              // `m1` is a dup field
+              io.airbyte.publicApi.server.generated.models.SelectedFieldInfo(fieldPath = (listOf("m1", "m3"))),
+              io.airbyte.publicApi.server.generated.models.SelectedFieldInfo(fieldPath = (listOf("b1"))),
+            ),
         )
       val throwable =
         assertThrows(BadRequestProblem::class.java) {
@@ -668,13 +729,17 @@ internal class AirbyteCatalogHelperTest {
 
     @Test
     fun `Should throw error if input contains non-existed field names`() {
-      streamConfiguration.selectedFields =
-        listOf(
-          io.airbyte.public_api.model.generated.SelectedFieldInfo().fieldPath(listOf("f1")),
-          io.airbyte.public_api.model.generated.SelectedFieldInfo().fieldPath(listOf("m1")),
-          // `x1` is not existed in source schema
-          io.airbyte.public_api.model.generated.SelectedFieldInfo().fieldPath(listOf("x1")),
-          io.airbyte.public_api.model.generated.SelectedFieldInfo().fieldPath(listOf("b1")),
+      val streamConfiguration =
+        StreamConfiguration(
+          name = "testStream",
+          selectedFields =
+            listOf(
+              io.airbyte.publicApi.server.generated.models.SelectedFieldInfo(fieldPath = (listOf("f1"))),
+              io.airbyte.publicApi.server.generated.models.SelectedFieldInfo(fieldPath = (listOf("m1"))),
+              // `x1` is not existed in source schema
+              io.airbyte.publicApi.server.generated.models.SelectedFieldInfo(fieldPath = (listOf("x1"))),
+              io.airbyte.publicApi.server.generated.models.SelectedFieldInfo(fieldPath = (listOf("b1"))),
+            ),
         )
       var throwable =
         assertThrows(BadRequestProblem::class.java) {
@@ -686,11 +751,15 @@ internal class AirbyteCatalogHelperTest {
 
     @Test
     fun `Should throw error if primary key(s) are not selected`() {
-      streamConfiguration.selectedFields =
-        listOf(
-          // "f1" as primary key is missing
-          io.airbyte.public_api.model.generated.SelectedFieldInfo().fieldPath(listOf("m1")),
-          io.airbyte.public_api.model.generated.SelectedFieldInfo().fieldPath(listOf("b1")),
+      val streamConfiguration =
+        StreamConfiguration(
+          name = "testStream",
+          selectedFields =
+            listOf(
+              // "f1" as primary key is missing
+              io.airbyte.publicApi.server.generated.models.SelectedFieldInfo(fieldPath = (listOf("m1"))),
+              io.airbyte.publicApi.server.generated.models.SelectedFieldInfo(fieldPath = (listOf("b1"))),
+            ),
         )
       var throwable =
         assertThrows(BadRequestProblem::class.java) {
@@ -702,12 +771,16 @@ internal class AirbyteCatalogHelperTest {
 
     @Test
     fun `Should throw error if cursor field is not selected`() {
-      streamConfiguration.selectedFields =
-        listOf(
-          // "b1" as cursor field is missing
-          io.airbyte.public_api.model.generated.SelectedFieldInfo().fieldPath(listOf("f1")),
-          io.airbyte.public_api.model.generated.SelectedFieldInfo().fieldPath(listOf("m1")),
-          io.airbyte.public_api.model.generated.SelectedFieldInfo().fieldPath(listOf("y1")),
+      val streamConfiguration =
+        StreamConfiguration(
+          name = "testStream",
+          selectedFields =
+            listOf(
+              // "b1" as cursor field is missing
+              io.airbyte.publicApi.server.generated.models.SelectedFieldInfo(fieldPath = (listOf("f1"))),
+              io.airbyte.publicApi.server.generated.models.SelectedFieldInfo(fieldPath = (listOf("m1"))),
+              io.airbyte.publicApi.server.generated.models.SelectedFieldInfo(fieldPath = (listOf("y1"))),
+            ),
         )
       var throwable =
         assertThrows(BadRequestProblem::class.java) {

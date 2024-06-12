@@ -7,7 +7,8 @@ package io.airbyte.server.apis.publicapi.constants
 const val SOURCE_TYPE = "sourceType"
 const val DESTINATION_TYPE = "destinationType"
 
-const val ROOT_PATH = "/api/public"
+const val API_PATH = "/api"
+const val ROOT_PATH = "/public"
 const val CONNECTIONS_PATH = "$ROOT_PATH/v1/connections"
 const val CONNECTIONS_WITH_ID_PATH = "$CONNECTIONS_PATH/{connectionId}"
 const val STREAMS_PATH = "$ROOT_PATH/v1/streams"

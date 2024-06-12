@@ -6,7 +6,7 @@ package io.airbyte.server.apis.publicapi.mappers
 
 import io.airbyte.api.model.generated.SourceRead
 import io.airbyte.api.model.generated.SourceReadList
-import io.airbyte.public_api.model.generated.SourcesResponse
+import io.airbyte.publicApi.server.generated.models.SourcesResponse
 import io.airbyte.server.apis.publicapi.constants.INCLUDE_DELETED
 import io.airbyte.server.apis.publicapi.constants.SOURCES_PATH
 import io.airbyte.server.apis.publicapi.constants.WORKSPACE_IDS
@@ -42,10 +42,10 @@ object SourcesResponseMapper {
 
     if (workspaceIds.isNotEmpty()) uriBuilder.queryParam(WORKSPACE_IDS, PaginationMapper.uuidListToQueryString(workspaceIds))
 
-    val sourcesResponse = SourcesResponse()
-    sourcesResponse.next = PaginationMapper.getNextUrl(sourceReadList.sources, limit, offset, uriBuilder)
-    sourcesResponse.previous = PaginationMapper.getPreviousUrl(limit, offset, uriBuilder)
-    sourcesResponse.data = sourceReadList.sources.map { obj: SourceRead? -> SourceReadMapper.from(obj!!) }
-    return sourcesResponse
+    return SourcesResponse(
+      next = PaginationMapper.getNextUrl(sourceReadList.sources, limit, offset, uriBuilder),
+      previous = PaginationMapper.getPreviousUrl(limit, offset, uriBuilder),
+      data = sourceReadList.sources.map { obj: SourceRead? -> SourceReadMapper.from(obj!!) },
+    )
   }
 }

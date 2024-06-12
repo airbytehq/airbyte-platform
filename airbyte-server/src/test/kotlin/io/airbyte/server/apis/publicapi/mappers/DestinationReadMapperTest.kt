@@ -21,10 +21,10 @@ class DestinationReadMapperTest {
     val destinationResponse = DestinationReadMapper.from(destinationRead)
 
     // Then
-    assertEquals(destinationRead.destinationId, destinationResponse.destinationId)
+    assertEquals(destinationRead.destinationId.toString(), destinationResponse.destinationId)
     assertEquals(destinationRead.name, destinationResponse.name)
-    assertEquals(DEFINITION_ID_TO_DESTINATION_NAME[destinationRead.destinationDefinitionId], destinationResponse.destinationType)
-    assertEquals(destinationRead.workspaceId, destinationResponse.workspaceId)
+    assertEquals(DEFINITION_ID_TO_DESTINATION_NAME.getOrDefault(destinationRead.destinationDefinitionId, ""), destinationResponse.destinationType)
+    assertEquals(destinationRead.workspaceId.toString(), destinationResponse.workspaceId)
     assertEquals(destinationRead.connectionConfiguration, destinationResponse.configuration)
   }
 }

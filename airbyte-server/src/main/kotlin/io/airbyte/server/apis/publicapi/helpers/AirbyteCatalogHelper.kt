@@ -23,12 +23,12 @@ import io.airbyte.api.problems.throwable.generated.UnexpectedProblem
 import io.airbyte.commons.server.errors.problems.ConnectionConfigurationProblem
 import io.airbyte.commons.server.errors.problems.ConnectionConfigurationProblem.Companion.duplicateStream
 import io.airbyte.commons.server.errors.problems.ConnectionConfigurationProblem.Companion.invalidStreamName
-import io.airbyte.public_api.model.generated.AirbyteApiConnectionSchedule
-import io.airbyte.public_api.model.generated.ConnectionSyncModeEnum
-import io.airbyte.public_api.model.generated.ScheduleTypeEnum
-import io.airbyte.public_api.model.generated.SelectedFieldInfo
-import io.airbyte.public_api.model.generated.StreamConfiguration
-import io.airbyte.public_api.model.generated.StreamConfigurations
+import io.airbyte.publicApi.server.generated.models.AirbyteApiConnectionSchedule
+import io.airbyte.publicApi.server.generated.models.ConnectionSyncModeEnum
+import io.airbyte.publicApi.server.generated.models.ScheduleTypeEnum
+import io.airbyte.publicApi.server.generated.models.SelectedFieldInfo
+import io.airbyte.publicApi.server.generated.models.StreamConfiguration
+import io.airbyte.publicApi.server.generated.models.StreamConfigurations
 import io.airbyte.server.apis.publicapi.mappers.ConnectionReadMapper
 import jakarta.validation.Valid
 import org.slf4j.LoggerFactory
@@ -105,7 +105,7 @@ object AirbyteCatalogHelper {
   ): Boolean {
     val validStreams = getValidStreams(referenceCatalog)
     val alreadyConfiguredStreams: MutableSet<String> = HashSet()
-    for (streamConfiguration in streamConfigurations.streams) {
+    for (streamConfiguration in streamConfigurations.streams!!) {
       if (!validStreams.containsKey(streamConfiguration.name)) {
         throw invalidStreamName(validStreams.keys)
       } else if (alreadyConfiguredStreams.contains(streamConfiguration.name)) {
@@ -132,7 +132,7 @@ object AirbyteCatalogHelper {
       return
     }
 
-    val allSelectedFields = streamConfiguration.selectedFields.mapNotNull { it.fieldPath?.firstOrNull() }
+    val allSelectedFields = streamConfiguration.selectedFields!!.mapNotNull { it.fieldPath?.firstOrNull() }
     // 1. Avoid duplicate fields selection.
     val allSelectedFieldsSet = allSelectedFields.toSet()
     if (allSelectedFields.size != allSelectedFieldsSet.size) {
@@ -184,11 +184,9 @@ object AirbyteCatalogHelper {
         if (connectionSchedule.cronExpression == null) {
           throw ConnectionConfigurationProblem.missingCronExpression()
         }
+        val cronExpression = normalizeCronExpression(connectionSchedule)?.cronExpression
         try {
-          if (connectionSchedule.cronExpression.endsWith("UTC")) {
-            connectionSchedule.cronExpression = connectionSchedule.cronExpression.replace("UTC", "").trim()
-          }
-          val cron: Cron = parser.parse(connectionSchedule.cronExpression)
+          val cron: Cron = parser.parse(cronExpression)
           cron.validate()
           val cronStrings: List<String> = cron.asString().split(" ")
           // Ensure first value is not `*`, could be seconds or minutes value
@@ -198,19 +196,34 @@ object AirbyteCatalogHelper {
             Integer.valueOf(cronStrings[1])
           }
         } catch (e: NumberFormatException) {
-          log.debug("Invalid cron expression: " + connectionSchedule.cronExpression)
+          log.debug("Invalid cron expression: $cronExpression")
           log.debug("NumberFormatException: $e")
-          throw ConnectionConfigurationProblem.invalidCronExpressionUnderOneHour(connectionSchedule.cronExpression)
+          throw ConnectionConfigurationProblem.invalidCronExpressionUnderOneHour(cronExpression.toString())
         } catch (e: IllegalArgumentException) {
-          log.debug("Invalid cron expression: " + connectionSchedule.cronExpression)
+          log.debug("Invalid cron expression: $cronExpression")
           log.debug("IllegalArgumentException: $e")
-          throw ConnectionConfigurationProblem.invalidCronExpression(connectionSchedule.cronExpression, e.message)
+          throw ConnectionConfigurationProblem.invalidCronExpression(cronExpression.toString(), e.message)
         }
       }
     }
     return true
     // validate that the cron expression is not more often than every hour due to product specs
     // check that the first seconds and hour values are not *
+  }
+
+  fun normalizeCronExpression(connectionSchedule: AirbyteApiConnectionSchedule?): AirbyteApiConnectionSchedule? {
+    return connectionSchedule?.let { schedule ->
+      schedule.cronExpression?.let { cronExpression ->
+        if (cronExpression.endsWith("UTC")) {
+          AirbyteApiConnectionSchedule(
+            scheduleType = connectionSchedule.scheduleType,
+            cronExpression = connectionSchedule.cronExpression?.let { exp -> exp.replace("UTC", "").trim() },
+          )
+        } else {
+          connectionSchedule
+        }
+      }
+    }
   }
 
   /**
@@ -235,7 +248,7 @@ object AirbyteCatalogHelper {
     if (!streamConfiguration.selectedFields.isNullOrEmpty()) {
       // We will ignore the null or empty input and sync all fields by default,
       // which is consistent with Cloud UI where all fields are selected by default.
-      updatedStreamConfiguration.selectedFields = streamConfiguration.selectedFields.map { selectedFieldInfoConverter(it) }
+      updatedStreamConfiguration.selectedFields = streamConfiguration.selectedFields!!.map { selectedFieldInfoConverter(it) }
     }
     updatedStreamConfiguration.suggested = config.suggested
 
@@ -285,7 +298,7 @@ object AirbyteCatalogHelper {
   ): List<String>? {
     return if (airbyteStream.sourceDefinedCursor != null && airbyteStream.sourceDefinedCursor!!) {
       airbyteStream.defaultCursorField
-    } else if (streamConfiguration.cursorField != null && streamConfiguration.cursorField.isNotEmpty()) {
+    } else if (streamConfiguration.cursorField != null && streamConfiguration.cursorField!!.isNotEmpty()) {
       streamConfiguration.cursorField
     } else {
       airbyteStream.defaultCursorField

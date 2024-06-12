@@ -5,8 +5,8 @@
 package io.airbyte.server.apis.publicapi.mappers
 
 import io.airbyte.api.model.generated.WorkspaceRead
-import io.airbyte.public_api.model.generated.GeographyEnum
-import io.airbyte.public_api.model.generated.WorkspaceResponse
+import io.airbyte.publicApi.server.generated.models.GeographyEnum
+import io.airbyte.publicApi.server.generated.models.WorkspaceResponse
 
 /**
  * Mappers that help convert models from the config api to models from the public api.
@@ -19,12 +19,14 @@ object WorkspaceResponseMapper {
    * @return WorkspaceResponse Response object which contains the workspace id
    */
   fun from(workspaceRead: WorkspaceRead): WorkspaceResponse {
-    val workspaceResponse = WorkspaceResponse()
-    workspaceResponse.workspaceId = workspaceRead.workspaceId
-    workspaceResponse.name = workspaceRead.name
-    if (workspaceRead.defaultGeography != null) {
-      workspaceResponse.dataResidency = GeographyEnum.fromValue(workspaceRead.defaultGeography!!.toString())
-    }
-    return workspaceResponse
+    return WorkspaceResponse(
+      workspaceId = workspaceRead.workspaceId.toString(),
+      name = workspaceRead.name,
+      dataResidency =
+        workspaceRead.defaultGeography?.let {
+            defaultGeography ->
+          GeographyEnum.valueOf(defaultGeography.toString().uppercase())
+        } ?: GeographyEnum.AUTO,
+    )
   }
 }
