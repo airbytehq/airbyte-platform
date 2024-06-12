@@ -51,7 +51,7 @@ export const DbtCloudTransformationsFormControls: React.FC<DbtCloudTransformatio
           availableDbtCloudJobs.length > 0 ? (
             <DropdownMenu
               options={dropdownMenuOptions}
-              placement="left"
+              placement="bottom"
               onChange={(selection) => {
                 append(selection.value as DbtCloudJobInfo);
               }}
