@@ -2,7 +2,7 @@
  * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
-package io.airbyte.commons.server.converters;
+package io.airbyte.commons.converters;
 
 import static io.airbyte.api.model.generated.OperatorWebhook.WebhookTypeEnum.DBTCLOUD;
 
@@ -18,6 +18,8 @@ import io.airbyte.config.OperatorNormalization.Option;
 import io.airbyte.config.OperatorWebhook;
 import io.airbyte.config.StandardSyncOperation;
 import io.airbyte.config.StandardSyncOperation.OperatorType;
+import io.airbyte.config.StandardWorkspace;
+import java.util.Optional;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -27,7 +29,9 @@ import java.util.regex.Pattern;
 @SuppressWarnings("MissingSwitchDefault")
 public class OperationsConverter {
 
-  public static void populateOperatorConfigFromApi(final OperatorConfiguration operatorConfig, final StandardSyncOperation standardSyncOperation) {
+  public static void populateOperatorConfigFromApi(final OperatorConfiguration operatorConfig,
+                                                   final StandardSyncOperation standardSyncOperation,
+                                                   final StandardWorkspace standardWorkspace) {
     standardSyncOperation.withOperatorType(Enums.convertTo(operatorConfig.getOperatorType(), OperatorType.class));
     switch (operatorConfig.getOperatorType()) {
       case NORMALIZATION -> {
@@ -53,7 +57,15 @@ public class OperationsConverter {
       case WEBHOOK -> {
         Preconditions.checkArgument(operatorConfig.getWebhook() != null);
         // TODO(mfsiega-airbyte): check that the webhook config id references a real webhook config.
-        standardSyncOperation.withOperatorWebhook(webhookOperatorFromConfig(operatorConfig.getWebhook()));
+        final Optional<String> customDbtHost = Optional.ofNullable(standardWorkspace.getWebhookOperationConfigs())
+            .flatMap(webHookOperationConfig -> {
+              if (webHookOperationConfig.has("customDbtHost") && webHookOperationConfig.get("customDbtHost").isTextual()) {
+                return Optional.of(webHookOperationConfig.get("customDbtHost").asText());
+              }
+              return Optional.empty();
+            });
+
+        standardSyncOperation.withOperatorWebhook(webhookOperatorFromConfig(operatorConfig.getWebhook(), customDbtHost));
         // Null out the other configs, since it's mutually exclusive. We need to do this if it's an update.
         standardSyncOperation.withOperatorNormalization(null);
         standardSyncOperation.withOperatorDbt(null);
@@ -98,7 +110,8 @@ public class OperationsConverter {
         .operatorConfiguration(operatorConfiguration);
   }
 
-  private static OperatorWebhook webhookOperatorFromConfig(io.airbyte.api.model.generated.OperatorWebhook webhookConfig) {
+  private static OperatorWebhook webhookOperatorFromConfig(io.airbyte.api.model.generated.OperatorWebhook webhookConfig,
+                                                           final Optional<String> customDbtHost) {
     final var operatorWebhook = new OperatorWebhook().withWebhookConfigId(webhookConfig.getWebhookConfigId());
     // TODO(mfsiega-airbyte): remove this once the frontend is sending the new format.
     if (webhookConfig.getWebhookType() == null) {
@@ -109,7 +122,7 @@ public class OperationsConverter {
     switch (webhookConfig.getWebhookType()) {
       case DBTCLOUD -> {
         return operatorWebhook
-            .withExecutionUrl(DbtCloudOperationConverter.getExecutionUrlFrom(webhookConfig.getDbtCloud()))
+            .withExecutionUrl(DbtCloudOperationConverter.getExecutionUrlFrom(webhookConfig.getDbtCloud(), customDbtHost))
             .withExecutionBody(DbtCloudOperationConverter.getDbtCloudExecutionBody());
       }
       // Future webhook operator types added here.
@@ -125,15 +138,15 @@ public class OperationsConverter {
       webhookOperator.webhookType(DBTCLOUD).dbtCloud(dbtCloudOperator);
       // TODO(mfsiega-airbyte): remove once frontend switches to new format.
       // Dual-write deprecated webhook format.
-      webhookOperator.executionUrl(DbtCloudOperationConverter.getExecutionUrlFrom(dbtCloudOperator));
-      webhookOperator.executionBody(DbtCloudOperationConverter.getDbtCloudExecutionBody());
+      webhookOperator.executionUrl(persistedWebhook.getExecutionUrl());
+      webhookOperator.executionBody(persistedWebhook.getExecutionBody());
     } else {
       throw new IllegalArgumentException("Unexpected webhook operator config");
     }
     return webhookOperator;
   }
 
-  private static class DbtCloudOperationConverter {
+  public static class DbtCloudOperationConverter {
 
     // See https://docs.getdbt.com/dbt-cloud/api-v2 for documentation on dbt Cloud API endpoints.
     static final Pattern dbtUrlPattern = Pattern.compile("^https://cloud\\.getdbt\\.com/api/v2/accounts/(\\d+)/jobs/(\\d+)/run/$");
@@ -151,8 +164,8 @@ public class OperationsConverter {
       return null;
     }
 
-    private static String getExecutionUrlFrom(final OperatorWebhookDbtCloud dbtCloudConfig) {
-      return String.format("https://cloud.getdbt.com/api/v2/accounts/%d/jobs/%d/run/", dbtCloudConfig.getAccountId(),
+    private static String getExecutionUrlFrom(final OperatorWebhookDbtCloud dbtCloudConfig, final Optional<String> customDbtHost) {
+      return String.format("https://%s/api/v2/accounts/%d/jobs/%d/run/", customDbtHost.orElse("cloud.getdbt.com"), dbtCloudConfig.getAccountId(),
           dbtCloudConfig.getJobId());
     }
 

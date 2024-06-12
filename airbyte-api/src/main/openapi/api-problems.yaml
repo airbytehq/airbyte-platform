@@ -257,6 +257,27 @@ components:
               default: The request could not be understood by the server due to malformed syntax.
             data:
               $ref: "#/components/schemas/ProblemMessageData"
+    DbtCloudCredentialsProblemResponse:
+      x-implements: io.airbyte.api.problems.ProblemResponse
+      type: object
+      allOf:
+        - $ref: "#/components/schemas/BaseProblemFields"
+        - type: object
+          properties:
+            status:
+              type: integer
+              default: 400
+            type:
+              type: string
+              default: error:dbtcloud/access-denied
+            title:
+              type: string
+              default: Incorrect integration credentials
+            detail:
+              type: string
+              default: The integration service denied access.
+            data:
+              $ref: "#/components/schemas/DbtCloudIntegrationData"
     CronValidationMissingCronProblemResponse:
       x-implements: io.airbyte.api.problems.ProblemResponse
       type: object
@@ -458,4 +479,17 @@ components:
         - value
       properties:
         value:
+          type: string
+    DbtCloudIntegrationData:
+      type: object
+      required:
+        - host
+        - code
+        - message
+      properties:
+        host:
+          type: string
+        code:
+          type: integer
+        message:
           type: string

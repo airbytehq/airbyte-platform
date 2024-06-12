@@ -6551,6 +6551,9 @@ components:
         validationUrl:
           type: string
           description: if supplied, the webhook config will be validated by checking that this URL returns a 2xx response.
+        customDbtHost:
+          type: string
+          description: if the webhook is of type DBT_CLOUD, this value will be used to construct the execution URL # todo: better explanation, link to docs
     NotificationItem:
       type: object
       properties:
@@ -6777,6 +6780,9 @@ components:
         name:
           type: string
           description: human-readable name e.g. for display in UI
+        customDbtHost:
+          type: string
+          description: If this is a dbt Cloud webhook, this is the custom host
     WorkspaceUpdateName:
       type: object
       required:

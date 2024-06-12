@@ -268,7 +268,7 @@ class ApiAcceptanceTests {
   void testWebhookOperationExecutesSuccessfully() throws Exception {
     // create workspace webhook config
     final WorkspaceRead workspaceRead =
-        testHarness.updateWorkspaceWebhookConfigs(workspaceId, List.of(new WebhookConfigWrite("reqres test", null, null)));
+        testHarness.updateWorkspaceWebhookConfigs(workspaceId, List.of(new WebhookConfigWrite("reqres test", null, null, null)));
     // create a webhook operation
     final OperationRead operationRead = testHarness.createDbtCloudWebhookOperation(workspaceId, workspaceRead.getWebhookConfigs().get(0).getId());
     // create a connection with the new operation.
