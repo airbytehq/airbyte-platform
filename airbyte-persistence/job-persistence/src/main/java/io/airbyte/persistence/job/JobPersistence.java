@@ -304,6 +304,34 @@ public interface JobPersistence {
    */
   List<Job> listJobs(final Set<Long> jobIds) throws IOException;
 
+  List<Job> listJobsLight(Set<ConfigType> configTypes, String configId, int pagesize) throws IOException;
+
+  List<Job> listJobsLight(Set<ConfigType> configTypes,
+                          String configId,
+                          int limit,
+                          int offset,
+                          List<JobStatus> statuses,
+                          OffsetDateTime createdAtStart,
+                          OffsetDateTime createdAtEnd,
+                          OffsetDateTime updatedAtStart,
+                          OffsetDateTime updatedAtEnd,
+                          String orderByField,
+                          String orderByMethod)
+      throws IOException;
+
+  List<Job> listJobsLight(Set<ConfigType> configTypes,
+                          List<UUID> workspaceIds,
+                          int limit,
+                          int offset,
+                          List<JobStatus> statuses,
+                          OffsetDateTime createdAtStart,
+                          OffsetDateTime createdAtEnd,
+                          OffsetDateTime updatedAtStart,
+                          OffsetDateTime updatedAtEnd,
+                          String orderByField,
+                          String orderByMethod)
+      throws IOException;
+
   /**
    * List jobs with id.
    *

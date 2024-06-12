@@ -193,6 +193,62 @@ public class JobHistoryHandler {
     return new JobReadList().jobs(jobReads).totalJobCount(totalJobCount);
   }
 
+  public JobReadList listJobsForLight(final JobListRequestBody request) throws IOException {
+    Preconditions.checkNotNull(request.getConfigTypes(), "configType cannot be null.");
+    Preconditions.checkState(!request.getConfigTypes().isEmpty(), "Must include at least one configType.");
+
+    final Set<ConfigType> configTypes = request.getConfigTypes()
+        .stream()
+        .map(type -> Enums.convertTo(type, JobConfig.ConfigType.class))
+        .collect(Collectors.toSet());
+
+    final String configId = request.getConfigId();
+
+    final int pageSize = (request.getPagination() != null && request.getPagination().getPageSize() != null) ? request.getPagination().getPageSize()
+        : DEFAULT_PAGE_SIZE;
+    final List<Job> jobs;
+
+    final HashMap<String, Object> tags = new HashMap<>(Map.of(MetricTags.CONFIG_TYPES, configTypes.toString()));
+    if (configId != null) {
+      tags.put(MetricTags.CONNECTION_ID, configId);
+    }
+    ApmTraceUtils.addTagsToTrace(tags);
+
+    if (request.getIncludingJobId() != null) {
+      jobs = jobPersistence.listJobsIncludingId(
+          configTypes,
+          configId,
+          request.getIncludingJobId(),
+          pageSize);
+    } else {
+      jobs = jobPersistence.listJobsLight(configTypes, configId, pageSize,
+          (request.getPagination() != null && request.getPagination().getRowOffset() != null) ? request.getPagination().getRowOffset() : 0,
+          CollectionUtils.isEmpty(request.getStatuses()) ? null : mapToDomainJobStatus(request.getStatuses()),
+          request.getCreatedAtStart(),
+          request.getCreatedAtEnd(),
+          request.getUpdatedAtStart(),
+          request.getUpdatedAtEnd(),
+          request.getOrderByField() == null ? null : request.getOrderByField().value(),
+          request.getOrderByMethod() == null ? null : request.getOrderByMethod().value());
+    }
+
+    final List<JobWithAttemptsRead> jobReads = jobs.stream().map(JobConverter::getJobWithAttemptsRead).collect(Collectors.toList());
+
+    hydrateWithStats(
+        jobReads,
+        jobs,
+        featureFlagClient.boolVariation(HydrateAggregatedStats.INSTANCE, new Workspace(ANONYMOUS)),
+        jobPersistence);
+
+    final Long totalJobCount = jobPersistence.getJobCount(configTypes, configId,
+        CollectionUtils.isEmpty(request.getStatuses()) ? null : mapToDomainJobStatus(request.getStatuses()),
+        request.getCreatedAtStart(),
+        request.getCreatedAtEnd(),
+        request.getUpdatedAtStart(),
+        request.getUpdatedAtEnd());
+    return new JobReadList().jobs(jobReads).totalJobCount(totalJobCount);
+  }
+
   @SuppressWarnings("UnstableApiUsage")
   public JobReadList listJobsForWorkspaces(final JobListForWorkspacesRequestBody request) throws IOException {
 
@@ -210,7 +266,7 @@ public class JobHistoryHandler {
     final int offset =
         (request.getPagination() != null && request.getPagination().getRowOffset() != null) ? request.getPagination().getRowOffset() : 0;
 
-    final List<Job> jobs = jobPersistence.listJobs(
+    final List<Job> jobs = jobPersistence.listJobsLight(
         configTypes,
         request.getWorkspaceIds(),
         pageSize,

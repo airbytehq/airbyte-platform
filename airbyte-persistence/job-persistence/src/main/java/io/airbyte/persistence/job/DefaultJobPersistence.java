@@ -474,6 +474,24 @@ public class DefaultJobPersistence implements JobPersistence {
     return attempt;
   }
 
+  private static Attempt getAttemptFromRecordLight(final Record record) {
+    return new Attempt(
+        record.get(ATTEMPT_NUMBER, int.class),
+        record.get(JOB_ID, Long.class),
+        Path.of(record.get("log_path", String.class)),
+        new AttemptSyncConfig(),
+        new JobOutput(),
+        Enums.toEnum(record.get("attempt_status", String.class), AttemptStatus.class).orElseThrow(),
+        record.get("processing_task_queue", String.class),
+        record.get("attempt_failure_summary", String.class) == null ? null
+            : Jsons.deserialize(record.get("attempt_failure_summary", String.class), AttemptFailureSummary.class),
+        getEpoch(record, "attempt_created_at"),
+        getEpoch(record, "attempt_updated_at"),
+        Optional.ofNullable(record.get("attempt_ended_at"))
+            .map(value -> getEpoch(record, "attempt_ended_at"))
+            .orElse(null));
+  }
+
   private static JobOutput parseJobOutputFromString(final String jobOutputString) {
     final JobOutput jobOutput = Jsons.deserialize(jobOutputString, JobOutput.class);
     // On-the-fly migration of persisted data types related objects (protocol v0->v1)
@@ -514,6 +532,26 @@ public class DefaultJobPersistence implements JobPersistence {
     }
     ApmTraceUtils.addTagsToTrace(Map.of("get_job_from_record_time_in_nanos", jobStopwatch));
     ApmTraceUtils.addTagsToTrace(Map.of("get_attempt_from_record_time_in_nanos", attemptStopwatch));
+    return jobs;
+  }
+
+  /**
+   * Gets jobs from results but without catalog data for attempts. For now we can't exclude catalog
+   * data for jobs because we need sync mode from the catalog for stat aggregation.
+   */
+  private static List<Job> getJobsFromResultLight(final Result<Record> result) {
+    // keeps results strictly in order so the sql query controls the sort
+    final List<Job> jobs = new ArrayList<>();
+    Job currentJob = null;
+    for (final Record entry : result) {
+      if (currentJob == null || currentJob.getId() != entry.get(JOB_ID, Long.class)) {
+        currentJob = getJobFromRecord(entry);
+        jobs.add(currentJob);
+      }
+      if (entry.getValue(ATTEMPT_NUMBER) != null) {
+        currentJob.getAttempts().add(getAttemptFromRecordLight(entry));
+      }
+    }
     return jobs;
   }
 
@@ -951,8 +989,8 @@ public class DefaultJobPersistence implements JobPersistence {
         .fetchOne().into(Long.class));
   }
 
-  @Override
-  public List<Job> listJobs(final Set<ConfigType> configTypes, final String configId, final int pagesize) throws IOException {
+  public Result<Record> listJobsQuery(final Set<ConfigType> configTypes, final String configId, final int pagesize, String orderByString)
+      throws IOException {
     return jobDatabase.query(ctx -> {
       final String jobsSubquery = "(" + ctx.select(DSL.asterisk()).from(JOBS)
           .where(JOBS.CONFIG_TYPE.in(configTypeSqlNames(configTypes)))
@@ -962,8 +1000,90 @@ public class DefaultJobPersistence implements JobPersistence {
           .limit(pagesize)
           .getSQL(ParamType.INLINED) + ") AS jobs";
 
-      return getJobsFromResult(ctx.fetch(jobSelectAndJoin(jobsSubquery) + ORDER_BY_JOB_TIME_ATTEMPT_TIME));
+      return ctx.fetch(jobSelectAndJoin(jobsSubquery) + orderByString);
     });
+  }
+
+  public Result<Record> listJobsQuery(final Set<ConfigType> configTypes,
+                                      final String configId,
+                                      final int limit,
+                                      final int offset,
+                                      final List<JobStatus> statuses,
+                                      final OffsetDateTime createdAtStart,
+                                      final OffsetDateTime createdAtEnd,
+                                      final OffsetDateTime updatedAtStart,
+                                      final OffsetDateTime updatedAtEnd,
+                                      final String orderByField,
+                                      final String orderByMethod)
+      throws IOException {
+    final SortField<OffsetDateTime> orderBy = getJobOrderBy(orderByField, orderByMethod);
+    return jobDatabase.query(ctx -> {
+      final String jobsSubquery = "(" + ctx.select(DSL.asterisk()).from(JOBS)
+          .where(JOBS.CONFIG_TYPE.in(configTypeSqlNames(configTypes)))
+          .and(configId == null ? DSL.noCondition()
+              : JOBS.SCOPE.eq(configId))
+          .and(statuses == null ? DSL.noCondition()
+              : JOBS.STATUS.in(statuses.stream()
+                  .map(status -> io.airbyte.db.instance.jobs.jooq.generated.enums.JobStatus.lookupLiteral(toSqlName(status)))
+                  .collect(Collectors.toList())))
+          .and(createdAtStart == null ? DSL.noCondition() : JOBS.CREATED_AT.ge(createdAtStart))
+          .and(createdAtEnd == null ? DSL.noCondition() : JOBS.CREATED_AT.le(createdAtEnd))
+          .and(updatedAtStart == null ? DSL.noCondition() : JOBS.UPDATED_AT.ge(updatedAtStart))
+          .and(updatedAtEnd == null ? DSL.noCondition() : JOBS.UPDATED_AT.le(updatedAtEnd))
+          .orderBy(orderBy)
+          .limit(limit)
+          .offset(offset)
+          .getSQL(ParamType.INLINED) + ") AS jobs";
+
+      final String fullQuery = jobSelectAndJoin(jobsSubquery) + getJobOrderBySql(orderBy);
+      LOGGER.debug("jobs query: {}", fullQuery);
+      return ctx.fetch(fullQuery);
+    });
+  }
+
+  private Result<Record> listJobsQuery(final Set<ConfigType> configTypes,
+                                       final List<UUID> workspaceIds,
+                                       final int limit,
+                                       final int offset,
+                                       final List<JobStatus> statuses,
+                                       final OffsetDateTime createdAtStart,
+                                       final OffsetDateTime createdAtEnd,
+                                       final OffsetDateTime updatedAtStart,
+                                       final OffsetDateTime updatedAtEnd,
+                                       final String orderByField,
+                                       final String orderByMethod)
+      throws IOException {
+    final SortField<OffsetDateTime> orderBy = getJobOrderBy(orderByField, orderByMethod);
+    return jobDatabase.query(ctx -> {
+      final String jobsSubquery = "(" + ctx.select(JOBS.asterisk()).from(JOBS)
+          .join(Tables.CONNECTION)
+          .on(Tables.CONNECTION.ID.cast(String.class).eq(JOBS.SCOPE))
+          .join(Tables.ACTOR)
+          .on(Tables.ACTOR.ID.eq(Tables.CONNECTION.SOURCE_ID))
+          .where(JOBS.CONFIG_TYPE.in(configTypeSqlNames(configTypes)))
+          .and(Tables.ACTOR.WORKSPACE_ID.in(workspaceIds))
+          .and(statuses == null ? DSL.noCondition()
+              : JOBS.STATUS.in(statuses.stream()
+                  .map(status -> io.airbyte.db.instance.jobs.jooq.generated.enums.JobStatus.lookupLiteral(toSqlName(status)))
+                  .collect(Collectors.toList())))
+          .and(createdAtStart == null ? DSL.noCondition() : JOBS.CREATED_AT.ge(createdAtStart))
+          .and(createdAtEnd == null ? DSL.noCondition() : JOBS.CREATED_AT.le(createdAtEnd))
+          .and(updatedAtStart == null ? DSL.noCondition() : JOBS.UPDATED_AT.ge(updatedAtStart))
+          .and(updatedAtEnd == null ? DSL.noCondition() : JOBS.UPDATED_AT.le(updatedAtEnd))
+          .orderBy(getJobOrderBy(orderByField, orderByMethod))
+          .limit(limit)
+          .offset(offset)
+          .getSQL(ParamType.INLINED) + ") AS jobs";
+
+      final String fullQuery = jobSelectAndJoin(jobsSubquery) + getJobOrderBySql(orderBy);
+      LOGGER.debug("jobs query: {}", fullQuery);
+      return ctx.fetch(fullQuery);
+    });
+  }
+
+  @Override
+  public List<Job> listJobs(final Set<ConfigType> configTypes, final String configId, final int pagesize) throws IOException {
+    return getJobsFromResult(listJobsQuery(configTypes, configId, pagesize, ORDER_BY_JOB_TIME_ATTEMPT_TIME));
   }
 
   @Override
@@ -1038,32 +1158,8 @@ public class DefaultJobPersistence implements JobPersistence {
                             final String orderByField,
                             final String orderByMethod)
       throws IOException {
-    final SortField<OffsetDateTime> orderBy = getJobOrderBy(orderByField, orderByMethod);
-    return jobDatabase.query(ctx -> {
-      final String jobsSubquery = "(" + ctx.select(JOBS.asterisk()).from(JOBS)
-          .join(Tables.CONNECTION)
-          .on(Tables.CONNECTION.ID.cast(String.class).eq(JOBS.SCOPE))
-          .join(Tables.ACTOR)
-          .on(Tables.ACTOR.ID.eq(Tables.CONNECTION.SOURCE_ID))
-          .where(JOBS.CONFIG_TYPE.in(configTypeSqlNames(configTypes)))
-          .and(Tables.ACTOR.WORKSPACE_ID.in(workspaceIds))
-          .and(statuses == null ? DSL.noCondition()
-              : JOBS.STATUS.in(statuses.stream()
-                  .map(status -> io.airbyte.db.instance.jobs.jooq.generated.enums.JobStatus.lookupLiteral(toSqlName(status)))
-                  .collect(Collectors.toList())))
-          .and(createdAtStart == null ? DSL.noCondition() : JOBS.CREATED_AT.ge(createdAtStart))
-          .and(createdAtEnd == null ? DSL.noCondition() : JOBS.CREATED_AT.le(createdAtEnd))
-          .and(updatedAtStart == null ? DSL.noCondition() : JOBS.UPDATED_AT.ge(updatedAtStart))
-          .and(updatedAtEnd == null ? DSL.noCondition() : JOBS.UPDATED_AT.le(updatedAtEnd))
-          .orderBy(getJobOrderBy(orderByField, orderByMethod))
-          .limit(limit)
-          .offset(offset)
-          .getSQL(ParamType.INLINED) + ") AS jobs";
-
-      final String fullQuery = jobSelectAndJoin(jobsSubquery) + getJobOrderBySql(orderBy);
-      LOGGER.debug("jobs query: {}", fullQuery);
-      return getJobsFromResult(ctx.fetch(fullQuery));
-    });
+    return getJobsFromResult(listJobsQuery(configTypes, workspaceIds, limit, offset, statuses, createdAtStart, createdAtEnd, updatedAtStart,
+        updatedAtEnd, orderByField, orderByMethod));
   }
 
   @Override
@@ -1088,6 +1184,45 @@ public class DefaultJobPersistence implements JobPersistence {
 
       return getJobsFromResult(ctx.fetch(jobSelectAndJoin(jobsSubquery)));
     });
+  }
+
+  @Override
+  public List<Job> listJobsLight(final Set<ConfigType> configTypes, final String configId, final int pagesize) throws IOException {
+    return getJobsFromResultLight(listJobsQuery(configTypes, configId, pagesize, ORDER_BY_JOB_TIME_ATTEMPT_TIME));
+  }
+
+  @Override
+  public List<Job> listJobsLight(final Set<ConfigType> configTypes,
+                                 final String configId,
+                                 final int limit,
+                                 final int offset,
+                                 final List<JobStatus> statuses,
+                                 final OffsetDateTime createdAtStart,
+                                 final OffsetDateTime createdAtEnd,
+                                 final OffsetDateTime updatedAtStart,
+                                 final OffsetDateTime updatedAtEnd,
+                                 final String orderByField,
+                                 final String orderByMethod)
+      throws IOException {
+    return getJobsFromResultLight(listJobsQuery(configTypes, configId, limit, offset, statuses, createdAtStart, createdAtEnd, updatedAtStart,
+        updatedAtEnd, orderByField, orderByMethod));
+  }
+
+  @Override
+  public List<Job> listJobsLight(final Set<ConfigType> configTypes,
+                                 final List<UUID> workspaceIds,
+                                 final int limit,
+                                 final int offset,
+                                 final List<JobStatus> statuses,
+                                 final OffsetDateTime createdAtStart,
+                                 final OffsetDateTime createdAtEnd,
+                                 final OffsetDateTime updatedAtStart,
+                                 final OffsetDateTime updatedAtEnd,
+                                 final String orderByField,
+                                 final String orderByMethod)
+      throws IOException {
+    return getJobsFromResultLight(listJobsQuery(configTypes, workspaceIds, limit, offset, statuses, createdAtStart, createdAtEnd, updatedAtStart,
+        updatedAtEnd, orderByField, orderByMethod));
   }
 
   @Override

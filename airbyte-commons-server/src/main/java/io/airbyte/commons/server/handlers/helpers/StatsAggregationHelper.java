@@ -136,14 +136,16 @@ public class StatsAggregationHelper {
       throws IOException {
 
     final var jobIds = jobReads.stream().map(r -> r.getJob().getId()).toList();
-    final Map<JobAttemptPair, AttemptStats> stats = jobPersistence.getAttemptStats(jobIds);
+    final Map<JobAttemptPair, AttemptStats> attemptStats = jobPersistence.getAttemptStats(jobIds);
 
+    log.debug("Attempt stats: {}", attemptStats);
     Map<Long, Map<StreamNameAndNamespace, List<StreamSyncStats>>> jobToStreamStats = new HashMap<>();
     for (final JobWithAttemptsRead jwar : jobReads) {
       Map<StreamNameAndNamespace, List<StreamSyncStats>> streamAttemptStats = new HashMap<>();
       jobToStreamStats.putIfAbsent(jwar.getJob().getId(), streamAttemptStats);
+      log.debug("Hydrating job {}", jwar.getJob().getId());
       for (final AttemptRead attempt : jwar.getAttempts()) {
-        final var stat = stats.get(new JobAttemptPair(jwar.getJob().getId(), attempt.getId().intValue()));
+        final var stat = attemptStats.get(new JobAttemptPair(jwar.getJob().getId(), attempt.getId().intValue()));
         if (stat == null) {
           log.warn("Missing stats for job {} attempt {}", jwar.getJob().getId(), attempt.getId().intValue());
           continue;
@@ -164,6 +166,7 @@ public class StatsAggregationHelper {
       Map<Long, Map<StreamNameAndNamespace, SyncMode>> jobToStreamSyncMode = jobs.stream()
           .collect(Collectors.toMap(Job::getId, JobHistoryHandler::getStreamsToSyncMode));
 
+      log.debug("Job to stream sync mode: {}", jobToStreamSyncMode);
       jobReads.forEach(job -> {
         Map<StreamNameAndNamespace, List<StreamSyncStats>> streamToAttemptStats = jobToStreamStats.get(job.getJob().getId());
         Map<StreamNameAndNamespace, SyncMode> streamToSyncMode = jobToStreamSyncMode.get(job.getJob().getId());

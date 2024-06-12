@@ -952,7 +952,7 @@ public class ConnectionsHandler {
     final List<UUID> connectionIds = connectionStatusesRequestBody.getConnectionIds();
     final List<ConnectionStatusRead> result = new ArrayList<>();
     for (final UUID connectionId : connectionIds) {
-      final List<Job> jobs = jobPersistence.listJobs(REPLICATION_TYPES,
+      final List<Job> jobs = jobPersistence.listJobsLight(REPLICATION_TYPES,
           connectionId.toString(),
           maxJobLookback);
       final boolean isRunning = jobs.stream().anyMatch(job -> JobStatus.NON_TERMINAL_STATUSES.contains(job.getStatus()));

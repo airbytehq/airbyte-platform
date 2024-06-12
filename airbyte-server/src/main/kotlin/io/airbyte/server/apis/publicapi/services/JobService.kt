@@ -155,7 +155,7 @@ class JobServiceImpl(
         )
 
     val result =
-      kotlin.runCatching { jobHistoryHandler.listJobsFor(jobListRequestBody) }
+      kotlin.runCatching { jobHistoryHandler.listJobsForLight(jobListRequestBody) }
         .onFailure {
           log.error("Error getting job list $it")
           ConfigClientErrorHandler.handleError(it, connectionId.toString())
