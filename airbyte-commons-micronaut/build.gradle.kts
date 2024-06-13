@@ -1,30 +1,39 @@
 plugins {
-    id("io.airbyte.gradle.jvm.lib")
-    id("io.airbyte.gradle.publish")
+  id("io.airbyte.gradle.jvm.lib")
+  id("io.airbyte.gradle.publish")
 }
 
 dependencies {
-    annotationProcessor(platform(libs.micronaut.bom))
-    annotationProcessor(libs.bundles.micronaut.annotation.processor)
+  compileOnly(libs.lombok)
+  annotationProcessor(libs.lombok)     // Lombok must be added BEFORE Micronaut
+  annotationProcessor(platform(libs.micronaut.platform))
+  annotationProcessor(libs.bundles.micronaut.annotation.processor)
 
-    implementation(platform(libs.micronaut.bom))
-    implementation(libs.bundles.micronaut)
-    implementation(libs.micronaut.security)
-    compileOnly(libs.lombok)
-    annotationProcessor(libs.lombok)
+  ksp(platform(libs.micronaut.platform))
+  ksp(libs.bundles.micronaut.annotation.processor)
 
-    implementation(project(":airbyte-commons"))
-    implementation(project(":airbyte-config:config-models"))
+  implementation(platform(libs.micronaut.platform))
+  implementation(libs.bundles.micronaut)
+  implementation(libs.bundles.micronaut.annotation)
+  implementation(libs.micronaut.security)
 
-    testAnnotationProcessor(platform(libs.micronaut.bom))
-    testAnnotationProcessor(libs.bundles.micronaut.test.annotation.processor)
-    testCompileOnly(libs.lombok)
-    testAnnotationProcessor(libs.lombok)
+  implementation(project(":airbyte-commons"))
+  implementation(project(":airbyte-config:config-models"))
 
-    testImplementation(libs.bundles.micronaut.test)
-    testImplementation(libs.mockito.inline)
+  testAnnotationProcessor(platform(libs.micronaut.platform))
+  testAnnotationProcessor(libs.bundles.micronaut.test.annotation.processor)
+
+  testImplementation(libs.bundles.micronaut.test)
+  testImplementation(libs.mockito.inline)
 }
 
 tasks.named<Test>("test") {
-    maxHeapSize = "2g"
+  maxHeapSize = "2g"
+}
+
+// The DuplicatesStrategy will be required while this module is mixture of kotlin and java _with_ lombok dependencies.
+// By default, runs all annotation(processors and disables annotation(processing by javac, however).  Once lombok has
+// been removed, this can also be removed.
+tasks.withType<Jar>().configureEach {
+  duplicatesStrategy = DuplicatesStrategy.EXCLUDE
 }

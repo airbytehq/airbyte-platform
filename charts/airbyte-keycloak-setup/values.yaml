@@ -5,6 +5,7 @@
 ##  database.secretValue Value of database password key stored in secret
 global:
   serviceAccountName: placeholderServiceAccount
+  edition: community
   deploymentMode: oss
   secretName: ""
   database:
@@ -13,7 +14,7 @@ global:
   secrets: {}
   env_vars: {}
   extraContainers: []
-  ## extraSelectorLables [object] - use to specify own additional selector labels for deployment
+  ## extraSelectorLabels [object] - use to specify own additional selector labels for deployment
   extraSelectorLabels: {}
   ## extraLabels [object] - use to specify own additional labels for deployment
   extraLabels: {}
@@ -175,7 +176,7 @@ extraVolumes: []
 #   DATABASE_USER: airbyte
 env_vars: {}
 
-## extraSelectorLables [object] - use to specify own additional selector labels for deployment
+## extraSelectorLabels [object] - use to specify own additional selector labels for deployment
 extraSelectorLabels: {}
 ## extraLabels [object] - use to specify own additional labels for deployment
 extraLabels: {}

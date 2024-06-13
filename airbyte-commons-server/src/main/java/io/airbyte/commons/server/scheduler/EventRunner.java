@@ -1,10 +1,11 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.commons.server.scheduler;
 
 import io.airbyte.commons.temporal.TemporalClient.ManualOperationResult;
+import io.airbyte.config.RefreshStream.RefreshType;
 import io.airbyte.protocol.models.StreamDescriptor;
 import java.util.List;
 import java.util.Set;
@@ -21,7 +22,11 @@ public interface EventRunner {
 
   ManualOperationResult startNewCancellation(final UUID connectionId);
 
-  ManualOperationResult resetConnection(final UUID connectionId, final List<StreamDescriptor> streamsToReset, final boolean runSyncImmediately);
+  ManualOperationResult resetConnection(final UUID connectionId, final List<StreamDescriptor> streamsToReset);
+
+  void refreshConnectionAsync(UUID connectionId, List<StreamDescriptor> streamsToRefresh, RefreshType refreshType);
+
+  void resetConnectionAsync(UUID connectionId, List<StreamDescriptor> streamsToReset);
 
   void forceDeleteConnection(final UUID connectionId);
 

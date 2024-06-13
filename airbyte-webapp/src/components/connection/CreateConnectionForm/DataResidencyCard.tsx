@@ -2,7 +2,7 @@ import React from "react";
 import { FormattedMessage, useIntl } from "react-intl";
 
 import { DataResidencyDropdown } from "components/forms/DataResidencyDropdown";
-import { CollapsibleCard } from "components/ui/CollapsibleCard";
+import { Card } from "components/ui/Card";
 import { ExternalLink } from "components/ui/Link";
 
 import { links } from "core/utils/links";
@@ -14,7 +14,7 @@ export const DataResidencyCard = () => {
   const { formatMessage } = useIntl();
 
   return (
-    <CollapsibleCard title={formatMessage({ id: "connection.geographyTitle" })} collapsible={false}>
+    <Card title={formatMessage({ id: "connection.geographyTitle" })}>
       <CardFormFieldLayout>
         <DataResidencyDropdown<FormConnectionFormValues>
           name="geography"
@@ -35,6 +35,6 @@ export const DataResidencyCard = () => {
           }
         />
       </CardFormFieldLayout>
-    </CollapsibleCard>
+    </Card>
   );
 };

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.db.instance.development;
@@ -17,6 +17,7 @@ import org.flywaydb.core.api.configuration.Configuration;
 import org.flywaydb.core.api.configuration.FluentConfiguration;
 import org.flywaydb.core.api.output.BaselineResult;
 import org.flywaydb.core.api.output.MigrateResult;
+import org.flywaydb.database.postgresql.PostgreSQLConfigurationExtension;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -76,7 +77,7 @@ public class DevDatabaseMigrator implements DatabaseMigrator {
   private static FluentConfiguration getBaselineConfig(final FlywayDatabaseMigrator fullMigrator) {
     final Configuration fullConfig = fullMigrator.getFlyway().getConfiguration();
 
-    return Flyway.configure()
+    final var flywayConfiguration = Flyway.configure()
         .dataSource(fullConfig.getDataSource())
         .baselineVersion(fullConfig.getBaselineVersion())
         .baselineDescription(fullConfig.getBaselineDescription())
@@ -84,6 +85,14 @@ public class DevDatabaseMigrator implements DatabaseMigrator {
         .installedBy(fullConfig.getInstalledBy())
         .table(fullConfig.getTable())
         .locations(fullConfig.getLocations());
+
+    // Setting the transactional lock to false allows us run queries outside transactions
+    // without hanging. This enables creating indexes concurrently (i.e. without locking tables)
+    flywayConfiguration.getPluginRegister()
+        .getPlugin(PostgreSQLConfigurationExtension.class)
+        .setTransactionalLock(false);
+
+    return flywayConfiguration;
   }
 
   /**

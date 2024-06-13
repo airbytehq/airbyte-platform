@@ -1,9 +1,10 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.config.persistence;
 
+import static io.airbyte.config.persistence.OrganizationPersistence.DEFAULT_ORGANIZATION_ID;
 import static io.airbyte.db.instance.configs.jooq.generated.Tables.ACTOR;
 import static io.airbyte.db.instance.configs.jooq.generated.Tables.ACTOR_DEFINITION;
 import static io.airbyte.db.instance.configs.jooq.generated.Tables.ACTOR_DEFINITION_VERSION;
@@ -15,13 +16,13 @@ import static org.mockito.Mockito.mock;
 
 import io.airbyte.config.secrets.SecretsRepositoryReader;
 import io.airbyte.config.secrets.SecretsRepositoryWriter;
+import io.airbyte.data.helpers.ActorDefinitionVersionUpdater;
+import io.airbyte.data.services.ConnectionService;
 import io.airbyte.data.services.SecretPersistenceConfigService;
 import io.airbyte.data.services.impls.jooq.ActorDefinitionServiceJooqImpl;
 import io.airbyte.data.services.impls.jooq.CatalogServiceJooqImpl;
-import io.airbyte.data.services.impls.jooq.ConnectionServiceJooqImpl;
 import io.airbyte.data.services.impls.jooq.ConnectorBuilderServiceJooqImpl;
 import io.airbyte.data.services.impls.jooq.DestinationServiceJooqImpl;
-import io.airbyte.data.services.impls.jooq.HealthCheckServiceJooqImpl;
 import io.airbyte.data.services.impls.jooq.OAuthServiceJooqImpl;
 import io.airbyte.data.services.impls.jooq.OperationServiceJooqImpl;
 import io.airbyte.data.services.impls.jooq.OrganizationServiceJooqImpl;
@@ -32,6 +33,7 @@ import io.airbyte.db.instance.configs.jooq.generated.enums.NamespaceDefinitionTy
 import io.airbyte.db.instance.configs.jooq.generated.enums.SupportLevel;
 import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.featureflag.TestClient;
+import io.airbyte.test.utils.BaseConfigDatabaseTest;
 import java.io.IOException;
 import java.sql.SQLException;
 import java.time.OffsetDateTime;
@@ -67,7 +69,7 @@ class WorkspaceFilterTest extends BaseConfigDatabaseTest {
   private ConfigRepository configRepository;
 
   @BeforeAll
-  static void setUpAll() throws SQLException {
+  static void setUpAll() throws SQLException, IOException {
     // create actor_definition
     database.transaction(ctx -> ctx.insertInto(ACTOR_DEFINITION, ACTOR_DEFINITION.ID, ACTOR_DEFINITION.NAME, ACTOR_DEFINITION.ACTOR_TYPE)
         .values(SRC_DEF_ID, "srcDef", ActorType.source)
@@ -82,23 +84,27 @@ class WorkspaceFilterTest extends BaseConfigDatabaseTest {
         .values(DST_DEF_VER_ID, DST_DEF_ID, "airbyte/destination", "tag", JSONB.valueOf("{}"), SupportLevel.community)
         .execute());
 
+    new OrganizationServiceJooqImpl(database).writeOrganization(MockData.defaultOrganization());
+
     // create workspace
     database.transaction(
-        ctx -> ctx.insertInto(WORKSPACE, WORKSPACE.ID, WORKSPACE.NAME, WORKSPACE.SLUG, WORKSPACE.INITIAL_SETUP_COMPLETE, WORKSPACE.TOMBSTONE)
-            .values(WORKSPACE_ID_0, "ws-0", "ws-0", true, false)
-            .values(WORKSPACE_ID_1, "ws-1", "ws-1", true, false)
-            .values(WORKSPACE_ID_2, "ws-2", "ws-2", true, true) // note that workspace 2 is tombstoned!
-            .values(WORKSPACE_ID_3, "ws-3", "ws-3", true, true) // note that workspace 3 is tombstoned!
+        ctx -> ctx
+            .insertInto(WORKSPACE, WORKSPACE.ID, WORKSPACE.NAME, WORKSPACE.SLUG, WORKSPACE.INITIAL_SETUP_COMPLETE, WORKSPACE.TOMBSTONE,
+                WORKSPACE.ORGANIZATION_ID)
+            .values(WORKSPACE_ID_0, "ws-0", "ws-0", true, false, DEFAULT_ORGANIZATION_ID)
+            .values(WORKSPACE_ID_1, "ws-1", "ws-1", true, false, DEFAULT_ORGANIZATION_ID)
+            .values(WORKSPACE_ID_2, "ws-2", "ws-2", true, true, DEFAULT_ORGANIZATION_ID) // note that workspace 2 is tombstoned!
+            .values(WORKSPACE_ID_3, "ws-3", "ws-3", true, true, DEFAULT_ORGANIZATION_ID) // note that workspace 3 is tombstoned!
             .execute());
     // create actors
     database.transaction(
         ctx -> ctx
-            .insertInto(ACTOR, ACTOR.WORKSPACE_ID, ACTOR.ID, ACTOR.ACTOR_DEFINITION_ID, ACTOR.DEFAULT_VERSION_ID, ACTOR.NAME, ACTOR.CONFIGURATION,
+            .insertInto(ACTOR, ACTOR.WORKSPACE_ID, ACTOR.ID, ACTOR.ACTOR_DEFINITION_ID, ACTOR.NAME, ACTOR.CONFIGURATION,
                 ACTOR.ACTOR_TYPE)
-            .values(WORKSPACE_ID_0, ACTOR_ID_0, SRC_DEF_ID, SRC_DEF_VER_ID, "ACTOR-0", JSONB.valueOf("{}"), ActorType.source)
-            .values(WORKSPACE_ID_1, ACTOR_ID_1, SRC_DEF_ID, SRC_DEF_VER_ID, "ACTOR-1", JSONB.valueOf("{}"), ActorType.source)
-            .values(WORKSPACE_ID_2, ACTOR_ID_2, DST_DEF_ID, DST_DEF_VER_ID, "ACTOR-2", JSONB.valueOf("{}"), ActorType.source)
-            .values(WORKSPACE_ID_3, ACTOR_ID_3, DST_DEF_ID, DST_DEF_VER_ID, "ACTOR-3", JSONB.valueOf("{}"), ActorType.source)
+            .values(WORKSPACE_ID_0, ACTOR_ID_0, SRC_DEF_ID, "ACTOR-0", JSONB.valueOf("{}"), ActorType.source)
+            .values(WORKSPACE_ID_1, ACTOR_ID_1, SRC_DEF_ID, "ACTOR-1", JSONB.valueOf("{}"), ActorType.source)
+            .values(WORKSPACE_ID_2, ACTOR_ID_2, DST_DEF_ID, "ACTOR-2", JSONB.valueOf("{}"), ActorType.source)
+            .values(WORKSPACE_ID_3, ACTOR_ID_3, DST_DEF_ID, "ACTOR-3", JSONB.valueOf("{}"), ActorType.source)
             .execute());
     // create connections
     database.transaction(
@@ -133,28 +139,32 @@ class WorkspaceFilterTest extends BaseConfigDatabaseTest {
     final SecretsRepositoryWriter secretsRepositoryWriter = mock(SecretsRepositoryWriter.class);
     final SecretPersistenceConfigService secretPersistenceConfigService = mock(SecretPersistenceConfigService.class);
 
+    final ConnectionService connectionService = mock(ConnectionService.class);
+    final ActorDefinitionVersionUpdater actorDefinitionVersionUpdater = mock(ActorDefinitionVersionUpdater.class);
     configRepository = new ConfigRepository(
         new ActorDefinitionServiceJooqImpl(database),
         new CatalogServiceJooqImpl(database),
-        new ConnectionServiceJooqImpl(database),
+        connectionService,
         new ConnectorBuilderServiceJooqImpl(database),
         new DestinationServiceJooqImpl(database,
             featureFlagClient,
             secretsRepositoryReader,
             secretsRepositoryWriter,
-            secretPersistenceConfigService),
-        new HealthCheckServiceJooqImpl(database),
+            secretPersistenceConfigService,
+            connectionService,
+            actorDefinitionVersionUpdater),
         new OAuthServiceJooqImpl(database,
             featureFlagClient,
             secretsRepositoryReader,
             secretPersistenceConfigService),
         new OperationServiceJooqImpl(database),
-        new OrganizationServiceJooqImpl(database),
         new SourceServiceJooqImpl(database,
             featureFlagClient,
             secretsRepositoryReader,
             secretsRepositoryWriter,
-            secretPersistenceConfigService),
+            secretPersistenceConfigService,
+            connectionService,
+            actorDefinitionVersionUpdater),
         new WorkspaceServiceJooqImpl(database,
             featureFlagClient,
             secretsRepositoryReader,

@@ -8,10 +8,9 @@ import { CopyButton } from "components/ui/CopyButton";
 import { FlexContainer } from "components/ui/Flex";
 import { Heading } from "components/ui/Heading";
 import { Message } from "components/ui/Message";
-import { Text } from "components/ui/Text";
 
 import { useCreateOrUpdateState, useGetConnectionState } from "core/api";
-import { AirbyteCatalog, ConnectionState, StreamState } from "core/api/types/AirbyteClient";
+import { ConnectionState, StreamState } from "core/api/types/AirbyteClient";
 import { haveSameShape } from "core/utils/objects";
 import { useConfirmationModalService } from "hooks/services/ConfirmationModal";
 
@@ -19,7 +18,7 @@ import styles from "./StateBlock.module.scss";
 
 interface StateBlockProps {
   connectionId: string;
-  syncCatalog: AirbyteCatalog;
+  disabled?: boolean;
 }
 
 function convertStateToString(state: ConnectionState): string {
@@ -36,15 +35,11 @@ function convertStateToString(state: ConnectionState): string {
   }
 }
 
-export const StateBlock: React.FC<StateBlockProps> = ({ connectionId, syncCatalog }) => {
+export const StateBlock: React.FC<StateBlockProps> = ({ connectionId, disabled }) => {
   const { formatMessage } = useIntl();
   const existingState = useGetConnectionState(connectionId);
   const { mutateAsync: updateState, isLoading } = useCreateOrUpdateState();
   const { openConfirmationModal, closeConfirmationModal } = useConfirmationModalService();
-
-  const hasIncrementalStream = useMemo(() => {
-    return syncCatalog.streams.some((stream) => stream.config?.syncMode === "incremental");
-  }, [syncCatalog.streams]);
 
   const existingStateString = useMemo(() => convertStateToString(existingState), [existingState]);
 
@@ -84,6 +79,11 @@ export const StateBlock: React.FC<StateBlockProps> = ({ connectionId, syncCatalo
     return { newState: { connectionId, stateType: "legacy", state: stateDraftJson } };
   }, [connectionId, formatMessage, stateDraft]);
 
+  // show the error message when both of the following are true:
+  // 1. an error exists
+  // 2. the connection has an existing state OR the editor has content (as a proxy for user modifying the non-state)
+  const showErrorMessage = !!errorMessage && (existingState.stateType !== "not_set" || stateDraft.length > 0);
+
   const handleStateUpdate = useCallback(() => {
     if (newState === undefined) {
       return;
@@ -112,67 +112,57 @@ export const StateBlock: React.FC<StateBlockProps> = ({ connectionId, syncCatalo
   );
 
   return (
-    <Card withPadding>
+    <Card>
       <FlexContainer direction="column">
-        {!hasIncrementalStream ? (
-          <>
-            {title}
-            <Text>
-              <FormattedMessage id="connection.state.noIncremental" />
-            </Text>
-          </>
-        ) : (
-          <>
-            <FlexContainer alignItems="center" justifyContent="space-between">
-              {title}
-              <CopyButton
-                content={stateDraft ?? existingStateString}
-                title={formatMessage({ id: "connection.state.copyTitle" })}
-              />
-            </FlexContainer>
+        <FlexContainer alignItems="center" justifyContent="space-between">
+          {title}
+          <CopyButton
+            content={stateDraft ?? existingStateString}
+            title={formatMessage({ id: "connection.state.copyTitle" })}
+          />
+        </FlexContainer>
 
-            <CodeEditor
-              value={stateDraft ?? existingStateString}
-              height={styles.stateEditorHeight}
-              language="json"
-              automaticLayout
-              showSuggestions={false}
-              onChange={(value) => {
-                setStateDraft(value ?? "");
-              }}
+        <CodeEditor
+          value={stateDraft ?? existingStateString}
+          height={styles.stateEditorHeight}
+          language="json"
+          automaticLayout
+          showSuggestions={false}
+          onChange={(value) => {
+            setStateDraft(value ?? "");
+          }}
+          readOnly={disabled}
+        />
+
+        <FlexContainer direction="column">
+          {showErrorMessage ? (
+            <Message type="error" text={errorMessage} />
+          ) : (
+            <Message
+              type="warning"
+              text={<FormattedMessage id="connection.state.warning" />}
+              secondaryText={<FormattedMessage id="connection.state.warning.secondary" values={{ br: () => <br /> }} />}
             />
-
-            <FlexContainer direction="column">
-              {errorMessage ? (
-                <Message type="error" text={errorMessage} />
-              ) : (
-                <Message
-                  type="warning"
-                  text={<FormattedMessage id="connection.state.warning" />}
-                  secondaryText={
-                    <FormattedMessage id="connection.state.warning.secondary" values={{ br: () => <br /> }} />
-                  }
-                />
-              )}
-              <FlexContainer alignItems="center" justifyContent="flex-end">
-                <Button
-                  variant="secondary"
-                  onClick={() => setStateDraft(existingStateString)}
-                  disabled={stateDraft === existingStateString}
-                >
-                  <FormattedMessage id="connection.state.revert" />
-                </Button>
-                <Button
-                  onClick={handleStateUpdate}
-                  isLoading={isLoading}
-                  disabled={stateDraft === existingStateString || newState === undefined || errorMessage !== undefined}
-                >
-                  <FormattedMessage id="connection.state.update" />
-                </Button>
-              </FlexContainer>
-            </FlexContainer>
-          </>
-        )}
+          )}
+          <FlexContainer alignItems="center" justifyContent="flex-end">
+            <Button
+              variant="secondary"
+              onClick={() => setStateDraft(existingStateString)}
+              disabled={disabled || stateDraft === existingStateString}
+            >
+              <FormattedMessage id="connection.state.revert" />
+            </Button>
+            <Button
+              onClick={handleStateUpdate}
+              isLoading={isLoading}
+              disabled={
+                disabled || stateDraft === existingStateString || newState === undefined || errorMessage !== undefined
+              }
+            >
+              <FormattedMessage id="connection.state.update" />
+            </Button>
+          </FlexContainer>
+        </FlexContainer>
       </FlexContainer>
     </Card>
   );

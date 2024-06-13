@@ -21,17 +21,20 @@ export const enum StreamNameDefinitionValueType {
 
 export interface DestinationStreamNamesFormValues {
   streamNameDefinition: StreamNameDefinitionValueType;
-  prefix?: string;
+  prefix: string;
 }
 
 const StreamNamePrefixInput: React.FC = () => {
   const { formatMessage } = useIntl();
-  const { watch, trigger } = useFormContext<DestinationStreamNamesFormValues>();
+  const { watch, trigger, setValue } = useFormContext<DestinationStreamNamesFormValues>();
   const watchedStreamNameDefinition = watch("streamNameDefinition");
 
   useEffect(() => {
+    if (watchedStreamNameDefinition !== StreamNameDefinitionValueType.Prefix) {
+      setValue("prefix", "");
+    }
     trigger("prefix");
-  }, [trigger, watchedStreamNameDefinition]);
+  }, [setValue, trigger, watchedStreamNameDefinition]);
 
   return (
     <FormControl
@@ -52,44 +55,41 @@ const destinationStreamNamesValidationSchema = yup.object().shape({
     .mixed<StreamNameDefinitionValueType>()
     .oneOf([StreamNameDefinitionValueType.Mirror, StreamNameDefinitionValueType.Prefix])
     .required("form.empty.error"),
-  prefix: yup.string().when("streamNameDefinition", {
-    is: StreamNameDefinitionValueType.Prefix,
-    then: yup
-      .string()
-      .trim()
-      .required("form.empty.error")
-      .matches(/^[a-zA-Z0-9_]*$/, "form.invalidCharacters.alphanumericunder.error"),
-  }),
+  prefix: yup
+    .string()
+    .when("streamNameDefinition", {
+      is: StreamNameDefinitionValueType.Prefix,
+      then: yup
+        .string()
+        .trim()
+        .required("form.empty.error")
+        .matches(/^[a-zA-Z0-9_]*$/, "form.invalidCharacters.alphanumericunder.error"),
+    })
+    .default(""),
 });
 
 interface DestinationStreamNamesModalProps {
   initialValues: Pick<FormConnectionFormValues, "prefix">;
-  onCloseModal: () => void;
-  onSubmit: (value: DestinationStreamNamesFormValues) => void;
+  onCancel: () => void;
+  onSubmit: (value: DestinationStreamNamesFormValues) => Promise<void>;
 }
 
 export const DestinationStreamNamesModal: React.FC<DestinationStreamNamesModalProps> = ({
   initialValues,
-  onCloseModal,
+  onCancel,
   onSubmit,
 }) => {
   const { formatMessage } = useIntl();
 
-  const onSubmitCallback = async (values: DestinationStreamNamesFormValues) => {
-    onCloseModal();
-    onSubmit(values);
-  };
-
   return (
     <Form
       defaultValues={{
-        streamNameDefinition: initialValues.prefix
-          ? StreamNameDefinitionValueType.Prefix
-          : StreamNameDefinitionValueType.Mirror,
+        streamNameDefinition:
+          initialValues.prefix.length > 0 ? StreamNameDefinitionValueType.Prefix : StreamNameDefinitionValueType.Mirror,
         prefix: initialValues.prefix ?? "",
       }}
       schema={destinationStreamNamesValidationSchema}
-      onSubmit={onSubmitCallback}
+      onSubmit={onSubmit}
     >
       <ModalBody padded>
         <FlexContainer direction="column">
@@ -130,7 +130,7 @@ export const DestinationStreamNamesModal: React.FC<DestinationStreamNamesModalPr
       <ModalFooter>
         <ModalFormSubmissionButtons
           submitKey="form.apply"
-          onCancelClickCallback={onCloseModal}
+          onCancelClickCallback={onCancel}
           additionalCancelButtonProps={{ "data-testid": "destination-stream-names-cancel-button" }}
           additionalSubmitButtonProps={{ "data-testid": "destination-stream-names-apply-button" }}
         />

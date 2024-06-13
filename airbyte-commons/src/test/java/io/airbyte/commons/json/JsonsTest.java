@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.commons.json;
@@ -13,6 +13,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.BinaryNode;
+import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import com.fasterxml.jackson.databind.node.TextNode;
 import com.google.common.base.Charsets;
 import com.google.common.collect.ImmutableList;
@@ -228,7 +229,7 @@ class JsonsTest {
     final JsonNode jsonNode = Jsons.jsonNode(ImmutableMap.of(TEST, ABC));
     final String expectedOutput = ""
         + "{\n"
-        + "  \"test\": \"abc\"\n"
+        + "  \"test\" : \"abc\"\n"
         + "}\n";
     assertEquals(expectedOutput, Jsons.toPrettyString(jsonNode));
   }
@@ -269,7 +270,7 @@ class JsonsTest {
   @Test
   void testFlatten__noArrays() {
     final JsonNode json = Jsons.deserialize("{ \"abc\": { \"def\": \"ghi\" }, \"jkl\": true, \"pqr\": 1 }");
-    Map<String, Object> expected = Stream.of(new Object[][] {
+    final Map<String, Object> expected = Stream.of(new Object[][] {
       {"abc.def", GHI},
       {JKL, true},
       {PQR, 1},
@@ -281,7 +282,7 @@ class JsonsTest {
   void testFlatten__withArraysNoApplyFlatten() {
     final JsonNode json = Jsons
         .deserialize("{ \"abc\": [{ \"def\": \"ghi\" }, { \"fed\": \"ihg\" }], \"jkl\": true, \"pqr\": 1 }");
-    Map<String, Object> expected = Stream.of(new Object[][] {
+    final Map<String, Object> expected = Stream.of(new Object[][] {
       {ABC, "[{\"def\":\"ghi\"},{\"fed\":\"ihg\"}]"},
       {JKL, true},
       {PQR, 1},
@@ -293,7 +294,7 @@ class JsonsTest {
   void testFlatten__checkBackwardCompatiblity() {
     final JsonNode json = Jsons
         .deserialize("{ \"abc\": [{ \"def\": \"ghi\" }, { \"fed\": \"ihg\" }], \"jkl\": true, \"pqr\": 1 }");
-    Map<String, Object> expected = Stream.of(new Object[][] {
+    final Map<String, Object> expected = Stream.of(new Object[][] {
       {ABC, "[{\"def\":\"ghi\"},{\"fed\":\"ihg\"}]"},
       {JKL, true},
       {PQR, 1},
@@ -305,7 +306,7 @@ class JsonsTest {
   void testFlatten__withArraysApplyFlatten() {
     final JsonNode json = Jsons
         .deserialize("{ \"abc\": [{ \"def\": \"ghi\" }, { \"fed\": \"ihg\" }], \"jkl\": true, \"pqr\": 1 }");
-    Map<String, Object> expected = Stream.of(new Object[][] {
+    final Map<String, Object> expected = Stream.of(new Object[][] {
       {"abc.[0].def", "ghi"},
       {"abc.[1].fed", "ihg"},
       {JKL, true},
@@ -319,7 +320,7 @@ class JsonsTest {
     final JsonNode json = Jsons
         .deserialize(
             "{ \"abc\": [{ \"def\": {\"ghi\": [\"xyz\"] }}, { \"fed\": \"ihg\" }], \"jkl\": true, \"pqr\": 1 }");
-    Map<String, Object> expected = Stream.of(new Object[][] {
+    final Map<String, Object> expected = Stream.of(new Object[][] {
       {"abc.[0].def.ghi.[0]", "xyz"},
       {"abc.[1].fed", "ihg"},
       {JKL, true},
@@ -403,7 +404,7 @@ class JsonsTest {
         Field.of("name", JsonSchemaType.STRING), Field.of("size", JsonSchemaType.NUMBER),
         Field.of("color", JsonSchemaType.STRING), Field.of("price", JsonSchemaType.NUMBER));
 
-    String actualJson = Jsons.canonicalJsonSerialize(actorCatalog);
+    final String actualJson = Jsons.canonicalJsonSerialize(actorCatalog);
 
     final String expectedJson =
         "{"
@@ -428,6 +429,21 @@ class JsonsTest {
 
     // Assert that the result is a JSON string with keys sorted in alphabetical order
     assertEquals(expectedJson, actualJson);
+  }
+
+  @Test
+  void testDeserializeIfTextOnTextNode() {
+    final TextNode textNode = TextNode.valueOf("{\"key1\": \"value1\"}");
+    final JsonNode jsonNode = JsonNodeFactory.instance.objectNode().set("key1", TextNode.valueOf("value1"));
+
+    assertEquals(jsonNode, Jsons.deserializeIfText(textNode));
+  }
+
+  @Test
+  void testDeserializeIfTextOnObjectNode() {
+    final JsonNode objectNode = JsonNodeFactory.instance.objectNode().set("key1", TextNode.valueOf("value1"));
+
+    assertEquals(objectNode, Jsons.deserializeIfText(objectNode));
   }
 
 }

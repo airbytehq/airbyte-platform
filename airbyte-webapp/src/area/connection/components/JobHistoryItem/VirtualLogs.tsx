@@ -128,7 +128,7 @@ const Row: ItemContent<CleanedLogLines[number], RowContext> = (index, item, cont
         [styles["virtualLogs__lineInner--highlighted"]]: rowIsHighlighted,
       })}
     >
-      <div className={styles.virtualLogs__lineNumber}>{index + 1}</div>
+      <div className={styles.virtualLogs__lineNumber}>{item.lineNumber}</div>
       <div className={styles.virtualLogs__lineLogContent}>
         {matchIndices.length > 0 &&
           matchIndices.map((matchIndex) => (

@@ -1,6 +1,6 @@
 # workload-launcher
 
-![Version: 0.50.14](https://img.shields.io/badge/Version-0.50.14-informational?style=flat-square) ![Type: application](https://img.shields.io/badge/Type-application-informational?style=flat-square) ![AppVersion: dev](https://img.shields.io/badge/AppVersion-dev-informational?style=flat-square)
+![Version: 0.67.17](https://img.shields.io/badge/Version-0.67.17-informational?style=flat-square) ![Type: application](https://img.shields.io/badge/Type-application-informational?style=flat-square) ![AppVersion: dev](https://img.shields.io/badge/AppVersion-dev-informational?style=flat-square)
 
 Helm chart to deploy airbyte-workload-launcher
 
@@ -43,22 +43,6 @@ Helm chart to deploy airbyte-workload-launcher
 | global.jobs.kube.tolerations | list | `[]` |  |
 | global.jobs.resources.limits | object | `{}` |  |
 | global.jobs.resources.requests | object | `{}` |  |
-| global.logs.accessKey.existingSecret | string | `""` |  |
-| global.logs.accessKey.existingSecretKey | string | `""` |  |
-| global.logs.accessKey.password | string | `"minio"` |  |
-| global.logs.externalMinio.enabled | bool | `false` |  |
-| global.logs.externalMinio.host | string | `"localhost"` |  |
-| global.logs.externalMinio.port | int | `9000` |  |
-| global.logs.gcs.bucket | string | `""` |  |
-| global.logs.gcs.credentials | string | `""` |  |
-| global.logs.gcs.credentialsJson | string | `""` |  |
-| global.logs.minio.enabled | bool | `true` |  |
-| global.logs.s3.bucket | string | `"airbyte-dev-logs"` |  |
-| global.logs.s3.bucketRegion | string | `""` |  |
-| global.logs.s3.enabled | bool | `false` |  |
-| global.logs.secretKey.existingSecret | string | `""` |  |
-| global.logs.secretKey.existingSecretKey | string | `""` |  |
-| global.logs.secretKey.password | string | `"minio123"` |  |
 | global.secretName | string | `""` |  |
 | global.serviceAccountName | string | `"airbyte-admin"` |  |
 | image.pullPolicy | string | `"IfNotPresent"` |  |

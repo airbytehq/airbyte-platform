@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.workload.metrics
@@ -8,19 +8,20 @@ import io.airbyte.metrics.lib.MetricAttribute
 import io.micrometer.core.instrument.MeterRegistry
 import io.micrometer.core.instrument.Tag
 import jakarta.inject.Singleton
+import java.util.Optional
 import java.util.function.ToDoubleFunction
 import java.util.stream.Collectors
 import java.util.stream.Stream
 
 @Singleton
 class CustomMetricPublisher(
-  private val meterRegistry: MeterRegistry,
+  private val maybeMeterRegistry: Optional<MeterRegistry>,
 ) {
   fun count(
     metricName: String,
     vararg attributes: MetricAttribute,
   ) {
-    meterRegistry.counter(metricName, toTags(*attributes)).increment()
+    maybeMeterRegistry.ifPresent { it.counter(metricName, toTags(*attributes)).increment() }
   }
 
   fun <T> gauge(
@@ -29,7 +30,7 @@ class CustomMetricPublisher(
     valueFunction: ToDoubleFunction<T>,
     vararg attributes: MetricAttribute,
   ) {
-    meterRegistry.gauge(metricName, toTags(*attributes), stateObject, valueFunction)
+    maybeMeterRegistry.ifPresent { it.gauge(metricName, toTags(*attributes), stateObject, valueFunction) }
   }
 
   companion object {

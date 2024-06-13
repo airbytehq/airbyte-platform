@@ -1,9 +1,11 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.persistence.job.factory;
 
+import io.airbyte.config.persistence.domain.StreamRefresh;
+import java.util.List;
 import java.util.UUID;
 
 /**
@@ -17,6 +19,14 @@ public interface SyncJobFactory {
    * @param connectionId connection id
    * @return job id
    */
-  Long create(UUID connectionId);
+  Long createSync(UUID connectionId);
+
+  /**
+   * Create refresh job for given connection id.
+   *
+   * @param connectionId connection id
+   * @return job id
+   */
+  Long createRefresh(UUID connectionId, List<StreamRefresh> streamsToRefresh);
 
 }

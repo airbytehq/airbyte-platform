@@ -20,7 +20,8 @@ export const ConnectionsRoutes: React.FC = () => {
     <Suspense fallback={<LoadingPage />}>
       <Routes>
         <Route
-          path={`${ConnectionRoutePaths.ConnectionNew}/${ConnectionRoutePaths.Configure}`}
+          index
+          path={`${ConnectionRoutePaths.ConnectionNew}/${ConnectionRoutePaths.Configure}/*`}
           element={<ConfigureConnectionPage />}
         />
         <Route path={ConnectionRoutePaths.ConnectionNew} element={<CreateConnectionPage />} />

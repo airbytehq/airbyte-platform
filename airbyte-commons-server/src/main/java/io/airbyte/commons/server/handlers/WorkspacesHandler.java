@@ -1,8 +1,10 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.commons.server.handlers;
+
+import static io.airbyte.config.persistence.ConfigNotFoundException.NO_ORGANIZATION_FOR_WORKSPACE;
 
 import com.github.slugify.Slugify;
 import com.google.common.annotations.VisibleForTesting;
@@ -12,7 +14,6 @@ import io.airbyte.analytics.TrackingClient;
 import io.airbyte.api.model.generated.ConnectionIdRequestBody;
 import io.airbyte.api.model.generated.ConnectionRead;
 import io.airbyte.api.model.generated.DestinationRead;
-import io.airbyte.api.model.generated.Geography;
 import io.airbyte.api.model.generated.ListResourcesForWorkspacesRequestBody;
 import io.airbyte.api.model.generated.ListWorkspacesByUserRequestBody;
 import io.airbyte.api.model.generated.ListWorkspacesInOrganizationRequestBody;
@@ -23,6 +24,7 @@ import io.airbyte.api.model.generated.SlugRequestBody;
 import io.airbyte.api.model.generated.SourceRead;
 import io.airbyte.api.model.generated.UserRead;
 import io.airbyte.api.model.generated.WorkspaceCreate;
+import io.airbyte.api.model.generated.WorkspaceCreateWithId;
 import io.airbyte.api.model.generated.WorkspaceGiveFeedback;
 import io.airbyte.api.model.generated.WorkspaceIdRequestBody;
 import io.airbyte.api.model.generated.WorkspaceOrganizationInfoRead;
@@ -35,9 +37,12 @@ import io.airbyte.commons.enums.Enums;
 import io.airbyte.commons.server.converters.ApiPojoConverters;
 import io.airbyte.commons.server.converters.NotificationConverter;
 import io.airbyte.commons.server.converters.NotificationSettingsConverter;
+import io.airbyte.commons.server.converters.WorkspaceConverter;
 import io.airbyte.commons.server.converters.WorkspaceWebhookConfigsConverter;
+import io.airbyte.commons.server.errors.BadObjectSchemaKnownException;
 import io.airbyte.commons.server.errors.InternalServerKnownException;
 import io.airbyte.commons.server.errors.ValueConflictKnownException;
+import io.airbyte.commons.server.handlers.helpers.WorkspaceHelpersKt;
 import io.airbyte.config.Organization;
 import io.airbyte.config.StandardWorkspace;
 import io.airbyte.config.persistence.ConfigNotFoundException;
@@ -51,6 +56,7 @@ import io.airbyte.config.persistence.WorkspacePersistence;
 import io.airbyte.config.secrets.SecretsRepositoryWriter;
 import io.airbyte.data.services.WorkspaceService;
 import io.airbyte.validation.json.JsonValidationException;
+import io.micronaut.core.util.CollectionUtils;
 import jakarta.inject.Named;
 import jakarta.inject.Singleton;
 import java.io.IOException;
@@ -111,62 +117,66 @@ public class WorkspacesHandler {
     this.trackingClient = trackingClient;
   }
 
-  private static WorkspaceRead buildWorkspaceRead(final StandardWorkspace workspace) {
-    final WorkspaceRead result = new WorkspaceRead()
-        .workspaceId(workspace.getWorkspaceId())
-        .customerId(workspace.getCustomerId())
-        .email(workspace.getEmail())
-        .name(workspace.getName())
-        .slug(workspace.getSlug())
-        .initialSetupComplete(workspace.getInitialSetupComplete())
-        .displaySetupWizard(workspace.getDisplaySetupWizard())
-        .anonymousDataCollection(workspace.getAnonymousDataCollection())
-        .news(workspace.getNews())
-        .securityUpdates(workspace.getSecurityUpdates())
-        .notifications(NotificationConverter.toApiList(workspace.getNotifications()))
-        .notificationSettings(NotificationSettingsConverter.toApi(workspace.getNotificationSettings()))
-        .defaultGeography(Enums.convertTo(workspace.getDefaultGeography(), Geography.class))
-        .organizationId(workspace.getOrganizationId());
-    // Add read-only webhook configs.
-    if (workspace.getWebhookOperationConfigs() != null) {
-      result.setWebhookConfigs(WorkspaceWebhookConfigsConverter.toApiReads(workspace.getWebhookOperationConfigs()));
-    }
-    return result;
-  }
-
   public WorkspaceRead createWorkspace(final WorkspaceCreate workspaceCreate)
       throws JsonValidationException, IOException, ValueConflictKnownException, ConfigNotFoundException {
 
-    final String email = workspaceCreate.getEmail();
-    final Boolean anonymousDataCollection = workspaceCreate.getAnonymousDataCollection();
-    final Boolean news = workspaceCreate.getNews();
-    final Boolean securityUpdates = workspaceCreate.getSecurityUpdates();
-    final Boolean displaySetupWizard = workspaceCreate.getDisplaySetupWizard();
+    final WorkspaceCreateWithId workspaceCreateWithId = new WorkspaceCreateWithId()
+        .id(uuidSupplier.get())
+        .organizationId(workspaceCreate.getOrganizationId())
+        .defaultGeography(workspaceCreate.getDefaultGeography())
+        .displaySetupWizard(workspaceCreate.getDisplaySetupWizard())
+        .name(workspaceCreate.getName())
+        .notifications(workspaceCreate.getNotifications())
+        .webhookConfigs(workspaceCreate.getWebhookConfigs())
+        .anonymousDataCollection(workspaceCreate.getAnonymousDataCollection())
+        .email(workspaceCreate.getEmail())
+        .news(workspaceCreate.getNews())
+        .notificationSettings(workspaceCreate.getNotificationSettings())
+        .securityUpdates(workspaceCreate.getSecurityUpdates());
+
+    return createWorkspaceIfNotExist(workspaceCreateWithId);
+  }
+
+  public WorkspaceRead createWorkspaceIfNotExist(final WorkspaceCreateWithId workspaceCreateWithId)
+      throws JsonValidationException, IOException, ValueConflictKnownException, ConfigNotFoundException {
+
+    // We expect that the caller is specifying the workspace ID.
+    // Since this code is currently only called by OSS, it's enforced in the public API and the UI
+    // currently.
+    if (workspaceCreateWithId.getOrganizationId() == null) {
+      throw new BadObjectSchemaKnownException("Workspace missing org ID.");
+    }
+
+    final String email = workspaceCreateWithId.getEmail();
+    final Boolean anonymousDataCollection = workspaceCreateWithId.getAnonymousDataCollection();
+    final Boolean news = workspaceCreateWithId.getNews();
+    final Boolean securityUpdates = workspaceCreateWithId.getSecurityUpdates();
+    final Boolean displaySetupWizard = workspaceCreateWithId.getDisplaySetupWizard();
 
     // if not set on the workspaceCreate, set the defaultGeography to AUTO
-    final io.airbyte.config.Geography defaultGeography = workspaceCreate.getDefaultGeography() != null
-        ? Enums.convertTo(workspaceCreate.getDefaultGeography(), io.airbyte.config.Geography.class)
+    final io.airbyte.config.Geography defaultGeography = workspaceCreateWithId.getDefaultGeography() != null
+        ? Enums.convertTo(workspaceCreateWithId.getDefaultGeography(), io.airbyte.config.Geography.class)
         : io.airbyte.config.Geography.AUTO;
 
     // NotificationSettings from input will be patched with default values.
-    final NotificationSettings notificationSettings = patchNotificationSettingsWithDefaultValue(workspaceCreate);
+    final NotificationSettings notificationSettings = patchNotificationSettingsWithDefaultValue(workspaceCreateWithId);
 
     final StandardWorkspace workspace = new StandardWorkspace()
-        .withWorkspaceId(uuidSupplier.get())
+        .withWorkspaceId(workspaceCreateWithId.getId())
         .withCustomerId(uuidSupplier.get()) // "customer_id" should be deprecated
-        .withName(workspaceCreate.getName())
-        .withSlug(generateUniqueSlug(workspaceCreate.getName()))
+        .withName(workspaceCreateWithId.getName())
+        .withSlug(generateUniqueSlug(workspaceCreateWithId.getName()))
         .withInitialSetupComplete(false)
         .withAnonymousDataCollection(anonymousDataCollection != null ? anonymousDataCollection : false)
         .withNews(news != null ? news : false)
         .withSecurityUpdates(securityUpdates != null ? securityUpdates : false)
         .withDisplaySetupWizard(displaySetupWizard != null ? displaySetupWizard : false)
         .withTombstone(false)
-        .withNotifications(NotificationConverter.toConfigList(workspaceCreate.getNotifications()))
+        .withNotifications(NotificationConverter.toConfigList(workspaceCreateWithId.getNotifications()))
         .withNotificationSettings(NotificationSettingsConverter.toConfig(notificationSettings))
         .withDefaultGeography(defaultGeography)
-        .withWebhookOperationConfigs(WorkspaceWebhookConfigsConverter.toPersistenceWrite(workspaceCreate.getWebhookConfigs(), uuidSupplier))
-        .withOrganizationId(workspaceCreate.getOrganizationId());
+        .withWebhookOperationConfigs(WorkspaceWebhookConfigsConverter.toPersistenceWrite(workspaceCreateWithId.getWebhookConfigs(), uuidSupplier))
+        .withOrganizationId(workspaceCreateWithId.getOrganizationId());
 
     if (!Strings.isNullOrEmpty(email)) {
       workspace.withEmail(email);
@@ -187,7 +197,7 @@ public class WorkspacesHandler {
     final Boolean news = user.getNews();
     // otherwise, create a default workspace for this user
     final WorkspaceCreate workspaceCreate = new WorkspaceCreate()
-        .name(getDefaultWorkspaceName(organization, companyName, email))
+        .name(WorkspaceHelpersKt.getDefaultWorkspaceName(organization, companyName, email))
         .organizationId(organization.map(Organization::getOrganizationId).orElse(null))
         .email(email)
         .news(news)
@@ -195,24 +205,6 @@ public class WorkspacesHandler {
         .securityUpdates(false)
         .displaySetupWizard(true);
     return createWorkspace(workspaceCreate);
-  }
-
-  private String getDefaultWorkspaceName(final Optional<Organization> organization, final String companyName, final String email) {
-    String defaultWorkspaceName = "";
-    if (organization.isPresent()) {
-      // use organization name as default workspace name
-      defaultWorkspaceName = organization.get().getName().trim();
-    }
-    // if organization name is not available or empty, use user's company name (note: this is an
-    // optional field)
-    if (defaultWorkspaceName.isEmpty() && companyName != null) {
-      defaultWorkspaceName = companyName.trim();
-    }
-    // if company name is still empty, use user's email (note: this is a required field)
-    if (defaultWorkspaceName.isEmpty()) {
-      defaultWorkspaceName = email;
-    }
-    return defaultWorkspaceName;
   }
 
   public void deleteWorkspace(final WorkspaceIdRequestBody workspaceIdRequestBody)
@@ -238,7 +230,7 @@ public class WorkspacesHandler {
     persistStandardWorkspace(persistedWorkspace);
   }
 
-  private NotificationSettings patchNotificationSettingsWithDefaultValue(final WorkspaceCreate workspaceCreate) {
+  private NotificationSettings patchNotificationSettingsWithDefaultValue(final WorkspaceCreateWithId workspaceCreateWithId) {
     final NotificationSettings notificationSettings = new NotificationSettings()
         .sendOnSuccess(new NotificationItem().notificationType(List.of()))
         .sendOnFailure(new NotificationItem().addNotificationTypeItem(NotificationType.CUSTOMERIO))
@@ -248,8 +240,8 @@ public class WorkspacesHandler {
         .sendOnSyncDisabledWarning(new NotificationItem().addNotificationTypeItem(NotificationType.CUSTOMERIO))
         .sendOnBreakingChangeWarning(new NotificationItem().addNotificationTypeItem(NotificationType.CUSTOMERIO))
         .sendOnBreakingChangeSyncsDisabled(new NotificationItem().addNotificationTypeItem(NotificationType.CUSTOMERIO));
-    if (workspaceCreate.getNotificationSettings() != null) {
-      final NotificationSettings inputNotificationSettings = workspaceCreate.getNotificationSettings();
+    if (workspaceCreateWithId.getNotificationSettings() != null) {
+      final NotificationSettings inputNotificationSettings = workspaceCreateWithId.getNotificationSettings();
       if (inputNotificationSettings.getSendOnSuccess() != null) {
         notificationSettings.setSendOnSuccess(inputNotificationSettings.getSendOnSuccess());
       }
@@ -280,7 +272,7 @@ public class WorkspacesHandler {
 
   public WorkspaceReadList listWorkspaces() throws JsonValidationException, IOException {
     final List<WorkspaceRead> reads = configRepository.listStandardWorkspaces(false).stream()
-        .map(WorkspacesHandler::buildWorkspaceRead)
+        .map(WorkspaceConverter::domainToApiModel)
         .collect(Collectors.toList());
     return new WorkspaceReadList().workspaces(reads);
   }
@@ -295,7 +287,7 @@ public class WorkspacesHandler {
             listResourcesForWorkspacesRequestBody.getPagination().getRowOffset(),
             listResourcesForWorkspacesRequestBody.getNameContains()))
         .stream()
-        .map(WorkspacesHandler::buildWorkspaceRead)
+        .map(WorkspaceConverter::domainToApiModel)
         .collect(Collectors.toList());
     return new WorkspaceReadList().workspaces(reads);
   }
@@ -310,7 +302,7 @@ public class WorkspacesHandler {
 
     final List<WorkspaceRead> reads = standardWorkspaces
         .stream()
-        .map(WorkspacesHandler::buildWorkspaceRead)
+        .map(WorkspaceConverter::domainToApiModel)
         .collect(Collectors.toList());
     return new WorkspaceReadList().workspaces(reads);
   }
@@ -320,7 +312,7 @@ public class WorkspacesHandler {
     final UUID workspaceId = workspaceIdRequestBody.getWorkspaceId();
     final boolean includeTombstone = workspaceIdRequestBody.getIncludeTombstone() != null ? workspaceIdRequestBody.getIncludeTombstone() : false;
     final StandardWorkspace workspace = configRepository.getStandardWorkspaceNoSecrets(workspaceId, includeTombstone);
-    return buildWorkspaceRead(workspace);
+    return WorkspaceConverter.domainToApiModel(workspace);
   }
 
   public WorkspaceOrganizationInfoRead getWorkspaceOrganizationInfo(final WorkspaceIdRequestBody workspaceIdRequestBody)
@@ -328,7 +320,7 @@ public class WorkspacesHandler {
     final UUID workspaceId = workspaceIdRequestBody.getWorkspaceId();
     final Optional<Organization> organization = organizationPersistence.getOrganizationByWorkspaceId(workspaceId);
     if (organization.isEmpty()) {
-      throw new ConfigNotFoundException("ORGANIZATION_FOR_WORKSPACE", workspaceId.toString());
+      throw new ConfigNotFoundException(NO_ORGANIZATION_FOR_WORKSPACE, workspaceId.toString());
     }
     return buildWorkspaceOrganizationInfoRead(organization.get());
   }
@@ -337,12 +329,14 @@ public class WorkspacesHandler {
   public WorkspaceRead getWorkspaceBySlug(final SlugRequestBody slugRequestBody) throws IOException, ConfigNotFoundException {
     // for now we assume there is one workspace and it has a default uuid.
     final StandardWorkspace workspace = configRepository.getWorkspaceBySlug(slugRequestBody.getSlug(), false);
-    return buildWorkspaceRead(workspace);
+    return WorkspaceConverter.domainToApiModel(workspace);
   }
 
-  public WorkspaceRead getWorkspaceByConnectionId(final ConnectionIdRequestBody connectionIdRequestBody) throws ConfigNotFoundException {
-    final StandardWorkspace workspace = configRepository.getStandardWorkspaceFromConnection(connectionIdRequestBody.getConnectionId(), false);
-    return buildWorkspaceRead(workspace);
+  public WorkspaceRead getWorkspaceByConnectionId(final ConnectionIdRequestBody connectionIdRequestBody, boolean includeTombstone)
+      throws ConfigNotFoundException {
+    final StandardWorkspace workspace =
+        configRepository.getStandardWorkspaceFromConnection(connectionIdRequestBody.getConnectionId(), includeTombstone);
+    return WorkspaceConverter.domainToApiModel(workspace);
   }
 
   public WorkspaceReadList listWorkspacesInOrganization(final ListWorkspacesInOrganizationRequestBody request) throws IOException {
@@ -355,13 +349,13 @@ public class WorkspacesHandler {
                   false, request.getPagination().getPageSize(), request.getPagination().getRowOffset()),
               nameContains)
           .stream()
-          .map(WorkspacesHandler::buildWorkspaceRead)
+          .map(WorkspaceConverter::domainToApiModel)
           .collect(Collectors.toList());
     } else {
       standardWorkspaces = workspacePersistence
           .listWorkspacesByOrganizationId(request.getOrganizationId(), false, nameContains)
           .stream()
-          .map(WorkspacesHandler::buildWorkspaceRead)
+          .map(WorkspaceConverter::domainToApiModel)
           .collect(Collectors.toList());
     }
     return new WorkspaceReadList().workspaces(standardWorkspaces);
@@ -376,13 +370,13 @@ public class WorkspacesHandler {
               false, request.getPagination().getPageSize(), request.getPagination().getRowOffset(),
               nameContains)
           .stream()
-          .map(WorkspacesHandler::buildWorkspaceRead)
+          .map(WorkspaceConverter::domainToApiModel)
           .collect(Collectors.toList());
     } else {
       standardWorkspaces = workspacePersistence
           .listWorkspacesByInstanceAdminUser(false, nameContains)
           .stream()
-          .map(WorkspacesHandler::buildWorkspaceRead)
+          .map(WorkspaceConverter::domainToApiModel)
           .collect(Collectors.toList());
     }
     return new WorkspaceReadList().workspaces(standardWorkspaces);
@@ -404,13 +398,13 @@ public class WorkspacesHandler {
                   false, request.getPagination().getPageSize(), request.getPagination().getRowOffset()),
               nameContains)
           .stream()
-          .map(WorkspacesHandler::buildWorkspaceRead)
+          .map(WorkspaceConverter::domainToApiModel)
           .collect(Collectors.toList());
     } else {
       standardWorkspaces = workspacePersistence
           .listActiveWorkspacesByUserId(request.getUserId(), nameContains)
           .stream()
-          .map(WorkspacesHandler::buildWorkspaceRead)
+          .map(WorkspaceConverter::domainToApiModel)
           .collect(Collectors.toList());
     }
     return new WorkspaceReadList().workspaces(standardWorkspaces);
@@ -427,13 +421,13 @@ public class WorkspacesHandler {
 
     validateWorkspacePatch(workspace, workspacePatch);
 
-    LOGGER.debug("Initial WorkspaceRead: {}", buildWorkspaceRead(workspace));
+    LOGGER.debug("Initial WorkspaceRead: {}", WorkspaceConverter.domainToApiModel(workspace));
 
     applyPatchToStandardWorkspace(workspace, workspacePatch);
 
     LOGGER.debug("Patched Workspace before persisting: {}", workspace);
 
-    if (workspacePatch.getWebhookConfigs() == null) {
+    if (CollectionUtils.isEmpty(workspacePatch.getWebhookConfigs())) {
       // We aren't persisting any secrets. It's safe (and necessary) to use the NoSecrets variant because
       // we never hydrated them in the first place.
       configRepository.writeStandardWorkspaceNoSecrets(workspace);
@@ -488,7 +482,7 @@ public class WorkspacesHandler {
 
   private WorkspaceRead buildWorkspaceReadFromId(final UUID workspaceId) throws ConfigNotFoundException, IOException, JsonValidationException {
     final StandardWorkspace workspace = configRepository.getStandardWorkspaceNoSecrets(workspaceId, false);
-    return buildWorkspaceRead(workspace);
+    return WorkspaceConverter.domainToApiModel(workspace);
   }
 
   private WorkspaceOrganizationInfoRead buildWorkspaceOrganizationInfoRead(final Organization organization) {
@@ -545,7 +539,7 @@ public class WorkspacesHandler {
     if (workspacePatch.getInitialSetupComplete() != null) {
       workspace.setInitialSetupComplete(workspacePatch.getInitialSetupComplete());
     }
-    if (workspacePatch.getNotifications() != null) {
+    if (CollectionUtils.isNotEmpty(workspacePatch.getNotifications())) {
       workspace.setNotifications(NotificationConverter.toConfigList(workspacePatch.getNotifications()));
     }
     if (workspacePatch.getNotificationSettings() != null) {
@@ -554,6 +548,7 @@ public class WorkspacesHandler {
     if (workspacePatch.getDefaultGeography() != null) {
       workspace.setDefaultGeography(ApiPojoConverters.toPersistenceGeography(workspacePatch.getDefaultGeography()));
     }
+    // Empty List is a valid value for webhookConfigs
     if (workspacePatch.getWebhookConfigs() != null) {
       workspace.setWebhookOperationConfigs(WorkspaceWebhookConfigsConverter.toPersistenceWrite(workspacePatch.getWebhookConfigs(), uuidSupplier));
     }
@@ -567,7 +562,7 @@ public class WorkspacesHandler {
     } catch (final io.airbyte.data.exceptions.ConfigNotFoundException e) {
       throw new ConfigNotFoundException(e.getType(), e.getConfigId());
     }
-    return buildWorkspaceRead(workspace);
+    return WorkspaceConverter.domainToApiModel(workspace);
   }
 
 }

@@ -1,12 +1,11 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.commons.server.handlers;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -19,7 +18,7 @@ import io.airbyte.api.model.generated.OrganizationUpdateRequestBody;
 import io.airbyte.api.model.generated.Pagination;
 import io.airbyte.config.Organization;
 import io.airbyte.config.persistence.OrganizationPersistence;
-import io.airbyte.config.persistence.PermissionPersistence;
+import io.airbyte.data.services.PermissionService;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -36,17 +35,17 @@ class OrganizationsHandlerTest {
   private static final String ORGANIZATION_SSO_REALM = "realm";
   private static final Organization ORGANIZATION =
       new Organization().withOrganizationId(ORGANIZATION_ID_1).withEmail(ORGANIZATION_EMAIL).withName(ORGANIZATION_NAME);
-  private PermissionPersistence permissionPersistence;
+  private PermissionService permissionService;
   private OrganizationPersistence organizationPersistence;
   private Supplier<UUID> uuidSupplier;
   private OrganizationsHandler organizationsHandler;
 
   @BeforeEach
   void setup() {
-    permissionPersistence = mock(PermissionPersistence.class);
+    permissionService = mock(PermissionService.class);
     uuidSupplier = mock(Supplier.class);
     organizationPersistence = mock(OrganizationPersistence.class);
-    organizationsHandler = new OrganizationsHandler(organizationPersistence, permissionPersistence, uuidSupplier);
+    organizationsHandler = new OrganizationsHandler(organizationPersistence, permissionService, uuidSupplier);
   }
 
   @Test
@@ -56,7 +55,6 @@ class OrganizationsHandlerTest {
         .withName(ORGANIZATION_NAME);
     when(uuidSupplier.get()).thenReturn(ORGANIZATION_ID_1);
     when(organizationPersistence.createOrganization(newOrganization)).thenReturn(newOrganization);
-    doNothing().when(permissionPersistence).writePermission(any());
 
     final OrganizationRead result = organizationsHandler.createOrganization(
         new OrganizationCreateRequestBody().organizationName(ORGANIZATION_NAME).email(ORGANIZATION_EMAIL));

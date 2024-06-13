@@ -1,16 +1,28 @@
 import pick from "lodash/pick";
-import { useContext, useState, createContext, useCallback } from "react";
+import { createContext, useCallback, useContext, useMemo, useState } from "react";
 import { useIntl } from "react-intl";
 import { useAsyncFn } from "react-use";
 
-import { SchemaError, useGetConnection, useGetConnectionQuery, useUpdateConnection } from "core/api";
+import {
+  useCurrentWorkspace,
+  useDestinationDefinitionVersion,
+  useGetConnection,
+  useGetConnectionQuery,
+  useUpdateConnection,
+} from "core/api";
 import {
   AirbyteCatalog,
   ConnectionStatus,
+  ConnectionStream,
+  DestinationSyncMode,
+  SchemaChange,
+  SyncMode,
   WebBackendConnectionRead,
   WebBackendConnectionUpdate,
 } from "core/api/types/AirbyteClient";
+import { useIntent } from "core/utils/rbac";
 
+import { useAnalyticsTrackFunctions } from "./useAnalyticsTrackFunctions";
 import { ConnectionFormServiceProvider } from "../ConnectionForm/ConnectionFormService";
 import { useNotificationService } from "../Notification";
 
@@ -31,40 +43,29 @@ interface ConnectionEditHook {
   schemaRefreshing: boolean;
   schemaHasBeenRefreshed: boolean;
   updateConnection: (connectionUpdates: WebBackendConnectionUpdate) => Promise<void>;
+  updateConnectionStatus: (status: ConnectionStatus) => Promise<void>;
   refreshSchema: () => Promise<void>;
   discardRefreshedSchema: () => void;
+  streamsByRefreshType: {
+    streamsSupportingMergeRefresh: ConnectionStream[];
+    streamsSupportingTruncateRefresh: ConnectionStream[];
+  };
 }
 
 const getConnectionCatalog = (connection: WebBackendConnectionRead): ConnectionCatalog =>
   pick(connection, ["syncCatalog", "catalogId"]);
 
 const useConnectionEdit = ({ connectionId }: ConnectionEditProps): ConnectionEditHook => {
+  const { trackConnectionStatusUpdate } = useAnalyticsTrackFunctions();
   const { formatMessage } = useIntl();
   const { registerNotification, unregisterNotificationById } = useNotificationService();
   const getConnectionQuery = useGetConnectionQuery();
   const [connection, setConnection] = useState(useGetConnection(connectionId));
+  const { supportsRefreshes: destinationSupportsRefreshes } = useDestinationDefinitionVersion(
+    connection.destination.destinationId
+  );
   const [catalog, setCatalog] = useState<ConnectionCatalog>(() => getConnectionCatalog(connection));
   const [schemaHasBeenRefreshed, setSchemaHasBeenRefreshed] = useState(false);
-
-  const [{ loading: schemaRefreshing, error: schemaError }, refreshSchema] = useAsyncFn(async () => {
-    unregisterNotificationById("connection.noDiff");
-
-    const refreshedConnection = await getConnectionQuery({ connectionId, withRefreshedCatalog: true });
-    if (refreshedConnection.catalogDiff && refreshedConnection.catalogDiff.transforms?.length > 0) {
-      setConnection(refreshedConnection);
-      setSchemaHasBeenRefreshed(true);
-    } else {
-      setConnection((connection) => ({
-        ...connection,
-        schemaChange: refreshedConnection.schemaChange,
-      }));
-
-      registerNotification({
-        id: "connection.noDiff",
-        text: formatMessage({ id: "connection.updateSchema.noDiff" }),
-      });
-    }
-  });
 
   const discardRefreshedSchema = useCallback(() => {
     setConnection((connection) => ({
@@ -76,6 +77,18 @@ const useConnectionEdit = ({ connectionId }: ConnectionEditProps): ConnectionEdi
   }, [catalog]);
 
   const { mutateAsync: updateConnectionAction, isLoading: connectionUpdating } = useUpdateConnection();
+
+  const updateConnectionStatus = useCallback(
+    async (status: ConnectionStatus) => {
+      const updatedConnection = await updateConnectionAction({
+        connectionId,
+        status,
+      });
+      setConnection(updatedConnection);
+      trackConnectionStatusUpdate(updatedConnection);
+    },
+    [connectionId, updateConnectionAction, trackConnectionStatusUpdate]
+  );
 
   const updateConnection = useCallback(
     async (connectionUpdates: WebBackendConnectionUpdate) => {
@@ -108,6 +121,92 @@ const useConnectionEdit = ({ connectionId }: ConnectionEditProps): ConnectionEdi
     [updateConnectionAction]
   );
 
+  const [{ loading: schemaRefreshing, error: schemaError }, refreshSchema] = useAsyncFn(async () => {
+    unregisterNotificationById("connection.noDiff");
+
+    const refreshedConnection = await getConnectionQuery({ connectionId, withRefreshedCatalog: true });
+
+    /**
+     * (BE issue) fix for "non-breaking" schema change and empty catalogDiff
+     * Issue: https://github.com/airbytehq/airbyte-internal-issues/issues/4867
+     */
+    if (
+      refreshedConnection.schemaChange === SchemaChange.non_breaking &&
+      !refreshedConnection?.catalogDiff?.transforms?.length
+    ) {
+      await updateConnection({
+        connectionId: refreshedConnection.connectionId,
+        sourceCatalogId: refreshedConnection.catalogId,
+      });
+      registerNotification({
+        id: "connection.updateAutomaticallyApplied",
+        type: "success",
+        text: formatMessage({ id: "connection.updateSchema.updateAutomaticallyApplied" }),
+      });
+      return;
+    }
+
+    if (refreshedConnection.catalogDiff && refreshedConnection.catalogDiff.transforms?.length > 0) {
+      setConnection(refreshedConnection);
+      setSchemaHasBeenRefreshed(true);
+    } else {
+      setConnection((connection) => ({
+        ...connection,
+        schemaChange: refreshedConnection.schemaChange,
+        /**
+         * set refreshed syncCatalog since the stream(AirbyteStream) data might have changed
+         * (eg. new sync mode is available)
+         */
+        syncCatalog: refreshedConnection.syncCatalog,
+      }));
+
+      registerNotification({
+        id: "connection.noDiff",
+        text: formatMessage({ id: "connection.updateSchema.noDiff" }),
+      });
+    }
+  });
+
+  const streamsByRefreshType = useMemo(() => {
+    const streamsSupportingMergeRefresh: ConnectionStream[] = [];
+    const streamsSupportingTruncateRefresh: ConnectionStream[] = [];
+
+    for (const stream of catalog.syncCatalog.streams) {
+      if (!stream.stream || !stream.config) {
+        continue;
+      }
+
+      if (stream?.config?.syncMode === SyncMode.incremental && destinationSupportsRefreshes && stream.config.selected) {
+        streamsSupportingMergeRefresh.push({
+          streamName: stream.stream.name,
+          streamNamespace: stream.stream.namespace,
+        });
+
+        if (
+          stream?.config?.destinationSyncMode === DestinationSyncMode.append_dedup &&
+          destinationSupportsRefreshes &&
+          stream.config.selected
+        ) {
+          streamsSupportingTruncateRefresh.push({
+            streamName: stream.stream.name,
+            streamNamespace: stream.stream.namespace,
+          });
+        }
+      }
+    }
+    const sortedStreamsSupportingMergeRefresh = streamsSupportingMergeRefresh.sort((a, b) =>
+      a.streamName.localeCompare(b.streamName)
+    );
+    const sortedStreamsSupportingTruncateRefresh = streamsSupportingTruncateRefresh.sort((a, b) =>
+      a.streamName.localeCompare(b.streamName)
+    );
+
+    return {
+      streamsSupportingMergeRefresh: sortedStreamsSupportingMergeRefresh,
+      streamsSupportingTruncateRefresh: sortedStreamsSupportingTruncateRefresh,
+    };
+  }, [catalog.syncCatalog.streams, destinationSupportsRefreshes]);
+
   return {
     connection,
     // only use `setConnection` directly if you have a good reason: it is handled for you
@@ -118,8 +217,10 @@ const useConnectionEdit = ({ connectionId }: ConnectionEditProps): ConnectionEdi
     schemaRefreshing,
     schemaHasBeenRefreshed,
     updateConnection,
+    updateConnectionStatus,
     refreshSchema,
     discardRefreshedSchema,
+    streamsByRefreshType,
   };
 };
 const ConnectionEditContext = createContext<Omit<ConnectionEditHook, "refreshSchema" | "schemaError"> | null>(null);
@@ -129,12 +230,14 @@ export const ConnectionEditServiceProvider: React.FC<React.PropsWithChildren<Con
   ...props
 }) => {
   const { refreshSchema, schemaError, ...data } = useConnectionEdit(props);
+  const { workspaceId } = useCurrentWorkspace();
+  const canEditConnection = useIntent("EditConnection", { workspaceId });
   return (
     <ConnectionEditContext.Provider value={data}>
       <ConnectionFormServiceProvider
-        mode={data.connection.status === ConnectionStatus.deprecated ? "readonly" : "edit"}
+        mode={data.connection.status === ConnectionStatus.deprecated || !canEditConnection ? "readonly" : "edit"}
         connection={data.connection}
-        schemaError={schemaError as SchemaError}
+        schemaError={schemaError}
         refreshSchema={refreshSchema}
       >
         {children}

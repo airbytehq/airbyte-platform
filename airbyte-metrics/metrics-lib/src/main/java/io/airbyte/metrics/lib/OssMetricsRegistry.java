@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.metrics.lib;
@@ -118,6 +118,10 @@ public enum OssMetricsRegistry implements MetricsRegistry {
   CRON_JOB_RUN_BY_CRON_TYPE(MetricEmittingApps.CRON,
       "cron_jobs_run",
       "number of cron runs by cron type"),
+  CONNECTOR_REGISTRY_DEFINITION_PROCESSED(
+      MetricEmittingApps.CRON, // Actually `cron` or `bootloader` based on which metric client calls the code
+      "connector_registry_definition_processed",
+      "increments when a connector registry definition is processed by the ApplyDefinitionsHelper"),
   EST_NUM_METRICS_EMITTED_BY_REPORTER(
       MetricEmittingApps.METRICS_REPORTER,
       "est_num_metrics_emitted_by_reporter",
@@ -208,11 +212,19 @@ public enum OssMetricsRegistry implements MetricsRegistry {
   ORCHESTRATOR_OUT_OF_MEMORY(MetricEmittingApps.WORKER,
       "orchestrator_out_of_memory",
       "orchestrator out of memory error"),
+  ORCHESTRATOR_INIT_COPY_FAILURE(MetricEmittingApps.WORKER,
+      "orchestrator_init_copy_failure",
+      "init files failed to copy over to orchestrator"),
 
   OVERALL_JOB_RUNTIME_IN_LAST_HOUR_BY_TERMINAL_STATE_SECS(MetricEmittingApps.METRICS_REPORTER,
       "overall_job_runtime_in_last_hour_by_terminal_state_secs",
       "overall job runtime - scheduling and execution for all attempts - for jobs that reach terminal states in the last hour. "
           + "tagged by terminal states."),
+
+  RUNNING_PODS_FOUND_FOR_CONNECTION_ID(MetricEmittingApps.WORKER,
+      "running_pods_found_for_connection_id",
+      "whether we found pods running for a given connection id when attempting to start a sync for that connection id"),
+
   REPLICATION_BYTES_SYNCED(MetricEmittingApps.WORKER,
       "replication_bytes_synced",
       "number of bytes synced during replication"),
@@ -234,9 +246,6 @@ public enum OssMetricsRegistry implements MetricsRegistry {
   SOURCE_HEARTBEAT_FAILURE(MetricEmittingApps.ORCHESTRATOR,
       "source_hearbeat_failure",
       "Fail a replication because the source missed an heartbeat"),
-  SOURCE_TIME_SINCE_LAST_HEARTBEAT_MILLIS(MetricEmittingApps.ORCHESTRATOR,
-      "source_time_since_last_heartbeat_millis",
-      "Time since last heartbeat (message from a source) for a connection."),
   STATE_BUFFERING(MetricEmittingApps.WORKER,
       "state_buffering",
       "number of state messages being buffered before a flush"),
@@ -345,6 +354,12 @@ public enum OssMetricsRegistry implements MetricsRegistry {
   WORKLOAD_MONITOR_RUN(MetricEmittingApps.CRON,
       "workload_monitor_run",
       "number of cron run for the workload_monitor"),
+  WORKLOAD_MONITOR_DONE(MetricEmittingApps.CRON,
+      "workload_monitor_done",
+      "number of cron completed run for the workload_monitor"),
+  WORKLOAD_MONITOR_DURATION(MetricEmittingApps.CRON,
+      "workload_monitor_duration",
+      "duration of a run of the workload_monitor"),
   WORKLOADS_CANCEL(MetricEmittingApps.CRON,
       "workload_cancel",
       "number of workloads canceled"),
@@ -365,7 +380,92 @@ public enum OssMetricsRegistry implements MetricsRegistry {
       "Too long line distribution"),
   WORKLOAD_LAUNCHER_KUBE_ERROR(MetricEmittingApps.WORKLOAD_LAUNCHER,
       "workload_kube_error",
-      "Number of kube error in the workload launcher");
+      "Number of kube error in the workload launcher"),
+  WORKLOAD_LAUNCHER_KUBE_COPY_SUCCESS_OOM(MetricEmittingApps.WORKLOAD_LAUNCHER,
+      "workload_launcher_kube_copy_success_oom",
+      "Number of kube cp errors when trying to write the success file in the launcher"),
+  JOB_OUTPUT_WRITE(MetricEmittingApps.ORCHESTRATOR,
+      "job_output_write",
+      "Write a job output in the output folder"),
+  JOB_OUTPUT_READ(MetricEmittingApps.WORKER,
+      "job_output_read",
+      "Read a job output from the output folder"),
+  SYNC_RECORD_CHECKSUM(MetricEmittingApps.ORCHESTRATOR,
+      "sync_record_checksum",
+      "Report the status of a record checksum"),
+  SYNC_STATE_RECORD_COUNT(MetricEmittingApps.ORCHESTRATOR,
+      "sync_state_record_count",
+      "The record count emitted between state messages."),
+
+  DESTINATION_DESERIALIZATION_ERROR(MetricEmittingApps.ORCHESTRATOR,
+      "destination_deserialization_error",
+      "When a sync failed with a deserialization error from the destination"),
+
+  HEARTBEAT_TERMINAL_SHUTDOWN(MetricEmittingApps.ORCHESTRATOR,
+      "heartbeat_terminal_shutdown",
+      "When the heartbeat receives a terminal response from the server, and we shut down the orchestrator"),
+
+  HEARTBEAT_CONNECTIVITY_FAILURE_SHUTDOWN(MetricEmittingApps.ORCHESTRATOR,
+      "heartbeat_connectivity_failure_shutdown",
+      "When the heartbeat cannot communicate with the server, and we shut down the orchestrator"),
+
+  SIDECAR_CHECK(MetricEmittingApps.SIDECAR_ORCHESTRATOR,
+      "sidecar_check",
+      "Exit of the connector sidecar"),
+
+  CATALOG_DISCOVERY(MetricEmittingApps.SIDECAR_ORCHESTRATOR,
+      "catalog_discover",
+      "Exit of the connector sidecar"),
+
+  SPEC(MetricEmittingApps.SIDECAR_ORCHESTRATOR,
+      "spec",
+      "Result of the spec operation"),
+
+  ACTIVITY_PAYLOAD_READ_FROM_DOC_STORE(MetricEmittingApps.WORKER,
+      "activity_payload_read_from_doc_store",
+      "An activity payload was read from the doc store."),
+
+  ACTIVITY_PAYLOAD_WRITTEN_TO_DOC_STORE(MetricEmittingApps.WORKER,
+      "activity_payload_written_to_doc_store",
+      "An activity payload was written to the doc store."),
+
+  PAYLOAD_SIZE_EXCEEDED(MetricEmittingApps.WORKER,
+      "payload_size_exceeded",
+      "Detected payload size was over 4mb Temporal limit"),
+
+  PAYLOAD_FAILURE_WRITE(MetricEmittingApps.WORKER,
+      "payload_failure_write",
+      "Failure writing the activity payload to storage."),
+
+  PAYLOAD_FAILURE_READ(MetricEmittingApps.WORKER,
+      "payload_failure_read",
+      "Failure reading the activity payload from storage."),
+
+  PAYLOAD_VALIDATION_RESULT(MetricEmittingApps.WORKER,
+      "payload_validation_result",
+      "The result of the comparing the payload in object storage to the one passed from temporal."),
+
+  CREATE_SECRET_DEFAULT_STORE(MetricEmittingApps.SERVER,
+      "create_secret_default_store",
+      "A secret was created in the default configured secret store."),
+  UPDATE_SECRET_DEFAULT_STORE(MetricEmittingApps.SERVER,
+      "update_secret_default_store",
+      "A secret was created in the default configured secret store."),
+  DELETE_SECRET_DEFAULT_STORE(MetricEmittingApps.SERVER,
+      "delete_secret_default_store",
+      "A secret was created in the default configured secret store."),
+
+  CATALOG_SIZE_VALIDATION_ERROR(MetricEmittingApps.SERVER,
+      "catalog_size_validation_error",
+      "The catalog provided by the user was larger than our limit and rejected."),
+
+  EXCESSIVE_CATALOG_SIZE(MetricEmittingApps.SERVER,
+      "excessive_catalog_size",
+      "Distribution of input catalog field counts that exceed the configured limit."),
+
+  REPLICATION_CONTEXT_NOT_INITIALIZED_ERROR(MetricEmittingApps.ORCHESTRATOR,
+      "replication_context_not_initialized_error",
+      "The replication context was not initialized when it was expected to be.");
 
   private final MetricEmittingApp application;
   private final String metricName;

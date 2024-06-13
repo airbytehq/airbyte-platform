@@ -1,11 +1,10 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.server.apis;
 
 import static io.airbyte.commons.auth.AuthRoleConstants.ADMIN;
-import static io.airbyte.commons.auth.AuthRoleConstants.EDITOR;
 import static io.airbyte.commons.auth.AuthRoleConstants.ORGANIZATION_EDITOR;
 import static io.airbyte.commons.auth.AuthRoleConstants.ORGANIZATION_READER;
 import static io.airbyte.commons.auth.AuthRoleConstants.READER;
@@ -34,7 +33,6 @@ import io.airbyte.api.model.generated.JobSuccessWithAttemptNumberRequest;
 import io.airbyte.api.model.generated.PersistCancelJobRequestBody;
 import io.airbyte.api.model.generated.ReportJobStartRequest;
 import io.airbyte.api.model.generated.SyncInput;
-import io.airbyte.commons.auth.SecuredWorkspace;
 import io.airbyte.commons.server.handlers.JobHistoryHandler;
 import io.airbyte.commons.server.handlers.JobInputHandler;
 import io.airbyte.commons.server.handlers.JobsHandler;
@@ -42,13 +40,14 @@ import io.airbyte.commons.server.handlers.SchedulerHandler;
 import io.airbyte.commons.server.scheduling.AirbyteTaskExecutors;
 import io.airbyte.commons.temporal.StreamResetRecordsHelper;
 import io.micronaut.context.annotation.Context;
+import io.micronaut.http.annotation.Body;
 import io.micronaut.http.annotation.Controller;
 import io.micronaut.http.annotation.Post;
 import io.micronaut.scheduling.annotation.ExecuteOn;
 import io.micronaut.security.annotation.Secured;
 import io.micronaut.security.rules.SecurityRule;
-import javax.ws.rs.POST;
-import javax.ws.rs.Path;
+import jakarta.ws.rs.POST;
+import jakarta.ws.rs.Path;
 
 @Controller("/api/v1/jobs")
 @Context
@@ -74,20 +73,18 @@ public class JobsApiController implements JobsApi {
   }
 
   @Post("/cancel")
-  @Secured({EDITOR, WORKSPACE_EDITOR, ORGANIZATION_EDITOR})
-  @SecuredWorkspace
+  @Secured({WORKSPACE_EDITOR, ORGANIZATION_EDITOR})
   @ExecuteOn(AirbyteTaskExecutors.SCHEDULER)
   @Override
-  public JobInfoRead cancelJob(final JobIdRequestBody jobIdRequestBody) {
+  public JobInfoRead cancelJob(@Body final JobIdRequestBody jobIdRequestBody) {
     return ApiHelper.execute(() -> schedulerHandler.cancelJob(jobIdRequestBody));
   }
 
   @Post("/create")
-  @SecuredWorkspace
-  @Secured({EDITOR, WORKSPACE_EDITOR, ORGANIZATION_EDITOR})
+  @Secured({WORKSPACE_EDITOR, ORGANIZATION_EDITOR})
   @ExecuteOn(AirbyteTaskExecutors.SCHEDULER)
   @Override
-  public JobInfoRead createJob(final JobCreate jobCreate) {
+  public JobInfoRead createJob(@Body final JobCreate jobCreate) {
     return ApiHelper.execute(() -> schedulerHandler.createJob(jobCreate));
   }
 
@@ -95,7 +92,7 @@ public class JobsApiController implements JobsApi {
   @Secured({ADMIN})
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @Override
-  public void failNonTerminalJobs(final ConnectionIdRequestBody connectionIdRequestBody) {
+  public void failNonTerminalJobs(@Body final ConnectionIdRequestBody connectionIdRequestBody) {
     ApiHelper.execute(() -> {
       jobsHandler.failNonTerminalJobs(connectionIdRequestBody.getConnectionId());
       return null; // to satisfy the lambda interface bounds
@@ -106,61 +103,55 @@ public class JobsApiController implements JobsApi {
   @Secured({ADMIN})
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @Override
-  public AttemptNormalizationStatusReadList getAttemptNormalizationStatusesForJob(final JobIdRequestBody jobIdRequestBody) {
+  public AttemptNormalizationStatusReadList getAttemptNormalizationStatusesForJob(@Body final JobIdRequestBody jobIdRequestBody) {
     return ApiHelper.execute(() -> jobHistoryHandler.getAttemptNormalizationStatuses(jobIdRequestBody));
   }
 
   @Post("/get_check_input")
-  @Secured({READER, WORKSPACE_READER, ORGANIZATION_READER})
-  @SecuredWorkspace
+  @Secured({WORKSPACE_READER, ORGANIZATION_READER})
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @Override
-  public Object getCheckInput(final CheckInput checkInput) {
+  public Object getCheckInput(@Body final CheckInput checkInput) {
     return ApiHelper.execute(() -> jobInputHandler.getCheckJobInput(checkInput));
   }
 
   @Post("/get_debug_info")
-  @Secured({READER, WORKSPACE_READER, ORGANIZATION_READER})
-  @SecuredWorkspace
+  @Secured({WORKSPACE_READER, ORGANIZATION_READER})
   @ExecuteOn(AirbyteTaskExecutors.SCHEDULER)
   @Override
-  public JobDebugInfoRead getJobDebugInfo(final JobIdRequestBody jobIdRequestBody) {
+  public JobDebugInfoRead getJobDebugInfo(@Body final JobIdRequestBody jobIdRequestBody) {
     return ApiHelper.execute(() -> jobHistoryHandler.getJobDebugInfo(jobIdRequestBody));
   }
 
   @Post("/get")
-  @Secured({READER, WORKSPACE_READER, ORGANIZATION_READER})
-  @SecuredWorkspace
+  @Secured({WORKSPACE_READER, ORGANIZATION_READER})
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @Override
-  public JobInfoRead getJobInfo(final JobIdRequestBody jobIdRequestBody) {
+  public JobInfoRead getJobInfo(@Body final JobIdRequestBody jobIdRequestBody) {
     return ApiHelper.execute(() -> jobHistoryHandler.getJobInfo(jobIdRequestBody));
   }
 
   @Post("/get_without_logs")
-  @Secured({READER, WORKSPACE_READER, ORGANIZATION_READER})
-  @SecuredWorkspace
+  @Secured({WORKSPACE_READER, ORGANIZATION_READER})
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @Override
-  public JobInfoRead getJobInfoWithoutLogs(final JobIdRequestBody jobIdRequestBody) {
+  public JobInfoRead getJobInfoWithoutLogs(@Body final JobIdRequestBody jobIdRequestBody) {
     return ApiHelper.execute(() -> jobHistoryHandler.getJobInfoWithoutLogs(jobIdRequestBody));
   }
 
   @Post("/get_input")
-  @Secured({READER, WORKSPACE_READER, ORGANIZATION_READER})
-  @SecuredWorkspace
+  @Secured({WORKSPACE_READER, ORGANIZATION_READER})
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @Override
-  public Object getJobInput(final SyncInput syncInput) {
+  public Object getJobInput(@Body final SyncInput syncInput) {
     return ApiHelper.execute(() -> jobInputHandler.getJobInput(syncInput));
   }
 
   @Post("/get_light")
-  @Secured({READER, WORKSPACE_READER, ORGANIZATION_READER})
-  @SecuredWorkspace
+  @Secured({WORKSPACE_READER, ORGANIZATION_READER})
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @Override
-  public JobInfoLightRead getJobInfoLight(final JobIdRequestBody jobIdRequestBody) {
+  public JobInfoLightRead getJobInfoLight(@Body final JobIdRequestBody jobIdRequestBody) {
     return ApiHelper.execute(() -> jobHistoryHandler.getJobInfoLight(jobIdRequestBody));
   }
 
@@ -168,7 +159,7 @@ public class JobsApiController implements JobsApi {
   @Secured({READER, WORKSPACE_READER, ORGANIZATION_READER})
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @Override
-  public JobOptionalRead getLastReplicationJob(final ConnectionIdRequestBody connectionIdRequestBody) {
+  public JobOptionalRead getLastReplicationJob(@Body final ConnectionIdRequestBody connectionIdRequestBody) {
     return ApiHelper.execute(() -> jobHistoryHandler.getLastReplicationJob(connectionIdRequestBody));
   }
 
@@ -176,7 +167,7 @@ public class JobsApiController implements JobsApi {
   @Secured({ADMIN})
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @Override
-  public InternalOperationResult jobFailure(final JobFailureRequest jobFailureRequest) {
+  public InternalOperationResult jobFailure(@Body final JobFailureRequest jobFailureRequest) {
     return ApiHelper.execute(() -> jobsHandler.jobFailure(jobFailureRequest));
   }
 
@@ -185,25 +176,23 @@ public class JobsApiController implements JobsApi {
   @Secured({ADMIN})
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @Override
-  public InternalOperationResult jobSuccessWithAttemptNumber(final JobSuccessWithAttemptNumberRequest jobSuccessWithAttemptNumberRequest) {
+  public InternalOperationResult jobSuccessWithAttemptNumber(@Body final JobSuccessWithAttemptNumberRequest jobSuccessWithAttemptNumberRequest) {
     return ApiHelper.execute(() -> jobsHandler.jobSuccessWithAttemptNumber(jobSuccessWithAttemptNumberRequest));
   }
 
   @Post("/list")
-  @Secured({READER, WORKSPACE_READER, ORGANIZATION_READER})
-  @SecuredWorkspace
+  @Secured({WORKSPACE_READER, ORGANIZATION_READER})
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @Override
-  public JobReadList listJobsFor(final JobListRequestBody jobListRequestBody) {
+  public JobReadList listJobsFor(@Body final JobListRequestBody jobListRequestBody) {
     return ApiHelper.execute(() -> jobHistoryHandler.listJobsFor(jobListRequestBody));
   }
 
   @Post("/list_for_workspaces")
-  @Secured({READER, WORKSPACE_READER, ORGANIZATION_READER})
-  @SecuredWorkspace
+  @Secured({WORKSPACE_READER, ORGANIZATION_READER})
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @Override
-  public JobReadList listJobsForWorkspaces(final JobListForWorkspacesRequestBody requestBody) {
+  public JobReadList listJobsForWorkspaces(@Body final JobListForWorkspacesRequestBody requestBody) {
     return ApiHelper.execute(() -> jobHistoryHandler.listJobsForWorkspaces(requestBody));
   }
 
@@ -211,7 +200,7 @@ public class JobsApiController implements JobsApi {
   @Secured({ADMIN})
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @Override
-  public InternalOperationResult reportJobStart(final ReportJobStartRequest reportJobStartRequest) {
+  public InternalOperationResult reportJobStart(@Body final ReportJobStartRequest reportJobStartRequest) {
     return ApiHelper.execute(() -> jobsHandler.reportJobStart(reportJobStartRequest.getJobId()));
   }
 
@@ -219,7 +208,7 @@ public class JobsApiController implements JobsApi {
   @Post(uri = "/did_previous_job_succeed")
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @Secured({ADMIN})
-  public BooleanRead didPreviousJobSucceed(final ConnectionJobRequestBody requestBody) {
+  public BooleanRead didPreviousJobSucceed(@Body final ConnectionJobRequestBody requestBody) {
     return ApiHelper.execute(() -> jobsHandler.didPreviousJobSucceed(
         requestBody.getConnectionId(),
         requestBody.getJobId()));
@@ -229,7 +218,7 @@ public class JobsApiController implements JobsApi {
   @Post("/persist_cancellation")
   @Secured({ADMIN})
   @ExecuteOn(AirbyteTaskExecutors.IO)
-  public void persistJobCancellation(final PersistCancelJobRequestBody requestBody) {
+  public void persistJobCancellation(@Body final PersistCancelJobRequestBody requestBody) {
     ApiHelper.execute(() -> {
       jobsHandler.persistJobCancellation(requestBody.getConnectionId(), requestBody.getJobId(), requestBody.getAttemptNumber(),
           requestBody.getAttemptFailureSummary());
@@ -241,7 +230,7 @@ public class JobsApiController implements JobsApi {
   @Post("/delete_stream_reset_records")
   @Secured({ADMIN})
   @ExecuteOn(AirbyteTaskExecutors.IO)
-  public void deleteStreamResetRecordsForJob(final DeleteStreamResetRecordsForJobRequest requestBody) {
+  public void deleteStreamResetRecordsForJob(@Body final DeleteStreamResetRecordsForJobRequest requestBody) {
     ApiHelper.execute(() -> {
       streamResetRecordsHelper.deleteStreamResetRecordsForJob(requestBody.getJobId(), requestBody.getConnectionId());
       return null;

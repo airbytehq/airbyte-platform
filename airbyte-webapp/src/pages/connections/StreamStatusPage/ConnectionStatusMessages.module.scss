@@ -1,4 +1,4 @@
-@use "scss/variables";
+@use "scss/mixins";
 
 .error {
   flex: 1;
@@ -6,4 +6,17 @@
 
 .breakingChangeButton {
   align-self: center;
+}
+
+.internalErrorMessage {
+  font-family: monospace;
+  max-height: calc(
+    100vh - var(--message-children-top-distance, 336px) - var(--message-children-bottom-distance, 25px)
+  ); // 336 offset + 25 for bottom padding
+
+  overflow-y: auto;
+}
+
+.buttonLikeLink {
+  @include mixins.link-text;
 }

@@ -8,22 +8,23 @@ import { FlexContainer } from "components/ui/Flex";
 import { Text } from "components/ui/Text";
 
 import { useGetInstanceConfiguration, useGetOrCreateUser } from "core/api";
-import { UserRead } from "core/api/types/AirbyteClient";
+import { AuthConfigurationMode, UserRead } from "core/api/types/AirbyteClient";
+import { useFormatError } from "core/errors";
 import { useNotificationService } from "hooks/services/Notification";
-import { createUriWithoutSsoParams } from "packages/cloud/services/auth/KeycloakService";
+import { createUriWithoutSsoParams } from "packages/cloud/services/auth/CloudAuthService";
 
-import { AuthContext } from "./AuthContext";
+import { AuthContext, AuthContextApi } from "./AuthContext";
 
 // This wrapper is conditionally present if the KeycloakAuthentication feature is enabled
 export const EnterpriseAuthService: React.FC<PropsWithChildren<unknown>> = ({ children }) => {
-  const { auth, webappUrl } = useGetInstanceConfiguration();
+  const { auth, airbyteUrl } = useGetInstanceConfiguration();
 
-  if (!auth) {
-    throw new Error("Authentication is enabled, but the server returned an invalid auth configuration: ", auth);
+  if (auth.mode !== AuthConfigurationMode.oidc || !auth.defaultRealm || !auth.clientId) {
+    throw new Error(`Authentication is enabled, but the server returned an invalid auth configuration: ${auth}`);
   }
 
   const oidcConfig = {
-    authority: `${webappUrl}/auth/realms/${auth.defaultRealm}`,
+    authority: `${airbyteUrl}/auth/realms/${auth.defaultRealm}`,
     client_id: auth.clientId,
     redirect_uri: createUriWithoutSsoParams(),
     onSigninCallback: () => {
@@ -51,6 +52,7 @@ export const EnterpriseAuthService: React.FC<PropsWithChildren<unknown>> = ({ ch
 // While auth status is loading we want to suspend rendering of the app
 const LoginRedirectCheck: React.FC<PropsWithChildren<unknown>> = ({ children }) => {
   const auth = useAuth();
+  const formatError = useFormatError();
 
   if (auth.isLoading) {
     return <LoadingPage />;
@@ -61,7 +63,7 @@ const LoginRedirectCheck: React.FC<PropsWithChildren<unknown>> = ({ children }) 
       <FlexContainer justifyContent="center">
         <FlexContainer direction="column" justifyContent="center" style={{ height: "100vh" }}>
           <Text>
-            <FormattedMessage id="auth.authError" values={{ errorMessage: auth.error.message }} />
+            <FormattedMessage id="auth.authError" values={{ errorMessage: formatError(auth.error) }} />
           </Text>
           <div>
             <Button onClick={() => auth.signinRedirect()}>
@@ -122,12 +124,13 @@ const AuthServiceProvider: React.FC<PropsWithChildren<unknown>> = ({ children })
       }
     })();
   }, [formatMessage, getAirbyteUser, keycloakAuth.user, registerNotification]);
-  const contextValue = useMemo(() => {
+  const contextValue = useMemo((): AuthContextApi => {
     return {
+      authType: "oidc",
       user: airbyteUser,
       inited,
       emailVerified: false,
-      providers: [],
+      provider: null,
       loggedOut: false,
       logout: keycloakAuth.signoutRedirect,
       getAccessToken,

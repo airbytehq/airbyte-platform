@@ -5,6 +5,7 @@ set -e
 projectDir=(
   "bootloader"
   "config/init"
+  "connector-sidecar"
   "container-orchestrator"
   "cron"
   "connector-builder-server"
@@ -15,6 +16,8 @@ projectDir=(
   "temporal"
   "webapp"
   "workers"
+  "workload-api-server"
+  "workload-launcher"
   "keycloak"
   "keycloak-setup"
   "api-server"
@@ -22,8 +25,8 @@ projectDir=(
 
 # Set default values to required vars. If set in env, values will be taken from there.
 # Primarily for testing.
-JDK_VERSION=${JDK_VERSION:-17.0.4}
-ALPINE_IMAGE=${ALPINE_IMAGE:-alpine:3.14}
+JDK_VERSION=${JDK_VERSION:-21.1.0}
+ALPINE_IMAGE=${ALPINE_IMAGE:-alpine:3.18}
 POSTGRES_IMAGE=${POSTGRES_IMAGE:-postgres:13-alpine}
 
 # Iterate over all directories in list to build one by one.
@@ -52,16 +55,6 @@ for workdir in "${projectDir[@]}"
         ;;
     esac
 
-    case $workdir in
-      "webapp")
-        dockerDir="build/docker"
-        ;;
-
-      *)
-        dockerDir="build/airbyte/docker"
-        ;;
-    esac
-
     echo "Publishing airbyte/$artifactName..."
     sleep 1
 
@@ -73,6 +66,6 @@ for workdir in "${projectDir[@]}"
       --build-arg POSTGRES_IMAGE=$POSTGRES_IMAGE            \
       --build-arg JDK_VERSION=$JDK_VERSION                  \
       --push                                                \
-      airbyte-$workdir/$dockerDir
+      airbyte-$workdir/build/airbyte/docker
     docker buildx rm $artifactName
 done

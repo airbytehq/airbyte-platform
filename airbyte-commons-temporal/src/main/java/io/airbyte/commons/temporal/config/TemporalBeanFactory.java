@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.commons.temporal.config;
@@ -12,6 +12,7 @@ import io.airbyte.metrics.lib.MetricClient;
 import io.micronaut.context.annotation.Factory;
 import io.micronaut.context.annotation.Value;
 import io.temporal.client.WorkflowClient;
+import io.temporal.common.converter.DataConverter;
 import io.temporal.serviceclient.WorkflowServiceStubs;
 import jakarta.inject.Named;
 import jakarta.inject.Singleton;
@@ -42,8 +43,9 @@ public class TemporalBeanFactory {
   @Singleton
   WorkflowClient workflowClient(
                                 final TemporalUtils temporalUtils,
-                                final WorkflowServiceStubs temporalService) {
-    return new WorkflowClientFactory().createWorkflowClient(temporalService, temporalUtils.getNamespace());
+                                final WorkflowServiceStubs temporalService,
+                                final DataConverter dataConverter) {
+    return new WorkflowClientFactory().createWorkflowClient(temporalService, temporalUtils.getNamespace(), dataConverter);
   }
 
   @Singleton

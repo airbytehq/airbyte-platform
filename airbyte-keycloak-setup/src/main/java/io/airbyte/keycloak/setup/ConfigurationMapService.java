@@ -1,12 +1,12 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.keycloak.setup;
 
 import io.airbyte.commons.auth.config.AirbyteKeycloakConfiguration;
-import io.airbyte.commons.auth.config.IdentityProviderConfiguration;
-import io.micronaut.context.annotation.Value;
+import io.airbyte.commons.auth.config.OidcConfig;
+import jakarta.inject.Named;
 import jakarta.inject.Singleton;
 import java.util.HashMap;
 import java.util.Map;
@@ -19,47 +19,57 @@ import org.keycloak.admin.client.resource.RealmResource;
 @Singleton
 public class ConfigurationMapService {
 
-  private final String webappUrl;
+  public static final String HTTPS_PREFIX = "https://";
+  public static final String WELL_KNOWN_OPENID_CONFIGURATION_SUFFIX = ".well-known/openid-configuration";
+  private final String airbyteUrl;
   private final AirbyteKeycloakConfiguration keycloakConfiguration;
 
-  public ConfigurationMapService(@Value("${airbyte.webapp-url}") final String webappUrl,
+  public ConfigurationMapService(@Named("airbyteUrl") final String airbyteUrl,
                                  final AirbyteKeycloakConfiguration keycloakConfiguration) {
-    this.webappUrl = webappUrl;
+    this.airbyteUrl = airbyteUrl;
     this.keycloakConfiguration = keycloakConfiguration;
   }
 
   public Map<String, String> importProviderFrom(final RealmResource keycloakRealm,
-                                                final IdentityProviderConfiguration provider,
+                                                final OidcConfig oidcConfig,
                                                 String keycloakProviderId) {
     Map<String, Object> map = new HashMap<>();
     map.put("providerId", keycloakProviderId);
-    map.put("fromUrl", getProviderDiscoveryUrl(provider));
+    map.put("fromUrl", getProviderDiscoveryUrl(oidcConfig));
     return keycloakRealm.identityProviders().importFrom(map);
   }
 
-  public Map<String, String> setupProviderConfig(final IdentityProviderConfiguration provider, Map<String, String> configMap) {
-    Map<String, String> config = new HashMap<>();
-    config.put("clientId", provider.getClientId());
-    config.put("clientSecret", provider.getClientSecret());
-    config.put("authorizationUrl", configMap.get("authorizationUrl"));
-    config.put("tokenUrl", configMap.get("tokenUrl"));
-    config.put("userInfoUrl", configMap.get("userInfoUrl"));
-    config.put("logoutUrl", configMap.get("logoutUrl"));
-    config.put("issuer", configMap.get("issuer"));
+  public Map<String, String> setupProviderConfig(final OidcConfig oidcConfig, Map<String, String> configMap) {
+    // Copy all keys from configMap to the result map
+    final Map<String, String> config = new HashMap<>(configMap);
+
+    // Explicitly set required keys
+    config.put("clientId", oidcConfig.getClientId());
+    config.put("clientSecret", oidcConfig.getClientSecret());
     config.put("defaultScope", "openid email profile");
-    config.put("redirectUris", getProviderRedirectUrl(provider));
-    config.put("jwksUrl", configMap.get("jwksUrl"));
+    config.put("redirectUris", getProviderRedirectUrl(oidcConfig));
+    config.put("backchannelSupported", "true");
+    config.put("backchannel_logout_session_supported", "true");
+
     return config;
   }
 
-  private String getProviderRedirectUrl(final IdentityProviderConfiguration provider) {
-    final String webappUrlWithTrailingSlash = webappUrl.endsWith("/") ? webappUrl : webappUrl + "/";
-    return webappUrlWithTrailingSlash + "auth/realms/" + keycloakConfiguration.getAirbyteRealm() + "/broker/" + provider.getAppName() + "/endpoint";
+  private String getProviderRedirectUrl(final OidcConfig oidcConfig) {
+    final String airbyteUrlWithTrailingSlash = airbyteUrl.endsWith("/") ? airbyteUrl : airbyteUrl + "/";
+    return airbyteUrlWithTrailingSlash + "auth/realms/" + keycloakConfiguration.getAirbyteRealm() + "/broker/" + oidcConfig.getAppName()
+        + "/endpoint";
   }
 
-  private String getProviderDiscoveryUrl(final IdentityProviderConfiguration provider) {
-    final String domainWithTrailingSlash = provider.getDomain().endsWith("/") ? provider.getDomain() : provider.getDomain() + "/";
-    return "https://" + domainWithTrailingSlash + ".well-known/openid-configuration";
+  private String getProviderDiscoveryUrl(final OidcConfig oidcConfig) {
+    String domain = oidcConfig.getDomain();
+    if (!domain.startsWith(HTTPS_PREFIX)) {
+      domain = HTTPS_PREFIX + domain;
+    }
+    if (!domain.endsWith(WELL_KNOWN_OPENID_CONFIGURATION_SUFFIX)) {
+      domain = domain.endsWith("/") ? domain : domain + "/";
+      domain = domain + WELL_KNOWN_OPENID_CONFIGURATION_SUFFIX;
+    }
+    return domain;
   }
 
 }

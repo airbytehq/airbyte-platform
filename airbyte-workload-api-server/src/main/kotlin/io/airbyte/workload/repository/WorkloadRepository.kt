@@ -39,6 +39,25 @@ interface WorkloadRepository : PageableRepository<Workload, String> {
       SELECT * FROM workload
       WHERE ((:dataplaneIds) IS NULL OR dataplane_id IN (:dataplaneIds))
       AND ((:statuses) IS NULL OR status = ANY(CAST(ARRAY[:statuses] AS workload_status[])))
+      AND (deadline < CAST(:deadline AS timestamptz))
+      """,
+  )
+  fun searchForExpiredWorkloads(
+    @Expandable dataplaneIds: List<String>?,
+    @Expandable statuses: List<WorkloadStatus>?,
+    deadline: OffsetDateTime,
+  ): List<Workload>
+
+  fun searchByMutexKeyAndStatusInList(
+    mutexKey: String,
+    statuses: List<WorkloadStatus>,
+  ): List<Workload>
+
+  @Query(
+    """
+      SELECT * FROM workload
+      WHERE ((:dataplaneIds) IS NULL OR dataplane_id IN (:dataplaneIds))
+      AND ((:statuses) IS NULL OR status = ANY(CAST(ARRAY[:statuses] AS workload_status[])))
       AND ((:types) IS NULL OR type = ANY(CAST(ARRAY[:types] AS workload_type[])))
       AND (CAST(:createdBefore AS timestamptz) IS NULL OR created_at < CAST(:createdBefore AS timestamptz))
       """,
@@ -53,17 +72,28 @@ interface WorkloadRepository : PageableRepository<Workload, String> {
   fun update(
     @Id id: String,
     status: WorkloadStatus,
+    deadline: OffsetDateTime?,
+  )
+
+  fun update(
+    @Id id: String,
+    status: WorkloadStatus,
+    terminationSource: String?,
+    terminationReason: String?,
+    deadline: OffsetDateTime?,
   )
 
   fun update(
     @Id id: String,
     status: WorkloadStatus,
     lastHeartbeatAt: OffsetDateTime,
+    deadline: OffsetDateTime,
   )
 
   fun update(
     @Id id: String,
     dataplaneId: String,
     status: WorkloadStatus,
+    deadline: OffsetDateTime,
   )
 }

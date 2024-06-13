@@ -4,7 +4,20 @@ import React, { HTMLAttributes } from "react";
 import styles from "./Text.module.scss";
 
 type TextSize = "xs" | "sm" | "md" | "lg" | "xl";
-type TextColor = "darkBlue" | "grey" | "grey300" | "green" | "green600" | "red" | "grey600" | "grey400" | "blue";
+type TextColor =
+  | "darkBlue"
+  | "grey"
+  | "grey300"
+  | "green"
+  | "green600"
+  | "red"
+  | "red200"
+  | "red400"
+  | "grey600"
+  | "grey400"
+  | "grey500"
+  | "blue"
+  | "yellow600";
 type TextElementType = "p" | "span" | "div";
 type TextHTMLElement = HTMLParagraphElement | HTMLSpanElement | HTMLDivElement;
 
@@ -21,6 +34,8 @@ export type TextProps = HTMLAttributes<TextHTMLElement> & {
   gradient?: boolean;
   align?: TextAlignment;
   italicized?: boolean;
+  smallcaps?: boolean;
+  "data-testid"?: string;
 };
 
 const sizes: Record<TextSize, string> = {
@@ -38,9 +53,13 @@ const colors: Record<TextColor, string> = {
   grey: styles.grey,
   grey300: styles.grey300,
   red: styles.red,
+  red200: styles.red200,
+  red400: styles.red400,
   blue: styles.blue,
   grey400: styles.grey400,
+  grey500: styles.grey500,
   grey600: styles.grey600,
+  yellow600: styles.yellow600,
 };
 
 const textAlignments: Record<TextAlignment, string> = {
@@ -57,12 +76,16 @@ const getTextClassNames = ({
   gradient,
   align,
   italicized,
-}: Required<Pick<TextProps, "size" | "color" | "bold" | "inverseColor" | "gradient" | "align" | "italicized">>) =>
+  smallcaps,
+}: Required<
+  Pick<TextProps, "size" | "color" | "bold" | "inverseColor" | "gradient" | "align" | "italicized" | "smallcaps">
+>) =>
   classNames(styles.text, sizes[size], colors[color], textAlignments[align], {
     [styles.bold]: bold,
     [styles.inverse]: inverseColor,
     [styles.gradient]: gradient,
     [styles.italicized]: italicized,
+    [styles.smallcaps]: smallcaps,
   });
 
 export const Text = React.memo(
@@ -79,12 +102,13 @@ export const Text = React.memo(
         gradient = false,
         align = "left",
         italicized = false,
+        smallcaps = false,
         ...remainingProps
       },
       ref
     ) => {
       const className = classNames(
-        getTextClassNames({ size, color, bold, inverseColor, gradient, align, italicized }),
+        getTextClassNames({ size, color, bold, inverseColor, gradient, align, italicized, smallcaps }),
         classNameProp
       );
 

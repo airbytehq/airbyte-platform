@@ -1,5 +1,5 @@
 import classNames from "classnames";
-import { useIntl } from "react-intl";
+import { ComponentProps } from "react";
 
 import { Box } from "components/ui/Box";
 import { FlexContainer, FlexItem } from "components/ui/Flex";
@@ -10,9 +10,11 @@ import { SelectedIndicatorDot } from "./SelectedIndicatorDot";
 
 interface RadioButtonTilesOption<T> {
   value: T;
-  label: string;
-  description: string;
+  label: React.ReactNode;
+  description: React.ReactNode;
+  extra?: React.ReactNode;
   disabled?: boolean;
+  "data-testid"?: string;
 }
 
 interface RadioButtonTilesProps<T> {
@@ -20,6 +22,8 @@ interface RadioButtonTilesProps<T> {
   selectedValue: string;
   onSelectRadioButton: (value: T) => void;
   name: string;
+  direction?: ComponentProps<typeof FlexContainer>["direction"];
+  light?: boolean;
 }
 
 export const RadioButtonTiles = <T extends string>({
@@ -27,45 +31,46 @@ export const RadioButtonTiles = <T extends string>({
   onSelectRadioButton,
   selectedValue,
   name,
-}: RadioButtonTilesProps<T>) => {
-  const { formatMessage } = useIntl();
-  return (
-    <FlexContainer>
-      {options.map((option) => (
-        <FlexItem className={styles.radioButtonTiles__tile} key={option.value}>
-          <input
-            type="radio"
-            name={name}
-            disabled={option.disabled}
-            id={`${name}-${option.value}`}
-            value={option.value}
-            checked={selectedValue === option.value}
-            onChange={() => onSelectRadioButton(option.value)}
-            className={styles.radioButtonTiles__hiddenInput}
-            data-testid={`radio-button-tile-${name}-${option.value}`}
-          />
-          <label
-            className={classNames(styles.radioButtonTiles__toggle, {
-              [styles["radioButtonTiles__toggle--disabled"]]: option.disabled,
-            })}
-            htmlFor={`${name}-${option.value}`}
-          >
-            <div className={styles.radioButtonTiles__dot}>
-              <SelectedIndicatorDot selected={selectedValue === option.value} />
-            </div>
-            <div>
-              <Box mb="sm">
-                <Text size="lg" color={option.disabled ? "grey" : "darkBlue"}>
-                  {formatMessage({ id: option.label })}
-                </Text>
-              </Box>
-              <Text size="sm" color={option.disabled ? "grey" : "darkBlue"}>
-                {formatMessage({ id: option.description })}
+  direction,
+  light,
+}: RadioButtonTilesProps<T>) => (
+  <FlexContainer direction={direction}>
+    {options.map(({ value, label, description, extra, disabled, "data-testid": testId }) => (
+      <FlexItem className={styles.radioButtonTiles__tile} key={value}>
+        <input
+          type="radio"
+          name={name}
+          disabled={disabled}
+          id={`${name}-${value}`}
+          value={value}
+          checked={selectedValue === value}
+          onChange={() => onSelectRadioButton(value)}
+          className={styles.radioButtonTiles__hiddenInput}
+          data-testid={testId ? `${testId}-option` : `radio-button-tile-${name}-${value}`}
+        />
+        <label
+          className={classNames(styles.radioButtonTiles__toggle, {
+            [styles["radioButtonTiles__toggle--light"]]: light,
+            [styles["radioButtonTiles__toggle--disabled"]]: disabled,
+          })}
+          htmlFor={`${name}-${value}`}
+        >
+          <div className={styles.radioButtonTiles__dot}>
+            <SelectedIndicatorDot selected={selectedValue === value} />
+          </div>
+          <div>
+            <Box mb="sm">
+              <Text size="lg" color={disabled ? "grey" : "darkBlue"}>
+                {label}
               </Text>
-            </div>
-          </label>
-        </FlexItem>
-      ))}
-    </FlexContainer>
-  );
-};
+            </Box>
+            <Text size="sm" color={disabled ? "grey" : "darkBlue"}>
+              {description}
+            </Text>
+            {extra && <Box mt="sm">{extra}</Box>}
+          </div>
+        </label>
+      </FlexItem>
+    ))}
+  </FlexContainer>
+);

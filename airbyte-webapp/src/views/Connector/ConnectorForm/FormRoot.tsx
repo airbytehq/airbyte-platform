@@ -16,7 +16,7 @@ export interface FormRootProps {
   isTestConnectionInProgress?: boolean;
   bodyClassName?: string;
   headerBlock?: ReactNode;
-  title?: React.ReactNode;
+  title?: string;
   description?: React.ReactNode;
   full?: boolean;
   castValues: (values: ConnectorFormValues) => ConnectorFormValues;

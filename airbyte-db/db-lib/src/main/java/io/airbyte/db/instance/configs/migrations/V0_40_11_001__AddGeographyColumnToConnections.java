@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.db.instance.configs.migrations;
@@ -40,7 +40,7 @@ public class V0_40_11_001__AddGeographyColumnToConnections extends BaseJavaMigra
 
   private static void addGeographyEnumDataTypes(final DSLContext ctx) {
     ctx.createType(GeographyType.NAME)
-        .asEnum(Arrays.stream(GeographyType.values()).map(GeographyType::getLiteral).toList())
+        .asEnum(Arrays.stream(GeographyType.values()).map(GeographyType::getLiteral).toArray(String[]::new))
         .execute();
   }
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.commons.server.handlers;
@@ -36,7 +36,7 @@ public class SecretPersistenceConfigHandler {
   }
 
   public String writeToEnvironmentSecretPersistence(final SecretCoordinate secretCoordinate, final String payload) {
-    secretsRepositoryWriter.storeSecretToDefaultSecretPersistence(secretCoordinate, payload);
+    secretsRepositoryWriter.store(secretCoordinate, payload, null);
     return secretCoordinate.getFullCoordinate();
   }
 

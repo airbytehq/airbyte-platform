@@ -14,10 +14,10 @@ import { DbtOperationReadOrCreate, TransformationForm } from "../TransformationF
 
 export const CustomTransformationsFormField: React.FC = () => {
   const { workspaceId } = useCurrentWorkspace();
-  const { fields, append, remove, update } = useFieldArray<CustomTransformationsFormValues>({
+  const { fields, append, remove, update, move } = useFieldArray<CustomTransformationsFormValues>({
     name: "transformations",
   });
-  const { openModal, closeModal } = useModalService();
+  const { openModal } = useModalService();
 
   const defaultTransformation: OperationCreate = useMemo(
     () => ({
@@ -36,10 +36,10 @@ export const CustomTransformationsFormField: React.FC = () => {
   );
 
   const openEditModal = (transformationItemIndex?: number) =>
-    openModal({
+    openModal<void>({
       size: "xl",
       title: <FormattedMessage id={isDefined(transformationItemIndex) ? "form.edit" : "form.add"} />,
-      content: () => (
+      content: ({ onComplete, onCancel }) => (
         <TransformationForm
           transformation={
             isDefined(transformationItemIndex)
@@ -50,9 +50,9 @@ export const CustomTransformationsFormField: React.FC = () => {
             isDefined(transformationItemIndex)
               ? update(transformationItemIndex, transformation)
               : append(transformation);
-            closeModal();
+            onComplete();
           }}
-          onCancel={closeModal}
+          onCancel={onCancel}
         />
       ),
     });
@@ -66,6 +66,7 @@ export const CustomTransformationsFormField: React.FC = () => {
       onAddItem={() => openEditModal()}
       onStartEdit={openEditModal}
       onRemove={remove}
+      onMove={move}
     />
   );
 };

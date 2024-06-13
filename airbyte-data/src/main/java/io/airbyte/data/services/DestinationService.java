@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.data.services;
@@ -27,6 +27,8 @@ public interface DestinationService {
       throws JsonValidationException, IOException, ConfigNotFoundException;
 
   StandardDestinationDefinition getDestinationDefinitionFromDestination(UUID destinationId);
+
+  Boolean isDestinationActive(UUID destinationId) throws IOException;
 
   StandardDestinationDefinition getDestinationDefinitionFromConnection(UUID connectionId);
 
@@ -67,7 +69,7 @@ public interface DestinationService {
                               final List<ActorDefinitionBreakingChange> breakingChangesForDefinition)
       throws IOException;
 
-  List<DestinationConnection> listDestinationsWithVersionIds(final List<UUID> actorDefinitionVersionIds) throws IOException;
+  List<DestinationConnection> listDestinationsWithIds(final List<UUID> destinationIds) throws IOException;
 
   DestinationConnection getDestinationConnectionWithSecrets(UUID destinationId) throws JsonValidationException, ConfigNotFoundException, IOException;
 

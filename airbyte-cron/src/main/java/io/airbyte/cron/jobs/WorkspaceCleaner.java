@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.cron.jobs;
@@ -7,6 +7,7 @@ package io.airbyte.cron.jobs;
 import static io.airbyte.cron.MicronautCronRunner.SCHEDULED_TRACE_OPERATION_NAME;
 
 import datadog.trace.api.Trace;
+import io.airbyte.commons.envvar.EnvVar;
 import io.airbyte.config.Configs;
 import io.airbyte.config.EnvConfigs;
 import io.airbyte.metrics.lib.ApmTraceUtils;
@@ -27,21 +28,25 @@ import java.time.OffsetDateTime;
 import java.util.Date;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
-import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.filefilter.AgeFileFilter;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Delete old files that accumulate in docker.
  */
 @Singleton
-@Slf4j
 @Requires(notEnv = Environment.KUBERNETES)
 public class WorkspaceCleaner {
+
+  private static final Logger log = LoggerFactory.getLogger(WorkspaceCleaner.class);
 
   private final Path workspaceRoot;
   private final long maxAgeFilesInDays;
   private final MetricClient metricClient;
+
+  public static final String DEFAULT_TEMPORAL_HISTORY_RETENTION_IN_DAYS = "30";
 
   WorkspaceCleaner(final MetricClient metricClient) {
     log.info("Creating workspace cleaner");
@@ -52,7 +57,7 @@ public class WorkspaceCleaner {
     this.workspaceRoot = configs.getWorkspaceRoot();
     // We align max file age on temporal for history consistency
     // It might make sense configure this independently in the future
-    this.maxAgeFilesInDays = configs.getTemporalRetentionInDays();
+    this.maxAgeFilesInDays = Integer.parseInt(EnvVar.TEMPORAL_HISTORY_RETENTION_IN_DAYS.fetch(DEFAULT_TEMPORAL_HISTORY_RETENTION_IN_DAYS));
     this.metricClient = metricClient;
   }
 

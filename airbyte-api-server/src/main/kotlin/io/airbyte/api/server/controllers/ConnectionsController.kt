@@ -1,10 +1,9 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.api.server.controllers
 
-import io.airbyte.airbyte_api.generated.ConnectionsApi
 import io.airbyte.airbyte_api.model.generated.ConnectionCreateRequest
 import io.airbyte.airbyte_api.model.generated.ConnectionPatchRequest
 import io.airbyte.airbyte_api.model.generated.ConnectionResponse
@@ -20,6 +19,7 @@ import io.airbyte.api.server.constants.DELETE
 import io.airbyte.api.server.constants.GET
 import io.airbyte.api.server.constants.POST
 import io.airbyte.api.server.constants.PUT
+import io.airbyte.api.server.controllers.interfaces.ConnectionsApi
 import io.airbyte.api.server.helpers.AirbyteCatalogHelper
 import io.airbyte.api.server.helpers.getLocalUserInfoIfNull
 import io.airbyte.api.server.services.ConnectionService
@@ -28,9 +28,9 @@ import io.airbyte.api.server.services.SourceService
 import io.airbyte.api.server.services.UserService
 import io.micronaut.http.annotation.Controller
 import io.micronaut.http.annotation.Patch
+import jakarta.ws.rs.core.Response
 import java.util.Objects
 import java.util.UUID
-import javax.ws.rs.core.Response
 
 @Controller(CONNECTIONS_PATH)
 open class ConnectionsController(
@@ -41,7 +41,7 @@ open class ConnectionsController(
   private val trackingHelper: TrackingHelper,
 ) : ConnectionsApi {
   override fun createConnection(
-    connectionCreateRequest: ConnectionCreateRequest?,
+    connectionCreateRequest: ConnectionCreateRequest,
     authorization: String?,
     userInfo: String?,
   ): Response {
@@ -50,14 +50,14 @@ open class ConnectionsController(
 
     trackingHelper.callWithTracker({
       AirbyteCatalogHelper.validateCronConfiguration(
-        connectionCreateRequest!!.schedule,
+        connectionCreateRequest.schedule,
       )
     }, CONNECTIONS_PATH, POST, userId)
 
     // get destination response to retrieve workspace id as well as input for destination sync modes
     val destinationResponse: DestinationResponse =
       trackingHelper.callWithTracker(
-        { destinationService.getDestination(connectionCreateRequest!!.destinationId, authorization, validUserInfo) },
+        { destinationService.getDestination(connectionCreateRequest.destinationId, authorization, validUserInfo) },
         CONNECTIONS_PATH,
         POST,
         userId,
@@ -66,7 +66,7 @@ open class ConnectionsController(
     // get source schema for catalog id and airbyte catalog
     val schemaResponse: SourceDiscoverSchemaRead =
       trackingHelper.callWithTracker(
-        { sourceService.getSourceSchema(connectionCreateRequest!!.sourceId, false, authorization, validUserInfo) },
+        { sourceService.getSourceSchema(connectionCreateRequest.sourceId, false, authorization, validUserInfo) },
         CONNECTIONS_PATH,
         POST,
         userId,
@@ -77,7 +77,7 @@ open class ConnectionsController(
 
     // refer to documentation to understand what we need to do for the catalog
     // https://docs.airbyte.com/understanding-airbyte/airbyte-protocol/#catalog
-    var configuredCatalog: AirbyteCatalog? = AirbyteCatalog()
+    var configuredCatalog: AirbyteCatalog? = null
 
     val validStreams: Map<String, AirbyteStreamAndConfiguration> =
       AirbyteCatalogHelper.getValidStreams(
@@ -85,7 +85,7 @@ open class ConnectionsController(
       )
 
     // check user configs
-    if (AirbyteCatalogHelper.hasStreamConfigurations(connectionCreateRequest!!.configurations)) {
+    if (AirbyteCatalogHelper.hasStreamConfigurations(connectionCreateRequest.configurations)) {
       // validate user inputs
       trackingHelper.callWithTracker(
         {
@@ -100,39 +100,48 @@ open class ConnectionsController(
       )
 
       // set user inputs
-      for (streamConfiguration in connectionCreateRequest.configurations.streams) {
-        val validStreamAndConfig = validStreams[streamConfiguration.name]
-        val schemaStream = validStreamAndConfig!!.stream
-        val schemaConfig = validStreamAndConfig.config
+      val updatedValidStreams =
+        connectionCreateRequest.configurations.streams.map { streamConfiguration ->
+          val validStreamAndConfig = validStreams[streamConfiguration.name]
+          val schemaStream = validStreamAndConfig!!.stream
+          val updatedValidStreamAndConfig =
+            AirbyteStreamAndConfiguration(
+              stream = schemaStream,
+              config =
+                AirbyteCatalogHelper.updateAirbyteStreamConfiguration(
+                  validStreamAndConfig.config,
+                  schemaStream,
+                  streamConfiguration,
+                ),
+            )
 
-        val validDestinationSyncModes =
+          val validDestinationSyncModes =
+            trackingHelper.callWithTracker(
+              { destinationService.getDestinationSyncModes(destinationResponse, authorization, validUserInfo) },
+              CONNECTIONS_PATH,
+              POST,
+              userId,
+            ) as List<DestinationSyncMode>
+
+          // set user configs
           trackingHelper.callWithTracker(
-            { destinationService.getDestinationSyncModes(destinationResponse, authorization, validUserInfo) },
+            {
+              AirbyteCatalogHelper.validateStreamConfig(
+                streamConfiguration = streamConfiguration,
+                validDestinationSyncModes = validDestinationSyncModes,
+                airbyteStream = schemaStream!!,
+              )
+            },
             CONNECTIONS_PATH,
             POST,
             userId,
-          ) as List<DestinationSyncMode>
-
-        // set user configs
-        trackingHelper.callWithTracker(
-          {
-            AirbyteCatalogHelper.setAndValidateStreamConfig(
-              streamConfiguration,
-              validDestinationSyncModes,
-              schemaStream!!,
-              schemaConfig!!,
-            )
-          },
-          CONNECTIONS_PATH,
-          POST,
-          userId,
-        )
-        configuredCatalog!!.addStreamsItem(validStreamAndConfig)
-      }
+          )
+          updatedValidStreamAndConfig
+        }
+      configuredCatalog = AirbyteCatalog(streams = updatedValidStreams)
     } else {
       // no user supplied stream configs, return all streams with full refresh overwrite
-      configuredCatalog = airbyteCatalogFromDiscoverSchema
-      AirbyteCatalogHelper.setAllStreamsFullRefreshOverwrite(configuredCatalog!!)
+      configuredCatalog = AirbyteCatalogHelper.updateAllStreamsFullRefreshOverwrite(airbyteCatalogFromDiscoverSchema)
     }
 
     val finalConfiguredCatalog = configuredCatalog
@@ -141,7 +150,7 @@ open class ConnectionsController(
         connectionService.createConnection(
           connectionCreateRequest,
           catalogId!!,
-          finalConfiguredCatalog!!,
+          finalConfiguredCatalog,
           destinationResponse.workspaceId,
           authorization,
           validUserInfo,
@@ -217,7 +226,7 @@ open class ConnectionsController(
   }
 
   override fun listConnections(
-    workspaceIds: MutableList<UUID>?,
+    workspaceIds: List<UUID>?,
     includeDeleted: Boolean?,
     limit: Int?,
     offset: Int?,
@@ -236,6 +245,7 @@ open class ConnectionsController(
           includeDeleted!!,
           authorization,
           getLocalUserInfoIfNull(userInfo),
+          userId,
         )
       }, CONNECTIONS_PATH, GET, userId)!!
     trackingHelper.trackSuccess(
@@ -302,7 +312,7 @@ open class ConnectionsController(
 
     // refer to documentation to understand what we need to do for the catalog
     // https://docs.airbyte.com/understanding-airbyte/airbyte-protocol/#catalog
-    var configuredCatalog: AirbyteCatalog? = AirbyteCatalog()
+    var configuredCatalog: AirbyteCatalog?
 
     val validStreams: Map<String, AirbyteStreamAndConfiguration> =
       AirbyteCatalogHelper.getValidStreams(
@@ -325,35 +335,45 @@ open class ConnectionsController(
       )
 
       // set user inputs
-      for (streamConfiguration in connectionPatchRequest.configurations.streams) {
-        val validStreamAndConfig = validStreams[streamConfiguration.name]
-        val schemaStream = validStreamAndConfig!!.stream
-        val schemaConfig = validStreamAndConfig.config
+      val updatedValidStreams =
+        connectionPatchRequest.configurations.streams.map { streamConfiguration ->
+          val validStreamAndConfig = validStreams[streamConfiguration.name]
+          val schemaStream = validStreamAndConfig!!.stream
+          val updatedValidStreamAndConfig =
+            AirbyteStreamAndConfiguration(
+              stream = schemaStream,
+              config =
+                AirbyteCatalogHelper.updateAirbyteStreamConfiguration(
+                  validStreamAndConfig.config,
+                  schemaStream,
+                  streamConfiguration,
+                ),
+            )
 
-        val validDestinationSyncModes =
+          val validDestinationSyncModes =
+            trackingHelper.callWithTracker(
+              { destinationService.getDestinationSyncModes(destinationResponse, authorization, validUserInfo) },
+              CONNECTIONS_PATH,
+              POST,
+              userId,
+            ) as List<DestinationSyncMode>
+
+          // set user configs
           trackingHelper.callWithTracker(
-            { destinationService.getDestinationSyncModes(destinationResponse, authorization, validUserInfo) },
+            {
+              AirbyteCatalogHelper.validateStreamConfig(
+                streamConfiguration = streamConfiguration,
+                validDestinationSyncModes = validDestinationSyncModes,
+                airbyteStream = schemaStream!!,
+              )
+            },
             CONNECTIONS_PATH,
             POST,
             userId,
-          ) as List<DestinationSyncMode>
-
-        // set user configs
-        trackingHelper.callWithTracker(
-          {
-            AirbyteCatalogHelper.setAndValidateStreamConfig(
-              streamConfiguration,
-              validDestinationSyncModes,
-              schemaStream!!,
-              schemaConfig!!,
-            )
-          },
-          CONNECTIONS_PATH,
-          POST,
-          userId,
-        )
-        configuredCatalog!!.addStreamsItem(validStreamAndConfig)
-      }
+          )
+          updatedValidStreamAndConfig
+        }
+      configuredCatalog = AirbyteCatalog(streams = updatedValidStreams)
     } else {
       // no user supplied stream configs, return all existing streams
       configuredCatalog = null

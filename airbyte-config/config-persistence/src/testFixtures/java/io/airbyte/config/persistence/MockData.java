@@ -1,8 +1,10 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.config.persistence;
+
+import static io.airbyte.config.persistence.OrganizationPersistence.DEFAULT_ORGANIZATION_ID;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -17,6 +19,7 @@ import io.airbyte.config.ActorDefinitionBreakingChange;
 import io.airbyte.config.ActorDefinitionConfigInjection;
 import io.airbyte.config.ActorDefinitionResourceRequirements;
 import io.airbyte.config.ActorDefinitionVersion;
+import io.airbyte.config.AuthProvider;
 import io.airbyte.config.DeclarativeManifest;
 import io.airbyte.config.DestinationConnection;
 import io.airbyte.config.DestinationOAuthParameter;
@@ -52,7 +55,6 @@ import io.airbyte.config.StandardWorkspace;
 import io.airbyte.config.State;
 import io.airbyte.config.SupportLevel;
 import io.airbyte.config.User;
-import io.airbyte.config.User.AuthProvider;
 import io.airbyte.config.WebhookConfig;
 import io.airbyte.config.WebhookOperationConfigs;
 import io.airbyte.config.WorkspaceServiceAccount;
@@ -74,7 +76,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
 import java.util.UUID;
-import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import lombok.Data;
 
@@ -127,13 +128,17 @@ public class MockData {
   private static final UUID ACTOR_CATALOG_FETCH_EVENT_ID_2 = UUID.randomUUID();
   private static final UUID ACTOR_CATALOG_FETCH_EVENT_ID_3 = UUID.randomUUID();
   public static final long DEFAULT_MAX_SECONDS_BETWEEN_MESSAGES = 3600;
-  public static final Supplier<Long> MAX_SECONDS_BETWEEN_MESSAGE_SUPPLIER = () -> DEFAULT_MAX_SECONDS_BETWEEN_MESSAGES;
   // User
   static final UUID CREATOR_USER_ID_1 = UUID.randomUUID();
   static final UUID CREATOR_USER_ID_2 = UUID.randomUUID();
   static final UUID CREATOR_USER_ID_3 = UUID.randomUUID();
   static final UUID CREATOR_USER_ID_4 = UUID.randomUUID();
   static final UUID CREATOR_USER_ID_5 = UUID.randomUUID();
+  static final UUID DUP_EMAIL_USER_ID_1 = UUID.randomUUID();
+  static final UUID DUP_EMAIL_USER_ID_2 = UUID.randomUUID();
+  static final String DUP_EMAIL = "dup-email@airbyte.io";
+  static final String EMAIL_1 = "user-1@whatever.com";
+  static final String EMAIL_2 = "user-2@whatever.com";
 
   // Permission
   static final UUID PERMISSION_ID_1 = UUID.randomUUID();
@@ -144,6 +149,7 @@ public class MockData {
   static final UUID PERMISSION_ID_5 = UUID.randomUUID();
   static final UUID PERMISSION_ID_6 = UUID.randomUUID();
   static final UUID PERMISSION_ID_7 = UUID.randomUUID();
+  static final UUID PERMISSION_ID_8 = UUID.randomUUID();
 
   static final UUID ORGANIZATION_ID_1 = UUID.randomUUID();
   static final UUID ORGANIZATION_ID_2 = UUID.randomUUID();
@@ -233,6 +239,12 @@ public class MockData {
       .withOrganizationId(ORGANIZATION_ID_2)
       .withPermissionType(PermissionType.ORGANIZATION_READER);
 
+  public static final Permission permission8 = new Permission()
+      .withPermissionId(PERMISSION_ID_8)
+      .withUserId(CREATOR_USER_ID_1)
+      .withOrganizationId(DEFAULT_ORGANIZATION_ID)
+      .withPermissionType(PermissionType.ORGANIZATION_ADMIN);
+
   public static List<User> users() {
     final User user1 = new User()
         .withUserId(CREATOR_USER_ID_1)
@@ -242,8 +254,9 @@ public class MockData {
         .withDefaultWorkspaceId(WORKSPACE_ID_1)
         .withStatus(User.Status.DISABLED)
         .withCompanyName("company-1")
-        .withEmail("user-1@whatever.com")
-        .withNews(true);
+        .withEmail(EMAIL_1)
+        .withNews(true)
+        .withUiMetadata(null);
 
     final User user2 = new User()
         .withUserId(CREATOR_USER_ID_2)
@@ -253,8 +266,9 @@ public class MockData {
         .withDefaultWorkspaceId(WORKSPACE_ID_2)
         .withStatus(User.Status.INVITED)
         .withCompanyName("company-2")
-        .withEmail("user-2@whatever.com")
-        .withNews(false);
+        .withEmail(EMAIL_2)
+        .withNews(false)
+        .withUiMetadata(null);
 
     final User user3 = new User()
         .withUserId(CREATOR_USER_ID_3)
@@ -265,7 +279,8 @@ public class MockData {
         .withStatus(User.Status.REGISTERED)
         .withCompanyName("company-3")
         .withEmail("user-3@whatever.com")
-        .withNews(true);
+        .withNews(true)
+        .withUiMetadata(null);
 
     final User user4 = new User()
         .withUserId(CREATOR_USER_ID_4)
@@ -276,7 +291,8 @@ public class MockData {
         .withStatus(User.Status.REGISTERED)
         .withCompanyName("company-4")
         .withEmail("user-4@whatever.com")
-        .withNews(true);
+        .withNews(true)
+        .withUiMetadata(null);
 
     final User user5 = new User()
         .withUserId(CREATOR_USER_ID_5)
@@ -287,13 +303,42 @@ public class MockData {
         .withStatus(User.Status.REGISTERED)
         .withCompanyName("company-5")
         .withEmail("user-5@whatever.com")
-        .withNews(true);
+        .withNews(true)
+        .withUiMetadata(null);
 
     return Arrays.asList(user1, user2, user3, user4, user5);
   }
 
+  public static List<User> dupEmailUsers() {
+    final User dupEmailUser1 = new User()
+        .withUserId(DUP_EMAIL_USER_ID_1)
+        .withName("dup-email-user-1")
+        .withAuthUserId(DUP_EMAIL_USER_ID_1.toString())
+        .withAuthProvider(AuthProvider.KEYCLOAK)
+        .withDefaultWorkspaceId(null)
+        .withStatus(User.Status.REGISTERED)
+        .withCompanyName("dup-user-company")
+        .withEmail(DUP_EMAIL)
+        .withNews(true)
+        .withUiMetadata(null);
+
+    final User dupEmailUser2 = new User()
+        .withUserId(DUP_EMAIL_USER_ID_2)
+        .withName("dup-email-user-2")
+        .withAuthUserId(DUP_EMAIL_USER_ID_2.toString())
+        .withAuthProvider(AuthProvider.KEYCLOAK)
+        .withDefaultWorkspaceId(null)
+        .withStatus(User.Status.REGISTERED)
+        .withCompanyName("dup-user-company")
+        .withEmail(DUP_EMAIL)
+        .withNews(true)
+        .withUiMetadata(null);
+
+    return Arrays.asList(dupEmailUser1, dupEmailUser2);
+  }
+
   public static List<Permission> permissions() {
-    return Arrays.asList(permission1, permission2, permission3, permission4, permission5, permission6, permission7);
+    return Arrays.asList(permission1, permission2, permission3, permission4, permission5, permission6, permission7, permission8);
   }
 
   public static List<Organization> organizations() {
@@ -345,7 +390,8 @@ public class MockData {
         .withFeedbackDone(true)
         .withDefaultGeography(Geography.US)
         .withWebhookOperationConfigs(Jsons.jsonNode(
-            new WebhookOperationConfigs().withWebhookConfigs(List.of(new WebhookConfig().withId(WEBHOOK_CONFIG_ID).withName("name")))));
+            new WebhookOperationConfigs().withWebhookConfigs(List.of(new WebhookConfig().withId(WEBHOOK_CONFIG_ID).withName("name")))))
+        .withOrganizationId(DEFAULT_ORGANIZATION_ID);
 
     final StandardWorkspace workspace2 = new StandardWorkspace()
         .withWorkspaceId(WORKSPACE_ID_2)
@@ -353,7 +399,8 @@ public class MockData {
         .withSlug("another-workspace")
         .withInitialSetupComplete(true)
         .withTombstone(false)
-        .withDefaultGeography(Geography.AUTO);
+        .withDefaultGeography(Geography.AUTO)
+        .withOrganizationId(DEFAULT_ORGANIZATION_ID);
 
     final StandardWorkspace workspace3 = new StandardWorkspace()
         .withWorkspaceId(WORKSPACE_ID_3)
@@ -361,7 +408,8 @@ public class MockData {
         .withSlug("tombstoned")
         .withInitialSetupComplete(true)
         .withTombstone(true)
-        .withDefaultGeography(Geography.AUTO);
+        .withDefaultGeography(Geography.AUTO)
+        .withOrganizationId(DEFAULT_ORGANIZATION_ID);
 
     return Arrays.asList(workspace1, workspace2, workspace3);
   }
@@ -514,7 +562,6 @@ public class MockData {
         .withName("source-1")
         .withTombstone(false)
         .withSourceDefinitionId(SOURCE_DEFINITION_ID_1)
-        .withDefaultVersionId(SOURCE_DEFINITION_VERSION_ID_1)
         .withWorkspaceId(WORKSPACE_ID_1)
         .withConfiguration(Jsons.deserialize(CONNECTION_SPECIFICATION))
         .withSourceId(SOURCE_ID_1);
@@ -522,7 +569,6 @@ public class MockData {
         .withName("source-2")
         .withTombstone(false)
         .withSourceDefinitionId(SOURCE_DEFINITION_ID_2)
-        .withDefaultVersionId(SOURCE_DEFINITION_VERSION_ID_2)
         .withWorkspaceId(WORKSPACE_ID_1)
         .withConfiguration(Jsons.deserialize(CONNECTION_SPECIFICATION))
         .withSourceId(SOURCE_ID_2);
@@ -530,7 +576,6 @@ public class MockData {
         .withName("source-3")
         .withTombstone(false)
         .withSourceDefinitionId(SOURCE_DEFINITION_ID_1)
-        .withDefaultVersionId(SOURCE_DEFINITION_VERSION_ID_1)
         .withWorkspaceId(WORKSPACE_ID_2)
         .withConfiguration(Jsons.emptyObject())
         .withSourceId(SOURCE_ID_3);
@@ -542,7 +587,6 @@ public class MockData {
         .withName("destination-1")
         .withTombstone(false)
         .withDestinationDefinitionId(DESTINATION_DEFINITION_ID_1)
-        .withDefaultVersionId(DESTINATION_DEFINITION_VERSION_ID_1)
         .withWorkspaceId(WORKSPACE_ID_1)
         .withConfiguration(Jsons.deserialize(CONNECTION_SPECIFICATION))
         .withDestinationId(DESTINATION_ID_1);
@@ -550,7 +594,6 @@ public class MockData {
         .withName("destination-2")
         .withTombstone(false)
         .withDestinationDefinitionId(DESTINATION_DEFINITION_ID_2)
-        .withDefaultVersionId(DESTINATION_DEFINITION_VERSION_ID_2)
         .withWorkspaceId(WORKSPACE_ID_1)
         .withConfiguration(Jsons.deserialize(CONNECTION_SPECIFICATION))
         .withDestinationId(DESTINATION_ID_2);
@@ -558,7 +601,6 @@ public class MockData {
         .withName("destination-3")
         .withTombstone(true)
         .withDestinationDefinitionId(DESTINATION_DEFINITION_ID_2)
-        .withDefaultVersionId(DESTINATION_DEFINITION_VERSION_ID_2)
         .withWorkspaceId(WORKSPACE_ID_2)
         .withConfiguration(Jsons.emptyObject())
         .withDestinationId(DESTINATION_ID_3);
@@ -664,6 +706,7 @@ public class MockData {
         .withGeography(Geography.AUTO)
         .withBreakingChange(false)
         .withNonBreakingChangesPreference(NonBreakingChangesPreference.IGNORE)
+        .withBackfillPreference(StandardSync.BackfillPreference.DISABLED)
         .withNotifySchemaChanges(false)
         .withNotifySchemaChangesByEmail(false);
 
@@ -684,6 +727,7 @@ public class MockData {
         .withGeography(Geography.AUTO)
         .withBreakingChange(false)
         .withNonBreakingChangesPreference(NonBreakingChangesPreference.IGNORE)
+        .withBackfillPreference(StandardSync.BackfillPreference.DISABLED)
         .withNotifySchemaChanges(false)
         .withNotifySchemaChangesByEmail(false);
 
@@ -704,6 +748,7 @@ public class MockData {
         .withGeography(Geography.AUTO)
         .withBreakingChange(false)
         .withNonBreakingChangesPreference(NonBreakingChangesPreference.IGNORE)
+        .withBackfillPreference(StandardSync.BackfillPreference.DISABLED)
         .withNotifySchemaChanges(false)
         .withNotifySchemaChangesByEmail(false);
 
@@ -724,6 +769,7 @@ public class MockData {
         .withGeography(Geography.AUTO)
         .withBreakingChange(false)
         .withNonBreakingChangesPreference(NonBreakingChangesPreference.IGNORE)
+        .withBackfillPreference(StandardSync.BackfillPreference.DISABLED)
         .withNotifySchemaChanges(false)
         .withNotifySchemaChangesByEmail(false);
 
@@ -744,6 +790,7 @@ public class MockData {
         .withGeography(Geography.AUTO)
         .withBreakingChange(false)
         .withNonBreakingChangesPreference(NonBreakingChangesPreference.IGNORE)
+        .withBackfillPreference(StandardSync.BackfillPreference.DISABLED)
         .withNotifySchemaChanges(false)
         .withNotifySchemaChangesByEmail(false);
 
@@ -764,6 +811,7 @@ public class MockData {
         .withGeography(Geography.AUTO)
         .withBreakingChange(false)
         .withNonBreakingChangesPreference(NonBreakingChangesPreference.IGNORE)
+        .withBackfillPreference(StandardSync.BackfillPreference.DISABLED)
         .withNotifySchemaChanges(false)
         .withNotifySchemaChangesByEmail(false);
 
@@ -858,6 +906,16 @@ public class MockData {
         .withConfigHash(CONFIG_HASH)
         .withConnectorVersion(CONNECTOR_VERSION);
     return Arrays.asList(actorCatalogFetchEvent1, actorCatalogFetchEvent2);
+  }
+
+  public static Organization defaultOrganization() {
+    return new Organization()
+        .withOrganizationId(DEFAULT_ORGANIZATION_ID)
+        .withName("default org")
+        .withEmail("test@test.com")
+        .withPba(false)
+        .withOrgLevelBilling(false);
+
   }
 
   @Data

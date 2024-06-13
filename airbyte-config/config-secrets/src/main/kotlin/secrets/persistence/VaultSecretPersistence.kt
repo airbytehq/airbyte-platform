@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.config.secrets.persistence
@@ -55,6 +55,10 @@ class VaultSecretPersistence(
     } catch (e: VaultException) {
       logger.error(e) { "Vault failed on write for coordinate ${coordinate.fullCoordinate}." }
     }
+  }
+
+  override fun delete(coordinate: SecretCoordinate) {
+    return
   }
 
   companion object {

@@ -1,33 +1,33 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.api.server.controllers
 
-import io.airbyte.airbyte_api.generated.WorkspacesApi
 import io.airbyte.airbyte_api.model.generated.WorkspaceCreateRequest
 import io.airbyte.airbyte_api.model.generated.WorkspaceOAuthCredentialsRequest
 import io.airbyte.airbyte_api.model.generated.WorkspaceUpdateRequest
 import io.airbyte.api.server.constants.WORKSPACES_PATH
+import io.airbyte.api.server.controllers.interfaces.WorkspacesApi
 import io.airbyte.api.server.services.WorkspaceService
 import io.micronaut.http.annotation.Controller
+import jakarta.ws.rs.PATCH
+import jakarta.ws.rs.Path
+import jakarta.ws.rs.core.Response
 import java.util.UUID
-import javax.ws.rs.PATCH
-import javax.ws.rs.Path
-import javax.ws.rs.core.Response
 
 @Controller(WORKSPACES_PATH)
 open class WorkspacesController(
   private val workspaceService: WorkspaceService,
 ) : WorkspacesApi {
   override fun createOrUpdateWorkspaceOAuthCredentials(
-    workspaceId: UUID?,
-    workspaceOAuthCredentialsRequest: WorkspaceOAuthCredentialsRequest?,
+    workspaceId: UUID,
+    workspaceOAuthCredentialsRequest: WorkspaceOAuthCredentialsRequest,
     authorization: String?,
     userInfo: String?,
   ): Response {
     return workspaceService.controllerSetWorkspaceOverrideOAuthParams(
-      workspaceId!!,
+      workspaceId,
       workspaceOAuthCredentialsRequest,
       authorization,
       userInfo,
@@ -35,31 +35,31 @@ open class WorkspacesController(
   }
 
   override fun createWorkspace(
-    workspaceCreateRequest: WorkspaceCreateRequest?,
+    workspaceCreateRequest: WorkspaceCreateRequest,
     authorization: String?,
     userInfo: String?,
   ): Response {
-    return workspaceService.controllerCreateWorkspace(workspaceCreateRequest!!, authorization, userInfo)
+    return workspaceService.controllerCreateWorkspace(workspaceCreateRequest, authorization, userInfo)
   }
 
   override fun deleteWorkspace(
-    workspaceId: UUID?,
+    workspaceId: UUID,
     authorization: String?,
     userInfo: String?,
   ): Response {
-    return workspaceService.controllerDeleteWorkspace(workspaceId!!, authorization, userInfo)
+    return workspaceService.controllerDeleteWorkspace(workspaceId, authorization, userInfo)
   }
 
   override fun getWorkspace(
-    workspaceId: UUID?,
+    workspaceId: UUID,
     authorization: String?,
     userInfo: String?,
   ): Response {
-    return workspaceService.controllerGetWorkspace(workspaceId!!, authorization, userInfo)
+    return workspaceService.controllerGetWorkspace(workspaceId, authorization, userInfo)
   }
 
   override fun listWorkspaces(
-    workspaceIds: MutableList<UUID>?,
+    workspaceIds: List<UUID>?,
     includeDeleted: Boolean?,
     limit: Int?,
     offset: Int?,
@@ -79,11 +79,11 @@ open class WorkspacesController(
   @PATCH
   @Path("/{workspaceId}")
   override fun updateWorkspace(
-    workspaceId: UUID?,
-    workspaceUpdateRequest: WorkspaceUpdateRequest?,
+    workspaceId: UUID,
+    workspaceUpdateRequest: WorkspaceUpdateRequest,
     authorization: String?,
     userInfo: String?,
   ): Response {
-    return workspaceService.controllerUpdateWorkspace(workspaceId!!, workspaceUpdateRequest!!, authorization, userInfo)
+    return workspaceService.controllerUpdateWorkspace(workspaceId, workspaceUpdateRequest, authorization, userInfo)
   }
 }

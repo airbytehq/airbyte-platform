@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.commons.server.support;
@@ -24,6 +24,9 @@ import org.mockito.Mockito;
 class AuthNettyServerCustomizerTest {
 
   private static final Integer MAX_CONTENT_LENGTH = 1024;
+  private static final Integer MAX_INITIAL_LINE_LENGTH = 4096;
+  private static final Integer MAX_HEADER_SIZE = 8192;
+  private static final Integer MAX_CHUNK_SIZE = 8192;
 
   private AuthorizationServerHandler authorizationServerHandler;
 
@@ -32,7 +35,8 @@ class AuthNettyServerCustomizerTest {
   @BeforeEach
   void setup() {
     authorizationServerHandler = Mockito.mock(AuthorizationServerHandler.class);
-    customizer = new AuthNettyServerCustomizer(authorizationServerHandler, MAX_CONTENT_LENGTH);
+    customizer = new AuthNettyServerCustomizer(
+        authorizationServerHandler, MAX_CONTENT_LENGTH, MAX_INITIAL_LINE_LENGTH, MAX_HEADER_SIZE, MAX_CHUNK_SIZE);
   }
 
   @Test

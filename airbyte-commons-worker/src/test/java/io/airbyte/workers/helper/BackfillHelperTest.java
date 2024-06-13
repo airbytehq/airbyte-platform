@@ -1,16 +1,18 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.workers.helper;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import io.airbyte.api.client.model.generated.CatalogDiff;
 import io.airbyte.api.client.model.generated.FieldTransform;
 import io.airbyte.api.client.model.generated.StreamDescriptor;
 import io.airbyte.api.client.model.generated.StreamTransform;
+import io.airbyte.api.client.model.generated.StreamTransformUpdateStream;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.config.State;
 import io.airbyte.config.helpers.StateMessageHelper;
@@ -27,9 +29,8 @@ class BackfillHelperTest {
   private static final String STREAM_NAMESPACE = "stream-namespace";
   private static final String ANOTHER_STREAM_NAME = "another-stream-name";
   private static final String ANOTHER_STREAM_NAMESPACE = "another-stream-namespace";
-  private static final StreamDescriptor STREAM_DESCRIPTOR = new StreamDescriptor().name(STREAM_NAME).namespace(STREAM_NAMESPACE);
-  private static final StreamDescriptor ANOTHER_STREAM_DESCRIPTOR = new StreamDescriptor()
-      .name(ANOTHER_STREAM_NAME).namespace(ANOTHER_STREAM_NAMESPACE);
+  private static final StreamDescriptor STREAM_DESCRIPTOR = new StreamDescriptor(STREAM_NAME, STREAM_NAMESPACE);
+  private static final StreamDescriptor ANOTHER_STREAM_DESCRIPTOR = new StreamDescriptor(ANOTHER_STREAM_NAME, ANOTHER_STREAM_NAMESPACE);
 
   private static final ConfiguredAirbyteStream INCREMENTAL_STREAM = new ConfiguredAirbyteStream()
       .withStream(new AirbyteStream()
@@ -43,13 +44,13 @@ class BackfillHelperTest {
       .withSyncMode(SyncMode.FULL_REFRESH);
   private static final ConfiguredAirbyteCatalog INCREMENTAL_CATALOG = new ConfiguredAirbyteCatalog()
       .withStreams(List.of(INCREMENTAL_STREAM));
-  private static CatalogDiff SINGLE_STREAM_ADD_COLUMN_DIFF = new CatalogDiff()
-      .addTransformsItem(addFieldForStream(STREAM_DESCRIPTOR));
-  private static CatalogDiff TWO_STREAMS_ADD_COLUMN_DIFF = new CatalogDiff()
-      .addTransformsItem(addFieldForStream(STREAM_DESCRIPTOR))
-      .addTransformsItem(addFieldForStream(ANOTHER_STREAM_DESCRIPTOR));
+  private static final CatalogDiff SINGLE_STREAM_ADD_COLUMN_DIFF = new CatalogDiff(
+      List.of(addFieldForStream(STREAM_DESCRIPTOR)));
+  private static final CatalogDiff TWO_STREAMS_ADD_COLUMN_DIFF = new CatalogDiff(List.of(
+      addFieldForStream(STREAM_DESCRIPTOR),
+      addFieldForStream(ANOTHER_STREAM_DESCRIPTOR)));
 
-  private static State STATE = new State().withState(Jsons.deserialize(
+  private static final State STATE = new State().withState(Jsons.deserialize(
       String.format("""
                     [{
                       "type":"STREAM",
@@ -64,11 +65,12 @@ class BackfillHelperTest {
                     """, STREAM_NAME, STREAM_NAMESPACE, STREAM_NAME, STREAM_NAMESPACE)));
 
   private static StreamTransform addFieldForStream(final StreamDescriptor streamDescriptor) {
-    return new StreamTransform()
-        .streamDescriptor(streamDescriptor)
-        .transformType(StreamTransform.TransformTypeEnum.UPDATE_STREAM)
-        .addUpdateStreamItem(new FieldTransform()
-            .transformType(FieldTransform.TransformTypeEnum.ADD_FIELD));
+    return new StreamTransform(
+        StreamTransform.TransformType.UPDATE_STREAM,
+        streamDescriptor,
+        new StreamTransformUpdateStream(
+            List.of(new FieldTransform(FieldTransform.TransformType.ADD_FIELD, List.of(), false, null, null, null)),
+            List.of()));
   }
 
   @Test
@@ -92,11 +94,12 @@ class BackfillHelperTest {
 
   @Test
   void testClearStateForStreamsToBackfill() {
-    List<StreamDescriptor> streamsToBackfill = List.of(STREAM_DESCRIPTOR);
-    final var actualState = BackfillHelper.clearStateForStreamsToBackfill(STATE, streamsToBackfill);
-    final var typedState = StateMessageHelper.getTypedState(actualState.getState());
+    final List<StreamDescriptor> streamsToBackfill = List.of(STREAM_DESCRIPTOR);
+    final State updatedState = BackfillHelper.clearStateForStreamsToBackfill(STATE, streamsToBackfill);
+    assertNotNull(updatedState);
+    final var typedState = StateMessageHelper.getTypedState(updatedState.getState());
     assertEquals(1, typedState.get().getStateMessages().size());
-    assertEquals(JsonNodeFactory.instance.nullNode(), typedState.get().getStateMessages().get(0).getStream().getStreamState());
+    assertEquals(JsonNodeFactory.instance.nullNode(), typedState.get().getStateMessages().getFirst().getStream().getStreamState());
   }
 
 }

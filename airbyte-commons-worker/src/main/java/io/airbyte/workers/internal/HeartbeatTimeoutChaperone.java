@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.workers.internal;
@@ -25,6 +25,7 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
+import org.apache.commons.lang3.time.DurationFormatUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -52,6 +53,7 @@ public class HeartbeatTimeoutChaperone implements AutoCloseable {
   private ExecutorService lazyExecutorService;
   private final Optional<Runnable> customMonitor;
   private final UUID connectionId;
+  private final String sourceDockerImage;
   private final MetricClient metricClient;
 
   public HeartbeatTimeoutChaperone(final HeartbeatMonitor heartbeatMonitor,
@@ -59,12 +61,14 @@ public class HeartbeatTimeoutChaperone implements AutoCloseable {
                                    final FeatureFlagClient featureFlagClient,
                                    final UUID workspaceId,
                                    final UUID connectionId,
+                                   final String sourceDockerImage,
                                    final MetricClient metricClient) {
     this.timeoutCheckDuration = timeoutCheckDuration;
     this.heartbeatMonitor = heartbeatMonitor;
     this.featureFlagClient = featureFlagClient;
     this.workspaceId = workspaceId;
     this.connectionId = connectionId;
+    this.sourceDockerImage = sourceDockerImage;
     this.metricClient = metricClient;
     this.customMonitor = Optional.empty();
   }
@@ -84,6 +88,7 @@ public class HeartbeatTimeoutChaperone implements AutoCloseable {
     this.workspaceId = workspaceId;
     this.customMonitor = customMonitor;
     this.connectionId = connectionId;
+    this.sourceDockerImage = "docker image";
     this.metricClient = metricClient;
   }
 
@@ -95,7 +100,8 @@ public class HeartbeatTimeoutChaperone implements AutoCloseable {
    * @throws ExecutionException - throw is the runnable throw an exception
    */
   public void runWithHeartbeatThread(final CompletableFuture<Void> runnableFuture) throws ExecutionException {
-    LOGGER.info("Starting source heartbeat check. Will check every {} minutes.", timeoutCheckDuration.toMinutes());
+    LOGGER.info("Starting source heartbeat check. Will check threshold of {} seconds, every {} minutes.",
+        heartbeatMonitor.getHeartbeatFreshnessThreshold().toSeconds(), timeoutCheckDuration.toMinutes());
     final CompletableFuture<Void> heartbeatFuture = CompletableFuture.runAsync(customMonitor.orElse(this::monitor), getLazyExecutorService());
 
     try {
@@ -118,12 +124,19 @@ public class HeartbeatTimeoutChaperone implements AutoCloseable {
       if (featureFlagClient.boolVariation(ShouldFailSyncIfHeartbeatFailure.INSTANCE,
           new Multi(List.of(new Workspace(workspaceId), new Connection(connectionId))))) {
         runnableFuture.cancel(true);
-        throw new HeartbeatTimeoutException(
-            String.format("Heartbeat has stopped. Heartbeat freshness threshold: %s secs Actual heartbeat age: %s secs",
-                heartbeatMonitor.getHeartbeatFreshnessThreshold().getSeconds(),
-                heartbeatMonitor.getTimeSinceLastBeat().orElse(Duration.ZERO).getSeconds()));
+        metricClient.count(OssMetricsRegistry.SOURCE_HEARTBEAT_FAILURE, 1,
+            new MetricAttribute(MetricTags.CONNECTION_ID, connectionId.toString()),
+            new MetricAttribute(MetricTags.KILLED, "true"),
+            new MetricAttribute(MetricTags.SOURCE_IMAGE, sourceDockerImage));
+        final var thresholdMs = heartbeatMonitor.getHeartbeatFreshnessThreshold().toMillis();
+        final var timeBetweenLastRecordMs = heartbeatMonitor.getTimeSinceLastBeat().orElse(Duration.ZERO).toMillis();
+        throw new HeartbeatTimeoutException(thresholdMs, timeBetweenLastRecordMs);
       } else {
-        LOGGER.info("Do not return because the feature flag is disable");
+        LOGGER.info("Do not terminate as feature flag is disable");
+        metricClient.count(OssMetricsRegistry.SOURCE_HEARTBEAT_FAILURE, 1,
+            new MetricAttribute(MetricTags.CONNECTION_ID, connectionId.toString()),
+            new MetricAttribute(MetricTags.KILLED, "false"),
+            new MetricAttribute(MetricTags.SOURCE_IMAGE, sourceDockerImage));
         return;
       }
     }
@@ -142,14 +155,8 @@ public class HeartbeatTimeoutChaperone implements AutoCloseable {
         return;
       }
 
-      heartbeatMonitor.getTimeSinceLastBeat()
-          .ifPresent(duration -> metricClient.distribution(OssMetricsRegistry.SOURCE_TIME_SINCE_LAST_HEARTBEAT_MILLIS, duration.toMillis(),
-              new MetricAttribute(MetricTags.CONNECTION_ID, connectionId.toString())));
-
       // if not beating, return. otherwise, if it is beating or heartbeat hasn't started, continue.
       if (!heartbeatMonitor.isBeating().orElse(true)) {
-        metricClient.count(OssMetricsRegistry.SOURCE_HEARTBEAT_FAILURE, 1,
-            new MetricAttribute(MetricTags.CONNECTION_ID, connectionId.toString()));
         LOGGER.error("Source has stopped heart beating.");
         return;
       }
@@ -174,8 +181,15 @@ public class HeartbeatTimeoutChaperone implements AutoCloseable {
    */
   public static class HeartbeatTimeoutException extends RuntimeException {
 
-    public HeartbeatTimeoutException(final String message) {
-      super(message);
+    public final String humanReadableThreshold;
+    public final String humanReadableTimeSinceLastRec;
+
+    public HeartbeatTimeoutException(final long thresholdMs, final long timeBetweenLastRecordMs) {
+      super(String.format("Last record seen %s ago, exceeding the threshold of %s.",
+          DurationFormatUtils.formatDurationWords(timeBetweenLastRecordMs, true, true),
+          DurationFormatUtils.formatDurationWords(thresholdMs, true, true)));
+      this.humanReadableThreshold = DurationFormatUtils.formatDurationWords(thresholdMs, true, true);
+      this.humanReadableTimeSinceLastRec = DurationFormatUtils.formatDurationWords(timeBetweenLastRecordMs, true, true);
     }
 
   }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.data.services.impls.jooq;
@@ -23,6 +23,7 @@ import io.airbyte.config.ConfigSchema;
 import io.airbyte.config.ScopeType;
 import io.airbyte.data.exceptions.ConfigNotFoundException;
 import io.airbyte.data.services.ActorDefinitionService;
+import io.airbyte.data.services.shared.ActorWorkspaceOrganizationIds;
 import io.airbyte.db.Database;
 import io.airbyte.db.ExceptionWrappingDatabase;
 import io.airbyte.db.instance.configs.jooq.generated.Tables;
@@ -113,17 +114,17 @@ public class ActorDefinitionServiceJooqImpl implements ActorDefinitionService {
   }
 
   /**
-   * Update the docker image tag for multiple actor definitions at once.
+   * Update the docker image tag for multiple source-declarative-manifest actor definition versions at
+   * once.
    *
-   * @param actorDefinitionIds the list of actor definition ids to update
-   * @param targetImageTag the new docker image tag for these actor definitions
+   * @param currentImageTag the current docker image tag for these actor definition versions
+   * @param targetImageTag the new docker image tag for these actor definition versions
    * @throws IOException - you never know when you IO
    */
   @Override
-  public int updateActorDefinitionsDockerImageTag(final List<UUID> actorDefinitionIds,
-                                                  final String targetImageTag)
+  public int updateDeclarativeActorDefinitionVersions(final String currentImageTag, final String targetImageTag)
       throws IOException {
-    return database.transaction(ctx -> writeSourceDefinitionImageTag(actorDefinitionIds, targetImageTag, ctx));
+    return database.transaction(ctx -> updateDeclarativeSourceVersionsImageTags(currentImageTag, targetImageTag, ctx));
   }
 
   /**
@@ -274,19 +275,24 @@ public class ActorDefinitionServiceJooqImpl implements ActorDefinitionService {
         .collect(Collectors.toList());
   }
 
-  /**
-   * Set the default version for an actor.
-   *
-   * @param actorId - actor id
-   * @param actorDefinitionVersionId - actor definition version id
-   */
   @Override
-  public void setActorDefaultVersion(final UUID actorId, final UUID actorDefinitionVersionId)
-      throws IOException {
-    database.query(ctx -> ctx.update(Tables.ACTOR)
-        .set(Tables.ACTOR.DEFAULT_VERSION_ID, actorDefinitionVersionId)
-        .set(Tables.ACTOR.UPDATED_AT, OffsetDateTime.now())
-        .where(Tables.ACTOR.ID.eq(actorId))
+  public List<ActorWorkspaceOrganizationIds> getActorIdsForDefinition(final UUID actorDefinitionId) throws IOException {
+    return database.query(ctx -> ctx.select(ACTOR.ID, ACTOR.WORKSPACE_ID, WORKSPACE.ORGANIZATION_ID)
+        .from(ACTOR)
+        .join(WORKSPACE).on(ACTOR.WORKSPACE_ID.eq(WORKSPACE.ID))
+        .where(ACTOR.ACTOR_DEFINITION_ID.eq(actorDefinitionId))
+        .fetch()
+        .stream()
+        .map(record -> new ActorWorkspaceOrganizationIds(record.get(ACTOR.ID), record.get(ACTOR.WORKSPACE_ID), record.get(WORKSPACE.ORGANIZATION_ID)))
+        .toList());
+  }
+
+  @Override
+  public void updateActorDefinitionDefaultVersionId(final UUID actorDefinitionId, final UUID versionId) throws IOException {
+    database.query(ctx -> ctx.update(ACTOR_DEFINITION)
+        .set(ACTOR_DEFINITION.DEFAULT_VERSION_ID, versionId)
+        .set(ACTOR_DEFINITION.UPDATED_AT, OffsetDateTime.now())
+        .where(ACTOR_DEFINITION.ID.eq(actorDefinitionId))
         .execute());
   }
 
@@ -435,15 +441,15 @@ public class ActorDefinitionServiceJooqImpl implements ActorDefinitionService {
         .stream();
   }
 
-  private int writeSourceDefinitionImageTag(final List<UUID> sourceDefinitionIds, final String targetImageTag, final DSLContext ctx) {
+  private int updateDeclarativeSourceVersionsImageTags(final String currentImageTag, final String targetImageTag, final DSLContext ctx) {
     final OffsetDateTime timestamp = OffsetDateTime.now();
 
-    // We are updating the same version since connector builder projects have a different concept of
-    // versioning
+    // We are updating the actor definition version itself instead of changing the actor definition's
+    // default version because connector builder projects have a different concept of versioning
     return ctx.update(ACTOR_DEFINITION_VERSION).set(ACTOR_DEFINITION_VERSION.DOCKER_IMAGE_TAG, targetImageTag)
         .set(ACTOR_DEFINITION_VERSION.UPDATED_AT, timestamp)
-        .where(
-            ACTOR_DEFINITION_VERSION.ACTOR_DEFINITION_ID.in(sourceDefinitionIds).andNot(ACTOR_DEFINITION_VERSION.DOCKER_IMAGE_TAG.eq(targetImageTag)))
+        .where(ACTOR_DEFINITION_VERSION.DOCKER_REPOSITORY.equal("airbyte/source-declarative-manifest")
+            .and(ACTOR_DEFINITION_VERSION.DOCKER_IMAGE_TAG.equal(currentImageTag)))
         .execute();
   }
 
@@ -477,7 +483,7 @@ public class ActorDefinitionServiceJooqImpl implements ActorDefinitionService {
   }
 
   private ActorDefinitionVersion getDefaultVersionForActorDefinitionId(final UUID actorDefinitionId, final DSLContext ctx) {
-    return getDefaultVersionForActorDefinitionIdOptional(actorDefinitionId, ctx).orElseThrow();
+    return ConnectorMetadataJooqHelper.getDefaultVersionForActorDefinitionIdOptional(actorDefinitionId, ctx).orElseThrow();
   }
 
   /**
@@ -486,15 +492,9 @@ public class ActorDefinitionServiceJooqImpl implements ActorDefinitionService {
    * the case is if we are in the process of inserting and have already written the source definition,
    * but not yet set its default version.
    */
-  private Optional<ActorDefinitionVersion> getDefaultVersionForActorDefinitionIdOptional(final UUID actorDefinitionId, final DSLContext ctx) {
-    return ctx.select(Tables.ACTOR_DEFINITION_VERSION.asterisk())
-        .from(ACTOR_DEFINITION)
-        .join(ACTOR_DEFINITION_VERSION).on(Tables.ACTOR_DEFINITION_VERSION.ID.eq(Tables.ACTOR_DEFINITION.DEFAULT_VERSION_ID))
-        .where(ACTOR_DEFINITION.ID.eq(actorDefinitionId))
-        .fetch()
-        .stream()
-        .findFirst()
-        .map(DbConverter::buildActorDefinitionVersion);
+  @Override
+  public Optional<ActorDefinitionVersion> getDefaultVersionForActorDefinitionIdOptional(final UUID actorDefinitionId) throws IOException {
+    return database.query(ctx -> ConnectorMetadataJooqHelper.getDefaultVersionForActorDefinitionIdOptional(actorDefinitionId, ctx));
   }
 
   /**
@@ -507,7 +507,7 @@ public class ActorDefinitionServiceJooqImpl implements ActorDefinitionService {
    *          field from the DB.
    */
   private ActorDefinitionVersion writeActorDefinitionVersion(final ActorDefinitionVersion actorDefinitionVersion, final DSLContext ctx) {
-    return ActorDefinitionVersionJooqHelper.writeActorDefinitionVersion(actorDefinitionVersion, ctx);
+    return ConnectorMetadataJooqHelper.writeActorDefinitionVersion(actorDefinitionVersion, ctx);
   }
 
   /**

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.commons.server.handlers;
@@ -17,13 +17,16 @@ import io.airbyte.api.model.generated.PermissionUpdate;
 import io.airbyte.api.model.generated.PermissionsCheckMultipleWorkspacesRequest;
 import io.airbyte.commons.enums.Enums;
 import io.airbyte.commons.lang.Exceptions;
+import io.airbyte.commons.server.errors.ConflictException;
 import io.airbyte.commons.server.errors.OperationNotAllowedException;
 import io.airbyte.config.ConfigSchema;
 import io.airbyte.config.Permission;
 import io.airbyte.config.helpers.PermissionHelper;
 import io.airbyte.config.persistence.ConfigNotFoundException;
 import io.airbyte.config.persistence.PermissionPersistence;
-import io.airbyte.config.persistence.SQLOperationNotAllowedException;
+import io.airbyte.data.services.PermissionRedundantException;
+import io.airbyte.data.services.PermissionService;
+import io.airbyte.data.services.RemoveLastOrgAdminPermissionException;
 import io.airbyte.data.services.WorkspaceService;
 import io.airbyte.validation.json.JsonValidationException;
 import jakarta.inject.Named;
@@ -35,7 +38,6 @@ import java.util.Optional;
 import java.util.UUID;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
-import org.jooq.exception.DataAccessException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -50,14 +52,17 @@ public class PermissionHandler {
   private final Supplier<UUID> uuidGenerator;
   private final PermissionPersistence permissionPersistence;
   private final WorkspaceService workspaceService;
+  private final PermissionService permissionService;
 
   public PermissionHandler(
                            final PermissionPersistence permissionPersistence,
                            final WorkspaceService workspaceService,
-                           @Named("uuidGenerator") final Supplier<UUID> uuidGenerator) {
+                           @Named("uuidGenerator") final Supplier<UUID> uuidGenerator,
+                           final PermissionService permissionService) {
     this.uuidGenerator = uuidGenerator;
     this.permissionPersistence = permissionPersistence;
     this.workspaceService = workspaceService;
+    this.permissionService = permissionService;
   }
 
   /**
@@ -91,15 +96,11 @@ public class PermissionHandler {
         .withWorkspaceId(permissionCreate.getWorkspaceId())
         .withOrganizationId(permissionCreate.getOrganizationId());
 
-    permissionPersistence.writePermission(permission);
-    final PermissionRead result;
     try {
-      result = buildPermissionRead(permissionId);
-    } catch (final ConfigNotFoundException ex) {
-      LOGGER.error("Config not found for permissionId: {} in CreatePermission.", permissionId);
-      throw new IOException(ex);
+      return buildPermissionRead(permissionService.createPermission(permission));
+    } catch (final PermissionRedundantException e) {
+      throw new ConflictException(e.getMessage(), e);
     }
-    return result;
   }
 
   private Permission getPermissionById(final UUID permissionId) throws ConfigNotFoundException, IOException {
@@ -185,12 +186,11 @@ public class PermissionHandler {
    * "workspace_xxx"/"instance_admin"
    *
    * @param permissionUpdate The permission update.
-   * @return The updated permission.
    * @throws IOException if unable to update the permissions.
    * @throws ConfigNotFoundException if unable to update the permissions.
    * @throws OperationNotAllowedException if update is prevented by business logic.
    */
-  public PermissionRead updatePermission(final PermissionUpdate permissionUpdate)
+  public void updatePermission(final PermissionUpdate permissionUpdate)
       throws IOException, ConfigNotFoundException, OperationNotAllowedException, JsonValidationException {
 
     // INSTANCE_ADMIN permissions are only created in special cases, so we block them here.
@@ -207,15 +207,10 @@ public class PermissionHandler {
         .withWorkspaceId(existingPermission.getWorkspaceId()) // cannot be updated
         .withUserId(existingPermission.getUserId()); // cannot be updated
     try {
-      permissionPersistence.writePermission(updatedPermission);
-    } catch (final DataAccessException e) {
-      if (e.getCause() instanceof SQLOperationNotAllowedException) {
-        throw new OperationNotAllowedException(e.getCause().getMessage(), e);
-      } else {
-        throw new IOException(e);
-      }
+      permissionService.updatePermission(updatedPermission);
+    } catch (final RemoveLastOrgAdminPermissionException e) {
+      throw new ConflictException(e.getMessage(), e);
     }
-    return buildPermissionRead(permissionUpdate.getPermissionId());
   }
 
   /**
@@ -309,6 +304,10 @@ public class PermissionHandler {
       } catch (final io.airbyte.data.exceptions.ConfigNotFoundException e) {
         throw new ConfigNotFoundException(e.getType(), e.getConfigId());
       }
+      // If the workspace is not in any organization, return true
+      if (requestedWorkspaceOrganizationId == null) {
+        return true;
+      }
       return !requestedWorkspaceOrganizationId.equals(userPermission.getOrganizationId());
     }
 
@@ -357,6 +356,14 @@ public class PermissionHandler {
     return permissionPersistence.isUserInstanceAdmin(userId);
   }
 
+  public Boolean isAuthUserInstanceAdmin(final String authUserId) throws IOException {
+    return permissionPersistence.isAuthUserInstanceAdmin(authUserId);
+  }
+
+  public Boolean isUserOrganizationAdmin(final UUID userId) throws IOException {
+    return permissionPersistence.isUserOrganizationAdmin(userId);
+  }
+
   /**
    * Lists the permissions for a workspace.
    *
@@ -391,32 +398,35 @@ public class PermissionHandler {
    * Deletes a permission.
    *
    * @param permissionIdRequestBody The permission to be deleted.
-   * @throws IOException if unable to delete the permission.
-   * @throws OperationNotAllowedException if deletion is prevented by business logic.
+   * @throws ConflictException if deletion is prevented by business logic.
    */
-  public void deletePermission(final PermissionIdRequestBody permissionIdRequestBody) throws IOException {
+  public void deletePermission(final PermissionIdRequestBody permissionIdRequestBody) {
     try {
-      permissionPersistence.deletePermissionById(permissionIdRequestBody.getPermissionId());
-    } catch (final DataAccessException e) {
-      if (e.getCause() instanceof SQLOperationNotAllowedException) {
-        throw new OperationNotAllowedException(e.getCause().getMessage(), e);
-      } else {
-        throw new IOException(e);
-      }
+      permissionService.deletePermission(permissionIdRequestBody.getPermissionId());
+    } catch (final RemoveLastOrgAdminPermissionException e) {
+      throw new ConflictException(e.getMessage(), e);
     }
   }
 
   /**
    * Delete all permission records that match a particular userId and workspaceId.
    */
-  public void deleteUserFromWorkspace(final PermissionDeleteUserFromWorkspaceRequestBody deleteUserFromWorkspaceRequestBody) throws IOException {
+  public void deleteUserFromWorkspace(final PermissionDeleteUserFromWorkspaceRequestBody deleteUserFromWorkspaceRequestBody)
+      throws IOException {
     final UUID userId = deleteUserFromWorkspaceRequestBody.getUserIdToRemove();
     final UUID workspaceId = deleteUserFromWorkspaceRequestBody.getWorkspaceId();
 
     // delete all workspace-level permissions that match the userId and workspaceId
-    permissionPersistence.listPermissionsByUser(userId).stream()
+    final List<UUID> userWorkspacePermissionIds = permissionPersistence.listPermissionsByUser(userId).stream()
         .filter(permission -> permission.getWorkspaceId() != null && permission.getWorkspaceId().equals(workspaceId))
-        .forEach(permission -> Exceptions.toRuntime(() -> permissionPersistence.deletePermissionById(permission.getPermissionId())));
+        .map(Permission::getPermissionId)
+        .toList();
+
+    try {
+      permissionService.deletePermissions(userWorkspacePermissionIds);
+    } catch (final RemoveLastOrgAdminPermissionException e) {
+      throw new ConflictException(e.getMessage(), e);
+    }
   }
 
 }

@@ -1,18 +1,22 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.commons.server.handlers;
 
 import io.airbyte.api.model.generated.AuthConfiguration;
+import io.airbyte.api.model.generated.AuthConfiguration.ModeEnum;
 import io.airbyte.api.model.generated.InstanceConfigurationResponse;
 import io.airbyte.api.model.generated.InstanceConfigurationResponse.EditionEnum;
 import io.airbyte.api.model.generated.InstanceConfigurationResponse.LicenseTypeEnum;
+import io.airbyte.api.model.generated.InstanceConfigurationResponse.TrackingStrategyEnum;
 import io.airbyte.api.model.generated.InstanceConfigurationSetupRequestBody;
 import io.airbyte.api.model.generated.WorkspaceUpdate;
-import io.airbyte.commons.auth.config.AirbyteKeycloakConfiguration;
+import io.airbyte.commons.auth.config.AuthConfigs;
+import io.airbyte.commons.auth.config.AuthMode;
 import io.airbyte.commons.enums.Enums;
 import io.airbyte.commons.license.ActiveAirbyteLicense;
+import io.airbyte.commons.version.AirbyteVersion;
 import io.airbyte.config.Configs.AirbyteEdition;
 import io.airbyte.config.Organization;
 import io.airbyte.config.StandardWorkspace;
@@ -23,6 +27,7 @@ import io.airbyte.config.persistence.UserPersistence;
 import io.airbyte.config.persistence.WorkspacePersistence;
 import io.airbyte.validation.json.JsonValidationException;
 import io.micronaut.context.annotation.Value;
+import jakarta.inject.Named;
 import jakarta.inject.Singleton;
 import java.io.IOException;
 import java.util.Optional;
@@ -37,49 +42,53 @@ import lombok.extern.slf4j.Slf4j;
 @Singleton
 public class InstanceConfigurationHandler {
 
-  private final String webappUrl;
+  private final Optional<String> airbyteUrl;
   private final AirbyteEdition airbyteEdition;
-  private final Optional<AirbyteKeycloakConfiguration> airbyteKeycloakConfiguration;
+  private final AirbyteVersion airbyteVersion;
   private final Optional<ActiveAirbyteLicense> activeAirbyteLicense;
   private final WorkspacePersistence workspacePersistence;
   private final WorkspacesHandler workspacesHandler;
   private final UserPersistence userPersistence;
   private final OrganizationPersistence organizationPersistence;
+  private final String trackingStrategy;
+  private final AuthConfigs authConfigs;
 
-  // the injected webapp-url value defaults to `null` to preserve backwards compatibility.
-  // TODO remove the default value once configurations are standardized to always include a
-  // webapp-url.
-  public InstanceConfigurationHandler(@Value("${airbyte.webapp-url:null}") final String webappUrl,
+  public InstanceConfigurationHandler(@Named("airbyteUrl") final Optional<String> airbyteUrl,
+                                      @Value("${airbyte.tracking.strategy:}") final String trackingStrategy,
                                       final AirbyteEdition airbyteEdition,
-                                      final Optional<AirbyteKeycloakConfiguration> airbyteKeycloakConfiguration,
+                                      final AirbyteVersion airbyteVersion,
                                       final Optional<ActiveAirbyteLicense> activeAirbyteLicense,
                                       final WorkspacePersistence workspacePersistence,
                                       final WorkspacesHandler workspacesHandler,
                                       final UserPersistence userPersistence,
-                                      final OrganizationPersistence organizationPersistence) {
-    this.webappUrl = webappUrl;
+                                      final OrganizationPersistence organizationPersistence,
+                                      final AuthConfigs authConfigs) {
+    this.airbyteUrl = airbyteUrl;
+    this.trackingStrategy = trackingStrategy;
     this.airbyteEdition = airbyteEdition;
-    this.airbyteKeycloakConfiguration = airbyteKeycloakConfiguration;
+    this.airbyteVersion = airbyteVersion;
     this.activeAirbyteLicense = activeAirbyteLicense;
     this.workspacePersistence = workspacePersistence;
     this.workspacesHandler = workspacesHandler;
     this.userPersistence = userPersistence;
     this.organizationPersistence = organizationPersistence;
+    this.authConfigs = authConfigs;
   }
 
   public InstanceConfigurationResponse getInstanceConfiguration() throws IOException {
     final UUID defaultOrganizationId = getDefaultOrganizationId();
-    final StandardWorkspace defaultWorkspace = getDefaultWorkspace(defaultOrganizationId);
+    final Boolean initialSetupComplete = workspacePersistence.getInitialSetupComplete();
 
     return new InstanceConfigurationResponse()
-        .webappUrl(webappUrl)
+        .airbyteUrl(airbyteUrl.orElse("airbyte-url-not-configured"))
         .edition(Enums.convertTo(airbyteEdition, EditionEnum.class))
+        .version(airbyteVersion.serialize())
         .licenseType(getLicenseType())
         .auth(getAuthConfiguration())
-        .initialSetupComplete(defaultWorkspace.getInitialSetupComplete())
+        .initialSetupComplete(initialSetupComplete)
         .defaultUserId(getDefaultUserId())
         .defaultOrganizationId(defaultOrganizationId)
-        .defaultWorkspaceId(defaultWorkspace.getWorkspaceId());
+        .trackingStrategy(trackingStrategy.equalsIgnoreCase("segment") ? TrackingStrategyEnum.SEGMENT : TrackingStrategyEnum.LOGGING);
   }
 
   public InstanceConfigurationResponse setupInstanceConfiguration(final InstanceConfigurationSetupRequestBody requestBody)
@@ -113,13 +122,19 @@ public class InstanceConfigurationHandler {
   }
 
   private AuthConfiguration getAuthConfiguration() {
-    if (airbyteEdition.equals(AirbyteEdition.PRO) && airbyteKeycloakConfiguration.isPresent()) {
-      return new AuthConfiguration()
-          .clientId(airbyteKeycloakConfiguration.get().getWebClientId())
-          .defaultRealm(airbyteKeycloakConfiguration.get().getAirbyteRealm());
-    } else {
-      return null;
+    final AuthConfiguration authConfig = new AuthConfiguration().mode(Enums.convertTo(authConfigs.getAuthMode(), ModeEnum.class));
+
+    // if Enterprise configurations are present, set OIDC-specific configs
+    if (authConfigs.getAuthMode().equals(AuthMode.OIDC)) {
+      // OIDC depends on Keycloak configuration being present
+      if (authConfigs.getKeycloakConfig() == null) {
+        throw new IllegalStateException("Keycloak configuration is required for OIDC mode.");
+      }
+      authConfig.setClientId(authConfigs.getKeycloakConfig().getWebClientId());
+      authConfig.setDefaultRealm(authConfigs.getKeycloakConfig().getAirbyteRealm());
     }
+
+    return authConfig;
   }
 
   private UUID getDefaultUserId() throws IOException {

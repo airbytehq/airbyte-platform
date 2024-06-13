@@ -2,41 +2,25 @@ import { useMemo, useState } from "react";
 import { useIntl } from "react-intl";
 import { useNavigate } from "react-router-dom";
 
-import { useConnectionSyncContext } from "components/connection/ConnectionSync/ConnectionSyncContext";
-import { Box } from "components/ui/Box";
-import { FlexContainer } from "components/ui/Flex";
+import { useConnectionStatus } from "components/connection/ConnectionStatus/useConnectionStatus";
+import { CopyButton } from "components/ui/CopyButton";
+import { FlexContainer, FlexItem } from "components/ui/Flex";
+import { Icon } from "components/ui/Icon";
+import { Link } from "components/ui/Link";
 import { Message, MessageProps, MessageType, isHigherSeverity, MESSAGE_SEVERITY_LEVELS } from "components/ui/Message";
+import { Text } from "components/ui/Text";
 
 import { useCurrentWorkspaceId } from "area/workspace/utils";
 import { useDestinationDefinitionVersion, useSourceDefinitionVersion } from "core/api";
-import {
-  ActorDefinitionVersionRead,
-  FailureOrigin,
-  FailureType,
-  JobWithAttemptsRead,
-} from "core/api/types/AirbyteClient";
+import { ActorDefinitionVersionRead, FailureOrigin } from "core/api/types/AirbyteClient";
 import { shouldDisplayBreakingChangeBanner, getHumanReadableUpgradeDeadline } from "core/domain/connector";
 import { FeatureItem, useFeature } from "core/services/features";
+import { failureUiDetailsFromReason } from "core/utils/errorStatusMessage";
 import { useSchemaChanges } from "hooks/connection/useSchemaChanges";
 import { useConnectionEditService } from "hooks/services/ConnectionEdit/ConnectionEditService";
 import { ConnectionRoutePaths, RoutePaths } from "pages/routePaths";
 
 import styles from "./ConnectionStatusMessages.module.scss";
-
-const getErrorMessageFromJob = (job: JobWithAttemptsRead | undefined) => {
-  const latestAttempt = job?.attempts?.slice(-1)[0];
-  if (latestAttempt?.failureSummary?.failures?.[0]?.failureType !== "manual_cancellation") {
-    return {
-      errorMessage: latestAttempt?.failureSummary?.failures?.[0]?.externalMessage,
-      failureOrigin: latestAttempt?.failureSummary?.failures?.[0]?.failureOrigin,
-      failureType: latestAttempt?.failureSummary?.failures?.[0]?.failureType,
-      attemptId: latestAttempt?.id,
-      jobId: job?.job?.id,
-    };
-  }
-
-  return null;
-};
 
 const reduceToHighestSeverityMessage = (messages: MessageProps[]): MessageProps[] => {
   // get the highest error type of all the messages e.g. error > warning > everything else
@@ -82,7 +66,9 @@ export const ConnectionStatusMessages: React.FC = () => {
 
   const workspaceId = useCurrentWorkspaceId();
   const { connection } = useConnectionEditService();
-  const { lastCompletedSyncJob } = useConnectionSyncContext();
+  const { failureReason, lastSyncJobId, lastSyncAttemptNumber, isRunning } = useConnectionStatus(
+    connection.connectionId
+  );
   const { hasBreakingSchemaChange } = useSchemaChanges(connection.schemaChange);
   const sourceActorDefinitionVersion = useSourceDefinitionVersion(connection.sourceId);
   const destinationActorDefinitionVersion = useDestinationDefinitionVersion(connection.destinationId);
@@ -92,31 +78,78 @@ export const ConnectionStatusMessages: React.FC = () => {
   const errorMessagesToDisplay = useMemo<MessageProps[]>(() => {
     const errorMessages: MessageProps[] = [];
 
-    const { jobId, attemptId, errorMessage, failureType, failureOrigin } =
-      getErrorMessageFromJob(lastCompletedSyncJob) ?? {};
-    // If we have an error message and no breaking schema changes, show the error message
-    if (errorMessage && !hasBreakingSchemaChange) {
-      const isConfigError = failureType === FailureType.config_error;
-      const isSourceError = failureOrigin === FailureOrigin.source;
-      const isDestinationError = failureOrigin === FailureOrigin.destination;
+    if (isRunning) {
+      return [];
+    }
 
-      if (isConfigError && (isSourceError || isDestinationError)) {
+    // If we have an error message and no breaking schema changes, show the error message
+    if (failureReason && !hasBreakingSchemaChange) {
+      const failureUiDetails = failureUiDetailsFromReason(failureReason, formatMessage);
+
+      const isError = failureUiDetails.type === "error";
+      if (isError) {
+        const isSourceError = failureUiDetails.origin === FailureOrigin.source;
+
         const targetRoute = isSourceError ? RoutePaths.Source : RoutePaths.Destination;
         const targetRouteId = isSourceError ? connection.sourceId : connection.destinationId;
         const configError = {
-          text: errorMessage,
+          text: formatMessage(
+            { id: "failureMessage.label" },
+            {
+              type: (
+                <Text size="lg" bold as="span">
+                  {failureUiDetails.typeLabel}:
+                </Text>
+              ),
+              message: failureUiDetails.message,
+            }
+          ),
           onAction: () => navigate(`/${RoutePaths.Workspaces}/${workspaceId}/${targetRoute}/${targetRouteId}`),
-          actionBtnText: formatMessage({ id: "connection.stream.status.gotoSettings" }),
-          type: "warning",
+          actionBtnText: formatMessage({
+            id: isSourceError
+              ? "connection.stream.status.checkSourceSettings"
+              : "connection.stream.status.checkDestinationSettings",
+          }),
+          type: "error",
+          "data-testid": `connection-status-message-error-${isSourceError ? "source" : "destination"}`,
         } as const;
 
         errorMessages.push(configError);
       } else {
+        const hasInternalErrorMessage = !!failureUiDetails.secondaryMessage;
         const goToLogError = {
-          text: errorMessage,
-          onAction: () => navigate(`../${ConnectionRoutePaths.JobHistory}#${jobId}::${attemptId}`),
-          actionBtnText: formatMessage({ id: "connection.stream.status.seeLogs" }),
+          text: formatMessage(
+            { id: "failureMessage.label" },
+            {
+              type: (
+                <Text size="lg" bold as="span">
+                  {failureUiDetails.typeLabel}:
+                </Text>
+              ),
+              message: failureUiDetails.message,
+            }
+          ),
           type: "warning",
+          children: hasInternalErrorMessage && (
+            <FlexContainer>
+              <FlexItem grow alignSelf="center">
+                <Text>{failureUiDetails.secondaryMessage}</Text>
+              </FlexItem>
+              <FlexContainer direction="row" gap="sm">
+                <CopyButton content={failureUiDetails.secondaryMessage!} />
+                <Link
+                  to={`../${ConnectionRoutePaths.JobHistory}#${lastSyncJobId}::${lastSyncAttemptNumber}`}
+                  title={formatMessage({ id: "connection.stream.status.seeLogs" })}
+                  className={styles.buttonLikeLink}
+                >
+                  <Icon type="share" />
+                </Link>
+              </FlexContainer>
+            </FlexContainer>
+          ),
+          childrenClassName: styles.internalErrorMessage,
+          isExpandable: hasInternalErrorMessage,
+          "data-testid": `connection-status-message-warning`,
         } as const;
         errorMessages.push(goToLogError);
       }
@@ -131,6 +164,7 @@ export const ConnectionStatusMessages: React.FC = () => {
         onAction: () => navigate(`../${ConnectionRoutePaths.Replication}`, { state: { triggerRefreshSchema: true } }),
         actionBtnText: formatMessage({ id: "connection.schemaChange.reviewAction" }),
         type: "error",
+        "data-testid": `connection-status-message-breaking-schema-change`,
       });
     }
 
@@ -223,37 +257,38 @@ export const ConnectionStatusMessages: React.FC = () => {
       return MESSAGE_SEVERITY_LEVELS[msg2?.type] - MESSAGE_SEVERITY_LEVELS[msg1?.type];
     });
   }, [
-    formatMessage,
+    isRunning,
+    failureReason,
     hasBreakingSchemaChange,
-    lastCompletedSyncJob,
-    navigate,
-    connection.sourceId,
-    connection.destinationId,
-    workspaceId,
     sourceActorDefinitionVersion,
     destinationActorDefinitionVersion,
-    connection.name,
+    formatMessage,
+    connection.sourceId,
+    connection.destinationId,
     connection.source.name,
-    connection.destination.name,
     connection.source.sourceName,
+    connection.name,
+    connection.destination.name,
     connection.destination.destinationName,
+    navigate,
+    workspaceId,
+    lastSyncJobId,
+    lastSyncAttemptNumber,
     connectorBreakingChangeDeadlinesEnabled,
   ]);
 
   if (errorMessagesToDisplay.length > 0) {
     return (
-      <Box p="lg">
-        <FlexContainer
-          direction="column"
-          data-error-count={typeCount.error}
-          data-warning-count={typeCount.warning}
-          data-notification-count={typeCount.info}
-        >
-          {errorMessagesToDisplay.map((message, index) => (
-            <Message key={index} className={styles.error} {...message} />
-          ))}
-        </FlexContainer>
-      </Box>
+      <FlexContainer
+        direction="column"
+        data-error-count={typeCount.error}
+        data-warning-count={typeCount.warning}
+        data-notification-count={typeCount.info}
+      >
+        {errorMessagesToDisplay.map((message, index) => (
+          <Message key={index} className={styles.error} {...message} />
+        ))}
+      </FlexContainer>
     );
   }
 

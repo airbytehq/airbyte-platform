@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.config.secrets
@@ -171,10 +171,12 @@ internal class SecretsHelpersTest {
   }
 
   @Test
-  fun testUpdatingSecretsOneAtATime() {
+  fun testUpdatingSecretsOneAtATimeShouldAlwaysIncrementAllVersions() {
     val uuidIterator = SecretsTestCase.UUIDS.iterator()
     val secretPersistence = MemorySecretPersistence()
     val testCase = NestedObjectTestCase()
+
+    // First write
     val splitConfig: SplitSecretConfig =
       SecretsHelpers.splitConfig(
         { uuidIterator.next() },
@@ -188,39 +190,35 @@ internal class SecretsHelpersTest {
     for ((key, value) in splitConfig.getCoordinateToPayload().entries) {
       secretPersistence.write(key, value)
     }
+
+    // Update 2
     val updatedSplit1: SplitSecretConfig =
       SecretsHelpers.splitAndUpdateConfig(
         { uuidIterator.next() },
         SecretsTestCase.WORKSPACE_ID,
         testCase.partialConfig,
-        testCase.fullConfigUpdate1,
+        testCase.fullConfigUpdateTopLevel,
         testCase.spec.connectionSpecification,
-        { coordinate: SecretCoordinate ->
-          secretPersistence.read(
-            coordinate,
-          )
-        },
+        { coordinate: SecretCoordinate -> secretPersistence.read(coordinate) },
       )
-    Assertions.assertEquals(testCase.updatedPartialConfigAfterUpdate1, updatedSplit1.partialConfig)
-    Assertions.assertEquals(testCase.secretMapAfterUpdate1, updatedSplit1.getCoordinateToPayload())
+    Assertions.assertEquals(testCase.updatedPartialConfigAfterUpdateTopLevel, updatedSplit1.partialConfig)
+    Assertions.assertEquals(testCase.secretMapAfterUpdateTopLevel, updatedSplit1.getCoordinateToPayload())
     for ((key, value) in updatedSplit1.getCoordinateToPayload().entries) {
       secretPersistence.write(key, value)
     }
+
+    // Update 3
     val updatedSplit2: SplitSecretConfig =
       SecretsHelpers.splitAndUpdateConfig(
         { uuidIterator.next() },
         SecretsTestCase.WORKSPACE_ID,
         updatedSplit1.partialConfig,
-        testCase.fullConfigUpdate2,
+        testCase.fullConfigUpdateNested,
         testCase.spec.connectionSpecification,
-        { coordinate: SecretCoordinate ->
-          secretPersistence.read(
-            coordinate,
-          )
-        },
+        { coordinate: SecretCoordinate -> secretPersistence.read(coordinate) },
       )
-    Assertions.assertEquals(testCase.updatedPartialConfigAfterUpdate2, updatedSplit2.partialConfig)
-    Assertions.assertEquals(testCase.secretMapAfterUpdate2, updatedSplit2.getCoordinateToPayload())
+    Assertions.assertEquals(testCase.updatedPartialConfigAfterUpdateNested, updatedSplit2.partialConfig)
+    Assertions.assertEquals(testCase.secretMapAfterUpdateNested, updatedSplit2.getCoordinateToPayload())
   }
 
   @Test
@@ -231,7 +229,6 @@ internal class SecretsHelpersTest {
     val secretCoordinate =
       SecretsHelpers.getSecretCoordinate(
         "secretBasePrefix",
-        "newSecret",
         secretPersistence,
         UUID.randomUUID(),
         { UUID.randomUUID() },
@@ -249,7 +246,6 @@ internal class SecretsHelpersTest {
     val secretCoordinate =
       SecretsHelpers.getSecretCoordinate(
         "secretBasePrefix",
-        "newSecret",
         secretPersistence,
         UUID.randomUUID(),
         { UUID.randomUUID() },

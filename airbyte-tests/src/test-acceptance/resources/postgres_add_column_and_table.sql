@@ -1,5 +1,5 @@
 ALTER TABLE
-    id_and_name ADD COLUMN a_new_column VARCHAR;
+    id_and_name ADD COLUMN a_new_column INTEGER;
 
 CREATE
     TABLE
@@ -17,7 +17,7 @@ INSERT
     VALUES(
         6,
         'a-new-name',
-        'contents-of-the-new-column'
+        100
     );
 
 INSERT

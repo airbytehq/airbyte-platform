@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.workload.auth
@@ -66,6 +66,30 @@ class WorkloadTokenValidatorTest {
     StepVerifier.create(responsePublisher)
       .expectErrorMatches { t: Throwable -> matchUnsuccessfulResponse(t) }
       .verify()
+  }
+
+  @Test
+  internal fun `test that a token with an underscore is successfully authenticated`() {
+    // This payload is specifically constructed so that it encodes to a value that contains an underscore.
+    // We used to have a bug in production where such tokens could not be decoded, so this test makes sure
+    // that the bug remains fixed.
+    val encodesToPayloadWithUnderscore = "{\"foo\":\"anoë\"}"
+
+    val encodedToken = Base64.getUrlEncoder().encodeToString(encodesToPayloadWithUnderscore.toByteArray())
+    assert(encodedToken.contains("_"))
+
+    val httpRequest: HttpRequest<*> = mockk()
+    val validator = WorkloadTokenValidator(encodesToPayloadWithUnderscore)
+
+    val responsePublisher: Publisher<Authentication> =
+      validator.validateToken(
+        encodedToken,
+        httpRequest,
+      )
+
+    StepVerifier.create(responsePublisher)
+      .expectNextMatches { a: Authentication -> matchSuccessfulResponse(a) }
+      .verifyComplete()
   }
 
   private fun matchSuccessfulResponse(authentication: Authentication): Boolean {

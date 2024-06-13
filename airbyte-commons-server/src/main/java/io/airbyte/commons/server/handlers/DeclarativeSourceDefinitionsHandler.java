@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.commons.server.handlers;
@@ -14,9 +14,12 @@ import io.airbyte.commons.server.errors.DeclarativeSourceNotFoundException;
 import io.airbyte.commons.server.errors.SourceIsNotDeclarativeException;
 import io.airbyte.commons.server.errors.ValueConflictKnownException;
 import io.airbyte.commons.server.handlers.helpers.DeclarativeSourceManifestInjector;
+import io.airbyte.commons.version.Version;
 import io.airbyte.config.DeclarativeManifest;
-import io.airbyte.config.persistence.ConfigNotFoundException;
-import io.airbyte.config.persistence.ConfigRepository;
+import io.airbyte.data.exceptions.ConfigNotFoundException;
+import io.airbyte.data.services.ConnectorBuilderService;
+import io.airbyte.data.services.DeclarativeManifestImageVersionService;
+import io.airbyte.data.services.WorkspaceService;
 import jakarta.inject.Inject;
 import jakarta.inject.Singleton;
 import java.io.IOException;
@@ -33,13 +36,19 @@ import java.util.stream.Stream;
 @Singleton
 public class DeclarativeSourceDefinitionsHandler {
 
-  private final ConfigRepository configRepository;
+  private final DeclarativeManifestImageVersionService declarativeManifestImageVersionService;
+  private final ConnectorBuilderService connectorBuilderService;
+  private final WorkspaceService workspaceService;
   private final DeclarativeSourceManifestInjector manifestInjector;
 
   @Inject
-  public DeclarativeSourceDefinitionsHandler(final ConfigRepository configRepository,
+  public DeclarativeSourceDefinitionsHandler(final DeclarativeManifestImageVersionService declarativeManifestImageVersionService,
+                                             final ConnectorBuilderService connectorBuilderService,
+                                             final WorkspaceService workspaceService,
                                              final DeclarativeSourceManifestInjector manifestInjector) {
-    this.configRepository = configRepository;
+    this.declarativeManifestImageVersionService = declarativeManifestImageVersionService;
+    this.connectorBuilderService = connectorBuilderService;
+    this.workspaceService = workspaceService;
     this.manifestInjector = manifestInjector;
   }
 
@@ -64,13 +73,13 @@ public class DeclarativeSourceDefinitionsHandler {
         .withManifest(requestBody.getDeclarativeManifest().getManifest())
         .withSpec(spec);
     if (requestBody.getSetAsActiveManifest()) {
-      configRepository.createDeclarativeManifestAsActiveVersion(declarativeManifest,
-          manifestInjector.createConfigInjection(requestBody.getSourceDefinitionId(), requestBody.getDeclarativeManifest().getManifest()),
-          manifestInjector.createDeclarativeManifestConnectorSpecification(spec));
+      connectorBuilderService.createDeclarativeManifestAsActiveVersion(declarativeManifest,
+          manifestInjector.createConfigInjection(requestBody.getSourceDefinitionId(), declarativeManifest.getManifest()),
+          manifestInjector.createDeclarativeManifestConnectorSpecification(spec), getImageVersionForManifest(declarativeManifest));
     } else {
-      configRepository.insertDeclarativeManifest(declarativeManifest);
+      connectorBuilderService.insertDeclarativeManifest(declarativeManifest);
     }
-    configRepository.deleteManifestDraftForActorDefinition(requestBody.getSourceDefinitionId(), requestBody.getWorkspaceId());
+    connectorBuilderService.deleteManifestDraftForActorDefinition(requestBody.getSourceDefinitionId(), requestBody.getWorkspaceId());
   }
 
   public void updateDeclarativeManifestVersion(final UpdateActiveManifestRequestBody requestBody) throws IOException, ConfigNotFoundException {
@@ -81,22 +90,23 @@ public class DeclarativeSourceDefinitionsHandler {
           String.format("Source %s is does not have a declarative manifest associated to it", requestBody.getSourceDefinitionId()));
     }
 
-    final DeclarativeManifest declarativeManifest = configRepository.getDeclarativeManifestByActorDefinitionIdAndVersion(
+    final DeclarativeManifest declarativeManifest = connectorBuilderService.getDeclarativeManifestByActorDefinitionIdAndVersion(
         requestBody.getSourceDefinitionId(), requestBody.getVersion());
-    configRepository.setDeclarativeSourceActiveVersion(requestBody.getSourceDefinitionId(),
+    connectorBuilderService.setDeclarativeSourceActiveVersion(requestBody.getSourceDefinitionId(),
         declarativeManifest.getVersion(),
         manifestInjector.createConfigInjection(declarativeManifest.getActorDefinitionId(), declarativeManifest.getManifest()),
-        manifestInjector.createDeclarativeManifestConnectorSpecification(declarativeManifest.getSpec()));
+        manifestInjector.createDeclarativeManifestConnectorSpecification(declarativeManifest.getSpec()),
+        getImageVersionForManifest(declarativeManifest));
   }
 
   private Collection<Long> fetchAvailableManifestVersions(final UUID sourceDefinitionId) throws IOException {
-    return configRepository.getDeclarativeManifestsByActorDefinitionId(sourceDefinitionId)
+    return connectorBuilderService.getDeclarativeManifestsByActorDefinitionId(sourceDefinitionId)
         .map(DeclarativeManifest::getVersion)
         .collect(Collectors.toSet());
   }
 
   private void validateAccessToSource(final UUID actorDefinitionId, final UUID workspaceId) throws IOException {
-    if (!configRepository.workspaceCanUseCustomDefinition(actorDefinitionId, workspaceId)) {
+    if (!workspaceService.workspaceCanUseCustomDefinition(actorDefinitionId, workspaceId)) {
       throw new DeclarativeSourceNotFoundException(
           String.format("Can't find source definition id `%s` in workspace %s", actorDefinitionId, workspaceId));
     }
@@ -106,15 +116,21 @@ public class DeclarativeSourceDefinitionsHandler {
                                                            final ListDeclarativeManifestsRequestBody requestBody)
       throws IOException, ConfigNotFoundException {
     validateAccessToSource(requestBody.getSourceDefinitionId(), requestBody.getWorkspaceId());
-    final Stream<DeclarativeManifest> existingVersions = configRepository.getDeclarativeManifestsByActorDefinitionId(
+    final Stream<DeclarativeManifest> existingVersions = connectorBuilderService.getDeclarativeManifestsByActorDefinitionId(
         requestBody.getSourceDefinitionId());
     final DeclarativeManifest activeVersion =
-        configRepository.getCurrentlyActiveDeclarativeManifestsByActorDefinitionId(requestBody.getSourceDefinitionId());
+        connectorBuilderService.getCurrentlyActiveDeclarativeManifestsByActorDefinitionId(requestBody.getSourceDefinitionId());
 
     return new DeclarativeManifestsReadList().manifestVersions(existingVersions
         .map(manifest -> new DeclarativeManifestVersionRead().description(
             manifest.getDescription()).version(manifest.getVersion()).isActive(manifest.getVersion().equals(activeVersion.getVersion())))
         .sorted(Comparator.comparingLong(DeclarativeManifestVersionRead::getVersion)).collect(Collectors.toList()));
+  }
+
+  private String getImageVersionForManifest(final DeclarativeManifest declarativeManifest) {
+    final Version manifestVersion = manifestInjector.getCdkVersion(declarativeManifest.getManifest());
+    return declarativeManifestImageVersionService
+        .getImageVersionByMajorVersion(Integer.parseInt(manifestVersion.getMajorVersion()));
   }
 
 }

@@ -2,24 +2,23 @@ import { createColumnHelper } from "@tanstack/react-table";
 import React, { useCallback, useMemo, useState } from "react";
 import { FormattedMessage } from "react-intl";
 
-import { HeadTitle } from "components/common/HeadTitle";
 import { ConnectorBuilderProjectTable } from "components/ConnectorBuilderProjectTable";
 import { FlexContainer, FlexItem } from "components/ui/Flex";
 import { Heading } from "components/ui/Heading";
 import { Table } from "components/ui/Table";
 import { InfoTooltip } from "components/ui/Tooltip";
 
-import { BuilderProject } from "core/api";
+import { BuilderProject, useCurrentWorkspace } from "core/api";
 import { DestinationDefinitionRead, SourceDefinitionRead } from "core/api/types/AirbyteClient";
 import { Connector, ConnectorDefinition } from "core/domain/connector";
 import { FeatureItem, useFeature } from "core/services/features";
 import { useIntent } from "core/utils/rbac";
 import { RoutePaths } from "pages/routePaths";
 
+import { AddNewConnectorButton } from "./AddNewConnectorButton";
 import { ConnectorCell } from "./ConnectorCell";
 import styles from "./ConnectorsView.module.scss";
 import { ConnectorsViewContext } from "./ConnectorsViewContext";
-import CreateConnector from "./CreateConnector";
 import ImageCell from "./ImageCell";
 import { UpdateDestinationConnectorVersionCell } from "./UpdateDestinationConnectorVersionCell";
 import { UpdateSourceConnectorVersionCell } from "./UpdateSourceConnectorVersionCell";
@@ -66,9 +65,15 @@ const ConnectorsView: React.FC<ConnectorsViewProps> = ({
   connectorBuilderProjects,
 }) => {
   const [updatingAllConnectors, setUpdatingAllConnectors] = useState(false);
-  const hasUpdateConnectorsPermissions = useIntent("UpdateConnectorVersions");
+  const workspace = useCurrentWorkspace();
+  const hasUpdateConnectorsPermissions = useIntent("UpdateConnectorVersions", {
+    organizationId: workspace.organizationId,
+  });
+  const hasUploadCustomConnectorPermissions = useIntent("UploadCustomConnector", {
+    organizationId: workspace.organizationId,
+  });
   const allowUpdateConnectors = useFeature(FeatureItem.AllowUpdateConnectors) && hasUpdateConnectorsPermissions;
-  const allowUploadCustomImage = useFeature(FeatureItem.AllowUploadCustomImage);
+  const allowUploadCustomImage = useFeature(FeatureItem.AllowUploadCustomImage) && hasUploadCustomConnectorPermissions;
 
   const showVersionUpdateColumn = useCallback(
     (definitions: ConnectorDefinition[]) => {
@@ -207,22 +212,31 @@ const ConnectorsView: React.FC<ConnectorsViewProps> = ({
     sections.push({
       title: type === "sources" ? "admin.manageSource" : "admin.manageDestination",
       content: (
-        <MemoizedTable columns={usedDefinitionColumns} data={filteredUsedConnectorsDefinitions} sorting={false} />
+        <MemoizedTable
+          stickyHeaders={false}
+          columns={usedDefinitionColumns}
+          data={filteredUsedConnectorsDefinitions}
+          sorting={false}
+        />
       ),
     });
   }
 
   sections.push({
     title: type === "sources" ? "admin.availableSource" : "admin.availableDestinations",
-    content: <MemoizedTable columns={definitionColumns} data={filteredConnectorsDefinitions} sorting={false} />,
+    content: (
+      <MemoizedTable
+        stickyHeaders={false}
+        columns={definitionColumns}
+        data={filteredConnectorsDefinitions}
+        sorting={false}
+      />
+    ),
   });
 
   return (
     <ConnectorsViewContext.Provider value={ctx}>
       <div className={styles.connectorsTable}>
-        <HeadTitle
-          titles={[{ id: "sidebar.settings" }, { id: type === "sources" ? "admin.sources" : "admin.destinations" }]}
-        />
         <FlexContainer direction="column" gap="2xl">
           {sections.map((section, index) => (
             <FlexContainer key={index} direction="column">
@@ -234,7 +248,7 @@ const ConnectorsView: React.FC<ConnectorsViewProps> = ({
                 </FlexItem>
                 {index === 0 && (
                   <FlexContainer>
-                    <CreateConnector type={type} />
+                    <AddNewConnectorButton type={type} />
                     {allowUpdateConnectors && <UpgradeAllButton connectorType={type} />}
                   </FlexContainer>
                 )}

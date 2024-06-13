@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.config.helpers;
@@ -25,7 +25,6 @@ public class PermissionHelper {
           PermissionType.ORGANIZATION_EDITOR,
           PermissionType.ORGANIZATION_READER,
           PermissionType.ORGANIZATION_MEMBER,
-          PermissionType.WORKSPACE_OWNER,
           PermissionType.WORKSPACE_ADMIN,
           PermissionType.WORKSPACE_EDITOR,
           PermissionType.WORKSPACE_READER),
@@ -57,14 +56,12 @@ public class PermissionHelper {
       // Workspace owner (deprecated) is equivalent to workspace admin, and grants access to all
       // workspace-admin-and-lower permissions.
       PermissionType.WORKSPACE_OWNER, Set.of(
-          PermissionType.WORKSPACE_OWNER,
           PermissionType.WORKSPACE_ADMIN,
           PermissionType.WORKSPACE_EDITOR,
           PermissionType.WORKSPACE_READER),
 
       // Workspace admin grants access to all workspace-admin-and-lower permissions.
       PermissionType.WORKSPACE_ADMIN, Set.of(
-          PermissionType.WORKSPACE_OWNER,
           PermissionType.WORKSPACE_ADMIN,
           PermissionType.WORKSPACE_EDITOR,
           PermissionType.WORKSPACE_READER),
@@ -82,12 +79,16 @@ public class PermissionHelper {
     return GRANTED_PERMISSION_TYPES_BY_DEFINED_PERMISSION_TYPE.get(definedPermission).contains(targetPermission);
   }
 
+  public static Set<PermissionType> getGrantedPermissions(final PermissionType definedPermission) {
+    return GRANTED_PERMISSION_TYPES_BY_DEFINED_PERMISSION_TYPE.get(definedPermission);
+  }
+
   /**
    * Returns the full set of all permission types that grant the target permission type.
    */
   public static Set<PermissionType> getPermissionTypesThatGrantTargetPermission(final PermissionType targetPermission) {
     final Set<PermissionType> grantingPermissionTypes = new HashSet<>();
-    for (Map.Entry<PermissionType, Set<PermissionType>> entry : GRANTED_PERMISSION_TYPES_BY_DEFINED_PERMISSION_TYPE.entrySet()) {
+    for (final Map.Entry<PermissionType, Set<PermissionType>> entry : GRANTED_PERMISSION_TYPES_BY_DEFINED_PERMISSION_TYPE.entrySet()) {
       if (entry.getValue().contains(targetPermission)) {
         grantingPermissionTypes.add(entry.getKey());
       }

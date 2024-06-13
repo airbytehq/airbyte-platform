@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.workers.workload
@@ -13,28 +13,30 @@ import java.util.UUID
  *     <code>&lt;the connection ID&gtl;_&lt;the job ID&gt;_&lt;the job attempt number&gt;_&lt;the workload job type&gt;</code>
  * </p>
  * where the workload type is a value defined in {@link WorkloadType}.
+ *
+ * IMPORTANT: Kube only accepts labels of up to 63 characters, so we try to keep these short for use with kube.
+ * NOTE: UUIDs are 36 characters.
  */
 @Singleton
 class WorkloadIdGenerator {
   fun generateCheckWorkloadId(
-    actorId: UUID,
-    differentiator: UUID,
+    actorDefinitionId: UUID,
+    jobId: String,
+    attemptNumber: Int,
   ): String {
-    return "${actorId}_${differentiator}_check"
+    return "${actorDefinitionId}_${jobId}_${attemptNumber}_check"
   }
 
   fun generateDiscoverWorkloadId(
-    actorId: UUID,
-    differentiator: UUID,
+    actorDefinitionId: UUID,
+    jobId: String,
+    attemptNumber: Int,
   ): String {
-    return "${actorId}_${differentiator}_discover"
+    return "${actorDefinitionId}_${jobId}_${attemptNumber}_discover"
   }
 
-  fun generateSpeckWorkloadId(
-    workspaceId: UUID,
-    differentiator: UUID,
-  ): String {
-    return "${workspaceId}_${differentiator}_spec"
+  fun generateSpecWorkloadId(differentiator: String): String {
+    return "${differentiator}_spec"
   }
 
   fun generateSyncWorkloadId(

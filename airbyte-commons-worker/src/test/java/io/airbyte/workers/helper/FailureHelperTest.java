@@ -1,10 +1,11 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.workers.helper;
 
 import static org.junit.Assert.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -16,6 +17,7 @@ import io.airbyte.config.FailureReason.FailureType;
 import io.airbyte.config.Metadata;
 import io.airbyte.protocol.models.AirbyteErrorTraceMessage;
 import io.airbyte.protocol.models.AirbyteTraceMessage;
+import io.airbyte.protocol.models.StreamDescriptor;
 import io.airbyte.workers.exception.WorkerException;
 import io.airbyte.workers.helper.FailureHelper.ConnectorCommand;
 import io.airbyte.workers.test_utils.AirbyteMessageUtils;
@@ -24,6 +26,7 @@ import io.temporal.failure.ActivityFailure;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
 class FailureHelperTest {
@@ -65,7 +68,7 @@ class FailureHelperTest {
       AirbyteErrorTraceMessage.FailureType.SYSTEM_ERROR);
 
   @Test
-  void testGenericFailureFromTrace() throws Exception {
+  void testGenericFailureFromTrace() {
     final AirbyteTraceMessage traceMessage = AirbyteMessageUtils.createErrorTraceMessage("trace message error", Double.valueOf(123),
         AirbyteErrorTraceMessage.FailureType.CONFIG_ERROR);
     final FailureReason failureReason = FailureHelper.genericFailure(traceMessage, Long.valueOf(12345), 1);
@@ -73,9 +76,63 @@ class FailureHelperTest {
   }
 
   @Test
-  void testGenericFailureFromTraceNoFailureType() throws Exception {
+  void testFailureWithTransientFailureType() {
+    final AirbyteTraceMessage traceMessage =
+        AirbyteMessageUtils.createErrorTraceMessage("sample trace message", 10.0, AirbyteErrorTraceMessage.FailureType.TRANSIENT_ERROR);
+    final FailureReason reason = FailureHelper.genericFailure(traceMessage, 1034L, 0);
+    assertEquals(FailureType.TRANSIENT_ERROR, reason.getFailureType());
+  }
+
+  @Test
+  void testGenericFailureFromTraceNoFailureType() {
     final FailureReason failureReason = FailureHelper.genericFailure(TRACE_MESSAGE, Long.valueOf(12345), 1);
     assertEquals(failureReason.getFailureType(), FailureType.SYSTEM_ERROR);
+  }
+
+  @Test
+  void genericFailureFromTraceTruncatesStrings() {
+    final var oneMbString = String.format("%1048576s", "");
+
+    final var traceMsg = new AirbyteTraceMessage()
+        .withType(io.airbyte.protocol.models.AirbyteTraceMessage.Type.ERROR)
+        .withError(new AirbyteErrorTraceMessage()
+            .withFailureType(AirbyteErrorTraceMessage.FailureType.CONFIG_ERROR)
+            .withMessage(oneMbString)
+            .withInternalMessage(oneMbString)
+            .withStackTrace(oneMbString))
+        .withEmittedAt(123D);
+
+    final var result = FailureHelper.genericFailure(traceMsg, Long.valueOf(667), 0);
+
+    assertTrue(oneMbString.length() > FailureHelper.MAX_MSG_LENGTH);
+    assertEquals(FailureHelper.MAX_MSG_LENGTH, result.getExternalMessage().length());
+    assertEquals(FailureHelper.MAX_MSG_LENGTH, result.getInternalMessage().length());
+    assertEquals(FailureHelper.MAX_STACK_TRACE_LENGTH, result.getStacktrace().length());
+  }
+
+  @Test
+  void testExtractStreamDescriptor() {
+    String name = "users";
+    String namespace = "public";
+    final AirbyteTraceMessage traceMessage =
+        AirbyteMessageUtils.createErrorTraceMessage("a error with a stream", 80.0, AirbyteErrorTraceMessage.FailureType.SYSTEM_ERROR);
+    traceMessage.getError().setStreamDescriptor(new StreamDescriptor().withName(name).withNamespace(namespace));
+    final FailureReason failureReason = FailureHelper.genericFailure(traceMessage, 1934L, 0);
+    Assertions.assertNotNull(failureReason.getStreamDescriptor());
+    assertEquals(failureReason.getStreamDescriptor().getName(), name);
+    assertEquals(failureReason.getStreamDescriptor().getNamespace(), namespace);
+  }
+
+  @Test
+  void testExtractStreamDescriptorNoNamespace() {
+    String name = "users";
+    final AirbyteTraceMessage traceMessage =
+        AirbyteMessageUtils.createErrorTraceMessage("a error with a stream", 80.0, AirbyteErrorTraceMessage.FailureType.SYSTEM_ERROR);
+    traceMessage.getError().setStreamDescriptor(new StreamDescriptor().withName(name));
+    final FailureReason failureReason = FailureHelper.genericFailure(traceMessage, 1934L, 0);
+    Assertions.assertNotNull(failureReason.getStreamDescriptor());
+    assertEquals(failureReason.getStreamDescriptor().getName(), name);
+    assertNull(failureReason.getStreamDescriptor().getNamespace());
   }
 
   @Test
@@ -195,7 +252,7 @@ class FailureHelperTest {
   }
 
   @Test
-  void testOrderedFailures() throws Exception {
+  void testOrderedFailures() {
     final List<FailureReason> failureReasonList =
         FailureHelper.orderedFailures(Set.of(TRACE_FAILURE_REASON_2, TRACE_FAILURE_REASON, EXCEPTION_FAILURE_REASON));
     assertEquals(failureReasonList.get(0), TRACE_FAILURE_REASON);
@@ -214,12 +271,46 @@ class FailureHelperTest {
   @Test
   void testExceptionChainContains() {
     final Throwable t =
-        new ActivityFailure(1L, 2L, "act", "actId", RetryState.RETRY_STATE_NON_RETRYABLE_FAILURE, "id",
+        new ActivityFailure("", 1L, 2L, "act", "actId", RetryState.RETRY_STATE_NON_RETRYABLE_FAILURE, "id",
             new RuntimeException("oops",
                 new SizeLimitException("oops too big")));
     assertTrue(FailureHelper.exceptionChainContains(t, ActivityFailure.class));
     assertTrue(FailureHelper.exceptionChainContains(t, SizeLimitException.class));
     assertFalse(FailureHelper.exceptionChainContains(t, WorkerException.class));
+  }
+
+  @Test
+  void truncateWithPlatformMessageTruncatesStrings() {
+    final var maxWidth = 1000;
+
+    final var longStr1 = String.format("%14218s", "");
+    final var longStr2 = String.format("%9288s", "");
+    final var longStr3 = String.format("%1100s", "");
+
+    assertTrue(longStr1.length() > maxWidth);
+    assertTrue(longStr2.length() > maxWidth);
+    assertTrue(longStr3.length() > maxWidth);
+
+    assertEquals(maxWidth, FailureHelper.truncateWithPlatformMessage(longStr1, maxWidth).length());
+    assertEquals(maxWidth, FailureHelper.truncateWithPlatformMessage(longStr2, maxWidth).length());
+    assertEquals(maxWidth, FailureHelper.truncateWithPlatformMessage(longStr3, maxWidth).length());
+  }
+
+  @Test
+  void truncateWithPlatformMessageHandlesSmallStrings() {
+    final var shortStr1 = "";
+    final var shortStr2 = "a";
+    final var shortStr3 = "abcde";
+    final var shortStr4 = String.format("%10s", "");
+
+    assertDoesNotThrow(() -> FailureHelper.truncateWithPlatformMessage(shortStr1, 10));
+    assertDoesNotThrow(() -> FailureHelper.truncateWithPlatformMessage(shortStr1, 0));
+    assertDoesNotThrow(() -> FailureHelper.truncateWithPlatformMessage(shortStr1, -1));
+    assertDoesNotThrow(() -> FailureHelper.truncateWithPlatformMessage(shortStr1, -24));
+    assertDoesNotThrow(() -> FailureHelper.truncateWithPlatformMessage(shortStr2, 10));
+    assertDoesNotThrow(() -> FailureHelper.truncateWithPlatformMessage(shortStr3, 3));
+    assertDoesNotThrow(() -> FailureHelper.truncateWithPlatformMessage(shortStr3, 5));
+    assertDoesNotThrow(() -> FailureHelper.truncateWithPlatformMessage(shortStr4, 10));
   }
 
 }

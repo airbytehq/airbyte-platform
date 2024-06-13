@@ -17,7 +17,6 @@ import {
 import { mockTheme } from "test-utils/mock-data/mockTheme";
 import { mocked, TestWrapper, useMockIntersectionObserver } from "test-utils/testutils";
 
-import type { SchemaError } from "core/api";
 import { useDiscoverSchema } from "core/api";
 import { defaultOssFeatures, FeatureItem } from "core/services/features";
 
@@ -33,6 +32,7 @@ const mockBaseUseDiscoverSchema = {
 
 jest.mock("area/workspace/utils", () => ({
   useCurrentWorkspaceId: () => "workspace-id",
+  useCurrentWorkspaceLink: () => () => "/link/to/workspace",
 }));
 
 jest.mock("core/api", () => ({
@@ -46,7 +46,7 @@ jest.mock("core/api", () => ({
   useSourceDefinition: () => mockSourceDefinition,
   useDestinationDefinition: () => mockDestinationDefinition,
   useDiscoverSchema: jest.fn(() => mockBaseUseDiscoverSchema),
-  LogsRequestError: jest.requireActual("core/api/errors").LogsRequestError,
+  ErrorWithJobInfo: jest.requireActual("core/api/errors").ErrorWithJobInfo,
 }));
 
 jest.mock("area/connector/utils", () => ({
@@ -101,7 +101,7 @@ describe("CreateConnectionForm", () => {
   it("should render with an error", async () => {
     mocked(useDiscoverSchema).mockImplementationOnce(() => ({
       ...mockBaseUseDiscoverSchema,
-      schemaErrorStatus: new Error("Test Error") as SchemaError,
+      schemaErrorStatus: new Error("Test Error"),
     }));
 
     const renderResult = await render();
@@ -114,7 +114,7 @@ describe("CreateConnectionForm", () => {
 
     it("should display an error for an invalid cron expression", async () => {
       const container = tlr(
-        <TestWrapper>
+        <TestWrapper route="/continued">
           <CreateConnectionForm />
         </TestWrapper>
       );
@@ -127,14 +127,14 @@ describe("CreateConnectionForm", () => {
       await userEvent.clear(cronExpressionInput);
       await userEvent.type(cronExpressionInput, INVALID_CRON_EXPRESSION, { delay: 1 });
 
-      const errorMessage = container.getByText(/must contain at least 6 fields/);
+      const errorMessage = await container.findByText(/invalid cron expression/i);
 
       expect(errorMessage).toBeInTheDocument();
     });
 
     it("should allow cron expressions under one hour when feature enabled", async () => {
       const container = tlr(
-        <TestWrapper>
+        <TestWrapper route="/continued">
           <CreateConnectionForm />
         </TestWrapper>
       );
@@ -156,7 +156,7 @@ describe("CreateConnectionForm", () => {
       const featuresToInject = defaultOssFeatures.filter((f) => f !== FeatureItem.AllowSyncSubOneHourCronExpressions);
 
       const container = tlr(
-        <TestWrapper features={featuresToInject}>
+        <TestWrapper features={featuresToInject} route="/continued">
           <CreateConnectionForm />
         </TestWrapper>
       );
@@ -169,7 +169,7 @@ describe("CreateConnectionForm", () => {
       await userEvent.clear(cronExpressionField);
       await userEvent.type(cronExpressionField, CRON_EXPRESSION_EVERY_MINUTE, { delay: 1 });
 
-      const errorMessage = container.getByTestId("cronExpressionError");
+      const errorMessage = await container.findByTestId("cronExpressionError");
 
       expect(errorMessage).toBeInTheDocument();
     });

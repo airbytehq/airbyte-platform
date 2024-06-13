@@ -9,10 +9,8 @@ import { FormSubmissionButtons } from "components/forms/FormSubmissionButtons";
 import { Box } from "components/ui/Box";
 import { Button } from "components/ui/Button";
 import { Card } from "components/ui/Card";
-import { Icon } from "components/ui/Icon";
 import { Text } from "components/ui/Text";
 
-import { useListWorkspaces } from "core/api";
 import { useCreateCloudWorkspace } from "core/api/cloud";
 import { OrganizationRead } from "core/api/types/AirbyteClient";
 import { trackError } from "core/utils/datadog";
@@ -41,10 +39,7 @@ export const CloudWorkspacesCreateControl: React.FC = () => {
   const { formatMessage } = useIntl();
   const [isEditMode, toggleMode] = useToggle(false);
   const { registerNotification } = useNotificationService();
-  const { workspaces } = useListWorkspaces();
-  const { organizationsToCreateIn, hasOrganization } = useOrganizationsToCreateWorkspaces();
-
-  const isFirstWorkspace = workspaces.length === 0;
+  const { organizationsToCreateIn } = useOrganizationsToCreateWorkspaces();
 
   const onSubmit = async (values: CreateCloudWorkspaceFormValues) => {
     const newWorkspace = await createWorkspace(values);
@@ -70,14 +65,14 @@ export const CloudWorkspacesCreateControl: React.FC = () => {
   };
 
   // if user is in an organization, but does not have adequate permissions, do not permit workspace creation
-  if (organizationsToCreateIn.length === 0 && hasOrganization) {
+  if (organizationsToCreateIn.length === 0) {
     return null;
   }
 
   return (
     <>
       {isEditMode ? (
-        <Card withPadding className={styles.animate}>
+        <Card className={styles.animate}>
           <Form<CreateCloudWorkspaceFormValues>
             defaultValues={{
               name: "",
@@ -99,10 +94,10 @@ export const CloudWorkspacesCreateControl: React.FC = () => {
             variant="secondary"
             data-testid="workspaces.createNew"
             size="lg"
-            icon={<Icon type="plus" />}
+            icon="plus"
             className={styles.createButton}
           >
-            <FormattedMessage id={isFirstWorkspace ? "workspaces.createFirst" : "workspaces.createNew"} />
+            <FormattedMessage id="workspaces.createNew" />
           </Button>
         </Box>
       )}

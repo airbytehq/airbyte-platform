@@ -1,6 +1,6 @@
 import { act, renderHook } from "@testing-library/react";
 
-import { useUniqueFormId, useFormChangeTrackerService, useChangedFormsById } from "./hooks";
+import { useUniqueFormId, useFormChangeTrackerService } from "./hooks";
 
 describe("#useUniqueFormId", () => {
   it("should use what is passed into it", () => {
@@ -20,10 +20,8 @@ describe("#useUniqueFormId", () => {
 
 describe("#useFormChangeTrackerService", () => {
   afterEach(() => {
-    const { result } = renderHook(() => useChangedFormsById());
     act(() => {
-      const [, setChangedFormsById] = result.current;
-      setChangedFormsById({});
+      renderHook(() => useFormChangeTrackerService().clearAllFormChanges());
     });
   });
 

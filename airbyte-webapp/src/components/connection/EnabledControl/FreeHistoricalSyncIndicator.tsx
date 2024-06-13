@@ -4,16 +4,17 @@ import { Box } from "components/ui/Box";
 import { Text } from "components/ui/Text";
 import { Tooltip } from "components/ui/Tooltip";
 
+import { useConnectionFormService } from "hooks/services/ConnectionForm/ConnectionFormService";
 import { useExperiment } from "hooks/services/Experiment";
 
 export const FreeHistoricalSyncIndicator: React.FC = () => {
   const isFreeHistoricalSyncEnabled = useExperiment("billing.early-sync-enabled", false);
+  const {
+    connection: { createdAt: connectionCreatedAt },
+  } = useConnectionFormService();
 
-  // todo: once we get a createdAt timestamp on the connection object, we should use that!
-  const connectionCreatedAt = 0;
-
-  // 7 days of free syncs minus the days since connectionCreatedAt
-  const daysRemaining = 7 - Math.floor((Date.now() / 1000 - connectionCreatedAt) / (24 * 60 * 60));
+  // 7 days of free syncs minus the days since connectionCreatedAt... or 0 in the case that doesn't exist
+  const daysRemaining = 7 - Math.floor((Date.now() / 1000 - (connectionCreatedAt || 0)) / (24 * 60 * 60));
 
   if (daysRemaining <= 0 || !isFreeHistoricalSyncEnabled) {
     return null;

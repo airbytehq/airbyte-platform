@@ -1,13 +1,11 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.data.services.impls.jooq;
 
 import static io.airbyte.db.instance.configs.jooq.generated.tables.SecretPersistenceConfig.SECRET_PERSISTENCE_CONFIG;
 import static org.jooq.impl.DSL.asterisk;
-import static org.jooq.impl.DSL.field;
-import static org.jooq.impl.DSL.inline;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import io.airbyte.commons.json.Jsons;
@@ -60,7 +58,7 @@ public class SecretPersistenceConfigServiceJooqImpl implements SecretPersistence
   }
 
   @Override
-  public SecretPersistenceConfig getSecretPersistenceConfig(final ScopeType scope, final UUID scopeId) throws IOException, ConfigNotFoundException {
+  public SecretPersistenceConfig get(final ScopeType scope, final UUID scopeId) throws IOException, ConfigNotFoundException {
     final Optional<SecretPersistenceCoordinate> secretPersistenceCoordinate = getSecretPersistenceCoordinate(scope, scopeId);
     if (secretPersistenceCoordinate.isPresent()) {
       final JsonNode configuration = secretsRepositoryReader.fetchSecretFromDefaultSecretPersistence(
@@ -75,38 +73,11 @@ public class SecretPersistenceConfigServiceJooqImpl implements SecretPersistence
     throw new ConfigNotFoundException(ConfigSchema.SECRET_PERSISTENCE_CONFIG, List.of(scope, scopeId).toString());
   }
 
-  /**
-   * Retrieve secret persistence configs in order of precedence: workspace -> organization.
-   *
-   * @param workspaceId workspace ID
-   * @param organizationId organization ID
-   * @return Optional secret persistence config for the first scope found.
-   * @throws IOException it could happen
-   */
   @Override
-  public Optional<SecretPersistenceCoordinate> getSecretPersistenceCoordinate(final UUID workspaceId, final UUID organizationId) throws IOException {
-    final Result<Record> result = database.query(ctx -> {
-      final SelectJoinStep<Record> query = ctx.select(asterisk(), inline(1).as(SORT_ORDER)).from(SECRET_PERSISTENCE_CONFIG);
-      return query.where(
-          SECRET_PERSISTENCE_CONFIG.SCOPE_TYPE.eq(SecretPersistenceScopeType.workspace),
-          SECRET_PERSISTENCE_CONFIG.SCOPE_ID.eq(workspaceId))
-          .unionAll(
-              ctx.select(asterisk(), inline(2).as(SORT_ORDER)).from(SECRET_PERSISTENCE_CONFIG)
-                  .where(
-                      SECRET_PERSISTENCE_CONFIG.SCOPE_TYPE.eq(SecretPersistenceScopeType.organization),
-                      SECRET_PERSISTENCE_CONFIG.SCOPE_ID.eq(organizationId)))
-          .orderBy(field(SORT_ORDER).asc())
-          .limit(1).fetch();
-    });
-
-    return result.stream().findFirst().map(DbConverter::buildSecretPersistenceCoordinate);
-  }
-
-  @Override
-  public Optional<SecretPersistenceCoordinate> createOrUpdateSecretPersistenceConfig(final ScopeType scope,
-                                                                                     final UUID scopeId,
-                                                                                     final SecretPersistenceType secretPersistenceType,
-                                                                                     final String secretPersistenceConfigCoordinate)
+  public Optional<SecretPersistenceCoordinate> createOrUpdate(final ScopeType scope,
+                                                              final UUID scopeId,
+                                                              final SecretPersistenceType secretPersistenceType,
+                                                              final String secretPersistenceConfigCoordinate)
       throws IOException {
     io.airbyte.db.instance.configs.jooq.generated.enums.SecretPersistenceType dbSecretPersistenceType =
         io.airbyte.db.instance.configs.jooq.generated.enums.SecretPersistenceType.valueOf(secretPersistenceType.value());

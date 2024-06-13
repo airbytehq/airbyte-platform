@@ -1,6 +1,8 @@
 import classnames from "classnames";
 import React from "react";
 
+import { Text } from "components/ui/Text";
+
 import styles from "./NumberBadge.module.scss";
 
 interface NumberBadgeProps {
@@ -29,7 +31,14 @@ export const NumberBadge: React.FC<NumberBadgeProps> = ({
 
   return (
     <div className={numberBadgeClassnames} aria-label={ariaLabel}>
-      {value}
+      <Text
+        size="xs"
+        color={color === "blue" && outline ? "blue" : color === "grey" && outline ? "grey300" : undefined}
+        inverseColor={color === "blue" && !outline}
+        align="center"
+      >
+        {value}
+      </Text>
     </div>
   );
 };

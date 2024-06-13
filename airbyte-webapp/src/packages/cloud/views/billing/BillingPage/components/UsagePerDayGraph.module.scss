@@ -6,7 +6,11 @@
 
   &--full {
     height: 260px;
-    padding: variables.$spacing-md;
+  }
+
+  &--minimized {
+    width: 100px;
+    height: 30px;
   }
 }
 
@@ -15,6 +19,12 @@
   color: colors.$dark-blue span {
     color: colors.$dark-blue;
   }
+}
+
+.recentCreditUsage {
+  margin-top: variables.$spacing-md;
+  max-width: 150px;
+  white-space: normal;
 }
 
 :export {

@@ -12,11 +12,15 @@ export interface StreamWithStatus {
   isRunning: boolean;
   relevantHistory: StreamStatusRead[];
   lastSuccessfulSyncAt?: StreamStatusRead["transitionedAt"];
+  streamSyncStartedAt?: number;
+  recordsLoaded: number | undefined;
+  recordsExtracted: number | undefined;
 }
 
 type StreamMapping = Record<ConnectionStatusIndicatorStatus, StreamWithStatus[]>;
 
-export const sortStreams = (
+/** deprecated... will remove with sync progress project */
+export const sortStreamsByStatus = (
   enabledStreams: AirbyteStreamAndConfigurationWithEnforcedStream[],
   streamStatuses: Map<string, StreamWithStatus>
 ): StreamMapping => {
@@ -38,6 +42,8 @@ export const sortStreams = (
       [ConnectionStatusIndicatorStatus.OnTrack]: [],
       [ConnectionStatusIndicatorStatus.OnTime]: [],
       [ConnectionStatusIndicatorStatus.Disabled]: [],
+      [ConnectionStatusIndicatorStatus.Syncing]: [],
+      [ConnectionStatusIndicatorStatus.Queued]: [],
     }
   );
 
@@ -58,6 +64,31 @@ export const sortStreams = (
   });
 
   return mappedStreams;
+};
+
+export const sortStreamsAlphabetically = (
+  enabledStreams: AirbyteStreamAndConfigurationWithEnforcedStream[],
+  streamStatuses: Map<string, StreamWithStatus>
+): StreamWithStatus[] => {
+  // Collect all streams into a single array
+  const allStreams = enabledStreams.reduce<StreamWithStatus[]>((streams, { stream }) => {
+    const streamKey = getStreamKey(stream);
+    const streamStatus = streamStatuses.get(streamKey);
+    if (streamStatus) {
+      streams.push(streamStatus);
+    }
+    return streams;
+  }, []);
+
+  // Define a comparator for sorting by stream name
+  const comparatorByName = (a: StreamWithStatus, b: StreamWithStatus) => {
+    return a.streamName.localeCompare(b.streamName);
+  };
+
+  // Sort the array by name
+  allStreams.sort(comparatorByName);
+
+  return allStreams;
 };
 
 export const useLateMultiplierExperiment = () => useExperiment("connection.streamCentricUI.lateMultiplier", 2);

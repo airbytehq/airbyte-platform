@@ -1,0 +1,47 @@
+{
+  "transactional_message_id": "201",
+  "to": "joe@foobar.com",
+  "identifiers": {
+    "email": "joe@foobar.com"
+  },
+  "message_data": {
+    "workspace": {
+      "id": "a39591af-6872-41e3-836d-984e35554324",
+      "name": "workspace-name",
+      "url": "http://workspace"
+    },
+    "connection": {
+      "id": "a2e110d4-f196-4fa5-a866-b18ad90e81aa",
+      "name": "connection",
+      "url": "http://connection"
+    },
+    "source": {
+      "id": "6d006cc5-d050-4f1b-9c22-ebd6b7d54b25",
+      "name": "source",
+      "url": "http://source"
+    },
+    "destination": {
+      "id": "26548b2d-78d3-4e4c-a824-3f7d0bb45a0e",
+      "name": "destination",
+      "url": "http://source"
+    },
+    "jobId": 100,
+    "startedAt": "1970-01-12T13:46:40Z",
+    "finishedAt": "1970-01-13T09:13:20Z",
+    "bytesEmitted": 1000,
+    "bytesEmittedFormatted": "1000 B",
+    "bytesCommitted": 9000,
+    "bytesCommittedFormatted": "8 kB",
+    "recordsEmitted": 50,
+    "recordsCommitted": 48,
+    "errorMessage": "Connection to the source failed",
+    "durationInSeconds": 70000,
+    "durationFormatted": "19 hours 26 min",
+    "success": false
+  },
+  "disable_message_retention": false,
+  "send_to_unsubscribed": true,
+  "tracked": true,
+  "queue_draft": false,
+  "disable_css_preprocessing": true
+}

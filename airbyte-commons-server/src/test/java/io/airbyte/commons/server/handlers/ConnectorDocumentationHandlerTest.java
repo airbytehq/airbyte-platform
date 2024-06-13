@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.commons.server.handlers;
@@ -58,10 +58,8 @@ class ConnectorDocumentationHandlerTest {
       new ActorDefinitionVersion().withDockerRepository(DESTINATION_DOCKER_REPO).withDockerImageTag(
           DESTINATION_VERSION_LATEST);
 
-  private static final String FULL_DOC_CONTENTS_OLD = "The full doc contents for the old version";
-  private static final String INAPP_DOC_CONTENTS_OLD = "The inapp doc contents for the old version";
-  private static final String FULL_DOC_CONTENTS_LATEST = "The full doc contents for the latest version";
-  private static final String INAPP_DOC_CONTENTS_LATEST = "The inapp doc contents for the latest version";
+  private static final String DOC_CONTENTS_OLD = "The doc contents for the old version";
+  private static final String DOC_CONTENTS_LATEST = "The doc contents for the latest version";
 
   @BeforeEach
   void setup() {
@@ -83,7 +81,7 @@ class ConnectorDocumentationHandlerTest {
     when(configRepository.getStandardSourceDefinition(sourceDefinitionId)).thenReturn(SOURCE_DEFINITION);
     when(actorDefinitionVersionHelper.getSourceVersion(SOURCE_DEFINITION, workspaceId, sourceId)).thenReturn(SOURCE_DEFINITION_VERSION_OLD);
 
-    when(remoteDefinitionsProvider.getConnectorDocumentation(any(), any(), any())).thenReturn(Optional.empty());
+    when(remoteDefinitionsProvider.getConnectorDocumentation(any(), any())).thenReturn(Optional.empty());
 
     final ConnectorDocumentationRequestBody request = new ConnectorDocumentationRequestBody().actorType(ActorType.SOURCE)
         .actorDefinitionId(sourceDefinitionId).workspaceId(workspaceId).actorId(sourceId);
@@ -92,172 +90,82 @@ class ConnectorDocumentationHandlerTest {
   }
 
   @Test
-  void testGetVersionedInappExistingSourceDocumentation() throws JsonValidationException, ConfigNotFoundException, IOException {
+  void testGetVersionedExistingSourceDocumentation() throws JsonValidationException, ConfigNotFoundException, IOException {
     final UUID sourceDefinitionId = UUID.randomUUID();
     final UUID sourceId = UUID.randomUUID();
     final UUID workspaceId = UUID.randomUUID();
     when(configRepository.getStandardSourceDefinition(sourceDefinitionId)).thenReturn(SOURCE_DEFINITION);
     when(actorDefinitionVersionHelper.getSourceVersion(SOURCE_DEFINITION, workspaceId, sourceId)).thenReturn(SOURCE_DEFINITION_VERSION_OLD);
 
-    when(remoteDefinitionsProvider.getConnectorDocumentation(SOURCE_DOCKER_REPO, SOURCE_VERSION_OLD, true))
-        .thenReturn(Optional.of(INAPP_DOC_CONTENTS_OLD));
+    when(remoteDefinitionsProvider.getConnectorDocumentation(SOURCE_DOCKER_REPO, SOURCE_VERSION_OLD))
+        .thenReturn(Optional.of(DOC_CONTENTS_OLD));
 
     final ConnectorDocumentationRequestBody request = new ConnectorDocumentationRequestBody().actorType(ActorType.SOURCE)
         .actorDefinitionId(sourceDefinitionId).workspaceId(workspaceId).actorId(sourceId);
 
     final ConnectorDocumentationRead expectedResult =
-        new ConnectorDocumentationRead().doc(INAPP_DOC_CONTENTS_OLD);
+        new ConnectorDocumentationRead().doc(DOC_CONTENTS_OLD);
     final ConnectorDocumentationRead actualResult = connectorDocumentationHandler.getConnectorDocumentation(request);
 
     assertEquals(expectedResult, actualResult);
   }
 
   @Test
-  void testGetVersionedFullExistingSourceDocumentation() throws JsonValidationException, ConfigNotFoundException, IOException {
+  void testGetLatestExistingSourceDocumentation() throws JsonValidationException, ConfigNotFoundException, IOException {
     final UUID sourceDefinitionId = UUID.randomUUID();
     final UUID sourceId = UUID.randomUUID();
     final UUID workspaceId = UUID.randomUUID();
     when(configRepository.getStandardSourceDefinition(sourceDefinitionId)).thenReturn(SOURCE_DEFINITION);
     when(actorDefinitionVersionHelper.getSourceVersion(SOURCE_DEFINITION, workspaceId, sourceId)).thenReturn(SOURCE_DEFINITION_VERSION_OLD);
 
-    when(remoteDefinitionsProvider.getConnectorDocumentation(SOURCE_DOCKER_REPO, SOURCE_VERSION_OLD, true)).thenReturn(Optional.empty());
-    when(remoteDefinitionsProvider.getConnectorDocumentation(SOURCE_DOCKER_REPO, SOURCE_VERSION_OLD, false))
-        .thenReturn(Optional.of(FULL_DOC_CONTENTS_OLD));
+    when(remoteDefinitionsProvider.getConnectorDocumentation(SOURCE_DOCKER_REPO, SOURCE_VERSION_OLD)).thenReturn(Optional.empty());
+    when(remoteDefinitionsProvider.getConnectorDocumentation(SOURCE_DOCKER_REPO, LATEST)).thenReturn(Optional.of(DOC_CONTENTS_LATEST));
 
     final ConnectorDocumentationRequestBody request = new ConnectorDocumentationRequestBody().actorType(ActorType.SOURCE)
         .actorDefinitionId(sourceDefinitionId).workspaceId(workspaceId).actorId(sourceId);
 
     final ConnectorDocumentationRead expectedResult =
-        new ConnectorDocumentationRead().doc(FULL_DOC_CONTENTS_OLD);
+        new ConnectorDocumentationRead().doc(DOC_CONTENTS_LATEST);
     final ConnectorDocumentationRead actualResult = connectorDocumentationHandler.getConnectorDocumentation(request);
 
     assertEquals(expectedResult, actualResult);
   }
 
   @Test
-  void testGetLatestInappExistingSourceDocumentation() throws JsonValidationException, ConfigNotFoundException, IOException {
-    final UUID sourceDefinitionId = UUID.randomUUID();
-    final UUID sourceId = UUID.randomUUID();
-    final UUID workspaceId = UUID.randomUUID();
-    when(configRepository.getStandardSourceDefinition(sourceDefinitionId)).thenReturn(SOURCE_DEFINITION);
-    when(actorDefinitionVersionHelper.getSourceVersion(SOURCE_DEFINITION, workspaceId, sourceId)).thenReturn(SOURCE_DEFINITION_VERSION_OLD);
-
-    when(remoteDefinitionsProvider.getConnectorDocumentation(SOURCE_DOCKER_REPO, SOURCE_VERSION_OLD, true)).thenReturn(Optional.empty());
-    when(remoteDefinitionsProvider.getConnectorDocumentation(SOURCE_DOCKER_REPO, SOURCE_VERSION_OLD, false)).thenReturn(Optional.empty());
-    when(remoteDefinitionsProvider.getConnectorDocumentation(SOURCE_DOCKER_REPO, LATEST, true)).thenReturn(Optional.of(INAPP_DOC_CONTENTS_LATEST));
-
-    final ConnectorDocumentationRequestBody request = new ConnectorDocumentationRequestBody().actorType(ActorType.SOURCE)
-        .actorDefinitionId(sourceDefinitionId).workspaceId(workspaceId).actorId(sourceId);
-
-    final ConnectorDocumentationRead expectedResult =
-        new ConnectorDocumentationRead().doc(INAPP_DOC_CONTENTS_LATEST);
-    final ConnectorDocumentationRead actualResult = connectorDocumentationHandler.getConnectorDocumentation(request);
-
-    assertEquals(expectedResult, actualResult);
-  }
-
-  @Test
-  void testGetLatestFullExistingSourceDocumentation() throws JsonValidationException, ConfigNotFoundException, IOException {
-    final UUID sourceDefinitionId = UUID.randomUUID();
-    final UUID sourceId = UUID.randomUUID();
-    final UUID workspaceId = UUID.randomUUID();
-    when(configRepository.getStandardSourceDefinition(sourceDefinitionId)).thenReturn(SOURCE_DEFINITION);
-    when(actorDefinitionVersionHelper.getSourceVersion(SOURCE_DEFINITION, workspaceId, sourceId)).thenReturn(SOURCE_DEFINITION_VERSION_OLD);
-
-    when(remoteDefinitionsProvider.getConnectorDocumentation(SOURCE_DOCKER_REPO, SOURCE_VERSION_OLD, true)).thenReturn(Optional.empty());
-    when(remoteDefinitionsProvider.getConnectorDocumentation(SOURCE_DOCKER_REPO, SOURCE_VERSION_OLD, false)).thenReturn(Optional.empty());
-    when(remoteDefinitionsProvider.getConnectorDocumentation(SOURCE_DOCKER_REPO, LATEST, true)).thenReturn(Optional.empty());
-    when(remoteDefinitionsProvider.getConnectorDocumentation(SOURCE_DOCKER_REPO, LATEST, false)).thenReturn(Optional.of(FULL_DOC_CONTENTS_LATEST));
-
-    final ConnectorDocumentationRequestBody request = new ConnectorDocumentationRequestBody().actorType(ActorType.SOURCE)
-        .actorDefinitionId(sourceDefinitionId).workspaceId(workspaceId).actorId(sourceId);
-
-    final ConnectorDocumentationRead expectedResult =
-        new ConnectorDocumentationRead().doc(FULL_DOC_CONTENTS_LATEST);
-    final ConnectorDocumentationRead actualResult = connectorDocumentationHandler.getConnectorDocumentation(request);
-
-    assertEquals(expectedResult, actualResult);
-  }
-
-  @Test
-  void testGetVersionedInappNewSourceDocumentation() throws JsonValidationException, ConfigNotFoundException, IOException {
+  void testGetVersionedNewSourceDocumentation() throws JsonValidationException, ConfigNotFoundException, IOException {
     final UUID sourceDefinitionId = UUID.randomUUID();
     final UUID workspaceId = UUID.randomUUID();
     when(configRepository.getStandardSourceDefinition(sourceDefinitionId)).thenReturn(SOURCE_DEFINITION);
     when(actorDefinitionVersionHelper.getSourceVersion(SOURCE_DEFINITION, workspaceId, null)).thenReturn(SOURCE_DEFINITION_VERSION_LATEST);
 
-    when(remoteDefinitionsProvider.getConnectorDocumentation(SOURCE_DOCKER_REPO, SOURCE_VERSION_LATEST, true))
-        .thenReturn(Optional.of(INAPP_DOC_CONTENTS_LATEST));
+    when(remoteDefinitionsProvider.getConnectorDocumentation(SOURCE_DOCKER_REPO, SOURCE_VERSION_LATEST))
+        .thenReturn(Optional.of(DOC_CONTENTS_LATEST));
 
     final ConnectorDocumentationRequestBody request =
         new ConnectorDocumentationRequestBody().actorType(ActorType.SOURCE).actorDefinitionId(sourceDefinitionId).workspaceId(workspaceId);
 
     final ConnectorDocumentationRead expectedResult =
-        new ConnectorDocumentationRead().doc(INAPP_DOC_CONTENTS_LATEST);
+        new ConnectorDocumentationRead().doc(DOC_CONTENTS_LATEST);
     final ConnectorDocumentationRead actualResult = connectorDocumentationHandler.getConnectorDocumentation(request);
 
     assertEquals(expectedResult, actualResult);
   }
 
   @Test
-  void testGetVersionedFullNewSourceDocumentation() throws JsonValidationException, ConfigNotFoundException, IOException {
+  void testGetLatestNewSourceDocumentation() throws JsonValidationException, ConfigNotFoundException, IOException {
     final UUID sourceDefinitionId = UUID.randomUUID();
     final UUID workspaceId = UUID.randomUUID();
     when(configRepository.getStandardSourceDefinition(sourceDefinitionId)).thenReturn(SOURCE_DEFINITION);
     when(actorDefinitionVersionHelper.getSourceVersion(SOURCE_DEFINITION, workspaceId, null)).thenReturn(SOURCE_DEFINITION_VERSION_LATEST);
 
-    when(remoteDefinitionsProvider.getConnectorDocumentation(SOURCE_DOCKER_REPO, SOURCE_VERSION_LATEST, true)).thenReturn(Optional.empty());
-    when(remoteDefinitionsProvider.getConnectorDocumentation(SOURCE_DOCKER_REPO, SOURCE_VERSION_LATEST, false))
-        .thenReturn(Optional.of(FULL_DOC_CONTENTS_LATEST));
+    when(remoteDefinitionsProvider.getConnectorDocumentation(SOURCE_DOCKER_REPO, SOURCE_VERSION_LATEST)).thenReturn(Optional.empty());
+    when(remoteDefinitionsProvider.getConnectorDocumentation(SOURCE_DOCKER_REPO, LATEST)).thenReturn(Optional.of(DOC_CONTENTS_LATEST));
 
     final ConnectorDocumentationRequestBody request =
         new ConnectorDocumentationRequestBody().actorType(ActorType.SOURCE).actorDefinitionId(sourceDefinitionId).workspaceId(workspaceId);
 
     final ConnectorDocumentationRead expectedResult =
-        new ConnectorDocumentationRead().doc(FULL_DOC_CONTENTS_LATEST);
-    final ConnectorDocumentationRead actualResult = connectorDocumentationHandler.getConnectorDocumentation(request);
-
-    assertEquals(expectedResult, actualResult);
-  }
-
-  @Test
-  void testGetLatestInappNewSourceDocumentation() throws JsonValidationException, ConfigNotFoundException, IOException {
-    final UUID sourceDefinitionId = UUID.randomUUID();
-    final UUID workspaceId = UUID.randomUUID();
-    when(configRepository.getStandardSourceDefinition(sourceDefinitionId)).thenReturn(SOURCE_DEFINITION);
-    when(actorDefinitionVersionHelper.getSourceVersion(SOURCE_DEFINITION, workspaceId, null)).thenReturn(SOURCE_DEFINITION_VERSION_LATEST);
-
-    when(remoteDefinitionsProvider.getConnectorDocumentation(SOURCE_DOCKER_REPO, SOURCE_VERSION_LATEST, true)).thenReturn(Optional.empty());
-    when(remoteDefinitionsProvider.getConnectorDocumentation(SOURCE_DOCKER_REPO, SOURCE_VERSION_LATEST, false)).thenReturn(Optional.empty());
-    when(remoteDefinitionsProvider.getConnectorDocumentation(SOURCE_DOCKER_REPO, LATEST, true)).thenReturn(Optional.of(INAPP_DOC_CONTENTS_LATEST));
-
-    final ConnectorDocumentationRequestBody request =
-        new ConnectorDocumentationRequestBody().actorType(ActorType.SOURCE).actorDefinitionId(sourceDefinitionId).workspaceId(workspaceId);
-
-    final ConnectorDocumentationRead expectedResult =
-        new ConnectorDocumentationRead().doc(INAPP_DOC_CONTENTS_LATEST);
-    final ConnectorDocumentationRead actualResult = connectorDocumentationHandler.getConnectorDocumentation(request);
-
-    assertEquals(expectedResult, actualResult);
-  }
-
-  @Test
-  void testGetLatestFullNewSourceDocumentation() throws JsonValidationException, ConfigNotFoundException, IOException {
-    final UUID sourceDefinitionId = UUID.randomUUID();
-    final UUID workspaceId = UUID.randomUUID();
-    when(configRepository.getStandardSourceDefinition(sourceDefinitionId)).thenReturn(SOURCE_DEFINITION);
-    when(actorDefinitionVersionHelper.getSourceVersion(SOURCE_DEFINITION, workspaceId, null)).thenReturn(SOURCE_DEFINITION_VERSION_LATEST);
-
-    when(remoteDefinitionsProvider.getConnectorDocumentation(SOURCE_DOCKER_REPO, SOURCE_VERSION_LATEST, true)).thenReturn(Optional.empty());
-    when(remoteDefinitionsProvider.getConnectorDocumentation(SOURCE_DOCKER_REPO, SOURCE_VERSION_LATEST, false)).thenReturn(Optional.empty());
-    when(remoteDefinitionsProvider.getConnectorDocumentation(SOURCE_DOCKER_REPO, LATEST, true)).thenReturn(Optional.empty());
-    when(remoteDefinitionsProvider.getConnectorDocumentation(SOURCE_DOCKER_REPO, LATEST, false)).thenReturn(Optional.of(FULL_DOC_CONTENTS_LATEST));
-
-    final ConnectorDocumentationRequestBody request =
-        new ConnectorDocumentationRequestBody().actorType(ActorType.SOURCE).actorDefinitionId(sourceDefinitionId).workspaceId(workspaceId);
-
-    final ConnectorDocumentationRead expectedResult =
-        new ConnectorDocumentationRead().doc(FULL_DOC_CONTENTS_LATEST);
+        new ConnectorDocumentationRead().doc(DOC_CONTENTS_LATEST);
     final ConnectorDocumentationRead actualResult = connectorDocumentationHandler.getConnectorDocumentation(request);
 
     assertEquals(expectedResult, actualResult);
@@ -273,7 +181,7 @@ class ConnectorDocumentationHandlerTest {
     when(actorDefinitionVersionHelper.getDestinationVersion(DESTINATION_DEFINITION, workspaceId, destinationId))
         .thenReturn(DESTINATION_DEFINITION_VERSION_OLD);
 
-    when(remoteDefinitionsProvider.getConnectorDocumentation(any(), any(), any())).thenReturn(Optional.empty());
+    when(remoteDefinitionsProvider.getConnectorDocumentation(any(), any())).thenReturn(Optional.empty());
 
     final ConnectorDocumentationRequestBody request = new ConnectorDocumentationRequestBody().actorType(ActorType.DESTINATION)
         .actorDefinitionId(destinationDefinitionId).workspaceId(workspaceId).actorId(destinationId);
@@ -282,7 +190,7 @@ class ConnectorDocumentationHandlerTest {
   }
 
   @Test
-  void testGetVersionedInappExistingDestinationDocumentation() throws JsonValidationException, ConfigNotFoundException, IOException {
+  void testGetVersionedExistingDestinationDocumentation() throws JsonValidationException, ConfigNotFoundException, IOException {
     final UUID destinationDefinitionId = UUID.randomUUID();
     final UUID destinationId = UUID.randomUUID();
     final UUID workspaceId = UUID.randomUUID();
@@ -290,21 +198,21 @@ class ConnectorDocumentationHandlerTest {
     when(actorDefinitionVersionHelper.getDestinationVersion(DESTINATION_DEFINITION, workspaceId, destinationId))
         .thenReturn(DESTINATION_DEFINITION_VERSION_OLD);
 
-    when(remoteDefinitionsProvider.getConnectorDocumentation(DESTINATION_DOCKER_REPO, DESTINATION_VERSION_OLD, true))
-        .thenReturn(Optional.of(INAPP_DOC_CONTENTS_OLD));
+    when(remoteDefinitionsProvider.getConnectorDocumentation(DESTINATION_DOCKER_REPO, DESTINATION_VERSION_OLD))
+        .thenReturn(Optional.of(DOC_CONTENTS_OLD));
 
     final ConnectorDocumentationRequestBody request = new ConnectorDocumentationRequestBody().actorType(ActorType.DESTINATION)
         .actorDefinitionId(destinationDefinitionId).workspaceId(workspaceId).actorId(destinationId);
 
     final ConnectorDocumentationRead expectedResult =
-        new ConnectorDocumentationRead().doc(INAPP_DOC_CONTENTS_OLD);
+        new ConnectorDocumentationRead().doc(DOC_CONTENTS_OLD);
     final ConnectorDocumentationRead actualResult = connectorDocumentationHandler.getConnectorDocumentation(request);
 
     assertEquals(expectedResult, actualResult);
   }
 
   @Test
-  void testGetVersionedFullExistingDestinationDocumentation() throws JsonValidationException, ConfigNotFoundException, IOException {
+  void testGetLatestExistingDestinationDocumentation() throws JsonValidationException, ConfigNotFoundException, IOException {
     final UUID destinationDefinitionId = UUID.randomUUID();
     final UUID destinationId = UUID.randomUUID();
     final UUID workspaceId = UUID.randomUUID();
@@ -312,156 +220,59 @@ class ConnectorDocumentationHandlerTest {
     when(actorDefinitionVersionHelper.getDestinationVersion(DESTINATION_DEFINITION, workspaceId, destinationId))
         .thenReturn(DESTINATION_DEFINITION_VERSION_OLD);
 
-    when(remoteDefinitionsProvider.getConnectorDocumentation(DESTINATION_DOCKER_REPO, DESTINATION_VERSION_OLD, true)).thenReturn(Optional.empty());
-    when(remoteDefinitionsProvider.getConnectorDocumentation(DESTINATION_DOCKER_REPO, DESTINATION_VERSION_OLD, false))
-        .thenReturn(Optional.of(FULL_DOC_CONTENTS_OLD));
+    when(remoteDefinitionsProvider.getConnectorDocumentation(DESTINATION_DOCKER_REPO, DESTINATION_VERSION_OLD)).thenReturn(Optional.empty());
+    when(remoteDefinitionsProvider.getConnectorDocumentation(DESTINATION_DOCKER_REPO, LATEST))
+        .thenReturn(Optional.of(DOC_CONTENTS_LATEST));
 
     final ConnectorDocumentationRequestBody request = new ConnectorDocumentationRequestBody().actorType(ActorType.DESTINATION)
         .actorDefinitionId(destinationDefinitionId).workspaceId(workspaceId).actorId(destinationId);
 
     final ConnectorDocumentationRead expectedResult =
-        new ConnectorDocumentationRead().doc(FULL_DOC_CONTENTS_OLD);
+        new ConnectorDocumentationRead().doc(DOC_CONTENTS_LATEST);
     final ConnectorDocumentationRead actualResult = connectorDocumentationHandler.getConnectorDocumentation(request);
 
     assertEquals(expectedResult, actualResult);
   }
 
   @Test
-  void testGetLatestInappExistingDestinationDocumentation() throws JsonValidationException, ConfigNotFoundException, IOException {
-    final UUID destinationDefinitionId = UUID.randomUUID();
-    final UUID destinationId = UUID.randomUUID();
-    final UUID workspaceId = UUID.randomUUID();
-    when(configRepository.getStandardDestinationDefinition(destinationDefinitionId)).thenReturn(DESTINATION_DEFINITION);
-    when(actorDefinitionVersionHelper.getDestinationVersion(DESTINATION_DEFINITION, workspaceId, destinationId))
-        .thenReturn(DESTINATION_DEFINITION_VERSION_OLD);
-
-    when(remoteDefinitionsProvider.getConnectorDocumentation(DESTINATION_DOCKER_REPO, DESTINATION_VERSION_OLD, true)).thenReturn(Optional.empty());
-    when(remoteDefinitionsProvider.getConnectorDocumentation(DESTINATION_DOCKER_REPO, DESTINATION_VERSION_OLD, false)).thenReturn(Optional.empty());
-    when(remoteDefinitionsProvider.getConnectorDocumentation(DESTINATION_DOCKER_REPO, LATEST, true))
-        .thenReturn(Optional.of(INAPP_DOC_CONTENTS_LATEST));
-
-    final ConnectorDocumentationRequestBody request = new ConnectorDocumentationRequestBody().actorType(ActorType.DESTINATION)
-        .actorDefinitionId(destinationDefinitionId).workspaceId(workspaceId).actorId(destinationId);
-
-    final ConnectorDocumentationRead expectedResult =
-        new ConnectorDocumentationRead().doc(INAPP_DOC_CONTENTS_LATEST);
-    final ConnectorDocumentationRead actualResult = connectorDocumentationHandler.getConnectorDocumentation(request);
-
-    assertEquals(expectedResult, actualResult);
-  }
-
-  @Test
-  void testGetLatestFullExistingDestinationDocumentation() throws JsonValidationException, ConfigNotFoundException, IOException {
-    final UUID destinationDefinitionId = UUID.randomUUID();
-    final UUID destinationId = UUID.randomUUID();
-    final UUID workspaceId = UUID.randomUUID();
-    when(configRepository.getStandardDestinationDefinition(destinationDefinitionId)).thenReturn(DESTINATION_DEFINITION);
-    when(actorDefinitionVersionHelper.getDestinationVersion(DESTINATION_DEFINITION, workspaceId, destinationId))
-        .thenReturn(DESTINATION_DEFINITION_VERSION_OLD);
-
-    when(remoteDefinitionsProvider.getConnectorDocumentation(DESTINATION_DOCKER_REPO, DESTINATION_VERSION_OLD, true)).thenReturn(Optional.empty());
-    when(remoteDefinitionsProvider.getConnectorDocumentation(DESTINATION_DOCKER_REPO, DESTINATION_VERSION_OLD, false)).thenReturn(Optional.empty());
-    when(remoteDefinitionsProvider.getConnectorDocumentation(DESTINATION_DOCKER_REPO, LATEST, true)).thenReturn(Optional.empty());
-    when(remoteDefinitionsProvider.getConnectorDocumentation(DESTINATION_DOCKER_REPO, LATEST, false))
-        .thenReturn(Optional.of(FULL_DOC_CONTENTS_LATEST));
-
-    final ConnectorDocumentationRequestBody request = new ConnectorDocumentationRequestBody().actorType(ActorType.DESTINATION)
-        .actorDefinitionId(destinationDefinitionId).workspaceId(workspaceId).actorId(destinationId);
-
-    final ConnectorDocumentationRead expectedResult =
-        new ConnectorDocumentationRead().doc(FULL_DOC_CONTENTS_LATEST);
-    final ConnectorDocumentationRead actualResult = connectorDocumentationHandler.getConnectorDocumentation(request);
-
-    assertEquals(expectedResult, actualResult);
-  }
-
-  @Test
-  void testGetVersionedInappNewDestinationDocumentation() throws JsonValidationException, ConfigNotFoundException, IOException {
+  void testGetVersionedNewDestinationDocumentation() throws JsonValidationException, ConfigNotFoundException, IOException {
     final UUID destinationDefinitionId = UUID.randomUUID();
     final UUID workspaceId = UUID.randomUUID();
     when(configRepository.getStandardDestinationDefinition(destinationDefinitionId)).thenReturn(DESTINATION_DEFINITION);
     when(actorDefinitionVersionHelper.getDestinationVersion(DESTINATION_DEFINITION, workspaceId, null))
         .thenReturn(DESTINATION_DEFINITION_VERSION_LATEST);
 
-    when(remoteDefinitionsProvider.getConnectorDocumentation(DESTINATION_DOCKER_REPO, DESTINATION_VERSION_LATEST, true))
-        .thenReturn(Optional.of(INAPP_DOC_CONTENTS_LATEST));
+    when(remoteDefinitionsProvider.getConnectorDocumentation(DESTINATION_DOCKER_REPO, DESTINATION_VERSION_LATEST))
+        .thenReturn(Optional.of(DOC_CONTENTS_LATEST));
 
     final ConnectorDocumentationRequestBody request =
         new ConnectorDocumentationRequestBody().actorType(ActorType.DESTINATION).actorDefinitionId(destinationDefinitionId).workspaceId(workspaceId);
 
     final ConnectorDocumentationRead expectedResult =
-        new ConnectorDocumentationRead().doc(INAPP_DOC_CONTENTS_LATEST);
+        new ConnectorDocumentationRead().doc(DOC_CONTENTS_LATEST);
     final ConnectorDocumentationRead actualResult = connectorDocumentationHandler.getConnectorDocumentation(request);
 
     assertEquals(expectedResult, actualResult);
   }
 
   @Test
-  void testGetVersionedFullNewDestinationDocumentation() throws JsonValidationException, ConfigNotFoundException, IOException {
+  void testGetLatestNewDestinationDocumentation() throws JsonValidationException, ConfigNotFoundException, IOException {
     final UUID destinationDefinitionId = UUID.randomUUID();
     final UUID workspaceId = UUID.randomUUID();
     when(configRepository.getStandardDestinationDefinition(destinationDefinitionId)).thenReturn(DESTINATION_DEFINITION);
     when(actorDefinitionVersionHelper.getDestinationVersion(DESTINATION_DEFINITION, workspaceId, null))
         .thenReturn(DESTINATION_DEFINITION_VERSION_LATEST);
 
-    when(remoteDefinitionsProvider.getConnectorDocumentation(DESTINATION_DOCKER_REPO, DESTINATION_VERSION_LATEST, true)).thenReturn(Optional.empty());
-    when(remoteDefinitionsProvider.getConnectorDocumentation(DESTINATION_DOCKER_REPO, DESTINATION_VERSION_LATEST, false))
-        .thenReturn(Optional.of(FULL_DOC_CONTENTS_LATEST));
-
-    final ConnectorDocumentationRequestBody request =
-        new ConnectorDocumentationRequestBody().actorType(ActorType.DESTINATION).actorDefinitionId(destinationDefinitionId).workspaceId(workspaceId);
-
-    final ConnectorDocumentationRead expectedResult =
-        new ConnectorDocumentationRead().doc(FULL_DOC_CONTENTS_LATEST);
-    final ConnectorDocumentationRead actualResult = connectorDocumentationHandler.getConnectorDocumentation(request);
-
-    assertEquals(expectedResult, actualResult);
-  }
-
-  @Test
-  void testGetLatestInappNewDestinationDocumentation() throws JsonValidationException, ConfigNotFoundException, IOException {
-    final UUID destinationDefinitionId = UUID.randomUUID();
-    final UUID workspaceId = UUID.randomUUID();
-    when(configRepository.getStandardDestinationDefinition(destinationDefinitionId)).thenReturn(DESTINATION_DEFINITION);
-    when(actorDefinitionVersionHelper.getDestinationVersion(DESTINATION_DEFINITION, workspaceId, null))
-        .thenReturn(DESTINATION_DEFINITION_VERSION_LATEST);
-
-    when(remoteDefinitionsProvider.getConnectorDocumentation(DESTINATION_DOCKER_REPO, DESTINATION_VERSION_LATEST, true)).thenReturn(Optional.empty());
-    when(remoteDefinitionsProvider.getConnectorDocumentation(DESTINATION_DOCKER_REPO, DESTINATION_VERSION_LATEST, false))
+    when(remoteDefinitionsProvider.getConnectorDocumentation(DESTINATION_DOCKER_REPO, DESTINATION_VERSION_LATEST))
         .thenReturn(Optional.empty());
-    when(remoteDefinitionsProvider.getConnectorDocumentation(DESTINATION_DOCKER_REPO, LATEST, true))
-        .thenReturn(Optional.of(INAPP_DOC_CONTENTS_LATEST));
+    when(remoteDefinitionsProvider.getConnectorDocumentation(DESTINATION_DOCKER_REPO, LATEST))
+        .thenReturn(Optional.of(DOC_CONTENTS_LATEST));
 
     final ConnectorDocumentationRequestBody request =
         new ConnectorDocumentationRequestBody().actorType(ActorType.DESTINATION).actorDefinitionId(destinationDefinitionId).workspaceId(workspaceId);
 
     final ConnectorDocumentationRead expectedResult =
-        new ConnectorDocumentationRead().doc(INAPP_DOC_CONTENTS_LATEST);
-    final ConnectorDocumentationRead actualResult = connectorDocumentationHandler.getConnectorDocumentation(request);
-
-    assertEquals(expectedResult, actualResult);
-  }
-
-  @Test
-  void testGetLatestFullNewDestinationDocumentation() throws JsonValidationException, ConfigNotFoundException, IOException {
-    final UUID destinationDefinitionId = UUID.randomUUID();
-    final UUID workspaceId = UUID.randomUUID();
-    when(configRepository.getStandardDestinationDefinition(destinationDefinitionId)).thenReturn(DESTINATION_DEFINITION);
-    when(actorDefinitionVersionHelper.getDestinationVersion(DESTINATION_DEFINITION, workspaceId, null))
-        .thenReturn(DESTINATION_DEFINITION_VERSION_LATEST);
-
-    when(remoteDefinitionsProvider.getConnectorDocumentation(DESTINATION_DOCKER_REPO, DESTINATION_VERSION_LATEST, true)).thenReturn(Optional.empty());
-    when(remoteDefinitionsProvider.getConnectorDocumentation(DESTINATION_DOCKER_REPO, DESTINATION_VERSION_LATEST, false))
-        .thenReturn(Optional.empty());
-    when(remoteDefinitionsProvider.getConnectorDocumentation(DESTINATION_DOCKER_REPO, LATEST, true)).thenReturn(Optional.empty());
-    when(remoteDefinitionsProvider.getConnectorDocumentation(DESTINATION_DOCKER_REPO, LATEST, false))
-        .thenReturn(Optional.of(FULL_DOC_CONTENTS_LATEST));
-
-    final ConnectorDocumentationRequestBody request =
-        new ConnectorDocumentationRequestBody().actorType(ActorType.DESTINATION).actorDefinitionId(destinationDefinitionId).workspaceId(workspaceId);
-
-    final ConnectorDocumentationRead expectedResult =
-        new ConnectorDocumentationRead().doc(FULL_DOC_CONTENTS_LATEST);
+        new ConnectorDocumentationRead().doc(DOC_CONTENTS_LATEST);
     final ConnectorDocumentationRead actualResult = connectorDocumentationHandler.getConnectorDocumentation(request);
 
     assertEquals(expectedResult, actualResult);

@@ -52,21 +52,17 @@ const destinationNamespaceValidationSchema = yup.object().shape({
 
 interface DestinationNamespaceModalProps {
   initialValues: Pick<FormConnectionFormValues, "namespaceDefinition" | "namespaceFormat">;
-  onCloseModal: () => void;
-  onSubmit: (values: DestinationNamespaceFormValues) => void;
+  onCancel: () => void;
+  onSubmit: (values: DestinationNamespaceFormValues) => Promise<void>;
 }
 
 export const DestinationNamespaceModal: React.FC<DestinationNamespaceModalProps> = ({
   initialValues,
-  onCloseModal,
+  onCancel,
   onSubmit,
 }) => {
   const { formatMessage } = useIntl();
 
-  const onSubmitCallback = async (values: DestinationNamespaceFormValues) => {
-    onCloseModal();
-    onSubmit(values);
-  };
   return (
     <Form
       defaultValues={{
@@ -75,7 +71,7 @@ export const DestinationNamespaceModal: React.FC<DestinationNamespaceModalProps>
         namespaceFormat: initialValues.namespaceFormat ?? "${SOURCE_NAMESPACE}",
       }}
       schema={destinationNamespaceValidationSchema}
-      onSubmit={onSubmitCallback}
+      onSubmit={onSubmit}
     >
       <>
         <ModalBody className={styles.content} padded={false}>
@@ -112,7 +108,7 @@ export const DestinationNamespaceModal: React.FC<DestinationNamespaceModalProps>
         <ModalFooter>
           <ModalFormSubmissionButtons
             submitKey="form.apply"
-            onCancelClickCallback={onCloseModal}
+            onCancelClickCallback={onCancel}
             additionalCancelButtonProps={{ "data-testid": "namespace-definition-cancel-button" }}
             additionalSubmitButtonProps={{ "data-testid": "namespace-definition-apply-button" }}
           />

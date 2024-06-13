@@ -18,12 +18,12 @@ const schema = yup.object().shape({
 });
 
 export const UpdateWorkspaceNameForm = () => {
-  const { name, workspaceId } = useCurrentWorkspace();
+  const { name, workspaceId, organizationId } = useCurrentWorkspace();
   const { formatMessage } = useIntl();
   const { mutateAsync: updateWorkspaceName } = useUpdateWorkspaceName();
   const { registerNotification } = useNotificationService();
   const { trackError } = useAppMonitoringService();
-  const canUpdateWorkspace = useIntent("UpdateWorkspace", { workspaceId });
+  const canUpdateWorkspace = useIntent("UpdateWorkspace", { workspaceId, organizationId });
 
   const onSubmit = async ({ name }: UpdateWorkspaceNameFormValues) => {
     await updateWorkspaceName({
@@ -64,7 +64,7 @@ export const UpdateWorkspaceNameForm = () => {
         fieldType="input"
         label={formatMessage({ id: "settings.workspaceSettings.updateWorkspaceNameForm.name.label" })}
       />
-      {canUpdateWorkspace && <FormSubmissionButtons />}
+      {canUpdateWorkspace && <FormSubmissionButtons noCancel justify="flex-start" submitKey="form.saveChanges" />}
     </Form>
   );
 };

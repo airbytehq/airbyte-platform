@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.config.secrets.test.cases
@@ -38,7 +38,7 @@ class NestedObjectTestCase() : SecretsTestCase {
         secretPersistence.write(SecretCoordinate(SecretsTestCase.buildBaseCoordinate(uuidIndex = 0), 1), "hunter2")
       }
     }
-  val updatedPartialConfigAfterUpdate1: JsonNode
+  val updatedPartialConfigAfterUpdateTopLevel: JsonNode
     // the following helpers are for the custom test suite for evaluating updating individual secret
     get() {
       return Exceptions.toRuntime<JsonNode> {
@@ -48,7 +48,7 @@ class NestedObjectTestCase() : SecretsTestCase {
         )
       }
     }
-  val updatedPartialConfigAfterUpdate2: JsonNode
+  val updatedPartialConfigAfterUpdateNested: JsonNode
     get() {
       return Exceptions.toRuntime(
         Callable {
@@ -59,7 +59,7 @@ class NestedObjectTestCase() : SecretsTestCase {
         },
       )
     }
-  val fullConfigUpdate1: JsonNode
+  val fullConfigUpdateTopLevel: JsonNode
     get() {
       return Exceptions.toRuntime<JsonNode> {
         getNodeResource(
@@ -68,7 +68,7 @@ class NestedObjectTestCase() : SecretsTestCase {
         )
       }
     }
-  val fullConfigUpdate2: JsonNode
+  val fullConfigUpdateNested: JsonNode
     get() {
       return Exceptions.toRuntime(
         Callable {
@@ -79,18 +79,18 @@ class NestedObjectTestCase() : SecretsTestCase {
         },
       )
     }
-  val secretMapAfterUpdate1: Map<SecretCoordinate, String>
+  val secretMapAfterUpdateTopLevel: Map<SecretCoordinate, String>
     get() {
       return mapOf(
         SecretCoordinate(SecretsTestCase.buildBaseCoordinate(uuidIndex = 1), 2) to "hunter3",
-        SecretCoordinate(SecretsTestCase.buildBaseCoordinate(uuidIndex = 0), 1) to "hunter2",
+        SecretCoordinate(SecretsTestCase.buildBaseCoordinate(uuidIndex = 0), 2) to "hunter2",
       )
     }
-  val secretMapAfterUpdate2: Map<SecretCoordinate, String>
+  val secretMapAfterUpdateNested: Map<SecretCoordinate, String>
     get() {
       return mapOf(
-        SecretCoordinate(SecretsTestCase.buildBaseCoordinate(uuidIndex = 1), 2) to "hunter3",
-        SecretCoordinate(SecretsTestCase.buildBaseCoordinate(uuidIndex = 0), 2) to "hunter4",
+        SecretCoordinate(SecretsTestCase.buildBaseCoordinate(uuidIndex = 1), 3) to "hunter3",
+        SecretCoordinate(SecretsTestCase.buildBaseCoordinate(uuidIndex = 0), 3) to "hunter4",
       )
     }
 }

@@ -1,15 +1,13 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.server.apis;
 
 import static io.airbyte.commons.auth.AuthRoleConstants.ADMIN;
 import static io.airbyte.commons.auth.AuthRoleConstants.AUTHENTICATED_USER;
-import static io.airbyte.commons.auth.AuthRoleConstants.EDITOR;
 import static io.airbyte.commons.auth.AuthRoleConstants.ORGANIZATION_EDITOR;
 import static io.airbyte.commons.auth.AuthRoleConstants.ORGANIZATION_READER;
-import static io.airbyte.commons.auth.AuthRoleConstants.READER;
 import static io.airbyte.commons.auth.AuthRoleConstants.WORKSPACE_EDITOR;
 import static io.airbyte.commons.auth.AuthRoleConstants.WORKSPACE_READER;
 
@@ -25,12 +23,12 @@ import io.airbyte.api.model.generated.SourceDefinitionRead;
 import io.airbyte.api.model.generated.SourceDefinitionReadList;
 import io.airbyte.api.model.generated.SourceDefinitionUpdate;
 import io.airbyte.api.model.generated.WorkspaceIdRequestBody;
-import io.airbyte.commons.auth.SecuredWorkspace;
 import io.airbyte.commons.server.handlers.SourceDefinitionsHandler;
 import io.airbyte.commons.server.scheduling.AirbyteTaskExecutors;
 import io.airbyte.commons.server.validation.ActorDefinitionAccessValidator;
 import io.micronaut.context.annotation.Context;
 import io.micronaut.http.HttpStatus;
+import io.micronaut.http.annotation.Body;
 import io.micronaut.http.annotation.Controller;
 import io.micronaut.http.annotation.Post;
 import io.micronaut.http.annotation.Status;
@@ -55,11 +53,10 @@ public class SourceDefinitionApiController implements SourceDefinitionApi {
   }
 
   @Post("/create_custom")
-  @Secured({EDITOR, WORKSPACE_EDITOR, ORGANIZATION_EDITOR})
-  @SecuredWorkspace
+  @Secured({WORKSPACE_EDITOR, ORGANIZATION_EDITOR})
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @Override
-  public SourceDefinitionRead createCustomSourceDefinition(final CustomSourceDefinitionCreate customSourceDefinitionCreate) {
+  public SourceDefinitionRead createCustomSourceDefinition(@Body final CustomSourceDefinitionCreate customSourceDefinitionCreate) {
     // legacy calls contain workspace id instead of scope id and scope type
     if (customSourceDefinitionCreate.getWorkspaceId() != null) {
       customSourceDefinitionCreate.setScopeType(ScopeType.WORKSPACE);
@@ -74,7 +71,7 @@ public class SourceDefinitionApiController implements SourceDefinitionApi {
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @Override
   @Status(HttpStatus.NO_CONTENT)
-  public void deleteSourceDefinition(final SourceDefinitionIdRequestBody sourceDefinitionIdRequestBody) {
+  public void deleteSourceDefinition(@Body final SourceDefinitionIdRequestBody sourceDefinitionIdRequestBody) {
     log.info("about to call access validator");
     accessValidator.validateWriteAccess(sourceDefinitionIdRequestBody.getSourceDefinitionId());
     ApiHelper.execute(() -> {
@@ -87,25 +84,23 @@ public class SourceDefinitionApiController implements SourceDefinitionApi {
   @Secured({AUTHENTICATED_USER})
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @Override
-  public SourceDefinitionRead getSourceDefinition(final SourceDefinitionIdRequestBody sourceDefinitionIdRequestBody) {
+  public SourceDefinitionRead getSourceDefinition(@Body final SourceDefinitionIdRequestBody sourceDefinitionIdRequestBody) {
     return ApiHelper.execute(() -> sourceDefinitionsHandler.getSourceDefinition(sourceDefinitionIdRequestBody));
   }
 
   @Post("/get_for_scope")
-  @Secured({READER, WORKSPACE_READER, ORGANIZATION_READER})
-  @SecuredWorkspace
+  @Secured({WORKSPACE_READER, ORGANIZATION_READER})
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @Override
-  public SourceDefinitionRead getSourceDefinitionForScope(final ActorDefinitionIdWithScope actorDefinitionIdWithScope) {
+  public SourceDefinitionRead getSourceDefinitionForScope(@Body final ActorDefinitionIdWithScope actorDefinitionIdWithScope) {
     return ApiHelper.execute(() -> sourceDefinitionsHandler.getSourceDefinitionForScope(actorDefinitionIdWithScope));
   }
 
   @Post("/get_for_workspace")
-  @Secured({READER, WORKSPACE_READER, ORGANIZATION_READER})
-  @SecuredWorkspace
+  @Secured({WORKSPACE_READER, ORGANIZATION_READER})
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @Override
-  public SourceDefinitionRead getSourceDefinitionForWorkspace(final SourceDefinitionIdWithWorkspaceId sourceDefinitionIdWithWorkspaceId) {
+  public SourceDefinitionRead getSourceDefinitionForWorkspace(@Body final SourceDefinitionIdWithWorkspaceId sourceDefinitionIdWithWorkspaceId) {
     return ApiHelper.execute(() -> sourceDefinitionsHandler.getSourceDefinitionForWorkspace(sourceDefinitionIdWithWorkspaceId));
   }
 
@@ -113,7 +108,7 @@ public class SourceDefinitionApiController implements SourceDefinitionApi {
   @Secured({ADMIN})
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @Override
-  public PrivateSourceDefinitionRead grantSourceDefinition(final ActorDefinitionIdWithScope actorDefinitionIdWithScope) {
+  public PrivateSourceDefinitionRead grantSourceDefinition(@Body final ActorDefinitionIdWithScope actorDefinitionIdWithScope) {
     return ApiHelper.execute(() -> sourceDefinitionsHandler.grantSourceDefinitionToWorkspaceOrOrganization(actorDefinitionIdWithScope));
   }
 
@@ -129,7 +124,7 @@ public class SourceDefinitionApiController implements SourceDefinitionApi {
   @Secured({ADMIN})
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @Override
-  public PrivateSourceDefinitionReadList listPrivateSourceDefinitions(final WorkspaceIdRequestBody workspaceIdRequestBody) {
+  public PrivateSourceDefinitionReadList listPrivateSourceDefinitions(@Body final WorkspaceIdRequestBody workspaceIdRequestBody) {
     return ApiHelper.execute(() -> sourceDefinitionsHandler.listPrivateSourceDefinitions(workspaceIdRequestBody));
   }
 
@@ -142,11 +137,10 @@ public class SourceDefinitionApiController implements SourceDefinitionApi {
   }
 
   @Post("/list_for_workspace")
-  @Secured({READER, WORKSPACE_READER, ORGANIZATION_READER})
-  @SecuredWorkspace
+  @Secured({WORKSPACE_READER, ORGANIZATION_READER})
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @Override
-  public SourceDefinitionReadList listSourceDefinitionsForWorkspace(final WorkspaceIdRequestBody workspaceIdRequestBody) {
+  public SourceDefinitionReadList listSourceDefinitionsForWorkspace(@Body final WorkspaceIdRequestBody workspaceIdRequestBody) {
     return ApiHelper.execute(() -> sourceDefinitionsHandler.listSourceDefinitionsForWorkspace(workspaceIdRequestBody));
   }
 
@@ -155,7 +149,7 @@ public class SourceDefinitionApiController implements SourceDefinitionApi {
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @Override
   @Status(HttpStatus.NO_CONTENT)
-  public void revokeSourceDefinition(final ActorDefinitionIdWithScope actorDefinitionIdWithScope) {
+  public void revokeSourceDefinition(@Body final ActorDefinitionIdWithScope actorDefinitionIdWithScope) {
     ApiHelper.execute(() -> {
       sourceDefinitionsHandler.revokeSourceDefinition(actorDefinitionIdWithScope);
       return null;
@@ -167,7 +161,7 @@ public class SourceDefinitionApiController implements SourceDefinitionApi {
   @Secured({AUTHENTICATED_USER})
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @Override
-  public SourceDefinitionRead updateSourceDefinition(final SourceDefinitionUpdate sourceDefinitionUpdate) {
+  public SourceDefinitionRead updateSourceDefinition(@Body final SourceDefinitionUpdate sourceDefinitionUpdate) {
     accessValidator.validateWriteAccess(sourceDefinitionUpdate.getSourceDefinitionId());
     return ApiHelper.execute(() -> sourceDefinitionsHandler.updateSourceDefinition(sourceDefinitionUpdate));
   }

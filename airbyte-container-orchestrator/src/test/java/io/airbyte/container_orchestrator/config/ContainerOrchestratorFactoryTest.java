@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.container_orchestrator.config;
@@ -10,6 +10,8 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 
+import io.airbyte.api.client.WorkloadApiClient;
+import io.airbyte.commons.envvar.EnvVar;
 import io.airbyte.commons.features.FeatureFlags;
 import io.airbyte.commons.workers.config.WorkerConfigs;
 import io.airbyte.commons.workers.config.WorkerConfigsProvider;
@@ -26,13 +28,15 @@ import io.airbyte.workers.process.ProcessFactory;
 import io.airbyte.workers.sync.DbtLauncherWorker;
 import io.airbyte.workers.sync.NormalizationLauncherWorker;
 import io.airbyte.workers.sync.ReplicationLauncherWorker;
+import io.airbyte.workers.workload.JobOutputDocStore;
 import io.airbyte.workers.workload.WorkloadIdGenerator;
-import io.airbyte.workload.api.client.generated.WorkloadApi;
 import io.micronaut.context.annotation.Bean;
+import io.micronaut.context.annotation.Property;
 import io.micronaut.context.annotation.Replaces;
 import io.micronaut.context.env.Environment;
 import io.micronaut.test.extensions.junit5.annotation.MicronautTest;
 import jakarta.inject.Inject;
+import jakarta.inject.Named;
 import java.util.Map;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -40,7 +44,13 @@ import org.junit.jupiter.api.Test;
 // tests may be running on a real k8s environment, override the environment to something else for
 // this test
 @MicronautTest(environments = Environment.TEST)
+@Property(name = "INTERNAL_API_HOST",
+          value = "http://localhost:8000")
 class ContainerOrchestratorFactoryTest {
+
+  @Inject
+  @Named("configDir")
+  String configDir;
 
   @Inject
   FeatureFlags featureFlags;
@@ -62,7 +72,7 @@ class ContainerOrchestratorFactoryTest {
   JobRunConfig jobRunConfig;
 
   @Inject
-  WorkloadApi workloadApi;
+  WorkloadApiClient workloadApiClient;
 
   @Inject
   ReplicationWorkerFactory replicationWorkerFactory;
@@ -72,11 +82,15 @@ class ContainerOrchestratorFactoryTest {
   // Tests will fail if this is uncommented, due to how the implementation of the DocumentStoreClient
   // is being created
   // @Inject
-  // DocumentStoreClient documentStoreClient;
+  // DocumentStoreClient storageClient;
+
+  // @Inject
+  JobOutputDocStore jobOutputDocStore;
 
   @BeforeEach
   void beforeEach() {
     asyncStateManager = mock(AsyncStateManager.class);
+    jobOutputDocStore = mock(JobOutputDocStore.class);
   }
 
   @Test
@@ -87,7 +101,7 @@ class ContainerOrchestratorFactoryTest {
   @Test
   void envConfigs() {
     // check one random environment variable to ensure the EnvConfigs was created correctly
-    assertEquals("/tmp/airbyte_local", envConfigs.getEnv(EnvConfigs.LOCAL_DOCKER_MOUNT));
+    assertEquals("/tmp/airbyte_local", envConfigs.getEnv(EnvVar.LOCAL_DOCKER_MOUNT));
   }
 
   @Test
@@ -112,29 +126,30 @@ class ContainerOrchestratorFactoryTest {
     final var factory = new ContainerOrchestratorFactory();
 
     final var repl = factory.jobOrchestrator(
-        ReplicationLauncherWorker.REPLICATION, envConfigs, processFactory, workerConfigsProvider, jobRunConfig, replicationWorkerFactory,
-        asyncStateManager, workloadApi, new WorkloadIdGenerator(), false);
+        ReplicationLauncherWorker.REPLICATION, configDir, envConfigs, processFactory, workerConfigsProvider, jobRunConfig, replicationWorkerFactory,
+        asyncStateManager, workloadApiClient, new WorkloadIdGenerator(), false, jobOutputDocStore);
     assertEquals("Replication", repl.getOrchestratorName());
 
     final var norm = factory.jobOrchestrator(
-        NormalizationLauncherWorker.NORMALIZATION, envConfigs, processFactory, workerConfigsProvider, jobRunConfig, replicationWorkerFactory,
-        asyncStateManager, workloadApi, new WorkloadIdGenerator(), false);
+        NormalizationLauncherWorker.NORMALIZATION, configDir, envConfigs, processFactory, workerConfigsProvider, jobRunConfig,
+        replicationWorkerFactory,
+        asyncStateManager, workloadApiClient, new WorkloadIdGenerator(), false, jobOutputDocStore);
     assertEquals("Normalization", norm.getOrchestratorName());
 
     final var dbt = factory.jobOrchestrator(
-        DbtLauncherWorker.DBT, envConfigs, processFactory, workerConfigsProvider, jobRunConfig,
-        replicationWorkerFactory, asyncStateManager, workloadApi, new WorkloadIdGenerator(), false);
+        DbtLauncherWorker.DBT, configDir, envConfigs, processFactory, workerConfigsProvider, jobRunConfig,
+        replicationWorkerFactory, asyncStateManager, workloadApiClient, new WorkloadIdGenerator(), false, jobOutputDocStore);
     assertEquals("DBT Transformation", dbt.getOrchestratorName());
 
     final var noop = factory.jobOrchestrator(
-        AsyncOrchestratorPodProcess.NO_OP, envConfigs, processFactory, workerConfigsProvider, jobRunConfig, replicationWorkerFactory,
-        asyncStateManager, workloadApi, new WorkloadIdGenerator(), false);
+        AsyncOrchestratorPodProcess.NO_OP, configDir, envConfigs, processFactory, workerConfigsProvider, jobRunConfig, replicationWorkerFactory,
+        asyncStateManager, workloadApiClient, new WorkloadIdGenerator(), false, jobOutputDocStore);
     assertEquals("NO_OP", noop.getOrchestratorName());
 
     var caught = false;
     try {
-      factory.jobOrchestrator("does not exist", envConfigs, processFactory, workerConfigsProvider, jobRunConfig, replicationWorkerFactory,
-          asyncStateManager, workloadApi, new WorkloadIdGenerator(), false);
+      factory.jobOrchestrator("does not exist", configDir, envConfigs, processFactory, workerConfigsProvider, jobRunConfig, replicationWorkerFactory,
+          asyncStateManager, workloadApiClient, new WorkloadIdGenerator(), false, jobOutputDocStore);
     } catch (final Exception e) {
       caught = true;
     }

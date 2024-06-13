@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.config.secrets
@@ -21,6 +21,15 @@ class MemorySecretPersistence : SecretPersistence {
     payload: String,
   ) {
     secretMap[coordinate] = payload
+  }
+
+  override fun delete(coordinate: SecretCoordinate) {
+    secretMap.remove(coordinate)
+  }
+
+  override fun disable(coordinate: SecretCoordinate) {
+    // Mimic the behavior of the real implementation.
+    secretMap.remove(coordinate)
   }
 
   val map: Map<SecretCoordinate, String>

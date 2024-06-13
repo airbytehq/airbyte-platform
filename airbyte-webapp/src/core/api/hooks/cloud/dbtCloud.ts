@@ -8,8 +8,7 @@
 // - for now, the code treats "webhook operations" and "dbt Cloud job" as synonymous.
 // - custom domains aren't yet supported
 
-import { useMutation, useQuery } from "@tanstack/react-query";
-import isEmpty from "lodash/isEmpty";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useIntl } from "react-intl";
 import { useAsyncFn } from "react-use";
 
@@ -37,16 +36,13 @@ export interface DbtCloudJob {
   jobName?: string;
 }
 
-type ServiceToken = string;
-
 const WEBHOOK_CONFIG_NAME = "dbt cloud";
 
 const jobName = (t: DbtCloudJob) => `${t.accountId}/${t.jobId}`;
 
 const isDbtWebhookConfig = (webhookConfig: WebhookConfigRead) => !!webhookConfig.name?.includes("dbt");
 
-const hasDbtIntegration = (workspace: WorkspaceRead) => !isEmpty(workspace.webhookConfigs?.filter(isDbtWebhookConfig));
-
+const hasDbtIntegration = (workspace: WorkspaceRead) => !!workspace.webhookConfigs?.some(isDbtWebhookConfig);
 export const toDbtCloudJob = (operationRead: OperationRead): DbtCloudJob => {
   if (operationRead.operatorConfiguration.webhook?.webhookType === "dbtCloud") {
     const dbtCloud = operationRead.operatorConfiguration.webhook.dbtCloud as DbtCloudJob;
@@ -70,14 +66,20 @@ export const useDbtCloudServiceToken = () => {
   const workspace = useCurrentWorkspace();
   const { workspaceId } = workspace;
   const { mutateAsync: updateWorkspace } = useUpdateWorkspace();
+  const queryClient = useQueryClient();
 
-  const { mutateAsync: saveToken, isLoading: isSavingToken } = useMutation<WorkspaceRead, Error, ServiceToken>(
-    ["submitWorkspaceDbtCloudToken", workspaceId],
-    async (authToken: string) => {
+  const { mutateAsync: saveToken, isLoading: isSavingToken } = useMutation<
+    WorkspaceRead,
+    Error,
+    { authToken: string; accessUrl?: string }
+  >(
+    ["saveToken", { workspaceId }],
+    async ({ authToken, accessUrl }) => {
       const webhookConfigs = [
         {
           name: WEBHOOK_CONFIG_NAME,
           authToken,
+          customDbtHost: accessUrl,
         },
       ];
 
@@ -85,11 +87,16 @@ export const useDbtCloudServiceToken = () => {
         workspaceId,
         webhookConfigs,
       });
+    },
+    {
+      onSuccess: () => {
+        queryClient.invalidateQueries(["workspace", workspaceId]);
+      },
     }
   );
 
   const { mutateAsync: deleteToken, isLoading: isDeletingToken } = useMutation<WorkspaceRead, Error>(
-    ["submitWorkspaceDbtCloudToken", workspaceId],
+    ["deleteToken", { workspaceId }],
     async () => {
       const webhookConfigs: WebhookConfigWrite[] = [];
 

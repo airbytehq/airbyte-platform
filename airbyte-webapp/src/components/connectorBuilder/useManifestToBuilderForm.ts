@@ -1,4 +1,4 @@
-import { useBuilderResolveManifestQuery } from "core/api";
+import { HttpError, useBuilderResolveManifestQuery } from "core/api";
 import { ResolveManifest } from "core/api/types/ConnectorBuilderClient";
 import { ConnectorManifest } from "core/api/types/ConnectorManifest";
 
@@ -20,7 +20,7 @@ export const convertToBuilderFormValues = async (
   try {
     resolveResult = await resolve(manifest, projectId);
   } catch (e) {
-    let errorMessage = e.message;
+    let errorMessage = e instanceof HttpError ? e.response.message : e.message;
     if (errorMessage[0] === '"') {
       errorMessage = errorMessage.substring(1, errorMessage.length);
     }

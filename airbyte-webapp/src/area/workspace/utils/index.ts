@@ -1,2 +1,2 @@
 export * from "./useCurrentWorkspaceId";
-export * from "./useSelectWorkspace";
+export * from "./useCurrentWorkspaceLink";

@@ -9,23 +9,12 @@ import {
   CloudWorkspaceReadCreditStatus as CreditStatus,
   CloudWorkspaceReadWorkspaceTrialStatus as WorkspaceTrialStatus,
 } from "core/api/types/CloudApi";
-import { useExperiment } from "hooks/services/Experiment";
 import { CloudRoutes } from "packages/cloud/cloudRoutePaths";
 
 interface WorkspaceStatusBannerProps {
   cloudWorkspace: CloudWorkspaceRead;
 }
 export const WorkspaceStatusBanner: React.FC<WorkspaceStatusBannerProps> = ({ cloudWorkspace }) => {
-  const isNewTrialPolicyEnabled = useExperiment("billing.newTrialPolicy", false);
-
-  const isWorkspacePreTrial = isNewTrialPolicyEnabled
-    ? cloudWorkspace.workspaceTrialStatus === WorkspaceTrialStatus.pre_trial
-    : false;
-
-  const isWorkspaceInTrial = isNewTrialPolicyEnabled
-    ? cloudWorkspace.workspaceTrialStatus === WorkspaceTrialStatus.in_trial
-    : !!cloudWorkspace.trialExpiryTimestamp;
-
   const negativeCreditStatus = useMemo(() => {
     // these remain the same regardless of the new trial policy
     return (
@@ -48,11 +37,11 @@ export const WorkspaceStatusBanner: React.FC<WorkspaceStatusBannerProps> = ({ cl
       );
     }
 
-    if (isWorkspacePreTrial) {
+    if (cloudWorkspace.workspaceTrialStatus === WorkspaceTrialStatus.pre_trial) {
       return <FormattedMessage id="trial.preTrialAlertMessage" />;
     }
 
-    if (isWorkspaceInTrial) {
+    if (cloudWorkspace.workspaceTrialStatus === WorkspaceTrialStatus.in_trial) {
       const { trialExpiryTimestamp } = cloudWorkspace;
 
       // calculate difference between timestamp (in epoch milliseconds) and now (in epoch milliseconds)
@@ -75,7 +64,7 @@ export const WorkspaceStatusBanner: React.FC<WorkspaceStatusBannerProps> = ({ cl
     }
 
     return null;
-  }, [cloudWorkspace, isWorkspaceInTrial, isWorkspacePreTrial, negativeCreditStatus]);
+  }, [cloudWorkspace, negativeCreditStatus]);
 
   return (
     <>

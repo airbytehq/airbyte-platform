@@ -1,11 +1,10 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.api.server.controllers
 
 import com.fasterxml.jackson.databind.node.ObjectNode
-import io.airbyte.airbyte_api.generated.SourcesApi
 import io.airbyte.airbyte_api.model.generated.InitiateOauthRequest
 import io.airbyte.airbyte_api.model.generated.SourceCreateRequest
 import io.airbyte.airbyte_api.model.generated.SourcePatchRequest
@@ -19,6 +18,7 @@ import io.airbyte.api.server.constants.PUT
 import io.airbyte.api.server.constants.SOURCES_PATH
 import io.airbyte.api.server.constants.SOURCES_WITH_ID_PATH
 import io.airbyte.api.server.constants.SOURCE_TYPE
+import io.airbyte.api.server.controllers.interfaces.SourcesApi
 import io.airbyte.api.server.helpers.getActorDefinitionIdFromActorName
 import io.airbyte.api.server.helpers.getLocalUserInfoIfNull
 import io.airbyte.api.server.helpers.removeSourceTypeNode
@@ -28,8 +28,8 @@ import io.airbyte.api.server.services.SourceService
 import io.airbyte.api.server.services.UserService
 import io.micronaut.http.annotation.Controller
 import io.micronaut.http.annotation.Patch
+import jakarta.ws.rs.core.Response
 import java.util.UUID
-import javax.ws.rs.core.Response
 
 // Marked as open because when not marked, micronaut failed to start up because generated beans couldn't extend this one since it was "final"
 @Controller(SOURCES_PATH)
@@ -165,7 +165,7 @@ open class SourcesController(
   }
 
   override fun listSources(
-    workspaceIds: MutableList<UUID>?,
+    workspaceIds: List<UUID>?,
     includeDeleted: Boolean?,
     limit: Int?,
     offset: Int?,

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.server.handlers;
@@ -42,7 +42,7 @@ class RetryStatesHandlerTest {
   void testGetByJobId() {
     final var jobId = 1345L;
     final var apiReq = new JobIdRequestBody().id(jobId);
-    final var domain = RetryState.builder().build();
+    final var domain = new RetryState.RetryStateBuilder().build();
     final var apiResp = new RetryStateRead();
 
     when(repo.findByJobId(jobId))
@@ -62,7 +62,7 @@ class RetryStatesHandlerTest {
     final var apiReq = new JobRetryStateRequestBody()
         .jobId(jobId);
 
-    final var update = RetryState.builder()
+    final var update = new RetryState.RetryStateBuilder()
         .jobId(jobId)
         .build();
 

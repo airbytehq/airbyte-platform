@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.connector_builder.command_runner;
@@ -48,6 +48,8 @@ public class ProcessOutputParser {
       messagesByType = WorkerUtils.getMessagesByType(process, streamFactory, timeOut);
     } catch (final NullPointerException exc) {
       throwCdkException(process, cdkCommand);
+    } catch (final IllegalStateException e) {
+      throw e;
     }
 
     if (messagesByType == null || messagesByType.isEmpty()) {

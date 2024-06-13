@@ -7,7 +7,6 @@ import { Message } from "components/ui/Message";
 
 import { NonBreakingChangesPreference } from "core/api/types/AirbyteClient";
 import { useConnectionFormService } from "hooks/services/ConnectionForm/ConnectionFormService";
-import { useExperiment } from "hooks/services/Experiment";
 
 import { CardFormFieldLayout } from "./CardFormFieldLayout";
 import { FormConnectionFormValues } from "./formConfig";
@@ -15,11 +14,6 @@ import { FormConnectionFormValues } from "./formConfig";
 export const NonBreakingChangesPreferenceFormField = () => {
   const { formatMessage } = useIntl();
   const { connection, mode } = useConnectionFormService();
-  const autoPropagationEnabled = useExperiment("autopropagation.enabled", true);
-  const autoPropagationPrefix = autoPropagationEnabled ? "autopropagation." : "";
-  const labelKey = autoPropagationEnabled
-    ? "connectionForm.nonBreakingChangesPreference.autopropagation.label"
-    : "connectionForm.nonBreakingChangesPreference.label";
 
   const watchedNonBreakingChangesPreference = useWatch<FormConnectionFormValues>({
     name: "nonBreakingChangesPreference",
@@ -31,25 +25,19 @@ export const NonBreakingChangesPreferenceFormField = () => {
     (watchedNonBreakingChangesPreference === "propagate_columns" ||
       watchedNonBreakingChangesPreference === "propagate_fully");
 
-  const supportedPreferences = useMemo(() => {
-    if (autoPropagationEnabled) {
-      return [
-        NonBreakingChangesPreference.propagate_columns,
-        NonBreakingChangesPreference.propagate_fully,
-        NonBreakingChangesPreference.ignore,
-        NonBreakingChangesPreference.disable,
-      ];
-    }
-    return [NonBreakingChangesPreference.ignore, NonBreakingChangesPreference.disable];
-  }, [autoPropagationEnabled]);
-
   const preferenceOptions = useMemo(() => {
+    const supportedPreferences = [
+      NonBreakingChangesPreference.propagate_columns,
+      NonBreakingChangesPreference.propagate_fully,
+      NonBreakingChangesPreference.ignore,
+      NonBreakingChangesPreference.disable,
+    ];
     return supportedPreferences.map((value) => ({
       value,
-      label: formatMessage({ id: `connectionForm.nonBreakingChangesPreference.${autoPropagationPrefix}${value}` }),
+      label: formatMessage({ id: `connectionForm.nonBreakingChangesPreference.autopropagation.${value}` }),
       "data-testid": value,
     }));
-  }, [formatMessage, supportedPreferences, autoPropagationPrefix]);
+  }, [formatMessage]);
 
   return (
     <CardFormFieldLayout>
@@ -57,7 +45,7 @@ export const NonBreakingChangesPreferenceFormField = () => {
         name="nonBreakingChangesPreference"
         fieldType="dropdown"
         label={formatMessage({
-          id: labelKey,
+          id: "connectionForm.nonBreakingChangesPreference.autopropagation.label",
         })}
         labelTooltip={formatMessage({
           id: "connectionForm.nonBreakingChangesPreference.message",

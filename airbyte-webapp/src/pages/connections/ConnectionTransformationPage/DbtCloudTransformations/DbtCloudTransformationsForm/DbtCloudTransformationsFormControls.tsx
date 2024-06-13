@@ -6,7 +6,6 @@ import { Box } from "components/ui/Box";
 import { Button } from "components/ui/Button";
 import { DropdownMenu } from "components/ui/DropdownMenu";
 import { FlexContainer } from "components/ui/Flex";
-import { Icon } from "components/ui/Icon";
 import { Text } from "components/ui/Text";
 
 import { isSameJob } from "core/api/cloud";
@@ -52,17 +51,13 @@ export const DbtCloudTransformationsFormControls: React.FC<DbtCloudTransformatio
           availableDbtCloudJobs.length > 0 ? (
             <DropdownMenu
               options={dropdownMenuOptions}
-              placement="left"
+              placement="bottom"
               onChange={(selection) => {
                 append(selection.value as DbtCloudJobInfo);
               }}
             >
               {() => (
-                <Button
-                  variant="secondary"
-                  icon={<Icon type="plus" size="sm" />}
-                  disabled={!dropdownMenuOptions.length}
-                >
+                <Button variant="secondary" icon="plus" iconSize="sm" disabled={!dropdownMenuOptions.length}>
                   <FormattedMessage id="connection.dbtCloudJobs.addJob" />
                 </Button>
               )}

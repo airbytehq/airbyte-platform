@@ -16,7 +16,7 @@ export const SelectExistingConnector = <T extends SourceRead | DestinationRead>(
   selectConnector,
 }: SelectExistingConnectorProps<T>) => {
   return (
-    <Card>
+    <Card noPadding>
       <ul className={styles.existingConnectors}>
         {connectors.map((connector) => {
           const key = isSource(connector) ? connector.sourceId : connector.destinationId;

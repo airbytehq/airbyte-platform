@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.persistence.job;
@@ -13,12 +13,13 @@ import io.airbyte.config.StandardDestinationDefinition;
 import io.airbyte.config.StandardSourceDefinition;
 import io.airbyte.config.StandardSync;
 import io.airbyte.config.StandardSyncOperation;
+import io.airbyte.config.persistence.domain.StreamRefresh;
 import io.airbyte.protocol.models.StreamDescriptor;
+import jakarta.annotation.Nullable;
 import java.io.IOException;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
-import javax.annotation.Nullable;
 
 /**
  * Abstraction to hide implementation of enqueuing a job.
@@ -41,8 +42,10 @@ public interface JobCreator {
                                DestinationConnection destination,
                                StandardSync standardSync,
                                String sourceDockerImage,
+                               Boolean sourceDockerImageIsDefault,
                                Version sourceProtocolVersion,
                                String destinationDockerImage,
+                               Boolean destinationDockerImageIsDefault,
                                Version destinationProtocolVersion,
                                List<StandardSyncOperation> standardSyncOperations,
                                @Nullable JsonNode webhookOperationConfigs,
@@ -73,6 +76,21 @@ public interface JobCreator {
                                           List<StandardSyncOperation> standardSyncOperations,
                                           List<StreamDescriptor> streamsToReset,
                                           UUID workspaceId)
+      throws IOException;
+
+  Optional<Long> createRefreshConnection(final StandardSync standardSync,
+                                         final String sourceDockerImageName,
+                                         final Version sourceProtocolVersion,
+                                         final String destinationDockerImageName,
+                                         final Version destinationProtocolVersion,
+                                         final List<StandardSyncOperation> standardSyncOperations,
+                                         @Nullable final JsonNode webhookOperationConfigs,
+                                         final StandardSourceDefinition sourceDefinition,
+                                         final StandardDestinationDefinition destinationDefinition,
+                                         final ActorDefinitionVersion sourceDefinitionVersion,
+                                         final ActorDefinitionVersion destinationDefinitionVersion,
+                                         final UUID workspaceId,
+                                         final List<StreamRefresh> streamsToRefresh)
       throws IOException;
 
 }

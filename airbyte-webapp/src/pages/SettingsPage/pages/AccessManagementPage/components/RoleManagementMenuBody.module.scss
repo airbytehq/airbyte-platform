@@ -1,0 +1,21 @@
+@use "scss/colors";
+@use "scss/variables";
+
+.roleManagementMenu__rolesList,
+.roleManagementMenu__listItem {
+  margin: 0;
+  padding: 0;
+  list-style-type: none;
+}
+
+.roleManagementMenu__menuTitle {
+  border-bottom: variables.$border-thin solid colors.$grey-100;
+}
+
+.roleManagementMenu__listItem {
+  margin-bottom: variables.$spacing-xs;
+}
+
+.roleManagementMenu__listItem:last-child {
+  margin-bottom: 0;
+}

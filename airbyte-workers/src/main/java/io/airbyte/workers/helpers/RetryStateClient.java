@@ -1,22 +1,24 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.workers.helpers;
 
 import io.airbyte.api.client.AirbyteApiClient;
-import io.airbyte.api.client.generated.JobRetryStatesApi;
-import io.airbyte.api.client.invoker.generated.ApiException;
 import io.airbyte.api.client.model.generated.JobIdRequestBody;
 import io.airbyte.api.client.model.generated.JobRetryStateRequestBody;
 import io.airbyte.api.client.model.generated.RetryStateRead;
+import io.airbyte.api.client.model.generated.WorkspaceIdRequestBody;
 import io.airbyte.commons.temporal.exception.RetryableException;
 import io.airbyte.commons.temporal.scheduling.retries.BackoffPolicy;
 import io.airbyte.commons.temporal.scheduling.retries.RetryManager;
 import io.airbyte.featureflag.CompleteFailureBackoffBase;
 import io.airbyte.featureflag.CompleteFailureBackoffMaxInterval;
 import io.airbyte.featureflag.CompleteFailureBackoffMinInterval;
+import io.airbyte.featureflag.Context;
 import io.airbyte.featureflag.FeatureFlagClient;
+import io.airbyte.featureflag.Multi;
+import io.airbyte.featureflag.Organization;
 import io.airbyte.featureflag.SuccessiveCompleteFailureLimit;
 import io.airbyte.featureflag.SuccessivePartialFailureLimit;
 import io.airbyte.featureflag.TotalCompleteFailureLimit;
@@ -25,17 +27,23 @@ import io.airbyte.featureflag.Workspace;
 import io.micronaut.context.annotation.Value;
 import io.micronaut.http.HttpStatus;
 import jakarta.inject.Singleton;
+import java.io.IOException;
 import java.time.Duration;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import lombok.SneakyThrows;
+import lombok.extern.slf4j.Slf4j;
+import org.openapitools.client.infrastructure.ClientException;
 
 /**
  * Business and request logic for retrieving and persisting retry state data.
  */
+@Slf4j
 @Singleton
 public class RetryStateClient {
 
-  final JobRetryStatesApi jobRetryStatesApi;
+  final AirbyteApiClient airbyteApiClient;
   final FeatureFlagClient featureFlagClient;
   final Integer successiveCompleteFailureLimit;
   final Integer totalCompleteFailureLimit;
@@ -45,7 +53,7 @@ public class RetryStateClient {
   final Integer maxInterval;
   final Integer backoffBase;
 
-  public RetryStateClient(final JobRetryStatesApi jobRetryStatesApi,
+  public RetryStateClient(final AirbyteApiClient airbyteApiClient,
                           final FeatureFlagClient featureFlagClient,
                           @Value("${airbyte.retries.complete-failures.max-successive}") final Integer successiveCompleteFailureLimit,
                           @Value("${airbyte.retries.complete-failures.max-total}") final Integer totalCompleteFailureLimit,
@@ -54,7 +62,7 @@ public class RetryStateClient {
                           @Value("${airbyte.retries.complete-failures.backoff.min-interval-s}") final Integer minInterval,
                           @Value("${airbyte.retries.complete-failures.backoff.max-interval-s}") final Integer maxInterval,
                           @Value("${airbyte.retries.complete-failures.backoff.base}") final Integer backoffBase) {
-    this.jobRetryStatesApi = jobRetryStatesApi;
+    this.airbyteApiClient = airbyteApiClient;
     this.featureFlagClient = featureFlagClient;
     this.successiveCompleteFailureLimit = successiveCompleteFailureLimit;
     this.totalCompleteFailureLimit = totalCompleteFailureLimit;
@@ -75,8 +83,11 @@ public class RetryStateClient {
    * @throws RetryableException — Delegates to Temporal to retry for now (retryWithJitter swallowing
    *         404's is problematic).
    */
+  @SneakyThrows
   public RetryManager hydrateRetryState(final Long jobId, final UUID workspaceId) throws RetryableException {
-    final var manager = initializeBuilder(workspaceId);
+    final var organizationId = fetchOrganizationId(workspaceId);
+
+    final var manager = initializeBuilder(workspaceId, organizationId);
 
     final var state = Optional.ofNullable(jobId).flatMap(this::fetchRetryState);
 
@@ -92,28 +103,51 @@ public class RetryStateClient {
   }
 
   /**
+   * We look up the organization id instead of passing it in because the caller
+   * (ConnectionManagerWorkflowImpl) doesn't have it before hydrating retry state. If this is changed
+   * in the future, we can simply take the organization id as an argument to the public methods.
+   */
+  private UUID fetchOrganizationId(final UUID workspaceId) {
+    UUID organizationId = null;
+    try {
+      final var workspaceRead = airbyteApiClient.getWorkspaceApi().getWorkspace(new WorkspaceIdRequestBody(workspaceId, false));
+      if (workspaceRead != null) {
+        organizationId = workspaceRead.getOrganizationId();
+      }
+    } catch (final Exception e) {
+      log.warn(String.format("Failed to fetch organization from workspace_ud: %s", workspaceId), e);
+    }
+
+    return organizationId;
+  }
+
+  /**
    * We initialize our values via FF if possible. These will be used for rollout, such that we can
    * tweak values on the fly without requiring redeployment. Eventually we plan to finalize the
    * default values and remove these FF'd values.
    */
-  private RetryManager.RetryManagerBuilder initializeBuilder(final UUID workspaceId) {
-    final var ffSuccessiveCompleteFailureLimit = featureFlagClient.intVariation(SuccessiveCompleteFailureLimit.INSTANCE, new Workspace(workspaceId));
-    final var ffTotalCompleteFailureLimit = featureFlagClient.intVariation(TotalCompleteFailureLimit.INSTANCE, new Workspace(workspaceId));
-    final var ffSuccessivePartialFailureLimit = featureFlagClient.intVariation(SuccessivePartialFailureLimit.INSTANCE, new Workspace(workspaceId));
-    final var ffTotalPartialFailureLimit = featureFlagClient.intVariation(TotalPartialFailureLimit.INSTANCE, new Workspace(workspaceId));
+  private RetryManager.RetryManagerBuilder initializeBuilder(final UUID workspaceId, final UUID organizationId) {
+    final var ffContext = organizationId == null
+        ? new Workspace(workspaceId)
+        : new Multi(List.of(new Workspace(workspaceId), new Organization(organizationId)));
+
+    final var ffSuccessiveCompleteFailureLimit = featureFlagClient.intVariation(SuccessiveCompleteFailureLimit.INSTANCE, ffContext);
+    final var ffTotalCompleteFailureLimit = featureFlagClient.intVariation(TotalCompleteFailureLimit.INSTANCE, ffContext);
+    final var ffSuccessivePartialFailureLimit = featureFlagClient.intVariation(SuccessivePartialFailureLimit.INSTANCE, ffContext);
+    final var ffTotalPartialFailureLimit = featureFlagClient.intVariation(TotalPartialFailureLimit.INSTANCE, ffContext);
 
     return RetryManager.builder()
-        .completeFailureBackoffPolicy(buildBackOffPolicy(workspaceId))
+        .completeFailureBackoffPolicy(buildBackOffPolicy(ffContext))
         .successiveCompleteFailureLimit(initializedOrElse(ffSuccessiveCompleteFailureLimit, successiveCompleteFailureLimit))
         .successivePartialFailureLimit(initializedOrElse(ffSuccessivePartialFailureLimit, successivePartialFailureLimit))
         .totalCompleteFailureLimit(initializedOrElse(ffTotalCompleteFailureLimit, totalCompleteFailureLimit))
         .totalPartialFailureLimit(initializedOrElse(ffTotalPartialFailureLimit, totalPartialFailureLimit));
   }
 
-  private BackoffPolicy buildBackOffPolicy(final UUID workspaceId) {
-    final var ffMin = featureFlagClient.intVariation(CompleteFailureBackoffMinInterval.INSTANCE, new Workspace(workspaceId));
-    final var ffMax = featureFlagClient.intVariation(CompleteFailureBackoffMaxInterval.INSTANCE, new Workspace(workspaceId));
-    final var ffBase = featureFlagClient.intVariation(CompleteFailureBackoffBase.INSTANCE, new Workspace(workspaceId));
+  private BackoffPolicy buildBackOffPolicy(final Context ffContext) {
+    final var ffMin = featureFlagClient.intVariation(CompleteFailureBackoffMinInterval.INSTANCE, ffContext);
+    final var ffMax = featureFlagClient.intVariation(CompleteFailureBackoffMaxInterval.INSTANCE, ffContext);
+    final var ffBase = featureFlagClient.intVariation(CompleteFailureBackoffBase.INSTANCE, ffContext);
 
     return BackoffPolicy.builder()
         .minInterval(Duration.ofSeconds(initializedOrElse(ffMin, minInterval)))
@@ -130,17 +164,19 @@ public class RetryStateClient {
   }
 
   private Optional<RetryStateRead> fetchRetryState(final long jobId) throws RetryableException {
-    final var req = new JobIdRequestBody().id(jobId);
+    final var req = new JobIdRequestBody(jobId);
 
     RetryStateRead resp;
 
     try {
-      resp = jobRetryStatesApi.get(req);
-    } catch (final ApiException e) {
-      if (e.getCode() != HttpStatus.NOT_FOUND.getCode()) {
+      resp = airbyteApiClient.getJobRetryStatesApi().get(req);
+    } catch (final ClientException e) {
+      if (e.getStatusCode() != HttpStatus.NOT_FOUND.getCode()) {
         throw new RetryableException(e);
       }
       resp = null;
+    } catch (final IOException e) {
+      throw new RetryableException(e);
     }
 
     return Optional.ofNullable(resp);
@@ -154,21 +190,17 @@ public class RetryStateClient {
    * @param manager — the RetryManager we want to persist.
    * @return true if successful, otherwise false.
    */
-  public boolean persistRetryState(final long jobId, final UUID connectionId, final RetryManager manager) {
-    final var req = new JobRetryStateRequestBody()
-        .jobId(jobId)
-        .connectionId(connectionId)
-        .totalCompleteFailures(manager.getTotalCompleteFailures())
-        .totalPartialFailures(manager.getTotalPartialFailures())
-        .successiveCompleteFailures(manager.getSuccessiveCompleteFailures())
-        .successivePartialFailures(manager.getSuccessivePartialFailures());
+  public boolean persistRetryState(final long jobId, final UUID connectionId, final RetryManager manager) throws IOException {
+    final var req = new JobRetryStateRequestBody(
+        connectionId,
+        jobId,
+        manager.getSuccessiveCompleteFailures(),
+        manager.getTotalCompleteFailures(),
+        manager.getSuccessivePartialFailures(),
+        manager.getTotalPartialFailures(),
+        null);
 
-    final var result = AirbyteApiClient.retryWithJitter(
-        () -> {
-          jobRetryStatesApi.createOrUpdateWithHttpInfo(req);
-          return true;
-        }, // retryWithJitter doesn't like `void` "consumer" fn's
-        String.format("Persisting retry state for job: %d connection: %s", req.getJobId(), req.getConnectionId()));
+    final var result = airbyteApiClient.getJobRetryStatesApi().createOrUpdateWithHttpInfo(req);
 
     // retryWithJitter returns null if unsuccessful
     return result != null;

@@ -1,55 +1,11 @@
 import React from "react";
-import styled from "styled-components";
 
-import { ButtonProps } from "components/ui/Button";
-
+import styles from "./GoogleAuthButton.module.scss";
 import googleAuthButton from "./googleAuthButton.svg";
 
-const StyledButton = styled.button<ButtonProps>`
-  align-items: center;
-  background: #4285f4;
-  border: 0 solid #4285f4;
-  color: #ffffff;
-  cursor: pointer;
-  display: flex;
-  font-family: Roboto, sans-serif;
-  font-weight: 500;
-  font-size: 14px;
-  font-style: normal;
-  line-height: 15px;
-  outline: none;
-  padding: 0 10px 0 0;
-  text-align: center;
-  text-decoration: none;
-  width: ${(props) => (props.full ? "100%" : "auto")};
-
-  &:disabled {
-    opacity: 0.3;
-    background: transparent;
-    border: none;
-    color: #ffffff;
-    pointer-events: none;
-  }
-
-  &:hover {
-    box-shadow:
-      0 1px 3px rgba(53, 53, 66, 0.2),
-      0 1px 2px rgba(53, 53, 66, 0.12),
-      0 1px 1px rgba(53, 53, 66, 0.14);
-  }
-`;
-
-const Img = styled.img`
-  display: inline-block;
-  padding-right: 10px;
-  height: 40px;
-`;
-
-const GoogleAuthButton: React.FC<React.PropsWithChildren<unknown>> = (props) => (
-  <StyledButton {...props}>
-    <Img src={googleAuthButton} alt="" />
-    {props.children}
-  </StyledButton>
+export const GoogleAuthButton: React.FC<React.PropsWithChildren<unknown>> = ({ children, ...restProps }) => (
+  <button className={styles.button} {...restProps}>
+    <img src={googleAuthButton} className={styles.image} alt="" />
+    {children}
+  </button>
 );
-
-export default GoogleAuthButton;

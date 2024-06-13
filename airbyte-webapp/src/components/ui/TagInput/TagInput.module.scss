@@ -2,18 +2,18 @@
 @use "scss/variables";
 
 :export {
-  inputBackgroundColor: colors.$grey-50;
+  regularBorderColor: colors.$grey-200;
   focusedBorderColor: colors.$blue-400;
-  hoveredBorderColor: colors.$grey-100;
-  errorBorderColor: colors.$red-100;
+  hoveredBorderColor: colors.$grey-300;
+  errorBorderColor: colors.$red-200;
   errorHoveredBorderColor: colors.$red-300;
   paddingLeft: variables.$spacing-sm;
-  backgroundColor: colors.$grey-100;
+  backgroundColor: colors.$grey-200;
   fontColor: colors.$grey-600;
-  borderRadius: variables.$border-radius-xs;
-  borderRadiusDirectional: variables.$border-radius-xs variables.$border-radius-2xl variables.$border-radius-2xl
-    variables.$border-radius-xs;
-  valueBorder: 1px solid colors.$grey;
+  borderRadius: variables.$border-radius-sm;
+  borderRadiusDirectional: variables.$border-radius-sm variables.$border-radius-2xl variables.$border-radius-2xl
+    variables.$border-radius-sm;
+  valueBorder: 1px solid colors.$grey-200;
   disabledOpacity: 0.54;
   fontSize: variables.$font-size-lg;
 }

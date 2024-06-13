@@ -1,11 +1,12 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.server.repositories;
 
 import io.airbyte.db.factory.DSLContextFactory;
 import io.airbyte.db.init.DatabaseInitializationException;
+import io.airbyte.db.instance.DatabaseConstants;
 import io.airbyte.db.instance.jobs.jooq.generated.Keys;
 import io.airbyte.db.instance.jobs.jooq.generated.Tables;
 import io.airbyte.db.instance.test.TestDatabaseProviders;
@@ -13,9 +14,9 @@ import io.airbyte.server.repositories.domain.RetryState;
 import io.airbyte.server.repositories.domain.RetryState.RetryStateBuilder;
 import io.micronaut.context.ApplicationContext;
 import io.micronaut.context.env.PropertySource;
+import io.micronaut.data.connection.jdbc.advice.DelegatingDataSource;
 import io.micronaut.inject.qualifiers.Qualifiers;
 import io.micronaut.test.extensions.junit5.annotation.MicronautTest;
-import io.micronaut.transaction.jdbc.DelegatingDataSource;
 import java.io.IOException;
 import java.util.Map;
 import java.util.UUID;
@@ -44,7 +45,7 @@ class RetryStatesRepositoryTest {
   static DSLContext jooqDslContext;
 
   // we run against an actual database to ensure micronaut data and jooq properly integrate
-  static PostgreSQLContainer<?> container = new PostgreSQLContainer<>("postgres:13-alpine")
+  static PostgreSQLContainer<?> container = new PostgreSQLContainer<>(DatabaseConstants.DEFAULT_DATABASE_VERSION)
       .withDatabaseName("airbyte")
       .withUsername("docker")
       .withPassword("docker");
@@ -226,7 +227,7 @@ class RetryStatesRepositoryTest {
     static Long jobId4 = ThreadLocalRandom.current().nextLong();
 
     static RetryStateBuilder state() {
-      return RetryState.builder()
+      return new RetryState.RetryStateBuilder()
           .connectionId(connectionId1)
           .jobId(jobId1)
           .successiveCompleteFailures(0)
@@ -236,7 +237,7 @@ class RetryStatesRepositoryTest {
     }
 
     static RetryStateBuilder stateFrom(final RetryState s) {
-      return RetryState.builder()
+      return new RetryState.RetryStateBuilder()
           .connectionId(s.getConnectionId())
           .jobId(s.getJobId())
           .successiveCompleteFailures(s.getSuccessiveCompleteFailures())

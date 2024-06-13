@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.commons.server.support;
@@ -15,10 +15,13 @@ import static io.airbyte.commons.server.support.AuthenticationHttpHeaders.JOB_ID
 import static io.airbyte.commons.server.support.AuthenticationHttpHeaders.OPERATION_ID_HEADER;
 import static io.airbyte.commons.server.support.AuthenticationHttpHeaders.ORGANIZATION_ID_HEADER;
 import static io.airbyte.commons.server.support.AuthenticationHttpHeaders.PERMISSION_ID_HEADER;
+import static io.airbyte.commons.server.support.AuthenticationHttpHeaders.SCOPE_ID_HEADER;
+import static io.airbyte.commons.server.support.AuthenticationHttpHeaders.SCOPE_TYPE_HEADER;
 import static io.airbyte.commons.server.support.AuthenticationHttpHeaders.SOURCE_ID_HEADER;
 import static io.airbyte.commons.server.support.AuthenticationHttpHeaders.WORKSPACE_IDS_HEADER;
 import static io.airbyte.commons.server.support.AuthenticationHttpHeaders.WORKSPACE_ID_HEADER;
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -35,6 +38,7 @@ import java.io.IOException;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -220,33 +224,33 @@ class AuthenticationHeaderResolverTest {
   void testResolvingAuthUserFromUserId() throws Exception {
     final UUID userId = UUID.randomUUID();
     final Map<String, String> properties = Map.of(AIRBYTE_USER_ID_HEADER, userId.toString());
-    final User expectedUser = new User().withUserId(userId).withAuthUserId(AUTH_USER_ID);
-    when(userPersistence.getUser(userId)).thenReturn(Optional.of(expectedUser));
+    final Set<String> expectedAuthUserIds = Set.of(AUTH_USER_ID, "some-other-id");
+    when(userPersistence.listAuthUserIdsForUser(userId)).thenReturn(expectedAuthUserIds.stream().toList());
 
-    final String resolvedAuthUserId = resolver.resolveUserAuthId(properties);
-    assertEquals(expectedUser.getAuthUserId(), resolvedAuthUserId);
+    final Set<String> resolvedAuthUserIds = resolver.resolveAuthUserIds(properties);
+
+    assertEquals(expectedAuthUserIds, resolvedAuthUserIds);
   }
 
   @Test
   void testResolvingAuthUserFromCreatorUserId() throws Exception {
     final UUID userId = UUID.randomUUID();
     final Map<String, String> properties = Map.of(CREATOR_USER_ID_HEADER, userId.toString());
-    final User expectedUser = new User().withUserId(userId).withAuthUserId(AUTH_USER_ID);
-    when(userPersistence.getUser(userId)).thenReturn(Optional.of(expectedUser));
+    final Set<String> expectedAuthUserIds = Set.of(AUTH_USER_ID, "some-other-id");
+    when(userPersistence.listAuthUserIdsForUser(userId)).thenReturn(expectedAuthUserIds.stream().toList());
 
-    final String resolvedAuthUserId = resolver.resolveUserAuthId(properties);
-    assertEquals(expectedUser.getAuthUserId(), resolvedAuthUserId);
+    final Set<String> resolvedAuthUserIds = resolver.resolveAuthUserIds(properties);
+
+    assertEquals(expectedAuthUserIds, resolvedAuthUserIds);
   }
 
   @Test
-  void testResolvingAuthUserFromExternalAuthUserId() throws Exception {
-    final UUID userId = UUID.randomUUID();
+  void testResolvingAuthUserFromExternalAuthUserId() {
     final Map<String, String> properties = Map.of(EXTERNAL_AUTH_ID_HEADER, AUTH_USER_ID);
-    final User expectedUser = new User().withUserId(userId).withAuthUserId(AUTH_USER_ID);
-    when(userPersistence.getUser(userId)).thenReturn(Optional.of(expectedUser));
 
-    final String resolvedAuthUserId = resolver.resolveUserAuthId(properties);
-    assertEquals(expectedUser.getAuthUserId(), resolvedAuthUserId);
+    final Set<String> resolvedAuthUserIds = resolver.resolveAuthUserIds(properties);
+
+    assertEquals(Set.of(AUTH_USER_ID), resolvedAuthUserIds);
   }
 
   @Test
@@ -256,8 +260,26 @@ class AuthenticationHeaderResolverTest {
     final User expectedUser = new User().withEmail(email).withAuthUserId(AUTH_USER_ID);
     when(userPersistence.getUserByEmail(email)).thenReturn(Optional.of(expectedUser));
 
-    final String resolvedAuthUserId = resolver.resolveUserAuthId(properties);
-    assertEquals(expectedUser.getAuthUserId(), resolvedAuthUserId);
+    final Set<String> resolvedAuthUserIds = resolver.resolveAuthUserIds(properties);
+    assertEquals(Set.of(AUTH_USER_ID), resolvedAuthUserIds);
+  }
+
+  @Test
+  void testResolvingWorkspaceIdFromScopeTypeAndScopeId() {
+    final UUID workspaceId = UUID.randomUUID();
+    final Map<String, String> properties = Map.of(SCOPE_TYPE_HEADER, "workspace", SCOPE_ID_HEADER, workspaceId.toString());
+
+    final List<UUID> result = resolver.resolveWorkspace(properties);
+    assertEquals(List.of(workspaceId), result);
+  }
+
+  @Test
+  void testResolvingOrganizationIdFromScopeTypeAndScopeId() {
+    final UUID organizationId = UUID.randomUUID();
+    final Map<String, String> properties = Map.of(SCOPE_TYPE_HEADER, "organization", SCOPE_ID_HEADER, organizationId.toString());
+
+    final List<UUID> result = resolver.resolveOrganization(properties);
+    assertEquals(List.of(organizationId), result);
   }
 
 }

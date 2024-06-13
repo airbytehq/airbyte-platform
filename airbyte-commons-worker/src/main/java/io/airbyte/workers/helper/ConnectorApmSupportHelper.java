@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.workers.helper;
@@ -7,7 +7,6 @@ package io.airbyte.workers.helper;
 import com.google.api.client.util.Preconditions;
 import com.google.common.annotations.VisibleForTesting;
 import io.airbyte.commons.constants.WorkerConstants;
-import io.airbyte.config.EnvConfigs;
 import io.fabric8.kubernetes.api.model.EnvVar;
 import io.micrometer.common.util.StringUtils;
 import jakarta.validation.constraints.NotNull;
@@ -22,13 +21,6 @@ import org.slf4j.LoggerFactory;
 public class ConnectorApmSupportHelper {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(ConnectorApmSupportHelper.class);
-
-  @VisibleForTesting
-  static final String JAVA_OPTS = "JAVA_OPTS";
-  @VisibleForTesting
-  static final String DD_SERVICE = "DD_SERVICE";
-  @VisibleForTesting
-  static final String DD_VERSION = "DD_VERSION";
   private static final String IMAGE_DELIMITER = ":";
 
   /**
@@ -44,8 +36,8 @@ public class ConnectorApmSupportHelper {
     final String serviceName = getImageName(imageNameAndVersion);
     final String version = getImageVersion(imageNameAndVersion);
 
-    envVars.add(new EnvVar(DD_SERVICE, serviceName, null));
-    envVars.add(new EnvVar(DD_VERSION, version, null));
+    envVars.add(new EnvVar(io.airbyte.commons.envvar.EnvVar.DD_SERVICE.name(), serviceName, null));
+    envVars.add(new EnvVar(io.airbyte.commons.envvar.EnvVar.DD_VERSION.name(), version, null));
     LOGGER.debug("Added service name {} and version {} to env vars for Datadog", serviceName, version);
   }
 
@@ -57,12 +49,14 @@ public class ConnectorApmSupportHelper {
   public void addApmEnvVars(final List<EnvVar> envVars) {
     final Map<String, String> env = getEnv();
 
-    envVars.add(new EnvVar(JAVA_OPTS, WorkerConstants.DD_ENV_VAR, null));
-    if (env.containsKey(EnvConfigs.DD_AGENT_HOST)) {
-      envVars.add(new EnvVar(EnvConfigs.DD_AGENT_HOST, env.get(EnvConfigs.DD_AGENT_HOST), null));
+    envVars.add(new EnvVar(io.airbyte.commons.envvar.EnvVar.JAVA_OPTS.name(), WorkerConstants.DD_ENV_VAR, null));
+    if (env.containsKey(io.airbyte.commons.envvar.EnvVar.DD_AGENT_HOST.name())) {
+      envVars.add(
+          new EnvVar(io.airbyte.commons.envvar.EnvVar.DD_AGENT_HOST.name(), env.get(io.airbyte.commons.envvar.EnvVar.DD_AGENT_HOST.name()), null));
     }
-    if (env.containsKey(EnvConfigs.DD_DOGSTATSD_PORT)) {
-      envVars.add(new EnvVar(EnvConfigs.DD_DOGSTATSD_PORT, env.get(EnvConfigs.DD_DOGSTATSD_PORT), null));
+    if (env.containsKey(io.airbyte.commons.envvar.EnvVar.DD_DOGSTATSD_PORT.name())) {
+      envVars.add(new EnvVar(io.airbyte.commons.envvar.EnvVar.DD_DOGSTATSD_PORT.name(),
+          env.get(io.airbyte.commons.envvar.EnvVar.DD_DOGSTATSD_PORT.name()), null));
     }
   }
 

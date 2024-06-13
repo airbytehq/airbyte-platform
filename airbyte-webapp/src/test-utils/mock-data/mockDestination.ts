@@ -28,13 +28,14 @@ export const mockDestinationDefinitionVersion: ActorDefinitionVersionRead = {
   dockerRepository: "airbyte/destination-postgres",
   dockerImageTag: "0.3.26",
   supportsDbt: true,
+  supportsRefreshes: false,
   normalizationConfig: {
     supported: true,
     normalizationRepository: "airbyte/normalization",
     normalizationTag: "0.2.25",
     normalizationIntegrationType: "postgres",
   },
-  isOverrideApplied: false,
+  isVersionOverrideApplied: false,
   supportState: SupportState.supported,
   supportLevel: "certified",
 };

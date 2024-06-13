@@ -25,12 +25,17 @@ buildscript {
 plugins {
     id "base"
     id "com.dorongold.task-tree" version "2.1.1"
-    id "io.airbyte.gradle.jvm" version "0.20.0" apply false
-    id "io.airbyte.gradle.jvm.app" version "0.20.0" apply false
-    id "io.airbyte.gradle.jvm.lib" version "0.20.0" apply false
-    id "io.airbyte.gradle.docker" version "0.20.0" apply false
-    id "io.airbyte.gradle.publish" version "0.20.0" apply false
-    id "jacoco-report-aggregation"
+    id "io.airbyte.gradle.jvm" version "0.35.0" apply false
+    id "io.airbyte.gradle.jvm.app" version "0.35.0" apply false
+    id "io.airbyte.gradle.jvm.lib" version "0.35.0" apply false
+    id "io.airbyte.gradle.docker" version "0.35.0" apply false
+    id "io.airbyte.gradle.publish" version "0.35.0" apply false
+    // uncomment for testing plugin locally
+    // id "io.airbyte.gradle.jvm" version "local-test" apply false
+    // id "io.airbyte.gradle.jvm.app" version "local-test" apply false
+    // id "io.airbyte.gradle.jvm.lib" version "local-test" apply false
+    // id "io.airbyte.gradle.docker" version "local-test" apply false
+    // id "io.airbyte.gradle.publish" version "local-test" apply false
 }
 
 repositories {
@@ -63,65 +68,6 @@ if (System.getProperty("ciMode", "false") == "true") {
     }
 }
 
-
-reporting {
-    reports {
-        testAggregateTestReport(JacocoCoverageReport) {
-            testType = TestSuiteType.UNIT_TEST
-        }
-    }
-}
-
-dependencies {
-    jacocoAggregation project(":airbyte-commons")
-
-    jacocoAggregation project(":airbyte-api")
-    jacocoAggregation project(":airbyte-api-server")
-    jacocoAggregation project(":airbyte-commons-protocol")
-    jacocoAggregation project(":airbyte-config:specs")
-    jacocoAggregation project(":airbyte-config:init")
-    jacocoAggregation project(":airbyte-config:config-models") // reused by acceptance tests in connector base.
-    jacocoAggregation project(":airbyte-db:db-lib") // reused by acceptance tests in connector base.
-    jacocoAggregation project(":airbyte-json-validation")
-    jacocoAggregation project(":airbyte-metrics:metrics-lib")
-    jacocoAggregation project(":airbyte-oauth")
-    jacocoAggregation project(":airbyte-test-utils")
-
-    jacocoAggregation project(":airbyte-analytics") // transitively used by airbyte-workers.
-    jacocoAggregation project(":airbyte-commons-temporal")
-    jacocoAggregation project(":airbyte-commons-converters")
-    jacocoAggregation project(":airbyte-commons-worker")
-    jacocoAggregation project(":airbyte-config:config-persistence") // transitively used by airbyte-workers.
-    jacocoAggregation project(":airbyte-featureflag")
-    jacocoAggregation project(":airbyte-db:jooq") // transitively used by airbyte-workers.
-    jacocoAggregation project(":airbyte-notification") // transitively used by airbyte-workers.
-    jacocoAggregation project(":airbyte-persistence:job-persistence") // transitively used by airbyte-workers.
-    jacocoAggregation project(":airbyte-worker-models")
-
-    jacocoAggregation project(":airbyte-bootloader")
-    jacocoAggregation project(":airbyte-commons-auth")
-    jacocoAggregation project(":airbyte-commons-license")
-    jacocoAggregation project(":airbyte-commons-micronaut")
-    jacocoAggregation project(":airbyte-commons-server")
-    jacocoAggregation project(":airbyte-commons-with-dependencies")
-    jacocoAggregation project(":airbyte-connector-builder-server")
-    jacocoAggregation project(":airbyte-container-orchestrator")
-    jacocoAggregation project(":airbyte-cron")
-    jacocoAggregation project(":airbyte-keycloak")
-    jacocoAggregation project(":airbyte-keycloak-setup")
-    jacocoAggregation project(":airbyte-metrics:reporter")
-    jacocoAggregation project(":airbyte-proxy")
-    jacocoAggregation project(":airbyte-server")
-    jacocoAggregation project(":airbyte-temporal")
-    jacocoAggregation project(":airbyte-tests")
-    jacocoAggregation project(":airbyte-webapp")
-    jacocoAggregation project(":airbyte-workers")
-}
-
-tasks.named("check") {
-    dependsOn tasks.named("testAggregateTestReport", JacocoReport)
-}
-
 Properties env = new Properties()
 rootProject.file('.env.dev').withInputStream { env.load(it) }
 
@@ -145,6 +91,23 @@ allprojects {
     group = "io.airbyte${sub.isEmpty() ? '' : ".$sub"}"
 
     version = rootProject.ext.version
+
+    configurations.all {
+        resolutionStrategy {
+            // Ensure that the versions defined in deps.toml are used
+            // instead of versions from transitive dependencies
+            // Force to avoid updated version brought in transitively from Micronaut 3.8+
+            force(libs.flyway.core,
+                    libs.jooq,
+                    libs.s3,
+                    libs.aws.java.sdk.s3,
+                    libs.sts,
+                    libs.aws.java.sdk.sts,
+                    libs.elasticsearch,
+                    libs.apache.mime4j.core, // Force upgrade to remediate GHSA-jw7r-rxff-gv24
+                    libs.platform.testcontainers.postgresql)
+        }
+    }
 }
 
 tasks.register('archiveReports', Tar) {
@@ -170,73 +133,6 @@ tasks.register('archiveReports', Tar) {
         }
     }
 }
-
-subprojects { sp ->
-    // airbyte-webapp has not been converted to the gradle plugins
-    if (sp.name != "airbyte-webapp") {
-        return
-    }
-
-    apply plugin: 'base'
-
-//    configurations {
-//        runtimeClasspath
-//    }
-
-    tasks.register("copyDocker", Copy) {
-        from "${project.projectDir}/Dockerfile"
-        into "build/docker/"
-    }
-
-    // Although this task is defined for every subproject with the dockerImageName property,
-    // It is not necessarily used for all subprojects. Non-TAR producing projects can ignore this.
-    tasks.register("copyGeneratedTar", Copy) {
-        dependsOn tasks.named("copyDocker")
-//        dependsOn copyWellKnownTypes
-        dependsOn tasks.named("distTar")
-        from('build/distributions') {
-            // Assume that tars are named <parent-project-name>-<child-project-name>-*.tar.
-            // Because we only have a handle to the child project, and to keep things simple,
-            // use a * regex to catch all prefixes.
-            include "*$sp.name-*.tar"
-        }
-        into 'build/docker/bin'
-    }
-
-    tasks.register("buildDockerImage", com.bmuschko.gradle.docker.tasks.image.DockerBuildImage) {
-        // This is currently only used for connectors.
-        def jdkVersion = System.getenv('JDK_VERSION') ?: '17.0.4'
-
-        def arch = System.getenv('BUILD_ARCH') ?: System.getProperty("os.arch").toLowerCase()
-        def isArm64 = arch == "aarch64" || arch == "arm64"
-        def buildArch = System.getenv('DOCKER_BUILD_ARCH') ?: isArm64 ? 'arm64' : 'amd64'
-        def buildPlatform = System.getenv('DOCKER_BUILD_PLATFORM') ?: isArm64 ? 'linux/arm64' : 'linux/amd64'
-        def alpineImage = System.getenv('ALPINE_IMAGE') ?: isArm64 ? 'arm64v8/alpine:3.14' : 'amd64/alpine:3.14'
-        def nginxImage = System.getenv('NGINX_IMAGE') ?: isArm64 ? 'arm64v8/nginx:alpine' : 'amd64/nginx:alpine'
-
-        // Used by the platform -- Must be an Amazon Corretto-based image for build to work without modification to Dockerfile instructions
-        def openjdkImage = System.getenv('JDK_IMAGE') ?: 'airbyte/airbyte-base-java-image:2.1.0'
-
-        platform = buildPlatform
-        images.add("airbyte/$sp.dockerImageName:$rootProject.ext.image_tag")
-        buildArgs.put('JDK_VERSION', jdkVersion)
-        buildArgs.put('DOCKER_BUILD_ARCH', buildArch)
-        buildArgs.put('ALPINE_IMAGE', alpineImage)
-        buildArgs.put('NGINX_IMAGE', nginxImage)
-        buildArgs.put('JDK_IMAGE', openjdkImage)
-        buildArgs.put('VERSION', rootProject.ext.version)
-
-    }
-
-    tasks.named("assemble") {
-        dependsOn tasks.named("buildDockerImage")
-    }
-
-    tasks.register("dockerBuildImage") {
-        dependsOn tasks.named("buildDockerImage")
-    }
-}
-
 
 tasks.register('generate-docker') {
     dependsOn(':airbyte-bootloader:assemble')

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.cron.jobs;
@@ -15,14 +15,16 @@ import io.airbyte.metrics.lib.OssMetricsRegistry;
 import io.micronaut.scheduling.annotation.Scheduled;
 import io.temporal.api.enums.v1.WorkflowExecutionStatus;
 import jakarta.inject.Singleton;
-import lombok.extern.slf4j.Slf4j;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Temporal cleaner. Resets failed workflow executions.
  */
 @Singleton
-@Slf4j
 public class SelfHealTemporalWorkflows {
+
+  private static final Logger log = LoggerFactory.getLogger(SelfHealTemporalWorkflows.class);
 
   private final TemporalClient temporalClient;
   private final MetricClient metricClient;

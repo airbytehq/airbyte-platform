@@ -5,29 +5,34 @@ import { Button } from "components/ui/Button";
 import { FlexContainer } from "components/ui/Flex";
 import { Text } from "components/ui/Text";
 
+import { useCurrentWorkspace } from "core/api";
 import { FeatureItem, useFeature } from "core/services/features";
+import { useIntent } from "core/utils/rbac";
 import { useModalService } from "hooks/services/Modal";
+import { AddUserModal } from "pages/SettingsPage/pages/AccessManagementPage/components/AddUserModal";
 
 import styles from "./InviteUsersHint.module.scss";
-import { InviteUsersModal } from "../InviteUsersModal";
 
 export interface InviteUsersHintProps {
   connectorType: "source" | "destination";
 }
 
 export const InviteUsersHint: React.FC<InviteUsersHintProps> = ({ connectorType }) => {
+  const workspace = useCurrentWorkspace();
   const { formatMessage } = useIntl();
   const inviteUsersHintVisible = useFeature(FeatureItem.ShowInviteUsersHint);
+  const { workspaceId } = useCurrentWorkspace();
+  const canInviteUsers = useIntent("UpdateWorkspacePermissions", { workspaceId });
   const { openModal } = useModalService();
 
-  if (!inviteUsersHintVisible) {
+  if (!inviteUsersHintVisible || !canInviteUsers) {
     return null;
   }
 
   const onOpenInviteUsersModal = () =>
-    openModal({
-      title: formatMessage({ id: "modals.addUser.title" }),
-      content: () => <InviteUsersModal invitedFrom={connectorType} />,
+    openModal<void>({
+      title: formatMessage({ id: "userInvitations.create.modal.title" }, { workspace: workspace.name }),
+      content: ({ onComplete }) => <AddUserModal onSubmit={onComplete} />,
       size: "md",
     });
 

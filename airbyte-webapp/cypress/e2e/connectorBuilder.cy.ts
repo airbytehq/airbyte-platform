@@ -13,8 +13,6 @@ import {
   assertTestReadAuthFailure,
   assertTestReadItems,
   assertUrlPath,
-  cleanUp,
-  configureAuth,
   configureGlobals,
   configurePagination,
   configureParameterizedRequests,
@@ -30,14 +28,16 @@ import {
   goToConnectorBuilderProjectsPage,
   goToView,
   selectActiveVersion,
+  selectAuthMethod,
   startFromScratch,
   testStream,
 } from "pages/connectorBuilderPage";
 import { goToSourcePage, openSourceConnectionsPage } from "pages/sourcePage";
 
 describe("Connector builder", { testIsolation: false }, () => {
-  const connectorName = appendRandomString("dummy_api");
-  before(() => {
+  let connectorName = "";
+  beforeEach(() => {
+    connectorName = appendRandomString("dummy_api");
     // Updated for cypress 12 because connector builder uses local storage
     // docs.cypress.io/guides/references/migration-guide#Simulating-Pre-Test-Isolation-Behavior
     cy.clearLocalStorage();
@@ -49,30 +49,19 @@ describe("Connector builder", { testIsolation: false }, () => {
     configureStream();
   });
 
-  afterEach(() => {
-    cleanUp();
-  });
-
-  /*
-  This test assumes it runs before "Read - Without pagination or parameterized requests" since auth will be configured at that
-  point
-  */
   it("Fail on invalid auth", () => {
     cy.on("uncaught:exception", () => false);
+    goToView("global");
+    selectAuthMethod("No Auth");
     testStream();
     assertTestReadAuthFailure();
   });
 
   it("Read - Without pagination or parameterized requests", () => {
-    configureAuth();
     testStream();
     assertTestReadItems();
   });
 
-  /*
-  All the tests below assume they run after "Read - Without pagination or parameterized requests" in order to have auth
-  configured
-  */
   it("Read - Infer schema", () => {
     testStream();
     assertSchema();
@@ -129,7 +118,6 @@ describe("Connector builder", { testIsolation: false }, () => {
     assertMaxNumberOfSlicesAndPages();
   });
 
-  // Note: This test cannot be run in isolation!  It is dependent on the previous test
   it("Sync published version", () => {
     publishProject();
 
@@ -162,8 +150,9 @@ describe("Connector builder", { testIsolation: false }, () => {
     editProjectBuilder(connectorName);
   });
 
-  // This test assumes the test before is configuring path items/
   it("Validate going back to a previously created connector", () => {
+    configureParameterizedRequests(10);
+    publishProject();
     goToConnectorBuilderProjectsPage();
     editProjectBuilder(connectorName);
     goToView("0");

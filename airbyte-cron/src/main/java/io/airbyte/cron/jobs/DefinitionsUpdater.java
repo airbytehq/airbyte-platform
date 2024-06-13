@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.cron.jobs;
@@ -19,7 +19,8 @@ import io.micronaut.context.annotation.Requires;
 import io.micronaut.scheduling.annotation.Scheduled;
 import jakarta.inject.Singleton;
 import java.io.IOException;
-import lombok.extern.slf4j.Slf4j;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * DefinitionsUpdater
@@ -28,10 +29,11 @@ import lombok.extern.slf4j.Slf4j;
  * be enabled by setting UPDATE_DEFINITIONS_CRON_ENABLED=true.
  */
 @Singleton
-@Slf4j
 @Requires(property = "airbyte.cron.update-definitions.enabled",
           value = "true")
 public class DefinitionsUpdater {
+
+  private static final Logger log = LoggerFactory.getLogger(DefinitionsUpdater.class);
 
   private final ApplyDefinitionsHelper applyDefinitionsHelper;
   private final DeploymentMode deploymentMode;
@@ -50,7 +52,7 @@ public class DefinitionsUpdater {
   @Trace(operationName = SCHEDULED_TRACE_OPERATION_NAME)
   @Scheduled(fixedRate = "30s",
              initialDelay = "1m")
-  void updateDefinitions() throws JsonValidationException, ConfigNotFoundException, IOException {
+  void updateDefinitions() throws JsonValidationException, ConfigNotFoundException, IOException, io.airbyte.data.exceptions.ConfigNotFoundException {
     log.info("Updating definitions...");
     metricClient.count(OssMetricsRegistry.CRON_JOB_RUN_BY_CRON_TYPE, 1, new MetricAttribute(MetricTags.CRON_TYPE, "definitions_updater"));
     applyDefinitionsHelper.apply(deploymentMode == DeploymentMode.CLOUD);

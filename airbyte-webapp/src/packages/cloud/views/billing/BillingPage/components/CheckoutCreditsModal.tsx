@@ -8,7 +8,7 @@ import { ModalFormSubmissionButtons } from "components/forms/ModalFormSubmission
 import { Box } from "components/ui/Box";
 import { FlexContainer, FlexItem } from "components/ui/Flex";
 import { Icon } from "components/ui/Icon";
-import { Link } from "components/ui/Link";
+import { ExternalLink, Link } from "components/ui/Link";
 import { Message } from "components/ui/Message";
 import { ModalBody, ModalFooter } from "components/ui/Modal";
 import { Text } from "components/ui/Text";
@@ -195,6 +195,14 @@ export const CheckoutCreditsModal: React.FC<ModalContentProps<void>> = ({ onCanc
           <FlexContainer direction="column">
             <DiscountMessage discount={0.07} minimum={2200} maximum={4800} />
             <DiscountMessage discount={0.17} minimum={4800} />
+            <Box pt="sm">
+              <Text size="sm" color="grey600" italicized>
+                <FormattedMessage
+                  id="credits.checkout.creditExpiration"
+                  values={{ lnk: (children) => <ExternalLink href={links.pricingPage}>{children}</ExternalLink> }}
+                />
+              </Text>
+            </Box>
           </FlexContainer>
         </Box>
         <TalkToSalesBanner />

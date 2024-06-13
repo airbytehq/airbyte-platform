@@ -4,7 +4,6 @@ import { useIntl } from "react-intl";
 import { Button } from "components/ui/Button";
 import { Card } from "components/ui/Card";
 import { FlexContainer, FlexItem } from "components/ui/Flex";
-import { Icon } from "components/ui/Icon";
 import { Text } from "components/ui/Text";
 
 import { DbtCloudJob } from "core/api/cloud";
@@ -68,7 +67,7 @@ export const JobListItem: React.FC<JobListItemProps> = ({
           variant="clear"
           onClick={removeJob}
           disabled={isLoading}
-          icon={<Icon type="cross" />}
+          icon="cross"
           aria-label={formatMessage({ id: "connection.dbtCloudJobs.job.deleteButton" })}
         />
       </FlexContainer>

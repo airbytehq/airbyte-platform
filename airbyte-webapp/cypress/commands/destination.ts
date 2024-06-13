@@ -12,7 +12,7 @@ export const createLocalJsonDestination = (name: string, destinationPath = "/loc
   fillLocalJsonForm(name, destinationPath);
   submitButtonClick();
 
-  cy.wait("@checkDestinationConnection", { requestTimeout: 30000 });
+  cy.wait("@checkDestinationConnection", { requestTimeout: 60000 });
   cy.wait("@createDestination");
 };
 

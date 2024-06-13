@@ -1,9 +1,18 @@
 import { Disclosure } from "@headlessui/react";
+import classnames from "classnames";
 import React from "react";
 import { FormattedMessage, useIntl } from "react-intl";
 import * as yup from "yup";
 
-import { DeleteBlock } from "components/common/DeleteBlock";
+import { ConnectionActionsBlock } from "components/common/ConnectionActionsBlock";
+import { ConnectionDeleteBlock } from "components/common/ConnectionDeleteBlock";
+import {
+  FormConnectionFormValues,
+  useConnectionValidationSchema,
+  useInitialFormValues,
+} from "components/connection/ConnectionForm/formConfig";
+import { ConnectionSyncContextProvider } from "components/connection/ConnectionSync/ConnectionSyncContext";
+import { SimplifiedConnectionsSettingsCard } from "components/connection/CreateConnectionForm/SimplifiedConnectionCreation/SimplifiedConnectionSettingsCard";
 import { Form } from "components/forms";
 import { DataResidencyDropdown } from "components/forms/DataResidencyDropdown";
 import { FormSubmissionButtons } from "components/forms/FormSubmissionButtons";
@@ -11,18 +20,19 @@ import { Button } from "components/ui/Button";
 import { Card } from "components/ui/Card";
 import { FlexContainer } from "components/ui/Flex";
 import { Heading } from "components/ui/Heading";
-import { Icon } from "components/ui/Icon";
 import { ExternalLink } from "components/ui/Link";
 import { Spinner } from "components/ui/Spinner";
 
-import { useDeleteConnection } from "core/api";
+import { useCurrentWorkspace, useDestinationDefinitionVersion } from "core/api";
 import { Geography, WebBackendConnectionUpdate } from "core/api/types/AirbyteClient";
 import { PageTrackingCodes, useTrackPage } from "core/services/analytics";
 import { FeatureItem, useFeature } from "core/services/features";
 import { links } from "core/utils/links";
+import { useIntent } from "core/utils/rbac";
 import { useAppMonitoringService } from "hooks/services/AppMonitoringService";
 import { useConnectionEditService } from "hooks/services/ConnectionEdit/ConnectionEditService";
 import { useConnectionFormService } from "hooks/services/ConnectionForm/ConnectionFormService";
+import { useExperiment } from "hooks/services/Experiment";
 import { useNotificationService } from "hooks/services/Notification";
 
 import styles from "./ConnectionSettingsPage.module.scss";
@@ -59,14 +69,15 @@ const dataResidencyDropdownDescription = (
 export const ConnectionSettingsPage: React.FC = () => {
   const { connection, updateConnection } = useConnectionEditService();
   const { mode } = useConnectionFormService();
-  const { mutateAsync: deleteConnection } = useDeleteConnection();
   const canUpdateDataResidency = useFeature(FeatureItem.AllowChangeDataGeographies);
   const canSendSchemaUpdateNotifications = useFeature(FeatureItem.AllowAutoDetectSchema);
   const { registerNotification } = useNotificationService();
   const { formatMessage } = useIntl();
   const { trackError } = useAppMonitoringService();
   useTrackPage(PageTrackingCodes.CONNECTIONS_ITEM_SETTINGS);
-  const onDelete = () => deleteConnection(connection);
+
+  const { workspaceId } = useCurrentWorkspace();
+  const canEditConnection = useIntent("EditConnection", { workspaceId });
 
   const onSuccess = () => {
     registerNotification({
@@ -98,15 +109,22 @@ export const ConnectionSettingsPage: React.FC = () => {
     return defaultValues;
   };
 
+  const isSimplifiedCreation = useExperiment("connection.simplifiedCreation", true);
+
+  if (isSimplifiedCreation) {
+    return <SimplifiedConnectionSettingsPage />;
+  }
+
   return (
     <div className={styles.container}>
       <FlexContainer direction="column" justifyContent="flex-start">
-        <Card withPadding>
+        <Card>
           <Heading as="h2" size="sm" className={styles.heading}>
             <FormattedMessage id="connectionForm.connectionSettings" />
           </Heading>
           <Form<ConnectionSettingsFormValues>
             trackDirtyChanges
+            disabled={!canEditConnection}
             onSubmit={({ connectionName, geography, notifySchemaChanges }) => {
               const connectionUpdates: WebBackendConnectionUpdate = {
                 name: connectionName,
@@ -141,7 +159,7 @@ export const ConnectionSettingsPage: React.FC = () => {
             <FormSubmissionButtons submitKey="form.saveChanges" />
           </Form>
         </Card>
-        {connection.status !== "deprecated" && <DeleteBlock type="connection" onDelete={onDelete} />}
+        {connection.status !== "deprecated" && <ConnectionDeleteBlock />}
       </FlexContainer>
       <Disclosure>
         {({ open }) => (
@@ -149,19 +167,116 @@ export const ConnectionSettingsPage: React.FC = () => {
             <Disclosure.Button
               as={Button}
               variant="clear"
-              icon={<Icon type={open ? "chevronDown" : "chevronRight"} />}
+              icon={open ? "chevronDown" : "chevronRight"}
               className={styles.advancedButton}
             >
               <FormattedMessage id="connectionForm.settings.advancedButton" />
             </Disclosure.Button>
             <Disclosure.Panel className={styles.advancedPanel}>
               <React.Suspense fallback={<Spinner />}>
-                <StateBlock connectionId={connection.connectionId} syncCatalog={connection.syncCatalog} />
+                <StateBlock connectionId={connection.connectionId} disabled={mode === "readonly"} />
               </React.Suspense>
             </Disclosure.Panel>
           </>
         )}
       </Disclosure>
     </div>
+  );
+};
+
+const SimplifiedConnectionSettingsPage = () => {
+  const { connection, updateConnection } = useConnectionEditService();
+  const { formatMessage } = useIntl();
+  const { registerNotification } = useNotificationService();
+  const { trackError } = useAppMonitoringService();
+
+  const { mode } = useConnectionFormService();
+  const destDefinitionVersion = useDestinationDefinitionVersion(connection.destinationId);
+  const { destDefinitionSpecification } = useConnectionFormService();
+  const simplifiedInitialValues = useInitialFormValues(
+    connection,
+    destDefinitionVersion,
+    destDefinitionSpecification,
+    mode
+  );
+
+  const { workspaceId } = useCurrentWorkspace();
+  const canEditConnection = useIntent("EditConnection", { workspaceId });
+
+  const validationSchema = useConnectionValidationSchema();
+
+  const onSuccess = () => {
+    registerNotification({
+      id: "connection_settings_change_success",
+      text: formatMessage({ id: "form.changesSaved" }),
+      type: "success",
+    });
+  };
+
+  const onError = (e: Error, { name }: FormConnectionFormValues) => {
+    trackError(e, { connectionName: name });
+    registerNotification({
+      id: "connection_settings_change_error",
+      text: formatMessage({ id: "connection.updateFailed" }),
+      type: "error",
+    });
+  };
+
+  const isDeprecated = connection.status === "deprecated";
+
+  return (
+    <FlexContainer direction="column">
+      <Form<FormConnectionFormValues>
+        trackDirtyChanges
+        disabled={!canEditConnection}
+        onSubmit={(values: FormConnectionFormValues) => {
+          const connectionUpdates: WebBackendConnectionUpdate = {
+            connectionId: connection.connectionId,
+            ...values,
+          };
+
+          return updateConnection(connectionUpdates);
+        }}
+        onError={onError}
+        onSuccess={onSuccess}
+        schema={validationSchema}
+        defaultValues={simplifiedInitialValues}
+      >
+        <SimplifiedConnectionsSettingsCard
+          title={formatMessage({ id: "sources.settings" })}
+          source={connection.source}
+          destination={connection.destination}
+          isCreating={false}
+          isDeprecated={isDeprecated}
+        />
+      </Form>
+
+      {connection.status !== "deprecated" && (
+        <ConnectionSyncContextProvider>
+          <ConnectionActionsBlock />
+        </ConnectionSyncContextProvider>
+      )}
+
+      <Disclosure>
+        {({ open }) => (
+          <>
+            <Disclosure.Button
+              as={Button}
+              variant="clear"
+              icon={open ? "chevronDown" : "chevronRight"}
+              iconPosition="right"
+              className={classnames(styles.advancedButton, styles.alignStart)}
+            >
+              <FormattedMessage id="connection.state.title" />
+            </Disclosure.Button>
+            <Disclosure.Panel className={styles.advancedPanel}>
+              <React.Suspense fallback={<Spinner />}>
+                <StateBlock connectionId={connection.connectionId} disabled={mode === "readonly"} />
+              </React.Suspense>
+            </Disclosure.Panel>
+          </>
+        )}
+      </Disclosure>
+    </FlexContainer>
   );
 };

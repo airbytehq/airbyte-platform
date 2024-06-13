@@ -2,30 +2,43 @@ import React, { PropsWithChildren, Suspense, useMemo } from "react";
 import { createSearchParams, Navigate, Route, Routes, useLocation } from "react-router-dom";
 import { useEffectOnce } from "react-use";
 
-import { ApiErrorBoundary } from "components/common/ApiErrorBoundary";
 import LoadingPage from "components/LoadingPage";
 
 import { useCurrentWorkspaceId } from "area/workspace/utils";
 import { useCurrentWorkspace, useInvalidateAllWorkspaceScopeOnChange } from "core/api";
 import { usePrefetchCloudWorkspaceData } from "core/api/cloud";
+import { DefaultErrorBoundary } from "core/errors";
 import { useAnalyticsIdentifyUser, useAnalyticsRegisterValues } from "core/services/analytics/useAnalyticsService";
 import { useAuthService } from "core/services/auth";
+import { FeatureItem, useFeature } from "core/services/features";
 import { isCorporateEmail } from "core/utils/freeEmailProviders";
+import { useIntent } from "core/utils/rbac";
 import { storeUtmFromQuery } from "core/utils/utmStorage";
+import { useExperiment, useExperimentContext } from "hooks/services/Experiment";
 import { useBuildUpdateCheck } from "hooks/services/useBuildUpdateCheck";
 import { useQuery } from "hooks/useQuery";
 import ConnectorBuilderRoutes from "pages/connectorBuilder/ConnectorBuilderRoutes";
 import { RoutePaths, DestinationPaths, SourcePaths } from "pages/routePaths";
-import { CompleteOauthRequest } from "views/CompleteOauthRequest";
+import { GeneralOrganizationSettingsPage } from "pages/SettingsPage/GeneralOrganizationSettingsPage";
+import {
+  SourcesPage as SettingsSourcesPage,
+  DestinationsPage as SettingsDestinationsPage,
+} from "pages/SettingsPage/pages/ConnectorsPage";
+import { NotificationPage } from "pages/SettingsPage/pages/NotificationPage";
 
+import { AcceptInvitation } from "./AcceptInvitation";
 import { CloudRoutes } from "./cloudRoutePaths";
 import { LDExperimentServiceProvider } from "./services/thirdParty/launchdarkly";
 import { SSOBookmarkPage } from "./views/auth/SSOBookmarkPage";
 import { SSOIdentifierPage } from "./views/auth/SSOIdentifierPage";
-import { FirebaseActionRoute } from "./views/FirebaseActionRoute";
+import { DbtCloudSettingsView } from "./views/settings/integrations/DbtCloudSettingsView";
+import { CloudSettingsRoutePaths } from "./views/settings/routePaths";
+import { AccountSettingsView } from "./views/users/AccountSettingsView";
+import { ApplicationSettingsView } from "./views/users/ApplicationSettingsView/ApplicationSettingsView";
+import { DataResidencyView } from "./views/workspaces/DataResidencyView";
+import { WorkspaceSettingsView } from "./views/workspaces/WorkspaceSettingsView";
 
 const LoginPage = React.lazy(() => import("./views/auth/LoginPage"));
-const ResetPasswordPage = React.lazy(() => import("./views/auth/ResetPasswordPage"));
 const SignupPage = React.lazy(() => import("./views/auth/SignupPage"));
 const CloudMainView = React.lazy(() => import("packages/cloud/views/layout/CloudMainView"));
 const CloudWorkspacesPage = React.lazy(() => import("packages/cloud/views/workspaces"));
@@ -51,9 +64,14 @@ const SourceConnectionsPage = React.lazy(() => import("pages/source/SourceConnec
 const SourceSettingsPage = React.lazy(() => import("pages/source/SourceSettingsPage"));
 const CloudDefaultView = React.lazy(() => import("./views/CloudDefaultView"));
 const CloudSettingsPage = React.lazy(() => import("./views/settings/CloudSettingsPage"));
+const AdvancedSettingsPage = React.lazy(() => import("pages/SettingsPage/pages/AdvancedSettingsPage"));
 
 const MainRoutes: React.FC = () => {
   const workspace = useCurrentWorkspace();
+  const isTokenManagementEnabled = useExperiment("settings.token-management-ui", false);
+  const canViewOrgSettings = useIntent("ViewOrganizationSettings", { organizationId: workspace.organizationId });
+
+  useExperimentContext("organization", workspace.organizationId);
 
   const analyticsContext = useMemo(
     () => ({
@@ -64,8 +82,11 @@ const MainRoutes: React.FC = () => {
   );
   useAnalyticsRegisterValues(analyticsContext);
 
+  const supportsCloudDbtIntegration = useFeature(FeatureItem.AllowDBTCloudIntegration);
+  const supportsDataResidency = useFeature(FeatureItem.AllowChangeDataGeographies);
+
   return (
-    <ApiErrorBoundary>
+    <DefaultErrorBoundary>
       <Routes>
         <Route path={RoutePaths.Destination}>
           <Route index element={<AllDestinationsPage />} />
@@ -86,13 +107,33 @@ const MainRoutes: React.FC = () => {
           </Route>
         </Route>
         <Route path={`${RoutePaths.Connections}/*`} element={<ConnectionsRoutes />} />
-        <Route path={`${RoutePaths.Settings}/*`} element={<CloudSettingsPage />} />
+        <Route path={`${RoutePaths.Settings}/*`} element={<CloudSettingsPage />}>
+          <Route path={CloudSettingsRoutePaths.Account} element={<AccountSettingsView />} />
+          {isTokenManagementEnabled && (
+            <Route path={CloudSettingsRoutePaths.Applications} element={<ApplicationSettingsView />} />
+          )}
+          <Route path={CloudSettingsRoutePaths.Workspace} element={<WorkspaceSettingsView />} />
+          {supportsDataResidency && (
+            <Route path={CloudSettingsRoutePaths.DataResidency} element={<DataResidencyView />} />
+          )}
+          <Route path={CloudSettingsRoutePaths.Source} element={<SettingsSourcesPage />} />
+          <Route path={CloudSettingsRoutePaths.Destination} element={<SettingsDestinationsPage />} />
+          <Route path={CloudSettingsRoutePaths.Notifications} element={<NotificationPage />} />
+          {supportsCloudDbtIntegration && (
+            <Route path={CloudSettingsRoutePaths.DbtCloud} element={<DbtCloudSettingsView />} />
+          )}
+          {canViewOrgSettings && (
+            <Route path={CloudSettingsRoutePaths.Organization} element={<GeneralOrganizationSettingsPage />} />
+          )}
+          <Route path={CloudSettingsRoutePaths.Advanced} element={<AdvancedSettingsPage />} />
+          <Route path="*" element={<Navigate to={CloudSettingsRoutePaths.Account} replace />} />
+        </Route>
         <Route path={CloudRoutes.Billing} element={<BillingPage />} />
         <Route path={CloudRoutes.UpcomingFeatures} element={<UpcomingFeaturesPage />} />
         <Route path={`${RoutePaths.ConnectorBuilder}/*`} element={<ConnectorBuilderRoutes />} />
         <Route path="*" element={<Navigate to={RoutePaths.Connections} replace />} />
       </Routes>
-    </ApiErrorBoundary>
+    </DefaultErrorBoundary>
   );
 };
 
@@ -107,7 +148,7 @@ const CloudMainViewRoutes = () => {
     <Routes>
       <Route path={RoutePaths.SpeakeasyRedirect} element={<SpeakeasyRedirectPage />} />
       <Route path={RoutePaths.Workspaces} element={<CloudWorkspacesPage />} />
-      <Route path={CloudRoutes.AuthFlow} element={<CompleteOauthRequest />} />
+      <Route path={CloudRoutes.AcceptInvitation} element={<AcceptInvitation />} />
       <Route
         path={`${RoutePaths.Workspaces}/:workspaceId/*`}
         element={
@@ -129,7 +170,7 @@ const CloudWorkspaceDataPrefetcher: React.FC<PropsWithChildren<unknown>> = ({ ch
 };
 
 export const Routing: React.FC = () => {
-  const { user, inited, providers, loggedOut, requirePasswordReset } = useAuthService();
+  const { user, inited, provider, loggedOut } = useAuthService();
   const workspaceId = useCurrentWorkspaceId();
   const { pathname: originalPathname, search, hash } = useLocation();
 
@@ -138,7 +179,7 @@ export const Routing: React.FC = () => {
   })}`;
 
   const loginRedirectTo =
-    loggedOut && (originalPathname === "/" || originalPathname.includes("/settings/account"))
+    loggedOut && originalPathname === "/"
       ? { pathname: CloudRoutes.Login }
       : { pathname: CloudRoutes.Login, search: loginRedirectSearchParam };
 
@@ -160,9 +201,14 @@ export const Routing: React.FC = () => {
   const userTraits = useMemo(
     () =>
       user
-        ? { providers, email: user.email, isCorporate: isCorporateEmail(user.email), currentWorkspaceId: workspaceId }
+        ? {
+            provider,
+            email: user.email,
+            isCorporate: isCorporateEmail(user.email),
+            currentWorkspaceId: workspaceId,
+          }
         : {},
-    [providers, user, workspaceId]
+    [provider, user, workspaceId]
   );
 
   useEffectOnce(() => {
@@ -181,11 +227,6 @@ export const Routing: React.FC = () => {
     <LDExperimentServiceProvider>
       <Suspense fallback={<LoadingPage />}>
         <Routes>
-          {/*
-            The firebase callback action route is available no matter wheter a user is logged in or not, since
-            the verify email action need to work in both cases.
-          */}
-          <Route path={CloudRoutes.FirebaseAction} element={<FirebaseActionRoute />} />
           <Route
             path="*"
             element={
@@ -199,12 +240,6 @@ export const Routing: React.FC = () => {
                         <Route path={CloudRoutes.Sso} element={<SSOIdentifierPage />} />
                         <Route path={CloudRoutes.Login} element={<LoginPage />} />
                         <Route path={CloudRoutes.Signup} element={<SignupPage />} />
-                        {requirePasswordReset && (
-                          <Route
-                            path={CloudRoutes.ResetPassword}
-                            element={<ResetPasswordPage requirePasswordReset={requirePasswordReset} />}
-                          />
-                        )}
                         {/* In case a not logged in user tries to access anything else navigate them to login */}
                         <Route path="*" element={<Navigate to={loginRedirectTo} />} />
                       </Routes>

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.commons.server.handlers;
@@ -7,6 +7,8 @@ package io.airbyte.commons.server.handlers;
 import static io.airbyte.config.helpers.ResourceRequirementsUtils.getResourceRequirementsForJobType;
 import static io.airbyte.metrics.lib.ApmTraceConstants.Tags.ATTEMPT_NUMBER_KEY;
 import static io.airbyte.metrics.lib.ApmTraceConstants.Tags.JOB_ID_KEY;
+import static io.airbyte.persistence.job.models.Job.REPLICATION_TYPES;
+import static io.airbyte.persistence.job.models.Job.SYNC_REPLICATION_TYPES;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import io.airbyte.api.model.generated.CheckInput;
@@ -35,6 +37,7 @@ import io.airbyte.config.JobConfig;
 import io.airbyte.config.JobResetConnectionConfig;
 import io.airbyte.config.JobSyncConfig;
 import io.airbyte.config.JobTypeResourceLimit.JobType;
+import io.airbyte.config.RefreshConfig;
 import io.airbyte.config.ResetSourceConfiguration;
 import io.airbyte.config.ResourceRequirements;
 import io.airbyte.config.SourceConnection;
@@ -68,6 +71,7 @@ import io.airbyte.persistence.job.models.Job;
 import io.airbyte.persistence.job.models.JobRunConfig;
 import io.airbyte.workers.models.JobInput;
 import io.airbyte.workers.models.SyncJobCheckConnectionInputs;
+import jakarta.annotation.Nullable;
 import jakarta.inject.Singleton;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -76,7 +80,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
-import javax.annotation.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -144,7 +147,7 @@ public class JobInputHandler {
 
       final JobConfig.ConfigType jobConfigType = job.getConfig().getConfigType();
 
-      if (JobConfig.ConfigType.SYNC.equals(jobConfigType)) {
+      if (SYNC_REPLICATION_TYPES.contains(jobConfigType)) {
         final SourceConnection source = configRepository.getSourceConnection(standardSync.getSourceId());
         sourceVersion = actorDefinitionVersionHelper.getSourceVersion(
             configRepository.getStandardSourceDefinition(source.getSourceDefinitionId()),
@@ -226,8 +229,6 @@ public class JobInputHandler {
           .withDestinationConfiguration(attemptSyncConfig.getDestinationConfiguration())
           .withOperationSequence(config.getOperationSequence())
           .withWebhookOperationConfigs(config.getWebhookOperationConfigs())
-          .withCatalog(config.getConfiguredAirbyteCatalog())
-          .withState(attemptSyncConfig.getState())
           .withSyncResourceRequirements(config.getSyncResourceRequirements())
           .withConnectionId(connectionId)
           .withWorkspaceId(config.getWorkspaceId())
@@ -355,12 +356,32 @@ public class JobInputHandler {
           .withIsDestinationCustomConnector(resetConnection.getIsDestinationCustomConnector())
           .withWebhookOperationConfigs(resetConnection.getWebhookOperationConfigs())
           .withWorkspaceId(resetConnection.getWorkspaceId());
+    } else if (JobConfig.ConfigType.REFRESH.equals(jobConfigType)) {
+      final RefreshConfig refreshConfig = jobConfig.getRefresh();
+
+      return new JobSyncConfig()
+          .withNamespaceDefinition(refreshConfig.getNamespaceDefinition())
+          .withNamespaceFormat(refreshConfig.getNamespaceFormat())
+          .withPrefix(refreshConfig.getPrefix())
+          .withSourceDockerImage(refreshConfig.getSourceDockerImage())
+          .withSourceProtocolVersion(refreshConfig.getSourceProtocolVersion())
+          .withSourceDefinitionVersionId(refreshConfig.getSourceDefinitionVersionId())
+          .withDestinationDockerImage(refreshConfig.getDestinationDockerImage())
+          .withDestinationProtocolVersion(refreshConfig.getDestinationProtocolVersion())
+          .withDestinationDefinitionVersionId(refreshConfig.getDestinationDefinitionVersionId())
+          .withConfiguredAirbyteCatalog(refreshConfig.getConfiguredAirbyteCatalog())
+          .withOperationSequence(refreshConfig.getOperationSequence())
+          .withSyncResourceRequirements(refreshConfig.getSyncResourceRequirements())
+          .withIsSourceCustomConnector(refreshConfig.getIsSourceCustomConnector())
+          .withIsDestinationCustomConnector(refreshConfig.getIsDestinationCustomConnector())
+          .withWebhookOperationConfigs(refreshConfig.getWebhookOperationConfigs())
+          .withWorkspaceId(refreshConfig.getWorkspaceId());
     } else {
       throw new IllegalStateException(
           String.format("Unexpected config type %s for job %d. The only supported config types for this activity are (%s)",
               jobConfigType,
               jobId,
-              List.of(JobConfig.ConfigType.SYNC, JobConfig.ConfigType.RESET_CONNECTION)));
+              REPLICATION_TYPES));
     }
   }
 

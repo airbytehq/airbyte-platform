@@ -1,0 +1,6 @@
+// stylelint-disable-next-line airbyte/no-use-renaming
+@use "scss/mixins";
+
+.linkText {
+  @include mixins.link-text;
+}

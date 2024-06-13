@@ -12,7 +12,11 @@ import { Overlay } from "../Overlay";
 
 export interface ModalProps {
   title?: string | React.ReactNode;
-  onClose?: () => void;
+  /**
+   * Function to call when the user press Escape, clicks on Backdrop clicks or X-button clicks.
+   * Note: if openModal function was called with "preventCancel: true" then this function will not be called.
+   */
+  onCancel?: () => void;
   cardless?: boolean;
   size?: "sm" | "md" | "lg" | "xl" | "full";
   testId?: string;
@@ -34,7 +38,7 @@ export const Modal: React.FC<React.PropsWithChildren<ModalProps>> = ({
   children,
   title,
   size,
-  onClose,
+  onCancel,
   cardless,
   testId,
   wrapIn,
@@ -42,15 +46,17 @@ export const Modal: React.FC<React.PropsWithChildren<ModalProps>> = ({
   const [isOpen, setIsOpen] = useState(true);
   const { formatMessage } = useIntl();
 
-  const onModalClose = () => {
-    setIsOpen(false);
-    onClose?.();
+  const onModalCancel = () => {
+    if (onCancel) {
+      setIsOpen(false);
+      onCancel();
+    }
   };
 
   const Wrapper = wrapIn || "div";
 
   return (
-    <Dialog open={isOpen} onClose={onModalClose} data-testid={testId} className={styles.modalPageContainer}>
+    <Dialog open={isOpen} onClose={onModalCancel} data-testid={testId} className={styles.modalPageContainer}>
       <Overlay />
       <Wrapper
         className={classNames(styles.modalContainer, {
@@ -69,13 +75,15 @@ export const Modal: React.FC<React.PropsWithChildren<ModalProps>> = ({
                       {title}
                     </Heading>
                   </Box>
-                  <button
-                    className={styles.card__closeButton}
-                    onClick={onModalClose}
-                    aria-label={formatMessage({ id: "modal.closeButtonLabel" })}
-                  >
-                    <Icon type="cross" />
-                  </button>
+                  {onCancel && (
+                    <button
+                      className={styles.card__closeButton}
+                      onClick={onModalCancel}
+                      aria-label={formatMessage({ id: "modal.closeButtonLabel" })}
+                    >
+                      <Icon type="cross" />
+                    </button>
+                  )}
                 </FlexContainer>
               </div>
               {children}

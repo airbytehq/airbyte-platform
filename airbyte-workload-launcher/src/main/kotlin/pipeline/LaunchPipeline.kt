@@ -5,6 +5,7 @@ import io.airbyte.metrics.lib.ApmTraceUtils
 import io.airbyte.metrics.lib.MetricAttribute
 import io.airbyte.workload.launcher.client.LogContextFactory
 import io.airbyte.workload.launcher.metrics.CustomMetricPublisher
+import io.airbyte.workload.launcher.metrics.MeterFilterFactory
 import io.airbyte.workload.launcher.metrics.MeterFilterFactory.Companion.DATA_PLANE_ID_TAG
 import io.airbyte.workload.launcher.metrics.MeterFilterFactory.Companion.LAUNCH_PIPELINE_OPERATION_NAME
 import io.airbyte.workload.launcher.metrics.MeterFilterFactory.Companion.WORKLOAD_ID_TAG
@@ -21,6 +22,8 @@ import jakarta.inject.Singleton
 import reactor.core.publisher.Mono
 import reactor.core.scheduler.Schedulers
 import reactor.kotlin.core.publisher.toMono
+import kotlin.time.TimeSource
+import kotlin.time.toJavaDuration
 
 private val logger = KotlinLogging.logger {}
 
@@ -39,10 +42,21 @@ class LaunchPipeline(
 ) {
   @Trace(operationName = LAUNCH_PIPELINE_OPERATION_NAME)
   fun accept(msg: LauncherInput) {
-    metricPublisher.count(WorkloadLauncherMetricMetadata.WORKLOAD_RECEIVED, MetricAttribute(WORKLOAD_ID_TAG, msg.workloadId))
-    buildPipeline(msg)
-      .subscribeOn(Schedulers.immediate())
-      .subscribe()
+    val startTime = TimeSource.Monotonic.markNow()
+    metricPublisher.count(
+      WorkloadLauncherMetricMetadata.WORKLOAD_RECEIVED,
+      MetricAttribute(MeterFilterFactory.WORKLOAD_TYPE_TAG, msg.workloadType.toString()),
+    )
+    val disposable =
+      buildPipeline(msg)
+        .subscribeOn(Schedulers.immediate())
+        .subscribe()
+    metricPublisher.timer(
+      WorkloadLauncherMetricMetadata.WORKLOAD_LAUNCH_DURATION,
+      startTime.elapsedNow().toJavaDuration(),
+      MetricAttribute(MeterFilterFactory.WORKLOAD_TYPE_TAG, msg.workloadType.toString()),
+    )
+    disposable.dispose()
   }
 
   fun buildPipeline(msg: LauncherInput): Mono<LaunchStageIO> {

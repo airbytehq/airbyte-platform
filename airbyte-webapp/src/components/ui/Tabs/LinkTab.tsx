@@ -25,7 +25,7 @@ const LinkTabInner: React.FC<LinkTabInnerProps> = ({ name, isActive, disabled = 
         [styles["tabContainer--disabled"]]: disabled,
       })}
     >
-      <Text color={disabled ? "grey300" : isActive ? "darkBlue" : "grey"} className={styles.text} size="lg">
+      <Text color={disabled ? "grey300" : isActive ? "darkBlue" : "grey"} size="lg">
         {name}
       </Text>
     </div>

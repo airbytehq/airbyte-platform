@@ -1,4 +1,3 @@
----
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -14,7 +13,10 @@ spec:
       {{ toYaml (mergeOverwrite .Values.extraSelectorLabels .Values.global.extraSelectorLabels) | nindent 6 }}
       {{- end }}
   strategy:
-    type: {{ .Values.deploymentStrategyType }}
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 0
+      maxSurge: 100%
   template:
     metadata:
       labels:
@@ -58,8 +60,8 @@ spec:
         {{- if .Values.debug.enabled }}
         - name: JAVA_TOOL_OPTIONS
           value: "-Xdebug -agentlib:jdwp=transport=dt_socket,address=0.0.0.0:{{ .Values.debug.remoteDebugPort }},server=y,suspend=n"
-        {{- end}}
-        {{- if eq .Values.global.deploymentMode "oss"  }}
+        {{- end }}
+        {{- if eq .Values.global.deploymentMode "oss" }}
         - name: AIRBYTE_VERSION
           valueFrom:
             configMapKeyRef:
@@ -75,21 +77,26 @@ spec:
             configMapKeyRef:
               name: {{ .Release.Name }}-airbyte-env
               key: AIRBYTE_API_HOST
-        - name: DATABASE_PASSWORD
-          valueFrom:
-            secretKeyRef:
-              name: {{ .Values.global.database.secretName | default (printf "%s-airbyte-secrets" .Release.Name ) }}
-              key: {{ .Values.global.database.secretValue | default "DATABASE_PASSWORD" }}
-        - name: DATABASE_URL
+        - name: MICROMETER_METRICS_ENABLED
           valueFrom:
             configMapKeyRef:
               name: {{ .Release.Name }}-airbyte-env
-              key: DATABASE_URL
-        - name: DATABASE_USER
+              key: MICROMETER_METRICS_ENABLED
+        - name: MICROMETER_METRICS_STATSD_FLAVOR
           valueFrom:
-            secretKeyRef:
-              name: {{ .Release.Name }}-airbyte-secrets
-              key: DATABASE_USER
+            configMapKeyRef:
+              name: {{ .Release.Name }}-airbyte-env
+              key: MICROMETER_METRICS_STATSD_FLAVOR
+        - name: STATSD_HOST
+          valueFrom:
+            configMapKeyRef:
+              name: {{ .Release.Name }}-airbyte-env
+              key: STATSD_HOST
+        - name: STATSD_PORT
+          valueFrom:
+            configMapKeyRef:
+              name: {{ .Release.Name }}-airbyte-env
+              key: STATSD_PORT
         - name: TEMPORAL_HOST
           valueFrom:
             configMapKeyRef:
@@ -100,6 +107,9 @@ spec:
             secretKeyRef:
               name: {{ index .Values "workloadApi" "bearerTokenSecretName" | default (printf "%s-airbyte-secrets" .Release.Name ) }}
               key: {{ index .Values "workloadApi" "bearerTokenSecretKey" | default "WORKLOAD_API_BEARER_TOKEN" }}
+        # Database
+        {{- include "airbyte.database.envs" . | nindent 8 }}
+
         {{- end }}
 
         # Values from secret
@@ -157,7 +167,7 @@ spec:
         - name: debug 
           containerPort: {{ .Values.debug.remoteDebugPort }}
           protocol: TCP
-        {{- end}}
+        {{- end }}
         {{- if .Values.resources }}
         resources: {{- toYaml .Values.resources | nindent 10 }}
         {{- end }}
@@ -165,10 +175,10 @@ spec:
         securityContext: {{- toYaml .Values.containerSecurityContext | nindent 10 }}
         {{- end }}
         volumeMounts:
-        {{- if eq .Values.global.deploymentMode "oss" }}
-          - name: gcs-log-creds-volume
-            mountPath: /secrets/gcs-log-creds
-            readOnly: true
+        {{- if and (eq .Values.global.deploymentMode "oss") (eq (lower (default "" .Values.global.storage.type)) "gcs") }}
+        - name: gcs-log-creds-volume
+          mountPath: /secrets/gcs-log-creds
+          readOnly: true
         {{- end }}
         {{- if .Values.extraVolumeMounts }}
 {{- toYaml .Values.extraVolumeMounts | nindent 8 }}
@@ -182,15 +192,16 @@ spec:
       {{- if .Values.global.extraContainers }}
       {{ toYaml .Values.global.extraContainers | nindent 6 }}
       {{- end }}
+      securityContext: {{- toYaml .Values.podSecurityContext | nindent 8 }}
       volumes:
-      {{- if eq .Values.global.deploymentMode "oss" }}
-        - name: gcs-log-creds-volume
-          secret:
-            secretName: {{ ternary (printf "%s-gcs-log-creds" ( .Release.Name )) (.Values.global.credVolumeOverride) (eq .Values.global.deploymentMode "oss") }}
+      {{- if and (eq .Values.global.deploymentMode "oss") (eq (lower (default "" .Values.global.storage.type)) "gcs") }}
+      - name: gcs-log-creds-volume
+        secret:
+          secretName: {{ ternary (printf "%s-gcs-log-creds" ( .Release.Name )) (.Values.global.credVolumeOverride) (eq .Values.global.deploymentMode "oss") }}
       {{- end }}
       {{- if .Values.extraVolumes }}
-{{- toYaml .Values.extraVolumes | nindent 6 }}
+      {{- toYaml .Values.extraVolumes | nindent 6 }}
       {{- end }}
       {{- if .Values.global.extraVolumes }}
-{{- toYaml .Values.global.extraVolumes | nindent 6 }}
+      {{- toYaml .Values.global.extraVolumes | nindent 6 }}
       {{- end }}

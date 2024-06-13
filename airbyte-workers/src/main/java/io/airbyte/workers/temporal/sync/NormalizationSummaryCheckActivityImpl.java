@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.workers.temporal.sync;
@@ -13,17 +13,21 @@ import io.airbyte.api.client.AirbyteApiClient;
 import io.airbyte.api.client.model.generated.AttemptNormalizationStatusRead;
 import io.airbyte.api.client.model.generated.AttemptNormalizationStatusReadList;
 import io.airbyte.api.client.model.generated.JobIdRequestBody;
+import io.airbyte.commons.temporal.exception.RetryableException;
 import io.airbyte.metrics.lib.ApmTraceUtils;
 import io.airbyte.metrics.lib.MetricClientFactory;
 import io.airbyte.metrics.lib.OssMetricsRegistry;
+import io.micronaut.http.HttpStatus;
 import io.temporal.activity.Activity;
 import jakarta.inject.Singleton;
+import java.io.IOException;
 import java.util.Comparator;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 import lombok.extern.slf4j.Slf4j;
+import org.openapitools.client.infrastructure.ClientException;
 
 /**
  * NormalizationSummaryCheckActivityImpl.
@@ -54,10 +58,13 @@ public class NormalizationSummaryCheckActivityImpl implements NormalizationSumma
 
     final AttemptNormalizationStatusReadList AttemptNormalizationStatusReadList;
     try {
-      AttemptNormalizationStatusReadList = AirbyteApiClient.retryWithJitter(
-          () -> airbyteApiClient.getJobsApi().getAttemptNormalizationStatusesForJob(new JobIdRequestBody().id(jobId)),
-          "get normalization statuses");
-    } catch (final Exception e) {
+      AttemptNormalizationStatusReadList = airbyteApiClient.getJobsApi().getAttemptNormalizationStatusesForJob(new JobIdRequestBody(jobId));
+    } catch (final ClientException e) {
+      if (e.getStatusCode() == HttpStatus.NOT_FOUND.getCode()) {
+        throw e;
+      }
+      throw new RetryableException(e);
+    } catch (final IOException e) {
       throw Activity.wrap(e);
     }
     final AtomicLong totalRecordsCommitted = new AtomicLong(0L);

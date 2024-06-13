@@ -50,36 +50,14 @@ spec:
             configMapKeyRef:
               name: {{ .Values.global.configMapName | default (printf "%s-airbyte-env" .Release.Name) }}
               key: AIRBYTE_VERSION
-        - name: DATABASE_HOST
-          valueFrom:
-            configMapKeyRef:
-              name: {{ .Values.global.configMapName | default (printf "%s-airbyte-env" .Release.Name) }}
-              key: DATABASE_HOST
-        - name: DATABASE_PORT
-          valueFrom:
-            configMapKeyRef:
-              name: {{ .Values.global.configMapName | default (printf "%s-airbyte-env" .Release.Name) }}
-              key: DATABASE_PORT
-        - name: DATABASE_PASSWORD
-          valueFrom:
-            secretKeyRef:
-              name: {{ .Values.global.database.secretName | default (printf "%s-airbyte-secrets" .Release.Name ) }}
-              key: {{ .Values.global.database.secretValue | default "DATABASE_PASSWORD" }}
-        - name: DATABASE_URL
-          valueFrom:
-            configMapKeyRef:
-              name: {{ .Values.global.configMapName | default (printf "%s-airbyte-env" .Release.Name) }}
-              key: DATABASE_URL
-        - name: DATABASE_USER
-          valueFrom:
-            secretKeyRef:
-              name: {{ .Values.global.secretName | default (printf "%s-airbyte-secrets" .Release.Name) }}
-              key: DATABASE_USER
         - name: RUN_DATABASE_MIGRATION_ON_STARTUP
           valueFrom:
             configMapKeyRef:
               name: {{ .Values.global.configMapName | default (printf "%s-airbyte-env" .Release.Name) }}
               key: RUN_DATABASE_MIGRATION_ON_STARTUP
+
+        {{- include "airbyte.database.envs" . | nindent 8 }}
+
         {{- end }}
         # Values from secret
         {{- if .Values.secrets }}
@@ -121,6 +99,7 @@ spec:
     {{- if .Values.global.extraContainers }}
     {{ toYaml .Values.global.extraContainers | nindent 4 }}
     {{- end }}
+  securityContext: {{- toYaml .Values.podSecurityContext | nindent 6 }}
   {{- if .Values.extraVolumes }}
   volumes:
     {{- toYaml .Values.extraVolumes | nindent 4 }}

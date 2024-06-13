@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.commons.server.scheduler;
@@ -9,6 +9,7 @@ import io.airbyte.config.DestinationConnection;
 import io.airbyte.config.ResourceRequirements;
 import io.airbyte.config.SourceConnection;
 import io.airbyte.config.StandardCheckConnectionOutput;
+import io.airbyte.config.WorkloadPriority;
 import io.airbyte.protocol.models.ConnectorSpecification;
 import java.io.IOException;
 import java.util.UUID;
@@ -34,7 +35,8 @@ public interface SynchronousSchedulerClient {
   SynchronousResponse<UUID> createDiscoverSchemaJob(SourceConnection source,
                                                     ActorDefinitionVersion sourceVersion,
                                                     boolean isCustomConnector,
-                                                    ResourceRequirements actorDefinitionResourceRequirements)
+                                                    ResourceRequirements actorDefinitionResourceRequirements,
+                                                    WorkloadPriority priority)
       throws IOException;
 
   SynchronousResponse<ConnectorSpecification> createGetSpecJob(String dockerImage, boolean isCustomConnector, final UUID workspaceId)

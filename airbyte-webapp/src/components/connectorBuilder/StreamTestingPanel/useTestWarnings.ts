@@ -3,7 +3,7 @@ import { useIntl } from "react-intl";
 
 import { useConnectorBuilderTestRead } from "services/connectorBuilder/ConnectorBuilderStateService";
 
-import { useBuilderWatch } from "../types";
+import { isYamlString, useBuilderWatch } from "../types";
 
 export const useTestWarnings = () => {
   const { formatMessage } = useIntl();
@@ -21,7 +21,7 @@ export const useTestWarnings = () => {
       return [];
     }
     const warnings: string[] = [];
-    if (currentStream.fieldPointer.length) {
+    if (!isYamlString(currentStream.recordSelector) && currentStream.recordSelector?.fieldPath.length) {
       const fieldPointerMissing = streamReadData.slices.every((slice) => {
         return slice.pages.every((page) => {
           // check whether responses look like they contain data but are always empty

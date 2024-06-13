@@ -1,51 +1,57 @@
 plugins {
-    id("io.airbyte.gradle.jvm.lib")
-    id("io.airbyte.gradle.docker")
-    id("io.airbyte.gradle.publish")
+  id("io.airbyte.gradle.jvm.lib")
+  id("io.airbyte.gradle.docker")
+  id("io.airbyte.gradle.publish")
 }
 
 dependencies {
-    annotationProcessor(libs.bundles.micronaut.annotation.processor)
-    api(libs.bundles.micronaut.annotation)
+  compileOnly(libs.lombok)
+  annotationProcessor(libs.lombok)     // Lombok must be added BEFORE Micronaut
+  api(libs.bundles.micronaut.annotation)
 
-    implementation(project(":airbyte-commons"))
-    implementation("commons-cli:commons-cli:1.4")
-    implementation(project(":airbyte-config:specs"))
-    implementation(project(":airbyte-config:config-models"))
-    implementation(project(":airbyte-config:config-persistence"))
-    implementation(project(":airbyte-featureflag"))
-    implementation(project(":airbyte-notification"))
-    implementation(project(":airbyte-persistence:job-persistence"))
-    implementation(libs.airbyte.protocol)
-    implementation(project(":airbyte-json-validation"))
-    compileOnly(libs.lombok)
-    annotationProcessor(libs.lombok)
-    implementation(libs.guava)
+  ksp(platform(libs.micronaut.platform))
+  ksp(libs.bundles.micronaut.annotation.processor)
 
-    testImplementation(project(":airbyte-test-utils"))
-    testRuntimeOnly(libs.junit.jupiter.engine)
-    testImplementation(libs.bundles.junit)
-    testImplementation(libs.assertj.core)
-    testImplementation(libs.junit.pioneer)
-    testCompileOnly(libs.lombok)
-    testAnnotationProcessor(libs.lombok)
+  implementation(project(":airbyte-commons"))
+  implementation("commons-cli:commons-cli:1.4")
+  implementation(project(":airbyte-config:specs"))
+  implementation(project(":airbyte-config:config-models"))
+  implementation(project(":airbyte-config:config-persistence"))
+  implementation(project(":airbyte-data"))
+  implementation(project(":airbyte-featureflag"))
+  implementation(project(":airbyte-notification"))
+  implementation(project(":airbyte-metrics:metrics-lib"))
+  implementation(project(":airbyte-persistence:job-persistence"))
+  implementation(libs.airbyte.protocol)
+  implementation(project(":airbyte-json-validation"))
+  implementation(libs.guava)
+  implementation(libs.okhttp)
+  implementation(libs.bundles.jackson)
+
+  testImplementation(project(":airbyte-test-utils"))
+  testRuntimeOnly(libs.junit.jupiter.engine)
+  testImplementation(libs.bundles.junit)
+  testImplementation(libs.assertj.core)
+  testImplementation(libs.junit.pioneer)
+  testImplementation(libs.mockk)
+
 }
 
 airbyte {
-    docker {
-        imageName = "init"
-    }
+  docker {
+    imageName = "init"
+  }
 }
 
 val copyScripts = tasks.register<Copy>("copyScripts") {
-    from("scripts")
-    into("build/airbyte/docker/bin/scripts")
+  from("scripts")
+  into("build/airbyte/docker/bin/scripts")
 }
 
-tasks.named("dockerBuildImage") {
-    dependsOn(copyScripts)
+tasks.named("dockerCopyDistribution") {
+  dependsOn(copyScripts)
 }
 
 tasks.processResources {
-    from("${project.rootDir}/airbyte-connector-builder-resources")
+  from("${project.rootDir}/airbyte-connector-builder-resources")
 }

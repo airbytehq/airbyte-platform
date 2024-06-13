@@ -18,6 +18,8 @@ servers:
 paths:
   /v1/stream/read:
     post:
+      tags:
+        - connectorBuilderServer
       summary: Reads a specific stream in the source. TODO in a later phase - only read a single slice of data.
       operationId: readStream
       requestBody:
@@ -39,6 +41,8 @@ paths:
           $ref: "#/components/responses/InvalidInputResponse"
   /v1/manifest/resolve:
     post:
+      tags:
+        - connectorBuilderServer
       summary: Given a JSON manifest, returns a JSON manifest with all of the $refs and $parameters resolved and flattened
       operationId: resolveManifest
       requestBody:
@@ -124,9 +128,9 @@ components:
                 type: object
                 description: "An object describing the current slice. This can be omitted if a stream slicer is not configured."
               state:
-                type: object
-                description: The STATE AirbyteMessage emitted at the end of this slice. This can be omitted if a stream slicer is not configured.
-                # $ref: "#/components/schemas/AirbyteProtocol/definitions/AirbyteStateMessage"
+                type: array
+                items:
+                  $ref: "#/components/schemas/AirbyteStateMessage"
         test_read_limit_reached:
           type: boolean
           description: Whether the maximum number of request per slice or the maximum number of slices queried has been reached
@@ -181,12 +185,22 @@ components:
         record_limit:
           type: integer
           minimum: 1
-          maximum: 1000
-          description: Number of records that will be returned to the client from the connector builder (max of 1000)
+          maximum: 10000
+          description: Maximum number of records that will be returned to the client from the connector builder
+        page_limit:
+          type: integer
+          minimum: 1
+          maximum: 20
+          description: Maximum number of pages that will be returned to the client from the connector builder
+        slice_limit:
+          type: integer
+          minimum: 1
+          maximum: 20
+          description: Maximum number of slices that will be returned to the client from the connector builder
         state:
-          type: object
-          description: The AirbyteStateMessage object to use as the starting state for this read
-          # $ref: "#/components/schemas/AirbyteProtocol/definitions/AirbyteStateMessage"
+          type: array
+          items:
+            $ref: "#/components/schemas/AirbyteStateMessage"
         workspace_id:
           type: string
           description: ID of the workspace where the request is coming from
@@ -204,9 +218,6 @@ components:
         url:
           type: string
           description: URL that the request was sent to
-        parameters:
-          type: object
-          description: The request parameters that were set on the HTTP request, if any
         body:
           type: string
           description: The body of the HTTP request, if present
@@ -276,6 +287,9 @@ components:
     ConnectorManifest:
       type: object
       description: The config-based connector manifest contents
+    AirbyteStateMessage:
+      type: object
+      description: The STATE AirbyteMessage emitted at the end of this slice. This can be omitted if a stream slicer is not configured.
 
     # The following exception structs were copied from airbyte-api/src/main/openapi/config.yaml
     InvalidInputProperty:

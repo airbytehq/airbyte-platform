@@ -1,14 +1,13 @@
 import { yupResolver } from "@hookform/resolvers/yup";
 import classNames from "classnames";
 import merge from "lodash/merge";
-import React, { useMemo, useState } from "react";
+import React, { useState } from "react";
 import { FormProvider, useForm, useFormContext } from "react-hook-form";
 import { FormattedMessage, useIntl } from "react-intl";
 import { v4 as uuid } from "uuid";
 import * as yup from "yup";
 
 import { Button } from "components/ui/Button";
-import { Icon } from "components/ui/Icon";
 import { Modal, ModalBody, ModalFooter } from "components/ui/Modal";
 
 import { Action, Namespace, useAnalyticsService } from "core/services/analytics";
@@ -16,13 +15,7 @@ import { Action, Namespace, useAnalyticsService } from "core/services/analytics"
 import styles from "./AddStreamButton.module.scss";
 import { BuilderField } from "./BuilderField";
 import { BuilderFieldWithInputs } from "./BuilderFieldWithInputs";
-import {
-  BuilderStream,
-  DEFAULT_BUILDER_STREAM_VALUES,
-  DEFAULT_SCHEMA,
-  authenticatorSchema,
-  useBuilderWatch,
-} from "../types";
+import { BuilderStream, DEFAULT_BUILDER_STREAM_VALUES, DEFAULT_SCHEMA, useBuilderWatch } from "../types";
 
 interface AddStreamValues {
   streamName: string;
@@ -37,6 +30,7 @@ interface AddStreamButtonProps {
   initialValues?: Partial<BuilderStream>;
   "data-testid"?: string;
   modalTitle?: string;
+  disabled?: boolean;
 }
 
 export const AddStreamButton: React.FC<AddStreamButtonProps> = ({
@@ -45,9 +39,10 @@ export const AddStreamButton: React.FC<AddStreamButtonProps> = ({
   initialValues,
   "data-testid": testId,
   modalTitle,
+  disabled,
 }) => {
   const analyticsService = useAnalyticsService();
-  const authenticator = useBuilderWatch("formValues.global.authenticator");
+  const baseUrl = useBuilderWatch("formValues.global.urlBase");
   const [isOpen, setIsOpen] = useState(false);
 
   const streams = useBuilderWatch("formValues.streams");
@@ -58,8 +53,7 @@ export const AddStreamButton: React.FC<AddStreamButtonProps> = ({
     setIsOpen(true);
   };
 
-  const authIsValid = useMemo(() => authenticatorSchema.isValidSync(authenticator), [authenticator]);
-  const shouldPulse = numStreams === 0 && authenticator.type !== "NoAuth" && authIsValid;
+  const shouldPulse = numStreams === 0 && baseUrl;
 
   const handleSubmit = (values: AddStreamValues) => {
     const otherStreamValues = values.copyOtherStream
@@ -104,15 +98,18 @@ export const AddStreamButton: React.FC<AddStreamButtonProps> = ({
         React.cloneElement(button, {
           onClick: buttonClickHandler,
           "data-testid": testId,
+          disabled: disabled ?? button.props.disabled, // respect `disabled` from both AddStreamButton and the custom button
+          className: classNames(button.props.className, styles.disableable),
         })
       ) : (
         <div className={classNames(styles.buttonContainer, { [styles["buttonContainer--pulse"]]: shouldPulse })}>
           <Button
             type="button"
-            className={styles.addButton}
+            className={classNames(styles.addButton, styles.disableable)}
             onClick={buttonClickHandler}
-            icon={<Icon type="plus" />}
+            icon="plus"
             data-testid={testId}
+            disabled={disabled}
           />
         </div>
       )}
@@ -120,7 +117,7 @@ export const AddStreamButton: React.FC<AddStreamButtonProps> = ({
         <Modal
           size="sm"
           title={modalTitle ?? <FormattedMessage id="connectorBuilder.addStreamModal.title" />}
-          onClose={() => {
+          onCancel={() => {
             setIsOpen(false);
           }}
         >

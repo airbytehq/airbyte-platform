@@ -1,0 +1,69 @@
+/*
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ */
+
+package io.airbyte.commons.auth.support;
+
+import static io.airbyte.commons.auth.support.JwtTokenParser.JWT_AUTH_PROVIDER;
+import static io.airbyte.commons.auth.support.JwtTokenParser.JWT_SSO_REALM;
+import static io.airbyte.commons.auth.support.JwtTokenParser.JWT_USER_EMAIL;
+import static io.airbyte.commons.auth.support.JwtTokenParser.JWT_USER_NAME;
+
+import io.airbyte.config.AuthProvider;
+import io.airbyte.config.User;
+import io.micronaut.security.utils.SecurityService;
+import jakarta.inject.Singleton;
+import java.util.Optional;
+import lombok.extern.slf4j.Slf4j;
+
+/**
+ * Resolves JWT into UserRead object.
+ */
+@Singleton
+@Slf4j
+public class JwtUserAuthenticationResolver implements UserAuthenticationResolver {
+
+  private final Optional<SecurityService> securityService;
+
+  public JwtUserAuthenticationResolver(final Optional<SecurityService> securityService) {
+    this.securityService = securityService;
+  }
+
+  /**
+   * Resolves JWT token into a UserRead object with user metadata.
+   */
+  @Override
+  public User resolveUser(final String expectedAuthUserId) {
+    if (securityService.isEmpty()) {
+      log.warn("Security service is not available. Returning empty user.");
+      return new User();
+    }
+    final String authUserId = securityService.get().username().get();
+    if (!expectedAuthUserId.equals(authUserId)) {
+      throw new IllegalArgumentException("JWT token doesn't match the expected auth user id.");
+    }
+
+    final var jwtMap = securityService.get().getAuthentication().get().getAttributes();
+    final String email = (String) jwtMap.get(JWT_USER_EMAIL);
+    // Default name to email address if name is not found
+    final String name = (String) jwtMap.getOrDefault(JWT_USER_NAME, email);
+    final AuthProvider authProvider = (AuthProvider) jwtMap.getOrDefault(JWT_AUTH_PROVIDER, null);
+    return new User().withName(name).withEmail(email).withAuthUserId(authUserId).withAuthProvider(authProvider);
+  }
+
+  /**
+   * Resolves JWT token to SsoRealm. If Sso realm does not exist, it will return null.
+   */
+  @Override
+  public Optional<String> resolveSsoRealm() {
+    if (securityService.isEmpty()) {
+      log.warn("Security service is not available. Returning empty realm.");
+      return Optional.empty();
+    }
+
+    final var jwtMap = securityService.get().getAuthentication().get().getAttributes();
+    final String realm = (String) jwtMap.getOrDefault(JWT_SSO_REALM, null);
+    return Optional.ofNullable(realm);
+  }
+
+}

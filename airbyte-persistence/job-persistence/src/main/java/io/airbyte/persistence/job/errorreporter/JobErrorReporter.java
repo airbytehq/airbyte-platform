@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.persistence.job.errorreporter;
@@ -56,7 +56,7 @@ public class JobErrorReporter {
   private static final String JOB_ID_KEY = "job_id";
 
   private static final ImmutableSet<FailureType> UNSUPPORTED_FAILURETYPES =
-      ImmutableSet.of(FailureType.CONFIG_ERROR, FailureType.MANUAL_CANCELLATION);
+      ImmutableSet.of(FailureType.CONFIG_ERROR, FailureType.MANUAL_CANCELLATION, FailureType.TRANSIENT_ERROR);
 
   private final ConfigRepository configRepository;
   private final DeploymentMode deploymentMode;
@@ -89,70 +89,79 @@ public class JobErrorReporter {
                                    final SyncJobReportingContext jobContext,
                                    @Nullable final AttemptConfigReportingContext attemptConfig) {
     Exceptions.swallow(() -> {
-      final List<FailureReason> traceMessageFailures = failureSummary.getFailures().stream()
-          .filter(failure -> failure.getMetadata() != null && failure.getMetadata().getAdditionalProperties().containsKey(FROM_TRACE_MESSAGE))
-          .toList();
+      try {
+        LOGGER.info("{} failures incoming for jobId '{}' connectionId '{}'",
+            failureSummary.getFailures() == null ? 0 : failureSummary.getFailures().size(), jobContext.jobId(), connectionId);
+        final List<FailureReason> traceMessageFailures = failureSummary.getFailures().stream()
+            .filter(failure -> failure.getMetadata() != null && failure.getMetadata().getAdditionalProperties().containsKey(FROM_TRACE_MESSAGE))
+            .toList();
 
-      final StandardWorkspace workspace = configRepository.getStandardWorkspaceFromConnection(connectionId, true);
-      final Map<String, String> commonMetadata = MoreMaps.merge(
-          Map.of(JOB_ID_KEY, String.valueOf(jobContext.jobId())),
-          getConnectionMetadata(workspace.getWorkspaceId(), connectionId));
+        final StandardWorkspace workspace = configRepository.getStandardWorkspaceFromConnection(connectionId, true);
+        final Map<String, String> commonMetadata = MoreMaps.merge(
+            Map.of(JOB_ID_KEY, String.valueOf(jobContext.jobId())),
+            getConnectionMetadata(workspace.getWorkspaceId(), connectionId));
 
-      for (final FailureReason failureReason : traceMessageFailures) {
-        final FailureOrigin failureOrigin = failureReason.getFailureOrigin();
+        LOGGER.info("{} failures to report for jobId '{}' connectionId '{}'", traceMessageFailures.size(), jobContext.jobId(), connectionId);
+        for (final FailureReason failureReason : traceMessageFailures) {
+          final FailureOrigin failureOrigin = failureReason.getFailureOrigin();
+          LOGGER.info("Reporting failure for jobId '{}' connectionId '{}' origin '{}'", jobContext.jobId(), connectionId, failureOrigin);
 
-        if (failureOrigin == FailureOrigin.SOURCE) {
-          final StandardSourceDefinition sourceDefinition = configRepository.getSourceDefinitionFromConnection(connectionId);
-          final ActorDefinitionVersion sourceVersion = configRepository.getActorDefinitionVersion(jobContext.sourceVersionId());
-          final String dockerImage = ActorDefinitionVersionHelper.getDockerImageName(sourceVersion);
-          final Map<String, String> metadata =
-              MoreMaps.merge(commonMetadata, getSourceMetadata(sourceDefinition, dockerImage, sourceVersion.getReleaseStage()));
+          if (failureOrigin == FailureOrigin.SOURCE) {
+            final StandardSourceDefinition sourceDefinition = configRepository.getSourceDefinitionFromConnection(connectionId);
+            final ActorDefinitionVersion sourceVersion = configRepository.getActorDefinitionVersion(jobContext.sourceVersionId());
+            final String dockerImage = ActorDefinitionVersionHelper.getDockerImageName(sourceVersion);
+            final Map<String, String> metadata =
+                MoreMaps.merge(commonMetadata, getSourceMetadata(sourceDefinition, dockerImage, sourceVersion.getReleaseStage()));
 
-          reportJobFailureReason(workspace, failureReason, dockerImage, metadata, attemptConfig);
-        } else if (failureOrigin == FailureOrigin.DESTINATION) {
-          final StandardDestinationDefinition destinationDefinition = configRepository.getDestinationDefinitionFromConnection(connectionId);
-          final ActorDefinitionVersion destinationVersion = configRepository.getActorDefinitionVersion(jobContext.destinationVersionId());
-          final String dockerImage = ActorDefinitionVersionHelper.getDockerImageName(destinationVersion);
-          final Map<String, String> metadata =
-              MoreMaps.merge(commonMetadata, getDestinationMetadata(destinationDefinition, dockerImage, destinationVersion.getReleaseStage()));
+            reportJobFailureReason(workspace, failureReason, dockerImage, metadata, attemptConfig);
+          } else if (failureOrigin == FailureOrigin.DESTINATION) {
+            final StandardDestinationDefinition destinationDefinition = configRepository.getDestinationDefinitionFromConnection(connectionId);
+            final ActorDefinitionVersion destinationVersion = configRepository.getActorDefinitionVersion(jobContext.destinationVersionId());
+            final String dockerImage = ActorDefinitionVersionHelper.getDockerImageName(destinationVersion);
+            final Map<String, String> metadata =
+                MoreMaps.merge(commonMetadata, getDestinationMetadata(destinationDefinition, dockerImage, destinationVersion.getReleaseStage()));
 
-          reportJobFailureReason(workspace, failureReason, dockerImage, metadata, attemptConfig);
-        } else if (failureOrigin == FailureOrigin.NORMALIZATION) {
-          final StandardSourceDefinition sourceDefinition = configRepository.getSourceDefinitionFromConnection(connectionId);
-          final StandardDestinationDefinition destinationDefinition = configRepository.getDestinationDefinitionFromConnection(connectionId);
-          final ActorDefinitionVersion destinationVersion = configRepository.getActorDefinitionVersion(jobContext.destinationVersionId());
-          // null check because resets don't have sources
-          final @Nullable ActorDefinitionVersion sourceVersion =
-              jobContext.sourceVersionId() != null ? configRepository.getActorDefinitionVersion(jobContext.sourceVersionId()) : null;
+            reportJobFailureReason(workspace, failureReason, dockerImage, metadata, attemptConfig);
+          } else if (failureOrigin == FailureOrigin.NORMALIZATION) {
+            final StandardSourceDefinition sourceDefinition = configRepository.getSourceDefinitionFromConnection(connectionId);
+            final StandardDestinationDefinition destinationDefinition = configRepository.getDestinationDefinitionFromConnection(connectionId);
+            final ActorDefinitionVersion destinationVersion = configRepository.getActorDefinitionVersion(jobContext.destinationVersionId());
+            // null check because resets don't have sources
+            final @Nullable ActorDefinitionVersion sourceVersion =
+                jobContext.sourceVersionId() != null ? configRepository.getActorDefinitionVersion(jobContext.sourceVersionId()) : null;
 
-          final Map<String, String> destinationMetadata = getDestinationMetadata(
-              destinationDefinition,
-              ActorDefinitionVersionHelper.getDockerImageName(destinationVersion),
-              destinationVersion.getReleaseStage());
+            final Map<String, String> destinationMetadata = getDestinationMetadata(
+                destinationDefinition,
+                ActorDefinitionVersionHelper.getDockerImageName(destinationVersion),
+                destinationVersion.getReleaseStage());
 
-          // prefixing source keys, so we don't overlap (destination as 'true' keys since normalization runs
-          // on the destination)
-          final Map<String, String> sourceMetadata = sourceVersion != null
-              ? prefixConnectorMetadataKeys(getSourceMetadata(
-                  sourceDefinition,
-                  ActorDefinitionVersionHelper.getDockerImageName(sourceVersion),
-                  sourceVersion.getReleaseStage()), "source")
-              : Map.of();
+            // prefixing source keys, so we don't overlap (destination as 'true' keys since normalization runs
+            // on the destination)
+            final Map<String, String> sourceMetadata = sourceVersion != null
+                ? prefixConnectorMetadataKeys(getSourceMetadata(
+                    sourceDefinition,
+                    ActorDefinitionVersionHelper.getDockerImageName(sourceVersion),
+                    sourceVersion.getReleaseStage()), "source")
+                : Map.of();
 
-          // since error could be arising from source or destination or normalization itself, we want all the
-          // metadata
-          final Map<String, String> metadata = MoreMaps.merge(
-              commonMetadata,
-              getNormalizationMetadata(destinationVersion.getNormalizationConfig().getNormalizationRepository()),
-              sourceMetadata,
-              destinationMetadata);
+            // since error could be arising from source or destination or normalization itself, we want all the
+            // metadata
+            final Map<String, String> metadata = MoreMaps.merge(
+                commonMetadata,
+                getNormalizationMetadata(destinationVersion.getNormalizationConfig().getNormalizationRepository()),
+                sourceMetadata,
+                destinationMetadata);
 
-          final String normalizationDockerImage =
-              destinationVersion.getNormalizationConfig().getNormalizationRepository() + ":"
-                  + destinationVersion.getNormalizationConfig().getNormalizationTag();
+            final String normalizationDockerImage =
+                destinationVersion.getNormalizationConfig().getNormalizationRepository() + ":"
+                    + destinationVersion.getNormalizationConfig().getNormalizationTag();
 
-          reportJobFailureReason(workspace, failureReason, normalizationDockerImage, metadata, attemptConfig);
+            reportJobFailureReason(workspace, failureReason, normalizationDockerImage, metadata, attemptConfig);
+          }
         }
+      } catch (final Exception e) {
+        LOGGER.error("Failed to report status for jobId '{}' connectionId '{}': {}", jobContext.jobId(), connectionId, e);
+        throw e;
       }
     });
   }
@@ -283,7 +292,8 @@ public class JobErrorReporter {
   }
 
   private Map<String, String> getFailureReasonMetadata(final FailureReason failureReason) {
-    final Map<String, Object> failureReasonAdditionalProps = failureReason.getMetadata().getAdditionalProperties();
+    final Map<String, Object> failureReasonAdditionalProps =
+        failureReason.getMetadata() != null ? failureReason.getMetadata().getAdditionalProperties() : Map.of();
     final Map<String, String> outMetadata = new HashMap<>();
 
     if (failureReasonAdditionalProps.containsKey(CONNECTOR_COMMAND_META_KEY)

@@ -1,6 +1,6 @@
 import classNames from "classnames";
 import uniqueId from "lodash/uniqueId";
-import { KeyboardEventHandler, useMemo, useState } from "react";
+import { KeyboardEventHandler, useCallback, useMemo, useState } from "react";
 import {
   ActionMeta,
   GroupBase,
@@ -44,7 +44,7 @@ const customStyles = (directional?: boolean, disabled?: boolean): StylesConfig<T
   }),
   control: (provided, state) => {
     const isInvalid = state.selectProps["aria-invalid"];
-    const regularBorderColor = isInvalid ? styles.errorBorderColor : "transparent";
+    const regularBorderColor = isInvalid ? styles.errorBorderColor : styles.regularBorderColor;
     const hoveredBorderColor = isInvalid ? styles.errorHoveredBorderColor : styles.hoveredBorderColor;
     return {
       ...provided,
@@ -80,6 +80,7 @@ interface TagInputProps {
   disabled?: boolean;
   id?: string;
   directionalStyle?: boolean;
+  uniqueValues?: boolean;
 }
 
 const generateTagFromString = (inputValue: string): Tag => ({
@@ -102,15 +103,26 @@ export const TagInput: React.FC<TagInputProps> = ({
   onBlur,
   onFocus,
   directionalStyle,
+  uniqueValues,
 }) => {
   const [draftValue, setDraftValue] = useState("");
   const draftExists = draftValue.length > 0;
 
+  // possibly deduplicates values based on the uniqueValues prop
+  const valuesToCommit = useCallback(
+    (preexistingValues: string[], newValues: string[] = []) => {
+      const allValues = [...preexistingValues, ...newValues];
+      return uniqueValues ? Array.from(new Set(allValues)) : allValues;
+    },
+    [uniqueValues]
+  );
+
   const tags = useMemo(() => {
     const nonDraftValues =
       draftExists && fieldValue.length > 0 ? fieldValue.slice(0, fieldValue.length - 1) : fieldValue;
-    return nonDraftValues.map(generateTagFromString);
-  }, [draftExists, fieldValue]);
+    // we deduplicate based on props.uniqueValues when values get converted to tags
+    return valuesToCommit(nonDraftValues).map(generateTagFromString);
+  }, [draftExists, fieldValue, valuesToCommit]);
 
   // handles various ways of deleting a value
   const handleDelete = (_value: OnChangeValue<Tag, true>, actionMeta: ActionMeta<Tag>) => {
@@ -131,7 +143,7 @@ export const TagInput: React.FC<TagInputProps> = ({
 
     const updatedTagsAsStrings = updatedTags.map((tag) => generateStringFromTag(tag));
     if (draftExists) {
-      onChange([...updatedTagsAsStrings, draftValue]);
+      onChange([...updatedTagsAsStrings, ...draftValue]);
     } else {
       onChange(updatedTagsAsStrings);
     }
@@ -171,9 +183,11 @@ export const TagInput: React.FC<TagInputProps> = ({
       setDraftValue("");
 
       if (draftExists) {
-        onChange([...fieldValueMinusLast, ...newTagStrings]);
+        // the user has been typing and entered a delimiter character
+        onChange(valuesToCommit([...fieldValueMinusLast, ...newTagStrings]));
       } else {
-        onChange([...fieldValue, ...newTagStrings]);
+        // the user pastes in text with a delimiter character with no draft item in progress
+        onChange(valuesToCommit([...fieldValue, ...newTagStrings]));
       }
     } else {
       const normalizedDraft = normalizeInput(newDraftValue);
@@ -185,11 +199,14 @@ export const TagInput: React.FC<TagInputProps> = ({
 
       if (draftExists) {
         if (newDraftValue.length === 0) {
-          onChange([...fieldValueMinusLast]);
+          // the user has just deleted the last character of a draft value
+          onChange(valuesToCommit(fieldValueMinusLast));
         } else {
+          // the user is continuing to update a draft value
           onChange([...fieldValueMinusLast, normalizedDraft]);
         }
       } else {
+        // the user has typed or pasted the first character(s) of a draft value
         onChange([...fieldValue, normalizedDraft]);
       }
     }
@@ -214,6 +231,12 @@ export const TagInput: React.FC<TagInputProps> = ({
    */
   const onBlurControl = () => {
     setDraftValue("");
+    // When `uniqueValues` is set, this ensures that invalid duplicate values are actually
+    // removed from the underlying fieldValue when the user exits the field, not just
+    // removed from view. Without it, drafting a duplicate value and then clicking outside
+    // the field will retain the potentially invalid value *even though* it will be removed
+    // from the user's view if `uniqueValues` is set.
+    onChange(valuesToCommit(fieldValue));
     onBlur?.();
   };
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.db.instance;
@@ -12,6 +12,11 @@ import java.util.Set;
  * Collection of database related constants.
  */
 public final class DatabaseConstants {
+
+  /**
+   * Default Postgres version Airbyte supports.
+   */
+  public static final String DEFAULT_DATABASE_VERSION = "postgres:15-alpine";
 
   /**
    * Logical name of the Configurations database.
@@ -64,6 +69,7 @@ public final class DatabaseConstants {
   public static final String SCHEMA_MANAGEMENT_TABLE = "schema_management";
 
   public static final String USER_TABLE = "user";
+  public static final String AUTH_USER_TABLE = "auth_user";
 
   public static final String PERMISSION_TABLE = "permission";
 

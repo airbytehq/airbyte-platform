@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.workers.general;
@@ -58,7 +58,7 @@ class DefaultGetSpecWorkerTest {
     final IntegrationLauncher integrationLauncher = mock(IntegrationLauncher.class, RETURNS_DEEP_STUBS);
     when(integrationLauncher.spec(jobRoot)).thenReturn(process);
 
-    worker = new DefaultGetSpecWorker(integrationLauncher, VersionedAirbyteStreamFactory.noMigrationVersionedAirbyteStreamFactory(false));
+    worker = new DefaultGetSpecWorker(integrationLauncher, VersionedAirbyteStreamFactory.noMigrationVersionedAirbyteStreamFactory());
   }
 
   @Test

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.micronaut.config;
@@ -20,14 +20,14 @@ import lombok.extern.slf4j.Slf4j;
 
 /**
  * Custom Micronaut {@link PropertySourceLoader} that loads the airbyte.yml file and prefixes all
- * properties within with "airbyte.". Micronaut registers this property loader via the
+ * properties within with "airbyte-yml.". Micronaut registers this property loader via the
  * resources/META-INF/services/io.micronaut.context.env.PropertySourceLoader file.
  */
 @Slf4j
 public class AirbytePropertySourceLoader implements PropertySourceLoader {
 
   static final String AIRBYTE_YML_PATH = "/app/configs/airbyte.yml";
-  static final String AIRBYTE_KEY = "airbyte";
+  static final String AIRBYTE_YML_KEY = "airbyte-yml";
 
   final YamlPropertySourceLoader yamlLoader = new YamlPropertySourceLoader();
 
@@ -52,7 +52,7 @@ public class AirbytePropertySourceLoader implements PropertySourceLoader {
       // Prefix all configuration from that file with airbyte.
       final var prefixedProps = new HashMap<String, Object>();
       for (var entry : yaml.entrySet()) {
-        prefixedProps.put(AIRBYTE_KEY + "." + entry.getKey(), entry.getValue());
+        prefixedProps.put(AIRBYTE_YML_KEY + "." + entry.getKey(), entry.getValue());
       }
       return Optional.of(PropertySource.of(prefixedProps));
     } catch (final IOException e) {

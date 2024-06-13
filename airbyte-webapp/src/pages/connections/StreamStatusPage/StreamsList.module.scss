@@ -3,6 +3,10 @@
 @use "scss/variables";
 @use "scss/z-indices";
 
+.cardHeader {
+  border-bottom: variables.$border-thin solid colors.$grey-100;
+}
+
 .clickableHeader {
   background-color: inherit;
   border: none;
@@ -31,6 +35,14 @@
     @include mixins.striped-background(colors.$dark-blue-30, 30px);
   }
 
+  .syncing--next {
+    background: colors.$grey-40;
+
+    &.row:hover {
+      background-color: colors.$grey-40;
+    }
+  }
+
   .statusHeader {
     width: 0;
   }
@@ -41,5 +53,9 @@
 
   .actionsHeader {
     width: 50px;
+  }
+
+  .row:hover {
+    background-color: colors.$foreground;
   }
 }

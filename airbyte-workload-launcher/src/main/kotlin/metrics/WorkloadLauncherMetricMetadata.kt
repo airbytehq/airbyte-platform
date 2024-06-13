@@ -8,6 +8,14 @@ enum class WorkloadLauncherMetricMetadata(
   private val metricName: String,
   private val description: String,
 ) : MetricsRegistry {
+  WORKLOAD_LAUNCHER_POLLER_STATUS(
+    "workload_launcher_poller_status",
+    "tracks the status of the workload task poller",
+  ),
+  WORKLOAD_LAUNCHER_REHYDRATE_FAILURE(
+    "workload_launcher_rehydrate_failure",
+    "tracks whenever the launcher rehydrate process failed",
+  ),
   WORKLOAD_QUEUE_SIZE(
     "workload_queue_size",
     "used to track the queue size launcher does not processes a workload successfully",
@@ -15,6 +23,10 @@ enum class WorkloadLauncherMetricMetadata(
   WORKLOAD_RECEIVED(
     "workload_received",
     "increments when the launcher receives a workload from the queue",
+  ),
+  WORKLOAD_LAUNCH_DURATION(
+    "workload_launch_duration",
+    "tracks the duration of the launch of a workload",
   ),
   WORKLOAD_CLAIM_RESUMED(
     "workload_claim_resumed",
@@ -48,17 +60,13 @@ enum class WorkloadLauncherMetricMetadata(
     "workload_stage_done",
     "increments when a workload stage is done",
   ),
+  WORKLOAD_STAGE_DURATION(
+    "workload_stage_duration",
+    "a distribution of the duration of a workload stage",
+  ),
   PODS_DELETED_FOR_MUTEX_KEY(
     "workload_pods_deleted_for_mutex_key",
     "existing pods for the provided mutex key were found and deleted",
-  ),
-  TOTAL_PENDING_PODS(
-    "workload_pods_pending",
-    "number of pending pods started by the launcher",
-  ),
-  OLDEST_PENDING_JOB_POD_TIME(
-    "workload_pods_oldest_pending_time",
-    "the time of the oldest pending job (in seconds)",
   ),
   PRODUCER_TO_CONSUMER_LATENCY_MS(
     "producer_to_consumer_start_latency_ms",

@@ -1,11 +1,8 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { act, Queries, queries, render as rtlRender, RenderOptions, RenderResult } from "@testing-library/react";
 import React, { Suspense } from "react";
-import { IntlProvider } from "react-intl";
 import { MemoryRouter } from "react-router-dom";
-import { ThemeProvider } from "styled-components";
 
-import { ConfigContext, config } from "config";
 import {
   ConnectionStatus,
   DestinationRead,
@@ -13,16 +10,11 @@ import {
   SourceRead,
   WebBackendConnectionRead,
 } from "core/api/types/AirbyteClient";
-import { AnalyticsProvider } from "core/services/analytics";
 import { defaultOssFeatures, FeatureItem, FeatureService } from "core/services/features";
+import { I18nProvider } from "core/services/i18n";
 import { ConfirmationModalService } from "hooks/services/ConfirmationModal";
 import { ModalServiceProvider } from "hooks/services/Modal";
 import { NotificationService } from "hooks/services/Notification";
-import en from "locales/en.json";
-
-interface WrapperProps {
-  children?: React.ReactElement;
-}
 
 export async function render<
   Q extends Queries = typeof queries,
@@ -32,7 +24,7 @@ export async function render<
   renderOptions?: RenderOptions<Q, Container>,
   features?: FeatureItem[]
 ): Promise<RenderResult<Q, Container>> {
-  const Wrapper = ({ children }: WrapperProps) => {
+  const Wrapper: React.FC<React.PropsWithChildren> = ({ children }) => {
     return (
       <TestWrapper features={features}>
         <Suspense fallback={<div>testutils render fallback content</div>}>{children}</Suspense>
@@ -51,30 +43,26 @@ export async function render<
 
 interface TestWrapperOptions {
   features?: FeatureItem[];
+  route?: string;
 }
 export const TestWrapper: React.FC<React.PropsWithChildren<TestWrapperOptions>> = ({
   children,
   features = defaultOssFeatures,
+  route,
 }) => (
-  <ThemeProvider theme={{}}>
-    <IntlProvider locale="en" messages={en} onError={() => null}>
-      <ConfigContext.Provider value={{ config }}>
-        <AnalyticsProvider>
-          <NotificationService>
-            <FeatureService features={features}>
-              <ModalServiceProvider>
-                <ConfirmationModalService>
-                  <QueryClientProvider client={new QueryClient()}>
-                    <MemoryRouter>{children}</MemoryRouter>
-                  </QueryClientProvider>
-                </ConfirmationModalService>
-              </ModalServiceProvider>
-            </FeatureService>
-          </NotificationService>
-        </AnalyticsProvider>
-      </ConfigContext.Provider>
-    </IntlProvider>
-  </ThemeProvider>
+  <I18nProvider locale="en">
+    <NotificationService>
+      <FeatureService features={features}>
+        <ModalServiceProvider>
+          <ConfirmationModalService>
+            <QueryClientProvider client={new QueryClient()}>
+              <MemoryRouter initialEntries={route ? [route] : undefined}>{children}</MemoryRouter>
+            </QueryClientProvider>
+          </ConfirmationModalService>
+        </ModalServiceProvider>
+      </FeatureService>
+    </NotificationService>
+  </I18nProvider>
 );
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any

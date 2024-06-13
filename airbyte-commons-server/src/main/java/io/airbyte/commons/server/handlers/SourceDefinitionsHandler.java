@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.commons.server.handlers;
@@ -35,14 +35,15 @@ import io.airbyte.config.ScopeType;
 import io.airbyte.config.StandardSourceDefinition;
 import io.airbyte.config.helpers.ConnectorRegistryConverters;
 import io.airbyte.config.init.SupportStateUpdater;
+import io.airbyte.config.persistence.ActorDefinitionVersionHelper;
 import io.airbyte.config.persistence.ConfigNotFoundException;
 import io.airbyte.config.persistence.ConfigRepository;
 import io.airbyte.config.specs.RemoteDefinitionsProvider;
 import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.featureflag.HideActorDefinitionFromList;
 import io.airbyte.featureflag.Multi;
-import io.airbyte.featureflag.RunSupportStateUpdater;
 import io.airbyte.featureflag.SourceDefinition;
+import io.airbyte.featureflag.UseIconUrlInApiResponse;
 import io.airbyte.featureflag.Workspace;
 import io.airbyte.validation.json.JsonValidationException;
 import jakarta.inject.Inject;
@@ -52,6 +53,7 @@ import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -71,6 +73,7 @@ public class SourceDefinitionsHandler {
   private final Supplier<UUID> uuidSupplier;
   private final RemoteDefinitionsProvider remoteDefinitionsProvider;
   private final ActorDefinitionHandlerHelper actorDefinitionHandlerHelper;
+  private final ActorDefinitionVersionHelper actorDefinitionVersionHelper;
   private final SourceHandler sourceHandler;
   private final SupportStateUpdater supportStateUpdater;
   private final FeatureFlagClient featureFlagClient;
@@ -82,7 +85,8 @@ public class SourceDefinitionsHandler {
                                   final RemoteDefinitionsProvider remoteDefinitionsProvider,
                                   final SourceHandler sourceHandler,
                                   final SupportStateUpdater supportStateUpdater,
-                                  final FeatureFlagClient featureFlagClient) {
+                                  final FeatureFlagClient featureFlagClient,
+                                  final ActorDefinitionVersionHelper actorDefinitionVersionHelper) {
     this.configRepository = configRepository;
     this.uuidSupplier = uuidSupplier;
     this.actorDefinitionHandlerHelper = actorDefinitionHandlerHelper;
@@ -90,11 +94,14 @@ public class SourceDefinitionsHandler {
     this.sourceHandler = sourceHandler;
     this.supportStateUpdater = supportStateUpdater;
     this.featureFlagClient = featureFlagClient;
+    this.actorDefinitionVersionHelper = actorDefinitionVersionHelper;
   }
 
   @VisibleForTesting
-  static SourceDefinitionRead buildSourceDefinitionRead(final StandardSourceDefinition standardSourceDefinition,
-                                                        final ActorDefinitionVersion sourceVersion) {
+  SourceDefinitionRead buildSourceDefinitionRead(final StandardSourceDefinition standardSourceDefinition,
+                                                 final ActorDefinitionVersion sourceVersion) {
+    final boolean iconUrlFeatureFlag = featureFlagClient.boolVariation(UseIconUrlInApiResponse.INSTANCE, new Workspace(ANONYMOUS));
+
     try {
       return new SourceDefinitionRead()
           .sourceDefinitionId(standardSourceDefinition.getSourceDefinitionId())
@@ -103,7 +110,7 @@ public class SourceDefinitionsHandler {
           .dockerRepository(sourceVersion.getDockerRepository())
           .dockerImageTag(sourceVersion.getDockerImageTag())
           .documentationUrl(new URI(sourceVersion.getDocumentationUrl()))
-          .icon(loadIcon(standardSourceDefinition.getIcon()))
+          .icon(iconUrlFeatureFlag ? standardSourceDefinition.getIconUrl() : loadIcon(standardSourceDefinition.getIcon()))
           .protocolVersion(sourceVersion.getProtocolVersion())
           .supportLevel(ApiPojoConverters.toApiSupportLevel(sourceVersion.getSupportLevel()))
           .releaseStage(ApiPojoConverters.toApiReleaseStage(sourceVersion.getReleaseStage()))
@@ -139,8 +146,8 @@ public class SourceDefinitionsHandler {
         .stream().collect(Collectors.toMap(ActorDefinitionVersion::getActorDefinitionId, v -> v));
   }
 
-  private static SourceDefinitionReadList toSourceDefinitionReadList(final List<StandardSourceDefinition> defs,
-                                                                     final Map<UUID, ActorDefinitionVersion> defIdToVersionMap) {
+  private SourceDefinitionReadList toSourceDefinitionReadList(final List<StandardSourceDefinition> defs,
+                                                              final Map<UUID, ActorDefinitionVersion> defIdToVersionMap) {
     final List<SourceDefinitionRead> reads = defs.stream()
         .map(d -> buildSourceDefinitionRead(d, defIdToVersionMap.get(d.getSourceDefinitionId())))
         .collect(Collectors.toList());
@@ -168,7 +175,7 @@ public class SourceDefinitionsHandler {
   }
 
   public SourceDefinitionReadList listSourceDefinitionsForWorkspace(final WorkspaceIdRequestBody workspaceIdRequestBody)
-      throws IOException {
+      throws IOException, JsonValidationException, ConfigNotFoundException {
     final List<StandardSourceDefinition> sourceDefs = Stream.concat(
         configRepository.listPublicSourceDefinitions(false).stream(),
         configRepository.listGrantedSourceDefinitions(workspaceIdRequestBody.getWorkspaceId(), false).stream()).toList();
@@ -179,7 +186,11 @@ public class SourceDefinitionsHandler {
         new Multi(List.of(new SourceDefinition(sourceDefinition.getSourceDefinitionId()), new Workspace(workspaceIdRequestBody.getWorkspaceId())))))
         .toList();
 
-    final Map<UUID, ActorDefinitionVersion> sourceDefVersionMap = getVersionsForSourceDefinitions(shownSourceDefs);
+    final Map<UUID, ActorDefinitionVersion> sourceDefVersionMap = new HashMap<>();
+    for (var definition : shownSourceDefs) {
+      sourceDefVersionMap.put(definition.getSourceDefinitionId(),
+          actorDefinitionVersionHelper.getSourceVersion(definition, workspaceIdRequestBody.getWorkspaceId()));
+    }
     return toSourceDefinitionReadList(shownSourceDefs, sourceDefVersionMap);
   }
 
@@ -192,8 +203,8 @@ public class SourceDefinitionsHandler {
     return toPrivateSourceDefinitionReadList(standardSourceDefinitionBooleanMap, sourceDefinitionVersionMap);
   }
 
-  private static PrivateSourceDefinitionReadList toPrivateSourceDefinitionReadList(final List<Entry<StandardSourceDefinition, Boolean>> defs,
-                                                                                   final Map<UUID, ActorDefinitionVersion> defIdToVersionMap) {
+  private PrivateSourceDefinitionReadList toPrivateSourceDefinitionReadList(final List<Entry<StandardSourceDefinition, Boolean>> defs,
+                                                                            final Map<UUID, ActorDefinitionVersion> defIdToVersionMap) {
     final List<PrivateSourceDefinitionRead> reads = defs.stream()
         .map(entry -> new PrivateSourceDefinitionRead()
             .sourceDefinition(buildSourceDefinitionRead(entry.getKey(), defIdToVersionMap.get(entry.getKey().getSourceDefinitionId())))
@@ -263,7 +274,7 @@ public class SourceDefinitionsHandler {
   }
 
   public SourceDefinitionRead updateSourceDefinition(final SourceDefinitionUpdate sourceDefinitionUpdate)
-      throws ConfigNotFoundException, IOException, JsonValidationException {
+      throws ConfigNotFoundException, IOException, JsonValidationException, io.airbyte.data.exceptions.ConfigNotFoundException {
     final StandardSourceDefinition currentSourceDefinition =
         configRepository.getStandardSourceDefinition(sourceDefinitionUpdate.getSourceDefinitionId());
     final ActorDefinitionVersion currentVersion = configRepository.getActorDefinitionVersion(currentSourceDefinition.getDefaultVersionId());
@@ -276,6 +287,7 @@ public class SourceDefinitionsHandler {
         .withSourceDefinitionId(currentSourceDefinition.getSourceDefinitionId())
         .withName(currentSourceDefinition.getName())
         .withIcon(currentSourceDefinition.getIcon())
+        .withIconUrl(currentSourceDefinition.getIconUrl())
         .withTombstone(currentSourceDefinition.getTombstone())
         .withPublic(currentSourceDefinition.getPublic())
         .withCustom(currentSourceDefinition.getCustom())
@@ -288,10 +300,9 @@ public class SourceDefinitionsHandler {
     final List<ActorDefinitionBreakingChange> breakingChangesForDef = actorDefinitionHandlerHelper.getBreakingChanges(newVersion, ActorType.SOURCE);
     configRepository.writeConnectorMetadata(newSource, newVersion, breakingChangesForDef);
 
-    if (featureFlagClient.boolVariation(RunSupportStateUpdater.INSTANCE, new Workspace(ANONYMOUS))) {
-      final StandardSourceDefinition updatedSourceDefinition = configRepository.getStandardSourceDefinition(newSource.getSourceDefinitionId());
-      supportStateUpdater.updateSupportStatesForSourceDefinition(updatedSourceDefinition);
-    }
+    final StandardSourceDefinition updatedSourceDefinition = configRepository.getStandardSourceDefinition(newSource.getSourceDefinitionId());
+    supportStateUpdater.updateSupportStatesForSourceDefinition(updatedSourceDefinition);
+
     return buildSourceDefinitionRead(newSource, newVersion);
   }
 

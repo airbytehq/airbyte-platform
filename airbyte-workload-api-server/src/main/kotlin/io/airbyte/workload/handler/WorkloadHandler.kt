@@ -5,6 +5,7 @@ import io.airbyte.workload.api.domain.Workload
 import io.airbyte.workload.api.domain.WorkloadLabel
 import jakarta.transaction.Transactional
 import java.time.OffsetDateTime
+import java.util.UUID
 
 /**
  * In order to mock a class it needs to be open. We have added this interface to avoid making [WorkloadHandler] an open class.
@@ -20,30 +21,60 @@ interface WorkloadHandler {
     updatedBefore: OffsetDateTime?,
   ): List<Workload>
 
+  fun getWorkloadsWithExpiredDeadline(
+    dataplaneId: List<String>?,
+    workloadStatus: List<ApiWorkloadStatus>?,
+    deadline: OffsetDateTime,
+  ): List<Workload>
+
+  fun workloadAlreadyExists(workloadId: String): Boolean
+
   fun createWorkload(
     workloadId: String,
     labels: List<WorkloadLabel>?,
     input: String,
     logPath: String,
     geography: String,
-    mutexKey: String,
+    mutexKey: String?,
     type: WorkloadType,
+    autoId: UUID,
+    deadline: OffsetDateTime,
   )
 
   fun claimWorkload(
     workloadId: String,
     dataplaneId: String,
+    deadline: OffsetDateTime,
   ): Boolean
 
-  fun cancelWorkload(workloadId: String)
+  fun cancelWorkload(
+    workloadId: String,
+    source: String?,
+    reason: String?,
+  )
 
-  fun failWorkload(workloadId: String)
+  fun failWorkload(
+    workloadId: String,
+    source: String?,
+    reason: String?,
+  )
 
   fun succeedWorkload(workloadId: String)
 
-  fun setWorkloadStatusToRunning(workloadId: String)
+  fun setWorkloadStatusToRunning(
+    workloadId: String,
+    deadline: OffsetDateTime,
+  )
 
-  fun heartbeat(workloadId: String)
+  fun setWorkloadStatusToLaunched(
+    workloadId: String,
+    deadline: OffsetDateTime,
+  )
+
+  fun heartbeat(
+    workloadId: String,
+    deadline: OffsetDateTime,
+  )
 
   fun getWorkloadsRunningCreatedBefore(
     dataplaneId: List<String>?,

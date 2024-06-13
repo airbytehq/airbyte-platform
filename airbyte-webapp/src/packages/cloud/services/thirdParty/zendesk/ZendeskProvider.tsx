@@ -2,10 +2,10 @@ import { useEffect } from "react";
 import { useEffectOnce } from "react-use";
 
 import { useCurrentWorkspaceId } from "area/workspace/utils";
-import { config } from "config";
+import { config } from "core/config";
 import { useAuthService } from "core/services/auth";
 
-import "./zendesk.module.scss";
+import "./zendesk.scss";
 
 declare global {
   interface Window {

@@ -1,0 +1,6 @@
+@use "scss/variables";
+
+.clearFiltersButton {
+  display: flex;
+  gap: variables.$spacing-xl;
+}

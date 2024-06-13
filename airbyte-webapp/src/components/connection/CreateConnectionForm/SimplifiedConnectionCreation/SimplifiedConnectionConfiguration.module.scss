@@ -1,0 +1,25 @@
+@use "scss/colors";
+@use "scss/variables";
+@use "scss/mixins";
+
+.linkText {
+  @include mixins.link-text;
+}
+
+.nextLink {
+  @include mixins.base-button;
+
+  // primary
+  color: colors.$white;
+  background-color: colors.$blue-400;
+  border: 0;
+
+  &:hover {
+    background-color: colors.$blue-500;
+    color: colors.$white;
+  }
+
+  &:active {
+    background-color: colors.$blue-600;
+  }
+}

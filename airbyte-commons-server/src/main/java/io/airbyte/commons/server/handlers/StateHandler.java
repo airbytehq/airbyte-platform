@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.commons.server.handlers;
@@ -52,6 +52,10 @@ public class StateHandler {
     }
 
     return createOrUpdateState(connectionStateCreateOrUpdate);
+  }
+
+  public void wipeState(final UUID connectionId) throws IOException {
+    statePersistence.eraseState(connectionId);
   }
 
 }

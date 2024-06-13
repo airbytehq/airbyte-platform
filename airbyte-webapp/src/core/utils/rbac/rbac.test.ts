@@ -2,11 +2,12 @@ import { renderHook } from "@testing-library/react";
 
 import { mockUser } from "test-utils/mock-data/mockUser";
 
-import { useListPermissions } from "core/api";
-import { PermissionRead } from "core/api/types/AirbyteClient";
-
 import { useRbac } from "./rbac";
-import { RbacPermission, useRbacPermissionsQuery } from "./rbacPermissionsQuery";
+import { useRbacPermissionsQuery } from "./rbacPermissionsQuery";
+
+jest.mock("../app", () => ({
+  isCloudApp: jest.fn(() => false),
+}));
 
 jest.mock("core/services/auth", () => ({
   useCurrentUser: () => mockUser,
@@ -25,81 +26,58 @@ jest.mock("core/api", () => {
   };
 });
 
-const mockUseListPermissions = useListPermissions as unknown as jest.Mock<{ permissions: RbacPermission[] }>;
-
 describe("useRbac", () => {
-  it("passes permissions", () => {
-    mockUseRbacPermissionsQuery.mockClear();
-
-    const permissions: PermissionRead[] = [
-      { permissionId: "", userId: "", permissionType: "instance_admin" },
-      { permissionId: "", userId: "", permissionType: "workspace_reader", organizationId: "work-18" },
-      { permissionId: "", userId: "", permissionType: "organization_editor", organizationId: "org-1" },
-    ];
-
-    mockUseListPermissions.mockImplementation(() => ({
-      permissions: [...permissions],
-    }));
-
-    renderHook(() => useRbac({ resourceType: "INSTANCE", role: "ADMIN" }));
-    expect(mockUseRbacPermissionsQuery).toHaveBeenCalledTimes(1);
-    expect(mockUseRbacPermissionsQuery.mock.lastCall?.[0]).toEqual(permissions);
-  });
-
   describe("query assembly", () => {
     it("no permissions", () => {
-      mockUseListPermissions.mockImplementation(() => ({
-        permissions: [],
-      }));
-
       mockUseRbacPermissionsQuery.mockClear();
-      renderHook(() => useRbac({ resourceType: "INSTANCE", role: "ADMIN" }));
+      renderHook(() => useRbac([{ resourceType: "INSTANCE", role: "ADMIN" }]));
       expect(mockUseRbacPermissionsQuery).toHaveBeenCalledTimes(1);
-      expect(mockUseRbacPermissionsQuery.mock.lastCall?.[1]).toEqual({
-        resourceType: "INSTANCE",
-        role: "ADMIN",
-      });
+      expect(mockUseRbacPermissionsQuery.mock.lastCall?.[1]).toEqual([
+        {
+          resourceType: "INSTANCE",
+          role: "ADMIN",
+        },
+      ]);
     });
 
     it("instance admin does not need to add details to the query", () => {
-      mockUseListPermissions.mockImplementation(() => ({
-        permissions: [{ permissionType: "instance_admin" }],
-      }));
-
       mockUseRbacPermissionsQuery.mockClear();
-      renderHook(() => useRbac({ resourceType: "INSTANCE", role: "ADMIN" }));
+      renderHook(() => useRbac([{ resourceType: "INSTANCE", role: "ADMIN" }]));
       expect(mockUseRbacPermissionsQuery).toHaveBeenCalledTimes(1);
-      expect(mockUseRbacPermissionsQuery.mock.lastCall?.[1]).toEqual({ resourceType: "INSTANCE", role: "ADMIN" });
+      expect(mockUseRbacPermissionsQuery.mock.lastCall?.[1]).toEqual([
+        {
+          resourceType: "INSTANCE",
+          role: "ADMIN",
+        },
+      ]);
     });
 
     it("organizationId can be provided directly", () => {
-      mockUseListPermissions.mockImplementation(() => ({
-        permissions: [{ permissionType: "instance_admin" }],
-      }));
-
       mockUseRbacPermissionsQuery.mockClear();
-      renderHook(() => useRbac({ resourceType: "ORGANIZATION", role: "ADMIN", resourceId: "some-other-organization" }));
+      renderHook(() =>
+        useRbac([{ resourceType: "ORGANIZATION", role: "ADMIN", resourceId: "some-other-organization" }])
+      );
       expect(mockUseRbacPermissionsQuery).toHaveBeenCalledTimes(1);
-      expect(mockUseRbacPermissionsQuery.mock.lastCall?.[1]).toEqual({
-        resourceType: "ORGANIZATION",
-        role: "ADMIN",
-        resourceId: "some-other-organization",
-      });
+      expect(mockUseRbacPermissionsQuery.mock.lastCall?.[1]).toEqual([
+        {
+          resourceType: "ORGANIZATION",
+          role: "ADMIN",
+          resourceId: "some-other-organization",
+        },
+      ]);
     });
 
     it("workspaceId can be provided directly", () => {
-      mockUseListPermissions.mockImplementation(() => ({
-        permissions: [{ permissionType: "instance_admin" }],
-      }));
-
       mockUseRbacPermissionsQuery.mockClear();
-      renderHook(() => useRbac({ resourceType: "WORKSPACE", role: "ADMIN", resourceId: "some-other-workspace" }));
+      renderHook(() => useRbac([{ resourceType: "WORKSPACE", role: "ADMIN", resourceId: "some-other-workspace" }]));
       expect(mockUseRbacPermissionsQuery).toHaveBeenCalledTimes(1);
-      expect(mockUseRbacPermissionsQuery.mock.lastCall?.[1]).toEqual({
-        resourceType: "WORKSPACE",
-        role: "ADMIN",
-        resourceId: "some-other-workspace",
-      });
+      expect(mockUseRbacPermissionsQuery.mock.lastCall?.[1]).toEqual([
+        {
+          resourceType: "WORKSPACE",
+          role: "ADMIN",
+          resourceId: "some-other-workspace",
+        },
+      ]);
     });
   });
 
@@ -113,49 +91,23 @@ describe("useRbac", () => {
     });
 
     it("throws an error when instance query includes a resourceId", () => {
-      mockUseListPermissions.mockImplementation(() => ({
-        permissions: [{ permissionType: "instance_admin" }],
-      }));
-
       expect(() =>
-        renderHook(() => useRbac({ resourceType: "INSTANCE", role: "ADMIN", resourceId: "some-workspace" }))
-      ).toThrow("Invalid RBAC query: resource INSTANCE with resourceId some-workspace");
-
-      mockUseListPermissions.mockImplementation(() => ({
-        permissions: [{ permissionType: "instance_admin" }],
-      }));
+        renderHook(() => useRbac([{ resourceType: "INSTANCE", role: "ADMIN", resourceId: "some-workspace" }]))
+      ).toThrow("Invalid RBAC query: Passed resource id some-workspace for INSTANCE query");
     });
-    // TODO: Update test to throw once cloud workspaces are migrated to organizations + rbac.ts invariant is adjusted to require organization id
 
     it("throws an error when an workspaceId is missing", () => {
-      mockUseListPermissions.mockImplementation(() => ({
-        permissions: [{ permissionType: "instance_admin" }],
-      }));
-
       mockUseRbacPermissionsQuery.mockClear();
-      expect(() => renderHook(() => useRbac({ resourceType: "WORKSPACE", role: "ADMIN" }))).toThrow(
-        "Invalid RBAC query: resource WORKSPACE with resourceId undefined"
+      expect(() => renderHook(() => useRbac([{ resourceType: "WORKSPACE", role: "ADMIN" }]))).toThrow(
+        "Invalid RBAC query: Missing id for resource WORKSPACE"
       );
     });
 
-    it("does not throw an error when an organizationId is missing", () => {
-      mockUseListPermissions.mockImplementation(() => ({
-        permissions: [{ permissionType: "instance_admin" }],
-      }));
-
+    it("does throw an error when an organizationId is missing", () => {
       mockUseRbacPermissionsQuery.mockClear();
-      renderHook(() => useRbac({ resourceType: "ORGANIZATION", role: "ADMIN" }));
-
-      expect(mockUseRbacPermissionsQuery).toHaveBeenCalledTimes(1);
-      expect(mockUseRbacPermissionsQuery.mock.lastCall?.[1]).toEqual({
-        resourceType: "ORGANIZATION",
-        role: "ADMIN",
-        resourceId: undefined,
-      });
-
-      mockUseListPermissions.mockImplementation(() => ({
-        permissions: [{ permissionType: "instance_admin" }],
-      }));
+      expect(() =>
+        renderHook(() => useRbac([{ resourceType: "ORGANIZATION", role: "ADMIN", resourceId: undefined }]))
+      ).toThrow("Invalid RBAC query: Missing id for resource ORGANIZATION");
     });
   });
 });

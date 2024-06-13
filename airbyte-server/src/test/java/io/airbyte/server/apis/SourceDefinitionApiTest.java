@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.server.apis;
@@ -15,7 +15,6 @@ import io.airbyte.api.model.generated.SourceDefinitionReadList;
 import io.airbyte.api.model.generated.SourceDefinitionUpdate;
 import io.airbyte.api.model.generated.SourceIdRequestBody;
 import io.airbyte.api.model.generated.WorkspaceIdRequestBody;
-import io.airbyte.commons.json.Jsons;
 import io.airbyte.commons.server.errors.ApplicationErrorKnownException;
 import io.airbyte.config.persistence.ConfigNotFoundException;
 import io.airbyte.validation.json.JsonValidationException;
@@ -40,7 +39,7 @@ class SourceDefinitionApiTest extends BaseControllerTest {
         .thenReturn(new SourceDefinitionRead());
     final String path = "/api/v1/source_definitions/create_custom";
     testEndpointStatus(
-        HttpRequest.POST(path, Jsons.serialize(new SourceIdRequestBody())),
+        HttpRequest.POST(path, new SourceIdRequestBody()),
         HttpStatus.OK);
   }
 
@@ -52,10 +51,10 @@ class SourceDefinitionApiTest extends BaseControllerTest {
 
     final String path = "/api/v1/source_definitions/delete";
     testEndpointStatus(
-        HttpRequest.POST(path, Jsons.serialize(new SourceDefinitionIdRequestBody())),
+        HttpRequest.POST(path, new SourceDefinitionIdRequestBody()),
         HttpStatus.NO_CONTENT);
     testErrorEndpointStatus(
-        HttpRequest.POST(path, Jsons.serialize(new SourceDefinitionIdRequestBody())),
+        HttpRequest.POST(path, new SourceDefinitionIdRequestBody()),
         HttpStatus.NOT_FOUND);
   }
 
@@ -66,7 +65,7 @@ class SourceDefinitionApiTest extends BaseControllerTest {
 
     final String path = "/api/v1/source_definitions/delete";
     testErrorEndpointStatus(
-        HttpRequest.POST(path, Jsons.serialize(new SourceDefinitionIdRequestBody().sourceDefinitionId(sourceDefinitionId))),
+        HttpRequest.POST(path, new SourceDefinitionIdRequestBody().sourceDefinitionId(sourceDefinitionId)),
         HttpStatus.UNPROCESSABLE_ENTITY);
   }
 
@@ -77,10 +76,10 @@ class SourceDefinitionApiTest extends BaseControllerTest {
         .thenThrow(new ConfigNotFoundException("", ""));
     final String path = "/api/v1/source_definitions/get";
     testEndpointStatus(
-        HttpRequest.POST(path, Jsons.serialize(new SourceDefinitionIdRequestBody())),
+        HttpRequest.POST(path, new SourceDefinitionIdRequestBody()),
         HttpStatus.OK);
     testErrorEndpointStatus(
-        HttpRequest.POST(path, Jsons.serialize(new SourceDefinitionIdRequestBody())),
+        HttpRequest.POST(path, new SourceDefinitionIdRequestBody()),
         HttpStatus.NOT_FOUND);
   }
 
@@ -91,10 +90,10 @@ class SourceDefinitionApiTest extends BaseControllerTest {
         .thenThrow(new ConfigNotFoundException("", ""));
     final String path = "/api/v1/source_definitions/get_for_workspace";
     testEndpointStatus(
-        HttpRequest.POST(path, Jsons.serialize(new SourceDefinitionIdWithWorkspaceId())),
+        HttpRequest.POST(path, new SourceDefinitionIdWithWorkspaceId()),
         HttpStatus.OK);
     testErrorEndpointStatus(
-        HttpRequest.POST(path, Jsons.serialize(new SourceDefinitionIdWithWorkspaceId())),
+        HttpRequest.POST(path, new SourceDefinitionIdWithWorkspaceId()),
         HttpStatus.NOT_FOUND);
   }
 
@@ -105,10 +104,10 @@ class SourceDefinitionApiTest extends BaseControllerTest {
         .thenThrow(new ConfigNotFoundException("", ""));
     final String path = "/api/v1/source_definitions/grant_definition";
     testEndpointStatus(
-        HttpRequest.POST(path, Jsons.serialize(new SourceDefinitionIdWithWorkspaceId())),
+        HttpRequest.POST(path, new SourceDefinitionIdWithWorkspaceId()),
         HttpStatus.OK);
     testErrorEndpointStatus(
-        HttpRequest.POST(path, Jsons.serialize(new SourceDefinitionIdWithWorkspaceId())),
+        HttpRequest.POST(path, new SourceDefinitionIdWithWorkspaceId()),
         HttpStatus.NOT_FOUND);
   }
 
@@ -118,7 +117,7 @@ class SourceDefinitionApiTest extends BaseControllerTest {
         .thenReturn(new SourceDefinitionReadList());
     final String path = "/api/v1/source_definitions/list_latest";
     testEndpointStatus(
-        HttpRequest.POST(path, Jsons.serialize(new SourceDefinitionIdWithWorkspaceId())),
+        HttpRequest.POST(path, new SourceDefinitionIdWithWorkspaceId()),
         HttpStatus.OK);
   }
 
@@ -128,7 +127,7 @@ class SourceDefinitionApiTest extends BaseControllerTest {
         .thenReturn(new PrivateSourceDefinitionReadList());
     final String path = "/api/v1/source_definitions/list_private";
     testEndpointStatus(
-        HttpRequest.POST(path, Jsons.serialize(new WorkspaceIdRequestBody())),
+        HttpRequest.POST(path, new WorkspaceIdRequestBody()),
         HttpStatus.OK);
   }
 
@@ -143,12 +142,12 @@ class SourceDefinitionApiTest extends BaseControllerTest {
   }
 
   @Test
-  void testListSourceDefinitionsForWorkspace() throws IOException {
+  void testListSourceDefinitionsForWorkspace() throws IOException, JsonValidationException, ConfigNotFoundException {
     Mockito.when(sourceDefinitionsHandler.listSourceDefinitionsForWorkspace(Mockito.any()))
         .thenReturn(new SourceDefinitionReadList());
     final String path = "/api/v1/source_definitions/list_for_workspace";
     testEndpointStatus(
-        HttpRequest.POST(path, Jsons.serialize(new WorkspaceIdRequestBody())),
+        HttpRequest.POST(path, new WorkspaceIdRequestBody()),
         HttpStatus.OK);
   }
 
@@ -158,21 +157,22 @@ class SourceDefinitionApiTest extends BaseControllerTest {
 
     final String path = "/api/v1/source_definitions/revoke_definition";
     testEndpointStatus(
-        HttpRequest.POST(path, Jsons.serialize(new SourceDefinitionIdWithWorkspaceId())),
+        HttpRequest.POST(path, new SourceDefinitionIdWithWorkspaceId()),
         HttpStatus.NO_CONTENT);
   }
 
   @Test
-  void testUpdateSourceDefinition() throws JsonValidationException, ConfigNotFoundException, IOException {
+  void testUpdateSourceDefinition()
+      throws JsonValidationException, ConfigNotFoundException, IOException, io.airbyte.data.exceptions.ConfigNotFoundException {
     Mockito.when(sourceDefinitionsHandler.updateSourceDefinition(Mockito.any()))
         .thenReturn(new SourceDefinitionRead())
         .thenThrow(new ConfigNotFoundException("", ""));
     final String path = "/api/v1/source_definitions/update";
     testEndpointStatus(
-        HttpRequest.POST(path, Jsons.serialize(new SourceDefinitionUpdate())),
+        HttpRequest.POST(path, new SourceDefinitionUpdate()),
         HttpStatus.OK);
     testErrorEndpointStatus(
-        HttpRequest.POST(path, Jsons.serialize(new SourceDefinitionUpdate())),
+        HttpRequest.POST(path, new SourceDefinitionUpdate()),
         HttpStatus.NOT_FOUND);
   }
 
@@ -183,7 +183,7 @@ class SourceDefinitionApiTest extends BaseControllerTest {
 
     final String path = "/api/v1/source_definitions/update";
     testErrorEndpointStatus(
-        HttpRequest.POST(path, Jsons.serialize(new SourceDefinitionUpdate().sourceDefinitionId(sourceDefinitionId))),
+        HttpRequest.POST(path, new SourceDefinitionUpdate().sourceDefinitionId(sourceDefinitionId)),
         HttpStatus.UNPROCESSABLE_ENTITY);
   }
 

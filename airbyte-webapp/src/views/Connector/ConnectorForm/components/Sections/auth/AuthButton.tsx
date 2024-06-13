@@ -3,16 +3,16 @@ import React from "react";
 import { FormattedMessage } from "react-intl";
 
 import { Button } from "components/ui/Button";
+import { FlexContainer } from "components/ui/Flex";
 import { Text } from "components/ui/Text";
 
 import { ConnectorIds } from "area/connector/utils";
 import { ConnectorDefinitionSpecification, ConnectorSpecification } from "core/domain/connector";
 
 import styles from "./AuthButton.module.scss";
-import GoogleAuthButton from "./GoogleAuthButton";
+import { GoogleAuthButton } from "./GoogleAuthButton";
 import QuickBooksAuthButton from "./QuickBooksAuthButton";
 import { useFormOauthAdapter } from "./useOauthFlowAdapter";
-import { FlexContainer } from "../../../../../../components/ui/Flex";
 import { useConnectorForm } from "../../../connectorFormContext";
 import { useAuthentication } from "../../../useAuthentication";
 

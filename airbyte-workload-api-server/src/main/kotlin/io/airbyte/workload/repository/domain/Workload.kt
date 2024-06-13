@@ -1,6 +1,10 @@
 package io.airbyte.workload.repository.domain
 
+import com.google.common.annotations.VisibleForTesting
+import io.micronaut.context.annotation.Factory
 import io.micronaut.core.annotation.Nullable
+import io.micronaut.core.convert.ConversionContext
+import io.micronaut.core.convert.TypeConverter
 import io.micronaut.data.annotation.DateCreated
 import io.micronaut.data.annotation.DateUpdated
 import io.micronaut.data.annotation.Id
@@ -8,8 +12,11 @@ import io.micronaut.data.annotation.MappedEntity
 import io.micronaut.data.annotation.Relation
 import io.micronaut.data.annotation.TypeDef
 import io.micronaut.data.model.DataType
+import jakarta.inject.Singleton
 import org.jsoup.internal.Normalizer.lowerCase
 import java.time.OffsetDateTime
+import java.util.Optional
+import java.util.UUID
 
 @MappedEntity("workload")
 data class Workload(
@@ -39,8 +46,16 @@ data class Workload(
   var mutexKey: String?,
   @field:TypeDef(type = DataType.OBJECT)
   var type: WorkloadType,
+  @Nullable
+  var terminationSource: String? = null,
+  @Nullable
+  var terminationReason: String? = null,
+  @Nullable
+  var deadline: OffsetDateTime? = null,
+  @Nullable
+  var autoId: UUID? = null,
 ) {
-  @JvmOverloads
+  @VisibleForTesting
   constructor(
     id: String,
     dataplaneId: String?,
@@ -64,13 +79,18 @@ data class Workload(
     lastHeartbeatAt = null,
     createdAt = null,
     updatedAt = null,
+    terminationSource = null,
+    terminationReason = null,
+    autoId = UUID.randomUUID(),
   )
 }
 
+@TypeDef(type = DataType.STRING)
 enum class WorkloadStatus {
-  CLAIMED,
-  RUNNING,
   PENDING,
+  CLAIMED,
+  LAUNCHED,
+  RUNNING,
   SUCCESS,
   FAILURE,
   CANCELLED,
@@ -81,6 +101,15 @@ enum class WorkloadStatus {
   }
 }
 
+@Factory
+class WorkloadStatusTypeConverters {
+  @Singleton
+  fun workloadStatusToStringTypeConverter(): TypeConverter<WorkloadStatus, String> {
+    return TypeConverter { workloadStatus, _: Class<String>, _: ConversionContext -> Optional.of(workloadStatus.toString()) }
+  }
+}
+
+@TypeDef(type = DataType.STRING)
 enum class WorkloadType {
   SYNC,
   CHECK,
@@ -90,5 +119,13 @@ enum class WorkloadType {
 
   override fun toString(): String {
     return lowerCase(this.name)
+  }
+
+  @Factory
+  class WorkloadTypeTypeConverters {
+    @Singleton
+    fun workloadTypeToStringTypeConverter(): TypeConverter<WorkloadType, String> {
+      return TypeConverter { workloadType, _: Class<String>, _: ConversionContext -> Optional.of(workloadType.toString()) }
+    }
   }
 }

@@ -8,11 +8,13 @@ import {
   ConnectionStatusIndicator,
   ConnectionStatusIndicatorStatus,
 } from "components/connection/ConnectionStatusIndicator";
-import { StreamWithStatus, sortStreams } from "components/connection/StreamStatus/streamStatusUtils";
+import { StreamWithStatus, sortStreamsByStatus } from "components/connection/StreamStatus/streamStatusUtils";
 import { StreamStatusIndicator, StreamStatusLoadingSpinner } from "components/connection/StreamStatusIndicator";
+import { LoadingSpinner } from "components/ui/LoadingSpinner";
 import { Tooltip } from "components/ui/Tooltip";
 
 import { AirbyteStreamAndConfigurationWithEnforcedStream, useStreamsStatuses } from "area/connection/utils";
+import { useExperiment } from "hooks/services/Experiment";
 
 import styles from "./StreamStatusCell.module.scss";
 import { ConnectionTableDataItem } from "../types";
@@ -25,6 +27,8 @@ const FILLING_STYLE_BY_STATUS: Readonly<Record<ConnectionStatusIndicatorStatus, 
   [ConnectionStatusIndicatorStatus.Error]: styles["filling--error"],
   [ConnectionStatusIndicatorStatus.Late]: styles["filling--late"],
   [ConnectionStatusIndicatorStatus.Pending]: styles["filling--pending"],
+  [ConnectionStatusIndicatorStatus.Queued]: styles["filling--queued"],
+  [ConnectionStatusIndicatorStatus.Syncing]: styles["filling--syncing"],
 };
 
 const StreamsBar: React.FC<{
@@ -51,10 +55,16 @@ const StreamsBar: React.FC<{
 
 const SyncingStreams: React.FC<{ streams: StreamWithStatus[] }> = ({ streams }) => {
   const syncingStreamsCount = streams.filter((stream) => stream.isRunning).length;
+  const showSyncProgress = useExperiment("connection.syncProgress", false);
+
   if (syncingStreamsCount) {
     return (
       <div className={styles.syncContainer}>
-        <StreamStatusLoadingSpinner className={styles.loadingSpinner} />
+        {!showSyncProgress ? (
+          <StreamStatusLoadingSpinner className={styles.loadingSpinner} />
+        ) : (
+          <LoadingSpinner className={styles.loadingSpinner} />
+        )}
         <strong>{syncingStreamsCount}</strong>&nbsp;running
       </div>
     );
@@ -66,7 +76,7 @@ const StreamsPerStatus: React.FC<{
   streamStatuses: Map<string, StreamWithStatus>;
   enabledStreams: AirbyteStreamAndConfigurationWithEnforcedStream[];
 }> = ({ streamStatuses, enabledStreams }) => {
-  const sortedStreamsMap = sortStreams(enabledStreams, streamStatuses);
+  const sortedStreamsMap = sortStreamsByStatus(enabledStreams, streamStatuses);
   const filteredAndSortedStreams = Object.entries(sortedStreamsMap).filter(([, streams]) => !!streams.length) as Array<
     [ConnectionStatusIndicatorStatus, StreamWithStatus[]]
   >;
@@ -88,7 +98,7 @@ const StreamsPerStatus: React.FC<{
 
 const StreamStatusPopover: React.FC<{ connectionId: string }> = ({ connectionId }) => {
   const { streamStatuses, enabledStreams } = useStreamsStatuses(connectionId);
-  const sortedStreamsMap = sortStreams(enabledStreams, streamStatuses);
+  const sortedStreamsMap = sortStreamsByStatus(enabledStreams, streamStatuses);
   const filteredAndSortedStreamsMap = Object.entries(sortedStreamsMap).filter(([, streams]) => !!streams.length);
   return (
     <div className={styles.tooltipContainer}>

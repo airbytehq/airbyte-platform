@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.commons.json;
@@ -145,7 +145,7 @@ public class JsonPaths {
    * @param jsonPath - path into the json object. must be in the format of JSONPath.
    * @return all values that match the input query
    */
-  private static List<JsonNode> getValues(final JsonNode json, final String jsonPath) {
+  public static List<JsonNode> getValues(final JsonNode json, final String jsonPath) {
     return getInternal(Configuration.defaultConfiguration(), json, jsonPath);
   }
 

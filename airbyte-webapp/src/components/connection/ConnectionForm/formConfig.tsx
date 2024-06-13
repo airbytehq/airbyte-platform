@@ -6,10 +6,8 @@ import { isDbtTransformation, isNormalizationTransformation } from "area/connect
 import { useCurrentWorkspace } from "core/api";
 import {
   AirbyteCatalog,
-  DestinationDefinitionSpecificationRead,
   DestinationSyncMode,
   OperationCreate,
-  SchemaChange,
   SyncMode,
   ActorDefinitionVersionRead,
   ConnectionScheduleData,
@@ -18,34 +16,40 @@ import {
   NamespaceDefinitionType,
   NonBreakingChangesPreference,
   OperationRead,
+  SchemaChangeBackfillPreference,
+  DestinationDefinitionSpecificationRead,
 } from "core/api/types/AirbyteClient";
 import { FeatureItem, useFeature } from "core/services/features";
-import {
-  ConnectionOrPartialConnection,
-  useConnectionFormService,
-} from "hooks/services/ConnectionForm/ConnectionFormService";
+import { ConnectionFormMode, ConnectionOrPartialConnection } from "hooks/services/ConnectionForm/ConnectionFormService";
 import { useExperiment } from "hooks/services/Experiment";
 
-import { calculateInitialCatalog } from "./calculateInitialCatalog";
-import { BASIC_FREQUENCY_DEFAULT_VALUE } from "./ScheduleFormField/useBasicFrequencyDropdownData";
+import { analyzeSyncCatalogBreakingChanges } from "./calculateInitialCatalog";
+import { pruneUnsupportedModes, replicateSourceModes } from "./preferredSyncModes";
+import {
+  BASIC_FREQUENCY_DEFAULT_VALUE,
+  SOURCE_SPECIFIC_FREQUENCY_DEFAULT,
+} from "./ScheduleFormField/useBasicFrequencyDropdownData";
 import { createConnectionValidationSchema } from "./schema";
+import { updateStreamSyncMode } from "../syncCatalog/SyncCatalog/updateStreamSyncMode";
 import { DbtOperationRead } from "../TransformationForm";
 
 /**
  * react-hook-form form values type for the connection form
  */
 export interface FormConnectionFormValues {
-  name?: string;
+  name: string;
   scheduleType: ConnectionScheduleType;
   scheduleData?: ConnectionScheduleData;
   namespaceDefinition: NamespaceDefinitionType;
   namespaceFormat?: string;
-  prefix?: string;
+  prefix: string;
   nonBreakingChangesPreference?: NonBreakingChangesPreference;
   geography?: Geography;
   normalization?: NormalizationType;
   transformations?: OperationRead[];
   syncCatalog: AirbyteCatalog;
+  notifySchemaChanges?: boolean;
+  backfillPreference?: SchemaChangeBackfillPreference;
 }
 
 /**
@@ -70,11 +74,10 @@ export const SUPPORTED_MODES: Array<[SyncMode, DestinationSyncMode]> = [
 export const useConnectionValidationSchema = () => {
   const allowSubOneHourCronExpressions = useFeature(FeatureItem.AllowSyncSubOneHourCronExpressions);
   const allowAutoDetectSchema = useFeature(FeatureItem.AllowAutoDetectSchema);
-  const { mode } = useConnectionFormService();
 
   return useMemo(
-    () => createConnectionValidationSchema(mode, allowSubOneHourCronExpressions, allowAutoDetectSchema),
-    [allowAutoDetectSchema, allowSubOneHourCronExpressions, mode]
+    () => createConnectionValidationSchema(allowSubOneHourCronExpressions, allowAutoDetectSchema),
+    [allowAutoDetectSchema, allowSubOneHourCronExpressions]
   );
 };
 
@@ -91,15 +94,15 @@ export const getInitialTransformations = (operations: OperationRead[]): DbtOpera
  * @param isEditMode
  */
 export const getInitialNormalization = (
-  operations?: Array<OperationRead | OperationCreate>,
-  isEditMode?: boolean
+  operations: Array<OperationRead | OperationCreate>,
+  mode: ConnectionFormMode
 ): NormalizationType => {
   const initialNormalization =
     operations?.find(isNormalizationTransformation)?.operatorConfiguration?.normalization?.option;
 
   return initialNormalization
     ? NormalizationType[initialNormalization]
-    : isEditMode
+    : mode !== "create"
     ? NormalizationType.raw
     : NormalizationType.basic;
 };
@@ -109,71 +112,62 @@ export const useInitialFormValues = (
   connection: ConnectionOrPartialConnection,
   destDefinitionVersion: ActorDefinitionVersionRead,
   destDefinitionSpecification: DestinationDefinitionSpecificationRead,
-  isEditMode?: boolean
+  mode: ConnectionFormMode
 ): FormConnectionFormValues => {
-  const autoPropagationEnabled = useExperiment("autopropagation.enabled", false);
   const workspace = useCurrentWorkspace();
-  const { catalogDiff } = connection;
+  const { catalogDiff, syncCatalog, schemaChange } = connection;
+  const useSimpliedCreation = useExperiment("connection.simplifiedCreation", true);
 
-  const defaultNonBreakingChangesPreference = autoPropagationEnabled
-    ? NonBreakingChangesPreference.propagate_columns
-    : NonBreakingChangesPreference.ignore;
-
-  // used to determine if we should calculate optimal sync mode
-  const newStreamDescriptors = catalogDiff?.transforms
-    .filter((transform) => transform.transformType === "add_stream")
-    .map((stream) => stream.streamDescriptor);
-
-  // used to determine if we need to clear any primary keys or cursor fields that were removed
-  const streamTransformsWithBreakingChange = useMemo(() => {
-    if (connection.schemaChange === SchemaChange.breaking) {
-      return catalogDiff?.transforms.filter((streamTransform) => {
-        if (streamTransform.transformType === "update_stream") {
-          return streamTransform.updateStream?.filter((fieldTransform) => fieldTransform.breaking === true);
-        }
-        return false;
-      });
+  const supportedSyncModes: SyncMode[] = useMemo(() => {
+    const foundModes = new Set<SyncMode>();
+    for (let i = 0; i < connection.syncCatalog.streams.length; i++) {
+      const stream = connection.syncCatalog.streams[i];
+      stream.stream?.supportedSyncModes?.forEach((mode) => foundModes.add(mode));
     }
-    return undefined;
-  }, [catalogDiff?.transforms, connection]);
+    return Array.from(foundModes);
+  }, [connection.syncCatalog.streams]);
 
-  const initialSchema = useMemo(
-    () =>
-      calculateInitialCatalog(
-        connection.syncCatalog,
-        destDefinitionSpecification?.supportedDestinationSyncModes || [],
-        streamTransformsWithBreakingChange,
-        isEditMode,
-        newStreamDescriptors
-      ),
-    [
-      connection.syncCatalog,
-      destDefinitionSpecification?.supportedDestinationSyncModes,
-      streamTransformsWithBreakingChange,
-      isEditMode,
-      newStreamDescriptors,
-    ]
-  );
+  if (mode === "create") {
+    const availableModes = pruneUnsupportedModes(
+      replicateSourceModes,
+      supportedSyncModes,
+      destDefinitionSpecification.supportedDestinationSyncModes
+    );
+
+    // when creating, apply the first applicable `replicateSourceModes` entry to each stream
+    syncCatalog.streams.forEach((airbyteStream) => {
+      for (let i = 0; i < availableModes.length; i++) {
+        const [syncMode, destinationSyncMode] = availableModes[i];
+
+        if (airbyteStream?.stream && airbyteStream?.config) {
+          if (!airbyteStream.stream?.supportedSyncModes?.includes(syncMode)) {
+            continue;
+          }
+
+          airbyteStream.config = updateStreamSyncMode(airbyteStream.stream, airbyteStream.config, {
+            syncMode,
+            destinationSyncMode,
+          });
+          break;
+        }
+      }
+    });
+  }
+
+  const defaultNonBreakingChangesPreference = NonBreakingChangesPreference.propagate_columns;
 
   return useMemo(() => {
     const initialValues: FormConnectionFormValues = {
-      // set name field
-      ...(isEditMode
-        ? {}
-        : {
-            name: connection.name ?? `${connection.source.name} → ${connection.destination.name}`,
-          }),
+      name: connection.name ?? `${connection.source.name} → ${connection.destination.name}`,
       scheduleType: connection.scheduleType ?? ConnectionScheduleType.basic,
-      // set scheduleData field if it's defined, otherwise there is no need to set it
-      ...{
-        ...(connection.scheduleData
-          ? { scheduleData: connection.scheduleData }
-          : connection.scheduleType === ConnectionScheduleType.manual
-          ? {}
-          : {
-              scheduleData: { basicSchedule: BASIC_FREQUENCY_DEFAULT_VALUE },
-            }),
-      },
+      scheduleData: connection.scheduleData
+        ? connection.scheduleData
+        : connection.scheduleType === ConnectionScheduleType.manual
+        ? undefined
+        : {
+            basicSchedule:
+              SOURCE_SPECIFIC_FREQUENCY_DEFAULT[connection.source?.sourceDefinitionId] ?? BASIC_FREQUENCY_DEFAULT_VALUE,
+          },
       namespaceDefinition: connection.namespaceDefinition || NamespaceDefinitionType.destination,
       // set connection's namespaceFormat if it's defined, otherwise there is no need to set it
       ...{
@@ -181,31 +175,31 @@ export const useInitialFormValues = (
           namespaceFormat: connection.namespaceFormat,
         }),
       },
-      // prefix is not required, so we don't need to set it to empty string if it's not defined in connection
       ...{
-        ...(connection.prefix && {
-          prefix: connection.prefix,
-        }),
+        prefix: connection.prefix ?? "",
       },
       nonBreakingChangesPreference: connection.nonBreakingChangesPreference ?? defaultNonBreakingChangesPreference,
       geography: connection.geography || workspace.defaultGeography || "auto",
       ...{
         ...(destDefinitionVersion.supportsDbt && {
-          normalization: getInitialNormalization(connection.operations ?? [], isEditMode),
+          normalization: getInitialNormalization(connection.operations ?? [], mode),
         }),
       },
       ...{
         ...(destDefinitionVersion.supportsDbt && {
           transformations: getInitialTransformations(connection.operations ?? []),
         }),
-        syncCatalog: initialSchema,
       },
+      syncCatalog: analyzeSyncCatalogBreakingChanges(syncCatalog, catalogDiff, schemaChange),
+      notifySchemaChanges: connection.notifySchemaChanges ?? useSimpliedCreation,
+      backfillPreference: connection.backfillPreference ?? SchemaChangeBackfillPreference.disabled,
     };
 
     return initialValues;
   }, [
     connection.name,
     connection.source.name,
+    connection.source?.sourceDefinitionId,
     connection.destination.name,
     connection.scheduleType,
     connection.scheduleData,
@@ -215,10 +209,15 @@ export const useInitialFormValues = (
     connection.nonBreakingChangesPreference,
     connection.geography,
     connection.operations,
+    connection.notifySchemaChanges,
+    connection.backfillPreference,
     defaultNonBreakingChangesPreference,
     workspace.defaultGeography,
     destDefinitionVersion.supportsDbt,
-    isEditMode,
-    initialSchema,
+    mode,
+    syncCatalog,
+    catalogDiff,
+    schemaChange,
+    useSimpliedCreation,
   ]);
 };

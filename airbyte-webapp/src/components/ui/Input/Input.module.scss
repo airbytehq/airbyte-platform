@@ -4,9 +4,8 @@
 .container {
   width: 100%;
   position: relative;
-  background-color: colors.$grey-50;
-  border: variables.$border-thin solid colors.$grey-50;
-  border-radius: variables.$border-radius-xs;
+  border: variables.$border-thin solid colors.$grey-200;
+  border-radius: variables.$border-radius-sm;
 
   &.light {
     background-color: colors.$foreground;
@@ -20,16 +19,17 @@
   }
 
   &.error {
-    border-color: colors.$red-100;
+    border-color: colors.$red-200;
   }
 
   &.disabled,
   &.readOnly {
     cursor: not-allowed;
+    border-color: colors.$grey-100;
   }
 
   &:not(.disabled, .readOnly, .focused):hover {
-    border-color: colors.$grey-100;
+    border-color: colors.$grey-300;
 
     &.light {
       background-color: colors.$foreground;
@@ -72,7 +72,7 @@
   &.disabled,
   &.readOnly {
     pointer-events: none;
-    color: colors.$grey-400;
+    color: colors.$grey-300;
   }
 }
 

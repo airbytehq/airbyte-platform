@@ -16,3 +16,7 @@
   border-image-slice: 0 100% 0 0; /* Slice the entire border for the image */
   border-image-repeat: repeat; /* Repeat the image */
 }
+
+.wrapText {
+  white-space: pre-wrap;
+}

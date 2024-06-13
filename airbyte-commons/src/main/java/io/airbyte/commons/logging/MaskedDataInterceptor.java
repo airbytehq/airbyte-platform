@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.commons.logging;
@@ -11,9 +11,11 @@ import io.airbyte.commons.constants.AirbyteSecretConstants;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.commons.yaml.Yamls;
 import java.nio.charset.Charset;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import org.apache.commons.io.IOUtils;
 import org.apache.logging.log4j.Logger;
@@ -43,9 +45,54 @@ public class MaskedDataInterceptor implements RewritePolicy {
   protected static final Logger logger = StatusLogger.getLogger();
 
   /**
+   * Regular expression pattern flag that enables case in-sensitive matching.
+   */
+  private static final String CASE_INSENSITIVE_FLAG = "(?i)";
+
+  // This is a little circuitous, but it gets the regex syntax highlighting in intelliJ to work.
+  private static final String DESTINATION_ERROR_PREFIX = Pattern.compile("^(?<destinationPrefix>.*destination.*\\s+>\\s+ERROR.+)").pattern();
+
+  /**
+   * Regular expression replacement pattern for applying the mask to PII log messages.
+   */
+  private static final String KNOWN_PII_LOG_MESSAGE_REPLACEMENT_PATTERN =
+      "${destinationPrefix}${messagePrefix}" + AirbyteSecretConstants.SECRETS_MASK;
+
+  /**
+   * Delimiter used as part of the regular expression pattern for applying the mask to property
+   * values.
+   */
+  private static final String PROPERTY_MATCHING_PATTERN_DELIMITER = "|";
+
+  /**
+   * Regular expression pattern prefix for applying the mask to property values.
+   */
+  private static final String PROPERTY_MATCHING_PATTERN_PREFIX = "\"(";
+
+  /**
+   * Regular expression pattern suffix for applying the mask to property values.
+   */
+  private static final String PROPERTY_MATCHING_PATTERN_SUFFIX = ")\"\\s*:\\s*(\"(?:[^\"\\\\]|\\\\.)*\"|\\[[^]\\[]*]|\\d+)";
+
+  /**
+   * Name of the key in the mask YAML file that contains the list of maskable properties.
+   */
+  private static final String PROPERTIES_KEY = "properties";
+
+  /**
+   * Regular expression pattern used to replace a key/value property with a masked value while
+   * maintaining the property key/name.
+   */
+  private static final String REPLACEMENT_PATTERN = "\"$1\":\"" + AirbyteSecretConstants.SECRETS_MASK + "\"";
+
+  /**
    * The pattern used to determine if a message contains sensitive data.
    */
-  private final Optional<String> pattern;
+  private final Optional<Pattern> pattern;
+
+  private static final List<Pattern> KNOWN_PII_PATTERNS = List.of(
+      Pattern.compile(DESTINATION_ERROR_PREFIX + "(?<messagePrefix>Received\\s+invalid\\s+message:)(.+)$"),
+      Pattern.compile(DESTINATION_ERROR_PREFIX + "(?<messagePrefix>org\\.jooq\\.exception\\.DataAccessException: SQL.+values\\s+\\()(.+)$"));
 
   @PluginFactory
   public static MaskedDataInterceptor createPolicy(
@@ -82,11 +129,21 @@ public class MaskedDataInterceptor implements RewritePolicy {
    * @return The possibly masked log message.
    */
   private String applyMask(final String message) {
-    if (pattern.isPresent()) {
-      return message.replaceAll(pattern.get(), "\"$1\":\"" + AirbyteSecretConstants.SECRETS_MASK + "\"");
-    } else {
-      return message;
-    }
+    final String piiScrubbedMessage = removeKnownPii(message);
+    return pattern.map(p -> p.matcher(piiScrubbedMessage).replaceAll(REPLACEMENT_PATTERN))
+        .orElse(piiScrubbedMessage);
+  }
+
+  /**
+   * Removes known PII from the message.
+   *
+   * @param message the log line
+   * @return a redacted log line
+   */
+  private static String removeKnownPii(final String message) {
+    return KNOWN_PII_PATTERNS.stream()
+        .reduce(message, (msg, pattern) -> pattern.matcher(msg).replaceAll(
+            KNOWN_PII_LOG_MESSAGE_REPLACEMENT_PATTERN), (a, b) -> a);
   }
 
   /**
@@ -100,7 +157,7 @@ public class MaskedDataInterceptor implements RewritePolicy {
     try {
       final String maskFileContents = IOUtils.toString(getClass().getResourceAsStream(specMaskFile), Charset.defaultCharset());
       final Map<String, Set<String>> properties = Jsons.object(Yamls.deserialize(maskFileContents), new TypeReference<>() {});
-      return properties.getOrDefault("properties", Set.of());
+      return properties.getOrDefault(PROPERTIES_KEY, Set.of());
     } catch (final Exception e) {
       logger.error("Unable to load mask data from '{}': {}.", specMaskFile, e.getMessage());
       return Set.of();
@@ -113,9 +170,9 @@ public class MaskedDataInterceptor implements RewritePolicy {
    * @param specMaskFile The spec mask file.
    * @return The regular expression pattern used to find maskable properties.
    */
-  private Optional<String> buildPattern(final String specMaskFile) {
+  private Optional<Pattern> buildPattern(final String specMaskFile) {
     final Set<String> maskableProperties = getMaskableProperties(specMaskFile);
-    return !maskableProperties.isEmpty() ? Optional.of(generatePattern(maskableProperties)) : Optional.empty();
+    return !maskableProperties.isEmpty() ? Optional.of(Pattern.compile(generatePattern(maskableProperties))) : Optional.empty();
   }
 
   /**
@@ -126,10 +183,10 @@ public class MaskedDataInterceptor implements RewritePolicy {
    */
   private String generatePattern(final Set<String> properties) {
     final StringBuilder builder = new StringBuilder();
-    builder.append("(?i)"); // case insensitive
-    builder.append("\"(");
-    builder.append(properties.stream().collect(Collectors.joining("|")));
-    builder.append(")\"\\s*:\\s*(\"(?:[^\"\\\\]|\\\\.)*\"|\\[[^]\\[]*]|\\d+)");
+    builder.append(CASE_INSENSITIVE_FLAG);
+    builder.append(PROPERTY_MATCHING_PATTERN_PREFIX);
+    builder.append(properties.stream().collect(Collectors.joining(PROPERTY_MATCHING_PATTERN_DELIMITER)));
+    builder.append(PROPERTY_MATCHING_PATTERN_SUFFIX);
     return builder.toString();
   }
 

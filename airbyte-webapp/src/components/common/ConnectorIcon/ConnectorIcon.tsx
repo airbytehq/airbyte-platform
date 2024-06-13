@@ -12,6 +12,6 @@ interface ConnectorIconProps {
 
 export const ConnectorIcon: React.FC<ConnectorIconProps> = ({ className, icon }) => (
   <div className={classNames(styles.content, className)} aria-hidden="true">
-    <SvgIcon svg={icon} />
+    <SvgIcon src={icon} />
   </div>
 );

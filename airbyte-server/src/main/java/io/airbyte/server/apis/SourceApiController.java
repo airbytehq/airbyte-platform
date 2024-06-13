@@ -1,14 +1,12 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.server.apis;
 
 import static io.airbyte.commons.auth.AuthRoleConstants.AUTHENTICATED_USER;
-import static io.airbyte.commons.auth.AuthRoleConstants.EDITOR;
 import static io.airbyte.commons.auth.AuthRoleConstants.ORGANIZATION_EDITOR;
 import static io.airbyte.commons.auth.AuthRoleConstants.ORGANIZATION_READER;
-import static io.airbyte.commons.auth.AuthRoleConstants.READER;
 import static io.airbyte.commons.auth.AuthRoleConstants.WORKSPACE_EDITOR;
 import static io.airbyte.commons.auth.AuthRoleConstants.WORKSPACE_READER;
 
@@ -30,7 +28,6 @@ import io.airbyte.api.model.generated.SourceReadList;
 import io.airbyte.api.model.generated.SourceSearch;
 import io.airbyte.api.model.generated.SourceUpdate;
 import io.airbyte.api.model.generated.WorkspaceIdRequestBody;
-import io.airbyte.commons.auth.SecuredWorkspace;
 import io.airbyte.commons.server.handlers.SchedulerHandler;
 import io.airbyte.commons.server.handlers.SourceHandler;
 import io.airbyte.commons.server.scheduling.AirbyteTaskExecutors;
@@ -56,11 +53,10 @@ public class SourceApiController implements SourceApi {
   }
 
   @Post("/apply_schema_changes")
-  @Secured({EDITOR, WORKSPACE_EDITOR, ORGANIZATION_EDITOR})
-  @SecuredWorkspace
+  @Secured({WORKSPACE_EDITOR, ORGANIZATION_EDITOR})
   @ExecuteOn(AirbyteTaskExecutors.SCHEDULER)
   @Override
-  public void applySchemaChangeForSource(final SourceAutoPropagateChange sourceAutoPropagateChange) {
+  public void applySchemaChangeForSource(@Body final SourceAutoPropagateChange sourceAutoPropagateChange) {
     ApiHelper.execute(() -> {
       schedulerHandler.applySchemaChangeForSource(sourceAutoPropagateChange);
       return null;
@@ -68,46 +64,42 @@ public class SourceApiController implements SourceApi {
   }
 
   @Post("/check_connection")
-  @Secured({EDITOR, WORKSPACE_EDITOR, ORGANIZATION_EDITOR})
-  @SecuredWorkspace
+  @Secured({WORKSPACE_EDITOR, ORGANIZATION_EDITOR})
   @ExecuteOn(AirbyteTaskExecutors.SCHEDULER)
   @Override
-  public CheckConnectionRead checkConnectionToSource(final SourceIdRequestBody sourceIdRequestBody) {
+  public CheckConnectionRead checkConnectionToSource(@Body final SourceIdRequestBody sourceIdRequestBody) {
     return ApiHelper.execute(() -> schedulerHandler.checkSourceConnectionFromSourceId(sourceIdRequestBody));
   }
 
   @Post("/check_connection_for_update")
-  @Secured({EDITOR, WORKSPACE_EDITOR, ORGANIZATION_EDITOR})
-  @SecuredWorkspace
+  @Secured({WORKSPACE_EDITOR, ORGANIZATION_EDITOR})
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @Override
-  public CheckConnectionRead checkConnectionToSourceForUpdate(final SourceUpdate sourceUpdate) {
+  public CheckConnectionRead checkConnectionToSourceForUpdate(@Body final SourceUpdate sourceUpdate) {
     return ApiHelper.execute(() -> schedulerHandler.checkSourceConnectionFromSourceIdForUpdate(sourceUpdate));
   }
 
   @Post("/clone")
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @Override
-  public SourceRead cloneSource(final SourceCloneRequestBody sourceCloneRequestBody) {
+  public SourceRead cloneSource(@Body final SourceCloneRequestBody sourceCloneRequestBody) {
     return ApiHelper.execute(() -> sourceHandler.cloneSource(sourceCloneRequestBody));
   }
 
   @Post("/create")
-  @Secured({EDITOR, WORKSPACE_EDITOR, ORGANIZATION_EDITOR})
-  @SecuredWorkspace
+  @Secured({WORKSPACE_EDITOR, ORGANIZATION_EDITOR})
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @Override
-  public SourceRead createSource(final SourceCreate sourceCreate) {
+  public SourceRead createSource(@Body final SourceCreate sourceCreate) {
     return ApiHelper.execute(() -> sourceHandler.createSourceWithOptionalSecret(sourceCreate));
   }
 
   @Post("/delete")
-  @Secured({EDITOR, WORKSPACE_EDITOR, ORGANIZATION_EDITOR})
-  @SecuredWorkspace
+  @Secured({WORKSPACE_EDITOR, ORGANIZATION_EDITOR})
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @Override
   @Status(HttpStatus.NO_CONTENT)
-  public void deleteSource(final SourceIdRequestBody sourceIdRequestBody) {
+  public void deleteSource(@Body final SourceIdRequestBody sourceIdRequestBody) {
     ApiHelper.execute(() -> {
       sourceHandler.deleteSource(sourceIdRequestBody);
       return null;
@@ -115,44 +107,39 @@ public class SourceApiController implements SourceApi {
   }
 
   @Post("/discover_schema")
-  @Secured({EDITOR, WORKSPACE_EDITOR, ORGANIZATION_EDITOR})
-  @SecuredWorkspace
+  @Secured({WORKSPACE_EDITOR, ORGANIZATION_EDITOR})
   @ExecuteOn(AirbyteTaskExecutors.SCHEDULER)
   @Override
-  public SourceDiscoverSchemaRead discoverSchemaForSource(final SourceDiscoverSchemaRequestBody sourceDiscoverSchemaRequestBody) {
+  public SourceDiscoverSchemaRead discoverSchemaForSource(@Body final SourceDiscoverSchemaRequestBody sourceDiscoverSchemaRequestBody) {
     return ApiHelper.execute(() -> schedulerHandler.discoverSchemaForSourceFromSourceId(sourceDiscoverSchemaRequestBody));
   }
 
   @Post("/get")
-  @Secured({READER, WORKSPACE_READER, ORGANIZATION_READER})
-  @SecuredWorkspace
+  @Secured({WORKSPACE_READER, ORGANIZATION_READER})
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @Override
-  public SourceRead getSource(final SourceIdRequestBody sourceIdRequestBody) {
+  public SourceRead getSource(@Body final SourceIdRequestBody sourceIdRequestBody) {
     return ApiHelper.execute(() -> sourceHandler.getSource(sourceIdRequestBody));
   }
 
   @Post("/most_recent_source_actor_catalog")
-  @Secured({READER, WORKSPACE_READER, ORGANIZATION_READER})
-  @SecuredWorkspace
+  @Secured({WORKSPACE_READER, ORGANIZATION_READER})
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @Override
-  public ActorCatalogWithUpdatedAt getMostRecentSourceActorCatalog(final SourceIdRequestBody sourceIdRequestBody) {
+  public ActorCatalogWithUpdatedAt getMostRecentSourceActorCatalog(@Body final SourceIdRequestBody sourceIdRequestBody) {
     return ApiHelper.execute(() -> sourceHandler.getMostRecentSourceActorCatalogWithUpdatedAt(sourceIdRequestBody));
   }
 
   @Post("/list")
-  @Secured({READER, WORKSPACE_READER, ORGANIZATION_READER})
-  @SecuredWorkspace
+  @Secured({WORKSPACE_READER, ORGANIZATION_READER})
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @Override
-  public SourceReadList listSourcesForWorkspace(final WorkspaceIdRequestBody workspaceIdRequestBody) {
+  public SourceReadList listSourcesForWorkspace(@Body final WorkspaceIdRequestBody workspaceIdRequestBody) {
     return ApiHelper.execute(() -> sourceHandler.listSourcesForWorkspace(workspaceIdRequestBody));
   }
 
   @Post(uri = "/list_paginated")
-  @Secured({READER, WORKSPACE_READER, ORGANIZATION_READER})
-  @SecuredWorkspace
+  @Secured({WORKSPACE_READER, ORGANIZATION_READER})
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @Override
   public SourceReadList listSourcesForWorkspacePaginated(@Body final ListResourcesForWorkspacesRequestBody listResourcesForWorkspacesRequestBody) {
@@ -161,22 +148,20 @@ public class SourceApiController implements SourceApi {
 
   @Post("/search")
   @Override
-  public SourceReadList searchSources(final SourceSearch sourceSearch) {
+  public SourceReadList searchSources(@Body final SourceSearch sourceSearch) {
     return ApiHelper.execute(() -> sourceHandler.searchSources(sourceSearch));
   }
 
   @Post("/update")
-  @Secured({EDITOR, WORKSPACE_EDITOR, ORGANIZATION_EDITOR})
-  @SecuredWorkspace
+  @Secured({WORKSPACE_EDITOR, ORGANIZATION_EDITOR})
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @Override
-  public SourceRead updateSource(final SourceUpdate sourceUpdate) {
+  public SourceRead updateSource(@Body final SourceUpdate sourceUpdate) {
     return ApiHelper.execute(() -> sourceHandler.updateSource(sourceUpdate));
   }
 
   @Post("/upgrade_version")
-  @Secured({EDITOR, WORKSPACE_EDITOR, ORGANIZATION_EDITOR})
-  @SecuredWorkspace
+  @Secured({WORKSPACE_EDITOR, ORGANIZATION_EDITOR})
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @Status(HttpStatus.NO_CONTENT)
   @Override
@@ -188,11 +173,10 @@ public class SourceApiController implements SourceApi {
   }
 
   @Post("/partial_update")
-  @Secured({EDITOR, WORKSPACE_EDITOR, ORGANIZATION_EDITOR})
-  @SecuredWorkspace
+  @Secured({WORKSPACE_EDITOR, ORGANIZATION_EDITOR})
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @Override
-  public SourceRead partialUpdateSource(final PartialSourceUpdate partialSourceUpdate) {
+  public SourceRead partialUpdateSource(@Body final PartialSourceUpdate partialSourceUpdate) {
     return ApiHelper.execute(() -> sourceHandler.updateSourceWithOptionalSecret(partialSourceUpdate));
   }
 
@@ -200,7 +184,7 @@ public class SourceApiController implements SourceApi {
   @Secured({AUTHENTICATED_USER})
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @Override
-  public DiscoverCatalogResult writeDiscoverCatalogResult(final SourceDiscoverSchemaWriteRequestBody request) {
+  public DiscoverCatalogResult writeDiscoverCatalogResult(@Body final SourceDiscoverSchemaWriteRequestBody request) {
     return ApiHelper.execute(() -> sourceHandler.writeDiscoverCatalogResult(request));
   }
 

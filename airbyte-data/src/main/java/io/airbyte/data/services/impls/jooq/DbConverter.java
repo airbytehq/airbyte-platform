@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.data.services.impls.jooq;
@@ -22,6 +22,7 @@ import static io.airbyte.db.instance.configs.jooq.generated.Tables.SECRET_PERSIS
 import static io.airbyte.db.instance.configs.jooq.generated.Tables.WORKSPACE;
 import static io.airbyte.db.instance.configs.jooq.generated.Tables.WORKSPACE_SERVICE_ACCOUNT;
 
+import com.fasterxml.jackson.core.type.TypeReference;
 import io.airbyte.commons.enums.Enums;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.commons.version.AirbyteProtocolVersion;
@@ -35,6 +36,7 @@ import io.airbyte.config.ActorDefinitionResourceRequirements;
 import io.airbyte.config.ActorDefinitionVersion;
 import io.airbyte.config.ActorDefinitionVersion.SupportState;
 import io.airbyte.config.AllowedHosts;
+import io.airbyte.config.BreakingChangeScope;
 import io.airbyte.config.ConnectorBuilderProject;
 import io.airbyte.config.DeclarativeManifest;
 import io.airbyte.config.DestinationConnection;
@@ -67,12 +69,14 @@ import io.airbyte.config.SuggestedStreams;
 import io.airbyte.config.SupportLevel;
 import io.airbyte.config.WorkspaceServiceAccount;
 import io.airbyte.db.instance.configs.jooq.generated.enums.AutoPropagationStatus;
+import io.airbyte.db.instance.configs.jooq.generated.enums.BackfillPreference;
 import io.airbyte.db.instance.configs.jooq.generated.enums.NotificationType;
 import io.airbyte.db.instance.configs.jooq.generated.tables.records.NotificationConfigurationRecord;
 import io.airbyte.protocol.models.AirbyteCatalog;
 import io.airbyte.protocol.models.ConfiguredAirbyteCatalog;
 import io.airbyte.protocol.models.ConnectorSpecification;
 import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.List;
@@ -140,7 +144,11 @@ public class DbConverter {
             Enums.toEnum(Optional.ofNullable(record.get(SCHEMA_MANAGEMENT.AUTO_PROPAGATION_STATUS)).orElse(AutoPropagationStatus.ignore)
                 .getLiteral(), NonBreakingChangesPreference.class).orElseThrow())
         .withNotifySchemaChanges(isWebhookNotificationEnabled)
-        .withNotifySchemaChangesByEmail(isEmailNotificationEnabled);
+        .withNotifySchemaChangesByEmail(isEmailNotificationEnabled)
+        .withCreatedAt(record.get(CONNECTION.CREATED_AT, OffsetDateTime.class).toEpochSecond())
+        .withBackfillPreference(
+            Enums.toEnum(Optional.ofNullable(record.get(SCHEMA_MANAGEMENT.BACKFILL_PREFERENCE)).orElse(BackfillPreference.disabled).getLiteral(),
+                StandardSync.BackfillPreference.class).orElseThrow());
   }
 
   private static ConfiguredAirbyteCatalog parseConfiguredAirbyteCatalog(final String configuredAirbyteCatalogString) {
@@ -215,7 +223,6 @@ public class DbConverter {
         .withSourceId(record.get(ACTOR.ID))
         .withConfiguration(Jsons.deserialize(record.get(ACTOR.CONFIGURATION).data()))
         .withWorkspaceId(record.get(ACTOR.WORKSPACE_ID))
-        .withDefaultVersionId(record.get(ACTOR.DEFAULT_VERSION_ID))
         .withSourceDefinitionId(record.get(ACTOR.ACTOR_DEFINITION_ID))
         .withTombstone(record.get(ACTOR.TOMBSTONE))
         .withName(record.get(ACTOR.NAME));
@@ -232,7 +239,6 @@ public class DbConverter {
         .withDestinationId(record.get(ACTOR.ID))
         .withConfiguration(Jsons.deserialize(record.get(ACTOR.CONFIGURATION).data()))
         .withWorkspaceId(record.get(ACTOR.WORKSPACE_ID))
-        .withDefaultVersionId(record.get(ACTOR.DEFAULT_VERSION_ID))
         .withDestinationDefinitionId(record.get(ACTOR.ACTOR_DEFINITION_ID))
         .withTombstone(record.get(ACTOR.TOMBSTONE))
         .withName(record.get(ACTOR.NAME));
@@ -245,10 +251,22 @@ public class DbConverter {
    * @return source definition
    */
   public static StandardSourceDefinition buildStandardSourceDefinition(final Record record, final long defaultMaxSecondsBetweenMessages) {
+    var maxSecondsBetweenMessage = record.get(ACTOR_DEFINITION.MAX_SECONDS_BETWEEN_MESSAGES) == null
+        ? defaultMaxSecondsBetweenMessages
+        : record.get(ACTOR_DEFINITION.MAX_SECONDS_BETWEEN_MESSAGES).longValue();
+
+    // All sources are starting to set this field according to their rate limits. As a
+    // safeguard for sources with rate limits that are too low e.g. minutes etc, we default to
+    // our defaults. One day, we'll relax this, be conservative for now.
+    if (maxSecondsBetweenMessage < defaultMaxSecondsBetweenMessages) {
+      maxSecondsBetweenMessage = defaultMaxSecondsBetweenMessages;
+    }
+
     return new StandardSourceDefinition()
         .withSourceDefinitionId(record.get(ACTOR_DEFINITION.ID))
         .withDefaultVersionId(record.get(ACTOR_DEFINITION.DEFAULT_VERSION_ID))
         .withIcon(record.get(ACTOR_DEFINITION.ICON))
+        .withIconUrl(record.get(ACTOR_DEFINITION.ICON_URL))
         .withName(record.get(ACTOR_DEFINITION.NAME))
         .withSourceType(record.get(ACTOR_DEFINITION.SOURCE_TYPE) == null ? null
             : Enums.toEnum(record.get(ACTOR_DEFINITION.SOURCE_TYPE, String.class), SourceType.class).orElseThrow())
@@ -258,9 +276,7 @@ public class DbConverter {
         .withResourceRequirements(record.get(ACTOR_DEFINITION.RESOURCE_REQUIREMENTS) == null
             ? null
             : Jsons.deserialize(record.get(ACTOR_DEFINITION.RESOURCE_REQUIREMENTS).data(), ActorDefinitionResourceRequirements.class))
-        .withMaxSecondsBetweenMessages(record.get(ACTOR_DEFINITION.MAX_SECONDS_BETWEEN_MESSAGES) == null
-            ? defaultMaxSecondsBetweenMessages
-            : record.get(ACTOR_DEFINITION.MAX_SECONDS_BETWEEN_MESSAGES).longValue());
+        .withMaxSecondsBetweenMessages(maxSecondsBetweenMessage);
   }
 
   /**
@@ -274,6 +290,7 @@ public class DbConverter {
         .withDestinationDefinitionId(record.get(ACTOR_DEFINITION.ID))
         .withDefaultVersionId(record.get(ACTOR_DEFINITION.DEFAULT_VERSION_ID))
         .withIcon(record.get(ACTOR_DEFINITION.ICON))
+        .withIconUrl(record.get(ACTOR_DEFINITION.ICON_URL))
         .withName(record.get(ACTOR_DEFINITION.NAME))
         .withTombstone(record.get(ACTOR_DEFINITION.TOMBSTONE))
         .withPublic(record.get(ACTOR_DEFINITION.PUBLIC))
@@ -409,7 +426,9 @@ public class DbConverter {
         .withHasDraft((Boolean) record.get("hasDraft"))
         .withTombstone(record.get(CONNECTOR_BUILDER_PROJECT.TOMBSTONE))
         .withActorDefinitionId(record.get(CONNECTOR_BUILDER_PROJECT.ACTOR_DEFINITION_ID))
-        .withActiveDeclarativeManifestVersion(record.get(ACTIVE_DECLARATIVE_MANIFEST.VERSION));
+        .withActiveDeclarativeManifestVersion(record.get(ACTIVE_DECLARATIVE_MANIFEST.VERSION))
+        .withTestingValues(record.get(CONNECTOR_BUILDER_PROJECT.TESTING_VALUES) == null ? null
+            : Jsons.deserialize(record.get(CONNECTOR_BUILDER_PROJECT.TESTING_VALUES).data()));
   }
 
   /**
@@ -456,12 +475,18 @@ public class DbConverter {
    * @return actor definition breaking change
    */
   public static ActorDefinitionBreakingChange buildActorDefinitionBreakingChange(final Record record) {
+    final List<BreakingChangeScope> scopedImpact = new ArrayList<>();
+    if (record.get(ACTOR_DEFINITION_BREAKING_CHANGE.SCOPED_IMPACT) != null) {
+      scopedImpact.addAll(
+          Jsons.deserialize(record.get(ACTOR_DEFINITION_BREAKING_CHANGE.SCOPED_IMPACT).data(), new TypeReference<List<BreakingChangeScope>>() {}));
+    }
     return new ActorDefinitionBreakingChange()
         .withActorDefinitionId(record.get(ACTOR_DEFINITION_BREAKING_CHANGE.ACTOR_DEFINITION_ID))
         .withVersion(new Version(record.get(ACTOR_DEFINITION_BREAKING_CHANGE.VERSION)))
         .withMessage(record.get(ACTOR_DEFINITION_BREAKING_CHANGE.MESSAGE))
         .withUpgradeDeadline(record.get(ACTOR_DEFINITION_BREAKING_CHANGE.UPGRADE_DEADLINE).toString())
-        .withMigrationDocumentationUrl(record.get(ACTOR_DEFINITION_BREAKING_CHANGE.MIGRATION_DOCUMENTATION_URL));
+        .withMigrationDocumentationUrl(record.get(ACTOR_DEFINITION_BREAKING_CHANGE.MIGRATION_DOCUMENTATION_URL))
+        .withScopedImpact(scopedImpact);
   }
 
   /**
@@ -502,6 +527,7 @@ public class DbConverter {
                         .withNormalizationTag(record.get(ACTOR_DEFINITION_VERSION.NORMALIZATION_TAG))
                         .withNormalizationIntegrationType(record.get(ACTOR_DEFINITION_VERSION.NORMALIZATION_INTEGRATION_TYPE))
                     : null)
+        .withSupportsRefreshes(record.get(ACTOR_DEFINITION_VERSION.SUPPORTS_REFRESHES))
         .withSupportState(Enums.toEnum(record.get(ACTOR_DEFINITION_VERSION.SUPPORT_STATE, String.class), SupportState.class).orElseThrow());
   }
 

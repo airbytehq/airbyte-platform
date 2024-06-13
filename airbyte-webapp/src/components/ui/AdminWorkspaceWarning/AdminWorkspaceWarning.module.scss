@@ -1,25 +1,22 @@
 @use "scss/colors";
 @use "scss/variables";
 
+.adminWorkspaceTooltipWrapper {
+  display: flex;
+  cursor: help;
+}
+
 .adminWorkspaceWarning {
+  padding: variables.$spacing-sm;
   width: 100%;
   background-color: colors.$red-400;
-  border-radius: variables.$border-radius-pill;
-  cursor: help;
+}
 
-  /** Hard coded values to match WorkspaceSelector :-( **/
-  flex: 0 0 21px;
+.listBoxControlButton {
+  border: unset;
+  padding: 0;
+}
 
-  &__pill {
-    height: 100%;
-    user-select: none;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-
-    p {
-      font-size: 9px;
-      line-height: 9px;
-    }
-  }
+.optionsMenuClassName {
+  min-width: 100px;
 }

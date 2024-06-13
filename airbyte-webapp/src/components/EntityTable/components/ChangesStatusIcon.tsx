@@ -24,7 +24,7 @@ export const ChangesStatusIcon: React.FC<ChangesStatusIconProps> = ({ schemaChan
   });
   return (
     <Tooltip
-      placement="left"
+      placement="bottom"
       containerClassName={styles.tooltipContainer}
       control={
         <Icon

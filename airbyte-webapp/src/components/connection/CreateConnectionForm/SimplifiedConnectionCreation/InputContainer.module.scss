@@ -1,0 +1,28 @@
+@use "scss/colors";
+@use "scss/variables";
+
+@keyframes highlight {
+  0%,
+  50% {
+    position: relative;
+    box-shadow: variables.$box-shadow-highlight colors.$blue-200;
+    z-index: 1;
+  }
+
+  99% {
+    z-index: 1;
+  }
+
+  100% {
+    box-shadow: 0 0 0 0 transparent;
+    z-index: 0;
+  }
+}
+
+.container {
+  width: 300px;
+
+  &.highlighted {
+    animation: highlight 2s ease-out;
+  }
+}

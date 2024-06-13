@@ -23,3 +23,8 @@ th.width20 {
     padding-left: 45px;
   }
 }
+
+.cellContent {
+  padding: variables.$spacing-md variables.$spacing-lg;
+  display: block;
+}

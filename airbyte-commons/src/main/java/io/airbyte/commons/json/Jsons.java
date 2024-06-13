@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.commons.json;
@@ -8,6 +8,7 @@ import static java.util.Collections.singletonMap;
 import static java.util.stream.Collectors.toMap;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.core.StreamReadConstraints;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.core.util.DefaultPrettyPrinter;
 import com.fasterxml.jackson.core.util.Separators;
@@ -18,6 +19,7 @@ import com.fasterxml.jackson.databind.ObjectWriter;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import com.fasterxml.jackson.databind.node.TextNode;
 import com.google.common.base.Charsets;
 import com.google.common.base.Preconditions;
 import io.airbyte.commons.jackson.MoreMappers;
@@ -44,8 +46,18 @@ import java.util.stream.StreamSupport;
 @SuppressWarnings({"PMD.AvoidReassigningParameters", "PMD.AvoidCatchingThrowable"})
 public class Jsons {
 
+  private static final StreamReadConstraints STREAM_READ_CONSTRAINTS = StreamReadConstraints
+      .builder()
+      .maxStringLength(Integer.MAX_VALUE)
+      .build();
+
   // Object Mapper is thread-safe
   private static final ObjectMapper OBJECT_MAPPER = MoreMappers.initMapper();
+
+  static {
+    OBJECT_MAPPER.getFactory().setStreamReadConstraints(STREAM_READ_CONSTRAINTS);
+  }
+
   /**
    * Exact ObjectMapper preserves float information by using the Java Big Decimal type.
    */
@@ -54,6 +66,7 @@ public class Jsons {
   static {
     OBJECT_MAPPER_EXACT = MoreMappers.initMapper();
     OBJECT_MAPPER_EXACT.enable(DeserializationFeature.USE_BIG_DECIMAL_FOR_FLOATS);
+    OBJECT_MAPPER_EXACT.getFactory().setStreamReadConstraints(STREAM_READ_CONSTRAINTS);
   }
 
   private static final ObjectWriter OBJECT_WRITER = OBJECT_MAPPER.writer(new JsonPrettyPrinter());
@@ -588,6 +601,16 @@ public class Jsons {
   }
 
   /**
+   * Convert a {@link JsonNode} as a string-to-string map.
+   *
+   * @param json to convert
+   * @return json as string-to-string map
+   */
+  public static Map<String, Object> deserializeToMap(final JsonNode json) {
+    return OBJECT_MAPPER.convertValue(json, new TypeReference<>() {});
+  }
+
+  /**
    * By the Jackson DefaultPrettyPrinter prints objects with an extra space as follows: {"name" :
    * "airbyte"}. We prefer {"name": "airbyte"}.
    */
@@ -705,6 +728,21 @@ public class Jsons {
     } else {
       return jsonNode;
     }
+  }
+
+  /**
+   * If the supplied object is a TextNode, attempt to deserialize it and return the result. Otherwise,
+   * return the object as-is.
+   *
+   * @param jsonNode the object to deserialize if in text form
+   * @return the deserialized JSON object
+   * @throws RuntimeException if the jsonNode is text that cannot be deserialized
+   */
+  public static JsonNode deserializeIfText(final JsonNode jsonNode) {
+    if (jsonNode instanceof TextNode) {
+      return Jsons.deserialize(jsonNode.asText());
+    }
+    return jsonNode;
   }
 
 }

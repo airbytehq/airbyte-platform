@@ -1,15 +1,15 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.workload.launcher.pipeline
 
 import fixtures.RecordFixtures
+import io.airbyte.api.client.WorkloadApiClient
 import io.airbyte.config.Configs
-import io.airbyte.workload.api.client.generated.WorkloadApi
+import io.airbyte.workload.launcher.ClaimProcessorTracker
 import io.airbyte.workload.launcher.ClaimedProcessor
 import io.airbyte.workload.launcher.client.LogContextFactory
-import io.airbyte.workload.launcher.client.WorkloadApiClient
 import io.airbyte.workload.launcher.fixtures.SharedMocks.Companion.metricPublisher
 import io.airbyte.workload.launcher.fixtures.TestStage
 import io.airbyte.workload.launcher.pipeline.LogPathTest.Fixtures.inputMsgs
@@ -22,6 +22,7 @@ import io.airbyte.workload.launcher.pipeline.stages.StageName
 import io.airbyte.workload.launcher.pipeline.stages.model.LaunchStageIO
 import io.mockk.every
 import io.mockk.mockk
+import io.mockk.verify
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.Arguments
 import org.junit.jupiter.params.provider.MethodSource
@@ -32,6 +33,7 @@ import java.util.Optional
 import java.util.function.Function
 import java.util.stream.Stream
 import kotlin.io.path.Path
+import io.airbyte.workload.launcher.client.WorkloadApiClient as LauncherWorkloadApiClient
 
 class LogPathTest {
   @ParameterizedTest
@@ -68,14 +70,23 @@ class LogPathTest {
     parallelism: Int,
   ) {
     val pipeline = launchPipeline(testErrorCase)
+    val workloadApiClient =
+      mockk<WorkloadApiClient> {
+        every { workloadApi } returns mockk()
+      }
+    val claimProcessorTracker =
+      mockk<ClaimProcessorTracker> {
+        every { trackResumed() } returns Unit
+      }
 
     val processor =
       ClaimedProcessor(
-        mockk<WorkloadApi>(),
+        workloadApiClient,
         pipeline,
         metricPublisher,
         "dataplane_id",
         parallelism,
+        claimProcessorTracker,
       )
 
     val msgs = inputMsgs()
@@ -96,6 +107,8 @@ class LogPathTest {
         assert(logLines[5].endsWith("TEST: success. Id: ${msg.workloadId}."))
       }
     }
+
+    verify { claimProcessorTracker.trackResumed() }
   }
 
   companion object {
@@ -113,11 +126,11 @@ class LogPathTest {
   }
 
   object Fixtures {
-    private val mockApiClient: WorkloadApiClient =
+    private val mockApiClient: LauncherWorkloadApiClient =
       mockk {
         every { reportFailure(any()) } returns Unit
       }
-    private val successHandler = SuccessHandler(metricPublisher, Optional.of(Function { id -> "TEST: success. Id: $id." }))
+    private val successHandler = SuccessHandler(mockApiClient, metricPublisher, Optional.of(Function { id -> "TEST: success. Id: $id." }))
     private val failureHandler = FailureHandler(mockApiClient, metricPublisher, Optional.of(Function { id -> "TEST: failure. Id: $id." }))
 
     private const val TEST_LOG_PREFIX = "TEST"

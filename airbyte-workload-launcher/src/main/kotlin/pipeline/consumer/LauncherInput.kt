@@ -1,6 +1,7 @@
 package io.airbyte.workload.launcher.pipeline.consumer
 
 import io.airbyte.config.WorkloadType
+import java.util.UUID
 
 data class LauncherInput(
   val workloadId: String,
@@ -10,4 +11,5 @@ data class LauncherInput(
   val mutexKey: String?,
   val workloadType: WorkloadType,
   val startTimeMs: Long? = null,
+  val autoId: UUID,
 )

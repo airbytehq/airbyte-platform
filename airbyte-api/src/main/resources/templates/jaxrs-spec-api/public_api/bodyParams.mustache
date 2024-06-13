@@ -1,0 +1,1 @@
+{{#isBodyParam}}{{#useBeanValidation}}@Valid @Body {{#required}}{{^isNullable}}@NotNull {{/isNullable}}{{/required}}{{/useBeanValidation}}{{{dataType}}} {{paramName}}{{/isBodyParam}}

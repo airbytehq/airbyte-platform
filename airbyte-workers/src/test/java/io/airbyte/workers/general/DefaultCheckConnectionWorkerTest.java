@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.workers.general;
@@ -137,7 +137,7 @@ class DefaultCheckConnectionWorkerTest {
   }
 
   @Test
-  void testCheckConnectionWithConfigUpdateSource() throws WorkerException {
+  void testCheckConnectionWithConfigUpdateSource() throws WorkerException, IOException {
     final DefaultCheckConnectionWorker worker =
         new DefaultCheckConnectionWorker(integrationLauncher, connectorConfigUpdater, configMessageStreamFactory);
     final ConnectorJobOutput output = worker.run(input, jobRoot);
@@ -155,7 +155,7 @@ class DefaultCheckConnectionWorkerTest {
   }
 
   @Test
-  void testCheckConnectionWithConfigUpdateDestination() throws WorkerException {
+  void testCheckConnectionWithConfigUpdateDestination() throws WorkerException, IOException {
     final DefaultCheckConnectionWorker worker =
         new DefaultCheckConnectionWorker(integrationLauncher, connectorConfigUpdater, configMessageStreamFactory);
 

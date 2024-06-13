@@ -1,0 +1,5 @@
+@use "scss/variables";
+
+.searchInputWrapper {
+  width: variables.$width-search-bar;
+}

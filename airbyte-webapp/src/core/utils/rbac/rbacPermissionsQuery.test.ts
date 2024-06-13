@@ -17,6 +17,7 @@ jest.mock("core/api", () => {
 
       return workspace;
     }),
+    useIsInstanceAdminEnabled: jest.fn(() => true),
   };
 });
 
@@ -53,7 +54,12 @@ describe("useRbacPermissionsQuery", () => {
         [],
         false,
       ],
-      ["no permission grants no access to instance", { resourceType: "INSTANCE", role: "ADMIN" }, [], false],
+      [
+        "no permission grants no access to instance",
+        { resourceType: "INSTANCE", role: "ADMIN", resourceId: "" },
+        [],
+        false,
+      ],
 
       /* BASIC WORKSPACE PERMISSIONS */
       [
@@ -151,7 +157,7 @@ describe("useRbacPermissionsQuery", () => {
       /* BASIC INSTANCE PERMISSIONS */
       [
         "instance_admin permission grants access to the instance",
-        { resourceType: "INSTANCE", role: "ADMIN" },
+        { resourceType: "INSTANCE", role: "ADMIN", resourceId: "" },
         [{ permissionType: "instance_admin" }],
         true,
       ],
@@ -168,32 +174,141 @@ describe("useRbacPermissionsQuery", () => {
         true,
       ],
     ])("%s", (_title, query, permissions, expectedResult) => {
-      expect(useRbacPermissionsQuery(permissions, query)).toBe(expectedResult);
+      expect(useRbacPermissionsQuery(permissions, [query])).toBe(expectedResult);
+    });
+  });
+
+  describe("multiple queries", () => {
+    it("returns true when the workspace permission is exact", () => {
+      expect(
+        useRbacPermissionsQuery(
+          [
+            { permissionType: "workspace_admin", workspaceId: "test-workspace" },
+            { permissionType: "organization_reader", organizationId: "org-with-test-workspace" },
+          ],
+          [
+            {
+              resourceType: "WORKSPACE",
+              role: "ADMIN",
+              resourceId: "test-workspace",
+            },
+          ]
+        )
+      ).toBe(true);
+    });
+
+    it("returns true when the workspace permission is higher", () => {
+      expect(
+        useRbacPermissionsQuery(
+          [
+            { permissionType: "workspace_admin", workspaceId: "test-workspace" },
+            { permissionType: "organization_reader", organizationId: "org-with-test-workspace" },
+          ],
+          [
+            {
+              resourceType: "WORKSPACE",
+              role: "EDITOR",
+              resourceId: "test-workspace",
+            },
+          ]
+        )
+      ).toBe(true);
+    });
+
+    it("returns true when the organization permission is exact", () => {
+      expect(
+        useRbacPermissionsQuery(
+          [
+            { permissionType: "workspace_reader", workspaceId: "test-workspace" },
+            { permissionType: "organization_editor", organizationId: "org-with-test-workspace" },
+          ],
+          [
+            {
+              resourceType: "ORGANIZATION",
+              role: "EDITOR",
+              resourceId: "org-with-test-workspace",
+            },
+          ]
+        )
+      ).toBe(true);
+    });
+
+    it("returns true when the organization permission is higher", () => {
+      expect(
+        useRbacPermissionsQuery(
+          [
+            { permissionType: "workspace_reader", workspaceId: "test-workspace" },
+            { permissionType: "organization_admin", organizationId: "org-with-test-workspace" },
+          ],
+          [
+            {
+              resourceType: "ORGANIZATION",
+              role: "EDITOR",
+              resourceId: "org-with-test-workspace",
+            },
+          ]
+        )
+      ).toBe(true);
+    });
+
+    it("returns false when the permissions do not match", () => {
+      expect(
+        useRbacPermissionsQuery(
+          [
+            { permissionType: "workspace_reader", workspaceId: "test-workspace" },
+            { permissionType: "organization_editor", organizationId: "org-with-test-workspace" },
+          ],
+          [
+            {
+              resourceType: "WORKSPACE",
+              role: "ADMIN",
+              resourceId: "org-with-test-workspace",
+            },
+          ]
+        )
+      ).toBe(false);
     });
   });
 
   describe("degenerate cases", () => {
     it("returns false when an organization or workspace resource permission is missing an id", () => {
       expect(
-        useRbacPermissionsQuery([{ permissionType: "organization_reader" }], {
-          resourceType: "INSTANCE",
-          role: "ADMIN",
-        })
+        useRbacPermissionsQuery(
+          [{ permissionType: "organization_reader" }],
+          [
+            {
+              resourceType: "INSTANCE",
+              role: "ADMIN",
+              resourceId: "",
+            },
+          ]
+        )
       ).toBe(false);
 
       expect(
-        useRbacPermissionsQuery([{ permissionType: "workspace_reader" }], {
-          resourceType: "INSTANCE",
-          role: "ADMIN",
-        })
+        useRbacPermissionsQuery(
+          [{ permissionType: "workspace_reader" }],
+          [
+            {
+              resourceType: "INSTANCE",
+              role: "ADMIN",
+              resourceId: "",
+            },
+          ]
+        )
       ).toBe(false);
 
       expect(
-        useRbacPermissionsQuery([{ permissionType: "organization_admin", organizationId: "test-organization" }], {
-          resourceType: "WORKSPACE",
-          role: "EDITOR",
-          resourceId: "",
-        })
+        useRbacPermissionsQuery(
+          [{ permissionType: "organization_admin", organizationId: "test-organization" }],
+          [
+            {
+              resourceType: "WORKSPACE",
+              role: "EDITOR",
+              resourceId: "",
+            },
+          ]
+        )
       ).toBe(false);
     });
   });

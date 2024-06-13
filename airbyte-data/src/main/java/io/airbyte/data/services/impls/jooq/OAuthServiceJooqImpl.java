@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.data.services.impls.jooq;
@@ -120,7 +120,7 @@ public class OAuthServiceJooqImpl implements OAuthService {
     final JsonNode hydratedConfig;
     if (organizationId != null && featureFlagClient.boolVariation(UseRuntimeSecretPersistence.INSTANCE, new Organization(organizationId))) {
       final SecretPersistenceConfig secretPersistenceConfig =
-          secretPersistenceConfigService.getSecretPersistenceConfig(ScopeType.ORGANIZATION, organizationId);
+          secretPersistenceConfigService.get(ScopeType.ORGANIZATION, organizationId);
       hydratedConfig =
           secretsRepositoryReader.hydrateConfigFromRuntimeSecretPersistence(sourceOAuthParameter.getConfiguration(),
               new RuntimeSecretPersistence(secretPersistenceConfig));
@@ -172,7 +172,7 @@ public class OAuthServiceJooqImpl implements OAuthService {
     final JsonNode hydratedConfig;
     if (organizationId != null && featureFlagClient.boolVariation(UseRuntimeSecretPersistence.INSTANCE, new Organization(organizationId))) {
       final SecretPersistenceConfig secretPersistenceConfig =
-          secretPersistenceConfigService.getSecretPersistenceConfig(ScopeType.ORGANIZATION, organizationId);
+          secretPersistenceConfigService.get(ScopeType.ORGANIZATION, organizationId);
       hydratedConfig =
           secretsRepositoryReader.hydrateConfigFromRuntimeSecretPersistence(destinationOAuthParameter.getConfiguration(),
               new RuntimeSecretPersistence(secretPersistenceConfig));

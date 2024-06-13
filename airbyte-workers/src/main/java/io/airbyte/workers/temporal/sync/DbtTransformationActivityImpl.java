@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.workers.temporal.sync;
@@ -12,7 +12,6 @@ import static io.airbyte.metrics.lib.ApmTraceConstants.Tags.JOB_ID_KEY;
 import com.fasterxml.jackson.databind.JsonNode;
 import datadog.trace.api.Trace;
 import io.airbyte.api.client.AirbyteApiClient;
-import io.airbyte.api.client.invoker.generated.ApiException;
 import io.airbyte.api.client.model.generated.ScopeType;
 import io.airbyte.api.client.model.generated.SecretPersistenceConfig;
 import io.airbyte.api.client.model.generated.SecretPersistenceConfigGetRequestBody;
@@ -43,15 +42,17 @@ import io.airbyte.workers.ContainerOrchestratorConfig;
 import io.airbyte.workers.Worker;
 import io.airbyte.workers.general.DbtTransformationRunner;
 import io.airbyte.workers.general.DbtTransformationWorker;
-import io.airbyte.workers.helpers.SecretPersistenceConfigHelper;
+import io.airbyte.workers.helper.SecretPersistenceConfigHelper;
 import io.airbyte.workers.process.ProcessFactory;
 import io.airbyte.workers.sync.DbtLauncherWorker;
 import io.airbyte.workers.temporal.TemporalAttemptExecution;
+import io.airbyte.workers.workload.WorkloadIdGenerator;
 import io.micronaut.context.annotation.Value;
 import io.temporal.activity.Activity;
 import io.temporal.activity.ActivityExecutionContext;
 import jakarta.inject.Named;
 import jakarta.inject.Singleton;
+import java.io.IOException;
 import java.nio.file.Path;
 import java.util.Map;
 import java.util.Optional;
@@ -78,6 +79,7 @@ public class DbtTransformationActivityImpl implements DbtTransformationActivity 
   private final AirbyteApiClient airbyteApiClient;
   private final FeatureFlagClient featureFlagClient;
   private final MetricClient metricClient;
+  private final WorkloadIdGenerator workloadIdGenerator;
 
   public DbtTransformationActivityImpl(@Named("containerOrchestratorConfig") final Optional<ContainerOrchestratorConfig> containerOrchestratorConfig,
                                        final WorkerConfigsProvider workerConfigsProvider,
@@ -91,7 +93,8 @@ public class DbtTransformationActivityImpl implements DbtTransformationActivity 
                                        final AirbyteConfigValidator airbyteConfigValidator,
                                        final AirbyteApiClient airbyteApiClient,
                                        final FeatureFlagClient featureFlagClient,
-                                       final MetricClient metricClient) {
+                                       final MetricClient metricClient,
+                                       final WorkloadIdGenerator workloadIdGenerator) {
     this.containerOrchestratorConfig = containerOrchestratorConfig;
     this.workerConfigsProvider = workerConfigsProvider;
     this.processFactory = processFactory;
@@ -105,6 +108,7 @@ public class DbtTransformationActivityImpl implements DbtTransformationActivity 
     this.airbyteApiClient = airbyteApiClient;
     this.featureFlagClient = featureFlagClient;
     this.metricClient = metricClient;
+    this.workloadIdGenerator = workloadIdGenerator;
   }
 
   @Trace(operationName = ACTIVITY_TRACE_OPERATION_NAME)
@@ -128,12 +132,12 @@ public class DbtTransformationActivityImpl implements DbtTransformationActivity 
           if (organizationId != null && featureFlagClient.boolVariation(UseRuntimeSecretPersistence.INSTANCE, new Organization(organizationId))) {
             try {
               final SecretPersistenceConfig secretPersistenceConfig = airbyteApiClient.getSecretPersistenceConfigApi().getSecretsPersistenceConfig(
-                  new SecretPersistenceConfigGetRequestBody().scopeType(ScopeType.ORGANIZATION).scopeId(organizationId));
+                  new SecretPersistenceConfigGetRequestBody(ScopeType.ORGANIZATION, organizationId));
               final RuntimeSecretPersistence runtimeSecretPersistence =
                   SecretPersistenceConfigHelper.fromApiSecretPersistenceConfig(secretPersistenceConfig);
               fullDestinationConfig =
                   secretsRepositoryReader.hydrateConfigFromRuntimeSecretPersistence(input.getDestinationConfiguration(), runtimeSecretPersistence);
-            } catch (final ApiException e) {
+            } catch (final IOException e) {
               throw new RuntimeException(e);
             }
           } else {
@@ -202,7 +206,8 @@ public class DbtTransformationActivityImpl implements DbtTransformationActivity 
         containerOrchestratorConfig.get(),
         serverPort,
         featureFlagClient,
-        metricClient);
+        metricClient,
+        workloadIdGenerator);
   }
 
 }

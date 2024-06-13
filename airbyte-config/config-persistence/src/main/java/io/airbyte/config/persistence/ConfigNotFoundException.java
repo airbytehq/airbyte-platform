@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.config.persistence;
@@ -11,6 +11,11 @@ import java.util.UUID;
  * Exception when the requested config cannot be found.
  */
 public class ConfigNotFoundException extends Exception {
+
+  // This is a specific error type that is used when an organization cannot be found
+  // from a given workspace. Workspaces will soon require an organization, so this
+  // error is temporary and will be removed once the requirement is enforced.
+  public static final String NO_ORGANIZATION_FOR_WORKSPACE = "NO_ORGANIZATION_FOR_WORKSPACE";
 
   private static final long serialVersionUID = 836273627;
   private final String type;

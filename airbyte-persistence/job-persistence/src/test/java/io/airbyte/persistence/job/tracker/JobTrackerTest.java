@@ -1,10 +1,11 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.persistence.job.tracker;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.reset;
 import static org.mockito.Mockito.verify;
@@ -31,6 +32,8 @@ import io.airbyte.config.JobSyncConfig;
 import io.airbyte.config.JobSyncConfig.NamespaceDefinitionType;
 import io.airbyte.config.Metadata;
 import io.airbyte.config.NormalizationSummary;
+import io.airbyte.config.RefreshConfig;
+import io.airbyte.config.RefreshStream;
 import io.airbyte.config.Schedule;
 import io.airbyte.config.Schedule.TimeUnit;
 import io.airbyte.config.StandardCheckConnectionOutput;
@@ -45,11 +48,14 @@ import io.airbyte.config.SyncStats;
 import io.airbyte.config.persistence.ActorDefinitionVersionHelper;
 import io.airbyte.config.persistence.ConfigNotFoundException;
 import io.airbyte.config.persistence.ConfigRepository;
+import io.airbyte.featureflag.FeatureFlagClient;
+import io.airbyte.featureflag.TestClient;
 import io.airbyte.persistence.job.JobPersistence;
 import io.airbyte.persistence.job.WorkspaceHelper;
 import io.airbyte.persistence.job.models.Attempt;
 import io.airbyte.persistence.job.models.Job;
 import io.airbyte.persistence.job.tracker.JobTracker.JobState;
+import io.airbyte.protocol.models.AirbyteStream;
 import io.airbyte.protocol.models.CatalogHelpers;
 import io.airbyte.protocol.models.ConfiguredAirbyteCatalog;
 import io.airbyte.protocol.models.ConfiguredAirbyteStream;
@@ -57,6 +63,7 @@ import io.airbyte.protocol.models.ConnectorSpecification;
 import io.airbyte.protocol.models.DestinationSyncMode;
 import io.airbyte.protocol.models.Field;
 import io.airbyte.protocol.models.JsonSchemaType;
+import io.airbyte.protocol.models.StreamDescriptor;
 import io.airbyte.protocol.models.SyncMode;
 import io.airbyte.validation.json.JsonValidationException;
 import java.io.IOException;
@@ -101,6 +108,7 @@ class JobTrackerTest {
   private static final String CONNECTOR_SOURCE_DOCKER_REPOSITORY_KEY = "connector_source_docker_repository";
   private static final String CONNECTOR_SOURCE_VERSION_KEY = "connector_source_version";
   private static final String FREQUENCY_KEY = "frequency";
+  private static final String WORKLOAD_ENABLED = "workload_enabled";
 
   private static final long SYNC_START_TIME = 1000L;
   private static final long SYNC_END_TIME = 10000L;
@@ -191,6 +199,7 @@ class JobTrackerTest {
   private TrackingClient trackingClient;
   private WorkspaceHelper workspaceHelper;
   private ActorDefinitionVersionHelper actorDefinitionVersionHelper;
+  private FeatureFlagClient featureFlagClient;
   private JobTracker jobTracker;
 
   @BeforeEach
@@ -200,7 +209,8 @@ class JobTrackerTest {
     workspaceHelper = mock(WorkspaceHelper.class);
     trackingClient = mock(TrackingClient.class);
     actorDefinitionVersionHelper = mock(ActorDefinitionVersionHelper.class);
-    jobTracker = new JobTracker(configRepository, jobPersistence, workspaceHelper, trackingClient, actorDefinitionVersionHelper);
+    featureFlagClient = mock(TestClient.class);
+    jobTracker = new JobTracker(configRepository, jobPersistence, workspaceHelper, trackingClient, actorDefinitionVersionHelper, featureFlagClient);
   }
 
   @Test
@@ -213,6 +223,7 @@ class JobTrackerTest {
         .put(CONNECTOR_SOURCE_DEFINITION_ID_KEY, UUID1)
         .put(CONNECTOR_SOURCE_DOCKER_REPOSITORY_KEY, CONNECTOR_REPOSITORY)
         .put(CONNECTOR_SOURCE_VERSION_KEY, CONNECTOR_VERSION)
+        .put(WORKLOAD_ENABLED, true)
         .build();
 
     final StandardSourceDefinition sourceDefinition = new StandardSourceDefinition()
@@ -226,6 +237,8 @@ class JobTrackerTest {
     when(actorDefinitionVersionHelper.getSourceVersion(sourceDefinition, WORKSPACE_ID, SOURCE_ID)).thenReturn(sourceVersion);
     when(configRepository.getStandardWorkspaceNoSecrets(WORKSPACE_ID, true))
         .thenReturn(new StandardWorkspace().withWorkspaceId(WORKSPACE_ID).withName(WORKSPACE_NAME));
+    when(featureFlagClient.boolVariation(any(), any())).thenReturn(true);
+
     assertCheckConnCorrectMessageForEachState(
         (jobState, output) -> jobTracker.trackCheckConnectionSource(JOB_ID, UUID1, WORKSPACE_ID, SOURCE_ID, jobState, output),
         ConfigType.CHECK_CONNECTION_SOURCE,
@@ -249,6 +262,7 @@ class JobTrackerTest {
         .put("connector_destination_definition_id", UUID2)
         .put("connector_destination_docker_repository", CONNECTOR_REPOSITORY)
         .put("connector_destination_version", CONNECTOR_VERSION)
+        .put(WORKLOAD_ENABLED, true)
         .build();
 
     final StandardDestinationDefinition destinationDefinition = new StandardDestinationDefinition()
@@ -262,6 +276,8 @@ class JobTrackerTest {
     when(actorDefinitionVersionHelper.getDestinationVersion(destinationDefinition, WORKSPACE_ID, DESTINATION_ID)).thenReturn(destinationVersion);
     when(configRepository.getStandardWorkspaceNoSecrets(WORKSPACE_ID, true))
         .thenReturn(new StandardWorkspace().withWorkspaceId(WORKSPACE_ID).withName(WORKSPACE_NAME));
+    when(featureFlagClient.boolVariation(any(), any())).thenReturn(true);
+
     assertCheckConnCorrectMessageForEachState(
         (jobState, output) -> jobTracker.trackCheckConnectionDestination(JOB_ID, UUID2, WORKSPACE_ID, DESTINATION_ID, jobState, output),
         ConfigType.CHECK_CONNECTION_DESTINATION,
@@ -285,6 +301,7 @@ class JobTrackerTest {
         .put(CONNECTOR_SOURCE_DEFINITION_ID_KEY, UUID1)
         .put(CONNECTOR_SOURCE_DOCKER_REPOSITORY_KEY, CONNECTOR_REPOSITORY)
         .put(CONNECTOR_SOURCE_VERSION_KEY, CONNECTOR_VERSION)
+        .put(WORKLOAD_ENABLED, true)
         .build();
 
     final StandardSourceDefinition sourceDefinition = new StandardSourceDefinition()
@@ -298,6 +315,8 @@ class JobTrackerTest {
     when(actorDefinitionVersionHelper.getSourceVersion(sourceDefinition, WORKSPACE_ID, SOURCE_ID)).thenReturn(sourceVersion);
     when(configRepository.getStandardWorkspaceNoSecrets(WORKSPACE_ID, true))
         .thenReturn(new StandardWorkspace().withWorkspaceId(WORKSPACE_ID).withName(WORKSPACE_NAME));
+    when(featureFlagClient.boolVariation(any(), any())).thenReturn(true);
+
     assertDiscoverCorrectMessageForEachState(
         (jobState, output) -> jobTracker.trackDiscover(JOB_ID, UUID1, WORKSPACE_ID, SOURCE_ID, jobState, output),
         metadata,
@@ -312,6 +331,14 @@ class JobTrackerTest {
   @Test
   void testTrackSync() throws ConfigNotFoundException, IOException, JsonValidationException {
     testAsynchronous(ConfigType.SYNC, SYNC_CONFIG_METADATA);
+  }
+
+  @Test
+  void testTrackRefresh() throws ConfigNotFoundException, IOException, JsonValidationException {
+    final Map<String, Object> expectedExtraMetadata = MoreMaps.merge(
+        SYNC_CONFIG_METADATA,
+        Map.of("refresh_types", List.of(RefreshStream.RefreshType.TRUNCATE.toString())));
+    testAsynchronous(ConfigType.REFRESH, expectedExtraMetadata);
   }
 
   @Test
@@ -485,6 +512,20 @@ class JobTrackerTest {
     assertEquals(expected, actual);
   }
 
+  @Test
+  void testGenerateMetadata() {
+    final String jobId = "shouldBeLong";
+    final int attemptId = 2;
+    final ConfigType configType = ConfigType.REFRESH;
+    final Job previousJob = new Job(0, ConfigType.RESET_CONNECTION, null, null, null, null, null, 0L, 0L);
+
+    final Map<String, Object> metadata = jobTracker.generateJobMetadata(jobId, configType, attemptId, Optional.of(previousJob));
+    assertEquals(jobId, metadata.get("job_id"));
+    assertEquals(attemptId, metadata.get("attempt_id"));
+    assertEquals(configType, metadata.get("job_type"));
+    assertEquals(ConfigType.RESET_CONNECTION, metadata.get("previous_job_type"));
+  }
+
   void testAsynchronousAttempt(final ConfigType configType) throws ConfigNotFoundException, IOException, JsonValidationException {
     testAsynchronousAttempt(configType, getJobWithAttemptsMock(configType, LONG_JOB_ID), Collections.emptyMap());
   }
@@ -599,11 +640,9 @@ class JobTrackerTest {
 
     final ConfiguredAirbyteCatalog catalog = new ConfiguredAirbyteCatalog().withStreams(List.of(
         new ConfiguredAirbyteStream()
+            .withStream(new AirbyteStream().withName("stream").withNamespace("namespace"))
             .withSyncMode(SyncMode.FULL_REFRESH)
             .withDestinationSyncMode(DestinationSyncMode.APPEND)));
-
-    final JobSyncConfig jobSyncConfig = new JobSyncConfig()
-        .withConfiguredAirbyteCatalog(catalog);
 
     final AttemptSyncConfig attemptSyncConfig = new AttemptSyncConfig()
         .withSourceConfiguration(Jsons.jsonNode(ImmutableMap.of("key", "some_value")))
@@ -613,7 +652,20 @@ class JobTrackerTest {
     when(jobConfig.getConfigType()).thenReturn(configType);
 
     if (configType == ConfigType.SYNC) {
+      final JobSyncConfig jobSyncConfig = new JobSyncConfig()
+          .withConfiguredAirbyteCatalog(catalog);
       when(jobConfig.getSync()).thenReturn(jobSyncConfig);
+    }
+    if (configType == ConfigType.REFRESH) {
+      final RefreshConfig refreshConfig = new RefreshConfig()
+          .withConfiguredAirbyteCatalog(catalog)
+          .withStreamsToRefresh(
+              catalog.getStreams()
+                  .stream()
+                  .map(s -> new RefreshStream().withRefreshType(RefreshStream.RefreshType.TRUNCATE)
+                      .withStreamDescriptor(new StreamDescriptor().withName(s.getStream().getName()).withNamespace(s.getStream().getNamespace())))
+                  .toList());
+      when(jobConfig.getRefresh()).thenReturn(refreshConfig);
     }
 
     final Attempt attempt = mock(Attempt.class);
@@ -737,7 +789,7 @@ class JobTrackerTest {
 
   private ImmutableMap<String, Object> getJobMetadata(final ConfigType configType, final long jobId) {
     return ImmutableMap.<String, Object>builder()
-        .put(JOB_TYPE, configType)
+        .put(JOB_TYPE, configType != ConfigType.RESET_CONNECTION ? configType : ConfigType.CLEAR)
         .put(JOB_ID_KEY, String.valueOf(jobId))
         .put(ATTEMPT_ID, 700)
         .put("connection_id", CONNECTION_ID)

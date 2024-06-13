@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.workers.process;
@@ -17,6 +17,7 @@ import com.google.common.collect.ImmutableMap;
 import io.airbyte.commons.io.IOs;
 import io.airbyte.commons.io.LineGobbler;
 import io.airbyte.commons.json.Jsons;
+import io.airbyte.commons.logging.MdcScope;
 import io.airbyte.commons.workers.config.WorkerConfigs;
 import io.airbyte.commons.workers.config.WorkerConfigsProvider;
 import io.airbyte.commons.workers.config.WorkerConfigsProvider.ResourceType;
@@ -31,6 +32,8 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Stream;
 import lombok.extern.slf4j.Slf4j;
@@ -157,10 +160,13 @@ class DockerProcessFactoryTest {
 
     final StringBuilder out = new StringBuilder();
     final StringBuilder err = new StringBuilder();
-    LineGobbler.gobble(process.getInputStream(), out::append);
-    LineGobbler.gobble(process.getErrorStream(), err::append);
-
+    final ExecutorService stdoutGobblerExecutor = Executors.newSingleThreadExecutor();
+    final ExecutorService stderrGobblerExecutor = Executors.newSingleThreadExecutor();
+    LineGobbler.gobble(process.getInputStream(), out::append, "unused", MdcScope.DEFAULT_BUILDER, stdoutGobblerExecutor);
+    LineGobbler.gobble(process.getErrorStream(), err::append, "unused", MdcScope.DEFAULT_BUILDER, stderrGobblerExecutor);
     WorkerUtils.gentleClose(process, 20, TimeUnit.SECONDS);
+    stdoutGobblerExecutor.awaitTermination(10, TimeUnit.SECONDS);
+    stderrGobblerExecutor.awaitTermination(10, TimeUnit.SECONDS);
 
     assertEquals(0, process.exitValue(), String.format("Process failed with stdout: %s and stderr: %s", out, err));
     assertEquals("ENV_VAR_1=ENV_VALUE_1", out.toString(), String.format("Output did not contain the expected string. stdout: %s", out));

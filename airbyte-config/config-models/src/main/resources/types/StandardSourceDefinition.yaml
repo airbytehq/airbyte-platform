@@ -19,6 +19,8 @@ properties:
     type: string
   icon:
     type: string
+  iconUrl:
+    type: string
   sourceType:
     type: string
     enum:

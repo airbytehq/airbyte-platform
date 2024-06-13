@@ -1,4 +1,4 @@
-import { cleanup, render, screen } from "@testing-library/react";
+import { act, cleanup, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { IntlProvider } from "react-intl";
 
@@ -52,18 +52,21 @@ const updatedItems: StreamTransform[] = [
   {
     transformType: "update_stream",
     streamDescriptor: { namespace: "apple", name: "harissa_paste" },
-    updateStream: [
-      { transformType: "add_field", fieldName: ["users", "phone"], breaking: false },
-      { transformType: "add_field", fieldName: ["users", "email"], breaking: false },
-      { transformType: "remove_field", fieldName: ["users", "lastName"], breaking: false },
+    updateStream: {
+      streamAttributeTransforms: [],
+      fieldTransforms: [
+        { transformType: "add_field", fieldName: ["users", "phone"], breaking: false },
+        { transformType: "add_field", fieldName: ["users", "email"], breaking: false },
+        { transformType: "remove_field", fieldName: ["users", "lastName"], breaking: false },
 
-      {
-        transformType: "update_field_schema",
-        fieldName: ["users", "address"],
-        breaking: false,
-        updateFieldSchema: { oldSchema: { type: "number" }, newSchema: { type: "string" } },
-      },
-    ],
+        {
+          transformType: "update_field_schema",
+          fieldName: ["users", "address"],
+          breaking: false,
+          updateFieldSchema: { oldSchema: { type: "number" }, newSchema: { type: "string" } },
+        },
+      ],
+    },
   },
 ];
 
@@ -157,7 +160,7 @@ describe("catalog diff modal", () => {
           <CatalogDiffModal
             catalogDiff={mockCatalogDiff}
             catalog={mockCatalog}
-            onClose={() => {
+            onComplete={() => {
               return null;
             }}
           />
@@ -188,7 +191,7 @@ describe("catalog diff modal", () => {
     });
     expect(removedStreamRowWithSyncMode).toBeInTheDocument();
 
-    const updatedStreamsSection = screen.getByRole("list", { name: /table with changes/ });
+    const updatedStreamsSection = screen.getByRole("list", { name: /stream with changes/ });
     expect(updatedStreamsSection).toBeInTheDocument();
 
     const updatedStreamRowWithSyncMode = screen.queryByRole("row", {
@@ -206,7 +209,7 @@ describe("catalog diff modal", () => {
           <CatalogDiffModal
             catalogDiff={mockCatalogDiff}
             catalog={mockCatalog}
-            onClose={() => {
+            onComplete={() => {
               return null;
             }}
           />
@@ -227,7 +230,7 @@ describe("catalog diff modal", () => {
           <CatalogDiffModal
             catalogDiff={mockCatalogDiff}
             catalog={mockCatalog}
-            onClose={() => {
+            onComplete={() => {
               return null;
             }}
           />
@@ -248,7 +251,7 @@ describe("catalog diff modal", () => {
           <CatalogDiffModal
             catalogDiff={mockCatalogDiff}
             catalog={mockCatalog}
-            onClose={() => {
+            onComplete={() => {
               return null;
             }}
           />
@@ -270,6 +273,175 @@ describe("catalog diff modal", () => {
     await userEvent.click(accordionHeader);
     const nullAccordionBodyAgain = screen.queryByRole("table", { name: /removed fields/ });
     expect(nullAccordionBodyAgain).not.toBeInTheDocument();
-    mockCatalogDiff.transforms = [];
+  });
+
+  it("renders breaking a breaking change icon on streams with braeking changes", async () => {
+    mockCatalogDiff.transforms.push(
+      {
+        transformType: "update_stream",
+        streamDescriptor: { namespace: "apple", name: "stream1" },
+        updateStream: {
+          streamAttributeTransforms: [
+            {
+              transformType: "update_primary_key",
+              breaking: true,
+              updatePrimaryKey: {
+                newPrimaryKey: [["prefix"], ["new", "key"]],
+              },
+            },
+          ],
+          fieldTransforms: [],
+        },
+      },
+      {
+        transformType: "update_stream",
+        streamDescriptor: { namespace: "apple", name: "stream2" },
+        updateStream: {
+          streamAttributeTransforms: [
+            {
+              transformType: "update_primary_key",
+              breaking: false,
+              updatePrimaryKey: {
+                newPrimaryKey: [["prefix"], ["new", "key"]],
+              },
+            },
+          ],
+          fieldTransforms: [{ transformType: "remove_field", fieldName: ["users", "lastName"], breaking: true }],
+        },
+      },
+      {
+        transformType: "update_stream",
+        streamDescriptor: { namespace: "apple", name: "stream3" },
+        updateStream: {
+          streamAttributeTransforms: [
+            {
+              transformType: "update_primary_key",
+              breaking: false,
+              updatePrimaryKey: {
+                newPrimaryKey: [["prefix"], ["new", "key"]],
+              },
+            },
+          ],
+          fieldTransforms: [{ transformType: "remove_field", fieldName: ["users", "lastName"], breaking: false }],
+        },
+      }
+    );
+
+    render(
+      <IntlProvider messages={messages} locale="en">
+        <ModalServiceProvider>
+          <CatalogDiffModal
+            catalogDiff={mockCatalogDiff}
+            catalog={mockCatalog}
+            onComplete={() => {
+              return null;
+            }}
+          />
+        </ModalServiceProvider>
+      </IntlProvider>
+    );
+
+    screen.debug();
+
+    expect(
+      within(screen.getByTestId(`toggle-accordion-stream1-stream`)).queryByTestId("breakingChangeStream")
+    ).toBeInTheDocument();
+
+    expect(
+      within(screen.getByTestId(`toggle-accordion-stream2-stream`)).queryByTestId("breakingChangeStream")
+    ).toBeInTheDocument();
+
+    expect(
+      within(screen.getByTestId(`toggle-accordion-stream3-stream`)).queryByTestId("breakingChangeStream")
+    ).not.toBeInTheDocument();
+  });
+
+  describe("source defined key changes", () => {
+    it("renders source defined primary key changes", async () => {
+      const updateWithPrimaryKeyChange: StreamTransform = {
+        transformType: "update_stream",
+        streamDescriptor: { namespace: "apple", name: "harissa_paste" },
+        updateStream: {
+          streamAttributeTransforms: [
+            {
+              transformType: "update_primary_key",
+              breaking: true,
+              updatePrimaryKey: {
+                oldPrimaryKey: [["old_key"]],
+                newPrimaryKey: [["prefix"], ["new", "key"]],
+              },
+            },
+          ],
+          fieldTransforms: [],
+        },
+      };
+      mockCatalogDiff.transforms.push(updateWithPrimaryKeyChange);
+
+      render(
+        <IntlProvider messages={messages} locale="en">
+          <ModalServiceProvider>
+            <CatalogDiffModal
+              catalogDiff={mockCatalogDiff}
+              catalog={mockCatalog}
+              onComplete={() => {
+                return null;
+              }}
+            />
+          </ModalServiceProvider>
+        </IntlProvider>
+      );
+
+      act(() => {
+        screen.getByTestId(`toggle-accordion-harissa_paste-stream`).click();
+      });
+
+      const primaryKeyTable = screen.queryByTestId("streamAttributeTable-update_primary_key");
+      expect(primaryKeyTable).toBeInTheDocument();
+
+      expect(within(primaryKeyTable!).getByTestId("fieldRow")).toHaveAttribute("title", "old_key -> [prefix, new.key]");
+    });
+
+    it("renders source defined primary key changes without old primary key", async () => {
+      const updateWithPrimaryKeyChange: StreamTransform = {
+        transformType: "update_stream",
+        streamDescriptor: { namespace: "apple", name: "harissa_paste" },
+        updateStream: {
+          streamAttributeTransforms: [
+            {
+              transformType: "update_primary_key",
+              breaking: true,
+              updatePrimaryKey: {
+                newPrimaryKey: [["prefix"], ["new", "key"]],
+              },
+            },
+          ],
+          fieldTransforms: [],
+        },
+      };
+      mockCatalogDiff.transforms.push(updateWithPrimaryKeyChange);
+
+      render(
+        <IntlProvider messages={messages} locale="en">
+          <ModalServiceProvider>
+            <CatalogDiffModal
+              catalogDiff={mockCatalogDiff}
+              catalog={mockCatalog}
+              onComplete={() => {
+                return null;
+              }}
+            />
+          </ModalServiceProvider>
+        </IntlProvider>
+      );
+
+      act(() => {
+        screen.getByTestId(`toggle-accordion-harissa_paste-stream`).click();
+      });
+
+      const primaryKeyTable = screen.queryByTestId("streamAttributeTable-update_primary_key");
+      expect(primaryKeyTable).toBeInTheDocument();
+
+      expect(within(primaryKeyTable!).getByTestId("fieldRow")).toHaveAttribute("title", "(none) -> [prefix, new.key]");
+    });
   });
 });

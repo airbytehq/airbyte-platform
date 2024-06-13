@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.commons.auth;
@@ -11,7 +11,7 @@ import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-public enum WorkspaceAuthRole {
+public enum WorkspaceAuthRole implements AuthRoleInterface {
 
   WORKSPACE_ADMIN(400, AuthRoleConstants.WORKSPACE_ADMIN),
   WORKSPACE_EDITOR(300, AuthRoleConstants.WORKSPACE_EDITOR),

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.connector_builder.command_runner;
@@ -27,7 +27,7 @@ public class MockSynchronousPythonCdkCommandRunner extends SynchronousPythonCdkC
   public MockSynchronousPythonCdkCommandRunner(
                                                final AirbyteFileWriter writer,
                                                final AirbyteStreamFactory streamFactory) {
-    super(writer, streamFactory, "", "");
+    super(writer, streamFactory, "", "", "");
   }
 
   public MockSynchronousPythonCdkCommandRunner(
@@ -38,7 +38,7 @@ public class MockSynchronousPythonCdkCommandRunner extends SynchronousPythonCdkC
                                                final InputStream inputStream,
                                                final InputStream errorStream,
                                                final OutputStream outputStream) {
-    super(writer, streamFactory, "", "");
+    super(writer, streamFactory, "", "", "");
     this.shouldThrow = shouldThrow;
     this.exitCode = exitCode;
     this.inputStream = inputStream;
@@ -50,7 +50,8 @@ public class MockSynchronousPythonCdkCommandRunner extends SynchronousPythonCdkC
   AirbyteCdkProcess start(
                           final String cdkCommand,
                           final String configFilepath,
-                          final String catalogFilepath)
+                          final String catalogFilepath,
+                          final String stateFilepath)
       throws AirbyteCdkInvalidInputException, IOException {
     if (this.shouldThrow) {
       throw new IOException();

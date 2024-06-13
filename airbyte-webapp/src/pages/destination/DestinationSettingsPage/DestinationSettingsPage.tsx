@@ -1,5 +1,5 @@
 import React, { useCallback, useMemo } from "react";
-import { FormattedMessage } from "react-intl";
+import { FormattedMessage, useIntl } from "react-intl";
 
 import { Box } from "components/ui/Box";
 import { Text } from "components/ui/Text";
@@ -23,6 +23,7 @@ import { ConnectorCardValues } from "views/Connector/ConnectorForm/types";
 import styles from "./DestinationSettings.module.scss";
 
 export const DestinationSettingsPage: React.FC = () => {
+  const { formatMessage } = useIntl();
   const destination = useGetDestinationFromParams();
   const connectionList = useConnectionList({ destinationId: [destination.destinationId] });
   const connectionsWithDestination = useMemo(() => connectionList?.connections ?? [], [connectionList]);
@@ -76,13 +77,13 @@ export const DestinationSettingsPage: React.FC = () => {
     );
   }, [connectionsWithDestination]);
 
-  const onDeleteClick = useDeleteModal("destination", onDelete, modalAdditionalContent);
+  const onDeleteClick = useDeleteModal("destination", onDelete, modalAdditionalContent, destination.name);
 
   return (
     <div className={styles.content}>
       <ConnectorCard
         formType="destination"
-        title={<FormattedMessage id="destination.destinationSettings" />}
+        title={formatMessage({ id: "destination.destinationSettings" })}
         isEditMode
         formId={formId}
         availableConnectorDefinitions={[destinationDefinition]}

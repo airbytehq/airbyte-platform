@@ -1,3 +1,3 @@
 export * from "./FeatureService";
 export * from "./types";
-export { defaultCloudFeatures, defaultOssFeatures } from "./constants";
+export { defaultCloudFeatures, defaultOssFeatures, defaultEnterpriseFeatures } from "./constants";

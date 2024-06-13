@@ -75,7 +75,10 @@ $icon-width: 18px;
 
 .body {
   width: 100%;
-  padding-left: calc($icon-width + variables.$spacing-sm);
+
+  &:not(&--noPadding) {
+    padding-left: calc($icon-width + variables.$spacing-sm);
+  }
 
   > div:last-child {
     margin-bottom: 0;

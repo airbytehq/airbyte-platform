@@ -3,10 +3,9 @@ import { FormattedMessage, useIntl } from "react-intl";
 
 import { Badge } from "components/ui/Badge";
 import { FlexContainer } from "components/ui/Flex";
-import { Icon } from "components/ui/Icon";
 import { Link } from "components/ui/Link";
 
-import { FeatureItem, useFeature } from "core/services/features";
+import { FeatureItem, IfFeatureEnabled } from "core/services/features";
 import { RoutePaths } from "pages/routePaths";
 
 import styles from "./AirbyteHomeLink.module.scss";
@@ -14,27 +13,30 @@ import AirbyteLogo from "./airbyteLogo.svg?react";
 
 export const AirbyteHomeLink: React.FC = () => {
   const { formatMessage } = useIntl();
-  const showEnterpriseBranding = useFeature(FeatureItem.EnterpriseBranding);
 
   return (
-    <Link
-      to={RoutePaths.Connections}
-      aria-label={formatMessage({ id: "sidebar.homepage" })}
-      className={styles.homeLink}
-    >
-      <FlexContainer direction="column" alignItems="center">
-        <AirbyteLogo height={33} width={33} className={styles.homeLink__logo} />
-        {showEnterpriseBranding && <EnterpriseBadge />}
-      </FlexContainer>
-    </Link>
+    <div className={styles.homeLink}>
+      <Link
+        to={RoutePaths.Connections}
+        aria-label={formatMessage({ id: "sidebar.homepage" })}
+        className={styles.homeLink__link}
+      >
+        <AirbyteLogo height={24} className={styles.homeLink__logo} />
+      </Link>
+      <IfFeatureEnabled feature={FeatureItem.EnterpriseBranding}>
+        <BrandingBadge product="enterprise" />
+      </IfFeatureEnabled>
+      <IfFeatureEnabled feature={FeatureItem.CloudForTeamsBranding}>
+        <BrandingBadge product="cloudForTeams" />
+      </IfFeatureEnabled>
+    </div>
   );
 };
 
-const EnterpriseBadge = () => (
-  <Badge variant="green">
-    <FlexContainer gap="xs" alignItems="center">
-      <Icon type="star" size="sm" />
-      <FormattedMessage id="enterprise.enterprise" />
+const BrandingBadge: React.FC<{ product: "enterprise" | "cloudForTeams" }> = ({ product }) => (
+  <Badge variant={product === "enterprise" ? "darkBlue" : "blue"}>
+    <FlexContainer alignItems="center">
+      <FormattedMessage id={product === "enterprise" ? "enterprise.enterprise" : "cloud.cloudForTeams"} />
     </FlexContainer>
   </Badge>
 );

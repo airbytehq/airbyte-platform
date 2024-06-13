@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.config.helpers;
@@ -8,6 +8,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import io.airbyte.commons.string.Strings;
 import io.airbyte.config.EnvConfigs;
+import io.airbyte.featureflag.TestClient;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.util.List;
@@ -62,7 +63,8 @@ class KubeLoggingConfigTest {
     logPath = randPath + "/logs.log/";
     // The same env vars that log4j2 uses to determine where to publish to determine how to retrieve the
     // log file.
-    final var logs = LogClientSingleton.getInstance().getJobLogFile(envConfigs.getWorkerEnvironment(), envConfigs.getLogConfigs(), Path.of(logPath));
+    final var logs = LogClientSingleton.getInstance().getJobLogFile(envConfigs.getWorkerEnvironment(), envConfigs.getLogConfigs(), Path.of(logPath),
+        new TestClient());
     // Each log line is of the form <time-stamp> <log-level> <log-message>. Further, there might be
     // other log lines from the system running. Join all the lines to simplify assertions.
     final var logsLine = Strings.join(logs, " ");

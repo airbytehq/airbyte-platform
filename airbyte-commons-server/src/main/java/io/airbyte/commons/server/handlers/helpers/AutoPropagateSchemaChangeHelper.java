@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.commons.server.handlers.helpers;
@@ -12,16 +12,15 @@ import io.airbyte.api.model.generated.ConnectionRead;
 import io.airbyte.api.model.generated.DestinationSyncMode;
 import io.airbyte.api.model.generated.FieldTransform;
 import io.airbyte.api.model.generated.NonBreakingChangesPreference;
+import io.airbyte.api.model.generated.StreamAttributeTransform;
 import io.airbyte.api.model.generated.StreamDescriptor;
 import io.airbyte.api.model.generated.StreamTransform;
 import io.airbyte.commons.json.Jsons;
-import io.airbyte.featureflag.FeatureFlagClient;
+import jakarta.ws.rs.NotSupportedException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.UUID;
 import java.util.stream.Collectors;
-import javax.ws.rs.NotSupportedException;
 import lombok.extern.slf4j.Slf4j;
 
 /**
@@ -52,9 +51,9 @@ public class AutoPropagateSchemaChangeHelper {
    */
   @VisibleForTesting
   static String staticFormatDiff(final StreamTransform transform) {
-    String namespace = transform.getStreamDescriptor().getNamespace();
-    String nsPrefix = namespace != null ? String.format("%s.", namespace) : "";
-    String streamName = transform.getStreamDescriptor().getName();
+    final String namespace = transform.getStreamDescriptor().getNamespace();
+    final String nsPrefix = namespace != null ? String.format("%s.", namespace) : "";
+    final String streamName = transform.getStreamDescriptor().getName();
     switch (transform.getTransformType()) {
       case ADD_STREAM -> {
         return String.format("Added new stream '%s%s'", nsPrefix, streamName);
@@ -63,15 +62,15 @@ public class AutoPropagateSchemaChangeHelper {
         return String.format("Removed stream '%s%s'", nsPrefix, streamName);
       }
       case UPDATE_STREAM -> {
-        StringBuilder returnValue = new StringBuilder(String.format("Modified stream '%s%s': ", nsPrefix, streamName));
+        final StringBuilder returnValue = new StringBuilder(String.format("Modified stream '%s%s': ", nsPrefix, streamName));
         if (transform.getUpdateStream() == null) {
           return returnValue.toString();
         }
-        List<String> addedFields = new ArrayList<>();
-        List<String> removedFields = new ArrayList<>();
-        List<String> updatedFields = new ArrayList<>();
+        final List<String> addedFields = new ArrayList<>();
+        final List<String> removedFields = new ArrayList<>();
+        final List<String> updatedFields = new ArrayList<>();
 
-        for (final FieldTransform fieldTransform : transform.getUpdateStream()) {
+        for (final FieldTransform fieldTransform : transform.getUpdateStream().getFieldTransforms()) {
           final String fieldName = String.join(".", fieldTransform.getFieldName());
           switch (fieldTransform.getTransformType()) {
             case ADD_FIELD -> addedFields.add(String.format("'%s'", fieldName));
@@ -80,7 +79,7 @@ public class AutoPropagateSchemaChangeHelper {
             default -> throw new NotSupportedException("Not supported transformation.");
           }
         }
-        List<String> detailedUpdates = new ArrayList<>();
+        final List<String> detailedUpdates = new ArrayList<>();
         if (!addedFields.isEmpty()) {
           detailedUpdates.add(String.format("Added fields [%s]", String.join(", ", addedFields)));
         }
@@ -114,9 +113,7 @@ public class AutoPropagateSchemaChangeHelper {
                                                     final AirbyteCatalog newCatalog,
                                                     final List<StreamTransform> transformations,
                                                     final NonBreakingChangesPreference nonBreakingChangesPreference,
-                                                    final List<DestinationSyncMode> supportedDestinationSyncModes,
-                                                    final FeatureFlagClient featureFlagClient,
-                                                    final UUID workspaceId) {
+                                                    final List<DestinationSyncMode> supportedDestinationSyncModes) {
     final AirbyteCatalog copiedOldCatalog = Jsons.clone(oldCatalog);
     final Map<StreamDescriptor, AirbyteStreamAndConfiguration> oldCatalogPerStream = extractStreamAndConfigPerStreamDescriptor(copiedOldCatalog);
     final Map<StreamDescriptor, AirbyteStreamAndConfiguration> newCatalogPerStream = extractStreamAndConfigPerStreamDescriptor(newCatalog);
@@ -184,13 +181,19 @@ public class AutoPropagateSchemaChangeHelper {
    */
   public static boolean shouldAutoPropagate(final CatalogDiff diff,
                                             final ConnectionRead connectionRead) {
-    final boolean hasDiff = !diff.getTransforms().isEmpty();
+    if (diff.getTransforms().isEmpty()) {
+      // If there's no diff we always propagate because it means there's a diff in a disabled stream, or
+      // some other bit of metadata.
+      // We want to acknowledge it and update to the latest source catalog id, but not bother the user
+      // about it.
+      return true;
+    }
     final boolean nonBreakingChange = !AutoPropagateSchemaChangeHelper.containsBreakingChange(diff);
     final boolean autoPropagationIsEnabledForConnection =
         connectionRead.getNonBreakingChangesPreference() != null
             && (connectionRead.getNonBreakingChangesPreference().equals(NonBreakingChangesPreference.PROPAGATE_COLUMNS)
                 || connectionRead.getNonBreakingChangesPreference().equals(NonBreakingChangesPreference.PROPAGATE_FULLY));
-    return hasDiff && nonBreakingChange && autoPropagationIsEnabledForConnection;
+    return nonBreakingChange && autoPropagationIsEnabledForConnection;
   }
 
   /**
@@ -206,8 +209,13 @@ public class AutoPropagateSchemaChangeHelper {
         continue;
       }
 
-      final boolean anyBreakingFieldTransforms = streamTransform.getUpdateStream().stream().anyMatch(FieldTransform::getBreaking);
-      if (anyBreakingFieldTransforms) {
+      final boolean anyBreakingFieldTransforms =
+          streamTransform.getUpdateStream().getFieldTransforms().stream().anyMatch(FieldTransform::getBreaking);
+
+      final boolean anyBreakingStreamAttributeTransforms =
+          streamTransform.getUpdateStream().getStreamAttributeTransforms().stream().anyMatch(StreamAttributeTransform::getBreaking);
+
+      if (anyBreakingFieldTransforms || anyBreakingStreamAttributeTransforms) {
         return true;
       }
     }

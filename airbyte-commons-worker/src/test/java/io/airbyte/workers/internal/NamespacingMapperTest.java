@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.workers.internal;
@@ -13,10 +13,12 @@ import io.airbyte.commons.json.Jsons;
 import io.airbyte.config.JobSyncConfig.NamespaceDefinitionType;
 import io.airbyte.protocol.models.AirbyteMessage;
 import io.airbyte.protocol.models.AirbyteStateMessage.AirbyteStateType;
+import io.airbyte.protocol.models.AirbyteStreamStatusTraceMessage;
 import io.airbyte.protocol.models.CatalogHelpers;
 import io.airbyte.protocol.models.ConfiguredAirbyteCatalog;
 import io.airbyte.protocol.models.Field;
 import io.airbyte.protocol.models.JsonSchemaType;
+import io.airbyte.protocol.models.StreamDescriptor;
 import io.airbyte.workers.test_utils.AirbyteMessageUtils;
 import java.util.Map;
 import org.junit.jupiter.api.BeforeEach;
@@ -38,6 +40,9 @@ class NamespacingMapperTest {
       Field.of(FIELD_NAME, JsonSchemaType.STRING));
   private AirbyteMessage recordMessage;
   private AirbyteMessage stateMessage;
+  private final AirbyteMessage streamStatusMessage = AirbyteMessageUtils.createStreamStatusTraceMessageWithType(
+      new StreamDescriptor().withName(STREAM_NAME).withNamespace(INPUT_NAMESPACE),
+      AirbyteStreamStatusTraceMessage.AirbyteStreamStatus.COMPLETE);
   private Map<NamespaceStreamName, NamespaceStreamName> destinationToSourceNamespaceAndStreamName;
 
   private static AirbyteMessage createRecordMessage() {
@@ -84,6 +89,15 @@ class NamespacingMapperTest {
     final AirbyteMessage actualMessage = mapper.mapMessage(recordMessage);
 
     assertEquals(expectedMessage, actualMessage);
+
+    final AirbyteMessage expectedStreamStatusMessage = AirbyteMessageUtils.createStreamStatusTraceMessageWithType(
+        new StreamDescriptor().withName(OUTPUT_PREFIX + STREAM_NAME),
+        AirbyteStreamStatusTraceMessage.AirbyteStreamStatus.COMPLETE);
+    expectedStreamStatusMessage.getTrace().getStreamStatus().getStreamDescriptor().withNamespace(INPUT_NAMESPACE);
+
+    final AirbyteMessage actualStreamStatusMessage = mapper.mapMessage(streamStatusMessage);
+
+    assertEquals(expectedStreamStatusMessage, actualStreamStatusMessage);
   }
 
   @Test
@@ -106,9 +120,18 @@ class NamespacingMapperTest {
     assertEquals(originalMessage, recordMessage);
     originalMessage.getRecord().withNamespace(null);
 
+    final AirbyteMessage originalStreamStatusMessage = Jsons.clone(streamStatusMessage);
+    assertEquals(originalStreamStatusMessage, streamStatusMessage);
+    originalStreamStatusMessage.getTrace().getStreamStatus().getStreamDescriptor().withNamespace(null);
+
     final AirbyteMessage expectedMessage = AirbyteMessageUtils.createRecordMessage(OUTPUT_PREFIX + STREAM_NAME, FIELD_NAME, BLUE);
     expectedMessage.getRecord().withNamespace(null);
     final AirbyteMessage actualMessage = mapper.mapMessage(originalMessage);
+
+    final AirbyteMessage expectedStreamStatusMessage = AirbyteMessageUtils.createStreamStatusTraceMessageWithType(
+        new StreamDescriptor().withName(OUTPUT_PREFIX + STREAM_NAME),
+        AirbyteStreamStatusTraceMessage.AirbyteStreamStatus.COMPLETE);
+    final AirbyteMessage actualStreamStatusMessage = mapper.mapMessage(originalStreamStatusMessage);
 
     assertEquals(expectedMessage, actualMessage);
   }
@@ -134,6 +157,12 @@ class NamespacingMapperTest {
     final AirbyteMessage expectedMessage = AirbyteMessageUtils.createRecordMessage(OUTPUT_PREFIX + STREAM_NAME, FIELD_NAME, BLUE);
     final AirbyteMessage actualMessage = mapper.mapMessage(recordMessage);
     assertEquals(expectedMessage, actualMessage);
+
+    final AirbyteMessage expectedStreamStatusMessage = AirbyteMessageUtils.createStreamStatusTraceMessageWithType(
+        new StreamDescriptor().withName(OUTPUT_PREFIX + STREAM_NAME),
+        AirbyteStreamStatusTraceMessage.AirbyteStreamStatus.COMPLETE);
+    final AirbyteMessage actualStreamStatusMessage = mapper.mapMessage(streamStatusMessage);
+    assertEquals(expectedStreamStatusMessage, actualStreamStatusMessage);
   }
 
   @Test
@@ -162,6 +191,14 @@ class NamespacingMapperTest {
     final AirbyteMessage actualMessage = mapper.mapMessage(recordMessage);
 
     assertEquals(expectedMessage, actualMessage);
+
+    final AirbyteMessage expectedStreamStatusMessage = AirbyteMessageUtils.createStreamStatusTraceMessageWithType(
+        new StreamDescriptor().withName(OUTPUT_PREFIX + STREAM_NAME),
+        AirbyteStreamStatusTraceMessage.AirbyteStreamStatus.COMPLETE);
+    expectedStreamStatusMessage.getTrace().getStreamStatus().getStreamDescriptor().withNamespace(expectedNamespace);
+    final AirbyteMessage actualStreamStatusMessage = mapper.mapMessage(streamStatusMessage);
+
+    assertEquals(expectedStreamStatusMessage, actualStreamStatusMessage);
   }
 
   @Test
@@ -190,6 +227,14 @@ class NamespacingMapperTest {
     final AirbyteMessage actualMessage = mapper.mapMessage(recordMessage);
 
     assertEquals(expectedMessage, actualMessage);
+
+    final AirbyteMessage expectedStreamStatusMessage = AirbyteMessageUtils.createStreamStatusTraceMessageWithType(
+        new StreamDescriptor().withName(OUTPUT_PREFIX + STREAM_NAME),
+        AirbyteStreamStatusTraceMessage.AirbyteStreamStatus.COMPLETE);
+    expectedStreamStatusMessage.getTrace().getStreamStatus().getStreamDescriptor().withNamespace(expectedNamespace);
+    final AirbyteMessage actualStreamStatusMessage = mapper.mapMessage(streamStatusMessage);
+
+    assertEquals(expectedStreamStatusMessage, actualStreamStatusMessage);
   }
 
   @Test
@@ -220,6 +265,18 @@ class NamespacingMapperTest {
     final AirbyteMessage actualMessage = mapper.mapMessage(originalMessage);
 
     assertEquals(expectedMessage, actualMessage);
+
+    final AirbyteMessage originalStreamStatusMessage = Jsons.clone(streamStatusMessage);
+    assertEquals(originalStreamStatusMessage, streamStatusMessage);
+    originalStreamStatusMessage.getTrace().getStreamStatus().getStreamDescriptor().withNamespace(null);
+
+    final AirbyteMessage expectedStreamStatusMessage = AirbyteMessageUtils.createStreamStatusTraceMessageWithType(
+        new StreamDescriptor().withName(OUTPUT_PREFIX + STREAM_NAME),
+        AirbyteStreamStatusTraceMessage.AirbyteStreamStatus.COMPLETE);
+    expectedStreamStatusMessage.getTrace().getStreamStatus().getStreamDescriptor().withNamespace(null);
+    final AirbyteMessage actualStreamStatusMessage = mapper.mapMessage(originalStreamStatusMessage);
+
+    assertEquals(expectedStreamStatusMessage, actualStreamStatusMessage);
   }
 
   @Test

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.workers.temporal.sync;
@@ -13,7 +13,6 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.google.common.annotations.VisibleForTesting;
 import datadog.trace.api.Trace;
 import io.airbyte.api.client.AirbyteApiClient;
-import io.airbyte.api.client.invoker.generated.ApiException;
 import io.airbyte.api.client.model.generated.ConnectionIdRequestBody;
 import io.airbyte.api.client.model.generated.ConnectionRead;
 import io.airbyte.api.client.model.generated.ScopeType;
@@ -37,8 +36,6 @@ import io.airbyte.config.JobSyncConfig;
 import io.airbyte.config.NormalizationInput;
 import io.airbyte.config.NormalizationSummary;
 import io.airbyte.config.ResourceRequirements;
-import io.airbyte.config.StandardSyncInput;
-import io.airbyte.config.StandardSyncOutput;
 import io.airbyte.config.helpers.LogConfigs;
 import io.airbyte.config.secrets.SecretsRepositoryReader;
 import io.airbyte.config.secrets.persistence.RuntimeSecretPersistence;
@@ -55,17 +52,20 @@ import io.airbyte.protocol.models.ConfiguredAirbyteCatalog;
 import io.airbyte.workers.ContainerOrchestratorConfig;
 import io.airbyte.workers.Worker;
 import io.airbyte.workers.general.DefaultNormalizationWorker;
-import io.airbyte.workers.helpers.SecretPersistenceConfigHelper;
+import io.airbyte.workers.helper.SecretPersistenceConfigHelper;
 import io.airbyte.workers.internal.NamespacingMapper;
 import io.airbyte.workers.normalization.DefaultNormalizationRunner;
 import io.airbyte.workers.process.ProcessFactory;
 import io.airbyte.workers.sync.NormalizationLauncherWorker;
 import io.airbyte.workers.temporal.TemporalAttemptExecution;
+import io.airbyte.workers.workload.WorkloadIdGenerator;
 import io.micronaut.context.annotation.Value;
 import io.temporal.activity.Activity;
 import io.temporal.activity.ActivityExecutionContext;
+import jakarta.annotation.Nullable;
 import jakarta.inject.Named;
 import jakarta.inject.Singleton;
+import java.io.IOException;
 import java.nio.file.Path;
 import java.util.Map;
 import java.util.Optional;
@@ -94,6 +94,7 @@ public class NormalizationActivityImpl implements NormalizationActivity {
   private final AirbyteApiClient airbyteApiClient;
   private final FeatureFlagClient featureFlagClient;
   private final MetricClient metricClient;
+  private final WorkloadIdGenerator workloadIdGenerator;
 
   private static final String V1_NORMALIZATION_MINOR_VERSION = "3";
 
@@ -109,7 +110,8 @@ public class NormalizationActivityImpl implements NormalizationActivity {
                                    final AirbyteConfigValidator airbyteConfigValidator,
                                    final AirbyteApiClient airbyteApiClient,
                                    final FeatureFlagClient featureFlagClient,
-                                   final MetricClient metricClient) {
+                                   final MetricClient metricClient,
+                                   final WorkloadIdGenerator workloadIdGenerator) {
     this.containerOrchestratorConfig = containerOrchestratorConfig;
     this.workerConfigsProvider = workerConfigsProvider;
     this.processFactory = processFactory;
@@ -123,6 +125,7 @@ public class NormalizationActivityImpl implements NormalizationActivity {
     this.airbyteApiClient = airbyteApiClient;
     this.featureFlagClient = featureFlagClient;
     this.metricClient = metricClient;
+    this.workloadIdGenerator = workloadIdGenerator;
   }
 
   @Trace(operationName = ACTIVITY_TRACE_OPERATION_NAME)
@@ -199,12 +202,12 @@ public class NormalizationActivityImpl implements NormalizationActivity {
     if (organizationId != null && featureFlagClient.boolVariation(UseRuntimeSecretPersistence.INSTANCE, new Organization(organizationId))) {
       try {
         final SecretPersistenceConfig secretPersistenceConfig = airbyteApiClient.getSecretPersistenceConfigApi().getSecretsPersistenceConfig(
-            new SecretPersistenceConfigGetRequestBody().scopeType(ScopeType.ORGANIZATION).scopeId(organizationId));
+            new SecretPersistenceConfigGetRequestBody(ScopeType.ORGANIZATION, organizationId));
         final RuntimeSecretPersistence runtimeSecretPersistence =
             SecretPersistenceConfigHelper.fromApiSecretPersistenceConfig(secretPersistenceConfig);
         fullDestinationConfig =
             secretsRepositoryReader.hydrateConfigFromRuntimeSecretPersistence(input.getDestinationConfiguration(), runtimeSecretPersistence);
-      } catch (final ApiException e) {
+      } catch (final IOException e) {
         throw new RuntimeException(e);
       }
     } else {
@@ -215,51 +218,17 @@ public class NormalizationActivityImpl implements NormalizationActivity {
     return input.withDestinationConfiguration(fullDestinationConfig).withCatalog(catalog);
   }
 
-  /**
-   * This activity is deprecated. It is using a big payload which is not needed, it has been replace
-   * by generateNormalizationInputWithMinimumPayload
-   *
-   * @param syncInput sync input
-   * @param syncOutput sync output
-   * @return normalization output
-   */
-  @SuppressWarnings("InvalidJavadocPosition")
-  @Trace(operationName = ACTIVITY_TRACE_OPERATION_NAME)
-  @Override
-  @Deprecated(forRemoval = true)
-  public NormalizationInput generateNormalizationInput(final StandardSyncInput syncInput, final StandardSyncOutput syncOutput) {
-    return new NormalizationInput()
-        .withConnectionId(syncInput.getConnectionId())
-        .withDestinationConfiguration(syncInput.getDestinationConfiguration())
-        .withCatalog(syncOutput.getOutputCatalog())
-        .withResourceRequirements(getNormalizationResourceRequirements())
-        .withWorkspaceId(syncInput.getWorkspaceId())
-        .withConnectionContext(syncInput.getConnectionContext());
-  }
-
-  @Trace(operationName = ACTIVITY_TRACE_OPERATION_NAME)
-  @Override
-  public NormalizationInput generateNormalizationInputWithMinimumPayload(final JsonNode destinationConfiguration,
-                                                                         final ConfiguredAirbyteCatalog airbyteCatalog,
-                                                                         final UUID workspaceId) {
-    return new NormalizationInput()
-        .withDestinationConfiguration(destinationConfiguration)
-        .withCatalog(airbyteCatalog)
-        .withResourceRequirements(getNormalizationResourceRequirements())
-        .withWorkspaceId(workspaceId);
-  }
-
   @Trace(operationName = ACTIVITY_TRACE_OPERATION_NAME)
   @Override
   public NormalizationInput generateNormalizationInputWithMinimumPayloadWithConnectionId(final JsonNode destinationConfiguration,
-                                                                                         final ConfiguredAirbyteCatalog airbyteCatalog,
+                                                                                         @Deprecated @Nullable final ConfiguredAirbyteCatalog unused,
                                                                                          final UUID workspaceId,
                                                                                          final UUID connectionId,
                                                                                          final UUID organizationId) {
     return new NormalizationInput()
         .withConnectionId(connectionId)
         .withDestinationConfiguration(destinationConfiguration)
-        .withCatalog(airbyteCatalog)
+        .withCatalog(null) // this is null as we will hydrate downstream in the NormalizationActivity
         .withResourceRequirements(getNormalizationResourceRequirements())
         .withWorkspaceId(workspaceId)
         // As much info as we can give.
@@ -320,16 +289,12 @@ public class NormalizationActivityImpl implements NormalizationActivity {
         containerOrchestratorConfig.get(),
         serverPort,
         featureFlagClient,
-        metricClient);
+        metricClient,
+        workloadIdGenerator);
   }
 
   private ConfiguredAirbyteCatalog retrieveCatalog(final UUID connectionId) throws Exception {
-    final ConnectionRead connectionInfo =
-        AirbyteApiClient
-            .retryWithJitterThrows(
-                () -> airbyteApiClient.getConnectionApi()
-                    .getConnection(new ConnectionIdRequestBody().connectionId(connectionId)),
-                "retrieve the connection");
+    final ConnectionRead connectionInfo = airbyteApiClient.getConnectionApi().getConnection(new ConnectionIdRequestBody(connectionId));
     if (connectionInfo.getSyncCatalog() == null) {
       throw new IllegalArgumentException("Connection is missing catalog, which is required");
     }

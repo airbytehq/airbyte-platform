@@ -16,19 +16,30 @@ Cypress.Commands.add("login", (user: TestUserCredentials = testUser) => {
   }
   cy.visit("/login");
 
-  cy.get("[data-testid='login.email']", { timeout: 10000 }).type(user.email);
-  cy.get("[data-testid='login.password']").type(user.password);
-  cy.get("[data-testid='login.submit']").click();
+  cy.get("button")
+    .contains("Continue with Email", { timeout: Cypress.config("pageLoadTimeout") })
+    .click();
+
+  const fillOutLoginForm = (testUser: TestUserCredentials) => {
+    cy.get("input[name=username]").type(testUser.email);
+    cy.get("input[name=password]").type(testUser.password);
+    cy.get("input[name=login]").click();
+  };
+
+  // Keycloak auth may redirect to a different URL to load the login page.
+  // If so, set the LOGIN_URL cypress env to that URL to allow the login to succeed.
+  // If not, set the LOGIN_URL to null to use the base URL as the login URL.
+  Cypress.env("LOGIN_URL")
+    ? cy.origin(Cypress.env("LOGIN_URL"), { args: testUser }, fillOutLoginForm)
+    : fillOutLoginForm(testUser);
   cy.hasNavigatedTo("/workspaces");
 });
 
 // TODO rewrite to logout programmatically, instead of by clicking through the UI. This
 // will be faster and less brittle.
 Cypress.Commands.add("logout", () => {
-  cy.contains("Settings").click({ force: true });
-  // TODO add cy.visitInWorkspace command
-  cy.hasNavigatedTo("/settings");
-  cy.get("[data-testid='button.signout']").click({ force: true });
+  cy.get("[data-testid='sidebar.userDropdown']").click();
+  cy.get("[data-testid='sidebar.signout']").click({ force: true });
   cy.hasNavigatedTo("/login");
 });
 

@@ -1,0 +1,3 @@
+{
+  "cron-validation/invalid-timezone": "The timezone {cronTimezone} is currently not supported. Please chose another timezone."
+}

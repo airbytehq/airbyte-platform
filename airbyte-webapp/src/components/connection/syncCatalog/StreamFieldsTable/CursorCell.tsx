@@ -14,6 +14,7 @@ interface CursorCellProps extends CellContext<TableStream, boolean | undefined> 
   isCursorDefinitionSupported: boolean;
   isCursor: (path: string[]) => boolean;
   onCursorSelect: (cursorPath: string[]) => void;
+  disabled?: boolean;
 }
 
 export const CursorCell: React.FC<CursorCellProps> = ({
@@ -22,6 +23,7 @@ export const CursorCell: React.FC<CursorCellProps> = ({
   isCursorDefinitionSupported,
   isCursor,
   onCursorSelect,
+  disabled,
 }) => {
   if (!isCursorDefinitionSupported) {
     return null;
@@ -34,7 +36,7 @@ export const CursorCell: React.FC<CursorCellProps> = ({
       className={styles.radio}
       checked={isSelectedCursor}
       onChange={() => onCursorSelect(row.original.path)}
-      disabled={!getValue()}
+      disabled={!getValue() || disabled}
       data-testid="field-cursor-radio-button"
     />
   );

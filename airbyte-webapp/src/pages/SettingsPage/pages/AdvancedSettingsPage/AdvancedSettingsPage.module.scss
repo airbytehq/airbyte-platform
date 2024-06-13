@@ -1,0 +1,12 @@
+@use "scss/variables";
+
+.switchSetting {
+  display: grid;
+  row-gap: variables.$spacing-sm;
+  column-gap: variables.$spacing-md;
+  grid-template-columns: auto 1fr;
+
+  &__description {
+    grid-column: 2;
+  }
+}

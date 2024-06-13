@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.db.instance.configs.migrations;
@@ -67,7 +67,7 @@ public class V0_50_11_001__CopyLegacyScheduleToNewScheduleData extends BaseJavaM
     });
   }
 
-  private static JSONB legacyToScheduleData(JSONB value) {
+  private static JSONB legacyToScheduleData(final JSONB value) {
     // JSONB -> Schedule object.
     final var legacySchedule = Jsons.deserialize(value.data(), Schedule.class);
     return JSONB.valueOf(Jsons.serialize(new ScheduleData().withBasicSchedule(new BasicSchedule()

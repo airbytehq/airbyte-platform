@@ -1,6 +1,7 @@
 package io.airbyte.workers.internal.syncpersistence
 
 import io.airbyte.protocol.models.ConfiguredAirbyteCatalog
+import io.airbyte.workers.internal.bookkeeping.ParallelStreamStatsTrackerFactory
 import io.micronaut.context.ApplicationContext
 import io.micronaut.kotlin.context.createBean
 import jakarta.inject.Singleton
@@ -17,14 +18,21 @@ import java.util.UUID
  * that would need to instantiate a SyncPersistence.
  */
 @Singleton
-class SyncPersistenceFactory(private val applicationContext: ApplicationContext) {
+class SyncPersistenceFactory(
+  private val applicationContext: ApplicationContext,
+  private val parallelStreamStatsTrackerFactory: ParallelStreamStatsTrackerFactory,
+) {
   /**
    * Get an instance of SyncPersistence
    */
   fun get(
     connectionId: UUID,
+    workspaceId: UUID,
     jobId: Long,
     attemptNumber: Int,
     catalog: ConfiguredAirbyteCatalog,
-  ): SyncPersistence = applicationContext.createBean(connectionId, jobId, attemptNumber, catalog)
+  ): SyncPersistence {
+    val statsTracker = parallelStreamStatsTrackerFactory.get(connectionId, workspaceId, jobId, attemptNumber)
+    return applicationContext.createBean(statsTracker, connectionId, workspaceId, jobId, attemptNumber, catalog)
+  }
 }

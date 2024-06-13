@@ -2,9 +2,10 @@ import React from "react";
 import { Helmet } from "react-helmet-async";
 import { useIntl } from "react-intl";
 
+import { useCurrentWorkspaceId } from "area/workspace/utils";
+import { useGetWorkspace } from "core/api";
 import { useAuthService } from "core/services/auth";
 import { useLocalStorage } from "core/utils/useLocalStorage";
-import { useCurrentWorkspace } from "hooks/services/useWorkspace";
 
 const AIRBYTE = "Airbyte";
 const SEPARATOR = "|";
@@ -33,12 +34,13 @@ interface WorkspacePrefixedTitleProps {
 }
 
 const WorkspacePrefixedTitle: React.FC<WorkspacePrefixedTitleProps> = ({ title }) => {
-  const workspace = useCurrentWorkspace();
+  const workspaceId = useCurrentWorkspaceId();
+  const workspace = useGetWorkspace(workspaceId, { enabled: !!workspaceId });
 
   return (
     <Helmet
-      titleTemplate={`${workspace.name} ${SEPARATOR} ${AIRBYTE} ${SEPARATOR} %s`}
-      defaultTitle={`${workspace.name} ${SEPARATOR} ${AIRBYTE}`}
+      titleTemplate={`${workspace ? `${workspace.name} ${SEPARATOR} ` : ""}${AIRBYTE} ${SEPARATOR} %s`}
+      defaultTitle={`${workspace ? `${workspace.name} ${SEPARATOR} ` : ""}${AIRBYTE}`}
     >
       <title>{title}</title>
     </Helmet>

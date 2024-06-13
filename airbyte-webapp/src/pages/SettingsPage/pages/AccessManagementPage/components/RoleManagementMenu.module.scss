@@ -1,0 +1,13 @@
+@use "scss/colors";
+@use "scss/variables";
+@use "scss/z-indices";
+
+.roleManagementMenu__popoverPanel {
+  position: relative;
+  z-index: z-indices.$dropdownMenu;
+  width: 300px;
+  background: colors.$foreground;
+  border-radius: variables.$border-radius-sm;
+  box-shadow: variables.$box-shadow-raised;
+  overflow: hidden;
+}

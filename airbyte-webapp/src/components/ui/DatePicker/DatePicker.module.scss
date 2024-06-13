@@ -33,14 +33,38 @@
   padding-right: 25px;
 }
 
+$day-cell-size: 39px;
+$nav-arrow-spacing-top: 12px;
+$nav-arrow-spacing-side: 15px;
+
 :global(.react-datepicker) {
   display: flex;
   color: colors.$dark-blue-900;
   font-family: fonts.$primary;
-  border: variables.$border-thick solid colors.$grey-100;
-  border-radius: variables.$border-radius-md;
-  box-shadow: variables.$box-shadow-popup;
+  box-shadow: variables.$box-shadow-menu;
   background-color: colors.$foreground;
+  padding: variables.$spacing-md;
+  border: unset;
+  border-radius: unset;
+}
+
+:global(.react-datepicker__header.react-datepicker__header) {
+  background-color: colors.$foreground;
+}
+
+/** Arrows **/
+:global(.react-datepicker__navigation--previous) {
+  left: $nav-arrow-spacing-side;
+  top: $nav-arrow-spacing-top;
+  border: variables.$border-thin solid colors.$grey-300;
+  border-radius: variables.$border-radius-xs;
+}
+
+:global(.react-datepicker__navigation--next) {
+  right: $nav-arrow-spacing-side;
+  top: $nav-arrow-spacing-top;
+  border: variables.$border-thin solid colors.$grey-300;
+  border-radius: variables.$border-radius-xs;
 }
 
 /** Main calendar area **/
@@ -60,7 +84,9 @@
 }
 
 :global(.react-datepicker__day-name) {
-  color: colors.$grey-300;
+  color: colors.$dark-blue-900;
+  margin: 0;
+  width: $day-cell-size; // same as day cell size
 }
 
 :global(.react-datepicker__current-month) {
@@ -72,23 +98,31 @@
 :global(.react-datepicker__day) {
   color: colors.$dark-blue-900;
   background-color: transparent;
-  border-radius: variables.$border-radius-xs;
+  border: variables.$border-thin solid colors.$grey-200;
+  outline: variables.$border-thin solid colors.$grey-200;
+  width: $day-cell-size;
+  height: $day-cell-size;
+  line-height: $day-cell-size;
+  margin: 0;
+  border-radius: unset;
 
   &:hover {
     background-color: colors.$grey-100;
+    border-radius: unset;
   }
 }
 
 :global(.react-datepicker__day--outside-month) {
-  color: colors.$grey-300;
+  visibility: hidden;
+  margin-top: -20px; // fix collapsed layout because of days outside month
 }
 
 :global(.react-datepicker__day--today) {
-  background-color: colors.$grey-50;
+  background-color: colors.$grey-100;
   font-weight: 700;
 }
 
-:global(.react-datepicker__day--selected) {
+:global(.react-datepicker__day.react-datepicker__day--selected) {
   color: colors.$foreground;
   background-color: colors.$blue-400;
   font-weight: 700;
@@ -96,6 +130,46 @@
   &:hover {
     background-color: colors.$blue-500;
   }
+}
+
+:global(.react-datepicker__day.react-datepicker__day--in-selecting-range) {
+  color: colors.$inverse;
+  background-color: colors.$blue-50;
+
+  &:hover {
+    background-color: colors.$blue-50;
+  }
+}
+
+:global(.react-datepicker__day.react-datepicker__day--selecting-range-start) {
+  color: colors.$foreground;
+  background-color: colors.$blue-400;
+
+  &:hover {
+    color: colors.$foreground;
+    background-color: colors.$blue-400;
+  }
+}
+
+:global(.react-datepicker__day.react-datepicker__day--in-range) {
+  color: colors.$inverse;
+  background-color: colors.$blue-50;
+
+  &:hover {
+    color: colors.$foreground;
+    background-color: colors.$blue-500;
+  }
+}
+
+:global(.react-datepicker__day.react-datepicker__day--range-start) {
+  color: colors.$foreground;
+  background-color: colors.$blue-400;
+}
+
+:global(.react-datepicker__day--disabled) {
+  color: colors.$grey-300;
+  cursor: not-allowed;
+  position: relative;
 }
 
 :global(.react-datepicker__navigation-icon::before) {

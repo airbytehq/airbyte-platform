@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.commons.server.handlers;
@@ -8,6 +8,7 @@ import static java.util.stream.Collectors.toMap;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.Lists;
+import datadog.trace.api.Trace;
 import io.airbyte.api.model.generated.AirbyteCatalog;
 import io.airbyte.api.model.generated.AirbyteStream;
 import io.airbyte.api.model.generated.AirbyteStreamAndConfiguration;
@@ -21,7 +22,6 @@ import io.airbyte.api.model.generated.ConnectionUpdate;
 import io.airbyte.api.model.generated.DestinationIdRequestBody;
 import io.airbyte.api.model.generated.DestinationRead;
 import io.airbyte.api.model.generated.DestinationSnippetRead;
-import io.airbyte.api.model.generated.FieldTransform;
 import io.airbyte.api.model.generated.JobRead;
 import io.airbyte.api.model.generated.JobStatus;
 import io.airbyte.api.model.generated.OperationCreate;
@@ -36,7 +36,6 @@ import io.airbyte.api.model.generated.SourceRead;
 import io.airbyte.api.model.generated.SourceSnippetRead;
 import io.airbyte.api.model.generated.StreamDescriptor;
 import io.airbyte.api.model.generated.StreamTransform;
-import io.airbyte.api.model.generated.StreamTransform.TransformTypeEnum;
 import io.airbyte.api.model.generated.WebBackendConnectionCreate;
 import io.airbyte.api.model.generated.WebBackendConnectionListItem;
 import io.airbyte.api.model.generated.WebBackendConnectionListRequestBody;
@@ -52,17 +51,22 @@ import io.airbyte.commons.enums.Enums;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.commons.lang.MoreBooleans;
 import io.airbyte.commons.server.converters.ApiPojoConverters;
+import io.airbyte.commons.server.handlers.helpers.AutoPropagateSchemaChangeHelper;
 import io.airbyte.commons.server.handlers.helpers.CatalogConverter;
 import io.airbyte.commons.server.scheduler.EventRunner;
 import io.airbyte.config.ActorCatalog;
 import io.airbyte.config.ActorCatalogFetchEvent;
 import io.airbyte.config.ActorDefinitionVersion;
+import io.airbyte.config.RefreshStream.RefreshType;
 import io.airbyte.config.StandardSourceDefinition;
 import io.airbyte.config.StandardSync;
 import io.airbyte.config.persistence.ActorDefinitionVersionHelper;
 import io.airbyte.config.persistence.ConfigNotFoundException;
 import io.airbyte.config.persistence.ConfigRepository;
 import io.airbyte.config.persistence.ConfigRepository.StandardSyncQuery;
+import io.airbyte.featureflag.FeatureFlagClient;
+import io.airbyte.metrics.lib.ApmTraceUtils;
+import io.airbyte.metrics.lib.MetricTags;
 import io.airbyte.persistence.job.models.JobStatusSummary;
 import io.airbyte.protocol.models.ConfiguredAirbyteCatalog;
 import io.airbyte.validation.json.JsonValidationException;
@@ -89,9 +93,11 @@ import java.util.stream.Collectors;
 @Singleton
 public class WebBackendConnectionsHandler {
 
+  private final ActorDefinitionVersionHandler actorDefinitionVersionHandler;
   private final ConnectionsHandler connectionsHandler;
   private final StateHandler stateHandler;
   private final SourceHandler sourceHandler;
+  private final DestinationDefinitionsHandler destinationDefinitionsHandler;
   private final DestinationHandler destinationHandler;
   private final JobHistoryHandler jobHistoryHandler;
   private final SchedulerHandler schedulerHandler;
@@ -101,20 +107,26 @@ public class WebBackendConnectionsHandler {
   @Deprecated
   private final ConfigRepository configRepositoryDoNotUse;
   private final ActorDefinitionVersionHelper actorDefinitionVersionHelper;
+  private final FeatureFlagClient featureFlagClient;
 
-  public WebBackendConnectionsHandler(final ConnectionsHandler connectionsHandler,
+  public WebBackendConnectionsHandler(final ActorDefinitionVersionHandler actorDefinitionVersionHandler,
+                                      final ConnectionsHandler connectionsHandler,
                                       final StateHandler stateHandler,
                                       final SourceHandler sourceHandler,
+                                      final DestinationDefinitionsHandler destinationDefinitionsHandler,
                                       final DestinationHandler destinationHandler,
                                       final JobHistoryHandler jobHistoryHandler,
                                       final SchedulerHandler schedulerHandler,
                                       final OperationsHandler operationsHandler,
                                       final EventRunner eventRunner,
                                       final ConfigRepository configRepositoryDoNotUse,
-                                      final ActorDefinitionVersionHelper actorDefinitionVersionHelper) {
+                                      final ActorDefinitionVersionHelper actorDefinitionVersionHelper,
+                                      final FeatureFlagClient featureFlagClient) {
+    this.actorDefinitionVersionHandler = actorDefinitionVersionHandler;
     this.connectionsHandler = connectionsHandler;
     this.stateHandler = stateHandler;
     this.sourceHandler = sourceHandler;
+    this.destinationDefinitionsHandler = destinationDefinitionsHandler;
     this.destinationHandler = destinationHandler;
     this.jobHistoryHandler = jobHistoryHandler;
     this.schedulerHandler = schedulerHandler;
@@ -122,6 +134,7 @@ public class WebBackendConnectionsHandler {
     this.eventRunner = eventRunner;
     this.configRepositoryDoNotUse = configRepositoryDoNotUse;
     this.actorDefinitionVersionHelper = actorDefinitionVersionHelper;
+    this.featureFlagClient = featureFlagClient;
   }
 
   public WebBackendWorkspaceStateResult getWorkspaceState(final WebBackendWorkspaceState webBackendWorkspaceState) throws IOException {
@@ -195,14 +208,14 @@ public class WebBackendConnectionsHandler {
   private Map<UUID, SourceSnippetRead> getSourceSnippetReadById(final List<UUID> sourceIds) throws IOException {
     return configRepositoryDoNotUse.getSourceAndDefinitionsFromSourceIds(sourceIds)
         .stream()
-        .map(sourceAndDefinition -> SourceHandler.toSourceSnippetRead(sourceAndDefinition.source(), sourceAndDefinition.definition()))
+        .map(sourceAndDefinition -> sourceHandler.toSourceSnippetRead(sourceAndDefinition.source(), sourceAndDefinition.definition()))
         .collect(Collectors.toMap(SourceSnippetRead::getSourceId, Function.identity()));
   }
 
   private Map<UUID, DestinationSnippetRead> getDestinationSnippetReadById(final List<UUID> destinationIds) throws IOException {
     return configRepositoryDoNotUse.getDestinationAndDefinitionsFromDestinationIds(destinationIds)
         .stream()
-        .map(destinationAndDefinition -> DestinationHandler.toDestinationSnippetRead(destinationAndDefinition.destination(),
+        .map(destinationAndDefinition -> destinationHandler.toDestinationSnippetRead(destinationAndDefinition.destination(),
             destinationAndDefinition.definition()))
         .collect(Collectors.toMap(DestinationSnippetRead::getDestinationId, Function.identity()));
   }
@@ -341,13 +354,17 @@ public class WebBackendConnectionsHandler {
         .geography(connectionRead.getGeography())
         .notifySchemaChanges(connectionRead.getNotifySchemaChanges())
         .notifySchemaChangesByEmail(connectionRead.getNotifySchemaChangesByEmail())
-        .nonBreakingChangesPreference(connectionRead.getNonBreakingChangesPreference());
+        .createdAt(connectionRead.getCreatedAt())
+        .nonBreakingChangesPreference(connectionRead.getNonBreakingChangesPreference())
+        .backfillPreference(connectionRead.getBackfillPreference());
   }
 
   // todo (cgardens) - This logic is a headache to follow it stems from the internal data model not
   // tracking selected streams in any reasonable way. We should update that.
+  @Trace
   public WebBackendConnectionRead webBackendGetConnection(final WebBackendConnectionRequestBody webBackendConnectionRequestBody)
       throws ConfigNotFoundException, IOException, JsonValidationException {
+    ApmTraceUtils.addTagsToTrace(Map.of(MetricTags.CONNECTION_ID, webBackendConnectionRequestBody.getConnectionId().toString()));
     final ConnectionIdRequestBody connectionIdRequestBody = new ConnectionIdRequestBody()
         .connectionId(webBackendConnectionRequestBody.getConnectionId());
 
@@ -485,7 +502,11 @@ public class WebBackendConnectionsHandler {
         }
 
         outputStreamConfig.setDestinationSyncMode(originalStreamConfig.getDestinationSyncMode());
-        if (originalStreamConfig.getPrimaryKey().size() > 0) {
+
+        final boolean hasSourceDefinedPK = stream.getSourceDefinedPrimaryKey() != null && !stream.getSourceDefinedPrimaryKey().isEmpty();
+        if (hasSourceDefinedPK) {
+          outputStreamConfig.setPrimaryKey(stream.getSourceDefinedPrimaryKey());
+        } else if (originalStreamConfig.getPrimaryKey().size() > 0) {
           outputStreamConfig.setPrimaryKey(originalStreamConfig.getPrimaryKey());
         } else {
           outputStreamConfig.setPrimaryKey(discoveredStreamConfig.getPrimaryKey());
@@ -493,8 +514,9 @@ public class WebBackendConnectionsHandler {
 
         outputStreamConfig.setAliasName(originalStreamConfig.getAliasName());
         outputStreamConfig.setSelected(originalConfiguredStream.getConfig().getSelected());
-
+        outputStreamConfig.setSuggested(originalConfiguredStream.getConfig().getSuggested());
         outputStreamConfig.setFieldSelectionEnabled(originalStreamConfig.getFieldSelectionEnabled());
+
         if (outputStreamConfig.getFieldSelectionEnabled()) {
           // TODO(mfsiega-airbyte): support nested fields.
           // If field selection is enabled, populate the selected fields.
@@ -515,6 +537,8 @@ public class WebBackendConnectionsHandler {
               outputStreamConfig.addSelectedFieldsItem(new SelectedFieldInfo().addFieldPathItem(discoveredField));
             }
           }
+        } else {
+          outputStreamConfig.setSelectedFields(List.of());
         }
 
       } else {
@@ -546,11 +570,12 @@ public class WebBackendConnectionsHandler {
    * request, and bundles those newly-created operationIds into the connection update.
    */
   public WebBackendConnectionRead webBackendUpdateConnection(final WebBackendConnectionUpdate webBackendConnectionPatch)
-      throws ConfigNotFoundException, IOException, JsonValidationException {
+      throws ConfigNotFoundException, IOException, JsonValidationException, io.airbyte.data.exceptions.ConfigNotFoundException {
 
     final UUID connectionId = webBackendConnectionPatch.getConnectionId();
     final ConnectionRead originalConnectionRead = connectionsHandler.getConnection(connectionId);
     boolean breakingChange = originalConnectionRead.getBreakingChange() != null && originalConnectionRead.getBreakingChange();
+    final SourceRead source = getSourceRead(originalConnectionRead.getSourceId());
 
     // If there have been changes to the sync catalog, check whether these changes result in or fix a
     // broken connection
@@ -566,7 +591,6 @@ public class WebBackendConnectionsHandler {
             Jsons.object(mostRecentActorCatalog.get().getCatalog(), io.airbyte.protocol.models.AirbyteCatalog.class);
         final StandardSourceDefinition sourceDefinition =
             configRepositoryDoNotUse.getSourceDefinitionFromSource(originalConnectionRead.getSourceId());
-        final SourceRead source = getSourceRead(originalConnectionRead.getSourceId());
         final ActorDefinitionVersion sourceVersion = actorDefinitionVersionHelper.getSourceVersion(
             sourceDefinition,
             source.getWorkspaceId(),
@@ -574,7 +598,7 @@ public class WebBackendConnectionsHandler {
         final CatalogDiff catalogDiff =
             connectionsHandler.getDiff(newAirbyteCatalog, CatalogConverter.toApi(mostRecentAirbyteCatalog, sourceVersion),
                 CatalogConverter.toConfiguredProtocol(newAirbyteCatalog));
-        breakingChange = containsBreakingChange(catalogDiff);
+        breakingChange = AutoPropagateSchemaChangeHelper.containsBreakingChange(catalogDiff);
       }
     }
 
@@ -593,7 +617,7 @@ public class WebBackendConnectionsHandler {
     final ConnectionRead updatedConnectionRead = connectionsHandler.updateConnection(connectionPatch);
 
     // detect if any streams need to be reset based on the patch and initial catalog, if so, reset them
-    resetStreamsIfNeeded(webBackendConnectionPatch, oldConfiguredCatalog, updatedConnectionRead, originalConnectionRead);
+    resetStreamsIfNeeded(webBackendConnectionPatch, oldConfiguredCatalog, updatedConnectionRead, originalConnectionRead, source.getWorkspaceId());
     /*
      * This catalog represents the full catalog that was used to create the configured catalog. It will
      * have all streams that were present at the time. It will have no configuration set.
@@ -619,8 +643,9 @@ public class WebBackendConnectionsHandler {
   private void resetStreamsIfNeeded(final WebBackendConnectionUpdate webBackendConnectionPatch,
                                     final ConfiguredAirbyteCatalog oldConfiguredCatalog,
                                     final ConnectionRead updatedConnectionRead,
-                                    final ConnectionRead oldConnectionRead)
-      throws IOException, JsonValidationException, ConfigNotFoundException {
+                                    final ConnectionRead oldConnectionRead,
+                                    final UUID workspaceId)
+      throws JsonValidationException, ConfigNotFoundException, IOException, io.airbyte.data.exceptions.ConfigNotFoundException {
 
     final UUID connectionId = webBackendConnectionPatch.getConnectionId();
     final Boolean skipReset = webBackendConnectionPatch.getSkipReset() != null ? webBackendConnectionPatch.getSkipReset() : false;
@@ -640,15 +665,18 @@ public class WebBackendConnectionsHandler {
           allStreamToReset.stream().map(ProtocolConverters::streamDescriptorToProtocol).toList();
 
       if (!streamsToReset.isEmpty()) {
-        final ConnectionIdRequestBody connectionIdRequestBody = new ConnectionIdRequestBody().connectionId(connectionId);
-        final ConnectionStateType stateType = getStateType(connectionIdRequestBody);
-
-        if (stateType == ConnectionStateType.LEGACY || stateType == ConnectionStateType.NOT_SET) {
-          streamsToReset = configRepositoryDoNotUse.getAllStreamsForConnection(connectionId);
+        final var destinationVersion = actorDefinitionVersionHandler
+            .getActorDefinitionVersionForDestinationId(new DestinationIdRequestBody().destinationId(oldConnectionRead.getDestinationId()));
+        if (destinationVersion.getSupportsRefreshes()) {
+          eventRunner.refreshConnectionAsync(
+              connectionId,
+              streamsToReset,
+              RefreshType.MERGE);
+        } else {
+          eventRunner.resetConnectionAsync(
+              connectionId,
+              streamsToReset);
         }
-        eventRunner.resetConnection(
-            connectionId,
-            streamsToReset, true);
       }
     }
   }
@@ -737,7 +765,9 @@ public class WebBackendConnectionsHandler {
     connectionCreate.resourceRequirements(webBackendConnectionCreate.getResourceRequirements());
     connectionCreate.sourceCatalogId(webBackendConnectionCreate.getSourceCatalogId());
     connectionCreate.geography(webBackendConnectionCreate.getGeography());
+    connectionCreate.notifySchemaChanges(webBackendConnectionCreate.getNotifySchemaChanges());
     connectionCreate.nonBreakingChangesPreference(webBackendConnectionCreate.getNonBreakingChangesPreference());
+    connectionCreate.backfillPreference(webBackendConnectionCreate.getBackfillPreference());
 
     return connectionCreate;
   }
@@ -772,6 +802,7 @@ public class WebBackendConnectionsHandler {
     connectionPatch.notifySchemaChanges(webBackendConnectionPatch.getNotifySchemaChanges());
     connectionPatch.notifySchemaChangesByEmail(webBackendConnectionPatch.getNotifySchemaChangesByEmail());
     connectionPatch.nonBreakingChangesPreference(webBackendConnectionPatch.getNonBreakingChangesPreference());
+    connectionPatch.backfillPreference(webBackendConnectionPatch.getBackfillPreference());
     connectionPatch.breakingChange(breakingChange);
 
     connectionPatch.operationIds(finalOperationIds);
@@ -791,21 +822,6 @@ public class WebBackendConnectionsHandler {
    */
   private record Stream(String name, String namespace) {
 
-  }
-
-  private boolean containsBreakingChange(final CatalogDiff diff) {
-    for (final StreamTransform streamTransform : diff.getTransforms()) {
-      if (streamTransform.getTransformType() != TransformTypeEnum.UPDATE_STREAM) {
-        continue;
-      }
-
-      final boolean anyBreakingFieldTransforms = streamTransform.getUpdateStream().stream().anyMatch(FieldTransform::getBreaking);
-      if (anyBreakingFieldTransforms) {
-        return true;
-      }
-    }
-
-    return false;
   }
 
 }

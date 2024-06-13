@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.config.persistence;
@@ -14,29 +14,25 @@ import io.airbyte.config.User;
 import io.airbyte.config.UserPermission;
 import io.airbyte.config.secrets.SecretsRepositoryReader;
 import io.airbyte.config.secrets.SecretsRepositoryWriter;
+import io.airbyte.data.helpers.ActorDefinitionVersionUpdater;
+import io.airbyte.data.services.ConnectionService;
 import io.airbyte.data.services.SecretPersistenceConfigService;
 import io.airbyte.data.services.impls.jooq.ActorDefinitionServiceJooqImpl;
 import io.airbyte.data.services.impls.jooq.CatalogServiceJooqImpl;
-import io.airbyte.data.services.impls.jooq.ConnectionServiceJooqImpl;
 import io.airbyte.data.services.impls.jooq.ConnectorBuilderServiceJooqImpl;
 import io.airbyte.data.services.impls.jooq.DestinationServiceJooqImpl;
-import io.airbyte.data.services.impls.jooq.HealthCheckServiceJooqImpl;
 import io.airbyte.data.services.impls.jooq.OAuthServiceJooqImpl;
 import io.airbyte.data.services.impls.jooq.OperationServiceJooqImpl;
-import io.airbyte.data.services.impls.jooq.OrganizationServiceJooqImpl;
 import io.airbyte.data.services.impls.jooq.SourceServiceJooqImpl;
 import io.airbyte.data.services.impls.jooq.WorkspaceServiceJooqImpl;
 import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.featureflag.TestClient;
-import io.airbyte.validation.json.JsonValidationException;
+import io.airbyte.test.utils.BaseConfigDatabaseTest;
 import java.io.IOException;
 import java.util.List;
 import java.util.Optional;
-import java.util.UUID;
-import org.jooq.exception.DataAccessException;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
 class PermissionPersistenceTest extends BaseConfigDatabaseTest {
@@ -52,40 +48,46 @@ class PermissionPersistenceTest extends BaseConfigDatabaseTest {
     setupTestData();
   }
 
-  private void setupTestData() throws IOException, JsonValidationException {
+  private void setupTestData() throws Exception {
     final UserPersistence userPersistence = new UserPersistence(database);
     final FeatureFlagClient featureFlagClient = mock(TestClient.class);
     final SecretsRepositoryReader secretsRepositoryReader = mock(SecretsRepositoryReader.class);
     final SecretsRepositoryWriter secretsRepositoryWriter = mock(SecretsRepositoryWriter.class);
     final SecretPersistenceConfigService secretPersistenceConfigService = mock(SecretPersistenceConfigService.class);
 
+    final ConnectionService connectionService = mock(ConnectionService.class);
+    final ActorDefinitionVersionUpdater actorDefinitionVersionUpdater = mock(ActorDefinitionVersionUpdater.class);
     final ConfigRepository configRepository = new ConfigRepository(
         new ActorDefinitionServiceJooqImpl(database),
         new CatalogServiceJooqImpl(database),
-        new ConnectionServiceJooqImpl(database),
+        connectionService,
         new ConnectorBuilderServiceJooqImpl(database),
         new DestinationServiceJooqImpl(database,
             featureFlagClient,
             secretsRepositoryReader,
             secretsRepositoryWriter,
-            secretPersistenceConfigService),
-        new HealthCheckServiceJooqImpl(database),
+            secretPersistenceConfigService,
+            connectionService,
+            actorDefinitionVersionUpdater),
         new OAuthServiceJooqImpl(database,
             featureFlagClient,
             secretsRepositoryReader,
             secretPersistenceConfigService),
         new OperationServiceJooqImpl(database),
-        new OrganizationServiceJooqImpl(database),
         new SourceServiceJooqImpl(database,
             featureFlagClient,
             secretsRepositoryReader,
             secretsRepositoryWriter,
-            secretPersistenceConfigService),
+            secretPersistenceConfigService,
+            connectionService,
+            actorDefinitionVersionUpdater),
         new WorkspaceServiceJooqImpl(database,
             featureFlagClient,
             secretsRepositoryReader,
             secretsRepositoryWriter,
             secretPersistenceConfigService));
+
+    organizationPersistence.createOrganization(MockData.defaultOrganization());
 
     // write workspace table
     for (final StandardWorkspace workspace : MockData.standardWorkspaces()) {
@@ -102,7 +104,7 @@ class PermissionPersistenceTest extends BaseConfigDatabaseTest {
 
     // write permission table
     for (final Permission permission : MockData.permissions()) {
-      permissionPersistence.writePermission(permission);
+      BaseConfigDatabaseTest.writePermission(permission);
     }
   }
 
@@ -136,19 +138,13 @@ class PermissionPersistenceTest extends BaseConfigDatabaseTest {
   @Test
   void listPermissionByUserTest() throws IOException {
     final List<Permission> permissions = permissionPersistence.listPermissionsByUser(MockData.CREATOR_USER_ID_1);
-    Assertions.assertEquals(2, permissions.size());
+    Assertions.assertEquals(3, permissions.size());
   }
 
   @Test
   void listPermissionByWorkspaceTest() throws IOException {
     final List<Permission> permissions = permissionPersistence.listPermissionByWorkspace(MockData.WORKSPACE_ID_1);
     Assertions.assertEquals(2, permissions.size());
-  }
-
-  @Test
-  void deletePermissionByIdTest() throws IOException {
-    permissionPersistence.deletePermissionById(MockData.PERMISSION_ID_4);
-    Assertions.assertEquals(Optional.empty(), permissionPersistence.getPermission(MockData.PERMISSION_ID_4));
   }
 
   @Test
@@ -226,227 +222,15 @@ class PermissionPersistenceTest extends BaseConfigDatabaseTest {
     Assertions.assertFalse(permissionPersistence.isAuthUserInstanceAdmin(user2.getAuthUserId()));
   }
 
-  @Nested
-  class WritePermission {
+  @Test
+  void isUserOrganizationAdmin() throws IOException {
+    // In MockData we have a user with userId(CREATOR_USER_ID_1), default workspace (WORKSPACE_ID_1)
+    // which is in organization(DEFAULT_ORGANIZATION_ID)
+    // also we have a permission(CREATOR_USER_ID_1, DEFAULT_ORGANIZATION_ID, ORGANIZATION_ADMIN)
+    Assertions.assertTrue(permissionPersistence.isUserOrganizationAdmin(MockData.CREATOR_USER_ID_1));
 
-    @Test
-    void createNewPermission() throws IOException {
-      final Permission permission = new Permission()
-          .withPermissionId(UUID.randomUUID())
-          .withOrganizationId(MockData.ORGANIZATION_ID_1)
-          .withPermissionType(PermissionType.ORGANIZATION_ADMIN)
-          .withUserId(MockData.CREATOR_USER_ID_1);
-
-      Assertions.assertDoesNotThrow(() -> permissionPersistence.writePermission(permission));
-      Assertions.assertEquals(permission, permissionPersistence.getPermission(permission.getPermissionId()).orElseThrow());
-    }
-
-    @Test
-    void createPermissionExceptionTest() {
-      // writing permissions against Permission table constraint should throw db exception.
-
-      // invalid permission 1: permission type cannot be null
-      final Permission invalidPermission1 = new Permission()
-          .withPermissionId(UUID.randomUUID())
-          .withUserId(UUID.randomUUID())
-          .withOrganizationId(UUID.randomUUID())
-          .withPermissionType(null);
-
-      // invalid permission 2: for workspace level permission, org id should be null and workspace id
-      // cannot be null
-      final Permission invalidPermission2 = new Permission()
-          .withPermissionId(UUID.randomUUID())
-          .withUserId(UUID.randomUUID())
-          .withOrganizationId(UUID.randomUUID())
-          .withPermissionType(PermissionType.WORKSPACE_OWNER);
-
-      // invalid permission 3: for organization level permission, org id cannot be null and workspace id
-      // should be null
-      final Permission invalidPermission3 = new Permission()
-          .withPermissionId(UUID.randomUUID())
-          .withUserId(UUID.randomUUID())
-          .withWorkspaceId(UUID.randomUUID())
-          .withPermissionType(PermissionType.ORGANIZATION_MEMBER);
-
-      Assertions.assertThrows(DataAccessException.class, () -> permissionPersistence.writePermission(invalidPermission1));
-      Assertions.assertThrows(DataAccessException.class, () -> permissionPersistence.writePermission(invalidPermission2));
-      Assertions.assertThrows(DataAccessException.class, () -> permissionPersistence.writePermission(invalidPermission3));
-    }
-
-  }
-
-  /**
-   * Note that while the Persistence layer allows updates to ID fields, the API layer does not. Since
-   * blocking such updates is an explicit API-level concern, our persistence layer tests cover updates
-   * to ID fields.
-   */
-  @Nested
-  class UpdatePermission {
-
-    final Permission instanceAdminPermission = MockData.permission1;
-    final Permission workspaceAdminPermission = MockData.permission4;
-    final Permission organizationReaderPermission = MockData.permission7;
-
-    @Test
-    void updateWorkspacePermission() throws IOException {
-      final Permission update = workspaceAdminPermission
-          .withPermissionType(PermissionType.WORKSPACE_READER) // change to a different workspace-level permission type
-          .withWorkspaceId(MockData.WORKSPACE_ID_2) // change to a different workspace ID
-          .withUserId(MockData.CREATOR_USER_ID_1); // change to a different user ID
-
-      Assertions.assertDoesNotThrow(() -> permissionPersistence.writePermission(update));
-      final Permission updated = permissionPersistence.getPermission(update.getPermissionId()).orElseThrow();
-
-      Assertions.assertEquals(update, updated);
-    }
-
-    @Test
-    void updateOrganizationPermission() throws IOException {
-      final Permission update = organizationReaderPermission
-          .withPermissionType(PermissionType.ORGANIZATION_EDITOR) // change to a different organization-level permission type
-          .withOrganizationId(MockData.ORGANIZATION_ID_3) // change to a different organization ID
-          .withUserId(MockData.CREATOR_USER_ID_1); // change to a different user ID
-
-      Assertions.assertDoesNotThrow(() -> permissionPersistence.writePermission(update));
-      final Permission updated = permissionPersistence.getPermission(update.getPermissionId()).orElseThrow();
-
-      Assertions.assertEquals(update, updated);
-    }
-
-    @Test
-    void updateInstanceAdminPermission() throws IOException {
-      final Permission update = instanceAdminPermission
-          .withUserId(MockData.CREATOR_USER_ID_2); // change to a different user ID
-
-      Assertions.assertDoesNotThrow(() -> permissionPersistence.writePermission(update));
-      final Permission updated = permissionPersistence.getPermission(update.getPermissionId()).orElseThrow();
-
-      Assertions.assertEquals(instanceAdminPermission.getPermissionId(), updated.getPermissionId());
-      Assertions.assertEquals(PermissionType.INSTANCE_ADMIN, updated.getPermissionType());
-      Assertions.assertEquals(MockData.CREATOR_USER_ID_2, updated.getUserId());
-    }
-
-    @Test
-    void shouldNotUpdateInstanceAdminPermissionTypeToOthers() {
-      final Permission update = new Permission()
-          .withPermissionId(instanceAdminPermission.getPermissionId())
-          .withPermissionType(PermissionType.ORGANIZATION_EDITOR); // another permission type
-      Assertions.assertThrows(DataAccessException.class, () -> permissionPersistence.writePermission(update));
-    }
-
-    @Test
-    void shouldNotUpdateWorkspaceLevelPermissionTypeToOrganizationLevelPermissions() {
-      final Permission update = new Permission()
-          .withPermissionId(workspaceAdminPermission.getPermissionId())
-          .withPermissionType(PermissionType.ORGANIZATION_EDITOR); // org level permission type
-      Assertions.assertThrows(DataAccessException.class, () -> permissionPersistence.writePermission(update));
-    }
-
-    @Test
-    void shouldNotUpdateOrganizationLevelPermissionTypeToWorkspaceLevelPermissions() {
-      final Permission update = new Permission()
-          .withPermissionId(organizationReaderPermission.getPermissionId())
-          .withPermissionType(PermissionType.WORKSPACE_ADMIN); // workspace level permission type
-      Assertions.assertThrows(DataAccessException.class, () -> permissionPersistence.writePermission(update));
-    }
-
-  }
-
-  @Nested
-  class SpecializedCases {
-
-    @Test
-    void cannotDeleteLastOrganizationAdmin() throws IOException {
-      final Permission orgAdmin1 = new Permission()
-          .withPermissionId(UUID.randomUUID())
-          .withOrganizationId(MockData.ORGANIZATION_ID_2)
-          .withPermissionType(PermissionType.ORGANIZATION_ADMIN)
-          .withUserId(MockData.CREATOR_USER_ID_1);
-      final Permission orgAdmin2 = new Permission()
-          .withPermissionId(UUID.randomUUID())
-          .withOrganizationId(MockData.ORGANIZATION_ID_2)
-          .withPermissionType(PermissionType.ORGANIZATION_ADMIN)
-          .withUserId(MockData.CREATOR_USER_ID_2);
-
-      permissionPersistence.writePermission(orgAdmin1);
-      permissionPersistence.writePermission(orgAdmin2);
-
-      Assertions.assertDoesNotThrow(() -> permissionPersistence.deletePermissionById(orgAdmin1.getPermissionId()));
-      final DataAccessException thrown =
-          Assertions.assertThrows(DataAccessException.class, () -> permissionPersistence.deletePermissionById(orgAdmin2.getPermissionId()));
-
-      Assertions.assertTrue(thrown.getCause() instanceof SQLOperationNotAllowedException);
-
-      // make sure the last org-admin permission is still present in the DB
-      Assertions.assertEquals(orgAdmin2, permissionPersistence.getPermission(orgAdmin2.getPermissionId()).orElseThrow());
-    }
-
-    @Test
-    void cannotDemoteLastOrganizationAdmin() throws IOException {
-      final Permission orgAdmin1 = new Permission()
-          .withPermissionId(UUID.randomUUID())
-          .withOrganizationId(MockData.ORGANIZATION_ID_2)
-          .withPermissionType(PermissionType.ORGANIZATION_ADMIN)
-          .withUserId(MockData.CREATOR_USER_ID_1);
-      final Permission orgAdmin2 = new Permission()
-          .withPermissionId(UUID.randomUUID())
-          .withOrganizationId(MockData.ORGANIZATION_ID_2)
-          .withPermissionType(PermissionType.ORGANIZATION_ADMIN)
-          .withUserId(MockData.CREATOR_USER_ID_2);
-
-      permissionPersistence.writePermission(orgAdmin1);
-      permissionPersistence.writePermission(orgAdmin2);
-
-      Assertions.assertDoesNotThrow(() -> permissionPersistence.writePermission(orgAdmin1.withPermissionType(PermissionType.ORGANIZATION_EDITOR)));
-
-      final Permission demotionUpdate = orgAdmin2
-          .withPermissionId(orgAdmin2.getPermissionId())
-          .withPermissionType(PermissionType.ORGANIZATION_EDITOR);
-
-      final DataAccessException thrown = Assertions.assertThrows(DataAccessException.class,
-          () -> permissionPersistence.writePermission(demotionUpdate));
-
-      Assertions.assertTrue(thrown.getCause() instanceof SQLOperationNotAllowedException);
-
-      // make sure the last org-admin is still an org-admin, ie the update did not persist
-      Assertions.assertEquals(
-          PermissionType.ORGANIZATION_ADMIN,
-          permissionPersistence.getPermission(orgAdmin2.getPermissionId()).orElseThrow().getPermissionType());
-    }
-
-    @Test
-    void cannotChangeLastOrganizationAdminToADifferentOrg() throws IOException {
-      final Permission orgAdmin1 = new Permission()
-          .withPermissionId(UUID.randomUUID())
-          .withOrganizationId(MockData.ORGANIZATION_ID_2)
-          .withPermissionType(PermissionType.ORGANIZATION_ADMIN)
-          .withUserId(MockData.CREATOR_USER_ID_1);
-      final Permission orgAdmin2 = new Permission()
-          .withPermissionId(UUID.randomUUID())
-          .withOrganizationId(MockData.ORGANIZATION_ID_2)
-          .withPermissionType(PermissionType.ORGANIZATION_ADMIN)
-          .withUserId(MockData.CREATOR_USER_ID_2);
-
-      permissionPersistence.writePermission(orgAdmin1);
-      permissionPersistence.writePermission(orgAdmin2);
-
-      Assertions.assertDoesNotThrow(() -> permissionPersistence.writePermission(orgAdmin1.withPermissionType(PermissionType.ORGANIZATION_EDITOR)));
-
-      final Permission demotionUpdate = orgAdmin2
-          .withPermissionId(orgAdmin2.getPermissionId())
-          .withOrganizationId(MockData.ORGANIZATION_ID_3);
-
-      final DataAccessException thrown = Assertions.assertThrows(DataAccessException.class,
-          () -> permissionPersistence.writePermission(demotionUpdate));
-
-      Assertions.assertTrue(thrown.getCause() instanceof SQLOperationNotAllowedException);
-
-      // make sure the last org-admin is still in the original org, ie the update did not persist
-      Assertions.assertEquals(
-          MockData.ORGANIZATION_ID_2,
-          permissionPersistence.getPermission(orgAdmin2.getPermissionId()).orElseThrow().getOrganizationId());
-    }
-
+    // In MockData, user(CREATOR_USER_ID_2) does not have an org_admin permission, so should be false
+    Assertions.assertFalse(permissionPersistence.isUserOrganizationAdmin(MockData.CREATOR_USER_ID_2));
   }
 
 }

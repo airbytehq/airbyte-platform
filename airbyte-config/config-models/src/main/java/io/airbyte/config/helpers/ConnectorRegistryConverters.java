@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.config.helpers;
@@ -8,6 +8,7 @@ import io.airbyte.commons.version.AirbyteProtocolVersion;
 import io.airbyte.commons.version.Version;
 import io.airbyte.config.ActorDefinitionBreakingChange;
 import io.airbyte.config.ActorDefinitionVersion;
+import io.airbyte.config.BreakingChangeScope;
 import io.airbyte.config.ConnectorRegistryDestinationDefinition;
 import io.airbyte.config.ConnectorRegistrySourceDefinition;
 import io.airbyte.config.StandardDestinationDefinition;
@@ -16,12 +17,12 @@ import io.airbyte.config.StandardSourceDefinition.SourceType;
 import io.airbyte.config.SupportLevel;
 import io.airbyte.config.VersionBreakingChange;
 import io.airbyte.protocol.models.ConnectorSpecification;
+import jakarta.annotation.Nullable;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.stream.Collectors;
-import javax.annotation.Nullable;
 
 /**
  * Utility class for converting between the connector registry and platform types.
@@ -40,6 +41,7 @@ public class ConnectorRegistryConverters {
         .withSourceDefinitionId(def.getSourceDefinitionId())
         .withName(def.getName())
         .withIcon(def.getIcon())
+        .withIconUrl(def.getIconUrl())
         .withSourceType(toStandardSourceType(def.getSourceType()))
         .withTombstone(def.getTombstone())
         .withPublic(def.getPublic())
@@ -60,6 +62,7 @@ public class ConnectorRegistryConverters {
         .withDestinationDefinitionId(def.getDestinationDefinitionId())
         .withName(def.getName())
         .withIcon(def.getIcon())
+        .withIconUrl(def.getIconUrl())
         .withTombstone(def.getTombstone())
         .withPublic(def.getPublic())
         .withCustom(def.getCustom())
@@ -112,7 +115,8 @@ public class ConnectorRegistryConverters {
         .withReleaseStage(def.getReleaseStage())
         .withSupportLevel(def.getSupportLevel() == null ? SupportLevel.NONE : def.getSupportLevel())
         .withNormalizationConfig(def.getNormalizationConfig())
-        .withSupportsDbt(def.getSupportsDbt());
+        .withSupportsDbt(def.getSupportsDbt())
+        .withSupportsRefreshes(def.getSupportsRefreshes() != null && def.getSupportsRefreshes());
   }
 
   /**
@@ -149,7 +153,8 @@ public class ConnectorRegistryConverters {
             .withVersion(new Version(entry.getKey()))
             .withMigrationDocumentationUrl(entry.getValue().getMigrationDocumentationUrl())
             .withUpgradeDeadline(entry.getValue().getUpgradeDeadline())
-            .withMessage(entry.getValue().getMessage()))
+            .withMessage(entry.getValue().getMessage())
+            .withScopedImpact(getValidatedScopedImpact(entry.getValue().getScopedImpact())))
         .collect(Collectors.toList());
   }
 
@@ -188,6 +193,17 @@ public class ConnectorRegistryConverters {
     } catch (final IllegalArgumentException e) {
       throw new IllegalArgumentException("Invalid Semver version for docker image tag: " + dockerImageTag, e);
     }
+  }
+
+  /**
+   * jsonschema2Pojo does not support oneOf and const Therefore, the type checking for
+   * BreakingChangeScope cannot take more specific subtypes. However, we want to validate that each
+   * scope can be correctly resolved to an internal type that we'll use for processing later (e.g.
+   * StreamBreakingChangeScope), So we validate that here at runtime instead.
+   */
+  private static List<BreakingChangeScope> getValidatedScopedImpact(final List<BreakingChangeScope> scopedImpact) {
+    scopedImpact.forEach(BreakingChangeScopeFactory::validateBreakingChangeScope);
+    return scopedImpact;
   }
 
 }

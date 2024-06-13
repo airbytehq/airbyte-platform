@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.test.utils;
@@ -19,16 +19,17 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
-import io.airbyte.api.client.AirbyteApiClient;
-import io.airbyte.api.client.invoker.generated.ApiException;
-import io.airbyte.api.client.model.generated.JobInfoRead;
-import io.airbyte.api.client.model.generated.Pagination;
+import dev.failsafe.Failsafe;
+import dev.failsafe.RetryPolicy;
+import io.airbyte.api.client.model.generated.ConnectionState;
+import io.airbyte.api.client.model.generated.StreamDescriptor;
+import io.airbyte.api.client.model.generated.StreamState;
 import io.airbyte.api.client.model.generated.StreamStatusJobType;
-import io.airbyte.api.client.model.generated.StreamStatusListRequestBody;
 import io.airbyte.api.client.model.generated.StreamStatusRead;
 import io.airbyte.api.client.model.generated.StreamStatusReadList;
 import io.airbyte.api.client.model.generated.StreamStatusRunState;
 import io.airbyte.db.Database;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -37,6 +38,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
+import org.junit.jupiter.api.Assertions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -79,30 +81,36 @@ public class Asserts {
       throws Exception {
     // NOTE: this is an unusual use of retry. The intention is to tolerate eventual consistency if e.g.,
     // the sync is marked complete but the destination tables aren't finalized yet.
-    AirbyteApiClient.retryWithJitterThrows(() -> {
-      try {
-        Set<SchemaTableNamePair> sourceTables = new HashSet<>();
-        for (String inputSchema : inputSchemas) {
-          sourceTables.addAll(Databases.listAllTables(source, inputSchema));
-        }
+    Failsafe.with(RetryPolicy.builder()
+        .withBackoff(Duration.ofSeconds(JITTER_MAX_INTERVAL_SECS), Duration.ofSeconds(FINAL_INTERVAL_SECS))
+        .withMaxRetries(MAX_TRIES)
+        .build()).run(() -> assertSourceAndDestinationInSync(source, destination, inputSchemas, outputSchema, withNormalizedTable, withScdTable));
+  }
 
-        final Set<SchemaTableNamePair> expDestTables = addAirbyteGeneratedTables(outputSchema, withNormalizedTable, withScdTable, sourceTables);
+  private static void assertSourceAndDestinationInSync(final Database source,
+                                                       final Database destination,
+                                                       final Set<String> inputSchemas,
+                                                       final String outputSchema,
+                                                       final boolean withNormalizedTable,
+                                                       final boolean withScdTable)
+      throws Exception {
+    Set<SchemaTableNamePair> sourceTables = new HashSet<>();
+    for (String inputSchema : inputSchemas) {
+      sourceTables.addAll(Databases.listAllTables(source, inputSchema));
+    }
 
-        final Set<SchemaTableNamePair> destinationTables = Databases.listAllTables(destination, outputSchema);
-        assertEquals(expDestTables, destinationTables,
-            String.format("streams did not match.\n exp stream names: %s\n destination stream names: %s\n", expDestTables, destinationTables));
+    final Set<SchemaTableNamePair> expDestTables = addAirbyteGeneratedTables(outputSchema, withNormalizedTable, withScdTable, sourceTables);
 
-        for (final SchemaTableNamePair pair : sourceTables) {
-          final List<JsonNode> sourceRecords = Databases.retrieveRecordsFromDatabase(source, pair.getFullyQualifiedTableName());
-          // generate the raw stream with the correct schema
-          // retrieve and assert the recordds
-          assertRawDestinationContains(destination, sourceRecords, outputSchema, pair.tableName());
-        }
-      } catch (final Exception e) {
-        return e;
-      }
-      return null;
-    }, "assert source and destination in sync", JITTER_MAX_INTERVAL_SECS, FINAL_INTERVAL_SECS, MAX_TRIES);
+    final Set<SchemaTableNamePair> destinationTables = Databases.listAllTables(destination, outputSchema);
+    assertEquals(expDestTables, destinationTables,
+        String.format("streams did not match.\n exp stream names: %s\n destination stream names: %s\n", expDestTables, destinationTables));
+
+    for (final SchemaTableNamePair pair : sourceTables) {
+      final List<JsonNode> sourceRecords = Databases.retrieveRecordsFromDatabase(source, pair.getFullyQualifiedTableName());
+      // generate the raw stream with the correct schema
+      // retrieve and assert the records
+      assertRawDestinationContains(destination, sourceRecords, outputSchema, pair.tableName());
+    }
   }
 
   public static void assertRawDestinationContains(final Database dst,
@@ -135,11 +143,15 @@ public class Asserts {
       throws Exception {
     final String finalDestinationTable = String.format("%s.%s%s", outputSchema, OUTPUT_STREAM_PREFIX, streamName.replace(".", "_"));
     final List<JsonNode> destinationRecords = Databases.retrieveRecordsFromDatabase(dst, finalDestinationTable);
+    for (final var record : destinationRecords) {
+      LOGGER.info("destination record: {}", record.toPrettyString());
+    }
     dropAirbyteSystemColumns(destinationRecords);
 
     assertEquals(sourceRecords.size(), destinationRecords.size(),
         String.format("destination contains: %s record. source contains: %s", sourceRecords.size(), destinationRecords.size()));
     for (final JsonNode sourceStreamRecord : sourceRecords) {
+      LOGGER.info("sourceStreamRecord: {}", sourceStreamRecord.toPrettyString());
       assertTrue(recordIsContainedIn(sourceStreamRecord, destinationRecords));
       assertTrue(
           destinationRecords.stream()
@@ -190,27 +202,46 @@ public class Asserts {
    *
    * @param workspaceId The workspace that contains the connection.
    * @param connectionId The connection that just executed a sync or reset.
-   * @param jobInfoRead The job associated with the sync execution.
+   * @param jobId The job associated with the sync execution.
    * @param expectedRunState The expected stream status for each stream in the connection for the most
    *        recent job and attempt.
    * @param expectedJobType The expected type of the stream status.
    */
   public static void assertStreamStatuses(
-                                          final AirbyteApiClient apiClient,
+                                          final AcceptanceTestHarness testHarness,
                                           final UUID workspaceId,
                                           final UUID connectionId,
-                                          final JobInfoRead jobInfoRead,
+                                          final Long jobId,
                                           final StreamStatusRunState expectedRunState,
-                                          final StreamStatusJobType expectedJobType) {
-    final var jobId = jobInfoRead.getJob().getId();
+                                          final StreamStatusJobType expectedJobType)
+      throws Exception {
+    final var jobInfoRead = testHarness.getJobInfoRead(jobId);
     final var attemptNumber = jobInfoRead.getAttempts().size() - 1;
 
-    final List<StreamStatusRead> streamStatuses = fetchStreamStatus(apiClient, workspaceId, connectionId, jobId, attemptNumber);
+    final List<StreamStatusRead> streamStatuses = fetchStreamStatus(testHarness, workspaceId, connectionId, jobId, attemptNumber);
     assertNotNull(streamStatuses);
     final List<StreamStatusRead> filteredStreamStatuses = streamStatuses.stream().filter(s -> expectedJobType.equals(s.getJobType())).toList();
     assertFalse(filteredStreamStatuses.isEmpty());
     filteredStreamStatuses.forEach(status -> assertEquals(expectedRunState, status.getRunState()));
 
+  }
+
+  /**
+   * Assert that all the expected stream descriptors are contained in the state for the given
+   * connection.
+   *
+   * @param connectionId to check the state
+   * @param expectedStreamDescriptors the streams we expect to find
+   * @throws Exception if the API requests fail
+   */
+  public static void assertStreamStateContainsStream(final AcceptanceTestHarness testHarness,
+                                                     final UUID connectionId,
+                                                     final List<StreamDescriptor> expectedStreamDescriptors)
+      throws Exception {
+    final ConnectionState state = testHarness.getConnectionState(connectionId);
+    final List<StreamDescriptor> streamDescriptors = state.getStreamState().stream().map(StreamState::getStreamDescriptor).toList();
+
+    Assertions.assertTrue(streamDescriptors.containsAll(expectedStreamDescriptors) && expectedStreamDescriptors.containsAll(streamDescriptors));
   }
 
   /**
@@ -223,29 +254,23 @@ public class Asserts {
    * @param attempt The attempt number associated with the sync execution.
    */
   private static List<StreamStatusRead> fetchStreamStatus(
-                                                          final AirbyteApiClient apiClient,
+                                                          final AcceptanceTestHarness testHarness,
                                                           final UUID workspaceId,
                                                           final UUID connectionId,
                                                           final Long jobId,
                                                           final Integer attempt) {
     List<StreamStatusRead> results = List.of();
-    final StreamStatusListRequestBody streamStatusListRequestBody = new StreamStatusListRequestBody()
-        .connectionId(connectionId)
-        .jobId(jobId)
-        .attemptNumber(attempt)
-        .workspaceId(workspaceId)
-        .pagination(new Pagination().pageSize(100).rowOffset(0));
 
     int count = 0;
     while (count < 60 && results.isEmpty()) {
-      LOGGER.debug("Fetching stream status for {}...", streamStatusListRequestBody);
+      LOGGER.debug("Fetching stream status for {} {} {} {}...", connectionId, jobId, attempt, workspaceId);
       try {
-        final StreamStatusReadList result = apiClient.getStreamStatusesApi().getStreamStatuses(streamStatusListRequestBody);
+        final StreamStatusReadList result = testHarness.getStreamStatuses(connectionId, jobId, attempt, workspaceId);
         if (result != null) {
           LOGGER.debug("Stream status result for connection {}: {}", connectionId, result);
           results = result.getStreamStatuses();
         }
-      } catch (final ApiException e) {
+      } catch (final Exception e) {
         LOGGER.info("Unable to call stream status API.", e);
       }
       count++;

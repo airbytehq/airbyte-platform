@@ -1,21 +1,18 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.workers;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import io.airbyte.api.client.AirbyteApiClient;
-import io.airbyte.api.client.generated.ConnectionApi;
-import io.airbyte.api.client.generated.JobsApi;
-import io.airbyte.api.client.generated.SecretsPersistenceConfigApi;
-import io.airbyte.api.client.generated.StateApi;
-import io.airbyte.api.client.invoker.generated.ApiException;
+import io.airbyte.api.client.model.generated.ConnectionAndJobIdRequestBody;
 import io.airbyte.api.client.model.generated.ConnectionIdRequestBody;
 import io.airbyte.api.client.model.generated.ConnectionRead;
 import io.airbyte.api.client.model.generated.ConnectionState;
 import io.airbyte.api.client.model.generated.ConnectionStateCreateOrUpdate;
 import io.airbyte.api.client.model.generated.ConnectionStateType;
+import io.airbyte.api.client.model.generated.DestinationIdRequestBody;
 import io.airbyte.api.client.model.generated.JobOptionalRead;
 import io.airbyte.api.client.model.generated.ScopeType;
 import io.airbyte.api.client.model.generated.SecretPersistenceConfig;
@@ -32,9 +29,9 @@ import io.airbyte.config.StateWrapper;
 import io.airbyte.config.helpers.StateMessageHelper;
 import io.airbyte.config.secrets.SecretsRepositoryReader;
 import io.airbyte.config.secrets.persistence.RuntimeSecretPersistence;
+import io.airbyte.featureflag.AutoBackfillOnNewColumns;
 import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.featureflag.Organization;
-import io.airbyte.featureflag.ResetBackfillState;
 import io.airbyte.featureflag.UseRuntimeSecretPersistence;
 import io.airbyte.featureflag.Workspace;
 import io.airbyte.persistence.job.models.ReplicationInput;
@@ -42,6 +39,7 @@ import io.airbyte.protocol.models.ConfiguredAirbyteCatalog;
 import io.airbyte.workers.helper.BackfillHelper;
 import io.airbyte.workers.models.RefreshSchemaActivityOutput;
 import io.airbyte.workers.models.ReplicationActivityInput;
+import java.io.IOException;
 import java.util.UUID;
 import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
@@ -51,25 +49,16 @@ public class ReplicationInputHydrator {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(ReplicationInputHydrator.class);
 
-  private final ConnectionApi connectionApi;
-  private final JobsApi jobsApi;
-  private final StateApi stateApi;
+  private final AirbyteApiClient airbyteApiClient;
   private final SecretsRepositoryReader secretsRepositoryReader;
   private final FeatureFlagClient featureFlagClient;
-  private final SecretsPersistenceConfigApi secretsPersistenceConfigApi;
 
-  public ReplicationInputHydrator(final ConnectionApi connectionApi,
-                                  final JobsApi jobsApi,
-                                  final StateApi stateApi,
-                                  final SecretsPersistenceConfigApi secretsPersistenceConfigApi,
+  public ReplicationInputHydrator(final AirbyteApiClient airbyteApiClient,
                                   final SecretsRepositoryReader secretsRepositoryReader,
                                   final FeatureFlagClient featureFlagClient) {
-    this.connectionApi = connectionApi;
-    this.jobsApi = jobsApi;
-    this.stateApi = stateApi;
+    this.airbyteApiClient = airbyteApiClient;
     this.secretsRepositoryReader = secretsRepositoryReader;
     this.featureFlagClient = featureFlagClient;
-    this.secretsPersistenceConfigApi = secretsPersistenceConfigApi;
   }
 
   /**
@@ -83,16 +72,27 @@ public class ReplicationInputHydrator {
    * @throws Exception from the Airbyte API
    */
   public ReplicationInput getHydratedReplicationInput(final ReplicationActivityInput replicationActivityInput) throws Exception {
-    final ConfiguredAirbyteCatalog catalog = retrieveCatalog(replicationActivityInput);
+    final var destinationDefinition = airbyteApiClient.getActorDefinitionVersionApi().getActorDefinitionVersionForDestinationId(
+        new DestinationIdRequestBody(replicationActivityInput.getDestinationId()));
+
+    // Retrieve the connection, which we need in a few places.
+    final ConnectionRead connectionInfo = destinationDefinition.getSupportsRefreshes()
+        ? airbyteApiClient.getConnectionApi().getConnectionForJob(new ConnectionAndJobIdRequestBody(replicationActivityInput.getConnectionId(),
+            Long.parseLong(replicationActivityInput.getJobRunConfig().getJobId())))
+        : airbyteApiClient.getConnectionApi().getConnection(new ConnectionIdRequestBody(replicationActivityInput.getConnectionId()));
+
+    final ConfiguredAirbyteCatalog catalog = retrieveCatalog(connectionInfo);
     if (replicationActivityInput.getIsReset()) {
       // If this is a reset, we need to set the streams being reset to Full Refresh | Overwrite.
       updateCatalogForReset(replicationActivityInput, catalog);
     }
     // Retrieve the state.
     State state = retrieveState(replicationActivityInput);
-    if (replicationActivityInput.getSchemaRefreshOutput() != null) {
-      state = getUpdatedStateForBackfill(state, replicationActivityInput.getSchemaRefreshOutput(),
-          replicationActivityInput.getWorkspaceId(), replicationActivityInput.getConnectionId(), catalog);
+    final boolean backfillEnabledForWorkspace =
+        featureFlagClient.boolVariation(AutoBackfillOnNewColumns.INSTANCE, new Workspace(replicationActivityInput.getWorkspaceId()));
+    if (backfillEnabledForWorkspace && BackfillHelper.syncShouldBackfill(replicationActivityInput, connectionInfo)) {
+      state =
+          getUpdatedStateForBackfill(state, replicationActivityInput.getSchemaRefreshOutput(), replicationActivityInput.getConnectionId(), catalog);
     }
 
     // Hydrate the secrets.
@@ -101,8 +101,8 @@ public class ReplicationInputHydrator {
     final UUID organizationId = replicationActivityInput.getConnectionContext().getOrganizationId();
     if (organizationId != null && featureFlagClient.boolVariation(UseRuntimeSecretPersistence.INSTANCE, new Organization(organizationId))) {
       try {
-        final SecretPersistenceConfig secretPersistenceConfig = secretsPersistenceConfigApi.getSecretsPersistenceConfig(
-            new SecretPersistenceConfigGetRequestBody().scopeType(ScopeType.ORGANIZATION).scopeId(organizationId));
+        final SecretPersistenceConfig secretPersistenceConfig = airbyteApiClient.getSecretPersistenceConfigApi().getSecretsPersistenceConfig(
+            new SecretPersistenceConfigGetRequestBody(ScopeType.ORGANIZATION, organizationId));
         final RuntimeSecretPersistence runtimeSecretPersistence = new RuntimeSecretPersistence(
             fromApiSecretPersistenceConfig(secretPersistenceConfig));
         fullSourceConfig = secretsRepositoryReader.hydrateConfigFromRuntimeSecretPersistence(replicationActivityInput.getSourceConfiguration(),
@@ -110,7 +110,7 @@ public class ReplicationInputHydrator {
         fullDestinationConfig =
             secretsRepositoryReader.hydrateConfigFromRuntimeSecretPersistence(replicationActivityInput.getDestinationConfiguration(),
                 runtimeSecretPersistence);
-      } catch (final ApiException e) {
+      } catch (final IOException e) {
         throw new RuntimeException(e);
       }
     } else {
@@ -140,7 +140,6 @@ public class ReplicationInputHydrator {
 
   private State getUpdatedStateForBackfill(final State state,
                                            final RefreshSchemaActivityOutput schemaRefreshOutput,
-                                           final UUID workspaceId,
                                            final UUID connectionId,
                                            final ConfiguredAirbyteCatalog catalog)
       throws Exception {
@@ -148,26 +147,21 @@ public class ReplicationInputHydrator {
       final var streamsToBackfill = BackfillHelper.getStreamsToBackfill(schemaRefreshOutput.getAppliedDiff(), catalog);
       LOGGER.debug("Backfilling streams: {}", String.join(", ", streamsToBackfill.stream().map(StreamDescriptor::getName).toList()));
       final State resetState = BackfillHelper.clearStateForStreamsToBackfill(state, streamsToBackfill);
-      // persist the state
-      // this will be behind a separate feature flag since it's a destructive operation.
-      if (resetState != null && featureFlagClient.boolVariation(ResetBackfillState.INSTANCE, new Workspace(workspaceId))) {
+      if (resetState != null) {
+        // We persist the state here in case the attempt fails, the subsequent attempt will continue the
+        // backfill process.
+        // TODO(mfsiega-airbyte): move all of the state handling into a separate activity.
         LOGGER.debug("Resetting state for connection: {}", connectionId);
         persistState(resetState, connectionId);
       }
 
       return resetState;
     }
-    // No schema refresh output, so we just return the original state.
     return state;
   }
 
   @NotNull
-  private ConfiguredAirbyteCatalog retrieveCatalog(final ReplicationActivityInput replicationActivityInput) throws Exception {
-    final ConnectionRead connectionInfo =
-        AirbyteApiClient
-            .retryWithJitterThrows(
-                () -> connectionApi.getConnection(new ConnectionIdRequestBody().connectionId(replicationActivityInput.getConnectionId())),
-                "retrieve the connection");
+  private ConfiguredAirbyteCatalog retrieveCatalog(final ConnectionRead connectionInfo) {
     if (connectionInfo.getSyncCatalog() == null) {
       throw new IllegalArgumentException("Connection is missing catalog, which is required");
     }
@@ -175,21 +169,16 @@ public class ReplicationInputHydrator {
     return catalog;
   }
 
-  private void persistState(final State resetState, final UUID connectionId) throws Exception {
+  private void persistState(final State resetState, final UUID connectionId) throws IOException {
     final StateWrapper stateWrapper = StateMessageHelper.getTypedState(resetState.getState()).get();
     final ConnectionState connectionState = StateConverter.toClient(connectionId, stateWrapper);
 
-    AirbyteApiClient.retryWithJitterThrows(
-        () -> stateApi.createOrUpdateState(new ConnectionStateCreateOrUpdate()
-            .connectionId(connectionId)
-            .connectionState(connectionState)),
-        "create or update the state");
+    airbyteApiClient.getStateApi().createOrUpdateState(new ConnectionStateCreateOrUpdate(connectionId, connectionState));
   }
 
-  private State retrieveState(final ReplicationActivityInput replicationActivityInput) throws Exception {
-    final ConnectionState connectionState = AirbyteApiClient.retryWithJitterThrows(
-        () -> stateApi.getState(new ConnectionIdRequestBody().connectionId(replicationActivityInput.getConnectionId())),
-        "retrieve the state");
+  private State retrieveState(final ReplicationActivityInput replicationActivityInput) throws IOException {
+    final ConnectionState connectionState =
+        airbyteApiClient.getStateApi().getState(new ConnectionIdRequestBody(replicationActivityInput.getConnectionId()));
     final State state =
         connectionState != null && !ConnectionStateType.NOT_SET.equals(connectionState.getStateType())
             ? StateMessageHelper.getState(StateConverter.toInternal(StateConverter.fromClientToApi(connectionState)))
@@ -198,11 +187,9 @@ public class ReplicationInputHydrator {
   }
 
   private void updateCatalogForReset(final ReplicationActivityInput replicationActivityInput, final ConfiguredAirbyteCatalog catalog)
-      throws Exception {
-    final JobOptionalRead jobInfo = AirbyteApiClient.retryWithJitterThrows(
-        () -> jobsApi.getLastReplicationJob(
-            new ConnectionIdRequestBody().connectionId(replicationActivityInput.getConnectionId())),
-        "get job info to retrieve streams to reset");
+      throws IOException {
+    final JobOptionalRead jobInfo = airbyteApiClient.getJobsApi().getLastReplicationJob(
+        new ConnectionIdRequestBody(replicationActivityInput.getConnectionId()));
     final boolean hasStreamsToReset = jobInfo != null && jobInfo.getJob() != null && jobInfo.getJob().getResetConfig() != null
         && jobInfo.getJob().getResetConfig().getStreamsToReset() != null;
     if (hasStreamsToReset) {

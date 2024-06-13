@@ -1,27 +1,29 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useIntl } from "react-intl";
 
+import { FeatureItem, useFeature } from "core/services/features";
 import { useNotificationService } from "hooks/services/Notification";
 
 import { organizationKeys } from "./organizations";
 import { workspaceKeys } from "./workspaces";
+import { HttpError } from "../errors";
 import {
   createPermission,
   listPermissionsByUser,
   deletePermission,
   updatePermission,
 } from "../generated/AirbyteClient";
-import { PermissionCreate, PermissionRead, PermissionUpdate } from "../generated/AirbyteClient.schemas";
-import { SCOPE_USER } from "../scopes";
+import { PermissionCreate, PermissionRead, PermissionType, PermissionUpdate } from "../generated/AirbyteClient.schemas";
+import { SCOPE_INSTANCE, SCOPE_USER } from "../scopes";
 import { useRequestOptions } from "../useRequestOptions";
 import { useSuspenseQuery } from "../useSuspenseQuery";
 
 export const permissionKeys = {
   all: [SCOPE_USER, "permissions"] as const,
-  listByUser: (userId: string) => [...permissionKeys.all, "listByUser", userId] as const,
+  listByUser: (userId?: string) => [...permissionKeys.all, "listByUser", ...(userId ? [userId] : [])] as const,
 };
 
-export const getListPermissionsQueryKey = (userId: string) => {
+export const getListPermissionsQueryKey = (userId?: string) => {
   return permissionKeys.listByUser(userId);
 };
 
@@ -31,7 +33,19 @@ export const useListPermissionsQuery = (userId: string) => {
 };
 
 export const useListPermissions = (userId: string) => {
-  return useSuspenseQuery(getListPermissionsQueryKey(userId), useListPermissionsQuery(userId));
+  const data = useSuspenseQuery(getListPermissionsQueryKey(userId), useListPermissionsQuery(userId));
+
+  const isInstanceAdminEnabled = useIsInstanceAdminEnabled();
+  if (!isInstanceAdminEnabled) {
+    const isInstanceAdminIdx = data.permissions.findIndex(
+      (permission) => permission.permissionType === "instance_admin"
+    );
+    if (isInstanceAdminIdx !== -1) {
+      data.permissions[isInstanceAdminIdx].permissionType = "instance_reader" as PermissionType; // isn't a value in the enum but it is supported by the webapp logic
+    }
+  }
+
+  return data;
 };
 
 export const useUpdatePermissions = () => {
@@ -41,27 +55,26 @@ export const useUpdatePermissions = () => {
   const { formatMessage } = useIntl();
 
   return useMutation(
-    (permission: PermissionUpdate): Promise<PermissionRead> => {
+    (permission: PermissionUpdate) => {
       return updatePermission(permission, requestOptions);
     },
     {
-      onSuccess: (data: PermissionRead) => {
+      onSuccess: () => {
         registerNotification({
           id: "settings.accessManagement.permissionUpdate.success",
           text: formatMessage({ id: "settings.accessManagement.permissionUpdate.success" }),
           type: "success",
         });
-        if (data.organizationId) {
-          queryClient.invalidateQueries(organizationKeys.listUsers(data.organizationId));
-        }
-        if (data.workspaceId) {
-          queryClient.invalidateQueries(workspaceKeys.listUsers(data.workspaceId));
-        }
+        queryClient.invalidateQueries(organizationKeys.allListUsers);
+        queryClient.invalidateQueries(workspaceKeys.allListAccessUsers);
       },
-      onError: () => {
+      onError: (e) => {
         registerNotification({
           id: "settings.accessManagement.permissionUpdate.error",
-          text: formatMessage({ id: "settings.accessManagement.permissionUpdate.error" }),
+          text:
+            e instanceof HttpError && e.status === 409
+              ? e.response.message
+              : formatMessage({ id: "settings.accessManagement.permissionUpdate.error" }),
           type: "error",
         });
       },
@@ -84,20 +97,18 @@ export const useCreatePermission = () => {
       onSuccess: (data: PermissionRead) => {
         registerNotification({
           id: "settings.accessManagement.permissionCreate.success",
-          text: formatMessage({ id: "settings.accessManagement.permissionCreate.success" }),
+          text: formatMessage({ id: "userInvitations.create.success.directlyAdded" }),
           type: "success",
         });
         if (data.organizationId) {
           queryClient.invalidateQueries(organizationKeys.listUsers(data.organizationId));
         }
-        if (data.workspaceId) {
-          queryClient.invalidateQueries(workspaceKeys.listUsers(data.workspaceId));
-        }
+        queryClient.invalidateQueries(workspaceKeys.allListAccessUsers);
       },
       onError: () => {
         registerNotification({
           id: "settings.accessManagement.permissionCreate.error",
-          text: formatMessage({ id: "settings.accessManagement.permissionCreate.error" }),
+          text: formatMessage({ id: "userInvitations.create.error" }),
           type: "error",
         });
       },
@@ -121,7 +132,7 @@ export const useDeletePermissions = () => {
         type: "success",
       });
       queryClient.invalidateQueries(organizationKeys.allListUsers);
-      queryClient.invalidateQueries(workspaceKeys.allListUsers);
+      queryClient.invalidateQueries(workspaceKeys.allListAccessUsers);
     },
     onError: () => {
       registerNotification({
@@ -131,4 +142,26 @@ export const useDeletePermissions = () => {
       });
     },
   });
+};
+
+let currentIsInstanceAdminEnabled = false;
+
+export const useIsInstanceAdminEnabled = () => {
+  const showInstanceAdminWarning = useFeature(FeatureItem.ShowAdminWarningInWorkspace); // we only want to use the "viewonly" mode if we in an env that shows the banner (ie: for now, cloud only)
+  return useSuspenseQuery(
+    [SCOPE_INSTANCE, "isInstanceAdminEnabled"],
+    async () => (showInstanceAdminWarning ? currentIsInstanceAdminEnabled : true),
+    {
+      cacheTime: Infinity,
+    }
+  );
+};
+
+export const useSetIsInstanceAdminEnabled = () => {
+  const queryClient = useQueryClient();
+  return (isEnabled: boolean) => {
+    currentIsInstanceAdminEnabled = isEnabled;
+    queryClient.invalidateQueries([SCOPE_INSTANCE, "isInstanceAdminEnabled"]);
+    queryClient.invalidateQueries(getListPermissionsQueryKey());
+  };
 };

@@ -3,8 +3,6 @@ import React, { ReactNode, useCallback, useImperativeHandle, useRef, useState } 
 import { useIntl } from "react-intl";
 import { useToggle } from "react-use";
 
-import { Icon } from "components/ui/Icon";
-
 import styles from "./Input.module.scss";
 import { Button } from "../Button";
 
@@ -14,10 +12,11 @@ export interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> 
   inline?: boolean;
   containerClassName?: string;
   adornment?: ReactNode;
+  "data-testid"?: string;
 }
 
 export const Input = React.forwardRef<HTMLInputElement, InputProps>(
-  ({ light, error, inline, containerClassName, adornment, ...props }, ref) => {
+  ({ light, error, inline, containerClassName, adornment, "data-testid": testId, ...props }, ref) => {
     const { formatMessage } = useIntl();
 
     const inputRef = useRef<HTMLInputElement | null>(null);
@@ -90,7 +89,7 @@ export const Input = React.forwardRef<HTMLInputElement, InputProps>(
       >
         <input
           aria-invalid={error}
-          data-testid="input"
+          data-testid={testId ?? "input"}
           {...props}
           ref={inputRef}
           type={type}
@@ -121,7 +120,7 @@ export const Input = React.forwardRef<HTMLInputElement, InputProps>(
               id: `ui.input.${isContentVisible ? "hide" : "show"}Password`,
             })}
             data-testid="toggle-password-visibility-button"
-            icon={<Icon type={isContentVisible ? "eyeSlash" : "eye"} />}
+            icon={isContentVisible ? "eyeSlash" : "eye"}
           />
         ) : null}
       </div>

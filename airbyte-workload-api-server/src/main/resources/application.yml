@@ -1,6 +1,8 @@
 micronaut:
   application:
     name: airbyte-workload-api-server
+  env:
+    cloud-deduction: true
   executors:
     io:
       type: fixed
@@ -9,25 +11,31 @@ micronaut:
       type: fixed
       n-threads: ${WORKLOAD_TASK_EXECUTOR_THREADS:50}
   metrics:
-    enabled: true
+    enabled: ${MICROMETER_METRICS_ENABLED:false}
     binders:
       netty:
         bytebuf-allocators:
-          enabled: true
+          enabled: false
         channels:
-          enabled: true
+          enabled: false
         queues:
           enabled: true
+      web:
+        enabled: true
+        server:
+          percentiles: "0.95"
+        client:
+          percentiles: "0.95"
     export:
       statsd:
-        enabled: true
-        flavor: ${MICROMENTER_METRICS_STATSD_FLAVOR:datadog}
-        step: PT10S
-        host: ${DD_AGENT_HOST:airbyte-datadog}
-        port: ${DD_DOGSTATSD_PORT:8125}
+        enabled: ${MICROMETER_METRICS_ENABLED:false}
+        flavor: ${MICROMETER_METRICS_STATSD_FLAVOR:datadog}
+        step: ${MICROMETER_METRICS_STEP:PT30S}
+        host: ${STATSD_HOST:localhost}
+        port: ${STATSD_PORT:8125}
   security:
     authentication-provider-strategy: ALL
-    enabled: true
+    enabled: ${API_AUTHORIZATION_ENABLED:true}
     token:
       jwt:
         bearer:
@@ -40,12 +48,13 @@ micronaut:
         web:
           allowed-origins-regex:
             - ^.*$
+    idle-timeout: ${HTTP_IDLE_TIMEOUT:5m}
     netty:
+      access-logger:
+        enabled: ${HTTP_ACCESS_LOG_ENABLED:false}
       aggregator:
         max-content-length: 52428800 # 50MB
-      access-logger:
-        enabled: ${HTTP_ACCESS_LOG_ENABLED:true}
-    idle-timeout: ${HTTP_IDLE_TIMEOUT:5m}
+    max-request-size: 10485760 # 10MB the micronaut default. If we want to bump, double check it works for nginx.
 
 airbyte:
   feature-flag:
@@ -72,7 +81,7 @@ endpoints:
     enabled: true
     sensitive: false
   metrics:
-    enabled: true
+    enabled: ${MICROMETER_METRICS_ENABLED:false}
     sensitive: false
   refresh:
     enabled: false
@@ -128,4 +137,6 @@ logger:
 #      com.zaxxer.hikari: TRACE
 
 jackson:
+  mapper:
+    ACCEPT_CASE_INSENSITIVE_ENUMS: true
   serialization-inclusion: always

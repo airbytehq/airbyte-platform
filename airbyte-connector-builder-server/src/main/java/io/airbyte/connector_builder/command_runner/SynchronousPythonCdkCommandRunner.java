@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.connector_builder.command_runner;
@@ -31,6 +31,10 @@ public class SynchronousPythonCdkCommandRunner implements SynchronousCdkCommandR
   private final String python;
   private final String cdkEntrypoint;
 
+  // `:` separated path to the modules that will be imported by the Python executable
+  // Custom components must be in one of these modules to be loaded
+  private final String pythonPath;
+
   private static final Logger LOGGER = LoggerFactory.getLogger(SynchronousPythonCdkCommandRunner.class);
 
   @Inject
@@ -38,11 +42,13 @@ public class SynchronousPythonCdkCommandRunner implements SynchronousCdkCommandR
                                            final AirbyteFileWriter writer,
                                            final AirbyteStreamFactory streamFactory,
                                            final String python,
-                                           final String cdkEntrypoint) {
+                                           final String cdkEntrypoint,
+                                           final String pythonPath) {
     this.writer = writer;
     this.streamFactory = streamFactory;
     this.python = python;
     this.cdkEntrypoint = cdkEntrypoint;
+    this.pythonPath = pythonPath;
   }
 
   /**
@@ -54,9 +60,11 @@ public class SynchronousPythonCdkCommandRunner implements SynchronousCdkCommandR
   public AirbyteRecordMessage runCommand(
                                          final String cdkCommand,
                                          final String configContents,
-                                         final String catalogContents)
+                                         final String catalogContents,
+                                         final String stateContents)
       throws IOException {
-    try (final AirbyteCdkProcess cdkProcess = this.start(cdkCommand, configContents, catalogContents)) {
+    try (final AirbyteCdkProcess cdkProcess = this.start(cdkCommand, configContents, catalogContents,
+        stateContents)) {
       return new ProcessOutputParser().parse(cdkProcess.getProcess(), this.streamFactory, cdkCommand);
     }
   }
@@ -69,10 +77,12 @@ public class SynchronousPythonCdkCommandRunner implements SynchronousCdkCommandR
   AirbyteCdkProcess start(
                           final String cdkCommand,
                           final String configContents,
-                          final String catalogContents)
+                          final String catalogContents,
+                          final String stateContents)
       throws IOException {
     final AirbyteArgument catalog = this.write("catalog", catalogContents);
     final AirbyteArgument config = this.write("config", configContents);
+    final AirbyteArgument state = this.write("state", stateContents);
 
     final List<String> command = Lists.newArrayList(
         this.python,
@@ -81,19 +91,27 @@ public class SynchronousPythonCdkCommandRunner implements SynchronousCdkCommandR
         "--config",
         config.getFilepath(),
         "--catalog",
-        catalog.getFilepath());
+        catalog.getFilepath(),
+        "--state",
+        state.getFilepath());
     LOGGER.debug("Preparing command for {}: {}", cdkCommand, Joiner.on(" ").join(command));
     final ProcessBuilder processBuilder = new ProcessBuilder(command);
+    addPythonPathToSubprocessEnvironment(processBuilder);
+
     final AirbyteCdkPythonProcess cdkProcess = new AirbyteCdkPythonProcess(
         writer, config, catalog, processBuilder);
     cdkProcess.start();
     return cdkProcess;
   }
 
-  AirbyteArgument write(final String name, final String contents) throws IOException {
+  private AirbyteArgument write(final String name, final String contents) throws IOException {
     final AirbyteArgument arg = new AirbyteArgument(this.writer);
     arg.setUpArg(name, contents);
     return arg;
+  }
+
+  private void addPythonPathToSubprocessEnvironment(ProcessBuilder processBuilder) {
+    processBuilder.environment().put("PYTHONPATH", this.pythonPath);
   }
 
 }

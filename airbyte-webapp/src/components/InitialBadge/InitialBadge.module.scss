@@ -1,0 +1,52 @@
+@use "scss/colors";
+@use "scss/variables";
+
+.green900 {
+  background-color: colors.$green-900;
+}
+
+.green600 {
+  background-color: colors.$green-600;
+}
+
+.green300 {
+  background-color: colors.$green-300;
+}
+
+.darkBlue200 {
+  background-color: colors.$dark-blue-200;
+}
+
+.blue900 {
+  background-color: colors.$blue-900;
+}
+
+.orange900 {
+  background-color: colors.$orange-900;
+}
+
+.orange300 {
+  background-color: colors.$orange-300;
+}
+
+.blue200 {
+  background-color: colors.$blue-200;
+}
+
+.blue400 {
+  background-color: colors.$blue-400;
+}
+
+.darkBlue400 {
+  background-color: colors.$dark-blue-400;
+}
+
+.initialBadge__container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 24px;
+  height: 24px;
+  border-radius: variables.$border-radius-xs;
+  aspect-ratio: 1 / 1;
+}

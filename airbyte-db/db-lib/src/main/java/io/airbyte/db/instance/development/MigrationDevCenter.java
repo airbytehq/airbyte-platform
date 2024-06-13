@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.db.instance.development;
@@ -8,6 +8,7 @@ import com.google.common.annotations.VisibleForTesting;
 import io.airbyte.db.Database;
 import io.airbyte.db.factory.DSLContextFactory;
 import io.airbyte.db.factory.DataSourceFactory;
+import io.airbyte.db.instance.DatabaseConstants;
 import io.airbyte.db.instance.FlywayDatabaseMigrator;
 import io.airbyte.db.instance.configs.ConfigsDatabaseMigrationDevCenter;
 import io.airbyte.db.instance.jobs.JobsDatabaseMigrationDevCenter;
@@ -47,7 +48,7 @@ public abstract class MigrationDevCenter {
   }
 
   private PostgreSQLContainer<?> createContainer() {
-    final PostgreSQLContainer<?> container = new PostgreSQLContainer<>("postgres:13-alpine")
+    final PostgreSQLContainer<?> container = new PostgreSQLContainer<>(DatabaseConstants.DEFAULT_DATABASE_VERSION)
         .withDatabaseName("airbyte")
         .withUsername("docker")
         .withPassword("docker");

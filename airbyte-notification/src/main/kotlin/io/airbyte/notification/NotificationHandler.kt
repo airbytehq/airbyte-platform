@@ -67,7 +67,7 @@ open class NotificationHandler(
         ) {
           val webhookConfig =
             WebhookConfig(
-              notificationItem!!.slackConfiguration!!.webhook,
+              notificationItem.slackConfiguration!!.webhook,
             )
           maybeWebhookNotificationSender.sendNotification(webhookConfig, subject, message)
           MetricClientFactory.getMetricClient().count(

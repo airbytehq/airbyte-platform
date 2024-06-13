@@ -4,12 +4,12 @@ import {
   createPostgresSourceViaApi,
 } from "@cy/commands/connection";
 import {
-  WebBackendConnectionRead,
+  AirbyteStreamConfiguration,
   DestinationRead,
   DestinationSyncMode,
   SourceRead,
   SyncMode,
-  AirbyteStreamConfiguration,
+  WebBackendConnectionRead,
 } from "@src/core/api/types/AirbyteClient";
 import { requestDeleteConnection, requestDeleteDestination, requestDeleteSource } from "commands/api";
 import { runDbQuery } from "commands/db/db";
@@ -49,6 +49,10 @@ const modifyAccountsTableInterceptHandler: RouteHandler = (request) => {
         ...stream,
         sourceDefinedCursor: true,
         defaultCursorField: ["updated_at"],
+      }),
+      modifyConfig: (config) => ({
+        ...config,
+        cursorField: ["updated_at"],
       }),
     });
 
@@ -189,14 +193,17 @@ describe("Connection - sync modes", () => {
       });
       streamDetails.close();
 
-      saveConnectionAndAssertStreams({
-        namespace: "public",
-        name: "users",
-        config: {
-          syncMode: SyncMode.full_refresh,
-          destinationSyncMode: DestinationSyncMode.append,
+      saveConnectionAndAssertStreams(
+        {
+          namespace: "public",
+          name: "users",
+          config: {
+            syncMode: SyncMode.full_refresh,
+            destinationSyncMode: DestinationSyncMode.append,
+          },
         },
-      });
+        { expectModal: false }
+      );
 
       // Verify changes after save
       usersStreamRow.hasSelectedSyncMode(SyncMode.full_refresh, DestinationSyncMode.append);
@@ -413,6 +420,51 @@ describe("Connection - sync modes", () => {
       usersStreamRow.hasSelectedSyncMode(SyncMode.incremental, DestinationSyncMode.append);
       usersStreamRow.verifyCursor(cursor);
       usersStreamRow.hasNoSourceDefinedPrimaryKeys();
+    });
+  });
+
+  describe("Track stream(config) user-configured changes", () => {
+    it("should NOT show reset stream modal if sync mode was changed in disabled stream", () => {
+      const accountsStreamRow = streamsTable.getRow("public", "accounts");
+
+      // disable the stream and save
+      accountsStreamRow.toggleStreamSync();
+      saveConnectionAndAssertStreams(
+        {
+          namespace: "public",
+          name: "accounts",
+          config: {
+            syncMode: SyncMode.full_refresh,
+            destinationSyncMode: DestinationSyncMode.overwrite,
+          },
+        },
+        { expectModal: false }
+      );
+
+      // leave the page and come back
+      connectionPage.visit(connection, "transformation", { interceptGetHandler: modifyAccountsTableInterceptHandler });
+      connectionPage.visit(connection, "replication", { interceptGetHandler: modifyAccountsTableInterceptHandler });
+
+      // enable stream, change sync mode, then disable stream and save
+      accountsStreamRow.toggleStreamSync();
+      accountsStreamRow.selectSyncMode(SyncMode.full_refresh, DestinationSyncMode.append);
+      accountsStreamRow.toggleStreamSync();
+      saveConnectionAndAssertStreams(
+        {
+          namespace: "public",
+          name: "accounts",
+          config: {
+            /**
+             * Note: changes in disabled streams aren't persisted at all to the db,
+             * so anything user-configured on a disabled stream can/should be ignored.
+             * So the sync should be the same as before
+             */
+            syncMode: SyncMode.full_refresh,
+            destinationSyncMode: DestinationSyncMode.overwrite,
+          },
+        },
+        { expectModal: false }
+      );
     });
   });
 });

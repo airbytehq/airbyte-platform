@@ -1,20 +1,16 @@
-import React from "react";
-import { useController, useFormContext } from "react-hook-form";
+import React, { useRef, useEffect } from "react";
+import { useFormContext, useWatch } from "react-hook-form";
 
 import GroupControls from "components/GroupControls";
 import { ControlLabels } from "components/LabeledControl";
-import { DropDown } from "components/ui/DropDown";
+import { ListBox } from "components/ui/ListBox";
+
+import { useConnectorBuilderFormManagementState } from "services/connectorBuilder/ConnectorBuilderStateService";
 
 import { getLabelAndTooltip } from "./manifestHelpers";
 
 interface OneOfType {
   type: string;
-}
-
-interface Option<T extends OneOfType> {
-  label: string;
-  value: string;
-  default?: T;
 }
 
 export interface OneOfOption<T extends OneOfType> {
@@ -45,9 +41,18 @@ export const BuilderOneOf = <T extends OneOfType>({
   onSelect,
 }: BuilderOneOfProps<T>) => {
   const { setValue, unregister } = useFormContext();
-  const { field } = useController({ name: `${path}.type` });
+  const fieldName = `${path}.type`;
+  // Use value from useWatch instead of from useController, since the former will respect updates made to parent paths from setValue
+  const fieldValue = useWatch({ name: fieldName });
 
-  const selectedOption = options.find((option) => option.default.type === field.value);
+  const { handleScrollToField } = useConnectorBuilderFormManagementState();
+  const elementRef = useRef<HTMLDivElement | null>(null);
+  useEffect(() => {
+    // Call handler in here to make sure it handles new scrollToField value from the context
+    handleScrollToField(elementRef, fieldName);
+  }, [handleScrollToField, fieldName]);
+
+  const selectedOption = options.find((option) => option.default.type === fieldValue);
   const { label: finalLabel, tooltip: finalTooltip } = getLabelAndTooltip(
     label,
     tooltip,
@@ -60,24 +65,28 @@ export const BuilderOneOf = <T extends OneOfType>({
 
   return (
     <GroupControls
+      ref={elementRef}
       label={<ControlLabels label={finalLabel} infoTooltipContent={finalTooltip} />}
       control={
-        <DropDown
-          {...field}
-          options={options.map((option) => {
-            return { label: option.label, value: option.default.type, default: option.default };
-          })}
-          value={field.value ?? options[0].default.type}
-          onChange={(selectedOption: Option<T>) => {
-            if (selectedOption.value === field.value) {
+        <ListBox
+          options={options.map((option) => ({
+            label: option.label,
+            value: option,
+          }))}
+          placement="bottom-end"
+          adaptiveWidth={false}
+          selectedValue={selectedOption ?? options[0]}
+          onSelect={(selectedOption: OneOfOption<T>) => {
+            if (selectedOption.default.type === fieldValue) {
               return;
             }
             // clear all values for this oneOf and set selected option and default values
             unregister(path, { keepValue: true, keepDefaultValue: true });
             setValue(path, selectedOption.default);
 
-            onSelect?.(selectedOption.value);
+            onSelect?.(selectedOption.default.type);
           }}
+          data-testid={fieldName}
         />
       }
     >

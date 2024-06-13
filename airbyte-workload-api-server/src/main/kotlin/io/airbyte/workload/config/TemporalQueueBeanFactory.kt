@@ -1,6 +1,7 @@
 package io.airbyte.workload.config
 
 import io.airbyte.commons.temporal.WorkflowClientWrapped
+import io.airbyte.commons.temporal.converter.AirbyteTemporalDataConverter
 import io.airbyte.commons.temporal.factories.TemporalCloudConfig
 import io.airbyte.commons.temporal.factories.TemporalSelfHostedConfig
 import io.airbyte.commons.temporal.factories.WorkflowClientFactory
@@ -82,6 +83,7 @@ class TemporalQueueBeanFactory {
     workflowServiceStub: WorkflowServiceStubs,
     temporalCloudConfig: TemporalCloudConfig,
     temporalSelfHostedConfig: TemporalSelfHostedConfig,
+    airbyteTemporalDataConveter: AirbyteTemporalDataConverter,
     @Property(name = "temporal.cloud.enabled", defaultValue = "false") temporalCloudEnabled: Boolean,
   ): WorkflowClient {
     val namespace = if (temporalCloudEnabled) temporalCloudConfig.namespace else temporalSelfHostedConfig.namespace
@@ -89,6 +91,7 @@ class TemporalQueueBeanFactory {
       WorkflowClientOptions.newBuilder()
         .setNamespace(namespace.orEmpty())
         .setInterceptors(OpenTracingClientInterceptor())
+        .setDataConverter(airbyteTemporalDataConveter)
         .build()
     return WorkflowClientFactory().createWorkflowClient(workflowServiceStub, workflowClientOptions)
   }
@@ -103,6 +106,6 @@ class TemporalQueueBeanFactory {
 
   @Singleton
   fun createTemporalQueueProducer(worklowClientWrapped: WorkflowClientWrapped): TemporalMessageProducer<LauncherInputMessage> {
-    return TemporalMessageProducer<LauncherInputMessage>(worklowClientWrapped)
+    return TemporalMessageProducer(worklowClientWrapped)
   }
 }

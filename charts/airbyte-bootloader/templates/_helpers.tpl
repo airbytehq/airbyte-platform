@@ -50,26 +50,6 @@ app.kubernetes.io/name: {{ include "airbyte.name" . }}
 app.kubernetes.io/instance: {{ .Release.Name }}
 {{- end }}
 
-{{/*
-Define db secret
-*/}}
-
-{{- define "airbyte.database.secret.passwordKey" -}}
-{{- if .Values.postgresql.enabled -}}
-    {{- printf "%s" "postgresql-password" -}}
-{{- else -}}
-    {{- if .Values.externalDatabase.existingSecret -}}
-        {{- if .Values.externalDatabase.existingSecretPasswordKey -}}
-            {{- printf "%s" .Values.externalDatabase.existingSecretPasswordKey -}}
-        {{- else -}}
-            {{- printf "%s" "postgresql-password" -}}
-        {{- end -}}
-    {{- else -}}
-        {{- printf "%s" "DATABASE_PASSWORD" -}}
-    {{- end -}}
-{{- end -}}
-{{- end -}}
-
 {{/* 
 Define imageTag
 */}}

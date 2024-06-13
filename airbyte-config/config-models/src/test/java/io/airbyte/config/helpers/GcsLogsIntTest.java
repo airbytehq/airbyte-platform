@@ -1,32 +1,34 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.config.helpers;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 import com.google.cloud.storage.Storage;
-import io.airbyte.config.EnvConfigs;
-import io.airbyte.config.storage.CloudStorageConfigs;
+import io.airbyte.commons.envvar.EnvVar;
 import io.airbyte.config.storage.DefaultGcsClientFactory;
-import java.io.File;
+import io.airbyte.config.storage.GcsStorageConfig;
+import io.airbyte.config.storage.StorageBucketConfig;
+import io.airbyte.featureflag.TestClient;
 import java.io.IOException;
-import java.nio.file.Files;
-import java.util.ArrayList;
 import java.util.List;
-import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
+import org.mockito.Mockito;
 
-@Slf4j
 @Tag("logger-client")
 class GcsLogsIntTest {
 
+  private final GcsLogs gcsLogs = new GcsLogs(GcsLogsIntTest::getClientFactory);
+
   private static Storage getClientFactory() {
-    return new DefaultGcsClientFactory(new CloudStorageConfigs.GcsConfig(
-        System.getenv(LogClientSingleton.GCS_LOG_BUCKET),
-        System.getenv(LogClientSingleton.GOOGLE_APPLICATION_CREDENTIALS))).get();
+    return new DefaultGcsClientFactory(new GcsStorageConfig(
+        new StorageBucketConfig(System.getenv(EnvVar.STORAGE_BUCKET_LOG.name()), "", "", ""),
+        System.getenv(EnvVar.GOOGLE_APPLICATION_CREDENTIALS.name()))).get();
   }
 
   /**
@@ -36,10 +38,12 @@ class GcsLogsIntTest {
    */
   @Test
   void testRetrieveAllLogs() throws IOException {
-    final File data;
-    data = GcsLogs.getFile(getClientFactory(), (new EnvConfigs()).getLogConfigs(), "paginate", 6);
-    final var retrieved = new ArrayList<String>();
-    Files.lines(data.toPath()).forEach(retrieved::add);
+    final var logConfigs = mock(LogConfigs.class);
+    final var gcsConfig = mock(GcsStorageConfig.class, Mockito.RETURNS_DEEP_STUBS);
+    when(logConfigs.getStorageConfig()).thenReturn(gcsConfig);
+    when(gcsConfig.getBuckets().getLog()).thenReturn(System.getenv(EnvVar.STORAGE_BUCKET_LOG.name()));
+
+    final var retrieved = gcsLogs.tailCloudLog(logConfigs, "paginate", 6, new TestClient());
 
     final var expected = List.of("Line 0", "Line 1", "Line 2", "Line 3", "Line 4", "Line 5", "Line 6", "Line 7", "Line 8");
 
@@ -56,7 +60,12 @@ class GcsLogsIntTest {
    */
   @Test
   void testTail() throws IOException {
-    final var data = new GcsLogs(GcsLogsIntTest::getClientFactory).tailCloudLog((new EnvConfigs()).getLogConfigs(), "tail", 6);
+    final var logConfigs = mock(LogConfigs.class);
+    final var gcsConfig = mock(GcsStorageConfig.class, Mockito.RETURNS_DEEP_STUBS);
+    when(logConfigs.getStorageConfig()).thenReturn(gcsConfig);
+    when(gcsConfig.getBuckets().getLog()).thenReturn(System.getenv(EnvVar.STORAGE_BUCKET_LOG.name()));
+
+    final var data = gcsLogs.tailCloudLog(logConfigs, "tail", 6, new TestClient());
 
     final var expected = List.of("Line 4", "Line 5", "Line 6", "Line 7", "Line 8", "Line 9");
     assertEquals(data, expected);

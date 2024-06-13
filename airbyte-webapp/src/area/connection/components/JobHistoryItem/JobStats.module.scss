@@ -1,0 +1,30 @@
+@use "scss/colors";
+@use "scss/variables";
+
+.failedMessage {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.seeMore {
+  color: colors.$grey-500;
+}
+
+.seeMoreIcon {
+  vertical-align: middle;
+}
+
+.secondaryMessage {
+  padding: variables.$spacing-sm;
+  border-radius: variables.$border-radius-md;
+  font-family: monospace;
+
+  &.errorMessage {
+    background-color: colors.$red-50;
+  }
+
+  &.warningMessage {
+    background-color: colors.$yellow-50;
+  }
+}

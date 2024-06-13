@@ -2,24 +2,30 @@ import React, { useMemo } from "react";
 import { Navigate, Route, Routes, useLocation, useSearchParams } from "react-router-dom";
 import { useEffectOnce } from "react-use";
 
-import { ApiErrorBoundary } from "components/common/ApiErrorBoundary";
-
 import {
   useGetInstanceConfiguration,
   useInvalidateAllWorkspaceScopeOnChange,
   useListWorkspacesInfinite,
 } from "core/api";
+import { DefaultErrorBoundary } from "core/errors";
 import { useAnalyticsIdentifyUser, useAnalyticsRegisterValues } from "core/services/analytics";
 import { useAuthService } from "core/services/auth";
 import { FeatureItem, useFeature } from "core/services/features";
+import { useIntent } from "core/utils/rbac/intent";
 import { storeUtmFromQuery } from "core/utils/utmStorage";
 import { useApiHealthPoll } from "hooks/services/Health";
 import { useBuildUpdateCheck } from "hooks/services/useBuildUpdateCheck";
 import { useCurrentWorkspace } from "hooks/services/useWorkspace";
-import { CompleteOauthRequest } from "views/CompleteOauthRequest";
+import { ApplicationSettingsView } from "packages/cloud/views/users/ApplicationSettingsView/ApplicationSettingsView";
 import MainView from "views/layout/MainView";
 
-import { RoutePaths, DestinationPaths, SourcePaths } from "./routePaths";
+import { RoutePaths, DestinationPaths, SourcePaths, SettingsRoutePaths } from "./routePaths";
+import { GeneralOrganizationSettingsPage } from "./SettingsPage/GeneralOrganizationSettingsPage";
+import { GeneralWorkspaceSettingsPage } from "./SettingsPage/GeneralWorkspaceSettingsPage";
+import { AccountPage } from "./SettingsPage/pages/AccountPage";
+import { DestinationsPage, SourcesPage } from "./SettingsPage/pages/ConnectorsPage";
+import { MetricsPage } from "./SettingsPage/pages/MetricsPage";
+import { NotificationPage } from "./SettingsPage/pages/NotificationPage";
 import { WorkspaceRead } from "../core/api/types/AirbyteClient";
 
 const DefaultView = React.lazy(() => import("./DefaultView"));
@@ -39,8 +45,9 @@ const SelectSourcePage = React.lazy(() => import("./source/SelectSourcePage"));
 const SourceItemPage = React.lazy(() => import("./source/SourceItemPage"));
 const SourceSettingsPage = React.lazy(() => import("./source/SourceSettingsPage"));
 const SourceConnectionsPage = React.lazy(() => import("./source/SourceConnectionsPage"));
+const AdvancedSettingsPage = React.lazy(() => import("./SettingsPage/pages/AdvancedSettingsPage"));
 
-const WorkspacesPage = React.lazy(() => import("./workspaces/WorkspacesPage"));
+const WorkspacesPage = React.lazy(() => import("./workspaces"));
 
 const useAddAnalyticsContextForWorkspace = (workspace: WorkspaceRead): void => {
   const analyticsContext = useMemo(
@@ -51,13 +58,22 @@ const useAddAnalyticsContextForWorkspace = (workspace: WorkspaceRead): void => {
     [workspace.workspaceId, workspace.customerId]
   );
   useAnalyticsRegisterValues(analyticsContext);
-  useAnalyticsIdentifyUser(workspace.workspaceId);
+  useAnalyticsIdentifyUser(workspace.workspaceId, {
+    protocol: window.location.protocol,
+    isLocalhost: window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1",
+  });
 };
 
 const MainViewRoutes: React.FC = () => {
+  const { organizationId, workspaceId } = useCurrentWorkspace();
+  const multiWorkspaceUI = useFeature(FeatureItem.MultiWorkspaceUI);
+  const isTokenManagementEnabled = useFeature(FeatureItem.APITokenManagement);
+  const canViewWorkspaceSettings = useIntent("ViewWorkspaceSettings", { workspaceId });
+  const canViewOrganizationSettings = useIntent("ViewOrganizationSettings", { organizationId });
+
   return (
     <MainView>
-      <ApiErrorBoundary>
+      <DefaultErrorBoundary>
         <Routes>
           <Route path={RoutePaths.Destination}>
             <Route index element={<AllDestinationsPage />} />
@@ -78,12 +94,33 @@ const MainViewRoutes: React.FC = () => {
             </Route>
           </Route>
           <Route path={`${RoutePaths.Connections}/*`} element={<ConnectionsRoutes />} />
-          <Route path={`${RoutePaths.Settings}/*`} element={<SettingsPage />} />
+          <Route path={`${RoutePaths.Settings}/*`} element={<SettingsPage />}>
+            <Route path={SettingsRoutePaths.Account} element={<AccountPage />} />
+            {isTokenManagementEnabled && (
+              <Route path={SettingsRoutePaths.Applications} element={<ApplicationSettingsView />} />
+            )}
+            {canViewWorkspaceSettings && multiWorkspaceUI && (
+              <Route path={SettingsRoutePaths.Workspace} element={<GeneralWorkspaceSettingsPage />} />
+            )}
+            {canViewWorkspaceSettings && (
+              <>
+                <Route path={SettingsRoutePaths.Source} element={<SourcesPage />} />
+                <Route path={SettingsRoutePaths.Destination} element={<DestinationsPage />} />
+              </>
+            )}
+            <Route path={SettingsRoutePaths.Notifications} element={<NotificationPage />} />
+            <Route path={SettingsRoutePaths.Metrics} element={<MetricsPage />} />
+            {multiWorkspaceUI && canViewOrganizationSettings && (
+              <Route path={SettingsRoutePaths.Organization} element={<GeneralOrganizationSettingsPage />} />
+            )}
+            <Route path={SettingsRoutePaths.Advanced} element={<AdvancedSettingsPage />} />
+            <Route path="*" element={<Navigate to={SettingsRoutePaths.Account} replace />} />
+          </Route>
           <Route path={`${RoutePaths.ConnectorBuilder}/*`} element={<ConnectorBuilderRoutes />} />
 
           <Route path="*" element={<Navigate to={RoutePaths.Connections} />} />
         </Routes>
-      </ApiErrorBoundary>
+      </DefaultErrorBoundary>
     </MainView>
   );
 };
@@ -148,7 +185,6 @@ export const Routing: React.FC = () => {
 
   return (
     <Routes>
-      <Route path={RoutePaths.AuthFlow} element={<CompleteOauthRequest />} />
       {user && !initialSetupComplete ? (
         <Route path="*" element={<PreferencesRoutes />} />
       ) : (

@@ -1,0 +1,19 @@
+{
+  "sourceDefinitionId": "4528e960-6f7b-4412-8555-7e0097e1da17",
+  "sourceId": "4528e960-6f7b-4412-8555-7e0097e1da17",
+  "workspaceId": "4528e960-6f7b-4412-8555-7e0097e1da17",
+  "connectionConfiguration": {
+    "start_date": "2024-01-17",
+    "account_ids": [1234567890],
+    "credentials": {
+      "auth_method": "access_token",
+      "access_token": {
+        "_secret": "airbyte_workspace_4528e960-6f7b-4412-8555-7e0097e1da17_v1"
+      }
+    }
+  },
+  "name": "test",
+  "sourceName": "source-linkedin",
+  "icon": "",
+  "isVersionOverrideApplied": false
+}

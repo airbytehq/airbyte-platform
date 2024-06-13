@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.api.server.mappers
@@ -102,7 +102,7 @@ object ConnectionReadMapper {
             streamAndConfiguration.config!!.syncMode,
             streamAndConfiguration.config!!.destinationSyncMode,
           )
-        streamConfigurations.addStreamsItem(
+        streamConfigurations.addstreamsItem(
           StreamConfiguration()
             .name(streamAndConfiguration.stream!!.name)
             .primaryKey(streamAndConfiguration.config!!.primaryKey)

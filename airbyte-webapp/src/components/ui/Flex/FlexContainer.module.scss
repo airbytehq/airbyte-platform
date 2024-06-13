@@ -2,6 +2,10 @@
 
 .container {
   display: flex;
+
+  &--inline {
+    display: inline-flex;
+  }
 }
 
 .directionRow {
@@ -86,4 +90,16 @@
 
 .justifyContentEvenly {
   justify-content: space-evenly;
+}
+
+.wrapWrap {
+  flex-wrap: wrap;
+}
+
+.wrapNowrap {
+  flex-wrap: nowrap;
+}
+
+.wrapWrapReverse {
+  flex-wrap: wrap-reverse;
 }

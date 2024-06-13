@@ -12,8 +12,8 @@ import { Pre } from "components/ui/Pre";
 import { Spinner } from "components/ui/Spinner";
 
 import { useAirbyteCloudIps } from "area/connector/utils/useAirbyteCloudIps";
-import { LogsRequestError } from "core/api";
-import { DestinationRead, SourceRead, SupportLevel, SynchronousJobRead } from "core/api/types/AirbyteClient";
+import { ErrorWithJobInfo } from "core/api";
+import { DestinationRead, SourceRead, SupportLevel } from "core/api/types/AirbyteClient";
 import {
   Connector,
   ConnectorDefinition,
@@ -38,11 +38,10 @@ import { WarningMessage } from "../ConnectorForm/components/WarningMessage";
 // since some of props are used in both components, and some of them used just as a prop-drill
 // https://github.com/airbytehq/airbyte/issues/18553
 interface ConnectorCardBaseProps {
-  title?: React.ReactNode;
+  title?: string;
   headerBlock?: React.ReactNode;
   description?: React.ReactNode;
   full?: boolean;
-  jobInfo?: SynchronousJobRead | null;
   onSubmit: (values: ConnectorCardValues) => Promise<void> | void;
   reloadConfig?: () => void;
   onDeleteClick?: () => void;
@@ -79,7 +78,6 @@ const getConnectorId = (connectorRead: DestinationRead | SourceRead) => {
 };
 
 export const ConnectorCard: React.FC<ConnectorCardCreateProps | ConnectorCardEditProps> = ({
-  jobInfo,
   onSubmit,
   onDeleteClick,
   selectedConnectorDefinitionId,
@@ -90,6 +88,7 @@ export const ConnectorCard: React.FC<ConnectorCardCreateProps | ConnectorCardEdi
   ...props
 }) => {
   const [errorStatusRequest, setErrorStatusRequest] = useState<Error | null>(null);
+  const { formatMessage } = useIntl();
 
   const { setDocumentationPanelOpen, setSelectedConnectorDefinition } = useDocumentationPanelContext();
   const {
@@ -142,7 +141,7 @@ export const ConnectorCard: React.FC<ConnectorCardCreateProps | ConnectorCardEdi
       trackTestConnectorSuccess(selectedConnectorDefinition);
       return response;
     } catch (e) {
-      trackTestConnectorFailure(selectedConnectorDefinition, LogsRequestError.extractJobInfo(e), e.message);
+      trackTestConnectorFailure(selectedConnectorDefinition, ErrorWithJobInfo.getJobInfo(e), e.message);
       throw e;
     }
   };
@@ -183,7 +182,7 @@ export const ConnectorCard: React.FC<ConnectorCardCreateProps | ConnectorCardEdi
     }
   };
 
-  const job = jobInfo || LogsRequestError.extractJobInfo(errorStatusRequest);
+  const job = ErrorWithJobInfo.getJobInfo(errorStatusRequest);
 
   const connector = isEditMode ? props.connector : undefined;
   const connectorId = connector ? getConnectorId(connector) : undefined;
@@ -246,7 +245,7 @@ export const ConnectorCard: React.FC<ConnectorCardCreateProps | ConnectorCardEdi
               isTestConnectionInProgress={isTestConnectionInProgress}
               onCancelTesting={onStopTesting}
               isSubmitting={isSubmitting || isTestConnectionInProgress}
-              errorMessage={error && generateMessageFromError(error)}
+              errorMessage={error && generateMessageFromError(error, formatMessage)}
               formType={props.formType}
               hasDefinition={Boolean(selectedConnectorDefinitionId)}
               onRetestClick={() => {
@@ -260,7 +259,7 @@ export const ConnectorCard: React.FC<ConnectorCardCreateProps | ConnectorCardEdi
               onDeleteClick={onDeleteClick}
               isValid={isValid}
               dirty={dirty}
-              job={job ? job : undefined}
+              job={job ?? undefined}
               onCancelClick={() => {
                 resetConnectorForm();
               }}

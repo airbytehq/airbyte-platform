@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.api.server.services
@@ -40,7 +40,7 @@ class SourceDefinitionServiceImpl(private val configApiClient: ConfigApiClient) 
     authorization: String?,
     userInfo: String?,
   ): SourceDefinitionSpecificationRead? {
-    val sourceDefinitionIdWithWorkspaceId = SourceDefinitionIdWithWorkspaceId().sourceDefinitionId(sourceDefinitionId).workspaceId(workspaceId)
+    val sourceDefinitionIdWithWorkspaceId = SourceDefinitionIdWithWorkspaceId(sourceDefinitionId = sourceDefinitionId, workspaceId = workspaceId)
 
     var response: HttpResponse<SourceDefinitionSpecificationRead>
     try {
@@ -52,7 +52,7 @@ class SourceDefinitionServiceImpl(private val configApiClient: ConfigApiClient) 
     ConfigClientErrorHandler.handleError(response, sourceDefinitionId.toString())
     log.debug(HTTP_RESPONSE_BODY_DEBUG_MESSAGE + response.body())
     return SourceDefinitionSpecificationReadMapper.from(
-      Objects.requireNonNull<SourceDefinitionSpecificationRead?>(
+      Objects.requireNonNull(
         response.body(),
       ),
     )

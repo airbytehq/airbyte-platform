@@ -25,10 +25,14 @@ interface ConnectorNameCellProps {
 
 export const ConnectorNameCell: React.FC<ConnectorNameCellProps> = ({ value, actualName, enabled, icon, hideIcon }) => (
   <FlexContainer alignItems="center">
-    {actualName ? (
-      <Tooltip control={<ConnectorIcon icon={icon} />}>{actualName}</Tooltip>
-    ) : (
-      !hideIcon && <ConnectorIcon icon={icon} />
+    {!hideIcon && (
+      <>
+        {actualName ? (
+          <Tooltip control={<ConnectorIcon icon={icon} />}>{actualName}</Tooltip>
+        ) : (
+          <ConnectorIcon icon={icon} />
+        )}
+      </>
     )}
     <EntityNameCell className={styles.text} value={value} enabled={enabled} />
   </FlexContainer>

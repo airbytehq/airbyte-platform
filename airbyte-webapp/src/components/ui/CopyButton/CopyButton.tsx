@@ -8,11 +8,20 @@ import { Icon } from "../Icon";
 
 interface CopyButtonProps {
   className?: string;
-  content: string;
+  content: string | (() => string);
   title?: string;
+  variant?: "secondary" | "clear";
+  iconPosition?: "left" | "right";
 }
 
-export const CopyButton: React.FC<CopyButtonProps> = ({ className, content, title }) => {
+export const CopyButton: React.FC<React.PropsWithChildren<CopyButtonProps>> = ({
+  className,
+  content,
+  title,
+  children,
+  variant = "secondary",
+  iconPosition = "left",
+}) => {
   const { formatMessage } = useIntl();
   const [copied, setCopied] = useState(false);
 
@@ -23,7 +32,9 @@ export const CopyButton: React.FC<CopyButtonProps> = ({ className, content, titl
       clearTimeout(timeoutRef.current);
     }
 
-    navigator.clipboard.writeText(content).then(() => {
+    const text = typeof content === "string" ? content : content();
+
+    navigator.clipboard.writeText(text).then(() => {
       setCopied(true);
       timeoutRef.current = setTimeout(() => setCopied(false), 2500);
     });
@@ -33,15 +44,15 @@ export const CopyButton: React.FC<CopyButtonProps> = ({ className, content, titl
     <Button
       size="xs"
       className={classNames(className, styles.button)}
-      variant="secondary"
+      variant={variant}
       title={title || formatMessage({ id: "copyButton.title" })}
-      icon={
-        <div>
-          <Icon type="copy" />
-          {copied && <Icon className={styles.success} type="successFilled" color="success" />}
-        </div>
-      }
       onClick={handleClick}
-    />
+      icon={children ? "copy" : undefined}
+      iconPosition={iconPosition}
+    >
+      {copied && <Icon className={styles.success} type="successFilled" color="success" />}
+      {children ? undefined : <Icon type="copy" />}
+      {children}
+    </Button>
   );
 };

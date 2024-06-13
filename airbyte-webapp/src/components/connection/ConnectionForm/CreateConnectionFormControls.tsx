@@ -1,5 +1,5 @@
 import React from "react";
-import { useFormContext, useFormState } from "react-hook-form";
+import { useFormContext, useFormState, useWatch } from "react-hook-form";
 import { FormattedMessage } from "react-intl";
 import { useEffectOnce } from "react-use";
 
@@ -8,7 +8,9 @@ import { Button } from "components/ui/Button";
 import { FlexContainer } from "components/ui/Flex";
 import { Text } from "components/ui/Text";
 
+import { ConnectionScheduleType } from "core/api/types/AirbyteClient";
 import { useConnectionFormService } from "hooks/services/ConnectionForm/ConnectionFormService";
+import { useExperiment } from "hooks/services/Experiment";
 
 import { FormConnectionFormValues } from "./formConfig";
 
@@ -21,6 +23,10 @@ export const CreateConnectionFormControls: React.FC = () => {
   const { trigger } = useFormContext<FormConnectionFormValues>();
   const { getErrorMessage } = useConnectionFormService();
   const errorMessage = getErrorMessage(isValid, errors);
+  const isSimplifiedCreation = useExperiment("connection.simplifiedCreation", true);
+
+  const watchedScheduleType = useWatch<FormConnectionFormValues>({ name: "scheduleType" });
+  const willSyncAfterCreation = watchedScheduleType === ConnectionScheduleType.basic;
 
   // If the source doesn't select any streams by default, the initial untouched state
   // won't validate that at least one is selected. In this case, a user could submit the form
@@ -30,13 +36,19 @@ export const CreateConnectionFormControls: React.FC = () => {
   });
 
   return (
-    <Box mt="md">
-      <FlexContainer justifyContent="space-between" gap="xl">
+    <Box mt={isSimplifiedCreation ? undefined : "md"}>
+      <FlexContainer justifyContent="space-between" alignItems="center" gap="xl">
         <Text color="red" size="lg">
           {errorMessage}
         </Text>
         <Button type="submit" isLoading={isSubmitting} disabled={isSubmitting || !isValid}>
-          <FormattedMessage id="onboarding.setUpConnection" />
+          <FormattedMessage
+            id={
+              isSimplifiedCreation && willSyncAfterCreation
+                ? "onboarding.setUpConnectionNext"
+                : "onboarding.setUpConnection"
+            }
+          />
         </Button>
       </FlexContainer>
     </Box>

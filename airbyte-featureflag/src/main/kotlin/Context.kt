@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.featureflag
@@ -212,4 +212,23 @@ data class ImageVersion(override val key: String) : Context {
 
 data class Geography(override val key: String) : Context {
   override val kind: String = "geography"
+}
+
+/**
+ * Context for representing a plane by name.
+ *
+ * For example: prod-gcp-dataplane-us-west-1-1
+ *
+ * @param [key] the name of the plane.
+ */
+data class PlaneName(override val key: String) : Context {
+  override val kind: String = "plane-name"
+}
+
+data class Priority(override val key: String) : Context {
+  override val kind: String = "priority"
+
+  companion object {
+    val HIGH_PRIORITY = "high"
+  }
 }

@@ -1,13 +1,18 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.commons.server.handlers;
+
+import static io.airbyte.commons.server.converters.ApiPojoConverters.toApiSupportState;
+import static io.airbyte.featureflag.ContextKt.ANONYMOUS;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.Lists;
 import io.airbyte.api.model.generated.ActorCatalogWithUpdatedAt;
+import io.airbyte.api.model.generated.ActorDefinitionVersionBreakingChanges;
+import io.airbyte.api.model.generated.ActorStatus;
 import io.airbyte.api.model.generated.CompleteOAuthResponse;
 import io.airbyte.api.model.generated.ConnectionRead;
 import io.airbyte.api.model.generated.DiscoverCatalogResult;
@@ -27,6 +32,7 @@ import io.airbyte.api.model.generated.SourceUpdate;
 import io.airbyte.api.model.generated.WorkspaceIdRequestBody;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.commons.server.converters.ConfigurationUpdate;
+import io.airbyte.commons.server.handlers.helpers.ActorDefinitionHandlerHelper;
 import io.airbyte.commons.server.handlers.helpers.CatalogConverter;
 import io.airbyte.commons.server.handlers.helpers.OAuthSecretHelper;
 import io.airbyte.config.ActorDefinitionVersion;
@@ -35,6 +41,7 @@ import io.airbyte.config.SecretPersistenceConfig;
 import io.airbyte.config.SourceConnection;
 import io.airbyte.config.StandardSourceDefinition;
 import io.airbyte.config.persistence.ActorDefinitionVersionHelper;
+import io.airbyte.config.persistence.ActorDefinitionVersionHelper.ActorDefinitionVersionWithOverrideStatus;
 import io.airbyte.config.persistence.ConfigNotFoundException;
 import io.airbyte.config.persistence.ConfigRepository;
 import io.airbyte.config.persistence.ConfigRepository.ResourcesQueryPaginated;
@@ -42,12 +49,15 @@ import io.airbyte.config.secrets.JsonSecretsProcessor;
 import io.airbyte.config.secrets.SecretCoordinate;
 import io.airbyte.config.secrets.SecretsRepositoryReader;
 import io.airbyte.config.secrets.persistence.RuntimeSecretPersistence;
+import io.airbyte.data.helpers.ActorDefinitionVersionUpdater;
 import io.airbyte.data.services.SecretPersistenceConfigService;
 import io.airbyte.data.services.SourceService;
 import io.airbyte.data.services.WorkspaceService;
 import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.featureflag.Organization;
+import io.airbyte.featureflag.UseIconUrlInApiResponse;
 import io.airbyte.featureflag.UseRuntimeSecretPersistence;
+import io.airbyte.featureflag.Workspace;
 import io.airbyte.persistence.job.factory.OAuthConfigSupplier;
 import io.airbyte.protocol.models.AirbyteCatalog;
 import io.airbyte.protocol.models.ConnectorSpecification;
@@ -77,10 +87,12 @@ public class SourceHandler {
   private final JsonSecretsProcessor secretsProcessor;
   private final OAuthConfigSupplier oAuthConfigSupplier;
   private final ActorDefinitionVersionHelper actorDefinitionVersionHelper;
+  private final ActorDefinitionVersionUpdater actorDefinitionVersionUpdater;
   private final FeatureFlagClient featureFlagClient;
   private final SourceService sourceService;
   private final WorkspaceService workspaceService;
   private final SecretPersistenceConfigService secretPersistenceConfigService;
+  private final ActorDefinitionHandlerHelper actorDefinitionHandlerHelper;
 
   @VisibleForTesting
   public SourceHandler(final ConfigRepository configRepository,
@@ -95,7 +107,9 @@ public class SourceHandler {
                        final FeatureFlagClient featureFlagClient,
                        final SourceService sourceService,
                        final WorkspaceService workspaceService,
-                       final SecretPersistenceConfigService secretPersistenceConfigService) {
+                       final SecretPersistenceConfigService secretPersistenceConfigService,
+                       final ActorDefinitionHandlerHelper actorDefinitionHandlerHelper,
+                       final ActorDefinitionVersionUpdater actorDefinitionVersionUpdater) {
     this.configRepository = configRepository;
     this.secretsRepositoryReader = secretsRepositoryReader;
     validator = integrationSchemaValidation;
@@ -109,6 +123,8 @@ public class SourceHandler {
     this.sourceService = sourceService;
     this.workspaceService = workspaceService;
     this.secretPersistenceConfigService = secretPersistenceConfigService;
+    this.actorDefinitionHandlerHelper = actorDefinitionHandlerHelper;
+    this.actorDefinitionVersionUpdater = actorDefinitionVersionUpdater;
   }
 
   public SourceRead createSourceWithOptionalSecret(final SourceCreate sourceCreate)
@@ -229,7 +245,7 @@ public class SourceHandler {
       throws IOException, JsonValidationException, ConfigNotFoundException {
     final SourceConnection sourceConnection = configRepository.getSourceConnection(sourceIdRequestBody.getSourceId());
     final StandardSourceDefinition sourceDefinition = configRepository.getStandardSourceDefinition(sourceConnection.getSourceDefinitionId());
-    configRepository.setActorDefaultVersion(sourceIdRequestBody.getSourceId(), sourceDefinition.getDefaultVersionId());
+    actorDefinitionVersionUpdater.upgradeActorVersion(sourceConnection, sourceDefinition);
   }
 
   public SourceRead getSource(final SourceIdRequestBody sourceIdRequestBody)
@@ -284,7 +300,7 @@ public class SourceHandler {
 
     final List<SourceRead> reads = Lists.newArrayList();
     for (final SourceConnection sc : sourceConnections) {
-      reads.add(buildSourceRead(sc));
+      reads.add(buildSourceReadWithStatus(sc));
     }
 
     return new SourceReadList().sources(reads);
@@ -301,7 +317,7 @@ public class SourceHandler {
 
     final List<SourceRead> reads = Lists.newArrayList();
     for (final SourceConnection sc : sourceConnections) {
-      reads.add(buildSourceRead(sc));
+      reads.add(buildSourceReadWithStatus(sc));
     }
 
     return new SourceReadList().sources(reads);
@@ -325,7 +341,7 @@ public class SourceHandler {
     for (final SourceConnection sci : configRepository.listSourceConnection()) {
       if (!sci.getTombstone()) {
         final SourceRead sourceRead = buildSourceRead(sci);
-        if (connectionsHandler.matchSearch(sourceSearch, sourceRead)) {
+        if (MatchSearchHandler.matchSearch(sourceSearch, sourceRead)) {
           reads.add(sourceRead);
         }
       }
@@ -392,6 +408,18 @@ public class SourceHandler {
         request.getSourceId(),
         request.getConnectorVersion(),
         request.getConfigurationHash());
+  }
+
+  private SourceRead buildSourceReadWithStatus(final SourceConnection sourceConnection)
+      throws JsonValidationException, ConfigNotFoundException, IOException {
+    final SourceRead sourceRead = buildSourceRead(sourceConnection);
+    // add source status into sourceRead
+    if (sourceService.isSourceActive(sourceConnection.getSourceId())) {
+      sourceRead.status(ActorStatus.ACTIVE);
+    } else {
+      sourceRead.status(ActorStatus.INACTIVE);
+    }
+    return sourceRead;
   }
 
   private SourceRead buildSourceRead(final UUID sourceId)
@@ -480,8 +508,18 @@ public class SourceHandler {
     }
   }
 
-  protected static SourceRead toSourceRead(final SourceConnection sourceConnection,
-                                           final StandardSourceDefinition standardSourceDefinition) {
+  protected SourceRead toSourceRead(final SourceConnection sourceConnection,
+                                    final StandardSourceDefinition standardSourceDefinition)
+      throws JsonValidationException, ConfigNotFoundException, IOException {
+
+    final ActorDefinitionVersionWithOverrideStatus sourceVersionWithOverrideStatus = actorDefinitionVersionHelper.getSourceVersionWithOverrideStatus(
+        standardSourceDefinition, sourceConnection.getWorkspaceId(), sourceConnection.getSourceId());
+
+    final boolean iconUrlFeatureFlag = featureFlagClient.boolVariation(UseIconUrlInApiResponse.INSTANCE, new Workspace(ANONYMOUS));
+
+    final Optional<ActorDefinitionVersionBreakingChanges> breakingChanges =
+        actorDefinitionHandlerHelper.getVersionBreakingChanges(sourceVersionWithOverrideStatus.actorDefinitionVersion());
+
     return new SourceRead()
         .sourceDefinitionId(standardSourceDefinition.getSourceDefinitionId())
         .sourceName(standardSourceDefinition.getName())
@@ -490,16 +528,20 @@ public class SourceHandler {
         .sourceDefinitionId(sourceConnection.getSourceDefinitionId())
         .connectionConfiguration(sourceConnection.getConfiguration())
         .name(sourceConnection.getName())
-        .icon(SourceDefinitionsHandler.loadIcon(standardSourceDefinition.getIcon()));
+        .icon(iconUrlFeatureFlag ? standardSourceDefinition.getIconUrl() : SourceDefinitionsHandler.loadIcon(standardSourceDefinition.getIcon()))
+        .isVersionOverrideApplied(sourceVersionWithOverrideStatus.isOverrideApplied())
+        .breakingChanges(breakingChanges.orElse(null))
+        .supportState(toApiSupportState(sourceVersionWithOverrideStatus.actorDefinitionVersion().getSupportState()));
   }
 
-  protected static SourceSnippetRead toSourceSnippetRead(final SourceConnection source, final StandardSourceDefinition sourceDefinition) {
+  protected SourceSnippetRead toSourceSnippetRead(final SourceConnection source, final StandardSourceDefinition sourceDefinition) {
+    final boolean iconUrlFeatureFlag = featureFlagClient.boolVariation(UseIconUrlInApiResponse.INSTANCE, new Workspace(ANONYMOUS));
     return new SourceSnippetRead()
         .sourceId(source.getSourceId())
         .name(source.getName())
         .sourceDefinitionId(sourceDefinition.getSourceDefinitionId())
         .sourceName(sourceDefinition.getName())
-        .icon(SourceDefinitionsHandler.loadIcon(sourceDefinition.getIcon()));
+        .icon(iconUrlFeatureFlag ? sourceDefinition.getIconUrl() : SourceDefinitionsHandler.loadIcon(sourceDefinition.getIcon()));
   }
 
   @VisibleForTesting
@@ -517,7 +559,7 @@ public class SourceHandler {
     if (organizationId != null && featureFlagClient.boolVariation(UseRuntimeSecretPersistence.INSTANCE, new Organization(organizationId))) {
       final SecretPersistenceConfig secretPersistenceConfig;
       try {
-        secretPersistenceConfig = secretPersistenceConfigService.getSecretPersistenceConfig(ScopeType.ORGANIZATION, organizationId);
+        secretPersistenceConfig = secretPersistenceConfigService.get(ScopeType.ORGANIZATION, organizationId);
       } catch (final io.airbyte.data.exceptions.ConfigNotFoundException e) {
         throw new ConfigNotFoundException(e.getType(), e.getConfigId());
       }
@@ -528,20 +570,6 @@ public class SourceHandler {
     }
     final CompleteOAuthResponse completeOAuthResponse = Jsons.object(secret, CompleteOAuthResponse.class);
     return Jsons.jsonNode(completeOAuthResponse.getAuthPayload());
-  }
-
-  @VisibleForTesting
-  JsonNode hydrateConnectionConfiguration(final UUID sourceDefinitionId,
-                                          final UUID workspaceId,
-                                          final String secretId,
-                                          final JsonNode dehydratedConnectionConfiguration)
-      throws JsonValidationException, ConfigNotFoundException, IOException {
-    final JsonNode hydratedSecret = hydrateOAuthResponseSecret(secretId, workspaceId);
-    final ConnectorSpecification spec =
-        getSpecFromSourceDefinitionIdForWorkspace(sourceDefinitionId, workspaceId);
-    // add OAuth Response data to connection configuration
-
-    return OAuthSecretHelper.setSecretsInConnectionConfiguration(spec, hydratedSecret, dehydratedConnectionConfiguration);
   }
 
 }

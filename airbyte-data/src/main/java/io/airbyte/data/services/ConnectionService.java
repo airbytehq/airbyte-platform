@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.data.services;
@@ -54,6 +54,8 @@ public interface ConnectionService {
   Geography getGeographyForConnection(UUID connectionId) throws IOException;
 
   boolean getConnectionHasAlphaOrBetaConnector(UUID connectionId) throws IOException;
+
+  boolean actorSyncsAnyListedStream(UUID actorID, List<String> streamNames) throws IOException;
 
   Set<Long> listEarlySyncJobs(final int freeUsageInterval, final int jobsFetchRange) throws IOException;
 

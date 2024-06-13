@@ -1,21 +1,24 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.workload.launcher
 
 import com.google.common.annotations.VisibleForTesting
 import datadog.trace.api.Trace
+import dev.failsafe.Failsafe
+import dev.failsafe.RetryPolicy
+import io.airbyte.api.client.WorkloadApiClient
 import io.airbyte.metrics.lib.ApmTraceUtils
 import io.airbyte.metrics.lib.MetricAttribute
-import io.airbyte.workload.api.client.generated.WorkloadApi
+import io.airbyte.workload.api.client.generated.infrastructure.ServerException
 import io.airbyte.workload.api.client.model.generated.WorkloadListRequest
 import io.airbyte.workload.api.client.model.generated.WorkloadListResponse
 import io.airbyte.workload.api.client.model.generated.WorkloadStatus
 import io.airbyte.workload.launcher.metrics.CustomMetricPublisher
+import io.airbyte.workload.launcher.metrics.MeterFilterFactory
 import io.airbyte.workload.launcher.metrics.MeterFilterFactory.Companion.DATA_PLANE_ID_TAG
 import io.airbyte.workload.launcher.metrics.MeterFilterFactory.Companion.RESUME_CLAIMED_OPERATION_NAME
-import io.airbyte.workload.launcher.metrics.MeterFilterFactory.Companion.WORKLOAD_ID_TAG
 import io.airbyte.workload.launcher.metrics.WorkloadLauncherMetricMetadata
 import io.airbyte.workload.launcher.model.toLauncherInput
 import io.airbyte.workload.launcher.pipeline.LaunchPipeline
@@ -27,16 +30,18 @@ import jakarta.inject.Singleton
 import reactor.core.publisher.Mono
 import reactor.core.scheduler.Schedulers
 import reactor.kotlin.core.publisher.toFlux
+import java.time.Duration
 
 private val logger = KotlinLogging.logger {}
 
 @Singleton
 class ClaimedProcessor(
-  private val apiClient: WorkloadApi,
+  private val apiClient: WorkloadApiClient,
   private val pipe: LaunchPipeline,
   private val metricPublisher: CustomMetricPublisher,
   @Value("\${airbyte.data-plane-id}") private val dataplaneId: String,
-  @Value("\${airbyte.workload-launcher.parallelism}") parallelism: Int,
+  @Value("\${airbyte.workload-launcher.temporal.default-queue.parallelism}") parallelism: Int,
+  private val claimProcessorTracker: ClaimProcessorTracker,
 ) {
   private val scheduler = Schedulers.newParallel("process-claimed-scheduler", parallelism)
 
@@ -50,9 +55,23 @@ class ClaimedProcessor(
       )
 
     val workloadList: WorkloadListResponse =
-      apiClient.workloadList(workloadListRequest)
+      Failsafe.with(
+        RetryPolicy.builder<Any>()
+          .withBackoff(Duration.ofSeconds(20), Duration.ofDays(365))
+          .onRetry { logger.error { "Retrying to fetch workloads for dataplane $dataplaneId" } }
+          .abortOn { exception ->
+            when (exception) {
+              // This makes us to retry only on 5XX errors
+              is ServerException -> exception.statusCode / 100 != 5
+              else -> true
+            }
+          }
+          .build(),
+      )
+        .get { -> apiClient.workloadApi.workloadList(workloadListRequest) }
 
     logger.info { "Re-hydrating ${workloadList.workloads.size} workload claim(s)..." }
+    claimProcessorTracker.trackNumberOfClaimsToResume(workloadList.workloads.size)
 
     val msgs = workloadList.workloads.map { it.toLauncherInput() }
 
@@ -69,8 +88,12 @@ class ClaimedProcessor(
   }
 
   private fun runOnClaimedScheduler(msg: LauncherInput): Mono<LaunchStageIO> {
-    metricPublisher.count(WorkloadLauncherMetricMetadata.WORKLOAD_CLAIM_RESUMED, MetricAttribute(WORKLOAD_ID_TAG, msg.workloadId))
+    metricPublisher.count(
+      WorkloadLauncherMetricMetadata.WORKLOAD_CLAIM_RESUMED,
+      MetricAttribute(MeterFilterFactory.WORKLOAD_TYPE_TAG, msg.workloadType.toString()),
+    )
     return pipe.buildPipeline(msg)
+      .doOnTerminate(claimProcessorTracker::trackResumed)
       .subscribeOn(scheduler)
   }
 

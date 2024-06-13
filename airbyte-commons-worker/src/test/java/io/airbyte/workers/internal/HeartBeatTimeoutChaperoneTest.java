@@ -1,10 +1,12 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.workers.internal;
 
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
@@ -24,7 +26,6 @@ import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
-import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.Test;
 
 class HeartBeatTimeoutChaperoneTest {
@@ -40,6 +41,8 @@ class HeartBeatTimeoutChaperoneTest {
   @Test
   void testFailHeartbeat() {
     when(featureFlagClient.boolVariation(eq(ShouldFailSyncIfHeartbeatFailure.INSTANCE), any())).thenReturn(true);
+    when(heartbeatMonitor.getHeartbeatFreshnessThreshold()).thenReturn(Duration.ofSeconds(1));
+
     final HeartbeatTimeoutChaperone heartbeatTimeoutChaperone = new HeartbeatTimeoutChaperone(
         heartbeatMonitor,
         timeoutCheckDuration,
@@ -49,15 +52,21 @@ class HeartBeatTimeoutChaperoneTest {
         connectionId,
         metricClient);
 
-    Assertions.assertThatThrownBy(() -> heartbeatTimeoutChaperone.runWithHeartbeatThread(CompletableFuture.runAsync(() -> {
-      try {
-        Thread.sleep(Long.MAX_VALUE);
-      } catch (final InterruptedException e) {
-        throw new RuntimeException(e);
-      }
-    })))
-        .isInstanceOf(HeartbeatTimeoutChaperone.HeartbeatTimeoutException.class);
+    final var thrown = assertThrows(HeartbeatTimeoutChaperone.HeartbeatTimeoutException.class,
+        () -> heartbeatTimeoutChaperone.runWithHeartbeatThread(CompletableFuture.runAsync(() -> {
+          try {
+            Thread.sleep(Long.MAX_VALUE);
+          } catch (final InterruptedException e) {
+            throw new RuntimeException(e);
+          }
+        })));
 
+    assertEquals("Last record seen 0 seconds ago, exceeding the threshold of 1 second.", thrown.getMessage());
+
+    verify(metricClient, times(1)).count(OssMetricsRegistry.SOURCE_HEARTBEAT_FAILURE, 1,
+        new MetricAttribute(MetricTags.CONNECTION_ID, connectionId.toString()),
+        new MetricAttribute(MetricTags.KILLED, "true"),
+        new MetricAttribute(MetricTags.SOURCE_IMAGE, "docker image"));
   }
 
   @Test
@@ -107,12 +116,11 @@ class HeartBeatTimeoutChaperoneTest {
         featureFlagClient,
         workspaceId,
         connectionId,
+        "docker image",
         metricClient);
     when(featureFlagClient.boolVariation(eq(ShouldFailSyncIfHeartbeatFailure.INSTANCE), any())).thenReturn(true);
     when(heartbeatMonitor.isBeating()).thenReturn(Optional.of(false));
     assertDoesNotThrow(() -> CompletableFuture.runAsync(() -> heartbeatTimeoutChaperone.monitor()).get(1000, TimeUnit.MILLISECONDS));
-    verify(metricClient, times(1)).count(OssMetricsRegistry.SOURCE_HEARTBEAT_FAILURE, 1,
-        new MetricAttribute(MetricTags.CONNECTION_ID, connectionId.toString()));
   }
 
   @Test
@@ -123,6 +131,7 @@ class HeartBeatTimeoutChaperoneTest {
         featureFlagClient,
         workspaceId,
         connectionId,
+        "docker image",
         metricClient);
     when(featureFlagClient.boolVariation(eq(ShouldFailSyncIfHeartbeatFailure.INSTANCE), any())).thenReturn(false);
     when(heartbeatMonitor.isBeating()).thenReturn(Optional.of(true), Optional.of(false));

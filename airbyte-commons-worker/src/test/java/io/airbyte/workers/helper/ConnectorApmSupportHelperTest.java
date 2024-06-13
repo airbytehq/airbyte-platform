@@ -1,14 +1,9 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.workers.helper;
 
-import static io.airbyte.config.EnvConfigs.DD_AGENT_HOST;
-import static io.airbyte.config.EnvConfigs.DD_DOGSTATSD_PORT;
-import static io.airbyte.workers.helper.ConnectorApmSupportHelper.DD_SERVICE;
-import static io.airbyte.workers.helper.ConnectorApmSupportHelper.DD_VERSION;
-import static io.airbyte.workers.helper.ConnectorApmSupportHelper.JAVA_OPTS;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -16,7 +11,6 @@ import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.when;
 
 import io.airbyte.commons.constants.WorkerConstants;
-import io.airbyte.config.EnvConfigs;
 import io.fabric8.kubernetes.api.model.EnvVar;
 import java.util.ArrayList;
 import java.util.List;
@@ -63,8 +57,8 @@ class ConnectorApmSupportHelperTest {
     supportHelper.addServerNameAndVersionToEnvVars(IMAGE, envVars);
 
     assertEquals(2, envVars.size());
-    assertTrue(envVars.contains(new EnvVar(DD_SERVICE, CONNECTOR_NAME, null)));
-    assertTrue(envVars.contains(new EnvVar(DD_VERSION, CONNECTOR_VERSION, null)));
+    assertTrue(envVars.contains(new EnvVar(io.airbyte.commons.envvar.EnvVar.DD_SERVICE.name(), CONNECTOR_NAME, null)));
+    assertTrue(envVars.contains(new EnvVar(io.airbyte.commons.envvar.EnvVar.DD_VERSION.name(), CONNECTOR_VERSION, null)));
   }
 
   @Test
@@ -84,14 +78,15 @@ class ConnectorApmSupportHelperTest {
     final String ddDogstatsdPort = "12345";
     final List<EnvVar> envVars = new ArrayList<>();
     final ConnectorApmSupportHelper supportHelper = spy(new ConnectorApmSupportHelper());
-    when(supportHelper.getEnv()).thenReturn(Map.of(DD_AGENT_HOST, ddAgentHost, DD_DOGSTATSD_PORT, ddDogstatsdPort));
+    when(supportHelper.getEnv()).thenReturn(Map.of(io.airbyte.commons.envvar.EnvVar.DD_AGENT_HOST.name(), ddAgentHost,
+        io.airbyte.commons.envvar.EnvVar.DD_DOGSTATSD_PORT.name(), ddDogstatsdPort));
 
     supportHelper.addApmEnvVars(envVars);
 
     assertEquals(3, envVars.size());
-    assertTrue(envVars.contains(new EnvVar(JAVA_OPTS, WorkerConstants.DD_ENV_VAR, null)));
-    assertTrue(envVars.contains(new EnvVar(DD_AGENT_HOST, ddAgentHost, null)));
-    assertTrue(envVars.contains(new EnvVar(EnvConfigs.DD_DOGSTATSD_PORT, ddDogstatsdPort, null)));
+    assertTrue(envVars.contains(new EnvVar(io.airbyte.commons.envvar.EnvVar.JAVA_OPTS.name(), WorkerConstants.DD_ENV_VAR, null)));
+    assertTrue(envVars.contains(new EnvVar(io.airbyte.commons.envvar.EnvVar.DD_AGENT_HOST.name(), ddAgentHost, null)));
+    assertTrue(envVars.contains(new EnvVar(io.airbyte.commons.envvar.EnvVar.DD_DOGSTATSD_PORT.name(), ddDogstatsdPort, null)));
   }
 
   @Test
@@ -103,7 +98,7 @@ class ConnectorApmSupportHelperTest {
     supportHelper.addApmEnvVars(envVars);
 
     assertEquals(1, envVars.size());
-    assertTrue(envVars.contains(new EnvVar(JAVA_OPTS, WorkerConstants.DD_ENV_VAR, null)));
+    assertTrue(envVars.contains(new EnvVar(io.airbyte.commons.envvar.EnvVar.JAVA_OPTS.name(), WorkerConstants.DD_ENV_VAR, null)));
   }
 
 }

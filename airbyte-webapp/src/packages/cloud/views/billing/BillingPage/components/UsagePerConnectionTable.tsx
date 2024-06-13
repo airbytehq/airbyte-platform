@@ -141,12 +141,14 @@ export const UsagePerConnectionTable: React.FC = () => {
         cell: (props) => (
           <FlexContainer alignItems="center">
             <TextWithOverflowTooltip size="sm" className={styles.cellText}>
-              {props.row.original.connection.connectionScheduleType ===
-              (ConnectionScheduleType.manual || ConnectionScheduleType.cron) ? (
+              {props.row.original.connection.connectionScheduleType === ConnectionScheduleType.manual ||
+              props.row.original.connection.connectionScheduleType === ConnectionScheduleType.cron ? (
                 <FormattedMessage id={`frequency.${props.row.original.connection.connectionScheduleType}`} />
               ) : (
                 <FormattedMessage
-                  id={`frequency.${props.row.original.connection.connectionScheduleTimeUnit ?? "manual"}`}
+                  id={`frequency.${
+                    props.row.original.connection.connectionScheduleTimeUnit?.toLowerCase() ?? "manual"
+                  }`}
                   values={{ value: props.row.original.connection.connectionScheduleUnits }}
                 />
               )}

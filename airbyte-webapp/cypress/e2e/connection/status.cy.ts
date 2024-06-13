@@ -56,7 +56,7 @@ describe("Status tab", () => {
   it("should initialize as pending", () => {
     cy.get<WebBackendConnectionRead>("@connection").then((connection) => {
       cy.visit(`/${RoutePaths.Connections}/${connection.connectionId}/${ConnectionRoutePaths.Status}/`);
-      cy.get(statusPage.connectionStatusText).contains("Pending").should("exist");
+      statusPage.connectionStatusShouldBe("pending");
     });
   });
 
@@ -67,16 +67,19 @@ describe("Status tab", () => {
       // sync & verify the button enters and exits its disabled state as the status updates
       startManualSync();
       cy.get(statusPage.manualSyncButton).should("be.disabled");
-      cy.get(statusPage.connectionStatusText)
-        .contains("On time", {
-          timeout: 30000,
-        })
-        .should("exist");
+
+      // Wait for the job to start
+      cy.get(`[data-loading="true"]`, { timeout: 10000 }).should("exist");
+
+      // Wait for the job to complete
+      cy.get(`[data-loading="false"]`, { timeout: 45000 }).should("exist");
+
       cy.get(statusPage.manualSyncButton).should("not.be.disabled");
     });
   });
 
-  it("should allow resetting a sync", () => {
+  // skipping for now, these controls have gone away but the logic is still a useful thing to test
+  it.skip("should allow clearing data", () => {
     cy.get<WebBackendConnectionRead>("@connection").then((connection) => {
       cy.visit(`/${RoutePaths.Connections}/${connection.connectionId}/${ConnectionRoutePaths.Status}/`);
 
@@ -85,15 +88,14 @@ describe("Status tab", () => {
 
       cy.get(statusPage.jobHistoryDropdownMenu).click();
       cy.get(statusPage.resetDataDropdownOption).should("be.disabled");
-
-      cy.get(statusPage.connectionStatusText)
-        .contains("Pending", {
-          timeout: 30000,
-        })
-        .should("exist");
-
-      cy.get(statusPage.jobHistoryDropdownMenu).should("not.be.disabled");
+      // Click again to close the menu
       cy.get(statusPage.jobHistoryDropdownMenu).click();
+
+      // Wait for the job to start
+      cy.get(`[data-loading="true"]`, { timeout: 10000 }).should("exist");
+
+      // Wait for the job to complete
+      cy.get(`[data-loading="false"]`, { timeout: 45000 }).should("exist");
 
       cy.get(statusPage.jobHistoryDropdownMenu).click();
       cy.get(statusPage.resetDataDropdownOption).should("not.be.disabled");

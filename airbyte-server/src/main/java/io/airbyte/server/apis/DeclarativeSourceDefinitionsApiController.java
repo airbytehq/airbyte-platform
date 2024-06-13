@@ -1,10 +1,9 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.server.apis;
 
-import static io.airbyte.commons.auth.AuthRoleConstants.EDITOR;
 import static io.airbyte.commons.auth.AuthRoleConstants.ORGANIZATION_EDITOR;
 import static io.airbyte.commons.auth.AuthRoleConstants.WORKSPACE_EDITOR;
 
@@ -13,11 +12,11 @@ import io.airbyte.api.model.generated.DeclarativeManifestsReadList;
 import io.airbyte.api.model.generated.DeclarativeSourceDefinitionCreateManifestRequestBody;
 import io.airbyte.api.model.generated.ListDeclarativeManifestsRequestBody;
 import io.airbyte.api.model.generated.UpdateActiveManifestRequestBody;
-import io.airbyte.commons.auth.SecuredWorkspace;
 import io.airbyte.commons.server.handlers.DeclarativeSourceDefinitionsHandler;
 import io.airbyte.commons.server.scheduling.AirbyteTaskExecutors;
 import io.micronaut.context.annotation.Context;
 import io.micronaut.http.HttpStatus;
+import io.micronaut.http.annotation.Body;
 import io.micronaut.http.annotation.Controller;
 import io.micronaut.http.annotation.Post;
 import io.micronaut.http.annotation.Status;
@@ -32,17 +31,16 @@ public class DeclarativeSourceDefinitionsApiController implements DeclarativeSou
 
   private final DeclarativeSourceDefinitionsHandler handler;
 
-  public DeclarativeSourceDefinitionsApiController(final DeclarativeSourceDefinitionsHandler handler) {
+  public DeclarativeSourceDefinitionsApiController(@Body final DeclarativeSourceDefinitionsHandler handler) {
     this.handler = handler;
   }
 
   @Override
   @Post(uri = "/create_manifest")
   @Status(HttpStatus.CREATED)
-  @Secured({EDITOR, WORKSPACE_EDITOR, ORGANIZATION_EDITOR})
-  @SecuredWorkspace
+  @Secured({WORKSPACE_EDITOR, ORGANIZATION_EDITOR})
   @ExecuteOn(AirbyteTaskExecutors.IO)
-  public void createDeclarativeSourceDefinitionManifest(final DeclarativeSourceDefinitionCreateManifestRequestBody requestBody) {
+  public void createDeclarativeSourceDefinitionManifest(@Body final DeclarativeSourceDefinitionCreateManifestRequestBody requestBody) {
     ApiHelper.execute(() -> {
       handler.createDeclarativeSourceDefinitionManifest(requestBody);
       return null;
@@ -52,10 +50,9 @@ public class DeclarativeSourceDefinitionsApiController implements DeclarativeSou
   @Override
   @Post(uri = "/update_active_manifest")
   @Status(HttpStatus.NO_CONTENT)
-  @Secured({EDITOR, WORKSPACE_EDITOR, ORGANIZATION_EDITOR})
-  @SecuredWorkspace
+  @Secured({WORKSPACE_EDITOR, ORGANIZATION_EDITOR})
   @ExecuteOn(AirbyteTaskExecutors.IO)
-  public void updateDeclarativeManifestVersion(UpdateActiveManifestRequestBody requestBody) {
+  public void updateDeclarativeManifestVersion(@Body final UpdateActiveManifestRequestBody requestBody) {
     ApiHelper.execute(() -> {
       handler.updateDeclarativeManifestVersion(requestBody);
       return null;
@@ -65,11 +62,10 @@ public class DeclarativeSourceDefinitionsApiController implements DeclarativeSou
   @Override
   @Post(uri = "/list_manifests")
   @Status(HttpStatus.OK)
-  @Secured({EDITOR, WORKSPACE_EDITOR, ORGANIZATION_EDITOR})
-  @SecuredWorkspace
+  @Secured({WORKSPACE_EDITOR, ORGANIZATION_EDITOR})
   @ExecuteOn(AirbyteTaskExecutors.IO)
   public DeclarativeManifestsReadList listDeclarativeManifests(
-                                                               final ListDeclarativeManifestsRequestBody requestBody) {
+                                                               @Body final ListDeclarativeManifestsRequestBody requestBody) {
     return ApiHelper
         .execute(() -> handler.listManifestVersions(requestBody));
   }

@@ -1,0 +1,19 @@
+@use "scss/colors";
+@use "scss/variables";
+
+.removeRoleMenuItem__button {
+  width: 100%;
+  border: none;
+  background-color: transparent;
+  cursor: pointer;
+}
+
+.removeRoleMenuItem__button:disabled {
+  cursor: default;
+}
+
+.removeRoleMenuItem__button:hover:not(:disabled) {
+  background-color: colors.$red-30;
+  border-bottom-left-radius: variables.$border-radius-sm;
+  border-bottom-right-radius: variables.$border-radius-sm;
+}

@@ -14,8 +14,8 @@ import {
   NamespaceDefinitionType,
   NonBreakingChangesPreference,
   SyncMode,
+  SchemaChangeBackfillPreference,
 } from "core/api/types/AirbyteClient";
-import { ConnectionFormMode } from "hooks/services/ConnectionForm/ConnectionFormService";
 
 import { dbtOperationReadOrCreateSchema } from "../TransformationForm";
 
@@ -52,7 +52,7 @@ const getScheduleDataSchema = (allowSubOneHourCronExpressions: boolean) =>
                 validation.isValid ||
                 createError({
                   path,
-                  message: validation.message ?? "form.cronExpression.invalid",
+                  message: "form.cronExpression.invalid",
                 })
               );
             })
@@ -81,6 +81,7 @@ const streamSchema: SchemaOf<AirbyteStream> = yup.object({
   defaultCursorField: yup.array().of(yup.string()).optional(),
   sourceDefinedPrimaryKey: yup.array().of(yup.array().of(yup.string())).optional(),
   namespace: yup.string().optional(),
+  isResumable: yup.boolean().optional(),
 });
 
 /**
@@ -102,6 +103,9 @@ const streamConfigSchema: SchemaOf<AirbyteStreamConfiguration> = yup.object({
     .optional(),
   aliasName: yup.string().optional(),
   primaryKey: yup.array().of(yup.array().of(yup.string())).optional(),
+  minimumGenerationId: yup.number().optional(),
+  generationId: yup.number().optional(),
+  syncId: yup.number().optional(),
 });
 
 export const streamAndConfigurationSchema: SchemaOf<AirbyteStreamAndConfiguration> = yup.object({
@@ -183,20 +187,18 @@ export const namespaceFormatSchema = yup.string().when("namespaceDefinition", {
  * generate yup schema for the create connection form
  */
 export const createConnectionValidationSchema = (
-  mode: ConnectionFormMode,
   allowSubOneHourCronExpressions: boolean,
   allowAutoDetectSchema: boolean
 ) =>
   yup
     .object({
-      // The connection name during Editing is handled separately from the form
-      name: mode === "create" ? yup.string().required("form.empty.error") : yup.string().notRequired(),
-      // scheduleType can't de 'undefined', make it required()
+      name: yup.string().required("form.empty.error"),
+      // scheduleType can't be 'undefined', make it required()
       scheduleType: yup.mixed<ConnectionScheduleType>().oneOf(Object.values(ConnectionScheduleType)).required(),
       scheduleData: getScheduleDataSchema(allowSubOneHourCronExpressions),
       namespaceDefinition: namespaceDefinitionSchema.required("form.empty.error"),
       namespaceFormat: namespaceFormatSchema,
-      prefix: yup.string().optional(),
+      prefix: yup.string().default(""),
       nonBreakingChangesPreference: allowAutoDetectSchema
         ? yup.mixed().oneOf(Object.values(NonBreakingChangesPreference)).required("form.empty.error")
         : yup.mixed().notRequired(),
@@ -204,5 +206,7 @@ export const createConnectionValidationSchema = (
       normalization: yup.mixed<NormalizationType>().oneOf(Object.values(NormalizationType)).optional(),
       transformations: yup.array().of(dbtOperationReadOrCreateSchema).optional(),
       syncCatalog: syncCatalogSchema,
+      notifySchemaChanges: yup.boolean().optional(),
+      backfillPreference: yup.mixed().oneOf(Object.values(SchemaChangeBackfillPreference)).optional(),
     })
     .noUnknown();

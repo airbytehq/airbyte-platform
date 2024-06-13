@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.server.handlers;
@@ -7,7 +7,11 @@ package io.airbyte.server.handlers;
 import io.airbyte.api.model.generated.ConnectionIdRequestBody;
 import io.airbyte.api.model.generated.ConnectionSyncResultRead;
 import io.airbyte.api.model.generated.ConnectionUptimeHistoryRequestBody;
+import io.airbyte.api.model.generated.JobAggregatedStats;
+import io.airbyte.api.model.generated.JobRead;
 import io.airbyte.api.model.generated.JobStatus;
+import io.airbyte.api.model.generated.JobSyncResultRead;
+import io.airbyte.api.model.generated.JobWithAttemptsRead;
 import io.airbyte.api.model.generated.StreamStatusCreateRequestBody;
 import io.airbyte.api.model.generated.StreamStatusIncompleteRunCause;
 import io.airbyte.api.model.generated.StreamStatusListRequestBody;
@@ -15,16 +19,19 @@ import io.airbyte.api.model.generated.StreamStatusRead;
 import io.airbyte.api.model.generated.StreamStatusReadList;
 import io.airbyte.api.model.generated.StreamStatusRunState;
 import io.airbyte.api.model.generated.StreamStatusUpdateRequestBody;
+import io.airbyte.commons.server.handlers.JobHistoryHandler;
+import io.airbyte.commons.server.handlers.helpers.StatsAggregationHelper;
+import io.airbyte.persistence.job.JobPersistence;
+import io.airbyte.persistence.job.models.Job;
 import io.airbyte.server.handlers.api_domain_mapping.StreamStatusesMapper;
 import io.airbyte.server.repositories.StreamStatusesRepository;
 import jakarta.inject.Singleton;
-import java.time.Instant;
-import java.time.LocalDate;
-import java.time.OffsetDateTime;
-import java.time.ZoneId;
-import java.time.ZonedDateTime;
-import java.util.Comparator;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 /**
  * Interface layer between the API and Persistence layers.
@@ -34,10 +41,17 @@ public class StreamStatusesHandler {
 
   final StreamStatusesRepository repo;
   final StreamStatusesMapper mapper;
+  private final JobHistoryHandler jobHistoryHandler;
+  private final JobPersistence jobPersistence;
 
-  public StreamStatusesHandler(final StreamStatusesRepository repo, final StreamStatusesMapper mapper) {
+  public StreamStatusesHandler(final StreamStatusesRepository repo,
+                               final StreamStatusesMapper mapper,
+                               final JobHistoryHandler jobHistoryHandler,
+                               JobPersistence jobPersistence) {
     this.repo = repo;
     this.mapper = mapper;
+    this.jobHistoryHandler = jobHistoryHandler;
+    this.jobPersistence = jobPersistence;
   }
 
   public StreamStatusRead createStreamStatus(final StreamStatusCreateRequestBody req) {
@@ -78,45 +92,61 @@ public class StreamStatusesHandler {
     return new StreamStatusReadList().streamStatuses(apiList);
   }
 
-  public ConnectionSyncResultRead mapStreamStatusToSyncReadResult(final StreamStatusRead streamStatus, final ZoneId timezone) {
+  public ConnectionSyncResultRead mapStreamStatusToSyncReadResult(final StreamStatusRead streamStatus) {
     final JobStatus jobStatus = streamStatus.getRunState() == StreamStatusRunState.COMPLETE ? JobStatus.SUCCEEDED
         : streamStatus.getIncompleteRunCause() == StreamStatusIncompleteRunCause.CANCELED ? JobStatus.CANCELLED : JobStatus.FAILED;
 
     final ConnectionSyncResultRead result = new ConnectionSyncResultRead();
-    final Instant instant = Instant.ofEpochMilli(streamStatus.getTransitionedAt());
-    final ZonedDateTime zonedDateTime = instant.atZone(timezone);
-    // Setting the timestamp to the start of the day in the user's timezone in epoch seconds
-    result.setTimestamp(zonedDateTime.toLocalDate().atStartOfDay(timezone).toEpochSecond());
     result.setStatus(jobStatus);
     result.setStreamName(streamStatus.getStreamName());
     result.setStreamNamespace(streamStatus.getStreamNamespace());
     return result;
   }
 
-  public List<ConnectionSyncResultRead> getConnectionUptimeHistory(final ConnectionUptimeHistoryRequestBody req) {
-    final ZoneId timezone = ZoneId.of(req.getTimezone());
-    final OffsetDateTime thirtyDaysAgoInUTC = ZonedDateTime.now(timezone)
-        .minusDays(30)
-        .toLocalDate()
-        .atStartOfDay(ZoneId.of(req.getTimezone()))
-        .toOffsetDateTime();
+  /**
+   * Get the uptime history for a specific connection over the last X jobs.
+   *
+   * @param req the request body
+   * @return list of JobSyncResultReads.
+   */
+  public List<JobSyncResultRead> getConnectionUptimeHistory(final ConnectionUptimeHistoryRequestBody req) {
 
-    final var streamStatuses = repo.findLatestStatusPerStreamByConnectionIdAndDayAfterTimestamp(req.getConnectionId(),
-        thirtyDaysAgoInUTC, req.getTimezone())
+    final List<StreamStatusRead> streamStatuses = repo.findLastAttemptsOfLastXJobsForConnection(req.getConnectionId(), req.getNumberOfJobs())
         .stream()
         .map(mapper::map)
         .toList();
 
-    final List<ConnectionSyncResultRead> syncReadResults = streamStatuses.stream()
-        .map(status -> mapStreamStatusToSyncReadResult(status, timezone))
-        .toList();
+    final Map<Long, List<StreamStatusRead>> jobIdToStreamStatuses =
+        streamStatuses.stream().collect(Collectors.groupingBy(StreamStatusRead::getJobId));
 
-    return syncReadResults.stream()
-        .sorted(Comparator
-            .comparing((ConnectionSyncResultRead r) -> LocalDate.ofInstant(Instant.ofEpochSecond(r.getTimestamp()), timezone))
-            .thenComparing(ConnectionSyncResultRead::getStreamNamespace)
-            .thenComparing(ConnectionSyncResultRead::getStreamName))
-        .toList();
+    final List<JobSyncResultRead> result = new ArrayList<>();
+
+    List<Job> jobs;
+    try {
+      jobs = jobPersistence.listJobsLight(new HashSet<>(jobIdToStreamStatuses.keySet()));
+    } catch (IOException e) {
+      throw new RuntimeException(e);
+    }
+
+    Map<Long, JobWithAttemptsRead> jobIdToJobRead = StatsAggregationHelper.getJobIdToJobWithAttemptsReadMap(jobs, jobPersistence);
+
+    jobIdToStreamStatuses.forEach((jobId, statuses) -> {
+      final JobRead job = jobIdToJobRead.get(jobId).getJob();
+      final JobAggregatedStats aggregatedStats = job.getAggregatedStats();
+      final JobSyncResultRead jobResult = new JobSyncResultRead()
+          .jobId(jobId)
+          .configType(job.getConfigType())
+          .jobCreatedAt(job.getCreatedAt())
+          .jobUpdatedAt(job.getUpdatedAt())
+          .streamStatuses(statuses.stream().map(this::mapStreamStatusToSyncReadResult).toList())
+          .bytesEmitted(aggregatedStats.getBytesEmitted())
+          .bytesCommitted(aggregatedStats.getBytesCommitted())
+          .recordsEmitted(aggregatedStats.getRecordsEmitted())
+          .recordsCommitted(aggregatedStats.getRecordsCommitted());
+      result.add(jobResult);
+    });
+
+    return result;
   }
 
 }

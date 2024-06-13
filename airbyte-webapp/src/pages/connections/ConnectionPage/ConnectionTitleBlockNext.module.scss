@@ -1,0 +1,30 @@
+.link {
+  text-decoration: none;
+  min-width: 0;
+}
+
+.heading {
+  font-weight: 400;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.titleContainer {
+  min-width: 450px;
+
+  .textEllipsis {
+    min-width: 0;
+  }
+}
+
+.connectorName {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.connectorIcon {
+  width: 20px;
+  height: 20px;
+}

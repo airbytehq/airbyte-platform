@@ -25,8 +25,8 @@ else
   set_dev_image_tag_if_true=""
 fi
 
-if [ "$RESET_KEYCLOAK_REALM" == "true" ]; then
-  set_reset_realm_if_true="--set keycloak-setup.resetRealm=true"
+if [ "$KEYCLOAK_RESET_REALM" == "true" ]; then
+  set_reset_realm_if_true="--set keycloak-setup.env_vars.KEYCLOAK_RESET_REALM=true"
 else
   set_reset_realm_if_true=""
 fi
@@ -40,7 +40,7 @@ if [ "$LOCAL" == "true" ]; then
   helm dep update
 
   # additional arguments to this script are appended at the end of the command, so that further customization can be done
-  helm upgrade --install "$airbyte_pro_release_name" . $set_dev_image_tag_if_true $set_reset_realm_if_true --set-file airbyteYml="$airbyte_yml_file_path" --values "$airbyte_pro_values_yml_file_path" "$@"
+  helm upgrade --install "$airbyte_pro_release_name" . $set_dev_image_tag_if_true $set_reset_realm_if_true --set-file airbyteYml="$airbyte_yml_file_path" --values "$airbyte_pro_values_yml_file_path" --values "$airbyte_yml_file_path" "$@"
   popd
 else
   airbyte_chart="airbyte/airbyte"

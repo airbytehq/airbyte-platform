@@ -2,14 +2,16 @@ import { yupResolver } from "@hookform/resolvers/yup";
 import classnames from "classnames";
 import React, { useMemo, useRef } from "react";
 import { FormProvider, useForm } from "react-hook-form";
-import { useIntl } from "react-intl";
 import { AnyObjectSchema } from "yup";
 
 import { HeadTitle } from "components/common/HeadTitle";
 import { Builder } from "components/connectorBuilder/Builder/Builder";
+import { MenuBar } from "components/connectorBuilder/MenuBar";
 import { StreamTestingPanel } from "components/connectorBuilder/StreamTestingPanel";
-import { BuilderState, builderStateValidationSchema, useBuilderWatch } from "components/connectorBuilder/types";
-import { YamlEditor } from "components/connectorBuilder/YamlEditor";
+import { BuilderState, useBuilderWatch } from "components/connectorBuilder/types";
+import { useBuilderValidationSchema } from "components/connectorBuilder/useBuilderValidationSchema";
+import { YamlManifestEditor } from "components/connectorBuilder/YamlEditor";
+import { FlexContainer } from "components/ui/Flex";
 import { ResizablePanels } from "components/ui/ResizablePanels";
 
 import {
@@ -34,6 +36,7 @@ const ConnectorBuilderEditPageInner: React.FC = React.memo(() => {
     initialYaml,
     builderProject: {
       builderProject: { name },
+      testingValues: initialTestingValues,
     },
   } = useInitializedBuilderProject();
   const { storedMode } = useConnectorBuilderLocalStorage();
@@ -44,6 +47,7 @@ const ConnectorBuilderEditPageInner: React.FC = React.memo(() => {
     name,
     view: "global" as const,
     testStreamIndex: 0,
+    testingValues: initialTestingValues,
   };
   const initialValues = useRef(values);
   initialValues.current = values;
@@ -61,6 +65,8 @@ export const ConnectorBuilderEditPage: React.FC = () => (
 );
 
 const BaseForm = React.memo(({ defaultValues }: { defaultValues: React.MutableRefObject<BuilderState> }) => {
+  const { builderStateValidationSchema } = useBuilderValidationSchema();
+
   // if this component re-renders, everything subscribed to rhf rerenders because the context object is a new one
   // Do prevent this, the hook is placed in its own memoized component which only re-renders when necessary
   const methods = useForm({
@@ -76,7 +82,10 @@ const BaseForm = React.memo(({ defaultValues }: { defaultValues: React.MutableRe
           <ConnectorBuilderFormStateProvider>
             <ConnectorBuilderTestReadProvider>
               <HeadTitle titles={[{ id: "connectorBuilder.title" }]} />
-              <Panels />
+              <FlexContainer direction="column" gap="none" className={styles.container}>
+                <MenuBar />
+                <Panels />
+              </FlexContainer>
             </ConnectorBuilderTestReadProvider>
           </ConnectorBuilderFormStateProvider>
         </form>
@@ -87,7 +96,6 @@ const BaseForm = React.memo(({ defaultValues }: { defaultValues: React.MutableRe
 BaseForm.displayName = "BaseForm";
 
 const Panels = React.memo(() => {
-  const { formatMessage } = useIntl();
   const formValues = useBuilderWatch("formValues");
   const mode = useBuilderWatch("mode");
   const { stateKey } = useConnectorBuilderFormManagementState();
@@ -97,30 +105,34 @@ const Panels = React.memo(() => {
       <ResizablePanels
         // key is used to force re-mount of the form when a different state version is loaded so the react-hook-form / YAML editor state is re-initialized with the new values
         key={stateKey}
-        className={classnames({ [styles.gradientBg]: mode === "yaml", [styles.solidBg]: mode === "ui" })}
+        className={classnames(styles.panelsContainer, {
+          [styles.gradientBg]: mode === "yaml",
+          [styles.solidBg]: mode === "ui",
+        })}
         panels={[
           {
             children: (
-              <>{mode === "yaml" ? <YamlEditor /> : <Builder hasMultipleStreams={formValues.streams.length > 1} />}</>
+              <>
+                {mode === "yaml" ? (
+                  <YamlManifestEditor />
+                ) : (
+                  <Builder hasMultipleStreams={formValues.streams.length > 1} />
+                )}
+              </>
             ),
             className: styles.leftPanel,
-            minWidth: 550,
+            minWidth: 350,
           },
           {
             children: <StreamTestingPanel />,
             className: styles.rightPanel,
             flex: 0.33,
-            minWidth: 60,
-            overlay: {
-              displayThreshold: 325,
-              header: formatMessage({ id: "connectorBuilder.testConnector" }),
-              rotation: "counter-clockwise",
-            },
+            minWidth: 250,
           },
         ]}
       />
     ),
-    [formValues.streams.length, formatMessage, mode, stateKey]
+    [formValues.streams.length, mode, stateKey]
   );
 });
 Panels.displayName = "Panels";

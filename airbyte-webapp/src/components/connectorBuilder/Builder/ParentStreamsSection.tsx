@@ -1,9 +1,10 @@
+import { useCallback, useMemo } from "react";
 import { useIntl } from "react-intl";
 import ReactMarkdown from "react-markdown";
 
 import GroupControls from "components/GroupControls";
 
-import { RequestOption } from "core/api/types/ConnectorManifest";
+import { RequestOption, SimpleRetrieverPartitionRouter } from "core/api/types/ConnectorManifest";
 import { links } from "core/utils/links";
 
 import { BuilderCard } from "./BuilderCard";
@@ -12,7 +13,8 @@ import { BuilderList } from "./BuilderList";
 import { BuilderRequestInjection } from "./BuilderRequestInjection";
 import { StreamReferenceField } from "./StreamReferenceField";
 import { ToggleGroupField } from "./ToggleGroupField";
-import { StreamPathFn, BuilderParentStream } from "../types";
+import { manifestSubstreamPartitionRouterToBuilder } from "../convertManifestToBuilderForm";
+import { StreamPathFn, BuilderParentStream, builderParentStreamsToManifest, useBuilderWatch } from "../types";
 
 interface ParentStreamsSectionProps {
   streamFieldPath: StreamPathFn;
@@ -27,21 +29,42 @@ const EMPTY_PARENT_STREAM: BuilderParentStream = {
 
 export const ParentStreamsSection: React.FC<ParentStreamsSectionProps> = ({ streamFieldPath, currentStreamIndex }) => {
   const { formatMessage } = useIntl();
+  const label = formatMessage({ id: "connectorBuilder.parentStreams.label" });
+  const builderStreams = useBuilderWatch("formValues.streams");
+
+  const parentStreamsToManifest = useCallback(
+    (parentStreams: BuilderParentStream[] | undefined) => builderParentStreamsToManifest(parentStreams, builderStreams),
+    [builderStreams]
+  );
+
+  const streamNameToId: Record<string, string> = useMemo(
+    () => builderStreams.reduce((acc, stream) => ({ ...acc, [stream.name]: stream.id }), {}),
+    [builderStreams]
+  );
+  const substreamPartitionRouterToBuilder = useCallback(
+    (partitionRouter: SimpleRetrieverPartitionRouter | undefined) =>
+      manifestSubstreamPartitionRouterToBuilder(partitionRouter, streamNameToId),
+    [streamNameToId]
+  );
 
   return (
     <BuilderCard
       docLink={links.connectorBuilderParentStream}
-      label={formatMessage({ id: "connectorBuilder.parentStreams.label" })}
+      label={label}
       tooltip={formatMessage({ id: "connectorBuilder.parentStreams.tooltip" })}
-      toggleConfig={{
+      inputsConfig={{
+        toggleable: true,
         path: streamFieldPath("parentStreams"),
         defaultValue: [EMPTY_PARENT_STREAM],
+        yamlConfig: {
+          builderToManifest: parentStreamsToManifest,
+          manifestToBuilder: substreamPartitionRouterToBuilder,
+        },
       }}
       copyConfig={{
         path: "parentStreams",
         currentStreamIndex,
-        copyFromLabel: formatMessage({ id: "connectorBuilder.copyFromParentStreamsTitle" }),
-        copyToLabel: formatMessage({ id: "connectorBuilder.copyToParentStreamsTitle" }),
+        componentName: label,
       }}
     >
       <BuilderList

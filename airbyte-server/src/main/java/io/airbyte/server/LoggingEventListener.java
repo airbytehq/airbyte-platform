@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.server;
@@ -18,8 +18,11 @@ import java.util.Optional;
 /**
  * Initializes the logging client on startup.
  */
+
 @Singleton
 public class LoggingEventListener implements ApplicationEventListener<ServiceReadyEvent> {
+
+  static final String SERVER_LOGS = "server/logs";
 
   @Inject
   private Optional<LogConfigs> logConfigs;
@@ -32,7 +35,7 @@ public class LoggingEventListener implements ApplicationEventListener<ServiceRea
   public void onApplicationEvent(final ServiceReadyEvent event) {
     // Configure logging client
     LogClientSingleton.getInstance().setWorkspaceMdc(workerEnvironment, logConfigs.orElseThrow(),
-        LogClientSingleton.getInstance().getServerLogsRoot(Path.of(workspaceRoot)));
+        Path.of(workspaceRoot, SERVER_LOGS));
   }
 
 }

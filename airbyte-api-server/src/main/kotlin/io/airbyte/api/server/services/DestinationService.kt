@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.api.server.services
@@ -20,6 +20,7 @@ import io.airbyte.api.client.model.generated.DestinationUpdate
 import io.airbyte.api.client.model.generated.ListResourcesForWorkspacesRequestBody
 import io.airbyte.api.client.model.generated.Pagination
 import io.airbyte.api.client.model.generated.PartialDestinationUpdate
+import io.airbyte.api.server.constants.AIRBYTE_API_AUTH_HEADER_VALUE
 import io.airbyte.api.server.constants.HTTP_RESPONSE_BODY_DEBUG_MESSAGE
 import io.airbyte.api.server.errorHandlers.ConfigClientErrorHandler
 import io.airbyte.api.server.forwardingClient.ConfigApiClient
@@ -110,11 +111,13 @@ class DestinationServiceImpl(private val configApiClient: ConfigApiClient, priva
     authorization: String?,
     userInfo: String?,
   ): DestinationResponse {
-    val destinationCreateOss = DestinationCreate()
-    destinationCreateOss.name = destinationCreateRequest.name
-    destinationCreateOss.destinationDefinitionId = destinationDefinitionId
-    destinationCreateOss.workspaceId = destinationCreateRequest.workspaceId
-    destinationCreateOss.connectionConfiguration = destinationCreateRequest.configuration
+    val destinationCreateOss =
+      DestinationCreate(
+        name = destinationCreateRequest.name,
+        destinationDefinitionId = destinationDefinitionId,
+        workspaceId = destinationCreateRequest.workspaceId,
+        connectionConfiguration = destinationCreateRequest.configuration,
+      )
 
     val response =
       try {
@@ -136,8 +139,7 @@ class DestinationServiceImpl(private val configApiClient: ConfigApiClient, priva
     authorization: String?,
     userInfo: String?,
   ): DestinationResponse {
-    val destinationIdRequestBody = DestinationIdRequestBody()
-    destinationIdRequestBody.destinationId = destinationId
+    val destinationIdRequestBody = DestinationIdRequestBody(destinationId = destinationId)
 
     log.info("getDestination request: $destinationIdRequestBody")
     val response =
@@ -162,10 +164,11 @@ class DestinationServiceImpl(private val configApiClient: ConfigApiClient, priva
     userInfo: String?,
   ): DestinationResponse {
     val destinationUpdate =
-      DestinationUpdate()
-        .destinationId(destinationId)
-        .connectionConfiguration(destinationPutRequest.configuration)
-        .name(destinationPutRequest.name)
+      DestinationUpdate(
+        destinationId = destinationId,
+        connectionConfiguration = destinationPutRequest.configuration,
+        name = destinationPutRequest.name,
+      )
 
     val response =
       try {
@@ -189,10 +192,11 @@ class DestinationServiceImpl(private val configApiClient: ConfigApiClient, priva
     userInfo: String?,
   ): DestinationResponse {
     val partialDestinationUpdate =
-      PartialDestinationUpdate()
-        .destinationId(destinationId)
-        .connectionConfiguration(destinationPatchRequest.configuration)
-        .name(destinationPatchRequest.name)
+      PartialDestinationUpdate(
+        destinationId = destinationId,
+        connectionConfiguration = destinationPatchRequest.configuration,
+        name = destinationPatchRequest.name,
+      )
 
     val response =
       try {
@@ -214,7 +218,7 @@ class DestinationServiceImpl(private val configApiClient: ConfigApiClient, priva
     authorization: String?,
     userInfo: String?,
   ) {
-    val destinationIdRequestBody = DestinationIdRequestBody().destinationId(connectionId)
+    val destinationIdRequestBody = DestinationIdRequestBody(destinationId = connectionId)
     val response =
       try {
         configApiClient.deleteDestination(destinationIdRequestBody, authorization, userInfo)
@@ -237,12 +241,17 @@ class DestinationServiceImpl(private val configApiClient: ConfigApiClient, priva
     authorization: String?,
     userInfo: String?,
   ): DestinationsResponse {
-    val pagination: Pagination = Pagination().pageSize(limit).rowOffset(offset)
-    val workspaceIdsToQuery = workspaceIds.ifEmpty { userService.getAllWorkspaceIdsForUser(userInfo) }
-    val listResourcesForWorkspacesRequestBody = ListResourcesForWorkspacesRequestBody()
-    listResourcesForWorkspacesRequestBody.includeDeleted = includeDeleted
-    listResourcesForWorkspacesRequestBody.pagination = pagination
-    listResourcesForWorkspacesRequestBody.workspaceIds = workspaceIdsToQuery
+    val pagination: Pagination = Pagination(pageSize = limit, rowOffset = offset)
+    val workspaceIdsToQuery =
+      workspaceIds.ifEmpty {
+        userService.getAllWorkspaceIdsForUser(authorization ?: System.getenv(AIRBYTE_API_AUTH_HEADER_VALUE), userInfo)
+      }
+    val listResourcesForWorkspacesRequestBody =
+      ListResourcesForWorkspacesRequestBody(
+        includeDeleted = includeDeleted,
+        pagination = pagination,
+        workspaceIds = workspaceIdsToQuery,
+      )
 
     val response =
       try {
@@ -279,9 +288,11 @@ class DestinationServiceImpl(private val configApiClient: ConfigApiClient, priva
   ): List<DestinationSyncMode> {
     val destinationDefinitionId: UUID =
       getActorDefinitionIdFromActorName(DESTINATION_NAME_TO_DEFINITION_ID, destinationResponse.destinationType)
-    val destinationDefinitionIdWithWorkspaceId = DestinationDefinitionIdWithWorkspaceId()
-    destinationDefinitionIdWithWorkspaceId.destinationDefinitionId = destinationDefinitionId
-    destinationDefinitionIdWithWorkspaceId.workspaceId = destinationResponse.workspaceId
+    val destinationDefinitionIdWithWorkspaceId =
+      DestinationDefinitionIdWithWorkspaceId(
+        destinationDefinitionId = destinationDefinitionId,
+        workspaceId = destinationResponse.workspaceId,
+      )
     var response: HttpResponse<DestinationDefinitionSpecificationRead>
     try {
       response = configApiClient.getDestinationSpec(destinationDefinitionIdWithWorkspaceId, authorization, userInfo)

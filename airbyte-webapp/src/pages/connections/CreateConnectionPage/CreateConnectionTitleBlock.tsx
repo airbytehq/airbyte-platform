@@ -1,6 +1,6 @@
 import { Fragment, Suspense } from "react";
 import { FormattedMessage } from "react-intl";
-import { Navigate, useSearchParams } from "react-router-dom";
+import { Navigate, useLocation, useSearchParams } from "react-router-dom";
 
 import { ConnectorIcon } from "components/common/ConnectorIcon";
 import { Box } from "components/ui/Box";
@@ -20,6 +20,7 @@ import {
   useGetSource,
 } from "core/api";
 import { SupportLevel } from "core/api/types/AirbyteClient";
+import { useExperiment } from "hooks/services/Experiment";
 import { RoutePaths } from "pages/routePaths";
 
 import styles from "./CreateConnectionTitleBlock.module.scss";
@@ -37,12 +38,21 @@ interface ConnectionSteps {
   configureConnection: StepStatus;
 }
 
-const calculateStepStatuses = (source: string | null, destination: string | null): ConnectionSteps | undefined => {
+const useCalculateStepStatuses = (source: string | null, destination: string | null): ConnectionSteps | undefined => {
+  const isSimplifiedCreation = useExperiment("connection.simplifiedCreation", true);
+  const location = useLocation();
+  const isOnContinuedSimplifiedStep = location.pathname.endsWith("/continued");
+
   if (!source && !destination) {
     return {
       defineSource: ACTIVE,
       defineDestination: INCOMPLETE,
-      configureConnection: INCOMPLETE,
+      ...(!isSimplifiedCreation
+        ? { configureConnection: INCOMPLETE }
+        : {
+            selectStreams: INCOMPLETE,
+            configureConnection: INCOMPLETE,
+          }),
     };
   }
 
@@ -50,21 +60,36 @@ const calculateStepStatuses = (source: string | null, destination: string | null
     return {
       defineSource: COMPLETE,
       defineDestination: ACTIVE,
-      configureConnection: INCOMPLETE,
+      ...(!isSimplifiedCreation
+        ? { configureConnection: INCOMPLETE }
+        : {
+            selectStreams: INCOMPLETE,
+            configureConnection: INCOMPLETE,
+          }),
     };
   }
   if (destination && !source) {
     return {
       defineSource: ACTIVE,
       defineDestination: COMPLETE,
-      configureConnection: INCOMPLETE,
+      ...(!isSimplifiedCreation
+        ? { configureConnection: INCOMPLETE }
+        : {
+            selectStreams: INCOMPLETE,
+            configureConnection: INCOMPLETE,
+          }),
     };
   }
   if (source && destination) {
     return {
       defineSource: COMPLETE,
       defineDestination: COMPLETE,
-      configureConnection: ACTIVE,
+      ...(!isSimplifiedCreation
+        ? { configureConnection: ACTIVE }
+        : {
+            selectStreams: isOnContinuedSimplifiedStep ? COMPLETE : ACTIVE,
+            configureConnection: isOnContinuedSimplifiedStep ? ACTIVE : INCOMPLETE,
+          }),
     };
   }
   return undefined;
@@ -81,12 +106,14 @@ const StepItem: React.FC<{ state: StepStatus; step: keyof ConnectionSteps; value
       ? "connectionForm.defineSource"
       : step === "defineDestination"
       ? "connectionForm.defineDestination"
-      : "connectionForm.configureConnection";
+      : step === "configureConnection"
+      ? "connectionForm.configureConnection"
+      : "connectionForm.selectStreams";
 
   return (
     <FlexContainer alignItems="center" gap="sm">
       <NumberBadge value={value} outline={state !== ACTIVE} color={color} />
-      <Text color={color} size="lg">
+      <Text color={color} size="sm">
         <FormattedMessage id={messageId} />
       </Text>
     </FlexContainer>
@@ -176,7 +203,7 @@ export const CreateConnectionTitleBlock: React.FC = () => {
   const sourceId = searchParams.get(SOURCEID_PARAM);
   const destinationId = searchParams.get(DESTINATIONID_PARAM);
 
-  const stepStatuses = calculateStepStatuses(sourceId, destinationId);
+  const stepStatuses = useCalculateStepStatuses(sourceId, destinationId);
   if (!stepStatuses) {
     // this should not be a possible state, but we'll handle it just in case
     return <Navigate to={`/${RoutePaths.Workspaces}/${workspaceId}/${RoutePaths.Connections}`} />;
@@ -187,12 +214,12 @@ export const CreateConnectionTitleBlock: React.FC = () => {
       <FlexContainer direction="column" gap="xl">
         {(sourceId || destinationId) && (
           <FlexContainer alignItems="center">
-            {sourceId ? <SourceBlock sourceId={sourceId} /> : <ConnectorPlaceholder />}
+            {sourceId && <SourceBlock sourceId={sourceId} />}
             <Icon type="arrowRight" />
-            {destinationId ? <DestinationBlock destinationId={destinationId} /> : <ConnectorPlaceholder />}
+            {destinationId && <DestinationBlock destinationId={destinationId} />}
           </FlexContainer>
         )}
-        <FlexContainer gap="lg" alignItems="center">
+        <FlexContainer gap="sm" alignItems="center">
           {(Object.keys(stepStatuses) as Array<keyof ConnectionSteps>).map((step, idx) => {
             return (
               <Fragment key={step}>

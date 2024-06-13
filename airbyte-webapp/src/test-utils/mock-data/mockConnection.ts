@@ -294,7 +294,7 @@ export const mockConnection: WebBackendConnectionRead = {
         config: {
           syncMode: "full_refresh",
           cursorField: [],
-          destinationSyncMode: "append",
+          destinationSyncMode: "overwrite",
           primaryKey: [],
           aliasName: "pokemon",
           selected: true,
@@ -581,7 +581,7 @@ export const mockConnection: WebBackendConnectionRead = {
         config: {
           syncMode: "full_refresh",
           cursorField: [],
-          destinationSyncMode: "append",
+          destinationSyncMode: "overwrite",
           primaryKey: [],
           aliasName: "pokemon",
           selected: false,
@@ -868,7 +868,7 @@ export const mockConnection: WebBackendConnectionRead = {
         config: {
           syncMode: "full_refresh",
           cursorField: [],
-          destinationSyncMode: "append",
+          destinationSyncMode: "overwrite",
           primaryKey: [],
           aliasName: "pokemon",
           selected: true,

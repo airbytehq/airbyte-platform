@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.commons.server.scheduling;
@@ -22,5 +22,11 @@ public interface AirbyteTaskExecutors extends TaskExecutors {
    * with the scheduler.
    */
   String SCHEDULER = "scheduler";
+
+  /**
+   * The name of the {@link java.util.concurrent.ExecutorService} used for endpoints that belong to
+   * the public API.
+   */
+  String PUBLIC_API = "public-api";
 
 }

@@ -19,9 +19,11 @@ import CheckIcon from "./icons/checkIcon.svg?react";
 import ChevronDownIcon from "./icons/chevronDownIcon.svg?react";
 import ChevronLeftIcon from "./icons/chevronLeftIcon.svg?react";
 import ChevronRightIcon from "./icons/chevronRightIcon.svg?react";
+import ChevronUpDownIcon from "./icons/chevronUpDownIcon.svg?react";
 import ChevronUpIcon from "./icons/chevronUpIcon.svg?react";
 import ClockFilledIcon from "./icons/clockFilledIcon.svg?react";
 import ClockOutlineIcon from "./icons/clockOutlineIcon.svg?react";
+import CollapseAllIcon from "./icons/collapseAllIcon.svg?react";
 import CommentsIcon from "./icons/commentsIcon.svg?react";
 import CommunityIcon from "./icons/communityIcon.svg?react";
 import ConnectionIcon from "./icons/connectionIcon.svg?react";
@@ -29,6 +31,7 @@ import ContractIcon from "./icons/contractIcon.svg?react";
 import CopyIcon from "./icons/copyIcon.svg?react";
 import CreditsIcon from "./icons/creditsIcon.svg?react";
 import CrossIcon from "./icons/crossIcon.svg?react";
+import CursorIcon from "./icons/cursorIcon.svg?react";
 import DatabaseIcon from "./icons/databaseIcon.svg?react";
 import DayIcon from "./icons/dayIcon.svg?react";
 import DbtCloudIcon from "./icons/dbtCloudIcon.svg?react";
@@ -37,12 +40,16 @@ import DisabledIcon from "./icons/disabledIcon.svg?react";
 import DockerIcon from "./icons/dockerIcon.svg?react";
 import DocsIcon from "./icons/docsIcon.svg?react";
 import DownloadIcon from "./icons/downloadIcon.svg?react";
+import DragHandleIcon from "./icons/dragHandleIcon.svg?react";
 import DuplicateIcon from "./icons/duplicateIcon.svg?react";
 import EarthIcon from "./icons/earthIcon.svg?react";
+import EnvelopeIcon from "./icons/envelopeIcon.svg?react";
 import EqualIcon from "./icons/equalIcon.svg?react";
 import ErrorFilledIcon from "./icons/errorFilledIcon.svg?react";
 import ErrorOutlineIcon from "./icons/errorOutlineIcon.svg?react";
+import ExpandAllIcon from "./icons/expandAllIcon.svg?react";
 import ExpandIcon from "./icons/expandIcon.svg?react";
+import ExportIcon from "./icons/exportIcon.svg?react";
 import EyeIcon from "./icons/eyeIcon.svg?react";
 import EyeSlashIcon from "./icons/eyeSlashIcon.svg?react";
 import FileIcon from "./icons/fileIcon.svg?react";
@@ -97,6 +104,7 @@ import SelectIcon from "./icons/selectIcon.svg?react";
 import ShareIcon from "./icons/shareIcon.svg?react";
 import ShortVideoIcon from "./icons/shortVideoIcon.svg?react";
 import ShrinkIcon from "./icons/shrinkIcon.svg?react";
+import SignoutIcon from "./icons/signout.svg?react";
 import SimpleCircleIcon from "./icons/simpleCircleIcon.svg?react";
 import SlackIcon from "./icons/slackIcon.svg?react";
 import SleepIcon from "./icons/sleepIcon.svg?react";
@@ -107,6 +115,7 @@ import StatusCancelledIcon from "./icons/statusCancelledIcon.svg?react";
 import StatusErrorIcon from "./icons/statusErrorIcon.svg?react";
 import StatusInactiveIcon from "./icons/statusInactiveIcon.svg?react";
 import StatusInProgressIcon from "./icons/statusInProgressIcon.svg?react";
+import StatusQueuedIcon from "./icons/statusQueuedIcon.svg?react";
 import StatusSleepIcon from "./icons/statusSleepIcon.svg?react";
 import StatusSuccessIcon from "./icons/statusSuccessIcon.svg?react";
 import StatusWarningIcon from "./icons/statusWarningIcon.svg?react";
@@ -118,9 +127,9 @@ import SuitcaseIcon from "./icons/suitcaseIcon.svg?react";
 import SyncIcon from "./icons/syncIcon.svg?react";
 import TableIcon from "./icons/tableIcon.svg?react";
 import TargetIcon from "./icons/targetIcon.svg?react";
-import TicketIcon from "./icons/ticketIcon.svg?react";
 import TrashIcon from "./icons/trashIcon.svg?react";
 import UnlockIcon from "./icons/unlockIcon.svg?react";
+import UnsortedIcon from "./icons/unsorted.svg?react";
 import UserIcon from "./icons/userIcon.svg?react";
 import WarningFilledIcon from "./icons/warningFilledIcon.svg?react";
 import WarningOutlineIcon from "./icons/warningOutlineIcon.svg?react";
@@ -135,6 +144,7 @@ const colorMap: Record<IconColor, string> = {
   error: styles[`icon--error`],
   action: styles[`icon--action`],
   affordance: styles[`icon--affordance`],
+  foreground: styles[`icon--foreground`],
 };
 
 const sizeMap: Record<NonNullable<IconProps["size"]>, string> = {
@@ -151,8 +161,8 @@ export const Icons: Record<IconType, React.FC<React.SVGProps<SVGSVGElement>>> = 
   arrowRight: ArrowRightIcon,
   article: ArticleIcon,
   bell: BellIcon,
-  calendarCheck: CalendarCheckIcon,
   calendar: CalendarIcon,
+  calendarCheck: CalendarCheckIcon,
   caretDown: CaretDownIcon,
   cast: CastIcon,
   certified: CertifiedIcon,
@@ -163,15 +173,18 @@ export const Icons: Record<IconType, React.FC<React.SVGProps<SVGSVGElement>>> = 
   chevronLeft: ChevronLeftIcon,
   chevronRight: ChevronRightIcon,
   chevronUp: ChevronUpIcon,
+  chevronUpDown: ChevronUpDownIcon,
   clockFilled: ClockFilledIcon,
   clockOutline: ClockOutlineIcon,
   comments: CommentsIcon,
   community: CommunityIcon,
   connection: ConnectionIcon,
   contract: ContractIcon,
+  collapseAll: CollapseAllIcon,
   copy: CopyIcon,
   credits: CreditsIcon,
   cross: CrossIcon,
+  cursor: CursorIcon,
   database: DatabaseIcon,
   day: DayIcon,
   dbtCloud: DbtCloudIcon,
@@ -180,12 +193,16 @@ export const Icons: Record<IconType, React.FC<React.SVGProps<SVGSVGElement>>> = 
   docker: DockerIcon,
   docs: DocsIcon,
   download: DownloadIcon,
+  drag: DragHandleIcon,
   duplicate: DuplicateIcon,
   earth: EarthIcon,
+  envelope: EnvelopeIcon,
   equal: EqualIcon,
   errorFilled: ErrorFilledIcon,
   errorOutline: ErrorOutlineIcon,
   expand: ExpandIcon,
+  expandAll: ExpandAllIcon,
+  export: ExportIcon,
   eye: EyeIcon,
   eyeSlash: EyeSlashIcon,
   file: FileIcon,
@@ -212,8 +229,8 @@ export const Icons: Record<IconType, React.FC<React.SVGProps<SVGSVGElement>>> = 
   location: LocationIcon,
   lock: LockIcon,
   menu: MenuIcon,
-  minusCircle: MinusCircleIcon,
   minus: MinusIcon,
+  minusCircle: MinusCircleIcon,
   modification: ModificationIcon,
   monitor: MonitorIcon,
   moon: MoonIcon,
@@ -240,6 +257,7 @@ export const Icons: Record<IconType, React.FC<React.SVGProps<SVGSVGElement>>> = 
   share: ShareIcon,
   shortVideo: ShortVideoIcon,
   shrink: ShrinkIcon,
+  signout: SignoutIcon,
   simpleCircle: SimpleCircleIcon,
   slack: SlackIcon,
   sleep: SleepIcon,
@@ -250,6 +268,7 @@ export const Icons: Record<IconType, React.FC<React.SVGProps<SVGSVGElement>>> = 
   statusError: StatusErrorIcon,
   statusInactive: StatusInactiveIcon,
   statusInProgress: StatusInProgressIcon,
+  statusQueued: StatusQueuedIcon,
   statusSleep: StatusSleepIcon,
   statusSuccess: StatusSuccessIcon,
   statusWarning: StatusWarningIcon,
@@ -261,9 +280,9 @@ export const Icons: Record<IconType, React.FC<React.SVGProps<SVGSVGElement>>> = 
   sync: SyncIcon,
   table: TableIcon,
   target: TargetIcon,
-  ticket: TicketIcon,
   trash: TrashIcon,
   unlock: UnlockIcon,
+  unsorted: UnsortedIcon,
   user: UserIcon,
   warningFilled: WarningFilledIcon,
   warningOutline: WarningOutlineIcon,
@@ -277,6 +296,7 @@ export const Icon: React.FC<IconProps> = React.memo(
       styles.icon,
       color ? colorMap[color] : undefined,
       withBackground ? styles["icon--withBackground"] : undefined,
+      type === "loading" ? styles["icon--spinning"] : undefined,
       sizeMap[size]
     );
 

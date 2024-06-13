@@ -1,5 +1,5 @@
-# If Cloud or Pro, render the keycloak service template.
-{{- if or (eq .Values.global.deploymentMode "cloud") (eq .Values.global.edition "pro") }}
+# If Cloud or Pro/Enterprise, render the keycloak service template.
+{{- if or (eq .Values.global.deploymentMode "cloud") (eq .Values.global.edition "pro") (eq .Values.global.edition "enterprise") }}
 ---
 apiVersion: v1
 kind: Service
@@ -18,6 +18,9 @@ spec:
       targetPort: http
       protocol: TCP
       name: http
+      {{ if and (eq .Values.service.type "NodePort") (.Values.service.nodePort)  }}
+      nodePort: {{ .Values.service.nodePort }}
+      {{- end }}
   selector:
     {{- include "airbyte.selectorLabels" . | nindent 4 }}
       {{- if .Values.extraSelectorLabels }}

@@ -2,6 +2,7 @@ package fixtures
 
 import io.airbyte.config.WorkloadType
 import io.airbyte.workload.launcher.pipeline.consumer.LauncherInput
+import java.util.UUID
 
 object RecordFixtures {
   fun launcherInput(
@@ -11,6 +12,7 @@ object RecordFixtures {
     logPath: String = "/log/path",
     mutexKey: String? = null,
     workloadType: WorkloadType = WorkloadType.SYNC,
+    autoId: UUID = UUID.randomUUID(),
   ): LauncherInput =
     LauncherInput(
       workloadId,
@@ -19,5 +21,6 @@ object RecordFixtures {
       logPath,
       mutexKey,
       workloadType,
+      autoId = autoId,
     )
 }

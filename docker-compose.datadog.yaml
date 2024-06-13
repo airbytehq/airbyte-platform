@@ -37,6 +37,10 @@ services:
       - DD_SITE=datadoghq.com
       - DD_DOGSTATSD_NON_LOCAL_TRAFFIC=true
       - DD_APM_ENABLED=true
+      - MICROMETER_METRICS_ENABLED=true
+      - MICROMETER_METRICS_STATSD_FLAVOR=datadog
+      - STATSD_HOST=airbyte-datadog
+      - STATSD_PORT=8125
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
       - /proc/:/host/proc/:ro

@@ -1,34 +1,40 @@
 import { createContext, useContext, useMemo, useState } from "react";
 
 import { ConnectionStatusIndicatorStatus } from "components/connection/ConnectionStatusIndicator";
-import { sortStreams } from "components/connection/StreamStatus/streamStatusUtils";
+import { sortStreamsAlphabetically, sortStreamsByStatus } from "components/connection/StreamStatus/streamStatusUtils";
 
 import { useStreamsStatuses } from "area/connection/utils";
-import { useListJobsForConnectionStatus } from "core/api";
 import { useConnectionEditService } from "hooks/services/ConnectionEdit/ConnectionEditService";
 
 const useStreamsContextInit = (connectionId: string) => {
-  const {
-    data: { jobs },
-  } = useListJobsForConnectionStatus(connectionId);
   const [searchTerm, setSearchTerm] = useState("");
 
   const { enabledStreams, streamStatuses } = useStreamsStatuses(connectionId);
-  const sortedStreams = sortStreams(enabledStreams, streamStatuses);
+  const streamsByStatus = sortStreamsByStatus(enabledStreams, streamStatuses);
+  const streamsByName = sortStreamsAlphabetically(enabledStreams, streamStatuses);
 
-  const streams = Object.entries(sortedStreams)
+  const enabledStreamsByStatus = Object.entries(streamsByStatus)
     .filter(([status]) => status !== ConnectionStatusIndicatorStatus.Disabled)
     .flatMap(([_, stream]) => stream);
 
-  const filteredStreams = useMemo(
-    () => streams.filter((stream) => stream.streamName.includes(searchTerm)),
-    [searchTerm, streams]
+  const enabledStreamsByName = Object.entries(streamsByName)
+    .filter(([status]) => status !== ConnectionStatusIndicatorStatus.Disabled)
+    .flatMap(([_, stream]) => stream);
+
+  /** deprecated... will remove with sync progress project */
+  const filteredStreamsByStatus = useMemo(
+    () => enabledStreamsByStatus.filter((stream) => stream.streamName.includes(searchTerm)),
+    [searchTerm, enabledStreamsByStatus]
   );
 
+  const filteredStreamsByName = useMemo(
+    () => enabledStreamsByName.filter((stream) => stream.streamName.includes(searchTerm)),
+    [enabledStreamsByName, searchTerm]
+  );
   return {
     setSearchTerm,
-    filteredStreams,
-    jobs,
+    filteredStreamsByStatus,
+    filteredStreamsByName,
   };
 };
 

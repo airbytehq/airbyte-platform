@@ -1,20 +1,19 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.server.apis;
 
 import static io.airbyte.commons.auth.AuthRoleConstants.AUTHENTICATED_USER;
-import static io.airbyte.commons.auth.AuthRoleConstants.EDITOR;
 import static io.airbyte.commons.auth.AuthRoleConstants.ORGANIZATION_EDITOR;
 import static io.airbyte.commons.auth.AuthRoleConstants.ORGANIZATION_READER;
-import static io.airbyte.commons.auth.AuthRoleConstants.READER;
 import static io.airbyte.commons.auth.AuthRoleConstants.WORKSPACE_EDITOR;
 import static io.airbyte.commons.auth.AuthRoleConstants.WORKSPACE_READER;
 
 import io.airbyte.api.generated.WebBackendApi;
 import io.airbyte.api.model.generated.ConnectionIdRequestBody;
 import io.airbyte.api.model.generated.ConnectionStateType;
+import io.airbyte.api.model.generated.PermissionType;
 import io.airbyte.api.model.generated.WebBackendCheckUpdatesRead;
 import io.airbyte.api.model.generated.WebBackendConnectionCreate;
 import io.airbyte.api.model.generated.WebBackendConnectionListRequestBody;
@@ -25,17 +24,21 @@ import io.airbyte.api.model.generated.WebBackendConnectionUpdate;
 import io.airbyte.api.model.generated.WebBackendGeographiesListResult;
 import io.airbyte.api.model.generated.WebBackendWorkspaceState;
 import io.airbyte.api.model.generated.WebBackendWorkspaceStateResult;
-import io.airbyte.commons.auth.SecuredWorkspace;
+import io.airbyte.commons.lang.MoreBooleans;
+import io.airbyte.commons.server.authorization.ApiAuthorizationHelper;
+import io.airbyte.commons.server.authorization.Scope;
 import io.airbyte.commons.server.handlers.WebBackendCheckUpdatesHandler;
 import io.airbyte.commons.server.handlers.WebBackendConnectionsHandler;
 import io.airbyte.commons.server.handlers.WebBackendGeographiesHandler;
 import io.airbyte.commons.server.scheduling.AirbyteTaskExecutors;
 import io.airbyte.metrics.lib.TracingHelper;
+import io.micronaut.http.annotation.Body;
 import io.micronaut.http.annotation.Controller;
 import io.micronaut.http.annotation.Post;
 import io.micronaut.scheduling.annotation.ExecuteOn;
 import io.micronaut.security.annotation.Secured;
 import io.micronaut.security.rules.SecurityRule;
+import java.util.Set;
 
 @Controller("/api/v1/web_backend")
 @Secured(SecurityRule.IS_AUTHENTICATED)
@@ -44,21 +47,23 @@ public class WebBackendApiController implements WebBackendApi {
   private final WebBackendConnectionsHandler webBackendConnectionsHandler;
   private final WebBackendGeographiesHandler webBackendGeographiesHandler;
   private final WebBackendCheckUpdatesHandler webBackendCheckUpdatesHandler;
+  private final ApiAuthorizationHelper apiAuthorizationHelper;
 
   public WebBackendApiController(final WebBackendConnectionsHandler webBackendConnectionsHandler,
                                  final WebBackendGeographiesHandler webBackendGeographiesHandler,
-                                 final WebBackendCheckUpdatesHandler webBackendCheckUpdatesHandler) {
+                                 final WebBackendCheckUpdatesHandler webBackendCheckUpdatesHandler,
+                                 final ApiAuthorizationHelper apiAuthorizationHelper) {
     this.webBackendConnectionsHandler = webBackendConnectionsHandler;
     this.webBackendGeographiesHandler = webBackendGeographiesHandler;
     this.webBackendCheckUpdatesHandler = webBackendCheckUpdatesHandler;
+    this.apiAuthorizationHelper = apiAuthorizationHelper;
   }
 
   @Post("/state/get_type")
-  @Secured({READER, WORKSPACE_READER, ORGANIZATION_READER})
-  @SecuredWorkspace
+  @Secured({WORKSPACE_READER, ORGANIZATION_READER})
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @Override
-  public ConnectionStateType getStateType(final ConnectionIdRequestBody connectionIdRequestBody) {
+  public ConnectionStateType getStateType(@Body final ConnectionIdRequestBody connectionIdRequestBody) {
     return ApiHelper.execute(() -> {
       TracingHelper.addConnection(connectionIdRequestBody.getConnectionId());
       return webBackendConnectionsHandler.getStateType(connectionIdRequestBody);
@@ -74,11 +79,10 @@ public class WebBackendApiController implements WebBackendApi {
   }
 
   @Post("/connections/create")
-  @Secured({EDITOR, WORKSPACE_EDITOR, ORGANIZATION_EDITOR})
-  @SecuredWorkspace
+  @Secured({WORKSPACE_EDITOR, ORGANIZATION_EDITOR})
   @ExecuteOn(AirbyteTaskExecutors.SCHEDULER)
   @Override
-  public WebBackendConnectionRead webBackendCreateConnection(final WebBackendConnectionCreate webBackendConnectionCreate) {
+  public WebBackendConnectionRead webBackendCreateConnection(@Body final WebBackendConnectionCreate webBackendConnectionCreate) {
     return ApiHelper.execute(() -> {
       TracingHelper.addSourceDestination(webBackendConnectionCreate.getSourceId(), webBackendConnectionCreate.getDestinationId());
       return webBackendConnectionsHandler.webBackendCreateConnection(webBackendConnectionCreate);
@@ -86,23 +90,29 @@ public class WebBackendApiController implements WebBackendApi {
   }
 
   @Post("/connections/get")
-  @Secured({READER, WORKSPACE_READER, ORGANIZATION_READER})
-  @SecuredWorkspace
+  @Secured({WORKSPACE_READER, ORGANIZATION_READER})
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @Override
-  public WebBackendConnectionRead webBackendGetConnection(final WebBackendConnectionRequestBody webBackendConnectionRequestBody) {
+  public WebBackendConnectionRead webBackendGetConnection(@Body final WebBackendConnectionRequestBody webBackendConnectionRequestBody) {
     return ApiHelper.execute(() -> {
       TracingHelper.addConnection(webBackendConnectionRequestBody.getConnectionId());
+      if (MoreBooleans.isTruthy(webBackendConnectionRequestBody.getWithRefreshedCatalog())) {
+        // only allow refresh catalog if the user is at least a workspace editor or
+        // organization editor for the connection's workspace
+        apiAuthorizationHelper.checkWorkspacePermissions(
+            webBackendConnectionRequestBody.getConnectionId().toString(),
+            Scope.CONNECTION,
+            Set.of(PermissionType.WORKSPACE_EDITOR, PermissionType.ORGANIZATION_EDITOR));
+      }
       return webBackendConnectionsHandler.webBackendGetConnection(webBackendConnectionRequestBody);
     });
   }
 
   @Post("/workspace/state")
-  @Secured({READER, WORKSPACE_READER, ORGANIZATION_READER})
-  @SecuredWorkspace
+  @Secured({WORKSPACE_READER, ORGANIZATION_READER})
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @Override
-  public WebBackendWorkspaceStateResult webBackendGetWorkspaceState(final WebBackendWorkspaceState webBackendWorkspaceState) {
+  public WebBackendWorkspaceStateResult webBackendGetWorkspaceState(@Body final WebBackendWorkspaceState webBackendWorkspaceState) {
     return ApiHelper.execute(() -> {
       TracingHelper.addWorkspace(webBackendWorkspaceState.getWorkspaceId());
       return webBackendConnectionsHandler.getWorkspaceState(webBackendWorkspaceState);
@@ -111,11 +121,10 @@ public class WebBackendApiController implements WebBackendApi {
 
   @SuppressWarnings("LineLength")
   @Post("/connections/list")
-  @Secured({READER, WORKSPACE_READER, ORGANIZATION_READER})
-  @SecuredWorkspace
+  @Secured({WORKSPACE_READER, ORGANIZATION_READER})
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @Override
-  public WebBackendConnectionReadList webBackendListConnectionsForWorkspace(final WebBackendConnectionListRequestBody webBackendConnectionListRequestBody) {
+  public WebBackendConnectionReadList webBackendListConnectionsForWorkspace(@Body final WebBackendConnectionListRequestBody webBackendConnectionListRequestBody) {
     return ApiHelper.execute(() -> {
       TracingHelper.addWorkspace(webBackendConnectionListRequestBody.getWorkspaceId());
       return webBackendConnectionsHandler.webBackendListConnectionsForWorkspace(webBackendConnectionListRequestBody);
@@ -131,11 +140,10 @@ public class WebBackendApiController implements WebBackendApi {
   }
 
   @Post("/connections/update")
-  @Secured({EDITOR, WORKSPACE_EDITOR, ORGANIZATION_EDITOR})
-  @SecuredWorkspace
+  @Secured({WORKSPACE_EDITOR, ORGANIZATION_EDITOR})
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @Override
-  public WebBackendConnectionRead webBackendUpdateConnection(final WebBackendConnectionUpdate webBackendConnectionUpdate) {
+  public WebBackendConnectionRead webBackendUpdateConnection(@Body final WebBackendConnectionUpdate webBackendConnectionUpdate) {
     return ApiHelper.execute(() -> {
       TracingHelper.addConnection(webBackendConnectionUpdate.getConnectionId());
       return webBackendConnectionsHandler.webBackendUpdateConnection(webBackendConnectionUpdate);

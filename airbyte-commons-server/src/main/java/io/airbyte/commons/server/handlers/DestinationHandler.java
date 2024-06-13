@@ -1,12 +1,17 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.commons.server.handlers;
 
+import static io.airbyte.commons.server.converters.ApiPojoConverters.toApiSupportState;
+import static io.airbyte.featureflag.ContextKt.ANONYMOUS;
+
 import com.fasterxml.jackson.databind.JsonNode;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.Lists;
+import io.airbyte.api.model.generated.ActorDefinitionVersionBreakingChanges;
+import io.airbyte.api.model.generated.ActorStatus;
 import io.airbyte.api.model.generated.ConnectionRead;
 import io.airbyte.api.model.generated.DestinationCloneConfiguration;
 import io.airbyte.api.model.generated.DestinationCloneRequestBody;
@@ -23,16 +28,22 @@ import io.airbyte.api.model.generated.PartialDestinationUpdate;
 import io.airbyte.api.model.generated.WorkspaceIdRequestBody;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.commons.server.converters.ConfigurationUpdate;
+import io.airbyte.commons.server.handlers.helpers.ActorDefinitionHandlerHelper;
 import io.airbyte.commons.server.handlers.helpers.OAuthSecretHelper;
 import io.airbyte.config.ActorDefinitionVersion;
 import io.airbyte.config.DestinationConnection;
 import io.airbyte.config.StandardDestinationDefinition;
 import io.airbyte.config.persistence.ActorDefinitionVersionHelper;
+import io.airbyte.config.persistence.ActorDefinitionVersionHelper.ActorDefinitionVersionWithOverrideStatus;
 import io.airbyte.config.persistence.ConfigNotFoundException;
 import io.airbyte.config.persistence.ConfigRepository;
 import io.airbyte.config.persistence.ConfigRepository.ResourcesQueryPaginated;
 import io.airbyte.config.secrets.JsonSecretsProcessor;
+import io.airbyte.data.helpers.ActorDefinitionVersionUpdater;
 import io.airbyte.data.services.DestinationService;
+import io.airbyte.featureflag.FeatureFlagClient;
+import io.airbyte.featureflag.UseIconUrlInApiResponse;
+import io.airbyte.featureflag.Workspace;
 import io.airbyte.persistence.job.factory.OAuthConfigSupplier;
 import io.airbyte.protocol.models.ConnectorSpecification;
 import io.airbyte.validation.json.JsonSchemaValidator;
@@ -42,6 +53,7 @@ import jakarta.inject.Singleton;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.function.Supplier;
 
@@ -61,6 +73,9 @@ public class DestinationHandler {
   private final OAuthConfigSupplier oAuthConfigSupplier;
   private final ActorDefinitionVersionHelper actorDefinitionVersionHelper;
   private final DestinationService destinationService;
+  private final FeatureFlagClient featureFlagClient;
+  private final ActorDefinitionHandlerHelper actorDefinitionHandlerHelper;
+  private final ActorDefinitionVersionUpdater actorDefinitionVersionUpdater;
 
   @VisibleForTesting
   public DestinationHandler(final ConfigRepository configRepository,
@@ -71,7 +86,10 @@ public class DestinationHandler {
                             final ConfigurationUpdate configurationUpdate,
                             final OAuthConfigSupplier oAuthConfigSupplier,
                             final ActorDefinitionVersionHelper actorDefinitionVersionHelper,
-                            final DestinationService destinationService) {
+                            final DestinationService destinationService,
+                            final FeatureFlagClient featureFlagClient,
+                            final ActorDefinitionHandlerHelper actorDefinitionHandlerHelper,
+                            final ActorDefinitionVersionUpdater actorDefinitionVersionUpdater) {
     this.configRepository = configRepository;
     this.validator = integrationSchemaValidation;
     this.connectionsHandler = connectionsHandler;
@@ -81,6 +99,9 @@ public class DestinationHandler {
     this.oAuthConfigSupplier = oAuthConfigSupplier;
     this.actorDefinitionVersionHelper = actorDefinitionVersionHelper;
     this.destinationService = destinationService;
+    this.featureFlagClient = featureFlagClient;
+    this.actorDefinitionHandlerHelper = actorDefinitionHandlerHelper;
+    this.actorDefinitionVersionUpdater = actorDefinitionVersionUpdater;
   }
 
   public DestinationRead createDestination(final DestinationCreate destinationCreate)
@@ -215,7 +236,7 @@ public class DestinationHandler {
     final DestinationConnection destinationConnection = configRepository.getDestinationConnection(destinationIdRequestBody.getDestinationId());
     final StandardDestinationDefinition destinationDefinition =
         configRepository.getStandardDestinationDefinition(destinationConnection.getDestinationDefinitionId());
-    configRepository.setActorDefaultVersion(destinationIdRequestBody.getDestinationId(), destinationDefinition.getDefaultVersionId());
+    actorDefinitionVersionUpdater.upgradeActorVersion(destinationConnection, destinationDefinition);
   }
 
   public DestinationRead getDestination(final DestinationIdRequestBody destinationIdRequestBody)
@@ -258,10 +279,22 @@ public class DestinationHandler {
     final List<DestinationConnection> destinationConnections =
         configRepository.listWorkspaceDestinationConnection(workspaceIdRequestBody.getWorkspaceId());
     for (final DestinationConnection destinationConnection : destinationConnections) {
-      destinationReads.add(buildDestinationRead(destinationConnection));
+      destinationReads.add(buildDestinationReadWithStatus(destinationConnection));
     }
 
     return new DestinationReadList().destinations(destinationReads);
+  }
+
+  private DestinationRead buildDestinationReadWithStatus(final DestinationConnection destinationConnection)
+      throws JsonValidationException, ConfigNotFoundException, IOException {
+    final DestinationRead destinationRead = buildDestinationRead(destinationConnection);
+    // add destination status into destinationRead
+    if (destinationService.isDestinationActive(destinationConnection.getDestinationId())) {
+      destinationRead.status(ActorStatus.ACTIVE);
+    } else {
+      destinationRead.status(ActorStatus.INACTIVE);
+    }
+    return destinationRead;
   }
 
   public DestinationReadList listDestinationsForWorkspaces(final ListResourcesForWorkspacesRequestBody listResourcesForWorkspacesRequestBody)
@@ -275,7 +308,7 @@ public class DestinationHandler {
             listResourcesForWorkspacesRequestBody.getPagination().getPageSize(),
             listResourcesForWorkspacesRequestBody.getPagination().getRowOffset(), null));
     for (final DestinationConnection destinationConnection : destinationConnections) {
-      reads.add(buildDestinationRead(destinationConnection));
+      reads.add(buildDestinationReadWithStatus(destinationConnection));
     }
     return new DestinationReadList().destinations(reads);
   }
@@ -299,7 +332,7 @@ public class DestinationHandler {
     for (final DestinationConnection dci : configRepository.listDestinationConnection()) {
       if (!dci.getTombstone()) {
         final DestinationRead destinationRead = buildDestinationRead(dci);
-        if (connectionsHandler.matchSearch(destinationSearch, destinationRead)) {
+        if (MatchSearchHandler.matchSearch(destinationSearch, destinationRead)) {
           reads.add(destinationRead);
         }
       }
@@ -392,8 +425,19 @@ public class DestinationHandler {
     return toDestinationRead(dci, standardDestinationDefinition);
   }
 
-  protected static DestinationRead toDestinationRead(final DestinationConnection destinationConnection,
-                                                     final StandardDestinationDefinition standardDestinationDefinition) {
+  protected DestinationRead toDestinationRead(final DestinationConnection destinationConnection,
+                                              final StandardDestinationDefinition standardDestinationDefinition)
+      throws JsonValidationException, ConfigNotFoundException, IOException {
+
+    final ActorDefinitionVersionWithOverrideStatus destinationVersionWithOverrideStatus =
+        actorDefinitionVersionHelper.getDestinationVersionWithOverrideStatus(
+            standardDestinationDefinition, destinationConnection.getWorkspaceId(), destinationConnection.getDestinationId());
+
+    final boolean iconUrlFeatureFlag = featureFlagClient.boolVariation(UseIconUrlInApiResponse.INSTANCE, new Workspace(ANONYMOUS));
+
+    final Optional<ActorDefinitionVersionBreakingChanges> breakingChanges =
+        actorDefinitionHandlerHelper.getVersionBreakingChanges(destinationVersionWithOverrideStatus.actorDefinitionVersion());
+
     return new DestinationRead()
         .destinationDefinitionId(standardDestinationDefinition.getDestinationDefinitionId())
         .destinationId(destinationConnection.getDestinationId())
@@ -402,17 +446,24 @@ public class DestinationHandler {
         .connectionConfiguration(destinationConnection.getConfiguration())
         .name(destinationConnection.getName())
         .destinationName(standardDestinationDefinition.getName())
-        .icon(DestinationDefinitionsHandler.loadIcon(standardDestinationDefinition.getIcon()));
+        .icon(iconUrlFeatureFlag ? standardDestinationDefinition.getIconUrl()
+            : DestinationDefinitionsHandler.loadIcon(standardDestinationDefinition.getIcon()))
+        .isVersionOverrideApplied(destinationVersionWithOverrideStatus.isOverrideApplied())
+        .breakingChanges(breakingChanges.orElse(null))
+        .supportState(toApiSupportState(destinationVersionWithOverrideStatus.actorDefinitionVersion().getSupportState()));
   }
 
-  protected static DestinationSnippetRead toDestinationSnippetRead(final DestinationConnection destinationConnection,
-                                                                   final StandardDestinationDefinition standardDestinationDefinition) {
+  protected DestinationSnippetRead toDestinationSnippetRead(final DestinationConnection destinationConnection,
+                                                            final StandardDestinationDefinition standardDestinationDefinition) {
+    final boolean iconUrlFeatureFlag = featureFlagClient.boolVariation(UseIconUrlInApiResponse.INSTANCE, new Workspace(ANONYMOUS));
+
     return new DestinationSnippetRead()
         .destinationId(destinationConnection.getDestinationId())
         .name(destinationConnection.getName())
         .destinationDefinitionId(standardDestinationDefinition.getDestinationDefinitionId())
         .destinationName(standardDestinationDefinition.getName())
-        .icon(DestinationDefinitionsHandler.loadIcon(standardDestinationDefinition.getIcon()));
+        .icon(iconUrlFeatureFlag ? standardDestinationDefinition.getIconUrl()
+            : DestinationDefinitionsHandler.loadIcon(standardDestinationDefinition.getIcon()));
   }
 
 }

@@ -9,7 +9,7 @@ enum class WorkloadType(private val value: String) {
   SYNC("sync"),
 
   @JsonProperty("check")
-  CHECK("CHECK"),
+  CHECK("check"),
 
   @JsonProperty("discover")
   DISCOVER("discover"),
@@ -21,6 +21,10 @@ enum class WorkloadType(private val value: String) {
   @JsonValue
   override fun toString(): String {
     return value
+  }
+
+  fun toOperationName(): String {
+    return value.uppercase()
   }
 
   companion object {

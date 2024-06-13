@@ -1,13 +1,17 @@
 // Jest Snapshot v1, https://goo.gl/fbAQLP
 
-exports[`#useInitialFormValues should generate initial values w/ 'not create' mode: false 1`] = `
+exports[`#useInitialFormValues should generate initial values w/ mode: create 1`] = `
 {
+  "backfillPreference": "disabled",
   "geography": "auto",
   "name": "Scrafty <> Heroku Postgres",
   "namespaceDefinition": "source",
   "namespaceFormat": "\${SOURCE_NAMESPACE}",
   "nonBreakingChangesPreference": "ignore",
   "normalization": "basic",
+  "notifySchemaChanges": true,
+  "prefix": "",
+  "scheduleData": undefined,
   "scheduleType": "manual",
   "syncCatalog": {
     "streams": [
@@ -1559,13 +1563,18 @@ exports[`#useInitialFormValues should generate initial values w/ 'not create' mo
 }
 `;
 
-exports[`#useInitialFormValues should generate initial values w/ 'not create' mode: true 1`] = `
+exports[`#useInitialFormValues should generate initial values w/ mode: edit 1`] = `
 {
+  "backfillPreference": "disabled",
   "geography": "auto",
+  "name": "Scrafty <> Heroku Postgres",
   "namespaceDefinition": "source",
   "namespaceFormat": "\${SOURCE_NAMESPACE}",
   "nonBreakingChangesPreference": "ignore",
   "normalization": "basic",
+  "notifySchemaChanges": true,
+  "prefix": "",
+  "scheduleData": undefined,
   "scheduleType": "manual",
   "syncCatalog": {
     "streams": [
@@ -1573,7 +1582,7 @@ exports[`#useInitialFormValues should generate initial values w/ 'not create' mo
         "config": {
           "aliasName": "pokemon",
           "cursorField": [],
-          "destinationSyncMode": "append",
+          "destinationSyncMode": "overwrite",
           "primaryKey": [],
           "selected": true,
           "syncMode": "full_refresh",
@@ -2087,7 +2096,7 @@ exports[`#useInitialFormValues should generate initial values w/ 'not create' mo
         "config": {
           "aliasName": "pokemon",
           "cursorField": [],
-          "destinationSyncMode": "append",
+          "destinationSyncMode": "overwrite",
           "primaryKey": [],
           "selected": false,
           "syncMode": "full_refresh",
@@ -2601,7 +2610,7 @@ exports[`#useInitialFormValues should generate initial values w/ 'not create' mo
         "config": {
           "aliasName": "pokemon",
           "cursorField": [],
-          "destinationSyncMode": "append",
+          "destinationSyncMode": "overwrite",
           "primaryKey": [],
           "selected": true,
           "syncMode": "full_refresh",
@@ -3117,14 +3126,18 @@ exports[`#useInitialFormValues should generate initial values w/ 'not create' mo
 }
 `;
 
-exports[`#useInitialFormValues should generate initial values w/ no 'not create' mode 1`] = `
+exports[`#useInitialFormValues should generate initial values w/ mode: readonly 1`] = `
 {
+  "backfillPreference": "disabled",
   "geography": "auto",
   "name": "Scrafty <> Heroku Postgres",
   "namespaceDefinition": "source",
   "namespaceFormat": "\${SOURCE_NAMESPACE}",
   "nonBreakingChangesPreference": "ignore",
   "normalization": "basic",
+  "notifySchemaChanges": true,
+  "prefix": "",
+  "scheduleData": undefined,
   "scheduleType": "manual",
   "syncCatalog": {
     "streams": [

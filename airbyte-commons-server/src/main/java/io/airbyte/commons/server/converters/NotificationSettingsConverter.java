@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.commons.server.converters;
@@ -117,61 +117,48 @@ public class NotificationSettingsConverter {
   }
 
   private static io.airbyte.api.model.generated.SlackNotificationConfiguration toApi(final io.airbyte.config.SlackNotificationConfiguration notification) {
-    if (notification == null) {
-      return new io.airbyte.api.model.generated.SlackNotificationConfiguration();
+    // webhook is non-nullable field in the OpenAPI spec and some configurations have been saved with
+    // a null webhook, so we must default to an empty string or we incur deser errors.
+    if (notification == null || notification.getWebhook() == null) {
+      return new io.airbyte.api.model.generated.SlackNotificationConfiguration()
+          .webhook("");
     }
     return new io.airbyte.api.model.generated.SlackNotificationConfiguration()
         .webhook(notification.getWebhook());
   }
 
   public static io.airbyte.api.client.model.generated.NotificationSettings toClientApi(final io.airbyte.config.NotificationSettings notificationSettings) {
-    final io.airbyte.api.client.model.generated.NotificationSettings apiClientNotificationSettings =
-        new io.airbyte.api.client.model.generated.NotificationSettings();
     if (notificationSettings == null) {
-      return apiClientNotificationSettings;
+      return new io.airbyte.api.client.model.generated.NotificationSettings(null, null, null, null, null, null, null, null);
     }
 
-    if (notificationSettings.getSendOnSuccess() != null) {
-      apiClientNotificationSettings.setSendOnSuccess(toClientApi(notificationSettings.getSendOnSuccess()));
-    }
-    if (notificationSettings.getSendOnFailure() != null) {
-      apiClientNotificationSettings.setSendOnFailure(toClientApi(notificationSettings.getSendOnFailure()));
-    }
-    if (notificationSettings.getSendOnConnectionUpdate() != null) {
-      apiClientNotificationSettings.setSendOnConnectionUpdate(toClientApi(notificationSettings.getSendOnConnectionUpdate()));
-    }
-    if (notificationSettings.getSendOnSyncDisabled() != null) {
-      apiClientNotificationSettings.setSendOnSyncDisabled(toClientApi(notificationSettings.getSendOnSyncDisabled()));
-    }
-    if (notificationSettings.getSendOnSyncDisabledWarning() != null) {
-      apiClientNotificationSettings.setSendOnSyncDisabledWarning(toClientApi(notificationSettings.getSendOnSyncDisabledWarning()));
-    }
-    if (notificationSettings.getSendOnConnectionUpdateActionRequired() != null) {
-      apiClientNotificationSettings
-          .setSendOnConnectionUpdateActionRequired(toClientApi(notificationSettings.getSendOnConnectionUpdateActionRequired()));
-    }
-    if (notificationSettings.getSendOnBreakingChangeWarning() != null) {
-      apiClientNotificationSettings.setSendOnBreakingChangeWarning(toClientApi(notificationSettings.getSendOnBreakingChangeWarning()));
-    }
-    if (notificationSettings.getSendOnBreakingChangeSyncsDisabled() != null) {
-      apiClientNotificationSettings.setSendOnBreakingChangeSyncsDisabled(toClientApi(notificationSettings.getSendOnBreakingChangeSyncsDisabled()));
-    }
+    final io.airbyte.api.client.model.generated.NotificationSettings apiClientNotificationSettings =
+        new io.airbyte.api.client.model.generated.NotificationSettings(
+            toClientApi(notificationSettings.getSendOnSuccess()),
+            toClientApi(notificationSettings.getSendOnFailure()),
+            toClientApi(notificationSettings.getSendOnSyncDisabled()),
+            toClientApi(notificationSettings.getSendOnSyncDisabledWarning()),
+            toClientApi(notificationSettings.getSendOnConnectionUpdate()),
+            toClientApi(notificationSettings.getSendOnConnectionUpdateActionRequired()),
+            toClientApi(notificationSettings.getSendOnBreakingChangeWarning()),
+            toClientApi(notificationSettings.getSendOnBreakingChangeSyncsDisabled()));
+
     return apiClientNotificationSettings;
   }
 
   private static io.airbyte.api.client.model.generated.NotificationItem toClientApi(final io.airbyte.config.NotificationItem notificationItem) {
-    final io.airbyte.api.client.model.generated.NotificationItem result = new io.airbyte.api.client.model.generated.NotificationItem();
-    notificationItem.getNotificationType().stream().map(n -> Enums.convertTo(n, io.airbyte.api.client.model.generated.NotificationType.class))
-        .forEach(result::addNotificationTypeItem);
+    return notificationItem != null ? convertNotificationItem(notificationItem) : null;
+  }
 
-    if (notificationItem.getSlackConfiguration() != null) {
-      final io.airbyte.api.client.model.generated.SlackNotificationConfiguration slackNotificationConfiguration =
-          new io.airbyte.api.client.model.generated.SlackNotificationConfiguration()
-              .webhook(notificationItem.getSlackConfiguration().getWebhook());
-      result.slackConfiguration(slackNotificationConfiguration);
-    }
-    return result;
-
+  private static io.airbyte.api.client.model.generated.NotificationItem convertNotificationItem(final io.airbyte.config.NotificationItem notificationItem) {
+    return new io.airbyte.api.client.model.generated.NotificationItem(
+        notificationItem.getNotificationType().stream().map(n -> Enums.convertTo(n, io.airbyte.api.client.model.generated.NotificationType.class))
+            .toList(),
+        notificationItem.getSlackConfiguration() != null
+            ? new io.airbyte.api.client.model.generated.SlackNotificationConfiguration(
+                notificationItem.getSlackConfiguration().getWebhook() != null ? notificationItem.getSlackConfiguration().getWebhook() : "")
+            : null,
+        null);
   }
 
 }

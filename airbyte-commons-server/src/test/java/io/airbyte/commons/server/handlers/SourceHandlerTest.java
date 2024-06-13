@@ -1,12 +1,12 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.commons.server.handlers;
 
+import static io.airbyte.featureflag.ContextKt.ANONYMOUS;
 import static io.airbyte.protocol.models.CatalogHelpers.createAirbyteStream;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
@@ -18,6 +18,7 @@ import static org.mockito.Mockito.when;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.google.common.collect.Lists;
+import io.airbyte.api.model.generated.ActorStatus;
 import io.airbyte.api.model.generated.AirbyteStreamConfiguration;
 import io.airbyte.api.model.generated.ConnectionRead;
 import io.airbyte.api.model.generated.ConnectionReadList;
@@ -33,9 +34,11 @@ import io.airbyte.api.model.generated.SourceRead;
 import io.airbyte.api.model.generated.SourceReadList;
 import io.airbyte.api.model.generated.SourceSearch;
 import io.airbyte.api.model.generated.SourceUpdate;
+import io.airbyte.api.model.generated.SupportState;
 import io.airbyte.api.model.generated.WorkspaceIdRequestBody;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.commons.server.converters.ConfigurationUpdate;
+import io.airbyte.commons.server.handlers.helpers.ActorDefinitionHandlerHelper;
 import io.airbyte.commons.server.handlers.helpers.CatalogConverter;
 import io.airbyte.commons.server.helpers.ConnectionHelpers;
 import io.airbyte.commons.server.helpers.ConnectorSpecificationHelpers;
@@ -46,15 +49,19 @@ import io.airbyte.config.StandardSourceDefinition;
 import io.airbyte.config.StandardSync;
 import io.airbyte.config.SuggestedStreams;
 import io.airbyte.config.persistence.ActorDefinitionVersionHelper;
+import io.airbyte.config.persistence.ActorDefinitionVersionHelper.ActorDefinitionVersionWithOverrideStatus;
 import io.airbyte.config.persistence.ConfigNotFoundException;
 import io.airbyte.config.persistence.ConfigRepository;
 import io.airbyte.config.secrets.JsonSecretsProcessor;
 import io.airbyte.config.secrets.SecretCoordinate;
 import io.airbyte.config.secrets.SecretsRepositoryReader;
+import io.airbyte.data.helpers.ActorDefinitionVersionUpdater;
 import io.airbyte.data.services.SecretPersistenceConfigService;
 import io.airbyte.data.services.SourceService;
 import io.airbyte.data.services.WorkspaceService;
 import io.airbyte.featureflag.TestClient;
+import io.airbyte.featureflag.UseIconUrlInApiResponse;
+import io.airbyte.featureflag.Workspace;
 import io.airbyte.persistence.job.factory.OAuthConfigSupplier;
 import io.airbyte.protocol.models.AirbyteCatalog;
 import io.airbyte.protocol.models.CatalogHelpers;
@@ -78,6 +85,7 @@ class SourceHandlerTest {
   private SecretsRepositoryReader secretsRepositoryReader;
   private StandardSourceDefinition standardSourceDefinition;
   private ActorDefinitionVersion sourceDefinitionVersion;
+  private ActorDefinitionVersionWithOverrideStatus sourceDefinitionVersionWithOverrideStatus;
   private SourceDefinitionSpecificationRead sourceDefinitionSpecificationRead;
   private SourceConnection sourceConnection;
   private SourceHandler sourceHandler;
@@ -89,6 +97,7 @@ class SourceHandlerTest {
   private ConnectorSpecification connectorSpecification;
   private OAuthConfigSupplier oAuthConfigSupplier;
   private ActorDefinitionVersionHelper actorDefinitionVersionHelper;
+  private ActorDefinitionVersionUpdater actorDefinitionVersionUpdater;
   private TestClient featureFlagClient;
 
   private static final String SHOES = "shoes";
@@ -96,11 +105,14 @@ class SourceHandlerTest {
   private static final AirbyteCatalog airbyteCatalog = CatalogHelpers.createAirbyteCatalog(SHOES,
       Field.of(SKU, JsonSchemaType.STRING));
 
-  // needs to match name of file in src/test/resources/icons
-  private static final String ICON = "test-source.svg";
+  private static final String ICON_URL = "https://connectors.airbyte.com/files/metadata/airbyte/destination-test/latest/icon.svg";
+  private static final boolean IS_VERSION_OVERRIDE_APPLIED = true;
+  private static final SupportState SUPPORT_STATE = SupportState.SUPPORTED;
+
   private SourceService sourceService;
   private WorkspaceService workspaceService;
   private SecretPersistenceConfigService secretPersistenceConfigService;
+  private ActorDefinitionHandlerHelper actorDefinitionHandlerHelper;
 
   @SuppressWarnings("unchecked")
   @BeforeEach
@@ -115,22 +127,29 @@ class SourceHandlerTest {
     oAuthConfigSupplier = mock(OAuthConfigSupplier.class);
     actorDefinitionVersionHelper = mock(ActorDefinitionVersionHelper.class);
     featureFlagClient = mock(TestClient.class);
+    when(featureFlagClient.boolVariation(UseIconUrlInApiResponse.INSTANCE, new Workspace(ANONYMOUS)))
+        .thenReturn(true);
     sourceService = mock(SourceService.class);
     workspaceService = mock(WorkspaceService.class);
     secretPersistenceConfigService = mock(SecretPersistenceConfigService.class);
+    actorDefinitionHandlerHelper = mock(ActorDefinitionHandlerHelper.class);
+    actorDefinitionVersionUpdater = mock(ActorDefinitionVersionUpdater.class);
 
     connectorSpecification = ConnectorSpecificationHelpers.generateConnectorSpecification();
 
     standardSourceDefinition = new StandardSourceDefinition()
         .withSourceDefinitionId(UUID.randomUUID())
         .withName("marketo")
-        .withIcon(ICON);
+        .withIcon(ICON_URL);
 
     sourceDefinitionVersion = new ActorDefinitionVersion()
         .withDockerRepository("thebestrepo")
         .withDocumentationUrl("https://wikipedia.org")
         .withDockerImageTag("thelatesttag")
-        .withSpec(connectorSpecification);
+        .withSpec(connectorSpecification)
+        .withSupportState(ActorDefinitionVersion.SupportState.SUPPORTED);
+
+    sourceDefinitionVersionWithOverrideStatus = new ActorDefinitionVersionWithOverrideStatus(sourceDefinitionVersion, IS_VERSION_OVERRIDE_APPLIED);
 
     sourceDefinitionSpecificationRead = new SourceDefinitionSpecificationRead()
         .sourceDefinitionId(standardSourceDefinition.getSourceDefinitionId())
@@ -147,7 +166,9 @@ class SourceHandlerTest {
         secretsProcessor,
         configurationUpdate,
         oAuthConfigSupplier,
-        actorDefinitionVersionHelper, featureFlagClient, sourceService, workspaceService, secretPersistenceConfigService);
+        actorDefinitionVersionHelper, featureFlagClient, sourceService, workspaceService, secretPersistenceConfigService,
+        actorDefinitionHandlerHelper,
+        actorDefinitionVersionUpdater);
   }
 
   @Test
@@ -170,11 +191,14 @@ class SourceHandlerTest {
     when(secretsProcessor.prepareSecretsForOutput(sourceCreate.getConnectionConfiguration(),
         sourceDefinitionSpecificationRead.getConnectionSpecification()))
             .thenReturn(sourceCreate.getConnectionConfiguration());
+    when(actorDefinitionVersionHelper.getSourceVersionWithOverrideStatus(standardSourceDefinition, sourceConnection.getWorkspaceId(),
+        sourceConnection.getSourceId())).thenReturn(sourceDefinitionVersionWithOverrideStatus);
 
     final SourceRead actualSourceRead = sourceHandler.createSource(sourceCreate);
 
-    final SourceRead expectedSourceRead = SourceHelpers.getSourceRead(sourceConnection, standardSourceDefinition)
-        .connectionConfiguration(sourceConnection.getConfiguration());
+    final SourceRead expectedSourceRead =
+        SourceHelpers.getSourceRead(sourceConnection, standardSourceDefinition, IS_VERSION_OVERRIDE_APPLIED, SUPPORT_STATE)
+            .connectionConfiguration(sourceConnection.getConfiguration());
 
     assertEquals(expectedSourceRead, actualSourceRead);
 
@@ -222,10 +246,13 @@ class SourceHandlerTest {
         .thenReturn(expectedSourceConnection);
     when(configurationUpdate.source(sourceConnection.getSourceId(), updatedSourceName, newConfiguration))
         .thenReturn(expectedSourceConnection);
+    when(actorDefinitionVersionHelper.getSourceVersionWithOverrideStatus(standardSourceDefinition, sourceConnection.getWorkspaceId(),
+        sourceConnection.getSourceId())).thenReturn(sourceDefinitionVersionWithOverrideStatus);
 
     final SourceRead actualSourceRead = sourceHandler.updateSource(sourceUpdate);
     final SourceRead expectedSourceRead =
-        SourceHelpers.getSourceRead(expectedSourceConnection, standardSourceDefinition).connectionConfiguration(newConfiguration);
+        SourceHelpers.getSourceRead(expectedSourceConnection, standardSourceDefinition, IS_VERSION_OVERRIDE_APPLIED, SUPPORT_STATE)
+            .connectionConfiguration(newConfiguration);
 
     assertEquals(expectedSourceRead, actualSourceRead);
 
@@ -242,23 +269,20 @@ class SourceHandlerTest {
   void testUpgradeSourceVersion() throws JsonValidationException, ConfigNotFoundException, IOException {
     final SourceIdRequestBody sourceIdRequestBody = new SourceIdRequestBody().sourceId(sourceConnection.getSourceId());
 
-    final UUID newDefaultVersionId = UUID.randomUUID();
-    final StandardSourceDefinition sourceDefinitionWithNewVersion = Jsons.clone(standardSourceDefinition)
-        .withDefaultVersionId(newDefaultVersionId);
-
     when(configRepository.getSourceConnection(sourceConnection.getSourceId())).thenReturn(sourceConnection);
-    when(configRepository.getStandardSourceDefinition(sourceDefinitionWithNewVersion.getSourceDefinitionId()))
-        .thenReturn(sourceDefinitionWithNewVersion);
+    when(configRepository.getStandardSourceDefinition(standardSourceDefinition.getSourceDefinitionId()))
+        .thenReturn(standardSourceDefinition);
 
     sourceHandler.upgradeSourceVersion(sourceIdRequestBody);
 
-    // validate that we set the actor version to the actor definition (global) default version
-    verify(configRepository).setActorDefaultVersion(sourceConnection.getSourceId(), newDefaultVersionId);
+    // validate that we call the actorDefinitionVersionUpdater to upgrade the version to global default
+    verify(actorDefinitionVersionUpdater).upgradeActorVersion(sourceConnection, standardSourceDefinition);
   }
 
   @Test
   void testGetSource() throws JsonValidationException, ConfigNotFoundException, IOException {
-    final SourceRead expectedSourceRead = SourceHelpers.getSourceRead(sourceConnection, standardSourceDefinition);
+    final SourceRead expectedSourceRead =
+        SourceHelpers.getSourceRead(sourceConnection, standardSourceDefinition, IS_VERSION_OVERRIDE_APPLIED, SUPPORT_STATE);
     final SourceIdRequestBody sourceIdRequestBody = new SourceIdRequestBody().sourceId(expectedSourceRead.getSourceId());
 
     when(configRepository.getSourceConnection(sourceConnection.getSourceId())).thenReturn(sourceConnection);
@@ -270,13 +294,12 @@ class SourceHandlerTest {
     when(
         secretsProcessor.prepareSecretsForOutput(sourceConnection.getConfiguration(), sourceDefinitionSpecificationRead.getConnectionSpecification()))
             .thenReturn(sourceConnection.getConfiguration());
+    when(actorDefinitionVersionHelper.getSourceVersionWithOverrideStatus(standardSourceDefinition, sourceConnection.getWorkspaceId(),
+        sourceConnection.getSourceId())).thenReturn(sourceDefinitionVersionWithOverrideStatus);
 
     final SourceRead actualSourceRead = sourceHandler.getSource(sourceIdRequestBody);
 
     assertEquals(expectedSourceRead, actualSourceRead);
-
-    // make sure the icon was loaded into actual svg content
-    assertTrue(expectedSourceRead.getIcon().startsWith("<svg>"));
 
     verify(actorDefinitionVersionHelper).getSourceVersion(standardSourceDefinition, sourceConnection.getWorkspaceId(),
         sourceConnection.getSourceId());
@@ -288,8 +311,9 @@ class SourceHandlerTest {
   void testCloneSourceWithoutConfigChange()
       throws JsonValidationException, ConfigNotFoundException, IOException, io.airbyte.data.exceptions.ConfigNotFoundException {
     final SourceConnection clonedConnection = SourceHelpers.generateSource(standardSourceDefinition.getSourceDefinitionId());
-    final SourceRead expectedClonedSourceRead = SourceHelpers.getSourceRead(clonedConnection, standardSourceDefinition);
-    final SourceRead sourceRead = SourceHelpers.getSourceRead(sourceConnection, standardSourceDefinition);
+    final SourceRead expectedClonedSourceRead =
+        SourceHelpers.getSourceRead(clonedConnection, standardSourceDefinition, IS_VERSION_OVERRIDE_APPLIED, SUPPORT_STATE);
+    final SourceRead sourceRead = SourceHelpers.getSourceRead(sourceConnection, standardSourceDefinition, IS_VERSION_OVERRIDE_APPLIED, SUPPORT_STATE);
 
     final SourceCloneRequestBody sourceCloneRequestBody = new SourceCloneRequestBody().sourceCloneId(sourceRead.getSourceId());
 
@@ -306,6 +330,12 @@ class SourceHandlerTest {
         secretsProcessor.prepareSecretsForOutput(sourceConnection.getConfiguration(), sourceDefinitionSpecificationRead.getConnectionSpecification()))
             .thenReturn(sourceConnection.getConfiguration());
 
+    when(actorDefinitionVersionHelper.getSourceVersionWithOverrideStatus(standardSourceDefinition, sourceConnection.getWorkspaceId(),
+        sourceConnection.getSourceId())).thenReturn(sourceDefinitionVersionWithOverrideStatus);
+
+    when(actorDefinitionVersionHelper.getSourceVersionWithOverrideStatus(standardSourceDefinition, clonedConnection.getWorkspaceId(),
+        clonedConnection.getSourceId())).thenReturn(sourceDefinitionVersionWithOverrideStatus);
+
     final SourceRead actualSourceRead = sourceHandler.cloneSource(sourceCloneRequestBody);
 
     assertEquals(expectedClonedSourceRead, actualSourceRead);
@@ -316,8 +346,9 @@ class SourceHandlerTest {
   void testCloneSourceWithConfigChange()
       throws JsonValidationException, ConfigNotFoundException, IOException, io.airbyte.data.exceptions.ConfigNotFoundException {
     final SourceConnection clonedConnection = SourceHelpers.generateSource(standardSourceDefinition.getSourceDefinitionId());
-    final SourceRead expectedClonedSourceRead = SourceHelpers.getSourceRead(clonedConnection, standardSourceDefinition);
-    final SourceRead sourceRead = SourceHelpers.getSourceRead(sourceConnection, standardSourceDefinition);
+    final SourceRead expectedClonedSourceRead =
+        SourceHelpers.getSourceRead(clonedConnection, standardSourceDefinition, IS_VERSION_OVERRIDE_APPLIED, SUPPORT_STATE);
+    final SourceRead sourceRead = SourceHelpers.getSourceRead(sourceConnection, standardSourceDefinition, IS_VERSION_OVERRIDE_APPLIED, SUPPORT_STATE);
 
     final SourceCloneConfiguration sourceCloneConfiguration = new SourceCloneConfiguration().name("Copy Name");
     final SourceCloneRequestBody sourceCloneRequestBody =
@@ -336,6 +367,12 @@ class SourceHandlerTest {
         secretsProcessor.prepareSecretsForOutput(sourceConnection.getConfiguration(), sourceDefinitionSpecificationRead.getConnectionSpecification()))
             .thenReturn(sourceConnection.getConfiguration());
 
+    when(actorDefinitionVersionHelper.getSourceVersionWithOverrideStatus(standardSourceDefinition, sourceConnection.getWorkspaceId(),
+        sourceConnection.getSourceId())).thenReturn(sourceDefinitionVersionWithOverrideStatus);
+
+    when(actorDefinitionVersionHelper.getSourceVersionWithOverrideStatus(standardSourceDefinition, clonedConnection.getWorkspaceId(),
+        clonedConnection.getSourceId())).thenReturn(sourceDefinitionVersionWithOverrideStatus);
+
     final SourceRead actualSourceRead = sourceHandler.cloneSource(sourceCloneRequestBody);
 
     assertEquals(expectedClonedSourceRead, actualSourceRead);
@@ -343,7 +380,9 @@ class SourceHandlerTest {
 
   @Test
   void testListSourcesForWorkspace() throws JsonValidationException, ConfigNotFoundException, IOException {
-    final SourceRead expectedSourceRead = SourceHelpers.getSourceRead(sourceConnection, standardSourceDefinition);
+    final SourceRead expectedSourceRead =
+        SourceHelpers.getSourceRead(sourceConnection, standardSourceDefinition, IS_VERSION_OVERRIDE_APPLIED, SUPPORT_STATE);
+    expectedSourceRead.setStatus(ActorStatus.INACTIVE); // set inactive by default
     final WorkspaceIdRequestBody workspaceIdRequestBody = new WorkspaceIdRequestBody().workspaceId(sourceConnection.getWorkspaceId());
 
     when(configRepository.getSourceConnection(sourceConnection.getSourceId())).thenReturn(sourceConnection);
@@ -358,6 +397,8 @@ class SourceHandlerTest {
     when(
         secretsProcessor.prepareSecretsForOutput(sourceConnection.getConfiguration(), sourceDefinitionSpecificationRead.getConnectionSpecification()))
             .thenReturn(sourceConnection.getConfiguration());
+    when(actorDefinitionVersionHelper.getSourceVersionWithOverrideStatus(standardSourceDefinition, sourceConnection.getWorkspaceId(),
+        sourceConnection.getSourceId())).thenReturn(sourceDefinitionVersionWithOverrideStatus);
 
     final SourceReadList actualSourceReadList = sourceHandler.listSourcesForWorkspace(workspaceIdRequestBody);
 
@@ -370,7 +411,8 @@ class SourceHandlerTest {
 
   @Test
   void testListSourcesForSourceDefinition() throws JsonValidationException, ConfigNotFoundException, IOException {
-    final SourceRead expectedSourceRead = SourceHelpers.getSourceRead(sourceConnection, standardSourceDefinition);
+    final SourceRead expectedSourceRead =
+        SourceHelpers.getSourceRead(sourceConnection, standardSourceDefinition, IS_VERSION_OVERRIDE_APPLIED, SUPPORT_STATE);
     final SourceDefinitionIdRequestBody sourceDefinitionIdRequestBody =
         new SourceDefinitionIdRequestBody().sourceDefinitionId(sourceConnection.getSourceDefinitionId());
 
@@ -384,6 +426,8 @@ class SourceHandlerTest {
     when(
         secretsProcessor.prepareSecretsForOutput(sourceConnection.getConfiguration(), sourceDefinitionSpecificationRead.getConnectionSpecification()))
             .thenReturn(sourceConnection.getConfiguration());
+    when(actorDefinitionVersionHelper.getSourceVersionWithOverrideStatus(standardSourceDefinition, sourceConnection.getWorkspaceId(),
+        sourceConnection.getSourceId())).thenReturn(sourceDefinitionVersionWithOverrideStatus);
 
     final SourceReadList actualSourceReadList = sourceHandler.listSourcesForSourceDefinition(sourceDefinitionIdRequestBody);
 
@@ -394,7 +438,8 @@ class SourceHandlerTest {
 
   @Test
   void testSearchSources() throws JsonValidationException, ConfigNotFoundException, IOException {
-    final SourceRead expectedSourceRead = SourceHelpers.getSourceRead(sourceConnection, standardSourceDefinition);
+    final SourceRead expectedSourceRead =
+        SourceHelpers.getSourceRead(sourceConnection, standardSourceDefinition, IS_VERSION_OVERRIDE_APPLIED, SUPPORT_STATE);
 
     when(configRepository.getSourceConnection(sourceConnection.getSourceId())).thenReturn(sourceConnection);
     when(configRepository.listSourceConnection()).thenReturn(Lists.newArrayList(sourceConnection));
@@ -406,14 +451,16 @@ class SourceHandlerTest {
     when(
         secretsProcessor.prepareSecretsForOutput(sourceConnection.getConfiguration(), sourceDefinitionSpecificationRead.getConnectionSpecification()))
             .thenReturn(sourceConnection.getConfiguration());
+    when(actorDefinitionVersionHelper.getSourceVersionWithOverrideStatus(standardSourceDefinition, sourceConnection.getWorkspaceId(),
+        sourceConnection.getSourceId())).thenReturn(sourceDefinitionVersionWithOverrideStatus);
 
-    when(connectionsHandler.matchSearch(new SourceSearch(), expectedSourceRead)).thenReturn(true);
-    SourceReadList actualSourceReadList = sourceHandler.searchSources(new SourceSearch());
+    final SourceSearch validSourceSearch = new SourceSearch().name(sourceConnection.getName());
+    SourceReadList actualSourceReadList = sourceHandler.searchSources(validSourceSearch);
     assertEquals(1, actualSourceReadList.getSources().size());
     assertEquals(expectedSourceRead, actualSourceReadList.getSources().get(0));
 
-    when(connectionsHandler.matchSearch(new SourceSearch(), expectedSourceRead)).thenReturn(false);
-    actualSourceReadList = sourceHandler.searchSources(new SourceSearch());
+    final SourceSearch invalidSourceSearch = new SourceSearch().name("invalid");
+    actualSourceReadList = sourceHandler.searchSources(invalidSourceSearch);
     assertEquals(0, actualSourceReadList.getSources().size());
   }
 
@@ -448,6 +495,8 @@ class SourceHandlerTest {
     when(
         secretsProcessor.prepareSecretsForOutput(sourceConnection.getConfiguration(), sourceDefinitionSpecificationRead.getConnectionSpecification()))
             .thenReturn(sourceConnection.getConfiguration());
+    when(actorDefinitionVersionHelper.getSourceVersionWithOverrideStatus(standardSourceDefinition, sourceConnection.getWorkspaceId(),
+        sourceConnection.getSourceId())).thenReturn(sourceDefinitionVersionWithOverrideStatus);
 
     sourceHandler.deleteSource(sourceIdRequestBody);
 
@@ -462,17 +511,19 @@ class SourceHandlerTest {
     final UUID catalogId = UUID.randomUUID();
     final String connectorVersion = "0.0.1";
     final String hashValue = "0123456789abcd";
+    final AirbyteCatalog expectedCatalog = Jsons.clone(airbyteCatalog);
+    expectedCatalog.getStreams().forEach(s -> s.withSourceDefinedCursor(false));
 
     final SourceDiscoverSchemaWriteRequestBody request = new SourceDiscoverSchemaWriteRequestBody()
-        .catalog(CatalogConverter.toApi(airbyteCatalog, new ActorDefinitionVersion()))
+        .catalog(CatalogConverter.toApi(expectedCatalog, new ActorDefinitionVersion()))
         .sourceId(actorId)
         .connectorVersion(connectorVersion)
         .configurationHash(hashValue);
 
-    when(configRepository.writeActorCatalogFetchEvent(airbyteCatalog, actorId, connectorVersion, hashValue)).thenReturn(catalogId);
+    when(configRepository.writeActorCatalogFetchEvent(expectedCatalog, actorId, connectorVersion, hashValue)).thenReturn(catalogId);
     final DiscoverCatalogResult result = sourceHandler.writeDiscoverCatalogResult(request);
 
-    verify(configRepository).writeActorCatalogFetchEvent(airbyteCatalog, actorId, connectorVersion, hashValue);
+    verify(configRepository).writeActorCatalogFetchEvent(expectedCatalog, actorId, connectorVersion, hashValue);
     assert (result.getCatalogId()).equals(catalogId);
   }
 

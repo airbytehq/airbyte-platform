@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.keycloak.setup;
@@ -8,12 +8,14 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.when;
 
 import io.airbyte.commons.auth.config.AirbyteKeycloakConfiguration;
-import io.airbyte.commons.auth.config.IdentityProviderConfiguration;
+import io.airbyte.commons.auth.config.OidcConfig;
 import java.util.HashMap;
 import java.util.Map;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.keycloak.admin.client.resource.IdentityProvidersResource;
 import org.keycloak.admin.client.resource.RealmResource;
 import org.mockito.InjectMocks;
@@ -29,7 +31,7 @@ class ConfigurationMapServiceTest {
   @Mock
   private IdentityProvidersResource identityProvidersResource;
   @Mock
-  private IdentityProviderConfiguration identityProviderConfiguration;
+  private OidcConfig oidcConfig;
   @Mock
   private AirbyteKeycloakConfiguration keycloakConfiguration;
   @InjectMocks
@@ -40,17 +42,25 @@ class ConfigurationMapServiceTest {
     configurationMapService = new ConfigurationMapService(WEBAPP_URL, keycloakConfiguration);
   }
 
-  @Test
-  void testImportProviderFrom() {
-    when(identityProviderConfiguration.getDomain()).thenReturn("trial-577.okta.com");
+  @ParameterizedTest
+  @ValueSource(strings = {
+    "trial-577.okta.com",
+    "https://trial-577.okta.com",
+    "trial-577.okta.com/.well-known/openid-configuration",
+    "https://trial-577.okta.com/.well-known/openid-configuration",
+    "trial-577.okta.com/",
+    "https://trial-577.okta.com/",
+  })
+  void testImportProviderFrom(String url) {
+    when(oidcConfig.getDomain()).thenReturn(url);
     when(realmResource.identityProviders()).thenReturn(identityProvidersResource);
 
     Map<String, Object> importFromMap = new HashMap<>();
-    importFromMap.put("providerId", "keycloak-oidc");
+    importFromMap.put("providerId", "oidc");
     importFromMap.put("fromUrl", "https://trial-577.okta.com/.well-known/openid-configuration");
 
     Map<String, String> expected = new HashMap<>();
-    expected.put("providerId", "keycloak-oidc");
+    expected.put("providerId", "oidc");
     expected.put("fromUrl", "https://trial-577.okta.com/.well-known/openid-configuration");
     expected.put("authorizationUrl", "https://trial-577.okta.com/oauth2/v1/authorize");
     expected.put("tokenUrl", "https://trial-577.okta.com/oauth2/v1/token");
@@ -62,7 +72,7 @@ class ConfigurationMapServiceTest {
     when(identityProvidersResource.importFrom(importFromMap)).thenReturn(expected);
 
     Map<String, String> actual =
-        configurationMapService.importProviderFrom(realmResource, identityProviderConfiguration, "keycloak-oidc");
+        configurationMapService.importProviderFrom(realmResource, oidcConfig, "oidc");
 
     assertEquals(expected, actual);
   }
@@ -77,10 +87,10 @@ class ConfigurationMapServiceTest {
         "issuer", "https://trial-577.okta.com/oauth2/default",
         "jwksUrl", "https://trial-577.okta.com/oauth2/default/v1/keys");
 
-    when(identityProviderConfiguration.getClientId()).thenReturn("clientId");
-    when(identityProviderConfiguration.getClientSecret()).thenReturn("clientSecret");
+    when(oidcConfig.getClientId()).thenReturn("clientId");
+    when(oidcConfig.getClientSecret()).thenReturn("clientSecret");
 
-    Map<String, String> result = configurationMapService.setupProviderConfig(identityProviderConfiguration, configMap);
+    Map<String, String> result = configurationMapService.setupProviderConfig(oidcConfig, configMap);
 
     assertEquals("clientId", result.get("clientId"));
     assertEquals("clientSecret", result.get("clientSecret"));

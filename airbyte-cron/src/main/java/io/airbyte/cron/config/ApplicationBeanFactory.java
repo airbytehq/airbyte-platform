@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.cron.config;
@@ -18,13 +18,11 @@ import java.time.Duration;
 import java.time.OffsetDateTime;
 import java.time.ZoneId;
 import kotlin.jvm.functions.Function1;
-import lombok.extern.slf4j.Slf4j;
 
 /**
  * Micronaut bean factory for general singletons.
  */
 @Factory
-@Slf4j
 public class ApplicationBeanFactory {
 
   @Singleton

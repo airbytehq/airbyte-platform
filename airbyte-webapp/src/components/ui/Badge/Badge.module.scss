@@ -16,6 +16,11 @@
     background-color: colors.$blue-50;
   }
 
+  &--darkBlue {
+    color: colors.$foreground;
+    background-color: colors.$dark-blue;
+  }
+
   &--grey {
     color: colors.$grey-900;
     background-color: colors.$grey-100;

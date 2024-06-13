@@ -1,9 +1,10 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.db.factory;
 
+import io.airbyte.db.instance.DatabaseConstants;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.testcontainers.containers.PostgreSQLContainer;
@@ -19,7 +20,7 @@ class CommonFactoryTest {
 
   @BeforeAll
   public static void dbSetup() {
-    container = new PostgreSQLContainer<>("postgres:13-alpine")
+    container = new PostgreSQLContainer<>(DatabaseConstants.DEFAULT_DATABASE_VERSION)
         .withDatabaseName(DATABASE_NAME)
         .withUsername("docker")
         .withPassword("docker");

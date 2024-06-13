@@ -85,6 +85,9 @@ interface UIStreamStatus {
   status: ConnectionStatusIndicatorStatus | undefined;
   isRunning: boolean;
   lastSuccessfulSync: StreamStatusRead | undefined;
+  streamSyncStartedAt: number | undefined;
+  recordsExtracted: number | undefined;
+  recordsLoaded: number | undefined;
 }
 
 export const computeStreamStatus = ({
@@ -94,6 +97,10 @@ export const computeStreamStatus = ({
   hasBreakingSchemaChange,
   lateMultiplier,
   errorMultiplier,
+  showSyncProgress,
+  isSyncing,
+  recordsExtracted,
+  recordsLoaded,
 }: {
   statuses: StreamStatusRead[];
   scheduleType?: ConnectionScheduleType;
@@ -101,29 +108,90 @@ export const computeStreamStatus = ({
   hasBreakingSchemaChange: boolean;
   lateMultiplier: number;
   errorMultiplier: number;
+  showSyncProgress: boolean;
+  isSyncing: boolean;
+  recordsExtracted: number | undefined;
+  recordsLoaded: number | undefined;
 }): UIStreamStatus => {
+  // no statuses
   if (statuses == null || statuses.length === 0) {
-    return { status: undefined, isRunning: false, lastSuccessfulSync: undefined };
+    return {
+      status: undefined,
+      isRunning: false,
+      lastSuccessfulSync: undefined,
+      streamSyncStartedAt: undefined,
+      recordsExtracted,
+      recordsLoaded,
+    };
   }
 
-  const isRunning = statuses[0].runState === StreamStatusRunState.RUNNING;
+  const isRunning =
+    isSyncing ||
+    statuses[0].runState === StreamStatusRunState.RUNNING ||
+    statuses[0].runState === StreamStatusRunState.RATE_LIMITED;
 
   const lastSuccessfulSync = statuses.find(
     ({ jobType, runState }) => jobType === StreamStatusJobType.SYNC && runState === StreamStatusRunState.COMPLETE
   );
 
+  if (showSyncProgress) {
+    // queued
+    if (isRunning && (!recordsExtracted || recordsExtracted === 0)) {
+      return {
+        status: ConnectionStatusIndicatorStatus.Queued,
+        isRunning,
+        lastSuccessfulSync,
+        streamSyncStartedAt: statuses[0].transitionedAt,
+        recordsExtracted,
+        recordsLoaded,
+      };
+    }
+    // syncing
+    if (isRunning && recordsExtracted && recordsExtracted > 0) {
+      return {
+        status: ConnectionStatusIndicatorStatus.Syncing,
+        isRunning,
+        lastSuccessfulSync,
+        streamSyncStartedAt: statuses[0].transitionedAt,
+        recordsExtracted,
+        recordsLoaded,
+      };
+    }
+  }
+
   // breaking schema change means user action is required
   if (hasBreakingSchemaChange) {
-    return { status: ConnectionStatusIndicatorStatus.ActionRequired, isRunning, lastSuccessfulSync };
+    return {
+      status: ConnectionStatusIndicatorStatus.ActionRequired,
+      isRunning,
+      lastSuccessfulSync,
+      streamSyncStartedAt: undefined,
+      recordsExtracted,
+      recordsLoaded,
+    };
   }
 
   if (statuses[0].runState === StreamStatusRunState.PENDING) {
-    return { status: ConnectionStatusIndicatorStatus.Pending, isRunning, lastSuccessfulSync };
+    return {
+      status: ConnectionStatusIndicatorStatus.Pending,
+      isRunning,
+      lastSuccessfulSync,
+      streamSyncStartedAt: undefined,
+      recordsExtracted,
+      recordsLoaded,
+    };
   }
 
   // reset streams are pending, regardless of the run state
   if (statuses[0].jobType === StreamStatusJobType.RESET) {
-    return { status: ConnectionStatusIndicatorStatus.Pending, isRunning, lastSuccessfulSync };
+    return {
+      status: ConnectionStatusIndicatorStatus.Pending,
+      isRunning,
+      lastSuccessfulSync,
+      streamSyncStartedAt: undefined,
+      recordsExtracted,
+      recordsLoaded,
+    };
   }
 
   // if the most recent sync failed, is there a previous successful sync within errorMultiplier (2x) schedule frequency?
@@ -131,19 +199,42 @@ export const computeStreamStatus = ({
     statuses[0].jobType === StreamStatusJobType.SYNC &&
     statuses[0].runState === StreamStatusRunState.INCOMPLETE &&
     statuses[0].incompleteRunCause === StreamStatusIncompleteRunCause.FAILED &&
+    scheduleType === ConnectionScheduleType.basic &&
+    lastSuccessfulSync && // if there is no previous successful sync it can't be OnTrack - required as isStreamLate (correctly) returns false for this case, but there's more nuance here; more correctly isStreamLate would indicate `stream is not late because stream never succeeded` instead of `false`, but it can't so we test here
     !isStreamLate(statuses, scheduleType, scheduleData, errorMultiplier)
   ) {
-    return { status: ConnectionStatusIndicatorStatus.OnTrack, isRunning, lastSuccessfulSync };
+    return {
+      status: ConnectionStatusIndicatorStatus.OnTrack,
+      isRunning,
+      lastSuccessfulSync,
+      streamSyncStartedAt: undefined,
+      recordsExtracted,
+      recordsLoaded,
+    };
   }
 
   // is there a previous successful sync outside lateMultipler (2x) schedule frequency?
   if (isStreamLate(statuses, scheduleType, scheduleData, lateMultiplier)) {
-    return { status: ConnectionStatusIndicatorStatus.Late, isRunning, lastSuccessfulSync };
+    return {
+      status: ConnectionStatusIndicatorStatus.Late,
+      isRunning,
+      lastSuccessfulSync,
+      streamSyncStartedAt: undefined,
+      recordsExtracted,
+      recordsLoaded,
+    };
   }
 
   // is there a previous successful sync outside 1 schedule frequency?
   if (isStreamLate(statuses, scheduleType, scheduleData, 1)) {
-    return { status: ConnectionStatusIndicatorStatus.OnTrack, isRunning, lastSuccessfulSync };
+    return {
+      status: ConnectionStatusIndicatorStatus.OnTrack,
+      isRunning,
+      lastSuccessfulSync,
+      streamSyncStartedAt: undefined,
+      recordsExtracted,
+      recordsLoaded,
+    };
   }
 
   // is there are error?
@@ -152,13 +243,34 @@ export const computeStreamStatus = ({
     statuses[0].runState === StreamStatusRunState.INCOMPLETE &&
     statuses[0].incompleteRunCause === StreamStatusIncompleteRunCause.FAILED
   ) {
-    return { status: ConnectionStatusIndicatorStatus.Error, isRunning, lastSuccessfulSync };
+    return {
+      status: ConnectionStatusIndicatorStatus.Error,
+      isRunning,
+      lastSuccessfulSync,
+      streamSyncStartedAt: undefined,
+      recordsExtracted,
+      recordsLoaded,
+    };
   }
 
   // completed syncs that haven't been flagged as ontrack/late are on time
   if (lastSuccessfulSync) {
-    return { status: ConnectionStatusIndicatorStatus.OnTime, isRunning, lastSuccessfulSync };
+    return {
+      status: ConnectionStatusIndicatorStatus.OnTime,
+      isRunning,
+      lastSuccessfulSync,
+      streamSyncStartedAt: undefined,
+      recordsExtracted,
+      recordsLoaded,
+    };
   }
 
-  return { status: undefined, isRunning, lastSuccessfulSync };
+  return {
+    status: undefined,
+    isRunning,
+    lastSuccessfulSync,
+    streamSyncStartedAt: undefined,
+    recordsExtracted,
+    recordsLoaded,
+  };
 };

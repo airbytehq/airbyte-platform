@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.db.instance.toys;
@@ -11,9 +11,9 @@ import io.airbyte.db.Database;
 import io.airbyte.db.check.DatabaseAvailabilityCheck;
 import io.airbyte.db.factory.FlywayFactory;
 import io.airbyte.db.init.DatabaseInitializationException;
-import io.airbyte.db.instance.AbstractDatabaseTest;
 import io.airbyte.db.instance.DatabaseConstants;
 import io.airbyte.db.instance.DatabaseMigrator;
+import io.airbyte.test.utils.AbstractDatabaseTest;
 import java.io.IOException;
 import javax.sql.DataSource;
 import org.flywaydb.core.Flyway;

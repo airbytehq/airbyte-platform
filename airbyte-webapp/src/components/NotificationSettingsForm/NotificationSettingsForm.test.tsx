@@ -19,6 +19,10 @@ jest.mock("core/api", () => ({
   useTryNotificationWebhook: () => jest.fn(),
 }));
 
+jest.mock("core/utils/rbac", () => ({
+  useIntent: () => true,
+}));
+
 const mockUpdateNotificationSettings = jest.fn();
 jest.mock("hooks/services/useWorkspace", () => ({
   useUpdateNotificationSettings: () => mockUpdateNotificationSettings,

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.config.helpers;
@@ -10,14 +10,15 @@ import com.google.cloud.storage.Blob.BlobSourceOption;
 import com.google.cloud.storage.Storage;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.Lists;
-import io.airbyte.commons.string.Strings;
+import io.airbyte.featureflag.FeatureFlagClient;
 import java.io.ByteArrayOutputStream;
-import java.io.File;
-import java.io.FileOutputStream;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.LinkedList;
 import java.util.List;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.function.Supplier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -37,59 +38,39 @@ public class GcsLogs implements CloudLogs {
     this.gcsClientFactory = gcsClientFactory;
   }
 
-  @Override
-  public File downloadCloudLog(final LogConfigs configs, final String logPath) throws IOException {
-    return getFile(configs, logPath, LogClientSingleton.DEFAULT_PAGE_SIZE);
-  }
-
-  private File getFile(final LogConfigs configs, final String logPath, final int pageSize) throws IOException {
-    return getFile(getOrCreateGcsClient(), configs, logPath, pageSize);
-  }
-
-  @VisibleForTesting
-  static File getFile(final Storage gcsClient, final LogConfigs configs, final String logPath, final int pageSize) throws IOException {
-    LOGGER.debug("Retrieving logs from GCS path: {}", logPath);
-
-    LOGGER.debug("Start GCS list request.");
-    final Page<Blob> blobs = gcsClient.list(
-        configs.getStorageConfigs().getGcsConfig().getBucketName(),
-        Storage.BlobListOption.prefix(logPath),
-        Storage.BlobListOption.pageSize(pageSize));
-
-    final var randomName = Strings.addRandomSuffix("logs", "-", 5);
-    final var tmpOutputFile = new File("/tmp/" + randomName);
-    final var os = new FileOutputStream(tmpOutputFile);
-    LOGGER.debug("Start getting GCS objects.");
-    // Objects are returned in lexicographical order.
-    blobs.iterateAll().forEach(blob -> blob.downloadTo(os));
-    os.close();
-    LOGGER.debug("Done retrieving GCS logs: {}.", logPath);
-    return tmpOutputFile;
-  }
+  private static final int TEMP_FILE_COUNT = 1000;
+  private static final ExecutorService executor =
+      Executors.newVirtualThreadPerTaskExecutor();
 
   @Override
-  public List<String> tailCloudLog(final LogConfigs configs, final String logPath, final int numLines) throws IOException {
-    LOGGER.debug("Tailing logs from GCS path: {}", logPath);
+  public List<String> tailCloudLog(final LogConfigs configs,
+                                   final String logPath,
+                                   final int numLines,
+                                   final FeatureFlagClient featureFlagClient)
+      throws IOException {
+    LOGGER.debug("Tailing {} lines from logs from GCS path: {}", numLines, logPath);
     final Storage gcsClient = getOrCreateGcsClient();
 
     LOGGER.debug("Start GCS list request.");
 
-    final var ascendingTimestampBlobs = new ArrayList<Blob>();
+    final LinkedList<Blob> descending = new LinkedList<>();
     gcsClient.list(
-        configs.getStorageConfigs().getGcsConfig().getBucketName(),
+        configs.getStorageConfig().getBuckets().getLog(),
         Storage.BlobListOption.prefix(logPath))
         .iterateAll()
-        .forEach(ascendingTimestampBlobs::add);
-
-    final var lines = new ArrayList<String>();
+        .forEach(descending::addFirst);
 
     LOGGER.debug("Start getting GCS objects.");
+    return tailCloudLogSerially(descending, logPath, numLines);
+  }
+
+  private List<String> tailCloudLogSerially(final List<Blob> descendingTimestampBlobs, final String logPath, final int numLines) throws IOException {
     final var inMemoryData = new ByteArrayOutputStream();
+    final List<String> lines = new ArrayList<>();
     // iterate through blobs in descending order (oldest first)
-    for (var i = ascendingTimestampBlobs.size() - 1; i >= 0; i--) {
+    for (Blob blob : descendingTimestampBlobs) {
       inMemoryData.reset();
 
-      final var blob = ascendingTimestampBlobs.get(i);
       blob.downloadTo(inMemoryData);
 
       final String[] currFileLines = inMemoryData.toString(StandardCharsets.UTF_8).split("\n");
@@ -114,13 +95,13 @@ public class GcsLogs implements CloudLogs {
 
   @Override
   public void deleteLogs(final LogConfigs configs, final String logPath) {
-    LOGGER.debug("Retrieving logs from GCS path: {}", logPath);
+    LOGGER.info("Retrieving logs from GCS path: {}", logPath);
     final Storage gcsClient = getOrCreateGcsClient();
 
-    LOGGER.debug("Start GCS list and delete request.");
-    final Page<Blob> blobs = gcsClient.list(configs.getStorageConfigs().getGcsConfig().getBucketName(), Storage.BlobListOption.prefix(logPath));
+    LOGGER.info("Start GCS list and delete request.");
+    final Page<Blob> blobs = gcsClient.list(configs.getStorageConfig().getBuckets().getLog(), Storage.BlobListOption.prefix(logPath));
     blobs.iterateAll().forEach(blob -> blob.delete(BlobSourceOption.generationMatch()));
-    LOGGER.debug("Finished all deletes.");
+    LOGGER.info("Finished all deletes.");
   }
 
   private Storage getOrCreateGcsClient() {

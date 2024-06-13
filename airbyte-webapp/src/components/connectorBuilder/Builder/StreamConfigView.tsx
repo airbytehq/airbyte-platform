@@ -12,7 +12,11 @@ import { Text } from "components/ui/Text";
 
 import { Action, Namespace, useAnalyticsService } from "core/services/analytics";
 import { useConfirmationModalService } from "hooks/services/ConfirmationModal";
-import { BuilderView, useConnectorBuilderTestRead } from "services/connectorBuilder/ConnectorBuilderStateService";
+import {
+  BuilderView,
+  useConnectorBuilderFormState,
+  useConnectorBuilderTestRead,
+} from "services/connectorBuilder/ConnectorBuilderStateService";
 
 import { AddStreamButton } from "./AddStreamButton";
 import { BuilderCard } from "./BuilderCard";
@@ -26,9 +30,11 @@ import { getOptionsByManifest } from "./manifestHelpers";
 import { PaginationSection } from "./PaginationSection";
 import { ParameterizedRequestsSection } from "./ParameterizedRequestsSection";
 import { ParentStreamsSection } from "./ParentStreamsSection";
+import { RecordSelectorSection } from "./RecordSelectorSection";
 import { RequestOptionSection } from "./RequestOptionSection";
 import styles from "./StreamConfigView.module.scss";
 import { TransformationSection } from "./TransformationSection";
+import { UnknownFieldsSection } from "./UnknownFieldsSection";
 import { SchemaConflictIndicator } from "../SchemaConflictIndicator";
 import { BuilderStream, StreamPathFn, isEmptyOrDefault, useBuilderWatch } from "../types";
 import { useAutoImportSchema } from "../useAutoImportSchema";
@@ -41,6 +47,7 @@ interface StreamConfigViewProps {
 
 export const StreamConfigView: React.FC<StreamConfigViewProps> = React.memo(({ streamNum, hasMultipleStreams }) => {
   const { formatMessage } = useIntl();
+  const { permission } = useConnectorBuilderFormState();
 
   const [selectedTab, setSelectedTab] = useState<"configuration" | "schema">("configuration");
   const streamPath = `formValues.streams.${streamNum}` as const;
@@ -67,7 +74,7 @@ export const StreamConfigView: React.FC<StreamConfigViewProps> = React.memo(({ s
         streamFieldPath={streamFieldPath}
       />
       {selectedTab === "configuration" ? (
-        <>
+        <fieldset disabled={permission === "readOnly"} className={styles.fieldset}>
           <BuilderCard>
             <BuilderFieldWithInputs
               type="string"
@@ -77,15 +84,8 @@ export const StreamConfigView: React.FC<StreamConfigViewProps> = React.memo(({ s
             <BuilderField
               type="enum"
               path={streamFieldPath("httpMethod")}
-              options={getOptionsByManifest("HttpRequester.properties.http_method.anyOf.1")}
+              options={getOptionsByManifest("HttpRequester.properties.http_method")}
               manifestPath="HttpRequester.properties.http_method"
-            />
-            <BuilderField
-              type="array"
-              path={streamFieldPath("fieldPointer")}
-              label={formatMessage({ id: "connectorBuilder.streamConfigView.fieldPointer" })}
-              manifestPath="DpathExtractor.properties.field_path"
-              optional
             />
             <BuilderField
               type="array"
@@ -96,6 +96,7 @@ export const StreamConfigView: React.FC<StreamConfigViewProps> = React.memo(({ s
               optional
             />
           </BuilderCard>
+          <RecordSelectorSection streamFieldPath={streamFieldPath} currentStreamIndex={streamNum} />
           <RequestOptionSection
             inline={false}
             basePath={streamFieldPath("requestOptions")}
@@ -111,7 +112,8 @@ export const StreamConfigView: React.FC<StreamConfigViewProps> = React.memo(({ s
             currentStreamIndex={streamNum}
           />
           <TransformationSection streamFieldPath={streamFieldPath} currentStreamIndex={streamNum} />
-        </>
+          <UnknownFieldsSection streamFieldPath={streamFieldPath} />
+        </fieldset>
       ) : (
         <BuilderCard className={styles.schemaEditor}>
           <SchemaEditor streamFieldPath={streamFieldPath} />
@@ -146,6 +148,7 @@ const StreamControls = ({
   const error = get(errors, streamFieldPath("schema"));
   const hasSchemaErrors = Boolean(error);
   const autoImportSchema = useAutoImportSchema(streamNum);
+  const { permission } = useConnectorBuilderFormState();
 
   const handleDelete = () => {
     openConfirmationModal({
@@ -190,13 +193,18 @@ const StreamControls = ({
         }}
         initialValues={streams[streamNum]}
         button={
-          <button className={styles.controlButton} type="button">
+          <button className={styles.controlButton} type="button" disabled={permission === "readOnly"}>
             <Icon type="copy" />
           </button>
         }
         modalTitle={formatMessage({ id: "connectorBuilder.copyStreamModal.title" }, { name: streams[streamNum].name })}
       />
-      <button className={classNames(styles.deleteButton, styles.controlButton)} type="button" onClick={handleDelete}>
+      <button
+        className={classNames(styles.deleteButton, styles.controlButton)}
+        type="button"
+        onClick={handleDelete}
+        disabled={permission === "readOnly"}
+      >
         <Icon type="trash" />
       </button>
     </div>
@@ -235,6 +243,7 @@ const StreamTab = ({
 const SchemaEditor = ({ streamFieldPath }: { streamFieldPath: StreamPathFn }) => {
   const { formatMessage } = useIntl();
   const analyticsService = useAnalyticsService();
+  const { permission, streamNames } = useConnectorBuilderFormState();
   const autoImportSchemaFieldPath = streamFieldPath("autoImportSchema");
   const autoImportSchema = useBuilderWatch(autoImportSchemaFieldPath);
   const schemaFieldPath = streamFieldPath("schema");
@@ -244,10 +253,7 @@ const SchemaEditor = ({ streamFieldPath }: { streamFieldPath: StreamPathFn }) =>
   const path = streamFieldPath("schema");
   const { errors } = useFormState({ name: path });
   const error = get(errors, path);
-  const {
-    resolvedManifest: { streams },
-    streamRead,
-  } = useConnectorBuilderTestRead();
+  const { streamRead } = useConnectorBuilderTestRead();
 
   const showImportButton = !autoImportSchema && isEmptyOrDefault(schema) && streamRead.data?.inferred_schema;
   const formattedSchema = useMemo(() => {
@@ -265,8 +271,12 @@ const SchemaEditor = ({ streamFieldPath }: { streamFieldPath: StreamPathFn }) =>
         path={autoImportSchemaFieldPath}
         type="boolean"
         tooltip={<FormattedMessage id="connectorBuilder.autoImportSchema.tooltip" values={{ br: () => <br /> }} />}
-        disabled={error && !streamRead.data?.inferred_schema}
-        disabledTooltip={formatMessage({ id: "connectorBuilder.autoImportSchema.disabledTooltip" })}
+        disabled={(error && !streamRead.data?.inferred_schema) || permission === "readOnly"}
+        disabledTooltip={
+          permission === "readOnly"
+            ? undefined
+            : formatMessage({ id: "connectorBuilder.autoImportSchema.disabledTooltip" })
+        }
       />
       {showImportButton && (
         <Button
@@ -278,7 +288,7 @@ const SchemaEditor = ({ streamFieldPath }: { streamFieldPath: StreamPathFn }) =>
             setValue(path, formattedJson);
             analyticsService.track(Namespace.CONNECTOR_BUILDER, Action.OVERWRITE_SCHEMA, {
               actionDescription: "Declared schema overwritten by detected schema",
-              stream_name: streams[testStreamIndex]?.name,
+              stream_name: streamNames[testStreamIndex],
             });
           }}
         >
@@ -292,6 +302,7 @@ const SchemaEditor = ({ streamFieldPath }: { streamFieldPath: StreamPathFn }) =>
       ) : (
         <div className={styles.editorContainer}>
           <CodeEditor
+            readOnly={permission === "readOnly"}
             key={schemaFieldPath}
             value={schema || ""}
             language="json"

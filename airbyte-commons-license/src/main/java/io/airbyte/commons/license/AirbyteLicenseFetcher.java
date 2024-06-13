@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.commons.license;
@@ -8,10 +8,10 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.google.common.collect.ImmutableMap;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.commons.license.AirbyteLicense.LicenseType;
-import io.micronaut.context.annotation.Requires;
-import io.micronaut.context.annotation.Value;
+import io.airbyte.commons.license.annotation.RequiresAirbyteProEnabled;
 import io.micronaut.http.HttpRequest;
 import io.micronaut.http.client.HttpClient;
+import jakarta.inject.Named;
 import jakarta.inject.Singleton;
 import lombok.extern.slf4j.Slf4j;
 
@@ -21,7 +21,7 @@ import lombok.extern.slf4j.Slf4j;
  */
 @Singleton
 @Slf4j
-@Requires(property = "airbyte.license-key")
+@RequiresAirbyteProEnabled
 public class AirbyteLicenseFetcher {
 
   private static final String LICENSE_URL = "https://oss.airbyte.com/license";
@@ -30,7 +30,7 @@ public class AirbyteLicenseFetcher {
   private final String licenceKey;
   private final HttpClient httpClient;
 
-  public AirbyteLicenseFetcher(@Value("${airbyte.license-key}") final String licenceKey, final HttpClient httpClient) {
+  public AirbyteLicenseFetcher(@Named("licenseKey") final String licenceKey, final HttpClient httpClient) {
     this.licenceKey = licenceKey;
     this.httpClient = httpClient;
   }

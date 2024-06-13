@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.workers.temporal.scheduling;
@@ -32,6 +32,7 @@ import io.airbyte.config.StandardSyncInput;
 import io.airbyte.config.StandardSyncOutput;
 import io.airbyte.config.StandardSyncSummary;
 import io.airbyte.config.StandardSyncSummary.ReplicationStatus;
+import io.airbyte.config.WorkloadPriority;
 import io.airbyte.metrics.lib.ApmTraceUtils;
 import io.airbyte.metrics.lib.MetricAttribute;
 import io.airbyte.metrics.lib.MetricTags;
@@ -91,6 +92,7 @@ import io.temporal.failure.ChildWorkflowFailure;
 import io.temporal.workflow.CancellationScope;
 import io.temporal.workflow.ChildWorkflowOptions;
 import io.temporal.workflow.Workflow;
+import jakarta.annotation.Nullable;
 import java.time.Duration;
 import java.util.HashSet;
 import java.util.Map;
@@ -100,7 +102,6 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.function.Consumer;
 import java.util.function.Function;
-import javax.annotation.Nullable;
 import lombok.extern.slf4j.Slf4j;
 
 /**
@@ -114,6 +115,8 @@ public class ConnectionManagerWorkflowImpl implements ConnectionManagerWorkflow 
   private static final String SYNC_TASK_QUEUE_ROUTE_RENAME_TAG = "sync_task_queue_route_rename";
   private static final int GENERATE_CHECK_INPUT_CURRENT_VERSION = 1;
   private static final int SYNC_TASK_QUEUE_ROUTE_RENAME_CURRENT_VERSION = 1;
+  private static final String CHECK_WORKSPACE_TOMBSTONE_TAG = "check_workspace_tombstone";
+  private static final int CHECK_WORKSPACE_TOMBSTONE_CURRENT_VERSION = 1;
 
   private final WorkflowState workflowState = new WorkflowState(UUID.randomUUID(), new NoopStateListener());
 
@@ -159,6 +162,11 @@ public class ConnectionManagerWorkflowImpl implements ConnectionManagerWorkflow 
   @Override
   public void run(final ConnectionUpdaterInput connectionUpdaterInput) throws RetryableException {
     try {
+
+      if (isTombstone(connectionUpdaterInput.getConnectionId())) {
+        return;
+      }
+
       /*
        * Always ensure that the connection ID is set from the input before performing any additional work.
        * Failure to set the connection ID before performing any work in this workflow could result in
@@ -189,7 +197,10 @@ public class ConnectionManagerWorkflowImpl implements ConnectionManagerWorkflow 
 
       if (workflowState.isDeleted()) {
         if (workflowState.isRunning()) {
-          log.info("Cancelling the current running job because a connection deletion was requested");
+          log.info(
+              "Cancelling jobId '{}' because connection '{}' was deleted",
+              Objects.toString(connectionUpdaterInput.getJobId(), "null"),
+              connectionUpdaterInput.getConnectionId());
           // This call is not needed anymore since this will be cancel using the cancellation state
           reportCancelled(connectionId);
         }
@@ -212,6 +223,16 @@ public class ConnectionManagerWorkflowImpl implements ConnectionManagerWorkflow 
       reportFailure(connectionUpdaterInput, null, FailureCause.UNKNOWN);
       prepareForNextRunAndContinueAsNew(connectionUpdaterInput);
     }
+  }
+
+  private boolean isTombstone(UUID connectionId) {
+    final int checkTombstoneVersion =
+        Workflow.getVersion(CHECK_WORKSPACE_TOMBSTONE_TAG, Workflow.DEFAULT_VERSION, CHECK_WORKSPACE_TOMBSTONE_CURRENT_VERSION);
+    if (checkTombstoneVersion == Workflow.DEFAULT_VERSION || connectionId == null) {
+      return false;
+    }
+
+    return configFetchActivity.isWorkspaceTombstone(connectionId);
   }
 
   @SuppressWarnings("PMD.UnusedLocalVariable")
@@ -294,9 +315,12 @@ public class ConnectionManagerWorkflowImpl implements ConnectionManagerWorkflow 
 
           standardSyncOutput = runChildWorkflow(jobInputs);
           workflowState.setFailed(getFailStatus(standardSyncOutput));
+          workflowState.setCancelled(getCancelledStatus(standardSyncOutput));
 
           if (workflowState.isFailed()) {
             reportFailure(connectionUpdaterInput, standardSyncOutput, FailureCause.UNKNOWN);
+          } else if (workflowState.isCancelled()) {
+            reportCancelledAndContinueWith(false, connectionUpdaterInput);
           } else {
             reportSuccess(connectionUpdaterInput, standardSyncOutput);
           }
@@ -537,7 +561,8 @@ public class ConnectionManagerWorkflowImpl implements ConnectionManagerWorkflow 
       checkInputs = getCheckConnectionInput();
     }
 
-    final IntegrationLauncherConfig sourceLauncherConfig = checkInputs.getSourceLauncherConfig();
+    final IntegrationLauncherConfig sourceLauncherConfig = checkInputs.getSourceLauncherConfig()
+        .withPriority(WorkloadPriority.DEFAULT);
 
     if (isResetJob(sourceLauncherConfig) || checkConnectionResult.isFailed()) {
       // reset jobs don't need to connect to any external source, so check connection is unnecessary
@@ -564,9 +589,11 @@ public class ConnectionManagerWorkflowImpl implements ConnectionManagerWorkflow 
     if (checkConnectionResult.isFailed()) {
       log.info("DESTINATION CHECK: Skipped, source check failed");
     } else {
+      IntegrationLauncherConfig launcherConfig = checkInputs.getDestinationLauncherConfig()
+          .withPriority(WorkloadPriority.DEFAULT);
       log.info("DESTINATION CHECK: Starting");
       final ConnectorJobOutput destinationCheckResponse;
-      destinationCheckResponse = runCheckInChildWorkflow(jobRunConfig, checkInputs.getDestinationLauncherConfig(),
+      destinationCheckResponse = runCheckInChildWorkflow(jobRunConfig, launcherConfig,
           new StandardCheckConnectionInput()
               .withActorType(ActorType.DESTINATION)
               .withActorId(checkInputs.getDestinationCheckConnectionInput().getActorId())
@@ -713,18 +740,19 @@ public class ConnectionManagerWorkflowImpl implements ConnectionManagerWorkflow 
     try {
       return mapper.apply(input);
     } catch (final Exception e) {
+      final Duration sleepDuration = getWorkflowDelay();
       log.error(
           "[ACTIVITY-FAILURE] Connection {} failed to run an activity.({}).  Connection manager workflow will be restarted after a delay of {}.",
-          connectionId, input.getClass().getSimpleName(), workflowDelay, e);
+          connectionId, input.getClass().getSimpleName(), sleepDuration, e);
       // TODO (https://github.com/airbytehq/airbyte/issues/13773) add tracking/notification
 
       // Wait a short delay before restarting workflow. This is important if, for example, the failing
       // activity was configured to not have retries.
       // Without this delay, that activity could cause the workflow to loop extremely quickly,
       // overwhelming temporal.
-      log.info("Waiting {} before restarting the workflow for connection {}, to prevent spamming temporal with restarts.", workflowDelay,
+      log.info("Waiting {} before restarting the workflow for connection {}, to prevent spamming temporal with restarts.", sleepDuration,
           connectionId);
-      Workflow.sleep(workflowDelay);
+      Workflow.sleep(sleepDuration);
 
       // Add the exception to the span, as it represents a platform failure
       ApmTraceUtils.addExceptionToTrace(e);
@@ -1005,14 +1033,15 @@ public class ConnectionManagerWorkflowImpl implements ConnectionManagerWorkflow 
   /**
    * Set the internal status as failed and save the failures reasons.
    *
-   * @return True if the job failed, false otherwise
+   * @return true if the job failed, false otherwise
    */
   private boolean getFailStatus(final StandardSyncOutput standardSyncOutput) {
     final StandardSyncSummary standardSyncSummary = standardSyncOutput.getStandardSyncSummary();
 
     if (standardSyncSummary != null && standardSyncSummary.getStatus() == ReplicationStatus.FAILED) {
       workflowInternalState.getFailures().addAll(standardSyncOutput.getFailures());
-      workflowInternalState.setPartialSuccess(standardSyncSummary.getTotalStats().getRecordsCommitted() > 0);
+      final var recordsCommitted = (standardSyncSummary.getTotalStats() != null) ? standardSyncSummary.getTotalStats().getRecordsCommitted() : null;
+      workflowInternalState.setPartialSuccess(recordsCommitted != null && recordsCommitted > 0);
       return true;
     }
 
@@ -1025,6 +1054,16 @@ public class ConnectionManagerWorkflowImpl implements ConnectionManagerWorkflow 
     }
 
     return false;
+  }
+
+  /**
+   * Extracts whether the job was cancelled from the output.
+   *
+   * @return true if the job was cancelled, false otherwise
+   */
+  private boolean getCancelledStatus(final StandardSyncOutput standardSyncOutput) {
+    final StandardSyncSummary summary = standardSyncOutput.getStandardSyncSummary();
+    return summary != null && summary.getStatus() == ReplicationStatus.CANCELLED;
   }
 
   /*
@@ -1210,6 +1249,14 @@ public class ConnectionManagerWorkflowImpl implements ConnectionManagerWorkflow 
   private void cancelSyncChildWorkflow() {
     if (cancellableSyncWorkflow != null) {
       cancellableSyncWorkflow.cancel();
+    }
+  }
+
+  private Duration getWorkflowDelay() {
+    if (workflowDelay != null) {
+      return workflowDelay;
+    } else {
+      return Duration.ofSeconds(600L);
     }
   }
 

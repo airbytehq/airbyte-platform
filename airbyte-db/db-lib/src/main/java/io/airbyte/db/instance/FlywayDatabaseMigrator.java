@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.db.instance;
@@ -50,7 +50,6 @@ public class FlywayDatabaseMigrator implements DatabaseMigrator {
   @Override
   public List<MigrationInfo> list() {
     final MigrationInfoService result = flyway.info();
-    result.getInfoResult().warnings.forEach(LOGGER::warn);
     return Arrays.asList(result.all());
   }
 

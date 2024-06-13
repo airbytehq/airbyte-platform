@@ -1,0 +1,23 @@
+@use "scss/variables";
+@use "scss/colors";
+
+.tokenModal__scrollboxContainer {
+  border-radius: variables.$border-radius-sm;
+  border: variables.$border-thin solid colors.$grey-600;
+  overflow: hidden;
+}
+
+.tokenModal__tokenScrollbox {
+  height: 200px;
+  width: 100%;
+  overflow-y: auto;
+}
+
+.tokenModal__pre {
+  padding: variables.$spacing-sm variables.$spacing-sm variables.$spacing-lg 0;
+  margin: 0;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+  word-break: break-all;
+}

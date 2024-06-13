@@ -1,16 +1,48 @@
 micronaut:
   application:
     name: airbyte-server
+  caches:
+    # used by the analytics tracking client to cache calls to resolve the deployment and identity (workspace) for
+    # track events
+    analytics-tracking-deployments:
+      charset: "UTF-8"
+      expire-after-access: 10m
+    analytics-tracking-identity:
+      charset: "UTF-8"
+      expire-after-access: 10m
+  env:
+    cloud-deduction: true
   executors:
+    # We set our max pool size for the config DB to 20 in 10-values.yml files at the time of writing this.
     health:
       type: fixed
-      n-threads: ${HEALTH_TASK_EXECUTOR_THREADS:10} # Match the data source max pool size below
+      n-threads: ${HEALTH_TASK_EXECUTOR_THREADS:3}
     io:
       type: fixed
-      n-threads: ${IO_TASK_EXECUTOR_THREADS:10} # Match the data source max pool size below
+      n-threads: ${IO_TASK_EXECUTOR_THREADS:10}
+    public-api:
+      type: fixed
+      n-threads: ${PUBLIC_API_EXECUTOR_THREADS:5}
     scheduler:
       type: fixed
       n-threads: ${SCHEDULER_TASK_EXECUTOR_THREADS:25}
+  metrics:
+    enabled: ${MICROMETER_METRICS_ENABLED:false}
+    binders:
+      netty:
+        bytebuf-allocators:
+          enabled: false
+        channels:
+          enabled: false
+        queues:
+          enabled: true
+    export:
+      statsd:
+        enabled: ${MICROMETER_METRICS_ENABLED:false}
+        flavor: ${MICROMETER_METRICS_STATSD_FLAVOR:datadog}
+        step: ${MICROMETER_METRICS_STEP:PT30S}
+        host: ${STATSD_HOST:localhost}
+        port: ${STATSD_PORT:8125}
   security:
     authentication-provider-strategy: ALL
     enabled: ${API_AUTHORIZATION_ENABLED:false}
@@ -22,49 +54,61 @@ micronaut:
         web:
           allowed-origins-regex:
             - ^.*$
+    idle-timeout: ${HTTP_IDLE_TIMEOUT:5m}
     netty:
+      access-logger:
+        enabled: ${HTTP_ACCESS_LOG_ENABLED:false}
       aggregator:
         max-content-length: 52428800 # 50MB
-      access-logger:
-        enabled: ${HTTP_ACCESS_LOG_ENABLED:true}
-    idle-timeout: ${HTTP_IDLE_TIMEOUT:5m}
+      max-header-size: ${NETTY_MAX_HEADER_SIZE:32768}
+    max-request-size: 10485760 # 10MB the micronaut default. If we want to bump, double check it works for nginx.
+
+  http:
+    client:
+      read-timeout: ${READ_TIMEOUT:10m}
+      max-content-length: 52428800 # 50MB
+      event-loop-group: http-client-event-loop
+  netty:
+    event-loops:
+      http-client-event-loop:
+        num-threads: 10
+        prefer-native-transport: true
 
 airbyte:
+  airbyte-url: ${AIRBYTE_URL:}
   edition: ${AIRBYTE_EDITION:COMMUNITY}
+  license-key: ${AIRBYTE_LICENSE_KEY:}
   shutdown:
     delay_ms: 20000
+  notification:
+    customerio:
+      apikey: ${CUSTOMERIO_API_KEY:}
+  auth:
+    initial-user:
+      email: ${INITIAL_USER_EMAIL:}
+      first-name: ${INITIAL_USER_FIRST_NAME:}
+      last-name: ${INITIAL_USER_LAST_NAME:}
+      password: ${INITIAL_USER_PASSWORD:}
   cloud:
     storage:
-      logs:
-        type: ${WORKER_LOGS_STORAGE_TYPE:}
-        gcs:
-          application-credentials: ${GOOGLE_APPLICATION_CREDENTIALS:}
-          bucket: ${GCS_LOG_BUCKET:}
-        minio:
-          access-key: ${AWS_ACCESS_KEY_ID:}
-          bucket: ${S3_LOG_BUCKET:}
-          endpoint: ${S3_MINIO_ENDPOINT:}
-          secret-access-key: ${AWS_SECRET_ACCESS_KEY:}
-        s3:
-          access-key: ${AWS_ACCESS_KEY_ID:}
-          bucket: ${S3_LOG_BUCKET:}
-          region: ${S3_LOG_BUCKET_REGION:}
-          secret-access-key: ${AWS_SECRET_ACCESS_KEY:}
-      state:
-        type: ${WORKER_STATE_STORAGE_TYPE:}
-        gcs:
-          application-credentials: ${STATE_STORAGE_GCS_APPLICATION_CREDENTIALS:}
-          bucket: ${STATE_STORAGE_GCS_BUCKET_NAME:}
-        minio:
-          access-key: ${STATE_STORAGE_MINIO_ACCESS_KEY:}
-          bucket: ${STATE_STORAGE_MINIO_BUCKET_NAME:}
-          endpoint: ${STATE_STORAGE_MINIO_ENDPOINT:}
-          secret-access-key: ${STATE_STORAGE_MINIO_SECRET_ACCESS_KEY:}
-        s3:
-          access-key: ${STATE_STORAGE_S3_ACCESS_KEY:}
-          bucket: ${STATE_STORAGE_S3_BUCKET_NAME:}
-          region: ${STATE_STORAGE_S3_REGION:}
-          secret-access-key: ${STATE_STORAGE_S3_SECRET_ACCESS_KEY:}
+      type: ${STORAGE_TYPE}
+      bucket:
+        log: ${STORAGE_BUCKET_LOG}
+        state: ${STORAGE_BUCKET_STATE}
+        workload-output: ${STORAGE_BUCKET_WORKLOAD_OUTPUT}
+        activity-payload: ${STORAGE_BUCKET_ACTIVITY_PAYLOAD}
+      gcs:
+        application-credentials: ${GOOGLE_APPLICATION_CREDENTIALS:}
+      local:
+        root: ${LOCAL_ROOT:}
+      minio:
+        access-key: ${AWS_ACCESS_KEY_ID:}
+        endpoint: ${MINIO_ENDPOINT:}
+        secret-access-key: ${AWS_SECRET_ACCESS_KEY:}
+      s3:
+        access-key: ${AWS_ACCESS_KEY_ID:}
+        region: ${AWS_DEFAULT_REGION:}
+        secret-access-key: ${AWS_SECRET_ACCESS_KEY:}
   connector:
     specific-resource-defaults-enabled: ${CONNECTOR_SPECIFIC_RESOURCE_DEFAULTS_ENABLED:false}
     datadog-support-names: ${CONNECTOR_DATADOG_SUPPORT_NAMES:}
@@ -89,9 +133,11 @@ airbyte:
     persistence: ${SECRET_PERSISTENCE:TESTING_CONFIG_DB_TABLE}
     store:
       aws:
-        access-key: ${AWS_ACCESS_KEY:}
-        secret-key: ${AWS_SECRET_ACCESS_KEY:}
-        region: ${AWS_REGION:}
+        access-key: ${AWS_SECRET_MANAGER_ACCESS_KEY_ID:}
+        secret-key: ${AWS_SECRET_MANAGER_SECRET_ACCESS_KEY:}
+        region: ${AWS_SECRET_MANAGER_REGION:}
+        kmsKeyArn: ${AWS_KMS_KEY_ARN:}
+        tags: ${AWS_SECRET_MANAGER_SECRET_TAGS:}
       gcp:
         credentials: ${SECRET_STORE_GCP_CREDENTIALS:}
         project-id: ${SECRET_STORE_GCP_PROJECT_ID:}
@@ -147,7 +193,7 @@ airbyte:
         memory-request: 25Mi
       orchestrator:
         cpu-limit: ${JOB_MAIN_CONTAINER_CPU_LIMIT:1}
-        cpu-request: ${JOB_MAIN_CONTAINER_CPU_REQUEST:0.5}
+        cpu-request: ${JOB_MAIN_CONTAINER_CPU_REQUEST:1}
         memory-limit: ${JOB_MAIN_CONTAINER_MEMORY_LIMIT:2Gi}
         memory-request: ${JOB_MAIN_CONTAINER_MEMORY_REQUEST:2Gi}
       source:
@@ -173,7 +219,7 @@ airbyte:
         memory-request: 25Mi
       orchestrator-api:
         cpu-limit: ${JOB_MAIN_CONTAINER_CPU_LIMIT:1}
-        cpu-request: ${JOB_MAIN_CONTAINER_CPU_REQUEST:0.3}
+        cpu-request: ${JOB_MAIN_CONTAINER_CPU_REQUEST:1}
         memory-limit: ${JOB_MAIN_CONTAINER_MEMORY_LIMIT:2Gi}
         memory-request: ${JOB_MAIN_CONTAINER_MEMORY_REQUEST:2Gi}
       destination-api:
@@ -199,7 +245,7 @@ airbyte:
         memory-request: 25Mi
       orchestrator-database:
         cpu-limit: ${JOB_MAIN_CONTAINER_CPU_LIMIT:2}
-        cpu-request: ${JOB_MAIN_CONTAINER_CPU_REQUEST:1}
+        cpu-request: ${JOB_MAIN_CONTAINER_CPU_REQUEST:2}
         memory-limit: ${JOB_MAIN_CONTAINER_MEMORY_LIMIT:2Gi}
         memory-request: ${JOB_MAIN_CONTAINER_MEMORY_REQUEST:2Gi}
       destination-database:
@@ -237,9 +283,10 @@ airbyte:
         node-selectors: ${JOB_ISOLATED_KUBE_NODE_SELECTORS:}
   server:
     connection:
-      disable:
+      limits:
         max-days: ${MAX_DAYS_OF_ONLY_FAILED_JOBS_BEFORE_CONNECTION_DISABLE:14}
         max-jobs: ${MAX_FAILED_JOBS_IN_A_ROW_BEFORE_CONNECTION_DISABLE:20}
+        max-fields-per-connection: ${MAX_FIELDS_PER_CONNECTION:20000}
   web-app:
     url: ${WEBAPP_URL:}
   workspace:
@@ -255,6 +302,27 @@ airbyte:
     base-path: ${KEYCLOAK_BASE_PATH:`/auth`}
     airbyte-realm: ${KEYCLOAK_AIRBYTE_REALM:airbyte}
     web-client-id: ${KEYCLOAK_WEB_CLIENT_ID:airbyte-webapp}
+    client-realm: ${KEYCLOAK_CLIENT_REALM:airbyte}
+    client-id: ${KEYCLOAK_CLIENT_ID:admin-cli}
+    realm: ${KEYCLOAK_REALM:master}
+    username: ${KEYCLOAK_ADMIN_USER:airbyteAdmin}
+    password: ${KEYCLOAK_ADMIN_PASSWORD:keycloak123}
+
+  # Airbyte API
+  api:
+    host: ${AIRBYTE_API_HOST}
+  internal:
+    documentation:
+      host: https://reference.airbyte.com/
+
+  connector-builder-server-api:
+    base-path: ${CONNECTOR_BUILDER_SERVER_API_HOST:}
+    connect-timeout-seconds: ${CONNECTOR_BUILDER_SERVER_API_CONNECT_TIMEOUT_SECONDS:30}
+    read-timeout-seconds: ${CONNECTOR_BUILDER_SERVER_API_READ_TIMEOUT_SECONDS:300}
+  internal-api:
+    auth-header:
+      name: ${AIRBYTE_API_AUTH_HEADER_NAME:}
+      value: ${AIRBYTE_API_AUTH_HEADER_VALUE:}
 
 temporal:
   cloud:
@@ -302,6 +370,9 @@ endpoints:
   beans:
     enabled: true
     sensitive: false
+  caches:
+    enabled: true
+    sensitive: false
   env:
     enabled: true
     sensitive: false
@@ -315,6 +386,9 @@ endpoints:
     sensitive: true
   loggers:
     enabled: true
+    sensitive: false
+  metrics:
+    enabled: ${MICROMETER_METRICS_ENABLED:false}
     sensitive: false
   refresh:
     enabled: false
@@ -337,6 +411,11 @@ flyway:
       enabled: false
       locations:
         - "classpath:io/airbyte/db/instance/jobs/migrations"
+
+jackson:
+  mapper:
+    ACCEPT_CASE_INSENSITIVE_ENUMS: true
+  serialization-inclusion: NON_ABSENT
 
 jooq:
   datasources:

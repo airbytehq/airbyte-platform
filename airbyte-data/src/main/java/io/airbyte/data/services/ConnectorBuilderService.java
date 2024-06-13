@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.data.services;
@@ -29,6 +29,8 @@ public interface ConnectorBuilderService {
 
   boolean deleteBuilderProject(UUID builderProjectId) throws IOException;
 
+  void updateBuilderProjectTestingValues(UUID projectId, JsonNode testingValues) throws IOException;
+
   void writeBuilderProjectDraft(UUID projectId, UUID workspaceId, String name, JsonNode manifestDraft) throws IOException;
 
   void deleteBuilderProjectDraft(UUID projectId) throws IOException;
@@ -42,13 +44,15 @@ public interface ConnectorBuilderService {
 
   void createDeclarativeManifestAsActiveVersion(DeclarativeManifest declarativeManifest,
                                                 ActorDefinitionConfigInjection configInjection,
-                                                ConnectorSpecification connectorSpecification)
+                                                ConnectorSpecification connectorSpecification,
+                                                String cdkVersion)
       throws IOException;
 
   void setDeclarativeSourceActiveVersion(UUID sourceDefinitionId,
                                          Long version,
                                          ActorDefinitionConfigInjection configInjection,
-                                         ConnectorSpecification connectorSpecification)
+                                         ConnectorSpecification connectorSpecification,
+                                         String cdkVersion)
       throws IOException;
 
   Stream<ActorDefinitionConfigInjection> getActorDefinitionConfigInjections(UUID actorDefinitionId) throws IOException;
@@ -65,7 +69,5 @@ public interface ConnectorBuilderService {
       throws IOException, ConfigNotFoundException;
 
   DeclarativeManifest getCurrentlyActiveDeclarativeManifestsByActorDefinitionId(UUID actorDefinitionId) throws IOException, ConfigNotFoundException;
-
-  Stream<UUID> getActorDefinitionIdsWithActiveDeclarativeManifest() throws IOException;
 
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.server.apis;
@@ -15,6 +15,7 @@ import io.airbyte.api.model.generated.UserRead;
 import io.airbyte.api.model.generated.UserUpdate;
 import io.airbyte.api.model.generated.UserWithPermissionInfoReadList;
 import io.airbyte.api.model.generated.WorkspaceIdRequestBody;
+import io.airbyte.api.model.generated.WorkspaceUserAccessInfoReadList;
 import io.airbyte.api.model.generated.WorkspaceUserReadList;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.config.persistence.ConfigNotFoundException;
@@ -39,7 +40,7 @@ class UserApiControllerTest extends BaseControllerTest {
         .thenReturn(new UserRead());
     final String path = "/api/v1/users/create";
     testEndpointStatus(
-        HttpRequest.POST(path, Jsons.serialize(new UserCreate())),
+        HttpRequest.POST(path, new UserCreate()),
         HttpStatus.OK);
   }
 
@@ -49,7 +50,7 @@ class UserApiControllerTest extends BaseControllerTest {
         .thenReturn(new UserRead());
     final String path = "/api/v1/users/get";
     testEndpointStatus(
-        HttpRequest.POST(path, Jsons.serialize(new UserIdRequestBody())),
+        HttpRequest.POST(path, new UserIdRequestBody()),
         HttpStatus.OK);
   }
 
@@ -59,7 +60,7 @@ class UserApiControllerTest extends BaseControllerTest {
         .thenReturn(new UserRead());
     final String path = "/api/v1/users/get_by_auth_id";
     testEndpointStatus(
-        HttpRequest.POST(path, Jsons.serialize(new UserAuthIdRequestBody())),
+        HttpRequest.POST(path, new UserAuthIdRequestBody()),
         HttpStatus.OK);
   }
 
@@ -69,7 +70,7 @@ class UserApiControllerTest extends BaseControllerTest {
         .thenReturn(new UserRead());
     final String path = "/api/v1/users/get_by_email";
     testEndpointStatus(
-        HttpRequest.POST(path, Jsons.serialize(new UserEmailRequestBody())),
+        HttpRequest.POST(path, new UserEmailRequestBody()),
         HttpStatus.OK);
   }
 
@@ -78,7 +79,7 @@ class UserApiControllerTest extends BaseControllerTest {
     Mockito.doNothing().when(userHandler).deleteUser(Mockito.any());
     final String path = "/api/v1/users/delete";
     testEndpointStatus(
-        HttpRequest.POST(path, Jsons.serialize(new UserIdRequestBody())),
+        HttpRequest.POST(path, new UserIdRequestBody()),
         HttpStatus.OK);
   }
 
@@ -88,7 +89,7 @@ class UserApiControllerTest extends BaseControllerTest {
         .thenReturn(new UserRead());
     final String path = "/api/v1/users/update";
     testEndpointStatus(
-        HttpRequest.POST(path, Jsons.serialize(new UserUpdate())),
+        HttpRequest.POST(path, new UserUpdate()),
         HttpStatus.OK);
   }
 
@@ -98,7 +99,7 @@ class UserApiControllerTest extends BaseControllerTest {
         .thenReturn(new OrganizationUserReadList());
     final String path = "/api/v1/users/list_by_organization_id";
     testEndpointStatus(
-        HttpRequest.POST(path, Jsons.serialize(new OrganizationIdRequestBody())),
+        HttpRequest.POST(path, new OrganizationIdRequestBody()),
         HttpStatus.OK);
   }
 
@@ -108,7 +109,7 @@ class UserApiControllerTest extends BaseControllerTest {
         .thenReturn(new WorkspaceUserReadList());
     final String path = "/api/v1/users/list_by_workspace_id";
     testEndpointStatus(
-        HttpRequest.POST(path, Jsons.serialize(new WorkspaceIdRequestBody())),
+        HttpRequest.POST(path, new WorkspaceIdRequestBody()),
         HttpStatus.OK);
   }
 
@@ -128,7 +129,17 @@ class UserApiControllerTest extends BaseControllerTest {
         .thenReturn(new UserGetOrCreateByAuthIdResponse().userRead(new UserRead()));
     final String path = "/api/v1/users/get_or_create_by_auth_id";
     testEndpointStatus(
-        HttpRequest.POST(path, Jsons.serialize(new UserAuthIdRequestBody())),
+        HttpRequest.POST(path, new UserAuthIdRequestBody()),
+        HttpStatus.OK);
+  }
+
+  @Test
+  void testListAccessInfoByWorkspaceId() throws Exception {
+    Mockito.when(userHandler.listAccessInfoByWorkspaceId(Mockito.any()))
+        .thenReturn(new WorkspaceUserAccessInfoReadList());
+    final String path = "/api/v1/users/list_access_info_by_workspace_id";
+    testEndpointStatus(
+        HttpRequest.POST(path, Jsons.serialize(new WorkspaceIdRequestBody())),
         HttpStatus.OK);
   }
 

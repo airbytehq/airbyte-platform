@@ -1,11 +1,13 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.workers.config;
 
 import io.airbyte.commons.temporal.TemporalConstants;
 import io.airbyte.commons.temporal.config.WorkerMode;
+import io.airbyte.commons.temporal.utils.PayloadChecker;
+import io.airbyte.metrics.lib.MetricClient;
 import io.airbyte.workers.exception.WorkerException;
 import io.airbyte.workers.temporal.check.connection.CheckConnectionActivity;
 import io.airbyte.workers.temporal.discover.catalog.DiscoverCatalogActivity;
@@ -29,6 +31,7 @@ import io.airbyte.workers.temporal.sync.NormalizationSummaryCheckActivity;
 import io.airbyte.workers.temporal.sync.RefreshSchemaActivity;
 import io.airbyte.workers.temporal.sync.ReplicationActivity;
 import io.airbyte.workers.temporal.sync.WebhookOperationActivity;
+import io.airbyte.workers.temporal.sync.WorkloadFeatureFlagActivity;
 import io.micronaut.context.annotation.Factory;
 import io.micronaut.context.annotation.Property;
 import io.micronaut.context.annotation.Requires;
@@ -88,6 +91,11 @@ public class ActivityBeanFactory {
   }
 
   @Singleton
+  public PayloadChecker payloadChecker(final MetricClient metricClient) {
+    return new PayloadChecker(metricClient);
+  }
+
+  @Singleton
   @Named("discoverActivities")
   public List<Object> discoverActivities(
                                          final DiscoverCatalogActivity discoverCatalogActivity) {
@@ -111,9 +119,10 @@ public class ActivityBeanFactory {
                                      final NormalizationSummaryCheckActivity normalizationSummaryCheckActivity,
                                      final WebhookOperationActivity webhookOperationActivity,
                                      final ConfigFetchActivity configFetchActivity,
-                                     final RefreshSchemaActivity refreshSchemaActivity) {
+                                     final RefreshSchemaActivity refreshSchemaActivity,
+                                     final WorkloadFeatureFlagActivity workloadFeatureFlagActivity) {
     return List.of(replicationActivity, normalizationActivity, dbtTransformationActivity, normalizationSummaryCheckActivity,
-        webhookOperationActivity, configFetchActivity, refreshSchemaActivity);
+        webhookOperationActivity, configFetchActivity, refreshSchemaActivity, workloadFeatureFlagActivity);
   }
 
   @Singleton

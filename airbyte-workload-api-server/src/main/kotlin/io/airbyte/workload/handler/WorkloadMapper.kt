@@ -4,6 +4,7 @@ import io.airbyte.workload.repository.domain.Workload
 import io.airbyte.workload.repository.domain.WorkloadLabel
 import io.airbyte.workload.repository.domain.WorkloadStatus
 import io.airbyte.workload.repository.domain.WorkloadType
+import java.util.UUID
 
 typealias ApiWorkloadStatus = io.airbyte.workload.api.domain.WorkloadStatus
 typealias DomainWorkload = Workload
@@ -16,6 +17,7 @@ fun ApiWorkloadStatus.toDomain(): WorkloadStatus {
   return when (this) {
     ApiWorkloadStatus.PENDING -> WorkloadStatus.PENDING
     ApiWorkloadStatus.CLAIMED -> WorkloadStatus.CLAIMED
+    ApiWorkloadStatus.LAUNCHED -> WorkloadStatus.LAUNCHED
     ApiWorkloadStatus.RUNNING -> WorkloadStatus.RUNNING
     ApiWorkloadStatus.SUCCESS -> WorkloadStatus.SUCCESS
     ApiWorkloadStatus.FAILURE -> WorkloadStatus.FAILURE
@@ -27,6 +29,7 @@ fun WorkloadStatus.toApi(): ApiWorkloadStatus {
   return when (this) {
     WorkloadStatus.PENDING -> ApiWorkloadStatus.PENDING
     WorkloadStatus.CLAIMED -> ApiWorkloadStatus.CLAIMED
+    WorkloadStatus.LAUNCHED -> ApiWorkloadStatus.LAUNCHED
     WorkloadStatus.RUNNING -> ApiWorkloadStatus.RUNNING
     WorkloadStatus.SUCCESS -> ApiWorkloadStatus.SUCCESS
     WorkloadStatus.FAILURE -> ApiWorkloadStatus.FAILURE
@@ -63,6 +66,9 @@ fun DomainWorkload.toApi(): ApiWorkload {
     geography = this.geography,
     mutexKey = this.mutexKey,
     type = this.type.toApi(),
+    terminationReason = this.terminationReason,
+    terminationSource = this.terminationSource,
+    autoId = if (this.autoId == null) UUID(0, 0) else this.autoId!!,
   )
 }
 
@@ -71,19 +77,23 @@ fun ApiWorkload.toDomain(): DomainWorkload {
     id = this.id,
     dataplaneId = this.dataplaneId,
     status = this.status?.toDomain() ?: WorkloadStatus.PENDING,
-    workloadLabels = this.labels?.map { it.toDomain() },
+    workloadLabels = this.labels.map { it.toDomain() },
     inputPayload = this.inputPayload,
     logPath = this.logPath,
     geography = this.geography,
     mutexKey = this.mutexKey,
     type = this.type.toDomain(),
+    terminationReason = terminationReason,
+    terminationSource = terminationSource,
+    autoId = this.autoId,
+    deadline = this.deadline,
   )
 }
 
 fun DomainWorkloadLabel.toApi(): ApiWorkloadLabel {
   return ApiWorkloadLabel(
     key = this.key,
-    value = this.key,
+    value = this.value,
   )
 }
 

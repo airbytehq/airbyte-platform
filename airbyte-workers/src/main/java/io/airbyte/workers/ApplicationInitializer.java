@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.workers;
@@ -58,6 +58,8 @@ import lombok.extern.slf4j.Slf4j;
 @Requires(notEnv = {Environment.TEST})
 @Slf4j
 public class ApplicationInitializer implements ApplicationEventListener<ServiceReadyEvent> {
+
+  private static final String SCHEDULER_LOGS = "scheduler/logs";
 
   @Inject
   @Named("checkConnectionActivities")
@@ -168,7 +170,7 @@ public class ApplicationInitializer implements ApplicationEventListener<ServiceR
 
     // Configure logging client
     LogClientSingleton.getInstance().setWorkspaceMdc(workerEnvironment, logConfigs.orElseThrow(),
-        LogClientSingleton.getInstance().getSchedulerLogsRoot(Path.of(workspaceRoot)));
+        Path.of(workspaceRoot, SCHEDULER_LOGS));
 
     if (environment.getActiveNames().contains(Environment.KUBERNETES)) {
       KubePortManagerSingleton.init(temporalWorkerPorts);

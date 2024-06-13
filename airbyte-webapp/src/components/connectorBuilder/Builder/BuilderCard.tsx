@@ -1,5 +1,6 @@
 import classNames from "classnames";
-import React, { useState } from "react";
+import { dump, load, YAMLException } from "js-yaml";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import { FieldPath, useFormContext, useWatch } from "react-hook-form";
 import { FormattedMessage, useIntl } from "react-intl";
 
@@ -10,52 +11,92 @@ import { CheckBox } from "components/ui/CheckBox";
 import { FlexContainer, FlexItem } from "components/ui/Flex";
 import { Icon } from "components/ui/Icon";
 import { Modal, ModalBody, ModalFooter } from "components/ui/Modal";
+import { Pre } from "components/ui/Pre";
 import { Text } from "components/ui/Text";
 
+import { useConfirmationModalService } from "hooks/services/ConfirmationModal";
+import {
+  useConnectorBuilderFormManagementState,
+  useConnectorBuilderFormState,
+} from "services/connectorBuilder/ConnectorBuilderStateService";
+
 import styles from "./BuilderCard.module.scss";
-import { BuilderStream, useBuilderWatch, BuilderState } from "../types";
+import { BuilderYamlField } from "./BuilderYamlField";
+import { ManifestCompatibilityError } from "../convertManifestToBuilderForm";
+import { BuilderState, BuilderStream, isYamlString, useBuilderWatch } from "../types";
+import { UiYamlToggleButton } from "../UiYamlToggleButton";
 import { useCopyValueIncludingArrays } from "../utils";
 
 interface BuilderCardProps {
   className?: string;
   label?: string;
   tooltip?: string;
-  toggleConfig?: {
-    path: FieldPath<BuilderState>;
-    defaultValue: unknown;
-  };
   copyConfig?: {
     path: string;
     currentStreamIndex: number;
-    copyToLabel: string;
-    copyFromLabel: string;
+    componentName: string;
   };
   docLink?: string;
+  inputsConfig?: {
+    toggleable: boolean;
+    path: FieldPath<BuilderState>;
+    defaultValue: unknown;
+    yamlConfig?: {
+      builderToManifest(builderValue: unknown): unknown;
+      manifestToBuilder(manifestValue: unknown): unknown;
+      getLockedInputKeys?(builderValue: unknown): string[];
+    };
+  };
 }
 
 export const BuilderCard: React.FC<React.PropsWithChildren<BuilderCardProps>> = ({
   children,
   className,
-  toggleConfig,
   copyConfig,
   docLink,
   label,
   tooltip,
+  inputsConfig,
 }) => {
   const { formatMessage } = useIntl();
+  const { handleScrollToField } = useConnectorBuilderFormManagementState();
+
+  const childElements = inputsConfig?.yamlConfig ? (
+    <YamlEditableComponent
+      path={inputsConfig.path}
+      defaultValue={inputsConfig.defaultValue}
+      builderToManifest={inputsConfig.yamlConfig.builderToManifest}
+      manifestToBuilder={inputsConfig.yamlConfig.manifestToBuilder}
+      getLockedInputKeys={inputsConfig.yamlConfig.getLockedInputKeys}
+    >
+      {children}
+    </YamlEditableComponent>
+  ) : (
+    children
+  );
+
+  const elementRef = useRef<HTMLDivElement | null>(null);
+  useEffect(() => {
+    if (inputsConfig) {
+      // Call handler in here to make sure it handles new scrollToField value from the context
+      handleScrollToField(elementRef, inputsConfig.path);
+    }
+  }, [inputsConfig, handleScrollToField]);
 
   return (
-    <Card className={classNames(className, styles.card)}>
-      {(toggleConfig || label) && (
+    <Card className={className} bodyClassName={classNames(styles.card)} ref={elementRef}>
+      {(inputsConfig?.toggleable || label || docLink) && (
         <FlexContainer alignItems="center">
           <FlexItem grow>
             <FlexContainer>
-              {toggleConfig && <CardToggle path={toggleConfig.path} defaultValue={toggleConfig.defaultValue} />}
+              {inputsConfig?.toggleable && (
+                <CardToggle path={inputsConfig.path} defaultValue={inputsConfig.defaultValue} />
+              )}
               <ControlLabels
-                className={classNames({ [styles.toggleLabel]: toggleConfig })}
+                className={classNames(styles.label, { [styles.toggleLabel]: inputsConfig?.toggleable })}
                 label={label}
                 infoTooltipContent={tooltip}
-                htmlFor={toggleConfig ? String(toggleConfig.path) : undefined}
+                htmlFor={inputsConfig ? String(inputsConfig.path) : undefined}
               />
             </FlexContainer>
           </FlexItem>
@@ -73,8 +114,167 @@ export const BuilderCard: React.FC<React.PropsWithChildren<BuilderCardProps>> = 
         </FlexContainer>
       )}
       {copyConfig && <CopyButtons copyConfig={copyConfig} />}
-      {toggleConfig ? <ToggledChildren path={toggleConfig.path}>{children}</ToggledChildren> : children}
+      {inputsConfig?.toggleable ? (
+        <ToggledChildren path={inputsConfig.path}>{childElements}</ToggledChildren>
+      ) : (
+        childElements
+      )}
     </Card>
+  );
+};
+
+interface YamlEditableComponentProps {
+  path: FieldPath<BuilderState>;
+  defaultValue: unknown;
+  builderToManifest: (builderValue: unknown) => unknown;
+  manifestToBuilder: (manifestValue: unknown) => unknown;
+  getLockedInputKeys?: (builderValue: unknown) => string[];
+}
+
+const YamlEditableComponent: React.FC<React.PropsWithChildren<YamlEditableComponentProps>> = ({
+  children,
+  path,
+  defaultValue,
+  builderToManifest,
+  manifestToBuilder,
+  getLockedInputKeys,
+}) => {
+  const { resolveErrorMessage } = useConnectorBuilderFormState();
+  const { openConfirmationModal, closeConfirmationModal } = useConfirmationModalService();
+  const { setValue, unregister } = useFormContext();
+  const formValue = useBuilderWatch(path);
+  const pathString = path as string;
+  const isYaml = isYamlString(formValue);
+  const [previousUiValue, setPreviousUiValue] = useState(isYaml ? undefined : formValue);
+  const [localYamlIsDirty, setLocalYamlIsDirty] = useState(false);
+  const inputs = useBuilderWatch("formValues.inputs");
+
+  const elementRef = useRef<HTMLDivElement | null>(null);
+  const { handleScrollToField } = useConnectorBuilderFormManagementState();
+  useEffect(() => {
+    // Call handler in here to make sure it handles new scrollToField value from the context
+    handleScrollToField(elementRef, pathString);
+  }, [handleScrollToField, pathString]);
+
+  const toggleLockedInputs = useCallback(
+    (builderFormValue: unknown, setTo: "locked" | "unlocked") => {
+      if (getLockedInputKeys) {
+        const keysToToggle = getLockedInputKeys(builderFormValue);
+        setValue(
+          "formValues.inputs",
+          inputs.map((input) =>
+            keysToToggle.includes(input.key)
+              ? {
+                  ...input,
+                  isLocked: setTo === "locked",
+                }
+              : input
+          )
+        );
+      }
+    },
+    [getLockedInputKeys, inputs, setValue]
+  );
+
+  const confirmDiscardYaml = useCallback(
+    (errorMessage?: string) => {
+      const text = (
+        <FlexContainer direction="column">
+          <FlexItem>
+            <FormattedMessage
+              id={
+                errorMessage
+                  ? "connectorBuilder.yamlComponent.discardChanges.knownErrorIntro"
+                  : "connectorBuilder.yamlComponent.discardChanges.unknownErrorIntro"
+              }
+            />
+          </FlexItem>
+          {errorMessage && (
+            <Pre className={styles.discardYamlError} wrapText>
+              {errorMessage}
+            </Pre>
+          )}
+          <FlexItem>
+            <FormattedMessage
+              id={
+                previousUiValue
+                  ? "connectorBuilder.yamlComponent.discardChanges.errorOutro.uiValueAvailable"
+                  : "connectorBuilder.yamlComponent.discardChanges.errorOutro.uiValueUnavailable"
+              }
+            />
+          </FlexItem>
+        </FlexContainer>
+      );
+
+      openConfirmationModal({
+        title: "connectorBuilder.yamlComponent.discardChanges.title",
+        text,
+        submitButtonText: "connectorBuilder.yamlComponent.discardChanges.confirm",
+        onSubmit: () => {
+          const uiValue = previousUiValue ?? defaultValue;
+          // lock the required inputs so they aren't duplicated when switching to UI
+          toggleLockedInputs(uiValue, "locked");
+          setValue(path, uiValue, {
+            shouldValidate: true,
+            shouldDirty: true,
+            shouldTouch: true,
+          });
+          closeConfirmationModal();
+        },
+      });
+    },
+    [closeConfirmationModal, openConfirmationModal, path, previousUiValue, defaultValue, setValue, toggleLockedInputs]
+  );
+
+  return (
+    <>
+      {isYaml ? <BuilderYamlField path={path} setLocalYamlIsDirty={setLocalYamlIsDirty} /> : children}
+      <UiYamlToggleButton
+        className={styles.yamlEditorToggle}
+        yamlSelected={isYaml}
+        size="xs"
+        disabled={localYamlIsDirty}
+        onClick={() => {
+          if (isYaml) {
+            if (resolveErrorMessage) {
+              confirmDiscardYaml(resolveErrorMessage);
+              return;
+            }
+
+            let builderFormValue;
+            try {
+              const manifestValue = load(formValue);
+              builderFormValue = manifestToBuilder(manifestValue);
+            } catch (e) {
+              const isKnownError = e instanceof ManifestCompatibilityError || e instanceof YAMLException;
+              confirmDiscardYaml(isKnownError ? e.message : undefined);
+              return;
+            }
+
+            // lock the required inputs so they aren't duplicated when switching to UI
+            toggleLockedInputs(builderFormValue, "locked");
+            setValue(path, builderFormValue, {
+              shouldValidate: true,
+              shouldDirty: true,
+              shouldTouch: true,
+            });
+          } else {
+            setPreviousUiValue(formValue);
+            const manifestValue = builderToManifest(formValue);
+            const yaml = dump(manifestValue);
+            // unlock the locked inputs so they don't disappear when switching to YAML
+            toggleLockedInputs(formValue, "unlocked");
+            // unregister the path so that the YAML editor can properly register on mount
+            unregister(path);
+            setValue(path, yaml, {
+              shouldValidate: true,
+              shouldDirty: true,
+              shouldTouch: true,
+            });
+          }
+        }}
+      />
+    </>
   );
 };
 
@@ -113,6 +313,7 @@ const CardToggle = ({ path, defaultValue }: { path: FieldPath<BuilderState>; def
 };
 
 const CopyButtons = ({ copyConfig }: Pick<BuilderCardProps, "copyConfig">) => {
+  const { formatMessage } = useIntl();
   const [isCopyToOpen, setCopyToOpen] = useState(false);
   const [isCopyFromOpen, setCopyFromOpen] = useState(false);
   const copyValueIncludingArrays = useCopyValueIncludingArrays();
@@ -132,7 +333,7 @@ const CopyButtons = ({ copyConfig }: Pick<BuilderCardProps, "copyConfig">) => {
         onClick={() => {
           setCopyFromOpen(true);
         }}
-        icon={<Icon type="import" />}
+        icon="import"
       />
       {currentRelevantConfig && (
         <Button
@@ -141,7 +342,7 @@ const CopyButtons = ({ copyConfig }: Pick<BuilderCardProps, "copyConfig">) => {
           onClick={() => {
             setCopyToOpen(true);
           }}
-          icon={<Icon type="share" />}
+          icon="share"
         />
       )}
       {isCopyToOpen && (
@@ -158,7 +359,7 @@ const CopyButtons = ({ copyConfig }: Pick<BuilderCardProps, "copyConfig">) => {
             setCopyToOpen(false);
           }}
           currentStreamIndex={copyConfig.currentStreamIndex}
-          title={copyConfig.copyToLabel}
+          title={formatMessage({ id: "connectorBuilder.copyToTitle" }, { componentName: copyConfig.componentName })}
         />
       )}
       {isCopyFromOpen && (
@@ -173,7 +374,7 @@ const CopyButtons = ({ copyConfig }: Pick<BuilderCardProps, "copyConfig">) => {
             setCopyFromOpen(false);
           }}
           currentStreamIndex={copyConfig.currentStreamIndex}
-          title={copyConfig.copyFromLabel}
+          title={formatMessage({ id: "connectorBuilder.copyFromTitle" }, { componentName: copyConfig.componentName })}
         />
       )}
     </div>
@@ -193,7 +394,7 @@ const CopyToModal: React.FC<{
   const streams = useBuilderWatch("formValues.streams");
   const [selectMap, setSelectMap] = useState<Record<string, boolean>>({});
   return (
-    <Modal size="sm" title={title} onClose={onCancel}>
+    <Modal size="sm" title={title} onCancel={onCancel}>
       <form
         onSubmit={() => {
           onApply(
@@ -240,7 +441,7 @@ const CopyFromModal: React.FC<{
 }> = ({ onCancel, onSelect, title, currentStreamIndex }) => {
   const streams = useBuilderWatch("formValues.streams");
   return (
-    <Modal size="sm" title={title} onClose={onCancel}>
+    <Modal size="sm" title={title} onCancel={onCancel}>
       <ModalBody className={styles.modalStreamListContainer}>
         {streams.map((stream, index) =>
           currentStreamIndex === index ? null : (

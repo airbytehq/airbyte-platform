@@ -1,6 +1,6 @@
 import React, { useCallback, useContext, useMemo, useState } from "react";
 
-import { InstanceConfigurationResponse, InstanceConfigurationResponseEdition } from "core/api/types/AirbyteClient";
+import { AuthConfigurationMode, InstanceConfigurationResponse } from "core/api/types/AirbyteClient";
 
 import { FeatureItem, FeatureSet } from "./types";
 
@@ -17,10 +17,8 @@ const featureSetFromList = (featureList: FeatureItem[]): FeatureSet => {
 
 const featureSetFromInstanceConfig = (instanceConfig: InstanceConfigurationResponse): FeatureSet => {
   return {
-    [FeatureItem.KeycloakAuthentication]: !!instanceConfig.auth,
-    [FeatureItem.MultiWorkspaceUI]: instanceConfig.edition === InstanceConfigurationResponseEdition.pro,
-    [FeatureItem.RBAC]: instanceConfig.edition === InstanceConfigurationResponseEdition.pro,
-    [FeatureItem.EnterpriseBranding]: instanceConfig.edition === InstanceConfigurationResponseEdition.pro,
+    [FeatureItem.KeycloakAuthentication]: instanceConfig.auth.mode === AuthConfigurationMode.oidc,
+    [FeatureItem.APITokenManagement]: instanceConfig.auth.mode !== AuthConfigurationMode.none,
   };
 };
 

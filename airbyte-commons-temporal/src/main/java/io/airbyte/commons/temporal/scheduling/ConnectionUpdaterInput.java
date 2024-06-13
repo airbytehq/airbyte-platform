@@ -1,12 +1,12 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.commons.temporal.scheduling;
 
 import io.airbyte.commons.temporal.scheduling.state.WorkflowState;
+import jakarta.annotation.Nullable;
 import java.util.UUID;
-import javax.annotation.Nullable;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -27,6 +27,7 @@ public class ConnectionUpdaterInput {
   private UUID connectionId;
   @Nullable
   private Long jobId;
+
   /**
    * This field is unused, it is kept for compatibility reasons.
    */

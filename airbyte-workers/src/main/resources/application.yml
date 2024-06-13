@@ -1,16 +1,36 @@
 micronaut:
   application:
     name: airbyte-workers
+  env:
+    cloud-deduction: true
   server:
     netty:
       aggregator:
         max-content-length: 52428800 # 50MB
+    max-request-size: 10485760 # 10MB the micronaut default. If we want to bump, double check it works for nginx.
     port: 9000
   caches:
+    # used by the analytics tracking client to cache calls to resolve the deployment and identity (workspace) for
+    # track events
+    analytics-tracking-deployments:
+      charset: "UTF-8"
+      expire-after-access: 10m
+    analytics-tracking-identity:
+      charset: "UTF-8"
+      expire-after-access: 10m
     # used by RecordMetricActivity to cache repeated calls to workspaceApi.getWorkspaceByConnectionId.
     # entries are UUID connectionIds, so 100,000 entries should be roughly 1.6MB
     connection-workspace-id:
       maximumSize: 100_000
+  metrics:
+    enabled: ${MICROMETER_METRICS_ENABLED:false}
+    export:
+      statsd:
+        enabled: ${MICROMETER_METRICS_ENABLED:false}
+        flavor: ${MICROMETER_METRICS_STATSD_FLAVOR:datadog}
+        step: ${MICROMETER_METRICS_STEP:PT30S}
+        host: ${STATSD_HOST:localhost}
+        port: ${STATSD_PORT:8125}
   security:
     enabled: false
 
@@ -20,43 +40,31 @@ airbyte:
     max-attempts: ${ACTIVITY_MAX_ATTEMPT:5}
     max-delay: ${ACTIVITY_MAX_DELAY_BETWEEN_ATTEMPTS_SECONDS:600}
     max-timeout: ${ACTIVITY_MAX_TIMEOUT_SECOND:120}
-    check-timeout: ${ACTIVITY_CHECK_TIMEOUT:5}
+    check-timeout: ${ACTIVITY_CHECK_TIMEOUT:10}
     discovery-timeout: ${ACTIVITY_DISCOVERY_TIMEOUT:30}
   acceptance:
     test:
       enabled: ${ACCEPTANCE_TEST_ENABLED:false}
   cloud:
     storage:
-      logs:
-        type: ${WORKER_LOGS_STORAGE_TYPE:}
-        gcs:
-          application-credentials: ${GOOGLE_APPLICATION_CREDENTIALS:}
-          bucket: ${GCS_LOG_BUCKET:}
-        minio:
-          access-key: ${AWS_ACCESS_KEY_ID:}
-          bucket: ${S3_LOG_BUCKET:}
-          endpoint: ${S3_MINIO_ENDPOINT:}
-          secret-access-key: ${AWS_SECRET_ACCESS_KEY:}
-        s3:
-          access-key: ${AWS_ACCESS_KEY_ID:}
-          bucket: ${S3_LOG_BUCKET:}
-          region: ${S3_LOG_BUCKET_REGION:}
-          secret-access-key: ${AWS_SECRET_ACCESS_KEY:}
-      state:
-        type: ${WORKER_STATE_STORAGE_TYPE:}
-        gcs:
-          application-credentials: ${STATE_STORAGE_GCS_APPLICATION_CREDENTIALS:}
-          bucket: ${STATE_STORAGE_GCS_BUCKET_NAME:}
-        minio:
-          access-key: ${STATE_STORAGE_MINIO_ACCESS_KEY:}
-          bucket: ${STATE_STORAGE_MINIO_BUCKET_NAME:}
-          endpoint: ${STATE_STORAGE_MINIO_ENDPOINT:}
-          secret-access-key: ${STATE_STORAGE_MINIO_SECRET_ACCESS_KEY:}
-        s3:
-          access-key: ${STATE_STORAGE_S3_ACCESS_KEY:}
-          bucket: ${STATE_STORAGE_S3_BUCKET_NAME:}
-          region: ${STATE_STORAGE_S3_REGION:}
-          secret-access-key: ${STATE_STORAGE_S3_SECRET_ACCESS_KEY:}
+      type: ${STORAGE_TYPE}
+      bucket:
+        log: ${STORAGE_BUCKET_LOG}
+        state: ${STORAGE_BUCKET_STATE}
+        workload-output: ${STORAGE_BUCKET_WORKLOAD_OUTPUT}
+        activity-payload: ${STORAGE_BUCKET_ACTIVITY_PAYLOAD}
+      gcs:
+        application-credentials: ${GOOGLE_APPLICATION_CREDENTIALS:}
+      local:
+        root: ${LOCAL_ROOT:}
+      minio:
+        access-key: ${AWS_ACCESS_KEY_ID:}
+        endpoint: ${MINIO_ENDPOINT:}
+        secret-access-key: ${AWS_SECRET_ACCESS_KEY:}
+      s3:
+        access-key: ${AWS_ACCESS_KEY_ID:}
+        region: ${AWS_DEFAULT_REGION:}
+        secret-access-key: ${AWS_SECRET_ACCESS_KEY:}
   connector:
     specific-resource-defaults-enabled: ${CONNECTOR_SPECIFIC_RESOURCE_DEFAULTS_ENABLED:false}
   connector-registry:
@@ -92,12 +100,16 @@ airbyte:
     client: ${FEATURE_FLAG_CLIENT:}
     path: ${FEATURE_FLAG_PATH:/flags}
     api-key: ${LAUNCHDARKLY_KEY:}
-  internal:
-    api:
-      auth-header:
-        name: ${AIRBYTE_API_AUTH_HEADER_NAME:}
-        value: ${AIRBYTE_API_AUTH_HEADER_VALUE:}
-      host: ${INTERNAL_API_HOST}
+  internal-api:
+    auth-header:
+      name: ${AIRBYTE_API_AUTH_HEADER_NAME:}
+      value: ${AIRBYTE_API_AUTH_HEADER_VALUE:}
+    base-path: ${INTERNAL_API_HOST}/api
+    connect-timeout-seconds: ${AIRBYTE_API_CONNECT_TIMEOUT_SECONDS:30}
+    read-timeout-seconds: ${AIRBYTE_API_READ_TIMEOUT_SECONDS:300}
+    retries:
+      delay-seconds: ${AIRBYTE_API_RETRY_DELAY_SECONDS:2}
+      max: ${AIRBYTE_API_MAX_RETRIES:5}
   local:
     docker-mount: ${LOCAL_DOCKER_MOUNT:}
     root: ${LOCAL_ROOT}
@@ -120,7 +132,7 @@ airbyte:
         base: ${SYNC_JOB_RETRIES_COMPLETE_FAILURES_BACKOFF_BASE:3} # 10s, 30s, 90s, 4.5m
     partial-failures:
       max-successive: ${SYNC_JOB_RETRIES_PARTIAL_FAILURES_MAX_SUCCESSIVE:1000}
-      max-total: ${SYNC_JOB_RETRIES_PARTIAL_FAILURES_MAX_TOTAL:10}
+      max-total: ${SYNC_JOB_RETRIES_PARTIAL_FAILURES_MAX_TOTAL:20}
   worker:
     kube-job-configs:
       default:
@@ -221,14 +233,16 @@ airbyte:
       max-workers: ${MAX_NOTIFY_WORKERS:5}
   workload:
     enabled: false
-  role: ${AIRBYTE_ROLE:}
+  role: ${AIRBYTE_ROLE:dev}
   secret:
     persistence: ${SECRET_PERSISTENCE:TESTING_CONFIG_DB_TABLE}
     store:
       aws:
-        access-key: ${AWS_ACCESS_KEY:}
-        secret-key: ${AWS_SECRET_ACCESS_KEY:}
-        region: ${AWS_REGION:}
+        access-key: ${AWS_SECRET_MANAGER_ACCESS_KEY_ID:}
+        secret-key: ${AWS_SECRET_MANAGER_SECRET_ACCESS_KEY:}
+        region: ${AWS_SECRET_MANAGER_REGION:}
+        kmsKeyArn: ${AWS_KMS_KEY_ARN:}
+        tags: ${AWS_SECRET_MANAGER_SECRET_TAGS:}
       gcp:
         credentials: ${SECRET_STORE_GCP_CREDENTIALS:}
         project-id: ${SECRET_STORE_GCP_PROJECT_ID:}
@@ -242,7 +256,7 @@ airbyte:
   tracking:
     strategy: ${TRACKING_STRATEGY:LOGGING}
     write-key: ${SEGMENT_WRITE_KEY:}
-  version: ${AIRBYTE_VERSION}
+  version: ${AIRBYTE_VERSION:dev}
   web-app:
     url: ${WEBAPP_URL:}
   workflow:
@@ -275,6 +289,9 @@ endpoints:
   beans:
     enabled: true
     sensitive: false
+  caches:
+    enabled: true
+    sensitive: false
   env:
     enabled: true
     sensitive: false
@@ -289,6 +306,9 @@ endpoints:
   loggers:
     enabled: true
     sensitive: true
+  metrics:
+    enabled: ${MICROMETER_METRICS_ENABLED:false}
+    sensitive: false
   refresh:
     enabled: false
     sensitive: true

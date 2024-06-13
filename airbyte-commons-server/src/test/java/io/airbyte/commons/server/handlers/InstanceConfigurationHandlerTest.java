@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.commons.server.handlers;
@@ -11,15 +11,20 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import io.airbyte.api.model.generated.AuthConfiguration;
+import io.airbyte.api.model.generated.AuthConfiguration.ModeEnum;
 import io.airbyte.api.model.generated.InstanceConfigurationResponse;
 import io.airbyte.api.model.generated.InstanceConfigurationResponse.EditionEnum;
 import io.airbyte.api.model.generated.InstanceConfigurationResponse.LicenseTypeEnum;
+import io.airbyte.api.model.generated.InstanceConfigurationResponse.TrackingStrategyEnum;
 import io.airbyte.api.model.generated.InstanceConfigurationSetupRequestBody;
 import io.airbyte.api.model.generated.WorkspaceUpdate;
 import io.airbyte.commons.auth.config.AirbyteKeycloakConfiguration;
+import io.airbyte.commons.auth.config.AuthConfigs;
+import io.airbyte.commons.auth.config.AuthMode;
 import io.airbyte.commons.license.ActiveAirbyteLicense;
 import io.airbyte.commons.license.AirbyteLicense;
 import io.airbyte.commons.license.AirbyteLicense.LicenseType;
+import io.airbyte.commons.version.AirbyteVersion;
 import io.airbyte.config.Configs.AirbyteEdition;
 import io.airbyte.config.Organization;
 import io.airbyte.config.StandardWorkspace;
@@ -43,7 +48,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 @ExtendWith(MockitoExtension.class)
 class InstanceConfigurationHandlerTest {
 
-  private static final String WEBAPP_URL = "http://localhost:8000";
+  private static final String AIRBYTE_URL = "http://localhost:8000";
   private static final String AIRBYTE_REALM = "airbyte";
   private static final String WEB_CLIENT_ID = "airbyte-webapp";
   private static final UUID WORKSPACE_ID = UUID.randomUUID();
@@ -60,6 +65,8 @@ class InstanceConfigurationHandlerTest {
   private WorkspacesHandler mWorkspacesHandler;
   @Mock
   private OrganizationPersistence mOrganizationPersistence;
+  @Mock
+  private AuthConfigs mAuthConfigs;
 
   private AirbyteKeycloakConfiguration keycloakConfiguration;
   private ActiveAirbyteLicense activeAirbyteLicense;
@@ -82,32 +89,68 @@ class InstanceConfigurationHandlerTest {
     "false, true",
     "false, false"
   })
-  void testGetInstanceConfiguration(final boolean isPro, final boolean isInitialSetupComplete) throws IOException {
+  void testGetInstanceConfiguration(final boolean isEnterprise, final boolean isInitialSetupComplete) throws IOException {
     stubGetDefaultUser();
     stubGetDefaultOrganization();
+    if (isEnterprise) {
+      stubEnterpriseAuthConfigs();
+    } else {
+      stubDefaultAuthConfigs();
+    }
 
-    when(mWorkspacePersistence.getDefaultWorkspaceForOrganization(ORGANIZATION_ID)).thenReturn(
-        new StandardWorkspace()
-            .withWorkspaceId(WORKSPACE_ID)
-            .withInitialSetupComplete(isInitialSetupComplete));
-
-    instanceConfigurationHandler = getInstanceConfigurationHandler(isPro);
+    when(mWorkspacePersistence.getInitialSetupComplete()).thenReturn(isInitialSetupComplete);
+    instanceConfigurationHandler = getInstanceConfigurationHandler(isEnterprise);
 
     final InstanceConfigurationResponse expected = new InstanceConfigurationResponse()
-        .edition(isPro ? EditionEnum.PRO : EditionEnum.COMMUNITY)
-        .webappUrl(WEBAPP_URL)
-        .licenseType(isPro ? LicenseTypeEnum.PRO : null)
-        .auth(isPro ? new AuthConfiguration()
+        .edition(isEnterprise ? EditionEnum.PRO : EditionEnum.COMMUNITY)
+        .version("0.50.1")
+        .airbyteUrl(AIRBYTE_URL)
+        .licenseType(isEnterprise ? LicenseTypeEnum.PRO : null)
+        .auth(isEnterprise ? new AuthConfiguration()
+            .mode(ModeEnum.OIDC)
             .clientId(WEB_CLIENT_ID)
-            .defaultRealm(AIRBYTE_REALM) : null)
+            .defaultRealm(AIRBYTE_REALM) : new AuthConfiguration().mode(ModeEnum.NONE))
         .initialSetupComplete(isInitialSetupComplete)
         .defaultUserId(USER_ID)
         .defaultOrganizationId(ORGANIZATION_ID)
-        .defaultWorkspaceId(WORKSPACE_ID);
+        .trackingStrategy(TrackingStrategyEnum.LOGGING);
 
     final InstanceConfigurationResponse actual = instanceConfigurationHandler.getInstanceConfiguration();
 
     assertEquals(expected, actual);
+  }
+
+  @ParameterizedTest
+  @CsvSource({
+    "logging, LOGGING", // lower case env works
+    "LOGGING, LOGGING", // upper case env works
+    "segment, SEGMENT", // lower case segment env works
+    "SEGMENT, SEGMENT", // upper case segment env works
+    "'' ,LOGGING", // empty env variable will become logging
+    "unknownValue, LOGGING" // Unknown value will be treated as logging (since servers won't send segment events either)
+  })
+  void testGetInstanceConfigurationTrackingStrategy(final String envValue, final TrackingStrategyEnum expectedResult) throws IOException {
+    stubGetDefaultUser();
+    stubGetDefaultOrganization();
+    stubDefaultAuthConfigs();
+
+    when(mWorkspacePersistence.getInitialSetupComplete()).thenReturn(true);
+
+    final var handler = new InstanceConfigurationHandler(
+        Optional.of(AIRBYTE_URL),
+        envValue,
+        AirbyteEdition.COMMUNITY,
+        new AirbyteVersion("0.50.1"),
+        Optional.empty(),
+        mWorkspacePersistence,
+        mWorkspacesHandler,
+        mUserPersistence,
+        mOrganizationPersistence,
+        mAuthConfigs);
+
+    final var result = handler.getInstanceConfiguration();
+
+    assertEquals(expectedResult, result.getTrackingStrategy());
   }
 
   @Test
@@ -149,6 +192,9 @@ class InstanceConfigurationHandlerTest {
             new StandardWorkspace().withWorkspaceId(WORKSPACE_ID).withInitialSetupComplete(false))
         .thenReturn(
             new StandardWorkspace().withWorkspaceId(WORKSPACE_ID).withInitialSetupComplete(true));
+    when(mWorkspacePersistence.getInitialSetupComplete()).thenReturn(true);
+    when(mAuthConfigs.getAuthMode()).thenReturn(AuthMode.OIDC);
+    when(mAuthConfigs.getKeycloakConfig()).thenReturn(keycloakConfiguration);
 
     instanceConfigurationHandler = getInstanceConfigurationHandler(true);
 
@@ -156,15 +202,17 @@ class InstanceConfigurationHandlerTest {
 
     final InstanceConfigurationResponse expected = new InstanceConfigurationResponse()
         .edition(EditionEnum.PRO)
-        .webappUrl(WEBAPP_URL)
+        .version("0.50.1")
+        .airbyteUrl(AIRBYTE_URL)
         .licenseType(LicenseTypeEnum.PRO)
         .auth(new AuthConfiguration()
+            .mode(ModeEnum.OIDC)
             .clientId(WEB_CLIENT_ID)
             .defaultRealm(AIRBYTE_REALM))
         .initialSetupComplete(true)
         .defaultUserId(USER_ID)
         .defaultOrganizationId(ORGANIZATION_ID)
-        .defaultWorkspaceId(WORKSPACE_ID);
+        .trackingStrategy(TrackingStrategyEnum.LOGGING);
 
     final InstanceConfigurationSetupRequestBody requestBody = new InstanceConfigurationSetupRequestBody()
         .email(email)
@@ -224,16 +272,27 @@ class InstanceConfigurationHandlerTest {
             .withUserId(USER_ID)));
   }
 
-  private InstanceConfigurationHandler getInstanceConfigurationHandler(final boolean isPro) {
+  private void stubDefaultAuthConfigs() {
+    when(mAuthConfigs.getAuthMode()).thenReturn(AuthMode.NONE);
+  }
+
+  private void stubEnterpriseAuthConfigs() {
+    when(mAuthConfigs.getAuthMode()).thenReturn(AuthMode.OIDC);
+    when(mAuthConfigs.getKeycloakConfig()).thenReturn(keycloakConfiguration);
+  }
+
+  private InstanceConfigurationHandler getInstanceConfigurationHandler(final boolean isEnterprise) {
     return new InstanceConfigurationHandler(
-        WEBAPP_URL,
-        isPro ? AirbyteEdition.PRO : AirbyteEdition.COMMUNITY,
-        isPro ? Optional.of(keycloakConfiguration) : Optional.empty(),
-        isPro ? Optional.of(activeAirbyteLicense) : Optional.empty(),
+        Optional.of(AIRBYTE_URL),
+        "logging",
+        isEnterprise ? AirbyteEdition.PRO : AirbyteEdition.COMMUNITY,
+        new AirbyteVersion("0.50.1"),
+        isEnterprise ? Optional.of(activeAirbyteLicense) : Optional.empty(),
         mWorkspacePersistence,
         mWorkspacesHandler,
         mUserPersistence,
-        mOrganizationPersistence);
+        mOrganizationPersistence,
+        mAuthConfigs);
   }
 
 }

@@ -4,8 +4,8 @@ export type IconType =
   | "arrowRight"
   | "article"
   | "bell"
-  | "calendarCheck"
   | "calendar"
+  | "calendarCheck"
   | "caretDown"
   | "cast"
   | "certified"
@@ -16,15 +16,18 @@ export type IconType =
   | "chevronLeft"
   | "chevronRight"
   | "chevronUp"
+  | "chevronUpDown"
   | "clockFilled"
   | "clockOutline"
   | "comments"
   | "community"
   | "connection"
+  | "collapseAll"
   | "contract"
   | "copy"
   | "credits"
   | "cross"
+  | "cursor"
   | "database"
   | "day"
   | "dbtCloud"
@@ -33,12 +36,16 @@ export type IconType =
   | "docker"
   | "docs"
   | "download"
+  | "drag"
   | "duplicate"
   | "earth"
+  | "envelope"
   | "equal"
   | "errorFilled"
   | "errorOutline"
   | "expand"
+  | "expandAll"
+  | "export"
   | "eye"
   | "eyeSlash"
   | "file"
@@ -65,8 +72,8 @@ export type IconType =
   | "location"
   | "lock"
   | "menu"
-  | "minusCircle"
   | "minus"
+  | "minusCircle"
   | "modification"
   | "monitor"
   | "moon"
@@ -93,6 +100,7 @@ export type IconType =
   | "share"
   | "shortVideo"
   | "shrink"
+  | "signout"
   | "simpleCircle"
   | "slack"
   | "sleep"
@@ -103,6 +111,7 @@ export type IconType =
   | "statusError"
   | "statusInactive"
   | "statusInProgress"
+  | "statusQueued"
   | "statusSleep"
   | "statusSuccess"
   | "statusWarning"
@@ -114,20 +123,29 @@ export type IconType =
   | "sync"
   | "table"
   | "target"
-  | "ticket"
   | "trash"
   | "unlock"
+  | "unsorted"
   | "user"
   | "warningFilled"
   | "warningOutline"
   | "wrench";
 
-export type IconColor = "primary" | "disabled" | "action" | "success" | "error" | "warning" | "affordance";
+export type IconColor =
+  | "primary"
+  | "disabled"
+  | "action"
+  | "success"
+  | "error"
+  | "warning"
+  | "affordance"
+  | "foreground";
+export type IconSize = "xs" | "sm" | "md" | "lg" | "xl";
 
 export interface IconProps {
   type: IconType;
   className?: string;
-  size?: "xs" | "sm" | "md" | "lg" | "xl";
+  size?: IconSize;
   color?: IconColor;
   withBackground?: boolean;
   title?: string;

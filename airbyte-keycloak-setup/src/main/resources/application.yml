@@ -5,6 +5,7 @@ micronaut:
     port: 9002
 
 airbyte:
+  airbyte-url: ${AIRBYTE_URL:}
   keycloak:
     protocol: ${KEYCLOAK_PROTOCOL:http}
     host: ${KEYCLOAK_INTERNAL_HOST:}
@@ -14,7 +15,32 @@ airbyte:
     client-id: ${KEYCLOAK_CLIENT_ID:admin-cli}
     redirect-uri: ${KEYCLOAK_REDIRECT_URI:`http://localhost:8000/*`}
     web-client-id: ${KEYCLOAK_WEB_CLIENT_ID:airbyte-webapp}
-    account-client-id: ${KEYCLOAK_ACCOUNT_CLIENT_ID:account}
     username: ${KEYCLOAK_ADMIN_USER:}
     password: ${KEYCLOAK_ADMIN_PASSWORD:}
-    reset-realm: ${KEYCLOAK_SETUP_RESET_REALM:false}
+    reset-realm: ${KEYCLOAK_RESET_REALM:false}
+  auth:
+    identity-provider:
+      type: ${IDENTITY_PROVIDER_TYPE:}
+      oidc:
+        domain: ${OIDC_DOMAIN:}
+        app-name: ${OIDC_APP_NAME:}
+        client-id: ${OIDC_CLIENT_ID:}
+        client-secret: ${OIDC_CLIENT_SECRET:}
+    initial-user:
+      email: ${INITIAL_USER_EMAIL:}
+      first-name: ${INITIAL_USER_FIRST_NAME:}
+      last-name: ${INITIAL_USER_LAST_NAME:}
+      password: ${INITIAL_USER_PASSWORD:}
+
+datasources:
+  config:
+    connection-test-query: SELECT 1
+    connection-timeout: 30000
+    maximum-pool-size: 10
+    minimum-idle: 0
+    idle-timeout: 600000
+    initialization-fail-timeout: -1 # Disable fail fast checking to avoid issues due to other pods not being started in time
+    url: ${DATABASE_URL}
+    driverClassName: org.postgresql.Driver
+    username: ${DATABASE_USER}
+    password: ${DATABASE_PASSWORD}

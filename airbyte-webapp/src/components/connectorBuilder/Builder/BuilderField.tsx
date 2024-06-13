@@ -1,17 +1,15 @@
-import isEqual from "lodash/isEqual";
-import toPath from "lodash/toPath";
+import classNames from "classnames";
 import { ReactNode, useEffect, useRef } from "react";
 import { useController, useWatch } from "react-hook-form";
 import { FormattedMessage } from "react-intl";
-import { Rnd } from "react-rnd";
 
 import { ControlLabels } from "components/LabeledControl";
 import { LabeledSwitch } from "components/LabeledSwitch";
 import { CodeEditor } from "components/ui/CodeEditor";
 import { ComboBox, MultiComboBox, Option } from "components/ui/ComboBox";
 import DatePicker from "components/ui/DatePicker";
-import { DropDown } from "components/ui/DropDown";
 import { Input } from "components/ui/Input";
+import { ListBox } from "components/ui/ListBox";
 import { TagInput } from "components/ui/TagInput";
 import { Text } from "components/ui/Text";
 import { TextArea } from "components/ui/TextArea";
@@ -37,6 +35,7 @@ interface ArrayFieldProps {
   error: boolean;
   itemType?: string;
   directionalStyle?: boolean;
+  uniqueValues?: boolean;
 }
 
 interface BaseFieldProps {
@@ -60,10 +59,18 @@ export type BuilderFieldProps = BaseFieldProps &
         onChange?: (newValue: string) => void;
         onBlur?: (value: string) => void;
         disabled?: boolean;
+        step?: number;
+        min?: number;
       }
     | { type: "date" | "date-time"; onChange?: (newValue: string) => void }
     | { type: "boolean"; onChange?: (newValue: boolean) => void; disabled?: boolean; disabledTooltip?: string }
-    | { type: "array"; onChange?: (newValue: string[]) => void; itemType?: string; directionalStyle?: boolean }
+    | {
+        type: "array";
+        onChange?: (newValue: string[]) => void;
+        itemType?: string;
+        directionalStyle?: boolean;
+        uniqueValues?: boolean;
+      }
     | { type: "textarea"; onChange?: (newValue: string[]) => void }
     | { type: "jsoneditor"; onChange?: (newValue: string[]) => void }
     | {
@@ -77,7 +84,7 @@ export type BuilderFieldProps = BaseFieldProps &
 
 const EnumField: React.FC<EnumFieldProps> = ({ options, value, setValue, error, ...props }) => {
   return (
-    <DropDown
+    <ListBox
       {...props}
       options={
         typeof options[0] === "string"
@@ -86,14 +93,22 @@ const EnumField: React.FC<EnumFieldProps> = ({ options, value, setValue, error, 
             })
           : (options as Array<{ label: string; value: string }>)
       }
-      onChange={(selected) => selected && setValue(selected.value)}
-      value={value}
-      error={error}
+      onSelect={(selected) => selected && setValue(selected)}
+      selectedValue={value}
+      hasError={error}
     />
   );
 };
 
-const ArrayField: React.FC<ArrayFieldProps> = ({ name, value, setValue, error, itemType, directionalStyle }) => {
+const ArrayField: React.FC<ArrayFieldProps> = ({
+  name,
+  value,
+  setValue,
+  error,
+  itemType,
+  directionalStyle,
+  uniqueValues,
+}) => {
   return (
     <TagInput
       name={name}
@@ -102,25 +117,9 @@ const ArrayField: React.FC<ArrayFieldProps> = ({ name, value, setValue, error, i
       itemType={itemType}
       error={error}
       directionalStyle={directionalStyle}
+      uniqueValues={uniqueValues}
     />
   );
-};
-
-// check whether paths are equal, normalizing [] and . notation
-function arePathsEqual(path1: string, path2: string) {
-  return isEqual(toPath(path1), toPath(path2));
-}
-
-const handleScrollToField = (
-  ref: React.RefObject<HTMLDivElement>,
-  path: string,
-  scrollToField: string | undefined,
-  setScrollToField: (value: string | undefined) => void
-) => {
-  if (ref.current && scrollToField && arePathsEqual(path, scrollToField)) {
-    ref.current.scrollIntoView({ block: "center" });
-    setScrollToField(undefined);
-  }
 };
 
 const InnerBuilderField: React.FC<BuilderFieldProps> = ({
@@ -147,14 +146,13 @@ const InnerBuilderField: React.FC<BuilderFieldProps> = ({
     false,
     omitInterpolationContext
   );
-  const { scrollToField, setScrollToField } = useConnectorBuilderFormManagementState();
 
+  const { handleScrollToField } = useConnectorBuilderFormManagementState();
   const elementRef = useRef<HTMLDivElement | null>(null);
-
   useEffect(() => {
     // Call handler in here to make sure it handles new scrollToField value from the context
-    handleScrollToField(elementRef, path, scrollToField, setScrollToField);
-  }, [path, scrollToField, setScrollToField]);
+    handleScrollToField(elementRef, path);
+  }, [handleScrollToField, path]);
 
   if (props.type === "boolean") {
     const switchId = `switch-${path}`;
@@ -162,11 +160,7 @@ const InnerBuilderField: React.FC<BuilderFieldProps> = ({
       <LabeledSwitch
         {...field}
         id={switchId}
-        ref={(ref) => {
-          elementRef.current = ref;
-          // Call handler in here to make sure it handles new refs
-          handleScrollToField(elementRef, path, scrollToField, setScrollToField);
-        }}
+        ref={elementRef}
         checked={fieldValue as boolean}
         label={
           <ControlLabels
@@ -202,10 +196,7 @@ const InnerBuilderField: React.FC<BuilderFieldProps> = ({
       label={label}
       infoTooltipContent={tooltip}
       optional={optional}
-      ref={(ref) => {
-        elementRef.current = ref;
-        handleScrollToField(elementRef, path, scrollToField, setScrollToField);
-      }}
+      ref={elementRef}
     >
       {(props.type === "number" || props.type === "string" || props.type === "integer") && (
         <Input
@@ -220,6 +211,8 @@ const InnerBuilderField: React.FC<BuilderFieldProps> = ({
           readOnly={readOnly}
           adornment={adornment}
           disabled={props.disabled}
+          step={props.step}
+          min={props.min}
           onBlur={(e) => {
             field.onBlur();
             props.onBlur?.(e.target.value);
@@ -249,38 +242,16 @@ const InnerBuilderField: React.FC<BuilderFieldProps> = ({
         />
       )}
       {props.type === "jsoneditor" && (
-        <div style={{ position: "relative" }}>
-          <Rnd
-            disableDragging
-            enableResizing={{
-              top: false,
-              right: false,
-              bottom: true,
-              left: false,
-              topRight: false,
-              bottomRight: false,
-              bottomLeft: false,
-              topLeft: false,
+        <div className={classNames(props.className, styles.jsonEditor)}>
+          <CodeEditor
+            key={path}
+            automaticLayout
+            value={fieldValue || ""}
+            language="json"
+            onChange={(val: string | undefined) => {
+              setValue(val);
             }}
-            default={{
-              x: 0,
-              y: 0,
-              width: "100%",
-              height: 300,
-            }}
-            resizeHandleClasses={{ bottom: styles.draghandle }}
-            style={{ position: "relative" }}
-          >
-            <CodeEditor
-              key={path}
-              automaticLayout
-              value={fieldValue || ""}
-              language="json"
-              onChange={(val: string | undefined) => {
-                setValue(val);
-              }}
-            />
-          </Rnd>
+          />
         </div>
       )}
       {props.type === "array" && (
@@ -292,6 +263,7 @@ const InnerBuilderField: React.FC<BuilderFieldProps> = ({
             setValue={setValue}
             error={hasError}
             directionalStyle={props.directionalStyle ?? true}
+            uniqueValues={props.uniqueValues}
           />
         </div>
       )}

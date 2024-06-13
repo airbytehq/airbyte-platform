@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.workload.auth
@@ -25,7 +25,7 @@ private val LOGGER = KotlinLogging.logger {}
 @Singleton
 class WorkloadTokenValidator(
   @Value("\${micronaut.security.token.jwt.bearer.secret}") val bearerSecret: String,
-) : TokenValidator {
+) : TokenValidator<HttpRequest<*>> {
   override fun validateToken(
     token: String,
     request: HttpRequest<*>?,
@@ -43,7 +43,7 @@ class WorkloadTokenValidator(
   }
 
   private fun authenticateRequest(token: String): Boolean {
-    return Base64.getDecoder().decode(token).decodeToString().trim() == bearerSecret
+    return Base64.getUrlDecoder().decode(token).decodeToString().trim() == bearerSecret
   }
 
   companion object {

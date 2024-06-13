@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.workers.internal.syncpersistence;
@@ -21,10 +21,9 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import io.airbyte.api.client.AirbyteApiClient;
 import io.airbyte.api.client.generated.AttemptApi;
 import io.airbyte.api.client.generated.StateApi;
-import io.airbyte.api.client.invoker.generated.ApiException;
-import io.airbyte.api.client.model.generated.ConnectionIdRequestBody;
 import io.airbyte.api.client.model.generated.ConnectionState;
 import io.airbyte.api.client.model.generated.ConnectionStateCreateOrUpdate;
 import io.airbyte.api.client.model.generated.ConnectionStateType;
@@ -34,14 +33,12 @@ import io.airbyte.protocol.models.AirbyteEstimateTraceMessage;
 import io.airbyte.protocol.models.AirbyteGlobalState;
 import io.airbyte.protocol.models.AirbyteRecordMessage;
 import io.airbyte.protocol.models.AirbyteStateMessage;
-import io.airbyte.protocol.models.AirbyteStream;
 import io.airbyte.protocol.models.AirbyteStreamState;
 import io.airbyte.protocol.models.ConfiguredAirbyteCatalog;
-import io.airbyte.protocol.models.ConfiguredAirbyteStream;
 import io.airbyte.protocol.models.StreamDescriptor;
-import io.airbyte.protocol.models.SyncMode;
 import io.airbyte.workers.internal.bookkeeping.SyncStatsTracker;
 import io.airbyte.workers.internal.stateaggregator.StateAggregatorFactory;
+import java.io.IOException;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.ScheduledExecutorService;
@@ -65,16 +62,20 @@ class SyncPersistenceImplTest {
   private ArgumentCaptor<Runnable> actualFlushMethod;
 
   private UUID connectionId;
+  private UUID workspaceId;
   private Long jobId;
   private Integer attemptNumber;
   private ConfiguredAirbyteCatalog catalog;
+  private AirbyteApiClient airbyteApiClient;
 
   @BeforeEach
   void beforeEach() {
     connectionId = UUID.randomUUID();
+    workspaceId = UUID.randomUUID();
     jobId = (long) (Math.random() * Long.MAX_VALUE);
     attemptNumber = (int) (Math.random() * Integer.MAX_VALUE);
     catalog = mock(ConfiguredAirbyteCatalog.class);
+    airbyteApiClient = mock(AirbyteApiClient.class);
 
     // Setting up an ArgumentCaptor to be able to manually trigger the actual flush method rather than
     // relying on the ScheduledExecutorService and having to deal with Thread.sleep in the tests.
@@ -90,9 +91,11 @@ class SyncPersistenceImplTest {
     // Setting syncPersistence
     stateApi = mock(StateApi.class);
     attemptApi = mock(AttemptApi.class);
-    syncPersistence = new SyncPersistenceImpl(stateApi, attemptApi, new StateAggregatorFactory(), syncStatsTracker, executorService,
+    when(airbyteApiClient.getAttemptApi()).thenReturn(attemptApi);
+    when(airbyteApiClient.getStateApi()).thenReturn(stateApi);
+    syncPersistence = new SyncPersistenceImpl(airbyteApiClient, new StateAggregatorFactory(), syncStatsTracker, executorService,
         flushPeriod, new RetryWithJitterConfig(1, 1, 4),
-        connectionId, jobId, attemptNumber, catalog);
+        connectionId, workspaceId, jobId, attemptNumber, catalog);
   }
 
   @AfterEach
@@ -102,10 +105,9 @@ class SyncPersistenceImplTest {
   }
 
   @Test
-  void testPersistHappyPath() throws ApiException {
+  void testPersistHappyPath() throws IOException {
     final AirbyteStateMessage stateA1 = getStreamState("A", 1);
     syncPersistence.persist(connectionId, stateA1);
-    verify(stateApi).getState(any());
     verify(executorService).scheduleAtFixedRate(any(Runnable.class), eq(0L), eq(flushPeriod), eq(TimeUnit.SECONDS));
     clearInvocations(executorService, stateApi);
 
@@ -137,12 +139,12 @@ class SyncPersistenceImplTest {
   }
 
   @Test
-  void testPersistWithApiFailures() throws ApiException {
+  void testPersistWithApiFailures() throws IOException {
     final AirbyteStateMessage stateF1 = getStreamState("F", 1);
     syncPersistence.persist(connectionId, stateF1);
 
     // Set API call to fail
-    when(stateApi.createOrUpdateState(any())).thenThrow(new ApiException());
+    when(stateApi.createOrUpdateState(any())).thenThrow(new IOException());
 
     // Flushing
     actualFlushMethod.getValue().run();
@@ -182,7 +184,7 @@ class SyncPersistenceImplTest {
   }
 
   @Test
-  void testStatsFlushBasicEmissions() throws ApiException {
+  void testStatsFlushBasicEmissions() throws IOException {
     syncPersistence.updateStats(new AirbyteRecordMessage());
     syncPersistence.persist(connectionId, getStreamState("a", 1));
 
@@ -199,11 +201,11 @@ class SyncPersistenceImplTest {
   }
 
   @Test
-  void testStatsAreNotPersistedWhenStateFails() throws ApiException {
+  void testStatsAreNotPersistedWhenStateFails() throws IOException {
     // We should not save stats if persist state failed
     syncPersistence.updateStats(new AirbyteRecordMessage());
     syncPersistence.persist(connectionId, getStreamState("b", 2));
-    when(stateApi.createOrUpdateState(any())).thenThrow(new ApiException());
+    when(stateApi.createOrUpdateState(any())).thenThrow(new IOException());
     actualFlushMethod.getValue().run();
     verify(stateApi).createOrUpdateState(any());
     verify(attemptApi, never()).saveStats(any());
@@ -217,11 +219,11 @@ class SyncPersistenceImplTest {
   }
 
   @Test
-  void testStatsFailuresAreRetriedOnFollowingRunsEvenWithoutNewStates() throws ApiException {
+  void testStatsFailuresAreRetriedOnFollowingRunsEvenWithoutNewStates() throws IOException {
     // If we failed to save stats, we should retry on the next schedule even if there were no new states
     syncPersistence.updateStats(new AirbyteRecordMessage());
     syncPersistence.persist(connectionId, getStreamState("a", 3));
-    when(attemptApi.saveStats(any())).thenThrow(new ApiException());
+    when(attemptApi.saveStats(any())).thenThrow(new IOException());
     actualFlushMethod.getValue().run();
     verify(stateApi).createOrUpdateState(any());
     verify(attemptApi).saveStats(any());
@@ -256,7 +258,7 @@ class SyncPersistenceImplTest {
     syncPersistence.persist(connectionId, stateA2);
 
     // Trigger a failure
-    when(stateApi.createOrUpdateState(any())).thenThrow(new ApiException());
+    when(stateApi.createOrUpdateState(any())).thenThrow(new IOException());
     actualFlushMethod.getValue().run();
 
     final AirbyteStateMessage stateB1 = getStreamState("closeB", 1);
@@ -275,26 +277,20 @@ class SyncPersistenceImplTest {
     syncPersistence.updateStats(new AirbyteRecordMessage());
     syncPersistence.persist(connectionId, state);
 
-    // Setup some API failures
     when(stateApi.createOrUpdateState(any()))
-        .thenThrow(new ApiException())
         .thenReturn(mock(ConnectionState.class));
 
     // Final flush
     when(executorService.awaitTermination(anyLong(), any())).thenReturn(true);
     syncPersistence.close();
-    verify(stateApi, times(2)).createOrUpdateState(buildStateRequest(connectionId, List.of(state)));
+    verify(stateApi, times(1)).createOrUpdateState(buildStateRequest(connectionId, List.of(state)));
     verify(attemptApi, times(1)).saveStats(any());
   }
 
   @Test
-  void testBadFinalStateFlushThrowsAnException() throws ApiException, InterruptedException {
+  void testBadFinalStateFlushThrowsAnException() throws IOException, InterruptedException {
     // Setup some API failures
-    when(stateApi.createOrUpdateState(any()))
-        .thenThrow(new ApiException())
-        .thenThrow(new ApiException())
-        .thenThrow(new ApiException())
-        .thenThrow(new ApiException());
+    when(stateApi.createOrUpdateState(any())).thenThrow(new IOException());
 
     final AirbyteStateMessage state = getStreamState("final retry", 2);
     syncPersistence.updateStats(new AirbyteRecordMessage());
@@ -303,28 +299,24 @@ class SyncPersistenceImplTest {
     // Final flush
     when(executorService.awaitTermination(anyLong(), any())).thenReturn(true);
     assertThrows(Exception.class, () -> syncPersistence.close());
-    verify(stateApi, times(4)).createOrUpdateState(buildStateRequest(connectionId, List.of(state)));
+    verify(stateApi, times(1)).createOrUpdateState(buildStateRequest(connectionId, List.of(state)));
     verify(attemptApi, never()).saveStats(any());
   }
 
   @Test
-  void testBadFinalStatsFlushThrowsAnException() throws ApiException, InterruptedException {
+  void testBadFinalStatsFlushThrowsAnException() throws IOException, InterruptedException {
     final AirbyteStateMessage state = getStreamState("final retry", 2);
     syncPersistence.updateStats(new AirbyteRecordMessage());
     syncPersistence.persist(connectionId, state);
 
     // Setup some API failures
-    when(attemptApi.saveStats(any()))
-        .thenThrow(new ApiException())
-        .thenThrow(new ApiException())
-        .thenThrow(new ApiException())
-        .thenThrow(new ApiException());
+    when(attemptApi.saveStats(any())).thenThrow(new IOException());
 
     // Final flush
     when(executorService.awaitTermination(anyLong(), any())).thenReturn(true);
     assertThrows(Exception.class, () -> syncPersistence.close());
     verify(stateApi).createOrUpdateState(buildStateRequest(connectionId, List.of(state)));
-    verify(attemptApi, times(4)).saveStats(any());
+    verify(attemptApi, times(1)).saveStats(any());
   }
 
   @Test
@@ -391,69 +383,6 @@ class SyncPersistenceImplTest {
     syncPersistence.close();
     verify(stateApi).createOrUpdateState(captor.capture());
     assertTrue(Jsons.serialize(captor.getValue()).contains("myOtherState2"));
-  }
-
-  @Test
-  void testLegacyStateMigrationToStreamAreOnlyFlushedAtTheEnd() throws Exception {
-    // Migration is defined by current state returned from the API is LEGACY, and we are trying to
-    // persist a non LEGACY state
-    when(stateApi.getState(new ConnectionIdRequestBody().connectionId(connectionId)))
-        .thenReturn(new ConnectionState().state(Jsons.deserialize("{\"state\":\"some_state\"}")).stateType(ConnectionStateType.LEGACY));
-
-    final AirbyteStateMessage message = getStreamState("migration1", 12);
-    syncPersistence.persist(connectionId, message);
-    verify(stateApi).getState(new ConnectionIdRequestBody().connectionId(connectionId));
-    verify(executorService, never()).scheduleAtFixedRate(any(), anyLong(), anyLong(), any());
-
-    reset(stateApi);
-
-    // Since we're delaying the flush, executorService should not have been called
-    // We also want to make sure we are not calling getState every time
-    final AirbyteStateMessage otherMessage = getStreamState("migration2", 10);
-    syncPersistence.persist(connectionId, otherMessage);
-    verify(stateApi, never()).getState(new ConnectionIdRequestBody().connectionId(connectionId));
-    verify(executorService, never()).scheduleAtFixedRate(any(), anyLong(), anyLong(), any());
-
-    when(executorService.awaitTermination(anyLong(), any())).thenReturn(true);
-    when(catalog.getStreams()).thenReturn(List.of(
-        new ConfiguredAirbyteStream().withStream(new AirbyteStream().withName("migration1")).withSyncMode(SyncMode.INCREMENTAL),
-        new ConfiguredAirbyteStream().withStream(new AirbyteStream().withName("migration2")).withSyncMode(SyncMode.INCREMENTAL)));
-    syncPersistence.close();
-    verifyStateUpdateApiCall(List.of(message, otherMessage));
-  }
-
-  @Test
-  void testLegacyStateMigrationToGlobalGettingIntoTheScheduledFlushLogic() throws ApiException, InterruptedException {
-    // Migration is defined by current state returned from the API is LEGACY, and we are trying to
-    // persist a non LEGACY state
-    when(stateApi.getState(new ConnectionIdRequestBody().connectionId(connectionId)))
-        .thenReturn(new ConnectionState().state(Jsons.deserialize("{\"state\":\"some_state\"}")).stateType(ConnectionStateType.LEGACY));
-
-    final AirbyteStateMessage message = getGlobalState(14);
-    syncPersistence.persist(connectionId, message);
-    verify(stateApi).getState(new ConnectionIdRequestBody().connectionId(connectionId));
-    verify(executorService).scheduleAtFixedRate(any(), anyLong(), anyLong(), any());
-  }
-
-  @Test
-  void testDoNotStartThreadUntilStateCheckSucceeds() throws ApiException {
-    when(stateApi.getState(any()))
-        .thenThrow(new ApiException())
-        .thenReturn(null);
-
-    final AirbyteStateMessage s1 = getStreamState("stream 1", 9);
-    syncPersistence.persist(connectionId, s1);
-    // First getState failed, we should not have started the thread or persisted states
-    verify(executorService, never()).scheduleAtFixedRate(any(), anyLong(), anyLong(), any());
-    verify(stateApi, never()).createOrUpdateState(any());
-
-    final AirbyteStateMessage s2 = getStreamState("stream 2", 19);
-    syncPersistence.persist(connectionId, s2);
-    verify(executorService).scheduleAtFixedRate(any(), anyLong(), anyLong(), any());
-
-    // Since the first state check failed, we should be flushing both states on the first flush
-    actualFlushMethod.getValue().run();
-    verifyStateUpdateApiCall(List.of(s1, s2));
   }
 
   @Test
@@ -558,7 +487,7 @@ class SyncPersistenceImplTest {
 
     try {
       verify(stateApi).createOrUpdateState(captor.capture());
-    } catch (ApiException e) {
+    } catch (IOException e) {
       throw new RuntimeException(e);
     }
     final ConnectionStateCreateOrUpdate actual = captor.getValue();
@@ -569,22 +498,26 @@ class SyncPersistenceImplTest {
         .containsExactlyInAnyOrderElementsOf(expected.getConnectionState().getStreamState());
 
     // Checking the rest of the payload
-    actual.getConnectionState().setStreamState(List.of());
-    expected.getConnectionState().setStreamState(List.of());
-    assertEquals(expected, actual);
+    assertEquals(expected.getConnectionState().getConnectionId(), actual.getConnectionState().getConnectionId());
+    assertEquals(expected.getConnectionState().getState(), actual.getConnectionState().getState());
+    assertEquals(expected.getConnectionState().getGlobalState(), actual.getConnectionState().getGlobalState());
+    assertEquals(expected.getConnectionState().getStateType(), actual.getConnectionState().getStateType());
+    assertEquals(expected.getConnectionId(), actual.getConnectionId());
   }
 
   private ConnectionStateCreateOrUpdate buildStateRequest(final UUID connectionId, final List<AirbyteStateMessage> stateMessages) {
-    return new ConnectionStateCreateOrUpdate()
-        .connectionId(connectionId)
-        .connectionState(new ConnectionState()
-            .connectionId(connectionId)
-            .stateType(ConnectionStateType.STREAM)
-            .streamState(
-                stateMessages.stream().map(s -> new StreamState()
-                    .streamDescriptor(
-                        new io.airbyte.api.client.model.generated.StreamDescriptor().name(s.getStream().getStreamDescriptor().getName()))
-                    .streamState(s.getStream().getStreamState())).toList()));
+    return new ConnectionStateCreateOrUpdate(
+        connectionId,
+        new ConnectionState(
+            ConnectionStateType.STREAM,
+            connectionId,
+            null,
+            stateMessages.stream().map(s -> new StreamState(
+                new io.airbyte.api.client.model.generated.StreamDescriptor(
+                    s.getStream().getStreamDescriptor().getName(),
+                    s.getStream().getStreamDescriptor().getNamespace()),
+                s.getStream().getStreamState())).toList(),
+            null));
   }
 
   private AirbyteStateMessage getStreamState(final String streamName, final int stateValue) {

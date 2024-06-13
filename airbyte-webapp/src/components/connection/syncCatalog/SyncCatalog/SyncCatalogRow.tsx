@@ -4,26 +4,20 @@ import React, { useCallback, useMemo } from "react";
 import { FieldErrors } from "react-hook-form";
 import { useToggle } from "react-use";
 
-import { AirbyteStreamConfiguration, DestinationSyncMode, SyncMode } from "core/api/types/AirbyteClient";
-import { SyncSchemaField, SyncSchemaFieldObject } from "core/domain/catalog";
+import { AirbyteStreamConfiguration } from "core/api/types/AirbyteClient";
 import { traverseSchemaToField } from "core/domain/catalog/traverseSchemaToField";
+import { Action, Namespace, useAnalyticsService } from "core/services/analytics";
 import { naturalComparatorBy } from "core/utils/objects";
 import { useDestinationNamespace } from "hooks/connection/useDestinationNamespace";
 import { useConnectionFormService } from "hooks/services/ConnectionForm/ConnectionFormService";
+import { useExperiment } from "hooks/services/Experiment";
 
-import {
-  updatePrimaryKey,
-  toggleFieldInPrimaryKey,
-  updateCursorField,
-  updateFieldSelected,
-  toggleAllFieldsSelected,
-} from "./streamConfigHelpers";
 import { updateStreamSyncMode } from "./updateStreamSyncMode";
 import { FormConnectionFormValues, SyncStreamFieldWithId, SUPPORTED_MODES } from "../../ConnectionForm/formConfig";
 import { StreamDetailsPanel } from "../StreamDetailsPanel/StreamDetailsPanel";
 import { StreamsConfigTableRow } from "../StreamsConfigTable/StreamsConfigTableRow";
 import { SyncModeValue } from "../SyncModeSelect";
-import { flattenSyncSchemaFields, getFieldPathType } from "../utils";
+import { checkCursorAndPKRequirements, getFieldPathType } from "../utils";
 
 interface SyncCatalogRowProps
   extends Pick<FormConnectionFormValues, "namespaceDefinition" | "namespaceFormat" | "prefix"> {
@@ -51,11 +45,6 @@ export const SyncCatalogRow: React.FC<SyncCatalogRowProps & { className?: string
     return traversedFields.sort(naturalComparatorBy((field) => field.cleanedName));
   }, [stream?.jsonSchema, stream?.name]);
 
-  // FIXME: Temp fix to return empty object when the json schema does not have .properties
-  // This prevents the table from crashing but still will not render the fields in the stream.
-  const streamProperties = streamNode?.stream?.jsonSchema?.properties ?? {};
-  const numberOfFieldsInStream = Object.keys(streamProperties).length ?? 0;
-
   const {
     destDefinitionSpecification: { supportedDestinationSyncModes },
   } = useConnectionFormService();
@@ -80,6 +69,8 @@ export const SyncCatalogRow: React.FC<SyncCatalogRowProps & { className?: string
     [streamNode, updateStreamNode]
   );
 
+  const isSimplifiedCreation = useExperiment("connection.simplifiedCreation", true);
+  const analyticsService = useAnalyticsService();
   const onSelectSyncMode = useCallback(
     (syncMode: SyncModeValue) => {
       if (!streamNode.config || !streamNode.stream) {
@@ -87,8 +78,18 @@ export const SyncCatalogRow: React.FC<SyncCatalogRowProps & { className?: string
       }
       const updatedConfig = updateStreamSyncMode(streamNode.stream, streamNode.config, syncMode);
       updateStreamWithConfig(updatedConfig);
+
+      if (isSimplifiedCreation) {
+        analyticsService.track(Namespace.STREAM_SELECTION, Action.SET_SYNC_MODE, {
+          actionDescription: "User selected a sync mode for a stream",
+          streamNamespace: streamNode.stream.namespace,
+          streamName: streamNode.stream.name,
+          syncMode: syncMode.syncMode,
+          destinationSyncMode: syncMode.destinationSyncMode,
+        });
+      }
     },
-    [streamNode, updateStreamWithConfig]
+    [streamNode, updateStreamWithConfig, isSimplifiedCreation, analyticsService]
   );
 
   const onSelectStream = useCallback(
@@ -99,62 +100,10 @@ export const SyncCatalogRow: React.FC<SyncCatalogRowProps & { className?: string
     [config, updateStreamWithConfig]
   );
 
-  const onPkSelect = useCallback(
-    (pkPath: string[]) => {
-      if (!config) {
-        return;
-      }
-      const updatedConfig = toggleFieldInPrimaryKey(config, pkPath, numberOfFieldsInStream);
-      updateStreamWithConfig(updatedConfig);
-    },
-    [config, updateStreamWithConfig, numberOfFieldsInStream]
+  const { pkRequired, cursorRequired, shouldDefinePk, shouldDefineCursor } = checkCursorAndPKRequirements(
+    config!,
+    stream!
   );
-
-  const onCursorSelect = useCallback(
-    (cursorField: string[]) => {
-      if (!config) {
-        return;
-      }
-      const updatedConfig = updateCursorField(config, cursorField, numberOfFieldsInStream);
-      updateStreamWithConfig(updatedConfig);
-    },
-    [config, numberOfFieldsInStream, updateStreamWithConfig]
-  );
-
-  const onPkUpdate = useCallback(
-    (newPrimaryKey: string[][]) => {
-      if (!config) {
-        return;
-      }
-      const updatedConfig = updatePrimaryKey(config, newPrimaryKey, numberOfFieldsInStream);
-      updateStreamWithConfig(updatedConfig);
-    },
-    [config, updateStreamWithConfig, numberOfFieldsInStream]
-  );
-
-  const onToggleAllFieldsSelected = useCallback(() => {
-    if (!config) {
-      return;
-    }
-    const updatedConfig = toggleAllFieldsSelected(config);
-    updateStreamWithConfig(updatedConfig);
-  }, [config, updateStreamWithConfig]);
-
-  const onToggleFieldSelected = useCallback(
-    (fieldPath: string[], isSelected: boolean) => {
-      if (!config) {
-        return;
-      }
-      const updatedConfig = updateFieldSelected({ config, fields, fieldPath, isSelected, numberOfFieldsInStream });
-      updateStreamWithConfig(updatedConfig);
-    },
-    [config, fields, numberOfFieldsInStream, updateStreamWithConfig]
-  );
-
-  const pkRequired = config?.destinationSyncMode === DestinationSyncMode.append_dedup;
-  const cursorRequired = config?.syncMode === SyncMode.incremental;
-  const shouldDefinePk = stream?.sourceDefinedPrimaryKey?.length === 0 && pkRequired;
-  const shouldDefineCursor = !stream?.sourceDefinedCursor && cursorRequired;
 
   const availableSyncModes: SyncModeValue[] = useMemo(
     () =>
@@ -177,13 +126,6 @@ export const SyncCatalogRow: React.FC<SyncCatalogRowProps & { className?: string
       stream?.namespace
     ) ?? "";
 
-  const flattenedFields = useMemo(() => flattenSyncSchemaFields(fields), [fields]);
-
-  const primitiveFields = useMemo<SyncSchemaField[]>(
-    () => flattenedFields.filter(SyncSchemaFieldObject.isPrimitive),
-    [flattenedFields]
-  );
-
   const destName = `${prefix ? prefix : ""}${streamNode.stream?.name ?? ""}`;
   const configErrors = get(errors, `syncCatalog.streams[${stream?.name}_${stream?.namespace}].config`);
   const pkType = getFieldPathType(pkRequired, shouldDefinePk);
@@ -200,35 +142,23 @@ export const SyncCatalogRow: React.FC<SyncCatalogRowProps & { className?: string
         availableSyncModes={availableSyncModes}
         onSelectStream={onSelectStream}
         onSelectSyncMode={onSelectSyncMode}
-        primitiveFields={primitiveFields}
         pkType={pkType}
-        onPrimaryKeyChange={onPkUpdate}
         cursorType={cursorType}
-        onCursorChange={onCursorSelect}
         fields={fields}
         openStreamDetailsPanel={setIsStreamDetailsPanelOpened}
         configErrors={configErrors}
         disabled={disabled}
         className={className}
       />
-      {isStreamDetailsPanelOpened && hasFields && (
+      {isStreamDetailsPanelOpened && hasFields && stream && config && (
         <StreamDetailsPanel
+          stream={stream}
           config={config}
           disabled={mode === "readonly"}
-          syncSchemaFields={flattenedFields}
+          fields={fields}
           onClose={setIsStreamDetailsPanelOpened}
-          onCursorSelect={onCursorSelect}
-          onPkSelect={onPkSelect}
-          onSelectedChange={onSelectStream}
-          onSelectSyncMode={onSelectSyncMode}
-          handleFieldToggle={onToggleFieldSelected}
-          shouldDefinePk={shouldDefinePk}
-          shouldDefineCursor={shouldDefineCursor}
-          isCursorDefinitionSupported={cursorRequired}
-          isPKDefinitionSupported={pkRequired}
-          stream={stream}
           availableSyncModes={availableSyncModes}
-          toggleAllFieldsSelected={onToggleAllFieldsSelected}
+          updateStreamWithConfig={updateStreamWithConfig}
         />
       )}
     </>

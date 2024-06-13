@@ -2,8 +2,27 @@ micronaut:
   application:
     name: airbyte-cron
   caches:
+    # used by the analytics tracking client to cache calls to resolve the deployment and identity (workspace) for
+    # track events
+    analytics-tracking-deployments:
+      charset: "UTF-8"
+      expire-after-access: 10m
+    analytics-tracking-identity:
+      charset: "UTF-8"
+      expire-after-access: 10m
     remote-definitions-provider:
       expire-after-write: 15s
+  env:
+    cloud-deduction: true
+  metrics:
+    enabled: ${MICROMETER_METRICS_ENABLED:false}
+    export:
+      statsd:
+        enabled: ${MICROMETER_METRICS_ENABLED:false}
+        flavor: ${MICROMETER_METRICS_STATSD_FLAVOR:datadog}
+        step: ${MICROMETER_METRICS_STEP:PT30S}
+        host: ${STATSD_HOST:localhost}
+        port: ${STATSD_PORT:8125}
   server:
     port: 9001
 
@@ -46,14 +65,12 @@ airbyte:
     monitor:
       enabled: ${WORKLOAD_MONITOR_ENABLED:false}
       claim-check-rate: PT1M
-      claim-timeout: ${WORKLOAD_CLAIM_TIMEOUT:PT1H}
       heartbeat-check-rate: PT1M
-      heartbeat-timeout: PT5M
       not-started-check-rate: PT1M
       non-sync-age-check-rate: PT1M
       sync-age-check-rate: PT1M
-      non-sync-workload-timeout: ${NON_SYNC_WORKLOAD_TIMEOUT:PT9M}
-      sync-workload-timeout: ${SYNC_WORKLOAD_TIMEOUT:P30D}
+      non-sync-workload-timeout: ${NON_SYNC_WORKLOAD_TIMEOUT:PT4H} # Should be longer than the sum of the deadlines
+      sync-workload-timeout: ${SYNC_WORKLOAD_TIMEOUT:P30D} # Should be longer than the sum of the deadlines
   workload-api:
     base-path: ${WORKLOAD_API_HOST:}
     bearer-token: ${WORKLOAD_API_BEARER_TOKEN:}
@@ -97,6 +114,9 @@ endpoints:
   beans:
     enabled: true
     sensitive: false
+  caches:
+    enabled: true
+    sensitive: false
   env:
     enabled: true
     sensitive: false
@@ -109,6 +129,9 @@ endpoints:
   loggers:
     enabled: true
     sensitive: true
+  metrics:
+    enabled: ${MICROMETER_METRICS_ENABLED:false}
+    sensitive: false
   refresh:
     enabled: false
     sensitive: true

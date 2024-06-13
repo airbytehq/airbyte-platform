@@ -1,21 +1,26 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.commons.server.handlers;
 
+import static io.airbyte.commons.server.handlers.helpers.StatsAggregationHelper.hydrateWithStats;
+import static io.airbyte.featureflag.ContextKt.ANONYMOUS;
+import static io.airbyte.persistence.job.models.Job.SYNC_REPLICATION_TYPES;
+
 import com.google.common.base.Preconditions;
+import datadog.trace.api.Trace;
 import io.airbyte.api.model.generated.AttemptInfoRead;
 import io.airbyte.api.model.generated.AttemptNormalizationStatusReadList;
-import io.airbyte.api.model.generated.AttemptRead;
-import io.airbyte.api.model.generated.AttemptStats;
-import io.airbyte.api.model.generated.AttemptStreamStats;
 import io.airbyte.api.model.generated.ConnectionIdRequestBody;
 import io.airbyte.api.model.generated.ConnectionRead;
+import io.airbyte.api.model.generated.ConnectionSyncProgressRead;
 import io.airbyte.api.model.generated.DestinationDefinitionIdRequestBody;
 import io.airbyte.api.model.generated.DestinationDefinitionRead;
 import io.airbyte.api.model.generated.DestinationIdRequestBody;
 import io.airbyte.api.model.generated.DestinationRead;
+import io.airbyte.api.model.generated.JobAggregatedStats;
+import io.airbyte.api.model.generated.JobConfigType;
 import io.airbyte.api.model.generated.JobDebugInfoRead;
 import io.airbyte.api.model.generated.JobDebugRead;
 import io.airbyte.api.model.generated.JobIdRequestBody;
@@ -31,7 +36,11 @@ import io.airbyte.api.model.generated.SourceDefinitionIdRequestBody;
 import io.airbyte.api.model.generated.SourceDefinitionRead;
 import io.airbyte.api.model.generated.SourceIdRequestBody;
 import io.airbyte.api.model.generated.SourceRead;
+import io.airbyte.api.model.generated.StreamDescriptor;
+import io.airbyte.api.model.generated.StreamStats;
+import io.airbyte.api.model.generated.StreamSyncProgressReadItem;
 import io.airbyte.commons.enums.Enums;
+import io.airbyte.commons.server.converters.ApiPojoConverters;
 import io.airbyte.commons.server.converters.JobConverter;
 import io.airbyte.commons.server.converters.WorkflowStateConverter;
 import io.airbyte.commons.temporal.TemporalClient;
@@ -39,22 +48,36 @@ import io.airbyte.commons.version.AirbyteVersion;
 import io.airbyte.config.Configs.WorkerEnvironment;
 import io.airbyte.config.JobConfig;
 import io.airbyte.config.JobConfig.ConfigType;
+import io.airbyte.config.JobConfigProxy;
+import io.airbyte.config.StandardSync;
 import io.airbyte.config.helpers.LogConfigs;
 import io.airbyte.config.persistence.ConfigNotFoundException;
+import io.airbyte.data.services.ConnectionService;
+import io.airbyte.featureflag.FeatureFlagClient;
+import io.airbyte.featureflag.HydrateAggregatedStats;
+import io.airbyte.featureflag.Workspace;
+import io.airbyte.metrics.lib.ApmTraceUtils;
+import io.airbyte.metrics.lib.MetricTags;
 import io.airbyte.persistence.job.JobPersistence;
-import io.airbyte.persistence.job.JobPersistence.JobAttemptPair;
 import io.airbyte.persistence.job.models.Job;
 import io.airbyte.persistence.job.models.JobStatus;
 import io.airbyte.persistence.job.models.JobStatusSummary;
+import io.airbyte.protocol.models.ConfiguredAirbyteStream;
+import io.airbyte.protocol.models.SyncMode;
 import io.airbyte.validation.json.JsonValidationException;
+import io.micronaut.core.util.CollectionUtils;
 import jakarta.inject.Singleton;
 import java.io.IOException;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.SortedMap;
+import java.util.TreeMap;
 import java.util.UUID;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
 
@@ -65,7 +88,7 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 public class JobHistoryHandler {
 
-  private final ConnectionsHandler connectionsHandler;
+  private final ConnectionService connectionService;
   private final SourceHandler sourceHandler;
   private final DestinationHandler destinationHandler;
   private final SourceDefinitionsHandler sourceDefinitionsHandler;
@@ -76,21 +99,27 @@ public class JobHistoryHandler {
   private final WorkflowStateConverter workflowStateConverter;
   private final AirbyteVersion airbyteVersion;
   private final TemporalClient temporalClient;
+  private final FeatureFlagClient featureFlagClient;
+
+  private static final Set<JobConfigType> CONFIG_TYPE_SUPPORTING_PROGRESS =
+      Set.of(JobConfigType.SYNC, JobConfigType.REFRESH, JobConfigType.RESET_CONNECTION, JobConfigType.CLEAR);
 
   public JobHistoryHandler(final JobPersistence jobPersistence,
                            final WorkerEnvironment workerEnvironment,
                            final LogConfigs logConfigs,
-                           final ConnectionsHandler connectionsHandler,
+                           final ConnectionService connectionService,
                            final SourceHandler sourceHandler,
                            final SourceDefinitionsHandler sourceDefinitionsHandler,
                            final DestinationHandler destinationHandler,
                            final DestinationDefinitionsHandler destinationDefinitionsHandler,
                            final AirbyteVersion airbyteVersion,
-                           final TemporalClient temporalClient) {
-    jobConverter = new JobConverter(workerEnvironment, logConfigs);
+                           final TemporalClient temporalClient,
+                           final FeatureFlagClient featureFlagClient) {
+    this.featureFlagClient = featureFlagClient;
+    jobConverter = new JobConverter(workerEnvironment, logConfigs, featureFlagClient);
     workflowStateConverter = new WorkflowStateConverter();
     this.jobPersistence = jobPersistence;
-    this.connectionsHandler = connectionsHandler;
+    this.connectionService = connectionService;
     this.sourceHandler = sourceHandler;
     this.sourceDefinitionsHandler = sourceDefinitionsHandler;
     this.destinationHandler = destinationHandler;
@@ -103,17 +132,19 @@ public class JobHistoryHandler {
   public JobHistoryHandler(final JobPersistence jobPersistence,
                            final WorkerEnvironment workerEnvironment,
                            final LogConfigs logConfigs,
-                           final ConnectionsHandler connectionsHandler,
+                           final ConnectionService connectionService,
                            final SourceHandler sourceHandler,
                            final SourceDefinitionsHandler sourceDefinitionsHandler,
                            final DestinationHandler destinationHandler,
                            final DestinationDefinitionsHandler destinationDefinitionsHandler,
-                           final AirbyteVersion airbyteVersion) {
-    this(jobPersistence, workerEnvironment, logConfigs, connectionsHandler, sourceHandler, sourceDefinitionsHandler, destinationHandler,
-        destinationDefinitionsHandler, airbyteVersion, null);
+                           final AirbyteVersion airbyteVersion,
+                           final FeatureFlagClient featureFlagClient) {
+    this(jobPersistence, workerEnvironment, logConfigs, connectionService, sourceHandler, sourceDefinitionsHandler, destinationHandler,
+        destinationDefinitionsHandler, airbyteVersion, null, featureFlagClient);
   }
 
   @SuppressWarnings("UnstableApiUsage")
+  @Trace
   public JobReadList listJobsFor(final JobListRequestBody request) throws IOException {
     Preconditions.checkNotNull(request.getConfigTypes(), "configType cannot be null.");
     Preconditions.checkState(!request.getConfigTypes().isEmpty(), "Must include at least one configType.");
@@ -122,11 +153,18 @@ public class JobHistoryHandler {
         .stream()
         .map(type -> Enums.convertTo(type, JobConfig.ConfigType.class))
         .collect(Collectors.toSet());
+
     final String configId = request.getConfigId();
 
     final int pageSize = (request.getPagination() != null && request.getPagination().getPageSize() != null) ? request.getPagination().getPageSize()
         : DEFAULT_PAGE_SIZE;
     final List<Job> jobs;
+
+    final HashMap<String, Object> tags = new HashMap<>(Map.of(MetricTags.CONFIG_TYPES, configTypes.toString()));
+    if (configId != null) {
+      tags.put(MetricTags.CONNECTION_ID, configId);
+    }
+    ApmTraceUtils.addTagsToTrace(tags);
 
     if (request.getIncludingJobId() != null) {
       jobs = jobPersistence.listJobsIncludingId(
@@ -137,36 +175,91 @@ public class JobHistoryHandler {
     } else {
       jobs = jobPersistence.listJobs(configTypes, configId, pageSize,
           (request.getPagination() != null && request.getPagination().getRowOffset() != null) ? request.getPagination().getRowOffset() : 0,
-          request.getStatus() == null ? null : JobStatus.valueOf(request.getStatus().toString().toUpperCase()),
+          CollectionUtils.isEmpty(request.getStatuses()) ? null : mapToDomainJobStatus(request.getStatuses()),
           request.getCreatedAtStart(),
           request.getCreatedAtEnd(),
           request.getUpdatedAtStart(),
           request.getUpdatedAtEnd(),
-          request.getOrderByField() == null ? null : request.getOrderByField().name(),
-          request.getOrderByMethod() == null ? null : request.getOrderByMethod().name());
+          request.getOrderByField() == null ? null : request.getOrderByField().value(),
+          request.getOrderByMethod() == null ? null : request.getOrderByMethod().value());
     }
 
     final List<JobWithAttemptsRead> jobReads = jobs.stream().map(JobConverter::getJobWithAttemptsRead).collect(Collectors.toList());
-    final var jobIds = jobReads.stream().map(r -> r.getJob().getId()).toList();
-    final Map<JobAttemptPair, JobPersistence.AttemptStats> stats = jobPersistence.getAttemptStats(jobIds);
-    for (final JobWithAttemptsRead jwar : jobReads) {
-      for (final AttemptRead a : jwar.getAttempts()) {
-        final var stat = stats.get(new JobAttemptPair(jwar.getJob().getId(), a.getId().intValue()));
-        if (stat == null) {
-          log.warn("Missing stats for job {} attempt {}", jwar.getJob().getId(), a.getId().intValue());
-          continue;
-        }
 
-        hydrateWithStats(a, stat);
-      }
+    hydrateWithStats(
+        jobReads,
+        jobs,
+        featureFlagClient.boolVariation(HydrateAggregatedStats.INSTANCE, new Workspace(ANONYMOUS)),
+        jobPersistence);
+
+    final Long totalJobCount = jobPersistence.getJobCount(configTypes, configId,
+        CollectionUtils.isEmpty(request.getStatuses()) ? null : mapToDomainJobStatus(request.getStatuses()),
+        request.getCreatedAtStart(),
+        request.getCreatedAtEnd(),
+        request.getUpdatedAtStart(),
+        request.getUpdatedAtEnd());
+    return new JobReadList().jobs(jobReads).totalJobCount(totalJobCount);
+  }
+
+  public JobReadList listJobsForLight(final JobListRequestBody request) throws IOException {
+    Preconditions.checkNotNull(request.getConfigTypes(), "configType cannot be null.");
+    Preconditions.checkState(!request.getConfigTypes().isEmpty(), "Must include at least one configType.");
+
+    final Set<ConfigType> configTypes = request.getConfigTypes()
+        .stream()
+        .map(type -> Enums.convertTo(type, JobConfig.ConfigType.class))
+        .collect(Collectors.toSet());
+
+    final String configId = request.getConfigId();
+
+    final int pageSize = (request.getPagination() != null && request.getPagination().getPageSize() != null) ? request.getPagination().getPageSize()
+        : DEFAULT_PAGE_SIZE;
+    final List<Job> jobs;
+
+    final HashMap<String, Object> tags = new HashMap<>(Map.of(MetricTags.CONFIG_TYPES, configTypes.toString()));
+    if (configId != null) {
+      tags.put(MetricTags.CONNECTION_ID, configId);
+    }
+    ApmTraceUtils.addTagsToTrace(tags);
+
+    if (request.getIncludingJobId() != null) {
+      jobs = jobPersistence.listJobsIncludingId(
+          configTypes,
+          configId,
+          request.getIncludingJobId(),
+          pageSize);
+    } else {
+      jobs = jobPersistence.listJobsLight(configTypes, configId, pageSize,
+          (request.getPagination() != null && request.getPagination().getRowOffset() != null) ? request.getPagination().getRowOffset() : 0,
+          CollectionUtils.isEmpty(request.getStatuses()) ? null : mapToDomainJobStatus(request.getStatuses()),
+          request.getCreatedAtStart(),
+          request.getCreatedAtEnd(),
+          request.getUpdatedAtStart(),
+          request.getUpdatedAtEnd(),
+          request.getOrderByField() == null ? null : request.getOrderByField().value(),
+          request.getOrderByMethod() == null ? null : request.getOrderByMethod().value());
     }
 
-    final Long totalJobCount = jobPersistence.getJobCount(configTypes, configId);
+    final List<JobWithAttemptsRead> jobReads = jobs.stream().map(JobConverter::getJobWithAttemptsRead).collect(Collectors.toList());
+
+    hydrateWithStats(
+        jobReads,
+        jobs,
+        featureFlagClient.boolVariation(HydrateAggregatedStats.INSTANCE, new Workspace(ANONYMOUS)),
+        jobPersistence);
+
+    final Long totalJobCount = jobPersistence.getJobCount(configTypes, configId,
+        CollectionUtils.isEmpty(request.getStatuses()) ? null : mapToDomainJobStatus(request.getStatuses()),
+        request.getCreatedAtStart(),
+        request.getCreatedAtEnd(),
+        request.getUpdatedAtStart(),
+        request.getUpdatedAtEnd());
     return new JobReadList().jobs(jobReads).totalJobCount(totalJobCount);
   }
 
   @SuppressWarnings("UnstableApiUsage")
   public JobReadList listJobsForWorkspaces(final JobListForWorkspacesRequestBody request) throws IOException {
+
     Preconditions.checkNotNull(request.getConfigTypes(), "configType cannot be null.");
     Preconditions.checkState(!request.getConfigTypes().isEmpty(), "Must include at least one configType.");
 
@@ -181,72 +274,41 @@ public class JobHistoryHandler {
     final int offset =
         (request.getPagination() != null && request.getPagination().getRowOffset() != null) ? request.getPagination().getRowOffset() : 0;
 
-    final List<Job> jobs = jobPersistence.listJobs(
+    final List<Job> jobs = jobPersistence.listJobsLight(
         configTypes,
         request.getWorkspaceIds(),
         pageSize,
         offset,
-        request.getStatus() == null ? null : JobStatus.valueOf(request.getStatus().toString().toUpperCase()),
+        CollectionUtils.isEmpty(request.getStatuses()) ? null : mapToDomainJobStatus(request.getStatuses()),
         request.getCreatedAtStart(),
         request.getCreatedAtEnd(),
         request.getUpdatedAtStart(),
         request.getUpdatedAtEnd(),
-        request.getOrderByField() == null ? null : request.getOrderByField().name(),
-        request.getOrderByMethod() == null ? null : request.getOrderByMethod().name());
+        request.getOrderByField() == null ? null : request.getOrderByField().value(),
+        request.getOrderByMethod() == null ? null : request.getOrderByMethod().value());
 
     final List<JobWithAttemptsRead> jobReads = jobs.stream().map(JobConverter::getJobWithAttemptsRead).collect(Collectors.toList());
-    final var jobIds = jobReads.stream().map(r -> r.getJob().getId()).toList();
-    final Map<JobAttemptPair, JobPersistence.AttemptStats> stats = jobPersistence.getAttemptStats(jobIds);
-    for (final JobWithAttemptsRead jwar : jobReads) {
-      for (final AttemptRead a : jwar.getAttempts()) {
-        final var stat = stats.get(new JobAttemptPair(jwar.getJob().getId(), a.getId().intValue()));
-        if (stat == null) {
-          log.warn("Missing stats for job {} attempt {}", jwar.getJob().getId(), a.getId().intValue());
-          continue;
-        }
 
-        hydrateWithStats(a, stat);
-      }
-    }
+    hydrateWithStats(
+        jobReads,
+        jobs,
+        featureFlagClient.boolVariation(HydrateAggregatedStats.INSTANCE, new Workspace(ANONYMOUS)),
+        jobPersistence);
 
     return new JobReadList().jobs(jobReads).totalJobCount((long) jobs.size());
   }
 
-  /**
-   * Retrieve stats for a given job id and attempt number and hydrate the api model with the retrieved
-   * information.
-   *
-   * @param jobId the job the attempt belongs to. Used as an index to retrieve stats.
-   * @param a the attempt to hydrate stats for.
-   */
-  private void hydrateWithStats(final AttemptRead a, final JobPersistence.AttemptStats attemptStats) {
-    a.setTotalStats(new AttemptStats());
+  public static Map<StreamNameAndNamespace, SyncMode> getStreamsToSyncMode(Job job) {
+    List<ConfiguredAirbyteStream> configuredAirbyteStreams = extractStreams(job);
+    return configuredAirbyteStreams.stream()
+        .collect(Collectors.toMap(
+            configuredStream -> new StreamNameAndNamespace(configuredStream.getStream().getName(), configuredStream.getStream().getNamespace()),
+            ConfiguredAirbyteStream::getSyncMode));
+  }
 
-    final var combinedStats = attemptStats.combinedStats();
-    if (combinedStats == null) {
-      // If overall stats are missing, assume stream stats are also missing, since overall stats are
-      // easier to produce than stream stats. Exit early.
-      return;
-    }
-
-    a.getTotalStats()
-        .estimatedBytes(combinedStats.getEstimatedBytes())
-        .estimatedRecords(combinedStats.getEstimatedRecords())
-        .bytesEmitted(combinedStats.getBytesEmitted())
-        .recordsEmitted(combinedStats.getRecordsEmitted())
-        .recordsCommitted(combinedStats.getRecordsCommitted());
-
-    final var streamStats = attemptStats.perStreamStats().stream().map(s -> new AttemptStreamStats()
-        .streamName(s.getStreamName())
-        .streamNamespace(s.getStreamNamespace())
-        .stats(new AttemptStats()
-            .bytesEmitted(s.getStats().getBytesEmitted())
-            .recordsEmitted(s.getStats().getRecordsEmitted())
-            .recordsCommitted(s.getStats().getRecordsCommitted())
-            .estimatedBytes(s.getStats().getEstimatedBytes())
-            .estimatedRecords(s.getStats().getEstimatedRecords())))
-        .collect(Collectors.toList());
-    a.setStreamStats(streamStats);
+  private static List<ConfiguredAirbyteStream> extractStreams(Job job) {
+    final var configuredCatalog = new JobConfigProxy(job.getConfig()).getConfiguredCatalog();
+    return configuredCatalog != null ? configuredCatalog.getStreams() : List.of();
   }
 
   public JobInfoRead getJobInfo(final JobIdRequestBody jobIdRequestBody) throws IOException {
@@ -256,7 +318,13 @@ public class JobHistoryHandler {
 
   public JobInfoRead getJobInfoWithoutLogs(final JobIdRequestBody jobIdRequestBody) throws IOException {
     final Job job = jobPersistence.getJob(jobIdRequestBody.getId());
-    return jobConverter.getJobInfoWithoutLogsRead(job);
+
+    final JobWithAttemptsRead jobWithAttemptsRead = JobConverter.getJobWithAttemptsRead(job);
+    hydrateWithStats(List.of(jobWithAttemptsRead), List.of(job), true, jobPersistence);
+
+    return new JobInfoRead()
+        .job(jobWithAttemptsRead.getJob())
+        .attempts(job.getAttempts().stream().map(JobConverter::getAttemptInfoWithoutLogsRead).collect(Collectors.toList()));
   }
 
   public JobInfoLightRead getJobInfoLight(final JobIdRequestBody jobIdRequestBody) throws IOException {
@@ -299,13 +367,84 @@ public class JobHistoryHandler {
   public Optional<JobRead> getLatestRunningSyncJob(final UUID connectionId) throws IOException {
     final List<Job> nonTerminalSyncJobsForConnection = jobPersistence.listJobsForConnectionWithStatuses(
         connectionId,
-        Collections.singleton(ConfigType.SYNC),
+        SYNC_REPLICATION_TYPES,
         JobStatus.NON_TERMINAL_STATUSES);
 
     // there *should* only be a single running sync job for a connection, but
     // jobPersistence.listJobsForConnectionWithStatuses orders by created_at desc so
     // .findFirst will always return what we want.
     return nonTerminalSyncJobsForConnection.stream().map(JobConverter::getJobRead).findFirst();
+  }
+
+  public ConnectionSyncProgressRead getConnectionSyncProgress(final ConnectionIdRequestBody connectionIdRequestBody) throws IOException {
+    final List<Job> jobs = jobPersistence.getRunningSyncJobForConnections(List.of(connectionIdRequestBody.getConnectionId()));
+
+    final List<JobWithAttemptsRead> jobReads = jobs.stream()
+        .map(JobConverter::getJobWithAttemptsRead)
+        .collect(Collectors.toList());
+
+    hydrateWithStats(jobReads, jobs, featureFlagClient.boolVariation(HydrateAggregatedStats.INSTANCE, new Workspace(ANONYMOUS)), jobPersistence);
+
+    if (jobReads.isEmpty() || jobReads.getFirst() == null
+        || !CONFIG_TYPE_SUPPORTING_PROGRESS.contains(jobReads.getFirst().getJob().getConfigType())) {
+      return new ConnectionSyncProgressRead().connectionId(connectionIdRequestBody.getConnectionId()).streams(Collections.emptyList());
+    }
+    final JobWithAttemptsRead runningJob = jobReads.getFirst();
+
+    // Create a map from the stream stats list
+    final Map<String, StreamStats> streamStatsMap = runningJob
+        .getJob().getStreamAggregatedStats().stream()
+        .collect(Collectors.toMap(
+            streamStats -> streamStats.getStreamName() + "-" + streamStats.getStreamNamespace(),
+            Function.identity()));
+
+    // Iterate through ALL enabled streams from the job, enriching with stream stats data
+    final JobConfigType runningJobConfigType = runningJob.getJob().getConfigType();
+    final SortedMap<JobConfigType, List<StreamDescriptor>> streamToTrackPerConfigType = new TreeMap<>();
+    final var enabledStreams = runningJob.getJob().getEnabledStreams();
+    if (runningJobConfigType.equals(JobConfigType.SYNC)) {
+      streamToTrackPerConfigType.put(JobConfigType.SYNC, enabledStreams);
+    } else if (runningJobConfigType.equals(JobConfigType.REFRESH)) {
+      final List<StreamDescriptor> streamsToRefresh = runningJob.getJob().getRefreshConfig().getStreamsToRefresh();
+      streamToTrackPerConfigType.put(JobConfigType.REFRESH, streamsToRefresh);
+      streamToTrackPerConfigType.put(JobConfigType.SYNC, enabledStreams.stream().filter(s -> !streamsToRefresh.contains(s)).toList());
+    } else if (runningJobConfigType.equals(JobConfigType.RESET_CONNECTION) || runningJobConfigType.equals(JobConfigType.CLEAR)) {
+      streamToTrackPerConfigType.put(JobConfigType.CLEAR, runningJob.getJob().getResetConfig().getStreamsToReset());
+    }
+
+    final List<StreamSyncProgressReadItem> finalStreamsWithStats = streamToTrackPerConfigType.entrySet().stream()
+        .flatMap((entry) -> {
+          return entry.getValue().stream().map(stream -> {
+            final String key = stream.getName() + "-" + stream.getNamespace();
+            final StreamStats streamStats = streamStatsMap.get(key);
+
+            final StreamSyncProgressReadItem item = new StreamSyncProgressReadItem()
+                .streamName(stream.getName())
+                .streamNamespace(stream.getNamespace())
+                .configType(entry.getKey());
+
+            if (streamStats != null) {
+              item.recordsEmitted(streamStats.getRecordsEmitted())
+                  .recordsCommitted(streamStats.getRecordsCommitted())
+                  .bytesEmitted(streamStats.getBytesEmitted())
+                  .bytesCommitted(streamStats.getBytesCommitted());
+            }
+
+            return item;
+          });
+        }).collect(Collectors.toList());
+
+    final JobAggregatedStats aggregatedStats = runningJob.getJob().getAggregatedStats();
+    return new ConnectionSyncProgressRead()
+        .connectionId(connectionIdRequestBody.getConnectionId())
+        .jobId(runningJob.getJob().getId())
+        .syncStartedAt(runningJob.getJob().getStartedAt())
+        .bytesEmitted(aggregatedStats == null ? null : aggregatedStats.getBytesEmitted())
+        .bytesCommitted(aggregatedStats == null ? null : aggregatedStats.getBytesCommitted())
+        .recordsEmitted(aggregatedStats == null ? null : aggregatedStats.getRecordsEmitted())
+        .recordsCommitted(aggregatedStats == null ? null : aggregatedStats.getRecordsCommitted())
+        .configType(runningJobConfigType)
+        .streams(finalStreamsWithStats);
   }
 
   public Optional<JobRead> getLatestSyncJob(final UUID connectionId) throws IOException {
@@ -356,7 +495,14 @@ public class JobHistoryHandler {
   private JobDebugInfoRead buildJobDebugInfoRead(final JobInfoRead jobInfoRead)
       throws ConfigNotFoundException, IOException, JsonValidationException {
     final String configId = jobInfoRead.getJob().getConfigId();
-    final ConnectionRead connection = connectionsHandler.getConnection(UUID.fromString(configId));
+    final StandardSync standardSync;
+    try {
+      standardSync = connectionService.getStandardSync(UUID.fromString(configId));
+    } catch (io.airbyte.data.exceptions.ConfigNotFoundException e) {
+      throw new ConfigNotFoundException(e.getType(), e.getMessage());
+    }
+
+    final ConnectionRead connection = ApiPojoConverters.internalToConnectionRead(standardSync);
     final SourceRead source = getSourceRead(connection);
     final DestinationRead destination = getDestinationRead(connection);
     final SourceDefinitionRead sourceDefinitionRead = getSourceDefinitionRead(source);
@@ -367,5 +513,13 @@ public class JobHistoryHandler {
         .attempts(jobInfoRead.getAttempts())
         .job(jobDebugRead);
   }
+
+  public List<JobStatus> mapToDomainJobStatus(List<io.airbyte.api.model.generated.JobStatus> apiJobStatuses) {
+    return apiJobStatuses.stream()
+        .map(apiJobStatus -> JobStatus.valueOf(apiJobStatus.toString().toUpperCase()))
+        .collect(Collectors.toList());
+  }
+
+  public record StreamNameAndNamespace(String name, String namespace) {}
 
 }

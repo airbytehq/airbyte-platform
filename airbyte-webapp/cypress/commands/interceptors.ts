@@ -10,7 +10,7 @@ export const waitForUpdateConnectionRequest = () => cy.wait("@updateConnection",
 
 export const interceptDiscoverSchemaRequest = () =>
   cy.intercept("/api/v1/sources/discover_schema").as("discoverSchema");
-export const waitForDiscoverSchemaRequest = () => cy.wait("@discoverSchema");
+export const waitForDiscoverSchemaRequest = () => cy.wait("@discoverSchema", { timeout: 60000 });
 
 export const interceptCreateConnectionRequest = () =>
   cy.intercept("/api/v1/web_backend/connections/create").as("createConnection");

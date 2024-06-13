@@ -2,12 +2,19 @@
 @use "scss/colors";
 
 .listboxContainer {
-  width: variables.$width-extra-wide-menu;
+  max-width: 300px;
+}
+
+.controlButton {
+  background-color: colors.$foreground;
+  border-radius: variables.$border-radius-sm;
+  border: variables.$border-thin solid colors.$grey-300;
+  min-height: auto;
+  height: variables.$button-height-xs;
 }
 
 .controlButtonLabel {
   width: calc(100% - variables.$spacing-lg);
-  color: colors.$dark-blue;
 
   p {
     overflow: hidden;
@@ -15,4 +22,15 @@
     white-space: nowrap;
     margin: 0;
   }
+}
+
+.periodOptionsMenu {
+  white-space: nowrap;
+}
+
+.connectorOptionsMenu {
+  display: block;
+  overflow: auto;
+  width: 300px;
+  max-height: variables.$height-long-listbox-options-list;
 }

@@ -21,8 +21,14 @@ interface DropdownMenuSeparator {
   as: "separator";
 }
 
+interface DropdownMenuDiv {
+  as: "div";
+  className?: string;
+  children?: React.ReactNode;
+}
+
 export type DropdownMenuOptionType = DropdownMenuOptionAnchorType | DropdownMenuOptionButtonType;
-export type DropdownMenuOptions = Array<DropdownMenuOptionType | DropdownMenuSeparator>;
+export type DropdownMenuOptions = Array<DropdownMenuOptionType | DropdownMenuSeparator | DropdownMenuDiv>;
 
 type DropdownMenuOptionButtonType = DropdownMenuOptionBaseType & { as?: "button" };
 

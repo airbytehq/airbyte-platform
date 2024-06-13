@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.api.server.services
@@ -16,6 +16,7 @@ import io.airbyte.api.client.model.generated.WorkspaceIdRequestBody
 import io.airbyte.api.client.model.generated.WorkspaceRead
 import io.airbyte.api.client.model.generated.WorkspaceReadList
 import io.airbyte.api.server.apiTracking.TrackingHelper
+import io.airbyte.api.server.constants.AIRBYTE_API_AUTH_HEADER_VALUE
 import io.airbyte.api.server.constants.DELETE
 import io.airbyte.api.server.constants.GET
 import io.airbyte.api.server.constants.HTTP_RESPONSE_BODY_DEBUG_MESSAGE
@@ -32,10 +33,10 @@ import io.micronaut.context.annotation.Value
 import io.micronaut.http.HttpResponse
 import io.micronaut.http.client.exceptions.HttpClientResponseException
 import jakarta.inject.Singleton
+import jakarta.ws.rs.core.Response
 import org.slf4j.LoggerFactory
 import java.util.Objects
 import java.util.UUID
-import javax.ws.rs.core.Response
 
 interface WorkspaceService {
   fun createWorkspace(
@@ -114,6 +115,8 @@ interface WorkspaceService {
   ): Response
 }
 
+val DEFAULT_ORGANIZATION_ID = UUID.fromString("00000000-0000-0000-0000-000000000000")!!
+
 @Singleton
 @Secondary
 open class WorkspaceServiceImpl(
@@ -136,7 +139,9 @@ open class WorkspaceServiceImpl(
     authorization: String?,
     userInfo: String?,
   ): WorkspaceResponse {
-    val workspaceCreate = WorkspaceCreate().name(workspaceCreateRequest.name)
+    // For now this should always be true in OSS.
+    val organizationId = DEFAULT_ORGANIZATION_ID
+    val workspaceCreate = WorkspaceCreate(name = workspaceCreateRequest.name, organizationId = organizationId)
     val workspaceReadHttpResponse =
       try {
         configApiClient.createWorkspace(workspaceCreate, authorization, userInfo)
@@ -209,8 +214,7 @@ open class WorkspaceServiceImpl(
     authorization: String?,
     userInfo: String?,
   ): WorkspaceResponse {
-    val workspaceIdRequestBody = WorkspaceIdRequestBody()
-    workspaceIdRequestBody.workspaceId = workspaceId
+    val workspaceIdRequestBody = WorkspaceIdRequestBody(workspaceId = workspaceId)
     val response =
       try {
         configApiClient.getWorkspace(workspaceIdRequestBody, authorization, userInfo)
@@ -262,8 +266,7 @@ open class WorkspaceServiceImpl(
     authorization: String?,
     userInfo: String?,
   ) {
-    val workspaceIdRequestBody = WorkspaceIdRequestBody()
-    workspaceIdRequestBody.workspaceId = workspaceId
+    val workspaceIdRequestBody = WorkspaceIdRequestBody(workspaceId = workspaceId)
     val response =
       try {
         configApiClient.deleteWorkspace(workspaceIdRequestBody, authorization, userInfo)
@@ -312,14 +315,19 @@ open class WorkspaceServiceImpl(
     authorization: String?,
     userInfo: String?,
   ): WorkspacesResponse {
-    val pagination: Pagination = Pagination().pageSize(limit).rowOffset(offset)
+    val pagination = Pagination(pageSize = limit, rowOffset = offset)
 
-    val workspaceIdsToQuery = workspaceIds.ifEmpty { userService.getAllWorkspaceIdsForUser(userInfo) }
+    val workspaceIdsToQuery =
+      workspaceIds.ifEmpty {
+        userService.getAllWorkspaceIdsForUser(authorization ?: System.getenv(AIRBYTE_API_AUTH_HEADER_VALUE), userInfo)
+      }
     log.debug("Workspaces to query: $workspaceIdsToQuery")
-    val listResourcesForWorkspacesRequestBody = ListResourcesForWorkspacesRequestBody()
-    listResourcesForWorkspacesRequestBody.includeDeleted = includeDeleted
-    listResourcesForWorkspacesRequestBody.pagination = pagination
-    listResourcesForWorkspacesRequestBody.workspaceIds = workspaceIdsToQuery
+    val listResourcesForWorkspacesRequestBody =
+      ListResourcesForWorkspacesRequestBody(
+        workspaceIds = workspaceIdsToQuery,
+        includeDeleted = includeDeleted,
+        pagination = pagination,
+      )
     val response =
       try {
         configApiClient.listWorkspaces(listResourcesForWorkspacesRequestBody, authorization, userInfo)

@@ -14,7 +14,7 @@ export const ConnectorHeader: React.FC<ConnectorHeaderProps> = ({ type, icon }) 
   return (
     <span className={styles.container} data-testid={`connector-header-group-icon-container-${type}`}>
       <div className={styles.icon}>
-        <SvgIcon svg={icon} />
+        <SvgIcon src={icon} />
       </div>
       <FormattedMessage id={`connector.${type}`} />
     </span>

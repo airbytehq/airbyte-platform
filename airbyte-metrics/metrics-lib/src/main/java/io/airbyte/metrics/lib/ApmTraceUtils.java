@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.metrics.lib;
@@ -19,8 +19,10 @@ import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.nio.file.Path;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 /**
  * Collection of utility methods to help with performance tracing.
@@ -36,6 +38,20 @@ public class ApmTraceUtils {
    * Standard prefix for tags added to spans.
    */
   public static final String TAG_PREFIX = "metadata";
+
+  /**
+   * Converts the provided metric attributes to tags and adds them to the currently active span, if
+   * one exists. <br />
+   * All tags added via this method will use the default {@link #TAG_PREFIX} namespace.
+   *
+   * @param attrs A list of attributes to be converted to tags and added to the currently active span.
+   */
+  public static void addTagsToTrace(final List<MetricAttribute> attrs) {
+    final Map<String, Object> tags = attrs.stream()
+        .collect(Collectors.toMap(MetricAttribute::key, MetricAttribute::value));
+
+    addTagsToTrace(tags, TAG_PREFIX);
+  }
 
   /**
    * Adds all the provided tags to the currently active span, if one exists. <br />

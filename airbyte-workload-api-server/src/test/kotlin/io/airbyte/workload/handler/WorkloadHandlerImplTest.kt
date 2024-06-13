@@ -1,5 +1,6 @@
 package io.airbyte.workload.handler
 
+import io.airbyte.featureflag.TestClient
 import io.airbyte.workload.api.domain.WorkloadLabel
 import io.airbyte.workload.errors.ConflictException
 import io.airbyte.workload.errors.InvalidStatusTransitionException
@@ -17,6 +18,7 @@ import io.mockk.clearAllMocks
 import io.mockk.every
 import io.mockk.just
 import io.mockk.mockk
+import io.mockk.spyk
 import io.mockk.verify
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
@@ -28,11 +30,26 @@ import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.EnumSource
 import java.time.OffsetDateTime
 import java.util.Optional
+import java.util.UUID
 
 class WorkloadHandlerImplTest {
+  val now = OffsetDateTime.now()
+
   @BeforeEach
   fun reset() {
     clearAllMocks()
+    every { workloadHandler.offsetDateTime() }.returns(now)
+  }
+
+  @Test
+  fun `test active statuses are complete`() {
+    assertEquals(
+      setOf(WorkloadStatus.PENDING, WorkloadStatus.CLAIMED, WorkloadStatus.LAUNCHED, WorkloadStatus.RUNNING),
+      WorkloadHandlerImpl.ACTIVE_STATUSES.toSet(),
+    )
+    assertFalse(WorkloadHandlerImpl.ACTIVE_STATUSES.contains(WorkloadStatus.CANCELLED))
+    assertFalse(WorkloadHandlerImpl.ACTIVE_STATUSES.contains(WorkloadStatus.FAILURE))
+    assertFalse(WorkloadHandlerImpl.ACTIVE_STATUSES.contains(WorkloadStatus.SUCCESS))
   }
 
   @Test
@@ -48,6 +65,7 @@ class WorkloadHandlerImplTest {
         geography = "US",
         mutexKey = null,
         type = WorkloadType.SYNC,
+        autoId = UUID.randomUUID(),
       )
 
     every { workloadRepository.findById(WORKLOAD_ID) }.returns(Optional.of(domainWorkload))
@@ -68,6 +86,7 @@ class WorkloadHandlerImplTest {
     val workloadLabels = mutableListOf(workloadLabel1, workloadLabel2)
 
     every { workloadRepository.existsById(WORKLOAD_ID) }.returns(false)
+    every { workloadRepository.searchByMutexKeyAndStatusInList("mutex-this", WorkloadHandlerImpl.ACTIVE_STATUSES) }.returns(listOf())
     every { workloadRepository.save(any()) }.returns(
       Fixtures.workload(),
     )
@@ -79,6 +98,8 @@ class WorkloadHandlerImplTest {
       "US",
       "mutex-this",
       io.airbyte.config.WorkloadType.SYNC,
+      UUID.randomUUID(),
+      now.plusHours(2),
     )
     verify {
       workloadRepository.save(
@@ -95,7 +116,8 @@ class WorkloadHandlerImplTest {
             it.logPath == "/log/path" &&
             it.geography == "US" &&
             it.mutexKey == "mutex-this" &&
-            it.type == WorkloadType.SYNC
+            it.type == WorkloadType.SYNC &&
+            it.deadline!!.equals(now.plusHours(2))
         },
       )
     }
@@ -105,7 +127,44 @@ class WorkloadHandlerImplTest {
   fun `test create workload id conflict`() {
     every { workloadRepository.existsById(WORKLOAD_ID) }.returns(true)
     assertThrows<ConflictException> {
-      workloadHandler.createWorkload(WORKLOAD_ID, null, "", "", "US", "mutex-this", io.airbyte.config.WorkloadType.SYNC)
+      workloadHandler.createWorkload(WORKLOAD_ID, null, "", "", "US", "mutex-this", io.airbyte.config.WorkloadType.SYNC, UUID.randomUUID(), now)
+    }
+  }
+
+  @Test
+  fun `test create workload mutex conflict`() {
+    val workloadIdWithSuccessfulFail = "workload-id-with-successful-fail"
+    val workloadIdWithFailedFail = "workload-id-with-failed-fail"
+    val duplWorkloads =
+      listOf(
+        Fixtures.workload(workloadIdWithSuccessfulFail, createdAt = OffsetDateTime.now().minusSeconds(5)),
+        Fixtures.workload(workloadIdWithFailedFail, createdAt = OffsetDateTime.now().minusSeconds(10)),
+      )
+    val newWorkload = Fixtures.workload(WORKLOAD_ID)
+    every { workloadRepository.existsById(WORKLOAD_ID) }.returns(false)
+    every {
+      workloadHandler.failWorkload(workloadIdWithSuccessfulFail, any(), any())
+    }.answers {}
+    every {
+      workloadHandler.failWorkload(workloadIdWithFailedFail, any(), any())
+    }.throws(InvalidStatusTransitionException("$workloadIdWithFailedFail"))
+    every { workloadRepository.save(any()) }.returns(newWorkload)
+    every {
+      workloadRepository.searchByMutexKeyAndStatusInList(
+        "mutex-this",
+        WorkloadHandlerImpl.ACTIVE_STATUSES,
+      )
+    }.returns(duplWorkloads + listOf(newWorkload))
+
+    workloadHandler.createWorkload(WORKLOAD_ID, null, "", "", "US", "mutex-this", io.airbyte.config.WorkloadType.SYNC, UUID.randomUUID(), now)
+    verify {
+      workloadHandler.failWorkload(workloadIdWithFailedFail, any(), any())
+      workloadHandler.failWorkload(workloadIdWithSuccessfulFail, any(), any())
+      workloadRepository.save(
+        match {
+          it.id == WORKLOAD_ID && it.mutexKey == "mutex-this"
+        },
+      )
     }
   }
 
@@ -135,7 +194,7 @@ class WorkloadHandlerImplTest {
   }
 
   @ParameterizedTest
-  @EnumSource(value = WorkloadStatus::class, names = ["CLAIMED", "RUNNING"])
+  @EnumSource(value = WorkloadStatus::class, names = ["CLAIMED", "LAUNCHED", "RUNNING"])
   fun `test successfulHeartbeat`(workloadStatus: WorkloadStatus) {
     every { workloadRepository.findById(WORKLOAD_ID) }.returns(
       Optional.of(
@@ -145,9 +204,9 @@ class WorkloadHandlerImplTest {
         ),
       ),
     )
-    every { workloadRepository.update(eq(WORKLOAD_ID), any(), ofType(OffsetDateTime::class)) }.returns(Unit)
-    workloadHandler.heartbeat(WORKLOAD_ID)
-    verify { workloadRepository.update(eq(WORKLOAD_ID), eq(WorkloadStatus.RUNNING), any()) }
+    every { workloadRepository.update(eq(WORKLOAD_ID), any(), ofType(OffsetDateTime::class), eq(now.plusMinutes(10))) }.returns(Unit)
+    workloadHandler.heartbeat(WORKLOAD_ID, now.plusMinutes(10))
+    verify { workloadRepository.update(eq(WORKLOAD_ID), eq(WorkloadStatus.RUNNING), any(), eq(now.plusMinutes(10))) }
   }
 
   @ParameterizedTest
@@ -161,13 +220,13 @@ class WorkloadHandlerImplTest {
         ),
       ),
     )
-    assertThrows<InvalidStatusTransitionException> { workloadHandler.heartbeat(WORKLOAD_ID) }
+    assertThrows<InvalidStatusTransitionException> { workloadHandler.heartbeat(WORKLOAD_ID, now) }
   }
 
   @Test
   fun `test workload not found when claiming workload`() {
     every { workloadRepository.findById(WORKLOAD_ID) }.returns(Optional.empty())
-    assertThrows<NotFoundException> { workloadHandler.claimWorkload(WORKLOAD_ID, DATAPLANE_ID) }
+    assertThrows<NotFoundException> { workloadHandler.claimWorkload(WORKLOAD_ID, DATAPLANE_ID, now) }
   }
 
   @Test
@@ -181,12 +240,12 @@ class WorkloadHandlerImplTest {
         ),
       ),
     )
-    assertFalse(workloadHandler.claimWorkload(WORKLOAD_ID, DATAPLANE_ID))
+    assertFalse(workloadHandler.claimWorkload(WORKLOAD_ID, DATAPLANE_ID, now))
   }
 
   @Test
   fun `test claiming pending workload has already been claimed by the same plane`() {
-    every { workloadRepository.update(WORKLOAD_ID, DATAPLANE_ID, WorkloadStatus.CLAIMED) }.returns(Unit)
+    every { workloadRepository.update(WORKLOAD_ID, DATAPLANE_ID, WorkloadStatus.CLAIMED, eq(now.plusMinutes(20))) }.returns(Unit)
     every { workloadRepository.findById(WORKLOAD_ID) }.returns(
       Optional.of(
         Fixtures.workload(
@@ -196,7 +255,7 @@ class WorkloadHandlerImplTest {
         ),
       ),
     )
-    assertTrue(workloadHandler.claimWorkload(WORKLOAD_ID, DATAPLANE_ID))
+    assertTrue(workloadHandler.claimWorkload(WORKLOAD_ID, DATAPLANE_ID, now.plusMinutes(20)))
   }
 
   @Test
@@ -210,7 +269,7 @@ class WorkloadHandlerImplTest {
         ),
       ),
     )
-    assertTrue(workloadHandler.claimWorkload(WORKLOAD_ID, DATAPLANE_ID))
+    assertTrue(workloadHandler.claimWorkload(WORKLOAD_ID, DATAPLANE_ID, now))
   }
 
   @Test
@@ -224,11 +283,11 @@ class WorkloadHandlerImplTest {
         ),
       ),
     )
-    assertThrows<InvalidStatusTransitionException> { workloadHandler.claimWorkload(WORKLOAD_ID, DATAPLANE_ID) }
+    assertThrows<InvalidStatusTransitionException> { workloadHandler.claimWorkload(WORKLOAD_ID, DATAPLANE_ID, now) }
   }
 
   @ParameterizedTest
-  @EnumSource(value = WorkloadStatus::class, names = ["RUNNING", "SUCCESS", "FAILURE", "CANCELLED"])
+  @EnumSource(value = WorkloadStatus::class, names = ["RUNNING", "LAUNCHED", "SUCCESS", "FAILURE", "CANCELLED"])
   fun `test claiming workload that is not pending`(workloadStatus: WorkloadStatus) {
     every { workloadRepository.findById(WORKLOAD_ID) }.returns(
       Optional.of(
@@ -238,7 +297,7 @@ class WorkloadHandlerImplTest {
         ),
       ),
     )
-    assertThrows<InvalidStatusTransitionException> { workloadHandler.claimWorkload(WORKLOAD_ID, DATAPLANE_ID) }
+    assertThrows<InvalidStatusTransitionException> { workloadHandler.claimWorkload(WORKLOAD_ID, DATAPLANE_ID, now) }
   }
 
   @Test
@@ -252,17 +311,17 @@ class WorkloadHandlerImplTest {
       ),
     )
 
-    every { workloadRepository.update(any(), any(), ofType(WorkloadStatus::class)) } just Runs
+    every { workloadRepository.update(any(), any(), ofType(WorkloadStatus::class), eq(now.plusMinutes(20))) } just Runs
 
-    assertTrue(workloadHandler.claimWorkload(WORKLOAD_ID, DATAPLANE_ID))
+    assertTrue(workloadHandler.claimWorkload(WORKLOAD_ID, DATAPLANE_ID, now.plusMinutes(20)))
 
-    verify { workloadRepository.update(WORKLOAD_ID, DATAPLANE_ID, WorkloadStatus.CLAIMED) }
+    verify { workloadRepository.update(WORKLOAD_ID, DATAPLANE_ID, WorkloadStatus.CLAIMED, eq(now.plusMinutes(20))) }
   }
 
   @Test
   fun `test workload not found when cancelling workload`() {
     every { workloadRepository.findById(WORKLOAD_ID) }.returns(Optional.empty())
-    assertThrows<NotFoundException> { workloadHandler.cancelWorkload(WORKLOAD_ID) }
+    assertThrows<NotFoundException> { workloadHandler.cancelWorkload(WORKLOAD_ID, "test", "test cancel") }
   }
 
   @ParameterizedTest
@@ -277,11 +336,11 @@ class WorkloadHandlerImplTest {
       ),
     )
 
-    assertThrows<InvalidStatusTransitionException> { workloadHandler.cancelWorkload(WORKLOAD_ID) }
+    assertThrows<InvalidStatusTransitionException> { workloadHandler.cancelWorkload(WORKLOAD_ID, "test", "invalid cancel") }
   }
 
   @ParameterizedTest
-  @EnumSource(value = WorkloadStatus::class, names = ["CLAIMED", "RUNNING", "PENDING"])
+  @EnumSource(value = WorkloadStatus::class, names = ["CLAIMED", "LAUNCHED", "RUNNING", "PENDING"])
   fun `test successful cancel`(workloadStatus: WorkloadStatus) {
     every { workloadRepository.findById(WORKLOAD_ID) }.returns(
       Optional.of(
@@ -292,10 +351,10 @@ class WorkloadHandlerImplTest {
       ),
     )
 
-    every { workloadRepository.update(any(), ofType(WorkloadStatus::class)) } just Runs
+    every { workloadRepository.update(any(), ofType(WorkloadStatus::class), eq("test"), eq("test cancel"), null) } just Runs
 
-    workloadHandler.cancelWorkload(WORKLOAD_ID)
-    verify { workloadRepository.update(eq(WORKLOAD_ID), eq(WorkloadStatus.CANCELLED)) }
+    workloadHandler.cancelWorkload(WORKLOAD_ID, "test", "test cancel")
+    verify { workloadRepository.update(eq(WORKLOAD_ID), eq(WorkloadStatus.CANCELLED), eq("test"), eq("test cancel"), null) }
   }
 
   @Test
@@ -309,18 +368,18 @@ class WorkloadHandlerImplTest {
       ),
     )
 
-    workloadHandler.cancelWorkload(WORKLOAD_ID)
-    verify(exactly = 0) { workloadRepository.update(eq(WORKLOAD_ID), eq(WorkloadStatus.CANCELLED)) }
+    workloadHandler.cancelWorkload(WORKLOAD_ID, "test", "test cancel again")
+    verify(exactly = 0) { workloadRepository.update(eq(WORKLOAD_ID), eq(WorkloadStatus.CANCELLED), "test", "test cancel again", null) }
   }
 
   @Test
   fun `test workload not found when failing workload`() {
     every { workloadRepository.findById(WORKLOAD_ID) }.returns(Optional.empty())
-    assertThrows<NotFoundException> { workloadHandler.failWorkload(WORKLOAD_ID) }
+    assertThrows<NotFoundException> { workloadHandler.failWorkload(WORKLOAD_ID, "test", "fail") }
   }
 
   @ParameterizedTest
-  @EnumSource(value = WorkloadStatus::class, names = ["SUCCESS", "PENDING", "CANCELLED"])
+  @EnumSource(value = WorkloadStatus::class, names = ["SUCCESS", "CANCELLED"])
   fun `test fail workload in inactive status`(workloadStatus: WorkloadStatus) {
     every { workloadRepository.findById(WORKLOAD_ID) }.returns(
       Optional.of(
@@ -331,11 +390,11 @@ class WorkloadHandlerImplTest {
       ),
     )
 
-    assertThrows<InvalidStatusTransitionException> { workloadHandler.failWorkload(WORKLOAD_ID) }
+    assertThrows<InvalidStatusTransitionException> { workloadHandler.failWorkload(WORKLOAD_ID, "test", "fail") }
   }
 
   @ParameterizedTest
-  @EnumSource(value = WorkloadStatus::class, names = ["CLAIMED", "RUNNING"])
+  @EnumSource(value = WorkloadStatus::class, names = ["CLAIMED", "LAUNCHED", "RUNNING"])
   fun `test failing workload succeeded`(workloadStatus: WorkloadStatus) {
     every { workloadRepository.findById(WORKLOAD_ID) }.returns(
       Optional.of(
@@ -346,10 +405,10 @@ class WorkloadHandlerImplTest {
       ),
     )
 
-    every { workloadRepository.update(any(), ofType(WorkloadStatus::class)) } just Runs
+    every { workloadRepository.update(any(), ofType(WorkloadStatus::class), eq("test"), eq("failing a workload"), null) } just Runs
 
-    workloadHandler.failWorkload(WORKLOAD_ID)
-    verify { workloadRepository.update(eq(WORKLOAD_ID), eq(WorkloadStatus.FAILURE)) }
+    workloadHandler.failWorkload(WORKLOAD_ID, "test", "failing a workload")
+    verify { workloadRepository.update(eq(WORKLOAD_ID), eq(WorkloadStatus.FAILURE), eq("test"), eq("failing a workload"), null) }
   }
 
   @Test
@@ -363,8 +422,8 @@ class WorkloadHandlerImplTest {
       ),
     )
 
-    workloadHandler.failWorkload(WORKLOAD_ID)
-    verify(exactly = 0) { workloadRepository.update(eq(WORKLOAD_ID), eq(WorkloadStatus.FAILURE)) }
+    workloadHandler.failWorkload(WORKLOAD_ID, "test", "noop")
+    verify(exactly = 0) { workloadRepository.update(eq(WORKLOAD_ID), eq(WorkloadStatus.FAILURE), eq("test"), eq("noop"), null) }
   }
 
   @Test
@@ -389,7 +448,7 @@ class WorkloadHandlerImplTest {
   }
 
   @ParameterizedTest
-  @EnumSource(value = WorkloadStatus::class, names = ["CLAIMED", "RUNNING"])
+  @EnumSource(value = WorkloadStatus::class, names = ["CLAIMED", "LAUNCHED", "RUNNING"])
   fun `test succeeding workload succeeded`(workloadStatus: WorkloadStatus) {
     every { workloadRepository.findById(WORKLOAD_ID) }.returns(
       Optional.of(
@@ -400,10 +459,10 @@ class WorkloadHandlerImplTest {
       ),
     )
 
-    every { workloadRepository.update(any(), ofType(WorkloadStatus::class)) } just Runs
+    every { workloadRepository.update(any(), ofType(WorkloadStatus::class), null) } just Runs
 
     workloadHandler.succeedWorkload(WORKLOAD_ID)
-    verify { workloadRepository.update(eq(WORKLOAD_ID), eq(WorkloadStatus.SUCCESS)) }
+    verify { workloadRepository.update(eq(WORKLOAD_ID), eq(WorkloadStatus.SUCCESS), null) }
   }
 
   @Test
@@ -418,13 +477,13 @@ class WorkloadHandlerImplTest {
     )
 
     workloadHandler.succeedWorkload(WORKLOAD_ID)
-    verify(exactly = 0) { workloadRepository.update(eq(WORKLOAD_ID), eq(WorkloadStatus.SUCCESS)) }
+    verify(exactly = 0) { workloadRepository.update(eq(WORKLOAD_ID), eq(WorkloadStatus.SUCCESS), null) }
   }
 
   @Test
   fun `test workload not found when setting status to running`() {
     every { workloadRepository.findById(WORKLOAD_ID) }.returns(Optional.empty())
-    assertThrows<NotFoundException> { workloadHandler.setWorkloadStatusToRunning(WORKLOAD_ID) }
+    assertThrows<NotFoundException> { workloadHandler.setWorkloadStatusToRunning(WORKLOAD_ID, now) }
   }
 
   @ParameterizedTest
@@ -439,7 +498,7 @@ class WorkloadHandlerImplTest {
       ),
     )
 
-    assertThrows<InvalidStatusTransitionException> { workloadHandler.setWorkloadStatusToRunning(WORKLOAD_ID) }
+    assertThrows<InvalidStatusTransitionException> { workloadHandler.setWorkloadStatusToRunning(WORKLOAD_ID, now) }
   }
 
   @Test
@@ -454,11 +513,65 @@ class WorkloadHandlerImplTest {
       ),
     )
 
-    assertThrows<InvalidStatusTransitionException> { workloadHandler.setWorkloadStatusToRunning(WORKLOAD_ID) }
+    assertThrows<InvalidStatusTransitionException> { workloadHandler.setWorkloadStatusToRunning(WORKLOAD_ID, now) }
+  }
+
+  @ParameterizedTest
+  @EnumSource(value = WorkloadStatus::class, names = ["CLAIMED", "LAUNCHED"])
+  fun `test set workload status to running succeeded`(workloadStatus: WorkloadStatus) {
+    every { workloadRepository.findById(WORKLOAD_ID) }.returns(
+      Optional.of(
+        Fixtures.workload(
+          id = WORKLOAD_ID,
+          status = workloadStatus,
+        ),
+      ),
+    )
+
+    every { workloadRepository.update(any(), ofType(WorkloadStatus::class), any()) } just Runs
+
+    workloadHandler.setWorkloadStatusToRunning(WORKLOAD_ID, now.plusMinutes(10))
+    verify { workloadRepository.update(eq(WORKLOAD_ID), eq(WorkloadStatus.RUNNING), eq(now.plusMinutes(10))) }
   }
 
   @Test
-  fun `test set workload status to running succeeded`() {
+  fun `test noop when setting workload status to running`() {
+    every { workloadRepository.findById(WORKLOAD_ID) }.returns(
+      Optional.of(
+        Fixtures.workload(
+          id = WORKLOAD_ID,
+          status = WorkloadStatus.RUNNING,
+        ),
+      ),
+    )
+
+    workloadHandler.setWorkloadStatusToRunning(WORKLOAD_ID, now.plusMinutes(10))
+    verify(exactly = 0) { workloadRepository.update(eq(WORKLOAD_ID), eq(WorkloadStatus.RUNNING), eq(now.plusMinutes(10))) }
+  }
+
+  @Test
+  fun `test workload not found when setting status to launched`() {
+    every { workloadRepository.findById(WORKLOAD_ID) }.returns(Optional.empty())
+    assertThrows<NotFoundException> { workloadHandler.setWorkloadStatusToLaunched(WORKLOAD_ID, now) }
+  }
+
+  @ParameterizedTest
+  @EnumSource(value = WorkloadStatus::class, names = ["PENDING", "SUCCESS", "CANCELLED", "FAILURE"])
+  fun `test set workload status to launched when is not in claimed state`(workloadStatus: WorkloadStatus) {
+    every { workloadRepository.findById(WORKLOAD_ID) }.returns(
+      Optional.of(
+        Fixtures.workload(
+          id = WORKLOAD_ID,
+          status = workloadStatus,
+        ),
+      ),
+    )
+
+    assertThrows<InvalidStatusTransitionException> { workloadHandler.setWorkloadStatusToLaunched(WORKLOAD_ID, now) }
+  }
+
+  @Test
+  fun `test set workload status to launched succeeded`() {
     every { workloadRepository.findById(WORKLOAD_ID) }.returns(
       Optional.of(
         Fixtures.workload(
@@ -468,25 +581,43 @@ class WorkloadHandlerImplTest {
       ),
     )
 
-    every { workloadRepository.update(any(), ofType(WorkloadStatus::class)) } just Runs
+    every { workloadRepository.update(any(), ofType(WorkloadStatus::class), any()) } just Runs
 
-    workloadHandler.succeedWorkload(WORKLOAD_ID)
-    verify { workloadRepository.update(eq(WORKLOAD_ID), eq(WorkloadStatus.SUCCESS)) }
+    workloadHandler.setWorkloadStatusToLaunched(WORKLOAD_ID, now.plusMinutes(10))
+    verify { workloadRepository.update(eq(WORKLOAD_ID), eq(WorkloadStatus.LAUNCHED), eq(now.plusMinutes(10))) }
   }
 
-  @Test
-  fun `test noop when setting workload status to running`() {
+  @ParameterizedTest
+  @EnumSource(value = WorkloadStatus::class, names = ["LAUNCHED", "RUNNING"])
+  fun `test set workload status to launched is a noop`(workloadStatus: WorkloadStatus) {
     every { workloadRepository.findById(WORKLOAD_ID) }.returns(
       Optional.of(
         Fixtures.workload(
           id = WORKLOAD_ID,
-          status = WorkloadStatus.SUCCESS,
+          status = workloadStatus,
         ),
       ),
     )
 
-    workloadHandler.succeedWorkload(WORKLOAD_ID)
-    verify(exactly = 0) { workloadRepository.update(eq(WORKLOAD_ID), eq(WorkloadStatus.SUCCESS)) }
+    every { workloadRepository.update(any(), ofType(WorkloadStatus::class), any()) } just Runs
+
+    workloadHandler.setWorkloadStatusToLaunched(WORKLOAD_ID, now.plusMinutes(10))
+    verify(exactly = 0) { workloadRepository.update(eq(WORKLOAD_ID), eq(WorkloadStatus.LAUNCHED), eq(now.plusMinutes(10))) }
+  }
+
+  @Test
+  fun `test noop when setting workload status to launched`() {
+    every { workloadRepository.findById(WORKLOAD_ID) }.returns(
+      Optional.of(
+        Fixtures.workload(
+          id = WORKLOAD_ID,
+          status = WorkloadStatus.LAUNCHED,
+        ),
+      ),
+    )
+
+    workloadHandler.setWorkloadStatusToLaunched(WORKLOAD_ID, now.plusMinutes(10))
+    verify(exactly = 0) { workloadRepository.update(eq(WORKLOAD_ID), eq(WorkloadStatus.LAUNCHED), eq(now.plusMinutes(10))) }
   }
 
   @Test
@@ -509,11 +640,20 @@ class WorkloadHandlerImplTest {
     }
   }
 
+  @Test
+  fun `offsetDateTime method should always return current time`() {
+    val workloadHandlerImpl = WorkloadHandlerImpl(mockk<WorkloadRepository>(), TestClient())
+    val offsetDateTime = workloadHandlerImpl.offsetDateTime()
+    Thread.sleep(10)
+    val offsetDateTimeAfter10Ms = workloadHandlerImpl.offsetDateTime()
+    assertTrue(offsetDateTimeAfter10Ms.isAfter(offsetDateTime))
+  }
+
   object Fixtures {
     val workloadRepository = mockk<WorkloadRepository>()
     const val WORKLOAD_ID = "test"
     const val DATAPLANE_ID = "dataplaneId"
-    val workloadHandler = WorkloadHandlerImpl(workloadRepository)
+    val workloadHandler = spyk(WorkloadHandlerImpl(workloadRepository, TestClient(mapOf("platform.enforce-mutex-key-on-create" to true))))
 
     fun workload(
       id: String = WORKLOAD_ID,
@@ -525,6 +665,7 @@ class WorkloadHandlerImplTest {
       geography: String = "US",
       mutexKey: String = "",
       type: WorkloadType = WorkloadType.SYNC,
+      createdAt: OffsetDateTime = OffsetDateTime.now(),
     ): Workload =
       Workload(
         id = id,
@@ -536,6 +677,7 @@ class WorkloadHandlerImplTest {
         geography = geography,
         mutexKey = mutexKey,
         type = type,
+        createdAt = createdAt,
       )
   }
 }

@@ -1,10 +1,11 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.workload.launcher.pipeline.handlers
 
 import io.airbyte.metrics.lib.MetricAttribute
+import io.airbyte.workload.launcher.client.WorkloadApiClient
 import io.airbyte.workload.launcher.metrics.CustomMetricPublisher
 import io.airbyte.workload.launcher.metrics.MeterFilterFactory
 import io.airbyte.workload.launcher.metrics.WorkloadLauncherMetricMetadata
@@ -13,6 +14,7 @@ import io.github.oshai.kotlinlogging.KotlinLogging
 import io.github.oshai.kotlinlogging.withLoggingContext
 import jakarta.inject.Named
 import jakarta.inject.Singleton
+import org.openapitools.client.infrastructure.ClientException
 import java.util.Optional
 import java.util.function.Function
 
@@ -20,6 +22,7 @@ private val logger = KotlinLogging.logger {}
 
 @Singleton
 class SuccessHandler(
+  private val apiClient: WorkloadApiClient,
   private val metricPublisher: CustomMetricPublisher,
   @Named("logMsgTemplate") private val logMsgTemplate: Optional<Function<String, String>>,
 ) {
@@ -27,7 +30,7 @@ class SuccessHandler(
     withLoggingContext(io.logCtx) {
       metricPublisher.count(
         WorkloadLauncherMetricMetadata.WORKLOAD_PROCESSED,
-        MetricAttribute(MeterFilterFactory.WORKLOAD_ID_TAG, io.msg.workloadId),
+        MetricAttribute(MeterFilterFactory.WORKLOAD_TYPE_TAG, io.msg.workloadType.toString()),
         MetricAttribute(MeterFilterFactory.STATUS_TAG, MeterFilterFactory.SUCCESS_STATUS),
       )
       if (io.msg.startTimeMs != null) {
@@ -36,8 +39,24 @@ class SuccessHandler(
           WorkloadLauncherMetricMetadata.PRODUCER_TO_POD_STARTED_LATENCY_MS,
           timeElapsed,
           { it.toDouble() },
+          MetricAttribute(MeterFilterFactory.WORKLOAD_TYPE_TAG, io.msg.workloadType.toString()),
         )
       }
+
+      // If we skipped then we didn't launch the workload on this run so we don't set it to launched.
+      if (!io.skip) {
+        try {
+          apiClient.updateStatusToLaunched(io.msg.workloadId)
+        } catch (e: Exception) {
+          val errorMsg = "Failed to update workload status to launched. Workload may be reprocessed on restart."
+          if (e is ClientException && e.statusCode == 410) {
+            logger.debug(e) { errorMsg }
+          } else {
+            logger.warn(e) { errorMsg }
+          }
+        }
+      }
+
       logger.info { logMsgTemplate.orElse { id: String -> "Pipeline completed for workload: $id." }.apply(io.msg.workloadId) }
     }
   }

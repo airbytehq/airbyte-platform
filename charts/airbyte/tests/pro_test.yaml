@@ -1,10 +1,10 @@
 values:
   - ../../test_resources/pro/values.yaml
 set:
-  airbyteYml: 'path'
+  global.airbyteYml: 'path'
 templates:
   - airbyte-db.yaml
-  - airbyte-yml-configmap.yaml
+  - airbyte-yml-secret.yaml
   - env-configmap.yaml
   - gcs-log-creds-secret.yaml
   - minio.yaml

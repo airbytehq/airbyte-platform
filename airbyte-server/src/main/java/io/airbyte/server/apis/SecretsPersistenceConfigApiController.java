@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.server.apis;
@@ -86,7 +86,7 @@ public class SecretsPersistenceConfigApiController implements SecretsPersistence
               secretCoordinate,
               Jsons.serialize(requestBody.getConfiguration()));
 
-          return secretPersistenceConfigService.createOrUpdateSecretPersistenceConfig(
+          return secretPersistenceConfigService.createOrUpdate(
               Enums.convertTo(requestBody.getScope(), io.airbyte.config.ScopeType.class),
               requestBody.getScopeId(),
               Enums.convertTo(requestBody.getSecretPersistenceType(), io.airbyte.config.SecretPersistenceConfig.SecretPersistenceType.class),
@@ -97,7 +97,7 @@ public class SecretsPersistenceConfigApiController implements SecretsPersistence
   @Post("/get")
   @Secured({ADMIN})
   @Override
-  public SecretPersistenceConfig getSecretsPersistenceConfig(final SecretPersistenceConfigGetRequestBody requestBody) {
+  public SecretPersistenceConfig getSecretsPersistenceConfig(@Body final SecretPersistenceConfigGetRequestBody requestBody) {
     if (Objects.requireNonNull(requestBody.getScopeType()) == io.airbyte.api.model.generated.ScopeType.WORKSPACE) {
       ApiHelper.execute(() -> {
         throw new BadObjectSchemaKnownException(
@@ -107,7 +107,7 @@ public class SecretsPersistenceConfigApiController implements SecretsPersistence
     return ApiHelper.execute(
         () -> {
           final io.airbyte.config.SecretPersistenceConfig secretPersistenceConfig =
-              secretPersistenceConfigService.getSecretPersistenceConfig(ScopeType.ORGANIZATION, requestBody.getScopeId());
+              secretPersistenceConfigService.get(ScopeType.ORGANIZATION, requestBody.getScopeId());
           return secretPersistenceConfigHandler.buildSecretPersistenceConfigResponse(secretPersistenceConfig);
         });
   }

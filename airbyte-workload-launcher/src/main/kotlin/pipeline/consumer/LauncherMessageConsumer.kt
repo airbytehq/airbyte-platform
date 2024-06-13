@@ -2,7 +2,9 @@ package io.airbyte.workload.launcher.pipeline.consumer
 
 import io.airbyte.commons.temporal.queue.MessageConsumer
 import io.airbyte.config.messages.LauncherInputMessage
+import io.airbyte.metrics.lib.MetricAttribute
 import io.airbyte.workload.launcher.metrics.CustomMetricPublisher
+import io.airbyte.workload.launcher.metrics.MeterFilterFactory
 import io.airbyte.workload.launcher.metrics.WorkloadLauncherMetricMetadata
 import io.airbyte.workload.launcher.pipeline.LaunchPipeline
 import jakarta.inject.Singleton
@@ -19,6 +21,7 @@ class LauncherMessageConsumer(
         WorkloadLauncherMetricMetadata.PRODUCER_TO_CONSUMER_LATENCY_MS,
         timeElapsed,
         { it.toDouble() },
+        MetricAttribute(MeterFilterFactory.WORKLOAD_TYPE_TAG, input.workloadType.toString()),
       )
     }
 
@@ -31,6 +34,7 @@ class LauncherMessageConsumer(
         mutexKey = input.mutexKey,
         workloadType = input.workloadType,
         startTimeMs = input.startTimeMs,
+        autoId = input.autoId,
       ),
     )
   }

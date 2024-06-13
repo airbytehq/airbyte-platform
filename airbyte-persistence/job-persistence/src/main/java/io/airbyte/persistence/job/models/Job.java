@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.persistence.job.models;
@@ -8,6 +8,7 @@ import com.google.common.base.Preconditions;
 import io.airbyte.config.JobConfig;
 import io.airbyte.config.JobConfig.ConfigType;
 import io.airbyte.config.JobOutput;
+import jakarta.annotation.Nullable;
 import java.util.Comparator;
 import java.util.EnumSet;
 import java.util.List;
@@ -15,14 +16,14 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
-import javax.annotation.Nullable;
 
 /**
  * POJO / accessors for the job domain model.
  */
 public class Job {
 
-  public static final Set<ConfigType> REPLICATION_TYPES = EnumSet.of(ConfigType.SYNC, ConfigType.RESET_CONNECTION);
+  public static final Set<ConfigType> REPLICATION_TYPES = EnumSet.of(ConfigType.SYNC, ConfigType.RESET_CONNECTION, ConfigType.REFRESH);
+  public static final Set<ConfigType> SYNC_REPLICATION_TYPES = EnumSet.of(ConfigType.SYNC, ConfigType.REFRESH);
 
   private final long id;
   private final ConfigType configType;
@@ -184,19 +185,6 @@ public class Job {
         .stream()
         .sorted(Comparator.comparing(Attempt::getCreatedAtInSecond).reversed())
         .filter(a -> a.getStatus() == AttemptStatus.FAILED)
-        .findFirst();
-  }
-
-  /**
-   * Get the last attempt by created_at for the job that had an output.
-   *
-   * @return the last attempt. empty optional, if there have been no attempts with outputs.
-   */
-  public Optional<Attempt> getLastAttemptWithOutput() {
-    return getAttempts()
-        .stream()
-        .sorted(Comparator.comparing(Attempt::getCreatedAtInSecond).reversed())
-        .filter(a -> a.getOutput().isPresent() && a.getOutput().get().getSync() != null && a.getOutput().get().getSync().getState() != null)
         .findFirst();
   }
 

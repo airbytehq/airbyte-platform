@@ -5,7 +5,7 @@ const CRON_REGEX_MAP = [
   /^(([1-9]|,|-|\*|\/|\?|L|W)+)$/, // day of month
   /^(([1-9]|,|-|\*|\/|JAN|FEB|MAR|APR|JUN|JUL|AUG|SEP|OCT|NOV|DEC)+)$/, // month
   /^(([1-7]|,|-|\*|\/|\?|L|#|SUN|MON|TUE|WED|THU|FRI|SAT|SUN)+)$/, // day of week
-  /^(([0-9]|,|-|\*|\/)+)?/, // year
+  /^(([0-9]|,|-|\*|\/)+)/, // year
 ];
 
 const ONLY_NUMBERS_REGEX = /^([0-9]){1,2}$/;

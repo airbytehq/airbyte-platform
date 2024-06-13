@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.commons.features;
@@ -15,8 +15,6 @@ public interface FeatureFlags {
   boolean autoDetectSchema();
 
   boolean logConnectorMessages();
-
-  boolean needStateValidation();
 
   /**
    * Return true if field selection should be applied. See also fieldSelectionWorkspaces.

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.commons.server.handlers;
@@ -11,7 +11,6 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.fasterxml.jackson.databind.JsonNode;
-import io.airbyte.api.client.invoker.generated.ApiException;
 import io.airbyte.api.model.generated.CheckInput;
 import io.airbyte.api.model.generated.ConnectionIdRequestBody;
 import io.airbyte.api.model.generated.ConnectionState;
@@ -150,7 +149,7 @@ class JobInputHandlerTest {
   }
 
   @Test
-  void testGetSyncWorkflowInput() throws JsonValidationException, ConfigNotFoundException, IOException, ApiException {
+  void testGetSyncWorkflowInput() throws JsonValidationException, ConfigNotFoundException, IOException {
     final SyncInput syncInput = new SyncInput().jobId(JOB_ID).attemptNumber(ATTEMPT_NUMBER);
 
     final UUID sourceDefinitionId = UUID.randomUUID();
@@ -191,8 +190,6 @@ class JobInputHandlerTest {
         .withDestinationId(DESTINATION_ID)
         .withSourceConfiguration(SOURCE_CONFIG_WITH_OAUTH_AND_INJECTED_CONFIG)
         .withDestinationConfiguration(DESTINATION_CONFIG_WITH_OAUTH)
-        .withState(STATE)
-        .withCatalog(jobSyncConfig.getConfiguredAirbyteCatalog())
         .withIsReset(false);
 
     final JobRunConfig expectedJobRunConfig = new JobRunConfig()
@@ -238,7 +235,7 @@ class JobInputHandlerTest {
   }
 
   @Test
-  void testGetResetSyncWorkflowInput() throws IOException, ApiException, JsonValidationException, ConfigNotFoundException {
+  void testGetResetSyncWorkflowInput() throws IOException {
     final SyncInput syncInput = new SyncInput().jobId(JOB_ID).attemptNumber(ATTEMPT_NUMBER);
 
     when(stateHandler.getState(new ConnectionIdRequestBody().connectionId(CONNECTION_ID)))
@@ -266,8 +263,6 @@ class JobInputHandlerTest {
         .withDestinationId(DESTINATION_ID)
         .withSourceConfiguration(Jsons.emptyObject())
         .withDestinationConfiguration(DESTINATION_CONFIG_WITH_OAUTH)
-        .withState(STATE)
-        .withCatalog(jobResetConfig.getConfiguredAirbyteCatalog())
         .withWebhookOperationConfigs(jobResetConfig.getWebhookOperationConfigs())
         .withIsReset(true);
 

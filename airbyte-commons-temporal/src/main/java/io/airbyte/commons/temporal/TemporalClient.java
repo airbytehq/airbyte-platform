@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.commons.temporal;
@@ -20,8 +20,12 @@ import io.airbyte.config.ConnectorJobOutput;
 import io.airbyte.config.JobCheckConnectionConfig;
 import io.airbyte.config.JobDiscoverCatalogConfig;
 import io.airbyte.config.JobGetSpecConfig;
+import io.airbyte.config.RefreshStream.RefreshType;
 import io.airbyte.config.StandardCheckConnectionInput;
 import io.airbyte.config.StandardDiscoverCatalogInput;
+import io.airbyte.config.WorkloadPriority;
+import io.airbyte.config.persistence.StreamRefreshesRepository;
+import io.airbyte.config.persistence.StreamRefreshesRepositoryKt;
 import io.airbyte.config.persistence.StreamResetPersistence;
 import io.airbyte.metrics.lib.MetricAttribute;
 import io.airbyte.metrics.lib.MetricClient;
@@ -36,6 +40,7 @@ import io.temporal.api.workflowservice.v1.ListClosedWorkflowExecutionsRequest;
 import io.temporal.api.workflowservice.v1.ListClosedWorkflowExecutionsResponse;
 import io.temporal.api.workflowservice.v1.ListOpenWorkflowExecutionsRequest;
 import io.temporal.api.workflowservice.v1.ListOpenWorkflowExecutionsResponse;
+import jakarta.annotation.Nullable;
 import jakarta.inject.Named;
 import jakarta.inject.Singleton;
 import java.io.IOException;
@@ -51,7 +56,6 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
-import javax.annotation.Nullable;
 import lombok.Builder;
 import lombok.Value;
 import lombok.extern.slf4j.Slf4j;
@@ -76,6 +80,7 @@ public class TemporalClient {
   private final WorkflowClientWrapped workflowClientWrapped;
   private final WorkflowServiceStubsWrapped serviceStubsWrapped;
   private final StreamResetPersistence streamResetPersistence;
+  private final StreamRefreshesRepository streamRefreshesRepository;
   private final ConnectionManagerUtils connectionManagerUtils;
   private final NotificationClient notificationClient;
   private final StreamResetRecordsHelper streamResetRecordsHelper;
@@ -85,6 +90,7 @@ public class TemporalClient {
                         final WorkflowClientWrapped workflowClientWrapped,
                         final WorkflowServiceStubsWrapped serviceStubsWrapped,
                         final StreamResetPersistence streamResetPersistence,
+                        final StreamRefreshesRepository streamRefreshesRepository,
                         final ConnectionManagerUtils connectionManagerUtils,
                         final NotificationClient notificationClient,
                         final StreamResetRecordsHelper streamResetRecordsHelper,
@@ -93,6 +99,7 @@ public class TemporalClient {
     this.workflowClientWrapped = workflowClientWrapped;
     this.serviceStubsWrapped = serviceStubsWrapped;
     this.streamResetPersistence = streamResetPersistence;
+    this.streamRefreshesRepository = streamRefreshesRepository;
     this.connectionManagerUtils = connectionManagerUtils;
     this.notificationClient = notificationClient;
     this.streamResetRecordsHelper = streamResetRecordsHelper;
@@ -295,17 +302,41 @@ public class TemporalClient {
         Optional.of(jobId), Optional.empty());
   }
 
+  public void resetConnectionAsync(final UUID connectionId,
+                                   final List<StreamDescriptor> streamsToReset) {
+    try {
+      streamResetPersistence.createStreamResets(connectionId, streamsToReset);
+      connectionManagerUtils.signalWorkflowAndRepairIfNecessary(connectionId, workflow -> workflow::resetConnection);
+    } catch (IOException | DeletedWorkflowException e) {
+      log.error("Not able to properly create a reset");
+      throw new RuntimeException(e);
+    }
+  }
+
+  public void refreshConnectionAsync(final UUID connectionId,
+                                     final List<StreamDescriptor> streamsToRefresh,
+                                     final RefreshType refreshType) {
+    try {
+      StreamRefreshesRepositoryKt.saveStreamsToRefresh(streamRefreshesRepository, connectionId, streamsToRefresh, refreshType);
+      // This isn't actually doing a reset. workflow::resetConnection will cancel the current run if any
+      // and cause the workflow to run immediately. The next run will be a refresh because we just saved a
+      // refresh configuration.
+      connectionManagerUtils.signalWorkflowAndRepairIfNecessary(connectionId, workflow -> workflow::resetConnection);
+    } catch (DeletedWorkflowException e) {
+      log.error("Not able to properly create a reset");
+      throw new RuntimeException(e);
+    }
+  }
+
   /**
    * Submit a reset connection job to temporal.
    *
    * @param connectionId connection id
    * @param streamsToReset streams that should be rest on the connection
-   * @param syncImmediatelyAfter whether another sync job should be triggered immediately after
    * @return result of reset connection
    */
   public ManualOperationResult resetConnection(final UUID connectionId,
-                                               final List<StreamDescriptor> streamsToReset,
-                                               final boolean syncImmediatelyAfter) {
+                                               final List<StreamDescriptor> streamsToReset) {
     log.info("reset sync request");
 
     try {
@@ -321,11 +352,7 @@ public class TemporalClient {
     final long oldJobId = connectionManagerUtils.getCurrentJobId(connectionId);
 
     try {
-      if (syncImmediatelyAfter) {
-        connectionManagerUtils.signalWorkflowAndRepairIfNecessary(connectionId, workflow -> workflow::resetConnectionAndSkipNextScheduling);
-      } else {
-        connectionManagerUtils.signalWorkflowAndRepairIfNecessary(connectionId, workflow -> workflow::resetConnection);
-      }
+      connectionManagerUtils.signalWorkflowAndRepairIfNecessary(connectionId, workflow -> workflow::resetConnection);
     } catch (final DeletedWorkflowException e) {
       log.error("Can't reset a deleted workflow", e);
       return new ManualOperationResult(
@@ -409,7 +436,8 @@ public class TemporalClient {
         .withWorkspaceId(workspaceId)
         .withDockerImage(config.getDockerImage())
         .withProtocolVersion(config.getProtocolVersion())
-        .withIsCustomConnector(config.getIsCustomConnector());
+        .withIsCustomConnector(config.getIsCustomConnector())
+        .withPriority(WorkloadPriority.HIGH);
 
     final StandardCheckConnectionInput input = new StandardCheckConnectionInput()
         .withActorType(config.getActorType())
@@ -437,7 +465,8 @@ public class TemporalClient {
                                                                    final UUID workspaceId,
                                                                    final String taskQueue,
                                                                    final JobDiscoverCatalogConfig config,
-                                                                   final ActorContext context) {
+                                                                   final ActorContext context,
+                                                                   final WorkloadPriority priority) {
     final JobRunConfig jobRunConfig = TemporalWorkflowUtils.createJobRunConfig(jobId, attempt);
     final IntegrationLauncherConfig launcherConfig = new IntegrationLauncherConfig()
         .withJobId(jobId.toString())
@@ -445,7 +474,8 @@ public class TemporalClient {
         .withWorkspaceId(workspaceId)
         .withDockerImage(config.getDockerImage())
         .withProtocolVersion(config.getProtocolVersion())
-        .withIsCustomConnector(config.getIsCustomConnector());
+        .withIsCustomConnector(config.getIsCustomConnector())
+        .withPriority(priority);
     final StandardDiscoverCatalogInput input = new StandardDiscoverCatalogInput().withConnectionConfiguration(config.getConnectionConfiguration())
         .withSourceId(config.getSourceId()).withConnectorVersion(config.getConnectorVersion()).withConfigHash(config.getConfigHash())
         .withResourceRequirements(config.getResourceRequirements()).withActorContext(context);
@@ -488,7 +518,7 @@ public class TemporalClient {
 
   @VisibleForTesting
   <T> TemporalResponse<T> execute(final JobRunConfig jobRunConfig, final Supplier<T> executor) {
-    final Path jobRoot = TemporalUtils.getJobRoot(workspaceRoot, jobRunConfig);
+    final Path jobRoot = TemporalUtils.getJobRoot(workspaceRoot, jobRunConfig.getJobId(), jobRunConfig.getAttemptId());
     final Path logPath = TemporalUtils.getLogPath(jobRoot);
 
     T operationOutput = null;

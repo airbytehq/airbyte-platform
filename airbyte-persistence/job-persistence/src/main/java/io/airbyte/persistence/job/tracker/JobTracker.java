@@ -1,9 +1,11 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.persistence.job.tracker;
 
+import static io.airbyte.persistence.job.models.Job.REPLICATION_TYPES;
+import static io.airbyte.persistence.job.models.Job.SYNC_REPLICATION_TYPES;
 import static java.util.Collections.emptyMap;
 import static java.util.Collections.singletonMap;
 
@@ -21,8 +23,10 @@ import io.airbyte.config.ActorDefinitionVersion;
 import io.airbyte.config.AttemptSyncConfig;
 import io.airbyte.config.ConnectorJobOutput;
 import io.airbyte.config.FailureReason;
-import io.airbyte.config.JobConfig;
 import io.airbyte.config.JobConfig.ConfigType;
+import io.airbyte.config.JobConfigProxy;
+import io.airbyte.config.RefreshStream;
+import io.airbyte.config.RefreshStream.RefreshType;
 import io.airbyte.config.StandardCheckConnectionOutput;
 import io.airbyte.config.StandardDestinationDefinition;
 import io.airbyte.config.StandardSourceDefinition;
@@ -32,6 +36,9 @@ import io.airbyte.config.StandardWorkspace;
 import io.airbyte.config.persistence.ActorDefinitionVersionHelper;
 import io.airbyte.config.persistence.ConfigNotFoundException;
 import io.airbyte.config.persistence.ConfigRepository;
+import io.airbyte.featureflag.FeatureFlagClient;
+import io.airbyte.featureflag.UseWorkloadApi;
+import io.airbyte.featureflag.Workspace;
 import io.airbyte.persistence.job.JobPersistence;
 import io.airbyte.persistence.job.WorkspaceHelper;
 import io.airbyte.persistence.job.models.Attempt;
@@ -48,7 +55,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 /**
  * Tracking calls to each job type.
@@ -81,12 +90,15 @@ public class JobTracker {
   private final WorkspaceHelper workspaceHelper;
   private final TrackingClient trackingClient;
   private final ActorDefinitionVersionHelper actorDefinitionVersionHelper;
+  private final FeatureFlagClient featureFlagClient;
 
   public JobTracker(final ConfigRepository configRepository,
                     final JobPersistence jobPersistence,
                     final TrackingClient trackingClient,
-                    final ActorDefinitionVersionHelper actorDefinitionVersionHelper) {
-    this(configRepository, jobPersistence, new WorkspaceHelper(configRepository, jobPersistence), trackingClient, actorDefinitionVersionHelper);
+                    final ActorDefinitionVersionHelper actorDefinitionVersionHelper,
+                    final FeatureFlagClient featureFlagClient) {
+    this(configRepository, jobPersistence, new WorkspaceHelper(configRepository, jobPersistence), trackingClient, actorDefinitionVersionHelper,
+        featureFlagClient);
   }
 
   @VisibleForTesting
@@ -94,12 +106,14 @@ public class JobTracker {
              final JobPersistence jobPersistence,
              final WorkspaceHelper workspaceHelper,
              final TrackingClient trackingClient,
-             final ActorDefinitionVersionHelper actorDefinitionVersionHelper) {
+             final ActorDefinitionVersionHelper actorDefinitionVersionHelper,
+             final FeatureFlagClient featureFlagClient) {
     this.configRepository = configRepository;
     this.jobPersistence = jobPersistence;
     this.workspaceHelper = workspaceHelper;
     this.trackingClient = trackingClient;
     this.actorDefinitionVersionHelper = actorDefinitionVersionHelper;
+    this.featureFlagClient = featureFlagClient;
   }
 
   /**
@@ -122,7 +136,7 @@ public class JobTracker {
     final FailureReason failureReason = jobOutput != null ? jobOutput.getFailureReason() : null;
 
     Exceptions.swallow(() -> {
-      final Map<String, Object> checkConnMetadata = generateCheckConnectionMetadata(responseOutput);
+      final Map<String, Object> checkConnMetadata = generateCheckConnectionMetadata(responseOutput, workspaceId);
       final Map<String, Object> failureReasonMetadata = generateFailureReasonMetadata(failureReason);
       final Map<String, Object> jobMetadata = generateJobMetadata(jobId.toString(), ConfigType.CHECK_CONNECTION_SOURCE);
       final Map<String, Object> sourceDefMetadata = generateSourceDefinitionMetadata(sourceDefinitionId, workspaceId, actorId);
@@ -153,7 +167,7 @@ public class JobTracker {
     final FailureReason failureReason = jobOutput != null ? jobOutput.getFailureReason() : null;
 
     Exceptions.swallow(() -> {
-      final Map<String, Object> checkConnMetadata = generateCheckConnectionMetadata(responseOutput);
+      final Map<String, Object> checkConnMetadata = generateCheckConnectionMetadata(responseOutput, workspaceId);
       final Map<String, Object> failureReasonMetadata = generateFailureReasonMetadata(failureReason);
       final Map<String, Object> jobMetadata = generateJobMetadata(jobId.toString(), ConfigType.CHECK_CONNECTION_DESTINATION);
       final Map<String, Object> destinationDefinitionMetadata = generateDestinationDefinitionMetadata(destinationDefinitionId, workspaceId, actorId);
@@ -186,8 +200,10 @@ public class JobTracker {
       final Map<String, Object> failureReasonMetadata = generateFailureReasonMetadata(failureReason);
       final Map<String, Object> sourceDefMetadata = generateSourceDefinitionMetadata(sourceDefinitionId, workspaceId, actorId);
       final Map<String, Object> stateMetadata = generateStateMetadata(jobState);
+      final Map<String, Object> workloadMetadata =
+          Map.of("workload_enabled", featureFlagClient.boolVariation(UseWorkloadApi.INSTANCE, new Workspace(workspaceId)));
 
-      track(workspaceId, DISCOVER_EVENT, MoreMaps.merge(jobMetadata, failureReasonMetadata, sourceDefMetadata, stateMetadata));
+      track(workspaceId, DISCOVER_EVENT, MoreMaps.merge(jobMetadata, failureReasonMetadata, sourceDefMetadata, stateMetadata, workloadMetadata));
     });
   }
 
@@ -199,8 +215,9 @@ public class JobTracker {
    */
   public void trackSync(final Job job, final JobState jobState) {
     Exceptions.swallow(() -> {
+      final JobConfigProxy jobConfig = new JobConfigProxy(job.getConfig());
       final ConfigType configType = job.getConfigType();
-      final boolean allowedJob = configType == ConfigType.SYNC || configType == ConfigType.RESET_CONNECTION;
+      final boolean allowedJob = REPLICATION_TYPES.contains(configType);
       Preconditions.checkArgument(allowedJob, "Job type " + configType + " is not allowed!");
       final long jobId = job.getId();
       final Optional<Attempt> lastAttempt = job.getLastAttempt();
@@ -216,17 +233,23 @@ public class JobTracker {
       final ActorDefinitionVersion destinationVersion =
           actorDefinitionVersionHelper.getDestinationVersion(destinationDefinition, workspaceId, standardSync.getDestinationId());
 
-      final Map<String, Object> jobMetadata = generateJobMetadata(String.valueOf(jobId), configType, job.getAttemptsCount());
+      final List<Job> jobsHistory = jobPersistence.listJobsIncludingId(
+          Set.of(ConfigType.SYNC, ConfigType.RESET_CONNECTION, ConfigType.REFRESH), connectionId.toString(), jobId, 2);
+
+      final Optional<Job> previousJob = jobsHistory.stream().filter(jobHistory -> jobHistory.getId() != jobId).findFirst();
+
+      final Map<String, Object> jobMetadata = generateJobMetadata(String.valueOf(jobId), configType, job.getAttemptsCount(), previousJob);
       final Map<String, Object> jobAttemptMetadata = generateJobAttemptMetadata(jobId, jobState);
       final Map<String, Object> sourceDefMetadata = generateSourceDefinitionMetadata(sourceDefinition, sourceVersion);
       final Map<String, Object> destinationDefMetadata = generateDestinationDefinitionMetadata(destinationDefinition, destinationVersion);
       final Map<String, Object> syncMetadata = generateSyncMetadata(standardSync);
       final Map<String, Object> stateMetadata = generateStateMetadata(jobState);
       final Map<String, Object> syncConfigMetadata = generateSyncConfigMetadata(
-          job.getConfig(),
+          jobConfig,
           attemptSyncConfig.orElse(null),
           sourceVersion.getSpec().getConnectionSpecification(),
           destinationVersion.getSpec().getConnectionSpecification());
+      final Map<String, Object> refreshMetadata = generateRefreshMetadata(jobConfig);
 
       track(workspaceId,
           SYNC_EVENT,
@@ -237,7 +260,8 @@ public class JobTracker {
               destinationDefMetadata,
               syncMetadata,
               stateMetadata,
-              syncConfigMetadata));
+              syncConfigMetadata,
+              refreshMetadata));
     });
   }
 
@@ -265,7 +289,7 @@ public class JobTracker {
       final ActorDefinitionVersion destinationVersion =
           actorDefinitionVersionHelper.getDestinationVersion(destinationDefinition, workspaceId, standardSync.getDestinationId());
 
-      final Map<String, Object> jobMetadata = generateJobMetadata(String.valueOf(jobId), null, attempts);
+      final Map<String, Object> jobMetadata = generateJobMetadata(String.valueOf(jobId), null, attempts, Optional.empty());
       final Map<String, Object> jobAttemptMetadata = generateJobAttemptMetadata(jobId, jobState);
       final Map<String, Object> sourceDefMetadata = generateSourceDefinitionMetadata(sourceDefinition, sourceVersion);
       final Map<String, Object> destinationDefMetadata = generateDestinationDefinitionMetadata(destinationDefinition, destinationVersion);
@@ -287,12 +311,29 @@ public class JobTracker {
     });
   }
 
+  private Map<String, Object> generateRefreshMetadata(final JobConfigProxy jobConfig) {
+    if (jobConfig.getConfigType() == ConfigType.REFRESH) {
+      final List<String> refreshTypes = jobConfig
+          .getRaw()
+          .getRefresh()
+          .getStreamsToRefresh()
+          .stream()
+          .map(RefreshStream::getRefreshType)
+          .collect(Collectors.toSet())
+          .stream()
+          .map(RefreshType::value)
+          .toList();
+      return Map.of("refresh_types", refreshTypes);
+    }
+    return Map.of();
+  }
+
   private Map<String, Object> generateSyncConfigMetadata(
-                                                         final JobConfig config,
+                                                         final JobConfigProxy config,
                                                          @Nullable final AttemptSyncConfig attemptSyncConfig,
                                                          final JsonNode sourceConfigSchema,
                                                          final JsonNode destinationConfigSchema) {
-    if (config.getConfigType() == ConfigType.SYNC) {
+    if (SYNC_REPLICATION_TYPES.contains(config.getConfigType())) {
       final Map<String, Object> actorConfigMetadata = new HashMap<>();
 
       if (attemptSyncConfig != null) {
@@ -306,7 +347,14 @@ public class JobTracker {
             mapToJsonString(configToMetadata(destinationConfiguration, destinationConfigSchema)));
       }
 
-      final Map<String, Object> catalogMetadata = getCatalogMetadata(config.getSync().getConfiguredAirbyteCatalog());
+      final var configuredCatalog = config.getConfiguredCatalog();
+      final Map<String, Object> catalogMetadata;
+      if (configuredCatalog != null) {
+        catalogMetadata = getCatalogMetadata(configuredCatalog);
+      } else {
+        // This is not possible
+        throw new IllegalStateException("This should not be reacheable");
+      }
       return MoreMaps.merge(actorConfigMetadata, catalogMetadata);
     } else {
       return emptyMap();
@@ -327,7 +375,7 @@ public class JobTracker {
   private static String mapToJsonString(final Map<String, Object> map) {
     try {
       return OBJECT_MAPPER.writeValueAsString(map);
-    } catch (JsonProcessingException e) {
+    } catch (final JsonProcessingException e) {
       return "<failed to convert to JSON>";
     }
   }
@@ -440,12 +488,14 @@ public class JobTracker {
    * job with a failed check. Because of this, tracking just the job attempt status does not capture
    * the whole picture. The `check_connection_outcome` field tracks this.
    */
-  private Map<String, Object> generateCheckConnectionMetadata(final @Nullable StandardCheckConnectionOutput output) {
+  private Map<String, Object> generateCheckConnectionMetadata(final @Nullable StandardCheckConnectionOutput output, final UUID workspaceId) {
+    final Map<String, Object> metadata = new HashMap<>();
+    metadata.put("workload_enabled", featureFlagClient.boolVariation(UseWorkloadApi.INSTANCE, new Workspace(workspaceId)));
+
     if (output == null) {
-      return Map.of();
+      return metadata;
     }
 
-    final Map<String, Object> metadata = new HashMap<>();
     if (output.getMessage() != null) {
       metadata.put("check_connection_message", output.getMessage());
     }
@@ -485,17 +535,30 @@ public class JobTracker {
   }
 
   private Map<String, Object> generateJobMetadata(final String jobId, final ConfigType configType) {
-    return generateJobMetadata(jobId, configType, 0);
+    return generateJobMetadata(jobId, configType, 0, Optional.empty());
   }
 
-  private Map<String, Object> generateJobMetadata(final String jobId, final @Nullable ConfigType configType, final int attempt) {
+  @VisibleForTesting
+  Map<String, Object> generateJobMetadata(final String jobId,
+                                          final @Nullable ConfigType configType,
+                                          final int attempt,
+                                          final Optional<Job> previousJob) {
     final Map<String, Object> metadata = new HashMap<>();
     if (configType != null) {
-      metadata.put("job_type", configType);
+      // This is a cosmetic fix for our job tracking.
+      // https://github.com/airbytehq/airbyte-internal-issues/issues/7671 tracks the more complete
+      // refactoring. Once that is done, this should no longer be needed as we can directly log
+      // configType.
+      final var eventConfigType = configType == ConfigType.RESET_CONNECTION ? ConfigType.CLEAR : configType;
+      metadata.put("job_type", eventConfigType);
     }
     metadata.put("job_id", jobId);
     metadata.put("attempt_id", attempt);
-
+    previousJob.ifPresent(job -> {
+      if (job.getConfigType() != null) {
+        metadata.put("previous_job_type", job.getConfigType());
+      }
+    });
     return Collections.unmodifiableMap(metadata);
   }
 

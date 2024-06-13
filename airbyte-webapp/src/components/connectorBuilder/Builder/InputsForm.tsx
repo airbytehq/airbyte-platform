@@ -1,6 +1,7 @@
 import { yupResolver } from "@hookform/resolvers/yup";
+import escapeStringRegexp from "escape-string-regexp";
 import { useContext, useMemo } from "react";
-import { FormProvider, useForm, useFormContext, useWatch } from "react-hook-form";
+import { FormProvider, UseFormSetValue, useForm, useFormContext, useWatch } from "react-hook-form";
 import { FormattedMessage, useIntl } from "react-intl";
 import { useEffectOnce } from "react-use";
 import * as yup from "yup";
@@ -9,14 +10,18 @@ import { Button } from "components/ui/Button";
 import { Message } from "components/ui/Message";
 import { Modal, ModalBody, ModalFooter } from "components/ui/Modal";
 
+import { ConnectorBuilderProjectTestingValues } from "core/api/types/AirbyteClient";
 import { AirbyteJSONSchema } from "core/jsonSchema/types";
 import { Action, Namespace, useAnalyticsService } from "core/services/analytics";
-import { ConnectorBuilderMainRHFContext } from "services/connectorBuilder/ConnectorBuilderStateService";
+import {
+  ConnectorBuilderMainRHFContext,
+  useConnectorBuilderFormState,
+  TestingValuesUpdate,
+} from "services/connectorBuilder/ConnectorBuilderStateService";
 
 import { BuilderField } from "./BuilderField";
 import styles from "./InputsForm.module.scss";
-import { BuilderFormInput } from "../types";
-import { useInferredInputs } from "../useInferredInputs";
+import { BuilderFormInput, BuilderFormValues, BuilderState, builderInputsToSpec } from "../types";
 
 const supportedTypes = [
   "string",
@@ -36,10 +41,10 @@ export interface InputInEditing {
   previousKey?: string;
   definition: AirbyteJSONSchema;
   required: boolean;
+  isLocked?: boolean;
   isNew?: boolean;
   showDefaultValueField: boolean;
   type: (typeof supportedTypes)[number];
-  isInferredInputOverride: boolean;
 }
 
 function sluggify(str: string) {
@@ -54,7 +59,6 @@ export function newInputInEditing(): InputInEditing {
     isNew: true,
     showDefaultValueField: false,
     type: "string",
-    isInferredInputOverride: false,
   };
 }
 
@@ -82,6 +86,7 @@ function inputInEditingToFormInput({
       default: showDefaultValueField ? values.definition.default : undefined,
       format: type === "date" ? "date" : type === "date-time" ? "date-time" : values.definition.format,
       pattern: type === "date" ? DATE_PATTERN : type === "date-time" ? DATE_TIME_PATTERN : values.definition.pattern,
+      airbyte_secret: values.definition.airbyte_secret ? true : undefined,
     },
   };
 }
@@ -98,9 +103,10 @@ export const InputForm = ({
   if (!setValue || !watch) {
     throw new Error("rhf context not available");
   }
-  const inputs = watch("formValues.inputs");
-  const inferredInputs = useInferredInputs();
-  const usedKeys = useMemo(() => [...inputs, ...inferredInputs].map((input) => input.key), [inputs, inferredInputs]);
+  const { updateTestingValues } = useConnectorBuilderFormState();
+  const formValues = watch("formValues");
+  const testingValues = watch("testingValues");
+  const usedKeys = useMemo(() => formValues.inputs.map((input) => input.key), [formValues.inputs]);
   const inputInEditValidation = useMemo(
     () =>
       yup.object().shape({
@@ -125,19 +131,26 @@ export const InputForm = ({
     mode: "onChange",
   });
   const onSubmit = async (inputInEditing: InputInEditing) => {
-    if (inputInEditing.isInferredInputOverride) {
-      setValue(`formValues.inferredInputOverrides.${inputInEditing.key}`, inputInEditing.definition);
-      onClose();
-    } else {
-      const newInput = inputInEditingToFormInput(inputInEditing);
+    const newInput = inputInEditingToFormInput(inputInEditing);
+    if (inputInEditing.isNew) {
+      setValue("formValues.inputs", [...formValues.inputs, newInput]);
+    } else if (inputInEditing.key === inputInEditing.previousKey) {
       setValue(
         "formValues.inputs",
-        inputInEditing.isNew
-          ? [...inputs, newInput]
-          : inputs.map((input) => (input.key === inputInEditing.previousKey ? newInput : input))
+        formValues.inputs.map((input) => (input.key === inputInEditing.key ? newInput : input))
       );
-      onClose(newInput);
+    } else {
+      await updateInputKeyAndReferences(
+        inputInEditing.previousKey!,
+        newInput,
+        formValues,
+        testingValues,
+        setValue,
+        updateTestingValues
+      );
     }
+
+    onClose(newInput);
     analyticsService.track(
       Namespace.CONNECTOR_BUILDER,
       inputInEditing.isNew ? Action.USER_INPUT_CREATE : Action.USER_INPUT_EDIT,
@@ -164,7 +177,7 @@ export const InputForm = ({
         onDelete={() => {
           setValue(
             "formValues.inputs",
-            inputs.filter((input) => input.key !== inputInEditing.key)
+            formValues.inputs.filter((input) => input.key !== inputInEditing.key)
           );
           onClose();
           analyticsService.track(Namespace.CONNECTOR_BUILDER, Action.USER_INPUT_DELETE, {
@@ -181,6 +194,70 @@ export const InputForm = ({
   );
 };
 
+async function updateInputKeyAndReferences(
+  previousKey: string,
+  newInput: BuilderFormInput,
+  formValues: BuilderFormValues,
+  testingValues: ConnectorBuilderProjectTestingValues | undefined,
+  setValue: UseFormSetValue<BuilderState>,
+  updateTestingValues: TestingValuesUpdate
+) {
+  const newInputs = formValues.inputs.map((input) => (input.key === previousKey ? newInput : input));
+
+  const stringifiedFormValues = JSON.stringify(formValues);
+  const escapedPreviousKey = escapeStringRegexp(previousKey);
+
+  // replace {{ ... config.key ... }} style references
+  const interpolatedConfigReferenceRegexDot = new RegExp(
+    `(?<prefix>{{[^}]*?config\\.)(${escapedPreviousKey})(?<suffix>((\\s|\\.).*?)?}})`,
+    "g"
+  );
+  const dotReferencesReplaced = stringifiedFormValues.replaceAll(
+    interpolatedConfigReferenceRegexDot,
+    `$<prefix>${newInput.key}$<suffix>`
+  );
+
+  // replace {{ ... config['key'] ... }} style references
+  const interpolatedConfigReferenceRegexBracket = new RegExp(
+    `(?<prefix>{{[^}]*?config\\[('|\\\\")+)(${escapedPreviousKey})(?<suffix>('|\\\\")+\\].*?}})`,
+    "g"
+  );
+  const bracketReferencesReplaced = dotReferencesReplaced.replaceAll(
+    interpolatedConfigReferenceRegexBracket,
+    `$<prefix>${newInput.key}$<suffix>`
+  );
+
+  const parsedUpdatedFormValues = JSON.parse(bracketReferencesReplaced);
+  setValue("formValues", {
+    ...parsedUpdatedFormValues,
+    inputs: newInputs,
+  });
+
+  // update key in testing values if present
+  const previousTestingValue = testingValues?.[previousKey];
+  if (previousTestingValue) {
+    try {
+      const spec = builderInputsToSpec(newInputs);
+      await updateTestingValues({
+        spec: spec?.connection_specification ?? {},
+        testingValues: {
+          ...testingValues,
+          [previousKey]: undefined,
+          [newInput.key]: previousTestingValue,
+        },
+      });
+    } catch (e) {
+      // Could not update persisted testing values, likely because another required field does not have a value.
+      // Instead, just update the testing values in the form state so that the testing values menu uses the new key next time it is opened.
+      setValue("testingValues", {
+        ...testingValues,
+        [previousKey]: undefined,
+        [newInput.key]: previousTestingValue,
+      });
+    }
+  }
+}
+
 const InputModal = ({
   inputInEditing,
   onClose,
@@ -192,9 +269,8 @@ const InputModal = ({
   onClose: () => void;
   onSubmit: (inputInEditing: InputInEditing) => void;
 }) => {
-  const isInferredInputOverride = inputInEditing.isInferredInputOverride;
   const {
-    formState: { isValid },
+    formState: { isValid, isSubmitting },
     setValue,
     handleSubmit,
   } = useFormContext<InputInEditing>();
@@ -214,9 +290,10 @@ const InputModal = ({
           id={inputInEditing.isNew ? "connectorBuilder.inputModal.newTitle" : "connectorBuilder.inputModal.editTitle"}
         />
       }
-      onClose={onClose}
+      onCancel={onClose}
     >
       <form
+        className={styles.inputForm}
         onSubmit={(e) => {
           // stop propagation to avoid submitting the outer form as this form is nested
           e.stopPropagation();
@@ -227,8 +304,8 @@ const InputModal = ({
           <BuilderField
             path="definition.title"
             type="string"
-            onChange={(newValue) => {
-              if (!isInferredInputOverride) {
+            onBlur={(newValue) => {
+              if (!values.key) {
                 setValue("key", sluggify(newValue || ""), { shouldValidate: true });
               }
             }}
@@ -238,7 +315,6 @@ const InputModal = ({
           <BuilderField
             path="key"
             type="string"
-            readOnly
             label={formatMessage({ id: "connectorBuilder.inputModal.fieldId" })}
             tooltip={formatMessage(
               { id: "connectorBuilder.inputModal.fieldIdTooltip" },
@@ -254,7 +330,7 @@ const InputModal = ({
             label={formatMessage({ id: "connectorBuilder.inputModal.description" })}
             tooltip={formatMessage({ id: "connectorBuilder.inputModal.descriptionTooltip" })}
           />
-          {values.type !== "unknown" && !isInferredInputOverride ? (
+          {values.type !== "unknown" && !values.isLocked ? (
             <>
               <BuilderField
                 path="type"
@@ -273,6 +349,7 @@ const InputModal = ({
                   path="definition.enum"
                   type="array"
                   optional
+                  uniqueValues
                   label={formatMessage({ id: "connectorBuilder.inputModal.enum" })}
                   tooltip={formatMessage({ id: "connectorBuilder.inputModal.enumTooltip" })}
                 />
@@ -312,17 +389,19 @@ const InputModal = ({
             <Message
               type="info"
               text={
-                isInferredInputOverride ? (
-                  <FormattedMessage id="connectorBuilder.inputModal.inferredInputMessage" />
-                ) : (
-                  <FormattedMessage id="connectorBuilder.inputModal.unsupportedInput" />
-                )
+                <FormattedMessage
+                  id={
+                    values.type === "unknown"
+                      ? "connectorBuilder.inputModal.unsupportedInput"
+                      : "connectorBuilder.inputModal.lockedInput"
+                  }
+                />
               }
             />
           )}
         </ModalBody>
         <ModalFooter>
-          {!inputInEditing.isNew && !inputInEditing.isInferredInputOverride && (
+          {!inputInEditing.isNew && !inputInEditing.isLocked && (
             <div className={styles.deleteButtonContainer}>
               <Button variant="danger" type="button" onClick={onDelete}>
                 <FormattedMessage id="form.delete" />
@@ -332,7 +411,7 @@ const InputModal = ({
           <Button variant="secondary" type="reset" onClick={onClose}>
             <FormattedMessage id="form.cancel" />
           </Button>
-          <Button type="submit" disabled={!isValid}>
+          <Button type="submit" disabled={!isValid} isLoading={isSubmitting}>
             <FormattedMessage id={inputInEditing.isNew ? "form.create" : "form.saveChanges"} />
           </Button>
         </ModalFooter>

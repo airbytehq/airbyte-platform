@@ -12,12 +12,14 @@ import { ResizablePanels } from "components/ui/ResizablePanels";
 import { Spinner } from "components/ui/Spinner";
 import { Text } from "components/ui/Text";
 
-import { CommonRequestError } from "core/api";
-import { KnownExceptionInfo } from "core/api/types/ConnectorBuilderClient";
+import { HttpError } from "core/api";
 import { Action, Namespace, useAnalyticsService } from "core/services/analytics";
 import { links } from "core/utils/links";
 import { useLocalStorage } from "core/utils/useLocalStorage";
-import { useConnectorBuilderTestRead } from "services/connectorBuilder/ConnectorBuilderStateService";
+import {
+  useConnectorBuilderFormState,
+  useConnectorBuilderTestRead,
+} from "services/connectorBuilder/ConnectorBuilderStateService";
 
 import { GlobalRequestsDisplay } from "./GlobalRequestsDisplay";
 import { LogsDisplay } from "./LogsDisplay";
@@ -30,15 +32,12 @@ import { useAutoImportSchema } from "../useAutoImportSchema";
 import { formatJson } from "../utils";
 
 export const StreamTester: React.FC<{
-  hasTestInputJsonErrors: boolean;
-  setTestInputOpen: (open: boolean) => void;
-}> = ({ hasTestInputJsonErrors, setTestInputOpen }) => {
+  hasTestingValuesErrors: boolean;
+  setTestingValuesInputOpen: (open: boolean) => void;
+}> = ({ hasTestingValuesErrors, setTestingValuesInputOpen }) => {
   const { formatMessage } = useIntl();
+  const { streamNames, isResolving, resolveErrorMessage, resolveError } = useConnectorBuilderFormState();
   const {
-    resolvedManifest,
-    isResolving,
-    resolveErrorMessage,
-    resolveError,
     streamRead: {
       data: streamReadData,
       refetch: readStream,
@@ -49,6 +48,7 @@ export const StreamTester: React.FC<{
       dataUpdatedAt,
       errorUpdatedAt,
     },
+    testReadLimits: { recordLimit, pageLimit, sliceLimit },
   } = useConnectorBuilderTestRead();
   const [showLimitWarning, setShowLimitWarning] = useLocalStorage("connectorBuilderLimitWarning", true);
   const mode = useBuilderWatch("mode");
@@ -57,19 +57,20 @@ export const StreamTester: React.FC<{
   const auxiliaryRequests = streamReadData?.auxiliary_requests;
   const autoImportSchema = useAutoImportSchema(testStreamIndex);
 
-  const resolvedStreams = resolvedManifest.streams;
-  const streamName = resolvedStreams[testStreamIndex]?.name;
+  const streamName = streamNames[testStreamIndex];
 
   const analyticsService = useAnalyticsService();
 
+  const requestErrorStatus = resolveError?.status;
+
   const unknownErrorMessage = formatMessage({ id: "connectorBuilder.unknownError" });
   const errorMessage = isError
-    ? error instanceof Error
-      ? error.message || unknownErrorMessage
+    ? error instanceof HttpError
+      ? error.response?.message || unknownErrorMessage
       : unknownErrorMessage
     : undefined;
 
-  const errorExceptionStack = (resolveError as CommonRequestError<KnownExceptionInfo>)?.payload?.exceptionStack;
+  const errorExceptionStack = resolveError?.response?.exceptionStack;
 
   const [errorLogs, nonErrorLogs] = useMemo(
     () =>
@@ -118,10 +119,9 @@ export const StreamTester: React.FC<{
 
   const testDataWarnings = useTestWarnings();
 
-  const currentStream = resolvedStreams[testStreamIndex];
   return (
     <div className={styles.container}>
-      {!currentStream && isResolving && (
+      {streamName === undefined && isResolving && (
         <Text size="lg" align="center">
           <FormattedMessage id="connectorBuilder.loadingStreamList" />
         </Text>
@@ -135,8 +135,8 @@ export const StreamTester: React.FC<{
             stream_name: streamName,
           });
         }}
-        hasTestInputJsonErrors={hasTestInputJsonErrors}
-        setTestInputOpen={setTestInputOpen}
+        hasTestingValuesErrors={hasTestingValuesErrors}
+        setTestingValuesInputOpen={setTestingValuesInputOpen}
         isResolving={isResolving}
         hasResolveErrors={Boolean(resolveErrorMessage)}
       />
@@ -153,16 +153,29 @@ export const StreamTester: React.FC<{
             </Collapsible>
           )}
           <Text>
-            <FormattedMessage
-              id="connectorBuilder.ensureProperYaml"
-              values={{
-                a: (node: React.ReactNode) => (
-                  <a href={links.lowCodeYamlDescription} target="_blank" rel="noreferrer">
-                    {node}
-                  </a>
-                ),
-              }}
-            />
+            {[400, 422].includes(requestErrorStatus as number) ? (
+              <FormattedMessage
+                id="connectorBuilder.ensureProperYaml"
+                values={{
+                  a: (node: React.ReactNode) => (
+                    <a href={links.lowCodeYamlDescription} target="_blank" rel="noreferrer">
+                      {node}
+                    </a>
+                  ),
+                }}
+              />
+            ) : (
+              <FormattedMessage
+                id="connectorBuilder.contactSupport"
+                values={{
+                  a: (node: React.ReactNode) => (
+                    <a href={links.supportPortal} target="_blank" rel="noreferrer">
+                      {node}
+                    </a>
+                  ),
+                }}
+              />
+            )}
           </Text>
         </div>
       )}
@@ -173,8 +186,13 @@ export const StreamTester: React.FC<{
       )}
       {!isFetching && streamReadData && streamReadData.test_read_limit_reached && showLimitWarning && (
         <Message
-          type="warning"
-          text={<FormattedMessage id="connectorBuilder.streamTestLimitReached" />}
+          type="info"
+          text={
+            <FormattedMessage
+              id="connectorBuilder.streamTestLimitReached"
+              values={{ recordLimit, pageLimit, sliceLimit }}
+            />
+          }
           onClose={() => {
             setShowLimitWarning(false);
           }}

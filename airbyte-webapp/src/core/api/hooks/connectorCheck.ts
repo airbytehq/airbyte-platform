@@ -1,7 +1,8 @@
 import { useMutation } from "@tanstack/react-query";
+import { useIntl } from "react-intl";
 
 import { ConnectionConfiguration } from "area/connector/types";
-import { LogsRequestError } from "core/api";
+import { ErrorWithJobInfo } from "core/api";
 
 import {
   checkConnectionToDestination,
@@ -41,6 +42,7 @@ export type ConnectorCheckParams = CreateConnectorParams | RetestConnectorParams
 
 export const useCheckConnector = (type: "source" | "destination") => {
   const requestOptions = useRequestOptions();
+  const { formatMessage } = useIntl();
   return useMutation<CheckConnectionRead, Error, ConnectorCheckParams>(async (params) => {
     const options = { ...requestOptions, signal: params.signal };
     let result: CheckConnectionRead;
@@ -101,9 +103,9 @@ export const useCheckConnector = (type: "source" | "destination") => {
     }
 
     if (!result.jobInfo?.succeeded) {
-      throw new LogsRequestError(result.jobInfo, "Failed to run connection tests.");
+      throw new ErrorWithJobInfo(formatMessage({ id: "connector.check.jobFailed" }), result.jobInfo);
     } else if (result.status === CheckConnectionReadStatus.failed) {
-      throw new LogsRequestError(result.jobInfo, result.message);
+      throw new ErrorWithJobInfo(result.message ?? formatMessage({ id: "connector.check.failed" }), result.jobInfo);
     }
 
     return result;

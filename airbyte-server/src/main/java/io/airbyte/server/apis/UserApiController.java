@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.server.apis;
@@ -22,6 +22,7 @@ import io.airbyte.api.model.generated.UserRead;
 import io.airbyte.api.model.generated.UserUpdate;
 import io.airbyte.api.model.generated.UserWithPermissionInfoReadList;
 import io.airbyte.api.model.generated.WorkspaceIdRequestBody;
+import io.airbyte.api.model.generated.WorkspaceUserAccessInfoReadList;
 import io.airbyte.api.model.generated.WorkspaceUserReadList;
 import io.airbyte.commons.auth.SecuredUser;
 import io.airbyte.commons.server.handlers.UserHandler;
@@ -51,7 +52,7 @@ public class UserApiController implements UserApi {
   @SecuredUser
   @Secured({ADMIN, SELF})
   @Override
-  public UserRead createUser(final UserCreate userCreate) {
+  public UserRead createUser(@Body final UserCreate userCreate) {
     return ApiHelper.execute(() -> userHandler.createUser(userCreate));
   }
 
@@ -59,7 +60,7 @@ public class UserApiController implements UserApi {
   @SecuredUser
   @Secured({ADMIN, SELF})
   @Override
-  public UserRead getUser(final UserIdRequestBody userIdRequestBody) {
+  public UserRead getUser(@Body final UserIdRequestBody userIdRequestBody) {
     return ApiHelper.execute(() -> userHandler.getUser(userIdRequestBody));
   }
 
@@ -67,7 +68,7 @@ public class UserApiController implements UserApi {
   @SecuredUser
   @Secured({ADMIN, SELF})
   @Override
-  public UserRead getUserByAuthId(final UserAuthIdRequestBody userAuthIdRequestBody) {
+  public UserRead getUserByAuthId(@Body final UserAuthIdRequestBody userAuthIdRequestBody) {
     return ApiHelper.execute(() -> userHandler.getUserByAuthId(userAuthIdRequestBody));
   }
 
@@ -75,7 +76,7 @@ public class UserApiController implements UserApi {
   @SecuredUser
   @Secured({ADMIN, SELF})
   @Override
-  public UserRead getUserByEmail(final UserEmailRequestBody userEmailRequestBody) {
+  public UserRead getUserByEmail(@Body final UserEmailRequestBody userEmailRequestBody) {
     return ApiHelper.execute(() -> userHandler.getUserByEmail(userEmailRequestBody));
   }
 
@@ -83,7 +84,7 @@ public class UserApiController implements UserApi {
   @SecuredUser
   @Secured({ADMIN, SELF})
   @Override
-  public void deleteUser(final UserIdRequestBody userIdRequestBody) {
+  public void deleteUser(@Body final UserIdRequestBody userIdRequestBody) {
     ApiHelper.execute(
         () -> {
           userHandler.deleteUser(userIdRequestBody);
@@ -95,7 +96,7 @@ public class UserApiController implements UserApi {
   @SecuredUser
   @Secured({ADMIN, SELF})
   @Override
-  public UserRead updateUser(final UserUpdate userUpdate) {
+  public UserRead updateUser(@Body final UserUpdate userUpdate) {
     return ApiHelper.execute(() -> userHandler.updateUser(userUpdate));
   }
 
@@ -103,7 +104,7 @@ public class UserApiController implements UserApi {
   @Secured({ORGANIZATION_MEMBER})
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @Override
-  public OrganizationUserReadList listUsersInOrganization(OrganizationIdRequestBody organizationIdRequestBody) {
+  public OrganizationUserReadList listUsersInOrganization(@Body final OrganizationIdRequestBody organizationIdRequestBody) {
     return ApiHelper.execute(() -> userHandler.listUsersInOrganization(organizationIdRequestBody));
   }
 
@@ -113,6 +114,14 @@ public class UserApiController implements UserApi {
   @Override
   public WorkspaceUserReadList listUsersInWorkspace(@Body final WorkspaceIdRequestBody workspaceIdRequestBody) {
     return ApiHelper.execute(() -> userHandler.listUsersInWorkspace(workspaceIdRequestBody));
+  }
+
+  @Post("/list_access_info_by_workspace_id")
+  @Secured({WORKSPACE_READER, ORGANIZATION_READER})
+  @ExecuteOn(AirbyteTaskExecutors.IO)
+  @Override
+  public WorkspaceUserAccessInfoReadList listAccessInfoByWorkspaceId(@Body final WorkspaceIdRequestBody workspaceIdRequestBody) {
+    return ApiHelper.execute(() -> userHandler.listAccessInfoByWorkspaceId(workspaceIdRequestBody));
   }
 
   @Post("/list_instance_admins")

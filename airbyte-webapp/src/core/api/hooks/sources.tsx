@@ -1,6 +1,7 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useEffect, useState } from "react";
 import { flushSync } from "react-dom";
+import { useIntl } from "react-intl";
 
 import { ConnectionConfiguration } from "area/connector/types";
 import { Action, Namespace, useAnalyticsService } from "core/services/analytics";
@@ -8,6 +9,7 @@ import { isDefined } from "core/utils/common";
 
 import { useRemoveConnectionsFromList } from "./connections";
 import { useCurrentWorkspace } from "./workspaces";
+import { ErrorWithJobInfo } from "../errors";
 import {
   createSource,
   deleteSource,
@@ -17,7 +19,7 @@ import {
   updateSource,
 } from "../generated/AirbyteClient";
 import { SCOPE_WORKSPACE } from "../scopes";
-import { AirbyteCatalog, SourceRead, SynchronousJobRead, WebBackendConnectionListItem } from "../types/AirbyteClient";
+import { AirbyteCatalog, SourceRead, WebBackendConnectionListItem } from "../types/AirbyteClient";
 import { useRequestErrorHandler } from "../useRequestErrorHandler";
 import { useRequestOptions } from "../useRequestOptions";
 import { useSuspenseQuery } from "../useSuspenseQuery";
@@ -173,23 +175,22 @@ const useUpdateSource = () => {
   );
 };
 
-export type SchemaError = (Error & { status: number; response: SynchronousJobRead }) | null;
-
 const useDiscoverSchema = (
   sourceId: string,
   disableCache?: boolean
 ): {
   isLoading: boolean;
   schema: AirbyteCatalog | undefined;
-  schemaErrorStatus: SchemaError;
+  schemaErrorStatus: Error | null;
   catalogId: string | undefined;
   onDiscoverSchema: () => Promise<void>;
 } => {
+  const { formatMessage } = useIntl();
   const requestOptions = useRequestOptions();
   const [schema, setSchema] = useState<AirbyteCatalog | undefined>(undefined);
   const [catalogId, setCatalogId] = useState<string | undefined>("");
   const [isLoading, setIsLoading] = useState(false);
-  const [schemaErrorStatus, setSchemaErrorStatus] = useState<SchemaError>(null);
+  const [schemaErrorStatus, setSchemaErrorStatus] = useState<Error | null>(null);
 
   const onDiscoverSchema = useCallback(async () => {
     setIsLoading(true);
@@ -200,13 +201,11 @@ const useDiscoverSchema = (
         requestOptions
       );
 
-      if (!result.jobInfo?.succeeded || !result.catalog) {
-        // @ts-expect-error TODO: address this case
-        const e = result.jobInfo?.logs ? new LogsRequestError(result.jobInfo) : new CommonRequestError(result);
-        // Generate error with failed status and received logs
-        e._status = 400;
-        e.response = result.jobInfo;
-        throw e;
+      if (!result.jobInfo?.succeeded) {
+        throw new ErrorWithJobInfo(formatMessage({ id: "connector.discoverSchema.jobFailed" }), result.jobInfo);
+      }
+      if (!result.catalog) {
+        throw new ErrorWithJobInfo(formatMessage({ id: "connector.discoverSchema.catalogMissing" }), result.jobInfo);
       }
 
       flushSync(() => {
@@ -218,7 +217,7 @@ const useDiscoverSchema = (
     } finally {
       setIsLoading(false);
     }
-  }, [disableCache, requestOptions, sourceId]);
+  }, [disableCache, formatMessage, requestOptions, sourceId]);
 
   useEffect(() => {
     if (sourceId) {

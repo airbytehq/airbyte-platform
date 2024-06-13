@@ -16,7 +16,7 @@ $border-radius: variables.$border-radius-lg;
   }
 }
 
-.thead {
+.thead--sticky {
   position: sticky;
   top: 0;
   z-index: z-indices.$tableScroll;
@@ -82,10 +82,6 @@ $border-radius: variables.$border-radius-lg;
   background-color: colors.$foreground;
   cursor: auto;
 
-  &--clickable {
-    cursor: pointer;
-  }
-
   &:hover {
     background-color: colors.$grey-50;
   }
@@ -105,6 +101,10 @@ $border-radius: variables.$border-radius-lg;
 
   &--responsive {
     max-width: 0;
+  }
+
+  &--noPadding {
+    padding: 0;
   }
 
   tr:last-child > & {

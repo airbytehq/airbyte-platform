@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.config.specs;
@@ -273,7 +273,7 @@ class RemoteDefinitionsProviderTest {
 
     final RemoteDefinitionsProvider remoteDefinitionsProvider =
         new RemoteDefinitionsProvider(baseUrl, DEPLOYMENT_MODE, TimeUnit.SECONDS.toMillis(30));
-    final Optional<String> documentationResult = remoteDefinitionsProvider.getConnectorDocumentation(CONNECTOR_REPOSITORY, CONNECTOR_VERSION, false);
+    final Optional<String> documentationResult = remoteDefinitionsProvider.getConnectorDocumentation(CONNECTOR_REPOSITORY, CONNECTOR_VERSION);
     assertTrue(documentationResult.isPresent());
     assertEquals(documentationResult.get(), connectorDocumentationBody);
   }

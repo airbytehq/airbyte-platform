@@ -1,5 +1,6 @@
 import classNames from "classnames";
 
+import { isHttpUrl } from "core/utils/common";
 import { useAirbyteTheme } from "hooks/theme/useAirbyteTheme";
 
 import styles from "./SvgIcon.module.scss";
@@ -10,16 +11,13 @@ const noIconPlaceholder = `
   </svg>
 `;
 
-export const SvgIcon = ({ svg }: { svg?: string }) => {
+export const SvgIcon = ({ src }: { src?: string }) => {
   const { theme } = useAirbyteTheme();
+  const sanitizedSrc = isHttpUrl(src) ? src : `data:image/svg+xml;utf8,${encodeURIComponent(src || noIconPlaceholder)}`;
 
   return (
     <div className={classNames({ [styles.background]: theme === "airbyteThemeDark" })}>
-      <img
-        alt=""
-        className={styles.icon}
-        src={`data:image/svg+xml;utf8,${encodeURIComponent(svg || noIconPlaceholder)}`}
-      />
+      <img alt="" className={styles.icon} src={sanitizedSrc} />
     </div>
   );
 };

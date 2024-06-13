@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.commons.server.handlers.helpers;
@@ -21,13 +21,13 @@ import io.airbyte.config.ActorDefinitionVersion;
 import io.airbyte.config.FieldSelectionData;
 import io.airbyte.protocol.models.ConfiguredAirbyteCatalog;
 import io.airbyte.validation.json.JsonValidationException;
+import jakarta.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
-import javax.annotation.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -43,10 +43,11 @@ public class CatalogConverter {
         .name(stream.getName())
         .jsonSchema(stream.getJsonSchema())
         .supportedSyncModes(Enums.convertListTo(stream.getSupportedSyncModes(), io.airbyte.api.model.generated.SyncMode.class))
-        .sourceDefinedCursor(stream.getSourceDefinedCursor())
+        .sourceDefinedCursor(stream.getSourceDefinedCursor() != null ? stream.getSourceDefinedCursor() : false)
         .defaultCursorField(stream.getDefaultCursorField())
         .sourceDefinedPrimaryKey(stream.getSourceDefinedPrimaryKey())
-        .namespace(stream.getNamespace());
+        .namespace(stream.getNamespace())
+        .isResumable(stream.getIsResumable());
   }
 
   /**
@@ -73,7 +74,12 @@ public class CatalogConverter {
                   .primaryKey(configuredStream.getPrimaryKey())
                   .aliasName(Names.toAlphanumericAndUnderscore(configuredStream.getStream().getName()))
                   .selected(true)
-                  .fieldSelectionEnabled(getStreamHasFieldSelectionEnabled(fieldSelectionData, streamDescriptor));
+                  .suggested(false)
+                  .fieldSelectionEnabled(getStreamHasFieldSelectionEnabled(fieldSelectionData, streamDescriptor))
+                  .selectedFields(List.of())
+                  .generationId(configuredStream.getGenerationId())
+                  .minimumGenerationId(configuredStream.getMinimumGenerationId())
+                  .syncId(configuredStream.getSyncId());
           if (configuration.getFieldSelectionEnabled()) {
             final List<String> selectedColumns = new ArrayList<>();
             // TODO(mfsiega-airbyte): support nested fields here.
@@ -178,7 +184,8 @@ public class CatalogConverter {
         .withSourceDefinedCursor(stream.getSourceDefinedCursor())
         .withDefaultCursorField(stream.getDefaultCursorField())
         .withSourceDefinedPrimaryKey(Optional.ofNullable(stream.getSourceDefinedPrimaryKey()).orElse(Collections.emptyList()))
-        .withNamespace(stream.getNamespace());
+        .withNamespace(stream.getNamespace())
+        .withIsResumable(stream.getIsResumable());
   }
 
   /**

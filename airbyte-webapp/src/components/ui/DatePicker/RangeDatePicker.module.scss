@@ -1,0 +1,22 @@
+@use "scss/colors";
+@use "scss/fonts";
+@use "scss/variables";
+@use "scss/z-indices";
+
+.container {
+  width: auto;
+}
+
+.button {
+  background-color: colors.$foreground;
+  border-radius: variables.$border-radius-sm;
+  border: variables.$border-thin solid colors.$grey-300;
+
+  &:hover:not(:disabled) {
+    border-color: colors.$grey-100;
+  }
+}
+
+.hyphen {
+  color: colors.$grey-500;
+}

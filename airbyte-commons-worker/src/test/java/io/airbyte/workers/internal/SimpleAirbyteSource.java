@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.workers.internal;
@@ -13,6 +13,7 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Optional;
 import java.util.Queue;
+import java.util.UUID;
 
 /**
  * Simple in memory implementation of an AirbyteSource for testing purpose.
@@ -41,7 +42,7 @@ public class SimpleAirbyteSource implements AirbyteSource {
   }
 
   @Override
-  public void start(WorkerSourceConfig sourceConfig, Path jobRoot) throws Exception {
+  public void start(WorkerSourceConfig sourceConfig, Path jobRoot, UUID connectionId) throws Exception {
 
   }
 

@@ -11,7 +11,7 @@ export default {
 } as ComponentMeta<typeof PropertyLabel>;
 
 const Template: ComponentStory<typeof PropertyLabel> = (args) => (
-  <Card withPadding>
+  <Card>
     <PropertyLabel {...args} />
   </Card>
 );

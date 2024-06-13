@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.commons.server.support;
@@ -12,10 +12,13 @@ import static io.airbyte.commons.server.support.AuthenticationHttpHeaders.CREATO
 import static io.airbyte.commons.server.support.AuthenticationHttpHeaders.DESTINATION_ID_HEADER;
 import static io.airbyte.commons.server.support.AuthenticationHttpHeaders.EMAIL_HEADER;
 import static io.airbyte.commons.server.support.AuthenticationHttpHeaders.EXTERNAL_AUTH_ID_HEADER;
+import static io.airbyte.commons.server.support.AuthenticationHttpHeaders.IS_PUBLIC_API_HEADER;
 import static io.airbyte.commons.server.support.AuthenticationHttpHeaders.JOB_ID_HEADER;
 import static io.airbyte.commons.server.support.AuthenticationHttpHeaders.OPERATION_ID_HEADER;
 import static io.airbyte.commons.server.support.AuthenticationHttpHeaders.ORGANIZATION_ID_HEADER;
 import static io.airbyte.commons.server.support.AuthenticationHttpHeaders.PERMISSION_ID_HEADER;
+import static io.airbyte.commons.server.support.AuthenticationHttpHeaders.SCOPE_ID_HEADER;
+import static io.airbyte.commons.server.support.AuthenticationHttpHeaders.SCOPE_TYPE_HEADER;
 import static io.airbyte.commons.server.support.AuthenticationHttpHeaders.SOURCE_ID_HEADER;
 import static io.airbyte.commons.server.support.AuthenticationHttpHeaders.WORKSPACE_IDS_HEADER;
 import static io.airbyte.commons.server.support.AuthenticationHttpHeaders.WORKSPACE_ID_HEADER;
@@ -24,6 +27,7 @@ import io.airbyte.api.model.generated.PermissionIdRequestBody;
 import io.airbyte.api.model.generated.PermissionRead;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.commons.server.handlers.PermissionHandler;
+import io.airbyte.config.ScopeType;
 import io.airbyte.config.User;
 import io.airbyte.config.persistence.ConfigNotFoundException;
 import io.airbyte.config.persistence.UserPersistence;
@@ -32,9 +36,12 @@ import io.airbyte.validation.json.JsonValidationException;
 import jakarta.inject.Singleton;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 import lombok.extern.slf4j.Slf4j;
 
@@ -67,6 +74,12 @@ public class AuthenticationHeaderResolver {
     try {
       if (properties.containsKey(ORGANIZATION_ID_HEADER)) {
         return List.of(UUID.fromString(properties.get(ORGANIZATION_ID_HEADER)));
+      } else if (properties.containsKey(SCOPE_TYPE_HEADER) && properties.containsKey(SCOPE_ID_HEADER) && properties.get(SCOPE_TYPE_HEADER)
+          .equals(ScopeType.ORGANIZATION.value().toLowerCase())) {
+        // if the scope type is organization, we can use the scope id directly to resolve an organization
+        // id.
+        final String organizationId = properties.get(SCOPE_ID_HEADER);
+        return List.of(UUID.fromString(organizationId));
       } else {
         // resolving by permission id requires a database fetch, so we
         // handle it last and with a dedicated check to minimize latency.
@@ -133,7 +146,21 @@ public class AuthenticationHeaderResolver {
         final String configId = properties.get(CONFIG_ID_HEADER);
         return List.of(workspaceHelper.getWorkspaceForConnectionId(UUID.fromString(configId)));
       } else if (properties.containsKey(WORKSPACE_IDS_HEADER)) {
+        // If workspaceIds were passed in as empty list [], they apparently don't show up in the headers so
+        // this will be skipped
+        // The full list of workspace ID permissions is handled below in the catch-all.
         return resolveWorkspaces(properties);
+      } else if (properties.containsKey(SCOPE_TYPE_HEADER) && properties.containsKey(SCOPE_ID_HEADER) && properties.get(SCOPE_TYPE_HEADER)
+          .equals(ScopeType.WORKSPACE.value().toLowerCase())) {
+        // if the scope type is workspace, we can use the scope id directly to resolve a workspace id.
+        final String workspaceId = properties.get(SCOPE_ID_HEADER);
+        return List.of(UUID.fromString(workspaceId));
+      } else if (!properties.containsKey(WORKSPACE_IDS_HEADER) && properties.containsKey(IS_PUBLIC_API_HEADER)) {
+        // If the WORKSPACE_IDS_HEADER is missing and this is a public API request, we should return empty
+        // list so that we pass through
+        // the permission check and the controller/handler can either pull all workspaces the user has
+        // access to or fail.
+        return Collections.emptyList();
       } else {
         // resolving by permission id requires a database fetch, so we
         // handle it last and with a dedicated check to minimize latency.
@@ -153,17 +180,18 @@ public class AuthenticationHeaderResolver {
     }
   }
 
-  public String resolveUserAuthId(final Map<String, String> properties) {
+  public Set<String> resolveAuthUserIds(final Map<String, String> properties) {
     log.debug("properties: {}", properties);
     try {
       if (properties.containsKey(EXTERNAL_AUTH_ID_HEADER)) {
-        return properties.get(EXTERNAL_AUTH_ID_HEADER);
+        final String authUserId = properties.get(EXTERNAL_AUTH_ID_HEADER);
+        return Set.of(authUserId);
       } else if (properties.containsKey(AIRBYTE_USER_ID_HEADER)) {
-        return resolveUserId(properties.get(AIRBYTE_USER_ID_HEADER));
+        return resolveAirbyteUserIdToAuthUserIds(properties.get(AIRBYTE_USER_ID_HEADER));
       } else if (properties.containsKey(CREATOR_USER_ID_HEADER)) {
-        return resolveUserId(properties.get(CREATOR_USER_ID_HEADER));
+        return resolveAirbyteUserIdToAuthUserIds(properties.get(CREATOR_USER_ID_HEADER));
       } else if (properties.containsKey(EMAIL_HEADER)) {
-        return resolveEmail(properties.get(EMAIL_HEADER));
+        return resolveEmailToAuthUserIds(properties.get(EMAIL_HEADER));
       } else {
         log.debug("Request does not contain any headers that resolve to a user ID.");
         return null;
@@ -174,23 +202,24 @@ public class AuthenticationHeaderResolver {
     }
   }
 
-  private String resolveUserId(final String userId) throws IOException {
-    final Optional<User> user = userPersistence.getUser(UUID.fromString(userId));
+  private Set<String> resolveAirbyteUserIdToAuthUserIds(final String airbyteUserId) throws IOException {
+    final List<String> authUserIds = userPersistence.listAuthUserIdsForUser(UUID.fromString(airbyteUserId));
 
-    if (user.isEmpty()) {
-      log.debug("Could not find a user database record for userId {}.", userId);
-      return null;
+    if (authUserIds.isEmpty()) {
+      throw new IllegalArgumentException(String.format("Could not find any authUserIds for userId %s", airbyteUserId));
     }
-    return user.get().getAuthUserId();
+
+    return new HashSet<>(authUserIds);
   }
 
-  private String resolveEmail(final String email) throws IOException {
-    // assumes Cloud is using Google Identity Platform
+  // TODO remove email-based resolution after Firebase invitations
+  // are replaced, flawed because email is not unique
+  private Set<String> resolveEmailToAuthUserIds(final String email) throws IOException {
     final Optional<User> user = userPersistence.getUserByEmail(email);
     if (user.isEmpty()) {
       throw new IllegalArgumentException(String.format("Could not find a user database record for email %s", email));
     }
-    return user.get().getAuthUserId();
+    return Set.of(user.get().getAuthUserId());
   }
 
   private UUID resolveWorkspaceIdFromPermissionHeader(final Map<String, String> properties) throws ConfigNotFoundException, IOException {

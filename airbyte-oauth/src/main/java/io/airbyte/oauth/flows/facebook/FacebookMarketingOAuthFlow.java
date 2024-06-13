@@ -1,11 +1,12 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.oauth.flows.facebook;
 
 import com.google.common.annotations.VisibleForTesting;
 import java.net.http.HttpClient;
+import java.util.List;
 import java.util.function.Supplier;
 
 /**
@@ -27,6 +28,11 @@ public class FacebookMarketingOAuthFlow extends FacebookOAuthFlow {
   @Override
   protected String getScopes() {
     return SCOPES;
+  }
+
+  @Override
+  public List<String> getDefaultOAuthOutputPath() {
+    return List.of("credentials");
   }
 
 }

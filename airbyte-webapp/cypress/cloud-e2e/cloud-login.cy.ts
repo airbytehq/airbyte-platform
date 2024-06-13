@@ -1,6 +1,5 @@
 import { assertOnLoginPage, testRedirectParamParsing } from "@cy/support/login-signup";
 import { buildRegExp, UUID } from "support/regexp";
-import { testUser } from "support/test-users";
 
 describe("manually logging in and out of airbyte cloud", () => {
   it("can be done by entering credentials, navigating to a workspace's settings page, and clicking the sign out button", () => {
@@ -8,10 +7,7 @@ describe("manually logging in and out of airbyte cloud", () => {
     // unauthenticated users are redirected to /login
     assertOnLoginPage();
 
-    cy.get("[data-testid='login.email']").type(testUser.email);
-    cy.get("[data-testid='login.password']").type(testUser.password);
-    cy.get("[data-testid='login.submit']").click();
-    cy.hasNavigatedTo("/workspaces");
+    cy.login();
     cy.selectWorkspace();
 
     cy.hasNavigatedTo(buildRegExp("/workspaces/", UUID, "/connections"));

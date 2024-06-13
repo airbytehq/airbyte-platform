@@ -1,6 +1,6 @@
 import { yupResolver } from "@hookform/resolvers/yup";
 import { ReactNode, useEffect } from "react";
-import { useForm, FormProvider, KeepStateOptions, DefaultValues, UseFormReturn } from "react-hook-form";
+import { useForm, FormProvider, KeepStateOptions, DefaultValues, UseFormReturn, UseFormProps } from "react-hook-form";
 import { SchemaOf } from "yup";
 
 import { FormChangeTracker } from "components/common/FormChangeTracker";
@@ -28,6 +28,8 @@ interface FormProps<T extends FormValues> {
   defaultValues: DefaultValues<T>;
   children?: ReactNode | undefined;
   trackDirtyChanges?: boolean;
+  mode?: UseFormProps<T>["mode"];
+  reValidateMode?: UseFormProps<T>["reValidateMode"];
   /**
    * Reinitialize form values when defaultValues changes. This will only work if the form is not dirty. Defaults to false.
    */
@@ -37,6 +39,10 @@ interface FormProps<T extends FormValues> {
    */
   disabled?: boolean;
   dataTestId?: string;
+  /**
+   * A unique identifier for tracking changes to the form, integrates with the form change tracking service
+   */
+  formTrackerId?: string;
 }
 
 export const Form = <T extends FormValues>({
@@ -48,13 +54,17 @@ export const Form = <T extends FormValues>({
   schema,
   trackDirtyChanges = false,
   reinitializeDefaultValues = false,
+  mode = "onChange",
+  reValidateMode,
   disabled = false,
   dataTestId,
+  formTrackerId,
 }: FormProps<T>) => {
   const methods = useForm<T>({
     defaultValues,
     resolver: yupResolver(schema),
-    mode: "onChange",
+    mode,
+    reValidateMode,
   });
 
   useEffect(() => {
@@ -85,7 +95,7 @@ export const Form = <T extends FormValues>({
   return (
     <FormProvider {...methods}>
       <FormDevTools />
-      {trackDirtyChanges && <FormChangeTracker changed={methods.formState.isDirty} />}
+      {trackDirtyChanges && <FormChangeTracker formId={formTrackerId} changed={methods.formState.isDirty} />}
       <form onSubmit={methods.handleSubmit(processSubmission)} data-testid={dataTestId}>
         <fieldset disabled={disabled} className={styles.fieldset}>
           {children}

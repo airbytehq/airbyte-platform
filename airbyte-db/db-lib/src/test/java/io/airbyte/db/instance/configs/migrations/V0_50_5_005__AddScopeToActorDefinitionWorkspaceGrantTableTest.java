@@ -1,8 +1,10 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.db.instance.configs.migrations;
+
+import static org.jooq.impl.DSL.select;
 
 import io.airbyte.db.factory.FlywayFactory;
 import io.airbyte.db.instance.configs.AbstractConfigsDatabaseTest;
@@ -14,9 +16,11 @@ import java.util.UUID;
 import org.flywaydb.core.Flyway;
 import org.flywaydb.core.api.migration.BaseJavaMigration;
 import org.jooq.DSLContext;
+import org.jooq.Field;
 import org.jooq.Record;
 import org.jooq.exception.DataAccessException;
 import org.jooq.impl.DSL;
+import org.jooq.impl.SQLDataType;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
@@ -29,6 +33,7 @@ class V0_50_5_005__AddScopeToActorDefinitionWorkspaceGrantTableTest extends Abst
   private static final String WORKSPACE_ID = "workspace_id";
   private static final String SCOPE_ID = "scope_id";
   private static final String SCOPE_TYPE = "scope_type";
+  public static final UUID DEFAULT_UUID = UUID.fromString("00000000-0000-0000-0000-000000000000");
 
   private DevDatabaseMigrator devConfigsDbMigrator;
 
@@ -58,6 +63,8 @@ class V0_50_5_005__AddScopeToActorDefinitionWorkspaceGrantTableTest extends Abst
     final UUID actorDefinitionId = UUID.randomUUID();
     final UUID workspaceId1 = UUID.randomUUID();
     final UUID workspaceId2 = UUID.randomUUID();
+
+    addDefaultOrganization(context);
 
     addWorkspace(context, workspaceId1);
     addWorkspace(context, workspaceId2);
@@ -91,20 +98,32 @@ class V0_50_5_005__AddScopeToActorDefinitionWorkspaceGrantTableTest extends Abst
     Assertions.assertTrue(scopeColumnsMatchWorkspaceId(context, actorDefinitionId, workspaceId2), "workspace id 2 doesn't match");
   }
 
+  private static void addDefaultOrganization(final DSLContext context) {
+    final Field<UUID> idColumn = DSL.field("id", SQLDataType.UUID);
+    final Field<String> emailColumn = DSL.field("email", SQLDataType.VARCHAR(256));
+    final Field<String> nameColumn = DSL.field("name", SQLDataType.VARCHAR(256));
+    final Field<UUID> userIdColumn = DSL.field("user_id", SQLDataType.UUID);
+
+    context.insertInto(DSL.table("organization"))
+        .columns(idColumn, emailColumn, nameColumn, userIdColumn)
+        .values(DEFAULT_UUID, "test@test.com", "Default Organization", DEFAULT_UUID)
+        .execute();
+  }
+
   protected static boolean scopeColumnsExists(final DSLContext ctx) {
-    return ctx.fetchExists(DSL.select()
+    return ctx.fetchExists(select()
         .from("information_schema.columns")
         .where(DSL.field("table_name").eq(ACTOR_DEFINITION_WORKSPACE_GRANT_TABLE)
             .and(DSL.field("column_name").eq(SCOPE_ID))))
         &&
-        ctx.fetchExists(DSL.select()
+        ctx.fetchExists(select()
             .from("information_schema.columns")
             .where(DSL.field("table_name").eq(ACTOR_DEFINITION_WORKSPACE_GRANT_TABLE)
                 .and(DSL.field("column_name").eq(SCOPE_TYPE))));
   }
 
   protected static boolean scopeColumnsMatchWorkspaceId(final DSLContext ctx, final UUID actorDefinitionId, final UUID workspaceId) {
-    final Record record = ctx.fetchOne(DSL.select()
+    final Record record = ctx.fetchOne(select()
         .from(ACTOR_DEFINITION_WORKSPACE_GRANT_TABLE)
         .where(DSL.field(ACTOR_DEFINITION_ID).eq(actorDefinitionId))
         .and(DSL.field(WORKSPACE_ID).eq(workspaceId)));
@@ -119,12 +138,14 @@ class V0_50_5_005__AddScopeToActorDefinitionWorkspaceGrantTableTest extends Abst
             DSL.field("id"),
             DSL.field("name"),
             DSL.field("slug"),
-            DSL.field("initial_setup_complete"))
+            DSL.field("initial_setup_complete"),
+            DSL.field("organization_id"))
         .values(
             workspaceId,
             "base workspace",
             "base_workspace",
-            true)
+            true,
+            DEFAULT_UUID)
         .execute();
   }
 
@@ -149,6 +170,10 @@ class V0_50_5_005__AddScopeToActorDefinitionWorkspaceGrantTableTest extends Abst
     final UUID scopeId = UUID.randomUUID();
 
     final DSLContext context = getDslContext();
+
+    // We retroactively made orgs required so applying the default org/user migration so we can use the
+    // default org to allow this test to pass
+    V0_50_19_001__CreateDefaultOrganizationAndUser.createDefaultUserAndOrganization(context);
 
     addWorkspace(context, workspaceId);
     addActorDefinition(context, actorDefinitionId);

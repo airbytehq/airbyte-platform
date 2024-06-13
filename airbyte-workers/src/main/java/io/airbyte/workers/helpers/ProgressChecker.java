@@ -1,18 +1,19 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.workers.helpers;
 
-import io.airbyte.api.client.generated.AttemptApi;
-import io.airbyte.api.client.invoker.generated.ApiException;
+import io.airbyte.api.client.AirbyteApiClient;
 import io.airbyte.api.client.model.generated.AttemptStats;
 import io.airbyte.api.client.model.generated.GetAttemptStatsRequestBody;
 import io.airbyte.commons.temporal.exception.RetryableException;
 import io.micronaut.http.HttpStatus;
 import jakarta.inject.Singleton;
+import java.io.IOException;
 import java.util.Optional;
 import lombok.extern.slf4j.Slf4j;
+import org.openapitools.client.infrastructure.ClientException;
 
 /**
  * Composes all the business and request logic for checking progress of a run.
@@ -21,11 +22,11 @@ import lombok.extern.slf4j.Slf4j;
 @Singleton
 public class ProgressChecker {
 
-  private final AttemptApi attemptApi;
+  private final AirbyteApiClient airbyteApiClient;
   private final ProgressCheckerPredicates predicate;
 
-  public ProgressChecker(final AttemptApi attemptApi, final ProgressCheckerPredicates predicate) {
-    this.attemptApi = attemptApi;
+  public ProgressChecker(final AirbyteApiClient airbyteApiClient, final ProgressCheckerPredicates predicate) {
+    this.airbyteApiClient = airbyteApiClient;
     this.predicate = predicate;
   }
 
@@ -35,8 +36,9 @@ public class ProgressChecker {
    * @param jobId Job id for run in question
    * @param attemptNo Attempt number for run in question — 0-based
    * @return whether we made progress. Returns false if we failed to check.
+   * @throws IOException Rethrows the OkHttp execute method exception
    */
-  public boolean check(final long jobId, final int attemptNo) {
+  public boolean check(final long jobId, final int attemptNo) throws IOException {
     final var resp = fetchAttemptStats(jobId, attemptNo);
 
     return resp
@@ -45,21 +47,21 @@ public class ProgressChecker {
   }
 
   private Optional<AttemptStats> fetchAttemptStats(final long jobId, final int attemptNo) throws RetryableException {
-    final var req = new GetAttemptStatsRequestBody()
-        .attemptNumber(attemptNo)
-        .jobId(jobId);
+    final var req = new GetAttemptStatsRequestBody(jobId, attemptNo);
 
     AttemptStats resp;
 
     try {
-      resp = attemptApi.getAttemptCombinedStats(req);
-    } catch (final ApiException e) {
+      resp = airbyteApiClient.getAttemptApi().getAttemptCombinedStats(req);
+    } catch (final ClientException e) {
       // Retry unexpected 4xx/5xx status codes.
       // 404 is an expected status code and should not be retried.
-      if (e.getCode() != HttpStatus.NOT_FOUND.getCode()) {
+      if (e.getStatusCode() != HttpStatus.NOT_FOUND.getCode()) {
         throw new RetryableException(e);
       }
       resp = null;
+    } catch (final IOException e) {
+      throw new RetryableException(e);
     }
 
     return Optional.ofNullable(resp);

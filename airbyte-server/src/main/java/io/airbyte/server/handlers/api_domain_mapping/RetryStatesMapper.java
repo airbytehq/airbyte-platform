@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.server.handlers.api_domain_mapping;
@@ -18,7 +18,7 @@ public class RetryStatesMapper {
 
   // API to Domain
   public RetryState map(final JobRetryStateRequestBody api) {
-    return RetryState.builder()
+    return new RetryState.RetryStateBuilder()
         .id(api.getId())
         .connectionId(api.getConnectionId())
         .jobId(api.getJobId())

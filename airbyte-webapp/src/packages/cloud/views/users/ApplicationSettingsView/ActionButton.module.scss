@@ -1,0 +1,14 @@
+.actionButton {
+  opacity: 0;
+  transition: 0.2s;
+
+  &:focus,
+  &:hover {
+    opacity: 1;
+  }
+
+  tr:hover &,
+  tr:focus-within & {
+    opacity: 1;
+  }
+}

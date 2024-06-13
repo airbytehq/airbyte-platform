@@ -10,9 +10,15 @@ const localDocMiddleware = (docsPath: string): Plugin => {
   return {
     name: "airbyte/doc-middleware-local",
     configureServer(server: ViteDevServer) {
-      // Serve the docs used in the sidebar. During building Gradle will copy those into the docker image
-      // Relavant gradle task :airbyte-webapp:copyDocs
+      // Serve the docs used in the sidebar. In dev mode, docs are served from either the local airbyte repository,
+      // or github if that repository is not found.
       server.middlewares.use("/docs/integrations", express.static(docsPath) as Connect.NextHandleFunction);
+      // Don't fallback to default handling (serve index.html) for not found files, but make sure they 404 out properly
+      // so that a clear error message is displayed in the documentation panel if the file is not found.
+      server.middlewares.use("/docs/integrations", (req, res) => {
+        res.statusCode = 404;
+        res.end(`404 - ${docsPath}${req.url} not found`);
+      });
       // Server assets that can be used during. Related gradle task: :airbyte-webapp:copyDocAssets
       server.middlewares.use("/docs/.gitbook", express.static(`${docsPath}/../.gitbook`) as Connect.NextHandleFunction);
     },

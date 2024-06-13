@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.commons.server.handlers;
@@ -16,7 +16,6 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
 
@@ -54,15 +53,16 @@ import io.airbyte.config.StandardSourceDefinition;
 import io.airbyte.config.SuggestedStreams;
 import io.airbyte.config.helpers.ConnectorRegistryConverters;
 import io.airbyte.config.init.SupportStateUpdater;
+import io.airbyte.config.persistence.ActorDefinitionVersionHelper;
 import io.airbyte.config.persistence.ConfigNotFoundException;
 import io.airbyte.config.persistence.ConfigRepository;
 import io.airbyte.config.specs.RemoteDefinitionsProvider;
 import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.featureflag.HideActorDefinitionFromList;
 import io.airbyte.featureflag.Multi;
-import io.airbyte.featureflag.RunSupportStateUpdater;
 import io.airbyte.featureflag.SourceDefinition;
 import io.airbyte.featureflag.TestClient;
+import io.airbyte.featureflag.UseIconUrlInApiResponse;
 import io.airbyte.featureflag.Workspace;
 import io.airbyte.protocol.models.ConnectorSpecification;
 import io.airbyte.validation.json.JsonValidationException;
@@ -86,6 +86,7 @@ class SourceDefinitionsHandlerTest {
 
   private static final String TODAY_DATE_STRING = LocalDate.now().toString();
   private static final String DEFAULT_PROTOCOL_VERSION = "0.2.0";
+  private static final String ICON_URL = "https://connectors.airbyte.com/files/metadata/airbyte/source-presto/latest/icon.svg";
 
   private ConfigRepository configRepository;
   private StandardSourceDefinition sourceDefinition;
@@ -99,6 +100,7 @@ class SourceDefinitionsHandlerTest {
   private UUID workspaceId;
   private UUID organizationId;
   private FeatureFlagClient featureFlagClient;
+  private ActorDefinitionVersionHelper actorDefinitionVersionHelper;
 
   @SuppressWarnings("unchecked")
   @BeforeEach
@@ -114,9 +116,11 @@ class SourceDefinitionsHandlerTest {
     sourceDefinition = generateSourceDefinition();
     sourceDefinitionVersion = generateVersionFromSourceDefinition(sourceDefinition);
     featureFlagClient = mock(TestClient.class);
+    actorDefinitionVersionHelper = mock(ActorDefinitionVersionHelper.class);
+
     sourceDefinitionsHandler =
         new SourceDefinitionsHandler(configRepository, uuidSupplier, actorDefinitionHandlerHelper, remoteDefinitionsProvider, sourceHandler,
-            supportStateUpdater, featureFlagClient);
+            supportStateUpdater, featureFlagClient, actorDefinitionVersionHelper);
   }
 
   private StandardSourceDefinition generateSourceDefinition() {
@@ -125,6 +129,7 @@ class SourceDefinitionsHandlerTest {
         .withDefaultVersionId(UUID.randomUUID())
         .withName("presto")
         .withIcon("rss.svg")
+        .withIconUrl(ICON_URL)
         .withTombstone(false)
         .withResourceRequirements(new ActorDefinitionResourceRequirements()
             .withDefault(new ResourceRequirements().withCpuRequest("2")));
@@ -216,15 +221,16 @@ class SourceDefinitionsHandlerTest {
 
   @Test
   @DisplayName("listSourceDefinitionsForWorkspace should return the right list")
-  void testListSourceDefinitionsForWorkspace() throws IOException, URISyntaxException {
+  void testListSourceDefinitionsForWorkspace() throws IOException, URISyntaxException, JsonValidationException, ConfigNotFoundException {
     final StandardSourceDefinition sourceDefinition2 = generateSourceDefinition();
     final ActorDefinitionVersion sourceDefinitionVersion2 = generateVersionFromSourceDefinition(sourceDefinition2);
 
     when(featureFlagClient.boolVariation(eq(HideActorDefinitionFromList.INSTANCE), any())).thenReturn(false);
     when(configRepository.listPublicSourceDefinitions(false)).thenReturn(Lists.newArrayList(sourceDefinition));
     when(configRepository.listGrantedSourceDefinitions(workspaceId, false)).thenReturn(Lists.newArrayList(sourceDefinition2));
-    when(configRepository.getActorDefinitionVersions(List.of(sourceDefinition.getDefaultVersionId(), sourceDefinition2.getDefaultVersionId())))
-        .thenReturn(Lists.newArrayList(sourceDefinitionVersion, sourceDefinitionVersion2));
+    when(actorDefinitionVersionHelper.getSourceVersion(sourceDefinition, workspaceId)).thenReturn(sourceDefinitionVersion);
+    when(actorDefinitionVersionHelper.getSourceVersion(sourceDefinition2, workspaceId))
+        .thenReturn(sourceDefinitionVersion2);
 
     final SourceDefinitionRead expectedSourceDefinitionRead1 = new SourceDefinitionRead()
         .sourceDefinitionId(sourceDefinition.getSourceDefinitionId())
@@ -266,7 +272,7 @@ class SourceDefinitionsHandlerTest {
 
   @Test
   @DisplayName("listSourceDefinitionsForWorkspace should return the right list, filtering out hidden connectors")
-  void testListSourceDefinitionsForWorkspaceWithHiddenConnectors() throws IOException {
+  void testListSourceDefinitionsForWorkspaceWithHiddenConnectors() throws IOException, JsonValidationException, ConfigNotFoundException {
     final StandardSourceDefinition hiddenSourceDefinition = generateSourceDefinition();
     final StandardSourceDefinition sourceDefinition2 = generateSourceDefinition();
     final ActorDefinitionVersion sourceDefinitionVersion2 = generateVersionFromSourceDefinition(sourceDefinition2);
@@ -277,8 +283,9 @@ class SourceDefinitionsHandlerTest {
 
     when(configRepository.listPublicSourceDefinitions(false)).thenReturn(Lists.newArrayList(hiddenSourceDefinition, sourceDefinition));
     when(configRepository.listGrantedSourceDefinitions(workspaceId, false)).thenReturn(Lists.newArrayList(sourceDefinition2));
-    when(configRepository.getActorDefinitionVersions(List.of(sourceDefinition.getDefaultVersionId(), sourceDefinition2.getDefaultVersionId())))
-        .thenReturn(Lists.newArrayList(sourceDefinitionVersion, sourceDefinitionVersion2));
+    when(actorDefinitionVersionHelper.getSourceVersion(sourceDefinition, workspaceId)).thenReturn(sourceDefinitionVersion);
+    when(actorDefinitionVersionHelper.getSourceVersion(sourceDefinition2, workspaceId))
+        .thenReturn(sourceDefinitionVersion2);
 
     final SourceDefinitionReadList actualSourceDefinitionReadList =
         sourceDefinitionsHandler.listSourceDefinitionsForWorkspace(new WorkspaceIdRequestBody().workspaceId(workspaceId));
@@ -539,7 +546,8 @@ class SourceDefinitionsHandlerTest {
     verify(configRepository).writeCustomConnectorMetadata(
         newSourceDefinition
             .withCustom(true)
-            .withDefaultVersionId(null),
+            .withDefaultVersionId(null)
+            .withIconUrl(null),
         sourceDefinitionVersion,
         workspaceId,
         ScopeType.WORKSPACE);
@@ -603,7 +611,8 @@ class SourceDefinitionsHandlerTest {
     verify(configRepository).writeCustomConnectorMetadata(
         newSourceDefinition
             .withCustom(true)
-            .withDefaultVersionId(null),
+            .withDefaultVersionId(null)
+            .withIconUrl(null),
         sourceDefinitionVersion,
         workspaceId,
         ScopeType.WORKSPACE);
@@ -669,8 +678,9 @@ class SourceDefinitionsHandlerTest {
   @ParameterizedTest
   @ValueSource(booleans = {true, false})
   @DisplayName("updateSourceDefinition should correctly update a sourceDefinition")
-  void testUpdateSource(final boolean runSupportStateUpdaterFlagValue) throws ConfigNotFoundException, IOException, JsonValidationException {
-    when(featureFlagClient.boolVariation(RunSupportStateUpdater.INSTANCE, new Workspace(ANONYMOUS))).thenReturn(runSupportStateUpdaterFlagValue);
+  void testUpdateSource(final boolean useIconUrlInApiResponseFlagValue)
+      throws ConfigNotFoundException, IOException, JsonValidationException, URISyntaxException, io.airbyte.data.exceptions.ConfigNotFoundException {
+    when(featureFlagClient.boolVariation(UseIconUrlInApiResponse.INSTANCE, new Workspace(ANONYMOUS))).thenReturn(useIconUrlInApiResponseFlagValue);
 
     final String newDockerImageTag = "averydifferenttag";
     final StandardSourceDefinition updatedSource =
@@ -701,16 +711,27 @@ class SourceDefinitionsHandlerTest {
             new SourceDefinitionUpdate().sourceDefinitionId(this.sourceDefinition.getSourceDefinitionId())
                 .dockerImageTag(newDockerImageTag));
 
-    assertEquals(newDockerImageTag, sourceRead.getDockerImageTag());
+    final SourceDefinitionRead expectedSourceDefinitionRead = new SourceDefinitionRead()
+        .sourceDefinitionId(sourceDefinition.getSourceDefinitionId())
+        .name(sourceDefinition.getName())
+        .dockerRepository(sourceDefinitionVersion.getDockerRepository())
+        .dockerImageTag(newDockerImageTag)
+        .documentationUrl(new URI(sourceDefinitionVersion.getDocumentationUrl()))
+        .icon(useIconUrlInApiResponseFlagValue ? ICON_URL : SourceDefinitionsHandler.loadIcon(sourceDefinition.getIcon()))
+        .supportLevel(SupportLevel.fromValue(sourceDefinitionVersion.getSupportLevel().value()))
+        .releaseStage(ReleaseStage.fromValue(sourceDefinitionVersion.getReleaseStage().value()))
+        .releaseDate(LocalDate.parse(sourceDefinitionVersion.getReleaseDate()))
+        .resourceRequirements(new io.airbyte.api.model.generated.ActorDefinitionResourceRequirements()
+            ._default(new io.airbyte.api.model.generated.ResourceRequirements()
+                .cpuRequest(sourceDefinition.getResourceRequirements().getDefault().getCpuRequest()))
+            .jobSpecific(Collections.emptyList()));
+
+    assertEquals(expectedSourceDefinitionRead, sourceRead);
     verify(actorDefinitionHandlerHelper).defaultDefinitionVersionFromUpdate(sourceDefinitionVersion, ActorType.SOURCE, newDockerImageTag,
         sourceDefinition.getCustom());
     verify(actorDefinitionHandlerHelper).getBreakingChanges(updatedSourceDefVersion, ActorType.SOURCE);
     verify(configRepository).writeConnectorMetadata(updatedSource, updatedSourceDefVersion, breakingChanges);
-    if (runSupportStateUpdaterFlagValue) {
-      verify(supportStateUpdater).updateSupportStatesForSourceDefinition(persistedUpdatedSource);
-    } else {
-      verifyNoInteractions(supportStateUpdater);
-    }
+    verify(supportStateUpdater).updateSupportStatesForSourceDefinition(persistedUpdatedSource);
     verifyNoMoreInteractions(actorDefinitionHandlerHelper, supportStateUpdater);
   }
 
@@ -869,7 +890,7 @@ class SourceDefinitionsHandlerTest {
     when(remoteDefinitionsProvider.getSourceDefinitions()).thenReturn(Collections.singletonList(registrySourceDefinition));
 
     final SourceDefinitionRead expectedRead =
-        SourceDefinitionsHandler.buildSourceDefinitionRead(ConnectorRegistryConverters.toStandardSourceDefinition(registrySourceDefinition),
+        sourceDefinitionsHandler.buildSourceDefinitionRead(ConnectorRegistryConverters.toStandardSourceDefinition(registrySourceDefinition),
             ConnectorRegistryConverters.toActorDefinitionVersion(registrySourceDefinition));
 
     assertEquals(expectedRead.getSupportLevel(), SupportLevel.NONE);
@@ -904,7 +925,7 @@ class SourceDefinitionsHandlerTest {
 
       final var sourceDefinitionRead = sourceDefinitionReadList.get(0);
       final SourceDefinitionRead expectedRead =
-          SourceDefinitionsHandler.buildSourceDefinitionRead(ConnectorRegistryConverters.toStandardSourceDefinition(registrySourceDefinition),
+          sourceDefinitionsHandler.buildSourceDefinitionRead(ConnectorRegistryConverters.toStandardSourceDefinition(registrySourceDefinition),
               ConnectorRegistryConverters.toActorDefinitionVersion(registrySourceDefinition));
 
       assertEquals(expectedRead, sourceDefinitionRead);

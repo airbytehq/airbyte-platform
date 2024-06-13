@@ -1,13 +1,10 @@
-ARG JDK_IMAGE=airbyte/airbyte-base-java-image:2.1.0
-FROM ${JDK_IMAGE} AS orchestrator
+ARG JAVA_WORKER_BASE_IMAGE_VERSION=2.2.2
 
-ARG DOCKER_BUILD_ARCH=amd64
+FROM scratch as builder
+WORKDIR /app
+ADD airbyte-app.tar /app
 
-RUN amazon-linux-extras install -y docker
-RUN yum install -y jq tar && yum clean all
-
-RUN curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/${DOCKER_BUILD_ARCH}/kubectl" \
-        && chmod +x kubectl && mv kubectl /usr/local/bin/
+FROM airbyte/airbyte-base-java-worker-image:${JAVA_WORKER_BASE_IMAGE_VERSION}
 
 # Don't change this manually.  Bump version expects to make moves based on this string
 ARG VERSION=dev
@@ -16,11 +13,9 @@ ENV APPLICATION airbyte-container-orchestrator
 ENV VERSION=${VERSION}
 
 WORKDIR /app
-
-COPY WellKnownTypes.json /app
-
-# Move orchestrator app
-ADD airbyte-app.tar /app
+COPY --chown=airbyte:airbyte WellKnownTypes.json /app
+COPY --chown=airbyte:airbyte --from=builder /app /app
+USER airbyte:airbyte
 
 # wait for upstream dependencies to become available before starting server
 ENTRYPOINT ["/bin/bash", "-c", "/app/airbyte-app/bin/${APPLICATION}"]

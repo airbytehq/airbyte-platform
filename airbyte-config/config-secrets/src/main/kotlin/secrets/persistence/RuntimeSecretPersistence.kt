@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 package io.airbyte.config.secrets.persistence
 
@@ -8,23 +8,21 @@ import io.airbyte.config.AwsAccessKeySecretPersistenceConfig
 import io.airbyte.config.AwsRoleSecretPersistenceConfig
 import io.airbyte.config.SecretPersistenceConfig
 import io.airbyte.config.secrets.SecretCoordinate
+import io.airbyte.metrics.lib.MetricClientFactory
+import io.airbyte.metrics.lib.MetricEmittingApps
 import io.github.oshai.kotlinlogging.KotlinLogging
-import io.micronaut.context.annotation.Property
 import kotlin.jvm.optionals.getOrElse
 
 private const val AWS_ASSUME_ROLE_ACCESS_KEY_ID = "AWS_ASSUME_ROLE_ACCESS_KEY_ID"
 private const val AWS_ASSUME_ROLE_SECRET_ACCESS_KEY = "AWS_ASSUME_ROLE_SECRET_ACCESS_KEY"
 
+private val log = KotlinLogging.logger {}
+
 /**
  * Class representing a RuntimeSecretPersistence to be used for BYO secrets customers.
  */
 class RuntimeSecretPersistence(private val secretPersistenceConfig: SecretPersistenceConfig) : SecretPersistence {
-  private val log = KotlinLogging.logger {}
-
-  @Property(name = "airbyte.secret.store.aws.access-key")
   private val awsAccessKey: String? = System.getenv(AWS_ASSUME_ROLE_ACCESS_KEY_ID)
-
-  @Property(name = "airbyte.secret.store.aws.secret-key")
   private val awsSecretKey: String? = System.getenv(AWS_ASSUME_ROLE_SECRET_ACCESS_KEY)
 
   private fun buildSecretPersistence(secretPersistenceConfig: SecretPersistenceConfig): SecretPersistence {
@@ -34,11 +32,13 @@ class RuntimeSecretPersistence(private val secretPersistenceConfig: SecretPersis
       }
 
       SecretPersistenceConfig.SecretPersistenceType.GOOGLE -> {
+        // We cannot use the @Singleton here because this class is not managed by Micronaut.
+        // Manually create the client for now.
+        MetricClientFactory.initialize(MetricEmittingApps.SERVER)
         GoogleSecretManagerPersistence(
           secretPersistenceConfig.configuration["gcpProjectId"]!!,
-          GoogleSecretManagerServiceClient(
-            secretPersistenceConfig.configuration["gcpCredentialsJson"]!!,
-          ),
+          GoogleSecretManagerServiceClient(secretPersistenceConfig.configuration["gcpCredentialsJson"]!!),
+          MetricClientFactory.getMetricClient(),
         )
       }
 
@@ -77,6 +77,10 @@ class RuntimeSecretPersistence(private val secretPersistenceConfig: SecretPersis
     secretPersistence.write(coordinate, payload)
   }
 
+  override fun delete(coordinate: SecretCoordinate) {
+    return
+  }
+
   private fun buildAwsSecretManager(configuration: Map<String, String>): AwsSecretManagerPersistence {
     // We default to ACCESS_KEY auth
     val authType = configuration["auth_type"]?.uppercase() ?: AwsAuthType.ACCESS_KEY.value
@@ -96,6 +100,8 @@ class RuntimeSecretPersistence(private val secretPersistenceConfig: SecretPersis
         serializedConfig.awsAccessKey,
         serializedConfig.awsSecretAccessKey,
         serializedConfig.awsRegion,
+        null,
+        null,
       )
     val cache = AwsCache(client)
     return AwsSecretManagerPersistence(client, cache)

@@ -1,17 +1,5 @@
 @use "scss/variables";
-
-.title {
-  display: flex;
-  justify-content: space-between;
-  flex-direction: row;
-  align-items: center;
-  min-height: 32px;
-}
-
-.actions {
-  display: flex;
-  gap: variables.$spacing-md;
-}
+@use "scss/colors";
 
 .footer {
   padding-top: variables.$spacing-xl;
@@ -19,4 +7,22 @@
   display: flex;
   align-items: center;
   justify-content: center;
+}
+
+.statusFilter {
+  min-width: 160px;
+  background-color: colors.$foreground;
+  border-radius: variables.$border-radius-sm;
+  color: colors.$grey-400;
+  border: variables.$border-thin solid colors.$grey-300;
+  min-height: auto;
+  height: variables.$button-height-xs;
+}
+
+.dateFilter {
+  width: 160px;
+}
+
+.jobCount {
+  margin-left: auto;
 }

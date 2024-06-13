@@ -11,10 +11,11 @@ export const CommunityAuthService: React.FC<PropsWithChildren<unknown>> = ({ chi
   return (
     <AuthContext.Provider
       value={{
+        authType: "none",
         user: defaultUser,
         inited: true,
         emailVerified: false,
-        providers: [],
+        provider: null,
         loggedOut: false,
       }}
     >

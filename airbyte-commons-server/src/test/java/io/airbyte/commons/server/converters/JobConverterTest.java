@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.commons.server.converters;
@@ -22,6 +22,7 @@ import io.airbyte.api.model.generated.JobDebugRead;
 import io.airbyte.api.model.generated.JobInfoLightRead;
 import io.airbyte.api.model.generated.JobInfoRead;
 import io.airbyte.api.model.generated.JobRead;
+import io.airbyte.api.model.generated.JobRefreshConfig;
 import io.airbyte.api.model.generated.JobWithAttemptsRead;
 import io.airbyte.api.model.generated.LogRead;
 import io.airbyte.api.model.generated.ResetConfig;
@@ -41,12 +42,15 @@ import io.airbyte.config.JobOutput;
 import io.airbyte.config.JobOutput.OutputType;
 import io.airbyte.config.JobResetConnectionConfig;
 import io.airbyte.config.JobSyncConfig;
+import io.airbyte.config.RefreshConfig;
+import io.airbyte.config.RefreshStream;
 import io.airbyte.config.ResetSourceConfiguration;
 import io.airbyte.config.StandardSyncOutput;
 import io.airbyte.config.StandardSyncSummary;
 import io.airbyte.config.StreamSyncStats;
 import io.airbyte.config.SyncStats;
 import io.airbyte.config.helpers.LogConfigs;
+import io.airbyte.featureflag.TestClient;
 import io.airbyte.persistence.job.models.Attempt;
 import io.airbyte.persistence.job.models.AttemptStatus;
 import io.airbyte.persistence.job.models.Job;
@@ -61,9 +65,13 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 
 class JobConverterTest {
 
@@ -89,6 +97,33 @@ class JobConverterTest {
     assertTrue(Enums.isCompatible(AttemptStatus.class, io.airbyte.api.model.generated.AttemptStatus.class));
     assertTrue(Enums.isCompatible(FailureReason.FailureOrigin.class, io.airbyte.api.model.generated.FailureOrigin.class));
 
+  }
+
+  private static Stream<Arguments> getExtractRefreshScenarios() {
+    return Stream.of(Arguments.of(
+        new Job(1, ConfigType.SYNC, null, null, null, null, null, 13, 37), Optional.empty()),
+        Arguments.of(
+            new Job(1, ConfigType.RESET_CONNECTION, null, null, null, null, null, 13, 37), Optional.empty()),
+        Arguments.of(
+            new Job(1, ConfigType.REFRESH, null, new JobConfig()
+                .withRefresh(new RefreshConfig().withStreamsToRefresh(
+                    List.of(new RefreshStream().withStreamDescriptor(new io.airbyte.protocol.models.StreamDescriptor().withName("test"))))),
+                null, null, null, 13, 37),
+            Optional.of(new JobRefreshConfig().streamsToRefresh(List.of(new StreamDescriptor().name("test"))))),
+        Arguments.of(
+            new Job(1, ConfigType.REFRESH, null, new JobConfig()
+                .withRefresh(new RefreshConfig().withStreamsToRefresh(
+                    List.of(new RefreshStream().withStreamDescriptor(null)))),
+                null, null, null, 13, 37),
+            Optional.empty()));
+  }
+
+  @ParameterizedTest
+  @MethodSource("getExtractRefreshScenarios")
+  void testExtractRefresh(final Job job, final Optional<JobRefreshConfig> expectedConfig) {
+    final Optional<JobRefreshConfig> actualConfig = JobConverter.extractRefreshConfigIfNeeded(job);
+
+    assertEquals(expectedConfig, actualConfig);
   }
 
   @Nested
@@ -201,7 +236,7 @@ class JobConverterTest {
 
     @BeforeEach
     public void setUp() {
-      jobConverter = new JobConverter(WorkerEnvironment.DOCKER, LogConfigs.EMPTY);
+      jobConverter = new JobConverter(WorkerEnvironment.DOCKER, LogConfigs.EMPTY, new TestClient());
       job = mock(Job.class);
       final Attempt attempt = mock(Attempt.class);
       when(job.getId()).thenReturn(JOB_ID);
@@ -317,7 +352,7 @@ class JobConverterTest {
 
     @BeforeEach
     public void setUp() {
-      jobConverter = new JobConverter(WorkerEnvironment.DOCKER, LogConfigs.EMPTY);
+      jobConverter = new JobConverter(WorkerEnvironment.DOCKER, LogConfigs.EMPTY, new TestClient());
       metadata = mock(SynchronousJobMetadata.class);
       when(metadata.getId()).thenReturn(JOB_ID);
       when(metadata.getConfigType()).thenReturn(CONFIG_TYPE);

@@ -13,5 +13,8 @@
   text-overflow: ellipsis;
   white-space: nowrap;
   overflow: hidden;
-  max-width: 150px;
+}
+
+.connectorsContainer {
+  min-width: 0;
 }

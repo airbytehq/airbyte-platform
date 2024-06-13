@@ -35,3 +35,7 @@ properties:
     type: integer
   manifestDescription:
     type: string
+  testingValues:
+    description: Integration specific blob. Must be a valid JSON string.
+    type: object
+    existingJavaType: com.fasterxml.jackson.databind.JsonNode

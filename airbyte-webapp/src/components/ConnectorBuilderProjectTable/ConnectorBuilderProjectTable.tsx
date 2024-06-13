@@ -1,13 +1,13 @@
 import { createColumnHelper } from "@tanstack/react-table";
 import classNames from "classnames";
-import { useMemo, useState } from "react";
-import { FormattedMessage } from "react-intl";
-import { useNavigate } from "react-router-dom";
+import { useCallback, useMemo, useState } from "react";
+import { FormattedMessage, useIntl } from "react-intl";
 
 import { Button } from "components/ui/Button";
 import { FlexContainer, FlexItem } from "components/ui/Flex";
 import { Icon } from "components/ui/Icon";
-import { Modal, ModalBody } from "components/ui/Modal";
+import { Link } from "components/ui/Link";
+import { ModalBody } from "components/ui/Modal";
 import { Spinner } from "components/ui/Spinner";
 import { Table } from "components/ui/Table";
 import { Text } from "components/ui/Text";
@@ -16,11 +16,14 @@ import { Tooltip } from "components/ui/Tooltip";
 import {
   BuilderProject,
   useChangeBuilderProjectVersion,
+  useCurrentWorkspace,
   useDeleteBuilderProject,
   useListBuilderProjectVersions,
 } from "core/api";
 import { Action, Namespace, useAnalyticsService } from "core/services/analytics";
+import { useIntent } from "core/utils/rbac";
 import { useConfirmationModalService } from "hooks/services/ConfirmationModal";
+import { useModalService } from "hooks/services/Modal";
 import { useNotificationService } from "hooks/services/Notification";
 import { getEditPath } from "pages/connectorBuilder/ConnectorBuilderRoutes";
 
@@ -37,8 +40,8 @@ const CHANGED_VERSION_ERROR_ID = "connectorBuilder.changeVersion.error";
 
 const VersionChangeModal: React.FC<{
   project: BuilderProject;
-  onClose: () => void;
-}> = ({ onClose, project }) => {
+  onComplete: () => void;
+}> = ({ onComplete, project }) => {
   const { data: versions, isLoading: isLoadingVersionList } = useListBuilderProjectVersions(project);
   const [selectedVersion, setSelectedVersion] = useState<number | undefined>(undefined);
   const { mutateAsync: changeVersion, isLoading } = useChangeBuilderProjectVersion();
@@ -72,7 +75,7 @@ const VersionChangeModal: React.FC<{
         ),
         type: "success",
       });
-      onClose();
+      onComplete();
     } catch (e) {
       registerNotification({
         id: NOTIFICATION_ID,
@@ -91,53 +94,49 @@ const VersionChangeModal: React.FC<{
   }
 
   return (
-    <Modal
-      size="sm"
-      title={<FormattedMessage id="connectorBuilder.changeVersionModal.title" values={{ name: project.name }} />}
-      onClose={onClose}
-    >
-      <ModalBody className={styles.modalStreamListContainer}>
-        {isLoadingVersionList ? (
-          <FlexContainer justifyContent="center">
-            <Spinner size="md" />
-          </FlexContainer>
-        ) : (
-          <FlexContainer direction="column" data-testid="versions-list">
-            {(versions || []).map((version, index) => (
-              <button
-                key={index}
-                onClick={() => {
-                  onSelect(version.version);
-                }}
-                className={classNames(styles.versionItem, { [styles["versionItem--active"]]: version.isActive })}
-              >
-                <FlexContainer alignItems="baseline">
-                  <Text size="md" as="span">
-                    v{version.version}{" "}
+    <ModalBody>
+      {isLoadingVersionList ? (
+        <FlexContainer justifyContent="center">
+          <Spinner size="md" />
+        </FlexContainer>
+      ) : (
+        <FlexContainer direction="column" data-testid="versions-list">
+          {(versions || []).map((version, index) => (
+            <button
+              key={index}
+              onClick={() => {
+                onSelect(version.version);
+              }}
+              className={classNames(styles.versionItem, { [styles["versionItem--active"]]: version.isActive })}
+            >
+              <FlexContainer alignItems="baseline">
+                <Text size="md" as="span">
+                  v{version.version}{" "}
+                </Text>
+                <FlexItem grow>
+                  <Text size="sm" as="span" color="grey">
+                    {version.description}
                   </Text>
-                  <FlexItem grow>
-                    <Text size="sm" as="span" color="grey">
-                      {version.description}
-                    </Text>
-                  </FlexItem>
-                  {version.isActive && (
-                    <Text className={styles.activeVersion} size="xs" as="span">
-                      <FormattedMessage id="connectorBuilder.changeVersionModal.activeVersion" />
-                    </Text>
-                  )}
-                  {isLoading && version.version === selectedVersion && <Spinner size="xs" />}
-                </FlexContainer>
-              </button>
-            ))}
-          </FlexContainer>
-        )}
-      </ModalBody>
-    </Modal>
+                </FlexItem>
+                {version.isActive && (
+                  <Text className={styles.activeVersion} size="xs" as="span">
+                    <FormattedMessage id="connectorBuilder.changeVersionModal.activeVersion" />
+                  </Text>
+                )}
+                {isLoading && version.version === selectedVersion && <Spinner size="xs" />}
+              </FlexContainer>
+            </button>
+          ))}
+        </FlexContainer>
+      )}
+    </ModalBody>
   );
 };
 
-const VersionChanger = ({ project }: { project: BuilderProject }) => {
-  const [changeInProgress, setChangeInProgress] = useState(false);
+const VersionChanger = ({ project, canUpdateConnector }: { project: BuilderProject; canUpdateConnector: boolean }) => {
+  const { openModal } = useModalService();
+  const { formatMessage } = useIntl();
+
   if (project.version === "draft") {
     return (
       <Tooltip
@@ -151,21 +150,25 @@ const VersionChanger = ({ project }: { project: BuilderProject }) => {
       </Tooltip>
     );
   }
+
+  const openVersionChangeModal = () =>
+    openModal<void>({
+      title: formatMessage({ id: "connectorBuilder.changeVersionModal.title" }, { name: project.name }),
+      size: "sm",
+      content: ({ onComplete }) => <VersionChangeModal project={project} onComplete={onComplete} />,
+    });
+
   return (
-    <>
-      <Button
-        variant="clear"
-        onClick={() => {
-          setChangeInProgress(true);
-        }}
-        icon={<Icon type="chevronDown" />}
-        iconPosition="right"
-        data-testid={`version-changer-${project.name}`}
-      >
-        <Text>v{project.version}</Text>
-      </Button>
-      {changeInProgress && <VersionChangeModal onClose={() => setChangeInProgress(false)} project={project} />}
-    </>
+    <Button
+      disabled={!canUpdateConnector}
+      variant="clear"
+      onClick={openVersionChangeModal}
+      icon="chevronDown"
+      iconPosition="right"
+      data-testid={`version-changer-${project.name}`}
+    >
+      <Text>v{project.version}</Text>
+    </Button>
   );
 };
 
@@ -180,23 +183,31 @@ export const ConnectorBuilderProjectTable = ({
   const { registerNotification, unregisterNotificationById } = useNotificationService();
   const analyticsService = useAnalyticsService();
   const { mutateAsync: deleteProject } = useDeleteBuilderProject();
-  const navigate = useNavigate();
+  const { workspaceId } = useCurrentWorkspace();
+  const canUpdateConnector = useIntent("UpdateCustomConnector", { workspaceId });
+  const getEditUrl = useCallback(
+    (projectId: string) => `${basePath ? basePath : ""}${getEditPath(projectId)}`,
+    [basePath]
+  );
   const columns = useMemo(
     () => [
       columnHelper.accessor("name", {
         header: () => <FormattedMessage id="connectorBuilder.listPage.name" />,
         cell: (props) => (
-          <FlexContainer alignItems="center">
+          <Link to={getEditUrl(props.row.original.id)} className={styles.nameLink}>
             {/* TODO: replace with custom logos once available */}
             <BuilderLogo />
             <Text>{props.cell.getValue()}</Text>
-          </FlexContainer>
+          </Link>
         ),
+        meta: {
+          tdClassName: styles.nameCell,
+        },
       }),
       columnHelper.accessor("version", {
         header: () => <FormattedMessage id="connectorBuilder.listPage.version" />,
         cell: (props) => {
-          return <VersionChanger project={props.row.original} />;
+          return <VersionChanger canUpdateConnector={canUpdateConnector} project={props.row.original} />;
         },
       }),
       columnHelper.display({
@@ -207,73 +218,82 @@ export const ConnectorBuilderProjectTable = ({
             <Text className={styles.draftInProgress} color="grey">
               {props.row.original.hasDraft && <FormattedMessage id="connectorBuilder.draftInProgressLabel" />}
             </Text>
-            <Button
-              variant="clear"
-              data-testid={`edit-project-button-${props.row.original.name}`}
-              icon={<Icon type="pencil" />}
-              onClick={() => {
-                const editPath = getEditPath(props.row.original.id);
-                navigate(basePath ? `${basePath}${editPath}` : editPath);
-              }}
-            />
-            <Tooltip
-              disabled={!props.row.original.sourceDefinitionId}
-              control={
-                <Button
-                  type="button"
-                  variant="clear"
-                  disabled={Boolean(props.row.original.sourceDefinitionId)}
-                  icon={<Icon type="trash" />}
-                  onClick={() => {
-                    unregisterNotificationById(NOTIFICATION_ID);
-                    openConfirmationModal({
-                      text: "connectorBuilder.deleteProjectModal.text",
-                      title: "connectorBuilder.deleteProjectModal.title",
-                      submitButtonText: "connectorBuilder.deleteProjectModal.submitButton",
-                      onSubmit: () => {
-                        closeConfirmationModal();
-                        deleteProject(props.row.original)
-                          .then(() => {
-                            analyticsService.track(Namespace.CONNECTOR_BUILDER, Action.CONNECTOR_BUILDER_DELETE, {
-                              actionDescription: "User has deleted a Connector Builder project",
-                              projectId: props.row.original.id,
-                            });
-                          })
-                          .catch((e) => {
-                            registerNotification({
-                              id: NOTIFICATION_ID,
-                              text: (
-                                <FormattedMessage
-                                  id={DELETE_PROJECT_ERROR_ID}
-                                  values={{
-                                    reason: e.message,
-                                  }}
-                                />
-                              ),
-                              type: "error",
-                            });
-                          });
-                      },
-                    });
-                  }}
-                />
-              }
-            >
-              <FormattedMessage id="connectorBuilder.deleteProject.publishedTooltip" />
-            </Tooltip>
+            {canUpdateConnector ? (
+              <>
+                <Link
+                  to={getEditUrl(props.row.original.id)}
+                  data-testid={`edit-project-button-${props.row.original.name}`}
+                >
+                  <Icon type="pencil" />
+                </Link>
+                <Tooltip
+                  disabled={!props.row.original.sourceDefinitionId}
+                  control={
+                    <Button
+                      type="button"
+                      variant="clear"
+                      disabled={Boolean(props.row.original.sourceDefinitionId)}
+                      data-testid={`delete-project-button_${props.row.original.name}`}
+                      icon="trash"
+                      onClick={() => {
+                        unregisterNotificationById(NOTIFICATION_ID);
+                        openConfirmationModal({
+                          text: "connectorBuilder.deleteProjectModal.text",
+                          title: "connectorBuilder.deleteProjectModal.title",
+                          submitButtonText: "connectorBuilder.deleteProjectModal.submitButton",
+                          onSubmit: () => {
+                            closeConfirmationModal();
+                            deleteProject(props.row.original)
+                              .then(() => {
+                                analyticsService.track(Namespace.CONNECTOR_BUILDER, Action.CONNECTOR_BUILDER_DELETE, {
+                                  actionDescription: "User has deleted a Connector Builder project",
+                                  projectId: props.row.original.id,
+                                });
+                              })
+                              .catch((e) => {
+                                registerNotification({
+                                  id: NOTIFICATION_ID,
+                                  text: (
+                                    <FormattedMessage
+                                      id={DELETE_PROJECT_ERROR_ID}
+                                      values={{
+                                        reason: e.message,
+                                      }}
+                                    />
+                                  ),
+                                  type: "error",
+                                });
+                              });
+                          },
+                        });
+                      }}
+                    />
+                  }
+                >
+                  <FormattedMessage id="connectorBuilder.deleteProject.publishedTooltip" />
+                </Tooltip>
+              </>
+            ) : (
+              <Link
+                to={getEditUrl(props.row.original.id)}
+                data-testid={`view-project-button-${props.row.original.name}`}
+              >
+                <Icon type="eye" />
+              </Link>
+            )}
           </FlexContainer>
         ),
       }),
     ],
     [
-      analyticsService,
-      basePath,
+      getEditUrl,
+      canUpdateConnector,
+      unregisterNotificationById,
+      openConfirmationModal,
       closeConfirmationModal,
       deleteProject,
-      navigate,
-      openConfirmationModal,
+      analyticsService,
       registerNotification,
-      unregisterNotificationById,
     ]
   );
 
@@ -283,6 +303,7 @@ export const ConnectorBuilderProjectTable = ({
       data={projects}
       className={styles.table}
       sorting={false}
+      stickyHeaders={false}
       initialSortBy={[{ id: "name", desc: false }]}
     />
   );

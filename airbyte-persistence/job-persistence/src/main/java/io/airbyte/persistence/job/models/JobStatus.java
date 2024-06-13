@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.persistence.job.models;
@@ -26,7 +26,7 @@ public enum JobStatus {
   public static final Map<JobStatus, Set<JobStatus>> VALID_STATUS_CHANGES = Map.of(
       PENDING, Set.of(RUNNING, FAILED, CANCELLED, INCOMPLETE),
       RUNNING, Set.of(INCOMPLETE, SUCCEEDED, FAILED, CANCELLED),
-      INCOMPLETE, Set.of(PENDING, RUNNING, FAILED, CANCELLED, INCOMPLETE),
+      INCOMPLETE, Set.of(PENDING, RUNNING, FAILED, CANCELLED, INCOMPLETE, SUCCEEDED),
       SUCCEEDED, Set.of(),
       FAILED, Set.of(FAILED),
       CANCELLED, Set.of());

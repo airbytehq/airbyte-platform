@@ -1,13 +1,13 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.commons.server.helpers;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import io.airbyte.api.model.generated.DestinationRead;
+import io.airbyte.api.model.generated.SupportState;
 import io.airbyte.commons.json.Jsons;
-import io.airbyte.commons.server.handlers.DestinationDefinitionsHandler;
 import io.airbyte.config.DestinationConnection;
 import io.airbyte.config.StandardDestinationDefinition;
 import java.io.IOException;
@@ -55,6 +55,16 @@ public class DestinationHelpers {
 
   public static DestinationRead getDestinationRead(final DestinationConnection destination,
                                                    final StandardDestinationDefinition standardDestinationDefinition) {
+    // sets reasonable defaults for isVersionOverrideApplied and supportState, use below method instead
+    // if you want to override them.
+    return getDestinationRead(destination, standardDestinationDefinition, false, SupportState.SUPPORTED);
+  }
+
+  public static DestinationRead getDestinationRead(final DestinationConnection destination,
+                                                   final StandardDestinationDefinition standardDestinationDefinition,
+                                                   final boolean isVersionOverrideApplied,
+                                                   final SupportState supportState) {
+
     return new DestinationRead()
         .destinationDefinitionId(standardDestinationDefinition.getDestinationDefinitionId())
         .workspaceId(destination.getWorkspaceId())
@@ -63,7 +73,9 @@ public class DestinationHelpers {
         .connectionConfiguration(destination.getConfiguration())
         .name(destination.getName())
         .destinationName(standardDestinationDefinition.getName())
-        .icon(DestinationDefinitionsHandler.loadIcon(standardDestinationDefinition.getIcon()));
+        .icon(standardDestinationDefinition.getIconUrl())
+        .isVersionOverrideApplied(isVersionOverrideApplied)
+        .supportState(supportState);
   }
 
 }

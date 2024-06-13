@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.commons.server.scheduler;
@@ -29,6 +29,7 @@ import io.airbyte.config.JobGetSpecConfig;
 import io.airbyte.config.ResourceRequirements;
 import io.airbyte.config.SourceConnection;
 import io.airbyte.config.StandardCheckConnectionOutput;
+import io.airbyte.config.WorkloadPriority;
 import io.airbyte.config.persistence.ActorDefinitionVersionHelper;
 import io.airbyte.config.persistence.ConfigInjector;
 import io.airbyte.persistence.job.errorreporter.ConnectorJobReportingContext;
@@ -37,13 +38,13 @@ import io.airbyte.persistence.job.factory.OAuthConfigSupplier;
 import io.airbyte.persistence.job.tracker.JobTracker;
 import io.airbyte.persistence.job.tracker.JobTracker.JobState;
 import io.airbyte.protocol.models.ConnectorSpecification;
+import jakarta.annotation.Nullable;
 import java.io.IOException;
 import java.time.Instant;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.function.Function;
 import java.util.function.Supplier;
-import javax.annotation.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -163,7 +164,8 @@ public class DefaultSynchronousSchedulerClient implements SynchronousSchedulerCl
   public SynchronousResponse<UUID> createDiscoverSchemaJob(final SourceConnection source,
                                                            final ActorDefinitionVersion sourceVersion,
                                                            final boolean isCustomConnector,
-                                                           final ResourceRequirements actorDefinitionResourceRequirements)
+                                                           final ResourceRequirements actorDefinitionResourceRequirements,
+                                                           final WorkloadPriority priority)
       throws IOException {
     final String dockerImage = ActorDefinitionVersionHelper.getDockerImageName(sourceVersion);
     final JsonNode sourceConfiguration = oAuthConfigSupplier.injectSourceOAuthParameters(
@@ -193,7 +195,7 @@ public class DefaultSynchronousSchedulerClient implements SynchronousSchedulerCl
         ConfigType.DISCOVER_SCHEMA,
         jobReportingContext,
         source.getSourceDefinitionId(),
-        () -> temporalClient.submitDiscoverSchema(jobId, 0, source.getWorkspaceId(), taskQueue, jobDiscoverCatalogConfig, context),
+        () -> temporalClient.submitDiscoverSchema(jobId, 0, source.getWorkspaceId(), taskQueue, jobDiscoverCatalogConfig, context, priority),
         ConnectorJobOutput::getDiscoverCatalogId,
         source.getWorkspaceId(),
         source.getSourceId());

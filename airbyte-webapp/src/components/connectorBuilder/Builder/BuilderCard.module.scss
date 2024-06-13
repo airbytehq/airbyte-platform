@@ -2,11 +2,11 @@
 @use "scss/colors";
 
 .card {
-  padding: variables.$spacing-xl;
   display: flex;
   flex-direction: column;
   gap: variables.$spacing-xl;
   position: relative;
+  flex-grow: 1;
 }
 
 .copyButtonContainer {
@@ -43,6 +43,10 @@
   color: colors.$blue-400;
 }
 
+.label {
+  max-width: fit-content;
+}
+
 .toggleContainer {
   display: flex;
   gap: variables.$spacing-md;
@@ -53,4 +57,26 @@
   & label {
     cursor: pointer;
   }
+}
+
+.yamlEditor {
+  min-height: 50px;
+  height: 200px;
+  overflow: hidden;
+  resize: vertical;
+}
+
+.yamlEditorToggle {
+  align-self: flex-end;
+}
+
+.discardYamlError {
+  overflow-x: auto;
+  background-color: colors.$grey-100;
+  padding: variables.$spacing-md;
+  border-radius: variables.$border-radius-xs;
+}
+
+.yamlError {
+  white-space: pre-wrap;
 }

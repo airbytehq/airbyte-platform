@@ -1,15 +1,29 @@
 package io.airbyte.workload.launcher.pods
 
+import io.airbyte.workers.process.Metadata
+import io.airbyte.workers.process.Metadata.CHECK_JOB
+import io.airbyte.workers.process.Metadata.CHECK_STEP_KEY
+import io.airbyte.workers.process.Metadata.CONNECTOR_STEP
+import io.airbyte.workers.process.Metadata.JOB_TYPE_KEY
 import io.airbyte.workers.process.Metadata.ORCHESTRATOR_REPLICATION_STEP
 import io.airbyte.workers.process.Metadata.READ_STEP
+import io.airbyte.workers.process.Metadata.SYNC_JOB
 import io.airbyte.workers.process.Metadata.SYNC_STEP_KEY
 import io.airbyte.workers.process.Metadata.WRITE_STEP
-import io.airbyte.workload.launcher.pods.KubePodClient.Constants.MUTEX_KEY
-import io.airbyte.workload.launcher.pods.KubePodClient.Constants.WORKLOAD_ID
+import io.airbyte.workers.process.ProcessFactory
+import io.airbyte.workload.launcher.pods.PodLabeler.LabelKeys.AUTO_ID
+import io.airbyte.workload.launcher.pods.PodLabeler.LabelKeys.MUTEX_KEY
+import io.airbyte.workload.launcher.pods.PodLabeler.LabelKeys.SWEEPER_LABEL_KEY
+import io.airbyte.workload.launcher.pods.PodLabeler.LabelKeys.SWEEPER_LABEL_VALUE
+import io.airbyte.workload.launcher.pods.PodLabeler.LabelKeys.WORKLOAD_ID
+import jakarta.inject.Named
 import jakarta.inject.Singleton
+import java.util.UUID
 
 @Singleton
-class PodLabeler {
+class PodLabeler(
+  @Named("containerOrchestratorImage") private val orchestratorImageName: String,
+) {
   fun getSourceLabels(): Map<String, String> {
     return mapOf(
       SYNC_STEP_KEY to READ_STEP,
@@ -22,13 +36,42 @@ class PodLabeler {
     )
   }
 
-  fun getOrchestratorLabels(): Map<String, String> {
+  fun getReplicationOrchestratorLabels(): Map<String, String> {
+    return getImageLabels() +
+      mapOf(
+        JOB_TYPE_KEY to SYNC_JOB,
+        SYNC_STEP_KEY to ORCHESTRATOR_REPLICATION_STEP,
+      )
+  }
+
+  fun getCheckConnectorLabels(): Map<String, String> {
     return mapOf(
-      SYNC_STEP_KEY to ORCHESTRATOR_REPLICATION_STEP,
+      JOB_TYPE_KEY to CHECK_JOB,
+      CHECK_STEP_KEY to CONNECTOR_STEP,
     )
   }
 
-  fun getWorkloadLabels(workloadId: String): Map<String, String> {
+  private fun getImageLabels(): Map<String, String> {
+    val shortImageName = ProcessFactory.getShortImageName(orchestratorImageName)
+    val imageVersion = ProcessFactory.getImageVersion(orchestratorImageName)
+
+    return mapOf(
+      Metadata.IMAGE_NAME to shortImageName,
+      Metadata.IMAGE_VERSION to imageVersion,
+    )
+  }
+
+  fun getAutoIdLabels(autoId: UUID): Map<String, String> {
+    return mapOf(
+      AUTO_ID to autoId.toString(),
+    )
+  }
+
+  fun getWorkloadLabels(workloadId: String?): Map<String, String> {
+    if (workloadId == null) {
+      return mapOf()
+    }
+
     return mapOf(
       WORKLOAD_ID to workloadId,
     )
@@ -44,11 +87,30 @@ class PodLabeler {
     )
   }
 
+  fun getPodSweeperLabels(): Map<String, String> {
+    return mapOf(
+      SWEEPER_LABEL_KEY to SWEEPER_LABEL_VALUE,
+    )
+  }
+
   fun getSharedLabels(
-    workloadId: String,
+    workloadId: String?,
     mutexKey: String?,
     passThroughLabels: Map<String, String>,
+    autoId: UUID,
   ): Map<String, String> {
-    return passThroughLabels + getMutexLabels(mutexKey) + getWorkloadLabels(workloadId)
+    return passThroughLabels +
+      getMutexLabels(mutexKey) +
+      getWorkloadLabels(workloadId) +
+      getAutoIdLabels(autoId) +
+      getPodSweeperLabels()
+  }
+
+  object LabelKeys {
+    const val AUTO_ID = "auto_id"
+    const val MUTEX_KEY = "mutex_key"
+    const val WORKLOAD_ID = "workload_id"
+    const val SWEEPER_LABEL_KEY = "airbyte"
+    const val SWEEPER_LABEL_VALUE = "job-pod"
   }
 }

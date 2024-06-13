@@ -1,26 +1,23 @@
-import { useCurrentWorkspace, useListUsersInOrganization, useListUsersInWorkspace } from "core/api";
-import { OrganizationUserRead, PermissionType, WorkspaceUserRead } from "core/api/types/AirbyteClient";
-import { useIntent } from "core/utils/rbac";
-
+import { PermissionType, UserInvitationRead, WorkspaceUserAccessInfoRead } from "core/api/types/AirbyteClient";
+import { RbacRole, RbacRoleHierarchy, partitionPermissionType } from "core/utils/rbac/rbacPermissionsQuery";
 export type ResourceType = "workspace" | "organization" | "instance";
 
-export const permissionStringDictionary: Record<PermissionType, string> = {
-  instance_admin: "role.admin",
-  organization_admin: "role.admin",
-  organization_editor: "role.editor",
-  organization_reader: "role.reader",
-  organization_member: "role.member",
-  workspace_admin: "role.admin",
-  workspace_owner: "role.admin",
-  workspace_editor: "role.editor",
-  workspace_reader: "role.reader",
+export const permissionStringDictionary: Record<PermissionType, Record<string, string>> = {
+  instance_admin: { resource: "resource.instance", role: "role.admin" },
+  organization_admin: { resource: "resource.organization", role: "role.admin" },
+  organization_editor: { resource: "resource.organization", role: "role.editor" },
+  organization_reader: { resource: "resource.organization", role: "role.reader" },
+  organization_member: { resource: "resource.organization", role: "role.member" },
+  workspace_admin: { resource: "resource.workspace", role: "role.admin" },
+  workspace_owner: { resource: "resource.workspace", role: "role.admin" },
+  workspace_editor: { resource: "resource.workspace", role: "role.editor" },
+  workspace_reader: { resource: "resource.workspace", role: "role.reader" },
 };
 
 interface PermissionDescription {
   id: string;
   values: Record<"resourceType", ResourceType>;
 }
-
 export const permissionDescriptionDictionary: Record<PermissionType, PermissionDescription> = {
   instance_admin: { id: "role.admin.description", values: { resourceType: "instance" } },
   organization_admin: { id: "role.admin.description", values: { resourceType: "organization" } },
@@ -32,60 +29,88 @@ export const permissionDescriptionDictionary: Record<PermissionType, PermissionD
   workspace_editor: { id: "role.editor.description", values: { resourceType: "workspace" } },
   workspace_reader: { id: "role.reader.description", values: { resourceType: "workspace" } },
 };
-
-export const tableTitleDictionary: Record<ResourceType, string> = {
-  workspace: "settings.accessManagement.workspace",
-  organization: "settings.accessManagement.organization",
-  instance: "settings.accessManagement.instance",
-};
-
 export const permissionsByResourceType: Record<ResourceType, PermissionType[]> = {
-  workspace: [
-    PermissionType.workspace_admin,
-    // PermissionType.workspace_editor, PermissionType.workspace_reader -- roles not supported in MVP
-  ],
+  workspace: [PermissionType.workspace_admin, PermissionType.workspace_editor, PermissionType.workspace_reader],
   organization: [
     PermissionType.organization_admin,
-    // PermissionType.organization_editor, -- role not supported in MVP
-    // PermissionType.organization_reader, -- role not supported in MVP
+    PermissionType.organization_editor,
+    PermissionType.organization_reader,
     PermissionType.organization_member,
   ],
   instance: [PermissionType.instance_admin],
 };
 
-export interface AccessUsers {
-  workspace?: { users: WorkspaceUserRead[]; usersToAdd: OrganizationUserRead[] };
-  organization?: { users: OrganizationUserRead[]; usersToAdd: [] };
-}
+/**
+ * a unified typing to allow listing invited and current users together in WorkspaceUsersTable
+ * using this custom union rather than a union of WorkspaceUserAccessInfoRead | UserInvitationRead
+ * allows us to handle intentionally missing properties more gracefully.
+ */
+export type UnifiedWorkspaceUserModel =
+  | {
+      id: string;
+      userEmail: string;
+      userName?: string;
+      organizationPermission?: WorkspaceUserAccessInfoRead["organizationPermission"];
+      workspacePermission?: WorkspaceUserAccessInfoRead["workspacePermission"];
+      invitationStatus?: never; // Explicitly marking these as never when permissions are present
+      invitationPermissionType?: never;
+    }
+  | {
+      id: string;
+      userEmail: string;
+      userName?: string;
+      organizationPermission?: never; // Explicitly marking these as never when invitation fields are present
+      workspacePermission?: never;
+      invitationStatus: UserInvitationRead["status"];
+      invitationPermissionType: UserInvitationRead["permissionType"];
+    };
 
-export const useGetWorkspaceAccessUsers = (): AccessUsers => {
-  const workspace = useCurrentWorkspace();
-  const canListOrganizationUsers = useIntent("ListOrganizationMembers", { organizationId: workspace.organizationId });
-  const workspaceUsers = useListUsersInWorkspace(workspace.workspaceId).users;
-  const organizationUsers =
-    useListUsersInOrganization(workspace.organizationId ?? "", canListOrganizationUsers)?.users ?? [];
+export const unifyWorkspaceUserData = (
+  workspaceAccessUsers: WorkspaceUserAccessInfoRead[],
+  workspaceInvitations: UserInvitationRead[]
+): UnifiedWorkspaceUserModel[] => {
+  const normalizedUsers = workspaceAccessUsers.map((user) => {
+    return {
+      id: user.userId,
+      userEmail: user.userEmail,
+      userName: user.userName,
+      organizationPermission: user.organizationPermission,
+      workspacePermission: user.workspacePermission,
+    };
+  });
 
-  return {
-    workspace: {
-      users: workspaceUsers,
-      usersToAdd: organizationUsers.filter(
-        (user) =>
-          user.permissionType === "organization_member" &&
-          !workspaceUsers.find((workspaceUser) => workspaceUser.userId === user.userId)
-      ),
-    },
-    organization: {
-      users: organizationUsers.filter((user) => user.permissionType !== "organization_member"),
-      usersToAdd: [],
-    },
-  };
+  const normalizedInvitations = workspaceInvitations.map((invitation) => {
+    return {
+      id: invitation.inviteCode,
+      userEmail: invitation.invitedEmail,
+      invitationStatus: invitation.status,
+      invitationPermissionType: invitation.permissionType,
+    };
+  });
+
+  return [...normalizedUsers, ...normalizedInvitations];
 };
 
-export const useGetOrganizationAccessUsers = (): AccessUsers => {
-  const workspace = useCurrentWorkspace();
-  const organizationUsers = useListUsersInOrganization(workspace.organizationId ?? "").users;
+export const getWorkspaceAccessLevel = (
+  unifiedWorkspaceUser: Pick<
+    UnifiedWorkspaceUserModel,
+    "workspacePermission" | "organizationPermission" | "invitationPermissionType"
+  >
+): RbacRole => {
+  const workspacePermissionType =
+    unifiedWorkspaceUser.workspacePermission?.permissionType ?? unifiedWorkspaceUser.invitationPermissionType;
 
-  return {
-    organization: { users: organizationUsers, usersToAdd: [] },
-  };
+  const organizationPermissionType = unifiedWorkspaceUser.organizationPermission?.permissionType;
+
+  const orgRole = organizationPermissionType ? partitionPermissionType(organizationPermissionType)[1] : undefined;
+  const workspaceRole = workspacePermissionType ? partitionPermissionType(workspacePermissionType)[1] : undefined;
+
+  // return whatever is the "highest" role ie the lowest index greater than -1.
+  // the reason we set the index to the length of the array is so that if there is not a given type of role, it will not be the lowest index.
+  return RbacRoleHierarchy[
+    Math.min(
+      orgRole ? RbacRoleHierarchy.indexOf(orgRole) : RbacRoleHierarchy.length,
+      workspaceRole ? RbacRoleHierarchy.indexOf(workspaceRole) : RbacRoleHierarchy.length
+    )
+  ];
 };

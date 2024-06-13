@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.db.factory;
@@ -160,7 +160,7 @@ public class DataSourceFactory {
    */
   public static void close(final DataSource dataSource) throws Exception {
     if (dataSource != null) {
-      if (dataSource instanceof AutoCloseable closeable) {
+      if (dataSource instanceof final AutoCloseable closeable) {
         closeable.close();
       }
     }

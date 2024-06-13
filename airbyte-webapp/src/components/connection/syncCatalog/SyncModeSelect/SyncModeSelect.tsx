@@ -14,7 +14,7 @@ export interface SyncModeValue {
   destinationSyncMode: DestinationSyncMode;
 }
 
-interface SyncModeSelectProps {
+export interface SyncModeSelectProps {
   onChange: (option: SyncModeValue) => void;
   options: SyncModeValue[];
   value: SyncModeValue | undefined;
@@ -43,7 +43,7 @@ export const SyncModeSelect: React.FC<SyncModeSelectProps> = ({ options, onChang
       onSelect={onChange}
       pillClassName={styles.pillSelect}
       variant={variant}
-      disabled={disabled}
+      isDisabled={disabled}
       data-testid="sync-mode-select"
     />
   );

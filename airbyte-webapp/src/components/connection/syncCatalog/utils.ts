@@ -1,6 +1,7 @@
 import isEqual from "lodash/isEqual";
 import sortBy from "lodash/sortBy";
 
+import { AirbyteStream, AirbyteStreamConfiguration, DestinationSyncMode, SyncMode } from "core/api/types/AirbyteClient";
 import { Path, SyncSchemaField } from "core/domain/catalog";
 
 export type FieldPathType = null | "required" | "sourceDefined";
@@ -19,6 +20,20 @@ export const getFieldPathType = (required: boolean, shouldDefine: boolean): Fiel
   required ? (shouldDefine ? "required" : "sourceDefined") : null;
 
 export const getFieldPathDisplayName = (path: Path): string => path.join(".");
+
+/**
+ * Checks if the stream has a required cursor or primary key and if the user has to defined it
+ * @param config
+ * @param stream
+ */
+export const checkCursorAndPKRequirements = (config: AirbyteStreamConfiguration, stream: AirbyteStream) => {
+  const pkRequired = config?.destinationSyncMode === DestinationSyncMode.append_dedup;
+  const cursorRequired = config?.syncMode === SyncMode.incremental;
+  const shouldDefinePk = stream?.sourceDefinedPrimaryKey?.length === 0 && pkRequired;
+  const shouldDefineCursor = !stream?.sourceDefinedCursor && cursorRequired;
+
+  return { pkRequired, cursorRequired, shouldDefinePk, shouldDefineCursor };
+};
 
 /**
  * compare two objects by the given prop names

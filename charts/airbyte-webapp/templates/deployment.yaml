@@ -62,11 +62,11 @@ spec:
             configMapKeyRef:
               name: {{ .Release.Name }}-airbyte-env
               key: TRACKING_STRATEGY
-        - name: INTERNAL_API_HOST
+        - name: AIRBYTE_SERVER_HOST
           valueFrom:
             configMapKeyRef:
               name: {{ .Release.Name }}-airbyte-env
-              key: INTERNAL_API_HOST
+              key: AIRBYTE_SERVER_HOST
         - name: KEYCLOAK_INTERNAL_HOST
           valueFrom:
             configMapKeyRef:
@@ -141,7 +141,7 @@ spec:
         {{- end }}
         ports:
         - name: http
-          containerPort: 80
+          containerPort: 8080
           protocol: TCP
         {{- if .Values.resources }}
         resources: {{- toYaml .Values.resources | nindent 10 }}
@@ -162,6 +162,7 @@ spec:
       {{- if .Values.global.extraContainers }}
       {{ toYaml .Values.global.extraContainers | nindent 6 }}
       {{- end }}
+      securityContext: {{- toYaml .Values.podSecurityContext | nindent 8 }}
       volumes:
       {{- if .Values.extraVolumes }}
 {{ toYaml .Values.extraVolumes | nindent 6 }}

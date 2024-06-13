@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.commons.server.support;
@@ -28,27 +28,26 @@ public class AirbyteHttpRequestFieldExtractor {
   /**
    * Extracts the requested ID from the HTTP request, if present.
    *
-   * @param content The raw HTTP request as a string.
+   * @param json The HTTP request body as a JsonNode.
    * @param idFieldName The name of the field/header that contains the ID.
    * @return An {@link Optional} that may or may not contain the ID value extracted from the raw HTTP
    *         request.
    */
-  public Optional<String> extractId(final String content, final String idFieldName) {
+  public Optional<String> extractId(final JsonNode json, final String idFieldName) {
     try {
-      final JsonNode json = Jsons.deserialize(content);
       if (json != null) {
 
         final Optional<String> idValue = extract(json, idFieldName);
 
         if (idValue.isEmpty()) {
-          log.debug("No match for field name '{}' in content '{}'.", idFieldName, content);
+          log.debug("No match for field name '{}' in content '{}'.", idFieldName, json);
         } else {
           log.debug("Found '{}' for field '{}'", idValue, idFieldName);
           return idValue;
         }
       }
     } catch (final RuntimeException e) {
-      log.debug("Unable to extract ID field '{}' from content '{}'.", idFieldName, content, e);
+      log.debug("Unable to extract ID field '{}' from content '{}'.", idFieldName, json, e);
     }
 
     return Optional.empty();
@@ -64,6 +63,20 @@ public class AirbyteHttpRequestFieldExtractor {
       return Optional.ofNullable(jsonNode.get(idFieldName))
           .map(JsonNode::asText)
           .filter(StringUtils::hasText);
+    }
+  }
+
+  public Optional<JsonNode> contentToJson(final String contentAsString) {
+    // Not sure if we'd ever have to worry about this case, but guarding against it anyway.
+    if (contentAsString.isBlank()) {
+      return Optional.empty();
+    }
+    try {
+      final JsonNode contentAsJson = Jsons.deserialize(contentAsString);
+      return Optional.of(contentAsJson);
+    } catch (RuntimeException e) {
+      log.error("Failed to parse content as JSON: {}", contentAsString, e);
+      return Optional.empty();
     }
   }
 

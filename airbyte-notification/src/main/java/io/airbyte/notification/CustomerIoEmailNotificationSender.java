@@ -1,10 +1,11 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.notification;
 
 import io.airbyte.commons.resources.MoreResources;
+import io.micronaut.context.annotation.Replaces;
 import io.micronaut.context.annotation.Requires;
 import io.micronaut.context.annotation.Value;
 import jakarta.inject.Named;
@@ -26,6 +27,7 @@ import org.jetbrains.annotations.NotNull;
 @Singleton
 @Requires(property = "airbyte.notification.customerio.apikey",
           notEquals = "")
+@Replaces(FakeCustomerIoEmailNotificationSender.class)
 public class CustomerIoEmailNotificationSender implements NotificationSender<CustomerIoEmailConfig> {
 
   public static final MediaType JSON = MediaType.get("application/json; charset=utf-8");
@@ -33,12 +35,14 @@ public class CustomerIoEmailNotificationSender implements NotificationSender<Cus
   private static final String CUSTOMER_IO_URL = "https://api.customer.io/v1/send/email";
   private static final String CUSTOMER_IO_DEFAULT_TEMPLATE = "customerio/default_template.json";
   private static final String INVITATION_NEW_USER_TEMPLATE = "customerio/invitation_new_user_template.json";
+  private static final String INVITE_USER_TEMPLATE = "customerio/invite_user_template.json";
   private static final String INVITATION_RESEND_TEMPLATE = "customerio/invitation_resend_template.json";
   private static final String INVITATION_EXISTING_USER_TEMPLATE = "customerio/invitation_existing_user_template.json";
   private static final String BREAKING_CHANGE_TRANSACTION_MESSAGE_ID = "6";
   private static final String INVITATION_NEW_USER_TRANSACTION_MESSAGE_ID = "11";
   private static final String INVITATION_EXISTING_USER_TRANSACTION_MESSAGE_ID = "12";
   private static final String INVITATION_RESEND_TRANSACTION_MESSAGE_ID = "17";
+  private static final String INVITE_USER_TRANSACTION_MESSAGE_ID = "28";
 
   private final OkHttpClient okHttpClient;
   private final String apiToken;
@@ -79,6 +83,18 @@ public class CustomerIoEmailNotificationSender implements NotificationSender<Cus
         /* workspace_name= */workspaceName,
         /* invite_url= */inviteUrl);
     callCustomerIoSendNotification(custumerIoPayload);
+  }
+
+  public void sendInviteToUser(final CustomerIoEmailConfig config,
+                               final String inviterUserName,
+                               final String inviteUrl) {
+    final String costumerIoPayload = renderTemplate(INVITE_USER_TEMPLATE,
+        INVITE_USER_TRANSACTION_MESSAGE_ID,
+        /* to_email= */config.getTo(),
+        /* identifier_email= */ config.getTo(),
+        /* name= */inviterUserName,
+        /* invite_url= */inviteUrl);
+    callCustomerIoSendNotification(costumerIoPayload);
   }
 
   /**

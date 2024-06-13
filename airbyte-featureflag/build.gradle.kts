@@ -1,23 +1,21 @@
 plugins {
   id("io.airbyte.gradle.jvm.lib")
   id("io.airbyte.gradle.publish")
-  kotlin("jvm")
-  kotlin("kapt")
 }
 
 dependencies {
-  kapt(platform(libs.micronaut.bom))
-  kapt(libs.bundles.micronaut.annotation.processor)
+  ksp(platform(libs.micronaut.platform))
+  ksp(libs.bundles.micronaut.annotation.processor)
 
-  implementation(platform(libs.micronaut.bom))
+  implementation(platform(libs.micronaut.platform))
   implementation(libs.micronaut.inject)
   implementation(libs.launchdarkly)
   implementation(libs.jackson.databind)
   implementation(libs.jackson.dataformat)
   implementation(libs.jackson.kotlin)
 
-  kaptTest(platform(libs.micronaut.bom))
-  kaptTest(libs.bundles.micronaut.test.annotation.processor)
+  kspTest(platform(libs.micronaut.platform))
+  kspTest(libs.bundles.micronaut.test.annotation.processor)
 
   testImplementation(kotlin("test"))
   testImplementation(kotlin("test-junit5"))

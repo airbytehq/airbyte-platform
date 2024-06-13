@@ -1,10 +1,11 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.persistence.job;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import com.google.common.annotations.VisibleForTesting;
 import io.airbyte.commons.protocol.CatalogTransforms;
 import io.airbyte.commons.version.Version;
 import io.airbyte.config.ActorDefinitionVersion;
@@ -14,6 +15,9 @@ import io.airbyte.config.JobConfig.ConfigType;
 import io.airbyte.config.JobResetConnectionConfig;
 import io.airbyte.config.JobSyncConfig;
 import io.airbyte.config.JobTypeResourceLimit.JobType;
+import io.airbyte.config.RefreshConfig;
+import io.airbyte.config.RefreshStream;
+import io.airbyte.config.RefreshStream.RefreshType;
 import io.airbyte.config.ResetSourceConfiguration;
 import io.airbyte.config.ResourceRequirements;
 import io.airbyte.config.ResourceRequirementsType;
@@ -26,6 +30,8 @@ import io.airbyte.config.StandardSyncOperation;
 import io.airbyte.config.SyncResourceRequirements;
 import io.airbyte.config.SyncResourceRequirementsKey;
 import io.airbyte.config.helpers.ResourceRequirementsUtils;
+import io.airbyte.config.persistence.StreamRefreshesRepository;
+import io.airbyte.config.persistence.domain.StreamRefresh;
 import io.airbyte.config.provider.ResourceRequirementsProvider;
 import io.airbyte.featureflag.Connection;
 import io.airbyte.featureflag.Context;
@@ -42,13 +48,16 @@ import io.airbyte.featureflag.UseResourceRequirementsVariant;
 import io.airbyte.featureflag.Workspace;
 import io.airbyte.protocol.models.ConfiguredAirbyteCatalog;
 import io.airbyte.protocol.models.StreamDescriptor;
+import io.airbyte.protocol.models.SyncMode;
+import jakarta.annotation.Nullable;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 import java.util.function.Function;
-import javax.annotation.Nullable;
+import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
 
 /**
@@ -63,13 +72,16 @@ public class DefaultJobCreator implements JobCreator {
   private final JobPersistence jobPersistence;
   private final ResourceRequirementsProvider resourceRequirementsProvider;
   private final FeatureFlagClient featureFlagClient;
+  private final StreamRefreshesRepository streamRefreshesRepository;
 
   public DefaultJobCreator(final JobPersistence jobPersistence,
                            final ResourceRequirementsProvider resourceRequirementsProvider,
-                           final FeatureFlagClient featureFlagClient) {
+                           final FeatureFlagClient featureFlagClient,
+                           final StreamRefreshesRepository streamRefreshesRepository) {
     this.jobPersistence = jobPersistence;
     this.resourceRequirementsProvider = resourceRequirementsProvider;
     this.featureFlagClient = featureFlagClient;
+    this.streamRefreshesRepository = streamRefreshesRepository;
   }
 
   @Override
@@ -77,8 +89,10 @@ public class DefaultJobCreator implements JobCreator {
                                       final DestinationConnection destination,
                                       final StandardSync standardSync,
                                       final String sourceDockerImageName,
+                                      final Boolean sourceDockerImageIsDefault,
                                       final Version sourceProtocolVersion,
                                       final String destinationDockerImageName,
+                                      final Boolean destinationDockerImageIsDefault,
                                       final Version destinationProtocolVersion,
                                       final List<StandardSyncOperation> standardSyncOperations,
                                       @Nullable final JsonNode webhookOperationConfigs,
@@ -96,8 +110,10 @@ public class DefaultJobCreator implements JobCreator {
         .withNamespaceFormat(standardSync.getNamespaceFormat())
         .withPrefix(standardSync.getPrefix())
         .withSourceDockerImage(sourceDockerImageName)
+        .withSourceDockerImageIsDefault(sourceDockerImageIsDefault)
         .withSourceProtocolVersion(sourceProtocolVersion)
         .withDestinationDockerImage(destinationDockerImageName)
+        .withDestinationDockerImageIsDefault(destinationDockerImageIsDefault)
         .withDestinationProtocolVersion(destinationProtocolVersion)
         .withOperationSequence(standardSyncOperations)
         .withWebhookOperationConfigs(webhookOperationConfigs)
@@ -112,7 +128,84 @@ public class DefaultJobCreator implements JobCreator {
     final JobConfig jobConfig = new JobConfig()
         .withConfigType(ConfigType.SYNC)
         .withSync(jobSyncConfig);
+
     return jobPersistence.enqueueJob(standardSync.getConnectionId().toString(), jobConfig);
+  }
+
+  @Override
+  public Optional<Long> createRefreshConnection(final StandardSync standardSync,
+                                                final String sourceDockerImageName,
+                                                final Version sourceProtocolVersion,
+                                                final String destinationDockerImageName,
+                                                final Version destinationProtocolVersion,
+                                                final List<StandardSyncOperation> standardSyncOperations,
+                                                @Nullable final JsonNode webhookOperationConfigs,
+                                                final StandardSourceDefinition sourceDefinition,
+                                                final StandardDestinationDefinition destinationDefinition,
+                                                final ActorDefinitionVersion sourceDefinitionVersion,
+                                                final ActorDefinitionVersion destinationDefinitionVersion,
+                                                final UUID workspaceId,
+                                                final List<StreamRefresh> streamsToRefresh)
+      throws IOException {
+    final boolean canRunRefreshes = destinationDefinitionVersion.getSupportsRefreshes();
+
+    if (!canRunRefreshes) {
+      throw new IllegalStateException("Trying to create a refresh job for a destination which doesn't support refreshes");
+    }
+
+    final SyncResourceRequirements syncResourceRequirements =
+        getSyncResourceRequirements(workspaceId, standardSync, sourceDefinition, destinationDefinition, false);
+
+    final RefreshConfig refreshConfig = new RefreshConfig()
+        .withNamespaceDefinition(standardSync.getNamespaceDefinition())
+        .withNamespaceFormat(standardSync.getNamespaceFormat())
+        .withPrefix(standardSync.getPrefix())
+        .withSourceDockerImage(sourceDockerImageName)
+        .withSourceProtocolVersion(sourceProtocolVersion)
+        .withDestinationDockerImage(destinationDockerImageName)
+        .withDestinationProtocolVersion(destinationProtocolVersion)
+        .withOperationSequence(standardSyncOperations)
+        .withWebhookOperationConfigs(webhookOperationConfigs)
+        .withConfiguredAirbyteCatalog(standardSync.getCatalog())
+        .withSyncResourceRequirements(syncResourceRequirements)
+        .withIsSourceCustomConnector(sourceDefinition.getCustom())
+        .withIsDestinationCustomConnector(destinationDefinition.getCustom())
+        .withWorkspaceId(workspaceId)
+        .withSourceDefinitionVersionId(sourceDefinitionVersion.getVersionId())
+        .withDestinationDefinitionVersionId(destinationDefinitionVersion.getVersionId())
+        .withStreamsToRefresh(
+            streamsToRefresh.stream().map(streamRefresh -> new RefreshStream()
+                .withRefreshType(convertToApi(streamRefresh.getRefreshType()))
+                .withStreamDescriptor(new StreamDescriptor()
+                    .withName(streamRefresh.getStreamName())
+                    .withNamespace(streamRefresh.getStreamNamespace())))
+                .toList());
+
+    streamsToRefresh.forEach(
+        s -> streamRefreshesRepository.deleteByConnectionIdAndStreamNameAndStreamNamespace(standardSync.getConnectionId(), s.getStreamName(),
+            s.getStreamNamespace()));
+
+    final JobConfig jobConfig = new JobConfig()
+        .withConfigType(ConfigType.REFRESH)
+        .withRefresh(refreshConfig);
+
+    return jobPersistence.enqueueJob(standardSync.getConnectionId().toString(), jobConfig);
+  }
+
+  @VisibleForTesting
+  Set<StreamDescriptor> getResumableFullRefresh(final StandardSync standardSync, final boolean supportResumableFullRefresh) {
+    if (!supportResumableFullRefresh) {
+      return Set.of();
+    }
+
+    return standardSync.getCatalog().getStreams().stream()
+        .filter(stream -> stream.getSyncMode() == SyncMode.FULL_REFRESH
+            && stream.getStream().getIsResumable() != null
+            && stream.getStream().getIsResumable())
+        .map(stream -> new StreamDescriptor()
+            .withName(stream.getStream().getName())
+            .withNamespace(stream.getStream().getNamespace()))
+        .collect(Collectors.toSet());
   }
 
   @Override
@@ -303,6 +396,18 @@ public class DefaultJobCreator implements JobCreator {
       return Optional.empty();
     }
     return Optional.ofNullable(sourceDefinition.getSourceType()).map(SourceType::toString);
+  }
+
+  private static RefreshType convertToApi(final io.airbyte.db.instance.configs.jooq.generated.enums.RefreshType type) {
+    switch (type) {
+      case MERGE -> {
+        return RefreshType.MERGE;
+      }
+      case TRUNCATE -> {
+        return RefreshType.TRUNCATE;
+      }
+      default -> throw new IllegalStateException("Unsupported enum value: " + type.getLiteral());
+    }
   }
 
 }

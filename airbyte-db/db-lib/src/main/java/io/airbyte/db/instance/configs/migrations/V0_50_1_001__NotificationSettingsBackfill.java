@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.db.instance.configs.migrations;
@@ -64,7 +64,7 @@ public class V0_50_1_001__NotificationSettingsBackfill extends BaseJavaMigration
       }
       final var originalNotificationList =
           Jsons.deserialize(workspaceRecord.get(NOTIFICATION_COLUMN).data(), new TypeReference<List<Notification>>() {});
-      var notificationSettings = new NotificationSettings();
+      final var notificationSettings = new NotificationSettings();
       // By default the following notifactions are all sent via emails. At this moment customers do not
       // have an option to turn
       // it off.

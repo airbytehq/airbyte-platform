@@ -4,7 +4,7 @@ global:
   configMapName: ""
   secretName: ""
   extraContainers: []
-  ## extraSelectorLables [object] - use to specify own additional selector labels for deployment
+  ## extraSelectorLabels [object] - use to specify own additional selector labels for deployment
   extraSelectorLabels: {}
   ## extraLabels [object] - use to specify own additional labels for deployment
   extraLabels: {}
@@ -208,7 +208,7 @@ secrets: {}
 #   # Miscellaneous
 #   TRACKING_STRATEGY: segment
 #   API_URL: /api/v1/
-#   INTERNAL_API_HOST: airbyte-server-svc:8001
+#   INTERNAL_API_HOST: http://airbyte-server-svc:8001
 
 env_vars: {}
 
@@ -219,7 +219,7 @@ env_vars: {}
 workloadApi: {}
 
 
-## extraSelectorLables [object] - use to specify own additional selector labels for deployment
+## extraSelectorLabels [object] - use to specify own additional selector labels for deployment
 extraSelectorLabels: {}
 ## extraLabels [object] - use to specify own additional labels for deployment
 extraLabels: {}

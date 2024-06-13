@@ -1,12 +1,12 @@
 import React from "react";
-import { useIntl } from "react-intl";
+import { FormattedMessage, useIntl } from "react-intl";
 
 import { Button } from "components/ui/Button";
-import { Icon } from "components/ui/Icon";
+import { Tooltip } from "components/ui/Tooltip";
 
 import { CleanedLogLines } from "area/connection/components/JobHistoryItem/useCleanLogs";
 import { useCurrentWorkspace } from "core/api";
-import { FILE_TYPE_DOWNLOAD, downloadFile, fileizeString } from "core/utils/file";
+import { downloadFile, FILE_TYPE_DOWNLOAD, fileizeString } from "core/utils/file";
 
 interface DownloadButtonProps {
   logLines: CleanedLogLines;
@@ -25,13 +25,18 @@ export const DownloadLogsButton: React.FC<DownloadButtonProps> = ({ logLines, fi
   };
 
   return (
-    <Button
-      onClick={downloadFileWithLogs}
-      variant="secondary"
-      title={formatMessage({
-        id: "jobHistory.logs.downloadLogs",
-      })}
-      icon={<Icon type="download" />}
-    />
+    <Tooltip
+      control={
+        <Button
+          onClick={downloadFileWithLogs}
+          variant="secondary"
+          icon="download"
+          aria-label={formatMessage({ id: "jobHistory.logs.downloadLogs" })}
+        />
+      }
+      placement="bottom"
+    >
+      <FormattedMessage id="jobHistory.logs.downloadLogs" />
+    </Tooltip>
   );
 };

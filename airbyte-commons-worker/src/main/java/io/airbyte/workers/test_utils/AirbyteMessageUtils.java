@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.workers.test_utils;
@@ -195,12 +195,18 @@ public class AirbyteMessageUtils {
   }
 
   public static AirbyteMessage createStatusTraceMessage(final StreamDescriptor stream, final AirbyteStreamStatus status) {
+    return createStatusTraceMessage(stream, status, System.currentTimeMillis());
+  }
+
+  public static AirbyteMessage createStatusTraceMessage(final StreamDescriptor stream,
+                                                        final AirbyteStreamStatus status,
+                                                        final Long emittedAt) {
     final AirbyteStreamStatusTraceMessage airbyteStreamStatusTraceMessage = new AirbyteStreamStatusTraceMessage()
         .withStatus(status)
         .withStreamDescriptor(stream);
 
     final AirbyteTraceMessage airbyteTraceMessage = new AirbyteTraceMessage()
-        .withEmittedAt(Long.valueOf(System.currentTimeMillis()).doubleValue())
+        .withEmittedAt(emittedAt.doubleValue())
         .withType(AirbyteTraceMessage.Type.STREAM_STATUS)
         .withStreamStatus(airbyteStreamStatusTraceMessage);
 
@@ -238,6 +244,22 @@ public class AirbyteMessageUtils {
         }
       }
     }
+
+    return new AirbyteMessage()
+        .withType(Type.TRACE)
+        .withTrace(airbyteTraceMessage);
+  }
+
+  public static AirbyteMessage createStreamStatusTraceMessageWithType(final StreamDescriptor stream,
+                                                                      final AirbyteStreamStatusTraceMessage.AirbyteStreamStatus status) {
+    final AirbyteStreamStatusTraceMessage airbyteStreamStatusTraceMessage = new AirbyteStreamStatusTraceMessage()
+        .withStatus(status)
+        .withStreamDescriptor(stream);
+
+    final AirbyteTraceMessage airbyteTraceMessage = new AirbyteTraceMessage()
+        .withEmittedAt(null)
+        .withType(AirbyteTraceMessage.Type.STREAM_STATUS)
+        .withStreamStatus(airbyteStreamStatusTraceMessage);
 
     return new AirbyteMessage()
         .withType(Type.TRACE)

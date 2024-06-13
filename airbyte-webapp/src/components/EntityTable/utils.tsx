@@ -1,4 +1,9 @@
+import { FormattedMessage } from "react-intl";
+
+import { Text } from "components/ui/Text";
+
 import {
+  ActorStatus,
   ConnectionStatus,
   DestinationRead,
   DestinationSnippetRead,
@@ -41,6 +46,7 @@ export function getEntityTableData<
         connectorIcon: entityItem.icon,
         lastSync: null,
         connectEntities: [],
+        isActive: entityItem.status === ActorStatus.active,
       };
     }
 
@@ -65,6 +71,7 @@ export function getEntityTableData<
       lastSync: sortBySync?.[0].latestSyncJobCreatedAt,
       connectEntities,
       connectorIcon: entityItem.icon,
+      isActive: entityItem.status === ActorStatus.active,
     };
   });
 
@@ -123,3 +130,36 @@ export const getConnectionSyncStatus = (
       return ConnectionSyncStatus.EMPTY;
   }
 };
+
+const generateStatusFilterOption = (value: string | null, id: string) => ({
+  label: (
+    <Text color="grey" bold as="span">
+      <FormattedMessage id={id} />
+    </Text>
+  ),
+  value,
+});
+
+export const statusFilterOptions = [
+  generateStatusFilterOption(null, "tables.connectors.filters.status.all"),
+  generateStatusFilterOption("inactive", "tables.connectors.filters.status.inactive"),
+  generateStatusFilterOption("active", "tables.connectors.filters.status.active"),
+];
+
+/**
+ * Filter entity table data by entityName(name defined by user) and connectorName
+ * @param searchFilter
+ * @param data
+ */
+export const filterBySearchEntityTableData = (
+  searchFilter: string,
+  status: string | null,
+  data: EntityTableDataItem[]
+) =>
+  data.filter(
+    ({ entityName, connectorName, isActive }) =>
+      [entityName, connectorName]
+        .map((value) => value.toLowerCase())
+        .some((value) => value.includes(searchFilter.toLowerCase())) &&
+      (status === null || (isActive && status === "active") || (!isActive && status === "inactive"))
+  );

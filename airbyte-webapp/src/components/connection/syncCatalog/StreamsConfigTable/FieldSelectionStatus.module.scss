@@ -24,7 +24,9 @@
   width: variables.$spacing-2xl;
   height: variables.$spacing-xl;
   border-radius: variables.$border-radius-pill;
-  transition: border-color variables.$transition-out, color variables.$transition-out;
+  transition:
+    border-color variables.$transition-out,
+    color variables.$transition-out;
   margin: auto;
 
   .selected {

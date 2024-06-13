@@ -1,0 +1,2 @@
+{{!Copied from the base JaxRs openapi generator to override the one included in JaxRsSpec}}
+{{#required}}@NotNull {{/required}}{{^isPrimitiveType}}{{^isDate}}{{^isDateTime}}{{^isString}}{{^isFile}}{{^isArray}}@Valid {{/isArray}}{{/isFile}}{{/isString}}{{/isDateTime}}{{/isDate}}{{/isPrimitiveType}}{{>beanValidationCore}}

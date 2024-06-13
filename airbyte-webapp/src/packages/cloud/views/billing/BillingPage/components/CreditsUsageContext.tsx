@@ -1,9 +1,9 @@
 import dayjs from "dayjs";
-import { Dispatch, SetStateAction, createContext, useContext, useMemo, useState } from "react";
+import { createContext, useContext, useMemo, useState } from "react";
 
 import { Option } from "components/ui/ListBox";
 
-import { useCurrentWorkspace } from "core/api";
+import { useCurrentWorkspace, useFilters } from "core/api";
 import { useGetCloudWorkspaceUsage } from "core/api/cloud";
 import { DestinationId, SourceId, SupportLevel } from "core/api/types/AirbyteClient";
 import { ConsumptionTimeWindow } from "core/api/types/CloudApi";
@@ -42,10 +42,10 @@ interface CreditsUsageContext {
   destinationOptions: Array<Option<string>>;
   selectedSource: SourceId | null;
   selectedDestination: DestinationId | null;
-  setSelectedSource: Dispatch<SetStateAction<string | null>>;
-  setSelectedDestination: Dispatch<SetStateAction<string | null>>;
+  setSelectedSource: (sourceId: SourceId | null) => void;
+  setSelectedDestination: (destinationId: DestinationId | null) => void;
   selectedTimeWindow: ConsumptionTimeWindow;
-  setSelectedTimeWindow: Dispatch<SetStateAction<ConsumptionTimeWindow>>;
+  setSelectedTimeWindow: (timeWindow: ConsumptionTimeWindow) => void;
   hasFreeUsage: boolean;
 }
 
@@ -59,12 +59,24 @@ export const useCreditsContext = (): CreditsUsageContext => {
   return creditsUsageHelpers;
 };
 
+interface FilterValues {
+  selectedTimeWindow: ConsumptionTimeWindow;
+  selectedSource: SourceId | null;
+  selectedDestination: DestinationId | null;
+}
+
 export const CreditsUsageContextProvider: React.FC<React.PropsWithChildren<unknown>> = ({ children }) => {
-  const [selectedTimeWindow, setSelectedTimeWindow] = useState<ConsumptionTimeWindow>(ConsumptionTimeWindow.lastMonth);
+  const [filters, setFilterValue] = useFilters<FilterValues>({
+    selectedTimeWindow: ConsumptionTimeWindow.lastMonth,
+    selectedSource: null,
+    selectedDestination: null,
+  });
+  const { selectedTimeWindow, selectedSource, selectedDestination } = filters;
+
   const [hasFreeUsage, setHasFreeUsage] = useState<boolean>(false);
 
   const { workspaceId } = useCurrentWorkspace();
-  const data = useGetCloudWorkspaceUsage(workspaceId, selectedTimeWindow);
+  const data = useGetCloudWorkspaceUsage(workspaceId, filters.selectedTimeWindow);
 
   const { consumptionPerConnectionPerTimeframe, timeWindow } = data;
 
@@ -82,8 +94,6 @@ export const CreditsUsageContextProvider: React.FC<React.PropsWithChildren<unkno
     });
   }, [consumptionPerConnectionPerTimeframe]);
 
-  const [selectedSource, setSelectedSource] = useState<SourceId | null>(null);
-  const [selectedDestination, setSelectedDestination] = useState<DestinationId | null>(null);
   const availableSourcesAndDestinations = useMemo(
     () => calculateAvailableSourcesAndDestinations(rawConsumptionData),
     [rawConsumptionData]
@@ -105,28 +115,27 @@ export const CreditsUsageContextProvider: React.FC<React.PropsWithChildren<unkno
     return rawConsumptionData;
   }, [rawConsumptionData, selectedDestination, selectedSource]);
 
-  const sourceOptions = useMemo(() => {
-    return availableSourcesAndDestinations.sources.map((source) => {
-      const disabled = !selectedDestination ? false : !source.connectedDestinations.includes(selectedDestination);
-      return {
-        label: <ConnectorOptionLabel connector={source} disabled={disabled} />,
-        value: source.id,
-        disabled,
-      };
-    });
-  }, [availableSourcesAndDestinations.sources, selectedDestination]);
+  const sourceOptions = useMemo(
+    () =>
+      availableSourcesAndDestinations.sources
+        .filter((source) => (selectedDestination ? source.connectedDestinations.includes(selectedDestination) : true))
+        .map((source) => ({
+          label: <ConnectorOptionLabel connector={source} />,
+          value: source.id,
+        })),
+    [availableSourcesAndDestinations.sources, selectedDestination]
+  );
 
-  const destinationOptions = useMemo(() => {
-    return availableSourcesAndDestinations.destinations.map((destination) => {
-      const disabled = !selectedSource ? false : !destination.connectedSources.includes(selectedSource);
-
-      return {
-        label: <ConnectorOptionLabel connector={destination} disabled={disabled} />,
-        value: destination.id,
-        disabled,
-      };
-    });
-  }, [availableSourcesAndDestinations.destinations, selectedSource]);
+  const destinationOptions = useMemo(
+    () =>
+      availableSourcesAndDestinations.destinations
+        .filter((destination) => (selectedSource ? destination.connectedSources.includes(selectedSource) : true))
+        .map((destination) => ({
+          label: <ConnectorOptionLabel connector={destination} />,
+          value: destination.id,
+        })),
+    [availableSourcesAndDestinations.destinations, selectedSource]
+  );
 
   return (
     <creditsUsageContext.Provider
@@ -136,11 +145,13 @@ export const CreditsUsageContextProvider: React.FC<React.PropsWithChildren<unkno
         sourceOptions,
         destinationOptions,
         selectedSource,
-        setSelectedSource,
+        setSelectedSource: (selectedSource: SourceId | null) => setFilterValue("selectedSource", selectedSource),
         selectedDestination,
-        setSelectedDestination,
+        setSelectedDestination: (selectedDestination: DestinationId | null) =>
+          setFilterValue("selectedDestination", selectedDestination),
         selectedTimeWindow,
-        setSelectedTimeWindow,
+        setSelectedTimeWindow: (selectedTimeWindow: ConsumptionTimeWindow) =>
+          setFilterValue("selectedTimeWindow", selectedTimeWindow),
         hasFreeUsage,
       }}
     >

@@ -20,7 +20,6 @@ export const links = {
   configurationArchiveLink: `${BASE_DOCS_LINK}/operator-guides/upgrading-airbyte/`,
   normalizationLink: `${BASE_DOCS_LINK}/understanding-airbyte/connections#airbyte-basic-normalization`,
   namespaceLink: `${BASE_DOCS_LINK}/understanding-airbyte/namespaces`,
-  tutorialLink: "https://www.youtube.com/watch?v=Rcpt5SVsMpk&feature=emb_logo",
   statusLink: "https://status.airbyte.io/",
   tutorialsLink: "https://airbyte.com/tutorials",
   syncModeLink: `${BASE_DOCS_LINK}/understanding-airbyte/connections`,
@@ -31,7 +30,7 @@ export const links = {
   webpageLink: "https://airbyte.com",
   webhookVideoGuideLink: "https://www.youtube.com/watch?v=NjYm8F-KiFc",
   cronReferenceLink: "http://www.quartz-scheduler.org/documentation/quartz-2.3.0/tutorials/crontrigger.html",
-  cloudAllowlistIPsLink: `${BASE_DOCS_LINK}/cloud/getting-started-with-airbyte-cloud/#allowlist-ip-addresses`,
+  cloudAllowlistIPsLink: `${BASE_DOCS_LINK}/operating-airbyte/security#network-security-1`,
   dataResidencySurvey: "https://forms.gle/Dr7MPTdt9k3xTinL8",
   connectionDataResidency: `${BASE_DOCS_LINK}/cloud/managing-airbyte-cloud/manage-data-residency#choose-the-data-residency-for-a-connection`,
   lowCodeYamlDescription: `${BASE_DOCS_LINK}/connector-development/config-based/understanding-the-yaml-file/yaml-overview`,
@@ -40,6 +39,7 @@ export const links = {
   iso8601Duration: "https://en.wikipedia.org/wiki/ISO_8601#Durations",
   ossSecurityDocs: `${BASE_DOCS_LINK}/operator-guides/security/#securing-airbyte-open-source`,
   connectorBuilderAuthentication: `${BASE_DOCS_LINK}/connector-development/connector-builder-ui/authentication`,
+  connectorBuilderRecordSelector: `${BASE_DOCS_LINK}/connector-development/connector-builder-ui/record-processing#record-selection`,
   connectorBuilderPagination: `${BASE_DOCS_LINK}/connector-development/connector-builder-ui/pagination`,
   connectorBuilderIncrementalSync: `${BASE_DOCS_LINK}/connector-development/connector-builder-ui/incremental-sync`,
   connectorBuilderErrorHandler: `${BASE_DOCS_LINK}/connector-development/connector-builder-ui/error-handling`,
@@ -50,7 +50,11 @@ export const links = {
   interpolationVariableDocs: `${BASE_DOCS_LINK}/connector-development/config-based/understanding-the-yaml-file/reference`,
   interpolationMacroDocs: `${BASE_DOCS_LINK}/connector-development/config-based/understanding-the-yaml-file/reference#macros`,
   creditDescription: "https://airbyte.com/pricing#what-is-a-credit",
+  pricingPage: "https://airbyte.com/pricing",
   usingCustomConnectors: `${BASE_DOCS_LINK}/operator-guides/using-custom-connectors/`,
+  gettingSupport: `${BASE_DOCS_LINK}/community/getting-support`,
+  autoRechargeEnrollment: `${BASE_DOCS_LINK}/cloud/managing-airbyte-cloud/manage-credits#automatic-reload-of-credits-beta`,
+  connectorSpecificationDocs: `${BASE_DOCS_LINK}/connector-development/connector-specification-reference/#airbyte-modifications-to-jsonschema`,
 } as const;
 
 export type OutboundLinks = typeof links;

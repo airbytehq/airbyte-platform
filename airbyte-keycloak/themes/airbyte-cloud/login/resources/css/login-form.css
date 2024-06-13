@@ -1,0 +1,11 @@
+#kc-form-login .ab-form-group:has(input[name="rememberMe"]) {
+    display: flex;
+    justify-content: space-between;
+    flex-direction: row-reverse;
+    font-size: var(--font-size-lg);
+}
+
+/** "Forgot password" link */
+#kc-form-login .ab-form-group:has(input[name="rememberMe"]) .ab-form-options-wrapper a:link {
+    color: var(--color-grey-400);
+}

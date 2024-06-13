@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.api.server.filters
@@ -40,7 +40,7 @@ class JobsFilter(
     return if (status == null) {
       null
     } else {
-      JobStatus.fromValue(status.toString())
+      JobStatus.valueOf(status.toString())
     }
   }
 //    @Nullable fun getJobType(): JobTypeEnum {

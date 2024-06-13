@@ -2,7 +2,7 @@ import React from "react";
 import { useIntl } from "react-intl";
 import { useMeasure } from "react-use";
 
-import { Button } from "components/ui/Button";
+import { FlexContainer } from "components/ui/Flex";
 import { Icon } from "components/ui/Icon";
 import { Input } from "components/ui/Input";
 import { Text } from "components/ui/Text";
@@ -38,42 +38,44 @@ export const LogSearchInput = React.forwardRef<HTMLInputElement, LogSearchInputP
     const { formatMessage } = useIntl();
 
     return (
-      <>
-        <div className={styles.logSearchInput__inputWrapper}>
-          <Input
-            ref={ref}
-            value={inputValue}
-            onChange={(e) => onSearchTermChange(e.target.value)}
-            onKeyDown={onSearchInputKeydown}
-            placeholder={formatMessage({ id: "jobHistory.logs.searchPlaceholder" })}
-            style={{ paddingRight: width + 15 }}
-            light
-          />
-          <div className={styles.logSearchInput__lineCount} ref={lineCountRef}>
+      <div className={styles.logSearchInput__inputWrapper}>
+        <Input
+          ref={ref}
+          value={inputValue}
+          onChange={(e) => onSearchTermChange(e.target.value)}
+          onKeyDown={onSearchInputKeydown}
+          placeholder={formatMessage({ id: "jobHistory.logs.searchPlaceholder" })}
+          style={{ paddingRight: width + 15 }}
+          light
+        />
+        {highlightedMatchIndex !== undefined && (
+          <div className={styles.logSearchInput__searchControls} ref={lineCountRef}>
             <Text align="center" size="xs" color={inputValue.length === 0 ? "grey" : "darkBlue"}>
-              {highlightedMatchIndex !== undefined && `${highlightedMatchDisplay} / ${matches.length}`}
+              {`${highlightedMatchDisplay} / ${matches.length}`}
             </Text>
+            <FlexContainer gap="none">
+              <button
+                className={styles.logSearchInput__button}
+                aria-label={formatMessage({ id: "jobHistory.logs.previousMatchLabel" })}
+                disabled={matches.length <= 1}
+                onClick={scrollToPreviousMatch}
+                type="button"
+              >
+                <Icon type="chevronLeft" color={matches.length > 1 ? "affordance" : "disabled"} />
+              </button>
+              <button
+                className={styles.logSearchInput__button}
+                aria-label={formatMessage({ id: "jobHistory.logs.nextMatchLabel" })}
+                disabled={matches.length <= 1}
+                onClick={scrollToNextMatch}
+                type="submit"
+              >
+                <Icon type="chevronRight" color={matches.length > 1 ? "affordance" : "disabled"} />
+              </button>
+            </FlexContainer>
           </div>
-        </div>
-        <Button
-          aria-label={formatMessage({ id: "jobHistory.logs.previousMatchLabel" })}
-          disabled={matches.length === 0}
-          onClick={scrollToPreviousMatch}
-          type="button"
-          variant="secondary"
-          size="xs"
-          icon={<Icon type="chevronLeft" />}
-        />
-        <Button
-          aria-label={formatMessage({ id: "jobHistory.logs.nextMatchLabel" })}
-          disabled={matches.length === 0}
-          onClick={scrollToNextMatch}
-          type="submit"
-          variant="secondary"
-          size="xs"
-          icon={<Icon type="chevronRight" />}
-        />
-      </>
+        )}
+      </div>
     );
   }
 );

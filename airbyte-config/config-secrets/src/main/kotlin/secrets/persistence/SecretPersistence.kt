@@ -1,10 +1,11 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.config.secrets.persistence
 
 import io.airbyte.config.secrets.SecretCoordinate
+import java.time.Instant
 
 /**
  * Provides a read-only interface to a backing secrets store similar to [SecretPersistence].
@@ -36,4 +37,19 @@ interface SecretPersistence : ReadOnlySecretPersistence {
     coordinate: SecretCoordinate,
     payload: String,
   )
+
+  fun writeWithExpiry(
+    coordinate: SecretCoordinate,
+    payload: String,
+    expiry: Instant? = null,
+  ) {
+    // Default implementation does not support expiry.
+    write(coordinate, payload)
+  }
+
+  fun delete(coordinate: SecretCoordinate)
+
+  fun disable(coordinate: SecretCoordinate) {
+    println("secret persistence has not implemented disable.")
+  }
 }

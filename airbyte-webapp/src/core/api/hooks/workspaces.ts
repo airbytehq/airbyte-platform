@@ -8,8 +8,7 @@ import {
   createWorkspace,
   deleteWorkspace,
   getWorkspace,
-  listUsersInWorkspace,
-  listWorkspaces,
+  listAccessInfoByWorkspaceId,
   listWorkspacesByUser,
   updateWorkspace,
   updateWorkspaceName,
@@ -30,8 +29,8 @@ export const workspaceKeys = {
   all: [SCOPE_USER, "workspaces"] as const,
   lists: () => [...workspaceKeys.all, "list"] as const,
   list: (filters: string | Record<string, string>) => [...workspaceKeys.lists(), { filters }] as const,
-  allListUsers: [SCOPE_WORKSPACE, "users", "list"] as const,
-  listUsers: (workspaceId: string) => [SCOPE_WORKSPACE, "users", "list", workspaceId] as const,
+  allListAccessUsers: [SCOPE_WORKSPACE, "users", "listAccessUsers"] as const,
+  listAccessUsers: (workspaceId: string) => [SCOPE_WORKSPACE, "users", "listAccessUsers", workspaceId] as const,
   detail: (workspaceId: string) => [...workspaceKeys.all, "details", workspaceId] as const,
   state: (workspaceId: string) => [...workspaceKeys.all, "state", workspaceId] as const,
 };
@@ -100,22 +99,6 @@ export const useInvalidateWorkspaceStateQuery = () => {
   }, [queryClient, workspaceId]);
 };
 
-// todo: after merging https://github.com/airbytehq/airbyte-platform-internal/pull/7779 this should get workspace by user id
-export const useListWorkspaces = () => {
-  const requestOptions = useRequestOptions();
-  return useSuspenseQuery(workspaceKeys.lists(), () => listWorkspaces(requestOptions));
-};
-
-export const getListWorkspacesAsyncQueryKey = () => {
-  return workspaceKeys.lists();
-};
-
-export const useListWorkspacesAsyncQuery = () => {
-  const requestOptions = useRequestOptions();
-
-  return () => listWorkspaces(requestOptions);
-};
-
 export const getWorkspaceQueryKey = (workspaceId: string) => {
   return workspaceKeys.detail(workspaceId);
 };
@@ -133,13 +116,6 @@ export const useGetWorkspace = (
   const queryFn = useGetWorkspaceQuery(workspaceId);
 
   return useSuspenseQuery(queryKey, queryFn, options);
-};
-
-export const useListUsersInWorkspace = (workspaceId: string) => {
-  const requestOptions = useRequestOptions();
-  const queryKey = workspaceKeys.listUsers(workspaceId);
-
-  return useSuspenseQuery(queryKey, () => listUsersInWorkspace({ workspaceId }, requestOptions));
 };
 
 export const useListWorkspacesInfinite = (pageSize: number, nameContains: string, suspense?: boolean) => {
@@ -226,4 +202,11 @@ export const useInvalidateAllWorkspaceScopeOnChange = (workspaceId: string) => {
   useLayoutEffect(() => {
     invalidateWorkspaceScope();
   }, [invalidateWorkspaceScope, workspaceId]);
+};
+
+export const useListWorkspaceAccessUsers = (workspaceId: string) => {
+  const requestOptions = useRequestOptions();
+  const queryKey = workspaceKeys.listAccessUsers(workspaceId);
+
+  return useSuspenseQuery(queryKey, () => listAccessInfoByWorkspaceId({ workspaceId }, requestOptions));
 };

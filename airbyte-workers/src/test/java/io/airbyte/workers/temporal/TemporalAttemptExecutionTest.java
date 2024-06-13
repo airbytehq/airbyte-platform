@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.workers.temporal;
@@ -18,6 +18,7 @@ import static org.mockito.Mockito.when;
 import io.airbyte.api.client.AirbyteApiClient;
 import io.airbyte.api.client.generated.AttemptApi;
 import io.airbyte.config.Configs;
+import io.airbyte.db.instance.DatabaseConstants;
 import io.airbyte.persistence.job.models.JobRunConfig;
 import io.airbyte.workers.Worker;
 import java.io.IOException;
@@ -59,7 +60,7 @@ class TemporalAttemptExecutionTest {
 
   @BeforeAll
   static void setUpAll() {
-    container = new PostgreSQLContainer<>("postgres:13-alpine")
+    container = new PostgreSQLContainer<>(DatabaseConstants.DEFAULT_DATABASE_VERSION)
         .withUsername(SOURCE_USERNAME)
         .withPassword(SOURCE_PASSWORD);
     container.start();
@@ -107,7 +108,7 @@ class TemporalAttemptExecutionTest {
     verify(worker).run(anyString(), any());
     verify(mdcSetter, atLeast(1)).accept(jobRoot);
     verify(attemptApi, times(1)).setWorkflowInAttempt(
-        argThat(request -> request.getAttemptNumber().equals(ATTEMPT_NUMBER) && request.getJobId().equals(Long.valueOf(JOB_ID))));
+        argThat(request -> request.getAttemptNumber() == ATTEMPT_NUMBER && request.getJobId() == Long.valueOf(JOB_ID)));
   }
 
   @Test
@@ -119,7 +120,7 @@ class TemporalAttemptExecutionTest {
     verify(worker).run(anyString(), any());
     verify(mdcSetter).accept(jobRoot);
     verify(attemptApi, times(1)).setWorkflowInAttempt(
-        argThat(request -> request.getAttemptNumber().equals(ATTEMPT_NUMBER) && request.getJobId().equals(Long.valueOf(JOB_ID))));
+        argThat(request -> request.getAttemptNumber() == ATTEMPT_NUMBER && request.getJobId() == Long.valueOf(JOB_ID)));
   }
 
 }

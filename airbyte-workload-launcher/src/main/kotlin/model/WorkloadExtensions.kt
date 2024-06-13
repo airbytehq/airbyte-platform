@@ -17,11 +17,12 @@ fun OpenApiWorkloadType.toInternalApi(): io.airbyte.config.WorkloadType {
 
 fun OpenApiWorkload.toLauncherInput(): LauncherInput {
   return LauncherInput(
-    this.id,
-    this.inputPayload,
-    this.labels.associate { it.key to it.value },
-    this.logPath,
-    this.mutexKey,
-    this.type.toInternalApi(),
+    workloadId = this.id,
+    workloadInput = this.inputPayload,
+    labels = this.labels.associate { it.key to it.value },
+    logPath = this.logPath,
+    mutexKey = this.mutexKey,
+    workloadType = this.type.toInternalApi(),
+    autoId = this.autoId,
   )
 }

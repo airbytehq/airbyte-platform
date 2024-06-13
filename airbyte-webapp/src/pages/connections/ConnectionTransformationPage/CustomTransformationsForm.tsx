@@ -1,5 +1,5 @@
 import React, { useMemo } from "react";
-import { FormattedMessage, useIntl } from "react-intl";
+import { useIntl } from "react-intl";
 import * as yup from "yup";
 import { SchemaOf } from "yup";
 
@@ -8,7 +8,7 @@ import { getInitialTransformations } from "components/connection/ConnectionForm/
 import { DbtOperationReadOrCreate, dbtOperationReadOrCreateSchema } from "components/connection/TransformationForm";
 import { Form } from "components/forms";
 import { FormSubmissionButtons } from "components/forms/FormSubmissionButtons";
-import { CollapsibleCard } from "components/ui/CollapsibleCard";
+import { Card } from "components/ui/Card";
 
 import { isDbtTransformation } from "area/connection/utils";
 import { useAppMonitoringService } from "hooks/services/AppMonitoringService";
@@ -76,10 +76,10 @@ export const CustomTransformationsForm: React.FC = () => {
       trackDirtyChanges
       dataTestId="custom-transformation-form"
     >
-      <CollapsibleCard title={<FormattedMessage id="connection.customTransformations" />} collapsible>
+      <Card title={formatMessage({ id: "connection.customTransformations" })} collapsible>
         <CustomTransformationsFormField />
         <FormSubmissionButtons submitKey="form.saveChanges" />
-      </CollapsibleCard>
+      </Card>
     </Form>
   );
 };

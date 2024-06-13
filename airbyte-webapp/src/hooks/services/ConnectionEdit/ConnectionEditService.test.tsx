@@ -1,6 +1,6 @@
 /* eslint-disable check-file/filename-blocklist */
 // temporary disable eslint rule for this file during form cleanup
-import { act, renderHook } from "@testing-library/react";
+import { act, renderHook, waitFor } from "@testing-library/react";
 import React from "react";
 
 import { mockCatalogDiff } from "test-utils/mock-data/mockCatalogDiff";
@@ -27,6 +27,15 @@ import {
 import { ConnectionEditServiceProvider, useConnectionEditService } from "./ConnectionEditService";
 import { useConnectionFormService } from "../ConnectionForm/ConnectionFormService";
 
+jest.mock("core/utils/rbac", () => ({
+  useIntent: () => true,
+}));
+
+const mockedUseUpdateConnection = jest.fn(async (connection: WebBackendConnectionUpdate) => {
+  const { sourceCatalogId, ...connectionUpdate } = connection;
+  return { ...mockConnection, ...connectionUpdate, catalogId: sourceCatalogId ?? mockConnection.catalogId };
+});
+
 jest.mock("core/api", () => ({
   useCurrentWorkspace: () => mockWorkspace,
   useGetConnection: () => mockConnection,
@@ -37,10 +46,7 @@ jest.mock("core/api", () => ({
     async ({ withRefreshedCatalog }: WebBackendConnectionRequestBody) =>
       withRefreshedCatalog ? utils.getMockConnectionWithRefreshedCatalog() : mockConnection,
   useUpdateConnection: () => ({
-    mutateAsync: jest.fn(async (connection: WebBackendConnectionUpdate) => {
-      const { sourceCatalogId, ...connectionUpdate } = connection;
-      return { ...mockConnection, ...connectionUpdate, catalogId: sourceCatalogId ?? mockConnection.catalogId };
-    }),
+    mutateAsync: mockedUseUpdateConnection,
     isLoading: false,
   }),
   useSourceDefinitionVersion: () => mockSourceDefinitionVersion,
@@ -193,5 +199,126 @@ describe("ConnectionEditServiceProvider", () => {
     expect(result.current.editService.schemaHasBeenRefreshed).toBe(false);
     expect(result.current.editService.schemaRefreshing).toBe(false);
     expect(result.current.editService.connection).toEqual(updatedConnection);
+  });
+
+  /**
+   * Edge case: https://github.com/airbytehq/airbyte-internal-issues/issues/4867
+   */
+  describe("Empty catalog diff with non-breaking changes", () => {
+    afterEach(() => {
+      mockedUseUpdateConnection.mockReset();
+    });
+
+    it("should automatically update the connection if schema change is non-breaking and catalogDiff is empty", async () => {
+      const useMyTestHook = () =>
+        ({
+          editService: useConnectionEditService(),
+          formService: useConnectionFormService(),
+        }) as const;
+
+      const { result } = renderHook(useMyTestHook, {
+        wrapper: Wrapper,
+      });
+
+      jest.spyOn(utils, "getMockConnectionWithRefreshedCatalog").mockImplementationOnce(
+        (): WebBackendConnectionRead => ({
+          ...mockConnection,
+          catalogDiff: { transforms: [] },
+          schemaChange: "non_breaking",
+          catalogId: `${mockConnection.catalogId}123`,
+        })
+      );
+
+      await act(async () => {
+        await result.current.formService.refreshSchema();
+      });
+
+      await waitFor(() => {
+        // update connection called with the correct values
+        expect(mockedUseUpdateConnection).toHaveBeenCalledWith({
+          connectionId: mockConnection.connectionId,
+          sourceCatalogId: `${mockConnection.catalogId}123`,
+        });
+        // notification is displayed
+        expect(
+          document.body.querySelector('[data-testid="notification-connection.updateAutomaticallyApplied"]')
+        ).toBeInTheDocument();
+      });
+    });
+
+    it("should NOT automatically update the connection if schema change is non-breaking and catalogDiff is NOT empty", async () => {
+      const useMyTestHook = () =>
+        ({
+          editService: useConnectionEditService(),
+          formService: useConnectionFormService(),
+        }) as const;
+
+      const { result } = renderHook(useMyTestHook, {
+        wrapper: Wrapper,
+      });
+
+      jest.spyOn(utils, "getMockConnectionWithRefreshedCatalog").mockImplementationOnce(
+        (): WebBackendConnectionRead => ({
+          ...mockConnection,
+          catalogDiff: {
+            transforms: [
+              {
+                streamDescriptor: {
+                  name: "test_stream",
+                  namespace: "test_namespace",
+                },
+                transformType: "update_stream",
+                updateStream: {
+                  fieldTransforms: [],
+                  streamAttributeTransforms: [],
+                },
+              },
+            ],
+          },
+          schemaChange: "non_breaking",
+        })
+      );
+
+      await act(async () => {
+        await result.current.formService.refreshSchema();
+      });
+
+      await waitFor(() => {
+        expect(mockedUseUpdateConnection).not.toHaveBeenCalled();
+        // notification is not displayed
+        expect(
+          document.body.querySelector('[data-testid="notification-connection.updateAutomaticallyApplied"]')
+        ).not.toBeInTheDocument();
+      });
+    });
+
+    it("should NOT automatically update the connection if schema change is not no_change", async () => {
+      const useMyTestHook = () =>
+        ({
+          editService: useConnectionEditService(),
+          formService: useConnectionFormService(),
+        }) as const;
+
+      const { result } = renderHook(useMyTestHook, {
+        wrapper: Wrapper,
+      });
+      jest.spyOn(utils, "getMockConnectionWithRefreshedCatalog").mockImplementationOnce(
+        (): WebBackendConnectionRead => ({
+          ...mockConnection,
+          catalogDiff: { transforms: [] },
+          schemaChange: "no_change",
+        })
+      );
+
+      await act(async () => {
+        await result.current.formService.refreshSchema();
+      });
+
+      await waitFor(() => {
+        expect(mockedUseUpdateConnection).not.toHaveBeenCalled();
+        // notification "noDiff" is displayed
+        expect(document.body.querySelector('[data-testid="notification-connection.noDiff"]')).toBeInTheDocument();
+      });
+    });
   });
 });

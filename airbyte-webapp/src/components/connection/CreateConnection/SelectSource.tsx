@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { FormattedMessage } from "react-intl";
+import { FormattedMessage, useIntl } from "react-intl";
 import { useSearchParams } from "react-router-dom";
 
 import { CloudInviteUsersHint } from "components/CloudInviteUsersHint";
@@ -10,6 +10,7 @@ import { FlexContainer } from "components/ui/Flex";
 import { Heading } from "components/ui/Heading";
 
 import { useSourceDefinitionList, useSourceList } from "core/api";
+import { PageTrackingCodes, useTrackPage } from "core/services/analytics";
 
 import { CreateNewSource, SOURCE_DEFINITION_PARAM } from "./CreateNewSource";
 import { RadioButtonTiles } from "./RadioButtonTiles";
@@ -23,6 +24,8 @@ export const SOURCE_TYPE_PARAM = "sourceType";
 export const SOURCE_ID_PARAM = "sourceId";
 
 export const SelectSource: React.FC = () => {
+  useTrackPage(PageTrackingCodes.CONNECTIONS_NEW_DEFINE_SOURCE);
+  const { formatMessage } = useIntl();
   const { sources } = useSourceList();
   const { sourceDefinitionMap } = useSourceDefinitionList();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -67,7 +70,7 @@ export const SelectSource: React.FC = () => {
         {!searchParams.get(SOURCE_DEFINITION_PARAM) && (
           <Box px="md">
             <PageContainer centered>
-              <Card withPadding>
+              <Card>
                 <Heading as="h2">
                   <FormattedMessage id="connectionForm.defineSource" />
                 </Heading>
@@ -77,14 +80,14 @@ export const SelectSource: React.FC = () => {
                     options={[
                       {
                         value: EXISTING_SOURCE_TYPE,
-                        label: "connectionForm.sourceExisting",
-                        description: "connectionForm.sourceExistingDescription",
+                        label: formatMessage({ id: "connectionForm.sourceExisting" }),
+                        description: formatMessage({ id: "connectionForm.sourceExistingDescription" }),
                         disabled: sources.length === 0,
                       },
                       {
                         value: NEW_SOURCE_TYPE,
-                        label: "onboarding.sourceSetUp",
-                        description: "onboarding.sourceSetUp.description",
+                        label: formatMessage({ id: "onboarding.sourceSetUp" }),
+                        description: formatMessage({ id: "onboarding.sourceSetUp.description" }),
                       },
                     ]}
                     selectedValue={selectedSourceType}

@@ -1,9 +1,11 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.container_orchestrator.config;
 
+import io.airbyte.api.client.WorkloadApiClient;
+import io.airbyte.commons.envvar.EnvVar;
 import io.airbyte.commons.features.EnvVariableFeatureFlags;
 import io.airbyte.commons.features.FeatureFlags;
 import io.airbyte.commons.workers.config.WorkerConfigsProvider;
@@ -26,14 +28,15 @@ import io.airbyte.workers.process.DockerProcessFactory;
 import io.airbyte.workers.process.KubePortManagerSingleton;
 import io.airbyte.workers.process.KubeProcessFactory;
 import io.airbyte.workers.process.ProcessFactory;
-import io.airbyte.workers.storage.DocumentStoreClient;
-import io.airbyte.workers.storage.StateClients;
+import io.airbyte.workers.storage.DocumentType;
+import io.airbyte.workers.storage.StorageClient;
+import io.airbyte.workers.storage.StorageClientFactory;
 import io.airbyte.workers.sync.DbtLauncherWorker;
 import io.airbyte.workers.sync.NormalizationLauncherWorker;
 import io.airbyte.workers.sync.OrchestratorConstants;
 import io.airbyte.workers.sync.ReplicationLauncherWorker;
+import io.airbyte.workers.workload.JobOutputDocStore;
 import io.airbyte.workers.workload.WorkloadIdGenerator;
-import io.airbyte.workload.api.client.generated.WorkloadApi;
 import io.fabric8.kubernetes.client.DefaultKubernetesClient;
 import io.micronaut.context.annotation.Factory;
 import io.micronaut.context.annotation.Prototype;
@@ -44,13 +47,15 @@ import jakarta.inject.Named;
 import jakarta.inject.Singleton;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
-import java.nio.file.Path;
 import java.util.Map;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 
 @Factory
 class ContainerOrchestratorFactory {
+
+  private static final String DEFAULT_NETWORK = "host";
+  private static final String DEFAULT_JOB_KUBE_NAMESPACE = "default";
 
   @Singleton
   public MetricClient metricClient() {
@@ -68,16 +73,15 @@ class ContainerOrchestratorFactory {
     return new EnvConfigs(env);
   }
 
-  // This is currently needed for tests bceause the default env is docker
   @Singleton
   @Requires(notEnv = Environment.KUBERNETES)
   ProcessFactory dockerProcessFactory(final WorkerConfigsProvider workerConfigsProvider, final EnvConfigs configs) {
     return new DockerProcessFactory(
         workerConfigsProvider,
         configs.getWorkspaceRoot(), // Path.of(workspaceRoot),
-        configs.getWorkspaceDockerMount(), // workspaceDockerMount,
-        configs.getLocalDockerMount(), // localDockerMount,
-        configs.getDockerNetwork()// dockerNetwork
+        EnvVar.WORKSPACE_DOCKER_MOUNT.fetch(EnvVar.WORKSPACE_ROOT.fetch()), // workspaceDockerMount,
+        EnvVar.LOCAL_DOCKER_MOUNT.fetch(EnvVar.LOCAL_ROOT.fetch()), // localDockerMount,
+        EnvVar.DOCKER_NETWORK.fetch(DEFAULT_NETWORK)// dockerNetwork
     );
   }
 
@@ -100,7 +104,7 @@ class ContainerOrchestratorFactory {
     return new KubeProcessFactory(
         workerConfigsProvider,
         featureFlagClient,
-        configs.getJobKubeNamespace(),
+        EnvVar.JOB_KUBE_NAMESPACE.fetch(DEFAULT_JOB_KUBE_NAMESPACE),
         serviceAccount,
         new DefaultKubernetesClient(),
         kubeHeartbeatUrl);
@@ -109,18 +113,20 @@ class ContainerOrchestratorFactory {
   @Singleton
   JobOrchestrator<?> jobOrchestrator(
                                      @Named("application") final String application,
+                                     @Named("configDir") final String configDir,
                                      final EnvConfigs envConfigs,
                                      final ProcessFactory processFactory,
                                      final WorkerConfigsProvider workerConfigsProvider,
                                      final JobRunConfig jobRunConfig,
                                      final ReplicationWorkerFactory replicationWorkerFactory,
                                      final AsyncStateManager asyncStateManager,
-                                     final WorkloadApi workloadApi,
+                                     final WorkloadApiClient workloadApiClient,
                                      final WorkloadIdGenerator workloadIdGenerator,
-                                     @Value("${airbyte.workload.enabled}") final boolean workloadEnabled) {
+                                     @Value("${airbyte.workload.enabled}") final boolean workloadEnabled,
+                                     final JobOutputDocStore jobOutputDocStore) {
     return switch (application) {
-      case ReplicationLauncherWorker.REPLICATION -> new ReplicationJobOrchestrator(envConfigs, jobRunConfig,
-          replicationWorkerFactory, asyncStateManager, workloadApi, workloadIdGenerator, workloadEnabled);
+      case ReplicationLauncherWorker.REPLICATION -> new ReplicationJobOrchestrator(configDir, envConfigs, jobRunConfig,
+          replicationWorkerFactory, asyncStateManager, workloadApiClient, workloadIdGenerator, workloadEnabled, jobOutputDocStore);
       case NormalizationLauncherWorker.NORMALIZATION -> new NormalizationJobOrchestrator(envConfigs, processFactory, jobRunConfig, asyncStateManager);
       case DbtLauncherWorker.DBT -> new DbtJobOrchestrator(envConfigs, workerConfigsProvider, processFactory, jobRunConfig, asyncStateManager);
       case AsyncOrchestratorPodProcess.NO_OP -> new NoOpOrchestrator();
@@ -129,8 +135,15 @@ class ContainerOrchestratorFactory {
   }
 
   @Singleton
-  DocumentStoreClient documentStoreClient(final EnvConfigs config) {
-    return StateClients.create(config.getStateStorageCloudConfigs(), Path.of("/state"));
+  @Named("stateDocumentStore")
+  StorageClient documentStoreClient(final StorageClientFactory factory) {
+    return factory.get(DocumentType.STATE);
+  }
+
+  @Singleton
+  @Named("outputDocumentStore")
+  StorageClient outputDocumentStoreClient(final StorageClientFactory factory) {
+    return factory.get(DocumentType.WORKLOAD_OUTPUT);
   }
 
   @Prototype

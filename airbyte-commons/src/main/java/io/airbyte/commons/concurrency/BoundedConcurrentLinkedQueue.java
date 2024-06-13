@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.commons.concurrency;
@@ -10,6 +10,8 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * A Wrapper around a ConcurrentLinkedQueue that adds a constant time size lookup and the ability to
@@ -19,8 +21,9 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
  * default implementation of a BlockingQueue has a single lock while the ConcurrentLinkedQueue has
  * two locks, one each end of the queue hence reducing the contention.
  */
-public class BoundedConcurrentLinkedQueue<T> {
+public class BoundedConcurrentLinkedQueue<T> implements ClosableQueue<T> {
 
+  private static final Logger LOGGER = LoggerFactory.getLogger(BoundedConcurrentLinkedQueue.class);
   private final Queue<T> queue;
   private final AtomicInteger size;
   private final AtomicBoolean closed;
@@ -28,6 +31,7 @@ public class BoundedConcurrentLinkedQueue<T> {
   private final int maxSize;
 
   public BoundedConcurrentLinkedQueue(final int maxSize) {
+    LOGGER.info("Using BoundedConcurrentLinkedQueue");
     this.queue = new ConcurrentLinkedQueue<>();
     this.size = new AtomicInteger();
     this.closed = new AtomicBoolean();
@@ -40,6 +44,7 @@ public class BoundedConcurrentLinkedQueue<T> {
    *
    * @return the head of this queue, or null if this queue is empty
    */
+  @Override
   public T poll() {
     final T e = queue.poll();
     if (e != null) {
@@ -60,6 +65,7 @@ public class BoundedConcurrentLinkedQueue<T> {
    * @param e the element to add
    * @return true if the insertion was successful
    */
+  @Override
   public boolean add(final T e) {
     try {
       // We use a ReadWriteLock to make sure we are not adding to the queue while attempting to close
@@ -81,6 +87,7 @@ public class BoundedConcurrentLinkedQueue<T> {
     }
   }
 
+  @Override
   public int size() {
     return size.get();
   }
@@ -88,6 +95,7 @@ public class BoundedConcurrentLinkedQueue<T> {
   /**
    * Returns true if the queue is done. A queue is done when closed and empty.
    */
+  @Override
   public boolean isDone() {
     try {
       closedLock.readLock().lock();
@@ -100,6 +108,7 @@ public class BoundedConcurrentLinkedQueue<T> {
   /**
    * Close the queue.
    */
+  @Override
   public void close() {
     try {
       closedLock.writeLock().lock();
@@ -112,6 +121,7 @@ public class BoundedConcurrentLinkedQueue<T> {
   /**
    * Returns true if the queue is closed.
    */
+  @Override
   public boolean isClosed() {
     try {
       // Acquiring this lock for safety. closed being an atomic boolean, we may not need this.

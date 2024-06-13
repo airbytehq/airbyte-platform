@@ -1,0 +1,24 @@
+@use "scss/colors";
+@use "scss/mixins";
+@use "scss/variables";
+
+.connectorButton {
+  @include mixins.shadow;
+
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  border: none;
+  padding: 18px;
+  background: colors.$foreground;
+  border-radius: variables.$border-radius-2xl;
+  transition: box-shadow variables.$transition ease;
+
+  &.isLink {
+    cursor: pointer;
+
+    &:hover,
+    &:focus-visible {
+      box-shadow: variables.$box-shadow-raised;
+    }
+  }
+}

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.commons.server.handlers;
@@ -10,6 +10,7 @@ import io.airbyte.api.model.generated.OrganizationIdRequestBody;
 import io.airbyte.api.model.generated.OrganizationRead;
 import io.airbyte.api.model.generated.OrganizationReadList;
 import io.airbyte.api.model.generated.OrganizationUpdateRequestBody;
+import io.airbyte.commons.server.errors.ConflictException;
 import io.airbyte.config.ConfigSchema;
 import io.airbyte.config.Organization;
 import io.airbyte.config.Permission;
@@ -17,7 +18,8 @@ import io.airbyte.config.Permission.PermissionType;
 import io.airbyte.config.persistence.ConfigNotFoundException;
 import io.airbyte.config.persistence.ConfigRepository.ResourcesByUserQueryPaginated;
 import io.airbyte.config.persistence.OrganizationPersistence;
-import io.airbyte.config.persistence.PermissionPersistence;
+import io.airbyte.data.services.PermissionRedundantException;
+import io.airbyte.data.services.PermissionService;
 import jakarta.inject.Inject;
 import jakarta.inject.Named;
 import jakarta.inject.Singleton;
@@ -28,8 +30,6 @@ import java.util.UUID;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import org.jooq.tools.StringUtils;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
  * OrganizationHandler for handling organization resource related operation.
@@ -39,18 +39,17 @@ import org.slf4j.LoggerFactory;
 @Singleton
 public class OrganizationsHandler {
 
-  private static final Logger LOGGER = LoggerFactory.getLogger(OrganizationsHandler.class);
-  private final PermissionPersistence permissionPersistence;
+  private final PermissionService permissionService;
   private final OrganizationPersistence organizationPersistence;
 
   private final Supplier<UUID> uuidGenerator;
 
   @Inject
   public OrganizationsHandler(final OrganizationPersistence organizationPersistence,
-                              final PermissionPersistence permissionPersistence,
+                              final PermissionService permissionService,
                               @Named("uuidGenerator") final Supplier<UUID> uuidGenerator) {
     this.organizationPersistence = organizationPersistence;
-    this.permissionPersistence = permissionPersistence;
+    this.permissionService = permissionService;
     this.uuidGenerator = uuidGenerator;
   }
 
@@ -80,13 +79,17 @@ public class OrganizationsHandler {
         .withPba(pba)
         .withOrgLevelBilling(orgLevelBilling);
     organizationPersistence.createOrganization(organization);
-    // Also create an OrgAdmin permission.
-    final Permission orgAdminPermission = new Permission()
-        .withPermissionId(uuidGenerator.get())
-        .withUserId(userId)
-        .withOrganizationId(orgId)
-        .withPermissionType(PermissionType.ORGANIZATION_ADMIN);
-    permissionPersistence.writePermission(orgAdminPermission);
+
+    try {
+      // Also create an OrgAdmin permission.
+      permissionService.createPermission(new Permission()
+          .withPermissionId(uuidGenerator.get())
+          .withUserId(userId)
+          .withOrganizationId(orgId)
+          .withPermissionType(PermissionType.ORGANIZATION_ADMIN));
+    } catch (final PermissionRedundantException e) {
+      throw new ConflictException(e.getMessage(), e);
+    }
     return buildOrganizationRead(organization);
   }
 

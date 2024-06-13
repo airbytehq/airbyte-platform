@@ -21,7 +21,14 @@ export const BlockerService: React.FC<React.PropsWithChildren<unknown>> = ({ chi
   // release the block calling .proceed() on it.
   useEffect(() => {
     if (blocker.state === "blocked") {
-      currentBlockerRef.current?.(blocker);
+      if (currentBlockerRef.current) {
+        currentBlockerRef.current(blocker);
+      } else {
+        // If we're running into a blocked state on the blocker but don't have a currentBlockerRef anymore,
+        // it means we're trying to navigate away (and got blocked) in the same render cycle as the blocker was already removed.
+        // In this case it's safe to just release the block immediately and proceed with the navigation.
+        blocker.proceed();
+      }
     }
   }, [blocker, blocker.state]);
 

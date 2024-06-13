@@ -19,7 +19,7 @@ export default {
 } as Meta<typeof SecretTextArea>;
 
 const Template: StoryFn<typeof SecretTextArea> = (args) => (
-  <Card withPadding>
+  <Card>
     <Text size="lg">An extremely secret text area</Text>
     <Box my="md">
       <SecretTextArea
@@ -43,7 +43,7 @@ Primary.args = {
 export const WithUpload: StoryFn<typeof SecretTextArea> = (args) => {
   const [value, setValue] = useState("testing");
   return (
-    <Card withPadding>
+    <Card>
       <Text size="lg">An extremely secret text area with file upload</Text>
       <Box my="md">
         <SecretTextArea {...args} value={value} onChange={(e) => setValue(e.target.value)} onUpload={setValue} />

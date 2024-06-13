@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.workers.temporal.sync;
@@ -10,7 +10,6 @@ import static io.airbyte.metrics.lib.ApmTraceConstants.Tags.WEBHOOK_CONFIG_ID_KE
 import com.fasterxml.jackson.databind.JsonNode;
 import datadog.trace.api.Trace;
 import io.airbyte.api.client.AirbyteApiClient;
-import io.airbyte.api.client.invoker.generated.ApiException;
 import io.airbyte.api.client.model.generated.ScopeType;
 import io.airbyte.api.client.model.generated.SecretPersistenceConfig;
 import io.airbyte.api.client.model.generated.SecretPersistenceConfigGetRequestBody;
@@ -26,8 +25,10 @@ import io.airbyte.featureflag.UseRuntimeSecretPersistence;
 import io.airbyte.metrics.lib.ApmTraceUtils;
 import io.airbyte.metrics.lib.MetricClientFactory;
 import io.airbyte.metrics.lib.OssMetricsRegistry;
-import io.airbyte.workers.helpers.SecretPersistenceConfigHelper;
+import io.airbyte.workers.helper.SecretPersistenceConfigHelper;
+import jakarta.inject.Named;
 import jakarta.inject.Singleton;
+import java.io.IOException;
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
@@ -53,7 +54,7 @@ public class WebhookOperationActivityImpl implements WebhookOperationActivity {
   private final AirbyteApiClient airbyteApiClient;
   private final FeatureFlagClient featureFlagClient;
 
-  public WebhookOperationActivityImpl(final HttpClient httpClient,
+  public WebhookOperationActivityImpl(@Named("webhookHttpClient") final HttpClient httpClient,
                                       final SecretsRepositoryReader secretsRepositoryReader,
                                       final AirbyteApiClient airbyteApiClient,
                                       final FeatureFlagClient featureFlagClient) {
@@ -76,12 +77,12 @@ public class WebhookOperationActivityImpl implements WebhookOperationActivity {
     if (organizationId != null && featureFlagClient.boolVariation(UseRuntimeSecretPersistence.INSTANCE, new Organization(organizationId))) {
       try {
         final SecretPersistenceConfig secretPersistenceConfig = airbyteApiClient.getSecretPersistenceConfigApi().getSecretsPersistenceConfig(
-            new SecretPersistenceConfigGetRequestBody().scopeType(ScopeType.ORGANIZATION).scopeId(organizationId));
+            new SecretPersistenceConfigGetRequestBody(ScopeType.ORGANIZATION, organizationId));
         final RuntimeSecretPersistence runtimeSecretPersistence =
             SecretPersistenceConfigHelper.fromApiSecretPersistenceConfig(secretPersistenceConfig);
         fullWebhookConfigJson =
             secretsRepositoryReader.hydrateConfigFromRuntimeSecretPersistence(input.getWorkspaceWebhookConfigs(), runtimeSecretPersistence);
-      } catch (final ApiException e) {
+      } catch (final IOException e) {
         throw new RuntimeException(e);
       }
     } else {

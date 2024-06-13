@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.db.instance.configs.migrations;
@@ -8,7 +8,6 @@ import static io.airbyte.db.instance.DatabaseConstants.CONNECTION_TABLE;
 import static io.airbyte.db.instance.DatabaseConstants.NOTIFICATION_CONFIGURATION_TABLE;
 import static org.jooq.impl.DSL.currentOffsetDateTime;
 import static org.jooq.impl.DSL.foreignKey;
-import static org.jooq.impl.DSL.now;
 import static org.jooq.impl.DSL.primaryKey;
 
 import java.time.OffsetDateTime;

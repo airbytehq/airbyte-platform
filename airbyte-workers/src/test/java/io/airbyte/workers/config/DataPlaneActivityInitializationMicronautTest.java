@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.workers.config;
@@ -9,7 +9,6 @@ import static org.mockito.Mockito.mock;
 
 import io.airbyte.commons.temporal.config.WorkerMode;
 import io.airbyte.config.secrets.persistence.SecretPersistence;
-import io.airbyte.workers.storage.DocumentStoreClient;
 import io.airbyte.workers.temporal.scheduling.activities.ConfigFetchActivity;
 import io.airbyte.workers.temporal.scheduling.activities.ConfigFetchActivityImpl;
 import io.airbyte.workers.temporal.sync.DbtTransformationActivity;
@@ -32,14 +31,24 @@ import jakarta.inject.Inject;
 import org.junit.jupiter.api.Test;
 
 @MicronautTest(environments = {WorkerMode.DATA_PLANE})
-@Property(name = "airbyte.internal.api.host",
-          value = "airbyte.test:1337")
+@Property(name = "airbyte.internal-api.base-path",
+          value = "http://airbyte.test:1337")
 @Property(name = "airbyte.version",
           value = "0.4128173.0")
 @Property(name = "airbyte.local.root",
           value = "/tmp/local")
 @Property(name = "airbyte.workspace.root",
           value = "/tmp/workspace")
+@Property(name = "airbyte.cloud.storage.type",
+          value = "local")
+@Property(name = "airbyte.cloud.storage.bucket.log",
+          value = "log")
+@Property(name = "airbyte.cloud.storage.bucket.state",
+          value = "state")
+@Property(name = "airbyte.cloud.storage.bucket.workload-output",
+          value = "workload")
+@Property(name = "airbyte.cloud.storage.bucket.activity-payload",
+          value = "payload")
 class DataPlaneActivityInitializationMicronautTest {
 
   // Ideally this should be broken down into different tests to get a clearer view of which bean
@@ -50,10 +59,6 @@ class DataPlaneActivityInitializationMicronautTest {
   @Bean
   @Replaces(SecretPersistence.class)
   SecretPersistence secretPersistence = mock(SecretPersistence.class);
-
-  @Bean
-  @Replaces(DocumentStoreClient.class)
-  DocumentStoreClient documentStoreClient = mock(DocumentStoreClient.class);
 
   @Inject
   ConfigFetchActivity configFetchActivity;

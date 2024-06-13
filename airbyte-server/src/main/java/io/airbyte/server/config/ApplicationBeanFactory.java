@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.server.config;
@@ -7,6 +7,10 @@ package io.airbyte.server.config;
 import io.airbyte.analytics.TrackingClient;
 import io.airbyte.commons.features.EnvVariableFeatureFlags;
 import io.airbyte.commons.features.FeatureFlags;
+import io.airbyte.commons.server.handlers.helpers.BuilderProjectUpdater;
+import io.airbyte.commons.server.handlers.helpers.CompositeBuilderProjectUpdater;
+import io.airbyte.commons.server.handlers.helpers.ConfigRepositoryBuilderProjectUpdater;
+import io.airbyte.commons.server.handlers.helpers.LocalFileSystemBuilderProjectUpdater;
 import io.airbyte.commons.server.scheduler.EventRunner;
 import io.airbyte.commons.server.scheduler.TemporalEventRunner;
 import io.airbyte.commons.temporal.TemporalClient;
@@ -16,7 +20,9 @@ import io.airbyte.commons.workers.config.WorkerConfigsProvider;
 import io.airbyte.config.persistence.ActorDefinitionVersionHelper;
 import io.airbyte.config.persistence.ConfigInjector;
 import io.airbyte.config.persistence.ConfigRepository;
+import io.airbyte.config.persistence.StreamRefreshesRepository;
 import io.airbyte.config.secrets.JsonSecretsProcessor;
+import io.airbyte.data.services.ConnectorBuilderService;
 import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.metrics.lib.MetricClient;
 import io.airbyte.metrics.lib.MetricClientFactory;
@@ -38,6 +44,7 @@ import jakarta.inject.Named;
 import jakarta.inject.Singleton;
 import java.net.http.HttpClient;
 import java.nio.file.Path;
+import java.util.List;
 import java.util.UUID;
 import java.util.function.Supplier;
 
@@ -51,7 +58,7 @@ public class ApplicationBeanFactory {
   @Singleton
   @Named("uuidGenerator")
   public Supplier<UUID> randomUUIDSupplier() {
-    return () -> UUID.randomUUID();
+    return UUID::randomUUID;
   }
 
   @Singleton
@@ -64,8 +71,9 @@ public class ApplicationBeanFactory {
                                final ConfigRepository configRepository,
                                final JobPersistence jobPersistence,
                                final TrackingClient trackingClient,
-                               final ActorDefinitionVersionHelper actorDefinitionVersionHelper) {
-    return new JobTracker(configRepository, jobPersistence, trackingClient, actorDefinitionVersionHelper);
+                               final ActorDefinitionVersionHelper actorDefinitionVersionHelper,
+                               final FeatureFlagClient featureFlagClient) {
+    return new JobTracker(configRepository, jobPersistence, trackingClient, actorDefinitionVersionHelper, featureFlagClient);
   }
 
   @Singleton
@@ -86,8 +94,9 @@ public class ApplicationBeanFactory {
   @Singleton
   public DefaultJobCreator defaultJobCreator(final JobPersistence jobPersistence,
                                              final WorkerConfigsProvider workerConfigsProvider,
-                                             final FeatureFlagClient featureFlagClient) {
-    return new DefaultJobCreator(jobPersistence, workerConfigsProvider, featureFlagClient);
+                                             final FeatureFlagClient featureFlagClient,
+                                             final StreamRefreshesRepository streamRefreshesRepository) {
+    return new DefaultJobCreator(jobPersistence, workerConfigsProvider, featureFlagClient, streamRefreshesRepository);
   }
 
   @SuppressWarnings("ParameterName")
@@ -160,6 +169,17 @@ public class ApplicationBeanFactory {
   @Named("oauthHttpClient")
   public HttpClient httpClient() {
     return HttpClient.newBuilder().version(HttpClient.Version.HTTP_1_1).build();
+  }
+
+  @Singleton
+  public BuilderProjectUpdater builderProjectUpdater(final ConnectorBuilderService connectorBuilderService) {
+    final var pathToConnectors = io.airbyte.commons.envvar.EnvVar.PATH_TO_CONNECTORS.fetch();
+    final ConfigRepositoryBuilderProjectUpdater configRepositoryProjectUpdater = new ConfigRepositoryBuilderProjectUpdater(connectorBuilderService);
+    if (pathToConnectors == null || pathToConnectors.isEmpty()) {
+      return configRepositoryProjectUpdater;
+    } else {
+      return new CompositeBuilderProjectUpdater(List.of(configRepositoryProjectUpdater, new LocalFileSystemBuilderProjectUpdater()));
+    }
   }
 
 }

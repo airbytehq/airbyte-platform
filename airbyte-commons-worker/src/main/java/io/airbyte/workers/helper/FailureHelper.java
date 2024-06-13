@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.workers.helper;
@@ -12,10 +12,12 @@ import io.airbyte.config.FailureReason;
 import io.airbyte.config.FailureReason.FailureOrigin;
 import io.airbyte.config.FailureReason.FailureType;
 import io.airbyte.config.Metadata;
+import io.airbyte.config.StreamDescriptor;
 import io.airbyte.protocol.models.AirbyteTraceMessage;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Set;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.exception.ExceptionUtils;
 
 /**
@@ -27,6 +29,10 @@ public class FailureHelper {
   private static final String ATTEMPT_NUMBER_METADATA_KEY = "attemptNumber";
   private static final String TRACE_MESSAGE_METADATA_KEY = "from_trace_message";
   private static final String CONNECTOR_COMMAND_METADATA_KEY = "connector_command";
+  // For limiting strings passed from connectors to the platform.
+  private static final String ATTRIBUTION_MESSAGE = "Remainder truncated by the Airbyte platform.";
+  static final int MAX_MSG_LENGTH = 50000;
+  static final int MAX_STACK_TRACE_LENGTH = 100000;
 
   /**
    * Connector Commands.
@@ -55,6 +61,7 @@ public class FailureHelper {
 
   private static final String WORKFLOW_TYPE_SYNC = "SyncWorkflow";
   private static final String ACTIVITY_TYPE_REPLICATE = "Replicate";
+  private static final String ACTIVITY_TYPE_REPLICATEV2 = "ReplicateV2";
   private static final String ACTIVITY_TYPE_PERSIST = "Persist";
   private static final String ACTIVITY_TYPE_NORMALIZE = "Normalize";
   private static final String ACTIVITY_TYPE_DBT_RUN = "Run";
@@ -101,11 +108,25 @@ public class FailureHelper {
         failureType = FailureType.SYSTEM_ERROR;
       }
     }
+    StreamDescriptor streamDescriptor = null;
+    if (m.getError().getStreamDescriptor() != null) {
+      streamDescriptor = new StreamDescriptor()
+          .withNamespace(m.getError().getStreamDescriptor().getNamespace())
+          .withName(m.getError().getStreamDescriptor().getName());
+    }
+
+    // for strings coming from outside the platform (namely, from community connectors)
+    // we want to ensure a max string length to keep payloads of reasonable size.
+    final var internalMsg = truncateWithPlatformMessage(m.getError().getInternalMessage(), MAX_MSG_LENGTH);
+    final var externalMsg = truncateWithPlatformMessage(m.getError().getMessage(), MAX_MSG_LENGTH);
+    final var stackTrace = truncateWithPlatformMessage(m.getError().getStackTrace(), MAX_STACK_TRACE_LENGTH);
+
     return new FailureReason()
-        .withInternalMessage(m.getError().getInternalMessage())
-        .withExternalMessage(m.getError().getMessage())
-        .withStacktrace(m.getError().getStackTrace())
+        .withInternalMessage(internalMsg)
+        .withExternalMessage(externalMsg)
+        .withStacktrace(stackTrace)
         .withTimestamp(m.getEmittedAt().longValue())
+        .withStreamDescriptor(streamDescriptor)
         .withFailureType(failureType)
         .withMetadata(traceMessageMetadata(jobId, attemptNumber));
   }
@@ -179,11 +200,18 @@ public class FailureHelper {
    * @param attemptNumber attempt number
    * @return failure reason
    */
-  public static FailureReason sourceHeartbeatFailure(final Throwable t, final Long jobId, final Integer attemptNumber) {
+  public static FailureReason sourceHeartbeatFailure(final Throwable t,
+                                                     final Long jobId,
+                                                     final Integer attemptNumber,
+                                                     final String humanReadableThreshold,
+                                                     final String timeBetweenLastRecord) {
+    final var errorMessage = String.format(
+        "Airbyte detected that the Source didn't send any records in the last %s, exceeding the configured %s threshold. Airbyte will try reading again on the next sync. Please see https://docs.airbyte.com/understanding-airbyte/heartbeats for more info.",
+        timeBetweenLastRecord, humanReadableThreshold);
     return connectorCommandFailure(t, jobId, attemptNumber, ConnectorCommand.READ)
         .withFailureOrigin(FailureOrigin.SOURCE)
         .withFailureType(FailureType.HEARTBEAT_TIMEOUT)
-        .withExternalMessage("The source is unresponsive");
+        .withExternalMessage(errorMessage);
   }
 
   /**
@@ -194,11 +222,18 @@ public class FailureHelper {
    * @param attemptNumber attempt number
    * @return failure reason
    */
-  public static FailureReason destinationTimeoutFailure(final Throwable t, final Long jobId, final Integer attemptNumber) {
+  public static FailureReason destinationTimeoutFailure(final Throwable t,
+                                                        final Long jobId,
+                                                        final Integer attemptNumber,
+                                                        final String humanReadableThreshold,
+                                                        final String timeBetweenLastAction) {
+    final var errorMessage = String.format(
+        "Airbyte detected that the Destination didn't make progress in the last %s, exceeding the configured %s threshold. Airbyte will try reading again on the next sync. Please see https://docs.airbyte.com/understanding-airbyte/heartbeats for more info.",
+        timeBetweenLastAction, humanReadableThreshold);
     return connectorCommandFailure(t, jobId, attemptNumber, ConnectorCommand.WRITE)
         .withFailureOrigin(FailureOrigin.DESTINATION)
         .withFailureType(FailureType.DESTINATION_TIMEOUT)
-        .withExternalMessage("Something went wrong when calling the destination. The destination seems stuck");
+        .withExternalMessage(errorMessage);
   }
 
   /**
@@ -381,7 +416,7 @@ public class FailureHelper {
                                                                    final Throwable t,
                                                                    final Long jobId,
                                                                    final Integer attemptNumber) {
-    if (WORKFLOW_TYPE_SYNC.equals(workflowType) && ACTIVITY_TYPE_REPLICATE.equals(activityType)) {
+    if (WORKFLOW_TYPE_SYNC.equals(workflowType) && (ACTIVITY_TYPE_REPLICATE.equals(activityType) || ACTIVITY_TYPE_REPLICATEV2.equals(activityType))) {
       return replicationFailure(t, jobId, attemptNumber);
     } else if (WORKFLOW_TYPE_SYNC.equals(workflowType) && ACTIVITY_TYPE_PERSIST.equals(activityType)) {
       return persistenceFailure(t, jobId, attemptNumber);
@@ -405,8 +440,22 @@ public class FailureHelper {
   public static FailureReason platformFailure(final Throwable t, final Long jobId, final Integer attemptNumber) {
     final String externalMessage =
         exceptionChainContains(t, SizeLimitException.class)
-            ? "Size limit exceeded, please check your configuration, this is often related to a high number of streams."
+            ? "Size limit exceeded, please check your configuration, this is often related to a high number of fields."
             : "Something went wrong within the airbyte platform";
+    return genericFailure(t, jobId, attemptNumber)
+        .withFailureOrigin(FailureOrigin.AIRBYTE_PLATFORM)
+        .withExternalMessage(externalMessage);
+  }
+
+  /**
+   * Create generic platform failure.
+   *
+   * @param t throwable that cause the failure
+   * @param jobId job id
+   * @param attemptNumber attempt number
+   * @return failure reason
+   */
+  public static FailureReason platformFailure(final Throwable t, final Long jobId, final Integer attemptNumber, final String externalMessage) {
     return genericFailure(t, jobId, attemptNumber)
         .withFailureOrigin(FailureOrigin.AIRBYTE_PLATFORM)
         .withExternalMessage(externalMessage);
@@ -453,6 +502,25 @@ public class FailureHelper {
       tp = tp.getCause();
     }
     return false;
+  }
+
+  /**
+   * Utility function for truncating strings with attribution to the platform for debugging purposes.
+   * Factor out into separate class as necessary.
+   */
+  @VisibleForTesting
+  static String truncateWithPlatformMessage(final String str, final int maxWidth) {
+    if (str == null || str.length() <= maxWidth) {
+      return str;
+    }
+
+    final var maxWidthAdjusted = maxWidth - ATTRIBUTION_MESSAGE.length() - 1;
+    // 4 is the min maxWidth of the Apache Lib we are using.
+    if (maxWidthAdjusted < 4) {
+      return str;
+    }
+
+    return StringUtils.abbreviate(str, maxWidthAdjusted) + " " + ATTRIBUTION_MESSAGE;
   }
 
 }

@@ -63,7 +63,9 @@
   border: none;
   border-radius: variables.$border-radius-pill;
   cursor: pointer;
-  transition: background-color variables.$transition-out, color variables.$transition-out;
+  transition:
+    background-color variables.$transition-out,
+    color variables.$transition-out;
 
   @include theme("grey", colors.$grey-50, colors.$grey-600, colors.$grey-100);
   @include theme("blue", colors.$blue-50, colors.$blue-600, colors.$blue-100);
@@ -115,5 +117,7 @@
 .divider {
   height: 100%;
   min-width: 1px;
-  transition: background-color variables.$transition-out, color variables.$transition-out;
+  transition:
+    background-color variables.$transition-out,
+    color variables.$transition-out;
 }

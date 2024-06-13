@@ -26,6 +26,10 @@ $buttonWidth: 26px;
   position: relative;
 }
 
+.disableable:disabled {
+  cursor: not-allowed !important;
+}
+
 $animation-length: 3s;
 $animation-size: -20px;
 

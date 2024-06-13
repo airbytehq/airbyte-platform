@@ -5,20 +5,17 @@ import { FlexContainer } from "components/ui/Flex";
 import { PageTrackingCodes, useTrackPage } from "core/services/analytics";
 import { useAuthService } from "core/services/auth";
 
-import { EmailSection, NameSection, PasswordSection } from "./components";
-import { LogoutSection } from "./components/LogoutSection";
+import { EmailSection, NameSection } from "./components";
 
 export const AccountSettingsView: React.FC = () => {
-  const { logout, updateName, hasPasswordLogin, updatePassword } = useAuthService();
+  const { updateName } = useAuthService();
 
   useTrackPage(PageTrackingCodes.SETTINGS_ACCOUNT);
 
   return (
-    <FlexContainer direction="column">
-      {updateName && <NameSection updateName={updateName} />}
+    <FlexContainer direction="column" gap="xl">
       <EmailSection />
-      {hasPasswordLogin?.() && updatePassword && <PasswordSection updatePassword={updatePassword} />}
-      {logout && <LogoutSection logout={logout} />}
+      {updateName && <NameSection updateName={updateName} />}
     </FlexContainer>
   );
 };

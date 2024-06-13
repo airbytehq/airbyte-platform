@@ -1,0 +1,12 @@
+@use "scss/colors";
+@use "scss/variables";
+@use "../builderVariables.scss";
+
+.container {
+  display: flex;
+  height: 100%;
+}
+
+.editorContainer {
+  flex: 1 1 0;
+}

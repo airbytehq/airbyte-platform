@@ -7,27 +7,26 @@ import { Box } from "components/ui/Box";
 import { Button } from "components/ui/Button";
 import { DropdownMenu, DropdownMenuOptionType } from "components/ui/DropdownMenu";
 import { FlexContainer } from "components/ui/Flex";
-import { Icon } from "components/ui/Icon";
 import { LoadingSpinner } from "components/ui/LoadingSpinner";
 import { Spinner } from "components/ui/Spinner";
 import { Text } from "components/ui/Text";
 
-import { AttemptDetails } from "area/connection/components/AttemptDetails";
 import { ResetStreamsDetails } from "area/connection/components/JobHistoryItem/ResetStreamDetails";
 import { JobLogsModal } from "area/connection/components/JobLogsModal/JobLogsModal";
 import { JobWithAttempts } from "area/connection/types/jobs";
 import { buildAttemptLink, useAttemptLink } from "area/connection/utils/attemptLink";
-import { isJobPartialSuccess, getJobAttempts, getJobCreatedAt } from "area/connection/utils/jobs";
+import { getJobCreatedAt } from "area/connection/utils/jobs";
 import { useCurrentWorkspaceId } from "area/workspace/utils";
 import { useCurrentWorkspace, useGetDebugInfoJobManual } from "core/api";
 import { copyToClipboard } from "core/utils/clipboard";
-import { FILE_TYPE_DOWNLOAD, downloadFile, fileizeString } from "core/utils/file";
+import { downloadFile, FILE_TYPE_DOWNLOAD, fileizeString } from "core/utils/file";
 import { useAppMonitoringService } from "hooks/services/AppMonitoringService";
 import { useConnectionEditService } from "hooks/services/ConnectionEdit/ConnectionEditService";
 import { useModalService } from "hooks/services/Modal";
 import { useNotificationService } from "hooks/services/Notification";
 
 import styles from "./JobHistoryItem.module.scss";
+import { JobStats } from "./JobStats";
 import { JobStatusIcon } from "./JobStatusIcon";
 import { JobStatusLabel } from "./JobStatusLabel";
 
@@ -43,7 +42,6 @@ enum ContextMenuOptions {
 
 export const JobHistoryItem: React.FC<JobHistoryItemProps> = ({ jobWithAttempts }) => {
   const { openModal } = useModalService();
-  const attempts = getJobAttempts(jobWithAttempts);
   const attemptLink = useAttemptLink();
   const wrapperRef = useRef<HTMLDivElement>(null);
   const { formatMessage } = useIntl();
@@ -159,6 +157,11 @@ export const JobHistoryItem: React.FC<JobHistoryItemProps> = ({ jobWithAttempts 
     }
   };
 
+  const streamsToList =
+    jobWithAttempts.job.configType === "reset_connection"
+      ? jobWithAttempts.job.resetConfig?.streamsToReset?.map((stream) => stream.name)
+      : jobWithAttempts.job.refreshConfig?.streamsToRefresh?.map((stream) => stream.name);
+
   return (
     <div
       ref={wrapperRef}
@@ -168,25 +171,17 @@ export const JobHistoryItem: React.FC<JobHistoryItemProps> = ({ jobWithAttempts 
       id={String(jobWithAttempts.job.id)}
     >
       <Box pr="xl">
-        <JobStatusIcon job={jobWithAttempts} />
+        <FlexContainer justifyContent="center" alignItems="center">
+          <JobStatusIcon job={jobWithAttempts} />
+        </FlexContainer>
       </Box>
       <FlexContainer justifyContent="space-between" alignItems="center" className={styles.jobHistoryItem__main}>
         <Box className={styles.jobHistoryItem__summary}>
           <JobStatusLabel jobWithAttempts={jobWithAttempts} />
-          {jobWithAttempts.job.configType === "reset_connection" ? (
-            <ResetStreamsDetails
-              names={jobWithAttempts.job.resetConfig?.streamsToReset?.map((stream) => stream.name)}
-            />
+          {jobWithAttempts.job.configType === "reset_connection" || jobWithAttempts.job.configType === "refresh" ? (
+            <ResetStreamsDetails names={streamsToList} />
           ) : (
-            attempts &&
-            attempts.length > 0 && (
-              <AttemptDetails
-                attempt={attempts[attempts.length - 1]}
-                hasMultipleAttempts={attempts.length > 1}
-                jobId={String(jobWithAttempts.job.id)}
-                isPartialSuccess={isJobPartialSuccess(jobWithAttempts.attempts)}
-              />
-            )
+            <JobStats jobWithAttempts={jobWithAttempts} />
           )}
         </Box>
         <Box pr="lg" className={styles.jobHistoryItem__timestamp}>
@@ -201,13 +196,6 @@ export const JobHistoryItem: React.FC<JobHistoryItemProps> = ({ jobWithAttempts 
               year="numeric"
             />
           </Text>
-          {jobWithAttempts.attempts.length > 1 && (
-            <Box mt="xs">
-              <Text size="sm" color="grey" align="right">
-                <FormattedMessage id="sources.countAttempts" values={{ count: jobWithAttempts.attempts.length }} />
-              </Text>
-            </Box>
-          )}
         </Box>
       </FlexContainer>
       <DropdownMenu
@@ -230,7 +218,7 @@ export const JobHistoryItem: React.FC<JobHistoryItemProps> = ({ jobWithAttempts 
         ]}
         onChange={handleClick}
       >
-        {() => <Button variant="clear" icon={<Icon type="options" />} />}
+        {() => <Button variant="clear" icon="options" />}
       </DropdownMenu>
     </div>
   );

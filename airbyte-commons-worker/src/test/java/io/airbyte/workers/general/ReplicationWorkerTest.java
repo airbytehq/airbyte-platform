@@ -1,11 +1,13 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.workers.general;
 
 import static io.airbyte.metrics.lib.OssMetricsRegistry.WORKER_DESTINATION_ACCEPT_TIMEOUT;
 import static io.airbyte.metrics.lib.OssMetricsRegistry.WORKER_DESTINATION_NOTIFY_END_OF_INPUT_TIMEOUT;
+import static io.airbyte.workers.test_utils.TestConfigHelpers.DESTINATION_IMAGE;
+import static io.airbyte.workers.test_utils.TestConfigHelpers.SOURCE_IMAGE;
 import static java.lang.Thread.sleep;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -15,6 +17,7 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.atLeastOnce;
@@ -29,7 +32,17 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.fasterxml.jackson.databind.node.ObjectNode;
-import io.airbyte.api.client.model.generated.StreamStatusIncompleteRunCause;
+import io.airbyte.api.client.AirbyteApiClient;
+import io.airbyte.api.client.WorkloadApiClient;
+import io.airbyte.api.client.generated.ActorDefinitionVersionApi;
+import io.airbyte.api.client.generated.DestinationApi;
+import io.airbyte.api.client.generated.SourceApi;
+import io.airbyte.api.client.model.generated.ActorDefinitionVersionRead;
+import io.airbyte.api.client.model.generated.DestinationRead;
+import io.airbyte.api.client.model.generated.NormalizationDestinationDefinitionConfig;
+import io.airbyte.api.client.model.generated.SourceRead;
+import io.airbyte.api.client.model.generated.SupportLevel;
+import io.airbyte.api.client.model.generated.SupportState;
 import io.airbyte.commons.concurrency.VoidCallable;
 import io.airbyte.commons.converters.ConnectorConfigUpdater;
 import io.airbyte.commons.io.IOs;
@@ -59,6 +72,7 @@ import io.airbyte.persistence.job.models.ReplicationInput;
 import io.airbyte.protocol.models.AirbyteLogMessage.Level;
 import io.airbyte.protocol.models.AirbyteMessage;
 import io.airbyte.protocol.models.AirbyteStreamNameNamespacePair;
+import io.airbyte.protocol.models.AirbyteStreamStatusTraceMessage;
 import io.airbyte.protocol.models.AirbyteTraceMessage;
 import io.airbyte.protocol.models.Config;
 import io.airbyte.protocol.models.StreamDescriptor;
@@ -71,8 +85,10 @@ import io.airbyte.workers.context.ReplicationFeatureFlags;
 import io.airbyte.workers.exception.WorkerException;
 import io.airbyte.workers.helper.AirbyteMessageDataExtractor;
 import io.airbyte.workers.helper.FailureHelper;
+import io.airbyte.workers.helper.StreamStatusCompletionTracker;
 import io.airbyte.workers.internal.AirbyteDestination;
 import io.airbyte.workers.internal.AirbyteSource;
+import io.airbyte.workers.internal.AnalyticsMessageTracker;
 import io.airbyte.workers.internal.DestinationTimeoutMonitor;
 import io.airbyte.workers.internal.DestinationTimeoutMonitor.TimeoutException;
 import io.airbyte.workers.internal.HeartbeatMonitor;
@@ -85,6 +101,8 @@ import io.airbyte.workers.internal.bookkeeping.AirbyteMessageTracker;
 import io.airbyte.workers.internal.bookkeeping.SyncStatsTracker;
 import io.airbyte.workers.internal.bookkeeping.events.ReplicationAirbyteMessageEvent;
 import io.airbyte.workers.internal.bookkeeping.events.ReplicationAirbyteMessageEventPublishingHelper;
+import io.airbyte.workers.internal.bookkeeping.streamstatus.StreamStatusTracker;
+import io.airbyte.workers.internal.bookkeeping.streamstatus.StreamStatusTrackerFactory;
 import io.airbyte.workers.internal.exception.DestinationException;
 import io.airbyte.workers.internal.exception.SourceException;
 import io.airbyte.workers.internal.syncpersistence.SyncPersistence;
@@ -115,8 +133,6 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.function.Executable;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.Mockito;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -140,12 +156,15 @@ abstract class ReplicationWorkerTest {
   protected static final AirbyteMessage STATE_MESSAGE = AirbyteMessageUtils.createStateMessage(STREAM_NAME, "checkpoint", "1");
   protected static final AirbyteTraceMessage ERROR_TRACE_MESSAGE =
       AirbyteMessageUtils.createErrorTraceMessage("a connector error occurred", Double.valueOf(123));
+
   protected static final Config CONNECTOR_CONFIG = new Config().withAdditionalProperty("my_key", "my_new_value");
   protected static final AirbyteMessage CONFIG_MESSAGE = AirbyteMessageUtils.createConfigControlMessage(CONNECTOR_CONFIG, 1D);
   protected static final String STREAM1 = "stream1";
 
   protected static final String NAMESPACE = "namespace";
   protected static final String INDUCED_EXCEPTION = "induced exception";
+  protected static final UUID SOURCE_DEFINITION_ID = UUID.randomUUID();
+  protected static final UUID DESTINATION_DEFINITION_ID = UUID.randomUUID();
 
   protected Path jobRoot;
   protected SimpleAirbyteSource sourceStub;
@@ -172,6 +191,14 @@ abstract class ReplicationWorkerTest {
 
   protected ReplicationWorkerHelper replicationWorkerHelper;
   protected WorkloadApi workloadApi;
+  protected WorkloadApiClient workloadApiClient;
+  protected AirbyteApiClient airbyteApiClient;
+  protected AnalyticsMessageTracker analyticsMessageTracker;
+  protected SourceApi sourceApi;
+  protected DestinationApi destinationApi;
+  protected StreamStatusCompletionTracker streamStatusCompletionTracker;
+  protected ActorDefinitionVersionApi actorDefinitionVersionApi;
+  protected StreamStatusTrackerFactory streamStatusTrackerFactory;
 
   ReplicationWorker getDefaultReplicationWorker() {
     return getDefaultReplicationWorker(false);
@@ -211,10 +238,61 @@ abstract class ReplicationWorkerTest {
     replicationFeatureFlagReader = mock(ReplicationFeatureFlagReader.class);
 
     final HeartbeatMonitor heartbeatMonitor = mock(HeartbeatMonitor.class);
-    heartbeatTimeoutChaperone = new HeartbeatTimeoutChaperone(heartbeatMonitor, Duration.ofMinutes(5), null, null, null, metricClient);
+    heartbeatTimeoutChaperone =
+        new HeartbeatTimeoutChaperone(heartbeatMonitor, Duration.ofMinutes(5), null, null, null, "docker image", metricClient);
     destinationTimeoutMonitor = mock(DestinationTimeoutMonitor.class);
     replicationAirbyteMessageEventPublishingHelper = mock(ReplicationAirbyteMessageEventPublishingHelper.class);
     workloadApi = mock(WorkloadApi.class);
+    workloadApiClient = mock(WorkloadApiClient.class);
+    airbyteApiClient = mock(AirbyteApiClient.class);
+    when(workloadApiClient.getWorkloadApi()).thenReturn(workloadApi);
+
+    analyticsMessageTracker = mock(AnalyticsMessageTracker.class);
+
+    sourceApi = mock(SourceApi.class);
+    when(sourceApi.getSource(any())).thenReturn(new SourceRead(
+        SOURCE_DEFINITION_ID,
+        UUID.randomUUID(),
+        UUID.randomUUID(),
+        Jsons.jsonNode(Map.of()),
+        "name",
+        "source-name",
+        null,
+        null,
+        null,
+        null, null));
+    destinationApi = mock(DestinationApi.class);
+    when(destinationApi.getDestination(any())).thenReturn(new DestinationRead(
+        DESTINATION_DEFINITION_ID,
+        UUID.randomUUID(),
+        UUID.randomUUID(),
+        Jsons.jsonNode(Map.of()),
+        "name",
+        "destination-name",
+        null,
+        null,
+        null,
+        null, null));
+    streamStatusCompletionTracker = mock(StreamStatusCompletionTracker.class);
+    streamStatusTrackerFactory = mock(StreamStatusTrackerFactory.class);
+    when(streamStatusTrackerFactory.create(any())).thenReturn(mock(StreamStatusTracker.class));
+
+    when(airbyteApiClient.getDestinationApi()).thenReturn(destinationApi);
+    when(airbyteApiClient.getSourceApi()).thenReturn(sourceApi);
+
+    actorDefinitionVersionApi = mock(ActorDefinitionVersionApi.class);
+    var actorDefinitionVersionRead = new ActorDefinitionVersionRead(
+        "dockerRepository",
+        "dockerImageTag",
+        false,
+        false,
+        new NormalizationDestinationDefinitionConfig(),
+        false,
+        SupportState.SUPPORTED,
+        SupportLevel.NONE,
+        null);
+    when(actorDefinitionVersionApi.getActorDefinitionVersionForDestinationId(any())).thenReturn(actorDefinitionVersionRead);
+    when(airbyteApiClient.getActorDefinitionVersionApi()).thenReturn(actorDefinitionVersionApi);
 
     when(messageTracker.getSyncStatsTracker()).thenReturn(syncStatsTracker);
 
@@ -225,12 +303,13 @@ abstract class ReplicationWorkerTest {
     when(mapper.mapMessage(CONFIG_MESSAGE)).thenReturn(CONFIG_MESSAGE);
     when(mapper.revertMap(STATE_MESSAGE)).thenReturn(STATE_MESSAGE);
     when(mapper.revertMap(CONFIG_MESSAGE)).thenReturn(CONFIG_MESSAGE);
-    when(replicationFeatureFlagReader.readReplicationFeatureFlags()).thenReturn(new ReplicationFeatureFlags(false, 60, 4));
+    when(replicationFeatureFlagReader.readReplicationFeatureFlags()).thenReturn(new ReplicationFeatureFlags(false, 60, 4, false));
     when(heartbeatMonitor.isBeating()).thenReturn(Optional.of(true));
   }
 
   @AfterEach
   void tearDown() {
+    Mockito.framework().clearInlineMocks();
     MDC.clear();
   }
 
@@ -240,7 +319,7 @@ abstract class ReplicationWorkerTest {
 
     worker.run(replicationInput, jobRoot);
 
-    verify(source).start(sourceConfig, jobRoot);
+    verify(source).start(sourceConfig, jobRoot, replicationInput.getConnectionId());
     verify(destination).start(destinationConfig, jobRoot);
     verify(onReplicationRunning).call();
     verify(destination).accept(RECORD_MESSAGE1);
@@ -272,153 +351,6 @@ abstract class ReplicationWorkerTest {
     assertNotEquals(0, syncStats.getDestinationWriteEndTime());
   }
 
-  @ParameterizedTest
-  @ValueSource(booleans = {true, false})
-  void testWithStreamStatus(final boolean isReset) throws Exception {
-    final AirbyteStreamNameNamespacePair streamNameNamespacePair = AirbyteStreamNameNamespacePair.fromRecordMessage(RECORD_MESSAGE1.getRecord());
-    final ReplicationWorker worker = getDefaultReplicationWorker();
-    final ReplicationContext replicationContext = simpleContext(isReset);
-    replicationInput = replicationInput.withIsReset(isReset);
-
-    worker.run(replicationInput, jobRoot);
-
-    verify(source).start(sourceConfig, jobRoot);
-    verify(destination).start(destinationConfig, jobRoot);
-    verify(destination).accept(RECORD_MESSAGE1);
-    verify(destination).accept(RECORD_MESSAGE2);
-    verify(source, atLeastOnce()).close();
-    verify(destination).close();
-    verify(recordSchemaValidator).validateSchema(
-        RECORD_MESSAGE1.getRecord(),
-        streamNameNamespacePair,
-        new ConcurrentHashMap<>());
-    verify(recordSchemaValidator).validateSchema(
-        RECORD_MESSAGE2.getRecord(),
-        AirbyteStreamNameNamespacePair.fromRecordMessage(RECORD_MESSAGE2.getRecord()),
-        new ConcurrentHashMap<>());
-    verify(replicationAirbyteMessageEventPublishingHelper, times(1)).publishCompleteStatusEvent(
-        new StreamDescriptor(),
-        replicationContext,
-        AirbyteMessageOrigin.INTERNAL);
-  }
-
-  @ParameterizedTest
-  @ValueSource(booleans = {true, false})
-  void testDestinationExceptionWithStreamStatus(final boolean isReset) throws Exception {
-    when(destination.getExitValue()).thenReturn(-1);
-    final AirbyteStreamNameNamespacePair streamNameNamespacePair = AirbyteStreamNameNamespacePair.fromRecordMessage(RECORD_MESSAGE1.getRecord());
-    final ReplicationWorker worker = getDefaultReplicationWorker();
-    final ReplicationContext replicationContext = simpleContext(isReset);
-    replicationInput = replicationInput.withIsReset(isReset);
-
-    worker.run(replicationInput, jobRoot);
-
-    verify(source).start(sourceConfig, jobRoot);
-    verify(destination).start(destinationConfig, jobRoot);
-    verify(destination).accept(RECORD_MESSAGE1);
-    verify(destination).accept(RECORD_MESSAGE2);
-    verify(source, atLeastOnce()).close();
-    verify(destination).close();
-    verify(recordSchemaValidator).validateSchema(
-        RECORD_MESSAGE1.getRecord(),
-        streamNameNamespacePair,
-        new ConcurrentHashMap<>());
-    verify(recordSchemaValidator).validateSchema(
-        RECORD_MESSAGE2.getRecord(),
-        AirbyteStreamNameNamespacePair.fromRecordMessage(RECORD_MESSAGE2.getRecord()),
-        new ConcurrentHashMap<>());
-    verify(replicationAirbyteMessageEventPublishingHelper, times(1)).publishIncompleteStatusEvent(
-        new StreamDescriptor(),
-        replicationContext,
-        AirbyteMessageOrigin.INTERNAL,
-        StreamStatusIncompleteRunCause.FAILED);
-  }
-
-  @ParameterizedTest
-  @ValueSource(booleans = {true, false})
-  void testSourceExceptionWithStreamStatus(final boolean isReset) throws Exception {
-    when(source.getExitValue()).thenReturn(-1);
-    final AirbyteStreamNameNamespacePair streamNameNamespacePair = AirbyteStreamNameNamespacePair.fromRecordMessage(RECORD_MESSAGE1.getRecord());
-    final ReplicationWorker worker = getDefaultReplicationWorker();
-    final ReplicationContext replicationContext = simpleContext(isReset);
-    replicationInput = replicationInput.withIsReset(isReset);
-
-    worker.run(replicationInput, jobRoot);
-
-    verify(source).start(sourceConfig, jobRoot);
-    verify(destination).start(destinationConfig, jobRoot);
-    verify(destination).accept(RECORD_MESSAGE1);
-    verify(destination).accept(RECORD_MESSAGE2);
-    verify(source, atLeastOnce()).close();
-    verify(destination).close();
-    verify(recordSchemaValidator).validateSchema(
-        RECORD_MESSAGE1.getRecord(),
-        streamNameNamespacePair,
-        new ConcurrentHashMap<>());
-    verify(recordSchemaValidator).validateSchema(
-        RECORD_MESSAGE2.getRecord(),
-        AirbyteStreamNameNamespacePair.fromRecordMessage(RECORD_MESSAGE2.getRecord()),
-        new ConcurrentHashMap<>());
-    verify(replicationAirbyteMessageEventPublishingHelper, times(1)).publishIncompleteStatusEvent(
-        new StreamDescriptor(),
-        replicationContext,
-        AirbyteMessageOrigin.INTERNAL,
-        StreamStatusIncompleteRunCause.FAILED);
-  }
-
-  @ParameterizedTest
-  @ValueSource(booleans = {true, false})
-  void testPlatformExceptionWithStreamStatus(final boolean isReset) throws Exception {
-    final ReplicationWorker worker = getDefaultReplicationWorker();
-    final ReplicationContext replicationContext = simpleContext(isReset);
-    replicationInput = replicationInput.withIsReset(isReset);
-    doThrow(new NullPointerException("test")).when(messageTracker).acceptFromSource(any());
-
-    worker.run(replicationInput, jobRoot);
-
-    verify(source).start(sourceConfig, jobRoot);
-    verify(destination).start(destinationConfig, jobRoot);
-    verify(source, atLeastOnce()).close();
-    verify(destination).close();
-    verify(replicationAirbyteMessageEventPublishingHelper, times(1)).publishIncompleteStatusEvent(
-        new StreamDescriptor(),
-        replicationContext,
-        AirbyteMessageOrigin.INTERNAL,
-        StreamStatusIncompleteRunCause.FAILED);
-  }
-
-  @ParameterizedTest
-  @ValueSource(booleans = {true, false})
-  void testDestinationWriteExceptionWithStreamStatus(final boolean isReset) throws Exception {
-    doThrow(new IllegalStateException("test")).when(destination).accept(RECORD_MESSAGE2);
-    final AirbyteStreamNameNamespacePair streamNameNamespacePair = AirbyteStreamNameNamespacePair.fromRecordMessage(RECORD_MESSAGE1.getRecord());
-    final ReplicationWorker worker = getDefaultReplicationWorker();
-    final ReplicationContext replicationContext = simpleContext(isReset);
-    replicationInput = replicationInput.withIsReset(isReset);
-
-    worker.run(replicationInput, jobRoot);
-
-    verify(source).start(sourceConfig, jobRoot);
-    verify(destination).start(destinationConfig, jobRoot);
-    verify(destination).accept(RECORD_MESSAGE1);
-    verify(destination).accept(RECORD_MESSAGE2);
-    verify(source, atLeastOnce()).close();
-    verify(destination).close();
-    verify(recordSchemaValidator).validateSchema(
-        RECORD_MESSAGE1.getRecord(),
-        streamNameNamespacePair,
-        new ConcurrentHashMap<>());
-    verify(recordSchemaValidator).validateSchema(
-        RECORD_MESSAGE2.getRecord(),
-        AirbyteStreamNameNamespacePair.fromRecordMessage(RECORD_MESSAGE2.getRecord()),
-        new ConcurrentHashMap<>());
-    verify(replicationAirbyteMessageEventPublishingHelper, times(1)).publishIncompleteStatusEvent(
-        new StreamDescriptor(),
-        replicationContext,
-        AirbyteMessageOrigin.INTERNAL,
-        StreamStatusIncompleteRunCause.FAILED);
-  }
-
   @Test
   void testInvalidSchema() throws Exception {
     sourceStub.setMessages(RECORD_MESSAGE1, RECORD_MESSAGE2, RECORD_MESSAGE3);
@@ -427,7 +359,7 @@ abstract class ReplicationWorkerTest {
 
     worker.run(replicationInput, jobRoot);
 
-    verify(source).start(sourceConfig, jobRoot);
+    verify(source).start(sourceConfig, jobRoot, replicationInput.getConnectionId());
     verify(destination).start(destinationConfig, jobRoot);
     verify(destination).accept(RECORD_MESSAGE1);
     verify(destination).accept(RECORD_MESSAGE2);
@@ -468,7 +400,7 @@ abstract class ReplicationWorkerTest {
     final ReplicationWorker worker = getDefaultReplicationWorker();
     worker.run(replicationInput, jobRoot);
 
-    verify(source).start(sourceConfig, jobRoot);
+    verify(source).start(sourceConfig, jobRoot, replicationInput.getConnectionId());
     verify(destination).start(destinationConfig, jobRoot);
     verify(destination).accept(RECORD_MESSAGE1);
     verify(destination).accept(RECORD_MESSAGE2);
@@ -483,7 +415,10 @@ abstract class ReplicationWorkerTest {
     // Since the thread was left to hang after the first call, we expect 1, not 2, calls to
     // validateInitializedSchema by the time the replication worker is done and shuts down the
     // validation thread. We therefore expect the metricReporter to only report on the first record.
-    verify(jsonSchemaValidator, Mockito.times(1)).validateInitializedSchema(any(), any());
+    // NOTE: we use atMost because validateInitializedSchema is called async, and isn't guaranteed to be
+    // invoked at all. The test still verifies that we shut it down without validating the second
+    // record.
+    verify(jsonSchemaValidator, Mockito.atMost(1)).validateInitializedSchema(any(), any());
   }
 
   @Test
@@ -518,25 +453,28 @@ abstract class ReplicationWorkerTest {
     final ReplicationOutput output = worker.run(replicationInput, jobRoot);
     assertEquals(ReplicationStatus.COMPLETED, output.getReplicationAttemptSummary().getStatus());
 
-    verify(replicationAirbyteMessageEventPublishingHelper).publishStatusEvent(new ReplicationAirbyteMessageEvent(AirbyteMessageOrigin.SOURCE,
+    verify(replicationAirbyteMessageEventPublishingHelper).publishEvent(new ReplicationAirbyteMessageEvent(AirbyteMessageOrigin.SOURCE,
         CONFIG_MESSAGE,
         new ReplicationContext(false, replicationInput.getConnectionId(), replicationInput.getSourceId(), replicationInput.getDestinationId(),
-            Long.valueOf(JOB_ID), JOB_ATTEMPT, replicationInput.getWorkspaceId())));
+            Long.valueOf(JOB_ID), JOB_ATTEMPT, replicationInput.getWorkspaceId(), SOURCE_IMAGE, DESTINATION_IMAGE, SOURCE_DEFINITION_ID,
+            DESTINATION_DEFINITION_ID)));
   }
 
   @Test
   void testSourceConfigPersistError() throws Exception {
     sourceStub.setMessages(CONFIG_MESSAGE);
-
     final String persistErrorMessage = "there was a problem persisting the new config";
     doThrow(new RuntimeException(persistErrorMessage))
         .when(replicationAirbyteMessageEventPublishingHelper)
-        .publishStatusEvent(new ReplicationAirbyteMessageEvent(AirbyteMessageOrigin.SOURCE,
+        .publishEvent(new ReplicationAirbyteMessageEvent(AirbyteMessageOrigin.SOURCE,
             CONFIG_MESSAGE,
             new ReplicationContext(false, replicationInput.getConnectionId(), replicationInput.getSourceId(), replicationInput.getDestinationId(),
-                Long.valueOf(JOB_ID), JOB_ATTEMPT, replicationInput.getWorkspaceId())));
+                Long.valueOf(JOB_ID), JOB_ATTEMPT, replicationInput.getWorkspaceId(), SOURCE_IMAGE, DESTINATION_IMAGE, SOURCE_DEFINITION_ID,
+                DESTINATION_DEFINITION_ID)));
 
     final ReplicationWorker worker = getDefaultReplicationWorker();
+    doReturn(SOURCE_DEFINITION_ID).when(replicationWorkerHelper).getSourceDefinitionIdForSourceId(replicationInput.getSourceId());
+    doReturn(DESTINATION_DEFINITION_ID).when(replicationWorkerHelper).getDestinationDefinitionIdForDestinationId(replicationInput.getDestinationId());
 
     final ReplicationOutput output = worker.run(replicationInput, jobRoot);
     assertEquals(ReplicationStatus.FAILED, output.getReplicationAttemptSummary().getStatus());
@@ -552,10 +490,11 @@ abstract class ReplicationWorkerTest {
     final ReplicationOutput output = worker.run(replicationInput, jobRoot);
     assertEquals(ReplicationStatus.COMPLETED, output.getReplicationAttemptSummary().getStatus());
 
-    verify(replicationAirbyteMessageEventPublishingHelper).publishStatusEvent(new ReplicationAirbyteMessageEvent(AirbyteMessageOrigin.DESTINATION,
+    verify(replicationAirbyteMessageEventPublishingHelper).publishEvent(new ReplicationAirbyteMessageEvent(AirbyteMessageOrigin.DESTINATION,
         CONFIG_MESSAGE,
         new ReplicationContext(false, replicationInput.getConnectionId(), replicationInput.getSourceId(), replicationInput.getDestinationId(),
-            Long.valueOf(JOB_ID), JOB_ATTEMPT, replicationInput.getWorkspaceId())));
+            Long.valueOf(JOB_ID), JOB_ATTEMPT, replicationInput.getWorkspaceId(), SOURCE_IMAGE, DESTINATION_IMAGE, SOURCE_DEFINITION_ID,
+            DESTINATION_DEFINITION_ID)));
   }
 
   @Test
@@ -566,10 +505,11 @@ abstract class ReplicationWorkerTest {
     final String persistErrorMessage = "there was a problem persisting the new config";
     doThrow(new RuntimeException(persistErrorMessage))
         .when(replicationAirbyteMessageEventPublishingHelper)
-        .publishStatusEvent(new ReplicationAirbyteMessageEvent(AirbyteMessageOrigin.DESTINATION,
+        .publishEvent(new ReplicationAirbyteMessageEvent(AirbyteMessageOrigin.DESTINATION,
             CONFIG_MESSAGE,
             new ReplicationContext(false, replicationInput.getConnectionId(), replicationInput.getSourceId(), replicationInput.getDestinationId(),
-                Long.valueOf(JOB_ID), JOB_ATTEMPT, replicationInput.getWorkspaceId())));
+                Long.valueOf(JOB_ID), JOB_ATTEMPT, replicationInput.getWorkspaceId(), SOURCE_IMAGE, DESTINATION_IMAGE, SOURCE_DEFINITION_ID,
+                DESTINATION_DEFINITION_ID)));
 
     final ReplicationWorker worker = getDefaultReplicationWorker();
 
@@ -594,7 +534,7 @@ abstract class ReplicationWorkerTest {
   @Test
   void testReplicationRunnableDestinationFailureViaTraceMessage() throws Exception {
     final FailureReason failureReason = FailureHelper.destinationFailure(ERROR_TRACE_MESSAGE, Long.valueOf(JOB_ID), JOB_ATTEMPT);
-    when(messageTracker.errorTraceMessageFailure(Long.parseLong(JOB_ID), JOB_ATTEMPT)).thenReturn(failureReason);
+    when(messageTracker.errorTraceMessageFailure(Long.parseLong(JOB_ID), JOB_ATTEMPT)).thenReturn(List.of(failureReason));
 
     final ReplicationWorker worker = getDefaultReplicationWorker();
 
@@ -630,7 +570,7 @@ abstract class ReplicationWorkerTest {
 
     worker.run(replicationInput, jobRoot);
 
-    verify(source).start(sourceConfig, jobRoot);
+    verify(source).start(sourceConfig, jobRoot, replicationInput.getConnectionId());
     verify(destination).start(destinationConfig, jobRoot);
     verify(destination).accept(RECORD_MESSAGE1);
     verify(destination).accept(RECORD_MESSAGE2);
@@ -789,11 +729,6 @@ abstract class ReplicationWorkerTest {
     worker.cancel();
     Assertions.assertTimeout(Duration.ofSeconds(5), (Executable) workerThread::join);
     assertNotNull(output.get());
-    verify(replicationAirbyteMessageEventPublishingHelper, times(1)).publishIncompleteStatusEvent(
-        new StreamDescriptor(),
-        simpleContext(false),
-        AirbyteMessageOrigin.INTERNAL,
-        StreamStatusIncompleteRunCause.CANCELED);
   }
 
   @Test
@@ -958,7 +893,7 @@ abstract class ReplicationWorkerTest {
     final MetricClient mMetricClient = mock(MetricClient.class);
     heartbeatTimeoutChaperone =
         new HeartbeatTimeoutChaperone(heartbeatMonitor, Duration.ofMillis(1), new TestClient(Map.of("heartbeat.failSync", true)), UUID.randomUUID(),
-            connectionId, mMetricClient);
+            connectionId, "docker image", mMetricClient);
     sourceStub.setInfiniteSourceWithMessages(RECORD_MESSAGE1);
 
     final ReplicationWorker worker = getDefaultReplicationWorker();
@@ -966,7 +901,9 @@ abstract class ReplicationWorkerTest {
     final ReplicationOutput actual = worker.run(replicationInput, jobRoot);
 
     verify(mMetricClient).count(OssMetricsRegistry.SOURCE_HEARTBEAT_FAILURE, 1,
-        new MetricAttribute(MetricTags.CONNECTION_ID, connectionId.toString()));
+        new MetricAttribute(MetricTags.CONNECTION_ID, connectionId.toString()),
+        new MetricAttribute(MetricTags.KILLED, "true"),
+        new MetricAttribute(MetricTags.SOURCE_IMAGE, "docker image"));
     assertEquals(1, actual.getFailures().size());
     assertEquals(FailureOrigin.SOURCE, actual.getFailures().get(0).getFailureOrigin());
     assertEquals(FailureReason.FailureType.HEARTBEAT_TIMEOUT, actual.getFailures().get(0).getFailureType());
@@ -975,7 +912,7 @@ abstract class ReplicationWorkerTest {
   @Test
   void testDestinationAcceptTimeout() throws Exception {
     when(replicationFeatureFlagReader.readReplicationFeatureFlags())
-        .thenReturn(new ReplicationFeatureFlags(true, 0, 4));
+        .thenReturn(new ReplicationFeatureFlags(true, 0, 4, false));
 
     destinationTimeoutMonitor = spy(new DestinationTimeoutMonitor(
         UUID.randomUUID(),
@@ -1023,7 +960,7 @@ abstract class ReplicationWorkerTest {
   @Test
   void testDestinationNotifyEndOfInputTimeout() throws Exception {
     when(replicationFeatureFlagReader.readReplicationFeatureFlags())
-        .thenReturn(new ReplicationFeatureFlags(true, 0, 4));
+        .thenReturn(new ReplicationFeatureFlags(true, 0, 4, false));
 
     destinationTimeoutMonitor = spy(new DestinationTimeoutMonitor(
         UUID.randomUUID(),
@@ -1069,7 +1006,7 @@ abstract class ReplicationWorkerTest {
   @Test
   void testDestinationTimeoutWithCloseFailure() throws Exception {
     when(replicationFeatureFlagReader.readReplicationFeatureFlags())
-        .thenReturn(new ReplicationFeatureFlags(true, 0, 4));
+        .thenReturn(new ReplicationFeatureFlags(true, 0, 4, false));
 
     destinationTimeoutMonitor = spy(new DestinationTimeoutMonitor(
         UUID.randomUUID(),
@@ -1124,12 +1061,21 @@ abstract class ReplicationWorkerTest {
     assertEquals(failureReason.getFailureOrigin(), FailureOrigin.SOURCE);
     failureReason = ReplicationWorkerHelper.getFailureReason(new DestinationException(""), jobId, attempt);
     assertEquals(failureReason.getFailureOrigin(), FailureOrigin.DESTINATION);
-    failureReason = ReplicationWorkerHelper.getFailureReason(new HeartbeatTimeoutChaperone.HeartbeatTimeoutException(""), jobId, attempt);
+    failureReason = ReplicationWorkerHelper.getFailureReason(new HeartbeatTimeoutChaperone.HeartbeatTimeoutException(10000, 15000), jobId, attempt);
     assertEquals(failureReason.getFailureOrigin(), FailureOrigin.SOURCE);
     assertEquals(failureReason.getFailureType(), FailureReason.FailureType.HEARTBEAT_TIMEOUT);
+    assertEquals(
+        "Airbyte detected that the Source didn't send any records in the last 15 seconds, exceeding the configured 10 seconds threshold. Airbyte will try reading again on the next sync. Please see https://docs.airbyte.com/understanding-airbyte/heartbeats for more info.",
+        failureReason.getExternalMessage());
+    assertEquals("Last record seen 15 seconds ago, exceeding the threshold of 10 seconds.", failureReason.getInternalMessage());
     failureReason = ReplicationWorkerHelper.getFailureReason(new RuntimeException(), jobId, attempt);
     assertEquals(failureReason.getFailureOrigin(), FailureOrigin.REPLICATION);
-    failureReason = ReplicationWorkerHelper.getFailureReason(new TimeoutException(""), jobId, attempt);
+    failureReason = ReplicationWorkerHelper.getFailureReason(new TimeoutException(10000, 15000), jobId, attempt);
+    assertEquals(
+        "Airbyte detected that the Destination didn't make progress in the last 15 seconds, exceeding the configured 10 seconds threshold. Airbyte will try reading again on the next sync. Please see https://docs.airbyte.com/understanding-airbyte/heartbeats for more info.",
+        failureReason.getExternalMessage());
+    assertEquals("Last action 15 seconds ago, exceeding the threshold of 10 seconds.", failureReason.getInternalMessage());
+    System.out.println(failureReason.getInternalMessage());
     assertEquals(failureReason.getFailureOrigin(), FailureOrigin.DESTINATION);
     assertEquals(failureReason.getFailureType(), FailureType.DESTINATION_TIMEOUT);
   }
@@ -1143,7 +1089,7 @@ abstract class ReplicationWorkerTest {
 
     worker.run(replicationInput, jobRoot);
 
-    verify(replicationWorkerHelper, times(0)).getWorkloadStatusHeartbeat();
+    verify(replicationWorkerHelper, times(0)).getWorkloadStatusHeartbeat(any());
   }
 
   @Test
@@ -1155,7 +1101,36 @@ abstract class ReplicationWorkerTest {
 
     worker.run(replicationInput, jobRoot);
 
-    verify(replicationWorkerHelper).getWorkloadStatusHeartbeat();
+    verify(replicationWorkerHelper).getWorkloadStatusHeartbeat(any());
+  }
+
+  @Test
+  void testStreamStatusCompletionTracking() throws Exception {
+    sourceStub.setMessages(RECORD_MESSAGE1);
+
+    final ReplicationWorker worker = getDefaultReplicationWorker();
+
+    worker.run(replicationInput, jobRoot);
+
+    verify(streamStatusCompletionTracker).startTracking(any(), anyBoolean());
+
+    verify(streamStatusCompletionTracker).finalize(0, mapper);
+  }
+
+  @Test
+  void testStreamStatusCompletionTrackingTrackSourceMessage() throws Exception {
+
+    final AirbyteMessage streamStatus = AirbyteMessageUtils.createStatusTraceMessage(new StreamDescriptor().withName(STREAM_NAME),
+        AirbyteStreamStatusTraceMessage.AirbyteStreamStatus.COMPLETE);
+    sourceStub.setMessages(RECORD_MESSAGE1, streamStatus);
+
+    final ReplicationWorker worker = getDefaultReplicationWorker();
+
+    worker.run(replicationInput, jobRoot);
+
+    verify(streamStatusCompletionTracker).startTracking(any(), anyBoolean());
+    verify(streamStatusCompletionTracker).track(streamStatus.getTrace().getStreamStatus());
+    verify(streamStatusCompletionTracker).finalize(0, mapper);
   }
 
   private ReplicationContext simpleContext(final boolean isReset) {
@@ -1166,7 +1141,11 @@ abstract class ReplicationWorkerTest {
         replicationInput.getDestinationId(),
         Long.valueOf(JOB_ID),
         JOB_ATTEMPT,
-        replicationInput.getWorkspaceId());
+        replicationInput.getWorkspaceId(),
+        SOURCE_IMAGE,
+        DESTINATION_IMAGE,
+        SOURCE_DEFINITION_ID,
+        DESTINATION_DEFINITION_ID);
   }
 
 }
