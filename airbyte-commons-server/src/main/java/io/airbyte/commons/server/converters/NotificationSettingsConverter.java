@@ -147,6 +147,10 @@ public class NotificationSettingsConverter {
   }
 
   private static io.airbyte.api.client.model.generated.NotificationItem toClientApi(final io.airbyte.config.NotificationItem notificationItem) {
+    return notificationItem != null ? convertNotificationItem(notificationItem) : null;
+  }
+
+  private static io.airbyte.api.client.model.generated.NotificationItem convertNotificationItem(final io.airbyte.config.NotificationItem notificationItem) {
     return new io.airbyte.api.client.model.generated.NotificationItem(
         notificationItem.getNotificationType().stream().map(n -> Enums.convertTo(n, io.airbyte.api.client.model.generated.NotificationType.class))
             .toList(),
