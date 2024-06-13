@@ -411,13 +411,15 @@ object AirbyteCatalogHelper {
     // Validate the actual key passed in
     val validPrimaryKey: List<List<String>> = getStreamFields(airbyteStream.jsonSchema!!)
 
-    for (singlePrimaryKey in primaryKey!!) {
-      if (!validPrimaryKey.contains(singlePrimaryKey)) { // todo double check if the .contains() for list of strings works as intended
-        throw ConnectionConfigurationProblem.invalidPrimaryKey(airbyteStream.name, validPrimaryKey)
-      }
+    primaryKey?.let {
+      for (singlePrimaryKey in primaryKey) {
+        if (!validPrimaryKey.contains(singlePrimaryKey)) { // todo double check if the .contains() for list of strings works as intended
+          throw ConnectionConfigurationProblem.invalidPrimaryKey(airbyteStream.name, validPrimaryKey)
+        }
 
-      if (singlePrimaryKey.distinct() != singlePrimaryKey) {
-        throw ConnectionConfigurationProblem.duplicatePrimaryKey(airbyteStream.name, primaryKey)
+        if (singlePrimaryKey.distinct() != singlePrimaryKey) {
+          throw ConnectionConfigurationProblem.duplicatePrimaryKey(airbyteStream.name, primaryKey)
+        }
       }
     }
   }
