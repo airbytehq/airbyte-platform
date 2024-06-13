@@ -87,10 +87,8 @@ import io.airbyte.config.secrets.persistence.RuntimeSecretPersistence;
 import io.airbyte.data.services.SecretPersistenceConfigService;
 import io.airbyte.data.services.WorkspaceService;
 import io.airbyte.featureflag.FeatureFlagClient;
-import io.airbyte.featureflag.FieldSelectionWorkspaces.UseNewSchemaUpdateNotification;
 import io.airbyte.featureflag.Organization;
 import io.airbyte.featureflag.UseRuntimeSecretPersistence;
-import io.airbyte.featureflag.Workspace;
 import io.airbyte.metrics.lib.MetricAttribute;
 import io.airbyte.metrics.lib.MetricClientFactory;
 import io.airbyte.metrics.lib.MetricTags;
@@ -452,10 +450,8 @@ public class SchedulerHandler {
             updateObject.getConnectionId(), result);
         LOGGER.info("Propagating changes for connectionId: '{}', new catalogId '{}'",
             connectionRead.getConnectionId(), sourceAutoPropagateChange.getCatalogId());
-        final boolean newNotificationsEnabled = featureFlagClient.boolVariation(
-            UseNewSchemaUpdateNotification.INSTANCE, new Workspace(sourceAutoPropagateChange.getWorkspaceId()));
+
         if (notificationSettings != null
-            && newNotificationsEnabled
             && notificationSettings.getSendOnConnectionUpdate() != null
             && !result.appliedDiff().getTransforms().isEmpty()
             && (Boolean.TRUE == connectionRead.getNotifySchemaChanges())) {
@@ -649,15 +645,6 @@ public class SchedulerHandler {
       updateObject.status(connectionStatus);
 
       connectionsHandler.updateConnection(updateObject);
-      // on workspace where the new detailed schema change notification is enabled, notifications are sent
-      // right after the diff is computed, and we
-      // don't need to send them here.
-      final boolean newNotificationsEnabled = featureFlagClient.boolVariation(UseNewSchemaUpdateNotification.INSTANCE, new Workspace(workspaceId));
-      if (shouldNotifySchemaChange(diff, connectionRead, discoverSchemaRequestBody) && !newNotificationsEnabled) {
-        final String url = webUrlHelper.getConnectionReplicationPageUrl(workspaceId, connectionRead.getConnectionId());
-        final String sourceName = configRepository.getSourceConnection(connectionRead.getSourceId()).getName();
-        eventRunner.sendSchemaChangeNotification(connectionRead.getConnectionId(), connectionRead.getName(), sourceName, url, containsBreakingChange);
-      }
       if (connectionRead.getConnectionId().equals(discoverSchemaRequestBody.getConnectionId())) {
         discoveredSchema.catalogDiff(diff).breakingChange(containsBreakingChange).connectionStatus(connectionStatus);
       }
@@ -683,13 +670,6 @@ public class SchedulerHandler {
     updateObject.setSyncCatalog(updateSchemaResult.catalog());
     updateObject.setSourceCatalogId(sourceCatalogId);
     return updateSchemaResult;
-  }
-
-  private boolean shouldNotifySchemaChange(final CatalogDiff diff,
-                                           final ConnectionRead connectionRead,
-                                           final SourceDiscoverSchemaRequestBody requestBody) {
-    return !diff.getTransforms().isEmpty() && connectionRead.getNotifySchemaChanges() && requestBody.getNotifySchemaChange() != null
-        && requestBody.getNotifySchemaChange();
   }
 
   private boolean shouldDisableConnection(final boolean containsBreakingChange,

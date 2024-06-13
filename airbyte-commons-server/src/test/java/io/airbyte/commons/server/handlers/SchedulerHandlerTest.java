@@ -115,9 +115,7 @@ import io.airbyte.data.services.SecretPersistenceConfigService;
 import io.airbyte.data.services.WorkspaceService;
 import io.airbyte.db.instance.configs.jooq.generated.enums.RefreshType;
 import io.airbyte.featureflag.FeatureFlagClient;
-import io.airbyte.featureflag.FieldSelectionWorkspaces;
 import io.airbyte.featureflag.TestClient;
-import io.airbyte.featureflag.Workspace;
 import io.airbyte.persistence.job.JobCreator;
 import io.airbyte.persistence.job.JobNotifier;
 import io.airbyte.persistence.job.JobPersistence;
@@ -984,7 +982,6 @@ class SchedulerHandlerTest {
     final SourceDiscoverSchemaRead actual = schedulerHandler.discoverSchemaForSourceFromSourceId(request);
     assertEquals(actual.getCatalogDiff(), catalogDiff);
     assertEquals(actual.getCatalog(), expectedActorCatalog);
-    verify(eventRunner).sendSchemaChangeNotification(connectionId, connectionRead.getName(), source.getName(), CONNECTION_URL, false);
     verify(actorDefinitionVersionHelper).getSourceVersion(sourceDef, source.getWorkspaceId(), source.getSourceId());
   }
 
@@ -1046,7 +1043,6 @@ class SchedulerHandlerTest {
     assertEquals(actual.getCatalogDiff(), catalogDiff);
     assertEquals(actual.getCatalog(), expectedActorCatalog);
     assertEquals(actual.getConnectionStatus(), ConnectionStatus.ACTIVE);
-    verify(eventRunner).sendSchemaChangeNotification(connectionId, connectionRead.getName(), source.getName(), CONNECTION_URL, false);
   }
 
   @Test
@@ -1175,7 +1171,6 @@ class SchedulerHandlerTest {
     assertEquals(actual.getCatalog(), expectedActorCatalog);
     assertEquals(actual.getConnectionStatus(), ConnectionStatus.ACTIVE);
     verify(connectionsHandler).updateConnection(expectedConnectionUpdate);
-    verify(eventRunner).sendSchemaChangeNotification(connectionId, connectionRead.getName(), source.getName(), CONNECTION_URL, true);
   }
 
   @Test
@@ -1241,7 +1236,6 @@ class SchedulerHandlerTest {
     assertEquals(actual.getCatalog(), expectedActorCatalog);
     assertEquals(actual.getConnectionStatus(), ConnectionStatus.INACTIVE);
     verify(connectionsHandler).updateConnection(expectedConnectionUpdate);
-    verify(eventRunner).sendSchemaChangeNotification(connectionId, connectionRead.getName(), source.getName(), CONNECTION_URL, true);
   }
 
   @Test
@@ -1395,9 +1389,6 @@ class SchedulerHandlerTest {
     assertEquals(ConnectionStatus.ACTIVE, connectionUpdateValues.get(0).getStatus());
     assertEquals(ConnectionStatus.ACTIVE, connectionUpdateValues.get(1).getStatus());
     assertEquals(ConnectionStatus.INACTIVE, connectionUpdateValues.get(2).getStatus());
-    verify(eventRunner).sendSchemaChangeNotification(connectionId, connectionRead.getName(), source.getName(), CONNECTION_URL, false);
-    verify(eventRunner).sendSchemaChangeNotification(connectionId2, connectionRead.getName(), source.getName(), CONNECTION_URL, false);
-    verify(eventRunner, times(0)).sendSchemaChangeNotification(connectionId3, connectionRead.getName(), source.getName(), CONNECTION_URL, false);
   }
 
   @Test
@@ -1917,8 +1908,6 @@ class SchedulerHandlerTest {
     when(connectionsHandler.getDiff(any(), any(), any()))
         .thenReturn(diff);
 
-    when(featureFlagClient.boolVariation(eq(FieldSelectionWorkspaces.UseNewSchemaUpdateNotification.INSTANCE), eq(new Workspace(workspaceId))))
-        .thenReturn(true);
     final var spySchedulerHandler = spy(schedulerHandler);
     final SourceAutoPropagateChange request = new SourceAutoPropagateChange()
         .sourceId(sourceId)

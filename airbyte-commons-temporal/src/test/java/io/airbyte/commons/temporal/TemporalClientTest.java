@@ -109,7 +109,6 @@ public class TemporalClientTest {
   private StreamResetPersistence streamResetPersistence;
   private StreamRefreshesRepository streamRefreshesRepository;
   private ConnectionManagerUtils connectionManagerUtils;
-  private NotificationClient notificationClient;
   private StreamResetRecordsHelper streamResetRecordsHelper;
   private Path workspaceRoot;
 
@@ -130,29 +129,26 @@ public class TemporalClientTest {
     final var workflowClientWrapped = new WorkflowClientWrapped(workflowClient, metricClient);
     final var workflowServiceStubsWrapped = new WorkflowServiceStubsWrapped(workflowServiceStubs, metricClient);
     connectionManagerUtils = spy(new ConnectionManagerUtils(workflowClientWrapped, metricClient));
-    notificationClient = spy(new NotificationClient(workflowClient));
     streamResetRecordsHelper = mock(StreamResetRecordsHelper.class);
     temporalClient =
         spy(new TemporalClient(workspaceRoot, workflowClientWrapped, workflowServiceStubsWrapped, streamResetPersistence, streamRefreshesRepository,
-            connectionManagerUtils, notificationClient, streamResetRecordsHelper, mock(MetricClient.class)));
+            connectionManagerUtils, streamResetRecordsHelper, mock(MetricClient.class)));
   }
 
   @Nested
   class RestartPerStatus {
 
     private ConnectionManagerUtils mConnectionManagerUtils;
-    private NotificationClient mNotificationClient;
 
     @BeforeEach
     void init() {
       mConnectionManagerUtils = mock(ConnectionManagerUtils.class);
-      mNotificationClient = mock(NotificationClient.class);
 
       final var metricClient = mock(MetricClient.class);
       temporalClient = spy(
           new TemporalClient(workspaceRoot, new WorkflowClientWrapped(workflowClient, metricClient),
               new WorkflowServiceStubsWrapped(workflowServiceStubs, metricClient), streamResetPersistence, streamRefreshesRepository,
-              mConnectionManagerUtils, mNotificationClient, streamResetRecordsHelper, metricClient));
+              mConnectionManagerUtils, streamResetRecordsHelper, metricClient));
     }
 
     @Test

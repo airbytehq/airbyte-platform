@@ -82,7 +82,6 @@ public class TemporalClient {
   private final StreamResetPersistence streamResetPersistence;
   private final StreamRefreshesRepository streamRefreshesRepository;
   private final ConnectionManagerUtils connectionManagerUtils;
-  private final NotificationClient notificationClient;
   private final StreamResetRecordsHelper streamResetRecordsHelper;
   private final MetricClient metricClient;
 
@@ -92,7 +91,6 @@ public class TemporalClient {
                         final StreamResetPersistence streamResetPersistence,
                         final StreamRefreshesRepository streamRefreshesRepository,
                         final ConnectionManagerUtils connectionManagerUtils,
-                        final NotificationClient notificationClient,
                         final StreamResetRecordsHelper streamResetRecordsHelper,
                         final MetricClient metricClient) {
     this.workspaceRoot = workspaceRoot;
@@ -101,7 +99,6 @@ public class TemporalClient {
     this.streamResetPersistence = streamResetPersistence;
     this.streamRefreshesRepository = streamRefreshesRepository;
     this.connectionManagerUtils = connectionManagerUtils;
-    this.notificationClient = notificationClient;
     this.streamResetRecordsHelper = streamResetRecordsHelper;
     this.metricClient = metricClient;
   }
@@ -584,14 +581,6 @@ public class TemporalClient {
    */
   public void forceDeleteWorkflow(final UUID connectionId) {
     connectionManagerUtils.deleteWorkflowIfItExist(connectionId);
-  }
-
-  public void sendSchemaChangeNotification(final UUID connectionId,
-                                           final String connectionName,
-                                           final String sourceName,
-                                           final String url,
-                                           final boolean containsBreakingChange) {
-    notificationClient.sendSchemaChangeNotification(connectionId, connectionName, sourceName, url, containsBreakingChange);
   }
 
   /**
