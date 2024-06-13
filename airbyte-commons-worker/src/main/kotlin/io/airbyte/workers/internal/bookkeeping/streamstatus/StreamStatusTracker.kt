@@ -51,8 +51,6 @@ class StreamStatusTracker(
       return
     }
 
-    logger.debug { "Message for stream ${key.toDisplayName()} received of type: ${msg.type}" }
-
     val currentRunState = store.get(key)?.runState
 
     val updatedStatus =
