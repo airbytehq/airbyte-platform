@@ -691,7 +691,7 @@ function getSavingState(
   if (updateError) {
     return "error";
   }
-  if (name === undefined) {
+  if (!name) {
     return "invalid";
   }
   if (mode === "ui" && !formAndResolveValid) {
