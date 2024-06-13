@@ -53,6 +53,9 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.lang.ProcessHandle.Info;
+import java.net.Inet4Address;
+import java.net.Inet6Address;
+import java.net.InetAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.nio.file.Path;
@@ -531,10 +534,17 @@ public class KubePodProcess implements KubePod {
           .withSecurityContext(containerSecurityContext())
           .build();
 
+      String socatProcessRunnerAddress = "";
+      InetAddress inetAddress = InetAddress.getByName(processRunnerHost);
+      if (inetAddress instanceof Inet4Address) {
+        socatProcessRunnerAddress = String.format("TCP:%s:%s", processRunnerHost, stdoutLocalPort);
+      } else if (inetAddress instanceof Inet6Address) {
+        socatProcessRunnerAddress = String.format("TCP6:[%s]:%s", processRunnerHost, stdoutLocalPort);
+      }
       final Container relayStdout = new ContainerBuilder()
           .withName("relay-stdout")
           .withImage(socatImage)
-          .withCommand("sh", "-c", String.format("cat %s | socat -d -d -t 60 - TCP:%s:%s", STDOUT_PIPE_FILE, processRunnerHost, stdoutLocalPort))
+          .withCommand("sh", "-c", String.format("cat %s | socat -d -d -t 60 - %s", STDOUT_PIPE_FILE, socatProcessRunnerAddress))
           .withVolumeMounts(pipeVolumeMount, terminationVolumeMount)
           .withResources(getResourceRequirementsBuilder(podResourceRequirements.stdOut()).build())
           .withImagePullPolicy(sidecarImagePullPolicy)
@@ -544,7 +554,7 @@ public class KubePodProcess implements KubePod {
       final Container relayStderr = new ContainerBuilder()
           .withName("relay-stderr")
           .withImage(socatImage)
-          .withCommand("sh", "-c", String.format("cat %s | socat -d -d -t 60 - TCP:%s:%s", STDERR_PIPE_FILE, processRunnerHost, stderrLocalPort))
+          .withCommand("sh", "-c", String.format("cat %s | socat -d -d -t 60 - %s", STDERR_PIPE_FILE, socatProcessRunnerAddress))
           .withVolumeMounts(pipeVolumeMount, terminationVolumeMount)
           .withResources(getResourceRequirementsBuilder(podResourceRequirements.stdErr()).build())
           .withImagePullPolicy(sidecarImagePullPolicy)
