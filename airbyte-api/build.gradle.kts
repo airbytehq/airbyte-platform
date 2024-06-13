@@ -245,50 +245,6 @@ val genPublicApiServer = tasks.register<GenerateTask>("generatePublicApiServer")
     inputs.file(specFile)
     outputs.dir(serverOutputDir)
 
-    generatorName = "jaxrs-spec"
-    inputSpec = specFile
-    outputDir = serverOutputDir
-    templateDir = publicApiSpecTemplateDirApi
-
-    apiPackage = "io.airbyte.public-api.generated"
-    invokerPackage = "io.airbyte.public-api.invoker.generated"
-    modelPackage = "io.airbyte.public-api.model.generated"
-
-    generateApiDocumentation = false
-
-    configOptions = mapOf(
-            "dateLibrary"                   to "java8",
-            "generatePom"                   to "false",
-            "interfaceOnly"                 to "true",
-            "returnResponse"                to "true",
-            "useBeanValidation"             to "true",
-            "performBeanValidation"         to "true",
-            "additionalModelTypeAnnotations" to "@io.micronaut.core.annotation.Introspected",
-            "additionalEnumTypeAnnotations" to "@io.micronaut.core.annotation.Introspected",
-            "useTags"                       to "true",
-            "useJakartaEe"                  to "true",
-    )
-
-    schemaMappings = mapOf(
-            "SourceConfiguration"          to "com.fasterxml.jackson.databind.JsonNode",
-            "OAuthInputConfiguration"      to "com.fasterxml.jackson.databind.JsonNode",
-            "OAuthCredentialsConfiguration" to "com.fasterxml.jackson.databind.JsonNode",
-            "DestinationConfiguration"     to "com.fasterxml.jackson.databind.JsonNode",
-            "ConnectorBuilderProjectTestingValues" to "com.fasterxml.jackson.databind.JsonNode",
-    )
-
-    doLast {
-      // Remove unnecessary invoker classes to avoid Micronaut picking them up and registering them as beans
-      delete("${outputDir.get()}/src/gen/java/${invokerPackage.get().replace(".", "/").replace("-","_")}")
-    }
-}
-
-val genPublicApiServer2 = tasks.register<GenerateTask>("generatePublicApiServer2") {
-    val serverOutputDir = "${getLayout().buildDirectory.get()}/generated/public_api/server2"
-
-    inputs.file(specFile)
-    outputs.dir(serverOutputDir)
-
     generatorName = "kotlin-server"
     inputSpec = specFile
     outputDir = serverOutputDir
@@ -531,7 +487,6 @@ sourceSets {
       srcDirs(
         "${project.layout.buildDirectory.get()}/generated/api/server/src/gen/java",
         "${project.layout.buildDirectory.get()}/generated/airbyte_api/server/src/gen/java",
-        "${project.layout.buildDirectory.get()}/generated/public_api/server/src/gen/java",
         "${project.layout.buildDirectory.get()}/generated/api/problems/src/gen/kotlin",
         "${project.layout.buildDirectory.get()}/generated/api/problems/src/gen/java",
         "$projectDir/src/main/java",
@@ -542,7 +497,7 @@ sourceSets {
         "${project.layout.buildDirectory.get()}/generated/workloadapi/client/src/main/kotlin",
         "${project.layout.buildDirectory.get()}/generated/api/server2/src/main/kotlin",
         "${project.layout.buildDirectory.get()}/generated/airbyte_api/server2/src/main/kotlin",
-        "${project.layout.buildDirectory.get()}/generated/public_api/server2/src/main/kotlin",
+        "${project.layout.buildDirectory.get()}/generated/public_api/server/src/main/kotlin",
         "${project.layout.buildDirectory.get()}/generated/connectorbuilderserverapi/client/src/main/kotlin",
         "${project.layout.buildDirectory.get()}/generated/api/client/src/main/kotlin",
         "$projectDir/src/main/kotlin",
@@ -555,7 +510,7 @@ sourceSets {
 }
 
 tasks.named("compileJava") {
-  dependsOn(genApiDocs, genApiServer, genAirbyteApiServer, genPublicApiServer)
+  dependsOn(genApiDocs, genApiServer, genAirbyteApiServer)
 }
 
 tasks.withType<JavaCompile>().configureEach {
@@ -564,14 +519,14 @@ tasks.withType<JavaCompile>().configureEach {
 
 tasks.named("compileKotlin") {
     dependsOn(genApiClient, genWorkloadApiClient, genConnectorBuilderServerApiClient, genAirbyteApiProblems,
-            genApiServer2, genAirbyteApiServer2, genPublicApiServer2)
+            genApiServer2, genAirbyteApiServer2, genPublicApiServer)
 }
 
 // uses afterEvaluate because at configuration time, the kspKotlin task does not exist.
 afterEvaluate {
   tasks.named("kspKotlin").configure {
     mustRunAfter(genApiDocs, genApiClient, genApiServer, genApiServer2, genAirbyteApiServer, genAirbyteApiServer2,
-    genPublicApiServer, genPublicApiServer2, genWorkloadApiClient, genConnectorBuilderServerApiClient,
+    genPublicApiServer, genWorkloadApiClient, genConnectorBuilderServerApiClient,
     genAirbyteApiProblems)
   }
 }
