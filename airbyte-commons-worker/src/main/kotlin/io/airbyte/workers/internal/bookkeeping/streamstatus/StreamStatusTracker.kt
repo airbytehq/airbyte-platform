@@ -47,11 +47,11 @@ class StreamStatusTracker(
   fun track(msg: AirbyteMessage) {
     val key = dataExtractor.getStreamFromMessage(msg)?.let { StreamStatusKey.fromProtocol(it) }
     if (key == null) {
-      logger.info { "Unable to read stream descriptor from message of type: ${msg.type}. Skipping..." }
+      logger.debug { "Unable to read stream descriptor from message of type: ${msg.type}. Skipping..." }
       return
     }
 
-    logger.info { "Message for stream ${key.toDisplayName()} received of type: ${msg.type}" }
+    logger.debug { "Message for stream ${key.toDisplayName()} received of type: ${msg.type}" }
 
     val currentRunState = store.get(key)?.runState
 
@@ -61,7 +61,7 @@ class StreamStatusTracker(
           if (msg.trace.type == AirbyteTraceMessage.Type.STREAM_STATUS) {
             trackEvent(key, msg.trace)
           } else {
-            logger.info {
+            logger.debug {
               "Stream Status does not track TRACE messages of type: ${msg.trace.type}. Ignoring message for stream ${key.toDisplayName()}"
             }
             null
@@ -72,14 +72,14 @@ class StreamStatusTracker(
           if (msg.state.type == AirbyteStateType.STREAM) {
             trackState(key, msg.state)
           } else {
-            logger.info {
+            logger.debug {
               "Stream Status does not track STATE messages of type: ${msg.state.type}. Ignoring message for stream ${key.toDisplayName()}"
             }
             null
           }
         }
         else -> {
-          logger.info { "Stream Status does not track message of type: ${msg.type}. Ignoring message for stream ${key.toDisplayName()}" }
+          logger.debug { "Stream Status does not track message of type: ${msg.type}. Ignoring message for stream ${key.toDisplayName()}" }
           null
         }
       }
@@ -130,7 +130,7 @@ class StreamStatusTracker(
     msg: AirbyteStateMessage,
   ): StreamStatusValue {
     val id = StateWithId.getIdFromStateMessage(msg)
-    logger.info { "STATE with id $id for ${key.toDisplayName()}" }
+    logger.debug { "STATE with id $id for ${key.toDisplayName()}" }
 
     return if (!store.isDestComplete(key, id)) {
       store.setLatestStateId(key, id)
