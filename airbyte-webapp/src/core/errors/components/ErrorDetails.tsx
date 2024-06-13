@@ -8,9 +8,12 @@ import { Card } from "components/ui/Card";
 import { Collapsible } from "components/ui/Collapsible";
 import { CopyButton } from "components/ui/CopyButton";
 import { FlexContainer, FlexItem } from "components/ui/Flex";
+import { Icon } from "components/ui/Icon";
+import { ExternalLink } from "components/ui/Link";
 import { Separator } from "components/ui/Separator";
 import { Text } from "components/ui/Text";
 
+import { HttpProblem } from "core/api";
 import { useGetAllExperiments } from "hooks/services/Experiment";
 
 import styles from "./ErrorDetails.module.scss";
@@ -64,6 +67,16 @@ export const ErrorDetails: React.FC<ErrorDetailsProps> = ({ error }) => {
                 </Text>
               </FlexContainer>
               <Text size="lg">{formatError(error)}</Text>
+              {HttpProblem.isInstanceOf(error) && error.response.documentationUrl && (
+                <Text size="lg">
+                  <ExternalLink href={error.response.documentationUrl}>
+                    <FlexContainer gap="xs" alignItems="center">
+                      <FormattedMessage id="errors.readMore" />
+                      <Icon type="share" size="sm" />
+                    </FlexContainer>
+                  </ExternalLink>
+                </Text>
+              )}
             </FlexContainer>
           </FlexItem>
         </FlexContainer>

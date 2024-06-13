@@ -391,7 +391,10 @@ export const useUpdateConnection = () => {
         }
 
         if (error instanceof HttpError) {
-          if (HttpProblem.isTypeOrSubtype(error, "error:cron-validation")) {
+          if (HttpProblem.isTypeOrSubtype(error, "error:cron-validation") && error.i18nType !== "exact") {
+            // Show a specific error message for invalid cron expressions, unless the error already had an exact match for a translation.
+            // This is needed since we want to render a link here, which is not possible by just making this a hierarchical translation for
+            // error:cron-validation in en.errors.json.
             return registerNotification({
               id: "update-connection-cron-error",
               type: "error",
@@ -411,7 +414,7 @@ export const useUpdateConnection = () => {
           return registerNotification({
             id: "update-connection-error",
             type: "error",
-            text: <FormattedMessage id={error.i18nKey} values={error.i18nParams} />,
+            text: formatError(error),
           });
         }
 
