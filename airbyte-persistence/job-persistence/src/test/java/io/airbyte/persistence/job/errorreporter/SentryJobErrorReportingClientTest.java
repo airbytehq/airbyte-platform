@@ -10,6 +10,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
@@ -30,6 +31,7 @@ import io.sentry.NoOpHub;
 import io.sentry.Scope;
 import io.sentry.ScopeCallback;
 import io.sentry.SentryEvent;
+import io.sentry.protocol.Contexts;
 import io.sentry.protocol.Message;
 import io.sentry.protocol.SentryException;
 import io.sentry.protocol.User;
@@ -42,7 +44,6 @@ import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
-import org.mockito.Mockito;
 
 class SentryJobErrorReportingClientTest {
 
@@ -125,11 +126,12 @@ class SentryJobErrorReportingClientTest {
     assertNull(actualEvent.getTag(STACKTRACE_PARSE_ERROR_TAG_KEY));
     assertNull(actualEvent.getExceptions());
 
-    // verify that scope setContexts is called with the correct arguments
-    verify(mockScope).setContexts(Mockito.eq("Failure Reason"), any(Object.class));
-    verify(mockScope).setContexts(Mockito.eq("Source Configuration"), any(Object.class));
-    verify(mockScope).setContexts(Mockito.eq("Destination Configuration"), any(Object.class));
-    verify(mockScope).setContexts(Mockito.eq("State"), any(Object.class));
+    final Contexts contexts = actualEvent.getContexts();
+    assertNotNull(contexts);
+    assertTrue(contexts.containsKey("Failure Reason"));
+    assertTrue(contexts.containsKey("Source Configuration"));
+    assertTrue(contexts.containsKey("Destination Configuration"));
+    assertTrue(contexts.containsKey("State"));
 
     final User sentryUser = actualEvent.getUser();
     assertNotNull(sentryUser);
@@ -241,8 +243,8 @@ class SentryJobErrorReportingClientTest {
 
   @Test
   void testEmptyJsonNode() {
-    JsonNode node = objectMapper.createObjectNode();
-    Map<String, String> flatMap = new HashMap<>();
+    final JsonNode node = objectMapper.createObjectNode();
+    final Map<String, String> flatMap = new HashMap<>();
     SentryJobErrorReportingClient.flattenJsonNode("", node, flatMap);
 
     assertEquals(0, flatMap.size());
@@ -250,8 +252,8 @@ class SentryJobErrorReportingClientTest {
 
   @Test
   void testSimpleFlatJson() throws Exception {
-    JsonNode node = objectMapper.readTree("{\"key1\":\"value1\", \"key2\":\"value2\"}");
-    Map<String, String> flatMap = new HashMap<>();
+    final JsonNode node = objectMapper.readTree("{\"key1\":\"value1\", \"key2\":\"value2\"}");
+    final Map<String, String> flatMap = new HashMap<>();
     SentryJobErrorReportingClient.flattenJsonNode("", node, flatMap);
 
     assertEquals(2, flatMap.size());
@@ -261,8 +263,8 @@ class SentryJobErrorReportingClientTest {
 
   @Test
   void testJsonWithArray() throws Exception {
-    JsonNode node = objectMapper.readTree("{\"a\": { \"b\": [{\"c\": 1}, {\"c\": 2}]}}");
-    Map<String, String> flatMap = new HashMap<>();
+    final JsonNode node = objectMapper.readTree("{\"a\": { \"b\": [{\"c\": 1}, {\"c\": 2}]}}");
+    final Map<String, String> flatMap = new HashMap<>();
     SentryJobErrorReportingClient.flattenJsonNode("", node, flatMap);
 
     assertEquals(2, flatMap.size());
@@ -272,9 +274,9 @@ class SentryJobErrorReportingClientTest {
 
   @Test
   void testJsonWithNestedObject() throws Exception {
-    JsonNode node = objectMapper.readTree(
+    final JsonNode node = objectMapper.readTree(
         "{\"key1\":\"value1\", \"nestedObject\":{\"nestedKey1\":\"nestedValue1\", \"nestedKey2\":\"nestedValue2\"}}");
-    Map<String, String> flatMap = new HashMap<>();
+    final Map<String, String> flatMap = new HashMap<>();
     SentryJobErrorReportingClient.flattenJsonNode("", node, flatMap);
 
     assertEquals(3, flatMap.size());
@@ -285,9 +287,9 @@ class SentryJobErrorReportingClientTest {
 
   @Test
   void testJsonWithNestedObjectsAndArray() throws Exception {
-    JsonNode node = objectMapper.readTree(
+    final JsonNode node = objectMapper.readTree(
         "{\"key1\":\"value1\", \"nested\":{\"nestedKey1\":\"nestedValue1\", \"array\":[{\"item\":\"value2\"}, {\"item\":\"value3\"}]}}");
-    Map<String, String> flatMap = new HashMap<>();
+    final Map<String, String> flatMap = new HashMap<>();
     SentryJobErrorReportingClient.flattenJsonNode("", node, flatMap);
 
     assertEquals(4, flatMap.size());
