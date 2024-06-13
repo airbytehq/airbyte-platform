@@ -20,7 +20,7 @@ import {
   DestinationDefinitionSpecificationRead,
 } from "core/api/types/AirbyteClient";
 import { FeatureItem, useFeature } from "core/services/features";
-import { ConnectionOrPartialConnection } from "hooks/services/ConnectionForm/ConnectionFormService";
+import { ConnectionFormMode, ConnectionOrPartialConnection } from "hooks/services/ConnectionForm/ConnectionFormService";
 import { useExperiment } from "hooks/services/Experiment";
 
 import { analyzeSyncCatalogBreakingChanges } from "./calculateInitialCatalog";
@@ -94,15 +94,15 @@ export const getInitialTransformations = (operations: OperationRead[]): DbtOpera
  * @param isEditMode
  */
 export const getInitialNormalization = (
-  operations?: Array<OperationRead | OperationCreate>,
-  isEditMode?: boolean
+  operations: Array<OperationRead | OperationCreate>,
+  mode: ConnectionFormMode
 ): NormalizationType => {
   const initialNormalization =
     operations?.find(isNormalizationTransformation)?.operatorConfiguration?.normalization?.option;
 
   return initialNormalization
     ? NormalizationType[initialNormalization]
-    : isEditMode
+    : mode !== "create"
     ? NormalizationType.raw
     : NormalizationType.basic;
 };
@@ -112,7 +112,7 @@ export const useInitialFormValues = (
   connection: ConnectionOrPartialConnection,
   destDefinitionVersion: ActorDefinitionVersionRead,
   destDefinitionSpecification: DestinationDefinitionSpecificationRead,
-  isEditMode?: boolean
+  mode: ConnectionFormMode
 ): FormConnectionFormValues => {
   const workspace = useCurrentWorkspace();
   const { catalogDiff, syncCatalog, schemaChange } = connection;
@@ -127,7 +127,7 @@ export const useInitialFormValues = (
     return Array.from(foundModes);
   }, [connection.syncCatalog.streams]);
 
-  if (isEditMode === false) {
+  if (mode === "create") {
     const availableModes = pruneUnsupportedModes(
       replicateSourceModes,
       supportedSyncModes,
@@ -182,7 +182,7 @@ export const useInitialFormValues = (
       geography: connection.geography || workspace.defaultGeography || "auto",
       ...{
         ...(destDefinitionVersion.supportsDbt && {
-          normalization: getInitialNormalization(connection.operations ?? [], isEditMode),
+          normalization: getInitialNormalization(connection.operations ?? [], mode),
         }),
       },
       ...{
@@ -214,7 +214,7 @@ export const useInitialFormValues = (
     defaultNonBreakingChangesPreference,
     workspace.defaultGeography,
     destDefinitionVersion.supportsDbt,
-    isEditMode,
+    mode,
     syncCatalog,
     catalogDiff,
     schemaChange,

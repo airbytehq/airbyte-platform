@@ -197,7 +197,7 @@ const SimplifiedConnectionSettingsPage = () => {
     connection,
     destDefinitionVersion,
     destDefinitionSpecification,
-    mode === "edit"
+    mode
   );
 
   const { workspaceId } = useCurrentWorkspace();
