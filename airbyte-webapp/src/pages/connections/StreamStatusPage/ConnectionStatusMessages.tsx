@@ -66,7 +66,9 @@ export const ConnectionStatusMessages: React.FC = () => {
 
   const workspaceId = useCurrentWorkspaceId();
   const { connection } = useConnectionEditService();
-  const { failureReason, lastSyncJobId, lastSyncAttemptNumber } = useConnectionStatus(connection.connectionId);
+  const { failureReason, lastSyncJobId, lastSyncAttemptNumber, isRunning } = useConnectionStatus(
+    connection.connectionId
+  );
   const { hasBreakingSchemaChange } = useSchemaChanges(connection.schemaChange);
   const sourceActorDefinitionVersion = useSourceDefinitionVersion(connection.sourceId);
   const destinationActorDefinitionVersion = useDestinationDefinitionVersion(connection.destinationId);
@@ -75,6 +77,10 @@ export const ConnectionStatusMessages: React.FC = () => {
 
   const errorMessagesToDisplay = useMemo<MessageProps[]>(() => {
     const errorMessages: MessageProps[] = [];
+
+    if (isRunning) {
+      return [];
+    }
 
     // If we have an error message and no breaking schema changes, show the error message
     if (failureReason && !hasBreakingSchemaChange) {
@@ -251,22 +257,23 @@ export const ConnectionStatusMessages: React.FC = () => {
       return MESSAGE_SEVERITY_LEVELS[msg2?.type] - MESSAGE_SEVERITY_LEVELS[msg1?.type];
     });
   }, [
-    formatMessage,
-    hasBreakingSchemaChange,
+    isRunning,
     failureReason,
-    lastSyncJobId,
-    lastSyncAttemptNumber,
-    navigate,
-    connection.sourceId,
-    connection.destinationId,
-    workspaceId,
+    hasBreakingSchemaChange,
     sourceActorDefinitionVersion,
     destinationActorDefinitionVersion,
-    connection.name,
+    formatMessage,
+    connection.sourceId,
+    connection.destinationId,
     connection.source.name,
-    connection.destination.name,
     connection.source.sourceName,
+    connection.name,
+    connection.destination.name,
     connection.destination.destinationName,
+    navigate,
+    workspaceId,
+    lastSyncJobId,
+    lastSyncAttemptNumber,
     connectorBreakingChangeDeadlinesEnabled,
   ]);
 
