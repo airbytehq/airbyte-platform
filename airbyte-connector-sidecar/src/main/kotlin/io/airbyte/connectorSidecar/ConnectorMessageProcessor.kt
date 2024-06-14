@@ -173,9 +173,11 @@ class ConnectorMessageProcessor(
 
       OperationType.DISCOVER ->
         if (result.catalog != null && input.discoveryInput != null) {
+          logger.info { "Writing catalog result to API..." }
           val apiResult =
             airbyteApiClient.sourceApi
               .writeDiscoverCatalogResult(buildSourceDiscoverSchemaWriteRequestBody(input.discoveryInput, result.catalog))
+          logger.info { "Finished writing catalog result to API." }
           jobOutput.discoverCatalogId = apiResult.catalogId
         } else if (failureReason.isEmpty && exitCode == 0) {
           throw WorkerException("Connector exited successfully without an output for $operationType.")
@@ -226,9 +228,11 @@ class ConnectorMessageProcessor(
     inputConfig: JsonNode,
     jobOutput: ConnectorJobOutput,
   ) {
+    logger.info { "Checking for optional control message..." }
     if (actorId != null && actorType != null) {
       val optionalConfigMsg = WorkerUtils.getMostRecentConfigControlMessage(messagesByType)
       if (optionalConfigMsg.isPresent && WorkerUtils.getDidControlMessageChangeConfig(inputConfig, optionalConfigMsg.get())) {
+        logger.info { "Optional control message present. Updating..." }
         when (actorType) {
           ActorType.SOURCE ->
             connectorConfigUpdater.updateSource(
@@ -243,7 +247,10 @@ class ConnectorMessageProcessor(
             )
         }
         jobOutput.connectorConfigurationUpdated = true
+        logger.info { "Update complete." }
       }
+    } else {
+      logger.info { "Optional control message not found. Skipping..." }
     }
   }
 
