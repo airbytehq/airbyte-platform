@@ -42,6 +42,7 @@ export const useStreamsStatuses = (
   // memoizing the function to call to get per-stream statuses as
   // otherwise breaks the Rules of Hooks by introducing a conditional;
   // using ref here as react doesn't guarantee `useMemo` won't drop the reference
+  // using ref here as react doesn't guarantee `useMemo` won't drop the reference
   // and we need to be sure of it in this case
   const { current: useStreamStatusesFunction } = useRef(
     doUseStreamStatuses ? useListStreamsStatuses : createEmptyStreamsStatuses
@@ -118,6 +119,8 @@ export const useStreamsStatuses = (
       enabledStreams.forEach((enabledStream) => {
         const streamKey = getStreamKey(enabledStream.stream);
         const mappedStreamStatus = streamStatuses.get(streamKey);
+        const syncProgressItem = syncProgressMap.get(streamKey);
+
         if (mappedStreamStatus) {
           mappedStreamStatus.relevantHistory.sort(sortStreamStatuses); // put the histories are in order
 
@@ -129,13 +132,15 @@ export const useStreamsStatuses = (
             lateMultiplier,
             errorMultiplier,
             showSyncProgress,
-            isSyncing: showSyncProgress && !!syncProgressMap.get(streamKey) ? true : false,
+            isSyncing: showSyncProgress && !!syncProgressItem ? true : false,
             recordsExtracted: syncProgressMap.get(streamKey)?.recordsEmitted,
+            runningJobConfigType: syncProgressItem?.configType,
           });
 
           if (detectedStatus.status != null) {
             mappedStreamStatus.status = detectedStatus.status;
           }
+
           mappedStreamStatus.isRunning =
             detectedStatus.status === ConnectionStatusIndicatorStatus.Syncing ||
             detectedStatus.status === ConnectionStatusIndicatorStatus.Queued;

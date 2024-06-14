@@ -16,6 +16,7 @@ import { Table } from "components/ui/Table";
 import { Text } from "components/ui/Text";
 import { InfoTooltip } from "components/ui/Tooltip";
 
+import { activeStatuses } from "area/connection/utils";
 import { useUiStreamStates } from "area/connection/utils/useUiStreamsStates";
 import { ConnectionStatus } from "core/api/types/AirbyteClient";
 import { useConnectionEditService } from "hooks/services/ConnectionEdit/ConnectionEditService";
@@ -131,7 +132,8 @@ export const NextStreamsList = () => {
               variant="inBlock"
               getRowClassName={(data) =>
                 classNames(styles.row, {
-                  [styles["syncing--next"]]: data.status === ConnectionStatusIndicatorStatus.Syncing,
+                  [styles["syncing--next"]]:
+                    activeStatuses.includes(data.status) && data.status !== ConnectionStatusIndicatorStatus.Queued,
                 })
               }
               sorting={false}

@@ -9,6 +9,7 @@ import {
   ConnectionScheduleData,
   ConnectionScheduleType,
   ConnectionSyncResultRead,
+  JobConfigType,
   StreamStatusIncompleteRunCause,
   StreamStatusJobType,
   StreamStatusRead,
@@ -588,10 +589,11 @@ describe("computeStreamStatus", () => {
           errorMultiplier: 2,
           showSyncProgress: true,
           isSyncing: true,
-          recordsExtracted: 1,
+          runningJobConfigType: JobConfigType.sync,
+          recordsExtracted: 0,
         });
         expect(result).toEqual({
-          status: ConnectionStatusIndicatorStatus.Syncing,
+          status: ConnectionStatusIndicatorStatus.Queued,
           isRunning: true,
           lastSuccessfulSync: undefined,
         });
@@ -613,6 +615,32 @@ describe("computeStreamStatus", () => {
           errorMultiplier: 2,
           showSyncProgress: true,
           isSyncing: true,
+          runningJobConfigType: JobConfigType.sync,
+        });
+        expect(result).toEqual({
+          status: ConnectionStatusIndicatorStatus.Queued,
+          isRunning: true,
+          lastSuccessfulSync: prevStatus,
+        });
+      });
+      it('returns "queued with a currently running refresh', () => {
+        const status = buildStreamStatusRead({ runState: StreamStatusRunState.RUNNING, transitionedAt: oneHourAgo });
+        const prevStatus = buildStreamStatusRead({
+          runState: StreamStatusRunState.COMPLETE,
+          transitionedAt: fiveHoursAgo,
+        });
+
+        const result = computeStreamStatus({
+          statuses: [status, prevStatus],
+          recordsExtracted: 0,
+          scheduleType: ConnectionScheduleType.basic,
+          scheduleData: basicScheduleData,
+          hasBreakingSchemaChange: false,
+          lateMultiplier: 2,
+          errorMultiplier: 2,
+          showSyncProgress: true,
+          isSyncing: true,
+          runningJobConfigType: JobConfigType.refresh,
         });
         expect(result).toEqual({
           status: ConnectionStatusIndicatorStatus.Queued,
@@ -627,14 +655,9 @@ describe("computeStreamStatus", () => {
           runState: StreamStatusRunState.RUNNING,
           transitionedAt: oneHourAgo,
         });
-        const cancelStatus = buildStreamStatusRead({
-          runState: StreamStatusRunState.INCOMPLETE,
-          incompleteRunCause: StreamStatusIncompleteRunCause.CANCELED,
-          transitionedAt: fiveHoursAgo,
-        });
 
         const result = computeStreamStatus({
-          statuses: [runningStatus, cancelStatus],
+          statuses: [runningStatus],
           recordsExtracted: 1,
           scheduleType: ConnectionScheduleType.basic,
           scheduleData: basicScheduleData,
@@ -643,6 +666,7 @@ describe("computeStreamStatus", () => {
           errorMultiplier: 2,
           showSyncProgress: true,
           isSyncing: true,
+          runningJobConfigType: JobConfigType.sync,
         });
         expect(result).toEqual({
           status: ConnectionStatusIndicatorStatus.Syncing,
@@ -667,9 +691,88 @@ describe("computeStreamStatus", () => {
           errorMultiplier: 2,
           showSyncProgress: true,
           isSyncing: true,
+          runningJobConfigType: JobConfigType.sync,
         });
         expect(result).toEqual({
           status: ConnectionStatusIndicatorStatus.Syncing,
+          isRunning: true,
+          lastSuccessfulSync: prevStatus,
+        });
+      });
+    });
+    describe("clearing", () => {
+      it('returns "clearing" when job type is reset_connection', () => {
+        const runningStatus = buildStreamStatusRead({
+          runState: StreamStatusRunState.RUNNING,
+          transitionedAt: oneHourAgo,
+        });
+
+        const result = computeStreamStatus({
+          statuses: [runningStatus],
+          recordsExtracted: 1,
+          scheduleType: ConnectionScheduleType.basic,
+          scheduleData: basicScheduleData,
+          hasBreakingSchemaChange: false,
+          lateMultiplier: 2,
+          errorMultiplier: 2,
+          showSyncProgress: true,
+          isSyncing: true,
+          runningJobConfigType: JobConfigType.reset_connection,
+        });
+        expect(result).toEqual({
+          status: ConnectionStatusIndicatorStatus.Clearing,
+          isRunning: true,
+          lastSuccessfulSync: undefined,
+        });
+      });
+      it('returns "clearing" when job type is clear', () => {
+        const status = buildStreamStatusRead({ runState: StreamStatusRunState.RUNNING, transitionedAt: oneHourAgo });
+        const prevStatus = buildStreamStatusRead({
+          runState: StreamStatusRunState.COMPLETE,
+          transitionedAt: fiveHoursAgo,
+        });
+
+        const result = computeStreamStatus({
+          statuses: [status, prevStatus],
+          recordsExtracted: 1,
+          scheduleType: ConnectionScheduleType.basic,
+          scheduleData: basicScheduleData,
+          hasBreakingSchemaChange: false,
+          lateMultiplier: 2,
+          errorMultiplier: 2,
+          showSyncProgress: true,
+          isSyncing: true,
+          runningJobConfigType: JobConfigType.clear,
+        });
+        expect(result).toEqual({
+          status: ConnectionStatusIndicatorStatus.Clearing,
+          isRunning: true,
+          lastSuccessfulSync: prevStatus,
+        });
+      });
+    });
+    describe("refreshing", () => {
+      it('returns "refreshing" with a currently running refresh', () => {
+        const status = buildStreamStatusRead({ runState: StreamStatusRunState.RUNNING, transitionedAt: oneHourAgo });
+        const prevStatus = buildStreamStatusRead({
+          runState: StreamStatusRunState.COMPLETE,
+          transitionedAt: fiveHoursAgo,
+        });
+
+        const result = computeStreamStatus({
+          statuses: [status, prevStatus],
+          recordsExtracted: 1,
+          scheduleType: ConnectionScheduleType.basic,
+          scheduleData: basicScheduleData,
+          hasBreakingSchemaChange: false,
+          lateMultiplier: 2,
+          errorMultiplier: 2,
+          showSyncProgress: true,
+          isSyncing: true,
+          runningJobConfigType: JobConfigType.refresh,
+        });
+        expect(result).toEqual({
+          status: ConnectionStatusIndicatorStatus.Refreshing,
           isRunning: true,
           lastSuccessfulSync: prevStatus,
         });

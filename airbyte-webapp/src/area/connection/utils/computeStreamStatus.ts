@@ -8,6 +8,7 @@ import {
   ConnectionScheduleData,
   ConnectionScheduleType,
   ConnectionSyncResultRead,
+  JobConfigType,
   StreamStatusIncompleteRunCause,
   StreamStatusJobType,
   StreamStatusRead,
@@ -104,6 +105,7 @@ export const computeStreamStatus = ({
   showSyncProgress,
   isSyncing,
   recordsExtracted,
+  runningJobConfigType,
 }: {
   statuses: StreamStatusRead[];
   scheduleType?: ConnectionScheduleType;
@@ -114,6 +116,7 @@ export const computeStreamStatus = ({
   showSyncProgress: boolean;
   isSyncing: boolean;
   recordsExtracted?: number;
+  runningJobConfigType?: string;
 }): UIStreamStatus => {
   // no statuses
   if (statuses == null || statuses.length === 0) {
@@ -142,26 +145,44 @@ export const computeStreamStatus = ({
       return {
         status: ConnectionStatusIndicatorStatus.QueuedForNextSync,
         isRunning,
+
         lastSuccessfulSync,
       };
     }
 
     // queued
-    if (isRunning && (!recordsExtracted || recordsExtracted === 0)) {
-      return {
-        status: ConnectionStatusIndicatorStatus.Queued,
-        isRunning,
+    if (isRunning) {
+      if (runningJobConfigType === JobConfigType.reset_connection || runningJobConfigType === JobConfigType.clear) {
+        return {
+          status: ConnectionStatusIndicatorStatus.Clearing,
+          isRunning,
+          lastSuccessfulSync,
+        };
+      }
 
-        lastSuccessfulSync,
-      };
-    }
-    // syncing
-    if (isRunning && recordsExtracted && recordsExtracted > 0) {
-      return {
-        status: ConnectionStatusIndicatorStatus.Syncing,
-        isRunning,
-        lastSuccessfulSync,
-      };
+      if (!recordsExtracted || recordsExtracted === 0) {
+        return {
+          status: ConnectionStatusIndicatorStatus.Queued,
+          isRunning,
+          lastSuccessfulSync,
+        };
+      }
+      if (recordsExtracted && recordsExtracted > 0) {
+        // syncing or refreshing
+        if (runningJobConfigType === "sync") {
+          return {
+            status: ConnectionStatusIndicatorStatus.Syncing,
+            isRunning,
+            lastSuccessfulSync,
+          };
+        } else if (runningJobConfigType === "refresh") {
+          return {
+            status: ConnectionStatusIndicatorStatus.Refreshing,
+            isRunning,
+            lastSuccessfulSync,
+          };
+        }
+      }
     }
   }
 
