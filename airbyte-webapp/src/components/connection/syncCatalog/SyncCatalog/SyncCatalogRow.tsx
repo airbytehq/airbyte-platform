@@ -59,11 +59,6 @@ export const SyncCatalogRow: React.FC<SyncCatalogRowProps & { className?: string
         ...configObj,
       });
 
-      // config.selectedFields must be removed if fieldSelection is disabled
-      if (!updatedStreamNode.config?.fieldSelectionEnabled) {
-        delete updatedStreamNode.config?.selectedFields;
-      }
-
       updateStreamNode(updatedStreamNode);
     },
     [streamNode, updateStreamNode]
