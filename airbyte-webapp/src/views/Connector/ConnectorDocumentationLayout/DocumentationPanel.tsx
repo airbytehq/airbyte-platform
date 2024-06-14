@@ -93,9 +93,6 @@ const LinkRelativePathReplacer: React.FC<
 };
 
 const FieldAnchor: React.FC<React.PropsWithChildren<{ field: string }>> = ({ field, children }) => {
-  if (field === "username,password") {
-    console.log(children);
-  }
   const ref = useRef<HTMLDivElement>(null);
   const { focusedField } = useDocumentationPanelContext();
   const isFieldFocused = field
