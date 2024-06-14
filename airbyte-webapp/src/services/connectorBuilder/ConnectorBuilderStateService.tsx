@@ -91,6 +91,7 @@ interface FormStateContext {
   previousManifestDraft: DeclarativeComponentSchema | undefined;
   displayedVersion: number | undefined;
   formValuesValid: boolean;
+  formValuesDirty: boolean;
   resolvedManifest: ConnectorManifest;
   resolveErrorMessage: string | undefined;
   resolveError: HttpError<KnownExceptionInfo> | null;
@@ -106,6 +107,7 @@ interface FormStateContext {
   releaseNewVersion: (options: NewVersionBody) => Promise<void>;
   toggleUI: (newMode: BuilderState["mode"]) => Promise<void>;
   setFormValuesValid: (value: boolean) => void;
+  setFormValuesDirty: (value: boolean) => void;
   updateTestingValues: TestingValuesUpdate;
   updateYamlCdkVersion: (currentManifest: ConnectorManifest) => ConnectorManifest;
 }
@@ -238,6 +240,7 @@ export const InternalConnectorBuilderFormStateProvider: React.FC<
   const [yamlIsValid, setYamlIsValid] = useState(true);
   const [yamlEditorIsMounted, setYamlEditorIsMounted] = useState(true);
   const [formValuesValid, setFormValuesValid] = useState(true);
+  const [formValuesDirty, setFormValuesDirty] = useState(false);
 
   const workspaceId = useCurrentWorkspaceId();
 
@@ -536,6 +539,7 @@ export const InternalConnectorBuilderFormStateProvider: React.FC<
     previousManifestDraft,
     displayedVersion,
     formValuesValid,
+    formValuesDirty,
     resolvedManifest,
     resolveError,
     resolveErrorMessage,
@@ -551,6 +555,7 @@ export const InternalConnectorBuilderFormStateProvider: React.FC<
     releaseNewVersion,
     toggleUI,
     setFormValuesValid,
+    setFormValuesDirty,
     updateTestingValues,
     updateYamlCdkVersion,
   };

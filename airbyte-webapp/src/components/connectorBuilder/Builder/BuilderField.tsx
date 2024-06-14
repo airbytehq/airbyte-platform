@@ -251,6 +251,7 @@ const InnerBuilderField: React.FC<BuilderFieldProps> = ({
             onChange={(val: string | undefined) => {
               setValue(val);
             }}
+            bubbleUpUndoRedo
           />
         </div>
       )}

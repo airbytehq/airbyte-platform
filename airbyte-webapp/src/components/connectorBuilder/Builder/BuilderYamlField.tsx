@@ -74,6 +74,7 @@ export const BuilderYamlField: React.FC<BuilderYamlFieldProps> = ({ path, setLoc
             // register path so that validation rules are applied
             register(path);
           }}
+          bubbleUpUndoRedo
         />
       </div>
       {error && (

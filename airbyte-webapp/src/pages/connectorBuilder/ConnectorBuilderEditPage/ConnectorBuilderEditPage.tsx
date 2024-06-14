@@ -78,7 +78,13 @@ const BaseForm = React.memo(({ defaultValues }: { defaultValues: React.MutableRe
   return (
     <FormProvider {...methods}>
       <ConnectorBuilderMainRHFContext.Provider value={methods}>
-        <form className={styles.form}>
+        <form
+          className={styles.form}
+          onSubmit={(e) => {
+            // prevent form submission
+            e.preventDefault();
+          }}
+        >
           <ConnectorBuilderFormStateProvider>
             <ConnectorBuilderTestReadProvider>
               <HeadTitle titles={[{ id: "connectorBuilder.title" }]} />

@@ -1587,6 +1587,9 @@
   "connectorBuilder.defaultYamlError": "YAML is not valid",
   "connectorBuilder.unknownFields.tooltip": "Other YAML fields for this stream which are not yet supported by the UI",
   "connectorBuilder.unknownFields.nonObjectError": "Must be an object with 'key: value' pairs",
+  "connectorBuilder.undo": "Undo",
+  "connectorBuilder.redo": "Redo",
+  "connectorBuilder.testRead": "Test stream",
 
   "jobs.noAttemptsFailure": "Failed to start job.",
 
