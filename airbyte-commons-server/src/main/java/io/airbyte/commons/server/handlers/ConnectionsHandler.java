@@ -23,6 +23,8 @@ import io.airbyte.api.model.generated.ConnectionAutoPropagateResult;
 import io.airbyte.api.model.generated.ConnectionAutoPropagateSchemaChange;
 import io.airbyte.api.model.generated.ConnectionCreate;
 import io.airbyte.api.model.generated.ConnectionDataHistoryRequestBody;
+import io.airbyte.api.model.generated.ConnectionLastJobPerStreamReadItem;
+import io.airbyte.api.model.generated.ConnectionLastJobPerStreamRequestBody;
 import io.airbyte.api.model.generated.ConnectionRead;
 import io.airbyte.api.model.generated.ConnectionReadList;
 import io.airbyte.api.model.generated.ConnectionStatusRead;
@@ -43,9 +45,12 @@ import io.airbyte.api.model.generated.JobWithAttemptsRead;
 import io.airbyte.api.model.generated.ListConnectionsForWorkspacesRequestBody;
 import io.airbyte.api.model.generated.NonBreakingChangesPreference;
 import io.airbyte.api.model.generated.StreamDescriptor;
+import io.airbyte.api.model.generated.StreamStats;
 import io.airbyte.api.model.generated.StreamTransform;
 import io.airbyte.api.model.generated.StreamTransform.TransformTypeEnum;
 import io.airbyte.api.model.generated.WorkspaceIdRequestBody;
+import io.airbyte.api.problems.model.generated.ProblemMessageData;
+import io.airbyte.api.problems.throwable.generated.UnexpectedProblem;
 import io.airbyte.commons.converters.ConnectionHelper;
 import io.airbyte.commons.enums.Enums;
 import io.airbyte.commons.json.Jsons;
@@ -88,6 +93,7 @@ import io.airbyte.config.persistence.ConfigRepository;
 import io.airbyte.config.persistence.StreamGenerationRepository;
 import io.airbyte.config.persistence.domain.Generation;
 import io.airbyte.config.persistence.helper.CatalogGenerationSetter;
+import io.airbyte.data.services.StreamStatsService;
 import io.airbyte.featureflag.CheckWithCatalog;
 import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.featureflag.Workspace;
@@ -162,6 +168,7 @@ public class ConnectionsHandler {
   private final CatalogGenerationSetter catalogGenerationSetter;
   private final CatalogValidator catalogValidator;
   private final NotificationHelper notificationHelper;
+  private final StreamStatsService streamStatsService;
 
   @Inject
   public ConnectionsHandler(final StreamRefreshesHandler streamRefreshesHandler,
@@ -181,7 +188,8 @@ public class ConnectionsHandler {
                             final StreamGenerationRepository streamGenerationRepository,
                             final CatalogGenerationSetter catalogGenerationSetter,
                             final CatalogValidator catalogValidator,
-                            final NotificationHelper notificationHelper) {
+                            final NotificationHelper notificationHelper,
+                            final StreamStatsService streamStatsService) {
     this.jobPersistence = jobPersistence;
     this.configRepository = configRepository;
     this.uuidGenerator = uuidGenerator;
@@ -200,6 +208,7 @@ public class ConnectionsHandler {
     this.catalogGenerationSetter = catalogGenerationSetter;
     this.catalogValidator = catalogValidator;
     this.notificationHelper = notificationHelper;
+    this.streamStatsService = streamStatsService;
   }
 
   /**
@@ -1227,6 +1236,86 @@ public class ConnectionsHandler {
     } catch (final Exception e) {
       LOGGER.error("Error while sending tracking event for schema change", e);
     }
+  }
+
+  @Trace
+  public List<ConnectionLastJobPerStreamReadItem> getConnectionLastJobPerStream(final ConnectionLastJobPerStreamRequestBody req) {
+    ApmTraceUtils.addTagsToTrace(Map.of(MetricTags.CONNECTION_ID, req.getConnectionId().toString()));
+
+    final var streamDescriptors = req.getStreams().stream().map(stream -> new io.airbyte.config.StreamDescriptor()
+        .withName(stream.getStreamName())
+        .withNamespace(stream.getStreamNamespace()))
+        .toList();
+
+    // determine the latest job ID with stats for each stream by calling the streamStatsService
+    final Map<io.airbyte.config.StreamDescriptor, Long> streamToLastJobIdWithStats =
+        streamStatsService.getLastJobIdWithStatsByStream(req.getConnectionId(), streamDescriptors);
+
+    // retrieve the full job information for each of those latest jobs
+    List<Job> jobs;
+    try {
+      jobs = jobPersistence.listJobsLight(new HashSet<>(streamToLastJobIdWithStats.values()));
+    } catch (IOException e) {
+      throw new UnexpectedProblem("Failed to retrieve the latest job per stream", new ProblemMessageData().message(e.getMessage()));
+    }
+
+    // hydrate those jobs with their aggregated stats
+    final Map<Long, JobWithAttemptsRead> jobIdToJobRead = StatsAggregationHelper.getJobIdToJobWithAttemptsReadMap(jobs, jobPersistence);
+
+    // build a map of stream descriptor to job read
+    final Map<io.airbyte.config.StreamDescriptor, JobWithAttemptsRead> streamToJobRead = streamToLastJobIdWithStats.entrySet().stream()
+        .collect(Collectors.toMap(Entry::getKey, entry -> jobIdToJobRead.get(entry.getValue())));
+
+    // memoize the process of building a stat-by-stream map for each job
+    final Map<Long, Map<io.airbyte.config.StreamDescriptor, StreamStats>> memo = new HashMap<>();
+
+    // convert the hydrated jobs to the response format
+    return streamToJobRead.entrySet().stream()
+        .map(entry -> buildLastJobPerStreamReadItem(entry.getKey(), entry.getValue().getJob(), memo))
+        .collect(Collectors.toList());
+  }
+
+  /**
+   * Build a ConnectionLastJobPerStreamReadItem from a stream descriptor and a job read. This method
+   * memoizes the stat-by-stream map for each job to avoid redundant computation in the case where
+   * multiple streams are associated with the same job.
+   */
+  @SuppressWarnings("LineLength")
+  private ConnectionLastJobPerStreamReadItem buildLastJobPerStreamReadItem(
+                                                                           final io.airbyte.config.StreamDescriptor streamDescriptor,
+                                                                           final JobRead jobRead,
+                                                                           final Map<Long, Map<io.airbyte.config.StreamDescriptor, StreamStats>> memo) {
+    // if this is the first time encountering the job, compute the stat-by-stream map for it
+    memo.putIfAbsent(jobRead.getId(), buildStreamStatsMap(jobRead));
+
+    // retrieve the stat for the stream of interest from the memo
+    final Optional<StreamStats> statsForThisStream = Optional.of(memo.get(jobRead.getId()).get(streamDescriptor));
+
+    return new ConnectionLastJobPerStreamReadItem()
+        .streamName(streamDescriptor.getName())
+        .streamNamespace(streamDescriptor.getNamespace())
+        .jobId(jobRead.getId())
+        .configType(jobRead.getConfigType())
+        .jobStatus(jobRead.getStatus())
+        .startedAt(jobRead.getStartedAt())
+        .endedAt(jobRead.getUpdatedAt()) // assumes the job ended at the last updated time
+        .bytesCommitted(statsForThisStream.map(StreamStats::getBytesCommitted).orElse(null))
+        .recordsCommitted(statsForThisStream.map(StreamStats::getRecordsCommitted).orElse(null));
+  }
+
+  /**
+   * Build a map of stream descriptor to stream stats for a given job. This is only called at most
+   * once per job, because the result is memoized.
+   */
+  private Map<io.airbyte.config.StreamDescriptor, StreamStats> buildStreamStatsMap(final JobRead jobRead) {
+    final Map<io.airbyte.config.StreamDescriptor, StreamStats> map = new HashMap<>();
+    for (final StreamStats stat : jobRead.getStreamAggregatedStats()) {
+      final var streamDescriptor = new io.airbyte.config.StreamDescriptor()
+          .withName(stat.getStreamName())
+          .withNamespace(stat.getStreamNamespace());
+      map.put(streamDescriptor, stat);
+    }
+    return map;
   }
 
 }

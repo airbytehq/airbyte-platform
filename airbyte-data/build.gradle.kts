@@ -6,7 +6,7 @@ plugins {
 
 dependencies {
   compileOnly(libs.lombok)
-  annotationProcessor(libs.lombok)     // Lombok must be added BEFORE Micronaut
+  annotationProcessor(libs.lombok) // Lombok must be added BEFORE Micronaut
 
   api(libs.bundles.micronaut.annotation)
 
@@ -38,6 +38,7 @@ dependencies {
   testCompileOnly(libs.lombok)
   testAnnotationProcessor(libs.lombok)
 
+  testImplementation(libs.assertj.core)
   testImplementation(libs.bundles.micronaut.test)
   testImplementation(libs.postgresql)
   testImplementation(libs.platform.testcontainers.postgresql)

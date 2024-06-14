@@ -9,9 +9,7 @@ import org.junit.jupiter.api.Test
 import java.util.UUID
 
 @MicronautTest
-internal class ConnectionTimelineEventRepositoryTest : AbstractConfigRepositoryTest<ConnectionTimelineEventRepository>(
-  ConnectionTimelineEventRepository::class,
-) {
+internal class ConnectionTimelineEventRepositoryTest : AbstractConfigRepositoryTest() {
   companion object {
     @BeforeAll
     @JvmStatic
@@ -32,10 +30,10 @@ internal class ConnectionTimelineEventRepositoryTest : AbstractConfigRepositoryT
         eventType = "Test",
       )
 
-    val saved = repository.save(event)
-    assert(repository.count() == 1L)
+    val saved = connectionTimelineEventRepository.save(event)
+    assert(connectionTimelineEventRepository.count() == 1L)
 
-    val persistedEvent = repository.findById(saved.id!!).get()
+    val persistedEvent = connectionTimelineEventRepository.findById(saved.id!!).get()
     assert(persistedEvent.connectionId == event.connectionId)
   }
 }

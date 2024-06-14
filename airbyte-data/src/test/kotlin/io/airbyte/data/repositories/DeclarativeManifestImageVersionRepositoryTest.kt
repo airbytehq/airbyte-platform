@@ -2,38 +2,42 @@ package io.airbyte.data.repositories
 
 import io.airbyte.data.repositories.entities.DeclarativeManifestImageVersion
 import io.micronaut.test.extensions.junit5.annotation.MicronautTest
+import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Test
 
 @MicronautTest
-internal class DeclarativeManifestImageVersionRepositoryTest : AbstractConfigRepositoryTest<DeclarativeManifestImageVersionRepository>(
-  DeclarativeManifestImageVersionRepository::class,
-) {
+internal class DeclarativeManifestImageVersionRepositoryTest : AbstractConfigRepositoryTest() {
   companion object {
     val declarativeManifestImageVersion0 = DeclarativeManifestImageVersion(majorVersion = 0, imageVersion = "0.79.0")
   }
 
+  @AfterEach
+  fun tearDown() {
+    declarativeManifestImageVersionRepository.deleteAll()
+  }
+
   @Test
   fun `test create declarative manifest image version and get by version`() {
-    repository.save(declarativeManifestImageVersion0)
-    assert(repository.count() == 1L)
+    declarativeManifestImageVersionRepository.save(declarativeManifestImageVersion0)
+    assert(declarativeManifestImageVersionRepository.count() == 1L)
 
-    val persistedCdkVersion = repository.findById(0).get()
+    val persistedCdkVersion = declarativeManifestImageVersionRepository.findById(0).get()
     assertVersionsAreEqual(declarativeManifestImageVersion0, persistedCdkVersion)
   }
 
   @Test
   fun `test get for nonexistent version`() {
-    assert(repository.findById(1).isEmpty)
+    assert(declarativeManifestImageVersionRepository.findById(1).isEmpty)
   }
 
   @Test
   fun `test update active version`() {
-    repository.save(declarativeManifestImageVersion0)
-    var initialPersistedCdkVersion = repository.findById(0).get()
+    declarativeManifestImageVersionRepository.save(declarativeManifestImageVersion0)
+    var initialPersistedCdkVersion = declarativeManifestImageVersionRepository.findById(0).get()
 
     val newActiveVersion = DeclarativeManifestImageVersion(majorVersion = 0, imageVersion = "0.80.0")
-    repository.update(newActiveVersion)
-    val updatedPersistedCdkVersion = repository.findById(0).get()
+    declarativeManifestImageVersionRepository.update(newActiveVersion)
+    val updatedPersistedCdkVersion = declarativeManifestImageVersionRepository.findById(0).get()
 
     assertVersionWasUpdated(initialPersistedCdkVersion, updatedPersistedCdkVersion)
   }
@@ -41,25 +45,25 @@ internal class DeclarativeManifestImageVersionRepositoryTest : AbstractConfigRep
   @Test
   fun `test insert multiple active versions`() {
     val declarativeManifestImageVersion1 = DeclarativeManifestImageVersion(majorVersion = 1, imageVersion = "1.0.4")
-    repository.save(declarativeManifestImageVersion0)
-    repository.save(declarativeManifestImageVersion1)
+    declarativeManifestImageVersionRepository.save(declarativeManifestImageVersion0)
+    declarativeManifestImageVersionRepository.save(declarativeManifestImageVersion1)
 
-    assert(repository.count() == 2L)
+    assert(declarativeManifestImageVersionRepository.count() == 2L)
 
-    val persistedCdkVersion = repository.findById(0).get()
+    val persistedCdkVersion = declarativeManifestImageVersionRepository.findById(0).get()
     assertVersionsAreEqual(declarativeManifestImageVersion0, persistedCdkVersion)
 
-    val persistedCdkVersion2 = repository.findById(1).get()
+    val persistedCdkVersion2 = declarativeManifestImageVersionRepository.findById(1).get()
     assertVersionsAreEqual(declarativeManifestImageVersion1, persistedCdkVersion2)
   }
 
   @Test
   fun `test get multiple active versions`() {
     val declarativeManifestImageVersion1 = DeclarativeManifestImageVersion(majorVersion = 1, imageVersion = "1.0.4")
-    repository.save(declarativeManifestImageVersion0)
-    repository.save(declarativeManifestImageVersion1)
+    declarativeManifestImageVersionRepository.save(declarativeManifestImageVersion0)
+    declarativeManifestImageVersionRepository.save(declarativeManifestImageVersion1)
 
-    val persistedCdkVersions = repository.findAll()
+    val persistedCdkVersions = declarativeManifestImageVersionRepository.findAll()
     assert(persistedCdkVersions.size == 2)
     assertVersionsAreEqual(declarativeManifestImageVersion0, persistedCdkVersions[0])
     assertVersionsAreEqual(declarativeManifestImageVersion1, persistedCdkVersions[1])
