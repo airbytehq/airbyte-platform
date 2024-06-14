@@ -27,6 +27,11 @@ interface PermissionService {
 
   fun getPermissionsByUserId(userId: UUID): PermissionsResponse
 
+  fun getPermissionsByUserInAnOrganization(
+    userId: UUID,
+    organizationId: UUID,
+  ): PermissionsResponse
+
   fun getPermission(permissionId: UUID): PermissionResponse
 
   fun updatePermission(
@@ -82,6 +87,24 @@ open class PermissionServiceImpl(
     return PermissionsResponse(
       data = permissionReadList.mapNotNull { PermissionResponseReadMapper.from(it) },
     )
+  }
+
+  /**
+   * Gets all permissions of a single user (by user ID) in a single organization.
+   */
+  override fun getPermissionsByUserInAnOrganization(
+    userId: UUID,
+    organizationId: UUID,
+  ): PermissionsResponse {
+    val result =
+      kotlin.runCatching { permissionHandler.listPermissionsByUserInAnOrganization(userId, organizationId) }
+        .onFailure {
+          log.error("Error for getPermissionsByUserInAnOrganization", it)
+          ConfigClientErrorHandler.handleError(it, userId.toString())
+        }
+    log.debug(HTTP_RESPONSE_BODY_DEBUG_MESSAGE + result)
+    val permissionReadList = result.getOrThrow().permissions
+    return PermissionsResponse(data = permissionReadList.mapNotNull { PermissionResponseReadMapper.from(it) })
   }
 
   /**

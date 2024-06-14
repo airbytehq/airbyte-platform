@@ -91,11 +91,11 @@ public class OrganizationPersistence {
    * @return created organization
    * @throws IOException when interaction with DB failed
    */
-  public Organization createOrganization(Organization organization) throws IOException {
+  public Organization createOrganization(final Organization organization) throws IOException {
     database.transaction(ctx -> {
       try {
         insertOrganizationIntoDB(ctx, organization);
-      } catch (IOException e) {
+      } catch (final IOException e) {
         throw new RuntimeException(e);
       }
       return null;
@@ -114,7 +114,7 @@ public class OrganizationPersistence {
     database.transaction(ctx -> {
       try {
         updateOrganizationInDB(ctx, organization);
-      } catch (IOException e) {
+      } catch (final IOException e) {
         throw new RuntimeException(e);
       }
       return null;
@@ -196,7 +196,7 @@ public class OrganizationPersistence {
     database.transaction(ctx -> {
       try {
         insertSsoConfigIntoDB(ctx, ssoConfig);
-      } catch (IOException e) {
+      } catch (final IOException e) {
         throw new RuntimeException(e);
       }
       return null;
@@ -251,7 +251,7 @@ public class OrganizationPersistence {
         .execute();
   }
 
-  private void insertOrganizationIntoDB(final DSLContext ctx, Organization organization) throws IOException {
+  private void insertOrganizationIntoDB(final DSLContext ctx, final Organization organization) throws IOException {
     final OffsetDateTime timestamp = OffsetDateTime.now();
 
     final boolean isExistingConfig = ctx.fetchExists(select()
@@ -274,7 +274,7 @@ public class OrganizationPersistence {
 
   }
 
-  private void insertSsoConfigIntoDB(final DSLContext ctx, SsoConfig ssoConfig) throws IOException {
+  private void insertSsoConfigIntoDB(final DSLContext ctx, final SsoConfig ssoConfig) throws IOException {
     final OffsetDateTime timestamp = OffsetDateTime.now();
 
     final boolean isExistingConfig = ctx.fetchExists(select()

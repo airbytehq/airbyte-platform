@@ -176,12 +176,15 @@ class ApiAuthorizationHelper(
     }
   }
 
-  fun isUserOrganizationAdminOrThrow(userId: UUID) {
+  fun isUserOrganizationAdminOrThrow(
+    userId: UUID,
+    organizationId: UUID,
+  ) {
     if (permissionHandler.isUserInstanceAdmin(userId)) {
       logger.debug { "User $userId is an instance admin, short circuiting auth check." }
       return
     }
-    if (permissionHandler.isUserOrganizationAdmin(userId)) {
+    if (permissionHandler.isUserOrganizationAdmin(userId, organizationId)) {
       return
     }
     throw ForbiddenProblem(ProblemMessageData().message("User does not have the required permissions to fulfill the request."))

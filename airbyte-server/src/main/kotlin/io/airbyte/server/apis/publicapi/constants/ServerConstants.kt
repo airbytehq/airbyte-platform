@@ -27,6 +27,8 @@ const val PERMISSIONS_PATH = "$ROOT_PATH/v1/permissions"
 const val PERMISSIONS_WITH_ID_PATH = "$PERMISSIONS_PATH/{permissionId}"
 const val USERS_PATH = "$ROOT_PATH/v1/users"
 const val USERS_WITH_ID_PATH = "$USERS_PATH/{userId}"
+const val ORGANIZATIONS_PATH = "$ROOT_PATH/v1/organizations"
+const val ORGANIZATIONS_PATH_WITH_ID_PATH = "$ORGANIZATIONS_PATH/{userId}"
 
 val POST = io.micronaut.http.HttpMethod.POST.name
 val GET = io.micronaut.http.HttpMethod.GET.name
