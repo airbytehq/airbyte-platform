@@ -11,6 +11,7 @@ import io.airbyte.protocol.models.AirbyteMessage
 import io.airbyte.protocol.models.AirbyteStateMessage
 import io.airbyte.protocol.models.AirbyteStateMessage.AirbyteStateType
 import io.airbyte.protocol.models.AirbyteTraceMessage
+import io.airbyte.protocol.models.StreamDescriptor
 import io.airbyte.workers.context.ReplicationContext
 import io.airbyte.workers.general.CachingFeatureFlagClient
 import io.airbyte.workers.general.RateLimitedMessageHelper
@@ -45,13 +46,20 @@ class StreamStatusTracker(
   private val apiResponseCache: MutableMap<StreamStatusKey, StreamStatusRead> = HashMap(),
 ) {
   fun track(msg: AirbyteMessage) {
-    val key = dataExtractor.getStreamFromMessage(msg)?.let { StreamStatusKey.fromProtocol(it) }
-    if (key == null) {
-      logger.info { "Unable to read stream descriptor from message of type: ${msg.type}. Skipping..." }
-      return
+    val stream = dataExtractor.getStreamFromMessage(msg)
+    if (stream == null) {
+      trackGlobal(msg)
+    } else {
+      trackStream(stream, msg)
     }
+  }
 
-    logger.info { "Message for stream ${key.toDisplayName()} received of type: ${msg.type}" }
+  @VisibleForTesting
+  fun trackStream(
+    stream: StreamDescriptor,
+    msg: AirbyteMessage,
+  ) {
+    val key = StreamStatusKey.fromProtocol(stream)
 
     val currentRunState = store.get(key)?.runState
 
@@ -61,7 +69,7 @@ class StreamStatusTracker(
           if (msg.trace.type == AirbyteTraceMessage.Type.STREAM_STATUS) {
             trackEvent(key, msg.trace)
           } else {
-            logger.info {
+            logger.debug {
               "Stream Status does not track TRACE messages of type: ${msg.trace.type}. Ignoring message for stream ${key.toDisplayName()}"
             }
             null
@@ -70,16 +78,16 @@ class StreamStatusTracker(
         AirbyteMessage.Type.RECORD -> trackRecord(key)
         AirbyteMessage.Type.STATE -> {
           if (msg.state.type == AirbyteStateType.STREAM) {
-            trackState(key, msg.state)
+            trackStreamState(key, msg.state)
           } else {
-            logger.info {
+            logger.debug {
               "Stream Status does not track STATE messages of type: ${msg.state.type}. Ignoring message for stream ${key.toDisplayName()}"
             }
             null
           }
         }
         else -> {
-          logger.info { "Stream Status does not track message of type: ${msg.type}. Ignoring message for stream ${key.toDisplayName()}" }
+          logger.debug { "Stream Status does not track message of type: ${msg.type}. Ignoring message for stream ${key.toDisplayName()}" }
           null
         }
       }
@@ -125,18 +133,44 @@ class StreamStatusTracker(
   }
 
   @VisibleForTesting
-  fun trackState(
+  fun trackStreamState(
     key: StreamStatusKey,
     msg: AirbyteStateMessage,
   ): StreamStatusValue {
     val id = StateWithId.getIdFromStateMessage(msg)
-    logger.info { "STATE with id $id for ${key.toDisplayName()}" }
+    logger.debug { "STATE with id $id for ${key.toDisplayName()}" }
 
-    return if (!store.isDestComplete(key, id)) {
+    return if (!store.isStreamComplete(key, id)) {
       store.setLatestStateId(key, id)
     } else {
       logger.info { "Destination complete for ${key.toDisplayName()}" }
       store.setRunState(key, ApiEnum.COMPLETE)
+    }
+  }
+
+  @VisibleForTesting
+  fun trackGlobal(msg: AirbyteMessage) {
+    if (msg.type == AirbyteMessage.Type.STATE && msg.state.type == AirbyteStateType.GLOBAL) {
+      trackGlobalState(msg.state)
+    } else {
+      logger.debug { "Unexpected message of type: ${msg.type} without stream descriptor. Skipping..." }
+    }
+  }
+
+  @VisibleForTesting
+  fun trackGlobalState(msg: AirbyteStateMessage) {
+    val id = StateWithId.getIdFromStateMessage(msg)
+    logger.debug { "STATE with id $id for GLOBAL" }
+
+    store.setLatestGlobalStateId(id)
+
+    if (store.isGlobalComplete(id)) {
+      logger.info { "Destination complete for GLOBAL" }
+
+      store.entries()
+        .filter { it.value.sourceComplete }
+        .map { it.key }
+        .forEach { sendUpdate(it, ApiEnum.COMPLETE, null) }
     }
   }
 

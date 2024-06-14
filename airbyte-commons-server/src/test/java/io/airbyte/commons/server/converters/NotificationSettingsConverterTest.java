@@ -9,6 +9,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import io.airbyte.api.model.generated.NotificationItem;
 import io.airbyte.api.model.generated.NotificationType;
 import io.airbyte.api.model.generated.SlackNotificationConfiguration;
+import io.airbyte.config.NotificationSettings;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 
@@ -76,6 +77,23 @@ class NotificationSettingsConverterTest {
     assertEquals("", api.getSendOnSyncDisabled().getSlackConfiguration().getWebhook());
     assertEquals("", api.getSendOnSyncDisabledWarning().getSlackConfiguration().getWebhook());
     assertEquals("", api.getSendOnConnectionUpdateActionRequired().getSlackConfiguration().getWebhook());
+  }
+
+  @Test
+  void testConvertToApiWithNullValues() {
+    final var notificationSettings = new NotificationSettings();
+    final var api = NotificationSettingsConverter.toClientApi(notificationSettings);
+    assertEquals(notificationSettings.getSendOnBreakingChangeSyncsDisabled(),
+        api.getSendOnBreakingChangeSyncsDisabled());
+    assertEquals(notificationSettings.getSendOnFailure(), api.getSendOnFailure());
+    assertEquals(notificationSettings.getSendOnSuccess(), api.getSendOnSuccess());
+    assertEquals(notificationSettings.getSendOnConnectionUpdate(), api.getSendOnConnectionUpdate());
+    assertEquals(notificationSettings.getSendOnSyncDisabled(), api.getSendOnSyncDisabled());
+    assertEquals(notificationSettings.getSendOnConnectionUpdateActionRequired(),
+        api.getSendOnConnectionUpdateActionRequired());
+    assertEquals(notificationSettings.getSendOnConnectionUpdateActionRequired(),
+        api.getSendOnConnectionUpdateActionRequired());
+    assertEquals(notificationSettings.getSendOnSyncDisabledWarning(), api.getSendOnSyncDisabledWarning());
   }
 
 }

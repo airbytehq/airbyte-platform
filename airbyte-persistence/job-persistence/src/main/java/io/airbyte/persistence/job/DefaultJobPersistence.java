@@ -12,7 +12,6 @@ import static io.airbyte.db.instance.jobs.jooq.generated.Tables.SYNC_STATS;
 import static io.airbyte.persistence.job.models.JobStatus.TERMINAL_STATUSES;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
@@ -417,8 +416,7 @@ public class DefaultJobPersistence implements JobPersistence {
   }
 
   private static List<FailureReason> deserializeFailureReasons(final Record record) throws JsonProcessingException {
-    final ObjectMapper mapper = new ObjectMapper();
-    return List.of(mapper.readValue(String.valueOf(record.get(NORMALIZATION_SUMMARIES.FAILURES)), FailureReason[].class));
+    return List.of(Jsons.deserialize(String.valueOf(record.get(NORMALIZATION_SUMMARIES.FAILURES)), FailureReason[].class));
   }
 
   // Retrieves only Job information from the record, without any attempt info

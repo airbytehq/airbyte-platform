@@ -10,21 +10,12 @@
 
   // make look like input
   background: none;
-  line-height: 20px;
   border: 1px solid transparent;
   border-radius: variables.$border-radius-sm;
   max-width: 500px;
 
   &.showBorder {
     border-color: colors.$grey-200;
-  }
-
-  &.sizeS {
-    padding: 4px 6px;
-  }
-
-  &.sizeM {
-    padding: 7px 8px;
   }
 
   &:hover {
@@ -35,11 +26,15 @@
 .sizeS {
   font-size: 13px;
   font-weight: 500;
+  line-height: 1.4;
+  padding: 4px 6px;
 }
 
 .sizeM {
   font-size: 19px;
   font-weight: 700;
+  line-height: 1.4;
+  padding: 7px 8px;
 }
 
 .invalid {
@@ -54,16 +49,4 @@
   border-color: colors.$grey-300;
   border-radius: variables.$border-radius-sm;
   max-width: 500px;
-}
-
-.input {
-  line-height: 20px;
-
-  &.sizeS {
-    padding: 4px 6px;
-  }
-
-  &.sizeM {
-    padding: 7px 8px;
-  }
 }

@@ -80,14 +80,4 @@ public class TemporalEventRunner implements EventRunner {
     temporalClient.update(connectionId);
   }
 
-  @Override
-  @Trace
-  public void sendSchemaChangeNotification(final UUID connectionId,
-                                           final String connectionName,
-                                           final String sourceName,
-                                           final String url,
-                                           final boolean containsBreakingChange) {
-    temporalClient.sendSchemaChangeNotification(connectionId, connectionName, sourceName, url, containsBreakingChange);
-  }
-
 }

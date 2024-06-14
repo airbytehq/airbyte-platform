@@ -157,6 +157,9 @@ public class JobErrorReporter {
                     + destinationVersion.getNormalizationConfig().getNormalizationTag();
 
             reportJobFailureReason(workspace, failureReason, normalizationDockerImage, metadata, attemptConfig);
+          } else {
+            // We only care about the above failure origins, i.e. those that come from connectors.
+            // The rest are ignored.
           }
         }
       } catch (final Exception e) {
@@ -178,6 +181,9 @@ public class JobErrorReporter {
                                           final FailureReason failureReason,
                                           final ConnectorJobReportingContext jobContext)
       throws JsonValidationException, ConfigNotFoundException, IOException {
+    if (failureReason.getFailureOrigin() != FailureOrigin.SOURCE) {
+      return;
+    }
     final StandardWorkspace workspace = workspaceId != null ? configRepository.getStandardWorkspaceNoSecrets(workspaceId, true) : null;
     final StandardSourceDefinition sourceDefinition = configRepository.getStandardSourceDefinition(sourceDefinitionId);
     final Map<String, String> metadata = MoreMaps.merge(
@@ -199,6 +205,9 @@ public class JobErrorReporter {
                                                final FailureReason failureReason,
                                                final ConnectorJobReportingContext jobContext)
       throws JsonValidationException, ConfigNotFoundException, IOException {
+    if (failureReason.getFailureOrigin() != FailureOrigin.DESTINATION) {
+      return;
+    }
     final StandardWorkspace workspace = workspaceId != null ? configRepository.getStandardWorkspaceNoSecrets(workspaceId, true) : null;
     final StandardDestinationDefinition destinationDefinition = configRepository.getStandardDestinationDefinition(destinationDefinitionId);
     final Map<String, String> metadata = MoreMaps.merge(
@@ -219,6 +228,9 @@ public class JobErrorReporter {
                                        final FailureReason failureReason,
                                        final ConnectorJobReportingContext jobContext)
       throws JsonValidationException, ConfigNotFoundException, IOException {
+    if (failureReason.getFailureOrigin() != FailureOrigin.SOURCE) {
+      return;
+    }
     final StandardWorkspace workspace = workspaceId != null ? configRepository.getStandardWorkspaceNoSecrets(workspaceId, true) : null;
     final StandardSourceDefinition sourceDefinition = configRepository.getStandardSourceDefinition(sourceDefinitionId);
     final Map<String, String> metadata = MoreMaps.merge(
@@ -234,6 +246,9 @@ public class JobErrorReporter {
    * @param jobContext - connector job reporting context
    */
   public void reportSpecJobFailure(final FailureReason failureReason, final ConnectorJobReportingContext jobContext) {
+    if (failureReason.getFailureOrigin() != FailureOrigin.SOURCE && failureReason.getFailureOrigin() != FailureOrigin.DESTINATION) {
+      return;
+    }
     final String dockerImage = jobContext.dockerImage();
     final String connectorRepository = dockerImage.split(":")[0];
     final Map<String, String> metadata = Map.of(

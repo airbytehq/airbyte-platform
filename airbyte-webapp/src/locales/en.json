@@ -1129,9 +1129,11 @@
   "credits.noBillingAccount": "Your account is excluded from billing requirements and credits are not required.",
 
   "docs.notFoundError": "We were not able to receive docs. Please click the link above to open docs on our website",
+  "errors.messageOnly": "{message}",
   "errors.title": "Sorry, something went wrong.",
   "errors.reload": "Reload",
   "errors.copyDetails": "Copy details",
+  "errors.readMore": "Read more",
   "errors.http.badRequest": "There was an error in the request sent to the API. If possible, change your inputs and try again. (HTTP 400)",
   "errors.http.unauthorized": "It seems you're not authorized. Please try logging in again. (HTTP 401)",
   "errors.http.forbidden": "You don't have the right permissions to take this action. (HTTP 403)",

@@ -1,7 +1,6 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { act, Queries, queries, render as rtlRender, RenderOptions, RenderResult } from "@testing-library/react";
 import React, { Suspense } from "react";
-import { IntlProvider } from "react-intl";
 import { MemoryRouter } from "react-router-dom";
 
 import {
@@ -12,10 +11,10 @@ import {
   WebBackendConnectionRead,
 } from "core/api/types/AirbyteClient";
 import { defaultOssFeatures, FeatureItem, FeatureService } from "core/services/features";
+import { I18nProvider } from "core/services/i18n";
 import { ConfirmationModalService } from "hooks/services/ConfirmationModal";
 import { ModalServiceProvider } from "hooks/services/Modal";
 import { NotificationService } from "hooks/services/Notification";
-import en from "locales/en.json";
 
 export async function render<
   Q extends Queries = typeof queries,
@@ -51,7 +50,7 @@ export const TestWrapper: React.FC<React.PropsWithChildren<TestWrapperOptions>> 
   features = defaultOssFeatures,
   route,
 }) => (
-  <IntlProvider locale="en" messages={en} onError={() => null}>
+  <I18nProvider locale="en">
     <NotificationService>
       <FeatureService features={features}>
         <ModalServiceProvider>
@@ -63,7 +62,7 @@ export const TestWrapper: React.FC<React.PropsWithChildren<TestWrapperOptions>> 
         </ModalServiceProvider>
       </FeatureService>
     </NotificationService>
-  </IntlProvider>
+  </I18nProvider>
 );
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any

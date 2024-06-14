@@ -16,7 +16,6 @@ import io.airbyte.workers.general.CachingFeatureFlagClient
 import io.airbyte.workers.helper.AirbyteMessageDataExtractor
 import io.airbyte.workers.internal.bookkeeping.events.StreamStatusUpdateEvent
 import io.micronaut.context.event.ApplicationEventPublisher
-import io.mockk.Called
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.spyk
@@ -51,18 +50,165 @@ class StreamStatusTrackerTest {
     tracker = StreamStatusTracker(dataExtractor, store, eventPublisher, ffClient, Fixtures.ctx, apiCache)
 
     every { ffClient.boolVariation(any(), any()) } returns true
-    every { dataExtractor.getStreamFromMessage(any()) } returns Fixtures.streamDescriptor
+    every { dataExtractor.getStreamFromMessage(any()) } returns Fixtures.streamDescriptor1
     every { store.get(any()) } returns null
+    every { store.isGlobalComplete(any()) } returns false
   }
 
   @Test
-  fun noopsIfStreamDescriptorNotExtractable() {
+  fun callsTrackStreamIfStreamExtractable() {
+    every { store.setRunState(any(), any()) } returns StreamStatusValue()
+
+    val spy = spyk(tracker)
+    val msg = Fixtures.traceMsg()
+
+    spy.track(msg)
+
+    verify(exactly = 1) { spy.trackStream(Fixtures.streamDescriptor1, msg) }
+  }
+
+  @Test
+  fun callsTrackGlobalIfStreamNotExtractable() {
     every { dataExtractor.getStreamFromMessage(any()) } returns null
 
-    tracker.track(Fixtures.traceMsg())
+    val spy = spyk(tracker)
+    val msg = Fixtures.traceMsg()
 
-    verify { store wasNot Called }
-    verify { eventPublisher wasNot Called }
+    spy.track(msg)
+
+    verify(exactly = 1) { spy.trackGlobal(msg) }
+  }
+
+  @Test
+  fun trackGlobalTracksGlobalStateMsgs() {
+    every { store.setLatestGlobalStateId(any()) } returns 1
+
+    val spy = spyk(tracker)
+
+    spy.trackGlobal(Fixtures.stateMsg(AirbyteStateMessage.AirbyteStateType.GLOBAL))
+
+    verify(exactly = 1) { spy.trackGlobalState(any()) }
+  }
+
+  @Test
+  fun trackGlobalNoopsForNonGlobalStateMsgs() {
+    val spy = spyk(tracker)
+
+    spy.trackGlobal(Fixtures.stateMsg(AirbyteStateMessage.AirbyteStateType.STREAM))
+    spy.trackGlobal(Fixtures.stateMsg(AirbyteStateMessage.AirbyteStateType.LEGACY))
+    spy.trackGlobal(Fixtures.traceMsg(AirbyteTraceMessage.Type.ERROR))
+    spy.trackGlobal(Fixtures.traceMsg(AirbyteTraceMessage.Type.ESTIMATE))
+    spy.trackGlobal(Fixtures.traceMsg(AirbyteTraceMessage.Type.ANALYTICS))
+    spy.trackGlobal(Fixtures.msg(AirbyteMessage.Type.LOG))
+    spy.trackGlobal(Fixtures.msg(AirbyteMessage.Type.SPEC))
+    spy.trackGlobal(Fixtures.msg(AirbyteMessage.Type.CONNECTION_STATUS))
+    spy.trackGlobal(Fixtures.msg(AirbyteMessage.Type.CATALOG))
+    spy.trackGlobal(Fixtures.msg(AirbyteMessage.Type.CONTROL))
+    spy.trackGlobal(Fixtures.recordMsg())
+
+    verify(exactly = 0) { spy.trackGlobalState(any()) }
+  }
+
+  @Test
+  fun trackGlobalStateUpdatesLatestGlobalStateId() {
+    val id = 12
+    every { store.setLatestGlobalStateId(any()) } returns id
+    every { store.isGlobalComplete(id) } returns false
+    every { store.entries() } returns
+      mapOf(
+        Fixtures.key1 to Fixtures.completeValue(),
+        Fixtures.key2 to Fixtures.completeValue(),
+        Fixtures.key3 to Fixtures.completeValue(),
+        Fixtures.key4 to Fixtures.completeValue(),
+      ).entries
+
+    val msg =
+      Fixtures.stateMsg(
+        type = AirbyteStateMessage.AirbyteStateType.GLOBAL,
+        id = id,
+      )
+
+    tracker.trackGlobalState(msg.state)
+
+    verify(exactly = 1) { store.setLatestGlobalStateId(id) }
+    verify(exactly = 0) { eventPublisher.publishEvent(any()) }
+  }
+
+  @Test
+  fun trackGlobalStatePublishesCompletesWhenGloballyComplete() {
+    val id = 12
+
+    every { store.setLatestGlobalStateId(any()) } returns id
+    every { store.isGlobalComplete(id) } returns true
+    every { store.entries() } returns
+      mapOf(
+        Fixtures.key1 to Fixtures.completeValue(),
+        Fixtures.key2 to Fixtures.completeValue(),
+        Fixtures.key3 to Fixtures.completeValue(),
+        Fixtures.key4 to Fixtures.runningValue(),
+      ).entries
+    every { eventPublisher.publishEvent(any()) } returns Unit
+
+    val msg =
+      Fixtures.stateMsg(
+        type = AirbyteStateMessage.AirbyteStateType.GLOBAL,
+        id = id,
+      )
+
+    tracker.trackGlobalState(msg.state)
+
+    verify(exactly = 1) { store.setLatestGlobalStateId(id) }
+    // verify one message published per event
+    verify(exactly = 1) {
+      eventPublisher.publishEvent(
+        eq(
+          StreamStatusUpdateEvent(
+            key = Fixtures.key1,
+            runState = ApiEnum.COMPLETE,
+            ctx = Fixtures.ctx,
+            cache = apiCache,
+          ),
+        ),
+      )
+    }
+    verify(exactly = 1) {
+      eventPublisher.publishEvent(
+        eq(
+          StreamStatusUpdateEvent(
+            key = Fixtures.key2,
+            runState = ApiEnum.COMPLETE,
+            ctx = Fixtures.ctx,
+            cache = apiCache,
+          ),
+        ),
+      )
+    }
+    verify(exactly = 1) {
+      eventPublisher.publishEvent(
+        eq(
+          StreamStatusUpdateEvent(
+            key = Fixtures.key3,
+            runState = ApiEnum.COMPLETE,
+            ctx = Fixtures.ctx,
+            cache = apiCache,
+          ),
+        ),
+      )
+    }
+    // this one wasn't source complete, so we don't send an update
+    // this case shouldn't happen in practice, but we program defensively
+    verify(exactly = 0) {
+      eventPublisher.publishEvent(
+        eq(
+          StreamStatusUpdateEvent(
+            key = Fixtures.key4,
+            runState = ApiEnum.COMPLETE,
+            ctx = Fixtures.ctx,
+            cache = apiCache,
+          ),
+        ),
+      )
+    }
   }
 
   @Test
@@ -84,7 +230,7 @@ class StreamStatusTrackerTest {
     spy.track(Fixtures.stateMsg(AirbyteStateMessage.AirbyteStateType.LEGACY))
     spy.track(Fixtures.stateMsg(AirbyteStateMessage.AirbyteStateType.GLOBAL))
 
-    verify(exactly = 0) { spy.trackState(any(), any()) }
+    verify(exactly = 0) { spy.trackStreamState(any(), any()) }
   }
 
   @Test
@@ -97,7 +243,7 @@ class StreamStatusTrackerTest {
     spy.track(Fixtures.msg(AirbyteMessage.Type.CATALOG))
     spy.track(Fixtures.msg(AirbyteMessage.Type.CONTROL))
 
-    verify(exactly = 0) { spy.trackState(any(), any()) }
+    verify(exactly = 0) { spy.trackStreamState(any(), any()) }
   }
 
   @Test
@@ -106,7 +252,7 @@ class StreamStatusTrackerTest {
 
     tracker.track(Fixtures.traceMsg(status = ProtocolEnum.STARTED))
 
-    verify(exactly = 1) { store.setRunState(Fixtures.key, ApiEnum.RUNNING) }
+    verify(exactly = 1) { store.setRunState(Fixtures.key1, ApiEnum.RUNNING) }
   }
 
   @Test
@@ -115,7 +261,7 @@ class StreamStatusTrackerTest {
 
     tracker.track(Fixtures.traceMsg(status = ProtocolEnum.RUNNING))
 
-    verify(exactly = 1) { store.setRunState(Fixtures.key, ApiEnum.RUNNING) }
+    verify(exactly = 1) { store.setRunState(Fixtures.key1, ApiEnum.RUNNING) }
   }
 
   @Test
@@ -124,7 +270,7 @@ class StreamStatusTrackerTest {
 
     tracker.track(Fixtures.traceMsg(status = ProtocolEnum.INCOMPLETE))
 
-    verify(exactly = 1) { store.setRunState(Fixtures.key, ApiEnum.INCOMPLETE) }
+    verify(exactly = 1) { store.setRunState(Fixtures.key1, ApiEnum.INCOMPLETE) }
   }
 
   @Test
@@ -136,7 +282,7 @@ class StreamStatusTrackerTest {
 
     tracker.track(Fixtures.recordMsg())
 
-    verify(exactly = 1) { store.setRunState(Fixtures.key, ApiEnum.RUNNING) }
+    verify(exactly = 1) { store.setRunState(Fixtures.key1, ApiEnum.RUNNING) }
   }
 
   @Test
@@ -145,7 +291,7 @@ class StreamStatusTrackerTest {
 
     tracker.track(Fixtures.traceMsg(status = ProtocolEnum.COMPLETE))
 
-    verify(exactly = 1) { store.markSourceComplete(Fixtures.key) }
+    verify(exactly = 1) { store.markSourceComplete(Fixtures.key1) }
   }
 
   @Test
@@ -156,7 +302,7 @@ class StreamStatusTrackerTest {
 
     tracker.track(Fixtures.recordMsg())
 
-    verify(exactly = 1) { store.markStreamNotEmpty(Fixtures.key) }
+    verify(exactly = 1) { store.markStreamNotEmpty(Fixtures.key1) }
   }
 
   @Test
@@ -168,18 +314,18 @@ class StreamStatusTrackerTest {
 
     tracker.track(Fixtures.recordMsg())
 
-    verify(exactly = 1) { store.setRunState(Fixtures.key, ApiEnum.RUNNING) }
-    verify(exactly = 1) { store.setMetadata(Fixtures.key, null) }
+    verify(exactly = 1) { store.setRunState(Fixtures.key1, ApiEnum.RUNNING) }
+    verify(exactly = 1) { store.setMetadata(Fixtures.key1, null) }
   }
 
   @Test
   fun setsLatestStateIdOnStateIfDestNotComplete() {
-    every { store.isDestComplete(any(), any()) } returns false
+    every { store.isStreamComplete(any(), any()) } returns false
     every { store.setLatestStateId(any(), any()) } returns StreamStatusValue()
 
     tracker.track(Fixtures.stateMsg(id = 54321))
 
-    verify(exactly = 1) { store.setLatestStateId(Fixtures.key, 54321) }
+    verify(exactly = 1) { store.setLatestStateId(Fixtures.key1, 54321) }
   }
 
   @Test
@@ -192,18 +338,18 @@ class StreamStatusTrackerTest {
 
     val expected = StreamStatusRateLimitedMetadata(quotaReset = quotaReset)
 
-    verify(exactly = 1) { store.setRunState(Fixtures.key, ApiEnum.RATE_LIMITED) }
-    verify(exactly = 1) { store.setMetadata(Fixtures.key, eq(expected)) }
+    verify(exactly = 1) { store.setRunState(Fixtures.key1, ApiEnum.RATE_LIMITED) }
+    verify(exactly = 1) { store.setMetadata(Fixtures.key1, eq(expected)) }
   }
 
   @Test
   fun setsRunStateToCompleteOnStateIfDestComplete() {
-    every { store.isDestComplete(any(), any()) } returns true
+    every { store.isStreamComplete(any(), any()) } returns true
     every { store.setRunState(any(), any()) } returns StreamStatusValue()
 
     tracker.track(Fixtures.stateMsg(id = 54321))
 
-    verify(exactly = 1) { store.setRunState(Fixtures.key, ApiEnum.COMPLETE) }
+    verify(exactly = 1) { store.setRunState(Fixtures.key1, ApiEnum.COMPLETE) }
   }
 
   @ParameterizedTest
@@ -222,7 +368,7 @@ class StreamStatusTrackerTest {
       eventPublisher.publishEvent(
         eq(
           StreamStatusUpdateEvent(
-            key = Fixtures.key,
+            key = Fixtures.key1,
             runState = updatedRunState,
             ctx = Fixtures.ctx,
             cache = apiCache,
@@ -273,17 +419,43 @@ class StreamStatusTrackerTest {
   }
 
   object Fixtures {
-    private const val STREAM_NAME = "test-stream-name"
-    private const val STREAM_NAMESPACE = "test-stream-namespace"
+    private const val STREAM_NAME_1 = "test-stream-name-1"
+    private const val STREAM_NAMESPACE_1 = "test-stream-namespace-1"
+    private const val STREAM_NAME_2 = "test-stream-name-1"
+    private const val STREAM_NAMESPACE_2 = "test-stream-namespace-1"
 
     private const val STATE_ID = 123
 
-    val streamDescriptor: StreamDescriptor =
+    val streamDescriptor1: StreamDescriptor =
       StreamDescriptor()
-        .withName(STREAM_NAME)
-        .withNamespace(STREAM_NAMESPACE)
+        .withName(STREAM_NAME_1)
+        .withNamespace(STREAM_NAMESPACE_1)
 
-    val key = StreamStatusKey.fromProtocol(streamDescriptor)
+    private val streamDescriptor2: StreamDescriptor =
+      StreamDescriptor()
+        .withName(STREAM_NAME_2)
+        .withNamespace(STREAM_NAMESPACE_2)
+
+    private val streamDescriptor3: StreamDescriptor =
+      StreamDescriptor()
+        .withName(STREAM_NAME_2)
+        .withNamespace(STREAM_NAMESPACE_1)
+
+    private val streamDescriptor4: StreamDescriptor =
+      StreamDescriptor()
+        .withName(STREAM_NAME_1)
+        .withNamespace(null)
+
+    val key1 = StreamStatusKey.fromProtocol(streamDescriptor1)
+    val key2 = StreamStatusKey.fromProtocol(streamDescriptor2)
+    val key3 = StreamStatusKey.fromProtocol(streamDescriptor3)
+    val key4 = StreamStatusKey.fromProtocol(streamDescriptor4)
+
+    fun runningValue() = StreamStatusValue(ApiEnum.RUNNING, 0, sourceComplete = false, streamEmpty = false)
+
+    fun completeValue() = StreamStatusValue(ApiEnum.COMPLETE, 124, sourceComplete = true, streamEmpty = false)
+
+    fun incompleteValue() = StreamStatusValue(ApiEnum.INCOMPLETE, 246, sourceComplete = false, streamEmpty = false)
 
     fun traceMsg(
       type: AirbyteTraceMessage.Type = AirbyteTraceMessage.Type.STREAM_STATUS,
@@ -299,7 +471,7 @@ class StreamStatusTrackerTest {
               AirbyteStreamStatusTraceMessage()
                 .withStatus(status)
                 .withStreamDescriptor(
-                  streamDescriptor,
+                  streamDescriptor1,
                 ),
             ),
         )
@@ -316,7 +488,7 @@ class StreamStatusTrackerTest {
             .withType(type)
             .withStream(
               AirbyteStreamState()
-                .withStreamDescriptor(streamDescriptor),
+                .withStreamDescriptor(streamDescriptor1),
             ),
         )
 
@@ -325,8 +497,8 @@ class StreamStatusTrackerTest {
         .withType(AirbyteMessage.Type.RECORD)
         .withRecord(
           AirbyteRecordMessage()
-            .withStream(STREAM_NAME)
-            .withNamespace(STREAM_NAMESPACE),
+            .withStream(STREAM_NAME_1)
+            .withNamespace(STREAM_NAMESPACE_1),
         )
 
     fun rateLimitedMsg(quotaReset: Long): AirbyteMessage =
@@ -340,7 +512,7 @@ class StreamStatusTrackerTest {
               AirbyteStreamStatusTraceMessage()
                 .withStatus(AirbyteStreamStatusTraceMessage.AirbyteStreamStatus.RUNNING)
                 .withStreamDescriptor(
-                  streamDescriptor,
+                  streamDescriptor1,
                 )
                 .withReasons(
                   listOf(

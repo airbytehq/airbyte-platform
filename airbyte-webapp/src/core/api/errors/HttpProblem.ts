@@ -1,7 +1,48 @@
 import type { KnownApiProblem } from "./problems";
 import type { RequestOptions } from "../apiCall";
 
+import { I18nError } from "core/errors";
+import errorMessages from "locales/en.errors.json";
+
 import { HttpError } from "./HttpError";
+
+// Generalizing the type, so TypeScript won't do strict compile time checks, since we do runtime checks for availability of messages in this object.
+const messages = errorMessages as Record<string, string>;
+
+type TranslationType = "exact" | "hierarchical" | "detail" | "title";
+
+function getTranslation(response: KnownApiProblem): {
+  key: string;
+  params?: I18nError["i18nParams"];
+  type: TranslationType;
+} {
+  const match = response.type.match(/^error:(?<error>.*)$/);
+  const isHierarchicalType = Boolean(match && match.groups?.error);
+  const errorType = match?.groups?.error || response.type;
+  if (messages[errorType]) {
+    // If we have an exact match on the type or in case if it's a hierarchical type only on the part behind "error:" use this message.
+    return { key: `error:${errorType}`, params: response.data, type: "exact" };
+  }
+
+  if (isHierarchicalType) {
+    // If we have a hierarchical type, try to see if any parent error type has a message available.
+    const hierarchy = errorType.split("/");
+    for (let i = hierarchy.length - 1; i > 0; i--) {
+      const parentType = hierarchy.slice(0, i).join("/");
+      if (messages[parentType]) {
+        return { key: `error:${parentType}`, params: response.data, type: "hierarchical" };
+      }
+    }
+  }
+
+  if (response.detail) {
+    // If the error has a detail on it, use that as the message.
+    return { key: "errors.messageOnly", params: { message: response.detail }, type: "detail" };
+  }
+
+  // In all other cases use the title as the message.
+  return { key: "errors.messageOnly", params: { message: response.title }, type: "title" };
+}
 
 /**
  * An `HttpProblem` is a special kind of `HttpError` that represents an error with a known response body.
@@ -9,6 +50,15 @@ import { HttpError } from "./HttpError";
  * response body is following our common error scheme of responses.
  */
 export class HttpProblem<PayloadType extends KnownApiProblem = KnownApiProblem> extends HttpError<PayloadType> {
+  /**
+   * The way how the error message found it's translation:
+   * - `exact`: The translation was found as an exact match in the translation file.
+   * - `hirarchical`: The translation was found as a parent type in the translation file.
+   * - `detail`: The translation was picked from `detail` in the response.
+   * - `title`: The translation was picked from `title` in the response.
+   */
+  public readonly i18nType: TranslationType;
+
   constructor(
     /**
      * Information about the request that was made.
@@ -26,9 +76,10 @@ export class HttpProblem<PayloadType extends KnownApiProblem = KnownApiProblem> 
      */
     public readonly response: PayloadType
   ) {
-    // TODO: Pass better i18nKey/params here, once we have a better error translation system in place
-    super(request, status, response);
+    const { key, params, type } = getTranslation(response);
+    super(request, status, response, key, params);
     this.name = "HttpProblem";
+    this.i18nType = type;
   }
 
   /**

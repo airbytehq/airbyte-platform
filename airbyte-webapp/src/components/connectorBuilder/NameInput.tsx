@@ -54,7 +54,7 @@ export const NameInput: React.FC<NameInputProps> = ({ className, size, showBorde
   }
   return (
     <Input
-      containerClassName={classNames(className, styles.inputContainer, sizeStyles)}
+      containerClassName={classNames(className, styles.inputContainer)}
       className={classNames(styles.input, sizeStyles)}
       {...field}
       ref={(el) => {

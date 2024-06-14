@@ -655,6 +655,7 @@ private fun updateApiClientSerializerWithJsonNodeAdapter(serializerPath: String)
     if (!serializerFileText.contains("import io.airbyte.api.client.infrastructure")) {
         val newImports = listOf(
                 "import io.airbyte.api.client.infrastructure.AirbyteCatalogAdapter",
+                "import io.airbyte.api.client.infrastructure.AirbyteGeneratedConfigAdapter",
                 "import io.airbyte.api.client.infrastructure.AirbyteLocalDateAdapter",
                 "import io.airbyte.api.client.infrastructure.ConnectorBuilderPublishRequestBodyAdapter",
                 "import io.airbyte.api.client.infrastructure.DestinationSyncModeAdapter",
@@ -671,6 +672,7 @@ private fun updateApiClientSerializerWithJsonNodeAdapter(serializerPath: String)
     serializerFileText = serializerFileText.replace("Moshi.Builder()", """Moshi.Builder()
         .add(AirbyteLocalDateAdapter())
         .add(AirbyteCatalogAdapter())
+        .add(AirbyteGeneratedConfigAdapter())
         .add(ConnectorBuilderPublishRequestBodyAdapter())
         .add(DestinationSyncModeAdapter())
         .add(FailureOriginAdapter())

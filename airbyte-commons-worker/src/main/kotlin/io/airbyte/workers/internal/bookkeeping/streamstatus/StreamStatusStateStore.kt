@@ -21,7 +21,15 @@ private val logger = KotlinLogging.logger {}
 class StreamStatusStateStore {
   private val store: MutableMap<StreamStatusKey, StreamStatusValue> = ConcurrentHashMap()
 
+  private var latestGlobalStateId = 0
+
   fun get(key: StreamStatusKey) = store[key]
+
+  fun getLatestGlobalStateId(): Int = latestGlobalStateId
+
+  fun entries(): Set<Map.Entry<StreamStatusKey, StreamStatusValue>> {
+    return store.entries
+  }
 
   fun set(
     key: StreamStatusKey,
@@ -67,6 +75,14 @@ class StreamStatusStateStore {
     return store[key]!!
   }
 
+  fun setLatestGlobalStateId(stateId: Int): Int {
+    if (latestGlobalStateId < stateId) {
+      latestGlobalStateId = stateId
+    }
+
+    return latestGlobalStateId
+  }
+
   fun setMetadata(
     key: StreamStatusKey,
     metadata: StreamStatusRateLimitedMetadata?,
@@ -106,7 +122,7 @@ class StreamStatusStateStore {
     return store[key]!!
   }
 
-  fun isDestComplete(
+  fun isStreamComplete(
     key: StreamStatusKey,
     destStateId: Int,
   ): Boolean {
@@ -121,6 +137,13 @@ class StreamStatusStateStore {
     val runState = value.runState ?: false
 
     return runState == RATE_LIMITED
+  }
+
+  fun isGlobalComplete(destStateId: Int): Boolean {
+    val sourceComplete = store.values.all { it.sourceComplete }
+    val destComplete = destStateId == latestGlobalStateId
+
+    return sourceComplete && destComplete
   }
 
   private fun resolveRunState(

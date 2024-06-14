@@ -1,4 +1,16 @@
+import { renderHook } from "@testing-library/react";
+import { useIntl } from "react-intl";
+
+import { TestWrapper } from "test-utils";
+
 import { HttpProblem } from "./HttpProblem";
+
+jest.mock("locales/en.errors.json", () => ({
+  validation: "Validation error: {reason}",
+  "validation/invalid-email": "Invalid email: {reason}",
+  "validation/invalid-email/already-exists": "Email already exists: {reason}",
+  "http://airbyte.com/old-error": "Old error: {reason}",
+}));
 
 const request = {
   method: "get" as const,
@@ -110,5 +122,97 @@ describe("HttpProblem", () => {
 
       expect(HttpProblem.isTypeOrSubtype(problem, "error:permissions")).toBe(false);
     });
+  });
+
+  describe("error message", () => {
+    const translate = (error: HttpProblem) => {
+      return renderHook(
+        () => {
+          const { formatMessage } = useIntl();
+          return error.translate(formatMessage);
+        },
+        { wrapper: TestWrapper }
+      ).result.current;
+    };
+
+    /* eslint-disable @typescript-eslint/no-explicit-any */
+
+    it("should use the exact match for legacy errors if available", () => {
+      const error = new HttpProblem(request, 500, {
+        type: "http://airbyte.com/old-error" as any,
+        title: "legacy error" as any,
+        data: {
+          reason: "did not go well",
+        },
+      });
+      expect(error).toHaveProperty("i18nType", "exact");
+      expect(translate(error)).toBe("Old error: did not go well");
+    });
+
+    it("should not try hierarchy on legacy error types", () => {
+      const error = new HttpProblem(request, 500, {
+        type: "http://airbyte.com/old-error/sub-path" as any,
+        title: "fallback msg" as any,
+      });
+      expect(error).toHaveProperty("i18nType", "title");
+      expect(translate(error)).toBe("fallback msg");
+    });
+
+    it("should do exact matches on new error:type", () => {
+      const error = new HttpProblem(request, 500, {
+        type: "error:validation/invalid-email/already-exists" as any,
+        title: "fallback msg" as any,
+        data: {
+          reason: "see above",
+        },
+      });
+      expect(error).toHaveProperty("i18nType", "exact");
+      expect(translate(error)).toBe("Email already exists: see above");
+    });
+
+    it("should search through the hierarchy for error: types", () => {
+      const error = new HttpProblem(request, 500, {
+        type: "error:validation/invalid-email/at-is-missing" as any,
+        title: "fallback msg" as any,
+        data: {
+          reason: "see above",
+        },
+      });
+      expect(error).toHaveProperty("i18nType", "hierarchical");
+      expect(translate(error)).toBe("Invalid email: see above");
+    });
+
+    it("should search multiple layers through the hierarchy for error: types", () => {
+      const error = new HttpProblem(request, 500, {
+        type: "error:validation/invalid-password/max-length" as any,
+        title: "fallback msg" as any,
+        data: {
+          reason: "see above",
+        },
+      });
+      expect(error).toHaveProperty("i18nType", "hierarchical");
+      expect(translate(error)).toBe("Validation error: see above");
+    });
+
+    it("should use details if no hierarchical match can be found", () => {
+      const error = new HttpProblem(request, 500, {
+        type: "error:conflict/did-not-work" as any,
+        title: "fallback msg" as any,
+        detail: "fallback details" as any,
+      });
+      expect(error).toHaveProperty("i18nType", "detail");
+      expect(translate(error)).toBe("fallback details");
+    });
+
+    it("should use title if no hierarchical match or detail can be found", () => {
+      const error = new HttpProblem(request, 500, {
+        type: "error:conflict/did-not-work" as any,
+        title: "fallback msg" as any,
+      });
+      expect(error).toHaveProperty("i18nType", "title");
+      expect(translate(error)).toBe("fallback msg");
+    });
+
+    /* eslint-enable @typescript-eslint/no-explicit-any */
   });
 });

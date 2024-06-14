@@ -89,8 +89,8 @@ const useConnectionForm = ({
   const getErrorMessage = useCallback<ConnectionFormHook["getErrorMessage"]>(
     (formValid, errors) => {
       if (submitError) {
-        if (HttpProblem.isTypeOrSubtype(submitError, "error:cron-validation")) {
-          // Handle cron expressions errors with an explicit error
+        if (HttpProblem.isTypeOrSubtype(submitError, "error:cron-validation") && submitError.i18nType !== "exact") {
+          // Handle cron expression errors (that don't have an explicit translation already) with a more detailed error
           return formatMessage(
             { id: "form.cronExpression.invalid" },
             { lnk: (btnText: React.ReactNode) => <ExternalLink href={links.cronReferenceLink}>{btnText}</ExternalLink> }

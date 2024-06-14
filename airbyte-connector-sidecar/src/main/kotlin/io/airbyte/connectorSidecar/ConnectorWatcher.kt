@@ -79,13 +79,16 @@ class ConnectorWatcher(
             return
           }
         }
+        logger.info { "Connector exited, processing output" }
         val outputIS =
           if (Files.exists(Path.of(OrchestratorConstants.JOB_OUTPUT_FILENAME))) {
+            logger.info { "Output file ${OrchestratorConstants.JOB_OUTPUT_FILENAME} found" }
             Files.newInputStream(Path.of(OrchestratorConstants.JOB_OUTPUT_FILENAME))
           } else {
             InputStream.nullInputStream()
           }
         val exitCode = readFile(OrchestratorConstants.EXIT_CODE_FILE).trim().toInt()
+        logger.info { "Connector exited with $exitCode" }
         val streamFactory: AirbyteStreamFactory = getStreamFactory(integrationLauncherConfig)
         val connectorOutput: ConnectorJobOutput =
           when (input.operationType) {
@@ -123,7 +126,9 @@ class ConnectorWatcher(
               )
             }
           }
+        logger.info { "Writing output of $workloadId to the doc store" }
         jobOutputDocStore.write(workloadId, connectorOutput)
+        logger.info { "Marking workload as successful" }
         workloadApiClient.workloadApi.workloadSuccess(WorkloadSuccessRequest(workloadId))
       } catch (e: Exception) {
         logger.error(e) { "Error performing operation: ${e.javaClass.name}" }

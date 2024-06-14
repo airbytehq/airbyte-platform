@@ -18,6 +18,7 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.Arguments
 import org.junit.jupiter.params.provider.MethodSource
+import java.util.AbstractMap.SimpleEntry
 import java.util.stream.Stream
 import io.airbyte.api.client.model.generated.StreamStatusRunState as ApiEnum
 
@@ -39,6 +40,33 @@ class StreamStatusStateStoreTest {
 
     store.set(key1, incompleteValue())
     Assertions.assertEquals(store.get(key1), incompleteValue())
+  }
+
+  @Test
+  fun entriesReturnsEntries() {
+    val store1 = StreamStatusStateStore()
+    val store2 = StreamStatusStateStore()
+
+    val value1 = runningValue()
+    val value2 = runningValue()
+    val value3 = runningValue()
+    val value4 = runningValue()
+    val value5 = runningValue()
+    val value6 = runningValue()
+
+    store1.set(key1, value1)
+    store1.set(key2, value2)
+    store1.set(key3, value3)
+    store1.set(key4, value4)
+
+    store2.set(key2, value5)
+    store2.set(key4, value6)
+
+    val expected1 = setOf(SimpleEntry(key1, value1), SimpleEntry(key2, value2), SimpleEntry(key3, value3), SimpleEntry(key4, value4))
+    val expected2 = setOf(SimpleEntry(key2, value5), SimpleEntry(key4, value6))
+
+    Assertions.assertEquals(expected1, store1.entries())
+    Assertions.assertEquals(expected2, store2.entries())
   }
 
   @Test
@@ -163,6 +191,25 @@ class StreamStatusStateStoreTest {
   }
 
   @Test
+  fun setLatestGlobalStateIdEnforcesMonotonicUpdates() {
+    store.setLatestGlobalStateId(0)
+    Assertions.assertEquals(0, store.getLatestGlobalStateId())
+
+    store.setLatestGlobalStateId(1)
+    Assertions.assertEquals(1, store.getLatestGlobalStateId())
+    store.setLatestGlobalStateId(20)
+    Assertions.assertEquals(20, store.getLatestGlobalStateId())
+    store.setLatestGlobalStateId(11)
+    Assertions.assertEquals(20, store.getLatestGlobalStateId())
+    store.setLatestGlobalStateId(124124)
+    Assertions.assertEquals(124124, store.getLatestGlobalStateId())
+    store.setLatestGlobalStateId(124123)
+    Assertions.assertEquals(124124, store.getLatestGlobalStateId())
+    store.setLatestGlobalStateId(0)
+    store.setLatestGlobalStateId(124123)
+  }
+
+  @Test
   fun setMetadataHandlesNoValue() {
     Assertions.assertNull(store.get(key1))
 
@@ -253,41 +300,84 @@ class StreamStatusStateStoreTest {
   }
 
   @Test
-  fun isDestCompleteHandlesNoValue() {
+  fun isStreamCompleteHandlesNoValue() {
     Assertions.assertNull(store.get(key1))
 
-    val result1 = store.isDestComplete(key1, 0)
+    val result1 = store.isStreamComplete(key1, 0)
 
     Assertions.assertFalse(result1)
   }
 
   @Test
-  fun isDestCompleteMatchesStateIds() {
+  fun isStreamCompleteMatchesStateIds() {
     store.set(key1, tenStateIdValue())
     Assertions.assertFalse(store.get(key1)!!.sourceComplete)
 
-    val result1 = store.isDestComplete(key1, 8)
+    val result1 = store.isStreamComplete(key1, 8)
     Assertions.assertFalse(result1)
 
     // this case shouldn't happen but documenting it here
-    val result2 = store.isDestComplete(key1, 11)
+    val result2 = store.isStreamComplete(key1, 11)
     Assertions.assertFalse(result2)
 
-    val result3 = store.isDestComplete(key1, 10)
+    val result3 = store.isStreamComplete(key1, 10)
     Assertions.assertFalse(result3)
 
     store.markSourceComplete(key1)
     Assertions.assertTrue(store.get(key1)!!.sourceComplete)
 
-    val result4 = store.isDestComplete(key1, 8)
+    val result4 = store.isStreamComplete(key1, 8)
     Assertions.assertFalse(result4)
 
     // this case shouldn't happen but documenting it here
-    val result5 = store.isDestComplete(key1, 11)
+    val result5 = store.isStreamComplete(key1, 11)
     Assertions.assertFalse(result5)
 
-    val result6 = store.isDestComplete(key1, 10)
+    val result6 = store.isStreamComplete(key1, 10)
     Assertions.assertTrue(result6)
+  }
+
+  @Test
+  fun isGlobalCompleteChecksAllStreamsSourceComplete() {
+    val id = 1
+    store.setLatestGlobalStateId(id)
+
+    store.set(key1, completeValue())
+    store.set(key2, completeValue())
+    store.set(key3, runningValue())
+
+    Assertions.assertFalse(store.isGlobalComplete(id))
+
+    store.markSourceComplete(key3)
+    store.set(key4, runningValue())
+
+    Assertions.assertFalse(store.isGlobalComplete(id))
+
+    store.markSourceComplete(key4)
+
+    Assertions.assertTrue(store.isGlobalComplete(id))
+  }
+
+  @Test
+  fun isGlobalCompleteMatchesLatestGlobalStateId() {
+    store.set(key1, completeValue())
+    store.set(key2, completeValue())
+    store.set(key3, completeValue())
+
+    val id1 = 121
+    val id2 = 122
+    val id3 = 123
+    val id4 = 124
+    store.setLatestGlobalStateId(id1)
+    store.setLatestGlobalStateId(id2)
+    store.setLatestGlobalStateId(id3)
+    store.setLatestGlobalStateId(id4)
+
+    Assertions.assertFalse(store.isGlobalComplete(id1))
+    Assertions.assertFalse(store.isGlobalComplete(id2))
+    Assertions.assertFalse(store.isGlobalComplete(id3))
+
+    Assertions.assertTrue(store.isGlobalComplete(id4))
   }
 
   companion object {
@@ -328,9 +418,9 @@ class StreamStatusStateStoreTest {
 
     fun runningValue() = StreamStatusValue(StreamStatusRunState.RUNNING, 0, sourceComplete = false, streamEmpty = true)
 
-    fun completeValue() = StreamStatusValue(StreamStatusRunState.COMPLETE, 124, sourceComplete = false, streamEmpty = true)
+    fun completeValue() = StreamStatusValue(StreamStatusRunState.COMPLETE, 124, sourceComplete = true, streamEmpty = false)
 
-    fun incompleteValue() = StreamStatusValue(StreamStatusRunState.INCOMPLETE, 246, sourceComplete = true, streamEmpty = true)
+    fun incompleteValue() = StreamStatusValue(StreamStatusRunState.INCOMPLETE, 246, sourceComplete = false, streamEmpty = false)
 
     fun zeroStateIdValue() = StreamStatusValue(StreamStatusRunState.RUNNING, 0, sourceComplete = false, streamEmpty = false)
 
