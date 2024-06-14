@@ -20,6 +20,7 @@ import { useCurrentWorkspace, useInvalidateWorkspaceStateQuery } from "./workspa
 import { HttpError, HttpProblem } from "../errors";
 import {
   getConnectionStatuses,
+  getConnectionLastJobPerStream,
   createOrUpdateStateSafe,
   deleteConnection,
   getConnectionDataHistory,
@@ -73,6 +74,7 @@ export const connectionsKeys = {
   getState: (connectionId: string) => [...connectionsKeys.all, "getState", connectionId] as const,
   statuses: (connectionIds: string[]) => [...connectionsKeys.all, "status", connectionIds],
   syncProgress: (connectionId: string) => [...connectionsKeys.all, "syncProgress", connectionId] as const,
+  lastJobPerStream: (connectionId: string) => [...connectionsKeys.all, "lastSyncPerStream", connectionId] as const,
 };
 
 export interface ConnectionValues {
@@ -94,6 +96,20 @@ interface CreateConnectionProps {
   destinationDefinition?: { name: string; destinationDefinitionId: string };
   sourceCatalogId: string | undefined;
 }
+
+export const useGetLastJobPerStream = (connectionId: string, streams: ConnectionStream[]) => {
+  const requestOptions = useRequestOptions();
+
+  return useQuery(
+    connectionsKeys.lastJobPerStream(connectionId),
+    async () => {
+      return await getConnectionLastJobPerStream({ connectionId, streams }, requestOptions);
+    },
+    {
+      enabled: streams.length > 0,
+    }
+  );
+};
 
 export const useGetConnectionSyncProgress = (connectionId: string, enabled: boolean) => {
   const requestOptions = useRequestOptions();

@@ -90,6 +90,7 @@ export const ConnectionHeaderControls: React.FC = () => {
         <Button
           onClick={cancelJob}
           disabled={isCancelBtnDisabled}
+          data-testid="cancel-sync-button"
           variant="clear"
           icon={cancelStarting ? "loading" : "cross"}
           iconColor="error"

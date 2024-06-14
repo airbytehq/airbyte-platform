@@ -20,7 +20,10 @@ const ICON_BY_STATUS: Readonly<Record<ConnectionStatusIndicatorStatus, JSX.Eleme
   onTime: <Icon type="successFilled" title="on-time" />,
   onTrack: <Icon type="successFilled" title="on-track" />,
   syncing: <CircleLoader title="syncing" className={styles.syncingIcon} />,
+  clearing: <CircleLoader title="clearing" className={styles.syncingIcon} />,
+  refreshing: <CircleLoader title="refreshing" className={styles.syncingIcon} />,
   queued: <Icon type="statusQueued" title="queued" />,
+  queuedForNextSync: <Icon type="statusQueued" title="queued" />,
 };
 
 const STYLE_BY_STATUS: Readonly<Record<ConnectionStatusIndicatorStatus, string>> = {
@@ -32,7 +35,10 @@ const STYLE_BY_STATUS: Readonly<Record<ConnectionStatusIndicatorStatus, string>>
   onTime: styles["status--upToDate"],
   onTrack: styles["status--upToDate"],
   syncing: styles["status--syncing"],
+  clearing: styles["status--syncing"],
+  refreshing: styles["status--syncing"],
   queued: styles["status--queued"],
+  queuedForNextSync: styles["status--queued"],
 };
 
 const BOX_STYLE_BY_STATUS: Readonly<Record<ConnectionStatusIndicatorStatus, string>> = {
@@ -44,11 +50,15 @@ const BOX_STYLE_BY_STATUS: Readonly<Record<ConnectionStatusIndicatorStatus, stri
   onTime: styles["status--upToDate-withBox"],
   onTrack: styles["status--upToDate-withBox"],
   syncing: styles["status--syncing-withBox"],
+  clearing: styles["status--syncing-withBox"],
+  refreshing: styles["status--syncing-withBox"],
   queued: styles["status--queued-withBox"],
+  queuedForNextSync: styles["status--queued-withBox"],
 };
 
 interface StreamStatusIndicatorProps {
   status: ConnectionStatusIndicatorStatus;
+  // this prop can be removed when the sync progress feature is rolled out
   loading?: boolean;
   withBox?: boolean;
 }

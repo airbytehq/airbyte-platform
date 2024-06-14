@@ -8,6 +8,7 @@ import {
   ConnectionScheduleData,
   ConnectionScheduleType,
   ConnectionSyncResultRead,
+  JobConfigType,
   StreamStatusIncompleteRunCause,
   StreamStatusJobType,
   StreamStatusRead,
@@ -15,6 +16,13 @@ import {
 } from "core/api/types/AirbyteClient";
 
 export type AirbyteStreamAndConfigurationWithEnforcedStream = AirbyteStreamAndConfiguration & { stream: AirbyteStream };
+
+export const activeStatuses: readonly ConnectionStatusIndicatorStatus[] = [
+  ConnectionStatusIndicatorStatus.Syncing,
+  ConnectionStatusIndicatorStatus.Queued,
+  ConnectionStatusIndicatorStatus.Clearing,
+  ConnectionStatusIndicatorStatus.Refreshing,
+] as const;
 
 export function getStreamKey(streamStatus: StreamStatusRead | AirbyteStream | ConnectionSyncResultRead) {
   let name: string;
@@ -83,11 +91,8 @@ export const isStreamLate = (
 
 interface UIStreamStatus {
   status: ConnectionStatusIndicatorStatus | undefined;
-  isRunning: boolean;
   lastSuccessfulSync: StreamStatusRead | undefined;
-  streamSyncStartedAt: number | undefined;
-  recordsExtracted: number | undefined;
-  recordsLoaded: number | undefined;
+  isRunning: boolean; // isRunning can be removed once sync progress has been fully rolled out, as it can be inferred from the status.  until then, it is required for the v1 stream status ui.
 }
 
 export const computeStreamStatus = ({
@@ -100,7 +105,7 @@ export const computeStreamStatus = ({
   showSyncProgress,
   isSyncing,
   recordsExtracted,
-  recordsLoaded,
+  runningJobConfigType,
 }: {
   statuses: StreamStatusRead[];
   scheduleType?: ConnectionScheduleType;
@@ -110,18 +115,15 @@ export const computeStreamStatus = ({
   errorMultiplier: number;
   showSyncProgress: boolean;
   isSyncing: boolean;
-  recordsExtracted: number | undefined;
-  recordsLoaded: number | undefined;
+  recordsExtracted?: number;
+  runningJobConfigType?: string;
 }): UIStreamStatus => {
   // no statuses
   if (statuses == null || statuses.length === 0) {
     return {
-      status: undefined,
+      status: showSyncProgress ? ConnectionStatusIndicatorStatus.QueuedForNextSync : undefined,
       isRunning: false,
       lastSuccessfulSync: undefined,
-      streamSyncStartedAt: undefined,
-      recordsExtracted,
-      recordsLoaded,
     };
   }
 
@@ -135,27 +137,52 @@ export const computeStreamStatus = ({
   );
 
   if (showSyncProgress) {
-    // queued
-    if (isRunning && (!recordsExtracted || recordsExtracted === 0)) {
+    // queued for next sync
+    if (
+      !isRunning &&
+      (statuses[0].runState === StreamStatusRunState.PENDING || statuses[0].jobType === StreamStatusJobType.RESET)
+    ) {
       return {
-        status: ConnectionStatusIndicatorStatus.Queued,
+        status: ConnectionStatusIndicatorStatus.QueuedForNextSync,
         isRunning,
+
         lastSuccessfulSync,
-        streamSyncStartedAt: statuses[0].transitionedAt,
-        recordsExtracted,
-        recordsLoaded,
       };
     }
-    // syncing
-    if (isRunning && recordsExtracted && recordsExtracted > 0) {
-      return {
-        status: ConnectionStatusIndicatorStatus.Syncing,
-        isRunning,
-        lastSuccessfulSync,
-        streamSyncStartedAt: statuses[0].transitionedAt,
-        recordsExtracted,
-        recordsLoaded,
-      };
+
+    // queued
+    if (isRunning) {
+      if (runningJobConfigType === JobConfigType.reset_connection || runningJobConfigType === JobConfigType.clear) {
+        return {
+          status: ConnectionStatusIndicatorStatus.Clearing,
+          isRunning,
+          lastSuccessfulSync,
+        };
+      }
+
+      if (!recordsExtracted || recordsExtracted === 0) {
+        return {
+          status: ConnectionStatusIndicatorStatus.Queued,
+          isRunning,
+          lastSuccessfulSync,
+        };
+      }
+      if (recordsExtracted && recordsExtracted > 0) {
+        // syncing or refreshing
+        if (runningJobConfigType === "sync") {
+          return {
+            status: ConnectionStatusIndicatorStatus.Syncing,
+            isRunning,
+            lastSuccessfulSync,
+          };
+        } else if (runningJobConfigType === "refresh") {
+          return {
+            status: ConnectionStatusIndicatorStatus.Refreshing,
+            isRunning,
+            lastSuccessfulSync,
+          };
+        }
+      }
     }
   }
 
@@ -165,9 +192,6 @@ export const computeStreamStatus = ({
       status: ConnectionStatusIndicatorStatus.ActionRequired,
       isRunning,
       lastSuccessfulSync,
-      streamSyncStartedAt: undefined,
-      recordsExtracted,
-      recordsLoaded,
     };
   }
 
@@ -176,9 +200,6 @@ export const computeStreamStatus = ({
       status: ConnectionStatusIndicatorStatus.Pending,
       isRunning,
       lastSuccessfulSync,
-      streamSyncStartedAt: undefined,
-      recordsExtracted,
-      recordsLoaded,
     };
   }
 
@@ -188,9 +209,6 @@ export const computeStreamStatus = ({
       status: ConnectionStatusIndicatorStatus.Pending,
       isRunning,
       lastSuccessfulSync,
-      streamSyncStartedAt: undefined,
-      recordsExtracted,
-      recordsLoaded,
     };
   }
 
@@ -207,9 +225,6 @@ export const computeStreamStatus = ({
       status: ConnectionStatusIndicatorStatus.OnTrack,
       isRunning,
       lastSuccessfulSync,
-      streamSyncStartedAt: undefined,
-      recordsExtracted,
-      recordsLoaded,
     };
   }
 
@@ -219,9 +234,6 @@ export const computeStreamStatus = ({
       status: ConnectionStatusIndicatorStatus.Late,
       isRunning,
       lastSuccessfulSync,
-      streamSyncStartedAt: undefined,
-      recordsExtracted,
-      recordsLoaded,
     };
   }
 
@@ -231,9 +243,6 @@ export const computeStreamStatus = ({
       status: ConnectionStatusIndicatorStatus.OnTrack,
       isRunning,
       lastSuccessfulSync,
-      streamSyncStartedAt: undefined,
-      recordsExtracted,
-      recordsLoaded,
     };
   }
 
@@ -247,9 +256,6 @@ export const computeStreamStatus = ({
       status: ConnectionStatusIndicatorStatus.Error,
       isRunning,
       lastSuccessfulSync,
-      streamSyncStartedAt: undefined,
-      recordsExtracted,
-      recordsLoaded,
     };
   }
 
@@ -259,9 +265,6 @@ export const computeStreamStatus = ({
       status: ConnectionStatusIndicatorStatus.OnTime,
       isRunning,
       lastSuccessfulSync,
-      streamSyncStartedAt: undefined,
-      recordsExtracted,
-      recordsLoaded,
     };
   }
 
@@ -269,8 +272,5 @@ export const computeStreamStatus = ({
     status: undefined,
     isRunning,
     lastSuccessfulSync,
-    streamSyncStartedAt: undefined,
-    recordsExtracted,
-    recordsLoaded,
   };
 };
