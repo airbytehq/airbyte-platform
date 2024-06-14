@@ -17,24 +17,17 @@ interface LastJobWithStatsPerStreamRepository : GenericRepository<StreamWithLast
     """
         WITH stream_pairs AS (
             SELECT * FROM unnest(:streamNames::text[], :streamNamespaces::text[]) as t(stream_name, stream_namespace)
-        ),
-        latest_attempt_per_stream AS 
-        (
-            SELECT
-                MAX(a.id) AS attempt_id,
-                ss.stream_name,
-                ss.stream_namespace
-            FROM stream_stats ss
-            INNER JOIN attempts a ON ss.attempt_id = a.id
-            INNER JOIN stream_pairs sp ON ss.stream_name = sp.stream_name AND 
-                (ss.stream_namespace = sp.stream_namespace OR (ss.stream_namespace IS NULL AND sp.stream_namespace IS NULL))
-            GROUP BY ss.stream_name, ss.stream_namespace
         )
-        SELECT laps.stream_name, laps.stream_namespace, j.id as job_id
-        FROM latest_attempt_per_stream laps
-        INNER JOIN attempts a ON laps.attempt_id = a.id
-        INNER JOIN jobs j ON j.id = a.job_id
-        WHERE j.scope = CAST(:connectionId AS varchar)
+        SELECT
+            MAX(j.id) AS job_id,
+            ss.stream_name,
+            ss.stream_namespace
+        FROM stream_stats ss
+        INNER JOIN attempts a ON ss.attempt_id = a.id
+        INNER JOIN jobs j ON a.job_id = j.id AND j.scope = CAST(:connectionId AS varchar)
+        INNER JOIN stream_pairs sp ON ss.stream_name = sp.stream_name AND 
+            (ss.stream_namespace = sp.stream_namespace OR (ss.stream_namespace IS NULL AND sp.stream_namespace IS NULL))
+        GROUP BY ss.stream_name, ss.stream_namespace
     """,
     readOnly = true,
   )
