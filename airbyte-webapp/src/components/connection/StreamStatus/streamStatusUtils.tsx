@@ -12,9 +12,6 @@ export interface StreamWithStatus {
   isRunning: boolean;
   relevantHistory: StreamStatusRead[];
   lastSuccessfulSyncAt?: StreamStatusRead["transitionedAt"];
-  streamSyncStartedAt?: number;
-  recordsLoaded: number | undefined;
-  recordsExtracted: number | undefined;
 }
 
 type StreamMapping = Record<ConnectionStatusIndicatorStatus, StreamWithStatus[]>;
@@ -43,7 +40,10 @@ export const sortStreamsByStatus = (
       [ConnectionStatusIndicatorStatus.OnTime]: [],
       [ConnectionStatusIndicatorStatus.Disabled]: [],
       [ConnectionStatusIndicatorStatus.Syncing]: [],
+      [ConnectionStatusIndicatorStatus.Clearing]: [],
+      [ConnectionStatusIndicatorStatus.Refreshing]: [],
       [ConnectionStatusIndicatorStatus.Queued]: [],
+      [ConnectionStatusIndicatorStatus.QueuedForNextSync]: [],
     }
   );
 

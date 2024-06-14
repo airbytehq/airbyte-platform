@@ -70,7 +70,6 @@ describe("computeStreamStatus", () => {
       const result = computeStreamStatus({
         statuses: [],
         recordsExtracted: 0,
-        recordsLoaded: 0,
         scheduleType: undefined,
         scheduleData: undefined,
         hasBreakingSchemaChange: false,
@@ -83,9 +82,6 @@ describe("computeStreamStatus", () => {
         status: undefined,
         isRunning: false,
         lastSuccessfulSync: undefined,
-        recordsExtracted: 0,
-        recordsLoaded: 0,
-        streamSyncStartedAt: undefined,
       });
     });
   });
@@ -96,7 +92,6 @@ describe("computeStreamStatus", () => {
       const result = computeStreamStatus({
         statuses: [status],
         recordsExtracted: 0,
-        recordsLoaded: 0,
         scheduleType: undefined,
         scheduleData: undefined,
         hasBreakingSchemaChange: false,
@@ -109,9 +104,6 @@ describe("computeStreamStatus", () => {
         status: ConnectionStatusIndicatorStatus.Pending,
         isRunning: false,
         lastSuccessfulSync: undefined,
-        recordsExtracted: 0,
-        recordsLoaded: 0,
-        streamSyncStartedAt: undefined,
       });
     });
 
@@ -123,7 +115,6 @@ describe("computeStreamStatus", () => {
       const result = computeStreamStatus({
         statuses: [status],
         recordsExtracted: 0,
-        recordsLoaded: 0,
         scheduleType: undefined,
         scheduleData: undefined,
         hasBreakingSchemaChange: false,
@@ -136,9 +127,6 @@ describe("computeStreamStatus", () => {
         status: ConnectionStatusIndicatorStatus.Pending,
         isRunning: false,
         lastSuccessfulSync: undefined,
-        recordsExtracted: 0,
-        recordsLoaded: 0,
-        streamSyncStartedAt: undefined,
       });
     });
 
@@ -150,7 +138,6 @@ describe("computeStreamStatus", () => {
       const result = computeStreamStatus({
         statuses: [status],
         recordsExtracted: 0,
-        recordsLoaded: 0,
         scheduleType: undefined,
         scheduleData: undefined,
         hasBreakingSchemaChange: false,
@@ -163,9 +150,6 @@ describe("computeStreamStatus", () => {
         status: ConnectionStatusIndicatorStatus.Pending,
         isRunning: false,
         lastSuccessfulSync: undefined,
-        recordsExtracted: 0,
-        recordsLoaded: 0,
-        streamSyncStartedAt: undefined,
       });
     });
   });
@@ -176,7 +160,6 @@ describe("computeStreamStatus", () => {
       const result = computeStreamStatus({
         statuses: [status],
         recordsExtracted: 0,
-        recordsLoaded: 0,
         scheduleType: undefined,
         scheduleData: undefined,
         hasBreakingSchemaChange: false,
@@ -189,9 +172,6 @@ describe("computeStreamStatus", () => {
         status: ConnectionStatusIndicatorStatus.OnTime,
         isRunning: false,
         lastSuccessfulSync: status,
-        recordsExtracted: 0,
-        recordsLoaded: 0,
-        streamSyncStartedAt: undefined,
       });
     });
 
@@ -200,7 +180,6 @@ describe("computeStreamStatus", () => {
       const result = computeStreamStatus({
         statuses: [status],
         recordsExtracted: 0,
-        recordsLoaded: 0,
         scheduleType: ConnectionScheduleType.cron,
         scheduleData: cronScheduleData,
         hasBreakingSchemaChange: false,
@@ -213,9 +192,6 @@ describe("computeStreamStatus", () => {
         status: ConnectionStatusIndicatorStatus.OnTime,
         isRunning: false,
         lastSuccessfulSync: status,
-        recordsExtracted: 0,
-        recordsLoaded: 0,
-        streamSyncStartedAt: undefined,
       });
     });
 
@@ -224,7 +200,6 @@ describe("computeStreamStatus", () => {
       const result = computeStreamStatus({
         statuses: [status],
         recordsExtracted: 1,
-        recordsLoaded: 1,
         scheduleType: ConnectionScheduleType.basic,
         scheduleData: basicScheduleData,
         hasBreakingSchemaChange: false,
@@ -237,9 +212,6 @@ describe("computeStreamStatus", () => {
         status: ConnectionStatusIndicatorStatus.OnTime,
         isRunning: false,
         lastSuccessfulSync: status,
-        recordsExtracted: 1,
-        recordsLoaded: 1,
-        streamSyncStartedAt: undefined,
       });
     });
 
@@ -256,7 +228,6 @@ describe("computeStreamStatus", () => {
       const result = computeStreamStatus({
         statuses: [cancelStatus, successStatus],
         recordsExtracted: 1,
-        recordsLoaded: 0,
         scheduleType: ConnectionScheduleType.basic,
         scheduleData: basicScheduleData,
         hasBreakingSchemaChange: false,
@@ -269,9 +240,6 @@ describe("computeStreamStatus", () => {
         status: ConnectionStatusIndicatorStatus.OnTime,
         isRunning: false,
         lastSuccessfulSync: successStatus,
-        recordsExtracted: 1,
-        recordsLoaded: 0,
-        streamSyncStartedAt: undefined,
       });
     });
   });
@@ -282,7 +250,6 @@ describe("computeStreamStatus", () => {
       const result = computeStreamStatus({
         statuses: [status],
         recordsExtracted: 1,
-        recordsLoaded: 0,
         scheduleType: ConnectionScheduleType.basic,
         scheduleData: basicScheduleData,
         hasBreakingSchemaChange: false,
@@ -295,9 +262,6 @@ describe("computeStreamStatus", () => {
         status: ConnectionStatusIndicatorStatus.OnTrack,
         isRunning: false,
         lastSuccessfulSync: status,
-        recordsExtracted: 1,
-        recordsLoaded: 0,
-        streamSyncStartedAt: undefined,
       });
     });
 
@@ -314,7 +278,6 @@ describe("computeStreamStatus", () => {
       const result = computeStreamStatus({
         statuses: [failedStatus, successStatus],
         recordsExtracted: 0,
-        recordsLoaded: 0,
         scheduleType: ConnectionScheduleType.basic,
         scheduleData: basicScheduleData,
         hasBreakingSchemaChange: false,
@@ -327,9 +290,6 @@ describe("computeStreamStatus", () => {
         status: ConnectionStatusIndicatorStatus.OnTrack,
         isRunning: false,
         lastSuccessfulSync: successStatus,
-        recordsExtracted: 0,
-        recordsLoaded: 0,
-        streamSyncStartedAt: undefined,
       });
     });
 
@@ -338,7 +298,6 @@ describe("computeStreamStatus", () => {
       const result = computeStreamStatus({
         statuses: [status],
         recordsExtracted: 1,
-        recordsLoaded: 0,
         scheduleType: ConnectionScheduleType.basic,
         scheduleData: basicScheduleData,
         hasBreakingSchemaChange: false,
@@ -351,9 +310,6 @@ describe("computeStreamStatus", () => {
         status: ConnectionStatusIndicatorStatus.Late,
         isRunning: false,
         lastSuccessfulSync: status,
-        recordsExtracted: 1,
-        recordsLoaded: 0,
-        streamSyncStartedAt: undefined,
       });
     });
   });
@@ -364,7 +320,6 @@ describe("computeStreamStatus", () => {
       const result = computeStreamStatus({
         statuses: [status],
         recordsExtracted: 1,
-        recordsLoaded: 0,
         scheduleType: ConnectionScheduleType.basic,
         scheduleData: basicScheduleData,
         hasBreakingSchemaChange: true,
@@ -377,9 +332,6 @@ describe("computeStreamStatus", () => {
         status: ConnectionStatusIndicatorStatus.ActionRequired,
         isRunning: false,
         lastSuccessfulSync: status,
-        recordsExtracted: 1,
-        recordsLoaded: 0,
-        streamSyncStartedAt: undefined,
       });
     });
 
@@ -392,7 +344,6 @@ describe("computeStreamStatus", () => {
       const result = computeStreamStatus({
         statuses: [status],
         recordsExtracted: 1,
-        recordsLoaded: 0,
         scheduleType: ConnectionScheduleType.basic,
         scheduleData: basicScheduleData,
         hasBreakingSchemaChange: true,
@@ -405,9 +356,6 @@ describe("computeStreamStatus", () => {
         status: ConnectionStatusIndicatorStatus.ActionRequired,
         isRunning: false,
         lastSuccessfulSync: undefined,
-        recordsExtracted: 1,
-        recordsLoaded: 0,
-        streamSyncStartedAt: undefined,
       });
     });
   });
@@ -422,7 +370,6 @@ describe("computeStreamStatus", () => {
       const result = computeStreamStatus({
         statuses: [status],
         recordsExtracted: 1,
-        recordsLoaded: 0,
         scheduleType: ConnectionScheduleType.basic,
         scheduleData: basicScheduleData,
         hasBreakingSchemaChange: false,
@@ -435,9 +382,6 @@ describe("computeStreamStatus", () => {
         status: ConnectionStatusIndicatorStatus.Error,
         isRunning: false,
         lastSuccessfulSync: undefined,
-        recordsExtracted: 1,
-        recordsLoaded: 0,
-        streamSyncStartedAt: undefined,
       });
     });
 
@@ -450,7 +394,6 @@ describe("computeStreamStatus", () => {
       const result = computeStreamStatus({
         statuses: [status],
         recordsExtracted: 0,
-        recordsLoaded: 0,
         scheduleType: ConnectionScheduleType.manual,
         hasBreakingSchemaChange: false,
         lateMultiplier: 2,
@@ -462,9 +405,6 @@ describe("computeStreamStatus", () => {
         status: ConnectionStatusIndicatorStatus.Error,
         isRunning: false,
         lastSuccessfulSync: undefined,
-        recordsExtracted: 0,
-        recordsLoaded: 0,
-        streamSyncStartedAt: undefined,
       });
     });
 
@@ -481,7 +421,6 @@ describe("computeStreamStatus", () => {
       const result = computeStreamStatus({
         statuses: [failedStatus, successStatus],
         recordsExtracted: 0,
-        recordsLoaded: 0,
         scheduleType: ConnectionScheduleType.manual,
         hasBreakingSchemaChange: false,
         lateMultiplier: 2,
@@ -493,9 +432,6 @@ describe("computeStreamStatus", () => {
         status: ConnectionStatusIndicatorStatus.Error,
         isRunning: false,
         lastSuccessfulSync: successStatus,
-        recordsExtracted: 0,
-        recordsLoaded: 0,
-        streamSyncStartedAt: undefined,
       });
     });
   });
@@ -516,7 +452,6 @@ describe("computeStreamStatus", () => {
         const result = computeStreamStatus({
           statuses: [runningStatus, cancelStatus],
           recordsExtracted: 0,
-          recordsLoaded: 0,
           scheduleType: ConnectionScheduleType.basic,
           scheduleData: basicScheduleData,
           hasBreakingSchemaChange: false,
@@ -529,9 +464,6 @@ describe("computeStreamStatus", () => {
           status: undefined,
           isRunning: true,
           lastSuccessfulSync: undefined,
-          recordsExtracted: 0,
-          recordsLoaded: 0,
-          streamSyncStartedAt: undefined,
         });
       });
       it("returns late with a currently running sync that is behind schedule", () => {
@@ -544,7 +476,6 @@ describe("computeStreamStatus", () => {
         const result = computeStreamStatus({
           statuses: [status, prevStatus],
           recordsExtracted: 0,
-          recordsLoaded: 0,
           scheduleType: ConnectionScheduleType.basic,
           scheduleData: basicScheduleData,
           hasBreakingSchemaChange: false,
@@ -557,9 +488,6 @@ describe("computeStreamStatus", () => {
           status: ConnectionStatusIndicatorStatus.Late,
           isRunning: true,
           lastSuccessfulSync: prevStatus,
-          recordsExtracted: 0,
-          recordsLoaded: 0,
-          streamSyncStartedAt: undefined,
         });
       });
     });
@@ -578,7 +506,6 @@ describe("computeStreamStatus", () => {
         const result = computeStreamStatus({
           statuses: [runningStatus, cancelStatus],
           recordsExtracted: 1,
-          recordsLoaded: 0,
           scheduleType: ConnectionScheduleType.basic,
           scheduleData: basicScheduleData,
           hasBreakingSchemaChange: false,
@@ -591,56 +518,69 @@ describe("computeStreamStatus", () => {
           status: undefined,
           isRunning: true,
           lastSuccessfulSync: undefined,
-          recordsExtracted: 1,
-          recordsLoaded: 0,
-          streamSyncStartedAt: undefined,
-        });
-      });
-      it('returns "syncing" if records were extracted - with a currently running sync', () => {
-        const status = buildStreamStatusRead({ runState: StreamStatusRunState.RUNNING, transitionedAt: oneHourAgo });
-        const prevStatus = buildStreamStatusRead({
-          runState: StreamStatusRunState.COMPLETE,
-          transitionedAt: fiveHoursAgo,
-        });
-
-        const result = computeStreamStatus({
-          statuses: [status, prevStatus],
-          recordsExtracted: 1,
-          recordsLoaded: 0,
-          scheduleType: ConnectionScheduleType.basic,
-          scheduleData: basicScheduleData,
-          hasBreakingSchemaChange: false,
-          lateMultiplier: 2,
-          errorMultiplier: 2,
-          showSyncProgress: true,
-          isSyncing: true,
-        });
-        expect(result).toEqual({
-          status: ConnectionStatusIndicatorStatus.Syncing,
-          isRunning: true,
-          lastSuccessfulSync: prevStatus,
-          recordsExtracted: 1,
-          recordsLoaded: 0,
-          streamSyncStartedAt: oneHourAgo,
         });
       });
     });
   });
   describe("with sync progress shown", () => {
+    describe("queued for next sync", () => {
+      it('returns "queued for next sync" when there are no statuses', () => {
+        const result = computeStreamStatus({
+          statuses: [],
+          recordsExtracted: 0,
+          scheduleType: undefined,
+          scheduleData: undefined,
+          hasBreakingSchemaChange: false,
+          lateMultiplier: 2,
+          errorMultiplier: 2,
+          showSyncProgress: true,
+          isSyncing: false,
+        });
+        expect(result).toEqual({
+          status: ConnectionStatusIndicatorStatus.QueuedForNextSync,
+          isRunning: false,
+          lastSuccessfulSync: undefined,
+        });
+      });
+      it('returns "queued for next sync" when the last job was a reset', () => {
+        const resetStatus = buildStreamStatusRead({
+          runState: StreamStatusRunState.COMPLETE,
+          jobType: StreamStatusJobType.RESET,
+          transitionedAt: oneHourAgo,
+        });
+        const syncStatus = buildStreamStatusRead({
+          runState: StreamStatusRunState.COMPLETE,
+          jobType: StreamStatusJobType.RESET,
+          transitionedAt: threeHoursAgo,
+        });
+
+        const result = computeStreamStatus({
+          statuses: [resetStatus, syncStatus],
+          recordsExtracted: 0,
+          scheduleType: undefined,
+          scheduleData: undefined,
+          hasBreakingSchemaChange: false,
+          lateMultiplier: 2,
+          errorMultiplier: 2,
+          showSyncProgress: true,
+          isSyncing: false,
+        });
+        expect(result).toEqual({
+          status: ConnectionStatusIndicatorStatus.QueuedForNextSync,
+          isRunning: false,
+          lastSuccessfulSync: undefined,
+        });
+      });
+    });
     describe("queued", () => {
       it('returns "queued" with only a currently running sync (no history)', () => {
         const runningStatus = buildStreamStatusRead({
           runState: StreamStatusRunState.RUNNING,
           transitionedAt: oneHourAgo,
         });
-        const cancelStatus = buildStreamStatusRead({
-          runState: StreamStatusRunState.INCOMPLETE,
-          incompleteRunCause: StreamStatusIncompleteRunCause.CANCELED,
-          transitionedAt: fiveHoursAgo,
-        });
 
         const result = computeStreamStatus({
-          statuses: [runningStatus, cancelStatus],
+          statuses: [runningStatus],
           scheduleType: ConnectionScheduleType.basic,
           scheduleData: basicScheduleData,
           hasBreakingSchemaChange: false,
@@ -649,15 +589,11 @@ describe("computeStreamStatus", () => {
           showSyncProgress: true,
           isSyncing: true,
           recordsExtracted: 1,
-          recordsLoaded: 0,
         });
         expect(result).toEqual({
           status: ConnectionStatusIndicatorStatus.Syncing,
           isRunning: true,
           lastSuccessfulSync: undefined,
-          recordsExtracted: 1,
-          recordsLoaded: 0,
-          streamSyncStartedAt: oneHourAgo,
         });
       });
       it('returns "queued" with a currently running sync', () => {
@@ -670,7 +606,6 @@ describe("computeStreamStatus", () => {
         const result = computeStreamStatus({
           statuses: [status, prevStatus],
           recordsExtracted: 0,
-          recordsLoaded: 0,
           scheduleType: ConnectionScheduleType.basic,
           scheduleData: basicScheduleData,
           hasBreakingSchemaChange: false,
@@ -683,9 +618,6 @@ describe("computeStreamStatus", () => {
           status: ConnectionStatusIndicatorStatus.Queued,
           isRunning: true,
           lastSuccessfulSync: prevStatus,
-          recordsExtracted: 0,
-          recordsLoaded: 0,
-          streamSyncStartedAt: oneHourAgo,
         });
       });
     });
@@ -704,7 +636,6 @@ describe("computeStreamStatus", () => {
         const result = computeStreamStatus({
           statuses: [runningStatus, cancelStatus],
           recordsExtracted: 1,
-          recordsLoaded: 0,
           scheduleType: ConnectionScheduleType.basic,
           scheduleData: basicScheduleData,
           hasBreakingSchemaChange: false,
@@ -717,9 +648,6 @@ describe("computeStreamStatus", () => {
           status: ConnectionStatusIndicatorStatus.Syncing,
           isRunning: true,
           lastSuccessfulSync: undefined,
-          recordsExtracted: 1,
-          recordsLoaded: 0,
-          streamSyncStartedAt: oneHourAgo,
         });
       });
       it('returns "syncing" if records were extracted - with a currently running sync', () => {
@@ -732,7 +660,6 @@ describe("computeStreamStatus", () => {
         const result = computeStreamStatus({
           statuses: [status, prevStatus],
           recordsExtracted: 1,
-          recordsLoaded: 0,
           scheduleType: ConnectionScheduleType.basic,
           scheduleData: basicScheduleData,
           hasBreakingSchemaChange: false,
@@ -745,9 +672,6 @@ describe("computeStreamStatus", () => {
           status: ConnectionStatusIndicatorStatus.Syncing,
           isRunning: true,
           lastSuccessfulSync: prevStatus,
-          recordsExtracted: 1,
-          recordsLoaded: 0,
-          streamSyncStartedAt: oneHourAgo,
         });
       });
     });
@@ -759,11 +683,13 @@ function buildStreamStatusRead({
   runState = StreamStatusRunState.COMPLETE,
   incompleteRunCause,
   transitionedAt = mockStreamStatusRead.transitionedAt,
+  jobId = mockStreamStatusRead.jobId,
 }: {
   jobType?: StreamStatusRead["jobType"];
   runState?: StreamStatusRead["runState"];
   incompleteRunCause?: StreamStatusRead["incompleteRunCause"];
   transitionedAt?: StreamStatusRead["transitionedAt"];
+  jobId?: StreamStatusRead["jobId"];
 }): StreamStatusRead {
-  return { ...mockStreamStatusRead, jobType, runState, incompleteRunCause, transitionedAt };
+  return { ...mockStreamStatusRead, jobType, runState, incompleteRunCause, transitionedAt, jobId };
 }

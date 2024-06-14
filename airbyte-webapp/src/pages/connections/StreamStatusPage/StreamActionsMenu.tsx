@@ -4,7 +4,6 @@ import { FormattedMessage, useIntl } from "react-intl";
 import { useNavigate } from "react-router-dom";
 
 import { useConnectionSyncContext } from "components/connection/ConnectionSync/ConnectionSyncContext";
-import { StreamWithStatus } from "components/connection/StreamStatus/streamStatusUtils";
 import { Box } from "components/ui/Box";
 import { Button } from "components/ui/Button";
 import { DropdownMenu, DropdownMenuOptionType } from "components/ui/DropdownMenu";
@@ -21,10 +20,11 @@ import styles from "./StreamActionsMenu.module.scss";
 import { ConnectionRefreshModal } from "../ConnectionSettingsPage/ConnectionRefreshModal";
 
 interface StreamActionsMenuProps {
-  streamState: StreamWithStatus;
+  streamName: string;
+  streamNamespace?: string;
 }
 
-export const StreamActionsMenu: React.FC<StreamActionsMenuProps> = ({ streamState }) => {
+export const StreamActionsMenu: React.FC<StreamActionsMenuProps> = ({ streamName, streamNamespace }) => {
   const { formatMessage } = useIntl();
   const navigate = useNavigate();
   const { mode, connection } = useConnectionFormService();
@@ -46,9 +46,7 @@ export const StreamActionsMenu: React.FC<StreamActionsMenuProps> = ({ streamStat
   const { openModal } = useModalService();
 
   const catalogStream = connection.syncCatalog.streams.find(
-    (catalogStream) =>
-      catalogStream.stream?.name === streamState.streamName &&
-      catalogStream.stream?.namespace === streamState.streamNamespace
+    (catalogStream) => catalogStream.stream?.name === streamName && catalogStream.stream?.namespace === streamNamespace
   );
 
   const disableSyncActions =
@@ -107,7 +105,7 @@ export const StreamActionsMenu: React.FC<StreamActionsMenuProps> = ({ streamStat
   const onOptionClick = async ({ value }: DropdownMenuOptionType) => {
     if (value === "showInReplicationTable" || value === "openDetails") {
       navigate(`../${ConnectionRoutePaths.Replication}`, {
-        state: { namespace: streamState?.streamNamespace, streamName: streamState?.streamName, action: value },
+        state: { namespace: streamNamespace, streamName, action: value },
       });
     }
 
@@ -118,9 +116,7 @@ export const StreamActionsMenu: React.FC<StreamActionsMenuProps> = ({ streamStat
           <FormattedMessage
             id="connection.stream.actions.refreshStream.confirm.title"
             values={{
-              streamName: (
-                <span className={styles.streamActionsMenu__clearDataModalStreamName}>{streamState.streamName}</span>
-              ),
+              streamName: <span className={styles.streamActionsMenu__clearDataModalStreamName}>{streamName}</span>,
             }}
           />
         ),
@@ -130,14 +126,8 @@ export const StreamActionsMenu: React.FC<StreamActionsMenuProps> = ({ streamStat
               refreshScope="stream"
               onComplete={onComplete}
               onCancel={onCancel}
-              streamsSupportingMergeRefresh={
-                canMerge ? [{ streamNamespace: streamState.streamNamespace, streamName: streamState.streamName }] : []
-              }
-              streamsSupportingTruncateRefresh={
-                canTruncate
-                  ? [{ streamNamespace: streamState.streamNamespace, streamName: streamState.streamName }]
-                  : []
-              }
+              streamsSupportingMergeRefresh={canMerge ? [{ streamNamespace, streamName }] : []}
+              streamsSupportingTruncateRefresh={canTruncate ? [{ streamNamespace, streamName }] : []}
               refreshStreams={refreshStreams}
             />
           );
@@ -151,9 +141,7 @@ export const StreamActionsMenu: React.FC<StreamActionsMenuProps> = ({ streamStat
           <FormattedMessage
             id="connection.stream.actions.clearData.confirm.title"
             values={{
-              streamName: (
-                <span className={styles.streamActionsMenu__clearDataModalStreamName}>{streamState.streamName}</span>
-              ),
+              streamName: <span className={styles.streamActionsMenu__clearDataModalStreamName}>{streamName}</span>,
             }}
           />
         ),
@@ -168,7 +156,7 @@ export const StreamActionsMenu: React.FC<StreamActionsMenuProps> = ({ streamStat
         submitButtonText: "connection.stream.actions.clearData.confirm.submit",
         cancelButtonText: "connection.stream.actions.clearData.confirm.cancel",
         onSubmit: async () => {
-          await resetStreams([{ streamNamespace: streamState.streamNamespace, streamName: streamState.streamName }]);
+          await resetStreams([{ streamNamespace, streamName }]);
           closeConfirmationModal();
         },
       });

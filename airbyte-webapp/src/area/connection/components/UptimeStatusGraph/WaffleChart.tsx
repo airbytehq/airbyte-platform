@@ -59,7 +59,10 @@ const getCellColor = (streamStatus: ConnectionStatusIndicatorStatus): WaffleColo
     case ConnectionStatusIndicatorStatus.Disabled:
     case ConnectionStatusIndicatorStatus.Pending:
     case ConnectionStatusIndicatorStatus.Queued:
+    case ConnectionStatusIndicatorStatus.QueuedForNextSync:
     case ConnectionStatusIndicatorStatus.Syncing:
+    case ConnectionStatusIndicatorStatus.Clearing:
+    case ConnectionStatusIndicatorStatus.Refreshing:
       return "empty";
   }
 };

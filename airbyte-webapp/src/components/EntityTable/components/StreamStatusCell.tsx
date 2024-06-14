@@ -29,6 +29,9 @@ const FILLING_STYLE_BY_STATUS: Readonly<Record<ConnectionStatusIndicatorStatus, 
   [ConnectionStatusIndicatorStatus.Pending]: styles["filling--pending"],
   [ConnectionStatusIndicatorStatus.Queued]: styles["filling--queued"],
   [ConnectionStatusIndicatorStatus.Syncing]: styles["filling--syncing"],
+  [ConnectionStatusIndicatorStatus.Clearing]: styles["filling--syncing"],
+  [ConnectionStatusIndicatorStatus.Refreshing]: styles["filling--syncing"],
+  [ConnectionStatusIndicatorStatus.QueuedForNextSync]: styles["filling--queued"],
 };
 
 const StreamsBar: React.FC<{

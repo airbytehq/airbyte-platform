@@ -1,4 +1,4 @@
-import { useMemo, useRef } from "react";
+import { useRef } from "react";
 
 import { useConnectionStatus } from "components/connection/ConnectionStatus/useConnectionStatus";
 import { ConnectionStatusIndicatorStatus } from "components/connection/ConnectionStatusIndicator";
@@ -8,7 +8,7 @@ import {
   useLateMultiplierExperiment,
 } from "components/connection/StreamStatus/streamStatusUtils";
 
-import { useListStreamsStatuses, useGetConnection, useGetConnectionSyncProgress } from "core/api";
+import { useListStreamsStatuses, useGetConnection } from "core/api";
 import { StreamStatusJobType, StreamStatusRead } from "core/api/types/AirbyteClient";
 import { useSchemaChanges } from "hooks/connection/useSchemaChanges";
 import { useExperiment } from "hooks/services/Experiment";
@@ -18,6 +18,7 @@ import {
   computeStreamStatus,
   getStreamKey,
 } from "./computeStreamStatus";
+import { useStreamsSyncProgress } from "./useStreamsSyncProgress";
 
 const createEmptyStreamsStatuses = (): ReturnType<typeof useListStreamsStatuses> => ({ streamStatuses: [] });
 
@@ -45,7 +46,6 @@ export const useStreamsStatuses = (
   const { current: useStreamStatusesFunction } = useRef(
     doUseStreamStatuses ? useListStreamsStatuses : createEmptyStreamsStatuses
   );
-
   const data = useStreamStatusesFunction({ connectionId });
 
   const connection = useGetConnection(connectionId);
@@ -56,33 +56,15 @@ export const useStreamsStatuses = (
   const connectionStatus = useConnectionStatus(connectionId);
   const isConnectionDisabled = connectionStatus.status === ConnectionStatusIndicatorStatus.Disabled;
 
-  const { data: connectionSyncProgress } = useGetConnectionSyncProgress(
-    connectionId,
-    showSyncProgress && connectionStatus.isRunning
-  );
-
-  const syncProgressMap = useMemo(() => {
-    if (connectionStatus.isRunning !== true) {
-      return new Map();
-    }
-
-    return new Map(
-      connectionSyncProgress?.streams.map((stream) => [
-        getStreamKey({
-          name: stream.streamName,
-          namespace: stream.streamNamespace ?? "",
-        }),
-        stream,
-      ])
-    );
-  }, [connectionStatus.isRunning, connectionSyncProgress?.streams]);
+  // TODO: Ideally we can pull this from the stream status endpoint directly once the "pending" status has been updated to reflect the correct status
+  // for now, we'll use this
+  const syncProgressMap = useStreamsSyncProgress(connectionId, connectionStatus.isRunning, showSyncProgress);
 
   const enabledStreams: AirbyteStreamAndConfigurationWithEnforcedStream[] = connection.syncCatalog.streams.filter(
     (stream) =>
       (showSyncProgress && !!stream.stream && syncProgressMap.has(getStreamKey(stream.stream))) ||
       (stream.config?.selected && stream.stream)
   ) as AirbyteStreamAndConfigurationWithEnforcedStream[];
-
   const streamStatuses = new Map<string, StreamWithStatus>();
 
   if (data.streamStatuses) {
@@ -101,23 +83,19 @@ export const useStreamsStatuses = (
     enabledStreams.forEach((enabledStream) => {
       const streamKey = getStreamKey(enabledStream.stream);
       const syncProgressItem = syncProgressMap.get(streamKey);
-
       const streamStatus: StreamWithStatus = {
         streamName: enabledStream.stream.name,
         streamNamespace: enabledStream.stream.namespace === "" ? undefined : enabledStream.stream.namespace,
         status: isConnectionDisabled
           ? ConnectionStatusIndicatorStatus.Disabled
-          : showSyncProgress && !!syncProgressItem
-          ? ConnectionStatusIndicatorStatus.Queued
           : ConnectionStatusIndicatorStatus.Pending,
         isRunning: false,
         relevantHistory: [],
-        recordsLoaded: syncProgressItem?.recordsCommitted,
-        recordsExtracted: syncProgressItem?.recordsEmitted,
       };
 
       if (!hasPerStreamStatuses) {
         streamStatus.status = connectionStatus.status;
+        streamStatus.isRunning = showSyncProgress ? !!syncProgressItem : connectionStatus.isRunning;
         streamStatus.isRunning = showSyncProgress ? !!syncProgressItem : connectionStatus.isRunning;
         streamStatus.lastSuccessfulSyncAt = connectionStatus.lastSuccessfulSync
           ? connectionStatus.lastSuccessfulSync * 1000 // unix timestamp in seconds -> milliseconds
@@ -136,7 +114,6 @@ export const useStreamsStatuses = (
           mappedStreamStatus.relevantHistory.push(streamStatus);
         }
       });
-
       // compute the final status for each stream
       enabledStreams.forEach((enabledStream) => {
         const streamKey = getStreamKey(enabledStream.stream);
@@ -152,17 +129,18 @@ export const useStreamsStatuses = (
             lateMultiplier,
             errorMultiplier,
             showSyncProgress,
-            isSyncing: (showSyncProgress && !!syncProgressMap.get(streamKey)) || false,
-            recordsLoaded: syncProgressMap.get(streamKey)?.recordsCommitted,
+            isSyncing: showSyncProgress && !!syncProgressMap.get(streamKey) ? true : false,
             recordsExtracted: syncProgressMap.get(streamKey)?.recordsEmitted,
           });
 
           if (detectedStatus.status != null) {
             mappedStreamStatus.status = detectedStatus.status;
           }
-          mappedStreamStatus.isRunning = detectedStatus.isRunning;
+          mappedStreamStatus.isRunning =
+            detectedStatus.status === ConnectionStatusIndicatorStatus.Syncing ||
+            detectedStatus.status === ConnectionStatusIndicatorStatus.Queued;
+
           mappedStreamStatus.lastSuccessfulSyncAt = detectedStatus.lastSuccessfulSync?.transitionedAt;
-          mappedStreamStatus.streamSyncStartedAt = detectedStatus.streamSyncStartedAt;
         }
       });
     }

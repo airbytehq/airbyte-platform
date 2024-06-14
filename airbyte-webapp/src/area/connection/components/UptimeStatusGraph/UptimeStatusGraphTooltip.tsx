@@ -20,17 +20,13 @@ type PresentingStatuses =
   | ConnectionStatusIndicatorStatus.OnTime
   | ConnectionStatusIndicatorStatus.Late
   | ConnectionStatusIndicatorStatus.Error
-  | ConnectionStatusIndicatorStatus.ActionRequired
-  | ConnectionStatusIndicatorStatus.Syncing
-  | ConnectionStatusIndicatorStatus.Queued;
+  | ConnectionStatusIndicatorStatus.ActionRequired;
 
 const MESSAGE_BY_STATUS: Readonly<Record<PresentingStatuses, string>> = {
   onTime: "connection.overview.graph.uptimeStatus.onTime",
   late: "connection.overview.graph.uptimeStatus.late",
   error: "connection.overview.graph.uptimeStatus.error",
   actionRequired: "connection.overview.graph.uptimeStatus.actionRequired",
-  syncing: "connection.overview.graph.uptimeStatus.syncing",
-  queued: "connection.overview.graph.uptimeStatus.queued",
 };
 
 export const UptimeStatusGraphTooltip: ContentType<number, string> = ({ active, payload }) => {
@@ -53,9 +49,15 @@ export const UptimeStatusGraphTooltip: ContentType<number, string> = ({ active, 
 
       if (status === ConnectionStatusIndicatorStatus.OnTrack) {
         status = ConnectionStatusIndicatorStatus.OnTime;
-      } else if (status === ConnectionStatusIndicatorStatus.Pending) {
-        return acc;
-      } else if (status === ConnectionStatusIndicatorStatus.Disabled) {
+      } else if (
+        status === ConnectionStatusIndicatorStatus.Pending ||
+        status === ConnectionStatusIndicatorStatus.Syncing ||
+        status === ConnectionStatusIndicatorStatus.Clearing ||
+        status === ConnectionStatusIndicatorStatus.Refreshing ||
+        status === ConnectionStatusIndicatorStatus.QueuedForNextSync ||
+        status === ConnectionStatusIndicatorStatus.Queued ||
+        status === ConnectionStatusIndicatorStatus.Disabled
+      ) {
         return acc;
       }
       acc[status].push(stream);
@@ -67,8 +69,6 @@ export const UptimeStatusGraphTooltip: ContentType<number, string> = ({ active, 
       [ConnectionStatusIndicatorStatus.Late]: [],
       [ConnectionStatusIndicatorStatus.Error]: [],
       [ConnectionStatusIndicatorStatus.ActionRequired]: [],
-      [ConnectionStatusIndicatorStatus.Syncing]: [],
-      [ConnectionStatusIndicatorStatus.Queued]: [],
     }
   );
 
