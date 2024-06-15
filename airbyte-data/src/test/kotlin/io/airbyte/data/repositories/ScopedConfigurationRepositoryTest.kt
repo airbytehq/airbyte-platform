@@ -6,6 +6,7 @@ import io.airbyte.db.instance.configs.jooq.generated.enums.ConfigResourceType
 import io.airbyte.db.instance.configs.jooq.generated.enums.ConfigScopeType
 import io.micronaut.data.exceptions.DataAccessException
 import io.micronaut.test.extensions.junit5.annotation.MicronautTest
+import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 import java.sql.Date
@@ -13,9 +14,14 @@ import java.time.LocalDate
 import java.util.UUID
 
 @MicronautTest
-internal class ScopedConfigurationRepositoryTest : AbstractConfigRepositoryTest<ScopedConfigurationRepository>(ScopedConfigurationRepository::class) {
+internal class ScopedConfigurationRepositoryTest : AbstractConfigRepositoryTest() {
   companion object {
     const val CONFIG_KEY = "config_key"
+  }
+
+  @AfterEach
+  fun tearDown() {
+    scopedConfigurationRepository.deleteAll()
   }
 
   @Test
@@ -37,10 +43,10 @@ internal class ScopedConfigurationRepositoryTest : AbstractConfigRepositoryTest<
         expiresAt = Date.valueOf("2021-01-01"),
       )
 
-    repository.save(config)
-    assert(repository.count() == 1L)
+    scopedConfigurationRepository.save(config)
+    assert(scopedConfigurationRepository.count() == 1L)
 
-    val persistedConfig = repository.findById(configId).get()
+    val persistedConfig = scopedConfigurationRepository.findById(configId).get()
 
     assert(persistedConfig.id == configId)
     assert(persistedConfig.key == config.key)
@@ -75,15 +81,15 @@ internal class ScopedConfigurationRepositoryTest : AbstractConfigRepositoryTest<
         description = "my_description",
       )
 
-    repository.save(config)
-    val persistedConfig = repository.findById(configId)
+    scopedConfigurationRepository.save(config)
+    val persistedConfig = scopedConfigurationRepository.findById(configId)
     assert(persistedConfig.get().value == initialValue)
 
     val newValue = "new_config_value"
     config.value = newValue
-    repository.update(config)
+    scopedConfigurationRepository.update(config)
 
-    val updatedConfig = repository.findById(configId)
+    val updatedConfig = scopedConfigurationRepository.findById(configId)
     assert(updatedConfig.get().value == newValue)
   }
 
@@ -104,11 +110,11 @@ internal class ScopedConfigurationRepositoryTest : AbstractConfigRepositoryTest<
         description = "my_description",
       )
 
-    repository.save(config)
-    assert(repository.count() == 1L)
+    scopedConfigurationRepository.save(config)
+    assert(scopedConfigurationRepository.count() == 1L)
 
-    repository.deleteById(configId)
-    assert(repository.count() == 0L)
+    scopedConfigurationRepository.deleteById(configId)
+    assert(scopedConfigurationRepository.count() == 0L)
   }
 
   @Test
@@ -155,15 +161,15 @@ internal class ScopedConfigurationRepositoryTest : AbstractConfigRepositoryTest<
         description = "my_description",
       )
 
-    repository.saveAll(listOf(config, config2, config3))
-    assert(repository.count() == 3L)
+    scopedConfigurationRepository.saveAll(listOf(config, config2, config3))
+    assert(scopedConfigurationRepository.count() == 3L)
 
-    repository.deleteByIdInList(listOf(config.id, config2.id))
-    assert(repository.count() == 1L)
+    scopedConfigurationRepository.deleteByIdInList(listOf(config.id, config2.id))
+    assert(scopedConfigurationRepository.count() == 1L)
 
-    assert(repository.findById(config3.id).isPresent)
-    assert(repository.findById(config2.id).isEmpty)
-    assert(repository.findById(config.id).isEmpty)
+    assert(scopedConfigurationRepository.findById(config3.id).isPresent)
+    assert(scopedConfigurationRepository.findById(config2.id).isEmpty)
+    assert(scopedConfigurationRepository.findById(config.id).isEmpty)
   }
 
   @Test
@@ -183,8 +189,8 @@ internal class ScopedConfigurationRepositoryTest : AbstractConfigRepositoryTest<
         expiresAt = Date.valueOf(LocalDate.now()),
       )
 
-    repository.save(config)
-    assert(repository.count() == 1L)
+    scopedConfigurationRepository.save(config)
+    assert(scopedConfigurationRepository.count() == 1L)
 
     val config2 =
       ScopedConfiguration(
@@ -200,7 +206,7 @@ internal class ScopedConfigurationRepositoryTest : AbstractConfigRepositoryTest<
         description = "description goes here",
       )
 
-    assertThrows<DataAccessException> { repository.save(config2) }
+    assertThrows<DataAccessException> { scopedConfigurationRepository.save(config2) }
   }
 
   @Test
@@ -221,11 +227,11 @@ internal class ScopedConfigurationRepositoryTest : AbstractConfigRepositoryTest<
         expiresAt = Date.valueOf(LocalDate.now()),
       )
 
-    repository.save(config)
-    assert(repository.count() == 1L)
+    scopedConfigurationRepository.save(config)
+    assert(scopedConfigurationRepository.count() == 1L)
 
     val persistedConfig =
-      repository.getByKeyAndResourceTypeAndResourceIdAndScopeTypeAndScopeId(
+      scopedConfigurationRepository.getByKeyAndResourceTypeAndResourceIdAndScopeTypeAndScopeId(
         config.key,
         config.resourceType,
         config.resourceId,
@@ -239,7 +245,7 @@ internal class ScopedConfigurationRepositoryTest : AbstractConfigRepositoryTest<
   @Test
   fun `test db get non-existent config by resource, scope, and key returns null`() {
     val persistedConfig =
-      repository.getByKeyAndResourceTypeAndResourceIdAndScopeTypeAndScopeId(
+      scopedConfigurationRepository.getByKeyAndResourceTypeAndResourceIdAndScopeTypeAndScopeId(
         CONFIG_KEY,
         ConfigResourceType.actor_definition,
         UUID.randomUUID(),
@@ -267,7 +273,7 @@ internal class ScopedConfigurationRepositoryTest : AbstractConfigRepositoryTest<
         expiresAt = Date.valueOf(LocalDate.now()),
       )
 
-    repository.save(config)
+    scopedConfigurationRepository.save(config)
 
     val config2 =
       ScopedConfiguration(
@@ -284,7 +290,7 @@ internal class ScopedConfigurationRepositoryTest : AbstractConfigRepositoryTest<
         expiresAt = Date.valueOf(LocalDate.now()),
       )
 
-    repository.save(config2)
+    scopedConfigurationRepository.save(config2)
 
     val otherConfig =
       ScopedConfiguration(
@@ -301,10 +307,10 @@ internal class ScopedConfigurationRepositoryTest : AbstractConfigRepositoryTest<
         expiresAt = Date.valueOf(LocalDate.now()),
       )
 
-    repository.save(otherConfig)
-    assert(repository.count() == 3L)
+    scopedConfigurationRepository.save(otherConfig)
+    assert(scopedConfigurationRepository.count() == 3L)
 
-    val persistedConfigs = repository.findByKey(config.key)
+    val persistedConfigs = scopedConfigurationRepository.findByKey(config.key)
     assert(persistedConfigs.size == 2)
 
     val persistedIds = persistedConfigs.map { it.id }
@@ -312,7 +318,7 @@ internal class ScopedConfigurationRepositoryTest : AbstractConfigRepositoryTest<
     assert(persistedIds.containsAll(listOf(configId, config2.id)))
     assert(persistedIds.contains(otherConfig.id).not())
 
-    val persistedConfigs2 = repository.findByKey(otherConfig.key)
+    val persistedConfigs2 = scopedConfigurationRepository.findByKey(otherConfig.key)
     assert(persistedConfigs2.size == 1)
 
     val persistedIds2 = persistedConfigs2.map { it.id }
@@ -338,7 +344,7 @@ internal class ScopedConfigurationRepositoryTest : AbstractConfigRepositoryTest<
         origin = UUID.randomUUID().toString(),
       )
 
-    repository.save(config)
+    scopedConfigurationRepository.save(config)
 
     val config2 =
       ScopedConfiguration(
@@ -353,7 +359,7 @@ internal class ScopedConfigurationRepositoryTest : AbstractConfigRepositoryTest<
         origin = UUID.randomUUID().toString(),
       )
 
-    repository.save(config2)
+    scopedConfigurationRepository.save(config2)
 
     val otherConfig =
       ScopedConfiguration(
@@ -368,7 +374,7 @@ internal class ScopedConfigurationRepositoryTest : AbstractConfigRepositoryTest<
         origin = UUID.randomUUID().toString(),
       )
 
-    repository.save(otherConfig)
+    scopedConfigurationRepository.save(otherConfig)
 
     val otherConfig2 =
       ScopedConfiguration(
@@ -383,11 +389,11 @@ internal class ScopedConfigurationRepositoryTest : AbstractConfigRepositoryTest<
         origin = UUID.randomUUID().toString(),
       )
 
-    repository.save(otherConfig2)
-    assert(repository.count() == 4L)
+    scopedConfigurationRepository.save(otherConfig2)
+    assert(scopedConfigurationRepository.count() == 4L)
 
     val findConfigsResult =
-      repository.findByKeyAndResourceTypeAndResourceIdAndScopeTypeAndScopeIdInList(
+      scopedConfigurationRepository.findByKeyAndResourceTypeAndResourceIdAndScopeTypeAndScopeIdInList(
         CONFIG_KEY,
         ConfigResourceType.actor_definition,
         resourceId,
@@ -417,7 +423,7 @@ internal class ScopedConfigurationRepositoryTest : AbstractConfigRepositoryTest<
         origin = originA,
       )
 
-    repository.save(config)
+    scopedConfigurationRepository.save(config)
 
     val config2 =
       ScopedConfiguration(
@@ -432,7 +438,7 @@ internal class ScopedConfigurationRepositoryTest : AbstractConfigRepositoryTest<
         origin = originA,
       )
 
-    repository.save(config2)
+    scopedConfigurationRepository.save(config2)
 
     val originB = UUID.randomUUID().toString()
     val config3 =
@@ -448,7 +454,7 @@ internal class ScopedConfigurationRepositoryTest : AbstractConfigRepositoryTest<
         origin = originB,
       )
 
-    repository.save(config3)
+    scopedConfigurationRepository.save(config3)
 
     val originC = UUID.randomUUID().toString()
     val config4 =
@@ -464,11 +470,11 @@ internal class ScopedConfigurationRepositoryTest : AbstractConfigRepositoryTest<
         origin = originC,
       )
 
-    repository.save(config4)
-    assert(repository.count() == 4L)
+    scopedConfigurationRepository.save(config4)
+    assert(scopedConfigurationRepository.count() == 4L)
 
     val findConfigsResult =
-      repository.findByKeyAndResourceTypeAndResourceIdAndOriginTypeAndOriginInList(
+      scopedConfigurationRepository.findByKeyAndResourceTypeAndResourceIdAndOriginTypeAndOriginInList(
         CONFIG_KEY,
         ConfigResourceType.actor_definition,
         resourceId,
@@ -498,7 +504,7 @@ internal class ScopedConfigurationRepositoryTest : AbstractConfigRepositoryTest<
         origin = "origin",
       )
 
-    repository.save(bcConfig1)
+    scopedConfigurationRepository.save(bcConfig1)
 
     val bcConfig2 =
       ScopedConfiguration(
@@ -513,7 +519,7 @@ internal class ScopedConfigurationRepositoryTest : AbstractConfigRepositoryTest<
         origin = "origin",
       )
 
-    repository.save(bcConfig2)
+    scopedConfigurationRepository.save(bcConfig2)
 
     val bcConfigOnOtherScopeType =
       ScopedConfiguration(
@@ -528,7 +534,7 @@ internal class ScopedConfigurationRepositoryTest : AbstractConfigRepositoryTest<
         origin = "origin",
       )
 
-    repository.save(bcConfigOnOtherScopeType)
+    scopedConfigurationRepository.save(bcConfigOnOtherScopeType)
 
     val userConfig =
       ScopedConfiguration(
@@ -543,7 +549,7 @@ internal class ScopedConfigurationRepositoryTest : AbstractConfigRepositoryTest<
         origin = "origin",
       )
 
-    repository.save(userConfig)
+    scopedConfigurationRepository.save(userConfig)
 
     val valueB = "version-2"
     val bcConfig3 =
@@ -559,7 +565,7 @@ internal class ScopedConfigurationRepositoryTest : AbstractConfigRepositoryTest<
         origin = "origin2",
       )
 
-    repository.save(bcConfig3)
+    scopedConfigurationRepository.save(bcConfig3)
 
     val valueC = "version-3"
     val bcConfig4 =
@@ -575,11 +581,11 @@ internal class ScopedConfigurationRepositoryTest : AbstractConfigRepositoryTest<
         origin = "origin3",
       )
 
-    repository.save(bcConfig4)
-    assert(repository.count() == 6L)
+    scopedConfigurationRepository.save(bcConfig4)
+    assert(scopedConfigurationRepository.count() == 6L)
 
     val findConfigsResult =
-      repository.findByKeyAndResourceTypeAndResourceIdAndScopeTypeAndOriginTypeAndValueInList(
+      scopedConfigurationRepository.findByKeyAndResourceTypeAndResourceIdAndScopeTypeAndOriginTypeAndValueInList(
         CONFIG_KEY,
         ConfigResourceType.actor_definition,
         resourceId,

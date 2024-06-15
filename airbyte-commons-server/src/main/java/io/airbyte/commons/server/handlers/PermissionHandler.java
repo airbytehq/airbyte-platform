@@ -360,8 +360,8 @@ public class PermissionHandler {
     return permissionPersistence.isAuthUserInstanceAdmin(authUserId);
   }
 
-  public Boolean isUserOrganizationAdmin(final UUID userId) throws IOException {
-    return permissionPersistence.isUserOrganizationAdmin(userId);
+  public Boolean isUserOrganizationAdmin(final UUID userId, final UUID organizationId) throws IOException {
+    return permissionPersistence.isUserOrganizationAdmin(userId, organizationId);
   }
 
   /**
@@ -389,6 +389,22 @@ public class PermissionHandler {
    */
   public PermissionReadList listPermissionsByUser(final UUID userId) throws IOException {
     final List<Permission> permissions = permissionPersistence.listPermissionsByUser(userId);
+    return new PermissionReadList().permissions(permissions.stream()
+        .map(PermissionHandler::buildPermissionRead)
+        .collect(Collectors.toList()));
+  }
+
+  /**
+   * Lists the permissions by user in an organization.
+   *
+   * @param userId The user ID.
+   * @param organizationId The organization ID.
+   * @return The permissions for the given user in the given organization.
+   * @throws IOException if unable to retrieve the permissions for the user.
+   * @throws JsonValidationException if unable to retrieve the permissions for the user.
+   */
+  public PermissionReadList listPermissionsByUserInAnOrganization(final UUID userId, final UUID organizationId) throws IOException {
+    final List<Permission> permissions = permissionPersistence.listPermissionsByUserInAnOrganization(userId, organizationId);
     return new PermissionReadList().permissions(permissions.stream()
         .map(PermissionHandler::buildPermissionRead)
         .collect(Collectors.toList()));

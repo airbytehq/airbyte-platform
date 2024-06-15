@@ -4,6 +4,7 @@
 
 package io.airbyte.config.persistence;
 
+import static io.airbyte.config.persistence.OrganizationPersistence.DEFAULT_ORGANIZATION_ID;
 import static org.mockito.Mockito.mock;
 
 import io.airbyte.config.Organization;
@@ -227,10 +228,10 @@ class PermissionPersistenceTest extends BaseConfigDatabaseTest {
     // In MockData we have a user with userId(CREATOR_USER_ID_1), default workspace (WORKSPACE_ID_1)
     // which is in organization(DEFAULT_ORGANIZATION_ID)
     // also we have a permission(CREATOR_USER_ID_1, DEFAULT_ORGANIZATION_ID, ORGANIZATION_ADMIN)
-    Assertions.assertTrue(permissionPersistence.isUserOrganizationAdmin(MockData.CREATOR_USER_ID_1));
+    Assertions.assertTrue(permissionPersistence.isUserOrganizationAdmin(MockData.CREATOR_USER_ID_1, DEFAULT_ORGANIZATION_ID));
 
     // In MockData, user(CREATOR_USER_ID_2) does not have an org_admin permission, so should be false
-    Assertions.assertFalse(permissionPersistence.isUserOrganizationAdmin(MockData.CREATOR_USER_ID_2));
+    Assertions.assertFalse(permissionPersistence.isUserOrganizationAdmin(MockData.CREATOR_USER_ID_2, DEFAULT_ORGANIZATION_ID));
   }
 
 }

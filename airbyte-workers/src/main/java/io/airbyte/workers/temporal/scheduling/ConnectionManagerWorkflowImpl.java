@@ -222,6 +222,9 @@ public class ConnectionManagerWorkflowImpl implements ConnectionManagerWorkflow 
       log.error("The connection update workflow has failed, will create a new attempt.", e);
       reportFailure(connectionUpdaterInput, null, FailureCause.UNKNOWN);
       prepareForNextRunAndContinueAsNew(connectionUpdaterInput);
+
+      // Add the exception to the span, as it represents a platform failure
+      ApmTraceUtils.addExceptionToTrace(e);
     }
   }
 

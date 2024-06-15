@@ -50,6 +50,7 @@ export const Builder: React.FC<BuilderProps> = ({ hasMultipleStreams }) => {
     blockedOnInvalidState,
     updateJsonManifest,
     setFormValuesValid,
+    setFormValuesDirty,
     undoRedo: { registerChange },
   } = useConnectorBuilderFormState();
   const formValues = useBuilderWatch("formValues");
@@ -64,13 +65,15 @@ export const Builder: React.FC<BuilderProps> = ({ hasMultipleStreams }) => {
         registerChange(cloneDeep(values));
         setFormValuesValid(builderFormValidationSchema.isValidSync(values));
         updateJsonManifest(convertToManifest(cleanFormValues(values, builderFormValidationSchema)));
+        setFormValuesDirty(false);
       }, 500),
-    [builderFormValidationSchema, registerChange, setFormValuesValid, updateJsonManifest]
+    [builderFormValidationSchema, registerChange, setFormValuesDirty, setFormValuesValid, updateJsonManifest]
   );
 
   useEffect(() => {
+    setFormValuesDirty(true);
     debouncedUpdateJsonManifest(formValues);
-  }, [debouncedUpdateJsonManifest, formValues]);
+  }, [debouncedUpdateJsonManifest, formValues, setFormValuesDirty]);
 
   const selectedView = useMemo(
     () =>

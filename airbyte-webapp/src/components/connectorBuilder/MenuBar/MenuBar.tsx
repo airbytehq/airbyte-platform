@@ -1,4 +1,5 @@
 import React from "react";
+import { useHotkeys } from "react-hotkeys-hook";
 import { FormattedMessage } from "react-intl";
 
 import { Button } from "components/ui/Button";
@@ -17,6 +18,7 @@ import { HelpDropdown } from "views/layout/SideBar/components/HelpDropdown";
 import { DownloadYamlButton } from "./DownloadYamlButton";
 import styles from "./MenuBar.module.scss";
 import { PublishButton } from "./PublishButton";
+import { HotkeyLabel, getCtrlOrCmdKey } from "../HotkeyLabel";
 import { NameInput } from "../NameInput";
 import { useBuilderWatch } from "../types";
 
@@ -25,6 +27,24 @@ export const MenuBar: React.FC = () => {
     undoRedo: { canUndo, canRedo, undo, redo },
   } = useConnectorBuilderFormState();
   const mode = useBuilderWatch("mode");
+
+  useHotkeys(
+    ["ctrl+z", "meta+z"],
+    (event) => {
+      event.preventDefault();
+      undo();
+    },
+    { enableOnFormTags: ["input", "textarea", "select"] }
+  );
+
+  useHotkeys(
+    ["ctrl+shift+z", "meta+shift+z"],
+    (event) => {
+      event.preventDefault();
+      redo();
+    },
+    { enableOnFormTags: ["input", "textarea", "select"] }
+  );
 
   return (
     <FlexContainer direction="row" alignItems="center" gap="2xl" className={styles.container}>
@@ -51,25 +71,43 @@ export const MenuBar: React.FC = () => {
         </FlexContainer>
         {mode === "ui" && (
           <FlexContainer direction="row" alignItems="center" gap="sm">
-            <Button
-              className={styles.undoButton}
-              variant="clearDark"
-              size="xs"
-              icon="rotate"
-              iconSize="md"
-              type="button"
-              disabled={!canUndo}
-              onClick={undo}
-            />
-            <Button
-              variant="clearDark"
-              size="xs"
-              icon="rotate"
-              iconSize="md"
-              type="button"
-              disabled={!canRedo}
-              onClick={redo}
-            />
+            <Tooltip
+              control={
+                <Button
+                  className={styles.undoButton}
+                  variant="clearDark"
+                  size="xs"
+                  icon="rotate"
+                  iconSize="md"
+                  type="button"
+                  disabled={!canUndo}
+                  onClick={undo}
+                />
+              }
+            >
+              <FlexContainer direction="column" gap="md" alignItems="center">
+                <FormattedMessage id="connectorBuilder.undo" />
+                <HotkeyLabel keys={[getCtrlOrCmdKey(), "Z"]} />
+              </FlexContainer>
+            </Tooltip>
+            <Tooltip
+              control={
+                <Button
+                  variant="clearDark"
+                  size="xs"
+                  icon="rotate"
+                  iconSize="md"
+                  type="button"
+                  disabled={!canRedo}
+                  onClick={redo}
+                />
+              }
+            >
+              <FlexContainer direction="column" gap="md" alignItems="center">
+                <FormattedMessage id="connectorBuilder.redo" />
+                <HotkeyLabel keys={[getCtrlOrCmdKey(), "Shift", "Z"]} />
+              </FlexContainer>
+            </Tooltip>
           </FlexContainer>
         )}
       </FlexContainer>

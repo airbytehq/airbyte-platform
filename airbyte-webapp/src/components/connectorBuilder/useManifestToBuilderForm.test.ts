@@ -11,7 +11,6 @@ import {
   SimpleRetrieverPaginator,
   Spec,
 } from "core/api/types/ConnectorManifest";
-import { removeEmptyProperties } from "core/utils/form";
 
 import {
   manifestAuthenticatorToBuilder,
@@ -485,7 +484,7 @@ describe("Conversion throws error when", () => {
 describe("Conversion successfully results in", () => {
   it("default values if manifest is empty", async () => {
     const formValues = await convertToBuilderFormValues(noOpResolve, baseManifest, DEFAULT_CONNECTOR_NAME);
-    expect(formValues).toEqual(removeEmptyProperties(DEFAULT_BUILDER_FORM_VALUES));
+    expect(formValues).toEqual(DEFAULT_BUILDER_FORM_VALUES);
   });
 
   it("spec properties converted to inputs if no streams present", async () => {

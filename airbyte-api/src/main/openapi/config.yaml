@@ -6160,6 +6160,13 @@ paths:
             type: string
           in: query
           required: false # if not provided in the request, userId will be the current user's ID by default
+        - name: organizationId
+          description: This is required if you want to read someone else's permissions, and you should have organization admin or a higher role.
+          schema:
+            format: UUID
+            type: string
+          in: query
+          required: false # if the request is to get self permissions, this input can be ignored
       responses:
         "200":
           content:
@@ -6215,6 +6222,30 @@ paths:
       summary: Create a permission
       x-sdk-entity-operation: Permission#create
 
+  # Public APIs - Organizations
+  /public/v1/organizations:
+    get:
+      tags:
+        - public_organizations
+        - public
+        - Organizations
+      summary: List all organizations for a user
+      description: Lists users organizations.
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OrganizationsResponse"
+          description: List user's organizations.
+        "403":
+          description: Not allowed
+        "404":
+          description: Not found
+      operationId: publicListOrganizationsForUser
+      x-sdk-alias: listOrganizationsForUser
+      x-sdk-group: Organizations
+
   # Public APIs - Users
   /public/v1/users:
     get:
@@ -6222,11 +6253,17 @@ paths:
         - public_users
         - public
         - Users
-      summary: List users
+      summary: List all users within an organization
       description:
-        Lists users based on provided filters. You can filter on either a list of IDs or a list of emails, but not both.
-        If no filters provided we will list all users by default.
+        Organization Admin user can list all users within the same organization.
+        Also provide filtering on a list of user IDs or/and a list of user emails.
       parameters:
+        - in: query
+          name: organizationId
+          schema:
+            type: string
+            format: UUID
+          required: true
         - in: query
           name: ids
           schema:
@@ -6243,11 +6280,6 @@ paths:
               type: string
               format: email
           description: List of user emails to filter by
-        - in: query
-          name: organizationId
-          schema:
-            type: string
-            format: UUID
       responses:
         "200":
           content:
@@ -6259,8 +6291,8 @@ paths:
           description: Not allowed
         "404":
           description: Not found
-      operationId: publicListUsers
-      x-sdk-alias: listUsers
+      operationId: publicListUsersWithinAnOrganization
+      x-sdk-alias: listUsersWithinAnOrganization
       x-sdk-group: Users
 
 components:
@@ -12553,16 +12585,17 @@ components:
     # Public APIs - Users
     UserResponse:
       title: Root Type for UserResponse
-      description: Provides details of a single user.
+      description: Provides details of a single user in an organization.
       type: object
       required:
-        - userId
+        - id
+        - name
         - email
       properties:
         name:
           description: Name of the user
           type: string
-        userId:
+        id:
           $ref: "#/components/schemas/UserId"
         email:
           type: string
@@ -12573,7 +12606,7 @@ components:
 
     UsersResponse:
       title: Root Type for UsersResponse
-      description: List/Array of multiple users
+      description: List/Array of multiple users in an organization
       required:
         - data
       type: object
@@ -12682,6 +12715,39 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/PermissionResponseRead"
+      x-sdk-component: true
+
+    # Public APIs - Organizations
+    OrganizationResponse:
+      title: Root Type for OrganizationResponse
+      description: Provides details of a single organization for a user.
+      type: object
+      required:
+        - organizationId
+        - organizationName
+        - email
+      properties:
+        organizationId:
+          $ref: "#/components/schemas/OrganizationId"
+        organizationName:
+          type: string
+        email:
+          type: string
+          format: email
+      x-sdk-param-suppress-computed-diff: true
+      x-sdk-component: true
+
+    OrganizationsResponse:
+      title: Root Type for OrganizationsResponse
+      description: List/Array of multiple organizations.
+      required:
+        - data
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/OrganizationResponse"
       x-sdk-component: true
 
     ConnectionsResponse:

@@ -151,9 +151,9 @@ public class UserHandler {
    *
    * @param userIdRequestBody The internal user id to be queried.
    * @return The user.
-   * @throws ConfigNotFoundException if unable to create the new user.
-   * @throws IOException if unable to create the new user.
-   * @throws JsonValidationException if unable to create the new user.
+   * @throws ConfigNotFoundException if unable to get the user.
+   * @throws IOException if unable to get the user.
+   * @throws JsonValidationException if unable to get the user.
    */
   public UserRead getUser(final UserIdRequestBody userIdRequestBody) throws JsonValidationException, ConfigNotFoundException, IOException {
     return buildUserRead(userIdRequestBody.getUserId());

@@ -15,6 +15,7 @@ import io.airbyte.commons.server.support.CurrentUserService
 import io.airbyte.publicApi.server.generated.apis.PublicPermissionsApi
 import io.airbyte.publicApi.server.generated.models.PermissionCreateRequest
 import io.airbyte.publicApi.server.generated.models.PermissionUpdateRequest
+import io.airbyte.publicApi.server.generated.models.PermissionsResponse
 import io.airbyte.server.apis.publicapi.apiTracking.TrackingHelper
 import io.airbyte.server.apis.publicapi.constants.API_PATH
 import io.airbyte.server.apis.publicapi.constants.DELETE
@@ -35,7 +36,7 @@ import java.util.UUID
 
 @Controller(API_PATH)
 @Secured(SecurityRule.IS_AUTHENTICATED)
-open class PermissionController(
+open class PermissionsController(
   private val permissionService: PermissionService,
   private val trackingHelper: TrackingHelper,
   private val apiAuthorizationHelper: ApiAuthorizationHelper,
@@ -144,25 +145,49 @@ open class PermissionController(
   }
 
   @ExecuteOn(AirbyteTaskExecutors.PUBLIC_API)
-  override fun publicListPermissionsByUserId(userId: String?): Response {
+  override fun publicListPermissionsByUserId(
+    userId: String?,
+    organizationId: String?,
+  ): Response {
     val currentUserId: UUID = currentUserService.currentUser.userId
     val permissionUserId = userId?.let { UUID.fromString(userId) } ?: currentUserId // if userId is not provided, then use current user ID by default
-    // auth check before processing the request
+    val permissionsResponse: PermissionsResponse
+    // get someone else's permissions
     if (currentUserId != permissionUserId) {
-      // then current user has to be organization_admin to access another user's permissions
-      // (assuming all users are in the same organization)
-      apiAuthorizationHelper.isUserOrganizationAdminOrThrow(currentUserId)
+      if (organizationId == null) {
+        val badRequestProblem =
+          BadRequestProblem(ProblemMessageData().message("Organization ID is required when getting someone else's permissions."))
+        trackingHelper.trackFailuresIfAny(
+          PERMISSIONS_PATH,
+          POST,
+          currentUserId,
+          badRequestProblem,
+        )
+        throw badRequestProblem
+      }
+      // Make sure current user has to be organization_admin to access another user's permissions.
+      apiAuthorizationHelper.isUserOrganizationAdminOrThrow(currentUserId, UUID.fromString(organizationId))
+      permissionsResponse =
+        trackingHelper.callWithTracker(
+          {
+            permissionService.getPermissionsByUserInAnOrganization(permissionUserId, UUID.fromString(organizationId))
+          },
+          PERMISSIONS_PATH,
+          GET,
+          currentUserId,
+        )
+    } else {
+      // Get all self permissions, ignoring the input `organizationId`.
+      permissionsResponse =
+        trackingHelper.callWithTracker(
+          {
+            permissionService.getPermissionsByUserId(permissionUserId)
+          },
+          PERMISSIONS_PATH,
+          GET,
+          currentUserId,
+        )
     }
-    // process and monitor the request
-    val permissionsResponse =
-      trackingHelper.callWithTracker(
-        {
-          permissionService.getPermissionsByUserId(permissionUserId)
-        },
-        PERMISSIONS_PATH,
-        GET,
-        currentUserId,
-      )
     return Response
       .status(Response.Status.OK.statusCode)
       .entity(permissionsResponse)

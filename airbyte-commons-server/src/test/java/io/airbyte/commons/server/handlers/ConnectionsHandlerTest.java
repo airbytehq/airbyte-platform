@@ -36,6 +36,8 @@ import io.airbyte.api.model.generated.ConnectionAutoPropagateSchemaChange;
 import io.airbyte.api.model.generated.ConnectionCreate;
 import io.airbyte.api.model.generated.ConnectionDataHistoryReadItem;
 import io.airbyte.api.model.generated.ConnectionDataHistoryRequestBody;
+import io.airbyte.api.model.generated.ConnectionLastJobPerStreamReadItem;
+import io.airbyte.api.model.generated.ConnectionLastJobPerStreamRequestBody;
 import io.airbyte.api.model.generated.ConnectionRead;
 import io.airbyte.api.model.generated.ConnectionReadList;
 import io.airbyte.api.model.generated.ConnectionSchedule;
@@ -48,6 +50,7 @@ import io.airbyte.api.model.generated.ConnectionSearch;
 import io.airbyte.api.model.generated.ConnectionStatus;
 import io.airbyte.api.model.generated.ConnectionStatusRead;
 import io.airbyte.api.model.generated.ConnectionStatusesRequestBody;
+import io.airbyte.api.model.generated.ConnectionStream;
 import io.airbyte.api.model.generated.ConnectionStreamHistoryReadItem;
 import io.airbyte.api.model.generated.ConnectionStreamHistoryRequestBody;
 import io.airbyte.api.model.generated.ConnectionUpdate;
@@ -69,6 +72,7 @@ import io.airbyte.api.model.generated.SchemaChangeBackfillPreference;
 import io.airbyte.api.model.generated.SelectedFieldInfo;
 import io.airbyte.api.model.generated.SourceSearch;
 import io.airbyte.api.model.generated.StreamDescriptor;
+import io.airbyte.api.model.generated.StreamStats;
 import io.airbyte.api.model.generated.StreamTransform;
 import io.airbyte.api.model.generated.StreamTransformUpdateStream;
 import io.airbyte.api.model.generated.SyncMode;
@@ -136,6 +140,7 @@ import io.airbyte.data.helpers.ActorDefinitionVersionUpdater;
 import io.airbyte.data.services.DestinationService;
 import io.airbyte.data.services.SecretPersistenceConfigService;
 import io.airbyte.data.services.SourceService;
+import io.airbyte.data.services.StreamStatsService;
 import io.airbyte.data.services.WorkspaceService;
 import io.airbyte.featureflag.TestClient;
 import io.airbyte.persistence.job.JobNotifier;
@@ -258,6 +263,7 @@ class ConnectionsHandlerTest {
   private CatalogGenerationSetter catalogGenerationSetter;
   private CatalogValidator catalogValidator;
   private NotificationHelper notificationHelper;
+  private StreamStatsService streamStatsService;
 
   @SuppressWarnings("unchecked")
   @BeforeEach
@@ -364,6 +370,7 @@ class ConnectionsHandlerTest {
     workspaceService = mock(WorkspaceService.class);
     secretPersistenceConfigService = mock(SecretPersistenceConfigService.class);
     actorDefinitionHandlerHelper = mock(ActorDefinitionHandlerHelper.class);
+    streamStatsService = mock(StreamStatsService.class);
 
     featureFlagClient = mock(TestClient.class);
 
@@ -429,7 +436,8 @@ class ConnectionsHandlerTest {
           streamGenerationRepository,
           catalogGenerationSetter,
           catalogValidator,
-          notificationHelper);
+          notificationHelper,
+          streamStatsService);
 
       when(uuidGenerator.get()).thenReturn(standardSync.getConnectionId());
       final StandardSourceDefinition sourceDefinition = new StandardSourceDefinition()
@@ -1679,7 +1687,8 @@ class ConnectionsHandlerTest {
           streamGenerationRepository,
           catalogGenerationSetter,
           catalogValidator,
-          notificationHelper);
+          notificationHelper,
+          streamStatsService);
     }
 
     private Attempt generateMockAttempt(final Instant attemptTime, final long recordsSynced) {
@@ -1928,7 +1937,8 @@ class ConnectionsHandlerTest {
           streamGenerationRepository,
           catalogGenerationSetter,
           catalogValidator,
-          notificationHelper);
+          notificationHelper,
+          streamStatsService);
     }
 
     @Test
@@ -2426,7 +2436,8 @@ class ConnectionsHandlerTest {
           streamGenerationRepository,
           catalogGenerationSetter,
           catalogValidator,
-          notificationHelper);
+          notificationHelper,
+          streamStatsService);
     }
 
     @Test
@@ -2505,6 +2516,164 @@ class ConnectionsHandlerTest {
       assertEquals(expectedDiff, actualResult.getPropagatedDiff());
       verify(notificationHelper).notifySchemaPropagated(NOTIFICATION_SETTINGS, expectedDiff, WORKSPACE, internalToConnectionRead(originalSync),
           source, EMAIL);
+    }
+
+  }
+
+  @Nested
+  class ConnectionLastJobPerStream {
+
+    @BeforeEach
+    void setUp() {
+      connectionsHandler = new ConnectionsHandler(
+          streamRefreshesHandler,
+          jobPersistence,
+          configRepository,
+          uuidGenerator,
+          workspaceHelper,
+          trackingClient,
+          eventRunner,
+          connectionHelper,
+          featureFlagClient,
+          actorDefinitionVersionHelper,
+          connectorDefinitionSpecificationHandler,
+          jobNotifier,
+          MAX_DAYS_OF_ONLY_FAILED_JOBS,
+          MAX_FAILURE_JOBS_IN_A_ROW,
+          streamGenerationRepository,
+          catalogGenerationSetter,
+          catalogValidator,
+          notificationHelper,
+          streamStatsService);
+    }
+
+    @Test
+    void testGetConnectionLastJobPerStream() throws IOException {
+      final UUID connectionId = UUID.randomUUID();
+      final Long jobId = 1L;
+      final String stream1Name = "testStream1";
+      final String stream1Namespace = "testNamespace1";
+      final String stream2Name = "testStream2";
+      final io.airbyte.config.StreamDescriptor stream1Descriptor = new io.airbyte.config.StreamDescriptor()
+          .withName(stream1Name)
+          .withNamespace(stream1Namespace);
+      final io.airbyte.config.StreamDescriptor stream2Descriptor = new io.airbyte.config.StreamDescriptor()
+          .withName(stream2Name)
+          .withNamespace(null);
+      final Instant createdAt = Instant.now();
+      final Instant startedAt = createdAt.plusSeconds(10);
+      final Instant updatedAt = startedAt.plusSeconds(10);
+      final long bytesCommitted1 = 12345L;
+      final long bytesEmitted1 = 23456L;
+      final long recordsCommitted1 = 100L;
+      final long recordsEmitted1 = 200L;
+      final long bytesCommitted2 = 912345L;
+      final long bytesEmitted2 = 923456L;
+      final long recordsCommitted2 = 9100L;
+      final long recordsEmitted2 = 9200L;
+      final ConfigType configType = ConfigType.SYNC;
+      final JobConfigType jobConfigType = JobConfigType.SYNC;
+      final JobStatus jobStatus = JobStatus.SUCCEEDED;
+      final io.airbyte.api.model.generated.JobStatus apiJobStatus = io.airbyte.api.model.generated.JobStatus.SUCCEEDED;
+      final JobAggregatedStats jobAggregatedStats = new JobAggregatedStats()
+          .bytesCommitted(bytesCommitted1 + bytesCommitted2)
+          .bytesEmitted(bytesEmitted1 + bytesEmitted2)
+          .recordsCommitted(recordsCommitted1 + recordsCommitted2)
+          .recordsEmitted(recordsEmitted1 + recordsEmitted2);
+      final Job job = new Job(
+          jobId,
+          configType,
+          connectionId.toString(),
+          null,
+          null,
+          jobStatus,
+          startedAt.toEpochMilli(),
+          createdAt.toEpochMilli(),
+          updatedAt.toEpochMilli());
+      final List<Job> jobList = List.of(job);
+      final JobRead jobRead = new JobRead()
+          .id(job.getId())
+          .configType(jobConfigType)
+          .status(apiJobStatus)
+          .aggregatedStats(jobAggregatedStats)
+          .createdAt(job.getCreatedAtInSecond())
+          .updatedAt(job.getUpdatedAtInSecond())
+          .startedAt(job.getStartedAtInSecond().orElseThrow())
+          .streamAggregatedStats(List.of(
+              new StreamStats()
+                  .streamName(stream1Name)
+                  .streamNamespace(stream1Namespace)
+                  .bytesCommitted(bytesCommitted1)
+                  .recordsCommitted(recordsCommitted1),
+              new StreamStats()
+                  .streamName(stream2Name)
+                  .streamNamespace(null)
+                  .bytesCommitted(bytesCommitted2)
+                  .recordsCommitted(recordsCommitted2)));
+      final JobWithAttemptsRead jobWithAttemptsRead = new JobWithAttemptsRead()
+          .job(jobRead);
+
+      final ConnectionLastJobPerStreamRequestBody apiReqStream1Only = new ConnectionLastJobPerStreamRequestBody()
+          .connectionId(connectionId)
+          .streams(List.of(
+              new ConnectionStream()
+                  .streamName(stream1Name)
+                  .streamNamespace(stream1Namespace)));
+
+      final ConnectionLastJobPerStreamRequestBody apiReqStream1And2 = new ConnectionLastJobPerStreamRequestBody()
+          .connectionId(connectionId)
+          .streams(List.of(
+              new ConnectionStream()
+                  .streamName(stream1Name)
+                  .streamNamespace(stream1Namespace),
+              new ConnectionStream()
+                  .streamName(stream2Name)
+                  .streamNamespace(null)));
+
+      final ConnectionLastJobPerStreamReadItem stream1ReadItem = new ConnectionLastJobPerStreamReadItem()
+          .streamName(stream1Name)
+          .streamNamespace(stream1Namespace)
+          .jobId(jobId)
+          .configType(jobConfigType)
+          .jobStatus(apiJobStatus)
+          .bytesCommitted(bytesCommitted1)
+          .recordsCommitted(recordsCommitted1)
+          .startedAt(startedAt.toEpochMilli())
+          .endedAt(updatedAt.toEpochMilli());
+
+      final ConnectionLastJobPerStreamReadItem stream2ReadItem = new ConnectionLastJobPerStreamReadItem()
+          .streamName(stream2Name)
+          .streamNamespace(null)
+          .jobId(jobId)
+          .configType(jobConfigType)
+          .jobStatus(apiJobStatus)
+          .bytesCommitted(bytesCommitted2)
+          .recordsCommitted(recordsCommitted2)
+          .startedAt(startedAt.toEpochMilli())
+          .endedAt(updatedAt.toEpochMilli());
+
+      // mock for req with only stream1
+      when(streamStatsService.getLastJobIdWithStatsByStream(connectionId, List.of(stream1Descriptor)))
+          .thenReturn(Map.of(stream1Descriptor, jobId));
+
+      // mock for req with both streams
+      when(streamStatsService.getLastJobIdWithStatsByStream(connectionId, List.of(stream1Descriptor, stream2Descriptor)))
+          .thenReturn(Map.of(
+              stream1Descriptor, jobId,
+              stream2Descriptor, jobId));
+
+      when(jobPersistence.listJobsLight(Set.of(jobId))).thenReturn(jobList);
+
+      try (MockedStatic<StatsAggregationHelper> mockStatsAggregationHelper = Mockito.mockStatic(StatsAggregationHelper.class)) {
+        mockStatsAggregationHelper.when(() -> StatsAggregationHelper.getJobIdToJobWithAttemptsReadMap(eq(jobList), eq(jobPersistence)))
+            .thenReturn(Map.of(jobId, jobWithAttemptsRead));
+
+        final List<ConnectionLastJobPerStreamReadItem> expectedStream1Only = List.of(stream1ReadItem);
+        final List<ConnectionLastJobPerStreamReadItem> expectedStream1And2 = List.of(stream1ReadItem, stream2ReadItem);
+
+        assertEquals(expectedStream1Only, connectionsHandler.getConnectionLastJobPerStream(apiReqStream1Only));
+        assertEquals(expectedStream1And2, connectionsHandler.getConnectionLastJobPerStream(apiReqStream1And2));
+      }
     }
 
   }
