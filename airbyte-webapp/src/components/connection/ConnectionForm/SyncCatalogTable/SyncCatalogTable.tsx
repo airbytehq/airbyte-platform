@@ -38,6 +38,7 @@ import { StreamNameCell } from "./components/StreamNameCell";
 import { FilterTabId, StreamsFilterTabs } from "./components/StreamsFilterTabs";
 import { SyncModeCell } from "./components/SyncModeCell";
 import { TableControls } from "./components/TableControls";
+import { useInitialRowIndex } from "./hooks/useInitialRowIndex";
 import styles from "./SyncCatalogTable.module.scss";
 import { getStreamFieldRows, getStreamRows, isStreamRow } from "./utils";
 import { FormConnectionFormValues, SyncStreamFieldWithId } from "../formConfig";
@@ -244,6 +245,7 @@ export const SyncCatalogTable: FC = () => {
   }, [filtering, getIsAllRowsExpanded, toggleAllRowsExpanded]);
 
   const rows = getRowModel().rows;
+  const initialTopMostItemIndex = useInitialRowIndex(rows);
 
   const Table: TableComponents["Table"] = ({ style, ...props }) => (
     <table className={classnames(styles.table)} {...props} style={style} />
@@ -273,7 +275,13 @@ export const SyncCatalogTable: FC = () => {
     const row = rows[index];
 
     return (
-      <tr key={`${row.id}-${row.depth}`} className={classnames(styles.tr)} {...props}>
+      <tr
+        key={`${row.id}-${row.depth}`}
+        className={classnames(styles.tr, {
+          [styles.highlighted]: initialTopMostItemIndex?.index === index,
+        })}
+        {...props}
+      >
         {row.getVisibleCells().map((cell) => {
           const meta = cell.column.columnDef.meta as ColumnMeta | undefined;
           return (
@@ -359,6 +367,7 @@ export const SyncCatalogTable: FC = () => {
       <TableVirtuoso<SyncCatalogUIModel>
         style={{ height: "50vh" }}
         totalCount={rows.length}
+        initialTopMostItemIndex={initialTopMostItemIndex}
         components={{
           Table,
           TableHead,
