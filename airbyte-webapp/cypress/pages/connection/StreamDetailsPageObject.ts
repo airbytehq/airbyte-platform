@@ -86,13 +86,13 @@ export class StreamDetailsPageObject {
 
   scrollToBottom() {
     return cy.get(streamDetailsPanel).within(() => {
-      cy.get("div[data-test-id='virtuoso-scroller']").scrollTo("bottom");
+      cy.get("div[data-testid='virtuoso-scroller']").scrollTo("bottom");
     });
   }
 
   scrollToTop() {
     return cy.get(streamDetailsPanel).within(() => {
-      cy.get("div[data-test-id='virtuoso-scroller']").scrollTo("top");
+      cy.get("div[data-testid='virtuoso-scroller']").scrollTo("top");
     });
   }
 

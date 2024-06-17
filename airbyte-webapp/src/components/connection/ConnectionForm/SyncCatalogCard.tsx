@@ -30,7 +30,7 @@ import { useStreamFilters } from "../syncCatalog/SyncCatalog/useStreamFilters";
 interface RedirectionLocationState {
   namespace?: string;
   streamName?: string;
-  action?: "showInReplicationTable" | "openDetails";
+  action?: "showInReplicationTable" | "openDetails" | "editStream";
 }
 
 export interface LocationWithState extends Location {

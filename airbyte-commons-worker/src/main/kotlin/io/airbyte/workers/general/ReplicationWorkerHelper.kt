@@ -9,10 +9,13 @@ import com.fasterxml.jackson.databind.ObjectMapper
 import com.google.common.annotations.VisibleForTesting
 import io.airbyte.api.client.AirbyteApiClient
 import io.airbyte.api.client.WorkloadApiClient
+import io.airbyte.api.client.model.generated.ActorType
 import io.airbyte.api.client.model.generated.DestinationIdRequestBody
+import io.airbyte.api.client.model.generated.ResolveActorDefinitionVersionRequestBody
 import io.airbyte.api.client.model.generated.SourceIdRequestBody
 import io.airbyte.commons.concurrency.VoidCallable
 import io.airbyte.commons.converters.ThreadedTimeTracker
+import io.airbyte.commons.helper.DockerImageName
 import io.airbyte.commons.io.LineGobbler
 import io.airbyte.config.FailureReason
 import io.airbyte.config.PerformanceMetrics
@@ -192,10 +195,15 @@ class ReplicationWorkerHelper(
     }
 
     ApmTraceUtils.addTagsToTrace(ctx.connectionId, ctx.attempt.toLong(), ctx.jobId.toString(), jobRoot)
+
     val supportRefreshes =
-      airbyteApiClient.actorDefinitionVersionApi.getActorDefinitionVersionForDestinationId(
-        DestinationIdRequestBody(destinationId = ctx.destinationId),
-      ).supportsRefreshes
+      airbyteApiClient.actorDefinitionVersionApi.resolveActorDefinitionVersionByTag(
+        ResolveActorDefinitionVersionRequestBody(
+          actorDefinitionId = ctx.destinationDefinitionId,
+          actorType = ActorType.DESTINATION,
+          dockerImageTag = DockerImageName.extractTag(ctx.destinationImage),
+        ),
+      ).supportRefreshes
     streamStatusCompletionTracker.startTracking(configuredAirbyteCatalog, supportRefreshes)
   }
 

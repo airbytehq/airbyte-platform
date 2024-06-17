@@ -21,10 +21,7 @@ import io.airbyte.api.client.WorkloadApiClient;
 import io.airbyte.api.client.generated.ActorDefinitionVersionApi;
 import io.airbyte.api.client.generated.DestinationApi;
 import io.airbyte.api.client.generated.SourceApi;
-import io.airbyte.api.client.model.generated.ActorDefinitionVersionRead;
-import io.airbyte.api.client.model.generated.NormalizationDestinationDefinitionConfig;
-import io.airbyte.api.client.model.generated.SupportLevel;
-import io.airbyte.api.client.model.generated.SupportState;
+import io.airbyte.api.client.model.generated.ResolveActorDefinitionVersionResponse;
 import io.airbyte.commons.concurrency.VoidCallable;
 import io.airbyte.commons.converters.ThreadedTimeTracker;
 import io.airbyte.persistence.job.models.ReplicationInput;
@@ -251,17 +248,12 @@ class ReplicationWorkerHelperTest {
   }
 
   private void mockSupportRefreshes(final boolean supportsRefreshes) throws IOException {
-    when(actorDefinitionVersionApi.getActorDefinitionVersionForDestinationId(any())).thenReturn(
-        new ActorDefinitionVersionRead(
+    when(actorDefinitionVersionApi.resolveActorDefinitionVersionByTag(any())).thenReturn(
+        new ResolveActorDefinitionVersionResponse(
+            UUID.randomUUID(),
             "dockerRepository",
             "dockerImageTag",
-            false,
-            supportsRefreshes,
-            new NormalizationDestinationDefinitionConfig(),
-            false,
-            SupportState.SUPPORTED,
-            SupportLevel.NONE,
-            null));
+            supportsRefreshes));
   }
 
 }

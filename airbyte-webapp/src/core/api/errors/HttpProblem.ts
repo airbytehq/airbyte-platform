@@ -1,4 +1,4 @@
-import type { KnownApiProblem } from "./problems";
+import type { KnownApiProblem, KnownApiProblemTypeAndPrefixes } from "./problems";
 import type { RequestOptions } from "../apiCall";
 
 import { I18nError } from "core/errors";
@@ -106,7 +106,7 @@ export class HttpProblem<PayloadType extends KnownApiProblem = KnownApiProblem> 
    * Check if an error is a known HttpProblem with the type being either the exact passed type of a hierarchical subtype of it.
    * e.g. passing error:validation will match error:validation or error:valiation/invalid-email.
    */
-  static isTypeOrSubtype(error: unknown, type: string): error is HttpProblem<KnownApiProblem> {
+  static isTypeOrSubtype(error: unknown, type: KnownApiProblemTypeAndPrefixes): error is HttpProblem<KnownApiProblem> {
     return (
       HttpProblem.isInstanceOf(error) && (error.response.type === type || error.response.type.startsWith(`${type}/`))
     );

@@ -13,6 +13,7 @@ import { useDestinationDefinitionVersion } from "core/api";
 import { DestinationSyncMode, SyncMode } from "core/api/types/AirbyteClient";
 import { useConfirmationModalService } from "hooks/services/ConfirmationModal";
 import { useConnectionFormService } from "hooks/services/ConnectionForm/ConnectionFormService";
+import { useExperiment } from "hooks/services/Experiment";
 import { useModalService } from "hooks/services/Modal";
 import { ConnectionRoutePaths } from "pages/routePaths";
 
@@ -25,6 +26,7 @@ interface StreamActionsMenuProps {
 }
 
 export const StreamActionsMenu: React.FC<StreamActionsMenuProps> = ({ streamName, streamNamespace }) => {
+  const isSyncCatalogV2Enabled = useExperiment("connection.syncCatalogV2", false);
   const { formatMessage } = useIntl();
   const navigate = useNavigate();
   const { mode, connection } = useConnectionFormService();
@@ -75,14 +77,23 @@ export const StreamActionsMenu: React.FC<StreamActionsMenuProps> = ({ streamName
   }
 
   const options: DropdownMenuOptionType[] = [
-    {
-      displayName: formatMessage({ id: "connection.stream.actions.showInReplicationTable" }),
-      value: "showInReplicationTable",
-    },
-    {
-      displayName: formatMessage({ id: "connection.stream.actions.openDetails" }),
-      value: "openDetails",
-    },
+    ...(isSyncCatalogV2Enabled
+      ? [
+          {
+            displayName: formatMessage({ id: "connection.stream.actions.edit" }),
+            value: "editStream",
+          },
+        ]
+      : [
+          {
+            displayName: formatMessage({ id: "connection.stream.actions.showInReplicationTable" }),
+            value: "showInReplicationTable",
+          },
+          {
+            displayName: formatMessage({ id: "connection.stream.actions.openDetails" }),
+            value: "openDetails",
+          },
+        ]),
     ...(showRefreshOption
       ? [
           {
@@ -103,7 +114,7 @@ export const StreamActionsMenu: React.FC<StreamActionsMenuProps> = ({ streamName
   ];
 
   const onOptionClick = async ({ value }: DropdownMenuOptionType) => {
-    if (value === "showInReplicationTable" || value === "openDetails") {
+    if (value === "showInReplicationTable" || value === "openDetails" || value === "editStream") {
       navigate(`../${ConnectionRoutePaths.Replication}`, {
         state: { namespace: streamNamespace, streamName, action: value },
       });

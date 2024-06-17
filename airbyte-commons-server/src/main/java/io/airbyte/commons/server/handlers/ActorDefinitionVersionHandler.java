@@ -108,7 +108,7 @@ public class ActorDefinitionVersionHandler {
     final ActorDefinitionVersion resolvedVersion = optResolvedVersion.get();
 
     return new ResolveActorDefinitionVersionResponse().versionId(resolvedVersion.getVersionId()).dockerImageTag(resolvedVersion.getDockerImageTag())
-        .dockerRepository(resolvedVersion.getDockerRepository());
+        .dockerRepository(resolvedVersion.getDockerRepository()).supportRefreshes(resolvedVersion.getSupportsRefreshes());
   }
 
   public ActorDefinitionVersionRead getActorDefinitionVersionForDestinationId(final DestinationIdRequestBody destinationIdRequestBody)

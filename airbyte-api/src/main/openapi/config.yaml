@@ -8139,6 +8139,7 @@ components:
         - versionId
         - dockerRepository
         - dockerImageTag
+        - supportRefreshes
       properties:
         versionId:
           $ref: "#/components/schemas/ActorDefinitionVersionId"
@@ -8146,6 +8147,8 @@ components:
           type: string
         dockerImageTag:
           type: string
+        supportRefreshes:
+          type: boolean
     ActorDefinitionBreakingChange:
       type: object
       required:

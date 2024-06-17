@@ -194,8 +194,8 @@ dependencies:
     specifier: ^17.4.0
     version: 17.4.0(react-dom@18.2.0)(react@18.2.0)
   react-virtuoso:
-    specifier: ^4.6.2
-    version: 4.6.2(react-dom@18.2.0)(react@18.2.0)
+    specifier: ^4.7.11
+    version: 4.7.11(react-dom@18.2.0)(react@18.2.0)
   react-widgets:
     specifier: ^4.6.1
     version: 4.6.1(react-dom@18.2.0)(react@18.2.0)
@@ -15441,8 +15441,8 @@ packages:
     dev: false
     patched: true
 
-  /react-virtuoso@4.6.2(react-dom@18.2.0)(react@18.2.0):
-    resolution: {integrity: sha512-vvlqvzPif+MvBrJ09+hJJrVY0xJK9yran+A+/1iwY78k0YCVKsyoNPqoLxOxzYPggspNBNXqUXEcvckN29OxyQ==}
+  /react-virtuoso@4.7.11(react-dom@18.2.0)(react@18.2.0):
+    resolution: {integrity: sha512-Kdn9qEtQI2ulEuBMzW2BTkDsfijB05QUd6lpZ1K36oyA3k65Cz4lG4EKrh2pCfUafX4C2uMSZOwzMOhbrMOTFA==}
     engines: {node: '>=10'}
     peerDependencies:
       react: '>=16 || >=17 || >= 18'
