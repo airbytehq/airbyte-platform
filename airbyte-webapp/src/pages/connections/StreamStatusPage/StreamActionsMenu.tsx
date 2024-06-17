@@ -33,11 +33,11 @@ export const StreamActionsMenu: React.FC<StreamActionsMenuProps> = ({ streamName
   const {
     syncStarting,
     jobSyncRunning,
-    resetStarting,
-    jobResetRunning,
+    clearStarting: resetStarting,
+    jobClearRunning: jobResetRunning,
     refreshStarting,
     jobRefreshRunning,
-    resetStreams,
+    clearStreams: resetStreams,
     refreshStreams,
   } = useConnectionSyncContext();
 

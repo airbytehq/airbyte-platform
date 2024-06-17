@@ -36,9 +36,9 @@ export const ConnectionSyncButtons: React.FC<ConnectionSyncButtonsProps> = ({
     cancelJob,
     syncConnection,
     connectionEnabled,
-    resetStreams,
-    resetStarting,
-    jobResetRunning,
+    clearStreams: resetStreams,
+    clearStarting: resetStarting,
+    jobClearRunning: jobResetRunning,
     refreshStarting,
     jobRefreshRunning,
   } = useConnectionSyncContext();

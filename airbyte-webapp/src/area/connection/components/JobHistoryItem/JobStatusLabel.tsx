@@ -3,7 +3,7 @@ import { FormattedMessage } from "react-intl";
 import { Text } from "components/ui/Text";
 
 import { JobWithAttempts } from "area/connection/types/jobs";
-import { isJobPartialSuccess, getJobAttempts, getJobStatus } from "area/connection/utils/jobs";
+import { isJobPartialSuccess, getJobAttempts, getJobStatus, isClearJob } from "area/connection/utils/jobs";
 import { JobStatus } from "core/api/types/AirbyteClient";
 
 interface JobStatusLabelProps {
@@ -16,13 +16,12 @@ export const JobStatusLabel: React.FC<JobStatusLabelProps> = ({ jobWithAttempts 
   const jobIsPartialSuccess = isJobPartialSuccess(attempts);
   const streamsToList =
     "job" in jobWithAttempts
-      ? jobWithAttempts.job.configType === "reset_connection"
+      ? isClearJob(jobWithAttempts)
         ? jobWithAttempts.job.resetConfig?.streamsToReset
         : jobWithAttempts.job.refreshConfig?.streamsToRefresh
       : undefined;
 
-  const jobConfigType =
-    jobWithAttempts.job.configType === "reset_connection" ? "clear_data" : jobWithAttempts.job.configType;
+  const jobConfigType = isClearJob(jobWithAttempts) ? "clear_data" : jobWithAttempts.job.configType;
 
   let status = "";
   if (jobIsPartialSuccess) {

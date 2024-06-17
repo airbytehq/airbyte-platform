@@ -41,7 +41,7 @@ jest.mock("core/api", () => ({
   useDeleteConnection: () => ({
     mutateAsync: jest.fn(),
   }),
-  useResetConnection: () => ({
+  useClearConnection: () => ({
     mutateAsync: jest.fn(),
   }),
   useListJobsForConnectionStatus: () => mockJobList,
@@ -57,7 +57,7 @@ jest.mock("core/api", () => ({
     mutateAsync: jest.fn(),
     isLoading: false,
   }),
-  useResetConnectionStream: () => ({
+  useClearConnectionStream: () => ({
     mutateAsync: jest.fn(),
     isLoading: false,
   }),

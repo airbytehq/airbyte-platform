@@ -65,7 +65,7 @@ export const ConnectionJobHistoryPage: React.FC = () => {
   const { data, isLoading, hasNextPage, fetchNextPage, isFetchingNextPage } = useListJobs(
     {
       configId: connection.connectionId,
-      configTypes: ["sync", "reset_connection", "refresh"],
+      configTypes: ["sync", "reset_connection", "clear", "refresh"],
       includingJobId: linkedJobId ? Number(linkedJobId) : undefined,
       statuses: filterValues.jobStatus === "all" ? undefined : [filterValues.jobStatus],
       updatedAtStart: filterValues.startDate !== "" ? startOfDay(filterValues.startDate) : undefined,
