@@ -13,6 +13,7 @@ import io.airbyte.config.Application;
 import io.airbyte.config.User;
 import io.airbyte.data.services.ApplicationService;
 import jakarta.annotation.Nonnull;
+import jakarta.inject.Named;
 import jakarta.inject.Singleton;
 import jakarta.ws.rs.BadRequestException;
 import jakarta.ws.rs.core.Response;
@@ -47,21 +48,23 @@ public class ApplicationServiceKeycloakImpl implements ApplicationService {
   public static final int MAX_CREDENTIALS = 2;
   public static final String USER_ID = "user_id";
   public static final String CLIENT_ID = "client_id";
-  public static final Duration ACCESS_TOKEN_EXPIRATION_TIME = Duration.ofMinutes(3);
   private final AirbyteKeycloakConfiguration keycloakConfiguration;
   private final Keycloak keycloakAdminClient;
   private final UserAuthenticationResolver userAuthenticationResolver;
   private final ClientScopeConfigurator clientScopeConfigurator;
+  private final Duration accessTokenExpirationTime;
 
   public ApplicationServiceKeycloakImpl(
                                         final Keycloak keycloakAdminClient,
                                         final AirbyteKeycloakConfiguration keycloakConfiguration,
                                         final UserAuthenticationResolver userAuthenticationResolver,
-                                        final ClientScopeConfigurator clientScopeConfigurator) {
+                                        final ClientScopeConfigurator clientScopeConfigurator,
+                                        @Named("access-token-expiration-time") final Duration accessTokenExpirationTime) {
     this.keycloakAdminClient = keycloakAdminClient;
     this.keycloakConfiguration = keycloakConfiguration;
     this.userAuthenticationResolver = userAuthenticationResolver;
     this.clientScopeConfigurator = clientScopeConfigurator;
+    this.accessTokenExpirationTime = accessTokenExpirationTime;
   }
 
   /**
@@ -251,7 +254,9 @@ public class ApplicationServiceKeycloakImpl implements ApplicationService {
 
     final var attributes = new HashMap<String, String>();
     attributes.put("access.token.signed.response.alg", "RS256");
-    attributes.put("access.token.lifespan", String.valueOf(ACCESS_TOKEN_EXPIRATION_TIME.getSeconds()));
+    // Note: No matter the configured value, this is limited to keycloak's Realm settings -> sessions ->
+    // SSO Session Max
+    attributes.put("access.token.lifespan", String.valueOf(accessTokenExpirationTime.getSeconds()));
     attributes.put("use.refresh.tokens", "false");
     client.setAttributes(attributes);
 
