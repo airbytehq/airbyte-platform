@@ -37,12 +37,9 @@ import io.airbyte.api.client.WorkloadApiClient;
 import io.airbyte.api.client.generated.ActorDefinitionVersionApi;
 import io.airbyte.api.client.generated.DestinationApi;
 import io.airbyte.api.client.generated.SourceApi;
-import io.airbyte.api.client.model.generated.ActorDefinitionVersionRead;
 import io.airbyte.api.client.model.generated.DestinationRead;
-import io.airbyte.api.client.model.generated.NormalizationDestinationDefinitionConfig;
+import io.airbyte.api.client.model.generated.ResolveActorDefinitionVersionResponse;
 import io.airbyte.api.client.model.generated.SourceRead;
-import io.airbyte.api.client.model.generated.SupportLevel;
-import io.airbyte.api.client.model.generated.SupportState;
 import io.airbyte.commons.concurrency.VoidCallable;
 import io.airbyte.commons.converters.ConnectorConfigUpdater;
 import io.airbyte.commons.io.IOs;
@@ -281,17 +278,11 @@ abstract class ReplicationWorkerTest {
     when(airbyteApiClient.getSourceApi()).thenReturn(sourceApi);
 
     actorDefinitionVersionApi = mock(ActorDefinitionVersionApi.class);
-    var actorDefinitionVersionRead = new ActorDefinitionVersionRead(
+    var resolveActorDefinitionVersionResponse = new ResolveActorDefinitionVersionResponse(UUID.randomUUID(),
         "dockerRepository",
         "dockerImageTag",
-        false,
-        false,
-        new NormalizationDestinationDefinitionConfig(),
-        false,
-        SupportState.SUPPORTED,
-        SupportLevel.NONE,
-        null);
-    when(actorDefinitionVersionApi.getActorDefinitionVersionForDestinationId(any())).thenReturn(actorDefinitionVersionRead);
+        false);
+    when(actorDefinitionVersionApi.resolveActorDefinitionVersionByTag(any())).thenReturn(resolveActorDefinitionVersionResponse);
     when(airbyteApiClient.getActorDefinitionVersionApi()).thenReturn(actorDefinitionVersionApi);
 
     when(messageTracker.getSyncStatsTracker()).thenReturn(syncStatsTracker);

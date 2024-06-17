@@ -264,7 +264,8 @@ class ActorDefinitionVersionHandlerTest {
     final ResolveActorDefinitionVersionResponse resolveActorDefinitionVersionResponse = new ResolveActorDefinitionVersionResponse()
         .versionId(actorDefinitionVersion.getVersionId())
         .dockerRepository(actorDefinitionVersion.getDockerRepository())
-        .dockerImageTag(actorDefinitionVersion.getDockerImageTag());
+        .dockerImageTag(actorDefinitionVersion.getDockerImageTag())
+        .supportRefreshes(false);
 
     when(mSourceService.getStandardSourceDefinition(actorDefinitionId))
         .thenReturn(Jsons.clone(SOURCE_DEFINITION).withDefaultVersionId(actorDefinitionVersion.getVersionId()));

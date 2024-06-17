@@ -6,6 +6,7 @@ package io.airbyte.workers;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import io.airbyte.api.client.AirbyteApiClient;
+import io.airbyte.api.client.model.generated.ActorType;
 import io.airbyte.api.client.model.generated.ConnectionAndJobIdRequestBody;
 import io.airbyte.api.client.model.generated.ConnectionIdRequestBody;
 import io.airbyte.api.client.model.generated.ConnectionRead;
@@ -14,6 +15,7 @@ import io.airbyte.api.client.model.generated.ConnectionStateCreateOrUpdate;
 import io.airbyte.api.client.model.generated.ConnectionStateType;
 import io.airbyte.api.client.model.generated.DestinationIdRequestBody;
 import io.airbyte.api.client.model.generated.JobOptionalRead;
+import io.airbyte.api.client.model.generated.ResolveActorDefinitionVersionRequestBody;
 import io.airbyte.api.client.model.generated.ScopeType;
 import io.airbyte.api.client.model.generated.SecretPersistenceConfig;
 import io.airbyte.api.client.model.generated.SecretPersistenceConfigGetRequestBody;
@@ -22,6 +24,7 @@ import io.airbyte.commons.converters.CatalogClientConverters;
 import io.airbyte.commons.converters.ProtocolConverters;
 import io.airbyte.commons.converters.StateConverter;
 import io.airbyte.commons.enums.Enums;
+import io.airbyte.commons.helper.DockerImageName;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.commons.protocol.CatalogTransforms;
 import io.airbyte.config.State;
@@ -72,11 +75,15 @@ public class ReplicationInputHydrator {
    * @throws Exception from the Airbyte API
    */
   public ReplicationInput getHydratedReplicationInput(final ReplicationActivityInput replicationActivityInput) throws Exception {
-    final var destinationDefinition = airbyteApiClient.getActorDefinitionVersionApi().getActorDefinitionVersionForDestinationId(
-        new DestinationIdRequestBody(replicationActivityInput.getDestinationId()));
+
+    final var destination =
+        airbyteApiClient.getDestinationApi().getDestination(new DestinationIdRequestBody(replicationActivityInput.getDestinationId()));
+    final var tag = DockerImageName.INSTANCE.extractTag(replicationActivityInput.getDestinationLauncherConfig().getDockerImage());
+    final var resolvedDestinationVersion = airbyteApiClient.getActorDefinitionVersionApi().resolveActorDefinitionVersionByTag(
+        new ResolveActorDefinitionVersionRequestBody(destination.getDestinationDefinitionId(), ActorType.DESTINATION, tag));
 
     // Retrieve the connection, which we need in a few places.
-    final ConnectionRead connectionInfo = destinationDefinition.getSupportsRefreshes()
+    final ConnectionRead connectionInfo = resolvedDestinationVersion.getSupportRefreshes()
         ? airbyteApiClient.getConnectionApi().getConnectionForJob(new ConnectionAndJobIdRequestBody(replicationActivityInput.getConnectionId(),
             Long.parseLong(replicationActivityInput.getJobRunConfig().getJobId())))
         : airbyteApiClient.getConnectionApi().getConnection(new ConnectionIdRequestBody(replicationActivityInput.getConnectionId()));
