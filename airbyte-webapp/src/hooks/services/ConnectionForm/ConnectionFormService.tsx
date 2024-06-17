@@ -72,14 +72,11 @@ const useConnectionForm = ({
 
   const sourceDefinition = useSourceDefinition(sourceDefinitionId);
   const sourceDefinitionVersion = useSourceDefinitionVersion(sourceId);
-  const sourceDefinitionSpecification = useGetSourceDefinitionSpecification(sourceDefinitionId, connection.sourceId);
+  const sourceDefinitionSpecification = useGetSourceDefinitionSpecification(connection.source.sourceId);
 
   const destDefinition = useDestinationDefinition(destinationDefinitionId);
   const destDefinitionVersion = useDestinationDefinitionVersion(destinationId);
-  const destDefinitionSpecification = useGetDestinationDefinitionSpecification(
-    destinationDefinitionId,
-    connection.destinationId
-  );
+  const destDefinitionSpecification = useGetDestinationDefinitionSpecification(connection.destination.destinationId);
 
   const initialValues = useInitialFormValues(connection, destDefinitionVersion, destDefinitionSpecification, mode);
   const { formatMessage } = useIntl();
