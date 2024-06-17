@@ -43,7 +43,7 @@ export const CreateApplicationControl = () => {
             />
           </Box>
           <ModalFooter>
-            <FormSubmissionButtons onCancelClickCallback={onCancel} />
+            <FormSubmissionButtons allowNonDirtyCancel onCancelClickCallback={onCancel} />
           </ModalFooter>
         </Form>
       ),
