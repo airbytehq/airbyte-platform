@@ -4,6 +4,7 @@ import { useIntl } from "react-intl";
 import { TestWrapper } from "test-utils";
 
 import { HttpProblem } from "./HttpProblem";
+import { KnownApiProblemTypeAndPrefixes } from "./problems";
 
 jest.mock("locales/en.errors.json", () => ({
   validation: "Validation error: {reason}",
@@ -100,7 +101,7 @@ describe("HttpProblem", () => {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
       } as any) as unknown;
 
-      expect(HttpProblem.isTypeOrSubtype(problem, "error:validation")).toBe(true);
+      expect(HttpProblem.isTypeOrSubtype(problem, "error:validation" as KnownApiProblemTypeAndPrefixes)).toBe(true);
     });
 
     it("should return true if type is a subtype", () => {
@@ -110,7 +111,7 @@ describe("HttpProblem", () => {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
       } as any) as unknown;
 
-      expect(HttpProblem.isTypeOrSubtype(problem, "error:validation")).toBe(true);
+      expect(HttpProblem.isTypeOrSubtype(problem, "error:validation" as KnownApiProblemTypeAndPrefixes)).toBe(true);
     });
 
     it("should return false if type does not match", () => {
@@ -120,7 +121,7 @@ describe("HttpProblem", () => {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
       } as any) as unknown;
 
-      expect(HttpProblem.isTypeOrSubtype(problem, "error:permissions")).toBe(false);
+      expect(HttpProblem.isTypeOrSubtype(problem, "error:permissions" as KnownApiProblemTypeAndPrefixes)).toBe(false);
     });
   });
 

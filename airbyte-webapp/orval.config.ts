@@ -1,7 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 
-import traverse from "json-schema-traverse";
+import traverse, { SchemaObject } from "json-schema-traverse";
 import { defineConfig, Options } from "orval";
 
 import * as apis from "./src/core/api/apis";
@@ -121,6 +121,12 @@ const errorTypeGeneration = (inputSpec: string): Options => {
               "api-problems.yml should not have a KnownApiProblem schema, or the webapp generation logic needs to be adjusted."
             );
           }
+          if (spec.components.schemas.KnownApiProblemTypeAndPrefixes) {
+            // Since we manually add this later we make sure there isn't a schema with the same type already defined.
+            throw new Error(
+              "api-problems.yml should not have a KnownApiProblemTypeAndPrefixes schema, or the webapp generation logic needs to be adjusted."
+            );
+          }
 
           // Transform each schema by some special logic needed for our type generation
           Object.entries(spec.components.schemas).forEach(([name, schema]) => {
@@ -146,6 +152,37 @@ const errorTypeGeneration = (inputSpec: string): Options => {
             anyOf: Object.entries(spec.components.schemas)
               .filter(([, schema]) => schema["x-implements"] === JAVA_PROBLEM_BASE_CLASS)
               .map(([name]) => ({ $ref: `#/components/schemas/${name}` })),
+          };
+
+          // Retrieve a list of all possible `type` keys of errors.
+          const allTypes = Object.values(spec.components.schemas)
+            .filter((schema) => schema["x-implements"] === JAVA_PROBLEM_BASE_CLASS)
+            .map(
+              (schema) =>
+                // Since every type is an allOf with a ref to the base class and the actual fields we need to find the allOf entry that's not the
+                // $ref and then read it's type.default value.
+                !("$ref" in schema) &&
+                schema.allOf?.find((s): s is SchemaObject => !("$ref" in s))?.properties?.type?.default
+            )
+            .filter(Boolean);
+
+          // Now add all types to this object (for performance reasons not an array) and all possible prefixes of that object
+          // e.g. add error:validation if we find error:validation/invalid-email.
+          const allTypesWithPrefixes = {};
+          for (const type of allTypes) {
+            allTypesWithPrefixes[type] = true;
+            if (type.startsWith("error:")) {
+              const segments = type.split("/");
+              for (let i = segments.length - 1; i > 0; i--) {
+                allTypesWithPrefixes[segments.slice(0, i).join("/")] = true;
+              }
+            }
+          }
+
+          // Add a type to the spec that's a union of all the possible types and prefixes.
+          spec.components.schemas.KnownApiProblemTypeAndPrefixes = {
+            type: "string",
+            enum: Object.keys(allTypesWithPrefixes),
           };
 
           return spec;
