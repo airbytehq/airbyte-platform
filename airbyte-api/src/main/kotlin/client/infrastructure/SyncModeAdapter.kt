@@ -25,6 +25,6 @@ class SyncModeAdapter {
 
   @FromJson
   fun fromJson(value: String): SyncMode {
-    return SyncMode.decode(value)!!
+    return SyncMode.valueOf(value.uppercase())
   }
 }

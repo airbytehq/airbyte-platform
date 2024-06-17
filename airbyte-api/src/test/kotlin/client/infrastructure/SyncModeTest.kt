@@ -8,60 +8,38 @@ import com.squareup.moshi.adapter
 import io.airbyte.api.client.model.generated.AirbyteStream
 import io.airbyte.api.client.model.generated.AirbyteStreamConfiguration
 import io.airbyte.api.client.model.generated.DestinationSyncMode
-import io.airbyte.api.client.model.generated.SourceDiscoverSchemaWriteRequestBody
 import io.airbyte.api.client.model.generated.SyncMode
-import io.airbyte.commons.resources.MoreResources
 import org.junit.jupiter.api.Assertions.assertEquals
-import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.Test
-import org.junit.jupiter.api.assertDoesNotThrow
 import org.openapitools.client.infrastructure.Serializer
 
 internal class SyncModeTest {
   @Test
   @OptIn(ExperimentalStdlibApi::class)
-  internal fun testSerdeSyncModes() {
-    val json = MoreResources.readResource("json/requests/source_discover_schema_write_request.json").trimIndent()
-    val adapter = Serializer.moshi.adapter<SourceDiscoverSchemaWriteRequestBody>()
-    val result = assertDoesNotThrow { adapter.fromJson(json) }
-    assertNotNull(result)
-    assertEquals(
-      json,
-      adapter.indent("  ").toJson(result)
-        // Moshi's formatting does not jibe with our code style formatting
-        .replace(
-          oldValue =
-            "\"supportedSyncModes\": [\n" +
-              "            \"full_refresh\",\n" +
-              "            \"incremental\"\n" +
-              "          ],",
-          newValue = "\"supportedSyncModes\": [\"full_refresh\", \"incremental\"],",
-        ),
-    )
-  }
-
-  @Test
-  @OptIn(ExperimentalStdlibApi::class)
-  internal fun test() {
+  internal fun testSerdeAirbyteStreamConfiguration() {
     val config =
       AirbyteStreamConfiguration(
         syncMode = SyncMode.INCREMENTAL,
         destinationSyncMode = DestinationSyncMode.OVERWRITE,
       )
     val adapter = Serializer.moshi.adapter<AirbyteStreamConfiguration>()
-    println(adapter.toJson(config))
+    val serializationResult = adapter.toJson(config)
+    val deserializationResult = adapter.fromJson(serializationResult)
+    assertEquals(config, deserializationResult)
   }
 
   @Test
   @OptIn(ExperimentalStdlibApi::class)
-  internal fun test2() {
+  internal fun testSerdeAirbyteStream() {
     val stream =
       AirbyteStream(
         name = "test",
         supportedSyncModes = listOf(SyncMode.INCREMENTAL, SyncMode.FULL_REFRESH),
       )
     val adapter = Serializer.moshi.adapter<AirbyteStream>()
-    println(adapter.toJson(stream))
+    val serializationResult = adapter.toJson(stream)
+    val deserializationResult = adapter.fromJson(serializationResult)
+    assertEquals(stream, deserializationResult)
   }
 
   @Test

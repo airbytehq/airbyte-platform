@@ -656,6 +656,7 @@ private fun updateApiClientSerializerWithJsonNodeAdapter(serializerPath: String)
         val newImports = listOf(
                 "import io.airbyte.api.client.infrastructure.AirbyteCatalogAdapter",
                 "import io.airbyte.api.client.infrastructure.AirbyteGeneratedConfigAdapter",
+                "import io.airbyte.api.client.infrastructure.SourceDiscoverSchemaWriteRequestBodyAdapter",
                 "import io.airbyte.api.client.infrastructure.AirbyteLocalDateAdapter",
                 "import io.airbyte.api.client.infrastructure.ConnectorBuilderPublishRequestBodyAdapter",
                 "import io.airbyte.api.client.infrastructure.DestinationSyncModeAdapter",
@@ -673,6 +674,7 @@ private fun updateApiClientSerializerWithJsonNodeAdapter(serializerPath: String)
         .add(AirbyteLocalDateAdapter())
         .add(AirbyteCatalogAdapter())
         .add(AirbyteGeneratedConfigAdapter())
+        .add(SourceDiscoverSchemaWriteRequestBodyAdapter())
         .add(ConnectorBuilderPublishRequestBodyAdapter())
         .add(DestinationSyncModeAdapter())
         .add(FailureOriginAdapter())
