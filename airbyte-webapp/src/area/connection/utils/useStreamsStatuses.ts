@@ -140,6 +140,7 @@ export const useStreamsStatuses = (
           }
 
           mappedStreamStatus.isRunning =
+            detectedStatus.isRunning ||
             detectedStatus.status === ConnectionStatusIndicatorStatus.Syncing ||
             detectedStatus.status === ConnectionStatusIndicatorStatus.Queued;
 
