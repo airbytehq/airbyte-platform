@@ -93,7 +93,7 @@ import io.airbyte.config.persistence.ConfigRepository;
 import io.airbyte.config.persistence.StreamGenerationRepository;
 import io.airbyte.config.persistence.domain.Generation;
 import io.airbyte.config.persistence.helper.CatalogGenerationSetter;
-import io.airbyte.data.services.StreamStatsService;
+import io.airbyte.data.services.StreamStatusesService;
 import io.airbyte.featureflag.CheckWithCatalog;
 import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.featureflag.Workspace;
@@ -168,7 +168,7 @@ public class ConnectionsHandler {
   private final CatalogGenerationSetter catalogGenerationSetter;
   private final CatalogValidator catalogValidator;
   private final NotificationHelper notificationHelper;
-  private final StreamStatsService streamStatsService;
+  private final StreamStatusesService streamStatusesService;
 
   @Inject
   public ConnectionsHandler(final StreamRefreshesHandler streamRefreshesHandler,
@@ -189,7 +189,7 @@ public class ConnectionsHandler {
                             final CatalogGenerationSetter catalogGenerationSetter,
                             final CatalogValidator catalogValidator,
                             final NotificationHelper notificationHelper,
-                            final StreamStatsService streamStatsService) {
+                            final StreamStatusesService streamStatusesService) {
     this.jobPersistence = jobPersistence;
     this.configRepository = configRepository;
     this.uuidGenerator = uuidGenerator;
@@ -208,7 +208,7 @@ public class ConnectionsHandler {
     this.catalogGenerationSetter = catalogGenerationSetter;
     this.catalogValidator = catalogValidator;
     this.notificationHelper = notificationHelper;
-    this.streamStatsService = streamStatsService;
+    this.streamStatusesService = streamStatusesService;
   }
 
   /**
@@ -1242,14 +1242,9 @@ public class ConnectionsHandler {
   public List<ConnectionLastJobPerStreamReadItem> getConnectionLastJobPerStream(final ConnectionLastJobPerStreamRequestBody req) {
     ApmTraceUtils.addTagsToTrace(Map.of(MetricTags.CONNECTION_ID, req.getConnectionId().toString()));
 
-    final var streamDescriptors = req.getStreams().stream().map(stream -> new io.airbyte.config.StreamDescriptor()
-        .withName(stream.getStreamName())
-        .withNamespace(stream.getStreamNamespace()))
-        .toList();
-
     // determine the latest job ID with stats for each stream by calling the streamStatsService
     final Map<io.airbyte.config.StreamDescriptor, Long> streamToLastJobIdWithStats =
-        streamStatsService.getLastJobIdWithStatsByStream(req.getConnectionId(), streamDescriptors);
+        streamStatusesService.getLastJobIdWithStatsByStream(req.getConnectionId());
 
     // retrieve the full job information for each of those latest jobs
     List<Job> jobs;

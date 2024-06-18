@@ -97,18 +97,12 @@ interface CreateConnectionProps {
   sourceCatalogId: string | undefined;
 }
 
-export const useGetLastJobPerStream = (connectionId: string, streams: ConnectionStream[]) => {
+export const useGetLastJobPerStream = (connectionId: string) => {
   const requestOptions = useRequestOptions();
 
-  return useQuery(
-    connectionsKeys.lastJobPerStream(connectionId),
-    async () => {
-      return await getConnectionLastJobPerStream({ connectionId, streams }, requestOptions);
-    },
-    {
-      enabled: streams.length > 0,
-    }
-  );
+  return useQuery(connectionsKeys.lastJobPerStream(connectionId), async () => {
+    return await getConnectionLastJobPerStream({ connectionId }, requestOptions);
+  });
 };
 
 export const useGetConnectionSyncProgress = (connectionId: string, enabled: boolean) => {

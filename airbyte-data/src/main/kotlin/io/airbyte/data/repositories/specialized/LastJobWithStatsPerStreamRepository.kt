@@ -15,27 +15,22 @@ interface LastJobWithStatsPerStreamRepository : GenericRepository<StreamWithLast
    */
   @Query(
     """
-        WITH stream_pairs AS (
-            SELECT * FROM unnest(:streamNames::text[], :streamNamespaces::text[]) as t(stream_name, stream_namespace)
-        )
-        SELECT
-            MAX(j.id) AS job_id,
-            ss.stream_name,
-            ss.stream_namespace
-        FROM stream_stats ss
-        INNER JOIN attempts a ON ss.attempt_id = a.id
-        INNER JOIN jobs j ON a.job_id = j.id AND j.scope = CAST(:connectionId AS varchar)
-        INNER JOIN stream_pairs sp ON ss.stream_name = sp.stream_name AND 
-            (ss.stream_namespace = sp.stream_namespace OR (ss.stream_namespace IS NULL AND sp.stream_namespace IS NULL))
-        GROUP BY ss.stream_name, ss.stream_namespace
+      SELECT
+          max(job_id) as job_id,
+          stream_namespace,
+          stream_name
+      FROM
+          stream_statuses ss 
+      WHERE
+          connection_id = :connectionId
+          and run_state in ('complete', 'incomplete')
+      GROUP BY
+          stream_namespace,
+          stream_name;
     """,
     readOnly = true,
   )
-  fun findLastJobIdWithStatsPerStream(
-    connectionId: UUID,
-    streamNames: Array<String>,
-    streamNamespaces: Array<String?>,
-  ): List<StreamWithLastJobId>
+  fun findLastJobIdWithStatsPerStream(connectionId: UUID): List<StreamWithLastJobId>
 }
 
 @Introspected

@@ -1,7 +1,7 @@
 import { useMemo } from "react";
 
 import { useGetLastJobPerStream } from "core/api";
-import { ConnectionLastJobPerStreamReadItem, ConnectionStream } from "core/api/types/AirbyteClient";
+import { ConnectionLastJobPerStreamReadItem } from "core/api/types/AirbyteClient";
 
 import { getStreamKey } from "./computeStreamStatus";
 
@@ -10,8 +10,8 @@ interface HistoricalStreamData {
   isFetching: boolean;
 }
 
-export const useHistoricalStreamData = (connectionId: string, streams: ConnectionStream[]): HistoricalStreamData => {
-  const { data: lastJobPerStreamData, isFetching } = useGetLastJobPerStream(connectionId, streams);
+export const useHistoricalStreamData = (connectionId: string): HistoricalStreamData => {
+  const { data: lastJobPerStreamData, isFetching } = useGetLastJobPerStream(connectionId);
   const historicalStreamsData = useMemo(() => {
     return new Map(
       lastJobPerStreamData?.map((stream) => [

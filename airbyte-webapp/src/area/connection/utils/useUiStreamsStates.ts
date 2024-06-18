@@ -52,18 +52,7 @@ export const useUiStreamStates = (connectionId: string): UIStreamState[] => {
     })
     .sort((a, b) => a.streamName.localeCompare(b.streamName));
 
-  // fetch enabled streams, but only if they have synced before.
-  const streamsToFetchHistoricalData = streamsToList.filter((streamItem) => {
-    const key = getStreamKey({ name: streamItem.streamName, namespace: streamItem.streamNamespace });
-    const streamStatus = streamStatuses.get(key);
-
-    return streamStatus?.relevantHistory && streamStatus?.relevantHistory.length > 0;
-  });
-
-  const { historicalStreamsData, isFetching: isLoadingHistoricalData } = useHistoricalStreamData(
-    connectionId,
-    streamsToFetchHistoricalData
-  );
+  const { historicalStreamsData, isFetching: isLoadingHistoricalData } = useHistoricalStreamData(connectionId);
   // if we just finished a job, re-fetch the historical data and set wasRunning to false
   useEffect(() => {
     if (wasRunning && !connectionStatus.isRunning) {
