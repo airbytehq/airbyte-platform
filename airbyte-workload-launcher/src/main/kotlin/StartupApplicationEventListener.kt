@@ -27,20 +27,22 @@ class StartupApplicationEventListener(
   private val customMetricPublisher: CustomMetricPublisher,
 ) : ApplicationEventListener<ServiceReadyEvent> {
   @VisibleForTesting
-  var mainThread: Thread? = null
+  var processorThread: Thread? = null
+  var trackerThread: Thread? = null
 
   override fun onApplicationEvent(event: ServiceReadyEvent?) {
-    thread {
-      try {
-        claimedProcessor.retrieveAndProcess()
-      } catch (e: Exception) {
-        customMetricPublisher.count(WorkloadLauncherMetricMetadata.WORKLOAD_LAUNCHER_REHYDRATE_FAILURE)
-        ApmTraceUtils.addExceptionToTrace(e)
-        logger.error(e) { "rehydrateAndProcessClaimed failed" }
+    processorThread =
+      thread {
+        try {
+          claimedProcessor.retrieveAndProcess()
+        } catch (e: Exception) {
+          customMetricPublisher.count(WorkloadLauncherMetricMetadata.WORKLOAD_LAUNCHER_REHYDRATE_FAILURE)
+          ApmTraceUtils.addExceptionToTrace(e)
+          logger.error(e) { "rehydrateAndProcessClaimed failed" }
+        }
       }
-    }
 
-    mainThread =
+    trackerThread =
       thread {
         claimProcessorTracker.await()
 
