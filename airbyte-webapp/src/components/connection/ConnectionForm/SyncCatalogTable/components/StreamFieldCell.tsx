@@ -90,12 +90,10 @@ export const StreamFieldNameCell: React.FC<StreamFieldNameCellProps> = ({
       numberOfFieldsInStream,
     });
 
-    // config.selectedFields must be removed if fieldSelection is disabled
-    if (!updatedConfig?.fieldSelectionEnabled) {
-      delete updatedConfig?.selectedFields;
-    }
-
-    updateStreamField(row.original.streamNode, updatedConfig);
+    updateStreamField(row.original.streamNode, {
+      ...updatedConfig,
+      selectedFields: !updatedConfig?.fieldSelectionEnabled ? [] : updatedConfig?.selectedFields,
+    });
   };
 
   return (

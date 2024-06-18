@@ -9,7 +9,12 @@ import { useConnectionList, useFilters } from "core/api";
 
 import { ConnectionsFilters, FilterValues } from "./ConnectionsFilters";
 import styles from "./ConnectionsListCard.module.scss";
-import { isConnectionFailed, isConnectionPaused, isConnectionRunning } from "./ConnectionsSummary/ConnectionsSummary";
+import {
+  isConnectionFailed,
+  isConnectionEnabled,
+  isConnectionPaused,
+  isConnectionRunning,
+} from "./ConnectionsSummary/ConnectionsSummary";
 import ConnectionsTable from "./ConnectionsTable";
 
 export const ConnectionsListCard = () => {
@@ -18,6 +23,7 @@ export const ConnectionsListCard = () => {
 
   const [filterValues, setFilterValue, setFilters] = useFilters<FilterValues>({
     search: "",
+    state: null,
     status: null,
     source: null,
     destination: null,
@@ -26,10 +32,21 @@ export const ConnectionsListCard = () => {
 
   const filteredConnections = useMemo(() => {
     const statusFilter = filterValues.status;
+    const stateFilter = filterValues.state;
     const sourceFilter = filterValues.source;
     const destinationFilter = filterValues.destination;
 
     return connections.filter((connection) => {
+      if (stateFilter) {
+        const isEnabled = isConnectionEnabled(connection);
+
+        if (stateFilter === "enabled" && !isEnabled) {
+          return false;
+        } else if (stateFilter === "disabled" && isEnabled) {
+          return false;
+        }
+      }
+
       if (statusFilter) {
         const isPaused = isConnectionPaused(connection);
         const isRunning = isConnectionRunning(connection);

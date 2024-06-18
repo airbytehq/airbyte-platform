@@ -113,11 +113,7 @@ const StreamsConfigTableRowInner: React.FC<StreamsConfigTableRowInnerProps & { c
   }, [syncMode, destinationSyncMode]);
 
   const fieldCount = fields?.length ?? 0;
-  const selectedFieldCount = fieldSelectionEnabled
-    ? selectedFields?.length === 0
-      ? fieldCount
-      : selectedFields?.length
-    : fieldCount;
+  const selectedFieldCount = fieldSelectionEnabled ? selectedFields?.length : fieldCount;
 
   const onRowClick: React.MouseEventHandler<HTMLElement> | undefined =
     fieldCount > 0

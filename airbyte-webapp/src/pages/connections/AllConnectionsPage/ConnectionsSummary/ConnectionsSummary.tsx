@@ -17,6 +17,10 @@ export const connectionStatColors: Record<SummaryKey, React.ComponentPropsWithou
   running: "blue",
 };
 
+export const isConnectionEnabled = (
+  connection: WebBackendConnectionListItem
+): connection is WebBackendConnectionListItem & { status: "active" } => connection.status === "active";
+
 export const isConnectionPaused = (
   connection: WebBackendConnectionListItem
 ): connection is WebBackendConnectionListItem & { status: "inactive" } => connection.status === "inactive";

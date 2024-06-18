@@ -56,7 +56,8 @@ export const UptimeStatusGraphTooltip: ContentType<number, string> = ({ active, 
         status === ConnectionStatusIndicatorStatus.Refreshing ||
         status === ConnectionStatusIndicatorStatus.QueuedForNextSync ||
         status === ConnectionStatusIndicatorStatus.Queued ||
-        status === ConnectionStatusIndicatorStatus.Disabled
+        status === ConnectionStatusIndicatorStatus.Disabled ||
+        status === ConnectionStatusIndicatorStatus.Paused
       ) {
         return acc;
       }

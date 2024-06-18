@@ -29,11 +29,11 @@ export const FieldCursorCell: React.FC<FieldCursorCellProps> = ({ row, updateStr
   const { mode } = useConnectionFormService();
   const { streamNode, field } = row.original;
 
-  if (!streamNode || !field) {
+  if (!field || SyncSchemaFieldObject.isNestedField(field) || !streamNode.config?.selected) {
     return null;
   }
 
-  const { cursorRequired, shouldDefineCursor } = checkCursorAndPKRequirements(streamNode.config!, streamNode.stream!);
+  const { cursorRequired, shouldDefineCursor } = checkCursorAndPKRequirements(streamNode.config, streamNode.stream!);
 
   // Cursor is not supported
   if (!cursorRequired) {

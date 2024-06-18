@@ -26,6 +26,8 @@ const MESSAGE_BY_STATUS: Readonly<Record<ConnectionStatusIndicatorStatus, string
   error: "connection.status.error",
   actionRequired: "connection.status.actionRequired",
   disabled: "connection.status.disabled",
+  paused: "connection.status.paused",
+
   syncing: "connection.status.syncing",
   clearing: "connection.status.clearing",
   refreshing: "connection.status.refreshing",

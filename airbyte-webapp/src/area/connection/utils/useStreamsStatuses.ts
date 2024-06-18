@@ -55,7 +55,7 @@ export const useStreamsStatuses = (
   const lateMultiplier = useLateMultiplierExperiment();
   const errorMultiplier = useErrorMultiplierExperiment();
   const connectionStatus = useConnectionStatus(connectionId);
-  const isConnectionDisabled = connectionStatus.status === ConnectionStatusIndicatorStatus.Disabled;
+  const isConnectionDisabled = connectionStatus.status === ConnectionStatusIndicatorStatus.Paused;
 
   // TODO: Ideally we can pull this from the stream status endpoint directly once the "pending" status has been updated to reflect the correct status
   // for now, we'll use this
@@ -87,9 +87,7 @@ export const useStreamsStatuses = (
       const streamStatus: StreamWithStatus = {
         streamName: enabledStream.stream.name,
         streamNamespace: enabledStream.stream.namespace === "" ? undefined : enabledStream.stream.namespace,
-        status: isConnectionDisabled
-          ? ConnectionStatusIndicatorStatus.Disabled
-          : ConnectionStatusIndicatorStatus.Pending,
+        status: isConnectionDisabled ? ConnectionStatusIndicatorStatus.Paused : ConnectionStatusIndicatorStatus.Pending,
         isRunning: false,
         relevantHistory: [],
       };
@@ -146,6 +144,16 @@ export const useStreamsStatuses = (
             detectedStatus.status === ConnectionStatusIndicatorStatus.Queued;
 
           mappedStreamStatus.lastSuccessfulSyncAt = detectedStatus.lastSuccessfulSync?.transitionedAt;
+        }
+      });
+    }
+
+    if (isConnectionDisabled) {
+      data.streamStatuses.forEach((streamStatus) => {
+        const streamKey = getStreamKey(streamStatus);
+        const mappedStreamStatus = streamStatuses.get(streamKey);
+        if (mappedStreamStatus) {
+          mappedStreamStatus.status = ConnectionStatusIndicatorStatus.Paused;
         }
       });
     }
