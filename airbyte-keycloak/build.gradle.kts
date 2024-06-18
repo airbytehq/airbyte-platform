@@ -9,6 +9,11 @@ airbyte {
   }
 }
 
+val copyPasswordBlacklists = tasks.register<Copy>("copyPasswordBlacklists") {
+  from("password-blacklists")
+  into("build/airbyte/docker/bin/password-blacklists")
+}
+
 val copyTheme = tasks.register<Copy>("copyTheme") {
   from("themes")
   into("build/airbyte/docker/bin/themes")
@@ -20,5 +25,5 @@ val copyScripts = tasks.register<Copy>("copyScripts") {
 }
 
 tasks.named("dockerCopyDistribution") {
-  dependsOn(copyScripts, copyTheme)
+  dependsOn(copyPasswordBlacklists, copyScripts, copyTheme)
 }
