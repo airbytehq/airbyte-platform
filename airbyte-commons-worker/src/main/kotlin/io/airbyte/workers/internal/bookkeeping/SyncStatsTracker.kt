@@ -153,4 +153,6 @@ interface SyncStatsTracker {
   fun getUnreliableStateTimingMetrics(): Boolean
 
   fun setReplicationFeatureFlags(replicationFeatureFlags: ReplicationFeatureFlags?): Unit
+
+  fun endOfReplication(completedSuccessfully: Boolean)
 }
