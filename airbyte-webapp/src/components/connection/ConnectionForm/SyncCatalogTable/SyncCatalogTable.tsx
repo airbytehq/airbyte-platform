@@ -23,7 +23,7 @@ import { SearchInput } from "components/ui/SearchInput";
 import { ColumnMeta } from "components/ui/Table/types";
 import { Text } from "components/ui/Text";
 
-import { AirbyteStreamConfiguration } from "core/api/types/AirbyteClient";
+import { AirbyteStreamAndConfiguration, AirbyteStreamConfiguration } from "core/api/types/AirbyteClient";
 import { SyncSchemaField } from "core/domain/catalog";
 import { useConnectionFormService } from "hooks/services/ConnectionForm/ConnectionFormService";
 
@@ -40,14 +40,19 @@ import { SyncModeCell } from "./components/SyncModeCell";
 import { TableControls } from "./components/TableControls";
 import { useInitialRowIndex } from "./hooks/useInitialRowIndex";
 import styles from "./SyncCatalogTable.module.scss";
-import { getStreamFieldRows, getStreamRows, isStreamRow } from "./utils";
+import { getRowChangeStatus, getStreamFieldRows, getStreamRows, isStreamRow } from "./utils";
 import { FormConnectionFormValues, SyncStreamFieldWithId } from "../formConfig";
 
 export interface SyncCatalogUIModel {
   /**
-   * original react-form syncCatalog streamNode field
+   * react-form syncCatalog streamNode field
    */
   streamNode: SyncStreamFieldWithId;
+  /**
+   * initial react-form syncCatalog streamNode field
+   * used for comparing with the current streamNode field
+   */
+  initialStreamNode?: AirbyteStreamAndConfiguration;
   /**
    * Stream and Field share the same "name" prop for filtering and sorting
    */
@@ -80,7 +85,7 @@ export interface SyncCatalogUIModel {
 
 export const SyncCatalogTable: FC = () => {
   const { formatMessage } = useIntl();
-  const { mode } = useConnectionFormService();
+  const { mode, initialValues } = useConnectionFormService();
   const { control, trigger } = useFormContext<FormConnectionFormValues>();
   const { fields: streams, update } = useFieldArray({
     name: "syncCatalog.streams",
@@ -196,7 +201,10 @@ export const SyncCatalogTable: FC = () => {
     }),
   ];
 
-  const preparedData = useMemo(() => getStreamRows(streams, prefix), [prefix, streams]);
+  const preparedData = useMemo(
+    () => getStreamRows(streams, initialValues.syncCatalog.streams, prefix),
+    [initialValues.syncCatalog.streams, prefix, streams]
+  );
 
   const { getHeaderGroups, getRowModel, getState, toggleAllRowsExpanded, getIsAllRowsExpanded } =
     useReactTable<SyncCatalogUIModel>({
@@ -273,15 +281,18 @@ export const SyncCatalogTable: FC = () => {
   const TableRow: React.FC<ItemProps<SyncCatalogUIModel>> = (props) => {
     const index = props["data-index"];
     const row = rows[index];
+    const { rowChangeStatus } = getRowChangeStatus(row);
+
+    const rowStatusStyle = classnames(styles.tr, {
+      [styles.added]: rowChangeStatus === "added",
+      [styles.removed]: rowChangeStatus === "removed",
+      [styles.changed]: rowChangeStatus === "changed",
+      [styles.disabled]: rowChangeStatus === "disabled",
+      [styles.highlighted]: initialTopMostItemIndex?.index === index,
+    });
 
     return (
-      <tr
-        key={`${row.id}-${row.depth}`}
-        className={classnames(styles.tr, {
-          [styles.highlighted]: initialTopMostItemIndex?.index === index,
-        })}
-        {...props}
-      >
+      <tr key={`${row.id}-${row.depth}`} className={rowStatusStyle} {...props}>
         {row.getVisibleCells().map((cell) => {
           const meta = cell.column.columnDef.meta as ColumnMeta | undefined;
           return (

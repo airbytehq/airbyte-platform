@@ -29,11 +29,11 @@ export const FieldPKCell: React.FC<FieldPKCellProps> = ({ row, updateStreamField
   const { mode } = useConnectionFormService();
   const { streamNode, field } = row.original;
 
-  if (!streamNode || !field) {
+  if (!field || SyncSchemaFieldObject.isNestedField(field) || !streamNode.config?.selected) {
     return null;
   }
 
-  const { pkRequired, shouldDefinePk } = checkCursorAndPKRequirements(streamNode.config!, streamNode.stream!);
+  const { pkRequired, shouldDefinePk } = checkCursorAndPKRequirements(streamNode.config, streamNode.stream!);
 
   // PK is not supported
   if (!pkRequired) {

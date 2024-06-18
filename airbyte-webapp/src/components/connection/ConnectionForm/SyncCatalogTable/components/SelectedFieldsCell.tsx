@@ -16,11 +16,7 @@ export const SelectedFieldsCell: React.FC<FieldSelectionStatusCellProps> = ({ ro
   } = row.original;
 
   const totalFieldCount = traversedFields?.length || 0;
-  const selectedFieldCount = config?.fieldSelectionEnabled
-    ? config?.selectedFields?.length === 0
-      ? totalFieldCount
-      : config?.selectedFields?.length
-    : totalFieldCount;
+  const selectedFieldCount = config?.fieldSelectionEnabled ? config?.selectedFields?.length : totalFieldCount;
 
   return config?.selected ? (
     <Text>
