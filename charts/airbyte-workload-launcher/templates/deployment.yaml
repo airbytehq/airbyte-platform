@@ -70,6 +70,16 @@ spec:
               key: AIRBYTE_VERSION
         - name: DATA_PLANE_ID
           value: "local"
+        - name: PUB_SUB_ENABLED
+          valueFrom:
+            configMapKeyRef:
+              name: {{ .Release.Name }}-airbyte-env
+              key: PUB_SUB_ENABLED
+        - name: PUB_SUB_TOPIC_NAME
+          valueFrom:
+            configMapKeyRef:
+              name: {{ .Release.Name }}-airbyte-env
+              key: PUB_SUB_TOPIC_NAME
         - name: CONFIG_ROOT
           valueFrom:
             configMapKeyRef:

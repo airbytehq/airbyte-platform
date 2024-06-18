@@ -42,6 +42,12 @@ airbyte:
     test:
       enabled: ${ACCEPTANCE_TEST_ENABLED:false}
   cloud:
+    pubsub:
+      enabled: ${PUB_SUB_ENABLED:false}
+      topic: ${PUB_SUB_TOPIC_NAME:}
+      request-bytes-threshold: ${PUB_SUB_REQUEST_BYTES_THRESHOLD:5000}
+      message-count-batch-size: ${PUB_SUB_MESSAGE_COUNT_BATCH_SIZE:50}
+      publish-delay-threshold-ms: ${PUB_SUB_PUBLISH_DELAY_THRESHOLD_MS:100}
     storage:
       type: ${STORAGE_TYPE}
       bucket:
