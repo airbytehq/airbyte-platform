@@ -35,6 +35,15 @@ const generateStatusFilterOption = (value: SummaryKey, id: string, iconType: fil
   value,
 });
 
+const generateStateFilterOption = (value: "enabled" | "disabled" | "all", id: string) => ({
+  label: (
+    <Text color="grey" bold as="span">
+      <FormattedMessage id={id} />
+    </Text>
+  ),
+  value,
+});
+
 export const statusFilterOptions = [
   {
     label: (
@@ -47,7 +56,19 @@ export const statusFilterOptions = [
   generateStatusFilterOption("healthy", "tables.connections.filters.status.healthy", "successFilled", "healthy"),
   generateStatusFilterOption("failed", "tables.connections.filters.status.failed", "errorFilled", "failed"),
   generateStatusFilterOption("running", "tables.connections.filters.status.running", "sync", "running"),
-  generateStatusFilterOption("paused", "tables.connections.filters.status.paused", "pauseFilled", "paused"),
+];
+
+export const stateFilterOptions = [
+  {
+    label: (
+      <Text color="grey" bold>
+        <FormattedMessage id="tables.connections.filters.state.all" />
+      </Text>
+    ),
+    value: null,
+  },
+  generateStateFilterOption("enabled", "tables.connections.filters.state.enabled"),
+  generateStateFilterOption("disabled", "tables.connections.filters.state.disabled"),
 ];
 
 interface FilterOption {

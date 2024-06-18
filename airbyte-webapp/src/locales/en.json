@@ -870,6 +870,9 @@
   "tables.connections.filters.status.paused": "Paused",
   "tables.connections.filters.source.all": "All sources",
   "tables.connections.filters.destination.all": "All destinations",
+  "tables.connections.filters.state.all": "All connections",
+  "tables.connections.filters.state.enabled": "Enabled connections",
+  "tables.connections.filters.state.disabled": "Disabled connections",
 
   "admin.destinations": "Destinations",
   "admin.sources": "Sources",
