@@ -467,6 +467,7 @@ val genConnectorBuilderServerApiClient = tasks.register<GenerateTask>("genConnec
       "enumPropertyNaming"  to "UPPERCASE",
       "generatePom"         to "false",
       "interfaceOnly"       to "true",
+      "serializationLibrary" to "jackson",
     )
 
     doLast {
