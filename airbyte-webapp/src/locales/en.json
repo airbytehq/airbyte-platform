@@ -677,6 +677,7 @@
   "connection.status.syncing": "Syncing",
   "connection.status.refreshing": "Refreshing",
   "connection.status.clearing": "Clearing data",
+  "connection.status.paused": "Paused",
 
   "connection.status.onTrack.failureDescription": "The previous sync encountered an issue but is expected to automatically recover in the next sync.",
   "connection.status.onTrack.delayedDescription": "The connection is delayed but is expected to catch up before the next sync.",
@@ -717,6 +718,7 @@
   "connection.stream.status.onTime": "On time",
   "connection.stream.status.onTrack": "On track",
   "connection.stream.status.disabled": "Disabled",
+  "connection.stream.status.paused": "Paused",
   "connection.stream.status.syncing": "Syncing",
   "connection.stream.status.refreshing": "Refreshing",
   "connection.stream.status.clearing": "Clearing data",

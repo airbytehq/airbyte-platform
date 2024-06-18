@@ -14,11 +14,11 @@ const useStreamsContextInit = (connectionId: string) => {
   const streamsByName = sortStreamsAlphabetically(enabledStreams, streamStatuses);
 
   const enabledStreamsByStatus = Object.entries(streamsByStatus)
-    .filter(([status]) => status !== ConnectionStatusIndicatorStatus.Disabled)
+    .filter(([status]) => status !== ConnectionStatusIndicatorStatus.Paused)
     .flatMap(([_, stream]) => stream);
 
   const enabledStreamsByName = Object.entries(streamsByName)
-    .filter(([status]) => status !== ConnectionStatusIndicatorStatus.Disabled)
+    .filter(([status]) => status !== ConnectionStatusIndicatorStatus.Paused)
     .flatMap(([_, stream]) => stream);
 
   /** deprecated... will remove with sync progress project */

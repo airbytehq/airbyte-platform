@@ -14,6 +14,7 @@ import { ConnectionStatusIndicatorStatus } from "../ConnectionStatusIndicator";
 const ICON_BY_STATUS: Readonly<Record<ConnectionStatusIndicatorStatus, JSX.Element>> = {
   actionRequired: <Icon type="errorFilled" title="error" />,
   disabled: <Icon type="pauseFilled" title="paused" />,
+  paused: <Icon type="pauseFilled" title="paused" />,
   error: <Icon type="warningFilled" title="warning" />,
   late: <Icon type="clockFilled" title="late" />,
   pending: <Icon type="pauseFilled" title="pending" />,
@@ -29,6 +30,7 @@ const ICON_BY_STATUS: Readonly<Record<ConnectionStatusIndicatorStatus, JSX.Eleme
 const STYLE_BY_STATUS: Readonly<Record<ConnectionStatusIndicatorStatus, string>> = {
   actionRequired: styles["status--actionRequired"],
   disabled: styles["status--disabled"],
+  paused: styles["status--disabled"],
   error: styles["status--error"],
   late: styles["status--late"],
   pending: styles["status--pending"],
@@ -44,6 +46,7 @@ const STYLE_BY_STATUS: Readonly<Record<ConnectionStatusIndicatorStatus, string>>
 const BOX_STYLE_BY_STATUS: Readonly<Record<ConnectionStatusIndicatorStatus, string>> = {
   actionRequired: styles["status--actionRequired-withBox"],
   disabled: styles["status--disabled-withBox"],
+  paused: styles["status--disabled-withBox"],
   error: styles["status--error-withBox"],
   late: styles["status--late-withBox"],
   pending: styles["status--pending-withBox"],

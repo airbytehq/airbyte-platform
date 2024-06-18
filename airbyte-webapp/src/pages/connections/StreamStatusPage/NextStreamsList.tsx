@@ -13,12 +13,10 @@ import { FlexContainer } from "components/ui/Flex";
 import { Heading } from "components/ui/Heading";
 import { Icon } from "components/ui/Icon";
 import { Table } from "components/ui/Table";
-import { Text } from "components/ui/Text";
 import { InfoTooltip } from "components/ui/Tooltip";
 
 import { activeStatuses } from "area/connection/utils";
 import { useUiStreamStates } from "area/connection/utils/useUiStreamsStates";
-import { ConnectionStatus } from "core/api/types/AirbyteClient";
 import { useConnectionEditService } from "hooks/services/ConnectionEdit/ConnectionEditService";
 
 import { DataFreshnessCell } from "./DataFreshnessCell";
@@ -102,8 +100,6 @@ export const NextStreamsList = () => {
 
   const { status, nextSync, recordsExtracted, recordsLoaded } = useConnectionStatus(connection.connectionId);
 
-  const showTable = connection.status !== ConnectionStatus.inactive;
-
   return (
     <Card noPadding>
       <Box p="xl" className={styles.cardHeader}>
@@ -125,28 +121,18 @@ export const NextStreamsList = () => {
       </Box>
       <FlexContainer direction="column" gap="sm">
         <div className={styles.tableContainer} data-survey="streamcentric">
-          {showTable && (
-            <Table
-              columns={columns}
-              data={streamEntries}
-              variant="inBlock"
-              getRowClassName={(data) =>
-                classNames(styles.row, {
-                  [styles["syncing--next"]]:
-                    activeStatuses.includes(data.status) && data.status !== ConnectionStatusIndicatorStatus.Queued,
-                })
-              }
-              sorting={false}
-            />
-          )}
-
-          {!showTable && (
-            <Box p="xl">
-              <Text size="sm" color="grey" italicized>
-                <FormattedMessage id="connection.stream.status.table.emptyTable.message" />
-              </Text>
-            </Box>
-          )}
+          <Table
+            columns={columns}
+            data={streamEntries}
+            variant="inBlock"
+            getRowClassName={(data) =>
+              classNames(styles.row, {
+                [styles["syncing--next"]]:
+                  activeStatuses.includes(data.status) && data.status !== ConnectionStatusIndicatorStatus.Queued,
+              })
+            }
+            sorting={false}
+          />
         </div>
       </FlexContainer>
     </Card>

@@ -143,7 +143,7 @@ export const useConnectionStatus = (connectionId: string): UIConnectionStatus =>
 
   if (connection.status !== ConnectionStatus.active) {
     return {
-      status: ConnectionStatusIndicatorStatus.Disabled,
+      status: ConnectionStatusIndicatorStatus.Paused,
       lastSyncJobStatus,
       nextSync,
       lastSuccessfulSync,
