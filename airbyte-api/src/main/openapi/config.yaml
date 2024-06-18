@@ -8255,14 +8255,9 @@ components:
       type: object
       required:
         - connectionId
-        - streams
       properties:
         connectionId:
           $ref: "#/components/schemas/ConnectionId"
-        streams:
-          type: array
-          items:
-            $ref: "#/components/schemas/ConnectionStream"
     ConnectionStream:
       type: object
       required:

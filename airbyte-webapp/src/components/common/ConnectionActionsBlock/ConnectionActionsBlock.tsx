@@ -11,7 +11,7 @@ import { FlexContainer } from "components/ui/Flex";
 import { Text } from "components/ui/Text";
 import { Tooltip } from "components/ui/Tooltip";
 
-import { useDeleteConnection, useDestinationDefinitionVersion, useResetConnection } from "core/api";
+import { useDeleteConnection, useDestinationDefinitionVersion } from "core/api";
 import { ConnectionStatus } from "core/api/types/AirbyteClient";
 import { useConfirmationModalService } from "hooks/services/ConfirmationModal";
 import { useConnectionEditService } from "hooks/services/ConnectionEdit/ConnectionEditService";
@@ -31,13 +31,13 @@ export const ConnectionActionsBlock: React.FC = () => {
   const { supportsRefreshes: destinationSupportsRefreshes } = useDestinationDefinitionVersion(
     connection.destination.destinationId
   );
-
+  const { clearStreams } = useConnectionSyncContext();
   const { mutateAsync: deleteConnection } = useDeleteConnection();
   const onDelete = () => deleteConnection(connection);
 
-  const { mutateAsync: doResetConnection } = useResetConnection();
   const onReset = useCallback(async () => {
-    await doResetConnection(connection.connectionId);
+    // empty streams array will clear _all_ streams
+    await clearStreams([]);
     registerNotification({
       id: "clearData.successfulStart",
       text: formatMessage({
@@ -45,7 +45,7 @@ export const ConnectionActionsBlock: React.FC = () => {
       }),
       type: "success",
     });
-  }, [doResetConnection, connection.connectionId, registerNotification, formatMessage]);
+  }, [clearStreams, registerNotification, formatMessage]);
 
   const onDeleteButtonClick = useDeleteModal("connection", onDelete, undefined, connection?.name);
   const connectionStatus = useConnectionStatus(connection.connectionId ?? "");
@@ -108,22 +108,72 @@ export const ConnectionActionsBlock: React.FC = () => {
     refreshWithModal();
   };
 
-  const RefreshConnectionButton = () => {
-    return (
-      <Button
-        variant="secondary"
-        onClick={onRefreshModalClick}
-        data-id="open-refresh-modal"
-        disabled={
-          (streamsByRefreshType.streamsSupportingMergeRefresh.length === 0 &&
-            streamsByRefreshType.streamsSupportingTruncateRefresh.length === 0) ||
-          mode === "readonly" ||
-          connectionStatus.isRunning ||
-          connection.status !== ConnectionStatus.active
-        }
-      >
-        <FormattedMessage id="connection.actions.refreshData" />
-      </Button>
+  const ClearConnectionDataButton = () => {
+    const tooltipContent =
+      mode === "readonly"
+        ? undefined
+        : connection.status !== ConnectionStatus.active
+        ? "connection.actions.clearYourData.disabledConnectionTooltip"
+        : connectionStatus.isRunning
+        ? "connection.actions.clearYourData.runningJobTooltip"
+        : undefined;
+
+    const ClearButton = () => {
+      return (
+        <Button
+          variant="secondary"
+          onClick={onResetButtonClick}
+          data-id="open-reset-modal"
+          disabled={mode === "readonly" || !!tooltipContent}
+        >
+          <FormattedMessage id="connection.actions.clearYourData" />
+        </Button>
+      );
+    };
+
+    return tooltipContent ? (
+      <Tooltip control={<ClearButton />}>
+        <FormattedMessage id={tooltipContent} />
+      </Tooltip>
+    ) : (
+      <ClearButton />
+    );
+  };
+
+  const RefreshConnectionDataButton = () => {
+    const tooltipContent =
+      mode === "readonly"
+        ? undefined
+        : destinationSupportsRefreshes === false
+        ? "connection.actions.refreshData.notAvailable.destination"
+        : streamsByRefreshType.streamsSupportingMergeRefresh.length === 0 &&
+          streamsByRefreshType.streamsSupportingTruncateRefresh.length === 0
+        ? "connection.actions.refreshData.notAvailable.streams"
+        : connection.status !== ConnectionStatus.active
+        ? "connection.actions.refreshData.disabledConnectionTooltip"
+        : connectionStatus.isRunning
+        ? "connection.actions.refreshData.runningJobTooltip"
+        : undefined;
+
+    const RefreshConnectionButton = () => {
+      return (
+        <Button
+          variant="secondary"
+          onClick={onRefreshModalClick}
+          data-id="open-refresh-modal"
+          disabled={!!tooltipContent || mode === "readonly"}
+        >
+          <FormattedMessage id="connection.actions.refreshData" />
+        </Button>
+      );
+    };
+
+    return tooltipContent ? (
+      <Tooltip control={<RefreshConnectionButton />}>
+        <FormattedMessage id={tooltipContent} />
+      </Tooltip>
+    ) : (
+      <RefreshConnectionButton />
     );
   };
 
@@ -139,20 +189,7 @@ export const ConnectionActionsBlock: React.FC = () => {
               <FormattedMessage id="connection.actions.refreshData.description" />
             </Text>
           </FlexContainer>
-          {streamsByRefreshType.streamsSupportingMergeRefresh.length > 0 ||
-          streamsByRefreshType.streamsSupportingTruncateRefresh.length > 0 ? (
-            <RefreshConnectionButton />
-          ) : (
-            <Tooltip control={<RefreshConnectionButton />}>
-              <FormattedMessage
-                id={
-                  destinationSupportsRefreshes
-                    ? "connection.actions.refreshData.notAvailable.streams"
-                    : "connection.actions.refreshData.notAvailable.destination"
-                }
-              />
-            </Tooltip>
-          )}
+          <RefreshConnectionDataButton />
         </FormFieldLayout>
 
         <FormFieldLayout alignItems="center" nextSizing>
@@ -164,18 +201,8 @@ export const ConnectionActionsBlock: React.FC = () => {
               <FormattedMessage id="connection.actions.clearDataDescription" />
             </Text>
           </FlexContainer>
-          <Button
-            variant="secondary"
-            onClick={onResetButtonClick}
-            data-id="open-reset-modal"
-            disabled={
-              mode === "readonly" || connectionStatus.isRunning || connection.status !== ConnectionStatus.active
-            }
-          >
-            <FormattedMessage id="connection.actions.clearYourData" />
-          </Button>
+          <ClearConnectionDataButton />
         </FormFieldLayout>
-
         <FormFieldLayout alignItems="center" nextSizing>
           <FlexContainer direction="column" gap="xs">
             <Text size="lg">

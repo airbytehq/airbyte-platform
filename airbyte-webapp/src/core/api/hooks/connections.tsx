@@ -28,9 +28,9 @@ import {
   getConnectionUptimeHistory,
   getState,
   getStateType,
+  clearConnectionStream,
+  clearConnection,
   refreshConnectionStream,
-  resetConnection,
-  resetConnectionStream,
   syncConnection,
   webBackendCreateConnection,
   webBackendGetConnection,
@@ -97,18 +97,12 @@ interface CreateConnectionProps {
   sourceCatalogId: string | undefined;
 }
 
-export const useGetLastJobPerStream = (connectionId: string, streams: ConnectionStream[]) => {
+export const useGetLastJobPerStream = (connectionId: string) => {
   const requestOptions = useRequestOptions();
 
-  return useQuery(
-    connectionsKeys.lastJobPerStream(connectionId),
-    async () => {
-      return await getConnectionLastJobPerStream({ connectionId, streams }, requestOptions);
-    },
-    {
-      enabled: streams.length > 0,
-    }
-  );
+  return useQuery(connectionsKeys.lastJobPerStream(connectionId), async () => {
+    return await getConnectionLastJobPerStream({ connectionId }, requestOptions);
+  });
 };
 
 export const useGetConnectionSyncProgress = (connectionId: string, enabled: boolean) => {
@@ -174,7 +168,7 @@ export const useSyncConnection = () => {
 
 /**
  * This function exists because we do not have a proper status API for a connection yet. Instead, we rely on the job list endpoint to determine the current status of a connection.
- * When a sync or reset job is started, we prepend a job to the list to immediately update the conneciton status to running (or cancelled), while re-fetching the actual job list in the background.
+ * When a sync or reset job is started, we prepend a job to the list to immediately update the connection status to running (or cancelled), while re-fetching the actual job list in the background.
  */
 export function prependArtificialJobToStatus(
   {
@@ -206,30 +200,30 @@ export function prependArtificialJobToStatus(
   };
 }
 
-export const useResetConnection = () => {
+export const useClearConnection = () => {
   const requestOptions = useRequestOptions();
   const queryClient = useQueryClient();
   const setConnectionRunState = useSetConnectionRunState();
-  const mutation = useMutation(["useResetConnection"], async (connectionId: string) => {
-    await resetConnection({ connectionId }, requestOptions);
+  const mutation = useMutation(["useClearConnection"], async (connectionId: string) => {
+    await clearConnection({ connectionId }, requestOptions);
     setConnectionRunState(connectionId, true);
     queryClient.setQueriesData<JobReadList>(jobsKeys.useListJobsForConnectionStatus(connectionId), (prevJobList) =>
-      prependArtificialJobToStatus({ status: JobStatus.running, configType: "reset_connection" }, prevJobList)
+      prependArtificialJobToStatus({ status: JobStatus.running, configType: "clear" }, prevJobList)
     );
   });
-  const activeMutationsCount = useIsMutating(["useResetConnection"]);
+  const activeMutationsCount = useIsMutating(["useClearConnection"]);
   return { ...mutation, isLoading: activeMutationsCount > 0 };
 };
 
-export const useResetConnectionStream = (connectionId: string) => {
+export const useClearConnectionStream = (connectionId: string) => {
   const requestOptions = useRequestOptions();
   const queryClient = useQueryClient();
   const setConnectionRunState = useSetConnectionRunState();
   return useMutation(async (streams: ConnectionStream[]) => {
-    await resetConnectionStream({ connectionId, streams }, requestOptions);
+    await clearConnectionStream({ connectionId, streams }, requestOptions);
     setConnectionRunState(connectionId, true);
     queryClient.setQueriesData<JobReadList>(jobsKeys.useListJobsForConnectionStatus(connectionId), (prevJobList) =>
-      prependArtificialJobToStatus({ status: JobStatus.running, configType: "reset_connection" }, prevJobList)
+      prependArtificialJobToStatus({ status: JobStatus.running, configType: "clear" }, prevJobList)
     );
   });
 };

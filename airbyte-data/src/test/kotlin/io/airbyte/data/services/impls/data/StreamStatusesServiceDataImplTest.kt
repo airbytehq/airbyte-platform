@@ -3,7 +3,7 @@ package io.airbyte.data.services.impls.data
 import io.airbyte.config.StreamDescriptor
 import io.airbyte.data.repositories.specialized.LastJobWithStatsPerStreamRepository
 import io.airbyte.data.repositories.specialized.StreamWithLastJobId
-import io.airbyte.data.services.StreamStatsService
+import io.airbyte.data.services.StreamStatusesService
 import io.mockk.every
 import io.mockk.mockk
 import org.junit.jupiter.api.Assertions.assertEquals
@@ -12,14 +12,14 @@ import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
 import java.util.UUID
 
-class StreamStatsServiceDataImplTest {
+class StreamStatusesServiceDataImplTest {
   private lateinit var lastJobWithStatsPerStreamRepository: LastJobWithStatsPerStreamRepository
-  private lateinit var streamStatsService: StreamStatsService
+  private lateinit var streamStatusesService: StreamStatusesService
 
   @BeforeEach
   fun setup() {
     lastJobWithStatsPerStreamRepository = mockk()
-    streamStatsService = StreamStatsServiceDataImpl(lastJobWithStatsPerStreamRepository)
+    streamStatusesService = StreamStatusesServiceDataImpl(lastJobWithStatsPerStreamRepository)
   }
 
   @Nested
@@ -36,8 +36,6 @@ class StreamStatsServiceDataImplTest {
       every {
         lastJobWithStatsPerStreamRepository.findLastJobIdWithStatsPerStream(
           connectionId,
-          arrayOf(stream1.name, stream2.name, stream1NoNamespace.name),
-          arrayOf(stream1.namespace, stream2.namespace, null),
         )
       } returns
         listOf(
@@ -47,9 +45,8 @@ class StreamStatsServiceDataImplTest {
         )
 
       val result =
-        streamStatsService.getLastJobIdWithStatsByStream(
+        streamStatusesService.getLastJobIdWithStatsByStream(
           connectionId = connectionId,
-          streams = listOf(stream1, stream2, stream1NoNamespace),
         )
 
       assertEquals(3, result.size)

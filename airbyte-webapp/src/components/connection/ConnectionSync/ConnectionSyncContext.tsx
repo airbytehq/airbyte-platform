@@ -1,16 +1,17 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { createContext, useCallback, useContext, useMemo } from "react";
 
+import { isClearJob } from "area/connection/utils/jobs";
 import {
-  useResetConnection,
   useSyncConnection,
   useCancelJob,
   useListJobsForConnectionStatus,
   jobsKeys,
   prependArtificialJobToStatus,
   useRefreshConnectionStreams,
-  useResetConnectionStream,
   connectionsKeys,
+  useClearConnection,
+  useClearConnectionStream,
 } from "core/api";
 import {
   ConnectionStatus,
@@ -37,9 +38,9 @@ interface ConnectionSyncContext {
     refreshMode: RefreshMode;
   }) => Promise<void>;
   refreshStarting: boolean;
-  resetStreams: (streams?: ConnectionStream[]) => Promise<void>;
-  resetStarting: boolean;
-  jobResetRunning: boolean;
+  clearStreams: (streams?: ConnectionStream[]) => Promise<void>;
+  clearStarting: boolean;
+  jobClearRunning: boolean;
   jobRefreshRunning: boolean;
 }
 
@@ -79,13 +80,13 @@ const useConnectionSyncContextInit = (connection: WebBackendConnectionRead): Con
     };
   }, [mostRecentJob, doCancelJob, connection.connectionId, queryClient]);
 
-  const { mutateAsync: doResetConnection, isLoading: resetStarting } = useResetConnection();
-  const { mutateAsync: resetStream } = useResetConnectionStream(connection.connectionId);
+  const { mutateAsync: doResetConnection, isLoading: clearStarting } = useClearConnection();
+  const { mutateAsync: resetStream } = useClearConnectionStream(connection.connectionId);
   const { mutateAsync: refreshStreams, isLoading: refreshStarting } = useRefreshConnectionStreams(
     connection.connectionId
   );
 
-  const resetStreams = useCallback(
+  const clearStreams = useCallback(
     async (streams?: ConnectionStream[]) => {
       if (streams) {
         // Reset a set of streams.
@@ -104,7 +105,8 @@ const useConnectionSyncContextInit = (connection: WebBackendConnectionRead): Con
       (mostRecentJob?.status === JobStatus.running || mostRecentJob?.status === JobStatus.incomplete),
     [mostRecentJob?.configType, mostRecentJob?.status]
   );
-  const jobResetRunning = mostRecentJob?.status === "running" && mostRecentJob.configType === "reset_connection";
+  const jobClearRunning = mostRecentJob?.status === "running" && isClearJob(mostRecentJob);
+
   const jobRefreshRunning = mostRecentJob?.status === "running" && mostRecentJob.configType === "refresh";
 
   return {
@@ -117,9 +119,9 @@ const useConnectionSyncContextInit = (connection: WebBackendConnectionRead): Con
     refreshStreams,
     refreshStarting,
     jobRefreshRunning,
-    resetStreams,
-    resetStarting,
-    jobResetRunning,
+    clearStreams,
+    clearStarting,
+    jobClearRunning,
   };
 };
 

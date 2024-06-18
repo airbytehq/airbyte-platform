@@ -29,7 +29,7 @@ export const SourceSettingsPage: React.FC = () => {
   const connectionsWithSource = useMemo(() => connectionList?.connections ?? [], [connectionList]);
   const sourceDefinition = useSourceDefinition(source.sourceDefinitionId);
   const sourceDefinitionVersion = useSourceDefinitionVersion(source.sourceId);
-  const sourceDefinitionSpecification = useGetSourceDefinitionSpecification(source.sourceDefinitionId, source.sourceId);
+  const sourceDefinitionSpecification = useGetSourceDefinitionSpecification(source.sourceId);
 
   const reloadSource = useInvalidateSource(source.sourceId);
   const { mutateAsync: updateSource } = useUpdateSource();

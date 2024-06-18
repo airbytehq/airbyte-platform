@@ -1,11 +1,15 @@
 package io.airbyte.data.repositories.specialized
 
 import io.airbyte.data.repositories.AbstractConfigRepositoryTest
-import io.airbyte.data.repositories.entities.Attempt
-import io.airbyte.data.repositories.entities.Job
-import io.airbyte.data.repositories.entities.StreamStats
+import io.airbyte.db.instance.jobs.jooq.generated.Keys
+import io.airbyte.db.instance.jobs.jooq.generated.Tables.STREAM_STATUSES
+import io.airbyte.db.instance.jobs.jooq.generated.enums.JobStreamStatusJobType
+import io.airbyte.db.instance.jobs.jooq.generated.enums.JobStreamStatusRunState
+import io.airbyte.db.instance.jobs.jooq.generated.tables.records.StreamStatusesRecord
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.Test
+import java.time.OffsetDateTime
 import java.util.UUID
 
 internal class LastJobWithStatsPerStreamRepositoryTest : AbstractConfigRepositoryTest() {
@@ -14,16 +18,19 @@ internal class LastJobWithStatsPerStreamRepositoryTest : AbstractConfigRepositor
     private val job2Id = 2L
     private val job3Id = 3L
 
-    private val job1Attempt1Id = 1L
-    private val job1Attempt2Id = 2L
-    private val job2Attempt1Id = 3L
-    private val job3Attempt1Id = 4L
-
     private val connectionId = UUID.randomUUID()
     private val streamNameFoo = "foo"
     private val streamNameBar = "bar"
     private val streamNamespace1 = "ns1"
     private val streamNamespace2 = "ns2"
+
+    @JvmStatic
+    @BeforeAll
+    fun beforeAll() {
+      // so we don't have to deal with making jobs as well
+      jooqDslContext.alterTable(STREAM_STATUSES)
+        .dropForeignKey(Keys.STREAM_STATUSES__STREAM_STATUSES_JOB_ID_FKEY.constraint()).execute()
+    }
   }
 
   @Test
@@ -33,8 +40,6 @@ internal class LastJobWithStatsPerStreamRepositoryTest : AbstractConfigRepositor
     val result =
       lastJobPerStreamRepository.findLastJobIdWithStatsPerStream(
         connectionId,
-        arrayOf(streamNameFoo, streamNameBar, streamNameFoo, streamNameFoo),
-        arrayOf(streamNamespace1, streamNamespace1, streamNamespace2, null),
       ).associate { listOf(it.streamName, it.streamNamespace) to it.jobId }
 
     val actualFooNs1JobId = result[listOf(streamNameFoo, streamNamespace1)]
@@ -53,158 +58,33 @@ internal class LastJobWithStatsPerStreamRepositoryTest : AbstractConfigRepositor
   }
 
   private fun setupFixtures() {
-    val job1 = Job(id = job1Id, scope = connectionId.toString())
-    val job2 = Job(id = job2Id, scope = connectionId.toString())
-    val job3 = Job(id = job3Id, scope = connectionId.toString())
+    val job1FooNs1 = streamStatusesRecord(job1Id, streamNameFoo, streamNamespace1, connectionId)
+    val job1FooNsNull = streamStatusesRecord(job1Id, streamNameFoo, null, connectionId)
+    val job1FooNs2 = streamStatusesRecord(job1Id, streamNameFoo, streamNamespace2, connectionId)
+    val job1BarNs1 = streamStatusesRecord(job1Id, streamNameBar, streamNamespace1, connectionId)
+    val job2FooNs2 = streamStatusesRecord(job2Id, streamNameFoo, streamNamespace2, connectionId)
+    val job3BarNs1 = streamStatusesRecord(job3Id, streamNameBar, streamNamespace1, connectionId)
+    val job3BarNs1RandomConn = streamStatusesRecord(job3Id, streamNameBar, streamNamespace1, UUID.randomUUID()) // make sure this doesn't show up
+    jooqDslContext.batchInsert(job1FooNs1, job1FooNsNull, job1FooNs2, job1BarNs1, job2FooNs2, job3BarNs1, job3BarNs1RandomConn).execute()
+  }
 
-    val job1Attempt1 =
-      Attempt(
-        id = job1Attempt1Id,
-        jobId = job1Id,
-        attemptNumber = 1,
-      )
-    val job1Attempt2 =
-      Attempt(
-        id = job1Attempt2Id,
-        jobId = job1Id,
-        attemptNumber = 2,
-      )
-
-    val job2Attempt1 =
-      Attempt(
-        id = job2Attempt1Id,
-        jobId = job2Id,
-        attemptNumber = 1,
-      )
-
-    val job3Attempt1 =
-      Attempt(
-        id = job3Attempt1Id,
-        jobId = job3Id,
-        attemptNumber = 1,
-      )
-
-    // stream foo_namespace1 only exists in job 1, it has stats in both attempts
-    val fooNs1Job1Attempt1Stats =
-      StreamStats(
-        attemptId = job1Attempt1.id!!,
-        streamName = streamNameFoo,
-        streamNamespace = streamNamespace1,
-        recordsEmitted = 10,
-        bytesEmitted = 100,
-        connectionId = connectionId,
-      )
-    val fooNs1Job1Attempt2Stats =
-      StreamStats(
-        attemptId = job1Attempt2.id!!,
-        streamName = streamNameFoo,
-        streamNamespace = streamNamespace1,
-        recordsEmitted = 20,
-        bytesEmitted = 200,
-        connectionId = connectionId,
-      )
-
-    // stream bar_namespace1 exists in all three jobs
-    val barNs1Job1Attempt1Stats =
-      StreamStats(
-        attemptId = job1Attempt1.id!!,
-        streamName = streamNameBar,
-        streamNamespace = streamNamespace1,
-        recordsEmitted = 30,
-        bytesEmitted = 300,
-        connectionId = connectionId,
-      )
-
-    val barNs1Job1Attempt2Stats =
-      StreamStats(
-        attemptId = job1Attempt2.id!!,
-        streamName = streamNameBar,
-        streamNamespace = streamNamespace1,
-        recordsEmitted = 40,
-        bytesEmitted = 400,
-        connectionId = connectionId,
-      )
-
-    val barNs1Job2Attempt1Stats =
-      StreamStats(
-        attemptId = job2Attempt1.id!!,
-        streamName = streamNameBar,
-        streamNamespace = streamNamespace1,
-        recordsEmitted = 50,
-        bytesEmitted = 500,
-        connectionId = connectionId,
-      )
-
-    val barNs1Job3Attempt1Stats =
-      StreamStats(
-        attemptId = job3Attempt1.id!!,
-        streamName = streamNameBar,
-        streamNamespace = streamNamespace1,
-        recordsEmitted = 60,
-        bytesEmitted = 600,
-        connectionId = connectionId,
-      )
-
-    // stream foo_namespace2 exists in job1 and job 2. Job1 has two attempts, job2 has one attempt.
-    // Only the 2nd attempt of job1 has stats for foo_namespace2. The only attempt of job2 has stats for foo_namespace2.
-    val fooNs2Job1Attempt1Stats =
-      StreamStats(
-        attemptId = job1Attempt2.id!!,
-        streamName = streamNameFoo,
-        streamNamespace = streamNamespace2,
-        recordsEmitted = 70,
-        bytesEmitted = 700,
-        connectionId = connectionId,
-      )
-
-    val fooNs2Job2Attempt1Stats =
-      StreamStats(
-        attemptId = job2Attempt1.id!!,
-        streamName = streamNameFoo,
-        streamNamespace = streamNamespace2,
-        recordsEmitted = 80,
-        bytesEmitted = 800,
-        connectionId = connectionId,
-      )
-
-    // stream foo_<null> only exists in job 1, and only has stats in the second attempt of job 1
-    val fooNullJob1Attempt1Stats =
-      StreamStats(
-        attemptId = job1Attempt2.id!!,
-        streamName = streamNameFoo,
-        streamNamespace = null,
-        recordsEmitted = 90,
-        bytesEmitted = 900,
-        connectionId = connectionId,
-      )
-
-    // stream bar_namespace2 only exists in job 1. We save this record to the database, but
-    // it should not be returned in the query because it is not in the list of streams we are querying for.
-    val barNs2Job1Attempt1Stats =
-      StreamStats(
-        attemptId = job1Attempt1.id!!,
-        streamName = streamNameBar,
-        streamNamespace = streamNamespace2,
-        recordsEmitted = 100,
-        bytesEmitted = 1000,
-        connectionId = connectionId,
-      )
-
-    jobsRepository.saveAll(listOf(job1, job2, job3))
-    attemptsRepository.saveAll(listOf(job1Attempt1, job1Attempt2, job2Attempt1, job3Attempt1))
-    streamStatsRepository.saveAll(
-      listOf(
-        fooNs1Job1Attempt1Stats,
-        fooNs1Job1Attempt2Stats,
-        barNs1Job1Attempt1Stats,
-        barNs1Job1Attempt2Stats,
-        barNs1Job2Attempt1Stats,
-        barNs1Job3Attempt1Stats,
-        fooNs2Job1Attempt1Stats,
-        fooNs2Job2Attempt1Stats,
-        fooNullJob1Attempt1Stats,
-        barNs2Job1Attempt1Stats,
-      ),
-    )
+  private fun streamStatusesRecord(
+    jobId: Long,
+    streamName: String,
+    streamNamespace: String?,
+    connectionId: UUID,
+  ): StreamStatusesRecord {
+    return jooqDslContext.newRecord(STREAM_STATUSES).apply {
+      this.id = UUID.randomUUID()
+      this.jobId = jobId
+      this.jobType = JobStreamStatusJobType.sync
+      this.connectionId = connectionId
+      this.streamName = streamName
+      this.streamNamespace = streamNamespace
+      this.workspaceId = UUID.randomUUID()
+      this.attemptNumber = 0
+      this.runState = JobStreamStatusRunState.complete
+      this.transitionedAt = OffsetDateTime.now()
+    }
   }
 }

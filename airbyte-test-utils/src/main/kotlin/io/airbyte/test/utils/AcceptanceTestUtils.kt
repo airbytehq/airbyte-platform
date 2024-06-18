@@ -126,7 +126,7 @@ object AcceptanceTestUtils {
 
   @JvmStatic
   fun modifyCatalog(
-    originalCatalog: AirbyteCatalog,
+    originalCatalog: AirbyteCatalog?,
     // TODO replace Optional with nullable values and leverage ?.let { } ?: config.<other value>
     replacementSourceSyncMode: Optional<SyncMode> = Optional.empty(),
     replacementDestinationSyncMode: Optional<DestinationSyncMode> = Optional.empty(),
@@ -141,27 +141,29 @@ object AcceptanceTestUtils {
     streamFilter: Optional<Predicate<AirbyteStreamAndConfiguration>> = Optional.empty(),
   ): AirbyteCatalog {
     val updatedStreams: List<AirbyteStreamAndConfiguration> =
-      originalCatalog.streams.stream().map { s: AirbyteStreamAndConfiguration ->
-        val config = s.config
-        val newConfig =
-          AirbyteStreamConfiguration(
-            replacementSourceSyncMode.orElse(config!!.syncMode),
-            replacementDestinationSyncMode.orElse(config.destinationSyncMode),
-            replacementCursorFields.orElse(config.cursorField),
-            replacementPrimaryKeys.orElse(config.primaryKey),
-            config.aliasName,
-            replacementSelected.orElse(config.selected),
-            config.suggested,
-            replacementFieldSelectionEnabled.orElse(config.fieldSelectionEnabled),
-            replacementSelectedFields.orElse(config.selectedFields),
-            replacementMinimumGenerationId.orElse(config.minimumGenerationId),
-            replacementGenerationId.orElse(config.generationId),
-            replacementSyncId.orElse(config.syncId),
-          )
-        AirbyteStreamAndConfiguration(s.stream, newConfig)
-      }
-        .filter(streamFilter.orElse { true })
-        .toList()
+      originalCatalog?.let { orig ->
+        orig.streams.stream().map { s: AirbyteStreamAndConfiguration ->
+          val config = s.config
+          val newConfig =
+            AirbyteStreamConfiguration(
+              replacementSourceSyncMode.orElse(config!!.syncMode),
+              replacementDestinationSyncMode.orElse(config.destinationSyncMode),
+              replacementCursorFields.orElse(config.cursorField),
+              replacementPrimaryKeys.orElse(config.primaryKey),
+              config.aliasName,
+              replacementSelected.orElse(config.selected),
+              config.suggested,
+              replacementFieldSelectionEnabled.orElse(config.fieldSelectionEnabled),
+              replacementSelectedFields.orElse(config.selectedFields),
+              replacementMinimumGenerationId.orElse(config.minimumGenerationId),
+              replacementGenerationId.orElse(config.generationId),
+              replacementSyncId.orElse(config.syncId),
+            )
+          AirbyteStreamAndConfiguration(s.stream, newConfig)
+        }
+          .filter(streamFilter.orElse { true })
+          .toList()
+      } ?: emptyList()
     return AirbyteCatalog(updatedStreams)
   }
 

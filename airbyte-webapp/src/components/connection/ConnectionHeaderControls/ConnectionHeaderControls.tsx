@@ -35,9 +35,9 @@ export const ConnectionHeaderControls: React.FC = () => {
     cancelJob,
     syncConnection,
     connectionEnabled,
-    resetStarting,
+    clearStarting: resetStarting,
     refreshStarting,
-    jobResetRunning,
+    jobClearRunning: jobResetRunning,
     jobRefreshRunning,
   } = useConnectionSyncContext();
 

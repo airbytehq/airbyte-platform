@@ -29,10 +29,7 @@ export const DestinationSettingsPage: React.FC = () => {
   const connectionsWithDestination = useMemo(() => connectionList?.connections ?? [], [connectionList]);
   const destinationDefinition = useDestinationDefinition(destination.destinationDefinitionId);
   const destinationDefinitionVersion = useDestinationDefinitionVersion(destination.destinationId);
-  const destinationSpecification = useGetDestinationDefinitionSpecification(
-    destination.destinationDefinitionId,
-    destination.destinationId
-  );
+  const destinationSpecification = useGetDestinationDefinitionSpecification(destination.destinationId);
   const reloadDestination = useInvalidateDestination(destination.destinationId);
   const { mutateAsync: updateDestination } = useUpdateDestination();
   const { mutateAsync: deleteDestination } = useDeleteDestination();

@@ -50,7 +50,6 @@ import io.airbyte.api.model.generated.ConnectionSearch;
 import io.airbyte.api.model.generated.ConnectionStatus;
 import io.airbyte.api.model.generated.ConnectionStatusRead;
 import io.airbyte.api.model.generated.ConnectionStatusesRequestBody;
-import io.airbyte.api.model.generated.ConnectionStream;
 import io.airbyte.api.model.generated.ConnectionStreamHistoryReadItem;
 import io.airbyte.api.model.generated.ConnectionStreamHistoryRequestBody;
 import io.airbyte.api.model.generated.ConnectionUpdate;
@@ -140,7 +139,7 @@ import io.airbyte.data.helpers.ActorDefinitionVersionUpdater;
 import io.airbyte.data.services.DestinationService;
 import io.airbyte.data.services.SecretPersistenceConfigService;
 import io.airbyte.data.services.SourceService;
-import io.airbyte.data.services.StreamStatsService;
+import io.airbyte.data.services.StreamStatusesService;
 import io.airbyte.data.services.WorkspaceService;
 import io.airbyte.featureflag.TestClient;
 import io.airbyte.persistence.job.JobNotifier;
@@ -263,7 +262,7 @@ class ConnectionsHandlerTest {
   private CatalogGenerationSetter catalogGenerationSetter;
   private CatalogValidator catalogValidator;
   private NotificationHelper notificationHelper;
-  private StreamStatsService streamStatsService;
+  private StreamStatusesService streamStatusesService;
 
   @SuppressWarnings("unchecked")
   @BeforeEach
@@ -370,7 +369,7 @@ class ConnectionsHandlerTest {
     workspaceService = mock(WorkspaceService.class);
     secretPersistenceConfigService = mock(SecretPersistenceConfigService.class);
     actorDefinitionHandlerHelper = mock(ActorDefinitionHandlerHelper.class);
-    streamStatsService = mock(StreamStatsService.class);
+    streamStatusesService = mock(StreamStatusesService.class);
 
     featureFlagClient = mock(TestClient.class);
 
@@ -437,7 +436,7 @@ class ConnectionsHandlerTest {
           catalogGenerationSetter,
           catalogValidator,
           notificationHelper,
-          streamStatsService);
+          streamStatusesService);
 
       when(uuidGenerator.get()).thenReturn(standardSync.getConnectionId());
       final StandardSourceDefinition sourceDefinition = new StandardSourceDefinition()
@@ -1688,7 +1687,7 @@ class ConnectionsHandlerTest {
           catalogGenerationSetter,
           catalogValidator,
           notificationHelper,
-          streamStatsService);
+          streamStatusesService);
     }
 
     private Attempt generateMockAttempt(final Instant attemptTime, final long recordsSynced) {
@@ -1938,7 +1937,7 @@ class ConnectionsHandlerTest {
           catalogGenerationSetter,
           catalogValidator,
           notificationHelper,
-          streamStatsService);
+          streamStatusesService);
     }
 
     @Test
@@ -2437,7 +2436,7 @@ class ConnectionsHandlerTest {
           catalogGenerationSetter,
           catalogValidator,
           notificationHelper,
-          streamStatsService);
+          streamStatusesService);
     }
 
     @Test
@@ -2544,7 +2543,7 @@ class ConnectionsHandlerTest {
           catalogGenerationSetter,
           catalogValidator,
           notificationHelper,
-          streamStatsService);
+          streamStatusesService);
     }
 
     @Test
@@ -2613,22 +2612,8 @@ class ConnectionsHandlerTest {
       final JobWithAttemptsRead jobWithAttemptsRead = new JobWithAttemptsRead()
           .job(jobRead);
 
-      final ConnectionLastJobPerStreamRequestBody apiReqStream1Only = new ConnectionLastJobPerStreamRequestBody()
-          .connectionId(connectionId)
-          .streams(List.of(
-              new ConnectionStream()
-                  .streamName(stream1Name)
-                  .streamNamespace(stream1Namespace)));
-
-      final ConnectionLastJobPerStreamRequestBody apiReqStream1And2 = new ConnectionLastJobPerStreamRequestBody()
-          .connectionId(connectionId)
-          .streams(List.of(
-              new ConnectionStream()
-                  .streamName(stream1Name)
-                  .streamNamespace(stream1Namespace),
-              new ConnectionStream()
-                  .streamName(stream2Name)
-                  .streamNamespace(null)));
+      final ConnectionLastJobPerStreamRequestBody apiReq = new ConnectionLastJobPerStreamRequestBody()
+          .connectionId(connectionId);
 
       final ConnectionLastJobPerStreamReadItem stream1ReadItem = new ConnectionLastJobPerStreamReadItem()
           .streamName(stream1Name)
@@ -2652,12 +2637,7 @@ class ConnectionsHandlerTest {
           .startedAt(startedAt.toEpochMilli())
           .endedAt(updatedAt.toEpochMilli());
 
-      // mock for req with only stream1
-      when(streamStatsService.getLastJobIdWithStatsByStream(connectionId, List.of(stream1Descriptor)))
-          .thenReturn(Map.of(stream1Descriptor, jobId));
-
-      // mock for req with both streams
-      when(streamStatsService.getLastJobIdWithStatsByStream(connectionId, List.of(stream1Descriptor, stream2Descriptor)))
+      when(streamStatusesService.getLastJobIdWithStatsByStream(connectionId))
           .thenReturn(Map.of(
               stream1Descriptor, jobId,
               stream2Descriptor, jobId));
@@ -2668,11 +2648,9 @@ class ConnectionsHandlerTest {
         mockStatsAggregationHelper.when(() -> StatsAggregationHelper.getJobIdToJobWithAttemptsReadMap(eq(jobList), eq(jobPersistence)))
             .thenReturn(Map.of(jobId, jobWithAttemptsRead));
 
-        final List<ConnectionLastJobPerStreamReadItem> expectedStream1Only = List.of(stream1ReadItem);
         final List<ConnectionLastJobPerStreamReadItem> expectedStream1And2 = List.of(stream1ReadItem, stream2ReadItem);
 
-        assertEquals(expectedStream1Only, connectionsHandler.getConnectionLastJobPerStream(apiReqStream1Only));
-        assertEquals(expectedStream1And2, connectionsHandler.getConnectionLastJobPerStream(apiReqStream1And2));
+        assertEquals(expectedStream1And2, connectionsHandler.getConnectionLastJobPerStream(apiReq));
       }
     }
 
