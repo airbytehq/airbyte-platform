@@ -5,6 +5,7 @@
 package io.airbyte.workers.temporal.scheduling;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
+import static org.junit.jupiter.api.parallel.ExecutionMode.SAME_THREAD;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -40,9 +41,11 @@ import java.util.stream.Stream;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.parallel.Execution;
 
 // TODO: Auto generation of the input and more scenario coverage
 @SuppressWarnings("PMD.JUnitTestsShouldIncludeAssert")
+@Execution(SAME_THREAD)
 class WorkflowReplayingTest {
 
   private TemporalProxyHelper temporalProxyHelper;
