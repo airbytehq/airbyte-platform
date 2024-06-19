@@ -236,7 +236,6 @@ class WebBackendConnectionsHandlerTest {
         connectionsHandler,
         stateHandler,
         sourceHandler,
-        destinationDefinitionsHandler,
         destinationHandler,
         jobHistoryHandler,
         schedulerHandler,
@@ -460,7 +459,8 @@ class WebBackendConnectionsHandlerTest {
   }
 
   @Test
-  void testWebBackendListConnectionsForWorkspace() throws IOException {
+  void testWebBackendListConnectionsForWorkspace()
+      throws IOException, JsonValidationException, io.airbyte.data.exceptions.ConfigNotFoundException, ConfigNotFoundException {
     final WebBackendConnectionListRequestBody webBackendConnectionListRequestBody = new WebBackendConnectionListRequestBody();
     webBackendConnectionListRequestBody.setWorkspaceId(sourceRead.getWorkspaceId());
 
@@ -475,7 +475,8 @@ class WebBackendConnectionsHandlerTest {
   }
 
   @Test
-  void testWebBackendGetConnection() throws ConfigNotFoundException, IOException, JsonValidationException {
+  void testWebBackendGetConnection()
+      throws ConfigNotFoundException, IOException, JsonValidationException, io.airbyte.data.exceptions.ConfigNotFoundException {
     final ConnectionIdRequestBody connectionIdRequestBody = new ConnectionIdRequestBody();
     connectionIdRequestBody.setConnectionId(connectionRead.getConnectionId());
 
@@ -496,7 +497,7 @@ class WebBackendConnectionsHandlerTest {
   WebBackendConnectionRead testWebBackendGetConnection(final boolean withCatalogRefresh,
                                                        final ConnectionRead connectionRead,
                                                        final OperationReadList operationReadList)
-      throws JsonValidationException, ConfigNotFoundException, IOException {
+      throws JsonValidationException, ConfigNotFoundException, IOException, io.airbyte.data.exceptions.ConfigNotFoundException {
     final ConnectionIdRequestBody connectionIdRequestBody = new ConnectionIdRequestBody();
     connectionIdRequestBody.setConnectionId(connectionRead.getConnectionId());
 
@@ -514,7 +515,7 @@ class WebBackendConnectionsHandlerTest {
 
   @Test
   void testWebBackendGetConnectionWithDiscoveryAndNewSchema() throws ConfigNotFoundException,
-      IOException, JsonValidationException {
+      IOException, JsonValidationException, io.airbyte.data.exceptions.ConfigNotFoundException {
     final UUID newCatalogId = UUID.randomUUID();
     when(configRepository.getMostRecentActorCatalogFetchEventForSource(any()))
         .thenReturn(Optional.of(new ActorCatalogFetchEvent().withActorCatalogId(newCatalogId)));
@@ -532,7 +533,7 @@ class WebBackendConnectionsHandlerTest {
 
   @Test
   void testWebBackendGetConnectionWithDiscoveryAndNewSchemaBreakingChange() throws ConfigNotFoundException,
-      IOException, JsonValidationException {
+      IOException, JsonValidationException, io.airbyte.data.exceptions.ConfigNotFoundException {
     final UUID newCatalogId = UUID.randomUUID();
     when(configRepository.getMostRecentActorCatalogFetchEventForSource(any()))
         .thenReturn(Optional.of(new ActorCatalogFetchEvent().withActorCatalogId(newCatalogId)));
@@ -551,7 +552,7 @@ class WebBackendConnectionsHandlerTest {
 
   @Test
   void testWebBackendGetConnectionWithDiscoveryMissingCatalogUsedToMakeConfiguredCatalog()
-      throws IOException, ConfigNotFoundException, JsonValidationException {
+      throws IOException, ConfigNotFoundException, JsonValidationException, io.airbyte.data.exceptions.ConfigNotFoundException {
     final UUID newCatalogId = UUID.randomUUID();
     when(configRepository.getMostRecentActorCatalogFetchEventForSource(any()))
         .thenReturn(Optional.of(new ActorCatalogFetchEvent().withActorCatalogId(newCatalogId)));
@@ -569,7 +570,7 @@ class WebBackendConnectionsHandlerTest {
 
   @Test
   void testWebBackendGetConnectionWithDiscoveryAndFieldSelectionAddField() throws ConfigNotFoundException,
-      IOException, JsonValidationException {
+      IOException, JsonValidationException, io.airbyte.data.exceptions.ConfigNotFoundException {
     // Mock this because the API uses it to determine whether there was a schema change.
     when(configRepository.getMostRecentActorCatalogFetchEventForSource(any()))
         .thenReturn(Optional.of(new ActorCatalogFetchEvent().withActorCatalogId(UUID.randomUUID())));
@@ -622,7 +623,7 @@ class WebBackendConnectionsHandlerTest {
 
   @Test
   void testWebBackendGetConnectionWithDiscoveryAndFieldSelectionRemoveField() throws ConfigNotFoundException,
-      IOException, JsonValidationException {
+      IOException, JsonValidationException, io.airbyte.data.exceptions.ConfigNotFoundException {
     // Mock this because the API uses it to determine whether there was a schema change.
     when(configRepository.getMostRecentActorCatalogFetchEventForSource(any()))
         .thenReturn(Optional.of(new ActorCatalogFetchEvent().withActorCatalogId(UUID.randomUUID())));
@@ -670,14 +671,15 @@ class WebBackendConnectionsHandlerTest {
 
   @Test
   void testWebBackendGetConnectionNoRefreshCatalog()
-      throws JsonValidationException, ConfigNotFoundException, IOException {
+      throws JsonValidationException, ConfigNotFoundException, IOException, io.airbyte.data.exceptions.ConfigNotFoundException {
     final WebBackendConnectionRead result = testWebBackendGetConnection(false, connectionRead, operationReadList);
     verify(schedulerHandler, never()).discoverSchemaForSourceFromSourceId(any());
     assertEquals(expected, result);
   }
 
   @Test
-  void testWebBackendGetConnectionNoDiscoveryWithNewSchema() throws JsonValidationException, ConfigNotFoundException, IOException {
+  void testWebBackendGetConnectionNoDiscoveryWithNewSchema()
+      throws JsonValidationException, ConfigNotFoundException, IOException, io.airbyte.data.exceptions.ConfigNotFoundException {
     when(configRepository.getMostRecentActorCatalogFetchEventForSource(any()))
         .thenReturn(Optional.of(new ActorCatalogFetchEvent().withActorCatalogId(UUID.randomUUID())));
     when(configRepository.getActorCatalogById(any())).thenReturn(new ActorCatalog().withId(UUID.randomUUID()));
@@ -686,7 +688,8 @@ class WebBackendConnectionsHandlerTest {
   }
 
   @Test
-  void testWebBackendGetConnectionNoDiscoveryWithNewSchemaBreaking() throws JsonValidationException, ConfigNotFoundException, IOException {
+  void testWebBackendGetConnectionNoDiscoveryWithNewSchemaBreaking()
+      throws JsonValidationException, ConfigNotFoundException, IOException, io.airbyte.data.exceptions.ConfigNotFoundException {
     when(connectionsHandler.getConnection(brokenConnectionRead.getConnectionId())).thenReturn(brokenConnectionRead);
     when(configRepository.getMostRecentActorCatalogFetchEventForSource(any()))
         .thenReturn(Optional.of(new ActorCatalogFetchEvent().withActorCatalogId(UUID.randomUUID())));

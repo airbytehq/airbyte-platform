@@ -10948,6 +10948,8 @@ components:
         - status
         - isSyncing
         - schemaChange
+        - sourceActorDefinitionVersion
+        - destinationActorDefinitionVersion
       properties:
         connectionId:
           $ref: "#/components/schemas/ConnectionId"
@@ -10971,6 +10973,10 @@ components:
           type: boolean
         schemaChange:
           $ref: "#/components/schemas/SchemaChange"
+        sourceActorDefinitionVersion:
+          $ref: "#/components/schemas/ActorDefinitionVersionRead"
+        destinationActorDefinitionVersion:
+          $ref: "#/components/schemas/ActorDefinitionVersionRead"
     WebBackendConnectionRead:
       type: object
       required:
@@ -10987,6 +10993,8 @@ components:
         - notifySchemaChanges
         - notifySchemaChangesByEmail
         - nonBreakingChangesPreference
+        - sourceActorDefinitionVersion
+        - destinationActorDefinitionVersion
       properties:
         connectionId:
           $ref: "#/components/schemas/ConnectionId"
@@ -11056,6 +11064,10 @@ components:
           format: int64
         backfillPreference:
           $ref: "#/components/schemas/SchemaChangeBackfillPreference"
+        sourceActorDefinitionVersion:
+          $ref: "#/components/schemas/ActorDefinitionVersionRead"
+        destinationActorDefinitionVersion:
+          $ref: "#/components/schemas/ActorDefinitionVersionRead"
     NonBreakingChangesPreference:
       enum:
         - ignore # do nothing if we detect a schema change

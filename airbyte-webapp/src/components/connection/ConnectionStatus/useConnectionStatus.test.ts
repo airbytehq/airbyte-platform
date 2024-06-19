@@ -2,7 +2,7 @@ import { UseQueryResult } from "@tanstack/react-query";
 import { renderHook } from "@testing-library/react";
 import dayjs from "dayjs";
 
-import { mockConnection } from "test-utils";
+import { mockConnection } from "test-utils/mock-data/mockConnection";
 
 import { useListConnectionsStatuses, useGetConnection, useGetConnectionSyncProgress } from "core/api";
 import {

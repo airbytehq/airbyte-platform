@@ -92,6 +92,8 @@ export const getConnectionTableData = (
     lastSync: connection.latestSyncJobCreatedAt,
     enabled: connection.status === ConnectionStatus.active,
     schemaChange: connection.schemaChange,
+    source: connection.sourceActorDefinitionVersion,
+    destination: connection.destinationActorDefinitionVersion,
     scheduleData: connection.scheduleData,
     scheduleType: connection.scheduleType,
     status: connection.status,

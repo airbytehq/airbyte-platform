@@ -73,7 +73,8 @@ class WebBackendApiTest extends BaseControllerTest {
   }
 
   @Test
-  void testWebBackendCreateConnection() throws JsonValidationException, ConfigNotFoundException, IOException {
+  void testWebBackendCreateConnection()
+      throws JsonValidationException, ConfigNotFoundException, IOException, io.airbyte.data.exceptions.ConfigNotFoundException {
     Mockito.when(webBackendConnectionsHandler.webBackendCreateConnection(Mockito.any()))
         .thenReturn(new WebBackendConnectionRead())
         .thenThrow(new ConfigNotFoundException("", ""));
@@ -87,7 +88,8 @@ class WebBackendApiTest extends BaseControllerTest {
   }
 
   @Test
-  void testWebBackendGetConnection() throws JsonValidationException, ConfigNotFoundException, IOException {
+  void testWebBackendGetConnection()
+      throws JsonValidationException, ConfigNotFoundException, IOException, io.airbyte.data.exceptions.ConfigNotFoundException {
     final String path = "/api/v1/web_backend/connections/get";
 
     Mockito.when(webBackendConnectionsHandler.webBackendGetConnection(Mockito.any()))
@@ -137,7 +139,8 @@ class WebBackendApiTest extends BaseControllerTest {
   }
 
   @Test
-  void testWebBackendListConnectionsForWorkspace() throws IOException {
+  void testWebBackendListConnectionsForWorkspace()
+      throws IOException, JsonValidationException, io.airbyte.data.exceptions.ConfigNotFoundException, ConfigNotFoundException {
     Mockito.when(webBackendConnectionsHandler.webBackendListConnectionsForWorkspace(Mockito.any()))
         .thenReturn(new WebBackendConnectionReadList());
     final String path = "/api/v1/web_backend/connections/list";

@@ -1,4 +1,5 @@
 import {
+  ActorDefinitionVersionRead,
   ConnectionScheduleData,
   ConnectionScheduleType,
   SchemaChange,
@@ -33,6 +34,8 @@ interface ConnectionTableDataItem {
   scheduleData?: ConnectionScheduleData;
   scheduleType?: ConnectionScheduleType;
   schemaChange: SchemaChange;
+  source: ActorDefinitionVersionRead;
+  destination: ActorDefinitionVersionRead;
   lastSyncStatus: string | null;
   connectorIcon?: string;
   entityIcon?: string;

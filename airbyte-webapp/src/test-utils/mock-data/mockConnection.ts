@@ -2,6 +2,9 @@
 import { ConnectorIds } from "area/connector/utils";
 import { WebBackendConnectionRead } from "core/api/types/AirbyteClient";
 
+import { mockDestinationDefinitionVersion } from "./mockDestination";
+import { mockSourceDefinitionVersion } from "./mockSource";
+
 export const mockConnection: WebBackendConnectionRead = {
   connectionId: "a9c8e4b5-349d-4a17-bdff-5ad2f6fbd611",
   name: "Scrafty <> Heroku Postgres",
@@ -929,4 +932,6 @@ export const mockConnection: WebBackendConnectionRead = {
   notifySchemaChanges: true,
   notifySchemaChangesByEmail: false,
   nonBreakingChangesPreference: "ignore",
+  sourceActorDefinitionVersion: mockSourceDefinitionVersion,
+  destinationActorDefinitionVersion: mockDestinationDefinitionVersion,
 };
