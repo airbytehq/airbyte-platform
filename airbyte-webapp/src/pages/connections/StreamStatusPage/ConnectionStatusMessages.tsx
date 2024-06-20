@@ -43,7 +43,7 @@ const reduceToHighestSeverityMessage = (messages: MessageProps[]): MessageProps[
  * @param connectorBreakingChangeDeadlinesEnabled
  * @returns An array containing id of the message to display and the type of error
  */
-const getBreakingChangeErrorMessage = (
+export const getBreakingChangeErrorMessage = (
   actorDefinitionVersion: ActorDefinitionVersionRead,
   connectorBreakingChangeDeadlinesEnabled: boolean
 ): {

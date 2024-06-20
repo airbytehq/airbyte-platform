@@ -128,4 +128,8 @@ class AirbyteMessageTracker(
       true -> logger.info { "$caller message | ${Jsons.serialize(msg)}" }
       else -> Unit
     }
+
+  fun endOfReplication(completedSuccessfully: Boolean) {
+    syncStatsTracker.endOfReplication(completedSuccessfully)
+  }
 }

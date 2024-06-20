@@ -17,6 +17,7 @@ dependencies {
   ksp(platform(libs.micronaut.platform))
   ksp(libs.bundles.micronaut.annotation.processor)
   ksp(libs.v3.swagger.annotations)
+  ksp(libs.jackson.kotlin)
   ksp(libs.moshi.kotlin)
 
   api(libs.bundles.micronaut.annotation)
@@ -28,6 +29,7 @@ dependencies {
   api(libs.java.jwt)
   api(libs.google.auth.library.oauth2.http)
   api(libs.kotlin.logging)
+  api(libs.jackson.kotlin)
   api(libs.moshi.kotlin)
   api(project(":airbyte-config:config-models"))
 
@@ -195,15 +197,14 @@ val genApiClient = tasks.register<GenerateTask>("genApiClient") {
             "enumPropertyNaming" to "UPPERCASE",
             "generatePom"        to "false",
             "interfaceOnly"      to "true",
+            "serializationLibrary" to "jackson",
     )
 
     doLast {
         val apiClientPath = "${outputDir.get()}/src/main/kotlin/org/openapitools/client/infrastructure/ApiClient.kt"
         updateApiClientWithFailsafe(apiClientPath)
         updateDomainClientsWithFailsafe("${outputDir.get()}/src/main/kotlin/io/airbyte/api/client/generated")
-
-        // a JsonNode adapter needs to be added to the kotlin client's serializer to handle JsonNode fields in requests
-        updateApiClientSerializerWithJsonNodeAdapter("${outputDir.get()}/src/main/kotlin/org/openapitools/client/infrastructure/Serializer.kt")
+        configureApiSerializer("${outputDir.get()}/src/main/kotlin/org/openapitools/client/infrastructure/Serializer.kt")
     }
 }
 
@@ -466,6 +467,7 @@ val genConnectorBuilderServerApiClient = tasks.register<GenerateTask>("genConnec
       "enumPropertyNaming"  to "UPPERCASE",
       "generatePom"         to "false",
       "interfaceOnly"       to "true",
+      "serializationLibrary" to "jackson",
     )
 
     doLast {
@@ -644,44 +646,44 @@ private fun updateDomainClientsToIncludeHttpResponseBodyOnClientException(client
     }
 }
 
-private fun updateApiClientSerializerWithJsonNodeAdapter(serializerPath: String) {
-    /*
-     * UPDATE Serializer to include JsonNode adapter
-     */
-    val serializerFile = file(serializerPath)
-    var serializerFileText = serializerFile.readText()
+private fun configureApiSerializer(serializerPath: String) {
+  /*
+   * UPDATE Serializer to match the Java generator's version
+   */
+  val serializerFile = file(serializerPath)
 
-    // add imports if not present
-    if (!serializerFileText.contains("import io.airbyte.api.client.infrastructure")) {
-        val newImports = listOf(
-                "import io.airbyte.api.client.infrastructure.AirbyteCatalogAdapter",
-                "import io.airbyte.api.client.infrastructure.AirbyteGeneratedConfigAdapter",
-                "import io.airbyte.api.client.infrastructure.SourceDiscoverSchemaWriteRequestBodyAdapter",
-                "import io.airbyte.api.client.infrastructure.AirbyteLocalDateAdapter",
-                "import io.airbyte.api.client.infrastructure.ConnectorBuilderPublishRequestBodyAdapter",
-                "import io.airbyte.api.client.infrastructure.DestinationSyncModeAdapter",
-                "import io.airbyte.api.client.infrastructure.FailureOriginAdapter",
-                "import io.airbyte.api.client.infrastructure.FailureTypeAdapter",
-                "import io.airbyte.api.client.infrastructure.JsonNodeAdapter",
-                "import io.airbyte.api.client.infrastructure.ReplicationStatusAdapter",
-                "import io.airbyte.api.client.infrastructure.SyncModeAdapter",
-        )
-        serializerFileText = serializerFileText.replaceFirst("import ", "${newImports.joinToString(separator="\n")}\nimport ")
-    }
+  val imports = listOf(
+    "import com.fasterxml.jackson.annotation.JsonInclude",
+    "import com.fasterxml.jackson.databind.ObjectMapper",
+    "import com.fasterxml.jackson.databind.DeserializationFeature",
+    "import com.fasterxml.jackson.databind.SerializationFeature",
+    "import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule",
+    "import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper",
+    "import org.openapitools.jackson.nullable.JsonNullableModule"
+  )
 
-    // add JsonNode adapter to builder
-    serializerFileText = serializerFileText.replace("Moshi.Builder()", """Moshi.Builder()
-        .add(AirbyteLocalDateAdapter())
-        .add(AirbyteCatalogAdapter())
-        .add(SourceDiscoverSchemaWriteRequestBodyAdapter())
-        .add(ConnectorBuilderPublishRequestBodyAdapter())
-        .add(DestinationSyncModeAdapter())
-        .add(FailureOriginAdapter())
-        .add(FailureTypeAdapter())
-        .add(JsonNodeAdapter())
-        .add(ReplicationStatusAdapter())
-        .add(SyncModeAdapter())
-        .addLast(AirbyteGeneratedConfigAdapter())""")
+  val body = """
+object Serializer {
+    @JvmStatic
+    val jacksonObjectMapper: ObjectMapper = jacksonObjectMapper()
+        .findAndRegisterModules()
+        .setSerializationInclusion(JsonInclude.Include.NON_NULL)
+        .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false)
+        .configure(DeserializationFeature.FAIL_ON_INVALID_SUBTYPE, false)
+        .disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS)
+        .enable(SerializationFeature.WRITE_ENUMS_USING_TO_STRING)
+        .enable(DeserializationFeature.READ_ENUMS_USING_TO_STRING)
+        .disable(DeserializationFeature.ADJUST_DATES_TO_CONTEXT_TIME_ZONE)
+        .registerModule(JavaTimeModule())
+        .registerModule(JsonNullableModule())
+}
+  """.trimIndent()
 
-    serializerFile.writeText(serializerFileText)
+  serializerFile.writeText("""
+package org.openapitools.client.infrastructure
+    
+${imports.joinToString("\n")}
+    
+$body
+  """.trimIndent())
 }

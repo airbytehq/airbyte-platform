@@ -20,6 +20,11 @@ public class StateWithId {
     return message;
   }
 
+  public static AirbyteStateMessage attachIdToStateMessageFromSource(final AirbyteStateMessage message) {
+    message.setAdditionalProperty(ID, StateIdProvider.getNextId());
+    return message;
+  }
+
   public static OptionalInt getIdFromStateMessage(final AirbyteMessage message) {
     if (message.getType() == AirbyteMessage.Type.STATE) {
       return OptionalInt.of(getIdFromStateMessage(message.getState()));

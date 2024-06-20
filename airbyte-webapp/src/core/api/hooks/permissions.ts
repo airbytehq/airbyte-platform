@@ -33,7 +33,9 @@ export const useListPermissionsQuery = (userId: string) => {
 };
 
 export const useListPermissions = (userId: string) => {
-  const data = useSuspenseQuery(getListPermissionsQueryKey(userId), useListPermissionsQuery(userId));
+  const data = useSuspenseQuery(getListPermissionsQueryKey(userId), useListPermissionsQuery(userId), {
+    staleTime: 60_000,
+  });
 
   const isInstanceAdminEnabled = useIsInstanceAdminEnabled();
   if (!isInstanceAdminEnabled) {

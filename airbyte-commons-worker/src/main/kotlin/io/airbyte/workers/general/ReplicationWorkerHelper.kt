@@ -244,6 +244,10 @@ class ReplicationWorkerHelper(
 
   fun endOfReplication() {
     timeTracker.trackReplicationEndTime()
+    // This is triggered to allow emission of successful state checksum events
+    // in case no checksum errors were found throughout the sync
+    messageTracker.endOfReplication((!_cancelled.get() && !hasFailed.get() && !shouldAbort))
+
     analyticsMessageTracker.flush()
   }
 

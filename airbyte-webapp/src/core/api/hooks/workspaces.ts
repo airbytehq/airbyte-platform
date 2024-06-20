@@ -38,9 +38,7 @@ export const workspaceKeys = {
 export const useCurrentWorkspace = () => {
   const workspaceId = useCurrentWorkspaceId();
 
-  return useGetWorkspace(workspaceId, {
-    staleTime: Infinity,
-  });
+  return useGetWorkspace(workspaceId);
 };
 
 export const getCurrentWorkspaceStateQueryKey = (workspaceId: string) => {
@@ -108,14 +106,11 @@ export const useGetWorkspaceQuery = (workspaceId: string) => {
   return () => getWorkspace({ workspaceId }, requestOptions);
 };
 
-export const useGetWorkspace = (
-  workspaceId: string,
-  options?: Parameters<typeof useSuspenseQuery<WorkspaceRead>>[2]
-) => {
+export const useGetWorkspace = (workspaceId: string, options?: { enabled?: boolean }) => {
   const queryKey = getWorkspaceQueryKey(workspaceId);
   const queryFn = useGetWorkspaceQuery(workspaceId);
 
-  return useSuspenseQuery(queryKey, queryFn, options);
+  return useSuspenseQuery(queryKey, queryFn, { ...options, staleTime: 30 * 60_000 });
 };
 
 export const useListWorkspacesInfinite = (pageSize: number, nameContains: string, suspense?: boolean) => {

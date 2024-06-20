@@ -80,6 +80,8 @@ var commonConfigMapKeys = toStringSet(
 	"WORKLOAD_LAUNCHER_PARALLELISM",
 	"WORKSPACE_DOCKER_MOUNT",
 	"WORKSPACE_ROOT",
+	"PUB_SUB_ENABLED",
+	"PUB_SUB_TOPIC_NAME",
 )
 
 var proEditionConfigMapKeys = toStringSet(

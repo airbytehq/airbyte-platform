@@ -80,7 +80,7 @@ describe("Connection - Auto-detect schema changes", () => {
 
     it("does not show non-breaking change on list page", () => {
       connectionListPage.visit();
-      connectionListPage.getSchemaChangeIcon(connection, "non_breaking").should("not.exist");
+      connectionListPage.getSchemaChangeIcon(connection, "warning").should("not.exist");
       connectionListPage.getConnectionStateSwitch(connection).should("be.checked").and("be.enabled");
     });
 
@@ -149,7 +149,7 @@ describe("Connection - Auto-detect schema changes", () => {
 
     it("shows breaking change on list page", () => {
       connectionListPage.visit();
-      connectionListPage.getSchemaChangeIcon(connection, "breaking").should("exist");
+      connectionListPage.getSchemaChangeIcon(connection, "error").should("exist");
       connectionListPage.getConnectionStateSwitch(connection).should("not.be.checked").and("not.be.enabled");
     });
 

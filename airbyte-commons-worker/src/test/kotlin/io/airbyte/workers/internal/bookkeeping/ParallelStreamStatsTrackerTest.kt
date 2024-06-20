@@ -1,13 +1,10 @@
 package io.airbyte.workers.internal.bookkeeping
 
 import io.airbyte.analytics.DeploymentFetcher
-import io.airbyte.analytics.LoggingTrackingClient
-import io.airbyte.analytics.TrackingClient
+import io.airbyte.analytics.TrackingIdentity
 import io.airbyte.analytics.TrackingIdentityFetcher
 import io.airbyte.api.client.model.generated.DeploymentMetadataRead
-import io.airbyte.api.client.model.generated.WorkspaceRead
 import io.airbyte.commons.json.Jsons
-import io.airbyte.config.Configs
 import io.airbyte.config.StreamSyncStats
 import io.airbyte.config.SyncStats
 import io.airbyte.featureflag.FeatureFlagClient
@@ -25,6 +22,7 @@ import io.airbyte.protocol.models.AirbyteStreamState
 import io.airbyte.protocol.models.StreamDescriptor
 import io.airbyte.workers.context.ReplicationFeatureFlags
 import io.airbyte.workers.exception.InvalidChecksumException
+import io.airbyte.workers.general.StateCheckSumCountEventHandler
 import io.airbyte.workers.models.StateWithId
 import io.airbyte.workers.test_utils.AirbyteMessageUtils
 import io.github.oshai.kotlinlogging.KotlinLogging
@@ -40,6 +38,7 @@ import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertDoesNotThrow
 import org.mockito.Mockito
+import java.util.Optional
 import java.util.UUID
 
 private val logger = KotlinLogging.logger { }
@@ -70,28 +69,30 @@ class ParallelStreamStatsTrackerTest {
   private val stream2Message3 = createRecord(STREAM2_NAME, "s2m3")
 
   private lateinit var metricClient: MetricClient
-  private lateinit var trackingClient: TrackingClient
+  private lateinit var checkSumCountEventHandler: StateCheckSumCountEventHandler
   private lateinit var featureFlagClient: FeatureFlagClient
   private lateinit var statsTracker: ParallelStreamStatsTracker
 
   @BeforeEach
   fun beforeEach() {
-    val deploymentMetadata = mockk<DeploymentMetadataRead>()
-    val workspaceRead = mockk<WorkspaceRead>()
+    val trackingIdentityFetcher = mockk<TrackingIdentityFetcher>()
+    val trackingIdentity = mockk<TrackingIdentity>()
+    every { trackingIdentity.email } returns "test"
+    every { trackingIdentityFetcher.apply(any()) }.returns(trackingIdentity)
     metricClient = Mockito.mock(MetricClient::class.java)
-    trackingClient = LoggingTrackingClient(DeploymentFetcher { deploymentMetadata }, TrackingIdentityFetcher { _ -> workspaceRead })
     featureFlagClient = TestClient(mapOf("platform.emit-state-stats-segment" to true))
-    statsTracker =
-      ParallelStreamStatsTracker(
-        metricClient,
-        trackingClient,
+    checkSumCountEventHandler =
+      StateCheckSumCountEventHandler(
+        Optional.empty(),
         featureFlagClient,
-        Configs.DeploymentMode.CLOUD,
+        DeploymentFetcher { DeploymentMetadataRead("test", UUID.randomUUID(), "test", "test") },
+        trackingIdentityFetcher,
         CONNECTION_ID,
         WORKSPACE_ID,
         JOB_ID,
         ATTEMPT_NUMBER,
       )
+    statsTracker = ParallelStreamStatsTracker(metricClient, checkSumCountEventHandler)
   }
 
   @Test

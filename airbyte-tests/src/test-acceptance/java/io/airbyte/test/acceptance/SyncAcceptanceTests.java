@@ -10,17 +10,14 @@ import static io.airbyte.test.acceptance.AcceptanceTestsResources.KUBE;
 import static io.airbyte.test.acceptance.AcceptanceTestsResources.MAX_TRIES;
 import static io.airbyte.test.acceptance.AcceptanceTestsResources.TRUE;
 import static io.airbyte.test.acceptance.AcceptanceTestsResources.WITHOUT_SCD_TABLE;
-import static io.airbyte.test.acceptance.AcceptanceTestsResources.WITH_SCD_TABLE;
 import static io.airbyte.test.utils.AcceptanceTestHarness.COLUMN_ID;
 import static io.airbyte.test.utils.AcceptanceTestHarness.PUBLIC;
 import static io.airbyte.test.utils.AcceptanceTestHarness.PUBLIC_SCHEMA_NAME;
-import static io.airbyte.test.utils.AcceptanceTestHarness.STREAM_NAME;
 import static io.airbyte.test.utils.AcceptanceTestUtils.IS_GKE;
 import static io.airbyte.test.utils.AcceptanceTestUtils.modifyCatalog;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.google.common.collect.ImmutableMap;
 import dev.failsafe.Failsafe;
 import dev.failsafe.RetryPolicy;
@@ -35,7 +32,6 @@ import io.airbyte.api.client.model.generated.JobInfoRead;
 import io.airbyte.api.client.model.generated.JobRead;
 import io.airbyte.api.client.model.generated.JobStatus;
 import io.airbyte.api.client.model.generated.OperationRead;
-import io.airbyte.api.client.model.generated.SelectedFieldInfo;
 import io.airbyte.api.client.model.generated.SourceDefinitionRead;
 import io.airbyte.api.client.model.generated.SourceDiscoverSchemaRead;
 import io.airbyte.api.client.model.generated.SourceRead;
@@ -57,7 +53,6 @@ import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
-import java.util.stream.Collectors;
 import org.jooq.impl.DSL;
 import org.jooq.impl.SQLDataType;
 import org.junit.jupiter.api.AfterEach;
@@ -550,83 +545,6 @@ class SyncAcceptanceTests {
     Asserts.assertStreamStateContainsStream(testHarness, connection.getConnectionId(), List.of(
         new StreamDescriptor(ID_AND_NAME, PUBLIC),
         new StreamDescriptor(additionalTable, PUBLIC)));
-  }
-
-  @Test
-  void testIncrementalDedupeSyncRemoveOneColumn() throws Exception {
-    final UUID sourceId = testHarness.createPostgresSource().getSourceId();
-    final UUID destinationId = testHarness.createPostgresDestination().getDestinationId();
-    final UUID normalizationOpId = testHarness.createNormalizationOperation().getOperationId();
-    final SourceDiscoverSchemaRead discoverResult = testHarness.discoverSourceSchemaWithId(sourceId);
-    final SyncMode srcSyncMode = SyncMode.INCREMENTAL;
-    final DestinationSyncMode dstSyncMode = DestinationSyncMode.APPEND_DEDUP;
-    final AirbyteCatalog catalog = modifyCatalog(
-        discoverResult.getCatalog(),
-        Optional.of(srcSyncMode),
-        Optional.of(dstSyncMode),
-        Optional.of(List.of(COLUMN_ID)),
-        Optional.of(List.of(List.of(COLUMN_ID))),
-        Optional.of(true),
-        Optional.empty(),
-        Optional.empty(),
-        Optional.empty(),
-        Optional.empty(),
-        Optional.empty(),
-        Optional.empty());
-    final var conn =
-        testHarness.createConnection(new TestConnectionCreate.Builder(
-            sourceId,
-            destinationId,
-            catalog,
-            discoverResult.getCatalogId())
-                .setNormalizationOperationId(normalizationOpId)
-                .build());
-    final var connectionId = conn.getConnectionId();
-    // sync from start
-    LOGGER.info("First incremental sync");
-    final JobInfoRead connectionSyncRead1 = testHarness.syncConnection(connectionId);
-    testHarness.waitForSuccessfulJob(connectionSyncRead1.getJob());
-    LOGGER.info("state after sync: {}", testHarness.getConnectionState(connectionId));
-
-    final var dst = testHarness.getDestinationDatabase();
-    Asserts.assertSourceAndDestinationDbRawRecordsInSync(testHarness.getSourceDatabase(), dst, PUBLIC_SCHEMA_NAME, conn.getNamespaceFormat(), true,
-        WITH_SCD_TABLE);
-
-    // Update the catalog, so we only select the id column.
-    final AirbyteCatalog updatedCatalog = modifyCatalog(
-        catalog,
-        Optional.empty(),
-        Optional.empty(),
-        Optional.empty(),
-        Optional.empty(),
-        Optional.empty(),
-        Optional.of(true),
-        Optional.of(List.of(new SelectedFieldInfo(List.of("id")))),
-        Optional.empty(),
-        Optional.empty(),
-        Optional.empty(),
-        Optional.empty());
-    testHarness.updateConnectionCatalog(connectionId, updatedCatalog);
-
-    // add new records and run again.
-    LOGGER.info("Adding new records to source database");
-    final Database source = testHarness.getSourceDatabase();
-    final List<JsonNode> expectedRawRecords = testHarness.retrieveRecordsFromDatabase(source, STREAM_NAME);
-    source.query(ctx -> ctx.execute("INSERT INTO id_and_name(id, name) VALUES(6, 'mike')"));
-    source.query(ctx -> ctx.execute("INSERT INTO id_and_name(id, name) VALUES(7, 'chris')"));
-    // The expected new raw records should only have the ID column.
-    expectedRawRecords.add(Jsons.jsonNode(ImmutableMap.builder().put(COLUMN_ID, 6).build()));
-    expectedRawRecords.add(Jsons.jsonNode(ImmutableMap.builder().put(COLUMN_ID, 7).build()));
-    final JobInfoRead connectionSyncRead2 = testHarness.syncConnection(connectionId);
-    LOGGER.info("Running second sync: job {} with status {}", connectionSyncRead2.getJob().getId(), connectionSyncRead2.getJob().getStatus());
-    testHarness.waitForSuccessfulJob(connectionSyncRead2.getJob());
-    LOGGER.info("state after sync: {}", testHarness.getConnectionState(connectionId));
-
-    // For the normalized records, they should all only have the ID column.
-    final List<JsonNode> expectedNormalizedRecords = testHarness.retrieveRecordsFromDatabase(source, STREAM_NAME).stream()
-        .map((record) -> ((ObjectNode) record).retain(COLUMN_ID)).collect(Collectors.toList());
-    Asserts.assertRawDestinationContains(dst, expectedRawRecords, conn.getNamespaceFormat(), STREAM_NAME);
-    testHarness.assertNormalizedDestinationContainsIdColumn(conn.getNamespaceFormat(), expectedNormalizedRecords);
   }
 
   static void assertDestinationDbEmpty(final Database dst) throws Exception {

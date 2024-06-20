@@ -111,6 +111,8 @@ object OrchestratorConstants {
           EnvVar.MINIO_ENDPOINT,
           EnvVar.OTEL_COLLECTOR_ENDPOINT,
           EnvVar.PUBLISH_METRICS,
+          EnvVar.PUB_SUB_ENABLED,
+          EnvVar.PUB_SUB_TOPIC_NAME,
           EnvVar.ROOTLESS_WORKLOAD,
           EnvVar.SOCAT_KUBE_CPU_LIMIT,
           EnvVar.SOCAT_KUBE_CPU_REQUEST,

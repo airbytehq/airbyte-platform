@@ -1284,7 +1284,7 @@ public class ConnectionsHandler {
     memo.putIfAbsent(jobRead.getId(), buildStreamStatsMap(jobRead));
 
     // retrieve the stat for the stream of interest from the memo
-    final Optional<StreamStats> statsForThisStream = Optional.of(memo.get(jobRead.getId()).get(streamDescriptor));
+    final Optional<StreamStats> statsForThisStream = Optional.ofNullable(memo.get(jobRead.getId()).get(streamDescriptor));
 
     return new ConnectionLastJobPerStreamReadItem()
         .streamName(streamDescriptor.getName())

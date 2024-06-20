@@ -4,7 +4,6 @@
 
 package io.airbyte.workers.temporal.scheduling.activities;
 
-import static io.airbyte.api.client.infrastructure.JsonNodeAdapterKt.transformNumbersToInts;
 import static io.airbyte.metrics.lib.ApmTraceConstants.ACTIVITY_TRACE_OPERATION_NAME;
 import static io.airbyte.metrics.lib.ApmTraceConstants.Tags.DESTINATION_DOCKER_IMAGE_KEY;
 import static io.airbyte.metrics.lib.ApmTraceConstants.Tags.JOB_ID_KEY;
@@ -55,7 +54,7 @@ public class GenerateInputActivityImpl implements GenerateInputActivity {
       final var checkInput = airbyteApiClient.getJobsApi()
           .getCheckInput(new CheckInput(input.getJobId(), input.getAttemptNumber()));
       return payloadChecker.validatePayloadSize(
-          Jsons.convertValue(transformNumbersToInts((Map<String, ? extends Object>) checkInput), SyncJobCheckConnectionInputs.class));
+          Jsons.convertValue(checkInput, SyncJobCheckConnectionInputs.class));
     } catch (final ClientException e) {
       if (e.getStatusCode() == HttpStatus.NOT_FOUND.getCode()) {
         throw e;
@@ -72,7 +71,7 @@ public class GenerateInputActivityImpl implements GenerateInputActivity {
   public JobInput getSyncWorkflowInput(final SyncInput input) throws IOException {
     final var jobInputResult =
         airbyteApiClient.getJobsApi().getJobInput(new io.airbyte.api.client.model.generated.SyncInput(input.getJobId(), input.getAttemptId()));
-    final var jobInput = Jsons.convertValue(transformNumbersToInts((Map<String, ? extends Object>) jobInputResult), JobInput.class);
+    final var jobInput = Jsons.convertValue(jobInputResult, JobInput.class);
 
     MetricAttribute[] attrs = new MetricAttribute[0];
     try {
