@@ -113,7 +113,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
-import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -523,7 +522,7 @@ public class SchedulerHandler {
   }
 
   public JobInfoRead resetConnectionStream(final ConnectionStreamRequestBody connectionStreamRequestBody)
-      throws IOException {
+      throws IOException, ConfigNotFoundException {
     return submitResetConnectionStreamsToWorker(connectionStreamRequestBody.getConnectionId(), connectionStreamRequestBody.getStreams());
   }
 
@@ -734,10 +733,11 @@ public class SchedulerHandler {
   }
 
   private JobInfoRead submitResetConnectionStreamsToWorker(final UUID connectionId, final List<ConnectionStream> streams)
-      throws IOException, IllegalStateException {
-    return submitResetConnectionToWorker(connectionId,
-        streams.stream().map(s -> new StreamDescriptor().withName(s.getStreamName()).withNamespace(s.getStreamNamespace())).collect(
-            Collectors.toList()));
+      throws IOException, IllegalStateException, ConfigNotFoundException {
+    final List<StreamDescriptor> actualStreamsToReset = streams.isEmpty()
+        ? configRepository.getAllStreamsForConnection(connectionId)
+        : streams.stream().map(s -> new StreamDescriptor().withName(s.getStreamName()).withNamespace(s.getStreamNamespace())).toList();
+    return submitResetConnectionToWorker(connectionId, actualStreamsToReset);
   }
 
   private JobInfoRead readJobFromResult(final ManualOperationResult manualOperationResult) throws IOException, IllegalStateException {

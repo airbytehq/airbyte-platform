@@ -1604,7 +1604,7 @@ class SchedulerHandlerTest {
   }
 
   @Test
-  void testResetConnectionStream() throws IOException {
+  void testResetConnectionStream() throws IOException, ConfigNotFoundException {
     final UUID connectionId = UUID.randomUUID();
     final String streamName = "name";
     final String streamNamespace = "namespace";
@@ -1620,6 +1620,37 @@ class SchedulerHandlerTest {
         .connectionId(connectionId)
         .streams(List.of(new ConnectionStream().streamName(streamName).streamNamespace(streamNamespace)));
 
+    when(eventRunner.resetConnection(connectionId, streamDescriptors))
+        .thenReturn(manualOperationResult);
+
+    doReturn(new JobInfoRead())
+        .when(jobConverter).getJobInfoRead(any());
+
+    schedulerHandler
+        .resetConnectionStream(connectionStreamRequestBody);
+
+    verify(eventRunner).resetConnection(connectionId, streamDescriptors);
+  }
+
+  @Test
+  void testResetConnectionStreamWithEmptyList() throws IOException, ConfigNotFoundException {
+    final UUID connectionId = UUID.randomUUID();
+    final String streamName = "name";
+    final String streamNamespace = "namespace";
+
+    final long jobId = 123L;
+    final ManualOperationResult manualOperationResult = ManualOperationResult
+        .builder()
+        .failingReason(Optional.empty())
+        .jobId(Optional.of(jobId))
+        .build();
+    final List<StreamDescriptor> streamDescriptors = List.of(new StreamDescriptor().withName(streamName).withNamespace(streamNamespace));
+    final ConnectionStreamRequestBody connectionStreamRequestBody = new ConnectionStreamRequestBody()
+        .connectionId(connectionId)
+        .streams(List.of());
+
+    when(configRepository.getAllStreamsForConnection(connectionId))
+        .thenReturn(streamDescriptors);
     when(eventRunner.resetConnection(connectionId, streamDescriptors))
         .thenReturn(manualOperationResult);
 
