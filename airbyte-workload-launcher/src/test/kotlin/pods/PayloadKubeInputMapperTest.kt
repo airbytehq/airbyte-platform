@@ -224,7 +224,7 @@ class PayloadKubeInputMapperTest {
 
     val connectorLabels = mapOf("connector" to "labels")
     val sharedLabels = mapOf("pass through" to "labels")
-    every { labeler.getCheckConnectorLabels() } returns connectorLabels
+    every { labeler.getCheckLabels() } returns connectorLabels
     val result = mapper.toKubeInput(workloadId, input, sharedLabels, logPath)
 
     Assertions.assertEquals(connectorLabels + sharedLabels, result.connectorLabels)
@@ -359,7 +359,7 @@ class PayloadKubeInputMapperTest {
 
     val connectorLabels = mapOf("connector" to "labels")
     val sharedLabels = mapOf("pass through" to "labels")
-    every { labeler.getCheckConnectorLabels() } returns connectorLabels
+    every { labeler.getDiscoverLabels() } returns connectorLabels
     val result = mapper.toKubeInput(workloadId, input, sharedLabels, logPath)
 
     Assertions.assertEquals(connectorLabels + sharedLabels, result.connectorLabels)
@@ -478,7 +478,7 @@ class PayloadKubeInputMapperTest {
 
     val connectorLabels = mapOf("connector" to "labels")
     val sharedLabels = mapOf("pass through" to "labels")
-    every { labeler.getCheckConnectorLabels() } returns connectorLabels
+    every { labeler.getSpecLabels() } returns connectorLabels
     val result = mapper.toKubeInput(workloadId, input, sharedLabels, logPath)
 
     Assertions.assertEquals(connectorLabels + sharedLabels, result.connectorLabels)
