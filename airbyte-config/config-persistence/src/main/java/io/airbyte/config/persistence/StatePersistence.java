@@ -129,16 +129,32 @@ public class StatePersistence {
       return;
     }
 
-    final var conditions = streamsToDelete.stream().map(stream -> {
-      var nameCondition = DSL.field(DSL.name(STATE.STREAM_NAME.getName())).eq(stream.getName());
-      var connCondition = DSL.field(DSL.name(STATE.CONNECTION_ID.getName())).eq(connectionId);
-      var namespaceCondition = stream.getNamespace() == null
-          ? DSL.field(DSL.name(STATE.NAMESPACE.getName())).isNull()
-          : DSL.field(DSL.name(STATE.NAMESPACE.getName())).eq(stream.getNamespace());
+    final Optional<StateWrapper> maybeCurrentState = getCurrentState(connectionId);
+    if (maybeCurrentState.isEmpty()) {
+      return;
+    }
 
-      return DSL.and(namespaceCondition, nameCondition, connCondition);
-    }).reduce(DSL.noCondition(), DSL::or);
-    this.database.transaction(ctx -> ctx.deleteFrom(STATE).where(conditions).execute());
+    final Set<StreamDescriptor> streamsInState = maybeCurrentState.get().getStateType() == StateType.GLOBAL
+        ? maybeCurrentState.get().getGlobal().getGlobal().getStreamStates().stream().map(AirbyteStreamState::getStreamDescriptor)
+            .collect(Collectors.toSet())
+        : maybeCurrentState.get().getStateMessages().stream().map(airbyteStateMessage -> airbyteStateMessage.getStream().getStreamDescriptor())
+            .collect(Collectors.toSet());
+
+    if (streamsInState.equals(streamsToDelete)) {
+      eraseState(connectionId);
+    } else {
+
+      final var conditions = streamsToDelete.stream().map(stream -> {
+        var nameCondition = DSL.field(DSL.name(STATE.STREAM_NAME.getName())).eq(stream.getName());
+        var connCondition = DSL.field(DSL.name(STATE.CONNECTION_ID.getName())).eq(connectionId);
+        var namespaceCondition = stream.getNamespace() == null
+            ? DSL.field(DSL.name(STATE.NAMESPACE.getName())).isNull()
+            : DSL.field(DSL.name(STATE.NAMESPACE.getName())).eq(stream.getNamespace());
+
+        return DSL.and(namespaceCondition, nameCondition, connCondition);
+      }).reduce(DSL.noCondition(), DSL::or);
+      this.database.transaction(ctx -> ctx.deleteFrom(STATE).where(conditions).execute());
+    }
   }
 
   private static void clearLegacyState(final DSLContext ctx, final UUID connectionId) {
