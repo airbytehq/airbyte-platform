@@ -333,6 +333,10 @@ class SyncPersistenceImpl
       isReceivingStats = true
       syncStatsTracker.updateDestinationStateStats(stateMessage)
     }
+
+    override fun endOfReplication(completedSuccessfully: Boolean) {
+      syncStatsTracker.endOfReplication(completedSuccessfully)
+    }
   }
 
 private fun isStateEmpty(connectionState: ConnectionState?) = connectionState?.state?.isEmpty ?: false
