@@ -85,6 +85,7 @@ module.exports = {
     "check-file",
     "react",
     "react-hooks",
+    "no-only-tests",
   ],
   parser: "@typescript-eslint/parser",
   parserOptions: {
@@ -474,6 +475,7 @@ module.exports = {
       extends: ["plugin:jest/recommended"],
       rules: {
         "jest/consistent-test-it": ["warn", { fn: "it", withinDescribe: "it" }],
+        "no-only-tests/no-only-tests": "error",
       },
     },
     {
@@ -488,6 +490,7 @@ module.exports = {
         "cypress/no-unnecessary-waiting": "warn",
         "no-template-curly-in-string": "off",
         "@typescript-eslint/no-unused-expressions": "off",
+        "no-only-tests/no-only-tests": "error",
       },
     },
     {

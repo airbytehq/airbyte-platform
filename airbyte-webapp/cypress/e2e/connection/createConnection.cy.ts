@@ -234,6 +234,9 @@ describe("Connection - Create new connection", { testIsolation: false }, () => {
     });
   });
 
+  // TODO: remove .only from describe and update the rest of the tests
+  // https://github.com/airbytehq/airbyte-internal-issues/issues/8316
+  // eslint-disable-next-line no-only-tests/no-only-tests
   describe.only("Stream", () => {
     before(() => {
       interceptDiscoverSchemaRequest();
