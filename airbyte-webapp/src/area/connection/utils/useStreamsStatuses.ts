@@ -55,7 +55,7 @@ export const useStreamsStatuses = (
   const lateMultiplier = useLateMultiplierExperiment();
   const errorMultiplier = useErrorMultiplierExperiment();
   const connectionStatus = useConnectionStatus(connectionId);
-  const isConnectionDisabled = connectionStatus.status === ConnectionStatusIndicatorStatus.Paused;
+  const isConnectionDisabled = connection.status !== "active";
 
   // TODO: Ideally we can pull this from the stream status endpoint directly once the "pending" status has been updated to reflect the correct status
   // for now, we'll use this

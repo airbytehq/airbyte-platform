@@ -716,6 +716,7 @@ class JobHistoryHandlerTest {
             .bytesEmitted(jobAggregatedStats.getBytesEmitted())
             .recordsEmitted(jobAggregatedStats.getRecordsEmitted())
             .configType(JobConfigType.SYNC)
+            .syncStartedAt(CREATED_AT)
             .streams(List.of(
                 new StreamSyncProgressReadItem()
                     .streamName("stream1")
@@ -782,6 +783,7 @@ class JobHistoryHandlerTest {
             .bytesEmitted(jobAggregatedStats.getBytesEmitted())
             .recordsEmitted(jobAggregatedStats.getRecordsEmitted())
             .configType(JobConfigType.REFRESH)
+            .syncStartedAt(CREATED_AT)
             .streams(List.of(
                 new StreamSyncProgressReadItem()
                     .streamName("stream3")
@@ -801,7 +803,7 @@ class JobHistoryHandlerTest {
     }
 
     @Test
-    @DisplayName("Should not return data for a running clear")
+    @DisplayName("Should return data for a running clear")
     void testGetConnectionSyncProgressWithClear() throws IOException {
       final UUID connectionId = UUID.randomUUID();
       final ConnectionIdRequestBody request = new ConnectionIdRequestBody().connectionId(connectionId);
@@ -827,6 +829,7 @@ class JobHistoryHandlerTest {
             .connectionId(connectionId)
             .jobId(JOB_ID)
             .configType(JobConfigType.CLEAR)
+            .syncStartedAt(CREATED_AT)
             .streams(List.of(
                 new StreamSyncProgressReadItem()
                     .streamName("stream1")

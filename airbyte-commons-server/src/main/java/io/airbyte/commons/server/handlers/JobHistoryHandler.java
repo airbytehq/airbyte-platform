@@ -438,7 +438,7 @@ public class JobHistoryHandler {
     return new ConnectionSyncProgressRead()
         .connectionId(connectionIdRequestBody.getConnectionId())
         .jobId(runningJob.getJob().getId())
-        .syncStartedAt(runningJob.getJob().getStartedAt())
+        .syncStartedAt(runningJob.getJob().getCreatedAt())
         .bytesEmitted(aggregatedStats == null ? null : aggregatedStats.getBytesEmitted())
         .bytesCommitted(aggregatedStats == null ? null : aggregatedStats.getBytesCommitted())
         .recordsEmitted(aggregatedStats == null ? null : aggregatedStats.getRecordsEmitted())
