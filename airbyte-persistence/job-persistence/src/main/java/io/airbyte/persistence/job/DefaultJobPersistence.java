@@ -1436,6 +1436,24 @@ public class DefaultJobPersistence implements JobPersistence {
         .collect(Collectors.toList()));
   }
 
+  /**
+   * For the connection ID in the input, find that connection's most recent non-terminal
+   * clear/reset/sync/refresh job and return it if one exists.
+   */
+  @Override
+  public List<Job> getRunningJobForConnection(final UUID connectionId) throws IOException {
+
+    return jobDatabase.query(ctx -> ctx
+        .fetch("SELECT DISTINCT ON (scope) * FROM jobs "
+            + WHERE + "CAST(jobs.config_type AS VARCHAR) in " + toSqlInFragment(Job.REPLICATION_TYPES)
+            + AND + "jobs.scope = '" + connectionId + "'"
+            + AND + JOB_STATUS_IS_NON_TERMINAL
+            + "ORDER BY scope, created_at DESC LIMIT 1")
+        .stream()
+        .flatMap(r -> getJobOptional(ctx, r.get("id", Long.class)).stream())
+        .collect(Collectors.toList()));
+  }
+
   private String scopeInList(final Collection<UUID> connectionIds) {
     return String.format("scope IN (%s) ",
         connectionIds.stream()

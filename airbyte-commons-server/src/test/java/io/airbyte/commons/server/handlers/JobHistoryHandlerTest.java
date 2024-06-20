@@ -704,7 +704,7 @@ class JobHistoryHandlerTest {
           .job(jobRead)
           .attempts(ImmutableList.of(toAttemptRead(testJobAttempt)));
 
-      when(jobPersistence.getRunningSyncJobForConnections(List.of(connectionId))).thenReturn(List.of(firstJob));
+      when(jobPersistence.getRunningJobForConnection(connectionId)).thenReturn(List.of(firstJob));
       try (final MockedStatic<JobConverter> mockedConverter = Mockito.mockStatic(JobConverter.class)) {
         mockedConverter.when(() -> JobConverter.getJobWithAttemptsRead(firstJob)).thenReturn(firstJobWithAttemptRead);
 
@@ -744,7 +744,7 @@ class JobHistoryHandlerTest {
     }
 
     @Test
-    @DisplayName("Should return data for a running refreshes")
+    @DisplayName("Should return data for a running refresh")
     void testGetConnectionSyncProgressWithRefresh() throws IOException {
       final UUID connectionId = UUID.randomUUID();
       final ConnectionIdRequestBody request = new ConnectionIdRequestBody().connectionId(connectionId);
@@ -771,7 +771,7 @@ class JobHistoryHandlerTest {
           .job(jobRead)
           .attempts(ImmutableList.of(toAttemptRead(testJobAttempt)));
 
-      when(jobPersistence.getRunningSyncJobForConnections(List.of(connectionId))).thenReturn(List.of(firstJob));
+      when(jobPersistence.getRunningJobForConnection(connectionId)).thenReturn(List.of(firstJob));
       try (final MockedStatic<JobConverter> mockedConverter = Mockito.mockStatic(JobConverter.class)) {
         mockedConverter.when(() -> JobConverter.getJobWithAttemptsRead(firstJob)).thenReturn(firstJobWithAttemptRead);
 
@@ -808,8 +808,9 @@ class JobHistoryHandlerTest {
       final UUID connectionId = UUID.randomUUID();
       final ConnectionIdRequestBody request = new ConnectionIdRequestBody().connectionId(connectionId);
 
-      final Job firstJob = new Job(JOB_ID, ConfigType.CLEAR, JOB_CONFIG_ID, JOB_CONFIG, ImmutableList.of(testJobAttempt), JobStatus.RUNNING,
-          CREATED_AT, CREATED_AT, CREATED_AT);
+      final Job firstJob =
+          new Job(JOB_ID, ConfigType.RESET_CONNECTION, JOB_CONFIG_ID, JOB_CONFIG, ImmutableList.of(testJobAttempt), JobStatus.RUNNING,
+              CREATED_AT, CREATED_AT, CREATED_AT);
 
       final JobRead jobRead = toJobInfo(firstJob);
       jobRead.setResetConfig(new ResetConfig().streamsToReset(List.of(
@@ -821,20 +822,20 @@ class JobHistoryHandlerTest {
           .job(jobRead)
           .attempts(ImmutableList.of(toAttemptRead(testJobAttempt)));
 
-      when(jobPersistence.getRunningSyncJobForConnections(List.of(connectionId))).thenReturn(List.of(firstJob));
+      when(jobPersistence.getRunningJobForConnection(connectionId)).thenReturn(List.of(firstJob));
       try (final MockedStatic<JobConverter> mockedConverter = Mockito.mockStatic(JobConverter.class)) {
         mockedConverter.when(() -> JobConverter.getJobWithAttemptsRead(firstJob)).thenReturn(firstJobWithAttemptRead);
 
         final ConnectionSyncProgressRead expected = new ConnectionSyncProgressRead()
             .connectionId(connectionId)
             .jobId(JOB_ID)
-            .configType(JobConfigType.CLEAR)
+            .configType(JobConfigType.RESET_CONNECTION)
             .syncStartedAt(CREATED_AT)
             .streams(List.of(
                 new StreamSyncProgressReadItem()
                     .streamName("stream1")
                     .streamNamespace("ns1")
-                    .configType(JobConfigType.CLEAR)));
+                    .configType(JobConfigType.RESET_CONNECTION)));
 
         final ConnectionSyncProgressRead actual = jobHistoryHandler.getConnectionSyncProgress(request);
 

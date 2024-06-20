@@ -1598,6 +1598,59 @@ class DefaultJobPersistenceTest {
   }
 
   @Nested
+  @DisplayName("When getting a running job for a single")
+  class GetRunningJobForConnection {
+
+    private static final UUID CONNECTION_ID_1 = UUID.randomUUID();
+
+    private static final String SCOPE_1 = CONNECTION_ID_1.toString();
+
+    @Test
+    @DisplayName("Should return nothing if no sync job exists")
+    void testGetRunningSyncJobsForConnectionsEmpty() throws IOException {
+      final List<Job> actual = jobPersistence.getRunningJobForConnection(CONNECTION_ID_1);
+
+      assertTrue(actual.isEmpty());
+    }
+
+    @Test
+    @DisplayName("Should return a running sync job for the connection")
+    void testGetRunningJobForConnection() throws IOException {
+      final long scope1Job1 = jobPersistence.enqueueJob(SCOPE_1, SYNC_JOB_CONFIG).orElseThrow();
+      jobPersistence.createAttempt(scope1Job1, LOG_PATH);
+      final Attempt scope1Job1Attempt = jobPersistence.getJob(scope1Job1).getAttempts().stream().findFirst().orElseThrow();
+
+      final Instant afterNow = NOW;
+      when(timeSupplier.get()).thenReturn(afterNow);
+
+      final List<Job> expected = new ArrayList<>();
+      expected.add(createJob(scope1Job1, SYNC_JOB_CONFIG, JobStatus.RUNNING, List.of(scope1Job1Attempt), afterNow.getEpochSecond(), SCOPE_1));
+
+      final List<Job> actual = jobPersistence.getRunningJobForConnection(CONNECTION_ID_1);
+      assertTrue(expected.size() == actual.size() && expected.containsAll(actual) && actual.containsAll(expected));
+    }
+
+    @Test
+    @DisplayName("Should return job if only a running reset job exists")
+    void testGetRunningSyncJobsForConnectionsEmptyBecauseOnlyReset() throws IOException {
+      final long jobId = jobPersistence.enqueueJob(SCOPE_1, RESET_JOB_CONFIG).orElseThrow();
+      jobPersistence.createAttempt(jobId, LOG_PATH);
+      final Attempt scope1Job1Attempt = jobPersistence.getJob(jobId).getAttempts().stream().findFirst().orElseThrow();
+
+      final Instant afterNow = NOW;
+      when(timeSupplier.get()).thenReturn(afterNow);
+
+      final List<Job> expected = new ArrayList<>();
+      expected.add(createJob(jobId, RESET_JOB_CONFIG, JobStatus.RUNNING, List.of(scope1Job1Attempt), afterNow.getEpochSecond(), SCOPE_1));
+
+      final List<Job> actual = jobPersistence.getRunningJobForConnection(CONNECTION_ID_1);
+
+      assertTrue(expected.size() == actual.size() && expected.containsAll(actual) && actual.containsAll(expected));
+    }
+
+  }
+
+  @Nested
   @DisplayName("When getting first replication job")
   class GetFirstReplicationJob {
 
