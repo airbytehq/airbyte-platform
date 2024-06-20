@@ -40,7 +40,7 @@ interface InjectedStreamWaffleChartProps extends StreamWaffleChartProps {
   isTooltipActive: boolean;
 }
 
-type WaffleColor = "green" | "darkBlue" | "red" | "black" | "empty";
+type WaffleColor = "green" | "darkBlue" | "red" | "black" | "blue" | "empty";
 const getCellColor = (streamStatus: ConnectionStatusIndicatorStatus): WaffleColor => {
   switch (streamStatus) {
     case ConnectionStatusIndicatorStatus.OnTime:
@@ -56,14 +56,16 @@ const getCellColor = (streamStatus: ConnectionStatusIndicatorStatus): WaffleColo
     case ConnectionStatusIndicatorStatus.ActionRequired:
       return "black";
 
+    case ConnectionStatusIndicatorStatus.Queued:
+    case ConnectionStatusIndicatorStatus.Syncing:
+    case ConnectionStatusIndicatorStatus.Refreshing:
+      return "blue";
+
     case ConnectionStatusIndicatorStatus.Disabled:
     case ConnectionStatusIndicatorStatus.Pending:
     case ConnectionStatusIndicatorStatus.Paused:
-    case ConnectionStatusIndicatorStatus.Queued:
     case ConnectionStatusIndicatorStatus.QueuedForNextSync:
-    case ConnectionStatusIndicatorStatus.Syncing:
     case ConnectionStatusIndicatorStatus.Clearing:
-    case ConnectionStatusIndicatorStatus.Refreshing:
       return "empty";
   }
 };
@@ -106,8 +108,13 @@ export const Waffle: React.FC<StreamWaffleChartProps> = (props) => {
         rowIndex: number,
         status: ConnectionStatusIndicatorStatus,
         skipRecurse = false
-      ): CellOperation => {
+      ): CellOperation | null => {
         const cellOffset = rowIndex * cellHeight;
+
+        if (columnIndex >= orderedTooltipTicks.length) {
+          return null;
+        }
+
         const xCoordinate = orderedTooltipTicks[columnIndex].coordinate;
 
         const myOperation = {
@@ -127,6 +134,10 @@ export const Waffle: React.FC<StreamWaffleChartProps> = (props) => {
           // vertical correction
           if (CELL_VERTICAL_GAP > 0 && rowIndex < streamsCount - 1) {
             const siblingOperationY = computeCellOperation(columnIndex, rowIndex + 1, status, true);
+            if (!siblingOperationY) {
+              return null;
+            }
+
             const gapY = siblingOperationY.y - (myOperation.y + myOperation.height);
             const extraGapY = CELL_VERTICAL_GAP - gapY;
             myOperation.height -= extraGapY;
@@ -159,6 +170,11 @@ export const Waffle: React.FC<StreamWaffleChartProps> = (props) => {
             const { status } = streams[j];
 
             const operation = computeCellOperation(i, rowOffset + j, status);
+
+            if (!operation) {
+              continue;
+            }
+
             if (status === ConnectionStatusIndicatorStatus.OnTime) {
               ontimeOperations.push(operation);
             } else {
@@ -177,9 +193,11 @@ export const Waffle: React.FC<StreamWaffleChartProps> = (props) => {
         // tooltip highlight
         if (isTooltipActive && activeTooltipIndex >= 0) {
           const coordinates = computeCellOperation(activeTooltipIndex, 0, ConnectionStatusIndicatorStatus.OnTime);
-          ctx.fillStyle = "rgba(255, 255, 255, 0.4)";
-          ctx.fillRect(coordinates.x, coordinates.y, coordinates.width, availableHeight);
-          ctx.restore();
+          if (coordinates) {
+            ctx.fillStyle = "rgba(255, 255, 255, 0.4)";
+            ctx.fillRect(coordinates.x, coordinates.y, coordinates.width, availableHeight);
+            ctx.restore();
+          }
         }
       }
     }

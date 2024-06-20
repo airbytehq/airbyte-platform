@@ -37,12 +37,14 @@ import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.featureflag.Organization;
 import io.airbyte.featureflag.UseRuntimeSecretPersistence;
 import io.airbyte.featureflag.Workspace;
+import io.airbyte.metrics.lib.ApmTraceUtils;
 import io.airbyte.persistence.job.models.ReplicationInput;
 import io.airbyte.protocol.models.ConfiguredAirbyteCatalog;
 import io.airbyte.workers.helper.BackfillHelper;
 import io.airbyte.workers.models.RefreshSchemaActivityOutput;
 import io.airbyte.workers.models.ReplicationActivityInput;
 import java.io.IOException;
+import java.util.Map;
 import java.util.UUID;
 import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
@@ -75,7 +77,7 @@ public class ReplicationInputHydrator {
    * @throws Exception from the Airbyte API
    */
   public ReplicationInput getHydratedReplicationInput(final ReplicationActivityInput replicationActivityInput) throws Exception {
-
+    ApmTraceUtils.addTagsToTrace(Map.of("api_base_url", airbyteApiClient.getDestinationApi().getBaseUrl()));
     final var destination =
         airbyteApiClient.getDestinationApi().getDestination(new DestinationIdRequestBody(replicationActivityInput.getDestinationId()));
     final var tag = DockerImageName.INSTANCE.extractTag(replicationActivityInput.getDestinationLauncherConfig().getDockerImage());

@@ -9,8 +9,6 @@ import static io.airbyte.metrics.lib.ApmTraceConstants.Tags.JOB_ID_KEY;
 import static io.airbyte.metrics.lib.ApmTraceConstants.Tags.JOB_ROOT_KEY;
 import static io.airbyte.metrics.lib.ApmTraceConstants.WORKER_OPERATION_NAME;
 import static io.airbyte.workers.process.Metadata.CHECK_JOB;
-import static io.airbyte.workers.process.Metadata.CHECK_STEP_KEY;
-import static io.airbyte.workers.process.Metadata.CONNECTOR_STEP;
 import static io.airbyte.workers.process.Metadata.DISCOVER_JOB;
 import static io.airbyte.workers.process.Metadata.JOB_TYPE_KEY;
 import static io.airbyte.workers.process.Metadata.READ_STEP;
@@ -161,7 +159,7 @@ public class AirbyteIntegrationLauncher implements IntegrationLauncher {
         null,
         buildGenericConnectorResourceRequirements(resourceRequirement),
         allowedHosts,
-        getLabels(Map.of(JOB_TYPE_KEY, CHECK_JOB, CHECK_STEP_KEY, CONNECTOR_STEP)),
+        getLabels(Map.of(JOB_TYPE_KEY, CHECK_JOB)),
         getWorkerMetadata(),
         Collections.emptyMap(),
         additionalEnvironmentVariables,

@@ -1,13 +1,13 @@
 package io.airbyte.workload.launcher.pods
 
 import io.airbyte.workers.process.Metadata.CHECK_JOB
-import io.airbyte.workers.process.Metadata.CHECK_STEP_KEY
-import io.airbyte.workers.process.Metadata.CONNECTOR_STEP
+import io.airbyte.workers.process.Metadata.DISCOVER_JOB
 import io.airbyte.workers.process.Metadata.IMAGE_NAME
 import io.airbyte.workers.process.Metadata.IMAGE_VERSION
 import io.airbyte.workers.process.Metadata.JOB_TYPE_KEY
 import io.airbyte.workers.process.Metadata.ORCHESTRATOR_REPLICATION_STEP
 import io.airbyte.workers.process.Metadata.READ_STEP
+import io.airbyte.workers.process.Metadata.SPEC_JOB
 import io.airbyte.workers.process.Metadata.SYNC_JOB
 import io.airbyte.workers.process.Metadata.SYNC_STEP_KEY
 import io.airbyte.workers.process.Metadata.WRITE_STEP
@@ -68,15 +68,40 @@ class PodLabelerTest {
   }
 
   @Test
-  fun getCheckConnectorLabels() {
+  fun getCheckLabels() {
     val labeler = PodLabeler(ORCHESTRATOR_IMAGE_NAME)
-    val result = labeler.getCheckConnectorLabels()
+    val result = labeler.getCheckLabels()
 
     assert(
       result ==
         mapOf(
           JOB_TYPE_KEY to CHECK_JOB,
-          CHECK_STEP_KEY to CONNECTOR_STEP,
+        ),
+    )
+  }
+
+  @Test
+  fun getDiscoverLabels() {
+    val labeler = PodLabeler(ORCHESTRATOR_IMAGE_NAME)
+    val result = labeler.getDiscoverLabels()
+
+    assert(
+      result ==
+        mapOf(
+          JOB_TYPE_KEY to DISCOVER_JOB,
+        ),
+    )
+  }
+
+  @Test
+  fun getSpecLabels() {
+    val labeler = PodLabeler(ORCHESTRATOR_IMAGE_NAME)
+    val result = labeler.getSpecLabels()
+
+    assert(
+      result ==
+        mapOf(
+          JOB_TYPE_KEY to SPEC_JOB,
         ),
     )
   }

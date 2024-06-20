@@ -4,6 +4,7 @@
 
 package io.airbyte.config.persistence;
 
+import static org.junit.Assert.assertTrue;
 import static org.mockito.Mockito.mock;
 
 import com.fasterxml.jackson.databind.JsonNode;
@@ -712,6 +713,38 @@ class StatePersistenceTest extends BaseConfigDatabaseTest {
                         .withStreamDescriptor(new StreamDescriptor().withName("keep-1").withNamespace("keep-n1"))
                         .withStreamState(Jsons.deserialize(""))))));
     assertEquals(exp, curr.get());
+  }
+
+  @Test
+  void testBulkDeleteGlobalAllStreams() throws IOException {
+    final StateWrapper globalToModify = new StateWrapper()
+        .withStateType(StateType.GLOBAL)
+        .withGlobal(new AirbyteStateMessage()
+            .withType(AirbyteStateType.GLOBAL)
+            .withGlobal(new AirbyteGlobalState()
+                .withSharedState(Jsons.deserialize("\"woot\""))
+                .withStreamStates(Arrays.asList(
+                    new AirbyteStreamState()
+                        .withStreamDescriptor(new StreamDescriptor().withName("del-1").withNamespace("del-n1"))
+                        .withStreamState(Jsons.deserialize("")),
+                    new AirbyteStreamState()
+                        .withStreamDescriptor(new StreamDescriptor().withName("del-2"))
+                        .withStreamState(Jsons.deserialize("")),
+                    new AirbyteStreamState()
+                        .withStreamDescriptor(new StreamDescriptor().withName("del-1").withNamespace("del-n2"))
+                        .withStreamState(Jsons.deserialize(""))))));
+
+    statePersistence.updateOrCreateState(connectionId, clone(globalToModify));
+
+    final var toDelete = Set.of(
+        new StreamDescriptor().withName("del-1").withNamespace("del-n1"),
+        new StreamDescriptor().withName("del-2"),
+        new StreamDescriptor().withName("del-1").withNamespace("del-n2"));
+    statePersistence.bulkDelete(connectionId, toDelete);
+
+    var curr = statePersistence.getCurrentState(connectionId);
+
+    assertTrue(curr.isEmpty());
   }
 
   @Test

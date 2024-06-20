@@ -101,9 +101,6 @@ public class JobHistoryHandler {
   private final TemporalClient temporalClient;
   private final FeatureFlagClient featureFlagClient;
 
-  private static final Set<JobConfigType> CONFIG_TYPE_SUPPORTING_PROGRESS =
-      Set.of(JobConfigType.SYNC, JobConfigType.REFRESH, JobConfigType.RESET_CONNECTION, JobConfigType.CLEAR);
-
   public JobHistoryHandler(final JobPersistence jobPersistence,
                            final WorkerEnvironment workerEnvironment,
                            final LogConfigs logConfigs,
@@ -377,7 +374,7 @@ public class JobHistoryHandler {
   }
 
   public ConnectionSyncProgressRead getConnectionSyncProgress(final ConnectionIdRequestBody connectionIdRequestBody) throws IOException {
-    final List<Job> jobs = jobPersistence.getRunningSyncJobForConnections(List.of(connectionIdRequestBody.getConnectionId()));
+    final List<Job> jobs = jobPersistence.getRunningJobForConnection(connectionIdRequestBody.getConnectionId());
 
     final List<JobWithAttemptsRead> jobReads = jobs.stream()
         .map(JobConverter::getJobWithAttemptsRead)
@@ -385,8 +382,7 @@ public class JobHistoryHandler {
 
     hydrateWithStats(jobReads, jobs, featureFlagClient.boolVariation(HydrateAggregatedStats.INSTANCE, new Workspace(ANONYMOUS)), jobPersistence);
 
-    if (jobReads.isEmpty() || jobReads.getFirst() == null
-        || !CONFIG_TYPE_SUPPORTING_PROGRESS.contains(jobReads.getFirst().getJob().getConfigType())) {
+    if (jobReads.isEmpty() || jobReads.getFirst() == null) {
       return new ConnectionSyncProgressRead().connectionId(connectionIdRequestBody.getConnectionId()).streams(Collections.emptyList());
     }
     final JobWithAttemptsRead runningJob = jobReads.getFirst();
@@ -409,7 +405,7 @@ public class JobHistoryHandler {
       streamToTrackPerConfigType.put(JobConfigType.REFRESH, streamsToRefresh);
       streamToTrackPerConfigType.put(JobConfigType.SYNC, enabledStreams.stream().filter(s -> !streamsToRefresh.contains(s)).toList());
     } else if (runningJobConfigType.equals(JobConfigType.RESET_CONNECTION) || runningJobConfigType.equals(JobConfigType.CLEAR)) {
-      streamToTrackPerConfigType.put(JobConfigType.CLEAR, runningJob.getJob().getResetConfig().getStreamsToReset());
+      streamToTrackPerConfigType.put(runningJobConfigType, runningJob.getJob().getResetConfig().getStreamsToReset());
     }
 
     final List<StreamSyncProgressReadItem> finalStreamsWithStats = streamToTrackPerConfigType.entrySet().stream()
@@ -438,7 +434,7 @@ public class JobHistoryHandler {
     return new ConnectionSyncProgressRead()
         .connectionId(connectionIdRequestBody.getConnectionId())
         .jobId(runningJob.getJob().getId())
-        .syncStartedAt(runningJob.getJob().getStartedAt())
+        .syncStartedAt(runningJob.getJob().getCreatedAt())
         .bytesEmitted(aggregatedStats == null ? null : aggregatedStats.getBytesEmitted())
         .bytesCommitted(aggregatedStats == null ? null : aggregatedStats.getBytesCommitted())
         .recordsEmitted(aggregatedStats == null ? null : aggregatedStats.getRecordsEmitted())

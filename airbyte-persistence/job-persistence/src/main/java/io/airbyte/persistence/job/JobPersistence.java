@@ -387,6 +387,8 @@ public interface JobPersistence {
 
   List<Job> getRunningSyncJobForConnections(final List<UUID> connectionIds) throws IOException;
 
+  List<Job> getRunningJobForConnection(final UUID connectionId) throws IOException;
+
   Optional<Job> getFirstReplicationJob(UUID connectionId) throws IOException;
 
   Optional<Job> getNextJob() throws IOException;

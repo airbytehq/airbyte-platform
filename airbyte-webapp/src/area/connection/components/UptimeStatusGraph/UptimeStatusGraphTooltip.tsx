@@ -73,6 +73,9 @@ export const UptimeStatusGraphTooltip: ContentType<number, string> = ({ active, 
     }
   );
 
+  const showStreamStatusesSection =
+    statusesByCount && Object.values(statusesByCount).some((streams) => streams.length > 0);
+
   return (
     <Card noPadding>
       <Box p="md">
@@ -97,7 +100,7 @@ export const UptimeStatusGraphTooltip: ContentType<number, string> = ({ active, 
             </Text>
           </FlexContainer>
 
-          {!!streams?.length && (
+          {!!streams?.length && showStreamStatusesSection && (
             <FlexContainer direction="column" gap="sm">
               <Text smallcaps bold color="grey">
                 <FormattedMessage id="connection.overview.graph.uptimeStatus" />

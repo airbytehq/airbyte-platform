@@ -77,6 +77,9 @@ class StateCheckSumCountEventHandler(
   private var sourceStateMessageSeen = false
 
   @Volatile
+  private var isClosed = false
+
+  @Volatile
   private var destinationStateMessageSeen = false
 
   @Volatile
@@ -363,7 +366,7 @@ class StateCheckSumCountEventHandler(
 
   fun close(completedSuccessfully: Boolean) {
     logger.info { "Closing StateCheckSumCountEventHandler" }
-    if (completedSuccessfully && sourceStateMessageSeen && destinationStateMessageSeen && noCheckSumError) {
+    if (completedSuccessfully && !isClosed && sourceStateMessageSeen && destinationStateMessageSeen && noCheckSumError) {
       logger.info { "No checksum errors were reported in the entire sync." }
       val dummyState = DUMMY_STATE_MESSAGE
       trackStateCountMetrics(
@@ -374,6 +377,7 @@ class StateCheckSumCountEventHandler(
         ),
         EventType.SUCCESS,
       )
+      isClosed = true
     }
     pubSubWriter.ifPresent { it.close() }
   }

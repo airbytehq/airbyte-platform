@@ -188,8 +188,10 @@ class ReplicationInputHydratorTest {
     secretsPersistenceConfigApi = mock(SecretsPersistenceConfigApi.class);
     actorDefinitionVersionApi = mock(ActorDefinitionVersionApi.class);
     destinationApi = mock(DestinationApi.class);
+    when(destinationApi.getBaseUrl()).thenReturn("http://localhost:8001/api");
     when(destinationApi.getDestination(any())).thenReturn(DESTINATION_READ);
     when(airbyteApiClient.getConnectionApi()).thenReturn(connectionApi);
+    when(airbyteApiClient.getDestinationApi()).thenReturn(destinationApi);
     when(airbyteApiClient.getStateApi()).thenReturn(stateApi);
     when(airbyteApiClient.getJobsApi()).thenReturn(jobsApi);
     when(airbyteApiClient.getSecretPersistenceConfigApi()).thenReturn(secretsPersistenceConfigApi);
