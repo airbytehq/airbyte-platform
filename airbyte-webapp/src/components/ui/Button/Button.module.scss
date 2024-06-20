@@ -40,11 +40,18 @@
     opacity: 0.5;
   }
 
+  .childrenContainer {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
   .buttonIcon {
     display: flex;
     justify-content: center;
     align-content: center;
     position: relative;
+    flex: 0 0 auto;
 
     &.positionLeft {
       &.withLabel {

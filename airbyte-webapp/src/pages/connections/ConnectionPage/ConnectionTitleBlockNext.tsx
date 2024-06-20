@@ -63,7 +63,7 @@ export const ConnectionTitleBlockNext = () => {
       {connectionStatus === ConnectionStatus.deprecated && (
         <Message type="warning" text={<FormattedMessage id="connection.connectionDeletedView" />} />
       )}
-      <FlexContainer alignItems="center" justifyContent="space-between">
+      <FlexContainer alignItems="center" justifyContent="space-between" wrap="wrap">
         <FlexContainer alignItems="center" className={styles.titleContainer}>
           <ConnectionStatusIndicator status={status} withBox loading={isRunning} />
           <FlexContainer direction="column" gap="xs" className={styles.textEllipsis}>
