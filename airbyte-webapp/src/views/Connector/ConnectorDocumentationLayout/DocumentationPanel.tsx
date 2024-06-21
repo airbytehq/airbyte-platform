@@ -9,11 +9,13 @@ import { useLocation } from "react-router-dom";
 import { useUpdateEffect } from "react-use";
 
 import { LoadingPage } from "components";
+import { ConnectorQualityMetrics } from "components/connector/ConnectorQualityMetrics";
 import { Button } from "components/ui/Button";
 import { FlexContainer } from "components/ui/Flex";
 import { Heading } from "components/ui/Heading";
 import { ExternalLink } from "components/ui/Link";
 import { Markdown } from "components/ui/Markdown";
+import mdStyles from "components/ui/Markdown/Markdown.module.scss";
 
 import {
   GITHUB_DOCS_DESTINATIONS_URL,
@@ -24,6 +26,7 @@ import {
   REMOTE_DOCS_SOURCES_URL,
   useConnectorDocumentation,
 } from "core/api";
+import { ConnectorDefinition } from "core/domain/connector";
 import { isCloudApp } from "core/utils/app";
 import { isDevelopment } from "core/utils/isDevelopment";
 import { useGetActorIdFromParams } from "core/utils/useGetActorIdFromParams";
@@ -129,6 +132,20 @@ const FieldAnchor: React.FC<React.PropsWithChildren<{ field: string }>> = ({ fie
   );
 };
 
+const ConnectorDocumentationHeader: React.FC<{ selectedConnectorDefinition: ConnectorDefinition }> = ({
+  selectedConnectorDefinition,
+}) => {
+  const { name } = selectedConnectorDefinition;
+  return (
+    <FlexContainer direction="column" justifyContent="space-between" className={styles.connectorDocumentationHeader}>
+      <div className={mdStyles.markdown}>
+        <Heading as="h1">{name}</Heading>
+      </div>
+      <ConnectorQualityMetrics connectorDefinition={selectedConnectorDefinition} />
+    </FlexContainer>
+  );
+};
+
 export const DocumentationPanel: React.FC = () => {
   const { formatMessage } = useIntl();
   const { setDocumentationPanelOpen, selectedConnectorDefinition } = useDocumentationPanelContext();
@@ -197,6 +214,7 @@ export const DocumentationPanel: React.FC = () => {
           </Button>
         </ExternalLink>
       </FlexContainer>
+      <ConnectorDocumentationHeader selectedConnectorDefinition={selectedConnectorDefinition} />
       <Markdown
         className={styles.content}
         content={docsContent}

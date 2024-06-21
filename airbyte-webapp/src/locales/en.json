@@ -1147,6 +1147,8 @@
   "credits.noBillingAccount": "Your account is excluded from billing requirements and credits are not required.",
 
   "docs.notFoundError": "We were not able to receive docs. Please click the link above to open docs on our website",
+  "docs.metrics.supportLevel.label": "Support Level",
+  "docs.metrics.connectorVersion.label": "Connector Version",
   "errors.messageOnly": "{message}",
   "errors.title": "Sorry, something went wrong.",
   "errors.reload": "Reload",
