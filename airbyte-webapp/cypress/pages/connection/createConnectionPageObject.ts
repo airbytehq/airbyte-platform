@@ -9,7 +9,7 @@ const getNewConnectorTypeOption = (connectorType: ConnectorType) =>
 
 const catalogTreeTableHeader = `div[data-testid='catalog-tree-table-header']`;
 const catalogTreeTableBody = `div[data-testid='catalog-tree-table-body']`;
-
+export const nextButton = `a[data-testid='next-creation-page']`;
 export const selectExistingConnectorFromList = (connectorType: ConnectorType, connectorName: string) => {
   cy.get(getExistingConnectorItemButton(connectorType, connectorName)).click();
 };
@@ -40,7 +40,7 @@ export const isAtConnectionOverviewPage = (connectionId: string) =>
  */
 
 export const checkColumnNames = () => {
-  const columnNames = ["Sync", "Data destination", "Stream", "Sync mode"];
+  const columnNames = ["Sync", "Namespace", "Stream", "Sync mode"];
   cy.get(catalogTreeTableHeader).within(($header) => {
     columnNames.forEach((columnName) => {
       cy.contains(columnName);
