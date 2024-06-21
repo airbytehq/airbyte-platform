@@ -19,8 +19,6 @@ public interface RefreshSchemaActivity {
   @ActivityMethod
   boolean shouldRefreshSchema(UUID sourceCatalogId);
 
-  void refreshSchema(UUID sourceCatalogId, UUID connectionId) throws Exception;
-
   /**
    * Refresh the schema. This will eventually replace the one above.
    *

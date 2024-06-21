@@ -97,13 +97,8 @@ public class SyncWorkflowImpl implements SyncWorkflow {
     if (!sourceId.isEmpty() && refreshSchemaActivity.shouldRefreshSchema(sourceId.get())) {
       LOGGER.info("Refreshing source schema...");
       try {
-        final var version = Workflow.getVersion("AUTO_BACKFILL_ON_NEW_COLUMNS", Workflow.DEFAULT_VERSION, 1);
-        if (version == Workflow.DEFAULT_VERSION) {
-          refreshSchemaActivity.refreshSchema(sourceId.get(), connectionId);
-        } else {
-          refreshSchemaOutput =
-              refreshSchemaActivity.refreshSchemaV2(new RefreshSchemaActivityInput(sourceId.get(), connectionId, syncInput.getWorkspaceId()));
-        }
+        refreshSchemaOutput =
+            refreshSchemaActivity.refreshSchemaV2(new RefreshSchemaActivityInput(sourceId.get(), connectionId, syncInput.getWorkspaceId()));
       } catch (final Exception e) {
         ApmTraceUtils.addExceptionToTrace(e);
         return SyncOutputProvider.getRefreshSchemaFailure(e);
