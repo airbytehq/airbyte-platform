@@ -12908,6 +12908,7 @@ components:
             items:
               type: string
         selectedFields:
+          description: By default (if not provided in the request) all fields will be synced. Otherwise, only the fields in this list will be synced.
           $ref: "#/components/schemas/SelectedFields"
       x-sdk-component: true
     StreamConfigurations:
