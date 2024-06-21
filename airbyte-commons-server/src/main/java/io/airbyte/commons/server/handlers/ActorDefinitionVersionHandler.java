@@ -134,6 +134,8 @@ public class ActorDefinitionVersionHandler {
         .normalizationConfig(ApiPojoConverters.normalizationDestinationDefinitionConfigToApi(actorDefinitionVersion.getNormalizationConfig()))
         .supportState(toApiSupportState(actorDefinitionVersion.getSupportState()))
         .supportLevel(toApiSupportLevel(actorDefinitionVersion.getSupportLevel()))
+        .cdkVersion(actorDefinitionVersion.getCdkVersion())
+        .lastPublished(ApiPojoConverters.toOffsetDateTime(actorDefinitionVersion.getLastPublished()))
         .isVersionOverrideApplied(versionWithOverrideStatus.isOverrideApplied());
 
     final Optional<ActorDefinitionVersionBreakingChanges> breakingChanges =

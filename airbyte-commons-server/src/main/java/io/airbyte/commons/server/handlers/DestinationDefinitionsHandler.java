@@ -113,6 +113,9 @@ public class DestinationDefinitionsHandler {
           .supportLevel(ApiPojoConverters.toApiSupportLevel(destinationVersion.getSupportLevel()))
           .releaseStage(ApiPojoConverters.toApiReleaseStage(destinationVersion.getReleaseStage()))
           .releaseDate(ApiPojoConverters.toLocalDate(destinationVersion.getReleaseDate()))
+          .lastPublished(ApiPojoConverters.toOffsetDateTime(destinationVersion.getLastPublished()))
+          .cdkVersion(destinationVersion.getCdkVersion())
+          .metrics(standardDestinationDefinition.getMetrics())
           .custom(standardDestinationDefinition.getCustom())
           .supportsDbt(Objects.requireNonNullElse(destinationVersion.getSupportsDbt(), false))
           .normalizationConfig(
@@ -289,6 +292,7 @@ public class DestinationDefinitionsHandler {
         .withTombstone(currentDestination.getTombstone())
         .withPublic(currentDestination.getPublic())
         .withCustom(currentDestination.getCustom())
+        .withMetrics(currentDestination.getMetrics())
         .withResourceRequirements(updatedResourceReqs);
 
     final ActorDefinitionVersion newVersion = actorDefinitionHandlerHelper.defaultDefinitionVersionFromUpdate(

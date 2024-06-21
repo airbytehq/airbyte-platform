@@ -597,6 +597,9 @@ public class SourceServiceJooqImpl implements SourceService {
             .set(Tables.ACTOR_DEFINITION.MAX_SECONDS_BETWEEN_MESSAGES,
                 standardSourceDefinition.getMaxSecondsBetweenMessages() == null ? null
                     : standardSourceDefinition.getMaxSecondsBetweenMessages().intValue())
+            .set(ACTOR_DEFINITION.METRICS,
+                standardSourceDefinition.getMetrics() == null ? null
+                    : JSONB.valueOf(Jsons.serialize(standardSourceDefinition.getMetrics())))
             .where(Tables.ACTOR_DEFINITION.ID.eq(standardSourceDefinition.getSourceDefinitionId()))
             .execute();
 
@@ -622,6 +625,9 @@ public class SourceServiceJooqImpl implements SourceService {
             .set(Tables.ACTOR_DEFINITION.MAX_SECONDS_BETWEEN_MESSAGES,
                 standardSourceDefinition.getMaxSecondsBetweenMessages() == null ? null
                     : standardSourceDefinition.getMaxSecondsBetweenMessages().intValue())
+            .set(ACTOR_DEFINITION.METRICS,
+                standardSourceDefinition.getMetrics() == null ? null
+                    : JSONB.valueOf(Jsons.serialize(standardSourceDefinition.getMetrics())))
             .execute();
       }
     });

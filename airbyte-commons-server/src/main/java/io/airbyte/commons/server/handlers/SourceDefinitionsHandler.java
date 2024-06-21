@@ -115,6 +115,9 @@ public class SourceDefinitionsHandler {
           .supportLevel(ApiPojoConverters.toApiSupportLevel(sourceVersion.getSupportLevel()))
           .releaseStage(ApiPojoConverters.toApiReleaseStage(sourceVersion.getReleaseStage()))
           .releaseDate(ApiPojoConverters.toLocalDate(sourceVersion.getReleaseDate()))
+          .lastPublished(ApiPojoConverters.toOffsetDateTime(sourceVersion.getLastPublished()))
+          .cdkVersion(sourceVersion.getCdkVersion())
+          .metrics(standardSourceDefinition.getMetrics())
           .custom(standardSourceDefinition.getCustom())
           .resourceRequirements(ApiPojoConverters.actorDefResourceReqsToApi(standardSourceDefinition.getResourceRequirements()))
           .maxSecondsBetweenMessages(standardSourceDefinition.getMaxSecondsBetweenMessages());
@@ -291,6 +294,7 @@ public class SourceDefinitionsHandler {
         .withTombstone(currentSourceDefinition.getTombstone())
         .withPublic(currentSourceDefinition.getPublic())
         .withCustom(currentSourceDefinition.getCustom())
+        .withMetrics(currentSourceDefinition.getMetrics())
         .withMaxSecondsBetweenMessages(currentSourceDefinition.getMaxSecondsBetweenMessages())
         .withResourceRequirements(updatedResourceReqs);
 
