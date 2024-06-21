@@ -1,3 +1,6 @@
+import type { Root as MdastRoot, Node as MdastNode } from "mdast";
+import type { Pluggable } from "unified";
+
 import classNames from "classnames";
 import path from "path-browserify";
 import React, { useEffect, useMemo, useRef } from "react";
@@ -30,6 +33,20 @@ import styles from "./DocumentationPanel.module.scss";
 
 const OSS_ENV_MARKERS = /<!-- env:oss -->([\s\S]*?)<!-- \/env:oss -->/gm;
 const CLOUD_ENV_MARKERS = /<!-- env:cloud -->([\s\S]*?)<!-- \/env:cloud -->/gm;
+
+const removeFirstHeading: Pluggable = () => {
+  // Remove the first heading from the markdown content, as it is already displayed in the header
+  return (tree: MdastRoot) => {
+    let headingRemoved = false;
+    tree.children = tree.children.filter((node: MdastNode) => {
+      if (node.type === "heading" && !headingRemoved) {
+        headingRemoved = true;
+        return false;
+      }
+      return true;
+    });
+  };
+};
 
 export const prepareMarkdown = (markdown: string, env: "oss" | "cloud"): string => {
   // Remove any empty lines between <FieldAnchor> tags and their content, as this causes
@@ -180,7 +197,12 @@ export const DocumentationPanel: React.FC = () => {
           </Button>
         </ExternalLink>
       </FlexContainer>
-      <Markdown className={styles.content} content={docsContent} options={markdownOptions} />
+      <Markdown
+        className={styles.content}
+        content={docsContent}
+        options={markdownOptions}
+        remarkPlugins={[removeFirstHeading]}
+      />
     </FlexContainer>
   );
 };

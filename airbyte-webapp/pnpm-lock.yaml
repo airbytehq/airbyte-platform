@@ -58,6 +58,9 @@ dependencies:
   '@types/diff':
     specifier: ^5.0.7
     version: 5.0.7
+  '@types/mdast':
+    specifier: ^4.0.4
+    version: 4.0.4
   '@types/path-browserify':
     specifier: ^1.0.1
     version: 1.0.1
@@ -122,8 +125,8 @@ dependencies:
     specifier: ^4.17.21
     version: 4.17.21
   markdown-to-jsx:
-    specifier: ^7.3.2
-    version: 7.3.2(react@18.2.0)
+    specifier: ^7.4.7
+    version: 7.4.7(react@18.2.0)
   monaco-editor:
     specifier: ^0.34.1
     version: 0.34.1
@@ -223,6 +226,9 @@ dependencies:
   typesafe-actions:
     specifier: ^5.1.0
     version: 5.1.0
+  unified:
+    specifier: ^10.1.2
+    version: 10.1.2
   uuid:
     specifier: ^9.0.1
     version: 9.0.1
@@ -5191,7 +5197,7 @@ packages:
       color-convert: 2.0.1
       dequal: 2.0.3
       lodash: 4.17.21
-      markdown-to-jsx: 7.3.2(react@18.2.0)
+      markdown-to-jsx: 7.4.7(react@18.2.0)
       memoizerific: 1.11.3
       polished: 4.3.1
       react: 18.2.0
@@ -6334,6 +6340,12 @@ packages:
 
   /@types/mdast@3.0.10:
     resolution: {integrity: sha512-W864tg/Osz1+9f4lrGTZpCSO5/z4608eUp19tbozkq2HJK6i3z1kT0H9tlADXuYIb1YYOBByU4Jsqkk75q48qA==}
+    dependencies:
+      '@types/unist': 2.0.6
+    dev: false
+
+  /@types/mdast@4.0.4:
+    resolution: {integrity: sha512-kGaNbPh1k7AFzgpud/gMdvIm5xuECykRR+JnWKQno9TAXVa6WIVCGTPvYGekIDL4uwCZQSYbUxNBSb1aUo79oA==}
     dependencies:
       '@types/unist': 2.0.6
     dev: false
@@ -12818,8 +12830,8 @@ packages:
     resolution: {integrity: sha512-Z1NL3Tb1M9wH4XESsCDEksWoKTdlUafKc4pt0GRwjUyXaCFZ+dc3g2erqB6zm3szA2IUSi7VnPI+o/9jnxh9hw==}
     dev: false
 
-  /markdown-to-jsx@7.3.2(react@18.2.0):
-    resolution: {integrity: sha512-B+28F5ucp83aQm+OxNrPkS8z0tMKaeHiy0lHJs3LqCyDQFtWuenaIrkaVTgAm1pf1AU85LXltva86hlaT17i8Q==}
+  /markdown-to-jsx@7.4.7(react@18.2.0):
+    resolution: {integrity: sha512-0+ls1IQZdU6cwM1yu0ZjjiVWYtkbExSyUIFU2ZeDIFuZM1W42Mh4OlJ4nb4apX4H8smxDHRdFaoIVJGwfv5hkg==}
     engines: {node: '>= 10'}
     peerDependencies:
       react: '>= 0.14.0'
