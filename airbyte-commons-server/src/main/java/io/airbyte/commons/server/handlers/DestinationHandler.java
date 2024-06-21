@@ -41,6 +41,7 @@ import io.airbyte.config.persistence.ConfigRepository.ResourcesQueryPaginated;
 import io.airbyte.config.secrets.JsonSecretsProcessor;
 import io.airbyte.data.helpers.ActorDefinitionVersionUpdater;
 import io.airbyte.data.services.DestinationService;
+import io.airbyte.featureflag.DeleteSecretsWhenTombstoneActors;
 import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.featureflag.UseIconUrlInApiResponse;
 import io.airbyte.featureflag.Workspace;
@@ -147,24 +148,33 @@ public class DestinationHandler {
       connectionsHandler.deleteConnection(connectionRead.getConnectionId());
     }
 
-    final JsonNode fullConfig;
-    try {
-      fullConfig = destinationService.getDestinationConnectionWithSecrets(destination.getDestinationId()).getConfiguration();
-    } catch (final io.airbyte.data.exceptions.ConfigNotFoundException e) {
-      throw new ConfigNotFoundException(e.getType(), e.getConfigId());
-    }
     final ConnectorSpecification spec =
         getSpecForDestinationId(destination.getDestinationDefinitionId(), destination.getWorkspaceId(), destination.getDestinationId());
 
-    // persist
-    persistDestinationConnection(
-        destination.getName(),
-        destination.getDestinationDefinitionId(),
-        destination.getWorkspaceId(),
-        destination.getDestinationId(),
-        fullConfig,
-        true,
-        spec);
+    if (featureFlagClient.boolVariation(DeleteSecretsWhenTombstoneActors.INSTANCE, new Workspace(destination.getWorkspaceId().toString()))) {
+      deleteDestinationConnection(
+          destination.getName(),
+          destination.getDestinationDefinitionId(),
+          destination.getWorkspaceId(),
+          destination.getDestinationId(),
+          spec);
+    } else {
+      final JsonNode fullConfig;
+      try {
+        fullConfig = destinationService.getDestinationConnectionWithSecrets(destination.getDestinationId()).getConfiguration();
+      } catch (final io.airbyte.data.exceptions.ConfigNotFoundException e) {
+        throw new ConfigNotFoundException(e.getType(), e.getConfigId());
+      }
+      // persist
+      persistDestinationConnection(
+          destination.getName(),
+          destination.getDestinationDefinitionId(),
+          destination.getWorkspaceId(),
+          destination.getDestinationId(),
+          fullConfig,
+          true,
+          spec);
+    }
   }
 
   public DestinationRead updateDestination(final DestinationUpdate destinationUpdate)
@@ -380,6 +390,26 @@ public class DestinationHandler {
         .withTombstone(tombstone);
     try {
       destinationService.writeDestinationConnectionWithSecrets(destinationConnection, spec);
+    } catch (final io.airbyte.data.exceptions.ConfigNotFoundException e) {
+      throw new ConfigNotFoundException(e.getType(), e.getConfigId());
+    }
+  }
+
+  private void deleteDestinationConnection(final String name,
+                                           final UUID destinationDefinitionId,
+                                           final UUID workspaceId,
+                                           final UUID destinationId,
+                                           final ConnectorSpecification spec)
+      throws JsonValidationException, IOException, ConfigNotFoundException {
+    final DestinationConnection destinationConnection = new DestinationConnection()
+        .withName(name)
+        .withDestinationDefinitionId(destinationDefinitionId)
+        .withWorkspaceId(workspaceId)
+        .withDestinationId(destinationId)
+        .withConfiguration(null)
+        .withTombstone(true);
+    try {
+      destinationService.tombstoneDestination(destinationConnection, spec);
     } catch (final io.airbyte.data.exceptions.ConfigNotFoundException e) {
       throw new ConfigNotFoundException(e.getType(), e.getConfigId());
     }

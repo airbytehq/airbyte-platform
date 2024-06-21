@@ -74,4 +74,9 @@ public interface SourceService {
                                         final ConnectorSpecification connectorSpecification)
       throws JsonValidationException, IOException, ConfigNotFoundException;
 
+  void tombstoneSource(
+                       SourceConnection source,
+                       ConnectorSpecification connectorSpecification)
+      throws ConfigNotFoundException, JsonValidationException, IOException;
+
 }

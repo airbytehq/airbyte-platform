@@ -735,7 +735,7 @@ public class WorkspaceServiceJooqImpl implements WorkspaceService {
         secretPersistence = new RuntimeSecretPersistence(secretPersistenceConfig);
       }
 
-      JsonNode partialConfig;
+      final JsonNode partialConfig;
       if (previousWebhookConfigs.isPresent()) {
         partialConfig = secretsRepositoryWriter.updateFromConfig(
             workspace.getWorkspaceId(),

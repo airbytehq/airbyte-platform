@@ -66,6 +66,65 @@ open class SecretsRepositoryWriter(
   }
 
   /**
+   * Pure function to delete secrets from persistence.
+   *
+   * @param config secret config to be deleted
+   * @param spec connector specification
+   * @param runtimeSecretPersistence to use as an override
+   * @return partial config
+   */
+  @Throws(JsonValidationException::class)
+  private fun deleteFromConfig(
+    config: JsonNode,
+    spec: JsonNode,
+    runtimeSecretPersistence: RuntimeSecretPersistence? = null,
+  ) {
+    val pathToSecrets = SecretsHelpers.getSortedSecretPaths(spec)
+    pathToSecrets.forEach { path ->
+      JsonPaths.getValues(config, path).forEach { jsonWithCoordinate ->
+        SecretsHelpers.getExistingCoordinateIfExists(jsonWithCoordinate)?.let { coordinate ->
+          val secretCoord = SecretCoordinate.fromFullCoordinate(coordinate)
+          logger.info { "Deleting: ${secretCoord.fullCoordinate}" }
+          try {
+            (runtimeSecretPersistence ?: secretPersistence).delete(secretCoord)
+            metricClient.count(OssMetricsRegistry.DELETE_SECRET_DEFAULT_STORE, 1, MetricAttribute(MetricTags.SUCCESS, "true"))
+          } catch (e: Exception) {
+            // Multiple versions within one secret is a legacy concern. This is no longer
+            // possible moving forward. Catch the exception to best-effort disable other secret versions.
+            // The other reason to catch this is propagating the exception prevents the database
+            // from being updated with the new coordinates.
+            metricClient.count(OssMetricsRegistry.DELETE_SECRET_DEFAULT_STORE, 1, MetricAttribute(MetricTags.SUCCESS, "false"))
+            logger.error(e) { "Error deleting secret: ${secretCoord.fullCoordinate}" }
+          }
+        }
+      }
+    }
+    logger.info { "Deleting secrets done!" }
+  }
+
+  /**
+   * Deletes secrets config from persistence and return the partial config.
+   *
+   * @param workspaceId workspace ID
+   * @param config secret config to be deleted
+   * @param spec connector specification
+   * @param runtimeSecretPersistence to use as an override
+   * @return partial config
+   */
+  @Throws(JsonValidationException::class)
+  fun deleteFromConfig(
+    workspaceId: UUID,
+    config: JsonNode,
+    spec: JsonNode,
+    runtimeSecretPersistence: RuntimeSecretPersistence? = null,
+  ): JsonNode {
+    val splitConfig: SplitSecretConfig =
+      SecretsHelpers.splitConfig(workspaceId, config, spec, secretPersistence)
+    deleteFromConfig(config, spec, runtimeSecretPersistence)
+    return splitConfig.partialConfig
+  }
+
+  /**
    * This method merges an existing partial config with a new full config. It writes the secrets to the
    * secrets store and returns the partial config with the secrets removed and replaced with secret coordinates.
    *
@@ -100,29 +159,10 @@ open class SecretsRepositoryWriter(
         runtimeSecretPersistence?.write(coordinate, payload) ?: secretPersistence.write(coordinate, payload)
         metricClient.count(OssMetricsRegistry.UPDATE_SECRET_DEFAULT_STORE, 1)
       }
-
-    val pathToSecrets = SecretsHelpers.getSortedSecretPaths(spec)
-    pathToSecrets.forEach { path ->
-      JsonPaths.getValues(oldPartialConfig, path).forEach { jsonWithCoordinate ->
-        SecretsHelpers.getExistingCoordinateIfExists(jsonWithCoordinate)?.let { coordinate ->
-
-          if (featureFlagClient.boolVariation(DeleteDanglingSecrets, Workspace(workspaceId))) {
-            val secretCoord = SecretCoordinate.fromFullCoordinate(coordinate)
-            logger.info { "Deleting: ${secretCoord.fullCoordinate}" }
-            try {
-              (runtimeSecretPersistence ?: secretPersistence).delete(secretCoord)
-              metricClient.count(OssMetricsRegistry.DELETE_SECRET_DEFAULT_STORE, 1, MetricAttribute(MetricTags.SUCCESS, "true"))
-            } catch (e: Exception) {
-              // Multiple versions within one secret is a legacy concern. This is no longer
-              // possible moving forward. Catch the exception to best-effort disable other secret versions.
-              // The other reason to catch this is propagating the exception prevents the database
-              // from being updated with the new coordinates.
-              metricClient.count(OssMetricsRegistry.DELETE_SECRET_DEFAULT_STORE, 1, MetricAttribute(MetricTags.SUCCESS, "false"))
-              logger.error(e) { "Error deleting secret: ${secretCoord.fullCoordinate}" }
-            }
-          }
-        }
-      }
+    // Delete old secrets (controlled by a workspace level feature flag).
+    // TODO: remove this flag after testing so that by default we are always cleaning up old secrets
+    if (featureFlagClient.boolVariation(DeleteDanglingSecrets, Workspace(workspaceId))) {
+      deleteFromConfig(oldPartialConfig, spec, runtimeSecretPersistence)
     }
     return updatedSplitConfig.partialConfig
   }

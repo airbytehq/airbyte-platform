@@ -53,6 +53,7 @@ import io.airbyte.data.helpers.ActorDefinitionVersionUpdater;
 import io.airbyte.data.services.SecretPersistenceConfigService;
 import io.airbyte.data.services.SourceService;
 import io.airbyte.data.services.WorkspaceService;
+import io.airbyte.featureflag.DeleteSecretsWhenTombstoneActors;
 import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.featureflag.Organization;
 import io.airbyte.featureflag.UseIconUrlInApiResponse;
@@ -376,22 +377,31 @@ public class SourceHandler {
     }
 
     final var spec = getSpecFromSourceId(source.getSourceId());
-    final JsonNode fullConfig;
-    try {
-      fullConfig = sourceService.getSourceConnectionWithSecrets(source.getSourceId()).getConfiguration();
-    } catch (final io.airbyte.data.exceptions.ConfigNotFoundException e) {
-      throw new ConfigNotFoundException(e.getType(), e.getConfigId());
-    }
 
-    // persist
-    persistSourceConnection(
-        source.getName(),
-        source.getSourceDefinitionId(),
-        source.getWorkspaceId(),
-        source.getSourceId(),
-        true,
-        fullConfig,
-        spec);
+    if (featureFlagClient.boolVariation(DeleteSecretsWhenTombstoneActors.INSTANCE, new Workspace(source.getWorkspaceId().toString()))) {
+      deleteSourceConnection(
+          source.getName(),
+          source.getSourceDefinitionId(),
+          source.getWorkspaceId(),
+          source.getSourceId(),
+          spec);
+    } else {
+      final JsonNode fullConfig;
+      try {
+        fullConfig = sourceService.getSourceConnectionWithSecrets(source.getSourceId()).getConfiguration();
+      } catch (final io.airbyte.data.exceptions.ConfigNotFoundException e) {
+        throw new ConfigNotFoundException(e.getType(), e.getConfigId());
+      }
+      // persist
+      persistSourceConnection(
+          source.getName(),
+          source.getSourceDefinitionId(),
+          source.getWorkspaceId(),
+          source.getSourceId(),
+          true,
+          fullConfig,
+          spec);
+    }
   }
 
   public DiscoverCatalogResult writeDiscoverCatalogResult(final SourceDiscoverSchemaWriteRequestBody request)
@@ -481,6 +491,26 @@ public class SourceHandler {
     final StandardSourceDefinition sourceDef = configRepository.getStandardSourceDefinition(sourceDefId);
     final ActorDefinitionVersion sourceVersion = actorDefinitionVersionHelper.getSourceVersion(sourceDef, workspaceId);
     return sourceVersion.getSpec();
+  }
+
+  private void deleteSourceConnection(final String name,
+                                      final UUID sourceDefinitionId,
+                                      final UUID workspaceId,
+                                      final UUID sourceId,
+                                      final ConnectorSpecification spec)
+      throws JsonValidationException, IOException, ConfigNotFoundException {
+    final SourceConnection sourceConnection = new SourceConnection()
+        .withName(name)
+        .withSourceDefinitionId(sourceDefinitionId)
+        .withWorkspaceId(workspaceId)
+        .withSourceId(sourceId)
+        .withConfiguration(null)
+        .withTombstone(true);
+    try {
+      sourceService.tombstoneSource(sourceConnection, spec);
+    } catch (final io.airbyte.data.exceptions.ConfigNotFoundException e) {
+      throw new ConfigNotFoundException(e.getType(), e.getConfigId());
+    }
   }
 
   @SuppressWarnings("PMD.PreserveStackTrace")
