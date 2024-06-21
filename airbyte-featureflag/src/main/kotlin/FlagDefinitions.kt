@@ -185,3 +185,5 @@ object DeleteSecretsWhenTombstoneActors : Temporary<Boolean>(key = "platform.del
 object EnableResumableFullRefresh : Temporary<Boolean>(key = "platform.enable-resumable-full-refresh", default = false)
 
 object AlwaysRunCheckBeforeSync : Permanent<Boolean>(key = "platform.always-run-check-before-sync", default = false)
+
+object DiscoverPostprocessInTemporal : Permanent<Boolean>(key = "platform.discover-postprocess-in-temporal", default = false)
