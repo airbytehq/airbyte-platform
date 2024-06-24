@@ -96,9 +96,4 @@ describe("#useInitialFormValues", () => {
     expect(result.current.syncCatalog.streams[0].config?.syncMode).toBe("full_refresh");
     expect(result.current.syncCatalog.streams[0].config?.destinationSyncMode).toBe("append");
   });
-
-  // This is a low-priority test
-  it.todo(
-    "should test for supportsDbt+initialValues.transformations and supportsNormalization+initialValues.normalization"
-  );
 });

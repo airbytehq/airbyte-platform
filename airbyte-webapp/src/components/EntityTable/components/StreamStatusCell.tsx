@@ -59,7 +59,7 @@ const StreamsBar: React.FC<{
 
 const SyncingStreams: React.FC<{ streams: StreamWithStatus[] }> = ({ streams }) => {
   const syncingStreamsCount = streams.filter((stream) => stream.isRunning).length;
-  const showSyncProgress = useExperiment("connection.syncProgress", false);
+  const showSyncProgress = useExperiment("connection.syncProgress", true);
 
   if (syncingStreamsCount) {
     return (

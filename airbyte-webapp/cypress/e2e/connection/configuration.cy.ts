@@ -547,7 +547,7 @@ describe("Connection Configuration", () => {
     it("should show empty streams table", () => {
       cy.get<WebBackendConnectionRead>("@postgresConnection").then((connection) => {
         cy.visit(`/${RoutePaths.Connections}/${connection.connectionId}/`);
-        cy.contains("Re-enable the connection to show stream sync progress");
+        cy.contains("users").should("exist");
       });
     });
 

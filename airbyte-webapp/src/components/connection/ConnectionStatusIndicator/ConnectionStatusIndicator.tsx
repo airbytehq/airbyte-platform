@@ -86,7 +86,7 @@ export const ConnectionStatusIndicator: React.FC<ConnectionStatusIndicatorProps>
   withBox,
   size,
 }) => {
-  const showSyncProgress = useExperiment("connection.syncProgress", false);
+  const showSyncProgress = useExperiment("connection.syncProgress", true);
 
   return (
     <div

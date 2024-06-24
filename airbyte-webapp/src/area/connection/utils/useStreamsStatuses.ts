@@ -51,7 +51,7 @@ export const useStreamsStatuses = (
 
   const connection = useGetConnection(connectionId);
   const { hasBreakingSchemaChange } = useSchemaChanges(connection.schemaChange);
-  const showSyncProgress = useExperiment("connection.syncProgress", false);
+  const showSyncProgress = useExperiment("connection.syncProgress", true);
   const lateMultiplier = useLateMultiplierExperiment();
   const errorMultiplier = useErrorMultiplierExperiment();
   const connectionStatus = useConnectionStatus(connectionId);

@@ -69,7 +69,7 @@ export interface UIConnectionStatus {
 
 export const useConnectionStatus = (connectionId: string): UIConnectionStatus => {
   const connection = useGetConnection(connectionId);
-  const showSyncProgress = useExperiment("connection.syncProgress", false);
+  const showSyncProgress = useExperiment("connection.syncProgress", true);
 
   const connectionStatuses = useListConnectionsStatuses([connectionId]);
   const connectionStatus = connectionStatuses[0];

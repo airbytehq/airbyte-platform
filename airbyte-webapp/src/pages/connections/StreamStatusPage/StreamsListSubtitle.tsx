@@ -19,9 +19,9 @@ export const StreamsListSubtitle: React.FC<StreamsListSubtitleProps> = ({
   recordsExtracted,
   recordsLoaded,
 }) => {
-  const showSyncProgress = useExperiment("connection.syncProgress", false);
+  const showSyncProgress = useExperiment("connection.syncProgress", true);
   return (
-    <Text color="grey" bold size="sm" as="span">
+    <Text color="grey" bold size="sm" as="span" data-testid="streams-list-subtitle">
       {connectionStatus === ConnectionStatusIndicatorStatus.OnTime && nextSync && (
         <FormattedMessage id="connection.stream.status.nextSync" values={{ sync: dayjs(nextSync).fromNow() }} />
       )}

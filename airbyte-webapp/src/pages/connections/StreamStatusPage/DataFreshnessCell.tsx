@@ -10,7 +10,7 @@ export const DataFreshnessCell: React.FC<{ transitionedAt: number | undefined; s
   transitionedAt,
   showRelativeTime,
 }) => {
-  const showSyncProgress = useExperiment("connection.syncProgress", false);
+  const showSyncProgress = useExperiment("connection.syncProgress", true);
 
   const lastSyncDisplayText = useMemo(() => {
     if (transitionedAt) {

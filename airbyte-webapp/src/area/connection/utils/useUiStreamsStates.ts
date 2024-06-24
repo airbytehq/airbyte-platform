@@ -37,7 +37,7 @@ export const useUiStreamStates = (connectionId: string): UIStreamState[] => {
   const connectionStatus = useConnectionStatus(connectionId);
   const [wasRunning, setWasRunning] = useState<boolean>(connectionStatus.isRunning);
   const [isFetchingPostJob, setIsFetchingPostJob] = useState<boolean>(false);
-  const isSyncProgressEnabled = useExperiment("connection.syncProgress", false);
+  const isSyncProgressEnabled = useExperiment("connection.syncProgress", true);
 
   const queryClient = useQueryClient();
 

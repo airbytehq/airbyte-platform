@@ -227,7 +227,7 @@ export const UptimeStatusGraph: React.FC = React.memo(() => {
   const { connection } = useConnectionEditService();
   const uptimeHistoryData = useGetConnectionUptimeHistory(connection.connectionId);
   const { isRunning } = useConnectionStatus(connection.connectionId);
-  const showSyncProgress = useExperiment("connection.syncProgress", false);
+  const showSyncProgress = useExperiment("connection.syncProgress", true);
   const { data: syncProgressData } = useGetConnectionSyncProgress(
     connection.connectionId,
     showSyncProgress && isRunning
