@@ -8,8 +8,9 @@ type SetFilterValue<T> = <FilterName extends keyof T, FilterType extends T[Filte
 
 type SetFilters<T> = (filters: T) => void;
 
-export const useFilters = <T extends object>(defaultValues: T): [T, SetFilterValue<T>, SetFilters<T>] => {
+export const useFilters = <T extends object>(defaultValues: T): [T, SetFilterValue<T>, SetFilters<T>, boolean] => {
   const [searchParams, setSearchParams] = useSearchParams();
+  const [isInitialState, setIsInitialState] = useState<boolean>(true);
 
   const [filterValues, setFilterValues] = useState<T>(() => {
     const valuesFromSearchParams = Object.keys(defaultValues).reduce<Record<string, string>>((acc, filterName) => {
@@ -28,11 +29,14 @@ export const useFilters = <T extends object>(defaultValues: T): [T, SetFilterVal
 
   const setFilterValue = useCallback<SetFilterValue<T>>(
     (filterName, filterValue) => {
+      if (isInitialState) {
+        setIsInitialState(false);
+      }
       setFilterValues((prevValues) => {
         return { ...prevValues, [filterName]: filterValue };
       });
     },
-    [setFilterValues]
+    [isInitialState]
   );
 
   useEffect(() => {
@@ -54,7 +58,7 @@ export const useFilters = <T extends object>(defaultValues: T): [T, SetFilterVal
     }
   }, [searchParams, filterValues, setSearchParams, defaultValues]);
 
-  return [filterValues, setFilterValue, setFilterValues];
+  return [filterValues, setFilterValue, setFilterValues, isInitialState];
 };
 
 function filtersAreEqual(newFilters: Record<string, unknown>, existingParams: URLSearchParams): boolean {
