@@ -29,6 +29,8 @@ import io.airbyte.api.client.model.generated.ConnectionStateCreateOrUpdate;
 import io.airbyte.api.client.model.generated.ConnectionStateType;
 import io.airbyte.api.client.model.generated.StreamState;
 import io.airbyte.commons.json.Jsons;
+import io.airbyte.featureflag.FeatureFlagClient;
+import io.airbyte.featureflag.TestClient;
 import io.airbyte.protocol.models.AirbyteEstimateTraceMessage;
 import io.airbyte.protocol.models.AirbyteGlobalState;
 import io.airbyte.protocol.models.AirbyteRecordMessage;
@@ -67,6 +69,7 @@ class SyncPersistenceImplTest {
   private Integer attemptNumber;
   private ConfiguredAirbyteCatalog catalog;
   private AirbyteApiClient airbyteApiClient;
+  private FeatureFlagClient ffClient;
 
   @BeforeEach
   void beforeEach() {
@@ -76,6 +79,7 @@ class SyncPersistenceImplTest {
     attemptNumber = (int) (Math.random() * Integer.MAX_VALUE);
     catalog = mock(ConfiguredAirbyteCatalog.class);
     airbyteApiClient = mock(AirbyteApiClient.class);
+    ffClient = mock(TestClient.class);
 
     // Setting up an ArgumentCaptor to be able to manually trigger the actual flush method rather than
     // relying on the ScheduledExecutorService and having to deal with Thread.sleep in the tests.
@@ -93,9 +97,11 @@ class SyncPersistenceImplTest {
     attemptApi = mock(AttemptApi.class);
     when(airbyteApiClient.getAttemptApi()).thenReturn(attemptApi);
     when(airbyteApiClient.getStateApi()).thenReturn(stateApi);
+    when(ffClient.intVariation(any(), any())).thenReturn(-1);
+
     syncPersistence = new SyncPersistenceImpl(airbyteApiClient, new StateAggregatorFactory(), syncStatsTracker, executorService,
         flushPeriod, new RetryWithJitterConfig(1, 1, 4),
-        connectionId, workspaceId, jobId, attemptNumber, catalog);
+        connectionId, workspaceId, jobId, attemptNumber, catalog, ffClient);
   }
 
   @AfterEach

@@ -187,3 +187,5 @@ object EnableResumableFullRefresh : Temporary<Boolean>(key = "platform.enable-re
 object AlwaysRunCheckBeforeSync : Permanent<Boolean>(key = "platform.always-run-check-before-sync", default = false)
 
 object DiscoverPostprocessInTemporal : Permanent<Boolean>(key = "platform.discover-postprocess-in-temporal", default = false)
+
+object SyncStatsFlushPeriodOverrideSeconds : Permanent<Int>(key = "platform.sync-stats-flush-period-override-seconds", default = -1)

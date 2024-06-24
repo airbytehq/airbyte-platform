@@ -10,6 +10,11 @@ import io.airbyte.api.client.model.generated.SaveStatsRequestBody
 import io.airbyte.commons.converters.StateConverter
 import io.airbyte.config.SyncStats
 import io.airbyte.config.helpers.StateMessageHelper
+import io.airbyte.featureflag.Connection
+import io.airbyte.featureflag.FeatureFlagClient
+import io.airbyte.featureflag.Multi
+import io.airbyte.featureflag.SyncStatsFlushPeriodOverrideSeconds
+import io.airbyte.featureflag.Workspace
 import io.airbyte.metrics.lib.MetricAttribute
 import io.airbyte.metrics.lib.MetricClient
 import io.airbyte.metrics.lib.MetricClientFactory
@@ -65,6 +70,7 @@ class SyncPersistenceImpl
     @Named("syncPersistenceExecutorService") private val stateFlushExecutorService: ScheduledExecutorService,
     @Value("\${airbyte.worker.replication.persistence-flush-period-sec}") private val stateFlushPeriodInSeconds: Long,
     private val metricClient: MetricClient,
+    private val featureFlagClient: FeatureFlagClient,
     @param:Parameter private val syncStatsTracker: SyncStatsTracker,
     @param:Parameter private val connectionId: UUID,
     @param:Parameter private val workspaceId: UUID,
@@ -91,6 +97,7 @@ class SyncPersistenceImpl
       jobId: Long,
       attemptNumber: Int,
       catalog: ConfiguredAirbyteCatalog,
+      featureFlagClient: FeatureFlagClient,
     ) : this(
       airbyteApiClient = airbyteApiClient,
       stateAggregatorFactory = stateAggregatorFactory,
@@ -103,6 +110,7 @@ class SyncPersistenceImpl
       jobId = jobId,
       attemptNumber = attemptNumber,
       catalog = catalog,
+      featureFlagClient = featureFlagClient,
     ) {
       this.retryWithJitterConfig = retryWithJitterConfig
     }
@@ -126,6 +134,13 @@ class SyncPersistenceImpl
         return
       }
 
+      val frequencyOverride =
+        featureFlagClient.intVariation(
+          SyncStatsFlushPeriodOverrideSeconds,
+          Multi(listOf(Workspace(workspaceId), Connection(connectionId))),
+        ).toLong()
+      val resolvedFrequency = if (frequencyOverride == -1L) stateFlushPeriodInSeconds else frequencyOverride
+
       // Making sure we only start one of background flush task
       synchronized(this) {
         if (stateFlushFuture == null) {
@@ -134,7 +149,7 @@ class SyncPersistenceImpl
             stateFlushExecutorService.scheduleAtFixedRate(
               { this.flush() },
               RUN_IMMEDIATELY,
-              stateFlushPeriodInSeconds,
+              resolvedFrequency,
               TimeUnit.SECONDS,
             )
         }
