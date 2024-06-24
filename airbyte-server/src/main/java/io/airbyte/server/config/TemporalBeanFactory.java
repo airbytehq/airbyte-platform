@@ -15,6 +15,7 @@ import io.airbyte.config.persistence.ConfigInjector;
 import io.airbyte.config.persistence.ConfigRepository;
 import io.airbyte.data.services.ConnectionService;
 import io.airbyte.data.services.DestinationService;
+import io.airbyte.data.services.SourceService;
 import io.airbyte.data.services.WorkspaceService;
 import io.airbyte.persistence.job.errorreporter.JobErrorReporter;
 import io.airbyte.persistence.job.factory.OAuthConfigSupplier;
@@ -51,8 +52,9 @@ public class TemporalBeanFactory {
   @Singleton
   public ContextBuilder contextBuilder(final WorkspaceService workspaceService,
                                        final DestinationService destinationService,
-                                       final ConnectionService connectionService) {
-    return new ContextBuilder(workspaceService, destinationService, connectionService);
+                                       final ConnectionService connectionService,
+                                       final SourceService sourceService) {
+    return new ContextBuilder(workspaceService, destinationService, connectionService, sourceService);
   }
 
 }

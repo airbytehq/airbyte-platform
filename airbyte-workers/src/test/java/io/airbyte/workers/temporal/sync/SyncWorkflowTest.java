@@ -87,6 +87,7 @@ class SyncWorkflowTest {
   private RefreshSchemaActivityImpl refreshSchemaActivity;
   private ConfigFetchActivityImpl configFetchActivity;
   private WorkloadFeatureFlagActivity workloadFeatureFlagActivity;
+  private ReportRunTimeActivity reportRunTimeActivity;
 
   // AIRBYTE CONFIGURATION
   private static final long JOB_ID = 11L;
@@ -113,6 +114,7 @@ class SyncWorkflowTest {
   private static final String SYNC_QUEUE = "SYNC";
 
   private static final UUID ORGANIZATION_ID = UUID.randomUUID();
+  private static final UUID SOURCE_DEFINITION_ID = UUID.randomUUID();
 
   private StandardSync sync;
   private StandardSyncInput syncInput;
@@ -135,7 +137,7 @@ class SyncWorkflowTest {
     syncWorker = testEnv.newWorker(SYNC_QUEUE);
     client = testEnv.getWorkflowClient();
 
-    final ImmutablePair<StandardSync, StandardSyncInput> syncPair = TestConfigHelpers.createSyncConfig(ORGANIZATION_ID);
+    final ImmutablePair<StandardSync, StandardSyncInput> syncPair = TestConfigHelpers.createSyncConfig(ORGANIZATION_ID, SOURCE_DEFINITION_ID);
     sync = syncPair.getKey();
     syncInput = syncPair.getValue();
 
@@ -161,6 +163,7 @@ class SyncWorkflowTest {
     refreshSchemaActivity = mock(RefreshSchemaActivityImpl.class);
     configFetchActivity = mock(ConfigFetchActivityImpl.class);
     workloadFeatureFlagActivity = mock(WorkloadFeatureFlagActivityImpl.class);
+    reportRunTimeActivity = mock(ReportRunTimeActivityImpl.class);
 
     when(normalizationActivity.generateNormalizationInputWithMinimumPayloadWithConnectionId(any(), any(), any(), any(), any()))
         .thenReturn(normalizationInput);
@@ -236,7 +239,8 @@ class SyncWorkflowTest {
         webhookOperationActivity,
         refreshSchemaActivity,
         configFetchActivity,
-        workloadFeatureFlagActivity);
+        workloadFeatureFlagActivity,
+        reportRunTimeActivity);
     testEnv.start();
     final SyncWorkflow workflow =
         client.newWorkflowStub(SyncWorkflow.class, WorkflowOptions.newBuilder().setTaskQueue(SYNC_QUEUE).build());
@@ -259,6 +263,7 @@ class SyncWorkflowTest {
     verifyNormalize(normalizationActivity, normalizationInput);
     verifyShouldRefreshSchema(refreshSchemaActivity);
     verifyRefreshSchema(refreshSchemaActivity, sync, syncInput);
+    verify(reportRunTimeActivity).reportRunTime(any());
     assertEquals(
         replicationSuccessOutput.withNormalizationSummary(normalizationSummary).getStandardSyncSummary(),
         actualOutput.getStandardSyncSummary());
@@ -399,7 +404,7 @@ class SyncWorkflowTest {
     when(webhookOperationActivity.invokeWebhook(
         new OperatorWebhookInput().withWebhookConfigId(WEBHOOK_CONFIG_ID).withExecutionUrl(WEBHOOK_URL).withExecutionBody(WEBHOOK_BODY)
             .withWorkspaceWebhookConfigs(workspaceWebhookConfigs)
-            .withConnectionContext(new ConnectionContext().withOrganizationId(ORGANIZATION_ID))))
+            .withConnectionContext(new ConnectionContext().withOrganizationId(ORGANIZATION_ID).withSourceDefinitionId(SOURCE_DEFINITION_ID))))
                 .thenReturn(true);
     final StandardSyncOutput actualOutput = execute();
     assertEquals(actualOutput.getWebhookOperationSummary().getSuccesses().get(0), WEBHOOK_CONFIG_ID);
@@ -471,7 +476,7 @@ class SyncWorkflowTest {
         syncInput.getNamespaceFormat(),
         syncInput.getPrefix(),
         null,
-        new ConnectionContext().withOrganizationId(ORGANIZATION_ID),
+        new ConnectionContext().withOrganizationId(ORGANIZATION_ID).withSourceDefinitionId(SOURCE_DEFINITION_ID),
         useWorkloadApi,
         useOutputDocStore));
   }
