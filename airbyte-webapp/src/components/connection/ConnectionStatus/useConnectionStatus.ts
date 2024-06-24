@@ -117,8 +117,8 @@ export const useConnectionStatus = (connectionId: string): UIConnectionStatus =>
       failureReason,
       lastSyncJobId,
       lastSyncAttemptNumber,
-      recordsExtracted: syncProgress?.recordsCommitted,
-      recordsLoaded: syncProgress?.recordsEmitted,
+      recordsExtracted: syncProgress?.recordsEmitted,
+      recordsLoaded: syncProgress?.recordsCommitted,
     };
   }
 
