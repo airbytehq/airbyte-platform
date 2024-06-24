@@ -17,7 +17,7 @@ import java.util.UUID
  */
 @MappedEntity("retry_states")
 class RetryState(
-  @field:AutoPopulated @field:Id val id: UUID?,
+  @field:AutoPopulated @field:Id val id: UUID,
   val connectionId: UUID?,
   val jobId: Long?,
   @field:DateCreated val createdAt: OffsetDateTime?,
@@ -90,7 +90,7 @@ class RetryState(
   }
 
   class RetryStateBuilder internal constructor() {
-    private var id: UUID? = null
+    private var id: UUID = UUID.fromString("00000000-0000-0000-0000-000000000000")
     private var connectionId: UUID? = null
     private var jobId: Long? = null
     private var createdAt: OffsetDateTime? = null
@@ -100,7 +100,7 @@ class RetryState(
     private var successivePartialFailures: Int? = null
     private var totalPartialFailures: Int? = null
 
-    fun id(id: UUID?): RetryStateBuilder {
+    fun id(id: UUID): RetryStateBuilder {
       this.id = id
       return this
     }

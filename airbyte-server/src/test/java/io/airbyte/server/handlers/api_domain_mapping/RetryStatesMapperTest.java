@@ -22,7 +22,7 @@ class RetryStatesMapperTest {
   @ParameterizedTest
   @MethodSource("retryStateFieldsMatrix")
   void mapsRequestToRetryState(
-                               final UUID unused,
+                               final UUID id,
                                final Long jobId,
                                final UUID connectionId,
                                final Integer successiveCompleteFailures,
@@ -30,6 +30,7 @@ class RetryStatesMapperTest {
                                final Integer successivePartialFailures,
                                final Integer totalPartialFailures) {
     final var api = new JobRetryStateRequestBody()
+        .id(id)
         .jobId(jobId)
         .connectionId(connectionId)
         .successiveCompleteFailures(successiveCompleteFailures)
@@ -38,6 +39,7 @@ class RetryStatesMapperTest {
         .totalPartialFailures(totalPartialFailures);
 
     final var expected = new RetryState.RetryStateBuilder()
+        .id(api.getId())
         .jobId(jobId)
         .connectionId(connectionId)
         .successiveCompleteFailures(successiveCompleteFailures)
