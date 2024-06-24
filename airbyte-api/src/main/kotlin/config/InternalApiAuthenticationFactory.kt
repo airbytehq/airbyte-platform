@@ -82,9 +82,15 @@ class InternalApiAuthenticationFactory {
       val cred = ServiceAccountCredentials.fromStream(stream)
       val key = cred.privateKey as RSAPrivateKey
       val algorithm: com.auth0.jwt.algorithms.Algorithm = com.auth0.jwt.algorithms.Algorithm.RSA256(null, key)
-      "Bearer " + token.sign(algorithm)
+      val signedToken = token.sign(algorithm)
+      if (signedToken.length < 10) {
+        logger.error { "Invalid signed token generated: '$signedToken'" }
+      } else {
+        logger.info { "Valid signed token generated: '${signedToken.replace(Regex("[^\\.]"), "*")}'" }
+      }
+      return "Bearer $signedToken"
     } catch (e: Exception) {
-      logger.error(e) { "An issue occurred while generating a data plane auth token. Defaulting to empty string. Error Message: {}" }
+      logger.error(e) { "An issue occurred while generating a data plane auth token. Defaulting to empty string." }
       ""
     }
   }
