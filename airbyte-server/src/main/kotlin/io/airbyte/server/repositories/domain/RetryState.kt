@@ -100,8 +100,10 @@ class RetryState(
     private var successivePartialFailures: Int? = null
     private var totalPartialFailures: Int? = null
 
-    fun id(id: UUID): RetryStateBuilder {
-      this.id = id
+    fun id(id: UUID?): RetryStateBuilder {
+      if (id != null) {
+        this.id = id
+      }
       return this
     }
 
