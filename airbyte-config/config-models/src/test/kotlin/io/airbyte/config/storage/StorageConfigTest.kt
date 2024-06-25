@@ -183,6 +183,7 @@ class StorageConfigTest {
         accessKey = private,
         secretAccessKey = private,
         region = public,
+        retry = "10",
       )
 
     with(gcs.toString()) {

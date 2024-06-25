@@ -105,7 +105,8 @@ public class EnvConfigs implements Configs {
           buckets,
           getEnsureEnv(EnvVar.AWS_ACCESS_KEY_ID),
           getEnsureEnv(EnvVar.AWS_ACCESS_KEY_ID),
-          getEnsureEnv(EnvVar.AWS_DEFAULT_REGION));
+          getEnsureEnv(EnvVar.AWS_DEFAULT_REGION),
+          getEnsureEnv(EnvVar.S3_RETRY));
       default -> throw new IllegalArgumentException(EnvVar.STORAGE_TYPE.name() + " has is an unsupported value");
     };
   }

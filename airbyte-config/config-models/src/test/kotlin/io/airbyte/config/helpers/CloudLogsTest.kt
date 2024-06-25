@@ -20,7 +20,7 @@ class CloudLogsTest {
 
   @Test
   fun `createCloudLogClient for s3`() {
-    val storageConfig = S3StorageConfig(buckets = buckets, accessKey = "ak", secretAccessKey = "sak", region = "r")
+    val storageConfig = S3StorageConfig(buckets = buckets, accessKey = "ak", secretAccessKey = "sak", region = "r", retry = "10")
     val cfg = LogConfigs(storageConfig)
 
     assertTrue(CloudLogs.createCloudLogClient(cfg) is S3Logs)

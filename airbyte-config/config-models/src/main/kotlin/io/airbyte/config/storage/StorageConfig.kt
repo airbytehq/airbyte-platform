@@ -86,6 +86,7 @@ data class S3StorageConfig(
   @Value("\${$STORAGE_S3.access-key}") val accessKey: String?,
   @Value("\${$STORAGE_S3.secret-access-key}") val secretAccessKey: String?,
   @Value("\${$STORAGE_S3.region}") val region: String,
+  @Value("\${$STORAGE_S3.retry}") val retry: String?,
 ) : StorageConfig {
   override fun toEnvVarMap(): Map<String, String> =
     buildMap {
@@ -99,6 +100,9 @@ data class S3StorageConfig(
       }
       secretAccessKey?.let {
         put(EnvVar.AWS_SECRET_ACCESS_KEY, secretAccessKey)
+      }
+      retry?.let {
+        put(EnvVar.S3_RETRY, retry)
       }
       put(EnvVar.AWS_DEFAULT_REGION, region)
     }.mapKeys { it.key.name }

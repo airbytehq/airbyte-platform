@@ -59,8 +59,8 @@ apache-cxf-core = { module = "org.apache.cxf:cxf-core", version = "3.4.2" }
 apache-mime4j-core = { module = "org.apache.james:apache-mime4j-core", version = "0.8.10" } # Transitive dependency of keycloak. Forced upgrade to 0.8.10 from 0.8.9
 appender-log4j2 = { module = "com.therealvan:appender-log4j2", version = "5.3.2" }
 assertj-core = { module = "org.assertj:assertj-core", version = "3.21.0" }
-aws-java-sdk-s3 = { module = "com.amazonaws:aws-java-sdk-s3", version = "1.12.701" }
-aws-java-sdk-sts = {module = "com.amazonaws:aws-java-sdk-sts", version = "1.12.701"}
+aws-java-sdk-s3 = { module = "com.amazonaws:aws-java-sdk-s3", version = "1.12.749" }
+aws-java-sdk-sts = {module = "com.amazonaws:aws-java-sdk-sts", version = "1.12.749"}
 aws-secretsmanager-caching-java = { module = "com.amazonaws.secretsmanager:aws-secretsmanager-caching-java", version = "1.0.2" }
 bouncycastle-bcprov = { module = "org.bouncycastle:bcprov-jdk15on", version.ref = "bouncycastle" }
 bouncycastle-bcpkix = { module = "org.bouncycastle:bcpkix-jdk15on", version.ref = "bouncycastle" }
@@ -171,8 +171,8 @@ quartz-scheduler = { module = "org.quartz-scheduler:quartz", version = "2.3.2" }
 reactor-core = { module = "io.projectreactor:reactor-core", version.ref = "reactor" }
 reactor-kotlin-extensions = { module = "io.projectreactor.kotlin:reactor-kotlin-extensions", version = "1.2.2" }
 reactor-test = { module = "io.projectreactor:reactor-test", version.ref = "reactor" }
-s3 = { module = "software.amazon.awssdk:s3", version = "2.23.17" }
-sts = { module = "software.amazon.awssdk:sts", version = "2.23.17" }
+s3 = { module = "software.amazon.awssdk:s3", version = "2.26.8" }
+sts = { module = "software.amazon.awssdk:sts", version = "2.26.8" }
 segment-java-analytics = { module = "com.segment.analytics.java:analytics", version.ref = "segment" }
 sendgrid-java = { module = "com.sendgrid:sendgrid-java", version = "4.0.1" }
 sentry-java = { module = "io.sentry:sentry", version.ref = "sentry" }

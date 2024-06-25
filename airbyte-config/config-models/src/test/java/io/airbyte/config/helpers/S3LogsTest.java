@@ -43,7 +43,7 @@ class S3LogsTest {
         new StorageBucketConfig(bucketLog, "state", "workload", "payload"),
         EnvVar.AWS_ACCESS_KEY_ID.fetch(),
         EnvVar.AWS_SECRET_ACCESS_KEY.fetch(),
-        region));
+        region, "10"));
   }
 
   private S3Client s3Client;
