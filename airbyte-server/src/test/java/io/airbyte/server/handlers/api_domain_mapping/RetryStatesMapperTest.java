@@ -22,7 +22,7 @@ class RetryStatesMapperTest {
   @ParameterizedTest
   @MethodSource("retryStateFieldsMatrix")
   void mapsRequestToRetryState(
-                               final UUID id,
+                               final UUID unused,
                                final Long jobId,
                                final UUID connectionId,
                                final Integer successiveCompleteFailures,
@@ -30,7 +30,6 @@ class RetryStatesMapperTest {
                                final Integer successivePartialFailures,
                                final Integer totalPartialFailures) {
     final var api = new JobRetryStateRequestBody()
-        .id(id)
         .jobId(jobId)
         .connectionId(connectionId)
         .successiveCompleteFailures(successiveCompleteFailures)
@@ -39,7 +38,6 @@ class RetryStatesMapperTest {
         .totalPartialFailures(totalPartialFailures);
 
     final var expected = new RetryState.RetryStateBuilder()
-        .id(api.getId())
         .jobId(jobId)
         .connectionId(connectionId)
         .successiveCompleteFailures(successiveCompleteFailures)
@@ -73,12 +71,8 @@ class RetryStatesMapperTest {
         .totalPartialFailures(totalPartialFailures)
         .build();
 
-    // We have a default id for RetryStates to satisfy the Micronaut-data 4.5 requirement
-    // the id field is non-null even when we don't have an id.
-    final var expectedRetryId = retryId == null ? RetryState.DEFAULT_ID : retryId;
-
     final var expected = new RetryStateRead()
-        .id(expectedRetryId)
+        .id(retryId)
         .jobId(jobId)
         .connectionId(connectionId)
         .successiveCompleteFailures(successiveCompleteFailures)
@@ -97,9 +91,7 @@ class RetryStatesMapperTest {
         Arguments.of(Fixtures.retryId2, Fixtures.jobId1, Fixtures.connectionId1, 0, 0, 9, 9),
         Arguments.of(Fixtures.retryId3, Fixtures.jobId2, Fixtures.connectionId2, 3, 2, 1, 0),
         Arguments.of(Fixtures.retryId2, Fixtures.jobId3, Fixtures.connectionId1, 3, 2, 1, 9),
-        Arguments.of(Fixtures.retryId1, Fixtures.jobId1, Fixtures.connectionId2, 1, 1, 0, 0),
-        Arguments.of(null, Fixtures.jobId1, Fixtures.connectionId2, 1, 1, 0, 0),
-        Arguments.of(null, Fixtures.jobId3, Fixtures.connectionId1, 0, 0, 9, 9));
+        Arguments.of(Fixtures.retryId1, Fixtures.jobId1, Fixtures.connectionId2, 1, 1, 0, 0));
   }
 
   private static class Fixtures {
