@@ -14,7 +14,6 @@ import io.airbyte.config.StandardWorkspace;
 import io.airbyte.data.exceptions.ConfigNotFoundException;
 import io.airbyte.data.services.ConnectionService;
 import io.airbyte.data.services.DestinationService;
-import io.airbyte.data.services.SourceService;
 import io.airbyte.data.services.WorkspaceService;
 import io.airbyte.validation.json.JsonValidationException;
 import java.io.IOException;
@@ -31,17 +30,14 @@ public class ContextBuilder {
   private final WorkspaceService workspaceService;
   private final DestinationService destinationService;
   private final ConnectionService connectionService;
-  private final SourceService sourceService;
 
   public ContextBuilder(final WorkspaceService workspaceService,
                         final DestinationService destinationService,
-                        final ConnectionService connectionService,
-                        final SourceService sourceService) {
+                        final ConnectionService connectionService) {
 
     this.workspaceService = workspaceService;
     this.destinationService = destinationService;
     this.connectionService = connectionService;
-    this.sourceService = sourceService;
   }
 
   /**
@@ -54,12 +50,9 @@ public class ContextBuilder {
   public ConnectionContext fromConnectionId(final UUID connectionId) {
     StandardSync connection = null;
     StandardWorkspace workspace = null;
-    DestinationConnection destination = null;
-    SourceConnection source = null;
     try {
       connection = connectionService.getStandardSync(connectionId);
-      source = sourceService.getSourceConnection(connection.getSourceId());
-      destination = destinationService.getDestinationConnection(connection.getDestinationId());
+      final DestinationConnection destination = destinationService.getDestinationConnection(connection.getDestinationId());
       workspace = workspaceService.getStandardWorkspaceNoSecrets(destination.getWorkspaceId(), false);
     } catch (final JsonValidationException | IOException | ConfigNotFoundException e) {
       log.error("Failed to get connection information for connection id: {}", connectionId, e);
@@ -75,14 +68,6 @@ public class ContextBuilder {
     if (workspace != null) {
       context.withWorkspaceId(workspace.getWorkspaceId())
           .withOrganizationId(workspace.getOrganizationId());
-    }
-
-    if (destination != null) {
-      context.setDestinationDefinitionId(destination.getDestinationDefinitionId());
-    }
-
-    if (source != null) {
-      context.setSourceDefinitionId(source.getSourceDefinitionId());
     }
 
     return context;

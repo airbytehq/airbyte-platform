@@ -36,7 +36,6 @@ import io.airbyte.persistence.job.models.JobRunConfig;
 import io.airbyte.workers.models.RefreshSchemaActivityInput;
 import io.airbyte.workers.models.RefreshSchemaActivityOutput;
 import io.airbyte.workers.models.ReplicationActivityInput;
-import io.airbyte.workers.temporal.activities.ReportRunTimeActivityInput;
 import io.airbyte.workers.temporal.scheduling.activities.ConfigFetchActivity;
 import io.temporal.workflow.Workflow;
 import java.util.Map;
@@ -69,8 +68,6 @@ public class SyncWorkflowImpl implements SyncWorkflow {
   private ConfigFetchActivity configFetchActivity;
   @TemporalActivityStub(activityOptionsBeanName = "shortActivityOptions")
   private WorkloadFeatureFlagActivity workloadFeatureFlagActivity;
-  @TemporalActivityStub(activityOptionsBeanName = "shortActivityOptions")
-  private ReportRunTimeActivity reportRunTimeActivity;
 
   @Trace(operationName = WORKFLOW_TRACE_OPERATION_NAME)
   @Override
@@ -80,7 +77,6 @@ public class SyncWorkflowImpl implements SyncWorkflow {
                                 final StandardSyncInput syncInput,
                                 final UUID connectionId) {
 
-    final long startTime = Workflow.currentTimeMillis();
     // TODO: Remove this once Workload API rolled out
     final var useWorkloadApi = checkUseWorkloadApiFlag(syncInput);
     final var useWorkloadOutputDocStore = checkUseWorkloadOutputFlag(syncInput);
@@ -108,8 +104,6 @@ public class SyncWorkflowImpl implements SyncWorkflow {
         return SyncOutputProvider.getRefreshSchemaFailure(e);
       }
     }
-
-    final long refreshSchemaEndTime = Workflow.currentTimeMillis();
 
     final Optional<ConnectionStatus> status = configFetchActivity.getStatus(connectionId);
     if (!status.isEmpty() && ConnectionStatus.INACTIVE == status.get()) {
@@ -175,24 +169,7 @@ public class SyncWorkflowImpl implements SyncWorkflow {
       }
     }
 
-    final long replicationEndTime = Workflow.currentTimeMillis();
-
-    if (shouldReportRuntime()) {
-      reportRunTimeActivity.reportRunTime(new ReportRunTimeActivityInput(
-          connectionId,
-          syncInput.getConnectionContext().getSourceDefinitionId(),
-          startTime,
-          refreshSchemaEndTime,
-          replicationEndTime));
-    }
-
     return syncOutput;
-  }
-
-  private boolean shouldReportRuntime() {
-    final int shouldReportRuntimeVersion = Workflow.getVersion("SHOULD_REPORT_RUNTIME", Workflow.DEFAULT_VERSION, 1);
-
-    return shouldReportRuntimeVersion != Workflow.DEFAULT_VERSION;
   }
 
   private NormalizationInput generateNormalizationInput(final StandardSyncInput syncInput) {
