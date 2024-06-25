@@ -3,8 +3,17 @@
 @use "scss/variables";
 @use "scss/z-indices";
 
+.card {
+  height: 100%;
+  overflow: hidden;
+}
+
 .cardHeader {
   border-bottom: variables.$border-thin solid colors.$grey-100;
+}
+
+.cardBody {
+  height: calc(100% - 75px); // cardHeader height
 }
 
 .clickableHeader {
@@ -30,6 +39,8 @@
 }
 
 .tableContainer {
+  height: 100%;
+
   .syncing {
     background: none;
     @include mixins.striped-background(colors.$dark-blue-30, 30px);

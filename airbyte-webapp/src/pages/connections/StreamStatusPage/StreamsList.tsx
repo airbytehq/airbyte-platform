@@ -122,7 +122,7 @@ export const StreamsList = () => {
   const showTable = connection.status !== ConnectionStatus.inactive;
 
   return (
-    <Card noPadding>
+    <Card noPadding className={styles.card} bodyClassName={styles.cardBody}>
       <Box p="xl" className={styles.cardHeader}>
         <FlexContainer justifyContent="space-between" alignItems="center">
           {useSimplifiedCreation ? (
@@ -139,30 +139,29 @@ export const StreamsList = () => {
           <StreamSearchFiltering className={styles.search} />
         </FlexContainer>
       </Box>
-      <FlexContainer direction="column" gap="sm">
-        <div className={styles.tableContainer} data-survey="streamcentric">
-          {showTable && (
-            <Table
-              columns={columns}
-              data={streamEntries}
-              variant="inBlock"
-              getRowClassName={(data) =>
-                classNames(styles.row, {
-                  [styles.syncing]: data.state?.status === ConnectionStatusIndicatorStatus.Syncing,
-                })
-              }
-              sorting={false}
-            />
-          )}
+      <FlexContainer direction="column" gap="sm" className={styles.tableContainer} data-survey="streamcentric">
+        {showTable && (
+          <Table
+            columns={columns}
+            data={streamEntries}
+            variant="inBlock"
+            getRowClassName={(data) =>
+              classNames(styles.row, {
+                [styles.syncing]: data.state?.status === ConnectionStatusIndicatorStatus.Syncing,
+              })
+            }
+            sorting={false}
+            virtualized
+          />
+        )}
 
-          {!showTable && (
-            <Box p="xl">
-              <Text size="sm" color="grey" italicized>
-                <FormattedMessage id="connection.stream.status.table.emptyTable.message" />
-              </Text>
-            </Box>
-          )}
-        </div>
+        {!showTable && (
+          <Box p="xl">
+            <Text size="sm" color="grey" italicized>
+              <FormattedMessage id="connection.stream.status.table.emptyTable.message" />
+            </Text>
+          </Box>
+        )}
       </FlexContainer>
     </Card>
   );

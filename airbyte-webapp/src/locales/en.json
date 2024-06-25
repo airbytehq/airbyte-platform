@@ -820,6 +820,7 @@
   "connection.state.revert": "Revert changes",
   "connection.state.copyTitle": "Copy connection state",
 
+  "tables.empty": "No data",
   "tables.name": "Name",
   "tables.connector": "Connector",
   "tables.sourceConnectWith": "Destination",

@@ -101,7 +101,7 @@ export const NextStreamsList = () => {
   const { status, nextSync, recordsExtracted, recordsLoaded } = useConnectionStatus(connection.connectionId);
 
   return (
-    <Card noPadding>
+    <Card noPadding className={styles.card} bodyClassName={styles.cardBody}>
       <Box p="xl" className={styles.cardHeader}>
         <FlexContainer justifyContent="space-between" alignItems="center">
           <FlexContainer alignItems="center">
@@ -119,21 +119,20 @@ export const NextStreamsList = () => {
           <StreamSearchFiltering className={styles.search} />
         </FlexContainer>
       </Box>
-      <FlexContainer direction="column" gap="sm">
-        <div className={styles.tableContainer} data-survey="streamcentric">
-          <Table
-            columns={columns}
-            data={streamEntries}
-            variant="inBlock"
-            getRowClassName={(data) =>
-              classNames(styles.row, {
-                [styles["syncing--next"]]:
-                  activeStatuses.includes(data.status) && data.status !== ConnectionStatusIndicatorStatus.Queued,
-              })
-            }
-            sorting={false}
-          />
-        </div>
+      <FlexContainer direction="column" gap="sm" className={styles.tableContainer} data-survey="streamcentric">
+        <Table
+          columns={columns}
+          data={streamEntries}
+          variant="inBlock"
+          getRowClassName={(data) =>
+            classNames(styles.row, {
+              [styles["syncing--next"]]:
+                activeStatuses.includes(data.status) && data.status !== ConnectionStatusIndicatorStatus.Queued,
+            })
+          }
+          sorting={false}
+          virtualized
+        />
       </FlexContainer>
     </Card>
   );
