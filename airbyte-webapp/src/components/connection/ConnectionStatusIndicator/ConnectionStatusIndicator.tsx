@@ -4,10 +4,7 @@ import React, { cloneElement } from "react";
 import { Icon, IconProps } from "components/ui/Icon";
 import { CircleLoader } from "components/ui/StatusIcon/CircleLoader";
 
-import { useExperiment } from "hooks/services/Experiment";
-
 import styles from "./ConnectionStatusIndicator.module.scss";
-import { StreamStatusLoadingSpinner } from "../StreamStatusIndicator";
 
 export enum ConnectionStatusIndicatorStatus {
   OnTime = "onTime",
@@ -86,8 +83,6 @@ export const ConnectionStatusIndicator: React.FC<ConnectionStatusIndicatorProps>
   withBox,
   size,
 }) => {
-  const showSyncProgress = useExperiment("connection.syncProgress", true);
-
   return (
     <div
       className={classNames(styles.status, STYLE_BY_STATUS[status], { [BOX_STYLE_BY_STATUS[status]]: withBox })}
@@ -96,7 +91,6 @@ export const ConnectionStatusIndicator: React.FC<ConnectionStatusIndicatorProps>
       data-status={status}
     >
       <div className={styles.icon}>{cloneElement(ICON_BY_STATUS[status], { [size ? "size" : ""]: size })}</div>
-      {!showSyncProgress && loading && <StreamStatusLoadingSpinner className={styles.spinner} />}
     </div>
   );
 };

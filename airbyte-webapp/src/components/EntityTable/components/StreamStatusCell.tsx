@@ -9,12 +9,11 @@ import {
   ConnectionStatusIndicatorStatus,
 } from "components/connection/ConnectionStatusIndicator";
 import { StreamWithStatus, sortStreamsByStatus } from "components/connection/StreamStatus/streamStatusUtils";
-import { StreamStatusIndicator, StreamStatusLoadingSpinner } from "components/connection/StreamStatusIndicator";
+import { StreamStatusIndicator } from "components/connection/StreamStatusIndicator";
 import { LoadingSpinner } from "components/ui/LoadingSpinner";
 import { Tooltip } from "components/ui/Tooltip";
 
 import { AirbyteStreamAndConfigurationWithEnforcedStream, useStreamsStatuses } from "area/connection/utils";
-import { useExperiment } from "hooks/services/Experiment";
 
 import styles from "./StreamStatusCell.module.scss";
 import { ConnectionTableDataItem } from "../types";
@@ -59,16 +58,11 @@ const StreamsBar: React.FC<{
 
 const SyncingStreams: React.FC<{ streams: StreamWithStatus[] }> = ({ streams }) => {
   const syncingStreamsCount = streams.filter((stream) => stream.isRunning).length;
-  const showSyncProgress = useExperiment("connection.syncProgress", true);
 
   if (syncingStreamsCount) {
     return (
       <div className={styles.syncContainer}>
-        {!showSyncProgress ? (
-          <StreamStatusLoadingSpinner className={styles.loadingSpinner} />
-        ) : (
-          <LoadingSpinner className={styles.loadingSpinner} />
-        )}
+        <LoadingSpinner className={styles.loadingSpinner} />
         <strong>{syncingStreamsCount}</strong>&nbsp;running
       </div>
     );

@@ -4,8 +4,6 @@ import { FormattedMessage } from "react-intl";
 import { ConnectionStatusIndicatorStatus } from "components/connection/ConnectionStatusIndicator";
 import { Text } from "components/ui/Text";
 
-import { useExperiment } from "hooks/services/Experiment";
-
 interface StreamsListSubtitleProps {
   connectionStatus: ConnectionStatusIndicatorStatus;
   nextSync?: number;
@@ -19,7 +17,6 @@ export const StreamsListSubtitle: React.FC<StreamsListSubtitleProps> = ({
   recordsExtracted,
   recordsLoaded,
 }) => {
-  const showSyncProgress = useExperiment("connection.syncProgress", true);
   return (
     <Text color="grey" bold size="sm" as="span" data-testid="streams-list-subtitle">
       {connectionStatus === ConnectionStatusIndicatorStatus.OnTime && nextSync && (
@@ -30,7 +27,7 @@ export const StreamsListSubtitle: React.FC<StreamsListSubtitleProps> = ({
         nextSync && (
           <FormattedMessage id="connection.stream.status.nextTry" values={{ sync: dayjs(nextSync).fromNow() }} />
         )}
-      {((showSyncProgress && connectionStatus === ConnectionStatusIndicatorStatus.Syncing) ||
+      {(connectionStatus === ConnectionStatusIndicatorStatus.Syncing ||
         connectionStatus === ConnectionStatusIndicatorStatus.Queued) &&
         (recordsLoaded ? (
           <FormattedMessage id="sources.countRecordsLoaded" values={{ count: recordsLoaded }} />
