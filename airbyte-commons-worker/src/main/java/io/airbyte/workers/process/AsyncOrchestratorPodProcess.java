@@ -22,6 +22,7 @@ import io.fabric8.kubernetes.api.model.ContainerBuilder;
 import io.fabric8.kubernetes.api.model.ContainerPort;
 import io.fabric8.kubernetes.api.model.DeletionPropagation;
 import io.fabric8.kubernetes.api.model.EnvVar;
+import io.fabric8.kubernetes.api.model.LocalObjectReference;
 import io.fabric8.kubernetes.api.model.Pod;
 import io.fabric8.kubernetes.api.model.PodBuilder;
 import io.fabric8.kubernetes.api.model.PodSecurityContextBuilder;
@@ -48,6 +49,7 @@ import java.nio.charset.Charset;
 import java.nio.file.Path;
 import java.util.AbstractMap;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -55,6 +57,7 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
 
 /**
@@ -537,6 +540,12 @@ public class AsyncOrchestratorPodProcess implements KubePod {
         .withSecurityContext(containerSecurityContext())
         .build();
 
+    final String imagepullScrets = environmentVariables.get(io.airbyte.commons.envvar.EnvVar.JOB_KUBE_MAIN_CONTAINER_IMAGE_PULL_SECRET.toString());
+    final List<LocalObjectReference> pullSecrets = Arrays.stream(imagepullScrets.split(",")).collect(Collectors.toList())
+        .stream()
+        .map(imagePullSecret -> new LocalObjectReference(imagePullSecret))
+        .collect(Collectors.toList());
+
     final Pod podToCreate = new PodBuilder()
         .withApiVersion("v1")
         .withNewMetadata()
@@ -545,7 +554,7 @@ public class AsyncOrchestratorPodProcess implements KubePod {
         .withLabels(allLabels)
         .withAnnotations(annotations)
         .endMetadata()
-        .withNewSpec()
+        .withNewSpec().withImagePullSecrets(pullSecrets)
         .withSchedulerName(schedulerName)
         .withServiceAccount(serviceAccount)
         .withAutomountServiceAccountToken(true)
