@@ -54,13 +54,10 @@ object ConnectionUpdateMapper {
           Geography.valueOf(connectionPatchRequest.dataResidency.toString())
         } ?: null,
       scheduleType =
-        connectionPatchRequest.schedule?.let { schedule ->
-          if (schedule.scheduleType !== ScheduleTypeEnum.MANUAL) {
-            ConnectionScheduleType.valueOf(schedule.scheduleType.toString())
-          } else {
-            ConnectionScheduleType.MANUAL
-          }
-        } ?: null,
+        connectionPatchRequest.schedule?.scheduleType?.let {
+            scheduleType ->
+          ConnectionScheduleType.decode(scheduleType.toString())
+        } ?: ConnectionScheduleType.MANUAL,
       scheduleData =
         connectionPatchRequest.schedule?.let { schedule ->
           if (schedule.scheduleType !== ScheduleTypeEnum.MANUAL) {
@@ -78,10 +75,7 @@ object ConnectionUpdateMapper {
         } ?: null,
       sourceCatalogId = catalogId,
       syncCatalog = configuredCatalog,
-      status =
-        connectionPatchRequest.status?.let {
-          ConnectionStatus.valueOf(connectionPatchRequest.status.toString())
-        } ?: null,
+      status = connectionPatchRequest.status?.let { status -> ConnectionStatus.decode(status.toString()) } ?: ConnectionStatus.ACTIVE,
     )
   }
 }
