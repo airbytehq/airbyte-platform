@@ -189,6 +189,11 @@ public class SyncWorkflowImpl implements SyncWorkflow {
           replicationEndTime));
     }
 
+    if (syncOutput.getStandardSyncSummary() != null && syncOutput.getStandardSyncSummary().getTotalStats() != null) {
+      syncOutput.getStandardSyncSummary().getTotalStats().setRefreshSchemaEndTime(refreshSchemaEndTime);
+      syncOutput.getStandardSyncSummary().getTotalStats().setRefreshSchemaStartTime(startTime);
+    }
+
     return syncOutput;
   }
 

@@ -134,6 +134,7 @@ class SyncWorkflowTest {
   @BeforeEach
   void setUp() {
     testEnv = TestWorkflowEnvironment.newInstance();
+
     syncWorker = testEnv.newWorker(SYNC_QUEUE);
     client = testEnv.getWorkflowClient();
 
@@ -266,7 +267,7 @@ class SyncWorkflowTest {
     verify(reportRunTimeActivity).reportRunTime(any());
     assertEquals(
         replicationSuccessOutput.withNormalizationSummary(normalizationSummary).getStandardSyncSummary(),
-        actualOutput.getStandardSyncSummary());
+        removeRefreshTime(actualOutput.getStandardSyncSummary()));
   }
 
   @ParameterizedTest
@@ -289,7 +290,7 @@ class SyncWorkflowTest {
     verifyRefreshSchema(refreshSchemaActivity, sync, syncInput);
     assertEquals(
         replicationSuccessOutput.withNormalizationSummary(normalizationSummary).getStandardSyncSummary(),
-        actualOutput.getStandardSyncSummary());
+        removeRefreshTime(actualOutput.getStandardSyncSummary()));
   }
 
   @Test
@@ -321,7 +322,14 @@ class SyncWorkflowTest {
     verifyNormalize(normalizationActivity, normalizationInput);
     assertEquals(
         replicationFailOutput.withNormalizationSummary(normalizationSummary).getStandardSyncSummary(),
-        actualOutput.getStandardSyncSummary());
+        removeRefreshTime(actualOutput.getStandardSyncSummary()));
+  }
+
+  private StandardSyncSummary removeRefreshTime(final StandardSyncSummary in) {
+    in.getTotalStats().setRefreshSchemaStartTime(null);
+    in.getTotalStats().setRefreshSchemaEndTime(null);
+
+    return in;
   }
 
   @Test
