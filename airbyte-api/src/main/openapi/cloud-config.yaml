@@ -1622,9 +1622,11 @@ components:
       properties:
         accountId:
           type: integer
+          format: int64
           description: The account id associated with the job
         jobId:
           type: integer
+          format: int64
           description: The the specific job id returned by the dbt Cloud API
         jobName:
           type: string
