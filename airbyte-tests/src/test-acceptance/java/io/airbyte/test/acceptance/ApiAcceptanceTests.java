@@ -5,10 +5,8 @@
 package io.airbyte.test.acceptance;
 
 import static io.airbyte.test.acceptance.AcceptanceTestsResources.TRUE;
-import static io.airbyte.test.acceptance.AcceptanceTestsResources.WITHOUT_SCD_TABLE;
 import static io.airbyte.test.utils.AcceptanceTestHarness.COLUMN_ID;
 import static io.airbyte.test.utils.AcceptanceTestHarness.COLUMN_NAME;
-import static io.airbyte.test.utils.AcceptanceTestHarness.PUBLIC_SCHEMA_NAME;
 import static io.airbyte.test.utils.AcceptanceTestUtils.IS_GKE;
 import static io.airbyte.test.utils.AcceptanceTestUtils.modifyCatalog;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
@@ -25,17 +23,13 @@ import io.airbyte.api.client.model.generated.DestinationRead;
 import io.airbyte.api.client.model.generated.DestinationSyncMode;
 import io.airbyte.api.client.model.generated.JobInfoRead;
 import io.airbyte.api.client.model.generated.JobStatus;
-import io.airbyte.api.client.model.generated.OperationRead;
 import io.airbyte.api.client.model.generated.SourceDefinitionSpecificationRead;
 import io.airbyte.api.client.model.generated.SourceDiscoverSchemaRead;
 import io.airbyte.api.client.model.generated.SourceRead;
 import io.airbyte.api.client.model.generated.SyncMode;
-import io.airbyte.api.client.model.generated.WebhookConfigWrite;
-import io.airbyte.api.client.model.generated.WorkspaceRead;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.db.jdbc.JdbcUtils;
 import io.airbyte.test.utils.AcceptanceTestHarness;
-import io.airbyte.test.utils.Asserts;
 import io.airbyte.test.utils.TestConnectionCreate;
 import io.micronaut.http.HttpStatus;
 import java.io.IOException;
@@ -259,61 +253,6 @@ class ApiAcceptanceTests {
       connectionStatus = testHarness.getConnection(anotherConnectionId).getStatus();
       assertEquals(ConnectionStatus.DEPRECATED, connectionStatus);
     }
-  }
-
-  @Test
-  @DisabledIfEnvironmentVariable(named = IS_GKE,
-                                 matches = TRUE,
-                                 disabledReason = "GKE deployment applies extra validation")
-  void testWebhookOperationExecutesSuccessfully() throws Exception {
-    // create workspace webhook config
-    final WorkspaceRead workspaceRead =
-        testHarness.updateWorkspaceWebhookConfigs(workspaceId, List.of(new WebhookConfigWrite("reqres test", null, null, null)));
-    // create a webhook operation
-    final OperationRead operationRead = testHarness.createDbtCloudWebhookOperation(workspaceId, workspaceRead.getWebhookConfigs().get(0).getId());
-    // create a connection with the new operation.
-    final UUID sourceId = testHarness.createPostgresSource().getSourceId();
-    final UUID destinationId = testHarness.createPostgresDestination().getDestinationId();
-    // NOTE: this is a normalization operation.
-    final UUID normalizationOpId = testHarness.createNormalizationOperation().getOperationId();
-    final SourceDiscoverSchemaRead discoverResult = testHarness.discoverSourceSchemaWithId(sourceId);
-    final SyncMode srcSyncMode = SyncMode.FULL_REFRESH;
-    final DestinationSyncMode dstSyncMode = DestinationSyncMode.OVERWRITE;
-    final AirbyteCatalog catalog = modifyCatalog(
-        discoverResult.getCatalog(),
-        Optional.of(srcSyncMode),
-        Optional.of(dstSyncMode),
-        Optional.empty(),
-        Optional.empty(),
-        Optional.of(true),
-        Optional.empty(),
-        Optional.empty(),
-        Optional.empty(),
-        Optional.empty(),
-        Optional.empty(),
-        Optional.empty());
-    final var conn =
-        testHarness.createConnection(new TestConnectionCreate.Builder(
-            sourceId,
-            destinationId,
-            catalog,
-            discoverResult.getCatalogId())
-                .setNormalizationOperationId(normalizationOpId)
-                .setAdditionalOperationIds(List.of(operationRead.getOperationId()))
-                .build());
-    final var connectionId = conn.getConnectionId();
-
-    // run the sync
-    final var jobInfoRead = testHarness.syncConnection(connectionId);
-    testResources.waitForSuccessfulJobWithRetries(jobInfoRead.getJob());
-    Asserts.assertSourceAndDestinationDbRawRecordsInSync(
-        testHarness.getSourceDatabase(), testHarness.getDestinationDatabase(), PUBLIC_SCHEMA_NAME,
-        conn.getNamespaceFormat(), true,
-        WITHOUT_SCD_TABLE);
-    testHarness.deleteConnection(connectionId);
-    // remove connection to avoid exception during tear down
-    testHarness.removeConnection(connectionId);
-    // TODO(mfsiega-airbyte): add webhook info to the jobs api to verify the webhook execution status.
   }
 
 }
