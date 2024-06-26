@@ -855,6 +855,7 @@
   "tables.sourceDeleteConfirm": "Confirm source deletion",
   "tables.destinationDeleteConfirm": "Confirm destination deletion",
   "tables.connectionDeleteConfirm": "Confirm connection deletion",
+  "tables.connectionDeleteConfirmationText": "delete",
   "tables.sourceDeleteModalText": "Deleting a source cannot be undone without a full re-sync. No existing data in the destination will be altered.",
   "tables.destinationDeleteModalText": "Deleting a destination cannot be undone. No existing data in the destination will be altered.",
   "tables.affectedConnectionsOnDeletion": "The following {count, plural, one {connection} other {connections}} will be deleted:\n",

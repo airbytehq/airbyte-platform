@@ -1,5 +1,5 @@
 import React from "react";
-import { FormattedMessage } from "react-intl";
+import { FormattedMessage, useIntl } from "react-intl";
 
 import { Button } from "components/ui/Button";
 import { Card } from "components/ui/Card";
@@ -18,8 +18,14 @@ export const ConnectionDeleteBlock: React.FC = () => {
   const { connection } = useConnectionEditService();
   const { mutateAsync: deleteConnection } = useDeleteConnection();
   const onDelete = () => deleteConnection(connection);
+  const { formatMessage } = useIntl();
 
-  const onDeleteButtonClick = useDeleteModal("connection", onDelete, undefined, connection.name);
+  const onDeleteButtonClick = useDeleteModal(
+    "connection",
+    onDelete,
+    undefined,
+    formatMessage({ id: "tables.connectionDeleteConfirmationText" })
+  );
 
   return (
     <Card>
