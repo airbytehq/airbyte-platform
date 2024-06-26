@@ -84,7 +84,7 @@ public class SentryExceptionHelper {
       if (stacktrace.startsWith("Traceback (most recent call last):")) {
         return buildPythonSentryExceptions(stacktrace);
       }
-      if (stacktrace.contains("\tat ") && stacktrace.contains(".java")) {
+      if (stacktrace.contains("\tat ") && (stacktrace.contains(".java") || stacktrace.contains(".kt"))) {
         return buildJavaSentryExceptions(stacktrace);
       }
       if (stacktrace.startsWith("AirbyteDbtError: ")) {
@@ -173,7 +173,7 @@ public class SentryExceptionHelper {
       @SuppressWarnings("LineLength")
       // Use a regex to grab stack trace frame information
       final Pattern framePattern = Pattern.compile(
-          "\n\tat (?:[\\w.$/]+/)?(?<module>[\\w$.]+)\\.(?<function>[\\w<>$]+)\\((?:(?<filename>[\\w]+\\.java):(?<lineno>\\d+)\\)|(?<desc>[\\w\\s]*))");
+          "\n\tat (?:[\\w.$/]+/)?(?<module>[\\w$.]+)\\.(?<function>[\\w<>$]+)\\((?:(?<filename>[\\w]+\\.(?<extension>java|kt)):(?<lineno>\\d+)\\)|(?<desc>[\\w\\s]*))");
       final Matcher matcher = framePattern.matcher(exceptionStr);
 
       while (matcher.find()) {
