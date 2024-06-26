@@ -54,6 +54,7 @@ public class MetricTags {
   public static final String RECORD_COUNT_TYPE = "record_count_type";
   public static final String RELEASE_STAGE = "release_stage";
   public static final String SOURCE_ID = "source_id";
+  public static final String SOURCE_DEFINITION_ID = "source_definition_id";
   public static final String SOURCE_IMAGE = "source_image";
   public static final String SOURCE_IMAGE_IS_DEFAULT = "source_image_is_default";
   public static final String STATUS = "status";

@@ -465,7 +465,19 @@ public enum OssMetricsRegistry implements MetricsRegistry {
 
   REPLICATION_CONTEXT_NOT_INITIALIZED_ERROR(MetricEmittingApps.ORCHESTRATOR,
       "replication_context_not_initialized_error",
-      "The replication context was not initialized when it was expected to be.");
+      "The replication context was not initialized when it was expected to be."),
+
+  DISCOVER_CATALOG_RUN_TIME(MetricEmittingApps.WORKER,
+      "discover_catalog_run_time",
+      "Time to run a discover catalog before a replication."),
+
+  REPLICATION_RUN_TIME(MetricEmittingApps.ORCHESTRATOR,
+      "replication_run_time",
+      "Time to run a replication withing a sync."),
+
+  SYNC_TOTAL_TIME(MetricEmittingApps.ORCHESTRATOR,
+      "sync_total_time",
+      "Time to run a sync workflow.");
 
   private final MetricEmittingApp application;
   private final String metricName;

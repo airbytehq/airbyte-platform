@@ -29,6 +29,7 @@ import io.airbyte.workers.temporal.sync.NormalizationActivity;
 import io.airbyte.workers.temporal.sync.NormalizationSummaryCheckActivity;
 import io.airbyte.workers.temporal.sync.RefreshSchemaActivity;
 import io.airbyte.workers.temporal.sync.ReplicationActivity;
+import io.airbyte.workers.temporal.sync.ReportRunTimeActivity;
 import io.airbyte.workers.temporal.sync.WebhookOperationActivity;
 import io.airbyte.workers.temporal.sync.WorkloadFeatureFlagActivity;
 import io.micronaut.context.annotation.Factory;
@@ -119,9 +120,10 @@ public class ActivityBeanFactory {
                                      final WebhookOperationActivity webhookOperationActivity,
                                      final ConfigFetchActivity configFetchActivity,
                                      final RefreshSchemaActivity refreshSchemaActivity,
-                                     final WorkloadFeatureFlagActivity workloadFeatureFlagActivity) {
+                                     final WorkloadFeatureFlagActivity workloadFeatureFlagActivity,
+                                     final ReportRunTimeActivity reportRunTimeActivity) {
     return List.of(replicationActivity, normalizationActivity, dbtTransformationActivity, normalizationSummaryCheckActivity,
-        webhookOperationActivity, configFetchActivity, refreshSchemaActivity, workloadFeatureFlagActivity);
+        webhookOperationActivity, configFetchActivity, refreshSchemaActivity, workloadFeatureFlagActivity, reportRunTimeActivity);
   }
 
   @Singleton
