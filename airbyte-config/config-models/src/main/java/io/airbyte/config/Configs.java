@@ -192,7 +192,8 @@ public interface Configs {
     TESTING_CONFIG_DB_TABLE,
     GOOGLE_SECRET_MANAGER,
     VAULT,
-    AWS_SECRET_MANAGER
+    AWS_SECRET_MANAGER,
+    AZURE_SECRET_MANAGER
   }
 
   /**

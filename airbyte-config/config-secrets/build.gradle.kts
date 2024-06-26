@@ -24,6 +24,9 @@ dependencies {
   api(libs.aws.java.sdk.sts)
   api(project(":airbyte-commons"))
 
+  implementation("com.azure:azure-security-keyvault-secrets:4.8.3")
+  implementation("com.azure:azure-identity:1.13.0")
+
   /*
    * Marked as "implementation" to avoid leaking these dependencies to services
    * that only use the retrieval side of the secret infrastructure.  The services
