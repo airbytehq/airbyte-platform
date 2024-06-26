@@ -1,5 +1,6 @@
 export enum RoutePaths {
   Root = "/",
+  Login = "login",
   SpeakeasyRedirect = "speakeasy-redirect",
   Workspaces = "workspaces",
   Setup = "setup",

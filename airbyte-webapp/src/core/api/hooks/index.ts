@@ -1,5 +1,6 @@
 export * from "./actorDefinitionVersions";
 export * from "./applications";
+export * from "./auth";
 export * from "./connections";
 export * from "./connectorBuilderApi";
 export * from "./connectorBuilderProject";

@@ -15,7 +15,6 @@ import { createUriWithoutSsoParams } from "packages/cloud/services/auth/CloudAut
 
 import { AuthContext, AuthContextApi } from "./AuthContext";
 
-// This wrapper is conditionally present if the KeycloakAuthentication feature is enabled
 export const EnterpriseAuthService: React.FC<PropsWithChildren<unknown>> = ({ children }) => {
   const { auth, airbyteUrl } = useGetInstanceConfiguration();
 
