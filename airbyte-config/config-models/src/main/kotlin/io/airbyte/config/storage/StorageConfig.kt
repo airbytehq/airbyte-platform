@@ -102,7 +102,7 @@ data class S3StorageConfig(
         put(EnvVar.AWS_SECRET_ACCESS_KEY, secretAccessKey)
       }
       retry?.let {
-        put(EnvVar.S3_RETRY, retry)
+        put(EnvVar.AWS_S3_RETRY, retry)
       }
       put(EnvVar.AWS_DEFAULT_REGION, region)
     }.mapKeys { it.key.name }
