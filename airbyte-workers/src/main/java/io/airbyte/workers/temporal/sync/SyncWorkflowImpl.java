@@ -57,10 +57,6 @@ public class SyncWorkflowImpl implements SyncWorkflow {
   private ReplicationActivity replicationActivity;
   @TemporalActivityStub(activityOptionsBeanName = "longRunActivityOptions")
   private NormalizationActivity normalizationActivity;
-  @TemporalActivityStub(activityOptionsBeanName = "longRunActivityOptions")
-  private DbtTransformationActivity dbtTransformationActivity;
-  @TemporalActivityStub(activityOptionsBeanName = "shortActivityOptions")
-  private NormalizationSummaryCheckActivity normalizationSummaryCheckActivity;
   @TemporalActivityStub(activityOptionsBeanName = "shortActivityOptions")
   private WebhookOperationActivity webhookOperationActivity;
   @TemporalActivityStub(activityOptionsBeanName = "refreshSchemaActivityOptions")

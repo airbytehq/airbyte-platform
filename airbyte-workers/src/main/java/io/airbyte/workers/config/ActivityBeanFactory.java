@@ -24,9 +24,7 @@ import io.airbyte.workers.temporal.scheduling.activities.RouteToSyncTaskQueueAct
 import io.airbyte.workers.temporal.scheduling.activities.StreamResetActivity;
 import io.airbyte.workers.temporal.scheduling.activities.WorkflowConfigActivity;
 import io.airbyte.workers.temporal.spec.SpecActivity;
-import io.airbyte.workers.temporal.sync.DbtTransformationActivity;
 import io.airbyte.workers.temporal.sync.NormalizationActivity;
-import io.airbyte.workers.temporal.sync.NormalizationSummaryCheckActivity;
 import io.airbyte.workers.temporal.sync.RefreshSchemaActivity;
 import io.airbyte.workers.temporal.sync.ReplicationActivity;
 import io.airbyte.workers.temporal.sync.ReportRunTimeActivity;
@@ -115,15 +113,13 @@ public class ActivityBeanFactory {
   public List<Object> syncActivities(
                                      final ReplicationActivity replicationActivity,
                                      final NormalizationActivity normalizationActivity,
-                                     final DbtTransformationActivity dbtTransformationActivity,
-                                     final NormalizationSummaryCheckActivity normalizationSummaryCheckActivity,
                                      final WebhookOperationActivity webhookOperationActivity,
                                      final ConfigFetchActivity configFetchActivity,
                                      final RefreshSchemaActivity refreshSchemaActivity,
                                      final WorkloadFeatureFlagActivity workloadFeatureFlagActivity,
                                      final ReportRunTimeActivity reportRunTimeActivity) {
-    return List.of(replicationActivity, normalizationActivity, dbtTransformationActivity, normalizationSummaryCheckActivity,
-        webhookOperationActivity, configFetchActivity, refreshSchemaActivity, workloadFeatureFlagActivity, reportRunTimeActivity);
+    return List.of(replicationActivity, normalizationActivity, webhookOperationActivity, configFetchActivity,
+        refreshSchemaActivity, workloadFeatureFlagActivity, reportRunTimeActivity);
   }
 
   @Singleton

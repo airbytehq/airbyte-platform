@@ -63,7 +63,6 @@ import java.util.UUID;
 import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
@@ -82,7 +81,6 @@ class SyncWorkflowTest {
   private WorkflowClient client;
   private ReplicationActivityImpl replicationActivity;
   private NormalizationActivityImpl normalizationActivity;
-  private NormalizationSummaryCheckActivityImpl normalizationSummaryCheckActivity;
   private WebhookOperationActivityImpl webhookOperationActivity;
   private RefreshSchemaActivityImpl refreshSchemaActivity;
   private ConfigFetchActivityImpl configFetchActivity;
@@ -159,7 +157,6 @@ class SyncWorkflowTest {
 
     replicationActivity = mock(ReplicationActivityImpl.class);
     normalizationActivity = mock(NormalizationActivityImpl.class);
-    normalizationSummaryCheckActivity = mock(NormalizationSummaryCheckActivityImpl.class);
     webhookOperationActivity = mock(WebhookOperationActivityImpl.class);
     refreshSchemaActivity = mock(RefreshSchemaActivityImpl.class);
     configFetchActivity = mock(ConfigFetchActivityImpl.class);
@@ -168,7 +165,6 @@ class SyncWorkflowTest {
 
     when(normalizationActivity.generateNormalizationInputWithMinimumPayloadWithConnectionId(any(), any(), any(), any(), any()))
         .thenReturn(normalizationInput);
-    when(normalizationSummaryCheckActivity.shouldRunNormalization(any(), any(), any())).thenReturn(true);
 
     when(configFetchActivity.getSourceId(sync.getConnectionId())).thenReturn(Optional.of(SOURCE_ID));
     when(refreshSchemaActivity.shouldRefreshSchema(SOURCE_ID)).thenReturn(true);
@@ -236,7 +232,6 @@ class SyncWorkflowTest {
   private StandardSyncOutput execute() {
     syncWorker.registerActivitiesImplementations(replicationActivity,
         normalizationActivity,
-        normalizationSummaryCheckActivity,
         webhookOperationActivity,
         refreshSchemaActivity,
         configFetchActivity,
@@ -382,19 +377,6 @@ class SyncWorkflowTest {
     verifyRefreshSchema(refreshSchemaActivity, sync, syncInput);
     verifyReplication(replicationActivity, syncInput);
     verifyNormalize(normalizationActivity, normalizationInput);
-  }
-
-  @Test
-  @Disabled("This behavior has been disabled temporarily (OC Issue #741)")
-  void testSkipNormalization() throws Exception {
-    when(normalizationSummaryCheckActivity.shouldRunNormalization(any(), any(), any())).thenReturn(false);
-
-    execute();
-
-    verifyShouldRefreshSchema(refreshSchemaActivity);
-    verifyRefreshSchema(refreshSchemaActivity, sync, syncInput);
-    verifyReplication(replicationActivity, syncInput);
-    verifyNoInteractions(normalizationActivity);
   }
 
   @Test
