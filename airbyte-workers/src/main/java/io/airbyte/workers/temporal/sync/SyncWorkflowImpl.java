@@ -95,7 +95,8 @@ public class SyncWorkflowImpl implements SyncWorkflow {
 
     final Optional<UUID> sourceId = configFetchActivity.getSourceId(connectionId);
     RefreshSchemaActivityOutput refreshSchemaOutput = null;
-    if (!sourceId.isEmpty() && refreshSchemaActivity.shouldRefreshSchema(sourceId.get())) {
+    final boolean shouldRefreshSchema = refreshSchemaActivity.shouldRefreshSchema(sourceId.get());
+    if (!sourceId.isEmpty() && shouldRefreshSchema) {
       LOGGER.info("Refreshing source schema...");
       try {
         refreshSchemaOutput =
@@ -182,10 +183,11 @@ public class SyncWorkflowImpl implements SyncWorkflow {
               : syncInput.getConnectionContext().getSourceDefinitionId(),
           startTime,
           refreshSchemaEndTime,
-          replicationEndTime));
+          replicationEndTime,
+          shouldRefreshSchema));
     }
 
-    if (syncOutput.getStandardSyncSummary() != null && syncOutput.getStandardSyncSummary().getTotalStats() != null) {
+    if (shouldRefreshSchema && syncOutput.getStandardSyncSummary() != null && syncOutput.getStandardSyncSummary().getTotalStats() != null) {
       syncOutput.getStandardSyncSummary().getTotalStats().setRefreshSchemaEndTime(refreshSchemaEndTime);
       syncOutput.getStandardSyncSummary().getTotalStats().setRefreshSchemaStartTime(startTime);
     }

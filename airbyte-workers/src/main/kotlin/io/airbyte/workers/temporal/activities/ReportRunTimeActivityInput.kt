@@ -10,6 +10,7 @@ data class ReportRunTimeActivityInput(
   val startTime: Long,
   val refreshSchemaEndTime: Long,
   val replicationEndTime: Long,
+  val shouldRefreshSchema: Boolean,
 ) {
   class Builder
     @JvmOverloads
@@ -19,6 +20,7 @@ data class ReportRunTimeActivityInput(
       val startTime: Long? = null,
       val refreshSchemaEndTime: Long? = null,
       val replicationEndTime: Long? = null,
+      val shouldRefreshSchema: Boolean? = null,
     ) {
       fun build(): ReportRunTimeActivityInput {
         return ReportRunTimeActivityInput(
@@ -27,6 +29,7 @@ data class ReportRunTimeActivityInput(
           startTime!!,
           refreshSchemaEndTime!!,
           replicationEndTime!!,
+          shouldRefreshSchema!!,
         )
       }
     }
