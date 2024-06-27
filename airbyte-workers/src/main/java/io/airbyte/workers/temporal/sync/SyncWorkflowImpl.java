@@ -107,7 +107,7 @@ public class SyncWorkflowImpl implements SyncWorkflow {
       }
     }
 
-    final long refreshSchemaEndTime = Workflow.currentTimeMillis();
+    final long discoverSchemaEndTime = Workflow.currentTimeMillis();
 
     final Optional<ConnectionStatus> status = configFetchActivity.getStatus(connectionId);
     if (!status.isEmpty() && ConnectionStatus.INACTIVE == status.get()) {
@@ -182,14 +182,14 @@ public class SyncWorkflowImpl implements SyncWorkflow {
               ? UUID.fromString("00000000-0000-0000-0000-000000000000")
               : syncInput.getConnectionContext().getSourceDefinitionId(),
           startTime,
-          refreshSchemaEndTime,
+          discoverSchemaEndTime,
           replicationEndTime,
           shouldRefreshSchema));
     }
 
     if (shouldRefreshSchema && syncOutput.getStandardSyncSummary() != null && syncOutput.getStandardSyncSummary().getTotalStats() != null) {
-      syncOutput.getStandardSyncSummary().getTotalStats().setRefreshSchemaEndTime(refreshSchemaEndTime);
-      syncOutput.getStandardSyncSummary().getTotalStats().setRefreshSchemaStartTime(startTime);
+      syncOutput.getStandardSyncSummary().getTotalStats().setDiscoverSchemaEndTime(discoverSchemaEndTime);
+      syncOutput.getStandardSyncSummary().getTotalStats().setDiscoverSchemaStartTime(startTime);
     }
 
     return syncOutput;

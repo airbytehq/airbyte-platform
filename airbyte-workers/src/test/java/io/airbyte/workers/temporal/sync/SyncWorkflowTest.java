@@ -321,8 +321,8 @@ class SyncWorkflowTest {
   }
 
   private StandardSyncSummary removeRefreshTime(final StandardSyncSummary in) {
-    in.getTotalStats().setRefreshSchemaStartTime(null);
-    in.getTotalStats().setRefreshSchemaEndTime(null);
+    in.getTotalStats().setDiscoverSchemaEndTime(null);
+    in.getTotalStats().setDiscoverSchemaStartTime(null);
 
     return in;
   }
