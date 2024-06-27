@@ -33,7 +33,10 @@ class StreamStatusCompletionTracker(
   open fun track(streamStatus: AirbyteStreamStatusTraceMessage) {
     if (shouldEmitStreamStatus && streamStatus.status == AirbyteStreamStatusTraceMessage.AirbyteStreamStatus.COMPLETE) {
       hasCompletedStatus[streamStatus.streamDescriptor] ?: run {
-        throw WorkerException("A stream status has been detected for a stream not present in the catalog")
+        throw WorkerException(
+          "A stream status (${streamStatus.streamDescriptor.namespace}.${streamStatus.streamDescriptor.name}) " +
+            "has been detected for a stream not present in the catalog",
+        )
       }
       hasCompletedStatus[streamStatus.streamDescriptor] = true
     }
