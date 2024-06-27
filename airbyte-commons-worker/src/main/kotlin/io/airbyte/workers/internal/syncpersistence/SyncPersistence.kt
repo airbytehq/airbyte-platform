@@ -271,14 +271,27 @@ class SyncPersistenceImpl
         stateToFlush?.ingest(stateBufferToFlush)
       }
 
+      if (!isReceivingStats) {
+        return
+      }
+
+      val haveStateToFlush = stateToFlush?.isEmpty() == false
+
+      val frequencyOverride =
+        featureFlagClient.intVariation(
+          SyncStatsFlushPeriodOverrideSeconds,
+          Multi(listOf(Workspace(workspaceId), Connection(connectionId))),
+        )
+
+      val frequencyOverrideOn = frequencyOverride > -1
+
       // We prepare stats to commit. We generate the payload here to keep track as close as possible to
-      // the states that are going to be persisted.
+      // the states that are going to be persisted. There is a minute race chance.
       // We also only want to generate the stats payload when roll-over state buffers. This is to avoid
       // updating the committed data counters ahead of the states because this counter is currently
       // decoupled from the state persistence.
       // This design favoring accuracy of committed data counters over freshness of emitted data counters.
-      if (isReceivingStats && stateToFlush?.isEmpty() == false) {
-        // TODO figure out a way to remove the double-bangs
+      if (haveStateToFlush || frequencyOverrideOn) {
         statsToPersist = buildSaveStatsRequest(syncStatsTracker, jobId, attemptNumber, connectionId)
       }
     }
