@@ -1,5 +1,5 @@
 {{- if eq .Values.global.deploymentMode "oss"  }}
-{{- $airbyteYmlDict := (default "" .Values.airbyteYml | fromYaml) }} # default to empty dict if airbyteYml is undefined
+{{- $airbyteYmlDict := (default "" .Values.global.airbyteYml | fromYaml) }} # default to empty dict if airbyteYml is undefined
 apiVersion: v1
 kind: ConfigMap
 metadata:
@@ -11,11 +11,19 @@ metadata:
     {{- include "airbyte.labels" . | nindent 4 }}
 data:
   AIRBYTE_VERSION: {{ .Values.version | default .Chart.AppVersion }}
-{{- if or (eq .Values.global.edition "pro") (eq .Values.global.edition "enterprise") }}
+  {{- if or (eq .Values.global.edition "pro") (eq .Values.global.edition "enterprise") }}
   AIRBYTE_EDITION: "pro"
-{{- else }}
+  {{- else }}
   AIRBYTE_EDITION: "community"
-{{- end }}
+  {{- end }}
+
+  {{- if $airbyteYmlDict }}
+  AIRBYTE_URL: {{ (index $airbyteYmlDict "webapp-url") | quote }}
+  {{- else}}
+  AIRBYTE_URL: {{ .Values.global.airbyteUrl }}
+  {{- end }}
+
+  AIRBYTE_SERVER_HOST: {{ .Release.Name }}-airbyte-server-svc:{{ .Values.server.service.port }}
   API_URL: {{ .Values.webapp.api.url }}
   CONNECTOR_BUILDER_API_URL: {{ index .Values.webapp "connector-builder-server" "url" | quote }}
   CONFIG_API_HOST: http://{{ .Release.Name }}-airbyte-server-svc:{{ .Values.server.service.port }} # temporary solution for oss kube deploys for airbyte api server until that server is wrapped into the config server
@@ -23,62 +31,88 @@ data:
   CONFIGS_DATABASE_MINIMUM_FLYWAY_MIGRATION_VERSION: "0.35.15.001"
   DATA_DOCKER_MOUNT: airbyte_data
   DB_DOCKER_MOUNT: airbyte_db
-  DATABASE_DB: {{ include "airbyte.database.name" . }}
-  DATABASE_HOST: {{ include "airbyte.database.host" . }} # todo: database information into secrets
-  DATABASE_PORT: {{ include "airbyte.database.port" . | quote }}
-  DATABASE_URL: {{ include "airbyte.database.url" . | quote }}
-  KEYCLOAK_DATABASE_URL: {{ include "keycloak.database.url" . | quote }}
+  {{- include "airbyte.database.configVars" . | nindent 2 }}
+  KEYCLOAK_DATABASE_URL: {{ include "airbyte.keycloak.database.url" . | quote }}
   GOOGLE_APPLICATION_CREDENTIALS: {{ include "airbyte.gcpLogCredentialsPath" . | quote }}
-  INTERNAL_API_HOST: {{ .Release.Name }}-airbyte-server-svc:{{ .Values.server.service.port }}
+  INTERNAL_API_HOST: http://{{ .Release.Name }}-airbyte-server-svc:{{ .Values.server.service.port }}
 {{- if eq (index .Values "workload-api-server" "enabled") true }}
   # Temporary conditional for OSS deploys.  Eventually, the workload-api will be present in OSS deploys and the else
   # block can be removed
   WORKLOAD_API_HOST: http://{{ .Release.Name }}-workload-api-server-svc:{{ index .Values "workload-api-server" "service" "port" }}
-{{- else }}
+  {{- else }}
   WORKLOAD_API_HOST: http://localhost # placeholder value
-{{- end }}
-{{- if or (eq .Values.global.edition "pro") (eq .Values.global.edition "enterprise") }}
+  {{- end }}
+
+  {{- if or (eq .Values.global.edition "pro") (eq .Values.global.edition "enterprise") }}
+  INITIAL_USER_FIRST_NAME: {{ .Values.global.auth.instanceAdmin.firstName }}
+  INITIAL_USER_LAST_NAME: {{ .Values.global.auth.instanceAdmin.lastName }}
+    {{- if .Values.global.auth.identityProvider }}
+  IDENTITY_PROVIDER_TYPE: {{ .Values.global.auth.identityProvider.type }}
+  OIDC_DOMAIN: {{ .Values.global.auth.identityProvider.oidc.domain }}
+  OIDC_APP_NAME: {{ .Values.global.auth.identityProvider.oidc.appName }}
+    {{- end }}
   KEYCLOAK_INTERNAL_HOST: {{ .Release.Name }}-airbyte-keycloak-svc:{{ .Values.keycloak.service.port }}
   KEYCLOAK_PORT: {{ .Values.keycloak.service.port | quote }}
+
+    {{- if $airbyteYmlDict }}
   KEYCLOAK_HOSTNAME_URL: {{ printf "%s/auth" (index $airbyteYmlDict "webapp-url") | quote }}
+    {{- else }}
+  KEYCLOAK_HOSTNAME_URL: {{ printf "%s/auth" .Values.global.airbyteUrl | quote }}
+    {{- end }}
+
   KEYCLOAK_JAVA_OPTS_APPEND: -Djgroups.dns.query={{ .Release.Name }}-airbyte-keycloak-headless-svc
-{{- else }}
+  {{- else }}
   KEYCLOAK_INTERNAL_HOST: localhost # just a placeholder so that nginx template is valid - shouldn't be used when edition isn't "pro"
-{{- end }}
+  {{- end }}
+
   CONNECTOR_BUILDER_API_HOST: {{ .Release.Name }}-airbyte-connector-builder-server-svc:{{ index .Values "connector-builder-server" "service" "port" }}
-{{- if or (eq .Values.global.edition "pro") (eq .Values.global.edition "enterprise") }}
+
+  {{- if or (eq .Values.global.edition "pro") (eq .Values.global.edition "enterprise") }}
+    {{- if $airbyteYmlDict }}
   AIRBYTE_API_HOST: {{ printf "%s/api/public" (index $airbyteYmlDict "webapp-url") | quote }}
-{{- else }}
+    {{- else }}
+  AIRBYTE_API_HOST: {{ printf "%s/api/public" .Values.global.airbyteUrl | quote }}
+    {{- end }}
+  {{- else }}
   AIRBYTE_API_HOST: http://{{ .Release.Name }}-airbyte-server-svc:{{ .Values.server.service.port }}/api/public
-{{- end }}
-{{- if $.Values.global.jobs.kube.annotations }}
+  {{- end }}
+
+  {{- if $.Values.global.jobs.kube.annotations }}
   JOB_KUBE_ANNOTATIONS: {{ $.Values.global.jobs.kube.annotations | include "airbyte.flattenMap" | quote }}
-{{- end }}
-{{- if $.Values.global.jobs.kube.labels }}
+  {{- end }}
+
+  {{- if $.Values.global.jobs.kube.labels }}
   JOB_KUBE_LABELS: {{ $.Values.global.jobs.kube.labels | include "airbyte.flattenMap" | quote }}
-{{- end }}
-{{- if $.Values.global.jobs.kube.nodeSelector }}
+  {{- end }}
+
+  {{- if $.Values.global.jobs.kube.nodeSelector }}
   JOB_KUBE_NODE_SELECTORS: {{ $.Values.global.jobs.kube.nodeSelector | include "airbyte.flattenMap" | quote }}
-{{- end }}
-{{- if $.Values.global.jobs.kube.tolerations }}
+  {{- end }}
+
+  {{- if $.Values.global.jobs.kube.tolerations }}
   JOB_KUBE_TOLERATIONS: {{ $.Values.global.jobs.kube.tolerations | include "airbyte.flattenArrayMap" | quote }}
-{{- end }}
-{{- if $.Values.global.jobs.kube.images.busybox }}
+  {{- end }}
+
+  {{- if $.Values.global.jobs.kube.images.busybox }}
   JOB_KUBE_BUSYBOX_IMAGE: {{ $.Values.global.jobs.kube.images.busybox | quote }}
-{{- end }}
-{{- if $.Values.global.jobs.kube.images.socat }}
+  {{- end }}
+
+  {{- if $.Values.global.jobs.kube.images.socat }}
   JOB_KUBE_SOCAT_IMAGE: {{ $.Values.global.jobs.kube.images.socat | quote }}
-{{- end }}
-{{- if $.Values.global.jobs.kube.images.curl }}
+  {{- end }}
+
+  {{- if $.Values.global.jobs.kube.images.curl }}
   JOB_KUBE_CURL_IMAGE: {{ $.Values.global.jobs.kube.images.curl | quote }}
-{{- end }}
+  {{- end }}
+
   JOB_MAIN_CONTAINER_CPU_LIMIT: {{ ((.Values.global.jobs.resources | default dict).limits | default dict).cpu | default "" | quote }}
   JOB_MAIN_CONTAINER_CPU_REQUEST: {{ ((.Values.global.jobs.resources | default dict).requests | default dict).cpu | default "" | quote }}
   JOB_MAIN_CONTAINER_MEMORY_LIMIT: {{ ((.Values.global.jobs.resources | default dict).limits | default dict).memory | default "" | quote }}
   JOB_MAIN_CONTAINER_MEMORY_REQUEST: {{ ((.Values.global.jobs.resources | default dict).requests | default dict).memory | default "" | quote }}
-{{- if $.Values.global.jobs.kube.main_container_image_pull_secret }}
+
+  {{- if $.Values.global.jobs.kube.main_container_image_pull_secret }}
   JOB_KUBE_MAIN_CONTAINER_IMAGE_PULL_SECRET: {{ $.Values.global.jobs.kube.main_container_image_pull_secret }}
-{{- end }}
+  {{- end }}
   JOBS_DATABASE_MINIMUM_FLYWAY_MIGRATION_VERSION: "0.29.15.001"
   LOCAL_ROOT: /tmp/airbyte_local
   LOG4J_CONFIGURATION_FILE: {{ include "airbyte.log4jConfig" . | quote }}
@@ -92,9 +126,11 @@ data:
   STORAGE_BUCKET_LOG: {{ ((((.Values.global).storage).bucket).log) | default "airbyte-storage" | quote }}
   STORAGE_BUCKET_STATE: {{ ((((.Values.global).storage).bucket).state) | default "airbyte-storage" | quote }}
   STORAGE_BUCKET_WORKLOAD_OUTPUT: {{ ((((.Values.global).storage).bucket).workloadOutput) | default "airbyte-storage" | quote }}
+
   {{- with .Values.global.storage.s3 }}
   AWS_DEFAULT_REGION: {{ .region | default ""  | quote }}
   {{- end}}
+
   MINIO_ENDPOINT: {{ include "airbyte.storage.minio.endpoint" . | quote }}
   S3_PATH_STYLE_ACCESS: {{ include "airbyte.s3PathStyleAccess" . | quote }}
   # Storage end
@@ -118,9 +154,12 @@ data:
   LAUNCHER_MICRONAUT_ENVIRONMENTS: "control-plane,oss"
   WORKERS_MICRONAUT_ENVIRONMENTS: "control-plane"
   CRON_MICRONAUT_ENVIRONMENTS: "control-plane"
+  SERVER_MICRONAUT_ENVIRONMENTS: "control-plane"
   SHOULD_RUN_NOTIFY_WORKFLOWS: "true"
   MAX_NOTIFY_WORKERS: {{ .Values.worker.maxNotifyWorkers | default "5" | quote }}
   KUBERNETES_CLIENT_MAX_IDLE_CONNECTIONS: ""
   WORKLOAD_LAUNCHER_PARALLELISM: "10"
   CONNECTOR_BUILDER_SERVER_API_HOST: http://{{ .Release.Name }}-airbyte-connector-builder-server-svc:{{ index .Values "connector-builder-server" "service" "port" }}
+  PUB_SUB_ENABLED: "false"
+  PUB_SUB_TOPIC_NAME: ""
 {{- end }}

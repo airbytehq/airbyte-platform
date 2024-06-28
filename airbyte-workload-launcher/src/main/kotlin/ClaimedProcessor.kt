@@ -6,9 +6,12 @@ package io.airbyte.workload.launcher
 
 import com.google.common.annotations.VisibleForTesting
 import datadog.trace.api.Trace
+import dev.failsafe.Failsafe
+import dev.failsafe.RetryPolicy
 import io.airbyte.api.client.WorkloadApiClient
 import io.airbyte.metrics.lib.ApmTraceUtils
 import io.airbyte.metrics.lib.MetricAttribute
+import io.airbyte.workload.api.client.generated.infrastructure.ServerException
 import io.airbyte.workload.api.client.model.generated.WorkloadListRequest
 import io.airbyte.workload.api.client.model.generated.WorkloadListResponse
 import io.airbyte.workload.api.client.model.generated.WorkloadStatus
@@ -27,6 +30,7 @@ import jakarta.inject.Singleton
 import reactor.core.publisher.Mono
 import reactor.core.scheduler.Schedulers
 import reactor.kotlin.core.publisher.toFlux
+import java.time.Duration
 
 private val logger = KotlinLogging.logger {}
 
@@ -51,7 +55,20 @@ class ClaimedProcessor(
       )
 
     val workloadList: WorkloadListResponse =
-      apiClient.workloadApi.workloadList(workloadListRequest)
+      Failsafe.with(
+        RetryPolicy.builder<Any>()
+          .withBackoff(Duration.ofSeconds(20), Duration.ofDays(365))
+          .onRetry { logger.error { "Retrying to fetch workloads for dataplane $dataplaneId" } }
+          .abortOn { exception ->
+            when (exception) {
+              // This makes us to retry only on 5XX errors
+              is ServerException -> exception.statusCode / 100 != 5
+              else -> true
+            }
+          }
+          .build(),
+      )
+        .get { -> apiClient.workloadApi.workloadList(workloadListRequest) }
 
     logger.info { "Re-hydrating ${workloadList.workloads.size} workload claim(s)..." }
     claimProcessorTracker.trackNumberOfClaimsToResume(workloadList.workloads.size)

@@ -13,7 +13,6 @@ import static org.mockito.Mockito.when;
 import io.airbyte.api.client.AirbyteApiClient;
 import io.airbyte.api.client.generated.JobRetryStatesApi;
 import io.airbyte.api.client.generated.WorkspaceApi;
-import io.airbyte.api.client.invoker.generated.ApiException;
 import io.airbyte.api.client.model.generated.RetryStateRead;
 import io.airbyte.featureflag.CompleteFailureBackoffBase;
 import io.airbyte.featureflag.CompleteFailureBackoffMaxInterval;
@@ -32,6 +31,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mock;
 import org.mockito.Mockito;
+import org.openapitools.client.infrastructure.ClientException;
 
 class RetryStateClientTest {
 
@@ -124,11 +124,14 @@ class RetryStateClientTest {
 
   @Test
   void hydratesFailureCountsFromApiIfPresent() throws Exception {
-    final var retryStateRead = new RetryStateRead()
-        .totalCompleteFailures(Fixtures.totalCompleteFailures)
-        .totalPartialFailures(Fixtures.totalPartialFailures)
-        .successiveCompleteFailures(Fixtures.successiveCompleteFailures)
-        .successivePartialFailures(Fixtures.successivePartialFailures);
+    final var retryStateRead = new RetryStateRead(
+        UUID.randomUUID(),
+        UUID.randomUUID(),
+        Fixtures.jobId,
+        Fixtures.successiveCompleteFailures,
+        Fixtures.totalCompleteFailures,
+        Fixtures.successivePartialFailures,
+        Fixtures.totalPartialFailures);
 
     when(mJobRetryStatesApi.get(any()))
         .thenReturn(retryStateRead);
@@ -155,7 +158,7 @@ class RetryStateClientTest {
   @Test
   void initializesFailureCountsFreshWhenApiReturnsNothing() throws Exception {
     when(mJobRetryStatesApi.get(any()))
-        .thenThrow(new ApiException(HttpStatus.NOT_FOUND.getCode(), "Not Found."));
+        .thenThrow(new ClientException("Not Found.", HttpStatus.NOT_FOUND.getCode(), null));
 
     final var client = new RetryStateClient(
         mAirbyteApiClient,

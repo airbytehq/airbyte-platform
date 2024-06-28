@@ -131,6 +131,7 @@ class ActorDefinitionVersionHandlerTest {
         .dockerRepository(actorDefinitionVersion.getDockerRepository())
         .dockerImageTag(actorDefinitionVersion.getDockerImageTag())
         .supportsDbt(false)
+        .supportsRefreshes(false)
         .normalizationConfig(ApiPojoConverters.normalizationDestinationDefinitionConfigToApi(null));
 
     assertEquals(expectedRead, actorDefinitionVersionRead);
@@ -171,6 +172,7 @@ class ActorDefinitionVersionHandlerTest {
         .dockerRepository(actorDefinitionVersion.getDockerRepository())
         .dockerImageTag(actorDefinitionVersion.getDockerImageTag())
         .supportsDbt(false)
+        .supportsRefreshes(false)
         .normalizationConfig(ApiPojoConverters.normalizationDestinationDefinitionConfigToApi(null));
 
     assertEquals(expectedRead, actorDefinitionVersionRead);
@@ -210,6 +212,7 @@ class ActorDefinitionVersionHandlerTest {
         .dockerRepository(actorDefinitionVersion.getDockerRepository())
         .dockerImageTag(actorDefinitionVersion.getDockerImageTag())
         .supportsDbt(actorDefinitionVersion.getSupportsDbt())
+        .supportsRefreshes(actorDefinitionVersion.getSupportsRefreshes())
         .normalizationConfig(ApiPojoConverters.normalizationDestinationDefinitionConfigToApi(actorDefinitionVersion.getNormalizationConfig()));
 
     assertEquals(expectedRead, actorDefinitionVersionRead);
@@ -242,6 +245,7 @@ class ActorDefinitionVersionHandlerTest {
         .dockerRepository(actorDefinitionVersion.getDockerRepository())
         .dockerImageTag(actorDefinitionVersion.getDockerImageTag())
         .supportsDbt(false)
+        .supportsRefreshes(false)
         .normalizationConfig(ApiPojoConverters.normalizationDestinationDefinitionConfigToApi(null))
         .breakingChanges(breakingChanges);
 
@@ -260,7 +264,8 @@ class ActorDefinitionVersionHandlerTest {
     final ResolveActorDefinitionVersionResponse resolveActorDefinitionVersionResponse = new ResolveActorDefinitionVersionResponse()
         .versionId(actorDefinitionVersion.getVersionId())
         .dockerRepository(actorDefinitionVersion.getDockerRepository())
-        .dockerImageTag(actorDefinitionVersion.getDockerImageTag());
+        .dockerImageTag(actorDefinitionVersion.getDockerImageTag())
+        .supportRefreshes(false);
 
     when(mSourceService.getStandardSourceDefinition(actorDefinitionId))
         .thenReturn(Jsons.clone(SOURCE_DEFINITION).withDefaultVersionId(actorDefinitionVersion.getVersionId()));

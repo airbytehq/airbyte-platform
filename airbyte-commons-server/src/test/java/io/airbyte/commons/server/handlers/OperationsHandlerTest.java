@@ -31,6 +31,7 @@ import io.airbyte.commons.enums.Enums;
 import io.airbyte.config.OperatorNormalization.Option;
 import io.airbyte.config.StandardSync;
 import io.airbyte.config.StandardSyncOperation;
+import io.airbyte.config.StandardWorkspace;
 import io.airbyte.config.persistence.ConfigNotFoundException;
 import io.airbyte.config.persistence.ConfigRepository;
 import io.airbyte.validation.json.JsonValidationException;
@@ -131,6 +132,8 @@ class OperationsHandlerTest {
             .withExecutionBody(EXECUTION_BODY))
         .withTombstone(false);
 
+    StandardWorkspace workspace = new StandardWorkspace();
+    when(configRepository.getStandardWorkspaceNoSecrets(standardSyncOperation.getWorkspaceId(), false)).thenReturn(workspace);
     when(configRepository.getStandardSyncOperation(WEBHOOK_OPERATION_ID)).thenReturn(expectedPersistedOperation);
 
     final OperationRead actualOperationRead = operationsHandler.createOperation(operationCreate);
@@ -238,6 +241,8 @@ class OperationsHandlerTest {
         .withOperatorType(StandardSyncOperation.OperatorType.WEBHOOK)
         .withOperatorWebhook(updatedWebhook);
 
+    StandardWorkspace workspace = new StandardWorkspace();
+    when(configRepository.getStandardWorkspaceNoSecrets(standardSyncOperation.getWorkspaceId(), false)).thenReturn(workspace);
     when(configRepository.getStandardSyncOperation(WEBHOOK_OPERATION_ID)).thenReturn(persistedOperation).thenReturn(updatedOperation);
 
     final OperationRead actualOperationRead = operationsHandler.updateOperation(operationUpdate);

@@ -12,12 +12,14 @@ import {
   useSourceDefinitionList,
   useUpdateSourceDefinition,
 } from "core/api";
+import { useFormatError } from "core/errors";
 
 import { useAppMonitoringService } from "./AppMonitoringService";
 import { useNotificationService } from "./Notification";
 
 export const useUpdateAllConnectors = (connectorType: "sources" | "destinations") => {
   const { formatMessage } = useIntl();
+  const formatError = useFormatError();
   const workspaceId = useCurrentWorkspaceId();
   const { updateAllSourceVersions } = useUpdateSourceDefinitions();
   const { updateAllDestinationVersions } = useUpdateDestinationDefinitions();
@@ -44,9 +46,7 @@ export const useUpdateAllConnectors = (connectorType: "sources" | "destinations"
         trackError(error);
         registerNotification({
           id: `workspace.connectorUpdateError.${connectorType}.${workspaceId}`,
-          text:
-            formatMessage({ id: "admin.upgradeAll.error" }, { type: connectorType }) +
-            (error.message ? `: ${error.message}` : ""),
+          text: `${formatMessage({ id: "admin.upgradeAll.error" }, { type: connectorType })}: ${formatError(error)}`,
           type: "error",
         });
       },

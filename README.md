@@ -42,13 +42,6 @@ Explore our [demo app](https://demo.airbyte.io/).
 
 ## Quick start
 
-⚠️ This Quickstart method is still under active development. This tool is intended to get Airbyte running as quickly as possible with no additional configuration necessary.
-Additional configuration options may be added in the future, however, if you need additional configuration options now, use the
-docker compose solution by following the instructions for the `run_ab_platform.sh` script [here](/deploying-airbyte/docker-compose).
-⚠️
-
-### Run Airbyte locally
-
 You can run Airbyte locally with `abctl`. Mac users can install `abctl` with Brew:
 
 ```bash
@@ -60,7 +53,6 @@ brew install abctl
 ## Setup & launch Airbyte
 
 - Install `Docker Desktop`  \(see [instructions](https://docs.docker.com/desktop/install/mac-install/)\).
-- After `Docker Desktop` is installed, you must enable `Kubernetes` \(see [instructions](https://docs.docker.com/desktop/kubernetes/)\).
 - For users that cannot install `abctl` with `brew` you download the latest version of `abctl` from the [releases page](https://github.com/airbytehq/abctl/releases)
 - Run the following command:
 

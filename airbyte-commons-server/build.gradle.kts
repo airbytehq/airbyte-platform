@@ -1,27 +1,18 @@
 plugins {
   id("io.airbyte.gradle.jvm.lib")
   id("io.airbyte.gradle.publish")
-  kotlin("jvm")
-  kotlin("kapt")
 }
 
-configurations.all {
-  resolutionStrategy {
-    // Ensure that the versions defined in deps.toml are used
-    // instead of versions from transitive dependencies
-    force(libs.flyway.core, libs.s3, libs.aws.java.sdk.s3)
-  }
-}
 dependencies {
   compileOnly(libs.lombok)
-  annotationProcessor(libs.lombok)     // Lombok must be added BEFORE Micronaut
+  annotationProcessor(libs.lombok) // Lombok must be added BEFORE Micronaut
 
-  kapt(platform(libs.micronaut.platform))
-  kapt(libs.bundles.micronaut.annotation.processor)
-  kapt(libs.micronaut.jaxrs.processor)
+  ksp(platform(libs.micronaut.platform))
+  ksp(libs.bundles.micronaut.annotation.processor)
+  ksp(libs.micronaut.jaxrs.processor)
 
-  kaptTest(platform(libs.micronaut.platform))
-  kaptTest(libs.bundles.micronaut.test.annotation.processor)
+  kspTest(platform(libs.micronaut.platform))
+  kspTest(libs.bundles.micronaut.test.annotation.processor)
 
   annotationProcessor(platform(libs.micronaut.platform))
   annotationProcessor(libs.bundles.micronaut.annotation.processor)
@@ -29,6 +20,7 @@ dependencies {
 
   implementation(platform(libs.micronaut.platform))
   implementation(libs.bundles.micronaut)
+  implementation(libs.bundles.datadog)
   implementation(libs.micronaut.cache.caffeine)
   implementation(libs.micronaut.inject)
   implementation(libs.micronaut.jaxrs.server)
@@ -52,6 +44,7 @@ dependencies {
   implementation(project(":airbyte-commons-auth"))
   implementation(project(":airbyte-commons-converters"))
   implementation(project(":airbyte-commons-license"))
+  implementation(project(":airbyte-commons-protocol"))
   implementation(project(":airbyte-commons-temporal"))
   implementation(project(":airbyte-commons-temporal-core"))
   implementation(project(":airbyte-commons-with-dependencies"))
@@ -95,6 +88,6 @@ tasks.named("spotbugsMain") {
   enabled = false
 }
 
-tasks.withType<Jar>() {
+tasks.withType<Jar> {
   duplicatesStrategy = DuplicatesStrategy.EXCLUDE
 }

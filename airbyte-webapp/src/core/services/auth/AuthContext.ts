@@ -1,67 +1,34 @@
 import React, { useContext } from "react";
-import { Observable } from "rxjs";
 
-import { UserRead, UserReadMetadata } from "core/api/types/AirbyteClient";
-import { SignupFormValues } from "packages/cloud/views/auth/SignupPage/components/SignupForm";
-
-export type AuthUpdatePassword = (email: string, currentPassword: string, newPassword: string) => Promise<void>;
-
-export type AuthRequirePasswordReset = (email: string) => Promise<void>;
-export type AuthConfirmPasswordReset = (code: string, newPassword: string) => Promise<void>;
-
-export type AuthLogin = (values: { email: string; password: string }) => Promise<void>;
-export type AuthOAuthLogin = (provider: OAuthProviders) => Observable<OAuthLoginState>;
-
-export type AuthSignUp = (form: SignupFormValues) => Promise<void>;
+import { UserRead } from "core/api/types/AirbyteClient";
 
 export type AuthChangeName = (name: string) => Promise<void>;
-
-export type AuthSendEmailVerification = () => Promise<void>;
-export type AuthVerifyEmail = FirebaseVerifyEmail | KeycloakVerifyEmail;
-type FirebaseVerifyEmail = (code: string) => Promise<void>;
-type KeycloakVerifyEmail = () => Promise<void>;
+export type AuthGetAccessToken = () => Promise<string | null>;
 export type AuthLogout = () => Promise<void>;
-
-export type OAuthLoginState = "waiting" | "loading" | "done";
-
-export enum AuthProviders {
-  GoogleIdentityPlatform = "google_identity_platform",
-}
-
-export type OAuthProviders = "github" | "google";
-
-// This override is currently needed because the UserRead type is not consistent between OSS and Cloud
-export interface CommonUserRead extends Omit<UserRead, "metadata"> {
-  metadata?: UserReadMetadata;
-}
+export type AuthLogin = ({ username, password }: { username: string; password: string }) => Promise<void>;
 
 export interface AuthContextApi {
-  user: CommonUserRead | null;
+  authType: "none" | "simple" | "oidc" | "cloud";
+  user: UserRead | null;
   inited: boolean;
   emailVerified: boolean;
   loggedOut: boolean;
-  /** @deprecated use `provider` instead */
-  providers: string[] | null;
   provider: string | null;
-  getAccessToken?: () => Promise<string | null>;
-  hasPasswordLogin?: () => boolean;
-  login?: AuthLogin;
-  loginWithOAuth?: AuthOAuthLogin;
-  signUpWithEmailLink?: (form: { name: string; email: string; password: string; news: boolean }) => Promise<void>;
-  signUp?: AuthSignUp;
-  updatePassword?: AuthUpdatePassword;
+  getAccessToken?: AuthGetAccessToken;
   updateName?: AuthChangeName;
-  requirePasswordReset?: AuthRequirePasswordReset;
-  confirmPasswordReset?: AuthConfirmPasswordReset;
-  sendEmailVerification?: AuthSendEmailVerification;
-  verifyEmail?: AuthVerifyEmail;
+  login?: AuthLogin;
   logout?: AuthLogout;
+  changeRealmAndRedirectToSignin?: (realm: string) => Promise<void>;
+  redirectToSignInWithGoogle?: () => Promise<void>;
+  redirectToSignInWithGithub?: () => Promise<void>;
+  redirectToSignInWithPassword?: () => Promise<void>;
+  redirectToRegistrationWithPassword?: () => Promise<void>;
 }
 
-// The AuthContext is implemented differently in OSS vs. Cloud, but both implementations use the AuthContextApi interface
+// The AuthContext is implemented differently in Community vs. Self-Managed Enterprise vs. Cloud, but all implementations must fulfill the AuthContextApi interface
 export const AuthContext = React.createContext<AuthContextApi | null>(null);
 
-export const useCurrentUser = (): CommonUserRead => {
+export const useCurrentUser = (): UserRead => {
   const { user } = useAuthService();
   if (!user) {
     throw new Error("useCurrentUser must be used only within authorised flow");

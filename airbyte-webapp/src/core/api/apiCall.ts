@@ -1,6 +1,8 @@
 import { trackError } from "core/utils/datadog";
 
 import { HttpError } from "./errors/HttpError";
+import { HttpProblem } from "./errors/HttpProblem";
+import { KnownApiProblem } from "./errors/problems";
 
 export interface ApiCallOptions {
   getAccessToken: () => Promise<string | null>;
@@ -92,10 +94,29 @@ async function parseResponse<T>(
     responsePayload = "<cannot load response body>";
   }
 
-  // Create a HttpError for the request/response. Replace the request url with the full url we called.
-  const error = new HttpError({ ...request, url: requestUrl }, response.status, responsePayload);
+  // Create a HttpError or HttpProblem (if it has a defined response payload) for the request/response.
+  // Replace the request url with the full url we called.
+  const error = isKnownApiProblemResponse(responsePayload)
+    ? new HttpProblem({ ...request, url: requestUrl }, response.status, responsePayload)
+    : new HttpError({ ...request, url: requestUrl }, response.status, responsePayload);
   // Track HttpErrors here (instead of the error boundary), so we report all of them,
   // even the ones that will handled by our application via e.g. toast notification.
   trackError(error, { ...error });
   throw error;
+}
+
+/**
+ * Check whether the payload of an error was a known API problem defined in api-problems.yaml.
+ * We do a bit of a shortcut check here and only check if it has at least a `type` and `title` string property.
+ * This is less accurate but faster than needing to try run through all possible error types.
+ */
+function isKnownApiProblemResponse(payload: unknown): payload is KnownApiProblem {
+  return (
+    !!payload &&
+    typeof payload === "object" &&
+    "type" in payload &&
+    typeof payload.type === "string" &&
+    "title" in payload &&
+    typeof payload.title === "string"
+  );
 }

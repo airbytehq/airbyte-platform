@@ -26,6 +26,7 @@ import io.micronaut.http.annotation.Controller
 import jakarta.ws.rs.core.Response
 import org.slf4j.LoggerFactory
 import java.io.IOException
+import java.util.Objects
 import java.util.UUID
 
 @Controller(STREAMS_PATH)
@@ -78,20 +79,18 @@ class StreamsController(
       httpResponse.catalog!!.streams.stream()
         .map { obj: AirbyteStreamAndConfiguration -> obj.stream }
         .toList()
-    val listOfStreamProperties: MutableList<StreamProperties> = emptyList<StreamProperties>().toMutableList()
+    val listOfStreamProperties: MutableList<KStreamProperties> = emptyList<KStreamProperties>().toMutableList()
     for (airbyteStream in streamList) {
-      val streamProperties = StreamProperties()
       val sourceSyncModes = airbyteStream!!.supportedSyncModes!!
-      streamProperties.streamName = airbyteStream.name
-      streamProperties.syncModes = getValidSyncModes(sourceSyncModes, destinationSyncModes)
-      if (airbyteStream.defaultCursorField != null) {
-        streamProperties.defaultCursorField = airbyteStream.defaultCursorField
-      }
-      if (airbyteStream.sourceDefinedPrimaryKey != null) {
-        streamProperties.sourceDefinedPrimaryKey = airbyteStream.sourceDefinedPrimaryKey
-      }
-      streamProperties.sourceDefinedCursorField = airbyteStream.sourceDefinedCursor != null && airbyteStream.sourceDefinedCursor!!
-      streamProperties.propertyFields = getStreamFields(airbyteStream.jsonSchema)
+      val streamProperties =
+        KStreamProperties(
+          streamName = airbyteStream.name,
+          syncModes = getValidSyncModes(sourceSyncModes = sourceSyncModes, destinationSyncModes = destinationSyncModes).toMutableList(),
+          defaultCursorField = airbyteStream.defaultCursorField?.toMutableList(),
+          sourceDefinedPrimaryKey = airbyteStream.sourceDefinedPrimaryKey?.toMutableList(),
+          sourceDefinedCursorField = airbyteStream.sourceDefinedCursor != null && airbyteStream.sourceDefinedCursor!!,
+          propertyFields = getStreamFields(airbyteStream.jsonSchema).toMutableList(),
+        )
       listOfStreamProperties.add(streamProperties)
     }
     trackingHelper.trackSuccess(
@@ -170,5 +169,62 @@ class StreamsController(
       }
     }
     return connectionSyncModes
+  }
+}
+
+/**
+ * Copy of the [StreamProperties] generated class to overcome issues with KSP stub
+ * generation.
+ */
+class KStreamProperties(
+  val streamName: String? = null,
+  val syncModes: MutableList<ConnectionSyncModeEnum>? = mutableListOf(),
+  val defaultCursorField: MutableList<String>? = mutableListOf(),
+  val sourceDefinedCursorField: Boolean? = false,
+  val sourceDefinedPrimaryKey: MutableList<List<String>>? = mutableListOf(),
+  val propertyFields: MutableList<List<String>>? = mutableListOf(),
+) {
+  override fun equals(o: Any?): Boolean {
+    if (this === o) {
+      return true
+    }
+    if (o == null || javaClass != o.javaClass) {
+      return false
+    }
+    val streamProperties = o as KStreamProperties
+    return this.streamName == streamProperties.streamName && (this.syncModes == streamProperties.syncModes) &&
+      (this.defaultCursorField == streamProperties.defaultCursorField) &&
+      (this.sourceDefinedCursorField == streamProperties.sourceDefinedCursorField) &&
+      (this.sourceDefinedPrimaryKey == streamProperties.sourceDefinedPrimaryKey) &&
+      (this.propertyFields == streamProperties.propertyFields)
+  }
+
+  override fun hashCode(): Int {
+    return Objects.hash(streamName, syncModes, defaultCursorField, sourceDefinedCursorField, sourceDefinedPrimaryKey, propertyFields)
+  }
+
+  override fun toString(): String {
+    val sb = StringBuilder()
+    sb.append("class StreamProperties {\n")
+
+    sb.append("    streamName: ").append(toIndentedString(streamName)).append("\n")
+    sb.append("    syncModes: ").append(toIndentedString(syncModes)).append("\n")
+    sb.append("    defaultCursorField: ").append(toIndentedString(defaultCursorField)).append("\n")
+    sb.append("    sourceDefinedCursorField: ").append(toIndentedString(sourceDefinedCursorField)).append("\n")
+    sb.append("    sourceDefinedPrimaryKey: ").append(toIndentedString(sourceDefinedPrimaryKey)).append("\n")
+    sb.append("    propertyFields: ").append(toIndentedString(propertyFields)).append("\n")
+    sb.append("}")
+    return sb.toString()
+  }
+
+  /**
+   * Convert the given object to string with each line indented by 4 spaces
+   * (except the first line).
+   */
+  private fun toIndentedString(o: Any?): String {
+    if (o == null) {
+      return "null"
+    }
+    return o.toString().replace("\n", "\n    ")
   }
 }

@@ -15,11 +15,13 @@ dependencies {
   annotationProcessor(libs.bundles.micronaut.annotation.processor)
 
   implementation(libs.jackson.datatype)
-  implementation("com.googlecode.json-simple:json-simple:1.1.1")
+  implementation(libs.jackson.databind)
+  implementation(libs.openapi.jackson.databind.nullable)
+  implementation(libs.json.simple)
 
-  // Cloud service dependencies. These are not strictly necessary yet, but likely needed for any full-fledged cloud service)
+  // Cloud service dependencies. These are not strictly necessary yet, but likely needed for any full-fledged cloud service
   implementation(libs.bundles.datadog)
-  // implementation(libs.bundles.temporal  uncomment this when we start using temporal to invoke connector commands)
+  // implementation(libs.bundles.temporal)  uncomment this when we start using temporal to invoke connector commands
   implementation(libs.sentry.java)
   implementation(libs.guava)
   implementation(platform(libs.micronaut.platform))
@@ -28,9 +30,8 @@ dependencies {
   implementation(libs.micronaut.http)
   implementation(libs.micronaut.security)
   implementation(libs.jakarta.annotation.api)
+  implementation(libs.jakarta.validation.api)
   implementation(libs.jakarta.ws.rs.api)
-
-  implementation(project(":airbyte-commons"))
 
   // OpenAPI code generation(dependencies)
   implementation(libs.swagger.annotations)
@@ -72,7 +73,7 @@ airbyte {
         "AIRBYTE_VERSION" to env["VERSION"].toString(),
         // path to CDK virtual environment)
         "CDK_PYTHON" to (System.getenv("CDK_PYTHON") ?: ""),
-        // path to CDK connector builder"s main.py)
+        // path to CDK connector builder's main.py
         "CDK_ENTRYPOINT" to (System.getenv("CDK_ENTRYPOINT") ?: ""),
       )
     )
@@ -85,8 +86,9 @@ airbyte {
 val generateOpenApiServer = tasks.register<GenerateTask>("generateOpenApiServer") {
   val specFile = "$projectDir/src/main/openapi/openapi.yaml"
   inputs.file(specFile)
-  inputSpec = specFile
-  outputDir = "$buildDir/generated/api/server"
+  outputDir = "${project.layout.buildDirectory.get()}/generated/api/server"
+
+  inputSpec.set(specFile)
 
   generatorName = "jaxrs-spec"
   apiPackage = "io.airbyte.connector_builder.api.generated"
@@ -99,38 +101,42 @@ val generateOpenApiServer = tasks.register<GenerateTask>("generateOpenApiServer"
             "AirbyteStateMessage" to "com.fasterxml.jackson.databind.JsonNode",
     ))
 
-  // Our spec does not have nullable, but if it changes, this would be a gotcha that we would want to avoid)
+  // Our spec does not have nullable, but if it changes, this would be a gotcha that we would want to avoid
   configOptions.putAll(
     mapOf(
       "dateLibrary" to "java8",
       "generatePom" to "false",
       "interfaceOnly" to "true",
-      /*)
+      /*
       JAX-RS generator does not respect nullable properties defined in the OpenApi Spec.
       It means that if a field is not nullable but not set it is still returning a null value for this field in the serialized json.
-      The below Jackson annotation(is made to only(keep non null values in serialized json.
-      We are not yet using nullable=true properties in our OpenApi so this is a valid(workaround at the moment to circumvent the default JAX-RS behavior described above.
-      Feel free to read the conversation(on https://github.com/airbytehq/airbyte/pull/13370 for more details.
+      The below Jackson annotation is made to only keep non-null values in serialized json.
+      We are not yet using nullable=true properties in our OpenApi so this is a valid workaround at the moment to circumvent the default JAX-RS behavior described above.
+      Feel free to read the conversation on https://github.com/airbytehq/airbyte/pull/13370 for more details.
       */
       "additionalModelTypeAnnotations" to "\n@com.fasterxml.jackson.annotation.JsonInclude(com.fasterxml.jackson.annotation.JsonInclude.Include.NON_NULL)",
     )
   )
 
   doLast {
-    updateToJakartaApi(file("${outputDir.get()}/src/gen/java/${apiPackage.get().replace(".", "/")}"))
-    updateToJakartaApi(file("${outputDir.get()}/src/gen/java/${modelPackage.get().replace(".", "/")}"))
+    // Remove unnecessary invoker classes to avoid Micronaut picking them up and registering them as beans
+    delete("${outputDir.get()}/src/gen/java/${invokerPackage.get().replace(".", "/")}")
+    // Clean up any javax references
+    listOf(apiPackage.get(), modelPackage.get()).forEach { sourceDir ->
+      updateToJakartaApi(file("${outputDir.get()}/src/gen/java/${sourceDir.replace(".", "/")}"))
+    }
   }
 }
 
 tasks.named("compileJava") {
   dependsOn(generateOpenApiServer)
 }
-//// Ensures that the generated models are compiled during the build step so they are available for use at runtime)
+// Ensures that the generated models are compiled during the build step, so they are available for use at runtime
 
 sourceSets {
   main {
     java {
-      srcDirs("$buildDir/generated/api/server/src/gen/java")
+      srcDirs("${project.layout.buildDirectory.get()}/generated/api/server/src/gen/java")
     }
     resources {
       srcDir("$projectDir/src/main/openapi/")
@@ -140,7 +146,7 @@ sourceSets {
 
 val copyPythonDeps = tasks.register<Copy>("copyPythonDependencies") {
   from("$projectDir/requirements.txt")
-  into("$buildDir/airbyte/docker/")
+  into("${project.layout.buildDirectory.get()}/airbyte/docker/")
 }
 //
 tasks.named<DockerBuildImage>("dockerBuildImage") {
@@ -160,7 +166,10 @@ private fun updateToJakartaApi(srcDir: File) {
       var contents = file.readText()
       contents = contents.replace("javax.ws.rs", "jakarta.ws.rs")
         .replace("javax.validation", "jakarta.validation")
+        .replace("javax.annotation.processing", "jakarta.annotation")
         .replace("javax.annotation", "jakarta.annotation")
+        .replace("jakarta.annotation.processing", "jakarta.annotation")
+        .replace("List<@Valid ", "List<")
       file.writeText(contents)
     }
   }

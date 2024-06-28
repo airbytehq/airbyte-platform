@@ -7,10 +7,17 @@ package io.airbyte.oauth.flows;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableMap;
+import com.google.gson.Gson;
+import com.google.gson.reflect.TypeToken;
+import io.airbyte.commons.json.Jsons;
 import io.airbyte.oauth.BaseOAuth2Flow;
 import java.io.IOException;
+import java.lang.reflect.Type;
+import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
@@ -23,7 +30,7 @@ import org.apache.http.client.utils.URIBuilder;
  */
 public class TikTokMarketingOAuthFlow extends BaseOAuth2Flow {
 
-  private static final String ACCESS_TOKEN_URL = "https://ads.tiktok.com/open_api/v1.2/oauth2/access_token/";
+  private static final String ACCESS_TOKEN_URL = "https://business-api.tiktok.com/open_api/v1.3/oauth2/access_token/";
 
   @Override
   protected String getClientIdUnsafe(final JsonNode oauthConfig) {
@@ -41,7 +48,38 @@ public class TikTokMarketingOAuthFlow extends BaseOAuth2Flow {
 
   @VisibleForTesting
   public TikTokMarketingOAuthFlow(final HttpClient httpClient, final Supplier<String> stateSupplier) {
-    super(httpClient, stateSupplier);
+    super(httpClient, stateSupplier, TokenRequestContentType.JSON);
+  }
+
+  public TikTokMarketingOAuthFlow(final HttpClient httpClient,
+                                  final Supplier<String> stateSupplier,
+                                  final TokenRequestContentType tokenReqContentType) {
+    super(httpClient, stateSupplier, TokenRequestContentType.JSON);
+  }
+
+  @Override
+  protected Map<String, Object> completeOAuthFlow(final String clientId,
+                                                  final String clientSecret,
+                                                  final String authCode,
+                                                  final String redirectUrl,
+                                                  final JsonNode inputOAuthConfiguration,
+                                                  final JsonNode oauthParamConfig)
+      throws IOException {
+    final var accessTokenUrl = getAccessTokenUrl(inputOAuthConfiguration);
+    final HttpRequest request = HttpRequest.newBuilder()
+        .POST(HttpRequest.BodyPublishers
+            .ofString(toJson(getAccessTokenQueryParameters(clientId, clientSecret, authCode, redirectUrl))))
+        .uri(URI.create(accessTokenUrl))
+        .header("Content-Type", "application/json")
+        .header("Accept", "application/json")
+        .build();
+    // TODO: Handle error response to report better messages
+    try {
+      final HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+      return extractOAuthOutput(Jsons.deserialize(response.body()), accessTokenUrl);
+    } catch (final InterruptedException e) {
+      throw new IOException("Failed to complete OAuth flow", e);
+    }
   }
 
   @Override
@@ -103,9 +141,15 @@ public class TikTokMarketingOAuthFlow extends BaseOAuth2Flow {
     if ((data.has("data")) && (data.get("data").has("access_token"))) {
       result.put("access_token", data.get("data").get("access_token").asText());
     } else {
-      throw new IOException(String.format("Missing 'access_token' in query params from %s", accessTokenUrl));
+      throw new IOException(String.format("Missing 'access_token' in query params from %s, data: %s", accessTokenUrl, data.toString()));
     }
     return result;
+  }
+
+  protected static String toJson(final Map<String, String> body) {
+    final Gson gson = new Gson();
+    final Type gsonType = new TypeToken<Map<String, String>>() {}.getType();
+    return gson.toJson(body, gsonType);
   }
 
 }

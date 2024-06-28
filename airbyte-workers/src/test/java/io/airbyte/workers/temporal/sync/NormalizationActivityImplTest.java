@@ -16,6 +16,7 @@ import io.airbyte.api.client.generated.ConnectionApi;
 import io.airbyte.api.client.model.generated.AirbyteCatalog;
 import io.airbyte.api.client.model.generated.ConnectionIdRequestBody;
 import io.airbyte.api.client.model.generated.ConnectionRead;
+import io.airbyte.api.client.model.generated.ConnectionStatus;
 import io.airbyte.commons.workers.config.WorkerConfigs;
 import io.airbyte.commons.workers.config.WorkerConfigsProvider;
 import io.airbyte.config.AirbyteConfigValidator;
@@ -40,7 +41,9 @@ import io.airbyte.workers.workload.JobOutputDocStore;
 import io.airbyte.workers.workload.WorkloadIdGenerator;
 import io.fabric8.kubernetes.client.KubernetesClient;
 import io.temporal.testing.TestActivityEnvironment;
+import java.io.IOException;
 import java.nio.file.Path;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import org.junit.jupiter.api.AfterEach;
@@ -151,14 +154,15 @@ class NormalizationActivityImplTest {
   }
 
   @Test
-  void retrievesCatalog() throws Exception {
-    when(mConnectionApi.getConnection(new ConnectionIdRequestBody().connectionId(CONNECTION_ID))).thenReturn(
-        new ConnectionRead().syncCatalog(new AirbyteCatalog()));
+  void retrievesCatalog() throws IOException {
+    when(mConnectionApi.getConnection(new ConnectionIdRequestBody(CONNECTION_ID))).thenReturn(
+        new ConnectionRead(CONNECTION_ID, "name", UUID.randomUUID(), UUID.randomUUID(), new AirbyteCatalog(List.of()), ConnectionStatus.ACTIVE, false,
+            null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, UUID.randomUUID()));
     normalizationActivity.normalize(JOB_RUN_CONFIG, DESTINATION_CONFIG, new NormalizationInput()
         .withConnectionId(CONNECTION_ID)
         .withWorkspaceId(UUID.randomUUID())
         .withConnectionContext(new ConnectionContext().withOrganizationId(UUID.randomUUID())));
-    verify(mConnectionApi).getConnection(new ConnectionIdRequestBody().connectionId(CONNECTION_ID));
+    verify(mConnectionApi).getConnection(new ConnectionIdRequestBody(CONNECTION_ID));
   }
 
 }

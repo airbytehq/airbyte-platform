@@ -6,12 +6,6 @@ plugins {
   alias(libs.plugins.nu.studer.jooq)
 }
 
-configurations.all {
-  resolutionStrategy {
-    force(libs.platform.testcontainers.postgresql)
-  }
-}
-
 dependencies {
   implementation(libs.jooq.meta)
   implementation(libs.jooq)
@@ -43,9 +37,11 @@ dependencies {
   jooqGenerator(libs.guava)
   jooqGenerator(libs.hikaricp)
   jooqGenerator(libs.jackson.datatype)
+  jooqGenerator(libs.jackson.jdk.datatype)
   jooqGenerator(libs.postgresql)
   jooqGenerator(libs.slf4j.simple)
   jooqGenerator(libs.platform.testcontainers.postgresql)
+  jooqGenerator(libs.jackson.kotlin)
 }
 
 jooq {
@@ -100,7 +96,8 @@ sourceSets["main"].java {
 
 
 sourceSets["main"].java {
-  srcDirs("$buildDir/generated/configsDatabase/src/main/java", "$buildDir/generated/jobsDatabase/src/main/java")
+  srcDirs("${project.layout.buildDirectory.get()}/generated/configsDatabase/src/main/java",
+    "${project.layout.buildDirectory.get()}/generated/jobsDatabase/src/main/java")
 }
 
 tasks.named<JooqGenerate>("generateConfigsDatabaseJooq") {

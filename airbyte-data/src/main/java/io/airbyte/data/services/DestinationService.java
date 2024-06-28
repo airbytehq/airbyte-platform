@@ -28,6 +28,8 @@ public interface DestinationService {
 
   StandardDestinationDefinition getDestinationDefinitionFromDestination(UUID destinationId);
 
+  Boolean isDestinationActive(UUID destinationId) throws IOException;
+
   StandardDestinationDefinition getDestinationDefinitionFromConnection(UUID connectionId);
 
   List<StandardDestinationDefinition> listStandardDestinationDefinitions(boolean includeTombstone) throws IOException;
@@ -75,5 +77,10 @@ public interface DestinationService {
                                              DestinationConnection destination,
                                              ConnectorSpecification connectorSpecification)
       throws JsonValidationException, IOException, ConfigNotFoundException;
+
+  void tombstoneDestination(
+                            DestinationConnection destination,
+                            ConnectorSpecification connectorSpecification)
+      throws ConfigNotFoundException, JsonValidationException, IOException;
 
 }

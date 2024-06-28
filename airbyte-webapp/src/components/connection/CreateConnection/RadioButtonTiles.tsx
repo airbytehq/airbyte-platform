@@ -14,6 +14,7 @@ interface RadioButtonTilesOption<T> {
   description: React.ReactNode;
   extra?: React.ReactNode;
   disabled?: boolean;
+  "data-testid"?: string;
 }
 
 interface RadioButtonTilesProps<T> {
@@ -34,7 +35,7 @@ export const RadioButtonTiles = <T extends string>({
   light,
 }: RadioButtonTilesProps<T>) => (
   <FlexContainer direction={direction}>
-    {options.map(({ value, label, description, extra, disabled }) => (
+    {options.map(({ value, label, description, extra, disabled, "data-testid": testId }) => (
       <FlexItem className={styles.radioButtonTiles__tile} key={value}>
         <input
           type="radio"
@@ -45,7 +46,7 @@ export const RadioButtonTiles = <T extends string>({
           checked={selectedValue === value}
           onChange={() => onSelectRadioButton(value)}
           className={styles.radioButtonTiles__hiddenInput}
-          data-testid={`radio-button-tile-${name}-${value}`}
+          data-testid={testId ? `${testId}-option` : `radio-button-tile-${name}-${value}`}
         />
         <label
           className={classNames(styles.radioButtonTiles__toggle, {

@@ -4,10 +4,10 @@
 
 package io.airbyte.workers.temporal.scheduling.activities;
 
-import io.airbyte.api.client.invoker.generated.ApiException;
 import io.airbyte.config.SlackNotificationConfiguration;
 import io.temporal.activity.ActivityInterface;
 import io.temporal.activity.ActivityMethod;
+import java.io.IOException;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -18,6 +18,6 @@ import java.util.UUID;
 public interface SlackConfigActivity {
 
   @ActivityMethod
-  public Optional<SlackNotificationConfiguration> fetchSlackConfiguration(UUID connectionId) throws ApiException;
+  public Optional<SlackNotificationConfiguration> fetchSlackConfiguration(UUID connectionId) throws IOException;
 
 }

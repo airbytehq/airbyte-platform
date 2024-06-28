@@ -21,21 +21,10 @@ plugins {
   id("io.airbyte.gradle.jvm.app")
   id("io.airbyte.gradle.docker")
   id("io.airbyte.gradle.publish")
-  kotlin("jvm")
-  kotlin("kapt")
 }
 
 val airbyteProtocol by configurations.creating
 
-configurations.all {
-  resolutionStrategy {
-    // Ensure that the versions defined in deps.toml are used)
-    // instead of versions from transitive dependencies)
-    // Force to avoid(updated version brought in transitively from Micronaut 3.8+)
-    // that is incompatible with our current Helm setup)
-    force(libs.s3, libs.aws.java.sdk.s3)
-  }
-}
 dependencies {
   compileOnly(libs.lombok)
   annotationProcessor(libs.lombok)     // Lombok must be added BEFORE Micronaut
@@ -98,7 +87,7 @@ airbyte {
   }
 }
 
-// Duplicated from :airbyte-worker, eventually, this should be handled in :airbyte-protocol)
+// Duplicated from :airbyte-worker, eventually, this should be handled in :airbyte-protocol
 val generateWellKnownTypes = tasks.register("generateWellKnownTypes") {
   inputs.files(airbyteProtocol) // declaring inputs)
   val targetFile = project.file("build/airbyte/docker/WellKnownTypes.json")

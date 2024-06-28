@@ -7,13 +7,13 @@ import io.airbyte.api.model.generated.ConnectionUpdate
 import io.airbyte.api.model.generated.Geography
 import io.airbyte.api.model.generated.NamespaceDefinitionType
 import io.airbyte.api.model.generated.NonBreakingChangesPreference
-import io.airbyte.public_api.model.generated.AirbyteApiConnectionSchedule
-import io.airbyte.public_api.model.generated.ConnectionPatchRequest
-import io.airbyte.public_api.model.generated.ConnectionStatusEnum
-import io.airbyte.public_api.model.generated.GeographyEnumNoDefault
-import io.airbyte.public_api.model.generated.NamespaceDefinitionEnumNoDefault
-import io.airbyte.public_api.model.generated.NonBreakingSchemaUpdatesBehaviorEnumNoDefault
-import io.airbyte.public_api.model.generated.ScheduleTypeEnum
+import io.airbyte.publicApi.server.generated.models.AirbyteApiConnectionSchedule
+import io.airbyte.publicApi.server.generated.models.ConnectionPatchRequest
+import io.airbyte.publicApi.server.generated.models.ConnectionStatusEnum
+import io.airbyte.publicApi.server.generated.models.GeographyEnumNoDefault
+import io.airbyte.publicApi.server.generated.models.NamespaceDefinitionEnumNoDefault
+import io.airbyte.publicApi.server.generated.models.NonBreakingSchemaUpdatesBehaviorEnumNoDefault
+import io.airbyte.publicApi.server.generated.models.ScheduleTypeEnum
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.Test
 import java.util.UUID
@@ -30,20 +30,20 @@ class ConnectionUpdateMapperTest {
       }
 
     val connectionPatchRequest =
-      ConnectionPatchRequest().apply {
-        this.name = "test"
-        this.nonBreakingSchemaUpdatesBehavior = NonBreakingSchemaUpdatesBehaviorEnumNoDefault.DISABLE_CONNECTION
-        this.namespaceDefinition = NamespaceDefinitionEnumNoDefault.DESTINATION
-        this.namespaceFormat = "test"
-        this.prefix = "test"
-        this.dataResidency = GeographyEnumNoDefault.US
-        this.schedule =
-          AirbyteApiConnectionSchedule().apply {
-            this.scheduleType = ScheduleTypeEnum.CRON
-            this.cronExpression = "0 0 0 0 0 0"
-          }
-        this.status = ConnectionStatusEnum.INACTIVE
-      }
+      ConnectionPatchRequest(
+        name = "test",
+        nonBreakingSchemaUpdatesBehavior = NonBreakingSchemaUpdatesBehaviorEnumNoDefault.DISABLE_CONNECTION,
+        namespaceDefinition = NamespaceDefinitionEnumNoDefault.DESTINATION,
+        namespaceFormat = "test",
+        prefix = "test",
+        dataResidency = GeographyEnumNoDefault.US,
+        schedule =
+          AirbyteApiConnectionSchedule(
+            scheduleType = ScheduleTypeEnum.CRON,
+            cronExpression = "0 0 0 0 0 0",
+          ),
+        status = ConnectionStatusEnum.INACTIVE,
+      )
 
     val expectedOssConnectionUpdateRequest =
       ConnectionUpdate().apply {

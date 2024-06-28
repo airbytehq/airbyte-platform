@@ -16,11 +16,12 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
 import io.airbyte.api.client.AirbyteApiClient;
 import io.airbyte.api.client.WorkloadApiClient;
+import io.airbyte.api.client.generated.ActorDefinitionVersionApi;
 import io.airbyte.api.client.generated.DestinationApi;
 import io.airbyte.api.client.generated.SourceApi;
+import io.airbyte.api.client.model.generated.ResolveActorDefinitionVersionResponse;
 import io.airbyte.commons.concurrency.VoidCallable;
 import io.airbyte.commons.converters.ThreadedTimeTracker;
 import io.airbyte.persistence.job.models.ReplicationInput;
@@ -32,7 +33,6 @@ import io.airbyte.protocol.models.AirbyteTraceMessage;
 import io.airbyte.protocol.models.ConfiguredAirbyteCatalog;
 import io.airbyte.workers.context.ReplicationContext;
 import io.airbyte.workers.context.ReplicationFeatureFlags;
-import io.airbyte.workers.helper.AirbyteMessageDataExtractor;
 import io.airbyte.workers.helper.StreamStatusCompletionTracker;
 import io.airbyte.workers.internal.AirbyteDestination;
 import io.airbyte.workers.internal.AirbyteMapper;
@@ -43,13 +43,20 @@ import io.airbyte.workers.internal.bookkeeping.AirbyteMessageOrigin;
 import io.airbyte.workers.internal.bookkeeping.AirbyteMessageTracker;
 import io.airbyte.workers.internal.bookkeeping.SyncStatsTracker;
 import io.airbyte.workers.internal.bookkeeping.events.ReplicationAirbyteMessageEventPublishingHelper;
+import io.airbyte.workers.internal.bookkeeping.streamstatus.StreamStatusTracker;
+import io.airbyte.workers.internal.bookkeeping.streamstatus.StreamStatusTrackerFactory;
 import io.airbyte.workers.internal.syncpersistence.SyncPersistence;
 import io.airbyte.workload.api.client.generated.WorkloadApi;
+import java.io.IOException;
 import java.nio.file.Path;
 import java.util.Optional;
 import java.util.UUID;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
+import org.mockito.Mockito;
 
 class ReplicationWorkerHelperTest {
 
@@ -60,8 +67,15 @@ class ReplicationWorkerHelperTest {
   private SyncPersistence syncPersistence;
   private AnalyticsMessageTracker analyticsMessageTracker;
   private StreamStatusCompletionTracker streamStatusCompletionTracker;
+  private StreamStatusTracker streamStatusTracker;
+  private StreamStatusTrackerFactory streamStatusTrackerFactory;
   private WorkloadApiClient workloadApiClient;
   private AirbyteApiClient airbyteApiClient;
+  private ActorDefinitionVersionApi actorDefinitionVersionApi;
+
+  private ReplicationAirbyteMessageEventPublishingHelper replicationAirbyteMessageEventPublishingHelper;
+  private ReplicationContext replicationContext = new ReplicationContext(true, UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), 0L,
+      1, UUID.randomUUID(), SOURCE_IMAGE, DESTINATION_IMAGE, UUID.randomUUID(), UUID.randomUUID());
 
   @BeforeEach
   void setUp() {
@@ -71,19 +85,24 @@ class ReplicationWorkerHelperTest {
     messageTracker = mock(AirbyteMessageTracker.class);
     analyticsMessageTracker = mock(AnalyticsMessageTracker.class);
     streamStatusCompletionTracker = mock(StreamStatusCompletionTracker.class);
+    replicationAirbyteMessageEventPublishingHelper = mock(ReplicationAirbyteMessageEventPublishingHelper.class);
+    streamStatusTracker = mock(StreamStatusTracker.class);
+    streamStatusTrackerFactory = mock(StreamStatusTrackerFactory.class);
     workloadApiClient = mock(WorkloadApiClient.class);
     airbyteApiClient = mock(AirbyteApiClient.class);
     when(messageTracker.getSyncStatsTracker()).thenReturn(syncStatsTracker);
     when(workloadApiClient.getWorkloadApi()).thenReturn(mock(WorkloadApi.class));
     when(airbyteApiClient.getDestinationApi()).thenReturn(mock(DestinationApi.class));
     when(airbyteApiClient.getSourceApi()).thenReturn(mock(SourceApi.class));
+    actorDefinitionVersionApi = mock(ActorDefinitionVersionApi.class);
+    when(airbyteApiClient.getActorDefinitionVersionApi()).thenReturn(actorDefinitionVersionApi);
+    when(streamStatusTrackerFactory.create(any())).thenReturn(streamStatusTracker);
     replicationWorkerHelper = spy(new ReplicationWorkerHelper(
-        mock(AirbyteMessageDataExtractor.class),
         mock(FieldSelector.class),
         mapper,
         messageTracker,
         syncPersistence,
-        mock(ReplicationAirbyteMessageEventPublishingHelper.class),
+        replicationAirbyteMessageEventPublishingHelper,
         mock(ThreadedTimeTracker.class),
         mock(VoidCallable.class),
         workloadApiClient,
@@ -91,21 +110,27 @@ class ReplicationWorkerHelperTest {
         analyticsMessageTracker,
         Optional.empty(),
         airbyteApiClient,
-        streamStatusCompletionTracker));
+        streamStatusCompletionTracker,
+        streamStatusTrackerFactory));
   }
 
-  @Test
-  void testGetReplicationOutput() throws JsonProcessingException {
+  @AfterEach
+  void tearDown() {
+    Mockito.framework().clearInlineMocks();
+  }
+
+  @ParameterizedTest
+  @ValueSource(booleans = {true, false})
+  void testGetReplicationOutput(final boolean supportRefreshes) throws IOException {
+    mockSupportRefreshes(supportRefreshes);
     // Need to pass in a replication context
     final ConfiguredAirbyteCatalog catalog = new ConfiguredAirbyteCatalog().withAdditionalProperty("test", "test");
-    final ReplicationContext replicationContext = new ReplicationContext(true, UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), 0L,
-        1, UUID.randomUUID(), SOURCE_IMAGE, DESTINATION_IMAGE, UUID.randomUUID(), UUID.randomUUID());
     replicationWorkerHelper.initialize(
         replicationContext,
         mock(ReplicationFeatureFlags.class),
         mock(Path.class),
         catalog);
-    verify(streamStatusCompletionTracker).startTracking(catalog, replicationContext);
+    verify(streamStatusCompletionTracker).startTracking(catalog, supportRefreshes);
     // Need to have a configured catalog for getReplicationOutput
     replicationWorkerHelper.startDestination(
         mock(AirbyteDestination.class),
@@ -123,13 +148,11 @@ class ReplicationWorkerHelperTest {
   }
 
   @Test
-  void testAnalyticsMessageHandling() {
-    final ReplicationContext context =
-        new ReplicationContext(true, UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), 0L,
-            1, UUID.randomUUID(), SOURCE_IMAGE, DESTINATION_IMAGE, UUID.randomUUID(), UUID.randomUUID());
+  void testAnalyticsMessageHandling() throws IOException {
+    mockSupportRefreshes(false);
     // Need to pass in a replication context
     replicationWorkerHelper.initialize(
-        context,
+        replicationContext,
         mock(ReplicationFeatureFlags.class),
         mock(Path.class),
         mock(ConfiguredAirbyteCatalog.class));
@@ -187,6 +210,50 @@ class ReplicationWorkerHelperTest {
     replicationWorkerHelper.processMessageFromDestination(destinationRawMessage);
 
     verify(replicationWorkerHelper, times(1)).internalProcessMessageFromDestination(mapRevertedDestinationMessage);
+  }
+
+  @Test
+  void callsStreamStatusTrackerOnSourceMessage() throws IOException {
+    mockSupportRefreshes(true);
+
+    replicationWorkerHelper.initialize(
+        replicationContext,
+        mock(ReplicationFeatureFlags.class),
+        mock(Path.class),
+        mock(ConfiguredAirbyteCatalog.class));
+
+    final AirbyteMessage message = mock(AirbyteMessage.class);
+
+    replicationWorkerHelper.processMessageFromSource(message);
+
+    verify(streamStatusTracker, times(1)).track(message);
+  }
+
+  @Test
+  void callsStreamStatusTrackerOnDestinationMessage() throws IOException {
+    mockSupportRefreshes(true);
+
+    replicationWorkerHelper.initialize(
+        replicationContext,
+        mock(ReplicationFeatureFlags.class),
+        mock(Path.class),
+        mock(ConfiguredAirbyteCatalog.class));
+
+    final AirbyteMessage message = mock(AirbyteMessage.class);
+    when(mapper.revertMap(message)).thenReturn(message);
+
+    replicationWorkerHelper.processMessageFromDestination(message);
+
+    verify(streamStatusTracker, times(1)).track(message);
+  }
+
+  private void mockSupportRefreshes(final boolean supportsRefreshes) throws IOException {
+    when(actorDefinitionVersionApi.resolveActorDefinitionVersionByTag(any())).thenReturn(
+        new ResolveActorDefinitionVersionResponse(
+            UUID.randomUUID(),
+            "dockerRepository",
+            "dockerImageTag",
+            supportsRefreshes));
   }
 
 }

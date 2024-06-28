@@ -3,6 +3,7 @@
 
 .container {
   background-color: colors.$foreground;
+  min-width: fit-content;
 }
 
 .section {

@@ -37,6 +37,7 @@ import io.airbyte.metrics.lib.OssMetricsRegistry;
 import io.airbyte.workers.models.RefreshSchemaActivityInput;
 import io.airbyte.workers.models.RefreshSchemaActivityOutput;
 import jakarta.inject.Singleton;
+import java.io.IOException;
 import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Map;
@@ -76,15 +77,12 @@ public class RefreshSchemaActivityImpl implements RefreshSchemaActivity {
     return !schemaRefreshRanRecently(sourceCatalogId);
   }
 
-  private SourceDiscoverSchemaRead discoverSchemaForRefresh(final UUID sourceId, final UUID connectionId) throws Exception {
+  private SourceDiscoverSchemaRead discoverSchemaForRefresh(final UUID sourceId, final UUID connectionId) throws IOException {
     if (!envVariableFeatureFlags.autoDetectSchema()) {
       return null;
     }
 
-    final UUID sourceDefinitionId =
-        AirbyteApiClient.retryWithJitterThrows(
-            () -> airbyteApiClient.getSourceApi().getSource(new SourceIdRequestBody().sourceId(sourceId)).getSourceDefinitionId(),
-            "Get the source definition id by source id");
+    final UUID sourceDefinitionId = airbyteApiClient.getSourceApi().getSource(new SourceIdRequestBody(sourceId)).getSourceDefinitionId();
 
     final List<Context> featureFlagContexts = List.of(new SourceDefinition(sourceDefinitionId), new Connection(connectionId));
     if (!featureFlagClient.boolVariation(ShouldRunRefreshSchema.INSTANCE, new Multi(featureFlagContexts))) {
@@ -95,17 +93,18 @@ public class RefreshSchemaActivityImpl implements RefreshSchemaActivity {
     ApmTraceUtils.addTagsToTrace(Map.of(CONNECTION_ID_KEY, connectionId, SOURCE_ID_KEY, sourceId));
 
     final SourceDiscoverSchemaRequestBody requestBody =
-        new SourceDiscoverSchemaRequestBody().sourceId(sourceId).disableCache(true).connectionId(connectionId).notifySchemaChange(true)
-            .priority(WorkloadPriority.DEFAULT);
+        new SourceDiscoverSchemaRequestBody(
+            sourceId,
+            connectionId,
+            true,
+            true,
+            WorkloadPriority.DEFAULT);
 
-    return AirbyteApiClient.retryWithJitterThrows(
-        () -> airbyteApiClient.getSourceApi().discoverSchemaForSource(requestBody),
-        "Trigger discover schema");
+    return airbyteApiClient.getSourceApi().discoverSchemaForSource(requestBody);
   }
 
-  @Override
   @Trace(operationName = ACTIVITY_TRACE_OPERATION_NAME)
-  public void refreshSchema(final UUID sourceId, final UUID connectionId) throws Exception {
+  public void refreshSchema(final UUID sourceId, final UUID connectionId) throws IOException {
     final var sourceDiscoverSchemaRead = discoverSchemaForRefresh(sourceId, connectionId);
     if (sourceDiscoverSchemaRead == null) {
       return;
@@ -114,28 +113,21 @@ public class RefreshSchemaActivityImpl implements RefreshSchemaActivity {
       log.warn("Failed to refresh schema; proceeding with sync.");
       return;
     }
-    final UUID workspaceId = AirbyteApiClient.retryWithJitterThrows(
-        () -> airbyteApiClient.getWorkspaceApi().getWorkspaceByConnectionId(new ConnectionIdRequestBody().connectionId(connectionId))
-            .getWorkspaceId(),
-        "Get the workspace by connection Id");
+    final UUID workspaceId = airbyteApiClient.getWorkspaceApi().getWorkspaceByConnectionId(new ConnectionIdRequestBody(connectionId))
+        .getWorkspaceId();
 
-    final SourceAutoPropagateChange sourceAutoPropagateChange = new SourceAutoPropagateChange()
-        .sourceId(sourceId)
-        .catalog(sourceDiscoverSchemaRead.getCatalog())
-        .workspaceId(workspaceId)
-        .catalogId(sourceDiscoverSchemaRead.getCatalogId());
+    final SourceAutoPropagateChange sourceAutoPropagateChange = new SourceAutoPropagateChange(
+        sourceDiscoverSchemaRead.getCatalog(),
+        sourceDiscoverSchemaRead.getCatalogId(),
+        sourceId,
+        workspaceId);
 
-    AirbyteApiClient.retryWithJitterThrows(
-        () -> {
-          airbyteApiClient.getSourceApi().applySchemaChangeForSource(sourceAutoPropagateChange);
-          return null;
-        },
-        "Auto propagate the schema change");
+    airbyteApiClient.getSourceApi().applySchemaChangeForSource(sourceAutoPropagateChange);
   }
 
   @Override
   @Trace(operationName = ACTIVITY_TRACE_OPERATION_NAME)
-  public RefreshSchemaActivityOutput refreshSchemaV2(final RefreshSchemaActivityInput input) throws Exception {
+  public RefreshSchemaActivityOutput refreshSchemaV2(final RefreshSchemaActivityInput input) throws IOException {
     final var workspaceId = input.getWorkspaceId();
     final var sourceId = input.getSourceCatalogId();
     final var connectionId = input.getConnectionId();
@@ -153,15 +145,14 @@ public class RefreshSchemaActivityImpl implements RefreshSchemaActivity {
       return new RefreshSchemaActivityOutput(null);
     }
 
-    final ConnectionAutoPropagateSchemaChange request = new ConnectionAutoPropagateSchemaChange()
-        .catalog(sourceDiscoverSchemaRead.getCatalog())
-        .workspaceId(workspaceId)
-        .connectionId(connectionId)
-        .catalogId(sourceDiscoverSchemaRead.getCatalogId());
+    final ConnectionAutoPropagateSchemaChange request = new ConnectionAutoPropagateSchemaChange(
+        sourceDiscoverSchemaRead.getCatalog(),
+        sourceDiscoverSchemaRead.getCatalogId(),
+        connectionId,
+        workspaceId);
 
-    final var output = new RefreshSchemaActivityOutput(AirbyteApiClient.retryWithJitterThrows(
-        () -> airbyteApiClient.getConnectionApi().applySchemaChangeForConnection(request),
-        "Auto propagate the schema change").getPropagatedDiff());
+    final var output = new RefreshSchemaActivityOutput(
+        airbyteApiClient.getConnectionApi().applySchemaChangeForConnection(request).getPropagatedDiff());
 
     final var attrs = new MetricAttribute[] {
       new MetricAttribute(MetricTags.CONNECTION_ID, String.valueOf(connectionId))
@@ -174,16 +165,12 @@ public class RefreshSchemaActivityImpl implements RefreshSchemaActivity {
 
   private boolean schemaRefreshRanRecently(final UUID sourceCatalogId) {
     try {
-      final SourceIdRequestBody sourceIdRequestBody = new SourceIdRequestBody().sourceId(sourceCatalogId);
-      final ActorCatalogWithUpdatedAt mostRecentFetchEvent = AirbyteApiClient.retryWithJitter(
-          () -> airbyteApiClient.getSourceApi().getMostRecentSourceActorCatalog(sourceIdRequestBody),
-          "get the most recent source actor catalog");
+      final SourceIdRequestBody sourceIdRequestBody = new SourceIdRequestBody(sourceCatalogId);
+      final ActorCatalogWithUpdatedAt mostRecentFetchEvent = airbyteApiClient.getSourceApi().getMostRecentSourceActorCatalog(sourceIdRequestBody);
       if (mostRecentFetchEvent.getUpdatedAt() == null) {
         return false;
       }
-      final UUID workspaceId = AirbyteApiClient.retryWithJitter(
-          () -> airbyteApiClient.getSourceApi().getSource(sourceIdRequestBody).getWorkspaceId(),
-          "Retrieve Id of the workspace for the source");
+      final UUID workspaceId = airbyteApiClient.getSourceApi().getSource(sourceIdRequestBody).getWorkspaceId();
       int refreshPeriod = 24;
       if (workspaceId != null) {
         refreshPeriod = featureFlagClient.intVariation(RefreshSchemaPeriod.INSTANCE, new Workspace(workspaceId));

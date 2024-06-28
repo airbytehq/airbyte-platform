@@ -5,7 +5,7 @@ import {
   useLateMultiplierExperiment,
 } from "components/connection/StreamStatus/streamStatusUtils";
 
-import { useGetConnection, useListConnectionsStatuses } from "core/api";
+import { useGetConnection, useGetConnectionSyncProgress, useListConnectionsStatuses } from "core/api";
 import {
   ConnectionScheduleType,
   ConnectionStatus,
@@ -62,6 +62,8 @@ export interface UIConnectionStatus {
   failureReason?: FailureReason;
   lastSyncJobId?: number;
   lastSyncAttemptNumber?: number;
+  recordsExtracted: number | undefined;
+  recordsLoaded: number | undefined;
 }
 
 export const useConnectionStatus = (connectionId: string): UIConnectionStatus => {
@@ -79,6 +81,8 @@ export const useConnectionStatus = (connectionId: string): UIConnectionStatus =>
     lastSyncJobId,
     lastSyncAttemptNumber,
   } = connectionStatus;
+
+  const { data: syncProgress } = useGetConnectionSyncProgress(connectionId, isRunning);
 
   const hasConfigError = failureReason?.failureType === FailureType.config_error;
 
@@ -101,6 +105,21 @@ export const useConnectionStatus = (connectionId: string): UIConnectionStatus =>
     ).valueOf();
   }
 
+  if (isRunning) {
+    return {
+      status: ConnectionStatusIndicatorStatus.Syncing,
+      lastSyncJobStatus,
+      nextSync,
+      lastSuccessfulSync,
+      isRunning,
+      failureReason,
+      lastSyncJobId,
+      lastSyncAttemptNumber,
+      recordsExtracted: syncProgress?.recordsEmitted,
+      recordsLoaded: syncProgress?.recordsCommitted,
+    };
+  }
+
   if (hasBreakingSchemaChange || hasConfigError) {
     return {
       status: ConnectionStatusIndicatorStatus.ActionRequired,
@@ -111,12 +130,14 @@ export const useConnectionStatus = (connectionId: string): UIConnectionStatus =>
       failureReason,
       lastSyncJobId,
       lastSyncAttemptNumber,
+      recordsExtracted: syncProgress?.recordsCommitted,
+      recordsLoaded: syncProgress?.recordsEmitted,
     };
   }
 
   if (connection.status !== ConnectionStatus.active) {
     return {
-      status: ConnectionStatusIndicatorStatus.Disabled,
+      status: ConnectionStatusIndicatorStatus.Paused,
       lastSyncJobStatus,
       nextSync,
       lastSuccessfulSync,
@@ -124,6 +145,8 @@ export const useConnectionStatus = (connectionId: string): UIConnectionStatus =>
       failureReason,
       lastSyncJobId,
       lastSyncAttemptNumber,
+      recordsExtracted: syncProgress?.recordsCommitted,
+      recordsLoaded: syncProgress?.recordsEmitted,
     };
   }
 
@@ -137,6 +160,8 @@ export const useConnectionStatus = (connectionId: string): UIConnectionStatus =>
       failureReason,
       lastSyncJobId,
       lastSyncAttemptNumber,
+      recordsExtracted: syncProgress?.recordsCommitted,
+      recordsLoaded: syncProgress?.recordsEmitted,
     };
   }
 
@@ -157,12 +182,22 @@ export const useConnectionStatus = (connectionId: string): UIConnectionStatus =>
       failureReason,
       lastSyncJobId,
       lastSyncAttemptNumber,
+      recordsExtracted: syncProgress?.recordsCommitted,
+      recordsLoaded: syncProgress?.recordsEmitted,
     };
   }
 
   // The `late` value is based on the `connection.streamCentricUI.late` experiment
   if (isConnectionLate(connection, lastSuccessfulSync, lateMultiplier)) {
-    return { status: ConnectionStatusIndicatorStatus.Late, lastSyncJobStatus, nextSync, lastSuccessfulSync, isRunning };
+    return {
+      status: ConnectionStatusIndicatorStatus.Late,
+      lastSyncJobStatus,
+      nextSync,
+      lastSuccessfulSync,
+      isRunning,
+      recordsExtracted: syncProgress?.recordsCommitted,
+      recordsLoaded: syncProgress?.recordsEmitted,
+    };
   } else if (isConnectionLate(connection, lastSuccessfulSync, 1)) {
     return {
       status: ConnectionStatusIndicatorStatus.OnTrack,
@@ -173,6 +208,8 @@ export const useConnectionStatus = (connectionId: string): UIConnectionStatus =>
       failureReason,
       lastSyncJobId,
       lastSyncAttemptNumber,
+      recordsExtracted: syncProgress?.recordsCommitted,
+      recordsLoaded: syncProgress?.recordsEmitted,
     };
   }
 
@@ -186,8 +223,18 @@ export const useConnectionStatus = (connectionId: string): UIConnectionStatus =>
       failureReason,
       lastSyncJobId,
       lastSyncAttemptNumber,
+      recordsExtracted: syncProgress?.recordsCommitted,
+      recordsLoaded: syncProgress?.recordsEmitted,
     };
   }
 
-  return { status: ConnectionStatusIndicatorStatus.OnTime, lastSyncJobStatus, nextSync, lastSuccessfulSync, isRunning };
+  return {
+    status: ConnectionStatusIndicatorStatus.OnTime,
+    lastSyncJobStatus,
+    nextSync,
+    lastSuccessfulSync,
+    isRunning,
+    recordsExtracted: syncProgress?.recordsCommitted,
+    recordsLoaded: syncProgress?.recordsEmitted,
+  };
 };

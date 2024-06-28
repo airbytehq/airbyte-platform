@@ -12,12 +12,11 @@ import io.airbyte.api.client.AirbyteApiClient;
 import io.airbyte.api.client.generated.ConnectionApi;
 import io.airbyte.api.client.generated.JobsApi;
 import io.airbyte.api.client.generated.WorkspaceApi;
-import io.airbyte.api.client.invoker.generated.ApiException;
+import io.airbyte.api.client.model.generated.AirbyteCatalog;
 import io.airbyte.api.client.model.generated.ConnectionRead;
 import io.airbyte.api.client.model.generated.ConnectionSchedule;
 import io.airbyte.api.client.model.generated.ConnectionScheduleData;
 import io.airbyte.api.client.model.generated.ConnectionScheduleDataBasicSchedule;
-import io.airbyte.api.client.model.generated.ConnectionScheduleDataBasicSchedule.TimeUnitEnum;
 import io.airbyte.api.client.model.generated.ConnectionScheduleDataCron;
 import io.airbyte.api.client.model.generated.ConnectionScheduleType;
 import io.airbyte.api.client.model.generated.ConnectionStatus;
@@ -30,9 +29,11 @@ import io.airbyte.featureflag.UseNewCronScheduleCalculation;
 import io.airbyte.workers.helpers.ScheduleJitterHelper;
 import io.airbyte.workers.temporal.scheduling.activities.ConfigFetchActivity.ScheduleRetrieverInput;
 import io.airbyte.workers.temporal.scheduling.activities.ConfigFetchActivity.ScheduleRetrieverOutput;
+import java.io.IOException;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.Calendar;
+import java.util.List;
 import java.util.TimeZone;
 import java.util.UUID;
 import java.util.function.Supplier;
@@ -48,6 +49,11 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 @ExtendWith(MockitoExtension.class)
 class ConfigFetchActivityTest {
+
+  private static final UUID CONNECTION_ID = UUID.randomUUID();
+  private static final String CONNECTION_NAME = "connection-name";
+  private static final UUID SOURCE_ID = UUID.randomUUID();
+  private static final UUID DESTINATION_ID = UUID.randomUUID();
 
   private static final Integer SYNC_JOB_MAX_ATTEMPTS = 3;
 
@@ -75,46 +81,37 @@ class ConfigFetchActivityTest {
 
   private final Supplier<Long> currentSecondsSupplier = () -> Instant.now().getEpochSecond();
 
-  private static final UUID connectionId = UUID.randomUUID();
-  private static final ConnectionRead connectionReadWithLegacySchedule = new ConnectionRead()
-      .schedule(new ConnectionSchedule()
-          .timeUnit(ConnectionSchedule.TimeUnitEnum.MINUTES)
-          .units(5L))
-      .status(ConnectionStatus.ACTIVE);
+  private static final ConnectionRead connectionReadWithLegacySchedule = new ConnectionRead(
+      CONNECTION_ID, CONNECTION_NAME, SOURCE_ID, DESTINATION_ID, new AirbyteCatalog(List.of()), ConnectionStatus.ACTIVE, false, null, null, null,
+      null, new ConnectionSchedule(5L, ConnectionSchedule.TimeUnit.MINUTES), null, null, null, null, null, null, null, null, null, null, null);
 
-  private static final ConnectionRead connectionReadWithManualScheduleType = new ConnectionRead()
-      .scheduleType(ConnectionScheduleType.MANUAL)
-      .status(ConnectionStatus.ACTIVE);
+  private static final ConnectionRead connectionReadWithManualScheduleType = new ConnectionRead(
+      CONNECTION_ID, CONNECTION_NAME, SOURCE_ID, DESTINATION_ID, new AirbyteCatalog(List.of()), ConnectionStatus.ACTIVE, false, null, null, null,
+      null, null, ConnectionScheduleType.MANUAL, null, null, null, null, null, null, null, null, null, null);
 
-  private static final ConnectionRead connectionReadWithBasicScheduleType = new ConnectionRead()
-      .scheduleType(ConnectionScheduleType.BASIC)
-      .status(ConnectionStatus.ACTIVE)
-      .scheduleData(new ConnectionScheduleData()
-          .basicSchedule(new ConnectionScheduleDataBasicSchedule()
-              .timeUnit(TimeUnitEnum.MINUTES)
-              .units(5L)));
+  private static final ConnectionRead connectionReadWithBasicScheduleType = new ConnectionRead(
+      CONNECTION_ID, CONNECTION_NAME, SOURCE_ID, DESTINATION_ID, new AirbyteCatalog(List.of()), ConnectionStatus.ACTIVE, false, null, null, null,
+      null, null, ConnectionScheduleType.BASIC,
+      new ConnectionScheduleData(new ConnectionScheduleDataBasicSchedule(ConnectionScheduleDataBasicSchedule.TimeUnit.MINUTES, 5L), null), null, null,
+      null, null, null, null, null, null, null);
 
   public static final String UTC = "UTC";
-  private static final ConnectionRead connectionReadWithCronScheduleType = new ConnectionRead()
-      .scheduleType(ConnectionScheduleType.CRON)
-      .status(ConnectionStatus.ACTIVE)
-      .scheduleData(new ConnectionScheduleData()
-          .cron(new ConnectionScheduleDataCron()
-              .cronExpression("0 0 12 * * ?")
-              .cronTimeZone(UTC)));
+  private static final ConnectionRead connectionReadWithCronScheduleType = new ConnectionRead(
+      CONNECTION_ID, CONNECTION_NAME, SOURCE_ID, DESTINATION_ID, new AirbyteCatalog(List.of()), ConnectionStatus.ACTIVE, false, null, null, null,
+      null, null, ConnectionScheduleType.CRON, new ConnectionScheduleData(null, new ConnectionScheduleDataCron("0 0 12 * * ?", UTC)), null, null,
+      null, null, null, null, null, null, null);
 
-  private static final ConnectionRead connectionReadWithScheduleDisable = new ConnectionRead()
-      .schedule(new ConnectionSchedule()
-          .timeUnit(ConnectionSchedule.TimeUnitEnum.MINUTES)
-          .units(5L))
-      .status(ConnectionStatus.INACTIVE);
+  private static final ConnectionRead connectionReadWithScheduleDisable = new ConnectionRead(
+      CONNECTION_ID, CONNECTION_NAME, SOURCE_ID, DESTINATION_ID, new AirbyteCatalog(List.of()), ConnectionStatus.INACTIVE, false, null, null, null,
+      null, new ConnectionSchedule(5L, ConnectionSchedule.TimeUnit.MINUTES), null, null, null, null, null, null, null, null, null, null, null);
 
-  private static final ConnectionRead connectionReadWithScheduleDeleted = new ConnectionRead()
-      .schedule(new ConnectionSchedule()
-          .timeUnit(ConnectionSchedule.TimeUnitEnum.MINUTES)
-          .units(5L))
-      .status(ConnectionStatus.DEPRECATED);
-  private static final ConnectionRead connectionReadWithoutSchedule = new ConnectionRead();
+  private static final ConnectionRead connectionReadWithScheduleDeleted = new ConnectionRead(
+      CONNECTION_ID, CONNECTION_NAME, SOURCE_ID, DESTINATION_ID, new AirbyteCatalog(List.of()), ConnectionStatus.DEPRECATED, false, null, null, null,
+      null, new ConnectionSchedule(5L, ConnectionSchedule.TimeUnit.MINUTES), null, null, null, null, null, null, null, null, null, null, null);
+
+  private static final ConnectionRead connectionReadWithoutSchedule = new ConnectionRead(
+      CONNECTION_ID, CONNECTION_NAME, SOURCE_ID, DESTINATION_ID, new AirbyteCatalog(List.of()), ConnectionStatus.DEPRECATED, false, null, null, null,
+      null, null, null, null, null, null, null, null, null, null, null, null, null);
 
   @BeforeEach
   void setup() {
@@ -125,8 +122,9 @@ class ConfigFetchActivityTest {
   class TimeToWaitTest {
 
     @BeforeEach
-    void setup() throws ApiException {
-      when(mWorkspaceApi.getWorkspaceByConnectionId(any())).thenReturn(new WorkspaceRead().workspaceId(UUID.randomUUID()));
+    void setup() throws IOException {
+      when(mWorkspaceApi.getWorkspaceByConnectionId(any())).thenReturn(new WorkspaceRead(UUID.randomUUID(), UUID.randomUUID(), "name", "slug", false,
+          UUID.randomUUID(), null, null, null, null, null, null, null, null, null, null, null, null));
     }
 
     @Nested
@@ -142,7 +140,7 @@ class ConfigFetchActivityTest {
 
       @Test
       @DisplayName("Test that the job gets scheduled if it is not manual and if it is the first run with legacy schedule schema")
-      void testFirstJobNonManual() throws ApiException {
+      void testFirstJobNonManual() throws IOException {
         when(mAirbyteApiClient.getJobsApi()).thenReturn(mJobsApi);
         when(mJobsApi.getLastReplicationJob(any()))
             .thenReturn(new JobOptionalRead());
@@ -150,7 +148,7 @@ class ConfigFetchActivityTest {
         when(mConnectionApi.getConnection(any()))
             .thenReturn(connectionReadWithLegacySchedule);
 
-        final ScheduleRetrieverInput input = new ScheduleRetrieverInput(connectionId);
+        final ScheduleRetrieverInput input = new ScheduleRetrieverInput(CONNECTION_ID);
 
         final ScheduleRetrieverOutput output = configFetchActivity.getTimeToWait(input);
 
@@ -160,11 +158,11 @@ class ConfigFetchActivityTest {
 
       @Test
       @DisplayName("Test that the job will wait for a long time if it is manual in the legacy schedule schema")
-      void testManual() throws ApiException {
+      void testManual() throws IOException {
         when(mConnectionApi.getConnection(any()))
             .thenReturn(connectionReadWithoutSchedule);
 
-        final ScheduleRetrieverInput input = new ScheduleRetrieverInput(connectionId);
+        final ScheduleRetrieverInput input = new ScheduleRetrieverInput(CONNECTION_ID);
 
         final ScheduleRetrieverOutput output = configFetchActivity.getTimeToWait(input);
 
@@ -174,11 +172,11 @@ class ConfigFetchActivityTest {
 
       @Test
       @DisplayName("Test that the job will wait for a long time if it is disabled")
-      void testDisable() throws ApiException {
+      void testDisable() throws IOException {
         when(mConnectionApi.getConnection(any()))
             .thenReturn(connectionReadWithScheduleDisable);
 
-        final ScheduleRetrieverInput input = new ScheduleRetrieverInput(connectionId);
+        final ScheduleRetrieverInput input = new ScheduleRetrieverInput(CONNECTION_ID);
 
         final ScheduleRetrieverOutput output = configFetchActivity.getTimeToWait(input);
 
@@ -188,11 +186,11 @@ class ConfigFetchActivityTest {
 
       @Test
       @DisplayName("Test that the connection will wait for a long time if it is deleted")
-      void testDeleted() throws ApiException {
+      void testDeleted() throws IOException {
         when(mConnectionApi.getConnection(any()))
             .thenReturn(connectionReadWithScheduleDeleted);
 
-        final ScheduleRetrieverInput input = new ScheduleRetrieverInput(connectionId);
+        final ScheduleRetrieverInput input = new ScheduleRetrieverInput(CONNECTION_ID);
 
         final ScheduleRetrieverOutput output = configFetchActivity.getTimeToWait(input);
 
@@ -202,7 +200,7 @@ class ConfigFetchActivityTest {
 
       @Test
       @DisplayName("Test we will wait the required amount of time with legacy config")
-      void testWait() throws ApiException {
+      void testWait() throws IOException {
         when(mAirbyteApiClient.getJobsApi()).thenReturn(mJobsApi);
         configFetchActivity =
             new ConfigFetchActivityImpl(mAirbyteApiClient, SYNC_JOB_MAX_ATTEMPTS, () -> 60L * 3, mFeatureFlagClient,
@@ -213,12 +211,12 @@ class ConfigFetchActivityTest {
             .thenReturn(60L);
 
         when(mJobsApi.getLastReplicationJob(any()))
-            .thenReturn(new JobOptionalRead().job(mJobRead));
+            .thenReturn(new JobOptionalRead(mJobRead));
 
         when(mConnectionApi.getConnection(any()))
             .thenReturn(connectionReadWithLegacySchedule);
 
-        final ScheduleRetrieverInput input = new ScheduleRetrieverInput(connectionId);
+        final ScheduleRetrieverInput input = new ScheduleRetrieverInput(CONNECTION_ID);
 
         final ScheduleRetrieverOutput output = configFetchActivity.getTimeToWait(input);
 
@@ -228,7 +226,7 @@ class ConfigFetchActivityTest {
 
       @Test
       @DisplayName("Test we will not wait if we are late in the legacy schedule schema")
-      void testNotWaitIfLate() throws ApiException {
+      void testNotWaitIfLate() throws IOException {
         when(mAirbyteApiClient.getJobsApi()).thenReturn(mJobsApi);
         configFetchActivity =
             new ConfigFetchActivityImpl(mAirbyteApiClient, SYNC_JOB_MAX_ATTEMPTS, () -> 60L * 10, mFeatureFlagClient,
@@ -239,12 +237,12 @@ class ConfigFetchActivityTest {
             .thenReturn(60L);
 
         when(mJobsApi.getLastReplicationJob(any()))
-            .thenReturn(new JobOptionalRead().job(mJobRead));
+            .thenReturn(new JobOptionalRead(mJobRead));
 
         when(mConnectionApi.getConnection(any()))
             .thenReturn(connectionReadWithLegacySchedule);
 
-        final ScheduleRetrieverInput input = new ScheduleRetrieverInput(connectionId);
+        final ScheduleRetrieverInput input = new ScheduleRetrieverInput(CONNECTION_ID);
 
         final ScheduleRetrieverOutput output = configFetchActivity.getTimeToWait(input);
 
@@ -254,11 +252,11 @@ class ConfigFetchActivityTest {
 
       @Test
       @DisplayName("Test that the job will wait a long time if it is MANUAL scheduleType")
-      void testManualScheduleType() throws ApiException {
+      void testManualScheduleType() throws IOException {
         when(mConnectionApi.getConnection(any()))
             .thenReturn(connectionReadWithManualScheduleType);
 
-        final ScheduleRetrieverInput input = new ScheduleRetrieverInput(connectionId);
+        final ScheduleRetrieverInput input = new ScheduleRetrieverInput(CONNECTION_ID);
 
         final ScheduleRetrieverOutput output = configFetchActivity.getTimeToWait(input);
 
@@ -268,7 +266,7 @@ class ConfigFetchActivityTest {
 
       @Test
       @DisplayName("Test that the job will be immediately scheduled if it is a BASIC_SCHEDULE type on the first run")
-      void testBasicScheduleTypeFirstRun() throws ApiException {
+      void testBasicScheduleTypeFirstRun() throws IOException {
         when(mAirbyteApiClient.getJobsApi()).thenReturn(mJobsApi);
         when(mJobsApi.getLastReplicationJob(any()))
             .thenReturn(new JobOptionalRead());
@@ -276,7 +274,7 @@ class ConfigFetchActivityTest {
         when(mConnectionApi.getConnection(any()))
             .thenReturn(connectionReadWithBasicScheduleType);
 
-        final ScheduleRetrieverInput input = new ScheduleRetrieverInput(connectionId);
+        final ScheduleRetrieverInput input = new ScheduleRetrieverInput(CONNECTION_ID);
 
         final ScheduleRetrieverOutput output = configFetchActivity.getTimeToWait(input);
 
@@ -286,7 +284,7 @@ class ConfigFetchActivityTest {
 
       @Test
       @DisplayName("Test that we will wait the required amount of time with a BASIC_SCHEDULE type on a subsequent run")
-      void testBasicScheduleSubsequentRun() throws ApiException {
+      void testBasicScheduleSubsequentRun() throws IOException {
         when(mAirbyteApiClient.getJobsApi()).thenReturn(mJobsApi);
         configFetchActivity = new ConfigFetchActivityImpl(mAirbyteApiClient, SYNC_JOB_MAX_ATTEMPTS, () -> 60L * 3,
             mFeatureFlagClient, mScheduleJitterHelper);
@@ -296,12 +294,12 @@ class ConfigFetchActivityTest {
             .thenReturn(60L);
 
         when(mJobsApi.getLastReplicationJob(any()))
-            .thenReturn(new JobOptionalRead().job(mJobRead));
+            .thenReturn(new JobOptionalRead(mJobRead));
 
         when(mConnectionApi.getConnection(any()))
             .thenReturn(connectionReadWithBasicScheduleType);
 
-        final ScheduleRetrieverInput input = new ScheduleRetrieverInput(connectionId);
+        final ScheduleRetrieverInput input = new ScheduleRetrieverInput(CONNECTION_ID);
 
         final ScheduleRetrieverOutput output = configFetchActivity.getTimeToWait(input);
 
@@ -323,7 +321,7 @@ class ConfigFetchActivityTest {
 
       @Test
       @DisplayName("Test that the job will wait to be scheduled if it is a CRON type, and the prior job ran recently")
-      void testCronScheduleSubsequentRunPriorJobRanRecently() throws ApiException {
+      void testCronScheduleSubsequentRunPriorJobRanRecently() throws IOException {
         final Calendar mockRightNow = Calendar.getInstance(TimeZone.getTimeZone(UTC));
         mockRightNow.set(Calendar.HOUR_OF_DAY, 0);
         mockRightNow.set(Calendar.MINUTE, 0);
@@ -336,7 +334,7 @@ class ConfigFetchActivityTest {
                 currentSecondsSupplier, mFeatureFlagClient, mScheduleJitterHelper);
 
         when(mJobsApi.getLastReplicationJob(any()))
-            .thenReturn(new JobOptionalRead().job(mJobRead));
+            .thenReturn(new JobOptionalRead(mJobRead));
 
         // prior job completed 3 hours ago, so expect the next job to be scheduled
         // according to the next cron run time.
@@ -347,7 +345,7 @@ class ConfigFetchActivityTest {
         when(mConnectionApi.getConnection(any()))
             .thenReturn(connectionReadWithCronScheduleType);
 
-        final ScheduleRetrieverInput input = new ScheduleRetrieverInput(connectionId);
+        final ScheduleRetrieverInput input = new ScheduleRetrieverInput(CONNECTION_ID);
 
         final ScheduleRetrieverOutput output = configFetchActivity.getTimeToWait(input);
 
@@ -357,7 +355,7 @@ class ConfigFetchActivityTest {
 
       @Test
       @DisplayName("Test that the job will run immediately if it is CRON type, and the expected interval has elapsed since the prior job")
-      void testCronScheduleSubsequentRunPriorJobRanLongAgo() throws ApiException {
+      void testCronScheduleSubsequentRunPriorJobRanLongAgo() throws IOException {
         final Calendar mockRightNow = Calendar.getInstance(TimeZone.getTimeZone(UTC));
         mockRightNow.set(Calendar.HOUR_OF_DAY, 0);
         mockRightNow.set(Calendar.MINUTE, 0);
@@ -370,7 +368,7 @@ class ConfigFetchActivityTest {
                 currentSecondsSupplier, mFeatureFlagClient, mScheduleJitterHelper);
 
         when(mJobsApi.getLastReplicationJob(any()))
-            .thenReturn(new JobOptionalRead().job(mJobRead));
+            .thenReturn(new JobOptionalRead(mJobRead));
 
         // Behavior is currently behind a feature flag
         when(mFeatureFlagClient.boolVariation(Mockito.eq(UseNewCronScheduleCalculation.INSTANCE), any())).thenReturn(true);
@@ -382,7 +380,7 @@ class ConfigFetchActivityTest {
         when(mConnectionApi.getConnection(any()))
             .thenReturn(connectionReadWithCronScheduleType);
 
-        final ScheduleRetrieverInput input = new ScheduleRetrieverInput(connectionId);
+        final ScheduleRetrieverInput input = new ScheduleRetrieverInput(CONNECTION_ID);
 
         final ScheduleRetrieverOutput output = configFetchActivity.getTimeToWait(input);
 
@@ -391,7 +389,7 @@ class ConfigFetchActivityTest {
 
       @Test
       @DisplayName("Test that the job will only be scheduled once per minimum cron interval")
-      void testCronScheduleMinimumInterval() throws ApiException {
+      void testCronScheduleMinimumInterval() throws IOException {
         final Calendar mockRightNow = Calendar.getInstance(TimeZone.getTimeZone(UTC));
         mockRightNow.set(Calendar.HOUR_OF_DAY, 12);
         mockRightNow.set(Calendar.MINUTE, 0);
@@ -406,12 +404,12 @@ class ConfigFetchActivityTest {
         when(mJobRead.getStartedAt()).thenReturn(null);
         when(mJobRead.getCreatedAt()).thenReturn(mockRightNow.getTimeInMillis() / 1000L);
         when(mJobsApi.getLastReplicationJob(any()))
-            .thenReturn(new JobOptionalRead().job(mJobRead));
+            .thenReturn(new JobOptionalRead(mJobRead));
 
         when(mConnectionApi.getConnection(any()))
             .thenReturn(connectionReadWithCronScheduleType);
 
-        final ScheduleRetrieverInput input = new ScheduleRetrieverInput(connectionId);
+        final ScheduleRetrieverInput input = new ScheduleRetrieverInput(CONNECTION_ID);
 
         final ScheduleRetrieverOutput output = configFetchActivity.getTimeToWait(input);
 
@@ -421,7 +419,7 @@ class ConfigFetchActivityTest {
 
       @Test
       @DisplayName("Test that for specific workspace ids, we add some noise in the cron scheduling")
-      void testCronSchedulingNoise() throws ApiException {
+      void testCronSchedulingNoise() throws IOException {
         final Calendar mockRightNow = Calendar.getInstance(TimeZone.getTimeZone(UTC));
         mockRightNow.set(Calendar.HOUR_OF_DAY, 0);
         mockRightNow.set(Calendar.MINUTE, 0);
@@ -430,7 +428,8 @@ class ConfigFetchActivityTest {
         final Supplier<Long> currentSecondsSupplier = () -> mockRightNow.getTimeInMillis() / 1000L;
 
         when(mWorkspaceApi.getWorkspaceByConnectionId(any()))
-            .thenReturn(new WorkspaceRead().workspaceId(UUID.fromString("226edbc1-4a9c-4401-95a9-90435d667d9d")));
+            .thenReturn(new WorkspaceRead(UUID.fromString("226edbc1-4a9c-4401-95a9-90435d667d9d"), UUID.randomUUID(), "name", "slug", false,
+                UUID.randomUUID(), null, null, null, null, null, null, null, null, null, null, null, null));
 
         configFetchActivity =
             new ConfigFetchActivityImpl(mAirbyteApiClient, SYNC_JOB_MAX_ATTEMPTS,
@@ -439,12 +438,12 @@ class ConfigFetchActivityTest {
         when(mJobRead.getStartedAt()).thenReturn(null);
         when(mJobRead.getCreatedAt()).thenReturn(mockRightNow.getTimeInMillis() / 1000L);
         when(mJobsApi.getLastReplicationJob(any()))
-            .thenReturn(new JobOptionalRead().job(mJobRead));
+            .thenReturn(new JobOptionalRead(mJobRead));
 
         when(mConnectionApi.getConnection(any()))
             .thenReturn(connectionReadWithCronScheduleType);
 
-        final ScheduleRetrieverInput input = new ScheduleRetrieverInput(connectionId);
+        final ScheduleRetrieverInput input = new ScheduleRetrieverInput(CONNECTION_ID);
 
         final ScheduleRetrieverOutput output = configFetchActivity.getTimeToWait(input);
 

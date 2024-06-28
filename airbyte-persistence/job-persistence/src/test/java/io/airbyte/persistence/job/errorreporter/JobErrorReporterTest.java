@@ -350,6 +350,22 @@ class JobErrorReporterTest {
   }
 
   @Test
+  void testDoNotReportSourceCheckJobFailureFromOtherOrigins() throws JsonValidationException, ConfigNotFoundException, IOException {
+    final FailureReason failureReason = new FailureReason()
+        .withMetadata(new Metadata()
+            .withAdditionalProperty(FROM_TRACE_MESSAGE, true)
+            .withAdditionalProperty(CONNECTOR_COMMAND_KEY, CHECK_COMMAND))
+        .withFailureOrigin(FailureOrigin.AIRBYTE_PLATFORM)
+        .withFailureType(FailureType.SYSTEM_ERROR);
+
+    final ConnectorJobReportingContext jobContext = new ConnectorJobReportingContext(JOB_ID, SOURCE_DOCKER_IMAGE, SOURCE_RELEASE_STAGE);
+
+    jobErrorReporter.reportSourceCheckJobFailure(SOURCE_DEFINITION_ID, WORKSPACE_ID, failureReason, jobContext);
+
+    Mockito.verifyNoInteractions(jobErrorReportingClient);
+  }
+
+  @Test
   void testReportDestinationCheckJobFailure() throws JsonValidationException, ConfigNotFoundException, IOException {
     final FailureReason failureReason = new FailureReason()
         .withMetadata(new Metadata()
@@ -387,6 +403,22 @@ class JobErrorReporterTest {
 
     Mockito.verify(jobErrorReportingClient).reportJobFailureReason(mWorkspace, failureReason, DESTINATION_DOCKER_IMAGE, expectedMetadata, null);
     Mockito.verifyNoMoreInteractions(jobErrorReportingClient);
+  }
+
+  @Test
+  void testDoNotReportDestinationCheckJobFailureFromOtherOrigins() throws JsonValidationException, ConfigNotFoundException, IOException {
+    final FailureReason failureReason = new FailureReason()
+        .withMetadata(new Metadata()
+            .withAdditionalProperty(FROM_TRACE_MESSAGE, true)
+            .withAdditionalProperty(CONNECTOR_COMMAND_KEY, CHECK_COMMAND))
+        .withFailureOrigin(FailureOrigin.AIRBYTE_PLATFORM)
+        .withFailureType(FailureType.SYSTEM_ERROR);
+
+    final ConnectorJobReportingContext jobContext = new ConnectorJobReportingContext(JOB_ID, DESTINATION_DOCKER_IMAGE, DESTINATION_RELEASE_STAGE);
+
+    jobErrorReporter.reportDestinationCheckJobFailure(DESTINATION_DEFINITION_ID, WORKSPACE_ID, failureReason, jobContext);
+
+    Mockito.verifyNoInteractions(jobErrorReportingClient);
   }
 
   @Test
@@ -498,6 +530,22 @@ class JobErrorReporterTest {
   }
 
   @Test
+  void testDoNotReportDiscoverJobFailureFromOtherOrigins() throws JsonValidationException, ConfigNotFoundException, IOException {
+    final FailureReason failureReason = new FailureReason()
+        .withMetadata(new Metadata()
+            .withAdditionalProperty(FROM_TRACE_MESSAGE, true)
+            .withAdditionalProperty(CONNECTOR_COMMAND_KEY, CHECK_COMMAND))
+        .withFailureOrigin(FailureOrigin.AIRBYTE_PLATFORM)
+        .withFailureType(FailureType.SYSTEM_ERROR);
+
+    final ConnectorJobReportingContext jobContext = new ConnectorJobReportingContext(JOB_ID, SOURCE_DOCKER_IMAGE, SOURCE_RELEASE_STAGE);
+
+    jobErrorReporter.reportDiscoverJobFailure(SOURCE_DEFINITION_ID, WORKSPACE_ID, failureReason, jobContext);
+
+    Mockito.verifyNoInteractions(jobErrorReportingClient);
+  }
+
+  @Test
   void testReportSpecJobFailure() {
     final FailureReason failureReason = new FailureReason()
         .withMetadata(new Metadata()
@@ -521,6 +569,22 @@ class JobErrorReporterTest {
 
     Mockito.verify(jobErrorReportingClient).reportJobFailureReason(null, failureReason, SOURCE_DOCKER_IMAGE, expectedMetadata, null);
     Mockito.verifyNoMoreInteractions(jobErrorReportingClient);
+  }
+
+  @Test
+  void testDoNotReportSpecJobFailureFromOtherOrigins() {
+    final FailureReason failureReason = new FailureReason()
+        .withMetadata(new Metadata()
+            .withAdditionalProperty(FROM_TRACE_MESSAGE, true)
+            .withAdditionalProperty(CONNECTOR_COMMAND_KEY, CHECK_COMMAND))
+        .withFailureOrigin(FailureOrigin.AIRBYTE_PLATFORM)
+        .withFailureType(FailureType.SYSTEM_ERROR);
+
+    final ConnectorJobReportingContext jobContext = new ConnectorJobReportingContext(JOB_ID, SOURCE_DOCKER_IMAGE, SOURCE_RELEASE_STAGE);
+
+    jobErrorReporter.reportSpecJobFailure(failureReason, jobContext);
+
+    Mockito.verifyNoInteractions(jobErrorReportingClient);
   }
 
   @Test

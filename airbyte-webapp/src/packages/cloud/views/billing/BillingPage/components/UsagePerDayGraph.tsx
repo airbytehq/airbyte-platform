@@ -47,8 +47,13 @@ export const UsagePerDayGraph: React.FC<UsagePerDayGraphProps> = ({ chartData, m
   }, [chartData, minimized]);
 
   return (
-    <div className={classnames(styles.container, { [styles["container--full"]]: !minimized })}>
-      <ResponsiveContainer width={minimized ? 100 : undefined} height={minimized ? 30 : undefined}>
+    <div
+      className={classnames(styles.container, {
+        [styles["container--full"]]: !minimized,
+        [styles["container--minimized"]]: minimized,
+      })}
+    >
+      <ResponsiveContainer>
         <BarChart data={chartData} margin={minimized ? {} : { right: 12, top: 25 }}>
           {!minimized && (
             <Legend

@@ -14,7 +14,7 @@ export interface SyncModeValue {
   destinationSyncMode: DestinationSyncMode;
 }
 
-interface SyncModeSelectProps {
+export interface SyncModeSelectProps {
   onChange: (option: SyncModeValue) => void;
   options: SyncModeValue[];
   value: SyncModeValue | undefined;

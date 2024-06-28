@@ -4,26 +4,24 @@
 
 package io.airbyte.test.acceptance;
 
-import static io.airbyte.test.acceptance.AcceptanceTestConstants.IS_ENTERPRISE_TRUE;
+import static io.airbyte.test.utils.AcceptanceTestUtils.createAirbyteApiClient;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
-import dev.failsafe.RetryPolicy;
-import io.airbyte.api.client2.AirbyteApiClient;
-import io.airbyte.api.client2.model.generated.CustomDestinationDefinitionCreate;
-import io.airbyte.api.client2.model.generated.CustomSourceDefinitionCreate;
-import io.airbyte.api.client2.model.generated.DestinationDefinitionCreate;
-import io.airbyte.api.client2.model.generated.DestinationDefinitionIdRequestBody;
-import io.airbyte.api.client2.model.generated.DestinationDefinitionRead;
-import io.airbyte.api.client2.model.generated.SourceDefinitionCreate;
-import io.airbyte.api.client2.model.generated.SourceDefinitionIdRequestBody;
-import io.airbyte.api.client2.model.generated.SourceDefinitionRead;
+import io.airbyte.api.client.AirbyteApiClient;
+import io.airbyte.api.client.model.generated.CustomDestinationDefinitionCreate;
+import io.airbyte.api.client.model.generated.CustomSourceDefinitionCreate;
+import io.airbyte.api.client.model.generated.DestinationDefinitionCreate;
+import io.airbyte.api.client.model.generated.DestinationDefinitionIdRequestBody;
+import io.airbyte.api.client.model.generated.DestinationDefinitionRead;
+import io.airbyte.api.client.model.generated.SourceDefinitionCreate;
+import io.airbyte.api.client.model.generated.SourceDefinitionIdRequestBody;
+import io.airbyte.api.client.model.generated.SourceDefinitionRead;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
-import java.time.Duration;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
-import okhttp3.OkHttpClient;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.TestInstance;
 import org.junit.jupiter.api.TestInstance.Lifecycle;
@@ -39,22 +37,8 @@ class VersioningAcceptanceTests {
 
   @BeforeAll
   static void init() throws IOException {
-    final RetryPolicy<okhttp3.Response> policy = RetryPolicy.<okhttp3.Response>builder()
-        .handle(Throwable.class)
-        .withMaxAttempts(10)
-        .withBackoff(Duration.ofSeconds(1), Duration.ofSeconds(120)).build();
-
-    final OkHttpClient.Builder clientBuilder = new OkHttpClient.Builder().readTimeout(Duration.ofSeconds(60));
-
-    if (IS_ENTERPRISE_TRUE) {
-      // In Enterprise, auth features are enabled. Add this header via
-      // interceptor so that the API client can auth as an instance admin.
-      clientBuilder.addInterceptor(new AcceptanceTestAuthHeaderInterceptor());
-    }
-
-    apiClient2 = new AirbyteApiClient(String.format("%s/api", AIRBYTE_SERVER_HOST), policy, clientBuilder.build());
-
-    workspaceId = apiClient2.getWorkspaceApi().listWorkspaces().getWorkspaces().get(0).getWorkspaceId();
+    apiClient2 = createAirbyteApiClient(String.format("%s/api", AIRBYTE_SERVER_HOST), Map.of());
+    workspaceId = apiClient2.getWorkspaceApi().listWorkspaces().getWorkspaces().getFirst().getWorkspaceId();
   }
 
   @ParameterizedTest

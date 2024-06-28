@@ -1,9 +1,11 @@
 import { BroadcastChannel } from "broadcast-channel";
 import { useCallback, useRef } from "react";
 import { FormattedMessage, useIntl } from "react-intl";
-import { useAsyncFn, useEffectOnce, useEvent, useUnmount } from "react-use";
+import { useAsyncFn, useEvent, useUnmount } from "react-use";
 import { v4 as uuid } from "uuid";
 
+import { OAuthEvent } from "area/connector/types/oauthCallback";
+import { OAUTH_BROADCAST_CHANNEL_NAME } from "area/connector/utils/oauthConstants";
 import { HttpError, useCompleteOAuth, useConsentUrls } from "core/api";
 import {
   CompleteOAuthResponse,
@@ -19,29 +21,11 @@ import { useConnectorForm } from "views/Connector/ConnectorForm/connectorFormCon
 import { useAppMonitoringService } from "./AppMonitoringService";
 import { useNotificationService } from "./Notification";
 import { useCurrentWorkspace } from "./useWorkspace";
-import { useQuery } from "../useQuery";
 
 let windowObjectReference: Window | null = null;
 
-interface CompletedOAuthEvent {
-  type: "completed";
-  query: Record<string, unknown>;
-}
-
-interface TakeoverOAuthEvent {
-  type: "takeover";
-}
-
-interface CancelOAuthEvent {
-  type: "cancel";
-  tabUuid: string;
-}
-
-type OAuthEvent = CompletedOAuthEvent | TakeoverOAuthEvent | CancelOAuthEvent;
-
 const tabUuid = uuid();
 const OAUTH_REDIRECT_URL = `${window.location.protocol}//${window.location.host}`;
-export const OAUTH_BROADCAST_CHANNEL_NAME = "airbyte_oauth_callback";
 
 /**
  * Since some OAuth providers clear out the window.opener and window.name properties,
@@ -281,15 +265,4 @@ export function useRunOauthFlow({
     done: value,
     run: onStartOauth,
   };
-}
-
-export function useResolveNavigate(): void {
-  const query = useQuery();
-
-  // pass the OAuth payload to the broadcast channel and close the window
-  useEffectOnce(() => {
-    const bc = new BroadcastChannel<OAuthEvent>(OAUTH_BROADCAST_CHANNEL_NAME);
-    bc.postMessage({ type: "completed", query });
-    window.close();
-  });
 }

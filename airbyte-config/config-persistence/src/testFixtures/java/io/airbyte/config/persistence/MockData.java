@@ -137,6 +137,8 @@ public class MockData {
   static final UUID DUP_EMAIL_USER_ID_1 = UUID.randomUUID();
   static final UUID DUP_EMAIL_USER_ID_2 = UUID.randomUUID();
   static final String DUP_EMAIL = "dup-email@airbyte.io";
+  static final String EMAIL_1 = "user-1@whatever.com";
+  static final String EMAIL_2 = "user-2@whatever.com";
 
   // Permission
   static final UUID PERMISSION_ID_1 = UUID.randomUUID();
@@ -147,6 +149,7 @@ public class MockData {
   static final UUID PERMISSION_ID_5 = UUID.randomUUID();
   static final UUID PERMISSION_ID_6 = UUID.randomUUID();
   static final UUID PERMISSION_ID_7 = UUID.randomUUID();
+  static final UUID PERMISSION_ID_8 = UUID.randomUUID();
 
   static final UUID ORGANIZATION_ID_1 = UUID.randomUUID();
   static final UUID ORGANIZATION_ID_2 = UUID.randomUUID();
@@ -236,6 +239,12 @@ public class MockData {
       .withOrganizationId(ORGANIZATION_ID_2)
       .withPermissionType(PermissionType.ORGANIZATION_READER);
 
+  public static final Permission permission8 = new Permission()
+      .withPermissionId(PERMISSION_ID_8)
+      .withUserId(CREATOR_USER_ID_1)
+      .withOrganizationId(DEFAULT_ORGANIZATION_ID)
+      .withPermissionType(PermissionType.ORGANIZATION_ADMIN);
+
   public static List<User> users() {
     final User user1 = new User()
         .withUserId(CREATOR_USER_ID_1)
@@ -245,7 +254,7 @@ public class MockData {
         .withDefaultWorkspaceId(WORKSPACE_ID_1)
         .withStatus(User.Status.DISABLED)
         .withCompanyName("company-1")
-        .withEmail("user-1@whatever.com")
+        .withEmail(EMAIL_1)
         .withNews(true)
         .withUiMetadata(null);
 
@@ -257,7 +266,7 @@ public class MockData {
         .withDefaultWorkspaceId(WORKSPACE_ID_2)
         .withStatus(User.Status.INVITED)
         .withCompanyName("company-2")
-        .withEmail("user-2@whatever.com")
+        .withEmail(EMAIL_2)
         .withNews(false)
         .withUiMetadata(null);
 
@@ -329,7 +338,7 @@ public class MockData {
   }
 
   public static List<Permission> permissions() {
-    return Arrays.asList(permission1, permission2, permission3, permission4, permission5, permission6, permission7);
+    return Arrays.asList(permission1, permission2, permission3, permission4, permission5, permission6, permission7, permission8);
   }
 
   public static List<Organization> organizations() {
@@ -504,8 +513,7 @@ public class MockData {
         .withTombstone(false)
         .withPublic(true)
         .withCustom(false)
-        .withResourceRequirements(new ActorDefinitionResourceRequirements().withDefault(new ResourceRequirements().withCpuRequest("2")))
-        .withSupportRefreshes(false);
+        .withResourceRequirements(new ActorDefinitionResourceRequirements().withDefault(new ResourceRequirements().withCpuRequest("2")));
   }
 
   public static StandardDestinationDefinition grantableDestinationDefinition1() {
@@ -516,8 +524,7 @@ public class MockData {
         .withIcon("icon-4")
         .withTombstone(false)
         .withPublic(false)
-        .withCustom(false)
-        .withSupportRefreshes(false);
+        .withCustom(false);
   }
 
   public static StandardDestinationDefinition grantableDestinationDefinition2() {
@@ -528,8 +535,7 @@ public class MockData {
         .withIcon("icon-3")
         .withTombstone(false)
         .withPublic(false)
-        .withCustom(false)
-        .withSupportRefreshes(false);
+        .withCustom(false);
   }
 
   public static StandardDestinationDefinition customDestinationDefinition() {
@@ -540,8 +546,7 @@ public class MockData {
         .withIcon("icon-4")
         .withTombstone(false)
         .withPublic(false)
-        .withCustom(true)
-        .withSupportRefreshes(false);
+        .withCustom(true);
   }
 
   public static List<StandardDestinationDefinition> standardDestinationDefinitions() {
@@ -557,7 +562,6 @@ public class MockData {
         .withName("source-1")
         .withTombstone(false)
         .withSourceDefinitionId(SOURCE_DEFINITION_ID_1)
-        .withDefaultVersionId(SOURCE_DEFINITION_VERSION_ID_1)
         .withWorkspaceId(WORKSPACE_ID_1)
         .withConfiguration(Jsons.deserialize(CONNECTION_SPECIFICATION))
         .withSourceId(SOURCE_ID_1);
@@ -565,7 +569,6 @@ public class MockData {
         .withName("source-2")
         .withTombstone(false)
         .withSourceDefinitionId(SOURCE_DEFINITION_ID_2)
-        .withDefaultVersionId(SOURCE_DEFINITION_VERSION_ID_2)
         .withWorkspaceId(WORKSPACE_ID_1)
         .withConfiguration(Jsons.deserialize(CONNECTION_SPECIFICATION))
         .withSourceId(SOURCE_ID_2);
@@ -573,7 +576,6 @@ public class MockData {
         .withName("source-3")
         .withTombstone(false)
         .withSourceDefinitionId(SOURCE_DEFINITION_ID_1)
-        .withDefaultVersionId(SOURCE_DEFINITION_VERSION_ID_1)
         .withWorkspaceId(WORKSPACE_ID_2)
         .withConfiguration(Jsons.emptyObject())
         .withSourceId(SOURCE_ID_3);
@@ -585,7 +587,6 @@ public class MockData {
         .withName("destination-1")
         .withTombstone(false)
         .withDestinationDefinitionId(DESTINATION_DEFINITION_ID_1)
-        .withDefaultVersionId(DESTINATION_DEFINITION_VERSION_ID_1)
         .withWorkspaceId(WORKSPACE_ID_1)
         .withConfiguration(Jsons.deserialize(CONNECTION_SPECIFICATION))
         .withDestinationId(DESTINATION_ID_1);
@@ -593,7 +594,6 @@ public class MockData {
         .withName("destination-2")
         .withTombstone(false)
         .withDestinationDefinitionId(DESTINATION_DEFINITION_ID_2)
-        .withDefaultVersionId(DESTINATION_DEFINITION_VERSION_ID_2)
         .withWorkspaceId(WORKSPACE_ID_1)
         .withConfiguration(Jsons.deserialize(CONNECTION_SPECIFICATION))
         .withDestinationId(DESTINATION_ID_2);
@@ -601,7 +601,6 @@ public class MockData {
         .withName("destination-3")
         .withTombstone(true)
         .withDestinationDefinitionId(DESTINATION_DEFINITION_ID_2)
-        .withDefaultVersionId(DESTINATION_DEFINITION_VERSION_ID_2)
         .withWorkspaceId(WORKSPACE_ID_2)
         .withConfiguration(Jsons.emptyObject())
         .withDestinationId(DESTINATION_ID_3);

@@ -7,7 +7,6 @@ package io.airbyte.commons.server.helpers;
 import static io.airbyte.commons.server.handlers.helpers.CatalogConverter.toApi;
 
 import com.fasterxml.jackson.databind.JsonNode;
-import com.google.common.collect.Lists;
 import io.airbyte.api.model.generated.AirbyteCatalog;
 import io.airbyte.api.model.generated.AirbyteStream;
 import io.airbyte.api.model.generated.AirbyteStreamAndConfiguration;
@@ -48,7 +47,6 @@ import io.airbyte.protocol.models.Field;
 import io.airbyte.protocol.models.JsonSchemaType;
 import io.airbyte.protocol.models.StreamDescriptor;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -316,18 +314,18 @@ public class ConnectionHelpers {
   }
 
   public static ConfiguredAirbyteCatalog generateBasicConfiguredAirbyteCatalog() {
-    return new ConfiguredAirbyteCatalog().withStreams(Collections.singletonList(generateBasicConfiguredStream(null)));
+    return new ConfiguredAirbyteCatalog().withStreams(List.of(generateBasicConfiguredStream(null)));
   }
 
   public static ConfiguredAirbyteCatalog generateAirbyteCatalogWithTwoFields() {
-    return new ConfiguredAirbyteCatalog().withStreams(Collections.singletonList(new ConfiguredAirbyteStream()
+    return new ConfiguredAirbyteCatalog().withStreams(List.of(new ConfiguredAirbyteStream()
         .withStream(
             new io.airbyte.protocol.models.AirbyteStream()
                 .withName(STREAM_NAME)
                 .withJsonSchema(generateJsonSchemaWithTwoFields())
-                .withDefaultCursorField(Lists.newArrayList(FIELD_NAME))
+                .withDefaultCursorField(List.of(FIELD_NAME))
                 .withSourceDefinedCursor(false)
-                .withSourceDefinedPrimaryKey(Collections.emptyList())
+                .withSourceDefinedPrimaryKey(List.of())
                 .withSupportedSyncModes(
                     List.of(io.airbyte.protocol.models.SyncMode.FULL_REFRESH, io.airbyte.protocol.models.SyncMode.INCREMENTAL)))));
   }
@@ -343,7 +341,7 @@ public class ConnectionHelpers {
   public static ConfiguredAirbyteStream generateBasicConfiguredStream(final String nameSuffix) {
     return new ConfiguredAirbyteStream()
         .withStream(generateBasicAirbyteStream(nameSuffix))
-        .withCursorField(Lists.newArrayList(FIELD_NAME))
+        .withCursorField(List.of(FIELD_NAME))
         .withSyncMode(io.airbyte.protocol.models.SyncMode.INCREMENTAL)
         .withDestinationSyncMode(DestinationSyncMode.APPEND);
   }
@@ -351,15 +349,17 @@ public class ConnectionHelpers {
   private static io.airbyte.protocol.models.AirbyteStream generateBasicAirbyteStream(final String nameSuffix) {
     return CatalogHelpers.createAirbyteStream(
         nameSuffix == null ? STREAM_NAME : STREAM_NAME_BASE + nameSuffix, Field.of(FIELD_NAME, JsonSchemaType.STRING))
-        .withDefaultCursorField(Lists.newArrayList(FIELD_NAME))
+        .withDefaultCursorField(List.of(FIELD_NAME))
         .withSourceDefinedCursor(false)
         .withSupportedSyncModes(List.of(io.airbyte.protocol.models.SyncMode.FULL_REFRESH, io.airbyte.protocol.models.SyncMode.INCREMENTAL));
   }
 
   public static AirbyteCatalog generateBasicApiCatalog() {
-    return new AirbyteCatalog().streams(Lists.newArrayList(new AirbyteStreamAndConfiguration()
+    final List<AirbyteStreamAndConfiguration> streams = new ArrayList<>();
+    streams.add(new AirbyteStreamAndConfiguration()
         .stream(generateBasicApiStream(null))
-        .config(generateBasicApiStreamConfig(null))));
+        .config(generateBasicApiStreamConfig(null)));
+    return new AirbyteCatalog().streams(streams);
   }
 
   /**
@@ -368,7 +368,7 @@ public class ConnectionHelpers {
    * @return AirbyteCatalog
    */
   public static AirbyteCatalog generateApiCatalogWithTwoFields() {
-    return new AirbyteCatalog().streams(Lists.newArrayList(new AirbyteStreamAndConfiguration()
+    return new AirbyteCatalog().streams(List.of(new AirbyteStreamAndConfiguration()
         .stream(generateApiStreamWithTwoFields())
         .config(generateBasicApiStreamConfig(null))));
   }
@@ -399,21 +399,23 @@ public class ConnectionHelpers {
   private static AirbyteStreamConfiguration generateBasicApiStreamConfig(final String nameSuffix) {
     return new AirbyteStreamConfiguration()
         .syncMode(SyncMode.INCREMENTAL)
-        .cursorField(Lists.newArrayList(FIELD_NAME))
+        .cursorField(List.of(FIELD_NAME))
         .destinationSyncMode(io.airbyte.api.model.generated.DestinationSyncMode.APPEND)
-        .primaryKey(Collections.emptyList())
+        .primaryKey(List.of())
         .aliasName(Names.toAlphanumericAndUnderscore(nameSuffix == null ? STREAM_NAME : STREAM_NAME_BASE + nameSuffix))
         .selected(true)
-        .fieldSelectionEnabled(false);
+        .suggested(false)
+        .fieldSelectionEnabled(false)
+        .selectedFields(new ArrayList<>());
   }
 
   private static AirbyteStream generateBasicApiStream(final String nameSuffix) {
     return new AirbyteStream()
         .name(nameSuffix == null ? STREAM_NAME : STREAM_NAME_BASE + nameSuffix)
         .jsonSchema(generateBasicJsonSchema())
-        .defaultCursorField(Lists.newArrayList(FIELD_NAME))
+        .defaultCursorField(List.of(FIELD_NAME))
         .sourceDefinedCursor(false)
-        .sourceDefinedPrimaryKey(Collections.emptyList())
+        .sourceDefinedPrimaryKey(List.of())
         .supportedSyncModes(List.of(SyncMode.FULL_REFRESH, SyncMode.INCREMENTAL));
   }
 
@@ -421,9 +423,9 @@ public class ConnectionHelpers {
     return new AirbyteStream()
         .name(STREAM_NAME)
         .jsonSchema(generateJsonSchemaWithTwoFields())
-        .defaultCursorField(Lists.newArrayList(FIELD_NAME))
+        .defaultCursorField(List.of(FIELD_NAME))
         .sourceDefinedCursor(false)
-        .sourceDefinedPrimaryKey(Collections.emptyList())
+        .sourceDefinedPrimaryKey(List.of())
         .supportedSyncModes(List.of(SyncMode.FULL_REFRESH, SyncMode.INCREMENTAL));
   }
 
@@ -432,9 +434,9 @@ public class ConnectionHelpers {
         .namespace(namespace.orElse(STREAM_NAMESPACE))
         .name(name.orElse(STREAM_NAME))
         .jsonSchema(generateJsonSchemaWithTwoFields())
-        .defaultCursorField(Lists.newArrayList(FIELD_NAME))
+        .defaultCursorField(List.of(FIELD_NAME))
         .sourceDefinedCursor(false)
-        .sourceDefinedPrimaryKey(Collections.emptyList())
+        .sourceDefinedPrimaryKey(List.of())
         .supportedSyncModes(List.of(SyncMode.FULL_REFRESH, SyncMode.INCREMENTAL));
   }
 

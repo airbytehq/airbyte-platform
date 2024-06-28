@@ -270,7 +270,7 @@ secrets: {}
 #   # Miscellaneous
 #   TRACKING_STRATEGY: segment
 #   WEBAPP_URL: airbyte-webapp-svc:80
-#   INTERNAL_API_HOST: airbyte-server-svc:8001
+#   INTERNAL_API_HOST: http://airbyte-server-svc:8001
 env_vars: {}
 
 ## extraSelectorLabels [object] - use to specify own additional selector labels for deployment

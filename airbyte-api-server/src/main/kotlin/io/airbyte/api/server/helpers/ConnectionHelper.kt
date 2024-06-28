@@ -22,7 +22,7 @@ object ConnectionHelper {
     return if (namespaceDefinitionEnum === NamespaceDefinitionEnum.CUSTOM_FORMAT) {
       NamespaceDefinitionType.CUSTOMFORMAT
     } else {
-      NamespaceDefinitionType.fromValue(namespaceDefinitionEnum.toString())
+      NamespaceDefinitionType.decode(namespaceDefinitionEnum) ?: NamespaceDefinitionType.DESTINATION
     }
   }
 
@@ -33,7 +33,7 @@ object ConnectionHelper {
     return if (namespaceDefinitionEnum === NamespaceDefinitionEnumNoDefault.CUSTOM_FORMAT) {
       NamespaceDefinitionType.CUSTOMFORMAT
     } else {
-      NamespaceDefinitionType.fromValue(namespaceDefinitionEnum.toString())
+      NamespaceDefinitionType.decode(namespaceDefinitionEnum) ?: NamespaceDefinitionType.DESTINATION
     }
   }
 
@@ -46,7 +46,7 @@ object ConnectionHelper {
     return if (nonBreakingSchemaUpdatesBehaviorEnum === NonBreakingSchemaUpdatesBehaviorEnum.DISABLE_CONNECTION) {
       NonBreakingChangesPreference.DISABLE
     } else {
-      NonBreakingChangesPreference.fromValue(nonBreakingSchemaUpdatesBehaviorEnum.toString())
+      NonBreakingChangesPreference.decode(nonBreakingSchemaUpdatesBehaviorEnum) ?: NonBreakingChangesPreference.IGNORE
     }
   }
 
@@ -59,7 +59,7 @@ object ConnectionHelper {
     return if (nonBreakingSchemaUpdatesBehaviorEnum === NonBreakingSchemaUpdatesBehaviorEnumNoDefault.DISABLE_CONNECTION) {
       NonBreakingChangesPreference.DISABLE
     } else {
-      NonBreakingChangesPreference.fromValue(nonBreakingSchemaUpdatesBehaviorEnum.toString())
+      NonBreakingChangesPreference.decode(nonBreakingSchemaUpdatesBehaviorEnum) ?: NonBreakingChangesPreference.IGNORE
     }
   }
 }

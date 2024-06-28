@@ -14,7 +14,6 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.google.common.annotations.VisibleForTesting;
 import datadog.trace.api.Trace;
 import io.airbyte.api.client.AirbyteApiClient;
-import io.airbyte.api.client.invoker.generated.ApiException;
 import io.airbyte.api.client.model.generated.ConnectionIdRequestBody;
 import io.airbyte.api.client.model.generated.Geography;
 import io.airbyte.api.client.model.generated.ScopeType;
@@ -28,6 +27,7 @@ import io.airbyte.commons.json.Jsons;
 import io.airbyte.commons.protocol.AirbyteMessageSerDeProvider;
 import io.airbyte.commons.protocol.AirbyteProtocolVersionedMigratorFactory;
 import io.airbyte.commons.temporal.HeartbeatUtils;
+import io.airbyte.commons.temporal.TemporalUtils;
 import io.airbyte.commons.workers.config.WorkerConfigs;
 import io.airbyte.commons.workers.config.WorkerConfigsProvider;
 import io.airbyte.commons.workers.config.WorkerConfigsProvider.ResourceType;
@@ -44,7 +44,7 @@ import io.airbyte.config.secrets.persistence.RuntimeSecretPersistence;
 import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.featureflag.Organization;
 import io.airbyte.featureflag.UseRuntimeSecretPersistence;
-import io.airbyte.featureflag.UseWorkloadApiForDiscover;
+import io.airbyte.featureflag.UseWorkloadApi;
 import io.airbyte.featureflag.WorkloadCheckFrequencyInSeconds;
 import io.airbyte.featureflag.Workspace;
 import io.airbyte.metrics.lib.ApmTraceUtils;
@@ -78,6 +78,7 @@ import io.temporal.activity.Activity;
 import io.temporal.activity.ActivityExecutionContext;
 import jakarta.inject.Named;
 import jakarta.inject.Singleton;
+import java.io.IOException;
 import java.nio.file.Path;
 import java.util.Collections;
 import java.util.List;
@@ -159,11 +160,11 @@ public class DiscoverCatalogActivityImpl implements DiscoverCatalogActivity {
     if (organizationId != null && featureFlagClient.boolVariation(UseRuntimeSecretPersistence.INSTANCE, new Organization(organizationId))) {
       try {
         final SecretPersistenceConfig secretPersistenceConfig = airbyteApiClient.getSecretPersistenceConfigApi().getSecretsPersistenceConfig(
-            new SecretPersistenceConfigGetRequestBody().scopeType(ScopeType.ORGANIZATION).scopeId(organizationId));
+            new SecretPersistenceConfigGetRequestBody(ScopeType.ORGANIZATION, organizationId));
         final RuntimeSecretPersistence runtimeSecretPersistence =
             SecretPersistenceConfigHelper.fromApiSecretPersistenceConfig(secretPersistenceConfig);
         fullConfig = secretsRepositoryReader.hydrateConfigFromRuntimeSecretPersistence(config.getConnectionConfiguration(), runtimeSecretPersistence);
-      } catch (final ApiException e) {
+      } catch (final IOException e) {
         throw new RuntimeException(e);
       }
     } else {
@@ -220,7 +221,7 @@ public class DiscoverCatalogActivityImpl implements DiscoverCatalogActivity {
             new WorkloadLabel(Metadata.WORKSPACE_LABEL_KEY, workspaceId.toString()),
             new WorkloadLabel(Metadata.ACTOR_TYPE, String.valueOf(ActorType.SOURCE.toString()))),
         serializedInput,
-        fullLogPath(Path.of(workloadId)),
+        fullLogPath(TemporalUtils.getJobRoot(workspaceRoot, jobId, attemptNumber)),
         geo.getValue(),
         WorkloadType.DISCOVER,
         WorkloadPriority.Companion.decode(input.getLauncherConfig().getPriority().toString()),
@@ -243,7 +244,7 @@ public class DiscoverCatalogActivityImpl implements DiscoverCatalogActivity {
 
   @Override
   public boolean shouldUseWorkload(final UUID workspaceId) {
-    return featureFlagClient.boolVariation(UseWorkloadApiForDiscover.INSTANCE, new Workspace(workspaceId));
+    return featureFlagClient.boolVariation(UseWorkloadApi.INSTANCE, new Workspace(workspaceId));
   }
 
   @Override
@@ -268,17 +269,17 @@ public class DiscoverCatalogActivityImpl implements DiscoverCatalogActivity {
       return maybeConnectionId
           .map(connectionId -> {
             try {
-              return airbyteApiClient.getConnectionApi().getConnection(new ConnectionIdRequestBody().connectionId(connectionId)).getGeography();
-            } catch (final ApiException e) {
+              return airbyteApiClient.getConnectionApi().getConnection(new ConnectionIdRequestBody(connectionId)).getGeography();
+            } catch (final IOException e) {
               throw new RuntimeException(e);
             }
           }).orElse(
               maybeWorkspaceId.map(
                   workspaceId -> {
                     try {
-                      return airbyteApiClient.getWorkspaceApi().getWorkspace(new WorkspaceIdRequestBody().workspaceId(workspaceId))
+                      return airbyteApiClient.getWorkspaceApi().getWorkspace(new WorkspaceIdRequestBody(workspaceId, false))
                           .getDefaultGeography();
-                    } catch (final ApiException e) {
+                    } catch (final IOException e) {
                       throw new RuntimeException(e);
                     }
                   })

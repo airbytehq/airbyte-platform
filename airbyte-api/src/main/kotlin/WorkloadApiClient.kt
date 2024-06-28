@@ -37,15 +37,10 @@ import okhttp3.Response
 @SuppressWarnings("Parameter")
 @Singleton
 @Requires(property = "airbyte.workload-api.base-path")
-class WorkloadApiClient {
-  val workloadApi: WorkloadApi
-
-  @JvmOverloads
-  constructor(
-    @Value("\${airbyte.workload-api.base-path}") basePath: String,
-    @Named("workloadApiClientRetryPolicy") policy: RetryPolicy<Response>,
-    @Named("workloadApiOkHttpClient") httpClient: OkHttpClient,
-  ) {
-    workloadApi = WorkloadApi(basePath = basePath, client = httpClient, policy = policy)
-  }
+class WorkloadApiClient(
+  @Value("\${airbyte.workload-api.base-path}") basePath: String,
+  @Named("workloadApiClientRetryPolicy") policy: RetryPolicy<Response>,
+  @Named("workloadApiOkHttpClient") httpClient: OkHttpClient,
+) {
+  val workloadApi = WorkloadApi(basePath = basePath, client = httpClient, policy = policy)
 }

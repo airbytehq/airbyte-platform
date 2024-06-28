@@ -29,13 +29,8 @@ val airbyteProtocol by configurations.creating
 val jdbc by configurations.creating
 
 configurations.all {
-  // The quartz-scheduler brings in a really old version(of hikari, we do not want to inherit this version.)
+  // The quartz-scheduler brings in an outdated version(of hikari, we do not want to inherit this version.)
   exclude(group = "com.zaxxer", module = "HikariCP-java7")
-  resolutionStrategy {
-    // Ensure that the versions defined in deps.toml are used)
-    // instead of versions from transitive dependencies)
-    force(libs.flyway.core, libs.jooq, libs.s3, libs.aws.java.sdk.s3, libs.sts, libs.aws.java.sdk.sts)
-  }
 }
 
 dependencies {
@@ -43,6 +38,9 @@ dependencies {
   annotationProcessor(libs.lombok)     // Lombok must be added BEFORE Micronaut
   annotationProcessor(platform(libs.micronaut.platform))
   annotationProcessor(libs.bundles.micronaut.annotation.processor)
+
+  ksp(platform(libs.micronaut.platform))
+  ksp(libs.bundles.micronaut.annotation.processor)
 
   implementation(libs.spotbugs.annotations)
   implementation(platform(libs.micronaut.platform))
@@ -165,7 +163,7 @@ tasks.register<Test>("cloudStorageIntegrationTest") {
   }
 }
 
-// Duplicated in :airbyte-container-orchestrator, eventually, this should be handled in :airbyte-protocol)
+// Duplicated in :airbyte-container-orchestrator, eventually, this should be handled in :airbyte-protocol
 val generateWellKnownTypes = tasks.register("generateWellKnownTypes") {
   inputs.files(airbyteProtocol) // declaring inputs)
   val targetFile = project.file("build/airbyte/docker/WellKnownTypes.json")
@@ -192,4 +190,11 @@ tasks.named("dockerCopyDistribution") {
 fun yamlToJson(rawYaml: String): String {
   val mappedYaml: Any = YAMLMapper().registerKotlinModule().readValue(rawYaml)
   return ObjectMapper().registerKotlinModule().writeValueAsString(mappedYaml)
+}
+
+// The DuplicatesStrategy will be required while this module is mixture of kotlin and java _with_ lombok dependencies.
+// By default, runs all annotation(processors and disables annotation(processing by javac, however).  Once lombok has
+// been removed, this can also be removed.
+tasks.withType<Jar>().configureEach {
+  duplicatesStrategy = DuplicatesStrategy.EXCLUDE
 }

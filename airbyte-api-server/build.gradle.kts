@@ -5,18 +5,16 @@ plugins {
   id("io.airbyte.gradle.jvm.lib")
   id("io.airbyte.gradle.publish")
   id("io.airbyte.gradle.docker")
-  kotlin("jvm")
-  kotlin("kapt")
 }
 
 dependencies {
-  kapt(platform(libs.micronaut.platform))
-  kapt(libs.bundles.micronaut.annotation.processor)
-  kapt(libs.micronaut.jaxrs.processor)
+  ksp(platform(libs.micronaut.platform))
+  ksp(libs.bundles.micronaut.annotation.processor)
+  ksp(libs.micronaut.jaxrs.processor)
 
-  kaptTest(platform(libs.micronaut.platform))
-  kaptTest(libs.bundles.micronaut.test.annotation.processor)
-  kaptTest(libs.micronaut.jaxrs.processor)
+  kspTest(platform(libs.micronaut.platform))
+  kspTest(libs.bundles.micronaut.test.annotation.processor)
+  kspTest(libs.micronaut.jaxrs.processor)
 
   annotationProcessor(platform(libs.micronaut.platform))
   annotationProcessor(libs.bundles.micronaut.annotation.processor)
@@ -25,6 +23,7 @@ dependencies {
   implementation(project(":airbyte-analytics"))
   implementation(project(":airbyte-api"))
   implementation(project(":airbyte-commons"))
+  implementation(project(":airbyte-commons-micronaut"))
   implementation(project(":airbyte-config:config-models"))
   implementation(platform(libs.micronaut.platform))
   implementation(libs.cron.utils)
@@ -56,10 +55,6 @@ dependencies {
   testImplementation(libs.mockwebserver)
   testImplementation(libs.mockito.inline)
   testImplementation(libs.mockk)
-}
-
-kapt {
-  correctErrorTypes = true
 }
 
 val env = Properties().apply {
@@ -98,9 +93,9 @@ tasks.named<Test>("test") {
   )
 }
 
-// Even though Kotlin is excluded on Spotbugs, this projects)
-// still runs into spotbug issues. Working theory is that)
-// generated code is being picked up. Disable as a short-term fix.)
+// Even though Kotlin is excluded on Spotbugs, this projects
+// still runs into SpotBugs issues. Working theory is that
+// generated code is being picked up. Disable as a short-term fix.
 tasks.named("spotbugsMain") {
   enabled = false
 }

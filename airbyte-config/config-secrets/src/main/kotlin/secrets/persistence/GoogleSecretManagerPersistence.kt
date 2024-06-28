@@ -7,11 +7,12 @@ package io.airbyte.config.secrets.persistence
 import com.google.api.gax.core.FixedCredentialsProvider
 import com.google.api.gax.rpc.NotFoundException
 import com.google.auth.oauth2.ServiceAccountCredentials
-import com.google.cloud.Timestamp
+import com.google.cloud.secretmanager.v1.ListSecretVersionsRequest
 import com.google.cloud.secretmanager.v1.ProjectName
 import com.google.cloud.secretmanager.v1.Replication
 import com.google.cloud.secretmanager.v1.Secret
 import com.google.cloud.secretmanager.v1.SecretManagerServiceClient
+import com.google.cloud.secretmanager.v1.SecretManagerServiceClient.ListSecretVersionsPagedResponse
 import com.google.cloud.secretmanager.v1.SecretManagerServiceSettings
 import com.google.cloud.secretmanager.v1.SecretName
 import com.google.cloud.secretmanager.v1.SecretPayload
@@ -118,7 +119,20 @@ class GoogleSecretManagerPersistence(
     googleSecretManagerServiceClient.createClient().use { client ->
       val secretName = SecretName.of(gcpProjectId, coordinate.fullCoordinate)
       client.deleteSecret(secretName)
-      metricClient.count(OssMetricsRegistry.DELETE_SECRET_DEFAULT_STORE, 1)
+    }
+  }
+
+  override fun disable(coordinate: SecretCoordinate) {
+    googleSecretManagerServiceClient.createClient().use { client ->
+      val secretVersionName = SecretName.of(gcpProjectId, coordinate.fullCoordinate)
+      val request = ListSecretVersionsRequest.newBuilder().setParent(secretVersionName.toString()).build()
+
+      val response: ListSecretVersionsPagedResponse = client.listSecretVersions(request)
+      response.iterateAll().forEach { secret ->
+        val version = secret.name.split("/").last()
+        val versionName = SecretVersionName.of(gcpProjectId, coordinate.fullCoordinate, version)
+        client.disableSecretVersion(versionName)
+      }
     }
   }
 }

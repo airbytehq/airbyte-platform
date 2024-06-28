@@ -2,8 +2,6 @@ plugins {
   id("io.airbyte.gradle.jvm.lib")
   id("io.airbyte.gradle.publish")
   `java-test-fixtures`
-  kotlin("jvm")
-  kotlin("kapt")
 }
 
 configurations.all {
@@ -15,8 +13,8 @@ dependencies {
   annotationProcessor(libs.lombok)     // Lombok must be added BEFORE Micronaut
   annotationProcessor(libs.bundles.micronaut.annotation.processor)
 
-  kapt(platform(libs.micronaut.platform))
-  kapt(libs.bundles.micronaut.annotation.processor)
+  ksp(platform(libs.micronaut.platform))
+  ksp(libs.bundles.micronaut.annotation.processor)
 
   api(libs.bundles.micronaut.annotation)
 
@@ -37,6 +35,7 @@ dependencies {
   implementation(libs.jackson.databind)
   implementation(libs.bundles.micronaut.data.jdbc)
   implementation(libs.bundles.micronaut.kotlin)
+  implementation(libs.bundles.datadog)
 
   testImplementation(libs.hamcrest.all)
   testImplementation(libs.platform.testcontainers.postgresql)
@@ -49,8 +48,8 @@ dependencies {
   testImplementation(libs.bundles.micronaut.test)
   testImplementation(libs.mockk)
 
-  kaptTest(platform(libs.micronaut.platform))
-  kaptTest(libs.bundles.micronaut.test.annotation.processor)
+  kspTest(platform(libs.micronaut.platform))
+  kspTest(libs.bundles.micronaut.test.annotation.processor)
 
   testRuntimeOnly(libs.junit.jupiter.engine)
 
@@ -67,11 +66,9 @@ dependencies {
   testFixturesAnnotationProcessor(libs.lombok)
 }
 
-// The DuplicatesStrategy will be required while this module is mixture of kotlin and java _with_ lombok dependencies.)
-// Kapt, by default, runs all annotation(processors and disables annotation(processing by javac, however)
-// this default behavior(breaks the lombok java annotation(processor.  To avoid(lombok breaking, ksp(has)
-// keepJavacAnnotationProcessors enabled, which causes duplicate META-INF files to be generated.)
-// Once lombok has been removed, this can also be removed.)
+// The DuplicatesStrategy will be required while this module is mixture of kotlin and java _with_ lombok dependencies.
+// By default, runs all annotation(processors and disables annotation(processing by javac, however).  Once lombok has
+// been removed, this can also be removed.
 tasks.withType<Jar>().configureEach {
   duplicatesStrategy = DuplicatesStrategy.EXCLUDE
 }

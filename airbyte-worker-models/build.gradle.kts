@@ -21,7 +21,7 @@ dependencies {
 jsonSchema2Pojo {
   setSourceType(SourceType.YAMLSCHEMA.name)
   setSource(files("${sourceSets["main"].output.resourcesDir}/workers_models"))
-  targetDirectory = file("$buildDir/generated/src/gen/java/")
+  targetDirectory = file("${project.layout.buildDirectory.get()}/generated/src/gen/java/")
   removeOldOutput = true
 
   targetPackage = "io.airbyte.persistence.job.models"

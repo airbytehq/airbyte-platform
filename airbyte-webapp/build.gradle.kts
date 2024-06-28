@@ -44,6 +44,7 @@ val pnpmVer = engines?.get("pnpm")?.toString()?.trim()  // Extract 'pnpm' as Str
 val outsideWebappDependencies = listOf(
     "../airbyte-api/src/main/openapi/config.yaml",
     "../airbyte-api/src/main/openapi/cloud-config.yaml",
+    "../airbyte-api/src/main/openapi/api-problems.yaml",
     "../airbyte-connector-builder-server/src/main/openapi/openapi.yaml",
     "../airbyte-connector-builder-resources/CDK_VERSION",
 )
@@ -119,7 +120,7 @@ tasks.register<PnpmTask>("cypress") {
     we'll record the cypress session, otherwise we're not recording
     */
     val hasRecordingKey = !System.getenv("CYPRESS_RECORD_KEY").isNullOrEmpty()
-    args = if (hasRecordingKey) {
+    args = if (hasRecordingKey && System.getProperty("cypressRecord", "false") == "true") {
         listOf("run", "cypress:run", "--record")
     } else {
         listOf("run", "cypress:run")
@@ -136,7 +137,7 @@ tasks.register<PnpmTask>("cypressCloud") {
     dependsOn(tasks.named("pnpmInstall"))
 
     val hasRecordingKey = !System.getenv("CYPRESS_RECORD_KEY").isNullOrEmpty()
-    args = if (hasRecordingKey) {
+    args = if (hasRecordingKey && System.getProperty("cypressRecord", "false") == "true") {
         listOf("run", "cloud-test:stage", "--record")
     } else {
         listOf("run", "cloud-test:stage")
@@ -193,6 +194,16 @@ tasks.register<PnpmTask>("unusedCode") {
     outputs.upToDateWhen { true }
 }
 
+tasks.register<PnpmTask>("prettier") {
+    dependsOn(tasks.named("pnpmInstall"))
+
+    args = listOf("run", "prettier:ci")
+
+    inputs.files(allFiles)
+
+    outputs.upToDateWhen { true }
+}
+
 tasks.register<PnpmTask>("buildStorybook") {
     dependsOn(tasks.named("pnpmInstall"))
 
@@ -221,7 +232,7 @@ tasks.register<Copy>("copyNginx") {
 
 // Those tasks should be run as part of the "check" task
 tasks.named("check") {
-    dependsOn(tasks.named("licenseCheck"), tasks.named("validateLock"), tasks.named("unusedCode"), tasks.named("test"))
+    dependsOn(tasks.named("licenseCheck"), tasks.named("validateLock"), tasks.named("unusedCode"), tasks.named("prettier"), tasks.named("test"))
 }
 
 // Some check tasks only should be run on CI, thus a separate ciCheck task

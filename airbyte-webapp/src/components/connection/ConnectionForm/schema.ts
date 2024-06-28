@@ -81,6 +81,7 @@ const streamSchema: SchemaOf<AirbyteStream> = yup.object({
   defaultCursorField: yup.array().of(yup.string()).optional(),
   sourceDefinedPrimaryKey: yup.array().of(yup.array().of(yup.string())).optional(),
   namespace: yup.string().optional(),
+  isResumable: yup.boolean().optional(),
 });
 
 /**

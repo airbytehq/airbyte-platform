@@ -4,15 +4,20 @@
 
 package io.airbyte.data.services.impls.keycloak;
 
+import io.airbyte.commons.auth.RequiresAuthMode;
 import io.airbyte.commons.auth.config.AirbyteKeycloakConfiguration;
-import io.airbyte.commons.license.annotation.RequiresAirbyteProEnabled;
+import io.airbyte.commons.auth.config.AuthMode;
+import io.airbyte.commons.auth.keycloak.ClientScopeConfigurator;
+import io.airbyte.commons.auth.support.UserAuthenticationResolver;
 import io.airbyte.config.Application;
 import io.airbyte.config.User;
 import io.airbyte.data.services.ApplicationService;
 import jakarta.annotation.Nonnull;
+import jakarta.inject.Named;
 import jakarta.inject.Singleton;
 import jakarta.ws.rs.BadRequestException;
 import jakarta.ws.rs.core.Response;
+import java.time.Duration;
 import java.time.Instant;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
@@ -25,16 +30,18 @@ import java.util.Optional;
 import java.util.UUID;
 import org.keycloak.admin.client.Keycloak;
 import org.keycloak.admin.client.KeycloakBuilder;
+import org.keycloak.admin.client.resource.ClientsResource;
+import org.keycloak.admin.client.resource.RealmResource;
+import org.keycloak.admin.client.resource.UsersResource;
 import org.keycloak.representations.idm.ClientRepresentation;
 
 /**
  * Application Service for Keycloak.
  * <p>
  * An Application for a user or non-user entity i.e. an organization.
- *
  */
 @Singleton
-@RequiresAirbyteProEnabled
+@RequiresAuthMode(AuthMode.OIDC)
 public class ApplicationServiceKeycloakImpl implements ApplicationService {
 
   // This number should be kept low or this code will start to do a lot of work.
@@ -43,12 +50,21 @@ public class ApplicationServiceKeycloakImpl implements ApplicationService {
   public static final String CLIENT_ID = "client_id";
   private final AirbyteKeycloakConfiguration keycloakConfiguration;
   private final Keycloak keycloakAdminClient;
+  private final UserAuthenticationResolver userAuthenticationResolver;
+  private final ClientScopeConfigurator clientScopeConfigurator;
+  private final Duration accessTokenExpirationTime;
 
   public ApplicationServiceKeycloakImpl(
                                         final Keycloak keycloakAdminClient,
-                                        final AirbyteKeycloakConfiguration keycloakConfiguration) {
+                                        final AirbyteKeycloakConfiguration keycloakConfiguration,
+                                        final UserAuthenticationResolver userAuthenticationResolver,
+                                        final ClientScopeConfigurator clientScopeConfigurator,
+                                        @Named("access-token-expiration-time") final Duration accessTokenExpirationTime) {
     this.keycloakAdminClient = keycloakAdminClient;
     this.keycloakConfiguration = keycloakConfiguration;
+    this.userAuthenticationResolver = userAuthenticationResolver;
+    this.clientScopeConfigurator = clientScopeConfigurator;
+    this.accessTokenExpirationTime = accessTokenExpirationTime;
   }
 
   /**
@@ -62,6 +78,16 @@ public class ApplicationServiceKeycloakImpl implements ApplicationService {
   @SuppressWarnings("PMD.PreserveStackTrace")
   public Application createApplication(final User user, final String name) {
     try {
+      final String userRealmName = getCurrentUserRealmName();
+      final RealmResource realmResource = keycloakAdminClient.realm(userRealmName);
+      final ClientsResource clientsResource = realmResource.clients();
+      final UsersResource usersResource = realmResource.users();
+
+      // Ensure realm is configured with the correct client scopes and mappers. For now,
+      // we call this every time a new application is created, even if the realm is already
+      // configured. It is an idempotent operation.
+      clientScopeConfigurator.configureClientScope(realmResource);
+
       final var existingClients = listApplicationsByUser(user);
       if (existingClients.size() >= MAX_CREDENTIALS) {
         throw new BadRequestException("User already has 2 Applications");
@@ -72,24 +98,19 @@ public class ApplicationServiceKeycloakImpl implements ApplicationService {
         throw new BadRequestException("User already has a key with this name");
       }
       final var clientRepresentation = buildClientRepresentation(user, name, existingClients.size());
-      final var response = keycloakAdminClient
-          .realm(keycloakConfiguration.getClientRealm())
-          .clients()
-          .create(clientRepresentation);
 
-      if (response.getStatus() != Response.Status.CREATED.getStatusCode()) {
-        throw new BadRequestException("Unable to create Application");
+      try (var response = realmResource.clients().create(clientRepresentation)) {
+        if (response.getStatus() != Response.Status.CREATED.getStatusCode()) {
+          throw new BadRequestException("Unable to create Application");
+        }
       }
 
-      final var client = keycloakAdminClient
-          .realm(keycloakConfiguration.getClientRealm())
+      final var client = realmResource
           .clients()
           .findByClientId(clientRepresentation.getClientId())
           .getFirst();
 
-      final var serviceAccountUser = keycloakAdminClient
-          .realm(keycloakConfiguration.getClientRealm())
-          .clients()
+      final var serviceAccountUser = clientsResource
           .get(client.getId())
           .getServiceAccountUser();
 
@@ -97,9 +118,8 @@ public class ApplicationServiceKeycloakImpl implements ApplicationService {
           Map.of(
               USER_ID, List.of(String.valueOf(user.getAuthUserId())),
               CLIENT_ID, List.of(client.getClientId())));
-      keycloakAdminClient
-          .realm(keycloakConfiguration.getClientRealm())
-          .users()
+
+      usersResource
           .get(serviceAccountUser.getId())
           .update(serviceAccountUser);
 
@@ -118,16 +138,19 @@ public class ApplicationServiceKeycloakImpl implements ApplicationService {
   @Override
   public List<Application> listApplicationsByUser(final User user) {
     final var clientUsers = keycloakAdminClient
-        .realm(keycloakConfiguration.getClientRealm())
+        .realm(getCurrentUserRealmName())
         .users()
         .searchByAttributes(USER_ID + ":" + user.getAuthUserId());
 
     final var existingClient = new ArrayList<ClientRepresentation>();
     for (final var clientUser : clientUsers) {
       final var client = keycloakAdminClient
-          .realm(keycloakConfiguration.getClientRealm())
+          .realm(getCurrentUserRealmName())
           .clients()
-          .findByClientId(clientUser.getAttributes().get(CLIENT_ID).getFirst())
+          .findByClientId(clientUser
+              .getAttributes()
+              .get(CLIENT_ID)
+              .getFirst())
           .stream()
           .findFirst();
 
@@ -148,8 +171,9 @@ public class ApplicationServiceKeycloakImpl implements ApplicationService {
    */
   @Override
   public Optional<Application> deleteApplication(final User user, final String applicationId) {
+    final var userRealm = getCurrentUserRealmName();
     final var client = keycloakAdminClient
-        .realm(keycloakConfiguration.getClientRealm())
+        .realm(getCurrentUserRealmName())
         .clients()
         .findByClientId(applicationId)
         .stream()
@@ -167,7 +191,7 @@ public class ApplicationServiceKeycloakImpl implements ApplicationService {
     }
 
     keycloakAdminClient
-        .realm(keycloakConfiguration.getClientRealm())
+        .realm(userRealm)
         .clients()
         .get(client.get().getId())
         .remove();
@@ -184,10 +208,11 @@ public class ApplicationServiceKeycloakImpl implements ApplicationService {
    */
   @Override
   public String getToken(final String clientId, final String clientSecret) {
+    final var userRealm = getCurrentUserRealmName();
     final var keycloakClient = KeycloakBuilder
         .builder()
         .serverUrl(keycloakConfiguration.getServerUrl())
-        .realm(keycloakConfiguration.getClientRealm())
+        .realm(userRealm)
         .grantType("client_credentials")
         .clientId(clientId)
         .clientSecret(clientSecret)
@@ -228,10 +253,10 @@ public class ApplicationServiceKeycloakImpl implements ApplicationService {
     client.setName(name);
 
     final var attributes = new HashMap<String, String>();
-    attributes.put(USER_ID, String.valueOf(user.getAuthUserId()));
-    attributes.put("user_id", String.valueOf(user.getUserId()));
     attributes.put("access.token.signed.response.alg", "RS256");
-    attributes.put("access.token.lifespan", "31536000");
+    // Note: No matter the configured value, this is limited to keycloak's Realm settings -> sessions ->
+    // SSO Session Max
+    attributes.put("access.token.lifespan", String.valueOf(accessTokenExpirationTime.getSeconds()));
     attributes.put("use.refresh.tokens", "false");
     client.setAttributes(attributes);
 
@@ -255,6 +280,11 @@ public class ApplicationServiceKeycloakImpl implements ApplicationService {
                 Instant.ofEpochSecond(
                     Long.parseLong(client.getAttributes().get("client.secret.creation.time"))),
                 ZoneOffset.UTC).format(DateTimeFormatter.ISO_DATE_TIME));
+  }
+
+  private String getCurrentUserRealmName() {
+    return userAuthenticationResolver.resolveSsoRealm().orElseThrow(
+        () -> new BadRequestException("Could not determine realm for current user"));
   }
 
 }

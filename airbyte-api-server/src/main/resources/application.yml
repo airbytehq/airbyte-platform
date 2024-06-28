@@ -21,9 +21,9 @@ micronaut:
     binders:
       netty:
         bytebuf-allocators:
-          enabled: true
+          enabled: false
         channels:
-          enabled: true
+          enabled: false
         queues:
           enabled: true
     export:
@@ -46,7 +46,7 @@ micronaut:
             - ^.*$
     netty:
       access-logger:
-        enabled: ${HTTP_ACCESS_LOG_ENABLED:true}
+        enabled: ${HTTP_ACCESS_LOG_ENABLED:false}
     idle-timeout: ${HTTP_IDLE_TIMEOUT:10m}
     thread-selection: auto
   http:
@@ -91,9 +91,6 @@ airbyte:
     max-version: ${AIRBYTE_PROTOCOL_VERSION_MAX:0.3.0}
   api:
     host: ${AIRBYTE_API_HOST}
-  internal:
-    api:
-      host: ${INTERNAL_API_HOST}
     documentation:
       host: https://reference.airbyte.com/
 
@@ -130,6 +127,14 @@ endpoints:
   threaddump:
     enabled: true
     sensitive: true
+
+jackson:
+  mapper:
+    ACCEPT_CASE_INSENSITIVE_ENUMS: true
+  deserialization:
+    READ_ENUMS_USING_TO_STRING: true
+  serialization:
+    WRITE_ENUMS_USING_TO_STRING: true
 
 logger:
   levels:

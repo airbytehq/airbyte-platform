@@ -2,16 +2,16 @@ import { useCallback } from "react";
 import { useIntl } from "react-intl";
 
 import { useDbtCloudServiceToken } from "core/api/cloud";
+import { useFormatError } from "core/errors";
 import { useConfirmationModalService } from "hooks/services/ConfirmationModal";
 import { useNotificationService } from "hooks/services/Notification";
-
-import { cleanedErrorMessage } from "./DbtCloudSettingsView";
 
 export const useDbtTokenRemovalModal = () => {
   const { openConfirmationModal, closeConfirmationModal } = useConfirmationModalService();
   const { deleteToken } = useDbtCloudServiceToken();
   const { registerNotification } = useNotificationService();
   const { formatMessage } = useIntl();
+  const formatError = useFormatError();
 
   return useCallback(() => {
     openConfirmationModal({
@@ -23,7 +23,7 @@ export const useDbtTokenRemovalModal = () => {
           onError: (e) => {
             registerNotification({
               id: "dbtCloud/delete-token-failure",
-              text: cleanedErrorMessage(e),
+              text: formatError(e),
               type: "error",
             });
           },
@@ -39,5 +39,5 @@ export const useDbtTokenRemovalModal = () => {
       },
       submitButtonDataId: "delete",
     });
-  }, [openConfirmationModal, deleteToken, closeConfirmationModal, registerNotification, formatMessage]);
+  }, [openConfirmationModal, deleteToken, closeConfirmationModal, registerNotification, formatMessage, formatError]);
 };

@@ -57,18 +57,16 @@ object AirbyteCatalogHelper {
    * @param config config to be set
    */
   fun updateConfigDefaultFullRefreshOverwrite(config: AirbyteStreamConfiguration?): AirbyteStreamConfiguration {
-    val updatedStreamConfiguration = AirbyteStreamConfiguration()
-    config?.let {
-      updatedStreamConfiguration.aliasName = config.aliasName
-      updatedStreamConfiguration.cursorField = config.cursorField
-      updatedStreamConfiguration.fieldSelectionEnabled = config.fieldSelectionEnabled
-      updatedStreamConfiguration.selected = config.selected
-      updatedStreamConfiguration.selectedFields = config.selectedFields
-      updatedStreamConfiguration.suggested = config.suggested
-    }
-    updatedStreamConfiguration.destinationSyncMode = DestinationSyncMode.OVERWRITE
-    updatedStreamConfiguration.syncMode = SyncMode.FULL_REFRESH
-    return updatedStreamConfiguration
+    return AirbyteStreamConfiguration(
+      aliasName = config?.aliasName,
+      cursorField = config?.cursorField,
+      fieldSelectionEnabled = config?.fieldSelectionEnabled,
+      selected = config?.selected,
+      selectedFields = config?.selectedFields,
+      suggested = config?.suggested,
+      destinationSyncMode = DestinationSyncMode.OVERWRITE,
+      syncMode = SyncMode.FULL_REFRESH,
+    )
   }
 
   /**
@@ -77,19 +75,15 @@ object AirbyteCatalogHelper {
    * @param airbyteCatalog The catalog to be modified
    */
   fun updateAllStreamsFullRefreshOverwrite(airbyteCatalog: AirbyteCatalog?): AirbyteCatalog {
-    val updatedAirbyteCatalog = AirbyteCatalog()
-    airbyteCatalog?.let {
-      updatedAirbyteCatalog.streams =
-        it.streams.stream().map { stream: AirbyteStreamAndConfiguration ->
-          val updatedAirbyteStreamAndConfiguration =
-            AirbyteStreamAndConfiguration()
-          updatedAirbyteStreamAndConfiguration.config = updateConfigDefaultFullRefreshOverwrite(stream.config)
-          updatedAirbyteStreamAndConfiguration.stream = stream.stream
-          updatedAirbyteStreamAndConfiguration
-        }.toList()
-    }
-
-    return updatedAirbyteCatalog
+    return AirbyteCatalog(
+      streams =
+        airbyteCatalog?.streams?.stream()?.map { stream: AirbyteStreamAndConfiguration ->
+          AirbyteStreamAndConfiguration(
+            config = updateConfigDefaultFullRefreshOverwrite(stream.config),
+            stream = stream.stream,
+          )
+        }?.toList() ?: listOf(),
+    )
   }
 
   /**
@@ -158,7 +152,7 @@ object AirbyteCatalogHelper {
             Integer.valueOf(cronStrings[1])
           }
         } catch (e: NumberFormatException) {
-          log.debug("Invalid cron expression: " + connectionSchedule.cronExpression)
+          log.debug("Invalid cron expression: ${connectionSchedule.cronExpression}")
           log.debug("NumberFormatException: $e")
           throw ConnectionConfigurationProblem.invalidCronExpressionUnderOneHour(connectionSchedule.cronExpression)
         } catch (e: IllegalArgumentException) {
@@ -178,52 +172,93 @@ object AirbyteCatalogHelper {
     airbyteStream: AirbyteStream?,
     streamConfiguration: StreamConfiguration,
   ): AirbyteStreamConfiguration {
-    val updatedStreamConfiguration = AirbyteStreamConfiguration()
-    // Set stream config as selected
-    updatedStreamConfiguration.selected = true
-    updatedStreamConfiguration.aliasName = config?.aliasName
-    updatedStreamConfiguration.fieldSelectionEnabled = config?.fieldSelectionEnabled
-    updatedStreamConfiguration.suggested = config?.suggested
-
-    if (streamConfiguration.syncMode == null) {
-      updatedStreamConfiguration.syncMode = SyncMode.FULL_REFRESH
-      updatedStreamConfiguration.destinationSyncMode = DestinationSyncMode.OVERWRITE
-      updatedStreamConfiguration.cursorField = config?.cursorField
-      updatedStreamConfiguration.primaryKey = config?.primaryKey
-    } else {
-      when (streamConfiguration.syncMode) {
-        ConnectionSyncModeEnum.FULL_REFRESH_APPEND -> {
-          updatedStreamConfiguration.syncMode = SyncMode.FULL_REFRESH
-          updatedStreamConfiguration.destinationSyncMode = DestinationSyncMode.APPEND
-          updatedStreamConfiguration.cursorField = config?.cursorField
-          updatedStreamConfiguration.primaryKey = config?.primaryKey
-        }
-
-        ConnectionSyncModeEnum.INCREMENTAL_APPEND -> {
-          updatedStreamConfiguration.syncMode(SyncMode.INCREMENTAL)
-          updatedStreamConfiguration.destinationSyncMode(DestinationSyncMode.APPEND)
-          updatedStreamConfiguration.cursorField(selectCursorField(airbyteStream, streamConfiguration))
-          updatedStreamConfiguration.primaryKey(selectPrimaryKey(airbyteStream, streamConfiguration))
-        }
-
-        ConnectionSyncModeEnum.INCREMENTAL_DEDUPED_HISTORY -> {
-          updatedStreamConfiguration.syncMode = SyncMode.INCREMENTAL
-          updatedStreamConfiguration.destinationSyncMode = DestinationSyncMode.APPEND_DEDUP
-          updatedStreamConfiguration.cursorField = selectCursorField(airbyteStream, streamConfiguration)
-          updatedStreamConfiguration.primaryKey = selectPrimaryKey(airbyteStream, streamConfiguration)
-        }
-
-        else -> {
-          updatedStreamConfiguration.syncMode = SyncMode.FULL_REFRESH
-          updatedStreamConfiguration.destinationSyncMode = DestinationSyncMode.OVERWRITE
-          updatedStreamConfiguration.cursorField = config?.cursorField
-          updatedStreamConfiguration.primaryKey = config?.primaryKey
-        }
-      }
-    }
+    val updatedStreamConfiguration =
+      AirbyteStreamConfiguration(
+        // Set stream config as selected
+        selected = true,
+        aliasName = config?.aliasName,
+        fieldSelectionEnabled = config?.fieldSelectionEnabled,
+        suggested = config?.suggested,
+        syncMode =
+          if (streamConfiguration.syncMode == null) {
+            SyncMode.FULL_REFRESH
+          } else {
+            getSyncMode(configuredSyncMode = streamConfiguration.syncMode)
+          },
+        destinationSyncMode =
+          if (streamConfiguration.syncMode == null) {
+            DestinationSyncMode.OVERWRITE
+          } else {
+            getDestinationSyncMode(configuredSyncMode = streamConfiguration.syncMode)
+          },
+        cursorField =
+          if (streamConfiguration.syncMode == null) {
+            config?.cursorField
+          } else {
+            getCursorField(
+              configuredSyncMode = streamConfiguration.syncMode,
+              config = config,
+              airbyteStream = airbyteStream,
+              streamConfiguration = streamConfiguration,
+            )
+          },
+        primaryKey =
+          if (streamConfiguration.syncMode == null) {
+            config?.primaryKey
+          } else {
+            getPrimaryKey(
+              configuredSyncMode = streamConfiguration.syncMode,
+              config = config,
+              airbyteStream = airbyteStream,
+              streamConfiguration = streamConfiguration,
+            )
+          },
+      )
 
     return updatedStreamConfiguration
   }
+
+  private fun getSyncMode(configuredSyncMode: ConnectionSyncModeEnum): SyncMode =
+    when (configuredSyncMode) {
+      ConnectionSyncModeEnum.FULL_REFRESH_APPEND -> SyncMode.FULL_REFRESH
+      ConnectionSyncModeEnum.INCREMENTAL_APPEND -> SyncMode.INCREMENTAL
+      ConnectionSyncModeEnum.INCREMENTAL_DEDUPED_HISTORY -> SyncMode.INCREMENTAL
+      else -> SyncMode.FULL_REFRESH
+    }
+
+  private fun getDestinationSyncMode(configuredSyncMode: ConnectionSyncModeEnum): DestinationSyncMode =
+    when (configuredSyncMode) {
+      ConnectionSyncModeEnum.FULL_REFRESH_APPEND -> DestinationSyncMode.APPEND
+      ConnectionSyncModeEnum.INCREMENTAL_APPEND -> DestinationSyncMode.APPEND
+      ConnectionSyncModeEnum.INCREMENTAL_DEDUPED_HISTORY -> DestinationSyncMode.APPEND_DEDUP
+      else -> DestinationSyncMode.OVERWRITE
+    }
+
+  private fun getCursorField(
+    configuredSyncMode: ConnectionSyncModeEnum,
+    config: AirbyteStreamConfiguration?,
+    airbyteStream: AirbyteStream?,
+    streamConfiguration: StreamConfiguration,
+  ): List<String>? =
+    when (configuredSyncMode) {
+      ConnectionSyncModeEnum.FULL_REFRESH_APPEND -> config?.cursorField
+      ConnectionSyncModeEnum.INCREMENTAL_APPEND -> selectCursorField(airbyteStream, streamConfiguration)
+      ConnectionSyncModeEnum.INCREMENTAL_DEDUPED_HISTORY -> selectCursorField(airbyteStream, streamConfiguration)
+      else -> config?.cursorField
+    }
+
+  private fun getPrimaryKey(
+    configuredSyncMode: ConnectionSyncModeEnum,
+    config: AirbyteStreamConfiguration?,
+    airbyteStream: AirbyteStream?,
+    streamConfiguration: StreamConfiguration,
+  ): List<List<String>>? =
+    when (configuredSyncMode) {
+      ConnectionSyncModeEnum.FULL_REFRESH_APPEND -> config?.primaryKey
+      ConnectionSyncModeEnum.INCREMENTAL_APPEND -> selectPrimaryKey(airbyteStream, streamConfiguration)
+      ConnectionSyncModeEnum.INCREMENTAL_DEDUPED_HISTORY -> selectPrimaryKey(airbyteStream, streamConfiguration)
+      else -> config?.primaryKey
+    }
 
   private fun selectCursorField(
     airbyteStream: AirbyteStream?,

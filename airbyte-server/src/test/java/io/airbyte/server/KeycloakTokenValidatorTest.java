@@ -34,6 +34,10 @@ class KeycloakTokenValidatorTest {
 
   private static final String LOCALHOST = "http://localhost";
   private static final String URI_PATH = "/some/path";
+
+  // Note that this token was specifically constructed to include an underscore, which was a bug in
+  // production
+  // due to incorrect decoding.
   private static final String VALID_ACCESS_TOKEN =
       """
       eyJhbGciOiJSUzI1NiIsInR5cCIgOiAiSldUIiwia2lkIiA6ICIwM095c3pkWmNrZFd6Mk84d0ZFRkZVblJPLVJrN1lGLWZzRm1kWG1Q
@@ -50,10 +54,7 @@ class KeycloakTokenValidatorTest {
       LWNsaWVudHMiLCJtYW5hZ2UtYXV0aG9yaXphdGlvbiIsIm1hbmFnZS1jbGllbnRzIiwicXVlcnktZ3JvdXBzIl19LCJhY2NvdW50Ijp7
       InJvbGVzIjpbIm1hbmFnZS1hY2NvdW50IiwibWFuYWdlLWFjY291bnQtbGlua3MiLCJ2aWV3LXByb2ZpbGUiXX19LCJzY29wZSI6Im9w
       ZW5pZCBwcm9maWxlIGVtYWlsIiwic2lkIjoiN2FhOTdmYTEtYTI1Mi00NmQ0LWE0NTMtOTE2Y2E3M2E4NmQ4IiwiZW1haWxfdmVyaWZp
-      ZWQiOmZhbHNlLCJwcmVmZXJyZWRfdXNlcm5hbWUiOiJhZG1pbiJ9.fTqnLrU4vtcqvqW88RGLe81EUZ48TwYt6i-EdRttPfYs6BkkR4L
-      WKbJYv0HLbJYYjalLvAuGg5ELUvyjNiZqyP4yzlCqlZvNSwtiGG8fROj5XutMyVd3jxxAsTNntHw-EX7dT9Z6_EeQlV3tVBl_yvNh-1y
-      4bujH25omDr080fmuU-4ug6PT7rxbIEjMjgQMiJQ7_B-2DXjq4bGwuB8js5kDEADJNiZjs1PLd4Cri2qC14I_CE1RcEgM4CA_oY48M13
-      DdKDaG0rH2B4zu7PD6PIMp8vgt9lq7FKh1QBfBdgDXCCbLe3RdOAua5QyeDztGyTwP7FghRLIUoK1kSbMww
+      ZWQiOmZhbHNlLCJwcmVmZXJyZWRfdXNlcm5hbWUiOiJhZW_DqyJ9
       """.replace("\n", "").replace("\r", "");
 
   private KeycloakTokenValidator keycloakTokenValidator;
@@ -63,6 +64,10 @@ class KeycloakTokenValidatorTest {
 
   @BeforeEach
   void setUp() {
+    // Make sure we're covering the case where the token contains an underscore, since this used to
+    // break in production.
+    assert VALID_ACCESS_TOKEN.contains("_");
+
     httpClient = mock(OkHttpClient.class);
 
     keycloakConfiguration = mock(AirbyteKeycloakConfiguration.class);

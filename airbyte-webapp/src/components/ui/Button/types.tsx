@@ -9,6 +9,7 @@ export type ButtonVariant =
   | "danger"
   | "light"
   | "clear"
+  | "clearDark"
   | "primaryDark"
   | "secondaryDark"
   | "link";

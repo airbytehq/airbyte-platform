@@ -10,9 +10,9 @@ import static org.mockito.Mockito.when;
 
 import io.airbyte.api.client.AirbyteApiClient;
 import io.airbyte.api.client.generated.WorkspaceApi;
-import io.airbyte.api.client.invoker.generated.ApiException;
 import io.airbyte.api.client.model.generated.ConnectionIdRequestBody;
 import io.airbyte.api.client.model.generated.WorkspaceRead;
+import java.io.IOException;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -35,11 +35,12 @@ class CustomerIoEmailConfigFetcherTest {
   }
 
   @Test
-  void testReturnTheRightConfig() throws ApiException {
+  void testReturnTheRightConfig() throws IOException {
     final UUID connectionId = UUID.randomUUID();
     final String email = "em@il.com";
-    when(workspaceApi.getWorkspaceByConnectionId(new ConnectionIdRequestBody().connectionId(connectionId)))
-        .thenReturn(new WorkspaceRead().email(email));
+    when(workspaceApi.getWorkspaceByConnectionId(new ConnectionIdRequestBody(connectionId)))
+        .thenReturn(new WorkspaceRead(UUID.randomUUID(), UUID.randomUUID(), "name", "slug", true, UUID.randomUUID(), email, null, null, null, null,
+            null, null, null, null, null, null, null));
 
     CustomerIoEmailConfig customerIoEmailConfig = cloudCustomerIoEmailConfigFetcher.fetchConfig(connectionId);
     assertEquals(email, customerIoEmailConfig.getTo());

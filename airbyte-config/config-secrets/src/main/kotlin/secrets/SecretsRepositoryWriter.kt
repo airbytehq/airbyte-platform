@@ -5,11 +5,16 @@
 package io.airbyte.config.secrets
 
 import com.fasterxml.jackson.databind.JsonNode
+import io.airbyte.commons.json.JsonPaths
 import io.airbyte.config.secrets.persistence.RuntimeSecretPersistence
 import io.airbyte.config.secrets.persistence.SecretPersistence
+import io.airbyte.featureflag.DeleteDanglingSecrets
+import io.airbyte.featureflag.FeatureFlagClient
+import io.airbyte.featureflag.Workspace
+import io.airbyte.metrics.lib.MetricAttribute
 import io.airbyte.metrics.lib.MetricClient
+import io.airbyte.metrics.lib.MetricTags
 import io.airbyte.metrics.lib.OssMetricsRegistry
-import io.airbyte.protocol.models.ConnectorSpecification
 import io.airbyte.validation.json.JsonSchemaValidator
 import io.airbyte.validation.json.JsonValidationException
 import io.github.oshai.kotlinlogging.KotlinLogging
@@ -17,7 +22,6 @@ import io.micronaut.context.annotation.Requires
 import jakarta.inject.Singleton
 import java.time.Duration
 import java.time.Instant
-import java.util.Optional
 import java.util.UUID
 
 private val logger = KotlinLogging.logger {}
@@ -35,6 +39,7 @@ private val EPHEMERAL_SECRET_LIFE_DURATION = Duration.ofHours(2)
 open class SecretsRepositoryWriter(
   private val secretPersistence: SecretPersistence,
   private val metricClient: MetricClient,
+  private val featureFlagClient: FeatureFlagClient,
 ) {
   val validator: JsonSchemaValidator = JsonSchemaValidator()
 
@@ -42,148 +47,124 @@ open class SecretsRepositoryWriter(
    * Detects secrets in the configuration. Writes them to the secrets store. It returns the config
    * stripped of secrets (replaced with pointers to the secrets store).
    *
-   * Uses the environment secret persistence to store secrets.
+   * Uses the environment secret persistence if needed.
    *
    * @param workspaceId workspace id for the config
    * @param fullConfig full config
    * @param spec connector specification
+   * @param runtimeSecretPersistence to use as an override
    * @return partial config
    */
-  fun statefulSplitSecretsToDefaultSecretPersistence(
+  fun createFromConfig(
     workspaceId: UUID,
     fullConfig: JsonNode,
-    spec: ConnectorSpecification,
+    connSpec: JsonNode,
+    runtimeSecretPersistence: RuntimeSecretPersistence? = null,
   ): JsonNode {
-    return splitSecretConfig(workspaceId, fullConfig, spec, secretPersistence)
+    val activePersistence = runtimeSecretPersistence ?: secretPersistence
+    return splitSecretConfig(workspaceId, fullConfig, connSpec, activePersistence)
   }
 
   /**
-   * Detects secrets in the configuration. Writes them to the secrets store. It returns the config
-   * stripped of secrets (replaced with pointers to the secrets store).
+   * Pure function to delete secrets from persistence.
    *
-   * Uses the runtime secret persistence to store secrets.
-   *
-   * @param workspaceId workspace id for the config
-   * @param fullConfig full config
+   * @param config secret config to be deleted
    * @param spec connector specification
-   * @param runtimeSecretPersistence runtime secret persistence
-   * @return partial config
-   */
-  fun statefulSplitSecretsToRuntimeSecretPersistence(
-    workspaceId: UUID,
-    fullConfig: JsonNode,
-    spec: ConnectorSpecification,
-    runtimeSecretPersistence: RuntimeSecretPersistence,
-  ): JsonNode {
-    return splitSecretConfig(workspaceId, fullConfig, spec, runtimeSecretPersistence)
-  }
-  // todo (cgardens) - the contract on this method is hard to follow, because it sometimes returns
-  // secrets (i.e. when there is no longLivedSecretPersistence). If we treated all secrets the same
-  // (i.e. used a separate db for secrets when the user didn't provide a store), this would be easier
-  // to reason about.
-
-  /**
-   * If a secrets store is present, this method attempts to fetch the existing config and merge its
-   * secrets with the passed in config. If there is no secrets store, it just returns the passed in
-   * config. Also validates the config.
-   *
-   * Uses the environment secret persistence to store secrets.
-   *
-   * @param workspaceId workspace id for the config
-   * @param oldConfig old full config
-   * @param fullConfig new full config
-   * @param spec connector specification
-   * @param validate should the spec be validated, tombstone entries should not be validated
+   * @param runtimeSecretPersistence to use as an override
    * @return partial config
    */
   @Throws(JsonValidationException::class)
-  fun statefulUpdateSecretsToDefaultSecretPersistence(
-    workspaceId: UUID,
-    oldConfig: Optional<JsonNode>,
-    fullConfig: JsonNode,
+  private fun deleteFromConfig(
+    config: JsonNode,
     spec: JsonNode,
-    validate: Boolean,
-  ): JsonNode {
-    if (validate) {
-      validator.ensure(spec, fullConfig)
-    }
-    val update = oldConfig.isPresent
-    val splitSecretConfig: SplitSecretConfig =
-      if (update) {
-        SecretsHelpers.splitAndUpdateConfig(
-          workspaceId,
-          oldConfig.get(),
-          fullConfig,
-          spec,
-          secretPersistence,
-        )
-      } else {
-        SecretsHelpers.splitConfig(
-          workspaceId,
-          fullConfig,
-          spec,
-          secretPersistence,
-        )
-      }
-
-    splitSecretConfig.getCoordinateToPayload()
-      .forEach { (coordinate: SecretCoordinate, payload: String) ->
-        if (update) {
-          metricClient.count(OssMetricsRegistry.UPDATE_SECRET_DEFAULT_STORE, 1)
+    runtimeSecretPersistence: RuntimeSecretPersistence? = null,
+  ) {
+    val pathToSecrets = SecretsHelpers.getSortedSecretPaths(spec)
+    pathToSecrets.forEach { path ->
+      JsonPaths.getValues(config, path).forEach { jsonWithCoordinate ->
+        SecretsHelpers.getExistingCoordinateIfExists(jsonWithCoordinate)?.let { coordinate ->
+          val secretCoord = SecretCoordinate.fromFullCoordinate(coordinate)
+          logger.info { "Deleting: ${secretCoord.fullCoordinate}" }
+          try {
+            (runtimeSecretPersistence ?: secretPersistence).delete(secretCoord)
+            metricClient.count(OssMetricsRegistry.DELETE_SECRET_DEFAULT_STORE, 1, MetricAttribute(MetricTags.SUCCESS, "true"))
+          } catch (e: Exception) {
+            // Multiple versions within one secret is a legacy concern. This is no longer
+            // possible moving forward. Catch the exception to best-effort disable other secret versions.
+            // The other reason to catch this is propagating the exception prevents the database
+            // from being updated with the new coordinates.
+            metricClient.count(OssMetricsRegistry.DELETE_SECRET_DEFAULT_STORE, 1, MetricAttribute(MetricTags.SUCCESS, "false"))
+            logger.error(e) { "Error deleting secret: ${secretCoord.fullCoordinate}" }
+          }
         }
-        secretPersistence.write(coordinate, payload)
       }
-    return splitSecretConfig.partialConfig
+    }
+    logger.info { "Deleting secrets done!" }
   }
 
   /**
-   * If a secrets store is present, this method attempts to fetch the existing config and merge its
-   * secrets with the passed in config. If there is no secrets store, it just returns the passed in
-   * config. Also validates the config.
+   * Deletes secrets config from persistence and return the partial config.
    *
-   * Uses the provided runtime Secrets Persistence to store secrets.
-   *
-   * @param workspaceId workspace id for the config
-   * @param oldConfig old full config
-   * @param fullConfig new full config
+   * @param workspaceId workspace ID
+   * @param config secret config to be deleted
    * @param spec connector specification
-   * @param validate should the spec be validated, tombstone entries should not be validated
+   * @param runtimeSecretPersistence to use as an override
    * @return partial config
    */
   @Throws(JsonValidationException::class)
-  fun statefulUpdateSecretsToRuntimeSecretPersistence(
+  fun deleteFromConfig(
     workspaceId: UUID,
-    oldConfig: Optional<JsonNode>,
+    config: JsonNode,
+    spec: JsonNode,
+    runtimeSecretPersistence: RuntimeSecretPersistence? = null,
+  ): JsonNode {
+    val splitConfig: SplitSecretConfig =
+      SecretsHelpers.splitConfig(workspaceId, config, spec, secretPersistence)
+    deleteFromConfig(config, spec, runtimeSecretPersistence)
+    return splitConfig.partialConfig
+  }
+
+  /**
+   * This method merges an existing partial config with a new full config. It writes the secrets to the
+   * secrets store and returns the partial config with the secrets removed and replaced with secret coordinates.
+   *
+   * For simplicity, secrets are always written regardless of whether value change.
+   *
+   * Finally, delete the old secrets for cost and security considerations.
+   *
+   * Uses the environment secret persistence if needed.
+   *
+   * @param workspaceId workspace id for the config
+   * @param oldPartialConfig old partial config (no secrets)
+   * @param fullConfig new full config (with secrets)
+   * @param spec connector specification
+   * @param runtimeSecretPersistence to use as an override
+   * @return partial config
+   */
+  @Throws(JsonValidationException::class)
+  fun updateFromConfig(
+    workspaceId: UUID,
+    oldPartialConfig: JsonNode,
     fullConfig: JsonNode,
     spec: JsonNode,
-    validate: Boolean,
-    runtimeSecretPersistence: RuntimeSecretPersistence,
+    runtimeSecretPersistence: RuntimeSecretPersistence? = null,
   ): JsonNode {
-    if (validate) {
-      validator.ensure(spec, fullConfig)
-    }
-    val splitSecretConfig: SplitSecretConfig =
-      if (oldConfig.isPresent) {
-        SecretsHelpers.splitAndUpdateConfig(
-          workspaceId,
-          oldConfig.get(),
-          fullConfig,
-          spec,
-          runtimeSecretPersistence,
-        )
-      } else {
-        SecretsHelpers.splitConfig(
-          workspaceId,
-          fullConfig,
-          spec,
-          runtimeSecretPersistence,
-        )
-      }
-    splitSecretConfig.getCoordinateToPayload()
+    validator.ensure(spec, fullConfig)
+
+    val updatedSplitConfig: SplitSecretConfig =
+      SecretsHelpers.splitAndUpdateConfig(workspaceId, oldPartialConfig, fullConfig, spec, secretPersistence)
+
+    updatedSplitConfig.getCoordinateToPayload()
       .forEach { (coordinate: SecretCoordinate, payload: String) ->
-        runtimeSecretPersistence.write(coordinate, payload)
+        runtimeSecretPersistence?.write(coordinate, payload) ?: secretPersistence.write(coordinate, payload)
+        metricClient.count(OssMetricsRegistry.UPDATE_SECRET_DEFAULT_STORE, 1)
       }
-    return splitSecretConfig.partialConfig
+    // Delete old secrets (controlled by a workspace level feature flag).
+    // TODO: remove this flag after testing so that by default we are always cleaning up old secrets
+    if (featureFlagClient.boolVariation(DeleteDanglingSecrets, Workspace(workspaceId))) {
+      deleteFromConfig(oldPartialConfig, spec, runtimeSecretPersistence)
+    }
+    return updatedSplitConfig.partialConfig
   }
 
   /**
@@ -192,44 +173,24 @@ open class SecretsRepositoryWriter(
    *
    * This method is intended for ephemeral secrets, hence the lack of workspace.
    *
-   * @param fullConfig full config
-   * @param spec connector specification
-   * @return partial config
-   */
-  fun statefulSplitSecretsToDefaultSecretPersistence(
-    fullConfig: JsonNode,
-    spec: ConnectorSpecification,
-  ): JsonNode {
-    return splitSecretConfig(
-      NO_WORKSPACE,
-      fullConfig,
-      spec,
-      secretPersistence,
-      Instant.now().plus(EPHEMERAL_SECRET_LIFE_DURATION),
-    )
-  }
-
-  /**
-   * Takes in a connector configuration with secrets. Saves the secrets and returns the configuration
-   * object with the secrets removed and replaced with pointers to the provided runtime secret persistence.
-   *
-   * This method is intended for ephemeral secrets, hence the lack of workspace.
+   * Ephemeral secrets are intended to be expired after a certain duration for cost and security reasons.
    *
    * @param fullConfig full config
    * @param spec connector specification
-   * @param runtimeSecretPersistence runtime secret persistence
+   * @param runtimeSecretPersistence to use as an override
    * @return partial config
    */
-  fun statefulSplitSecretsToRuntimeSecretPersistence(
+  fun createEphemeralFromConfig(
     fullConfig: JsonNode,
-    spec: ConnectorSpecification,
-    runtimeSecretPersistence: RuntimeSecretPersistence,
+    connSpec: JsonNode,
+    runtimeSecretPersistence: RuntimeSecretPersistence? = null,
   ): JsonNode {
+    val activePersistence = runtimeSecretPersistence ?: secretPersistence
     return splitSecretConfig(
       NO_WORKSPACE,
       fullConfig,
-      spec,
-      runtimeSecretPersistence,
+      connSpec,
+      activePersistence,
       Instant.now().plus(EPHEMERAL_SECRET_LIFE_DURATION),
     )
   }
@@ -237,7 +198,7 @@ open class SecretsRepositoryWriter(
   private fun splitSecretConfig(
     workspaceId: UUID,
     fullConfig: JsonNode,
-    spec: ConnectorSpecification,
+    connSpec: JsonNode,
     secretPersistence: SecretPersistence,
     expireTime: Instant? = null,
   ): JsonNode {
@@ -245,7 +206,7 @@ open class SecretsRepositoryWriter(
       SecretsHelpers.splitConfig(
         workspaceId,
         fullConfig,
-        spec.connectionSpecification,
+        connSpec,
         secretPersistence,
       )
     // modify this to add expire time
@@ -257,25 +218,16 @@ open class SecretsRepositoryWriter(
 
   /**
    * No frills, given a coordinate, just store the payload. Uses the environment secret persistence.
+   *
+   * @param runtimeSecretPersistence to use as an override
    */
-  fun storeSecretToDefaultSecretPersistence(
-    secretCoordinate: SecretCoordinate,
+  fun store(
+    coordinate: SecretCoordinate,
     payload: String,
+    runtimeSecretPersistence: RuntimeSecretPersistence? = null,
   ): SecretCoordinate {
-    secretPersistence.write(secretCoordinate, payload)
-    return secretCoordinate
-  }
-
-  /**
-   * No frills, given a coordinate, just store the payload in the provided runtime secret persistence.
-   */
-  fun storeSecretToRuntimeSecretPersistence(
-    secretCoordinate: SecretCoordinate,
-    payload: String,
-    runtimeSecretPersistence: RuntimeSecretPersistence,
-  ): SecretCoordinate {
-    runtimeSecretPersistence.write(secretCoordinate, payload)
-    return secretCoordinate
+    runtimeSecretPersistence?.write(coordinate, payload) ?: secretPersistence.write(coordinate, payload)
+    return coordinate
   }
 
   companion object {

@@ -12,8 +12,8 @@ import { Text } from "components/ui/Text";
 import { useCurrentWorkspace, useListUserInvitations, useListWorkspaceAccessUsers } from "core/api";
 import { useIntent } from "core/utils/rbac";
 import { useModalService } from "hooks/services/Modal";
-import { AddUserModal } from "packages/cloud/views/workspaces/WorkspaceSettingsView/components/AddUserModal";
 
+import { AddUserModal } from "./components/AddUserModal";
 import { UnifiedWorkspaceUserModel, unifyWorkspaceUserData } from "./components/useGetAccessManagementData";
 import styles from "./WorkspaceAccessManagementSection.module.scss";
 import { WorkspaceUsersTable } from "./WorkspaceUsersTable";

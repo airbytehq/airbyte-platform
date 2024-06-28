@@ -12,10 +12,10 @@ import static org.mockito.Mockito.when;
 
 import io.airbyte.api.client.AirbyteApiClient;
 import io.airbyte.api.client.generated.JobsApi;
-import io.airbyte.api.client.invoker.generated.ApiException;
 import io.airbyte.api.client.model.generated.DeleteStreamResetRecordsForJobRequest;
 import io.airbyte.commons.temporal.exception.RetryableException;
 import io.airbyte.workers.temporal.scheduling.activities.StreamResetActivity.DeleteStreamResetRecordsForJobInput;
+import java.io.IOException;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -42,7 +42,7 @@ class StreamResetActivityTest {
   }
 
   @Test
-  void deleteStreamResetRecordsForJobSuccess() throws ApiException {
+  void deleteStreamResetRecordsForJobSuccess() throws IOException {
     final DeleteStreamResetRecordsForJobInput input = new DeleteStreamResetRecordsForJobInput(UUID.randomUUID(), Long.valueOf("123"));
 
     final ArgumentCaptor<DeleteStreamResetRecordsForJobRequest> req = ArgumentCaptor.forClass(DeleteStreamResetRecordsForJobRequest.class);
@@ -55,10 +55,10 @@ class StreamResetActivityTest {
   }
 
   @Test
-  void deleteStreamResetRecordsForJobThrowsRetryableException() throws ApiException {
+  void deleteStreamResetRecordsForJobThrowsRetryableException() throws IOException {
     final DeleteStreamResetRecordsForJobInput input = new DeleteStreamResetRecordsForJobInput(UUID.randomUUID(), Long.valueOf("123"));
 
-    Mockito.doThrow(new ApiException("bang.")).when(jobsApi).deleteStreamResetRecordsForJob(any());
+    Mockito.doThrow(new IOException("bang.")).when(jobsApi).deleteStreamResetRecordsForJob(any());
 
     assertThrows(RetryableException.class, () -> streamResetActivity.deleteStreamResetRecordsForJob(input));
   }

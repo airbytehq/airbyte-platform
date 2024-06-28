@@ -1,4 +1,5 @@
 import { requestWorkspaceId, completeInitialSetup } from "commands/api";
+require("dd-trace/ci/cypress/support");
 
 Cypress.on("window:load", (window) => {
   // Hide the react-query devtool button during tests, to it never accidentally overlaps some button

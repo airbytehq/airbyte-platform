@@ -7,8 +7,10 @@ plugins {
 dependencies {
   compileOnly(libs.lombok)
   annotationProcessor(libs.lombok)     // Lombok must be added BEFORE Micronaut
-  annotationProcessor(libs.bundles.micronaut.annotation.processor)
   api(libs.bundles.micronaut.annotation)
+
+  ksp(platform(libs.micronaut.platform))
+  ksp(libs.bundles.micronaut.annotation.processor)
 
   implementation(project(":airbyte-commons"))
   implementation("commons-cli:commons-cli:1.4")
@@ -23,12 +25,16 @@ dependencies {
   implementation(libs.airbyte.protocol)
   implementation(project(":airbyte-json-validation"))
   implementation(libs.guava)
+  implementation(libs.okhttp)
+  implementation(libs.bundles.jackson)
 
   testImplementation(project(":airbyte-test-utils"))
   testRuntimeOnly(libs.junit.jupiter.engine)
   testImplementation(libs.bundles.junit)
   testImplementation(libs.assertj.core)
   testImplementation(libs.junit.pioneer)
+  testImplementation(libs.mockk)
+
 }
 
 airbyte {

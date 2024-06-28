@@ -8,13 +8,15 @@ import { ConnectionStatusMessages } from "./ConnectionStatusMessages";
 import { ConnectionSyncStatusCard } from "./ConnectionSyncStatusCard";
 import { StreamsList } from "./StreamsList";
 import { StreamsListContextProvider } from "./StreamsListContext";
+import styles from "./StreamStatusPage.module.scss";
 
 export const StreamStatusPage = () => {
-  const isSimplifiedCreation = useExperiment("connection.simplifiedCreation", false);
+  const isSimplifiedCreation = useExperiment("connection.simplifiedCreation", true);
+
   return (
     <ConnectionSyncContextProvider>
       <StreamsListContextProvider>
-        <FlexContainer direction="column" gap="md">
+        <FlexContainer direction="column" gap="md" className={styles.container}>
           {isSimplifiedCreation ? (
             <>
               <ConnectionStatusMessages />

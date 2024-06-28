@@ -7,9 +7,9 @@ package io.airbyte.server.apis.publicapi.mappers
 import io.airbyte.api.model.generated.JobConfigType
 import io.airbyte.api.model.generated.JobReadList
 import io.airbyte.api.model.generated.JobWithAttemptsRead
-import io.airbyte.public_api.model.generated.JobResponse
-import io.airbyte.public_api.model.generated.JobTypeEnum
-import io.airbyte.public_api.model.generated.JobsResponse
+import io.airbyte.publicApi.server.generated.models.JobResponse
+import io.airbyte.publicApi.server.generated.models.JobTypeEnum
+import io.airbyte.publicApi.server.generated.models.JobsResponse
 import io.airbyte.server.apis.publicapi.constants.JOBS_PATH
 import io.airbyte.server.apis.publicapi.constants.JOB_TYPE
 import io.airbyte.server.apis.publicapi.constants.WORKSPACE_IDS
@@ -51,11 +51,11 @@ object JobsResponseMapper {
       PaginationMapper.getBuilder(apiHost, removePublicApiPathPrefix(JOBS_PATH))
         .queryParam(JOB_TYPE, jobType)
         .queryParam("connectionId", connectionId)
-    val jobsResponse = JobsResponse()
-    jobsResponse.next = PaginationMapper.getNextUrl(jobs, limit, offset, uriBuilder)
-    jobsResponse.previous = PaginationMapper.getPreviousUrl(limit, offset, uriBuilder)
-    jobsResponse.data = jobs
-    return jobsResponse
+    return JobsResponse(
+      next = PaginationMapper.getNextUrl(jobs, limit, offset, uriBuilder),
+      previous = PaginationMapper.getPreviousUrl(limit, offset, uriBuilder),
+      data = jobs,
+    )
   }
 
   /**
@@ -89,10 +89,10 @@ object JobsResponseMapper {
         .queryParam(JOB_TYPE, jobType)
     if (workspaceIds.isNotEmpty()) uriBuilder.queryParam(WORKSPACE_IDS, PaginationMapper.uuidListToQueryString(workspaceIds))
 
-    val jobsResponse = JobsResponse()
-    jobsResponse.next = PaginationMapper.getNextUrl(jobs, limit, offset, uriBuilder)
-    jobsResponse.previous = PaginationMapper.getPreviousUrl(limit, offset, uriBuilder)
-    jobsResponse.data = jobs
-    return jobsResponse
+    return JobsResponse(
+      next = PaginationMapper.getNextUrl(jobs, limit, offset, uriBuilder),
+      previous = PaginationMapper.getPreviousUrl(limit, offset, uriBuilder),
+      data = jobs,
+    )
   }
 }

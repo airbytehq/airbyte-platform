@@ -15,7 +15,7 @@ import { ResetStreamsDetails } from "area/connection/components/JobHistoryItem/R
 import { JobLogsModal } from "area/connection/components/JobLogsModal/JobLogsModal";
 import { JobWithAttempts } from "area/connection/types/jobs";
 import { buildAttemptLink, useAttemptLink } from "area/connection/utils/attemptLink";
-import { getJobCreatedAt } from "area/connection/utils/jobs";
+import { getJobCreatedAt, isClearJob } from "area/connection/utils/jobs";
 import { useCurrentWorkspaceId } from "area/workspace/utils";
 import { useCurrentWorkspace, useGetDebugInfoJobManual } from "core/api";
 import { copyToClipboard } from "core/utils/clipboard";
@@ -157,6 +157,10 @@ export const JobHistoryItem: React.FC<JobHistoryItemProps> = ({ jobWithAttempts 
     }
   };
 
+  const streamsToList = isClearJob(jobWithAttempts)
+    ? jobWithAttempts.job.resetConfig?.streamsToReset?.map((stream) => stream.name)
+    : jobWithAttempts.job.refreshConfig?.streamsToRefresh?.map((stream) => stream.name);
+
   return (
     <div
       ref={wrapperRef}
@@ -173,10 +177,8 @@ export const JobHistoryItem: React.FC<JobHistoryItemProps> = ({ jobWithAttempts 
       <FlexContainer justifyContent="space-between" alignItems="center" className={styles.jobHistoryItem__main}>
         <Box className={styles.jobHistoryItem__summary}>
           <JobStatusLabel jobWithAttempts={jobWithAttempts} />
-          {jobWithAttempts.job.configType === "reset_connection" ? (
-            <ResetStreamsDetails
-              names={jobWithAttempts.job.resetConfig?.streamsToReset?.map((stream) => stream.name)}
-            />
+          {isClearJob(jobWithAttempts) || jobWithAttempts.job.configType === "refresh" ? (
+            <ResetStreamsDetails names={streamsToList} />
           ) : (
             <JobStats jobWithAttempts={jobWithAttempts} />
           )}

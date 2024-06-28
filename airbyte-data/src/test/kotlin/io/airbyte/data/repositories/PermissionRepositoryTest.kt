@@ -14,7 +14,7 @@ import org.junit.jupiter.api.Test
 import java.util.UUID
 
 @MicronautTest
-internal class PermissionRepositoryTest : AbstractConfigRepositoryTest<PermissionRepository>(PermissionRepository::class) {
+internal class PermissionRepositoryTest : AbstractConfigRepositoryTest() {
   companion object {
     @BeforeAll
     @JvmStatic
@@ -28,7 +28,7 @@ internal class PermissionRepositoryTest : AbstractConfigRepositoryTest<Permissio
 
   @BeforeEach
   fun setupEach() {
-    repository.deleteAll()
+    permissionRepository.deleteAll()
   }
 
   @Test
@@ -40,13 +40,13 @@ internal class PermissionRepositoryTest : AbstractConfigRepositoryTest<Permissio
         permissionType = PermissionType.workspace_admin,
       )
 
-    val countBeforeSave = repository.count()
+    val countBeforeSave = permissionRepository.count()
 
-    val saveResult = repository.save(permission)
+    val saveResult = permissionRepository.save(permission)
 
-    assertEquals(countBeforeSave + 1, repository.count())
+    assertEquals(countBeforeSave + 1, permissionRepository.count())
 
-    val persistedPermission = repository.findById(saveResult.id!!).get()
+    val persistedPermission = permissionRepository.findById(saveResult.id!!).get()
 
     with(persistedPermission) {
       assertEquals(id, saveResult.id)
@@ -73,11 +73,11 @@ internal class PermissionRepositoryTest : AbstractConfigRepositoryTest<Permissio
     val permission3 =
       Permission(id = UUID.randomUUID(), workspaceId = UUID.randomUUID(), userId = UUID.randomUUID(), permissionType = PermissionType.workspace_admin)
 
-    repository.save(permission1)
-    repository.save(permission2)
-    repository.save(permission3)
+    permissionRepository.save(permission1)
+    permissionRepository.save(permission2)
+    permissionRepository.save(permission3)
 
-    val result = repository.findByIdIn(listOf(permission1.id!!, permission3.id!!))
+    val result = permissionRepository.findByIdIn(listOf(permission1.id!!, permission3.id!!))
 
     assertEquals(2, result.size)
     assertEquals(setOf(permission1.id, permission3.id), result.map { it.id }.toSet())
@@ -96,11 +96,11 @@ internal class PermissionRepositoryTest : AbstractConfigRepositoryTest<Permissio
         permissionType = PermissionType.workspace_admin,
       ) // different user
 
-    repository.save(permission1)
-    repository.save(permission2)
-    repository.save(permission3)
+    permissionRepository.save(permission1)
+    permissionRepository.save(permission2)
+    permissionRepository.save(permission3)
 
-    val result = repository.findByUserId(userId)
+    val result = permissionRepository.findByUserId(userId)
 
     assertEquals(2, result.size)
     assertEquals(setOf(permission1.id, permission2.id), result.map { it.id }.toSet())
@@ -119,11 +119,11 @@ internal class PermissionRepositoryTest : AbstractConfigRepositoryTest<Permissio
         permissionType = PermissionType.organization_admin,
       ) // different org
 
-    repository.save(permission1)
-    repository.save(permission2)
-    repository.save(permission3)
+    permissionRepository.save(permission1)
+    permissionRepository.save(permission2)
+    permissionRepository.save(permission3)
 
-    val result = repository.findByOrganizationId(organizationId)
+    val result = permissionRepository.findByOrganizationId(organizationId)
 
     assertEquals(2, result.size)
     assertEquals(setOf(permission1.id, permission2.id), result.map { it.id }.toSet())
@@ -143,15 +143,15 @@ internal class PermissionRepositoryTest : AbstractConfigRepositoryTest<Permissio
     val permission3 =
       Permission(id = UUID.randomUUID(), workspaceId = UUID.randomUUID(), userId = UUID.randomUUID(), permissionType = PermissionType.workspace_admin)
 
-    repository.save(permission1)
-    repository.save(permission2)
-    repository.save(permission3)
+    permissionRepository.save(permission1)
+    permissionRepository.save(permission2)
+    permissionRepository.save(permission3)
 
-    assertEquals(3, repository.count())
+    assertEquals(3, permissionRepository.count())
 
-    repository.deleteByIdIn(listOf(permission1.id!!, permission2.id!!))
+    permissionRepository.deleteByIdIn(listOf(permission1.id!!, permission2.id!!))
 
-    assertEquals(1, repository.count())
-    assertEquals(permission3.id, repository.findAll().first().id)
+    assertEquals(1, permissionRepository.count())
+    assertEquals(permission3.id, permissionRepository.findAll().first().id)
   }
 }

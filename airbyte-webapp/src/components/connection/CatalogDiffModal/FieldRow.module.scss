@@ -25,6 +25,10 @@
   &.remove {
     background-color: colors.$red-50;
   }
+
+  &.attributeChange {
+    background-color: colors.$blue-40;
+  }
 }
 
 tr:first-child .content {

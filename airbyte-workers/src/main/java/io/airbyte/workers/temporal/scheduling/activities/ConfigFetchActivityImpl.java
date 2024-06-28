@@ -10,12 +10,11 @@ import static io.airbyte.metrics.lib.ApmTraceConstants.Tags.CONNECTION_ID_KEY;
 import com.google.common.annotations.VisibleForTesting;
 import datadog.trace.api.Trace;
 import io.airbyte.api.client.AirbyteApiClient;
-import io.airbyte.api.client.invoker.generated.ApiException;
 import io.airbyte.api.client.model.generated.ConnectionIdRequestBody;
 import io.airbyte.api.client.model.generated.ConnectionRead;
 import io.airbyte.api.client.model.generated.ConnectionSchedule;
 import io.airbyte.api.client.model.generated.ConnectionScheduleDataBasicSchedule;
-import io.airbyte.api.client.model.generated.ConnectionScheduleDataBasicSchedule.TimeUnitEnum;
+import io.airbyte.api.client.model.generated.ConnectionScheduleDataBasicSchedule.TimeUnit;
 import io.airbyte.api.client.model.generated.ConnectionScheduleDataCron;
 import io.airbyte.api.client.model.generated.ConnectionScheduleType;
 import io.airbyte.api.client.model.generated.ConnectionStatus;
@@ -33,6 +32,7 @@ import io.airbyte.metrics.lib.ApmTraceUtils;
 import io.airbyte.workers.helpers.CronSchedulingHelper;
 import io.airbyte.workers.helpers.ScheduleJitterHelper;
 import io.micronaut.context.annotation.Value;
+import io.micronaut.http.HttpStatus;
 import jakarta.inject.Named;
 import jakarta.inject.Singleton;
 import java.io.IOException;
@@ -46,10 +46,10 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.TimeZone;
 import java.util.UUID;
-import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
 import lombok.extern.slf4j.Slf4j;
 import org.joda.time.DateTimeZone;
+import org.openapitools.client.infrastructure.ClientException;
 import org.quartz.CronExpression;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -96,7 +96,7 @@ public class ConfigFetchActivityImpl implements ConfigFetchActivity {
   public ScheduleRetrieverOutput getTimeToWait(final ScheduleRetrieverInput input) {
     try {
       ApmTraceUtils.addTagsToTrace(Map.of(CONNECTION_ID_KEY, input.getConnectionId()));
-      final ConnectionIdRequestBody connectionIdRequestBody = new ConnectionIdRequestBody().connectionId(input.getConnectionId());
+      final ConnectionIdRequestBody connectionIdRequestBody = new ConnectionIdRequestBody(input.getConnectionId());
       final ConnectionRead connectionRead = airbyteApiClient.getConnectionApi().getConnection(connectionIdRequestBody);
       final UUID workspaceId = airbyteApiClient.getWorkspaceApi().getWorkspaceByConnectionId(connectionIdRequestBody).getWorkspaceId();
       final Duration timeToWait = connectionRead.getScheduleType() != null
@@ -105,7 +105,12 @@ public class ConfigFetchActivityImpl implements ConfigFetchActivity {
       final Duration timeToWaitWithSchedulingJitter =
           applyJitterRules(timeToWait, input.getConnectionId(), connectionRead.getScheduleType(), workspaceId);
       return new ScheduleRetrieverOutput(timeToWaitWithSchedulingJitter);
-    } catch (final IOException | ApiException e) {
+    } catch (final ClientException e) {
+      if (e.getStatusCode() == HttpStatus.NOT_FOUND.getCode()) {
+        throw e;
+      }
+      throw new RetryableException(e);
+    } catch (final IOException e) {
       throw new RetryableException(e);
     }
   }
@@ -133,14 +138,14 @@ public class ConfigFetchActivityImpl implements ConfigFetchActivity {
    * @throws IOException exception while interacting with db
    */
   private Duration getTimeToWaitFromScheduleType(final ConnectionRead connectionRead, final UUID connectionId, final UUID workspaceId)
-      throws IOException, ApiException {
+      throws IOException {
     if (connectionRead.getScheduleType() == ConnectionScheduleType.MANUAL || connectionRead.getStatus() != ConnectionStatus.ACTIVE) {
       // Manual syncs wait for their first run
       return Duration.ofDays(100 * 365);
     }
 
     final JobOptionalRead previousJobOptional =
-        airbyteApiClient.getJobsApi().getLastReplicationJob(new ConnectionIdRequestBody().connectionId(connectionId));
+        airbyteApiClient.getJobsApi().getLastReplicationJob(new ConnectionIdRequestBody(connectionId));
 
     if (connectionRead.getScheduleType() == ConnectionScheduleType.BASIC) {
       if (previousJobOptional.getJob() == null) {
@@ -212,14 +217,14 @@ public class ConfigFetchActivityImpl implements ConfigFetchActivity {
    * @throws IOException exception when interacting with the db
    */
   private Duration getTimeToWaitFromLegacy(final ConnectionRead connectionRead, final UUID connectionId)
-      throws IOException, ApiException {
+      throws IOException {
     if (connectionRead.getSchedule() == null || connectionRead.getStatus() != ConnectionStatus.ACTIVE) {
       // Manual syncs wait for their first run
       return Duration.ofDays(100 * 365);
     }
 
     final JobOptionalRead previousJobOptional =
-        airbyteApiClient.getJobsApi().getLastReplicationJob(new ConnectionIdRequestBody().connectionId(connectionId));
+        airbyteApiClient.getJobsApi().getLastReplicationJob(new ConnectionIdRequestBody(connectionId));
 
     if (previousJobOptional.getJob() == null && connectionRead.getSchedule() != null) {
       // Non-manual syncs don't wait for their first run
@@ -246,9 +251,14 @@ public class ConfigFetchActivityImpl implements ConfigFetchActivity {
   public Boolean isWorkspaceTombstone(UUID connectionId) {
     try {
       WorkspaceRead workspaceRead =
-          airbyteApiClient.getWorkspaceApi().getWorkspaceByConnectionIdWithTombstone(new ConnectionIdRequestBody().connectionId(connectionId));
+          airbyteApiClient.getWorkspaceApi().getWorkspaceByConnectionIdWithTombstone(new ConnectionIdRequestBody(connectionId));
       return workspaceRead.getTombstone();
-    } catch (ApiException e) {
+    } catch (final ClientException e) {
+      if (e.getStatusCode() == HttpStatus.NOT_FOUND.getCode()) {
+        throw e;
+      }
+      throw new RetryableException(e);
+    } catch (final IOException e) {
       log.warn("Fail to get the workspace.", e);
       return false;
     }
@@ -258,12 +268,15 @@ public class ConfigFetchActivityImpl implements ConfigFetchActivity {
   public Optional<UUID> getSourceId(final UUID connectionId) {
     try {
       final io.airbyte.api.client.model.generated.ConnectionIdRequestBody requestBody =
-          new io.airbyte.api.client.model.generated.ConnectionIdRequestBody().connectionId(connectionId);
-      final ConnectionRead connectionRead = AirbyteApiClient.retryWithJitter(
-          () -> airbyteApiClient.getConnectionApi().getConnection(requestBody),
-          "Get a connection by connection Id");
+          new io.airbyte.api.client.model.generated.ConnectionIdRequestBody(connectionId);
+      final ConnectionRead connectionRead = airbyteApiClient.getConnectionApi().getConnection(requestBody);
       return Optional.ofNullable(connectionRead.getSourceId());
-    } catch (final Exception e) {
+    } catch (final ClientException e) {
+      if (e.getStatusCode() == HttpStatus.NOT_FOUND.getCode()) {
+        throw e;
+      }
+      throw new RetryableException(e);
+    } catch (final IOException e) {
       log.info("Encountered an error fetching the connection's Source ID: ", e);
       return Optional.empty();
     }
@@ -273,12 +286,15 @@ public class ConfigFetchActivityImpl implements ConfigFetchActivity {
   public Optional<ConnectionStatus> getStatus(final UUID connectionId) {
     try {
       final io.airbyte.api.client.model.generated.ConnectionIdRequestBody requestBody =
-          new io.airbyte.api.client.model.generated.ConnectionIdRequestBody().connectionId(connectionId);
-      final ConnectionRead connectionRead = AirbyteApiClient.retryWithJitter(
-          () -> airbyteApiClient.getConnectionApi().getConnection(requestBody),
-          "Get a connection by connection Id");
+          new io.airbyte.api.client.model.generated.ConnectionIdRequestBody(connectionId);
+      final ConnectionRead connectionRead = airbyteApiClient.getConnectionApi().getConnection(requestBody);
       return Optional.ofNullable(connectionRead.getStatus());
-    } catch (final Exception e) {
+    } catch (final ClientException e) {
+      if (e.getStatusCode() == HttpStatus.NOT_FOUND.getCode()) {
+        throw e;
+      }
+      throw new RetryableException(e);
+    } catch (final IOException e) {
       log.info("Encountered an error fetching the connection's status: ", e);
       return Optional.empty();
     }
@@ -288,12 +304,15 @@ public class ConfigFetchActivityImpl implements ConfigFetchActivity {
   public Optional<Boolean> getBreakingChange(final UUID connectionId) {
     try {
       final io.airbyte.api.client.model.generated.ConnectionIdRequestBody requestBody =
-          new io.airbyte.api.client.model.generated.ConnectionIdRequestBody().connectionId(connectionId);
-      final ConnectionRead connectionRead = AirbyteApiClient.retryWithJitter(
-          () -> airbyteApiClient.getConnectionApi().getConnection(requestBody),
-          "Get a connection by connection Id");
+          new io.airbyte.api.client.model.generated.ConnectionIdRequestBody(connectionId);
+      final ConnectionRead connectionRead = airbyteApiClient.getConnectionApi().getConnection(requestBody);
       return Optional.ofNullable(connectionRead.getBreakingChange());
-    } catch (final Exception e) {
+    } catch (final ClientException e) {
+      if (e.getStatusCode() == HttpStatus.NOT_FOUND.getCode()) {
+        throw e;
+      }
+      throw new RetryableException(e);
+    } catch (final IOException e) {
       log.info("Encountered an error fetching the connection's breaking change status: ", e);
       return Optional.empty();
     }
@@ -307,35 +326,35 @@ public class ConfigFetchActivityImpl implements ConfigFetchActivity {
     return getSecondsInUnit(schedule.getTimeUnit()) * schedule.getUnits();
   }
 
-  private Long getSecondsInUnit(final TimeUnitEnum timeUnitEnum) {
+  private Long getSecondsInUnit(final TimeUnit timeUnitEnum) {
     switch (timeUnitEnum) {
       case MINUTES:
-        return TimeUnit.MINUTES.toSeconds(1);
+        return java.util.concurrent.TimeUnit.MINUTES.toSeconds(1);
       case HOURS:
-        return TimeUnit.HOURS.toSeconds(1);
+        return java.util.concurrent.TimeUnit.HOURS.toSeconds(1);
       case DAYS:
-        return TimeUnit.DAYS.toSeconds(1);
+        return java.util.concurrent.TimeUnit.DAYS.toSeconds(1);
       case WEEKS:
-        return TimeUnit.DAYS.toSeconds(1) * 7;
+        return java.util.concurrent.TimeUnit.DAYS.toSeconds(1) * 7;
       case MONTHS:
-        return TimeUnit.DAYS.toSeconds(1) * 30;
+        return java.util.concurrent.TimeUnit.DAYS.toSeconds(1) * 30;
       default:
         throw new RuntimeException("Unhandled TimeUnitEnum: " + timeUnitEnum);
     }
   }
 
-  private Long getSecondsInUnit(final ConnectionSchedule.TimeUnitEnum timeUnitEnum) {
+  private Long getSecondsInUnit(final ConnectionSchedule.TimeUnit timeUnitEnum) {
     switch (timeUnitEnum) {
       case MINUTES:
-        return TimeUnit.MINUTES.toSeconds(1);
+        return java.util.concurrent.TimeUnit.MINUTES.toSeconds(1);
       case HOURS:
-        return TimeUnit.HOURS.toSeconds(1);
+        return java.util.concurrent.TimeUnit.HOURS.toSeconds(1);
       case DAYS:
-        return TimeUnit.DAYS.toSeconds(1);
+        return java.util.concurrent.TimeUnit.DAYS.toSeconds(1);
       case WEEKS:
-        return TimeUnit.DAYS.toSeconds(1) * 7;
+        return java.util.concurrent.TimeUnit.DAYS.toSeconds(1) * 7;
       case MONTHS:
-        return TimeUnit.DAYS.toSeconds(1) * 30;
+        return java.util.concurrent.TimeUnit.DAYS.toSeconds(1) * 30;
       default:
         throw new RuntimeException("Unhandled TimeUnitEnum: " + timeUnitEnum);
     }

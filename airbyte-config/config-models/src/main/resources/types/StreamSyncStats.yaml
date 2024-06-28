@@ -19,3 +19,6 @@ properties:
   wasBackfilled:
     type: boolean
     description: Indicates whether the stream state was cleared before the sync
+  wasResumed:
+    type: boolean
+    description: Indicates whether the stream was resumed from a previous state

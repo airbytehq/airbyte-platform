@@ -27,7 +27,7 @@ import java.util.stream.Collectors;
 @SuppressWarnings({"PMD.ForLoopCanBeForeach", "LineLength"})
 public class WorkspaceWebhookConfigsConverter {
 
-  public static JsonNode toPersistenceWrite(List<WebhookConfigWrite> apiWebhookConfigs, Supplier<UUID> uuidSupplier) {
+  public static JsonNode toPersistenceWrite(final List<WebhookConfigWrite> apiWebhookConfigs, final Supplier<UUID> uuidSupplier) {
     if (apiWebhookConfigs == null) {
       return Jsons.emptyObject();
     }
@@ -75,13 +75,17 @@ public class WorkspaceWebhookConfigsConverter {
     return new WebhookConfig()
         .withId(uuidSupplier.get())
         .withName(input.getName())
-        .withAuthToken(input.getAuthToken());
+        .withAuthToken(input.getAuthToken())
+        .withCustomDbtHost(input.getCustomDbtHost());
   }
 
   private static WebhookConfigRead toApiRead(final JsonNode configJson) {
     final var read = new WebhookConfigRead();
     read.setId(UUID.fromString(configJson.findValue("id").asText()));
     read.setName(configJson.findValue("name").asText());
+    if (configJson.has("customDbtHost") && configJson.findValue("customDbtHost").isTextual()) {
+      read.setCustomDbtHost(configJson.findValue("customDbtHost").asText());
+    }
     return read;
   }
 

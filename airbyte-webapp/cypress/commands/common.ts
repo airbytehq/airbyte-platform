@@ -41,7 +41,6 @@ export const deleteEntity = () => {
 };
 
 export const clearApp = () => {
-  indexedDB.deleteDatabase("firebaseLocalStorageDb");
   cy.clearLocalStorage();
   cy.clearCookies();
 };

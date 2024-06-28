@@ -45,6 +45,7 @@ export const SimplifiedConnectionNameFormField = () => {
               inline={false}
               value={field.value}
               onChange={field.onChange}
+              data-testid="connectionName"
             />
           </InputContainer>
           {fieldState.error && (

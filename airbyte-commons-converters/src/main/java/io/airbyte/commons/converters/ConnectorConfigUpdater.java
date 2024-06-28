@@ -16,6 +16,7 @@ import io.airbyte.api.client.model.generated.SourceUpdate;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.protocol.models.Config;
 import jakarta.inject.Singleton;
+import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.UUID;
 import org.slf4j.Logger;
@@ -23,11 +24,9 @@ import org.slf4j.LoggerFactory;
 
 /**
  * Helper class for workers to persist updates to Source/Destination configs emitted from
- * AirbyteControlMessages.
- *
- * This is in order to support connectors updating configs when running commands, which is specially
- * useful for migrating configuration to a new version or for enabling connectors that require
- * single-use or short-lived OAuth tokens.
+ * AirbyteControlMessages. This is in order to support connectors updating configs when running
+ * commands, which is specially useful for migrating configuration to a new version or for enabling
+ * connectors that require single-use or short-lived OAuth tokens.
  */
 @Singleton
 public class ConnectorConfigUpdater {
@@ -45,18 +44,15 @@ public class ConnectorConfigUpdater {
    * parameters will be masked when saving.
    */
   @Trace
-  public void updateSource(final UUID sourceId, final Config config) {
-    final SourceRead source = AirbyteApiClient.retryWithJitter(
-        () -> airbyteApiClient.getSourceApi().getSource(new SourceIdRequestBody().sourceId(sourceId)),
-        "get source");
+  public void updateSource(final UUID sourceId, final Config config) throws IOException {
+    final SourceRead source = airbyteApiClient.getSourceApi().getSource(new SourceIdRequestBody(sourceId));
 
-    final SourceRead updatedSource = AirbyteApiClient.retryWithJitter(
-        () -> airbyteApiClient.getSourceApi()
-            .updateSource(new SourceUpdate()
-                .sourceId(sourceId)
-                .name(source.getName())
-                .connectionConfiguration(Jsons.jsonNode(config.getAdditionalProperties()))),
-        "update source");
+    final SourceRead updatedSource = airbyteApiClient.getSourceApi()
+        .updateSource(new SourceUpdate(
+            sourceId,
+            Jsons.jsonNode(config.getAdditionalProperties()),
+            source.getName(),
+            null));
 
     LOGGER.info("Persisted updated configuration for source {}. New config hash: {}.", sourceId,
         Hashing.sha256().hashString(updatedSource.getConnectionConfiguration().asText(), StandardCharsets.UTF_8));
@@ -67,18 +63,13 @@ public class ConnectorConfigUpdater {
    * Updates the Destination from a sync job ID with the provided Configuration. Secrets and OAuth
    * parameters will be masked when saving.
    */
-  public void updateDestination(final UUID destinationId, final Config config) {
-    final DestinationRead destination = AirbyteApiClient.retryWithJitter(
-        () -> airbyteApiClient.getDestinationApi().getDestination(new DestinationIdRequestBody().destinationId(destinationId)),
-        "get destination");
+  public void updateDestination(final UUID destinationId, final Config config) throws IOException {
+    final DestinationRead destination = airbyteApiClient.getDestinationApi().getDestination(new DestinationIdRequestBody(destinationId));
 
-    final DestinationRead updatedDestination = AirbyteApiClient.retryWithJitter(
-        () -> airbyteApiClient.getDestinationApi()
-            .updateDestination(new DestinationUpdate()
-                .destinationId(destinationId)
-                .name(destination.getName())
-                .connectionConfiguration(Jsons.jsonNode(config.getAdditionalProperties()))),
-        "update destination");
+    final DestinationRead updatedDestination = airbyteApiClient.getDestinationApi().updateDestination(new DestinationUpdate(
+        destinationId,
+        Jsons.jsonNode(config.getAdditionalProperties()),
+        destination.getName()));
 
     LOGGER.info("Persisted updated configuration for destination {}. New config hash: {}.", destinationId,
         Hashing.sha256().hashString(updatedDestination.getConnectionConfiguration().asText(), StandardCharsets.UTF_8));

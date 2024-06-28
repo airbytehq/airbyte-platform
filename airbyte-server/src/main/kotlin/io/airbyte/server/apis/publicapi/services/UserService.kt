@@ -5,11 +5,15 @@
 package io.airbyte.server.apis.publicapi.services
 
 import io.airbyte.api.model.generated.ListWorkspacesByUserRequestBody
+import io.airbyte.api.model.generated.OrganizationIdRequestBody
+import io.airbyte.api.model.generated.OrganizationUserReadList
 import io.airbyte.api.model.generated.WorkspaceReadList
 import io.airbyte.commons.server.handlers.UserHandler
 import io.airbyte.commons.server.handlers.WorkspacesHandler
+import io.airbyte.publicApi.server.generated.models.UsersResponse
 import io.airbyte.server.apis.publicapi.constants.HTTP_RESPONSE_BODY_DEBUG_MESSAGE
 import io.airbyte.server.apis.publicapi.errorHandlers.ConfigClientErrorHandler
+import io.airbyte.server.apis.publicapi.mappers.UserReadMapper
 import io.micronaut.context.annotation.Secondary
 import jakarta.inject.Singleton
 import org.slf4j.LoggerFactory
@@ -17,10 +21,13 @@ import java.util.UUID
 
 interface UserService {
   fun getAllWorkspaceIdsForUser(userId: UUID): List<UUID>
-}
 
-const val CUSTOMER_ID = "customer_id"
-const val USER_ID = "user_id"
+  fun getUsersInAnOrganization(
+    organizationId: UUID,
+    ids: List<String>?,
+    emails: List<String>?,
+  ): UsersResponse
+}
 
 @Singleton
 @Secondary
@@ -44,5 +51,43 @@ open class UserServiceImpl(
     log.debug(HTTP_RESPONSE_BODY_DEBUG_MESSAGE + result)
     val workspaceReadList: WorkspaceReadList = result.getOrDefault(WorkspaceReadList().workspaces(emptyList()))
     return workspaceReadList.workspaces.map { it.workspaceId }
+  }
+
+  override fun getUsersInAnOrganization(
+    organizationId: UUID,
+    ids: List<String>?,
+    emails: List<String>?,
+  ): UsersResponse {
+    // 1. Get all users in the organization.
+    val organizationIdRequestBody = OrganizationIdRequestBody().organizationId(organizationId)
+    val result =
+      kotlin.runCatching {
+        userHandler.listUsersInOrganization(organizationIdRequestBody)
+      }
+        .onFailure {
+          log.error("Error for getUsersInAnOrganization", it)
+          ConfigClientErrorHandler.handleError(it, "airbyte-user")
+        }
+    log.debug(HTTP_RESPONSE_BODY_DEBUG_MESSAGE + result)
+    val userReadList = result.getOrThrow()
+    // 2. Filter users on either ids or emails.
+    val finalUserReadList = OrganizationUserReadList()
+    finalUserReadList.users =
+      when {
+        !ids.isNullOrEmpty() && !emails.isNullOrEmpty() -> { // Filter on both ids and emails.
+          userReadList.users.filter { it.userId.toString() in ids || it.email in emails }
+        }
+        !ids.isNullOrEmpty() -> { // Filter on ids only.
+          userReadList.users.filter { it.userId.toString() in ids }
+        }
+        !emails.isNullOrEmpty() -> { // Filter on emails only.
+          userReadList.users.filter { it.email in emails }
+        }
+        else -> { // If there is no filters at all, we will list all users.
+          userReadList.users
+        }
+      }
+    // 3. Return mapped result.
+    return UsersResponse(data = finalUserReadList.users.mapNotNull { UserReadMapper.from(it) })
   }
 }

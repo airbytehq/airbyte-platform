@@ -20,8 +20,6 @@ testing {
     implementation(project(":airbyte-test-utils"))
     implementation(project(":airbyte-commons-worker"))
 
-
-
     implementation(libs.failsafe)
     implementation(libs.jackson.databind)
     implementation(libs.okhttp)
@@ -63,7 +61,12 @@ fun registerTestSuite(name: String, type: String, dirName: String, deps: JvmComp
         testTask.configure {
 
           val parallelExecutionEnabled = System.getenv()["TESTS_PARALLEL_EXECUTION_ENABLED"] ?: "true"
-          systemProperties = mapOf("junit.jupiter.execution.parallel.enabled" to parallelExecutionEnabled)
+          val ciMode = System.getProperty("ciMode") ?: "false"
+
+          systemProperties = mapOf(
+            "junit.jupiter.execution.parallel.enabled" to parallelExecutionEnabled,
+            // we use this property for our log4j2 configuration. Gradle creates a new JVM to run tests, so we need to explicitly pass this property
+            "ciMode" to ciMode)
 
           testLogging {
             events = setOf(TestLogEvent.PASSED, TestLogEvent.FAILED, TestLogEvent.STARTED, TestLogEvent.SKIPPED)

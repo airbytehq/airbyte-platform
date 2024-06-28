@@ -36,8 +36,17 @@ class AnalyticsMessageTrackerTest {
     analyticsMessageTracker = AnalyticsMessageTracker(trackingClient)
     ctx =
       ReplicationContext(
-        false, UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(),
-        1, 1, UUID.randomUUID(), SOURCE_IMAGE, DESTINATION_IMAGE, sourceDefinitionId, destinationDefinitionId,
+        false,
+        UUID.randomUUID(),
+        UUID.randomUUID(),
+        UUID.randomUUID(),
+        1,
+        1,
+        UUID.randomUUID(),
+        SOURCE_IMAGE,
+        DESTINATION_IMAGE,
+        sourceDefinitionId,
+        destinationDefinitionId,
       )
     analyticsMessageTracker.ctx = ctx
   }
@@ -114,7 +123,7 @@ class AnalyticsMessageTrackerTest {
     analyticsMessageTracker.flush()
 
     // Capture the argument passed to track
-    val payloadSlot = slot<Map<String?, Any?>>()
+    val payloadSlot = slot<Map<String, Any?>>()
     verify(exactly = 1) { trackingClient.track(any(), any(), capture(payloadSlot)) }
 
     // Extract and assert the captured payload

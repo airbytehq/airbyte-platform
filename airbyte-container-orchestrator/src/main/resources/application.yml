@@ -42,6 +42,12 @@ airbyte:
     test:
       enabled: ${ACCEPTANCE_TEST_ENABLED:false}
   cloud:
+    pubsub:
+      enabled: ${PUB_SUB_ENABLED:false}
+      topic: ${PUB_SUB_TOPIC_NAME:}
+      request-bytes-threshold: ${PUB_SUB_REQUEST_BYTES_THRESHOLD:5000}
+      message-count-batch-size: ${PUB_SUB_MESSAGE_COUNT_BATCH_SIZE:50}
+      publish-delay-threshold-ms: ${PUB_SUB_PUBLISH_DELAY_THRESHOLD_MS:100}
     storage:
       type: ${STORAGE_TYPE}
       bucket:
@@ -73,12 +79,16 @@ airbyte:
     client: ${FEATURE_FLAG_CLIENT:config}
     path: ${FEATURE_FLAG_PATH:/flags}
     api-key: ${LAUNCHDARKLY_KEY:}
-  internal:
-    api:
-      auth-header:
-        name: ${AIRBYTE_API_AUTH_HEADER_NAME:}
-        value: ${AIRBYTE_API_AUTH_HEADER_VALUE:}
-      host: ${INTERNAL_API_HOST}
+  internal-api:
+    auth-header:
+      name: ${AIRBYTE_API_AUTH_HEADER_NAME:}
+      value: ${AIRBYTE_API_AUTH_HEADER_VALUE:}
+    base-path: ${INTERNAL_API_HOST}/api
+    connect-timeout-seconds: ${AIRBYTE_API_CONNECT_TIMEOUT_SECONDS:30}
+    read-timeout-seconds: ${AIRBYTE_API_READ_TIMEOUT_SECONDS:600}
+    retries:
+      delay-seconds: ${AIRBYTE_API_RETRY_DELAY_SECONDS:2}
+      max: ${AIRBYTE_API_MAX_RETRIES:5}
   tracking:
     strategy: ${TRACKING_STRATEGY:LOGGING}
     write-key: ${SEGMENT_WRITE_KEY:}

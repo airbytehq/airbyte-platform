@@ -1,4 +1,4 @@
-ARG JDK_IMAGE=airbyte/airbyte-base-java-image:3.2.1
+ARG JDK_IMAGE=airbyte/airbyte-base-java-image:3.2.3
 FROM ${JDK_IMAGE}
 
 USER root
@@ -9,10 +9,11 @@ RUN yum update -y && \
 
 USER airbyte:airbyte
 
-ENV PYTHON_VERSION=3.9.11
+ENV PYTHON_VERSION=3.9.19
 
 # Set up python
 RUN git clone https://github.com/pyenv/pyenv.git ~/.pyenv
 ENV PYENV_ROOT /home/airbyte/.pyenv
 ENV PATH ${PYENV_ROOT}/shims:${PYENV_ROOT}/bin:$PATH
 RUN pyenv install -v ${PYTHON_VERSION} && pyenv global ${PYTHON_VERSION}
+RUN python -m pip install --upgrade pip setuptools

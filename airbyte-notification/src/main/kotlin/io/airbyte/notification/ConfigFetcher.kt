@@ -19,7 +19,7 @@ data class WebhookConfig(val webhookUrl: String)
 class WebhookConfigFetcher(private val airbyteApiClient: AirbyteApiClient) : ConfigFetcher<WebhookConfig> {
   override fun fetchConfig(connectionId: UUID): WebhookConfig? {
     val workspaceRead: WorkspaceRead? =
-      ConnectionIdRequestBody().connectionId(connectionId).let {
+      ConnectionIdRequestBody(connectionId = connectionId).let {
         airbyteApiClient.workspaceApi.getWorkspaceByConnectionId(it)
       }
 

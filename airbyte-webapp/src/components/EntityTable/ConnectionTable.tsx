@@ -10,9 +10,9 @@ import { RoutePaths } from "pages/routePaths";
 
 import { ConnectionStatusCell } from "./components/ConnectionStatusCell";
 import { ConnectorNameCell } from "./components/ConnectorNameCell";
+import { EntityWarningsCell } from "./components/EntityWarningsCell";
 import { FrequencyCell } from "./components/FrequencyCell";
 import { LastSyncCell } from "./components/LastSyncCell";
-import { SchemaChangeCell } from "./components/SchemaChangeCell";
 import { StateSwitchCell } from "./components/StateSwitchCell";
 import { StreamsStatusCell } from "./components/StreamStatusCell";
 import styles from "./ConnectionTable.module.scss";
@@ -163,17 +163,12 @@ const ConnectionTable: React.FC<ConnectionTableProps> = ({ data, entity, variant
         ),
         enableSorting: false,
       }),
-      columnHelper.accessor("schemaChange", {
+      columnHelper.accessor("connection", {
         header: "",
         meta: {
           thClassName: styles.thConnectionSettings,
         },
-        cell: (props) => (
-          <SchemaChangeCell
-            connectionId={props.row.original.connectionId}
-            schemaChange={props.row.original.schemaChange}
-          />
-        ),
+        cell: (props) => <EntityWarningsCell connection={props.cell.getValue()} />,
         enableSorting: false,
       }),
     ],

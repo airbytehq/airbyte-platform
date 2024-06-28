@@ -23,7 +23,7 @@ export const CreateConnectionFormControls: React.FC = () => {
   const { trigger } = useFormContext<FormConnectionFormValues>();
   const { getErrorMessage } = useConnectionFormService();
   const errorMessage = getErrorMessage(isValid, errors);
-  const isSimplifiedCreation = useExperiment("connection.simplifiedCreation", false);
+  const isSimplifiedCreation = useExperiment("connection.simplifiedCreation", true);
 
   const watchedScheduleType = useWatch<FormConnectionFormValues>({ name: "scheduleType" });
   const willSyncAfterCreation = watchedScheduleType === ConnectionScheduleType.basic;
@@ -37,7 +37,7 @@ export const CreateConnectionFormControls: React.FC = () => {
 
   return (
     <Box mt={isSimplifiedCreation ? undefined : "md"}>
-      <FlexContainer justifyContent="space-between" alignItems="flex-start" gap="xl">
+      <FlexContainer justifyContent="space-between" alignItems="center" gap="xl">
         <Text color="red" size="lg">
           {errorMessage}
         </Text>

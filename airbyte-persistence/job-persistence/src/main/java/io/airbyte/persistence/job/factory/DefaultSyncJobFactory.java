@@ -67,8 +67,10 @@ public class DefaultSyncJobFactory implements SyncJobFactory {
           jobCreatorInput.getDestination(),
           jobCreatorInput.getStandardSync(),
           jobCreatorInput.getSourceDockerImageName(),
+          jobCreatorInput.getSourceDockerImageIsDefault(),
           jobCreatorInput.getSourceProtocolVersion(),
           jobCreatorInput.getDestinationDockerImageName(),
+          jobCreatorInput.getDestinationDockerImageIsDefault(),
           jobCreatorInput.getDestinationProtocolVersion(),
           jobCreatorInput.getStandardSyncOperations(),
           jobCreatorInput.getWebhookOperationConfigs(),
@@ -142,6 +144,11 @@ public class DefaultSyncJobFactory implements SyncJobFactory {
     final String sourceImageName = sourceVersion.getDockerRepository() + ":" + sourceVersion.getDockerImageTag();
     final String destinationImageName = destinationVersion.getDockerRepository() + ":" + destinationVersion.getDockerImageTag();
 
+    final ActorDefinitionVersion sourceImageVersionDefault =
+        actorDefinitionVersionHelper.getSourceVersion(sourceDefinition, workspaceId);
+    final ActorDefinitionVersion destinationImageVersionDefault =
+        actorDefinitionVersionHelper.getDestinationVersion(destinationDefinition, workspaceId);
+
     final List<StandardSyncOperation> standardSyncOperations = Lists.newArrayList();
     for (final var operationId : standardSync.getOperationIds()) {
       final StandardSyncOperation standardSyncOperation = configRepository.getStandardSyncOperation(operationId);
@@ -159,8 +166,10 @@ public class DefaultSyncJobFactory implements SyncJobFactory {
         destinationConnection,
         standardSync,
         sourceImageName,
+        imageIsDefault(sourceImageName, sourceImageVersionDefault),
         new Version(sourceVersion.getProtocolVersion()),
         destinationImageName,
+        imageIsDefault(destinationImageName, destinationImageVersionDefault),
         new Version(destinationVersion.getProtocolVersion()),
         standardSyncOperations,
         workspace.getWebhookOperationConfigs(),
@@ -169,6 +178,20 @@ public class DefaultSyncJobFactory implements SyncJobFactory {
         sourceVersion,
         destinationVersion,
         workspaceId);
+  }
+
+  Boolean imageIsDefault(final String imageName, final ActorDefinitionVersion imageVersionDefault) {
+    if (imageName == null || imageVersionDefault == null) {
+      // We assume that if these values are not set there is no override and therefore the version is
+      // default
+      return true;
+    }
+    String dockerRepository = imageVersionDefault.getDockerRepository();
+    String dockerImageTag = imageVersionDefault.getDockerImageTag();
+    if (dockerRepository == null || dockerImageTag == null) {
+      return true;
+    }
+    return imageName.equals(dockerRepository + ":" + dockerImageTag);
   }
 
 }

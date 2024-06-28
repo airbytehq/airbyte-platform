@@ -5,11 +5,13 @@ import { Navigate, useNavigate } from "react-router-dom";
 import { HeadTitle } from "components/common/HeadTitle";
 import { MainPageWithScroll } from "components/common/MainPageWithScroll";
 import { ImplementationTable } from "components/EntityTable";
-import { filterBySearchEntityTableData, getEntityTableData } from "components/EntityTable/utils";
+import { filterBySearchEntityTableData, getEntityTableData, statusFilterOptions } from "components/EntityTable/utils";
 import { Box } from "components/ui/Box";
 import { Button } from "components/ui/Button";
 import { Card } from "components/ui/Card";
+import { FlexContainer, FlexItem } from "components/ui/Flex";
 import { Heading } from "components/ui/Heading";
+import { ListBox } from "components/ui/ListBox";
 import { PageHeader } from "components/ui/PageHeader";
 import { SearchInput } from "components/ui/SearchInput";
 import { Text } from "components/ui/Text";
@@ -34,12 +36,15 @@ const AllDestinationsPageInner: React.FC<{ destinations: DestinationRead[] }> = 
   const connections = connectionList?.connections ?? [];
   const data = getEntityTableData(destinations, connections, "destination");
 
-  const [{ search }, setFilterValue] = useFilters<{ search: string }>({ search: "" });
+  const [{ search, status }, setFilterValue] = useFilters<{ search: string; status: string | null }>({
+    search: "",
+    status: null,
+  });
   const debouncedSearchFilter = useDeferredValue(search);
 
   const filteredDestinations = useMemo(
-    () => filterBySearchEntityTableData(debouncedSearchFilter, data),
-    [data, debouncedSearchFilter]
+    () => filterBySearchEntityTableData(debouncedSearchFilter, status, data),
+    [data, debouncedSearchFilter, status]
   );
 
   return destinations.length ? (
@@ -69,9 +74,23 @@ const AllDestinationsPageInner: React.FC<{ destinations: DestinationRead[] }> = 
     >
       <Card noPadding className={styles.card}>
         <Box p="lg">
-          <SearchInput value={search} onChange={({ target: { value } }) => setFilterValue("search", value)} />
+          <FlexContainer justifyContent="flex-start" direction="column">
+            <FlexItem grow>
+              <SearchInput value={search} onChange={({ target: { value } }) => setFilterValue("search", value)} />
+            </FlexItem>
+            <FlexContainer gap="sm" alignItems="center">
+              <FlexItem>
+                <ListBox
+                  optionTextAs="span"
+                  options={statusFilterOptions}
+                  selectedValue={status}
+                  onSelect={(value) => setFilterValue("status", value)}
+                />
+              </FlexItem>
+            </FlexContainer>
+          </FlexContainer>
         </Box>
-        <ImplementationTable data={debouncedSearchFilter ? filteredDestinations : data} entity="destination" />
+        <ImplementationTable data={filteredDestinations} entity="destination" />
         {filteredDestinations.length === 0 && (
           <Box pt="xl" pb="lg">
             <Text bold color="grey" align="center">

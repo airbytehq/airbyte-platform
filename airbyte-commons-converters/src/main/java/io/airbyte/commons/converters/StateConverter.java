@@ -81,12 +81,12 @@ public class StateConverter {
    * @return client representation of state
    */
   public static io.airbyte.api.client.model.generated.ConnectionState toClient(final UUID connectionId, final @Nullable StateWrapper stateWrapper) {
-    return new io.airbyte.api.client.model.generated.ConnectionState()
-        .connectionId(connectionId)
-        .stateType(convertStateTypeToClient(stateWrapper))
-        .state(stateWrapper != null ? stateWrapper.getLegacyState() : null)
-        .globalState(globalStateToClient(stateWrapper).orElse(null))
-        .streamState(streamStateToClient(stateWrapper).orElse(null));
+    return new io.airbyte.api.client.model.generated.ConnectionState(
+        convertStateTypeToClient(stateWrapper),
+        connectionId,
+        stateWrapper != null ? stateWrapper.getLegacyState() : null,
+        streamStateToClient(stateWrapper).orElse(null),
+        globalStateToClient(stateWrapper).orElse(null));
   }
 
   /**
@@ -215,12 +215,12 @@ public class StateConverter {
         && stateWrapper.getStateType() == StateType.GLOBAL
         && stateWrapper.getGlobal() != null
         && stateWrapper.getGlobal().getGlobal() != null) {
-      return Optional.of(new io.airbyte.api.client.model.generated.GlobalState()
-          .sharedState(stateWrapper.getGlobal().getGlobal().getSharedState())
-          .streamStates(stateWrapper.getGlobal().getGlobal().getStreamStates()
+      return Optional.of(new io.airbyte.api.client.model.generated.GlobalState(
+          stateWrapper.getGlobal().getGlobal().getStreamStates()
               .stream()
               .map(StateConverter::streamStateStructToClient)
-              .toList()));
+              .toList(),
+          stateWrapper.getGlobal().getGlobal().getSharedState()));
     } else {
       return Optional.empty();
     }
@@ -349,9 +349,9 @@ public class StateConverter {
   }
 
   private static io.airbyte.api.client.model.generated.StreamState streamStateStructToClient(final AirbyteStreamState streamState) {
-    return new io.airbyte.api.client.model.generated.StreamState()
-        .streamDescriptor(ProtocolConverters.streamDescriptorToClient(streamState.getStreamDescriptor()))
-        .streamState(streamState.getStreamState());
+    return new io.airbyte.api.client.model.generated.StreamState(
+        ProtocolConverters.streamDescriptorToClient(streamState.getStreamDescriptor()),
+        streamState.getStreamState());
   }
 
   private static AirbyteStreamState streamStateStructToInternal(final StreamState streamState) {

@@ -11,7 +11,6 @@ import static org.mockito.Mockito.when;
 
 import io.airbyte.api.client.AirbyteApiClient;
 import io.airbyte.api.client.generated.AttemptApi;
-import io.airbyte.api.client.invoker.generated.ApiException;
 import io.airbyte.api.client.model.generated.AttemptStats;
 import io.micronaut.http.HttpStatus;
 import org.junit.jupiter.api.BeforeEach;
@@ -20,6 +19,7 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.Mock;
 import org.mockito.Mockito;
+import org.openapitools.client.infrastructure.ClientException;
 
 class ProgressCheckerTest {
 
@@ -70,7 +70,7 @@ class ProgressCheckerTest {
   void notFoundsAreTreatedAsNoProgress() throws Exception {
     final ProgressChecker activity = new ProgressChecker(mAirbyteApiClient, mPredicates);
     when(mAttemptApi.getAttemptCombinedStats(Mockito.any()))
-        .thenThrow(new ApiException(HttpStatus.NOT_FOUND.getCode(), "Not Found."));
+        .thenThrow(new ClientException("Not Found.", HttpStatus.NOT_FOUND.getCode(), null));
 
     final var result = activity.check(Fixtures.jobId1, Fixtures.attemptNo1);
 

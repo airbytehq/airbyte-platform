@@ -16,6 +16,7 @@ import io.airbyte.db.instance.configs.jooq.generated.enums.ReleaseStage;
 import io.airbyte.db.instance.configs.jooq.generated.enums.SupportLevel;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
@@ -90,9 +91,14 @@ public class ConnectorMetadataJooqHelper {
           .set(Tables.ACTOR_DEFINITION_VERSION.SUGGESTED_STREAMS,
               actorDefinitionVersion.getSuggestedStreams() == null ? null
                   : JSONB.valueOf(Jsons.serialize(actorDefinitionVersion.getSuggestedStreams())))
+          .set(ACTOR_DEFINITION_VERSION.SUPPORTS_REFRESHES,
+              actorDefinitionVersion.getSupportsRefreshes() != null && actorDefinitionVersion.getSupportsRefreshes())
           .set(Tables.ACTOR_DEFINITION_VERSION.SUPPORT_STATE,
               Enums.toEnum(actorDefinitionVersion.getSupportState().value(), io.airbyte.db.instance.configs.jooq.generated.enums.SupportState.class)
                   .orElseThrow())
+          .set(ACTOR_DEFINITION_VERSION.LAST_PUBLISHED, actorDefinitionVersion.getLastPublished() == null ? null
+              : actorDefinitionVersion.getLastPublished().toInstant().atOffset(ZoneOffset.UTC))
+          .set(ACTOR_DEFINITION_VERSION.CDK_VERSION, actorDefinitionVersion.getCdkVersion())
           .where(ACTOR_DEFINITION_VERSION.ID.eq(versionId))
           .execute();
     } else {
@@ -136,6 +142,11 @@ public class ConnectorMetadataJooqHelper {
           .set(Tables.ACTOR_DEFINITION_VERSION.SUGGESTED_STREAMS,
               actorDefinitionVersion.getSuggestedStreams() == null ? null
                   : JSONB.valueOf(Jsons.serialize(actorDefinitionVersion.getSuggestedStreams())))
+          .set(ACTOR_DEFINITION_VERSION.SUPPORTS_REFRESHES,
+              actorDefinitionVersion.getSupportsRefreshes() != null && actorDefinitionVersion.getSupportsRefreshes())
+          .set(ACTOR_DEFINITION_VERSION.LAST_PUBLISHED, actorDefinitionVersion.getLastPublished() == null ? null
+              : actorDefinitionVersion.getLastPublished().toInstant().atOffset(ZoneOffset.UTC))
+          .set(ACTOR_DEFINITION_VERSION.CDK_VERSION, actorDefinitionVersion.getCdkVersion())
           .set(Tables.ACTOR_DEFINITION_VERSION.SUPPORT_STATE,
               Enums.toEnum(actorDefinitionVersion.getSupportState().value(), io.airbyte.db.instance.configs.jooq.generated.enums.SupportState.class)
                   .orElseThrow())

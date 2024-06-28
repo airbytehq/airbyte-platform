@@ -1,7 +1,8 @@
 import { selectFromDropdown } from "@cy/commands/common";
 
 const startFromScratchButton = "[data-testid='start-from-scratch']";
-const nameInput = "input[name='name']";
+const nameLabel = "[data-testid='connector-name-label']";
+const nameInput = "[data-testid='connector-name-input']";
 const urlBaseInput = "input[name='formValues.global.urlBase']";
 const addStreamButton = "[data-testid='add-stream']";
 const apiKeyInput = "input[name='connectionConfiguration.api_key']";
@@ -10,7 +11,8 @@ const toggleParameterizedRequestsInput = "input[data-testid='toggle-formValues.s
 const streamNameInput = "input[name='streamName']";
 const streamUrlPathFromModal = "input[name='urlPath']";
 const streamUrlPathFromForm = "input[name='formValues.streams.0.urlPath']";
-const recordSelectorInput = "[data-testid='tag-input'] input";
+const recordSelectorToggle = "[data-testid='toggle-formValues.streams.0.recordSelector']";
+const recordSelectorFieldPathInput = "[data-testid='tag-input-formValues.streams.0.recordSelector.fieldPath'] input";
 const authType = "[data-testid='formValues.global.authenticator.type']";
 const testInputsButton = "[data-testid='test-inputs']";
 const limitInput = "[name='formValues.streams.0.paginator.strategy.page_size']";
@@ -40,6 +42,7 @@ export const startFromScratch = () => {
 };
 
 export const enterName = (name: string) => {
+  cy.get(nameLabel).first().click();
   cy.get(nameInput).clear();
   cy.get(nameInput).type(name);
 };
@@ -49,8 +52,9 @@ export const enterUrlBase = (urlBase: string) => {
 };
 
 export const enterRecordSelector = (recordSelector: string) => {
-  cy.get(recordSelectorInput).first().type(recordSelector);
-  cy.get(recordSelectorInput).first().type("{enter}");
+  cy.get(recordSelectorToggle).parent().click();
+  cy.get(recordSelectorFieldPathInput).first().type(recordSelector);
+  cy.get(recordSelectorFieldPathInput).first().type("{enter}");
 };
 
 export const selectAuthMethod = (value: string) => {

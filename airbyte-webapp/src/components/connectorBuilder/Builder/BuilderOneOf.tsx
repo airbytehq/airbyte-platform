@@ -1,9 +1,11 @@
-import React from "react";
+import React, { useRef, useEffect } from "react";
 import { useFormContext, useWatch } from "react-hook-form";
 
 import GroupControls from "components/GroupControls";
 import { ControlLabels } from "components/LabeledControl";
 import { ListBox } from "components/ui/ListBox";
+
+import { useConnectorBuilderFormManagementState } from "services/connectorBuilder/ConnectorBuilderStateService";
 
 import { getLabelAndTooltip } from "./manifestHelpers";
 
@@ -43,6 +45,13 @@ export const BuilderOneOf = <T extends OneOfType>({
   // Use value from useWatch instead of from useController, since the former will respect updates made to parent paths from setValue
   const fieldValue = useWatch({ name: fieldName });
 
+  const { handleScrollToField } = useConnectorBuilderFormManagementState();
+  const elementRef = useRef<HTMLDivElement | null>(null);
+  useEffect(() => {
+    // Call handler in here to make sure it handles new scrollToField value from the context
+    handleScrollToField(elementRef, fieldName);
+  }, [handleScrollToField, fieldName]);
+
   const selectedOption = options.find((option) => option.default.type === fieldValue);
   const { label: finalLabel, tooltip: finalTooltip } = getLabelAndTooltip(
     label,
@@ -56,6 +65,7 @@ export const BuilderOneOf = <T extends OneOfType>({
 
   return (
     <GroupControls
+      ref={elementRef}
       label={<ControlLabels label={finalLabel} infoTooltipContent={finalTooltip} />}
       control={
         <ListBox

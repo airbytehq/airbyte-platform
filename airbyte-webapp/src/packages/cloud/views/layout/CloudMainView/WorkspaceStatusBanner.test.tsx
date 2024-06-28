@@ -9,17 +9,16 @@ import {
   CloudWorkspaceReadWorkspaceTrialStatus as WorkspaceTrialStatus,
 } from "core/api/types/CloudApi";
 import { I18nProvider } from "core/services/i18n";
-import messages from "locales/en.json";
 
 import { WorkspaceStatusBanner } from "./WorkspaceStatusBanner";
 
-const defaultCloudWorkspace = { workspaceId: "123", organizationId: "9f05431f-1822-4f29-8238-9c9ac2bb5357" };
+const defaultCloudWorkspace = { workspaceId: "123" };
 
 const renderWorkspaceBanner = (cloudWorkspace: CloudWorkspaceRead) => {
   return render(
     <TestWrapper>
       <Suspense fallback="this should not render">
-        <I18nProvider messages={messages} locale="en">
+        <I18nProvider locale="en">
           <WorkspaceStatusBanner cloudWorkspace={cloudWorkspace} />
         </I18nProvider>
       </Suspense>

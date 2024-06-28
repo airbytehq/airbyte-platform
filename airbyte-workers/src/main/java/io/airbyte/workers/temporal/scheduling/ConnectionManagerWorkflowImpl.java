@@ -197,7 +197,10 @@ public class ConnectionManagerWorkflowImpl implements ConnectionManagerWorkflow 
 
       if (workflowState.isDeleted()) {
         if (workflowState.isRunning()) {
-          log.info("Cancelling the current running job because a connection deletion was requested");
+          log.info(
+              "Cancelling jobId '{}' because connection '{}' was deleted",
+              Objects.toString(connectionUpdaterInput.getJobId(), "null"),
+              connectionUpdaterInput.getConnectionId());
           // This call is not needed anymore since this will be cancel using the cancellation state
           reportCancelled(connectionId);
         }
@@ -219,6 +222,9 @@ public class ConnectionManagerWorkflowImpl implements ConnectionManagerWorkflow 
       log.error("The connection update workflow has failed, will create a new attempt.", e);
       reportFailure(connectionUpdaterInput, null, FailureCause.UNKNOWN);
       prepareForNextRunAndContinueAsNew(connectionUpdaterInput);
+
+      // Add the exception to the span, as it represents a platform failure
+      ApmTraceUtils.addExceptionToTrace(e);
     }
   }
 
@@ -317,7 +323,7 @@ public class ConnectionManagerWorkflowImpl implements ConnectionManagerWorkflow 
           if (workflowState.isFailed()) {
             reportFailure(connectionUpdaterInput, standardSyncOutput, FailureCause.UNKNOWN);
           } else if (workflowState.isCancelled()) {
-            reportCancelled(connectionId);
+            reportCancelledAndContinueWith(false, connectionUpdaterInput);
           } else {
             reportSuccess(connectionUpdaterInput, standardSyncOutput);
           }
@@ -737,18 +743,19 @@ public class ConnectionManagerWorkflowImpl implements ConnectionManagerWorkflow 
     try {
       return mapper.apply(input);
     } catch (final Exception e) {
+      final Duration sleepDuration = getWorkflowDelay();
       log.error(
           "[ACTIVITY-FAILURE] Connection {} failed to run an activity.({}).  Connection manager workflow will be restarted after a delay of {}.",
-          connectionId, input.getClass().getSimpleName(), workflowDelay, e);
+          connectionId, input.getClass().getSimpleName(), sleepDuration, e);
       // TODO (https://github.com/airbytehq/airbyte/issues/13773) add tracking/notification
 
       // Wait a short delay before restarting workflow. This is important if, for example, the failing
       // activity was configured to not have retries.
       // Without this delay, that activity could cause the workflow to loop extremely quickly,
       // overwhelming temporal.
-      log.info("Waiting {} before restarting the workflow for connection {}, to prevent spamming temporal with restarts.", workflowDelay,
+      log.info("Waiting {} before restarting the workflow for connection {}, to prevent spamming temporal with restarts.", sleepDuration,
           connectionId);
-      Workflow.sleep(workflowDelay);
+      Workflow.sleep(sleepDuration);
 
       // Add the exception to the span, as it represents a platform failure
       ApmTraceUtils.addExceptionToTrace(e);
@@ -1245,6 +1252,14 @@ public class ConnectionManagerWorkflowImpl implements ConnectionManagerWorkflow 
   private void cancelSyncChildWorkflow() {
     if (cancellableSyncWorkflow != null) {
       cancellableSyncWorkflow.cancel();
+    }
+  }
+
+  private Duration getWorkflowDelay() {
+    if (workflowDelay != null) {
+      return workflowDelay;
+    } else {
+      return Duration.ofSeconds(600L);
     }
   }
 

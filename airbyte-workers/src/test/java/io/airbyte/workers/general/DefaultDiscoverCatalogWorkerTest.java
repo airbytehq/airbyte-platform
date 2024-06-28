@@ -93,7 +93,7 @@ class DefaultDiscoverCatalogWorkerTest {
   private static final UUID CATALOG_ID = UUID.randomUUID();
 
   private static final DiscoverCatalogResult DISCOVER_CATALOG_RESULT =
-      new DiscoverCatalogResult().catalogId(CATALOG_ID);
+      new DiscoverCatalogResult(CATALOG_ID);
 
   private Path jobRoot;
   private IntegrationLauncher integrationLauncher;

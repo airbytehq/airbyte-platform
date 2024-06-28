@@ -9,7 +9,6 @@ import {
   getCloudWorkspaceUsage,
   updateCloudWorkspace,
   webBackendCreatePermissionedCloudWorkspace,
-  webBackendListWorkspacesByUser,
   webBackendListWorkspacesByUserPaginated,
 } from "../../generated/CloudApi";
 import { SCOPE_USER } from "../../scopes";
@@ -32,14 +31,27 @@ export const workspaceKeys = {
   usage: (id: number | string, timeWindow: string) => [...workspaceKeys.all, id, timeWindow, "usage"] as const,
 };
 
-export function useListCloudWorkspaces() {
-  const requestOptions = useRequestOptions();
-  const user = useCurrentUser();
+type CloudWorkspaceCount = { count: "zero" } | { count: "one"; workspace: CloudWorkspaceRead } | { count: "multiple" };
 
-  return useSuspenseQuery(workspaceKeys.lists(), () =>
-    webBackendListWorkspacesByUser({ userId: user.userId }, requestOptions)
+export const useCloudWorkspaceCount = () => {
+  const { userId } = useCurrentUser();
+  const requestOptions = useRequestOptions();
+  return useSuspenseQuery(
+    workspaceKeys.list({ pageSize: "2", nameContains: "", rowOffset: "0" }),
+    async (): Promise<CloudWorkspaceCount> =>
+      webBackendListWorkspacesByUserPaginated(
+        { userId, nameContains: "", pagination: { pageSize: 2, rowOffset: 0 } },
+        requestOptions
+      ).then((workspaces) => {
+        if (workspaces.workspaces.length === 0) {
+          return { count: "zero" };
+        } else if (workspaces.workspaces.length === 1) {
+          return { count: "one", workspace: workspaces.workspaces[0] };
+        }
+        return { count: "multiple" };
+      })
   );
-}
+};
 
 export function useCreateCloudWorkspace() {
   const requestOptions = useRequestOptions();
@@ -182,7 +194,6 @@ export const useIsForeignWorkspace = () => {
   const { workspaceId, organizationId } = useCurrentWorkspace();
 
   return !permissions.some(
-    (permission) =>
-      permission.workspaceId === workspaceId || (organizationId && permission.organizationId === organizationId)
+    (permission) => permission.workspaceId === workspaceId || permission.organizationId === organizationId
   );
 };

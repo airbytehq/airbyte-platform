@@ -12,15 +12,16 @@ import static io.airbyte.db.instance.jobs.jooq.generated.Tables.SYNC_STATS;
 import static io.airbyte.persistence.job.models.JobStatus.TERMINAL_STATUSES;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
+import datadog.trace.api.Trace;
 import io.airbyte.commons.enums.Enums;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.commons.protocol.migrations.v1.CatalogMigrationV1Helper;
 import io.airbyte.commons.resources.MoreResources;
 import io.airbyte.commons.text.Names;
+import io.airbyte.commons.timer.Stopwatch;
 import io.airbyte.commons.version.AirbyteProtocolVersion;
 import io.airbyte.commons.version.AirbyteProtocolVersionRange;
 import io.airbyte.commons.version.AirbyteVersion;
@@ -40,6 +41,7 @@ import io.airbyte.db.Database;
 import io.airbyte.db.ExceptionWrappingDatabase;
 import io.airbyte.db.instance.configs.jooq.generated.Tables;
 import io.airbyte.db.instance.jobs.jooq.generated.tables.records.JobsRecord;
+import io.airbyte.metrics.lib.ApmTraceUtils;
 import io.airbyte.persistence.job.models.Attempt;
 import io.airbyte.persistence.job.models.AttemptNormalizationStatus;
 import io.airbyte.persistence.job.models.AttemptStatus;
@@ -64,6 +66,7 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -128,7 +131,6 @@ public class DefaultJobPersistence implements JobPersistence {
   static final String BASE_JOB_SELECT_AND_JOIN = jobSelectAndJoin("jobs");
   private static final String ATTEMPT_SELECT =
       "SELECT job_id," + ATTEMPT_FIELDS + "FROM attempts WHERE job_id = ? AND attempt_number = ?";
-  private static final ZoneOffset SYSTEM_OFFSET = ZonedDateTime.now().getOffset();
   // not static because job history test case manipulates these.
   private final int jobHistoryMinimumAgeInDays;
   private final int jobHistoryMinimumRecency;
@@ -215,6 +217,7 @@ public class DefaultJobPersistence implements JobPersistence {
   private static void saveToStreamStatsTableBatch(final OffsetDateTime now,
                                                   final List<StreamSyncStats> perStreamStats,
                                                   final Long attemptId,
+                                                  final UUID connectionId,
                                                   final DSLContext ctx) {
     final List<Query> queries = new ArrayList<>();
 
@@ -254,6 +257,7 @@ public class DefaultJobPersistence implements JobPersistence {
                 ctx.insertInto(STREAM_STATS)
                     .set(STREAM_STATS.ID, UUID.randomUUID())
                     .set(STREAM_STATS.ATTEMPT_ID, attemptId)
+                    .set(STREAM_STATS.CONNECTION_ID, connectionId)
                     .set(STREAM_STATS.STREAM_NAME, streamStats.getStreamName())
                     .set(STREAM_STATS.STREAM_NAMESPACE, streamStats.getStreamNamespace())
                     .set(STREAM_STATS.CREATED_AT, now)
@@ -299,8 +303,32 @@ public class DefaultJobPersistence implements JobPersistence {
    * has prepopulated the map.
    */
   private static void hydrateStreamStats(final String jobIdsStr, final DSLContext ctx, final Map<JobAttemptPair, AttemptStats> attemptStats) {
+
+    final var attemptOutputs = ctx.fetch("SELECT id, output FROM attempts WHERE job_id in (%s);".formatted(jobIdsStr));
+    final Map<Long, Set<StreamDescriptor>> backFilledStreamsPerAttemptId = new HashMap<>();
+    final Map<Long, Set<StreamDescriptor>> resumedStreamsPerAttemptId = new HashMap<>();
+    for (final var result : attemptOutputs) {
+      final long attemptId = result.get(ATTEMPTS.ID);
+      final var backfilledStreams = backFilledStreamsPerAttemptId.computeIfAbsent(attemptId, (k) -> new HashSet<>());
+      final var resumedStreams = resumedStreamsPerAttemptId.computeIfAbsent(attemptId, (k) -> new HashSet<>());
+      final JSONB attemptOutput = result.get(ATTEMPTS.OUTPUT);
+      final JobOutput output = attemptOutput != null ? parseJobOutputFromString(attemptOutput.toString()) : null;
+      if (output != null && output.getSync() != null && output.getSync().getStandardSyncSummary() != null
+          && output.getSync().getStandardSyncSummary().getStreamStats() != null) {
+        for (final var streamSyncStats : output.getSync().getStandardSyncSummary().getStreamStats()) {
+          if (Boolean.TRUE == streamSyncStats.getWasBackfilled()) {
+            backfilledStreams
+                .add(new StreamDescriptor().withNamespace(streamSyncStats.getStreamNamespace()).withName(streamSyncStats.getStreamName()));
+          }
+          if (Boolean.TRUE == streamSyncStats.getWasResumed()) {
+            resumedStreams.add(new StreamDescriptor().withNamespace(streamSyncStats.getStreamNamespace()).withName(streamSyncStats.getStreamName()));
+          }
+        }
+      }
+    }
+
     final var streamResults = ctx.fetch(
-        "SELECT atmpt.attempt_number, atmpt.job_id, "
+        "SELECT atmpt.id, atmpt.attempt_number, atmpt.job_id, "
             + "stats.stream_name, stats.stream_namespace, stats.estimated_bytes, stats.estimated_records, stats.bytes_emitted, stats.records_emitted,"
             + "stats.bytes_committed, stats.records_committed "
             + "FROM stream_stats stats "
@@ -309,16 +337,25 @@ public class DefaultJobPersistence implements JobPersistence {
             + "( SELECT id FROM attempts WHERE job_id IN ( " + jobIdsStr + "));");
 
     streamResults.forEach(r -> {
+      final String streamNamespace = r.get(STREAM_STATS.STREAM_NAMESPACE);
+      final String streamName = r.get(STREAM_STATS.STREAM_NAME);
+      final long attemptId = r.get(ATTEMPTS.ID);
+      final var streamDescriptor = new StreamDescriptor().withName(streamName).withNamespace(streamNamespace);
+      final boolean wasBackfilled = backFilledStreamsPerAttemptId.getOrDefault(attemptId, new HashSet<>()).contains(streamDescriptor);
+      final boolean wasResumed = resumedStreamsPerAttemptId.getOrDefault(attemptId, new HashSet<>()).contains(streamDescriptor);
+
       final var streamSyncStats = new StreamSyncStats()
-          .withStreamNamespace(r.get(STREAM_STATS.STREAM_NAMESPACE))
-          .withStreamName(r.get(STREAM_STATS.STREAM_NAME))
+          .withStreamNamespace(streamNamespace)
+          .withStreamName(streamName)
           .withStats(new SyncStats()
               .withBytesEmitted(r.get(STREAM_STATS.BYTES_EMITTED))
               .withRecordsEmitted(r.get(STREAM_STATS.RECORDS_EMITTED))
               .withEstimatedRecords(r.get(STREAM_STATS.ESTIMATED_RECORDS))
               .withEstimatedBytes(r.get(STREAM_STATS.ESTIMATED_BYTES))
               .withBytesCommitted(r.get(STREAM_STATS.BYTES_COMMITTED))
-              .withRecordsCommitted(r.get(STREAM_STATS.RECORDS_COMMITTED)));
+              .withRecordsCommitted(r.get(STREAM_STATS.RECORDS_COMMITTED)))
+          .withWasBackfilled(wasBackfilled)
+          .withWasResumed(wasResumed);
 
       final var key = new JobAttemptPair(r.get(ATTEMPTS.JOB_ID), r.get(ATTEMPTS.ATTEMPT_NUMBER));
       if (!attemptStats.containsKey(key)) {
@@ -379,8 +416,7 @@ public class DefaultJobPersistence implements JobPersistence {
   }
 
   private static List<FailureReason> deserializeFailureReasons(final Record record) throws JsonProcessingException {
-    final ObjectMapper mapper = new ObjectMapper();
-    return List.of(mapper.readValue(String.valueOf(record.get(NORMALIZATION_SUMMARIES.FAILURES)), FailureReason[].class));
+    return List.of(Jsons.deserialize(String.valueOf(record.get(NORMALIZATION_SUMMARIES.FAILURES)), FailureReason[].class));
   }
 
   // Retrieves only Job information from the record, without any attempt info
@@ -417,13 +453,32 @@ public class DefaultJobPersistence implements JobPersistence {
 
   private static Attempt getAttemptFromRecord(final Record record) {
     final String attemptOutputString = record.get("attempt_output", String.class);
-    return new Attempt(
+    final Attempt attempt = new Attempt(
         record.get(ATTEMPT_NUMBER, int.class),
         record.get(JOB_ID, Long.class),
         Path.of(record.get("log_path", String.class)),
         record.get("attempt_sync_config", String.class) == null ? null
             : Jsons.deserialize(record.get("attempt_sync_config", String.class), AttemptSyncConfig.class),
         attemptOutputString == null ? null : parseJobOutputFromString(attemptOutputString),
+        Enums.toEnum(record.get("attempt_status", String.class), AttemptStatus.class).orElseThrow(),
+        record.get("processing_task_queue", String.class),
+        record.get("attempt_failure_summary", String.class) == null ? null
+            : Jsons.deserialize(record.get("attempt_failure_summary", String.class), AttemptFailureSummary.class),
+        getEpoch(record, "attempt_created_at"),
+        getEpoch(record, "attempt_updated_at"),
+        Optional.ofNullable(record.get("attempt_ended_at"))
+            .map(value -> getEpoch(record, "attempt_ended_at"))
+            .orElse(null));
+    return attempt;
+  }
+
+  private static Attempt getAttemptFromRecordLight(final Record record) {
+    return new Attempt(
+        record.get(ATTEMPT_NUMBER, int.class),
+        record.get(JOB_ID, Long.class),
+        Path.of(record.get("log_path", String.class)),
+        new AttemptSyncConfig(),
+        new JobOutput(),
         Enums.toEnum(record.get("attempt_status", String.class), AttemptStatus.class).orElseThrow(),
         record.get("processing_task_queue", String.class),
         record.get("attempt_failure_summary", String.class) == null ? null
@@ -458,16 +513,43 @@ public class DefaultJobPersistence implements JobPersistence {
     // keeps results strictly in order so the sql query controls the sort
     final List<Job> jobs = new ArrayList<>();
     Job currentJob = null;
+    final Stopwatch jobStopwatch = new Stopwatch();
+    final Stopwatch attemptStopwatch = new Stopwatch();
+    for (final Record entry : result) {
+      if (currentJob == null || currentJob.getId() != entry.get(JOB_ID, Long.class)) {
+        try (var ignored = jobStopwatch.start()) {
+          currentJob = getJobFromRecord(entry);
+        }
+        jobs.add(currentJob);
+      }
+      if (entry.getValue(ATTEMPT_NUMBER) != null) {
+        try (var ignored = attemptStopwatch.start()) {
+          currentJob.getAttempts().add(getAttemptFromRecord(entry));
+        }
+      }
+    }
+    ApmTraceUtils.addTagsToTrace(Map.of("get_job_from_record_time_in_nanos", jobStopwatch));
+    ApmTraceUtils.addTagsToTrace(Map.of("get_attempt_from_record_time_in_nanos", attemptStopwatch));
+    return jobs;
+  }
+
+  /**
+   * Gets jobs from results but without catalog data for attempts. For now we can't exclude catalog
+   * data for jobs because we need sync mode from the catalog for stat aggregation.
+   */
+  private static List<Job> getJobsFromResultLight(final Result<Record> result) {
+    // keeps results strictly in order so the sql query controls the sort
+    final List<Job> jobs = new ArrayList<>();
+    Job currentJob = null;
     for (final Record entry : result) {
       if (currentJob == null || currentJob.getId() != entry.get(JOB_ID, Long.class)) {
         currentJob = getJobFromRecord(entry);
         jobs.add(currentJob);
       }
       if (entry.getValue(ATTEMPT_NUMBER) != null) {
-        currentJob.getAttempts().add(getAttemptFromRecord(entry));
+        currentJob.getAttempts().add(getAttemptFromRecordLight(entry));
       }
     }
-
     return jobs;
   }
 
@@ -502,6 +584,14 @@ public class DefaultJobPersistence implements JobPersistence {
     return record.get(fieldName, OffsetDateTime.class).toEpochSecond();
   }
 
+  private LocalDateTime getCurrentTime() {
+    return LocalDateTime.ofInstant(timeSupplier.get(), ZoneId.systemDefault());
+  }
+
+  private LocalDateTime convertInstantToLocalDataTime(Instant instant) {
+    return LocalDateTime.ofInstant(instant, ZoneId.systemDefault());
+  }
+
   /**
    * Enqueue a job for a given scope (i.e. almost always at this point just means enqueue a sync or
    * reset job for a connection).
@@ -518,7 +608,7 @@ public class DefaultJobPersistence implements JobPersistence {
     LOGGER.info("enqueuing pending job for scope: {}", scope);
     // TODO: stop using LocalDateTime
     // https://github.com/airbytehq/airbyte-platform-internal/issues/10815
-    final LocalDateTime now = LocalDateTime.ofInstant(timeSupplier.get(), ZoneId.systemDefault());
+    final LocalDateTime now = getCurrentTime();
 
     final String queueingRequest = Job.REPLICATION_TYPES.contains(jobConfig.getConfigType())
         ? String.format("WHERE NOT EXISTS (SELECT 1 FROM jobs WHERE config_type IN (%s) AND scope = '%s' AND status NOT IN (%s)) ",
@@ -548,9 +638,8 @@ public class DefaultJobPersistence implements JobPersistence {
   public void resetJob(final long jobId) throws IOException {
     // TODO: stop using LocalDateTime
     // https://github.com/airbytehq/airbyte-platform-internal/issues/10815
-    final LocalDateTime now = LocalDateTime.ofInstant(timeSupplier.get(), SYSTEM_OFFSET);
     jobDatabase.query(ctx -> {
-      updateJobStatus(ctx, jobId, JobStatus.PENDING, now);
+      updateJobStatus(ctx, jobId, JobStatus.PENDING);
       return null;
     });
   }
@@ -559,9 +648,8 @@ public class DefaultJobPersistence implements JobPersistence {
   public void cancelJob(final long jobId) throws IOException {
     // TODO: stop using LocalDateTime
     // https://github.com/airbytehq/airbyte-platform-internal/issues/10815
-    final LocalDateTime now = LocalDateTime.ofInstant(timeSupplier.get(), SYSTEM_OFFSET);
     jobDatabase.query(ctx -> {
-      updateJobStatus(ctx, jobId, JobStatus.CANCELLED, now);
+      updateJobStatus(ctx, jobId, JobStatus.CANCELLED);
       return null;
     });
   }
@@ -570,34 +658,35 @@ public class DefaultJobPersistence implements JobPersistence {
   public void failJob(final long jobId) throws IOException {
     // TODO: stop using LocalDateTime
     // https://github.com/airbytehq/airbyte-platform-internal/issues/10815
-    final LocalDateTime now = LocalDateTime.ofInstant(timeSupplier.get(), SYSTEM_OFFSET);
     jobDatabase.query(ctx -> {
-      updateJobStatus(ctx, jobId, JobStatus.FAILED, now);
+      updateJobStatus(ctx, jobId, JobStatus.FAILED);
       return null;
     });
   }
 
   // TODO: stop using LocalDateTime
   // https://github.com/airbytehq/airbyte-platform-internal/issues/10815
-  private void updateJobStatus(final DSLContext ctx, final long jobId, final JobStatus newStatus, final LocalDateTime now) {
+  // returns the new updated_at time for the job
+  private LocalDateTime updateJobStatus(final DSLContext ctx, final long jobId, final JobStatus newStatus) {
+    var now = getCurrentTime();
     final Job job = getJob(ctx, jobId);
     if (job.isJobInTerminalState()) {
       // If the job is already terminal, no need to set a new status
-      return;
+      return now;
     }
     job.validateStatusTransition(newStatus);
     ctx.execute(
         "UPDATE jobs SET status = CAST(? as JOB_STATUS), updated_at = ? WHERE id = ?",
         toSqlName(newStatus),
-        now,
+        getCurrentTime(),
         jobId);
+    return now;
   }
 
   @Override
   public int createAttempt(final long jobId, final Path logPath) throws IOException {
     // TODO: stop using LocalDateTime
     // https://github.com/airbytehq/airbyte-platform-internal/issues/10815
-    final LocalDateTime now = LocalDateTime.ofInstant(timeSupplier.get(), ZoneId.systemDefault());
 
     return jobDatabase.transaction(ctx -> {
       final Job job = getJob(ctx, jobId);
@@ -615,7 +704,7 @@ public class DefaultJobPersistence implements JobPersistence {
         throw new IllegalStateException(errMsg);
       }
 
-      updateJobStatus(ctx, jobId, JobStatus.RUNNING, now);
+      var now = updateJobStatus(ctx, jobId, JobStatus.RUNNING);
 
       // will fail if attempt number already exists for the job id.
       return ctx.fetch(
@@ -639,9 +728,8 @@ public class DefaultJobPersistence implements JobPersistence {
   public void failAttempt(final long jobId, final int attemptNumber) throws IOException {
     // TODO: stop using LocalDateTime
     // https://github.com/airbytehq/airbyte-platform-internal/issues/10815
-    final LocalDateTime now = LocalDateTime.ofInstant(timeSupplier.get(), ZoneId.systemDefault());
     jobDatabase.transaction(ctx -> {
-      updateJobStatus(ctx, jobId, JobStatus.INCOMPLETE, now);
+      final LocalDateTime now = updateJobStatus(ctx, jobId, JobStatus.INCOMPLETE);
 
       ctx.execute(
           "UPDATE attempts SET status = CAST(? as ATTEMPT_STATUS), updated_at = ? , ended_at = ? WHERE job_id = ? AND attempt_number = ?",
@@ -658,9 +746,8 @@ public class DefaultJobPersistence implements JobPersistence {
   public void succeedAttempt(final long jobId, final int attemptNumber) throws IOException {
     // TODO: stop using LocalDateTime
     // https://github.com/airbytehq/airbyte-platform-internal/issues/10815
-    final LocalDateTime now = LocalDateTime.ofInstant(timeSupplier.get(), ZoneId.systemDefault());
     jobDatabase.transaction(ctx -> {
-      updateJobStatus(ctx, jobId, JobStatus.SUCCEEDED, now);
+      final LocalDateTime now = updateJobStatus(ctx, jobId, JobStatus.SUCCEEDED);
 
       ctx.execute(
           "UPDATE attempts SET status = CAST(? as ATTEMPT_STATUS), updated_at = ? , ended_at = ? WHERE job_id = ? AND attempt_number = ?",
@@ -716,6 +803,8 @@ public class DefaultJobPersistence implements JobPersistence {
       throws IOException {
     final OffsetDateTime now = OffsetDateTime.ofInstant(timeSupplier.get(), ZoneOffset.UTC);
 
+    final Job job = getJob(jobId);
+    final UUID connectionId = UUID.fromString(job.getScope());
     jobDatabase.transaction(ctx -> {
       ctx.update(ATTEMPTS)
           .set(ATTEMPTS.OUTPUT, JSONB.valueOf(Jsons.serialize(output)))
@@ -731,7 +820,7 @@ public class DefaultJobPersistence implements JobPersistence {
 
       final List<StreamSyncStats> streamSyncStats = output.getSync().getStandardSyncSummary().getStreamStats();
       if (CollectionUtils.isNotEmpty(streamSyncStats)) {
-        saveToStreamStatsTableBatch(now, output.getSync().getStandardSyncSummary().getStreamStats(), attemptId, ctx);
+        saveToStreamStatsTableBatch(now, output.getSync().getStandardSyncSummary().getStreamStats(), attemptId, connectionId, ctx);
       }
 
       final NormalizationSummary normalizationSummary = output.getSync().getNormalizationSummary();
@@ -761,6 +850,7 @@ public class DefaultJobPersistence implements JobPersistence {
                          final Long bytesEmitted,
                          final Long recordsCommitted,
                          final Long bytesCommitted,
+                         final UUID connectionId,
                          final List<StreamSyncStats> streamStats)
       throws IOException {
     final OffsetDateTime now = OffsetDateTime.ofInstant(timeSupplier.get(), ZoneOffset.UTC);
@@ -776,7 +866,7 @@ public class DefaultJobPersistence implements JobPersistence {
           .withBytesCommitted(bytesCommitted);
       saveToSyncStatsTable(now, syncStats, attemptId, ctx);
 
-      saveToStreamStatsTableBatch(now, streamStats, attemptId, ctx);
+      saveToStreamStatsTableBatch(now, streamStats, attemptId, connectionId, ctx);
       return null;
     });
 
@@ -897,8 +987,8 @@ public class DefaultJobPersistence implements JobPersistence {
         .fetchOne().into(Long.class));
   }
 
-  @Override
-  public List<Job> listJobs(final Set<ConfigType> configTypes, final String configId, final int pagesize) throws IOException {
+  public Result<Record> listJobsQuery(final Set<ConfigType> configTypes, final String configId, final int pagesize, String orderByString)
+      throws IOException {
     return jobDatabase.query(ctx -> {
       final String jobsSubquery = "(" + ctx.select(DSL.asterisk()).from(JOBS)
           .where(JOBS.CONFIG_TYPE.in(configTypeSqlNames(configTypes)))
@@ -908,11 +998,114 @@ public class DefaultJobPersistence implements JobPersistence {
           .limit(pagesize)
           .getSQL(ParamType.INLINED) + ") AS jobs";
 
+      return ctx.fetch(jobSelectAndJoin(jobsSubquery) + orderByString);
+    });
+  }
+
+  public Result<Record> listJobsQuery(final Set<ConfigType> configTypes,
+                                      final String configId,
+                                      final int limit,
+                                      final int offset,
+                                      final List<JobStatus> statuses,
+                                      final OffsetDateTime createdAtStart,
+                                      final OffsetDateTime createdAtEnd,
+                                      final OffsetDateTime updatedAtStart,
+                                      final OffsetDateTime updatedAtEnd,
+                                      final String orderByField,
+                                      final String orderByMethod)
+      throws IOException {
+    final SortField<OffsetDateTime> orderBy = getJobOrderBy(orderByField, orderByMethod);
+    return jobDatabase.query(ctx -> {
+      final String jobsSubquery = "(" + ctx.select(DSL.asterisk()).from(JOBS)
+          .where(JOBS.CONFIG_TYPE.in(configTypeSqlNames(configTypes)))
+          .and(configId == null ? DSL.noCondition()
+              : JOBS.SCOPE.eq(configId))
+          .and(statuses == null ? DSL.noCondition()
+              : JOBS.STATUS.in(statuses.stream()
+                  .map(status -> io.airbyte.db.instance.jobs.jooq.generated.enums.JobStatus.lookupLiteral(toSqlName(status)))
+                  .collect(Collectors.toList())))
+          .and(createdAtStart == null ? DSL.noCondition() : JOBS.CREATED_AT.ge(createdAtStart))
+          .and(createdAtEnd == null ? DSL.noCondition() : JOBS.CREATED_AT.le(createdAtEnd))
+          .and(updatedAtStart == null ? DSL.noCondition() : JOBS.UPDATED_AT.ge(updatedAtStart))
+          .and(updatedAtEnd == null ? DSL.noCondition() : JOBS.UPDATED_AT.le(updatedAtEnd))
+          .orderBy(orderBy)
+          .limit(limit)
+          .offset(offset)
+          .getSQL(ParamType.INLINED) + ") AS jobs";
+
+      final String fullQuery = jobSelectAndJoin(jobsSubquery) + getJobOrderBySql(orderBy);
+      LOGGER.debug("jobs query: {}", fullQuery);
+      return ctx.fetch(fullQuery);
+    });
+  }
+
+  private Result<Record> listJobsQuery(final Set<ConfigType> configTypes,
+                                       final List<UUID> workspaceIds,
+                                       final int limit,
+                                       final int offset,
+                                       final List<JobStatus> statuses,
+                                       final OffsetDateTime createdAtStart,
+                                       final OffsetDateTime createdAtEnd,
+                                       final OffsetDateTime updatedAtStart,
+                                       final OffsetDateTime updatedAtEnd,
+                                       final String orderByField,
+                                       final String orderByMethod)
+      throws IOException {
+    final SortField<OffsetDateTime> orderBy = getJobOrderBy(orderByField, orderByMethod);
+    return jobDatabase.query(ctx -> {
+      final String jobsSubquery = "(" + ctx.select(JOBS.asterisk()).from(JOBS)
+          .join(Tables.CONNECTION)
+          .on(Tables.CONNECTION.ID.cast(String.class).eq(JOBS.SCOPE))
+          .join(Tables.ACTOR)
+          .on(Tables.ACTOR.ID.eq(Tables.CONNECTION.SOURCE_ID))
+          .where(JOBS.CONFIG_TYPE.in(configTypeSqlNames(configTypes)))
+          .and(Tables.ACTOR.WORKSPACE_ID.in(workspaceIds))
+          .and(statuses == null ? DSL.noCondition()
+              : JOBS.STATUS.in(statuses.stream()
+                  .map(status -> io.airbyte.db.instance.jobs.jooq.generated.enums.JobStatus.lookupLiteral(toSqlName(status)))
+                  .collect(Collectors.toList())))
+          .and(createdAtStart == null ? DSL.noCondition() : JOBS.CREATED_AT.ge(createdAtStart))
+          .and(createdAtEnd == null ? DSL.noCondition() : JOBS.CREATED_AT.le(createdAtEnd))
+          .and(updatedAtStart == null ? DSL.noCondition() : JOBS.UPDATED_AT.ge(updatedAtStart))
+          .and(updatedAtEnd == null ? DSL.noCondition() : JOBS.UPDATED_AT.le(updatedAtEnd))
+          .orderBy(getJobOrderBy(orderByField, orderByMethod))
+          .limit(limit)
+          .offset(offset)
+          .getSQL(ParamType.INLINED) + ") AS jobs";
+
+      final String fullQuery = jobSelectAndJoin(jobsSubquery) + getJobOrderBySql(orderBy);
+      LOGGER.debug("jobs query: {}", fullQuery);
+      return ctx.fetch(fullQuery);
+    });
+  }
+
+  @Override
+  public List<Job> listJobs(final Set<ConfigType> configTypes, final String configId, final int pagesize) throws IOException {
+    return getJobsFromResult(listJobsQuery(configTypes, configId, pagesize, ORDER_BY_JOB_TIME_ATTEMPT_TIME));
+  }
+
+  @Override
+  public List<Job> listJobs(final Set<ConfigType> configTypes, final Set<JobStatus> jobStatuses, final String configId, final int pagesize)
+      throws IOException {
+    return jobDatabase.query(ctx -> {
+      final String jobsSubquery = "(" + ctx.select(DSL.asterisk()).from(JOBS)
+          .where(JOBS.CONFIG_TYPE.in(configTypeSqlNames(configTypes)))
+          .and(configId == null ? DSL.noCondition()
+              : JOBS.SCOPE.eq(configId))
+          .and(jobStatuses == null ? DSL.noCondition()
+              : JOBS.STATUS.in(jobStatuses.stream()
+                  .map(status -> io.airbyte.db.instance.jobs.jooq.generated.enums.JobStatus.lookupLiteral(toSqlName(status)))
+                  .collect(Collectors.toList())))
+          .orderBy(JOBS.CREATED_AT.desc(), JOBS.ID.desc())
+          .limit(pagesize)
+          .getSQL(ParamType.INLINED) + ") AS jobs";
+
       return getJobsFromResult(ctx.fetch(jobSelectAndJoin(jobsSubquery) + ORDER_BY_JOB_TIME_ATTEMPT_TIME));
     });
   }
 
   @Override
+  @Trace
   public List<Job> listJobs(final Set<ConfigType> configTypes,
                             final String configId,
                             final int limit,
@@ -963,39 +1156,15 @@ public class DefaultJobPersistence implements JobPersistence {
                             final String orderByField,
                             final String orderByMethod)
       throws IOException {
-    final SortField<OffsetDateTime> orderBy = getJobOrderBy(orderByField, orderByMethod);
-    return jobDatabase.query(ctx -> {
-      final String jobsSubquery = "(" + ctx.select(JOBS.asterisk()).from(JOBS)
-          .join(Tables.CONNECTION)
-          .on(Tables.CONNECTION.ID.cast(String.class).eq(JOBS.SCOPE))
-          .join(Tables.ACTOR)
-          .on(Tables.ACTOR.ID.eq(Tables.CONNECTION.SOURCE_ID))
-          .where(JOBS.CONFIG_TYPE.in(configTypeSqlNames(configTypes)))
-          .and(Tables.ACTOR.WORKSPACE_ID.in(workspaceIds))
-          .and(statuses == null ? DSL.noCondition()
-              : JOBS.STATUS.in(statuses.stream()
-                  .map(status -> io.airbyte.db.instance.jobs.jooq.generated.enums.JobStatus.lookupLiteral(toSqlName(status)))
-                  .collect(Collectors.toList())))
-          .and(createdAtStart == null ? DSL.noCondition() : JOBS.CREATED_AT.ge(createdAtStart))
-          .and(createdAtEnd == null ? DSL.noCondition() : JOBS.CREATED_AT.le(createdAtEnd))
-          .and(updatedAtStart == null ? DSL.noCondition() : JOBS.UPDATED_AT.ge(updatedAtStart))
-          .and(updatedAtEnd == null ? DSL.noCondition() : JOBS.UPDATED_AT.le(updatedAtEnd))
-          .orderBy(getJobOrderBy(orderByField, orderByMethod))
-          .limit(limit)
-          .offset(offset)
-          .getSQL(ParamType.INLINED) + ") AS jobs";
-
-      final String fullQuery = jobSelectAndJoin(jobsSubquery) + getJobOrderBySql(orderBy);
-      LOGGER.debug("jobs query: {}", fullQuery);
-      return getJobsFromResult(ctx.fetch(fullQuery));
-    });
+    return getJobsFromResult(listJobsQuery(configTypes, workspaceIds, limit, offset, statuses, createdAtStart, createdAtEnd, updatedAtStart,
+        updatedAtEnd, orderByField, orderByMethod));
   }
 
   @Override
   public List<Job> listJobs(final ConfigType configType, final Instant attemptEndedAtTimestamp) throws IOException {
     // TODO: stop using LocalDateTime
     // https://github.com/airbytehq/airbyte-platform-internal/issues/10815
-    final LocalDateTime timeConvertedIntoLocalDateTime = LocalDateTime.ofInstant(attemptEndedAtTimestamp, SYSTEM_OFFSET);
+    final LocalDateTime timeConvertedIntoLocalDateTime = convertInstantToLocalDataTime(attemptEndedAtTimestamp);
     return jobDatabase.query(ctx -> getJobsFromResult(ctx
         .fetch(BASE_JOB_SELECT_AND_JOIN + WHERE
             + "CAST(config_type AS VARCHAR) =  ? AND "
@@ -1004,6 +1173,58 @@ public class DefaultJobPersistence implements JobPersistence {
   }
 
   @Override
+  public List<Job> listJobsLight(final Set<Long> jobIds) throws IOException {
+    return jobDatabase.query(ctx -> {
+      final String jobsSubquery = "(" + ctx.select(DSL.asterisk()).from(JOBS)
+          .where(JOBS.ID.in(jobIds))
+          .orderBy(JOBS.CREATED_AT.desc(), JOBS.ID.desc())
+          .getSQL(ParamType.INLINED) + ") AS jobs";
+
+      return getJobsFromResultLight(ctx.fetch(jobSelectAndJoin(jobsSubquery)));
+    });
+  }
+
+  @Override
+  public List<Job> listJobsLight(final Set<ConfigType> configTypes, final String configId, final int pagesize) throws IOException {
+    return getJobsFromResultLight(listJobsQuery(configTypes, configId, pagesize, ORDER_BY_JOB_TIME_ATTEMPT_TIME));
+  }
+
+  @Override
+  public List<Job> listJobsLight(final Set<ConfigType> configTypes,
+                                 final String configId,
+                                 final int limit,
+                                 final int offset,
+                                 final List<JobStatus> statuses,
+                                 final OffsetDateTime createdAtStart,
+                                 final OffsetDateTime createdAtEnd,
+                                 final OffsetDateTime updatedAtStart,
+                                 final OffsetDateTime updatedAtEnd,
+                                 final String orderByField,
+                                 final String orderByMethod)
+      throws IOException {
+    return getJobsFromResultLight(listJobsQuery(configTypes, configId, limit, offset, statuses, createdAtStart, createdAtEnd, updatedAtStart,
+        updatedAtEnd, orderByField, orderByMethod));
+  }
+
+  @Override
+  public List<Job> listJobsLight(final Set<ConfigType> configTypes,
+                                 final List<UUID> workspaceIds,
+                                 final int limit,
+                                 final int offset,
+                                 final List<JobStatus> statuses,
+                                 final OffsetDateTime createdAtStart,
+                                 final OffsetDateTime createdAtEnd,
+                                 final OffsetDateTime updatedAtStart,
+                                 final OffsetDateTime updatedAtEnd,
+                                 final String orderByField,
+                                 final String orderByMethod)
+      throws IOException {
+    return getJobsFromResultLight(listJobsQuery(configTypes, workspaceIds, limit, offset, statuses, createdAtStart, createdAtEnd, updatedAtStart,
+        updatedAtEnd, orderByField, orderByMethod));
+  }
+
+  @Override
+  @Trace
   public List<Job> listJobsIncludingId(final Set<ConfigType> configTypes, final String connectionId, final long includingJobId, final int pagesize)
       throws IOException {
     final Optional<OffsetDateTime> includingJobCreatedAt = jobDatabase.query(ctx -> ctx.select(JOBS.CREATED_AT).from(JOBS)
@@ -1071,7 +1292,7 @@ public class DefaultJobPersistence implements JobPersistence {
       throws IOException {
     // TODO: stop using LocalDateTime
     // https://github.com/airbytehq/airbyte-platform-internal/issues/10815
-    final LocalDateTime timeConvertedIntoLocalDateTime = LocalDateTime.ofInstant(attemptEndedAtTimestamp, SYSTEM_OFFSET);
+    final LocalDateTime timeConvertedIntoLocalDateTime = convertInstantToLocalDataTime(attemptEndedAtTimestamp);
 
     return jobDatabase.query(ctx -> getAttemptsWithJobsFromResult(ctx.fetch(
         BASE_JOB_SELECT_AND_JOIN + WHERE + "CAST(config_type AS VARCHAR) =  ? AND " + "scope = ? AND " + "CAST(jobs.status AS VARCHAR) = ? AND "
@@ -1088,7 +1309,7 @@ public class DefaultJobPersistence implements JobPersistence {
       throws IOException {
     // TODO: stop using LocalDateTime
     // https://github.com/airbytehq/airbyte-platform-internal/issues/10815
-    final LocalDateTime timeConvertedIntoLocalDateTime = LocalDateTime.ofInstant(attemptEndedAtTimestamp, SYSTEM_OFFSET);
+    final LocalDateTime timeConvertedIntoLocalDateTime = convertInstantToLocalDataTime(attemptEndedAtTimestamp);
 
     return jobDatabase.query(ctx -> ctx.fetch(
         "SELECT "
@@ -1127,7 +1348,7 @@ public class DefaultJobPersistence implements JobPersistence {
       throws IOException {
     // TODO: stop using LocalDateTime
     // https://github.com/airbytehq/airbyte-platform-internal/issues/10815
-    final LocalDateTime timeConvertedIntoLocalDateTime = LocalDateTime.ofInstant(jobCreatedAtTimestamp, SYSTEM_OFFSET);
+    final LocalDateTime timeConvertedIntoLocalDateTime = convertInstantToLocalDataTime(jobCreatedAtTimestamp);
 
     final String JobStatusSelect = "SELECT id, status, created_at, updated_at FROM jobs ";
     return jobDatabase.query(ctx -> ctx
@@ -1215,6 +1436,24 @@ public class DefaultJobPersistence implements JobPersistence {
         .collect(Collectors.toList()));
   }
 
+  /**
+   * For the connection ID in the input, find that connection's most recent non-terminal
+   * clear/reset/sync/refresh job and return it if one exists.
+   */
+  @Override
+  public List<Job> getRunningJobForConnection(final UUID connectionId) throws IOException {
+
+    return jobDatabase.query(ctx -> ctx
+        .fetch("SELECT DISTINCT ON (scope) * FROM jobs "
+            + WHERE + "CAST(jobs.config_type AS VARCHAR) in " + toSqlInFragment(Job.REPLICATION_TYPES)
+            + AND + "jobs.scope = '" + connectionId + "'"
+            + AND + JOB_STATUS_IS_NON_TERMINAL
+            + "ORDER BY scope, created_at DESC LIMIT 1")
+        .stream()
+        .flatMap(r -> getJobOptional(ctx, r.get("id", Long.class)).stream())
+        .collect(Collectors.toList()));
+  }
+
   private String scopeInList(final Collection<UUID> connectionIds) {
     return String.format("scope IN (%s) ",
         connectionIds.stream()
@@ -1259,7 +1498,7 @@ public class DefaultJobPersistence implements JobPersistence {
       throws IOException {
     // TODO: stop using LocalDateTime
     // https://github.com/airbytehq/airbyte-platform-internal/issues/10815
-    final LocalDateTime timeConvertedIntoLocalDateTime = LocalDateTime.ofInstant(attemptEndedAtTimestamp, SYSTEM_OFFSET);
+    final LocalDateTime timeConvertedIntoLocalDateTime = convertInstantToLocalDataTime(attemptEndedAtTimestamp);
     return jobDatabase.query(ctx -> getAttemptsWithJobsFromResult(ctx.fetch(
         BASE_JOB_SELECT_AND_JOIN + WHERE + "CAST(config_type AS VARCHAR) =  ? AND " + " attempts.ended_at > ? ORDER BY attempts.ended_at ASC LIMIT ?",
         toSqlName(configType),

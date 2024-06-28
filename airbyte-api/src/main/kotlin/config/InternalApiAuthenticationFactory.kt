@@ -8,6 +8,7 @@ import com.auth0.jwt.JWT
 import com.auth0.jwt.JWTCreator
 import com.google.auth.oauth2.ServiceAccountCredentials
 import io.github.oshai.kotlinlogging.KotlinLogging
+import io.micrometer.core.instrument.MeterRegistry
 import io.micronaut.context.annotation.Factory
 import io.micronaut.context.annotation.Primary
 import io.micronaut.context.annotation.Prototype
@@ -18,6 +19,7 @@ import jakarta.inject.Singleton
 import java.io.FileInputStream
 import java.security.interfaces.RSAPrivateKey
 import java.util.Date
+import java.util.Optional
 import java.util.concurrent.TimeUnit
 
 private val logger = KotlinLogging.logger {}
@@ -26,8 +28,7 @@ private val logger = KotlinLogging.logger {}
 class InternalApiAuthenticationFactory {
   @Primary
   @Singleton
-  @Requires(property = "airbyte.internal-api.base-path")
-  @Requires(property = "airbyte.acceptance.test.enabled", value = "true")
+  @Requires(property = "airbyte.acceptance.test.enabled", value = "true", defaultValue = "false")
   @Named(INTERNAL_API_AUTH_TOKEN_BEAN_NAME)
   fun testInternalApiAuthToken(
     @Value("\${airbyte.internal-api.auth-header.value}") airbyteApiAuthHeaderValue: String,
@@ -36,8 +37,7 @@ class InternalApiAuthenticationFactory {
   }
 
   @Singleton
-  @Requires(property = "airbyte.internal-api.base-path")
-  @Requires(property = "airbyte.acceptance.test.enabled", value = "false")
+  @Requires(property = "airbyte.acceptance.test.enabled", value = "false", defaultValue = "false")
   @Requires(env = [CONTROL_PLANE])
   @Named(INTERNAL_API_AUTH_TOKEN_BEAN_NAME)
   fun controlPlaneInternalApiAuthToken(
@@ -56,14 +56,14 @@ class InternalApiAuthenticationFactory {
    * https://cloud.google.com/endpoints/docs/openapi/service-account-authentication
    */
   @Prototype
-  @Requires(property = "airbyte.internal-api.base-path")
-  @Requires(property = "airbyte.acceptance.test.enabled", value = "false")
+  @Requires(property = "airbyte.acceptance.test.enabled", value = "false", defaultValue = "false")
   @Requires(env = [DATA_PLANE])
   @Named(INTERNAL_API_AUTH_TOKEN_BEAN_NAME)
   fun dataPlaneInternalApiAuthToken(
     @Value("\${airbyte.control.plane.auth-endpoint}") controlPlaneAuthEndpoint: String,
     @Value("\${airbyte.data.plane.service-account.email}") dataPlaneServiceAccountEmail: String,
     @Value("\${airbyte.data.plane.service-account.credentials-path}") dataPlaneServiceAccountCredentialsPath: String,
+    meterRegistry: Optional<MeterRegistry>,
   ): String {
     return try {
       val now = Date()
@@ -85,10 +85,13 @@ class InternalApiAuthenticationFactory {
       val cred = ServiceAccountCredentials.fromStream(stream)
       val key = cred.privateKey as RSAPrivateKey
       val algorithm: com.auth0.jwt.algorithms.Algorithm = com.auth0.jwt.algorithms.Algorithm.RSA256(null, key)
-      return "Bearer " + token.sign(algorithm)
+      val signedToken = token.sign(algorithm)
+      meterRegistry.ifPresent { registry -> registry.counter("airbyte-api-client.auth-token.success").increment() }
+      return "Bearer $signedToken"
     } catch (e: Exception) {
-      logger.error(e) { "An issue occurred while generating a data plane auth token. Defaulting to empty string. Error Message: {}" }
-      return ""
+      meterRegistry.ifPresent { registry -> registry.counter("airbyte-api-client.auth-token.failure").increment() }
+      logger.error(e) { "An issue occurred while generating a data plane auth token. Defaulting to empty string." }
+      ""
     }
   }
 

@@ -34,6 +34,8 @@ export type TextProps = HTMLAttributes<TextHTMLElement> & {
   gradient?: boolean;
   align?: TextAlignment;
   italicized?: boolean;
+  smallcaps?: boolean;
+  "data-testid"?: string;
 };
 
 const sizes: Record<TextSize, string> = {
@@ -74,12 +76,16 @@ const getTextClassNames = ({
   gradient,
   align,
   italicized,
-}: Required<Pick<TextProps, "size" | "color" | "bold" | "inverseColor" | "gradient" | "align" | "italicized">>) =>
+  smallcaps,
+}: Required<
+  Pick<TextProps, "size" | "color" | "bold" | "inverseColor" | "gradient" | "align" | "italicized" | "smallcaps">
+>) =>
   classNames(styles.text, sizes[size], colors[color], textAlignments[align], {
     [styles.bold]: bold,
     [styles.inverse]: inverseColor,
     [styles.gradient]: gradient,
     [styles.italicized]: italicized,
+    [styles.smallcaps]: smallcaps,
   });
 
 export const Text = React.memo(
@@ -96,12 +102,13 @@ export const Text = React.memo(
         gradient = false,
         align = "left",
         italicized = false,
+        smallcaps = false,
         ...remainingProps
       },
       ref
     ) => {
       const className = classNames(
-        getTextClassNames({ size, color, bold, inverseColor, gradient, align, italicized }),
+        getTextClassNames({ size, color, bold, inverseColor, gradient, align, italicized, smallcaps }),
         classNameProp
       );
 

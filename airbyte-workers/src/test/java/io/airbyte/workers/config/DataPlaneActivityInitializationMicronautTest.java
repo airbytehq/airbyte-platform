@@ -11,12 +11,8 @@ import io.airbyte.commons.temporal.config.WorkerMode;
 import io.airbyte.config.secrets.persistence.SecretPersistence;
 import io.airbyte.workers.temporal.scheduling.activities.ConfigFetchActivity;
 import io.airbyte.workers.temporal.scheduling.activities.ConfigFetchActivityImpl;
-import io.airbyte.workers.temporal.sync.DbtTransformationActivity;
-import io.airbyte.workers.temporal.sync.DbtTransformationActivityImpl;
 import io.airbyte.workers.temporal.sync.NormalizationActivity;
 import io.airbyte.workers.temporal.sync.NormalizationActivityImpl;
-import io.airbyte.workers.temporal.sync.NormalizationSummaryCheckActivity;
-import io.airbyte.workers.temporal.sync.NormalizationSummaryCheckActivityImpl;
 import io.airbyte.workers.temporal.sync.RefreshSchemaActivity;
 import io.airbyte.workers.temporal.sync.RefreshSchemaActivityImpl;
 import io.airbyte.workers.temporal.sync.ReplicationActivity;
@@ -31,8 +27,8 @@ import jakarta.inject.Inject;
 import org.junit.jupiter.api.Test;
 
 @MicronautTest(environments = {WorkerMode.DATA_PLANE})
-@Property(name = "airbyte.internal.api.host",
-          value = "airbyte.test:1337")
+@Property(name = "airbyte.internal-api.base-path",
+          value = "http://airbyte.test:1337")
 @Property(name = "airbyte.version",
           value = "0.4128173.0")
 @Property(name = "airbyte.local.root",
@@ -62,15 +58,8 @@ class DataPlaneActivityInitializationMicronautTest {
 
   @Inject
   ConfigFetchActivity configFetchActivity;
-
-  @Inject
-  DbtTransformationActivity dbtTransformationActivity;
-
   @Inject
   NormalizationActivity normalizationActivity;
-
-  @Inject
-  NormalizationSummaryCheckActivity normalizationSummaryCheckActivity;
 
   @Inject
   RefreshSchemaActivity refreshSchemaActivity;
@@ -87,18 +76,8 @@ class DataPlaneActivityInitializationMicronautTest {
   }
 
   @Test
-  void testDbtTransformationActivity() {
-    assertEquals(DbtTransformationActivityImpl.class, dbtTransformationActivity.getClass());
-  }
-
-  @Test
   void testNormalizationActivity() {
     assertEquals(NormalizationActivityImpl.class, normalizationActivity.getClass());
-  }
-
-  @Test
-  void testNormalizationSummaryCheckActivity() {
-    assertEquals(NormalizationSummaryCheckActivityImpl.class, normalizationSummaryCheckActivity.getClass());
   }
 
   @Test

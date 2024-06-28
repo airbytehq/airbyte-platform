@@ -1,5 +1,7 @@
 package io.airbyte.commons.server.errors.problems
 
+import io.airbyte.api.problems.AbstractThrowableProblem
+import io.airbyte.api.problems.ProblemResponse
 import io.airbyte.commons.json.Jsons
 import io.micronaut.context.annotation.Requires
 import io.micronaut.http.HttpRequest
@@ -26,8 +28,12 @@ class AbstractThrowableProblemHandler :
   ): HttpResponse<*>? {
     if (exception != null) {
       log.error("Throwable Problem Handler caught exception: ", exception)
-      return HttpResponse.status<Any>(HttpStatus.valueOf(exception.httpCode))
-        .body(Jsons.serialize(exception.apiProblemInfo ?: {}))
+      val problem: ProblemResponse = exception.problem
+
+      val status: HttpStatus = HttpStatus.valueOf(problem.status)
+      return HttpResponse
+        .status<Any>(status)
+        .body(Jsons.serialize(problem))
         .contentType(MediaType.APPLICATION_JSON_TYPE)
     }
     return HttpResponse.status<Any>(HttpStatus.INTERNAL_SERVER_ERROR)

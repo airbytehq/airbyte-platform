@@ -36,6 +36,7 @@ import io.airbyte.persistence.job.models.JobRunConfig;
 import io.airbyte.workers.models.RefreshSchemaActivityInput;
 import io.airbyte.workers.models.RefreshSchemaActivityOutput;
 import io.airbyte.workers.models.ReplicationActivityInput;
+import io.airbyte.workers.temporal.activities.ReportRunTimeActivityInput;
 import io.airbyte.workers.temporal.scheduling.activities.ConfigFetchActivity;
 import io.temporal.workflow.Workflow;
 import java.util.Map;
@@ -56,10 +57,6 @@ public class SyncWorkflowImpl implements SyncWorkflow {
   private ReplicationActivity replicationActivity;
   @TemporalActivityStub(activityOptionsBeanName = "longRunActivityOptions")
   private NormalizationActivity normalizationActivity;
-  @TemporalActivityStub(activityOptionsBeanName = "longRunActivityOptions")
-  private DbtTransformationActivity dbtTransformationActivity;
-  @TemporalActivityStub(activityOptionsBeanName = "shortActivityOptions")
-  private NormalizationSummaryCheckActivity normalizationSummaryCheckActivity;
   @TemporalActivityStub(activityOptionsBeanName = "shortActivityOptions")
   private WebhookOperationActivity webhookOperationActivity;
   @TemporalActivityStub(activityOptionsBeanName = "refreshSchemaActivityOptions")
@@ -68,6 +65,8 @@ public class SyncWorkflowImpl implements SyncWorkflow {
   private ConfigFetchActivity configFetchActivity;
   @TemporalActivityStub(activityOptionsBeanName = "shortActivityOptions")
   private WorkloadFeatureFlagActivity workloadFeatureFlagActivity;
+  @TemporalActivityStub(activityOptionsBeanName = "shortActivityOptions")
+  private ReportRunTimeActivity reportRunTimeActivity;
 
   @Trace(operationName = WORKFLOW_TRACE_OPERATION_NAME)
   @Override
@@ -77,9 +76,11 @@ public class SyncWorkflowImpl implements SyncWorkflow {
                                 final StandardSyncInput syncInput,
                                 final UUID connectionId) {
 
+    final long startTime = Workflow.currentTimeMillis();
     // TODO: Remove this once Workload API rolled out
     final var useWorkloadApi = checkUseWorkloadApiFlag(syncInput);
     final var useWorkloadOutputDocStore = checkUseWorkloadOutputFlag(syncInput);
+    final var sendRunTimeMetrics = shouldReportRuntime();
 
     ApmTraceUtils
         .addTagsToTrace(Map.of(
@@ -94,21 +95,19 @@ public class SyncWorkflowImpl implements SyncWorkflow {
 
     final Optional<UUID> sourceId = configFetchActivity.getSourceId(connectionId);
     RefreshSchemaActivityOutput refreshSchemaOutput = null;
-    if (!sourceId.isEmpty() && refreshSchemaActivity.shouldRefreshSchema(sourceId.get())) {
+    final boolean shouldRefreshSchema = refreshSchemaActivity.shouldRefreshSchema(sourceId.get());
+    if (!sourceId.isEmpty() && shouldRefreshSchema) {
       LOGGER.info("Refreshing source schema...");
       try {
-        final var version = Workflow.getVersion("AUTO_BACKFILL_ON_NEW_COLUMNS", Workflow.DEFAULT_VERSION, 1);
-        if (version == Workflow.DEFAULT_VERSION) {
-          refreshSchemaActivity.refreshSchema(sourceId.get(), connectionId);
-        } else {
-          refreshSchemaOutput =
-              refreshSchemaActivity.refreshSchemaV2(new RefreshSchemaActivityInput(sourceId.get(), connectionId, syncInput.getWorkspaceId()));
-        }
+        refreshSchemaOutput =
+            refreshSchemaActivity.refreshSchemaV2(new RefreshSchemaActivityInput(sourceId.get(), connectionId, syncInput.getWorkspaceId()));
       } catch (final Exception e) {
         ApmTraceUtils.addExceptionToTrace(e);
         return SyncOutputProvider.getRefreshSchemaFailure(e);
       }
     }
+
+    final long discoverSchemaEndTime = Workflow.currentTimeMillis();
 
     final Optional<ConnectionStatus> status = configFetchActivity.getStatus(connectionId);
     if (!status.isEmpty() && ConnectionStatus.INACTIVE == status.get()) {
@@ -174,7 +173,32 @@ public class SyncWorkflowImpl implements SyncWorkflow {
       }
     }
 
+    final long replicationEndTime = Workflow.currentTimeMillis();
+
+    if (sendRunTimeMetrics) {
+      reportRunTimeActivity.reportRunTime(new ReportRunTimeActivityInput(
+          connectionId,
+          syncInput.getConnectionContext() == null || syncInput.getConnectionContext().getSourceDefinitionId() == null
+              ? UUID.fromString("00000000-0000-0000-0000-000000000000")
+              : syncInput.getConnectionContext().getSourceDefinitionId(),
+          startTime,
+          discoverSchemaEndTime,
+          replicationEndTime,
+          shouldRefreshSchema));
+    }
+
+    if (shouldRefreshSchema && syncOutput.getStandardSyncSummary() != null && syncOutput.getStandardSyncSummary().getTotalStats() != null) {
+      syncOutput.getStandardSyncSummary().getTotalStats().setDiscoverSchemaEndTime(discoverSchemaEndTime);
+      syncOutput.getStandardSyncSummary().getTotalStats().setDiscoverSchemaStartTime(startTime);
+    }
+
     return syncOutput;
+  }
+
+  private boolean shouldReportRuntime() {
+    final int shouldReportRuntimeVersion = Workflow.getVersion("SHOULD_REPORT_RUNTIME", Workflow.DEFAULT_VERSION, 1);
+
+    return shouldReportRuntimeVersion != Workflow.DEFAULT_VERSION;
   }
 
   private NormalizationInput generateNormalizationInput(final StandardSyncInput syncInput) {
@@ -218,16 +242,12 @@ public class SyncWorkflowImpl implements SyncWorkflow {
 
   private boolean checkUseWorkloadApiFlag(final StandardSyncInput syncInput) {
     return workloadFeatureFlagActivity.useWorkloadApi(new WorkloadFeatureFlagActivity.Input(
-        syncInput.getWorkspaceId(),
-        syncInput.getConnectionId(),
-        syncInput.getConnectionContext().getOrganizationId()));
+        syncInput.getWorkspaceId()));
   }
 
   private boolean checkUseWorkloadOutputFlag(final StandardSyncInput syncInput) {
     return workloadFeatureFlagActivity.useOutputDocStore(new WorkloadFeatureFlagActivity.Input(
-        syncInput.getWorkspaceId(),
-        syncInput.getConnectionId(),
-        syncInput.getConnectionContext().getOrganizationId()));
+        syncInput.getWorkspaceId()));
   }
 
 }

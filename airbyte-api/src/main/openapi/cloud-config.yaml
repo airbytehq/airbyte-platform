@@ -28,7 +28,10 @@ externalDocs:
   description: Find out more about Airbyte
   url: "https://airbyte.io"
 servers:
+  - url: "https://cloud.airbyte.com/cloud"
+    description: Airbyte Cloud
   - url: "http://localhost:8002/cloud"
+    description: Local Development
 tags:
   - name: user
     description: User related resources.
@@ -1216,7 +1219,6 @@ components:
       type: object
       required:
         - workspaceId
-        - organizationId
       properties:
         name:
           type: string
@@ -1224,9 +1226,6 @@ components:
           $ref: "#/components/schemas/WorkspaceId"
         creatorUserId:
           $ref: "#/components/schemas/UserId"
-        organizationId:
-          type: string
-          format: uuid
         tombstone:
           description:
             If not set or false, the configuration is active. If true, then this
@@ -1623,9 +1622,11 @@ components:
       properties:
         accountId:
           type: integer
+          format: int64
           description: The account id associated with the job
         jobId:
           type: integer
+          format: int64
           description: The the specific job id returned by the dbt Cloud API
         jobName:
           type: string

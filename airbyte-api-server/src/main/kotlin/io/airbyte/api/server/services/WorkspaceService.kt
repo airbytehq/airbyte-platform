@@ -115,6 +115,8 @@ interface WorkspaceService {
   ): Response
 }
 
+val DEFAULT_ORGANIZATION_ID = UUID.fromString("00000000-0000-0000-0000-000000000000")!!
+
 @Singleton
 @Secondary
 open class WorkspaceServiceImpl(
@@ -137,7 +139,9 @@ open class WorkspaceServiceImpl(
     authorization: String?,
     userInfo: String?,
   ): WorkspaceResponse {
-    val workspaceCreate = WorkspaceCreate().name(workspaceCreateRequest.name)
+    // For now this should always be true in OSS.
+    val organizationId = DEFAULT_ORGANIZATION_ID
+    val workspaceCreate = WorkspaceCreate(name = workspaceCreateRequest.name, organizationId = organizationId)
     val workspaceReadHttpResponse =
       try {
         configApiClient.createWorkspace(workspaceCreate, authorization, userInfo)
@@ -210,8 +214,7 @@ open class WorkspaceServiceImpl(
     authorization: String?,
     userInfo: String?,
   ): WorkspaceResponse {
-    val workspaceIdRequestBody = WorkspaceIdRequestBody()
-    workspaceIdRequestBody.workspaceId = workspaceId
+    val workspaceIdRequestBody = WorkspaceIdRequestBody(workspaceId = workspaceId)
     val response =
       try {
         configApiClient.getWorkspace(workspaceIdRequestBody, authorization, userInfo)
@@ -263,8 +266,7 @@ open class WorkspaceServiceImpl(
     authorization: String?,
     userInfo: String?,
   ) {
-    val workspaceIdRequestBody = WorkspaceIdRequestBody()
-    workspaceIdRequestBody.workspaceId = workspaceId
+    val workspaceIdRequestBody = WorkspaceIdRequestBody(workspaceId = workspaceId)
     val response =
       try {
         configApiClient.deleteWorkspace(workspaceIdRequestBody, authorization, userInfo)
@@ -313,17 +315,19 @@ open class WorkspaceServiceImpl(
     authorization: String?,
     userInfo: String?,
   ): WorkspacesResponse {
-    val pagination: Pagination = Pagination().pageSize(limit).rowOffset(offset)
+    val pagination = Pagination(pageSize = limit, rowOffset = offset)
 
     val workspaceIdsToQuery =
       workspaceIds.ifEmpty {
         userService.getAllWorkspaceIdsForUser(authorization ?: System.getenv(AIRBYTE_API_AUTH_HEADER_VALUE), userInfo)
       }
     log.debug("Workspaces to query: $workspaceIdsToQuery")
-    val listResourcesForWorkspacesRequestBody = ListResourcesForWorkspacesRequestBody()
-    listResourcesForWorkspacesRequestBody.includeDeleted = includeDeleted
-    listResourcesForWorkspacesRequestBody.pagination = pagination
-    listResourcesForWorkspacesRequestBody.workspaceIds = workspaceIdsToQuery
+    val listResourcesForWorkspacesRequestBody =
+      ListResourcesForWorkspacesRequestBody(
+        workspaceIds = workspaceIdsToQuery,
+        includeDeleted = includeDeleted,
+        pagination = pagination,
+      )
     val response =
       try {
         configApiClient.listWorkspaces(listResourcesForWorkspacesRequestBody, authorization, userInfo)

@@ -1,0 +1,291 @@
+/*
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ */
+package io.airbyte.config.init
+
+import io.airbyte.commons.version.AirbyteProtocolVersion
+import io.airbyte.commons.version.AirbyteProtocolVersionRange
+import io.airbyte.config.ActorDefinitionBreakingChange
+import io.airbyte.config.ActorDefinitionVersion
+import io.airbyte.config.ConnectorRegistryDestinationDefinition
+import io.airbyte.config.ConnectorRegistrySourceDefinition
+import io.airbyte.config.StandardDestinationDefinition
+import io.airbyte.config.StandardSourceDefinition
+import io.airbyte.config.helpers.ConnectorRegistryConverters
+import io.airbyte.config.init.ApplyDefinitionMetricsHelper.DefinitionProcessingFailureReason
+import io.airbyte.config.init.ApplyDefinitionMetricsHelper.DefinitionProcessingOutcome
+import io.airbyte.config.init.ApplyDefinitionMetricsHelper.DefinitionProcessingSuccessOutcome
+import io.airbyte.config.init.ApplyDefinitionMetricsHelper.getMetricAttributes
+import io.airbyte.config.specs.DefinitionsProvider
+import io.airbyte.data.exceptions.ConfigNotFoundException
+import io.airbyte.data.services.ActorDefinitionService
+import io.airbyte.data.services.DestinationService
+import io.airbyte.data.services.SourceService
+import io.airbyte.metrics.lib.MetricClient
+import io.airbyte.metrics.lib.OssMetricsRegistry
+import io.airbyte.persistence.job.JobPersistence
+import io.airbyte.validation.json.JsonValidationException
+import io.micronaut.context.annotation.Requires
+import jakarta.inject.Named
+import jakarta.inject.Singleton
+import org.slf4j.Logger
+import org.slf4j.LoggerFactory
+import java.io.IOException
+import java.util.Optional
+import java.util.UUID
+
+/**
+ * Helper class used to apply actor definitions from a DefinitionsProvider to the database. This is
+ * here to enable easy reuse of definition application logic in bootloader and cron.
+ */
+@Singleton
+@Requires(bean = JobPersistence::class)
+@Requires(bean = MetricClient::class)
+class ApplyDefinitionsHelper(
+  @param:Named("seedDefinitionsProvider") private val definitionsProvider: DefinitionsProvider,
+  private val jobPersistence: JobPersistence,
+  private val actorDefinitionService: ActorDefinitionService,
+  private val sourceService: SourceService,
+  private val destinationService: DestinationService,
+  private val metricClient: MetricClient,
+  private val supportStateUpdater: SupportStateUpdater,
+) {
+  private var newConnectorCount = 0
+  private var changedConnectorCount = 0
+
+  /**
+   * Apply the latest definitions from the provider to the repository.
+   *
+   * @param updateAll - Whether we should overwrite all stored definitions. If true, we do not
+   * consider whether a definition is in use before updating the definition and default
+   * version.
+   */
+  @JvmOverloads
+  @Throws(
+    JsonValidationException::class,
+    IOException::class,
+    ConfigNotFoundException::class,
+    io.airbyte.config.persistence.ConfigNotFoundException::class,
+  )
+  fun apply(updateAll: Boolean = false) {
+    val latestSourceDefinitions = definitionsProvider.sourceDefinitions
+    val latestDestinationDefinitions = definitionsProvider.destinationDefinitions
+
+    val currentProtocolRange = jobPersistence.currentProtocolVersionRange
+    val protocolCompatibleSourceDefinitions =
+      filterOutIncompatibleSourceDefs(currentProtocolRange, latestSourceDefinitions)
+    val protocolCompatibleDestinationDefinitions =
+      filterOutIncompatibleDestDefs(currentProtocolRange, latestDestinationDefinitions)
+
+    val actorDefinitionIdsToDefaultVersionsMap =
+      actorDefinitionService.actorDefinitionIdsToDefaultVersionsMap
+    val actorDefinitionIdsInUse = actorDefinitionService.actorDefinitionIdsInUse
+
+    newConnectorCount = 0
+    changedConnectorCount = 0
+
+    for (def in protocolCompatibleSourceDefinitions) {
+      applySourceDefinition(actorDefinitionIdsToDefaultVersionsMap, def, actorDefinitionIdsInUse, updateAll)
+    }
+    for (def in protocolCompatibleDestinationDefinitions) {
+      applyDestinationDefinition(actorDefinitionIdsToDefaultVersionsMap, def, actorDefinitionIdsInUse, updateAll)
+    }
+    supportStateUpdater.updateSupportStates()
+
+    log.info("New connectors added: {}", newConnectorCount)
+    log.info("Version changes applied: {}", changedConnectorCount)
+  }
+
+  @Throws(IOException::class, JsonValidationException::class, ConfigNotFoundException::class)
+  private fun applySourceDefinition(
+    actorDefinitionIdsAndDefaultVersions: Map<UUID, ActorDefinitionVersion>,
+    newDef: ConnectorRegistrySourceDefinition,
+    actorDefinitionIdsInUse: Set<UUID>,
+    updateAll: Boolean,
+  ) {
+    // Skip and log if unable to parse registry entry.
+    val newSourceDef: StandardSourceDefinition
+    val newADV: ActorDefinitionVersion
+    val breakingChangesForDef: List<ActorDefinitionBreakingChange>
+    try {
+      newSourceDef = ConnectorRegistryConverters.toStandardSourceDefinition(newDef)
+      newADV = ConnectorRegistryConverters.toActorDefinitionVersion(newDef)
+      breakingChangesForDef = ConnectorRegistryConverters.toActorDefinitionBreakingChanges(newDef)
+    } catch (e: IllegalArgumentException) {
+      log.error("Failed to convert source definition: {}", newDef.name, e)
+      trackDefinitionProcessed(
+        newDef.dockerRepository,
+        newDef.dockerImageTag,
+        DefinitionProcessingFailureReason.DEFINITION_CONVERSION_FAILED,
+      )
+      return
+    }
+
+    val connectorIsNew = !actorDefinitionIdsAndDefaultVersions.containsKey(newSourceDef.sourceDefinitionId)
+    if (connectorIsNew) {
+      log.info("Adding new connector {}:{}", newDef.dockerRepository, newDef.dockerImageTag)
+      sourceService.writeConnectorMetadata(newSourceDef, newADV, breakingChangesForDef)
+      newConnectorCount++
+      trackDefinitionProcessed(newDef.dockerRepository, newDef.dockerImageTag, DefinitionProcessingSuccessOutcome.INITIAL_VERSION_ADDED)
+      return
+    }
+
+    val currentDefaultADV =
+      actorDefinitionIdsAndDefaultVersions[newSourceDef.sourceDefinitionId] ?: throw RuntimeException(
+        "No default actor definition version found for source definition with ID: ${newSourceDef.sourceDefinitionId}",
+      )
+    val shouldUpdateActorDefinitionDefaultVersion =
+      getShouldUpdateActorDefinitionDefaultVersion(currentDefaultADV, newADV, actorDefinitionIdsInUse, updateAll)
+
+    if (shouldUpdateActorDefinitionDefaultVersion) {
+      log.info(
+        "Updating default version for connector {}: {} -> {}",
+        currentDefaultADV.dockerRepository,
+        currentDefaultADV.dockerImageTag,
+        newADV.dockerImageTag,
+      )
+      sourceService.writeConnectorMetadata(newSourceDef, newADV, breakingChangesForDef)
+      changedConnectorCount++
+      trackDefinitionProcessed(newDef.dockerRepository, newDef.dockerImageTag, DefinitionProcessingSuccessOutcome.DEFAULT_VERSION_UPDATED)
+    } else {
+      sourceService.updateStandardSourceDefinition(newSourceDef)
+      trackDefinitionProcessed(newDef.dockerRepository, newDef.dockerImageTag, DefinitionProcessingSuccessOutcome.VERSION_UNCHANGED)
+    }
+  }
+
+  @Throws(IOException::class, JsonValidationException::class, ConfigNotFoundException::class)
+  private fun applyDestinationDefinition(
+    actorDefinitionIdsAndDefaultVersions: Map<UUID, ActorDefinitionVersion>,
+    newDef: ConnectorRegistryDestinationDefinition,
+    actorDefinitionIdsInUse: Set<UUID>,
+    updateAll: Boolean,
+  ) {
+    // Skip and log if unable to parse registry entry.
+    val newDestinationDef: StandardDestinationDefinition
+    val newADV: ActorDefinitionVersion
+    val breakingChangesForDef: List<ActorDefinitionBreakingChange>
+    try {
+      newDestinationDef = ConnectorRegistryConverters.toStandardDestinationDefinition(newDef)
+      newADV = ConnectorRegistryConverters.toActorDefinitionVersion(newDef)
+      breakingChangesForDef = ConnectorRegistryConverters.toActorDefinitionBreakingChanges(newDef)
+    } catch (e: IllegalArgumentException) {
+      log.error("Failed to convert source definition: {}", newDef.name, e)
+      trackDefinitionProcessed(
+        newDef.dockerRepository,
+        newDef.dockerImageTag,
+        DefinitionProcessingFailureReason.DEFINITION_CONVERSION_FAILED,
+      )
+      return
+    }
+
+    val connectorIsNew = !actorDefinitionIdsAndDefaultVersions.containsKey(newDestinationDef.destinationDefinitionId)
+    if (connectorIsNew) {
+      log.info("Adding new connector {}:{}", newDef.dockerRepository, newDef.dockerImageTag)
+      destinationService.writeConnectorMetadata(newDestinationDef, newADV, breakingChangesForDef)
+      newConnectorCount++
+      trackDefinitionProcessed(newDef.dockerRepository, newDef.dockerImageTag, DefinitionProcessingSuccessOutcome.INITIAL_VERSION_ADDED)
+      return
+    }
+
+    val currentDefaultADV =
+      actorDefinitionIdsAndDefaultVersions[newDestinationDef.destinationDefinitionId] ?: throw RuntimeException(
+        "No default actor definition version found for destination definition with ID: ${newDestinationDef.destinationDefinitionId}",
+      )
+    val shouldUpdateActorDefinitionDefaultVersion =
+      getShouldUpdateActorDefinitionDefaultVersion(currentDefaultADV, newADV, actorDefinitionIdsInUse, updateAll)
+
+    if (shouldUpdateActorDefinitionDefaultVersion) {
+      log.info(
+        "Updating default version for connector {}: {} -> {}",
+        currentDefaultADV.dockerRepository,
+        currentDefaultADV.dockerImageTag,
+        newADV.dockerImageTag,
+      )
+      destinationService.writeConnectorMetadata(newDestinationDef, newADV, breakingChangesForDef)
+      changedConnectorCount++
+      trackDefinitionProcessed(newDef.dockerRepository, newDef.dockerImageTag, DefinitionProcessingSuccessOutcome.DEFAULT_VERSION_UPDATED)
+    } else {
+      destinationService.updateStandardDestinationDefinition(newDestinationDef)
+      trackDefinitionProcessed(newDef.dockerRepository, newDef.dockerImageTag, DefinitionProcessingSuccessOutcome.VERSION_UNCHANGED)
+    }
+  }
+
+  private fun getShouldUpdateActorDefinitionDefaultVersion(
+    currentDefaultADV: ActorDefinitionVersion,
+    newADV: ActorDefinitionVersion,
+    actorDefinitionIdsInUse: Set<UUID>,
+    updateAll: Boolean,
+  ): Boolean {
+    val newVersionIsAvailable = newADV.dockerImageTag != currentDefaultADV.dockerImageTag
+    val definitionIsInUse = actorDefinitionIdsInUse.contains(currentDefaultADV.actorDefinitionId)
+    val shouldApplyNewVersion = updateAll || !definitionIsInUse
+
+    return newVersionIsAvailable && shouldApplyNewVersion
+  }
+
+  private fun filterOutIncompatibleDestDefs(
+    protocolVersionRange: Optional<AirbyteProtocolVersionRange>,
+    destDefs: List<ConnectorRegistryDestinationDefinition>,
+  ): List<ConnectorRegistryDestinationDefinition> {
+    if (protocolVersionRange.isEmpty) {
+      return destDefs
+    }
+
+    return destDefs.stream().filter { def: ConnectorRegistryDestinationDefinition ->
+      val isSupported = isProtocolVersionSupported(protocolVersionRange.get(), def.spec.protocolVersion)
+      if (!isSupported) {
+        log.warn(
+          "Destination {} {} has an incompatible protocol version ({})... ignoring.",
+          def.destinationDefinitionId,
+          def.name,
+          def.spec.protocolVersion,
+        )
+        trackDefinitionProcessed(def.dockerRepository, def.dockerImageTag, DefinitionProcessingFailureReason.INCOMPATIBLE_PROTOCOL_VERSION)
+      }
+      isSupported
+    }.toList()
+  }
+
+  private fun filterOutIncompatibleSourceDefs(
+    protocolVersionRange: Optional<AirbyteProtocolVersionRange>,
+    sourceDefs: List<ConnectorRegistrySourceDefinition>,
+  ): List<ConnectorRegistrySourceDefinition> {
+    if (protocolVersionRange.isEmpty) {
+      return sourceDefs
+    }
+
+    return sourceDefs.stream().filter { def: ConnectorRegistrySourceDefinition ->
+      val isSupported = isProtocolVersionSupported(protocolVersionRange.get(), def.spec.protocolVersion)
+      if (!isSupported) {
+        log.warn(
+          "Source {} {} has an incompatible protocol version ({})... ignoring.",
+          def.sourceDefinitionId,
+          def.name,
+          def.spec.protocolVersion,
+        )
+        trackDefinitionProcessed(def.dockerRepository, def.dockerImageTag, DefinitionProcessingFailureReason.INCOMPATIBLE_PROTOCOL_VERSION)
+      }
+      isSupported
+    }.toList()
+  }
+
+  private fun isProtocolVersionSupported(
+    protocolVersionRange: AirbyteProtocolVersionRange,
+    protocolVersion: String?,
+  ): Boolean {
+    return protocolVersionRange.isSupported(AirbyteProtocolVersion.getWithDefault(protocolVersion))
+  }
+
+  private fun trackDefinitionProcessed(
+    dockerRepository: String,
+    dockerImageTag: String,
+    outcome: DefinitionProcessingOutcome,
+  ) {
+    val attributes = getMetricAttributes(dockerRepository, dockerImageTag, outcome)
+    metricClient.count(OssMetricsRegistry.CONNECTOR_REGISTRY_DEFINITION_PROCESSED, 1, *attributes)
+  }
+
+  companion object {
+    private val log: Logger = LoggerFactory.getLogger(ApplyDefinitionsHelper::class.java)
+  }
+}

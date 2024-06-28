@@ -102,7 +102,7 @@ object ConnectionReadMapper {
             streamAndConfiguration.config!!.syncMode,
             streamAndConfiguration.config!!.destinationSyncMode,
           )
-        streamConfigurations.addStreamsItem(
+        streamConfigurations.addstreamsItem(
           StreamConfiguration()
             .name(streamAndConfiguration.stream!!.name)
             .primaryKey(streamAndConfiguration.config!!.primaryKey)

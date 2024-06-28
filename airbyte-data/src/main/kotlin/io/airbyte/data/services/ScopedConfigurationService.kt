@@ -9,8 +9,6 @@ import io.airbyte.data.services.shared.ScopedConfigurationKey
 import java.util.Optional
 import java.util.UUID
 
-data class KeyedScopeMap(val key: String, val scopeMap: Map<ConfigScopeType, UUID?>)
-
 /**
  * A service that manages scoped configurations.
  */

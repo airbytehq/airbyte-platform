@@ -83,6 +83,7 @@ create table "public"."stream_stats" (
   "updated_at" timestamp(6) with time zone not null default current_timestamp,
   "bytes_committed" bigint,
   "records_committed" bigint,
+  "connection_id" uuid,
   constraint "stream_stats_pkey" primary key ("id"),
   constraint "uniq_stream_attempt" unique ("attempt_id", "stream_name", "stream_namespace")
 );
@@ -100,6 +101,7 @@ create table "public"."stream_statuses" (
   "run_state" "public"."job_stream_status_run_state" not null,
   "incomplete_run_cause" "public"."job_stream_status_incomplete_run_cause",
   "transitioned_at" timestamp(6) with time zone not null,
+  "metadata" jsonb,
   constraint "stream_statuses_pkey" primary key ("id")
 );
 create table "public"."sync_stats" (

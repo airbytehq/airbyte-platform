@@ -146,6 +146,8 @@ public class ActorDefinitionHandlerHelper {
         .withSupportLevel(currentVersion.getSupportLevel())
         .withNormalizationConfig(currentVersion.getNormalizationConfig())
         .withSupportsDbt(currentVersion.getSupportsDbt())
+        .withCdkVersion(currentVersion.getCdkVersion())
+        .withLastPublished(currentVersion.getLastPublished())
         .withAllowedHosts(currentVersion.getAllowedHosts());
   }
 

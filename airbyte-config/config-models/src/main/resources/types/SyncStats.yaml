@@ -55,3 +55,9 @@ properties:
   sourceStateMessagesEmitted:
     description: Number of State messages emitted by the Source Connector
     type: integer
+  discoverSchemaEndTime:
+    type: integer
+    description: The end of the refresh schema
+  discoverSchemaStartTime:
+    type: integer
+    description: The start of the refresh schema

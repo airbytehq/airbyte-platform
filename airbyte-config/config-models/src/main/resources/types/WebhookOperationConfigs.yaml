@@ -26,3 +26,6 @@ properties:
           type: string
           airbyte_secret: true
           description: An auth token, to be passed as the value for an HTTP Authorization header. Note - must include prefix such as "Bearer <credential>".
+        customDbtHost:
+          type: string
+          description: if this config is for a dbt Cloud webhook, use this custom host

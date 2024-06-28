@@ -3,6 +3,7 @@ package io.airbyte.connectorSidecar
 import com.google.common.annotations.VisibleForTesting
 import com.google.common.base.Stopwatch
 import io.airbyte.api.client.WorkloadApiClient
+import io.airbyte.commons.io.LineGobbler
 import io.airbyte.commons.json.Jsons
 import io.airbyte.commons.protocol.AirbyteMessageSerDeProvider
 import io.airbyte.commons.protocol.AirbyteProtocolVersionedMigratorFactory
@@ -25,6 +26,7 @@ import io.airbyte.workers.workload.JobOutputDocStore
 import io.airbyte.workload.api.client.model.generated.WorkloadFailureRequest
 import io.airbyte.workload.api.client.model.generated.WorkloadSuccessRequest
 import io.github.oshai.kotlinlogging.KotlinLogging
+import io.github.oshai.kotlinlogging.withLoggingContext
 import io.micronaut.context.annotation.Value
 import jakarta.inject.Named
 import jakarta.inject.Singleton
@@ -49,92 +51,102 @@ class ConnectorWatcher(
   val gsonPksExtractor: GsonPksExtractor,
   val workloadApiClient: WorkloadApiClient,
   val jobOutputDocStore: JobOutputDocStore,
+  val logContextFactory: SidecarLogContextFactory,
 ) {
   fun run() {
     val input = Jsons.deserialize(readFile(OrchestratorConstants.SIDECAR_INPUT), SidecarInput::class.java)
-    val checkConnectionConfiguration = input.checkConnectionInput
-    val discoverCatalogInput = input.discoverCatalogInput
-    val workloadId = input.workloadId
-    val integrationLauncherConfig = input.integrationLauncherConfig
-    try {
-      val stopwatch: Stopwatch = Stopwatch.createStarted()
-      while (!areNeededFilesPresent()) {
-        Thread.sleep(100)
-        if (fileTimeoutReach(stopwatch)) {
-          logger.warn { "Failed to find output files from connector within timeout $fileTimeoutMinutes. Is the connector still running?" }
-          val failureReason =
-            FailureReason()
-              .withFailureOrigin(FailureReason.FailureOrigin.UNKNOWN)
-              .withExternalMessage("Failed to find output files from connector within timeout $fileTimeoutMinutes.")
+    withLoggingContext(logContextFactory.create(input.logPath)) {
+      LineGobbler.startSection(input.operationType.toString())
+      val checkConnectionConfiguration = input.checkConnectionInput
+      val discoverCatalogInput = input.discoverCatalogInput
+      val workloadId = input.workloadId
+      val integrationLauncherConfig = input.integrationLauncherConfig
+      try {
+        val stopwatch: Stopwatch = Stopwatch.createStarted()
+        while (!areNeededFilesPresent()) {
+          Thread.sleep(100)
+          if (fileTimeoutReach(stopwatch)) {
+            logger.warn { "Failed to find output files from connector within timeout $fileTimeoutMinutes. Is the connector still running?" }
+            val failureReason =
+              FailureReason()
+                .withFailureOrigin(FailureReason.FailureOrigin.UNKNOWN)
+                .withExternalMessage("Failed to find output files from connector within timeout $fileTimeoutMinutes.")
 
-          failWorkload(workloadId, failureReason)
-          exitFileNotFound()
-          // The return is needed for the test
-          return
+            failWorkload(workloadId, failureReason)
+            exitFileNotFound()
+            LineGobbler.endSection(input.operationType.toString())
+            // The return is needed for the test
+            return
+          }
         }
+        logger.info { "Connector exited, processing output" }
+        val outputIS =
+          if (Files.exists(Path.of(OrchestratorConstants.JOB_OUTPUT_FILENAME))) {
+            logger.info { "Output file ${OrchestratorConstants.JOB_OUTPUT_FILENAME} found" }
+            Files.newInputStream(Path.of(OrchestratorConstants.JOB_OUTPUT_FILENAME))
+          } else {
+            InputStream.nullInputStream()
+          }
+        val exitCode = readFile(OrchestratorConstants.EXIT_CODE_FILE).trim().toInt()
+        logger.info { "Connector exited with $exitCode" }
+        val streamFactory: AirbyteStreamFactory = getStreamFactory(integrationLauncherConfig)
+        val connectorOutput: ConnectorJobOutput =
+          when (input.operationType) {
+            SidecarInput.OperationType.CHECK -> {
+              connectorMessageProcessor.run(
+                outputIS,
+                streamFactory,
+                ConnectorMessageProcessor.OperationInput(
+                  checkConnectionConfiguration,
+                ),
+                exitCode,
+                input.operationType,
+              )
+            }
+
+            SidecarInput.OperationType.DISCOVER -> {
+              connectorMessageProcessor.run(
+                outputIS,
+                streamFactory,
+                ConnectorMessageProcessor.OperationInput(
+                  discoveryInput = discoverCatalogInput,
+                ),
+                exitCode,
+                input.operationType,
+              )
+            }
+
+            SidecarInput.OperationType.SPEC -> {
+              connectorMessageProcessor.run(
+                outputIS,
+                streamFactory,
+                ConnectorMessageProcessor.OperationInput(),
+                exitCode,
+                input.operationType,
+              )
+            }
+          }
+        logger.info { "Writing output of $workloadId to the doc store" }
+        jobOutputDocStore.write(workloadId, connectorOutput)
+        logger.info { "Marking workload as successful" }
+        workloadApiClient.workloadApi.workloadSuccess(WorkloadSuccessRequest(workloadId))
+      } catch (e: Exception) {
+        logger.error(e) { "Error performing operation: ${e.javaClass.name}" }
+
+        val output =
+          when (input.operationType) {
+            SidecarInput.OperationType.CHECK -> getFailedOutput(checkConnectionConfiguration, e)
+            SidecarInput.OperationType.DISCOVER -> getFailedOutput(discoverCatalogInput, e)
+            SidecarInput.OperationType.SPEC -> getFailedOutput(input.integrationLauncherConfig.dockerImage, e)
+          }
+
+        jobOutputDocStore.write(workloadId, output)
+        failWorkload(workloadId, output.failureReason)
+        exitInternalError()
       }
-      val outputIS =
-        if (Files.exists(Path.of(OrchestratorConstants.JOB_OUTPUT_FILENAME))) {
-          Files.newInputStream(Path.of(OrchestratorConstants.JOB_OUTPUT_FILENAME))
-        } else {
-          InputStream.nullInputStream()
-        }
-      val exitCode = readFile(OrchestratorConstants.EXIT_CODE_FILE).trim().toInt()
-      val streamFactory: AirbyteStreamFactory = getStreamFactory(integrationLauncherConfig)
-      val connectorOutput: ConnectorJobOutput =
-        when (input.operationType) {
-          SidecarInput.OperationType.CHECK -> {
-            connectorMessageProcessor.run(
-              outputIS,
-              streamFactory,
-              ConnectorMessageProcessor.OperationInput(
-                checkConnectionConfiguration,
-              ),
-              exitCode,
-              input.operationType,
-            )
-          }
-
-          SidecarInput.OperationType.DISCOVER -> {
-            connectorMessageProcessor.run(
-              outputIS,
-              streamFactory,
-              ConnectorMessageProcessor.OperationInput(
-                discoveryInput = discoverCatalogInput,
-              ),
-              exitCode,
-              input.operationType,
-            )
-          }
-
-          SidecarInput.OperationType.SPEC -> {
-            connectorMessageProcessor.run(
-              outputIS,
-              streamFactory,
-              ConnectorMessageProcessor.OperationInput(),
-              exitCode,
-              input.operationType,
-            )
-          }
-        }
-      jobOutputDocStore.write(workloadId, connectorOutput)
-      workloadApiClient.workloadApi.workloadSuccess(WorkloadSuccessRequest(workloadId))
-    } catch (e: Exception) {
-      logger.error(e) { "Error performing operation: ${e.javaClass.name}" }
-
-      val output =
-        when (input.operationType) {
-          SidecarInput.OperationType.CHECK -> getFailedOutput(checkConnectionConfiguration, e)
-          SidecarInput.OperationType.DISCOVER -> getFailedOutput(discoverCatalogInput, e)
-          SidecarInput.OperationType.SPEC -> getFailedOutput(input.integrationLauncherConfig.dockerImage, e)
-        }
-
-      jobOutputDocStore.write(workloadId, output)
-      failWorkload(workloadId, output.failureReason)
-      exitInternalError()
+      LineGobbler.endSection(input.operationType.toString())
+      exitProperly()
     }
-
-    exitProperly()
   }
 
   @VisibleForTesting

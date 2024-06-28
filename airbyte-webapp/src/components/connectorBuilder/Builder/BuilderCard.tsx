@@ -1,11 +1,9 @@
 import classNames from "classnames";
 import { dump, load, YAMLException } from "js-yaml";
-import debounce from "lodash/debounce";
-import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import { FieldPath, useFormContext, useWatch } from "react-hook-form";
 import { FormattedMessage, useIntl } from "react-intl";
 
-import { YamlEditor } from "components/connectorBuilder/YamlEditor";
 import { ControlLabels } from "components/LabeledControl";
 import { Button } from "components/ui/Button";
 import { Card } from "components/ui/Card";
@@ -23,6 +21,7 @@ import {
 } from "services/connectorBuilder/ConnectorBuilderStateService";
 
 import styles from "./BuilderCard.module.scss";
+import { BuilderYamlField } from "./BuilderYamlField";
 import { ManifestCompatibilityError } from "../convertManifestToBuilderForm";
 import { BuilderState, BuilderStream, isYamlString, useBuilderWatch } from "../types";
 import { UiYamlToggleButton } from "../UiYamlToggleButton";
@@ -35,8 +34,7 @@ interface BuilderCardProps {
   copyConfig?: {
     path: string;
     currentStreamIndex: number;
-    copyToLabel: string;
-    copyFromLabel: string;
+    componentName: string;
   };
   docLink?: string;
   inputsConfig?: {
@@ -61,6 +59,7 @@ export const BuilderCard: React.FC<React.PropsWithChildren<BuilderCardProps>> = 
   inputsConfig,
 }) => {
   const { formatMessage } = useIntl();
+  const { handleScrollToField } = useConnectorBuilderFormManagementState();
 
   const childElements = inputsConfig?.yamlConfig ? (
     <YamlEditableComponent
@@ -76,8 +75,16 @@ export const BuilderCard: React.FC<React.PropsWithChildren<BuilderCardProps>> = 
     children
   );
 
+  const elementRef = useRef<HTMLDivElement | null>(null);
+  useEffect(() => {
+    if (inputsConfig) {
+      // Call handler in here to make sure it handles new scrollToField value from the context
+      handleScrollToField(elementRef, inputsConfig.path);
+    }
+  }, [inputsConfig, handleScrollToField]);
+
   return (
-    <Card className={className} bodyClassName={classNames(styles.card)}>
+    <Card className={className} bodyClassName={classNames(styles.card)} ref={elementRef}>
       {(inputsConfig?.toggleable || label || docLink) && (
         <FlexContainer alignItems="center">
           <FlexItem grow>
@@ -134,23 +141,12 @@ const YamlEditableComponent: React.FC<React.PropsWithChildren<YamlEditableCompon
 }) => {
   const { resolveErrorMessage } = useConnectorBuilderFormState();
   const { openConfirmationModal, closeConfirmationModal } = useConfirmationModalService();
-  const { setValue, register } = useFormContext();
+  const { setValue, unregister } = useFormContext();
   const formValue = useBuilderWatch(path);
   const pathString = path as string;
   const isYaml = isYamlString(formValue);
-  const [previousUiValue, setPreviousUiValue] = useState(isYaml ? defaultValue : formValue);
-  // Use a separate state for the YamlEditor value to avoid the debouncedSetValue
-  // causing the YamlEditor be set to a previous value while still typing
-  const [localYamlValue, setLocalYamlValue] = useState(isYaml ? formValue : "");
+  const [previousUiValue, setPreviousUiValue] = useState(isYaml ? undefined : formValue);
   const [localYamlIsDirty, setLocalYamlIsDirty] = useState(false);
-  const debouncedSetValue = useMemo(
-    () =>
-      debounce((...args: Parameters<typeof setValue>) => {
-        setValue(...args);
-        setLocalYamlIsDirty(false);
-      }, 500),
-    [setValue]
-  );
   const inputs = useBuilderWatch("formValues.inputs");
 
   const elementRef = useRef<HTMLDivElement | null>(null);
@@ -193,9 +189,19 @@ const YamlEditableComponent: React.FC<React.PropsWithChildren<YamlEditableCompon
               }
             />
           </FlexItem>
-          {errorMessage && <Pre className={styles.discardYamlError}>{errorMessage}</Pre>}
+          {errorMessage && (
+            <Pre className={styles.discardYamlError} wrapText>
+              {errorMessage}
+            </Pre>
+          )}
           <FlexItem>
-            <FormattedMessage id="connectorBuilder.yamlComponent.discardChanges.errorOutro" />
+            <FormattedMessage
+              id={
+                previousUiValue
+                  ? "connectorBuilder.yamlComponent.discardChanges.errorOutro.uiValueAvailable"
+                  : "connectorBuilder.yamlComponent.discardChanges.errorOutro.uiValueUnavailable"
+              }
+            />
           </FlexItem>
         </FlexContainer>
       );
@@ -205,9 +211,10 @@ const YamlEditableComponent: React.FC<React.PropsWithChildren<YamlEditableCompon
         text,
         submitButtonText: "connectorBuilder.yamlComponent.discardChanges.confirm",
         onSubmit: () => {
+          const uiValue = previousUiValue ?? defaultValue;
           // lock the required inputs so they aren't duplicated when switching to UI
-          toggleLockedInputs(previousUiValue, "locked");
-          setValue(path, previousUiValue, {
+          toggleLockedInputs(uiValue, "locked");
+          setValue(path, uiValue, {
             shouldValidate: true,
             shouldDirty: true,
             shouldTouch: true,
@@ -216,40 +223,12 @@ const YamlEditableComponent: React.FC<React.PropsWithChildren<YamlEditableCompon
         },
       });
     },
-    [closeConfirmationModal, openConfirmationModal, path, previousUiValue, setValue, toggleLockedInputs]
+    [closeConfirmationModal, openConfirmationModal, path, previousUiValue, defaultValue, setValue, toggleLockedInputs]
   );
 
   return (
     <>
-      {isYaml ? (
-        <div
-          className={styles.yamlEditor}
-          ref={(ref) => {
-            elementRef.current = ref;
-            // Call handler in here to make sure it handles new refs
-            handleScrollToField(elementRef, path);
-          }}
-        >
-          <YamlEditor
-            value={localYamlValue}
-            onChange={(val: string | undefined) => {
-              setLocalYamlValue(val ?? "");
-              setLocalYamlIsDirty(true);
-              debouncedSetValue(path, val, {
-                shouldValidate: true,
-                shouldDirty: true,
-                shouldTouch: true,
-              });
-            }}
-            onMount={(_) => {
-              // register path so that validation rules are applied
-              register(path);
-            }}
-          />
-        </div>
-      ) : (
-        children
-      )}
+      {isYaml ? <BuilderYamlField path={path} setLocalYamlIsDirty={setLocalYamlIsDirty} /> : children}
       <UiYamlToggleButton
         className={styles.yamlEditorToggle}
         yamlSelected={isYaml}
@@ -283,9 +262,10 @@ const YamlEditableComponent: React.FC<React.PropsWithChildren<YamlEditableCompon
             setPreviousUiValue(formValue);
             const manifestValue = builderToManifest(formValue);
             const yaml = dump(manifestValue);
-            setLocalYamlValue(yaml);
             // unlock the locked inputs so they don't disappear when switching to YAML
             toggleLockedInputs(formValue, "unlocked");
+            // unregister the path so that the YAML editor can properly register on mount
+            unregister(path);
             setValue(path, yaml, {
               shouldValidate: true,
               shouldDirty: true,
@@ -333,6 +313,7 @@ const CardToggle = ({ path, defaultValue }: { path: FieldPath<BuilderState>; def
 };
 
 const CopyButtons = ({ copyConfig }: Pick<BuilderCardProps, "copyConfig">) => {
+  const { formatMessage } = useIntl();
   const [isCopyToOpen, setCopyToOpen] = useState(false);
   const [isCopyFromOpen, setCopyFromOpen] = useState(false);
   const copyValueIncludingArrays = useCopyValueIncludingArrays();
@@ -378,7 +359,7 @@ const CopyButtons = ({ copyConfig }: Pick<BuilderCardProps, "copyConfig">) => {
             setCopyToOpen(false);
           }}
           currentStreamIndex={copyConfig.currentStreamIndex}
-          title={copyConfig.copyToLabel}
+          title={formatMessage({ id: "connectorBuilder.copyToTitle" }, { componentName: copyConfig.componentName })}
         />
       )}
       {isCopyFromOpen && (
@@ -393,7 +374,7 @@ const CopyButtons = ({ copyConfig }: Pick<BuilderCardProps, "copyConfig">) => {
             setCopyFromOpen(false);
           }}
           currentStreamIndex={copyConfig.currentStreamIndex}
-          title={copyConfig.copyFromLabel}
+          title={formatMessage({ id: "connectorBuilder.copyFromTitle" }, { componentName: copyConfig.componentName })}
         />
       )}
     </div>

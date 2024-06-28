@@ -9,11 +9,17 @@ import { SearchInput } from "components/ui/SearchInput";
 import { WebBackendConnectionListItem } from "core/api/types/AirbyteClient";
 
 import styles from "./ConnectionsFilters.module.scss";
-import { getAvailableDestinationOptions, getAvailableSourceOptions, statusFilterOptions } from "./filterOptions";
+import {
+  getAvailableDestinationOptions,
+  getAvailableSourceOptions,
+  stateFilterOptions,
+  statusFilterOptions,
+} from "./filterOptions";
 
 export interface FilterValues {
   search: string;
   status: string | null;
+  state: string | null;
   source: string | null;
   destination: string | null;
 }
@@ -45,7 +51,11 @@ export const ConnectionsFilters: React.FC<ConnectionsTableFiltersProps> = ({
   );
 
   const hasAnyFilterSelected =
-    !!filterValues.status || !!filterValues.source || !!filterValues.destination || searchFilter;
+    !!filterValues.status ||
+    !!filterValues.source ||
+    !!filterValues.state ||
+    !!filterValues.destination ||
+    searchFilter;
 
   return (
     <Box p="lg">
@@ -54,6 +64,16 @@ export const ConnectionsFilters: React.FC<ConnectionsTableFiltersProps> = ({
           <SearchInput value={searchFilter} onChange={({ target: { value } }) => setSearchFilter(value)} />
         </FlexItem>
         <FlexContainer gap="sm" alignItems="center">
+          <FlexItem>
+            <ListBox
+              buttonClassName={styles.filterButton}
+              optionClassName={styles.filterOption}
+              optionTextAs="span"
+              options={stateFilterOptions}
+              selectedValue={filterValues.state}
+              onSelect={(value) => setFilterValue("state", value)}
+            />
+          </FlexItem>
           <FlexItem>
             <ListBox
               buttonClassName={styles.filterButton}
@@ -92,6 +112,7 @@ export const ConnectionsFilters: React.FC<ConnectionsTableFiltersProps> = ({
                   setFilters({
                     search: "",
                     status: null,
+                    state: null,
                     source: null,
                     destination: null,
                   });

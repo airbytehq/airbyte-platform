@@ -13,6 +13,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -38,19 +39,34 @@ import io.airbyte.commons.server.errors.IdNotFoundKnownException;
 import io.airbyte.commons.server.errors.UnprocessableContentException;
 import io.airbyte.commons.server.handlers.helpers.JobCreationAndStatusUpdateHelper;
 import io.airbyte.commons.temporal.TemporalUtils;
+import io.airbyte.config.ActorDefinitionVersion;
 import io.airbyte.config.AttemptFailureSummary;
+import io.airbyte.config.DestinationConnection;
 import io.airbyte.config.FailureReason;
 import io.airbyte.config.FailureReason.FailureOrigin;
 import io.airbyte.config.JobConfig;
+import io.airbyte.config.JobConfig.ConfigType;
 import io.airbyte.config.JobOutput;
+import io.airbyte.config.JobResetConnectionConfig;
 import io.airbyte.config.JobSyncConfig;
 import io.airbyte.config.NormalizationSummary;
+import io.airbyte.config.RefreshConfig;
+import io.airbyte.config.ResetSourceConfiguration;
+import io.airbyte.config.StandardSync;
 import io.airbyte.config.StandardSyncOutput;
 import io.airbyte.config.StandardSyncSummary;
 import io.airbyte.config.StandardSyncSummary.ReplicationStatus;
+import io.airbyte.config.StateType;
+import io.airbyte.config.StateWrapper;
 import io.airbyte.config.SyncStats;
 import io.airbyte.config.helpers.LogClientSingleton;
+import io.airbyte.config.persistence.ActorDefinitionVersionHelper;
+import io.airbyte.config.persistence.ConfigNotFoundException;
 import io.airbyte.config.persistence.StatePersistence;
+import io.airbyte.config.persistence.helper.GenerationBumper;
+import io.airbyte.data.services.ConnectionService;
+import io.airbyte.data.services.DestinationService;
+import io.airbyte.featureflag.EnableResumableFullRefresh;
 import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.featureflag.TestClient;
 import io.airbyte.persistence.job.JobPersistence;
@@ -62,6 +78,7 @@ import io.airbyte.protocol.models.ConfiguredAirbyteCatalog;
 import io.airbyte.protocol.models.ConfiguredAirbyteStream;
 import io.airbyte.protocol.models.StreamDescriptor;
 import io.airbyte.protocol.models.SyncMode;
+import io.airbyte.validation.json.JsonValidationException;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.time.Instant;
@@ -73,7 +90,6 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Stream;
 import org.assertj.core.api.Assertions;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -85,15 +101,30 @@ import org.mockito.Mockito;
 
 class AttemptHandlerTest {
 
-  JobConverter jobConverter;
-  JobPersistence jobPersistence;
-  StatePersistence statePersistence;
-  Path path;
-  AttemptHandler handler;
-  JobCreationAndStatusUpdateHelper helper;
-  FeatureFlagClient ffClient;
+  private final JobConverter jobConverter = mock(JobConverter.class);
+  private final JobPersistence jobPersistence = mock(JobPersistence.class);
+  private final StatePersistence statePersistence = mock(StatePersistence.class);
+  private final Path path = mock(Path.class);
+  private final JobCreationAndStatusUpdateHelper helper = mock(JobCreationAndStatusUpdateHelper.class);
+  private final FeatureFlagClient ffClient = mock(TestClient.class);
+  private final GenerationBumper generationBumper = mock(GenerationBumper.class);
+  private final ConnectionService connectionService = mock(ConnectionService.class);
+  private final DestinationService destinationService = mock(DestinationService.class);
+  private final ActorDefinitionVersionHelper actorDefinitionVersionHelper = mock(ActorDefinitionVersionHelper.class);
+
+  private final AttemptHandler handler = new AttemptHandler(jobPersistence,
+      statePersistence,
+      jobConverter,
+      ffClient,
+      helper,
+      path,
+      generationBumper,
+      connectionService,
+      destinationService,
+      actorDefinitionVersionHelper);
 
   private static final UUID CONNECTION_ID = UUID.randomUUID();
+  private static final UUID WORKSPACE_ID = UUID.randomUUID();
   private static final long JOB_ID = 10002L;
   private static final int ATTEMPT_NUMBER = 1;
   private static final String PROCESSING_TASK_QUEUE = "SYNC";
@@ -111,18 +142,6 @@ class AttemptHandlerTest {
       .withFailures(Collections.singletonList(
           new FailureReason()
               .withFailureOrigin(FailureOrigin.SOURCE)));
-
-  @BeforeEach
-  public void init() {
-    jobPersistence = mock(JobPersistence.class);
-    statePersistence = mock(StatePersistence.class);
-    jobConverter = mock(JobConverter.class);
-    path = mock(Path.class);
-    helper = mock(JobCreationAndStatusUpdateHelper.class);
-    ffClient = mock(TestClient.class);
-
-    handler = new AttemptHandler(jobPersistence, statePersistence, jobConverter, ffClient, helper, path);
-  }
 
   @Test
   void testInternalWorkerHandlerSetsTemporalWorkflowId() throws Exception {
@@ -210,24 +229,31 @@ class AttemptHandlerTest {
     assertEquals(expectedAttemptSyncConfig, attemptSyncConfigCapture.getValue());
   }
 
-  @Test
-  void createAttemptNumber() throws IOException {
-    final int attemptNumber = 1;
+  @ParameterizedTest
+  @ValueSource(booleans = {true, false})
+  void createAttemptNumberForSync(final boolean enableRfr)
+      throws IOException, ConfigNotFoundException, JsonValidationException, io.airbyte.data.exceptions.ConfigNotFoundException {
+    final int attemptNumber = 0;
     final var connId = UUID.randomUUID();
     final Job mJob = mock(Job.class);
     when(mJob.getConfigType()).thenReturn(JobConfig.ConfigType.SYNC);
     when(mJob.getAttemptsCount()).thenReturn(ATTEMPT_NUMBER);
     when(mJob.getScope()).thenReturn(connId.toString());
+    when(mJob.getId()).thenReturn(JOB_ID);
 
     final var mConfig = mock(JobConfig.class);
+    when(mConfig.getConfigType()).thenReturn(ConfigType.SYNC);
     when(mJob.getConfig()).thenReturn(mConfig);
 
-    final var mDyncConfig = mock(JobSyncConfig.class);
-    when(mConfig.getSync()).thenReturn(mDyncConfig);
-    when(mDyncConfig.getWorkspaceId()).thenReturn(UUID.randomUUID());
+    final var mSyncConfig = mock(JobSyncConfig.class);
+    when(mConfig.getSync()).thenReturn(mSyncConfig);
+    when(mSyncConfig.getWorkspaceId()).thenReturn(UUID.randomUUID());
 
     final var mCatalog = mock(ConfiguredAirbyteCatalog.class);
-    when(mDyncConfig.getConfiguredAirbyteCatalog()).thenReturn(mCatalog);
+    when(mSyncConfig.getConfiguredAirbyteCatalog()).thenReturn(mCatalog);
+    when(mCatalog.getStreams()).thenReturn(List.of(
+        new ConfiguredAirbyteStream().withStream(new AirbyteStream().withIsResumable(true).withName("rfrStream"))
+            .withSyncMode(SyncMode.FULL_REFRESH)));
 
     when(jobPersistence.getJob(JOB_ID)).thenReturn(mJob);
     when(path.resolve(Mockito.anyString())).thenReturn(path);
@@ -238,16 +264,137 @@ class AttemptHandlerTest {
     when(jobPersistence.createAttempt(JOB_ID, expectedLogPath))
         .thenReturn(attemptNumber);
     when(ffClient.boolVariation(any(), any())).thenReturn(true);
-
+    when(ffClient.boolVariation(eq(EnableResumableFullRefresh.INSTANCE), any())).thenReturn(enableRfr);
+    StateWrapper stateWrapper = new StateWrapper().withStateType(StateType.STREAM);
+    if (enableRfr) {
+      when(statePersistence.getCurrentState(connId)).thenReturn(Optional.of(stateWrapper));
+    }
+    final UUID destinationId = UUID.randomUUID();
+    when(connectionService.getStandardSync(connId)).thenReturn(new StandardSync().withDestinationId(destinationId));
+    when(destinationService.getDestinationConnection(destinationId))
+        .thenReturn(new DestinationConnection().withWorkspaceId(WORKSPACE_ID));
+    when(actorDefinitionVersionHelper.getDestinationVersion(any(), any(), any()))
+        .thenReturn(new ActorDefinitionVersion().withSupportsRefreshes(enableRfr));
     final CreateNewAttemptNumberResponse output = handler.createNewAttemptNumber(JOB_ID);
     assertThat(output.getAttemptNumber()).isEqualTo(attemptNumber);
+    if (enableRfr) {
+      verify(generationBumper).updateGenerationForStreams(connId, JOB_ID, List.of(), Set.of(new StreamDescriptor().withName("rfrStream")));
+      verify(statePersistence).bulkDelete(connId, Set.of(new StreamDescriptor().withName("rfrStream")));
+    }
+  }
+
+  @Test
+  void createAttemptNumberForClear()
+      throws IOException, ConfigNotFoundException, JsonValidationException, io.airbyte.data.exceptions.ConfigNotFoundException {
+    final int attemptNumber = 0;
+    final var connId = UUID.randomUUID();
+    final Job mJob = mock(Job.class);
+    when(mJob.getConfigType()).thenReturn(JobConfig.ConfigType.CLEAR);
+    when(mJob.getAttemptsCount()).thenReturn(ATTEMPT_NUMBER);
+    when(mJob.getScope()).thenReturn(connId.toString());
+    when(mJob.getId()).thenReturn(JOB_ID);
+
+    final var mConfig = mock(JobConfig.class);
+    when(mConfig.getConfigType()).thenReturn(ConfigType.CLEAR);
+    when(mJob.getConfig()).thenReturn(mConfig);
+
+    final var mResetConfig = mock(JobResetConnectionConfig.class);
+    when(mConfig.getResetConnection()).thenReturn(mResetConfig);
+    when(mResetConfig.getWorkspaceId()).thenReturn(UUID.randomUUID());
+
+    final var mCatalog = mock(ConfiguredAirbyteCatalog.class);
+    when(mResetConfig.getConfiguredAirbyteCatalog()).thenReturn(mCatalog);
+    when(mCatalog.getStreams()).thenReturn(List.of(
+        new ConfiguredAirbyteStream().withStream(new AirbyteStream().withIsResumable(true).withName("rfrStream"))
+            .withSyncMode(SyncMode.INCREMENTAL)));
+    when(mResetConfig.getResetSourceConfiguration()).thenReturn(new ResetSourceConfiguration().withStreamsToReset(
+        List.of(new StreamDescriptor().withName("rfrStream"))));
+
+    when(jobPersistence.getJob(JOB_ID)).thenReturn(mJob);
+    when(path.resolve(Mockito.anyString())).thenReturn(path);
+
+    final Path expectedRoot = TemporalUtils.getJobRoot(path, String.valueOf(JOB_ID), ATTEMPT_NUMBER);
+    final Path expectedLogPath = expectedRoot.resolve(LogClientSingleton.LOG_FILENAME);
+
+    when(jobPersistence.createAttempt(JOB_ID, expectedLogPath))
+        .thenReturn(attemptNumber);
+    when(ffClient.boolVariation(any(), any())).thenReturn(true);
+    final UUID destinationId = UUID.randomUUID();
+    when(connectionService.getStandardSync(connId)).thenReturn(new StandardSync().withDestinationId(destinationId));
+    when(destinationService.getDestinationConnection(destinationId))
+        .thenReturn(new DestinationConnection().withWorkspaceId(WORKSPACE_ID));
+    when(actorDefinitionVersionHelper.getDestinationVersion(any(), any(), any()))
+        .thenReturn(new ActorDefinitionVersion().withSupportsRefreshes(true));
+    final CreateNewAttemptNumberResponse output = handler.createNewAttemptNumber(JOB_ID);
+    assertThat(output.getAttemptNumber()).isEqualTo(attemptNumber);
+    verify(generationBumper).updateGenerationForStreams(connId, JOB_ID, List.of(), Set.of(new StreamDescriptor().withName("rfrStream")));
+    verify(statePersistence).bulkDelete(connId, Set.of(new StreamDescriptor().withName("rfrStream")));
+  }
+
+  @ParameterizedTest
+  @ValueSource(ints = {0, 2})
+  void createAttemptNumberForRefresh(final int attemptNumber)
+      throws IOException, ConfigNotFoundException, JsonValidationException, io.airbyte.data.exceptions.ConfigNotFoundException {
+    final var connId = UUID.randomUUID();
+    final Job mJob = mock(Job.class);
+    when(mJob.getConfigType()).thenReturn(ConfigType.REFRESH);
+    when(mJob.getAttemptsCount()).thenReturn(ATTEMPT_NUMBER);
+    when(mJob.getScope()).thenReturn(connId.toString());
+    when(mJob.getId()).thenReturn(JOB_ID);
+
+    final var mConfig = mock(JobConfig.class);
+    when(mConfig.getConfigType()).thenReturn(ConfigType.REFRESH);
+    when(mJob.getConfig()).thenReturn(mConfig);
+
+    final var mRefreshConfig = mock(RefreshConfig.class);
+    when(mConfig.getRefresh()).thenReturn(mRefreshConfig);
+    when(mRefreshConfig.getWorkspaceId()).thenReturn(UUID.randomUUID());
+
+    final var mCatalog = mock(ConfiguredAirbyteCatalog.class);
+    when(mRefreshConfig.getConfiguredAirbyteCatalog()).thenReturn(mCatalog);
+    when(mCatalog.getStreams()).thenReturn(List.of(
+        new ConfiguredAirbyteStream().withStream(new AirbyteStream().withIsResumable(true).withName("rfrStream"))
+            .withSyncMode(SyncMode.FULL_REFRESH),
+        new ConfiguredAirbyteStream().withStream(new AirbyteStream().withName("nonRfrStream"))
+            .withSyncMode(SyncMode.FULL_REFRESH)));
+
+    when(jobPersistence.getJob(JOB_ID)).thenReturn(mJob);
+    when(path.resolve(Mockito.anyString())).thenReturn(path);
+
+    final Path expectedRoot = TemporalUtils.getJobRoot(path, String.valueOf(JOB_ID), ATTEMPT_NUMBER);
+    final Path expectedLogPath = expectedRoot.resolve(LogClientSingleton.LOG_FILENAME);
+
+    when(jobPersistence.createAttempt(JOB_ID, expectedLogPath))
+        .thenReturn(attemptNumber);
+    when(ffClient.boolVariation(any(), any())).thenReturn(true);
+    when(ffClient.boolVariation(eq(EnableResumableFullRefresh.INSTANCE), any())).thenReturn(true);
+    final UUID destinationId = UUID.randomUUID();
+    when(connectionService.getStandardSync(connId)).thenReturn(new StandardSync().withDestinationId(destinationId));
+    when(destinationService.getDestinationConnection(destinationId))
+        .thenReturn(new DestinationConnection().withWorkspaceId(WORKSPACE_ID));
+    when(actorDefinitionVersionHelper.getDestinationVersion(any(), any(), any()))
+        .thenReturn(new ActorDefinitionVersion().withSupportsRefreshes(true));
+    final CreateNewAttemptNumberResponse output = handler.createNewAttemptNumber(JOB_ID);
+    assertThat(output.getAttemptNumber()).isEqualTo(attemptNumber);
+    if (attemptNumber == 0) {
+      verify(generationBumper).updateGenerationForStreams(connId, JOB_ID, List.of(), Set.of(
+          new StreamDescriptor().withName("rfrStream"),
+          new StreamDescriptor().withName("nonRfrStream")));
+      verify(statePersistence).bulkDelete(connId, Set.of(
+          new StreamDescriptor().withName("rfrStream"),
+          new StreamDescriptor().withName("nonRfrStream")));
+    } else {
+      verify(generationBumper).updateGenerationForStreams(connId, JOB_ID, List.of(), Set.of(new StreamDescriptor().withName("nonRfrStream")));
+      verify(statePersistence).bulkDelete(connId, Set.of(new StreamDescriptor().withName("nonRfrStream")));
+    }
   }
 
   @Nested
   class ClearFullRefreshStreamStateFirstAttempt {
 
-    @Test
-    void getFullRefreshStreamsShouldOnlyReturnFullRefreshStreams() {
+    @ParameterizedTest
+    @ValueSource(booleans = {true, false})
+    void getFullRefreshStreamsShouldOnlyReturnFullRefreshStreams(final boolean enableResumableFullRefresh) {
       final var connId = UUID.randomUUID();
       final Job mJob = mock(Job.class);
       when(mJob.getConfigType()).thenReturn(JobConfig.ConfigType.SYNC);
@@ -263,26 +410,42 @@ class AttemptHandlerTest {
       when(mSyncConfig.getConfiguredAirbyteCatalog()).thenReturn(mCatalog);
 
       when(mCatalog.getStreams()).thenReturn(List.of(
-          new ConfiguredAirbyteStream().withSyncMode(SyncMode.FULL_REFRESH).withStream(new AirbyteStream().withName("full")),
+          new ConfiguredAirbyteStream().withSyncMode(SyncMode.FULL_REFRESH).withStream(new AirbyteStream().withName("full").withIsResumable(true)),
           new ConfiguredAirbyteStream().withSyncMode(SyncMode.INCREMENTAL).withStream(new AirbyteStream().withName("incre")),
           new ConfiguredAirbyteStream().withSyncMode(SyncMode.FULL_REFRESH).withStream(new AirbyteStream().withName("full").withNamespace("name")),
           new ConfiguredAirbyteStream().withSyncMode(SyncMode.INCREMENTAL).withStream(new AirbyteStream().withName("incre").withNamespace("name"))));
 
-      final var streams = handler.getFullRefreshStreams(mCatalog, 1);
-      final var exp = Set.of(new StreamDescriptor().withName("full"), new StreamDescriptor().withName("full").withNamespace("name"));
+      final var streams = handler.getFullRefreshStreamsToClear(mCatalog, 1, enableResumableFullRefresh);
+      final var exp = enableResumableFullRefresh ? Set.of(new StreamDescriptor().withName("full").withNamespace("name"))
+          : Set.of(new StreamDescriptor().withName("full"), new StreamDescriptor().withName("full").withNamespace("name"));
       assertEquals(exp, streams);
     }
 
+    private static Stream<Arguments> provideCreateAttemptConfig() {
+      return Stream.of(
+          Arguments.of(0, true),
+          Arguments.of(1, true),
+          Arguments.of(2, true),
+          Arguments.of(3, true),
+          Arguments.of(0, false),
+          Arguments.of(1, false),
+          Arguments.of(2, false),
+          Arguments.of(3, false));
+    }
+
     @ParameterizedTest()
-    @ValueSource(ints = {0, 1, 2, 3}) // six numbers
-    void createAttemptShouldAlwaysDeleteFullRefreshStreamState(int attemptNumber) throws IOException {
+    @MethodSource("provideCreateAttemptConfig")
+    void createAttemptShouldAlwaysDeleteFullRefreshStreamState(final int attemptNumber, final boolean enableResumableFullRefresh)
+        throws IOException, ConfigNotFoundException, JsonValidationException, io.airbyte.data.exceptions.ConfigNotFoundException {
       final var connId = UUID.randomUUID();
       final Job mJob = mock(Job.class);
       when(mJob.getConfigType()).thenReturn(JobConfig.ConfigType.SYNC);
       when(mJob.getAttemptsCount()).thenReturn(0);
       when(mJob.getScope()).thenReturn(connId.toString());
+      when(mJob.getId()).thenReturn(JOB_ID);
 
       final var mConfig = mock(JobConfig.class);
+      when(mConfig.getConfigType()).thenReturn(ConfigType.SYNC);
       when(mJob.getConfig()).thenReturn(mConfig);
 
       final var mDyncConfig = mock(JobSyncConfig.class);
@@ -293,7 +456,7 @@ class AttemptHandlerTest {
 
       when(path.resolve(Mockito.anyString())).thenReturn(path);
       when(ffClient.boolVariation(any(), any())).thenReturn(true);
-
+      when(ffClient.boolVariation(eq(EnableResumableFullRefresh.INSTANCE), any())).thenReturn(enableResumableFullRefresh);
       final Path expectedRoot = TemporalUtils.getJobRoot(path, String.valueOf(JOB_ID), ATTEMPT_NUMBER);
       final Path expectedLogPath = expectedRoot.resolve(LogClientSingleton.LOG_FILENAME);
 
@@ -301,12 +464,19 @@ class AttemptHandlerTest {
       when(mDyncConfig.getConfiguredAirbyteCatalog()).thenReturn(mCatalog);
 
       when(mCatalog.getStreams()).thenReturn(List.of(
-          new ConfiguredAirbyteStream().withSyncMode(SyncMode.FULL_REFRESH).withStream(new AirbyteStream().withName("full")),
+          new ConfiguredAirbyteStream().withSyncMode(SyncMode.FULL_REFRESH).withStream(new AirbyteStream().withName("full").withIsResumable(true)),
           new ConfiguredAirbyteStream().withSyncMode(SyncMode.INCREMENTAL).withStream(new AirbyteStream().withName("incre")),
           new ConfiguredAirbyteStream().withSyncMode(SyncMode.FULL_REFRESH).withStream(new AirbyteStream().withName("full").withNamespace("name")),
           new ConfiguredAirbyteStream().withSyncMode(SyncMode.INCREMENTAL).withStream(new AirbyteStream().withName("incre").withNamespace("name"))));
 
       when(jobPersistence.createAttempt(JOB_ID, expectedLogPath)).thenReturn(attemptNumber);
+
+      final UUID destinationId = UUID.randomUUID();
+      when(connectionService.getStandardSync(connId)).thenReturn(new StandardSync().withDestinationId(destinationId));
+      when(destinationService.getDestinationConnection(destinationId))
+          .thenReturn(new DestinationConnection().withWorkspaceId(WORKSPACE_ID));
+      when(actorDefinitionVersionHelper.getDestinationVersion(any(), any(), any()))
+          .thenReturn(new ActorDefinitionVersion().withSupportsRefreshes(true));
 
       final CreateNewAttemptNumberResponse output = handler.createNewAttemptNumber(JOB_ID);
       assertThat(output.getAttemptNumber()).isEqualTo(attemptNumber);
@@ -315,8 +485,16 @@ class AttemptHandlerTest {
       ArgumentCaptor<Set<StreamDescriptor>> captor2 = ArgumentCaptor.forClass(Set.class);
       verify(statePersistence).bulkDelete(captor1.capture(), captor2.capture());
       assertEquals(connId, captor1.getValue());
-      assertEquals(Set.of(new StreamDescriptor().withName("full"), new StreamDescriptor().withName("full").withNamespace("name")),
-          captor2.getValue());
+      if (enableResumableFullRefresh) {
+        Set<StreamDescriptor> nonResumableFullRefresh = attemptNumber == 0 ? Set.of(
+            new StreamDescriptor().withName("full"),
+            new StreamDescriptor().withName("full").withNamespace("name")) : Set.of(new StreamDescriptor().withName("full").withNamespace("name"));
+        assertEquals(nonResumableFullRefresh, captor2.getValue());
+        verify(generationBumper).updateGenerationForStreams(connId, JOB_ID, List.of(), nonResumableFullRefresh);
+      } else {
+        assertEquals(Set.of(new StreamDescriptor().withName("full"), new StreamDescriptor().withName("full").withNamespace("name")),
+            captor2.getValue());
+      }
     }
 
   }

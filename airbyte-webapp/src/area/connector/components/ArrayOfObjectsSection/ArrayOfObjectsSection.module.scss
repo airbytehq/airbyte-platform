@@ -1,4 +1,10 @@
+@use "scss/variables";
+
 .container {
   max-width: 100%;
   min-width: 0;
+}
+
+.removeButton {
+  padding-top: variables.$spacing-sm;
 }

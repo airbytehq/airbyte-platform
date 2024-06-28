@@ -25,11 +25,11 @@ buildscript {
 plugins {
     id "base"
     id "com.dorongold.task-tree" version "2.1.1"
-    id "io.airbyte.gradle.jvm" version "0.32.0" apply false
-    id "io.airbyte.gradle.jvm.app" version "0.32.0" apply false
-    id "io.airbyte.gradle.jvm.lib" version "0.32.0" apply false
-    id "io.airbyte.gradle.docker" version "0.32.0" apply false
-    id "io.airbyte.gradle.publish" version "0.32.0" apply false
+    id "io.airbyte.gradle.jvm" version "0.35.0" apply false
+    id "io.airbyte.gradle.jvm.app" version "0.35.0" apply false
+    id "io.airbyte.gradle.jvm.lib" version "0.35.0" apply false
+    id "io.airbyte.gradle.docker" version "0.35.0" apply false
+    id "io.airbyte.gradle.publish" version "0.35.0" apply false
     // uncomment for testing plugin locally
     // id "io.airbyte.gradle.jvm" version "local-test" apply false
     // id "io.airbyte.gradle.jvm.app" version "local-test" apply false
@@ -91,6 +91,23 @@ allprojects {
     group = "io.airbyte${sub.isEmpty() ? '' : ".$sub"}"
 
     version = rootProject.ext.version
+
+    configurations.all {
+        resolutionStrategy {
+            // Ensure that the versions defined in deps.toml are used
+            // instead of versions from transitive dependencies
+            // Force to avoid updated version brought in transitively from Micronaut 3.8+
+            force(libs.flyway.core,
+                    libs.jooq,
+                    libs.s3,
+                    libs.aws.java.sdk.s3,
+                    libs.sts,
+                    libs.aws.java.sdk.sts,
+                    libs.elasticsearch,
+                    libs.apache.mime4j.core, // Force upgrade to remediate GHSA-jw7r-rxff-gv24
+                    libs.platform.testcontainers.postgresql)
+        }
+    }
 }
 
 tasks.register('archiveReports', Tar) {

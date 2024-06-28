@@ -40,9 +40,9 @@ export const NormalizationForm: React.FC = () => {
 
   const initialValues = useMemo(
     () => ({
-      normalization: getInitialNormalization(operations, true),
+      normalization: getInitialNormalization(operations ?? [], mode),
     }),
-    [operations]
+    [mode, operations]
   );
 
   const onSubmit = async ({ normalization }: NormalizationFormValues) => {

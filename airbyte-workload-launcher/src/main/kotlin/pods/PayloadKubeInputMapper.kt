@@ -103,6 +103,7 @@ class PayloadKubeInputMapper(
     workloadId: String,
     input: CheckConnectionInput,
     sharedLabels: Map<String, String>,
+    logPath: String,
   ): ConnectorKubeInput {
     val jobId = input.getJobId()
     val attemptId = input.getAttemptId()
@@ -126,12 +127,12 @@ class PayloadKubeInputMapper(
         getNodeSelectors(input.launcherConfig.isCustomConnector, checkWorkerConfigs)
       }
 
-    val fileMap = buildCheckFileMap(workloadId, input, input.jobRunConfig)
+    val fileMap = buildCheckFileMap(workloadId, input, input.jobRunConfig, logPath)
 
     val extraEnv = resolveAwsAssumedRoleEnvVars(input.launcherConfig)
 
     return ConnectorKubeInput(
-      labeler.getCheckConnectorLabels() + sharedLabels,
+      labeler.getCheckLabels() + sharedLabels,
       nodeSelectors,
       connectorPodInfo,
       fileMap,
@@ -144,6 +145,7 @@ class PayloadKubeInputMapper(
     workloadId: String,
     input: DiscoverCatalogInput,
     sharedLabels: Map<String, String>,
+    logPath: String,
   ): ConnectorKubeInput {
     val jobId = input.getJobId()
     val attemptId = input.getAttemptId()
@@ -167,12 +169,12 @@ class PayloadKubeInputMapper(
         getNodeSelectors(input.usesCustomConnector(), discoverWorkerConfigs)
       }
 
-    val fileMap = buildDiscoverFileMap(workloadId, input, input.jobRunConfig)
+    val fileMap = buildDiscoverFileMap(workloadId, input, input.jobRunConfig, logPath)
 
     val extraEnv = resolveAwsAssumedRoleEnvVars(input.launcherConfig)
 
     return ConnectorKubeInput(
-      labeler.getCheckConnectorLabels() + sharedLabels,
+      labeler.getDiscoverLabels() + sharedLabels,
       nodeSelectors,
       connectorPodInfo,
       fileMap,
@@ -185,6 +187,7 @@ class PayloadKubeInputMapper(
     workloadId: String,
     input: SpecInput,
     sharedLabels: Map<String, String>,
+    logPath: String,
   ): ConnectorKubeInput {
     val jobId = input.getJobId()
     val attemptId = input.getAttemptId()
@@ -203,10 +206,10 @@ class PayloadKubeInputMapper(
 
     val nodeSelectors = getNodeSelectors(input.usesCustomConnector(), specWorkerConfigs)
 
-    val fileMap = buildSpecFileMap(workloadId, input, input.jobRunConfig)
+    val fileMap = buildSpecFileMap(workloadId, input, input.jobRunConfig, logPath)
 
     return ConnectorKubeInput(
-      labeler.getCheckConnectorLabels() + sharedLabels,
+      labeler.getSpecLabels() + sharedLabels,
       nodeSelectors,
       connectorPodInfo,
       fileMap,
@@ -268,6 +271,7 @@ class PayloadKubeInputMapper(
     workloadId: String,
     input: CheckConnectionInput,
     jobRunConfig: JobRunConfig,
+    logPath: String,
   ): Map<String, String> {
     return sharedFileMap(jobRunConfig) +
       mapOf(
@@ -280,6 +284,7 @@ class PayloadKubeInputMapper(
               workloadId,
               input.launcherConfig,
               OperationType.CHECK,
+              logPath,
             ),
           ),
       )
@@ -289,6 +294,7 @@ class PayloadKubeInputMapper(
     workloadId: String,
     input: DiscoverCatalogInput,
     jobRunConfig: JobRunConfig,
+    logPath: String,
   ): Map<String, String> {
     return sharedFileMap(jobRunConfig) +
       mapOf(
@@ -301,6 +307,7 @@ class PayloadKubeInputMapper(
               workloadId,
               input.launcherConfig,
               OperationType.DISCOVER,
+              logPath,
             ),
           ),
       )
@@ -310,6 +317,7 @@ class PayloadKubeInputMapper(
     workloadId: String,
     input: SpecInput,
     jobRunConfig: JobRunConfig,
+    logPath: String,
   ): Map<String, String> {
     return sharedFileMap(jobRunConfig) +
       mapOf(
@@ -322,6 +330,7 @@ class PayloadKubeInputMapper(
               input.launcherConfig,
               // TODO: change to OperationType.SPEC once we add it to the sidecar
               OperationType.SPEC,
+              logPath,
             ),
           ),
       )

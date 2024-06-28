@@ -49,7 +49,4 @@ public final class Metadata {
   public static final String AWS_ASSUME_ROLE_SECRET_NAME = "AWS_ASSUME_ROLE_SECRET_NAME";
   public static final String AWS_ASSUME_ROLE_EXTERNAL_ID = "AWS_ASSUME_ROLE_EXTERNAL_ID";
 
-  public static final String CHECK_STEP_KEY = "check_step";
-  public static final String CONNECTOR_STEP = "connector";
-
 }

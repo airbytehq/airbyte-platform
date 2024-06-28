@@ -4,6 +4,7 @@
 
 package io.airbyte.server.repositories.domain
 
+import com.fasterxml.jackson.databind.JsonNode
 import io.airbyte.db.instance.jobs.jooq.generated.enums.JobStreamStatusIncompleteRunCause
 import io.airbyte.db.instance.jobs.jooq.generated.enums.JobStreamStatusJobType
 import io.airbyte.db.instance.jobs.jooq.generated.enums.JobStreamStatusRunState
@@ -36,6 +37,7 @@ class StreamStatus(
   @field:TypeDef(type = DataType.OBJECT) val runState: JobStreamStatusRunState?,
   @field:TypeDef(type = DataType.OBJECT) val incompleteRunCause: @Nullable JobStreamStatusIncompleteRunCause?,
   val transitionedAt: OffsetDateTime?,
+  @field:TypeDef(type = DataType.JSON) val metadata: @Nullable JsonNode?,
 ) {
   override fun equals(other: Any?): Boolean {
     if (other === this) {
@@ -94,7 +96,13 @@ class StreamStatus(
     }
     val thisTransitionedAt: Any? = this.transitionedAt
     val otherTransitionedAt: Any? = other.transitionedAt
-    return thisTransitionedAt == otherTransitionedAt
+    if (thisTransitionedAt != otherTransitionedAt) {
+      return false
+    }
+    val thisMetadata: JsonNode? = this.metadata
+    val otherMetadata: JsonNode? = other.metadata
+
+    return thisMetadata?.asText() == otherMetadata?.asText()
   }
 
   protected fun canEqual(other: Any?): Boolean {
@@ -124,6 +132,8 @@ class StreamStatus(
     result = result * prime + (incompleteRunCause?.hashCode() ?: 43)
     val transitionedAt: Any? = this.transitionedAt
     result = result * prime + (transitionedAt?.hashCode() ?: 43)
+    val metadata: Any? = this.metadata
+    result = result * prime + (metadata?.hashCode() ?: 43)
     return result
   }
 
@@ -141,6 +151,7 @@ class StreamStatus(
     private var runState: JobStreamStatusRunState? = null
     private var incompleteRunCause: JobStreamStatusIncompleteRunCause? = null
     private var transitionedAt: OffsetDateTime? = null
+    private var metadata: JsonNode? = null
 
     fun id(id: UUID?): StreamStatusBuilder {
       this.id = id
@@ -207,10 +218,15 @@ class StreamStatus(
       return this
     }
 
+    fun metadata(metadata: JsonNode?): StreamStatusBuilder {
+      this.metadata = metadata
+      return this
+    }
+
     fun build(): StreamStatus {
       return StreamStatus(
         this.id, this.workspaceId, this.connectionId, this.jobId, this.attemptNumber, this.streamNamespace, this.streamName,
-        this.jobType, this.createdAt, this.updatedAt, this.runState, this.incompleteRunCause, this.transitionedAt,
+        this.jobType, this.createdAt, this.updatedAt, this.runState, this.incompleteRunCause, this.transitionedAt, this.metadata,
       )
     }
 
@@ -219,7 +235,8 @@ class StreamStatus(
         "StreamStatus.StreamStatusBuilder(id=" + this.id + ", workspaceId=" + this.workspaceId + ", connectionId=" + this.connectionId +
           ", jobId=" + this.jobId + ", attemptNumber=" + this.attemptNumber + ", streamNamespace=" + this.streamNamespace + ", streamName=" +
           this.streamName + ", jobType=" + this.jobType + ", createdAt=" + this.createdAt + ", updatedAt=" + this.updatedAt + ", runState=" +
-          this.runState + ", incompleteRunCause=" + this.incompleteRunCause + ", transitionedAt=" + this.transitionedAt + ")"
+          this.runState + ", incompleteRunCause=" + this.incompleteRunCause + ", transitionedAt=" + this.transitionedAt + ", metadata=" +
+          this.metadata + ")"
       )
     }
   }

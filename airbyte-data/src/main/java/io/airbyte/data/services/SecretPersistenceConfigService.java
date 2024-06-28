@@ -15,12 +15,12 @@ import java.util.UUID;
 
 public interface SecretPersistenceConfigService {
 
-  SecretPersistenceConfig getSecretPersistenceConfig(ScopeType scope, UUID scopeId) throws IOException, ConfigNotFoundException;
+  SecretPersistenceConfig get(ScopeType scope, UUID scopeId) throws IOException, ConfigNotFoundException;
 
-  Optional<SecretPersistenceCoordinate> createOrUpdateSecretPersistenceConfig(ScopeType scope,
-                                                                              UUID scopeId,
-                                                                              SecretPersistenceType secretPersistenceType,
-                                                                              String secretPersistenceConfigCoordinate)
+  Optional<SecretPersistenceCoordinate> createOrUpdate(ScopeType scope,
+                                                       UUID scopeId,
+                                                       SecretPersistenceType secretPersistenceType,
+                                                       String secretPersistenceConfigCoordinate)
       throws IOException;
 
 }

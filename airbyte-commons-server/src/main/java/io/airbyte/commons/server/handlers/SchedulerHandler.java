@@ -53,6 +53,7 @@ import io.airbyte.commons.server.handlers.helpers.AutoPropagateSchemaChangeHelpe
 import io.airbyte.commons.server.handlers.helpers.AutoPropagateSchemaChangeHelper.UpdateSchemaResult;
 import io.airbyte.commons.server.handlers.helpers.CatalogConverter;
 import io.airbyte.commons.server.handlers.helpers.JobCreationAndStatusUpdateHelper;
+import io.airbyte.commons.server.handlers.helpers.NotificationHelper;
 import io.airbyte.commons.server.scheduler.EventRunner;
 import io.airbyte.commons.server.scheduler.SynchronousResponse;
 import io.airbyte.commons.server.scheduler.SynchronousSchedulerClient;
@@ -63,8 +64,6 @@ import io.airbyte.config.ActorCatalog;
 import io.airbyte.config.ActorDefinitionVersion;
 import io.airbyte.config.DestinationConnection;
 import io.airbyte.config.JobTypeResourceLimit.JobType;
-import io.airbyte.config.Notification.NotificationType;
-import io.airbyte.config.NotificationItem;
 import io.airbyte.config.NotificationSettings;
 import io.airbyte.config.ResourceRequirements;
 import io.airbyte.config.ScopeType;
@@ -87,8 +86,8 @@ import io.airbyte.config.secrets.SecretsRepositoryWriter;
 import io.airbyte.config.secrets.persistence.RuntimeSecretPersistence;
 import io.airbyte.data.services.SecretPersistenceConfigService;
 import io.airbyte.data.services.WorkspaceService;
+import io.airbyte.featureflag.DiscoverPostprocessInTemporal;
 import io.airbyte.featureflag.FeatureFlagClient;
-import io.airbyte.featureflag.FieldSelectionWorkspaces.UseNewSchemaUpdateNotification;
 import io.airbyte.featureflag.Organization;
 import io.airbyte.featureflag.UseRuntimeSecretPersistence;
 import io.airbyte.featureflag.Workspace;
@@ -96,12 +95,6 @@ import io.airbyte.metrics.lib.MetricAttribute;
 import io.airbyte.metrics.lib.MetricClientFactory;
 import io.airbyte.metrics.lib.MetricTags;
 import io.airbyte.metrics.lib.OssMetricsRegistry;
-import io.airbyte.notification.CustomerioNotificationClient;
-import io.airbyte.notification.SlackNotificationClient;
-import io.airbyte.notification.messages.ConnectionInfo;
-import io.airbyte.notification.messages.SchemaUpdateNotification;
-import io.airbyte.notification.messages.SourceInfo;
-import io.airbyte.notification.messages.WorkspaceInfo;
 import io.airbyte.persistence.job.JobCreator;
 import io.airbyte.persistence.job.JobNotifier;
 import io.airbyte.persistence.job.JobPersistence;
@@ -122,7 +115,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
-import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -163,6 +155,7 @@ public class SchedulerHandler {
   private final WorkspaceService workspaceService;
   private final SecretPersistenceConfigService secretPersistenceConfigService;
   private final StreamRefreshesHandler streamRefreshesHandler;
+  private final NotificationHelper notificationHelper;
 
   @VisibleForTesting
   public SchedulerHandler(final ConfigRepository configRepository,
@@ -187,7 +180,8 @@ public class SchedulerHandler {
                           final ConnectorDefinitionSpecificationHandler connectorDefinitionSpecificationHandler,
                           final WorkspaceService workspaceService,
                           final SecretPersistenceConfigService secretPersistenceConfigService,
-                          final StreamRefreshesHandler streamRefreshesHandler) {
+                          final StreamRefreshesHandler streamRefreshesHandler,
+                          final NotificationHelper notificationHelper) {
     this.configRepository = configRepository;
     this.secretsRepositoryWriter = secretsRepositoryWriter;
     this.synchronousSchedulerClient = synchronousSchedulerClient;
@@ -214,6 +208,7 @@ public class SchedulerHandler {
         jobNotifier,
         jobTracker);
     this.streamRefreshesHandler = streamRefreshesHandler;
+    this.notificationHelper = notificationHelper;
   }
 
   public CheckConnectionRead checkSourceConnectionFromSourceId(final SourceIdRequestBody sourceIdRequestBody)
@@ -346,10 +341,24 @@ public class SchedulerHandler {
     return checkDestinationConnectionFromDestinationCreate(destinationCoreConfig);
   }
 
-  public SourceDiscoverSchemaRead discoverSchemaForSourceFromSourceId(final SourceDiscoverSchemaRequestBody discoverSchemaRequestBody)
+  public SourceDiscoverSchemaRead discoverSchemaForSourceFromSourceId(final SourceDiscoverSchemaRequestBody req)
+      throws ConfigNotFoundException, IOException, JsonValidationException {
+    final SourceConnection source = configRepository.getSourceConnection(req.getSourceId());
+
+    if (featureFlagClient.boolVariation(DiscoverPostprocessInTemporal.INSTANCE, new Workspace(source.getWorkspaceId()))) {
+      return discoverWithPostprocessInTemporal(req, source);
+    } else {
+      return discoverWithLocalPostprocess(req, source);
+    }
+  }
+
+  /**
+   * Runs discover schema and performs postprocessing (catalog diff and connection disabling) locally.
+   */
+  public SourceDiscoverSchemaRead discoverWithLocalPostprocess(final SourceDiscoverSchemaRequestBody discoverSchemaRequestBody,
+                                                               final SourceConnection source)
       throws ConfigNotFoundException, IOException, JsonValidationException {
     final UUID sourceId = discoverSchemaRequestBody.getSourceId();
-    final SourceConnection source = configRepository.getSourceConnection(sourceId);
     final StandardSourceDefinition sourceDef = configRepository.getStandardSourceDefinition(source.getSourceDefinitionId());
     final ActorDefinitionVersion sourceVersion = actorDefinitionVersionHelper.getSourceVersion(sourceDef, source.getWorkspaceId(), sourceId);
     final boolean isCustomConnector = sourceDef.getCustom();
@@ -396,6 +405,76 @@ public class SchedulerHandler {
         .catalog(CatalogConverter.toApi(airbyteCatalog, sourceVersion))
         .jobInfo(emptyJob)
         .catalogId(currentCatalog.get().getId());
+  }
+
+  /**
+   * Runs discover schema and performs postprocessing (catalog diff and connection disabling) in the
+   * temporal workflow.
+   */
+  public SourceDiscoverSchemaRead discoverWithPostprocessInTemporal(final SourceDiscoverSchemaRequestBody req, final SourceConnection source)
+      throws ConfigNotFoundException, IOException, JsonValidationException {
+    final UUID sourceId = req.getSourceId();
+    final StandardSourceDefinition sourceDef = configRepository.getStandardSourceDefinition(source.getSourceDefinitionId());
+    final ActorDefinitionVersion sourceVersion = actorDefinitionVersionHelper.getSourceVersion(sourceDef, source.getWorkspaceId(), sourceId);
+
+    final boolean skipCacheCheck = req.getDisableCache() != null && req.getDisableCache();
+    // Skip cache check and run discover.
+    if (skipCacheCheck) {
+      return runDiscoverSchemaJob(source, sourceDef, sourceVersion, req.getPriority());
+    }
+
+    // Check cache.
+    final String configHash = HASH_FUNCTION.hashBytes(Jsons.serialize(source.getConfiguration()).getBytes(
+        Charsets.UTF_8)).toString();
+    final String connectorVersion = sourceVersion.getDockerImageTag();
+
+    final Optional<ActorCatalog> existingCatalog =
+        configRepository.getActorCatalog(req.getSourceId(), connectorVersion, configHash);
+
+    // No catalog exists, run discover.
+    if (existingCatalog.isEmpty()) {
+      return runDiscoverSchemaJob(source, sourceDef, sourceVersion, req.getPriority());
+    }
+
+    // We have a catalog cached, no need to run discover. Return cached catalog.
+    final AirbyteCatalog airbyteCatalog = Jsons.object(existingCatalog.get().getCatalog(), AirbyteCatalog.class);
+    final SynchronousJobRead emptyJob = new SynchronousJobRead()
+        .configId("NoConfiguration")
+        .configType(JobConfigType.DISCOVER_SCHEMA)
+        .id(UUID.randomUUID())
+        .createdAt(0L)
+        .endedAt(0L)
+        .logs(new LogRead().logLines(new ArrayList<>()))
+        .succeeded(true);
+    return new SourceDiscoverSchemaRead()
+        .catalog(CatalogConverter.toApi(airbyteCatalog, sourceVersion))
+        .jobInfo(emptyJob)
+        .catalogId(existingCatalog.get().getId());
+  }
+
+  private SourceDiscoverSchemaRead runDiscoverSchemaJob(
+                                                        final SourceConnection source,
+                                                        final StandardSourceDefinition sourceDef,
+                                                        final ActorDefinitionVersion sourceVersion,
+                                                        final io.airbyte.api.model.generated.WorkloadPriority priority)
+      throws ConfigNotFoundException, IOException {
+    final boolean isCustomConnector = sourceDef.getCustom();
+    // ResourceRequirements are read from actor definition and can be null; but if it's not null it will
+    // have higher priority and overwrite
+    // the default settings in WorkerConfig.
+    final ResourceRequirements resourceRequirements =
+        getResourceRequirementsForJobType(sourceDef.getResourceRequirements(), JobType.DISCOVER_SCHEMA)
+            .orElse(null);
+
+    final SynchronousResponse<UUID> persistedCatalogId =
+        synchronousSchedulerClient.createDiscoverSchemaJob(
+            source,
+            sourceVersion,
+            isCustomConnector,
+            resourceRequirements,
+            priority == null ? WorkloadPriority.HIGH : WorkloadPriority.fromValue(priority.toString()));
+
+    return retrieveDiscoveredSchema(persistedCatalogId, sourceVersion);
   }
 
   public void applySchemaChangeForSource(final SourceAutoPropagateChange sourceAutoPropagateChange)
@@ -456,66 +535,17 @@ public class SchedulerHandler {
             updateObject.getConnectionId(), result);
         LOGGER.info("Propagating changes for connectionId: '{}', new catalogId '{}'",
             connectionRead.getConnectionId(), sourceAutoPropagateChange.getCatalogId());
-        final boolean newNotificationsEnabled = featureFlagClient.boolVariation(
-            UseNewSchemaUpdateNotification.INSTANCE, new Workspace(sourceAutoPropagateChange.getWorkspaceId()));
+
         if (notificationSettings != null
-            && newNotificationsEnabled
             && notificationSettings.getSendOnConnectionUpdate() != null
             && !result.appliedDiff().getTransforms().isEmpty()
             && (Boolean.TRUE == connectionRead.getNotifySchemaChanges())) {
-          notifySchemaPropagated(notificationSettings, diff, workspace, connectionRead, source,
+          notificationHelper.notifySchemaPropagated(notificationSettings, diff, workspace, connectionRead, source,
               workspace.getEmail());
         }
       } else {
         LOGGER.info("Not propagating changes for connectionId: '{}', new catalogId '{}'",
             connectionRead.getConnectionId(), sourceAutoPropagateChange.getCatalogId());
-      }
-    }
-  }
-
-  public void notifySchemaPropagated(final NotificationSettings notificationSettings,
-                                     final CatalogDiff diff,
-                                     final StandardWorkspace workspace,
-                                     final ConnectionRead connection,
-                                     final SourceConnection source,
-                                     final String email)
-      throws IOException {
-    final NotificationItem item;
-
-    final String connectionUrl = webUrlHelper.getConnectionUrl(workspace.getWorkspaceId(), connection.getConnectionId());
-    final String workspaceUrl = webUrlHelper.getWorkspaceUrl(workspace.getWorkspaceId());
-    final String sourceUrl = webUrlHelper.getSourceUrl(workspace.getWorkspaceId(), source.getSourceId());
-    final boolean isBreakingChange = AutoPropagateSchemaChangeHelper.containsBreakingChange(diff);
-
-    SchemaUpdateNotification notification = SchemaUpdateNotification.builder()
-        .sourceInfo(SourceInfo.builder().name(source.getName()).id(source.getSourceId()).url(sourceUrl).build())
-        .connectionInfo(ConnectionInfo.builder().name(connection.getName()).id(connection.getConnectionId()).url(connectionUrl).build())
-        .workspace(WorkspaceInfo.builder().name(workspace.getName()).id(workspace.getWorkspaceId()).url(workspaceUrl).build())
-        .catalogDiff(diff)
-        .isBreakingChange(isBreakingChange)
-        .build();
-    if (isBreakingChange) {
-      item = notificationSettings.getSendOnConnectionUpdateActionRequired();
-    } else {
-      item = notificationSettings.getSendOnConnectionUpdate();
-    }
-    for (final NotificationType type : item.getNotificationType()) {
-      try {
-        switch (type) {
-          case SLACK -> {
-            final SlackNotificationClient slackNotificationClient = new SlackNotificationClient(item.getSlackConfiguration());
-            slackNotificationClient.notifySchemaPropagated(notification, email);
-          }
-          case CUSTOMERIO -> {
-            final CustomerioNotificationClient emailNotificationClient = new CustomerioNotificationClient();
-            emailNotificationClient.notifySchemaPropagated(notification, email);
-          }
-          default -> {
-            LOGGER.warn("Notification type {} not supported", type);
-          }
-        }
-      } catch (final InterruptedException e) {
-        LOGGER.error("Failed to send notification for connectionId: '{}'", connection.getConnectionId(), e);
       }
     }
   }
@@ -578,7 +608,7 @@ public class SchedulerHandler {
   }
 
   public JobInfoRead resetConnectionStream(final ConnectionStreamRequestBody connectionStreamRequestBody)
-      throws IOException {
+      throws IOException, ConfigNotFoundException {
     return submitResetConnectionStreamsToWorker(connectionStreamRequestBody.getConnectionId(), connectionStreamRequestBody.getStreams());
   }
 
@@ -700,15 +730,6 @@ public class SchedulerHandler {
       updateObject.status(connectionStatus);
 
       connectionsHandler.updateConnection(updateObject);
-      // on workspace where the new detailed schema change notification is enabled, notifications are sent
-      // right after the diff is computed, and we
-      // don't need to send them here.
-      final boolean newNotificationsEnabled = featureFlagClient.boolVariation(UseNewSchemaUpdateNotification.INSTANCE, new Workspace(workspaceId));
-      if (shouldNotifySchemaChange(diff, connectionRead, discoverSchemaRequestBody) && !newNotificationsEnabled) {
-        final String url = webUrlHelper.getConnectionReplicationPageUrl(workspaceId, connectionRead.getConnectionId());
-        final String sourceName = configRepository.getSourceConnection(connectionRead.getSourceId()).getName();
-        eventRunner.sendSchemaChangeNotification(connectionRead.getConnectionId(), connectionRead.getName(), sourceName, url, containsBreakingChange);
-      }
       if (connectionRead.getConnectionId().equals(discoverSchemaRequestBody.getConnectionId())) {
         discoveredSchema.catalogDiff(diff).breakingChange(containsBreakingChange).connectionStatus(connectionStatus);
       }
@@ -734,13 +755,6 @@ public class SchedulerHandler {
     updateObject.setSyncCatalog(updateSchemaResult.catalog());
     updateObject.setSourceCatalogId(sourceCatalogId);
     return updateSchemaResult;
-  }
-
-  private boolean shouldNotifySchemaChange(final CatalogDiff diff,
-                                           final ConnectionRead connectionRead,
-                                           final SourceDiscoverSchemaRequestBody requestBody) {
-    return !diff.getTransforms().isEmpty() && connectionRead.getNotifySchemaChanges() && requestBody.getNotifySchemaChange() != null
-        && requestBody.getNotifySchemaChange();
   }
 
   private boolean shouldDisableConnection(final boolean containsBreakingChange,
@@ -805,10 +819,11 @@ public class SchedulerHandler {
   }
 
   private JobInfoRead submitResetConnectionStreamsToWorker(final UUID connectionId, final List<ConnectionStream> streams)
-      throws IOException, IllegalStateException {
-    return submitResetConnectionToWorker(connectionId,
-        streams.stream().map(s -> new StreamDescriptor().withName(s.getStreamName()).withNamespace(s.getStreamNamespace())).collect(
-            Collectors.toList()));
+      throws IOException, IllegalStateException, ConfigNotFoundException {
+    final List<StreamDescriptor> actualStreamsToReset = streams.isEmpty()
+        ? configRepository.getAllStreamsForConnection(connectionId)
+        : streams.stream().map(s -> new StreamDescriptor().withName(s.getStreamName()).withNamespace(s.getStreamNamespace())).toList();
+    return submitResetConnectionToWorker(connectionId, actualStreamsToReset);
   }
 
   private JobInfoRead readJobFromResult(final ManualOperationResult manualOperationResult) throws IOException, IllegalStateException {
@@ -826,8 +841,7 @@ public class SchedulerHandler {
   }
 
   /**
-   * Wrapper around
-   * {@link SecretsRepositoryWriter#statefulSplitSecretsToDefaultSecretPersistence(JsonNode, ConnectorSpecification)}.
+   * Wrapper around {@link SecretsRepositoryWriter#createFromConfig}.
    *
    * @param workspaceId workspaceId
    * @param connectionConfiguration connectionConfiguration
@@ -844,18 +858,14 @@ public class SchedulerHandler {
     if (organizationId.isPresent() && featureFlagClient.boolVariation(UseRuntimeSecretPersistence.INSTANCE, new Organization(organizationId.get()))) {
       final SecretPersistenceConfig secretPersistenceConfig;
       try {
-        secretPersistenceConfig = secretPersistenceConfigService.getSecretPersistenceConfig(ScopeType.ORGANIZATION, organizationId.get());
+        secretPersistenceConfig = secretPersistenceConfigService.get(ScopeType.ORGANIZATION, organizationId.get());
       } catch (final io.airbyte.data.exceptions.ConfigNotFoundException e) {
         throw new ConfigNotFoundException(e.getType(), e.getConfigId());
       }
-      return secretsRepositoryWriter.statefulSplitSecretsToRuntimeSecretPersistence(
-          connectionConfiguration,
-          connectorSpecification,
+      return secretsRepositoryWriter.createEphemeralFromConfig(connectionConfiguration, connectorSpecification.getConnectionSpecification(),
           new RuntimeSecretPersistence(secretPersistenceConfig));
     } else {
-      return secretsRepositoryWriter.statefulSplitSecretsToDefaultSecretPersistence(
-          connectionConfiguration,
-          connectorSpecification);
+      return secretsRepositoryWriter.createEphemeralFromConfig(connectionConfiguration, connectorSpecification.getConnectionSpecification(), null);
     }
   }
 

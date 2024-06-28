@@ -3,15 +3,17 @@ package io.airbyte.commons.server.authorization
 import io.airbyte.api.model.generated.PermissionCheckRead
 import io.airbyte.api.model.generated.PermissionType
 import io.airbyte.api.model.generated.PermissionsCheckMultipleWorkspacesRequest
+import io.airbyte.api.problems.model.generated.ProblemMessageData
+import io.airbyte.api.problems.throwable.generated.ForbiddenProblem
 import io.airbyte.commons.auth.AuthRoleInterface
 import io.airbyte.commons.json.Jsons
-import io.airbyte.commons.server.errors.problems.ForbiddenProblem
 import io.airbyte.commons.server.handlers.PermissionHandler
 import io.airbyte.commons.server.support.AuthenticationHeaderResolver
 import io.airbyte.commons.server.support.AuthenticationHttpHeaders.CONNECTION_ID_HEADER
 import io.airbyte.commons.server.support.AuthenticationHttpHeaders.DESTINATION_ID_HEADER
 import io.airbyte.commons.server.support.AuthenticationHttpHeaders.JOB_ID_HEADER
 import io.airbyte.commons.server.support.AuthenticationHttpHeaders.ORGANIZATION_ID_HEADER
+import io.airbyte.commons.server.support.AuthenticationHttpHeaders.PERMISSION_ID_HEADER
 import io.airbyte.commons.server.support.AuthenticationHttpHeaders.SOURCE_ID_HEADER
 import io.airbyte.commons.server.support.AuthenticationHttpHeaders.WORKSPACE_IDS_HEADER
 import io.airbyte.commons.server.support.CurrentUserService
@@ -58,7 +60,10 @@ class ApiAuthorizationHelper(
           buildPropertiesMapForJob(ids.first())
         }
         Scope.ORGANIZATION -> {
-          throw ForbiddenProblem("Cannot resolve organization Ids to workspace Ids.")
+          throw ForbiddenProblem(ProblemMessageData().message("Cannot resolve organization Ids to workspace Ids."))
+        }
+        Scope.PERMISSION -> {
+          buildPropertiesMapForPermission(ids.first())
         }
       }
     return authorizationHeaderResolver.resolveWorkspace(properties)
@@ -149,7 +154,7 @@ class ApiAuthorizationHelper(
 
     // Disallow empty ids for other scopes
     if (ids.isEmpty()) {
-      throw ForbiddenProblem("No Ids provided for scope: ${scope.name}.")
+      throw ForbiddenProblem(ProblemMessageData().message("No Ids provided for scope: ${scope.name}."))
     }
 
     if (permissionHandler.isUserInstanceAdmin(userId)) {
@@ -161,12 +166,28 @@ class ApiAuthorizationHelper(
     val resolvedWorkspaceIds = resolveIdsToWorkspaceIds(ids, scope)
 
     if (resolvedWorkspaceIds.isNullOrEmpty()) {
-      throw ForbiddenProblem("Unable to resolve to a workspace for $ids in scope [${scope.name}].")
+      throw ForbiddenProblem(ProblemMessageData().message("Unable to resolve to a workspace for $ids in scope [${scope.name}]."))
     }
 
     if (!checkIfAnyPermissionGranted(resolvedWorkspaceIds, userId, permissionTypes)) {
-      throw ForbiddenProblem("User does not have the required permissions to access the resource(s) $ids of type [${scope.name}].")
+      throw ForbiddenProblem(
+        ProblemMessageData().message("User does not have the required permissions to access the resource(s) $ids of type [${scope.name}]."),
+      )
     }
+  }
+
+  fun isUserOrganizationAdminOrThrow(
+    userId: UUID,
+    organizationId: UUID,
+  ) {
+    if (permissionHandler.isUserInstanceAdmin(userId)) {
+      logger.debug { "User $userId is an instance admin, short circuiting auth check." }
+      return
+    }
+    if (permissionHandler.isUserOrganizationAdmin(userId, organizationId)) {
+      return
+    }
+    throw ForbiddenProblem(ProblemMessageData().message("User does not have the required permissions to fulfill the request."))
   }
 
   private fun checkIfAnyPermissionGranted(
@@ -203,7 +224,9 @@ class ApiAuthorizationHelper(
     val idHeaderMap = buildIdHeaderMap(resourceIds, scope)
     val userRoles = rbacRoleHelper.getRbacRoles(authUserId, idHeaderMap).toSet()
     if (userRoles.intersect(requiredRoles.map(AuthRoleInterface::getLabel).toSet()).isEmpty()) {
-      throw ForbiddenProblem("User does not have any of the required roles to access resource(s) $resourceIds of type [${scope.name}].")
+      throw ForbiddenProblem(
+        ProblemMessageData().message("User does not have any of the required roles to access resource(s) $resourceIds of type [${scope.name}]."),
+      )
     }
   }
 
@@ -236,7 +259,14 @@ class ApiAuthorizationHelper(
       Scope.ORGANIZATION -> {
         buildPropertiesMapForOrganization(ids.first())
       }
+      Scope.PERMISSION -> {
+        buildPropertiesMapForPermission(ids.first())
+      }
     }
+  }
+
+  private fun buildPropertiesMapForPermission(id: String): Map<String, String> {
+    return mapOf(Scope.PERMISSION.mappedHeaderProperty to id)
   }
 
   private fun buildPropertiesMapForOrganization(id: String): Map<String, String> {
@@ -272,4 +302,5 @@ enum class Scope(val mappedHeaderProperty: String) {
   DESTINATION(DESTINATION_ID_HEADER),
   JOB(JOB_ID_HEADER),
   ORGANIZATION(ORGANIZATION_ID_HEADER),
+  PERMISSION(PERMISSION_ID_HEADER),
 }

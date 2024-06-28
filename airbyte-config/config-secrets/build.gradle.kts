@@ -2,13 +2,11 @@ plugins {
   id("io.airbyte.gradle.jvm.lib")
   id("io.airbyte.gradle.publish")
   `java-test-fixtures`
-  kotlin("jvm")
-  kotlin("kapt")
 }
 
 dependencies {
-  kapt(platform(libs.micronaut.platform))
-  kapt(libs.bundles.micronaut.annotation.processor)
+  ksp(platform(libs.micronaut.platform))
+  ksp(libs.bundles.micronaut.annotation.processor)
 
   api(libs.bundles.micronaut.annotation)
   api(libs.bundles.micronaut.kotlin)
@@ -35,6 +33,7 @@ dependencies {
   implementation(project(":airbyte-config:config-models"))
   implementation(project(":airbyte-json-validation"))
   implementation(project(":airbyte-metrics:metrics-lib"))
+  implementation(project(":airbyte-featureflag"))
 
   testAnnotationProcessor(platform(libs.micronaut.platform))
   testAnnotationProcessor(libs.bundles.micronaut.test.annotation.processor)
@@ -47,13 +46,4 @@ dependencies {
   testImplementation(libs.apache.commons.lang)
   testImplementation(libs.testcontainers.vault)
   testImplementation(testFixtures(project(":airbyte-config:config-persistence")))
-}
-
-// This is a workaround related to kaptBuild errors. It seems to be because there are no tests in cloud-airbyte-api-server.
-// TODO: this should be removed when we move to kotlin 1.9.20
-// TODO: we should write tests
-afterEvaluate {
-  tasks.named("kaptGenerateStubsTestKotlin") {
-    enabled = false
-  }
 }

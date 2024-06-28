@@ -11,7 +11,7 @@ import io.airbyte.api.model.generated.ConnectionScheduleDataCron
 import io.airbyte.api.model.generated.ConnectionScheduleType
 import io.airbyte.api.model.generated.ConnectionStatus
 import io.airbyte.api.model.generated.Geography
-import io.airbyte.public_api.model.generated.ConnectionCreateRequest
+import io.airbyte.publicApi.server.generated.models.ConnectionCreateRequest
 import io.airbyte.server.apis.publicapi.helpers.ConnectionHelper
 import java.util.UUID
 
@@ -53,9 +53,9 @@ object ConnectionCreateMapper {
 
     // set schedule
     if (connectionCreateRequest.schedule != null) {
-      connectionCreateOss.scheduleType = ConnectionScheduleType.fromValue(connectionCreateRequest.schedule.scheduleType.toString())
+      connectionCreateOss.scheduleType = ConnectionScheduleType.fromValue(connectionCreateRequest.schedule!!.scheduleType.toString())
       val connectionScheduleDataCron = ConnectionScheduleDataCron()
-      connectionScheduleDataCron.cronExpression = connectionCreateRequest.schedule.cronExpression
+      connectionScheduleDataCron.cronExpression = connectionCreateRequest.schedule!!.cronExpression
       connectionScheduleDataCron.cronTimeZone = "UTC"
       val connectionScheduleData = ConnectionScheduleData()
       connectionScheduleData.cron = connectionScheduleDataCron

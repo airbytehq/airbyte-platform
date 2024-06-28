@@ -8,6 +8,8 @@ export KC_DB_USERNAME=$KEYCLOAK_DATABASE_USERNAME
 export KC_DB_PASSWORD=$KEYCLOAK_DATABASE_PASSWORD
 export KC_HTTP_PORT=$KEYCLOAK_PORT
 
+LOG_LEVEL=${LOG_LEVEL:-INFO}
+
 if [ -n "$KEYCLOAK_HOSTNAME_URL" ]; then
   # leave this unset if planning to configure frontendUrl at the realm level.
   export KC_HOSTNAME_URL=$KEYCLOAK_HOSTNAME_URL
@@ -21,7 +23,7 @@ fi
 # cache-config is relative to conf directory
 bin/kc.sh build --cache=ispn --cache-stack=kubernetes --health-enabled=true --http-relative-path /auth --cache-config-file=cache-ispn-override.xml
 
-bin/kc.sh start --optimized --proxy edge --hostname-strict false
+bin/kc.sh start --optimized --proxy edge --hostname-strict false --log-level=$LOG_LEVEL
 
 # Uncomment to disable caching, which is useful for theme development
 # bin/kc.sh start --optimized --proxy edge --hostname-strict false --spi-theme-static-max-age=-1 --spi-theme-cache-themes=false --spi-theme-cache-templates=false

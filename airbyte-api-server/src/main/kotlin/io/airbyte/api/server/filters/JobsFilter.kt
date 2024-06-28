@@ -40,7 +40,7 @@ class JobsFilter(
     return if (status == null) {
       null
     } else {
-      JobStatus.fromValue(status.toString())
+      JobStatus.valueOf(status.toString())
     }
   }
 //    @Nullable fun getJobType(): JobTypeEnum {

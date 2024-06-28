@@ -43,10 +43,11 @@ public class CatalogConverter {
         .name(stream.getName())
         .jsonSchema(stream.getJsonSchema())
         .supportedSyncModes(Enums.convertListTo(stream.getSupportedSyncModes(), io.airbyte.api.model.generated.SyncMode.class))
-        .sourceDefinedCursor(stream.getSourceDefinedCursor())
+        .sourceDefinedCursor(stream.getSourceDefinedCursor() != null ? stream.getSourceDefinedCursor() : false)
         .defaultCursorField(stream.getDefaultCursorField())
         .sourceDefinedPrimaryKey(stream.getSourceDefinedPrimaryKey())
-        .namespace(stream.getNamespace());
+        .namespace(stream.getNamespace())
+        .isResumable(stream.getIsResumable());
   }
 
   /**
@@ -73,7 +74,9 @@ public class CatalogConverter {
                   .primaryKey(configuredStream.getPrimaryKey())
                   .aliasName(Names.toAlphanumericAndUnderscore(configuredStream.getStream().getName()))
                   .selected(true)
+                  .suggested(false)
                   .fieldSelectionEnabled(getStreamHasFieldSelectionEnabled(fieldSelectionData, streamDescriptor))
+                  .selectedFields(List.of())
                   .generationId(configuredStream.getGenerationId())
                   .minimumGenerationId(configuredStream.getMinimumGenerationId())
                   .syncId(configuredStream.getSyncId());
@@ -181,7 +184,8 @@ public class CatalogConverter {
         .withSourceDefinedCursor(stream.getSourceDefinedCursor())
         .withDefaultCursorField(stream.getDefaultCursorField())
         .withSourceDefinedPrimaryKey(Optional.ofNullable(stream.getSourceDefinedPrimaryKey()).orElse(Collections.emptyList()))
-        .withNamespace(stream.getNamespace());
+        .withNamespace(stream.getNamespace())
+        .withIsResumable(stream.getIsResumable());
   }
 
   /**

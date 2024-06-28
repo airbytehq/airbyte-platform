@@ -3,7 +3,7 @@ import { useIntl } from "react-intl";
 
 import { BuilderField } from "./BuilderField";
 import { BuilderFieldWithInputs } from "./BuilderFieldWithInputs";
-import { InjectIntoValue, injectIntoOptions } from "../types";
+import { InjectIntoValue, injectIntoOptions } from "../useBuilderValidationSchema";
 
 interface BuilderRequestInjectionProps {
   path: string;

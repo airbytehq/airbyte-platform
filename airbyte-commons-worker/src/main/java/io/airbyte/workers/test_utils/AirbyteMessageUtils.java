@@ -195,12 +195,18 @@ public class AirbyteMessageUtils {
   }
 
   public static AirbyteMessage createStatusTraceMessage(final StreamDescriptor stream, final AirbyteStreamStatus status) {
+    return createStatusTraceMessage(stream, status, System.currentTimeMillis());
+  }
+
+  public static AirbyteMessage createStatusTraceMessage(final StreamDescriptor stream,
+                                                        final AirbyteStreamStatus status,
+                                                        final Long emittedAt) {
     final AirbyteStreamStatusTraceMessage airbyteStreamStatusTraceMessage = new AirbyteStreamStatusTraceMessage()
         .withStatus(status)
         .withStreamDescriptor(stream);
 
     final AirbyteTraceMessage airbyteTraceMessage = new AirbyteTraceMessage()
-        .withEmittedAt(Long.valueOf(System.currentTimeMillis()).doubleValue())
+        .withEmittedAt(emittedAt.doubleValue())
         .withType(AirbyteTraceMessage.Type.STREAM_STATUS)
         .withStreamStatus(airbyteStreamStatusTraceMessage);
 

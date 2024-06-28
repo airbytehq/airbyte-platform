@@ -134,7 +134,7 @@ public class UserPersistence {
     });
   }
 
-  public void writeAuthUser(UUID userId, String authUserId, io.airbyte.config.AuthProvider authProvider) throws IOException {
+  public void writeAuthUser(final UUID userId, final String authUserId, final io.airbyte.config.AuthProvider authProvider) throws IOException {
     database.query(ctx -> {
       final OffsetDateTime now = OffsetDateTime.now();
       ctx.insertInto(AUTH_USER)

@@ -1,16 +1,17 @@
 import { Disclosure } from "@headlessui/react";
 import classnames from "classnames";
-import React, { useCallback } from "react";
+import React from "react";
 import { FormattedMessage, useIntl } from "react-intl";
 import * as yup from "yup";
 
-import { ConnectionDangerBlock } from "components/common/ConnectionDangerBlock";
+import { ConnectionActionsBlock } from "components/common/ConnectionActionsBlock";
 import { ConnectionDeleteBlock } from "components/common/ConnectionDeleteBlock";
 import {
   FormConnectionFormValues,
   useConnectionValidationSchema,
   useInitialFormValues,
 } from "components/connection/ConnectionForm/formConfig";
+import { ConnectionSyncContextProvider } from "components/connection/ConnectionSync/ConnectionSyncContext";
 import { SimplifiedConnectionsSettingsCard } from "components/connection/CreateConnectionForm/SimplifiedConnectionCreation/SimplifiedConnectionSettingsCard";
 import { Form } from "components/forms";
 import { DataResidencyDropdown } from "components/forms/DataResidencyDropdown";
@@ -22,12 +23,7 @@ import { Heading } from "components/ui/Heading";
 import { ExternalLink } from "components/ui/Link";
 import { Spinner } from "components/ui/Spinner";
 
-import {
-  useCurrentWorkspace,
-  useDeleteConnection,
-  useDestinationDefinitionVersion,
-  useResetConnection,
-} from "core/api";
+import { useCurrentWorkspace, useDestinationDefinitionVersion } from "core/api";
 import { Geography, WebBackendConnectionUpdate } from "core/api/types/AirbyteClient";
 import { PageTrackingCodes, useTrackPage } from "core/services/analytics";
 import { FeatureItem, useFeature } from "core/services/features";
@@ -113,7 +109,7 @@ export const ConnectionSettingsPage: React.FC = () => {
     return defaultValues;
   };
 
-  const isSimplifiedCreation = useExperiment("connection.simplifiedCreation", false);
+  const isSimplifiedCreation = useExperiment("connection.simplifiedCreation", true);
 
   if (isSimplifiedCreation) {
     return <SimplifiedConnectionSettingsPage />;
@@ -196,27 +192,18 @@ const SimplifiedConnectionSettingsPage = () => {
 
   const { mode } = useConnectionFormService();
   const destDefinitionVersion = useDestinationDefinitionVersion(connection.destinationId);
-  const simplifiedInitialValues = useInitialFormValues(connection, destDefinitionVersion, mode === "edit");
+  const { destDefinitionSpecification } = useConnectionFormService();
+  const simplifiedInitialValues = useInitialFormValues(
+    connection,
+    destDefinitionVersion,
+    destDefinitionSpecification,
+    mode
+  );
 
   const { workspaceId } = useCurrentWorkspace();
   const canEditConnection = useIntent("EditConnection", { workspaceId });
 
   const validationSchema = useConnectionValidationSchema();
-
-  const { mutateAsync: deleteConnection } = useDeleteConnection();
-  const onDelete = () => deleteConnection(connection);
-
-  const { mutateAsync: doResetConnection } = useResetConnection();
-  const onReset = useCallback(async () => {
-    await doResetConnection(connection.connectionId);
-    registerNotification({
-      id: "clearData.successfulStart",
-      text: formatMessage({
-        id: "form.clearData.successfulStart",
-      }),
-      type: "success",
-    });
-  }, [doResetConnection, connection.connectionId, registerNotification, formatMessage]);
 
   const onSuccess = () => {
     registerNotification({
@@ -264,7 +251,11 @@ const SimplifiedConnectionSettingsPage = () => {
         />
       </Form>
 
-      {connection.status !== "deprecated" && <ConnectionDangerBlock onDelete={onDelete} onReset={onReset} />}
+      {connection.status !== "deprecated" && (
+        <ConnectionSyncContextProvider>
+          <ConnectionActionsBlock />
+        </ConnectionSyncContextProvider>
+      )}
 
       <Disclosure>
         {({ open }) => (

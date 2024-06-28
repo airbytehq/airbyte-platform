@@ -2,17 +2,19 @@ package io.airbyte.workload.launcher.pods
 
 import io.airbyte.workers.process.Metadata
 import io.airbyte.workers.process.Metadata.CHECK_JOB
-import io.airbyte.workers.process.Metadata.CHECK_STEP_KEY
-import io.airbyte.workers.process.Metadata.CONNECTOR_STEP
+import io.airbyte.workers.process.Metadata.DISCOVER_JOB
 import io.airbyte.workers.process.Metadata.JOB_TYPE_KEY
 import io.airbyte.workers.process.Metadata.ORCHESTRATOR_REPLICATION_STEP
 import io.airbyte.workers.process.Metadata.READ_STEP
+import io.airbyte.workers.process.Metadata.SPEC_JOB
 import io.airbyte.workers.process.Metadata.SYNC_JOB
 import io.airbyte.workers.process.Metadata.SYNC_STEP_KEY
 import io.airbyte.workers.process.Metadata.WRITE_STEP
 import io.airbyte.workers.process.ProcessFactory
 import io.airbyte.workload.launcher.pods.PodLabeler.LabelKeys.AUTO_ID
 import io.airbyte.workload.launcher.pods.PodLabeler.LabelKeys.MUTEX_KEY
+import io.airbyte.workload.launcher.pods.PodLabeler.LabelKeys.SWEEPER_LABEL_KEY
+import io.airbyte.workload.launcher.pods.PodLabeler.LabelKeys.SWEEPER_LABEL_VALUE
 import io.airbyte.workload.launcher.pods.PodLabeler.LabelKeys.WORKLOAD_ID
 import jakarta.inject.Named
 import jakarta.inject.Singleton
@@ -42,10 +44,21 @@ class PodLabeler(
       )
   }
 
-  fun getCheckConnectorLabels(): Map<String, String> {
+  fun getCheckLabels(): Map<String, String> {
     return mapOf(
       JOB_TYPE_KEY to CHECK_JOB,
-      CHECK_STEP_KEY to CONNECTOR_STEP,
+    )
+  }
+
+  fun getDiscoverLabels(): Map<String, String> {
+    return mapOf(
+      JOB_TYPE_KEY to DISCOVER_JOB,
+    )
+  }
+
+  fun getSpecLabels(): Map<String, String> {
+    return mapOf(
+      JOB_TYPE_KEY to SPEC_JOB,
     )
   }
 
@@ -85,18 +98,30 @@ class PodLabeler(
     )
   }
 
+  fun getPodSweeperLabels(): Map<String, String> {
+    return mapOf(
+      SWEEPER_LABEL_KEY to SWEEPER_LABEL_VALUE,
+    )
+  }
+
   fun getSharedLabels(
     workloadId: String?,
     mutexKey: String?,
     passThroughLabels: Map<String, String>,
     autoId: UUID,
   ): Map<String, String> {
-    return passThroughLabels + getMutexLabels(mutexKey) + getWorkloadLabels(workloadId) + getAutoIdLabels(autoId)
+    return passThroughLabels +
+      getMutexLabels(mutexKey) +
+      getWorkloadLabels(workloadId) +
+      getAutoIdLabels(autoId) +
+      getPodSweeperLabels()
   }
 
   object LabelKeys {
     const val AUTO_ID = "auto_id"
     const val MUTEX_KEY = "mutex_key"
     const val WORKLOAD_ID = "workload_id"
+    const val SWEEPER_LABEL_KEY = "airbyte"
+    const val SWEEPER_LABEL_VALUE = "job-pod"
   }
 }

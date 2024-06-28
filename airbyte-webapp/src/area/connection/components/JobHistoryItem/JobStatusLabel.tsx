@@ -3,7 +3,7 @@ import { FormattedMessage } from "react-intl";
 import { Text } from "components/ui/Text";
 
 import { JobWithAttempts } from "area/connection/types/jobs";
-import { isJobPartialSuccess, getJobAttempts, getJobStatus } from "area/connection/utils/jobs";
+import { isJobPartialSuccess, getJobAttempts, getJobStatus, isClearJob } from "area/connection/utils/jobs";
 import { JobStatus } from "core/api/types/AirbyteClient";
 
 interface JobStatusLabelProps {
@@ -14,9 +14,14 @@ export const JobStatusLabel: React.FC<JobStatusLabelProps> = ({ jobWithAttempts 
   const attempts = getJobAttempts(jobWithAttempts);
   const jobStatus = getJobStatus(jobWithAttempts);
   const jobIsPartialSuccess = isJobPartialSuccess(attempts);
-  const streamsToReset = "job" in jobWithAttempts ? jobWithAttempts.job.resetConfig?.streamsToReset : undefined;
-  const jobConfigType =
-    jobWithAttempts.job.configType === "reset_connection" ? "clear_data" : jobWithAttempts.job.configType;
+  const streamsToList =
+    "job" in jobWithAttempts
+      ? isClearJob(jobWithAttempts)
+        ? jobWithAttempts.job.resetConfig?.streamsToReset
+        : jobWithAttempts.job.refreshConfig?.streamsToRefresh
+      : undefined;
+
+  const jobConfigType = isClearJob(jobWithAttempts) ? "clear_data" : jobWithAttempts.job.configType;
 
   let status = "";
   if (jobIsPartialSuccess) {
@@ -35,7 +40,9 @@ export const JobStatusLabel: React.FC<JobStatusLabelProps> = ({ jobWithAttempts 
   return (
     <Text>
       <FormattedMessage
-        values={{ count: streamsToReset?.length || 0 }}
+        values={{
+          count: streamsToList?.length || 0,
+        }}
         id={`jobs.jobStatus.${jobConfigType}.${status}`}
       />
     </Text>

@@ -1,7 +1,9 @@
 import React from "react";
 
-import cactus from "./cactus.png";
-import styles from "./EmptyResourceBlock.module.scss";
+import { FlexContainer } from "components/ui/Flex";
+import { Text } from "components/ui/Text";
+
+import cactus from "./cactus.svg";
 
 interface EmptyResourceBlockProps {
   text: React.ReactNode;
@@ -9,11 +11,13 @@ interface EmptyResourceBlockProps {
 }
 
 export const EmptyResourceBlock: React.FC<EmptyResourceBlockProps> = ({ text, description }) => (
-  <div className={styles.content}>
-    <div className={styles.imgBlock}>
-      <img src={cactus} height={40} alt="" />
-    </div>
-    {text}
-    <div className={styles.description}>{description}</div>
-  </div>
+  <FlexContainer alignItems="center" direction="column">
+    <img src={cactus} height={46} alt="" />
+    <FlexContainer alignItems="center" direction="column" gap="sm">
+      <Text color="grey500" size="lg">
+        {text}
+      </Text>
+      {description && <Text color="grey400">{description}</Text>}
+    </FlexContainer>
+  </FlexContainer>
 );

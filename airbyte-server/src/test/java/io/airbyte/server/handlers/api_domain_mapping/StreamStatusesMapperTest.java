@@ -11,14 +11,17 @@ import io.airbyte.api.model.generated.StreamStatusCreateRequestBody;
 import io.airbyte.api.model.generated.StreamStatusIncompleteRunCause;
 import io.airbyte.api.model.generated.StreamStatusJobType;
 import io.airbyte.api.model.generated.StreamStatusListRequestBody;
+import io.airbyte.api.model.generated.StreamStatusRateLimitedMetadata;
 import io.airbyte.api.model.generated.StreamStatusRead;
 import io.airbyte.api.model.generated.StreamStatusRunState;
 import io.airbyte.api.model.generated.StreamStatusUpdateRequestBody;
+import io.airbyte.commons.json.Jsons;
 import io.airbyte.db.instance.jobs.jooq.generated.enums.JobStreamStatusIncompleteRunCause;
 import io.airbyte.db.instance.jobs.jooq.generated.enums.JobStreamStatusJobType;
 import io.airbyte.db.instance.jobs.jooq.generated.enums.JobStreamStatusRunState;
 import io.airbyte.server.repositories.StreamStatusesRepository;
 import io.airbyte.server.repositories.domain.StreamStatus;
+import io.airbyte.server.repositories.domain.StreamStatusRateLimitedMetadataRepositoryStructure;
 import java.time.Instant;
 import java.time.OffsetDateTime;
 import java.util.UUID;
@@ -47,6 +50,7 @@ public class StreamStatusesMapperTest {
       Assertions.assertEquals(JobStreamStatusRunState.running, mapper.map(StreamStatusRunState.RUNNING));
       Assertions.assertEquals(JobStreamStatusRunState.complete, mapper.map(StreamStatusRunState.COMPLETE));
       Assertions.assertEquals(JobStreamStatusRunState.incomplete, mapper.map(StreamStatusRunState.INCOMPLETE));
+      Assertions.assertEquals(JobStreamStatusRunState.rate_limited, mapper.map(StreamStatusRunState.RATE_LIMITED));
     }
 
     @Test
@@ -131,7 +135,8 @@ public class StreamStatusesMapperTest {
           .attemptNumber(attemptNumber)
           .streamNamespace(streamNamespace)
           .streamName(streamName)
-          .transitionedAt(transitionedAt);
+          .transitionedAt(transitionedAt)
+          .metadata(new StreamStatusRateLimitedMetadata().quotaReset(transitionedAt));
       final var domain = new StreamStatus.StreamStatusBuilder()
           .runState(mapper.map(StreamStatusRunState.INCOMPLETE))
           .incompleteRunCause(mapper.map(StreamStatusIncompleteRunCause.FAILED))
@@ -143,6 +148,7 @@ public class StreamStatusesMapperTest {
           .streamNamespace(streamNamespace)
           .streamName(streamName)
           .transitionedAt(OffsetDateTime.ofInstant(Instant.ofEpochMilli(transitionedAt), UTC))
+          .metadata(Jsons.jsonNode(new StreamStatusRateLimitedMetadataRepositoryStructure(transitionedAt)))
           .build();
 
       final var mapped = mapper.map(api);
@@ -158,6 +164,7 @@ public class StreamStatusesMapperTest {
       Assertions.assertEquals(domain.getStreamNamespace(), mapped.getStreamNamespace());
       Assertions.assertEquals(domain.getStreamName(), mapped.getStreamName());
       Assertions.assertEquals(domain.getTransitionedAt(), mapped.getTransitionedAt());
+      Assertions.assertEquals(domain.getMetadata(), mapped.getMetadata());
       // test whole shebang in case we forget to add fields above
       Assertions.assertEquals(domain, mapped);
     }
@@ -184,6 +191,7 @@ public class StreamStatusesMapperTest {
           .streamNamespace(streamNamespace)
           .streamName(streamName)
           .transitionedAt(transitionedAt)
+          .metadata(new StreamStatusRateLimitedMetadata().quotaReset(transitionedAt))
           .id(id);
       final var domain = new StreamStatus.StreamStatusBuilder()
           .runState(mapper.map(StreamStatusRunState.INCOMPLETE))
@@ -196,6 +204,7 @@ public class StreamStatusesMapperTest {
           .streamNamespace(streamNamespace)
           .streamName(streamName)
           .transitionedAt(OffsetDateTime.ofInstant(Instant.ofEpochMilli(transitionedAt), UTC))
+          .metadata(Jsons.jsonNode(new StreamStatusRateLimitedMetadataRepositoryStructure(transitionedAt)))
           .id(id)
           .build();
 
@@ -213,6 +222,7 @@ public class StreamStatusesMapperTest {
       Assertions.assertEquals(domain.getStreamName(), mapped.getStreamName());
       Assertions.assertEquals(domain.getTransitionedAt(), mapped.getTransitionedAt());
       Assertions.assertEquals(domain.getId(), mapped.getId());
+      Assertions.assertEquals(domain.getMetadata(), mapped.getMetadata());
       // test whole shebang in case we forget to add fields above
       Assertions.assertEquals(domain, mapped);
     }
@@ -228,6 +238,7 @@ public class StreamStatusesMapperTest {
       Assertions.assertEquals(StreamStatusRunState.RUNNING, mapper.map(JobStreamStatusRunState.running));
       Assertions.assertEquals(StreamStatusRunState.COMPLETE, mapper.map(JobStreamStatusRunState.complete));
       Assertions.assertEquals(StreamStatusRunState.INCOMPLETE, mapper.map(JobStreamStatusRunState.incomplete));
+      Assertions.assertEquals(StreamStatusRunState.RATE_LIMITED, mapper.map(JobStreamStatusRunState.rate_limited));
     }
 
     @Test
@@ -265,6 +276,7 @@ public class StreamStatusesMapperTest {
           .streamName(streamName)
           .transitionedAt(OffsetDateTime.ofInstant(Instant.ofEpochMilli(transitionedAt), UTC))
           .id(id)
+          .metadata(Jsons.jsonNode(new StreamStatusRateLimitedMetadataRepositoryStructure(transitionedAt)))
           .build();
       final var api = new StreamStatusRead()
           .runState(StreamStatusRunState.INCOMPLETE)
@@ -277,6 +289,7 @@ public class StreamStatusesMapperTest {
           .streamNamespace(streamNamespace)
           .streamName(streamName)
           .transitionedAt(transitionedAt)
+          .metadata(new StreamStatusRateLimitedMetadata().quotaReset(transitionedAt))
           .id(id);
 
       final var mapped = mapper.map(domain);
@@ -293,6 +306,7 @@ public class StreamStatusesMapperTest {
       Assertions.assertEquals(api.getStreamName(), mapped.getStreamName());
       Assertions.assertEquals(api.getTransitionedAt(), mapped.getTransitionedAt());
       Assertions.assertEquals(api.getId(), mapped.getId());
+      Assertions.assertEquals(api.getMetadata(), mapped.getMetadata());
       // test whole shebang in case we forget to add fields above
       Assertions.assertEquals(api, mapped);
     }

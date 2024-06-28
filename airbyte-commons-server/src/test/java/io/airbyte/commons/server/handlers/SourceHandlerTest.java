@@ -8,6 +8,7 @@ import static io.airbyte.featureflag.ContextKt.ANONYMOUS;
 import static io.airbyte.protocol.models.CatalogHelpers.createAirbyteStream;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -18,6 +19,7 @@ import static org.mockito.Mockito.when;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.google.common.collect.Lists;
+import io.airbyte.api.model.generated.ActorStatus;
 import io.airbyte.api.model.generated.AirbyteStreamConfiguration;
 import io.airbyte.api.model.generated.ConnectionRead;
 import io.airbyte.api.model.generated.ConnectionReadList;
@@ -58,6 +60,7 @@ import io.airbyte.data.helpers.ActorDefinitionVersionUpdater;
 import io.airbyte.data.services.SecretPersistenceConfigService;
 import io.airbyte.data.services.SourceService;
 import io.airbyte.data.services.WorkspaceService;
+import io.airbyte.featureflag.DeleteSecretsWhenTombstoneActors;
 import io.airbyte.featureflag.TestClient;
 import io.airbyte.featureflag.UseIconUrlInApiResponse;
 import io.airbyte.featureflag.Workspace;
@@ -381,6 +384,7 @@ class SourceHandlerTest {
   void testListSourcesForWorkspace() throws JsonValidationException, ConfigNotFoundException, IOException {
     final SourceRead expectedSourceRead =
         SourceHelpers.getSourceRead(sourceConnection, standardSourceDefinition, IS_VERSION_OVERRIDE_APPLIED, SUPPORT_STATE);
+    expectedSourceRead.setStatus(ActorStatus.INACTIVE); // set inactive by default
     final WorkspaceIdRequestBody workspaceIdRequestBody = new WorkspaceIdRequestBody().workspaceId(sourceConnection.getWorkspaceId());
 
     when(configRepository.getSourceConnection(sourceConnection.getSourceId())).thenReturn(sourceConnection);
@@ -495,10 +499,64 @@ class SourceHandlerTest {
             .thenReturn(sourceConnection.getConfiguration());
     when(actorDefinitionVersionHelper.getSourceVersionWithOverrideStatus(standardSourceDefinition, sourceConnection.getWorkspaceId(),
         sourceConnection.getSourceId())).thenReturn(sourceDefinitionVersionWithOverrideStatus);
+    // By default feature flag is false
+    when(featureFlagClient.boolVariation(
+        eq(DeleteSecretsWhenTombstoneActors.INSTANCE),
+        any(Workspace.class))).thenReturn(false);
 
     sourceHandler.deleteSource(sourceIdRequestBody);
 
     verify(sourceService).writeSourceConnectionWithSecrets(expectedSourceConnection, connectorSpecification);
+    verify(connectionsHandler).listConnectionsForWorkspace(workspaceIdRequestBody);
+    verify(connectionsHandler).deleteConnection(connectionRead.getConnectionId());
+  }
+
+  @Test
+  void testDeleteSourceAndDeleteSecrets()
+      throws JsonValidationException, ConfigNotFoundException, IOException, io.airbyte.data.exceptions.ConfigNotFoundException {
+    final JsonNode newConfiguration = sourceConnection.getConfiguration();
+    ((ObjectNode) newConfiguration).put("apiKey", "987-xyz");
+
+    final SourceConnection expectedSourceConnection = Jsons.clone(sourceConnection).withTombstone(true);
+
+    final SourceIdRequestBody sourceIdRequestBody = new SourceIdRequestBody().sourceId(sourceConnection.getSourceId());
+    final StandardSync standardSync = ConnectionHelpers.generateSyncWithSourceId(sourceConnection.getSourceId());
+    final ConnectionRead connectionRead = ConnectionHelpers.generateExpectedConnectionRead(standardSync);
+    final ConnectionReadList connectionReadList = new ConnectionReadList().connections(Collections.singletonList(connectionRead));
+    final WorkspaceIdRequestBody workspaceIdRequestBody = new WorkspaceIdRequestBody().workspaceId(sourceConnection.getWorkspaceId());
+
+    when(configRepository.getSourceConnection(sourceConnection.getSourceId()))
+        .thenReturn(sourceConnection)
+        .thenReturn(expectedSourceConnection);
+    when(sourceService.getSourceConnectionWithSecrets(sourceConnection.getSourceId()))
+        .thenReturn(sourceConnection)
+        .thenReturn(expectedSourceConnection);
+    when(oAuthConfigSupplier.maskSourceOAuthParameters(sourceDefinitionSpecificationRead.getSourceDefinitionId(),
+        sourceConnection.getWorkspaceId(),
+        newConfiguration, sourceDefinitionVersion.getSpec())).thenReturn(newConfiguration);
+    when(configRepository.getStandardSourceDefinition(sourceDefinitionSpecificationRead.getSourceDefinitionId()))
+        .thenReturn(standardSourceDefinition);
+    when(actorDefinitionVersionHelper.getSourceVersion(standardSourceDefinition, sourceConnection.getWorkspaceId(), sourceConnection.getSourceId()))
+        .thenReturn(sourceDefinitionVersion);
+    when(configRepository.getSourceDefinitionFromSource(sourceConnection.getSourceId())).thenReturn(standardSourceDefinition);
+    when(connectionsHandler.listConnectionsForWorkspace(workspaceIdRequestBody)).thenReturn(connectionReadList);
+    when(
+        secretsProcessor.prepareSecretsForOutput(sourceConnection.getConfiguration(), sourceDefinitionSpecificationRead.getConnectionSpecification()))
+            .thenReturn(sourceConnection.getConfiguration());
+    when(actorDefinitionVersionHelper.getSourceVersionWithOverrideStatus(standardSourceDefinition, sourceConnection.getWorkspaceId(),
+        sourceConnection.getSourceId())).thenReturn(sourceDefinitionVersionWithOverrideStatus);
+    // Turn on feature flag to delete secrets
+    when(featureFlagClient.boolVariation(
+        eq(DeleteSecretsWhenTombstoneActors.INSTANCE),
+        any(Workspace.class))).thenReturn(true);
+
+    sourceHandler.deleteSource(sourceIdRequestBody);
+
+    // With the flag on, we should not no longer get secrets or write secrets anymore (since we are
+    // deleting the source).
+    verify(sourceService, times(0)).writeSourceConnectionWithSecrets(expectedSourceConnection, connectorSpecification);
+    verify(sourceService, times(0)).getSourceConnectionWithSecrets(any());
+    verify(sourceService).tombstoneSource(any(), any());
     verify(connectionsHandler).listConnectionsForWorkspace(workspaceIdRequestBody);
     verify(connectionsHandler).deleteConnection(connectionRead.getConnectionId());
   }
@@ -509,17 +567,19 @@ class SourceHandlerTest {
     final UUID catalogId = UUID.randomUUID();
     final String connectorVersion = "0.0.1";
     final String hashValue = "0123456789abcd";
+    final AirbyteCatalog expectedCatalog = Jsons.clone(airbyteCatalog);
+    expectedCatalog.getStreams().forEach(s -> s.withSourceDefinedCursor(false));
 
     final SourceDiscoverSchemaWriteRequestBody request = new SourceDiscoverSchemaWriteRequestBody()
-        .catalog(CatalogConverter.toApi(airbyteCatalog, new ActorDefinitionVersion()))
+        .catalog(CatalogConverter.toApi(expectedCatalog, new ActorDefinitionVersion()))
         .sourceId(actorId)
         .connectorVersion(connectorVersion)
         .configurationHash(hashValue);
 
-    when(configRepository.writeActorCatalogFetchEvent(airbyteCatalog, actorId, connectorVersion, hashValue)).thenReturn(catalogId);
+    when(configRepository.writeActorCatalogFetchEvent(expectedCatalog, actorId, connectorVersion, hashValue)).thenReturn(catalogId);
     final DiscoverCatalogResult result = sourceHandler.writeDiscoverCatalogResult(request);
 
-    verify(configRepository).writeActorCatalogFetchEvent(airbyteCatalog, actorId, connectorVersion, hashValue);
+    verify(configRepository).writeActorCatalogFetchEvent(expectedCatalog, actorId, connectorVersion, hashValue);
     assert (result.getCatalogId()).equals(catalogId);
   }
 

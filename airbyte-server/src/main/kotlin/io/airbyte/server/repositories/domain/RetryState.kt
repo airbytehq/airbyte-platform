@@ -147,8 +147,11 @@ class RetryState(
 
     fun build(): RetryState {
       return RetryState(
-        this.id, this.connectionId, this.jobId, this.createdAt, this.updatedAt, this.successiveCompleteFailures,
-        this.totalCompleteFailures, this.successivePartialFailures, this.totalPartialFailures,
+        id = this.id, connectionId = this.connectionId, jobId = this.jobId, createdAt = this.createdAt, updatedAt = this.updatedAt,
+        successiveCompleteFailures = this.successiveCompleteFailures,
+        totalCompleteFailures = this.totalCompleteFailures,
+        successivePartialFailures = this.successivePartialFailures,
+        totalPartialFailures = this.totalPartialFailures,
       )
     }
 

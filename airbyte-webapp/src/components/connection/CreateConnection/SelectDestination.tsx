@@ -37,7 +37,7 @@ export const SelectDestination: React.FC = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const createLink = useCurrentWorkspaceLink();
 
-  const useSimpliedCreation = useExperiment("connection.simplifiedCreation", false);
+  const useSimpliedCreation = useExperiment("connection.simplifiedCreation", true);
 
   if (!searchParams.get(DESTINATION_TYPE_PARAM)) {
     if (destinations.length === 0) {

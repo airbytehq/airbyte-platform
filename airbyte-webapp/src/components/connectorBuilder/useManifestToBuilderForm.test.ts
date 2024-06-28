@@ -1,3 +1,4 @@
+import { dump } from "js-yaml";
 import merge from "lodash/merge";
 
 import {
@@ -5,17 +6,20 @@ import {
   DeclarativeStream,
   DeclarativeStreamIncrementalSync,
   HttpRequesterErrorHandler,
+  RecordSelector,
   SessionTokenAuthenticator,
   SimpleRetrieverPaginator,
   Spec,
 } from "core/api/types/ConnectorManifest";
-import { removeEmptyProperties } from "core/utils/form";
 
 import {
   manifestAuthenticatorToBuilder,
   manifestErrorHandlerToBuilder,
   manifestIncrementalSyncToBuilder,
   manifestPaginatorToBuilder,
+  manifestRecordSelectorToBuilder,
+  manifestSubstreamPartitionRouterToBuilder,
+  manifestTransformationsToBuilder,
 } from "./convertManifestToBuilderForm";
 import {
   DEFAULT_BUILDER_FORM_VALUES,
@@ -321,7 +325,7 @@ describe("Conversion throws error when", () => {
       return manifestAuthenticatorToBuilder(authenticator, undefined);
     };
     expect(convert).toThrow(
-      "SessionTokenAuthenticator login_requester.authenticator must have one of the following types"
+      "SessionTokenAuthenticator.login_requester.authenticator must have one of the following types: NoAuth, ApiKeyAuthenticator, BearerAuthenticator, BasicHttpAuthenticator"
     );
   });
 
@@ -342,9 +346,7 @@ describe("Conversion throws error when", () => {
       };
       return manifestErrorHandlerToBuilder(errorHandler as HttpRequesterErrorHandler);
     };
-    expect(convert).toThrow(
-      "error handler type is unsupported; only CompositeErrorHandler and DefaultErrorHandler are supported"
-    );
+    expect(convert).toThrow("error handler type 'UnsupportedErrorHandler' is unsupported");
   });
 
   it("manifest has an incremental sync with an unsupported type", async () => {
@@ -356,12 +358,133 @@ describe("Conversion throws error when", () => {
     };
     expect(convert).toThrow("doesn't use a DatetimeBasedCursor");
   });
+
+  it("manifest has a record selector with an unsupported type", async () => {
+    const convert = () => {
+      const recordSelector = {
+        type: "UnsupportedRecordSelector",
+      };
+      return manifestRecordSelectorToBuilder(recordSelector as RecordSelector);
+    };
+    expect(convert).toThrow("doesn't use a RecordSelector");
+  });
+
+  it("manifest has a record extractor with an unsupported type", async () => {
+    const convert = () => {
+      const recordSelector = {
+        type: "RecordSelector",
+        extractor: {
+          type: "UnsupportedExtractor",
+        },
+      };
+      return manifestRecordSelectorToBuilder(recordSelector as RecordSelector);
+    };
+    expect(convert).toThrow("doesn't use a DpathExtractor");
+  });
+
+  it("manifest has a record filter with an unsupported type", async () => {
+    const convert = () => {
+      const recordSelector = {
+        type: "RecordSelector",
+        extractor: {
+          type: "DpathExtractor",
+          field_path: [],
+        },
+        record_filter: {
+          type: "UnsupportedRecordFilter",
+        },
+      };
+      return manifestRecordSelectorToBuilder(recordSelector as RecordSelector);
+    };
+    expect(convert).toThrow("doesn't use a RecordFilter");
+  });
+
+  it("SubstreamPartitionRouter doesn't use a $ref for the parent stream", async () => {
+    const convert = () => {
+      const partitionRouter = {
+        type: "SubstreamPartitionRouter" as const,
+        parent_stream_configs: [
+          {
+            type: "ParentStreamConfig" as const,
+            parent_key: "id",
+            partition_field: "parent_id",
+            stream: stream2,
+          },
+        ],
+      };
+      return manifestSubstreamPartitionRouterToBuilder(partitionRouter, { stream2: "stream2" });
+    };
+    expect(convert).toThrow("SubstreamPartitionRouter.parent_stream_configs.stream must use $ref");
+  });
+
+  it("SubstreamPartitionRouter's parent stream $ref does not point to a stream definition", async () => {
+    const convert = () => {
+      const partitionRouter = {
+        type: "SubstreamPartitionRouter" as const,
+        parent_stream_configs: [
+          {
+            type: "ParentStreamConfig" as const,
+            parent_key: "id",
+            partition_field: "parent_id",
+            stream: {
+              $ref: "#/definitions/notAStream",
+            } as unknown as DeclarativeStream,
+          },
+        ],
+      };
+      return manifestSubstreamPartitionRouterToBuilder(partitionRouter, { stream2: "stream2" });
+    };
+    expect(convert).toThrow(
+      "SubstreamPartitionRouter's parent stream reference must match the pattern '#/definitions/streams/streamName'"
+    );
+  });
+
+  it("SubstreamPartitionRouter's parent stream $ref does not match any stream name", async () => {
+    const convert = () => {
+      const partitionRouter = {
+        type: "SubstreamPartitionRouter" as const,
+        parent_stream_configs: [
+          {
+            type: "ParentStreamConfig" as const,
+            parent_key: "id",
+            partition_field: "parent_id",
+            stream: {
+              $ref: "#/definitions/streams/stream1",
+            } as unknown as DeclarativeStream,
+          },
+        ],
+      };
+      return manifestSubstreamPartitionRouterToBuilder(partitionRouter, { stream2: "stream2" });
+    };
+    expect(convert).toThrow(
+      "SubstreamPartitionRouter references parent stream name 'stream1' which could not be found"
+    );
+  });
+
+  it("unknown fields are found on component", async () => {
+    const convert = () => {
+      const transformations = [
+        {
+          type: "AddFields" as const,
+          fields: [
+            {
+              path: ["path", "to", "field"],
+              value: "my_value",
+            },
+          ],
+          unsupported_field: "abc",
+        },
+      ];
+      return manifestTransformationsToBuilder(transformations);
+    };
+    expect(convert).toThrow("AddFields contains fields unsupported by the UI: unsupported_field");
+  });
 });
 
 describe("Conversion successfully results in", () => {
   it("default values if manifest is empty", async () => {
     const formValues = await convertToBuilderFormValues(noOpResolve, baseManifest, DEFAULT_CONNECTOR_NAME);
-    expect(formValues).toEqual(removeEmptyProperties(DEFAULT_BUILDER_FORM_VALUES));
+    expect(formValues).toEqual(DEFAULT_BUILDER_FORM_VALUES);
   });
 
   it("spec properties converted to inputs if no streams present", async () => {
@@ -460,7 +583,6 @@ describe("Conversion successfully results in", () => {
       },
     };
     const formValues = await convertToBuilderFormValues(noOpResolve, manifest, DEFAULT_CONNECTOR_NAME);
-    console.log(formValues);
     expect(formValues.inputs).toEqual([
       {
         key: "api_key",
@@ -573,6 +695,36 @@ describe("Conversion successfully results in", () => {
         ["k1", "v1"],
         ["k2", "v2"],
       ],
+    });
+  });
+
+  it("record selector converted to builder record selector", async () => {
+    const manifest: ConnectorManifest = {
+      ...baseManifest,
+      streams: [
+        merge({}, stream1, {
+          retriever: {
+            record_selector: {
+              type: "RecordSelector",
+              extractor: {
+                type: "DpathExtractor",
+                field_path: ["a", "b"],
+              },
+              record_filter: {
+                type: "RecordFilter",
+                condition: "{{ record.c > 1 }}",
+              },
+              schema_normalization: "Default",
+            },
+          },
+        }),
+      ],
+    };
+    const formValues = await convertToBuilderFormValues(noOpResolve, manifest, DEFAULT_CONNECTOR_NAME);
+    expect(formValues.streams[0].recordSelector).toEqual({
+      fieldPath: ["a", "b"],
+      filterCondition: "{{ record.c > 1 }}",
+      normalizeToSchema: true,
     });
   });
 
@@ -700,32 +852,6 @@ describe("Conversion successfully results in", () => {
   "b": "yyy"
 }`
     );
-  });
-
-  it("stores unsupported fields", async () => {
-    const manifest: ConnectorManifest = {
-      ...baseManifest,
-      streams: [
-        merge({}, stream1, {
-          retriever: {
-            record_selector: {
-              record_filter: {
-                type: "RecordFilter",
-                condition: "true",
-              },
-            },
-          },
-        }),
-      ],
-    };
-    const formValues = await convertToBuilderFormValues(noOpResolve, manifest, DEFAULT_CONNECTOR_NAME);
-    expect(formValues.streams[0].unsupportedFields).toEqual({
-      retriever: {
-        record_selector: {
-          record_filter: manifest.streams[0].retriever.record_selector.record_filter,
-        },
-      },
-    });
   });
 
   it('authenticator with a interpolated secret key of type config.key converted to config["key"]', async () => {
@@ -918,5 +1044,30 @@ describe("Conversion successfully results in", () => {
         },
       },
     });
+  });
+
+  it("unrecognized stream fields are placed into unknownFields in BuilderStream", async () => {
+    const unknownFields = {
+      top_level_unknown_field: {
+        inner_unknown_field_1: "a",
+        inner_unknown_field_2: 1,
+      },
+      retriever: {
+        retriever_unknown_field: "b",
+        requester: {
+          requester_unknown_field: {
+            inner_requester_field_1: "c",
+            inner_requester_field_2: 2,
+          },
+        },
+      },
+    };
+    const manifest: ConnectorManifest = {
+      ...baseManifest,
+      streams: [merge({}, stream1, unknownFields)],
+      spec: apiTokenSpec,
+    };
+    const formValues = await convertToBuilderFormValues(noOpResolve, manifest, DEFAULT_CONNECTOR_NAME);
+    expect(formValues.streams[0].unknownFields).toEqual(dump(unknownFields));
   });
 });

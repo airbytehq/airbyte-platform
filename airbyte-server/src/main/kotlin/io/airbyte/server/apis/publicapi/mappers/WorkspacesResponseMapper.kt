@@ -6,7 +6,7 @@ package io.airbyte.server.apis.publicapi.mappers
 
 import io.airbyte.api.model.generated.WorkspaceRead
 import io.airbyte.api.model.generated.WorkspaceReadList
-import io.airbyte.public_api.model.generated.WorkspacesResponse
+import io.airbyte.publicApi.server.generated.models.WorkspacesResponse
 import io.airbyte.server.apis.publicapi.constants.INCLUDE_DELETED
 import io.airbyte.server.apis.publicapi.constants.WORKSPACES_PATH
 import io.airbyte.server.apis.publicapi.constants.WORKSPACE_IDS
@@ -42,14 +42,10 @@ object WorkspacesResponseMapper {
         .queryParam(INCLUDE_DELETED, includeDeleted)
     if (workspaceIds.isNotEmpty()) uriBuilder.queryParam(WORKSPACE_IDS, PaginationMapper.uuidListToQueryString(workspaceIds))
 
-    val workspacesResponse = WorkspacesResponse()
-    workspacesResponse.next =
-      PaginationMapper.getNextUrl(workspaceReadList.workspaces, limit, offset, uriBuilder)
-    workspacesResponse.previous = PaginationMapper.getPreviousUrl(limit, offset, uriBuilder)
-    workspacesResponse.data =
-      workspaceReadList.workspaces.stream()
-        .map { obj: WorkspaceRead? -> from(obj!!) }
-        .toList()
-    return workspacesResponse
+    return WorkspacesResponse(
+      next = PaginationMapper.getNextUrl(workspaceReadList.workspaces, limit, offset, uriBuilder),
+      previous = PaginationMapper.getPreviousUrl(limit, offset, uriBuilder),
+      data = workspaceReadList.workspaces.stream().map { obj: WorkspaceRead? -> from(obj!!) }.toList(),
+    )
   }
 }

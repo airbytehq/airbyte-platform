@@ -113,12 +113,14 @@ public class DestinationDefinitionsHandler {
           .supportLevel(ApiPojoConverters.toApiSupportLevel(destinationVersion.getSupportLevel()))
           .releaseStage(ApiPojoConverters.toApiReleaseStage(destinationVersion.getReleaseStage()))
           .releaseDate(ApiPojoConverters.toLocalDate(destinationVersion.getReleaseDate()))
+          .lastPublished(ApiPojoConverters.toOffsetDateTime(destinationVersion.getLastPublished()))
+          .cdkVersion(destinationVersion.getCdkVersion())
+          .metrics(standardDestinationDefinition.getMetrics())
           .custom(standardDestinationDefinition.getCustom())
           .supportsDbt(Objects.requireNonNullElse(destinationVersion.getSupportsDbt(), false))
           .normalizationConfig(
               ApiPojoConverters.normalizationDestinationDefinitionConfigToApi(destinationVersion.getNormalizationConfig()))
-          .resourceRequirements(ApiPojoConverters.actorDefResourceReqsToApi(standardDestinationDefinition.getResourceRequirements()))
-          .supportRefreshes(standardDestinationDefinition.getSupportRefreshes());
+          .resourceRequirements(ApiPojoConverters.actorDefResourceReqsToApi(standardDestinationDefinition.getResourceRequirements()));
     } catch (final URISyntaxException | NullPointerException e) {
       throw new InternalServerKnownException("Unable to process retrieved latest destination definitions list", e);
     }
@@ -258,8 +260,7 @@ public class DestinationDefinitionsHandler {
         .withTombstone(false)
         .withPublic(false)
         .withCustom(true)
-        .withResourceRequirements(ApiPojoConverters.actorDefResourceReqsToInternal(destinationDefCreate.getResourceRequirements()))
-        .withSupportRefreshes(false);
+        .withResourceRequirements(ApiPojoConverters.actorDefResourceReqsToInternal(destinationDefCreate.getResourceRequirements()));
 
     // legacy call; todo: remove once we drop workspace_id column
     if (customDestinationDefinitionCreate.getWorkspaceId() != null) {
@@ -291,6 +292,7 @@ public class DestinationDefinitionsHandler {
         .withTombstone(currentDestination.getTombstone())
         .withPublic(currentDestination.getPublic())
         .withCustom(currentDestination.getCustom())
+        .withMetrics(currentDestination.getMetrics())
         .withResourceRequirements(updatedResourceReqs);
 
     final ActorDefinitionVersion newVersion = actorDefinitionHandlerHelper.defaultDefinitionVersionFromUpdate(

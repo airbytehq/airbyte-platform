@@ -88,7 +88,9 @@ func TestBasicTopologyConfiguration(t *testing.T) {
 			valuesPath: "pod-sweeper",
 		},
 	}
+
 	t.Run("configure nodeSelector for workloads", func(t *testing.T) {
+		t.Parallel()
 		nodeSelector := map[string]string{
 			"machineSize": "xlarge",
 			"region":      "us-west-2",
@@ -96,10 +98,8 @@ func TestBasicTopologyConfiguration(t *testing.T) {
 
 		for _, c := range cases {
 			t.Run(fmt.Sprintf("verify nodeSelectors are set for %s: %s", c.kind, c.name), func(t *testing.T) {
-				helmOpts := baseHelmOptions()
-				helmOpts.SetValues["global.edition"] = "enterprise" // enables keycloak, etc
+				helmOpts := baseHelmOptionsForEnterpriseWithAirbyteYml() // enables all the things
 				helmOpts.SetValues["metrics.enabled"] = "true"
-				helmOpts.SetValues["workload-api-server.enabled"] = "true"
 				helmOpts.SetValues["workload-api-server.enabled"] = "true"
 				helmOpts.SetValues["workload-launcher.enabled"] = "true"
 				for k, v := range nodeSelector {
@@ -148,6 +148,7 @@ func TestBasicTopologyConfiguration(t *testing.T) {
 	})
 
 	t.Run("configure tolerations for workloads", func(t *testing.T) {
+		t.Parallel()
 		tolerations := []corev1.Toleration{
 			{
 				Key:      "key1",
@@ -165,10 +166,8 @@ func TestBasicTopologyConfiguration(t *testing.T) {
 
 		for _, c := range cases {
 			t.Run(fmt.Sprintf("verify tolerations are set for %s: %s", c.kind, c.name), func(t *testing.T) {
-				helmOpts := baseHelmOptions()
-				helmOpts.SetValues["global.edition"] = "enterprise" // enables keycloak, etc
+				helmOpts := baseHelmOptionsForEnterpriseWithAirbyteYml() // enables all the things
 				helmOpts.SetValues["metrics.enabled"] = "true"
-				helmOpts.SetValues["workload-api-server.enabled"] = "true"
 				helmOpts.SetValues["workload-api-server.enabled"] = "true"
 				helmOpts.SetValues["workload-launcher.enabled"] = "true"
 				for i, tol := range tolerations {
@@ -220,6 +219,7 @@ func TestBasicTopologyConfiguration(t *testing.T) {
 	})
 
 	t.Run("configure affinity for workloads", func(t *testing.T) {
+		t.Parallel()
 		affinity := &corev1.Affinity{
 			NodeAffinity: &corev1.NodeAffinity{
 				RequiredDuringSchedulingIgnoredDuringExecution: &corev1.NodeSelector{
@@ -251,10 +251,8 @@ func TestBasicTopologyConfiguration(t *testing.T) {
 
 		for _, c := range cases {
 			t.Run(fmt.Sprintf("verify affinities are set for %s: %s", c.kind, c.name), func(t *testing.T) {
-				helmOpts := baseHelmOptions()
-				helmOpts.SetValues["global.edition"] = "enterprise" // enables keycloak, etc
+				helmOpts := baseHelmOptionsForEnterpriseWithAirbyteYml() // enables all the things
 				helmOpts.SetValues["metrics.enabled"] = "true"
-				helmOpts.SetValues["workload-api-server.enabled"] = "true"
 				helmOpts.SetValues["workload-api-server.enabled"] = "true"
 				helmOpts.SetValues["workload-launcher.enabled"] = "true"
 

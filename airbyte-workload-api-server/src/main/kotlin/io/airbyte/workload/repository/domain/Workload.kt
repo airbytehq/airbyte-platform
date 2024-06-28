@@ -3,6 +3,7 @@ package io.airbyte.workload.repository.domain
 import com.google.common.annotations.VisibleForTesting
 import io.micronaut.context.annotation.Factory
 import io.micronaut.core.annotation.Nullable
+import io.micronaut.core.convert.ConversionContext
 import io.micronaut.core.convert.TypeConverter
 import io.micronaut.data.annotation.DateCreated
 import io.micronaut.data.annotation.DateUpdated
@@ -55,7 +56,6 @@ data class Workload(
   var autoId: UUID? = null,
 ) {
   @VisibleForTesting
-  @JvmOverloads
   constructor(
     id: String,
     dataplaneId: String?,
@@ -105,7 +105,7 @@ enum class WorkloadStatus {
 class WorkloadStatusTypeConverters {
   @Singleton
   fun workloadStatusToStringTypeConverter(): TypeConverter<WorkloadStatus, String> {
-    return TypeConverter { workloadStatus, targetType, context -> Optional.of(workloadStatus.toString()) }
+    return TypeConverter { workloadStatus, _: Class<String>, _: ConversionContext -> Optional.of(workloadStatus.toString()) }
   }
 }
 
@@ -125,7 +125,7 @@ enum class WorkloadType {
   class WorkloadTypeTypeConverters {
     @Singleton
     fun workloadTypeToStringTypeConverter(): TypeConverter<WorkloadType, String> {
-      return TypeConverter { workloadType, targetType, context -> Optional.of(workloadType.toString()) }
+      return TypeConverter { workloadType, _: Class<String>, _: ConversionContext -> Optional.of(workloadType.toString()) }
     }
   }
 }

@@ -1,15 +1,17 @@
 import { render, renderHook, act } from "@testing-library/react";
 import React from "react";
-import { FormattedMessage, IntlConfig, useIntl } from "react-intl";
+import { FormattedMessage, useIntl } from "react-intl";
 
 import { I18nProvider, useI18nContext } from "./I18nProvider";
 
-const provider = (messages: IntlConfig["messages"], locale = "en"): React.FC<React.PropsWithChildren<unknown>> => {
-  return ({ children }) => (
-    <I18nProvider locale={locale} messages={messages}>
-      {children}
-    </I18nProvider>
-  );
+jest.mock("locales/en.json", () => ({
+  test: "default message",
+  "test.id": "Hello world!",
+  "test.id.bold": "Hello <b>world</b>!",
+}));
+
+const provider = (locale = "en"): React.FC<React.PropsWithChildren<unknown>> => {
+  return ({ children }) => <I18nProvider locale={locale}>{children}</I18nProvider>;
 };
 
 const useMessages = () => {
@@ -21,7 +23,7 @@ const useMessages = () => {
 describe("I18nProvider", () => {
   it("should set the react-intl locale correctly", () => {
     const { result } = renderHook(() => useIntl(), {
-      wrapper: provider({}, "fr"),
+      wrapper: provider("fr"),
     });
     expect(result.current.locale).toBe("fr");
   });
@@ -31,7 +33,7 @@ describe("I18nProvider", () => {
       <span data-testid="msg">
         <FormattedMessage id="test.id" />
       </span>,
-      { wrapper: provider({ "test.id": "Hello world!" }) }
+      { wrapper: provider() }
     );
     expect(wrapper.getByTestId("msg").textContent).toBe("Hello world!");
   });
@@ -39,9 +41,9 @@ describe("I18nProvider", () => {
   it("should allow render <b></b> tags for every message", () => {
     const wrapper = render(
       <span data-testid="msg">
-        <FormattedMessage id="test.id" />
+        <FormattedMessage id="test.id.bold" />
       </span>,
-      { wrapper: provider({ "test.id": "Hello <b>world</b>!" }) }
+      { wrapper: provider() }
     );
     expect(wrapper.getByTestId("msg").innerHTML).toBe("Hello <strong>world</strong>!");
   });
@@ -49,7 +51,7 @@ describe("I18nProvider", () => {
   describe("useI18nContext", () => {
     it("should allow overwriting default and setting additional messages", () => {
       const { result } = renderHook(() => useMessages(), {
-        wrapper: provider({ test: "default message" }),
+        wrapper: provider(),
       });
       expect(result.current.messages).toHaveProperty("test", "default message");
       act(() => result.current.setMessageOverwrite({ test: "overwritten message", other: "new message" }));
@@ -59,7 +61,7 @@ describe("I18nProvider", () => {
 
     it("should allow resetting overwrites with an empty object", () => {
       const { result } = renderHook(() => useMessages(), {
-        wrapper: provider({ test: "default message" }),
+        wrapper: provider(),
       });
       act(() => result.current.setMessageOverwrite({ test: "overwritten message" }));
       expect(result.current.messages).toHaveProperty("test", "overwritten message");
@@ -69,7 +71,7 @@ describe("I18nProvider", () => {
 
     it("should allow resetting overwrites with undefined", () => {
       const { result } = renderHook(() => useMessages(), {
-        wrapper: provider({ test: "default message" }),
+        wrapper: provider(),
       });
       act(() => result.current.setMessageOverwrite({ test: "overwritten message" }));
       expect(result.current.messages).toHaveProperty("test", "overwritten message");

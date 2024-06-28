@@ -13,7 +13,6 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.google.common.annotations.VisibleForTesting;
 import datadog.trace.api.Trace;
 import io.airbyte.api.client.AirbyteApiClient;
-import io.airbyte.api.client.invoker.generated.ApiException;
 import io.airbyte.api.client.model.generated.ConnectionIdRequestBody;
 import io.airbyte.api.client.model.generated.ConnectionRead;
 import io.airbyte.api.client.model.generated.ScopeType;
@@ -66,6 +65,7 @@ import io.temporal.activity.ActivityExecutionContext;
 import jakarta.annotation.Nullable;
 import jakarta.inject.Named;
 import jakarta.inject.Singleton;
+import java.io.IOException;
 import java.nio.file.Path;
 import java.util.Map;
 import java.util.Optional;
@@ -202,12 +202,12 @@ public class NormalizationActivityImpl implements NormalizationActivity {
     if (organizationId != null && featureFlagClient.boolVariation(UseRuntimeSecretPersistence.INSTANCE, new Organization(organizationId))) {
       try {
         final SecretPersistenceConfig secretPersistenceConfig = airbyteApiClient.getSecretPersistenceConfigApi().getSecretsPersistenceConfig(
-            new SecretPersistenceConfigGetRequestBody().scopeType(ScopeType.ORGANIZATION).scopeId(organizationId));
+            new SecretPersistenceConfigGetRequestBody(ScopeType.ORGANIZATION, organizationId));
         final RuntimeSecretPersistence runtimeSecretPersistence =
             SecretPersistenceConfigHelper.fromApiSecretPersistenceConfig(secretPersistenceConfig);
         fullDestinationConfig =
             secretsRepositoryReader.hydrateConfigFromRuntimeSecretPersistence(input.getDestinationConfiguration(), runtimeSecretPersistence);
-      } catch (final ApiException e) {
+      } catch (final IOException e) {
         throw new RuntimeException(e);
       }
     } else {
@@ -294,12 +294,7 @@ public class NormalizationActivityImpl implements NormalizationActivity {
   }
 
   private ConfiguredAirbyteCatalog retrieveCatalog(final UUID connectionId) throws Exception {
-    final ConnectionRead connectionInfo =
-        AirbyteApiClient
-            .retryWithJitterThrows(
-                () -> airbyteApiClient.getConnectionApi()
-                    .getConnection(new ConnectionIdRequestBody().connectionId(connectionId)),
-                "retrieve the connection");
+    final ConnectionRead connectionInfo = airbyteApiClient.getConnectionApi().getConnection(new ConnectionIdRequestBody(connectionId));
     if (connectionInfo.getSyncCatalog() == null) {
       throw new IllegalArgumentException("Connection is missing catalog, which is required");
     }

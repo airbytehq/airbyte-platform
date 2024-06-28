@@ -5,7 +5,6 @@
 package io.airbyte.workers.helpers;
 
 import io.airbyte.api.client.AirbyteApiClient;
-import io.airbyte.api.client.invoker.generated.ApiException;
 import io.airbyte.api.client.model.generated.JobIdRequestBody;
 import io.airbyte.api.client.model.generated.JobRetryStateRequestBody;
 import io.airbyte.api.client.model.generated.RetryStateRead;
@@ -28,11 +27,14 @@ import io.airbyte.featureflag.Workspace;
 import io.micronaut.context.annotation.Value;
 import io.micronaut.http.HttpStatus;
 import jakarta.inject.Singleton;
+import java.io.IOException;
 import java.time.Duration;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
+import org.openapitools.client.infrastructure.ClientException;
 
 /**
  * Business and request logic for retrieving and persisting retry state data.
@@ -81,6 +83,7 @@ public class RetryStateClient {
    * @throws RetryableException — Delegates to Temporal to retry for now (retryWithJitter swallowing
    *         404's is problematic).
    */
+  @SneakyThrows
   public RetryManager hydrateRetryState(final Long jobId, final UUID workspaceId) throws RetryableException {
     final var organizationId = fetchOrganizationId(workspaceId);
 
@@ -107,7 +110,7 @@ public class RetryStateClient {
   private UUID fetchOrganizationId(final UUID workspaceId) {
     UUID organizationId = null;
     try {
-      final var workspaceRead = airbyteApiClient.getWorkspaceApi().getWorkspace(new WorkspaceIdRequestBody().workspaceId(workspaceId));
+      final var workspaceRead = airbyteApiClient.getWorkspaceApi().getWorkspace(new WorkspaceIdRequestBody(workspaceId, false));
       if (workspaceRead != null) {
         organizationId = workspaceRead.getOrganizationId();
       }
@@ -161,17 +164,19 @@ public class RetryStateClient {
   }
 
   private Optional<RetryStateRead> fetchRetryState(final long jobId) throws RetryableException {
-    final var req = new JobIdRequestBody().id(jobId);
+    final var req = new JobIdRequestBody(jobId);
 
     RetryStateRead resp;
 
     try {
       resp = airbyteApiClient.getJobRetryStatesApi().get(req);
-    } catch (final ApiException e) {
-      if (e.getCode() != HttpStatus.NOT_FOUND.getCode()) {
+    } catch (final ClientException e) {
+      if (e.getStatusCode() != HttpStatus.NOT_FOUND.getCode()) {
         throw new RetryableException(e);
       }
       resp = null;
+    } catch (final IOException e) {
+      throw new RetryableException(e);
     }
 
     return Optional.ofNullable(resp);
@@ -185,21 +190,17 @@ public class RetryStateClient {
    * @param manager — the RetryManager we want to persist.
    * @return true if successful, otherwise false.
    */
-  public boolean persistRetryState(final long jobId, final UUID connectionId, final RetryManager manager) {
-    final var req = new JobRetryStateRequestBody()
-        .jobId(jobId)
-        .connectionId(connectionId)
-        .totalCompleteFailures(manager.getTotalCompleteFailures())
-        .totalPartialFailures(manager.getTotalPartialFailures())
-        .successiveCompleteFailures(manager.getSuccessiveCompleteFailures())
-        .successivePartialFailures(manager.getSuccessivePartialFailures());
+  public boolean persistRetryState(final long jobId, final UUID connectionId, final RetryManager manager) throws IOException {
+    final var req = new JobRetryStateRequestBody(
+        connectionId,
+        jobId,
+        manager.getSuccessiveCompleteFailures(),
+        manager.getTotalCompleteFailures(),
+        manager.getSuccessivePartialFailures(),
+        manager.getTotalPartialFailures(),
+        null);
 
-    final var result = AirbyteApiClient.retryWithJitter(
-        () -> {
-          airbyteApiClient.getJobRetryStatesApi().createOrUpdateWithHttpInfo(req);
-          return true;
-        }, // retryWithJitter doesn't like `void` "consumer" fn's
-        String.format("Persisting retry state for job: %d connection: %s", req.getJobId(), req.getConnectionId()));
+    final var result = airbyteApiClient.getJobRetryStatesApi().createOrUpdateWithHttpInfo(req);
 
     // retryWithJitter returns null if unsuccessful
     return result != null;

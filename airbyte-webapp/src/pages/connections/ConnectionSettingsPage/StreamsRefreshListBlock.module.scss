@@ -1,0 +1,22 @@
+@use "scss/colors";
+@use "scss/variables";
+
+.streamsRefreshListBlock__container {
+  background-color: colors.$grey-40;
+  overflow-y: auto;
+  border-radius: variables.$border-radius-lg variables.$border-radius-lg;
+  padding: variables.$spacing-lg 0 variables.$spacing-lg variables.$spacing-lg;
+  position: relative;
+  max-height: 195px;
+
+  &--expanded {
+    height: 195px;
+  }
+}
+
+.streamsRefreshListBlock__seeMoreButton.streamsRefreshListBlock__seeMoreButton {
+  padding-top: variables.$spacing-sm;
+  margin-left: -#{variables.$spacing-sm};
+  position: absolute;
+  bottom: 0;
+}

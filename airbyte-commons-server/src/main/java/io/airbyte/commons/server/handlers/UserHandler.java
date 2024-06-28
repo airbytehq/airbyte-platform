@@ -33,13 +33,13 @@ import io.airbyte.api.model.generated.WorkspaceUserAccessInfoRead;
 import io.airbyte.api.model.generated.WorkspaceUserAccessInfoReadList;
 import io.airbyte.api.model.generated.WorkspaceUserRead;
 import io.airbyte.api.model.generated.WorkspaceUserReadList;
-import io.airbyte.commons.auth.config.InitialUserConfiguration;
+import io.airbyte.commons.auth.config.InitialUserConfig;
+import io.airbyte.commons.auth.support.UserAuthenticationResolver;
 import io.airbyte.commons.enums.Enums;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.commons.server.errors.ConflictException;
 import io.airbyte.commons.server.errors.OperationNotAllowedException;
 import io.airbyte.commons.server.handlers.helpers.WorkspaceHelpersKt;
-import io.airbyte.commons.server.support.UserAuthenticationResolver;
 import io.airbyte.config.ConfigSchema;
 import io.airbyte.config.Organization;
 import io.airbyte.config.Permission;
@@ -59,6 +59,7 @@ import jakarta.inject.Named;
 import jakarta.inject.Singleton;
 import java.io.IOException;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.function.Supplier;
@@ -85,7 +86,7 @@ public class UserHandler {
   private final OrganizationPersistence organizationPersistence;
 
   private final UserAuthenticationResolver userAuthenticationResolver;
-  private final Optional<InitialUserConfiguration> initialUserConfiguration;
+  private final Optional<InitialUserConfig> initialUserConfig;
   private final ResourceBootstrapHandlerInterface resourceBootstrapHandler;
 
   @VisibleForTesting
@@ -98,7 +99,7 @@ public class UserHandler {
                      final WorkspacesHandler workspacesHandler,
                      @Named("uuidGenerator") final Supplier<UUID> uuidGenerator,
                      final UserAuthenticationResolver userAuthenticationResolver,
-                     final Optional<InitialUserConfiguration> initialUserConfiguration,
+                     final Optional<InitialUserConfig> initialUserConfig,
                      final ResourceBootstrapHandlerInterface resourceBootstrapHandler) {
     this.uuidGenerator = uuidGenerator;
     this.userPersistence = userPersistence;
@@ -108,7 +109,7 @@ public class UserHandler {
     this.workspacesHandler = workspacesHandler;
     this.permissionHandler = permissionHandler;
     this.userAuthenticationResolver = userAuthenticationResolver;
-    this.initialUserConfiguration = initialUserConfiguration;
+    this.initialUserConfig = initialUserConfig;
     this.resourceBootstrapHandler = resourceBootstrapHandler;
   }
 
@@ -150,9 +151,9 @@ public class UserHandler {
    *
    * @param userIdRequestBody The internal user id to be queried.
    * @return The user.
-   * @throws ConfigNotFoundException if unable to create the new user.
-   * @throws IOException if unable to create the new user.
-   * @throws JsonValidationException if unable to create the new user.
+   * @throws ConfigNotFoundException if unable to get the user.
+   * @throws IOException if unable to get the user.
+   * @throws JsonValidationException if unable to get the user.
    */
   public UserRead getUser(final UserIdRequestBody userIdRequestBody) throws JsonValidationException, ConfigNotFoundException, IOException {
     return buildUserRead(userIdRequestBody.getUserId());
@@ -211,7 +212,7 @@ public class UserHandler {
         .status(Enums.convertTo(user.getStatus(), UserStatus.class))
         .companyName(user.getCompanyName())
         .email(user.getEmail())
-        .metadata(user.getUiMetadata())
+        .metadata(user.getUiMetadata() != null ? user.getUiMetadata() : Map.of())
         .news(user.getNews())
         .defaultWorkspaceId(user.getDefaultWorkspaceId());
   }
@@ -282,6 +283,7 @@ public class UserHandler {
         .withStatus(Enums.convertTo(userRead.getStatus(), Status.class))
         .withCompanyName(userRead.getCompanyName())
         .withEmail(userRead.getEmail())
+        .withUiMetadata(Jsons.jsonNode(userRead.getMetadata() != null ? userRead.getMetadata() : Map.of()))
         .withNews(userRead.getNews());
   }
 
@@ -483,12 +485,12 @@ public class UserHandler {
   }
 
   private void createInstanceAdminPermissionIfInitialUser(final UserRead createdUser) {
-    if (initialUserConfiguration.isEmpty()) {
+    if (initialUserConfig.isEmpty()) {
       // do nothing if initial_user bean is not present.
       return;
     }
 
-    final String initialEmailFromConfig = initialUserConfiguration.get().getEmail();
+    final String initialEmailFromConfig = initialUserConfig.get().getEmail();
 
     if (initialEmailFromConfig == null || initialEmailFromConfig.isEmpty()) {
       // do nothing if there is no initial_user email configured.

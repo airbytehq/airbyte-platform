@@ -52,7 +52,7 @@ class ConfigurationMapServiceTest {
     "https://trial-577.okta.com/",
   })
   void testImportProviderFrom(String url) {
-    when(oidcConfig.domain()).thenReturn(url);
+    when(oidcConfig.getDomain()).thenReturn(url);
     when(realmResource.identityProviders()).thenReturn(identityProvidersResource);
 
     Map<String, Object> importFromMap = new HashMap<>();
@@ -87,8 +87,8 @@ class ConfigurationMapServiceTest {
         "issuer", "https://trial-577.okta.com/oauth2/default",
         "jwksUrl", "https://trial-577.okta.com/oauth2/default/v1/keys");
 
-    when(oidcConfig.clientId()).thenReturn("clientId");
-    when(oidcConfig.clientSecret()).thenReturn("clientSecret");
+    when(oidcConfig.getClientId()).thenReturn("clientId");
+    when(oidcConfig.getClientSecret()).thenReturn("clientSecret");
 
     Map<String, String> result = configurationMapService.setupProviderConfig(oidcConfig, configMap);
 

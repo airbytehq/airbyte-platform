@@ -22,10 +22,11 @@ class GenerationBumper(val streamGenerationRepository: StreamGenerationRepositor
     connectionId: UUID,
     jobId: Long,
     streamRefreshes: List<StreamRefresh>,
+    fullRefreshStream: Set<StreamDescriptor>,
   ) {
     val streamDescriptors: Set<StreamDescriptor> =
       streamRefreshes
-        .map { StreamDescriptor().withName(it.streamName).withNamespace(it.streamNamespace) }.toHashSet()
+        .map { StreamDescriptor().withName(it.streamName).withNamespace(it.streamNamespace) }.toHashSet() + fullRefreshStream
 
     val currentMaxGeneration: List<Generation> = streamGenerationRepository.getMaxGenerationOfStreamsForConnectionId(connectionId)
 

@@ -1,5 +1,5 @@
 import { useCallback, useMemo } from "react";
-import { FormattedMessage, useIntl } from "react-intl";
+import { FormattedMessage } from "react-intl";
 
 import Logs from "components/Logs";
 import { Box } from "components/ui/Box";
@@ -8,14 +8,17 @@ import { Card } from "components/ui/Card";
 import { Collapsible } from "components/ui/Collapsible";
 import { CopyButton } from "components/ui/CopyButton";
 import { FlexContainer, FlexItem } from "components/ui/Flex";
+import { Icon } from "components/ui/Icon";
+import { ExternalLink } from "components/ui/Link";
 import { Separator } from "components/ui/Separator";
 import { Text } from "components/ui/Text";
 
+import { HttpProblem } from "core/api";
 import { useGetAllExperiments } from "hooks/services/Experiment";
 
 import styles from "./ErrorDetails.module.scss";
 import octavia from "./pixel-octavia.png";
-import { I18nError } from "../I18nError";
+import { useFormatError } from "../formatErrors";
 
 type FullStoryGlobal = (method: "getSession", options: { format: "url.now" }) => string;
 
@@ -26,7 +29,7 @@ interface ErrorDetailsProps {
 const jsonReplacer = (_: string, value: unknown) => (typeof value === "function" ? `[Function ${value.name}]` : value);
 
 export const ErrorDetails: React.FC<ErrorDetailsProps> = ({ error }) => {
-  const { formatMessage } = useIntl();
+  const formatError = useFormatError();
   const getAllExperiments = useGetAllExperiments();
   const getErrorDetails = useCallback(
     () =>
@@ -63,7 +66,17 @@ export const ErrorDetails: React.FC<ErrorDetailsProps> = ({ error }) => {
                   <FormattedMessage id="errors.title" />
                 </Text>
               </FlexContainer>
-              <Text size="lg">{error instanceof I18nError ? error.translate(formatMessage) : error.message}</Text>
+              <Text size="lg">{formatError(error)}</Text>
+              {HttpProblem.isInstanceOf(error) && error.response.documentationUrl && (
+                <Text size="lg">
+                  <ExternalLink href={error.response.documentationUrl}>
+                    <FlexContainer gap="xs" alignItems="center">
+                      <FormattedMessage id="errors.readMore" />
+                      <Icon type="share" size="sm" />
+                    </FlexContainer>
+                  </ExternalLink>
+                </Text>
+              )}
             </FlexContainer>
           </FlexItem>
         </FlexContainer>

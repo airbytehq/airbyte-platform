@@ -6,11 +6,6 @@ export interface AirbyteWebappConfig {
   version?: string;
   cloudApiUrl: string;
   cloudPublicApiUrl?: string;
-  firebase: {
-    apiKey?: string;
-    authDomain?: string;
-    authEmulatorHost?: string;
-  };
   zendeskKey?: string;
   launchDarkly?: string;
   datadog: {

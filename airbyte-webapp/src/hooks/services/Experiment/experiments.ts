@@ -7,14 +7,12 @@
  */
 
 export interface Experiments {
-  "authPage.keycloak": boolean;
   "authPage.rightSideUrl": string | undefined;
-  "authPage.signup.hideCompanyName": boolean;
-  "authPage.signup.hideName": boolean;
   "billing.early-sync-enabled": boolean;
   "billing.autoRecharge": boolean;
   "connection.columnSelection": boolean;
   "connection.simplifiedCreation": boolean;
+  "connection.syncProgressPollingTime": number;
   "connection.onboarding.destinations": string;
   "connection.onboarding.sources": string;
   "connection.streamCentricUI.errorMultiplier": number;
@@ -25,9 +23,9 @@ export interface Experiments {
   "connector.suggestedSourceConnectors": string;
   "connector.suggestedDestinationConnectors": string;
   "platform.auto-backfill-on-new-columns": boolean;
-  "platform.activate-refreshes": boolean;
   "settings.breakingChangeNotifications": boolean;
   "settings.token-management-ui": boolean;
   "settings.showAdvancedSettings": boolean;
   "upcomingFeaturesPage.url": string;
+  "connection.syncCatalogV2": boolean;
 }

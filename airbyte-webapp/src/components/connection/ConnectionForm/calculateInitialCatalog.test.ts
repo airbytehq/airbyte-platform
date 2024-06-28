@@ -71,13 +71,16 @@ describe("analyzeSyncCatalogBreakingChanges", () => {
         {
           transformType: StreamTransformTransformType.update_stream,
           streamDescriptor: { name: "test", namespace: "namespace-test" },
-          updateStream: [
-            {
-              breaking: true,
-              transformType: FieldTransformTransformType.remove_field,
-              fieldName: ["old_primary_key"],
-            },
-          ],
+          updateStream: {
+            streamAttributeTransforms: [],
+            fieldTransforms: [
+              {
+                breaking: true,
+                transformType: FieldTransformTransformType.remove_field,
+                fieldName: ["old_primary_key"],
+              },
+            ],
+          },
         },
       ],
     };
@@ -92,13 +95,16 @@ describe("analyzeSyncCatalogBreakingChanges", () => {
         {
           transformType: StreamTransformTransformType.update_stream,
           streamDescriptor: { name: "test", namespace: "namespace-test" },
-          updateStream: [
-            {
-              breaking: true,
-              transformType: FieldTransformTransformType.remove_field,
-              fieldName: ["old_cursor"],
-            },
-          ],
+          updateStream: {
+            streamAttributeTransforms: [],
+            fieldTransforms: [
+              {
+                breaking: true,
+                transformType: FieldTransformTransformType.remove_field,
+                fieldName: ["old_cursor"],
+              },
+            ],
+          },
         },
       ],
     };
@@ -113,13 +119,16 @@ describe("analyzeSyncCatalogBreakingChanges", () => {
         {
           transformType: StreamTransformTransformType.update_stream,
           streamDescriptor: { name: "test", namespace: "namespace-test" },
-          updateStream: [
-            {
-              breaking: true,
-              transformType: FieldTransformTransformType.remove_field,
-              fieldName: ["old_primary_key"],
-            },
-          ],
+          updateStream: {
+            streamAttributeTransforms: [],
+            fieldTransforms: [
+              {
+                breaking: true,
+                transformType: FieldTransformTransformType.remove_field,
+                fieldName: ["old_primary_key"],
+              },
+            ],
+          },
         },
       ],
     };
@@ -134,13 +143,16 @@ describe("analyzeSyncCatalogBreakingChanges", () => {
         {
           transformType: StreamTransformTransformType.update_stream,
           streamDescriptor: { name: "test", namespace: "namespace-test" },
-          updateStream: [
-            {
-              breaking: true,
-              transformType: FieldTransformTransformType.remove_field,
-              fieldName: ["old_cursor"],
-            },
-          ],
+          updateStream: {
+            streamAttributeTransforms: [],
+            fieldTransforms: [
+              {
+                breaking: true,
+                transformType: FieldTransformTransformType.remove_field,
+                fieldName: ["old_cursor"],
+              },
+            ],
+          },
         },
       ],
     };
@@ -155,13 +167,16 @@ describe("analyzeSyncCatalogBreakingChanges", () => {
         {
           transformType: StreamTransformTransformType.update_stream,
           streamDescriptor: { name: "test", namespace: "namespace-test" },
-          updateStream: [
-            {
-              breaking: false,
-              transformType: FieldTransformTransformType.add_field,
-              fieldName: ["new_field"],
-            },
-          ],
+          updateStream: {
+            streamAttributeTransforms: [],
+            fieldTransforms: [
+              {
+                breaking: false,
+                transformType: FieldTransformTransformType.add_field,
+                fieldName: ["new_field"],
+              },
+            ],
+          },
         },
       ],
     };

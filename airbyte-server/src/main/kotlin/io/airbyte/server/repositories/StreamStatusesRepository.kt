@@ -19,8 +19,26 @@ import io.micronaut.data.repository.jpa.criteria.PredicateSpecification
 import jakarta.persistence.criteria.CriteriaBuilder
 import jakarta.persistence.criteria.Root
 import org.jooq.TableField
-import java.time.OffsetDateTime
 import java.util.UUID
+
+const val STREAM_STATUS_WITH_FALLBACKS = """
+-- when the associated job is no longer running, compute a terminal run_state from the job's status
+CASE
+  WHEN j.status in ('pending', 'running', 'incomplete') THEN ss.run_state
+  WHEN ss.run_state not in ('complete', 'incomplete') and j.status = 'succeeded' THEN 'complete'
+  WHEN ss.run_state not in ('complete', 'incomplete') THEN 'incomplete'
+  ELSE ss.run_state
+END as run_state,
+CASE
+  WHEN j.status in ('pending', 'running', 'incomplete') THEN ss.incomplete_run_cause
+  WHEN ss.run_state not in ('complete', 'incomplete') and j.status = 'succeeded' THEN null
+  WHEN ss.run_state not in ('complete', 'incomplete') THEN 'failed'
+  ELSE ss.incomplete_run_cause
+END as incomplete_run_cause,
+-- the rest of fields for StreamStatus
+ss.id, ss.workspace_id, ss.connection_id, ss.job_id, ss.stream_namespace, ss.stream_name, ss.created_at,
+ss.updated_at, ss.attempt_number, ss.job_type, ss.run_state, ss.transitioned_at, ss.metadata
+"""
 
 @JdbcRepository(dialect = Dialect.POSTGRES, dataSource = "config")
 abstract class StreamStatusesRepository : PageableRepository<StreamStatus, UUID>, JpaSpecificationExecutor<StreamStatus> {
@@ -71,30 +89,47 @@ abstract class StreamStatusesRepository : PageableRepository<StreamStatus, UUID>
    * Returns the latest stream status per run state (and job type) for a connection.
    */
   @Query(
-    "SELECT DISTINCT ON (stream_name, stream_namespace, run_state, incomplete_run_cause, job_type) * " +
-      "FROM stream_statuses WHERE connection_id = :connectionId " +
-      "ORDER BY job_type, stream_name, stream_namespace, run_state, incomplete_run_cause, transitioned_at DESC",
+    """
+    SELECT DISTINCT ON (ss.stream_name, ss.stream_namespace, 1 /* computed run_state */, 2 /* computed incomplete_run_cause */, ss.job_type)
+      $STREAM_STATUS_WITH_FALLBACKS
+      FROM stream_statuses ss
+      JOIN jobs j on j.id = ss.job_id
+      WHERE ss.connection_id = :connectionId
+      ORDER BY
+        ss.job_type, ss.stream_name, ss.stream_namespace,
+        1 /* computed run_state */,2 /* computed incomplete_run_cause */, ss.transitioned_at desc
+      """,
   )
   abstract fun findAllPerRunStateByConnectionId(connectionId: UUID): List<StreamStatus>
 
-  /**
-   * Returns the latest terminal stream status per stream per day for a connection after a given
-   * timestamp. Filters for complete and incomplete so we don't report an effectively unknown overview
-   * status
-   */
   @Query(
-    (
-      "SELECT DISTINCT ON (stream_name, stream_namespace, 1) DATE_TRUNC('day', transitioned_at, :timezone), * " +
-        "FROM stream_statuses WHERE connection_id = :connectionId AND transitioned_at >= :timestamp " +
-        "AND run_state IN ('complete', 'incomplete') " +
-        "ORDER BY stream_name, stream_namespace, 1, transitioned_at DESC"
-    ),
+    """
+           SELECT
+              $STREAM_STATUS_WITH_FALLBACKS,
+              last_x_jobs.created_at AS job_created_at, last_x_jobs.updated_at AS job_updated_at
+           FROM stream_statuses ss
+           JOIN jobs j on j.id = ss.job_id
+           INNER JOIN (
+               SELECT job_id, MAX(attempt_number) AS max_attempt_number
+               FROM stream_statuses
+               WHERE connection_id = :connectionId
+               GROUP BY job_id
+             ) AS max_attempts ON ss.job_id = max_attempts.job_id AND ss.attempt_number = max_attempts.max_attempt_number
+           INNER JOIN (
+               SELECT id, created_at, updated_at
+               FROM jobs
+               WHERE config_type = 'sync' AND status in ('succeeded', 'failed') AND scope = CAST(:connectionId AS VARCHAR)
+               ORDER BY created_at DESC
+               LIMIT :lastXJobs
+             ) AS last_x_jobs ON ss.job_id = last_x_jobs.id
+           WHERE ss.connection_id = :connectionId;
+         
+         """,
   )
-  abstract fun findLatestTerminalStatusPerStreamByConnectionIdAndDayAfterTimestamp(
-    connectionId: UUID,
-    timestamp: OffsetDateTime,
-    timezone: String,
-  ): List<StreamStatus>
+  abstract fun findLastAttemptsOfLastXJobsForConnection(
+    connectionId: UUID?,
+    lastXJobs: Int,
+  ): List<StreamStatus?>?
 
   /**
    * Pagination params.

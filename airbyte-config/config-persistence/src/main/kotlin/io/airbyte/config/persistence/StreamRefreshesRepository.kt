@@ -1,6 +1,9 @@
 package io.airbyte.config.persistence
 
+import io.airbyte.config.RefreshStream
 import io.airbyte.config.persistence.domain.StreamRefresh
+import io.airbyte.db.instance.configs.jooq.generated.enums.RefreshType
+import io.airbyte.protocol.models.StreamDescriptor
 import io.micronaut.data.annotation.Query
 import io.micronaut.data.jdbc.annotation.JdbcRepository
 import io.micronaut.data.model.query.builder.sql.Dialect
@@ -29,3 +32,26 @@ interface StreamRefreshesRepository : PageableRepository<StreamRefresh, UUID> {
 
   fun existsByConnectionId(connectionId: UUID): Boolean
 }
+
+fun StreamRefreshesRepository.saveStreamsToRefresh(
+  connectionId: UUID,
+  streamDescriptors: List<StreamDescriptor>,
+  refreshType: RefreshStream.RefreshType = RefreshStream.RefreshType.MERGE,
+) {
+  val refreshes =
+    streamDescriptors.map { s ->
+      StreamRefresh(
+        connectionId = connectionId,
+        streamName = s.name,
+        streamNamespace = s.namespace,
+        refreshType = refreshType.toDBO(),
+      )
+    }
+  saveAll(refreshes)
+}
+
+fun RefreshStream.RefreshType.toDBO(): RefreshType =
+  when (this) {
+    RefreshStream.RefreshType.MERGE -> RefreshType.MERGE
+    RefreshStream.RefreshType.TRUNCATE -> RefreshType.TRUNCATE
+  }

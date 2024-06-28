@@ -12,13 +12,13 @@ import io.airbyte.api.model.generated.JobListForWorkspacesRequestBody.OrderByFie
 import io.airbyte.api.model.generated.JobListForWorkspacesRequestBody.OrderByMethodEnum
 import io.airbyte.api.model.generated.JobListRequestBody
 import io.airbyte.api.model.generated.Pagination
-import io.airbyte.commons.server.errors.problems.UnprocessableEntityProblem
+import io.airbyte.api.problems.throwable.generated.UnprocessableEntityProblem
 import io.airbyte.commons.server.handlers.JobHistoryHandler
 import io.airbyte.commons.server.handlers.SchedulerHandler
 import io.airbyte.commons.server.support.CurrentUserService
-import io.airbyte.public_api.model.generated.JobResponse
-import io.airbyte.public_api.model.generated.JobTypeEnum
-import io.airbyte.public_api.model.generated.JobsResponse
+import io.airbyte.publicApi.server.generated.models.JobResponse
+import io.airbyte.publicApi.server.generated.models.JobTypeEnum
+import io.airbyte.publicApi.server.generated.models.JobsResponse
 import io.airbyte.server.apis.publicapi.constants.HTTP_RESPONSE_BODY_DEBUG_MESSAGE
 import io.airbyte.server.apis.publicapi.errorHandlers.ConfigClientErrorHandler
 import io.airbyte.server.apis.publicapi.filters.JobsFilter
@@ -155,7 +155,7 @@ class JobServiceImpl(
         )
 
     val result =
-      kotlin.runCatching { jobHistoryHandler.listJobsFor(jobListRequestBody) }
+      kotlin.runCatching { jobHistoryHandler.listJobsForLight(jobListRequestBody) }
         .onFailure {
           log.error("Error getting job list $it")
           ConfigClientErrorHandler.handleError(it, connectionId.toString())
@@ -225,6 +225,8 @@ class JobServiceImpl(
       when (jobType) {
         JobTypeEnum.SYNC -> configTypes.add(JobConfigType.SYNC)
         JobTypeEnum.RESET -> configTypes.add(JobConfigType.RESET_CONNECTION)
+        JobTypeEnum.CLEAR -> configTypes.add(JobConfigType.CLEAR)
+        JobTypeEnum.REFRESH -> configTypes.add(JobConfigType.REFRESH)
         else -> throw UnprocessableEntityProblem()
       }
     }

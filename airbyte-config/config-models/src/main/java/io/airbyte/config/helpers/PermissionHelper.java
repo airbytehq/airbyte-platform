@@ -25,7 +25,6 @@ public class PermissionHelper {
           PermissionType.ORGANIZATION_EDITOR,
           PermissionType.ORGANIZATION_READER,
           PermissionType.ORGANIZATION_MEMBER,
-          PermissionType.WORKSPACE_OWNER,
           PermissionType.WORKSPACE_ADMIN,
           PermissionType.WORKSPACE_EDITOR,
           PermissionType.WORKSPACE_READER),
@@ -57,14 +56,12 @@ public class PermissionHelper {
       // Workspace owner (deprecated) is equivalent to workspace admin, and grants access to all
       // workspace-admin-and-lower permissions.
       PermissionType.WORKSPACE_OWNER, Set.of(
-          PermissionType.WORKSPACE_OWNER,
           PermissionType.WORKSPACE_ADMIN,
           PermissionType.WORKSPACE_EDITOR,
           PermissionType.WORKSPACE_READER),
 
       // Workspace admin grants access to all workspace-admin-and-lower permissions.
       PermissionType.WORKSPACE_ADMIN, Set.of(
-          PermissionType.WORKSPACE_OWNER,
           PermissionType.WORKSPACE_ADMIN,
           PermissionType.WORKSPACE_EDITOR,
           PermissionType.WORKSPACE_READER),
@@ -80,6 +77,10 @@ public class PermissionHelper {
 
   public static boolean definedPermissionGrantsTargetPermission(final PermissionType definedPermission, final PermissionType targetPermission) {
     return GRANTED_PERMISSION_TYPES_BY_DEFINED_PERMISSION_TYPE.get(definedPermission).contains(targetPermission);
+  }
+
+  public static Set<PermissionType> getGrantedPermissions(final PermissionType definedPermission) {
+    return GRANTED_PERMISSION_TYPES_BY_DEFINED_PERMISSION_TYPE.get(definedPermission);
   }
 
   /**

@@ -4,8 +4,14 @@
 
 package io.airbyte.server.apis.publicapi.helpers
 
+import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.node.ObjectNode
-import io.airbyte.api.common.ConfigurableActor
+import io.airbyte.publicApi.server.generated.models.DestinationCreateRequest
+import io.airbyte.publicApi.server.generated.models.DestinationPatchRequest
+import io.airbyte.publicApi.server.generated.models.DestinationPutRequest
+import io.airbyte.publicApi.server.generated.models.SourceCreateRequest
+import io.airbyte.publicApi.server.generated.models.SourcePatchRequest
+import io.airbyte.publicApi.server.generated.models.SourcePutRequest
 import io.airbyte.server.apis.publicapi.constants.DESTINATION_TYPE
 import io.airbyte.server.apis.publicapi.constants.SOURCE_TYPE
 import java.util.Optional
@@ -16,7 +22,15 @@ import java.util.Optional
  * @param actor any actor model marked as a configurable actor via the x-implements extension in the
  * api.yaml.
  */
-fun removeSourceTypeNode(actor: ConfigurableActor) {
+fun removeSourceTypeNode(actor: SourceCreateRequest) {
+  removeConfigurationNode(actor, SOURCE_TYPE)
+}
+
+fun removeSourceTypeNode(actor: SourcePatchRequest) {
+  removeConfigurationNode(actor, SOURCE_TYPE)
+}
+
+fun removeSourceTypeNode(actor: SourcePutRequest) {
   removeConfigurationNode(actor, SOURCE_TYPE)
 }
 
@@ -26,22 +40,40 @@ fun removeSourceTypeNode(actor: ConfigurableActor) {
  * @param actor any actor model marked as a configurable actor via the x-implements extension in the
  * api.yaml.
  */
-fun removeDestinationType(actor: ConfigurableActor) {
+fun removeDestinationType(actor: DestinationCreateRequest) {
+  removeConfigurationNode(actor, DESTINATION_TYPE)
+}
+
+fun removeDestinationType(actor: DestinationPatchRequest) {
+  removeConfigurationNode(actor, DESTINATION_TYPE)
+}
+
+fun removeDestinationType(actor: DestinationPutRequest) {
   removeConfigurationNode(actor, DESTINATION_TYPE)
 }
 
 fun removeConfigurationNode(
-  actor: ConfigurableActor,
+  actor: Any,
   node: String,
 ) {
-  if (actor.configuration == null) {
-    return
-  }
+  val configuration = getConfiguration(actor) ?: return
 
-  val configuration = Optional.ofNullable((actor.configuration as ObjectNode))
-  configuration.ifPresent { config: ObjectNode ->
+  val configurationObjectNode = Optional.ofNullable((configuration as ObjectNode))
+  configurationObjectNode.ifPresent { config: ObjectNode ->
     config.remove(
       node,
     )
+  }
+}
+
+internal fun getConfiguration(actor: Any): JsonNode? {
+  return when (actor) {
+    is DestinationCreateRequest -> actor.configuration
+    is DestinationPatchRequest -> actor.configuration
+    is DestinationPutRequest -> actor.configuration
+    is SourceCreateRequest -> actor.configuration
+    is SourcePatchRequest -> actor.configuration
+    is SourcePutRequest -> actor.configuration
+    else -> null
   }
 }

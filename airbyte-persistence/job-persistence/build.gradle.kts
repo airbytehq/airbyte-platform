@@ -1,14 +1,6 @@
 plugins {
   id("io.airbyte.gradle.jvm.lib")
   id("io.airbyte.gradle.publish")
-  kotlin("jvm")
-  kotlin("kapt")
-}
-
-configurations.all {
-  resolutionStrategy {
-    force(libs.platform.testcontainers.postgresql)
-  }
 }
 
 dependencies {
@@ -16,8 +8,8 @@ dependencies {
   annotationProcessor(libs.lombok)     // Lombok must be added BEFORE Micronaut
   annotationProcessor(libs.bundles.micronaut.annotation.processor)
 
-  kapt(platform(libs.micronaut.platform))
-  kapt(libs.bundles.micronaut.annotation.processor)
+  ksp(platform(libs.micronaut.platform))
+  ksp(libs.bundles.micronaut.annotation.processor)
 
   implementation(platform(libs.fasterxml))
   implementation(libs.bundles.jackson)
@@ -47,6 +39,7 @@ dependencies {
   implementation(libs.otel.sdk)
   implementation(libs.otel.sdk.testing)
   implementation(libs.micrometer.statsd)
+  implementation(libs.bundles.datadog)
   implementation(platform(libs.otel.bom))
   implementation("io.opentelemetry:opentelemetry-api")
   implementation("io.opentelemetry:opentelemetry-sdk")

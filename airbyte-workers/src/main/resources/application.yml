@@ -100,12 +100,16 @@ airbyte:
     client: ${FEATURE_FLAG_CLIENT:}
     path: ${FEATURE_FLAG_PATH:/flags}
     api-key: ${LAUNCHDARKLY_KEY:}
-  internal:
-    api:
-      auth-header:
-        name: ${AIRBYTE_API_AUTH_HEADER_NAME:}
-        value: ${AIRBYTE_API_AUTH_HEADER_VALUE:}
-      host: ${INTERNAL_API_HOST}
+  internal-api:
+    auth-header:
+      name: ${AIRBYTE_API_AUTH_HEADER_NAME:}
+      value: ${AIRBYTE_API_AUTH_HEADER_VALUE:}
+    base-path: ${INTERNAL_API_HOST}/api
+    connect-timeout-seconds: ${AIRBYTE_API_CONNECT_TIMEOUT_SECONDS:30}
+    read-timeout-seconds: ${AIRBYTE_API_READ_TIMEOUT_SECONDS:600}
+    retries:
+      delay-seconds: ${AIRBYTE_API_RETRY_DELAY_SECONDS:2}
+      max: ${AIRBYTE_API_MAX_RETRIES:5}
   local:
     docker-mount: ${LOCAL_DOCKER_MOUNT:}
     root: ${LOCAL_ROOT}
@@ -128,7 +132,7 @@ airbyte:
         base: ${SYNC_JOB_RETRIES_COMPLETE_FAILURES_BACKOFF_BASE:3} # 10s, 30s, 90s, 4.5m
     partial-failures:
       max-successive: ${SYNC_JOB_RETRIES_PARTIAL_FAILURES_MAX_SUCCESSIVE:1000}
-      max-total: ${SYNC_JOB_RETRIES_PARTIAL_FAILURES_MAX_TOTAL:10}
+      max-total: ${SYNC_JOB_RETRIES_PARTIAL_FAILURES_MAX_TOTAL:20}
   worker:
     kube-job-configs:
       default:

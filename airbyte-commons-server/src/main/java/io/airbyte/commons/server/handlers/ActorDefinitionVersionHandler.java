@@ -108,7 +108,7 @@ public class ActorDefinitionVersionHandler {
     final ActorDefinitionVersion resolvedVersion = optResolvedVersion.get();
 
     return new ResolveActorDefinitionVersionResponse().versionId(resolvedVersion.getVersionId()).dockerImageTag(resolvedVersion.getDockerImageTag())
-        .dockerRepository(resolvedVersion.getDockerRepository());
+        .dockerRepository(resolvedVersion.getDockerRepository()).supportRefreshes(resolvedVersion.getSupportsRefreshes());
   }
 
   public ActorDefinitionVersionRead getActorDefinitionVersionForDestinationId(final DestinationIdRequestBody destinationIdRequestBody)
@@ -130,9 +130,12 @@ public class ActorDefinitionVersionHandler {
         .dockerRepository(actorDefinitionVersion.getDockerRepository())
         .dockerImageTag(actorDefinitionVersion.getDockerImageTag())
         .supportsDbt(Objects.requireNonNullElse(actorDefinitionVersion.getSupportsDbt(), false))
+        .supportsRefreshes(actorDefinitionVersion.getSupportsRefreshes())
         .normalizationConfig(ApiPojoConverters.normalizationDestinationDefinitionConfigToApi(actorDefinitionVersion.getNormalizationConfig()))
         .supportState(toApiSupportState(actorDefinitionVersion.getSupportState()))
         .supportLevel(toApiSupportLevel(actorDefinitionVersion.getSupportLevel()))
+        .cdkVersion(actorDefinitionVersion.getCdkVersion())
+        .lastPublished(ApiPojoConverters.toOffsetDateTime(actorDefinitionVersion.getLastPublished()))
         .isVersionOverrideApplied(versionWithOverrideStatus.isOverrideApplied());
 
     final Optional<ActorDefinitionVersionBreakingChanges> breakingChanges =

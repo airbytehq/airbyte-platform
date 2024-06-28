@@ -9,6 +9,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import io.airbyte.api.model.generated.NotificationItem;
 import io.airbyte.api.model.generated.NotificationType;
 import io.airbyte.api.model.generated.SlackNotificationConfiguration;
+import io.airbyte.config.NotificationSettings;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 
@@ -68,7 +69,31 @@ class NotificationSettingsConverterTest {
   @Test
   void testConvertToApi() {
     assertEquals(NotificationSettingsConverter.toApi(PROTOCOL_NOTIFICATION_SETTINGS), API_NOTIFICATION_SETTINGS);
-    assertEquals(NotificationSettingsConverter.toApi(EMPTY_CONFIG_NOTIFICATION_SETTINGS), EMPTY_API_NOTIFICATION_SETTINGS);
+    final var api = NotificationSettingsConverter.toApi(EMPTY_CONFIG_NOTIFICATION_SETTINGS);
+    // validate we default the webhook to an empty string to satisfy the OpenAPI driven deserializers.
+    assertEquals("", api.getSendOnSuccess().getSlackConfiguration().getWebhook());
+    assertEquals("", api.getSendOnFailure().getSlackConfiguration().getWebhook());
+    assertEquals("", api.getSendOnConnectionUpdate().getSlackConfiguration().getWebhook());
+    assertEquals("", api.getSendOnSyncDisabled().getSlackConfiguration().getWebhook());
+    assertEquals("", api.getSendOnSyncDisabledWarning().getSlackConfiguration().getWebhook());
+    assertEquals("", api.getSendOnConnectionUpdateActionRequired().getSlackConfiguration().getWebhook());
+  }
+
+  @Test
+  void testConvertToApiWithNullValues() {
+    final var notificationSettings = new NotificationSettings();
+    final var api = NotificationSettingsConverter.toClientApi(notificationSettings);
+    assertEquals(notificationSettings.getSendOnBreakingChangeSyncsDisabled(),
+        api.getSendOnBreakingChangeSyncsDisabled());
+    assertEquals(notificationSettings.getSendOnFailure(), api.getSendOnFailure());
+    assertEquals(notificationSettings.getSendOnSuccess(), api.getSendOnSuccess());
+    assertEquals(notificationSettings.getSendOnConnectionUpdate(), api.getSendOnConnectionUpdate());
+    assertEquals(notificationSettings.getSendOnSyncDisabled(), api.getSendOnSyncDisabled());
+    assertEquals(notificationSettings.getSendOnConnectionUpdateActionRequired(),
+        api.getSendOnConnectionUpdateActionRequired());
+    assertEquals(notificationSettings.getSendOnConnectionUpdateActionRequired(),
+        api.getSendOnConnectionUpdateActionRequired());
+    assertEquals(notificationSettings.getSendOnSyncDisabledWarning(), api.getSendOnSyncDisabledWarning());
   }
 
 }

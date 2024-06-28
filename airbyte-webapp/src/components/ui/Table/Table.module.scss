@@ -85,6 +85,14 @@ $border-radius: variables.$border-radius-lg;
   &:hover {
     background-color: colors.$grey-50;
   }
+
+  &.emptyPlaceholder {
+    height: 400px;
+
+    &:hover {
+      background-color: colors.$foreground;
+    }
+  }
 }
 
 // --------- <td/> ---------

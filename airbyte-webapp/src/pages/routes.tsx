@@ -1,5 +1,5 @@
 import React, { useMemo } from "react";
-import { Navigate, Route, Routes, useLocation, useSearchParams } from "react-router-dom";
+import { createSearchParams, Navigate, Route, Routes, useLocation, useSearchParams } from "react-router-dom";
 import { useEffectOnce } from "react-use";
 
 import {
@@ -16,8 +16,9 @@ import { storeUtmFromQuery } from "core/utils/utmStorage";
 import { useApiHealthPoll } from "hooks/services/Health";
 import { useBuildUpdateCheck } from "hooks/services/useBuildUpdateCheck";
 import { useCurrentWorkspace } from "hooks/services/useWorkspace";
+import { useQuery } from "hooks/useQuery";
 import { ApplicationSettingsView } from "packages/cloud/views/users/ApplicationSettingsView/ApplicationSettingsView";
-import { CompleteOauthRequest } from "views/CompleteOauthRequest";
+import { LoginPage } from "pages/login/LoginPage";
 import MainView from "views/layout/MainView";
 
 import { RoutePaths, DestinationPaths, SourcePaths, SettingsRoutePaths } from "./routePaths";
@@ -111,7 +112,7 @@ const MainViewRoutes: React.FC = () => {
             )}
             <Route path={SettingsRoutePaths.Notifications} element={<NotificationPage />} />
             <Route path={SettingsRoutePaths.Metrics} element={<MetricsPage />} />
-            {multiWorkspaceUI && organizationId && canViewOrganizationSettings && (
+            {multiWorkspaceUI && canViewOrganizationSettings && (
               <Route path={SettingsRoutePaths.Organization} element={<GeneralOrganizationSettingsPage />} />
             )}
             <Route path={SettingsRoutePaths.Advanced} element={<AdvancedSettingsPage />} />
@@ -168,26 +169,50 @@ const RoutingWithWorkspace: React.FC<{ element?: JSX.Element }> = ({ element }) 
 };
 
 export const Routing: React.FC = () => {
-  const { inited, user } = useAuthService();
-
+  const { pathname: originalPathname, search, hash } = useLocation();
+  const { inited, loggedOut } = useAuthService();
   useBuildUpdateCheck();
-  const { search } = useLocation();
 
   useEffectOnce(() => {
     storeUtmFromQuery(search);
   });
 
-  const multiWorkspaceUI = useFeature(FeatureItem.MultiWorkspaceUI);
-  const { initialSetupComplete } = useGetInstanceConfiguration();
-
   if (!inited) {
     return null;
   }
 
+  if (loggedOut) {
+    const loginRedirectSearchParam = `${createSearchParams({
+      loginRedirect: `${originalPathname}${search}${hash}`,
+    })}`;
+    const loginRedirectTo =
+      loggedOut && originalPathname === "/"
+        ? { pathname: RoutePaths.Login }
+        : { pathname: RoutePaths.Login, search: loginRedirectSearchParam };
+
+    return (
+      <Routes>
+        <Route path={RoutePaths.Login} element={<LoginPage />} />
+        <Route path="*" element={<Navigate to={loginRedirectTo} />} />
+      </Routes>
+    );
+  }
+
+  return <AuthenticatedRoutes />;
+};
+
+const AuthenticatedRoutes = () => {
+  const { loginRedirect } = useQuery<{ loginRedirect: string }>();
+  const multiWorkspaceUI = useFeature(FeatureItem.MultiWorkspaceUI);
+  const { initialSetupComplete } = useGetInstanceConfiguration();
+
+  if (loginRedirect) {
+    return <Navigate to={loginRedirect} replace />;
+  }
+
   return (
     <Routes>
-      <Route path={RoutePaths.AuthFlow} element={<CompleteOauthRequest />} />
-      {user && !initialSetupComplete ? (
+      {!initialSetupComplete ? (
         <Route path="*" element={<PreferencesRoutes />} />
       ) : (
         <>

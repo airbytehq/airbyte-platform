@@ -38,8 +38,6 @@ public abstract class FlywayMigrationDatabase extends PostgresDatabase {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(FlywayMigrationDatabase.class);
 
-  private static final String DEFAULT_DOCKER_IMAGE = "postgres:13-alpine";
-
   private Connection connection;
 
   private DataSource dataSource;
@@ -77,7 +75,7 @@ public abstract class FlywayMigrationDatabase extends PostgresDatabase {
   private void createInternalConnection() throws Exception {
     String dockerImage = getProperties().getProperty("dockerImage");
     if (StringUtils.isBlank(dockerImage)) {
-      dockerImage = DEFAULT_DOCKER_IMAGE;
+      dockerImage = DatabaseConstants.DEFAULT_DATABASE_VERSION;
     }
 
     final PostgreSQLContainer<?> container = new PostgreSQLContainer<>(dockerImage)

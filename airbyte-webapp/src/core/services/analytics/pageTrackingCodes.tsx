@@ -1,8 +1,6 @@
 export enum PageTrackingCodes {
   SIGNUP = "Auth.Signup",
   LOGIN = "Auth.Login",
-  RESET_PASSWORD = "Auth.ResetPassword",
-  VERIFY_EMAIL = "Auth.VerifyEmail",
   SOURCE_NEW = "Source.New",
   SOURCE_LIST = "Source.List",
   SOURCE_ITEM = "Source.Item",

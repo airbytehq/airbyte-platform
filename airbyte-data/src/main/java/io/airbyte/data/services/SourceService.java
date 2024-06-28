@@ -41,11 +41,11 @@ public interface SourceService {
 
   SourceConnection getSourceConnection(UUID sourceId) throws JsonValidationException, ConfigNotFoundException, IOException;
 
-  void writeSourceConnectionNoSecrets(SourceConnection partialSource) throws IOException;
-
   List<SourceConnection> listSourceConnection() throws IOException;
 
   List<SourceConnection> listWorkspaceSourceConnection(UUID workspaceId) throws IOException;
+
+  Boolean isSourceActive(UUID sourceId) throws IOException;
 
   List<SourceConnection> listWorkspacesSourceConnections(ResourcesQueryPaginated resourcesQueryPaginated) throws IOException;
 
@@ -68,8 +68,15 @@ public interface SourceService {
 
   SourceConnection getSourceConnectionWithSecrets(UUID sourceId) throws JsonValidationException, ConfigNotFoundException, IOException;
 
+  void writeSourceConnectionNoSecrets(SourceConnection partialSource) throws IOException;
+
   void writeSourceConnectionWithSecrets(final SourceConnection source,
                                         final ConnectorSpecification connectorSpecification)
       throws JsonValidationException, IOException, ConfigNotFoundException;
+
+  void tombstoneSource(
+                       SourceConnection source,
+                       ConnectorSpecification connectorSpecification)
+      throws ConfigNotFoundException, JsonValidationException, IOException;
 
 }

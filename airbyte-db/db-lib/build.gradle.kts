@@ -11,9 +11,6 @@ val migrations by configurations.creating {
 
 configurations.all {
   exclude(group = "io.micronaut.flyway")
-  resolutionStrategy {
-    force(libs.platform.testcontainers.postgresql)
-  }
 }
 
 airbyte {
@@ -41,12 +38,12 @@ dependencies {
   migrations(libs.platform.testcontainers.postgresql)
   migrations(sourceSets["main"].output)
 
-  // Mark as compile Only to avoid leaking transitively to connectors)
+  // Mark as compile Only to avoid leaking transitively to connectors
   compileOnly(libs.platform.testcontainers.postgresql)
 
-  // These are required because gradle might be using lower version of Jna from other)
-  // library transitive dependency. Can be removed if we can figure out which library is the cause.)
-  // Refer: https://github.com/testcontainers/testcontainers-java/issues/3834#issuecomment-825409079)
+  // These are required because gradle might be using lower version of Jna from other
+  // library transitive dependency. Can be removed if we can figure out which library is the cause.
+  // Refer: https://github.com/testcontainers/testcontainers-java/issues/3834#issuecomment-825409079
   implementation(libs.jna)
   implementation(libs.jna.platform)
 

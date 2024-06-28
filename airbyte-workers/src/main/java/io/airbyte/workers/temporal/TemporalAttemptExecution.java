@@ -8,7 +8,6 @@ import static io.airbyte.metrics.lib.ApmTraceConstants.Tags.ERROR_ACTUAL_TYPE_KE
 
 import com.google.common.annotations.VisibleForTesting;
 import io.airbyte.api.client.AirbyteApiClient;
-import io.airbyte.api.client.invoker.generated.ApiException;
 import io.airbyte.api.client.model.generated.SetWorkflowInAttemptRequestBody;
 import io.airbyte.commons.logging.LoggingHelper;
 import io.airbyte.commons.logging.MdcScope;
@@ -21,6 +20,7 @@ import io.airbyte.persistence.job.models.JobRunConfig;
 import io.airbyte.workers.Worker;
 import io.temporal.activity.Activity;
 import io.temporal.activity.ActivityExecutionContext;
+import java.io.IOException;
 import java.nio.file.Path;
 import java.util.Map;
 import java.util.Optional;
@@ -134,11 +134,7 @@ public class TemporalAttemptExecution<INPUT, OUTPUT> implements Supplier<OUTPUT>
         }
 
         LOGGER.info("Executing worker wrapper. Airbyte version: {}", airbyteVersion);
-        AirbyteApiClient.retryWithJitter(() -> {
-          saveWorkflowIdForCancellation(airbyteApiClient);
-          return null;
-        }, "save workflow id for cancellation");
-
+        saveWorkflowIdForCancellation(airbyteApiClient);
         return worker.run(input, jobRoot);
       }
 
@@ -158,7 +154,7 @@ public class TemporalAttemptExecution<INPUT, OUTPUT> implements Supplier<OUTPUT>
     ApmTraceUtils.addTagsToTrace(Map.of(ERROR_ACTUAL_TYPE_KEY, e.getClass().getName()));
   }
 
-  private void saveWorkflowIdForCancellation(final AirbyteApiClient airbyteApiClient) throws ApiException {
+  private void saveWorkflowIdForCancellation(final AirbyteApiClient airbyteApiClient) throws IOException {
     // If the jobId is not a number, it means the job is a synchronous job. No attempt is created for
     // it, and it cannot be cancelled, so do not save the workflowId. See
     // SynchronousSchedulerClient.java for info.
@@ -169,11 +165,11 @@ public class TemporalAttemptExecution<INPUT, OUTPUT> implements Supplier<OUTPUT>
     // so it's not needed to save it for multiple times.
     if (NumberUtils.isCreatable(jobRunConfig.getJobId()) && replicationTaskQueue.isPresent()) {
       final String workflowId = workflowIdProvider.get();
-      airbyteApiClient.getAttemptApi().setWorkflowInAttempt(new SetWorkflowInAttemptRequestBody()
-          .jobId(Long.parseLong(jobRunConfig.getJobId()))
-          .attemptNumber(jobRunConfig.getAttemptId().intValue())
-          .processingTaskQueue(replicationTaskQueue.get())
-          .workflowId(workflowId));
+      airbyteApiClient.getAttemptApi().setWorkflowInAttempt(new SetWorkflowInAttemptRequestBody(
+          Long.parseLong(jobRunConfig.getJobId()),
+          jobRunConfig.getAttemptId().intValue(),
+          workflowId,
+          replicationTaskQueue.get()));
     }
   }
 

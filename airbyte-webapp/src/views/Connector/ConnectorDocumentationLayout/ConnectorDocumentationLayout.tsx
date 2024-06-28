@@ -36,7 +36,6 @@ export const ConnectorDocumentationLayout: React.FC<React.PropsWithChildren<unkn
       panels={[
         {
           children,
-          className: styles.leftPanel,
           minWidth: 500,
         },
         {

@@ -6,6 +6,7 @@ WORKDIR /app
 
 RUN <<EOF
 yum install -y tar shadow-utils
+yum update -y --security
 yum clean all
 rm -rf /var/cache/yum
 groupadd --gid 1000 airbyte

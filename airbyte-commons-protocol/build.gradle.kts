@@ -15,6 +15,7 @@ dependencies {
   implementation(libs.airbyte.protocol)
   implementation(libs.guava)
   implementation(libs.bundles.jackson)
+  implementation(libs.bundles.apache)
 
   testAnnotationProcessor(libs.bundles.micronaut.test.annotation.processor)
 

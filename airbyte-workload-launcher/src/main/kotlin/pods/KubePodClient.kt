@@ -44,7 +44,7 @@ class KubePodClient(
   @Named("specPodFactory") private val specPodFactory: ConnectorPodFactory,
 ) : PodClient {
   override fun podsExistForAutoId(autoId: UUID): Boolean {
-    return kubePodLauncher.podsExist(labeler.getAutoIdLabels(autoId))
+    return kubePodLauncher.podsRunning(labeler.getAutoIdLabels(autoId))
   }
 
   @Trace(operationName = LAUNCH_REPLICATION_OPERATION_NAME)
@@ -191,7 +191,7 @@ class KubePodClient(
         autoId = launcherInput.autoId,
       )
 
-    val kubeInput = mapper.toKubeInput(launcherInput.workloadId, checkInput, sharedLabels)
+    val kubeInput = mapper.toKubeInput(launcherInput.workloadId, checkInput, sharedLabels, launcherInput.logPath)
 
     launchConnectorWithSidecar(kubeInput, checkPodFactory, launcherInput.workloadType.toOperationName())
   }
@@ -209,7 +209,7 @@ class KubePodClient(
         autoId = launcherInput.autoId,
       )
 
-    val kubeInput = mapper.toKubeInput(launcherInput.workloadId, discoverCatalogInput, sharedLabels)
+    val kubeInput = mapper.toKubeInput(launcherInput.workloadId, discoverCatalogInput, sharedLabels, launcherInput.logPath)
 
     launchConnectorWithSidecar(kubeInput, discoverPodFactory, launcherInput.workloadType.toOperationName())
   }
@@ -227,7 +227,7 @@ class KubePodClient(
         autoId = launcherInput.autoId,
       )
 
-    val kubeInput = mapper.toKubeInput(launcherInput.workloadId, specInput, sharedLabels)
+    val kubeInput = mapper.toKubeInput(launcherInput.workloadId, specInput, sharedLabels, launcherInput.logPath)
 
     launchConnectorWithSidecar(kubeInput, specPodFactory, launcherInput.workloadType.toOperationName())
   }

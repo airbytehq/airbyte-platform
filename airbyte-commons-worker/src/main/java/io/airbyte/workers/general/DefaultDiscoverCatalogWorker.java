@@ -52,7 +52,7 @@ import org.slf4j.LoggerFactory;
 public class DefaultDiscoverCatalogWorker implements DiscoverCatalogWorker {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(DefaultDiscoverCatalogWorker.class);
-  private static final String WRITE_DISCOVER_CATALOG_LOGS_TAG = "call to write discover schema result";
+  private static final String DISCOVER_SECTION_NAME = "DISCOVER SOURCE CATALOG";
 
   private final IntegrationLauncher integrationLauncher;
   private final AirbyteStreamFactory streamFactory;
@@ -73,6 +73,7 @@ public class DefaultDiscoverCatalogWorker implements DiscoverCatalogWorker {
   @Trace(operationName = WORKER_OPERATION_NAME)
   @Override
   public ConnectorJobOutput run(final StandardDiscoverCatalogInput discoverSchemaInput, final Path jobRoot) throws WorkerException {
+    LineGobbler.startSection(DISCOVER_SECTION_NAME);
     ApmTraceUtils.addTagsToTrace(generateTraceTags(discoverSchemaInput, jobRoot));
     try {
       final JsonNode inputConfig = discoverSchemaInput.getConnectionConfiguration();
@@ -121,19 +122,20 @@ public class DefaultDiscoverCatalogWorker implements DiscoverCatalogWorker {
         if (!error.isEmpty()) {
           WorkerUtils.throwWorkerException(error, process);
         }
-        final DiscoverCatalogResult result =
-            AirbyteApiClient.retryWithJitter(() -> airbyteApiClient.getSourceApi()
-                .writeDiscoverCatalogResult(buildSourceDiscoverSchemaWriteRequestBody(discoverSchemaInput, catalog.get())),
-                WRITE_DISCOVER_CATALOG_LOGS_TAG);
+        final DiscoverCatalogResult result = airbyteApiClient.getSourceApi()
+            .writeDiscoverCatalogResult(buildSourceDiscoverSchemaWriteRequestBody(discoverSchemaInput, catalog.get()));
         jobOutput.setDiscoverCatalogId(result.getCatalogId());
       } else if (failureReasonOptional.isEmpty()) {
         WorkerUtils.throwWorkerException("Integration failed to output a catalog struct and did not output a failure reason", process);
       }
+      LineGobbler.endSection(DISCOVER_SECTION_NAME);
       return jobOutput;
     } catch (final WorkerException e) {
+      LineGobbler.endSection(DISCOVER_SECTION_NAME);
       ApmTraceUtils.addExceptionToTrace(e);
       throw e;
     } catch (final Exception e) {
+      LineGobbler.endSection(DISCOVER_SECTION_NAME);
       ApmTraceUtils.addExceptionToTrace(e);
       throw new WorkerException("Error while discovering schema", e);
     }
@@ -187,15 +189,13 @@ public class DefaultDiscoverCatalogWorker implements DiscoverCatalogWorker {
 
   private SourceDiscoverSchemaWriteRequestBody buildSourceDiscoverSchemaWriteRequestBody(final StandardDiscoverCatalogInput discoverSchemaInput,
                                                                                          final AirbyteCatalog catalog) {
-    return new SourceDiscoverSchemaWriteRequestBody().catalog(
-        CatalogClientConverters.toAirbyteCatalogClientApi(catalog)).sourceId(
-            // NOTE: sourceId is marked required in the OpenAPI config but the code generator doesn't enforce
-            // it, so we check again here.
-            discoverSchemaInput.getSourceId() == null ? null : UUID.fromString(discoverSchemaInput.getSourceId()))
-        .connectorVersion(
-            discoverSchemaInput.getConnectorVersion())
-        .configurationHash(
-            discoverSchemaInput.getConfigHash());
+    return new SourceDiscoverSchemaWriteRequestBody(
+        CatalogClientConverters.toAirbyteCatalogClientApi(catalog),
+        // NOTE: sourceId is marked required in the OpenAPI config but the code generator doesn't enforce
+        // it, so we check again here.
+        discoverSchemaInput.getSourceId() == null ? null : UUID.fromString(discoverSchemaInput.getSourceId()),
+        discoverSchemaInput.getConnectorVersion(),
+        discoverSchemaInput.getConfigHash());
   }
 
   private Map<String, Object> generateTraceTags(final StandardDiscoverCatalogInput discoverSchemaInput, final Path jobRoot) {

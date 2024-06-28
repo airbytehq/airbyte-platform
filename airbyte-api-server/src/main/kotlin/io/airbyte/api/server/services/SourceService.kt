@@ -117,12 +117,14 @@ open class SourceServiceImpl(
     authorization: String?,
     userInfo: String?,
   ): SourceResponse {
-    val sourceCreateOss = SourceCreate()
-    sourceCreateOss.name = sourceCreateRequest.name
-    sourceCreateOss.sourceDefinitionId = sourceDefinitionId
-    sourceCreateOss.workspaceId = sourceCreateRequest.workspaceId
-    sourceCreateOss.connectionConfiguration = sourceCreateRequest.configuration
-    sourceCreateOss.secretId = sourceCreateRequest.secretId
+    val sourceCreateOss =
+      SourceCreate(
+        name = sourceCreateRequest.name,
+        sourceDefinitionId = sourceDefinitionId,
+        workspaceId = sourceCreateRequest.workspaceId,
+        connectionConfiguration = sourceCreateRequest.configuration,
+        secretId = sourceCreateRequest.secretId,
+      )
 
     val response =
       try {
@@ -147,10 +149,11 @@ open class SourceServiceImpl(
     userInfo: String?,
   ): SourceResponse {
     val sourceUpdate =
-      SourceUpdate()
-        .sourceId(sourceId)
-        .connectionConfiguration(sourcePutRequest.configuration)
-        .name(sourcePutRequest.name)
+      SourceUpdate(
+        sourceId = sourceId,
+        connectionConfiguration = sourcePutRequest.configuration,
+        name = sourcePutRequest.name,
+      )
 
     val response =
       try {
@@ -175,11 +178,12 @@ open class SourceServiceImpl(
     userInfo: String?,
   ): SourceResponse {
     val sourceUpdate =
-      PartialSourceUpdate()
-        .sourceId(sourceId)
-        .connectionConfiguration(sourcePatchRequest.configuration)
-        .name(sourcePatchRequest.name)
-        .secretId(sourcePatchRequest.secretId)
+      PartialSourceUpdate(
+        sourceId = sourceId,
+        connectionConfiguration = sourcePatchRequest.configuration,
+        name = sourcePatchRequest.name,
+        secretId = sourcePatchRequest.secretId,
+      )
 
     val response =
       try {
@@ -202,7 +206,7 @@ open class SourceServiceImpl(
     authorization: String?,
     userInfo: String?,
   ) {
-    val sourceIdRequestBody = SourceIdRequestBody().sourceId(sourceId)
+    val sourceIdRequestBody = SourceIdRequestBody(sourceId = sourceId)
     val response =
       try {
         configApiClient.deleteSource(sourceIdRequestBody, authorization, userInfo)
@@ -222,8 +226,7 @@ open class SourceServiceImpl(
     authorization: String?,
     userInfo: String?,
   ): SourceResponse {
-    val sourceIdRequestBody = SourceIdRequestBody()
-    sourceIdRequestBody.sourceId = sourceId
+    val sourceIdRequestBody = SourceIdRequestBody(sourceId = sourceId)
     val response =
       try {
         configApiClient.getSource(sourceIdRequestBody, authorization, userInfo)
@@ -245,7 +248,7 @@ open class SourceServiceImpl(
     authorization: String?,
     userInfo: String?,
   ): SourceDiscoverSchemaRead {
-    val sourceDiscoverSchemaRequestBody = SourceDiscoverSchemaRequestBody().sourceId(sourceId).disableCache(disableCache)
+    val sourceDiscoverSchemaRequestBody = SourceDiscoverSchemaRequestBody(sourceId = sourceId, disableCache = disableCache)
 
     val response: HttpResponse<SourceDiscoverSchemaRead> =
       try {
@@ -290,15 +293,17 @@ open class SourceServiceImpl(
     authorization: String?,
     userInfo: String?,
   ): SourcesResponse {
-    val pagination: Pagination = Pagination().pageSize(limit).rowOffset(offset)
+    val pagination = Pagination(pageSize = limit, rowOffset = offset)
     val workspaceIdsToQuery =
       workspaceIds.ifEmpty {
         userService.getAllWorkspaceIdsForUser(authorization ?: System.getenv(AIRBYTE_API_AUTH_HEADER_VALUE), userInfo)
       }
-    val listResourcesForWorkspacesRequestBody = ListResourcesForWorkspacesRequestBody()
-    listResourcesForWorkspacesRequestBody.includeDeleted = includeDeleted
-    listResourcesForWorkspacesRequestBody.pagination = pagination
-    listResourcesForWorkspacesRequestBody.workspaceIds = workspaceIdsToQuery
+    val listResourcesForWorkspacesRequestBody =
+      ListResourcesForWorkspacesRequestBody(
+        includeDeleted = includeDeleted,
+        pagination = pagination,
+        workspaceIds = workspaceIdsToQuery,
+      )
 
     val response =
       try {

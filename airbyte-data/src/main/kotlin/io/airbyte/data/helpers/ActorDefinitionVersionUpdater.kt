@@ -71,7 +71,6 @@ class ActorDefinitionVersionUpdater(
     return upgradeActorVersion(
       source.sourceId,
       sourceDefinition.sourceDefinitionId,
-      sourceDefinition.defaultVersionId,
       ActorType.SOURCE,
     )
   }
@@ -86,7 +85,6 @@ class ActorDefinitionVersionUpdater(
     return upgradeActorVersion(
       destination.destinationId,
       destinationDefinition.destinationDefinitionId,
-      destinationDefinition.defaultVersionId,
       ActorType.DESTINATION,
     )
   }
@@ -95,7 +93,6 @@ class ActorDefinitionVersionUpdater(
   internal fun upgradeActorVersion(
     actorId: UUID,
     actorDefinitionId: UUID,
-    newVersionId: UUID,
     actorType: ActorType,
   ) {
     val versionPinConfigOpt =
@@ -114,8 +111,6 @@ class ActorDefinitionVersionUpdater(
 
       scopedConfigurationService.deleteScopedConfiguration(versionPinConfig.id)
     }
-
-    actorDefinitionService.setActorDefaultVersion(actorId, newVersionId)
   }
 
   @VisibleForTesting
@@ -137,17 +132,13 @@ class ActorDefinitionVersionUpdater(
           breakingChangesForDefinition,
         )
 
-      // Old: update actor.default_version_id for unaffected actors
-      val actorsToUpgrade = getActorsToUpgrade(currentDefaultVersion, breakingChangesForUpgrade)
-      actorDefinitionService.setActorDefaultVersions(actorsToUpgrade.stream().toList(), newDefaultVersion.versionId)
-
-      // New: determine which actors should NOT be upgraded, and pin those back
+      // Determine which actors should NOT be upgraded, and pin those back
       processBreakingChangesForUpgrade(currentDefaultVersion, breakingChangesForUpgrade)
     }
 
     actorDefinitionService.updateActorDefinitionDefaultVersionId(actorDefinitionId, newDefaultVersion.versionId)
 
-    // New: for breaking changes that have been rolled back, clear old pins that may have been created
+    // For breaking changes that have been rolled back, clear old pins that may have been created
     processBreakingChangePinRollbacks(actorDefinitionId, newDefaultVersion, breakingChangesForDefinition)
   }
 
@@ -269,21 +260,6 @@ class ActorDefinitionVersionUpdater(
           .withOrigin(breakingChange.version.serialize())
       }.toList()
     scopedConfigurationService.insertScopedConfigurations(scopedConfigurationsToCreate)
-  }
-
-  @VisibleForTesting
-  fun getActorsToUpgrade(
-    currentDefaultVersion: ActorDefinitionVersion,
-    breakingChangesForUpgrade: List<ActorDefinitionBreakingChange>,
-  ): Set<UUID> {
-    val upgradeCandidates = actorDefinitionService.getActorsWithDefaultVersionId(currentDefaultVersion.versionId).toMutableSet()
-
-    for (breakingChange in breakingChangesForUpgrade) {
-      val actorsImpactedByBreakingChange = getActorsAffectedByBreakingChange(upgradeCandidates, breakingChange)
-      upgradeCandidates.removeAll(actorsImpactedByBreakingChange)
-    }
-
-    return upgradeCandidates
   }
 
   @VisibleForTesting

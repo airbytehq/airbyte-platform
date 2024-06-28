@@ -34,7 +34,9 @@ class AnalyticsTrackingBeanFactory {
   fun workspaceFetcher(airbyteApiClient: AirbyteApiClient): Function<UUID, WorkspaceRead> {
     return Function {
         workspaceId: UUID? ->
-      airbyteApiClient.workspaceApi.getWorkspace(WorkspaceIdRequestBody().workspaceId(workspaceId).includeTombstone(true))
+      workspaceId.let { wid ->
+        airbyteApiClient.workspaceApi.getWorkspace(WorkspaceIdRequestBody(workspaceId = wid!!, includeTombstone = true))
+      }
     }
   }
 }

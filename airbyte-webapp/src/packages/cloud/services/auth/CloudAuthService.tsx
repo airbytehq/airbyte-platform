@@ -1,383 +1,414 @@
 import { useQueryClient } from "@tanstack/react-query";
-import {
-  AuthErrorCodes,
-  EmailAuthProvider,
-  User as FirebaseUser,
-  GithubAuthProvider,
-  GoogleAuthProvider,
-  applyActionCode,
-  confirmPasswordReset,
-  createUserWithEmailAndPassword,
-  getIdToken,
-  reauthenticateWithCredential,
-  reload,
-  sendEmailVerification,
-  signInWithEmailLink,
-  signInWithPopup,
-  updatePassword,
-  updateProfile,
-  signInWithEmailAndPassword,
-  sendPasswordResetEmail,
-} from "firebase/auth";
-import React, { PropsWithChildren, useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { FormattedMessage } from "react-intl";
+import { BroadcastChannel } from "broadcast-channel";
+import Keycloak from "keycloak-js";
+import isEqual from "lodash/isEqual";
+import { User, UserManager, WebStorageStateStore } from "oidc-client-ts";
+import React, { PropsWithChildren, useCallback, useEffect, useMemo, useReducer, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Observable, Subject } from "rxjs";
 
 import { LoadingPage } from "components";
 
-import { useGetOrCreateUser } from "core/api";
-import { useCreateKeycloakUser, useResendSigninLink, useRevokeUserSession, useUpdateUser } from "core/api/cloud";
-import { AuthProvider, UserRead } from "core/api/types/AirbyteClient";
-import { AuthContext, AuthContextApi, OAuthLoginState } from "core/services/auth";
-import { useNotificationService } from "hooks/services/Notification";
-import { SignupFormValues } from "packages/cloud/views/auth/SignupPage/components/SignupForm";
-import { useAuth } from "packages/firebaseReact";
+import { useGetOrCreateUser, useUpdateUser } from "core/api";
+import { UserRead } from "core/api/types/AirbyteClient";
+import { config } from "core/config";
+import { AuthContext, AuthContextApi } from "core/services/auth";
 
-import { useKeycloakService } from "./KeycloakService";
-import {
-  EmailLinkErrorCodes,
-  LoginFormErrorCodes,
-  ResetPasswordConfirmErrorCodes,
-  SignUpFormErrorCodes,
-} from "./types";
+/**
+ * The ID of the client in Keycloak that should be used by the webapp.
+ */
+const KEYCLOAK_CLIENT_ID = "airbyte-webapp";
+/**
+ * The IDP hint to provide keycloak for SSO users (i.e. the name of the identity provider to directly forward to).
+ */
+const KEYCLOAK_IDP_HINT = "default";
+/**
+ * The realm name that is used for all default (non-SSO) cloud users.
+ */
+const AIRBYTE_CLOUD_REALM = "_airbyte-cloud-users";
 
-export enum FirebaseAuthMessageId {
-  NetworkFailure = "firebase.auth.error.networkRequestFailed",
-  TooManyRequests = "firebase.auth.error.tooManyRequests",
-  InvalidPassword = "firebase.auth.error.invalidPassword",
-  DefaultError = "firebase.auth.error.default",
+interface KeycloakAuthState {
+  airbyteUser: UserRead | null;
+  keycloakUser: User | null;
+  error: Error | null;
+  didInitialize: boolean;
+  isAuthenticated: boolean;
 }
 
-// Checks for a valid auth session with either keycloak or firebase, and returns the user if found.
+const keycloakAuthStateInitialState: KeycloakAuthState = {
+  airbyteUser: null,
+  keycloakUser: null,
+  error: null,
+  didInitialize: false,
+  isAuthenticated: false,
+};
+
+type KeycloakAuthStateAction =
+  | {
+      type: "userLoaded";
+      keycloakUser: User;
+      airbyteUser: UserRead;
+    }
+  | {
+      type: "userUnloaded";
+    }
+  | {
+      type: "error";
+      error: Error;
+    }
+  | {
+      type: "userUpdated";
+      airbyteUser: UserRead;
+    };
+
+type BroadcastEvent = Extract<KeycloakAuthStateAction, { type: "userLoaded" | "userUnloaded" }>;
+
+function createRedirectUri(realm: string) {
+  const searchParams = new URLSearchParams(window.location.search);
+  searchParams.set("realm", realm);
+  return `${window.location.origin}${window.location.pathname}?${searchParams.toString()}`;
+}
+
+function createUserManager(realm: string) {
+  return new UserManager({
+    userStore: new WebStorageStateStore({ store: window.localStorage }),
+    authority: `${config.keycloakBaseUrl}/auth/realms/${realm}`,
+    client_id: KEYCLOAK_CLIENT_ID,
+    redirect_uri: createRedirectUri(realm),
+  });
+}
+
+export function initializeUserManager() {
+  // First, check if there's an active redirect in progress. If so, we can pull the realm & clientId from the query params
+  const searchParams = new URLSearchParams(window.location.search);
+  const realm = searchParams.get("realm");
+  if (realm) {
+    return createUserManager(realm);
+  }
+
+  // If there's no active redirect, so we can check for an existing session based on an entry in local storage
+  // The local storage key looks like this: oidc.user:https://example.com/auth/realms/<realm>:<client-id>
+  const localStorageKeys = Object.keys(window.localStorage);
+  const realmAndClientId = localStorageKeys.find((key) => key.startsWith("oidc.user:"));
+  if (realmAndClientId) {
+    const match = realmAndClientId.match(/^oidc.user:.*\/(?<realm>[^:]+):(?<clientId>.+)$/);
+    if (match?.groups) {
+      return createUserManager(match.groups.realm);
+    }
+  }
+
+  // If no session is found, we can fall back to the default realm and client id
+  return createUserManager(AIRBYTE_CLOUD_REALM);
+}
+
+// Removes OIDC params from URL, but doesn't remove other params that might be present
+export function createUriWithoutSsoParams() {
+  // state, code and session_state are from keycloak. realm is added by us to indicate which realm the user is signing in to.
+  const SSO_SEARCH_PARAMS = ["state", "code", "session_state", "realm"];
+
+  const searchParams = new URLSearchParams(window.location.search);
+
+  SSO_SEARCH_PARAMS.forEach((param) => searchParams.delete(param));
+
+  return searchParams.toString().length > 0
+    ? `${window.location.origin}?${searchParams.toString()}`
+    : window.location.origin;
+}
+
+function clearSsoSearchParams() {
+  const newUrl = createUriWithoutSsoParams();
+  window.history.replaceState({}, document.title, newUrl);
+}
+
+const hasAuthParams = (location = window.location): boolean => {
+  const searchParams = new URLSearchParams(location.search);
+  if ((searchParams.get("code") || searchParams.get("error")) && searchParams.get("state")) {
+    return true;
+  }
+
+  return false;
+};
+
+// Checks whether users are the same, ignoring properties like the access_token or refresh_token
+function usersAreSame(
+  newState: { keycloakUser: User | null; airbyteUser: UserRead | null },
+  authState: KeycloakAuthState
+): boolean {
+  if (!!authState.airbyteUser !== !!newState.airbyteUser) {
+    return false;
+  }
+
+  if (!!authState.keycloakUser !== !!newState.keycloakUser) {
+    return false;
+  }
+
+  // We only really care if the keycloakUser id changes. If only the access token or refresh token has updated,
+  // we don't need to cause a re-render of the context value.
+  if (authState.keycloakUser?.profile.sub !== newState.keycloakUser?.profile.sub) {
+    return false;
+  }
+
+  if (!isEqual(authState.airbyteUser, newState.airbyteUser)) {
+    return false;
+  }
+
+  return true;
+}
+
+const keycloakAuthStateReducer = (state: KeycloakAuthState, action: KeycloakAuthStateAction): KeycloakAuthState => {
+  switch (action.type) {
+    case "userLoaded":
+      return {
+        ...state,
+        keycloakUser: action.keycloakUser,
+        airbyteUser: action.airbyteUser,
+        isAuthenticated: true,
+        didInitialize: true,
+        error: null,
+      };
+    case "userUpdated":
+      return {
+        ...state,
+        airbyteUser: action.airbyteUser,
+      };
+    case "userUnloaded":
+      return {
+        ...state,
+        keycloakUser: null,
+        airbyteUser: null,
+        isAuthenticated: false,
+        didInitialize: true,
+        error: null,
+      };
+    case "error":
+      return {
+        ...state,
+        didInitialize: true,
+        error: action.error,
+      };
+  }
+};
+
+const broadcastChannel = new BroadcastChannel<BroadcastEvent>("keycloak-state-sync");
+
+// Checks for a valid auth session with keycloak and returns the user if found.
 export const CloudAuthService: React.FC<PropsWithChildren> = ({ children }) => {
-  const passwordRef = useRef<undefined | string>(undefined);
-  const [logoutInProgress, setLogoutInProgress] = useState(false);
+  const userSigninInitialized = useRef(false);
   const queryClient = useQueryClient();
-  const { registerNotification } = useNotificationService();
-  const { mutateAsync: updateAirbyteUser } = useUpdateUser();
+  const [userManager] = useState<UserManager>(initializeUserManager);
+  const [authState, dispatch] = useReducer(keycloakAuthStateReducer, keycloakAuthStateInitialState);
+  const [logoutInProgress, setLogoutInProgress] = useState(false);
   const { mutateAsync: getAirbyteUser } = useGetOrCreateUser();
-  const { mutateAsync: resendWithSignInLink } = useResendSigninLink();
-  const { mutateAsync: revokeUserSession } = useRevokeUserSession();
-  const { mutateAsync: createKeycloakUser } = useCreateKeycloakUser();
-  const keycloakAuth = useKeycloakService();
-  const firebaseAuth = useAuth();
+  const { mutateAsync: updateAirbyteUser } = useUpdateUser();
   const navigate = useNavigate();
 
-  // These values are set during the firebase initialization process
-  const [firebaseInitialized, setFirebaseInitialized] = useState(false);
-  const [airbyteUser, setAirbyteUser] = useState<UserRead | null>(null);
-  const [firebaseUser, setFirebaseUser] = useState<FirebaseUser | null>(null);
+  // Allows us to get the access token as a callback, instead of re-rendering every time a new access token arrives
+  const keycloakAccessTokenRef = useRef<string | null>(null);
 
-  // This is only necessary to force a re-render after firebase verifies an email, because the underlying firebaseUser does not change
-  const [emailDidVerify, setEmailDidVerify] = useState(false);
+  // Handle login/logoff that happened in another tab
+  useEffect(() => {
+    broadcastChannel.onmessage = (event) => {
+      console.log("broadcastChannel.onmessage", event);
+      if (event.type === "userUnloaded") {
+        console.debug("🔑 Received userUnloaded event from other tab.");
+        dispatch({ type: "userUnloaded" });
+        // Need to clear all queries from cache. In the tab that triggered the logout this is
+        // handled inside CloudAuthService.logout
+        queryClient.removeQueries();
+      } else if (event.type === "userLoaded") {
+        console.debug("🔑 Received userLoaded event from other tab.");
+        keycloakAccessTokenRef.current = event.keycloakUser.access_token;
+        dispatch({ type: "userLoaded", keycloakUser: event.keycloakUser, airbyteUser: event.airbyteUser });
+      }
+    };
+  }, [queryClient]);
 
-  const verifyFirebaseEmail = useCallback(
-    async (code: string) => {
-      await applyActionCode(firebaseAuth, code)
-        .then(async () => {
-          // Reload the user to get a fresh token with email_verified: true
-          if (firebaseUser && !emailDidVerify) {
-            await reload(firebaseUser);
-            await getIdToken(firebaseUser, true);
-            setEmailDidVerify(true);
-          }
-          registerNotification({
-            id: "workspace.emailVerificationSuccess",
-            text: <FormattedMessage id="verifyEmail.success" />,
-            type: "success",
+  // Initialization of the current user
+  useEffect(() => {
+    if (userSigninInitialized.current) {
+      return;
+    }
+    // We strictly need to initialize once, because authorization codes are only valid for a single use
+    userSigninInitialized.current = true;
+
+    (async (): Promise<void> => {
+      let keycloakUser: User | void | null = null;
+      try {
+        // Check if user is returning back from IdP login
+        if (hasAuthParams()) {
+          keycloakUser = await userManager.signinCallback();
+          clearSsoSearchParams();
+          // Otherwise, check if there is a session currently
+        } else if ((keycloakUser ??= await userManager.signinSilent())) {
+          // Initialize the access token ref with a value
+          keycloakAccessTokenRef.current = keycloakUser.access_token;
+          const airbyteUser = await getAirbyteUser({
+            authUserId: keycloakUser.profile.sub,
+            getAccessToken: () => Promise.resolve(keycloakUser?.access_token ?? ""),
           });
-        })
-        .catch(() => {
-          registerNotification({
-            id: "workspace.emailVerificationError",
-            text: <FormattedMessage id="verifyEmail.error" />,
-            type: "error",
-          });
-        });
-    },
-    [firebaseAuth, registerNotification, firebaseUser, emailDidVerify]
-  );
+          dispatch({ type: "userLoaded", airbyteUser, keycloakUser });
+          // Finally, we can assume there is no active session
+        } else {
+          dispatch({ type: "userUnloaded" });
+        }
+      } catch (error) {
+        dispatch({ type: "error", error });
+      }
+    })();
+  }, [userManager, getAirbyteUser]);
+
+  // Hook in to userManager events
+  useEffect(() => {
+    const handleUserLoaded = async (keycloakUser: User) => {
+      const airbyteUser = await getAirbyteUser({
+        authUserId: keycloakUser.profile.sub,
+        getAccessToken: () => Promise.resolve(keycloakUser?.access_token ?? ""),
+      });
+
+      // Update the access token ref with the new access token. This happens each time we get a fresh token.
+      keycloakAccessTokenRef.current = keycloakUser.access_token;
+
+      // Only if actual user values (not just access_token) have changed, do we need to update the state and cause a re-render
+      if (!usersAreSame({ keycloakUser, airbyteUser }, authState)) {
+        dispatch({ type: "userLoaded", keycloakUser, airbyteUser });
+        // Notify other tabs that this tab got a new user loaded (usually meaning this tab signed in)
+        broadcastChannel.postMessage({ type: "userLoaded", keycloakUser, airbyteUser });
+      }
+    };
+    userManager.events.addUserLoaded(handleUserLoaded);
+
+    const handleUserUnloaded = () => {
+      dispatch({ type: "userUnloaded" });
+      // Notify other open tabs that the user got unloaded (i.e. this tab signed out)
+      broadcastChannel.postMessage({ type: "userUnloaded" });
+    };
+    userManager.events.addUserUnloaded(handleUserUnloaded);
+
+    const handleSilentRenewError = (error: Error) => {
+      dispatch({ type: "error", error });
+    };
+    userManager.events.addSilentRenewError(handleSilentRenewError);
+
+    const handleExpiredToken = async () => {
+      await userManager.signinSilent().catch(async () => {
+        // We need to manually sign out, otherwise the expired token and user will stick around
+        await userManager.signoutSilent();
+        dispatch({ type: "userUnloaded" });
+      });
+    };
+    userManager.events.addAccessTokenExpired(handleExpiredToken);
+
+    return () => {
+      userManager.events.removeUserLoaded(handleUserLoaded);
+      userManager.events.removeUserUnloaded(handleUserUnloaded);
+      userManager.events.removeSilentRenewError(handleSilentRenewError);
+      userManager.events.removeAccessTokenExpired(handleExpiredToken);
+    };
+  }, [userManager, getAirbyteUser, authState]);
+
+  const changeRealmAndRedirectToSignin = useCallback(async (realm: string) => {
+    // This is not a security measure. The realm is publicly accessible, but we don't want users to access it via the SSO flow, because that could cause confusion.
+    if (realm === AIRBYTE_CLOUD_REALM) {
+      throw new Error("Realm inaccessible via SSO flow. Use the default login flow instead.");
+    }
+    const newUserManager = createUserManager(realm);
+    await newUserManager.signinRedirect({ extraQueryParams: { kc_idp_hint: KEYCLOAK_IDP_HINT } });
+  }, []);
+
+  const redirectToSignInWithGoogle = useCallback(async () => {
+    const newUserManager = createUserManager(AIRBYTE_CLOUD_REALM);
+    await newUserManager.signinRedirect({ extraQueryParams: { kc_idp_hint: "google" } });
+  }, []);
+
+  const redirectToSignInWithGithub = useCallback(async () => {
+    const newUserManager = createUserManager(AIRBYTE_CLOUD_REALM);
+    await newUserManager.signinRedirect({ extraQueryParams: { kc_idp_hint: "github" } });
+  }, []);
+
+  const redirectToSignInWithPassword = useCallback(async () => {
+    const newUserManager = createUserManager(AIRBYTE_CLOUD_REALM);
+    await newUserManager.signinRedirect();
+  }, []);
+
+  /**
+   * Using the keycloak-js library here instead of oidc-ts, because keycloak-js knows how to route us directly to Keycloak's registration page.
+   * oidc-ts does not (because that's not part of the OIDC spec) and recreating the logic to set the correct state, code_challenge, etc. would be complicated to maintain.
+   */
+  const redirectToRegistrationWithPassword = useCallback(async () => {
+    const keycloak = new Keycloak({
+      url: `${config.keycloakBaseUrl}/auth`,
+      realm: AIRBYTE_CLOUD_REALM,
+      clientId: KEYCLOAK_CLIENT_ID,
+    });
+    await keycloak.init({});
+    keycloak.register({ redirectUri: createRedirectUri(AIRBYTE_CLOUD_REALM) });
+  }, []);
 
   const logout = useCallback(async () => {
     setLogoutInProgress(true);
-    if (firebaseUser) {
-      await revokeUserSession({ getAccessToken: () => firebaseUser.getIdToken() });
-      await firebaseAuth.signOut();
-      setFirebaseUser(null);
-      setAirbyteUser(null);
-    }
-    if (keycloakAuth.isAuthenticated) {
-      await keycloakAuth.signout();
+    if (authState.isAuthenticated) {
+      await userManager.signoutRedirect({ post_logout_redirect_uri: window.location.origin });
     }
     setLogoutInProgress(false);
     navigate("/");
     queryClient.removeQueries();
-  }, [firebaseAuth, firebaseUser, keycloakAuth, navigate, queryClient, revokeUserSession]);
-
-  // useFirebaseAuth() does not give us the user synchronously, we instead have to subscribe to onAuthStateChanged and store the state separately
-  useEffect(() => {
-    return firebaseAuth.onAuthStateChanged(async (user) => {
-      if (user) {
-        const airbyteUser = await getAirbyteUser({
-          authUserId: user.uid,
-          getAccessToken: () => user.getIdToken(),
-        });
-        // [Firebase deprecation] We want to ensure the user is dual-written to Keycloak when they sign in with Firebase
-        createKeycloakUser({
-          authUserId: user.uid,
-          getAccessToken: () => user.getIdToken(),
-          password: passwordRef.current,
-        });
-        setFirebaseUser(user);
-        setAirbyteUser(airbyteUser);
-      } else {
-        setFirebaseUser(null);
-        setAirbyteUser(null);
-      }
-      setFirebaseInitialized(true);
-    });
-  }, [firebaseAuth, getAirbyteUser, createKeycloakUser]);
+  }, [authState.isAuthenticated, navigate, queryClient, userManager]);
 
   const authContextValue = useMemo<AuthContextApi>(() => {
-    // The context value for an authenticated firebase user
-    if (firebaseUser) {
+    // The context value for an authenticated Keycloak user.
+    if (authState.isAuthenticated) {
       return {
-        isAuthenticated: true,
+        authType: "cloud",
         inited: true,
-        user: airbyteUser,
-        authProvider: AuthProvider.google_identity_platform,
-        displayName: firebaseUser.displayName,
-        emailVerified: firebaseUser.emailVerified,
-        email: firebaseUser.email,
-        getAccessToken: () => firebaseUser.getIdToken(),
-        logout,
-        loggedOut: false,
+        user: authState.airbyteUser,
+        emailVerified: authState.keycloakUser?.profile.email_verified ?? false,
+        getAccessToken: () => Promise.resolve(keycloakAccessTokenRef?.current),
         updateName: async (name: string) => {
-          if (!airbyteUser) {
-            throw new Error("Cannot change name, airbyteUser is null");
-          }
-          await updateProfile(firebaseUser, { displayName: name });
-          await updateAirbyteUser({
-            userUpdate: { userId: airbyteUser.userId, name },
-            getAccessToken: () => firebaseUser.getIdToken(),
-          }).then(() => setAirbyteUser({ ...airbyteUser, name }));
-        },
-        updatePassword: async (email: string, currentPassword: string, newPassword: string) => {
-          // re-authentication may be needed before updating password
-          // https://firebase.google.com/docs/auth/web/manage-users#re-authenticate_a_user
-          if (firebaseUser === null) {
-            throw new Error("You must log in first to reauthenticate!");
-          }
-          const credential = EmailAuthProvider.credential(email, currentPassword);
-          await reauthenticateWithCredential(firebaseUser, credential);
-          return updatePassword(firebaseUser, newPassword).then(() => {
-            createKeycloakUser({
-              authUserId: firebaseUser.uid,
-              getAccessToken: () => firebaseUser.getIdToken(),
-              password: newPassword,
-            });
-          });
-        },
-        hasPasswordLogin: () => !!firebaseUser.providerData.filter(({ providerId }) => providerId === "password"),
-        providers: firebaseUser.providerData.map(({ providerId }) => providerId),
-        provider: null,
-        sendEmailVerification: async () => {
-          if (!firebaseUser) {
-            console.error("sendEmailVerifiedLink should be used within auth flow");
-            throw new Error("Cannot send verification email if firebaseUser is null.");
-          }
-          return sendEmailVerification(firebaseUser);
-        },
-        verifyEmail: verifyFirebaseEmail,
-      };
-    }
-    // The context value for an authenticated Keycloak user. Firebase takes precedence, so we have to wait until firebase is initialized.
-    if (firebaseInitialized && keycloakAuth.isAuthenticated) {
-      return {
-        isAuthenticated: true,
-        inited: true,
-        user: keycloakAuth.airbyteUser,
-        authProvider: AuthProvider.keycloak,
-        displayName: keycloakAuth.keycloakUser?.profile.name ?? null,
-        emailVerified: keycloakAuth.keycloakUser?.profile.email_verified ?? false,
-        email: keycloakAuth.keycloakUser?.profile.email ?? null,
-        getAccessToken: () => Promise.resolve(keycloakAuth.accessTokenRef?.current),
-        updateName: async (name: string) => {
-          const user = keycloakAuth.airbyteUser;
+          const user = authState.airbyteUser;
           if (!user) {
             throw new Error("Cannot change name, airbyteUser is null");
           }
           await updateAirbyteUser({
             userUpdate: { userId: user.userId, name },
-            getAccessToken: async () => keycloakAuth.accessTokenRef?.current ?? "",
+            getAccessToken: async () => keycloakAccessTokenRef?.current ?? "",
           }).then(() => {
-            keycloakAuth.updateAirbyteUser({ ...user, name });
+            dispatch({ type: "userUpdated", airbyteUser: { ...user, name } });
           });
         },
         logout,
         loggedOut: false,
-        providers: null,
-        provider: keycloakAuth.isSso
+        provider: !authState.keycloakUser?.profile.iss.endsWith(AIRBYTE_CLOUD_REALM)
           ? "sso"
-          : (keycloakAuth.keycloakUser?.profile.identity_provider as string | undefined) ?? "none",
+          : (authState.keycloakUser?.profile.identity_provider as string | undefined) ?? "none",
       };
     }
     // The context value for an unauthenticated user
     return {
-      isAuthenticated: false,
+      authType: "cloud",
       user: null,
-      inited: keycloakAuth.didInitialize && firebaseInitialized,
-      userId: null,
+      inited: authState.didInitialize,
       emailVerified: false,
       loggedOut: true,
-      providers: null,
       provider: null,
-      login: async ({ email, password }: { email: string; password: string }) => {
-        await signInWithEmailAndPassword(firebaseAuth, email, password)
-          .then(() => {
-            if (firebaseAuth.currentUser) {
-              // Update the keycloak user with the new password
-              passwordRef.current = password;
-            }
-          })
-          .catch((err) => {
-            switch (err.code) {
-              case AuthErrorCodes.INVALID_EMAIL:
-                throw new Error(LoginFormErrorCodes.EMAIL_INVALID);
-              case AuthErrorCodes.USER_CANCELLED:
-              case AuthErrorCodes.USER_DISABLED:
-                throw new Error(LoginFormErrorCodes.EMAIL_DISABLED);
-              case AuthErrorCodes.USER_DELETED:
-                throw new Error(LoginFormErrorCodes.EMAIL_NOT_FOUND);
-              case AuthErrorCodes.INVALID_PASSWORD:
-                throw new Error(LoginFormErrorCodes.PASSWORD_INVALID);
-            }
-
-            throw err;
-          });
-      },
-      loginWithOAuth(provider): Observable<OAuthLoginState> {
-        const state = new Subject<OAuthLoginState>();
-        try {
-          // Clear any password that might have been set during a password login/registration attempt
-          passwordRef.current = undefined;
-          state.next("waiting");
-          // Instantiate the appropriate auth provider. For Google we're specifying the `hd` parameter, to only show
-          // Google accounts in the selector that are linked to a business (GSuite) account.
-          const authProvider =
-            provider === "github"
-              ? new GithubAuthProvider()
-              : new GoogleAuthProvider().setCustomParameters({ hd: "*" });
-          signInWithPopup(firebaseAuth, authProvider)
-            .then(async () => {
-              state.next("loading");
-              if (firebaseAuth.currentUser) {
-                state.next("done");
-                state.complete();
-              }
-            })
-            .catch((e) => state.error(e));
-        } catch (e) {
-          state.error(e);
-        }
-        return state.asObservable();
-      },
-      requirePasswordReset: (email: string) => {
-        return sendPasswordResetEmail(firebaseAuth, email);
-      },
-      confirmPasswordReset: async (code: string, newPassword: string) => {
-        try {
-          await confirmPasswordReset(firebaseAuth, code, newPassword);
-          if (firebaseAuth.currentUser) {
-            // Update the keycloak user with the new password
-            createKeycloakUser({
-              authUserId: firebaseAuth.currentUser.uid,
-              getAccessToken: firebaseAuth.currentUser.getIdToken,
-              password: newPassword,
-            });
-          }
-        } catch (e) {
-          switch (e?.code) {
-            case AuthErrorCodes.EXPIRED_OOB_CODE:
-              throw new Error(ResetPasswordConfirmErrorCodes.LINK_EXPIRED);
-            case AuthErrorCodes.INVALID_OOB_CODE:
-              throw new Error(ResetPasswordConfirmErrorCodes.LINK_INVALID);
-            case AuthErrorCodes.WEAK_PASSWORD:
-              throw new Error(ResetPasswordConfirmErrorCodes.PASSWORD_WEAK);
-          }
-
-          throw e;
-        }
-      },
-      signUp: async ({ email, password }: SignupFormValues) => {
-        try {
-          const { user } = await createUserWithEmailAndPassword(firebaseAuth, email, password);
-          // Store the password in a ref so that we can use it to create a keycloak user after the firebase user is created
-          passwordRef.current = password;
-
-          // Send verification mail via firebase
-          await sendEmailVerification(user);
-        } catch (err) {
-          // Clear the password ref if the user creation fails
-          passwordRef.current = undefined;
-          switch (err.code) {
-            case AuthErrorCodes.EMAIL_EXISTS:
-              throw new Error(SignUpFormErrorCodes.EMAIL_DUPLICATE);
-            case AuthErrorCodes.INVALID_EMAIL:
-              throw new Error(SignUpFormErrorCodes.EMAIL_INVALID);
-            case AuthErrorCodes.WEAK_PASSWORD:
-              throw new Error(SignUpFormErrorCodes.PASSWORD_WEAK);
-          }
-
-          throw err;
-        }
-      },
-      signUpWithEmailLink: async ({ name, email, password, news }) => {
-        let firebaseUser: FirebaseUser;
-
-        try {
-          ({ user: firebaseUser } = await signInWithEmailLink(firebaseAuth, email));
-          await updatePassword(firebaseUser, password).then(() => {
-            createKeycloakUser({
-              authUserId: firebaseUser.uid,
-              getAccessToken: () => firebaseUser.getIdToken(),
-              password,
-            });
-          });
-        } catch (e) {
-          await firebaseAuth.signOut();
-          if (e.message === EmailLinkErrorCodes.LINK_EXPIRED) {
-            await resendWithSignInLink(email);
-          }
-          throw e;
-        }
-
-        if (firebaseUser) {
-          const airbyteUser = await getAirbyteUser({
-            authUserId: firebaseUser.uid,
-            getAccessToken: () => firebaseUser.getIdToken(),
-          });
-          await updateAirbyteUser({
-            userUpdate: { userId: airbyteUser.userId, authUserId: firebaseUser.uid, name, news },
-            getAccessToken: () => firebaseUser.getIdToken(),
-          });
-        }
-      },
-      verifyEmail: verifyFirebaseEmail,
+      changeRealmAndRedirectToSignin,
+      redirectToSignInWithGoogle,
+      redirectToSignInWithGithub,
+      redirectToSignInWithPassword,
+      redirectToRegistrationWithPassword,
     };
   }, [
-    airbyteUser,
-    createKeycloakUser,
-    firebaseAuth,
-    firebaseInitialized,
-    firebaseUser,
-    getAirbyteUser,
-    keycloakAuth,
+    authState.airbyteUser,
+    authState.didInitialize,
+    authState.isAuthenticated,
+    authState.keycloakUser?.profile.email_verified,
+    authState.keycloakUser?.profile.identity_provider,
+    authState.keycloakUser?.profile.iss,
+    changeRealmAndRedirectToSignin,
     logout,
-    resendWithSignInLink,
+    redirectToRegistrationWithPassword,
+    redirectToSignInWithGithub,
+    redirectToSignInWithGoogle,
+    redirectToSignInWithPassword,
     updateAirbyteUser,
-    verifyFirebaseEmail,
   ]);
 
   if (logoutInProgress) {

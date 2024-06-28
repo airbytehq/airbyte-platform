@@ -28,17 +28,17 @@ interface DefaultDataResidencyFormValues {
 }
 
 export const DataResidencyView: React.FC = () => {
-  const workspace = useCurrentWorkspace();
+  const { workspaceId, organizationId, defaultGeography } = useCurrentWorkspace();
   const { mutateAsync: updateWorkspace } = useUpdateWorkspace();
   const { registerNotification } = useNotificationService();
   const { formatMessage } = useIntl();
-  const canUpdateWorkspace = useIntent("UpdateWorkspace", { workspaceId: workspace.workspaceId });
+  const canUpdateWorkspace = useIntent("UpdateWorkspace", { workspaceId, organizationId });
 
   useTrackPage(PageTrackingCodes.SETTINGS_DATA_RESIDENCY);
 
   const handleSubmit = async (values: DefaultDataResidencyFormValues) => {
     await updateWorkspace({
-      workspaceId: workspace.workspaceId,
+      workspaceId,
       defaultGeography: values.defaultGeography,
     });
   };
@@ -73,7 +73,7 @@ export const DataResidencyView: React.FC = () => {
       </Text>
       <Form<DefaultDataResidencyFormValues>
         defaultValues={{
-          defaultGeography: workspace.defaultGeography,
+          defaultGeography,
         }}
         schema={schema}
         onSubmit={handleSubmit}

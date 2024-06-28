@@ -184,7 +184,10 @@ internal class AirbyteCatalogHelperTest {
   ) {
     val cursorField = "cursor"
     val primayKeyColumn = "primary"
-    val airbyteStream = AirbyteStream()
+    val airbyteStream =
+      AirbyteStream(
+        name = "stream-name",
+      )
     val airbyteStreamConfiguration = createAirbyteStreamConfiguration()
     val streamConfiguration = StreamConfiguration()
     streamConfiguration.syncMode = connectionSyncMode
@@ -206,7 +209,10 @@ internal class AirbyteCatalogHelperTest {
   internal fun `test that when a stream configuration does not have a configured sync mode, the updated configuration uses full refresh overwrite`() {
     val cursorField = "cursor"
     val primayKeyColumn = "primary"
-    val airbyteStream = AirbyteStream()
+    val airbyteStream =
+      AirbyteStream(
+        name = "stream-name",
+      )
     val airbyteStreamConfiguration = createAirbyteStreamConfiguration()
     val streamConfiguration = StreamConfiguration()
     streamConfiguration.syncMode = null
@@ -227,7 +233,10 @@ internal class AirbyteCatalogHelperTest {
 
   @Test
   internal fun `test that when validating a stream without a sync mode, the sync mode is set to full refresh and the stream is considered valid`() {
-    val airbyteStream = AirbyteStream()
+    val airbyteStream =
+      AirbyteStream(
+        name = "stream-name",
+      )
     val streamConfiguration = StreamConfiguration()
     streamConfiguration.syncMode = null
     val airbyteStreamConfiguration =
@@ -245,11 +254,14 @@ internal class AirbyteCatalogHelperTest {
 
   @Test
   internal fun `test that if the stream configuration contains an invalid sync mode, the stream is considered invalid`() {
-    val airbyteStream = AirbyteStream()
+    val airbyteStream =
+      AirbyteStream(
+        name = "stream-name",
+        supportedSyncModes = listOf(SyncMode.INCREMENTAL),
+      )
     val streamConfiguration = StreamConfiguration()
-    airbyteStream.supportedSyncModes = listOf(SyncMode.INCREMENTAL)
     streamConfiguration.syncMode = ConnectionSyncModeEnum.FULL_REFRESH_OVERWRITE
-    streamConfiguration.name = "stream-name"
+    streamConfiguration.name = airbyteStream.name
 
     val throwable =
       assertThrows(ConnectionConfigurationProblem::class.java) {
@@ -264,9 +276,12 @@ internal class AirbyteCatalogHelperTest {
 
   @Test
   internal fun `test that a stream configuration with FULL_REFRESH_APPEND is always considered to be valid`() {
-    val airbyteStream = AirbyteStream()
+    val airbyteStream =
+      AirbyteStream(
+        name = "stream-name",
+        supportedSyncModes = listOf(SyncMode.FULL_REFRESH),
+      )
     val streamConfiguration = StreamConfiguration()
-    airbyteStream.supportedSyncModes = listOf(SyncMode.FULL_REFRESH)
     streamConfiguration.syncMode = ConnectionSyncModeEnum.FULL_REFRESH_APPEND
     val airbyteStreamConfiguration =
       AirbyteCatalogHelper.updateAirbyteStreamConfiguration(
@@ -288,9 +303,12 @@ internal class AirbyteCatalogHelperTest {
 
   @Test
   internal fun `test that a stream configuration with FULL_REFRESH_OVERWRITE is always considered to be valid`() {
-    val airbyteStream = AirbyteStream()
+    val airbyteStream =
+      AirbyteStream(
+        name = "stream-name",
+        supportedSyncModes = listOf(SyncMode.FULL_REFRESH),
+      )
     val streamConfiguration = StreamConfiguration()
-    airbyteStream.supportedSyncModes = listOf(SyncMode.FULL_REFRESH)
     streamConfiguration.syncMode = ConnectionSyncModeEnum.FULL_REFRESH_OVERWRITE
     val airbyteStreamConfiguration =
       AirbyteCatalogHelper.updateAirbyteStreamConfiguration(
@@ -313,12 +331,15 @@ internal class AirbyteCatalogHelperTest {
   @Test
   internal fun `test that a stream configuration with INCREMENTAL_APPEND is only valid if the source defined cursor field is also valid`() {
     val cursorField = "cursor"
-    val airbyteStream = AirbyteStream()
+    val airbyteStream =
+      AirbyteStream(
+        name = "stream-name",
+        defaultCursorField = listOf(cursorField),
+        sourceDefinedCursor = true,
+        supportedSyncModes = listOf(SyncMode.INCREMENTAL),
+      )
     val airbyteStreamConfiguration = createAirbyteStreamConfiguration()
     val streamConfiguration = StreamConfiguration()
-    airbyteStream.defaultCursorField = listOf(cursorField)
-    airbyteStream.sourceDefinedCursor = true
-    airbyteStream.supportedSyncModes = listOf(SyncMode.INCREMENTAL)
     streamConfiguration.cursorField = listOf(cursorField)
     streamConfiguration.syncMode = ConnectionSyncModeEnum.INCREMENTAL_APPEND
 
@@ -338,12 +359,14 @@ internal class AirbyteCatalogHelperTest {
   internal fun `test that a stream configuration with INCREMENTAL_APPEND is invalid if the source defined cursor field is invalid`() {
     val cursorField = "cursor"
     val streamName = "stream-name"
-    val airbyteStream = AirbyteStream()
+    val airbyteStream =
+      AirbyteStream(
+        name = streamName,
+        defaultCursorField = listOf(cursorField),
+        sourceDefinedCursor = true,
+        supportedSyncModes = listOf(SyncMode.INCREMENTAL),
+      )
     val streamConfiguration = StreamConfiguration()
-    airbyteStream.defaultCursorField = listOf(cursorField)
-    airbyteStream.name = streamName
-    airbyteStream.sourceDefinedCursor = true
-    airbyteStream.supportedSyncModes = listOf(SyncMode.INCREMENTAL)
     streamConfiguration.cursorField = listOf("other")
     streamConfiguration.name = airbyteStream.name
     streamConfiguration.syncMode = ConnectionSyncModeEnum.INCREMENTAL_APPEND
@@ -370,12 +393,15 @@ internal class AirbyteCatalogHelperTest {
   @Test
   internal fun `test that a stream configuration with INCREMENTAL_APPEND is only valid if the source cursor field is also valid`() {
     val cursorField = "cursor"
-    val airbyteStream = AirbyteStream()
+    val airbyteStream =
+      AirbyteStream(
+        name = "stream-name",
+        defaultCursorField = listOf(cursorField),
+        jsonSchema = Jsons.deserialize("{\"properties\": {\"$cursorField\": {}}}"),
+        sourceDefinedCursor = true,
+        supportedSyncModes = listOf(SyncMode.INCREMENTAL),
+      )
     val streamConfiguration = StreamConfiguration()
-    airbyteStream.defaultCursorField = listOf(cursorField)
-    airbyteStream.jsonSchema = Jsons.deserialize("{\"properties\": {\"$cursorField\": {}}}")
-    airbyteStream.sourceDefinedCursor = false
-    airbyteStream.supportedSyncModes = listOf(SyncMode.INCREMENTAL)
     streamConfiguration.cursorField = listOf(cursorField)
     streamConfiguration.syncMode = ConnectionSyncModeEnum.INCREMENTAL_APPEND
     val airbyteStreamConfiguration =
@@ -401,13 +427,15 @@ internal class AirbyteCatalogHelperTest {
   internal fun `test that a stream configuration with INCREMENTAL_APPEND is invalid if the source cursor field is invalid`() {
     val cursorField = "cursor"
     val otherCursorField = "other"
-    val airbyteStream = AirbyteStream()
+    val airbyteStream =
+      AirbyteStream(
+        name = "name",
+        defaultCursorField = listOf(otherCursorField),
+        jsonSchema = Jsons.deserialize("{\"properties\": {\"$otherCursorField\": {}}}"),
+        sourceDefinedCursor = false,
+        supportedSyncModes = listOf(SyncMode.INCREMENTAL),
+      )
     val streamConfiguration = StreamConfiguration()
-    airbyteStream.defaultCursorField = listOf(otherCursorField)
-    airbyteStream.jsonSchema = Jsons.deserialize("{\"properties\": {\"$otherCursorField\": {}}}")
-    airbyteStream.name = "name"
-    airbyteStream.sourceDefinedCursor = false
-    airbyteStream.supportedSyncModes = listOf(SyncMode.INCREMENTAL)
     streamConfiguration.cursorField = listOf(cursorField)
     streamConfiguration.syncMode = ConnectionSyncModeEnum.INCREMENTAL_APPEND
     val airbyteStreamConfiguration =
@@ -439,13 +467,15 @@ internal class AirbyteCatalogHelperTest {
   @Test
   internal fun `test that a stream configuration with INCREMENTAL_APPEND is invalid if there is no cursor field`() {
     val cursorField = "cursor"
-    val airbyteStream = AirbyteStream()
+    val airbyteStream =
+      AirbyteStream(
+        name = "name",
+        defaultCursorField = listOf(),
+        jsonSchema = Jsons.deserialize("{\"properties\": {\"$cursorField\": {}}}"),
+        sourceDefinedCursor = false,
+        supportedSyncModes = listOf(SyncMode.INCREMENTAL),
+      )
     val streamConfiguration = StreamConfiguration()
-    airbyteStream.defaultCursorField = listOf()
-    airbyteStream.jsonSchema = Jsons.deserialize("{\"properties\": {\"$cursorField\": {}}}")
-    airbyteStream.name = "name"
-    airbyteStream.sourceDefinedCursor = false
-    airbyteStream.supportedSyncModes = listOf(SyncMode.INCREMENTAL)
     streamConfiguration.cursorField = listOf()
     streamConfiguration.syncMode = ConnectionSyncModeEnum.INCREMENTAL_APPEND
     val airbyteStreamConfiguration =
@@ -477,12 +507,15 @@ internal class AirbyteCatalogHelperTest {
   internal fun `test that an INCREMENTAL_DEDUPED_HISTORY stream is only valid if the source defined cursor and primary key field are also valid`() {
     val cursorField = "cursor"
     val primaryKey = "primary"
-    val airbyteStream = AirbyteStream()
+    val airbyteStream =
+      AirbyteStream(
+        name = "name",
+        defaultCursorField = listOf(cursorField),
+        jsonSchema = Jsons.deserialize("{\"properties\": {\"$cursorField\": {}, \"$primaryKey\": {}}}"),
+        sourceDefinedCursor = true,
+        supportedSyncModes = listOf(SyncMode.INCREMENTAL),
+      )
     val streamConfiguration = StreamConfiguration()
-    airbyteStream.defaultCursorField = listOf(cursorField)
-    airbyteStream.jsonSchema = Jsons.deserialize("{\"properties\": {\"$cursorField\": {}, \"$primaryKey\": {}}}")
-    airbyteStream.sourceDefinedCursor = true
-    airbyteStream.supportedSyncModes = listOf(SyncMode.INCREMENTAL)
     streamConfiguration.cursorField = listOf(cursorField)
     streamConfiguration.primaryKey = listOf(listOf(primaryKey))
     streamConfiguration.syncMode = ConnectionSyncModeEnum.INCREMENTAL_DEDUPED_HISTORY
@@ -510,12 +543,15 @@ internal class AirbyteCatalogHelperTest {
   internal fun `test that an INCREMENTAL_DEDUPED_HISTORY stream is only valid if the source cursor field and primary key field are also valid`() {
     val cursorField = "cursor"
     val primaryKey = "primary"
-    val airbyteStream = AirbyteStream()
+    val airbyteStream =
+      AirbyteStream(
+        name = "name",
+        defaultCursorField = listOf(cursorField),
+        jsonSchema = Jsons.deserialize("{\"properties\": {\"$cursorField\": {}, \"$primaryKey\": {}}}"),
+        sourceDefinedCursor = false,
+        supportedSyncModes = listOf(SyncMode.INCREMENTAL),
+      )
     val streamConfiguration = StreamConfiguration()
-    airbyteStream.defaultCursorField = listOf(cursorField)
-    airbyteStream.jsonSchema = Jsons.deserialize("{\"properties\": {\"$cursorField\": {}, \"$primaryKey\": {}}}")
-    airbyteStream.sourceDefinedCursor = false
-    airbyteStream.supportedSyncModes = listOf(SyncMode.INCREMENTAL)
     streamConfiguration.cursorField = listOf(cursorField)
     streamConfiguration.primaryKey = listOf(listOf(primaryKey))
     streamConfiguration.syncMode = ConnectionSyncModeEnum.INCREMENTAL_DEDUPED_HISTORY
@@ -554,33 +590,35 @@ internal class AirbyteCatalogHelperTest {
   }
 
   private fun createAirbyteCatalog(): AirbyteCatalog {
-    val airbyteCatalog = AirbyteCatalog()
     val streams = mutableListOf<AirbyteStreamAndConfiguration>()
     for (i in 1..5) {
-      val streamAndConfiguration = AirbyteStreamAndConfiguration()
-      val stream = AirbyteStream()
-      stream.name = "name$i"
-      stream.namespace = "namespace"
-      streamAndConfiguration.stream = stream
-      streamAndConfiguration.config = createAirbyteStreamConfiguration()
+      val stream =
+        AirbyteStream(
+          name = "name$i",
+          namespace = "namespace",
+        )
+      val streamAndConfiguration =
+        AirbyteStreamAndConfiguration(
+          config = createAirbyteStreamConfiguration(),
+          stream = stream,
+        )
       streams += streamAndConfiguration
     }
-    airbyteCatalog.streams(streams)
-    return airbyteCatalog
+    return AirbyteCatalog(streams = streams)
   }
 
   private fun createAirbyteStreamConfiguration(): AirbyteStreamConfiguration {
-    val airbyteStreamConfiguration = AirbyteStreamConfiguration()
-    airbyteStreamConfiguration.aliasName = "alias"
-    airbyteStreamConfiguration.cursorField = listOf("cursor")
-    airbyteStreamConfiguration.destinationSyncMode = DestinationSyncMode.APPEND
-    airbyteStreamConfiguration.fieldSelectionEnabled = true
-    airbyteStreamConfiguration.primaryKey = listOf(listOf("primary"))
-    airbyteStreamConfiguration.selected = false
-    airbyteStreamConfiguration.selectedFields = listOf(SelectedFieldInfo())
-    airbyteStreamConfiguration.suggested = false
-    airbyteStreamConfiguration.syncMode = SyncMode.INCREMENTAL
-    return airbyteStreamConfiguration
+    return AirbyteStreamConfiguration(
+      syncMode = SyncMode.INCREMENTAL,
+      destinationSyncMode = DestinationSyncMode.APPEND,
+      cursorField = listOf("cursor"),
+      primaryKey = listOf(listOf("primary")),
+      aliasName = "alias",
+      selected = false,
+      suggested = false,
+      fieldSelectionEnabled = true,
+      selectedFields = listOf(SelectedFieldInfo()),
+    )
   }
 
   private fun getSyncMode(connectionSyncMode: ConnectionSyncModeEnum): SyncMode {

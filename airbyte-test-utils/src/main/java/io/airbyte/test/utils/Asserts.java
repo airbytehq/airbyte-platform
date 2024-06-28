@@ -19,7 +19,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
-import io.airbyte.api.client.AirbyteApiClient;
+import dev.failsafe.Failsafe;
+import dev.failsafe.RetryPolicy;
 import io.airbyte.api.client.model.generated.ConnectionState;
 import io.airbyte.api.client.model.generated.StreamDescriptor;
 import io.airbyte.api.client.model.generated.StreamState;
@@ -28,6 +29,7 @@ import io.airbyte.api.client.model.generated.StreamStatusRead;
 import io.airbyte.api.client.model.generated.StreamStatusReadList;
 import io.airbyte.api.client.model.generated.StreamStatusRunState;
 import io.airbyte.db.Database;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -79,30 +81,36 @@ public class Asserts {
       throws Exception {
     // NOTE: this is an unusual use of retry. The intention is to tolerate eventual consistency if e.g.,
     // the sync is marked complete but the destination tables aren't finalized yet.
-    AirbyteApiClient.retryWithJitterThrows(() -> {
-      try {
-        Set<SchemaTableNamePair> sourceTables = new HashSet<>();
-        for (String inputSchema : inputSchemas) {
-          sourceTables.addAll(Databases.listAllTables(source, inputSchema));
-        }
+    Failsafe.with(RetryPolicy.builder()
+        .withBackoff(Duration.ofSeconds(JITTER_MAX_INTERVAL_SECS), Duration.ofSeconds(FINAL_INTERVAL_SECS))
+        .withMaxRetries(MAX_TRIES)
+        .build()).run(() -> assertSourceAndDestinationInSync(source, destination, inputSchemas, outputSchema, withNormalizedTable, withScdTable));
+  }
 
-        final Set<SchemaTableNamePair> expDestTables = addAirbyteGeneratedTables(outputSchema, withNormalizedTable, withScdTable, sourceTables);
+  private static void assertSourceAndDestinationInSync(final Database source,
+                                                       final Database destination,
+                                                       final Set<String> inputSchemas,
+                                                       final String outputSchema,
+                                                       final boolean withNormalizedTable,
+                                                       final boolean withScdTable)
+      throws Exception {
+    Set<SchemaTableNamePair> sourceTables = new HashSet<>();
+    for (String inputSchema : inputSchemas) {
+      sourceTables.addAll(Databases.listAllTables(source, inputSchema));
+    }
 
-        final Set<SchemaTableNamePair> destinationTables = Databases.listAllTables(destination, outputSchema);
-        assertEquals(expDestTables, destinationTables,
-            String.format("streams did not match.\n exp stream names: %s\n destination stream names: %s\n", expDestTables, destinationTables));
+    final Set<SchemaTableNamePair> expDestTables = addAirbyteGeneratedTables(outputSchema, withNormalizedTable, withScdTable, sourceTables);
 
-        for (final SchemaTableNamePair pair : sourceTables) {
-          final List<JsonNode> sourceRecords = Databases.retrieveRecordsFromDatabase(source, pair.getFullyQualifiedTableName());
-          // generate the raw stream with the correct schema
-          // retrieve and assert the recordds
-          assertRawDestinationContains(destination, sourceRecords, outputSchema, pair.tableName());
-        }
-      } catch (final Exception e) {
-        return e;
-      }
-      return null;
-    }, "assert source and destination in sync", JITTER_MAX_INTERVAL_SECS, FINAL_INTERVAL_SECS, MAX_TRIES);
+    final Set<SchemaTableNamePair> destinationTables = Databases.listAllTables(destination, outputSchema);
+    assertEquals(expDestTables, destinationTables,
+        String.format("streams did not match.\n exp stream names: %s\n destination stream names: %s\n", expDestTables, destinationTables));
+
+    for (final SchemaTableNamePair pair : sourceTables) {
+      final List<JsonNode> sourceRecords = Databases.retrieveRecordsFromDatabase(source, pair.getFullyQualifiedTableName());
+      // generate the raw stream with the correct schema
+      // retrieve and assert the records
+      assertRawDestinationContains(destination, sourceRecords, outputSchema, pair.tableName());
+    }
   }
 
   public static void assertRawDestinationContains(final Database dst,
@@ -194,7 +202,7 @@ public class Asserts {
    *
    * @param workspaceId The workspace that contains the connection.
    * @param connectionId The connection that just executed a sync or reset.
-   * @param jobInfoRead The job associated with the sync execution.
+   * @param jobId The job associated with the sync execution.
    * @param expectedRunState The expected stream status for each stream in the connection for the most
    *        recent job and attempt.
    * @param expectedJobType The expected type of the stream status.

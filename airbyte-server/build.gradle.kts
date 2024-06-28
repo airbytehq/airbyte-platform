@@ -4,18 +4,6 @@ plugins {
   id("io.airbyte.gradle.jvm.app")
   id("io.airbyte.gradle.docker")
   id("io.airbyte.gradle.publish")
-  kotlin("jvm")
-  kotlin("kapt")
-}
-
-configurations.all {
-  resolutionStrategy {
-    // Ensure that the versions defined in deps.toml are used)
-    // instead of versions from transitive dependencies)
-    // Force to avoid updated version(brought in transitively from Micronaut 3.8+)
-    // that is incompatible with our current Helm setup)
-    force(libs.flyway.core, libs.s3, libs.aws.java.sdk.s3, libs.sts, libs.aws.java.sdk.sts)
-  }
 }
 
 dependencies {
@@ -25,9 +13,9 @@ dependencies {
   annotationProcessor(libs.bundles.micronaut.annotation.processor)
   annotationProcessor(libs.micronaut.jaxrs.processor)
 
-  kapt(platform(libs.micronaut.platform))
-  kapt(libs.bundles.micronaut.annotation.processor)
-  kapt(libs.micronaut.jaxrs.processor)
+  ksp(platform(libs.micronaut.platform))
+  ksp(libs.bundles.micronaut.annotation.processor)
+  ksp(libs.micronaut.jaxrs.processor)
 
   implementation(platform(libs.micronaut.platform))
   implementation(libs.bundles.micronaut)
@@ -114,7 +102,7 @@ dependencies {
 // we want to be able to access the generated db files from config/init when we build the server docker image.)
 val copySeed = tasks.register<Copy>("copySeed") {
   from("${project(":airbyte-config:init").buildDir}/resources/main/config")
-  into("$buildDir/config_init/resources/main/config")
+  into("${project.layout.buildDirectory.get()}/config_init/resources/main/config")
   dependsOn(project(":airbyte-config:init").tasks.named("processResources"))
 }
 
@@ -163,13 +151,11 @@ airbyte {
   }
 
   spotbugs {
-    excludes = listOf(
-      "  <Match>\n" +
-        "    <Package name=\"io.airbyte.server.repositories.domain.*\" />\n" +
-        "    <!-- All args constructor used by builders trigger this error -->\n" +
-        "    <Bug pattern=\"NP_PARAMETER_MUST_BE_NONNULL_BUT_MARKED_AS_NULLABLE\" />\n" +
-        "  </Match>"
-    )
+      excludes = listOf("  <Match>\n" +
+              "    <Package name=\"io.airbyte.server.repositories.domain.*\" />\n" +
+              "    <!-- All args constructor used by builders trigger this error -->\n" +
+              "    <Bug pattern=\"NP_PARAMETER_MUST_BE_NONNULL_BUT_MARKED_AS_NULLABLE\" />\n" +
+              "  </Match>")
   }
 }
 
@@ -183,11 +169,9 @@ tasks.named<Test>("test") {
   )
 }
 
-// The DuplicatesStrategy will be required while this module is mixture of kotlin and java _with_ lombok dependencies.)
-// Kapt, by default, runs all annotation(processors and disables annotation(processing by javac, however)
-// this default behavior(breaks the lombok java annotation(processor.  To avoid(lombok breaking, kapt(has)
-// keepJavacAnnotationProcessors enabled, which causes duplicate META-INF files to be generated.)
-// Once lombok has been removed, this can also be removed.)
+// The DuplicatesStrategy will be required while this module is mixture of kotlin and java _with_ lombok dependencies.
+// By default, Gradle runs all annotation processors and disables annotation processing by javac, however.  Once lombok has
+// been removed, this can also be removed.
 tasks.withType<Jar>().configureEach {
   duplicatesStrategy = DuplicatesStrategy.EXCLUDE
 }

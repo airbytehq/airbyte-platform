@@ -77,6 +77,7 @@ interface ConnectionService {
     includeDeleted: Boolean = false,
     authorization: String?,
     userInfo: String?,
+    userId: UUID,
   ): ConnectionsResponse
 }
 
@@ -86,6 +87,7 @@ class ConnectionServiceImpl(
   private val configApiClient: ConfigApiClient,
   private val userService: UserService,
   private val sourceService: SourceService,
+  private val objectMapper: ObjectMapper,
 ) : ConnectionService {
   companion object {
     private val log = LoggerFactory.getLogger(ConnectionServiceImpl::class.java)
@@ -121,7 +123,6 @@ class ConnectionServiceImpl(
     ConfigClientErrorHandler.handleCreateConnectionError(response, connectionCreateRequest)
     log.debug(HTTP_RESPONSE_BODY_DEBUG_MESSAGE + response.body())
 
-    val objectMapper = ObjectMapper()
     return try {
       ConnectionReadMapper.from(
         objectMapper.readValue(
@@ -144,7 +145,7 @@ class ConnectionServiceImpl(
     authorization: String?,
     userInfo: String?,
   ) {
-    val connectionIdRequestBody = ConnectionIdRequestBody().connectionId(connectionId)
+    val connectionIdRequestBody = ConnectionIdRequestBody(connectionId = connectionId)
     val response =
       try {
         configApiClient.deleteConnection(connectionIdRequestBody, authorization, userInfo)
@@ -164,8 +165,7 @@ class ConnectionServiceImpl(
     authorization: String?,
     userInfo: String?,
   ): ConnectionResponse {
-    val connectionIdRequestBody = ConnectionIdRequestBody()
-    connectionIdRequestBody.connectionId = connectionId
+    val connectionIdRequestBody = ConnectionIdRequestBody(connectionId = connectionId)
 
     val response =
       try {
@@ -219,7 +219,6 @@ class ConnectionServiceImpl(
     ConfigClientErrorHandler.handleError(response, connectionId.toString())
     log.debug(HTTP_RESPONSE_BODY_DEBUG_MESSAGE + response.body())
 
-    val objectMapper = ObjectMapper()
     return try {
       ConnectionReadMapper.from(
         objectMapper.readValue(
@@ -244,18 +243,21 @@ class ConnectionServiceImpl(
     includeDeleted: Boolean,
     authorization: String?,
     userInfo: String?,
+    userId: UUID,
   ): ConnectionsResponse {
-    val pagination: Pagination = Pagination().pageSize(limit).rowOffset(offset)
+    val pagination = Pagination(pageSize = limit, rowOffset = offset)
     val workspaceIdsToQuery =
       workspaceIds.ifEmpty {
         userService.getAllWorkspaceIdsForUser(authorization ?: System.getenv(AIRBYTE_API_AUTH_HEADER_VALUE), userInfo)
       }
 
     val listConnectionsForWorkspacesRequestBody =
-      ListConnectionsForWorkspacesRequestBody()
-        .workspaceIds(workspaceIdsToQuery)
-        .includeDeleted(includeDeleted)
-        .pagination(pagination)
+      ListConnectionsForWorkspacesRequestBody(
+        workspaceIds = workspaceIdsToQuery,
+        includeDeleted = includeDeleted,
+        pagination = pagination,
+        userId = userId,
+      )
 
     val response =
       try {

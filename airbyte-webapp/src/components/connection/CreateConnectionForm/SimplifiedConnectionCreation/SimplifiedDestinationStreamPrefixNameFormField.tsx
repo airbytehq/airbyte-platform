@@ -23,7 +23,7 @@ export const SimplifiedDestinationStreamPrefixNameFormField: React.FC<{ disabled
       name="prefix"
       control={control}
       render={({ field }) => (
-        <FormFieldLayout alignItems="flex-start" nextSizing>
+        <FormFieldLayout alignItems="flex-start" nextSizing data-testid="stream-prefix">
           <ControlLabels
             htmlFor={controlId}
             label={
@@ -50,10 +50,11 @@ export const SimplifiedDestinationStreamPrefixNameFormField: React.FC<{ disabled
               value={field.value}
               onChange={field.onChange}
               disabled={disabled}
+              data-testid="stream-prefix-input"
             />
           </InputContainer>
           {prefix && (
-            <Text>
+            <Text data-testid="stream-prefix-preview">
               <FormattedMessage id="form.prefix.example" values={{ prefix }} />
             </Text>
           )}

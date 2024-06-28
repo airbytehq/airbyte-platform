@@ -111,11 +111,6 @@ class OrchestratorEnvSingleton(
       orchestratorEnvMap(connectionId)
         .filterNot { env ->
           secretEnvMap().containsKey(env.key)
-            .also {
-              if (it) {
-                logger.info { "Skipping env-var ${env.key} as it was already defined as a secret. " }
-              }
-            }
         }
         .map { EnvVar(it.key, it.value, null) }
         .toList()

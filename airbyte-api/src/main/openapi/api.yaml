@@ -1277,6 +1277,8 @@ components:
       enum:
         - sync
         - reset
+        - refresh
+        - clear
       type: string
     SourceCreateRequest:
       required:

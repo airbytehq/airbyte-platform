@@ -21,12 +21,14 @@ import { useGetDestinationFromSearchParams, useGetSourceFromSearchParams } from 
 import { useCurrentWorkspaceLink } from "area/workspace/utils";
 import { PageTrackingCodes, useTrackPage } from "core/services/analytics";
 import { useConnectionFormService } from "hooks/services/ConnectionForm/ConnectionFormService";
+import { useExperiment } from "hooks/services/Experiment";
 import { useFormChangeTrackerService } from "hooks/services/FormChangeTracker";
 import { ConnectionRoutePaths, RoutePaths } from "pages/routePaths";
 
 import styles from "./SimplifiedConnectionConfiguration.module.scss";
 import { SimplifiedConnectionsSettingsCard } from "./SimplifiedConnectionSettingsCard";
 import { SimplifiedSchemaQuestionnaire } from "./SimplifiedSchemaQuestionnaire";
+import { SyncCatalogCardNext } from "../../ConnectionForm/SyncCatalogCardNext";
 import { CREATE_CONNECTION_FORM_ID } from "../CreateConnectionForm";
 
 export const SimplifiedConnectionConfiguration: React.FC = () => {
@@ -56,6 +58,7 @@ export const SimplifiedConnectionConfiguration: React.FC = () => {
 
 const SimplifiedConnectionCreationReplication: React.FC = () => {
   useTrackPage(PageTrackingCodes.CONNECTIONS_NEW_SELECT_STREAMS);
+  const isSyncCatalogV2Enabled = useExperiment("connection.syncCatalogV2", false);
   const { formatMessage } = useIntl();
   const { isDirty } = useFormState<FormConnectionFormValues>();
   const { trackFormChange } = useFormChangeTrackerService();
@@ -73,7 +76,7 @@ const SimplifiedConnectionCreationReplication: React.FC = () => {
       >
         <SimplifiedSchemaQuestionnaire />
       </Card>
-      <SyncCatalogCard />
+      {isSyncCatalogV2Enabled ? <SyncCatalogCardNext /> : <SyncCatalogCard />}
     </>
   );
 };
@@ -157,11 +160,12 @@ const FirstNav: React.FC = () => {
               // we're navigating to the next step which retains the creation form's state
               clearFormChange(CREATE_CONNECTION_FORM_ID);
             }}
+            data-testid="next-creation-page"
           >
             <FormattedMessage id="connectionForm.nextButton" />
           </Link>
         ) : (
-          <Button disabled>
+          <Button disabled data-testid="next-creation-page">
             <FormattedMessage id="connectionForm.nextButton" />
           </Button>
         )}

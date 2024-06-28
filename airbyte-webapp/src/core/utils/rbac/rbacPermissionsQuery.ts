@@ -1,4 +1,4 @@
-import { useGetWorkspace, useIsInstanceAdminEnabled } from "core/api";
+import { useGetWorkspace } from "core/api";
 import { PermissionRead } from "core/api/types/AirbyteClient";
 
 export const RbacResourceHierarchy = ["INSTANCE", "ORGANIZATION", "WORKSPACE"] as const;
@@ -37,58 +37,71 @@ export const partitionPermissionType = (permissionType: RbacPermission["permissi
 /**
  * Don't call this outside of `core/utils/rbac`. Always use the `useRbac()` or (better) `useIntent()` hook instead.
  */
-export const useRbacPermissionsQuery = (allPermissions: RbacPermission[], query: RbacQuery) => {
-  const queryRoleHierarchy = RbacRoleHierarchy.indexOf(query.role);
-  const queryResourceHierarchy = RbacResourceHierarchy.indexOf(query.resourceType);
+export const useRbacPermissionsQuery = (permissions: RbacPermission[], queries: RbacQuery[]) => {
+  // to satisfy React's rule of hooks, we have to isolate a singiular workspace ID
+  // from the queries; this is fine, because the queries list is built up from intents
+  // which are applied to at most a single workspace
+  const queriedWorkspaceIdPermissions = queries.filter((query) => query.resourceType === "WORKSPACE");
+  const queriedWorkspaceIds = queriedWorkspaceIdPermissions
+    .map((query) => query.resourceId)
+    .reduce((acc, item) => {
+      if (item) {
+        acc.add(item);
+      }
+      return acc;
+    }, new Set<string>());
 
-  const owningOrganizationId = useGetWorkspace(query.resourceId ?? "", {
-    enabled: query.resourceType === "WORKSPACE" && !!query.resourceId,
-  })?.organizationId;
-
-  const isInstanceAdminEnabled = useIsInstanceAdminEnabled();
-  let permissions = allPermissions;
-  if (!isInstanceAdminEnabled) {
-    const isInstanceAdminIdx = allPermissions.findIndex((permission) => permission.permissionType === "instance_admin");
-    if (isInstanceAdminIdx !== -1) {
-      permissions = [...allPermissions];
-      permissions.splice(isInstanceAdminIdx, 1);
-    }
+  if (queriedWorkspaceIds.size > 1) {
+    throw new Error(
+      `Invalid RBAC query: Queries for multiple workspace IDs: ${Array.from(queriedWorkspaceIds).join(", ")}`
+    );
   }
 
-  return permissions.some((permission) => {
-    const [permissionResource, permissionRole] = partitionPermissionType(permission.permissionType);
+  const queriedWorkspaceId = queriedWorkspaceIds.size === 1 ? Array.from(queriedWorkspaceIds)[0] : undefined;
 
-    const permissionRoleHierarchy = RbacRoleHierarchy.indexOf(permissionRole);
-    const permissionResourceHierarchy = RbacResourceHierarchy.indexOf(permissionResource);
+  const owningOrganizationId = useGetWorkspace(queriedWorkspaceId ?? "", {
+    enabled: !!queriedWorkspaceId,
+  })?.organizationId;
 
-    const { organizationId, workspaceId } = permission;
+  return queries.some((query) => {
+    const queryRoleHierarchy = RbacRoleHierarchy.indexOf(query.role);
+    const queryResourceHierarchy = RbacResourceHierarchy.indexOf(query.resourceType);
 
-    if (query.resourceType === "WORKSPACE") {
-      if (workspaceId && query.resourceId !== workspaceId) {
-        // workspace permission applies to a different workspace
-        return false;
-      }
+    return permissions.some((permission) => {
+      const [permissionResource, permissionRole] = partitionPermissionType(permission.permissionType);
 
-      // is this permission for an organization
-      if (organizationId) {
-        if (!query.resourceId) {
+      const permissionRoleHierarchy = RbacRoleHierarchy.indexOf(permissionRole);
+      const permissionResourceHierarchy = RbacResourceHierarchy.indexOf(permissionResource);
+
+      const { organizationId, workspaceId } = permission;
+
+      if (query.resourceType === "WORKSPACE") {
+        if (workspaceId && query.resourceId !== workspaceId) {
+          // workspace permission applies to a different workspace
           return false;
         }
 
-        if (owningOrganizationId !== organizationId) {
-          // this organization permission does not apply to the workspace request
+        // is this permission for an organization
+        if (organizationId) {
+          if (!query.resourceId) {
+            return false;
+          }
+
+          if (owningOrganizationId !== organizationId) {
+            // this organization permission does not apply to the workspace request
+            return false;
+          }
+        }
+      }
+
+      if (query.resourceType === "ORGANIZATION") {
+        if (organizationId && query.resourceId !== organizationId) {
+          // organization permission applies to a different organization
           return false;
         }
       }
-    }
 
-    if (query.resourceType === "ORGANIZATION") {
-      if (organizationId && query.resourceId !== organizationId) {
-        // organization permission applies to a different organization
-        return false;
-      }
-    }
-
-    return permissionRoleHierarchy <= queryRoleHierarchy && permissionResourceHierarchy <= queryResourceHierarchy;
+      return permissionRoleHierarchy <= queryRoleHierarchy && permissionResourceHierarchy <= queryResourceHierarchy;
+    });
   });
 };

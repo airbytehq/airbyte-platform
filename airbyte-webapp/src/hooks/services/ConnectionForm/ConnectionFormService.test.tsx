@@ -36,6 +36,9 @@ jest.mock("core/api", () => ({
   useSourceDefinition: () => mockSourceDefinition,
   useDestinationDefinition: () => mockDestinationDefinition,
   HttpError: jest.fn(),
+  HttpProblem: {
+    isTypeOrSubtype: jest.fn(),
+  },
 }));
 
 describe("ConnectionFormService", () => {
@@ -94,7 +97,7 @@ describe("ConnectionFormService", () => {
       });
 
       expect(result.current.getErrorMessage(false)).toBe(
-        "The form is invalid. Please make sure that all fields are correct."
+        "Unable to save the connection. Review the errors above to finish setup."
       );
     });
 
@@ -120,7 +123,7 @@ describe("ConnectionFormService", () => {
       });
 
       expect(result.current.getErrorMessage(false)).toBe(
-        "The form is invalid. Please make sure that all fields are correct."
+        "Unable to save the connection. Review the errors above to finish setup."
       );
     });
 

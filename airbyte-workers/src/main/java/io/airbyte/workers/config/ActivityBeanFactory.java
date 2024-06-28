@@ -18,18 +18,16 @@ import io.airbyte.workers.temporal.scheduling.activities.ConfigFetchActivity;
 import io.airbyte.workers.temporal.scheduling.activities.FeatureFlagFetchActivity;
 import io.airbyte.workers.temporal.scheduling.activities.GenerateInputActivity;
 import io.airbyte.workers.temporal.scheduling.activities.JobCreationAndStatusUpdateActivity;
-import io.airbyte.workers.temporal.scheduling.activities.NotifyActivity;
 import io.airbyte.workers.temporal.scheduling.activities.RecordMetricActivity;
 import io.airbyte.workers.temporal.scheduling.activities.RetryStatePersistenceActivity;
 import io.airbyte.workers.temporal.scheduling.activities.RouteToSyncTaskQueueActivity;
 import io.airbyte.workers.temporal.scheduling.activities.StreamResetActivity;
 import io.airbyte.workers.temporal.scheduling.activities.WorkflowConfigActivity;
 import io.airbyte.workers.temporal.spec.SpecActivity;
-import io.airbyte.workers.temporal.sync.DbtTransformationActivity;
 import io.airbyte.workers.temporal.sync.NormalizationActivity;
-import io.airbyte.workers.temporal.sync.NormalizationSummaryCheckActivity;
 import io.airbyte.workers.temporal.sync.RefreshSchemaActivity;
 import io.airbyte.workers.temporal.sync.ReplicationActivity;
+import io.airbyte.workers.temporal.sync.ReportRunTimeActivity;
 import io.airbyte.workers.temporal.sync.WebhookOperationActivity;
 import io.airbyte.workers.temporal.sync.WorkloadFeatureFlagActivity;
 import io.micronaut.context.annotation.Factory;
@@ -115,22 +113,13 @@ public class ActivityBeanFactory {
   public List<Object> syncActivities(
                                      final ReplicationActivity replicationActivity,
                                      final NormalizationActivity normalizationActivity,
-                                     final DbtTransformationActivity dbtTransformationActivity,
-                                     final NormalizationSummaryCheckActivity normalizationSummaryCheckActivity,
                                      final WebhookOperationActivity webhookOperationActivity,
                                      final ConfigFetchActivity configFetchActivity,
                                      final RefreshSchemaActivity refreshSchemaActivity,
-                                     final WorkloadFeatureFlagActivity workloadFeatureFlagActivity) {
-    return List.of(replicationActivity, normalizationActivity, dbtTransformationActivity, normalizationSummaryCheckActivity,
-        webhookOperationActivity, configFetchActivity, refreshSchemaActivity, workloadFeatureFlagActivity);
-  }
-
-  @Singleton
-  @Requires(env = WorkerMode.CONTROL_PLANE)
-  @Named("notificationActivities")
-  public List<Object> notificationActivities(
-                                             final NotifyActivity notifyActivity) {
-    return List.of(notifyActivity);
+                                     final WorkloadFeatureFlagActivity workloadFeatureFlagActivity,
+                                     final ReportRunTimeActivity reportRunTimeActivity) {
+    return List.of(replicationActivity, normalizationActivity, webhookOperationActivity, configFetchActivity,
+        refreshSchemaActivity, workloadFeatureFlagActivity, reportRunTimeActivity);
   }
 
   @Singleton

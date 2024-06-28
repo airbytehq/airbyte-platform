@@ -73,7 +73,7 @@ sourceSets.main.java.srcDirs (
 sourceSets {
   main {
     java {
-      srcDirs "$buildDir/generated/<db-name>Database/src/main/java"
+      srcDirs "${project.layout.buildDirectory.get()}/generated/<db-name>Database/src/main/java"
     }
   }
 }

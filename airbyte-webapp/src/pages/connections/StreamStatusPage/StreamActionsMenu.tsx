@@ -4,12 +4,12 @@ import { FormattedMessage, useIntl } from "react-intl";
 import { useNavigate } from "react-router-dom";
 
 import { useConnectionSyncContext } from "components/connection/ConnectionSync/ConnectionSyncContext";
-import { StreamWithStatus } from "components/connection/StreamStatus/streamStatusUtils";
 import { Box } from "components/ui/Box";
 import { Button } from "components/ui/Button";
 import { DropdownMenu, DropdownMenuOptionType } from "components/ui/DropdownMenu";
 import { Text } from "components/ui/Text";
 
+import { useDestinationDefinitionVersion } from "core/api";
 import { DestinationSyncMode, SyncMode } from "core/api/types/AirbyteClient";
 import { useConfirmationModalService } from "hooks/services/ConfirmationModal";
 import { useConnectionFormService } from "hooks/services/ConnectionForm/ConnectionFormService";
@@ -17,73 +17,89 @@ import { useExperiment } from "hooks/services/Experiment";
 import { useModalService } from "hooks/services/Modal";
 import { ConnectionRoutePaths } from "pages/routePaths";
 
-import { ConnectionRefreshStreamModal } from "./ConnectionRefreshStreamModal";
 import styles from "./StreamActionsMenu.module.scss";
+import { ConnectionRefreshModal } from "../ConnectionSettingsPage/ConnectionRefreshModal";
 
 interface StreamActionsMenuProps {
-  streamState: StreamWithStatus;
+  streamName: string;
+  streamNamespace?: string;
 }
 
-export const StreamActionsMenu: React.FC<StreamActionsMenuProps> = ({ streamState }) => {
+export const StreamActionsMenu: React.FC<StreamActionsMenuProps> = ({ streamName, streamNamespace }) => {
+  const isSyncCatalogV2Enabled = useExperiment("connection.syncCatalogV2", false);
   const { formatMessage } = useIntl();
   const navigate = useNavigate();
-  const { syncStarting, jobSyncRunning, resetStarting, jobResetRunning, resetStreams, refreshStreams } =
-    useConnectionSyncContext();
-  const newRefreshTypes = useExperiment("platform.activate-refreshes", false);
-  const destinationSupportsTruncateRefreshes = false; // for local testing.  this will be flagged on _only_ for a dev destination starting later in q1b.
-  const destinationSupportsMergeRefreshes = false; // for local testing.  this will be flagged on _only_ for a dev destination starting later in q1b.
-  const { openModal } = useModalService();
   const { mode, connection } = useConnectionFormService();
+  const {
+    syncStarting,
+    jobSyncRunning,
+    clearStarting: resetStarting,
+    jobClearRunning: jobResetRunning,
+    refreshStarting,
+    jobRefreshRunning,
+    clearStreams: resetStreams,
+    refreshStreams,
+  } = useConnectionSyncContext();
+
+  const { supportsRefreshes: destinationSupportsRefreshes } = useDestinationDefinitionVersion(
+    connection.destination.destinationId
+  );
   const { openConfirmationModal, closeConfirmationModal } = useConfirmationModalService();
+  const { openModal } = useModalService();
 
   const catalogStream = connection.syncCatalog.streams.find(
-    (catalogStream) =>
-      catalogStream.stream?.name === streamState.streamName &&
-      catalogStream.stream?.namespace === streamState.streamNamespace
+    (catalogStream) => catalogStream.stream?.name === streamName && catalogStream.stream?.namespace === streamNamespace
   );
 
-  /**
-   * In order to refresh a stream, both the destination AND the sync mode must support one of the refresh modes
-   * Currently, destination support is simply hardcoded in lines 32-33.  However, we will be moving to a feature flag
-   * and/or destination metadata support before release.
-   */
+  const disableSyncActions =
+    syncStarting ||
+    jobSyncRunning ||
+    resetStarting ||
+    jobResetRunning ||
+    refreshStarting ||
+    jobRefreshRunning ||
+    mode === "readonly";
+
   const { canMerge, canTruncate } = useMemo(() => {
     const hasIncremental = catalogStream?.config?.syncMode === SyncMode.incremental;
     const hasAppendDedupe = catalogStream?.config?.destinationSyncMode === DestinationSyncMode.append_dedup;
 
     return {
-      canMerge: hasIncremental && destinationSupportsMergeRefreshes,
-      canTruncate: hasIncremental && hasAppendDedupe && destinationSupportsTruncateRefreshes,
+      canMerge: hasIncremental && destinationSupportsRefreshes,
+      canTruncate: hasIncremental && hasAppendDedupe && destinationSupportsRefreshes,
     };
-  }, [
-    catalogStream?.config?.destinationSyncMode,
-    catalogStream?.config?.syncMode,
-    destinationSupportsMergeRefreshes,
-    destinationSupportsTruncateRefreshes,
-  ]);
+  }, [catalogStream?.config?.destinationSyncMode, catalogStream?.config?.syncMode, destinationSupportsRefreshes]);
 
-  // the platform must support refresh operations AND the stream must support at least one of the refresh types
-  const showRefreshOption = newRefreshTypes && (canMerge || canTruncate);
+  const showRefreshOption = canMerge || canTruncate;
 
   if (!catalogStream) {
     return null;
   }
 
   const options: DropdownMenuOptionType[] = [
-    {
-      displayName: formatMessage({ id: "connection.stream.actions.showInReplicationTable" }),
-      value: "showInReplicationTable",
-    },
-    {
-      displayName: formatMessage({ id: "connection.stream.actions.openDetails" }),
-      value: "openDetails",
-    },
+    ...(isSyncCatalogV2Enabled
+      ? [
+          {
+            displayName: formatMessage({ id: "connection.stream.actions.edit" }),
+            value: "editStream",
+          },
+        ]
+      : [
+          {
+            displayName: formatMessage({ id: "connection.stream.actions.showInReplicationTable" }),
+            value: "showInReplicationTable",
+          },
+          {
+            displayName: formatMessage({ id: "connection.stream.actions.openDetails" }),
+            value: "openDetails",
+          },
+        ]),
     ...(showRefreshOption
       ? [
           {
             displayName: formatMessage({ id: "connection.stream.actions.refreshStream" }),
             value: "refreshStream",
-            disabled: syncStarting || jobSyncRunning || resetStarting || jobResetRunning || mode === "readonly",
+            disabled: disableSyncActions,
           },
         ]
       : []),
@@ -98,9 +114,9 @@ export const StreamActionsMenu: React.FC<StreamActionsMenuProps> = ({ streamStat
   ];
 
   const onOptionClick = async ({ value }: DropdownMenuOptionType) => {
-    if (value === "showInReplicationTable" || value === "openDetails") {
+    if (value === "showInReplicationTable" || value === "openDetails" || value === "editStream") {
       navigate(`../${ConnectionRoutePaths.Replication}`, {
-        state: { namespace: streamState?.streamNamespace, streamName: streamState?.streamName, action: value },
+        state: { namespace: streamNamespace, streamName, action: value },
       });
     }
 
@@ -111,21 +127,18 @@ export const StreamActionsMenu: React.FC<StreamActionsMenuProps> = ({ streamStat
           <FormattedMessage
             id="connection.stream.actions.refreshStream.confirm.title"
             values={{
-              streamName: (
-                <span className={styles.streamActionsMenu__clearDataModalStreamName}>{streamState.streamName}</span>
-              ),
+              streamName: <span className={styles.streamActionsMenu__clearDataModalStreamName}>{streamName}</span>,
             }}
           />
         ),
         content: ({ onComplete, onCancel }) => {
           return (
-            <ConnectionRefreshStreamModal
+            <ConnectionRefreshModal
+              refreshScope="stream"
               onComplete={onComplete}
               onCancel={onCancel}
-              canTruncate={canTruncate}
-              canMerge={canMerge}
-              streamNamespace={streamState.streamNamespace}
-              streamName={streamState.streamName}
+              streamsSupportingMergeRefresh={canMerge ? [{ streamNamespace, streamName }] : []}
+              streamsSupportingTruncateRefresh={canTruncate ? [{ streamNamespace, streamName }] : []}
               refreshStreams={refreshStreams}
             />
           );
@@ -139,9 +152,7 @@ export const StreamActionsMenu: React.FC<StreamActionsMenuProps> = ({ streamStat
           <FormattedMessage
             id="connection.stream.actions.clearData.confirm.title"
             values={{
-              streamName: (
-                <span className={styles.streamActionsMenu__clearDataModalStreamName}>{streamState.streamName}</span>
-              ),
+              streamName: <span className={styles.streamActionsMenu__clearDataModalStreamName}>{streamName}</span>,
             }}
           />
         ),
@@ -156,7 +167,7 @@ export const StreamActionsMenu: React.FC<StreamActionsMenuProps> = ({ streamStat
         submitButtonText: "connection.stream.actions.clearData.confirm.submit",
         cancelButtonText: "connection.stream.actions.clearData.confirm.cancel",
         onSubmit: async () => {
-          await resetStreams([{ streamNamespace: streamState.streamNamespace, streamName: streamState.streamName }]);
+          await resetStreams([{ streamNamespace, streamName }]);
           closeConfirmationModal();
         },
       });

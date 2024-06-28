@@ -99,12 +99,12 @@ class WorkspaceFilterTest extends BaseConfigDatabaseTest {
     // create actors
     database.transaction(
         ctx -> ctx
-            .insertInto(ACTOR, ACTOR.WORKSPACE_ID, ACTOR.ID, ACTOR.ACTOR_DEFINITION_ID, ACTOR.DEFAULT_VERSION_ID, ACTOR.NAME, ACTOR.CONFIGURATION,
+            .insertInto(ACTOR, ACTOR.WORKSPACE_ID, ACTOR.ID, ACTOR.ACTOR_DEFINITION_ID, ACTOR.NAME, ACTOR.CONFIGURATION,
                 ACTOR.ACTOR_TYPE)
-            .values(WORKSPACE_ID_0, ACTOR_ID_0, SRC_DEF_ID, SRC_DEF_VER_ID, "ACTOR-0", JSONB.valueOf("{}"), ActorType.source)
-            .values(WORKSPACE_ID_1, ACTOR_ID_1, SRC_DEF_ID, SRC_DEF_VER_ID, "ACTOR-1", JSONB.valueOf("{}"), ActorType.source)
-            .values(WORKSPACE_ID_2, ACTOR_ID_2, DST_DEF_ID, DST_DEF_VER_ID, "ACTOR-2", JSONB.valueOf("{}"), ActorType.source)
-            .values(WORKSPACE_ID_3, ACTOR_ID_3, DST_DEF_ID, DST_DEF_VER_ID, "ACTOR-3", JSONB.valueOf("{}"), ActorType.source)
+            .values(WORKSPACE_ID_0, ACTOR_ID_0, SRC_DEF_ID, "ACTOR-0", JSONB.valueOf("{}"), ActorType.source)
+            .values(WORKSPACE_ID_1, ACTOR_ID_1, SRC_DEF_ID, "ACTOR-1", JSONB.valueOf("{}"), ActorType.source)
+            .values(WORKSPACE_ID_2, ACTOR_ID_2, DST_DEF_ID, "ACTOR-2", JSONB.valueOf("{}"), ActorType.source)
+            .values(WORKSPACE_ID_3, ACTOR_ID_3, DST_DEF_ID, "ACTOR-3", JSONB.valueOf("{}"), ActorType.source)
             .execute());
     // create connections
     database.transaction(

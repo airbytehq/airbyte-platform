@@ -1,6 +1,6 @@
 import { Tab } from "@headlessui/react";
 import classNames from "classnames";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import { FlexContainer } from "components/ui/Flex";
 import { Text } from "components/ui/Text";
@@ -22,6 +22,11 @@ export interface TabData {
 
 export const TabbedDisplay: React.FC<TabbedDisplayProps> = ({ className, tabs, defaultTabIndex = 0 }) => {
   const [selectedIndex, setSelectedIndex] = useState(defaultTabIndex);
+  useEffect(() => {
+    if (selectedIndex >= tabs.length) {
+      setSelectedIndex(defaultTabIndex);
+    }
+  }, [defaultTabIndex, selectedIndex, tabs.length]);
 
   return (
     <FlexContainer className={classNames(className, styles.container)} direction="column">

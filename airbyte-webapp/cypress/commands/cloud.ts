@@ -16,11 +16,22 @@ Cypress.Commands.add("login", (user: TestUserCredentials = testUser) => {
   }
   cy.visit("/login");
 
-  cy.get("button").contains("Continue with Email").click();
-  cy.get("input[name=username]").type(testUser.email);
-  cy.get("input[name=password]").type(testUser.password);
-  cy.get("input[name=login]").click();
+  cy.get("button")
+    .contains("Continue with Email", { timeout: Cypress.config("pageLoadTimeout") })
+    .click();
 
+  const fillOutLoginForm = (testUser: TestUserCredentials) => {
+    cy.get("input[name=username]").type(testUser.email);
+    cy.get("input[name=password]").type(testUser.password);
+    cy.get("input[name=login]").click();
+  };
+
+  // Keycloak auth may redirect to a different URL to load the login page.
+  // If so, set the LOGIN_URL cypress env to that URL to allow the login to succeed.
+  // If not, set the LOGIN_URL to null to use the base URL as the login URL.
+  Cypress.env("LOGIN_URL")
+    ? cy.origin(Cypress.env("LOGIN_URL"), { args: testUser }, fillOutLoginForm)
+    : fillOutLoginForm(testUser);
   cy.hasNavigatedTo("/workspaces");
 });
 

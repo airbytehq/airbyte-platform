@@ -13,7 +13,9 @@ $iconHeight: 38px;
   box-shadow: none;
   background-color: colors.$grey-30;
   border-radius: variables.$border-radius-md;
-  transition: color variables.$transition, border-color variables.$transition;
+  transition:
+    color variables.$transition,
+    border-color variables.$transition;
 
   &:only-child {
     grid-column: 2 / 3;

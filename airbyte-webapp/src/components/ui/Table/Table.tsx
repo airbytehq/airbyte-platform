@@ -9,7 +9,10 @@ import {
 } from "@tanstack/react-table";
 import classNames from "classnames";
 import React, { PropsWithChildren } from "react";
+import { FormattedMessage } from "react-intl";
 import { TableVirtuoso, TableComponents, ItemProps } from "react-virtuoso";
+
+import { Text } from "components/ui/Text";
 
 import { SortableTableHeader } from "./SortableTableHeader";
 import styles from "./Table.module.scss";
@@ -44,6 +47,10 @@ export interface TableProps<T> {
     React.ComponentProps<typeof TableVirtuoso>,
     "data" | "components" | "totalCount" | "fixedHeaderContent"
   >;
+  /**
+   * Custom placeholder to be shown when the table is empty. Defaults to a simple "No data" message.
+   */
+  customEmptyPlaceholder?: React.ReactElement;
 }
 
 export const Table = <T,>({
@@ -62,6 +69,7 @@ export const Table = <T,>({
   initialSortBy,
   virtualized = false,
   virtualizedProps,
+  customEmptyPlaceholder,
 }: PropsWithChildren<TableProps<T>>) => {
   const table = useReactTable({
     columns,
@@ -192,6 +200,18 @@ export const Table = <T,>({
       </tr>
     ));
 
+  const EmptyPlaceholder: TableComponents["EmptyPlaceholder"] = () => (
+    <tbody>
+      <tr className={classNames(styles.tr, styles.emptyPlaceholder)}>
+        <td className={styles.td} colSpan={columns.length} style={{ textAlign: "center" }}>
+          <Text bold color="grey" align="center">
+            {customEmptyPlaceholder ? customEmptyPlaceholder : <FormattedMessage id="tables.empty" />}
+          </Text>
+        </td>
+      </tr>
+    </tbody>
+  );
+
   return virtualized ? (
     <TableVirtuoso<T>
       // the parent container should have exact height to make "AutoSizer" work properly
@@ -202,6 +222,7 @@ export const Table = <T,>({
         Table,
         TableHead,
         TableRow: TableRowVirtualized,
+        EmptyPlaceholder,
       }}
       fixedHeaderContent={headerContent}
     />
@@ -213,11 +234,15 @@ export const Table = <T,>({
       data-testid={testId}
     >
       <thead className={classNames({ [styles["thead--sticky"]]: stickyHeaders })}>{headerContent()}</thead>
-      <tbody>
-        {rows.map((row) => (
-          <TableRow key={`table-row-${row.id}`} row={row} />
-        ))}
-      </tbody>
+      {rows.length === 0 ? (
+        <EmptyPlaceholder />
+      ) : (
+        <tbody>
+          {rows.map((row) => (
+            <TableRow key={`table-row-${row.id}`} row={row} />
+          ))}
+        </tbody>
+      )}
     </table>
   );
 };

@@ -76,3 +76,7 @@
   padding: variables.$spacing-md;
   border-radius: variables.$border-radius-xs;
 }
+
+.yamlError {
+  white-space: pre-wrap;
+}

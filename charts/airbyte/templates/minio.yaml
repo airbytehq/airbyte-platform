@@ -52,6 +52,13 @@ spec:
                   key: DEFAULT_MINIO_SECRET_KEY
           ports:
             - containerPort: 9000
+          resources:
+            requests:
+              memory: "256Mi"
+              cpu: "200m"
+            limits:
+              memory: "256Mi"
+              cpu: "200m"
           # Mount the volume into the pod
           securityContext:
             allowPrivilegeEscalation: false 

@@ -4,6 +4,7 @@
 
 package io.airbyte.connector_builder.config;
 
+import com.google.common.io.Resources;
 import io.airbyte.commons.envvar.EnvVar;
 import io.airbyte.connector_builder.command_runner.SynchronousCdkCommandRunner;
 import io.airbyte.connector_builder.command_runner.SynchronousPythonCdkCommandRunner;
@@ -11,8 +12,11 @@ import io.airbyte.connector_builder.exceptions.ConnectorBuilderException;
 import io.airbyte.connector_builder.file_writer.AirbyteFileWriterImpl;
 import io.airbyte.workers.internal.VersionedAirbyteStreamFactory;
 import io.micronaut.context.annotation.Factory;
+import jakarta.inject.Named;
 import jakarta.inject.Singleton;
 import java.io.File;
+import java.net.URL;
+import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
@@ -55,8 +59,8 @@ public class ApplicationBeanFactory {
   }
 
   private String getPythonPath() {
-    String pathToConnectors = getPathToConnectors();
-    List<String> subdirectories = listSubdirectories(pathToConnectors);
+    final String pathToConnectors = getPathToConnectors();
+    final List<String> subdirectories = listSubdirectories(pathToConnectors);
     return createPythonPathFromListOfPaths(pathToConnectors, subdirectories);
   }
 
@@ -64,15 +68,15 @@ public class ApplicationBeanFactory {
     return "/connectors";
   }
 
-  private static List<String> listSubdirectories(String path) {
-    File file = new File(path);
-    String[] directories = file.list((current, name) -> new File(current, name).isDirectory());
+  private static List<String> listSubdirectories(final String path) {
+    final File file = new File(path);
+    final String[] directories = file.list((current, name) -> new File(current, name).isDirectory());
     return Optional.ofNullable(directories).stream()
         .flatMap(Arrays::stream)
         .collect(Collectors.toList());
   }
 
-  static String createPythonPathFromListOfPaths(String path, List<String> subdirectories) {
+  static String createPythonPathFromListOfPaths(final String path, final List<String> subdirectories) {
     /*
      * Creates a `:`-separated path of all connector directories. The connector directories that contain
      * a python module can then be imported.
@@ -80,6 +84,17 @@ public class ApplicationBeanFactory {
     return subdirectories.stream()
         .map(subdirectory -> path + "/" + subdirectory)
         .collect(Collectors.joining(":"));
+  }
+
+  @Singleton
+  @Named("buildCdkVersion")
+  public static String buildCdkVersion() {
+    try {
+      final URL version = Resources.getResource("CDK_VERSION");
+      return Resources.toString(version, StandardCharsets.UTF_8).trim();
+    } catch (final Exception e) {
+      throw new RuntimeException("Failed to fetch local CDK version", e);
+    }
   }
 
 }

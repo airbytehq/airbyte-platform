@@ -30,9 +30,11 @@ import { getOptionsByManifest } from "./manifestHelpers";
 import { PaginationSection } from "./PaginationSection";
 import { ParameterizedRequestsSection } from "./ParameterizedRequestsSection";
 import { ParentStreamsSection } from "./ParentStreamsSection";
+import { RecordSelectorSection } from "./RecordSelectorSection";
 import { RequestOptionSection } from "./RequestOptionSection";
 import styles from "./StreamConfigView.module.scss";
 import { TransformationSection } from "./TransformationSection";
+import { UnknownFieldsSection } from "./UnknownFieldsSection";
 import { SchemaConflictIndicator } from "../SchemaConflictIndicator";
 import { BuilderStream, StreamPathFn, isEmptyOrDefault, useBuilderWatch } from "../types";
 import { useAutoImportSchema } from "../useAutoImportSchema";
@@ -87,13 +89,6 @@ export const StreamConfigView: React.FC<StreamConfigViewProps> = React.memo(({ s
             />
             <BuilderField
               type="array"
-              path={streamFieldPath("fieldPointer")}
-              label={formatMessage({ id: "connectorBuilder.streamConfigView.fieldPointer" })}
-              manifestPath="DpathExtractor.properties.field_path"
-              optional
-            />
-            <BuilderField
-              type="array"
               path={streamFieldPath("primaryKey")}
               label={formatMessage({ id: "connectorBuilder.streamConfigView.primaryKey.label" })}
               tooltip={formatMessage({ id: "connectorBuilder.streamConfigView.primaryKey.tooltip" })}
@@ -101,6 +96,7 @@ export const StreamConfigView: React.FC<StreamConfigViewProps> = React.memo(({ s
               optional
             />
           </BuilderCard>
+          <RecordSelectorSection streamFieldPath={streamFieldPath} currentStreamIndex={streamNum} />
           <RequestOptionSection
             inline={false}
             basePath={streamFieldPath("requestOptions")}
@@ -116,6 +112,7 @@ export const StreamConfigView: React.FC<StreamConfigViewProps> = React.memo(({ s
             currentStreamIndex={streamNum}
           />
           <TransformationSection streamFieldPath={streamFieldPath} currentStreamIndex={streamNum} />
+          <UnknownFieldsSection streamFieldPath={streamFieldPath} />
         </fieldset>
       ) : (
         <BuilderCard className={styles.schemaEditor}>

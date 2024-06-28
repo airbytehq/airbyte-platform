@@ -16,6 +16,7 @@ import io.airbyte.data.services.impls.jooq.DestinationServiceJooqImpl
 import io.airbyte.data.services.impls.jooq.SourceServiceJooqImpl
 import io.airbyte.data.services.impls.jooq.WorkspaceServiceJooqImpl
 import io.airbyte.db.factory.DSLContextFactory
+import io.airbyte.db.instance.DatabaseConstants
 import io.airbyte.db.instance.test.TestDatabaseProviders
 import io.micronaut.context.ApplicationContext
 import io.micronaut.context.env.PropertySource
@@ -39,7 +40,7 @@ open class RepositoryTestSetup {
 
     // we run against an actual database to ensure micronaut data and jooq properly integrate
     private val container: PostgreSQLContainer<*> =
-      PostgreSQLContainer("postgres:13-alpine")
+      PostgreSQLContainer(DatabaseConstants.DEFAULT_DATABASE_VERSION)
         .withDatabaseName("airbyte")
         .withUsername("docker")
         .withPassword("docker")
@@ -137,7 +138,6 @@ open class RepositoryTestSetup {
           .withSourceId(sourceId)
           .withName("source")
           .withSourceDefinitionId(sourceDefinitionId)
-          .withDefaultVersionId(sourceDefinitionVersionId)
           .withWorkspaceId(workspaceId),
       )
 
@@ -176,7 +176,6 @@ open class RepositoryTestSetup {
           .withDestinationId(destinationId)
           .withName("destination")
           .withDestinationDefinitionId(destinationDefinitionId)
-          .withDefaultVersionId(destinationDefinitionVersionId)
           .withWorkspaceId(workspaceId),
       )
 

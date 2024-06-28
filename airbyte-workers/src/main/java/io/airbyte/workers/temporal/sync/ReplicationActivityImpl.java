@@ -41,6 +41,7 @@ import io.airbyte.protocol.models.ConfiguredAirbyteCatalog;
 import io.airbyte.workers.ReplicationInputHydrator;
 import io.airbyte.workers.Worker;
 import io.airbyte.workers.helper.BackfillHelper;
+import io.airbyte.workers.helper.ResumableFullRefreshStatsHelper;
 import io.airbyte.workers.models.ReplicationActivityInput;
 import io.airbyte.workers.orchestrator.OrchestratorHandleFactory;
 import io.airbyte.workers.storage.activities.OutputStorageClient;
@@ -90,6 +91,7 @@ public class ReplicationActivityImpl implements ReplicationActivity {
   private final PayloadChecker payloadChecker;
   private final OutputStorageClient<State> stateStorageClient;
   private final OutputStorageClient<ConfiguredAirbyteCatalog> catalogStorageClient;
+  private final ResumableFullRefreshStatsHelper resumableFullRefreshStatsHelper;
 
   public ReplicationActivityImpl(final SecretsRepositoryReader secretsRepositoryReader,
                                  @Named("workspaceRoot") final Path workspaceRoot,
@@ -106,7 +108,8 @@ public class ReplicationActivityImpl implements ReplicationActivity {
                                  final FeatureFlagClient featureFlagClient,
                                  final PayloadChecker payloadChecker,
                                  @Named("outputStateClient") final OutputStorageClient<State> stateStorageClient,
-                                 @Named("outputCatalogClient") final OutputStorageClient<ConfiguredAirbyteCatalog> catalogStorageClient) {
+                                 @Named("outputCatalogClient") final OutputStorageClient<ConfiguredAirbyteCatalog> catalogStorageClient,
+                                 final ResumableFullRefreshStatsHelper resumableFullRefreshStatsHelper) {
     this.replicationInputHydrator = new ReplicationInputHydrator(airbyteApiClient, secretsRepositoryReader,
         featureFlagClient);
     this.workspaceRoot = workspaceRoot;
@@ -124,6 +127,7 @@ public class ReplicationActivityImpl implements ReplicationActivity {
     this.payloadChecker = payloadChecker;
     this.stateStorageClient = stateStorageClient;
     this.catalogStorageClient = catalogStorageClient;
+    this.resumableFullRefreshStatsHelper = resumableFullRefreshStatsHelper;
   }
 
   /**
@@ -217,6 +221,7 @@ public class ReplicationActivityImpl implements ReplicationActivity {
                 .getStreamsToBackfill(replicationActivityInput.getSchemaRefreshOutput().getAppliedDiff(), hydratedReplicationInput.getCatalog());
           }
           BackfillHelper.markBackfilledStreams(streamsToBackfill, standardSyncOutput);
+          resumableFullRefreshStatsHelper.markResumedStreams(hydratedReplicationInput, standardSyncOutput);
           LOGGER.info("sync summary after backfill: {}", standardSyncOutput);
 
           if (featureFlagClient.boolVariation(WriteOutputCatalogToObjectStorage.INSTANCE, new Connection(connectionId))) {

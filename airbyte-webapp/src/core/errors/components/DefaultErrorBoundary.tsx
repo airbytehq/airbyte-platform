@@ -36,9 +36,10 @@ const RETRY_TIMEOUT = 10000;
 const isDyanmicImportError = (error: unknown): boolean => {
   return (
     error instanceof Error &&
-    error.name === "TypeError" &&
-    (error.message.includes("dynamically imported module") ||
-      error.message.includes("Importing a module script failed"))
+    (error.message.includes("Unable to preload CSS") ||
+      (error.name === "TypeError" &&
+        (error.message.includes("dynamically imported module") ||
+          error.message.includes("Importing a module script failed"))))
   );
 };
 

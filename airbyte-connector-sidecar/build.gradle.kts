@@ -9,8 +9,6 @@ plugins {
   id("io.airbyte.gradle.jvm.app")
   id("io.airbyte.gradle.publish")
   id("io.airbyte.gradle.docker")
-  kotlin("jvm")
-  kotlin("kapt")
 }
 
 buildscript {
@@ -26,15 +24,6 @@ buildscript {
 }
 
 val airbyteProtocol by configurations.creating
-configurations.all {
-  resolutionStrategy {
-    // Ensure that the versions defined in deps.toml are used)
-    // instead of versions from transitive dependencies)
-    // Force to avoid(updated version brought in transitively from Micronaut 3.8+)
-    // that is incompatible with our current Helm setup)
-    force(libs.s3, libs.aws.java.sdk.s3)
-  }
-}
 
 configurations.all {
   exclude(group = "io.micronaut", module = "micronaut-http-server-netty")
@@ -44,8 +33,8 @@ configurations.all {
 }
 
 dependencies {
-  kapt(platform(libs.micronaut.platform))
-  kapt(libs.bundles.micronaut.annotation.processor)
+  ksp(platform(libs.micronaut.platform))
+  ksp(libs.bundles.micronaut.annotation.processor)
 
   implementation(platform(libs.micronaut.platform))
   implementation(libs.bundles.log4j)
@@ -72,9 +61,9 @@ dependencies {
   runtimeOnly(libs.appender.log4j2)
   runtimeOnly(libs.bundles.bouncycastle) // cryptography package
 
-  kaptTest(platform(libs.micronaut.platform))
-  kaptTest(libs.bundles.micronaut.annotation.processor)
-  kaptTest(libs.bundles.micronaut.test.annotation.processor)
+  kspTest(platform(libs.micronaut.platform))
+  kspTest(libs.bundles.micronaut.annotation.processor)
+  kspTest(libs.bundles.micronaut.test.annotation.processor)
 
   testImplementation(libs.bundles.micronaut.test)
   testImplementation(libs.mockk)
@@ -112,7 +101,7 @@ airbyte {
   }
 }
 
-// Duplicated from :airbyte-worker, eventually, this should be handled in :airbyte-protocol)
+// Duplicated from :airbyte-worker, eventually, this should be handled in :airbyte-protocol
 val generateWellKnownTypes = tasks.register("generateWellKnownTypes") {
   inputs.files(airbyteProtocol) // declaring inputs)
   val targetFile = project.file("build/airbyte/docker/WellKnownTypes.json")
@@ -139,13 +128,4 @@ tasks.named("dockerCopyDistribution") {
 fun yamlToJson(rawYaml: String): String {
   val mappedYaml: Any = YAMLMapper().registerKotlinModule().readValue(rawYaml)
   return ObjectMapper().registerKotlinModule().writeValueAsString(mappedYaml)
-}
-
-// This is a workaround related to kaptBuild errors. It seems to be because there are no tests in cloud-airbyte-api-server.
-// TODO: this should be removed when we move to kotlin 1.9.20
-// TODO: we should write tests
-afterEvaluate {
-  tasks.named("kaptGenerateStubsTestKotlin") {
-    enabled = false
-  }
 }

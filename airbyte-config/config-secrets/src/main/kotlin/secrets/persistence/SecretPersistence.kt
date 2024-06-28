@@ -48,4 +48,8 @@ interface SecretPersistence : ReadOnlySecretPersistence {
   }
 
   fun delete(coordinate: SecretCoordinate)
+
+  fun disable(coordinate: SecretCoordinate) {
+    println("secret persistence has not implemented disable.")
+  }
 }

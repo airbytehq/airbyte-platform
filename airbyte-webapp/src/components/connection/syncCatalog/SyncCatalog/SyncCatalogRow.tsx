@@ -59,17 +59,12 @@ export const SyncCatalogRow: React.FC<SyncCatalogRowProps & { className?: string
         ...configObj,
       });
 
-      // config.selectedFields must be removed if fieldSelection is disabled
-      if (!updatedStreamNode.config?.fieldSelectionEnabled) {
-        delete updatedStreamNode.config?.selectedFields;
-      }
-
       updateStreamNode(updatedStreamNode);
     },
     [streamNode, updateStreamNode]
   );
 
-  const isSimplifiedCreation = useExperiment("connection.simplifiedCreation", false);
+  const isSimplifiedCreation = useExperiment("connection.simplifiedCreation", true);
   const analyticsService = useAnalyticsService();
   const onSelectSyncMode = useCallback(
     (syncMode: SyncModeValue) => {

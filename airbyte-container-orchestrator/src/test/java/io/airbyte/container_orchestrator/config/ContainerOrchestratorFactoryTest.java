@@ -31,6 +31,7 @@ import io.airbyte.workers.sync.ReplicationLauncherWorker;
 import io.airbyte.workers.workload.JobOutputDocStore;
 import io.airbyte.workers.workload.WorkloadIdGenerator;
 import io.micronaut.context.annotation.Bean;
+import io.micronaut.context.annotation.Property;
 import io.micronaut.context.annotation.Replaces;
 import io.micronaut.context.env.Environment;
 import io.micronaut.test.extensions.junit5.annotation.MicronautTest;
@@ -43,6 +44,8 @@ import org.junit.jupiter.api.Test;
 // tests may be running on a real k8s environment, override the environment to something else for
 // this test
 @MicronautTest(environments = Environment.TEST)
+@Property(name = "INTERNAL_API_HOST",
+          value = "http://localhost:8000")
 class ContainerOrchestratorFactoryTest {
 
   @Inject

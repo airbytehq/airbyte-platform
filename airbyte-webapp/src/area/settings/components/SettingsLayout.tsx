@@ -26,8 +26,7 @@ export const SettingsLayout: React.FC<React.PropsWithChildren> = ({ children }) 
 
   const breadcrumbs = [
     { label: formatMessage({ id: "sidebar.settings" }) },
-    ...(organization && multiWorkspaceUi ? [{ label: organization.organizationName }] : []),
-    ...(multiWorkspaceUi ? [{ label: workspaceName }] : []),
+    ...(multiWorkspaceUi ? [{ label: organization.organizationName }, { label: workspaceName }] : []),
   ];
 
   return (

@@ -3,16 +3,14 @@ import java.util.Properties
 plugins {
   id("io.airbyte.gradle.jvm.app")
   id("io.airbyte.gradle.publish")
-  id("org.jetbrains.kotlin.jvm")
-  id("org.jetbrains.kotlin.kapt")
   id("io.airbyte.gradle.docker")
 }
 
 dependencies {
-  kapt(libs.v3.swagger.annotations)
-  kapt(platform(libs.micronaut.platform))
-  kapt(libs.bundles.micronaut.annotation.processor)
-  kapt(libs.micronaut.openapi)
+  ksp(libs.v3.swagger.annotations)
+  ksp(platform(libs.micronaut.platform))
+  ksp(libs.bundles.micronaut.annotation.processor)
+  ksp(libs.micronaut.openapi)
 
   annotationProcessor(platform(libs.micronaut.platform))
   annotationProcessor(libs.bundles.micronaut.annotation.processor)
@@ -53,8 +51,8 @@ dependencies {
   runtimeOnly(libs.snakeyaml)
   runtimeOnly(libs.javax.databind)
 
-  kaptTest(platform(libs.micronaut.platform))
-  kaptTest(libs.bundles.micronaut.test.annotation.processor)
+  kspTest(platform(libs.micronaut.platform))
+  kspTest(libs.bundles.micronaut.test.annotation.processor)
   testAnnotationProcessor(platform(libs.micronaut.platform))
   testAnnotationProcessor(libs.bundles.micronaut.test.annotation.processor)
 
@@ -66,13 +64,6 @@ dependencies {
   testImplementation(libs.mockito.inline)
   testImplementation(libs.reactor.test)
   testImplementation(libs.mockk)
-}
-
-kapt {
-  correctErrorTypes = true
-  arguments {
-    arg("micronaut.openapi.project.dir", projectDir.toString())
-  }
 }
 
 val env = Properties().apply {
@@ -115,9 +106,9 @@ tasks.withType(JavaCompile::class).configureEach {
   options.compilerArgs = listOf("-parameters")
 }
 
-// Even though Kotlin is excluded on Spotbugs, this projects)
-// still runs into spotbug issues. Working theory is that)
-// generated code is being picked up. Disable as a short-term fix.)
+// Even though Kotlin is excluded on Spotbugs, this projects
+// still runs into SpotBugs issues. Working theory is that
+// generated code is being picked up. Disable as a short-term fix.
 tasks.named("spotbugsMain") {
   enabled = false
 }

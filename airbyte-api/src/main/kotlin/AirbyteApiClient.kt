@@ -2,31 +2,32 @@
  * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
-package io.airbyte.api.client2
+package io.airbyte.api.client
 
 import dev.failsafe.RetryPolicy
-import io.airbyte.api.client2.generated.AttemptApi
-import io.airbyte.api.client2.generated.ConnectionApi
-import io.airbyte.api.client2.generated.ConnectorBuilderProjectApi
-import io.airbyte.api.client2.generated.DeploymentMetadataApi
-import io.airbyte.api.client2.generated.DestinationApi
-import io.airbyte.api.client2.generated.DestinationDefinitionApi
-import io.airbyte.api.client2.generated.DestinationDefinitionSpecificationApi
-import io.airbyte.api.client2.generated.HealthApi
-import io.airbyte.api.client2.generated.JobRetryStatesApi
-import io.airbyte.api.client2.generated.JobsApi
-import io.airbyte.api.client2.generated.OperationApi
-import io.airbyte.api.client2.generated.OrganizationApi
-import io.airbyte.api.client2.generated.PermissionApi
-import io.airbyte.api.client2.generated.SecretsPersistenceConfigApi
-import io.airbyte.api.client2.generated.SourceApi
-import io.airbyte.api.client2.generated.SourceDefinitionApi
-import io.airbyte.api.client2.generated.SourceDefinitionSpecificationApi
-import io.airbyte.api.client2.generated.StateApi
-import io.airbyte.api.client2.generated.StreamStatusesApi
-import io.airbyte.api.client2.generated.UserApi
-import io.airbyte.api.client2.generated.WebBackendApi
-import io.airbyte.api.client2.generated.WorkspaceApi
+import io.airbyte.api.client.generated.ActorDefinitionVersionApi
+import io.airbyte.api.client.generated.AttemptApi
+import io.airbyte.api.client.generated.ConnectionApi
+import io.airbyte.api.client.generated.ConnectorBuilderProjectApi
+import io.airbyte.api.client.generated.DeploymentMetadataApi
+import io.airbyte.api.client.generated.DestinationApi
+import io.airbyte.api.client.generated.DestinationDefinitionApi
+import io.airbyte.api.client.generated.DestinationDefinitionSpecificationApi
+import io.airbyte.api.client.generated.HealthApi
+import io.airbyte.api.client.generated.JobRetryStatesApi
+import io.airbyte.api.client.generated.JobsApi
+import io.airbyte.api.client.generated.OperationApi
+import io.airbyte.api.client.generated.OrganizationApi
+import io.airbyte.api.client.generated.PermissionApi
+import io.airbyte.api.client.generated.SecretsPersistenceConfigApi
+import io.airbyte.api.client.generated.SourceApi
+import io.airbyte.api.client.generated.SourceDefinitionApi
+import io.airbyte.api.client.generated.SourceDefinitionSpecificationApi
+import io.airbyte.api.client.generated.StateApi
+import io.airbyte.api.client.generated.StreamStatusesApi
+import io.airbyte.api.client.generated.UserApi
+import io.airbyte.api.client.generated.WebBackendApi
+import io.airbyte.api.client.generated.WorkspaceApi
 import io.micronaut.context.annotation.Requires
 import io.micronaut.context.annotation.Value
 import jakarta.inject.Named
@@ -57,35 +58,34 @@ import okhttp3.Response
 @Suppress("MemberVisibilityCanBePrivate")
 @Singleton
 @Requires(property = "airbyte.internal-api.base-path")
-class AirbyteApiClient
-  @JvmOverloads
-  constructor(
-    @Value("\${airbyte.internal-api.base-path}") basePath: String,
-    @Named("airbyteApiClientRetryPolicy") policy: RetryPolicy<Response>,
-    @Named("airbyteApiOkHttpClient") httpClient: OkHttpClient,
-  ) {
-    val attemptApi = AttemptApi(basePath = basePath, client = httpClient, policy = policy)
-    val connectionApi = ConnectionApi(basePath = basePath, client = httpClient, policy = policy)
-    val connectorBuilderProjectApi = ConnectorBuilderProjectApi(basePath = basePath, client = httpClient, policy = policy)
-    val deploymentMetadataApi = DeploymentMetadataApi(basePath = basePath, client = httpClient, policy = policy)
-    val destinationApi = DestinationApi(basePath = basePath, client = httpClient, policy = policy)
-    val destinationDefinitionApi = DestinationDefinitionApi(basePath = basePath, client = httpClient, policy = policy)
-    val destinationDefinitionSpecificationApi =
-      DestinationDefinitionSpecificationApi(basePath = basePath, client = httpClient, policy = policy)
-    val healthApi = HealthApi(basePath = basePath, client = httpClient, policy = policy)
-    val jobsApi = JobsApi(basePath = basePath, client = httpClient, policy = policy)
-    val jobRetryStatesApi = JobRetryStatesApi(basePath = basePath, client = httpClient, policy = policy)
-    val operationApi = OperationApi(basePath = basePath, client = httpClient, policy = policy)
-    val organizationApi = OrganizationApi(basePath = basePath, client = httpClient, policy = policy)
-    val permissionApi = PermissionApi(basePath = basePath, client = httpClient, policy = policy)
-    val secretPersistenceConfigApi = SecretsPersistenceConfigApi(basePath = basePath, client = httpClient, policy = policy)
-    val sourceApi = SourceApi(basePath = basePath, client = httpClient, policy = policy)
-    val sourceDefinitionApi = SourceDefinitionApi(basePath = basePath, client = httpClient, policy = policy)
-    val sourceDefinitionSpecificationApi =
-      SourceDefinitionSpecificationApi(basePath = basePath, client = httpClient, policy = policy)
-    val stateApi = StateApi(basePath = basePath, client = httpClient, policy = policy)
-    val streamStatusesApi = StreamStatusesApi(basePath = basePath, client = httpClient, policy = policy)
-    val userApi = UserApi(basePath = basePath, client = httpClient, policy = policy)
-    val webBackendApi = WebBackendApi(basePath = basePath, client = httpClient, policy = policy)
-    val workspaceApi = WorkspaceApi(basePath = basePath, client = httpClient, policy = policy)
-  }
+class AirbyteApiClient(
+  @Value("\${airbyte.internal-api.base-path}") basePath: String,
+  @Named("airbyteApiClientRetryPolicy") policy: RetryPolicy<Response>,
+  @Named("airbyteApiOkHttpClient") httpClient: OkHttpClient,
+) {
+  val actorDefinitionVersionApi = ActorDefinitionVersionApi(basePath = basePath, client = httpClient, policy = policy)
+  val attemptApi = AttemptApi(basePath = basePath, client = httpClient, policy = policy)
+  val connectionApi = ConnectionApi(basePath = basePath, client = httpClient, policy = policy)
+  val connectorBuilderProjectApi = ConnectorBuilderProjectApi(basePath = basePath, client = httpClient, policy = policy)
+  val deploymentMetadataApi = DeploymentMetadataApi(basePath = basePath, client = httpClient, policy = policy)
+  val destinationApi = DestinationApi(basePath = basePath, client = httpClient, policy = policy)
+  val destinationDefinitionApi = DestinationDefinitionApi(basePath = basePath, client = httpClient, policy = policy)
+  val destinationDefinitionSpecificationApi =
+    DestinationDefinitionSpecificationApi(basePath = basePath, client = httpClient, policy = policy)
+  val healthApi = HealthApi(basePath = basePath, client = httpClient, policy = policy)
+  val jobsApi = JobsApi(basePath = basePath, client = httpClient, policy = policy)
+  val jobRetryStatesApi = JobRetryStatesApi(basePath = basePath, client = httpClient, policy = policy)
+  val operationApi = OperationApi(basePath = basePath, client = httpClient, policy = policy)
+  val organizationApi = OrganizationApi(basePath = basePath, client = httpClient, policy = policy)
+  val permissionApi = PermissionApi(basePath = basePath, client = httpClient, policy = policy)
+  val secretPersistenceConfigApi = SecretsPersistenceConfigApi(basePath = basePath, client = httpClient, policy = policy)
+  val sourceApi = SourceApi(basePath = basePath, client = httpClient, policy = policy)
+  val sourceDefinitionApi = SourceDefinitionApi(basePath = basePath, client = httpClient, policy = policy)
+  val sourceDefinitionSpecificationApi =
+    SourceDefinitionSpecificationApi(basePath = basePath, client = httpClient, policy = policy)
+  val stateApi = StateApi(basePath = basePath, client = httpClient, policy = policy)
+  val streamStatusesApi = StreamStatusesApi(basePath = basePath, client = httpClient, policy = policy)
+  val userApi = UserApi(basePath = basePath, client = httpClient, policy = policy)
+  val webBackendApi = WebBackendApi(basePath = basePath, client = httpClient, policy = policy)
+  val workspaceApi = WorkspaceApi(basePath = basePath, client = httpClient, policy = policy)
+}

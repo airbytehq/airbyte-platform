@@ -3,6 +3,7 @@ import { FormattedMessage, useIntl } from "react-intl";
 
 import { useListBuilderProjects, useSourceDefinitionList, useUpdateSourceDefinition, useSourceList } from "core/api";
 import { SourceDefinitionRead } from "core/api/types/AirbyteClient";
+import { useFormatError } from "core/errors";
 import { useTrackPage, PageTrackingCodes } from "core/services/analytics";
 import { useNotificationService } from "hooks/services/Notification";
 
@@ -12,6 +13,7 @@ const SourcesPage: React.FC = () => {
   useTrackPage(PageTrackingCodes.SETTINGS_SOURCE);
 
   const { formatMessage } = useIntl();
+  const formatError = useFormatError();
   const { sources } = useSourceList();
   const { sourceDefinitions } = useSourceDefinitionList();
 
@@ -52,18 +54,17 @@ const SourcesPage: React.FC = () => {
       } catch (error) {
         registerNotification({
           id: `source.update.error.${id}.${version}`,
-          text:
-            formatMessage(
-              { id: "admin.upgradeConnector.error" },
-              { name: definitionMap.current.get(id)?.name, version }
-            ) + (error.message ? `: ${error.message}` : ""),
+          text: `${formatMessage(
+            { id: "admin.upgradeConnector.error" },
+            { name: definitionMap.current.get(id)?.name, version }
+          )}: ${formatError(error)}`,
           type: "error",
         });
       } finally {
         setUpdatingDefinitionId(undefined);
       }
     },
-    [formatMessage, registerNotification, updateSourceDefinition]
+    [formatError, formatMessage, registerNotification, updateSourceDefinition]
   );
 
   const usedSourceDefinitions: SourceDefinitionRead[] = useMemo(() => {

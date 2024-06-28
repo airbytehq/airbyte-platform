@@ -23,6 +23,7 @@ import ChevronUpDownIcon from "./icons/chevronUpDownIcon.svg?react";
 import ChevronUpIcon from "./icons/chevronUpIcon.svg?react";
 import ClockFilledIcon from "./icons/clockFilledIcon.svg?react";
 import ClockOutlineIcon from "./icons/clockOutlineIcon.svg?react";
+import CollapseAllIcon from "./icons/collapseAllIcon.svg?react";
 import CommentsIcon from "./icons/commentsIcon.svg?react";
 import CommunityIcon from "./icons/communityIcon.svg?react";
 import ConnectionIcon from "./icons/connectionIcon.svg?react";
@@ -30,6 +31,7 @@ import ContractIcon from "./icons/contractIcon.svg?react";
 import CopyIcon from "./icons/copyIcon.svg?react";
 import CreditsIcon from "./icons/creditsIcon.svg?react";
 import CrossIcon from "./icons/crossIcon.svg?react";
+import CursorIcon from "./icons/cursorIcon.svg?react";
 import DatabaseIcon from "./icons/databaseIcon.svg?react";
 import DayIcon from "./icons/dayIcon.svg?react";
 import DbtCloudIcon from "./icons/dbtCloudIcon.svg?react";
@@ -45,6 +47,7 @@ import EnvelopeIcon from "./icons/envelopeIcon.svg?react";
 import EqualIcon from "./icons/equalIcon.svg?react";
 import ErrorFilledIcon from "./icons/errorFilledIcon.svg?react";
 import ErrorOutlineIcon from "./icons/errorOutlineIcon.svg?react";
+import ExpandAllIcon from "./icons/expandAllIcon.svg?react";
 import ExpandIcon from "./icons/expandIcon.svg?react";
 import ExportIcon from "./icons/exportIcon.svg?react";
 import EyeIcon from "./icons/eyeIcon.svg?react";
@@ -73,6 +76,12 @@ import LoadingIcon from "./icons/loadingIcon.svg?react";
 import LocationIcon from "./icons/locationIcon.svg?react";
 import LockIcon from "./icons/lockIcon.svg?react";
 import MenuIcon from "./icons/menuIcon.svg?react";
+import MetricSuccessHighIcon from "./icons/metricSuccessHighIcon.svg?react";
+import MetricSuccessLowIcon from "./icons/metricSuccessLowIcon.svg?react";
+import MetricSuccessMedIcon from "./icons/metricSuccessMedIcon.svg?react";
+import MetricUsageHighIcon from "./icons/metricUsageHighIcon.svg?react";
+import MetricUsageLowIcon from "./icons/metricUsageLowIcon.svg?react";
+import MetricUsageMedIcon from "./icons/metricUsageMedIcon.svg?react";
 import MinusCircleIcon from "./icons/minusCircleIcon.svg?react";
 import MinusIcon from "./icons/minusIcon.svg?react";
 import ModificationIcon from "./icons/modificationIcon.svg?react";
@@ -112,6 +121,7 @@ import StatusCancelledIcon from "./icons/statusCancelledIcon.svg?react";
 import StatusErrorIcon from "./icons/statusErrorIcon.svg?react";
 import StatusInactiveIcon from "./icons/statusInactiveIcon.svg?react";
 import StatusInProgressIcon from "./icons/statusInProgressIcon.svg?react";
+import StatusQueuedIcon from "./icons/statusQueuedIcon.svg?react";
 import StatusSleepIcon from "./icons/statusSleepIcon.svg?react";
 import StatusSuccessIcon from "./icons/statusSuccessIcon.svg?react";
 import StatusWarningIcon from "./icons/statusWarningIcon.svg?react";
@@ -176,9 +186,11 @@ export const Icons: Record<IconType, React.FC<React.SVGProps<SVGSVGElement>>> = 
   community: CommunityIcon,
   connection: ConnectionIcon,
   contract: ContractIcon,
+  collapseAll: CollapseAllIcon,
   copy: CopyIcon,
   credits: CreditsIcon,
   cross: CrossIcon,
+  cursor: CursorIcon,
   database: DatabaseIcon,
   day: DayIcon,
   dbtCloud: DbtCloudIcon,
@@ -195,6 +207,7 @@ export const Icons: Record<IconType, React.FC<React.SVGProps<SVGSVGElement>>> = 
   errorFilled: ErrorFilledIcon,
   errorOutline: ErrorOutlineIcon,
   expand: ExpandIcon,
+  expandAll: ExpandAllIcon,
   export: ExportIcon,
   eye: EyeIcon,
   eyeSlash: EyeSlashIcon,
@@ -222,6 +235,12 @@ export const Icons: Record<IconType, React.FC<React.SVGProps<SVGSVGElement>>> = 
   location: LocationIcon,
   lock: LockIcon,
   menu: MenuIcon,
+  metricSuccessHigh: MetricSuccessHighIcon,
+  metricSuccessLow: MetricSuccessLowIcon,
+  metricSuccessMed: MetricSuccessMedIcon,
+  metricUsageHigh: MetricUsageHighIcon,
+  metricUsageLow: MetricUsageLowIcon,
+  metricUsageMed: MetricUsageMedIcon,
   minus: MinusIcon,
   minusCircle: MinusCircleIcon,
   modification: ModificationIcon,
@@ -261,6 +280,7 @@ export const Icons: Record<IconType, React.FC<React.SVGProps<SVGSVGElement>>> = 
   statusError: StatusErrorIcon,
   statusInactive: StatusInactiveIcon,
   statusInProgress: StatusInProgressIcon,
+  statusQueued: StatusQueuedIcon,
   statusSleep: StatusSleepIcon,
   statusSuccess: StatusSuccessIcon,
   statusWarning: StatusWarningIcon,

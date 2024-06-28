@@ -1,6 +1,9 @@
+import { renderHook } from "@testing-library/react";
 import dayjs from "dayjs";
 
-import { moveTimeToFutureByPeriod } from "./time";
+import { TestWrapper } from "test-utils";
+
+import { moveTimeToFutureByPeriod, useFormatLengthOfTime } from "./time";
 
 describe("moveTimeToFutureByPeriod", () => {
   it("does nothing if the time is already in the future", () => {
@@ -69,5 +72,57 @@ describe("moveTimeToFutureByPeriod", () => {
         expect(future.diff(now, "days")).toBe(365 * 3 - 6); // 6*4=24 years worth, including 6 leaps days
       }
     });
+  });
+});
+
+describe("useFormatLengthOfTime", () => {
+  it("formats time with hours, minutes, and seconds", () => {
+    expect(
+      renderHook(() => useFormatLengthOfTime((2 * 60 * 60 + 38 * 60 + 39) * 1000), { wrapper: TestWrapper }).result
+        .current
+    ).toBe("2h 38m 39s");
+
+    expect(
+      renderHook(() => useFormatLengthOfTime((1 * 60 * 60 + 15 * 60 + 30) * 1000), { wrapper: TestWrapper }).result
+        .current
+    ).toBe("1h 15m 30s");
+
+    expect(
+      renderHook(() => useFormatLengthOfTime((0 * 60 * 60 + 45 * 60 + 10) * 1000), { wrapper: TestWrapper }).result
+        .current
+    ).toBe("45m 10s");
+
+    expect(
+      renderHook(() => useFormatLengthOfTime((0 * 60 * 60 + 0 * 60 + 59) * 1000), { wrapper: TestWrapper }).result
+        .current
+    ).toBe("59s");
+  });
+
+  it("formats time with minutes and seconds", () => {
+    expect(
+      renderHook(() => useFormatLengthOfTime((38 * 60 + 39) * 1000), { wrapper: TestWrapper }).result.current
+    ).toBe("38m 39s");
+
+    expect(
+      renderHook(() => useFormatLengthOfTime((15 * 60 + 30) * 1000), { wrapper: TestWrapper }).result.current
+    ).toBe("15m 30s");
+
+    expect(
+      renderHook(() => useFormatLengthOfTime((45 * 60 + 10) * 1000), { wrapper: TestWrapper }).result.current
+    ).toBe("45m 10s");
+
+    expect(renderHook(() => useFormatLengthOfTime((0 * 60 + 59) * 1000), { wrapper: TestWrapper }).result.current).toBe(
+      "59s"
+    );
+  });
+
+  it("formats time with seconds", () => {
+    expect(renderHook(() => useFormatLengthOfTime(39 * 1000), { wrapper: TestWrapper }).result.current).toBe("39s");
+
+    expect(renderHook(() => useFormatLengthOfTime(30 * 1000), { wrapper: TestWrapper }).result.current).toBe("30s");
+
+    expect(renderHook(() => useFormatLengthOfTime(10 * 1000), { wrapper: TestWrapper }).result.current).toBe("10s");
+
+    expect(renderHook(() => useFormatLengthOfTime(1 * 1000), { wrapper: TestWrapper }).result.current).toBe("1s");
   });
 });

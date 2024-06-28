@@ -1,11 +1,9 @@
 package io.airbyte.workers.internal.bookkeeping
 
 import io.airbyte.analytics.DeploymentFetcher
-import io.airbyte.analytics.LoggingTrackingClient
-import io.airbyte.analytics.TrackingClient
+import io.airbyte.analytics.TrackingIdentity
 import io.airbyte.analytics.TrackingIdentityFetcher
 import io.airbyte.api.client.model.generated.DeploymentMetadataRead
-import io.airbyte.api.client.model.generated.WorkspaceRead
 import io.airbyte.commons.json.Jsons
 import io.airbyte.config.StreamSyncStats
 import io.airbyte.config.SyncStats
@@ -24,19 +22,23 @@ import io.airbyte.protocol.models.AirbyteStreamState
 import io.airbyte.protocol.models.StreamDescriptor
 import io.airbyte.workers.context.ReplicationFeatureFlags
 import io.airbyte.workers.exception.InvalidChecksumException
+import io.airbyte.workers.general.StateCheckSumCountEventHandler
 import io.airbyte.workers.models.StateWithId
 import io.airbyte.workers.test_utils.AirbyteMessageUtils
 import io.github.oshai.kotlinlogging.KotlinLogging
 import io.mockk.every
 import io.mockk.mockk
-import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
+import org.junit.jupiter.api.Assertions.assertNull
+import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Assertions.assertTrue
+import org.junit.jupiter.api.Assertions.fail
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertDoesNotThrow
 import org.mockito.Mockito
+import java.util.Optional
 import java.util.UUID
 
 private val logger = KotlinLogging.logger { }
@@ -67,16 +69,30 @@ class ParallelStreamStatsTrackerTest {
   private val stream2Message3 = createRecord(STREAM2_NAME, "s2m3")
 
   private lateinit var metricClient: MetricClient
-  private lateinit var trackingClient: TrackingClient
+  private lateinit var checkSumCountEventHandler: StateCheckSumCountEventHandler
   private lateinit var featureFlagClient: FeatureFlagClient
   private lateinit var statsTracker: ParallelStreamStatsTracker
 
   @BeforeEach
   fun beforeEach() {
+    val trackingIdentityFetcher = mockk<TrackingIdentityFetcher>()
+    val trackingIdentity = mockk<TrackingIdentity>()
+    every { trackingIdentity.email } returns "test"
+    every { trackingIdentityFetcher.apply(any()) }.returns(trackingIdentity)
     metricClient = Mockito.mock(MetricClient::class.java)
-    trackingClient = LoggingTrackingClient(DeploymentFetcher { DeploymentMetadataRead() }, TrackingIdentityFetcher { _ -> WorkspaceRead() })
     featureFlagClient = TestClient(mapOf("platform.emit-state-stats-segment" to true))
-    statsTracker = ParallelStreamStatsTracker(metricClient, trackingClient, featureFlagClient, CONNECTION_ID, WORKSPACE_ID, JOB_ID, ATTEMPT_NUMBER)
+    checkSumCountEventHandler =
+      StateCheckSumCountEventHandler(
+        Optional.empty(),
+        featureFlagClient,
+        DeploymentFetcher { DeploymentMetadataRead("test", UUID.randomUUID(), "test", "test") },
+        trackingIdentityFetcher,
+        CONNECTION_ID,
+        WORKSPACE_ID,
+        JOB_ID,
+        ATTEMPT_NUMBER,
+      )
+    statsTracker = ParallelStreamStatsTracker(metricClient, checkSumCountEventHandler)
   }
 
   @Test
@@ -99,7 +115,7 @@ class ParallelStreamStatsTrackerTest {
     assertSyncStatsCoreStatsEquals(expectedSyncStats, actualSyncStats)
 
     val expectedStreamSyncStats =
-      java.util.List.of(
+      listOf(
         StreamSyncStats()
           .withStreamName(STREAM1_NAME)
           .withStats(buildSyncStats(3L, 2L)),
@@ -192,7 +208,7 @@ class ParallelStreamStatsTrackerTest {
     assertSyncStatsCoreStatsEquals(expectedSyncStats, actualSyncStats)
 
     val expectedStreamSyncStats =
-      java.util.List.of(
+      listOf(
         StreamSyncStats()
           .withStreamName(STREAM1_NAME)
           .withStats(buildSyncStats(2L, 2L)),
@@ -262,10 +278,10 @@ class ParallelStreamStatsTrackerTest {
 
     val streamToCommittedRecords = statsTracker.getStreamToCommittedRecords()
 
-    Assertions.assertEquals(2, streamToCommittedRecords.size)
-    Assertions.assertEquals(2, streamToCommittedRecords[stream1])
-    Assertions.assertEquals(1, streamToCommittedRecords[stream2])
-    Assertions.assertEquals(3, statsTracker.getTotalRecordsCommitted())
+    assertEquals(2, streamToCommittedRecords.size)
+    assertEquals(2, streamToCommittedRecords[stream1])
+    assertEquals(1, streamToCommittedRecords[stream2])
+    assertEquals(3, statsTracker.getTotalRecordsCommitted())
   }
 
   @Test
@@ -295,8 +311,8 @@ class ParallelStreamStatsTrackerTest {
     Mockito.verify(metricClient).count(OssMetricsRegistry.STATE_ERROR_COLLISION_FROM_SOURCE, 1)
 
     // The following metrics are expected to be discarded
-    Assertions.assertNull(statsTracker.getMaxSecondsBetweenStateMessageEmittedAndCommitted())
-    Assertions.assertNull(statsTracker.getMeanSecondsBetweenStateMessageEmittedAndCommitted())
+    assertNull(statsTracker.getMaxSecondsBetweenStateMessageEmittedAndCommitted())
+    assertNull(statsTracker.getMeanSecondsBetweenStateMessageEmittedAndCommitted())
   }
 
   @Test
@@ -382,25 +398,25 @@ class ParallelStreamStatsTrackerTest {
     statsTracker.updateSourceStatesStats(s2State1)
     statsTracker.updateDestinationStateStats(s2State1)
 
-    Assertions.assertEquals(
+    assertEquals(
       java.util.Map.of(stream1, 0L, stream2, 2L),
       statsTracker.getStreamToCommittedRecords(),
     )
-    Assertions.assertEquals(
+    assertEquals(
       java.util.Map.of(stream1, 0L, stream2, 2L * MESSAGE_SIZE),
       statsTracker.getStreamToCommittedBytes(),
     )
 
-    Assertions.assertEquals(java.util.Map.of(stream1, 1L, stream2, 2L), statsTracker.getStreamToEmittedRecords())
-    Assertions.assertEquals(
+    assertEquals(java.util.Map.of(stream1, 1L, stream2, 2L), statsTracker.getStreamToEmittedRecords())
+    assertEquals(
       java.util.Map.of(stream1, 1L * MESSAGE_SIZE, stream2, 2L * MESSAGE_SIZE),
       statsTracker.getStreamToEmittedBytes(),
     )
 
-    Assertions.assertEquals(3L, statsTracker.getTotalRecordsEmitted())
-    Assertions.assertEquals(3L * MESSAGE_SIZE, statsTracker.getTotalBytesEmitted())
-    Assertions.assertEquals(2L, statsTracker.getTotalRecordsCommitted())
-    Assertions.assertEquals(2L * MESSAGE_SIZE, statsTracker.getTotalBytesCommitted())
+    assertEquals(3L, statsTracker.getTotalRecordsEmitted())
+    assertEquals(3L * MESSAGE_SIZE, statsTracker.getTotalBytesEmitted())
+    assertEquals(2L, statsTracker.getTotalRecordsCommitted())
+    assertEquals(2L * MESSAGE_SIZE, statsTracker.getTotalBytesCommitted())
   }
 
   @Test
@@ -409,12 +425,12 @@ class ParallelStreamStatsTrackerTest {
     statsTracker.getTotalStats(false)
     statsTracker.getTotalStats(true)
 
-    Assertions.assertEquals(0L, statsTracker.getTotalBytesEmitted())
-    Assertions.assertEquals(0L, statsTracker.getTotalRecordsEmitted())
-    Assertions.assertNull(statsTracker.getTotalBytesCommitted())
-    Assertions.assertNull(statsTracker.getTotalRecordsCommitted())
-    Assertions.assertEquals(0L, statsTracker.getTotalBytesEstimated())
-    Assertions.assertEquals(0L, statsTracker.getTotalRecordsEstimated())
+    assertEquals(0L, statsTracker.getTotalBytesEmitted())
+    assertEquals(0L, statsTracker.getTotalRecordsEmitted())
+    assertNull(statsTracker.getTotalBytesCommitted())
+    assertNull(statsTracker.getTotalRecordsCommitted())
+    assertEquals(0L, statsTracker.getTotalBytesEstimated())
+    assertEquals(0L, statsTracker.getTotalRecordsEstimated())
   }
 
   @Test
@@ -429,14 +445,14 @@ class ParallelStreamStatsTrackerTest {
     statsTracker.updateEstimates(estimateStream2)
 
     val actualSyncStats = statsTracker.getTotalStats(false)
-    Assertions.assertEquals(
+    assertEquals(
       buildSyncStats(0L, 0L).withEstimatedBytes(110L).withEstimatedRecords(23L),
       actualSyncStats,
     )
 
     val actualStreamSyncStats = statsTracker.getAllStreamSyncStats(false)
     val expectedStreamSyncStats =
-      java.util.List.of(
+      listOf(
         StreamSyncStats()
           .withStreamName(STREAM1_NAME)
           .withStats(buildSyncStats(0L, 0L).withEstimatedBytes(10L).withEstimatedRecords(2L)),
@@ -446,13 +462,13 @@ class ParallelStreamStatsTrackerTest {
       )
     assertStreamSyncStatsCoreStatsEquals(expectedStreamSyncStats, actualStreamSyncStats)
 
-    Assertions.assertEquals(23L, statsTracker.getTotalRecordsEstimated())
-    Assertions.assertEquals(110L, statsTracker.getTotalBytesEstimated())
-    Assertions.assertEquals(
-      java.util.Map.of(stream1, 2L, stream2, 21L),
+    assertEquals(23L, statsTracker.getTotalRecordsEstimated())
+    assertEquals(110L, statsTracker.getTotalBytesEstimated())
+    assertEquals(
+      mapOf(stream1 to 2L, stream2 to 21L),
       statsTracker.getStreamToEstimatedRecords(),
     )
-    Assertions.assertEquals(
+    assertEquals(
       java.util.Map.of(stream1, 10L, stream2, 100L),
       statsTracker.getStreamToEstimatedBytes(),
     )
@@ -466,13 +482,13 @@ class ParallelStreamStatsTrackerTest {
     statsTracker.updateEstimates(syncEstimate2)
 
     val actualSyncStats = statsTracker.getTotalStats(false)
-    Assertions.assertEquals(SyncStats().withEstimatedBytes(15L).withEstimatedRecords(5L), actualSyncStats)
-    Assertions.assertEquals(listOf<Any>(), statsTracker.getAllStreamSyncStats(false))
+    assertEquals(SyncStats().withEstimatedBytes(15L).withEstimatedRecords(5L), actualSyncStats)
+    assertEquals(listOf<Any>(), statsTracker.getAllStreamSyncStats(false))
 
-    Assertions.assertEquals(5L, statsTracker.getTotalRecordsEstimated())
-    Assertions.assertEquals(15L, statsTracker.getTotalBytesEstimated())
-    Assertions.assertEquals(java.util.Map.of<Any, Any>(), statsTracker.getStreamToEstimatedRecords())
-    Assertions.assertEquals(java.util.Map.of<Any, Any>(), statsTracker.getStreamToEstimatedBytes())
+    assertEquals(5L, statsTracker.getTotalRecordsEstimated())
+    assertEquals(15L, statsTracker.getTotalBytesEstimated())
+    assertEquals(java.util.Map.of<Any, Any>(), statsTracker.getStreamToEstimatedRecords())
+    assertEquals(java.util.Map.of<Any, Any>(), statsTracker.getStreamToEstimatedBytes())
   }
 
   @Test
@@ -481,11 +497,11 @@ class ParallelStreamStatsTrackerTest {
     statsTracker.updateEstimates(createSyncEstimate(3L, 1L))
 
     val actualSyncStats = statsTracker.getTotalStats(false)
-    Assertions.assertEquals(buildSyncStats(0L, 0L), actualSyncStats)
-    Assertions.assertEquals(0L, statsTracker.getTotalRecordsEstimated())
-    Assertions.assertEquals(0L, statsTracker.getTotalBytesEstimated())
-    Assertions.assertEquals(java.util.Map.of<Any, Any>(), statsTracker.getStreamToEstimatedBytes())
-    Assertions.assertEquals(java.util.Map.of<Any, Any>(), statsTracker.getStreamToEstimatedRecords())
+    assertEquals(buildSyncStats(0L, 0L), actualSyncStats)
+    assertEquals(0L, statsTracker.getTotalRecordsEstimated())
+    assertEquals(0L, statsTracker.getTotalBytesEstimated())
+    assertEquals(java.util.Map.of<Any, Any>(), statsTracker.getStreamToEstimatedBytes())
+    assertEquals(java.util.Map.of<Any, Any>(), statsTracker.getStreamToEstimatedRecords())
   }
 
   @Test
@@ -505,29 +521,29 @@ class ParallelStreamStatsTrackerTest {
     statsTracker.updateDestinationStateStats(s1State1)
     statsTracker.updateDestinationStateStats(s2State1)
 
-    Assertions.assertEquals(4, statsTracker.getTotalSourceStateMessagesEmitted())
-    Assertions.assertEquals(2, statsTracker.getTotalDestinationStateMessagesEmitted())
+    assertEquals(4, statsTracker.getTotalSourceStateMessagesEmitted())
+    assertEquals(2, statsTracker.getTotalDestinationStateMessagesEmitted())
 
     // We only check for a non-zero value for sanity check to avoid jitter from time.
-    Assertions.assertTrue(statsTracker.getMaxSecondsToReceiveSourceStateMessage() > 0)
-    Assertions.assertTrue(statsTracker.getMeanSecondsToReceiveSourceStateMessage() > 0)
-    Assertions.assertTrue(statsTracker.getMaxSecondsBetweenStateMessageEmittedAndCommitted()!! > 0)
-    Assertions.assertTrue(statsTracker.getMeanSecondsBetweenStateMessageEmittedAndCommitted()!! > 0)
+    assertTrue(statsTracker.getMaxSecondsToReceiveSourceStateMessage() > 0)
+    assertTrue(statsTracker.getMeanSecondsToReceiveSourceStateMessage() > 0)
+    assertTrue(statsTracker.getMaxSecondsBetweenStateMessageEmittedAndCommitted()!! > 0)
+    assertTrue(statsTracker.getMeanSecondsBetweenStateMessageEmittedAndCommitted()!! > 0)
   }
 
   @Test
   fun testGetMeanSecondsToReceiveSourceStateMessageReturnsZeroWhenEmpty() {
-    Assertions.assertEquals(0, statsTracker.getMeanSecondsToReceiveSourceStateMessage())
+    assertEquals(0, statsTracker.getMeanSecondsToReceiveSourceStateMessage())
   }
 
   @Test
   fun testGetMaxSecondsToReceiveSourceStateMessageReturnsZeroWhenEmpty() {
-    Assertions.assertEquals(0, statsTracker.getMaxSecondsToReceiveSourceStateMessage())
+    assertEquals(0, statsTracker.getMaxSecondsToReceiveSourceStateMessage())
   }
 
   @Test
   fun testGetMaxSecondsBetweenStateMessageEmittedAndCommittedReturnsNullWhenEmpty() {
-    Assertions.assertNull(statsTracker.getMaxSecondsBetweenStateMessageEmittedAndCommitted())
+    assertNull(statsTracker.getMaxSecondsBetweenStateMessageEmittedAndCommitted())
   }
 
   @Test
@@ -541,12 +557,12 @@ class ParallelStreamStatsTrackerTest {
     val actualLegacyStreamStats = statsTracker.getAllStreamSyncStats(false)
     assertStreamSyncStatsCoreStatsEquals(listOf(), actualLegacyStreamStats)
 
-    Assertions.assertTrue(statsTracker.getStreamToEmittedRecords().isEmpty())
-    Assertions.assertTrue(statsTracker.getStreamToEmittedBytes().isEmpty())
-    Assertions.assertTrue(statsTracker.getStreamToEstimatedRecords().isEmpty())
-    Assertions.assertTrue(statsTracker.getStreamToEstimatedBytes().isEmpty())
-    Assertions.assertTrue(statsTracker.getStreamToCommittedRecords().isEmpty())
-    Assertions.assertTrue(statsTracker.getStreamToCommittedBytes().isEmpty())
+    assertTrue(statsTracker.getStreamToEmittedRecords().isEmpty())
+    assertTrue(statsTracker.getStreamToEmittedBytes().isEmpty())
+    assertTrue(statsTracker.getStreamToEstimatedRecords().isEmpty())
+    assertTrue(statsTracker.getStreamToEstimatedBytes().isEmpty())
+    assertTrue(statsTracker.getStreamToCommittedRecords().isEmpty())
+    assertTrue(statsTracker.getStreamToCommittedBytes().isEmpty())
 
     // Checking for GlobalStates
     val globalState = createGlobalState(1337)
@@ -601,7 +617,7 @@ class ParallelStreamStatsTrackerTest {
 
     trackRecords(recordCount - 2, name, namespace)
 
-    Assertions.assertThrows(InvalidChecksumException::class.java) {
+    assertThrows(InvalidChecksumException::class.java) {
       statsTracker.updateSourceStatesStats(stateMessage2.state)
     }
   }
@@ -654,7 +670,7 @@ class ParallelStreamStatsTrackerTest {
 
     statsTracker.updateSourceStatesStats(stateMessage2.state)
 
-    Assertions.assertThrows(InvalidChecksumException::class.java) {
+    assertThrows(InvalidChecksumException::class.java) {
       statsTracker.updateDestinationStateStats(stateMessage2.state)
     }
   }
@@ -706,7 +722,7 @@ class ParallelStreamStatsTrackerTest {
     trackRecords(recordCount, name, namespace)
     statsTracker.updateSourceStatesStats(stateMessage2.state)
 
-    Assertions.assertThrows(InvalidChecksumException::class.java) {
+    assertThrows(InvalidChecksumException::class.java) {
       stateMessage2.state.sourceStats.recordCount = (recordCount - 2).toDouble()
       statsTracker.updateDestinationStateStats(stateMessage2.state)
     }
@@ -1123,7 +1139,7 @@ class ParallelStreamStatsTrackerTest {
     trackRecords(recordCountStream1, name1, namespace1)
     trackRecords(recordCountStream2, name2, namespace2)
     statsTracker.updateSourceStatesStats(stateMessage2.state)
-    Assertions.assertThrows(InvalidChecksumException::class.java) {
+    assertThrows(InvalidChecksumException::class.java) {
       stateMessage2.state.sourceStats.recordCount = recordCountStream1.toDouble()
       statsTracker.updateDestinationStateStats(stateMessage2.state)
     }
@@ -1140,13 +1156,7 @@ class ParallelStreamStatsTrackerTest {
     val strippedActual = keepCoreStats(actual)
 
     if (strippedExpected != strippedActual) {
-      Assertions.fail<Any>(
-        String.format(
-          "SyncStats differ, expected %s, actual:%s",
-          Jsons.serialize(strippedExpected),
-          Jsons.serialize(strippedActual),
-        ),
-      )
+      fail<Any>("SyncStats differ, expected ${Jsons.serialize(strippedExpected)}, actual:${Jsons.serialize(strippedActual)}")
     }
   }
 
@@ -1185,7 +1195,7 @@ class ParallelStreamStatsTrackerTest {
       }
     }
 
-    Assertions.assertFalse(isDifferent)
+    assertFalse(isDifferent)
   }
 
   private fun keepCoreStats(syncStats: SyncStats): SyncStats {
@@ -1205,7 +1215,7 @@ class ParallelStreamStatsTrackerTest {
       if (previous != null) {
         logger.info { "Duplicated stream found: $streamNameNamespacesPair" }
       }
-      Assertions.assertNull(previous)
+      assertNull(previous)
     }
     return filterStats
   }

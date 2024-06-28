@@ -5,7 +5,7 @@
 package io.airbyte.server.apis.publicapi.mappers
 
 import io.airbyte.api.model.generated.DestinationRead
-import io.airbyte.public_api.model.generated.DestinationResponse
+import io.airbyte.publicApi.server.generated.models.DestinationResponse
 
 /**
  * Mappers that help convert models from the config api to models from the public api.
@@ -18,12 +18,12 @@ object DestinationReadMapper {
    * @return DestinationResponse Response object with destination details
    */
   fun from(destinationRead: DestinationRead): DestinationResponse {
-    val destinationResponse = DestinationResponse()
-    destinationResponse.destinationId = destinationRead.destinationId
-    destinationResponse.name = destinationRead.name
-    destinationResponse.destinationType = DEFINITION_ID_TO_DESTINATION_NAME[destinationRead.destinationDefinitionId]
-    destinationResponse.workspaceId = destinationRead.workspaceId
-    destinationResponse.configuration = destinationRead.connectionConfiguration
-    return destinationResponse
+    return DestinationResponse(
+      destinationId = destinationRead.destinationId.toString(),
+      name = destinationRead.name,
+      destinationType = DEFINITION_ID_TO_DESTINATION_NAME.getOrDefault(destinationRead.destinationDefinitionId, ""),
+      workspaceId = destinationRead.workspaceId.toString(),
+      configuration = destinationRead.connectionConfiguration,
+    )
   }
 }

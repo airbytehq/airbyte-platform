@@ -276,11 +276,11 @@ abstract class MetricRepositoryTest {
 
       final var srcId = UUID.randomUUID();
       final var dstId = UUID.randomUUID();
-      ctx.insertInto(ACTOR, ACTOR.ID, ACTOR.WORKSPACE_ID, ACTOR.ACTOR_DEFINITION_ID, ACTOR.DEFAULT_VERSION_ID, ACTOR.NAME, ACTOR.CONFIGURATION,
+      ctx.insertInto(ACTOR, ACTOR.ID, ACTOR.WORKSPACE_ID, ACTOR.ACTOR_DEFINITION_ID, ACTOR.NAME, ACTOR.CONFIGURATION,
           ACTOR.ACTOR_TYPE,
           ACTOR.TOMBSTONE)
-          .values(srcId, workspaceId, SRC_DEF_ID, SRC_DEF_VER_ID, SRC, JSONB.valueOf("{}"), ActorType.source, false)
-          .values(dstId, workspaceId, DST_DEF_ID, DST_DEF_VER_ID, DEST, JSONB.valueOf("{}"), ActorType.destination, false)
+          .values(srcId, workspaceId, SRC_DEF_ID, SRC, JSONB.valueOf("{}"), ActorType.source, false)
+          .values(dstId, workspaceId, DST_DEF_ID, DEST, JSONB.valueOf("{}"), ActorType.destination, false)
           .execute();
 
       ctx.insertInto(CONNECTION, CONNECTION.ID, CONNECTION.NAMESPACE_DEFINITION, CONNECTION.SOURCE_ID, CONNECTION.DESTINATION_ID,
@@ -304,11 +304,11 @@ abstract class MetricRepositoryTest {
 
       final var srcId = UUID.randomUUID();
       final var dstId = UUID.randomUUID();
-      ctx.insertInto(ACTOR, ACTOR.ID, ACTOR.WORKSPACE_ID, ACTOR.ACTOR_DEFINITION_ID, ACTOR.DEFAULT_VERSION_ID, ACTOR.NAME, ACTOR.CONFIGURATION,
+      ctx.insertInto(ACTOR, ACTOR.ID, ACTOR.WORKSPACE_ID, ACTOR.ACTOR_DEFINITION_ID, ACTOR.NAME, ACTOR.CONFIGURATION,
           ACTOR.ACTOR_TYPE,
           ACTOR.TOMBSTONE)
-          .values(srcId, workspaceId, SRC_DEF_ID, SRC_DEF_VER_ID, SRC, JSONB.valueOf("{}"), ActorType.source, false)
-          .values(dstId, workspaceId, DST_DEF_ID, DST_DEF_VER_ID, DEST, JSONB.valueOf("{}"), ActorType.destination, false)
+          .values(srcId, workspaceId, SRC_DEF_ID, SRC, JSONB.valueOf("{}"), ActorType.source, false)
+          .values(dstId, workspaceId, DST_DEF_ID, DEST, JSONB.valueOf("{}"), ActorType.destination, false)
           .execute();
 
       ctx.insertInto(CONNECTION, CONNECTION.ID, CONNECTION.NAMESPACE_DEFINITION, CONNECTION.SOURCE_ID, CONNECTION.DESTINATION_ID,
@@ -334,11 +334,11 @@ abstract class MetricRepositoryTest {
 
       final var srcId = UUID.randomUUID();
       final var dstId = UUID.randomUUID();
-      ctx.insertInto(ACTOR, ACTOR.ID, ACTOR.WORKSPACE_ID, ACTOR.ACTOR_DEFINITION_ID, ACTOR.DEFAULT_VERSION_ID, ACTOR.NAME, ACTOR.CONFIGURATION,
+      ctx.insertInto(ACTOR, ACTOR.ID, ACTOR.WORKSPACE_ID, ACTOR.ACTOR_DEFINITION_ID, ACTOR.NAME, ACTOR.CONFIGURATION,
           ACTOR.ACTOR_TYPE,
           ACTOR.TOMBSTONE)
-          .values(srcId, workspaceId, SRC_DEF_ID, SRC_DEF_VER_ID, SRC, JSONB.valueOf("{}"), ActorType.source, false)
-          .values(dstId, workspaceId, DST_DEF_ID, DST_DEF_VER_ID, DEST, JSONB.valueOf("{}"), ActorType.destination, false)
+          .values(srcId, workspaceId, SRC_DEF_ID, SRC, JSONB.valueOf("{}"), ActorType.source, false)
+          .values(dstId, workspaceId, DST_DEF_ID, DEST, JSONB.valueOf("{}"), ActorType.destination, false)
           .execute();
 
       ctx.insertInto(CONNECTION, CONNECTION.ID, CONNECTION.NAMESPACE_DEFINITION, CONNECTION.SOURCE_ID, CONNECTION.DESTINATION_ID,

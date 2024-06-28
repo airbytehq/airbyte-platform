@@ -59,7 +59,7 @@ public class SlackNotificationClient extends NotificationClient {
   public boolean notifyJobFailure(final SyncSummary summary,
                                   final String receiverEmail)
       throws IOException, InterruptedException {
-    String legacyMessage = renderTemplate(
+    final String legacyMessage = renderTemplate(
         "slack/failure_slack_notification_template.txt",
         summary.getConnection().getName(),
         summary.getSource().getName(),
@@ -67,14 +67,16 @@ public class SlackNotificationClient extends NotificationClient {
         summary.getErrorMessage(),
         summary.getConnection().getUrl(),
         String.valueOf(summary.getJobId()));
-    return notifyJson(buildJobCompletedNotification(summary, "Sync failure occurred", legacyMessage, Optional.empty()).toJsonNode());
+    Notification notification = buildJobCompletedNotification(summary, "Sync failure occurred", legacyMessage, Optional.empty());
+    notification.setData(summary);
+    return notifyJson(notification.toJsonNode());
   }
 
   @Override
   public boolean notifyJobSuccess(final SyncSummary summary,
                                   final String receiverEmail)
       throws IOException, InterruptedException {
-    String legacyMessage = renderTemplate(
+    final String legacyMessage = renderTemplate(
         "slack/success_slack_notification_template.txt",
         summary.getConnection().getName(),
         summary.getSource().getName(),
@@ -82,7 +84,9 @@ public class SlackNotificationClient extends NotificationClient {
         summary.getErrorMessage(),
         summary.getConnection().getUrl(),
         String.valueOf(summary.getJobId()));
-    return notifyJson(buildJobCompletedNotification(summary, "Sync completed", legacyMessage, Optional.empty()).toJsonNode());
+    Notification notification = buildJobCompletedNotification(summary, "Sync completed", legacyMessage, Optional.empty());
+    notification.setData(summary);
+    return notifyJson(notification.toJsonNode());
   }
 
   @NotNull
@@ -90,10 +94,10 @@ public class SlackNotificationClient extends NotificationClient {
                                                     final String titleText,
                                                     final String legacyText,
                                                     final Optional<String> topContent) {
-    Notification notification = new Notification();
+    final Notification notification = new Notification();
     notification.setText(legacyText);
-    Section title = notification.addSection();
-    String connectionLink = Notification.createLink(summary.getConnection().getName(), summary.getConnection().getUrl());
+    final Section title = notification.addSection();
+    final String connectionLink = Notification.createLink(summary.getConnection().getName(), summary.getConnection().getUrl());
     title.setText(String.format("%s: %s", titleText, connectionLink));
 
     if (topContent.isPresent()) {
@@ -101,7 +105,7 @@ public class SlackNotificationClient extends NotificationClient {
       topSection.setText(topContent.get());
     }
 
-    Section description = notification.addSection();
+    final Section description = notification.addSection();
     final Field sourceLabel = description.addField();
     sourceLabel.setType("mrkdwn");
     sourceLabel.setText("*Source:*");
@@ -126,7 +130,7 @@ public class SlackNotificationClient extends NotificationClient {
     }
 
     if (!summary.isSuccess() && summary.getErrorMessage() != null) {
-      Section failureSection = notification.addSection();
+      final Section failureSection = notification.addSection();
       failureSection.setText(String.format("""
                                            *Failure reason:*
 
@@ -135,7 +139,7 @@ public class SlackNotificationClient extends NotificationClient {
                                            ```
                                            """, summary.getErrorMessage()));
     }
-    Section summarySection = notification.addSection();
+    final Section summarySection = notification.addSection();
     summarySection.setText(String.format("""
                                          *Sync Summary:*
                                          %d record(s) extracted / %d record(s) loaded
@@ -151,16 +155,16 @@ public class SlackNotificationClient extends NotificationClient {
   public boolean notifyConnectionDisabled(final SyncSummary summary,
                                           final String receiverEmail)
       throws IOException, InterruptedException {
-    String legacyMessage = renderTemplate(
+    final String legacyMessage = renderTemplate(
         "slack/auto_disable_slack_notification_template.txt",
         summary.getSource().getName(),
         summary.getDestination().getName(),
         summary.getErrorMessage(),
         summary.getWorkspace().getId().toString(),
         summary.getConnection().getId().toString());
-    String message = """
-                     Your connection has been repeatedly failing and has been automatically disabled.
-                     """;
+    final String message = """
+                           Your connection has been repeatedly failing and has been automatically disabled.
+                           """;
     return notifyJson(buildJobCompletedNotification(summary, "Connection disabled", legacyMessage, Optional.of(message)).toJsonNode());
   }
 
@@ -168,16 +172,16 @@ public class SlackNotificationClient extends NotificationClient {
   public boolean notifyConnectionDisableWarning(final SyncSummary summary,
                                                 final String receiverEmail)
       throws IOException, InterruptedException {
-    String legacyMessage = renderTemplate(
+    final String legacyMessage = renderTemplate(
         "slack/auto_disable_warning_slack_notification_template.txt",
         summary.getSource().getName(),
         summary.getDestination().getName(),
         summary.getErrorMessage(),
         summary.getWorkspace().getId().toString(),
         summary.getConnection().getId().toString());
-    String message = """
-                     Your connection has been repeatedly failing. Please address any issues to ensure your syncs continue to run.
-                     """;
+    final String message = """
+                           Your connection has been repeatedly failing. Please address any issues to ensure your syncs continue to run.
+                           """;
     return notifyJson(
         buildJobCompletedNotification(summary, "Warning - repeated connection failures", legacyMessage, Optional.of(message)).toJsonNode());
   }
@@ -206,11 +210,11 @@ public class SlackNotificationClient extends NotificationClient {
   public boolean notifySchemaPropagated(final SchemaUpdateNotification notification,
                                         final String recipient)
       throws IOException, InterruptedException {
-    String summary = buildSummary(notification.getCatalogDiff());
+    final String summary = buildSummary(notification.getCatalogDiff());
 
     final String header = String.format("The schema of '%s' has changed.",
         Notification.createLink(notification.getConnectionInfo().getName(), notification.getConnectionInfo().getUrl()));
-    Notification slackNotification =
+    final Notification slackNotification =
         buildSchemaPropagationNotification(notification.getWorkspace().getName(), notification.getSourceInfo().getName(), summary, header,
             notification.getWorkspace().getUrl(), notification.getSourceInfo().getUrl());
 
@@ -226,42 +230,42 @@ public class SlackNotificationClient extends NotificationClient {
   protected static String buildSummary(final CatalogDiff diff) {
     final StringBuilder summaryBuilder = new StringBuilder();
 
-    var newStreams =
+    final var newStreams =
         diff.getTransforms().stream().filter((t) -> t.getTransformType() == StreamTransform.TransformTypeEnum.ADD_STREAM)
             .sorted(Comparator.comparing(o -> StreamDescriptorUtils.buildFullyQualifiedName(o.getStreamDescriptor()))).toList();
-    var deletedStreams =
+    final var deletedStreams =
         diff.getTransforms().stream().filter((t) -> t.getTransformType() == StreamTransform.TransformTypeEnum.REMOVE_STREAM)
             .sorted(Comparator.comparing(o -> StreamDescriptorUtils.buildFullyQualifiedName(o.getStreamDescriptor()))).toList();
     if (!newStreams.isEmpty() || !deletedStreams.isEmpty()) {
       summaryBuilder.append(String.format(" • Streams (+%d/-%d)\n", newStreams.size(), deletedStreams.size()));
-      for (var stream : newStreams) {
-        StreamDescriptor descriptor = stream.getStreamDescriptor();
-        String fullyQualifiedStreamName = StreamDescriptorUtils.buildFullyQualifiedName(descriptor);
+      for (final var stream : newStreams) {
+        final StreamDescriptor descriptor = stream.getStreamDescriptor();
+        final String fullyQualifiedStreamName = StreamDescriptorUtils.buildFullyQualifiedName(descriptor);
         summaryBuilder.append(String.format("   ＋ %s\n", fullyQualifiedStreamName));
       }
-      for (var stream : deletedStreams) {
-        StreamDescriptor descriptor = stream.getStreamDescriptor();
-        String fullyQualifiedStreamName = StreamDescriptorUtils.buildFullyQualifiedName(descriptor);
+      for (final var stream : deletedStreams) {
+        final StreamDescriptor descriptor = stream.getStreamDescriptor();
+        final String fullyQualifiedStreamName = StreamDescriptorUtils.buildFullyQualifiedName(descriptor);
         summaryBuilder.append(String.format("   － %s\n", fullyQualifiedStreamName));
       }
     }
 
-    var alteredStreams =
+    final var alteredStreams =
         diff.getTransforms().stream().filter((t) -> t.getTransformType() == StreamTransform.TransformTypeEnum.UPDATE_STREAM)
             .sorted(Comparator.comparing(o -> StreamDescriptorUtils.buildFullyQualifiedName(o.getStreamDescriptor()))).toList();
     if (!alteredStreams.isEmpty()) {
-      var newFieldCount = alteredStreams.stream().flatMap(t -> t.getUpdateStream().stream())
+      final var newFieldCount = alteredStreams.stream().flatMap(t -> t.getUpdateStream().getFieldTransforms().stream())
           .filter(t -> t.getTransformType().equals(FieldTransform.TransformTypeEnum.ADD_FIELD)).count();
-      var deletedFieldsCount = alteredStreams.stream().flatMap(t -> t.getUpdateStream().stream())
+      final var deletedFieldsCount = alteredStreams.stream().flatMap(t -> t.getUpdateStream().getFieldTransforms().stream())
           .filter(t -> t.getTransformType().equals(FieldTransform.TransformTypeEnum.REMOVE_FIELD)).count();
-      var alteredFieldsCount = alteredStreams.stream().flatMap(t -> t.getUpdateStream().stream())
+      final var alteredFieldsCount = alteredStreams.stream().flatMap(t -> t.getUpdateStream().getFieldTransforms().stream())
           .filter(t -> t.getTransformType().equals(FieldTransform.TransformTypeEnum.UPDATE_FIELD_SCHEMA)).count();
       summaryBuilder.append(String.format(" • Fields (+%d/~%d/-%d)\n", newFieldCount, alteredFieldsCount, deletedFieldsCount));
-      for (var stream : alteredStreams) {
-        StreamDescriptor descriptor = stream.getStreamDescriptor();
-        String fullyQualifiedStreamName = StreamDescriptorUtils.buildFullyQualifiedName(descriptor);
+      for (final var stream : alteredStreams) {
+        final StreamDescriptor descriptor = stream.getStreamDescriptor();
+        final String fullyQualifiedStreamName = StreamDescriptorUtils.buildFullyQualifiedName(descriptor);
         summaryBuilder.append(String.format("   • %s\n", fullyQualifiedStreamName));
-        for (var fieldChange : stream.getUpdateStream().stream().sorted((o1, o2) -> {
+        for (final var fieldChange : stream.getUpdateStream().getFieldTransforms().stream().sorted((o1, o2) -> {
           if (o1.getTransformType().equals(o2.getTransformType())) {
             return StreamDescriptorUtils.buildFieldName(o1.getFieldName())
                 .compareTo(StreamDescriptorUtils.buildFieldName(o2.getFieldName()));
@@ -273,8 +277,8 @@ public class SlackNotificationClient extends NotificationClient {
           }
           return 1;
         }).toList()) {
-          String fieldName = StreamDescriptorUtils.buildFieldName(fieldChange.getFieldName());
-          String operation;
+          final String fieldName = StreamDescriptorUtils.buildFieldName(fieldChange.getFieldName());
+          final String operation;
           switch (fieldChange.getTransformType()) {
             case ADD_FIELD -> operation = "＋";
             case REMOVE_FIELD -> operation = "－";
@@ -296,11 +300,11 @@ public class SlackNotificationClient extends NotificationClient {
                                                          final String header,
                                                          final String workspaceUrl,
                                                          final String sourceUrl) {
-    Notification slackNotification = new Notification();
+    final Notification slackNotification = new Notification();
     slackNotification.setText(header);
-    Section titleSection = slackNotification.addSection();
+    final Section titleSection = slackNotification.addSection();
     titleSection.setText(header);
-    Section section = slackNotification.addSection();
+    final Section section = slackNotification.addSection();
     Field field = section.addField();
     field.setType("mrkdwn");
     field.setText("*Workspace*");
@@ -314,14 +318,14 @@ public class SlackNotificationClient extends NotificationClient {
     field.setType("mrkdwn");
     field.setText(Notification.createLink(sourceName, sourceUrl));
     slackNotification.addDivider();
-    Section changeSection = slackNotification.addSection();
+    final Section changeSection = slackNotification.addSection();
     changeSection.setText(summary);
     return slackNotification;
   }
 
   private boolean notify(final String message) throws IOException, InterruptedException {
-    ObjectMapper mapper = new ObjectMapper();
-    ObjectNode node = mapper.createObjectNode();
+    final ObjectMapper mapper = new ObjectMapper();
+    final ObjectNode node = mapper.createObjectNode();
     node.put("text", message);
     return notifyJson(node);
   }
@@ -330,7 +334,7 @@ public class SlackNotificationClient extends NotificationClient {
     if (Strings.isEmpty(config.getWebhook())) {
       return false;
     }
-    ObjectMapper mapper = new ObjectMapper();
+    final ObjectMapper mapper = new ObjectMapper();
     final HttpClient httpClient = HttpClient.newBuilder()
         .version(HttpClient.Version.HTTP_2)
         .build();

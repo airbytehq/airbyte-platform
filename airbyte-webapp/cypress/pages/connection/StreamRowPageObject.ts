@@ -115,7 +115,7 @@ export class StreamRowPageObject {
         // instead of using .contains(), e.g. "Incremental | Append" and "Incremental | Append + Dedupe"
         .filter((_, element) => Cypress.$(element).text().trim() === syncMode)
         .should("have.length", 1)
-        .click();
+        .click({ force: true });
     });
   }
 

@@ -23,9 +23,7 @@ public class ProtocolConverters {
    */
   @SuppressWarnings("LineLength")
   public static io.airbyte.api.client.model.generated.StreamDescriptor streamDescriptorToClient(final io.airbyte.protocol.models.StreamDescriptor protocolStreamDescriptor) {
-    return new io.airbyte.api.client.model.generated.StreamDescriptor()
-        .name(protocolStreamDescriptor.getName())
-        .namespace(protocolStreamDescriptor.getNamespace());
+    return new io.airbyte.api.client.model.generated.StreamDescriptor(protocolStreamDescriptor.getName(), protocolStreamDescriptor.getNamespace());
   }
 
   public static io.airbyte.protocol.models.StreamDescriptor streamDescriptorToProtocol(final StreamDescriptor apiStreamDescriptor) {

@@ -11,6 +11,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import io.airbyte.api.model.generated.AuthConfiguration;
+import io.airbyte.api.model.generated.AuthConfiguration.ModeEnum;
 import io.airbyte.api.model.generated.InstanceConfigurationResponse;
 import io.airbyte.api.model.generated.InstanceConfigurationResponse.EditionEnum;
 import io.airbyte.api.model.generated.InstanceConfigurationResponse.LicenseTypeEnum;
@@ -18,6 +19,8 @@ import io.airbyte.api.model.generated.InstanceConfigurationResponse.TrackingStra
 import io.airbyte.api.model.generated.InstanceConfigurationSetupRequestBody;
 import io.airbyte.api.model.generated.WorkspaceUpdate;
 import io.airbyte.commons.auth.config.AirbyteKeycloakConfiguration;
+import io.airbyte.commons.auth.config.AuthConfigs;
+import io.airbyte.commons.auth.config.AuthMode;
 import io.airbyte.commons.license.ActiveAirbyteLicense;
 import io.airbyte.commons.license.AirbyteLicense;
 import io.airbyte.commons.license.AirbyteLicense.LicenseType;
@@ -62,6 +65,8 @@ class InstanceConfigurationHandlerTest {
   private WorkspacesHandler mWorkspacesHandler;
   @Mock
   private OrganizationPersistence mOrganizationPersistence;
+  @Mock
+  private AuthConfigs mAuthConfigs;
 
   private AirbyteKeycloakConfiguration keycloakConfiguration;
   private ActiveAirbyteLicense activeAirbyteLicense;
@@ -84,21 +89,27 @@ class InstanceConfigurationHandlerTest {
     "false, true",
     "false, false"
   })
-  void testGetInstanceConfiguration(final boolean isPro, final boolean isInitialSetupComplete) throws IOException {
+  void testGetInstanceConfiguration(final boolean isEnterprise, final boolean isInitialSetupComplete) throws IOException {
     stubGetDefaultUser();
     stubGetDefaultOrganization();
-    when(mWorkspacePersistence.getInitialSetupComplete()).thenReturn(isInitialSetupComplete);
+    if (isEnterprise) {
+      stubEnterpriseAuthConfigs();
+    } else {
+      stubDefaultAuthConfigs();
+    }
 
-    instanceConfigurationHandler = getInstanceConfigurationHandler(isPro);
+    when(mWorkspacePersistence.getInitialSetupComplete()).thenReturn(isInitialSetupComplete);
+    instanceConfigurationHandler = getInstanceConfigurationHandler(isEnterprise);
 
     final InstanceConfigurationResponse expected = new InstanceConfigurationResponse()
-        .edition(isPro ? EditionEnum.PRO : EditionEnum.COMMUNITY)
+        .edition(isEnterprise ? EditionEnum.PRO : EditionEnum.COMMUNITY)
         .version("0.50.1")
         .airbyteUrl(AIRBYTE_URL)
-        .licenseType(isPro ? LicenseTypeEnum.PRO : null)
-        .auth(isPro ? new AuthConfiguration()
+        .licenseType(isEnterprise ? LicenseTypeEnum.PRO : null)
+        .auth(isEnterprise ? new AuthConfiguration()
+            .mode(ModeEnum.OIDC)
             .clientId(WEB_CLIENT_ID)
-            .defaultRealm(AIRBYTE_REALM) : null)
+            .defaultRealm(AIRBYTE_REALM) : new AuthConfiguration().mode(ModeEnum.NONE))
         .initialSetupComplete(isInitialSetupComplete)
         .defaultUserId(USER_ID)
         .defaultOrganizationId(ORGANIZATION_ID)
@@ -121,20 +132,21 @@ class InstanceConfigurationHandlerTest {
   void testGetInstanceConfigurationTrackingStrategy(final String envValue, final TrackingStrategyEnum expectedResult) throws IOException {
     stubGetDefaultUser();
     stubGetDefaultOrganization();
+    stubDefaultAuthConfigs();
 
     when(mWorkspacePersistence.getInitialSetupComplete()).thenReturn(true);
 
     final var handler = new InstanceConfigurationHandler(
-        AIRBYTE_URL,
+        Optional.of(AIRBYTE_URL),
         envValue,
         AirbyteEdition.COMMUNITY,
         new AirbyteVersion("0.50.1"),
         Optional.empty(),
-        Optional.empty(),
         mWorkspacePersistence,
         mWorkspacesHandler,
         mUserPersistence,
-        mOrganizationPersistence);
+        mOrganizationPersistence,
+        mAuthConfigs);
 
     final var result = handler.getInstanceConfiguration();
 
@@ -181,6 +193,8 @@ class InstanceConfigurationHandlerTest {
         .thenReturn(
             new StandardWorkspace().withWorkspaceId(WORKSPACE_ID).withInitialSetupComplete(true));
     when(mWorkspacePersistence.getInitialSetupComplete()).thenReturn(true);
+    when(mAuthConfigs.getAuthMode()).thenReturn(AuthMode.OIDC);
+    when(mAuthConfigs.getKeycloakConfig()).thenReturn(keycloakConfiguration);
 
     instanceConfigurationHandler = getInstanceConfigurationHandler(true);
 
@@ -192,6 +206,7 @@ class InstanceConfigurationHandlerTest {
         .airbyteUrl(AIRBYTE_URL)
         .licenseType(LicenseTypeEnum.PRO)
         .auth(new AuthConfiguration()
+            .mode(ModeEnum.OIDC)
             .clientId(WEB_CLIENT_ID)
             .defaultRealm(AIRBYTE_REALM))
         .initialSetupComplete(true)
@@ -257,18 +272,27 @@ class InstanceConfigurationHandlerTest {
             .withUserId(USER_ID)));
   }
 
-  private InstanceConfigurationHandler getInstanceConfigurationHandler(final boolean isPro) {
+  private void stubDefaultAuthConfigs() {
+    when(mAuthConfigs.getAuthMode()).thenReturn(AuthMode.NONE);
+  }
+
+  private void stubEnterpriseAuthConfigs() {
+    when(mAuthConfigs.getAuthMode()).thenReturn(AuthMode.OIDC);
+    when(mAuthConfigs.getKeycloakConfig()).thenReturn(keycloakConfiguration);
+  }
+
+  private InstanceConfigurationHandler getInstanceConfigurationHandler(final boolean isEnterprise) {
     return new InstanceConfigurationHandler(
-        AIRBYTE_URL,
+        Optional.of(AIRBYTE_URL),
         "logging",
-        isPro ? AirbyteEdition.PRO : AirbyteEdition.COMMUNITY,
+        isEnterprise ? AirbyteEdition.PRO : AirbyteEdition.COMMUNITY,
         new AirbyteVersion("0.50.1"),
-        isPro ? Optional.of(keycloakConfiguration) : Optional.empty(),
-        isPro ? Optional.of(activeAirbyteLicense) : Optional.empty(),
+        isEnterprise ? Optional.of(activeAirbyteLicense) : Optional.empty(),
         mWorkspacePersistence,
         mWorkspacesHandler,
         mUserPersistence,
-        mOrganizationPersistence);
+        mOrganizationPersistence,
+        mAuthConfigs);
   }
 
 }

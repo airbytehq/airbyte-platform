@@ -11,6 +11,7 @@ dependencies {
 
   implementation(platform(libs.micronaut.platform))
   implementation(libs.bundles.micronaut)
+  implementation(libs.bundles.micronaut.data.jdbc)
   implementation(libs.bundles.temporal)
   implementation(libs.bundles.apache)
   implementation(libs.failsafe)
@@ -32,7 +33,7 @@ dependencies {
   testAnnotationProcessor(libs.bundles.micronaut.test.annotation.processor)
 
   testImplementation(libs.temporal.testing)
-  // Needed to be able to mock final class)
+  // Needed to be able to mock final class
   testImplementation(libs.mockito.inline)
   testRuntimeOnly(libs.junit.jupiter.engine)
   testImplementation(libs.bundles.junit)
