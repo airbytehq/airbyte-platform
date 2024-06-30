@@ -1351,6 +1351,9 @@ postgresql:
   image:
     repository: airbyte/db
 
+  storage:
+    volumeClaimValue: 500Mi
+
   postgresqlUsername: airbyte
   postgresqlPassword: airbyte
   postgresqlDatabase: db-airbyte
