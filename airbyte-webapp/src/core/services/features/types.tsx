@@ -7,7 +7,6 @@ export enum FeatureItem {
   AllowAllRBACRoles = "ALLOW_ALL_RBAC_ROLES",
   AllowAutoDetectSchema = "ALLOW_AUTO_DETECT_SCHEMA",
   AllowUploadCustomImage = "ALLOW_UPLOAD_CUSTOM_IMAGE",
-  AllowCustomDBT = "ALLOW_CUSTOM_DBT",
   AllowDBTCloudIntegration = "ALLOW_DBT_CLOUD_INTEGRATION",
   AllowUpdateConnectors = "ALLOW_UPDATE_CONNECTORS",
   AllowOAuthConnector = "ALLOW_OAUTH_CONNECTOR",

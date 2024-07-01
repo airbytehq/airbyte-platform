@@ -17,9 +17,7 @@ import io.airbyte.config.DestinationOAuthParameter;
 import io.airbyte.config.JobSyncConfig.NamespaceDefinitionType;
 import io.airbyte.config.Notification;
 import io.airbyte.config.Notification.NotificationType;
-import io.airbyte.config.OperatorDbt;
-import io.airbyte.config.OperatorNormalization;
-import io.airbyte.config.OperatorNormalization.Option;
+import io.airbyte.config.OperatorWebhook;
 import io.airbyte.config.ResourceRequirements;
 import io.airbyte.config.Schedule;
 import io.airbyte.config.Schedule.TimeUnit;
@@ -29,7 +27,6 @@ import io.airbyte.config.SourceOAuthParameter;
 import io.airbyte.config.StandardSync;
 import io.airbyte.config.StandardSync.Status;
 import io.airbyte.config.StandardSyncOperation;
-import io.airbyte.config.StandardSyncOperation.OperatorType;
 import io.airbyte.config.StandardSyncState;
 import io.airbyte.config.StandardWorkspace;
 import io.airbyte.config.State;
@@ -299,27 +296,20 @@ public class SetupForNormalizedTablesTest {
   }
 
   public static List<StandardSyncOperation> standardSyncOperations() {
-    final OperatorDbt operatorDbt = new OperatorDbt()
-        .withDbtArguments("dbt-arguments")
-        .withDockerImage("image-tag")
-        .withGitRepoBranch("git-repo-branch")
-        .withGitRepoUrl("git-repo-url");
     final StandardSyncOperation standardSyncOperation1 = new StandardSyncOperation()
         .withName("operation-1")
         .withTombstone(false)
         .withOperationId(OPERATION_ID_1)
         .withWorkspaceId(WORKSPACE_ID)
-        .withOperatorDbt(operatorDbt)
-        .withOperatorNormalization(null)
-        .withOperatorType(OperatorType.DBT);
+        .withOperatorType(StandardSyncOperation.OperatorType.WEBHOOK)
+        .withOperatorWebhook(new OperatorWebhook());
     final StandardSyncOperation standardSyncOperation2 = new StandardSyncOperation()
         .withName("operation-1")
         .withTombstone(false)
         .withOperationId(OPERATION_ID_2)
         .withWorkspaceId(WORKSPACE_ID)
-        .withOperatorDbt(null)
-        .withOperatorNormalization(new OperatorNormalization().withOption(Option.BASIC))
-        .withOperatorType(OperatorType.NORMALIZATION);
+        .withOperatorType(StandardSyncOperation.OperatorType.WEBHOOK)
+        .withOperatorWebhook(new OperatorWebhook());
     return Arrays.asList(standardSyncOperation1, standardSyncOperation2);
   }
 

@@ -576,7 +576,7 @@ class StandardSyncPersistenceTest extends BaseConfigDatabaseTest {
         .withOperationId(standardSyncOperationId)
         .withName("name")
         .withWorkspaceId(workspaceId)
-        .withOperatorType(StandardSyncOperation.OperatorType.DBT));
+        .withOperatorType(StandardSyncOperation.OperatorType.WEBHOOK));
 
     database.transaction(ctx -> ctx.insertInto(CONNECTION_OPERATION)
         .set(CONNECTION_OPERATION.ID, operationId)

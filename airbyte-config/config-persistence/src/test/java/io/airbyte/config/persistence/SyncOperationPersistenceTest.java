@@ -10,9 +10,6 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.mock;
 
 import io.airbyte.config.Geography;
-import io.airbyte.config.OperatorDbt;
-import io.airbyte.config.OperatorNormalization;
-import io.airbyte.config.OperatorNormalization.Option;
 import io.airbyte.config.OperatorWebhook;
 import io.airbyte.config.StandardSyncOperation;
 import io.airbyte.config.StandardSyncOperation.OperatorType;
@@ -51,40 +48,18 @@ class SyncOperationPersistenceTest extends BaseConfigDatabaseTest {
 
   private ConfigRepository configRepository;
 
-  private static final StandardSyncOperation DBT_OP = new StandardSyncOperation()
-      .withName("operation-1")
-      .withTombstone(false)
-      .withOperationId(UUID.randomUUID())
-      .withWorkspaceId(WORKSPACE_ID)
-      .withOperatorDbt(new OperatorDbt()
-          .withDbtArguments("dbt-arguments")
-          .withDockerImage("image-tag")
-          .withGitRepoBranch("git-repo-branch")
-          .withGitRepoUrl("git-repo-url"))
-      .withOperatorNormalization(null)
-      .withOperatorType(OperatorType.DBT);
-  private static final StandardSyncOperation NORMALIZATION_OP = new StandardSyncOperation()
-      .withName("operation-1")
-      .withTombstone(false)
-      .withOperationId(UUID.randomUUID())
-      .withWorkspaceId(WORKSPACE_ID)
-      .withOperatorDbt(null)
-      .withOperatorNormalization(new OperatorNormalization().withOption(Option.BASIC))
-      .withOperatorType(OperatorType.NORMALIZATION);
   private static final StandardSyncOperation WEBHOOK_OP = new StandardSyncOperation()
       .withName("webhook-operation")
       .withTombstone(false)
       .withOperationId(UUID.randomUUID())
       .withWorkspaceId(WORKSPACE_ID)
       .withOperatorType(OperatorType.WEBHOOK)
-      .withOperatorDbt(null)
-      .withOperatorNormalization(null)
       .withOperatorWebhook(
           new OperatorWebhook()
               .withWebhookConfigId(WEBHOOK_CONFIG_ID)
               .withExecutionUrl(WEBHOOK_OPERATION_EXECUTION_URL)
               .withExecutionBody(WEBHOOK_OPERATION_EXECUTION_BODY));
-  private static final List<StandardSyncOperation> OPS = List.of(DBT_OP, NORMALIZATION_OP, WEBHOOK_OP);
+  private static final List<StandardSyncOperation> OPS = List.of(WEBHOOK_OP);
 
   @BeforeEach
   void beforeEach() throws Exception {

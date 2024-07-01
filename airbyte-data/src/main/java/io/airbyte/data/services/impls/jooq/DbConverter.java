@@ -45,7 +45,6 @@ import io.airbyte.config.DestinationOAuthParameter;
 import io.airbyte.config.FieldSelectionData;
 import io.airbyte.config.Geography;
 import io.airbyte.config.JobSyncConfig.NamespaceDefinitionType;
-import io.airbyte.config.NormalizationDestinationDefinitionConfig;
 import io.airbyte.config.Notification;
 import io.airbyte.config.NotificationSettings;
 import io.airbyte.config.Organization;
@@ -82,7 +81,6 @@ import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
-import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
 import org.jooq.Record;
@@ -528,16 +526,6 @@ public class DbConverter {
             ? null
             : Jsons.deserialize(record.get(ACTOR_DEFINITION_VERSION.SUGGESTED_STREAMS).data(),
                 SuggestedStreams.class))
-        .withSupportsDbt(record.get(ACTOR_DEFINITION_VERSION.SUPPORTS_DBT))
-        .withNormalizationConfig(
-            Objects.nonNull(record.get(ACTOR_DEFINITION_VERSION.NORMALIZATION_REPOSITORY))
-                && Objects.nonNull(record.get(ACTOR_DEFINITION_VERSION.NORMALIZATION_TAG))
-                && Objects.nonNull(record.get(ACTOR_DEFINITION_VERSION.NORMALIZATION_INTEGRATION_TYPE))
-                    ? new NormalizationDestinationDefinitionConfig()
-                        .withNormalizationRepository(record.get(ACTOR_DEFINITION_VERSION.NORMALIZATION_REPOSITORY))
-                        .withNormalizationTag(record.get(ACTOR_DEFINITION_VERSION.NORMALIZATION_TAG))
-                        .withNormalizationIntegrationType(record.get(ACTOR_DEFINITION_VERSION.NORMALIZATION_INTEGRATION_TYPE))
-                    : null)
         .withSupportsRefreshes(record.get(ACTOR_DEFINITION_VERSION.SUPPORTS_REFRESHES))
         .withSupportState(Enums.toEnum(record.get(ACTOR_DEFINITION_VERSION.SUPPORT_STATE, String.class), SupportState.class).orElseThrow());
   }

@@ -23,7 +23,7 @@ import { Heading } from "components/ui/Heading";
 import { ExternalLink } from "components/ui/Link";
 import { Spinner } from "components/ui/Spinner";
 
-import { useCurrentWorkspace, useDestinationDefinitionVersion } from "core/api";
+import { useCurrentWorkspace } from "core/api";
 import { Geography, WebBackendConnectionUpdate } from "core/api/types/AirbyteClient";
 import { PageTrackingCodes, useTrackPage } from "core/services/analytics";
 import { FeatureItem, useFeature } from "core/services/features";
@@ -191,14 +191,8 @@ const SimplifiedConnectionSettingsPage = () => {
   const { trackError } = useAppMonitoringService();
 
   const { mode } = useConnectionFormService();
-  const destDefinitionVersion = useDestinationDefinitionVersion(connection.destinationId);
   const { destDefinitionSpecification } = useConnectionFormService();
-  const simplifiedInitialValues = useInitialFormValues(
-    connection,
-    destDefinitionVersion,
-    destDefinitionSpecification,
-    mode
-  );
+  const simplifiedInitialValues = useInitialFormValues(connection, destDefinitionSpecification, mode);
 
   const { workspaceId } = useCurrentWorkspace();
   const canEditConnection = useIntent("EditConnection", { workspaceId });

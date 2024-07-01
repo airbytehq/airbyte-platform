@@ -15,8 +15,6 @@ import datadog.trace.api.Trace;
 import io.airbyte.api.client.model.generated.ConnectionStatus;
 import io.airbyte.commons.temporal.annotations.TemporalActivityStub;
 import io.airbyte.commons.temporal.scheduling.SyncWorkflow;
-import io.airbyte.config.NormalizationInput;
-import io.airbyte.config.NormalizationSummary;
 import io.airbyte.config.OperatorWebhookInput;
 import io.airbyte.config.StandardSyncInput;
 import io.airbyte.config.StandardSyncOperation;
@@ -27,10 +25,6 @@ import io.airbyte.config.StandardSyncSummary.ReplicationStatus;
 import io.airbyte.config.SyncStats;
 import io.airbyte.config.WebhookOperationSummary;
 import io.airbyte.metrics.lib.ApmTraceUtils;
-import io.airbyte.metrics.lib.MetricAttribute;
-import io.airbyte.metrics.lib.MetricClientFactory;
-import io.airbyte.metrics.lib.MetricTags;
-import io.airbyte.metrics.lib.OssMetricsRegistry;
 import io.airbyte.persistence.job.models.IntegrationLauncherConfig;
 import io.airbyte.persistence.job.models.JobRunConfig;
 import io.airbyte.workers.models.RefreshSchemaActivityInput;
@@ -55,8 +49,6 @@ public class SyncWorkflowImpl implements SyncWorkflow {
 
   @TemporalActivityStub(activityOptionsBeanName = "longRunActivityOptions")
   private ReplicationActivity replicationActivity;
-  @TemporalActivityStub(activityOptionsBeanName = "longRunActivityOptions")
-  private NormalizationActivity normalizationActivity;
   @TemporalActivityStub(activityOptionsBeanName = "shortActivityOptions")
   private WebhookOperationActivity webhookOperationActivity;
   @TemporalActivityStub(activityOptionsBeanName = "refreshSchemaActivityOptions")
@@ -124,27 +116,7 @@ public class SyncWorkflowImpl implements SyncWorkflow {
 
     if (syncInput.getOperationSequence() != null && !syncInput.getOperationSequence().isEmpty()) {
       for (final StandardSyncOperation standardSyncOperation : syncInput.getOperationSequence()) {
-        if (standardSyncOperation.getOperatorType() == OperatorType.NORMALIZATION) {
-          if (destinationLauncherConfig.getNormalizationDockerImage() == null
-              || destinationLauncherConfig.getNormalizationIntegrationType() == null) {
-            // In the case that this connection used to run normalization but the destination no longer supports
-            // it (destinations v1 -> v2)
-            LOGGER.info("Not Running Normalization Container for connection {}, attempt id {}, because destination no longer supports normalization",
-                connectionId, jobRunConfig.getAttemptId());
-          } else if (syncInput.getNormalizeInDestinationContainer()) {
-            LOGGER.info("Not Running Normalization Container for connection {}, attempt id {}, because it ran in destination",
-                connectionId, jobRunConfig.getAttemptId());
-          } else {
-            final NormalizationInput normalizationInput = generateNormalizationInput(syncInput);
-            final NormalizationSummary normalizationSummary =
-                normalizationActivity.normalize(jobRunConfig, destinationLauncherConfig, normalizationInput);
-            syncOutput = syncOutput.withNormalizationSummary(normalizationSummary);
-            MetricClientFactory.getMetricClient().count(OssMetricsRegistry.NORMALIZATION_IN_NORMALIZATION_CONTAINER, 1,
-                new MetricAttribute(MetricTags.CONNECTION_ID, connectionId.toString()));
-          }
-        } else if (standardSyncOperation.getOperatorType() == OperatorType.DBT) {
-          LOGGER.info("skipping custom dbt. deprecated.");
-        } else if (standardSyncOperation.getOperatorType() == OperatorType.WEBHOOK) {
+        if (standardSyncOperation.getOperatorType() == OperatorType.WEBHOOK) {
           LOGGER.info("running webhook operation");
           LOGGER.debug("webhook operation input: {}", standardSyncOperation);
           final boolean success = webhookOperationActivity
@@ -166,9 +138,7 @@ public class SyncWorkflowImpl implements SyncWorkflow {
             syncOutput.getWebhookOperationSummary().getFailures().add(standardSyncOperation.getOperatorWebhook().getWebhookConfigId());
           }
         } else {
-          final String message = String.format("Unsupported operation type: %s", standardSyncOperation.getOperatorType());
-          LOGGER.error(message);
-          throw new IllegalArgumentException(message);
+          LOGGER.warn("Unsupported operation type '{}' found.  Skipping operation...", standardSyncOperation.getOperatorType());
         }
       }
     }
@@ -201,14 +171,6 @@ public class SyncWorkflowImpl implements SyncWorkflow {
     return shouldReportRuntimeVersion != Workflow.DEFAULT_VERSION;
   }
 
-  private NormalizationInput generateNormalizationInput(final StandardSyncInput syncInput) {
-    return normalizationActivity.generateNormalizationInputWithMinimumPayloadWithConnectionId(syncInput.getDestinationConfiguration(),
-        null,
-        syncInput.getWorkspaceId(),
-        syncInput.getConnectionId(),
-        syncInput.getConnectionContext().getOrganizationId());
-  }
-
   private ReplicationActivityInput generateReplicationActivityInput(final StandardSyncInput syncInput,
                                                                     final JobRunConfig jobRunConfig,
                                                                     final IntegrationLauncherConfig sourceLauncherConfig,
@@ -228,7 +190,6 @@ public class SyncWorkflowImpl implements SyncWorkflow {
         syncInput.getSyncResourceRequirements(),
         syncInput.getWorkspaceId(),
         syncInput.getConnectionId(),
-        syncInput.getNormalizeInDestinationContainer(),
         taskQueue,
         syncInput.getIsReset(),
         syncInput.getNamespaceDefinition(),

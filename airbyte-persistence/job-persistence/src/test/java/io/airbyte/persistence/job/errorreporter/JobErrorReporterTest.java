@@ -14,7 +14,6 @@ import io.airbyte.config.FailureReason;
 import io.airbyte.config.FailureReason.FailureOrigin;
 import io.airbyte.config.FailureReason.FailureType;
 import io.airbyte.config.Metadata;
-import io.airbyte.config.NormalizationDestinationDefinitionConfig;
 import io.airbyte.config.ReleaseStage;
 import io.airbyte.config.StandardDestinationDefinition;
 import io.airbyte.config.StandardSourceDefinition;
@@ -42,9 +41,6 @@ class JobErrorReporterTest {
   private static final String WORKSPACE_URL = "http://localhost:8000/workspace/my_workspace";
   private static final DeploymentMode DEPLOYMENT_MODE = DeploymentMode.OSS;
   private static final String AIRBYTE_VERSION = "0.1.40";
-  private static final String NORMALIZATION_IMAGE = "airbyte/normalization";
-  private static final String NORMALIZATION_VERSION = "0.2.24";
-  private static final String NORMALIZATION_INTEGRATION_TYPE = "snowflake";
   private static final String DOCKER_IMAGE_TAG = "1.2.3";
 
   private static final UUID SOURCE_DEFINITION_ID = UUID.randomUUID();
@@ -77,7 +73,6 @@ class JobErrorReporterTest {
   private static final String CONNECTOR_NAME_KEY = "connector_name";
   private static final String CONNECTOR_RELEASE_STAGE_KEY = "connector_release_stage";
   private static final String CONNECTOR_COMMAND_KEY = "connector_command";
-  private static final String NORMALIZATION_REPOSITORY_KEY = "normalization_repository";
   private static final String CHECK_COMMAND = "check";
   private static final String DISCOVER_COMMAND = "discover";
   private static final String SPEC_COMMAND = "spec";
@@ -119,16 +114,11 @@ class JobErrorReporterTest {
         .withFailureOrigin(FailureOrigin.DESTINATION)
         .withFailureType(FailureType.SYSTEM_ERROR);
 
-    final FailureReason normalizationFailureReason = new FailureReason()
-        .withMetadata(new Metadata().withAdditionalProperty(FROM_TRACE_MESSAGE, true))
-        .withFailureOrigin(FailureOrigin.NORMALIZATION)
-        .withFailureType(FailureType.SYSTEM_ERROR);
-
     final FailureReason nonTraceMessageFailureReason = new FailureReason().withFailureOrigin(FailureOrigin.SOURCE);
     final FailureReason replicationFailureReason = new FailureReason().withFailureOrigin(FailureOrigin.REPLICATION);
 
     Mockito.when(mFailureSummary.getFailures()).thenReturn(List.of(
-        sourceFailureReason, destinationFailureReason, normalizationFailureReason, nonTraceMessageFailureReason, replicationFailureReason));
+        sourceFailureReason, destinationFailureReason, nonTraceMessageFailureReason, replicationFailureReason));
 
     final long syncJobId = 1L;
     final SyncJobReportingContext jobReportingContext = new SyncJobReportingContext(
@@ -160,11 +150,7 @@ class JobErrorReporterTest {
         .thenReturn(new ActorDefinitionVersion()
             .withDockerRepository(DESTINATION_DOCKER_REPOSITORY)
             .withDockerImageTag(DOCKER_IMAGE_TAG)
-            .withReleaseStage(DESTINATION_RELEASE_STAGE)
-            .withNormalizationConfig(new NormalizationDestinationDefinitionConfig()
-                .withNormalizationTag(NORMALIZATION_VERSION)
-                .withNormalizationRepository(NORMALIZATION_IMAGE)
-                .withNormalizationIntegrationType(NORMALIZATION_INTEGRATION_TYPE)));
+            .withReleaseStage(DESTINATION_RELEASE_STAGE));
 
     final StandardWorkspace mWorkspace = Mockito.mock(StandardWorkspace.class);
     Mockito.when(mWorkspace.getWorkspaceId()).thenReturn(WORKSPACE_ID);
@@ -204,33 +190,10 @@ class JobErrorReporterTest {
         Map.entry(CONNECTOR_NAME_KEY, DESTINATION_DEFINITION_NAME),
         Map.entry(CONNECTOR_RELEASE_STAGE_KEY, DESTINATION_RELEASE_STAGE.toString()));
 
-    final Map<String, String> expectedNormalizationMetadata = Map.ofEntries(
-        Map.entry(JOB_ID_KEY, String.valueOf(syncJobId)),
-        Map.entry(WORKSPACE_ID_KEY, WORKSPACE_ID.toString()),
-        Map.entry(WORKSPACE_URL_KEY, WORKSPACE_URL),
-        Map.entry(CONNECTION_ID_KEY, CONNECTION_ID.toString()),
-        Map.entry(CONNECTION_URL_KEY, CONNECTION_URL),
-        Map.entry(DEPLOYMENT_MODE_KEY, DEPLOYMENT_MODE.name()),
-        Map.entry(AIRBYTE_VERSION_KEY, AIRBYTE_VERSION),
-        Map.entry(FAILURE_ORIGIN_KEY, "normalization"),
-        Map.entry(FAILURE_TYPE_KEY, SYSTEM_ERROR),
-        Map.entry(NORMALIZATION_REPOSITORY_KEY, NORMALIZATION_IMAGE),
-        Map.entry(String.format(PREFIX_FORMAT_STRING, SOURCE, CONNECTOR_DEFINITION_ID_KEY), SOURCE_DEFINITION_ID.toString()),
-        Map.entry(String.format(PREFIX_FORMAT_STRING, SOURCE, CONNECTOR_REPOSITORY_KEY), SOURCE_DOCKER_REPOSITORY),
-        Map.entry(String.format(PREFIX_FORMAT_STRING, SOURCE, CONNECTOR_NAME_KEY), SOURCE_DEFINITION_NAME),
-        Map.entry(String.format(PREFIX_FORMAT_STRING, SOURCE, CONNECTOR_RELEASE_STAGE_KEY), SOURCE_RELEASE_STAGE.toString()),
-        Map.entry(CONNECTOR_DEFINITION_ID_KEY, DESTINATION_DEFINITION_ID.toString()),
-        Map.entry(CONNECTOR_REPOSITORY_KEY, DESTINATION_DOCKER_REPOSITORY),
-        Map.entry(CONNECTOR_NAME_KEY, DESTINATION_DEFINITION_NAME),
-        Map.entry(CONNECTOR_RELEASE_STAGE_KEY, DESTINATION_RELEASE_STAGE.toString()));
-
     Mockito.verify(jobErrorReportingClient).reportJobFailureReason(mWorkspace, sourceFailureReason, SOURCE_DOCKER_IMAGE, expectedSourceMetadata,
         attemptConfig);
     Mockito.verify(jobErrorReportingClient).reportJobFailureReason(mWorkspace, destinationFailureReason, DESTINATION_DOCKER_IMAGE,
         expectedDestinationMetadata, attemptConfig);
-    Mockito.verify(jobErrorReportingClient).reportJobFailureReason(
-        mWorkspace, normalizationFailureReason, String.format("%s:%s", NORMALIZATION_IMAGE, NORMALIZATION_VERSION), expectedNormalizationMetadata,
-        attemptConfig);
     Mockito.verifyNoMoreInteractions(jobErrorReportingClient);
   }
 

@@ -31,7 +31,6 @@ import io.airbyte.config.JobOutput;
 import io.airbyte.config.JobSyncConfig;
 import io.airbyte.config.JobSyncConfig.NamespaceDefinitionType;
 import io.airbyte.config.Metadata;
-import io.airbyte.config.NormalizationSummary;
 import io.airbyte.config.RefreshConfig;
 import io.airbyte.config.RefreshStream;
 import io.airbyte.config.Schedule;
@@ -145,8 +144,6 @@ class JobTrackerTest {
       .put("source_read_end_time", 10L)
       .put("destination_write_start_time", 11L)
       .put("destination_write_end_time", 12L)
-      .put("normalization_start_time", 13L)
-      .put("normalization_end_time", 14L)
       .build();
   private static final ImmutableMap<String, Object> SYNC_CONFIG_METADATA = ImmutableMap.<String, Object>builder()
       .put(JobTracker.CONFIG + ".source", "{\"key\":\"set\"}")
@@ -686,7 +683,6 @@ class JobTrackerTest {
     final JobOutput jobOutput = mock(JobOutput.class);
     final StandardSyncOutput syncOutput = mock(StandardSyncOutput.class);
     final StandardSyncSummary syncSummary = mock(StandardSyncSummary.class);
-    final NormalizationSummary normalizationSummary = mock(NormalizationSummary.class);
     final SyncStats syncStats = mock(SyncStats.class);
 
     when(syncSummary.getStartTime()).thenReturn(SYNC_START_TIME);
@@ -694,7 +690,6 @@ class JobTrackerTest {
     when(syncSummary.getBytesSynced()).thenReturn(SYNC_BYTES_SYNC);
     when(syncSummary.getRecordsSynced()).thenReturn(SYNC_RECORDS_SYNC);
     when(syncOutput.getStandardSyncSummary()).thenReturn(syncSummary);
-    when(syncOutput.getNormalizationSummary()).thenReturn(normalizationSummary);
     when(syncSummary.getTotalStats()).thenReturn(syncStats);
     when(jobOutput.getSync()).thenReturn(syncOutput);
     when(attempt.getOutput()).thenReturn(java.util.Optional.of(jobOutput));
@@ -710,8 +705,6 @@ class JobTrackerTest {
     when(syncStats.getSourceReadEndTime()).thenReturn(10L);
     when(syncStats.getDestinationWriteStartTime()).thenReturn(11L);
     when(syncStats.getDestinationWriteEndTime()).thenReturn(12L);
-    when(normalizationSummary.getStartTime()).thenReturn(13L);
-    when(normalizationSummary.getEndTime()).thenReturn(14L);
 
     return attempt;
   }

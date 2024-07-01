@@ -27,7 +27,6 @@ import { useAnalyticsTrackFunctions } from "./useAnalyticsTrackFunctions";
 import { ConnectionConfigurationCard } from "../ConnectionForm/ConnectionConfigurationCard";
 import { CreateConnectionFormControls } from "../ConnectionForm/CreateConnectionFormControls";
 import { FormConnectionFormValues, useConnectionValidationSchema } from "../ConnectionForm/formConfig";
-import { OperationsSectionCard } from "../ConnectionForm/OperationsSectionCard";
 import { SyncCatalogCard } from "../ConnectionForm/SyncCatalogCard";
 import { SyncCatalogCardNext } from "../ConnectionForm/SyncCatalogCardNext";
 
@@ -49,15 +48,11 @@ const CreateConnectionFormInner: React.FC = () => {
   const isSimplifiedCreation = useExperiment("connection.simplifiedCreation", true);
 
   const onSubmit = useCallback(
-    async ({ transformations, ...restFormValues }: FormConnectionFormValues) => {
+    async ({ ...restFormValues }: FormConnectionFormValues) => {
       try {
         const createdConnection = await createConnection({
           values: {
             ...restFormValues,
-            // only add operations if we have any transformations
-            ...(transformations !== undefined && {
-              operations: transformations,
-            }),
           },
           source: connection.source,
           destination: connection.destination,
@@ -117,7 +112,6 @@ const CreateConnectionFormInner: React.FC = () => {
               {canEditDataGeographies && <DataResidencyCard />}
               <ConnectionConfigurationCard />
               {isSyncCatalogV2Enabled ? <SyncCatalogCardNext /> : <SyncCatalogCard />}
-              <OperationsSectionCard />
               <CreateConnectionFormControls />
             </>
           )}

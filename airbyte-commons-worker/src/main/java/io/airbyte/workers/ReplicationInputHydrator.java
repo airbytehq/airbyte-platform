@@ -138,7 +138,6 @@ public class ReplicationInputHydrator {
         .withSyncResourceRequirements(replicationActivityInput.getSyncResourceRequirements())
         .withWorkspaceId(replicationActivityInput.getWorkspaceId())
         .withConnectionId(replicationActivityInput.getConnectionId())
-        .withNormalizeInDestinationContainer(replicationActivityInput.getNormalizeInDestinationContainer())
         .withIsReset(replicationActivityInput.getIsReset())
         .withJobRunConfig(replicationActivityInput.getJobRunConfig())
         .withSourceLauncherConfig(replicationActivityInput.getSourceLauncherConfig())

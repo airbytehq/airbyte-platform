@@ -3381,25 +3381,6 @@ paths:
           $ref: "#/components/responses/NotFoundResponse"
         "422":
           $ref: "#/components/responses/InvalidInputResponse"
-  /v1/jobs/get_normalization_status:
-    post:
-      tags:
-        - jobs
-        - internal
-      summary: Get normalization status to determine if we can bypass normalization phase
-      operationId: getAttemptNormalizationStatusesForJob
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/JobIdRequestBody"
-      responses:
-        "200":
-          description: Successful operation
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/AttemptNormalizationStatusReadList"
   /v1/jobs/get_input:
     post:
       tags:
@@ -7836,8 +7817,6 @@ components:
         - dockerRepository
         - dockerImageTag
         - documentationUrl
-        - supportsDbt
-        - normalizationConfig
       properties:
         destinationDefinitionId:
           $ref: "#/components/schemas/DestinationDefinitionId"
@@ -7869,15 +7848,9 @@ components:
           format: date
         resourceRequirements:
           $ref: "#/components/schemas/ActorDefinitionResourceRequirements"
-        supportsDbt:
-          type: boolean
-          description: an optional flag indicating whether DBT is used in the normalization. If the flag value is NULL - DBT is not used.
-        normalizationConfig:
-          $ref: "#/components/schemas/NormalizationDestinationDefinitionConfig"
         lastPublished:
           description: The time the connector was modified in the codebase.
           $ref: "#/components/schemas/ISO8601DateTime"
-
         cdkVersion:
           description: "The version of the CDK that the connector was built with. e.g. python:0.1.0, java:0.1.0"
           type: string
@@ -8128,9 +8101,7 @@ components:
       required:
         - dockerRepository
         - dockerImageTag
-        - supportsDbt
         - supportsRefreshes
-        - normalizationConfig
         - supportState
         - isVersionOverrideApplied
       properties:
@@ -8138,12 +8109,8 @@ components:
           type: string
         dockerImageTag:
           type: string
-        supportsDbt:
-          type: boolean
         supportsRefreshes:
           type: boolean
-        normalizationConfig:
-          $ref: "#/components/schemas/NormalizationDestinationDefinitionConfig"
         isVersionOverrideApplied:
           type: boolean
         supportLevel:
@@ -9100,41 +9067,12 @@ components:
         # the jsonschema2pojo does not seem to support it yet: https://github.com/joelittlejohn/jsonschema2pojo/issues/392
         operatorType:
           $ref: "#/components/schemas/OperatorType"
-        normalization:
-          $ref: "#/components/schemas/OperatorNormalization"
-        dbt:
-          $ref: "#/components/schemas/OperatorDbt"
         webhook:
           $ref: "#/components/schemas/OperatorWebhook"
     OperatorType:
       type: string
       enum:
-        # - destination
-        - normalization
-        - dbt
         - webhook
-      # - docker
-    OperatorNormalization:
-      type: object
-      properties:
-        option:
-          type: string
-          enum:
-            - basic
-            #- unnesting
-    OperatorDbt:
-      type: object
-      required:
-        - gitRepoUrl
-      properties:
-        gitRepoUrl:
-          type: string
-        gitRepoBranch:
-          type: string
-        dockerImage:
-          type: string
-        dbtArguments:
-          type: string
     OperatorWebhook:
       type: object
       properties:
@@ -10196,8 +10134,6 @@ components:
         - destination
         - replication
         - persistence
-        - normalization
-        - dbt
         - airbyte_platform
         - unknown
     FailureType:
@@ -10547,27 +10483,6 @@ components:
       description: A unique identifier for an actor.
       type: string
       format: uuid
-    NormalizationDestinationDefinitionConfig:
-      description: describes a normalization config for destination definition version
-      type: object
-      required:
-        - supported
-      additionalProperties: false
-      properties:
-        supported:
-          type: boolean
-          description: whether the destination definition supports normalization.
-          default: false
-        normalizationRepository:
-          type: string
-          description: a field indicating the name of the repository to be used for normalization. If the value of the flag is NULL - normalization is not used.
-        normalizationTag:
-          type: string
-          description: a field indicating the tag of the docker repository to be used for normalization.
-        normalizationIntegrationType:
-          type: string
-          description: a field indicating the type of integration dialect to use for normalization.
-
     JobTypeResourceLimit:
       description: sets resource requirements for a specific job type for an actor definition. these values override the default, if both are set.
       type: object
@@ -11257,25 +11172,6 @@ components:
         catalogId:
           type: string
           format: uuid
-    AttemptNormalizationStatusReadList:
-      type: object
-      properties:
-        attemptNormalizationStatuses:
-          type: array
-          items:
-            $ref: "#/components/schemas/AttemptNormalizationStatusRead"
-    AttemptNormalizationStatusRead:
-      type: object
-      properties:
-        attemptNumber:
-          $ref: "#/components/schemas/AttemptNumber"
-        hasRecordsCommitted:
-          type: boolean
-        recordsCommitted:
-          type: integer
-          format: int64
-        hasNormalizationFailed:
-          type: boolean
     StreamStatusId:
       type: string
       format: uuid

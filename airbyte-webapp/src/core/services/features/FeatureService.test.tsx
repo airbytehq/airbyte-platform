@@ -38,7 +38,6 @@ describe("Feature Service", () => {
     it("should allow setting default features", () => {
       const getFeature = (feature: FeatureItem) => renderHook(() => useFeature(feature), { wrapper }).result.current;
       expect(getFeature(FeatureItem.AllowDBTCloudIntegration)).toBe(true);
-      expect(getFeature(FeatureItem.AllowCustomDBT)).toBe(false);
       expect(getFeature(FeatureItem.AllowUpdateConnectors)).toBe(false);
     });
 
@@ -64,9 +63,9 @@ describe("Feature Service", () => {
 
     it("overwritten features can be cleared again", () => {
       const { result, rerender } = getFeatures({
-        overwrite: { [FeatureItem.AllowCustomDBT]: true } as FeatureSet,
+        overwrite: {} as FeatureSet,
       });
-      expect(result.current.sort()).toEqual([FeatureItem.AllowCustomDBT, FeatureItem.AllowDBTCloudIntegration]);
+      expect(result.current.sort()).toEqual([FeatureItem.AllowDBTCloudIntegration]);
       rerender({ overwrite: undefined });
       expect(result.current.sort()).toEqual([FeatureItem.AllowDBTCloudIntegration]);
     });

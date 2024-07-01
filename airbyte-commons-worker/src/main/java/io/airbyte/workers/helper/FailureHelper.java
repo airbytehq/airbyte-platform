@@ -63,8 +63,6 @@ public class FailureHelper {
   private static final String ACTIVITY_TYPE_REPLICATE = "Replicate";
   private static final String ACTIVITY_TYPE_REPLICATEV2 = "ReplicateV2";
   private static final String ACTIVITY_TYPE_PERSIST = "Persist";
-  private static final String ACTIVITY_TYPE_NORMALIZE = "Normalize";
-  private static final String ACTIVITY_TYPE_DBT_RUN = "Run";
 
   /**
    * Create generic failure.
@@ -311,47 +309,6 @@ public class FailureHelper {
   }
 
   /**
-   * Create normalization failure.
-   *
-   * @param t throwable that caused the failure
-   * @param jobId job id
-   * @param attemptNumber attempt number
-   * @return failure reason
-   */
-  public static FailureReason normalizationFailure(final Throwable t, final Long jobId, final Integer attemptNumber) {
-    return genericFailure(t, jobId, attemptNumber)
-        .withFailureOrigin(FailureOrigin.NORMALIZATION)
-        .withExternalMessage("Something went wrong during normalization");
-  }
-
-  /**
-   * Create normalization failure.
-   *
-   * @param jobId job id
-   * @param attemptNumber attempt number
-   * @return failure reason
-   */
-  public static FailureReason normalizationFailure(final AirbyteTraceMessage m, final Long jobId, final Integer attemptNumber) {
-    return genericFailure(m, jobId, attemptNumber)
-        .withFailureOrigin(FailureOrigin.NORMALIZATION)
-        .withExternalMessage(m.getError().getMessage());
-  }
-
-  /**
-   * Create dbt failure.
-   *
-   * @param t throwable that caused the failure
-   * @param jobId job id
-   * @param attemptNumber attempt number
-   * @return failure reason
-   */
-  public static FailureReason dbtFailure(final Throwable t, final Long jobId, final Integer attemptNumber) {
-    return genericFailure(t, jobId, attemptNumber)
-        .withFailureOrigin(FailureOrigin.DBT)
-        .withExternalMessage("Something went wrong during dbt");
-  }
-
-  /**
    * Create unknown origin failure.
    *
    * @param t throwable that caused the failure
@@ -420,10 +377,6 @@ public class FailureHelper {
       return replicationFailure(t, jobId, attemptNumber);
     } else if (WORKFLOW_TYPE_SYNC.equals(workflowType) && ACTIVITY_TYPE_PERSIST.equals(activityType)) {
       return persistenceFailure(t, jobId, attemptNumber);
-    } else if (WORKFLOW_TYPE_SYNC.equals(workflowType) && ACTIVITY_TYPE_NORMALIZE.equals(activityType)) {
-      return normalizationFailure(t, jobId, attemptNumber);
-    } else if (WORKFLOW_TYPE_SYNC.equals(workflowType) && ACTIVITY_TYPE_DBT_RUN.equals(activityType)) {
-      return dbtFailure(t, jobId, attemptNumber);
     } else {
       return unknownOriginFailure(t, jobId, attemptNumber);
     }

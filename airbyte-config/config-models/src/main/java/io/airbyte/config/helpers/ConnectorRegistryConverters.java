@@ -156,8 +156,6 @@ public class ConnectorRegistryConverters {
         .withReleaseDate(def.getReleaseDate())
         .withReleaseStage(def.getReleaseStage())
         .withSupportLevel(def.getSupportLevel() == null ? SupportLevel.NONE : def.getSupportLevel())
-        .withNormalizationConfig(def.getNormalizationConfig())
-        .withSupportsDbt(def.getSupportsDbt())
         .withLastPublished(lastModified)
         .withCdkVersion(cdkVersion)
         .withSupportsRefreshes(def.getSupportsRefreshes() != null && def.getSupportsRefreshes());

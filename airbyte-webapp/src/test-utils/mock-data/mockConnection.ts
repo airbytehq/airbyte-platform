@@ -911,19 +911,7 @@ export const mockConnection: WebBackendConnectionRead = {
     name: "Heroku Postgres",
     destinationName: "Postgres",
   },
-  operations: [
-    {
-      workspaceId: "47c74b9b-9b89-4af1-8331-4865af6c4e4d",
-      operationId: "8af8ef4d-01b1-49c8-b145-23775f34a74b",
-      name: "Normalization",
-      operatorConfiguration: {
-        operatorType: "normalization",
-        normalization: {
-          option: "basic",
-        },
-      },
-    },
-  ],
+  operations: [],
   latestSyncJobCreatedAt: 1660227512,
   latestSyncJobStatus: "succeeded",
   isSyncing: false,

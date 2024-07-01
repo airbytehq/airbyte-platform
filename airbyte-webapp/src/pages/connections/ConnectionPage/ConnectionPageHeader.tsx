@@ -8,6 +8,7 @@ import { FlexContainer } from "components/ui/Flex";
 import { PageHeaderWithNavigation } from "components/ui/PageHeader";
 import { Tabs, LinkTab } from "components/ui/Tabs";
 
+import { FeatureItem, useFeature } from "core/services/features";
 import { useConnectionEditService } from "hooks/services/ConnectionEdit/ConnectionEditService";
 import { useExperiment } from "hooks/services/Experiment";
 import { RoutePaths, ConnectionRoutePaths } from "pages/routePaths";
@@ -21,6 +22,7 @@ export const ConnectionPageHeader = () => {
   const { formatMessage } = useIntl();
   const currentTab = params["*"] || ConnectionRoutePaths.Status;
   const isSimplifiedCreation = useExperiment("connection.simplifiedCreation", true);
+  const supportsDbtCloud = useFeature(FeatureItem.AllowDBTCloudIntegration);
 
   const { connection, schemaRefreshing } = useConnectionEditService();
   const breadcrumbsData = [
@@ -56,12 +58,16 @@ export const ConnectionPageHeader = () => {
         to: `${basePath}/${ConnectionRoutePaths.Replication}`,
         disabled: schemaRefreshing,
       },
-      {
-        id: ConnectionRoutePaths.Transformation,
-        name: <FormattedMessage id="connectionForm.transformation.title" />,
-        to: `${basePath}/${ConnectionRoutePaths.Transformation}`,
-        disabled: schemaRefreshing,
-      },
+      ...(supportsDbtCloud
+        ? [
+            {
+              id: ConnectionRoutePaths.Transformation,
+              name: <FormattedMessage id="connectionForm.transformation.title" />,
+              to: `${basePath}/${ConnectionRoutePaths.Transformation}`,
+              disabled: schemaRefreshing,
+            },
+          ]
+        : []),
       {
         id: ConnectionRoutePaths.Settings,
         name: <FormattedMessage id="sources.settings" />,
@@ -71,7 +77,7 @@ export const ConnectionPageHeader = () => {
     ];
 
     return tabs;
-  }, [basePath, connection.schemaChange, schemaRefreshing, isSimplifiedCreation]);
+  }, [basePath, schemaRefreshing, isSimplifiedCreation, connection.schemaChange, supportsDbtCloud]);
 
   return (
     <PageHeaderWithNavigation breadcrumbsData={breadcrumbsData}>

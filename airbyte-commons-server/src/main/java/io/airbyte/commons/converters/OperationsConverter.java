@@ -9,12 +9,8 @@ import static io.airbyte.api.model.generated.OperatorWebhook.WebhookTypeEnum.DBT
 import com.google.common.base.Preconditions;
 import io.airbyte.api.model.generated.OperationRead;
 import io.airbyte.api.model.generated.OperatorConfiguration;
-import io.airbyte.api.model.generated.OperatorNormalization.OptionEnum;
 import io.airbyte.api.model.generated.OperatorWebhookDbtCloud;
 import io.airbyte.commons.enums.Enums;
-import io.airbyte.config.OperatorDbt;
-import io.airbyte.config.OperatorNormalization;
-import io.airbyte.config.OperatorNormalization.Option;
 import io.airbyte.config.OperatorWebhook;
 import io.airbyte.config.StandardSyncOperation;
 import io.airbyte.config.StandardSyncOperation.OperatorType;
@@ -34,26 +30,6 @@ public class OperationsConverter {
                                                    final StandardWorkspace standardWorkspace) {
     standardSyncOperation.withOperatorType(Enums.convertTo(operatorConfig.getOperatorType(), OperatorType.class));
     switch (operatorConfig.getOperatorType()) {
-      case NORMALIZATION -> {
-        Preconditions.checkArgument(operatorConfig.getNormalization() != null);
-        standardSyncOperation.withOperatorNormalization(new OperatorNormalization()
-            .withOption(Enums.convertTo(operatorConfig.getNormalization().getOption(), Option.class)));
-        // Null out the other configs, since it's mutually exclusive. We need to do this if it's an update.
-        standardSyncOperation.withOperatorDbt(null);
-        standardSyncOperation.withOperatorWebhook(null);
-      }
-      case DBT -> {
-        Preconditions.checkArgument(operatorConfig.getDbt() != null);
-        standardSyncOperation.withOperatorDbt(new OperatorDbt()
-            .withGitRepoUrl(operatorConfig.getDbt().getGitRepoUrl())
-            .withGitRepoBranch(operatorConfig.getDbt().getGitRepoBranch())
-            .withDockerImage(operatorConfig.getDbt().getDockerImage())
-            .withDbtArguments(operatorConfig.getDbt().getDbtArguments()));
-        // Null out the other configs, since they're mutually exclusive. We need to do this if it's an
-        // update.
-        standardSyncOperation.withOperatorNormalization(null);
-        standardSyncOperation.withOperatorWebhook(null);
-      }
       case WEBHOOK -> {
         Preconditions.checkArgument(operatorConfig.getWebhook() != null);
         // TODO(mfsiega-airbyte): check that the webhook config id references a real webhook config.
@@ -66,9 +42,6 @@ public class OperationsConverter {
             });
 
         standardSyncOperation.withOperatorWebhook(webhookOperatorFromConfig(operatorConfig.getWebhook(), customDbtHost));
-        // Null out the other configs, since it's mutually exclusive. We need to do this if it's an update.
-        standardSyncOperation.withOperatorNormalization(null);
-        standardSyncOperation.withOperatorDbt(null);
       }
     }
   }
@@ -85,19 +58,6 @@ public class OperationsConverter {
           .name(standardSyncOperation.getName());
     }
     switch (standardSyncOperation.getOperatorType()) {
-      case NORMALIZATION -> {
-        Preconditions.checkArgument(standardSyncOperation.getOperatorNormalization() != null);
-        operatorConfiguration.normalization(new io.airbyte.api.model.generated.OperatorNormalization()
-            .option(Enums.convertTo(standardSyncOperation.getOperatorNormalization().getOption(), OptionEnum.class)));
-      }
-      case DBT -> {
-        Preconditions.checkArgument(standardSyncOperation.getOperatorDbt() != null);
-        operatorConfiguration.dbt(new io.airbyte.api.model.generated.OperatorDbt()
-            .gitRepoUrl(standardSyncOperation.getOperatorDbt().getGitRepoUrl())
-            .gitRepoBranch(standardSyncOperation.getOperatorDbt().getGitRepoBranch())
-            .dockerImage(standardSyncOperation.getOperatorDbt().getDockerImage())
-            .dbtArguments(standardSyncOperation.getOperatorDbt().getDbtArguments()));
-      }
       case WEBHOOK -> {
         Preconditions.checkArgument(standardSyncOperation.getOperatorWebhook() != null);
         operatorConfiguration.webhook(webhookOperatorFromPersistence(standardSyncOperation.getOperatorWebhook()));

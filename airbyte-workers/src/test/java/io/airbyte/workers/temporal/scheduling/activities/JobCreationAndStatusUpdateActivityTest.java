@@ -30,7 +30,6 @@ import io.airbyte.commons.temporal.exception.RetryableException;
 import io.airbyte.config.AttemptFailureSummary;
 import io.airbyte.config.FailureReason;
 import io.airbyte.config.FailureReason.FailureOrigin;
-import io.airbyte.config.NormalizationSummary;
 import io.airbyte.config.StandardSyncOutput;
 import io.airbyte.config.StandardSyncSummary;
 import io.airbyte.config.StandardSyncSummary.ReplicationStatus;
@@ -98,9 +97,7 @@ class JobCreationAndStatusUpdateActivityTest {
   private static final StandardSyncOutput standardSyncOutput = new StandardSyncOutput()
       .withStandardSyncSummary(
           new StandardSyncSummary()
-              .withStatus(ReplicationStatus.COMPLETED))
-      .withNormalizationSummary(
-          new NormalizationSummary());
+              .withStatus(ReplicationStatus.COMPLETED));
 
   private static final AttemptFailureSummary failureSummary = new AttemptFailureSummary()
       .withFailures(Collections.singletonList(

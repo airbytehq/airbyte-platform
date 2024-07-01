@@ -87,12 +87,6 @@ public class OperationsHandler {
   }
 
   private void validateOperation(final OperatorConfiguration operatorConfiguration) {
-    if ((io.airbyte.api.model.generated.OperatorType.NORMALIZATION).equals(operatorConfiguration.getOperatorType())) {
-      Preconditions.checkArgument(operatorConfiguration.getNormalization() != null);
-    }
-    if ((io.airbyte.api.model.generated.OperatorType.DBT).equals(operatorConfiguration.getOperatorType())) {
-      Preconditions.checkArgument(operatorConfiguration.getDbt() != null);
-    }
     if (io.airbyte.api.model.generated.OperatorType.WEBHOOK.equals(operatorConfiguration.getOperatorType())) {
       Preconditions.checkArgument(operatorConfiguration.getWebhook() != null);
     }

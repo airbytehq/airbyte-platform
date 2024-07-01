@@ -21,7 +21,6 @@ import io.airbyte.config.BreakingChanges;
 import io.airbyte.config.ConnectorRegistryDestinationDefinition;
 import io.airbyte.config.ConnectorRegistrySourceDefinition;
 import io.airbyte.config.ConnectorReleases;
-import io.airbyte.config.NormalizationDestinationDefinitionConfig;
 import io.airbyte.config.ReleaseStage;
 import io.airbyte.config.ResourceRequirements;
 import io.airbyte.config.StandardDestinationDefinition;
@@ -150,11 +149,6 @@ class ConnectorRegistryConvertersTest {
 
   @Test
   void testConvertRegistryDestinationToInternalTypes() {
-    final NormalizationDestinationDefinitionConfig normalizationConfig = new NormalizationDestinationDefinitionConfig()
-        .withNormalizationRepository("normalization")
-        .withNormalizationTag("0.1.0")
-        .withNormalizationIntegrationType("bigquery");
-
     final ConnectorRegistryDestinationDefinition registryDestinationDef = new ConnectorRegistryDestinationDefinition()
         .withDestinationDefinitionId(DEF_ID)
         .withName(CONNECTOR_NAME)
@@ -171,8 +165,6 @@ class ConnectorRegistryConvertersTest {
         .withProtocolVersion(PROTOCOL_VERSION)
         .withAllowedHosts(ALLOWED_HOSTS)
         .withResourceRequirements(RESOURCE_REQUIREMENTS)
-        .withNormalizationConfig(normalizationConfig)
-        .withSupportsDbt(true)
         .withReleases(new ConnectorReleases().withBreakingChanges(registryBreakingChanges));
 
     final StandardDestinationDefinition stdDestinationDef = new StandardDestinationDefinition()
@@ -193,9 +185,7 @@ class ConnectorRegistryConvertersTest {
         .withReleaseStage(ReleaseStage.GENERALLY_AVAILABLE)
         .withReleaseDate(RELEASE_DATE)
         .withProtocolVersion(PROTOCOL_VERSION)
-        .withAllowedHosts(ALLOWED_HOSTS)
-        .withNormalizationConfig(normalizationConfig)
-        .withSupportsDbt(true);
+        .withAllowedHosts(ALLOWED_HOSTS);
 
     assertEquals(stdDestinationDef, ConnectorRegistryConverters.toStandardDestinationDefinition(registryDestinationDef));
     assertEquals(actorDefinitionVersion, ConnectorRegistryConverters.toActorDefinitionVersion(registryDestinationDef));
@@ -219,7 +209,6 @@ class ConnectorRegistryConvertersTest {
         .withProtocolVersion(PROTOCOL_VERSION)
         .withAllowedHosts(ALLOWED_HOSTS)
         .withResourceRequirements(RESOURCE_REQUIREMENTS)
-        .withSupportsDbt(true)
         .withReleases(new ConnectorReleases().withBreakingChanges(registryBreakingChanges));
 
     final ActorDefinitionVersion convertedAdv = ConnectorRegistryConverters.toActorDefinitionVersion(registryDestinationDef);
@@ -243,7 +232,6 @@ class ConnectorRegistryConvertersTest {
         .withProtocolVersion(PROTOCOL_VERSION)
         .withAllowedHosts(ALLOWED_HOSTS)
         .withResourceRequirements(RESOURCE_REQUIREMENTS)
-        .withSupportsDbt(true)
         .withReleases(new ConnectorReleases().withBreakingChanges(registryBreakingChangesWithoutScopedImpact));
 
     final List<ActorDefinitionBreakingChange> actorDefinitionBreakingChanges =

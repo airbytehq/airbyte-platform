@@ -377,7 +377,6 @@ class SyncAcceptanceTests {
     UUID sourceId = testHarness.createPostgresSource().getSourceId();
     final SourceDiscoverSchemaRead discoverResult = testHarness.discoverSourceSchemaWithId(sourceId);
     final UUID destinationId = testHarness.createPostgresDestination().getDestinationId();
-    final OperationRead operation = testHarness.createNormalizationOperation();
     final AirbyteCatalog catalog = modifyCatalog(
         discoverResult.getCatalog(),
         Optional.empty(),
@@ -400,6 +399,8 @@ class SyncAcceptanceTests {
             catalog,
             discoverResult.getCatalogId())
                 .build());
+
+    final OperationRead operation = testHarness.createDbtCloudWebhookOperation(connection.getWorkspaceId(), UUID.randomUUID());
 
     // Run initial sync
     final JobInfoRead syncRead = testHarness.syncConnection(connection.getConnectionId());

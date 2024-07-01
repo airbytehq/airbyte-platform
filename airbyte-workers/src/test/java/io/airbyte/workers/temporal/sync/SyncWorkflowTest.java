@@ -23,11 +23,8 @@ import io.airbyte.commons.temporal.scheduling.SyncWorkflow;
 import io.airbyte.config.ConnectionContext;
 import io.airbyte.config.FailureReason.FailureOrigin;
 import io.airbyte.config.FailureReason.FailureType;
-import io.airbyte.config.NormalizationInput;
-import io.airbyte.config.NormalizationSummary;
 import io.airbyte.config.OperatorWebhook;
 import io.airbyte.config.OperatorWebhookInput;
-import io.airbyte.config.ResourceRequirements;
 import io.airbyte.config.StandardSync;
 import io.airbyte.config.StandardSyncInput;
 import io.airbyte.config.StandardSyncOperation;
@@ -80,7 +77,6 @@ class SyncWorkflowTest {
   private Worker syncWorker;
   private WorkflowClient client;
   private ReplicationActivityImpl replicationActivity;
-  private NormalizationActivityImpl normalizationActivity;
   private WebhookOperationActivityImpl webhookOperationActivity;
   private RefreshSchemaActivityImpl refreshSchemaActivity;
   private ConfigFetchActivityImpl configFetchActivity;
@@ -96,8 +92,6 @@ class SyncWorkflowTest {
       .withAttemptId((long) ATTEMPT_ID);
   private static final String IMAGE_NAME1 = "hms invincible";
   private static final String IMAGE_NAME2 = "hms defiant";
-  private static final String NORMALIZATION_IMAGE1 = "hms normalize";
-  private static final String NORMALIZATION_TYPE = "postgres";
   private static final IntegrationLauncherConfig SOURCE_LAUNCHER_CONFIG = new IntegrationLauncherConfig()
       .withJobId(String.valueOf(JOB_ID))
       .withAttemptId((long) ATTEMPT_ID)
@@ -105,9 +99,7 @@ class SyncWorkflowTest {
   private static final IntegrationLauncherConfig DESTINATION_LAUNCHER_CONFIG = new IntegrationLauncherConfig()
       .withJobId(String.valueOf(JOB_ID))
       .withAttemptId((long) ATTEMPT_ID)
-      .withDockerImage(IMAGE_NAME2)
-      .withNormalizationDockerImage(NORMALIZATION_IMAGE1)
-      .withNormalizationIntegrationType(NORMALIZATION_TYPE);
+      .withDockerImage(IMAGE_NAME2);
 
   private static final String SYNC_QUEUE = "SYNC";
 
@@ -116,13 +108,11 @@ class SyncWorkflowTest {
 
   private StandardSync sync;
   private StandardSyncInput syncInput;
-  private NormalizationInput normalizationInput;
   private StandardSyncOutput replicationSuccessOutput;
   private StandardSyncOutput replicationFailOutput;
   private StandardSyncSummary standardSyncSummary;
   private StandardSyncSummary failedSyncSummary;
   private SyncStats syncStats;
-  private NormalizationSummary normalizationSummary;
   private ActivityOptions longActivityOptions;
   private ActivityOptions shortActivityOptions;
   private ActivityOptions discoveryActivityOptions;
@@ -145,26 +135,12 @@ class SyncWorkflowTest {
     failedSyncSummary = new StandardSyncSummary().withStatus(ReplicationStatus.FAILED).withTotalStats(new SyncStats().withRecordsEmitted(0L));
     replicationSuccessOutput = new StandardSyncOutput().withStandardSyncSummary(standardSyncSummary);
     replicationFailOutput = new StandardSyncOutput().withStandardSyncSummary(failedSyncSummary);
-
-    normalizationSummary = new NormalizationSummary();
-
-    normalizationInput = new NormalizationInput()
-        .withDestinationConfiguration(syncInput.getDestinationConfiguration())
-        .withResourceRequirements(new ResourceRequirements())
-        .withConnectionId(syncInput.getConnectionId())
-        .withWorkspaceId(syncInput.getWorkspaceId())
-        .withConnectionContext(new ConnectionContext().withOrganizationId(ORGANIZATION_ID));
-
     replicationActivity = mock(ReplicationActivityImpl.class);
-    normalizationActivity = mock(NormalizationActivityImpl.class);
     webhookOperationActivity = mock(WebhookOperationActivityImpl.class);
     refreshSchemaActivity = mock(RefreshSchemaActivityImpl.class);
     configFetchActivity = mock(ConfigFetchActivityImpl.class);
     workloadFeatureFlagActivity = mock(WorkloadFeatureFlagActivityImpl.class);
     reportRunTimeActivity = mock(ReportRunTimeActivityImpl.class);
-
-    when(normalizationActivity.generateNormalizationInputWithMinimumPayloadWithConnectionId(any(), any(), any(), any(), any()))
-        .thenReturn(normalizationInput);
 
     when(configFetchActivity.getSourceId(sync.getConnectionId())).thenReturn(Optional.of(SOURCE_ID));
     when(refreshSchemaActivity.shouldRefreshSchema(SOURCE_ID)).thenReturn(true);
@@ -231,7 +207,6 @@ class SyncWorkflowTest {
   // bundle up all the temporal worker setup / execution into one method.
   private StandardSyncOutput execute() {
     syncWorker.registerActivitiesImplementations(replicationActivity,
-        normalizationActivity,
         webhookOperationActivity,
         refreshSchemaActivity,
         configFetchActivity,
@@ -248,20 +223,14 @@ class SyncWorkflowTest {
   void testSuccess() throws Exception {
     doReturn(replicationSuccessOutput).when(replicationActivity).replicateV2(any());
 
-    doReturn(normalizationSummary).when(normalizationActivity).normalize(
-        JOB_RUN_CONFIG,
-        DESTINATION_LAUNCHER_CONFIG,
-        normalizationInput);
-
     final StandardSyncOutput actualOutput = execute();
 
     verifyReplication(replicationActivity, syncInput);
-    verifyNormalize(normalizationActivity, normalizationInput);
     verifyShouldRefreshSchema(refreshSchemaActivity);
     verifyRefreshSchema(refreshSchemaActivity, sync, syncInput);
     verify(reportRunTimeActivity).reportRunTime(any());
     assertEquals(
-        replicationSuccessOutput.withNormalizationSummary(normalizationSummary).getStandardSyncSummary(),
+        replicationSuccessOutput.getStandardSyncSummary(),
         removeRefreshTime(actualOutput.getStandardSyncSummary()));
   }
 
@@ -272,19 +241,13 @@ class SyncWorkflowTest {
 
     doReturn(replicationSuccessOutput).when(replicationActivity).replicateV2(any());
 
-    doReturn(normalizationSummary).when(normalizationActivity).normalize(
-        JOB_RUN_CONFIG,
-        DESTINATION_LAUNCHER_CONFIG,
-        normalizationInput);
-
     final StandardSyncOutput actualOutput = execute();
 
     verifyReplication(replicationActivity, syncInput, useWorkloadApi, false);
-    verifyNormalize(normalizationActivity, normalizationInput);
     verifyShouldRefreshSchema(refreshSchemaActivity);
     verifyRefreshSchema(refreshSchemaActivity, sync, syncInput);
     assertEquals(
-        replicationSuccessOutput.withNormalizationSummary(normalizationSummary).getStandardSyncSummary(),
+        replicationSuccessOutput.getStandardSyncSummary(),
         removeRefreshTime(actualOutput.getStandardSyncSummary()));
   }
 
@@ -297,26 +260,19 @@ class SyncWorkflowTest {
     verifyShouldRefreshSchema(refreshSchemaActivity);
     verifyRefreshSchema(refreshSchemaActivity, sync, syncInput);
     verifyReplication(replicationActivity, syncInput);
-    verifyNoInteractions(normalizationActivity);
   }
 
   @Test
   void testReplicationFailedGracefully() throws Exception {
     doReturn(replicationFailOutput).when(replicationActivity).replicateV2(any());
 
-    doReturn(normalizationSummary).when(normalizationActivity).normalize(
-        JOB_RUN_CONFIG,
-        DESTINATION_LAUNCHER_CONFIG,
-        normalizationInput);
-
     final StandardSyncOutput actualOutput = execute();
 
     verifyShouldRefreshSchema(refreshSchemaActivity);
     verifyRefreshSchema(refreshSchemaActivity, sync, syncInput);
     verifyReplication(replicationActivity, syncInput);
-    verifyNormalize(normalizationActivity, normalizationInput);
     assertEquals(
-        replicationFailOutput.withNormalizationSummary(normalizationSummary).getStandardSyncSummary(),
+        replicationFailOutput.getStandardSyncSummary(),
         removeRefreshTime(actualOutput.getStandardSyncSummary()));
   }
 
@@ -325,23 +281,6 @@ class SyncWorkflowTest {
     in.getTotalStats().setDiscoverSchemaStartTime(null);
 
     return in;
-  }
-
-  @Test
-  void testNormalizationFailure() throws Exception {
-    doReturn(replicationSuccessOutput).when(replicationActivity).replicateV2(any());
-
-    doThrow(new IllegalArgumentException("induced exception")).when(normalizationActivity).normalize(
-        JOB_RUN_CONFIG,
-        DESTINATION_LAUNCHER_CONFIG,
-        normalizationInput);
-
-    assertThrows(WorkflowFailedException.class, this::execute);
-
-    verifyShouldRefreshSchema(refreshSchemaActivity);
-    verifyRefreshSchema(refreshSchemaActivity, sync, syncInput);
-    verifyReplication(replicationActivity, syncInput);
-    verifyNormalize(normalizationActivity, normalizationInput);
   }
 
   @Test
@@ -356,27 +295,6 @@ class SyncWorkflowTest {
     verifyShouldRefreshSchema(refreshSchemaActivity);
     verifyRefreshSchema(refreshSchemaActivity, sync, syncInput);
     verifyReplication(replicationActivity, syncInput);
-    verifyNoInteractions(normalizationActivity);
-  }
-
-  @Test
-  void testCancelDuringNormalization() throws Exception {
-    doReturn(replicationSuccessOutput).when(replicationActivity).replicateV2(any());
-
-    doAnswer(ignored -> {
-      cancelWorkflow();
-      return replicationSuccessOutput;
-    }).when(normalizationActivity).normalize(
-        JOB_RUN_CONFIG,
-        DESTINATION_LAUNCHER_CONFIG,
-        normalizationInput);
-
-    assertThrows(WorkflowFailedException.class, this::execute);
-
-    verifyShouldRefreshSchema(refreshSchemaActivity);
-    verifyRefreshSchema(refreshSchemaActivity, sync, syncInput);
-    verifyReplication(replicationActivity, syncInput);
-    verifyNormalize(normalizationActivity, normalizationInput);
   }
 
   @Test
@@ -407,7 +325,6 @@ class SyncWorkflowTest {
     verifyShouldRefreshSchema(refreshSchemaActivity);
     verifyRefreshSchema(refreshSchemaActivity, sync, syncInput);
     verifyNoInteractions(replicationActivity);
-    verifyNoInteractions(normalizationActivity);
     assertEquals(output.getStandardSyncSummary().getStatus(), ReplicationStatus.CANCELLED);
   }
 
@@ -459,7 +376,6 @@ class SyncWorkflowTest {
         syncInput.getSyncResourceRequirements(),
         syncInput.getWorkspaceId(),
         syncInput.getConnectionId(),
-        syncInput.getNormalizeInDestinationContainer(),
         SYNC_QUEUE,
         syncInput.getIsReset(),
         syncInput.getNamespaceDefinition(),
@@ -469,13 +385,6 @@ class SyncWorkflowTest {
         new ConnectionContext().withOrganizationId(ORGANIZATION_ID).withSourceDefinitionId(SOURCE_DEFINITION_ID),
         useWorkloadApi,
         useOutputDocStore));
-  }
-
-  private void verifyNormalize(final NormalizationActivity normalizationActivity, final NormalizationInput normalizationInput) {
-    verify(normalizationActivity).normalize(
-        JOB_RUN_CONFIG,
-        DESTINATION_LAUNCHER_CONFIG,
-        normalizationInput);
   }
 
   private static void verifyShouldRefreshSchema(final RefreshSchemaActivity refreshSchemaActivity) {

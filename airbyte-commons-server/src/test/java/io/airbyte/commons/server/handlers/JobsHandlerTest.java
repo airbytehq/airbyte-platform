@@ -33,7 +33,6 @@ import io.airbyte.config.FailureReason.FailureOrigin;
 import io.airbyte.config.JobConfig;
 import io.airbyte.config.JobOutput;
 import io.airbyte.config.JobSyncConfig;
-import io.airbyte.config.NormalizationSummary;
 import io.airbyte.config.StandardSyncOutput;
 import io.airbyte.config.StandardSyncSummary;
 import io.airbyte.config.StandardSyncSummary.ReplicationStatus;
@@ -85,9 +84,7 @@ public class JobsHandlerTest {
   private static final StandardSyncOutput standardSyncOutput = new StandardSyncOutput()
       .withStandardSyncSummary(
           new StandardSyncSummary()
-              .withStatus(ReplicationStatus.COMPLETED))
-      .withNormalizationSummary(
-          new NormalizationSummary());
+              .withStatus(ReplicationStatus.COMPLETED));
 
   private static final JobOutput jobOutput = new JobOutput().withSync(standardSyncOutput);
   private static final ConfiguredAirbyteCatalog catalog = new ConfiguredAirbyteCatalog()

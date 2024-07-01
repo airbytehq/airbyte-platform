@@ -49,7 +49,6 @@ import io.airbyte.config.JobConfig.ConfigType;
 import io.airbyte.config.JobOutput;
 import io.airbyte.config.JobResetConnectionConfig;
 import io.airbyte.config.JobSyncConfig;
-import io.airbyte.config.NormalizationSummary;
 import io.airbyte.config.RefreshConfig;
 import io.airbyte.config.ResetSourceConfiguration;
 import io.airbyte.config.StandardSync;
@@ -132,9 +131,7 @@ class AttemptHandlerTest {
   private static final StandardSyncOutput standardSyncOutput = new StandardSyncOutput()
       .withStandardSyncSummary(
           new StandardSyncSummary()
-              .withStatus(ReplicationStatus.COMPLETED))
-      .withNormalizationSummary(
-          new NormalizationSummary());
+              .withStatus(ReplicationStatus.COMPLETED));
 
   private static final JobOutput jobOutput = new JobOutput().withSync(standardSyncOutput);
 

@@ -19,8 +19,6 @@ object AutoDetectSchema : EnvVar(envVar = "AUTO_DETECT_SCHEMA")
 
 object RemoveValidationLimit : Temporary<Boolean>(key = "validation.removeValidationLimit", default = false)
 
-object NormalizationInDestination : Temporary<String>(key = "connectors.normalizationInDestination", default = "")
-
 object FieldSelectionEnabled : Temporary<Boolean>(key = "connection.columnSelection", default = false)
 
 object CheckWithCatalog : Temporary<Boolean>(key = "check-with-catalog", default = false)

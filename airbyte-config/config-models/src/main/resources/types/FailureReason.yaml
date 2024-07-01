@@ -15,8 +15,6 @@ properties:
       - destination
       - replication
       - persistence
-      - normalization
-      - dbt
       - airbyte_platform
       - unknown
   failureType:

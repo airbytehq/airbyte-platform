@@ -11,7 +11,6 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Charsets;
 import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.Lists;
 import com.google.common.hash.HashFunction;
 import com.google.common.hash.Hashing;
 import io.airbyte.api.model.generated.CatalogDiff;
@@ -73,7 +72,6 @@ import io.airbyte.config.StandardCheckConnectionOutput;
 import io.airbyte.config.StandardDestinationDefinition;
 import io.airbyte.config.StandardSourceDefinition;
 import io.airbyte.config.StandardSync;
-import io.airbyte.config.StandardSyncOperation;
 import io.airbyte.config.StandardWorkspace;
 import io.airbyte.config.WorkloadPriority;
 import io.airbyte.config.helpers.ResourceRequirementsUtils;
@@ -637,18 +635,6 @@ public class SchedulerHandler {
           actorDefinitionVersionHelper.getDestinationVersion(destinationDef, destination.getWorkspaceId(), destination.getDestinationId());
       final String destinationImageName = destinationVersion.getDockerRepository() + ":" + destinationVersion.getDockerImageTag();
 
-      final List<StandardSyncOperation> standardSyncOperations = Lists.newArrayList();
-      for (final var operationId : standardSync.getOperationIds()) {
-        final StandardSyncOperation standardSyncOperation = configRepository.getStandardSyncOperation(operationId);
-        // NOTE: we must run normalization operations during resets, because we rely on them to clear the
-        // normalized tables. However, we don't want to run other operations (dbt, webhook) because those
-        // are meant to transform the data after the sync but there's no data to transform. Webhook
-        // operations particularly will fail because we don't populate some required config during resets.
-        if (StandardSyncOperation.OperatorType.NORMALIZATION.equals(standardSyncOperation.getOperatorType())) {
-          standardSyncOperations.add(standardSyncOperation);
-        }
-      }
-
       final Optional<Long> jobIdOptional =
           jobCreator.createResetConnectionJob(
               destination,
@@ -658,7 +644,7 @@ public class SchedulerHandler {
               destinationImageName,
               new Version(destinationVersion.getProtocolVersion()),
               destinationDef.getCustom(),
-              standardSyncOperations,
+              List.of(),
               streamsToReset,
               destination.getWorkspaceId());
 

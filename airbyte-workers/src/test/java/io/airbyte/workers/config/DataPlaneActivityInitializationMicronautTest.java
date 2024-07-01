@@ -11,8 +11,6 @@ import io.airbyte.commons.temporal.config.WorkerMode;
 import io.airbyte.config.secrets.persistence.SecretPersistence;
 import io.airbyte.workers.temporal.scheduling.activities.ConfigFetchActivity;
 import io.airbyte.workers.temporal.scheduling.activities.ConfigFetchActivityImpl;
-import io.airbyte.workers.temporal.sync.NormalizationActivity;
-import io.airbyte.workers.temporal.sync.NormalizationActivityImpl;
 import io.airbyte.workers.temporal.sync.RefreshSchemaActivity;
 import io.airbyte.workers.temporal.sync.RefreshSchemaActivityImpl;
 import io.airbyte.workers.temporal.sync.ReplicationActivity;
@@ -58,8 +56,6 @@ class DataPlaneActivityInitializationMicronautTest {
 
   @Inject
   ConfigFetchActivity configFetchActivity;
-  @Inject
-  NormalizationActivity normalizationActivity;
 
   @Inject
   RefreshSchemaActivity refreshSchemaActivity;
@@ -73,11 +69,6 @@ class DataPlaneActivityInitializationMicronautTest {
   @Test
   void testConfigFetchActivity() {
     assertEquals(ConfigFetchActivityImpl.class, configFetchActivity.getClass());
-  }
-
-  @Test
-  void testNormalizationActivity() {
-    assertEquals(NormalizationActivityImpl.class, normalizationActivity.getClass());
   }
 
   @Test

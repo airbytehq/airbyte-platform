@@ -60,7 +60,6 @@ import io.airbyte.api.client.model.generated.OperationCreate;
 import io.airbyte.api.client.model.generated.OperationIdRequestBody;
 import io.airbyte.api.client.model.generated.OperationRead;
 import io.airbyte.api.client.model.generated.OperatorConfiguration;
-import io.airbyte.api.client.model.generated.OperatorNormalization;
 import io.airbyte.api.client.model.generated.OperatorType;
 import io.airbyte.api.client.model.generated.OperatorWebhook;
 import io.airbyte.api.client.model.generated.OperatorWebhookDbtCloud;
@@ -848,25 +847,6 @@ public class AcceptanceTestHarness {
         .checkConnectionToDestination(new DestinationIdRequestBody(destinationId)).getStatus();
   }
 
-  public OperationRead createNormalizationOperation() throws IOException {
-    return createNormalizationOperation(defaultWorkspaceId);
-  }
-
-  public OperationRead createNormalizationOperation(final UUID workspaceId) throws IOException {
-    final OperatorConfiguration normalizationConfig = new OperatorConfiguration(
-        OperatorType.NORMALIZATION,
-        new OperatorNormalization(OperatorNormalization.Option.BASIC),
-        null,
-        null);
-    final OperationCreate operationCreate = new OperationCreate(
-        workspaceId,
-        "AccTestDestination-" + UUID.randomUUID(),
-        normalizationConfig);
-    final OperationRead operation = apiClient.getOperationApi().createOperation(operationCreate);
-    operationIds.add(operation.getOperationId());
-    return operation;
-  }
-
   public OperationRead createDbtCloudWebhookOperation(final UUID workspaceId, final UUID webhookConfigId) throws Exception {
     return apiClient.getOperationApi().createOperation(
         new OperationCreate(
@@ -874,8 +854,6 @@ public class AcceptanceTestHarness {
             "reqres test",
             new OperatorConfiguration(
                 OperatorType.WEBHOOK,
-                null,
-                null,
                 new OperatorWebhook(
                     webhookConfigId,
                     OperatorWebhook.WebhookType.DBT_CLOUD,

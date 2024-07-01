@@ -25,8 +25,6 @@ import io.airbyte.workers.general.ReplicationWorkerFactory;
 import io.airbyte.workers.process.AsyncOrchestratorPodProcess;
 import io.airbyte.workers.process.DockerProcessFactory;
 import io.airbyte.workers.process.ProcessFactory;
-import io.airbyte.workers.sync.DbtLauncherWorker;
-import io.airbyte.workers.sync.NormalizationLauncherWorker;
 import io.airbyte.workers.sync.ReplicationLauncherWorker;
 import io.airbyte.workers.workload.JobOutputDocStore;
 import io.airbyte.workers.workload.WorkloadIdGenerator;
@@ -126,29 +124,18 @@ class ContainerOrchestratorFactoryTest {
     final var factory = new ContainerOrchestratorFactory();
 
     final var repl = factory.jobOrchestrator(
-        ReplicationLauncherWorker.REPLICATION, configDir, envConfigs, processFactory, workerConfigsProvider, jobRunConfig, replicationWorkerFactory,
+        ReplicationLauncherWorker.REPLICATION, configDir, envConfigs, jobRunConfig, replicationWorkerFactory,
         asyncStateManager, workloadApiClient, new WorkloadIdGenerator(), false, jobOutputDocStore);
     assertEquals("Replication", repl.getOrchestratorName());
 
-    final var norm = factory.jobOrchestrator(
-        NormalizationLauncherWorker.NORMALIZATION, configDir, envConfigs, processFactory, workerConfigsProvider, jobRunConfig,
-        replicationWorkerFactory,
-        asyncStateManager, workloadApiClient, new WorkloadIdGenerator(), false, jobOutputDocStore);
-    assertEquals("Normalization", norm.getOrchestratorName());
-
-    final var dbt = factory.jobOrchestrator(
-        DbtLauncherWorker.DBT, configDir, envConfigs, processFactory, workerConfigsProvider, jobRunConfig,
-        replicationWorkerFactory, asyncStateManager, workloadApiClient, new WorkloadIdGenerator(), false, jobOutputDocStore);
-    assertEquals("DBT Transformation", dbt.getOrchestratorName());
-
     final var noop = factory.jobOrchestrator(
-        AsyncOrchestratorPodProcess.NO_OP, configDir, envConfigs, processFactory, workerConfigsProvider, jobRunConfig, replicationWorkerFactory,
+        AsyncOrchestratorPodProcess.NO_OP, configDir, envConfigs, jobRunConfig, replicationWorkerFactory,
         asyncStateManager, workloadApiClient, new WorkloadIdGenerator(), false, jobOutputDocStore);
     assertEquals("NO_OP", noop.getOrchestratorName());
 
     var caught = false;
     try {
-      factory.jobOrchestrator("does not exist", configDir, envConfigs, processFactory, workerConfigsProvider, jobRunConfig, replicationWorkerFactory,
+      factory.jobOrchestrator("does not exist", configDir, envConfigs, jobRunConfig, replicationWorkerFactory,
           asyncStateManager, workloadApiClient, new WorkloadIdGenerator(), false, jobOutputDocStore);
     } catch (final Exception e) {
       caught = true;

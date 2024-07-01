@@ -21,7 +21,6 @@ import io.airbyte.commons.version.AirbyteProtocolVersion;
 import io.airbyte.config.ActorDefinitionVersion;
 import io.airbyte.config.ActorDefinitionVersion.SupportState;
 import io.airbyte.config.AllowedHosts;
-import io.airbyte.config.NormalizationDestinationDefinitionConfig;
 import io.airbyte.config.ReleaseStage;
 import io.airbyte.config.StandardSourceDefinition;
 import io.airbyte.config.SuggestedStreams;
@@ -103,12 +102,7 @@ class ActorDefinitionVersionPersistenceTest extends BaseConfigDatabaseTest {
         .withReleaseDate("2021-01-21")
         .withSuggestedStreams(new SuggestedStreams().withStreams(List.of("users")))
         .withProtocolVersion("0.1.0")
-        .withAllowedHosts(new AllowedHosts().withHosts(List.of("https://airbyte.com")))
-        .withSupportsDbt(true)
-        .withNormalizationConfig(new NormalizationDestinationDefinitionConfig()
-            .withNormalizationRepository("airbyte/normalization")
-            .withNormalizationTag("tag")
-            .withNormalizationIntegrationType("bigquery"));
+        .withAllowedHosts(new AllowedHosts().withHosts(List.of("https://airbyte.com")));
   }
 
   private ConfigRepository configRepository;

@@ -18,7 +18,6 @@ import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.util.List;
-import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -73,19 +72,6 @@ public class ConnectorMetadataJooqHelper {
                   ReleaseStage.class).orElseThrow())
           .set(Tables.ACTOR_DEFINITION_VERSION.RELEASE_DATE, actorDefinitionVersion.getReleaseDate() == null ? null
               : LocalDate.parse(actorDefinitionVersion.getReleaseDate()))
-          .set(Tables.ACTOR_DEFINITION_VERSION.NORMALIZATION_REPOSITORY,
-              Objects.nonNull(actorDefinitionVersion.getNormalizationConfig())
-                  ? actorDefinitionVersion.getNormalizationConfig().getNormalizationRepository()
-                  : null)
-          .set(Tables.ACTOR_DEFINITION_VERSION.NORMALIZATION_TAG,
-              Objects.nonNull(actorDefinitionVersion.getNormalizationConfig())
-                  ? actorDefinitionVersion.getNormalizationConfig().getNormalizationTag()
-                  : null)
-          .set(Tables.ACTOR_DEFINITION_VERSION.SUPPORTS_DBT, actorDefinitionVersion.getSupportsDbt())
-          .set(Tables.ACTOR_DEFINITION_VERSION.NORMALIZATION_INTEGRATION_TYPE,
-              Objects.nonNull(actorDefinitionVersion.getNormalizationConfig())
-                  ? actorDefinitionVersion.getNormalizationConfig().getNormalizationIntegrationType()
-                  : null)
           .set(Tables.ACTOR_DEFINITION_VERSION.ALLOWED_HOSTS, actorDefinitionVersion.getAllowedHosts() == null ? null
               : JSONB.valueOf(Jsons.serialize(actorDefinitionVersion.getAllowedHosts())))
           .set(Tables.ACTOR_DEFINITION_VERSION.SUGGESTED_STREAMS,
@@ -124,19 +110,6 @@ public class ConnectorMetadataJooqHelper {
                   ReleaseStage.class).orElseThrow())
           .set(Tables.ACTOR_DEFINITION_VERSION.RELEASE_DATE, actorDefinitionVersion.getReleaseDate() == null ? null
               : LocalDate.parse(actorDefinitionVersion.getReleaseDate()))
-          .set(Tables.ACTOR_DEFINITION_VERSION.NORMALIZATION_REPOSITORY,
-              Objects.nonNull(actorDefinitionVersion.getNormalizationConfig())
-                  ? actorDefinitionVersion.getNormalizationConfig().getNormalizationRepository()
-                  : null)
-          .set(Tables.ACTOR_DEFINITION_VERSION.NORMALIZATION_TAG,
-              Objects.nonNull(actorDefinitionVersion.getNormalizationConfig())
-                  ? actorDefinitionVersion.getNormalizationConfig().getNormalizationTag()
-                  : null)
-          .set(Tables.ACTOR_DEFINITION_VERSION.SUPPORTS_DBT, actorDefinitionVersion.getSupportsDbt())
-          .set(Tables.ACTOR_DEFINITION_VERSION.NORMALIZATION_INTEGRATION_TYPE,
-              Objects.nonNull(actorDefinitionVersion.getNormalizationConfig())
-                  ? actorDefinitionVersion.getNormalizationConfig().getNormalizationIntegrationType()
-                  : null)
           .set(Tables.ACTOR_DEFINITION_VERSION.ALLOWED_HOSTS, actorDefinitionVersion.getAllowedHosts() == null ? null
               : JSONB.valueOf(Jsons.serialize(actorDefinitionVersion.getAllowedHosts())))
           .set(Tables.ACTOR_DEFINITION_VERSION.SUGGESTED_STREAMS,

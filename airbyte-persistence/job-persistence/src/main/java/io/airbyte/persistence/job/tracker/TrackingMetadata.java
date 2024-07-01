@@ -13,7 +13,6 @@ import io.airbyte.config.ActorDefinitionVersion;
 import io.airbyte.config.AttemptFailureSummary;
 import io.airbyte.config.FailureReason;
 import io.airbyte.config.JobOutput;
-import io.airbyte.config.NormalizationSummary;
 import io.airbyte.config.ResourceRequirements;
 import io.airbyte.config.ScheduleData;
 import io.airbyte.config.StandardDestinationDefinition;
@@ -160,8 +159,6 @@ public class TrackingMetadata {
     }
     final StandardSyncSummary syncSummary = jobOutput.getSync().getStandardSyncSummary();
     final SyncStats totalStats = syncSummary.getTotalStats();
-    final NormalizationSummary normalizationSummary = jobOutput.getSync().getNormalizationSummary();
-
     if (syncSummary.getStartTime() != null) {
       metadata.put("sync_start_time", syncSummary.getStartTime());
     }
@@ -214,16 +211,6 @@ public class TrackingMetadata {
     }
     if (totalStats.getDestinationWriteEndTime() != null) {
       metadata.put("destination_write_end_time", totalStats.getDestinationWriteEndTime());
-    }
-
-    if (normalizationSummary != null) {
-      if (normalizationSummary.getStartTime() != null) {
-        metadata.put("normalization_start_time", normalizationSummary.getStartTime());
-
-      }
-      if (normalizationSummary.getEndTime() != null) {
-        metadata.put("normalization_end_time", normalizationSummary.getEndTime());
-      }
     }
 
     final List<FailureReason> failureReasons = failureReasonsList(attempts);

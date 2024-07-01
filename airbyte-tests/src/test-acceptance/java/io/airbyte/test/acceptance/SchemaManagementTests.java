@@ -32,7 +32,6 @@ import io.airbyte.api.client.model.generated.WebBackendConnectionRead;
 import io.airbyte.api.client.model.generated.WorkspaceCreate;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.test.utils.AcceptanceTestHarness;
-import io.airbyte.test.utils.Asserts;
 import io.airbyte.test.utils.TestConnectionCreate;
 import java.io.IOException;
 import java.net.URISyntaxException;
@@ -85,7 +84,6 @@ class SchemaManagementTests {
     final UUID sourceId = testHarness.createPostgresSource().getSourceId();
     final SourceDiscoverSchemaRead discoverResult = testHarness.discoverSourceSchemaWithId(sourceId);
     final UUID destinationId = testHarness.createPostgresDestination().getDestinationId();
-    final UUID normalizationOpId = testHarness.createNormalizationOperation().getOperationId();
     // Use incremental append-dedup with a primary key column, so we can simulate a breaking change by
     // removing that column.
     final SyncMode syncMode = SyncMode.INCREMENTAL;
@@ -108,9 +106,7 @@ class SchemaManagementTests {
             sourceId,
             destinationId,
             catalog,
-            discoverResult.getCatalogId())
-                .setNormalizationOperationId(normalizationOpId)
-                .build());
+            discoverResult.getCatalogId()).build());
     LOGGER.info("Created connection: {}", createdConnection);
     // Create a connection that shares the source, to verify that the schema management actions are
     // applied to all connections with the same source.
@@ -205,8 +201,6 @@ class SchemaManagementTests {
     final AirbyteCatalog catalogWithPropagatedChanges = getExpectedCatalogWithExtraColumnAndTable();
     assertEquals(catalogWithPropagatedChanges, currentConnection.getSyncCatalog());
     assertEquals(ConnectionStatus.ACTIVE, currentConnection.getStatus());
-    Asserts.assertNormalizedDestinationContains(testHarness.getDestinationDatabase(), currentConnection.getNamespaceFormat(),
-        getExpectedRecordsForIdAndNameWithUpdatedCatalog());
 
     // This connection does not have auto propagation, so it should have stayed the same.
     final ConnectionRead currentConnectionWithSameSource = testHarness.getConnection(createdConnectionWithSameSource.getConnectionId());
@@ -224,8 +218,6 @@ class SchemaManagementTests {
     // Run a sync with the initial data.
     final var jobRead = testHarness.syncConnection(createdConnection.getConnectionId()).getJob();
     testHarness.waitForSuccessfulSyncNoTimeout(jobRead);
-    Asserts.assertNormalizedDestinationContains(testHarness.getDestinationDatabase(), createdConnection.getNamespaceFormat(),
-        getExpectedRecordsForIdAndName());
 
     // Modify the source to add a new column and populate it with default values.
     testHarness.runSqlScriptInSource("postgres_add_column_with_default_value.sql");
@@ -236,8 +228,6 @@ class SchemaManagementTests {
     testHarness.waitForSuccessfulSyncNoTimeout(jobReadWithBackfills);
     final var currentConnection = testHarness.getConnection(createdConnection.getConnectionId());
     assertEquals(3, currentConnection.getSyncCatalog().getStreams().getFirst().getStream().getJsonSchema().get("properties").size());
-    Asserts.assertNormalizedDestinationContains(testHarness.getDestinationDatabase(), createdConnection.getNamespaceFormat(),
-        getExpectedRecordsForIdAndNameWithUpdatedCatalog());
   }
 
   @Test
@@ -249,9 +239,7 @@ class SchemaManagementTests {
         SchemaChangeBackfillPreference.ENABLED);
     // Run a sync with the initial data.
     final var jobRead = testHarness.syncConnection(createdConnection.getConnectionId()).getJob();
-    testHarness.waitForSuccessfulSyncNoTimeout(jobRead);
-    Asserts.assertNormalizedDestinationContains(testHarness.getDestinationDatabase(), createdConnection.getNamespaceFormat(),
-        getExpectedRecordsForIdAndName());
+    testHarness.waitForSuccessfulSyncNoTimeout(jobRead);;
 
     // Modify the source to add a new column, which will be populated with a default value.
     testHarness.runSqlScriptInSource("postgres_add_column_with_default_value.sql");
@@ -262,8 +250,6 @@ class SchemaManagementTests {
     final var currentConnection = testHarness.getConnection(createdConnection.getConnectionId());
     // Expect that we have the two original fields, plus the new one.
     assertEquals(3, currentConnection.getSyncCatalog().getStreams().getFirst().getStream().getJsonSchema().get("properties").size());
-    Asserts.assertNormalizedDestinationContains(testHarness.getDestinationDatabase(), createdConnection.getNamespaceFormat(),
-        getExpectedRecordsForIdAndNameWithBackfilledColumn());
   }
 
   @Test

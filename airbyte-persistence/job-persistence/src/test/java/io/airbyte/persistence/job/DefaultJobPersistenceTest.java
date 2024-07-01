@@ -38,7 +38,6 @@ import io.airbyte.config.JobConfig.ConfigType;
 import io.airbyte.config.JobGetSpecConfig;
 import io.airbyte.config.JobOutput;
 import io.airbyte.config.JobSyncConfig;
-import io.airbyte.config.NormalizationSummary;
 import io.airbyte.config.StandardSyncOutput;
 import io.airbyte.config.StandardSyncSummary;
 import io.airbyte.config.State;
@@ -52,7 +51,6 @@ import io.airbyte.db.instance.test.TestDatabaseProviders;
 import io.airbyte.persistence.job.JobPersistence.AttemptStats;
 import io.airbyte.persistence.job.JobPersistence.JobAttemptPair;
 import io.airbyte.persistence.job.models.Attempt;
-import io.airbyte.persistence.job.models.AttemptNormalizationStatus;
 import io.airbyte.persistence.job.models.AttemptStatus;
 import io.airbyte.persistence.job.models.AttemptWithJobInfo;
 import io.airbyte.persistence.job.models.Job;
@@ -324,17 +322,14 @@ class DefaultJobPersistenceTest {
         new SyncStats().withBytesEmitted(100L).withRecordsEmitted(9L).withEstimatedBytes(200L).withEstimatedRecords(10L))
         .withStreamNamespace(streamNamespace).withStreamName(streamName);
     final FailureReason failureReason1 = new FailureReason().withFailureOrigin(FailureOrigin.DESTINATION).withFailureType(FailureType.SYSTEM_ERROR)
-        .withExternalMessage("There was a normalization error");
+        .withExternalMessage("There was an error");
     final FailureReason failureReason2 = new FailureReason().withFailureOrigin(FailureOrigin.SOURCE).withFailureType(FailureType.CONFIG_ERROR)
-        .withExternalMessage("There was another normalization error");
+        .withExternalMessage("There was another error");
 
-    final NormalizationSummary normalizationSummary =
-        new NormalizationSummary().withStartTime(10L).withEndTime(500L).withFailures(List.of(failureReason1, failureReason2));
     final StandardSyncOutput standardSyncOutput =
         new StandardSyncOutput().withStandardSyncSummary(new StandardSyncSummary()
             .withTotalStats(syncStats)
-            .withStreamStats(List.of(streamSyncStats)))
-            .withNormalizationSummary(normalizationSummary);
+            .withStreamStats(List.of(streamSyncStats)));
     final JobOutput jobOutput = new JobOutput().withOutputType(JobOutput.OutputType.DISCOVER_CATALOG).withSync(standardSyncOutput);
 
     when(timeSupplier.get()).thenReturn(Instant.ofEpochMilli(4242));
@@ -366,11 +361,6 @@ class DefaultJobPersistenceTest {
     assertEquals(streamSyncStats.getStats().getRecordsEmitted(), storedStreamSyncStats.get(0).getStats().getRecordsEmitted());
     assertEquals(streamSyncStats.getStats().getEstimatedRecords(), storedStreamSyncStats.get(0).getStats().getEstimatedRecords());
     assertEquals(streamSyncStats.getStats().getEstimatedBytes(), storedStreamSyncStats.get(0).getStats().getEstimatedBytes());
-
-    final NormalizationSummary storedNormalizationSummary = jobPersistence.getNormalizationSummary(jobId, attemptNumber).stream().findFirst().get();
-    assertEquals(10L, storedNormalizationSummary.getStartTime());
-    assertEquals(500L, storedNormalizationSummary.getEndTime());
-    assertEquals(List.of(failureReason1, failureReason2), storedNormalizationSummary.getFailures());
   }
 
   @Test
@@ -2802,30 +2792,6 @@ class DefaultJobPersistenceTest {
       assertEquals(2, allJobs.size());
       assertEquals(JobStatus.INCOMPLETE, allJobs.get(0).getStatus());
       assertEquals(JobStatus.FAILED, allJobs.get(1).getStatus());
-    }
-
-    @Test
-    @DisplayName("Should be able to get attempt normalization status")
-    void testGetAttemptNormalizationStatusesForJob() throws IOException {
-      final Supplier<Instant> timeSupplier = incrementingSecondSupplier(NOW);
-      jobPersistence = new DefaultJobPersistence(jobDatabase, timeSupplier, DEFAULT_MINIMUM_AGE_IN_DAYS, DEFAULT_EXCESSIVE_NUMBER_OF_JOBS,
-          DEFAULT_MINIMUM_RECENCY_COUNT);
-
-      // Create and fail initial job
-      final long syncJobId1 = jobPersistence.enqueueJob(SCOPE, SYNC_JOB_CONFIG).orElseThrow();
-      final int syncJobAttemptNumber1 = jobPersistence.createAttempt(syncJobId1, LOG_PATH);
-      jobPersistence.writeStats(syncJobId1, syncJobAttemptNumber1, 10L, 100L, 5L, 50L, null, null, CONNECTION_ID, List.of());
-      jobPersistence.failAttempt(syncJobId1, syncJobAttemptNumber1);
-
-      final int syncJobAttemptNumber2 = jobPersistence.createAttempt(syncJobId1, LOG_PATH);
-      jobPersistence.writeStats(syncJobId1, syncJobAttemptNumber2, 10L, 100L, 10L, 100L, 10L, 100L, CONNECTION_ID, List.of());
-      jobPersistence.succeedAttempt(syncJobId1, syncJobAttemptNumber2);
-
-      // Check to see current status of all jobs from beginning of time, expecting all jobs in createAt
-      // descending order (most recent first)
-      final List<AttemptNormalizationStatus> allAttempts =
-          jobPersistence.getAttemptNormalizationStatusesForJob(syncJobId1);
-      assertEquals(2, allAttempts.size());
     }
 
   }

@@ -216,7 +216,6 @@ class ReplicationInputHydratorTest {
         SYNC_RESOURCE_REQUIREMENTS,
         WORKSPACE_ID,
         CONNECTION_ID,
-        false,
         "unused",
         false,
         JobSyncConfig.NamespaceDefinitionType.CUSTOMFORMAT,
