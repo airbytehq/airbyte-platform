@@ -9072,6 +9072,8 @@ components:
     OperatorType:
       type: string
       enum:
+        - normalization
+        - dbt
         - webhook
     OperatorWebhook:
       type: object

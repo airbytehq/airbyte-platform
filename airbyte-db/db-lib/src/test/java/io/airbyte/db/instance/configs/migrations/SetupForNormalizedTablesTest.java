@@ -301,14 +301,14 @@ public class SetupForNormalizedTablesTest {
         .withTombstone(false)
         .withOperationId(OPERATION_ID_1)
         .withWorkspaceId(WORKSPACE_ID)
-        .withOperatorType(StandardSyncOperation.OperatorType.WEBHOOK)
+        .withOperatorType(StandardSyncOperation.OperatorType.NORMALIZATION)
         .withOperatorWebhook(new OperatorWebhook());
     final StandardSyncOperation standardSyncOperation2 = new StandardSyncOperation()
         .withName("operation-1")
         .withTombstone(false)
         .withOperationId(OPERATION_ID_2)
         .withWorkspaceId(WORKSPACE_ID)
-        .withOperatorType(StandardSyncOperation.OperatorType.WEBHOOK)
+        .withOperatorType(StandardSyncOperation.OperatorType.NORMALIZATION)
         .withOperatorWebhook(new OperatorWebhook());
     return Arrays.asList(standardSyncOperation1, standardSyncOperation2);
   }
