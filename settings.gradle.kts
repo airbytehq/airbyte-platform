@@ -15,7 +15,7 @@ pluginManagement {
 // as much information as possible.
 plugins {
   id("com.gradle.enterprise") version "3.15.1"
-  id("com.github.burrunan.s3-build-cache") version "1.5"
+  id("com.github.burrunan.s3-build-cache") version "1.8.1"
 }
 
 gradleEnterprise {
