@@ -4,6 +4,7 @@ plugins {
   id("io.airbyte.gradle.jvm.app")
   id("io.airbyte.gradle.docker")
   id("io.airbyte.gradle.publish")
+  id("io.airbyte.gradle.kube-reload")
 }
 
 dependencies {
@@ -148,6 +149,11 @@ airbyte {
 
   docker {
     imageName = "server"
+  }
+
+  kubeReload {
+    deployment = "ab-server"
+    container = "airbyte-server-container"
   }
 
   spotbugs {
