@@ -1,3 +1,5 @@
+import type { PluggableList } from "unified";
+
 import classNames from "classnames";
 import MarkdownToJsx from "markdown-to-jsx";
 import React, { useMemo } from "react";
@@ -13,6 +15,7 @@ interface MarkdownToJsxProps {
   className?: string;
   content: string;
   options?: Options;
+  remarkPlugins?: PluggableList;
 }
 
 function surroundTagWithNewlines(tag: string, markdown: string): string {
@@ -23,7 +26,7 @@ function surroundTagWithNewlines(tag: string, markdown: string): string {
   return processed;
 }
 
-function preprocessMarkdown(markdown: string): string {
+function preprocessMarkdown(markdown: string, additionalPlugins: PluggableList = []): string {
   // Note: there is also some preprocessing happening in DocumentationPanel.tsx's
   // prepareMarkdown function that is specific to the connector documentation pages.
 
@@ -64,7 +67,6 @@ function preprocessMarkdown(markdown: string): string {
   preprocessed = surroundTagWithNewlines("details", preprocessed);
   // And likewise for <Tabs>
   preprocessed = surroundTagWithNewlines("Tabs", preprocessed);
-
   // Add an empty line before any code block that isn't already preceded by one, since
   // without it the code block is just rendered as plain text.
   preprocessed = preprocessed.replace(
@@ -72,44 +74,44 @@ function preprocessMarkdown(markdown: string): string {
     "$<preceding>\n\n$<whitespace>```"
   );
 
-  // Apply remark plugins to the markdown.
-  // This should be ran last so that remarkGfm doesn't interfere with the above.
-  preprocessed = remark().use(remarkGfm).processSync(preprocessed).toString();
+  const pluginsToApply = [remarkGfm, ...additionalPlugins];
 
-  return preprocessed;
+  return remark().use(pluginsToApply).processSync(preprocessed).toString();
 }
 
-export const Markdown: React.FC<MarkdownToJsxProps> = React.memo(({ className, content, options }) => {
-  const processedMarkdown = useMemo(() => preprocessMarkdown(content), [content]);
-  return (
-    <div className={classNames(className, styles.markdown)}>
-      <MarkdownToJsx
-        options={{
-          ...options,
-          overrides: {
-            ...options?.overrides,
-            pre: {
-              component: Pre,
+export const Markdown: React.FC<MarkdownToJsxProps> = React.memo(
+  ({ className, content, options, remarkPlugins = [] }) => {
+    const processedMarkdown = useMemo(() => preprocessMarkdown(content, remarkPlugins), [content, remarkPlugins]);
+    return (
+      <div className={classNames(className, styles.markdown)}>
+        <MarkdownToJsx
+          options={{
+            ...options,
+            overrides: {
+              ...options?.overrides,
+              pre: {
+                component: Pre,
+              },
+              details: {
+                component: Details,
+              },
+              admonition: {
+                component: Admonition,
+              },
+              HideInUI: {
+                component: HideInUI,
+              },
+              Tabs: {
+                component: DocTabs,
+              },
             },
-            details: {
-              component: Details,
-            },
-            admonition: {
-              component: Admonition,
-            },
-            HideInUI: {
-              component: HideInUI,
-            },
-            Tabs: {
-              component: DocTabs,
-            },
-          },
-        }}
-      >
-        {processedMarkdown}
-      </MarkdownToJsx>
-    </div>
-  );
-});
+          }}
+        >
+          {processedMarkdown}
+        </MarkdownToJsx>
+      </div>
+    );
+  }
+);
 
 Markdown.displayName = "Markdown";

@@ -655,7 +655,7 @@ class ConnectorBuilderProjectsHandlerTest {
     final String responseBody = "[" + Jsons.serialize(record1) + "," + Jsons.serialize(record2) + "]";
     final String requestUrl = "https://api.com/users";
     final int responseStatus = 200;
-    final HttpRequest httpRequest = new HttpRequest(requestUrl, null, null, HttpMethod.GET);
+    final HttpRequest httpRequest = new HttpRequest(requestUrl, HttpMethod.GET, null, null);
     final HttpResponse httpResponse = new HttpResponse(responseStatus, responseBody, null);
     final StreamRead streamRead = new StreamRead(Collections.emptyList(), List.of(
         new StreamReadSlicesInner(List.of(new StreamReadSlicesInnerPagesInner(List.of(record1, record2), httpRequest, httpResponse)), null, null)),

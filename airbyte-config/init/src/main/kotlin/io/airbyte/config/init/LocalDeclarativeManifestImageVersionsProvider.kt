@@ -10,6 +10,7 @@ class LocalDeclarativeManifestImageVersionsProvider : DeclarativeManifestImageVe
     return mapOf(
       0 to "0.90.0",
       1 to "1.0.1",
+      2 to "2.0.0",
     )
   }
 }

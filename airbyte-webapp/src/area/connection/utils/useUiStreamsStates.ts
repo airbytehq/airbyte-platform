@@ -13,7 +13,6 @@ import { ConnectionStatusIndicatorStatus } from "components/connection/Connectio
 
 import { connectionsKeys } from "core/api";
 import { JobConfigType, StreamStatusJobType, StreamStatusRunState } from "core/api/types/AirbyteClient";
-import { useExperiment } from "hooks/services/Experiment";
 
 import { getStreamKey } from "./computeStreamStatus";
 import { useHistoricalStreamData } from "./useStreamsHistoricalData";
@@ -37,12 +36,11 @@ export const useUiStreamStates = (connectionId: string): UIStreamState[] => {
   const connectionStatus = useConnectionStatus(connectionId);
   const [wasRunning, setWasRunning] = useState<boolean>(connectionStatus.isRunning);
   const [isFetchingPostJob, setIsFetchingPostJob] = useState<boolean>(false);
-  const isSyncProgressEnabled = useExperiment("connection.syncProgress", false);
 
   const queryClient = useQueryClient();
 
   const { streamStatuses, enabledStreams } = useStreamsStatuses(connectionId);
-  const syncProgress = useStreamsSyncProgress(connectionId, connectionStatus.isRunning, isSyncProgressEnabled);
+  const syncProgress = useStreamsSyncProgress(connectionId, connectionStatus.isRunning);
   const isClearOrResetJob = (configType?: JobConfigType) =>
     configType === JobConfigType.clear || configType === JobConfigType.reset_connection;
 

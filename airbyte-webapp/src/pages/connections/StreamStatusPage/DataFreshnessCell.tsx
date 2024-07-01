@@ -4,14 +4,10 @@ import { FormattedMessage } from "react-intl";
 
 import { Text } from "components/ui/Text";
 
-import { useExperiment } from "hooks/services/Experiment";
-
 export const DataFreshnessCell: React.FC<{ transitionedAt: number | undefined; showRelativeTime: boolean }> = ({
   transitionedAt,
   showRelativeTime,
 }) => {
-  const showSyncProgress = useExperiment("connection.syncProgress", false);
-
   const lastSyncDisplayText = useMemo(() => {
     if (transitionedAt) {
       const lastSync = dayjs(transitionedAt);
@@ -22,8 +18,8 @@ export const DataFreshnessCell: React.FC<{ transitionedAt: number | undefined; s
       return lastSync.format("MM.DD.YY HH:mm:ss");
     }
 
-    return showSyncProgress ? <FormattedMessage id="general.dash" /> : null;
-  }, [transitionedAt, showSyncProgress, showRelativeTime]);
+    return <FormattedMessage id="general.dash" />;
+  }, [transitionedAt, showRelativeTime]);
 
   if (lastSyncDisplayText) {
     return (

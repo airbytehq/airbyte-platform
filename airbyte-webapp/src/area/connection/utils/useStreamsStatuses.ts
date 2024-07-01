@@ -51,7 +51,6 @@ export const useStreamsStatuses = (
 
   const connection = useGetConnection(connectionId);
   const { hasBreakingSchemaChange } = useSchemaChanges(connection.schemaChange);
-  const showSyncProgress = useExperiment("connection.syncProgress", false);
   const lateMultiplier = useLateMultiplierExperiment();
   const errorMultiplier = useErrorMultiplierExperiment();
   const connectionStatus = useConnectionStatus(connectionId);
@@ -59,11 +58,11 @@ export const useStreamsStatuses = (
 
   // TODO: Ideally we can pull this from the stream status endpoint directly once the "pending" status has been updated to reflect the correct status
   // for now, we'll use this
-  const syncProgressMap = useStreamsSyncProgress(connectionId, connectionStatus.isRunning, showSyncProgress);
+  const syncProgressMap = useStreamsSyncProgress(connectionId, connectionStatus.isRunning);
 
   const enabledStreams: AirbyteStreamAndConfigurationWithEnforcedStream[] = connection.syncCatalog.streams.filter(
     (stream) =>
-      (showSyncProgress && !!stream.stream && syncProgressMap.has(getStreamKey(stream.stream))) ||
+      (!!stream.stream && syncProgressMap.has(getStreamKey(stream.stream))) ||
       (stream.config?.selected && stream.stream)
   ) as AirbyteStreamAndConfigurationWithEnforcedStream[];
   const streamStatuses = new Map<string, StreamWithStatus>();
@@ -94,8 +93,7 @@ export const useStreamsStatuses = (
 
       if (!hasPerStreamStatuses) {
         streamStatus.status = connectionStatus.status;
-        streamStatus.isRunning = showSyncProgress ? !!syncProgressItem : connectionStatus.isRunning;
-        streamStatus.isRunning = showSyncProgress ? !!syncProgressItem : connectionStatus.isRunning;
+        streamStatus.isRunning = !!syncProgressItem;
         streamStatus.lastSuccessfulSyncAt = connectionStatus.lastSuccessfulSync
           ? connectionStatus.lastSuccessfulSync * 1000 // unix timestamp in seconds -> milliseconds
           : undefined;
@@ -129,8 +127,7 @@ export const useStreamsStatuses = (
             hasBreakingSchemaChange,
             lateMultiplier,
             errorMultiplier,
-            showSyncProgress,
-            isSyncing: showSyncProgress && !!syncProgressItem ? true : false,
+            isSyncing: !!syncProgressItem ? true : false,
             recordsExtracted: syncProgressMap.get(streamKey)?.recordsEmitted,
             runningJobConfigType: syncProgressItem?.configType,
           });

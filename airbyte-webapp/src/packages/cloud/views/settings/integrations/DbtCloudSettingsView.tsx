@@ -11,8 +11,9 @@ import { ExternalLink } from "components/ui/Link";
 import { Message } from "components/ui/Message";
 import { Text } from "components/ui/Text";
 
-import { HttpError, useCurrentWorkspace } from "core/api";
+import { useCurrentWorkspace } from "core/api";
 import { useDbtCloudServiceToken } from "core/api/cloud";
+import { useFormatError } from "core/errors";
 import { trackError } from "core/utils/datadog";
 import { links } from "core/utils/links";
 import { useIntent } from "core/utils/rbac";
@@ -30,12 +31,8 @@ interface DbtConfigurationFormValues {
   accessUrl?: string;
 }
 
-// TODO(Tim): Needs to be moved to the proper new error system
-export const cleanedErrorMessage = (e: Error): string =>
-  e instanceof HttpError ? e.response?.message?.replace("Internal Server Error: ", "") : e.message;
-// a centrally-defined key for accessing the token value within formik objects
-
 export const DbtCloudSettingsView: React.FC = () => {
+  const formatError = useFormatError();
   const { formatMessage } = useIntl();
   const { hasExistingToken, saveToken } = useDbtCloudServiceToken();
   const { registerNotification } = useNotificationService();
@@ -63,7 +60,7 @@ export const DbtCloudSettingsView: React.FC = () => {
     trackError(e);
     registerNotification({
       id: "dbtCloud/save-token-failure",
-      text: cleanedErrorMessage(e),
+      text: formatError(e),
       type: "error",
     });
   };

@@ -34,11 +34,8 @@ $spacing: variables.$spacing-xl;
 }
 
 .content {
+  height: 95%;
   padding: 0 $spacing $spacing;
-
-  &.cloud {
-    padding-bottom: variables.$spacing-page-bottom-cloud;
-  }
 
   &.noBottomPadding {
     padding-bottom: 0;

@@ -1,5 +1,6 @@
 export * from "./actorDefinitionVersions";
 export * from "./applications";
+export * from "./auth";
 export * from "./connections";
 export * from "./connectorBuilderApi";
 export * from "./connectorBuilderProject";
@@ -19,6 +20,7 @@ export * from "./notifications";
 export * from "./operations";
 export * from "./organizations";
 export * from "./permissions";
+export * from "./pypi";
 export * from "./security";
 export * from "./sources";
 export * from "./sourceDefinitions";

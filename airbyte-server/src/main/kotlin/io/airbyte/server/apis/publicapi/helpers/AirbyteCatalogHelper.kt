@@ -19,10 +19,9 @@ import io.airbyte.api.model.generated.AirbyteStreamAndConfiguration
 import io.airbyte.api.model.generated.AirbyteStreamConfiguration
 import io.airbyte.api.model.generated.DestinationSyncMode
 import io.airbyte.api.model.generated.SyncMode
+import io.airbyte.api.problems.model.generated.ProblemMessageData
+import io.airbyte.api.problems.throwable.generated.BadRequestProblem
 import io.airbyte.api.problems.throwable.generated.UnexpectedProblem
-import io.airbyte.commons.server.errors.problems.ConnectionConfigurationProblem
-import io.airbyte.commons.server.errors.problems.ConnectionConfigurationProblem.Companion.duplicateStream
-import io.airbyte.commons.server.errors.problems.ConnectionConfigurationProblem.Companion.invalidStreamName
 import io.airbyte.publicApi.server.generated.models.AirbyteApiConnectionSchedule
 import io.airbyte.publicApi.server.generated.models.ConnectionSyncModeEnum
 import io.airbyte.publicApi.server.generated.models.ScheduleTypeEnum
@@ -107,9 +106,17 @@ object AirbyteCatalogHelper {
     val alreadyConfiguredStreams: MutableSet<String> = HashSet()
     for (streamConfiguration in streamConfigurations.streams!!) {
       if (!validStreams.containsKey(streamConfiguration.name)) {
-        throw invalidStreamName(validStreams.keys)
+        throw BadRequestProblem(
+          ProblemMessageData().message(
+            "Invalid stream found. The list of valid streams include: ${validStreams.keys}.",
+          ),
+        )
       } else if (alreadyConfiguredStreams.contains(streamConfiguration.name)) {
-        throw duplicateStream(streamConfiguration.name)
+        throw BadRequestProblem(
+          ProblemMessageData().message(
+            "Duplicate stream found in configuration for: ${streamConfiguration.name}.",
+          ),
+        )
       }
       alreadyConfiguredStreams.add(streamConfiguration.name)
     }
@@ -127,33 +134,88 @@ object AirbyteCatalogHelper {
     streamConfiguration: StreamConfiguration,
     sourceStream: AirbyteStream,
   ) {
-    if (streamConfiguration.selectedFields.isNullOrEmpty()) {
-      log.debug("No fields selected specifically. Bypass validation.")
+    if (streamConfiguration.selectedFields == null) {
+      log.debug("Selected fields not provided. Bypass validation.")
       return
     }
 
-    val allSelectedFields = streamConfiguration.selectedFields!!.mapNotNull { it.fieldPath?.firstOrNull() }
+    val allTopLevelStreamFields = getStreamTopLevelFields(sourceStream.jsonSchema).toSet()
+    if (streamConfiguration.selectedFields!!.isEmpty()) {
+      // User puts an empty list of selected fields to sync, which is a bad request.
+      throw BadRequestProblem(
+        ProblemMessageData().message(
+          "No fields selected for stream ${sourceStream.name}. The list of valid field names includes: $allTopLevelStreamFields.",
+        ),
+      )
+    }
+    // Validate input selected fields.
+    val allSelectedFields =
+      streamConfiguration.selectedFields!!.map { it ->
+        if (it.fieldPath.isNullOrEmpty()) {
+          throw BadRequestProblem(
+            ProblemMessageData().message(
+              "Selected field path cannot be empty for stream:  ${sourceStream.name}.",
+            ),
+          )
+        }
+        if (it.fieldPath!!.size > 1) {
+          // We do not support nested field selection. Only top level properties can be selected.
+          throw BadRequestProblem(
+            ProblemMessageData().message(
+              "Nested field selection not supported for stream ${sourceStream.name}.",
+            ),
+          )
+        }
+        it.fieldPath!!.first()
+      }
     // 1. Avoid duplicate fields selection.
     val allSelectedFieldsSet = allSelectedFields.toSet()
     if (allSelectedFields.size != allSelectedFieldsSet.size) {
-      throw ConnectionConfigurationProblem.duplicateFieldsSelected(sourceStream.name)
+      throw BadRequestProblem(
+        ProblemMessageData().message(
+          "Duplicate fields selected in configuration for stream: ${sourceStream.name}.",
+        ),
+      )
     }
     // 2. Avoid non-existing fields selection.
-    val allTopLevelStreamFields = getStreamTopLevelFields(sourceStream.jsonSchema).toSet()
     require(allSelectedFields.all { it in allTopLevelStreamFields }) {
-      throw ConnectionConfigurationProblem.invalidFieldName(sourceStream.name, allTopLevelStreamFields)
+      throw BadRequestProblem(
+        ProblemMessageData().message(
+          "Invalid fields selected for stream ${sourceStream.name}. The list of valid field names includes: $allTopLevelStreamFields.",
+        ),
+      )
     }
-    // 3. Selected fields must contain primary key(s).
-    val primaryKeys = selectPrimaryKey(sourceStream, streamConfiguration)
-    val primaryKeyFields = primaryKeys?.mapNotNull { it.firstOrNull() } ?: emptyList()
-    require(primaryKeyFields.all { it in allSelectedFieldsSet }) {
-      throw ConnectionConfigurationProblem.missingPrimaryKeySelected(sourceStream.name)
+    // 3. Selected fields must contain primary key(s) in dedup mode.
+    if (streamConfiguration.syncMode == ConnectionSyncModeEnum.INCREMENTAL_DEDUPED_HISTORY) {
+      val primaryKeys = selectPrimaryKey(sourceStream, streamConfiguration)
+      val primaryKeyFields = primaryKeys?.mapNotNull { it.firstOrNull() } ?: emptyList()
+      require(primaryKeyFields.all { it in allSelectedFieldsSet }) {
+        throw BadRequestProblem(
+          ProblemMessageData().message(
+            "Primary key fields are not selected properly for stream: ${sourceStream.name}. " +
+              "Please include primary key(s) in the configuration for this stream.",
+          ),
+        )
+      }
     }
-    // 4. Selected fields must contain the cursor field.
-    val cursorField = selectCursorField(sourceStream, streamConfiguration)
-    if (!cursorField.isNullOrEmpty() && !allSelectedFieldsSet.contains(cursorField.first())) {
-      // first element is the top level field, and it has to be present in selected fields
-      throw ConnectionConfigurationProblem.missingCursorFieldSelected(sourceStream.name)
+
+    // 4. Selected fields must contain the cursor field in incremental modes.
+    val incrementalSyncModes: Set<ConnectionSyncModeEnum> =
+      setOf(
+        ConnectionSyncModeEnum.INCREMENTAL_DEDUPED_HISTORY,
+        ConnectionSyncModeEnum.INCREMENTAL_APPEND,
+      )
+    if (streamConfiguration.syncMode in incrementalSyncModes) {
+      val cursorField = selectCursorField(sourceStream, streamConfiguration)
+      if (!cursorField.isNullOrEmpty() && !allSelectedFieldsSet.contains(cursorField.first())) {
+        // first element is the top level field, and it has to be present in selected fields
+        throw BadRequestProblem(
+          ProblemMessageData().message(
+            "Cursor field is not selected properly for stream: ${sourceStream.name}. " +
+              "Please include the cursor field in selected fields for this stream.",
+          ),
+        )
+      }
     }
   }
 
@@ -182,7 +244,9 @@ object AirbyteCatalogHelper {
     if (connectionSchedule != null) {
       if (connectionSchedule.scheduleType != null && connectionSchedule.scheduleType === ScheduleTypeEnum.CRON) {
         if (connectionSchedule.cronExpression == null) {
-          throw ConnectionConfigurationProblem.missingCronExpression()
+          throw BadRequestProblem(
+            ProblemMessageData().message("Missing cron expression in the schedule."),
+          )
         }
         val cronExpression = normalizeCronExpression(connectionSchedule)?.cronExpression
         try {
@@ -198,11 +262,21 @@ object AirbyteCatalogHelper {
         } catch (e: NumberFormatException) {
           log.debug("Invalid cron expression: $cronExpression")
           log.debug("NumberFormatException: $e")
-          throw ConnectionConfigurationProblem.invalidCronExpressionUnderOneHour(cronExpression.toString())
+          throw BadRequestProblem(
+            ProblemMessageData().message(
+              "The cron expression ${connectionSchedule.cronExpression}" +
+                " is not valid or is less than the one hour minimum. The seconds and minutes values cannot be `*`.",
+            ),
+          )
         } catch (e: IllegalArgumentException) {
           log.debug("Invalid cron expression: $cronExpression")
           log.debug("IllegalArgumentException: $e")
-          throw ConnectionConfigurationProblem.invalidCronExpression(cronExpression.toString(), e.message)
+          throw BadRequestProblem(
+            ProblemMessageData().message(
+              "The cron expression ${connectionSchedule.cronExpression} is not valid. Error: ${e.message}" +
+                ". Please check the cron expression format at https://www.quartz-scheduler.org/documentation/quartz-2.3.0/tutorials/crontrigger.html",
+            ),
+          )
         }
       }
     }
@@ -245,9 +319,10 @@ object AirbyteCatalogHelper {
     updatedStreamConfiguration.selected = true
     updatedStreamConfiguration.aliasName = config.aliasName
     updatedStreamConfiguration.fieldSelectionEnabled = config.fieldSelectionEnabled
-    if (!streamConfiguration.selectedFields.isNullOrEmpty()) {
-      // We will ignore the null or empty input and sync all fields by default,
-      // which is consistent with Cloud UI where all fields are selected by default.
+    updatedStreamConfiguration.selectedFields = config.selectedFields
+    if (streamConfiguration.selectedFields != null) {
+      // Override and update
+      updatedStreamConfiguration.fieldSelectionEnabled = true
       updatedStreamConfiguration.selectedFields = streamConfiguration.selectedFields!!.map { selectedFieldInfoConverter(it) }
     }
     updatedStreamConfiguration.suggested = config.suggested
@@ -338,10 +413,11 @@ object AirbyteCatalogHelper {
     }
     val validCombinedSyncModes: Set<ConnectionSyncModeEnum> = validCombinedSyncModes(airbyteStream.supportedSyncModes, validDestinationSyncModes)
     if (!validCombinedSyncModes.contains(streamConfiguration.syncMode)) {
-      throw ConnectionConfigurationProblem.handleSyncModeProblem(
-        streamConfiguration.syncMode,
-        streamConfiguration.name,
-        validCombinedSyncModes,
+      throw BadRequestProblem(
+        ProblemMessageData().message(
+          "Cannot set sync mode to ${streamConfiguration.syncMode} for stream ${streamConfiguration.name}. " +
+            "Valid sync modes are: $validCombinedSyncModes",
+        ),
       )
     }
 
@@ -368,7 +444,12 @@ object AirbyteCatalogHelper {
       if (!cursorField.isNullOrEmpty()) {
         // if cursor given is not empty and is NOT the same as the default, throw error
         if (java.util.Set.copyOf(cursorField) != java.util.Set.copyOf(airbyteStream.defaultCursorField)) {
-          throw ConnectionConfigurationProblem.sourceDefinedCursorFieldProblem(airbyteStream.name, airbyteStream.defaultCursorField!!)
+          throw BadRequestProblem(
+            ProblemMessageData().message(
+              "Cursor Field " + cursorField + " is already defined by source for stream: " + airbyteStream.name +
+                ". Do not include a cursor field configuration for this stream.",
+            ),
+          )
         }
       }
     } else {
@@ -376,12 +457,20 @@ object AirbyteCatalogHelper {
         // validate cursor field
         val validCursorFields: List<List<String>> = getStreamFields(airbyteStream.jsonSchema!!)
         if (!validCursorFields.contains(cursorField)) {
-          throw ConnectionConfigurationProblem.invalidCursorField(airbyteStream.name, validCursorFields)
+          throw BadRequestProblem(
+            ProblemMessageData().message(
+              "Invalid cursor field for stream: ${airbyteStream.name}. The list of valid cursor fields include: $validCursorFields.",
+            ),
+          )
         }
       } else {
         // no default or given cursor field
         if (airbyteStream.defaultCursorField == null || airbyteStream.defaultCursorField!!.isEmpty()) {
-          throw ConnectionConfigurationProblem.missingCursorField(airbyteStream.name)
+          throw BadRequestProblem(
+            ProblemMessageData().message(
+              "No default cursor field for stream: ${airbyteStream.name}. Please include a cursor field configuration for this stream.",
+            ),
+          )
         }
       }
     }
@@ -398,14 +487,23 @@ object AirbyteCatalogHelper {
 
     if (sourceDefinedPrimaryKeyExists && configuredPrimaryKeyExists) {
       if (airbyteStream.sourceDefinedPrimaryKey != primaryKey) {
-        throw ConnectionConfigurationProblem.primaryKeyAlreadyDefined(airbyteStream.name, airbyteStream.sourceDefinedPrimaryKey)
+        throw BadRequestProblem(
+          ProblemMessageData().message(
+            "Primary key for stream: ${airbyteStream.name} is already pre-defined. " +
+              "Please remove the primaryKey or provide the value as ${airbyteStream.sourceDefinedPrimaryKey}.",
+          ),
+        )
       }
     }
 
     // Ensure that we've passed at least some kind of primary key
     val noPrimaryKey = !configuredPrimaryKeyExists && !sourceDefinedPrimaryKeyExists
     if (noPrimaryKey) {
-      throw ConnectionConfigurationProblem.missingPrimaryKey(airbyteStream.name)
+      throw BadRequestProblem(
+        ProblemMessageData().message(
+          "No default primary key for stream: ${airbyteStream.name}. Please include a primary key configuration for this stream.",
+        ),
+      )
     }
 
     // Validate the actual key passed in
@@ -414,11 +512,19 @@ object AirbyteCatalogHelper {
     primaryKey?.let {
       for (singlePrimaryKey in primaryKey) {
         if (!validPrimaryKey.contains(singlePrimaryKey)) { // todo double check if the .contains() for list of strings works as intended
-          throw ConnectionConfigurationProblem.invalidPrimaryKey(airbyteStream.name, validPrimaryKey)
+          throw BadRequestProblem(
+            ProblemMessageData().message(
+              "Invalid cursor field for stream: ${airbyteStream.name}. The list of valid primary keys fields: $validPrimaryKey.",
+            ),
+          )
         }
-
         if (singlePrimaryKey.distinct() != singlePrimaryKey) {
-          throw ConnectionConfigurationProblem.duplicatePrimaryKey(airbyteStream.name, primaryKey)
+          throw BadRequestProblem(
+            ProblemMessageData().message(
+              "Duplicate primary key detected for stream: ${airbyteStream.name}, " +
+                "please don't provide the same column more than once. Key: $primaryKey",
+            ),
+          )
         }
       }
     }

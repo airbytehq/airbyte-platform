@@ -9,10 +9,12 @@ interface SupportLevelBadgeProps {
   supportLevel?: SupportLevel;
   custom?: boolean;
   tooltip?: boolean;
+  className?: string;
 }
 
 export const SupportLevelBadge: React.FC<SupportLevelBadgeProps> = ({
   supportLevel,
+  className,
   custom = false,
   tooltip = true,
 }) => {
@@ -21,7 +23,7 @@ export const SupportLevelBadge: React.FC<SupportLevelBadgeProps> = ({
   }
 
   const badgeComponent = (
-    <Badge variant={supportLevel === "certified" ? "blue" : "grey"}>
+    <Badge variant={supportLevel === "certified" ? "blue" : "grey"} className={className}>
       <FormattedMessage
         id={
           custom

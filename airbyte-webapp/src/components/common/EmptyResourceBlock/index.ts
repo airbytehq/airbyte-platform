@@ -1,1 +1,1 @@
-export * from "./EmptyResourceBlock";
+export { EmptyResourceBlock } from "./EmptyResourceBlock";

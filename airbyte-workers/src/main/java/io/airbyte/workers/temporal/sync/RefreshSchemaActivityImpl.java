@@ -103,7 +103,6 @@ public class RefreshSchemaActivityImpl implements RefreshSchemaActivity {
     return airbyteApiClient.getSourceApi().discoverSchemaForSource(requestBody);
   }
 
-  @Override
   @Trace(operationName = ACTIVITY_TRACE_OPERATION_NAME)
   public void refreshSchema(final UUID sourceId, final UUID connectionId) throws IOException {
     final var sourceDiscoverSchemaRead = discoverSchemaForRefresh(sourceId, connectionId);

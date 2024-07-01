@@ -17,7 +17,6 @@ import { useGetConnectionSyncProgress, useGetConnectionUptimeHistory } from "cor
 import { ConnectionSyncProgressRead, ConnectionUptimeHistoryRead, JobStatus } from "core/api/types/AirbyteClient";
 import { assertNever } from "core/utils/asserts";
 import { useConnectionEditService } from "hooks/services/ConnectionEdit/ConnectionEditService";
-import { useExperiment } from "hooks/services/Experiment";
 import { useAirbyteTheme } from "hooks/theme/useAirbyteTheme";
 
 import { UpdateTooltipTickPositions } from "./UpdateTooltipTickPositions";
@@ -227,11 +226,7 @@ export const UptimeStatusGraph: React.FC = React.memo(() => {
   const { connection } = useConnectionEditService();
   const uptimeHistoryData = useGetConnectionUptimeHistory(connection.connectionId);
   const { isRunning } = useConnectionStatus(connection.connectionId);
-  const showSyncProgress = useExperiment("connection.syncProgress", false);
-  const { data: syncProgressData } = useGetConnectionSyncProgress(
-    connection.connectionId,
-    showSyncProgress && isRunning
-  );
+  const { data: syncProgressData } = useGetConnectionSyncProgress(connection.connectionId, isRunning);
 
   const placeholderHistory = useMemo(
     () => generatePlaceholderHistory(isRunning ? syncProgressData : undefined),

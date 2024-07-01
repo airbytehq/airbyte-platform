@@ -17,7 +17,6 @@ const featureSetFromList = (featureList: FeatureItem[]): FeatureSet => {
 
 const featureSetFromInstanceConfig = (instanceConfig: InstanceConfigurationResponse): FeatureSet => {
   return {
-    [FeatureItem.KeycloakAuthentication]: instanceConfig.auth.mode === AuthConfigurationMode.oidc,
     [FeatureItem.APITokenManagement]: instanceConfig.auth.mode !== AuthConfigurationMode.none,
   };
 };

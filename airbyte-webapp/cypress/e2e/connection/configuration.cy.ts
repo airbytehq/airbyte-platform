@@ -471,16 +471,14 @@ describe("Connection Configuration", () => {
           row.checkSyncModeDropdownDisabled();
         });
       });
-      it("Stream filters are disabled and not applied", () => {
+      it("Stream filters are still enabled", () => {
         cy.get<WebBackendConnectionRead>("@postgresConnection").then((connection) => {
           cy.visit(`/${RoutePaths.Connections}/${connection.connectionId}/${ConnectionRoutePaths.Replication}`);
           // input for filtering streams by name
-          cy.get('input[placeholder*="Search stream name"]').should("be.disabled");
-          cy.get('input[placeholder*="Search stream name"]').should("be.empty");
+          cy.get('input[placeholder*="Search stream name"]').should("be.enabled");
 
           // "hide disabled streams" switch
-          cy.get('[data-testid="hideDisableStreams-switch"]').should("be.disabled");
-          cy.get('[data-testid="hideDisableStreams-switch"]').should("be.not.checked");
+          cy.get('[data-testid="hideDisableStreams-switch"]').should("be.enabled");
         });
       });
     });
@@ -547,7 +545,7 @@ describe("Connection Configuration", () => {
     it("should show empty streams table", () => {
       cy.get<WebBackendConnectionRead>("@postgresConnection").then((connection) => {
         cy.visit(`/${RoutePaths.Connections}/${connection.connectionId}/`);
-        cy.contains("Re-enable the connection to show stream sync progress");
+        cy.contains("users").should("exist");
       });
     });
 

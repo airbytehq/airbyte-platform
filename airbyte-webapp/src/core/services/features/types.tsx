@@ -23,7 +23,6 @@ export enum FeatureItem {
   EnterpriseBranding = "ENTERPRISE_BRANDING",
   ExternalInvitations = "EXTERNAL_INVITATIONS",
   IndicateGuestUsers = "INDICATE_GUEST_USERS",
-  KeycloakAuthentication = "KEYCLOAK_AUTHENTICATION",
   MultiWorkspaceUI = "MULTI_WORKSPACE_UI",
   RBAC = "RBAC",
   RestrictAdminInForeignWorkspace = "RESTRICT_ADMIN_IN_FOREIGN_WORKSPACE",

@@ -129,20 +129,20 @@ class ClientSupportFactory {
           r.counter(
             "$metricPrefix.abort",
             *metricTags,
-            *arrayOf("retry-attempt", l.attemptCount.toString(), "method", l.result.request.method),
-            *getUrlTags(l.result.request.url),
+            *arrayOf("retry-attempt", l.attemptCount.toString(), "method", l.result?.request?.method ?: UNKNOWN),
+            *getUrlTags(l.result?.request?.url),
           ).increment()
         }
       }
       .onFailure { l ->
-        logger.error(l.exception) { "Failed to call ${l.result.request.url}.  Last response: ${l.result}" }
+        logger.error(l.exception) { "Failed to call ${l.result?.request?.url ?: UNKNOWN}.  Last response: ${l.result}" }
         meterRegistry.ifPresent {
             r ->
           r.counter(
             "$metricPrefix.failure",
             *metricTags,
-            *arrayOf("retry-attempt", l.attemptCount.toString(), "method", l.result.request.method),
-            *getUrlTags(l.result.request.url),
+            *arrayOf("retry-attempt", l.attemptCount.toString(), "method", l.result?.request?.method ?: UNKNOWN),
+            *getUrlTags(l.result?.request?.url),
           ).increment()
         }
       }
@@ -153,8 +153,8 @@ class ClientSupportFactory {
           r.counter(
             "$metricPrefix.retry",
             *metricTags,
-            *arrayOf("retry-attempt", l.attemptCount.toString(), "url", "method", l.lastResult.request.method),
-            *getUrlTags(l.lastResult.request.url),
+            *arrayOf("retry-attempt", l.attemptCount.toString(), "method", l.lastResult?.request?.method ?: UNKNOWN),
+            *getUrlTags(l.lastResult?.request?.url),
           ).increment()
         }
       }
@@ -165,8 +165,8 @@ class ClientSupportFactory {
           r.counter(
             "$metricPrefix.retries_exceeded",
             *metricTags,
-            *arrayOf("retry-attempt", l.attemptCount.toString(), "method", l.result.request.method),
-            *getUrlTags(l.result.request.url),
+            *arrayOf("retry-attempt", l.attemptCount.toString(), "method", l.result?.request?.method ?: UNKNOWN),
+            *getUrlTags(l.result?.request?.url),
           ).increment()
         }
       }
@@ -177,8 +177,8 @@ class ClientSupportFactory {
           r.counter(
             "$metricPrefix.success",
             *metricTags,
-            *arrayOf("retry-attempt", l.attemptCount.toString(), "method", l.result.request.method),
-            *getUrlTags(l.result.request.url),
+            *arrayOf("retry-attempt", l.attemptCount.toString(), "method", l.result?.request?.method ?: UNKNOWN),
+            *getUrlTags(l.result?.request?.url),
           ).increment()
         }
       }
@@ -188,12 +188,18 @@ class ClientSupportFactory {
       .build()
   }
 
-  private fun getUrlTags(httpUrl: HttpUrl): Array<String> {
-    val last = httpUrl.pathSegments.last()
-    if (last.contains("[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}".toRegex())) {
-      return arrayOf("url", httpUrl.toString().removeSuffix(last), "workload-id", last)
-    } else {
-      return arrayOf("url", httpUrl.toString())
-    }
+  private fun getUrlTags(httpUrl: HttpUrl?): Array<String> {
+    return httpUrl?.let {
+      val last = httpUrl.pathSegments.last()
+      if (last.contains("[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}".toRegex())) {
+        return arrayOf("url", httpUrl.toString().removeSuffix(last), "workload-id", last)
+      } else {
+        return arrayOf("url", httpUrl.toString())
+      }
+    } ?: emptyArray()
+  }
+
+  companion object {
+    private const val UNKNOWN = "unknown"
   }
 }

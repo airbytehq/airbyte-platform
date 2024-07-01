@@ -1,0 +1,40 @@
+@use "scss/variables";
+@use "scss/colors";
+
+.connectorMetadata {
+  background: colors.$blue-30;
+  border-radius: variables.$border-radius-sm;
+  width: 100%;
+  padding: variables.$spacing-md variables.$spacing-xl;
+  line-height: 1.25rem;
+  vertical-align: middle;
+}
+
+.metadataStat {
+  font-size: variables.$font-size-sm;
+  font-weight: 400;
+}
+
+.metadataStatLabel {
+  font-weight: 500;
+}
+
+.metadataStatValue > a {
+  text-decoration: none;
+}
+
+.statChip {
+  padding: 0.125rem 0.375rem;
+  font-size: 0.625rem;
+  line-height: 0.8rem;
+  background-color: colors.$grey-100;
+  color: colors.$grey-900;
+}
+
+.wideIcon {
+  width: auto;
+}
+
+.deemphasizeText {
+  color: colors.$grey-400;
+}

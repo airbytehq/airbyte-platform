@@ -55,3 +55,10 @@ properties:
     default: false
   supportState:
     "$ref": SupportState.yaml
+  lastPublished:
+    description: The time the connector was modified in the codebase.
+    type: string
+    format: date-time
+  cdkVersion:
+    description: "The version of the CDK that the connector was built with. e.g. python:0.1.0, java:0.1.0"
+    type: string

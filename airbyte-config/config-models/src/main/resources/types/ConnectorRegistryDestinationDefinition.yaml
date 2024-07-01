@@ -73,3 +73,7 @@ properties:
   supportsRefreshes:
     type: boolean
     description: an optional flag indicating whether the refresh operation is available for this destination.
+  generated:
+    "$ref": ConnectorRegistryEntryGeneratedFields.yaml
+  packageInfo:
+    "$ref": ConnectorPackageInfo.yaml

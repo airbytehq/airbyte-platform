@@ -77,3 +77,7 @@ properties:
     type: integer
   releases:
     "$ref": ConnectorReleases.yaml
+  generated:
+    "$ref": ConnectorRegistryEntryGeneratedFields.yaml
+  packageInfo:
+    "$ref": ConnectorPackageInfo.yaml

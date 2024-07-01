@@ -213,6 +213,7 @@ components:
       type: object
       required:
         - url
+        - http_method
       properties:
         url:
           type: string
@@ -227,7 +228,6 @@ components:
           type: string
           enum: ["GET", "POST", "PUT", "PATCH"]
           description: The http method of the request ("GET", "POST", "PUT", or "PATCH")
-          default: "GET"
     HttpResponse:
       type: object
       required:

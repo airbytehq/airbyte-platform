@@ -180,6 +180,12 @@ object ConnectionFieldLimitOverride : Permanent<Int>(key = "connection-field-lim
 
 object DeleteDanglingSecrets : Temporary<Boolean>(key = "platform.delete-dangling-secrets", default = false)
 
+object DeleteSecretsWhenTombstoneActors : Temporary<Boolean>(key = "platform.delete-secrets-when-tombstone-actors", default = false)
+
 object EnableResumableFullRefresh : Temporary<Boolean>(key = "platform.enable-resumable-full-refresh", default = false)
 
 object AlwaysRunCheckBeforeSync : Permanent<Boolean>(key = "platform.always-run-check-before-sync", default = false)
+
+object DiscoverPostprocessInTemporal : Permanent<Boolean>(key = "platform.discover-postprocess-in-temporal", default = false)
+
+object SyncStatsFlushPeriodOverrideSeconds : Permanent<Int>(key = "platform.sync-stats-flush-period-override-seconds", default = -1)

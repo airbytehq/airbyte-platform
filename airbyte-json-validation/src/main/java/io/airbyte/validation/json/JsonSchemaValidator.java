@@ -8,8 +8,12 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.networknt.schema.JsonMetaSchema;
+import com.networknt.schema.JsonNodePath;
 import com.networknt.schema.JsonSchema;
 import com.networknt.schema.JsonSchemaFactory;
+import com.networknt.schema.PathType;
+import com.networknt.schema.SchemaLocation;
+import com.networknt.schema.SchemaValidatorsConfig;
 import com.networknt.schema.SpecVersion;
 import com.networknt.schema.ValidationContext;
 import com.networknt.schema.ValidationMessage;
@@ -210,15 +214,15 @@ public class JsonSchemaValidator {
     }
 
     final ValidationContext context = new ValidationContext(
-        jsonSchemaFactory.getUriFactory(),
-        null,
         metaschema,
         jsonSchemaFactory,
-        null);
-    final JsonSchema schema = new JsonSchema(
+        new SchemaValidatorsConfig());
+    final JsonSchema schema = jsonSchemaFactory.create(
         context,
-        baseUri,
-        schemaJson);
+        SchemaLocation.of(baseUri.toString()),
+        new JsonNodePath(PathType.LEGACY),
+        schemaJson,
+        null);
     return schema;
   }
 

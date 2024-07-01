@@ -249,7 +249,6 @@ export const ConnectionReplicationPage: React.FC = () => {
         schema={validationSchema}
         onSubmit={onFormSubmit}
         trackDirtyChanges
-        disabled={mode === "readonly"}
       >
         <FlexContainer direction="column">
           <SchemaChangeMessage />

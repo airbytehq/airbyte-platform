@@ -651,6 +651,9 @@ public class DestinationServiceJooqImpl implements DestinationService {
             .set(Tables.ACTOR_DEFINITION.RESOURCE_REQUIREMENTS,
                 standardDestinationDefinition.getResourceRequirements() == null ? null
                     : JSONB.valueOf(Jsons.serialize(standardDestinationDefinition.getResourceRequirements())))
+            .set(ACTOR_DEFINITION.METRICS,
+                standardDestinationDefinition.getMetrics() == null ? null
+                    : JSONB.valueOf(Jsons.serialize(standardDestinationDefinition.getMetrics())))
             .set(Tables.ACTOR_DEFINITION.UPDATED_AT, timestamp)
             .where(Tables.ACTOR_DEFINITION.ID.eq(standardDestinationDefinition.getDestinationDefinitionId()))
             .execute();
@@ -669,6 +672,9 @@ public class DestinationServiceJooqImpl implements DestinationService {
             .set(Tables.ACTOR_DEFINITION.RESOURCE_REQUIREMENTS,
                 standardDestinationDefinition.getResourceRequirements() == null ? null
                     : JSONB.valueOf(Jsons.serialize(standardDestinationDefinition.getResourceRequirements())))
+            .set(ACTOR_DEFINITION.METRICS,
+                standardDestinationDefinition.getMetrics() == null ? null
+                    : JSONB.valueOf(Jsons.serialize(standardDestinationDefinition.getMetrics())))
             .set(Tables.ACTOR_DEFINITION.CREATED_AT, timestamp)
             .set(Tables.ACTOR_DEFINITION.UPDATED_AT, timestamp)
             .execute();
@@ -697,6 +703,37 @@ public class DestinationServiceJooqImpl implements DestinationService {
       hydratedConfig = secretsRepositoryReader.hydrateConfigFromDefaultSecretPersistence(destination.getConfiguration());
     }
     return Jsons.clone(destination).withConfiguration(hydratedConfig);
+  }
+
+  /**
+   * Delete destination: tombstone destination AND delete secrets
+   *
+   * @param connectorSpecification spec for the destination
+   * @throws JsonValidationException if the workspace is or contains invalid json
+   * @throws IOException if there is an issue while interacting with the secrets store or db.
+   */
+  @Override
+  public void tombstoneDestination(
+                                   final DestinationConnection destination,
+                                   final ConnectorSpecification connectorSpecification)
+      throws ConfigNotFoundException, JsonValidationException, IOException {
+    // 1. Delete secrets from config
+    final JsonNode config = destination.getConfiguration();
+
+    final Optional<UUID> organizationId = getOrganizationIdFromWorkspaceId(destination.getWorkspaceId());
+    RuntimeSecretPersistence secretPersistence = null;
+    if (organizationId.isPresent() && featureFlagClient.boolVariation(UseRuntimeSecretPersistence.INSTANCE, new Organization(organizationId.get()))) {
+      final SecretPersistenceConfig secretPersistenceConfig = secretPersistenceConfigService.get(ScopeType.ORGANIZATION, organizationId.get());
+      secretPersistence = new RuntimeSecretPersistence(secretPersistenceConfig);
+    }
+    final JsonNode partialConfig = secretsRepositoryWriter.deleteFromConfig(
+        destination.getWorkspaceId(),
+        config,
+        connectorSpecification.getConnectionSpecification(),
+        secretPersistence);
+    // 2. Tombstone destination
+    final DestinationConnection partialSource = Jsons.clone(destination).withConfiguration(partialConfig);
+    writeDestinationConnectionNoSecrets(partialSource);
   }
 
   /**

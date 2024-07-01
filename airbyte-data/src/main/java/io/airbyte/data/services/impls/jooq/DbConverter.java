@@ -38,6 +38,7 @@ import io.airbyte.config.ActorDefinitionVersion.SupportState;
 import io.airbyte.config.AllowedHosts;
 import io.airbyte.config.BreakingChangeScope;
 import io.airbyte.config.ConnectorBuilderProject;
+import io.airbyte.config.ConnectorRegistryEntryMetrics;
 import io.airbyte.config.DeclarativeManifest;
 import io.airbyte.config.DestinationConnection;
 import io.airbyte.config.DestinationOAuthParameter;
@@ -79,6 +80,7 @@ import java.time.LocalDateTime;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
@@ -276,6 +278,9 @@ public class DbConverter {
         .withResourceRequirements(record.get(ACTOR_DEFINITION.RESOURCE_REQUIREMENTS) == null
             ? null
             : Jsons.deserialize(record.get(ACTOR_DEFINITION.RESOURCE_REQUIREMENTS).data(), ActorDefinitionResourceRequirements.class))
+        .withMetrics(record.get(ACTOR_DEFINITION.METRICS) == null
+            ? null
+            : Jsons.deserialize(record.get(ACTOR_DEFINITION.METRICS).data(), ConnectorRegistryEntryMetrics.class))
         .withMaxSecondsBetweenMessages(maxSecondsBetweenMessage);
   }
 
@@ -295,6 +300,9 @@ public class DbConverter {
         .withTombstone(record.get(ACTOR_DEFINITION.TOMBSTONE))
         .withPublic(record.get(ACTOR_DEFINITION.PUBLIC))
         .withCustom(record.get(ACTOR_DEFINITION.CUSTOM))
+        .withMetrics(record.get(ACTOR_DEFINITION.METRICS) == null
+            ? null
+            : Jsons.deserialize(record.get(ACTOR_DEFINITION.METRICS).data(), ConnectorRegistryEntryMetrics.class))
         .withResourceRequirements(record.get(ACTOR_DEFINITION.RESOURCE_REQUIREMENTS) == null
             ? null
             : Jsons.deserialize(record.get(ACTOR_DEFINITION.RESOURCE_REQUIREMENTS).data(), ActorDefinitionResourceRequirements.class));
@@ -510,6 +518,9 @@ public class DbConverter {
             : Enums.toEnum(record.get(ACTOR_DEFINITION_VERSION.RELEASE_STAGE, String.class), ReleaseStage.class).orElseThrow())
         .withReleaseDate(record.get(ACTOR_DEFINITION_VERSION.RELEASE_DATE) == null ? null
             : record.get(ACTOR_DEFINITION_VERSION.RELEASE_DATE).toString())
+        .withLastPublished(record.get(ACTOR_DEFINITION_VERSION.LAST_PUBLISHED) == null ? null
+            : Date.from(record.get(ACTOR_DEFINITION_VERSION.LAST_PUBLISHED).toInstant()))
+        .withCdkVersion(record.get(ACTOR_DEFINITION_VERSION.CDK_VERSION))
         .withAllowedHosts(record.get(ACTOR_DEFINITION_VERSION.ALLOWED_HOSTS) == null
             ? null
             : Jsons.deserialize(record.get(ACTOR_DEFINITION_VERSION.ALLOWED_HOSTS).data(), AllowedHosts.class))

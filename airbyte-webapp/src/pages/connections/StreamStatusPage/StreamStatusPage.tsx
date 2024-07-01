@@ -6,18 +6,17 @@ import { useExperiment } from "hooks/services/Experiment";
 import { ConnectionStatusCard } from "./ConnectionStatusCard";
 import { ConnectionStatusMessages } from "./ConnectionStatusMessages";
 import { ConnectionSyncStatusCard } from "./ConnectionSyncStatusCard";
-import { NextStreamsList } from "./NextStreamsList";
 import { StreamsList } from "./StreamsList";
 import { StreamsListContextProvider } from "./StreamsListContext";
+import styles from "./StreamStatusPage.module.scss";
 
 export const StreamStatusPage = () => {
   const isSimplifiedCreation = useExperiment("connection.simplifiedCreation", true);
-  const showSyncProgress = useExperiment("connection.syncProgress", false);
 
   return (
     <ConnectionSyncContextProvider>
       <StreamsListContextProvider>
-        <FlexContainer direction="column" gap="md">
+        <FlexContainer direction="column" gap="md" className={styles.container}>
           {isSimplifiedCreation ? (
             <>
               <ConnectionStatusMessages />
@@ -26,7 +25,7 @@ export const StreamStatusPage = () => {
           ) : (
             <ConnectionStatusCard />
           )}
-          {showSyncProgress ? <NextStreamsList /> : <StreamsList />}
+          <StreamsList />
         </FlexContainer>
       </StreamsListContextProvider>
     </ConnectionSyncContextProvider>

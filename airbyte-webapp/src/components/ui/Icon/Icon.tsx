@@ -76,6 +76,12 @@ import LoadingIcon from "./icons/loadingIcon.svg?react";
 import LocationIcon from "./icons/locationIcon.svg?react";
 import LockIcon from "./icons/lockIcon.svg?react";
 import MenuIcon from "./icons/menuIcon.svg?react";
+import MetricSuccessHighIcon from "./icons/metricSuccessHighIcon.svg?react";
+import MetricSuccessLowIcon from "./icons/metricSuccessLowIcon.svg?react";
+import MetricSuccessMedIcon from "./icons/metricSuccessMedIcon.svg?react";
+import MetricUsageHighIcon from "./icons/metricUsageHighIcon.svg?react";
+import MetricUsageLowIcon from "./icons/metricUsageLowIcon.svg?react";
+import MetricUsageMedIcon from "./icons/metricUsageMedIcon.svg?react";
 import MinusCircleIcon from "./icons/minusCircleIcon.svg?react";
 import MinusIcon from "./icons/minusIcon.svg?react";
 import ModificationIcon from "./icons/modificationIcon.svg?react";
@@ -229,6 +235,12 @@ export const Icons: Record<IconType, React.FC<React.SVGProps<SVGSVGElement>>> = 
   location: LocationIcon,
   lock: LockIcon,
   menu: MenuIcon,
+  metricSuccessHigh: MetricSuccessHighIcon,
+  metricSuccessLow: MetricSuccessLowIcon,
+  metricSuccessMed: MetricSuccessMedIcon,
+  metricUsageHigh: MetricUsageHighIcon,
+  metricUsageLow: MetricUsageLowIcon,
+  metricUsageMed: MetricUsageMedIcon,
   minus: MinusIcon,
   minusCircle: MinusCircleIcon,
   modification: ModificationIcon,

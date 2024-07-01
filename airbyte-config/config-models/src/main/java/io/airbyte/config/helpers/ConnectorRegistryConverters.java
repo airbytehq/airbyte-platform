@@ -9,8 +9,12 @@ import io.airbyte.commons.version.Version;
 import io.airbyte.config.ActorDefinitionBreakingChange;
 import io.airbyte.config.ActorDefinitionVersion;
 import io.airbyte.config.BreakingChangeScope;
+import io.airbyte.config.ConnectorPackageInfo;
 import io.airbyte.config.ConnectorRegistryDestinationDefinition;
+import io.airbyte.config.ConnectorRegistryEntryGeneratedFields;
+import io.airbyte.config.ConnectorRegistryEntryMetrics;
 import io.airbyte.config.ConnectorRegistrySourceDefinition;
+import io.airbyte.config.SourceFileInfo;
 import io.airbyte.config.StandardDestinationDefinition;
 import io.airbyte.config.StandardSourceDefinition;
 import io.airbyte.config.StandardSourceDefinition.SourceType;
@@ -19,8 +23,10 @@ import io.airbyte.config.VersionBreakingChange;
 import io.airbyte.protocol.models.ConnectorSpecification;
 import jakarta.annotation.Nullable;
 import java.util.Collections;
+import java.util.Date;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -37,6 +43,11 @@ public class ConnectorRegistryConverters {
       return null;
     }
 
+    ConnectorRegistryEntryMetrics metrics = Optional.of(def)
+        .map(ConnectorRegistrySourceDefinition::getGenerated)
+        .map(ConnectorRegistryEntryGeneratedFields::getMetrics)
+        .orElse(null);
+
     return new StandardSourceDefinition()
         .withSourceDefinitionId(def.getSourceDefinitionId())
         .withName(def.getName())
@@ -46,6 +57,7 @@ public class ConnectorRegistryConverters {
         .withTombstone(def.getTombstone())
         .withPublic(def.getPublic())
         .withCustom(def.getCustom())
+        .withMetrics(metrics)
         .withResourceRequirements(def.getResourceRequirements())
         .withMaxSecondsBetweenMessages(def.getMaxSecondsBetweenMessages());
   }
@@ -58,6 +70,11 @@ public class ConnectorRegistryConverters {
       return null;
     }
 
+    ConnectorRegistryEntryMetrics metrics = Optional.of(def)
+        .map(ConnectorRegistryDestinationDefinition::getGenerated)
+        .map(ConnectorRegistryEntryGeneratedFields::getMetrics)
+        .orElse(null);
+
     return new StandardDestinationDefinition()
         .withDestinationDefinitionId(def.getDestinationDefinitionId())
         .withName(def.getName())
@@ -66,6 +83,7 @@ public class ConnectorRegistryConverters {
         .withTombstone(def.getTombstone())
         .withPublic(def.getPublic())
         .withCustom(def.getCustom())
+        .withMetrics(metrics)
         .withResourceRequirements(def.getResourceRequirements());
   }
 
@@ -77,6 +95,17 @@ public class ConnectorRegistryConverters {
     if (def == null) {
       return null;
     }
+
+    Date lastModified = Optional.of(def)
+        .map(ConnectorRegistrySourceDefinition::getGenerated)
+        .map(ConnectorRegistryEntryGeneratedFields::getSourceFileInfo)
+        .map(SourceFileInfo::getMetadataLastModified)
+        .orElse(null);
+
+    String cdkVersion = Optional.of(def)
+        .map(ConnectorRegistrySourceDefinition::getPackageInfo)
+        .map(ConnectorPackageInfo::getCdkVersion)
+        .orElse(null);
 
     validateDockerImageTag(def.getDockerImageTag());
     return new ActorDefinitionVersion()
@@ -90,6 +119,8 @@ public class ConnectorRegistryConverters {
         .withReleaseDate(def.getReleaseDate())
         .withSupportLevel(def.getSupportLevel() == null ? SupportLevel.NONE : def.getSupportLevel())
         .withReleaseStage(def.getReleaseStage())
+        .withLastPublished(lastModified)
+        .withCdkVersion(cdkVersion)
         .withSuggestedStreams(def.getSuggestedStreams());
   }
 
@@ -101,6 +132,17 @@ public class ConnectorRegistryConverters {
     if (def == null) {
       return null;
     }
+
+    Date lastModified = Optional.of(def)
+        .map(ConnectorRegistryDestinationDefinition::getGenerated)
+        .map(ConnectorRegistryEntryGeneratedFields::getSourceFileInfo)
+        .map(SourceFileInfo::getMetadataLastModified)
+        .orElse(null);
+
+    String cdkVersion = Optional.of(def)
+        .map(ConnectorRegistryDestinationDefinition::getPackageInfo)
+        .map(ConnectorPackageInfo::getCdkVersion)
+        .orElse(null);
 
     validateDockerImageTag(def.getDockerImageTag());
     return new ActorDefinitionVersion()
@@ -116,6 +158,8 @@ public class ConnectorRegistryConverters {
         .withSupportLevel(def.getSupportLevel() == null ? SupportLevel.NONE : def.getSupportLevel())
         .withNormalizationConfig(def.getNormalizationConfig())
         .withSupportsDbt(def.getSupportsDbt())
+        .withLastPublished(lastModified)
+        .withCdkVersion(cdkVersion)
         .withSupportsRefreshes(def.getSupportsRefreshes() != null && def.getSupportsRefreshes());
   }
 

@@ -1,3 +1,4 @@
 {
-  "cron-validation/invalid-timezone": "The timezone {cronTimezone} is currently not supported. Please chose another timezone."
+  "cron-validation/invalid-timezone": "The timezone {cronTimezone} is currently not supported. Please chose another timezone.",
+  "dbtcloud/access-denied": "dbt Cloud denied access. Please verify your service token and access URL."
 }

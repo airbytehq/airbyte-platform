@@ -38,7 +38,7 @@ Cypress.Commands.add("login", (user: TestUserCredentials = testUser) => {
 // TODO rewrite to logout programmatically, instead of by clicking through the UI. This
 // will be faster and less brittle.
 Cypress.Commands.add("logout", () => {
-  cy.get("[data-testid='sidebar.userDropdown']").click();
+  cy.get("[data-testid='sidebar.userDropdown']").click({ force: true });
   cy.get("[data-testid='sidebar.signout']").click({ force: true });
   cy.hasNavigatedTo("/login");
 });

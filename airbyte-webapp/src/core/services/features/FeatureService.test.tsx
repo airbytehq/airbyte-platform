@@ -51,7 +51,7 @@ describe("Feature Service", () => {
       const getFeature = (feature: FeatureItem) =>
         renderHook(() => useFeature(feature), { wrapper: wrapperWithInstanceConfig }).result.current;
 
-      expect(getFeature(FeatureItem.KeycloakAuthentication)).toBe(true);
+      expect(getFeature(FeatureItem.APITokenManagement)).toBe(true);
     });
 
     it("overwrite features can overwrite default features", () => {

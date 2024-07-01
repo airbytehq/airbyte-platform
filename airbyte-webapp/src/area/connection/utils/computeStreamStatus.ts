@@ -102,7 +102,6 @@ export const computeStreamStatus = ({
   hasBreakingSchemaChange,
   lateMultiplier,
   errorMultiplier,
-  showSyncProgress,
   isSyncing,
   recordsExtracted,
   runningJobConfigType,
@@ -113,7 +112,6 @@ export const computeStreamStatus = ({
   hasBreakingSchemaChange: boolean;
   lateMultiplier: number;
   errorMultiplier: number;
-  showSyncProgress: boolean;
   isSyncing: boolean;
   recordsExtracted?: number;
   runningJobConfigType?: string;
@@ -121,7 +119,7 @@ export const computeStreamStatus = ({
   // no statuses
   if (statuses == null || statuses.length === 0) {
     return {
-      status: showSyncProgress ? ConnectionStatusIndicatorStatus.QueuedForNextSync : undefined,
+      status: ConnectionStatusIndicatorStatus.QueuedForNextSync,
       isRunning: false,
       lastSuccessfulSync: undefined,
     };
@@ -136,52 +134,50 @@ export const computeStreamStatus = ({
     ({ jobType, runState }) => jobType === StreamStatusJobType.SYNC && runState === StreamStatusRunState.COMPLETE
   );
 
-  if (showSyncProgress) {
-    // queued for next sync
-    if (
-      !isRunning &&
-      (statuses[0].runState === StreamStatusRunState.PENDING || statuses[0].jobType === StreamStatusJobType.RESET)
-    ) {
-      return {
-        status: ConnectionStatusIndicatorStatus.QueuedForNextSync,
-        isRunning,
+  // queued for next sync
+  if (
+    !isRunning &&
+    (statuses[0].runState === StreamStatusRunState.PENDING || statuses[0].jobType === StreamStatusJobType.RESET)
+  ) {
+    return {
+      status: ConnectionStatusIndicatorStatus.QueuedForNextSync,
+      isRunning,
 
+      lastSuccessfulSync,
+    };
+  }
+
+  // queued
+  if (isRunning) {
+    if (runningJobConfigType === JobConfigType.reset_connection || runningJobConfigType === JobConfigType.clear) {
+      return {
+        status: ConnectionStatusIndicatorStatus.Clearing,
+        isRunning,
         lastSuccessfulSync,
       };
     }
 
-    // queued
-    if (isRunning) {
-      if (runningJobConfigType === JobConfigType.reset_connection || runningJobConfigType === JobConfigType.clear) {
+    if (!recordsExtracted || recordsExtracted === 0) {
+      return {
+        status: ConnectionStatusIndicatorStatus.Queued,
+        isRunning,
+        lastSuccessfulSync,
+      };
+    }
+    if (recordsExtracted && recordsExtracted > 0) {
+      // syncing or refreshing
+      if (runningJobConfigType === "sync") {
         return {
-          status: ConnectionStatusIndicatorStatus.Clearing,
+          status: ConnectionStatusIndicatorStatus.Syncing,
           isRunning,
           lastSuccessfulSync,
         };
-      }
-
-      if (!recordsExtracted || recordsExtracted === 0) {
+      } else if (runningJobConfigType === "refresh") {
         return {
-          status: ConnectionStatusIndicatorStatus.Queued,
+          status: ConnectionStatusIndicatorStatus.Refreshing,
           isRunning,
           lastSuccessfulSync,
         };
-      }
-      if (recordsExtracted && recordsExtracted > 0) {
-        // syncing or refreshing
-        if (runningJobConfigType === "sync") {
-          return {
-            status: ConnectionStatusIndicatorStatus.Syncing,
-            isRunning,
-            lastSuccessfulSync,
-          };
-        } else if (runningJobConfigType === "refresh") {
-          return {
-            status: ConnectionStatusIndicatorStatus.Refreshing,
-            isRunning,
-            lastSuccessfulSync,
-          };
-        }
       }
     }
   }

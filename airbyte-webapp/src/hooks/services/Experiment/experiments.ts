@@ -12,13 +12,13 @@ export interface Experiments {
   "billing.autoRecharge": boolean;
   "connection.columnSelection": boolean;
   "connection.simplifiedCreation": boolean;
+  "connection.syncProgressPollingTime": number;
   "connection.onboarding.destinations": string;
   "connection.onboarding.sources": string;
   "connection.streamCentricUI.errorMultiplier": number;
   "connection.streamCentricUI.lateMultiplier": number;
   "connection.streamCentricUI.v2": boolean;
   "connection.streamCentricUI.historicalOverview": boolean;
-  "connection.syncProgress": boolean;
   "connector.airbyteCloudIpAddresses": string;
   "connector.suggestedSourceConnectors": string;
   "connector.suggestedDestinationConnectors": string;

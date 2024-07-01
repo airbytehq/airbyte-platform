@@ -350,8 +350,8 @@ open class ConnectionsController(
     val schemaResponse =
       trackingHelper.callWithTracker(
         { sourceService.getSourceSchema(UUID.fromString(currentConnection.sourceId), false) },
-        CONNECTIONS_PATH,
-        POST,
+        CONNECTIONS_WITH_ID_PATH,
+        PUT,
         userId,
       )
     val catalogId = schemaResponse.catalogId
@@ -379,8 +379,8 @@ open class ConnectionsController(
             )
           }
         },
-        CONNECTIONS_PATH,
-        POST,
+        CONNECTIONS_WITH_ID_PATH,
+        PUT,
         userId,
       )
 
@@ -388,24 +388,15 @@ open class ConnectionsController(
       for (streamConfiguration in validConnectionPatchRequest.configurations!!.streams!!) {
         val validStreamAndConfig = validStreams[streamConfiguration.name]
         val schemaStream = validStreamAndConfig!!.stream
-        val updatedValidStreamAndConfig = AirbyteStreamAndConfiguration()
-        updatedValidStreamAndConfig.stream = schemaStream
-        updatedValidStreamAndConfig.config =
-          AirbyteCatalogHelper.updateAirbyteStreamConfiguration(
-            validStreamAndConfig.config,
-            schemaStream,
-            streamConfiguration,
-          )
-
+        // validate config for each stream
         val validDestinationSyncModes =
           trackingHelper.callWithTracker(
             { destinationService.getDestinationSyncModes(destinationRead) },
-            CONNECTIONS_PATH,
-            POST,
+            CONNECTIONS_WITH_ID_PATH,
+            PUT,
             userId,
           ) as List<DestinationSyncMode>
 
-        // set user configs
         trackingHelper.callWithTracker(
           {
             AirbyteCatalogHelper.validateStreamConfig(
@@ -414,10 +405,21 @@ open class ConnectionsController(
               airbyteStream = schemaStream,
             )
           },
-          CONNECTIONS_PATH,
-          POST,
+          CONNECTIONS_WITH_ID_PATH,
+          PUT,
           userId,
         )
+
+        // set user inputs
+        val updatedValidStreamAndConfig = AirbyteStreamAndConfiguration()
+        updatedValidStreamAndConfig.stream = schemaStream
+        updatedValidStreamAndConfig.config =
+          AirbyteCatalogHelper.updateAirbyteStreamConfiguration(
+            validStreamAndConfig.config,
+            schemaStream,
+            streamConfiguration,
+          )
+        // set user configs
         configuredCatalog!!.addStreamsItem(updatedValidStreamAndConfig)
       }
     } else {
@@ -437,8 +439,8 @@ open class ConnectionsController(
             destinationRead.workspaceId,
           )
         },
-        CONNECTIONS_PATH,
-        POST,
+        CONNECTIONS_WITH_ID_PATH,
+        PUT,
         userId,
       )!!
 

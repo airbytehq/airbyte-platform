@@ -4,10 +4,12 @@
 #
 #    pip-compile
 #
-airbyte-cdk==1.5.2
+airbyte-cdk==2.0.0
     # via -r requirements.in
-airbyte-protocol-models==0.12.2
+airbyte-protocol-models-pdv2==0.12.2
     # via airbyte-cdk
+annotated-types==0.7.0
+    # via pydantic
 attrs==23.2.0
     # via
     #   cattrs
@@ -53,7 +55,7 @@ jsonschema==3.2.0
     # via airbyte-cdk
 langchain-core==0.1.42
     # via airbyte-cdk
-langsmith==0.1.79
+langsmith==0.1.81
     # via langchain-core
 markupsafe==2.1.5
     # via jinja2
@@ -67,12 +69,14 @@ platformdirs==4.2.2
     # via requests-cache
 pycparser==2.22
     # via cffi
-pydantic==1.10.16
+pydantic==2.7.4
     # via
     #   airbyte-cdk
-    #   airbyte-protocol-models
+    #   airbyte-protocol-models-pdv2
     #   langchain-core
     #   langsmith
+pydantic-core==2.18.4
+    # via pydantic
 pyjwt==2.8.0
     # via airbyte-cdk
 pyrate-limiter==3.1.1
@@ -96,7 +100,7 @@ requests==2.32.3
     #   airbyte-cdk
     #   langsmith
     #   requests-cache
-requests-cache==1.2.0
+requests-cache==1.2.1
     # via airbyte-cdk
 six==1.16.0
     # via
@@ -110,6 +114,7 @@ typing-extensions==4.12.2
     # via
     #   cattrs
     #   pydantic
+    #   pydantic-core
 url-normalize==1.4.3
     # via requests-cache
 urllib3==2.2.2

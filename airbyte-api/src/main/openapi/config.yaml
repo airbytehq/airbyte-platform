@@ -6054,7 +6054,7 @@ paths:
       description: >-
         Create/update a set of OAuth credentials to override the Airbyte-provided OAuth credentials used for source/destination OAuth.
 
-        In order to determine what the credential configuration needs to be, please see the connector specification of the relevant 
+        In order to determine what the credential configuration needs to be, please see the connector specification of the relevant
         source/destination.
     parameters:
       - name: workspaceId
@@ -7354,6 +7354,15 @@ components:
           description: Number of seconds allowed between 2 airbyte protocol messages. The source will timeout if this delay is reach
           type: integer
           format: int64
+        lastPublished:
+          description: The time the connector was modified in the codebase.
+          $ref: "#/components/schemas/ISO8601DateTime"
+        cdkVersion:
+          description: "The version of the CDK that the connector was built with. e.g. python:0.1.0, java:0.1.0"
+          type: string
+        metrics:
+          description: Public metrics for the connector
+          type: object
     SourceDefinitionReadList:
       type: object
       required:
@@ -7865,6 +7874,16 @@ components:
           description: an optional flag indicating whether DBT is used in the normalization. If the flag value is NULL - DBT is not used.
         normalizationConfig:
           $ref: "#/components/schemas/NormalizationDestinationDefinitionConfig"
+        lastPublished:
+          description: The time the connector was modified in the codebase.
+          $ref: "#/components/schemas/ISO8601DateTime"
+
+        cdkVersion:
+          description: "The version of the CDK that the connector was built with. e.g. python:0.1.0, java:0.1.0"
+          type: string
+        metrics:
+          description: Public metrics for the connector
+          type: object
     DestinationDefinitionReadList:
       type: object
       required:
@@ -8133,6 +8152,12 @@ components:
           $ref: "#/components/schemas/SupportState"
         breakingChanges:
           $ref: "#/components/schemas/ActorDefinitionVersionBreakingChanges"
+        lastPublished:
+          description: The time the connector was modified in the codebase.
+          $ref: "#/components/schemas/ISO8601DateTime"
+        cdkVersion:
+          description: "The version of the CDK that the connector was built with. e.g. python:0.1.0, java:0.1.0"
+          type: string
     ResolveActorDefinitionVersionResponse:
       type: object
       required:
@@ -12883,6 +12908,7 @@ components:
             items:
               type: string
         selectedFields:
+          description: By default (if not provided in the request) all fields will be synced. Otherwise, only the fields in this list will be synced.
           $ref: "#/components/schemas/SelectedFields"
       x-sdk-component: true
     StreamConfigurations:
@@ -12942,6 +12968,11 @@ components:
         - source
         - destination
       x-sdk-component: true
+
+    ISO8601DateTime:
+      type: string
+      format: date-time
+      x-field-extra-annotation: '@com.fasterxml.jackson.annotation.JsonFormat(pattern="yyyy-MM-dd''T''HH:mm:ss.SSS''Z''")'
 
   responses:
     NotFoundResponse:

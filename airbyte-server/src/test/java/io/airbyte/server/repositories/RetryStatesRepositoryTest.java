@@ -4,6 +4,9 @@
 
 package io.airbyte.server.repositories;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
 import io.airbyte.db.factory.DSLContextFactory;
 import io.airbyte.db.init.DatabaseInitializationException;
 import io.airbyte.db.instance.DatabaseConstants;
@@ -95,8 +98,8 @@ class RetryStatesRepositoryTest {
 
     final var found = repo.findById(inserted.getId());
 
-    Assertions.assertTrue(found.isPresent());
-    Assertions.assertEquals(inserted, found.get());
+    assertTrue(found.isPresent());
+    assertEquals(inserted, found.get());
   }
 
   @Test
@@ -115,15 +118,15 @@ class RetryStatesRepositoryTest {
         .successivePartialFailures(0)
         .build();
 
-    repo.updateByJobId(Fixtures.jobId2, updated);
+    repo.updateByJobId(updated);
 
     final var found2 = repo.findById(id);
 
-    Assertions.assertTrue(found1.isPresent());
-    Assertions.assertEquals(s, found1.get());
+    assertTrue(found1.isPresent());
+    assertEquals(s, found1.get());
 
-    Assertions.assertTrue(found2.isPresent());
-    Assertions.assertEquals(updated, found2.get());
+    assertTrue(found2.isPresent());
+    assertEquals(updated, found2.get());
   }
 
   @Test
@@ -150,14 +153,14 @@ class RetryStatesRepositoryTest {
     final var found2 = repo.findByJobId(Fixtures.jobId3);
     final var found3 = repo.findByJobId(Fixtures.jobId1);
 
-    Assertions.assertTrue(found1.isPresent());
-    Assertions.assertEquals(s1, found1.get());
+    assertTrue(found1.isPresent());
+    assertEquals(s1, found1.get());
 
-    Assertions.assertTrue(found2.isPresent());
-    Assertions.assertEquals(s2, found2.get());
+    assertTrue(found2.isPresent());
+    assertEquals(s2, found2.get());
 
-    Assertions.assertTrue(found3.isPresent());
-    Assertions.assertEquals(s3, found3.get());
+    assertTrue(found3.isPresent());
+    assertEquals(s3, found3.get());
   }
 
   @Test
@@ -171,7 +174,7 @@ class RetryStatesRepositoryTest {
     final var exists1 = repo.existsByJobId(Fixtures.jobId3);
     final var exists2 = repo.existsByJobId(Fixtures.jobId2);
 
-    Assertions.assertTrue(exists1);
+    assertTrue(exists1);
     Assertions.assertFalse(exists2);
   }
 
@@ -195,11 +198,11 @@ class RetryStatesRepositoryTest {
 
     final var found2 = repo.findById(id);
 
-    Assertions.assertTrue(found1.isPresent());
-    Assertions.assertEquals(s, found1.get());
+    assertTrue(found1.isPresent());
+    assertEquals(s, found1.get());
 
-    Assertions.assertTrue(found2.isPresent());
-    Assertions.assertEquals(updated, found2.get());
+    assertTrue(found2.isPresent());
+    assertEquals(updated, found2.get());
   }
 
   @Test
@@ -212,8 +215,8 @@ class RetryStatesRepositoryTest {
 
     final var found1 = repo.findByJobId(Fixtures.jobId4);
 
-    Assertions.assertTrue(found1.isPresent());
-    Assertions.assertEquals(s, found1.get());
+    assertTrue(found1.isPresent());
+    assertEquals(s, found1.get());
   }
 
   private static class Fixtures {

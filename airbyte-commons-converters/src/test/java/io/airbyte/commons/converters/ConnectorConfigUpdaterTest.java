@@ -59,7 +59,7 @@ class ConnectorConfigUpdaterTest {
             Jsons.jsonNode(Map.of()),
             DESTINATION_NAME,
             DESTINATION_NAME,
-            null, null, null, null, null));;
+            null, null, null, null, null));
 
     when(mAirbyteApiClient.getDestinationApi()).thenReturn(mDestinationApi);
     when(mAirbyteApiClient.getSourceApi()).thenReturn(mSourceApi);

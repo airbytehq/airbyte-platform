@@ -5,10 +5,7 @@ import { FlexContainer } from "components/ui/Flex";
 import { Icon } from "components/ui/Icon";
 import { CircleLoader } from "components/ui/StatusIcon/CircleLoader";
 
-import { useExperiment } from "hooks/services/Experiment";
-
 import styles from "./StreamStatusIndicator.module.scss";
-import { StreamStatusLoadingSpinner } from "./StreamStatusLoadingSpinner";
 import { ConnectionStatusIndicatorStatus } from "../ConnectionStatusIndicator";
 
 const ICON_BY_STATUS: Readonly<Record<ConnectionStatusIndicatorStatus, JSX.Element>> = {
@@ -62,18 +59,14 @@ const BOX_STYLE_BY_STATUS: Readonly<Record<ConnectionStatusIndicatorStatus, stri
 interface StreamStatusIndicatorProps {
   status: ConnectionStatusIndicatorStatus;
   // this prop can be removed when the sync progress feature is rolled out
-  loading?: boolean;
   withBox?: boolean;
 }
 
-export const StreamStatusIndicator: React.FC<StreamStatusIndicatorProps> = ({ status, loading, withBox }) => {
-  const showSyncProgress = useExperiment("connection.syncProgress", false);
-
+export const StreamStatusIndicator: React.FC<StreamStatusIndicatorProps> = ({ status, withBox }) => {
   return (
     <div className={classNames(styles.status, STYLE_BY_STATUS[status], { [BOX_STYLE_BY_STATUS[status]]: withBox })}>
       <FlexContainer justifyContent="center" alignItems="center" className={styles.icon}>
         {ICON_BY_STATUS[status]}
-        {!showSyncProgress && loading && <StreamStatusLoadingSpinner className={styles.spinner} />}
       </FlexContainer>
     </div>
   );
