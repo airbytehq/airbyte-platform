@@ -30,6 +30,7 @@ import io.airbyte.api.client.model.generated.ConnectionStateType;
 import io.airbyte.api.client.model.generated.StreamState;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.featureflag.FeatureFlagClient;
+import io.airbyte.featureflag.SyncStatsFlushPeriodOverrideSeconds;
 import io.airbyte.featureflag.TestClient;
 import io.airbyte.protocol.models.AirbyteEstimateTraceMessage;
 import io.airbyte.protocol.models.AirbyteGlobalState;
@@ -38,6 +39,7 @@ import io.airbyte.protocol.models.AirbyteStateMessage;
 import io.airbyte.protocol.models.AirbyteStreamState;
 import io.airbyte.protocol.models.ConfiguredAirbyteCatalog;
 import io.airbyte.protocol.models.StreamDescriptor;
+import io.airbyte.workers.internal.bookkeeping.ParallelStreamStatsTracker;
 import io.airbyte.workers.internal.bookkeeping.SyncStatsTracker;
 import io.airbyte.workers.internal.stateaggregator.StateAggregatorFactory;
 import java.io.IOException;
@@ -90,14 +92,14 @@ class SyncPersistenceImplTest {
     when(executorService.scheduleAtFixedRate(actualFlushMethod.capture(), eq(0L), eq(flushPeriod), eq(TimeUnit.SECONDS)))
         .thenReturn(mock(ScheduledFuture.class));
 
-    syncStatsTracker = mock(SyncStatsTracker.class);
+    syncStatsTracker = new ParallelStreamStatsTracker(mock(), mock());
 
     // Setting syncPersistence
     stateApi = mock(StateApi.class);
     attemptApi = mock(AttemptApi.class);
     when(airbyteApiClient.getAttemptApi()).thenReturn(attemptApi);
     when(airbyteApiClient.getStateApi()).thenReturn(stateApi);
-    when(ffClient.intVariation(any(), any())).thenReturn(-1);
+    when(ffClient.intVariation(eq(SyncStatsFlushPeriodOverrideSeconds.INSTANCE), any())).thenReturn(-1);
 
     syncPersistence = new SyncPersistenceImpl(airbyteApiClient, new StateAggregatorFactory(), syncStatsTracker, executorService,
         flushPeriod, new RetryWithJitterConfig(1, 1, 4),
@@ -240,6 +242,52 @@ class SyncPersistenceImplTest {
     actualFlushMethod.getValue().run();
     verify(stateApi, never()).createOrUpdateState(any());
     verify(attemptApi).saveStats(any());
+  }
+
+  @Test
+  void statsDontPersistIfTheresBeenNoChanges() throws IOException {
+    // enable frequency ff and re-init class and arg capturing since FF is checked on init
+    final var overriddenFlushPeriod = 10L;
+    when(ffClient.intVariation(eq(SyncStatsFlushPeriodOverrideSeconds.INSTANCE), any())).thenReturn(Math.toIntExact(overriddenFlushPeriod));
+    when(executorService.scheduleAtFixedRate(actualFlushMethod.capture(), eq(0L), eq(overriddenFlushPeriod), eq(TimeUnit.SECONDS)))
+        .thenReturn(mock(ScheduledFuture.class));
+    syncPersistence = new SyncPersistenceImpl(airbyteApiClient, new StateAggregatorFactory(), syncStatsTracker, executorService,
+        overriddenFlushPeriod, new RetryWithJitterConfig(1, 1, 4),
+        connectionId, workspaceId, jobId, attemptNumber, catalog, ffClient);
+
+    // update stats
+    syncPersistence.updateStats(new AirbyteRecordMessage().withStream("stream1"));
+
+    // stats have updated so we should save
+    actualFlushMethod.getValue().run();
+    verify(attemptApi).saveStats(any());
+    clearInvocations(stateApi, attemptApi);
+
+    // stats have NOT updated so we should not save
+    actualFlushMethod.getValue().run();
+    verify(attemptApi, never()).saveStats(any());
+    clearInvocations(stateApi, attemptApi);
+
+    // update stats for different stream
+    syncPersistence.updateStats(new AirbyteRecordMessage().withStream("stream2").withNamespace("other"));
+
+    // stats have updated so we should save
+    actualFlushMethod.getValue().run();
+    verify(attemptApi).saveStats(any());
+    clearInvocations(stateApi, attemptApi);
+
+    // stats have NOT updated so we should not save
+    actualFlushMethod.getValue().run();
+    verify(attemptApi, never()).saveStats(any());
+    clearInvocations(stateApi, attemptApi);
+
+    // update stats for original stream
+    syncPersistence.updateStats(new AirbyteRecordMessage().withStream("stream1"));
+
+    // stats have updated so we should save
+    actualFlushMethod.getValue().run();
+    verify(attemptApi).saveStats(any());
+    clearInvocations(stateApi, attemptApi);
   }
 
   @Test
@@ -393,6 +441,11 @@ class SyncPersistenceImplTest {
 
   @Test
   void testSyncStatsTrackerWrapping() {
+    syncStatsTracker = mock();
+    syncPersistence = new SyncPersistenceImpl(airbyteApiClient, new StateAggregatorFactory(), syncStatsTracker, executorService,
+        flushPeriod, new RetryWithJitterConfig(1, 1, 4),
+        connectionId, workspaceId, jobId, attemptNumber, catalog, ffClient);
+
     syncPersistence.updateStats(new AirbyteRecordMessage());
     verify(syncStatsTracker).updateStats(new AirbyteRecordMessage());
     clearInvocations(syncStatsTracker);

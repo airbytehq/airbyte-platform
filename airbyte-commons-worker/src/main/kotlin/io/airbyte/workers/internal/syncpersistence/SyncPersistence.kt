@@ -82,6 +82,7 @@ class SyncPersistenceImpl
     private var stateFlushFuture: ScheduledFuture<*>? = null
     private var isReceivingStats = false
     private var stateToFlush: StateAggregator? = null
+    private var persistedStats: SaveStatsRequestBody? = null
     private var statsToPersist: SaveStatsRequestBody? = null
     private var retryWithJitterConfig: RetryWithJitterConfig? = null
 
@@ -342,13 +343,14 @@ class SyncPersistenceImpl
         throw e
       }
 
+      persistedStats = statsToPersist
       statsToPersist = null
       metricClient.count(OssMetricsRegistry.STATS_COMMIT_ATTEMPT_SUCCESSFUL, 1)
     }
 
     private fun hasStatesToFlush(): Boolean = !stateBuffer.isEmpty() || stateToFlush != null
 
-    private fun hasStatsToFlush(): Boolean = isReceivingStats && statsToPersist != null
+    private fun hasStatsToFlush(): Boolean = isReceivingStats && statsToPersist != null && statsToPersist != persistedStats
 
     override fun updateStats(recordMessage: AirbyteRecordMessage) {
       isReceivingStats = true
