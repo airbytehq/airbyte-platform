@@ -16,6 +16,9 @@ data
 **/gmon.out
 static_checker_reports/
 
+# ignore jenv artifacts
+.java-version
+
 # Logs
 acceptance_tests_logs/
 
