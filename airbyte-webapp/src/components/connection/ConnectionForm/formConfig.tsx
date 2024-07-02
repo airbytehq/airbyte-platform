@@ -16,7 +16,6 @@ import {
 } from "core/api/types/AirbyteClient";
 import { FeatureItem, useFeature } from "core/services/features";
 import { ConnectionFormMode, ConnectionOrPartialConnection } from "hooks/services/ConnectionForm/ConnectionFormService";
-import { useExperiment } from "hooks/services/Experiment";
 
 import { analyzeSyncCatalogBreakingChanges } from "./calculateInitialCatalog";
 import { pruneUnsupportedModes, replicateSourceModes } from "./preferredSyncModes";
@@ -81,8 +80,7 @@ export const useInitialFormValues = (
 ): FormConnectionFormValues => {
   const workspace = useCurrentWorkspace();
   const { catalogDiff, syncCatalog, schemaChange } = connection;
-  const useSimpliedCreation = useExperiment("connection.simplifiedCreation", true);
-
+  const { notificationSettings } = useCurrentWorkspace();
   const supportedSyncModes: SyncMode[] = useMemo(() => {
     const foundModes = new Set<SyncMode>();
     for (let i = 0; i < connection.syncCatalog.streams.length; i++) {
@@ -146,7 +144,10 @@ export const useInitialFormValues = (
       nonBreakingChangesPreference: connection.nonBreakingChangesPreference ?? defaultNonBreakingChangesPreference,
       geography: connection.geography || workspace.defaultGeography || "auto",
       syncCatalog: analyzeSyncCatalogBreakingChanges(syncCatalog, catalogDiff, schemaChange),
-      notifySchemaChanges: connection.notifySchemaChanges ?? useSimpliedCreation,
+      notifySchemaChanges:
+        connection.notifySchemaChanges ??
+        (notificationSettings?.sendOnConnectionUpdate?.notificationType &&
+          notificationSettings.sendOnConnectionUpdate.notificationType.length > 0),
       backfillPreference: connection.backfillPreference ?? SchemaChangeBackfillPreference.disabled,
     };
 
@@ -170,6 +171,6 @@ export const useInitialFormValues = (
     syncCatalog,
     catalogDiff,
     schemaChange,
-    useSimpliedCreation,
+    notificationSettings?.sendOnConnectionUpdate,
   ]);
 };

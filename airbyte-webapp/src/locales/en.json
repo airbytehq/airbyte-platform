@@ -589,6 +589,7 @@
 
   "connection.schemaUpdateNotifications.title": "Schema update notifications",
   "connection.schemaUpdateNotifications.titleNext": "Be notified when schema changes occur",
+  "connection.schemaUpdateNotifications.workspaceWarning": "Connection update notifications are not enabled in this workspace. <link>Configure them here</link>.",
   "connection.schemaUpdateNotifications.subtitle": "Receive notifications when schema changes occur",
   "connection.schemaUpdateNotifications.info": "Send webhook notifications when your source schema has changed",
   "connection.schemaUpdateNotifications.error": "Unable to save the schema update notifications setting at this time.",
