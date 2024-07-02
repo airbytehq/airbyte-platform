@@ -25,6 +25,7 @@ import { useConnectionEditService } from "hooks/services/ConnectionEdit/Connecti
 
 interface ConnectionSyncContext {
   syncConnection: () => Promise<void>;
+  isSyncConnectionAvailable: boolean;
   connectionEnabled: boolean;
   syncStarting: boolean;
   jobSyncRunning: boolean;
@@ -109,8 +110,31 @@ const useConnectionSyncContextInit = (connection: WebBackendConnectionRead): Con
 
   const jobRefreshRunning = mostRecentJob?.status === "running" && mostRecentJob.configType === "refresh";
 
+  const isSyncConnectionAvailable = useMemo(
+    () =>
+      !syncStarting &&
+      !cancelStarting &&
+      !clearStarting &&
+      !refreshStarting &&
+      !jobSyncRunning &&
+      !jobClearRunning &&
+      !jobRefreshRunning &&
+      connectionEnabled,
+    [
+      cancelStarting,
+      clearStarting,
+      connectionEnabled,
+      jobClearRunning,
+      jobRefreshRunning,
+      jobSyncRunning,
+      refreshStarting,
+      syncStarting,
+    ]
+  );
+
   return {
     syncConnection,
+    isSyncConnectionAvailable,
     connectionEnabled,
     syncStarting,
     jobSyncRunning,

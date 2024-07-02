@@ -743,7 +743,8 @@
   "connection.stream.status.nextSync": "Next sync {sync}",
   "connection.stream.status.nextTry": "Next try {sync}",
 
-  "connection.overview.graph.noData": "No syncs to show data from",
+  "connection.overview.graph.noData": "No data yet",
+  "connection.overview.graph.noData.button": "Sync now to see data",
   "connection.overview.graph.volume": "Volume",
   "connection.overview.graph.recordsEmitted": "{value, plural, one {# record} other {# records}} extracted",
   "connection.overview.graph.recordsLoaded": "{value, plural, one {# record} other {# records}} loaded",

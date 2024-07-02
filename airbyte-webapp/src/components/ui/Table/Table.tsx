@@ -91,6 +91,7 @@ export const Table = <T,>({
     <table
       className={classNames(styles.table, className, {
         [styles["table--default"]]: variant === "default",
+        [styles["table--empty"]]: rows.length === 0,
       })}
       {...props}
       style={style}

@@ -3,7 +3,7 @@ import React from "react";
 import { FormattedMessage } from "react-intl";
 import { useLocation, useNavigate } from "react-router-dom";
 
-import { EmptyResourceBlock } from "components/common/EmptyResourceBlock";
+import { EmptyState } from "components/common/EmptyState";
 import { ConnectionSyncButtons } from "components/connection/ConnectionSync/ConnectionSyncButtons";
 import { ConnectionSyncContextProvider } from "components/connection/ConnectionSync/ConnectionSyncContext";
 import { PageContainer } from "components/PageContainer";
@@ -168,7 +168,7 @@ export const ConnectionJobHistoryPage: React.FC = () => {
             <JobsList jobs={jobs} />
           ) : linkedJobNotFound ? (
             <Box pb="xl">
-              <EmptyResourceBlock
+              <EmptyState
                 text={<FormattedMessage id="connection.linkedJobNotFound" />}
                 description={
                   <Link to={pathname}>
@@ -179,7 +179,7 @@ export const ConnectionJobHistoryPage: React.FC = () => {
             </Box>
           ) : (
             <Box pb="xl">
-              <EmptyResourceBlock
+              <EmptyState
                 text={<FormattedMessage id="jobs.noJobs" />}
                 description={
                   <FormattedMessage id={isInitialState ? "jobs.noJobsDescription" : "jobs.noJobsFilterDescription"} />

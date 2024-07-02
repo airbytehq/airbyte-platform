@@ -1,23 +1,29 @@
 import React from "react";
 
 import { FlexContainer } from "components/ui/Flex";
+import { Icon } from "components/ui/Icon";
 import { Text } from "components/ui/Text";
 
-import cactus from "./cactus.svg";
+import styles from "./EmptyState.module.scss";
 
-interface EmptyResourceBlockProps {
+interface EmptyStateProps {
+  icon?: "cactus" | "chart";
   text: React.ReactNode;
   description?: React.ReactNode;
+  button?: React.ReactNode;
 }
 
-export const EmptyResourceBlock: React.FC<EmptyResourceBlockProps> = ({ text, description }) => (
+export const EmptyState: React.FC<EmptyStateProps> = ({ icon = "cactus", text, description, button }) => (
   <FlexContainer alignItems="center" direction="column">
-    <img src={cactus} height={46} alt="" />
+    <FlexContainer alignItems="center" justifyContent="center" className={styles.circle}>
+      <Icon type={icon} color="action" />
+    </FlexContainer>
     <FlexContainer alignItems="center" direction="column" gap="sm">
       <Text color="grey500" size="lg">
         {text}
       </Text>
       {description && <Text color="grey400">{description}</Text>}
+      {button && button}
     </FlexContainer>
   </FlexContainer>
 );

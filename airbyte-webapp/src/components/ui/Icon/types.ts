@@ -4,6 +4,7 @@ export type IconType =
   | "arrowRight"
   | "article"
   | "bell"
+  | "cactus"
   | "calendar"
   | "calendarCheck"
   | "caretDown"

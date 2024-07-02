@@ -8,6 +8,7 @@ import ArrowLeftIcon from "./icons/arrowLeftIcon.svg?react";
 import ArrowRightIcon from "./icons/arrowRightIcon.svg?react";
 import ArticleIcon from "./icons/articleIcon.svg?react";
 import BellIcon from "./icons/bellIcon.svg?react";
+import CactusIcon from "./icons/cactusIcon.svg?react";
 import CalendarCheckIcon from "./icons/calendarCheckIcon.svg?react";
 import CalendarIcon from "./icons/calendarIcon.svg?react";
 import CaretDownIcon from "./icons/caretDownIcon.svg?react";
@@ -167,6 +168,7 @@ export const Icons: Record<IconType, React.FC<React.SVGProps<SVGSVGElement>>> = 
   arrowRight: ArrowRightIcon,
   article: ArticleIcon,
   bell: BellIcon,
+  cactus: CactusIcon,
   calendar: CalendarIcon,
   calendarCheck: CalendarCheckIcon,
   caretDown: CaretDownIcon,
