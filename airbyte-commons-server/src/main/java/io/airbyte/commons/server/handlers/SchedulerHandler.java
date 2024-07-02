@@ -344,17 +344,17 @@ public class SchedulerHandler {
     final SourceConnection source = configRepository.getSourceConnection(req.getSourceId());
 
     if (featureFlagClient.boolVariation(DiscoverPostprocessInTemporal.INSTANCE, new Workspace(source.getWorkspaceId()))) {
-      return discoverWithPostprocessInTemporal(req, source);
+      return discover(req, source);
     } else {
-      return discoverWithLocalPostprocess(req, source);
+      return discoverAndPostprocess(req, source);
     }
   }
 
   /**
    * Runs discover schema and performs postprocessing (catalog diff and connection disabling) locally.
    */
-  public SourceDiscoverSchemaRead discoverWithLocalPostprocess(final SourceDiscoverSchemaRequestBody discoverSchemaRequestBody,
-                                                               final SourceConnection source)
+  public SourceDiscoverSchemaRead discoverAndPostprocess(final SourceDiscoverSchemaRequestBody discoverSchemaRequestBody,
+                                                         final SourceConnection source)
       throws ConfigNotFoundException, IOException, JsonValidationException {
     final UUID sourceId = discoverSchemaRequestBody.getSourceId();
     final StandardSourceDefinition sourceDef = configRepository.getStandardSourceDefinition(source.getSourceDefinitionId());
@@ -406,10 +406,9 @@ public class SchedulerHandler {
   }
 
   /**
-   * Runs discover schema and performs postprocessing (catalog diff and connection disabling) in the
-   * temporal workflow.
+   * Runs discover schema and does not perform postprocessing (catalog diff and connection disabling).
    */
-  public SourceDiscoverSchemaRead discoverWithPostprocessInTemporal(final SourceDiscoverSchemaRequestBody req, final SourceConnection source)
+  public SourceDiscoverSchemaRead discover(final SourceDiscoverSchemaRequestBody req, final SourceConnection source)
       throws ConfigNotFoundException, IOException, JsonValidationException {
     final UUID sourceId = req.getSourceId();
     final StandardSourceDefinition sourceDef = configRepository.getStandardSourceDefinition(source.getSourceDefinitionId());
@@ -450,8 +449,7 @@ public class SchedulerHandler {
         .catalogId(existingCatalog.get().getId());
   }
 
-  private SourceDiscoverSchemaRead runDiscoverSchemaJob(
-                                                        final SourceConnection source,
+  private SourceDiscoverSchemaRead runDiscoverSchemaJob(final SourceConnection source,
                                                         final StandardSourceDefinition sourceDef,
                                                         final ActorDefinitionVersion sourceVersion,
                                                         final io.airbyte.api.model.generated.WorkloadPriority priority)

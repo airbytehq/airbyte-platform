@@ -2310,6 +2310,29 @@ paths:
           $ref: "#/components/responses/NotFoundResponse"
         "422":
           $ref: "#/components/responses/InvalidInputResponse"
+  /v1/connections/diff_catalog:
+    post:
+      tags:
+        - connection
+      summary: Generate the diff between stored catalog for the connection and catalog provided and postprocess as necessary
+      operationId: diffCatalogForConnection
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DiffCatalogRequestBody"
+        required: true
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SourceDiscoverSchemaRead"
+        "404":
+          $ref: "#/components/responses/NotFoundResponse"
+        "422":
+          $ref: "#/components/responses/InvalidInputResponse"
   /v1/state/get:
     post:
       tags:
@@ -7594,6 +7617,18 @@ components:
           type: boolean
         priority:
           $ref: "#/components/schemas/WorkloadPriority"
+    DiffCatalogRequestBody:
+      type: object
+      required:
+        - catalogId
+        - connectionId
+      properties:
+        catalogId:
+          type: string
+          format: uuid
+        connectionId:
+          type: string
+          format: uuid
     WorkloadPriority:
       type: string
       enum:

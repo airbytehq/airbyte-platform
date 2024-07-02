@@ -27,6 +27,7 @@ import io.airbyte.api.model.generated.ConnectionLastJobPerStreamReadItem;
 import io.airbyte.api.model.generated.ConnectionLastJobPerStreamRequestBody;
 import io.airbyte.api.model.generated.ConnectionRead;
 import io.airbyte.api.model.generated.ConnectionReadList;
+import io.airbyte.api.model.generated.ConnectionStatus;
 import io.airbyte.api.model.generated.ConnectionStatusRead;
 import io.airbyte.api.model.generated.ConnectionStatusesRequestBody;
 import io.airbyte.api.model.generated.ConnectionStreamHistoryReadItem;
@@ -44,6 +45,7 @@ import io.airbyte.api.model.generated.JobSyncResultRead;
 import io.airbyte.api.model.generated.JobWithAttemptsRead;
 import io.airbyte.api.model.generated.ListConnectionsForWorkspacesRequestBody;
 import io.airbyte.api.model.generated.NonBreakingChangesPreference;
+import io.airbyte.api.model.generated.SourceDiscoverSchemaRead;
 import io.airbyte.api.model.generated.StreamDescriptor;
 import io.airbyte.api.model.generated.StreamStats;
 import io.airbyte.api.model.generated.StreamTransform;
@@ -784,6 +786,17 @@ public class ConnectionsHandler {
         .toList());
   }
 
+  public CatalogDiff getDiff(final ConnectionRead connectionRead, final AirbyteCatalog discoveredCatalog)
+      throws JsonValidationException, ConfigNotFoundException, IOException {
+
+    final var catalogWithSelectedFieldsAnnotated = connectionRead.getSyncCatalog();
+    final var configuredCatalog = CatalogConverter.toConfiguredProtocol(catalogWithSelectedFieldsAnnotated);
+
+    final var rawCatalog = getConnectionAirbyteCatalog(connectionRead.getConnectionId());
+
+    return getDiff(rawCatalog.orElse(catalogWithSelectedFieldsAnnotated), discoveredCatalog, configuredCatalog);
+  }
+
   /**
    * Returns the list of the streamDescriptor that have their config updated.
    *
@@ -1268,6 +1281,60 @@ public class ConnectionsHandler {
     return streamToJobRead.entrySet().stream()
         .map(entry -> buildLastJobPerStreamReadItem(entry.getKey(), entry.getValue().getJob(), memo))
         .collect(Collectors.toList());
+  }
+
+  /**
+   * For a given discovered catalog and connection, calculate a catalog diff, determine if there are
+   * breaking changes then disable the connection if necessary.
+   */
+  public SourceDiscoverSchemaRead diffCatalogAndConditionallyDisable(final UUID connectionId, final UUID discoveredCatalogId)
+      throws JsonValidationException, ConfigNotFoundException, IOException {
+    final var connectionRead = getConnection(connectionId);
+    final var source = configRepository.getSourceConnection(connectionRead.getSourceId());
+    final var sourceDef = configRepository.getStandardSourceDefinition(source.getSourceDefinitionId());
+    final var sourceVersion = actorDefinitionVersionHelper.getSourceVersion(sourceDef, source.getWorkspaceId(), connectionRead.getSourceId());
+
+    final var discoveredCatalog = retrieveDiscoveredCatalog(discoveredCatalogId, sourceVersion);
+
+    final var diff = getDiff(connectionRead, discoveredCatalog);
+    final boolean containsBreakingChange = AutoPropagateSchemaChangeHelper.containsBreakingChange(diff);
+
+    if (containsBreakingChange) {
+      MetricClientFactory.getMetricClient().count(OssMetricsRegistry.BREAKING_SCHEMA_CHANGE_DETECTED, 1,
+          new MetricAttribute(MetricTags.CONNECTION_ID, connectionId.toString()));
+    } else {
+      MetricClientFactory.getMetricClient().count(OssMetricsRegistry.NON_BREAKING_SCHEMA_CHANGE_DETECTED, 1,
+          new MetricAttribute(MetricTags.CONNECTION_ID, connectionId.toString()));
+    }
+
+    final var patch = new ConnectionUpdate()
+        .breakingChange(containsBreakingChange)
+        .connectionId(connectionId);
+
+    final var disableForNonBreakingChange = (connectionRead.getNonBreakingChangesPreference() == NonBreakingChangesPreference.DISABLE);
+
+    if (containsBreakingChange || (disableForNonBreakingChange && AutoPropagateSchemaChangeHelper.containsChanges(diff))) {
+      patch.status(ConnectionStatus.INACTIVE);
+    }
+
+    final var updated = updateConnection(patch);
+
+    return new SourceDiscoverSchemaRead()
+        .breakingChange(containsBreakingChange)
+        .catalogDiff(diff)
+        .catalog(discoveredCatalog)
+        .catalogId(discoveredCatalogId)
+        .connectionStatus(updated.getStatus());
+  }
+
+  private AirbyteCatalog retrieveDiscoveredCatalog(final UUID catalogId, final ActorDefinitionVersion sourceVersion)
+      throws ConfigNotFoundException, IOException {
+
+    final ActorCatalog catalog = configRepository.getActorCatalogById(catalogId);
+    final io.airbyte.protocol.models.AirbyteCatalog persistenceCatalog = Jsons.object(
+        catalog.getCatalog(),
+        io.airbyte.protocol.models.AirbyteCatalog.class);
+    return CatalogConverter.toApi(persistenceCatalog, sourceVersion);
   }
 
   /**
