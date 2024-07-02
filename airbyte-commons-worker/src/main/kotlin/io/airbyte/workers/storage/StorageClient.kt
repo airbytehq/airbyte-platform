@@ -21,6 +21,8 @@ import io.micronaut.kotlin.context.createBean
 import jakarta.inject.Inject
 import jakarta.inject.Singleton
 import software.amazon.awssdk.auth.credentials.AwsBasicCredentials
+import software.amazon.awssdk.core.client.config.ClientOverrideConfiguration
+import software.amazon.awssdk.core.retry.RetryPolicy
 import software.amazon.awssdk.core.sync.RequestBody
 import software.amazon.awssdk.regions.Region
 import software.amazon.awssdk.services.s3.S3Client
@@ -314,7 +316,15 @@ internal fun MinioStorageConfig.s3Client(): S3Client =
  */
 internal fun S3StorageConfig.s3Client(): S3Client {
   val builder = S3Client.builder().region(Region.of(this.region))
-
+  // Adding more try to avoid unknown host exception
+  val retryPolicy = RetryPolicy.builder()
+  if (!this.retry.isNullOrBlank()) {
+    retryPolicy.numRetries(this.retry!!.toInt())
+  } else {
+    retryPolicy.numRetries(25)
+  }
+  val clientOverrideConfiguration = ClientOverrideConfiguration.builder().retryPolicy(retryPolicy.build())
+  builder.overrideConfiguration(clientOverrideConfiguration.build())
   // If credentials are part of this config, specify them. Otherwise, let the SDK default credential provider take over.
   if (!this.accessKey.isNullOrBlank()) {
     builder.credentialsProvider {
