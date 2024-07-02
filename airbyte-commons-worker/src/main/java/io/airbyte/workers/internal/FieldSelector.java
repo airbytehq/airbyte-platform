@@ -12,6 +12,7 @@ import io.airbyte.protocol.models.AirbyteStreamNameNamespacePair;
 import io.airbyte.protocol.models.ConfiguredAirbyteCatalog;
 import io.airbyte.workers.RecordSchemaValidator;
 import io.airbyte.workers.WorkerMetricReporter;
+import io.micronaut.core.util.StringUtils;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -102,7 +103,7 @@ public class FieldSelector {
     if (data.isObject()) {
       ((ObjectNode) data).retain(selectedFields);
     } else {
-      throw new RuntimeException(String.format("Unexpected data in record: %s", data.toString()));
+      throw new RuntimeException(String.format("Unexpected data in record: %s", data));
     }
   }
 
@@ -145,7 +146,7 @@ public class FieldSelector {
       final List<String> selectedFields = new ArrayList<>();
       final JsonNode propertiesNode = s.getStream().getJsonSchema().findPath("properties");
       if (propertiesNode.isObject()) {
-        propertiesNode.fieldNames().forEachRemaining((fieldName) -> selectedFields.add(fieldName));
+        propertiesNode.fieldNames().forEachRemaining((fieldName) -> selectedFields.add(replaceEscapeCharacter(fieldName)));
       } else {
         throw new RuntimeException("No properties node in stream schema");
       }
@@ -164,7 +165,7 @@ public class FieldSelector {
       final Set<String> fields = new HashSet<>();
       final JsonNode propertiesNode = s.getStream().getJsonSchema().findPath("properties");
       if (propertiesNode.isObject()) {
-        propertiesNode.fieldNames().forEachRemaining((fieldName) -> fields.add(fieldName));
+        propertiesNode.fieldNames().forEachRemaining((fieldName) -> fields.add(replaceEscapeCharacter(fieldName)));
       } else {
         throw new RuntimeException("No properties node in stream schema");
       }
@@ -221,6 +222,17 @@ public class FieldSelector {
       }
     }
     return unexpectedFieldNames;
+  }
+
+  /**
+   * Removes JSON Schema escape character (<code>$</code>) from field names in order to ensure that
+   * the field name will map the property name in a record.
+   *
+   * @param fieldName A field name in the JSON schema in a catalog.
+   * @return The unescaped field name.
+   */
+  private String replaceEscapeCharacter(final String fieldName) {
+    return StringUtils.isNotEmpty(fieldName) ? fieldName.replaceAll("\\$", "") : fieldName;
   }
 
 }
