@@ -927,7 +927,7 @@
   "settings.organizationSettings.orgId": "ID: {id}",
   "settings.organizationSettings.copyOrgId": "Copy organization id",
   "settings.organizationSettings.organizationName": "Organization name",
-  "settings.organizationSettings.email": "Administrator email",
+  "settings.organizationSettings.email": "Contact email",
   "settings.organizationSettings.email.description": "Airbyte will display this email to new users in your organization and use this email for communications about your organization.",
   "settings.accountSettings": "Account Settings",
   "settings.accountSettings.logoutText": "Sign out",
