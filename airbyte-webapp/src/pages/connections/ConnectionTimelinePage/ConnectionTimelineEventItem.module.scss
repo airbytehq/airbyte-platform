@@ -1,0 +1,14 @@
+@use "scss/variables";
+
+.connectionTimelineEventItem__mainContent {
+  flex-grow: 1;
+}
+
+.connectionTimelineEventItem__endContent {
+  flex-shrink: 0;
+}
+
+.connectionTimelineEventItem__container {
+  height: 70px;
+  padding: 0 variables.$spacing-lg;
+}

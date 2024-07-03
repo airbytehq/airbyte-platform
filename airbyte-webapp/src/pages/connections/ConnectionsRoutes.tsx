@@ -5,6 +5,7 @@ import { LoadingPage } from "components";
 
 import { ConnectionRoutePaths } from "../routePaths";
 
+const ConnectionTimelinePage = React.lazy(() => import("./ConnectionTimelinePage"));
 const ConfigureConnectionPage = React.lazy(() => import("./ConfigureConnectionPage"));
 const CreateConnectionPage = React.lazy(() => import("./CreateConnectionPage"));
 const ConnectionPage = React.lazy(() => import("./ConnectionPage"));
@@ -28,6 +29,7 @@ export const ConnectionsRoutes: React.FC = () => {
         <Route path={ConnectionRoutePaths.Root} element={<ConnectionPage />}>
           <Route path={ConnectionRoutePaths.Status} element={<StreamStatusPage />} />
           <Route path={ConnectionRoutePaths.JobHistory} element={<ConnectionJobHistoryPage />} />
+          <Route path={ConnectionRoutePaths.Timeline} element={<ConnectionTimelinePage />} />
           <Route path={ConnectionRoutePaths.Replication} element={<ConnectionReplicationPage />} />
           <Route path={ConnectionRoutePaths.Transformation} element={<ConnectionTransformationPage />} />
           <Route path={ConnectionRoutePaths.Settings} element={<ConnectionSettingsPage />} />

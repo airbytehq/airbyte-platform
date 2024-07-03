@@ -23,6 +23,7 @@ export const ConnectionPageHeader = () => {
   const currentTab = params["*"] || ConnectionRoutePaths.Status;
   const isSimplifiedCreation = useExperiment("connection.simplifiedCreation", true);
   const supportsDbtCloud = useFeature(FeatureItem.AllowDBTCloudIntegration);
+  const connectionTimeline = useExperiment("connection.timeline", false);
 
   const { connection, schemaRefreshing } = useConnectionEditService();
   const breadcrumbsData = [
@@ -41,12 +42,23 @@ export const ConnectionPageHeader = () => {
         to: basePath,
         disabled: schemaRefreshing,
       },
-      {
-        id: ConnectionRoutePaths.JobHistory,
-        name: <FormattedMessage id="connectionForm.jobHistory" />,
-        to: `${basePath}/${ConnectionRoutePaths.JobHistory}`,
-        disabled: schemaRefreshing,
-      },
+      ...(connectionTimeline
+        ? [
+            {
+              id: ConnectionRoutePaths.Timeline,
+              name: <FormattedMessage id="connection.timeline" />,
+              to: `${basePath}/${ConnectionRoutePaths.Timeline}`,
+              disabled: schemaRefreshing,
+            },
+          ]
+        : [
+            {
+              id: ConnectionRoutePaths.JobHistory,
+              name: <FormattedMessage id="connectionForm.jobHistory" />,
+              to: `${basePath}/${ConnectionRoutePaths.JobHistory}`,
+              disabled: schemaRefreshing,
+            },
+          ]),
       {
         id: ConnectionRoutePaths.Replication,
         name: (
@@ -77,7 +89,7 @@ export const ConnectionPageHeader = () => {
     ];
 
     return tabs;
-  }, [basePath, schemaRefreshing, isSimplifiedCreation, connection.schemaChange, supportsDbtCloud]);
+  }, [basePath, schemaRefreshing, connectionTimeline, isSimplifiedCreation, connection.schemaChange, supportsDbtCloud]);
 
   return (
     <PageHeaderWithNavigation breadcrumbsData={breadcrumbsData}>
