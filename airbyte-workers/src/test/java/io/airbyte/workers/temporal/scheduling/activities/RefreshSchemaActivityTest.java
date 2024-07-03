@@ -48,6 +48,7 @@ import io.airbyte.featureflag.ShouldRunRefreshSchema;
 import io.airbyte.featureflag.SourceDefinition;
 import io.airbyte.featureflag.TestClient;
 import io.airbyte.featureflag.Workspace;
+import io.airbyte.workers.helper.CatalogDiffConverter;
 import io.airbyte.workers.models.RefreshSchemaActivityInput;
 import io.airbyte.workers.models.RefreshSchemaActivityOutput;
 import io.airbyte.workers.temporal.sync.RefreshSchemaActivityImpl;
@@ -240,7 +241,7 @@ class RefreshSchemaActivityTest {
     verify(mSourceApi, times(0)).applySchemaChangeForSource(any());
     verify(mConnectionApi, times(1))
         .applySchemaChangeForConnection(new ConnectionAutoPropagateSchemaChange(CATALOG, CATALOG_ID, CONNECTION_ID, WORKSPACE_ID));
-    assertEquals(CATALOG_DIFF, result.getAppliedDiff());
+    assertEquals(CatalogDiffConverter.toDomain(CATALOG_DIFF), result.getAppliedDiff());
   }
 
   @Test
@@ -253,7 +254,7 @@ class RefreshSchemaActivityTest {
 
     refreshSchemaActivity.refreshSchemaV2(new RefreshSchemaActivityInput(SOURCE_ID, CONNECTION_ID, WORKSPACE_ID));
 
-    verify(mPayloadChecker, times(1)).validatePayloadSize(eq(new RefreshSchemaActivityOutput(CATALOG_DIFF)), any());
+    verify(mPayloadChecker, times(1)).validatePayloadSize(eq(new RefreshSchemaActivityOutput(CatalogDiffConverter.toDomain(CATALOG_DIFF))), any());
   }
 
 }

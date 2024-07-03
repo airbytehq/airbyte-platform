@@ -15,7 +15,6 @@ dependencies {
   implementation(project(":airbyte-commons"))
   implementation(project(":airbyte-config:config-models"))
   implementation(libs.airbyte.protocol)
-  implementation(project(":airbyte-api"))
 }
 
 jsonSchema2Pojo {

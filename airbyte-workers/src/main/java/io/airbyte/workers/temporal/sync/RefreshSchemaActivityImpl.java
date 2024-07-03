@@ -34,6 +34,7 @@ import io.airbyte.metrics.lib.MetricAttribute;
 import io.airbyte.metrics.lib.MetricClientFactory;
 import io.airbyte.metrics.lib.MetricTags;
 import io.airbyte.metrics.lib.OssMetricsRegistry;
+import io.airbyte.workers.helper.CatalogDiffConverter;
 import io.airbyte.workers.models.RefreshSchemaActivityInput;
 import io.airbyte.workers.models.RefreshSchemaActivityOutput;
 import jakarta.inject.Singleton;
@@ -152,7 +153,7 @@ public class RefreshSchemaActivityImpl implements RefreshSchemaActivity {
         workspaceId);
 
     final var output = new RefreshSchemaActivityOutput(
-        airbyteApiClient.getConnectionApi().applySchemaChangeForConnection(request).getPropagatedDiff());
+        CatalogDiffConverter.toDomain(airbyteApiClient.getConnectionApi().applySchemaChangeForConnection(request).getPropagatedDiff()));
 
     final var attrs = new MetricAttribute[] {
       new MetricAttribute(MetricTags.CONNECTION_ID, String.valueOf(connectionId))

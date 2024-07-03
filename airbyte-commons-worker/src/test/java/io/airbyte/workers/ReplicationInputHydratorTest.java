@@ -56,6 +56,7 @@ import io.airbyte.featureflag.TestClient;
 import io.airbyte.featureflag.Workspace;
 import io.airbyte.persistence.job.models.IntegrationLauncherConfig;
 import io.airbyte.persistence.job.models.JobRunConfig;
+import io.airbyte.workers.helper.CatalogDiffConverter;
 import io.airbyte.workers.models.RefreshSchemaActivityOutput;
 import io.airbyte.workers.models.ReplicationActivityInput;
 import java.io.IOException;
@@ -290,7 +291,7 @@ class ReplicationInputHydratorTest {
     mockEnableBackfillForConnection(withRefresh);
     final ReplicationInputHydrator replicationInputHydrator = getReplicationInputHydrator();
     final ReplicationActivityInput input = getDefaultReplicationActivityInputForTest();
-    input.setSchemaRefreshOutput(new RefreshSchemaActivityOutput(CATALOG_DIFF));
+    input.setSchemaRefreshOutput(new RefreshSchemaActivityOutput(CatalogDiffConverter.toDomain(CATALOG_DIFF)));
     final var replicationInput = replicationInputHydrator.getHydratedReplicationInput(input);
     final var typedState = StateMessageHelper.getTypedState(replicationInput.getState().getState());
     assertEquals(JsonNodeFactory.instance.nullNode(), typedState.get().getStateMessages().get(0).getStream().getStreamState());

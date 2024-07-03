@@ -19,7 +19,6 @@ import io.airbyte.api.client.model.generated.ResolveActorDefinitionVersionReques
 import io.airbyte.api.client.model.generated.ScopeType;
 import io.airbyte.api.client.model.generated.SecretPersistenceConfig;
 import io.airbyte.api.client.model.generated.SecretPersistenceConfigGetRequestBody;
-import io.airbyte.api.client.model.generated.StreamDescriptor;
 import io.airbyte.commons.converters.CatalogClientConverters;
 import io.airbyte.commons.converters.ProtocolConverters;
 import io.airbyte.commons.converters.StateConverter;
@@ -153,7 +152,7 @@ public class ReplicationInputHydrator {
       throws Exception {
     if (schemaRefreshOutput != null && schemaRefreshOutput.getAppliedDiff() != null) {
       final var streamsToBackfill = BackfillHelper.getStreamsToBackfill(schemaRefreshOutput.getAppliedDiff(), catalog);
-      LOGGER.debug("Backfilling streams: {}", String.join(", ", streamsToBackfill.stream().map(StreamDescriptor::getName).toList()));
+      LOGGER.debug("Backfilling streams: {}", String.join(", ", streamsToBackfill.stream().map(sd -> sd.getName()).toList()));
       final State resetState = BackfillHelper.clearStateForStreamsToBackfill(state, streamsToBackfill);
       if (resetState != null) {
         // We persist the state here in case the attempt fails, the subsequent attempt will continue the
