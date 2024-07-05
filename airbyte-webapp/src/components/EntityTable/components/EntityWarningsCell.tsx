@@ -50,7 +50,7 @@ export const EntityWarningsCell: React.FC<EntityWarningCellProps> = ({ connectio
 
   const warningsToShow: Array<[MessageType, ReactNode, PropsOf<typeof Link> & Record<"data-testid", string>]> = [];
 
-  if (allowAutoDetectSchema && schemaChange !== SchemaChange.no_change) {
+  if (allowAutoDetectSchema && schemaChange === SchemaChange.breaking) {
     warningsToShow.push([
       schemaChangeToMessageType[schemaChange],
       <FormattedMessage id={`connection.schemaChange.${convertSnakeToCamel(schemaChange)}`} />,

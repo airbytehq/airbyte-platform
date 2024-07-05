@@ -1,7 +1,6 @@
 import { createColumnHelper } from "@tanstack/react-table";
-import dayjs from "dayjs";
 import { useMemo } from "react";
-import { FormattedMessage } from "react-intl";
+import { FormattedDate, FormattedMessage } from "react-intl";
 
 import { Box } from "components/ui/Box";
 import { FlexContainer } from "components/ui/Flex";
@@ -57,7 +56,9 @@ export const ApplicationSettingsView = () => {
       columnHelper.accessor("createdAt", {
         header: () => <FormattedMessage id="settings.applications.table.createdAt" />,
         cell: (props) => (
-          <Text color="grey400">{dayjs.unix(props.row.original.createdAt).format("MMM DD, YYYY h:mmA")}</Text>
+          <Text color="grey400">
+            <FormattedDate value={props.row.original.createdAt * 1000} dateStyle="medium" timeStyle="short" />
+          </Text>
         ),
         sortingFn: "basic",
       }),

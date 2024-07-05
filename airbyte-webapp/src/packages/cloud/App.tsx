@@ -46,7 +46,7 @@ const App: React.FC = () => {
   return (
     <React.StrictMode>
       <AirbyteThemeProvider>
-        <I18nProvider locale="en">
+        <I18nProvider>
           <QueryProvider>
             <BlockerService>
               <Suspense fallback={<LoadingPage />}>

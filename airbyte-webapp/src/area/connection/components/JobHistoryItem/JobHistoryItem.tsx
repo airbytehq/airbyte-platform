@@ -1,6 +1,6 @@
 import classNames from "classnames";
 import { Suspense, useCallback, useRef } from "react";
-import { FormattedDate, FormattedMessage, FormattedTimeParts, useIntl } from "react-intl";
+import { FormattedDate, FormattedMessage, useIntl } from "react-intl";
 import { useEffectOnce } from "react-use";
 
 import { Box } from "components/ui/Box";
@@ -185,15 +185,7 @@ export const JobHistoryItem: React.FC<JobHistoryItemProps> = ({ jobWithAttempts 
         </Box>
         <Box pr="lg" className={styles.jobHistoryItem__timestamp}>
           <Text>
-            <FormattedTimeParts value={getJobCreatedAt(jobWithAttempts) * 1000} hour="numeric" minute="2-digit">
-              {(parts) => <span>{`${parts[0].value}:${parts[2].value}${parts[4].value} `}</span>}
-            </FormattedTimeParts>
-            <FormattedDate
-              value={getJobCreatedAt(jobWithAttempts) * 1000}
-              month="2-digit"
-              day="2-digit"
-              year="numeric"
-            />
+            <FormattedDate value={getJobCreatedAt(jobWithAttempts) * 1000} dateStyle="medium" timeStyle="short" />
           </Text>
         </Box>
       </FlexContainer>

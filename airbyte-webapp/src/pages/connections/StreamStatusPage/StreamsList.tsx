@@ -47,6 +47,7 @@ export const StreamsList = () => {
       columnHelper.accessor("streamName", {
         header: () => <FormattedMessage id="connection.stream.status.table.streamName" />,
         cell: (props) => <>{props.cell.getValue()}</>,
+        meta: { responsive: true },
       }),
       columnHelper.accessor("recordsLoaded", {
         id: "latestSync",
@@ -69,6 +70,7 @@ export const StreamsList = () => {
             />
           );
         },
+        meta: { responsive: true },
       }),
       columnHelper.accessor("dataFreshAsOf", {
         header: () => (
@@ -80,6 +82,7 @@ export const StreamsList = () => {
         cell: (props) => (
           <DataFreshnessCell transitionedAt={props.cell.getValue()} showRelativeTime={showRelativeTime} />
         ),
+        meta: { responsive: true },
       }),
       columnHelper.accessor("dataFreshAsOf", {
         header: () => null,

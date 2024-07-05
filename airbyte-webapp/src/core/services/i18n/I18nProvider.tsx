@@ -20,8 +20,13 @@ export const useI18nContext = () => {
 };
 
 interface I18nProviderProps {
-  locale: string;
+  /**
+   * The locale to use for internationalization. If not provided, the browser locale will be used.
+   */
+  locale?: string;
 }
+
+const getBrowserLocale = () => new Intl.DateTimeFormat().resolvedOptions().locale ?? "en";
 
 export const I18nProvider: React.FC<React.PropsWithChildren<I18nProviderProps>> = ({ children, locale }) => {
   const [overwrittenMessages, setOvewrittenMessages] = useState<Messages>({});
@@ -50,7 +55,7 @@ export const I18nProvider: React.FC<React.PropsWithChildren<I18nProviderProps>> 
   return (
     <i18nContext.Provider value={i18nOverwriteContext}>
       <IntlProvider
-        locale={locale}
+        locale={locale ?? getBrowserLocale()}
         messages={mergedMessages}
         defaultRichTextElements={{
           b: (chunk) => <strong>{chunk}</strong>,
