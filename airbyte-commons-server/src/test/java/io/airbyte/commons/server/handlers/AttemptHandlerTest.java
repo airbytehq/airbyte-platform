@@ -28,9 +28,12 @@ import io.airbyte.api.model.generated.ConnectionState;
 import io.airbyte.api.model.generated.ConnectionStateType;
 import io.airbyte.api.model.generated.CreateNewAttemptNumberResponse;
 import io.airbyte.api.model.generated.GlobalState;
+import io.airbyte.api.model.generated.InternalOperationResult;
 import io.airbyte.api.model.generated.LogRead;
 import io.airbyte.api.model.generated.SaveAttemptSyncConfigRequestBody;
+import io.airbyte.api.model.generated.SaveStreamAttemptMetadataRequestBody;
 import io.airbyte.api.model.generated.SetWorkflowInAttemptRequestBody;
+import io.airbyte.api.model.generated.StreamAttemptMetadata;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.commons.server.converters.ApiPojoConverters;
 import io.airbyte.commons.server.converters.JobConverter;
@@ -65,6 +68,7 @@ import io.airbyte.config.persistence.StatePersistence;
 import io.airbyte.config.persistence.helper.GenerationBumper;
 import io.airbyte.data.services.ConnectionService;
 import io.airbyte.data.services.DestinationService;
+import io.airbyte.data.services.StreamAttemptMetadataService;
 import io.airbyte.featureflag.EnableResumableFullRefresh;
 import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.featureflag.TestClient;
@@ -110,6 +114,7 @@ class AttemptHandlerTest {
   private final ConnectionService connectionService = mock(ConnectionService.class);
   private final DestinationService destinationService = mock(DestinationService.class);
   private final ActorDefinitionVersionHelper actorDefinitionVersionHelper = mock(ActorDefinitionVersionHelper.class);
+  private final StreamAttemptMetadataService streamAttemptMetadataService = mock(StreamAttemptMetadataService.class);
 
   private final AttemptHandler handler = new AttemptHandler(jobPersistence,
       statePersistence,
@@ -120,7 +125,8 @@ class AttemptHandlerTest {
       generationBumper,
       connectionService,
       destinationService,
-      actorDefinitionVersionHelper);
+      actorDefinitionVersionHelper,
+      streamAttemptMetadataService);
 
   private static final UUID CONNECTION_ID = UUID.randomUUID();
   private static final UUID WORKSPACE_ID = UUID.randomUUID();
@@ -616,6 +622,40 @@ class AttemptHandlerTest {
   @MethodSource("randomObjects")
   void failAttemptValidatesSyncOutput(final Object thing) {
     assertThrows(BadRequestException.class, () -> handler.failAttempt(ATTEMPT_NUMBER, JOB_ID, failureSummary, thing));
+  }
+
+  @Test
+  void saveStreamMetadata() {
+    final long jobId = 123L;
+    final int attemptNumber = 1;
+
+    final var result = handler.saveStreamMetadata(new SaveStreamAttemptMetadataRequestBody()
+        .jobId(jobId)
+        .attemptNumber(attemptNumber)
+        .streamMetadata(List.of(
+            new StreamAttemptMetadata().streamName("s1").wasBackfilled(false).wasResumed(true),
+            new StreamAttemptMetadata().streamName("s2").streamNamespace("ns").wasBackfilled(true).wasResumed(false))));
+    verify(streamAttemptMetadataService).upsertStreamAttemptMetadata(
+        jobId,
+        attemptNumber,
+        List.of(
+            new io.airbyte.data.services.StreamAttemptMetadata("s1", null, false, true),
+            new io.airbyte.data.services.StreamAttemptMetadata("s2", "ns", true, false)));
+    assertEquals(new InternalOperationResult().succeeded(true), result);
+  }
+
+  @Test
+  void saveStreamMetadataFailure() {
+    final long jobId = 123L;
+    final int attemptNumber = 1;
+
+    doThrow(new RuntimeException("oops")).when(streamAttemptMetadataService).upsertStreamAttemptMetadata(anyLong(), anyLong(), any());
+
+    final var result = handler.saveStreamMetadata(new SaveStreamAttemptMetadataRequestBody()
+        .jobId(jobId)
+        .attemptNumber(attemptNumber)
+        .streamMetadata(List.of(new StreamAttemptMetadata().streamName("s").wasBackfilled(false).wasResumed(false))));
+    assertEquals(new InternalOperationResult().succeeded(false), result);
   }
 
   private static Stream<Arguments> randomObjects() {

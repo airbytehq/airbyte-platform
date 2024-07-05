@@ -4093,6 +4093,25 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/InternalOperationResult"
+  /v1/attempt/save_stream_metadata:
+    post:
+      tags:
+        - attempt
+        - internal
+      summary: Save stream level attempt information
+      operationId: saveStreamMetadata
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SaveStreamAttemptMetadataRequestBody"
+      responses:
+        "200":
+          description: Successful Operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InternalOperationResult"
   /v1/attempt/save_stats:
     post:
       tags:
@@ -11159,6 +11178,36 @@ components:
             $ref: "#/components/schemas/AttemptStreamStats"
         connectionId:
           $ref: "#/components/schemas/ConnectionId"
+    SaveStreamAttemptMetadataRequestBody:
+      type: object
+      required:
+        - jobId
+        - attemptNumber
+        - stats
+      properties:
+        jobId:
+          $ref: "#/components/schemas/JobId"
+        attemptNumber:
+          $ref: "#/components/schemas/AttemptNumber"
+        streamMetadata:
+          type: array
+          items:
+            $ref: "#/components/schemas/StreamAttemptMetadata"
+    StreamAttemptMetadata:
+      type: object
+      required:
+        - streamName
+        - wasBackfilled
+        - wasResumed
+      properties:
+        streamName:
+          type: string
+        streamNamespace:
+          type: string
+        wasBackfilled:
+          type: boolean
+        wasResumed:
+          type: boolean
     AttemptSyncConfig:
       type: object
       required:
