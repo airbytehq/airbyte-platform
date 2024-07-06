@@ -152,12 +152,14 @@ public class DestinationHandler {
         getSpecForDestinationId(destination.getDestinationDefinitionId(), destination.getWorkspaceId(), destination.getDestinationId());
 
     if (featureFlagClient.boolVariation(DeleteSecretsWhenTombstoneActors.INSTANCE, new Workspace(destination.getWorkspaceId().toString()))) {
-      deleteDestinationConnection(
-          destination.getName(),
-          destination.getDestinationDefinitionId(),
-          destination.getWorkspaceId(),
-          destination.getDestinationId(),
-          spec);
+      try {
+        destinationService.tombstoneDestination(
+            destination.getName(),
+            destination.getWorkspaceId(),
+            destination.getDestinationId(), spec);
+      } catch (final io.airbyte.data.exceptions.ConfigNotFoundException e) {
+        throw new ConfigNotFoundException(e.getType(), e.getConfigId());
+      }
     } else {
       final JsonNode fullConfig;
       try {
@@ -390,26 +392,6 @@ public class DestinationHandler {
         .withTombstone(tombstone);
     try {
       destinationService.writeDestinationConnectionWithSecrets(destinationConnection, spec);
-    } catch (final io.airbyte.data.exceptions.ConfigNotFoundException e) {
-      throw new ConfigNotFoundException(e.getType(), e.getConfigId());
-    }
-  }
-
-  private void deleteDestinationConnection(final String name,
-                                           final UUID destinationDefinitionId,
-                                           final UUID workspaceId,
-                                           final UUID destinationId,
-                                           final ConnectorSpecification spec)
-      throws JsonValidationException, IOException, ConfigNotFoundException {
-    final DestinationConnection destinationConnection = new DestinationConnection()
-        .withName(name)
-        .withDestinationDefinitionId(destinationDefinitionId)
-        .withWorkspaceId(workspaceId)
-        .withDestinationId(destinationId)
-        .withConfiguration(null)
-        .withTombstone(true);
-    try {
-      destinationService.tombstoneDestination(destinationConnection, spec);
     } catch (final io.airbyte.data.exceptions.ConfigNotFoundException e) {
       throw new ConfigNotFoundException(e.getType(), e.getConfigId());
     }

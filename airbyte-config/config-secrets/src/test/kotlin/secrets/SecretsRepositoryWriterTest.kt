@@ -64,7 +64,6 @@ internal class SecretsRepositoryWriterTest {
     secretPersistence.write(SecretCoordinate.fromFullCoordinate(coordinate), secret)
     val config = injectCoordinate(coordinate)
     secretsRepositoryWriter.deleteFromConfig(
-      WORKSPACE_ID,
       config,
       SPEC.connectionSpecification,
       null,

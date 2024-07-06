@@ -713,32 +713,43 @@ public class SourceServiceJooqImpl implements SourceService {
   /**
    * Delete source: tombstone source AND delete secrets
    *
-   * @param connectorSpecification spec for the source
-   * @throws JsonValidationException if the workspace is or contains invalid json
+   * @param name Source name
+   * @param workspaceId workspace ID
+   * @param sourceId source ID
+   * @param spec spec for the destination
+   * @throws JsonValidationException if the config is or contains invalid json
    * @throws IOException if there is an issue while interacting with the secrets store or db.
    */
   @Override
   public void tombstoneSource(
-                              final SourceConnection source,
-                              final ConnectorSpecification connectorSpecification)
+                              final String name,
+                              final UUID workspaceId,
+                              final UUID sourceId,
+                              final ConnectorSpecification spec)
       throws ConfigNotFoundException, JsonValidationException, IOException {
     // 1. Delete secrets from config
-    final JsonNode config = source.getConfiguration();
-
-    final Optional<UUID> organizationId = getOrganizationIdFromWorkspaceId(source.getWorkspaceId());
+    final SourceConnection sourceConnection = getSourceConnection(sourceId);
+    final JsonNode config = sourceConnection.getConfiguration();
+    final Optional<UUID> organizationId = getOrganizationIdFromWorkspaceId(workspaceId);
     RuntimeSecretPersistence secretPersistence = null;
     if (organizationId.isPresent() && featureFlagClient.boolVariation(UseRuntimeSecretPersistence.INSTANCE, new Organization(organizationId.get()))) {
       final SecretPersistenceConfig secretPersistenceConfig = secretPersistenceConfigService.get(ScopeType.ORGANIZATION, organizationId.get());
       secretPersistence = new RuntimeSecretPersistence(secretPersistenceConfig);
     }
-    final JsonNode partialConfig = secretsRepositoryWriter.deleteFromConfig(
-        source.getWorkspaceId(),
+    secretsRepositoryWriter.deleteFromConfig(
         config,
-        connectorSpecification.getConnectionSpecification(),
+        spec.getConnectionSpecification(),
         secretPersistence);
-    // 2. Tombstone destination
-    final SourceConnection partialSource = Jsons.clone(source).withConfiguration(partialConfig);
-    writeSourceConnectionNoSecrets(partialSource);
+
+    // 2. Tombstone source and void config
+    final SourceConnection newSourceConnection = new SourceConnection()
+        .withName(name)
+        .withSourceDefinitionId(sourceConnection.getSourceDefinitionId())
+        .withWorkspaceId(workspaceId)
+        .withSourceId(sourceId)
+        .withConfiguration(null)
+        .withTombstone(true);
+    writeSourceConnectionNoSecrets(newSourceConnection);
   }
 
   /**
