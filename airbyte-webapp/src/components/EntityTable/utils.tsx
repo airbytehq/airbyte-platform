@@ -47,6 +47,9 @@ export function getEntityTableData<
         lastSync: null,
         connectEntities: [],
         isActive: entityItem.status === ActorStatus.active,
+        breakingChanges: entityItem.breakingChanges,
+        isVersionOverrideApplied: entityItem.isVersionOverrideApplied ?? false,
+        supportState: entityItem.supportState,
       };
     }
 
@@ -72,6 +75,9 @@ export function getEntityTableData<
       connectEntities,
       connectorIcon: entityItem.icon,
       isActive: entityItem.status === ActorStatus.active,
+      breakingChanges: entityItem.breakingChanges,
+      isVersionOverrideApplied: entityItem.isVersionOverrideApplied ?? false,
+      supportState: entityItem.supportState,
     };
   });
 

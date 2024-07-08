@@ -75,7 +75,6 @@ export const EntityWarningsCell: React.FC<EntityWarningCellProps> = ({ connectio
           actor_name: connection.source.name,
           actor_definition_name: connection.source.sourceName,
           actor_type: "source",
-          connection_name: connection.name,
           upgrade_deadline: getHumanReadableUpgradeDeadline(source),
         }}
       />,
@@ -99,7 +98,6 @@ export const EntityWarningsCell: React.FC<EntityWarningCellProps> = ({ connectio
           actor_name: connection.destination.name,
           actor_definition_name: connection.destination.destinationName,
           actor_type: "destination",
-          connection_name: connection.name,
           upgrade_deadline: getHumanReadableUpgradeDeadline(destination),
         }}
       />,

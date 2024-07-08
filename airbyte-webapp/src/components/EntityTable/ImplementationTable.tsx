@@ -2,8 +2,14 @@ import { createColumnHelper } from "@tanstack/react-table";
 import React from "react";
 import { FormattedMessage } from "react-intl";
 
+import { Icon } from "components/ui/Icon";
 import { Link } from "components/ui/Link";
 import { Table } from "components/ui/Table";
+import { Tooltip } from "components/ui/Tooltip";
+
+import { getHumanReadableUpgradeDeadline, shouldDisplayBreakingChangeBanner } from "core/domain/connector";
+import { FeatureItem, useFeature } from "core/services/features";
+import { getBreakingChangeErrorMessage } from "pages/connections/StreamStatusPage/ConnectionStatusMessages";
 
 import AllConnectionsStatusCell from "./components/AllConnectionsStatusCell";
 import ConnectEntitiesCell from "./components/ConnectEntitiesCell";
@@ -20,6 +26,7 @@ interface ImplementationTableProps {
 
 const ImplementationTable: React.FC<ImplementationTableProps> = ({ data, entity }) => {
   const columnHelper = createColumnHelper<EntityTableDataItem>();
+  const connectorBreakingChangeDeadlinesEnabled = useFeature(FeatureItem.ConnectorBreakingChangeDeadlines);
 
   const columns = React.useMemo(
     () => [
@@ -95,8 +102,49 @@ const ImplementationTable: React.FC<ImplementationTableProps> = ({ data, entity 
         ),
         enableSorting: false,
       }),
+      columnHelper.accessor("breakingChanges", {
+        header: () => null,
+        id: "breakingChanges",
+        meta: {
+          noPadding: true,
+        },
+        cell: (props) => {
+          if (props.row.original.supportState != null && shouldDisplayBreakingChangeBanner(props.row.original)) {
+            const { errorMessageId, errorType } = getBreakingChangeErrorMessage(
+              props.row.original as Parameters<typeof getBreakingChangeErrorMessage>[0],
+              connectorBreakingChangeDeadlinesEnabled
+            );
+            return (
+              <Tooltip
+                placement="bottom"
+                control={
+                  <Link to={props.row.original.entityId} variant="primary">
+                    <Icon
+                      size="sm"
+                      type={errorType === "warning" ? "infoFilled" : "statusWarning"}
+                      color={errorType === "warning" ? "warning" : "error"}
+                    />
+                  </Link>
+                }
+              >
+                <FormattedMessage
+                  id={errorMessageId}
+                  values={{
+                    actor_name: props.row.original.entityName,
+                    actor_definition_name: props.row.original.connectorName,
+                    actor_type: entity,
+                    upgrade_deadline: getHumanReadableUpgradeDeadline(props.row.original),
+                  }}
+                />
+              </Tooltip>
+            );
+          }
+          return null;
+        },
+        enableSorting: false,
+      }),
     ],
-    [columnHelper, entity]
+    [columnHelper, entity, connectorBreakingChangeDeadlinesEnabled]
   );
 
   return (

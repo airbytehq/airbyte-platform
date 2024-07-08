@@ -1,8 +1,10 @@
 import {
+  ActorDefinitionVersionBreakingChanges,
   ActorDefinitionVersionRead,
   ConnectionScheduleData,
   ConnectionScheduleType,
   SchemaChange,
+  SupportState,
   WebBackendConnectionListItem,
 } from "../../core/api/types/AirbyteClient";
 
@@ -20,6 +22,9 @@ interface EntityTableDataItem {
   lastSync?: number | null;
   connectorIcon?: string;
   isActive: boolean;
+  breakingChanges?: ActorDefinitionVersionBreakingChanges;
+  isVersionOverrideApplied: boolean;
+  supportState?: SupportState;
 }
 
 interface ConnectionTableDataItem {

@@ -44,7 +44,7 @@ const reduceToHighestSeverityMessage = (messages: MessageProps[]): MessageProps[
  * @returns An array containing id of the message to display and the type of error
  */
 export const getBreakingChangeErrorMessage = (
-  actorDefinitionVersion: ActorDefinitionVersionRead,
+  actorDefinitionVersion: Pick<ActorDefinitionVersionRead, "supportState">,
   connectorBreakingChangeDeadlinesEnabled: boolean
 ): {
   errorMessageId: string;
@@ -183,7 +183,6 @@ export const ConnectionStatusMessages: React.FC = () => {
             actor_name: connection.source.name,
             actor_definition_name: connection.source.sourceName,
             actor_type: "source",
-            connection_name: connection.name,
             upgrade_deadline: getHumanReadableUpgradeDeadline(sourceActorDefinitionVersion),
           }
         ),
@@ -215,7 +214,6 @@ export const ConnectionStatusMessages: React.FC = () => {
             actor_name: connection.destination.name,
             actor_definition_name: connection.destination.destinationName,
             actor_type: "destination",
-            connection_name: connection.name,
             upgrade_deadline: getHumanReadableUpgradeDeadline(destinationActorDefinitionVersion),
           }
         ),
@@ -267,7 +265,6 @@ export const ConnectionStatusMessages: React.FC = () => {
     connection.destinationId,
     connection.source.name,
     connection.source.sourceName,
-    connection.name,
     connection.destination.name,
     connection.destination.destinationName,
     navigate,
