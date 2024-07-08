@@ -10,8 +10,12 @@ import io.airbyte.config.SyncStats
 import io.airbyte.persistence.job.models.ReplicationInput
 import io.airbyte.protocol.models.AirbyteGlobalState
 import io.airbyte.protocol.models.AirbyteStateMessage
+import io.airbyte.protocol.models.AirbyteStream
 import io.airbyte.protocol.models.AirbyteStreamState
+import io.airbyte.protocol.models.ConfiguredAirbyteCatalog
+import io.airbyte.protocol.models.ConfiguredAirbyteStream
 import io.airbyte.protocol.models.StreamDescriptor
+import io.airbyte.protocol.models.SyncMode
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
@@ -65,6 +69,45 @@ class ResumableFullRefreshStatsHelperTest {
 
     val streamsWithStates = ResumableFullRefreshStatsHelper().getStreamsWithStates(input.state)
     assertEquals(expected, streamsWithStates)
+  }
+
+  @ParameterizedTest
+  @ValueSource(strings = ["STREAM", "GLOBAL"])
+  fun `test we correctly return only full refresh streams with states`(stateType: String) {
+    val input =
+      replicationInputWithStates(
+        StateType.valueOf(stateType),
+        Stream(namespace = null, name = "s0"),
+        Stream(namespace = "ns", name = "s1"),
+      )
+
+    val catalog =
+      ConfiguredAirbyteCatalog().withStreams(
+        listOf(
+          ConfiguredAirbyteStream().withSyncMode(SyncMode.FULL_REFRESH).withStream(AirbyteStream().withNamespace(null).withName("s0")),
+          ConfiguredAirbyteStream().withSyncMode(SyncMode.INCREMENTAL).withStream(AirbyteStream().withNamespace("ns").withName("s1")),
+        ),
+      )
+
+    assertEquals(
+      setOf(io.airbyte.config.StreamDescriptor().withName("s0")),
+      ResumableFullRefreshStatsHelper().getResumedFullRefreshStreams(catalog, input.state),
+    )
+  }
+
+  @Test
+  fun `test empty state is handled correctly when getting full refresh streams`() {
+    val input = ReplicationInput()
+
+    val catalog =
+      ConfiguredAirbyteCatalog().withStreams(
+        listOf(
+          ConfiguredAirbyteStream().withSyncMode(SyncMode.FULL_REFRESH).withStream(AirbyteStream().withNamespace(null).withName("s0")),
+          ConfiguredAirbyteStream().withSyncMode(SyncMode.INCREMENTAL).withStream(AirbyteStream().withNamespace("ns").withName("s1")),
+        ),
+      )
+
+    assertEquals(emptySet<StreamDescriptor>(), ResumableFullRefreshStatsHelper().getResumedFullRefreshStreams(catalog, input.state))
   }
 
   @Test

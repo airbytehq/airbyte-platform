@@ -22,6 +22,7 @@ import io.airbyte.config.PerformanceMetrics
 import io.airbyte.config.ReplicationAttemptSummary
 import io.airbyte.config.ReplicationOutput
 import io.airbyte.config.StandardSyncSummary.ReplicationStatus
+import io.airbyte.config.State
 import io.airbyte.config.SyncStats
 import io.airbyte.config.WorkerDestinationConfig
 import io.airbyte.metrics.lib.ApmTraceUtils
@@ -42,6 +43,7 @@ import io.airbyte.workers.context.ReplicationContext
 import io.airbyte.workers.context.ReplicationFeatureFlags
 import io.airbyte.workers.exception.WorkloadHeartbeatException
 import io.airbyte.workers.helper.FailureHelper
+import io.airbyte.workers.helper.ResumableFullRefreshStatsHelper
 import io.airbyte.workers.helper.StreamStatusCompletionTracker
 import io.airbyte.workers.internal.AirbyteDestination
 import io.airbyte.workers.internal.AirbyteMapper
@@ -180,6 +182,7 @@ class ReplicationWorkerHelper(
     replicationFeatureFlags: ReplicationFeatureFlags,
     jobRoot: Path,
     configuredAirbyteCatalog: ConfiguredAirbyteCatalog,
+    state: State?,
   ) {
     timeTracker.trackReplicationStartTime()
 
@@ -204,6 +207,17 @@ class ReplicationWorkerHelper(
           dockerImageTag = DockerImageName.extractTag(ctx.destinationImage),
         ),
       ).supportRefreshes
+
+    if (supportRefreshes) {
+      // if configured airbyte catalog has full refresh with state
+      val resumedFRStreams = ResumableFullRefreshStatsHelper().getResumedFullRefreshStreams(configuredAirbyteCatalog, state)
+      logger.info { "Number of Resumed Full Refresh Streams: {${resumedFRStreams.size}}" }
+      if (resumedFRStreams.isNotEmpty()) {
+        resumedFRStreams.forEach { streamDescriptor ->
+          logger.info { " Resumed stream name: ${streamDescriptor.name} namespace: ${streamDescriptor.namespace}" }
+        }
+      }
+    }
     streamStatusCompletionTracker.startTracking(configuredAirbyteCatalog, supportRefreshes)
   }
 

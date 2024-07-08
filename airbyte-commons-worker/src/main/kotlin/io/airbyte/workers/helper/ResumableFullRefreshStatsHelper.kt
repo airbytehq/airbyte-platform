@@ -8,6 +8,8 @@ import io.airbyte.config.StreamDescriptor
 import io.airbyte.config.StreamSyncStats
 import io.airbyte.config.helpers.StateMessageHelper
 import io.airbyte.persistence.job.models.ReplicationInput
+import io.airbyte.protocol.models.ConfiguredAirbyteCatalog
+import io.airbyte.protocol.models.SyncMode
 import io.github.oshai.kotlinlogging.KotlinLogging
 import jakarta.inject.Singleton
 
@@ -29,6 +31,21 @@ class ResumableFullRefreshStatsHelper {
         .filter { s -> streamsWithStates.contains(s.streamDescriptor()) }
         .map { s -> s.wasResumed = true }
     }
+  }
+
+  fun getResumedFullRefreshStreams(
+    catalog: ConfiguredAirbyteCatalog,
+    state: State?,
+  ): Set<StreamDescriptor> {
+    val streamsWithStates: Set<StreamDescriptor> = getStreamsWithStates(state)
+
+    val fullRefreshStreams =
+      catalog.streams
+        .filter { s -> s.syncMode == SyncMode.FULL_REFRESH }
+        .map { s -> StreamDescriptor().withNamespace(s.stream.namespace).withName(s.stream.name) }
+        .toSet()
+
+    return streamsWithStates intersect fullRefreshStreams
   }
 
   fun getStreamsWithStates(state: State?): Set<StreamDescriptor> =
