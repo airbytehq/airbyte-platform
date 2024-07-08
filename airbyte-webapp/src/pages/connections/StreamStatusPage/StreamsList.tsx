@@ -13,7 +13,6 @@ import { FlexContainer } from "components/ui/Flex";
 import { Heading } from "components/ui/Heading";
 import { Icon } from "components/ui/Icon";
 import { Table } from "components/ui/Table";
-import { InfoTooltip } from "components/ui/Tooltip";
 
 import { activeStatuses } from "area/connection/utils";
 import { useUiStreamStates } from "area/connection/utils/useUiStreamsStates";
@@ -51,14 +50,7 @@ export const StreamsList = () => {
       }),
       columnHelper.accessor("recordsLoaded", {
         id: "latestSync",
-        header: () => (
-          <>
-            <FormattedMessage id="connection.stream.status.table.latestSync" />
-            <InfoTooltip>
-              <FormattedMessage id="sources.updatesEveryMinute" />
-            </InfoTooltip>
-          </>
-        ),
+        header: () => <FormattedMessage id="connection.stream.status.table.latestSync" />,
         cell: (props) => {
           return (
             <LatestSyncCell

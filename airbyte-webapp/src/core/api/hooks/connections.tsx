@@ -107,19 +107,13 @@ export const useGetLastJobPerStream = (connectionId: string) => {
 
 export const useGetConnectionSyncProgress = (connectionId: string, enabled: boolean) => {
   const requestOptions = useRequestOptions();
-  const syncStatsFlushFrequencyOverrideSeconds = useExperiment("connection.syncProgressPollingTime", -1);
 
   return useQuery(
     connectionsKeys.syncProgress(connectionId),
     async () => await getConnectionSyncProgress({ connectionId }, requestOptions),
     {
       enabled,
-      refetchInterval: (data) =>
-        data?.jobId
-          ? syncStatsFlushFrequencyOverrideSeconds > 0
-            ? syncStatsFlushFrequencyOverrideSeconds
-            : 60000
-          : 5000,
+      refetchInterval: 10000,
     }
   );
 };

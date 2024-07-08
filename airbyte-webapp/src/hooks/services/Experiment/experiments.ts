@@ -12,7 +12,6 @@ export interface Experiments {
   "billing.autoRecharge": boolean;
   "connection.columnSelection": boolean;
   "connection.simplifiedCreation": boolean;
-  "connection.syncProgressPollingTime": number;
   "connection.onboarding.destinations": string;
   "connection.onboarding.sources": string;
   "connection.streamCentricUI.errorMultiplier": number;
