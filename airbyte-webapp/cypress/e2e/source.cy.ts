@@ -76,7 +76,7 @@ describe("Unsaved changes modal on create source page", () => {
   it("Check leaving Source page without any changes after selection type", () => {
     goToSourcePage();
     openNewSourcePage();
-    selectServiceType("PokeAPI");
+    selectServiceType("PokeAPI", "marketplace");
 
     openHomepage();
 

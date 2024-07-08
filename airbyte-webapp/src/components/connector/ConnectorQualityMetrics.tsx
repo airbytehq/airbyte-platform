@@ -1,4 +1,5 @@
 import dayjs from "dayjs";
+import isString from "lodash/isString";
 import React from "react";
 import { useIntl } from "react-intl";
 
@@ -77,19 +78,30 @@ const SUCCESS_ICON_MAP: IconMap = {
 } as const;
 
 interface MetricIconProps {
-  iconMap: IconMap;
-  level: MetricLevel;
+  metric: "usage" | "success";
+  connectorDefinition: ConnectorDefinition;
 }
 
-const MetricIcon: React.FC<MetricIconProps> = ({ iconMap, level }) => {
+export const MetricIcon: React.FC<MetricIconProps> = ({ metric, connectorDefinition }) => {
   const { formatMessage } = useIntl();
 
-  const lowercaseLevel = level.toLowerCase() as MetricLevel;
-  if (!iconMap[lowercaseLevel]) {
+  const metricValue =
+    metric === "usage"
+      ? connectorDefinition?.metrics?.all?.usage
+      : connectorDefinition?.metrics?.all?.sync_success_rate;
+  if (!isString(metricValue)) {
+    return null;
+  }
+  const lowercaseMetricValue = metricValue.toLowerCase();
+  if (lowercaseMetricValue !== "low" && lowercaseMetricValue !== "medium" && lowercaseMetricValue !== "high") {
+    return null;
+  }
+  const iconMap = metric === "usage" ? USAGE_ICON_MAP : SUCCESS_ICON_MAP;
+  if (!iconMap[lowercaseMetricValue]) {
     return null;
   }
 
-  const { icon, title } = iconMap[lowercaseLevel];
+  const { icon, title } = iconMap[lowercaseMetricValue];
   return (
     <Icon
       className={styles.wideIcon}
@@ -135,7 +147,11 @@ export const ConnectorQualityMetrics: React.FC<ConnectorQualityMetricsProps> = (
   return (
     <FlexContainer direction="column" gap="sm" className={styles.connectorMetadata}>
       <MetadataStat label={formatMessage({ id: "docs.metrics.supportLevel.label" })}>
-        <SupportLevelBadge supportLevel={connectorDefinition.supportLevel} className={styles.statChip} />
+        <SupportLevelBadge
+          supportLevel={connectorDefinition.supportLevel}
+          className={styles.statChip}
+          hideCertified={false}
+        />
       </MetadataStat>
       <MetadataStat label={formatMessage({ id: "docs.metrics.connectorVersion.label" })}>
         <a href="#changelog">{connectorDefinition.dockerImageTag}</a>
@@ -164,12 +180,12 @@ export const ConnectorQualityMetrics: React.FC<ConnectorQualityMetricsProps> = (
       )}
       {syncSuccessRate && (
         <MetadataStat label={formatMessage({ id: "docs.metrics.syncSuccessRate.label" })}>
-          <MetricIcon iconMap={SUCCESS_ICON_MAP} level={syncSuccessRate} />
+          <MetricIcon metric="success" connectorDefinition={connectorDefinition} />
         </MetadataStat>
       )}
       {usageRate && (
         <MetadataStat label={formatMessage({ id: "docs.metrics.usageRate.label" })}>
-          <MetricIcon iconMap={USAGE_ICON_MAP} level={usageRate} />
+          <MetricIcon metric="usage" connectorDefinition={connectorDefinition} />
         </MetadataStat>
       )}
     </FlexContainer>

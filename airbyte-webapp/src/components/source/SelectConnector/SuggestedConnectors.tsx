@@ -64,32 +64,29 @@ export const SuggestedConnectorsUnmemoized: React.FC<SuggestedConnectorsProps> =
     : "destinations.suggestedDestinations";
 
   return (
-    <div className={styles.suggestedConnectors}>
-      <Box mb="xl">
-        <div>
-          <Heading as="h2" size="sm">
-            <FormattedMessage id={titleKey} />
-          </Heading>
-          <Button
-            variant="clear"
-            onClick={() => setShowSuggestedConnectors(false)}
-            className={styles.suggestedConnectors__dismiss}
-            aria-label={formatMessage({ id: "connector.hideSuggestedConnectors" })}
-          >
-            <Icon type="cross" />
-          </Button>
-        </div>
-      </Box>
+    <FlexContainer direction="column" className={styles.suggestedConnectors}>
+      <Button
+        variant="clear"
+        onClick={() => setShowSuggestedConnectors(false)}
+        className={styles.suggestedConnectors__dismiss}
+        aria-label={formatMessage({ id: "connector.hideSuggestedConnectors" })}
+      >
+        <Icon type="cross" />
+      </Button>
+      <Heading as="h2" size="xs">
+        <FormattedMessage id={titleKey} />
+      </Heading>
       <div className={styles.suggestedConnectors__grid}>
         {definitions.map((definition) => (
           <ConnectorButton
             definition={definition}
             onClick={() => onConnectorButtonClick(definition)}
             key={isSourceDefinition(definition) ? definition.sourceDefinitionId : definition.destinationDefinitionId}
+            maxLines={3}
           />
         ))}
       </div>
-    </div>
+    </FlexContainer>
   );
 };
 

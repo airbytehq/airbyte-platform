@@ -1,0 +1,11 @@
+@mixin responsive-grid() {
+  --grid-columns: 3;
+
+  @container (max-width: 800px) {
+    --grid-columns: 2;
+  }
+
+  @container (max-width: 500px) {
+    --grid-columns: 1;
+  }
+}

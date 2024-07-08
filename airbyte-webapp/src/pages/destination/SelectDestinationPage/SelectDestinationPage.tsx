@@ -18,7 +18,7 @@ export const SelectDestinationPage: React.FC = () => {
   return (
     <>
       <HeadTitle titles={[{ id: "destinations.newDestinationTitle" }]} />
-      <Box px="md" pt="2xl" pb="md">
+      <Box px="xl" pt="2xl" pb="md">
         <PageContainer centered>
           <Heading as="h2" size="lg">
             <FormattedMessage id="destinations.selectDestinationTitle" />
