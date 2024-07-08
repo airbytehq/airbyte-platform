@@ -10,11 +10,7 @@ import io.airbyte.api.client.model.generated.SaveStatsRequestBody
 import io.airbyte.commons.converters.StateConverter
 import io.airbyte.config.SyncStats
 import io.airbyte.config.helpers.StateMessageHelper
-import io.airbyte.featureflag.Connection
 import io.airbyte.featureflag.FeatureFlagClient
-import io.airbyte.featureflag.Multi
-import io.airbyte.featureflag.SyncStatsFlushPeriodOverrideSeconds
-import io.airbyte.featureflag.Workspace
 import io.airbyte.metrics.lib.MetricAttribute
 import io.airbyte.metrics.lib.MetricClient
 import io.airbyte.metrics.lib.MetricClientFactory
@@ -43,12 +39,12 @@ import kotlin.jvm.optionals.getOrNull
 
 interface SyncPersistence : SyncStatsTracker, AutoCloseable {
   /**
-   * Persist a state for a given connectionId.
+   * Buffers a state for a given connectionId for eventual persistence.
    *
    * @param connectionId the connection
    * @param stateMessage stateMessage to persist
    */
-  fun persist(
+  fun accept(
     connectionId: UUID,
     stateMessage: AirbyteStateMessage,
   )
@@ -117,13 +113,11 @@ class SyncPersistenceImpl
     }
 
     init {
-      if (isFrequencyOverrideEnabled()) {
-        startBackgroundFlushStateTask(connectionId)
-      }
+      startBackgroundFlushStateTask(connectionId)
     }
 
     @Trace
-    override fun persist(
+    override fun accept(
       connectionId: UUID,
       stateMessage: AirbyteStateMessage,
     ) {
@@ -133,21 +127,9 @@ class SyncPersistenceImpl
 
       metricClient.count(OssMetricsRegistry.STATE_BUFFERING, 1)
       stateBuffer.ingest(stateMessage)
-      startBackgroundFlushStateTask(connectionId)
     }
 
     private fun startBackgroundFlushStateTask(connectionId: UUID) {
-      if (stateFlushFuture != null) {
-        return
-      }
-
-      val frequencyOverride =
-        featureFlagClient.intVariation(
-          SyncStatsFlushPeriodOverrideSeconds,
-          Multi(listOf(Workspace(workspaceId), Connection(connectionId))),
-        ).toLong()
-      val resolvedFrequency = if (frequencyOverride == -1L) stateFlushPeriodInSeconds else frequencyOverride
-
       // Making sure we only start one of background flush task
       synchronized(this) {
         if (stateFlushFuture == null) {
@@ -156,7 +138,7 @@ class SyncPersistenceImpl
             stateFlushExecutorService.scheduleAtFixedRate(
               { this.flush() },
               RUN_IMMEDIATELY,
-              resolvedFrequency,
+              stateFlushPeriodInSeconds,
               TimeUnit.SECONDS,
             )
         }
@@ -282,27 +264,7 @@ class SyncPersistenceImpl
         return
       }
 
-      val haveStateToFlush = stateToFlush?.isEmpty() == false
-
-      // We prepare stats to commit. We generate the payload here to keep track as close as possible to
-      // the states that are going to be persisted. There is a minute race chance.
-      // We also only want to generate the stats payload when roll-over state buffers. This is to avoid
-      // updating the committed data counters ahead of the states because this counter is currently
-      // decoupled from the state persistence.
-      // This design favoring accuracy of committed data counters over freshness of emitted data counters.
-      if (haveStateToFlush || isFrequencyOverrideEnabled()) {
-        statsToPersist = buildSaveStatsRequest(syncStatsTracker, jobId, attemptNumber, connectionId)
-      }
-    }
-
-    private fun isFrequencyOverrideEnabled(): Boolean {
-      val frequencyOverride =
-        featureFlagClient.intVariation(
-          SyncStatsFlushPeriodOverrideSeconds,
-          Multi(listOf(Workspace(workspaceId), Connection(connectionId))),
-        )
-
-      return frequencyOverride > -1
+      statsToPersist = buildSaveStatsRequest(syncStatsTracker, jobId, attemptNumber, connectionId)
     }
 
     private fun doFlushState() {

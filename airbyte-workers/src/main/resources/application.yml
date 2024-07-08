@@ -218,7 +218,7 @@ airbyte:
             image-pull-policy: ${JOB_KUBE_SIDECAR_CONTAINER_IMAGE_PULL_POLICY:IfNotPresent}
         tolerations: ${JOB_KUBE_TOLERATIONS:}
     replication:
-      persistence-flush-period-sec: ${REPLICATION_FLUSH_PERIOD_SECONDS:60}
+      persistence-flush-period-sec: ${REPLICATION_FLUSH_PERIOD_SECONDS:10}
     spec:
       enabled: ${SHOULD_RUN_GET_SPEC_WORKFLOWS:true}
       max-workers: ${MAX_SPEC_WORKERS:5}

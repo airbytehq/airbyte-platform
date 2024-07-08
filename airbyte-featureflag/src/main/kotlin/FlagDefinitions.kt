@@ -188,6 +188,4 @@ object AlwaysRunCheckBeforeSync : Permanent<Boolean>(key = "platform.always-run-
 
 object DiscoverPostprocessInTemporal : Permanent<Boolean>(key = "platform.discover-postprocess-in-temporal", default = false)
 
-object SyncStatsFlushPeriodOverrideSeconds : Permanent<Int>(key = "platform.sync-stats-flush-period-override-seconds", default = -1)
-
 object UseStreamAttemptMetadata : Temporary<Boolean>(key = "platform.use-stream-attempt-metadata", default = false)

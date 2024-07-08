@@ -404,7 +404,7 @@ class ReplicationWorkerHelper(
     if (destinationRawMessage.type == Type.STATE) {
       val airbyteStateMessage = destinationRawMessage.state
       recordStateStatsMetrics(metricClient, airbyteStateMessage, AirbyteMessageOrigin.DESTINATION, ctx!!)
-      syncPersistence.persist(context.connectionId, destinationRawMessage.state)
+      syncPersistence.accept(context.connectionId, destinationRawMessage.state)
       metricClient.count(OssMetricsRegistry.STATE_PROCESSED_FROM_DESTINATION, 1, *metricAttrs.toTypedArray())
     }
 
