@@ -7,12 +7,14 @@ package io.airbyte.workers;
 import static org.junit.Assert.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import io.airbyte.api.client.AirbyteApiClient;
 import io.airbyte.api.client.generated.ActorDefinitionVersionApi;
+import io.airbyte.api.client.generated.AttemptApi;
 import io.airbyte.api.client.generated.ConnectionApi;
 import io.airbyte.api.client.generated.DestinationApi;
 import io.airbyte.api.client.generated.JobsApi;
@@ -37,7 +39,9 @@ import io.airbyte.api.client.model.generated.JobRead;
 import io.airbyte.api.client.model.generated.JobStatus;
 import io.airbyte.api.client.model.generated.ResetConfig;
 import io.airbyte.api.client.model.generated.ResolveActorDefinitionVersionResponse;
+import io.airbyte.api.client.model.generated.SaveStreamAttemptMetadataRequestBody;
 import io.airbyte.api.client.model.generated.SchemaChangeBackfillPreference;
+import io.airbyte.api.client.model.generated.StreamAttemptMetadata;
 import io.airbyte.api.client.model.generated.StreamDescriptor;
 import io.airbyte.api.client.model.generated.StreamTransform;
 import io.airbyte.api.client.model.generated.StreamTransformUpdateStream;
@@ -57,14 +61,18 @@ import io.airbyte.featureflag.Workspace;
 import io.airbyte.persistence.job.models.IntegrationLauncherConfig;
 import io.airbyte.persistence.job.models.JobRunConfig;
 import io.airbyte.workers.helper.CatalogDiffConverter;
+import io.airbyte.workers.helper.ResumableFullRefreshStatsHelper;
 import io.airbyte.workers.models.RefreshSchemaActivityOutput;
 import io.airbyte.workers.models.ReplicationActivityInput;
 import java.io.IOException;
 import java.util.List;
 import java.util.UUID;
+import org.assertj.core.api.CollectionAssert;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
+import org.mockito.ArgumentCaptor;
 
 /**
  * Tests for the replication activity specifically.
@@ -135,7 +143,8 @@ class ReplicationInputHydratorTest {
       }]
       """));
   private static final Long JOB_ID = 123L;
-  private static final JobRunConfig JOB_RUN_CONFIG = new JobRunConfig().withJobId(JOB_ID.toString());
+  private static final Long ATTEMPT_NUMBER = 2L;
+  private static final JobRunConfig JOB_RUN_CONFIG = new JobRunConfig().withJobId(JOB_ID.toString()).withAttemptId(ATTEMPT_NUMBER);
   private static final IntegrationLauncherConfig DESTINATION_LAUNCHER_CONFIG =
       new IntegrationLauncherConfig().withDockerImage("dockerimage:dockertag");
   private static final IntegrationLauncherConfig SOURCE_LAUNCHER_CONFIG = new IntegrationLauncherConfig();
@@ -176,12 +185,15 @@ class ReplicationInputHydratorTest {
   private static FeatureFlagClient featureFlagClient;
   private SecretsPersistenceConfigApi secretsPersistenceConfigApi;
   private ActorDefinitionVersionApi actorDefinitionVersionApi;
+  private AttemptApi attemptApi;
   private DestinationApi destinationApi;
+  private ResumableFullRefreshStatsHelper resumableFullRefreshStatsHelper;
 
   @BeforeEach
   void setup() throws IOException {
     secretsRepositoryReader = mock(SecretsRepositoryReader.class);
     airbyteApiClient = mock(AirbyteApiClient.class);
+    attemptApi = mock(AttemptApi.class);
     connectionApi = mock(ConnectionApi.class);
     stateApi = mock(StateApi.class);
     jobsApi = mock(JobsApi.class);
@@ -189,8 +201,10 @@ class ReplicationInputHydratorTest {
     secretsPersistenceConfigApi = mock(SecretsPersistenceConfigApi.class);
     actorDefinitionVersionApi = mock(ActorDefinitionVersionApi.class);
     destinationApi = mock(DestinationApi.class);
+    resumableFullRefreshStatsHelper = mock(ResumableFullRefreshStatsHelper.class);
     when(destinationApi.getBaseUrl()).thenReturn("http://localhost:8001/api");
     when(destinationApi.getDestination(any())).thenReturn(DESTINATION_READ);
+    when(airbyteApiClient.getAttemptApi()).thenReturn(attemptApi);
     when(airbyteApiClient.getConnectionApi()).thenReturn(connectionApi);
     when(airbyteApiClient.getDestinationApi()).thenReturn(destinationApi);
     when(airbyteApiClient.getStateApi()).thenReturn(stateApi);
@@ -202,7 +216,7 @@ class ReplicationInputHydratorTest {
   }
 
   private ReplicationInputHydrator getReplicationInputHydrator() {
-    return new ReplicationInputHydrator(airbyteApiClient, secretsRepositoryReader, featureFlagClient);
+    return new ReplicationInputHydrator(airbyteApiClient, resumableFullRefreshStatsHelper, secretsRepositoryReader, featureFlagClient);
   }
 
   private ReplicationActivityInput getDefaultReplicationActivityInputForTest() {
@@ -295,6 +309,93 @@ class ReplicationInputHydratorTest {
     final var replicationInput = replicationInputHydrator.getHydratedReplicationInput(input);
     final var typedState = StateMessageHelper.getTypedState(replicationInput.getState().getState());
     assertEquals(JsonNodeFactory.instance.nullNode(), typedState.get().getStateMessages().get(0).getStream().getStreamState());
+  }
+
+  @Test
+  void testTrackBackfillAndResume() throws IOException {
+    final ReplicationInputHydrator replicationInputHydrator = getReplicationInputHydrator();
+    final io.airbyte.config.StreamDescriptor stream1 = new io.airbyte.config.StreamDescriptor().withName("s1").withNamespace("ns1");
+    final io.airbyte.config.StreamDescriptor stream2 = new io.airbyte.config.StreamDescriptor().withName("s1");
+    final io.airbyte.config.StreamDescriptor stream3 = new io.airbyte.config.StreamDescriptor().withName("s1").withNamespace("ns2");
+    final io.airbyte.config.StreamDescriptor stream4 = new io.airbyte.config.StreamDescriptor().withName("s2");
+    replicationInputHydrator.trackBackfillAndResume(
+        1L,
+        2L,
+        List.of(stream1, stream2, stream4),
+        List.of(stream1, stream3, stream4));
+
+    final SaveStreamAttemptMetadataRequestBody expectedRequest = new SaveStreamAttemptMetadataRequestBody(
+        1,
+        2,
+        List.of(
+            new StreamAttemptMetadata("s1", true, true, "ns1"),
+            new StreamAttemptMetadata("s1", false, true, null),
+            new StreamAttemptMetadata("s1", true, false, "ns2"),
+            new StreamAttemptMetadata("s2", true, true, null)));
+
+    ArgumentCaptor<SaveStreamAttemptMetadataRequestBody> captor = ArgumentCaptor.forClass(SaveStreamAttemptMetadataRequestBody.class);
+    verify(attemptApi).saveStreamMetadata(captor.capture());
+    assertEquals(expectedRequest.getJobId(), captor.getValue().getJobId());
+    assertEquals(expectedRequest.getAttemptNumber(), captor.getValue().getAttemptNumber());
+    CollectionAssert.assertThatCollection(captor.getValue().getStreamMetadata())
+        .containsExactlyInAnyOrderElementsOf(expectedRequest.getStreamMetadata());
+  }
+
+  @Test
+  void testTrackBackfillAndResumeWithoutBackfill() throws IOException {
+    final ReplicationInputHydrator replicationInputHydrator = getReplicationInputHydrator();
+    final io.airbyte.config.StreamDescriptor stream1 = new io.airbyte.config.StreamDescriptor().withName("s1").withNamespace("ns1");
+    final io.airbyte.config.StreamDescriptor stream2 = new io.airbyte.config.StreamDescriptor().withName("s1");
+    final io.airbyte.config.StreamDescriptor stream3 = new io.airbyte.config.StreamDescriptor().withName("s1").withNamespace("ns2");
+    final io.airbyte.config.StreamDescriptor stream4 = new io.airbyte.config.StreamDescriptor().withName("s2");
+    replicationInputHydrator.trackBackfillAndResume(
+        1L,
+        2L,
+        List.of(stream1, stream2, stream4),
+        null);
+
+    final SaveStreamAttemptMetadataRequestBody expectedRequest = new SaveStreamAttemptMetadataRequestBody(
+        1,
+        2,
+        List.of(
+            new StreamAttemptMetadata("s1", false, true, "ns1"),
+            new StreamAttemptMetadata("s1", false, true, null),
+            new StreamAttemptMetadata("s2", false, true, null)));
+
+    ArgumentCaptor<SaveStreamAttemptMetadataRequestBody> captor = ArgumentCaptor.forClass(SaveStreamAttemptMetadataRequestBody.class);
+    verify(attemptApi).saveStreamMetadata(captor.capture());
+    assertEquals(expectedRequest.getJobId(), captor.getValue().getJobId());
+    assertEquals(expectedRequest.getAttemptNumber(), captor.getValue().getAttemptNumber());
+    CollectionAssert.assertThatCollection(captor.getValue().getStreamMetadata())
+        .containsExactlyInAnyOrderElementsOf(expectedRequest.getStreamMetadata());
+  }
+
+  @Test
+  void testTrackBackfillAndResumeWithoutResume() throws IOException {
+    final ReplicationInputHydrator replicationInputHydrator = getReplicationInputHydrator();
+    final io.airbyte.config.StreamDescriptor stream1 = new io.airbyte.config.StreamDescriptor().withName("s1").withNamespace("ns1");
+    final io.airbyte.config.StreamDescriptor stream3 = new io.airbyte.config.StreamDescriptor().withName("s1").withNamespace("ns2");
+    final io.airbyte.config.StreamDescriptor stream4 = new io.airbyte.config.StreamDescriptor().withName("s2");
+    replicationInputHydrator.trackBackfillAndResume(
+        1L,
+        2L,
+        null,
+        List.of(stream1, stream3, stream4));
+
+    final SaveStreamAttemptMetadataRequestBody expectedRequest = new SaveStreamAttemptMetadataRequestBody(
+        1,
+        2,
+        List.of(
+            new StreamAttemptMetadata("s1", true, false, "ns1"),
+            new StreamAttemptMetadata("s1", true, false, "ns2"),
+            new StreamAttemptMetadata("s2", true, false, null)));
+
+    ArgumentCaptor<SaveStreamAttemptMetadataRequestBody> captor = ArgumentCaptor.forClass(SaveStreamAttemptMetadataRequestBody.class);
+    verify(attemptApi).saveStreamMetadata(captor.capture());
+    assertEquals(expectedRequest.getJobId(), captor.getValue().getJobId());
+    assertEquals(expectedRequest.getAttemptNumber(), captor.getValue().getAttemptNumber());
+    CollectionAssert.assertThatCollection(captor.getValue().getStreamMetadata())
+        .containsExactlyInAnyOrderElementsOf(expectedRequest.getStreamMetadata());
   }
 
   private void mockEnableFeatureFlagForWorkspace(final Flag<Boolean> flag, final UUID workspaceId) {

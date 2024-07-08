@@ -1,6 +1,7 @@
 package io.airbyte.workers.helper
 
 import io.airbyte.config.StandardSyncOutput
+import io.airbyte.config.State
 import io.airbyte.config.StateType
 import io.airbyte.config.StateWrapper
 import io.airbyte.config.StreamDescriptor
@@ -21,11 +22,7 @@ class ResumableFullRefreshStatsHelper {
     hydratedInput: ReplicationInput,
     standardSyncOutput: StandardSyncOutput,
   ) {
-    val streamsWithStates: Set<StreamDescriptor> =
-      StateMessageHelper
-        .getTypedState(hydratedInput.state?.state)
-        .map(this::getStreams).orElse(listOf())
-        .toSet()
+    val streamsWithStates: Set<StreamDescriptor> = getStreamsWithStates(hydratedInput.state)
 
     standardSyncOutput.standardSyncSummary?.streamStats?.let {
       it
@@ -33,6 +30,12 @@ class ResumableFullRefreshStatsHelper {
         .map { s -> s.wasResumed = true }
     }
   }
+
+  fun getStreamsWithStates(state: State?): Set<StreamDescriptor> =
+    StateMessageHelper
+      .getTypedState(state?.state)
+      .map(this::getStreams).orElse(listOf())
+      .toSet()
 
   private fun getStreams(stateWrapper: StateWrapper): List<StreamDescriptor> {
     return when (stateWrapper.stateType) {

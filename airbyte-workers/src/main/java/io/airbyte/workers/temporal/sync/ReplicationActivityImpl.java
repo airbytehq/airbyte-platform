@@ -110,7 +110,7 @@ public class ReplicationActivityImpl implements ReplicationActivity {
                                  @Named("outputStateClient") final OutputStorageClient<State> stateStorageClient,
                                  @Named("outputCatalogClient") final OutputStorageClient<ConfiguredAirbyteCatalog> catalogStorageClient,
                                  final ResumableFullRefreshStatsHelper resumableFullRefreshStatsHelper) {
-    this.replicationInputHydrator = new ReplicationInputHydrator(airbyteApiClient, secretsRepositoryReader,
+    this.replicationInputHydrator = new ReplicationInputHydrator(airbyteApiClient, resumableFullRefreshStatsHelper, secretsRepositoryReader,
         featureFlagClient);
     this.workspaceRoot = workspaceRoot;
     this.workerEnvironment = workerEnvironment;

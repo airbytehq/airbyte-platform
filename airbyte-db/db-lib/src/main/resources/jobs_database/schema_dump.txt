@@ -72,7 +72,7 @@ create table "public"."retry_states" (
 );
 create table "public"."stream_attempt_metadata" (
   "id" uuid not null,
-  "attempt_id" int not null,
+  "attempt_id" bigint not null,
   "stream_namespace" varchar(2147483647),
   "stream_name" varchar(2147483647) not null,
   "was_backfilled" boolean not null default false,

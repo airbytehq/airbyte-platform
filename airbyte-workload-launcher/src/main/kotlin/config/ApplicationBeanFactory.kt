@@ -17,6 +17,7 @@ import io.airbyte.workers.CheckConnectionInputHydrator
 import io.airbyte.workers.ConnectorSecretsHydrator
 import io.airbyte.workers.DiscoverCatalogInputHydrator
 import io.airbyte.workers.ReplicationInputHydrator
+import io.airbyte.workers.helper.ResumableFullRefreshStatsHelper
 import io.micrometer.core.instrument.MeterRegistry
 import io.micronaut.context.annotation.Factory
 import io.micronaut.context.annotation.Value
@@ -46,10 +47,11 @@ class ApplicationBeanFactory {
   @Singleton
   fun replicationInputHydrator(
     airbyteApiClient: AirbyteApiClient,
+    resumableFullRefreshStatsHelper: ResumableFullRefreshStatsHelper,
     secretsRepositoryReader: SecretsRepositoryReader,
     featureFlagClient: FeatureFlagClient,
   ): ReplicationInputHydrator {
-    return ReplicationInputHydrator(airbyteApiClient, secretsRepositoryReader, featureFlagClient)
+    return ReplicationInputHydrator(airbyteApiClient, resumableFullRefreshStatsHelper, secretsRepositoryReader, featureFlagClient)
   }
 
   @Singleton

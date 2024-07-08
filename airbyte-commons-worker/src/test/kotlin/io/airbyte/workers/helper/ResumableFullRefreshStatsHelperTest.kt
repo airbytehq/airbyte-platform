@@ -47,6 +47,26 @@ class ResumableFullRefreshStatsHelperTest {
     assertEquals(expected, output)
   }
 
+  @ParameterizedTest
+  @ValueSource(strings = ["STREAM", "GLOBAL"])
+  fun `test get streams with states`(stateType: String) {
+    val input =
+      replicationInputWithStates(
+        StateType.valueOf(stateType),
+        Stream(namespace = null, name = "s0"),
+        Stream(namespace = "ns", name = "s1"),
+      )
+
+    val expected =
+      setOf(
+        io.airbyte.config.StreamDescriptor().withName("s0"),
+        io.airbyte.config.StreamDescriptor().withName("s1").withNamespace("ns"),
+      )
+
+    val streamsWithStates = ResumableFullRefreshStatsHelper().getStreamsWithStates(input.state)
+    assertEquals(expected, streamsWithStates)
+  }
+
   @Test
   fun `test we do not fail if there are no states`() {
     val input = ReplicationInput()

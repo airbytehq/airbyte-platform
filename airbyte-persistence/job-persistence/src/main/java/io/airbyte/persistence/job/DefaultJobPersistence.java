@@ -6,6 +6,7 @@ package io.airbyte.persistence.job;
 
 import static io.airbyte.db.instance.jobs.jooq.generated.Tables.ATTEMPTS;
 import static io.airbyte.db.instance.jobs.jooq.generated.Tables.JOBS;
+import static io.airbyte.db.instance.jobs.jooq.generated.Tables.STREAM_ATTEMPT_METADATA;
 import static io.airbyte.db.instance.jobs.jooq.generated.Tables.STREAM_STATS;
 import static io.airbyte.db.instance.jobs.jooq.generated.Tables.SYNC_STATS;
 import static io.airbyte.persistence.job.models.JobStatus.TERMINAL_STATUSES;
@@ -74,6 +75,7 @@ import java.util.stream.StreamSupport;
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.jooq.DSLContext;
+import org.jooq.Field;
 import org.jooq.JSONB;
 import org.jooq.Query;
 import org.jooq.Record;
@@ -325,10 +327,11 @@ public class DefaultJobPersistence implements JobPersistence {
     final var streamResults = ctx.fetch(
         "SELECT atmpt.id, atmpt.attempt_number, atmpt.job_id, "
             + "stats.stream_name, stats.stream_namespace, stats.estimated_bytes, stats.estimated_records, stats.bytes_emitted, stats.records_emitted,"
-            + "stats.bytes_committed, stats.records_committed "
+            + "stats.bytes_committed, stats.records_committed, sam.was_backfilled, sam.was_resumed "
             + "FROM stream_stats stats "
             + "INNER JOIN attempts atmpt ON atmpt.id = stats.attempt_id "
-            + "WHERE attempt_id IN "
+            + "LEFT JOIN stream_attempt_metadata sam ON sam.attempt_id = stats.attempt_id "
+            + "WHERE stats.attempt_id IN "
             + "( SELECT id FROM attempts WHERE job_id IN ( " + jobIdsStr + "));");
 
     streamResults.forEach(r -> {
@@ -336,8 +339,13 @@ public class DefaultJobPersistence implements JobPersistence {
       final String streamName = r.get(STREAM_STATS.STREAM_NAME);
       final long attemptId = r.get(ATTEMPTS.ID);
       final var streamDescriptor = new StreamDescriptor().withName(streamName).withNamespace(streamNamespace);
-      final boolean wasBackfilled = backFilledStreamsPerAttemptId.getOrDefault(attemptId, new HashSet<>()).contains(streamDescriptor);
-      final boolean wasResumed = resumedStreamsPerAttemptId.getOrDefault(attemptId, new HashSet<>()).contains(streamDescriptor);
+
+      // We merge the information from the database and what is retrieved from the attemptOutput because
+      // the historical data is only present in the attemptOutput
+      final boolean wasBackfilled = getOrDefaultFalse(r, STREAM_ATTEMPT_METADATA.WAS_BACKFILLED)
+          || backFilledStreamsPerAttemptId.getOrDefault(attemptId, new HashSet<>()).contains(streamDescriptor);
+      final boolean wasResumed = getOrDefaultFalse(r, STREAM_ATTEMPT_METADATA.WAS_RESUMED)
+          || resumedStreamsPerAttemptId.getOrDefault(attemptId, new HashSet<>()).contains(streamDescriptor);
 
       final var streamSyncStats = new StreamSyncStats()
           .withStreamNamespace(streamNamespace)
@@ -359,6 +367,10 @@ public class DefaultJobPersistence implements JobPersistence {
       }
       attemptStats.get(key).perStreamStats().add(streamSyncStats);
     });
+  }
+
+  private static boolean getOrDefaultFalse(final Record r, final Field<Boolean> field) {
+    return r.get(field) == null ? false : r.get(field);
   }
 
   @VisibleForTesting

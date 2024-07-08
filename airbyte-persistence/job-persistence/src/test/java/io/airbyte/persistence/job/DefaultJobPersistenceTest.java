@@ -7,6 +7,7 @@ package io.airbyte.persistence.job;
 import static io.airbyte.db.instance.jobs.jooq.generated.Tables.AIRBYTE_METADATA;
 import static io.airbyte.db.instance.jobs.jooq.generated.Tables.ATTEMPTS;
 import static io.airbyte.db.instance.jobs.jooq.generated.Tables.JOBS;
+import static io.airbyte.db.instance.jobs.jooq.generated.Tables.STREAM_ATTEMPT_METADATA;
 import static io.airbyte.db.instance.jobs.jooq.generated.Tables.STREAM_STATS;
 import static io.airbyte.db.instance.jobs.jooq.generated.Tables.SYNC_STATS;
 import static io.airbyte.persistence.job.DefaultJobPersistence.toSqlName;
@@ -233,6 +234,7 @@ class DefaultJobPersistenceTest {
     jobDatabase.query(ctx -> ctx.truncateTable(ATTEMPTS).cascade().execute());
     jobDatabase.query(ctx -> ctx.truncateTable(AIRBYTE_METADATA).cascade().execute());
     jobDatabase.query(ctx -> ctx.truncateTable(SYNC_STATS));
+    jobDatabase.query(ctx -> ctx.truncateTable(STREAM_ATTEMPT_METADATA));
   }
 
   private Result<Record> getJobRecord(final long jobId) throws SQLException {
@@ -785,7 +787,7 @@ class DefaultJobPersistenceTest {
 
     @Test
     @DisplayName("Retrieving all attempts stats for a job should return the right information")
-    void testGetMultipleStats() throws IOException {
+    void testGetMultipleStats() throws IOException, SQLException {
       final long jobOneId = jobPersistence.enqueueJob(SCOPE, SPEC_JOB_CONFIG).orElseThrow();
       final int jobOneAttemptNumberOne = jobPersistence.createAttempt(jobOneId, LOG_PATH);
 
@@ -822,6 +824,21 @@ class DefaultJobPersistenceTest {
                   .withEstimatedBytes(10000L).withEstimatedRecords(2000L)));
       jobPersistence.writeStats(jobTwoId, jobTwoAttemptNumberOne, 1000L, 1000L, 1000L, 1000L, 1000L, 1000L, CONNECTION_ID, streamStats);
 
+      final List<Long> jobOneAttemptIds = jobDatabase.query(
+          ctx -> ctx.select(ATTEMPTS.ID).from(ATTEMPTS).where(ATTEMPTS.JOB_ID.eq(jobOneId)).orderBy(ATTEMPTS.ID).fetch()
+              .map(r -> r.get(ATTEMPTS.ID)));
+      jobDatabase.query(
+          ctx -> ctx.insertInto(
+              STREAM_ATTEMPT_METADATA,
+              STREAM_ATTEMPT_METADATA.ID,
+              STREAM_ATTEMPT_METADATA.ATTEMPT_ID,
+              STREAM_ATTEMPT_METADATA.STREAM_NAME,
+              STREAM_ATTEMPT_METADATA.WAS_BACKFILLED,
+              STREAM_ATTEMPT_METADATA.WAS_RESUMED)
+              .values(UUID.randomUUID(), jobOneAttemptIds.get(0), "name1", true, false)
+              .values(UUID.randomUUID(), jobOneAttemptIds.get(1), "name1", false, true)
+              .execute());
+
       final var stats = jobPersistence.getAttemptStats(List.of(jobOneId, jobTwoId));
       final var exp = Map.of(
           new JobAttemptPair(jobOneId, jobOneAttemptNumberOne),
@@ -835,7 +852,7 @@ class DefaultJobPersistenceTest {
                       .withEstimatedBytes(10000L).withEstimatedRecords(2000L)
                       .withBytesEmitted(1000L).withRecordsEmitted(1000L)
                       .withBytesCommitted(1000L).withRecordsCommitted(1000L))
-                  .withWasBackfilled(false)
+                  .withWasBackfilled(true)
                   .withWasResumed(false))),
           new JobAttemptPair(jobOneId, jobOneAttemptNumberTwo),
           new AttemptStats(
@@ -849,7 +866,7 @@ class DefaultJobPersistenceTest {
                       .withBytesEmitted(1000L).withRecordsEmitted(1000L)
                       .withBytesCommitted(1000L).withRecordsCommitted(1000L))
                   .withWasBackfilled(false)
-                  .withWasResumed(false))),
+                  .withWasResumed(true))),
           new JobAttemptPair(jobTwoId, jobTwoAttemptNumberOne),
           new AttemptStats(
               new SyncStats()
