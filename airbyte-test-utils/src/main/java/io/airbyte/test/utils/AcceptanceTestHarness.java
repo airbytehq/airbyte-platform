@@ -166,6 +166,8 @@ public class AcceptanceTestHarness {
   private static final DockerImageName SOURCE_POSTGRES_IMAGE_NAME = DockerImageName.parse("debezium/postgres:15-alpine")
       .asCompatibleSubstituteFor("postgres");
 
+  private static final String TEMPORAL_HOST = "temporal.airbyte.dev:80";
+
   private static final String SOURCE_E2E_TEST_CONNECTOR_VERSION = "0.1.2";
   private static final String DESTINATION_E2E_TEST_CONNECTOR_VERSION = "0.1.1";
 
@@ -515,7 +517,7 @@ public class AcceptanceTestHarness {
   private WorkflowClient getWorkflowClient() {
     final TemporalUtils temporalUtils = new TemporalUtils(null, null, null, null, null, null, null);
     final WorkflowServiceStubs temporalService = temporalUtils.createTemporalService(
-        TemporalWorkflowUtils.getAirbyteTemporalOptions("localhost:7233", new TemporalSdkTimeouts()),
+        TemporalWorkflowUtils.getAirbyteTemporalOptions(TEMPORAL_HOST, new TemporalSdkTimeouts()),
         TemporalUtils.DEFAULT_NAMESPACE);
     return WorkflowClient.newInstance(temporalService);
   }

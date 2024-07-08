@@ -39,6 +39,7 @@ import java.util.Set;
 import java.util.UUID;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.DisabledIfEnvironmentVariable;
 import org.openapitools.client.infrastructure.ClientException;
@@ -62,8 +63,7 @@ import org.slf4j.LoggerFactory;
  */
 @SuppressWarnings({"PMD.JUnitTestsShouldIncludeAssert", "DataFlowIssue", "SqlDialectInspection", "SqlNoDataSourceInspection",
   "PMD.AvoidDuplicateLiterals"})
-@DisabledIfEnvironmentVariable(named = "SKIP_BASIC_ACCEPTANCE_TESTS",
-                               matches = "true")
+@Tag("api")
 class ApiAcceptanceTests {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(ApiAcceptanceTests.class);

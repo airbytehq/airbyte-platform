@@ -45,9 +45,9 @@ import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
-import org.junit.jupiter.api.condition.DisabledIfEnvironmentVariable;
 import org.junit.jupiter.api.parallel.Execution;
 import org.junit.jupiter.api.parallel.ExecutionMode;
 import org.slf4j.Logger;
@@ -56,11 +56,10 @@ import org.slf4j.LoggerFactory;
 /**
  * Tests for the various schema management functionalities e.g., auto-detect, auto-propagate.
  */
-@DisabledIfEnvironmentVariable(named = "SKIP_BASIC_ACCEPTANCE_TESTS",
-                               matches = "true")
 @Timeout(value = 2,
          unit = TimeUnit.MINUTES) // Default timeout of 2 minutes; individual tests should override if they need longer.
 @Execution(ExecutionMode.CONCURRENT)
+@Tag("api")
 class SchemaManagementTests {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(SchemaManagementTests.class);
