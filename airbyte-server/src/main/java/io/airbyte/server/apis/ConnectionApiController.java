@@ -18,10 +18,6 @@ import io.airbyte.api.model.generated.ConnectionAutoPropagateResult;
 import io.airbyte.api.model.generated.ConnectionAutoPropagateSchemaChange;
 import io.airbyte.api.model.generated.ConnectionCreate;
 import io.airbyte.api.model.generated.ConnectionDataHistoryRequestBody;
-import io.airbyte.api.model.generated.ConnectionEventIdRequestBody;
-import io.airbyte.api.model.generated.ConnectionEventList;
-import io.airbyte.api.model.generated.ConnectionEventWithDetails;
-import io.airbyte.api.model.generated.ConnectionEventsRequestBody;
 import io.airbyte.api.model.generated.ConnectionIdRequestBody;
 import io.airbyte.api.model.generated.ConnectionLastJobPerStreamReadItem;
 import io.airbyte.api.model.generated.ConnectionLastJobPerStreamRequestBody;
@@ -66,8 +62,6 @@ import io.micronaut.http.annotation.Status;
 import io.micronaut.scheduling.annotation.ExecuteOn;
 import io.micronaut.security.annotation.Secured;
 import io.micronaut.security.rules.SecurityRule;
-import jakarta.validation.Valid;
-import jakarta.validation.constraints.NotNull;
 import java.util.ArrayList;
 import java.util.List;
 import lombok.extern.slf4j.Slf4j;
@@ -197,22 +191,6 @@ public class ConnectionApiController implements ConnectionApi {
   }
 
   @Override
-  @Post(uri = "/events/get")
-  @Secured({WORKSPACE_READER, ORGANIZATION_READER})
-  @ExecuteOn(AirbyteTaskExecutors.IO)
-  public ConnectionEventWithDetails getConnectionEvent(final ConnectionEventIdRequestBody connectionEventIdRequestBody) {
-    return ApiHelper.execute(() -> connectionsHandler.getConnectionEvent(connectionEventIdRequestBody));
-  }
-
-  @Override
-  @Post(uri = "/events/list")
-  @Secured({WORKSPACE_READER, ORGANIZATION_READER})
-  @ExecuteOn(AirbyteTaskExecutors.IO)
-  public ConnectionEventList listConnectionEvents(@Valid @NotNull final ConnectionEventsRequestBody connectionEventsRequestBody) {
-    return ApiHelper.execute(() -> connectionsHandler.listConnectionEvents(connectionEventsRequestBody));
-  }
-
-  @Override
   @Post(uri = "/getForJob")
   @Secured({WORKSPACE_READER, ORGANIZATION_READER})
   @ExecuteOn(AirbyteTaskExecutors.IO)
@@ -305,7 +283,7 @@ public class ConnectionApiController implements ConnectionApi {
   @Post(uri = "/clear")
   @Secured({WORKSPACE_EDITOR, ORGANIZATION_EDITOR})
   @ExecuteOn(AirbyteTaskExecutors.SCHEDULER)
-  public JobInfoRead clearConnection(@Body final ConnectionIdRequestBody connectionIdRequestBody) {
+  public JobInfoRead clearConnection(@Body ConnectionIdRequestBody connectionIdRequestBody) {
     return ApiHelper.execute(() -> schedulerHandler.resetConnection(connectionIdRequestBody));
   }
 
@@ -313,7 +291,7 @@ public class ConnectionApiController implements ConnectionApi {
   @Post(uri = "/clear/stream")
   @Secured({WORKSPACE_EDITOR, ORGANIZATION_EDITOR})
   @ExecuteOn(AirbyteTaskExecutors.SCHEDULER)
-  public JobInfoRead clearConnectionStream(@Body final ConnectionStreamRequestBody connectionStreamRequestBody) {
+  public JobInfoRead clearConnectionStream(@Body ConnectionStreamRequestBody connectionStreamRequestBody) {
     return ApiHelper.execute(() -> schedulerHandler.resetConnectionStream(connectionStreamRequestBody));
   }
 

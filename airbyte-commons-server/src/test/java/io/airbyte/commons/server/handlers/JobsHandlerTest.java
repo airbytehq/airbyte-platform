@@ -125,7 +125,7 @@ public class JobsHandlerTest {
     verify(jobPersistence).succeedAttempt(JOB_ID, ATTEMPT_NUMBER);
     verify(jobNotifier).successJob(any(), any());
     verify(helper).trackCompletion(any(), eq(JobStatus.SUCCEEDED));
-    verify(connectionTimelineEventService).writeEvent(eq(CONNECTION_ID), any(), any());
+    verify(connectionTimelineEventService).writeEvent(eq(CONNECTION_ID), any());
   }
 
   @Test
@@ -194,7 +194,7 @@ public class JobsHandlerTest {
         .jobId(JOB_ID)
         .connectionId(UUID.randomUUID())
         .standardSyncOutput(standardSyncOutput);
-    final Job job = new Job(JOB_ID, RESET_CONNECTION, "", simpleConfig, List.of(), io.airbyte.persistence.job.models.JobStatus.SUCCEEDED, 0L, 0, 0);
+    Job job = new Job(JOB_ID, RESET_CONNECTION, "", simpleConfig, List.of(), io.airbyte.persistence.job.models.JobStatus.SUCCEEDED, 0L, 0, 0);
     when(jobPersistence.getJob(JOB_ID)).thenReturn(job);
     jobsHandler.jobSuccessWithAttemptNumber(request);
 
@@ -368,7 +368,7 @@ public class JobsHandlerTest {
     verify(jobPersistence).failJob(JOB_ID);
     verify(jobNotifier).failJob(Mockito.any(), any());
     verify(jobErrorReporter).reportSyncJobFailure(CONNECTION_ID, failureSummary, expectedReportingContext, expectedAttemptConfig);
-    verify(connectionTimelineEventService).writeEvent(eq(CONNECTION_ID), any(), any());
+    verify(connectionTimelineEventService).writeEvent(eq(CONNECTION_ID), any());
   }
 
   @Test
