@@ -134,11 +134,13 @@ import io.airbyte.config.persistence.ActorDefinitionVersionHelper.ActorDefinitio
 import io.airbyte.config.persistence.ConfigNotFoundException;
 import io.airbyte.config.persistence.ConfigRepository;
 import io.airbyte.config.persistence.StreamGenerationRepository;
+import io.airbyte.config.persistence.UserPersistence;
 import io.airbyte.config.persistence.domain.Generation;
 import io.airbyte.config.persistence.helper.CatalogGenerationSetter;
 import io.airbyte.config.secrets.JsonSecretsProcessor;
 import io.airbyte.config.secrets.SecretsRepositoryReader;
 import io.airbyte.data.helpers.ActorDefinitionVersionUpdater;
+import io.airbyte.data.services.ConnectionTimelineEventService;
 import io.airbyte.data.services.DestinationService;
 import io.airbyte.data.services.SecretPersistenceConfigService;
 import io.airbyte.data.services.SourceService;
@@ -266,6 +268,8 @@ class ConnectionsHandlerTest {
   private CatalogValidator catalogValidator;
   private NotificationHelper notificationHelper;
   private StreamStatusesService streamStatusesService;
+  private ConnectionTimelineEventService connectionTimelineEventService;
+  private UserPersistence userPersistence;
 
   @SuppressWarnings("unchecked")
   @BeforeEach
@@ -373,6 +377,8 @@ class ConnectionsHandlerTest {
     secretPersistenceConfigService = mock(SecretPersistenceConfigService.class);
     actorDefinitionHandlerHelper = mock(ActorDefinitionHandlerHelper.class);
     streamStatusesService = mock(StreamStatusesService.class);
+    connectionTimelineEventService = mock(ConnectionTimelineEventService.class);
+    userPersistence = mock(UserPersistence.class);
 
     featureFlagClient = mock(TestClient.class);
 
@@ -439,7 +445,8 @@ class ConnectionsHandlerTest {
           catalogGenerationSetter,
           catalogValidator,
           notificationHelper,
-          streamStatusesService);
+          streamStatusesService,
+          connectionTimelineEventService, userPersistence);
 
       when(uuidGenerator.get()).thenReturn(standardSync.getConnectionId());
       final StandardSourceDefinition sourceDefinition = new StandardSourceDefinition()
@@ -1690,7 +1697,8 @@ class ConnectionsHandlerTest {
           catalogGenerationSetter,
           catalogValidator,
           notificationHelper,
-          streamStatusesService);
+          streamStatusesService,
+          connectionTimelineEventService, userPersistence);
     }
 
     private Attempt generateMockAttempt(final Instant attemptTime, final long recordsSynced) {
@@ -1768,7 +1776,7 @@ class ConnectionsHandlerTest {
         final long jobTwoBytesEmmitted = 87654L;
         final long jobTwoRecordsCommitted = 50L;
         final long jobTwoRecordsEmittted = 60L;
-        try (MockedStatic<StatsAggregationHelper> mockStatsAggregationHelper = Mockito.mockStatic(StatsAggregationHelper.class)) {
+        try (final MockedStatic<StatsAggregationHelper> mockStatsAggregationHelper = Mockito.mockStatic(StatsAggregationHelper.class)) {
           mockStatsAggregationHelper.when(() -> StatsAggregationHelper.getJobIdToJobWithAttemptsReadMap(Mockito.any(), Mockito.any()))
               .thenReturn(Map.of(
                   jobOneId, new JobWithAttemptsRead().job(
@@ -1786,7 +1794,7 @@ class ConnectionsHandlerTest {
                               .recordsCommitted(jobTwoRecordsCommitted)
                               .recordsEmitted(jobTwoRecordsEmittted)))));
 
-          List<JobSyncResultRead> expected = List.of(
+          final List<JobSyncResultRead> expected = List.of(
               new JobSyncResultRead()
                   .configType(JobConfigType.SYNC)
                   .jobId(jobOneId)
@@ -1940,7 +1948,8 @@ class ConnectionsHandlerTest {
           catalogGenerationSetter,
           catalogValidator,
           notificationHelper,
-          streamStatusesService);
+          streamStatusesService,
+          connectionTimelineEventService, userPersistence);
     }
 
     @Test
@@ -2445,7 +2454,8 @@ class ConnectionsHandlerTest {
           catalogGenerationSetter,
           catalogValidator,
           notificationHelper,
-          streamStatusesService);
+          streamStatusesService,
+          connectionTimelineEventService, userPersistence);
     }
 
     @Test
@@ -2622,7 +2632,8 @@ class ConnectionsHandlerTest {
           catalogGenerationSetter,
           catalogValidator,
           notificationHelper,
-          streamStatusesService);
+          streamStatusesService,
+          connectionTimelineEventService, userPersistence);
     }
 
     @Test
@@ -2723,7 +2734,7 @@ class ConnectionsHandlerTest {
 
       when(jobPersistence.listJobsLight(Set.of(jobId))).thenReturn(jobList);
 
-      try (MockedStatic<StatsAggregationHelper> mockStatsAggregationHelper = Mockito.mockStatic(StatsAggregationHelper.class)) {
+      try (final MockedStatic<StatsAggregationHelper> mockStatsAggregationHelper = Mockito.mockStatic(StatsAggregationHelper.class)) {
         mockStatsAggregationHelper.when(() -> StatsAggregationHelper.getJobIdToJobWithAttemptsReadMap(eq(jobList), eq(jobPersistence)))
             .thenReturn(Map.of(jobId, jobWithAttemptsRead));
 

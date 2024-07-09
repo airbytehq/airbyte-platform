@@ -48,7 +48,7 @@ internal class ConnectionTimelineEventServiceDataImplTest {
         attemptsCount = 5,
         failureReason = Optional.of(FailureReason()),
       )
-    service.writeEvent(connectionId = connectionId, event = syncFailedEvent)
+    service.writeEvent(connectionId = connectionId, event = syncFailedEvent, userId = null)
     verify {
       repository.save(any())
     }
