@@ -152,8 +152,10 @@ public class RefreshSchemaActivityImpl implements RefreshSchemaActivity {
         connectionId,
         workspaceId);
 
-    final var output = new RefreshSchemaActivityOutput(
-        CatalogDiffConverter.toDomain(airbyteApiClient.getConnectionApi().applySchemaChangeForConnection(request).getPropagatedDiff()));
+    final var propagatedDiff = airbyteApiClient.getConnectionApi().applySchemaChangeForConnection(request).getPropagatedDiff();
+    final var domainDiff = propagatedDiff != null ? CatalogDiffConverter.toDomain(propagatedDiff) : null;
+
+    final var output = new RefreshSchemaActivityOutput(domainDiff);
 
     final var attrs = new MetricAttribute[] {
       new MetricAttribute(MetricTags.CONNECTION_ID, String.valueOf(connectionId))
