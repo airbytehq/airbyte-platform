@@ -15,10 +15,12 @@ import com.google.common.annotations.VisibleForTesting;
 import datadog.trace.api.Trace;
 import io.airbyte.api.client.AirbyteApiClient;
 import io.airbyte.api.client.model.generated.ConnectionIdRequestBody;
+import io.airbyte.api.client.model.generated.DiffCatalogRequestBody;
 import io.airbyte.api.client.model.generated.Geography;
 import io.airbyte.api.client.model.generated.ScopeType;
 import io.airbyte.api.client.model.generated.SecretPersistenceConfig;
 import io.airbyte.api.client.model.generated.SecretPersistenceConfigGetRequestBody;
+import io.airbyte.api.client.model.generated.SourceDiscoverSchemaRead;
 import io.airbyte.api.client.model.generated.WorkspaceIdRequestBody;
 import io.airbyte.commons.converters.ConnectorConfigUpdater;
 import io.airbyte.commons.features.FeatureFlags;
@@ -62,6 +64,8 @@ import io.airbyte.workers.helper.SecretPersistenceConfigHelper;
 import io.airbyte.workers.internal.AirbyteStreamFactory;
 import io.airbyte.workers.internal.VersionedAirbyteStreamFactory;
 import io.airbyte.workers.models.DiscoverCatalogInput;
+import io.airbyte.workers.models.PostprocessCatalogInput;
+import io.airbyte.workers.models.PostprocessCatalogOutput;
 import io.airbyte.workers.process.AirbyteIntegrationLauncher;
 import io.airbyte.workers.process.IntegrationLauncher;
 import io.airbyte.workers.process.Metadata;
@@ -83,6 +87,7 @@ import java.nio.file.Path;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicReference;
@@ -261,6 +266,20 @@ public class DiscoverCatalogActivityImpl implements DiscoverCatalogActivity {
     metricClient.count(OssMetricsRegistry.CATALOG_DISCOVERY, 1,
         new MetricAttribute(MetricTags.STATUS, "failed"),
         new MetricAttribute("workload_enabled", workloadEnabledStr));
+  }
+
+  @Override
+  public PostprocessCatalogOutput postprocess(final PostprocessCatalogInput input) {
+    final var reqBody = new DiffCatalogRequestBody(
+        Objects.requireNonNull(input.getCatalogId()),
+        Objects.requireNonNull(input.getConnectionId()));
+
+    try {
+      final SourceDiscoverSchemaRead resp = airbyteApiClient.getConnectionApi().diffCatalogForConnection(reqBody);
+      return PostprocessCatalogOutput.Companion.success(resp);
+    } catch (final Exception e) {
+      return PostprocessCatalogOutput.Companion.failure(e);
+    }
   }
 
   @VisibleForTesting

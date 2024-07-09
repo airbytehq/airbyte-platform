@@ -5,7 +5,10 @@ package io.airbyte.workers.temporal.discover.catalog
 
 import io.airbyte.api.client.AirbyteApiClient
 import io.airbyte.api.client.WorkloadApiClient
+import io.airbyte.api.client.generated.ConnectionApi
+import io.airbyte.api.client.model.generated.DiffCatalogRequestBody
 import io.airbyte.api.client.model.generated.Geography
+import io.airbyte.api.client.model.generated.SourceDiscoverSchemaRead
 import io.airbyte.commons.features.FeatureFlags
 import io.airbyte.commons.protocol.AirbyteMessageSerDeProvider
 import io.airbyte.commons.protocol.AirbyteProtocolVersionedMigratorFactory
@@ -24,6 +27,8 @@ import io.airbyte.persistence.job.models.IntegrationLauncherConfig
 import io.airbyte.persistence.job.models.JobRunConfig
 import io.airbyte.workers.helper.GsonPksExtractor
 import io.airbyte.workers.models.DiscoverCatalogInput
+import io.airbyte.workers.models.PostprocessCatalogInput
+import io.airbyte.workers.models.PostprocessCatalogOutput
 import io.airbyte.workers.process.ProcessFactory
 import io.airbyte.workers.sync.WorkloadClient
 import io.airbyte.workers.workload.JobOutputDocStore
@@ -35,9 +40,11 @@ import io.airbyte.workload.api.client.model.generated.WorkloadType
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.spyk
+import io.mockk.verify
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
+import java.io.IOException
 import java.nio.file.Path
 import java.util.Optional
 import java.util.UUID
@@ -58,6 +65,7 @@ class DiscoverCatalogActivityTest {
   private val featureFlagClient: FeatureFlagClient = TestClient()
   private val gsonPksExtractor: GsonPksExtractor = mockk()
   private val workloadApi: WorkloadApi = mockk()
+  private val connectionApi: ConnectionApi = mockk()
   private val workloadApiClient: WorkloadApiClient = mockk()
   private val workloadIdGenerator: WorkloadIdGenerator = mockk()
   private val jobOutputDocStore: JobOutputDocStore = mockk()
@@ -66,6 +74,7 @@ class DiscoverCatalogActivityTest {
   @BeforeEach
   fun init() {
     every { workloadApiClient.workloadApi }.returns(workloadApi)
+    every { airbyteApiClient.connectionApi }.returns(connectionApi)
     discoverCatalogActivity =
       spyk(
         DiscoverCatalogActivityImpl(
@@ -122,5 +131,39 @@ class DiscoverCatalogActivityTest {
     every { jobOutputDocStore.read(workloadId) }.returns(Optional.of(output))
     val actualOutput = discoverCatalogActivity.runWithWorkload(input)
     Assertions.assertEquals(output, actualOutput)
+  }
+
+  @Test
+  fun postprocessHappyPath() {
+    val read: SourceDiscoverSchemaRead = mockk()
+    every { connectionApi.diffCatalogForConnection(any()) } returns read
+
+    val input = PostprocessCatalogInput(UUID.randomUUID(), UUID.randomUUID())
+    val result = discoverCatalogActivity.postprocess(input)
+
+    val expectedReqBody = DiffCatalogRequestBody(input.catalogId!!, input.connectionId!!)
+    verify { connectionApi.diffCatalogForConnection(eq(expectedReqBody)) }
+
+    val expected = PostprocessCatalogOutput.success(read)
+    Assertions.assertEquals(expected, result)
+    Assertions.assertTrue(result.isSuccess)
+    Assertions.assertFalse(result.isFailure)
+  }
+
+  @Test
+  fun postprocessExceptionalPath() {
+    val exception = IOException("not happy")
+    every { connectionApi.diffCatalogForConnection(any()) } throws exception
+
+    val input = PostprocessCatalogInput(UUID.randomUUID(), UUID.randomUUID())
+    val result = discoverCatalogActivity.postprocess(input)
+
+    val expectedReqBody = DiffCatalogRequestBody(input.catalogId!!, input.connectionId!!)
+    verify { connectionApi.diffCatalogForConnection(eq(expectedReqBody)) }
+
+    val expected = PostprocessCatalogOutput.failure(exception)
+    Assertions.assertEquals(expected, result)
+    Assertions.assertFalse(result.isSuccess)
+    Assertions.assertTrue(result.isFailure)
   }
 }
