@@ -852,7 +852,7 @@ class DefaultJobPersistenceTest {
                       .withEstimatedBytes(10000L).withEstimatedRecords(2000L)
                       .withBytesEmitted(1000L).withRecordsEmitted(1000L)
                       .withBytesCommitted(1000L).withRecordsCommitted(1000L))
-                  .withWasBackfilled(true)
+                  .withWasBackfilled(false)
                   .withWasResumed(false))),
           new JobAttemptPair(jobOneId, jobOneAttemptNumberTwo),
           new AttemptStats(
@@ -866,7 +866,7 @@ class DefaultJobPersistenceTest {
                       .withBytesEmitted(1000L).withRecordsEmitted(1000L)
                       .withBytesCommitted(1000L).withRecordsCommitted(1000L))
                   .withWasBackfilled(false)
-                  .withWasResumed(true))),
+                  .withWasResumed(false))),
           new JobAttemptPair(jobTwoId, jobTwoAttemptNumberOne),
           new AttemptStats(
               new SyncStats()

@@ -6,7 +6,6 @@ package io.airbyte.persistence.job;
 
 import static io.airbyte.db.instance.jobs.jooq.generated.Tables.ATTEMPTS;
 import static io.airbyte.db.instance.jobs.jooq.generated.Tables.JOBS;
-import static io.airbyte.db.instance.jobs.jooq.generated.Tables.STREAM_ATTEMPT_METADATA;
 import static io.airbyte.db.instance.jobs.jooq.generated.Tables.STREAM_STATS;
 import static io.airbyte.db.instance.jobs.jooq.generated.Tables.SYNC_STATS;
 import static io.airbyte.persistence.job.models.JobStatus.TERMINAL_STATUSES;
@@ -327,10 +326,9 @@ public class DefaultJobPersistence implements JobPersistence {
     final var streamResults = ctx.fetch(
         "SELECT atmpt.id, atmpt.attempt_number, atmpt.job_id, "
             + "stats.stream_name, stats.stream_namespace, stats.estimated_bytes, stats.estimated_records, stats.bytes_emitted, stats.records_emitted,"
-            + "stats.bytes_committed, stats.records_committed, sam.was_backfilled, sam.was_resumed "
+            + "stats.bytes_committed, stats.records_committed "
             + "FROM stream_stats stats "
             + "INNER JOIN attempts atmpt ON atmpt.id = stats.attempt_id "
-            + "LEFT JOIN stream_attempt_metadata sam ON sam.attempt_id = stats.attempt_id "
             + "WHERE stats.attempt_id IN "
             + "( SELECT id FROM attempts WHERE job_id IN ( " + jobIdsStr + "));");
 
@@ -342,10 +340,8 @@ public class DefaultJobPersistence implements JobPersistence {
 
       // We merge the information from the database and what is retrieved from the attemptOutput because
       // the historical data is only present in the attemptOutput
-      final boolean wasBackfilled = getOrDefaultFalse(r, STREAM_ATTEMPT_METADATA.WAS_BACKFILLED)
-          || backFilledStreamsPerAttemptId.getOrDefault(attemptId, new HashSet<>()).contains(streamDescriptor);
-      final boolean wasResumed = getOrDefaultFalse(r, STREAM_ATTEMPT_METADATA.WAS_RESUMED)
-          || resumedStreamsPerAttemptId.getOrDefault(attemptId, new HashSet<>()).contains(streamDescriptor);
+      final boolean wasBackfilled = backFilledStreamsPerAttemptId.getOrDefault(attemptId, new HashSet<>()).contains(streamDescriptor);
+      final boolean wasResumed = resumedStreamsPerAttemptId.getOrDefault(attemptId, new HashSet<>()).contains(streamDescriptor);
 
       final var streamSyncStats = new StreamSyncStats()
           .withStreamNamespace(streamNamespace)
