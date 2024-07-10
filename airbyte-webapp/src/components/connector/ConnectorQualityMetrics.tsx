@@ -1,12 +1,13 @@
 import dayjs from "dayjs";
 import isString from "lodash/isString";
 import React from "react";
-import { useIntl } from "react-intl";
+import { FormattedMessage, useIntl } from "react-intl";
 
 import { FlexContainer } from "components/ui/Flex";
 import { Icon, IconType } from "components/ui/Icon";
 import { ExternalLink } from "components/ui/Link/ExternalLink";
 import { SupportLevelBadge } from "components/ui/SupportLevelBadge";
+import { Tooltip } from "components/ui/Tooltip";
 
 import { usePythonCDKVersion } from "core/api";
 import { ConnectorDefinition } from "core/domain/connector";
@@ -44,7 +45,7 @@ interface MetricInfo {
   icon: IconType;
   title: string;
 }
-type MetricLevel = "high" | "medium" | "low";
+type MetricLevel = "high" | "medium" | "low" | "none";
 type IconMap = Record<MetricLevel, MetricInfo>;
 
 const USAGE_ICON_MAP: IconMap = {
@@ -59,6 +60,10 @@ const USAGE_ICON_MAP: IconMap = {
   low: {
     icon: "metricUsageLow",
     title: "docs.metrics.usageRate.tooltip.low",
+  },
+  none: {
+    icon: "metricUsageNone",
+    title: "docs.metrics.usageRate.tooltip.none",
   },
 } as const;
 
@@ -75,6 +80,10 @@ const SUCCESS_ICON_MAP: IconMap = {
     icon: "metricSuccessLow",
     title: "docs.metrics.syncSuccessRate.tooltip.low",
   },
+  none: {
+    icon: "metricSuccessNone",
+    title: "docs.metrics.syncSuccessRate.tooltip.none",
+  },
 } as const;
 
 interface MetricIconProps {
@@ -85,31 +94,33 @@ interface MetricIconProps {
 export const MetricIcon: React.FC<MetricIconProps> = ({ metric, connectorDefinition }) => {
   const { formatMessage } = useIntl();
 
-  const metricValue =
+  const normalizeMetricValue = (metricValue: unknown): keyof IconMap => {
+    if (!isString(metricValue)) {
+      return "none";
+    }
+
+    const lowercaseMetricValue = metricValue.toLowerCase();
+    if (lowercaseMetricValue !== "low" && lowercaseMetricValue !== "medium" && lowercaseMetricValue !== "high") {
+      return "none";
+    }
+
+    return lowercaseMetricValue;
+  };
+
+  const iconMap = metric === "usage" ? USAGE_ICON_MAP : SUCCESS_ICON_MAP;
+  const rawMetricValue =
     metric === "usage"
       ? connectorDefinition?.metrics?.all?.usage
       : connectorDefinition?.metrics?.all?.sync_success_rate;
-  if (!isString(metricValue)) {
-    return null;
-  }
-  const lowercaseMetricValue = metricValue.toLowerCase();
-  if (lowercaseMetricValue !== "low" && lowercaseMetricValue !== "medium" && lowercaseMetricValue !== "high") {
-    return null;
-  }
-  const iconMap = metric === "usage" ? USAGE_ICON_MAP : SUCCESS_ICON_MAP;
-  if (!iconMap[lowercaseMetricValue]) {
-    return null;
-  }
+  const { icon, title } = iconMap[normalizeMetricValue(rawMetricValue)];
 
-  const { icon, title } = iconMap[lowercaseMetricValue];
   return (
-    <Icon
-      className={styles.wideIcon}
-      size="xs"
-      type={icon}
-      title={formatMessage({ id: title })}
-      aria-label={formatMessage({ id: title })}
-    />
+    <Tooltip
+      control={<Icon className={styles.wideIcon} size="xs" type={icon} aria-label={formatMessage({ id: title })} />}
+      placement="top"
+    >
+      <FormattedMessage id={title} />
+    </Tooltip>
   );
 };
 
