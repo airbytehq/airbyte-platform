@@ -56,12 +56,14 @@ import io.airbyte.commons.server.handlers.helpers.NotificationHelper;
 import io.airbyte.commons.server.scheduler.EventRunner;
 import io.airbyte.commons.server.scheduler.SynchronousResponse;
 import io.airbyte.commons.server.scheduler.SynchronousSchedulerClient;
+import io.airbyte.commons.server.support.CurrentUserService;
 import io.airbyte.commons.temporal.ErrorCode;
 import io.airbyte.commons.temporal.TemporalClient.ManualOperationResult;
 import io.airbyte.commons.version.Version;
 import io.airbyte.config.ActorCatalog;
 import io.airbyte.config.ActorDefinitionVersion;
 import io.airbyte.config.DestinationConnection;
+import io.airbyte.config.JobConfig;
 import io.airbyte.config.JobTypeResourceLimit.JobType;
 import io.airbyte.config.NotificationSettings;
 import io.airbyte.config.ResourceRequirements;
@@ -82,8 +84,11 @@ import io.airbyte.config.persistence.StreamResetPersistence;
 import io.airbyte.config.persistence.domain.StreamRefresh;
 import io.airbyte.config.secrets.SecretsRepositoryWriter;
 import io.airbyte.config.secrets.persistence.RuntimeSecretPersistence;
+import io.airbyte.data.services.ConnectionTimelineEventService;
 import io.airbyte.data.services.SecretPersistenceConfigService;
 import io.airbyte.data.services.WorkspaceService;
+import io.airbyte.data.services.shared.SyncCancelledEvent;
+import io.airbyte.data.services.shared.SyncStartedEvent;
 import io.airbyte.featureflag.DiscoverPostprocessInTemporal;
 import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.featureflag.Organization;
@@ -152,6 +157,8 @@ public class SchedulerHandler {
   private final ConnectorDefinitionSpecificationHandler connectorDefinitionSpecificationHandler;
   private final WorkspaceService workspaceService;
   private final SecretPersistenceConfigService secretPersistenceConfigService;
+  private final ConnectionTimelineEventService connectionEventService;
+  private final CurrentUserService currentUserService;
   private final StreamRefreshesHandler streamRefreshesHandler;
   private final NotificationHelper notificationHelper;
 
@@ -178,6 +185,8 @@ public class SchedulerHandler {
                           final ConnectorDefinitionSpecificationHandler connectorDefinitionSpecificationHandler,
                           final WorkspaceService workspaceService,
                           final SecretPersistenceConfigService secretPersistenceConfigService,
+                          final ConnectionTimelineEventService connectionEventService,
+                          final CurrentUserService currentUserService,
                           final StreamRefreshesHandler streamRefreshesHandler,
                           final NotificationHelper notificationHelper) {
     this.configRepository = configRepository;
@@ -200,6 +209,8 @@ public class SchedulerHandler {
     this.connectorDefinitionSpecificationHandler = connectorDefinitionSpecificationHandler;
     this.workspaceService = workspaceService;
     this.secretPersistenceConfigService = secretPersistenceConfigService;
+    this.connectionEventService = connectionEventService;
+    this.currentUserService = currentUserService;
     this.jobCreationAndStatusUpdateHelper = new JobCreationAndStatusUpdateHelper(
         jobPersistence,
         configRepository,
@@ -771,6 +782,15 @@ public class SchedulerHandler {
     return checkConnectionRead;
   }
 
+  private UUID getCurrentUserIdIfExist() {
+    try {
+      return currentUserService.getCurrentUser().getUserId();
+    } catch (final Exception e) {
+      log.info("Unable to get current user associated with the request. " + e);
+      return null;
+    }
+  }
+
   private JobInfoRead submitCancellationToWorker(final Long jobId) throws IOException {
     final Job job = jobPersistence.getJob(jobId);
 
@@ -778,7 +798,14 @@ public class SchedulerHandler {
     if (cancellationResult.getFailingReason().isPresent()) {
       throw new IllegalStateException(cancellationResult.getFailingReason().get());
     }
-
+    final JobInfoRead jobInfo = readJobFromResult(cancellationResult);
+    if (job.getConfigType() != null && job.getConfigType().equals(JobConfig.ConfigType.SYNC)) {
+      // Store connection timeline event (cancel a sync).
+      final SyncCancelledEvent event = new SyncCancelledEvent(
+          jobInfo.getJob().getId(),
+          jobInfo.getJob().getCreatedAt());
+      connectionEventService.writeEvent(UUID.fromString(job.getScope()), event, getCurrentUserIdIfExist());
+    }
     // query same job ID again to get updated job info after cancellation
     return jobConverter.getJobInfoRead(jobPersistence.getJob(jobId));
   }
@@ -791,8 +818,15 @@ public class SchedulerHandler {
       throw new IllegalStateException("Can only sync an active connection");
     }
     final ManualOperationResult manualSyncResult = eventRunner.startNewManualSync(connectionId);
-
-    return readJobFromResult(manualSyncResult);
+    final JobInfoRead jobInfo = readJobFromResult(manualSyncResult);
+    if (jobInfo != null && jobInfo.getJob() != null && jobInfo.getJob().getConfigType().equals(JobConfigType.SYNC)) {
+      // Store connection timeline event (start a manual sync).
+      final SyncStartedEvent event = new SyncStartedEvent(
+          jobInfo.getJob().getId(),
+          jobInfo.getJob().getCreatedAt());
+      connectionEventService.writeEvent(connectionId, event, getCurrentUserIdIfExist());
+    }
+    return jobInfo;
   }
 
   private JobInfoRead submitResetConnectionToWorker(final UUID connectionId) throws IOException, IllegalStateException, ConfigNotFoundException {

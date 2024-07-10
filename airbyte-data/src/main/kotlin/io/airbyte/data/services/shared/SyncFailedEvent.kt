@@ -12,11 +12,11 @@ class SyncFailedEvent(
   private val attemptsCount: Int,
   private val failureReason: Optional<FailureReason>,
 ) : ConnectionEvent {
-  fun startTimeEpochSeconds(): Long {
-    return this.startTimeEpochSeconds
+  fun getStartTimeEpochSeconds(): Long {
+    return startTimeEpochSeconds
   }
 
-  fun endTimeEpochSeconds(): Long {
+  fun getEndTimeEpochSeconds(): Long {
     return endTimeEpochSeconds
   }
 

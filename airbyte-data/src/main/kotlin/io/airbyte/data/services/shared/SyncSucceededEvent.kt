@@ -8,11 +8,11 @@ class SyncSucceededEvent(
   private val recordsLoaded: Long,
   private val attemptsCount: Int,
 ) : ConnectionEvent {
-  fun startTimeEpochSeconds(): Long {
-    return this.startTimeEpochSeconds
+  fun getStartTimeEpochSeconds(): Long {
+    return startTimeEpochSeconds
   }
 
-  fun endTimeEpochSeconds(): Long {
+  fun getEndTimeEpochSeconds(): Long {
     return endTimeEpochSeconds
   }
 
