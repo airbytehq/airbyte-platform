@@ -346,15 +346,15 @@ public class SchedulerHandler {
     if (featureFlagClient.boolVariation(DiscoverPostprocessInTemporal.INSTANCE, new Workspace(source.getWorkspaceId()))) {
       return discover(req, source);
     } else {
-      return discoverAndPostprocess(req, source);
+      return discoverAndGloballyDisable(req, source);
     }
   }
 
   /**
-   * Runs discover schema and performs postprocessing (catalog diff and connection disabling) locally.
+   * Runs discover schema and performs conditional disabling of all connections.
    */
-  public SourceDiscoverSchemaRead discoverAndPostprocess(final SourceDiscoverSchemaRequestBody discoverSchemaRequestBody,
-                                                         final SourceConnection source)
+  public SourceDiscoverSchemaRead discoverAndGloballyDisable(final SourceDiscoverSchemaRequestBody discoverSchemaRequestBody,
+                                                             final SourceConnection source)
       throws ConfigNotFoundException, IOException, JsonValidationException {
     final UUID sourceId = discoverSchemaRequestBody.getSourceId();
     final StandardSourceDefinition sourceDef = configRepository.getStandardSourceDefinition(source.getSourceDefinitionId());
@@ -406,7 +406,7 @@ public class SchedulerHandler {
   }
 
   /**
-   * Runs discover schema and does not perform postprocessing (catalog diff and connection disabling).
+   * Runs discover schema and does not disable other connections.
    */
   public SourceDiscoverSchemaRead discover(final SourceDiscoverSchemaRequestBody req, final SourceConnection source)
       throws ConfigNotFoundException, IOException, JsonValidationException {
@@ -417,7 +417,7 @@ public class SchedulerHandler {
     final boolean skipCacheCheck = req.getDisableCache() != null && req.getDisableCache();
     // Skip cache check and run discover.
     if (skipCacheCheck) {
-      return runDiscoverSchemaJob(source, sourceDef, sourceVersion, req.getPriority());
+      return runDiscoverJobDiffAndConditionallyDisable(source, sourceDef, sourceVersion, req.getPriority(), req.getConnectionId());
     }
 
     // Check cache.
@@ -430,7 +430,7 @@ public class SchedulerHandler {
 
     // No catalog exists, run discover.
     if (existingCatalog.isEmpty()) {
-      return runDiscoverSchemaJob(source, sourceDef, sourceVersion, req.getPriority());
+      return runDiscoverJobDiffAndConditionallyDisable(source, sourceDef, sourceVersion, req.getPriority(), req.getConnectionId());
     }
 
     // We have a catalog cached, no need to run discover. Return cached catalog.
@@ -449,11 +449,12 @@ public class SchedulerHandler {
         .catalogId(existingCatalog.get().getId());
   }
 
-  private SourceDiscoverSchemaRead runDiscoverSchemaJob(final SourceConnection source,
-                                                        final StandardSourceDefinition sourceDef,
-                                                        final ActorDefinitionVersion sourceVersion,
-                                                        final io.airbyte.api.model.generated.WorkloadPriority priority)
-      throws ConfigNotFoundException, IOException {
+  private SourceDiscoverSchemaRead runDiscoverJobDiffAndConditionallyDisable(final SourceConnection source,
+                                                                             final StandardSourceDefinition sourceDef,
+                                                                             final ActorDefinitionVersion sourceVersion,
+                                                                             final io.airbyte.api.model.generated.WorkloadPriority priority,
+                                                                             final UUID connectionId)
+      throws ConfigNotFoundException, IOException, JsonValidationException {
     final boolean isCustomConnector = sourceDef.getCustom();
     // ResourceRequirements are read from actor definition and can be null; but if it's not null it will
     // have higher priority and overwrite
@@ -470,7 +471,13 @@ public class SchedulerHandler {
             resourceRequirements,
             priority == null ? WorkloadPriority.HIGH : WorkloadPriority.fromValue(priority.toString()));
 
-    return retrieveDiscoveredSchema(persistedCatalogId, sourceVersion);
+    final var schemaRead = retrieveDiscoveredSchema(persistedCatalogId, sourceVersion);
+    // no connection to diff
+    if (connectionId == null) {
+      return schemaRead;
+    }
+
+    return connectionsHandler.diffCatalogAndConditionallyDisable(connectionId, schemaRead.getCatalogId());
   }
 
   public void applySchemaChangeForSource(final SourceAutoPropagateChange sourceAutoPropagateChange)

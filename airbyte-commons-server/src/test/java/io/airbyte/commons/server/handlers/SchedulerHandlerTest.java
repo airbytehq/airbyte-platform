@@ -938,11 +938,12 @@ class SchedulerHandlerTest {
     when(featureFlagClient.boolVariation(eq(DiscoverPostprocessInTemporal.INSTANCE), any())).thenReturn(enabled);
     when(envVariableFeatureFlags.autoDetectSchema()).thenReturn(false);
     final SourceConnection source = SourceHelpers.generateSource(UUID.randomUUID());
-    final UUID connectionId = UUID.randomUUID();
+    final UUID connectionId1 = UUID.randomUUID();
+    final UUID connectionId2 = UUID.randomUUID();
     final UUID discoveredCatalogId = UUID.randomUUID();
     final SynchronousResponse<UUID> discoverResponse = (SynchronousResponse<UUID>) jobResponse;
     final SourceDiscoverSchemaRequestBody request =
-        new SourceDiscoverSchemaRequestBody().sourceId(source.getSourceId()).connectionId(connectionId).disableCache(true).notifySchemaChange(true);
+        new SourceDiscoverSchemaRequestBody().sourceId(source.getSourceId()).connectionId(connectionId1).disableCache(true).notifySchemaChange(true);
     final StreamTransform streamTransform = new StreamTransform().transformType(TransformTypeEnum.UPDATE_STREAM)
         .streamDescriptor(new io.airbyte.api.model.generated.StreamDescriptor().name(DOGS))
         .updateStream(new StreamTransformUpdateStream().addFieldTransformsItem(new FieldTransform().transformType(
@@ -961,7 +962,7 @@ class SchedulerHandlerTest {
     when(configRepository.getSourceConnection(source.getSourceId())).thenReturn(source);
     when(synchronousSchedulerClient.createDiscoverSchemaJob(source, sourceVersion, false, null, WorkloadPriority.HIGH))
         .thenReturn(discoverResponse);
-    when(webUrlHelper.getConnectionReplicationPageUrl(source.getWorkspaceId(), connectionId)).thenReturn(CONNECTION_URL);
+    when(webUrlHelper.getConnectionReplicationPageUrl(source.getWorkspaceId(), connectionId1)).thenReturn(CONNECTION_URL);
 
     when(discoverResponse.isSuccess()).thenReturn(true);
     when(discoverResponse.getOutput()).thenReturn(discoveredCatalogId);
@@ -970,14 +971,19 @@ class SchedulerHandlerTest {
         CatalogHelpers.createAirbyteStream(SHOES, Field.of(SKU, JsonSchemaType.STRING)),
         CatalogHelpers.createAirbyteStream(DOGS, Field.of(NAME, JsonSchemaType.STRING))));
 
-    final ConnectionRead connectionRead =
+    final ConnectionRead connectionRead1 =
         new ConnectionRead().syncCatalog(CatalogConverter.toApi(airbyteCatalogCurrent, sourceVersion)).status(ConnectionStatus.ACTIVE)
-            .connectionId(connectionId)
+            .connectionId(connectionId1)
             .sourceId(source.getSourceId())
             .notifySchemaChanges(true);
-    when(connectionsHandler.getConnection(request.getConnectionId())).thenReturn(connectionRead);
+    final ConnectionRead connectionRead2 =
+        new ConnectionRead().syncCatalog(CatalogConverter.toApi(airbyteCatalogCurrent, sourceVersion)).status(ConnectionStatus.ACTIVE)
+            .connectionId(connectionId2)
+            .sourceId(source.getSourceId())
+            .notifySchemaChanges(true);
+    when(connectionsHandler.getConnection(request.getConnectionId())).thenReturn(connectionRead1);
     when(connectionsHandler.getDiff(any(), any(), any())).thenReturn(catalogDiff);
-    final ConnectionReadList connectionReadList = new ConnectionReadList().connections(List.of(connectionRead));
+    final ConnectionReadList connectionReadList = new ConnectionReadList().connections(List.of(connectionRead1, connectionRead2));
     when(connectionsHandler.listConnectionsForSource(source.getSourceId(), false)).thenReturn(connectionReadList);
 
     final ActorCatalog actorCatalog = new ActorCatalog()
@@ -986,15 +992,17 @@ class SchedulerHandlerTest {
         .withId(discoveredCatalogId);
     when(configRepository.getActorCatalogById(discoveredCatalogId)).thenReturn(actorCatalog);
 
-    final ConnectionUpdate expectedConnectionUpdate =
-        new ConnectionUpdate().connectionId(connectionId).breakingChange(true).status(ConnectionStatus.ACTIVE);
-
     schedulerHandler.discoverSchemaForSourceFromSourceId(request);
 
-    // the diff and update should be called if the FF is disabled, but not called if ff is enabled
-    final var times = enabled ? 0 : 1;
-    verify(connectionsHandler, times(times)).getDiff(any(), any(), any());
-    verify(connectionsHandler, times(times)).updateConnection(expectedConnectionUpdate);
+    // if the FF is disabled, the diff and update should be called for _each_ connection using the
+    // source
+    final var expectedOldPathCalls = enabled ? 0 : 2;
+    verify(connectionsHandler, times(expectedOldPathCalls)).getDiff(any(), any(), any());
+    verify(connectionsHandler, times(expectedOldPathCalls)).updateConnection(any());
+
+    // if the ff is on, we use the ala cart diff and disabling logic for just the connection specified
+    final var expectedNewPathCalls = enabled ? 1 : 0;
+    verify(connectionsHandler, times(expectedNewPathCalls)).diffCatalogAndConditionallyDisable(any(), any());
   }
 
   // TODO: to be removed once we swap to new discover flow
