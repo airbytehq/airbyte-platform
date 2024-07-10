@@ -14,21 +14,6 @@
   height: 30px;
   border-radius: 50%;
   background-color: colors.$grey-100;
-
-  &--last::after {
-    display: none;
-  }
-
-  &::after {
-    content: "";
-    position: absolute;
-    top: 100%;
-    left: 50%;
-    height: 200%;
-    width: 1px;
-    background-color: colors.$grey-100;
-    transform: translateX(-50%);
-  }
 }
 
 .connectionTimelineEventIcon__statusIndicator {

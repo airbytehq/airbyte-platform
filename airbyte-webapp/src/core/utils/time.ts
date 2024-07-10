@@ -36,3 +36,17 @@ export const useFormatLengthOfTime = (lengthOfTimeMs: number) => {
   const strSeconds = formatMessage({ id: "sources.second" }, { second: seconds });
   return `${strHours}${strMinutes}${strSeconds}`;
 };
+
+/**
+ *
+ * @param start (milliseconds)
+ * @param end (milliseconds)
+ * @returns formatted length of time in milliseconds
+ */
+export const useFormatDuration = (start: number, end: number) => {
+  const startTime = dayjs(start);
+  const endTime = dayjs(end);
+  const duration = endTime.diff(startTime, "milliseconds");
+
+  return useFormatLengthOfTime(duration);
+};

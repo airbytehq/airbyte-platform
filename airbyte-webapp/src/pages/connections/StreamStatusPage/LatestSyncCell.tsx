@@ -27,7 +27,7 @@ export const LatestSyncCell: React.FC<LatestSyncCellProps> = ({
   const hours = Math.abs(end.diff(start, "hour"));
   const minutes = Math.abs(end.diff(start, "minute")) - hours * 60;
 
-  if (activeStatuses.includes(status) && isLoadingHistoricalData) {
+  if (!activeStatuses.includes(status) && isLoadingHistoricalData) {
     return <LoadingSpinner />;
   }
   return (

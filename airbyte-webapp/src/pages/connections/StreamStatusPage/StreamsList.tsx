@@ -30,6 +30,7 @@ export const StreamsList = () => {
   const { connection } = useConnectionEditService();
   const streamEntries = useUiStreamStates(connection.connectionId);
   const columnHelper = useMemo(() => createColumnHelper<(typeof streamEntries)[number]>(), []);
+
   const columns = useMemo(
     () => [
       columnHelper.accessor("status", {
