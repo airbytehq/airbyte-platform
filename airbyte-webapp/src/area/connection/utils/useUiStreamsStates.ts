@@ -24,8 +24,8 @@ interface UIStreamState {
   streamName: string;
   streamNamespace?: string;
   activeJobConfigType?: JobConfigType;
-  activeJobStartedAt?: number; // date?
-  dataFreshAsOf?: number; // date?
+  activeJobStartedAt?: number;
+  dataFreshAsOf?: number;
   recordsExtracted?: number;
   recordsLoaded?: number;
   bytesLoaded?: number;
@@ -49,6 +49,7 @@ export const useUiStreamStates = (connectionId: string): UIStreamState[] => {
     configType === JobConfigType.clear || configType === JobConfigType.reset_connection;
 
   const { historicalStreamsData, isFetching: isLoadingHistoricalData } = useHistoricalStreamData(connectionId);
+
   // if we just finished a job, re-fetch the historical data and set wasRunning to false
   useEffect(() => {
     if (wasRunning && !connectionStatus.isRunning) {

@@ -1,6 +1,6 @@
 import { createColumnHelper } from "@tanstack/react-table";
 import classNames from "classnames";
-import { useMemo } from "react";
+import { useMemo, useRef } from "react";
 import { FormattedMessage } from "react-intl";
 import { useToggle } from "react-use";
 
@@ -15,6 +15,7 @@ import { Icon } from "components/ui/Icon";
 import { Table } from "components/ui/Table";
 
 import { activeStatuses } from "area/connection/utils";
+import { useTrackSyncProgress } from "area/connection/utils/useStreamsTableAnalytics";
 import { useUiStreamStates } from "area/connection/utils/useUiStreamsStates";
 import { useConnectionEditService } from "hooks/services/ConnectionEdit/ConnectionEditService";
 
@@ -29,6 +30,9 @@ export const StreamsList = () => {
   const [showRelativeTime, setShowRelativeTime] = useToggle(true);
   const { connection } = useConnectionEditService();
   const streamEntries = useUiStreamStates(connection.connectionId);
+  const trackCountRef = useRef(0);
+  useTrackSyncProgress(connection.connectionId, trackCountRef);
+
   const columnHelper = useMemo(() => createColumnHelper<(typeof streamEntries)[number]>(), []);
 
   const columns = useMemo(
