@@ -186,6 +186,10 @@ object EnableResumableFullRefresh : Temporary<Boolean>(key = "platform.enable-re
 
 object AlwaysRunCheckBeforeSync : Permanent<Boolean>(key = "platform.always-run-check-before-sync", default = false)
 
+object WorkloadLauncherEnabled : EnvVar(envVar = "WORKLOAD_LAUNCHER_ENABLED", default = false)
+
+object WorkloadApiServerEnabled : EnvVar(envVar = "WORKLOAD_API_SERVER_ENABLED", default = false)
+
 object DiscoverPostprocessInTemporal : Permanent<Boolean>(key = "platform.discover-postprocess-in-temporal", default = false)
 
 object UseStreamAttemptMetadata : Temporary<Boolean>(key = "platform.use-stream-attempt-metadata", default = false)

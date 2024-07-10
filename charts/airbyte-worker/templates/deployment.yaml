@@ -293,13 +293,22 @@ spec:
             configMapKeyRef:
               name: {{ .Release.Name }}-airbyte-env
               key: WORKERS_MICRONAUT_ENVIRONMENTS
+        - name: WORKLOAD_LAUNCHER_ENABLED
+          valueFrom:
+            configMapKeyRef:
+              name: {{ .Release.Name }}-airbyte-env
+              key: WORKLOAD_LAUNCHER_ENABLED
+        - name: WORKLOAD_API_SERVER_ENABLED
+          valueFrom:
+            configMapKeyRef:
+              name: {{ .Release.Name }}-airbyte-env
+              key: WORKLOAD_API_SERVER_ENABLED
         {{- if or (eq .Values.global.edition "pro") (eq .Values.global.edition "enterprise") }}
         - name: AIRBYTE_API_AUTH_HEADER_NAME
           value: "X-Airbyte-Auth"
         - name: AIRBYTE_API_AUTH_HEADER_VALUE
           value: "Internal worker"
         {{- end }}
-
         # SECRETS MANAGER
         - name: SECRET_PERSISTENCE
           value: {{ include "airbyte.secretPersistence" . }}
