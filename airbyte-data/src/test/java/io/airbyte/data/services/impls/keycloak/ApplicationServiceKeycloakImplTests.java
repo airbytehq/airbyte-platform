@@ -14,7 +14,6 @@ import static org.mockito.Mockito.when;
 
 import io.airbyte.commons.auth.config.AirbyteKeycloakConfiguration;
 import io.airbyte.commons.auth.keycloak.ClientScopeConfigurator;
-import io.airbyte.commons.auth.support.UserAuthenticationResolver;
 import io.airbyte.config.Application;
 import io.airbyte.config.User;
 import jakarta.ws.rs.BadRequestException;
@@ -52,7 +51,6 @@ class ApplicationServiceKeycloakImplTests {
   private final ClientResource clientResource = mock(ClientResource.class);
   private final UsersResource usersResource = mock(UsersResource.class);
   private final UserResource userResource = mock(UserResource.class);
-  private final UserAuthenticationResolver userAuthenticationResolver = mock(UserAuthenticationResolver.class);
   private final ClientScopeConfigurator clientScopeConfigurator = mock(ClientScopeConfigurator.class);
 
   private ApplicationServiceKeycloakImpl apiKeyServiceKeycloakImpl;
@@ -66,7 +64,6 @@ class ApplicationServiceKeycloakImplTests {
     when(keycloakClient.realm(REALM_NAME)).thenReturn(realmResource);
     when(realmResource.clients()).thenReturn(clientsResource);
     when(realmResource.users()).thenReturn(usersResource);
-    when(userAuthenticationResolver.resolveSsoRealm()).thenReturn(Optional.of(REALM_NAME));
 
     when(clientsResource.create(any(ClientRepresentation.class)))
         .thenReturn(Response.created(URI.create("https://company.example")).build());
@@ -74,7 +71,6 @@ class ApplicationServiceKeycloakImplTests {
     apiKeyServiceKeycloakImpl = spy(new ApplicationServiceKeycloakImpl(
         keycloakClient,
         keycloakConfiguration,
-        userAuthenticationResolver,
         clientScopeConfigurator,
         Duration.ofMinutes(30)));
   }
