@@ -27,6 +27,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
+import lombok.extern.slf4j.Slf4j;
 import org.keycloak.admin.client.Keycloak;
 import org.keycloak.admin.client.KeycloakBuilder;
 import org.keycloak.admin.client.resource.ClientsResource;
@@ -40,6 +41,7 @@ import org.keycloak.representations.idm.ClientRepresentation;
  * An Application for a user or non-user entity i.e. an organization.
  */
 @Singleton
+@Slf4j
 @RequiresAuthMode(AuthMode.OIDC)
 public class ApplicationServiceKeycloakImpl implements ApplicationService {
 

@@ -4652,7 +4652,6 @@ paths:
       operationId: applicationTokenRequest
       summary: Grant an Access Token for an Application.
       description: Takes the client_id and client_secret for an application and returns an Access Token.
-
   # Scoped Configuration
   /v1/scoped_configuration/list:
     post:
@@ -4938,6 +4937,176 @@ paths:
       security: []
       x-sdk-alias: getHealthCheck
       x-sdk-group: Health
+  /public/v1/applications:
+    get:
+      tags:
+        - public_applications
+        - public
+        - Applications
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApplicationReadList"
+              examples:
+                Application List Response Example:
+                  value:
+                    applications:
+                      [
+                        {
+                          id: 780d5bd9-a8a0-43cf-8b35-cc2061ad8319,
+                          name: test application,
+                          clientId: b6b159ce-07f4-4699-94b3-3e85b318852e,
+                          clientSecret: TG9yZW0gaXBzdW0gZG9sb3Igc2l0IGFtZXQsIGNvbnNlY3RldHVyIGFkaXBpc2NpbmcgZWxpdC4gU2VkIGNvbmRpbWVudHVtIG5lYyBsaWJlcm8gc2VkIGxvYm9ydGlzLg==,
+                          createdAt: 2024-06-09T21:50:30Z,
+                        },
+                      ]
+          description: List all Applications a User has permission to view.
+        "403":
+          description: Not allowed
+      operationId: publicListApplications
+      summary: List Applications
+      x-sdk-alias: listApplications
+      x-sdk-group: Applications
+    post:
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ApplicationCreate"
+            examples:
+              Application Creation Request Example:
+                value:
+                  name: test application
+        required: true
+      tags:
+        - public_applications
+        - public
+        - Applications
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApplicationRead"
+              examples:
+                Application Creation Response Example:
+                  value:
+                    id: 780d5bd9-a8a0-43cf-8b35-cc2061ad8319
+                    name: test application
+                    clientId: b6b159ce-07f4-4699-94b3-3e85b318852e
+                    clientSecret: TG9yZW0gaXBzdW0gZG9sb3Igc2l0IGFtZXQsIGNvbnNlY3RldHVyIGFkaXBpc2NpbmcgZWxpdC4gU2VkIGNvbmRpbWVudHVtIG5lYyBsaWJlcm8gc2VkIGxvYm9ydGlzLg==
+                    createdAt: 2024-06-09T21:50:30Z
+          description: "Creates a new Application."
+        "400":
+          description: Invalid data
+        "403":
+          description: Not allowed
+      operationId: publicCreateApplication
+      summary: Create an Application
+      x-sdk-alias: createApplication
+      x-sdk-group: Applications
+  /public/v1/applications/{applicationId}:
+    get:
+      tags:
+        - public_applications
+        - public
+        - Applications
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApplicationRead"
+              examples:
+                Application Get Response Example:
+                  value:
+                    id: 780d5bd9-a8a0-43cf-8b35-cc2061ad8319
+                    name: test application
+                    clientId: b6b159ce-07f4-4699-94b3-3e85b318852e
+                    clientSecret: TG9yZW0gaXBzdW0gZG9sb3Igc2l0IGFtZXQsIGNvbnNlY3RldHVyIGFkaXBpc2NpbmcgZWxpdC4gU2VkIGNvbmRpbWVudHVtIG5lYyBsaWJlcm8gc2VkIGxvYm9ydGlzLg==
+                    createdAt: 2024-06-09T21:50:30Z
+          description: Get an Application by the id in the path.
+        "403":
+          description: Not allowed
+        "404":
+          description: Not found
+      operationId: publicGetApplication
+      x-sdk-alias: getApplication
+      x-sdk-group: Applications
+      summary: Get an Application detail
+    delete:
+      tags:
+        - public_applications
+        - public
+        - Applications
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApplicationRead"
+              examples:
+                Application Delete Response Example:
+                  value:
+                    id: 780d5bd9-a8a0-43cf-8b35-cc2061ad8319
+                    name: test application
+                    clientId: b6b159ce-07f4-4699-94b3-3e85b318852e
+                    clientSecret: TG9yZW0gaXBzdW0gZG9sb3Igc2l0IGFtZXQsIGNvbnNlY3RldHVyIGFkaXBpc2NpbmcgZWxpdC4gU2VkIGNvbmRpbWVudHVtIG5lYyBsaWJlcm8gc2VkIGxvYm9ydGlzLg==
+                    createdAt: 2024-06-09T21:50:30Z
+          description: Delete an Application.
+        "403":
+          description: Not allowed
+        "404":
+          description: Not found
+      operationId: publicDeleteApplication
+      x-sdk-alias: deleteApplication
+      x-sdk-group: Applications
+      summary: Deletes an Application
+    parameters:
+      - name: applicationId
+        schema:
+          type: string
+        in: path
+        required: true
+  /public/v1/applications/token:
+    post:
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ApplicationTokenRequest"
+            examples:
+              Application Token Request Example:
+                value:
+                  clientId: 0da998a2-0d7b-49c7-bb6e-9f7eb9cc68a0
+                  clientSecret: TG9yZW0gaXBzdW0gZG9sb3Igc2l0IGFtZXQsIGNvbnNlY3RldHVyIGFkaXBpc2NpbmcgZWxpdC4gU2VkIGNvbmRpbWVudHVtIG5lYyBsaWJlcm8gc2VkIGxvYm9ydGlzLg==
+        required: true
+      tags:
+        - public_applications
+        - public
+        - Applications
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AccessToken"
+              examples:
+                Application Creation Response Example:
+                  value:
+                    access_token: TG9yZW0gaXBzdW0gZG9sb3Igc2l0IGFtZXQsIGNvbnNlY3RldHVyIGFkaXBpc2NpbmcgZWxpdC4gU2VkIGNvbmRpbWVudHVtIG5lYyBsaWJlcm8gc2VkIGxvYm9ydGlzLg==
+          description: "Creates an Access Token."
+        "400":
+          description: Invalid data
+        "403":
+          description: Not allowed
+      operationId: publicGetAccessToken
+      summary: Get an Access Token
+      x-sdk-alias: createAccessToken
+      x-sdk-group: Applications
+      security: []
   /public/v1/jobs:
     get:
       tags:
@@ -12037,6 +12206,7 @@ components:
       properties:
         name:
           type: string
+      x-sdk-component: true
     ApplicationId:
       type: string
       format: uuid
@@ -12058,6 +12228,7 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/ApplicationRead"
+      x-sdk-component: true
     ApplicationRead:
       required:
         - id
@@ -12078,6 +12249,7 @@ components:
         createdAt:
           type: integer
           format: int64
+      x-sdk-component: true
     ApplicationTokenRequest:
       required:
         - client_id
@@ -12088,6 +12260,7 @@ components:
           type: string
         client_secret:
           type: string
+      x-sdk-component: true
     AccessToken:
       required:
         - access_token
@@ -12095,6 +12268,7 @@ components:
       properties:
         access_token:
           type: string
+      x-sdk-component: true
     UserInvitationCreateRequestBody:
       type: object
       required:

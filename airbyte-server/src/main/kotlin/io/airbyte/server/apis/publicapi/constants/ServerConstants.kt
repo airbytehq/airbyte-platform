@@ -9,6 +9,8 @@ const val DESTINATION_TYPE = "destinationType"
 
 const val API_PATH = "/api"
 const val ROOT_PATH = "/public"
+const val APPLICATIONS_PATH = "$ROOT_PATH/v1/applications"
+const val APPLICATIONS_PATH_WITH_ID = "$ROOT_PATH/v1/applications/{applicationId}"
 const val CONNECTIONS_PATH = "$ROOT_PATH/v1/connections"
 const val CONNECTIONS_WITH_ID_PATH = "$CONNECTIONS_PATH/{connectionId}"
 const val STREAMS_PATH = "$ROOT_PATH/v1/streams"
