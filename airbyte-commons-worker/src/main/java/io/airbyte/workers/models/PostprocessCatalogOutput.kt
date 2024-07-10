@@ -1,17 +1,17 @@
 package io.airbyte.workers.models
 
-import io.airbyte.api.client.model.generated.SourceDiscoverSchemaRead
+import io.airbyte.config.CatalogDiff
 
 /**
  * A very basic discriminated union of a successful catalog postprocess and an error. Allows bypassing
  * extraneous exception wrapping / propagation. Written naively to allow interop with Java.
  */
-data class PostprocessCatalogOutput private constructor(val discoverRead: SourceDiscoverSchemaRead?, val error: Throwable?) {
+data class PostprocessCatalogOutput private constructor(val diff: CatalogDiff?, val error: Throwable?) {
   val isSuccess = error == null
   val isFailure = error != null
 
   companion object {
-    fun success(discoverRead: SourceDiscoverSchemaRead): PostprocessCatalogOutput = PostprocessCatalogOutput(discoverRead, null)
+    fun success(diff: CatalogDiff?): PostprocessCatalogOutput = PostprocessCatalogOutput(diff, null)
 
     fun failure(t: Throwable): PostprocessCatalogOutput = PostprocessCatalogOutput(null, t)
   }
