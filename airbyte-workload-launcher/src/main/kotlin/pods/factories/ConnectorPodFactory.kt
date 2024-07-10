@@ -153,9 +153,9 @@ class ConnectorPodFactory(
   }
 
   companion object {
-    val CHECK_OPERATION_NAME = "check"
-    val DISCOVER_OPERATION_NAME = "discover"
-    val SPEC_OPERATION_NAME = "spec"
+    const val CHECK_OPERATION_NAME = "check"
+    const val DISCOVER_OPERATION_NAME = "discover"
+    const val SPEC_OPERATION_NAME = "spec"
   }
 }
 
