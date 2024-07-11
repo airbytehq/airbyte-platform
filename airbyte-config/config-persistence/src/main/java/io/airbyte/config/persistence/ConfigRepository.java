@@ -35,7 +35,6 @@ import io.airbyte.data.services.OperationService;
 import io.airbyte.data.services.SourceService;
 import io.airbyte.data.services.WorkspaceService;
 import io.airbyte.protocol.models.AirbyteCatalog;
-import io.airbyte.protocol.models.ConfiguredAirbyteCatalog;
 import io.airbyte.protocol.models.StreamDescriptor;
 import io.airbyte.validation.json.JsonValidationException;
 import jakarta.annotation.Nonnull;
@@ -1512,25 +1511,6 @@ public class ConfigRepository {
   public List<StreamDescriptor> getAllStreamsForConnection(final UUID connectionId) throws ConfigNotFoundException, IOException {
     try {
       return connectionService.getAllStreamsForConnection(connectionId);
-    } catch (final io.airbyte.data.exceptions.ConfigNotFoundException e) {
-      throw new ConfigNotFoundException(e.getType(), e.getConfigId());
-    }
-  }
-
-  /**
-   * Get configured catalog for connection.
-   *
-   * @param connectionId connection id
-   * @return configured catalog
-   * @throws JsonValidationException if the workspace is or contains invalid json
-   * @throws ConfigNotFoundException if the config does not exist
-   * @throws IOException if there is an issue while interacting with db.
-   */
-  @Deprecated
-  public ConfiguredAirbyteCatalog getConfiguredCatalogForConnection(final UUID connectionId)
-      throws JsonValidationException, ConfigNotFoundException, IOException {
-    try {
-      return connectionService.getConfiguredCatalogForConnection(connectionId);
     } catch (final io.airbyte.data.exceptions.ConfigNotFoundException e) {
       throw new ConfigNotFoundException(e.getType(), e.getConfigId());
     }

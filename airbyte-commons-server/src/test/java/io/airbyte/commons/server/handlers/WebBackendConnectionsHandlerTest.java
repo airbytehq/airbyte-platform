@@ -105,6 +105,7 @@ import io.airbyte.config.persistence.ConfigRepository.StandardSyncQuery;
 import io.airbyte.config.secrets.JsonSecretsProcessor;
 import io.airbyte.config.secrets.SecretsRepositoryReader;
 import io.airbyte.data.helpers.ActorDefinitionVersionUpdater;
+import io.airbyte.data.services.ConnectionService;
 import io.airbyte.data.services.DestinationService;
 import io.airbyte.data.services.SecretPersistenceConfigService;
 import io.airbyte.data.services.SourceService;
@@ -163,6 +164,7 @@ class WebBackendConnectionsHandlerTest {
   private WebBackendConnectionRead expectedNoDiscoveryWithNewSchema;
   private EventRunner eventRunner;
   private ConfigRepository configRepository;
+  private ConnectionService connectionService;
   private ActorDefinitionVersionHelper actorDefinitionVersionHelper;
   private ActorDefinitionHandlerHelper actorDefinitionHandlerHelper;
   private final FeatureFlagClient featureFlagClient = mock(TestClient.class);
@@ -184,6 +186,7 @@ class WebBackendConnectionsHandlerTest {
     operationsHandler = mock(OperationsHandler.class);
     final JobHistoryHandler jobHistoryHandler = mock(JobHistoryHandler.class);
     configRepository = mock(ConfigRepository.class);
+    connectionService = mock(ConnectionService.class);
     schedulerHandler = mock(SchedulerHandler.class);
     eventRunner = mock(EventRunner.class);
     actorDefinitionVersionHelper = mock(ActorDefinitionVersionHelper.class);
@@ -242,6 +245,7 @@ class WebBackendConnectionsHandlerTest {
         operationsHandler,
         eventRunner,
         configRepository,
+        connectionService,
         actorDefinitionVersionHelper,
         featureFlagClient));
 
@@ -859,7 +863,7 @@ class WebBackendConnectionsHandlerTest {
         .notifySchemaChanges(expected.getNotifySchemaChanges())
         .notifySchemaChangesByEmail(expected.getNotifySchemaChangesByEmail());
 
-    when(configRepository.getConfiguredCatalogForConnection(expected.getConnectionId()))
+    when(connectionService.getConfiguredCatalogForConnection(expected.getConnectionId()))
         .thenReturn(ConnectionHelpers.generateBasicConfiguredAirbyteCatalog());
 
     final CatalogDiff catalogDiff = new CatalogDiff().transforms(List.of());
@@ -918,7 +922,7 @@ class WebBackendConnectionsHandlerTest {
         .syncCatalog(expected.getSyncCatalog())
         .operations(List.of(operationCreateOrUpdate));
 
-    when(configRepository.getConfiguredCatalogForConnection(expected.getConnectionId()))
+    when(connectionService.getConfiguredCatalogForConnection(expected.getConnectionId()))
         .thenReturn(ConnectionHelpers.generateBasicConfiguredAirbyteCatalog());
 
     final CatalogDiff catalogDiff = new CatalogDiff().transforms(List.of());
@@ -973,7 +977,7 @@ class WebBackendConnectionsHandlerTest {
     // state is per-stream
     final ConnectionIdRequestBody connectionIdRequestBody = new ConnectionIdRequestBody().connectionId(expected.getConnectionId());
     when(stateHandler.getState(connectionIdRequestBody)).thenReturn(new ConnectionState().stateType(ConnectionStateType.STREAM));
-    when(configRepository.getConfiguredCatalogForConnection(expected.getConnectionId()))
+    when(connectionService.getConfiguredCatalogForConnection(expected.getConnectionId()))
         .thenReturn(ConnectionHelpers.generateBasicConfiguredAirbyteCatalog());
 
     final StreamDescriptor streamDescriptorAdd = new StreamDescriptor().name("addStream");
@@ -1057,7 +1061,7 @@ class WebBackendConnectionsHandlerTest {
     final ConnectionIdRequestBody connectionIdRequestBody = new ConnectionIdRequestBody().connectionId(expected.getConnectionId());
     final ConfiguredAirbyteCatalog configuredAirbyteCatalog = ConnectionHelpers.generateBasicConfiguredAirbyteCatalog();
     when(stateHandler.getState(connectionIdRequestBody)).thenReturn(new ConnectionState().stateType(ConnectionStateType.STREAM));
-    when(configRepository.getConfiguredCatalogForConnection(expected.getConnectionId()))
+    when(connectionService.getConfiguredCatalogForConnection(expected.getConnectionId()))
         .thenReturn(configuredAirbyteCatalog);
 
     final CatalogDiff catalogDiff = new CatalogDiff().transforms(List.of());
@@ -1110,7 +1114,7 @@ class WebBackendConnectionsHandlerTest {
         .syncCatalog(expectedWithNewSchema.getSyncCatalog())
         .skipReset(true);
 
-    when(configRepository.getConfiguredCatalogForConnection(expected.getConnectionId()))
+    when(connectionService.getConfiguredCatalogForConnection(expected.getConnectionId()))
         .thenReturn(ConnectionHelpers.generateBasicConfiguredAirbyteCatalog());
     when(operationsHandler.listOperationsForConnection(any())).thenReturn(operationReadList);
     when(connectionsHandler.getConnection(expected.getConnectionId())).thenReturn(
@@ -1169,7 +1173,7 @@ class WebBackendConnectionsHandlerTest {
             + "\"json_schema\": {\"type\": \"object\", \"properties\": {\"id\": {\"type\": \"number\", \"airbyte_type\": \"integer\"}}}}]}"))));
     when(connectionsHandler.getDiff(any(), any(), any())).thenReturn(catalogDiff, catalogDiff);
 
-    when(configRepository.getConfiguredCatalogForConnection(expected.getConnectionId()))
+    when(connectionService.getConfiguredCatalogForConnection(expected.getConnectionId()))
         .thenReturn(ConnectionHelpers.generateBasicConfiguredAirbyteCatalog());
     when(operationsHandler.listOperationsForConnection(any())).thenReturn(operationReadList);
 
