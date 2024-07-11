@@ -152,7 +152,6 @@
   "form.noNeed": "No need!",
   "form.reset": "Reset",
   "form.clearData.successfulStart": "Data clearing started.",
-  "form.dockerError": "Could not find docker image",
   "form.edit": "Edit",
   "form.done": "Done",
   "form.prefix": "Destination Stream Prefix",
