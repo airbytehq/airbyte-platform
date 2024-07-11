@@ -7,6 +7,7 @@ import io.airbyte.commons.version.AirbyteProtocolVersion
 import io.airbyte.commons.version.AirbyteProtocolVersionRange
 import io.airbyte.config.ActorDefinitionBreakingChange
 import io.airbyte.config.ActorDefinitionVersion
+import io.airbyte.config.ActorType
 import io.airbyte.config.ConnectorRegistryDestinationDefinition
 import io.airbyte.config.ConnectorRegistrySourceDefinition
 import io.airbyte.config.StandardDestinationDefinition
@@ -16,6 +17,7 @@ import io.airbyte.config.init.ApplyDefinitionMetricsHelper.DefinitionProcessingF
 import io.airbyte.config.init.ApplyDefinitionMetricsHelper.DefinitionProcessingOutcome
 import io.airbyte.config.init.ApplyDefinitionMetricsHelper.DefinitionProcessingSuccessOutcome
 import io.airbyte.config.init.ApplyDefinitionMetricsHelper.getMetricAttributes
+import io.airbyte.config.persistence.ActorDefinitionVersionResolver
 import io.airbyte.config.specs.DefinitionsProvider
 import io.airbyte.data.exceptions.ConfigNotFoundException
 import io.airbyte.data.services.ActorDefinitionService
@@ -49,6 +51,7 @@ class ApplyDefinitionsHelper(
   private val destinationService: DestinationService,
   private val metricClient: MetricClient,
   private val supportStateUpdater: SupportStateUpdater,
+  private val actorDefinitionVersionResolver: ActorDefinitionVersionResolver,
 ) {
   private var newConnectorCount = 0
   private var changedConnectorCount = 0
@@ -59,6 +62,7 @@ class ApplyDefinitionsHelper(
    * @param updateAll - Whether we should overwrite all stored definitions. If true, we do not
    * consider whether a definition is in use before updating the definition and default
    * version.
+   * @param reImportVersionInUse - It forces the connector in use to re-import their connector definition.
    */
   @JvmOverloads
   @Throws(
@@ -67,7 +71,10 @@ class ApplyDefinitionsHelper(
     ConfigNotFoundException::class,
     io.airbyte.config.persistence.ConfigNotFoundException::class,
   )
-  fun apply(updateAll: Boolean = false) {
+  fun apply(
+    updateAll: Boolean = false,
+    reImportVersionInUse: Boolean = false,
+  ) {
     val latestSourceDefinitions = definitionsProvider.sourceDefinitions
     val latestDestinationDefinitions = definitionsProvider.destinationDefinitions
 
@@ -83,12 +90,11 @@ class ApplyDefinitionsHelper(
 
     newConnectorCount = 0
     changedConnectorCount = 0
-
     for (def in protocolCompatibleSourceDefinitions) {
-      applySourceDefinition(actorDefinitionIdsToDefaultVersionsMap, def, actorDefinitionIdsInUse, updateAll)
+      applySourceDefinition(actorDefinitionIdsToDefaultVersionsMap, def, actorDefinitionIdsInUse, updateAll, reImportVersionInUse)
     }
     for (def in protocolCompatibleDestinationDefinitions) {
-      applyDestinationDefinition(actorDefinitionIdsToDefaultVersionsMap, def, actorDefinitionIdsInUse, updateAll)
+      applyDestinationDefinition(actorDefinitionIdsToDefaultVersionsMap, def, actorDefinitionIdsInUse, updateAll, reImportVersionInUse)
     }
     supportStateUpdater.updateSupportStates()
 
@@ -102,6 +108,7 @@ class ApplyDefinitionsHelper(
     newDef: ConnectorRegistrySourceDefinition,
     actorDefinitionIdsInUse: Set<UUID>,
     updateAll: Boolean,
+    reImportVersionInUse: Boolean,
   ) {
     // Skip and log if unable to parse registry entry.
     val newSourceDef: StandardSourceDefinition
@@ -137,6 +144,8 @@ class ApplyDefinitionsHelper(
     val shouldUpdateActorDefinitionDefaultVersion =
       getShouldUpdateActorDefinitionDefaultVersion(currentDefaultADV, newADV, actorDefinitionIdsInUse, updateAll)
 
+    val shouldUpdateOldVersionMetadata = (newADV.dockerImageTag != currentDefaultADV.dockerImageTag) && reImportVersionInUse
+
     if (shouldUpdateActorDefinitionDefaultVersion) {
       log.info(
         "Updating default version for connector {}: {} -> {}",
@@ -147,6 +156,21 @@ class ApplyDefinitionsHelper(
       sourceService.writeConnectorMetadata(newSourceDef, newADV, breakingChangesForDef)
       changedConnectorCount++
       trackDefinitionProcessed(newDef.dockerRepository, newDef.dockerImageTag, DefinitionProcessingSuccessOutcome.DEFAULT_VERSION_UPDATED)
+    } else if (shouldUpdateOldVersionMetadata) {
+      log.info("Refreshing default version metadata for connector ${currentDefaultADV.dockerRepository}:${currentDefaultADV.dockerImageTag}")
+
+      val updatedADV =
+        actorDefinitionVersionResolver.fetchRemoteActorDefinitionVersion(
+          ActorType.SOURCE,
+          currentDefaultADV.dockerRepository,
+          currentDefaultADV.dockerImageTag,
+        )
+
+      updatedADV.ifPresent {
+        sourceService.writeConnectorMetadata(newSourceDef, it, breakingChangesForDef)
+        changedConnectorCount++
+        trackDefinitionProcessed(newDef.dockerRepository, newDef.dockerImageTag, DefinitionProcessingSuccessOutcome.REFRESH_VERSION)
+      }
     } else {
       sourceService.updateStandardSourceDefinition(newSourceDef)
       trackDefinitionProcessed(newDef.dockerRepository, newDef.dockerImageTag, DefinitionProcessingSuccessOutcome.VERSION_UNCHANGED)
@@ -159,6 +183,7 @@ class ApplyDefinitionsHelper(
     newDef: ConnectorRegistryDestinationDefinition,
     actorDefinitionIdsInUse: Set<UUID>,
     updateAll: Boolean,
+    reImportVersionInUse: Boolean,
   ) {
     // Skip and log if unable to parse registry entry.
     val newDestinationDef: StandardDestinationDefinition
@@ -194,6 +219,8 @@ class ApplyDefinitionsHelper(
     val shouldUpdateActorDefinitionDefaultVersion =
       getShouldUpdateActorDefinitionDefaultVersion(currentDefaultADV, newADV, actorDefinitionIdsInUse, updateAll)
 
+    val shouldUpdateOldVersion = getShouldRefreshActorDefinitionDefaultVersion(currentDefaultADV, actorDefinitionIdsInUse, reImportVersionInUse)
+
     if (shouldUpdateActorDefinitionDefaultVersion) {
       log.info(
         "Updating default version for connector {}: {} -> {}",
@@ -204,10 +231,35 @@ class ApplyDefinitionsHelper(
       destinationService.writeConnectorMetadata(newDestinationDef, newADV, breakingChangesForDef)
       changedConnectorCount++
       trackDefinitionProcessed(newDef.dockerRepository, newDef.dockerImageTag, DefinitionProcessingSuccessOutcome.DEFAULT_VERSION_UPDATED)
+    } else if (shouldUpdateOldVersion) {
+      log.info("Refreshing default version metadata for connector ${currentDefaultADV.dockerRepository}:${currentDefaultADV.dockerImageTag}")
+
+      val updatedADV =
+        actorDefinitionVersionResolver.fetchRemoteActorDefinitionVersion(
+          ActorType.DESTINATION,
+          currentDefaultADV.dockerRepository,
+          currentDefaultADV.dockerImageTag,
+        )
+
+      updatedADV.ifPresent {
+        destinationService.writeConnectorMetadata(newDestinationDef, it, breakingChangesForDef)
+        changedConnectorCount++
+        trackDefinitionProcessed(newDef.dockerRepository, newDef.dockerImageTag, DefinitionProcessingSuccessOutcome.DEFAULT_VERSION_UPDATED)
+      }
     } else {
       destinationService.updateStandardDestinationDefinition(newDestinationDef)
       trackDefinitionProcessed(newDef.dockerRepository, newDef.dockerImageTag, DefinitionProcessingSuccessOutcome.VERSION_UNCHANGED)
     }
+  }
+
+  private fun getShouldRefreshActorDefinitionDefaultVersion(
+    currentDefaultADV: ActorDefinitionVersion,
+    actorDefinitionIdsInUse: Set<UUID>,
+    reImportVersionInUse: Boolean,
+  ): Boolean {
+    val definitionIsInUse = actorDefinitionIdsInUse.contains(currentDefaultADV.actorDefinitionId)
+
+    return reImportVersionInUse && definitionIsInUse
   }
 
   private fun getShouldUpdateActorDefinitionDefaultVersion(
