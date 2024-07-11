@@ -12,6 +12,7 @@ import io.fabric8.kubernetes.api.model.CapabilitiesBuilder
 import io.fabric8.kubernetes.api.model.ContainerBuilder
 import io.fabric8.kubernetes.api.model.ContainerPort
 import io.fabric8.kubernetes.api.model.EnvVar
+import io.fabric8.kubernetes.api.model.LocalObjectReference
 import io.fabric8.kubernetes.api.model.Pod
 import io.fabric8.kubernetes.api.model.PodBuilder
 import io.fabric8.kubernetes.api.model.PodSecurityContext
@@ -33,6 +34,7 @@ class OrchestratorPodFactory(
   private val orchestratorEnvSingleton: OrchestratorEnvSingleton,
   @Value("\${airbyte.worker.job.kube.serviceAccount}") private val serviceAccount: String?,
   @Named("orchestratorContainerPorts") private val containerPorts: List<ContainerPort>,
+  @Named("discoverImagePullSecrets") private val imagePullSecrets: List<LocalObjectReference>,
   private val volumeFactory: VolumeFactory,
   private val initContainerFactory: InitContainerFactory,
 ) {
@@ -100,6 +102,7 @@ class OrchestratorPodFactory(
       .withRestartPolicy("Never")
       .withContainers(mainContainer)
       .withInitContainers(initContainer)
+      .withImagePullSecrets(imagePullSecrets)
       .withVolumes(volumes)
       .withNodeSelector<Any, Any>(nodeSelectors)
       .withSecurityContext(podSecurityContext())
