@@ -200,7 +200,7 @@ public class ConnectionApiController implements ConnectionApi {
   @Post(uri = "/events/get")
   @Secured({WORKSPACE_READER, ORGANIZATION_READER})
   @ExecuteOn(AirbyteTaskExecutors.IO)
-  public ConnectionEventWithDetails getConnectionEvent(final ConnectionEventIdRequestBody connectionEventIdRequestBody) {
+  public ConnectionEventWithDetails getConnectionEvent(@Body final ConnectionEventIdRequestBody connectionEventIdRequestBody) {
     return ApiHelper.execute(() -> connectionsHandler.getConnectionEvent(connectionEventIdRequestBody));
   }
 
@@ -208,7 +208,7 @@ public class ConnectionApiController implements ConnectionApi {
   @Post(uri = "/events/list")
   @Secured({WORKSPACE_READER, ORGANIZATION_READER})
   @ExecuteOn(AirbyteTaskExecutors.IO)
-  public ConnectionEventList listConnectionEvents(@Valid @NotNull final ConnectionEventsRequestBody connectionEventsRequestBody) {
+  public ConnectionEventList listConnectionEvents(@Body @Valid @NotNull final ConnectionEventsRequestBody connectionEventsRequestBody) {
     return ApiHelper.execute(() -> connectionsHandler.listConnectionEvents(connectionEventsRequestBody));
   }
 
