@@ -149,6 +149,7 @@ const ImplementationTable: React.FC<ImplementationTableProps> = ({ data, entity 
 
   return (
     <Table
+      rowId="entityId"
       columns={columns}
       data={data}
       testId={`${entity}sTable`}

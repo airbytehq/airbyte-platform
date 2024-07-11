@@ -122,6 +122,7 @@ export const StreamsList = () => {
       <FlexContainer direction="column" gap="sm" className={styles.tableContainer} data-survey="streamcentric">
         <div className={styles.tableContainer} data-survey="streamcentric">
           <Table
+            rowId={(row) => `${row.streamNamespace ?? ""}.${row.streamName}`}
             columns={columns}
             data={streamEntries}
             variant="inBlock"

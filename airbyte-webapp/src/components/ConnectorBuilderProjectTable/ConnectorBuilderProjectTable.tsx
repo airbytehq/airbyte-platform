@@ -299,6 +299,7 @@ export const ConnectorBuilderProjectTable = ({
 
   return (
     <Table
+      rowId="id"
       columns={columns}
       data={projects}
       className={styles.table}

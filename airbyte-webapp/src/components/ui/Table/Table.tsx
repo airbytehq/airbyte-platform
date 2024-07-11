@@ -26,6 +26,7 @@ export interface TableProps<T> {
   className?: string;
   columns: TableColumns<T>;
   data: T[];
+  rowId?: keyof T | ((row: T) => string);
   variant?: "default" | "light" | "white" | "inBlock";
   getRowCanExpand?: (data: Row<T>) => boolean;
   getIsRowExpanded?: (data: Row<T>) => boolean;
@@ -59,6 +60,7 @@ export const Table = <T,>({
   columns,
   data,
   variant = "default",
+  rowId,
   getRowCanExpand,
   getIsRowExpanded,
   expandedRow,
@@ -83,6 +85,15 @@ export const Table = <T,>({
     getRowCanExpand,
     getIsRowExpanded,
     enableSorting: sorting,
+    getRowId: rowId
+      ? (originalRow) => {
+          if (typeof rowId === "function") {
+            return rowId(originalRow);
+          }
+
+          return String(originalRow[rowId]);
+        }
+      : undefined,
   });
 
   const rows = table.getRowModel().rows;
