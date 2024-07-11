@@ -11,6 +11,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import com.google.common.collect.ImmutableMap;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.commons.version.Version;
+import io.airbyte.config.AbInternal;
 import io.airbyte.config.ActorDefinitionBreakingChange;
 import io.airbyte.config.ActorDefinitionResourceRequirements;
 import io.airbyte.config.ActorDefinitionVersion;
@@ -85,6 +86,7 @@ class ConnectorRegistryConvertersTest {
         .withPublic(true)
         .withCustom(false)
         .withSupportLevel(SupportLevel.CERTIFIED)
+        .withAbInternal(new AbInternal().withSl(200L))
         .withReleaseStage(ReleaseStage.GENERALLY_AVAILABLE)
         .withReleaseDate(RELEASE_DATE)
         .withProtocolVersion("doesnt matter")
@@ -110,6 +112,7 @@ class ConnectorRegistryConvertersTest {
         .withSpec(SPEC)
         .withDocumentationUrl(DOCS_URL)
         .withSupportLevel(SupportLevel.CERTIFIED)
+        .withInternalSupportLevel(200L)
         .withReleaseStage(ReleaseStage.GENERALLY_AVAILABLE)
         .withReleaseDate(RELEASE_DATE)
         .withProtocolVersion(PROTOCOL_VERSION)
@@ -160,6 +163,7 @@ class ConnectorRegistryConvertersTest {
         .withPublic(true)
         .withCustom(false)
         .withSupportLevel(SupportLevel.CERTIFIED)
+        .withAbInternal(new AbInternal().withSl(200L))
         .withReleaseStage(ReleaseStage.GENERALLY_AVAILABLE)
         .withReleaseDate(RELEASE_DATE)
         .withProtocolVersion(PROTOCOL_VERSION)
@@ -182,6 +186,7 @@ class ConnectorRegistryConvertersTest {
         .withSpec(SPEC)
         .withDocumentationUrl(DOCS_URL)
         .withSupportLevel(SupportLevel.CERTIFIED)
+        .withInternalSupportLevel(200L)
         .withReleaseStage(ReleaseStage.GENERALLY_AVAILABLE)
         .withReleaseDate(RELEASE_DATE)
         .withProtocolVersion(PROTOCOL_VERSION)

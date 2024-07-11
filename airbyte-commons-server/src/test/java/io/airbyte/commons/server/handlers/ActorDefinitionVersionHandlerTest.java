@@ -86,6 +86,7 @@ class ActorDefinitionVersionHandlerTest {
         .withActorDefinitionId(ACTOR_DEFINITION_ID)
         .withVersionId(UUID.randomUUID())
         .withSupportLevel(SupportLevel.NONE)
+        .withInternalSupportLevel(100L)
         .withReleaseStage(ReleaseStage.BETA)
         .withSupportState(SupportState.SUPPORTED)
         .withDockerRepository("airbyte/source-faker")

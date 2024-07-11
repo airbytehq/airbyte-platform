@@ -198,6 +198,7 @@ class WorkspacePersistenceTest extends BaseConfigDatabaseTest {
         .withActorDefinitionId(actorDefinitionId)
         .withDockerRepository("dockerhub")
         .withSupportLevel(SupportLevel.COMMUNITY)
+        .withInternalSupportLevel(100L)
         .withDockerImageTag("0.0.1")
         .withReleaseStage(releaseStage);
   }

@@ -527,7 +527,8 @@ public class DbConverter {
             : Jsons.deserialize(record.get(ACTOR_DEFINITION_VERSION.SUGGESTED_STREAMS).data(),
                 SuggestedStreams.class))
         .withSupportsRefreshes(record.get(ACTOR_DEFINITION_VERSION.SUPPORTS_REFRESHES))
-        .withSupportState(Enums.toEnum(record.get(ACTOR_DEFINITION_VERSION.SUPPORT_STATE, String.class), SupportState.class).orElseThrow());
+        .withSupportState(Enums.toEnum(record.get(ACTOR_DEFINITION_VERSION.SUPPORT_STATE, String.class), SupportState.class).orElseThrow())
+        .withInternalSupportLevel(record.get(ACTOR_DEFINITION_VERSION.INTERNAL_SUPPORT_LEVEL, Long.class));
   }
 
   public static SecretPersistenceCoordinate buildSecretPersistenceCoordinate(final Record record) {

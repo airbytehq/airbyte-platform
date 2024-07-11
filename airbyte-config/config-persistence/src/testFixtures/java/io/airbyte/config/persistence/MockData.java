@@ -470,6 +470,7 @@ public class MockData {
         .withDockerRepository("repository-4")
         .withSpec(connectorSpecification())
         .withSupportLevel(SupportLevel.COMMUNITY)
+        .withInternalSupportLevel(100L)
         .withProtocolVersion("0.2.0");
   }
 

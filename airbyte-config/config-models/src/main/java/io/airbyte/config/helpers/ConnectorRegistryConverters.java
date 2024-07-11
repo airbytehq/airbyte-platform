@@ -6,6 +6,7 @@ package io.airbyte.config.helpers;
 
 import io.airbyte.commons.version.AirbyteProtocolVersion;
 import io.airbyte.commons.version.Version;
+import io.airbyte.config.AbInternal;
 import io.airbyte.config.ActorDefinitionBreakingChange;
 import io.airbyte.config.ActorDefinitionVersion;
 import io.airbyte.config.BreakingChangeScope;
@@ -118,6 +119,7 @@ public class ConnectorRegistryConverters {
         .withProtocolVersion(getProtocolVersion(def.getSpec()))
         .withReleaseDate(def.getReleaseDate())
         .withSupportLevel(def.getSupportLevel() == null ? SupportLevel.NONE : def.getSupportLevel())
+        .withInternalSupportLevel(Optional.ofNullable(def.getAbInternal()).map(AbInternal::getSl).orElse(100L))
         .withReleaseStage(def.getReleaseStage())
         .withLastPublished(lastModified)
         .withCdkVersion(cdkVersion)
@@ -156,6 +158,7 @@ public class ConnectorRegistryConverters {
         .withReleaseDate(def.getReleaseDate())
         .withReleaseStage(def.getReleaseStage())
         .withSupportLevel(def.getSupportLevel() == null ? SupportLevel.NONE : def.getSupportLevel())
+        .withInternalSupportLevel(Optional.ofNullable(def.getAbInternal()).map(AbInternal::getSl).orElse(100L))
         .withLastPublished(lastModified)
         .withCdkVersion(cdkVersion)
         .withSupportsRefreshes(def.getSupportsRefreshes() != null && def.getSupportsRefreshes());

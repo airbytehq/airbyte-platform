@@ -516,6 +516,7 @@ class ActorDefinitionPersistenceTest extends BaseConfigDatabaseTest {
         .withDockerRepository("source-image-" + actorDefId)
         .withDockerImageTag(DOCKER_IMAGE_TAG)
         .withSupportLevel(SupportLevel.COMMUNITY)
+        .withInternalSupportLevel(100L)
         .withProtocolVersion("0.2.0");
   }
 

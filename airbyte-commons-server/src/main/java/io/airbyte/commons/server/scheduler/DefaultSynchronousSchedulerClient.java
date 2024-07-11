@@ -106,7 +106,8 @@ public class DefaultSynchronousSchedulerClient implements SynchronousSchedulerCl
         .withResourceRequirements(resourceRequirements);
 
     final UUID jobId = UUID.randomUUID();
-    final ConnectorJobReportingContext jobReportingContext = new ConnectorJobReportingContext(jobId, dockerImage, sourceVersion.getReleaseStage());
+    final ConnectorJobReportingContext jobReportingContext =
+        new ConnectorJobReportingContext(jobId, dockerImage, sourceVersion.getReleaseStage(), sourceVersion.getInternalSupportLevel());
     final String taskQueue = routerService.getTaskQueueForWorkspace(source.getWorkspaceId(), TemporalJobType.CHECK_CONNECTION);
 
     final ActorContext context = contextBuilder.fromSource(source);
@@ -145,7 +146,7 @@ public class DefaultSynchronousSchedulerClient implements SynchronousSchedulerCl
 
     final UUID jobId = UUID.randomUUID();
     final ConnectorJobReportingContext jobReportingContext =
-        new ConnectorJobReportingContext(jobId, dockerImage, destinationVersion.getReleaseStage());
+        new ConnectorJobReportingContext(jobId, dockerImage, destinationVersion.getReleaseStage(), destinationVersion.getInternalSupportLevel());
     final String taskQueue = routerService.getTaskQueueForWorkspace(destination.getWorkspaceId(), TemporalJobType.CHECK_CONNECTION);
 
     final ActorContext context = contextBuilder.fromDestination(destination);
@@ -185,7 +186,8 @@ public class DefaultSynchronousSchedulerClient implements SynchronousSchedulerCl
         .withResourceRequirements(actorDefinitionResourceRequirements);
 
     final UUID jobId = UUID.randomUUID();
-    final ConnectorJobReportingContext jobReportingContext = new ConnectorJobReportingContext(jobId, dockerImage, sourceVersion.getReleaseStage());
+    final ConnectorJobReportingContext jobReportingContext =
+        new ConnectorJobReportingContext(jobId, dockerImage, sourceVersion.getReleaseStage(), sourceVersion.getInternalSupportLevel());
 
     final String taskQueue = routerService.getTaskQueueForWorkspace(source.getWorkspaceId(), TemporalJobType.DISCOVER_SCHEMA);
 
@@ -208,7 +210,7 @@ public class DefaultSynchronousSchedulerClient implements SynchronousSchedulerCl
     final JobGetSpecConfig jobSpecConfig = new JobGetSpecConfig().withDockerImage(dockerImage).withIsCustomConnector(isCustomConnector);
 
     final UUID jobId = UUID.randomUUID();
-    final ConnectorJobReportingContext jobReportingContext = new ConnectorJobReportingContext(jobId, dockerImage, null);
+    final ConnectorJobReportingContext jobReportingContext = new ConnectorJobReportingContext(jobId, dockerImage, null, null);
 
     return execute(
         ConfigType.GET_SPEC,

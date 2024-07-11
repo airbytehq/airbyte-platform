@@ -87,6 +87,7 @@ class ActorDefinitionVersionPersistenceTest extends BaseConfigDatabaseTest {
         .withDockerImageTag("0.0.0")
         .withDockerRepository("overwrite me")
         .withSupportLevel(SupportLevel.COMMUNITY)
+        .withInternalSupportLevel(100L)
         .withSpec(new ConnectorSpecification().withAdditionalProperty("overwrite", "me").withProtocolVersion("0.0.0"));
   }
 
@@ -99,6 +100,7 @@ class ActorDefinitionVersionPersistenceTest extends BaseConfigDatabaseTest {
         .withDocumentationUrl("https://airbyte.io/docs/")
         .withReleaseStage(ReleaseStage.BETA)
         .withSupportLevel(SupportLevel.COMMUNITY)
+        .withInternalSupportLevel(100L)
         .withReleaseDate("2021-01-21")
         .withSuggestedStreams(new SuggestedStreams().withStreams(List.of("users")))
         .withProtocolVersion("0.1.0")
