@@ -12,12 +12,15 @@ import { InfoTooltip } from "components/ui/Tooltip";
 
 import { useListApplications } from "core/api";
 import { ApplicationRead } from "core/api/types/AirbyteClient";
+import { useAuthService } from "core/services/auth";
 
 import styles from "./ApplicationSettingsView.module.scss";
 import { CreateApplicationControl } from "./CreateApplicationControl";
 import { DeleteApplicationControl } from "./DeleteApplicationControl";
 import { GenerateTokenControl } from "./GenerateTokenControl";
+
 export const ApplicationSettingsView = () => {
+  const { authType } = useAuthService();
   const { applications } = useListApplications();
   const columnHelper = useMemo(() => createColumnHelper<ApplicationRead>(), []);
 
@@ -72,17 +75,19 @@ export const ApplicationSettingsView = () => {
                 clientId={props.row.original.clientId}
                 clientSecret={props.row.original.clientSecret}
               />
-              <DeleteApplicationControl
-                applicationId={props.row.original.id}
-                applicationName={props.row.original.name}
-              />
+              {authType !== "simple" && (
+                <DeleteApplicationControl
+                  applicationId={props.row.original.id}
+                  applicationName={props.row.original.name}
+                />
+              )}
             </FlexContainer>
           );
         },
         meta: { thClassName: styles.actionsColumn },
       }),
     ];
-  }, [columnHelper]);
+  }, [columnHelper, authType]);
 
   return (
     <>
@@ -91,11 +96,13 @@ export const ApplicationSettingsView = () => {
           <Heading as="h1">
             <FormattedMessage id="settings.applications" />
           </Heading>
-          <InfoTooltip>
-            <Text inverseColor align="center">
-              <FormattedMessage id="settings.applications.tooltip" />
-            </Text>
-          </InfoTooltip>
+          {authType !== "simple" && (
+            <InfoTooltip>
+              <Text inverseColor align="center">
+                <FormattedMessage id="settings.applications.tooltip" />
+              </Text>
+            </InfoTooltip>
+          )}
         </FlexContainer>
         <CreateApplicationControl />
       </FlexContainer>

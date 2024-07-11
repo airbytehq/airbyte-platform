@@ -62,6 +62,7 @@
   "sidebar.lightMode": "Light mode",
   "sidebar.darkMode": "Dark mode",
   "sidebar.beta": "Beta",
+  "sidebar.defaultUsername": "User",
 
   "form.error": "Error: {message}",
   "form.error.pk.missing": "Primary key missing",
