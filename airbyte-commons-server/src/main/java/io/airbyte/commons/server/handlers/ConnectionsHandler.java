@@ -50,6 +50,7 @@ import io.airbyte.api.model.generated.JobSyncResultRead;
 import io.airbyte.api.model.generated.JobWithAttemptsRead;
 import io.airbyte.api.model.generated.ListConnectionsForWorkspacesRequestBody;
 import io.airbyte.api.model.generated.NonBreakingChangesPreference;
+import io.airbyte.api.model.generated.PostprocessDiscoveredCatalogResult;
 import io.airbyte.api.model.generated.SourceDiscoverSchemaRead;
 import io.airbyte.api.model.generated.StreamDescriptor;
 import io.airbyte.api.model.generated.StreamStats;
@@ -1244,14 +1245,24 @@ public class ConnectionsHandler {
 
   public ConnectionAutoPropagateResult applySchemaChange(final ConnectionAutoPropagateSchemaChange request)
       throws JsonValidationException, ConfigNotFoundException, IOException {
-    LOGGER.info("Applying schema change for connection '{}' only", request.getConnectionId());
-    final ConnectionRead connection = buildConnectionRead(request.getConnectionId());
+    return applySchemaChange(request.getConnectionId(), request.getWorkspaceId(), request.getCatalogId(), request.getCatalog());
+  }
+
+  public ConnectionAutoPropagateResult applySchemaChange(
+                                                         final UUID connectionId,
+                                                         final UUID workspaceId,
+                                                         final UUID catalogId,
+                                                         final AirbyteCatalog catalog)
+      throws JsonValidationException, ConfigNotFoundException, IOException {
+
+    LOGGER.info("Applying schema change for connection '{}' only", connectionId);
+    final ConnectionRead connection = buildConnectionRead(connectionId);
     final Optional<io.airbyte.api.model.generated.AirbyteCatalog> catalogUsedToMakeConfiguredCatalog =
-        getConnectionAirbyteCatalog(request.getConnectionId());
+        getConnectionAirbyteCatalog(connectionId);
     final io.airbyte.api.model.generated.AirbyteCatalog currentCatalog = connection.getSyncCatalog();
     final CatalogDiff diffToApply = getDiff(
         catalogUsedToMakeConfiguredCatalog.orElse(currentCatalog),
-        request.getCatalog(),
+        catalog,
         CatalogConverter.toConfiguredProtocol(currentCatalog));
     final ConnectionUpdate updateObject =
         new ConnectionUpdate().connectionId(connection.getConnectionId());
@@ -1259,23 +1270,23 @@ public class ConnectionsHandler {
         configRepository.getDestinationDefinitionFromConnection(connection.getConnectionId()).getDestinationDefinitionId();
     final var supportedDestinationSyncModes =
         connectorSpecHandler.getDestinationSpecification(new DestinationDefinitionIdWithWorkspaceId().destinationDefinitionId(destinationDefinitionId)
-            .workspaceId(request.getWorkspaceId())).getSupportedDestinationSyncModes();
-    final var workspace = configRepository.getStandardWorkspaceNoSecrets(request.getWorkspaceId(), false);
+            .workspaceId(workspaceId)).getSupportedDestinationSyncModes();
+    final var workspace = configRepository.getStandardWorkspaceNoSecrets(workspaceId, false);
     final var source = configRepository.getSourceConnection(connection.getSourceId());
     final CatalogDiff appliedDiff;
     if (AutoPropagateSchemaChangeHelper.shouldAutoPropagate(diffToApply, connection)) {
       // NOTE: appliedDiff is the part of the diff that were actually applied.
       appliedDiff = applySchemaChangeInternal(updateObject.getConnectionId(),
-          request.getWorkspaceId(),
+          workspaceId,
           updateObject,
           currentCatalog,
-          request.getCatalog(),
+          catalog,
           diffToApply.getTransforms(),
-          request.getCatalogId(),
+          catalogId,
           connection.getNonBreakingChangesPreference(), supportedDestinationSyncModes);
       updateConnection(updateObject);
       LOGGER.info("Propagating changes for connectionId: '{}', new catalogId '{}'",
-          connection.getConnectionId(), request.getCatalogId());
+          connection.getConnectionId(), catalogId);
       notificationHelper.notifySchemaPropagated(
           workspace.getNotificationSettings(),
           appliedDiff,
@@ -1380,6 +1391,21 @@ public class ConnectionsHandler {
     return streamToJobRead.entrySet().stream()
         .map(entry -> buildLastJobPerStreamReadItem(entry.getKey(), entry.getValue().getJob(), memo))
         .collect(Collectors.toList());
+  }
+
+  /**
+   * Does all secondary steps from a source discover for a connection. Currently, it calculates the
+   * diff, conditionally disables and auto-propagates schema changes.
+   */
+  public PostprocessDiscoveredCatalogResult postprocessDiscoveredCatalog(final UUID connectionId, final UUID discoveredCatalogId)
+      throws JsonValidationException, ConfigNotFoundException, IOException {
+    final var read = diffCatalogAndConditionallyDisable(connectionId, discoveredCatalogId);
+
+    final var autoPropResult =
+        applySchemaChange(connectionId, workspaceHelper.getWorkspaceForConnectionId(connectionId), discoveredCatalogId, read.getCatalog());
+    final var diff = autoPropResult.getPropagatedDiff();
+
+    return new PostprocessDiscoveredCatalogResult().appliedDiff(diff);
   }
 
   /**

@@ -19,7 +19,9 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -70,6 +72,7 @@ import io.airbyte.api.model.generated.NamespaceDefinitionType;
 import io.airbyte.api.model.generated.ResourceRequirements;
 import io.airbyte.api.model.generated.SchemaChangeBackfillPreference;
 import io.airbyte.api.model.generated.SelectedFieldInfo;
+import io.airbyte.api.model.generated.SourceDiscoverSchemaRead;
 import io.airbyte.api.model.generated.SourceSearch;
 import io.airbyte.api.model.generated.StreamDescriptor;
 import io.airbyte.api.model.generated.StreamStats;
@@ -2604,6 +2607,24 @@ class ConnectionsHandlerTest {
       verify(configRepository).writeStandardSync(syncCaptor.capture());
       final StandardSync savedSync = syncCaptor.getValue();
       assertEquals(Status.INACTIVE, savedSync.getStatus());
+    }
+
+    @Test
+    void postprocessDiscoveredComposesDiffingAndSchemaPropagation() throws JsonValidationException, ConfigNotFoundException, IOException {
+      final var catalog = CatalogConverter.toApi(Jsons.clone(airbyteCatalog), SOURCE_VERSION);
+      final var diffResult = new SourceDiscoverSchemaRead().catalog(catalog);
+      final var transform = new StreamTransform().transformType(StreamTransform.TransformTypeEnum.ADD_STREAM)
+          .streamDescriptor(new StreamDescriptor().namespace(A_DIFFERENT_NAMESPACE).name(A_DIFFERENT_STREAM));
+      final var propagatedDiff = new CatalogDiff().transforms(List.of(transform));
+      final var autoPropResult = new ConnectionAutoPropagateResult().propagatedDiff(propagatedDiff);
+
+      final var spiedConnectionsHandler = spy(connectionsHandler);
+      doReturn(diffResult).when(spiedConnectionsHandler).diffCatalogAndConditionallyDisable(CONNECTION_ID, DISCOVERED_CATALOG_ID);
+      doReturn(autoPropResult).when(spiedConnectionsHandler).applySchemaChange(CONNECTION_ID, WORKSPACE_ID, DISCOVERED_CATALOG_ID, catalog);
+
+      final var result = spiedConnectionsHandler.postprocessDiscoveredCatalog(CONNECTION_ID, DISCOVERED_CATALOG_ID);
+
+      assertEquals(propagatedDiff, result.getAppliedDiff());
     }
 
   }

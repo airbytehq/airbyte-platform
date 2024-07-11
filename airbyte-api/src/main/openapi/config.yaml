@@ -2357,17 +2357,17 @@ paths:
           $ref: "#/components/responses/NotFoundResponse"
         "422":
           $ref: "#/components/responses/InvalidInputResponse"
-  /v1/connections/diff_catalog:
+  /v1/connections/postprocess_discovered_catalog:
     post:
       tags:
         - connection
       summary: Generate the diff between stored catalog for the connection and catalog provided and postprocess as necessary
-      operationId: diffCatalogForConnection
+      operationId: postprocessDiscoveredCatalogForConnection
       requestBody:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/DiffCatalogRequestBody"
+              $ref: "#/components/schemas/PostprocessDiscoveredCatalogRequestBody"
         required: true
       responses:
         "200":
@@ -2375,7 +2375,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/SourceDiscoverSchemaRead"
+                $ref: "#/components/schemas/PostprocessDiscoveredCatalogResult"
         "404":
           $ref: "#/components/responses/NotFoundResponse"
         "422":
@@ -7852,7 +7852,7 @@ components:
           type: boolean
         priority:
           $ref: "#/components/schemas/WorkloadPriority"
-    DiffCatalogRequestBody:
+    PostprocessDiscoveredCatalogRequestBody:
       type: object
       required:
         - catalogId
@@ -7864,6 +7864,11 @@ components:
         connectionId:
           type: string
           format: uuid
+    PostprocessDiscoveredCatalogResult:
+      type: object
+      properties:
+        appliedDiff:
+          $ref: "#/components/schemas/CatalogDiff"
     WorkloadPriority:
       type: string
       enum:

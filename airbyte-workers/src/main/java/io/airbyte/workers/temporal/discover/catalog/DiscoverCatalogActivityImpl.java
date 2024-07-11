@@ -14,14 +14,13 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.google.common.annotations.VisibleForTesting;
 import datadog.trace.api.Trace;
 import io.airbyte.api.client.AirbyteApiClient;
-import io.airbyte.api.client.model.generated.ConnectionAutoPropagateSchemaChange;
 import io.airbyte.api.client.model.generated.ConnectionIdRequestBody;
-import io.airbyte.api.client.model.generated.DiffCatalogRequestBody;
 import io.airbyte.api.client.model.generated.Geography;
+import io.airbyte.api.client.model.generated.PostprocessDiscoveredCatalogRequestBody;
+import io.airbyte.api.client.model.generated.PostprocessDiscoveredCatalogResult;
 import io.airbyte.api.client.model.generated.ScopeType;
 import io.airbyte.api.client.model.generated.SecretPersistenceConfig;
 import io.airbyte.api.client.model.generated.SecretPersistenceConfigGetRequestBody;
-import io.airbyte.api.client.model.generated.SourceDiscoverSchemaRead;
 import io.airbyte.api.client.model.generated.WorkspaceIdRequestBody;
 import io.airbyte.commons.converters.ConnectorConfigUpdater;
 import io.airbyte.commons.features.FeatureFlags;
@@ -284,21 +283,13 @@ public class DiscoverCatalogActivityImpl implements DiscoverCatalogActivity {
       Objects.requireNonNull(input.getCatalogId());
       Objects.requireNonNull(input.getWorkspaceId());
 
-      final var reqBody = new DiffCatalogRequestBody(
+      final var reqBody = new PostprocessDiscoveredCatalogRequestBody(
           input.getCatalogId(),
           input.getConnectionId());
 
-      final SourceDiscoverSchemaRead resp = airbyteApiClient.getConnectionApi().diffCatalogForConnection(reqBody);
-      Objects.requireNonNull(resp.getCatalog());
+      final PostprocessDiscoveredCatalogResult resp = airbyteApiClient.getConnectionApi().postprocessDiscoveredCatalogForConnection(reqBody);
 
-      final var request = new ConnectionAutoPropagateSchemaChange(
-          resp.getCatalog(),
-          input.getCatalogId(),
-          input.getConnectionId(),
-          input.getWorkspaceId());
-
-      final var propagatedDiff = airbyteApiClient.getConnectionApi().applySchemaChangeForConnection(request).getPropagatedDiff();
-      final var domainDiff = propagatedDiff != null ? CatalogDiffConverter.toDomain(propagatedDiff) : null;
+      final var domainDiff = resp.getAppliedDiff() != null ? CatalogDiffConverter.toDomain(resp.getAppliedDiff()) : null;
 
       return PostprocessCatalogOutput.Companion.success(domainDiff);
     } catch (final Exception e) {

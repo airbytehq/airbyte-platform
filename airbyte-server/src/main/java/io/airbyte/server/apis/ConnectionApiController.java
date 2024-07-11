@@ -37,13 +37,13 @@ import io.airbyte.api.model.generated.ConnectionStreamRequestBody;
 import io.airbyte.api.model.generated.ConnectionSyncProgressRead;
 import io.airbyte.api.model.generated.ConnectionUpdate;
 import io.airbyte.api.model.generated.ConnectionUptimeHistoryRequestBody;
-import io.airbyte.api.model.generated.DiffCatalogRequestBody;
 import io.airbyte.api.model.generated.GetTaskQueueNameRequest;
 import io.airbyte.api.model.generated.InternalOperationResult;
 import io.airbyte.api.model.generated.JobInfoRead;
 import io.airbyte.api.model.generated.JobSyncResultRead;
 import io.airbyte.api.model.generated.ListConnectionsForWorkspacesRequestBody;
-import io.airbyte.api.model.generated.SourceDiscoverSchemaRead;
+import io.airbyte.api.model.generated.PostprocessDiscoveredCatalogRequestBody;
+import io.airbyte.api.model.generated.PostprocessDiscoveredCatalogResult;
 import io.airbyte.api.model.generated.TaskQueueNameRead;
 import io.airbyte.api.model.generated.WorkspaceIdRequestBody;
 import io.airbyte.commons.server.errors.BadRequestException;
@@ -325,11 +325,12 @@ public class ConnectionApiController implements ConnectionApi {
     return ApiHelper.execute(() -> connectionsHandler.applySchemaChange(request));
   }
 
-  @Post("/diff_catalog")
+  @Override
+  @Post("/postprocess_discovered_catalog")
   @Secured({WORKSPACE_EDITOR, ORGANIZATION_EDITOR})
-  @ExecuteOn(AirbyteTaskExecutors.SCHEDULER)
-  public SourceDiscoverSchemaRead diffCatalogForConnection(final DiffCatalogRequestBody req) {
-    return ApiHelper.execute(() -> connectionsHandler.diffCatalogAndConditionallyDisable(req.getConnectionId(), req.getCatalogId()));
+  @ExecuteOn(AirbyteTaskExecutors.IO)
+  public PostprocessDiscoveredCatalogResult postprocessDiscoveredCatalogForConnection(@Body final PostprocessDiscoveredCatalogRequestBody req) {
+    return ApiHelper.execute(() -> connectionsHandler.postprocessDiscoveredCatalog(req.getConnectionId(), req.getCatalogId()));
   }
 
   @Override
