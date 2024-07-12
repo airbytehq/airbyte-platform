@@ -7,6 +7,7 @@ plugins {
   id("io.airbyte.gradle.docker")
   id("org.openapi.generator")
   id("io.airbyte.gradle.publish")
+  id("io.airbyte.gradle.kube-reload")
 }
 
 dependencies {
@@ -80,6 +81,11 @@ airbyte {
   }
   docker {
     imageName = "connector-builder-server"
+  }
+
+  kubeReload {
+    deployment = "ab-connector-builder-server"
+    container = "airbyte-connector-builder-server"
   }
 }
 

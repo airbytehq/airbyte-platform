@@ -119,6 +119,33 @@ Developing connectors that require 3rd party libraries can be done by running th
     
 6. Follow the standard instructions
 
+### Developing in a K8S Deployment
+_**⚠️ Warning**: Using Local CDKs, or Custom Components is not supported at this time_
+
+_**💡 When to use**: You are modifying the API (spec/controller/handler) and want a faster iteration cycle_
+
+#### Build and Deploy
+Ensure you have k8s running
+```bash
+make vm.up
+make build.oss
+make deploy.oss
+```
+
+If successful you should have an OSS instance available on your machine at https://local.airbyte.dev
+
+#### Fast Reload Changes
+After you have made your modifications to the builder server you can "warm" reload the changes into the k8s cluster via
+
+```bash
+./gradlew -p oss :airbyte-connector-builder-server:kubeReload
+```
+
+you can also do this for the regular airbyte server
+
+```bash
+./gradlew -p oss :airbyte-server:kubeReload
+```
 ## OpenAPI generation
 
 Run it via Gradle by running this from the Airbyte project root:
