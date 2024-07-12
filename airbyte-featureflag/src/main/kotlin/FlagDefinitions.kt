@@ -191,5 +191,3 @@ object WorkloadLauncherEnabled : EnvVar(envVar = "WORKLOAD_LAUNCHER_ENABLED", de
 object WorkloadApiServerEnabled : EnvVar(envVar = "WORKLOAD_API_SERVER_ENABLED", default = false)
 
 object DiscoverPostprocessInTemporal : Permanent<Boolean>(key = "platform.discover-postprocess-in-temporal", default = false)
-
-object UseStreamAttemptMetadata : Temporary<Boolean>(key = "platform.use-stream-attempt-metadata", default = false)

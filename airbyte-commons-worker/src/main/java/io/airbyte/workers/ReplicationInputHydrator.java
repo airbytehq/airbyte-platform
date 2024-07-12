@@ -36,11 +36,9 @@ import io.airbyte.config.helpers.StateMessageHelper;
 import io.airbyte.config.secrets.SecretsRepositoryReader;
 import io.airbyte.config.secrets.persistence.RuntimeSecretPersistence;
 import io.airbyte.featureflag.AutoBackfillOnNewColumns;
-import io.airbyte.featureflag.Connection;
 import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.featureflag.Organization;
 import io.airbyte.featureflag.UseRuntimeSecretPersistence;
-import io.airbyte.featureflag.UseStreamAttemptMetadata;
 import io.airbyte.featureflag.Workspace;
 import io.airbyte.metrics.lib.ApmTraceUtils;
 import io.airbyte.persistence.job.models.ReplicationInput;
@@ -119,17 +117,15 @@ public class ReplicationInputHydrator {
           getUpdatedStateForBackfill(state, replicationActivityInput.getSchemaRefreshOutput(), replicationActivityInput.getConnectionId(), catalog);
     }
 
-    if (featureFlagClient.boolVariation(UseStreamAttemptMetadata.INSTANCE, new Connection(replicationActivityInput.getConnectionId()))) {
-      try {
-        trackBackfillAndResume(
-            jobId,
-            replicationActivityInput.getJobRunConfig().getAttemptId(),
-            resumableFullRefreshStatsHelper.getStreamsWithStates(state).stream().toList(),
-            streamsToBackfill);
-      } catch (final Exception e) {
-        LOGGER.error("Failed to track stream metadata for connectionId:{} attempt:{}", replicationActivityInput.getConnectionId(),
-            replicationActivityInput.getJobRunConfig().getAttemptId(), e);
-      }
+    try {
+      trackBackfillAndResume(
+          jobId,
+          replicationActivityInput.getJobRunConfig().getAttemptId(),
+          resumableFullRefreshStatsHelper.getStreamsWithStates(state).stream().toList(),
+          streamsToBackfill);
+    } catch (final Exception e) {
+      LOGGER.error("Failed to track stream metadata for connectionId:{} attempt:{}", replicationActivityInput.getConnectionId(),
+          replicationActivityInput.getJobRunConfig().getAttemptId(), e);
     }
 
     // Hydrate the secrets.
