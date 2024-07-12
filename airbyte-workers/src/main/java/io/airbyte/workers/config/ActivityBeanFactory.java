@@ -27,6 +27,7 @@ import io.airbyte.workers.temporal.spec.SpecActivity;
 import io.airbyte.workers.temporal.sync.RefreshSchemaActivity;
 import io.airbyte.workers.temporal.sync.ReplicationActivity;
 import io.airbyte.workers.temporal.sync.ReportRunTimeActivity;
+import io.airbyte.workers.temporal.sync.SyncFeatureFlagFetcherActivity;
 import io.airbyte.workers.temporal.sync.WebhookOperationActivity;
 import io.airbyte.workers.temporal.sync.WorkloadFeatureFlagActivity;
 import io.micronaut.context.annotation.Factory;
@@ -109,15 +110,16 @@ public class ActivityBeanFactory {
 
   @Singleton
   @Named("syncActivities")
-  public List<Object> syncActivities(
-                                     final ReplicationActivity replicationActivity,
+  public List<Object> syncActivities(final ReplicationActivity replicationActivity,
                                      final WebhookOperationActivity webhookOperationActivity,
                                      final ConfigFetchActivity configFetchActivity,
                                      final RefreshSchemaActivity refreshSchemaActivity,
                                      final WorkloadFeatureFlagActivity workloadFeatureFlagActivity,
-                                     final ReportRunTimeActivity reportRunTimeActivity) {
-    return List.of(replicationActivity, webhookOperationActivity, configFetchActivity,
-        refreshSchemaActivity, workloadFeatureFlagActivity, reportRunTimeActivity);
+                                     final ReportRunTimeActivity reportRunTimeActivity,
+                                     final SyncFeatureFlagFetcherActivity syncFeatureFlagFetcherActivity,
+                                     final RouteToSyncTaskQueueActivity routeToSyncTaskQueueActivity) {
+    return List.of(replicationActivity, webhookOperationActivity, configFetchActivity, refreshSchemaActivity,
+        workloadFeatureFlagActivity, reportRunTimeActivity, syncFeatureFlagFetcherActivity, routeToSyncTaskQueueActivity);
   }
 
   @Singleton

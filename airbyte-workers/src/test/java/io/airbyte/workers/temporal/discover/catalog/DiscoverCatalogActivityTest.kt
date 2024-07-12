@@ -21,8 +21,10 @@ import io.airbyte.config.StandardDiscoverCatalogInput
 import io.airbyte.config.WorkloadPriority
 import io.airbyte.config.helpers.LogConfigs
 import io.airbyte.config.secrets.SecretsRepositoryReader
+import io.airbyte.featureflag.DiscoverPostprocessInTemporal
 import io.airbyte.featureflag.FeatureFlagClient
 import io.airbyte.featureflag.TestClient
+import io.airbyte.featureflag.Workspace
 import io.airbyte.metrics.lib.MetricClient
 import io.airbyte.persistence.job.models.IntegrationLauncherConfig
 import io.airbyte.persistence.job.models.JobRunConfig
@@ -33,6 +35,7 @@ import io.airbyte.workers.models.PostprocessCatalogInput
 import io.airbyte.workers.models.PostprocessCatalogOutput
 import io.airbyte.workers.process.ProcessFactory
 import io.airbyte.workers.sync.WorkloadClient
+import io.airbyte.workers.temporal.discover.catalog.DiscoverCatalogActivityImpl.DISCOVER_CATALOG_SNAP_DURATION
 import io.airbyte.workers.workload.JobOutputDocStore
 import io.airbyte.workers.workload.WorkloadIdGenerator
 import io.airbyte.workload.api.client.generated.WorkloadApi
@@ -46,6 +49,8 @@ import io.mockk.verify
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.params.ParameterizedTest
+import org.junit.jupiter.params.provider.ValueSource
 import java.io.IOException
 import java.nio.file.Path
 import java.util.Optional
@@ -64,7 +69,7 @@ class DiscoverCatalogActivityTest {
   private val migratorFactory: AirbyteProtocolVersionedMigratorFactory = mockk()
   private val featureFlags: FeatureFlags = mockk()
   private val metricClient: MetricClient = mockk()
-  private val featureFlagClient: FeatureFlagClient = TestClient()
+  private val featureFlagClient: FeatureFlagClient = spyk(TestClient())
   private val gsonPksExtractor: GsonPksExtractor = mockk()
   private val workloadApi: WorkloadApi = mockk()
   private val connectionApi: ConnectionApi = mockk()
@@ -100,11 +105,13 @@ class DiscoverCatalogActivityTest {
       )
   }
 
-  @Test
-  fun runWithWorkload() {
+  @ParameterizedTest
+  @ValueSource(booleans = [ true, false ])
+  fun runWithWorkload(withNewWorkloadName: Boolean) {
     val jobId = "123"
     val attemptNumber = 456
     val actorDefinitionId = UUID.randomUUID()
+    val actorId = UUID.randomUUID()
     val workloadId = "789"
     val workspaceId = UUID.randomUUID()
     val connectionId = UUID.randomUUID()
@@ -118,10 +125,19 @@ class DiscoverCatalogActivityTest {
         .withActorContext(
           ActorContext()
             .withWorkspaceId(workspaceId)
-            .withActorDefinitionId(actorDefinitionId),
+            .withActorDefinitionId(actorDefinitionId)
+            .withActorId(actorId),
         )
-    input.launcherConfig = IntegrationLauncherConfig().withConnectionId(connectionId).withPriority(WorkloadPriority.DEFAULT)
-    every { workloadIdGenerator.generateDiscoverWorkloadId(actorDefinitionId, jobId, attemptNumber) }.returns(workloadId)
+    input.launcherConfig =
+      IntegrationLauncherConfig().withConnectionId(
+        connectionId,
+      ).withWorkspaceId(workspaceId).withPriority(WorkloadPriority.DEFAULT)
+    every { featureFlagClient.boolVariation(DiscoverPostprocessInTemporal, Workspace(input.launcherConfig.workspaceId)) }.returns(withNewWorkloadName)
+    if (withNewWorkloadName) {
+      every { workloadIdGenerator.generateDiscoverWorkloadIdV2WithSnap(eq(actorId), any(), eq(DISCOVER_CATALOG_SNAP_DURATION)) }.returns(workloadId)
+    } else {
+      every { workloadIdGenerator.generateDiscoverWorkloadId(actorDefinitionId, jobId, attemptNumber) }.returns(workloadId)
+    }
     every { discoverCatalogActivity.getGeography(Optional.of(connectionId), Optional.of(workspaceId)) }.returns(Geography.AUTO)
     every { workloadApi.workloadCreate(any()) }.returns(Unit)
     every {

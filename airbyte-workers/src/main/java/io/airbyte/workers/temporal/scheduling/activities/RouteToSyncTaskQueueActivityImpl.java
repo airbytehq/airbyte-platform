@@ -52,6 +52,12 @@ public class RouteToSyncTaskQueueActivityImpl implements RouteToSyncTaskQueueAct
     return routeToTask(input, TemporalJobType.CHECK_CONNECTION);
   }
 
+  @Trace(operationName = ACTIVITY_TRACE_OPERATION_NAME)
+  @Override
+  public RouteToSyncTaskQueueOutput routeToDiscoverCatalog(final RouteToSyncTaskQueueInput input) {
+    return routeToTask(input, TemporalJobType.DISCOVER_SCHEMA);
+  }
+
   @VisibleForTesting
   protected RouteToSyncTaskQueueOutput routeToTask(final RouteToSyncTaskQueueInput input, final TemporalJobType jobType) {
     ApmTraceUtils.addTagsToTrace(Map.of(CONNECTION_ID_KEY, input.getConnectionId()));

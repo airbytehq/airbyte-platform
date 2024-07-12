@@ -11,11 +11,22 @@ import static io.airbyte.metrics.lib.ApmTraceConstants.Tags.JOB_ID_KEY;
 import static io.airbyte.metrics.lib.ApmTraceConstants.Tags.SOURCE_DOCKER_IMAGE_KEY;
 import static io.airbyte.metrics.lib.ApmTraceConstants.WORKFLOW_TRACE_OPERATION_NAME;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.Charsets;
+import com.google.common.hash.HashFunction;
+import com.google.common.hash.Hashing;
 import datadog.trace.api.Trace;
 import io.airbyte.api.client.model.generated.ConnectionStatus;
+import io.airbyte.commons.helper.DockerImageName;
+import io.airbyte.commons.json.Jsons;
 import io.airbyte.commons.temporal.annotations.TemporalActivityStub;
+import io.airbyte.commons.temporal.scheduling.DiscoverCatalogAndAutoPropagateWorkflow;
 import io.airbyte.commons.temporal.scheduling.SyncWorkflow;
+import io.airbyte.config.ActorContext;
+import io.airbyte.config.ActorType;
 import io.airbyte.config.OperatorWebhookInput;
+import io.airbyte.config.StandardDiscoverCatalogInput;
 import io.airbyte.config.StandardSyncInput;
 import io.airbyte.config.StandardSyncOperation;
 import io.airbyte.config.StandardSyncOperation.OperatorType;
@@ -24,6 +35,7 @@ import io.airbyte.config.StandardSyncSummary;
 import io.airbyte.config.StandardSyncSummary.ReplicationStatus;
 import io.airbyte.config.SyncStats;
 import io.airbyte.config.WebhookOperationSummary;
+import io.airbyte.config.WorkloadPriority;
 import io.airbyte.metrics.lib.ApmTraceUtils;
 import io.airbyte.persistence.job.models.IntegrationLauncherConfig;
 import io.airbyte.persistence.job.models.JobRunConfig;
@@ -31,7 +43,10 @@ import io.airbyte.workers.models.RefreshSchemaActivityInput;
 import io.airbyte.workers.models.RefreshSchemaActivityOutput;
 import io.airbyte.workers.models.ReplicationActivityInput;
 import io.airbyte.workers.temporal.activities.ReportRunTimeActivityInput;
+import io.airbyte.workers.temporal.activities.SyncFeatureFlagFetcherInput;
 import io.airbyte.workers.temporal.scheduling.activities.ConfigFetchActivity;
+import io.airbyte.workers.temporal.scheduling.activities.RouteToSyncTaskQueueActivity;
+import io.temporal.workflow.ChildWorkflowOptions;
 import io.temporal.workflow.Workflow;
 import java.util.Map;
 import java.util.Optional;
@@ -47,6 +62,10 @@ public class SyncWorkflowImpl implements SyncWorkflow {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(SyncWorkflowImpl.class);
 
+  private static final UUID DEFAULT_UUID = UUID.fromString("00000000-0000-0000-0000-000000000000");
+
+  private static final HashFunction HASH_FUNCTION = Hashing.md5();
+
   @TemporalActivityStub(activityOptionsBeanName = "longRunActivityOptions")
   private ReplicationActivity replicationActivity;
   @TemporalActivityStub(activityOptionsBeanName = "shortActivityOptions")
@@ -59,6 +78,10 @@ public class SyncWorkflowImpl implements SyncWorkflow {
   private WorkloadFeatureFlagActivity workloadFeatureFlagActivity;
   @TemporalActivityStub(activityOptionsBeanName = "shortActivityOptions")
   private ReportRunTimeActivity reportRunTimeActivity;
+  @TemporalActivityStub(activityOptionsBeanName = "shortActivityOptions")
+  private SyncFeatureFlagFetcherActivity syncFeatureFlagFetcherActivity;
+  @TemporalActivityStub(activityOptionsBeanName = "shortActivityOptions")
+  private RouteToSyncTaskQueueActivity routeToSyncTaskQueueActivity;
 
   @Trace(operationName = WORKFLOW_TRACE_OPERATION_NAME)
   @Override
@@ -70,9 +93,11 @@ public class SyncWorkflowImpl implements SyncWorkflow {
 
     final long startTime = Workflow.currentTimeMillis();
     // TODO: Remove this once Workload API rolled out
-    final var useWorkloadApi = checkUseWorkloadApiFlag(syncInput);
+    final var useWorkloadApi = checkUseWorkloadApiFlag(syncInput.getWorkspaceId());
     final var useWorkloadOutputDocStore = checkUseWorkloadOutputFlag(syncInput);
     final var sendRunTimeMetrics = shouldReportRuntime();
+    final var shouldRunAsChildWorkflow = shouldRunAsAChildWorkflow(connectionId, syncInput.getWorkspaceId(),
+        syncInput.getConnectionContext().getSourceDefinitionId());
 
     ApmTraceUtils
         .addTagsToTrace(Map.of(
@@ -88,15 +113,23 @@ public class SyncWorkflowImpl implements SyncWorkflow {
     final Optional<UUID> sourceId = configFetchActivity.getSourceId(connectionId);
     RefreshSchemaActivityOutput refreshSchemaOutput = null;
     final boolean shouldRefreshSchema = refreshSchemaActivity.shouldRefreshSchema(sourceId.get());
-    if (!sourceId.isEmpty() && shouldRefreshSchema) {
-      LOGGER.info("Refreshing source schema...");
+    if (!sourceId.isEmpty() && (shouldRefreshSchema || shouldRunAsChildWorkflow)) {
       try {
-        refreshSchemaOutput =
-            refreshSchemaActivity.refreshSchemaV2(new RefreshSchemaActivityInput(sourceId.get(), connectionId, syncInput.getWorkspaceId()));
+        if (shouldRunAsChildWorkflow) {
+          final JsonNode sourceConfig = configFetchActivity.getSourceConfig(sourceId.get());
+          final String discoverTaskQueue = routeToSyncTaskQueueActivity.routeToDiscoverCatalog(
+              new RouteToSyncTaskQueueActivity.RouteToSyncTaskQueueInput(connectionId)).getTaskQueue();
+          refreshSchemaOutput = runDiscoverAsChildWorkflow(jobRunConfig, sourceLauncherConfig, syncInput, sourceConfig, discoverTaskQueue);
+        } else if (shouldRefreshSchema) {
+          refreshSchemaOutput =
+              refreshSchemaActivity.refreshSchemaV2(new RefreshSchemaActivityInput(sourceId.get(), connectionId, syncInput.getWorkspaceId()));
+        }
       } catch (final Exception e) {
         ApmTraceUtils.addExceptionToTrace(e);
         return SyncOutputProvider.getRefreshSchemaFailure(e);
       }
+    } else {
+      LOGGER.error("Not Needed");
     }
 
     final long discoverSchemaEndTime = Workflow.currentTimeMillis();
@@ -149,7 +182,7 @@ public class SyncWorkflowImpl implements SyncWorkflow {
       reportRunTimeActivity.reportRunTime(new ReportRunTimeActivityInput(
           connectionId,
           syncInput.getConnectionContext() == null || syncInput.getConnectionContext().getSourceDefinitionId() == null
-              ? UUID.fromString("00000000-0000-0000-0000-000000000000")
+              ? DEFAULT_UUID
               : syncInput.getConnectionContext().getSourceDefinitionId(),
           startTime,
           discoverSchemaEndTime,
@@ -163,6 +196,50 @@ public class SyncWorkflowImpl implements SyncWorkflow {
     }
 
     return syncOutput;
+  }
+
+  @VisibleForTesting
+  public RefreshSchemaActivityOutput runDiscoverAsChildWorkflow(final JobRunConfig jobRunConfig,
+                                                                final IntegrationLauncherConfig sourceLauncherConfig,
+                                                                final StandardSyncInput syncInput,
+                                                                final JsonNode sourceConfig,
+                                                                final String discoverTaskQueue) {
+    try {
+      final DiscoverCatalogAndAutoPropagateWorkflow childDiscoverCatalogWorkflow =
+          Workflow.newChildWorkflowStub(DiscoverCatalogAndAutoPropagateWorkflow.class,
+              ChildWorkflowOptions.newBuilder()
+                  .setWorkflowId("discover_" + jobRunConfig.getJobId() + "_" + jobRunConfig.getAttemptId())
+                  .setTaskQueue(discoverTaskQueue)
+                  .build());
+      return childDiscoverCatalogWorkflow.run(jobRunConfig, sourceLauncherConfig.withPriority(WorkloadPriority.DEFAULT),
+          new StandardDiscoverCatalogInput()
+              .withActorContext(new ActorContext()
+                  .withActorDefinitionId(syncInput.getConnectionContext().getSourceDefinitionId())
+                  .withActorType(ActorType.SOURCE)
+                  .withActorId(syncInput.getSourceId())
+                  .withWorkspaceId(syncInput.getWorkspaceId()))
+              .withConnectionConfiguration(syncInput.getSourceConfiguration())
+              .withSourceId(syncInput.getSourceId().toString())
+              .withConfigHash(HASH_FUNCTION.hashBytes(Jsons.serialize(sourceConfig).getBytes(
+                  Charsets.UTF_8)).toString())
+              .withConnectorVersion(DockerImageName.INSTANCE.extractTag(sourceLauncherConfig.getDockerImage())));
+    } catch (Exception e) {
+      LOGGER.error("error", e);
+      throw new RuntimeException(e);
+    }
+  }
+
+  private boolean shouldRunAsAChildWorkflow(final UUID connectionId, final UUID workspaceId, final UUID sourceDefinitionId) {
+    final int shouldRunAsChildWorkflowVersion = Workflow.getVersion("SHOULD_RUN_AS_CHILD", Workflow.DEFAULT_VERSION, 1);
+
+    if (shouldRunAsChildWorkflowVersion == Workflow.DEFAULT_VERSION) {
+      return false;
+    }
+    return checkUseWorkloadApiFlag(workspaceId)
+        && syncFeatureFlagFetcherActivity.shouldRunAsChildWorkflow(new SyncFeatureFlagFetcherInput(
+            Optional.ofNullable(connectionId).orElse(DEFAULT_UUID),
+            sourceDefinitionId,
+            workspaceId));
   }
 
   private boolean shouldReportRuntime() {
@@ -201,9 +278,8 @@ public class SyncWorkflowImpl implements SyncWorkflow {
         useWorkloadOutputDocStore);
   }
 
-  private boolean checkUseWorkloadApiFlag(final StandardSyncInput syncInput) {
-    return workloadFeatureFlagActivity.useWorkloadApi(new WorkloadFeatureFlagActivity.Input(
-        syncInput.getWorkspaceId()));
+  private boolean checkUseWorkloadApiFlag(final UUID workspaceId) {
+    return workloadFeatureFlagActivity.useWorkloadApi(new WorkloadFeatureFlagActivity.Input(workspaceId));
   }
 
   private boolean checkUseWorkloadOutputFlag(final StandardSyncInput syncInput) {
