@@ -1,4 +1,3 @@
-import classNames from "classnames";
 import { useMemo } from "react";
 import { FormattedMessage, useIntl } from "react-intl";
 import { useSearchParams } from "react-router-dom";
@@ -9,17 +8,14 @@ import { Box } from "components/ui/Box";
 import { Card } from "components/ui/Card";
 import { FlexContainer } from "components/ui/Flex";
 import { Heading } from "components/ui/Heading";
-import { Link } from "components/ui/Link";
 
-import { useCurrentWorkspaceLink } from "area/workspace/utils";
 import { useConnectionList, useDestinationList } from "core/api";
 import { PageTrackingCodes, useTrackPage } from "core/services/analytics";
 import { useExperiment } from "hooks/services/Experiment";
-import { ConnectionRoutePaths, RoutePaths } from "pages/routePaths";
 
+import { BackToDefineSourceButton } from "./BackToDefineSourceButton";
 import { CreateNewDestination, DESTINATION_DEFINITION_PARAM } from "./CreateNewDestination";
 import { RadioButtonTiles } from "./RadioButtonTiles";
-import styles from "./SelectDestination.module.scss";
 import { SelectExistingConnector } from "./SelectExistingConnector";
 
 type DestinationType = "existing" | "new";
@@ -29,13 +25,12 @@ export const NEW_DESTINATION_TYPE = "new";
 export const DESTINATION_TYPE_PARAM = "destinationType";
 export const DESTINATION_ID_PARAM = "destinationId";
 
-export const SelectDestination: React.FC = () => {
+export const DefineDestination: React.FC = () => {
   useTrackPage(PageTrackingCodes.CONNECTIONS_NEW_DEFINE_DESTINATION);
   const { formatMessage } = useIntl();
   const { destinations } = useDestinationList();
   const connectionList = useConnectionList();
   const [searchParams, setSearchParams] = useSearchParams();
-  const createLink = useCurrentWorkspaceLink();
 
   const useSimpliedCreation = useExperiment("connection.simplifiedCreation", true);
 
@@ -77,10 +72,10 @@ export const SelectDestination: React.FC = () => {
   }, [destinations, connectionList?.connectionsByConnectorId]);
 
   return (
-    <Box py="xl">
-      <FlexContainer direction="column">
-        {!searchParams.get(DESTINATION_DEFINITION_PARAM) && (
-          <Box px="md">
+    <PageContainer centered>
+      <Box p="xl">
+        <FlexContainer direction="column">
+          {!searchParams.get(DESTINATION_DEFINITION_PARAM) && (
             <PageContainer centered>
               <Card>
                 <Heading as="h2">
@@ -108,30 +103,15 @@ export const SelectDestination: React.FC = () => {
                 </Box>
               </Card>
             </PageContainer>
-          </Box>
-        )}
-        {selectedDestinationType === EXISTING_DESTINATION_TYPE && (
-          <Box px="md">
-            <PageContainer centered>
-              <SelectExistingConnector connectors={sortedDestinations} selectConnector={selectDestination} />
-            </PageContainer>
-          </Box>
-        )}
-        {selectedDestinationType === NEW_DESTINATION_TYPE && <CreateNewDestination />}
-        <CloudInviteUsersHint connectorType="destination" />
-        {useSimpliedCreation && (
-          <Box px="md">
-            <FlexContainer>
-              <Link
-                to={createLink(`/${RoutePaths.Connections}/${ConnectionRoutePaths.ConnectionNew}`)}
-                className={classNames(styles.linkText)}
-              >
-                <FormattedMessage id="connectionForm.backToDefineSource" />
-              </Link>
-            </FlexContainer>
-          </Box>
-        )}
-      </FlexContainer>
-    </Box>
+          )}
+          {selectedDestinationType === EXISTING_DESTINATION_TYPE && (
+            <SelectExistingConnector connectors={sortedDestinations} selectConnector={selectDestination} />
+          )}
+          {selectedDestinationType === NEW_DESTINATION_TYPE && <CreateNewDestination />}
+          {useSimpliedCreation && selectedDestinationType !== NEW_DESTINATION_TYPE && <BackToDefineSourceButton />}
+          <CloudInviteUsersHint connectorType="destination" />
+        </FlexContainer>
+      </Box>
+    </PageContainer>
   );
 };

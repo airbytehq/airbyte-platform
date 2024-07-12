@@ -16,16 +16,16 @@ export const SelectDestinationPage: React.FC = () => {
   const suggestedDestinationDefinitionIds = useSuggestedDestinations();
 
   return (
-    <>
+    <Box px="xl" pt="xl">
       <HeadTitle titles={[{ id: "destinations.newDestinationTitle" }]} />
-      <Box px="xl" pt="2xl" pb="md">
+      <Box pb="md">
         <PageContainer centered>
           <Heading as="h2" size="lg">
             <FormattedMessage id="destinations.selectDestinationTitle" />
           </Heading>
         </PageContainer>
       </Box>
-      <Box pb="2xl">
+      <Box pb="xl">
         <SelectConnector
           connectorType="destination"
           connectorDefinitions={destinationDefinitions}
@@ -33,6 +33,6 @@ export const SelectDestinationPage: React.FC = () => {
           suggestedConnectorDefinitionIds={suggestedDestinationDefinitionIds}
         />
       </Box>
-    </>
+    </Box>
   );
 };

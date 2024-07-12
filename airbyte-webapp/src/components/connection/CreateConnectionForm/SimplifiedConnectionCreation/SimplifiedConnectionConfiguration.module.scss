@@ -2,10 +2,6 @@
 @use "scss/variables";
 @use "scss/mixins";
 
-.linkText {
-  @include mixins.link-text;
-}
-
 .nextLink {
   @include mixins.base-button;
 

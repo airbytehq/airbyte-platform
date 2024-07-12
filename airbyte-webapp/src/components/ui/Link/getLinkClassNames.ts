@@ -8,5 +8,9 @@ type GetClassNamesArgs = Pick<LinkProps, "variant"> & {
 };
 
 export const getLinkClassNames = ({ className, variant }: GetClassNamesArgs) => {
-  return classNames(styles.link, { [styles["link--primary"]]: variant === "primary" }, className);
+  return classNames(
+    styles.link,
+    { [styles["link--primary"]]: variant === "primary", [styles["link--button"]]: variant === "button" },
+    className
+  );
 };

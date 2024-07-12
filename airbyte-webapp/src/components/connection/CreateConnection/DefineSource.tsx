@@ -23,7 +23,7 @@ export const NEW_SOURCE_TYPE = "new";
 export const SOURCE_TYPE_PARAM = "sourceType";
 export const SOURCE_ID_PARAM = "sourceId";
 
-export const SelectSource: React.FC = () => {
+export const DefineSource: React.FC = () => {
   useTrackPage(PageTrackingCodes.CONNECTIONS_NEW_DEFINE_SOURCE);
   const { formatMessage } = useIntl();
   const { sources } = useSourceList();
@@ -65,45 +65,41 @@ export const SelectSource: React.FC = () => {
   }, [sources, sourceDefinitionMap]);
 
   return (
-    <Box py="xl">
+    <Box p="xl">
       <FlexContainer direction="column">
         {!searchParams.get(SOURCE_DEFINITION_PARAM) && (
-          <Box px="md">
-            <PageContainer centered>
-              <Card>
-                <Heading as="h2">
-                  <FormattedMessage id="connectionForm.defineSource" />
-                </Heading>
-                <Box mt="md">
-                  <RadioButtonTiles
-                    name="sourceType"
-                    options={[
-                      {
-                        value: EXISTING_SOURCE_TYPE,
-                        label: formatMessage({ id: "connectionForm.sourceExisting" }),
-                        description: formatMessage({ id: "connectionForm.sourceExistingDescription" }),
-                        disabled: sources.length === 0,
-                      },
-                      {
-                        value: NEW_SOURCE_TYPE,
-                        label: formatMessage({ id: "onboarding.sourceSetUp" }),
-                        description: formatMessage({ id: "onboarding.sourceSetUp.description" }),
-                      },
-                    ]}
-                    selectedValue={selectedSourceType}
-                    onSelectRadioButton={(id) => selectSourceType(id)}
-                  />
-                </Box>
-              </Card>
-            </PageContainer>
-          </Box>
+          <PageContainer centered>
+            <Card>
+              <Heading as="h2">
+                <FormattedMessage id="connectionForm.defineSource" />
+              </Heading>
+              <Box mt="md">
+                <RadioButtonTiles
+                  name="sourceType"
+                  options={[
+                    {
+                      value: EXISTING_SOURCE_TYPE,
+                      label: formatMessage({ id: "connectionForm.sourceExisting" }),
+                      description: formatMessage({ id: "connectionForm.sourceExistingDescription" }),
+                      disabled: sources.length === 0,
+                    },
+                    {
+                      value: NEW_SOURCE_TYPE,
+                      label: formatMessage({ id: "onboarding.sourceSetUp" }),
+                      description: formatMessage({ id: "onboarding.sourceSetUp.description" }),
+                    },
+                  ]}
+                  selectedValue={selectedSourceType}
+                  onSelectRadioButton={(id) => selectSourceType(id)}
+                />
+              </Box>
+            </Card>
+          </PageContainer>
         )}
         {selectedSourceType === EXISTING_SOURCE_TYPE && (
-          <Box px="md">
-            <PageContainer centered>
-              <SelectExistingConnector connectors={sortedSources} selectConnector={selectSource} />
-            </PageContainer>
-          </Box>
+          <PageContainer centered>
+            <SelectExistingConnector connectors={sortedSources} selectConnector={selectSource} />
+          </PageContainer>
         )}
         {selectedSourceType === NEW_SOURCE_TYPE && <CreateNewSource />}
         <CloudInviteUsersHint connectorType="source" />

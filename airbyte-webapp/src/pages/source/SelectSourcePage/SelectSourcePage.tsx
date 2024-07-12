@@ -16,16 +16,16 @@ export const SelectSourcePage: React.FC = () => {
   const suggestedSourceDefinitionIds = useSuggestedSources();
 
   return (
-    <>
+    <Box px="xl" pt="xl">
       <HeadTitle titles={[{ id: "sources.newSourceTitle" }]} />
-      <Box px="xl" pt="2xl" pb="md">
+      <Box pb="md">
         <PageContainer centered>
           <Heading as="h2" size="lg">
             <FormattedMessage id="sources.selectSourceTitle" />
           </Heading>
         </PageContainer>
       </Box>
-      <Box pb="2xl">
+      <Box pb="xl">
         <SelectConnector
           connectorType="source"
           connectorDefinitions={sourceDefinitions}
@@ -33,6 +33,6 @@ export const SelectSourcePage: React.FC = () => {
           suggestedConnectorDefinitionIds={suggestedSourceDefinitionIds}
         />
       </Box>
-    </>
+    </Box>
   );
 };

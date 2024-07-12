@@ -20,7 +20,7 @@ import { AirbyteIllustration, HighlightIndex } from "./AirbyteIllustration";
 import styles from "./ConnectionOnboarding.module.scss";
 import { ConnectionOnboardingConnectorLink } from "./ConnectionOnboardingConnectorLink";
 import { SOURCE_DEFINITION_PARAM } from "../CreateConnection/CreateNewSource";
-import { NEW_SOURCE_TYPE, SOURCE_TYPE_PARAM } from "../CreateConnection/SelectSource";
+import { NEW_SOURCE_TYPE, SOURCE_TYPE_PARAM } from "../CreateConnection/DefineSource";
 
 interface ConnectionOnboardingProps {
   onCreate: (sourceConnectorTypeId?: string) => void;
