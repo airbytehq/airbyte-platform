@@ -19,6 +19,9 @@ jest.mock("hooks/theme/useAirbyteTheme", () => ({
 
 jest.mock("core/api", () => ({
   useCurrentWorkspace: () => mockWorkspace,
+  useFilters: (defaultFilters: unknown) => {
+    return [defaultFilters, () => null];
+  },
 }));
 
 describe(`${SelectConnector.name}`, () => {

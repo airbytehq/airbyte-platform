@@ -34,7 +34,7 @@ export const ConnectionTimelinePage: React.FC = () => {
   const { formatMessage } = useIntl();
   const { connection } = useConnectionFormService();
 
-  const [filterValues, setFilterValue, setFilters] = useFilters<TimelineFilterValues>({
+  const [filterValues, setFilterValue, resetFilters, filtersAreDefault] = useFilters<TimelineFilterValues>({
     status: null,
     eventType: null,
     eventId: null,
@@ -62,7 +62,7 @@ export const ConnectionTimelinePage: React.FC = () => {
     return true;
   });
 
-  if (filterValues.openLogs && filterValues.eventId) {
+  if (filterValues.openLogs === "true" && filterValues.eventId) {
     const jobId = 55874; // todo: calculate this by fetching single connection timeline event from API based on filterValues.eventId once get endpoint is merged!
     openJobLogsModalFromTimeline(openModal, jobId, formatMessage, connection.name ?? "");
   }
@@ -82,7 +82,8 @@ export const ConnectionTimelinePage: React.FC = () => {
                 <ConnectionTimelineFilters
                   filterValues={filterValues}
                   setFilterValue={setFilterValue}
-                  setFilters={setFilters}
+                  resetFilters={resetFilters}
+                  filtersAreDefault={filtersAreDefault}
                 />
               </FlexContainer>
             </Box>

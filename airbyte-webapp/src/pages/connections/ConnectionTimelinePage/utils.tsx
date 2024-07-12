@@ -136,7 +136,7 @@ export interface TimelineFilterValues {
   status: "success" | "failure" | "incomplete" | "cancelled" | null;
   eventType: "sync" | "clear" | "refresh" | null;
   eventId: string | null;
-  openLogs: boolean | null;
+  openLogs: "true" | "false" | null;
 }
 
 export const eventTypeByFilterValue: Record<

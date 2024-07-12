@@ -1,5 +1,5 @@
 import classNames from "classnames";
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useMemo } from "react";
 import { FormattedMessage, useIntl } from "react-intl";
 import { useDebounce } from "react-use";
 import { match } from "ts-pattern";
@@ -12,7 +12,7 @@ import { SortableTableHeader } from "components/ui/Table/SortableTableHeader";
 import { ButtonTab, Tabs } from "components/ui/Tabs";
 import { Text } from "components/ui/Text";
 
-import { useCurrentWorkspace } from "core/api";
+import { useCurrentWorkspace, useFilters } from "core/api";
 import { ConnectorDefinition } from "core/domain/connector";
 import { isSourceDefinition } from "core/domain/connector/source";
 import { Action, Namespace, useAnalyticsService } from "core/services/analytics";
@@ -48,7 +48,19 @@ export const SelectConnector: React.FC<SelectConnectorProps> = ({
   const { email } = useCurrentWorkspace();
   const { openModal } = useModalService();
   const trackSelectConnector = useTrackSelectConnector(connectorType);
-  const [searchTerm, setSearchTerm] = useState("");
+
+  const [{ search: searchTerm, tab: selectedTab, col: sortColumn, asc }, setFilterValue] = useFilters<{
+    search: string;
+    tab: ConnectorTab;
+    col: ConnectorSortColumn;
+    asc: "true" | "false";
+  }>({
+    search: "",
+    tab: "certified",
+    col: "name",
+    asc: "true",
+  });
+  const isSortAscending = asc === "true";
 
   const handleConnectorButtonClick = (definition: ConnectorDefinition) => {
     if (isSourceDefinition(definition)) {
@@ -75,28 +87,25 @@ export const SelectConnector: React.FC<SelectConnectorProps> = ({
       size: "sm",
     });
 
-  const [selectedTab, setSelectedTab] = useState<ConnectorTab>("certified");
-  const [sortingByTab, setSortingByTab] = useState<Record<ConnectorTab, ConnectorSorting>>({
-    certified: { column: "name", isAscending: true },
-    marketplace: { column: "name", isAscending: true },
-    custom: { column: "name", isAscending: true },
-  });
   const handleSortClick = useCallback(
     (clickedColumn: ConnectorSortColumn) => {
-      sortingByTab[selectedTab].column === clickedColumn
-        ? setSortingByTab((prevSortingByTab) => ({
-            ...prevSortingByTab,
-            [selectedTab]: {
-              ...prevSortingByTab[selectedTab],
-              isAscending: clickedColumn === "name" ? !prevSortingByTab[selectedTab].isAscending : false,
-            },
-          }))
-        : setSortingByTab((prevSortingByTab) => ({
-            ...prevSortingByTab,
-            [selectedTab]: { column: clickedColumn, isAscending: clickedColumn === "name" ? true : false },
-          }));
+      if (clickedColumn === sortColumn) {
+        setFilterValue("asc", !isSortAscending ? "true" : "false");
+      } else {
+        setFilterValue("col", clickedColumn);
+        setFilterValue("asc", clickedColumn === "successRate" || clickedColumn === "usage" ? "false" : "true");
+      }
     },
-    [selectedTab, sortingByTab]
+    [isSortAscending, setFilterValue, sortColumn]
+  );
+
+  const setSelectedTab = useCallback(
+    (tab: ConnectorTab) => {
+      setFilterValue("tab", tab);
+      setFilterValue("col", "name");
+      setFilterValue("asc", "true");
+    },
+    [setFilterValue]
   );
 
   const hasCustomConnectors = useMemo(
@@ -224,7 +233,7 @@ export const SelectConnector: React.FC<SelectConnectorProps> = ({
       >
         <SearchInput
           value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
+          onChange={(e) => setFilterValue("search", e.target.value)}
           placeholder={formatMessage(
             { id: "connector.searchPlaceholder" },
             { tabName: getTabDisplayName(selectedTab) }
@@ -273,8 +282,8 @@ export const SelectConnector: React.FC<SelectConnectorProps> = ({
               className={styles.sortButton}
               activeClassName={styles.activeSortColumn}
               onClick={() => handleSortClick("name")}
-              isActive={sortingByTab[selectedTab].column === "name"}
-              isAscending={sortingByTab[selectedTab].isAscending}
+              isActive={sortColumn === "name"}
+              isAscending={isSortAscending}
               iconSize="sm"
             >
               <FormattedMessage id="connector.sort.name" />
@@ -285,8 +294,8 @@ export const SelectConnector: React.FC<SelectConnectorProps> = ({
                   className={styles.sortButton}
                   activeClassName={styles.activeSortColumn}
                   onClick={() => handleSortClick("successRate")}
-                  isActive={sortingByTab[selectedTab].column === "successRate"}
-                  isAscending={sortingByTab[selectedTab].isAscending}
+                  isActive={sortColumn === "successRate"}
+                  isAscending={isSortAscending}
                   iconSize="sm"
                 >
                   <FormattedMessage id="connector.sort.success" />
@@ -295,8 +304,8 @@ export const SelectConnector: React.FC<SelectConnectorProps> = ({
                   className={styles.sortButton}
                   activeClassName={styles.activeSortColumn}
                   onClick={() => handleSortClick("usage")}
-                  isActive={sortingByTab[selectedTab].column === "usage"}
-                  isAscending={sortingByTab[selectedTab].isAscending}
+                  isActive={sortColumn === "usage"}
+                  isAscending={isSortAscending}
                   iconSize="sm"
                 >
                   <FormattedMessage id="connector.sort.usage" />
@@ -310,7 +319,10 @@ export const SelectConnector: React.FC<SelectConnectorProps> = ({
 
       <div className={styles.selectConnector__grid}>
         <ConnectorList
-          sorting={sortingByTab[selectedTab]}
+          sorting={{
+            column: sortColumn,
+            isAscending: isSortAscending,
+          }}
           displayType={selectedTab === "marketplace" ? "list" : "grid"}
           connectorDefinitions={searchResultsByTab[selectedTab]}
           suggestedConnectorDefinitionIds={

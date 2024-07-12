@@ -35,7 +35,7 @@ export const ConnectorList = <T extends ConnectorDefinition>({
 }: ConnectorListProps<T>) => {
   const sortedConnectorDefinitions = useMemo(
     () =>
-      connectorDefinitions.sort((a, b) => {
+      [...connectorDefinitions].sort((a, b) => {
         switch (sorting.column) {
           case "name":
             const localeCompare = a.name.localeCompare(b.name);
@@ -104,29 +104,28 @@ export const ConnectorList = <T extends ConnectorDefinition>({
   );
 };
 
-type NumericMetric = 1 | 2 | 3 | undefined;
+type NumericMetric = number | undefined;
 
 const getNumericMetric = (connectorDefinition: ConnectorDefinition, metric: "successRate" | "usage"): NumericMetric => {
   const rawMetricValue =
     metric === "successRate"
       ? connectorDefinition.metrics?.all?.sync_success_rate
       : connectorDefinition.metrics?.all?.usage;
+
   if (!isString(rawMetricValue)) {
-    return undefined;
+    return 1;
   }
 
   const lowercaseMetricValue = rawMetricValue.toLowerCase();
-  if (lowercaseMetricValue !== "low" && lowercaseMetricValue !== "medium" && lowercaseMetricValue !== "high") {
-    return undefined;
-  }
-
   switch (lowercaseMetricValue) {
     case "low":
-      return 1;
-    case "medium":
       return 2;
-    case "high":
+    case "medium":
       return 3;
+    case "high":
+      return 4;
+    default:
+      return 1;
   }
 };
 

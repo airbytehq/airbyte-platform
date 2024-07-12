@@ -53,7 +53,7 @@ export const ConnectionJobHistoryPage: React.FC = () => {
   const isSimplifiedCreation = useExperiment("connection.simplifiedCreation", true);
   const { connection } = useConnectionEditService();
   useTrackPage(PageTrackingCodes.CONNECTIONS_ITEM_STATUS);
-  const [filterValues, setFilterValue, setFilters, isInitialState] = useFilters<JobHistoryFilterValues>({
+  const [filterValues, setFilterValue, resetFilters, filtersAreDefault] = useFilters<JobHistoryFilterValues>({
     jobStatus: "all",
     startDate: "",
     endDate: "",
@@ -107,17 +107,10 @@ export const ConnectionJobHistoryPage: React.FC = () => {
 
   const clearFilters = () => {
     clearLinkedJob();
-    setFilters({
-      jobStatus: "all",
-      startDate: "",
-      endDate: "",
-    });
+    resetFilters();
   };
 
   const linkedJobNotFound = linkedJobId && jobs.length === 0;
-
-  const areAnyFiltersActive =
-    filterValues.jobStatus !== "all" || filterValues.startDate !== "" || filterValues.endDate !== "";
 
   return (
     <PageContainer centered>
@@ -147,7 +140,7 @@ export const ConnectionJobHistoryPage: React.FC = () => {
                   maxDate={END_OF_TODAY}
                   buttonText="jobHistory.rangeDateFilter"
                 />
-                {areAnyFiltersActive && <ClearFiltersButton onClick={clearFilters} />}
+                {!filtersAreDefault && <ClearFiltersButton onClick={clearFilters} />}
                 <span className={styles.jobCount}>
                   {!isLoading && (
                     <Text color="grey">
@@ -182,7 +175,9 @@ export const ConnectionJobHistoryPage: React.FC = () => {
               <EmptyState
                 text={<FormattedMessage id="jobs.noJobs" />}
                 description={
-                  <FormattedMessage id={isInitialState ? "jobs.noJobsDescription" : "jobs.noJobsFilterDescription"} />
+                  <FormattedMessage
+                    id={filtersAreDefault ? "jobs.noJobsDescription" : "jobs.noJobsFilterDescription"}
+                  />
                 }
               />
             </Box>

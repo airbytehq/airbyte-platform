@@ -137,7 +137,10 @@ describe("Connection - Create new connection", { testIsolation: false }, () => {
 
           cy.wait("@createDestination", { timeout: 30000 }).then((interception) => {
             const createdDestinationId = interception.response?.body.destinationId;
-            cy.location("search").should("eq", `?sourceId=${source.sourceId}&destinationId=${createdDestinationId}`);
+            cy.location("search").should(
+              "eq",
+              `?sourceId=${source.sourceId}&tab=marketplace&destinationId=${createdDestinationId}`
+            );
 
             requestDeleteDestination({ destinationId: createdDestinationId });
           });

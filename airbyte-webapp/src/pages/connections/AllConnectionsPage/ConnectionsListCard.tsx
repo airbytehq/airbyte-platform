@@ -21,7 +21,7 @@ export const ConnectionsListCard = () => {
   const connectionList = useConnectionList();
   const connections = useMemo(() => connectionList?.connections ?? [], [connectionList?.connections]);
 
-  const [filterValues, setFilterValue, setFilters] = useFilters<FilterValues>({
+  const [filterValues, setFilterValue, resetFilters] = useFilters<FilterValues>({
     search: "",
     state: null,
     status: null,
@@ -101,7 +101,7 @@ export const ConnectionsListCard = () => {
         setSearchFilter={(search) => setFilterValue("search", search)}
         filterValues={filterValues}
         setFilterValue={setFilterValue}
-        setFilters={setFilters}
+        resetFilters={resetFilters}
       />
       <ConnectionsTable connections={filteredConnections} variant="white" />
       {filteredConnections.length === 0 && (

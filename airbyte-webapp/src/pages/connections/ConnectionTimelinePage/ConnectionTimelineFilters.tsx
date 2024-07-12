@@ -12,16 +12,16 @@ import { eventTypeFilterOptions, statusFilterOptions, TimelineFilterValues } fro
 interface ConnectionTimelineFiltersProps {
   filterValues: TimelineFilterValues;
   setFilterValue: (key: keyof TimelineFilterValues, value: string | null) => void;
-  setFilters: (filters: TimelineFilterValues) => void;
+  resetFilters: () => void;
+  filtersAreDefault: boolean;
 }
 
 export const ConnectionTimelineFilters: React.FC<ConnectionTimelineFiltersProps> = ({
   filterValues,
   setFilterValue,
-  setFilters,
+  resetFilters,
+  filtersAreDefault,
 }) => {
-  const hasAnyFilterSelected = !!filterValues.status || !!filterValues.eventType || !!filterValues.eventId;
-
   return (
     <FlexContainer gap="sm" alignItems="center">
       {!!filterValues.eventId ? (
@@ -59,18 +59,9 @@ export const ConnectionTimelineFilters: React.FC<ConnectionTimelineFiltersProps>
         </>
       )}
 
-      {hasAnyFilterSelected && (
+      {!filtersAreDefault && (
         <FlexItem>
-          <ClearFiltersButton
-            onClick={() => {
-              setFilters({
-                status: null,
-                eventType: null,
-                eventId: null,
-                openLogs: null,
-              });
-            }}
-          />
+          <ClearFiltersButton onClick={resetFilters} />
         </FlexItem>
       )}
     </FlexContainer>

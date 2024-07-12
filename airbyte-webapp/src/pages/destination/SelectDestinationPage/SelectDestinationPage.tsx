@@ -1,5 +1,5 @@
 import { FormattedMessage } from "react-intl";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 
 import { HeadTitle } from "components/common/HeadTitle";
 import { PageContainer } from "components/PageContainer";
@@ -11,6 +11,7 @@ import { useSuggestedDestinations } from "area/connector/utils";
 import { useDestinationDefinitionList } from "core/api";
 
 export const SelectDestinationPage: React.FC = () => {
+  const location = useLocation();
   const navigate = useNavigate();
   const { destinationDefinitions } = useDestinationDefinitionList();
   const suggestedDestinationDefinitionIds = useSuggestedDestinations();
@@ -29,7 +30,9 @@ export const SelectDestinationPage: React.FC = () => {
         <SelectConnector
           connectorType="destination"
           connectorDefinitions={destinationDefinitions}
-          onSelectConnectorDefinition={(id) => navigate(`./${id}`)}
+          onSelectConnectorDefinition={(id) =>
+            navigate(`./${id}`, { state: { prevPath: location.pathname + location.search } })
+          }
           suggestedConnectorDefinitionIds={suggestedDestinationDefinitionIds}
         />
       </Box>
