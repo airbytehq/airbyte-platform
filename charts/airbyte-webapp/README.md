@@ -64,6 +64,7 @@ Helm chart to deploy airbyte-webapp
 | secrets | object | `{}` |  |
 | service.annotations | object | `{}` |  |
 | service.port | int | `80` |  |
+| service.targetPort | string OR int | `"http"` |  |
 | service.type | string | `"ClusterIP"` |  |
 | tolerations | list | `[]` |  |
 

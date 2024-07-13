@@ -242,6 +242,8 @@ webapp:
     type: ClusterIP
     # -- The service port to expose the webapp on
     port: 80
+    # -- The target port of the webapp service - useful in situations where it needs to be proxied via another pod
+    targetPort: http
     # -- Annotations for the webapp service resource
     annotations: {}
 
@@ -1848,7 +1850,7 @@ keycloak:
       drop: ["ALL"]
     seccompProfile:
       type: RuntimeDefault
-    
+
   containerSecurityContext:
     allowPrivilegeEscalation: false 
     runAsNonRoot: true
