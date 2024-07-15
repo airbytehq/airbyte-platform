@@ -475,7 +475,7 @@ public class TemporalClient {
         .withPriority(priority);
     final StandardDiscoverCatalogInput input = new StandardDiscoverCatalogInput().withConnectionConfiguration(config.getConnectionConfiguration())
         .withSourceId(config.getSourceId()).withConnectorVersion(config.getConnectorVersion()).withConfigHash(config.getConfigHash())
-        .withResourceRequirements(config.getResourceRequirements()).withActorContext(context);
+        .withResourceRequirements(config.getResourceRequirements()).withActorContext(context).withManual(true);
 
     return execute(jobRunConfig,
         () -> getWorkflowStubWithTaskQueue(DiscoverCatalogWorkflow.class, taskQueue).run(jobRunConfig, launcherConfig, input));

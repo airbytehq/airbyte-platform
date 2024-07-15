@@ -222,7 +222,8 @@ public class SyncWorkflowImpl implements SyncWorkflow {
               .withSourceId(syncInput.getSourceId().toString())
               .withConfigHash(HASH_FUNCTION.hashBytes(Jsons.serialize(sourceConfig).getBytes(
                   Charsets.UTF_8)).toString())
-              .withConnectorVersion(DockerImageName.INSTANCE.extractTag(sourceLauncherConfig.getDockerImage())));
+              .withConnectorVersion(DockerImageName.INSTANCE.extractTag(sourceLauncherConfig.getDockerImage()))
+              .withManual(false));
     } catch (Exception e) {
       LOGGER.error("error", e);
       throw new RuntimeException(e);

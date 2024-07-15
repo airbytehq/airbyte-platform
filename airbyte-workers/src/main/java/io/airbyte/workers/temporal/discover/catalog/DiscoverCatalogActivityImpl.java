@@ -43,7 +43,6 @@ import io.airbyte.config.helpers.LogConfigs;
 import io.airbyte.config.helpers.ResourceRequirementsUtils;
 import io.airbyte.config.secrets.SecretsRepositoryReader;
 import io.airbyte.config.secrets.persistence.RuntimeSecretPersistence;
-import io.airbyte.featureflag.DiscoverPostprocessInTemporal;
 import io.airbyte.featureflag.Empty;
 import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.featureflag.Organization;
@@ -218,15 +217,13 @@ public class DiscoverCatalogActivityImpl implements DiscoverCatalogActivity {
   public ConnectorJobOutput runWithWorkload(final DiscoverCatalogInput input) throws WorkerException {
     final String jobId = input.getJobRunConfig().getJobId();
     final int attemptNumber = input.getJobRunConfig().getAttemptId() == null ? 0 : Math.toIntExact(input.getJobRunConfig().getAttemptId());
-    final boolean runTemporalAsChild =
-        featureFlagClient.boolVariation(DiscoverPostprocessInTemporal.INSTANCE, new Workspace(input.getLauncherConfig().getWorkspaceId()));
-    final String workloadId = runTemporalAsChild
-        ? workloadIdGenerator.generateDiscoverWorkloadIdV2WithSnap(
+    final String workloadId = input.getDiscoverCatalogInput().getManual()
+        ? workloadIdGenerator.generateDiscoverWorkloadId(input.getDiscoverCatalogInput().getActorContext().getActorDefinitionId(), jobId,
+            attemptNumber)
+        : workloadIdGenerator.generateDiscoverWorkloadIdV2WithSnap(
             input.getDiscoverCatalogInput().getActorContext().getActorId(),
             System.currentTimeMillis(),
-            DISCOVER_CATALOG_SNAP_DURATION)
-        : workloadIdGenerator.generateDiscoverWorkloadId(input.getDiscoverCatalogInput().getActorContext().getActorDefinitionId(), jobId,
-            attemptNumber);
+            DISCOVER_CATALOG_SNAP_DURATION);
 
     final String serializedInput = Jsons.serialize(input);
 

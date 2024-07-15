@@ -21,10 +21,8 @@ import io.airbyte.config.StandardDiscoverCatalogInput
 import io.airbyte.config.WorkloadPriority
 import io.airbyte.config.helpers.LogConfigs
 import io.airbyte.config.secrets.SecretsRepositoryReader
-import io.airbyte.featureflag.DiscoverPostprocessInTemporal
 import io.airbyte.featureflag.FeatureFlagClient
 import io.airbyte.featureflag.TestClient
-import io.airbyte.featureflag.Workspace
 import io.airbyte.metrics.lib.MetricClient
 import io.airbyte.persistence.job.models.IntegrationLauncherConfig
 import io.airbyte.persistence.job.models.JobRunConfig
@@ -128,11 +126,11 @@ class DiscoverCatalogActivityTest {
             .withActorDefinitionId(actorDefinitionId)
             .withActorId(actorId),
         )
+        .withManual(!withNewWorkloadName)
     input.launcherConfig =
       IntegrationLauncherConfig().withConnectionId(
         connectionId,
       ).withWorkspaceId(workspaceId).withPriority(WorkloadPriority.DEFAULT)
-    every { featureFlagClient.boolVariation(DiscoverPostprocessInTemporal, Workspace(input.launcherConfig.workspaceId)) }.returns(withNewWorkloadName)
     if (withNewWorkloadName) {
       every { workloadIdGenerator.generateDiscoverWorkloadIdV2WithSnap(eq(actorId), any(), eq(DISCOVER_CATALOG_SNAP_DURATION)) }.returns(workloadId)
     } else {
