@@ -5076,7 +5076,10 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/ApplicationTokenRequest"
+              $ref: "#/components/schemas/ApplicationTokenRequestWithGrant"
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: "#/components/schemas/ApplicationTokenRequestWithGrant"
             examples:
               Application Token Request Example:
                 value:
@@ -5092,7 +5095,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/AccessToken"
+                $ref: "#/components/schemas/PublicAccessTokenResponse"
               examples:
                 Application Creation Response Example:
                   value:
@@ -12265,6 +12268,19 @@ components:
           type: string
         client_secret:
           type: string
+    ApplicationTokenRequestWithGrant:
+      required:
+        - client_id
+        - client_secret
+        - grant_type
+      type: object
+      properties:
+        client_id:
+          type: string
+        client_secret:
+          type: string
+        grant-type:
+          enum: ["client_credentials"]
       x-sdk-component: true
     AccessToken:
       required:
@@ -12273,6 +12289,20 @@ components:
       properties:
         access_token:
           type: string
+    PublicAccessTokenResponse:
+      required:
+        - access_token
+        - token_type
+        - expires_in
+      type: object
+      properties:
+        access_token:
+          type: string
+        token_type:
+          enum: ["Bearer"]
+        expires_in:
+          type: integer
+          format: int64
       x-sdk-component: true
     UserInvitationCreateRequestBody:
       type: object

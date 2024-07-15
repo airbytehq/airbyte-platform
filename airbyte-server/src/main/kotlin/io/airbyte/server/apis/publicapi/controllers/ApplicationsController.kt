@@ -11,11 +11,11 @@ import io.airbyte.config.Application
 import io.airbyte.config.User
 import io.airbyte.data.services.ApplicationService
 import io.airbyte.publicApi.server.generated.apis.PublicApplicationsApi
-import io.airbyte.publicApi.server.generated.models.AccessToken
 import io.airbyte.publicApi.server.generated.models.ApplicationCreate
 import io.airbyte.publicApi.server.generated.models.ApplicationRead
 import io.airbyte.publicApi.server.generated.models.ApplicationReadList
-import io.airbyte.publicApi.server.generated.models.ApplicationTokenRequest
+import io.airbyte.publicApi.server.generated.models.ApplicationTokenRequestWithGrant
+import io.airbyte.publicApi.server.generated.models.PublicAccessTokenResponse
 import io.airbyte.server.apis.publicapi.apiTracking.TrackingHelper
 import io.airbyte.server.apis.publicapi.constants.API_PATH
 import io.airbyte.server.apis.publicapi.constants.APPLICATIONS_PATH
@@ -31,6 +31,8 @@ import io.micronaut.security.annotation.Secured
 import io.micronaut.security.rules.SecurityRule
 import jakarta.ws.rs.core.Response
 import java.util.Optional
+
+const val TOKEN_EXPIRATION_TIME: Long = 180
 
 @Controller(API_PATH)
 @Secured(SecurityRule.IS_AUTHENTICATED)
@@ -95,13 +97,17 @@ open class ApplicationsController(
 
   @ExecuteOn(AirbyteTaskExecutors.PUBLIC_API)
   @Secured(SecurityRule.IS_ANONYMOUS)
-  override fun publicGetAccessToken(applicationTokenRequest: ApplicationTokenRequest): Response {
+  override fun publicGetAccessToken(applicationTokenRequestWithGrant: ApplicationTokenRequestWithGrant): Response {
     return Response
       .status(Response.Status.OK.statusCode)
       .entity(
-        AccessToken(
-          applicationService
-            .getToken(applicationTokenRequest.clientId, applicationTokenRequest.clientSecret),
+        PublicAccessTokenResponse(
+          accessToken =
+            applicationService
+              .getToken(applicationTokenRequestWithGrant.clientId, applicationTokenRequestWithGrant.clientSecret),
+          PublicAccessTokenResponse.TokenType.BEARER,
+          // This is longer for pro, but there's no reason for the terraform provider/sdks to not just get a new token every 3 min
+          TOKEN_EXPIRATION_TIME,
         ),
       )
       .build()
