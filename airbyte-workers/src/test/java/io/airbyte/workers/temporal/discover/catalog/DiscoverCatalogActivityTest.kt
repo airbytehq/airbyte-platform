@@ -163,7 +163,7 @@ class DiscoverCatalogActivityTest {
       }
     every { connectionApi.postprocessDiscoveredCatalogForConnection(any()) } returns apiResult
 
-    val input = PostprocessCatalogInput(UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID())
+    val input = PostprocessCatalogInput(UUID.randomUUID(), UUID.randomUUID())
     val result = discoverCatalogActivity.postprocess(input)
 
     val expectedReqBody = PostprocessDiscoveredCatalogRequestBody(input.catalogId!!, input.connectionId!!)
@@ -186,7 +186,7 @@ class DiscoverCatalogActivityTest {
       }
     every { connectionApi.postprocessDiscoveredCatalogForConnection(any()) } returns apiResult
 
-    val input = PostprocessCatalogInput(UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID())
+    val input = PostprocessCatalogInput(UUID.randomUUID(), UUID.randomUUID())
     val result = discoverCatalogActivity.postprocess(input)
 
     val expectedReqBody = PostprocessDiscoveredCatalogRequestBody(input.catalogId!!, input.connectionId!!)

@@ -14,7 +14,6 @@ import io.airbyte.workers.models.DiscoverCatalogInput
 import io.airbyte.workers.models.PostprocessCatalogInput
 import io.airbyte.workers.models.RefreshSchemaActivityOutput
 import io.airbyte.workers.temporal.discover.catalog.DiscoverCatalogActivity
-import java.util.Map
 
 open class DiscoverCatalogAndAutoPropagateWorkflowImpl : DiscoverCatalogAndAutoPropagateWorkflow {
   @VisibleForTesting
@@ -23,9 +22,6 @@ open class DiscoverCatalogAndAutoPropagateWorkflowImpl : DiscoverCatalogAndAutoP
   }
 
   constructor() {}
-
-  init {
-  }
 
   @TemporalActivityStub(activityOptionsBeanName = "discoveryActivityOptions")
   private lateinit var activity: DiscoverCatalogActivity
@@ -37,16 +33,13 @@ open class DiscoverCatalogAndAutoPropagateWorkflowImpl : DiscoverCatalogAndAutoP
     config: StandardDiscoverCatalogInput,
   ): RefreshSchemaActivityOutput {
     ApmTraceUtils.addTagsToTrace(
-      Map.of<String, Any>(
-        ApmTraceConstants.Tags.ATTEMPT_NUMBER_KEY,
-        jobRunConfig.attemptId,
-        ApmTraceConstants.Tags.JOB_ID_KEY,
-        jobRunConfig.jobId,
-        ApmTraceConstants.Tags.DOCKER_IMAGE_KEY,
-        launcherConfig.dockerImage,
+      mapOf(
+        ApmTraceConstants.Tags.ATTEMPT_NUMBER_KEY to jobRunConfig.attemptId,
+        ApmTraceConstants.Tags.JOB_ID_KEY to jobRunConfig.jobId,
+        ApmTraceConstants.Tags.DOCKER_IMAGE_KEY to launcherConfig.dockerImage,
       ),
     )
-    val result =
+    val workloadResult =
       try {
         activity.runWithWorkload(
           DiscoverCatalogInput(
@@ -60,17 +53,17 @@ open class DiscoverCatalogAndAutoPropagateWorkflowImpl : DiscoverCatalogAndAutoP
         throw RuntimeException(e)
       }
 
-    if (result.discoverCatalogId != null) {
-      val result = activity.postprocess(PostprocessCatalogInput(result.discoverCatalogId, launcherConfig.connectionId, launcherConfig.workspaceId))
-      if (result.isSuccess) {
-        activity.reportSuccess(true)
-        return RefreshSchemaActivityOutput(result.diff!!)
-      } else {
-        return failure()
-      }
-    } else {
+    if (workloadResult.discoverCatalogId == null) {
       return failure()
     }
+
+    val postprocessResult = activity.postprocess(PostprocessCatalogInput(workloadResult.discoverCatalogId, launcherConfig.connectionId))
+    if (postprocessResult.isFailure) {
+      return failure()
+    }
+
+    activity.reportSuccess(true)
+    return RefreshSchemaActivityOutput(postprocessResult.diff!!)
   }
 
   fun failure(): RefreshSchemaActivityOutput {

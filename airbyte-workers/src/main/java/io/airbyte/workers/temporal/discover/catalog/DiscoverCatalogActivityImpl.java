@@ -292,7 +292,6 @@ public class DiscoverCatalogActivityImpl implements DiscoverCatalogActivity {
     try {
       Objects.requireNonNull(input.getConnectionId());
       Objects.requireNonNull(input.getCatalogId());
-      Objects.requireNonNull(input.getWorkspaceId());
 
       final var reqBody = new PostprocessDiscoveredCatalogRequestBody(
           input.getCatalogId(),

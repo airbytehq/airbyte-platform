@@ -53,7 +53,6 @@ class DiscoverCatalogAndAutoPropagateWorkflowTest {
         PostprocessCatalogInput(
           discoverCatalogId,
           connectionId,
-          workspaceId,
         ),
       )
     } returns PostprocessCatalogOutput.success(catalogDiff)
@@ -104,7 +103,6 @@ class DiscoverCatalogAndAutoPropagateWorkflowTest {
         PostprocessCatalogInput(
           discoverCatalogId,
           connectionId,
-          workspaceId,
         ),
       )
     } returns PostprocessCatalogOutput.failure(RuntimeException())
