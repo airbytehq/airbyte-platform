@@ -12,12 +12,12 @@ dependencies {
 
   implementation(libs.apache.commons.text)
 
-  implementation(project(":airbyte-api"))
-  implementation(project(":airbyte-commons"))
-  implementation(project(":airbyte-config:config-models"))
-  implementation(project(":airbyte-config:config-persistence"))
-  implementation(project(":airbyte-json-validation"))
-  implementation(project(":airbyte-persistence:job-persistence"))
+  implementation(project(":oss:airbyte-api"))
+  implementation(project(":oss:airbyte-commons"))
+  implementation(project(":oss:airbyte-config:config-models"))
+  implementation(project(":oss:airbyte-config:config-persistence"))
+  implementation(project(":oss:airbyte-json-validation"))
+  implementation(project(":oss:airbyte-persistence:job-persistence"))
   implementation(libs.airbyte.protocol)
   implementation(libs.guava)
   implementation(libs.slf4j.api)

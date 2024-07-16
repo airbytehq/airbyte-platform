@@ -8,8 +8,8 @@ dependencies {
   annotationProcessor(libs.lombok)     // Lombok must be added BEFORE Micronaut
   annotationProcessor(libs.bundles.micronaut.annotation.processor)
 
-  implementation(project(":airbyte-commons"))
-  implementation(project(":airbyte-json-validation"))
+  implementation(project(":oss:airbyte-commons"))
+  implementation(project(":oss:airbyte-json-validation"))
 
   implementation(libs.bundles.micronaut.annotation)
   implementation(libs.airbyte.protocol)

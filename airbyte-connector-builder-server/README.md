@@ -33,7 +33,7 @@ poetry install
 From the root folder of your local airbyte-platform-internal repo, run the build command:
 
 ```bash
-./gradlew -p oss airbyte-connector-builder-server:build
+./gradlew :oss:airbyte-connector-builder-server:build
 ```
 
 To develop the server locally (without Docker), the `CDK_PYTHON` and `CDK_ENTRYPOINT` environment variables need to be set, where `CDK_PYTHON` is the path to the python interpreter you want to use, i.e. in which the CDK is installed, and `CDK_ENTRYPOINT` is the path to the Connector Builder entrypoint, located at <CDK directory/connector_builder/main.py>.
@@ -52,13 +52,13 @@ export CDK_ENTRYPOINT=~/code/airbyte/airbyte-cdk/python/airbyte_cdk/connector_bu
 Then run the server (You can also do this w/o build)
 
 ```bash
-./gradlew -p oss airbyte-connector-builder-server:run
+./gradlew :oss:airbyte-connector-builder-server:run
 ```
 
 If you experience any issues, try running the full command as:
 
 ```bash
-sudo CDK_PYTHON=<path_to_CDK_virtual_environment> CDK_ENTRYPOINT=<path_to_CDK_connector_builder_main.py> ./gradlew -p oss airbyte-connector-builder-server:run
+sudo CDK_PYTHON=<path_to_CDK_virtual_environment> CDK_ENTRYPOINT=<path_to_CDK_connector_builder_main.py> ./gradlew :oss:airbyte-connector-builder-server:run
 ```
 
 The server is now reachable on localhost:8080
@@ -105,7 +105,7 @@ Developing connectors that require 3rd party libraries can be done by running th
 2. export CDK_PYTHON=<path_to_virtual_environment>
  - `CDK_PYTHON` should point to the virtual environment's python executable (example: `export CDK_PYTHON=~/code/airbyte/airbyte-cdk/python/.venv/bin/python`)
 3. export CDK_ENTRYPOINT=<path_to_CDK_connector_builder_main.py>
-4. ./gradlew -p oss airbyte-connector-builder-server:run
+4. ./gradlew -p :oss:airbyte-connector-builder-server:run
     1. The server is now reachable on localhost:8080
 5. Update the server to point to port 8080 by editing .env and replacing
     
@@ -138,19 +138,19 @@ If successful you should have an OSS instance available on your machine at https
 After you have made your modifications to the builder server you can "warm" reload the changes into the k8s cluster via
 
 ```bash
-./gradlew -p oss :airbyte-connector-builder-server:kubeReload
+./gradlew :oss:airbyte-connector-builder-server:kubeReload
 ```
 
 you can also do this for the regular airbyte server
 
 ```bash
-./gradlew -p oss :airbyte-server:kubeReload
+./gradlew :oss:airbyte-server:kubeReload
 ```
 ## OpenAPI generation
 
 Run it via Gradle by running this from the Airbyte project root:
 ```bash
-./gradlew -p oss airbyte-connector-builder-server:generateOpenApiServer
+./gradlew :oss:airbyte-connector-builder-server:generateOpenApiServer
 ```
 
 ## Changing the used CDK version

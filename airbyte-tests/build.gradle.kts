@@ -67,16 +67,16 @@ configurations.configureEach {
 }
 
 dependencies {
-  implementation(project(":airbyte-api"))
-  implementation(project(":airbyte-commons"))
-  implementation(project(":airbyte-commons-auth"))
-  implementation(project(":airbyte-commons-temporal"))
-  implementation(project(":airbyte-config:config-models"))
-  implementation(project(":airbyte-config:config-persistence"))
-  implementation(project(":airbyte-db:db-lib"))
-  implementation(project(":airbyte-test-utils"))
-  implementation(project(":airbyte-commons-worker"))
-  implementation(project(":airbyte-container-orchestrator"))
+  implementation(project(":oss:airbyte-api"))
+  implementation(project(":oss:airbyte-commons"))
+  implementation(project(":oss:airbyte-commons-auth"))
+  implementation(project(":oss:airbyte-commons-temporal"))
+  implementation(project(":oss:airbyte-config:config-models"))
+  implementation(project(":oss:airbyte-config:config-persistence"))
+  implementation(project(":oss:airbyte-db:db-lib"))
+  implementation(project(":oss:airbyte-test-utils"))
+  implementation(project(":oss:airbyte-commons-worker"))
+  implementation(project(":oss:airbyte-container-orchestrator"))
 
   implementation(libs.bundles.kubernetes.client)
   implementation(libs.platform.testcontainers)

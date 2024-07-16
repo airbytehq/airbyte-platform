@@ -25,10 +25,10 @@ dependencies {
   api(libs.jooq)
   api(libs.postgresql)
 
-  implementation(project(":airbyte-commons"))
+  implementation(project(":oss:airbyte-commons"))
   implementation(libs.airbyte.protocol)
-  implementation(project(":airbyte-json-validation"))
-  implementation(project(":airbyte-config:config-models"))
+  implementation(project(":oss:airbyte-json-validation"))
+  implementation(project(":oss:airbyte-config:config-models"))
   implementation(libs.bundles.flyway)
   implementation(libs.guava)
   implementation(platform(libs.fasterxml))
@@ -47,7 +47,7 @@ dependencies {
   implementation(libs.jna)
   implementation(libs.jna.platform)
 
-  testImplementation(project(":airbyte-test-utils"))
+  testImplementation(project(":oss:airbyte-test-utils"))
   testImplementation(libs.apache.commons.lang)
   testImplementation(libs.platform.testcontainers.postgresql)
   testRuntimeOnly(libs.junit.jupiter.engine)

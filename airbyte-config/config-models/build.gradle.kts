@@ -16,9 +16,9 @@ dependencies {
 
   api(libs.bundles.micronaut.annotation)
 
-  implementation(project(":airbyte-json-validation"))
-  implementation(project(":airbyte-commons"))
-  implementation(project(":airbyte-featureflag"))
+  implementation(project(":oss:airbyte-json-validation"))
+  implementation(project(":oss:airbyte-commons"))
+  implementation(project(":oss:airbyte-featureflag"))
 
   implementation(platform(libs.fasterxml))
   implementation(libs.bundles.datadog)

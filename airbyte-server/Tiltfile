@@ -7,7 +7,7 @@ watch_file('.')
 
 custom_build(
   'airbyte/server',
-  '../gradlew :airbyte-server:assemble',
+  '../gradlew :oss:airbyte-server:assemble',
   tag=IMAGE_TAG,
   deps=['src'],
   disable_push=True,

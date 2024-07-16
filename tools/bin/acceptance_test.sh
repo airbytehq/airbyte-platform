@@ -59,5 +59,5 @@ check_success 'airbyte-bootloader'
 
 echo "Running e2e tests via gradle"
 
-USE_EXTERNAL_DEPLOYMENT=true ./gradlew :airbyte-tests:acceptanceTest --rerun-tasks --scan "$CI_MODE_FLAG"
+USE_EXTERNAL_DEPLOYMENT=true ./gradlew :oss:airbyte-tests:acceptanceTest --rerun-tasks --scan "$CI_MODE_FLAG"
 

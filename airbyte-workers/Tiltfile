@@ -7,7 +7,7 @@ watch_file('.')
 
 custom_build(
   'airbyte/worker',
-  '../gradlew :airbyte-worker:assemble',
+  '../gradlew :oss:airbyte-worker:assemble',
   tag=IMAGE_TAG,
   deps=['src'],
   disable_push=True,

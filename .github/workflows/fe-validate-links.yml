@@ -32,8 +32,8 @@ jobs:
           org.gradle.vfs.watch=false
           EOF
 
-      - name: Run :airbyte-webapp:validateLinks
-        run: ./gradlew --no-daemon :airbyte-webapp:validateLinks --scan -DciMode=true
+      - name: Run :oss:airbyte-webapp:validateLinks
+        run: ./gradlew --no-daemon :oss:airbyte-webapp:validateLinks --scan -DciMode=true
 
       - name: Publish Failures to dev-frontend channel
         uses: abinoda/slack-action@master

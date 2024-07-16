@@ -9,10 +9,10 @@ dependencies {
 
   ksp(libs.bundles.micronaut.annotation.processor)
 
-  implementation(project(":airbyte-commons"))
-  implementation(project(":airbyte-config:config-models"))
-  implementation(project(":airbyte-db:jooq"))
-  implementation(project(":airbyte-db:db-lib"))
+  implementation(project(":oss:airbyte-commons"))
+  implementation(project(":oss:airbyte-config:config-models"))
+  implementation(project(":oss:airbyte-db:jooq"))
+  implementation(project(":oss:airbyte-db:db-lib"))
 
   implementation(libs.guava)
   implementation(libs.google.cloud.storage)
@@ -29,8 +29,8 @@ dependencies {
   implementation(libs.java.dogstatsd.client)
   implementation(libs.bundles.datadog)
 
-  testImplementation(project(":airbyte-config:config-persistence"))
-  testImplementation(project(":airbyte-test-utils"))
+  testImplementation(project(":oss:airbyte-config:config-persistence"))
+  testImplementation(project(":oss:airbyte-test-utils"))
   testImplementation(libs.platform.testcontainers.postgresql)
   testRuntimeOnly(libs.junit.jupiter.engine)
   testImplementation(libs.bundles.junit)

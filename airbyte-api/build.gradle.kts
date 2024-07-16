@@ -31,7 +31,7 @@ dependencies {
   api(libs.kotlin.logging)
   api(libs.jackson.kotlin)
   api(libs.moshi.kotlin)
-  api(project(":airbyte-config:config-models"))
+  api(project(":oss:airbyte-config:config-models"))
 
   implementation(platform(libs.micronaut.platform))
   implementation(libs.bundles.micronaut)
@@ -46,7 +46,7 @@ dependencies {
   implementation(libs.slf4j.api)
   implementation(libs.swagger.annotations)
     
-  implementation(project(":airbyte-commons"))
+  implementation(project(":oss:airbyte-commons"))
 
   compileOnly(libs.v3.swagger.annotations)
 
@@ -65,7 +65,7 @@ val airbyteApiProblemsSpecFile = "$projectDir/src/main/openapi/api-problems.yaml
 val airbyteApiSpecTemplateDirApi = "$projectDir/src/main/resources/templates/jaxrs-spec-api"
 val publicApiSpecTemplateDirApi = "$projectDir/src/main/resources/templates/jaxrs-spec-api/public_api"
 val workloadSpecFile = "$projectDir/src/main/openapi/workload-openapi.yaml"
-val connectorBuilderServerSpecFile = project(":airbyte-connector-builder-server").file("src/main/openapi/openapi.yaml").getPath()
+val connectorBuilderServerSpecFile = project(":oss:airbyte-connector-builder-server").file("src/main/openapi/openapi.yaml").getPath()
 
 val genApiServer = tasks.register<GenerateTask>("generateApiServer") {
     val serverOutputDir = "${getLayout().buildDirectory.get()}/generated/api/server"
@@ -438,7 +438,7 @@ val genWorkloadApiClient = tasks.register<GenerateTask>("genWorkloadApiClient") 
         updateDomainClientsToIncludeHttpResponseBodyOnClientException(generatedDomainClientsPath)
     }
 
-    dependsOn(":airbyte-workload-api-server:compileKotlin", "genApiClient")
+    dependsOn(":oss:airbyte-workload-api-server:compileKotlin", "genApiClient")
 }
 
 val genConnectorBuilderServerApiClient = tasks.register<GenerateTask>("genConnectorBuilderServerApiClient") {

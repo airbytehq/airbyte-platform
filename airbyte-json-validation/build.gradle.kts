@@ -4,7 +4,7 @@ plugins {
 }
 
 dependencies {
-  implementation(project(":airbyte-commons"))
+  implementation(project(":oss:airbyte-commons"))
   implementation(libs.guava)
   implementation(libs.json.schema.validator)
   // needed so that we can follow $ref when parsing json. jackson does not support this natively.

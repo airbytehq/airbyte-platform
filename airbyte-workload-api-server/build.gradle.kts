@@ -39,11 +39,11 @@ dependencies {
   implementation(libs.bundles.datadog)
   implementation(libs.jsoup)
 
-  implementation(project(":airbyte-commons"))
-  implementation(project(":airbyte-commons-temporal-core"))
-  implementation(project(":airbyte-config:config-models"))
-  implementation(project(":airbyte-featureflag"))
-  implementation(project(":airbyte-metrics:metrics-lib"))
+  implementation(project(":oss:airbyte-commons"))
+  implementation(project(":oss:airbyte-commons-temporal-core"))
+  implementation(project(":oss:airbyte-config:config-models"))
+  implementation(project(":oss:airbyte-featureflag"))
+  implementation(project(":oss:airbyte-metrics:metrics-lib"))
 
   compileOnly(libs.v3.swagger.annotations)
   compileOnly(libs.micronaut.openapi.annotations)
@@ -56,7 +56,7 @@ dependencies {
   testAnnotationProcessor(platform(libs.micronaut.platform))
   testAnnotationProcessor(libs.bundles.micronaut.test.annotation.processor)
 
-  testImplementation(project(":airbyte-test-utils"))
+  testImplementation(project(":oss:airbyte-test-utils"))
   testImplementation(libs.bundles.micronaut.test)
   testImplementation(libs.postgresql)
   testImplementation(libs.platform.testcontainers.postgresql)
