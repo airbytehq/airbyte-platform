@@ -95,7 +95,7 @@ export const SyncCatalogCard: React.FC = () => {
 
   return (
     <Card noPadding>
-      <Box m="xl">
+      <Box p="xl">
         <FlexContainer justifyContent="space-between" alignItems="center">
           <Heading as="h2" size="sm">
             <FormattedMessage id={cardTitle} />

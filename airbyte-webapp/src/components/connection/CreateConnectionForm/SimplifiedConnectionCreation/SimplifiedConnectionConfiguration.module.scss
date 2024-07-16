@@ -19,3 +19,17 @@
     background-color: colors.$blue-600;
   }
 }
+
+.fixedBottomNav {
+  background-color: colors.$white;
+  border-top: variables.$border-thin solid colors.$grey-100;
+  position: absolute;
+  bottom: 0;
+  right: 0;
+  width: 100%;
+}
+
+.bottomNavPaddingOffset {
+  // Offsets the height of .fixedBottomNav, which is positioned absolutely at the bottom of the page.
+  padding-bottom: calc(variables.$spacing-xl + variables.$spacing-lg + variables.$button-height-xs);
+}

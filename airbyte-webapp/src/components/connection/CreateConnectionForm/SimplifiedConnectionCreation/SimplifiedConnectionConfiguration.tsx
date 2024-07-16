@@ -69,7 +69,7 @@ const SimplifiedConnectionCreationReplication: React.FC = () => {
   });
 
   return (
-    <>
+    <FlexContainer className={styles.bottomNavPaddingOffset} direction="column" gap="lg">
       <Card
         title={formatMessage({ id: "connectionForm.selectSyncMode" })}
         helpText={formatMessage({ id: "connectionForm.selectSyncModeDescription" })}
@@ -77,7 +77,7 @@ const SimplifiedConnectionCreationReplication: React.FC = () => {
         <SimplifiedSchemaQuestionnaire />
       </Card>
       {isSyncCatalogV2Enabled ? <SyncCatalogCardNext /> : <SyncCatalogCard />}
-    </>
+    </FlexContainer>
   );
 };
 
@@ -96,12 +96,14 @@ const SimplifiedConnectionCreationConfigureConnection: React.FC = () => {
   });
 
   return (
-    <SimplifiedConnectionsSettingsCard
-      title={formatMessage({ id: "connectionForm.configureConnection" })}
-      source={source}
-      destination={destination}
-      isCreating
-    />
+    <div className={styles.bottomNavPaddingOffset}>
+      <SimplifiedConnectionsSettingsCard
+        title={formatMessage({ id: "connectionForm.configureConnection" })}
+        source={source}
+        destination={destination}
+        isCreating
+      />
+    </div>
   );
 };
 
@@ -129,7 +131,7 @@ const FirstNav: React.FC = () => {
   });
 
   return (
-    <Box pb="xl">
+    <Box pb="xl" px="xl" pt="lg" className={styles.fixedBottomNav}>
       <FlexContainer justifyContent="space-between">
         <Link
           to={{
@@ -183,7 +185,7 @@ const SecondNav: React.FC = () => {
   const { clearFormChange } = useFormChangeTrackerService();
 
   return (
-    <Box pb="xl">
+    <Box pb="xl" px="xl" pt="lg" className={styles.fixedBottomNav}>
       <FlexContainer justifyContent="space-between">
         <Link
           to={{
