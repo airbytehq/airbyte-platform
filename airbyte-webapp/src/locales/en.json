@@ -1590,6 +1590,8 @@
   "connectorBuilder.parentStreams.parentStream.requestOption.label": "Inject Parent Key into outgoing HTTP Request",
   "connectorBuilder.parentStreams.parentStream.requestOption.tooltip": "Optionally configures how the parent key will be sent in requests to the source API",
   "connectorBuilder.parentStreams.parentStream.requestOption.descriptor": "parent key",
+  "connectorBuilder.parentStreams.parentStream.incrementalParent.label": "Incremental Parent",
+  "connectorBuilder.parentStreams.parentStream.incrementalParent.tooltip": "Causes the parent stream's records to be read incrementally, so only parent records that have been updated since the last sync will be retrieved for use in this stream.\n\n**This only works if this child stream is Incremental.**\n\n**WARNING:** If the parent stream records' cursor fields are NOT updated whenever the relevant child records are updated, then those child records may be missed!",
   "connectorBuilder.partitionRouter.missingTypeMessage": "Values must have a 'type'",
   "connectorBuilder.partitionRouter.invalidTypeMessage": "Invalid type: {inputType}. Only the following types are supported: {validTypes}.",
   "connectorBuilder.partitionRouter.customRouter": "To use a CustomPartitionRouter, add it to the Parent Stream component in YAML mode",

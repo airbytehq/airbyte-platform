@@ -153,6 +153,7 @@ export interface BuilderParentStream {
   partition_field: string;
   parentStreamReference: string;
   request_option?: RequestOption;
+  incremental_dependency?: boolean;
 }
 
 export interface BuilderParameterizedRequests extends Omit<ListPartitionRouter, "values"> {
@@ -684,6 +685,7 @@ export function builderParentStreamsToManifest(
             request_option: parentStreamConfiguration.request_option,
             partition_field: parentStreamConfiguration.partition_field,
             stream: streamRef(parentStream.name),
+            incremental_dependency: parentStreamConfiguration.incremental_dependency ? true : undefined,
           },
         ],
       };
