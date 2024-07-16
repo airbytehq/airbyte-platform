@@ -221,7 +221,7 @@ class ReplicationWorkerHelper(
     streamStatusCompletionTracker.startTracking(configuredAirbyteCatalog, supportRefreshes)
 
     if (configuredAirbyteCatalog.streams.isEmpty()) {
-      metricClient.count(OssMetricsRegistry.DESTINATION_DESERIALIZATION_ERROR, 1, *metricAttrs.toTypedArray())
+      metricClient.count(OssMetricsRegistry.SYNC_WITH_EMPTY_CATALOG, 1, *metricAttrs.toTypedArray())
     }
   }
 
@@ -515,6 +515,7 @@ private fun toConnectionAttrs(ctx: ReplicationContext?): List<MetricAttribute> {
     ctx.connectionId?.let { add(MetricAttribute(MetricTags.CONNECTION_ID, it.toString())) }
     ctx.jobId?.let { add(MetricAttribute(MetricTags.JOB_ID, it.toString())) }
     ctx.attempt?.let { add(MetricAttribute(MetricTags.ATTEMPT_NUMBER, it.toString())) }
+    add(MetricAttribute(MetricTags.IS_RESET, ctx.isReset.toString()))
   }
 }
 
