@@ -34,10 +34,6 @@ import com.google.api.client.util.Preconditions;
  */
 public enum OssMetricsRegistry implements MetricsRegistry {
 
-  ACTIVITY_DBT_TRANSFORMATION(
-      MetricEmittingApps.WORKER,
-      "activity_dbt_transformation",
-      "increments when we start a dbt transformation activity"),
   ACTIVITY_CHECK_CONNECTION(
       MetricEmittingApps.WORKER,
       "activity_check_connection",
