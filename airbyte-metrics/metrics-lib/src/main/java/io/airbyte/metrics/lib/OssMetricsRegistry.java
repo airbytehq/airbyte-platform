@@ -477,7 +477,11 @@ public enum OssMetricsRegistry implements MetricsRegistry {
 
   SYNC_TOTAL_TIME(MetricEmittingApps.ORCHESTRATOR,
       "sync_total_time",
-      "Time to run a sync workflow.");
+      "Time to run a sync workflow."),
+
+  SYNC_WITH_EMPTY_CATALOG(MetricEmittingApps.ORCHESTRATOR,
+      "sync_with_empty_catalog",
+      "Sync was started with an empty configured catalog.");
 
   private final MetricEmittingApp application;
   private final String metricName;

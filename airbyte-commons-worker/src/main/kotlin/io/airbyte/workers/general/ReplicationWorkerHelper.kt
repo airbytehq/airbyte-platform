@@ -219,6 +219,10 @@ class ReplicationWorkerHelper(
       }
     }
     streamStatusCompletionTracker.startTracking(configuredAirbyteCatalog, supportRefreshes)
+
+    if (configuredAirbyteCatalog.streams.isEmpty()) {
+      metricClient.count(OssMetricsRegistry.DESTINATION_DESERIALIZATION_ERROR, 1, *metricAttrs.toTypedArray())
+    }
   }
 
   fun startDestination(
