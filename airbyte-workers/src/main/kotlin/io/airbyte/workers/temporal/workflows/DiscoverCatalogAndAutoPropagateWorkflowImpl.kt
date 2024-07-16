@@ -63,7 +63,7 @@ open class DiscoverCatalogAndAutoPropagateWorkflowImpl : DiscoverCatalogAndAutoP
     }
 
     activity.reportSuccess(true)
-    return RefreshSchemaActivityOutput(postprocessResult.diff!!)
+    return RefreshSchemaActivityOutput(postprocessResult.diff)
   }
 
   fun failure(): RefreshSchemaActivityOutput {
