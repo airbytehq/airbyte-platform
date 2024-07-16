@@ -4,12 +4,16 @@ import io.airbyte.api.model.generated.ActorDefinitionVersionRead
 import io.airbyte.api.model.generated.ConnectionStream
 import io.airbyte.api.model.generated.DestinationIdRequestBody
 import io.airbyte.api.model.generated.RefreshMode
+import io.airbyte.commons.server.converters.JobConverter
 import io.airbyte.commons.server.handlers.StreamRefreshesHandler.Companion.connectionStreamsToStreamDescriptors
 import io.airbyte.commons.server.scheduler.EventRunner
+import io.airbyte.commons.server.support.CurrentUserService
 import io.airbyte.config.StandardSync
 import io.airbyte.config.persistence.StreamRefreshesRepository
 import io.airbyte.config.persistence.domain.StreamRefresh
 import io.airbyte.data.services.ConnectionService
+import io.airbyte.data.services.ConnectionTimelineEventService
+import io.airbyte.persistence.job.JobPersistence
 import io.airbyte.protocol.models.StreamDescriptor
 import io.mockk.clearAllMocks
 import io.mockk.every
@@ -28,6 +32,10 @@ internal class StreamRefreshesHandlerTest {
   private val streamRefreshesRepository: StreamRefreshesRepository = mockk()
   private val eventRunner: EventRunner = mockk()
   private val actorDefinitionVersionHandler: ActorDefinitionVersionHandler = mockk()
+  private val currentUserService: CurrentUserService = mockk()
+  private val jobPersistence: JobPersistence = mockk()
+  private val jobConverter: JobConverter = mockk()
+  private val connectionTimelineEventService: ConnectionTimelineEventService = mockk()
 
   private val streamRefreshesHandler =
     StreamRefreshesHandler(
@@ -35,6 +43,10 @@ internal class StreamRefreshesHandlerTest {
       streamRefreshesRepository,
       eventRunner,
       actorDefinitionVersionHandler,
+      currentUserService,
+      jobPersistence,
+      jobConverter,
+      connectionTimelineEventService,
     )
 
   private val connectionId = UUID.randomUUID()
@@ -73,6 +85,8 @@ internal class StreamRefreshesHandlerTest {
 
     every { streamRefreshesRepository.saveAll(any<List<StreamRefresh>>()) } returns listOf()
     every { eventRunner.startNewManualSync(connectionId) } returns null
+    // todo(@keyi): mock a real job and test saving on connection timeline event
+    every { jobPersistence.getJob(any()) } returns null
 
     val result = streamRefreshesHandler.createRefreshesForConnection(connectionId, RefreshMode.TRUNCATE, connectionStream)
 
@@ -91,6 +105,8 @@ internal class StreamRefreshesHandlerTest {
     every { streamRefreshesRepository.saveAll(any<List<StreamRefresh>>()) } returns listOf()
     every { eventRunner.startNewManualSync(connectionId) } returns null
     every { connectionService.getAllStreamsForConnection(connectionId) } returns streamDescriptors
+    // todo(@keyi): mock a real job and test saving on connection timeline event
+    every { jobPersistence.getJob(any()) } returns null
 
     val result = streamRefreshesHandler.createRefreshesForConnection(connectionId, RefreshMode.TRUNCATE, listOf())
 

@@ -10,6 +10,7 @@ import com.google.common.annotations.VisibleForTesting;
 import io.airbyte.api.model.generated.BooleanRead;
 import io.airbyte.api.model.generated.InternalOperationResult;
 import io.airbyte.api.model.generated.JobFailureRequest;
+import io.airbyte.api.model.generated.JobStatusEnum;
 import io.airbyte.api.model.generated.JobSuccessWithAttemptNumberRequest;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.commons.server.JobStatus;
@@ -26,8 +27,8 @@ import io.airbyte.config.JobResetConnectionConfig;
 import io.airbyte.config.JobSyncConfig;
 import io.airbyte.config.StandardSyncOutput;
 import io.airbyte.data.services.ConnectionTimelineEventService;
-import io.airbyte.data.services.shared.SyncFailedEvent;
-import io.airbyte.data.services.shared.SyncSucceededEvent;
+import io.airbyte.data.services.shared.FailedEvent;
+import io.airbyte.data.services.shared.FinalStatusEvent;
 import io.airbyte.metrics.lib.MetricClientFactory;
 import io.airbyte.metrics.lib.OssMetricsRegistry;
 import io.airbyte.persistence.job.JobNotifier;
@@ -92,8 +93,8 @@ public class JobsHandler {
       }
       if (job.getConfigType().equals(JobConfig.ConfigType.SYNC)) {
         jobNotifier.failJob(job, attemptStats);
-        storeSyncFailure(job, input.getConnectionId(), attemptStats);
       }
+      logJobFailureEventInConnectionTimeline(job, input.getConnectionId(), attemptStats);
 
       jobCreationAndStatusUpdateHelper.emitJobToReleaseStagesMetric(OssMetricsRegistry.JOB_FAILED_BY_RELEASE_STAGE, job, input);
 
@@ -179,8 +180,8 @@ public class JobsHandler {
       }
       if (job.getConfigType().equals(JobConfig.ConfigType.SYNC)) {
         jobNotifier.successJob(job, attemptStats);
-        storeSyncSuccess(job, input.getConnectionId(), attemptStats);
       }
+      logJobSuccessEventInConnectionTimeline(job, input.getConnectionId(), attemptStats);
       jobCreationAndStatusUpdateHelper.emitJobToReleaseStagesMetric(OssMetricsRegistry.JOB_SUCCEEDED_BY_RELEASE_STAGE, job, input);
       jobCreationAndStatusUpdateHelper.trackCompletion(job, JobStatus.SUCCEEDED);
 
@@ -192,19 +193,26 @@ public class JobsHandler {
     }
   }
 
-  private void storeSyncSuccess(final Job job, final UUID connectionId, final List<JobPersistence.AttemptStats> attemptStats) {
+  private void logJobSuccessEventInConnectionTimeline(final Job job, final UUID connectionId, final List<JobPersistence.AttemptStats> attemptStats) {
     final long jobId = job.getId();
     try {
       final LoadedStats stats = buildLoadedStats(job, attemptStats);
-      final SyncSucceededEvent event = new SyncSucceededEvent(jobId, job.getCreatedAtInSecond(),
-          job.getUpdatedAtInSecond(), stats.bytes, stats.records, job.getAttemptsCount());
+      final FinalStatusEvent event = new FinalStatusEvent(
+          jobId,
+          job.getCreatedAtInSecond(),
+          job.getUpdatedAtInSecond(),
+          stats.bytes,
+          stats.records,
+          job.getAttemptsCount(),
+          job.getConfigType().name(),
+          JobStatus.SUCCEEDED.name());
       connectionEventService.writeEvent(connectionId, event, null);
     } catch (final Exception e) {
       log.warn("Failed to persist timeline event for job: {}", jobId, e);
     }
   }
 
-  private void storeSyncFailure(final Job job, final UUID connectionId, final List<JobPersistence.AttemptStats> attemptStats) {
+  private void logJobFailureEventInConnectionTimeline(final Job job, final UUID connectionId, final List<JobPersistence.AttemptStats> attemptStats) {
     final long jobId = job.getId();
     try {
       final LoadedStats stats = buildLoadedStats(job, attemptStats);
@@ -213,8 +221,24 @@ public class JobsHandler {
       final Optional<FailureReason> firstFailureReasonOfLastAttempt =
           lastAttemptFailureSummary.flatMap(summary -> summary.getFailures().stream().findFirst());
 
-      final SyncFailedEvent event = new SyncFailedEvent(jobId, job.getCreatedAtInSecond(),
-          job.getUpdatedAtInSecond(), stats.bytes, stats.records, job.getAttemptsCount(), firstFailureReasonOfLastAttempt);
+      final String jobStatus;
+      if (stats.bytes > 0) {
+        // Sync is incomplete (partial succeeded).
+        jobStatus = JobStatusEnum.INCOMPLETE.name();
+      } else {
+        // Sync is failed.
+        jobStatus = JobStatusEnum.FAILED.name();
+      }
+      final FailedEvent event = new FailedEvent(
+          jobId,
+          job.getCreatedAtInSecond(),
+          job.getUpdatedAtInSecond(),
+          stats.bytes,
+          stats.records,
+          job.getAttemptsCount(),
+          job.getConfigType().name(),
+          jobStatus,
+          firstFailureReasonOfLastAttempt);
       connectionEventService.writeEvent(connectionId, event, null);
     } catch (final Exception e) {
       log.warn("Failed to persist timeline event for job: {}", jobId, e);

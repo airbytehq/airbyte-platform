@@ -9105,6 +9105,7 @@ components:
         - CONNECTION_DISABLED
         - SCHEMA_UPDATE
         - CONNECTOR_UPDATE
+        - UNKNOWN
     UserReadInConnectionEvent:
       type: object
       required:

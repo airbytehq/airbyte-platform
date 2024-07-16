@@ -28,6 +28,7 @@ interface ConnectionEvent {
     CONNECTION_DISABLED,
     SCHEMA_UPDATE,
     CONNECTOR_UPDATE,
+    UNKNOWN,
   }
 
   fun getEventType(): Type

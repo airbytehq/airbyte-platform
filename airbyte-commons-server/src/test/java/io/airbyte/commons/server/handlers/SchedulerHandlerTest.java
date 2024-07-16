@@ -1774,8 +1774,15 @@ class SchedulerHandlerTest {
     when(eventRunner.startNewCancellation(connectionId))
         .thenReturn(manualOperationResult);
 
-    doReturn(new JobInfoRead())
-        .when(jobConverter).getJobInfoRead(any());
+    doReturn(new JobInfoRead()
+        .job(new JobRead()
+            .id(jobId)
+            .createdAt(123L)
+            .updatedAt(321L)))
+                .when(jobConverter).getJobInfoRead(any());
+
+    // todo(@keyi): test different type (sync, clear, refresh)
+    when(job.getConfigType()).thenReturn(ConfigType.SYNC);
 
     schedulerHandler.cancelJob(new JobIdRequestBody().id(jobId));
 

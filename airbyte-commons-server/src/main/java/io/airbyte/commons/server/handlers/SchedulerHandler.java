@@ -63,7 +63,6 @@ import io.airbyte.commons.version.Version;
 import io.airbyte.config.ActorCatalog;
 import io.airbyte.config.ActorDefinitionVersion;
 import io.airbyte.config.DestinationConnection;
-import io.airbyte.config.JobConfig;
 import io.airbyte.config.JobTypeResourceLimit.JobType;
 import io.airbyte.config.NotificationSettings;
 import io.airbyte.config.ResourceRequirements;
@@ -87,8 +86,8 @@ import io.airbyte.config.secrets.persistence.RuntimeSecretPersistence;
 import io.airbyte.data.services.ConnectionTimelineEventService;
 import io.airbyte.data.services.SecretPersistenceConfigService;
 import io.airbyte.data.services.WorkspaceService;
-import io.airbyte.data.services.shared.SyncCancelledEvent;
-import io.airbyte.data.services.shared.SyncStartedEvent;
+import io.airbyte.data.services.shared.FinalStatusEvent;
+import io.airbyte.data.services.shared.ManuallyStartedEvent;
 import io.airbyte.featureflag.DiscoverPostprocessInTemporal;
 import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.featureflag.Organization;
@@ -105,6 +104,7 @@ import io.airbyte.persistence.job.WebUrlHelper;
 import io.airbyte.persistence.job.factory.OAuthConfigSupplier;
 import io.airbyte.persistence.job.factory.SyncJobFactory;
 import io.airbyte.persistence.job.models.Job;
+import io.airbyte.persistence.job.models.JobStatus;
 import io.airbyte.persistence.job.tracker.JobTracker;
 import io.airbyte.protocol.models.AirbyteCatalog;
 import io.airbyte.protocol.models.ConnectorSpecification;
@@ -112,6 +112,7 @@ import io.airbyte.protocol.models.StreamDescriptor;
 import io.airbyte.validation.json.JsonSchemaValidator;
 import io.airbyte.validation.json.JsonValidationException;
 import jakarta.inject.Singleton;
+import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotNull;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -157,7 +158,7 @@ public class SchedulerHandler {
   private final ConnectorDefinitionSpecificationHandler connectorDefinitionSpecificationHandler;
   private final WorkspaceService workspaceService;
   private final SecretPersistenceConfigService secretPersistenceConfigService;
-  private final ConnectionTimelineEventService connectionEventService;
+  private final ConnectionTimelineEventService connectionTimelineEventService;
   private final CurrentUserService currentUserService;
   private final StreamRefreshesHandler streamRefreshesHandler;
   private final NotificationHelper notificationHelper;
@@ -209,7 +210,7 @@ public class SchedulerHandler {
     this.connectorDefinitionSpecificationHandler = connectorDefinitionSpecificationHandler;
     this.workspaceService = workspaceService;
     this.secretPersistenceConfigService = secretPersistenceConfigService;
-    this.connectionEventService = connectionEventService;
+    this.connectionTimelineEventService = connectionEventService;
     this.currentUserService = currentUserService;
     this.jobCreationAndStatusUpdateHelper = new JobCreationAndStatusUpdateHelper(
         jobPersistence,
@@ -791,6 +792,22 @@ public class SchedulerHandler {
     }
   }
 
+  private long getRecordsLoaded(final List<io.airbyte.api.model.generated.@Valid StreamStats> streamAggregatedStats) {
+    long totalRecordsLoaded = 0;
+    for (final io.airbyte.api.model.generated.@Valid StreamStats streamStats : streamAggregatedStats) {
+      totalRecordsLoaded += streamStats.getRecordsCommitted();
+    }
+    return totalRecordsLoaded;
+  }
+
+  private long getBytesLoaded(final List<io.airbyte.api.model.generated.@Valid StreamStats> streamAggregatedStats) {
+    long totalBytesLoaded = 0;
+    for (final io.airbyte.api.model.generated.@Valid StreamStats streamStats : streamAggregatedStats) {
+      totalBytesLoaded += streamStats.getBytesCommitted();
+    }
+    return totalBytesLoaded;
+  }
+
   private JobInfoRead submitCancellationToWorker(final Long jobId) throws IOException {
     final Job job = jobPersistence.getJob(jobId);
 
@@ -799,13 +816,19 @@ public class SchedulerHandler {
       throw new IllegalStateException(cancellationResult.getFailingReason().get());
     }
     final JobInfoRead jobInfo = readJobFromResult(cancellationResult);
-    if (job.getConfigType() != null && job.getConfigType().equals(JobConfig.ConfigType.SYNC)) {
-      // Store connection timeline event (cancel a sync).
-      final SyncCancelledEvent event = new SyncCancelledEvent(
-          jobInfo.getJob().getId(),
-          jobInfo.getJob().getCreatedAt());
-      connectionEventService.writeEvent(UUID.fromString(job.getScope()), event, getCurrentUserIdIfExist());
-    }
+
+    // Store connection timeline event (job cancellation).
+    final @Valid List<io.airbyte.api.model.generated.@Valid StreamStats> streamAggregatedStats = jobInfo.getJob().getStreamAggregatedStats();
+    final FinalStatusEvent event = new FinalStatusEvent(
+        jobInfo.getJob().getId(),
+        jobInfo.getJob().getCreatedAt(),
+        jobInfo.getJob().getUpdatedAt(),
+        getBytesLoaded(streamAggregatedStats),
+        getRecordsLoaded(streamAggregatedStats),
+        job.getAttemptsCount(),
+        job.getConfigType().name(), JobStatus.CANCELLED.name());
+    connectionTimelineEventService.writeEvent(UUID.fromString(job.getScope()), event, getCurrentUserIdIfExist());
+
     // query same job ID again to get updated job info after cancellation
     return jobConverter.getJobInfoRead(jobPersistence.getJob(jobId));
   }
@@ -819,14 +842,19 @@ public class SchedulerHandler {
     }
     final ManualOperationResult manualSyncResult = eventRunner.startNewManualSync(connectionId);
     final JobInfoRead jobInfo = readJobFromResult(manualSyncResult);
-    if (jobInfo != null && jobInfo.getJob() != null && jobInfo.getJob().getConfigType().equals(JobConfigType.SYNC)) {
-      // Store connection timeline event (start a manual sync).
-      final SyncStartedEvent event = new SyncStartedEvent(
-          jobInfo.getJob().getId(),
-          jobInfo.getJob().getCreatedAt());
-      connectionEventService.writeEvent(connectionId, event, getCurrentUserIdIfExist());
-    }
+    logManuallyStartedEventInConnectionTimeline(connectionId, jobInfo, null);
     return jobInfo;
+  }
+
+  private void logManuallyStartedEventInConnectionTimeline(final UUID connectionId, final JobInfoRead jobInfo, final List<StreamDescriptor> streams) {
+    if (jobInfo != null && jobInfo.getJob() != null && jobInfo.getJob().getConfigType() != null) {
+      final ManuallyStartedEvent event = new ManuallyStartedEvent(
+          jobInfo.getJob().getId(),
+          jobInfo.getJob().getCreatedAt(),
+          jobInfo.getJob().getConfigType().name(),
+          streams);
+      connectionTimelineEventService.writeEvent(connectionId, event, getCurrentUserIdIfExist());
+    }
   }
 
   private JobInfoRead submitResetConnectionToWorker(final UUID connectionId) throws IOException, IllegalStateException, ConfigNotFoundException {
@@ -840,7 +868,9 @@ public class SchedulerHandler {
         connectionId,
         streamsToReset);
 
-    return readJobFromResult(resetConnectionResult);
+    final JobInfoRead jobInfo = readJobFromResult(resetConnectionResult);
+    logManuallyStartedEventInConnectionTimeline(connectionId, jobInfo, streamsToReset);
+    return jobInfo;
   }
 
   private JobInfoRead submitResetConnectionStreamsToWorker(final UUID connectionId, final List<ConnectionStream> streams)
@@ -851,7 +881,7 @@ public class SchedulerHandler {
     return submitResetConnectionToWorker(connectionId, actualStreamsToReset);
   }
 
-  private JobInfoRead readJobFromResult(final ManualOperationResult manualOperationResult) throws IOException, IllegalStateException {
+  public JobInfoRead readJobFromResult(final ManualOperationResult manualOperationResult) throws IOException, IllegalStateException {
     if (manualOperationResult.getFailingReason().isPresent()) {
       if (VALUE_CONFLICT_EXCEPTION_ERROR_CODE_SET.contains(manualOperationResult.getErrorCode().get())) {
         throw new ValueConflictKnownException(manualOperationResult.getFailingReason().get());
