@@ -4,7 +4,7 @@
 #
 #    pip-compile
 #
-airbyte-cdk==2.3.0
+airbyte-cdk==3.7.0
     # via -r requirements.in
 airbyte-protocol-models-pdv2==0.12.2
     # via airbyte-cdk
@@ -19,7 +19,7 @@ backoff==2.2.1
     # via airbyte-cdk
 bracex==2.4
     # via wcmatch
-cachetools==5.3.3
+cachetools==5.4.0
     # via airbyte-cdk
 cattrs==23.2.3
     # via requests-cache
@@ -35,7 +35,7 @@ deprecated==1.2.14
     # via airbyte-cdk
 dpath==2.2.0
     # via airbyte-cdk
-exceptiongroup==1.2.1
+exceptiongroup==1.2.2
     # via cattrs
 genson==1.2.2
     # via airbyte-cdk
@@ -55,7 +55,7 @@ jsonschema==3.2.0
     # via airbyte-cdk
 langchain-core==0.1.42
     # via airbyte-cdk
-langsmith==0.1.83
+langsmith==0.1.88
     # via langchain-core
 markupsafe==2.1.5
     # via jinja2
