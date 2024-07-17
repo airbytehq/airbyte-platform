@@ -16,6 +16,7 @@ import { SimplifiedConnectionsSettingsCard } from "components/connection/CreateC
 import { Form } from "components/forms";
 import { DataResidencyDropdown } from "components/forms/DataResidencyDropdown";
 import { FormSubmissionButtons } from "components/forms/FormSubmissionButtons";
+import { ScrollableContainer } from "components/ScrollableContainer";
 import { Button } from "components/ui/Button";
 import { Card } from "components/ui/Card";
 import { FlexContainer } from "components/ui/Flex";
@@ -219,58 +220,60 @@ const SimplifiedConnectionSettingsPage = () => {
   const isDeprecated = connection.status === "deprecated";
 
   return (
-    <FlexContainer direction="column">
-      <Form<FormConnectionFormValues>
-        trackDirtyChanges
-        disabled={!canEditConnection}
-        onSubmit={(values: FormConnectionFormValues) => {
-          const connectionUpdates: WebBackendConnectionUpdate = {
-            connectionId: connection.connectionId,
-            ...values,
-          };
+    <ScrollableContainer>
+      <FlexContainer direction="column">
+        <Form<FormConnectionFormValues>
+          trackDirtyChanges
+          disabled={!canEditConnection}
+          onSubmit={(values: FormConnectionFormValues) => {
+            const connectionUpdates: WebBackendConnectionUpdate = {
+              connectionId: connection.connectionId,
+              ...values,
+            };
 
-          return updateConnection(connectionUpdates);
-        }}
-        onError={onError}
-        onSuccess={onSuccess}
-        schema={validationSchema}
-        defaultValues={simplifiedInitialValues}
-      >
-        <SimplifiedConnectionsSettingsCard
-          title={formatMessage({ id: "sources.settings" })}
-          source={connection.source}
-          destination={connection.destination}
-          isCreating={false}
-          isDeprecated={isDeprecated}
-        />
-      </Form>
+            return updateConnection(connectionUpdates);
+          }}
+          onError={onError}
+          onSuccess={onSuccess}
+          schema={validationSchema}
+          defaultValues={simplifiedInitialValues}
+        >
+          <SimplifiedConnectionsSettingsCard
+            title={formatMessage({ id: "sources.settings" })}
+            source={connection.source}
+            destination={connection.destination}
+            isCreating={false}
+            isDeprecated={isDeprecated}
+          />
+        </Form>
 
-      {connection.status !== "deprecated" && (
-        <ConnectionSyncContextProvider>
-          <ConnectionActionsBlock />
-        </ConnectionSyncContextProvider>
-      )}
-
-      <Disclosure>
-        {({ open }) => (
-          <>
-            <Disclosure.Button
-              as={Button}
-              variant="clear"
-              icon={open ? "chevronDown" : "chevronRight"}
-              iconPosition="right"
-              className={classnames(styles.advancedButton, styles.alignStart)}
-            >
-              <FormattedMessage id="connection.state.title" />
-            </Disclosure.Button>
-            <Disclosure.Panel className={styles.advancedPanel}>
-              <React.Suspense fallback={<Spinner />}>
-                <StateBlock connectionId={connection.connectionId} disabled={mode === "readonly"} />
-              </React.Suspense>
-            </Disclosure.Panel>
-          </>
+        {connection.status !== "deprecated" && (
+          <ConnectionSyncContextProvider>
+            <ConnectionActionsBlock />
+          </ConnectionSyncContextProvider>
         )}
-      </Disclosure>
-    </FlexContainer>
+
+        <Disclosure>
+          {({ open }) => (
+            <>
+              <Disclosure.Button
+                as={Button}
+                variant="clear"
+                icon={open ? "chevronDown" : "chevronRight"}
+                iconPosition="right"
+                className={classnames(styles.advancedButton, styles.alignStart)}
+              >
+                <FormattedMessage id="connection.state.title" />
+              </Disclosure.Button>
+              <Disclosure.Panel className={styles.advancedPanel}>
+                <React.Suspense fallback={<Spinner />}>
+                  <StateBlock connectionId={connection.connectionId} disabled={mode === "readonly"} />
+                </React.Suspense>
+              </Disclosure.Panel>
+            </>
+          )}
+        </Disclosure>
+      </FlexContainer>
+    </ScrollableContainer>
   );
 };

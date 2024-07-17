@@ -7,6 +7,7 @@ import { EmptyState } from "components/common/EmptyState";
 import { ConnectionSyncButtons } from "components/connection/ConnectionSync/ConnectionSyncButtons";
 import { ConnectionSyncContextProvider } from "components/connection/ConnectionSync/ConnectionSyncContext";
 import { PageContainer } from "components/PageContainer";
+import { ScrollableContainer } from "components/ScrollableContainer";
 import { Box } from "components/ui/Box";
 import { Button } from "components/ui/Button";
 import { Card } from "components/ui/Card";
@@ -113,85 +114,87 @@ export const ConnectionJobHistoryPage: React.FC = () => {
   const linkedJobNotFound = linkedJobId && jobs.length === 0;
 
   return (
-    <PageContainer centered>
-      <ConnectionSyncContextProvider>
-        <Card noPadding>
-          <Box p="xl">
-            <FlexContainer direction="column">
-              <FlexContainer justifyContent="space-between" alignItems="center">
-                <Heading as="h5" size="sm">
-                  <FormattedMessage id="connectionForm.jobHistory" />
-                </Heading>
-                {!isSimplifiedCreation && (
-                  <ConnectionSyncButtons buttonText={<FormattedMessage id="connection.startSync" />} />
-                )}
-              </FlexContainer>
-              <FlexContainer alignItems="center">
-                <ListBox
-                  buttonClassName={styles.statusFilter}
-                  options={statusFilterOptions}
-                  onSelect={(value) => updateJobStatusFilter(value)}
-                  selectedValue={filterValues.jobStatus}
-                  id="job-history-status-filter"
-                />
-                <RangeDatePicker
-                  value={[filterValues.startDate, filterValues.endDate]}
-                  onChange={updateRangeDateFilter}
-                  maxDate={END_OF_TODAY}
-                  buttonText="jobHistory.rangeDateFilter"
-                />
-                {!filtersAreDefault && <ClearFiltersButton onClick={clearFilters} />}
-                <span className={styles.jobCount}>
-                  {!isLoading && (
-                    <Text color="grey">
-                      <FormattedMessage id="jobHistory.count" values={{ count: data?.pages[0].data.totalJobCount }} />
-                    </Text>
+    <ScrollableContainer>
+      <PageContainer centered>
+        <ConnectionSyncContextProvider>
+          <Card noPadding>
+            <Box p="xl">
+              <FlexContainer direction="column">
+                <FlexContainer justifyContent="space-between" alignItems="center">
+                  <Heading as="h5" size="sm">
+                    <FormattedMessage id="connectionForm.jobHistory" />
+                  </Heading>
+                  {!isSimplifiedCreation && (
+                    <ConnectionSyncButtons buttonText={<FormattedMessage id="connection.startSync" />} />
                   )}
-                </span>
-              </FlexContainer>
-            </FlexContainer>
-          </Box>
-          {isLoading ? (
-            <Box py="2xl">
-              <FlexContainer justifyContent="center">
-                <LoadingSpinner />
-              </FlexContainer>
-            </Box>
-          ) : jobs?.length ? (
-            <JobsList jobs={jobs} />
-          ) : linkedJobNotFound ? (
-            <Box pb="xl">
-              <EmptyState
-                text={<FormattedMessage id="connection.linkedJobNotFound" />}
-                description={
-                  <Link to={pathname}>
-                    <FormattedMessage id="connection.returnToJobHistory" />
-                  </Link>
-                }
-              />
-            </Box>
-          ) : (
-            <Box pb="xl">
-              <EmptyState
-                text={<FormattedMessage id="jobs.noJobs" />}
-                description={
-                  <FormattedMessage
-                    id={filtersAreDefault ? "jobs.noJobsDescription" : "jobs.noJobsFilterDescription"}
+                </FlexContainer>
+                <FlexContainer alignItems="center">
+                  <ListBox
+                    buttonClassName={styles.statusFilter}
+                    options={statusFilterOptions}
+                    onSelect={(value) => updateJobStatusFilter(value)}
+                    selectedValue={filterValues.jobStatus}
+                    id="job-history-status-filter"
                   />
-                }
-              />
+                  <RangeDatePicker
+                    value={[filterValues.startDate, filterValues.endDate]}
+                    onChange={updateRangeDateFilter}
+                    maxDate={END_OF_TODAY}
+                    buttonText="jobHistory.rangeDateFilter"
+                  />
+                  {!filtersAreDefault && <ClearFiltersButton onClick={clearFilters} />}
+                  <span className={styles.jobCount}>
+                    {!isLoading && (
+                      <Text color="grey">
+                        <FormattedMessage id="jobHistory.count" values={{ count: data?.pages[0].data.totalJobCount }} />
+                      </Text>
+                    )}
+                  </span>
+                </FlexContainer>
+              </FlexContainer>
             </Box>
+            {isLoading ? (
+              <Box py="2xl">
+                <FlexContainer justifyContent="center">
+                  <LoadingSpinner />
+                </FlexContainer>
+              </Box>
+            ) : jobs?.length ? (
+              <JobsList jobs={jobs} />
+            ) : linkedJobNotFound ? (
+              <Box pb="xl">
+                <EmptyState
+                  text={<FormattedMessage id="connection.linkedJobNotFound" />}
+                  description={
+                    <Link to={pathname}>
+                      <FormattedMessage id="connection.returnToJobHistory" />
+                    </Link>
+                  }
+                />
+              </Box>
+            ) : (
+              <Box pb="xl">
+                <EmptyState
+                  text={<FormattedMessage id="jobs.noJobs" />}
+                  description={
+                    <FormattedMessage
+                      id={filtersAreDefault ? "jobs.noJobsDescription" : "jobs.noJobsFilterDescription"}
+                    />
+                  }
+                />
+              </Box>
+            )}
+          </Card>
+          {hasNextPage && (
+            <footer className={styles.footer}>
+              <Button variant="secondary" isLoading={isFetchingNextPage} onClick={onLoadMoreJobs}>
+                <FormattedMessage id="connection.loadMoreJobs" />
+              </Button>
+            </footer>
           )}
-        </Card>
-        {hasNextPage && (
-          <footer className={styles.footer}>
-            <Button variant="secondary" isLoading={isFetchingNextPage} onClick={onLoadMoreJobs}>
-              <FormattedMessage id="connection.loadMoreJobs" />
-            </Button>
-          </footer>
-        )}
-      </ConnectionSyncContextProvider>
-    </PageContainer>
+        </ConnectionSyncContextProvider>
+      </PageContainer>
+    </ScrollableContainer>
   );
 };
 

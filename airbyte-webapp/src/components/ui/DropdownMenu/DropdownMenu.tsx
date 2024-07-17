@@ -1,4 +1,4 @@
-import { autoUpdate, useFloating, offset } from "@floating-ui/react-dom";
+import { autoUpdate, useFloating, offset, flip } from "@floating-ui/react-dom";
 import { Menu } from "@headlessui/react";
 import classNames from "classnames";
 import React, { AnchorHTMLAttributes } from "react";
@@ -30,7 +30,7 @@ export const DropdownMenu: React.FC<DropdownMenuProps> = ({
   ...restProps
 }) => {
   const { x, y, reference, floating, strategy } = useFloating({
-    middleware: [offset(displacement)],
+    middleware: [offset(displacement), flip()],
     whileElementsMounted: autoUpdate,
     placement,
   });

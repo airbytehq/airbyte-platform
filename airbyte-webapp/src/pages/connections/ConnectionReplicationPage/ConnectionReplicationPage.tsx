@@ -18,6 +18,7 @@ import { UpdateConnectionFormControls } from "components/connection/ConnectionFo
 import { SchemaError } from "components/connection/CreateConnectionForm/SchemaError";
 import { Form } from "components/forms";
 import LoadingSchema from "components/LoadingSchema";
+import { ScrollableContainer } from "components/ScrollableContainer";
 import { FlexContainer } from "components/ui/Flex";
 import { Message } from "components/ui/Message/Message";
 
@@ -266,8 +267,8 @@ export const ConnectionReplicationPage: React.FC = () => {
     );
 
   return (
-    <FlexContainer direction="column" className={styles.content}>
+    <ScrollableContainer className={styles.content}>
       {isSyncCatalogV2Enabled ? newSyncCatalogV2Form : oldSyncCatalogForm}
-    </FlexContainer>
+    </ScrollableContainer>
   );
 };

@@ -110,8 +110,8 @@ export const Table = <T,>({
     />
   );
 
-  const TableHead: TableComponents["TableHead"] = React.forwardRef((props, ref) => (
-    <thead ref={ref} className={classNames({ [styles["thead--sticky"]]: stickyHeaders })} {...props} />
+  const TableHead: TableComponents["TableHead"] = React.forwardRef(({ style, ...restProps }, ref) => (
+    <thead ref={ref} className={classNames({ [styles["thead--sticky"]]: stickyHeaders })} {...restProps} />
   ));
   TableHead.displayName = "TableHead";
 
@@ -227,7 +227,10 @@ export const Table = <T,>({
   return virtualized ? (
     <TableVirtuoso<T>
       // the parent container should have exact height to make "AutoSizer" work properly
-      style={{ height: "100%" }}
+      style={{
+        height: "100%",
+        minHeight: 100, // for empty state placeholder
+      }}
       totalCount={rows.length}
       {...virtualizedProps}
       components={{

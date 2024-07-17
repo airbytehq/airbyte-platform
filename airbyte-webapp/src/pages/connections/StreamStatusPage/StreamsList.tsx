@@ -1,6 +1,6 @@
 import { createColumnHelper } from "@tanstack/react-table";
 import classNames from "classnames";
-import { useMemo, useRef } from "react";
+import { useRef, forwardRef, useMemo } from "react";
 import { FormattedMessage } from "react-intl";
 import { useToggle } from "react-use";
 
@@ -26,7 +26,7 @@ import { StreamSearchFiltering } from "./StreamSearchFiltering";
 import styles from "./StreamsList.module.scss";
 import { StreamsListSubtitle } from "./StreamsListSubtitle";
 
-export const StreamsList = () => {
+export const StreamsList = forwardRef<HTMLDivElement>((_, outerRef) => {
   const [showRelativeTime, setShowRelativeTime] = useToggle(true);
   const { connection } = useConnectionEditService();
   const streamEntries = useUiStreamStates(connection.connectionId);
@@ -100,8 +100,11 @@ export const StreamsList = () => {
 
   const { status, nextSync, recordsExtracted, recordsLoaded } = useConnectionStatus(connection.connectionId);
 
+  const customScrollParent =
+    typeof outerRef !== "function" && outerRef && outerRef.current ? outerRef.current : undefined;
+
   return (
-    <Card noPadding className={styles.card} bodyClassName={styles.cardBody}>
+    <Card noPadding>
       <Box p="xl" className={styles.cardHeader}>
         <FlexContainer justifyContent="space-between" alignItems="center">
           <FlexContainer alignItems="center">
@@ -120,23 +123,24 @@ export const StreamsList = () => {
         </FlexContainer>
       </Box>
       <FlexContainer direction="column" gap="sm" className={styles.tableContainer} data-survey="streamcentric">
-        <div className={styles.tableContainer} data-survey="streamcentric">
-          <Table
-            rowId={(row) => `${row.streamNamespace ?? ""}.${row.streamName}`}
-            columns={columns}
-            data={streamEntries}
-            variant="inBlock"
-            getRowClassName={(data) =>
-              classNames(styles.row, {
-                [styles["syncing--next"]]:
-                  activeStatuses.includes(data.status) && data.status !== ConnectionStatusIndicatorStatus.Queued,
-              })
-            }
-            sorting={false}
-            virtualized
-          />
-        </div>
+        <Table
+          columns={columns}
+          data={streamEntries}
+          variant="inBlock"
+          className={styles.table}
+          rowId={(row) => `${row.streamNamespace ?? ""}.${row.streamName}`}
+          getRowClassName={(data) =>
+            classNames(styles.row, {
+              [styles["syncing--next"]]:
+                activeStatuses.includes(data.status) && data.status !== ConnectionStatusIndicatorStatus.Queued,
+            })
+          }
+          sorting={false}
+          virtualized
+          virtualizedProps={{ customScrollParent, useWindowScroll: true }}
+        />
       </FlexContainer>
     </Card>
   );
-};
+});
+StreamsList.displayName = "StreamsList";
