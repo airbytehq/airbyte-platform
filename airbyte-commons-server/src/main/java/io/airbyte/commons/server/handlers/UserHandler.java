@@ -33,6 +33,7 @@ import io.airbyte.api.model.generated.WorkspaceUserAccessInfoRead;
 import io.airbyte.api.model.generated.WorkspaceUserAccessInfoReadList;
 import io.airbyte.api.model.generated.WorkspaceUserRead;
 import io.airbyte.api.model.generated.WorkspaceUserReadList;
+import io.airbyte.api.problems.throwable.generated.SSORequiredProblem;
 import io.airbyte.commons.auth.config.InitialUserConfig;
 import io.airbyte.commons.auth.support.UserAuthenticationResolver;
 import io.airbyte.commons.enums.Enums;
@@ -42,6 +43,7 @@ import io.airbyte.commons.server.errors.OperationNotAllowedException;
 import io.airbyte.commons.server.handlers.helpers.WorkspaceHelpersKt;
 import io.airbyte.config.ConfigSchema;
 import io.airbyte.config.Organization;
+import io.airbyte.config.OrganizationEmailDomain;
 import io.airbyte.config.Permission;
 import io.airbyte.config.User;
 import io.airbyte.config.User.Status;
@@ -52,8 +54,11 @@ import io.airbyte.config.persistence.OrganizationPersistence;
 import io.airbyte.config.persistence.PermissionPersistence;
 import io.airbyte.config.persistence.SQLOperationNotAllowedException;
 import io.airbyte.config.persistence.UserPersistence;
+import io.airbyte.data.services.OrganizationEmailDomainService;
 import io.airbyte.data.services.PermissionRedundantException;
 import io.airbyte.data.services.PermissionService;
+import io.airbyte.featureflag.FeatureFlagClient;
+import io.airbyte.featureflag.RestrictLoginsForSSODomains;
 import io.airbyte.validation.json.JsonValidationException;
 import jakarta.inject.Named;
 import jakarta.inject.Singleton;
@@ -81,9 +86,11 @@ public class UserHandler {
   private final UserPersistence userPersistence;
   private final PermissionPersistence permissionPersistence;
   private final PermissionService permissionService;
+  private final OrganizationEmailDomainService organizationEmailDomainService;
   private final PermissionHandler permissionHandler;
   private final WorkspacesHandler workspacesHandler;
   private final OrganizationPersistence organizationPersistence;
+  private final FeatureFlagClient featureFlagClient;
 
   private final UserAuthenticationResolver userAuthenticationResolver;
   private final Optional<InitialUserConfig> initialUserConfig;
@@ -95,15 +102,18 @@ public class UserHandler {
                      final PermissionPersistence permissionPersistence,
                      final PermissionService permissionService,
                      final OrganizationPersistence organizationPersistence,
+                     final OrganizationEmailDomainService organizationEmailDomainService,
                      final PermissionHandler permissionHandler,
                      final WorkspacesHandler workspacesHandler,
                      @Named("uuidGenerator") final Supplier<UUID> uuidGenerator,
                      final UserAuthenticationResolver userAuthenticationResolver,
                      final Optional<InitialUserConfig> initialUserConfig,
-                     final ResourceBootstrapHandlerInterface resourceBootstrapHandler) {
+                     final ResourceBootstrapHandlerInterface resourceBootstrapHandler,
+                     final FeatureFlagClient featureFlagClient) {
     this.uuidGenerator = uuidGenerator;
     this.userPersistence = userPersistence;
     this.organizationPersistence = organizationPersistence;
+    this.organizationEmailDomainService = organizationEmailDomainService;
     this.permissionPersistence = permissionPersistence;
     this.permissionService = permissionService;
     this.workspacesHandler = workspacesHandler;
@@ -111,6 +121,7 @@ public class UserHandler {
     this.userAuthenticationResolver = userAuthenticationResolver;
     this.initialUserConfig = initialUserConfig;
     this.resourceBootstrapHandler = resourceBootstrapHandler;
+    this.featureFlagClient = featureFlagClient;
   }
 
   /**
@@ -340,8 +351,34 @@ public class UserHandler {
         .collect(Collectors.toList()));
   }
 
+  private boolean isAllowedDomain(final String email) throws IOException {
+    final String emailDomain = email.split("@")[1];
+    final List<OrganizationEmailDomain> restrictedForOrganizations = organizationEmailDomainService.findByEmailDomain(emailDomain);
+
+    final List<OrganizationEmailDomain> filteredOrganizations = restrictedForOrganizations.stream()
+        .filter(orgEmailDomain -> featureFlagClient.boolVariation(RestrictLoginsForSSODomains.INSTANCE,
+            new io.airbyte.featureflag.Organization(orgEmailDomain.getOrganizationId())))
+        .toList();
+
+    if (filteredOrganizations.isEmpty()) {
+      return true;
+    }
+
+    final Optional<Organization> currentSSOOrg = getSsoOrganizationIfExists();
+    return currentSSOOrg.isPresent() && filteredOrganizations.stream()
+        .anyMatch(orgEmailDomain -> orgEmailDomain.getOrganizationId().equals(currentSSOOrg.get().getOrganizationId()));
+  }
+
   public UserGetOrCreateByAuthIdResponse getOrCreateUserByAuthId(final UserAuthIdRequestBody userAuthIdRequestBody)
       throws JsonValidationException, ConfigNotFoundException, IOException {
+
+    // check SSO restriction
+    final User incomingJwtUser = resolveIncomingJwtUser(userAuthIdRequestBody);
+    final boolean allowDomain = isAllowedDomain(incomingJwtUser.getEmail());
+    if (!allowDomain) {
+      // TODO: also clean up the keycloak user
+      throw new SSORequiredProblem();
+    }
 
     final Optional<User> existingUser = userPersistence.getUserByAuthId(userAuthIdRequestBody.getAuthUserId());
 
@@ -351,7 +388,6 @@ public class UserHandler {
           .newUserCreated(false);
     }
 
-    final User incomingJwtUser = resolveIncomingJwtUser(userAuthIdRequestBody);
     final UserRead createdUser = createUserFromIncomingUser(incomingJwtUser, userAuthIdRequestBody);
 
     handleUserPermissionsAndWorkspace(createdUser);

@@ -68,6 +68,25 @@ components:
               default: The request is forbidden.
             data:
               $ref: "#/components/schemas/ProblemMessageData"
+    SSORequiredProblemResponse:
+      x-implements: io.airbyte.api.problems.ProblemResponse
+      type: object
+      allOf:
+        - $ref: "#/components/schemas/BaseProblemFields"
+        - type: object
+          properties:
+            status:
+              type: integer
+              default: 403
+            type:
+              type: string
+              default: error:auth/sso-required
+            title:
+              type: string
+              default: SSO Sign-in Required
+            detail:
+              type: string
+              default: Your email domain requires SSO sign-in. Please sign in using your SSO provider.
     OAuthCallbackFailureProblemResponse:
       x-implements: io.airbyte.api.problems.ProblemResponse
       type: object
