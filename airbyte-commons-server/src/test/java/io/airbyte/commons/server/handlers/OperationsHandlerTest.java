@@ -85,7 +85,7 @@ class OperationsHandlerTest {
     when(uuidGenerator.get()).thenReturn(WEBHOOK_OPERATION_ID);
     final OperatorWebhook webhookConfig = new OperatorWebhook()
         .webhookConfigId(WEBHOOK_CONFIG_ID)
-        .webhookType(WebhookTypeEnum.DBTCLOUD)
+        .webhookType(WebhookTypeEnum.DBT_CLOUD)
         .dbtCloud(new OperatorWebhookDbtCloud()
             .accountId(DBT_CLOUD_WEBHOOK_ACCOUNT_ID)
             .jobId(DBT_CLOUD_WEBHOOK_JOB_ID));
@@ -135,7 +135,7 @@ class OperationsHandlerTest {
     when(uuidGenerator.get()).thenReturn(WEBHOOK_OPERATION_ID);
     final OperatorWebhook webhookConfig = new OperatorWebhook()
         .webhookConfigId(WEBHOOK_CONFIG_ID)
-        .webhookType(WebhookTypeEnum.DBTCLOUD)
+        .webhookType(WebhookTypeEnum.DBT_CLOUD)
         .dbtCloud(new OperatorWebhookDbtCloud()
             .accountId(NEW_DBT_CLOUD_WEBHOOK_ACCOUNT_ID)
             .jobId(DBT_CLOUD_WEBHOOK_JOB_ID));
@@ -213,7 +213,7 @@ class OperationsHandlerTest {
                 .operatorType(OperatorType.WEBHOOK).webhook(
                     new OperatorWebhook()
                         .webhookConfigId(WEBHOOK_CONFIG_ID)
-                        .webhookType(WebhookTypeEnum.DBTCLOUD)
+                        .webhookType(WebhookTypeEnum.DBT_CLOUD)
                         .executionUrl(operatorWebhook.getExecutionUrl())
                         .executionBody(operatorWebhook.getExecutionBody())
                         .dbtCloud(new OperatorWebhookDbtCloud()

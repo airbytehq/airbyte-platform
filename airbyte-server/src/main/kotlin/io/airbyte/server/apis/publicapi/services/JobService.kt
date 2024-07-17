@@ -42,14 +42,14 @@ interface JobService {
   fun getJobList(
     connectionId: UUID,
     jobsFilter: JobsFilter,
-    orderByField: OrderByFieldEnum = OrderByFieldEnum.CREATEDAT,
+    orderByField: OrderByFieldEnum = OrderByFieldEnum.CREATED_AT,
     orderByMethod: OrderByMethodEnum = OrderByMethodEnum.DESC,
   ): JobsResponse
 
   fun getJobList(
     workspaceIds: List<UUID>,
     jobsFilter: JobsFilter,
-    orderByField: OrderByFieldEnum = OrderByFieldEnum.CREATEDAT,
+    orderByField: OrderByFieldEnum = OrderByFieldEnum.CREATED_AT,
     orderByMethod: OrderByMethodEnum = OrderByMethodEnum.DESC,
   ): JobsResponse
 }

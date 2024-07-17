@@ -4,7 +4,7 @@
 
 package io.airbyte.commons.converters;
 
-import static io.airbyte.api.model.generated.OperatorWebhook.WebhookTypeEnum.DBTCLOUD;
+import static io.airbyte.api.model.generated.OperatorWebhook.WebhookTypeEnum.DBT_CLOUD;
 
 import com.google.common.base.Preconditions;
 import io.airbyte.api.model.generated.OperationRead;
@@ -80,7 +80,7 @@ public class OperationsConverter {
           .withExecutionBody(webhookConfig.getExecutionBody());
     }
     switch (webhookConfig.getWebhookType()) {
-      case DBTCLOUD -> {
+      case DBT_CLOUD -> {
         return operatorWebhook
             .withExecutionUrl(DbtCloudOperationConverter.getExecutionUrlFrom(webhookConfig.getDbtCloud(), customDbtHost))
             .withExecutionBody(DbtCloudOperationConverter.getDbtCloudExecutionBody());
@@ -95,7 +95,7 @@ public class OperationsConverter {
         .webhookConfigId(persistedWebhook.getWebhookConfigId());
     OperatorWebhookDbtCloud dbtCloudOperator = DbtCloudOperationConverter.parseFrom(persistedWebhook);
     if (dbtCloudOperator != null) {
-      webhookOperator.webhookType(DBTCLOUD).dbtCloud(dbtCloudOperator);
+      webhookOperator.webhookType(DBT_CLOUD).dbtCloud(dbtCloudOperator);
       // TODO(mfsiega-airbyte): remove once frontend switches to new format.
       // Dual-write deprecated webhook format.
       webhookOperator.executionUrl(persistedWebhook.getExecutionUrl());
