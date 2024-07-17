@@ -7,7 +7,6 @@ import io.airbyte.featureflag.UseCustomK8sScheduler
 import io.airbyte.workers.process.KubeContainerInfo
 import io.airbyte.workers.process.KubePodInfo
 import io.airbyte.workers.process.KubePodProcess
-import io.airbyte.workers.sync.OrchestratorConstants
 import io.fabric8.kubernetes.api.model.CapabilitiesBuilder
 import io.fabric8.kubernetes.api.model.Container
 import io.fabric8.kubernetes.api.model.ContainerBuilder
@@ -106,25 +105,13 @@ class ConnectorPodFactory(
     containerInfo: KubeContainerInfo,
     extraEnvVars: List<EnvVar>,
   ): Container {
-    val configArg =
+    val configArgs =
       connectorArgs.map {
           (k, v) ->
         "--$k $v"
       }.joinToString(prefix = " ", separator = " ")
 
-    val mainCommand =
-      """
-      pwd
-      
-      eval "${'$'}AIRBYTE_ENTRYPOINT $operationCommand $configArg" > ${KubePodProcess.CONFIG_DIR}/${OrchestratorConstants.JOB_OUTPUT_FILENAME}
-      exit_code=${'$'}?
-      
-      echo ${'$'}exit_code > ${KubePodProcess.CONFIG_DIR}/${OrchestratorConstants.EXIT_CODE_FILE}
-
-      cat ${KubePodProcess.CONFIG_DIR}/${OrchestratorConstants.JOB_OUTPUT_FILENAME}
-      
-      exit ${'$'}exit_code
-      """.trimIndent()
+    val mainCommand = ContainerCommandFactory.connectorOperation(operationCommand, configArgs)
 
     return ContainerBuilder()
       .withName(KubePodProcess.MAIN_CONTAINER_NAME)
@@ -140,10 +127,13 @@ class ConnectorPodFactory(
   }
 
   private fun buildSidecarContainer(volumeMounts: List<VolumeMount>): Container {
+    val mainCommand = ContainerCommandFactory.sidecar()
+
     return ContainerBuilder()
       .withName(KubePodProcess.SIDECAR_CONTAINER_NAME)
       .withImage(sidecarContainerInfo.image)
       .withImagePullPolicy(sidecarContainerInfo.pullPolicy)
+      .withCommand("sh", "-c", mainCommand)
       .withWorkingDir(KubePodProcess.CONFIG_DIR)
       .withEnv(sideCarEnvVars)
       .withVolumeMounts(volumeMounts)

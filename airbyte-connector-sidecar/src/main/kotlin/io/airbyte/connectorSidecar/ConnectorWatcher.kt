@@ -66,11 +66,11 @@ class ConnectorWatcher(
         while (!areNeededFilesPresent()) {
           Thread.sleep(100)
           if (fileTimeoutReach(stopwatch)) {
-            logger.warn { "Failed to find output files from connector within timeout $fileTimeoutMinutes. Is the connector still running?" }
+            logger.warn { "Failed to find output files from connector within timeout $fileTimeoutMinutes minute(s). Is the connector still running?" }
             val failureReason =
               FailureReason()
                 .withFailureOrigin(FailureReason.FailureOrigin.UNKNOWN)
-                .withExternalMessage("Failed to find output files from connector within timeout $fileTimeoutMinutes.")
+                .withExternalMessage("Failed to find output files from connector within timeout $fileTimeoutMinutes minute(s).")
 
             failWorkload(workloadId, failureReason)
             exitFileNotFound()
