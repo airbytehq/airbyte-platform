@@ -1732,6 +1732,7 @@
   "login.sso.backToSsoLogin": "Back to SSO login",
   "login.sso.invalidCompanyIdentifier": "Invalid company identifier",
   "login.sso.unknownError": "An unknown error occurred during login. Please try again.",
+  "login.sso.ssoLoginRequired": "You need to log in using SSO.",
 
   "signup.details.noCreditCard": "No credit card required",
   "signup.details.instantSetup": "Instant setup",
