@@ -48,6 +48,8 @@ export const enum Action {
   APPLIED = "Applied",
   SET_SYNC_MODE = "SetSyncMode",
   DISMISSED_CHANGES_MODAL = "DismissedChangesModal",
+  CONFIRMED_CANCEL_SYNC = "ConfirmedCancelSync",
+  DECLINED_CANCEL_SYNC = "DeclinedCancelSync",
   SYNC_PROGRESS = "SyncProgress",
 
   // Connector Builder Actions

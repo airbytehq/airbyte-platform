@@ -19,6 +19,7 @@ export interface Experiments {
   "connection.streamCentricUI.v2": boolean;
   "connection.streamCentricUI.historicalOverview": boolean;
   "connection.timeline": boolean;
+  "connection.jobCancellationModal": boolean;
   "connector.airbyteCloudIpAddresses": string;
   "connector.suggestedSourceConnectors": string;
   "connector.suggestedDestinationConnectors": string;
