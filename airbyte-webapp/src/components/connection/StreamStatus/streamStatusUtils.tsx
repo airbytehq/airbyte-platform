@@ -40,6 +40,7 @@ export const sortStreamsByStatus = (
       [ConnectionStatusIndicatorStatus.OnTime]: [],
       [ConnectionStatusIndicatorStatus.Disabled]: [],
       [ConnectionStatusIndicatorStatus.Paused]: [],
+      [ConnectionStatusIndicatorStatus.RateLimited]: [],
       [ConnectionStatusIndicatorStatus.Syncing]: [],
       [ConnectionStatusIndicatorStatus.Clearing]: [],
       [ConnectionStatusIndicatorStatus.Refreshing]: [],

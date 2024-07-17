@@ -657,6 +657,7 @@
   "connection.status.disabled": "Disabled",
   "connection.status.cancelled": "Cancelled",
   "connection.status.queuedForNextSync": "Queued for next sync",
+  "connection.status.rateLimited": "Syncing",
   "connection.status.syncing": "Syncing",
   "connection.status.refreshing": "Refreshing",
   "connection.status.clearing": "Clearing data",
@@ -750,6 +751,7 @@
   "connection.stream.status.clearing": "Clearing data",
   "connection.stream.status.queued": "Queued",
   "connection.stream.status.queuedForNextSync": "Queued for next sync",
+  "connection.stream.status.rateLimited": "Syncing",
   "connection.stream.status.error": "Error",
   "connection.stream.status.late": "Late",
   "connection.stream.status.pending": "Pending",
@@ -768,6 +770,10 @@
   "connection.stream.status.table.emptyTable.message": "Re-enable the connection to show stream sync progress",
   "connection.stream.status.table.emptyTable.callToAction": "Re-enable",
   "connection.stream.status.table.syncStarting": "Sync starting...",
+
+  "connection.stream.rateLimitedMessage": "restarting in {quota}",
+  "connection.rateLimitedMessageNoQuota": "This sync is rate limited by the source.",
+  "connection.rateLimitedMessageWithQuota": "This sync is rate limited by the source. We'll try to complete syncing once the time limit is up in {quota}",
 
   "connection.stream.actions.refreshStream": "Refresh stream",
   "connection.stream.actions.refreshStream.confirm.title": "Are you sure you want to refresh the {streamName} stream?",

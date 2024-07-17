@@ -27,12 +27,12 @@ const MESSAGE_BY_STATUS: Readonly<Record<ConnectionStatusIndicatorStatus, string
   actionRequired: "connection.status.actionRequired",
   disabled: "connection.status.disabled",
   paused: "connection.status.paused",
-
   syncing: "connection.status.syncing",
   clearing: "connection.status.clearing",
   refreshing: "connection.status.refreshing",
   queued: "connection.status.queued",
   queuedForNextSync: "connection.status.queuedForNextSync",
+  rateLimited: "connection.status.rateLimited",
 };
 
 export const ConnectionStatusOverview: React.FC = () => {

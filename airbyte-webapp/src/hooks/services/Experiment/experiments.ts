@@ -18,6 +18,7 @@ export interface Experiments {
   "connection.streamCentricUI.lateMultiplier": number;
   "connection.streamCentricUI.v2": boolean;
   "connection.streamCentricUI.historicalOverview": boolean;
+  "connection.rateLimitedUI": boolean;
   "connection.timeline": boolean;
   "connection.jobCancellationModal": boolean;
   "connector.airbyteCloudIpAddresses": string;

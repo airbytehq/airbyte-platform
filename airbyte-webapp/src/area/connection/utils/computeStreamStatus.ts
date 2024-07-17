@@ -89,11 +89,19 @@ export const isStreamLate = (
   );
 };
 
-interface UIStreamStatus {
-  status: ConnectionStatusIndicatorStatus | undefined;
+interface BaseUIStreamStatus {
+  status: Exclude<ConnectionStatusIndicatorStatus, "rateLimited"> | undefined;
   lastSuccessfulSync: StreamStatusRead | undefined;
   isRunning: boolean; // isRunning can be removed once sync progress has been fully rolled out, as it can be inferred from the status.  until then, it is required for the v1 stream status ui.
 }
+interface RateLimitedUIStreamStatus {
+  status: ConnectionStatusIndicatorStatus.RateLimited;
+  lastSuccessfulSync: StreamStatusRead | undefined;
+  isRunning: true;
+  quotaReset?: number;
+}
+
+type UIStreamStatus = BaseUIStreamStatus | RateLimitedUIStreamStatus;
 
 export const computeStreamStatus = ({
   statuses,
@@ -105,6 +113,7 @@ export const computeStreamStatus = ({
   isSyncing,
   recordsExtracted,
   runningJobConfigType,
+  isRateLimitedUiEnabled = true, // default to `true` here so unit tests execute against this side, this value is set from the one actual call site
 }: {
   statuses: StreamStatusRead[];
   scheduleType?: ConnectionScheduleType;
@@ -115,6 +124,7 @@ export const computeStreamStatus = ({
   isSyncing: boolean;
   recordsExtracted?: number;
   runningJobConfigType?: string;
+  isRateLimitedUiEnabled?: boolean;
 }): UIStreamStatus => {
   // no statuses
   if (statuses == null || statuses.length === 0) {
@@ -142,8 +152,16 @@ export const computeStreamStatus = ({
     return {
       status: ConnectionStatusIndicatorStatus.QueuedForNextSync,
       isRunning,
-
       lastSuccessfulSync,
+    };
+  }
+
+  if (isRateLimitedUiEnabled && statuses[0].runState === StreamStatusRunState.RATE_LIMITED) {
+    return {
+      status: ConnectionStatusIndicatorStatus.RateLimited,
+      isRunning: true,
+      lastSuccessfulSync,
+      quotaReset: statuses[0].metadata?.quotaReset,
     };
   }
 

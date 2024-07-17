@@ -47,6 +47,7 @@ export const enum Action {
   ANSWERED = "Answered",
   APPLIED = "Applied",
   SET_SYNC_MODE = "SetSyncMode",
+  RATE_LIMITED = "RateLimited",
   DISMISSED_CHANGES_MODAL = "DismissedChangesModal",
   CONFIRMED_CANCEL_SYNC = "ConfirmedCancelSync",
   DECLINED_CANCEL_SYNC = "DeclinedCancelSync",

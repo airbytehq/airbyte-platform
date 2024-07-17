@@ -20,7 +20,7 @@ import { useHistoricalStreamData } from "./useStreamsHistoricalData";
 import { useStreamsStatuses } from "./useStreamsStatuses";
 import { useStreamsSyncProgress } from "./useStreamsSyncProgress";
 
-interface UIStreamState {
+interface BaseUIStreamState {
   streamName: string;
   streamNamespace?: string;
   activeJobConfigType?: JobConfigType;
@@ -29,9 +29,16 @@ interface UIStreamState {
   recordsExtracted?: number;
   recordsLoaded?: number;
   bytesLoaded?: number;
-  status: ConnectionStatusIndicatorStatus;
+  status: Exclude<ConnectionStatusIndicatorStatus, "rateLimited">;
   isLoadingHistoricalData: boolean;
 }
+
+export interface RateLimitedUIStreamState extends Omit<BaseUIStreamState, "status"> {
+  status: ConnectionStatusIndicatorStatus.RateLimited;
+  quotaReset?: number;
+}
+
+export type UIStreamState = BaseUIStreamState | RateLimitedUIStreamState;
 
 export const useUiStreamStates = (connectionId: string): UIStreamState[] => {
   const connectionStatus = useConnectionStatus(connectionId);
@@ -80,7 +87,7 @@ export const useUiStreamStates = (connectionId: string): UIStreamState[] => {
       recordsExtracted: undefined,
       recordsLoaded: undefined,
       bytesLoaded: undefined,
-      status: ConnectionStatusIndicatorStatus.Pending,
+      status: ConnectionStatusIndicatorStatus.Pending as ConnectionStatusIndicatorStatus, // cast so TS keeps the wider UIStreamState union instead of narrowing to BaseUIStreamState
       isLoadingHistoricalData,
     };
 
@@ -91,6 +98,9 @@ export const useUiStreamStates = (connectionId: string): UIStreamState[] => {
 
     if (streamStatus?.status) {
       uiState.status = streamStatus.status;
+      if (uiState.status === ConnectionStatusIndicatorStatus.RateLimited) {
+        uiState.quotaReset = streamStatus.relevantHistory.at(0)?.metadata?.quotaReset;
+      }
     }
 
     // only pull from syncProgress OR historicalData for the latestSync related data

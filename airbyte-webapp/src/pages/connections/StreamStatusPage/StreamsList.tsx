@@ -6,7 +6,6 @@ import { useToggle } from "react-use";
 
 import { useConnectionStatus } from "components/connection/ConnectionStatus/useConnectionStatus";
 import { ConnectionStatusIndicatorStatus } from "components/connection/ConnectionStatusIndicator";
-import { StreamStatusIndicator } from "components/connection/StreamStatusIndicator";
 import { Box } from "components/ui/Box";
 import { Card } from "components/ui/Card";
 import { FlexContainer } from "components/ui/Flex";
@@ -24,6 +23,7 @@ import { LatestSyncCell } from "./LatestSyncCell";
 import { StreamActionsMenu } from "./StreamActionsMenu";
 import { StreamSearchFiltering } from "./StreamSearchFiltering";
 import styles from "./StreamsList.module.scss";
+import { StatusCell } from "./StreamsListStatusCell";
 import { StreamsListSubtitle } from "./StreamsListSubtitle";
 
 export const StreamsList = forwardRef<HTMLDivElement>((_, outerRef) => {
@@ -40,12 +40,7 @@ export const StreamsList = forwardRef<HTMLDivElement>((_, outerRef) => {
       columnHelper.accessor("status", {
         id: "statusIcon",
         header: () => <FormattedMessage id="connection.stream.status.table.status" />,
-        cell: (props) => (
-          <FlexContainer justifyContent="flex-start" gap="sm" alignItems="center" className={styles.statusCell}>
-            <StreamStatusIndicator status={props.cell.getValue()} />
-            <FormattedMessage id={`connection.stream.status.${props.cell.getValue()}`} />
-          </FlexContainer>
-        ),
+        cell: StatusCell,
         meta: { thClassName: styles.statusHeader },
       }),
       columnHelper.accessor("streamName", {
