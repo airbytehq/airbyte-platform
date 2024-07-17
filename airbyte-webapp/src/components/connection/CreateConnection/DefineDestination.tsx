@@ -11,7 +11,6 @@ import { Heading } from "components/ui/Heading";
 
 import { useConnectionList, useDestinationList } from "core/api";
 import { PageTrackingCodes, useTrackPage } from "core/services/analytics";
-import { useExperiment } from "hooks/services/Experiment";
 
 import { BackToDefineSourceButton } from "./BackToDefineSourceButton";
 import { CreateNewDestination, DESTINATION_DEFINITION_PARAM } from "./CreateNewDestination";
@@ -31,8 +30,6 @@ export const DefineDestination: React.FC = () => {
   const { destinations } = useDestinationList();
   const connectionList = useConnectionList();
   const [searchParams, setSearchParams] = useSearchParams();
-
-  const useSimpliedCreation = useExperiment("connection.simplifiedCreation", true);
 
   if (!searchParams.get(DESTINATION_TYPE_PARAM)) {
     if (destinations.length === 0) {
@@ -108,7 +105,7 @@ export const DefineDestination: React.FC = () => {
             <SelectExistingConnector connectors={sortedDestinations} selectConnector={selectDestination} />
           )}
           {selectedDestinationType === NEW_DESTINATION_TYPE && <CreateNewDestination />}
-          {useSimpliedCreation && selectedDestinationType !== NEW_DESTINATION_TYPE && <BackToDefineSourceButton />}
+          {selectedDestinationType !== NEW_DESTINATION_TYPE && <BackToDefineSourceButton />}
           <CloudInviteUsersHint connectorType="destination" />
         </FlexContainer>
       </Box>

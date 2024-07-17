@@ -5,7 +5,6 @@ import { FormattedMessage, useIntl } from "react-intl";
 import { useLocation } from "react-router-dom";
 import { useUnmount } from "react-use";
 
-import { ConnectionConfigurationCard } from "components/connection/ConnectionForm/ConnectionConfigurationCard";
 import {
   FormConnectionFormValues,
   useConnectionValidationSchema,
@@ -218,8 +217,6 @@ export const ConnectionReplicationPage: React.FC = () => {
     }
   }, [refreshSchema, state]);
 
-  const isSimplifiedCreation = useExperiment("connection.simplifiedCreation", true);
-
   const newSyncCatalogV2Form = connection && (
     <Form<FormConnectionFormValues>
       defaultValues={initialValues}
@@ -232,7 +229,6 @@ export const ConnectionReplicationPage: React.FC = () => {
       <FlexContainer direction="column">
         <SchemaChangeMessage />
         <SchemaChangeBackdrop>
-          {!isSimplifiedCreation && <ConnectionConfigurationCard />}
           <SchemaRefreshing>
             <SyncCatalogCardNext />
           </SchemaRefreshing>
@@ -254,7 +250,6 @@ export const ConnectionReplicationPage: React.FC = () => {
         <FlexContainer direction="column">
           <SchemaChangeMessage />
           <SchemaChangeBackdrop>
-            {!isSimplifiedCreation && <ConnectionConfigurationCard />}
             <SyncCatalogCard />
             <div className={styles.editControlsContainer}>
               <UpdateConnectionFormControls onCancel={discardRefreshedSchema} />

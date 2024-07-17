@@ -15,7 +15,6 @@ import { LoadingBackdrop } from "components/ui/LoadingBackdrop";
 
 import { naturalComparatorBy } from "core/utils/objects";
 import { useConnectionFormService } from "hooks/services/ConnectionForm/ConnectionFormService";
-import { useExperiment } from "hooks/services/Experiment";
 
 import { FormConnectionFormValues, SyncStreamFieldWithId } from "./formConfig";
 import { useRefreshSourceSchemaWithConfirmationOnDirty } from "./refreshSourceSchemaWithConfirmationOnDirty";
@@ -46,8 +45,6 @@ export const SyncCatalogCard: React.FC = () => {
     name: "syncCatalog.streams",
     control,
   });
-  const isSimplifiedCreation = useExperiment("connection.simplifiedCreation", true);
-
   const watchedPrefix = useWatch<FormConnectionFormValues>({ name: "prefix", control });
   const watchedNamespaceDefinition = useWatch<FormConnectionFormValues>({ name: "namespaceDefinition", control });
   const watchedNamespaceFormat = useWatch<FormConnectionFormValues>({ name: "namespaceFormat", control });
@@ -88,10 +85,7 @@ export const SyncCatalogCard: React.FC = () => {
     };
   }, [locationState?.action, locationState?.namespace, locationState?.streamName, filteredStreams]);
 
-  let cardTitle = mode === "readonly" ? "form.dataSync.readonly" : "form.dataSync";
-  if (isSimplifiedCreation) {
-    cardTitle = mode === "readonly" ? "connectionForm.selectStreams.readonly" : "connectionForm.selectStreams";
-  }
+  const cardTitle = mode === "readonly" ? "connectionForm.selectStreams.readonly" : "connectionForm.selectStreams";
 
   return (
     <Card noPadding>

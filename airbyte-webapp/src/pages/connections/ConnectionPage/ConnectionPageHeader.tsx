@@ -14,14 +14,12 @@ import { useExperiment } from "hooks/services/Experiment";
 import { RoutePaths, ConnectionRoutePaths } from "pages/routePaths";
 
 import { ConnectionTitleBlock } from "./ConnectionTitleBlock";
-import { ConnectionTitleBlockNext } from "./ConnectionTitleBlockNext";
 
 export const ConnectionPageHeader = () => {
   const params = useParams<{ workspaceId: string; connectionId: string; "*": ConnectionRoutePaths }>();
   const basePath = `/${RoutePaths.Workspaces}/${params.workspaceId}/${RoutePaths.Connections}/${params.connectionId}`;
   const { formatMessage } = useIntl();
   const currentTab = params["*"] || ConnectionRoutePaths.Status;
-  const isSimplifiedCreation = useExperiment("connection.simplifiedCreation", true);
   const supportsDbtCloud = useFeature(FeatureItem.AllowDBTCloudIntegration);
   const connectionTimeline = useExperiment("connection.timeline", false);
 
@@ -63,7 +61,7 @@ export const ConnectionPageHeader = () => {
         id: ConnectionRoutePaths.Replication,
         name: (
           <FlexContainer gap="sm" as="span">
-            <FormattedMessage id={isSimplifiedCreation ? "connection.schema" : "connection.replication"} />
+            <FormattedMessage id="connection.schema" />
             <ChangesStatusIcon schemaChange={connection.schemaChange} />
           </FlexContainer>
         ),
@@ -89,17 +87,13 @@ export const ConnectionPageHeader = () => {
     ];
 
     return tabs;
-  }, [basePath, schemaRefreshing, connectionTimeline, isSimplifiedCreation, connection.schemaChange, supportsDbtCloud]);
+  }, [basePath, schemaRefreshing, connectionTimeline, connection.schemaChange, supportsDbtCloud]);
 
   return (
     <PageHeaderWithNavigation breadcrumbsData={breadcrumbsData}>
-      {isSimplifiedCreation ? (
-        <ConnectionSyncContextProvider>
-          <ConnectionTitleBlockNext />
-        </ConnectionSyncContextProvider>
-      ) : (
+      <ConnectionSyncContextProvider>
         <ConnectionTitleBlock />
-      )}
+      </ConnectionSyncContextProvider>
       <Tabs>
         {tabsData.map((tabItem) => (
           <LinkTab

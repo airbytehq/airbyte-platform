@@ -10,7 +10,6 @@ import { useFormatError } from "core/errors";
 import { getFrequencyFromScheduleData, useAnalyticsService, Action, Namespace } from "core/services/analytics";
 import { links } from "core/utils/links";
 import { useAppMonitoringService } from "hooks/services/AppMonitoringService";
-import { useExperiment } from "hooks/services/Experiment";
 import { useNotificationService } from "hooks/services/Notification";
 import { CloudRoutes } from "packages/cloud/cloudRoutePaths";
 import { RoutePaths } from "pages/routePaths";
@@ -280,7 +279,6 @@ export const useCreateConnection = () => {
   const queryClient = useQueryClient();
   const analyticsService = useAnalyticsService();
   const invalidateWorkspaceSummary = useInvalidateWorkspaceStateQuery();
-  const isSimplifiedCreation = useExperiment("connection.simplifiedCreation", true);
 
   return useMutation(
     async ({
@@ -317,7 +315,6 @@ export const useCreateConnection = () => {
         enabled_streams: enabledStreams.length,
         enabled_streams_list: JSON.stringify(enabledStreams),
         connection_id: response.connectionId,
-        is_simplified_creation: isSimplifiedCreation,
       });
 
       return response;

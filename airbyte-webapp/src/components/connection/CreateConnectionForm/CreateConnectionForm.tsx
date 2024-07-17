@@ -9,43 +9,32 @@ import { FlexContainer } from "components/ui/Flex";
 import { useGetDestinationFromSearchParams, useGetSourceFromSearchParams } from "area/connector/utils";
 import { useCreateConnection, useDiscoverSchema } from "core/api";
 import { ConnectionScheduleType } from "core/api/types/AirbyteClient";
-import { FeatureItem, useFeature } from "core/services/features";
 import {
   ConnectionFormServiceProvider,
   useConnectionFormService,
 } from "hooks/services/ConnectionForm/ConnectionFormService";
-import { useExperiment, useExperimentContext } from "hooks/services/Experiment";
+import { useExperimentContext } from "hooks/services/Experiment";
 import { useFormChangeTrackerService } from "hooks/services/FormChangeTracker";
 import { useNotificationService } from "hooks/services/Notification";
 
-import { ConnectionNameCard } from "./ConnectionNameCard";
 import styles from "./CreateConnectionForm.module.scss";
-import { DataResidencyCard } from "./DataResidencyCard";
 import { SchemaError } from "./SchemaError";
 import { SimplifiedConnectionConfiguration } from "./SimplifiedConnectionCreation/SimplifiedConnectionConfiguration";
 import { useAnalyticsTrackFunctions } from "./useAnalyticsTrackFunctions";
-import { ConnectionConfigurationCard } from "../ConnectionForm/ConnectionConfigurationCard";
-import { CreateConnectionFormControls } from "../ConnectionForm/CreateConnectionFormControls";
 import { FormConnectionFormValues, useConnectionValidationSchema } from "../ConnectionForm/formConfig";
-import { SyncCatalogCard } from "../ConnectionForm/SyncCatalogCard";
-import { SyncCatalogCardNext } from "../ConnectionForm/SyncCatalogCardNext";
 
 export const CREATE_CONNECTION_FORM_ID = "create-connection-form";
 
 const CreateConnectionFormInner: React.FC = () => {
-  const isSyncCatalogV2Enabled = useExperiment("connection.syncCatalogV2", false);
   const navigate = useNavigate();
   const { clearAllFormChanges } = useFormChangeTrackerService();
   const { mutateAsync: createConnection } = useCreateConnection();
   const { connection, initialValues, setSubmitError } = useConnectionFormService();
-  const canEditDataGeographies = useFeature(FeatureItem.AllowChangeDataGeographies);
   const { registerNotification } = useNotificationService();
   const { formatMessage } = useIntl();
   useExperimentContext("source-definition", connection.source?.sourceDefinitionId);
 
   const validationSchema = useConnectionValidationSchema();
-
-  const isSimplifiedCreation = useExperiment("connection.simplifiedCreation", true);
 
   const onSubmit = useCallback(
     async ({ ...restFormValues }: FormConnectionFormValues) => {
@@ -69,7 +58,7 @@ const CreateConnectionFormInner: React.FC = () => {
         navigate(`../../connections/${createdConnection.connectionId}`);
 
         const willSyncAfterCreation = restFormValues.scheduleType === ConnectionScheduleType.basic;
-        if (isSimplifiedCreation && willSyncAfterCreation) {
+        if (willSyncAfterCreation) {
           registerNotification({
             id: "onboarding.firstSyncStarted",
             text: formatMessage({ id: "onboarding.firstSyncStarted" }),
@@ -88,7 +77,6 @@ const CreateConnectionFormInner: React.FC = () => {
       createConnection,
       navigate,
       setSubmitError,
-      isSimplifiedCreation,
       registerNotification,
       formatMessage,
     ]
@@ -104,17 +92,7 @@ const CreateConnectionFormInner: React.FC = () => {
         formTrackerId={CREATE_CONNECTION_FORM_ID}
       >
         <FlexContainer direction="column" className={styles.formContainer}>
-          {isSimplifiedCreation ? (
-            <SimplifiedConnectionConfiguration />
-          ) : (
-            <>
-              <ConnectionNameCard />
-              {canEditDataGeographies && <DataResidencyCard />}
-              <ConnectionConfigurationCard />
-              {isSyncCatalogV2Enabled ? <SyncCatalogCardNext /> : <SyncCatalogCard />}
-              <CreateConnectionFormControls />
-            </>
-          )}
+          <SimplifiedConnectionConfiguration />
         </FlexContainer>
       </Form>
     </Suspense>

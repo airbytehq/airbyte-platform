@@ -4,7 +4,6 @@ import { FormattedMessage } from "react-intl";
 import { useLocation, useNavigate } from "react-router-dom";
 
 import { EmptyState } from "components/common/EmptyState";
-import { ConnectionSyncButtons } from "components/connection/ConnectionSync/ConnectionSyncButtons";
 import { ConnectionSyncContextProvider } from "components/connection/ConnectionSync/ConnectionSyncContext";
 import { PageContainer } from "components/PageContainer";
 import { ScrollableContainer } from "components/ScrollableContainer";
@@ -33,7 +32,6 @@ import {
   useAnalyticsService,
 } from "core/services/analytics";
 import { useConnectionEditService } from "hooks/services/ConnectionEdit/ConnectionEditService";
-import { useExperiment } from "hooks/services/Experiment";
 
 import styles from "./ConnectionJobHistoryPage.module.scss";
 import JobsList from "./JobsList";
@@ -51,7 +49,6 @@ interface JobHistoryFilterValues {
 }
 
 export const ConnectionJobHistoryPage: React.FC = () => {
-  const isSimplifiedCreation = useExperiment("connection.simplifiedCreation", true);
   const { connection } = useConnectionEditService();
   useTrackPage(PageTrackingCodes.CONNECTIONS_ITEM_STATUS);
   const [filterValues, setFilterValue, resetFilters, filtersAreDefault] = useFilters<JobHistoryFilterValues>({
@@ -124,9 +121,6 @@ export const ConnectionJobHistoryPage: React.FC = () => {
                   <Heading as="h5" size="sm">
                     <FormattedMessage id="connectionForm.jobHistory" />
                   </Heading>
-                  {!isSimplifiedCreation && (
-                    <ConnectionSyncButtons buttonText={<FormattedMessage id="connection.startSync" />} />
-                  )}
                 </FlexContainer>
                 <FlexContainer alignItems="center">
                   <ListBox
