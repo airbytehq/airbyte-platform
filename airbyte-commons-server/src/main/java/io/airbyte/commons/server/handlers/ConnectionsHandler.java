@@ -1078,8 +1078,8 @@ public class ConnectionsHandler {
     final int pageSize = (connectionEventsRequestBody.getPagination() != null && connectionEventsRequestBody.getPagination().getPageSize() != null)
         ? connectionEventsRequestBody.getPagination().getPageSize()
         : DEFAULT_PAGE_SIZE;
-    final int rowOffset = (connectionEventsRequestBody.getPagination() != null && connectionEventsRequestBody.getPagination().getPageSize() != null)
-        ? connectionEventsRequestBody.getPagination().getPageSize()
+    final int rowOffset = (connectionEventsRequestBody.getPagination() != null && connectionEventsRequestBody.getPagination().getRowOffset() != null)
+        ? connectionEventsRequestBody.getPagination().getRowOffset()
         : DEFAULT_ROW_OFFSET;
     // 2. get list of events
     final List<ConnectionTimelineEvent> events = connectionTimelineEventService.listEvents(

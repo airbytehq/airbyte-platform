@@ -184,5 +184,45 @@ internal class ConnectionTimelineEventRepositoryTest : AbstractConfigRepositoryT
         )
       assert(res.size == 2)
     }
+
+    @Test
+    fun `should list events with all combined restrictions`() {
+      val allEvents = // sorted by createdAtStart DESC: [event4, e3, e2, e1]
+        connectionTimelineEventRepository.findByConnectionIdWithFilters(
+          connectionId = connectionId,
+          eventTypes = null,
+          createdAtStart = null,
+          createdAtEnd = null,
+          pageSize = 200,
+          rowOffset = 0,
+        )
+      val res =
+        connectionTimelineEventRepository.findByConnectionIdWithFilters(
+          connectionId = connectionId,
+          eventTypes =
+            listOf(
+              // e1
+              ConnectionEvent.Type.SYNC_STARTED,
+              // e2
+              ConnectionEvent.Type.SYNC_CANCELLED,
+              // e3
+              ConnectionEvent.Type.REFRESH_STARTED,
+              // e4
+              ConnectionEvent.Type.REFRESH_SUCCEEDED,
+              // no event
+              ConnectionEvent.Type.CLEAR_STARTED,
+            ),
+          // e1.createdAt
+          createdAtStart = allEvents[3].createdAt,
+          // e3.createdAt
+          createdAtEnd = allEvents[1].createdAt,
+          // now we should list total 3 events: [e3, e2, e1]
+          pageSize = 200,
+          // now we should list total 2 events: [e2, e1]
+          rowOffset = 1,
+        )
+      assert(res.size == 2)
+      assert(res[0].id == event2.id)
+    }
   }
 }

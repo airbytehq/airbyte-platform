@@ -1,5 +1,6 @@
 package io.airbyte.data.services.shared
 
+import com.fasterxml.jackson.annotation.JsonIgnore
 import io.micronaut.data.annotation.TypeDef
 import io.micronaut.data.model.DataType
 
@@ -31,5 +32,6 @@ interface ConnectionEvent {
     UNKNOWN,
   }
 
+  @JsonIgnore
   fun getEventType(): Type
 }
