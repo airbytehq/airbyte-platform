@@ -34,7 +34,6 @@ import io.airbyte.validation.json.JsonValidationException;
 import jakarta.inject.Inject;
 import jakarta.inject.Singleton;
 import java.io.IOException;
-import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -129,9 +128,7 @@ public class ActorDefinitionVersionHandler {
     final ActorDefinitionVersionRead advRead = new ActorDefinitionVersionRead()
         .dockerRepository(actorDefinitionVersion.getDockerRepository())
         .dockerImageTag(actorDefinitionVersion.getDockerImageTag())
-        .supportsDbt(Objects.requireNonNullElse(actorDefinitionVersion.getSupportsDbt(), false))
         .supportsRefreshes(actorDefinitionVersion.getSupportsRefreshes())
-        .normalizationConfig(ApiPojoConverters.normalizationDestinationDefinitionConfigToApi(actorDefinitionVersion.getNormalizationConfig()))
         .supportState(toApiSupportState(actorDefinitionVersion.getSupportState()))
         .supportLevel(toApiSupportLevel(actorDefinitionVersion.getSupportLevel()))
         .cdkVersion(actorDefinitionVersion.getCdkVersion())

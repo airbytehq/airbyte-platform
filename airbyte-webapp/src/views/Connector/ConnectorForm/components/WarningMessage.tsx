@@ -18,7 +18,7 @@ export const WarningMessage: React.FC<{ supportLevel?: SupportLevel }> = ({ supp
       <Message
         text={
           <>
-            <FormattedMessage id="connector.supportLevel.community.description" />
+            <FormattedMessage id="connector.supportLevel.community.description" />{" "}
             <FormattedMessage
               id="connector.connectorsInDevelopment.docLink"
               values={{

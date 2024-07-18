@@ -102,7 +102,7 @@ open class SourceServiceImpl(
       kotlin.runCatching { sourceHandler.createSourceWithOptionalSecret(sourceCreateOss) }
         .onFailure {
           log.error("Error for createSource", it)
-          ConfigClientErrorHandler.handleError(it, sourceDefinitionId.toString())
+          ConfigClientErrorHandler.handleError(it)
         }
     log.debug(HTTP_RESPONSE_BODY_DEBUG_MESSAGE + result)
     return SourceReadMapper.from(result.getOrNull()!!)
@@ -125,7 +125,7 @@ open class SourceServiceImpl(
       kotlin.runCatching { sourceHandler.updateSource(sourceUpdate) }
         .onFailure {
           log.error("Error for updateSource", it)
-          ConfigClientErrorHandler.handleError(it, sourceId.toString())
+          ConfigClientErrorHandler.handleError(it)
         }
     log.debug(HTTP_RESPONSE_BODY_DEBUG_MESSAGE + result)
     return SourceReadMapper.from(result.getOrNull()!!)
@@ -149,7 +149,7 @@ open class SourceServiceImpl(
       kotlin.runCatching { sourceHandler.partialUpdateSource(sourceUpdate) }
         .onFailure {
           log.error("Error for partialUpdateSource", it)
-          ConfigClientErrorHandler.handleError(it, sourceId.toString())
+          ConfigClientErrorHandler.handleError(it)
         }
 
     log.debug(HTTP_RESPONSE_BODY_DEBUG_MESSAGE + result)
@@ -165,7 +165,7 @@ open class SourceServiceImpl(
       kotlin.runCatching { sourceHandler.deleteSource(sourceIdRequestBody) }
         .onFailure {
           log.error("Error for deleteSource", it)
-          ConfigClientErrorHandler.handleError(it, sourceId.toString())
+          ConfigClientErrorHandler.handleError(it)
         }
     log.debug(HTTP_RESPONSE_BODY_DEBUG_MESSAGE + result)
   }
@@ -181,7 +181,7 @@ open class SourceServiceImpl(
       kotlin.runCatching { sourceHandler.getSource(sourceIdRequestBody) }
         .onFailure {
           log.error("Error for getSource", it)
-          ConfigClientErrorHandler.handleError(it, sourceId.toString())
+          ConfigClientErrorHandler.handleError(it)
         }
     log.debug(HTTP_RESPONSE_BODY_DEBUG_MESSAGE + result)
     return SourceReadMapper.from(result.getOrNull()!!)
@@ -200,7 +200,7 @@ open class SourceServiceImpl(
       kotlin.runCatching { schedulerHandler.discoverSchemaForSourceFromSourceId(sourceDiscoverSchemaRequestBody) }
         .onFailure {
           log.error("Error for getSourceSchema", it)
-          ConfigClientErrorHandler.handleError(it, sourceId.toString())
+          ConfigClientErrorHandler.handleError(it)
         }
 
     val sourceDefinitionSpecificationRead = result.getOrNull()!!
@@ -237,7 +237,7 @@ open class SourceServiceImpl(
       kotlin.runCatching { sourceHandler.listSourcesForWorkspaces(listResourcesForWorkspacesRequestBody) }
         .onFailure {
           log.error("Error for listSourcesForWorkspaces", it)
-          ConfigClientErrorHandler.handleError(it, workspaceIds.toString())
+          ConfigClientErrorHandler.handleError(it)
         }
 
     log.debug(HTTP_RESPONSE_BODY_DEBUG_MESSAGE + result)

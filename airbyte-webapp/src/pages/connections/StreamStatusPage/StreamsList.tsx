@@ -1,21 +1,20 @@
 import { createColumnHelper } from "@tanstack/react-table";
 import classNames from "classnames";
-import { useMemo } from "react";
+import { useRef, forwardRef, useMemo } from "react";
 import { FormattedMessage } from "react-intl";
 import { useToggle } from "react-use";
 
 import { useConnectionStatus } from "components/connection/ConnectionStatus/useConnectionStatus";
 import { ConnectionStatusIndicatorStatus } from "components/connection/ConnectionStatusIndicator";
-import { StreamStatusIndicator } from "components/connection/StreamStatusIndicator";
 import { Box } from "components/ui/Box";
 import { Card } from "components/ui/Card";
 import { FlexContainer } from "components/ui/Flex";
 import { Heading } from "components/ui/Heading";
 import { Icon } from "components/ui/Icon";
 import { Table } from "components/ui/Table";
-import { InfoTooltip } from "components/ui/Tooltip";
 
 import { activeStatuses } from "area/connection/utils";
+import { useTrackSyncProgress } from "area/connection/utils/useStreamsTableAnalytics";
 import { useUiStreamStates } from "area/connection/utils/useUiStreamsStates";
 import { useConnectionEditService } from "hooks/services/ConnectionEdit/ConnectionEditService";
 
@@ -24,40 +23,34 @@ import { LatestSyncCell } from "./LatestSyncCell";
 import { StreamActionsMenu } from "./StreamActionsMenu";
 import { StreamSearchFiltering } from "./StreamSearchFiltering";
 import styles from "./StreamsList.module.scss";
+import { StatusCell } from "./StreamsListStatusCell";
 import { StreamsListSubtitle } from "./StreamsListSubtitle";
 
-export const StreamsList = () => {
+export const StreamsList = forwardRef<HTMLDivElement>((_, outerRef) => {
   const [showRelativeTime, setShowRelativeTime] = useToggle(true);
   const { connection } = useConnectionEditService();
   const streamEntries = useUiStreamStates(connection.connectionId);
+  const trackCountRef = useRef(0);
+  useTrackSyncProgress(connection.connectionId, trackCountRef);
+
   const columnHelper = useMemo(() => createColumnHelper<(typeof streamEntries)[number]>(), []);
+
   const columns = useMemo(
     () => [
       columnHelper.accessor("status", {
         id: "statusIcon",
         header: () => <FormattedMessage id="connection.stream.status.table.status" />,
-        cell: (props) => (
-          <FlexContainer justifyContent="flex-start" gap="sm" alignItems="center" className={styles.statusCell}>
-            <StreamStatusIndicator status={props.cell.getValue()} />
-            <FormattedMessage id={`connection.stream.status.${props.cell.getValue()}`} />
-          </FlexContainer>
-        ),
+        cell: StatusCell,
         meta: { thClassName: styles.statusHeader },
       }),
       columnHelper.accessor("streamName", {
         header: () => <FormattedMessage id="connection.stream.status.table.streamName" />,
         cell: (props) => <>{props.cell.getValue()}</>,
+        meta: { responsive: true },
       }),
       columnHelper.accessor("recordsLoaded", {
         id: "latestSync",
-        header: () => (
-          <>
-            <FormattedMessage id="connection.stream.status.table.latestSync" />
-            <InfoTooltip>
-              <FormattedMessage id="sources.updatesEveryMinute" />
-            </InfoTooltip>
-          </>
-        ),
+        header: () => <FormattedMessage id="connection.stream.status.table.latestSync" />,
         cell: (props) => {
           return (
             <LatestSyncCell
@@ -69,6 +62,7 @@ export const StreamsList = () => {
             />
           );
         },
+        meta: { responsive: true },
       }),
       columnHelper.accessor("dataFreshAsOf", {
         header: () => (
@@ -80,6 +74,7 @@ export const StreamsList = () => {
         cell: (props) => (
           <DataFreshnessCell transitionedAt={props.cell.getValue()} showRelativeTime={showRelativeTime} />
         ),
+        meta: { responsive: true },
       }),
       columnHelper.accessor("dataFreshAsOf", {
         header: () => null,
@@ -100,8 +95,11 @@ export const StreamsList = () => {
 
   const { status, nextSync, recordsExtracted, recordsLoaded } = useConnectionStatus(connection.connectionId);
 
+  const customScrollParent =
+    typeof outerRef !== "function" && outerRef && outerRef.current ? outerRef.current : undefined;
+
   return (
-    <Card noPadding className={styles.card} bodyClassName={styles.cardBody}>
+    <Card noPadding>
       <Box p="xl" className={styles.cardHeader}>
         <FlexContainer justifyContent="space-between" alignItems="center">
           <FlexContainer alignItems="center">
@@ -120,22 +118,24 @@ export const StreamsList = () => {
         </FlexContainer>
       </Box>
       <FlexContainer direction="column" gap="sm" className={styles.tableContainer} data-survey="streamcentric">
-        <div className={styles.tableContainer} data-survey="streamcentric">
-          <Table
-            columns={columns}
-            data={streamEntries}
-            variant="inBlock"
-            getRowClassName={(data) =>
-              classNames(styles.row, {
-                [styles["syncing--next"]]:
-                  activeStatuses.includes(data.status) && data.status !== ConnectionStatusIndicatorStatus.Queued,
-              })
-            }
-            sorting={false}
-            virtualized
-          />
-        </div>
+        <Table
+          columns={columns}
+          data={streamEntries}
+          variant="inBlock"
+          className={styles.table}
+          rowId={(row) => `${row.streamNamespace ?? ""}.${row.streamName}`}
+          getRowClassName={(data) =>
+            classNames(styles.row, {
+              [styles["syncing--next"]]:
+                activeStatuses.includes(data.status) && data.status !== ConnectionStatusIndicatorStatus.Queued,
+            })
+          }
+          sorting={false}
+          virtualized
+          virtualizedProps={{ customScrollParent, useWindowScroll: true }}
+        />
       </FlexContainer>
     </Card>
   );
-};
+});
+StreamsList.displayName = "StreamsList";

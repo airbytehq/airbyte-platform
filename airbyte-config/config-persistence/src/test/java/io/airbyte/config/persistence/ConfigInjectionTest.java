@@ -198,6 +198,7 @@ class ConfigInjectionTest extends BaseConfigDatabaseTest {
         .withDockerRepository("source-image-" + actorDefId)
         .withDockerImageTag("1.0.0")
         .withSupportLevel(SupportLevel.COMMUNITY)
+        .withInternalSupportLevel(100L)
         .withSpec(new ConnectorSpecification().withProtocolVersion("0.1.0"));
   }
 

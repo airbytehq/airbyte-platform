@@ -20,7 +20,6 @@ import io.airbyte.api.model.generated.Geography;
 import io.airbyte.api.model.generated.JobType;
 import io.airbyte.api.model.generated.JobTypeResourceLimit;
 import io.airbyte.api.model.generated.NonBreakingChangesPreference;
-import io.airbyte.api.model.generated.NormalizationDestinationDefinitionConfig;
 import io.airbyte.api.model.generated.ReleaseStage;
 import io.airbyte.api.model.generated.ResourceRequirements;
 import io.airbyte.api.model.generated.SchemaChangeBackfillPreference;
@@ -138,17 +137,6 @@ public class ApiPojoConverters {
         .cpuLimit(resourceReqs.getCpuLimit())
         .memoryRequest(resourceReqs.getMemoryRequest())
         .memoryLimit(resourceReqs.getMemoryLimit());
-  }
-
-  public static NormalizationDestinationDefinitionConfig normalizationDestinationDefinitionConfigToApi(final io.airbyte.config.NormalizationDestinationDefinitionConfig normalizationDestinationDefinitionConfig) {
-    if (normalizationDestinationDefinitionConfig == null) {
-      return new NormalizationDestinationDefinitionConfig().supported(false);
-    }
-    return new NormalizationDestinationDefinitionConfig()
-        .supported(true)
-        .normalizationRepository(normalizationDestinationDefinitionConfig.getNormalizationRepository())
-        .normalizationTag(normalizationDestinationDefinitionConfig.getNormalizationTag())
-        .normalizationIntegrationType(normalizationDestinationDefinitionConfig.getNormalizationIntegrationType());
   }
 
   public static ConnectionRead internalToConnectionRead(final StandardSync standardSync) {

@@ -10,7 +10,6 @@ import { useFormatError } from "core/errors";
 import { getFrequencyFromScheduleData, useAnalyticsService, Action, Namespace } from "core/services/analytics";
 import { links } from "core/utils/links";
 import { useAppMonitoringService } from "hooks/services/AppMonitoringService";
-import { useExperiment } from "hooks/services/Experiment";
 import { useNotificationService } from "hooks/services/Notification";
 import { CloudRoutes } from "packages/cloud/cloudRoutePaths";
 import { RoutePaths } from "pages/routePaths";
@@ -107,19 +106,13 @@ export const useGetLastJobPerStream = (connectionId: string) => {
 
 export const useGetConnectionSyncProgress = (connectionId: string, enabled: boolean) => {
   const requestOptions = useRequestOptions();
-  const syncStatsFlushFrequencyOverrideSeconds = useExperiment("connection.syncProgressPollingTime", -1);
 
   return useQuery(
     connectionsKeys.syncProgress(connectionId),
     async () => await getConnectionSyncProgress({ connectionId }, requestOptions),
     {
       enabled,
-      refetchInterval: (data) =>
-        data?.jobId
-          ? syncStatsFlushFrequencyOverrideSeconds > 0
-            ? syncStatsFlushFrequencyOverrideSeconds
-            : 60000
-          : 5000,
+      refetchInterval: 10000,
     }
   );
 };
@@ -286,7 +279,6 @@ export const useCreateConnection = () => {
   const queryClient = useQueryClient();
   const analyticsService = useAnalyticsService();
   const invalidateWorkspaceSummary = useInvalidateWorkspaceStateQuery();
-  const isSimplifiedCreation = useExperiment("connection.simplifiedCreation", true);
 
   return useMutation(
     async ({
@@ -323,7 +315,6 @@ export const useCreateConnection = () => {
         enabled_streams: enabledStreams.length,
         enabled_streams_list: JSON.stringify(enabledStreams),
         connection_id: response.connectionId,
-        is_simplified_creation: isSimplifiedCreation,
       });
 
       return response;

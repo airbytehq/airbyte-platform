@@ -13,10 +13,10 @@ dependencies {
   implementation(libs.aws.java.sdk.s3)
   implementation(libs.aws.java.sdk.sts)
 
-  implementation(project(":airbyte-commons"))
-  implementation(project(":airbyte-config:config-models"))
-  implementation(project(":airbyte-config:config-persistence"))
-  implementation(project(":airbyte-json-validation"))
+  implementation(project(":oss:airbyte-commons"))
+  implementation(project(":oss:airbyte-config:config-models"))
+  implementation(project(":oss:airbyte-config:config-persistence"))
+  implementation(project(":oss:airbyte-json-validation"))
   implementation(libs.airbyte.protocol)
 
   testRuntimeOnly(libs.junit.jupiter.engine)

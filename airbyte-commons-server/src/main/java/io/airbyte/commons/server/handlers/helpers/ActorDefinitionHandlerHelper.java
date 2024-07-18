@@ -91,6 +91,7 @@ public class ActorDefinitionHandlerHelper {
         .withDocumentationUrl(documentationUrl.toString())
         .withProtocolVersion(protocolVersion)
         .withSupportLevel(io.airbyte.config.SupportLevel.NONE)
+        .withInternalSupportLevel(100L)
         .withReleaseStage(io.airbyte.config.ReleaseStage.CUSTOM);
   }
 
@@ -144,8 +145,7 @@ public class ActorDefinitionHandlerHelper {
         .withReleaseStage(currentVersion.getReleaseStage())
         .withReleaseDate(currentVersion.getReleaseDate())
         .withSupportLevel(currentVersion.getSupportLevel())
-        .withNormalizationConfig(currentVersion.getNormalizationConfig())
-        .withSupportsDbt(currentVersion.getSupportsDbt())
+        .withInternalSupportLevel(currentVersion.getInternalSupportLevel())
         .withCdkVersion(currentVersion.getCdkVersion())
         .withLastPublished(currentVersion.getLastPublished())
         .withAllowedHosts(currentVersion.getAllowedHosts());

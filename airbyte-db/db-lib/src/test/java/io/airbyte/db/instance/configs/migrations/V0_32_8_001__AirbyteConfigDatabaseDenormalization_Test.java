@@ -23,8 +23,7 @@ import io.airbyte.commons.json.Jsons;
 import io.airbyte.config.DestinationConnection;
 import io.airbyte.config.DestinationOAuthParameter;
 import io.airbyte.config.Notification;
-import io.airbyte.config.OperatorDbt;
-import io.airbyte.config.OperatorNormalization;
+import io.airbyte.config.OperatorWebhook;
 import io.airbyte.config.ResourceRequirements;
 import io.airbyte.config.Schedule;
 import io.airbyte.config.SourceConnection;
@@ -340,8 +339,6 @@ class V0_32_8_001__AirbyteConfigDatabaseDenormalization_Test extends AbstractCon
     final Field<UUID> workspaceId = DSL.field("workspace_id", SQLDataType.UUID.nullable(false));
     final Field<String> name = DSL.field("name", SQLDataType.VARCHAR(256).nullable(false));
     final Field<OperatorType> operatorType = DSL.field("operator_type", SQLDataType.VARCHAR.asEnumDataType(OperatorType.class).nullable(false));
-    final Field<JSONB> operatorNormalization = DSL.field("operator_normalization", SQLDataType.JSONB.nullable(true));
-    final Field<JSONB> operatorDbt = DSL.field("operator_dbt", SQLDataType.JSONB.nullable(true));
     final Field<Boolean> tombstone = DSL.field("tombstone", SQLDataType.BOOLEAN.nullable(true));
     final Field<OffsetDateTime> createdAt = DSL.field("created_at", SQLDataType.TIMESTAMPWITHTIMEZONE.nullable(false));
     final Field<OffsetDateTime> updatedAt = DSL.field("updated_at", SQLDataType.TIMESTAMPWITHTIMEZONE.nullable(false));
@@ -357,9 +354,9 @@ class V0_32_8_001__AirbyteConfigDatabaseDenormalization_Test extends AbstractCon
           .withOperationId(record.get(id))
           .withName(record.get(name))
           .withWorkspaceId(record.get(workspaceId))
-          .withOperatorType(Enums.toEnum(record.get(operatorType, String.class), StandardSyncOperation.OperatorType.class).orElseThrow())
-          .withOperatorNormalization(Jsons.deserialize(record.get(operatorNormalization).data(), OperatorNormalization.class))
-          .withOperatorDbt(Jsons.deserialize(record.get(operatorDbt).data(), OperatorDbt.class))
+          .withOperatorType(Enums.toEnum(record.get(operatorType, String.class), StandardSyncOperation.OperatorType.class)
+              .orElse(StandardSyncOperation.OperatorType.WEBHOOK))
+          .withOperatorWebhook(new OperatorWebhook())
           .withTombstone(record.get(tombstone));
 
       Assertions.assertTrue(expectedDefinitions.contains(standardSyncOperation));

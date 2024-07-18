@@ -33,7 +33,6 @@ export const OrganizationUsersTable: React.FC<{
           );
         },
         sortingFn: "alphanumeric",
-        meta: { responsive: true },
       }),
       columnHelper.accessor("permissionType", {
         id: "permissionType",
@@ -43,7 +42,6 @@ export const OrganizationUsersTable: React.FC<{
             <FormattedMessage id="settings.accessManagement.table.column.role" />
           </>
         ),
-        meta: { responsive: true },
         cell: (props) => {
           const user = {
             userName: props.row.original.name ?? "",

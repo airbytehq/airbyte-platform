@@ -7,6 +7,7 @@ package io.airbyte.workers.temporal.scheduling.activities;
 import static io.airbyte.metrics.lib.ApmTraceConstants.ACTIVITY_TRACE_OPERATION_NAME;
 import static io.airbyte.metrics.lib.ApmTraceConstants.Tags.CONNECTION_ID_KEY;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import com.google.common.annotations.VisibleForTesting;
 import datadog.trace.api.Trace;
 import io.airbyte.api.client.AirbyteApiClient;
@@ -20,6 +21,7 @@ import io.airbyte.api.client.model.generated.ConnectionScheduleType;
 import io.airbyte.api.client.model.generated.ConnectionStatus;
 import io.airbyte.api.client.model.generated.JobOptionalRead;
 import io.airbyte.api.client.model.generated.JobRead;
+import io.airbyte.api.client.model.generated.SourceIdRequestBody;
 import io.airbyte.api.client.model.generated.WorkspaceRead;
 import io.airbyte.commons.temporal.exception.RetryableException;
 import io.airbyte.featureflag.Connection;
@@ -279,6 +281,15 @@ public class ConfigFetchActivityImpl implements ConfigFetchActivity {
     } catch (final IOException e) {
       log.info("Encountered an error fetching the connection's Source ID: ", e);
       return Optional.empty();
+    }
+  }
+
+  @Override
+  public JsonNode getSourceConfig(final UUID sourceId) {
+    try {
+      return airbyteApiClient.getSourceApi().getSource(new SourceIdRequestBody(sourceId)).getConnectionConfiguration();
+    } catch (IOException e) {
+      throw new RuntimeException(e);
     }
   }
 

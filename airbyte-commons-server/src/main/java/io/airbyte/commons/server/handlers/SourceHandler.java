@@ -379,12 +379,14 @@ public class SourceHandler {
     final var spec = getSpecFromSourceId(source.getSourceId());
 
     if (featureFlagClient.boolVariation(DeleteSecretsWhenTombstoneActors.INSTANCE, new Workspace(source.getWorkspaceId().toString()))) {
-      deleteSourceConnection(
-          source.getName(),
-          source.getSourceDefinitionId(),
-          source.getWorkspaceId(),
-          source.getSourceId(),
-          spec);
+      try {
+        sourceService.tombstoneSource(
+            source.getName(),
+            source.getWorkspaceId(),
+            source.getSourceId(), spec);
+      } catch (final io.airbyte.data.exceptions.ConfigNotFoundException e) {
+        throw new ConfigNotFoundException(e.getType(), e.getConfigId());
+      }
     } else {
       final JsonNode fullConfig;
       try {
@@ -491,26 +493,6 @@ public class SourceHandler {
     final StandardSourceDefinition sourceDef = configRepository.getStandardSourceDefinition(sourceDefId);
     final ActorDefinitionVersion sourceVersion = actorDefinitionVersionHelper.getSourceVersion(sourceDef, workspaceId);
     return sourceVersion.getSpec();
-  }
-
-  private void deleteSourceConnection(final String name,
-                                      final UUID sourceDefinitionId,
-                                      final UUID workspaceId,
-                                      final UUID sourceId,
-                                      final ConnectorSpecification spec)
-      throws JsonValidationException, IOException, ConfigNotFoundException {
-    final SourceConnection sourceConnection = new SourceConnection()
-        .withName(name)
-        .withSourceDefinitionId(sourceDefinitionId)
-        .withWorkspaceId(workspaceId)
-        .withSourceId(sourceId)
-        .withConfiguration(null)
-        .withTombstone(true);
-    try {
-      sourceService.tombstoneSource(sourceConnection, spec);
-    } catch (final io.airbyte.data.exceptions.ConfigNotFoundException e) {
-      throw new ConfigNotFoundException(e.getType(), e.getConfigId());
-    }
   }
 
   @SuppressWarnings("PMD.PreserveStackTrace")

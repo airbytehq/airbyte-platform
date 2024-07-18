@@ -7,6 +7,7 @@ plugins {
   id("io.airbyte.gradle.docker")
   id("org.openapi.generator")
   id("io.airbyte.gradle.publish")
+  id("io.airbyte.gradle.kube-reload")
 }
 
 dependencies {
@@ -37,14 +38,14 @@ dependencies {
   implementation(libs.swagger.annotations)
 
   // Internal dependencies)
-  implementation(project(":airbyte-commons"))
-  implementation(project(":airbyte-commons-protocol"))
-  implementation(project(":airbyte-commons-server"))
-  implementation(project(":airbyte-commons-worker"))
-  implementation(project(":airbyte-config:config-models"))
-  implementation(project(":airbyte-config:config-persistence"))
-  implementation(project(":airbyte-config:init"))
-  implementation(project(":airbyte-metrics:metrics-lib"))
+  implementation(project(":oss:airbyte-commons"))
+  implementation(project(":oss:airbyte-commons-protocol"))
+  implementation(project(":oss:airbyte-commons-server"))
+  implementation(project(":oss:airbyte-commons-worker"))
+  implementation(project(":oss:airbyte-config:config-models"))
+  implementation(project(":oss:airbyte-config:config-persistence"))
+  implementation(project(":oss:airbyte-config:init"))
+  implementation(project(":oss:airbyte-metrics:metrics-lib"))
 
   implementation(libs.airbyte.protocol)
 
@@ -80,6 +81,11 @@ airbyte {
   }
   docker {
     imageName = "connector-builder-server"
+  }
+
+  kubeReload {
+    deployment = "ab-connector-builder-server"
+    container = "airbyte-connector-builder-server"
   }
 }
 
@@ -152,7 +158,7 @@ val copyPythonDeps = tasks.register<Copy>("copyPythonDependencies") {
 tasks.named<DockerBuildImage>("dockerBuildImage") {
   // Set build args
   // Current CDK version(used by the Connector Builder and workers running Connector Builder connectors
-  val cdkVersion: String = File(project.projectDir.parentFile, "airbyte-connector-builder-resources/CDK_VERSION").readText().trim()
+  val cdkVersion: String = File((ext["ossRootProject"] as Project).projectDir, "airbyte-connector-builder-resources/CDK_VERSION").readText().trim()
   buildArgs.put("CDK_VERSION", cdkVersion)
 }
 

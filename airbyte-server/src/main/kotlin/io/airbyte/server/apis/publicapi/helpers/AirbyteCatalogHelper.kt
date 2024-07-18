@@ -241,43 +241,41 @@ object AirbyteCatalogHelper {
    * @return boolean, but mostly so we can callwithTracker.
    */
   fun validateCronConfiguration(connectionSchedule: @Valid AirbyteApiConnectionSchedule): Boolean {
-    if (connectionSchedule != null) {
-      if (connectionSchedule.scheduleType != null && connectionSchedule.scheduleType === ScheduleTypeEnum.CRON) {
-        if (connectionSchedule.cronExpression == null) {
-          throw BadRequestProblem(
-            ProblemMessageData().message("Missing cron expression in the schedule."),
-          )
+    if (connectionSchedule.scheduleType === ScheduleTypeEnum.CRON) {
+      if (connectionSchedule.cronExpression == null) {
+        throw BadRequestProblem(
+          ProblemMessageData().message("Missing cron expression in the schedule."),
+        )
+      }
+      val cronExpression = normalizeCronExpression(connectionSchedule)?.cronExpression
+      try {
+        val cron: Cron = parser.parse(cronExpression)
+        cron.validate()
+        val cronStrings: List<String> = cron.asString().split(" ")
+        // Ensure first value is not `*`, could be seconds or minutes value
+        Integer.valueOf(cronStrings[0])
+        if (cronStrings.size == MAX_LENGTH_OF_CRON) {
+          // Ensure minutes value is not `*`
+          Integer.valueOf(cronStrings[1])
         }
-        val cronExpression = normalizeCronExpression(connectionSchedule)?.cronExpression
-        try {
-          val cron: Cron = parser.parse(cronExpression)
-          cron.validate()
-          val cronStrings: List<String> = cron.asString().split(" ")
-          // Ensure first value is not `*`, could be seconds or minutes value
-          Integer.valueOf(cronStrings[0])
-          if (cronStrings.size == MAX_LENGTH_OF_CRON) {
-            // Ensure minutes value is not `*`
-            Integer.valueOf(cronStrings[1])
-          }
-        } catch (e: NumberFormatException) {
-          log.debug("Invalid cron expression: $cronExpression")
-          log.debug("NumberFormatException: $e")
-          throw BadRequestProblem(
-            ProblemMessageData().message(
-              "The cron expression ${connectionSchedule.cronExpression}" +
-                " is not valid or is less than the one hour minimum. The seconds and minutes values cannot be `*`.",
-            ),
-          )
-        } catch (e: IllegalArgumentException) {
-          log.debug("Invalid cron expression: $cronExpression")
-          log.debug("IllegalArgumentException: $e")
-          throw BadRequestProblem(
-            ProblemMessageData().message(
-              "The cron expression ${connectionSchedule.cronExpression} is not valid. Error: ${e.message}" +
-                ". Please check the cron expression format at https://www.quartz-scheduler.org/documentation/quartz-2.3.0/tutorials/crontrigger.html",
-            ),
-          )
-        }
+      } catch (e: NumberFormatException) {
+        log.debug("Invalid cron expression: $cronExpression")
+        log.debug("NumberFormatException: $e")
+        throw BadRequestProblem(
+          ProblemMessageData().message(
+            "The cron expression ${connectionSchedule.cronExpression}" +
+              " is not valid or is less than the one hour minimum. The seconds and minutes values cannot be `*`.",
+          ),
+        )
+      } catch (e: IllegalArgumentException) {
+        log.debug("Invalid cron expression: $cronExpression")
+        log.debug("IllegalArgumentException: $e")
+        throw BadRequestProblem(
+          ProblemMessageData().message(
+            "The cron expression ${connectionSchedule.cronExpression} is not valid. Error: ${e.message}" +
+              ". Please check the cron expression format at https://www.quartz-scheduler.org/documentation/quartz-2.3.0/tutorials/crontrigger.html",
+          ),
+        )
       }
     }
     return true
@@ -291,7 +289,7 @@ object AirbyteCatalogHelper {
         if (cronExpression.endsWith("UTC")) {
           AirbyteApiConnectionSchedule(
             scheduleType = connectionSchedule.scheduleType,
-            cronExpression = connectionSchedule.cronExpression?.let { exp -> exp.replace("UTC", "").trim() },
+            cronExpression = connectionSchedule.cronExpression?.replace("UTC", "")?.trim(),
           )
         } else {
           connectionSchedule

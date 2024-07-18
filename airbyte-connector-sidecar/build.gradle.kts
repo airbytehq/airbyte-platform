@@ -45,15 +45,15 @@ dependencies {
   implementation(libs.micronaut.jackson.databind)
   implementation(libs.slf4j.api)
 
-  implementation(project(":airbyte-api"))
-  implementation(project(":airbyte-commons"))
-  implementation(project(":airbyte-commons-converters"))
-  implementation(project(":airbyte-commons-protocol"))
-  implementation(project(":airbyte-commons-temporal"))
-  implementation(project(":airbyte-commons-worker"))
-  implementation(project(":airbyte-config:config-models"))
-  implementation(project(":airbyte-metrics:metrics-lib")) // necessary for doc store
-  implementation(project(":airbyte-worker-models"))
+  implementation(project(":oss:airbyte-api"))
+  implementation(project(":oss:airbyte-commons"))
+  implementation(project(":oss:airbyte-commons-converters"))
+  implementation(project(":oss:airbyte-commons-protocol"))
+  implementation(project(":oss:airbyte-commons-temporal"))
+  implementation(project(":oss:airbyte-commons-worker"))
+  implementation(project(":oss:airbyte-config:config-models"))
+  implementation(project(":oss:airbyte-metrics:metrics-lib")) // necessary for doc store
+  implementation(project(":oss:airbyte-worker-models"))
   implementation(libs.airbyte.protocol)
 
   runtimeOnly(libs.snakeyaml)
@@ -101,7 +101,7 @@ airbyte {
   }
 }
 
-// Duplicated from :airbyte-worker, eventually, this should be handled in :airbyte-protocol
+// Duplicated from :oss:airbyte-worker, eventually, this should be handled in :oss:airbyte-protocol
 val generateWellKnownTypes = tasks.register("generateWellKnownTypes") {
   inputs.files(airbyteProtocol) // declaring inputs)
   val targetFile = project.file("build/airbyte/docker/WellKnownTypes.json")

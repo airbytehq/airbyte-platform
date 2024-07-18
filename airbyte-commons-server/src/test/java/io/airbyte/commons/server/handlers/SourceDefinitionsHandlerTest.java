@@ -42,6 +42,7 @@ import io.airbyte.commons.server.errors.IdNotFoundKnownException;
 import io.airbyte.commons.server.errors.UnsupportedProtocolVersionException;
 import io.airbyte.commons.server.handlers.helpers.ActorDefinitionHandlerHelper;
 import io.airbyte.commons.version.Version;
+import io.airbyte.config.AbInternal;
 import io.airbyte.config.ActorDefinitionBreakingChange;
 import io.airbyte.config.ActorDefinitionResourceRequirements;
 import io.airbyte.config.ActorDefinitionVersion;
@@ -155,6 +156,7 @@ class SourceDefinitionsHandlerTest {
         .withDockerImageTag("12.3")
         .withSpec(spec)
         .withSupportLevel(io.airbyte.config.SupportLevel.COMMUNITY)
+        .withInternalSupportLevel(100L)
         .withReleaseStage(io.airbyte.config.ReleaseStage.ALPHA)
         .withReleaseDate(TODAY_DATE_STRING)
         .withAllowedHosts(new AllowedHosts().withHosts(List.of("host1", "host2")))
@@ -176,6 +178,7 @@ class SourceDefinitionsHandlerTest {
         .withProtocolVersion(DEFAULT_PROTOCOL_VERSION)
         .withReleaseDate(null)
         .withSupportLevel(io.airbyte.config.SupportLevel.COMMUNITY)
+        .withInternalSupportLevel(100L)
         .withReleaseStage(io.airbyte.config.ReleaseStage.CUSTOM)
         .withAllowedHosts(null);
   }
@@ -930,6 +933,7 @@ class SourceDefinitionsHandlerTest {
             Jsons.jsonNode(ImmutableMap.of("key", "val"))))
         .withTombstone(false)
         .withSupportLevel(io.airbyte.config.SupportLevel.NONE)
+        .withAbInternal(new AbInternal().withSl(100L))
         .withReleaseStage(io.airbyte.config.ReleaseStage.ALPHA)
         .withReleaseDate(TODAY_DATE_STRING)
         .withResourceRequirements(new ActorDefinitionResourceRequirements().withDefault(new ResourceRequirements().withCpuRequest("2")));
@@ -961,6 +965,7 @@ class SourceDefinitionsHandlerTest {
               Jsons.jsonNode(ImmutableMap.of("key", "val"))))
           .withTombstone(false)
           .withSupportLevel(io.airbyte.config.SupportLevel.COMMUNITY)
+          .withAbInternal(new AbInternal().withSl(100L))
           .withReleaseStage(io.airbyte.config.ReleaseStage.ALPHA)
           .withReleaseDate(TODAY_DATE_STRING)
           .withResourceRequirements(new ActorDefinitionResourceRequirements().withDefault(new ResourceRequirements().withCpuRequest("2")));

@@ -708,32 +708,43 @@ public class DestinationServiceJooqImpl implements DestinationService {
   /**
    * Delete destination: tombstone destination AND delete secrets
    *
-   * @param connectorSpecification spec for the destination
-   * @throws JsonValidationException if the workspace is or contains invalid json
+   * @param name Destination name
+   * @param workspaceId workspace ID
+   * @param destinationId destination ID
+   * @param spec spec for the destination
+   * @throws JsonValidationException if the config is or contains invalid json
    * @throws IOException if there is an issue while interacting with the secrets store or db.
    */
   @Override
   public void tombstoneDestination(
-                                   final DestinationConnection destination,
-                                   final ConnectorSpecification connectorSpecification)
+                                   final String name,
+                                   final UUID workspaceId,
+                                   final UUID destinationId,
+                                   final ConnectorSpecification spec)
       throws ConfigNotFoundException, JsonValidationException, IOException {
     // 1. Delete secrets from config
-    final JsonNode config = destination.getConfiguration();
-
-    final Optional<UUID> organizationId = getOrganizationIdFromWorkspaceId(destination.getWorkspaceId());
+    final DestinationConnection destinationConnection = getDestinationConnection(destinationId);
+    final JsonNode config = destinationConnection.getConfiguration();
+    final Optional<UUID> organizationId = getOrganizationIdFromWorkspaceId(workspaceId);
     RuntimeSecretPersistence secretPersistence = null;
     if (organizationId.isPresent() && featureFlagClient.boolVariation(UseRuntimeSecretPersistence.INSTANCE, new Organization(organizationId.get()))) {
       final SecretPersistenceConfig secretPersistenceConfig = secretPersistenceConfigService.get(ScopeType.ORGANIZATION, organizationId.get());
       secretPersistence = new RuntimeSecretPersistence(secretPersistenceConfig);
     }
-    final JsonNode partialConfig = secretsRepositoryWriter.deleteFromConfig(
-        destination.getWorkspaceId(),
+    secretsRepositoryWriter.deleteFromConfig(
         config,
-        connectorSpecification.getConnectionSpecification(),
+        spec.getConnectionSpecification(),
         secretPersistence);
-    // 2. Tombstone destination
-    final DestinationConnection partialSource = Jsons.clone(destination).withConfiguration(partialConfig);
-    writeDestinationConnectionNoSecrets(partialSource);
+
+    // 2. Tombstone destination and void config
+    final DestinationConnection newDestinationConnection = new DestinationConnection()
+        .withName(name)
+        .withDestinationDefinitionId(destinationConnection.getDestinationDefinitionId())
+        .withWorkspaceId(workspaceId)
+        .withDestinationId(destinationId)
+        .withConfiguration(null)
+        .withTombstone(true);
+    writeDestinationConnectionNoSecrets(newDestinationConnection);
   }
 
   /**

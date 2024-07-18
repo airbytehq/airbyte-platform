@@ -88,7 +88,8 @@ val allFiles = fileTree(".") {
 tasks.register<PnpmTask>("pnpmBuild") {
     dependsOn(tasks.named("pnpmInstall"))
 
-    environment.put("VERSION", rootProject.ext.get("version") as String)
+    // todo (cgardens) - this isn't great because this version is used for cloud as well (even though it's pulled from the oss project).
+    environment.put("VERSION", (ext["ossRootProject"] as Project).ext["webapp_version"] as String)
 
     args = listOf("build")
 

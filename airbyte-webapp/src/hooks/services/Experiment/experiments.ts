@@ -11,14 +11,15 @@ export interface Experiments {
   "billing.early-sync-enabled": boolean;
   "billing.autoRecharge": boolean;
   "connection.columnSelection": boolean;
-  "connection.simplifiedCreation": boolean;
-  "connection.syncProgressPollingTime": number;
   "connection.onboarding.destinations": string;
   "connection.onboarding.sources": string;
   "connection.streamCentricUI.errorMultiplier": number;
   "connection.streamCentricUI.lateMultiplier": number;
   "connection.streamCentricUI.v2": boolean;
   "connection.streamCentricUI.historicalOverview": boolean;
+  "connection.rateLimitedUI": boolean;
+  "connection.timeline": boolean;
+  "connection.jobCancellationModal": boolean;
   "connector.airbyteCloudIpAddresses": string;
   "connector.suggestedSourceConnectors": string;
   "connector.suggestedDestinationConnectors": string;

@@ -1,5 +1,5 @@
 import classNames from "classnames";
-import { PropsWithChildren } from "react";
+import { PropsWithChildren, useMemo } from "react";
 import { FormattedMessage, useIntl } from "react-intl";
 import { matchPath, useLocation } from "react-router-dom";
 
@@ -37,11 +37,18 @@ export const SideBar: React.FC<PropsWithChildren<SideBarProps>> = ({
   bottomSlot,
   settingHighlight,
 }) => {
-  const { logout, user } = useAuthService();
+  const { logout, user, authType } = useAuthService();
   const { formatMessage } = useIntl();
 
   const { pathname } = useLocation();
   const isHidden = HIDDEN_SIDEBAR_PATHS.some((path) => !!matchPath(path, pathname));
+
+  const username = useMemo(() => {
+    if (authType === "simple" || authType === "none") {
+      return formatMessage({ id: "sidebar.defaultUsername" });
+    }
+    return user?.name;
+  }, [authType, user?.name, formatMessage]);
 
   return (
     <nav className={classNames(styles.sidebar, { [styles.hidden]: isHidden })}>
@@ -121,7 +128,7 @@ export const SideBar: React.FC<PropsWithChildren<SideBarProps>> = ({
                 },
               ]}
               icon="user"
-              label={user.name}
+              label={username}
             />
           )}
         </MenuContent>

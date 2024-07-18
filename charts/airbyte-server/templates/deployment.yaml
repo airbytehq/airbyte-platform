@@ -215,6 +215,16 @@ spec:
           value: "X-Airbyte-Auth"
         - name: AIRBYTE_API_AUTH_HEADER_VALUE
           value: "Internal server"
+        - name: WORKLOAD_LAUNCHER_ENABLED
+          valueFrom:
+            configMapKeyRef:
+              name: {{ .Release.Name }}-airbyte-env
+              key: WORKLOAD_LAUNCHER_ENABLED
+        - name: WORKLOAD_API_SERVER_ENABLED
+          valueFrom:
+            configMapKeyRef:
+              name: {{ .Release.Name }}-airbyte-env
+              key: WORKLOAD_API_SERVER_ENABLED
 
         # SECRETS MANAGER
         - name: SECRET_PERSISTENCE

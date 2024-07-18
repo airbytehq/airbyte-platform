@@ -61,11 +61,6 @@ properties:
   protocolVersion:
     type: string
     description: the Airbyte Protocol version supported by the connector
-  normalizationConfig:
-    "$ref": NormalizationDestinationDefinitionConfig.yaml
-  supportsDbt:
-    type: boolean
-    description: an optional flag indicating whether DBT is used in the normalization. If the flag value is NULL - DBT is not used.
   allowedHosts:
     "$ref": AllowedHosts.yaml
   releases:
@@ -77,3 +72,5 @@ properties:
     "$ref": ConnectorRegistryEntryGeneratedFields.yaml
   packageInfo:
     "$ref": ConnectorPackageInfo.yaml
+  ab_internal:
+    "$ref": AbInternal.yaml

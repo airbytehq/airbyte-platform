@@ -35,7 +35,7 @@ export const generateMessageFromError = (
   );
 };
 
-interface FailureUiDetails {
+export interface FailureUiDetails {
   type: "error" | "warning";
   typeLabel: string;
   origin: FailureReason["failureOrigin"];

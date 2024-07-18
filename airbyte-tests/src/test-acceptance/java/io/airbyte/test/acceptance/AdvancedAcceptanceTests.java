@@ -28,6 +28,8 @@ import java.util.UUID;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.MethodOrderer;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Tags;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
 import org.junit.jupiter.api.TestInstance.Lifecycle;
@@ -56,6 +58,7 @@ import org.slf4j.LoggerFactory;
 @SuppressWarnings({"ConstantConditions"})
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
 @TestInstance(Lifecycle.PER_CLASS)
+@Tags({@Tag("sync"), @Tag("enterprise")})
 class AdvancedAcceptanceTests {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(AdvancedAcceptanceTests.class);

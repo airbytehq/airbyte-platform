@@ -71,9 +71,7 @@ export const AllConnectionsPage: React.FC = () => {
               />
             }
           >
-            <Suspense fallback={<LoadingPage />}>
-              <ConnectionsListCard />
-            </Suspense>
+            <ConnectionsListCard />
           </MainPageWithScroll>
         ) : (
           <ConnectionOnboarding onCreate={onCreateClick} />

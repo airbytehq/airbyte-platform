@@ -15,7 +15,7 @@ dependencies {
   implementation(libs.micronaut.security)
   implementation(libs.micronaut.security.jwt)
 
-  implementation(project(":airbyte-commons"))
+  implementation(project(":oss:airbyte-commons"))
 
   testCompileOnly(libs.lombok)
   testAnnotationProcessor(libs.lombok)

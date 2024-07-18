@@ -45,7 +45,7 @@ open class UserServiceImpl(
       kotlin.runCatching { workspacesHandler.listWorkspacesByUser(listWorkspacesByUserRequestBody) }
         .onFailure {
           log.error("Error for listWorkspacesByUser", it)
-          ConfigClientErrorHandler.handleError(it, "airbyte-user")
+          ConfigClientErrorHandler.handleError(it)
         }
 
     log.debug(HTTP_RESPONSE_BODY_DEBUG_MESSAGE + result)
@@ -66,7 +66,7 @@ open class UserServiceImpl(
       }
         .onFailure {
           log.error("Error for getUsersInAnOrganization", it)
-          ConfigClientErrorHandler.handleError(it, "airbyte-user")
+          ConfigClientErrorHandler.handleError(it)
         }
     log.debug(HTTP_RESPONSE_BODY_DEBUG_MESSAGE + result)
     val userReadList = result.getOrThrow()

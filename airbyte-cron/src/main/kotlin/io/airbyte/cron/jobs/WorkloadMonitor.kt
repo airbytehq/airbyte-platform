@@ -63,7 +63,11 @@ open class WorkloadMonitor(
           status = listOf(WorkloadStatus.CLAIMED),
         ),
       )
-    failWorkloads(notStartedWorkloads.workloads, "Not started within time limit", CHECK_START)
+    failWorkloads(
+      notStartedWorkloads.workloads,
+      "Airbyte could not start the process within time limit. The workload was claimed but never started.",
+      CHECK_START,
+    )
   }
 
   @Trace
@@ -85,7 +89,11 @@ open class WorkloadMonitor(
         ),
       )
 
-    failWorkloads(notClaimedWorkloads.workloads, "Not claimed within time limit", CHECK_CLAIMS)
+    failWorkloads(
+      notClaimedWorkloads.workloads,
+      "Airbyte could not start the process within time limit. The workload was never claimed.",
+      CHECK_CLAIMS,
+    )
   }
 
   @Trace
@@ -107,7 +115,12 @@ open class WorkloadMonitor(
         ),
       )
 
-    failWorkloads(nonHeartbeatingWorkloads.workloads, "No heartbeat within time limit", CHECK_HEARTBEAT)
+    failWorkloads(
+      nonHeartbeatingWorkloads.workloads,
+      "Airbyte could not track the sync progress. " +
+        "No heartbeat within the time limit indicates the process might have died.",
+      CHECK_HEARTBEAT,
+    )
   }
 
   @Trace

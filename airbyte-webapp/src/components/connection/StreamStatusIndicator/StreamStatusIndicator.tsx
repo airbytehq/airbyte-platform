@@ -22,6 +22,7 @@ const ICON_BY_STATUS: Readonly<Record<ConnectionStatusIndicatorStatus, JSX.Eleme
   refreshing: <CircleLoader title="refreshing" className={styles.syncingIcon} />,
   queued: <Icon type="statusQueued" title="queued" />,
   queuedForNextSync: <Icon type="statusQueued" title="queued" />,
+  rateLimited: <CircleLoader title="rate limited" className={styles.syncingIcon} />,
 };
 
 const STYLE_BY_STATUS: Readonly<Record<ConnectionStatusIndicatorStatus, string>> = {
@@ -38,6 +39,7 @@ const STYLE_BY_STATUS: Readonly<Record<ConnectionStatusIndicatorStatus, string>>
   refreshing: styles["status--syncing"],
   queued: styles["status--queued"],
   queuedForNextSync: styles["status--queued"],
+  rateLimited: styles["status--syncing"],
 };
 
 const BOX_STYLE_BY_STATUS: Readonly<Record<ConnectionStatusIndicatorStatus, string>> = {
@@ -54,6 +56,7 @@ const BOX_STYLE_BY_STATUS: Readonly<Record<ConnectionStatusIndicatorStatus, stri
   refreshing: styles["status--syncing-withBox"],
   queued: styles["status--queued-withBox"],
   queuedForNextSync: styles["status--queued-withBox"],
+  rateLimited: styles["status--syncing-withBox"],
 };
 
 interface StreamStatusIndicatorProps {

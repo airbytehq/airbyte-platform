@@ -47,7 +47,12 @@ export const ConnectionActionsBlock: React.FC = () => {
     });
   }, [clearStreams, registerNotification, formatMessage]);
 
-  const onDeleteButtonClick = useDeleteModal("connection", onDelete, undefined, connection?.name);
+  const onDeleteButtonClick = useDeleteModal(
+    "connection",
+    onDelete,
+    undefined,
+    formatMessage({ id: "tables.connectionDeleteConfirmationText" })
+  );
   const connectionStatus = useConnectionStatus(connection.connectionId ?? "");
 
   const { openConfirmationModal, closeConfirmationModal } = useConfirmationModalService();

@@ -24,6 +24,7 @@ import io.airbyte.api.client.generated.SourceApi;
 import io.airbyte.api.client.model.generated.ResolveActorDefinitionVersionResponse;
 import io.airbyte.commons.concurrency.VoidCallable;
 import io.airbyte.commons.converters.ThreadedTimeTracker;
+import io.airbyte.config.State;
 import io.airbyte.persistence.job.models.ReplicationInput;
 import io.airbyte.protocol.models.AirbyteAnalyticsTraceMessage;
 import io.airbyte.protocol.models.AirbyteLogMessage;
@@ -129,7 +130,8 @@ class ReplicationWorkerHelperTest {
         replicationContext,
         mock(ReplicationFeatureFlags.class),
         mock(Path.class),
-        catalog);
+        catalog,
+        mock(State.class));
     verify(streamStatusCompletionTracker).startTracking(catalog, supportRefreshes);
     // Need to have a configured catalog for getReplicationOutput
     replicationWorkerHelper.startDestination(
@@ -155,7 +157,8 @@ class ReplicationWorkerHelperTest {
         replicationContext,
         mock(ReplicationFeatureFlags.class),
         mock(Path.class),
-        mock(ConfiguredAirbyteCatalog.class));
+        mock(ConfiguredAirbyteCatalog.class),
+        mock(State.class));
     // Need to have a configured catalog for getReplicationOutput
     replicationWorkerHelper.startDestination(
         mock(AirbyteDestination.class),
@@ -220,7 +223,8 @@ class ReplicationWorkerHelperTest {
         replicationContext,
         mock(ReplicationFeatureFlags.class),
         mock(Path.class),
-        mock(ConfiguredAirbyteCatalog.class));
+        mock(ConfiguredAirbyteCatalog.class),
+        mock(State.class));
 
     final AirbyteMessage message = mock(AirbyteMessage.class);
 
@@ -237,7 +241,8 @@ class ReplicationWorkerHelperTest {
         replicationContext,
         mock(ReplicationFeatureFlags.class),
         mock(Path.class),
-        mock(ConfiguredAirbyteCatalog.class));
+        mock(ConfiguredAirbyteCatalog.class),
+        mock(State.class));
 
     final AirbyteMessage message = mock(AirbyteMessage.class);
     when(mapper.revertMap(message)).thenReturn(message);

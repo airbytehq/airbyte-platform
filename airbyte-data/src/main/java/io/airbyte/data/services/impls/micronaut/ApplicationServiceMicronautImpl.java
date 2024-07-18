@@ -58,13 +58,15 @@ public class ApplicationServiceMicronautImpl implements ApplicationService {
       roles.addAll(AuthRole.buildAuthRolesSet(AuthRole.ADMIN));
       roles.addAll(WorkspaceAuthRole.buildWorkspaceAuthRolesSet(WorkspaceAuthRole.WORKSPACE_ADMIN));
       roles.addAll(OrganizationAuthRole.buildOrganizationAuthRolesSet(OrganizationAuthRole.ORGANIZATION_ADMIN));
-      final var token = jwtTokenGenerator.generateToken(
+      return jwtTokenGenerator.generateToken(
           Map.of(
               "iss", "airbyte-server",
               "sub", DEFAULT_AUTH_USER_ID,
               "roles", roles,
-              "exp", Instant.now().plus(24, ChronoUnit.HOURS).getEpochSecond()));
-      return token.orElseThrow(() -> new BadRequestException("Token generation failed"));
+              "exp", Instant.now().plus(24, ChronoUnit.HOURS).getEpochSecond()))
+          // Necessary now that this is no longer optional, but I don't know under what conditions we could
+          // end up here.
+          .orElseThrow(() -> new BadRequestException("Could not generate token"));
     }
     throw new BadRequestException("Invalid client id or token");
   }

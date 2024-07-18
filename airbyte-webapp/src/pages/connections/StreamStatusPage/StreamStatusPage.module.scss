@@ -1,3 +1,9 @@
+@use "scss/variables";
+
 .container {
-  height: 100%;
+  grid-area: connection-page-content;
+  overflow-y: auto;
+  display: flex;
+  gap: variables.$spacing-md;
+  flex-direction: column;
 }

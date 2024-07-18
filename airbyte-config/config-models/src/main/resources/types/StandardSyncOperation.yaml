@@ -20,10 +20,6 @@ properties:
   # the jsonschema2pojo does not seem to support it yet: https://github.com/joelittlejohn/jsonschema2pojo/issues/392
   operatorType:
     "$ref": OperatorType.yaml
-  operatorNormalization:
-    "$ref": OperatorNormalization.yaml
-  operatorDbt:
-    "$ref": OperatorDbt.yaml
   operatorWebhook:
     "$ref": OperatorWebhook.yaml
   tombstone:

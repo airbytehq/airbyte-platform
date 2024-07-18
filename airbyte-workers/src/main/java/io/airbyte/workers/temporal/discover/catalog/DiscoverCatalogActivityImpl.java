@@ -16,6 +16,8 @@ import datadog.trace.api.Trace;
 import io.airbyte.api.client.AirbyteApiClient;
 import io.airbyte.api.client.model.generated.ConnectionIdRequestBody;
 import io.airbyte.api.client.model.generated.Geography;
+import io.airbyte.api.client.model.generated.PostprocessDiscoveredCatalogRequestBody;
+import io.airbyte.api.client.model.generated.PostprocessDiscoveredCatalogResult;
 import io.airbyte.api.client.model.generated.ScopeType;
 import io.airbyte.api.client.model.generated.SecretPersistenceConfig;
 import io.airbyte.api.client.model.generated.SecretPersistenceConfigGetRequestBody;
@@ -41,11 +43,14 @@ import io.airbyte.config.helpers.LogConfigs;
 import io.airbyte.config.helpers.ResourceRequirementsUtils;
 import io.airbyte.config.secrets.SecretsRepositoryReader;
 import io.airbyte.config.secrets.persistence.RuntimeSecretPersistence;
+import io.airbyte.featureflag.Empty;
 import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.featureflag.Organization;
 import io.airbyte.featureflag.UseRuntimeSecretPersistence;
 import io.airbyte.featureflag.UseWorkloadApi;
+import io.airbyte.featureflag.WorkloadApiServerEnabled;
 import io.airbyte.featureflag.WorkloadCheckFrequencyInSeconds;
+import io.airbyte.featureflag.WorkloadLauncherEnabled;
 import io.airbyte.featureflag.Workspace;
 import io.airbyte.metrics.lib.ApmTraceUtils;
 import io.airbyte.metrics.lib.MetricAttribute;
@@ -57,11 +62,14 @@ import io.airbyte.persistence.job.models.JobRunConfig;
 import io.airbyte.workers.Worker;
 import io.airbyte.workers.exception.WorkerException;
 import io.airbyte.workers.general.DefaultDiscoverCatalogWorker;
+import io.airbyte.workers.helper.CatalogDiffConverter;
 import io.airbyte.workers.helper.GsonPksExtractor;
 import io.airbyte.workers.helper.SecretPersistenceConfigHelper;
 import io.airbyte.workers.internal.AirbyteStreamFactory;
 import io.airbyte.workers.internal.VersionedAirbyteStreamFactory;
 import io.airbyte.workers.models.DiscoverCatalogInput;
+import io.airbyte.workers.models.PostprocessCatalogInput;
+import io.airbyte.workers.models.PostprocessCatalogOutput;
 import io.airbyte.workers.process.AirbyteIntegrationLauncher;
 import io.airbyte.workers.process.IntegrationLauncher;
 import io.airbyte.workers.process.Metadata;
@@ -80,9 +88,11 @@ import jakarta.inject.Named;
 import jakarta.inject.Singleton;
 import java.io.IOException;
 import java.nio.file.Path;
+import java.time.Duration;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicReference;
@@ -94,6 +104,8 @@ import lombok.extern.slf4j.Slf4j;
 @Singleton
 @Slf4j
 public class DiscoverCatalogActivityImpl implements DiscoverCatalogActivity {
+
+  static final long DISCOVER_CATALOG_SNAP_DURATION = Duration.ofMinutes(15).toMillis();
 
   private final WorkerConfigsProvider workerConfigsProvider;
   private final ProcessFactory processFactory;
@@ -205,9 +217,14 @@ public class DiscoverCatalogActivityImpl implements DiscoverCatalogActivity {
   public ConnectorJobOutput runWithWorkload(final DiscoverCatalogInput input) throws WorkerException {
     final String jobId = input.getJobRunConfig().getJobId();
     final int attemptNumber = input.getJobRunConfig().getAttemptId() == null ? 0 : Math.toIntExact(input.getJobRunConfig().getAttemptId());
-    final String workloadId =
-        workloadIdGenerator.generateDiscoverWorkloadId(input.getDiscoverCatalogInput().getActorContext().getActorDefinitionId(), jobId,
-            attemptNumber);
+    final String workloadId = input.getDiscoverCatalogInput().getManual()
+        ? workloadIdGenerator.generateDiscoverWorkloadId(input.getDiscoverCatalogInput().getActorContext().getActorDefinitionId(), jobId,
+            attemptNumber)
+        : workloadIdGenerator.generateDiscoverWorkloadIdV2WithSnap(
+            input.getDiscoverCatalogInput().getActorContext().getActorId(),
+            System.currentTimeMillis(),
+            DISCOVER_CATALOG_SNAP_DURATION);
+
     final String serializedInput = Jsons.serialize(input);
 
     final UUID workspaceId = input.getDiscoverCatalogInput().getActorContext().getWorkspaceId();
@@ -244,7 +261,11 @@ public class DiscoverCatalogActivityImpl implements DiscoverCatalogActivity {
 
   @Override
   public boolean shouldUseWorkload(final UUID workspaceId) {
-    return featureFlagClient.boolVariation(UseWorkloadApi.INSTANCE, new Workspace(workspaceId));
+    var ffCheck = featureFlagClient.boolVariation(UseWorkloadApi.INSTANCE, new Workspace(workspaceId));
+    var envCheck = featureFlagClient.boolVariation(WorkloadLauncherEnabled.INSTANCE, Empty.INSTANCE)
+        && featureFlagClient.boolVariation(WorkloadApiServerEnabled.INSTANCE, Empty.INSTANCE);
+
+    return ffCheck || envCheck;
   }
 
   @Override
@@ -261,6 +282,26 @@ public class DiscoverCatalogActivityImpl implements DiscoverCatalogActivity {
     metricClient.count(OssMetricsRegistry.CATALOG_DISCOVERY, 1,
         new MetricAttribute(MetricTags.STATUS, "failed"),
         new MetricAttribute("workload_enabled", workloadEnabledStr));
+  }
+
+  @Override
+  public PostprocessCatalogOutput postprocess(final PostprocessCatalogInput input) {
+    try {
+      Objects.requireNonNull(input.getConnectionId());
+      Objects.requireNonNull(input.getCatalogId());
+
+      final var reqBody = new PostprocessDiscoveredCatalogRequestBody(
+          input.getCatalogId(),
+          input.getConnectionId());
+
+      final PostprocessDiscoveredCatalogResult resp = airbyteApiClient.getConnectionApi().postprocessDiscoveredCatalogForConnection(reqBody);
+
+      final var domainDiff = resp.getAppliedDiff() != null ? CatalogDiffConverter.toDomain(resp.getAppliedDiff()) : null;
+
+      return PostprocessCatalogOutput.Companion.success(domainDiff);
+    } catch (final Exception e) {
+      return PostprocessCatalogOutput.Companion.failure(e);
+    }
   }
 
   @VisibleForTesting

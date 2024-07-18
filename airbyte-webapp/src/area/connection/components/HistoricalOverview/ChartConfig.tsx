@@ -122,7 +122,14 @@ export const ClickToJob = (chartState: CategoricalChartState & { height: number 
 
   return (
     <Link to={`${pathname}#${hash}`}>
-      <rect x={0} y={offsetTop} width="100%" height={availableHeight} fill="transparent" />
+      <rect
+        x={0}
+        y={offsetTop}
+        width="100%"
+        height={availableHeight}
+        fill="transparent"
+        data-testid="streams-graph-to-jobs-link"
+      />
     </Link>
   );
 };

@@ -509,6 +509,7 @@ class ConnectorBuilderProjectsHandlerTest {
                 .withDockerImageTag(A_DECLARATIVE_MANIFEST_IMAGE_VERSION)
                 .withSpec(adaptedConnectorSpecification)
                 .withSupportLevel(SupportLevel.NONE)
+                .withInternalSupportLevel(100L)
                 .withReleaseStage(ReleaseStage.CUSTOM)
                 .withDocumentationUrl(A_DOCUMENTATION_URL)
                 .withProtocolVersion("0.2.0")),

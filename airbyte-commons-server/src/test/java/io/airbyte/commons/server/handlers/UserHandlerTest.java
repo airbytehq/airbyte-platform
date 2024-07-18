@@ -6,10 +6,12 @@ package io.airbyte.commons.server.handlers;
 
 import static io.airbyte.config.persistence.UserPersistence.DEFAULT_USER_ID;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.argThat;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -34,11 +36,13 @@ import io.airbyte.api.model.generated.WorkspaceReadList;
 import io.airbyte.api.model.generated.WorkspaceUserAccessInfoReadList;
 import io.airbyte.api.model.generated.WorkspaceUserRead;
 import io.airbyte.api.model.generated.WorkspaceUserReadList;
+import io.airbyte.api.problems.throwable.generated.SSORequiredProblem;
 import io.airbyte.commons.auth.config.InitialUserConfig;
 import io.airbyte.commons.auth.support.JwtUserAuthenticationResolver;
 import io.airbyte.commons.enums.Enums;
 import io.airbyte.config.AuthProvider;
 import io.airbyte.config.Organization;
+import io.airbyte.config.OrganizationEmailDomain;
 import io.airbyte.config.Permission;
 import io.airbyte.config.Permission.PermissionType;
 import io.airbyte.config.User;
@@ -49,7 +53,12 @@ import io.airbyte.config.persistence.ConfigNotFoundException;
 import io.airbyte.config.persistence.OrganizationPersistence;
 import io.airbyte.config.persistence.PermissionPersistence;
 import io.airbyte.config.persistence.UserPersistence;
+import io.airbyte.data.services.ExternalUserService;
+import io.airbyte.data.services.OrganizationEmailDomainService;
 import io.airbyte.data.services.PermissionService;
+import io.airbyte.featureflag.FeatureFlagClient;
+import io.airbyte.featureflag.RestrictLoginsForSSODomains;
+import io.airbyte.featureflag.TestClient;
 import io.airbyte.validation.json.JsonValidationException;
 import java.io.IOException;
 import java.util.Arrays;
@@ -81,16 +90,20 @@ class UserHandlerTest {
   PermissionHandler permissionHandler;
   WorkspacesHandler workspacesHandler;
   OrganizationPersistence organizationPersistence;
+  OrganizationEmailDomainService organizationEmailDomainService;
   OrganizationsHandler organizationsHandler;
   JwtUserAuthenticationResolver jwtUserAuthenticationResolver;
   InitialUserConfig initialUserConfig;
   PermissionService permissionService;
+  ExternalUserService externalUserService;
+  FeatureFlagClient featureFlagClient;
 
   private static final UUID USER_ID = UUID.randomUUID();
   private static final String USER_NAME = "user 1";
   private static final String USER_EMAIL = "user_1@whatever.com";
 
   private static final Organization ORGANIZATION = new Organization().withOrganizationId(UUID.randomUUID()).withName(USER_NAME).withEmail(USER_EMAIL);
+  private static final Organization ORGANIZATION2 = new Organization().withOrganizationId(UUID.randomUUID()).withName("org 2").withEmail(USER_EMAIL);
   private static final UUID PERMISSION1_ID = UUID.randomUUID();
 
   private final User user = new User()
@@ -110,15 +123,21 @@ class UserHandlerTest {
     permissionHandler = mock(PermissionHandler.class);
     workspacesHandler = mock(WorkspacesHandler.class);
     organizationPersistence = mock(OrganizationPersistence.class);
+    organizationEmailDomainService = mock(OrganizationEmailDomainService.class);
     organizationsHandler = mock(OrganizationsHandler.class);
     uuidSupplier = mock(Supplier.class);
     jwtUserAuthenticationResolver = mock(JwtUserAuthenticationResolver.class);
     initialUserConfig = mock(InitialUserConfig.class);
     resourceBootstrapHandler = mock(ResourceBootstrapHandler.class);
+    externalUserService = mock(ExternalUserService.class);
+    featureFlagClient = mock(TestClient.class);
 
+    when(featureFlagClient.boolVariation(eq(RestrictLoginsForSSODomains.INSTANCE), any())).thenReturn(true);
     userHandler =
-        new UserHandler(userPersistence, permissionPersistence, permissionService, organizationPersistence, permissionHandler, workspacesHandler,
-            uuidSupplier, jwtUserAuthenticationResolver, Optional.of(initialUserConfig), resourceBootstrapHandler);
+        new UserHandler(userPersistence, permissionPersistence, permissionService, externalUserService, organizationPersistence,
+            organizationEmailDomainService,
+            permissionHandler, workspacesHandler,
+            uuidSupplier, jwtUserAuthenticationResolver, Optional.of(initialUserConfig), resourceBootstrapHandler, featureFlagClient);
   }
 
   @Test
@@ -166,7 +185,7 @@ class UserHandlerTest {
     when(permissionPersistence.listUsersInOrganization(organizationId)).thenReturn(List.of(defaultUserPermission, realUserPermission));
 
     // no default user present
-    var expectedListResult = new OrganizationUserReadList().users(List.of(new OrganizationUserRead()
+    final var expectedListResult = new OrganizationUserReadList().users(List.of(new OrganizationUserRead()
         .name(USER_NAME)
         .userId(userID)
         .email(USER_EMAIL)
@@ -195,7 +214,7 @@ class UserHandlerTest {
     when(permissionPersistence.listUsersInWorkspace(workspaceId)).thenReturn(List.of(defaultUserPermission, realUserPermission));
 
     // no default user present
-    var expectedListResult = new WorkspaceUserReadList().users(List.of(new WorkspaceUserRead()
+    final var expectedListResult = new WorkspaceUserReadList().users(List.of(new WorkspaceUserRead()
         .userId(userID)
         .name(USER_NAME)
         .isDefaultWorkspace(true)
@@ -271,6 +290,7 @@ class UserHandlerTest {
       final io.airbyte.api.model.generated.AuthProvider apiAuthProvider =
           Enums.convertTo(authProvider, io.airbyte.api.model.generated.AuthProvider.class);
 
+      when(jwtUserAuthenticationResolver.resolveUser(authUserId)).thenReturn(user);
       when(userPersistence.getUserByAuthId(authUserId)).thenReturn(Optional.of(user));
 
       final UserRead userRead = userHandler.getOrCreateUserByAuthId(new UserAuthIdRequestBody().authUserId(authUserId)).getUserRead();
@@ -301,23 +321,27 @@ class UserHandlerTest {
       static class NewUserArgumentsProvider implements ArgumentsProvider {
 
         @Override
-        public Stream<? extends Arguments> provideArguments(ExtensionContext context) {
-          List<AuthProvider> authProviders = Arrays.asList(AuthProvider.values());
-          List<String> ssoRealms = Arrays.asList("airbyte-realm", null);
-          List<String> initialUserEmails = Arrays.asList(null, "", "other@gmail.com", NEW_EMAIL);
-          List<Boolean> initialUserConfigPresent = Arrays.asList(true, false);
-          List<Boolean> isFirstOrgUser = Arrays.asList(true, false);
-          List<Boolean> isDefaultWorkspaceForOrgPresent = Arrays.asList(true, false);
+        public Stream<? extends Arguments> provideArguments(final ExtensionContext context) {
+          final List<AuthProvider> authProviders = Arrays.asList(AuthProvider.values());
+          final List<String> authRealms = Arrays.asList("airbyte-realm", null);
+          final List<String> initialUserEmails = Arrays.asList(null, "", "other@gmail.com", NEW_EMAIL);
+          final List<UUID> domainRestrictedToOrgIds = Arrays.asList(null, UUID.randomUUID(), ORGANIZATION.getOrganizationId());
+          final List<Boolean> initialUserConfigPresent = Arrays.asList(true, false);
+          final List<Boolean> isFirstOrgUser = Arrays.asList(true, false);
+          final List<Boolean> isDefaultWorkspaceForOrgPresent = Arrays.asList(true, false);
 
           // return all permutations of the above input lists so that we can test all combinations.
           return authProviders.stream()
               .flatMap(
-                  authProvider -> ssoRealms.stream()
-                      .flatMap(
-                          ssoRealm -> initialUserEmails.stream()
-                              .flatMap(email -> initialUserConfigPresent.stream().flatMap(initialUserPresent -> isFirstOrgUser.stream()
-                                  .flatMap(firstOrgUser -> isDefaultWorkspaceForOrgPresent.stream().flatMap(orgWorkspacePresent -> Stream
-                                      .of(Arguments.of(authProvider, ssoRealm, email, initialUserPresent, firstOrgUser, orgWorkspacePresent))))))));
+                  authProvider -> authRealms.stream()
+                      .flatMap(authRealm -> initialUserEmails.stream()
+                          .flatMap(email -> initialUserConfigPresent.stream()
+                              .flatMap(initialUserPresent -> isFirstOrgUser.stream()
+                                  .flatMap(firstOrgUser -> isDefaultWorkspaceForOrgPresent.stream()
+                                      .flatMap(orgWorkspacePresent -> domainRestrictedToOrgIds.stream()
+                                          .flatMap(domainRestrictedToOrgId -> Stream.of(Arguments.of(
+                                              authProvider, authRealm, email, initialUserPresent, firstOrgUser, orgWorkspacePresent,
+                                              domainRestrictedToOrgId)))))))));
         }
 
       }
@@ -337,18 +361,26 @@ class UserHandlerTest {
       @ParameterizedTest
       @ArgumentsSource(NewUserArgumentsProvider.class)
       void testNewUserCreation(final AuthProvider authProvider,
-                               final String ssoRealm,
+                               final String authRealm,
                                final String initialUserEmail,
                                final boolean initialUserPresent,
                                final boolean isFirstOrgUser,
-                               final boolean isDefaultWorkspaceForOrgPresent)
+                               final boolean isDefaultWorkspaceForOrgPresent,
+                               final UUID domainRestrictedToOrgId)
           throws Exception {
 
         newUser.setAuthProvider(authProvider);
 
-        when(jwtUserAuthenticationResolver.resolveSsoRealm()).thenReturn(Optional.ofNullable(ssoRealm));
-        if (ssoRealm != null) {
-          when(organizationPersistence.getOrganizationBySsoConfigRealm(ssoRealm)).thenReturn(Optional.of(ORGANIZATION));
+        if (domainRestrictedToOrgId != null) {
+          final String emailDomain = newUser.getEmail().split("@")[1];
+          when(organizationEmailDomainService.findByEmailDomain(emailDomain))
+              .thenReturn(List.of(new OrganizationEmailDomain()
+                  .withOrganizationId(domainRestrictedToOrgId).withEmailDomain(emailDomain)));
+        }
+
+        when(jwtUserAuthenticationResolver.resolveRealm()).thenReturn(Optional.ofNullable(authRealm));
+        if (authRealm != null) {
+          when(organizationPersistence.getOrganizationBySsoConfigRealm(authRealm)).thenReturn(Optional.of(ORGANIZATION));
         }
 
         if (initialUserPresent) {
@@ -358,9 +390,10 @@ class UserHandlerTest {
         } else {
           // replace default user handler with one that doesn't use initial user config (ie to test what
           // happens in Cloud)
-          userHandler = new UserHandler(userPersistence, permissionPersistence, permissionService, organizationPersistence, permissionHandler,
+          userHandler = new UserHandler(userPersistence, permissionPersistence, permissionService, externalUserService, organizationPersistence,
+              organizationEmailDomainService, permissionHandler,
               workspacesHandler,
-              uuidSupplier, jwtUserAuthenticationResolver, Optional.empty(), resourceBootstrapHandler);
+              uuidSupplier, jwtUserAuthenticationResolver, Optional.empty(), resourceBootstrapHandler, featureFlagClient);
         }
 
         if (isFirstOrgUser) {
@@ -389,8 +422,18 @@ class UserHandlerTest {
         final io.airbyte.api.model.generated.AuthProvider apiAuthProvider =
             Enums.convertTo(authProvider, io.airbyte.api.model.generated.AuthProvider.class);
 
+        if (domainRestrictedToOrgId != null && (authRealm == null || domainRestrictedToOrgId != ORGANIZATION.getOrganizationId())) {
+          assertThrows(SSORequiredProblem.class, () -> userHandler.getOrCreateUserByAuthId(new UserAuthIdRequestBody().authUserId(NEW_AUTH_USER_ID)));
+          verify(userPersistence, never()).writeUser(any());
+          if (authRealm != null) {
+            verify(externalUserService).deleteUserByExternalId(newUser.getAuthUserId(), authRealm);
+          }
+          return;
+        }
+
         final UserGetOrCreateByAuthIdResponse response = userHandler.getOrCreateUserByAuthId(
             new UserAuthIdRequestBody().authUserId(NEW_AUTH_USER_ID));
+
         final UserRead userRead = response.getUserRead();
         final boolean newUserCreated = response.getNewUserCreated();
 
@@ -400,7 +443,7 @@ class UserHandlerTest {
         verifyCreatedUser(authProvider, userPersistenceInOrder);
         verifyUserRead(userRead, apiAuthProvider);
         verifyInstanceAdminPermissionCreation(initialUserEmail, initialUserPresent);
-        verifyOrganizationPermissionCreation(ssoRealm, isFirstOrgUser);
+        verifyOrganizationPermissionCreation(authRealm, isFirstOrgUser);
         verifyDefaultWorkspaceCreation(isDefaultWorkspaceForOrgPresent, userPersistenceInOrder);
       }
 

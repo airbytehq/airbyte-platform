@@ -8,7 +8,7 @@ import io.airbyte.commons.enums.Enums
 fun orderByToFieldAndMethod(
   orderBy: String?,
 ): Pair<JobListForWorkspacesRequestBody.OrderByFieldEnum, JobListForWorkspacesRequestBody.OrderByMethodEnum> {
-  var field: JobListForWorkspacesRequestBody.OrderByFieldEnum = JobListForWorkspacesRequestBody.OrderByFieldEnum.CREATEDAT
+  var field: JobListForWorkspacesRequestBody.OrderByFieldEnum = JobListForWorkspacesRequestBody.OrderByFieldEnum.CREATED_AT
   var method: JobListForWorkspacesRequestBody.OrderByMethodEnum = JobListForWorkspacesRequestBody.OrderByMethodEnum.ASC
   if (orderBy != null) {
     val pattern: java.util.regex.Pattern = java.util.regex.Pattern.compile("([a-zA-Z0-9]+)\\|(ASC|DESC)")

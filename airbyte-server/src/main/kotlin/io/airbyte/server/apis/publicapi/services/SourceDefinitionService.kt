@@ -34,14 +34,14 @@ class SourceDefinitionServiceImpl(
   override fun getSourceDefinitionSpecification(
     sourceDefinitionId: UUID,
     workspaceId: UUID,
-  ): SourceDefinitionSpecificationRead? {
+  ): SourceDefinitionSpecificationRead {
     val sourceDefinitionIdWithWorkspaceId = SourceDefinitionIdWithWorkspaceId().sourceDefinitionId(sourceDefinitionId).workspaceId(workspaceId)
 
     val result =
       kotlin.runCatching { sourceDefinitionSpecificationHandler.getSourceDefinitionSpecification(sourceDefinitionIdWithWorkspaceId) }
         .onFailure {
           log.error("Error for getSourceDefinitionSpecification", it)
-          ConfigClientErrorHandler.handleError(it, sourceDefinitionId.toString())
+          ConfigClientErrorHandler.handleError(it)
         }
 
     log.debug(HTTP_RESPONSE_BODY_DEBUG_MESSAGE + result)

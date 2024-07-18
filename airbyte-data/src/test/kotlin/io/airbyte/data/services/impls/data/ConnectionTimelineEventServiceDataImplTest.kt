@@ -6,10 +6,12 @@ package io.airbyte.data.services.impls.data
 
 import io.airbyte.commons.jackson.MoreMappers
 import io.airbyte.config.FailureReason
+import io.airbyte.config.JobConfig
 import io.airbyte.data.repositories.ConnectionTimelineEventRepository
 import io.airbyte.data.repositories.entities.ConnectionTimelineEvent
 import io.airbyte.data.services.ConnectionTimelineEventService
-import io.airbyte.data.services.shared.SyncFailedEvent
+import io.airbyte.data.services.shared.FailedEvent
+import io.airbyte.db.instance.jobs.jooq.generated.enums.JobStatus
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
@@ -39,16 +41,18 @@ internal class ConnectionTimelineEventServiceDataImplTest {
       repository.save(any())
     } returns ConnectionTimelineEvent(connectionId = connectionId, eventType = "")
     val syncFailedEvent =
-      SyncFailedEvent(
+      FailedEvent(
         jobId = 100L,
         startTimeEpochSeconds = 10L,
         endTimeEpochSeconds = 11L,
         bytesLoaded = 0L,
         recordsLoaded = 2L,
         attemptsCount = 5,
+        jobType = JobConfig.ConfigType.SYNC.name,
+        statusType = JobStatus.failed.name.uppercase(),
         failureReason = Optional.of(FailureReason()),
       )
-    service.writeEvent(connectionId = connectionId, event = syncFailedEvent)
+    val writtenEvent = service.writeEvent(connectionId = connectionId, event = syncFailedEvent, userId = null)
     verify {
       repository.save(any())
     }

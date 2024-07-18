@@ -60,7 +60,6 @@ import io.airbyte.api.client.model.generated.OperationCreate;
 import io.airbyte.api.client.model.generated.OperationIdRequestBody;
 import io.airbyte.api.client.model.generated.OperationRead;
 import io.airbyte.api.client.model.generated.OperatorConfiguration;
-import io.airbyte.api.client.model.generated.OperatorNormalization;
 import io.airbyte.api.client.model.generated.OperatorType;
 import io.airbyte.api.client.model.generated.OperatorWebhook;
 import io.airbyte.api.client.model.generated.OperatorWebhookDbtCloud;
@@ -166,6 +165,8 @@ public class AcceptanceTestHarness {
 
   private static final DockerImageName SOURCE_POSTGRES_IMAGE_NAME = DockerImageName.parse("debezium/postgres:15-alpine")
       .asCompatibleSubstituteFor("postgres");
+
+  private static final String TEMPORAL_HOST = "temporal.airbyte.dev:80";
 
   private static final String SOURCE_E2E_TEST_CONNECTOR_VERSION = "0.1.2";
   private static final String DESTINATION_E2E_TEST_CONNECTOR_VERSION = "0.1.1";
@@ -516,7 +517,7 @@ public class AcceptanceTestHarness {
   private WorkflowClient getWorkflowClient() {
     final TemporalUtils temporalUtils = new TemporalUtils(null, null, null, null, null, null, null);
     final WorkflowServiceStubs temporalService = temporalUtils.createTemporalService(
-        TemporalWorkflowUtils.getAirbyteTemporalOptions("localhost:7233", new TemporalSdkTimeouts()),
+        TemporalWorkflowUtils.getAirbyteTemporalOptions(TEMPORAL_HOST, new TemporalSdkTimeouts()),
         TemporalUtils.DEFAULT_NAMESPACE);
     return WorkflowClient.newInstance(temporalService);
   }
@@ -848,25 +849,6 @@ public class AcceptanceTestHarness {
         .checkConnectionToDestination(new DestinationIdRequestBody(destinationId)).getStatus();
   }
 
-  public OperationRead createNormalizationOperation() throws IOException {
-    return createNormalizationOperation(defaultWorkspaceId);
-  }
-
-  public OperationRead createNormalizationOperation(final UUID workspaceId) throws IOException {
-    final OperatorConfiguration normalizationConfig = new OperatorConfiguration(
-        OperatorType.NORMALIZATION,
-        new OperatorNormalization(OperatorNormalization.Option.BASIC),
-        null,
-        null);
-    final OperationCreate operationCreate = new OperationCreate(
-        workspaceId,
-        "AccTestDestination-" + UUID.randomUUID(),
-        normalizationConfig);
-    final OperationRead operation = apiClient.getOperationApi().createOperation(operationCreate);
-    operationIds.add(operation.getOperationId());
-    return operation;
-  }
-
   public OperationRead createDbtCloudWebhookOperation(final UUID workspaceId, final UUID webhookConfigId) throws Exception {
     return apiClient.getOperationApi().createOperation(
         new OperationCreate(
@@ -874,8 +856,6 @@ public class AcceptanceTestHarness {
             "reqres test",
             new OperatorConfiguration(
                 OperatorType.WEBHOOK,
-                null,
-                null,
                 new OperatorWebhook(
                     webhookConfigId,
                     OperatorWebhook.WebhookType.DBT_CLOUD,

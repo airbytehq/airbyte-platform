@@ -287,4 +287,48 @@ func TestExternalDatabaseConfiguration(t *testing.T) {
 			})
 		}
 	})
+
+	t.Run("should set the DATABASE_USER in the generated secret when plaintext value is provided", func(t *testing.T) {
+		helmOpts := baseHelmOptionsForEnterpriseWithValues()
+		helmOpts.SetValues["postgresql.enabled"] = "false"
+		helmOpts.SetValues["global.database.secretName"] = "database-secret"
+		helmOpts.SetValues["global.database.host"] = "localhost"
+		helmOpts.SetValues["global.database.port"] = "5432"
+		helmOpts.SetValues["global.database.database"] = "airbyte"
+		helmOpts.SetValues["global.database.user"] = "octavia"
+		helmOpts.SetValues["global.database.passwordSecretKey"] = "DATABASE_PASSWORD"
+
+		chartYaml, err := helm.RenderTemplateE(t, helmOpts, chartPath, "airbyte", nil)
+		require.NoError(t, err)
+
+		configMap, err := getConfigMap(chartYaml, "airbyte-airbyte-env")
+		require.NotNil(t, configMap)
+		require.NoError(t, err)
+
+		assert.Equal(t, "octavia", configMap.Data["DATABASE_USER"])
+		_, ok := configMap.Data["DATABASE_PASSWORD"]
+		assert.False(t, ok)
+	})
+
+	t.Run("should set the DATABASE_PASSWORD in the config map when plaintext value is provided", func(t *testing.T) {
+		helmOpts := baseHelmOptionsForEnterpriseWithValues()
+		helmOpts.SetValues["postgresql.enabled"] = "false"
+		helmOpts.SetValues["global.database.secretName"] = "database-secret"
+		helmOpts.SetValues["global.database.host"] = "localhost"
+		helmOpts.SetValues["global.database.port"] = "5432"
+		helmOpts.SetValues["global.database.database"] = "airbyte"
+		helmOpts.SetValues["global.database.userSecretKey"] = "DATABASE_USER"
+		helmOpts.SetValues["global.database.password"] = "squidward"
+
+		chartYaml, err := helm.RenderTemplateE(t, helmOpts, chartPath, "airbyte", nil)
+		require.NoError(t, err)
+
+		configMap, err := getConfigMap(chartYaml, "airbyte-airbyte-env")
+		require.NotNil(t, configMap)
+		require.NoError(t, err)
+
+		assert.Equal(t, "squidward", configMap.Data["DATABASE_PASSWORD"])
+		_, ok := configMap.Data["DATABASE_USER"]
+		assert.False(t, ok)
+	})
 }

@@ -4,7 +4,7 @@
 #
 #    pip-compile
 #
-airbyte-cdk==2.0.0
+airbyte-cdk==3.8.2
     # via -r requirements.in
 airbyte-protocol-models-pdv2==0.12.2
     # via airbyte-cdk
@@ -19,11 +19,11 @@ backoff==2.2.1
     # via airbyte-cdk
 bracex==2.4
     # via wcmatch
-cachetools==5.3.3
+cachetools==5.4.0
     # via airbyte-cdk
 cattrs==23.2.3
     # via requests-cache
-certifi==2024.6.2
+certifi==2024.7.4
     # via requests
 cffi==1.16.0
     # via cryptography
@@ -35,7 +35,7 @@ deprecated==1.2.14
     # via airbyte-cdk
 dpath==2.2.0
     # via airbyte-cdk
-exceptiongroup==1.2.1
+exceptiongroup==1.2.2
     # via cattrs
 genson==1.2.2
     # via airbyte-cdk
@@ -55,11 +55,11 @@ jsonschema==3.2.0
     # via airbyte-cdk
 langchain-core==0.1.42
     # via airbyte-cdk
-langsmith==0.1.81
+langsmith==0.1.90
     # via langchain-core
 markupsafe==2.1.5
     # via jinja2
-orjson==3.10.5
+orjson==3.10.6
     # via langsmith
 packaging==23.2
     # via langchain-core
@@ -69,13 +69,13 @@ platformdirs==4.2.2
     # via requests-cache
 pycparser==2.22
     # via cffi
-pydantic==2.7.4
+pydantic==2.8.2
     # via
     #   airbyte-cdk
     #   airbyte-protocol-models-pdv2
     #   langchain-core
     #   langsmith
-pydantic-core==2.18.4
+pydantic-core==2.20.1
     # via pydantic
 pyjwt==2.8.0
     # via airbyte-cdk
@@ -108,7 +108,7 @@ six==1.16.0
     #   jsonschema
     #   python-dateutil
     #   url-normalize
-tenacity==8.4.1
+tenacity==8.5.0
     # via langchain-core
 typing-extensions==4.12.2
     # via

@@ -99,6 +99,7 @@ create table "public"."actor_definition_version" (
   "supports_refreshes" boolean not null default false,
   "cdk_version" varchar(256),
   "last_published" timestamp(6) with time zone,
+  "internal_support_level" bigint not null,
   constraint "actor_definition_version_pkey" primary key ("id"),
   constraint "actor_definition_version_actor_definition_id_version_key" unique ("actor_definition_id", "docker_image_tag")
 );
@@ -251,7 +252,7 @@ create table "public"."organization_email_domain" (
   "email_domain" varchar(256) not null,
   "created_at" timestamp(6) with time zone not null default current_timestamp,
   constraint "organization_email_domain_pkey" primary key ("id"),
-  constraint "organization_email_domain_email_domain_key" unique ("email_domain")
+  constraint "organization_id_email_domain_key" unique ("organization_id", "email_domain")
 );
 create table "public"."permission" (
   "id" uuid not null,

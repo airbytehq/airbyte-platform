@@ -6,4 +6,9 @@ import io.micronaut.data.model.query.builder.sql.Dialect
 import io.micronaut.data.repository.PageableRepository
 
 @JdbcRepository(dialect = Dialect.POSTGRES, dataSource = "config")
-interface AttemptsRepository : PageableRepository<Attempt, Long>
+interface AttemptsRepository : PageableRepository<Attempt, Long> {
+  fun findByJobIdAndAttemptNumber(
+    jobId: Long,
+    attemptNumber: Long,
+  ): Attempt
+}

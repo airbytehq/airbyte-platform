@@ -24,11 +24,10 @@ import io.airbyte.workers.temporal.scheduling.activities.RouteToSyncTaskQueueAct
 import io.airbyte.workers.temporal.scheduling.activities.StreamResetActivity;
 import io.airbyte.workers.temporal.scheduling.activities.WorkflowConfigActivity;
 import io.airbyte.workers.temporal.spec.SpecActivity;
-import io.airbyte.workers.temporal.sync.DbtTransformationActivity;
-import io.airbyte.workers.temporal.sync.NormalizationActivity;
-import io.airbyte.workers.temporal.sync.NormalizationSummaryCheckActivity;
 import io.airbyte.workers.temporal.sync.RefreshSchemaActivity;
 import io.airbyte.workers.temporal.sync.ReplicationActivity;
+import io.airbyte.workers.temporal.sync.ReportRunTimeActivity;
+import io.airbyte.workers.temporal.sync.SyncFeatureFlagFetcherActivity;
 import io.airbyte.workers.temporal.sync.WebhookOperationActivity;
 import io.airbyte.workers.temporal.sync.WorkloadFeatureFlagActivity;
 import io.micronaut.context.annotation.Factory;
@@ -111,17 +110,16 @@ public class ActivityBeanFactory {
 
   @Singleton
   @Named("syncActivities")
-  public List<Object> syncActivities(
-                                     final ReplicationActivity replicationActivity,
-                                     final NormalizationActivity normalizationActivity,
-                                     final DbtTransformationActivity dbtTransformationActivity,
-                                     final NormalizationSummaryCheckActivity normalizationSummaryCheckActivity,
+  public List<Object> syncActivities(final ReplicationActivity replicationActivity,
                                      final WebhookOperationActivity webhookOperationActivity,
                                      final ConfigFetchActivity configFetchActivity,
                                      final RefreshSchemaActivity refreshSchemaActivity,
-                                     final WorkloadFeatureFlagActivity workloadFeatureFlagActivity) {
-    return List.of(replicationActivity, normalizationActivity, dbtTransformationActivity, normalizationSummaryCheckActivity,
-        webhookOperationActivity, configFetchActivity, refreshSchemaActivity, workloadFeatureFlagActivity);
+                                     final WorkloadFeatureFlagActivity workloadFeatureFlagActivity,
+                                     final ReportRunTimeActivity reportRunTimeActivity,
+                                     final SyncFeatureFlagFetcherActivity syncFeatureFlagFetcherActivity,
+                                     final RouteToSyncTaskQueueActivity routeToSyncTaskQueueActivity) {
+    return List.of(replicationActivity, webhookOperationActivity, configFetchActivity, refreshSchemaActivity,
+        workloadFeatureFlagActivity, reportRunTimeActivity, syncFeatureFlagFetcherActivity, routeToSyncTaskQueueActivity);
   }
 
   @Singleton

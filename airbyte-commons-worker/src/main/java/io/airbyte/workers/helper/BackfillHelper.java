@@ -5,19 +5,19 @@
 package io.airbyte.workers.helper;
 
 import com.fasterxml.jackson.databind.node.JsonNodeFactory;
-import io.airbyte.api.client.model.generated.CatalogDiff;
 import io.airbyte.api.client.model.generated.ConnectionRead;
-import io.airbyte.api.client.model.generated.FieldTransform;
 import io.airbyte.api.client.model.generated.SchemaChangeBackfillPreference;
-import io.airbyte.api.client.model.generated.StreamDescriptor;
-import io.airbyte.api.client.model.generated.StreamTransform;
 import io.airbyte.commons.converters.CatalogClientConverters;
 import io.airbyte.commons.converters.ProtocolConverters;
+import io.airbyte.config.CatalogDiff;
+import io.airbyte.config.FieldTransform;
 import io.airbyte.config.StandardSyncOutput;
 import io.airbyte.config.State;
 import io.airbyte.config.StateType;
 import io.airbyte.config.StateWrapper;
+import io.airbyte.config.StreamDescriptor;
 import io.airbyte.config.StreamSyncStats;
+import io.airbyte.config.StreamTransform;
 import io.airbyte.config.helpers.StateMessageHelper;
 import io.airbyte.protocol.models.AirbyteStateMessage;
 import io.airbyte.protocol.models.ConfiguredAirbyteCatalog;
@@ -78,7 +78,7 @@ public class BackfillHelper {
         continue;
       }
       if (!streamsToBackfill.contains(
-          ProtocolConverters.streamDescriptorToClient(stateMessage.getStream().getStreamDescriptor()))) {
+          ProtocolConverters.streamDescriptorToDomain(stateMessage.getStream().getStreamDescriptor()))) {
         continue;
       }
       // It's listed in the streams to backfill, so we write the state to null.
@@ -125,7 +125,7 @@ public class BackfillHelper {
       return; // No streams to backfill, no backfill.
     }
     for (final StreamSyncStats streamStat : syncOutput.getStandardSyncSummary().getStreamStats()) {
-      if (streamsToBackfill.contains(new StreamDescriptor(streamStat.getStreamName(), streamStat.getStreamNamespace()))) {
+      if (streamsToBackfill.contains(new StreamDescriptor().withName(streamStat.getStreamName()).withNamespace(streamStat.getStreamNamespace()))) {
         streamStat.setWasBackfilled(true);
       }
     }

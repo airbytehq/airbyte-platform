@@ -20,6 +20,7 @@ export enum ConnectionStatusIndicatorStatus {
   QueuedForNextSync = "queuedForNextSync",
   Clearing = "clearing",
   Refreshing = "refreshing",
+  RateLimited = "rateLimited",
 }
 
 const ICON_BY_STATUS: Readonly<Record<ConnectionStatusIndicatorStatus, JSX.Element>> = {
@@ -35,7 +36,8 @@ const ICON_BY_STATUS: Readonly<Record<ConnectionStatusIndicatorStatus, JSX.Eleme
   clearing: <CircleLoader className={styles.circleLoader} />,
   refreshing: <CircleLoader className={styles.circleLoader} />,
   queued: <Icon type="statusQueued" title="Queued" size="md" />,
-  queuedForNextSync: <Icon type="statusQueued" title="Queued for next sync" size="md" />,
+  queuedForNextSync: <Icon type="statusQueued" title="Queued" size="md" />,
+  rateLimited: <CircleLoader className={styles.circleLoader} />,
 };
 
 const STYLE_BY_STATUS: Readonly<Record<ConnectionStatusIndicatorStatus, string>> = {
@@ -52,6 +54,7 @@ const STYLE_BY_STATUS: Readonly<Record<ConnectionStatusIndicatorStatus, string>>
   refreshing: styles["status--syncing"],
   queued: styles["status--syncing"],
   queuedForNextSync: styles["status--syncing"],
+  rateLimited: styles["status--syncing"],
 };
 
 const BOX_STYLE_BY_STATUS: Readonly<Record<ConnectionStatusIndicatorStatus, string>> = {
@@ -68,6 +71,7 @@ const BOX_STYLE_BY_STATUS: Readonly<Record<ConnectionStatusIndicatorStatus, stri
   refreshing: styles["status--syncing-withBox"],
   queued: styles["status--syncing-withBox"],
   queuedForNextSync: styles["status--syncing-withBox"],
+  rateLimited: styles["status--syncing-withBox"],
 };
 
 interface ConnectionStatusIndicatorProps {

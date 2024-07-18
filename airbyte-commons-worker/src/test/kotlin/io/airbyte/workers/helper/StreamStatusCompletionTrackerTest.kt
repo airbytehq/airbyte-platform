@@ -88,6 +88,22 @@ internal class StreamStatusCompletionTrackerTest {
   }
 
   @Test
+  fun `test that we support multiple completed status`() {
+    streamStatusCompletionTracker.startTracking(catalog, true)
+    streamStatusCompletionTracker.track(getStreamStatusCompletedMessage("name1").trace.streamStatus)
+    streamStatusCompletionTracker.track(getStreamStatusCompletedMessage("name1").trace.streamStatus)
+    val result = streamStatusCompletionTracker.finalize(0, mapper)
+
+    assertEquals(
+      listOf(
+        getStreamStatusCompletedMessage("name1"),
+        getStreamStatusCompletedMessage("name2", "namespace2"),
+      ),
+      result,
+    )
+  }
+
+  @Test
   fun `test that we get no streams if the exit code is 1 and no stream status is send`() {
     streamStatusCompletionTracker.startTracking(catalog, true)
     val result = streamStatusCompletionTracker.finalize(1, mapper)

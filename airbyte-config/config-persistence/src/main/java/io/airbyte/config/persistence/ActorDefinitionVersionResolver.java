@@ -69,9 +69,9 @@ public class ActorDefinitionVersionResolver {
 
   }
 
-  private Optional<ActorDefinitionVersion> fetchRemoteActorDefinitionVersion(final ActorType actorType,
-                                                                             final String connectorRepository,
-                                                                             final String dockerImageTag) {
+  public Optional<ActorDefinitionVersion> fetchRemoteActorDefinitionVersion(final ActorType actorType,
+                                                                            final String connectorRepository,
+                                                                            final String dockerImageTag) {
     final Optional<ActorDefinitionVersion> actorDefinitionVersion;
     switch (actorType) {
       case SOURCE -> {

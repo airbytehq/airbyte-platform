@@ -6,12 +6,11 @@ package io.airbyte.persistence.job;
 
 import static io.airbyte.db.instance.jobs.jooq.generated.Tables.ATTEMPTS;
 import static io.airbyte.db.instance.jobs.jooq.generated.Tables.JOBS;
-import static io.airbyte.db.instance.jobs.jooq.generated.Tables.NORMALIZATION_SUMMARIES;
+import static io.airbyte.db.instance.jobs.jooq.generated.Tables.STREAM_ATTEMPT_METADATA;
 import static io.airbyte.db.instance.jobs.jooq.generated.Tables.STREAM_STATS;
 import static io.airbyte.db.instance.jobs.jooq.generated.Tables.SYNC_STATS;
 import static io.airbyte.persistence.job.models.JobStatus.TERMINAL_STATUSES;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
@@ -28,12 +27,10 @@ import io.airbyte.commons.version.AirbyteVersion;
 import io.airbyte.commons.version.Version;
 import io.airbyte.config.AttemptFailureSummary;
 import io.airbyte.config.AttemptSyncConfig;
-import io.airbyte.config.FailureReason;
 import io.airbyte.config.JobConfig;
 import io.airbyte.config.JobConfig.ConfigType;
 import io.airbyte.config.JobOutput;
 import io.airbyte.config.JobOutput.OutputType;
-import io.airbyte.config.NormalizationSummary;
 import io.airbyte.config.StreamSyncStats;
 import io.airbyte.config.SyncStats;
 import io.airbyte.config.persistence.PersistenceHelpers;
@@ -43,7 +40,6 @@ import io.airbyte.db.instance.configs.jooq.generated.Tables;
 import io.airbyte.db.instance.jobs.jooq.generated.tables.records.JobsRecord;
 import io.airbyte.metrics.lib.ApmTraceUtils;
 import io.airbyte.persistence.job.models.Attempt;
-import io.airbyte.persistence.job.models.AttemptNormalizationStatus;
 import io.airbyte.persistence.job.models.AttemptStatus;
 import io.airbyte.persistence.job.models.AttemptWithJobInfo;
 import io.airbyte.persistence.job.models.Job;
@@ -79,6 +75,7 @@ import java.util.stream.StreamSupport;
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.jooq.DSLContext;
+import org.jooq.Field;
 import org.jooq.JSONB;
 import org.jooq.Query;
 import org.jooq.Record;
@@ -330,10 +327,15 @@ public class DefaultJobPersistence implements JobPersistence {
     final var streamResults = ctx.fetch(
         "SELECT atmpt.id, atmpt.attempt_number, atmpt.job_id, "
             + "stats.stream_name, stats.stream_namespace, stats.estimated_bytes, stats.estimated_records, stats.bytes_emitted, stats.records_emitted,"
-            + "stats.bytes_committed, stats.records_committed "
+            + "stats.bytes_committed, stats.records_committed, sam.was_backfilled, sam.was_resumed "
             + "FROM stream_stats stats "
             + "INNER JOIN attempts atmpt ON atmpt.id = stats.attempt_id "
-            + "WHERE attempt_id IN "
+            + "LEFT JOIN stream_attempt_metadata sam ON ("
+            + "sam.attempt_id = stats.attempt_id and "
+            + "sam.stream_name = stats.stream_name and "
+            + "((sam.stream_namespace is null and stats.stream_namespace is null) or (sam.stream_namespace = stats.stream_namespace))"
+            + ") "
+            + "WHERE stats.attempt_id IN "
             + "( SELECT id FROM attempts WHERE job_id IN ( " + jobIdsStr + "));");
 
     streamResults.forEach(r -> {
@@ -341,8 +343,13 @@ public class DefaultJobPersistence implements JobPersistence {
       final String streamName = r.get(STREAM_STATS.STREAM_NAME);
       final long attemptId = r.get(ATTEMPTS.ID);
       final var streamDescriptor = new StreamDescriptor().withName(streamName).withNamespace(streamNamespace);
-      final boolean wasBackfilled = backFilledStreamsPerAttemptId.getOrDefault(attemptId, new HashSet<>()).contains(streamDescriptor);
-      final boolean wasResumed = resumedStreamsPerAttemptId.getOrDefault(attemptId, new HashSet<>()).contains(streamDescriptor);
+
+      // We merge the information from the database and what is retrieved from the attemptOutput because
+      // the historical data is only present in the attemptOutput
+      final boolean wasBackfilled = getOrDefaultFalse(r, STREAM_ATTEMPT_METADATA.WAS_BACKFILLED)
+          || backFilledStreamsPerAttemptId.getOrDefault(attemptId, new HashSet<>()).contains(streamDescriptor);
+      final boolean wasResumed = getOrDefaultFalse(r, STREAM_ATTEMPT_METADATA.WAS_RESUMED)
+          || resumedStreamsPerAttemptId.getOrDefault(attemptId, new HashSet<>()).contains(streamDescriptor);
 
       final var streamSyncStats = new StreamSyncStats()
           .withStreamNamespace(streamNamespace)
@@ -364,6 +371,10 @@ public class DefaultJobPersistence implements JobPersistence {
       }
       attemptStats.get(key).perStreamStats().add(streamSyncStats);
     });
+  }
+
+  private static boolean getOrDefaultFalse(final Record r, final Field<Boolean> field) {
+    return r.get(field) == null ? false : r.get(field);
   }
 
   @VisibleForTesting
@@ -401,22 +412,6 @@ public class DefaultJobPersistence implements JobPersistence {
           .withStreamName(record.get(STREAM_STATS.STREAM_NAME)).withStreamNamespace(record.get(STREAM_STATS.STREAM_NAMESPACE))
           .withStats(stats);
     };
-  }
-
-  private static RecordMapper<Record, NormalizationSummary> getNormalizationSummaryRecordMapper() {
-    return record -> {
-      try {
-        return new NormalizationSummary().withStartTime(record.get(NORMALIZATION_SUMMARIES.START_TIME).toInstant().toEpochMilli())
-            .withEndTime(record.get(NORMALIZATION_SUMMARIES.END_TIME).toInstant().toEpochMilli())
-            .withFailures(record.get(NORMALIZATION_SUMMARIES.FAILURES, String.class) == null ? null : deserializeFailureReasons(record));
-      } catch (final JsonProcessingException e) {
-        throw new RuntimeException(e);
-      }
-    };
-  }
-
-  private static List<FailureReason> deserializeFailureReasons(final Record record) throws JsonProcessingException {
-    return List.of(Jsons.deserialize(String.valueOf(record.get(NORMALIZATION_SUMMARIES.FAILURES)), FailureReason[].class));
   }
 
   // Retrieves only Job information from the record, without any attempt info
@@ -822,20 +817,6 @@ public class DefaultJobPersistence implements JobPersistence {
       if (CollectionUtils.isNotEmpty(streamSyncStats)) {
         saveToStreamStatsTableBatch(now, output.getSync().getStandardSyncSummary().getStreamStats(), attemptId, connectionId, ctx);
       }
-
-      final NormalizationSummary normalizationSummary = output.getSync().getNormalizationSummary();
-      if (normalizationSummary != null) {
-        ctx.insertInto(NORMALIZATION_SUMMARIES)
-            .set(NORMALIZATION_SUMMARIES.ID, UUID.randomUUID())
-            .set(NORMALIZATION_SUMMARIES.UPDATED_AT, now)
-            .set(NORMALIZATION_SUMMARIES.CREATED_AT, now)
-            .set(NORMALIZATION_SUMMARIES.ATTEMPT_ID, attemptId)
-            .set(NORMALIZATION_SUMMARIES.START_TIME,
-                OffsetDateTime.ofInstant(Instant.ofEpochMilli(normalizationSummary.getStartTime()), ZoneOffset.UTC))
-            .set(NORMALIZATION_SUMMARIES.END_TIME, OffsetDateTime.ofInstant(Instant.ofEpochMilli(normalizationSummary.getEndTime()), ZoneOffset.UTC))
-            .set(NORMALIZATION_SUMMARIES.FAILURES, JSONB.valueOf(Jsons.serialize(normalizationSummary.getFailures())))
-            .execute();
-      }
       return null;
     });
 
@@ -935,18 +916,6 @@ public class DefaultJobPersistence implements JobPersistence {
           return ctx.select(DSL.asterisk()).from(SYNC_STATS).where(SYNC_STATS.ATTEMPT_ID.eq(attemptId))
               .orderBy(SYNC_STATS.UPDATED_AT.desc())
               .fetchOne(getSyncStatsRecordMapper());
-        });
-  }
-
-  @Override
-  public List<NormalizationSummary> getNormalizationSummary(final long jobId, final int attemptNumber) throws IOException {
-    return jobDatabase
-        .query(ctx -> {
-          final Long attemptId = getAttemptId(jobId, attemptNumber, ctx);
-          return ctx.select(DSL.asterisk()).from(NORMALIZATION_SUMMARIES).where(NORMALIZATION_SUMMARIES.ATTEMPT_ID.eq(attemptId))
-              .fetch(getNormalizationSummaryRecordMapper())
-              .stream()
-              .toList();
         });
   }
 
@@ -1504,18 +1473,6 @@ public class DefaultJobPersistence implements JobPersistence {
         toSqlName(configType),
         timeConvertedIntoLocalDateTime,
         limit)));
-  }
-
-  @Override
-  public List<AttemptNormalizationStatus> getAttemptNormalizationStatusesForJob(final Long jobId) throws IOException {
-    return jobDatabase
-        .query(ctx -> ctx.select(ATTEMPTS.ATTEMPT_NUMBER, SYNC_STATS.RECORDS_COMMITTED, NORMALIZATION_SUMMARIES.FAILURES)
-            .from(ATTEMPTS)
-            .join(SYNC_STATS).on(SYNC_STATS.ATTEMPT_ID.eq(ATTEMPTS.ID))
-            .leftJoin(NORMALIZATION_SUMMARIES).on(NORMALIZATION_SUMMARIES.ATTEMPT_ID.eq(ATTEMPTS.ID))
-            .where(ATTEMPTS.JOB_ID.eq(jobId))
-            .fetch(record -> new AttemptNormalizationStatus(record.get(ATTEMPTS.ATTEMPT_NUMBER),
-                Optional.ofNullable(record.get(SYNC_STATS.RECORDS_COMMITTED)), record.get(NORMALIZATION_SUMMARIES.FAILURES) != null)));
   }
 
   @Override

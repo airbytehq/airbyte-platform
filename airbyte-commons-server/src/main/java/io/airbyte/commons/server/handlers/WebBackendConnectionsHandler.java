@@ -65,6 +65,7 @@ import io.airbyte.config.persistence.ActorDefinitionVersionHelper;
 import io.airbyte.config.persistence.ConfigNotFoundException;
 import io.airbyte.config.persistence.ConfigRepository;
 import io.airbyte.config.persistence.ConfigRepository.StandardSyncQuery;
+import io.airbyte.data.services.ConnectionService;
 import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.metrics.lib.ApmTraceUtils;
 import io.airbyte.metrics.lib.MetricTags;
@@ -106,6 +107,7 @@ public class WebBackendConnectionsHandler {
   // todo (cgardens) - this handler should NOT have access to the db. only access via handler.
   @Deprecated
   private final ConfigRepository configRepositoryDoNotUse;
+  private final ConnectionService connectionService;
   private final ActorDefinitionVersionHelper actorDefinitionVersionHelper;
   private final FeatureFlagClient featureFlagClient;
 
@@ -119,6 +121,7 @@ public class WebBackendConnectionsHandler {
                                       final OperationsHandler operationsHandler,
                                       final EventRunner eventRunner,
                                       final ConfigRepository configRepositoryDoNotUse,
+                                      final ConnectionService connectionService,
                                       final ActorDefinitionVersionHelper actorDefinitionVersionHelper,
                                       final FeatureFlagClient featureFlagClient) {
     this.actorDefinitionVersionHandler = actorDefinitionVersionHandler;
@@ -131,6 +134,7 @@ public class WebBackendConnectionsHandler {
     this.operationsHandler = operationsHandler;
     this.eventRunner = eventRunner;
     this.configRepositoryDoNotUse = configRepositoryDoNotUse;
+    this.connectionService = connectionService;
     this.actorDefinitionVersionHelper = actorDefinitionVersionHelper;
     this.featureFlagClient = featureFlagClient;
   }
@@ -620,7 +624,7 @@ public class WebBackendConnectionsHandler {
     // before doing any updates, fetch the existing catalog so that it can be diffed
     // with the final catalog to determine which streams might need to be reset.
     final ConfiguredAirbyteCatalog oldConfiguredCatalog =
-        configRepositoryDoNotUse.getConfiguredCatalogForConnection(connectionId);
+        connectionService.getConfiguredCatalogForConnection(connectionId);
 
     final List<UUID> newAndExistingOperationIds = createOrUpdateOperations(originalConnectionRead, webBackendConnectionPatch);
 

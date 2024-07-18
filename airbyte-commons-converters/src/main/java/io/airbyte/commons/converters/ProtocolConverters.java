@@ -32,6 +32,13 @@ public class ProtocolConverters {
   }
 
   @SuppressWarnings("LineLength")
+  public static io.airbyte.config.StreamDescriptor streamDescriptorToDomain(final io.airbyte.protocol.models.StreamDescriptor protocolStreamDescriptor) {
+    return new io.airbyte.config.StreamDescriptor()
+        .withName(protocolStreamDescriptor.getName())
+        .withNamespace(protocolStreamDescriptor.getNamespace());
+  }
+
+  @SuppressWarnings("LineLength")
   public static io.airbyte.protocol.models.StreamDescriptor clientStreamDescriptorToProtocol(final io.airbyte.api.client.model.generated.StreamDescriptor clientStreamDescriptor) {
     return new io.airbyte.protocol.models.StreamDescriptor().withName(clientStreamDescriptor.getName())
         .withNamespace(clientStreamDescriptor.getNamespace());

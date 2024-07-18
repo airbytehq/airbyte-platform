@@ -8,6 +8,7 @@ import com.auth0.jwt.JWT
 import com.auth0.jwt.JWTCreator
 import com.google.auth.oauth2.ServiceAccountCredentials
 import io.github.oshai.kotlinlogging.KotlinLogging
+import io.micrometer.core.instrument.MeterRegistry
 import io.micronaut.context.annotation.Factory
 import io.micronaut.context.annotation.Primary
 import io.micronaut.context.annotation.Prototype
@@ -18,6 +19,7 @@ import jakarta.inject.Singleton
 import java.io.FileInputStream
 import java.security.interfaces.RSAPrivateKey
 import java.util.Date
+import java.util.Optional
 import java.util.concurrent.TimeUnit
 
 private val logger = KotlinLogging.logger {}
@@ -61,6 +63,7 @@ class InternalApiAuthenticationFactory {
     @Value("\${airbyte.control.plane.auth-endpoint}") controlPlaneAuthEndpoint: String,
     @Value("\${airbyte.data.plane.service-account.email}") dataPlaneServiceAccountEmail: String,
     @Value("\${airbyte.data.plane.service-account.credentials-path}") dataPlaneServiceAccountCredentialsPath: String,
+    meterRegistry: Optional<MeterRegistry>,
   ): String {
     return try {
       val now = Date()
@@ -83,13 +86,10 @@ class InternalApiAuthenticationFactory {
       val key = cred.privateKey as RSAPrivateKey
       val algorithm: com.auth0.jwt.algorithms.Algorithm = com.auth0.jwt.algorithms.Algorithm.RSA256(null, key)
       val signedToken = token.sign(algorithm)
-      if (signedToken.length < 10) {
-        logger.error { "Invalid signed token generated: '$signedToken'" }
-      } else {
-        logger.info { "Valid signed token generated: '${signedToken.replace(Regex("[^\\.]"), "*")}'" }
-      }
+      meterRegistry.ifPresent { registry -> registry.counter("airbyte-api-client.auth-token.success").increment() }
       return "Bearer $signedToken"
     } catch (e: Exception) {
+      meterRegistry.ifPresent { registry -> registry.counter("airbyte-api-client.auth-token.failure").increment() }
       logger.error(e) { "An issue occurred while generating a data plane auth token. Defaulting to empty string." }
       ""
     }

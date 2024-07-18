@@ -14,6 +14,6 @@ public interface UserAuthenticationResolver {
 
   User resolveUser(final String expectedAuthUserId);
 
-  Optional<String> resolveSsoRealm();
+  Optional<String> resolveRealm();
 
 }

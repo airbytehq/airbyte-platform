@@ -5,6 +5,7 @@
 package io.airbyte.workers.temporal.scheduling.activities;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
@@ -48,6 +49,7 @@ import io.airbyte.featureflag.ShouldRunRefreshSchema;
 import io.airbyte.featureflag.SourceDefinition;
 import io.airbyte.featureflag.TestClient;
 import io.airbyte.featureflag.Workspace;
+import io.airbyte.workers.helper.CatalogDiffConverter;
 import io.airbyte.workers.models.RefreshSchemaActivityInput;
 import io.airbyte.workers.models.RefreshSchemaActivityOutput;
 import io.airbyte.workers.temporal.sync.RefreshSchemaActivityImpl;
@@ -240,7 +242,25 @@ class RefreshSchemaActivityTest {
     verify(mSourceApi, times(0)).applySchemaChangeForSource(any());
     verify(mConnectionApi, times(1))
         .applySchemaChangeForConnection(new ConnectionAutoPropagateSchemaChange(CATALOG, CATALOG_ID, CONNECTION_ID, WORKSPACE_ID));
-    assertEquals(CATALOG_DIFF, result.getAppliedDiff());
+    assertEquals(CatalogDiffConverter.toDomain(CATALOG_DIFF), result.getAppliedDiff());
+  }
+
+  @Test
+  void refreshSchemaHandlesNullDiff() throws IOException {
+    when(mAirbyteApiClient.getConnectionApi()).thenReturn(mConnectionApi);
+    when(mFeatureFlagClient.boolVariation(eq(ShouldRunRefreshSchema.INSTANCE), any())).thenReturn(true);
+    when(mFeatureFlagClient.boolVariation(eq(AutoBackfillOnNewColumns.INSTANCE), any())).thenReturn(true);
+
+    final CatalogDiff catalogDiff = null;
+    when(mConnectionApi.applySchemaChangeForConnection(new ConnectionAutoPropagateSchemaChange(CATALOG, CATALOG_ID, CONNECTION_ID, WORKSPACE_ID)))
+        .thenReturn(new ConnectionAutoPropagateResult(catalogDiff));
+
+    final var result = refreshSchemaActivity.refreshSchemaV2(new RefreshSchemaActivityInput(SOURCE_ID, CONNECTION_ID, WORKSPACE_ID));
+
+    verify(mSourceApi, times(0)).applySchemaChangeForSource(any());
+    verify(mConnectionApi, times(1))
+        .applySchemaChangeForConnection(new ConnectionAutoPropagateSchemaChange(CATALOG, CATALOG_ID, CONNECTION_ID, WORKSPACE_ID));
+    assertNull(result.getAppliedDiff());
   }
 
   @Test
@@ -253,7 +273,7 @@ class RefreshSchemaActivityTest {
 
     refreshSchemaActivity.refreshSchemaV2(new RefreshSchemaActivityInput(SOURCE_ID, CONNECTION_ID, WORKSPACE_ID));
 
-    verify(mPayloadChecker, times(1)).validatePayloadSize(eq(new RefreshSchemaActivityOutput(CATALOG_DIFF)), any());
+    verify(mPayloadChecker, times(1)).validatePayloadSize(eq(new RefreshSchemaActivityOutput(CatalogDiffConverter.toDomain(CATALOG_DIFF))), any());
   }
 
 }

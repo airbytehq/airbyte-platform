@@ -11,7 +11,6 @@ import static io.airbyte.persistence.job.models.Job.SYNC_REPLICATION_TYPES;
 import com.google.common.base.Preconditions;
 import datadog.trace.api.Trace;
 import io.airbyte.api.model.generated.AttemptInfoRead;
-import io.airbyte.api.model.generated.AttemptNormalizationStatusReadList;
 import io.airbyte.api.model.generated.ConnectionIdRequestBody;
 import io.airbyte.api.model.generated.ConnectionRead;
 import io.airbyte.api.model.generated.ConnectionSyncProgressRead;
@@ -449,12 +448,6 @@ public class JobHistoryHandler {
 
   public List<JobStatusSummary> getLatestSyncJobsForConnections(final List<UUID> connectionIds) throws IOException {
     return jobPersistence.getLastSyncJobForConnections(connectionIds);
-  }
-
-  public AttemptNormalizationStatusReadList getAttemptNormalizationStatuses(final JobIdRequestBody jobIdRequestBody) throws IOException {
-    return new AttemptNormalizationStatusReadList()
-        .attemptNormalizationStatuses(jobPersistence.getAttemptNormalizationStatusesForJob(jobIdRequestBody.getId()).stream()
-            .map(JobConverter::convertAttemptNormalizationStatus).collect(Collectors.toList()));
   }
 
   public List<JobRead> getRunningSyncJobForConnections(final List<UUID> connectionIds) throws IOException {

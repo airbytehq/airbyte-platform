@@ -1,7 +1,9 @@
 import type { Dayjs, ManipulateType } from "dayjs";
 
 import dayjs from "dayjs";
+import { useState } from "react";
 import { useIntl } from "react-intl";
+import { useHarmonicIntervalFn } from "react-use";
 
 /**
  * Given a `time`, this effectively increments the time forward in steps of `${value}${unit}` until the future is reached (I hope there's flying cars!
@@ -22,7 +24,7 @@ export const moveTimeToFutureByPeriod = (time: Dayjs, value: number, unit: Manip
   return time;
 };
 
-export const useFormatLengthOfTime = (lengthOfTimeMs: number) => {
+export const useFormatLengthOfTime = (lengthOfTimeMs: number | undefined) => {
   const { formatMessage } = useIntl();
 
   const start = dayjs(0);
@@ -35,4 +37,30 @@ export const useFormatLengthOfTime = (lengthOfTimeMs: number) => {
   const strMinutes = hours || minutes ? formatMessage({ id: "sources.minute" }, { minute: minutes }) : "";
   const strSeconds = formatMessage({ id: "sources.second" }, { second: seconds });
   return `${strHours}${strMinutes}${strSeconds}`;
+};
+
+export const useCurrentTime = (updateMs = 1000) => {
+  const [time, setTime] = useState(Date.now());
+
+  // Same as useInterval hook, but triggers all effects with the same delay at the same time.
+  // https://github.com/streamich/react-use/blob/master/docs/useHarmonicIntervalFn.md
+  useHarmonicIntervalFn(() => {
+    setTime(Date.now());
+  }, updateMs);
+
+  return time;
+};
+
+/**
+ *
+ * @param start (milliseconds)
+ * @param end (milliseconds)
+ * @returns formatted length of time in milliseconds
+ */
+export const useFormatDuration = (start: number, end: number) => {
+  const startTime = dayjs(start);
+  const endTime = dayjs(end);
+  const duration = endTime.diff(startTime, "milliseconds");
+
+  return useFormatLengthOfTime(duration);
 };

@@ -23,10 +23,16 @@ import io.airbyte.api.model.generated.ConnectionAutoPropagateResult;
 import io.airbyte.api.model.generated.ConnectionAutoPropagateSchemaChange;
 import io.airbyte.api.model.generated.ConnectionCreate;
 import io.airbyte.api.model.generated.ConnectionDataHistoryRequestBody;
+import io.airbyte.api.model.generated.ConnectionEventIdRequestBody;
+import io.airbyte.api.model.generated.ConnectionEventList;
+import io.airbyte.api.model.generated.ConnectionEventType;
+import io.airbyte.api.model.generated.ConnectionEventWithDetails;
+import io.airbyte.api.model.generated.ConnectionEventsRequestBody;
 import io.airbyte.api.model.generated.ConnectionLastJobPerStreamReadItem;
 import io.airbyte.api.model.generated.ConnectionLastJobPerStreamRequestBody;
 import io.airbyte.api.model.generated.ConnectionRead;
 import io.airbyte.api.model.generated.ConnectionReadList;
+import io.airbyte.api.model.generated.ConnectionStatus;
 import io.airbyte.api.model.generated.ConnectionStatusRead;
 import io.airbyte.api.model.generated.ConnectionStatusesRequestBody;
 import io.airbyte.api.model.generated.ConnectionStreamHistoryReadItem;
@@ -44,10 +50,13 @@ import io.airbyte.api.model.generated.JobSyncResultRead;
 import io.airbyte.api.model.generated.JobWithAttemptsRead;
 import io.airbyte.api.model.generated.ListConnectionsForWorkspacesRequestBody;
 import io.airbyte.api.model.generated.NonBreakingChangesPreference;
+import io.airbyte.api.model.generated.PostprocessDiscoveredCatalogResult;
+import io.airbyte.api.model.generated.SourceDiscoverSchemaRead;
 import io.airbyte.api.model.generated.StreamDescriptor;
 import io.airbyte.api.model.generated.StreamStats;
 import io.airbyte.api.model.generated.StreamTransform;
 import io.airbyte.api.model.generated.StreamTransform.TransformTypeEnum;
+import io.airbyte.api.model.generated.UserReadInConnectionEvent;
 import io.airbyte.api.model.generated.WorkspaceIdRequestBody;
 import io.airbyte.api.problems.model.generated.ProblemMessageData;
 import io.airbyte.api.problems.throwable.generated.UnexpectedProblem;
@@ -86,14 +95,19 @@ import io.airbyte.config.StandardSync.ScheduleType;
 import io.airbyte.config.StandardSync.Status;
 import io.airbyte.config.StandardWorkspace;
 import io.airbyte.config.StreamSyncStats;
+import io.airbyte.config.User;
 import io.airbyte.config.helpers.ScheduleHelpers;
 import io.airbyte.config.persistence.ActorDefinitionVersionHelper;
 import io.airbyte.config.persistence.ConfigNotFoundException;
 import io.airbyte.config.persistence.ConfigRepository;
 import io.airbyte.config.persistence.StreamGenerationRepository;
+import io.airbyte.config.persistence.UserPersistence;
 import io.airbyte.config.persistence.domain.Generation;
 import io.airbyte.config.persistence.helper.CatalogGenerationSetter;
+import io.airbyte.data.repositories.entities.ConnectionTimelineEvent;
+import io.airbyte.data.services.ConnectionTimelineEventService;
 import io.airbyte.data.services.StreamStatusesService;
+import io.airbyte.data.services.shared.ConnectionEvent;
 import io.airbyte.featureflag.CheckWithCatalog;
 import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.featureflag.Workspace;
@@ -148,6 +162,8 @@ import org.slf4j.LoggerFactory;
 public class ConnectionsHandler {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(ConnectionsHandler.class);
+  public static final int DEFAULT_PAGE_SIZE = 20;
+  public static final int DEFAULT_ROW_OFFSET = 0;
 
   private final JobPersistence jobPersistence;
   private final ConfigRepository configRepository;
@@ -169,6 +185,8 @@ public class ConnectionsHandler {
   private final CatalogValidator catalogValidator;
   private final NotificationHelper notificationHelper;
   private final StreamStatusesService streamStatusesService;
+  private final ConnectionTimelineEventService connectionTimelineEventService;
+  private final UserPersistence userPersistence;
 
   @Inject
   public ConnectionsHandler(final StreamRefreshesHandler streamRefreshesHandler,
@@ -189,7 +207,9 @@ public class ConnectionsHandler {
                             final CatalogGenerationSetter catalogGenerationSetter,
                             final CatalogValidator catalogValidator,
                             final NotificationHelper notificationHelper,
-                            final StreamStatusesService streamStatusesService) {
+                            final StreamStatusesService streamStatusesService,
+                            final ConnectionTimelineEventService connectionTimelineEventService,
+                            final UserPersistence userPersistence) {
     this.jobPersistence = jobPersistence;
     this.configRepository = configRepository;
     this.uuidGenerator = uuidGenerator;
@@ -209,6 +229,8 @@ public class ConnectionsHandler {
     this.catalogValidator = catalogValidator;
     this.notificationHelper = notificationHelper;
     this.streamStatusesService = streamStatusesService;
+    this.connectionTimelineEventService = connectionTimelineEventService;
+    this.userPersistence = userPersistence;
   }
 
   /**
@@ -784,6 +806,17 @@ public class ConnectionsHandler {
         .toList());
   }
 
+  public CatalogDiff getDiff(final ConnectionRead connectionRead, final AirbyteCatalog discoveredCatalog)
+      throws JsonValidationException, ConfigNotFoundException, IOException {
+
+    final var catalogWithSelectedFieldsAnnotated = connectionRead.getSyncCatalog();
+    final var configuredCatalog = CatalogConverter.toConfiguredProtocol(catalogWithSelectedFieldsAnnotated);
+
+    final var rawCatalog = getConnectionAirbyteCatalog(connectionRead.getConnectionId());
+
+    return getDiff(rawCatalog.orElse(catalogWithSelectedFieldsAnnotated), discoveredCatalog, configuredCatalog);
+  }
+
   /**
    * Returns the list of the streamDescriptor that have their config updated.
    *
@@ -1001,6 +1034,86 @@ public class ConnectionsHandler {
     return result;
   }
 
+  private List<ConnectionEvent.Type> convertConnectionType(final List<ConnectionEventType> eventTypes) {
+    if (eventTypes == null) {
+      return null;
+    }
+    return eventTypes.stream().map(eventType -> ConnectionEvent.Type.valueOf(eventType.name())).collect(Collectors.toList());
+  }
+
+  private io.airbyte.api.model.generated.ConnectionEvent convertConnectionEvent(final ConnectionTimelineEvent event) {
+    final io.airbyte.api.model.generated.ConnectionEvent connectionEvent = new io.airbyte.api.model.generated.ConnectionEvent();
+    connectionEvent.id(event.getId());
+    connectionEvent.eventType(ConnectionEventType.fromString(event.getEventType()));
+    connectionEvent.createdAt(event.getCreatedAt().toEpochSecond());
+    connectionEvent.connectionId(event.getConnectionId());
+    connectionEvent.summary(event.getSummary());
+    if (event.getUserId() != null) {
+      connectionEvent.user(getUserRead(event.getUserId()));
+    }
+    return connectionEvent;
+  }
+
+  private UserReadInConnectionEvent getUserRead(final UUID userId) {
+    try {
+      final User user = userPersistence.getUser(userId).orElseThrow();
+      return new UserReadInConnectionEvent()
+          .id(user.getUserId())
+          .name(user.getName())
+          .email(user.getEmail());
+    } catch (final Exception e) {
+      LOGGER.error("Error while retrieving user information.", e);
+      return null;
+    }
+  }
+
+  private ConnectionEventList convertConnectionEventList(final List<ConnectionTimelineEvent> events) {
+    final List<io.airbyte.api.model.generated.ConnectionEvent> eventsRead =
+        events.stream().map(event -> convertConnectionEvent(event)).collect(Collectors.toList());
+    return new ConnectionEventList().events(eventsRead);
+  }
+
+  public ConnectionEventList listConnectionEvents(final ConnectionEventsRequestBody connectionEventsRequestBody) {
+    // 1. set page size and offset
+    final int pageSize = (connectionEventsRequestBody.getPagination() != null && connectionEventsRequestBody.getPagination().getPageSize() != null)
+        ? connectionEventsRequestBody.getPagination().getPageSize()
+        : DEFAULT_PAGE_SIZE;
+    final int rowOffset = (connectionEventsRequestBody.getPagination() != null && connectionEventsRequestBody.getPagination().getRowOffset() != null)
+        ? connectionEventsRequestBody.getPagination().getRowOffset()
+        : DEFAULT_ROW_OFFSET;
+    // 2. get list of events
+    final List<ConnectionTimelineEvent> events = connectionTimelineEventService.listEvents(
+        connectionEventsRequestBody.getConnectionId(),
+        convertConnectionType(connectionEventsRequestBody.getEventTypes()),
+        connectionEventsRequestBody.getCreatedAtStart(),
+        connectionEventsRequestBody.getCreatedAtEnd(),
+        pageSize,
+        rowOffset);
+    return convertConnectionEventList(events);
+  }
+
+  public ConnectionEventWithDetails getConnectionEvent(final ConnectionEventIdRequestBody connectionEventIdRequestBody) {
+    final ConnectionTimelineEvent eventData = connectionTimelineEventService.getEvent(connectionEventIdRequestBody.getConnectionEventId());
+    return hydrateConnectionEvent(eventData);
+  }
+
+  private ConnectionEventWithDetails hydrateConnectionEvent(final ConnectionTimelineEvent event) {
+    final ConnectionEventWithDetails connectionEventWithDetails = new ConnectionEventWithDetails();
+    connectionEventWithDetails.id(event.getId());
+    connectionEventWithDetails.connectionId(event.getConnectionId());
+    // enforce event type consistency
+    connectionEventWithDetails.eventType(ConnectionEventType.fromString(event.getEventType()));
+    connectionEventWithDetails.summary(event.getSummary());
+    // TODO: implement details generation. Note this could be a huge json if conn_settings changed or
+    // schema changed
+    connectionEventWithDetails.details(null);
+    connectionEventWithDetails.createdAt(event.getCreatedAt().toEpochSecond());
+    if (event.getUserId() != null) {
+      connectionEventWithDetails.user(getUserRead(event.getUserId()));
+    }
+    return connectionEventWithDetails;
+  }
+
   /**
    * Returns data history for the given connection for requested number of jobs.
    *
@@ -1009,17 +1122,17 @@ public class ConnectionsHandler {
    */
   public List<JobSyncResultRead> getConnectionDataHistory(final ConnectionDataHistoryRequestBody connectionDataHistoryRequestBody) {
 
-    List<Job> jobs;
+    final List<Job> jobs;
     try {
       jobs = jobPersistence.listJobs(
           Set.of(ConfigType.SYNC),
           Set.of(JobStatus.SUCCEEDED, JobStatus.FAILED),
           connectionDataHistoryRequestBody.getConnectionId().toString(),
           connectionDataHistoryRequestBody.getNumberOfJobs());
-    } catch (IOException e) {
+    } catch (final IOException e) {
       throw new RuntimeException(e);
     }
-    Map<Long, JobWithAttemptsRead> jobIdToJobRead = StatsAggregationHelper.getJobIdToJobWithAttemptsReadMap(jobs, jobPersistence);
+    final Map<Long, JobWithAttemptsRead> jobIdToJobRead = StatsAggregationHelper.getJobIdToJobWithAttemptsReadMap(jobs, jobPersistence);
 
     final List<JobSyncResultRead> result = new ArrayList<>();
     jobs.forEach((job) -> {
@@ -1132,14 +1245,24 @@ public class ConnectionsHandler {
 
   public ConnectionAutoPropagateResult applySchemaChange(final ConnectionAutoPropagateSchemaChange request)
       throws JsonValidationException, ConfigNotFoundException, IOException {
-    LOGGER.info("Applying schema change for connection '{}' only", request.getConnectionId());
-    final ConnectionRead connection = buildConnectionRead(request.getConnectionId());
+    return applySchemaChange(request.getConnectionId(), request.getWorkspaceId(), request.getCatalogId(), request.getCatalog());
+  }
+
+  public ConnectionAutoPropagateResult applySchemaChange(
+                                                         final UUID connectionId,
+                                                         final UUID workspaceId,
+                                                         final UUID catalogId,
+                                                         final AirbyteCatalog catalog)
+      throws JsonValidationException, ConfigNotFoundException, IOException {
+
+    LOGGER.info("Applying schema change for connection '{}' only", connectionId);
+    final ConnectionRead connection = buildConnectionRead(connectionId);
     final Optional<io.airbyte.api.model.generated.AirbyteCatalog> catalogUsedToMakeConfiguredCatalog =
-        getConnectionAirbyteCatalog(request.getConnectionId());
+        getConnectionAirbyteCatalog(connectionId);
     final io.airbyte.api.model.generated.AirbyteCatalog currentCatalog = connection.getSyncCatalog();
     final CatalogDiff diffToApply = getDiff(
         catalogUsedToMakeConfiguredCatalog.orElse(currentCatalog),
-        request.getCatalog(),
+        catalog,
         CatalogConverter.toConfiguredProtocol(currentCatalog));
     final ConnectionUpdate updateObject =
         new ConnectionUpdate().connectionId(connection.getConnectionId());
@@ -1147,23 +1270,23 @@ public class ConnectionsHandler {
         configRepository.getDestinationDefinitionFromConnection(connection.getConnectionId()).getDestinationDefinitionId();
     final var supportedDestinationSyncModes =
         connectorSpecHandler.getDestinationSpecification(new DestinationDefinitionIdWithWorkspaceId().destinationDefinitionId(destinationDefinitionId)
-            .workspaceId(request.getWorkspaceId())).getSupportedDestinationSyncModes();
-    final var workspace = configRepository.getStandardWorkspaceNoSecrets(request.getWorkspaceId(), false);
+            .workspaceId(workspaceId)).getSupportedDestinationSyncModes();
+    final var workspace = configRepository.getStandardWorkspaceNoSecrets(workspaceId, false);
     final var source = configRepository.getSourceConnection(connection.getSourceId());
     final CatalogDiff appliedDiff;
     if (AutoPropagateSchemaChangeHelper.shouldAutoPropagate(diffToApply, connection)) {
       // NOTE: appliedDiff is the part of the diff that were actually applied.
       appliedDiff = applySchemaChangeInternal(updateObject.getConnectionId(),
-          request.getWorkspaceId(),
+          workspaceId,
           updateObject,
           currentCatalog,
-          request.getCatalog(),
+          catalog,
           diffToApply.getTransforms(),
-          request.getCatalogId(),
+          catalogId,
           connection.getNonBreakingChangesPreference(), supportedDestinationSyncModes);
       updateConnection(updateObject);
       LOGGER.info("Propagating changes for connectionId: '{}', new catalogId '{}'",
-          connection.getConnectionId(), request.getCatalogId());
+          connection.getConnectionId(), catalogId);
       notificationHelper.notifySchemaPropagated(
           workspace.getNotificationSettings(),
           appliedDiff,
@@ -1247,10 +1370,10 @@ public class ConnectionsHandler {
         streamStatusesService.getLastJobIdWithStatsByStream(req.getConnectionId());
 
     // retrieve the full job information for each of those latest jobs
-    List<Job> jobs;
+    final List<Job> jobs;
     try {
       jobs = jobPersistence.listJobsLight(new HashSet<>(streamToLastJobIdWithStats.values()));
-    } catch (IOException e) {
+    } catch (final IOException e) {
       throw new UnexpectedProblem("Failed to retrieve the latest job per stream", new ProblemMessageData().message(e.getMessage()));
     }
 
@@ -1268,6 +1391,75 @@ public class ConnectionsHandler {
     return streamToJobRead.entrySet().stream()
         .map(entry -> buildLastJobPerStreamReadItem(entry.getKey(), entry.getValue().getJob(), memo))
         .collect(Collectors.toList());
+  }
+
+  /**
+   * Does all secondary steps from a source discover for a connection. Currently, it calculates the
+   * diff, conditionally disables and auto-propagates schema changes.
+   */
+  public PostprocessDiscoveredCatalogResult postprocessDiscoveredCatalog(final UUID connectionId, final UUID discoveredCatalogId)
+      throws JsonValidationException, ConfigNotFoundException, IOException {
+    final var read = diffCatalogAndConditionallyDisable(connectionId, discoveredCatalogId);
+
+    final var autoPropResult =
+        applySchemaChange(connectionId, workspaceHelper.getWorkspaceForConnectionId(connectionId), discoveredCatalogId, read.getCatalog());
+    final var diff = autoPropResult.getPropagatedDiff();
+
+    return new PostprocessDiscoveredCatalogResult().appliedDiff(diff);
+  }
+
+  /**
+   * For a given discovered catalog and connection, calculate a catalog diff, determine if there are
+   * breaking changes then disable the connection if necessary.
+   */
+  public SourceDiscoverSchemaRead diffCatalogAndConditionallyDisable(final UUID connectionId, final UUID discoveredCatalogId)
+      throws JsonValidationException, ConfigNotFoundException, IOException {
+    final var connectionRead = getConnection(connectionId);
+    final var source = configRepository.getSourceConnection(connectionRead.getSourceId());
+    final var sourceDef = configRepository.getStandardSourceDefinition(source.getSourceDefinitionId());
+    final var sourceVersion = actorDefinitionVersionHelper.getSourceVersion(sourceDef, source.getWorkspaceId(), connectionRead.getSourceId());
+
+    final var discoveredCatalog = retrieveDiscoveredCatalog(discoveredCatalogId, sourceVersion);
+
+    final var diff = getDiff(connectionRead, discoveredCatalog);
+    final boolean containsBreakingChange = AutoPropagateSchemaChangeHelper.containsBreakingChange(diff);
+
+    if (containsBreakingChange) {
+      MetricClientFactory.getMetricClient().count(OssMetricsRegistry.BREAKING_SCHEMA_CHANGE_DETECTED, 1,
+          new MetricAttribute(MetricTags.CONNECTION_ID, connectionId.toString()));
+    } else {
+      MetricClientFactory.getMetricClient().count(OssMetricsRegistry.NON_BREAKING_SCHEMA_CHANGE_DETECTED, 1,
+          new MetricAttribute(MetricTags.CONNECTION_ID, connectionId.toString()));
+    }
+
+    final var patch = new ConnectionUpdate()
+        .breakingChange(containsBreakingChange)
+        .connectionId(connectionId);
+
+    final var disableForNonBreakingChange = (connectionRead.getNonBreakingChangesPreference() == NonBreakingChangesPreference.DISABLE);
+
+    if (containsBreakingChange || (disableForNonBreakingChange && AutoPropagateSchemaChangeHelper.containsChanges(diff))) {
+      patch.status(ConnectionStatus.INACTIVE);
+    }
+
+    final var updated = updateConnection(patch);
+
+    return new SourceDiscoverSchemaRead()
+        .breakingChange(containsBreakingChange)
+        .catalogDiff(diff)
+        .catalog(discoveredCatalog)
+        .catalogId(discoveredCatalogId)
+        .connectionStatus(updated.getStatus());
+  }
+
+  private AirbyteCatalog retrieveDiscoveredCatalog(final UUID catalogId, final ActorDefinitionVersion sourceVersion)
+      throws ConfigNotFoundException, IOException {
+
+    final ActorCatalog catalog = configRepository.getActorCatalogById(catalogId);
+    final io.airbyte.protocol.models.AirbyteCatalog persistenceCatalog = Jsons.object(
+        catalog.getCatalog(),
+        io.airbyte.protocol.models.AirbyteCatalog.class);
+    return CatalogConverter.toApi(persistenceCatalog, sourceVersion);
   }
 
   /**

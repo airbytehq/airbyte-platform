@@ -122,7 +122,8 @@ open class RepositoryTestSetup {
           .withDockerRepository("")
           .withDockerImageTag("")
           .withSupportState(ActorDefinitionVersion.SupportState.SUPPORTED)
-          .withSupportLevel(SupportLevel.CERTIFIED),
+          .withSupportLevel(SupportLevel.CERTIFIED)
+          .withInternalSupportLevel(200L),
         listOf(),
       )
 
@@ -164,7 +165,8 @@ open class RepositoryTestSetup {
           .withDockerRepository("")
           .withDockerImageTag("")
           .withSupportState(ActorDefinitionVersion.SupportState.SUPPORTED)
-          .withSupportLevel(SupportLevel.CERTIFIED),
+          .withSupportLevel(SupportLevel.CERTIFIED)
+          .withInternalSupportLevel(200L),
         listOf(),
       )
 

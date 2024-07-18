@@ -12,6 +12,7 @@ import io.airbyte.commons.json.Jsons
 import io.airbyte.featureflag.Connection
 import io.airbyte.featureflag.EmitStateStatsToSegment
 import io.airbyte.featureflag.FeatureFlagClient
+import io.airbyte.featureflag.LogStreamNamesInSateMessage
 import io.airbyte.featureflag.Multi
 import io.airbyte.featureflag.Workspace
 import io.airbyte.protocol.models.AirbyteStateMessage
@@ -58,6 +59,13 @@ class StateCheckSumCountEventHandler(
     val connectionContext = Multi(listOf(Connection(connectionId), Workspace(workspaceId)))
     featureFlagClient.boolVariation(EmitStateStatsToSegment, connectionContext)
   }
+
+  // Temp piece of code for debug
+  val logIncomingStreamNames: Boolean by lazy {
+    val connectionContext = Multi(listOf(Connection(connectionId), Workspace(workspaceId)))
+    featureFlagClient.boolVariation(LogStreamNamesInSateMessage, connectionContext)
+  }
+
   private val deployment: Deployment by lazy { retry { deploymentFetcher.get() } }
 
   private val trackingIdentity: TrackingIdentity by lazy { retry { trackingIdentityFetcher.apply(workspaceId) } }

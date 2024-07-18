@@ -57,10 +57,10 @@ class ContainerConfigBeanFactory {
       return injectedImage
     }
 
-    if (airbyteVersion.endsWith("-cloud")) {
-      return "airbyte/connector-sidecar:${airbyteVersion.dropLast(6)}"
+    return if (airbyteVersion.endsWith("-cloud")) {
+      "airbyte/connector-sidecar:${airbyteVersion.dropLast(6)}"
     } else {
-      return "airbyte/connector-sidecar:$airbyteVersion"
+      "airbyte/connector-sidecar:$airbyteVersion"
     }
   }
 
@@ -236,6 +236,15 @@ class ContainerConfigBeanFactory {
           .withValue(t.value)
           .build()
       }
+  }
+
+  @Singleton
+  @Named("replicationImagePullSecrets")
+  fun replicationImagePullSecrets(
+    @Named("replicationWorkerConfigs") workerConfigs: WorkerConfigs,
+  ): List<LocalObjectReference> {
+    return workerConfigs.jobImagePullSecrets
+      .map { imagePullSecret -> LocalObjectReference(imagePullSecret) }
   }
 
   @Singleton

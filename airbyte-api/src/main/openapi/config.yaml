@@ -2195,6 +2195,53 @@ paths:
           $ref: "#/components/responses/NotFoundResponse"
         "422":
           $ref: "#/components/responses/InvalidInputResponse"
+  /v1/connections/events/get:
+    post:
+      tags:
+        - connection
+      summary: Get a single event (including details) in a connection by given event ID
+      operationId: getConnectionEvent
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ConnectionEventIdRequestBody"
+        required: true
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConnectionEventWithDetails"
+        "404":
+          $ref: "#/components/responses/NotFoundResponse"
+        "422":
+          $ref: "#/components/responses/InvalidInputResponse"
+
+  /v1/connections/events/list:
+    post:
+      tags:
+        - connection
+      summary: List most recent events in a connection (optional filters may apply)
+      operationId: listConnectionEvents
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ConnectionEventsRequestBody"
+        required: true
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConnectionEventList"
+        "404":
+          $ref: "#/components/responses/NotFoundResponse"
+        "422":
+          $ref: "#/components/responses/InvalidInputResponse"
   /v1/connections/last_job_per_stream:
     post:
       tags:
@@ -2306,6 +2353,29 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ConnectionAutoPropagateResult"
+        "404":
+          $ref: "#/components/responses/NotFoundResponse"
+        "422":
+          $ref: "#/components/responses/InvalidInputResponse"
+  /v1/connections/postprocess_discovered_catalog:
+    post:
+      tags:
+        - connection
+      summary: Generate the diff between stored catalog for the connection and catalog provided and postprocess as necessary
+      operationId: postprocessDiscoveredCatalogForConnection
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PostprocessDiscoveredCatalogRequestBody"
+        required: true
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PostprocessDiscoveredCatalogResult"
         "404":
           $ref: "#/components/responses/NotFoundResponse"
         "422":
@@ -3381,25 +3451,6 @@ paths:
           $ref: "#/components/responses/NotFoundResponse"
         "422":
           $ref: "#/components/responses/InvalidInputResponse"
-  /v1/jobs/get_normalization_status:
-    post:
-      tags:
-        - jobs
-        - internal
-      summary: Get normalization status to determine if we can bypass normalization phase
-      operationId: getAttemptNormalizationStatusesForJob
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/JobIdRequestBody"
-      responses:
-        "200":
-          description: Successful operation
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/AttemptNormalizationStatusReadList"
   /v1/jobs/get_input:
     post:
       tags:
@@ -4089,6 +4140,25 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/InternalOperationResult"
+  /v1/attempt/save_stream_metadata:
+    post:
+      tags:
+        - attempt
+        - internal
+      summary: Save stream level attempt information
+      operationId: saveStreamMetadata
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SaveStreamAttemptMetadataRequestBody"
+      responses:
+        "200":
+          description: Successful Operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InternalOperationResult"
   /v1/attempt/save_stats:
     post:
       tags:
@@ -4582,7 +4652,6 @@ paths:
       operationId: applicationTokenRequest
       summary: Grant an Access Token for an Application.
       description: Takes the client_id and client_secret for an application and returns an Access Token.
-
   # Scoped Configuration
   /v1/scoped_configuration/list:
     post:
@@ -4868,6 +4937,179 @@ paths:
       security: []
       x-sdk-alias: getHealthCheck
       x-sdk-group: Health
+  /public/v1/applications:
+    get:
+      tags:
+        - public_applications
+        - public
+        - Applications
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApplicationReadList"
+              examples:
+                Application List Response Example:
+                  value:
+                    applications:
+                      [
+                        {
+                          id: 780d5bd9-a8a0-43cf-8b35-cc2061ad8319,
+                          name: test application,
+                          clientId: b6b159ce-07f4-4699-94b3-3e85b318852e,
+                          clientSecret: TG9yZW0gaXBzdW0gZG9sb3Igc2l0IGFtZXQsIGNvbnNlY3RldHVyIGFkaXBpc2NpbmcgZWxpdC4gU2VkIGNvbmRpbWVudHVtIG5lYyBsaWJlcm8gc2VkIGxvYm9ydGlzLg==,
+                          createdAt: 2024-06-09T21:50:30Z,
+                        },
+                      ]
+          description: List all Applications a User has permission to view.
+        "403":
+          description: Not allowed
+      operationId: publicListApplications
+      summary: List Applications
+      x-sdk-alias: listApplications
+      x-sdk-group: Applications
+    post:
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ApplicationCreate"
+            examples:
+              Application Creation Request Example:
+                value:
+                  name: test application
+        required: true
+      tags:
+        - public_applications
+        - public
+        - Applications
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApplicationRead"
+              examples:
+                Application Creation Response Example:
+                  value:
+                    id: 780d5bd9-a8a0-43cf-8b35-cc2061ad8319
+                    name: test application
+                    clientId: b6b159ce-07f4-4699-94b3-3e85b318852e
+                    clientSecret: TG9yZW0gaXBzdW0gZG9sb3Igc2l0IGFtZXQsIGNvbnNlY3RldHVyIGFkaXBpc2NpbmcgZWxpdC4gU2VkIGNvbmRpbWVudHVtIG5lYyBsaWJlcm8gc2VkIGxvYm9ydGlzLg==
+                    createdAt: 2024-06-09T21:50:30Z
+          description: "Creates a new Application."
+        "400":
+          description: Invalid data
+        "403":
+          description: Not allowed
+      operationId: publicCreateApplication
+      summary: Create an Application
+      x-sdk-alias: createApplication
+      x-sdk-group: Applications
+  /public/v1/applications/{applicationId}:
+    get:
+      tags:
+        - public_applications
+        - public
+        - Applications
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApplicationRead"
+              examples:
+                Application Get Response Example:
+                  value:
+                    id: 780d5bd9-a8a0-43cf-8b35-cc2061ad8319
+                    name: test application
+                    clientId: b6b159ce-07f4-4699-94b3-3e85b318852e
+                    clientSecret: TG9yZW0gaXBzdW0gZG9sb3Igc2l0IGFtZXQsIGNvbnNlY3RldHVyIGFkaXBpc2NpbmcgZWxpdC4gU2VkIGNvbmRpbWVudHVtIG5lYyBsaWJlcm8gc2VkIGxvYm9ydGlzLg==
+                    createdAt: 2024-06-09T21:50:30Z
+          description: Get an Application by the id in the path.
+        "403":
+          description: Not allowed
+        "404":
+          description: Not found
+      operationId: publicGetApplication
+      x-sdk-alias: getApplication
+      x-sdk-group: Applications
+      summary: Get an Application detail
+    delete:
+      tags:
+        - public_applications
+        - public
+        - Applications
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApplicationRead"
+              examples:
+                Application Delete Response Example:
+                  value:
+                    id: 780d5bd9-a8a0-43cf-8b35-cc2061ad8319
+                    name: test application
+                    clientId: b6b159ce-07f4-4699-94b3-3e85b318852e
+                    clientSecret: TG9yZW0gaXBzdW0gZG9sb3Igc2l0IGFtZXQsIGNvbnNlY3RldHVyIGFkaXBpc2NpbmcgZWxpdC4gU2VkIGNvbmRpbWVudHVtIG5lYyBsaWJlcm8gc2VkIGxvYm9ydGlzLg==
+                    createdAt: 2024-06-09T21:50:30Z
+          description: Delete an Application.
+        "403":
+          description: Not allowed
+        "404":
+          description: Not found
+      operationId: publicDeleteApplication
+      x-sdk-alias: deleteApplication
+      x-sdk-group: Applications
+      summary: Deletes an Application
+    parameters:
+      - name: applicationId
+        schema:
+          type: string
+        in: path
+        required: true
+  /public/v1/applications/token:
+    post:
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ApplicationTokenRequestWithGrant"
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: "#/components/schemas/ApplicationTokenRequestWithGrant"
+            examples:
+              Application Token Request Example:
+                value:
+                  clientId: 0da998a2-0d7b-49c7-bb6e-9f7eb9cc68a0
+                  clientSecret: TG9yZW0gaXBzdW0gZG9sb3Igc2l0IGFtZXQsIGNvbnNlY3RldHVyIGFkaXBpc2NpbmcgZWxpdC4gU2VkIGNvbmRpbWVudHVtIG5lYyBsaWJlcm8gc2VkIGxvYm9ydGlzLg==
+        required: true
+      tags:
+        - public_applications
+        - public
+        - Applications
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PublicAccessTokenResponse"
+              examples:
+                Application Creation Response Example:
+                  value:
+                    access_token: TG9yZW0gaXBzdW0gZG9sb3Igc2l0IGFtZXQsIGNvbnNlY3RldHVyIGFkaXBpc2NpbmcgZWxpdC4gU2VkIGNvbmRpbWVudHVtIG5lYyBsaWJlcm8gc2VkIGxvYm9ydGlzLg==
+          description: "Creates an Access Token."
+        "400":
+          description: Invalid data
+        "403":
+          description: Not allowed
+      operationId: publicGetAccessToken
+      summary: Get an Access Token
+      x-sdk-alias: createAccessToken
+      x-sdk-group: Applications
+      security: []
   /public/v1/jobs:
     get:
       tags:
@@ -7613,6 +7855,23 @@ components:
           type: boolean
         priority:
           $ref: "#/components/schemas/WorkloadPriority"
+    PostprocessDiscoveredCatalogRequestBody:
+      type: object
+      required:
+        - catalogId
+        - connectionId
+      properties:
+        catalogId:
+          type: string
+          format: uuid
+        connectionId:
+          type: string
+          format: uuid
+    PostprocessDiscoveredCatalogResult:
+      type: object
+      properties:
+        appliedDiff:
+          $ref: "#/components/schemas/CatalogDiff"
     WorkloadPriority:
       type: string
       enum:
@@ -7836,8 +8095,6 @@ components:
         - dockerRepository
         - dockerImageTag
         - documentationUrl
-        - supportsDbt
-        - normalizationConfig
       properties:
         destinationDefinitionId:
           $ref: "#/components/schemas/DestinationDefinitionId"
@@ -7869,15 +8126,9 @@ components:
           format: date
         resourceRequirements:
           $ref: "#/components/schemas/ActorDefinitionResourceRequirements"
-        supportsDbt:
-          type: boolean
-          description: an optional flag indicating whether DBT is used in the normalization. If the flag value is NULL - DBT is not used.
-        normalizationConfig:
-          $ref: "#/components/schemas/NormalizationDestinationDefinitionConfig"
         lastPublished:
           description: The time the connector was modified in the codebase.
           $ref: "#/components/schemas/ISO8601DateTime"
-
         cdkVersion:
           description: "The version of the CDK that the connector was built with. e.g. python:0.1.0, java:0.1.0"
           type: string
@@ -8128,9 +8379,7 @@ components:
       required:
         - dockerRepository
         - dockerImageTag
-        - supportsDbt
         - supportsRefreshes
-        - normalizationConfig
         - supportState
         - isVersionOverrideApplied
       properties:
@@ -8138,12 +8387,8 @@ components:
           type: string
         dockerImageTag:
           type: string
-        supportsDbt:
-          type: boolean
         supportsRefreshes:
           type: boolean
-        normalizationConfig:
-          $ref: "#/components/schemas/NormalizationDestinationDefinitionConfig"
         isVersionOverrideApplied:
           type: boolean
         supportLevel:
@@ -8827,6 +9072,137 @@ components:
         recordsCommitted:
           type: integer
           format: int64
+    ConnectionEventId:
+      type: string
+      format: UUID
+    ConnectionEventIdRequestBody:
+      type: object
+      required:
+        - connectionEventId
+      properties:
+        connectionEventId:
+          $ref: "#/components/schemas/ConnectionEventId"
+    ConnectionEventType:
+      type: string
+      enum:
+        - SYNC_STARTED # only for manual sync jobs
+        - SYNC_SUCCEEDED
+        - SYNC_INCOMPLETE
+        - SYNC_FAILED
+        - SYNC_CANCELLED
+        - REFRESH_STARTED
+        - REFRESH_SUCCEEDED
+        - REFRESH_INCOMPLETE
+        - REFRESH_FAILED
+        - REFRESH_CANCELLED
+        - CLEAR_STARTED
+        - CLEAR_SUCCEEDED
+        - CLEAR_INCOMPLETE
+        - CLEAR_FAILED
+        - CLEAR_CANCELLED
+        - CONNECTION_SETTINGS_UPDATE
+        - CONNECTION_ENABLED
+        - CONNECTION_DISABLED
+        - SCHEMA_UPDATE
+        - CONNECTOR_UPDATE
+        - UNKNOWN
+    UserReadInConnectionEvent:
+      type: object
+      required:
+        - id
+        - email
+      properties:
+        id:
+          type: string
+          format: uuid
+        email:
+          type: string
+          format: email
+        name:
+          type: string
+    ConnectionEvent:
+      type: object
+      required:
+        - id
+        - connectionId
+        - eventType
+        - summary
+        - created_at
+      properties:
+        id:
+          $ref: "#/components/schemas/ConnectionEventId"
+        connectionId:
+          $ref: "#/components/schemas/ConnectionId"
+        eventType:
+          $ref: "#/components/schemas/ConnectionEventType"
+        summary:
+          description: JSON object without event details
+          type: object
+        createdAt:
+          type: integer
+          format: int64
+        user:
+          $ref: "#/components/schemas/UserReadInConnectionEvent"
+    ConnectionEventWithDetails:
+      type: object
+      required:
+        - id
+        - connectionId
+        - eventType
+        - summary
+        - details
+        - created_at
+      properties:
+        id:
+          $ref: "#/components/schemas/ConnectionEventId"
+        connectionId:
+          $ref: "#/components/schemas/ConnectionId"
+        eventType:
+          $ref: "#/components/schemas/ConnectionEventType"
+        summary:
+          description: JSON object without event details
+          type: object
+        details:
+          description: JSON object with event details
+          type: object
+        createdAt:
+          type: integer
+          format: int64
+        user:
+          $ref: "#/components/schemas/UserReadInConnectionEvent"
+
+    ConnectionEventList:
+      type: object
+      required:
+        - events
+      properties:
+        events:
+          type: array
+          items:
+            $ref: "#/components/schemas/ConnectionEvent"
+    ConnectionEventsRequestBody:
+      type: object
+      required:
+        - connectionId
+      properties:
+        connectionId:
+          $ref: "#/components/schemas/ConnectionId"
+        eventTypes:
+          description: filter events by event types (optional)
+          type: array
+          items:
+            $ref: "#/components/schemas/ConnectionEventType"
+        pagination:
+          $ref: "#/components/schemas/Pagination"
+        createdAtStart:
+          description: The start datetime of a time range to filter by
+          type: string
+          format: date-time
+        createdAtEnd:
+          description: The end datetime of a time range to filter by
+          type: string
+          format: date-time
+
     ConnectionLastJobPerStreamRead:
       type: array
       items:
@@ -9100,41 +9476,14 @@ components:
         # the jsonschema2pojo does not seem to support it yet: https://github.com/joelittlejohn/jsonschema2pojo/issues/392
         operatorType:
           $ref: "#/components/schemas/OperatorType"
-        normalization:
-          $ref: "#/components/schemas/OperatorNormalization"
-        dbt:
-          $ref: "#/components/schemas/OperatorDbt"
         webhook:
           $ref: "#/components/schemas/OperatorWebhook"
     OperatorType:
       type: string
       enum:
-        # - destination
         - normalization
         - dbt
         - webhook
-      # - docker
-    OperatorNormalization:
-      type: object
-      properties:
-        option:
-          type: string
-          enum:
-            - basic
-            #- unnesting
-    OperatorDbt:
-      type: object
-      required:
-        - gitRepoUrl
-      properties:
-        gitRepoUrl:
-          type: string
-        gitRepoBranch:
-          type: string
-        dockerImage:
-          type: string
-        dbtArguments:
-          type: string
     OperatorWebhook:
       type: object
       properties:
@@ -10196,8 +10545,6 @@ components:
         - destination
         - replication
         - persistence
-        - normalization
-        - dbt
         - airbyte_platform
         - unknown
     FailureType:
@@ -10547,27 +10894,6 @@ components:
       description: A unique identifier for an actor.
       type: string
       format: uuid
-    NormalizationDestinationDefinitionConfig:
-      description: describes a normalization config for destination definition version
-      type: object
-      required:
-        - supported
-      additionalProperties: false
-      properties:
-        supported:
-          type: boolean
-          description: whether the destination definition supports normalization.
-          default: false
-        normalizationRepository:
-          type: string
-          description: a field indicating the name of the repository to be used for normalization. If the value of the flag is NULL - normalization is not used.
-        normalizationTag:
-          type: string
-          description: a field indicating the tag of the docker repository to be used for normalization.
-        normalizationIntegrationType:
-          type: string
-          description: a field indicating the type of integration dialect to use for normalization.
-
     JobTypeResourceLimit:
       description: sets resource requirements for a specific job type for an actor definition. these values override the default, if both are set.
       type: object
@@ -11207,6 +11533,36 @@ components:
             $ref: "#/components/schemas/AttemptStreamStats"
         connectionId:
           $ref: "#/components/schemas/ConnectionId"
+    SaveStreamAttemptMetadataRequestBody:
+      type: object
+      required:
+        - jobId
+        - attemptNumber
+        - stats
+      properties:
+        jobId:
+          $ref: "#/components/schemas/JobId"
+        attemptNumber:
+          $ref: "#/components/schemas/AttemptNumber"
+        streamMetadata:
+          type: array
+          items:
+            $ref: "#/components/schemas/StreamAttemptMetadata"
+    StreamAttemptMetadata:
+      type: object
+      required:
+        - streamName
+        - wasBackfilled
+        - wasResumed
+      properties:
+        streamName:
+          type: string
+        streamNamespace:
+          type: string
+        wasBackfilled:
+          type: boolean
+        wasResumed:
+          type: boolean
     AttemptSyncConfig:
       type: object
       required:
@@ -11257,25 +11613,6 @@ components:
         catalogId:
           type: string
           format: uuid
-    AttemptNormalizationStatusReadList:
-      type: object
-      properties:
-        attemptNormalizationStatuses:
-          type: array
-          items:
-            $ref: "#/components/schemas/AttemptNormalizationStatusRead"
-    AttemptNormalizationStatusRead:
-      type: object
-      properties:
-        attemptNumber:
-          $ref: "#/components/schemas/AttemptNumber"
-        hasRecordsCommitted:
-          type: boolean
-        recordsCommitted:
-          type: integer
-          format: int64
-        hasNormalizationFailed:
-          type: boolean
     StreamStatusId:
       type: string
       format: uuid
@@ -11878,6 +12215,7 @@ components:
       properties:
         name:
           type: string
+      x-sdk-component: true
     ApplicationId:
       type: string
       format: uuid
@@ -11899,6 +12237,7 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/ApplicationRead"
+      x-sdk-component: true
     ApplicationRead:
       required:
         - id
@@ -11919,6 +12258,7 @@ components:
         createdAt:
           type: integer
           format: int64
+      x-sdk-component: true
     ApplicationTokenRequest:
       required:
         - client_id
@@ -11929,6 +12269,20 @@ components:
           type: string
         client_secret:
           type: string
+    ApplicationTokenRequestWithGrant:
+      required:
+        - client_id
+        - client_secret
+        - grant_type
+      type: object
+      properties:
+        client_id:
+          type: string
+        client_secret:
+          type: string
+        grant-type:
+          enum: ["client_credentials"]
+      x-sdk-component: true
     AccessToken:
       required:
         - access_token
@@ -11936,6 +12290,21 @@ components:
       properties:
         access_token:
           type: string
+    PublicAccessTokenResponse:
+      required:
+        - access_token
+        - token_type
+        - expires_in
+      type: object
+      properties:
+        access_token:
+          type: string
+        token_type:
+          enum: ["Bearer"]
+        expires_in:
+          type: integer
+          format: int64
+      x-sdk-component: true
     UserInvitationCreateRequestBody:
       type: object
       required:

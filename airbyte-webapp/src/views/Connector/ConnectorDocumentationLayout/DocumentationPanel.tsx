@@ -51,6 +51,8 @@ const removeFirstHeading: Pluggable = () => {
   };
 };
 
+const remarkPlugins = [removeFirstHeading];
+
 export const prepareMarkdown = (markdown: string, env: "oss" | "cloud"): string => {
   // Remove any empty lines between <FieldAnchor> tags and their content, as this causes
   // the content to be rendered as a raw string unless it contains a list, for reasons
@@ -219,8 +221,10 @@ export const DocumentationPanel: React.FC = () => {
         className={styles.content}
         content={docsContent}
         options={markdownOptions}
-        remarkPlugins={[removeFirstHeading]}
+        remarkPlugins={remarkPlugins}
       />
     </FlexContainer>
   );
 };
+
+export default DocumentationPanel;

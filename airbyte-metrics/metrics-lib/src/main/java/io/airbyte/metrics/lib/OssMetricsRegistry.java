@@ -34,10 +34,6 @@ import com.google.api.client.util.Preconditions;
  */
 public enum OssMetricsRegistry implements MetricsRegistry {
 
-  ACTIVITY_DBT_TRANSFORMATION(
-      MetricEmittingApps.WORKER,
-      "activity_dbt_transformation",
-      "increments when we start a dbt transformation activity"),
   ACTIVITY_CHECK_CONNECTION(
       MetricEmittingApps.WORKER,
       "activity_check_connection",
@@ -465,7 +461,23 @@ public enum OssMetricsRegistry implements MetricsRegistry {
 
   REPLICATION_CONTEXT_NOT_INITIALIZED_ERROR(MetricEmittingApps.ORCHESTRATOR,
       "replication_context_not_initialized_error",
-      "The replication context was not initialized when it was expected to be.");
+      "The replication context was not initialized when it was expected to be."),
+
+  DISCOVER_CATALOG_RUN_TIME(MetricEmittingApps.WORKER,
+      "discover_catalog_run_time",
+      "Time to run a discover catalog before a replication."),
+
+  REPLICATION_RUN_TIME(MetricEmittingApps.ORCHESTRATOR,
+      "replication_run_time",
+      "Time to run a replication withing a sync."),
+
+  SYNC_TOTAL_TIME(MetricEmittingApps.ORCHESTRATOR,
+      "sync_total_time",
+      "Time to run a sync workflow."),
+
+  SYNC_WITH_EMPTY_CATALOG(MetricEmittingApps.ORCHESTRATOR,
+      "sync_with_empty_catalog",
+      "Sync was started with an empty configured catalog.");
 
   private final MetricEmittingApp application;
   private final String metricName;

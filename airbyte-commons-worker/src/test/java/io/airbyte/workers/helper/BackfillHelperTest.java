@@ -30,6 +30,9 @@ class BackfillHelperTest {
   private static final String ANOTHER_STREAM_NAME = "another-stream-name";
   private static final String ANOTHER_STREAM_NAMESPACE = "another-stream-namespace";
   private static final StreamDescriptor STREAM_DESCRIPTOR = new StreamDescriptor(STREAM_NAME, STREAM_NAMESPACE);
+  private static final io.airbyte.config.StreamDescriptor DOMAIN_STREAM_DESCRIPTOR = new io.airbyte.config.StreamDescriptor()
+      .withName(STREAM_NAME)
+      .withNamespace(STREAM_NAMESPACE);
   private static final StreamDescriptor ANOTHER_STREAM_DESCRIPTOR = new StreamDescriptor(ANOTHER_STREAM_NAME, ANOTHER_STREAM_NAMESPACE);
 
   private static final ConfiguredAirbyteStream INCREMENTAL_STREAM = new ConfiguredAirbyteStream()
@@ -76,8 +79,8 @@ class BackfillHelperTest {
   @Test
   void testGetStreamsToBackfillWithNewColumn() {
     assertEquals(
-        List.of(STREAM_DESCRIPTOR),
-        BackfillHelper.getStreamsToBackfill(SINGLE_STREAM_ADD_COLUMN_DIFF, INCREMENTAL_CATALOG));
+        List.of(DOMAIN_STREAM_DESCRIPTOR),
+        BackfillHelper.getStreamsToBackfill(CatalogDiffConverter.toDomain(SINGLE_STREAM_ADD_COLUMN_DIFF), INCREMENTAL_CATALOG));
   }
 
   @Test
@@ -86,15 +89,15 @@ class BackfillHelperTest {
     // Verify that the second stream is ignored because it's Full Refresh.
     assertEquals(
         1,
-        BackfillHelper.getStreamsToBackfill(TWO_STREAMS_ADD_COLUMN_DIFF, testCatalog).size());
+        BackfillHelper.getStreamsToBackfill(CatalogDiffConverter.toDomain(TWO_STREAMS_ADD_COLUMN_DIFF), testCatalog).size());
     assertEquals(
-        List.of(STREAM_DESCRIPTOR),
-        BackfillHelper.getStreamsToBackfill(TWO_STREAMS_ADD_COLUMN_DIFF, testCatalog));
+        List.of(DOMAIN_STREAM_DESCRIPTOR),
+        BackfillHelper.getStreamsToBackfill(CatalogDiffConverter.toDomain(TWO_STREAMS_ADD_COLUMN_DIFF), testCatalog));
   }
 
   @Test
   void testClearStateForStreamsToBackfill() {
-    final List<StreamDescriptor> streamsToBackfill = List.of(STREAM_DESCRIPTOR);
+    final List<io.airbyte.config.StreamDescriptor> streamsToBackfill = List.of(DOMAIN_STREAM_DESCRIPTOR);
     final State updatedState = BackfillHelper.clearStateForStreamsToBackfill(STATE, streamsToBackfill);
     assertNotNull(updatedState);
     final var typedState = StateMessageHelper.getTypedState(updatedState.getState());

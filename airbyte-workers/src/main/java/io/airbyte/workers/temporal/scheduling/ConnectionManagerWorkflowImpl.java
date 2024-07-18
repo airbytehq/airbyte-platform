@@ -26,7 +26,6 @@ import io.airbyte.config.ActorType;
 import io.airbyte.config.ConnectorJobOutput;
 import io.airbyte.config.FailureReason;
 import io.airbyte.config.FailureReason.FailureType;
-import io.airbyte.config.NormalizationSummary;
 import io.airbyte.config.StandardCheckConnectionInput;
 import io.airbyte.config.StandardSyncInput;
 import io.airbyte.config.StandardSyncOutput;
@@ -338,9 +337,7 @@ public class ConnectionManagerWorkflowImpl implements ConnectionManagerWorkflow 
           log.debug("Ignoring canceled failure as it is handled by the cancellation scope.");
           // do nothing, cancellation handled by cancellationScope
         } else if (childWorkflowFailure.getCause()instanceof final ActivityFailure af) {
-          // Allows us to classify unhandled failures from the sync workflow. e.g. If the normalization
-          // activity throws an exception, for
-          // example, this lets us set the failureOrigin to normalization.
+          // Allows us to classify unhandled failures from the sync workflow.
           workflowInternalState.getFailures().add(FailureHelper.failureReasonFromWorkflowAndActivity(
               childWorkflowFailure.getWorkflowType(),
               af.getActivityType(),
@@ -1045,14 +1042,6 @@ public class ConnectionManagerWorkflowImpl implements ConnectionManagerWorkflow 
       workflowInternalState.getFailures().addAll(standardSyncOutput.getFailures());
       final var recordsCommitted = (standardSyncSummary.getTotalStats() != null) ? standardSyncSummary.getTotalStats().getRecordsCommitted() : null;
       workflowInternalState.setPartialSuccess(recordsCommitted != null && recordsCommitted > 0);
-      return true;
-    }
-
-    // catch normalization failure reasons
-    final NormalizationSummary normalizationSummary = standardSyncOutput.getNormalizationSummary();
-    if (normalizationSummary != null && normalizationSummary.getFailures() != null
-        && !normalizationSummary.getFailures().isEmpty()) {
-      workflowInternalState.getFailures().addAll(normalizationSummary.getFailures());
       return true;
     }
 

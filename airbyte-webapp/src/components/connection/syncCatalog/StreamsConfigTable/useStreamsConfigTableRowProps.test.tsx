@@ -44,7 +44,7 @@ const mockDisabledInitialValues: Partial<FormConnectionFormValues> = {
 const testSetup = (initialValues: Partial<FormConnectionFormValues>) => {
   jest.spyOn(connectionFormService, "useConnectionFormService").mockImplementation(() => {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    return { initialValues } as any;
+    return { initialValues, mode: "edit" } as any;
   });
 };
 

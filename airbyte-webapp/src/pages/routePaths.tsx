@@ -1,5 +1,6 @@
 export enum RoutePaths {
   Root = "/",
+  Login = "login",
   SpeakeasyRedirect = "speakeasy-redirect",
   Workspaces = "workspaces",
   Setup = "setup",
@@ -33,6 +34,7 @@ export const enum ConnectionRoutePaths {
   ConnectionNew = "new-connection",
   Configure = "configure",
   ConfigureContinued = "continued",
+  Timeline = "timeline",
 }
 
 export enum SettingsRoutePaths {

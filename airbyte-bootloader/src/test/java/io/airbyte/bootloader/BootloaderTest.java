@@ -22,6 +22,7 @@ import io.airbyte.config.init.DeclarativeSourceUpdater;
 import io.airbyte.config.init.LocalDeclarativeManifestImageVersionsProvider;
 import io.airbyte.config.init.PostLoadExecutor;
 import io.airbyte.config.init.SupportStateUpdater;
+import io.airbyte.config.persistence.ActorDefinitionVersionResolver;
 import io.airbyte.config.persistence.BreakingChangesHelper;
 import io.airbyte.config.persistence.ConfigRepository;
 import io.airbyte.config.persistence.OrganizationPersistence;
@@ -97,8 +98,8 @@ class BootloaderTest {
 
   // ⚠️ This line should change with every new migration to show that you meant to make a new
   // migration to the prod database
-  private static final String CURRENT_CONFIGS_MIGRATION_VERSION = "0.57.4.006";
-  private static final String CURRENT_JOBS_MIGRATION_VERSION = "0.57.2.003";
+  private static final String CURRENT_CONFIGS_MIGRATION_VERSION = "0.57.4.009";
+  private static final String CURRENT_JOBS_MIGRATION_VERSION = "0.57.2.005";
   private static final String CDK_VERSION = "1.2.3";
 
   @BeforeEach
@@ -206,9 +207,10 @@ class BootloaderTest {
         new SupportStateUpdater(actorDefinitionService, sourceService, destinationService, DeploymentMode.OSS, breakingChangeHelper,
             breakingChangeNotificationHelper, featureFlagClient);
     val metricClient = new NotImplementedMetricClient();
+    val actorDefinitionVersionResolver = mock(ActorDefinitionVersionResolver.class);
     val applyDefinitionsHelper =
         new ApplyDefinitionsHelper(definitionsProvider, jobsPersistence, actorDefinitionService, sourceService, destinationService,
-            metricClient, supportStateUpdater);
+            metricClient, supportStateUpdater, actorDefinitionVersionResolver);
     final DeclarativeManifestImageVersionsProvider declarativeManifestImageVersionsProvider = new LocalDeclarativeManifestImageVersionsProvider();
     val declarativeSourceUpdater =
         new DeclarativeSourceUpdater(declarativeManifestImageVersionsProvider, mock(DeclarativeManifestImageVersionService.class),
@@ -313,9 +315,10 @@ class BootloaderTest {
             breakingChangeNotificationHelper, featureFlagClient);
     val protocolVersionChecker = new ProtocolVersionChecker(jobsPersistence, airbyteProtocolRange, configRepository, definitionsProvider);
     val metricClient = new NotImplementedMetricClient();
+    val actorDefinitionVersionResolver = mock(ActorDefinitionVersionResolver.class);
     val applyDefinitionsHelper =
         new ApplyDefinitionsHelper(definitionsProvider, jobsPersistence, actorDefinitionService, sourceService, destinationService,
-            metricClient, supportStateUpdater);
+            metricClient, supportStateUpdater, actorDefinitionVersionResolver);
     final DeclarativeManifestImageVersionsProvider declarativeManifestImageVersionsProvider = new LocalDeclarativeManifestImageVersionsProvider();
     val declarativeSourceUpdater =
         new DeclarativeSourceUpdater(declarativeManifestImageVersionsProvider, mock(DeclarativeManifestImageVersionService.class),

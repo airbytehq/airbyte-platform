@@ -105,7 +105,7 @@ open class WorkspaceServiceImpl(
       kotlin.runCatching { workspacesHandler.createWorkspace(workspaceCreate) }
         .onFailure {
           log.error("Error for createWorkspace", it)
-          ConfigClientErrorHandler.handleError(it, workspaceCreateRequest.name)
+          ConfigClientErrorHandler.handleError(it)
         }
     log.debug(HTTP_RESPONSE_BODY_DEBUG_MESSAGE + result)
     return WorkspaceResponseMapper.from(
@@ -151,7 +151,7 @@ open class WorkspaceServiceImpl(
       kotlin.runCatching { workspacesHandler.updateWorkspaceName(workspaceUpdate) }
         .onFailure {
           log.error("Error for updateWorkspace", it)
-          ConfigClientErrorHandler.handleError(it, workspaceId.toString())
+          ConfigClientErrorHandler.handleError(it)
         }
     log.debug(HTTP_RESPONSE_BODY_DEBUG_MESSAGE + result)
     return WorkspaceResponseMapper.from(result.getOrNull()!!)
@@ -191,7 +191,7 @@ open class WorkspaceServiceImpl(
       kotlin.runCatching { workspacesHandler.getWorkspace(workspaceIdRequestBody) }
         .onFailure {
           log.error("Error for getWorkspace", it)
-          ConfigClientErrorHandler.handleError(it, workspaceId.toString())
+          ConfigClientErrorHandler.handleError(it)
         }
     log.debug(HTTP_RESPONSE_BODY_DEBUG_MESSAGE + result)
     return WorkspaceResponseMapper.from(result.getOrNull()!!)
@@ -232,7 +232,7 @@ open class WorkspaceServiceImpl(
       kotlin.runCatching { workspacesHandler.deleteWorkspace(workspaceIdRequestBody) }
         .onFailure {
           log.error("Error for deleteWorkspace", it)
-          ConfigClientErrorHandler.handleError(it, workspaceId.toString())
+          ConfigClientErrorHandler.handleError(it)
         }
     log.debug(HTTP_RESPONSE_BODY_DEBUG_MESSAGE + result)
   }
@@ -278,7 +278,7 @@ open class WorkspaceServiceImpl(
       kotlin.runCatching { workspacesHandler.listWorkspacesPaginated(listResourcesForWorkspacesRequestBody) }
         .onFailure {
           log.error("Error for listWorkspaces", it)
-          ConfigClientErrorHandler.handleError(it, workspaceIds.toString())
+          ConfigClientErrorHandler.handleError(it)
         }
     log.debug(HTTP_RESPONSE_BODY_DEBUG_MESSAGE + result)
     return io.airbyte.server.apis.publicapi.mappers.WorkspacesResponseMapper.from(

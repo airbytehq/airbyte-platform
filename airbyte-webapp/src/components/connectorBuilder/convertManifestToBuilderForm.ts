@@ -524,7 +524,7 @@ export function manifestSubstreamPartitionRouterToBuilder(
 
   const parentStreamConfig = filterKnownFields(
     substreamPartitionRouter.parent_stream_configs[0],
-    ["type", "parent_key", "partition_field", "request_option", "stream"],
+    ["type", "parent_key", "partition_field", "request_option", "stream", "incremental_dependency"],
     `${partitionRouter.type}.parent_stream_configs`,
     streamName
   );
@@ -572,6 +572,7 @@ export function manifestSubstreamPartitionRouterToBuilder(
       partition_field: parentStreamConfig.partition_field,
       parentStreamReference: parentStreamId,
       request_option: parentStreamConfig.request_option,
+      incremental_dependency: parentStreamConfig.incremental_dependency,
     },
   ];
 }

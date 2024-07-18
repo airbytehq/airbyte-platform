@@ -26,8 +26,6 @@ import { useFormatError } from "core/errors";
 import { FormError } from "core/utils/errorStatusMessage";
 import { links } from "core/utils/links";
 
-import { useExperiment } from "../Experiment";
-
 export type ConnectionFormMode = "create" | "edit" | "readonly";
 
 export type ConnectionOrPartialConnection =
@@ -78,10 +76,9 @@ const useConnectionForm = ({
   const destDefinitionVersion = useDestinationDefinitionVersion(destinationId);
   const destDefinitionSpecification = useGetDestinationDefinitionSpecification(connection.destination.destinationId);
 
-  const initialValues = useInitialFormValues(connection, destDefinitionVersion, destDefinitionSpecification, mode);
+  const initialValues = useInitialFormValues(connection, destDefinitionSpecification, mode);
   const { formatMessage } = useIntl();
   const [submitError, setSubmitError] = useState<FormError | null>(null);
-  const isSimplifiedCreation = useExperiment("connection.simplifiedCreation", true);
 
   const getErrorMessage = useCallback<ConnectionFormHook["getErrorMessage"]>(
     (formValid, errors) => {
@@ -99,9 +96,7 @@ const useConnectionForm = ({
 
       if (!formValid) {
         const hasNoStreamsSelectedError = errors?.syncCatalog?.streams?.message === "connectionForm.streams.required";
-        const validationErrorMessage = isSimplifiedCreation
-          ? "connectionForm.validation.creationError"
-          : "connectionForm.validation.error";
+        const validationErrorMessage = "connectionForm.validation.creationError";
         return formatMessage({
           id: hasNoStreamsSelectedError ? "connectionForm.streams.required" : validationErrorMessage,
         });
@@ -109,7 +104,7 @@ const useConnectionForm = ({
 
       return null;
     },
-    [submitError, formatError, formatMessage, isSimplifiedCreation]
+    [submitError, formatError, formatMessage]
   );
 
   return {

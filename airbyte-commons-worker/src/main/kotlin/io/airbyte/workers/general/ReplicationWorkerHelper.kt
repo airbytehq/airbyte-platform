@@ -22,6 +22,7 @@ import io.airbyte.config.PerformanceMetrics
 import io.airbyte.config.ReplicationAttemptSummary
 import io.airbyte.config.ReplicationOutput
 import io.airbyte.config.StandardSyncSummary.ReplicationStatus
+import io.airbyte.config.State
 import io.airbyte.config.SyncStats
 import io.airbyte.config.WorkerDestinationConfig
 import io.airbyte.metrics.lib.ApmTraceUtils
@@ -42,6 +43,7 @@ import io.airbyte.workers.context.ReplicationContext
 import io.airbyte.workers.context.ReplicationFeatureFlags
 import io.airbyte.workers.exception.WorkloadHeartbeatException
 import io.airbyte.workers.helper.FailureHelper
+import io.airbyte.workers.helper.ResumableFullRefreshStatsHelper
 import io.airbyte.workers.helper.StreamStatusCompletionTracker
 import io.airbyte.workers.internal.AirbyteDestination
 import io.airbyte.workers.internal.AirbyteMapper
@@ -180,6 +182,7 @@ class ReplicationWorkerHelper(
     replicationFeatureFlags: ReplicationFeatureFlags,
     jobRoot: Path,
     configuredAirbyteCatalog: ConfiguredAirbyteCatalog,
+    state: State?,
   ) {
     timeTracker.trackReplicationStartTime()
 
@@ -204,7 +207,22 @@ class ReplicationWorkerHelper(
           dockerImageTag = DockerImageName.extractTag(ctx.destinationImage),
         ),
       ).supportRefreshes
+
+    if (supportRefreshes) {
+      // if configured airbyte catalog has full refresh with state
+      val resumedFRStreams = ResumableFullRefreshStatsHelper().getResumedFullRefreshStreams(configuredAirbyteCatalog, state)
+      logger.info { "Number of Resumed Full Refresh Streams: {${resumedFRStreams.size}}" }
+      if (resumedFRStreams.isNotEmpty()) {
+        resumedFRStreams.forEach { streamDescriptor ->
+          logger.info { " Resumed stream name: ${streamDescriptor.name} namespace: ${streamDescriptor.namespace}" }
+        }
+      }
+    }
     streamStatusCompletionTracker.startTracking(configuredAirbyteCatalog, supportRefreshes)
+
+    if (configuredAirbyteCatalog.streams.isEmpty()) {
+      metricClient.count(OssMetricsRegistry.SYNC_WITH_EMPTY_CATALOG, 1, *metricAttrs.toTypedArray())
+    }
   }
 
   fun startDestination(
@@ -390,7 +408,7 @@ class ReplicationWorkerHelper(
     if (destinationRawMessage.type == Type.STATE) {
       val airbyteStateMessage = destinationRawMessage.state
       recordStateStatsMetrics(metricClient, airbyteStateMessage, AirbyteMessageOrigin.DESTINATION, ctx!!)
-      syncPersistence.persist(context.connectionId, destinationRawMessage.state)
+      syncPersistence.accept(context.connectionId, destinationRawMessage.state)
       metricClient.count(OssMetricsRegistry.STATE_PROCESSED_FROM_DESTINATION, 1, *metricAttrs.toTypedArray())
     }
 
@@ -497,6 +515,7 @@ private fun toConnectionAttrs(ctx: ReplicationContext?): List<MetricAttribute> {
     ctx.connectionId?.let { add(MetricAttribute(MetricTags.CONNECTION_ID, it.toString())) }
     ctx.jobId?.let { add(MetricAttribute(MetricTags.JOB_ID, it.toString())) }
     ctx.attempt?.let { add(MetricAttribute(MetricTags.ATTEMPT_NUMBER, it.toString())) }
+    add(MetricAttribute(MetricTags.IS_RESET, ctx.isReset.toString()))
   }
 }
 

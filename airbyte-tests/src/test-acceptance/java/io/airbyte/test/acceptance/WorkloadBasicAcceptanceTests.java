@@ -17,6 +17,8 @@ import java.util.UUID;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Tags;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.DisabledIfEnvironmentVariable;
 import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;
@@ -26,6 +28,7 @@ import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;
  * components, and we migrate more operations to them, we will run these tests in CI to catch
  * regressions.
  */
+@Tags({@Tag("sync"), @Tag("enterprise")})
 public class WorkloadBasicAcceptanceTests {
 
   AcceptanceTestsResources testResources = new AcceptanceTestsResources();

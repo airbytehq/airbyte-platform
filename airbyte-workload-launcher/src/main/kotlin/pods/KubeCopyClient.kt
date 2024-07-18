@@ -58,9 +58,15 @@ class KubeCopyClient(private val metricClient: MetricClient) {
     // several issues with copying files. See https://github.com/airbytehq/airbyte/issues/8643 for
     // details.
     val command =
-      """
-      kubectl cp $localPath ${pod.metadata.namespace}/${pod.metadata.name}:$containerPath -c ${KubePodProcess.INIT_CONTAINER_NAME} --retries=3
-      """.trimMargin()
+      arrayOf(
+        "kubectl",
+        "cp",
+        localPath.toString(),
+        "${pod.metadata.namespace}/${pod.metadata.name}:$containerPath",
+        "-c",
+        KubePodProcess.INIT_CONTAINER_NAME,
+        "--retries=3",
+      )
 
     return Runtime.getRuntime().exec(command)
   }

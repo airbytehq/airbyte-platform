@@ -12,23 +12,23 @@ dependencies {
   ksp(platform(libs.micronaut.platform))
   ksp(libs.bundles.micronaut.annotation.processor)
 
-  implementation(project(":airbyte-commons"))
+  implementation(project(":oss:airbyte-commons"))
   implementation("commons-cli:commons-cli:1.4")
-  implementation(project(":airbyte-config:specs"))
-  implementation(project(":airbyte-config:config-models"))
-  implementation(project(":airbyte-config:config-persistence"))
-  implementation(project(":airbyte-data"))
-  implementation(project(":airbyte-featureflag"))
-  implementation(project(":airbyte-notification"))
-  implementation(project(":airbyte-metrics:metrics-lib"))
-  implementation(project(":airbyte-persistence:job-persistence"))
+  implementation(project(":oss:airbyte-config:specs"))
+  implementation(project(":oss:airbyte-config:config-models"))
+  implementation(project(":oss:airbyte-config:config-persistence"))
+  implementation(project(":oss:airbyte-data"))
+  implementation(project(":oss:airbyte-featureflag"))
+  implementation(project(":oss:airbyte-notification"))
+  implementation(project(":oss:airbyte-metrics:metrics-lib"))
+  implementation(project(":oss:airbyte-persistence:job-persistence"))
   implementation(libs.airbyte.protocol)
-  implementation(project(":airbyte-json-validation"))
+  implementation(project(":oss:airbyte-json-validation"))
   implementation(libs.guava)
   implementation(libs.okhttp)
   implementation(libs.bundles.jackson)
 
-  testImplementation(project(":airbyte-test-utils"))
+  testImplementation(project(":oss:airbyte-test-utils"))
   testRuntimeOnly(libs.junit.jupiter.engine)
   testImplementation(libs.bundles.junit)
   testImplementation(libs.assertj.core)
@@ -53,5 +53,5 @@ tasks.named("dockerCopyDistribution") {
 }
 
 tasks.processResources {
-  from("${project.rootDir}/airbyte-connector-builder-resources")
+  from("${(ext["ossRootProject"] as Project).projectDir}/airbyte-connector-builder-resources")
 }

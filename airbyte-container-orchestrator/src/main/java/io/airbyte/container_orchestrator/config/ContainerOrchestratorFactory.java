@@ -11,10 +11,8 @@ import io.airbyte.commons.features.FeatureFlags;
 import io.airbyte.commons.workers.config.WorkerConfigsProvider;
 import io.airbyte.config.EnvConfigs;
 import io.airbyte.container_orchestrator.AsyncStateManager;
-import io.airbyte.container_orchestrator.orchestrator.DbtJobOrchestrator;
 import io.airbyte.container_orchestrator.orchestrator.JobOrchestrator;
 import io.airbyte.container_orchestrator.orchestrator.NoOpOrchestrator;
-import io.airbyte.container_orchestrator.orchestrator.NormalizationJobOrchestrator;
 import io.airbyte.container_orchestrator.orchestrator.ReplicationJobOrchestrator;
 import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.metrics.lib.MetricClient;
@@ -31,8 +29,6 @@ import io.airbyte.workers.process.ProcessFactory;
 import io.airbyte.workers.storage.DocumentType;
 import io.airbyte.workers.storage.StorageClient;
 import io.airbyte.workers.storage.StorageClientFactory;
-import io.airbyte.workers.sync.DbtLauncherWorker;
-import io.airbyte.workers.sync.NormalizationLauncherWorker;
 import io.airbyte.workers.sync.OrchestratorConstants;
 import io.airbyte.workers.sync.ReplicationLauncherWorker;
 import io.airbyte.workers.workload.JobOutputDocStore;
@@ -90,7 +86,6 @@ class ContainerOrchestratorFactory {
   ProcessFactory kubeProcessFactory(
                                     final WorkerConfigsProvider workerConfigsProvider,
                                     final FeatureFlagClient featureFlagClient,
-                                    final EnvConfigs configs,
                                     @Value("${micronaut.server.port}") final int serverPort,
                                     @Value("${airbyte.worker.job.kube.serviceAccount}") final String serviceAccount)
       throws UnknownHostException {
@@ -115,8 +110,6 @@ class ContainerOrchestratorFactory {
                                      @Named("application") final String application,
                                      @Named("configDir") final String configDir,
                                      final EnvConfigs envConfigs,
-                                     final ProcessFactory processFactory,
-                                     final WorkerConfigsProvider workerConfigsProvider,
                                      final JobRunConfig jobRunConfig,
                                      final ReplicationWorkerFactory replicationWorkerFactory,
                                      final AsyncStateManager asyncStateManager,
@@ -127,8 +120,6 @@ class ContainerOrchestratorFactory {
     return switch (application) {
       case ReplicationLauncherWorker.REPLICATION -> new ReplicationJobOrchestrator(configDir, envConfigs, jobRunConfig,
           replicationWorkerFactory, asyncStateManager, workloadApiClient, workloadIdGenerator, workloadEnabled, jobOutputDocStore);
-      case NormalizationLauncherWorker.NORMALIZATION -> new NormalizationJobOrchestrator(envConfigs, processFactory, jobRunConfig, asyncStateManager);
-      case DbtLauncherWorker.DBT -> new DbtJobOrchestrator(envConfigs, workerConfigsProvider, processFactory, jobRunConfig, asyncStateManager);
       case AsyncOrchestratorPodProcess.NO_OP -> new NoOpOrchestrator();
       default -> throw new IllegalStateException("Could not find job orchestrator for application: " + application);
     };

@@ -21,7 +21,6 @@ const useStreamsContextInit = (connectionId: string) => {
     .filter(([status]) => status !== ConnectionStatusIndicatorStatus.Paused)
     .flatMap(([_, stream]) => stream);
 
-  /** deprecated... will remove with sync progress project */
   const filteredStreamsByStatus = useMemo(
     () => enabledStreamsByStatus.filter((stream) => stream.streamName.includes(searchTerm)),
     [searchTerm, enabledStreamsByStatus]

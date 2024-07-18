@@ -118,6 +118,7 @@ class ActorDefinitionHandlerHelperTest {
           .withSpec(new ConnectorSpecification().withProtocolVersion(VALID_PROTOCOL_VERSION))
           .withDocumentationUrl(DOCUMENTATION_URL.toString())
           .withSupportLevel(SupportLevel.NONE)
+          .withInternalSupportLevel(100L)
           .withProtocolVersion(VALID_PROTOCOL_VERSION)
           .withReleaseStage(io.airbyte.config.ReleaseStage.CUSTOM);
 

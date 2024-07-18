@@ -10,6 +10,8 @@ import io.airbyte.persistence.job.models.IntegrationLauncherConfig;
 import io.airbyte.persistence.job.models.JobRunConfig;
 import io.airbyte.workers.exception.WorkerException;
 import io.airbyte.workers.models.DiscoverCatalogInput;
+import io.airbyte.workers.models.PostprocessCatalogInput;
+import io.airbyte.workers.models.PostprocessCatalogOutput;
 import io.temporal.activity.ActivityInterface;
 import io.temporal.activity.ActivityMethod;
 import java.util.UUID;
@@ -36,5 +38,12 @@ public interface DiscoverCatalogActivity {
 
   @ActivityMethod
   void reportFailure(final Boolean workloadEnabled);
+
+  /**
+   * Perform catalog diffing, subsequent disabling of the connection and any other necessary
+   * operations after performing the discover.
+   */
+  @ActivityMethod
+  PostprocessCatalogOutput postprocess(final PostprocessCatalogInput input);
 
 }

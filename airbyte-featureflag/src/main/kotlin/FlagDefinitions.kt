@@ -19,8 +19,6 @@ object AutoDetectSchema : EnvVar(envVar = "AUTO_DETECT_SCHEMA")
 
 object RemoveValidationLimit : Temporary<Boolean>(key = "validation.removeValidationLimit", default = false)
 
-object NormalizationInDestination : Temporary<String>(key = "connectors.normalizationInDestination", default = "")
-
 object FieldSelectionEnabled : Temporary<Boolean>(key = "connection.columnSelection", default = false)
 
 object CheckWithCatalog : Temporary<Boolean>(key = "check-with-catalog", default = false)
@@ -156,6 +154,8 @@ object UseWorkloadApi : Temporary<Boolean>(key = "platform.use-workload-api", de
 
 object EmitStateStatsToSegment : Temporary<Boolean>(key = "platform.emit-state-stats-segment", default = false)
 
+object LogStreamNamesInSateMessage : Temporary<Boolean>(key = "platform.logs-stream-names-state", default = false)
+
 object ProcessRateLimitedMessage : Temporary<Boolean>(key = "platform.process-rate-limited-message", default = false)
 
 object AddInitialCreditsForWorkspace : Temporary<Int>(key = "add-credits-at-workspace-creation-for-org", default = 0)
@@ -186,6 +186,10 @@ object EnableResumableFullRefresh : Temporary<Boolean>(key = "platform.enable-re
 
 object AlwaysRunCheckBeforeSync : Permanent<Boolean>(key = "platform.always-run-check-before-sync", default = false)
 
+object WorkloadLauncherEnabled : EnvVar(envVar = "WORKLOAD_LAUNCHER_ENABLED", default = false)
+
+object WorkloadApiServerEnabled : EnvVar(envVar = "WORKLOAD_API_SERVER_ENABLED", default = false)
+
 object DiscoverPostprocessInTemporal : Permanent<Boolean>(key = "platform.discover-postprocess-in-temporal", default = false)
 
-object SyncStatsFlushPeriodOverrideSeconds : Permanent<Int>(key = "platform.sync-stats-flush-period-override-seconds", default = -1)
+object RestrictLoginsForSSODomains : Temporary<Boolean>(key = "platform.restrict-logins-for-sso-domains", default = false)

@@ -11,7 +11,7 @@ dependencies {
   implementation(libs.jooq)
   implementation(libs.postgresql)
   implementation(libs.bundles.flyway)
-  implementation(project(":airbyte-db:db-lib"))
+  implementation(project(":oss:airbyte-db:db-lib"))
 
   // jOOQ code generation)
   implementation(libs.jooq.codegen)
@@ -24,13 +24,13 @@ dependencies {
   implementation(libs.jna.platform)
 
   // The jOOQ code generator(only has access to classes added to the jooqGenerator configuration
-  jooqGenerator(project(":airbyte-db:db-lib")) {
+  jooqGenerator(project(":oss:airbyte-db:db-lib")) {
     isTransitive = false
   }
-  jooqGenerator(project(":airbyte-commons")) {
+  jooqGenerator(project(":oss:airbyte-commons")) {
     isTransitive = false
   }
-  jooqGenerator(project(":airbyte-config:config-models")) {
+  jooqGenerator(project(":oss:airbyte-config:config-models")) {
     isTransitive = false
   }
   jooqGenerator(libs.bundles.flyway)

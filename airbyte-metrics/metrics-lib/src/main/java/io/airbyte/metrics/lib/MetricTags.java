@@ -39,6 +39,7 @@ public class MetricTags {
   public static final String GEOGRAPHY = "geography";
   public static final String IMPLEMENTATION = "implementation";
   public static final String IS_CUSTOM_CONNECTOR_SYNC = "is_custom_connector_sync";
+  public static final String IS_RESET = "is_reset";
   public static final String JOB_ID = "job_id";
   public static final String JOB_STATUS = "job_status";
   public static final String KILLED = "killed";
@@ -54,6 +55,7 @@ public class MetricTags {
   public static final String RECORD_COUNT_TYPE = "record_count_type";
   public static final String RELEASE_STAGE = "release_stage";
   public static final String SOURCE_ID = "source_id";
+  public static final String SOURCE_DEFINITION_ID = "source_definition_id";
   public static final String SOURCE_IMAGE = "source_image";
   public static final String SOURCE_IMAGE_IS_DEFAULT = "source_image_is_default";
   public static final String STATUS = "status";

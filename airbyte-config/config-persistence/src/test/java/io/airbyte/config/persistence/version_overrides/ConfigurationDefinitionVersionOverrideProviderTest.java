@@ -21,7 +21,6 @@ import io.airbyte.config.ConfigOriginType;
 import io.airbyte.config.ConfigResourceType;
 import io.airbyte.config.ConfigSchema;
 import io.airbyte.config.ConfigScopeType;
-import io.airbyte.config.NormalizationDestinationDefinitionConfig;
 import io.airbyte.config.ReleaseStage;
 import io.airbyte.config.ScopedConfiguration;
 import io.airbyte.config.StandardWorkspace;
@@ -67,10 +66,6 @@ class ConfigurationDefinitionVersionOverrideProviderTest {
       .withProtocolVersion("0.2.0")
       .withConnectionSpecification(Jsons.jsonNode(Map.of(
           "theSpec", "goesHere")));
-  private static final NormalizationDestinationDefinitionConfig NORMALIZATION_CONFIG = new NormalizationDestinationDefinitionConfig()
-      .withNormalizationRepository("airbyte/normalization")
-      .withNormalizationTag("tag")
-      .withNormalizationIntegrationType("bigquery");
   private static final ActorDefinitionVersion DEFAULT_VERSION = new ActorDefinitionVersion()
       .withVersionId(UUID.randomUUID())
       .withDockerRepository(DOCKER_REPOSITORY)
@@ -81,9 +76,7 @@ class ConfigurationDefinitionVersionOverrideProviderTest {
       .withDocumentationUrl(DOCS_URL)
       .withReleaseStage(ReleaseStage.BETA)
       .withSuggestedStreams(SUGGESTED_STREAMS)
-      .withAllowedHosts(ALLOWED_HOSTS)
-      .withSupportsDbt(true)
-      .withNormalizationConfig(NORMALIZATION_CONFIG);
+      .withAllowedHosts(ALLOWED_HOSTS);
   private static final ActorDefinitionVersion OVERRIDE_VERSION = new ActorDefinitionVersion()
       .withVersionId(UUID.randomUUID())
       .withDockerRepository(DOCKER_REPOSITORY)
@@ -94,9 +87,7 @@ class ConfigurationDefinitionVersionOverrideProviderTest {
       .withDocumentationUrl(DOCS_URL)
       .withReleaseStage(ReleaseStage.BETA)
       .withSuggestedStreams(SUGGESTED_STREAMS)
-      .withAllowedHosts(ALLOWED_HOSTS)
-      .withSupportsDbt(true)
-      .withNormalizationConfig(NORMALIZATION_CONFIG);
+      .withAllowedHosts(ALLOWED_HOSTS);
 
   private WorkspaceService mWorkspaceService;
   private ActorDefinitionService mActorDefinitionService;

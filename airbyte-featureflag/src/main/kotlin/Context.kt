@@ -232,3 +232,9 @@ data class Priority(override val key: String) : Context {
     val HIGH_PRIORITY = "high"
   }
 }
+
+// This is aimed to be used with the EnvFeatureFlag
+data object Empty : Context {
+  override val kind: String = "empty"
+  override val key: String = ""
+}

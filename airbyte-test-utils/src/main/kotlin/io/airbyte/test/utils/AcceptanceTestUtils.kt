@@ -32,7 +32,7 @@ private val logger = KotlinLogging.logger {}
 object AcceptanceTestUtils {
   private const val JITTER_MAX_INTERVAL_SECS: Int = 10
   private const val MAX_TRIES: Int = 3
-  private const val DEFAULT_TIMEOUT: Long = 30L
+  private const val DEFAULT_TIMEOUT: Long = 60L
 
   // TODO(mfsiega-airbyte): clean up and centralize the way we do config.
   private const val IS_ENTERPRISE: String = "IS_ENTERPRISE"

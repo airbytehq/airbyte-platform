@@ -52,10 +52,10 @@ public class JwtUserAuthenticationResolver implements UserAuthenticationResolver
   }
 
   /**
-   * Resolves JWT token to SsoRealm. If Sso realm does not exist, it will return null.
+   * Resolves JWT token to realm. If a realm is not set, it will return null.
    */
   @Override
-  public Optional<String> resolveSsoRealm() {
+  public Optional<String> resolveRealm() {
     if (securityService.isEmpty()) {
       log.warn("Security service is not available. Returning empty realm.");
       return Optional.empty();

@@ -315,7 +315,7 @@ export const InternalConnectorBuilderFormStateProvider: React.FC<
         setValue("mode", "yaml");
       } else {
         const confirmDiscard = (errorMessage: string) => {
-          if (isEqual(formValues, DEFAULT_BUILDER_FORM_VALUES)) {
+          if (isEqual(formValues, DEFAULT_BUILDER_FORM_VALUES) && jsonManifest.streams.length > 0) {
             openNoUiValueModal(errorMessage);
           } else {
             openConfirmationModal({
@@ -334,7 +334,7 @@ export const InternalConnectorBuilderFormStateProvider: React.FC<
           }
         };
         try {
-          if (jsonManifest === DEFAULT_JSON_MANIFEST_VALUES) {
+          if (isEqual(jsonManifest, removeEmptyProperties(DEFAULT_JSON_MANIFEST_VALUES))) {
             setValue("mode", "ui");
             return;
           }
