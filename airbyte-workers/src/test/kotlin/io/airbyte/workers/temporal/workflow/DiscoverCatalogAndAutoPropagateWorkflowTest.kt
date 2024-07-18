@@ -9,6 +9,7 @@ import io.airbyte.workers.models.DiscoverCatalogInput
 import io.airbyte.workers.models.PostprocessCatalogInput
 import io.airbyte.workers.models.PostprocessCatalogOutput
 import io.airbyte.workers.temporal.discover.catalog.DiscoverCatalogActivity
+import io.airbyte.workers.temporal.discover.catalog.DiscoverCatalogHelperActivity
 import io.airbyte.workers.temporal.workflows.DiscoverCatalogAndAutoPropagateWorkflowImpl
 import io.mockk.every
 import io.mockk.mockk
@@ -24,6 +25,7 @@ class DiscoverCatalogAndAutoPropagateWorkflowTest {
   val catalogDiff = CatalogDiff().withAdditionalProperty("test", "value")
 
   val activity: DiscoverCatalogActivity = mockk()
+  val activityReport: DiscoverCatalogHelperActivity = mockk()
   val jobRunConfig =
     JobRunConfig()
       .withJobId("1")
@@ -37,7 +39,7 @@ class DiscoverCatalogAndAutoPropagateWorkflowTest {
 
   @Test
   fun `Test success`() {
-    val discoverCatalogAndAutoPropagateWorkflow = DiscoverCatalogAndAutoPropagateWorkflowImpl(activity)
+    val discoverCatalogAndAutoPropagateWorkflow = DiscoverCatalogAndAutoPropagateWorkflowImpl(activity, activityReport)
 
     every {
       activity.runWithWorkload(
@@ -49,24 +51,24 @@ class DiscoverCatalogAndAutoPropagateWorkflowTest {
       )
     } returns ConnectorJobOutput().withDiscoverCatalogId(discoverCatalogId)
     every {
-      activity.postprocess(
+      activityReport.postprocess(
         PostprocessCatalogInput(
           discoverCatalogId,
           connectionId,
         ),
       )
     } returns PostprocessCatalogOutput.success(catalogDiff)
-    every { activity.reportSuccess(true) } returns Unit
+    every { activityReport.reportSuccess(true) } returns Unit
 
     val result = discoverCatalogAndAutoPropagateWorkflow.run(jobRunConfig, launcherConfig, config)
 
-    verify { activity.reportSuccess(true) }
+    verify { activityReport.reportSuccess(true) }
     assertEquals(catalogDiff, result.appliedDiff)
   }
 
   @Test
   fun `Test failure discover`() {
-    val discoverCatalogAndAutoPropagateWorkflow = DiscoverCatalogAndAutoPropagateWorkflowImpl(activity)
+    val discoverCatalogAndAutoPropagateWorkflow = DiscoverCatalogAndAutoPropagateWorkflowImpl(activity, activityReport)
 
     every {
       activity.runWithWorkload(
@@ -77,17 +79,17 @@ class DiscoverCatalogAndAutoPropagateWorkflowTest {
         ),
       )
     } returns ConnectorJobOutput().withDiscoverCatalogId(null)
-    every { activity.reportFailure(true) } returns Unit
+    every { activityReport.reportFailure(true) } returns Unit
 
     val result = discoverCatalogAndAutoPropagateWorkflow.run(jobRunConfig, launcherConfig, config)
 
-    verify { activity.reportFailure(true) }
+    verify { activityReport.reportFailure(true) }
     assertEquals(null, result.appliedDiff)
   }
 
   @Test
   fun `Test failure post process`() {
-    val discoverCatalogAndAutoPropagateWorkflow = DiscoverCatalogAndAutoPropagateWorkflowImpl(activity)
+    val discoverCatalogAndAutoPropagateWorkflow = DiscoverCatalogAndAutoPropagateWorkflowImpl(activity, activityReport)
 
     every {
       activity.runWithWorkload(
@@ -99,18 +101,18 @@ class DiscoverCatalogAndAutoPropagateWorkflowTest {
       )
     } returns ConnectorJobOutput().withDiscoverCatalogId(discoverCatalogId)
     every {
-      activity.postprocess(
+      activityReport.postprocess(
         PostprocessCatalogInput(
           discoverCatalogId,
           connectionId,
         ),
       )
     } returns PostprocessCatalogOutput.failure(RuntimeException())
-    every { activity.reportFailure(true) } returns Unit
+    every { activityReport.reportFailure(true) } returns Unit
 
     val result = discoverCatalogAndAutoPropagateWorkflow.run(jobRunConfig, launcherConfig, config)
 
-    verify { activity.reportFailure(true) }
+    verify { activityReport.reportFailure(true) }
     assertEquals(null, result.appliedDiff)
   }
 }

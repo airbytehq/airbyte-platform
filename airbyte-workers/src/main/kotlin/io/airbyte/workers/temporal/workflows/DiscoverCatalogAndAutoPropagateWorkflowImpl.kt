@@ -14,17 +14,25 @@ import io.airbyte.workers.models.DiscoverCatalogInput
 import io.airbyte.workers.models.PostprocessCatalogInput
 import io.airbyte.workers.models.RefreshSchemaActivityOutput
 import io.airbyte.workers.temporal.discover.catalog.DiscoverCatalogActivity
+import io.airbyte.workers.temporal.discover.catalog.DiscoverCatalogHelperActivity
+import io.github.oshai.kotlinlogging.KotlinLogging
+
+private val logger = KotlinLogging.logger {}
 
 open class DiscoverCatalogAndAutoPropagateWorkflowImpl : DiscoverCatalogAndAutoPropagateWorkflow {
   @VisibleForTesting
-  constructor(activity: DiscoverCatalogActivity) {
+  constructor(activity: DiscoverCatalogActivity, reportActivity: DiscoverCatalogHelperActivity) {
     this.activity = activity
+    this.reportActivity = reportActivity
   }
 
   constructor() {}
 
-  @TemporalActivityStub(activityOptionsBeanName = "discoveryActivityOptions")
+  @TemporalActivityStub(activityOptionsBeanName = "discoveryActivityOptionsWithRetry")
   private lateinit var activity: DiscoverCatalogActivity
+
+  @TemporalActivityStub(activityOptionsBeanName = "shortActivityOptions")
+  private lateinit var reportActivity: DiscoverCatalogHelperActivity
 
   @Trace(operationName = ApmTraceConstants.WORKFLOW_TRACE_OPERATION_NAME)
   override fun run(
@@ -49,7 +57,7 @@ open class DiscoverCatalogAndAutoPropagateWorkflowImpl : DiscoverCatalogAndAutoP
           ),
         )
       } catch (e: WorkerException) {
-        activity.reportFailure(true)
+        reportActivity.reportFailure(true)
         throw RuntimeException(e)
       }
 
@@ -57,17 +65,17 @@ open class DiscoverCatalogAndAutoPropagateWorkflowImpl : DiscoverCatalogAndAutoP
       return failure()
     }
 
-    val postprocessResult = activity.postprocess(PostprocessCatalogInput(workloadResult.discoverCatalogId, launcherConfig.connectionId))
+    val postprocessResult = reportActivity.postprocess(PostprocessCatalogInput(workloadResult.discoverCatalogId, launcherConfig.connectionId))
     if (postprocessResult.isFailure) {
       return failure()
     }
 
-    activity.reportSuccess(true)
+    reportActivity.reportSuccess(true)
     return RefreshSchemaActivityOutput(postprocessResult.diff)
   }
 
   fun failure(): RefreshSchemaActivityOutput {
-    activity.reportFailure(true)
+    reportActivity.reportFailure(true)
     return RefreshSchemaActivityOutput(null)
   }
 }

@@ -11,6 +11,7 @@ import io.airbyte.metrics.lib.MetricClient;
 import io.airbyte.workers.exception.WorkerException;
 import io.airbyte.workers.temporal.check.connection.CheckConnectionActivity;
 import io.airbyte.workers.temporal.discover.catalog.DiscoverCatalogActivity;
+import io.airbyte.workers.temporal.discover.catalog.DiscoverCatalogHelperActivity;
 import io.airbyte.workers.temporal.scheduling.activities.AppendToAttemptLogActivity;
 import io.airbyte.workers.temporal.scheduling.activities.AutoDisableConnectionActivity;
 import io.airbyte.workers.temporal.scheduling.activities.CheckRunProgressActivity;
@@ -96,8 +97,9 @@ public class ActivityBeanFactory {
   @Singleton
   @Named("discoverActivities")
   public List<Object> discoverActivities(
-                                         final DiscoverCatalogActivity discoverCatalogActivity) {
-    return List.of(discoverCatalogActivity);
+                                         final DiscoverCatalogActivity discoverCatalogActivity,
+                                         final DiscoverCatalogHelperActivity discoverCatalogHelperActivity) {
+    return List.of(discoverCatalogActivity, discoverCatalogHelperActivity);
   }
 
   @Singleton
@@ -139,6 +141,18 @@ public class ActivityBeanFactory {
     return ActivityOptions.newBuilder()
         .setScheduleToCloseTimeout(Duration.ofMinutes(discoveryTimeoutMinutes))
         .setRetryOptions(TemporalConstants.NO_RETRY)
+        .build();
+  }
+
+  @Singleton
+  @Named("discoveryActivityOptionsWithRetry")
+  public ActivityOptions discoveryActivityOptionsWithRetry(@Property(name = "airbyte.activity.discovery-timeout",
+                                                                     defaultValue = "30") final Integer discoveryTimeoutMinutes,
+                                                           @Named("shortRetryOptions") final RetryOptions retryOptions) {
+    return ActivityOptions.newBuilder()
+        .setScheduleToCloseTimeout(Duration.ofMinutes(discoveryTimeoutMinutes))
+        .setRetryOptions(retryOptions)
+        .setHeartbeatTimeout(TemporalConstants.HEARTBEAT_TIMEOUT)
         .build();
   }
 

@@ -6,10 +6,7 @@ package io.airbyte.workers.temporal.discover.catalog
 import io.airbyte.api.client.AirbyteApiClient
 import io.airbyte.api.client.WorkloadApiClient
 import io.airbyte.api.client.generated.ConnectionApi
-import io.airbyte.api.client.model.generated.CatalogDiff
 import io.airbyte.api.client.model.generated.Geography
-import io.airbyte.api.client.model.generated.PostprocessDiscoveredCatalogRequestBody
-import io.airbyte.api.client.model.generated.PostprocessDiscoveredCatalogResult
 import io.airbyte.commons.features.FeatureFlags
 import io.airbyte.commons.protocol.AirbyteMessageSerDeProvider
 import io.airbyte.commons.protocol.AirbyteProtocolVersionedMigratorFactory
@@ -26,11 +23,8 @@ import io.airbyte.featureflag.TestClient
 import io.airbyte.metrics.lib.MetricClient
 import io.airbyte.persistence.job.models.IntegrationLauncherConfig
 import io.airbyte.persistence.job.models.JobRunConfig
-import io.airbyte.workers.helper.CatalogDiffConverter
 import io.airbyte.workers.helper.GsonPksExtractor
 import io.airbyte.workers.models.DiscoverCatalogInput
-import io.airbyte.workers.models.PostprocessCatalogInput
-import io.airbyte.workers.models.PostprocessCatalogOutput
 import io.airbyte.workers.process.ProcessFactory
 import io.airbyte.workers.sync.WorkloadClient
 import io.airbyte.workers.temporal.discover.catalog.DiscoverCatalogActivityImpl.DISCOVER_CATALOG_SNAP_DURATION
@@ -43,13 +37,10 @@ import io.airbyte.workload.api.client.model.generated.WorkloadType
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.spyk
-import io.mockk.verify
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.BeforeEach
-import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.ValueSource
-import java.io.IOException
 import java.nio.file.Path
 import java.util.Optional
 import java.util.UUID
@@ -101,6 +92,7 @@ class DiscoverCatalogActivityTest {
           workloadIdGenerator,
         ),
       )
+    every { discoverCatalogActivity.activityContext } returns mockk()
   }
 
   @ParameterizedTest
@@ -147,53 +139,5 @@ class DiscoverCatalogActivityTest {
     every { jobOutputDocStore.read(workloadId) }.returns(Optional.of(output))
     val actualOutput = discoverCatalogActivity.runWithWorkload(input)
     Assertions.assertEquals(output, actualOutput)
-  }
-
-  @Test
-  fun postprocessHappyPath() {
-    val diff1: CatalogDiff =
-      mockk {
-        every { transforms } returns listOf()
-      }
-    val apiResult: PostprocessDiscoveredCatalogResult =
-      mockk {
-        every { appliedDiff } returns diff1
-      }
-    every { connectionApi.postprocessDiscoveredCatalogForConnection(any()) } returns apiResult
-
-    val input = PostprocessCatalogInput(UUID.randomUUID(), UUID.randomUUID())
-    val result = discoverCatalogActivity.postprocess(input)
-
-    val expectedReqBody = PostprocessDiscoveredCatalogRequestBody(input.catalogId!!, input.connectionId!!)
-
-    verify { connectionApi.postprocessDiscoveredCatalogForConnection(eq(expectedReqBody)) }
-
-    val expected = PostprocessCatalogOutput.success(CatalogDiffConverter.toDomain(diff1))
-    Assertions.assertEquals(expected, result)
-    Assertions.assertTrue(result.isSuccess)
-    Assertions.assertFalse(result.isFailure)
-  }
-
-  @Test
-  fun postprocessExceptionalPath() {
-    val exception = IOException("not happy")
-
-    val apiResult: PostprocessDiscoveredCatalogResult =
-      mockk {
-        every { appliedDiff } throws exception
-      }
-    every { connectionApi.postprocessDiscoveredCatalogForConnection(any()) } returns apiResult
-
-    val input = PostprocessCatalogInput(UUID.randomUUID(), UUID.randomUUID())
-    val result = discoverCatalogActivity.postprocess(input)
-
-    val expectedReqBody = PostprocessDiscoveredCatalogRequestBody(input.catalogId!!, input.connectionId!!)
-
-    verify { connectionApi.postprocessDiscoveredCatalogForConnection(eq(expectedReqBody)) }
-
-    val expected = PostprocessCatalogOutput.failure(exception)
-    Assertions.assertEquals(expected, result)
-    Assertions.assertFalse(result.isSuccess)
-    Assertions.assertTrue(result.isFailure)
   }
 }

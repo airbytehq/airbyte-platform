@@ -51,9 +51,18 @@ class WorkloadClient(private val workloadApiClient: WorkloadApiClient, private v
     workloadId: String,
     pollingFrequencyInSeconds: Int,
   ) {
+    waitForWorkload(workloadId, pollingFrequencyInSeconds) {}
+  }
+
+  fun waitForWorkload(
+    workloadId: String,
+    pollingFrequencyInSeconds: Int,
+    loopingAction: () -> Unit,
+  ) {
     try {
       var workload = workloadApiClient.workloadApi.workloadGet(workloadId)
       while (!isWorkloadTerminal(workload)) {
+        loopingAction()
         Thread.sleep(pollingFrequencyInSeconds.seconds.inWholeMilliseconds)
         workload = workloadApiClient.workloadApi.workloadGet(workloadId)
       }
