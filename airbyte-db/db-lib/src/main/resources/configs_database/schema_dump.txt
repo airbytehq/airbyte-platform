@@ -133,6 +133,15 @@ create table "public"."airbyte_configs_migrations" (
   "success" boolean not null,
   constraint "airbyte_configs_migrations_pk" primary key ("installed_rank")
 );
+create table "public"."auth_refresh_token" (
+  "value" varchar(2147483647) not null,
+  "session_id" varchar(2147483647) not null,
+  "revoked" boolean not null default true,
+  "created_at" timestamp(6) with time zone not null default current_timestamp,
+  "updated_at" timestamp(6) with time zone not null default current_timestamp,
+  constraint "auth_refresh_token_pkey" primary key ("value"),
+  constraint "auth_refresh_token_session_id_value_key" unique ("session_id", "value")
+);
 create table "public"."auth_user" (
   "id" uuid not null,
   "user_id" uuid not null,
