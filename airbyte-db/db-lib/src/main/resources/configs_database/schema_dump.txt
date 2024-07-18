@@ -252,7 +252,7 @@ create table "public"."organization_email_domain" (
   "email_domain" varchar(256) not null,
   "created_at" timestamp(6) with time zone not null default current_timestamp,
   constraint "organization_email_domain_pkey" primary key ("id"),
-  constraint "organization_email_domain_email_domain_key" unique ("email_domain")
+  constraint "organization_id_email_domain_key" unique ("organization_id", "email_domain")
 );
 create table "public"."permission" (
   "id" uuid not null,
