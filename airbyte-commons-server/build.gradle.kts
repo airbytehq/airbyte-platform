@@ -38,6 +38,7 @@ dependencies {
   implementation(libs.swagger.annotations)
   implementation(libs.bundles.log4j)
   implementation(libs.commons.io)
+  implementation(libs.kotlin.logging)
   implementation(project(":oss:airbyte-analytics"))
   implementation(project(":oss:airbyte-api"))
   implementation(project(":oss:airbyte-commons"))

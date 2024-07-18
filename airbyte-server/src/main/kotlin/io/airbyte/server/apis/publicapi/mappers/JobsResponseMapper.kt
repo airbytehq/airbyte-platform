@@ -20,13 +20,13 @@ import java.util.UUID
  * Mappers that help convert models from the config api to models from the public api.
  */
 object JobsResponseMapper {
-  val ALLOWED_CONFIG_TYPES = listOf(JobConfigType.SYNC, JobConfigType.RESET_CONNECTION)
+  private val ALLOWED_CONFIG_TYPES = listOf(JobConfigType.SYNC, JobConfigType.RESET_CONNECTION)
 
   /**
    * Converts a JobReadList object from the config api to a JobsResponse object.
    *
    * @param jobsList Output of a job list from config api
-   * @param connectionId Id of the connection
+   * @param connectionId ID of the connection
    * @param jobType Type of job e.g. sync or reset
    * @param limit Number of JobResponses to be outputted
    * @param offset Offset of the pagination

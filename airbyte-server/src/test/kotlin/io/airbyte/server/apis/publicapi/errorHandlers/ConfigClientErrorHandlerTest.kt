@@ -52,13 +52,13 @@ class ConfigClientErrorHandlerTest {
 
   @Test
   fun `test that it can handle throwables`() {
-    assertThrows<ResourceNotFoundProblem> { ConfigClientErrorHandler.handleError(ConfigNotFoundException("test", "test"), resourceId.toString()) }
+    assertThrows<ResourceNotFoundProblem> { ConfigClientErrorHandler.handleError(ConfigNotFoundException("test", "test")) }
 
-    assertThrows<TryAgainLaterConflictProblem> { ConfigClientErrorHandler.handleError(ValueConflictKnownException("test"), resourceId.toString()) }
+    assertThrows<TryAgainLaterConflictProblem> { ConfigClientErrorHandler.handleError(ValueConflictKnownException("test")) }
 
-    assertThrows<StateConflictProblem> { ConfigClientErrorHandler.handleError(IllegalStateException(), resourceId.toString()) }
+    assertThrows<StateConflictProblem> { ConfigClientErrorHandler.handleError(IllegalStateException()) }
 
-    assertThrows<UnprocessableEntityProblem> { ConfigClientErrorHandler.handleError(JsonValidationException("test"), resourceId.toString()) }
+    assertThrows<UnprocessableEntityProblem> { ConfigClientErrorHandler.handleError(JsonValidationException("test")) }
   }
 
   @Test
@@ -88,14 +88,14 @@ class ConfigClientErrorHandlerTest {
       )
 
     runCatching { JsonSchemaValidator().ensure(schema, Jsons.deserialize("{\"test\": \"test\"}")) }
-      .onFailure { assertThrows<UnprocessableEntityProblem> { ConfigClientErrorHandler.handleError(it, resourceId.toString()) } }
+      .onFailure { assertThrows<UnprocessableEntityProblem> { ConfigClientErrorHandler.handleError(it) } }
   }
 
   @Test
   fun `test that it can handle job cancellation failures gracefully`() {
     val failureReason = "Could not find job with id: -1"
     assertThrows<StateConflictProblem>(JOB_NOT_RUNNING_MESSAGE) {
-      ConfigClientErrorHandler.handleError(RuntimeException(failureReason), resourceId.toString())
+      ConfigClientErrorHandler.handleError(RuntimeException(failureReason))
     }
   }
 

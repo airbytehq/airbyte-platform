@@ -105,7 +105,7 @@ class StreamStatus(
     return thisMetadata?.asText() == otherMetadata?.asText()
   }
 
-  protected fun canEqual(other: Any?): Boolean {
+  private fun canEqual(other: Any?): Boolean {
     return other is StreamStatus
   }
 

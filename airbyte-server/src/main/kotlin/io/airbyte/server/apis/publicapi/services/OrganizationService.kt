@@ -35,7 +35,7 @@ abstract class OrganizationServiceImpl(
       }
         .onFailure {
           log.error("Error for getOrganizationsByUser", it)
-          ConfigClientErrorHandler.handleError(it, "airbyte-organization")
+          ConfigClientErrorHandler.handleError(it)
         }
     log.debug(HTTP_RESPONSE_BODY_DEBUG_MESSAGE + result)
     val userOrganizationsReadList = result.getOrThrow()

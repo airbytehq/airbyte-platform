@@ -98,7 +98,7 @@ class DestinationServiceImpl(
         destinationHandler.createDestination(destinationCreateOss)
       }.onFailure {
         log.error("Error while listing connections for workspaces: ", it)
-        ConfigClientErrorHandler.handleError(it, destinationCreateRequest.workspaceId.toString())
+        ConfigClientErrorHandler.handleError(it)
       }
 
     log.debug(HTTP_RESPONSE_BODY_DEBUG_MESSAGE + result)
@@ -118,7 +118,7 @@ class DestinationServiceImpl(
         destinationHandler.getDestination(destinationIdRequestBody)
       }.onFailure {
         log.error("Error while getting destination: ", it)
-        ConfigClientErrorHandler.handleError(it, destinationId.toString())
+        ConfigClientErrorHandler.handleError(it)
       }
 
     log.debug(HTTP_RESPONSE_BODY_DEBUG_MESSAGE + result)
@@ -138,7 +138,7 @@ class DestinationServiceImpl(
         destinationHandler.getDestination(destinationIdRequestBody)
       }.onFailure {
         log.error("Error while getting destination: ", it)
-        ConfigClientErrorHandler.handleError(it, destinationId.toString())
+        ConfigClientErrorHandler.handleError(it)
       }
 
     log.debug(HTTP_RESPONSE_BODY_DEBUG_MESSAGE + result)
@@ -164,7 +164,7 @@ class DestinationServiceImpl(
         destinationHandler.updateDestination(destinationUpdate)
       }.onFailure {
         log.error("Error while listing connections for workspaces: ", it)
-        ConfigClientErrorHandler.handleError(it, destinationId.toString())
+        ConfigClientErrorHandler.handleError(it)
       }
     log.debug(HTTP_RESPONSE_BODY_DEBUG_MESSAGE + result)
     val destinationRead = result.getOrNull()!!
@@ -189,7 +189,7 @@ class DestinationServiceImpl(
         destinationHandler.partialDestinationUpdate(partialDestinationUpdate)
       }.onFailure {
         log.error("Error while listing connections for workspaces: ", it)
-        ConfigClientErrorHandler.handleError(it, destinationId.toString())
+        ConfigClientErrorHandler.handleError(it)
       }
     log.debug(HTTP_RESPONSE_BODY_DEBUG_MESSAGE + result)
     val destinationRead = result.getOrNull()!!
@@ -206,7 +206,7 @@ class DestinationServiceImpl(
         destinationHandler.deleteDestination(destinationIdRequestBody)
       }.onFailure {
         log.error("Error while listing connections for workspaces: ", it)
-        ConfigClientErrorHandler.handleError(it, destinationId.toString())
+        ConfigClientErrorHandler.handleError(it)
       }
     log.debug(HTTP_RESPONSE_BODY_DEBUG_MESSAGE + result)
   }
@@ -232,7 +232,7 @@ class DestinationServiceImpl(
         destinationHandler.listDestinationsForWorkspaces(listResourcesForWorkspacesRequestBody)
       }.onFailure {
         log.error("Error while listing destinations for workspaces: ", it)
-        ConfigClientErrorHandler.handleError(it, workspaceIds.toString())
+        ConfigClientErrorHandler.handleError(it)
       }
     log.debug(HTTP_RESPONSE_BODY_DEBUG_MESSAGE + result)
     return DestinationsResponseMapper.from(
@@ -261,7 +261,7 @@ class DestinationServiceImpl(
         connectorDefinitionSpecificationHandler.getDestinationSpecification(destinationDefinitionIdWithWorkspaceId)
       }.onFailure {
         log.error("Error while listing destinations for workspaces: ", it)
-        ConfigClientErrorHandler.handleError(it, destinationDefinitionId.toString())
+        ConfigClientErrorHandler.handleError(it)
       }
 
     val destinationDefinitionSpecificationRead = result.getOrNull()!!

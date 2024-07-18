@@ -4,7 +4,6 @@ import io.airbyte.workers.process.KubePodProcess
 import io.airbyte.workers.sync.OrchestratorConstants
 import io.micronaut.context.annotation.Factory
 import io.micronaut.context.annotation.Value
-import jakarta.annotation.Nullable
 import jakarta.inject.Named
 import jakarta.inject.Singleton
 import java.nio.file.Path
@@ -20,7 +19,7 @@ class ConfigFactory {
   @Singleton
   @Named("configDir")
   fun configDir(
-    @Value("\${airbyte.config-dir}") @Nullable configDir: String,
+    @Value("\${airbyte.config-dir}") configDir: String?,
   ): String {
     if (configDir == null) {
       return KubePodProcess.CONFIG_DIR

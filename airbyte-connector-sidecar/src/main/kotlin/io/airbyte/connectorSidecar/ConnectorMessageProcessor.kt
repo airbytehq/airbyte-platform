@@ -39,8 +39,8 @@ private val logger = KotlinLogging.logger {}
 
 @Singleton
 class ConnectorMessageProcessor(
-  val connectorConfigUpdater: ConnectorConfigUpdater,
-  val airbyteApiClient: AirbyteApiClient,
+  private val connectorConfigUpdater: ConnectorConfigUpdater,
+  private val airbyteApiClient: AirbyteApiClient,
 ) {
   data class OperationResult(
     val connectionStatus: AirbyteConnectionStatus? = null,
@@ -115,7 +115,7 @@ class ConnectorMessageProcessor(
       OperationType.CHECK ->
         updateConfigFromControlMessage(
           input.checkInput!!.actorId,
-          input.checkInput!!.actorType,
+          input.checkInput.actorType,
           messagesByType,
           inputConfig,
           jobOutput,
@@ -229,7 +229,7 @@ class ConnectorMessageProcessor(
     jobOutput: ConnectorJobOutput,
   ) {
     logger.info { "Checking for optional control message..." }
-    if (actorId != null && actorType != null) {
+    if (actorId != null) {
       val optionalConfigMsg = WorkerUtils.getMostRecentConfigControlMessage(messagesByType)
       if (optionalConfigMsg.isPresent && WorkerUtils.getDidControlMessageChangeConfig(inputConfig, optionalConfigMsg.get())) {
         logger.info { "Optional control message present. Updating..." }

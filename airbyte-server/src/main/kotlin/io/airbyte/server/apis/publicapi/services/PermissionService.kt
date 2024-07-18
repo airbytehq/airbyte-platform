@@ -66,7 +66,7 @@ open class PermissionServiceImpl(
       kotlin.runCatching { permissionHandler.createPermission(permissionCreateOss) }
         .onFailure {
           log.error("Error for createPermission", it)
-          ConfigClientErrorHandler.handleError(it, permissionCreateRequest.userId.toString())
+          ConfigClientErrorHandler.handleError(it)
         }
     log.debug(HTTP_RESPONSE_BODY_DEBUG_MESSAGE + result)
     return PermissionReadMapper.from(result.getOrThrow())
@@ -80,7 +80,7 @@ open class PermissionServiceImpl(
       kotlin.runCatching { permissionHandler.listPermissionsByUser(userId) }
         .onFailure {
           log.error("Error for getPermissionsByUserId", it)
-          ConfigClientErrorHandler.handleError(it, userId.toString())
+          ConfigClientErrorHandler.handleError(it)
         }
     log.debug(HTTP_RESPONSE_BODY_DEBUG_MESSAGE + result)
     val permissionReadList = result.getOrThrow().permissions
@@ -100,7 +100,7 @@ open class PermissionServiceImpl(
       kotlin.runCatching { permissionHandler.listPermissionsByUserInAnOrganization(userId, organizationId) }
         .onFailure {
           log.error("Error for getPermissionsByUserInAnOrganization", it)
-          ConfigClientErrorHandler.handleError(it, userId.toString())
+          ConfigClientErrorHandler.handleError(it)
         }
     log.debug(HTTP_RESPONSE_BODY_DEBUG_MESSAGE + result)
     val permissionReadList = result.getOrThrow().permissions
@@ -117,7 +117,7 @@ open class PermissionServiceImpl(
       kotlin.runCatching { permissionHandler.getPermission(permissionIdRequestBody) }
         .onFailure {
           log.error("Error for getPermission", it)
-          ConfigClientErrorHandler.handleError(it, permissionId.toString())
+          ConfigClientErrorHandler.handleError(it)
         }
     log.debug(HTTP_RESPONSE_BODY_DEBUG_MESSAGE + result)
     return PermissionReadMapper.from(result.getOrThrow())
@@ -141,7 +141,7 @@ open class PermissionServiceImpl(
       }
         .onFailure {
           log.error("Error for updatePermission", it)
-          ConfigClientErrorHandler.handleError(it, permissionId.toString())
+          ConfigClientErrorHandler.handleError(it)
         }
     log.debug(HTTP_RESPONSE_BODY_DEBUG_MESSAGE + updatedPermission)
     return PermissionReadMapper.from(updatedPermission.getOrThrow())
@@ -157,7 +157,7 @@ open class PermissionServiceImpl(
       kotlin.runCatching { permissionHandler.deletePermission(permissionIdRequestBody) }
         .onFailure {
           log.error("Error for deletePermission", it)
-          ConfigClientErrorHandler.handleError(it, permissionId.toString())
+          ConfigClientErrorHandler.handleError(it)
         }
     log.debug(HTTP_RESPONSE_BODY_DEBUG_MESSAGE + result)
   }

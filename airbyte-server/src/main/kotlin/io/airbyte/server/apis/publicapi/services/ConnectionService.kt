@@ -114,7 +114,7 @@ class ConnectionServiceImpl(
         connectionHandler.deleteConnection(connectionId)
       }.onFailure {
         log.error("Error while deleting connection: ", it)
-        ConfigClientErrorHandler.handleError(it, connectionId.toString())
+        ConfigClientErrorHandler.handleError(it)
       }
     log.debug(HTTP_RESPONSE_BODY_DEBUG_MESSAGE + result.getOrNull())
   }
@@ -128,7 +128,7 @@ class ConnectionServiceImpl(
         connectionHandler.getConnection(connectionId)
       }.onFailure {
         log.error("Error while getting connection: ", it)
-        ConfigClientErrorHandler.handleError(it, connectionId.toString())
+        ConfigClientErrorHandler.handleError(it)
       }
     log.debug(HTTP_RESPONSE_BODY_DEBUG_MESSAGE + result)
 
@@ -167,7 +167,7 @@ class ConnectionServiceImpl(
       kotlin.runCatching { connectionHandler.updateConnection(connectionUpdate) }
         .onFailure {
           log.error("Error while updating connection: ", it)
-          ConfigClientErrorHandler.handleError(it, connectionId.toString())
+          ConfigClientErrorHandler.handleError(it)
         }
     log.debug(HTTP_RESPONSE_BODY_DEBUG_MESSAGE + result)
 
@@ -207,7 +207,7 @@ class ConnectionServiceImpl(
         connectionHandler.listConnectionsForWorkspaces(listConnectionsForWorkspacesRequestBody)
       }.onFailure {
         log.error("Error while listing connections for workspaces: ", it)
-        ConfigClientErrorHandler.handleError(it, workspaceIds.toString())
+        ConfigClientErrorHandler.handleError(it)
       }
     log.debug(HTTP_RESPONSE_BODY_DEBUG_MESSAGE + result)
     val connectionReadList = result.getOrNull()!!
