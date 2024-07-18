@@ -62,42 +62,42 @@ tasks.register<JavaExec>("newConfigsMigration") {
   mainClass = "io.airbyte.db.instance.development.MigrationDevCenter"
   classpath = files(migrations.files)
   args = listOf("configs", "create")
-  dependsOn(tasks.named("classes"))
+  dependsOn(":oss:airbyte-db:db-lib:build")
 }
 
 tasks.register<JavaExec>("runConfigsMigration") {
   mainClass = "io.airbyte.db.instance.development.MigrationDevCenter"
   classpath = files(migrations.files)
   args = listOf("configs", "migrate")
-  dependsOn(tasks.named("classes"))
+  dependsOn(":oss:airbyte-db:db-lib:build")
 }
 
 tasks.register<JavaExec>("dumpConfigsSchema") {
   mainClass = "io.airbyte.db.instance.development.MigrationDevCenter"
   classpath = files(migrations.files)
   args = listOf("configs", "dump_schema")
-  dependsOn(tasks.named("classes"))
+  dependsOn(":oss:airbyte-db:db-lib:build")
 }
 
 tasks.register<JavaExec>("newJobsMigration") {
   mainClass = "io.airbyte.db.instance.development.MigrationDevCenter"
   classpath = files(migrations.files)
   args = listOf("jobs", "create")
-  dependsOn(tasks.named("classes"))
+  dependsOn(":oss:airbyte-db:db-lib:build")
 }
 
 tasks.register<JavaExec>("runJobsMigration") {
   mainClass = "io.airbyte.db.instance.development.MigrationDevCenter"
   classpath = files(migrations.files)
   args = listOf("jobs", "migrate")
-  dependsOn(tasks.named("classes"))
+  dependsOn(":oss:airbyte-db:db-lib:build")
 }
 
 tasks.register<JavaExec>("dumpJobsSchema") {
   mainClass = "io.airbyte.db.instance.development.MigrationDevCenter"
   classpath = files(migrations.files)
   args = listOf("jobs", "dump_schema")
-  dependsOn(tasks.named("classes"))
+  dependsOn(":oss:airbyte-db:db-lib:build")
 }
 
 val copyInitSql = tasks.register<Copy>("copyInitSql") {
