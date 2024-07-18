@@ -34,7 +34,7 @@ class OrchestratorPodFactory(
   private val orchestratorEnvSingleton: OrchestratorEnvSingleton,
   @Value("\${airbyte.worker.job.kube.serviceAccount}") private val serviceAccount: String?,
   @Named("orchestratorContainerPorts") private val containerPorts: List<ContainerPort>,
-  @Named("discoverImagePullSecrets") private val imagePullSecrets: List<LocalObjectReference>,
+  @Named("replicationImagePullSecrets") private val imagePullSecrets: List<LocalObjectReference>,
   private val volumeFactory: VolumeFactory,
   private val initContainerFactory: InitContainerFactory,
 ) {

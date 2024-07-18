@@ -239,6 +239,15 @@ class ContainerConfigBeanFactory {
   }
 
   @Singleton
+  @Named("replicationImagePullSecrets")
+  fun replicationImagePullSecrets(
+    @Named("replicationWorkerConfigs") workerConfigs: WorkerConfigs,
+  ): List<LocalObjectReference> {
+    return workerConfigs.jobImagePullSecrets
+      .map { imagePullSecret -> LocalObjectReference(imagePullSecret) }
+  }
+
+  @Singleton
   @Named("checkImagePullSecrets")
   fun checkImagePullSecrets(
     @Named("checkWorkerConfigs") workerConfigs: WorkerConfigs,
