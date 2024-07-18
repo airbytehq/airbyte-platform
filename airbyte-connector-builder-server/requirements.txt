@@ -4,7 +4,7 @@
 #
 #    pip-compile
 #
-airbyte-cdk==3.7.0
+airbyte-cdk==3.8.2
     # via -r requirements.in
 airbyte-protocol-models-pdv2==0.12.2
     # via airbyte-cdk
@@ -55,7 +55,7 @@ jsonschema==3.2.0
     # via airbyte-cdk
 langchain-core==0.1.42
     # via airbyte-cdk
-langsmith==0.1.88
+langsmith==0.1.90
     # via langchain-core
 markupsafe==2.1.5
     # via jinja2
