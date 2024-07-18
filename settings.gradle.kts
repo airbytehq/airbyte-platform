@@ -5,8 +5,8 @@ pluginManagement {
   repositories {
     // uncomment for local dev
     // maven {
-    //     name = "localPluginRepo"
-    //     url = uri("../.gradle-plugins-local")
+    // name = "localPluginRepo"
+    // url = uri("../.gradle-plugins-local")
     // }
     maven(url = "https://airbyte.mycloudrepo.io/public/repositories/airbyte-public-jars")
     gradlePluginPortal()
