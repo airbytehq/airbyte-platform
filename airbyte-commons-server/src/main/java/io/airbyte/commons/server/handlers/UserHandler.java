@@ -54,6 +54,7 @@ import io.airbyte.config.persistence.OrganizationPersistence;
 import io.airbyte.config.persistence.PermissionPersistence;
 import io.airbyte.config.persistence.SQLOperationNotAllowedException;
 import io.airbyte.config.persistence.UserPersistence;
+import io.airbyte.data.services.ExternalUserService;
 import io.airbyte.data.services.OrganizationEmailDomainService;
 import io.airbyte.data.services.PermissionRedundantException;
 import io.airbyte.data.services.PermissionService;
@@ -86,6 +87,7 @@ public class UserHandler {
   private final UserPersistence userPersistence;
   private final PermissionPersistence permissionPersistence;
   private final PermissionService permissionService;
+  private final ExternalUserService externalUserService;
   private final OrganizationEmailDomainService organizationEmailDomainService;
   private final PermissionHandler permissionHandler;
   private final WorkspacesHandler workspacesHandler;
@@ -101,6 +103,7 @@ public class UserHandler {
                      final UserPersistence userPersistence,
                      final PermissionPersistence permissionPersistence,
                      final PermissionService permissionService,
+                     final ExternalUserService externalUserService,
                      final OrganizationPersistence organizationPersistence,
                      final OrganizationEmailDomainService organizationEmailDomainService,
                      final PermissionHandler permissionHandler,
@@ -112,6 +115,7 @@ public class UserHandler {
                      final FeatureFlagClient featureFlagClient) {
     this.uuidGenerator = uuidGenerator;
     this.userPersistence = userPersistence;
+    this.externalUserService = externalUserService;
     this.organizationPersistence = organizationPersistence;
     this.organizationEmailDomainService = organizationEmailDomainService;
     this.permissionPersistence = permissionPersistence;
@@ -376,7 +380,8 @@ public class UserHandler {
     final User incomingJwtUser = resolveIncomingJwtUser(userAuthIdRequestBody);
     final boolean allowDomain = isAllowedDomain(incomingJwtUser.getEmail());
     if (!allowDomain) {
-      // TODO: also clean up the keycloak user
+      final Optional<String> authRealm = userAuthenticationResolver.resolveRealm();
+      authRealm.ifPresent(realm -> externalUserService.deleteUserByExternalId(incomingJwtUser.getAuthUserId(), realm));
       throw new SSORequiredProblem();
     }
 
@@ -500,8 +505,8 @@ public class UserHandler {
   }
 
   private Optional<Organization> getSsoOrganizationIfExists() throws IOException {
-    final Optional<String> ssoRealm = userAuthenticationResolver.resolveSsoRealm();
-    return ssoRealm.isPresent() ? organizationPersistence.getOrganizationBySsoConfigRealm(ssoRealm.get()) : Optional.empty();
+    final Optional<String> authRealm = userAuthenticationResolver.resolveRealm();
+    return authRealm.isPresent() ? organizationPersistence.getOrganizationBySsoConfigRealm(authRealm.get()) : Optional.empty();
   }
 
   private void createPermissionForUserAndOrg(final UUID userId, final UUID orgId, final PermissionType permissionType)

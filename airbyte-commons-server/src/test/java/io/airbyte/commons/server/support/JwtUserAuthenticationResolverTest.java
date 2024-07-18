@@ -42,7 +42,7 @@ class JwtUserAuthenticationResolverTest {
   void testResolveUser_firebase() {
     when(securityService.username()).thenReturn(Optional.of(AUTH_USER_ID));
 
-    Optional<Authentication> authentication =
+    final Optional<Authentication> authentication =
         Optional.of(Authentication.build(AUTH_USER_ID,
             Map.of(JWT_USER_EMAIL, EMAIL, JWT_USER_NAME, USER_NAME, JWT_AUTH_PROVIDER, AuthProvider.GOOGLE_IDENTITY_PLATFORM)));
     when(securityService.getAuthentication()).thenReturn(authentication);
@@ -55,29 +55,29 @@ class JwtUserAuthenticationResolverTest {
 
     // In this case we do not have ssoRealm in the attributes; expecting not throw and treat it as a
     // request without realm.
-    final Optional<String> ssoRealm = jwtUserAuthenticationResolver.resolveSsoRealm();
-    assertTrue(ssoRealm.isEmpty());
+    final Optional<String> realm = jwtUserAuthenticationResolver.resolveRealm();
+    assertTrue(realm.isEmpty());
   }
 
   @Test
-  void testResolveSsoRealm_firebase() {
+  void testResolveRealm_firebase() {
     when(securityService.username()).thenReturn(Optional.of(AUTH_USER_ID));
-    Optional<Authentication> authentication =
+    final Optional<Authentication> authentication =
         Optional.of(Authentication.build(AUTH_USER_ID, Map.of(JWT_AUTH_PROVIDER, AuthProvider.GOOGLE_IDENTITY_PLATFORM)));
     when(securityService.getAuthentication()).thenReturn(authentication);
 
-    final Optional<String> ssoRealm = jwtUserAuthenticationResolver.resolveSsoRealm();
-    assertTrue(ssoRealm.isEmpty());
+    final Optional<String> realm = jwtUserAuthenticationResolver.resolveRealm();
+    assertTrue(realm.isEmpty());
   }
 
   @Test
-  void testResolveSsoRealm_keycloak() {
+  void testResolveRealm_keycloak() {
     when(securityService.username()).thenReturn(Optional.of(AUTH_USER_ID));
     final Optional<Authentication> authentication =
         Optional.of(Authentication.build(AUTH_USER_ID, Map.of(JWT_SSO_REALM, "airbyte")));
     when(securityService.getAuthentication()).thenReturn(authentication);
-    final String ssoRealm = jwtUserAuthenticationResolver.resolveSsoRealm().orElseThrow();
-    assertEquals("airbyte", ssoRealm);
+    final String realm = jwtUserAuthenticationResolver.resolveRealm().orElseThrow();
+    assertEquals("airbyte", realm);
   }
 
 }
