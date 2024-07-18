@@ -155,11 +155,6 @@ airbyte:
         annotations: ${DISCOVER_JOB_KUBE_ANNOTATIONS:}
         labels: ${DISCOVER_JOB_KUBE_LABELS:}
         node-selectors: ${DISCOVER_JOB_KUBE_NODE_SELECTORS:}
-      normalization:
-        cpu-limit: ${NORMALIZATION_JOB_MAIN_CONTAINER_CPU_LIMIT:}
-        cpu-request: ${NORMALIZATION_JOB_MAIN_CONTAINER_CPU_REQUEST:}
-        memory-limit: ${NORMALIZATION_JOB_MAIN_CONTAINER_MEMORY_LIMIT:}
-        memory-request: ${NORMALIZATION_JOB_MAIN_CONTAINER_MEMORY_REQUEST:}
       replication:
         annotations: ${JOB_KUBE_ANNOTATIONS:}
         labels: ${REPLICATION_JOB_KUBE_LABELS:}
