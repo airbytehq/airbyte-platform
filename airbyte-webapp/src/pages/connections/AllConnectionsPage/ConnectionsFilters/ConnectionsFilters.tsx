@@ -30,7 +30,7 @@ interface ConnectionsTableFiltersProps {
   setSearchFilter: (value: string) => void;
   filterValues: FilterValues;
   setFilterValue: (key: keyof FilterValues, value: string | null) => void;
-  setFilters: (filters: FilterValues) => void;
+  resetFilters: () => void;
 }
 
 export const ConnectionsFilters: React.FC<ConnectionsTableFiltersProps> = ({
@@ -39,7 +39,7 @@ export const ConnectionsFilters: React.FC<ConnectionsTableFiltersProps> = ({
   setSearchFilter,
   filterValues,
   setFilterValue,
-  setFilters,
+  resetFilters,
 }) => {
   const availableSourceOptions = useMemo(
     () => getAvailableSourceOptions(connections, filterValues.destination),
@@ -107,17 +107,7 @@ export const ConnectionsFilters: React.FC<ConnectionsTableFiltersProps> = ({
           </FlexItem>
           {hasAnyFilterSelected && (
             <FlexItem>
-              <ClearFiltersButton
-                onClick={() => {
-                  setFilters({
-                    search: "",
-                    status: null,
-                    state: null,
-                    source: null,
-                    destination: null,
-                  });
-                }}
-              />
+              <ClearFiltersButton onClick={resetFilters} />
             </FlexItem>
           )}
         </FlexContainer>

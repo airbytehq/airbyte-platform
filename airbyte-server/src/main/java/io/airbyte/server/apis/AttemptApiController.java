@@ -18,6 +18,7 @@ import io.airbyte.api.model.generated.GetAttemptStatsRequestBody;
 import io.airbyte.api.model.generated.InternalOperationResult;
 import io.airbyte.api.model.generated.SaveAttemptSyncConfigRequestBody;
 import io.airbyte.api.model.generated.SaveStatsRequestBody;
+import io.airbyte.api.model.generated.SaveStreamAttemptMetadataRequestBody;
 import io.airbyte.api.model.generated.SetWorkflowInAttemptRequestBody;
 import io.airbyte.commons.server.handlers.AttemptHandler;
 import io.airbyte.commons.server.scheduling.AirbyteTaskExecutors;
@@ -75,6 +76,14 @@ public class AttemptApiController implements AttemptApi {
   @ExecuteOn(AirbyteTaskExecutors.IO)
   public InternalOperationResult saveStats(@Body final SaveStatsRequestBody requestBody) {
     return ApiHelper.execute(() -> attemptHandler.saveStats(requestBody));
+  }
+
+  @Override
+  @Post(uri = "/save_stream_metadata",
+        processes = MediaType.APPLICATION_JSON)
+  @ExecuteOn(AirbyteTaskExecutors.IO)
+  public InternalOperationResult saveStreamMetadata(@Body final SaveStreamAttemptMetadataRequestBody requestBody) {
+    return ApiHelper.execute(() -> attemptHandler.saveStreamMetadata(requestBody));
   }
 
   @Override

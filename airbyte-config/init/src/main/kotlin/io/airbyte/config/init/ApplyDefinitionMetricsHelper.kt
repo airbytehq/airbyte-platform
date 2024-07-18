@@ -42,6 +42,7 @@ object ApplyDefinitionMetricsHelper {
   enum class DefinitionProcessingSuccessOutcome : DefinitionProcessingOutcome {
     INITIAL_VERSION_ADDED,
     DEFAULT_VERSION_UPDATED,
+    REFRESH_VERSION,
     VERSION_UNCHANGED,
     ;
 

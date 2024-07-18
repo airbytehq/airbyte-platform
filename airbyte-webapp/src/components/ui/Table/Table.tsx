@@ -26,6 +26,7 @@ export interface TableProps<T> {
   className?: string;
   columns: TableColumns<T>;
   data: T[];
+  rowId?: keyof T | ((row: T) => string);
   variant?: "default" | "light" | "white" | "inBlock";
   getRowCanExpand?: (data: Row<T>) => boolean;
   getIsRowExpanded?: (data: Row<T>) => boolean;
@@ -59,6 +60,7 @@ export const Table = <T,>({
   columns,
   data,
   variant = "default",
+  rowId,
   getRowCanExpand,
   getIsRowExpanded,
   expandedRow,
@@ -83,6 +85,15 @@ export const Table = <T,>({
     getRowCanExpand,
     getIsRowExpanded,
     enableSorting: sorting,
+    getRowId: rowId
+      ? (originalRow) => {
+          if (typeof rowId === "function") {
+            return rowId(originalRow);
+          }
+
+          return String(originalRow[rowId]);
+        }
+      : undefined,
   });
 
   const rows = table.getRowModel().rows;
@@ -91,6 +102,7 @@ export const Table = <T,>({
     <table
       className={classNames(styles.table, className, {
         [styles["table--default"]]: variant === "default",
+        [styles["table--empty"]]: rows.length === 0,
       })}
       {...props}
       style={style}
@@ -98,8 +110,8 @@ export const Table = <T,>({
     />
   );
 
-  const TableHead: TableComponents["TableHead"] = React.forwardRef((props, ref) => (
-    <thead ref={ref} className={classNames({ [styles["thead--sticky"]]: stickyHeaders })} {...props} />
+  const TableHead: TableComponents["TableHead"] = React.forwardRef(({ style, ...restProps }, ref) => (
+    <thead ref={ref} className={classNames({ [styles["thead--sticky"]]: stickyHeaders })} {...restProps} />
   ));
   TableHead.displayName = "TableHead";
 
@@ -215,7 +227,10 @@ export const Table = <T,>({
   return virtualized ? (
     <TableVirtuoso<T>
       // the parent container should have exact height to make "AutoSizer" work properly
-      style={{ height: "100%" }}
+      style={{
+        height: "100%",
+        minHeight: 100, // for empty state placeholder
+      }}
       totalCount={rows.length}
       {...virtualizedProps}
       components={{

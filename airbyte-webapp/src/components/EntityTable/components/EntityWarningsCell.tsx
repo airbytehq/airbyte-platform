@@ -50,7 +50,7 @@ export const EntityWarningsCell: React.FC<EntityWarningCellProps> = ({ connectio
 
   const warningsToShow: Array<[MessageType, ReactNode, PropsOf<typeof Link> & Record<"data-testid", string>]> = [];
 
-  if (allowAutoDetectSchema && schemaChange !== SchemaChange.no_change) {
+  if (allowAutoDetectSchema && schemaChange === SchemaChange.breaking) {
     warningsToShow.push([
       schemaChangeToMessageType[schemaChange],
       <FormattedMessage id={`connection.schemaChange.${convertSnakeToCamel(schemaChange)}`} />,
@@ -75,7 +75,6 @@ export const EntityWarningsCell: React.FC<EntityWarningCellProps> = ({ connectio
           actor_name: connection.source.name,
           actor_definition_name: connection.source.sourceName,
           actor_type: "source",
-          connection_name: connection.name,
           upgrade_deadline: getHumanReadableUpgradeDeadline(source),
         }}
       />,
@@ -99,7 +98,6 @@ export const EntityWarningsCell: React.FC<EntityWarningCellProps> = ({ connectio
           actor_name: connection.destination.name,
           actor_definition_name: connection.destination.destinationName,
           actor_type: "destination",
-          connection_name: connection.name,
           upgrade_deadline: getHumanReadableUpgradeDeadline(destination),
         }}
       />,

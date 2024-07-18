@@ -6,7 +6,6 @@ package io.airbyte.commons.server.converters;
 
 import io.airbyte.api.model.generated.AttemptFailureSummary;
 import io.airbyte.api.model.generated.AttemptInfoRead;
-import io.airbyte.api.model.generated.AttemptNormalizationStatusRead;
 import io.airbyte.api.model.generated.AttemptRead;
 import io.airbyte.api.model.generated.AttemptStats;
 import io.airbyte.api.model.generated.AttemptStatus;
@@ -47,7 +46,6 @@ import io.airbyte.config.helpers.LogClientSingleton;
 import io.airbyte.config.helpers.LogConfigs;
 import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.persistence.job.models.Attempt;
-import io.airbyte.persistence.job.models.AttemptNormalizationStatus;
 import io.airbyte.persistence.job.models.Job;
 import jakarta.annotation.Nullable;
 import jakarta.inject.Singleton;
@@ -302,15 +300,6 @@ public class JobConverter {
         .connectorConfigurationUpdated(metadata.isConnectorConfigurationUpdated())
         .logs(getLogRead(metadata.getLogPath()))
         .failureReason(getFailureReason(metadata.getFailureReason(), TimeUnit.SECONDS.toMillis(metadata.getEndedAt())));
-  }
-
-  public static AttemptNormalizationStatusRead convertAttemptNormalizationStatus(
-                                                                                 final AttemptNormalizationStatus databaseStatus) {
-    return new AttemptNormalizationStatusRead()
-        .attemptNumber(databaseStatus.attemptNumber())
-        .hasRecordsCommitted(!databaseStatus.recordsCommitted().isEmpty())
-        .recordsCommitted(databaseStatus.recordsCommitted().orElse(0L))
-        .hasNormalizationFailed(databaseStatus.normalizationFailed());
   }
 
   private static List<StreamDescriptor> extractEnabledStreams(final Job job) {

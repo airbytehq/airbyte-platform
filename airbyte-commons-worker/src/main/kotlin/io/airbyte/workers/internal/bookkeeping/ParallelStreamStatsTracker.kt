@@ -8,6 +8,7 @@ import io.airbyte.protocol.models.AirbyteEstimateTraceMessage.Type
 import io.airbyte.protocol.models.AirbyteRecordMessage
 import io.airbyte.protocol.models.AirbyteStateMessage
 import io.airbyte.protocol.models.AirbyteStreamNameNamespacePair
+import io.airbyte.protocol.models.AirbyteStreamState
 import io.airbyte.protocol.models.StreamDescriptor
 import io.airbyte.workers.context.ReplicationFeatureFlags
 import io.airbyte.workers.general.StateCheckSumCountEventHandler
@@ -77,6 +78,7 @@ class ParallelStreamStatsTracker(
     when (stateMessage.type) {
       AirbyteStateMessage.AirbyteStateType.GLOBAL -> {
         stateMessage.global.streamStates.forEach { it ->
+          logStreamNameIfEnabled(it)
           val statsTracker = getOrCreateStreamStatsTracker(getNameNamespacePair(it.streamDescriptor))
           statsTracker.trackStateFromSource(stateMessage)
           updateChecksumValidationStatus(
@@ -104,6 +106,17 @@ class ParallelStreamStatsTracker(
           checksumValidationEnabled,
         )
       }
+    }
+  }
+
+  private fun logStreamNameIfEnabled(it: AirbyteStreamState) {
+    try {
+      if (stateCheckSumEventHandler.logIncomingStreamNames) {
+        val nameNamespacePair = getNameNamespacePair(it.streamDescriptor)
+        logger.info { "Stream in state message ${nameNamespacePair.namespace}.${nameNamespacePair.name} " }
+      }
+    } catch (e: Exception) {
+      logger.error(e) { "Exception while logging stream name" }
     }
   }
 

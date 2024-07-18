@@ -548,6 +548,62 @@ describe("computeStreamStatus", () => {
         });
       });
     });
+    describe("rateLimited", () => {
+      it('returns "rateLimited" if the most recent status is RATE_LIMITED', () => {
+        const rateLimitedStatus = buildStreamStatusRead({
+          runState: StreamStatusRunState.RATE_LIMITED,
+          transitionedAt: oneHourAgo,
+        });
+        const incompleteStatus = buildStreamStatusRead({
+          runState: StreamStatusRunState.INCOMPLETE,
+          transitionedAt: threeHoursAgo,
+        });
+
+        const result = computeStreamStatus({
+          statuses: [rateLimitedStatus, incompleteStatus],
+          recordsExtracted: 0,
+          scheduleType: ConnectionScheduleType.basic,
+          scheduleData: basicScheduleData,
+          hasBreakingSchemaChange: false,
+          lateMultiplier: 2,
+          errorMultiplier: 2,
+          isSyncing: true,
+          runningJobConfigType: JobConfigType.sync,
+        });
+        expect(result).toEqual({
+          status: ConnectionStatusIndicatorStatus.RateLimited,
+          isRunning: true,
+          lastSuccessfulSync: undefined,
+          quotaReset: undefined,
+        });
+      });
+      it('returns "rateLimited" with a quotaReset if the most recent status is RATE_LIMITED', () => {
+        const rateLimitedStatus = buildStreamStatusRead({
+          runState: StreamStatusRunState.RATE_LIMITED,
+          transitionedAt: oneHourAgo,
+        });
+        const quotaReset = Date.now() + 60000;
+        rateLimitedStatus.metadata = { quotaReset };
+
+        const result = computeStreamStatus({
+          statuses: [rateLimitedStatus],
+          recordsExtracted: 5,
+          scheduleType: ConnectionScheduleType.basic,
+          scheduleData: basicScheduleData,
+          hasBreakingSchemaChange: false,
+          lateMultiplier: 2,
+          errorMultiplier: 2,
+          isSyncing: true,
+          runningJobConfigType: JobConfigType.sync,
+        });
+        expect(result).toEqual({
+          status: ConnectionStatusIndicatorStatus.RateLimited,
+          isRunning: true,
+          lastSuccessfulSync: undefined,
+          quotaReset,
+        });
+      });
+    });
     describe("clearing", () => {
       it('returns "clearing" when job type is reset_connection', () => {
         const runningStatus = buildStreamStatusRead({

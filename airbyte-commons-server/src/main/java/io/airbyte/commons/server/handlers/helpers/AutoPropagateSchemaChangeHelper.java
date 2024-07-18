@@ -181,7 +181,7 @@ public class AutoPropagateSchemaChangeHelper {
    */
   public static boolean shouldAutoPropagate(final CatalogDiff diff,
                                             final ConnectionRead connectionRead) {
-    if (diff.getTransforms().isEmpty()) {
+    if (!containsChanges(diff)) {
       // If there's no diff we always propagate because it means there's a diff in a disabled stream, or
       // some other bit of metadata.
       // We want to acknowledge it and update to the latest source catalog id, but not bother the user
@@ -194,6 +194,10 @@ public class AutoPropagateSchemaChangeHelper {
             && (connectionRead.getNonBreakingChangesPreference().equals(NonBreakingChangesPreference.PROPAGATE_COLUMNS)
                 || connectionRead.getNonBreakingChangesPreference().equals(NonBreakingChangesPreference.PROPAGATE_FULLY));
     return nonBreakingChange && autoPropagationIsEnabledForConnection;
+  }
+
+  public static boolean containsChanges(final CatalogDiff diff) {
+    return !diff.getTransforms().isEmpty();
   }
 
   /**

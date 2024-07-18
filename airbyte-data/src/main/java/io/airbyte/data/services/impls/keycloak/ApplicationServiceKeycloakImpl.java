@@ -8,7 +8,6 @@ import io.airbyte.commons.auth.RequiresAuthMode;
 import io.airbyte.commons.auth.config.AirbyteKeycloakConfiguration;
 import io.airbyte.commons.auth.config.AuthMode;
 import io.airbyte.commons.auth.keycloak.ClientScopeConfigurator;
-import io.airbyte.commons.auth.support.UserAuthenticationResolver;
 import io.airbyte.config.Application;
 import io.airbyte.config.User;
 import io.airbyte.data.services.ApplicationService;
@@ -28,6 +27,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
+import lombok.extern.slf4j.Slf4j;
 import org.keycloak.admin.client.Keycloak;
 import org.keycloak.admin.client.KeycloakBuilder;
 import org.keycloak.admin.client.resource.ClientsResource;
@@ -41,6 +41,7 @@ import org.keycloak.representations.idm.ClientRepresentation;
  * An Application for a user or non-user entity i.e. an organization.
  */
 @Singleton
+@Slf4j
 @RequiresAuthMode(AuthMode.OIDC)
 public class ApplicationServiceKeycloakImpl implements ApplicationService {
 
@@ -50,19 +51,16 @@ public class ApplicationServiceKeycloakImpl implements ApplicationService {
   public static final String CLIENT_ID = "client_id";
   private final AirbyteKeycloakConfiguration keycloakConfiguration;
   private final Keycloak keycloakAdminClient;
-  private final UserAuthenticationResolver userAuthenticationResolver;
   private final ClientScopeConfigurator clientScopeConfigurator;
   private final Duration accessTokenExpirationTime;
 
   public ApplicationServiceKeycloakImpl(
                                         final Keycloak keycloakAdminClient,
                                         final AirbyteKeycloakConfiguration keycloakConfiguration,
-                                        final UserAuthenticationResolver userAuthenticationResolver,
                                         final ClientScopeConfigurator clientScopeConfigurator,
                                         @Named("access-token-expiration-time") final Duration accessTokenExpirationTime) {
     this.keycloakAdminClient = keycloakAdminClient;
     this.keycloakConfiguration = keycloakConfiguration;
-    this.userAuthenticationResolver = userAuthenticationResolver;
     this.clientScopeConfigurator = clientScopeConfigurator;
     this.accessTokenExpirationTime = accessTokenExpirationTime;
   }
@@ -78,8 +76,7 @@ public class ApplicationServiceKeycloakImpl implements ApplicationService {
   @SuppressWarnings("PMD.PreserveStackTrace")
   public Application createApplication(final User user, final String name) {
     try {
-      final String userRealmName = getCurrentUserRealmName();
-      final RealmResource realmResource = keycloakAdminClient.realm(userRealmName);
+      final RealmResource realmResource = keycloakAdminClient.realm(keycloakConfiguration.getClientRealm());
       final ClientsResource clientsResource = realmResource.clients();
       final UsersResource usersResource = realmResource.users();
 
@@ -97,7 +94,7 @@ public class ApplicationServiceKeycloakImpl implements ApplicationService {
           .anyMatch(clientRepresentation -> clientRepresentation.getName().equals(name))) {
         throw new BadRequestException("User already has a key with this name");
       }
-      final var clientRepresentation = buildClientRepresentation(user, name, existingClients.size());
+      final var clientRepresentation = buildClientRepresentation(name);
 
       try (var response = realmResource.clients().create(clientRepresentation)) {
         if (response.getStatus() != Response.Status.CREATED.getStatusCode()) {
@@ -137,15 +134,16 @@ public class ApplicationServiceKeycloakImpl implements ApplicationService {
    */
   @Override
   public List<Application> listApplicationsByUser(final User user) {
+    final var clientRealm = keycloakConfiguration.getClientRealm();
     final var clientUsers = keycloakAdminClient
-        .realm(getCurrentUserRealmName())
+        .realm(clientRealm)
         .users()
         .searchByAttributes(USER_ID + ":" + user.getAuthUserId());
 
     final var existingClient = new ArrayList<ClientRepresentation>();
     for (final var clientUser : clientUsers) {
       final var client = keycloakAdminClient
-          .realm(getCurrentUserRealmName())
+          .realm(clientRealm)
           .clients()
           .findByClientId(clientUser
               .getAttributes()
@@ -171,9 +169,9 @@ public class ApplicationServiceKeycloakImpl implements ApplicationService {
    */
   @Override
   public Optional<Application> deleteApplication(final User user, final String applicationId) {
-    final var userRealm = getCurrentUserRealmName();
+    final var clientRealm = keycloakConfiguration.getClientRealm();
     final var client = keycloakAdminClient
-        .realm(getCurrentUserRealmName())
+        .realm(clientRealm)
         .clients()
         .findByClientId(applicationId)
         .stream()
@@ -191,7 +189,7 @@ public class ApplicationServiceKeycloakImpl implements ApplicationService {
     }
 
     keycloakAdminClient
-        .realm(userRealm)
+        .realm(clientRealm)
         .clients()
         .get(client.get().getId())
         .remove();
@@ -208,11 +206,10 @@ public class ApplicationServiceKeycloakImpl implements ApplicationService {
    */
   @Override
   public String getToken(final String clientId, final String clientSecret) {
-    final var userRealm = getCurrentUserRealmName();
     final var keycloakClient = KeycloakBuilder
         .builder()
         .serverUrl(keycloakConfiguration.getServerUrl())
-        .realm(userRealm)
+        .realm(keycloakConfiguration.getClientRealm())
         .grantType("client_credentials")
         .clientId(clientId)
         .clientSecret(clientSecret)
@@ -230,13 +227,11 @@ public class ApplicationServiceKeycloakImpl implements ApplicationService {
   /**
    * Build a client representation for a user.
    *
-   * @param user The user to build the client representation for.
    * @param name The name of the client.
-   * @param index The index of the client.
    * @return The built client representation.
    */
   @Nonnull
-  private ClientRepresentation buildClientRepresentation(final User user, final String name, final int index) {
+  private ClientRepresentation buildClientRepresentation(final String name) {
     final var client = new ClientRepresentation();
     client.setClientId(String.valueOf(UUID.randomUUID()));
     client.setServiceAccountsEnabled(true);
@@ -280,11 +275,6 @@ public class ApplicationServiceKeycloakImpl implements ApplicationService {
                 Instant.ofEpochSecond(
                     Long.parseLong(client.getAttributes().get("client.secret.creation.time"))),
                 ZoneOffset.UTC).format(DateTimeFormatter.ISO_DATE_TIME));
-  }
-
-  private String getCurrentUserRealmName() {
-    return userAuthenticationResolver.resolveSsoRealm().orElseThrow(
-        () -> new BadRequestException("Could not determine realm for current user"));
   }
 
 }

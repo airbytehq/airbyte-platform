@@ -4,7 +4,6 @@
 
 package io.airbyte.server.apis;
 
-import io.airbyte.api.model.generated.AttemptNormalizationStatusReadList;
 import io.airbyte.api.model.generated.JobCreate;
 import io.airbyte.api.model.generated.JobDebugInfoRead;
 import io.airbyte.api.model.generated.JobIdRequestBody;
@@ -44,16 +43,6 @@ class JobsApiTest extends BaseControllerTest {
     Mockito.when(schedulerHandler.cancelJob(Mockito.any()))
         .thenReturn(new JobInfoRead());
     final String path = "/api/v1/jobs/cancel";
-    testEndpointStatus(
-        HttpRequest.POST(path, new JobIdRequestBody()),
-        HttpStatus.OK);
-  }
-
-  @Test
-  void testGetAttemptNormalizationStatusesForJob() throws IOException {
-    Mockito.when(jobHistoryHandler.getAttemptNormalizationStatuses(Mockito.any()))
-        .thenReturn(new AttemptNormalizationStatusReadList());
-    final String path = "/api/v1/jobs/get_normalization_status";
     testEndpointStatus(
         HttpRequest.POST(path, new JobIdRequestBody()),
         HttpStatus.OK);

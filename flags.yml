@@ -14,7 +14,7 @@ flags:
   - name: connection.columnSelection
     serve: true
   - name: refreshSchema.period.hours
-    serve: 24
+    serve: 0
   - name: concurrent.source.stream.read
     serve: false
   - name: platform.add-scheduling-jitter

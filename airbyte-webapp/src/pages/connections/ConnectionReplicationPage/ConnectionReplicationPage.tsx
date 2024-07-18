@@ -5,7 +5,6 @@ import { FormattedMessage, useIntl } from "react-intl";
 import { useLocation } from "react-router-dom";
 import { useUnmount } from "react-use";
 
-import { ConnectionConfigurationCard } from "components/connection/ConnectionForm/ConnectionConfigurationCard";
 import {
   FormConnectionFormValues,
   useConnectionValidationSchema,
@@ -18,6 +17,7 @@ import { UpdateConnectionFormControls } from "components/connection/ConnectionFo
 import { SchemaError } from "components/connection/CreateConnectionForm/SchemaError";
 import { Form } from "components/forms";
 import LoadingSchema from "components/LoadingSchema";
+import { ScrollableContainer } from "components/ScrollableContainer";
 import { FlexContainer } from "components/ui/Flex";
 import { Message } from "components/ui/Message/Message";
 
@@ -217,8 +217,6 @@ export const ConnectionReplicationPage: React.FC = () => {
     }
   }, [refreshSchema, state]);
 
-  const isSimplifiedCreation = useExperiment("connection.simplifiedCreation", true);
-
   const newSyncCatalogV2Form = connection && (
     <Form<FormConnectionFormValues>
       defaultValues={initialValues}
@@ -231,7 +229,6 @@ export const ConnectionReplicationPage: React.FC = () => {
       <FlexContainer direction="column">
         <SchemaChangeMessage />
         <SchemaChangeBackdrop>
-          {!isSimplifiedCreation && <ConnectionConfigurationCard />}
           <SchemaRefreshing>
             <SyncCatalogCardNext />
           </SchemaRefreshing>
@@ -253,7 +250,6 @@ export const ConnectionReplicationPage: React.FC = () => {
         <FlexContainer direction="column">
           <SchemaChangeMessage />
           <SchemaChangeBackdrop>
-            {!isSimplifiedCreation && <ConnectionConfigurationCard />}
             <SyncCatalogCard />
             <div className={styles.editControlsContainer}>
               <UpdateConnectionFormControls onCancel={discardRefreshedSchema} />
@@ -266,8 +262,8 @@ export const ConnectionReplicationPage: React.FC = () => {
     );
 
   return (
-    <FlexContainer direction="column" className={styles.content}>
+    <ScrollableContainer className={styles.content}>
       {isSyncCatalogV2Enabled ? newSyncCatalogV2Form : oldSyncCatalogForm}
-    </FlexContainer>
+    </ScrollableContainer>
   );
 };

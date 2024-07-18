@@ -4,6 +4,8 @@
 
 package io.airbyte.commons.server.support;
 
+import static io.airbyte.commons.server.ServerConstants.APPLICATIONS_TOKEN_PATH;
+
 import com.fasterxml.jackson.databind.JsonNode;
 import io.netty.channel.ChannelDuplexHandler;
 import io.netty.channel.ChannelHandler.Sharable;
@@ -39,7 +41,12 @@ public class AuthorizationServerHandler extends ChannelDuplexHandler {
 
     if (FullHttpRequest.class.isInstance(message)) {
       final FullHttpRequest fullHttpRequest = FullHttpRequest.class.cast(message);
-      updatedMessage = updateHeaders(fullHttpRequest);
+      // Only update headers if we're not talking about the APPLICATIONS_TOKEN_PATH
+      // That endpoint doesn't need the updated headers and can be in a non-JSON format.
+      // Did this here because I didn't want to parse a JSON Parsing exception in the contentToJson call.
+      if (!fullHttpRequest.uri().equals(APPLICATIONS_TOKEN_PATH)) {
+        updatedMessage = updateHeaders(fullHttpRequest);
+      }
     }
 
     context.fireChannelRead(updatedMessage);

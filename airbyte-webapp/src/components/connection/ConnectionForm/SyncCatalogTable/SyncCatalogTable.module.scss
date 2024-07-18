@@ -16,7 +16,7 @@ $row-height: 40px;
 .thead {
   position: sticky;
   top: 0;
-  z-index: z-indices.$tableScroll;
+  z-index: z-indices.$tableStickyHeader;
 }
 
 // --------- <th/> ---------

@@ -81,6 +81,7 @@ class RemoteDefinitionsProviderTest {
     assertEquals(false, stripeSource.getTombstone());
     assertEquals("0.2.1", stripeSource.getProtocolVersion());
     assertEquals(SupportLevel.COMMUNITY, stripeSource.getSupportLevel());
+    assertEquals(300L, stripeSource.getAbInternal().getSl());
   }
 
   @Test
@@ -100,6 +101,7 @@ class RemoteDefinitionsProviderTest {
     assertEquals(false, s3Destination.getTombstone());
     assertEquals("0.2.2", s3Destination.getProtocolVersion());
     assertEquals(SupportLevel.COMMUNITY, s3Destination.getSupportLevel());
+    assertEquals(300L, s3Destination.getAbInternal().getSl());
   }
 
   @Test

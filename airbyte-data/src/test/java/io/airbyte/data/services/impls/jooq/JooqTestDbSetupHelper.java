@@ -207,6 +207,7 @@ public class JooqTestDbSetupHelper extends BaseConfigDatabaseTest {
         .withDockerImageTag("0.0.1")
         .withProtocolVersion("1.0.0")
         .withSupportLevel(SupportLevel.CERTIFIED)
+        .withInternalSupportLevel(200L)
         .withSpec(new ConnectorSpecification()
             .withConnectionSpecification(Jsons.jsonNode(Map.of("key", "value1"))).withProtocolVersion("1.0.0"));
   }

@@ -10,8 +10,6 @@ required:
 properties:
   standardSyncSummary:
     "$ref": StandardSyncSummary.yaml
-  normalizationSummary:
-    "$ref": NormalizationSummary.yaml
   webhookOperationSummary:
     "$ref": WebhookOperationSummary.yaml
   failures:

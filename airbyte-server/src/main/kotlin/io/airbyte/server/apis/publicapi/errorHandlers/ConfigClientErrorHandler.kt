@@ -78,12 +78,8 @@ object ConfigClientErrorHandler {
    * Maps handler exceptions to problems.
    *
    * @param throwable throwable from handler
-   * @param resourceId resource ID passed in with the request
    */
-  fun handleError(
-    throwable: Throwable,
-    resourceId: String?,
-  ) {
+  fun handleError(throwable: Throwable) {
     when (throwable) {
       is ConfigNotFoundException -> throw ResourceNotFoundProblem(ProblemResourceData().resourceType(throwable.type).resourceId(throwable.configId))
       is ValueConflictKnownException -> {

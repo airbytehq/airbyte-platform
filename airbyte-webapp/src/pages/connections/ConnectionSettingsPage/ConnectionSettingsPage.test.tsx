@@ -32,6 +32,9 @@ jest.mock("core/api", () => ({
     mutateAsync: async (connection: WebBackendConnectionUpdate) => connection,
     isLoading: false,
   }),
+  useGetConnectionSyncProgress: () => {
+    return [];
+  },
   useSourceDefinitionVersion: () => mockSourceDefinitionVersion,
   useDestinationDefinitionVersion: () => mockDestinationDefinitionVersion,
   useGetSourceDefinitionSpecification: () => mockSourceDefinitionSpecification,

@@ -177,6 +177,7 @@ const ConnectionTable: React.FC<ConnectionTableProps> = ({ data, entity, variant
 
   return (
     <Table
+      rowId="connectionId"
       variant={variant}
       columns={columns}
       data={data}

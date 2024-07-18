@@ -28,8 +28,6 @@ import io.airbyte.config.JobSyncConfig;
 import io.airbyte.config.JobSyncConfig.NamespaceDefinitionType;
 import io.airbyte.config.JobTypeResourceLimit;
 import io.airbyte.config.JobTypeResourceLimit.JobType;
-import io.airbyte.config.OperatorNormalization;
-import io.airbyte.config.OperatorNormalization.Option;
 import io.airbyte.config.RefreshConfig;
 import io.airbyte.config.RefreshStream;
 import io.airbyte.config.ResetSourceConfiguration;
@@ -41,7 +39,6 @@ import io.airbyte.config.StandardSourceDefinition;
 import io.airbyte.config.StandardSourceDefinition.SourceType;
 import io.airbyte.config.StandardSync;
 import io.airbyte.config.StandardSyncOperation;
-import io.airbyte.config.StandardSyncOperation.OperatorType;
 import io.airbyte.config.StateType;
 import io.airbyte.config.StateWrapper;
 import io.airbyte.config.SyncResourceRequirements;
@@ -190,9 +187,7 @@ class DefaultJobCreatorTest {
     STANDARD_SYNC_OPERATION = new StandardSyncOperation()
         .withOperationId(operationId)
         .withName("normalize")
-        .withTombstone(false)
-        .withOperatorType(OperatorType.NORMALIZATION)
-        .withOperatorNormalization(new OperatorNormalization().withOption(Option.BASIC));
+        .withTombstone(false);
 
     PERSISTED_WEBHOOK_CONFIGS = Jsons.deserialize(
         String.format("{\"webhookConfigs\": [{\"id\": \"%s\", \"name\": \"%s\", \"authToken\": {\"_secret\": \"a-secret_v1\"}}]}",

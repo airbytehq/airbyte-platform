@@ -15,7 +15,6 @@ import io.airbyte.config.StandardCheckConnectionInput
 import io.airbyte.config.StandardCheckConnectionOutput
 import io.airbyte.config.StandardDiscoverCatalogInput
 import io.airbyte.persistence.job.models.IntegrationLauncherConfig
-import io.airbyte.protocol.models.ConfiguredAirbyteCatalog
 import io.airbyte.workers.helper.GsonPksExtractor
 import io.airbyte.workers.internal.AirbyteStreamFactory
 import io.airbyte.workers.internal.VersionedAirbyteStreamFactory
@@ -35,7 +34,6 @@ import java.nio.file.Files
 import java.nio.file.Path
 import java.time.Duration
 import java.util.Optional
-import java.util.UUID
 import kotlin.system.exitProcess
 
 private val logger = KotlinLogging.logger {}
@@ -45,13 +43,13 @@ class ConnectorWatcher(
   @Named("output") val outputPath: Path,
   @Named("configDir") val configDir: String,
   @Value("\${airbyte.sidecar.file-timeout-minutes}") val fileTimeoutMinutes: Int,
-  val connectorMessageProcessor: ConnectorMessageProcessor,
-  val serDeProvider: AirbyteMessageSerDeProvider,
-  val airbyteProtocolVersionedMigratorFactory: AirbyteProtocolVersionedMigratorFactory,
-  val gsonPksExtractor: GsonPksExtractor,
-  val workloadApiClient: WorkloadApiClient,
-  val jobOutputDocStore: JobOutputDocStore,
-  val logContextFactory: SidecarLogContextFactory,
+  private val connectorMessageProcessor: ConnectorMessageProcessor,
+  private val serDeProvider: AirbyteMessageSerDeProvider,
+  private val airbyteProtocolVersionedMigratorFactory: AirbyteProtocolVersionedMigratorFactory,
+  private val gsonPksExtractor: GsonPksExtractor,
+  private val workloadApiClient: WorkloadApiClient,
+  private val jobOutputDocStore: JobOutputDocStore,
+  private val logContextFactory: SidecarLogContextFactory,
 ) {
   fun run() {
     val input = Jsons.deserialize(readFile(OrchestratorConstants.SIDECAR_INPUT), SidecarInput::class.java)
@@ -66,11 +64,11 @@ class ConnectorWatcher(
         while (!areNeededFilesPresent()) {
           Thread.sleep(100)
           if (fileTimeoutReach(stopwatch)) {
-            logger.warn { "Failed to find output files from connector within timeout $fileTimeoutMinutes. Is the connector still running?" }
+            logger.warn { "Failed to find output files from connector within timeout $fileTimeoutMinutes minute(s). Is the connector still running?" }
             val failureReason =
               FailureReason()
                 .withFailureOrigin(FailureReason.FailureOrigin.UNKNOWN)
-                .withExternalMessage("Failed to find output files from connector within timeout $fileTimeoutMinutes.")
+                .withExternalMessage("Failed to find output files from connector within timeout $fileTimeoutMinutes minute(s).")
 
             failWorkload(workloadId, failureReason)
             exitFileNotFound()
@@ -91,7 +89,7 @@ class ConnectorWatcher(
         logger.info { "Connector exited with $exitCode" }
         val streamFactory: AirbyteStreamFactory = getStreamFactory(integrationLauncherConfig)
         val connectorOutput: ConnectorJobOutput =
-          when (input.operationType) {
+          when (input.operationType!!) {
             SidecarInput.OperationType.CHECK -> {
               connectorMessageProcessor.run(
                 outputIS,
@@ -134,14 +132,17 @@ class ConnectorWatcher(
         logger.error(e) { "Error performing operation: ${e.javaClass.name}" }
 
         val output =
-          when (input.operationType) {
+          when (input.operationType!!) {
             SidecarInput.OperationType.CHECK -> getFailedOutput(checkConnectionConfiguration, e)
             SidecarInput.OperationType.DISCOVER -> getFailedOutput(discoverCatalogInput, e)
             SidecarInput.OperationType.SPEC -> getFailedOutput(input.integrationLauncherConfig.dockerImage, e)
           }
 
         jobOutputDocStore.write(workloadId, output)
-        failWorkload(workloadId, output.failureReason)
+        failWorkload(
+          workloadId,
+          output.failureReason,
+        )
         exitInternalError()
       }
       LineGobbler.endSection(input.operationType.toString())
@@ -164,13 +165,13 @@ class ConnectorWatcher(
     return VersionedAirbyteStreamFactory<Any>(
       serDeProvider,
       airbyteProtocolVersionedMigratorFactory,
-      if (integrationLauncherConfig.getProtocolVersion() != null) {
-        integrationLauncherConfig.getProtocolVersion()
+      if (integrationLauncherConfig.protocolVersion != null) {
+        integrationLauncherConfig.protocolVersion
       } else {
         AirbyteProtocolVersion.DEFAULT_AIRBYTE_PROTOCOL_VERSION
       },
-      Optional.empty<UUID>(),
-      Optional.empty<ConfiguredAirbyteCatalog>(),
+      Optional.empty(),
+      Optional.empty(),
       InvalidLineFailureConfiguration(false),
       gsonPksExtractor,
     )
@@ -211,7 +212,7 @@ class ConnectorWatcher(
       .withFailureReason(
         FailureReason()
           .withFailureOrigin(
-            if (input.getActorType() == ActorType.SOURCE) {
+            if (input.actorType == ActorType.SOURCE) {
               FailureReason.FailureOrigin.SOURCE
             } else {
               FailureReason.FailureOrigin.DESTINATION

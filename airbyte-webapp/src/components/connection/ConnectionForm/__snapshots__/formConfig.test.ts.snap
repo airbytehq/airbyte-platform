@@ -8,7 +8,6 @@ exports[`#useInitialFormValues should generate initial values w/ mode: create 1`
   "namespaceDefinition": "source",
   "namespaceFormat": "\${SOURCE_NAMESPACE}",
   "nonBreakingChangesPreference": "ignore",
-  "normalization": "basic",
   "notifySchemaChanges": true,
   "prefix": "",
   "scheduleData": undefined,
@@ -1559,7 +1558,6 @@ exports[`#useInitialFormValues should generate initial values w/ mode: create 1`
       },
     ],
   },
-  "transformations": [],
 }
 `;
 
@@ -1571,7 +1569,6 @@ exports[`#useInitialFormValues should generate initial values w/ mode: edit 1`] 
   "namespaceDefinition": "source",
   "namespaceFormat": "\${SOURCE_NAMESPACE}",
   "nonBreakingChangesPreference": "ignore",
-  "normalization": "basic",
   "notifySchemaChanges": true,
   "prefix": "",
   "scheduleData": undefined,
@@ -3122,7 +3119,6 @@ exports[`#useInitialFormValues should generate initial values w/ mode: edit 1`] 
       },
     ],
   },
-  "transformations": [],
 }
 `;
 
@@ -3134,7 +3130,6 @@ exports[`#useInitialFormValues should generate initial values w/ mode: readonly 
   "namespaceDefinition": "source",
   "namespaceFormat": "\${SOURCE_NAMESPACE}",
   "nonBreakingChangesPreference": "ignore",
-  "normalization": "basic",
   "notifySchemaChanges": true,
   "prefix": "",
   "scheduleData": undefined,
@@ -4685,6 +4680,5 @@ exports[`#useInitialFormValues should generate initial values w/ mode: readonly 
       },
     ],
   },
-  "transformations": [],
 }
 `;

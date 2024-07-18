@@ -2,7 +2,7 @@ import React, { lazy, Suspense } from "react";
 import { useIntl } from "react-intl";
 import { useWindowSize } from "react-use";
 
-import { LoadingPage } from "components/LoadingPage";
+import { LoadingPage } from "components";
 import { ResizablePanels } from "components/ui/ResizablePanels";
 
 import { EXCLUDED_DOC_URLS } from "core/api";
@@ -10,9 +10,7 @@ import { EXCLUDED_DOC_URLS } from "core/api";
 import styles from "./ConnectorDocumentationLayout.module.scss";
 import { useDocumentationPanelContext } from "./DocumentationPanelContext";
 
-const LazyDocumentationPanel = lazy(() =>
-  import("./DocumentationPanel").then(({ DocumentationPanel }) => ({ default: DocumentationPanel }))
-);
+const LazyDocumentationPanel = lazy(() => import("./DocumentationPanel"));
 
 export const ConnectorDocumentationLayout: React.FC<React.PropsWithChildren<unknown>> = ({ children }) => {
   const { formatMessage } = useIntl();

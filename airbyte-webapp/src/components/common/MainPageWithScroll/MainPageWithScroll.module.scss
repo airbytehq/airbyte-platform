@@ -34,7 +34,7 @@ $spacing: variables.$spacing-xl;
 }
 
 .content {
-  height: 95%;
+  height: calc(100% - $spacing);
   padding: 0 $spacing $spacing;
 
   &.noBottomPadding {

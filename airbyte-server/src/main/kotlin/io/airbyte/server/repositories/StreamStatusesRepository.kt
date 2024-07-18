@@ -36,8 +36,19 @@ CASE
   ELSE ss.incomplete_run_cause
 END as incomplete_run_cause,
 -- the rest of fields for StreamStatus
-ss.id, ss.workspace_id, ss.connection_id, ss.job_id, ss.stream_namespace, ss.stream_name, ss.created_at,
-ss.updated_at, ss.attempt_number, ss.job_type, ss.run_state, ss.transitioned_at, ss.metadata
+ss.id,
+ss.workspace_id,
+ss.connection_id,
+ss.job_id,
+ss.stream_namespace,
+ss.stream_name,
+coalesce(ss.created_at, j.created_at) as created_at, -- coalesce in case this is a NULL row
+coalesce(ss.updated_at, j.updated_at) as updated_at, -- coalesce in case this is a NULL row
+ss.attempt_number,
+ss.job_type,
+ss.run_state,
+coalesce(ss.transitioned_at, j.created_at) as transitioned_at, -- coalesce in case this is a NULL row
+ss.metadata
 """
 
 @JdbcRepository(dialect = Dialect.POSTGRES, dataSource = "config")
@@ -105,25 +116,30 @@ abstract class StreamStatusesRepository : PageableRepository<StreamStatus, UUID>
   @Query(
     """
            SELECT
+              j.id as job_id,
               $STREAM_STATUS_WITH_FALLBACKS,
               last_x_jobs.created_at AS job_created_at, last_x_jobs.updated_at AS job_updated_at
-           FROM stream_statuses ss
-           JOIN jobs j on j.id = ss.job_id
-           INNER JOIN (
-               SELECT job_id, MAX(attempt_number) AS max_attempt_number
-               FROM stream_statuses
-               WHERE connection_id = :connectionId
-               GROUP BY job_id
-             ) AS max_attempts ON ss.job_id = max_attempts.job_id AND ss.attempt_number = max_attempts.max_attempt_number
+           FROM jobs j
+           -- left join to stream status, as there may not be a stream status for this job but we still need the job_id
+           LEFT JOIN (
+              SELECT ss.*
+              FROM stream_statuses ss
+              -- limit to the last attempt in the job for this stream
+              JOIN (
+                 SELECT job_id, MAX(attempt_number) AS max_attempt_number
+                 FROM stream_statuses
+                 WHERE connection_id = :connectionId
+                 GROUP BY job_id
+              ) AS max_attempts ON ss.job_id = max_attempts.job_id AND ss.attempt_number = max_attempts.max_attempt_number
+           ) as ss on ss.job_id = j.id
            INNER JOIN (
                SELECT id, created_at, updated_at
                FROM jobs
                WHERE config_type = 'sync' AND status in ('succeeded', 'failed') AND scope = CAST(:connectionId AS VARCHAR)
                ORDER BY created_at DESC
                LIMIT :lastXJobs
-             ) AS last_x_jobs ON ss.job_id = last_x_jobs.id
-           WHERE ss.connection_id = :connectionId;
-         
+             ) AS last_x_jobs ON j.id = last_x_jobs.id
+           WHERE j.scope = (:connectionId :: varchar);
          """,
   )
   abstract fun findLastAttemptsOfLastXJobsForConnection(

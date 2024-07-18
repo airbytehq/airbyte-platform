@@ -11,6 +11,7 @@ import io.airbyte.api.model.generated.CreateNewAttemptNumberResponse;
 import io.airbyte.api.model.generated.InternalOperationResult;
 import io.airbyte.api.model.generated.SaveAttemptSyncConfigRequestBody;
 import io.airbyte.api.model.generated.SaveStatsRequestBody;
+import io.airbyte.api.model.generated.SaveStreamAttemptMetadataRequestBody;
 import io.airbyte.api.model.generated.SetWorkflowInAttemptRequestBody;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.commons.server.converters.ApiPojoConverters;
@@ -38,6 +39,8 @@ import io.airbyte.config.persistence.helper.GenerationBumper;
 import io.airbyte.data.exceptions.ConfigNotFoundException;
 import io.airbyte.data.services.ConnectionService;
 import io.airbyte.data.services.DestinationService;
+import io.airbyte.data.services.StreamAttemptMetadata;
+import io.airbyte.data.services.StreamAttemptMetadataService;
 import io.airbyte.featureflag.Connection;
 import io.airbyte.featureflag.EnableResumableFullRefresh;
 import io.airbyte.featureflag.FeatureFlagClient;
@@ -78,6 +81,7 @@ public class AttemptHandler {
   private final ConnectionService connectionService;
   private final DestinationService destinationService;
   private final ActorDefinitionVersionHelper actorDefinitionVersionHelper;
+  private final StreamAttemptMetadataService streamAttemptMetadataService;
 
   public AttemptHandler(final JobPersistence jobPersistence,
                         final StatePersistence statePersistence,
@@ -88,7 +92,8 @@ public class AttemptHandler {
                         final GenerationBumper generationBumper,
                         final ConnectionService connectionService,
                         final DestinationService destinationService,
-                        final ActorDefinitionVersionHelper actorDefinitionVersionHelper) {
+                        final ActorDefinitionVersionHelper actorDefinitionVersionHelper,
+                        final StreamAttemptMetadataService streamAttemptMetadataService) {
     this.jobPersistence = jobPersistence;
     this.statePersistence = statePersistence;
     this.jobConverter = jobConverter;
@@ -99,6 +104,7 @@ public class AttemptHandler {
     this.connectionService = connectionService;
     this.destinationService = destinationService;
     this.actorDefinitionVersionHelper = actorDefinitionVersionHelper;
+    this.streamAttemptMetadataService = streamAttemptMetadataService;
   }
 
   public CreateNewAttemptNumberResponse createNewAttemptNumber(final long jobId)
@@ -290,6 +296,25 @@ public class AttemptHandler {
     }
 
     return new InternalOperationResult().succeeded(true);
+  }
+
+  public InternalOperationResult saveStreamMetadata(final SaveStreamAttemptMetadataRequestBody requestBody) {
+    try {
+      streamAttemptMetadataService.upsertStreamAttemptMetadata(
+          requestBody.getJobId(),
+          requestBody.getAttemptNumber(),
+          requestBody.getStreamMetadata().stream().map(
+              (s) -> new StreamAttemptMetadata(
+                  s.getStreamName(),
+                  s.getStreamNamespace(),
+                  s.getWasBackfilled(),
+                  s.getWasResumed()))
+              .toList());
+      return new InternalOperationResult().succeeded(true);
+    } catch (final Exception e) {
+      LOGGER.error("failed to save steam metadata for job:{} attempt:{}", requestBody.getJobId(), requestBody.getAttemptNumber(), e);
+      return new InternalOperationResult().succeeded(false);
+    }
   }
 
   public InternalOperationResult saveSyncConfig(final SaveAttemptSyncConfigRequestBody requestBody) {

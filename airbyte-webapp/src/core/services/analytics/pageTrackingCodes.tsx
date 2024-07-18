@@ -20,6 +20,7 @@ export enum PageTrackingCodes {
   CONNECTIONS_ITEM_TRANSFORMATION = "Connections.Item.TransformationView",
   CONNECTIONS_ITEM_REPLICATION = "Connections.Item.ReplicationView",
   CONNECTIONS_ITEM_SETTINGS = "Connections.Item.Settings",
+  CONNECTIONS_ITEM_TIMELINE = "Connections.Item.Timeline",
   SETTINGS_ACCOUNT = "Settings.Account",
   SETTINGS_WORKSPACE = "Settings.Workspace",
   SETTINGS_ORGANIZATION = "Settings.Organization",

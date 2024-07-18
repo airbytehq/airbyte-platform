@@ -11,46 +11,52 @@ import { useEffect, useState } from "react";
 import { useConnectionStatus } from "components/connection/ConnectionStatus/useConnectionStatus";
 import { ConnectionStatusIndicatorStatus } from "components/connection/ConnectionStatusIndicator";
 
-import { connectionsKeys } from "core/api";
+import { connectionsKeys, useGetConnectionSyncProgress } from "core/api";
 import { JobConfigType, StreamStatusJobType, StreamStatusRunState } from "core/api/types/AirbyteClient";
+import { useStreamsListContext } from "pages/connections/StreamStatusPage/StreamsListContext";
 
 import { getStreamKey } from "./computeStreamStatus";
 import { useHistoricalStreamData } from "./useStreamsHistoricalData";
 import { useStreamsStatuses } from "./useStreamsStatuses";
 import { useStreamsSyncProgress } from "./useStreamsSyncProgress";
 
-interface UIStreamState {
+interface BaseUIStreamState {
   streamName: string;
   streamNamespace?: string;
   activeJobConfigType?: JobConfigType;
-  activeJobStartedAt?: number; // date?
-  dataFreshAsOf?: number; // date?
+  activeJobStartedAt?: number;
+  dataFreshAsOf?: number;
   recordsExtracted?: number;
   recordsLoaded?: number;
   bytesLoaded?: number;
-  status: ConnectionStatusIndicatorStatus;
+  status: Exclude<ConnectionStatusIndicatorStatus, "rateLimited">;
   isLoadingHistoricalData: boolean;
 }
 
+export interface RateLimitedUIStreamState extends Omit<BaseUIStreamState, "status"> {
+  status: ConnectionStatusIndicatorStatus.RateLimited;
+  quotaReset?: number;
+}
+
+export type UIStreamState = BaseUIStreamState | RateLimitedUIStreamState;
+
 export const useUiStreamStates = (connectionId: string): UIStreamState[] => {
   const connectionStatus = useConnectionStatus(connectionId);
+  const { filteredStreamsByName } = useStreamsListContext();
   const [wasRunning, setWasRunning] = useState<boolean>(connectionStatus.isRunning);
   const [isFetchingPostJob, setIsFetchingPostJob] = useState<boolean>(false);
+  const { data: connectionSyncProgress } = useGetConnectionSyncProgress(connectionId, connectionStatus.isRunning);
+  const currentJobId = connectionSyncProgress?.jobId;
 
   const queryClient = useQueryClient();
 
-  const { streamStatuses, enabledStreams } = useStreamsStatuses(connectionId);
+  const { streamStatuses } = useStreamsStatuses(connectionId);
   const syncProgress = useStreamsSyncProgress(connectionId, connectionStatus.isRunning);
   const isClearOrResetJob = (configType?: JobConfigType) =>
     configType === JobConfigType.clear || configType === JobConfigType.reset_connection;
 
-  const streamsToList = enabledStreams
-    .map((stream) => {
-      return { streamName: stream.stream?.name ?? "", streamNamespace: stream.stream?.namespace };
-    })
-    .sort((a, b) => a.streamName.localeCompare(b.streamName));
-
   const { historicalStreamsData, isFetching: isLoadingHistoricalData } = useHistoricalStreamData(connectionId);
+
   // if we just finished a job, re-fetch the historical data and set wasRunning to false
   useEffect(() => {
     if (wasRunning && !connectionStatus.isRunning) {
@@ -70,7 +76,7 @@ export const useUiStreamStates = (connectionId: string): UIStreamState[] => {
     }
   }, [wasRunning, connectionStatus.isRunning, queryClient, connectionId, isFetchingPostJob, isLoadingHistoricalData]);
 
-  const uiStreamStates = streamsToList.map((streamItem) => {
+  const uiStreamStates = filteredStreamsByName.map((streamItem) => {
     // initialize the state as undefined
     const uiState: UIStreamState = {
       streamName: streamItem.streamName,
@@ -81,7 +87,7 @@ export const useUiStreamStates = (connectionId: string): UIStreamState[] => {
       recordsExtracted: undefined,
       recordsLoaded: undefined,
       bytesLoaded: undefined,
-      status: ConnectionStatusIndicatorStatus.Pending,
+      status: ConnectionStatusIndicatorStatus.Pending as ConnectionStatusIndicatorStatus, // cast so TS keeps the wider UIStreamState union instead of narrowing to BaseUIStreamState
       isLoadingHistoricalData,
     };
 
@@ -92,6 +98,9 @@ export const useUiStreamStates = (connectionId: string): UIStreamState[] => {
 
     if (streamStatus?.status) {
       uiState.status = streamStatus.status;
+      if (uiState.status === ConnectionStatusIndicatorStatus.RateLimited) {
+        uiState.quotaReset = streamStatus.relevantHistory.at(0)?.metadata?.quotaReset;
+      }
     }
 
     // only pull from syncProgress OR historicalData for the latestSync related data
@@ -100,7 +109,10 @@ export const useUiStreamStates = (connectionId: string): UIStreamState[] => {
       // also, for clear jobs, we should not show anything in this column
       uiState.recordsExtracted = syncProgressItem.recordsEmitted;
       uiState.recordsLoaded = syncProgressItem.recordsCommitted;
-      uiState.activeJobStartedAt = streamStatus?.relevantHistory[0]?.transitionedAt;
+      uiState.activeJobStartedAt =
+        currentJobId === streamStatus?.relevantHistory[0]?.jobId
+          ? streamStatus?.relevantHistory[0]?.transitionedAt
+          : undefined;
     } else if (historicalItem && !isClearOrResetJob(historicalItem.configType)) {
       uiState.recordsLoaded = historicalItem.recordsCommitted;
       uiState.bytesLoaded = historicalItem.bytesCommitted;

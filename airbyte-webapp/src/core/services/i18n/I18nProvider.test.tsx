@@ -38,6 +38,24 @@ describe("I18nProvider", () => {
     expect(wrapper.getByTestId("msg").textContent).toBe("Hello world!");
   });
 
+  it("should pick the browser locale if no locale is specified", () => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    jest.spyOn(Intl.DateTimeFormat.prototype, "resolvedOptions").mockReturnValue({ locale: "de-DE" } as any);
+    const { result } = renderHook(() => useIntl(), {
+      wrapper: ({ children }) => <I18nProvider>{children}</I18nProvider>,
+    });
+    expect(result.current.locale).toBe("de-DE");
+  });
+
+  it("should use the browser locale for formatting if no locale is specified", () => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    jest.spyOn(Intl.DateTimeFormat.prototype, "resolvedOptions").mockReturnValue({ locale: "de-DE" } as any);
+    const { result } = renderHook(() => useIntl(), {
+      wrapper: ({ children }) => <I18nProvider>{children}</I18nProvider>,
+    });
+    expect(result.current.formatNumber(1_000_000.42)).toBe("1.000.000,42");
+  });
+
   it("should allow render <b></b> tags for every message", () => {
     const wrapper = render(
       <span data-testid="msg">

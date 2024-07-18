@@ -4,6 +4,7 @@
 
 package io.airbyte.workers.temporal.scheduling.activities;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import io.airbyte.api.client.model.generated.ConnectionStatus;
 import io.temporal.activity.ActivityInterface;
 import io.temporal.activity.ActivityMethod;
@@ -22,6 +23,9 @@ public interface ConfigFetchActivity {
 
   @ActivityMethod
   Optional<UUID> getSourceId(UUID connectionId);
+
+  @ActivityMethod
+  JsonNode getSourceConfig(UUID sourceId);
 
   @ActivityMethod
   Optional<ConnectionStatus> getStatus(UUID connectionId);

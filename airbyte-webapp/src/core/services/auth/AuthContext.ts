@@ -5,9 +5,10 @@ import { UserRead } from "core/api/types/AirbyteClient";
 export type AuthChangeName = (name: string) => Promise<void>;
 export type AuthGetAccessToken = () => Promise<string | null>;
 export type AuthLogout = () => Promise<void>;
+export type AuthLogin = ({ username, password }: { username: string; password: string }) => Promise<void>;
 
 export interface AuthContextApi {
-  authType: "none" | "oidc" | "cloud";
+  authType: "none" | "simple" | "oidc" | "cloud";
   user: UserRead | null;
   inited: boolean;
   emailVerified: boolean;
@@ -15,6 +16,7 @@ export interface AuthContextApi {
   provider: string | null;
   getAccessToken?: AuthGetAccessToken;
   updateName?: AuthChangeName;
+  login?: AuthLogin;
   logout?: AuthLogout;
   changeRealmAndRedirectToSignin?: (realm: string) => Promise<void>;
   redirectToSignInWithGoogle?: () => Promise<void>;

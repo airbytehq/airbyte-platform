@@ -42,14 +42,14 @@ interface JobService {
   fun getJobList(
     connectionId: UUID,
     jobsFilter: JobsFilter,
-    orderByField: OrderByFieldEnum = OrderByFieldEnum.CREATEDAT,
+    orderByField: OrderByFieldEnum = OrderByFieldEnum.CREATED_AT,
     orderByMethod: OrderByMethodEnum = OrderByMethodEnum.DESC,
   ): JobsResponse
 
   fun getJobList(
     workspaceIds: List<UUID>,
     jobsFilter: JobsFilter,
-    orderByField: OrderByFieldEnum = OrderByFieldEnum.CREATEDAT,
+    orderByField: OrderByFieldEnum = OrderByFieldEnum.CREATED_AT,
     orderByMethod: OrderByMethodEnum = OrderByMethodEnum.DESC,
   ): JobsResponse
 }
@@ -57,7 +57,7 @@ interface JobService {
 @Singleton
 @Secondary
 class JobServiceImpl(
-  val userService: UserService,
+  private val userService: UserService,
   private val schedulerHandler: SchedulerHandler,
   private val jobHistoryHandler: JobHistoryHandler,
   private val currentUserService: CurrentUserService,
@@ -76,7 +76,7 @@ class JobServiceImpl(
     val connectionIdRequestBody = ConnectionIdRequestBody().connectionId(connectionId)
     val result =
       kotlin.runCatching { schedulerHandler.syncConnection(connectionIdRequestBody) }
-        .onFailure { ConfigClientErrorHandler.handleError(it, connectionId.toString()) }
+        .onFailure { ConfigClientErrorHandler.handleError(it) }
 
     log.debug(HTTP_RESPONSE_BODY_DEBUG_MESSAGE + result)
     return JobResponseMapper.from(result.getOrNull()!!)
@@ -91,7 +91,7 @@ class JobServiceImpl(
       kotlin.runCatching { schedulerHandler.resetConnection(connectionIdRequestBody) }
         .onFailure {
           log.error("reset job error $it")
-          ConfigClientErrorHandler.handleError(it, connectionId.toString())
+          ConfigClientErrorHandler.handleError(it)
         }
     log.debug(HTTP_RESPONSE_BODY_DEBUG_MESSAGE + result)
     return JobResponseMapper.from(result.getOrNull()!!)
@@ -108,7 +108,7 @@ class JobServiceImpl(
       }
         .onFailure {
           log.error("cancel job error $it")
-          ConfigClientErrorHandler.handleError(it, jobId.toString())
+          ConfigClientErrorHandler.handleError(it)
         }
     log.debug(HTTP_RESPONSE_BODY_DEBUG_MESSAGE + result)
     return JobResponseMapper.from(result.getOrNull()!!)
@@ -123,7 +123,7 @@ class JobServiceImpl(
       kotlin.runCatching { jobHistoryHandler.getJobInfoWithoutLogs(jobIdRequestBody) }
         .onFailure {
           log.error("Error getting job info without logs $it")
-          ConfigClientErrorHandler.handleError(it, jobId.toString())
+          ConfigClientErrorHandler.handleError(it)
         }
     log.debug(HTTP_RESPONSE_BODY_DEBUG_MESSAGE + result)
     return JobResponseMapper.from(result.getOrNull()!!)
@@ -158,7 +158,7 @@ class JobServiceImpl(
       kotlin.runCatching { jobHistoryHandler.listJobsForLight(jobListRequestBody) }
         .onFailure {
           log.error("Error getting job list $it")
-          ConfigClientErrorHandler.handleError(it, connectionId.toString())
+          ConfigClientErrorHandler.handleError(it)
         }
 
     log.debug(HTTP_RESPONSE_BODY_DEBUG_MESSAGE + result)
@@ -203,7 +203,7 @@ class JobServiceImpl(
       kotlin.runCatching { jobHistoryHandler.listJobsForWorkspaces(requestBody) }
         .onFailure {
           log.error("Error getting job list:", it)
-          ConfigClientErrorHandler.handleError(it, workspaceIds.toString())
+          ConfigClientErrorHandler.handleError(it)
         }
 
     log.debug(HTTP_RESPONSE_BODY_DEBUG_MESSAGE + result)

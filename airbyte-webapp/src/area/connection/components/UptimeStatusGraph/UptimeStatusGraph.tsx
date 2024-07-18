@@ -189,8 +189,8 @@ const formatDataForChart = (data: ReturnType<typeof useGetConnectionUptimeHistor
   // entries in the graph's expected format
   const uptimeData: UptimeDayEntry[] = [];
 
-  dateBucketKeys.forEach((dateBucketKey) => {
-    const dateEntries = bucketedEntries[dateBucketKey];
+  dateBucketKeys.forEach((dateBucketKey, idx) => {
+    const dateEntries = ensureStreams(bucketedEntries[dateBucketKey], idx, bucketedEntries, dateBucketKeys);
     dateEntries.streams.sort(sortStreams);
 
     uptimeData.push({
@@ -281,3 +281,48 @@ export const UptimeStatusGraph: React.FC = React.memo(() => {
   );
 });
 UptimeStatusGraph.displayName = "UptimeStatusGraph";
+
+export function ensureStreams(
+  bucket: RunBucket,
+  idx: number,
+  bucketedEntries: Record<string, RunBucket>,
+  dateBucketKeys: string[]
+) {
+  if (bucket.streams.length === 1 && bucket.streams[0].streamName == null) {
+    // there are no stream statuses for this job - this can happen if e.g. the orchestrator falls over before the source emits data
+    // find streams to inject by walking backwards and then forwards
+    // walk back
+    let foundStreams;
+    for (let i = idx - 1; i >= 0; i--) {
+      const thisBucket = bucketedEntries[dateBucketKeys[i]];
+      if (thisBucket.streams.length === 1 && thisBucket.streams[0].streamName == null) {
+        continue;
+      }
+      foundStreams = thisBucket;
+      break;
+    }
+    // walk forward
+    if (!foundStreams) {
+      for (let i = idx + 1; i < dateBucketKeys.length; i++) {
+        const thisBucket = bucketedEntries[dateBucketKeys[i]];
+        if (thisBucket.streams.length === 1 && thisBucket.streams[0].streamName == null) {
+          continue;
+        }
+        console.log("found forwards at", i);
+        foundStreams = thisBucket;
+        break;
+      }
+    }
+
+    if (foundStreams) {
+      return {
+        ...bucket,
+        streams: foundStreams.streams.map((stream) => ({
+          ...stream,
+          status: ConnectionStatusIndicatorStatus.Error,
+        })),
+      };
+    }
+  }
+  return bucket;
+}

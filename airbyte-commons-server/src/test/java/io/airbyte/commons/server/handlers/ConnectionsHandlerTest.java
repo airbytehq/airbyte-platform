@@ -12,13 +12,16 @@ import static io.airbyte.config.EnvConfigs.DEFAULT_FAILED_JOBS_IN_A_ROW_BEFORE_C
 import static io.airbyte.persistence.job.models.Job.REPLICATION_TYPES;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -69,6 +72,7 @@ import io.airbyte.api.model.generated.NamespaceDefinitionType;
 import io.airbyte.api.model.generated.ResourceRequirements;
 import io.airbyte.api.model.generated.SchemaChangeBackfillPreference;
 import io.airbyte.api.model.generated.SelectedFieldInfo;
+import io.airbyte.api.model.generated.SourceDiscoverSchemaRead;
 import io.airbyte.api.model.generated.SourceSearch;
 import io.airbyte.api.model.generated.StreamDescriptor;
 import io.airbyte.api.model.generated.StreamStats;
@@ -83,6 +87,7 @@ import io.airbyte.commons.server.converters.ApiPojoConverters;
 import io.airbyte.commons.server.converters.ConfigurationUpdate;
 import io.airbyte.commons.server.errors.BadRequestException;
 import io.airbyte.commons.server.handlers.helpers.ActorDefinitionHandlerHelper;
+import io.airbyte.commons.server.handlers.helpers.AutoPropagateSchemaChangeHelper;
 import io.airbyte.commons.server.handlers.helpers.CatalogConverter;
 import io.airbyte.commons.server.handlers.helpers.NotificationHelper;
 import io.airbyte.commons.server.handlers.helpers.StatsAggregationHelper;
@@ -90,6 +95,7 @@ import io.airbyte.commons.server.helpers.ConnectionHelpers;
 import io.airbyte.commons.server.scheduler.EventRunner;
 import io.airbyte.commons.server.validation.CatalogValidator;
 import io.airbyte.commons.server.validation.ValidationError;
+import io.airbyte.config.ActorCatalog;
 import io.airbyte.config.ActorDefinitionVersion;
 import io.airbyte.config.ActorType;
 import io.airbyte.config.AttemptFailureSummary;
@@ -131,11 +137,13 @@ import io.airbyte.config.persistence.ActorDefinitionVersionHelper.ActorDefinitio
 import io.airbyte.config.persistence.ConfigNotFoundException;
 import io.airbyte.config.persistence.ConfigRepository;
 import io.airbyte.config.persistence.StreamGenerationRepository;
+import io.airbyte.config.persistence.UserPersistence;
 import io.airbyte.config.persistence.domain.Generation;
 import io.airbyte.config.persistence.helper.CatalogGenerationSetter;
 import io.airbyte.config.secrets.JsonSecretsProcessor;
 import io.airbyte.config.secrets.SecretsRepositoryReader;
 import io.airbyte.data.helpers.ActorDefinitionVersionUpdater;
+import io.airbyte.data.services.ConnectionTimelineEventService;
 import io.airbyte.data.services.DestinationService;
 import io.airbyte.data.services.SecretPersistenceConfigService;
 import io.airbyte.data.services.SourceService;
@@ -263,6 +271,8 @@ class ConnectionsHandlerTest {
   private CatalogValidator catalogValidator;
   private NotificationHelper notificationHelper;
   private StreamStatusesService streamStatusesService;
+  private ConnectionTimelineEventService connectionTimelineEventService;
+  private UserPersistence userPersistence;
 
   @SuppressWarnings("unchecked")
   @BeforeEach
@@ -370,6 +380,8 @@ class ConnectionsHandlerTest {
     secretPersistenceConfigService = mock(SecretPersistenceConfigService.class);
     actorDefinitionHandlerHelper = mock(ActorDefinitionHandlerHelper.class);
     streamStatusesService = mock(StreamStatusesService.class);
+    connectionTimelineEventService = mock(ConnectionTimelineEventService.class);
+    userPersistence = mock(UserPersistence.class);
 
     featureFlagClient = mock(TestClient.class);
 
@@ -436,7 +448,8 @@ class ConnectionsHandlerTest {
           catalogGenerationSetter,
           catalogValidator,
           notificationHelper,
-          streamStatusesService);
+          streamStatusesService,
+          connectionTimelineEventService, userPersistence);
 
       when(uuidGenerator.get()).thenReturn(standardSync.getConnectionId());
       final StandardSourceDefinition sourceDefinition = new StandardSourceDefinition()
@@ -1687,7 +1700,8 @@ class ConnectionsHandlerTest {
           catalogGenerationSetter,
           catalogValidator,
           notificationHelper,
-          streamStatusesService);
+          streamStatusesService,
+          connectionTimelineEventService, userPersistence);
     }
 
     private Attempt generateMockAttempt(final Instant attemptTime, final long recordsSynced) {
@@ -1765,7 +1779,7 @@ class ConnectionsHandlerTest {
         final long jobTwoBytesEmmitted = 87654L;
         final long jobTwoRecordsCommitted = 50L;
         final long jobTwoRecordsEmittted = 60L;
-        try (MockedStatic<StatsAggregationHelper> mockStatsAggregationHelper = Mockito.mockStatic(StatsAggregationHelper.class)) {
+        try (final MockedStatic<StatsAggregationHelper> mockStatsAggregationHelper = Mockito.mockStatic(StatsAggregationHelper.class)) {
           mockStatsAggregationHelper.when(() -> StatsAggregationHelper.getJobIdToJobWithAttemptsReadMap(Mockito.any(), Mockito.any()))
               .thenReturn(Map.of(
                   jobOneId, new JobWithAttemptsRead().job(
@@ -1783,7 +1797,7 @@ class ConnectionsHandlerTest {
                               .recordsCommitted(jobTwoRecordsCommitted)
                               .recordsEmitted(jobTwoRecordsEmittted)))));
 
-          List<JobSyncResultRead> expected = List.of(
+          final List<JobSyncResultRead> expected = List.of(
               new JobSyncResultRead()
                   .configType(JobConfigType.SYNC)
                   .jobId(jobOneId)
@@ -1937,7 +1951,8 @@ class ConnectionsHandlerTest {
           catalogGenerationSetter,
           catalogValidator,
           notificationHelper,
-          streamStatusesService);
+          streamStatusesService,
+          connectionTimelineEventService, userPersistence);
     }
 
     @Test
@@ -2317,8 +2332,7 @@ class ConnectionsHandlerTest {
     }
 
     @Test
-    void testConnectionStatus()
-        throws JsonValidationException, ConfigNotFoundException, IOException {
+    void testConnectionStatus() throws IOException {
       final UUID connectionId = UUID.randomUUID();
       final AttemptFailureSummary failureSummary = new AttemptFailureSummary();
       failureSummary.setFailures(List.of(new FailureReason().withFailureOrigin(FailureReason.FailureOrigin.DESTINATION)));
@@ -2382,6 +2396,7 @@ class ConnectionsHandlerTest {
     private static final UUID DESTINATION_DEFINITION_ID = UUID.randomUUID();
     private static final UUID WORKSPACE_ID = UUID.randomUUID();
     private static final UUID DESTINATION_ID = UUID.randomUUID();
+    private static final UUID DISCOVERED_CATALOG_ID = UUID.randomUUID();
     private static final io.airbyte.protocol.models.AirbyteCatalog airbyteCatalog =
         CatalogHelpers.createAirbyteCatalog(SHOES, Field.of(SKU, JsonSchemaType.STRING));
     private static final ConfiguredAirbyteCatalog configuredAirbyteCatalog =
@@ -2395,6 +2410,10 @@ class ConnectionsHandlerTest {
         .withWorkspaceId(WORKSPACE_ID)
         .withEmail(EMAIL)
         .withNotificationSettings(NOTIFICATION_SETTINGS);
+    private static final ActorCatalog actorCatalog = new ActorCatalog()
+        .withCatalog(Jsons.jsonNode(airbyteCatalog))
+        .withCatalogHash("")
+        .withId(UUID.randomUUID());
 
     @BeforeEach
     void setup() throws IOException, JsonValidationException, ConfigNotFoundException {
@@ -2406,6 +2425,8 @@ class ConnectionsHandlerTest {
           .withCatalog(configuredAirbyteCatalog)
           .withManual(true)
           .withNonBreakingChangesPreference(StandardSync.NonBreakingChangesPreference.PROPAGATE_FULLY);
+
+      when(configRepository.getActorCatalogById(SOURCE_CATALOG_ID)).thenReturn(actorCatalog);
       when(configRepository.getStandardSync(CONNECTION_ID)).thenReturn(standardSync);
       when(configRepository.getSourceConnection(SOURCE_ID)).thenReturn(source);
       when(configRepository.getStandardWorkspaceNoSecrets(WORKSPACE_ID, false)).thenReturn(WORKSPACE);
@@ -2436,7 +2457,8 @@ class ConnectionsHandlerTest {
           catalogGenerationSetter,
           catalogValidator,
           notificationHelper,
-          streamStatusesService);
+          streamStatusesService,
+          connectionTimelineEventService, userPersistence);
     }
 
     @Test
@@ -2517,6 +2539,94 @@ class ConnectionsHandlerTest {
           source, EMAIL);
     }
 
+    @Test
+    void diffCatalogGeneratesADiffAndUpdatesTheConnection() throws JsonValidationException, ConfigNotFoundException, IOException {
+      final Field newField = Field.of(A_DIFFERENT_COLUMN, JsonSchemaType.STRING);
+      final var catalogWithDiff = CatalogHelpers.createAirbyteCatalog(SHOES, Field.of(SKU, JsonSchemaType.STRING), newField);
+      final ActorCatalog discoveredCatalog = new ActorCatalog()
+          .withCatalog(Jsons.jsonNode(catalogWithDiff))
+          .withCatalogHash("")
+          .withId(UUID.randomUUID());
+      when(configRepository.getActorCatalogById(DISCOVERED_CATALOG_ID)).thenReturn(discoveredCatalog);
+
+      final CatalogDiff expectedDiff =
+          new CatalogDiff().addTransformsItem(new StreamTransform()
+              .transformType(StreamTransform.TransformTypeEnum.UPDATE_STREAM)
+              .streamDescriptor(new StreamDescriptor().namespace(null).name(SHOES))
+              .updateStream(new StreamTransformUpdateStream().addFieldTransformsItem(new FieldTransform()
+                  .addField(new FieldAdd().schema(Jsons.deserialize("{\"type\": \"string\"}")))
+                  .fieldName(List.of(newField.getName()))
+                  .breaking(false)
+                  .transformType(FieldTransform.TransformTypeEnum.ADD_FIELD))));
+
+      final var result = connectionsHandler.diffCatalogAndConditionallyDisable(CONNECTION_ID, DISCOVERED_CATALOG_ID);
+
+      assertEquals(expectedDiff, result.getCatalogDiff());
+      assertEquals(false, result.getBreakingChange());
+
+      final ArgumentCaptor<StandardSync> syncCaptor = ArgumentCaptor.forClass(StandardSync.class);
+      verify(configRepository).writeStandardSync(syncCaptor.capture());
+      final StandardSync savedSync = syncCaptor.getValue();
+      assertNotEquals(Status.INACTIVE, savedSync.getStatus());
+    }
+
+    @Test
+    void diffCatalogADisablesForBreakingChange() throws JsonValidationException, ConfigNotFoundException, IOException {
+      try (MockedStatic<AutoPropagateSchemaChangeHelper> helper = Mockito.mockStatic(AutoPropagateSchemaChangeHelper.class)) {
+        helper.when(() -> AutoPropagateSchemaChangeHelper.containsBreakingChange(any())).thenReturn(true);
+
+        final var result = connectionsHandler.diffCatalogAndConditionallyDisable(CONNECTION_ID, SOURCE_CATALOG_ID);
+        assertEquals(true, result.getBreakingChange());
+      }
+
+      final ArgumentCaptor<StandardSync> syncCaptor = ArgumentCaptor.forClass(StandardSync.class);
+      verify(configRepository).writeStandardSync(syncCaptor.capture());
+      final StandardSync savedSync = syncCaptor.getValue();
+      assertEquals(Status.INACTIVE, savedSync.getStatus());
+    }
+
+    @Test
+    void diffCatalogDisablesForNonBreakingChangeIfConfiguredSo() throws IOException, JsonValidationException, ConfigNotFoundException {
+      // configure the sync to be disabled on non-breaking change
+      standardSync = standardSync.withNonBreakingChangesPreference(StandardSync.NonBreakingChangesPreference.DISABLE);
+      when(configRepository.getStandardSync(CONNECTION_ID)).thenReturn(standardSync);
+
+      final Field newField = Field.of(A_DIFFERENT_COLUMN, JsonSchemaType.STRING);
+      final var catalogWithDiff = CatalogHelpers.createAirbyteCatalog(SHOES, Field.of(SKU, JsonSchemaType.STRING), newField);
+      final ActorCatalog discoveredCatalog = new ActorCatalog()
+          .withCatalog(Jsons.jsonNode(catalogWithDiff))
+          .withCatalogHash("")
+          .withId(UUID.randomUUID());
+      when(configRepository.getActorCatalogById(DISCOVERED_CATALOG_ID)).thenReturn(discoveredCatalog);
+
+      final var result = connectionsHandler.diffCatalogAndConditionallyDisable(CONNECTION_ID, DISCOVERED_CATALOG_ID);
+
+      assertEquals(false, result.getBreakingChange());
+
+      final ArgumentCaptor<StandardSync> syncCaptor = ArgumentCaptor.forClass(StandardSync.class);
+      verify(configRepository).writeStandardSync(syncCaptor.capture());
+      final StandardSync savedSync = syncCaptor.getValue();
+      assertEquals(Status.INACTIVE, savedSync.getStatus());
+    }
+
+    @Test
+    void postprocessDiscoveredComposesDiffingAndSchemaPropagation() throws JsonValidationException, ConfigNotFoundException, IOException {
+      final var catalog = CatalogConverter.toApi(Jsons.clone(airbyteCatalog), SOURCE_VERSION);
+      final var diffResult = new SourceDiscoverSchemaRead().catalog(catalog);
+      final var transform = new StreamTransform().transformType(StreamTransform.TransformTypeEnum.ADD_STREAM)
+          .streamDescriptor(new StreamDescriptor().namespace(A_DIFFERENT_NAMESPACE).name(A_DIFFERENT_STREAM));
+      final var propagatedDiff = new CatalogDiff().transforms(List.of(transform));
+      final var autoPropResult = new ConnectionAutoPropagateResult().propagatedDiff(propagatedDiff);
+
+      final var spiedConnectionsHandler = spy(connectionsHandler);
+      doReturn(diffResult).when(spiedConnectionsHandler).diffCatalogAndConditionallyDisable(CONNECTION_ID, DISCOVERED_CATALOG_ID);
+      doReturn(autoPropResult).when(spiedConnectionsHandler).applySchemaChange(CONNECTION_ID, WORKSPACE_ID, DISCOVERED_CATALOG_ID, catalog);
+
+      final var result = spiedConnectionsHandler.postprocessDiscoveredCatalog(CONNECTION_ID, DISCOVERED_CATALOG_ID);
+
+      assertEquals(propagatedDiff, result.getAppliedDiff());
+    }
+
   }
 
   @Nested
@@ -2543,7 +2653,8 @@ class ConnectionsHandlerTest {
           catalogGenerationSetter,
           catalogValidator,
           notificationHelper,
-          streamStatusesService);
+          streamStatusesService,
+          connectionTimelineEventService, userPersistence);
     }
 
     @Test
@@ -2644,7 +2755,7 @@ class ConnectionsHandlerTest {
 
       when(jobPersistence.listJobsLight(Set.of(jobId))).thenReturn(jobList);
 
-      try (MockedStatic<StatsAggregationHelper> mockStatsAggregationHelper = Mockito.mockStatic(StatsAggregationHelper.class)) {
+      try (final MockedStatic<StatsAggregationHelper> mockStatsAggregationHelper = Mockito.mockStatic(StatsAggregationHelper.class)) {
         mockStatsAggregationHelper.when(() -> StatsAggregationHelper.getJobIdToJobWithAttemptsReadMap(eq(jobList), eq(jobPersistence)))
             .thenReturn(Map.of(jobId, jobWithAttemptsRead));
 

@@ -43,6 +43,8 @@ import java.util.UUID;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.MethodOrderer;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Tags;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
 import org.junit.jupiter.api.TestMethodOrder;
@@ -53,8 +55,6 @@ import org.testcontainers.utility.DockerImageName;
 /**
  * Connector Builder-only acceptance tests.
  */
-@DisabledIfEnvironmentVariable(named = "SKIP_BASIC_ACCEPTANCE_TESTS",
-                               matches = "true")
 @DisabledIfEnvironmentVariable(named = "IS_GKE",
                                matches = "TRUE",
                                disabledReason = "Cloud GKE environment is preventing unsecured http requests")
@@ -63,6 +63,7 @@ import org.testcontainers.utility.DockerImageName;
 // The tests methods already have the right visibility, but PMD complains.
 // Silence it as it's a bug.
 @SuppressWarnings("PMD.JUnit5TestShouldBePackagePrivate")
+@Tags({@Tag("builder"), @Tag("enterprise")})
 public class ConnectorBuilderTests {
 
   private static final String ECHO_SERVER_IMAGE = "mendhak/http-https-echo:29";

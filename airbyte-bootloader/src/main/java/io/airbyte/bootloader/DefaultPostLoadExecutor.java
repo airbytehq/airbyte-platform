@@ -37,7 +37,9 @@ public class DefaultPostLoadExecutor implements PostLoadExecutor {
 
   @Override
   public void execute() throws Exception {
-    applyDefinitionsHelper.apply();
+    log.info("Updating connector definitions");
+    applyDefinitionsHelper.apply(false, true);
+    log.info("Done updating connector definitions");
     declarativeSourceUpdater.apply();
 
     log.info("Loaded seed data.");

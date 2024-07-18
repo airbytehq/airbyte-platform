@@ -20,6 +20,7 @@ import io.airbyte.workers.temporal.discover.catalog.DiscoverCatalogWorkflowImpl;
 import io.airbyte.workers.temporal.scheduling.ConnectionManagerWorkflowImpl;
 import io.airbyte.workers.temporal.spec.SpecWorkflowImpl;
 import io.airbyte.workers.temporal.sync.SyncWorkflowImpl;
+import io.airbyte.workers.temporal.workflows.DiscoverCatalogAndAutoPropagateWorkflowImpl;
 import io.airbyte.workers.tracing.StorageObjectGetInterceptor;
 import io.airbyte.workers.tracing.TemporalSdkInterceptor;
 import io.micronaut.context.annotation.Requires;
@@ -239,7 +240,8 @@ public class ApplicationInitializer implements ApplicationEventListener<ServiceR
           .setFailWorkflowExceptionTypes(NonDeterministicException.class).build();
       discoverWorker
           .registerWorkflowImplementationTypes(options,
-              temporalProxyHelper.proxyWorkflowClass(DiscoverCatalogWorkflowImpl.class));
+              temporalProxyHelper.proxyWorkflowClass(DiscoverCatalogWorkflowImpl.class),
+              temporalProxyHelper.proxyWorkflowClass(DiscoverCatalogAndAutoPropagateWorkflowImpl.class));
       discoverWorker.registerActivitiesImplementations(
           discoverActivities.orElseThrow().toArray(new Object[] {}));
       log.info("Discover Workflow registered.");

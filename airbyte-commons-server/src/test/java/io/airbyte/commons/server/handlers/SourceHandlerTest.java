@@ -556,7 +556,7 @@ class SourceHandlerTest {
     // deleting the source).
     verify(sourceService, times(0)).writeSourceConnectionWithSecrets(expectedSourceConnection, connectorSpecification);
     verify(sourceService, times(0)).getSourceConnectionWithSecrets(any());
-    verify(sourceService).tombstoneSource(any(), any());
+    verify(sourceService).tombstoneSource(any(), any(), any(), any());
     verify(connectionsHandler).listConnectionsForWorkspace(workspaceIdRequestBody);
     verify(connectionsHandler).deleteConnection(connectionRead.getConnectionId());
   }

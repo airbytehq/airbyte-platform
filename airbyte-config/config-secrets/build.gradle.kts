@@ -22,7 +22,7 @@ dependencies {
   api(libs.jakarta.transaction.api)
   api(libs.micronaut.data.tx)
   api(libs.aws.java.sdk.sts)
-  api(project(":airbyte-commons"))
+  api(project(":oss:airbyte-commons"))
 
   /*
    * Marked as "implementation" to avoid leaking these dependencies to services
@@ -30,10 +30,10 @@ dependencies {
    * that do need these dependencies will already have them declared, as they will
    * need to define singletons from these modules in order for everything work.
    */
-  implementation(project(":airbyte-config:config-models"))
-  implementation(project(":airbyte-json-validation"))
-  implementation(project(":airbyte-metrics:metrics-lib"))
-  implementation(project(":airbyte-featureflag"))
+  implementation(project(":oss:airbyte-config:config-models"))
+  implementation(project(":oss:airbyte-json-validation"))
+  implementation(project(":oss:airbyte-metrics:metrics-lib"))
+  implementation(project(":oss:airbyte-featureflag"))
 
   testAnnotationProcessor(platform(libs.micronaut.platform))
   testAnnotationProcessor(libs.bundles.micronaut.test.annotation.processor)
@@ -45,5 +45,5 @@ dependencies {
   testImplementation(libs.airbyte.protocol)
   testImplementation(libs.apache.commons.lang)
   testImplementation(libs.testcontainers.vault)
-  testImplementation(testFixtures(project(":airbyte-config:config-persistence")))
+  testImplementation(testFixtures(project(":oss:airbyte-config:config-persistence")))
 }

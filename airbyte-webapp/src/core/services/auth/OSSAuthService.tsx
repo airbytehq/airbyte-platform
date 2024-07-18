@@ -1,16 +1,19 @@
 import { PropsWithChildren } from "react";
 
-import { FeatureItem, useFeature } from "core/services/features";
+import { useGetInstanceConfiguration } from "core/api";
 
-import { CommunityAuthService } from "./CommunityAuthService";
 import { EnterpriseAuthService } from "./EnterpriseAuthService";
+import { NoAuthService } from "./NoAuthService";
+import { SimpleAuthService } from "./SimpleAuthService";
 
 export const OSSAuthService: React.FC<PropsWithChildren<unknown>> = ({ children }) => {
-  const isKeycloakAuthenticationEnabled = useFeature(FeatureItem.KeycloakAuthentication);
+  const { auth } = useGetInstanceConfiguration();
 
-  return isKeycloakAuthenticationEnabled ? (
-    <EnterpriseAuthService>{children}</EnterpriseAuthService>
-  ) : (
-    <CommunityAuthService>{children}</CommunityAuthService>
-  );
+  if (auth.mode === "oidc") {
+    return <EnterpriseAuthService>{children}</EnterpriseAuthService>;
+  }
+  if (auth.mode === "simple") {
+    return <SimpleAuthService>{children}</SimpleAuthService>;
+  }
+  return <NoAuthService>{children}</NoAuthService>;
 };

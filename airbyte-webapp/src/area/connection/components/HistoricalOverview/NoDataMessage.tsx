@@ -1,14 +1,29 @@
 import { FormattedMessage } from "react-intl";
 
-import { FlexContainer } from "components/ui/Flex";
-import { Text } from "components/ui/Text";
+import { EmptyState } from "components/common/EmptyState";
+import { useConnectionSyncContext } from "components/connection/ConnectionSync/ConnectionSyncContext";
+import { Button } from "components/ui/Button";
 
-import styles from "./NoDataMessage.module.scss";
+import { useConnectionFormService } from "hooks/services/ConnectionForm/ConnectionFormService";
 
-export const NoDataMessage: React.FC = () => (
-  <FlexContainer className={styles.minHeight} alignItems="center" justifyContent="center">
-    <Text size="lg">
-      <FormattedMessage id="connection.overview.graph.noData" />
-    </Text>
-  </FlexContainer>
-);
+export const NoDataMessage: React.FC = () => {
+  const { mode } = useConnectionFormService();
+  const { syncConnection, isSyncConnectionAvailable } = useConnectionSyncContext();
+
+  return (
+    <EmptyState
+      icon="chart"
+      text={<FormattedMessage id="connection.overview.graph.noData" />}
+      button={
+        <Button
+          variant="primary"
+          type="button"
+          onClick={syncConnection}
+          disabled={mode === "readonly" || !isSyncConnectionAvailable}
+        >
+          <FormattedMessage id="connection.overview.graph.noData.button" />
+        </Button>
+      }
+    />
+  );
+};

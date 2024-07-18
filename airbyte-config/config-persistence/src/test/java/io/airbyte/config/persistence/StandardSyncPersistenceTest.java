@@ -481,7 +481,8 @@ class StandardSyncPersistenceTest extends BaseConfigDatabaseTest {
         .withSpec(new ConnectorSpecification())
         .withProtocolVersion(protocolVersion)
         .withReleaseStage(releaseStage)
-        .withSupportLevel(SupportLevel.COMMUNITY);
+        .withSupportLevel(SupportLevel.COMMUNITY)
+        .withInternalSupportLevel(100L);
     configRepository.writeConnectorMetadata(sourceDef, sourceDefVersion);
     return sourceDef;
   }
@@ -505,7 +506,8 @@ class StandardSyncPersistenceTest extends BaseConfigDatabaseTest {
         .withSpec(new ConnectorSpecification())
         .withProtocolVersion(protocolVersion)
         .withReleaseStage(releaseStage)
-        .withSupportLevel(SupportLevel.COMMUNITY);
+        .withSupportLevel(SupportLevel.COMMUNITY)
+        .withInternalSupportLevel(100L);
 
     configRepository.writeConnectorMetadata(destDef, destDefVersion);
     return destDef;
@@ -576,7 +578,7 @@ class StandardSyncPersistenceTest extends BaseConfigDatabaseTest {
         .withOperationId(standardSyncOperationId)
         .withName("name")
         .withWorkspaceId(workspaceId)
-        .withOperatorType(StandardSyncOperation.OperatorType.DBT));
+        .withOperatorType(StandardSyncOperation.OperatorType.WEBHOOK));
 
     database.transaction(ctx -> ctx.insertInto(CONNECTION_OPERATION)
         .set(CONNECTION_OPERATION.ID, operationId)

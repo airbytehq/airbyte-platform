@@ -23,12 +23,15 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Tags;
 import org.junit.jupiter.api.TestInstance;
 import org.junit.jupiter.api.TestInstance.Lifecycle;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 
 @TestInstance(Lifecycle.PER_CLASS)
+@Tags({@Tag("sync"), @Tag("enterprise")})
 class VersioningAcceptanceTests {
 
   private static AirbyteApiClient apiClient2;

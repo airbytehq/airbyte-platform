@@ -13,8 +13,8 @@ dependencies {
   implementation(libs.failsafe)
 
   // We do not want dependency on(databases from this library.)
-  implementation(project(":airbyte-commons"))
-  implementation(project(":airbyte-metrics:metrics-lib"))
+  implementation(project(":oss:airbyte-commons"))
+  implementation(project(":oss:airbyte-metrics:metrics-lib"))
 
   testImplementation(libs.assertj.core)
   testImplementation(libs.bundles.junit)

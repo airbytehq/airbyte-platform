@@ -96,6 +96,7 @@ Renders the name of the secret where the database user will be referenced
 */}}
 {{- define "airbyte.database.userSecretKey" }}
     {{- if .Values.global.database.userSecretKey }}
+        {{ $secretName := .Values.global.database.secretName | required "You must set `global.database.secretName` when using an external database" }}
         {{- .Values.global.database.userSecretKey }}
     {{- else }}
         {{- printf "%s" "DATABASE_USER" }}
@@ -139,6 +140,7 @@ Renders the name of the secret where the database password will be referenced
 */}}
 {{- define "airbyte.database.passwordSecretKey" }}
     {{- if .Values.global.database.passwordSecretKey }}
+        {{ $secretName := .Values.global.database.secretName | required "You must set `global.database.secretName` when using an external database" }}
         {{- .Values.global.database.passwordSecretKey }}
     {{- else }}
         {{- printf "%s" "DATABASE_PASSWORD" }}
@@ -205,10 +207,14 @@ Renders all of the common environment variables which provide database credentia
 Renders a set of database secrets to be included in the shared Airbyte secret
 */}}
 {{- define "airbyte.database.secrets" }}
-{{- if and (not .Values.global.database.secretName) (not .Values.externalDatabase.existingSecret) }}
-DATABASE_USER: {{ include "airbyte.database.user" . }}
-DATABASE_PASSWORD: {{ include "airbyte.database.password" . }}
+{{ $user := (include "airbyte.database.user" .)}}
+{{- if not (empty $user) }}
+DATABASE_USER: {{ $user }}
 {{- end }}
+{{ $password := (include "airbyte.database.password" .)}}
+{{- if not (empty $password) }}
+DATABASE_PASSWORD: {{ $password }}
+{{- end}}
 {{- end }}
 
 {{/*
@@ -219,4 +225,10 @@ DATABASE_HOST: {{ include "airbyte.database.host" . }}
 DATABASE_PORT: {{ include "airbyte.database.port" . | quote }}
 DATABASE_DB: {{ include "airbyte.database.name" . }}
 DATABASE_URL: {{ include "airbyte.database.url" . }}
+{{- if .Values.global.database.user }}
+DATABASE_USER: {{ include "airbyte.database.user" . }}
+{{- end}}
+{{- if .Values.global.database.password }}
+DATABASE_PASSWORD: {{ include "airbyte.database.password" . }}
+{{- end}}
 {{- end }}

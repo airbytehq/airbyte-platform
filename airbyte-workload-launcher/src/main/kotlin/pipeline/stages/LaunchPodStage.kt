@@ -42,9 +42,7 @@ open class LaunchPodStage(
   }
 
   override fun applyStage(input: LaunchStageIO): LaunchStageIO {
-    val payload = input.payload!!
-
-    when (payload) {
+    when (val payload = input.payload!!) {
       is SyncPayload -> launcher.launchReplication(payload.input, input.msg)
       is CheckPayload -> launcher.launchCheck(payload.input, input.msg)
       is DiscoverCatalogPayload -> launcher.launchDiscover(payload.input, input.msg)

@@ -28,9 +28,6 @@ import io.airbyte.config.Geography;
 import io.airbyte.config.JobSyncConfig.NamespaceDefinitionType;
 import io.airbyte.config.Notification;
 import io.airbyte.config.Notification.NotificationType;
-import io.airbyte.config.OperatorDbt;
-import io.airbyte.config.OperatorNormalization;
-import io.airbyte.config.OperatorNormalization.Option;
 import io.airbyte.config.OperatorWebhook;
 import io.airbyte.config.Organization;
 import io.airbyte.config.Permission;
@@ -473,6 +470,7 @@ public class MockData {
         .withDockerRepository("repository-4")
         .withSpec(connectorSpecification())
         .withSupportLevel(SupportLevel.COMMUNITY)
+        .withInternalSupportLevel(100L)
         .withProtocolVersion("0.2.0");
   }
 
@@ -636,43 +634,45 @@ public class MockData {
   }
 
   public static List<StandardSyncOperation> standardSyncOperations() {
-    final OperatorDbt operatorDbt = new OperatorDbt()
-        .withDbtArguments("dbt-arguments")
-        .withDockerImage("image-tag")
-        .withGitRepoBranch("git-repo-branch")
-        .withGitRepoUrl("git-repo-url");
     final StandardSyncOperation standardSyncOperation1 = new StandardSyncOperation()
         .withName("operation-1")
         .withTombstone(false)
         .withOperationId(OPERATION_ID_1)
         .withWorkspaceId(WORKSPACE_ID_1)
-        .withOperatorDbt(operatorDbt)
-        .withOperatorNormalization(null)
-        .withOperatorType(OperatorType.DBT);
+        .withOperatorType(OperatorType.WEBHOOK)
+        .withOperatorWebhook(
+            new OperatorWebhook()
+                .withWebhookConfigId(WEBHOOK_CONFIG_ID)
+                .withExecutionUrl(WEBHOOK_OPERATION_EXECUTION_URL)
+                .withExecutionBody(WEBHOOK_OPERATION_EXECUTION_BODY));
     final StandardSyncOperation standardSyncOperation2 = new StandardSyncOperation()
         .withName("operation-1")
         .withTombstone(false)
         .withOperationId(OPERATION_ID_2)
         .withWorkspaceId(WORKSPACE_ID_1)
-        .withOperatorDbt(null)
-        .withOperatorNormalization(new OperatorNormalization().withOption(Option.BASIC))
-        .withOperatorType(OperatorType.NORMALIZATION);
+        .withOperatorType(OperatorType.WEBHOOK)
+        .withOperatorWebhook(
+            new OperatorWebhook()
+                .withWebhookConfigId(WEBHOOK_CONFIG_ID)
+                .withExecutionUrl(WEBHOOK_OPERATION_EXECUTION_URL)
+                .withExecutionBody(WEBHOOK_OPERATION_EXECUTION_BODY));
     final StandardSyncOperation standardSyncOperation3 = new StandardSyncOperation()
         .withName("operation-3")
         .withTombstone(false)
         .withOperationId(OPERATION_ID_3)
         .withWorkspaceId(WORKSPACE_ID_2)
-        .withOperatorDbt(null)
-        .withOperatorNormalization(new OperatorNormalization().withOption(Option.BASIC))
-        .withOperatorType(OperatorType.NORMALIZATION);
+        .withOperatorType(OperatorType.WEBHOOK)
+        .withOperatorWebhook(
+            new OperatorWebhook()
+                .withWebhookConfigId(WEBHOOK_CONFIG_ID)
+                .withExecutionUrl(WEBHOOK_OPERATION_EXECUTION_URL)
+                .withExecutionBody(WEBHOOK_OPERATION_EXECUTION_BODY));
     final StandardSyncOperation standardSyncOperation4 = new StandardSyncOperation()
         .withName("webhook-operation")
         .withTombstone(false)
         .withOperationId(OPERATION_ID_4)
         .withWorkspaceId(WORKSPACE_ID_1)
         .withOperatorType(OperatorType.WEBHOOK)
-        .withOperatorDbt(null)
-        .withOperatorNormalization(null)
         .withOperatorWebhook(
             new OperatorWebhook()
                 .withWebhookConfigId(WEBHOOK_CONFIG_ID)

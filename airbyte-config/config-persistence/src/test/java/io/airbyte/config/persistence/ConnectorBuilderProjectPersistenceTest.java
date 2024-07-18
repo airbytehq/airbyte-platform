@@ -366,6 +366,7 @@ class ConnectorBuilderProjectPersistenceTest extends BaseConfigDatabaseTest {
         .withDockerRepository("repo-" + id)
         .withDockerImageTag("0.0.1")
         .withSupportLevel(SupportLevel.COMMUNITY)
+        .withInternalSupportLevel(100L)
         .withSpec(new ConnectorSpecification().withProtocolVersion("0.1.0"));
 
     sourceService.writeConnectorMetadata(sourceDefinition, actorDefinitionVersion, List.of());

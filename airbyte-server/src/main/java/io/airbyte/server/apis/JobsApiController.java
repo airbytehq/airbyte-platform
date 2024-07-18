@@ -12,7 +12,6 @@ import static io.airbyte.commons.auth.AuthRoleConstants.WORKSPACE_EDITOR;
 import static io.airbyte.commons.auth.AuthRoleConstants.WORKSPACE_READER;
 
 import io.airbyte.api.generated.JobsApi;
-import io.airbyte.api.model.generated.AttemptNormalizationStatusReadList;
 import io.airbyte.api.model.generated.BooleanRead;
 import io.airbyte.api.model.generated.CheckInput;
 import io.airbyte.api.model.generated.ConnectionIdRequestBody;
@@ -97,14 +96,6 @@ public class JobsApiController implements JobsApi {
       jobsHandler.failNonTerminalJobs(connectionIdRequestBody.getConnectionId());
       return null; // to satisfy the lambda interface bounds
     });
-  }
-
-  @Post("/get_normalization_status")
-  @Secured({ADMIN})
-  @ExecuteOn(AirbyteTaskExecutors.IO)
-  @Override
-  public AttemptNormalizationStatusReadList getAttemptNormalizationStatusesForJob(@Body final JobIdRequestBody jobIdRequestBody) {
-    return ApiHelper.execute(() -> jobHistoryHandler.getAttemptNormalizationStatuses(jobIdRequestBody));
   }
 
   @Post("/get_check_input")

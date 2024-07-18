@@ -71,10 +71,9 @@ open class SecretsRepositoryWriter(
    * @param config secret config to be deleted
    * @param spec connector specification
    * @param runtimeSecretPersistence to use as an override
-   * @return partial config
    */
   @Throws(JsonValidationException::class)
-  private fun deleteFromConfig(
+  fun deleteFromConfig(
     config: JsonNode,
     spec: JsonNode,
     runtimeSecretPersistence: RuntimeSecretPersistence? = null,
@@ -100,28 +99,6 @@ open class SecretsRepositoryWriter(
       }
     }
     logger.info { "Deleting secrets done!" }
-  }
-
-  /**
-   * Deletes secrets config from persistence and return the partial config.
-   *
-   * @param workspaceId workspace ID
-   * @param config secret config to be deleted
-   * @param spec connector specification
-   * @param runtimeSecretPersistence to use as an override
-   * @return partial config
-   */
-  @Throws(JsonValidationException::class)
-  fun deleteFromConfig(
-    workspaceId: UUID,
-    config: JsonNode,
-    spec: JsonNode,
-    runtimeSecretPersistence: RuntimeSecretPersistence? = null,
-  ): JsonNode {
-    val splitConfig: SplitSecretConfig =
-      SecretsHelpers.splitConfig(workspaceId, config, spec, secretPersistence)
-    deleteFromConfig(config, spec, runtimeSecretPersistence)
-    return splitConfig.partialConfig
   }
 
   /**

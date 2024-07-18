@@ -14,8 +14,11 @@ import io.airbyte.config.FailureReason.FailureType;
 import io.airbyte.config.Metadata;
 import io.airbyte.config.StreamDescriptor;
 import io.airbyte.protocol.models.AirbyteTraceMessage;
+import io.airbyte.workers.exception.WorkloadLauncherException;
+import io.airbyte.workers.exception.WorkloadMonitorException;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Objects;
 import java.util.Set;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.exception.ExceptionUtils;
@@ -63,8 +66,6 @@ public class FailureHelper {
   private static final String ACTIVITY_TYPE_REPLICATE = "Replicate";
   private static final String ACTIVITY_TYPE_REPLICATEV2 = "ReplicateV2";
   private static final String ACTIVITY_TYPE_PERSIST = "Persist";
-  private static final String ACTIVITY_TYPE_NORMALIZE = "Normalize";
-  private static final String ACTIVITY_TYPE_DBT_RUN = "Run";
 
   /**
    * Create generic failure.
@@ -291,9 +292,29 @@ public class FailureHelper {
    * @return failure reason
    */
   public static FailureReason replicationFailure(final Throwable t, final Long jobId, final Integer attemptNumber) {
-    return genericFailure(t, jobId, attemptNumber)
-        .withFailureOrigin(FailureOrigin.REPLICATION)
-        .withExternalMessage("Something went wrong during replication");
+    final FailureReason failure = genericFailure(t, jobId, attemptNumber)
+        .withFailureOrigin(FailureOrigin.REPLICATION);
+    if (isInstanceOf(t, WorkloadLauncherException.class)) {
+      return failure.withFailureType(FailureType.TRANSIENT_ERROR)
+          .withExternalMessage("Airbyte could not start the sync process.");
+    } else if (isInstanceOf(t, WorkloadMonitorException.class)) {
+      return failure.withFailureType(FailureType.TRANSIENT_ERROR)
+          .withExternalMessage("Airbyte could not start the sync process or track the progress of the sync.");
+    } else {
+      return failure.withExternalMessage("Something went wrong during replication");
+    }
+  }
+
+  private static boolean isInstanceOf(final Throwable exception, final Class<? extends Throwable> exceptionType) {
+    Throwable current = exception;
+    while (current != null) {
+      if (exceptionType.isInstance(exception)) {
+        return true;
+      }
+      current = current.getCause();
+    }
+
+    return Objects.nonNull(exception) && Objects.nonNull(exception.getMessage()) && exception.getMessage().contains(exceptionType.getName());
   }
 
   /**
@@ -308,47 +329,6 @@ public class FailureHelper {
     return genericFailure(t, jobId, attemptNumber)
         .withFailureOrigin(FailureOrigin.PERSISTENCE)
         .withExternalMessage("Something went wrong during state persistence");
-  }
-
-  /**
-   * Create normalization failure.
-   *
-   * @param t throwable that caused the failure
-   * @param jobId job id
-   * @param attemptNumber attempt number
-   * @return failure reason
-   */
-  public static FailureReason normalizationFailure(final Throwable t, final Long jobId, final Integer attemptNumber) {
-    return genericFailure(t, jobId, attemptNumber)
-        .withFailureOrigin(FailureOrigin.NORMALIZATION)
-        .withExternalMessage("Something went wrong during normalization");
-  }
-
-  /**
-   * Create normalization failure.
-   *
-   * @param jobId job id
-   * @param attemptNumber attempt number
-   * @return failure reason
-   */
-  public static FailureReason normalizationFailure(final AirbyteTraceMessage m, final Long jobId, final Integer attemptNumber) {
-    return genericFailure(m, jobId, attemptNumber)
-        .withFailureOrigin(FailureOrigin.NORMALIZATION)
-        .withExternalMessage(m.getError().getMessage());
-  }
-
-  /**
-   * Create dbt failure.
-   *
-   * @param t throwable that caused the failure
-   * @param jobId job id
-   * @param attemptNumber attempt number
-   * @return failure reason
-   */
-  public static FailureReason dbtFailure(final Throwable t, final Long jobId, final Integer attemptNumber) {
-    return genericFailure(t, jobId, attemptNumber)
-        .withFailureOrigin(FailureOrigin.DBT)
-        .withExternalMessage("Something went wrong during dbt");
   }
 
   /**
@@ -420,10 +400,6 @@ public class FailureHelper {
       return replicationFailure(t, jobId, attemptNumber);
     } else if (WORKFLOW_TYPE_SYNC.equals(workflowType) && ACTIVITY_TYPE_PERSIST.equals(activityType)) {
       return persistenceFailure(t, jobId, attemptNumber);
-    } else if (WORKFLOW_TYPE_SYNC.equals(workflowType) && ACTIVITY_TYPE_NORMALIZE.equals(activityType)) {
-      return normalizationFailure(t, jobId, attemptNumber);
-    } else if (WORKFLOW_TYPE_SYNC.equals(workflowType) && ACTIVITY_TYPE_DBT_RUN.equals(activityType)) {
-      return dbtFailure(t, jobId, attemptNumber);
     } else {
       return unknownOriginFailure(t, jobId, attemptNumber);
     }

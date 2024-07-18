@@ -4,6 +4,7 @@ plugins {
   id("io.airbyte.gradle.jvm.app")
   id("io.airbyte.gradle.docker")
   id("io.airbyte.gradle.publish")
+  id("io.airbyte.gradle.kube-reload")
 }
 
 dependencies {
@@ -42,33 +43,33 @@ dependencies {
   implementation(libs.jakarta.ws.rs.api)
   implementation(libs.jakarta.validation.api)
 
-  implementation(project(":airbyte-analytics"))
-  implementation(project(":airbyte-api"))
-  implementation(project(":airbyte-commons"))
-  implementation(project(":airbyte-commons-auth"))
-  implementation(project(":airbyte-commons-converters"))
-  implementation(project(":airbyte-commons-license"))
-  implementation(project(":airbyte-commons-micronaut"))
-  implementation(project(":airbyte-commons-micronaut-security"))
-  implementation(project(":airbyte-commons-temporal"))
-  implementation(project(":airbyte-commons-temporal-core"))
-  implementation(project(":airbyte-commons-server"))
-  implementation(project(":airbyte-commons-with-dependencies"))
-  implementation(project(":airbyte-config:init"))
-  implementation(project(":airbyte-config:config-models"))
-  implementation(project(":airbyte-config:config-persistence"))
-  implementation(project(":airbyte-config:config-secrets"))
-  implementation(project(":airbyte-config:specs"))
-  implementation(project(":airbyte-data"))
-  implementation(project(":airbyte-featureflag"))
-  implementation(project(":airbyte-metrics:metrics-lib"))
-  implementation(project(":airbyte-db:db-lib"))
-  implementation(project(":airbyte-db:jooq"))
-  implementation(project(":airbyte-json-validation"))
-  implementation(project(":airbyte-notification"))
-  implementation(project(":airbyte-oauth"))
+  implementation(project(":oss:airbyte-analytics"))
+  implementation(project(":oss:airbyte-api"))
+  implementation(project(":oss:airbyte-commons"))
+  implementation(project(":oss:airbyte-commons-auth"))
+  implementation(project(":oss:airbyte-commons-converters"))
+  implementation(project(":oss:airbyte-commons-license"))
+  implementation(project(":oss:airbyte-commons-micronaut"))
+  implementation(project(":oss:airbyte-commons-micronaut-security"))
+  implementation(project(":oss:airbyte-commons-temporal"))
+  implementation(project(":oss:airbyte-commons-temporal-core"))
+  implementation(project(":oss:airbyte-commons-server"))
+  implementation(project(":oss:airbyte-commons-with-dependencies"))
+  implementation(project(":oss:airbyte-config:init"))
+  implementation(project(":oss:airbyte-config:config-models"))
+  implementation(project(":oss:airbyte-config:config-persistence"))
+  implementation(project(":oss:airbyte-config:config-secrets"))
+  implementation(project(":oss:airbyte-config:specs"))
+  implementation(project(":oss:airbyte-data"))
+  implementation(project(":oss:airbyte-featureflag"))
+  implementation(project(":oss:airbyte-metrics:metrics-lib"))
+  implementation(project(":oss:airbyte-db:db-lib"))
+  implementation(project(":oss:airbyte-db:jooq"))
+  implementation(project(":oss:airbyte-json-validation"))
+  implementation(project(":oss:airbyte-notification"))
+  implementation(project(":oss:airbyte-oauth"))
   implementation(libs.airbyte.protocol)
-  implementation(project(":airbyte-persistence:job-persistence"))
+  implementation(project(":oss:airbyte-persistence:job-persistence"))
 
   runtimeOnly(libs.javax.databind)
 
@@ -84,7 +85,7 @@ dependencies {
   testAnnotationProcessor(libs.bundles.micronaut.test.annotation.processor)
 
   testImplementation(libs.bundles.micronaut.test)
-  testImplementation(project(":airbyte-test-utils"))
+  testImplementation(project(":oss:airbyte-test-utils"))
   testImplementation(libs.postgresql)
   testImplementation(libs.platform.testcontainers.postgresql)
   testImplementation(libs.mockwebserver)
@@ -101,9 +102,9 @@ dependencies {
 
 // we want to be able to access the generated db files from config/init when we build the server docker image.)
 val copySeed = tasks.register<Copy>("copySeed") {
-  from("${project(":airbyte-config:init").buildDir}/resources/main/config")
+  from("${project(":oss:airbyte-config:init").layout.buildDirectory.get()}/resources/main/config")
   into("${project.layout.buildDirectory.get()}/config_init/resources/main/config")
-  dependsOn(project(":airbyte-config:init").tasks.named("processResources"))
+  dependsOn(project(":oss:airbyte-config:init").tasks.named("processResources"))
 }
 
 // need to make sure that the files are in the resource directory before copying.)
@@ -148,6 +149,11 @@ airbyte {
 
   docker {
     imageName = "server"
+  }
+
+  kubeReload {
+    deployment = "ab-server"
+    container = "airbyte-server-container"
   }
 
   spotbugs {

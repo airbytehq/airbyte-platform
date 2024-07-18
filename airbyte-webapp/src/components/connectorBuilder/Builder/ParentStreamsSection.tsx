@@ -1,6 +1,6 @@
 import { useCallback, useMemo } from "react";
 import { useIntl } from "react-intl";
-import ReactMarkdown from "react-markdown";
+import { ReactMarkdown } from "react-markdown/lib/react-markdown";
 
 import GroupControls from "components/GroupControls";
 
@@ -8,6 +8,7 @@ import { RequestOption, SimpleRetrieverPartitionRouter } from "core/api/types/Co
 import { links } from "core/utils/links";
 
 import { BuilderCard } from "./BuilderCard";
+import { BuilderField } from "./BuilderField";
 import { BuilderFieldWithInputs } from "./BuilderFieldWithInputs";
 import { BuilderList } from "./BuilderList";
 import { BuilderRequestInjection } from "./BuilderRequestInjection";
@@ -92,6 +93,16 @@ export const ParentStreamsSection: React.FC<ParentStreamsSectionProps> = ({ stre
               tooltip={
                 <ReactMarkdown>
                   {formatMessage({ id: "connectorBuilder.parentStreams.parentStream.partitionField.tooltip" })}
+                </ReactMarkdown>
+              }
+            />
+            <BuilderField
+              type="boolean"
+              path={buildPath("incremental_dependency")}
+              label={formatMessage({ id: "connectorBuilder.parentStreams.parentStream.incrementalParent.label" })}
+              tooltip={
+                <ReactMarkdown>
+                  {formatMessage({ id: "connectorBuilder.parentStreams.parentStream.incrementalParent.tooltip" })}
                 </ReactMarkdown>
               }
             />

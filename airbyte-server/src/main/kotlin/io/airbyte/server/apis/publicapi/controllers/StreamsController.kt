@@ -137,7 +137,7 @@ class StreamsController(
     val streamFields: MutableList<List<String>> = ArrayList()
     val spec: JsonNode =
       try {
-        yamlMapper.readTree<JsonNode>(connectorSchema!!.traverse())
+        yamlMapper.readTree(connectorSchema!!.traverse())
       } catch (e: IOException) {
         log?.error("Error getting stream fields from schema", e)
         throw UnexpectedProblem()

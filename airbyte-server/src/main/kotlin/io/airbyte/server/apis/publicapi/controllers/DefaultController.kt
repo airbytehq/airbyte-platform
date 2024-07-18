@@ -21,7 +21,7 @@ open class DefaultController() : PublicRootApi {
   override fun getDocumentation(): Response {
     return Response
       .status(302)
-      .location(URI.create(documentationHost))
+      .location(documentationHost?.let { URI.create(it) })
       .build()
   }
 }

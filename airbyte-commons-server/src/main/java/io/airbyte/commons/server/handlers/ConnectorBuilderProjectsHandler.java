@@ -292,6 +292,7 @@ public class ConnectorBuilderProjectsHandler {
         .withProtocolVersion(DEFAULT_AIRBYTE_PROTOCOL_VERSION.serialize())
         .withReleaseStage(ReleaseStage.CUSTOM)
         .withSupportLevel(SupportLevel.NONE)
+        .withInternalSupportLevel(100L)
         .withDocumentationUrl(connectorSpecification.getDocumentationUrl().toString());
 
     sourceService.writeCustomConnectorMetadata(source, defaultVersion, workspaceId, ScopeType.WORKSPACE);

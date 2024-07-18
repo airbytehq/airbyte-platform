@@ -9,7 +9,7 @@ import io.micronaut.context.ApplicationContext
 
 private val logger = KotlinLogging.logger {}
 
-fun main(args: Array<String>) {
+fun main() {
   val stopwatch = Stopwatch()
 
   var applicationContext: ApplicationContext?

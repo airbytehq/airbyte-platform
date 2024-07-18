@@ -4,13 +4,10 @@
 
 package io.airbyte.test.utils;
 
-import static io.airbyte.test.utils.AcceptanceTestHarness.COLUMN_ID;
-import static io.airbyte.test.utils.AcceptanceTestHarness.COLUMN_NAME;
 import static io.airbyte.test.utils.AcceptanceTestHarness.FINAL_INTERVAL_SECS;
 import static io.airbyte.test.utils.AcceptanceTestHarness.JITTER_MAX_INTERVAL_SECS;
 import static io.airbyte.test.utils.AcceptanceTestHarness.MAX_TRIES;
 import static io.airbyte.test.utils.AcceptanceTestHarness.OUTPUT_STREAM_PREFIX;
-import static io.airbyte.test.utils.AcceptanceTestHarness.STREAM_NAME;
 import static java.lang.Thread.sleep;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -128,36 +125,6 @@ public class Asserts {
       assertTrue(destinationRecords.contains(sourceStreamRecord),
           String.format("destination does not contain record:\n %s \n destination contains:\n %s\n",
               sourceStreamRecord, destinationRecords));
-    }
-  }
-
-  public static void assertNormalizedDestinationContains(final Database dst, final String outputSchema, final List<JsonNode> sourceRecords)
-      throws Exception {
-    assertNormalizedDestinationContains(dst, outputSchema, sourceRecords, STREAM_NAME);
-  }
-
-  private static void assertNormalizedDestinationContains(final Database dst,
-                                                          final String outputSchema,
-                                                          final List<JsonNode> sourceRecords,
-                                                          final String streamName)
-      throws Exception {
-    final String finalDestinationTable = String.format("%s.%s%s", outputSchema, OUTPUT_STREAM_PREFIX, streamName.replace(".", "_"));
-    final List<JsonNode> destinationRecords = Databases.retrieveRecordsFromDatabase(dst, finalDestinationTable);
-    for (final var record : destinationRecords) {
-      LOGGER.info("destination record: {}", record.toPrettyString());
-    }
-    dropAirbyteSystemColumns(destinationRecords);
-
-    assertEquals(sourceRecords.size(), destinationRecords.size(),
-        String.format("destination contains: %s record. source contains: %s", sourceRecords.size(), destinationRecords.size()));
-    for (final JsonNode sourceStreamRecord : sourceRecords) {
-      LOGGER.info("sourceStreamRecord: {}", sourceStreamRecord.toPrettyString());
-      assertTrue(recordIsContainedIn(sourceStreamRecord, destinationRecords));
-      assertTrue(
-          destinationRecords.stream()
-              .anyMatch(r -> r.get(COLUMN_NAME).asText().equals(sourceStreamRecord.get(COLUMN_NAME).asText())
-                  && r.get(COLUMN_ID).asInt() == sourceStreamRecord.get(COLUMN_ID).asInt()),
-          String.format("destination does not contain record:\n %s \n destination contains:\n %s\n", sourceStreamRecord, destinationRecords));
     }
   }
 

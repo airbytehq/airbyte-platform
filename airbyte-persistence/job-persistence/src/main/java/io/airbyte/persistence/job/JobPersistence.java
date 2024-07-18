@@ -11,11 +11,9 @@ import io.airbyte.config.AttemptSyncConfig;
 import io.airbyte.config.JobConfig;
 import io.airbyte.config.JobConfig.ConfigType;
 import io.airbyte.config.JobOutput;
-import io.airbyte.config.NormalizationSummary;
 import io.airbyte.config.StreamSyncStats;
 import io.airbyte.config.SyncStats;
 import io.airbyte.persistence.job.models.Attempt;
-import io.airbyte.persistence.job.models.AttemptNormalizationStatus;
 import io.airbyte.persistence.job.models.AttemptWithJobInfo;
 import io.airbyte.persistence.job.models.Job;
 import io.airbyte.persistence.job.models.JobStatus;
@@ -69,8 +67,6 @@ public interface JobPersistence {
    * @return {@link AttemptStats}
    */
   SyncStats getAttemptCombinedStats(long jobId, int attemptNumber) throws IOException;
-
-  List<NormalizationSummary> getNormalizationSummary(long jobId, int attemptNumber) throws IOException;
 
   Job getJob(long jobId) throws IOException;
 
@@ -456,8 +452,6 @@ public interface JobPersistence {
   void purgeJobHistory();
   // a deployment references a setup of airbyte. it is created the first time the docker compose or
   // K8s is ready.
-
-  List<AttemptNormalizationStatus> getAttemptNormalizationStatusesForJob(final Long jobId) throws IOException;
 
   void updateJobConfig(Long jobId, JobConfig config) throws IOException;
 

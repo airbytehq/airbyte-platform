@@ -10,6 +10,7 @@ interface SupportLevelBadgeProps {
   custom?: boolean;
   tooltip?: boolean;
   className?: string;
+  hideCertified?: boolean;
 }
 
 export const SupportLevelBadge: React.FC<SupportLevelBadgeProps> = ({
@@ -17,8 +18,13 @@ export const SupportLevelBadge: React.FC<SupportLevelBadgeProps> = ({
   className,
   custom = false,
   tooltip = true,
+  hideCertified = true,
 }) => {
-  if (!supportLevel || (!custom && supportLevel === SupportLevel.none)) {
+  if (
+    !supportLevel ||
+    (!custom && supportLevel === SupportLevel.none) ||
+    (hideCertified && supportLevel === SupportLevel.certified)
+  ) {
     return null;
   }
 

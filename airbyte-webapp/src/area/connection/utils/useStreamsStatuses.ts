@@ -39,6 +39,7 @@ export const useStreamsStatuses = (
   enabledStreams: AirbyteStreamAndConfigurationWithEnforcedStream[];
 } => {
   const doUseStreamStatuses = useExperiment("connection.streamCentricUI.v2", false);
+  const isRateLimitedUiEnabled = useExperiment("connection.rateLimitedUI", false);
   // memoizing the function to call to get per-stream statuses as
   // otherwise breaks the Rules of Hooks by introducing a conditional;
   // using ref here as react doesn't guarantee `useMemo` won't drop the reference
@@ -130,6 +131,7 @@ export const useStreamsStatuses = (
             isSyncing: !!syncProgressItem ? true : false,
             recordsExtracted: syncProgressMap.get(streamKey)?.recordsEmitted,
             runningJobConfigType: syncProgressItem?.configType,
+            isRateLimitedUiEnabled,
           });
 
           if (detectedStatus.status != null) {

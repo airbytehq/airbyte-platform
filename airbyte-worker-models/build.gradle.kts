@@ -12,10 +12,9 @@ dependencies {
 
   implementation(platform(libs.fasterxml))
   implementation(libs.bundles.jackson)
-  implementation(project(":airbyte-commons"))
-  implementation(project(":airbyte-config:config-models"))
+  implementation(project(":oss:airbyte-commons"))
+  implementation(project(":oss:airbyte-config:config-models"))
   implementation(libs.airbyte.protocol)
-  implementation(project(":airbyte-api"))
 }
 
 jsonSchema2Pojo {

@@ -137,7 +137,10 @@ describe("Connection - Create new connection", { testIsolation: false }, () => {
 
           cy.wait("@createDestination", { timeout: 30000 }).then((interception) => {
             const createdDestinationId = interception.response?.body.destinationId;
-            cy.location("search").should("eq", `?sourceId=${source.sourceId}&destinationId=${createdDestinationId}`);
+            cy.location("search").should(
+              "eq",
+              `?sourceId=${source.sourceId}&tab=marketplace&destinationId=${createdDestinationId}`
+            );
 
             requestDeleteDestination({ destinationId: createdDestinationId });
           });
@@ -257,14 +260,9 @@ describe("Connection - Create new connection", { testIsolation: false }, () => {
       usersStreamRow.isStreamSyncEnabled(true);
     });
 
-    it("should have added stream style after click", () => {
-      usersStreamRow.hasAddedStyle(true);
-    });
-
     it("should have unchecked sync switch after click and default stream style", () => {
       usersStreamRow.toggleStreamSync();
       usersStreamRow.isStreamSyncEnabled(false);
-      usersStreamRow.hasAddedStyle(false);
     });
 
     it("should enable form submit after a stream is selected and configured", () => {
@@ -316,6 +314,20 @@ describe("Connection - Create new connection", { testIsolation: false }, () => {
 
     it("should redirect to connection overview page after connection set up", () => {
       newConnectionPage.isAtConnectionOverviewPage(connectionId);
+    });
+  });
+
+  describe("Editing", () => {
+    it("should have added stream style after modifying", () => {
+      cy.visit(`/workspaces/${getWorkspaceId()}/connections/${connectionId}/replication`);
+
+      const usersStreamRow = new StreamRowPageObject("public", "dummy_table_1");
+
+      usersStreamRow.toggleStreamSync();
+      usersStreamRow.hasAddedStyle(true);
+
+      usersStreamRow.toggleStreamSync();
+      usersStreamRow.hasAddedStyle(false);
     });
   });
 });

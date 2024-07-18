@@ -5,6 +5,7 @@
 package io.airbyte.workers.sync;
 
 import static io.airbyte.config.helpers.LogClientSingleton.fullLogPath;
+import static io.airbyte.metrics.lib.MetricEmittingApps.WORKLOAD_LAUNCHER;
 
 import dev.failsafe.Failsafe;
 import dev.failsafe.RetryPolicy;
@@ -27,6 +28,8 @@ import io.airbyte.featureflag.Workspace;
 import io.airbyte.persistence.job.models.ReplicationInput;
 import io.airbyte.workers.Worker;
 import io.airbyte.workers.exception.WorkerException;
+import io.airbyte.workers.exception.WorkloadLauncherException;
+import io.airbyte.workers.exception.WorkloadMonitorException;
 import io.airbyte.workers.internal.exception.DestinationException;
 import io.airbyte.workers.internal.exception.SourceException;
 import io.airbyte.workers.models.ReplicationActivityInput;
@@ -63,6 +66,8 @@ public class WorkloadApiWorker implements Worker<ReplicationInput, ReplicationOu
   private static final int HTTP_CONFLICT_CODE = HttpStatus.CONFLICT.getCode();
   private static final String DESTINATION = "destination";
   private static final String SOURCE = "source";
+
+  private static final Set<String> WORKLOAD_MONITOR = Set.of("workload-monitor-start", "workload-monitor-claim", "workload-monitor-heartbeat");
 
   private static final Logger log = LoggerFactory.getLogger(WorkloadApiWorker.class);
   private static final Set<WorkloadStatus> TERMINAL_STATUSES = Set.of(WorkloadStatus.CANCELLED, WorkloadStatus.FAILURE, WorkloadStatus.SUCCESS);
@@ -188,6 +193,10 @@ public class WorkloadApiWorker implements Worker<ReplicationInput, ReplicationOu
         throw new SourceException(workload.getTerminationReason(), e);
       } else if (DESTINATION.equals(workload.getTerminationSource())) {
         throw new DestinationException(workload.getTerminationReason(), e);
+      } else if (WORKLOAD_LAUNCHER.getApplicationName().equals(workload.getTerminationSource())) {
+        throw new WorkloadLauncherException(workload.getTerminationReason());
+      } else if (workload.getTerminationSource() != null && WORKLOAD_MONITOR.contains(workload.getTerminationSource())) {
+        throw new WorkloadMonitorException(workload.getTerminationReason());
       } else {
         throw new WorkerException(workload.getTerminationReason(), e);
       }

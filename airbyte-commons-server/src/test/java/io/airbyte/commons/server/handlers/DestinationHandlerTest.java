@@ -441,7 +441,7 @@ class DestinationHandlerTest {
     // deleting the destination).
     verify(destinationService, times(0)).writeDestinationConnectionWithSecrets(expectedSourceConnection, connectorSpecification);
     verify(destinationService, times(0)).getDestinationConnectionWithSecrets(any());
-    verify(destinationService).tombstoneDestination(any(), any());
+    verify(destinationService).tombstoneDestination(any(), any(), any(), any());
     verify(connectionsHandler).listConnectionsForWorkspace(workspaceIdRequestBody);
     verify(connectionsHandler).deleteConnection(connectionRead.getConnectionId());
   }

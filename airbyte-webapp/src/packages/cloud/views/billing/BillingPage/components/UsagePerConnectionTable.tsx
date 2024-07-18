@@ -200,6 +200,7 @@ export const UsagePerConnectionTable: React.FC = () => {
   return (
     <div className={styles.content}>
       <Table
+        rowId={(row) => row.connection.connectionId}
         variant="white"
         columns={columns}
         data={freeAndPaidUsageByConnection}

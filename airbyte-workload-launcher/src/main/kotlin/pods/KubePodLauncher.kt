@@ -62,10 +62,10 @@ class KubePodLauncher(
     pod: Pod,
     waitDuration: Duration,
   ) {
-    if (shouldUseCustomK8sInitCheck()) {
-      return waitForPodInitCustomCheck(pod, waitDuration)
+    return if (shouldUseCustomK8sInitCheck()) {
+      waitForPodInitCustomCheck(pod, waitDuration)
     } else {
-      return waitForPodInitDefaultCheck(pod, waitDuration)
+      waitForPodInitDefaultCheck(pod, waitDuration)
     }
   }
 

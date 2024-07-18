@@ -13,9 +13,9 @@ dependencies {
   api(libs.bundles.micronaut.annotation)
   api(libs.bundles.micronaut.kotlin)
   api(libs.kotlin.logging)
-  api(project(":airbyte-commons"))
-  api(project(":airbyte-config:config-models"))
-  api(project(":airbyte-api"))
+  api(project(":oss:airbyte-commons"))
+  api(project(":oss:airbyte-config:config-models"))
+  api(project(":oss:airbyte-api"))
 
   testAnnotationProcessor(platform(libs.micronaut.platform))
   testAnnotationProcessor(libs.bundles.micronaut.test.annotation.processor)

@@ -11,7 +11,6 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Charsets;
 import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.Lists;
 import com.google.common.hash.HashFunction;
 import com.google.common.hash.Hashing;
 import io.airbyte.api.model.generated.CatalogDiff;
@@ -57,6 +56,7 @@ import io.airbyte.commons.server.handlers.helpers.NotificationHelper;
 import io.airbyte.commons.server.scheduler.EventRunner;
 import io.airbyte.commons.server.scheduler.SynchronousResponse;
 import io.airbyte.commons.server.scheduler.SynchronousSchedulerClient;
+import io.airbyte.commons.server.support.CurrentUserService;
 import io.airbyte.commons.temporal.ErrorCode;
 import io.airbyte.commons.temporal.TemporalClient.ManualOperationResult;
 import io.airbyte.commons.version.Version;
@@ -73,7 +73,6 @@ import io.airbyte.config.StandardCheckConnectionOutput;
 import io.airbyte.config.StandardDestinationDefinition;
 import io.airbyte.config.StandardSourceDefinition;
 import io.airbyte.config.StandardSync;
-import io.airbyte.config.StandardSyncOperation;
 import io.airbyte.config.StandardWorkspace;
 import io.airbyte.config.WorkloadPriority;
 import io.airbyte.config.helpers.ResourceRequirementsUtils;
@@ -84,8 +83,11 @@ import io.airbyte.config.persistence.StreamResetPersistence;
 import io.airbyte.config.persistence.domain.StreamRefresh;
 import io.airbyte.config.secrets.SecretsRepositoryWriter;
 import io.airbyte.config.secrets.persistence.RuntimeSecretPersistence;
+import io.airbyte.data.services.ConnectionTimelineEventService;
 import io.airbyte.data.services.SecretPersistenceConfigService;
 import io.airbyte.data.services.WorkspaceService;
+import io.airbyte.data.services.shared.FinalStatusEvent;
+import io.airbyte.data.services.shared.ManuallyStartedEvent;
 import io.airbyte.featureflag.DiscoverPostprocessInTemporal;
 import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.featureflag.Organization;
@@ -102,6 +104,7 @@ import io.airbyte.persistence.job.WebUrlHelper;
 import io.airbyte.persistence.job.factory.OAuthConfigSupplier;
 import io.airbyte.persistence.job.factory.SyncJobFactory;
 import io.airbyte.persistence.job.models.Job;
+import io.airbyte.persistence.job.models.JobStatus;
 import io.airbyte.persistence.job.tracker.JobTracker;
 import io.airbyte.protocol.models.AirbyteCatalog;
 import io.airbyte.protocol.models.ConnectorSpecification;
@@ -109,6 +112,7 @@ import io.airbyte.protocol.models.StreamDescriptor;
 import io.airbyte.validation.json.JsonSchemaValidator;
 import io.airbyte.validation.json.JsonValidationException;
 import jakarta.inject.Singleton;
+import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotNull;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -154,6 +158,8 @@ public class SchedulerHandler {
   private final ConnectorDefinitionSpecificationHandler connectorDefinitionSpecificationHandler;
   private final WorkspaceService workspaceService;
   private final SecretPersistenceConfigService secretPersistenceConfigService;
+  private final ConnectionTimelineEventService connectionTimelineEventService;
+  private final CurrentUserService currentUserService;
   private final StreamRefreshesHandler streamRefreshesHandler;
   private final NotificationHelper notificationHelper;
 
@@ -180,6 +186,8 @@ public class SchedulerHandler {
                           final ConnectorDefinitionSpecificationHandler connectorDefinitionSpecificationHandler,
                           final WorkspaceService workspaceService,
                           final SecretPersistenceConfigService secretPersistenceConfigService,
+                          final ConnectionTimelineEventService connectionEventService,
+                          final CurrentUserService currentUserService,
                           final StreamRefreshesHandler streamRefreshesHandler,
                           final NotificationHelper notificationHelper) {
     this.configRepository = configRepository;
@@ -202,6 +210,8 @@ public class SchedulerHandler {
     this.connectorDefinitionSpecificationHandler = connectorDefinitionSpecificationHandler;
     this.workspaceService = workspaceService;
     this.secretPersistenceConfigService = secretPersistenceConfigService;
+    this.connectionTimelineEventService = connectionEventService;
+    this.currentUserService = currentUserService;
     this.jobCreationAndStatusUpdateHelper = new JobCreationAndStatusUpdateHelper(
         jobPersistence,
         configRepository,
@@ -346,17 +356,17 @@ public class SchedulerHandler {
     final SourceConnection source = configRepository.getSourceConnection(req.getSourceId());
 
     if (featureFlagClient.boolVariation(DiscoverPostprocessInTemporal.INSTANCE, new Workspace(source.getWorkspaceId()))) {
-      return discoverWithPostprocessInTemporal(req, source);
+      return discover(req, source);
     } else {
-      return discoverWithLocalPostprocess(req, source);
+      return discoverAndGloballyDisable(req, source);
     }
   }
 
   /**
-   * Runs discover schema and performs postprocessing (catalog diff and connection disabling) locally.
+   * Runs discover schema and performs conditional disabling of all connections.
    */
-  public SourceDiscoverSchemaRead discoverWithLocalPostprocess(final SourceDiscoverSchemaRequestBody discoverSchemaRequestBody,
-                                                               final SourceConnection source)
+  public SourceDiscoverSchemaRead discoverAndGloballyDisable(final SourceDiscoverSchemaRequestBody discoverSchemaRequestBody,
+                                                             final SourceConnection source)
       throws ConfigNotFoundException, IOException, JsonValidationException {
     final UUID sourceId = discoverSchemaRequestBody.getSourceId();
     final StandardSourceDefinition sourceDef = configRepository.getStandardSourceDefinition(source.getSourceDefinitionId());
@@ -408,10 +418,9 @@ public class SchedulerHandler {
   }
 
   /**
-   * Runs discover schema and performs postprocessing (catalog diff and connection disabling) in the
-   * temporal workflow.
+   * Runs discover schema and does not disable other connections.
    */
-  public SourceDiscoverSchemaRead discoverWithPostprocessInTemporal(final SourceDiscoverSchemaRequestBody req, final SourceConnection source)
+  public SourceDiscoverSchemaRead discover(final SourceDiscoverSchemaRequestBody req, final SourceConnection source)
       throws ConfigNotFoundException, IOException, JsonValidationException {
     final UUID sourceId = req.getSourceId();
     final StandardSourceDefinition sourceDef = configRepository.getStandardSourceDefinition(source.getSourceDefinitionId());
@@ -420,7 +429,7 @@ public class SchedulerHandler {
     final boolean skipCacheCheck = req.getDisableCache() != null && req.getDisableCache();
     // Skip cache check and run discover.
     if (skipCacheCheck) {
-      return runDiscoverSchemaJob(source, sourceDef, sourceVersion, req.getPriority());
+      return runDiscoverJobDiffAndConditionallyDisable(source, sourceDef, sourceVersion, req.getPriority(), req.getConnectionId());
     }
 
     // Check cache.
@@ -433,7 +442,7 @@ public class SchedulerHandler {
 
     // No catalog exists, run discover.
     if (existingCatalog.isEmpty()) {
-      return runDiscoverSchemaJob(source, sourceDef, sourceVersion, req.getPriority());
+      return runDiscoverJobDiffAndConditionallyDisable(source, sourceDef, sourceVersion, req.getPriority(), req.getConnectionId());
     }
 
     // We have a catalog cached, no need to run discover. Return cached catalog.
@@ -452,12 +461,12 @@ public class SchedulerHandler {
         .catalogId(existingCatalog.get().getId());
   }
 
-  private SourceDiscoverSchemaRead runDiscoverSchemaJob(
-                                                        final SourceConnection source,
-                                                        final StandardSourceDefinition sourceDef,
-                                                        final ActorDefinitionVersion sourceVersion,
-                                                        final io.airbyte.api.model.generated.WorkloadPriority priority)
-      throws ConfigNotFoundException, IOException {
+  private SourceDiscoverSchemaRead runDiscoverJobDiffAndConditionallyDisable(final SourceConnection source,
+                                                                             final StandardSourceDefinition sourceDef,
+                                                                             final ActorDefinitionVersion sourceVersion,
+                                                                             final io.airbyte.api.model.generated.WorkloadPriority priority,
+                                                                             final UUID connectionId)
+      throws ConfigNotFoundException, IOException, JsonValidationException {
     final boolean isCustomConnector = sourceDef.getCustom();
     // ResourceRequirements are read from actor definition and can be null; but if it's not null it will
     // have higher priority and overwrite
@@ -474,7 +483,13 @@ public class SchedulerHandler {
             resourceRequirements,
             priority == null ? WorkloadPriority.HIGH : WorkloadPriority.fromValue(priority.toString()));
 
-    return retrieveDiscoveredSchema(persistedCatalogId, sourceVersion);
+    final var schemaRead = retrieveDiscoveredSchema(persistedCatalogId, sourceVersion);
+    // no connection to diff
+    if (connectionId == null) {
+      return schemaRead;
+    }
+
+    return connectionsHandler.diffCatalogAndConditionallyDisable(connectionId, schemaRead.getCatalogId());
   }
 
   public void applySchemaChangeForSource(final SourceAutoPropagateChange sourceAutoPropagateChange)
@@ -637,18 +652,6 @@ public class SchedulerHandler {
           actorDefinitionVersionHelper.getDestinationVersion(destinationDef, destination.getWorkspaceId(), destination.getDestinationId());
       final String destinationImageName = destinationVersion.getDockerRepository() + ":" + destinationVersion.getDockerImageTag();
 
-      final List<StandardSyncOperation> standardSyncOperations = Lists.newArrayList();
-      for (final var operationId : standardSync.getOperationIds()) {
-        final StandardSyncOperation standardSyncOperation = configRepository.getStandardSyncOperation(operationId);
-        // NOTE: we must run normalization operations during resets, because we rely on them to clear the
-        // normalized tables. However, we don't want to run other operations (dbt, webhook) because those
-        // are meant to transform the data after the sync but there's no data to transform. Webhook
-        // operations particularly will fail because we don't populate some required config during resets.
-        if (StandardSyncOperation.OperatorType.NORMALIZATION.equals(standardSyncOperation.getOperatorType())) {
-          standardSyncOperations.add(standardSyncOperation);
-        }
-      }
-
       final Optional<Long> jobIdOptional =
           jobCreator.createResetConnectionJob(
               destination,
@@ -658,7 +661,7 @@ public class SchedulerHandler {
               destinationImageName,
               new Version(destinationVersion.getProtocolVersion()),
               destinationDef.getCustom(),
-              standardSyncOperations,
+              List.of(),
               streamsToReset,
               destination.getWorkspaceId());
 
@@ -780,6 +783,31 @@ public class SchedulerHandler {
     return checkConnectionRead;
   }
 
+  private UUID getCurrentUserIdIfExist() {
+    try {
+      return currentUserService.getCurrentUser().getUserId();
+    } catch (final Exception e) {
+      log.info("Unable to get current user associated with the request. " + e);
+      return null;
+    }
+  }
+
+  private long getRecordsLoaded(final List<io.airbyte.api.model.generated.@Valid StreamStats> streamAggregatedStats) {
+    long totalRecordsLoaded = 0;
+    for (final io.airbyte.api.model.generated.@Valid StreamStats streamStats : streamAggregatedStats) {
+      totalRecordsLoaded += streamStats.getRecordsCommitted();
+    }
+    return totalRecordsLoaded;
+  }
+
+  private long getBytesLoaded(final List<io.airbyte.api.model.generated.@Valid StreamStats> streamAggregatedStats) {
+    long totalBytesLoaded = 0;
+    for (final io.airbyte.api.model.generated.@Valid StreamStats streamStats : streamAggregatedStats) {
+      totalBytesLoaded += streamStats.getBytesCommitted();
+    }
+    return totalBytesLoaded;
+  }
+
   private JobInfoRead submitCancellationToWorker(final Long jobId) throws IOException {
     final Job job = jobPersistence.getJob(jobId);
 
@@ -787,6 +815,19 @@ public class SchedulerHandler {
     if (cancellationResult.getFailingReason().isPresent()) {
       throw new IllegalStateException(cancellationResult.getFailingReason().get());
     }
+    final JobInfoRead jobInfo = readJobFromResult(cancellationResult);
+
+    // Store connection timeline event (job cancellation).
+    final @Valid List<io.airbyte.api.model.generated.@Valid StreamStats> streamAggregatedStats = jobInfo.getJob().getStreamAggregatedStats();
+    final FinalStatusEvent event = new FinalStatusEvent(
+        jobInfo.getJob().getId(),
+        jobInfo.getJob().getCreatedAt(),
+        jobInfo.getJob().getUpdatedAt(),
+        getBytesLoaded(streamAggregatedStats),
+        getRecordsLoaded(streamAggregatedStats),
+        job.getAttemptsCount(),
+        job.getConfigType().name(), JobStatus.CANCELLED.name());
+    connectionTimelineEventService.writeEvent(UUID.fromString(job.getScope()), event, getCurrentUserIdIfExist());
 
     // query same job ID again to get updated job info after cancellation
     return jobConverter.getJobInfoRead(jobPersistence.getJob(jobId));
@@ -800,8 +841,20 @@ public class SchedulerHandler {
       throw new IllegalStateException("Can only sync an active connection");
     }
     final ManualOperationResult manualSyncResult = eventRunner.startNewManualSync(connectionId);
+    final JobInfoRead jobInfo = readJobFromResult(manualSyncResult);
+    logManuallyStartedEventInConnectionTimeline(connectionId, jobInfo, null);
+    return jobInfo;
+  }
 
-    return readJobFromResult(manualSyncResult);
+  private void logManuallyStartedEventInConnectionTimeline(final UUID connectionId, final JobInfoRead jobInfo, final List<StreamDescriptor> streams) {
+    if (jobInfo != null && jobInfo.getJob() != null && jobInfo.getJob().getConfigType() != null) {
+      final ManuallyStartedEvent event = new ManuallyStartedEvent(
+          jobInfo.getJob().getId(),
+          jobInfo.getJob().getCreatedAt(),
+          jobInfo.getJob().getConfigType().name(),
+          streams);
+      connectionTimelineEventService.writeEvent(connectionId, event, getCurrentUserIdIfExist());
+    }
   }
 
   private JobInfoRead submitResetConnectionToWorker(final UUID connectionId) throws IOException, IllegalStateException, ConfigNotFoundException {
@@ -815,7 +868,9 @@ public class SchedulerHandler {
         connectionId,
         streamsToReset);
 
-    return readJobFromResult(resetConnectionResult);
+    final JobInfoRead jobInfo = readJobFromResult(resetConnectionResult);
+    logManuallyStartedEventInConnectionTimeline(connectionId, jobInfo, streamsToReset);
+    return jobInfo;
   }
 
   private JobInfoRead submitResetConnectionStreamsToWorker(final UUID connectionId, final List<ConnectionStream> streams)
@@ -826,7 +881,7 @@ public class SchedulerHandler {
     return submitResetConnectionToWorker(connectionId, actualStreamsToReset);
   }
 
-  private JobInfoRead readJobFromResult(final ManualOperationResult manualOperationResult) throws IOException, IllegalStateException {
+  public JobInfoRead readJobFromResult(final ManualOperationResult manualOperationResult) throws IOException, IllegalStateException {
     if (manualOperationResult.getFailingReason().isPresent()) {
       if (VALUE_CONFLICT_EXCEPTION_ERROR_CODE_SET.contains(manualOperationResult.getErrorCode().get())) {
         throw new ValueConflictKnownException(manualOperationResult.getFailingReason().get());

@@ -9,15 +9,11 @@ import io.airbyte.commons.json.Jsons;
 import io.airbyte.config.ConnectionContext;
 import io.airbyte.config.DestinationConnection;
 import io.airbyte.config.JobSyncConfig.NamespaceDefinitionType;
-import io.airbyte.config.OperatorDbt;
-import io.airbyte.config.OperatorNormalization;
-import io.airbyte.config.OperatorNormalization.Option;
 import io.airbyte.config.SourceConnection;
 import io.airbyte.config.StandardSync;
 import io.airbyte.config.StandardSync.Status;
 import io.airbyte.config.StandardSyncInput;
 import io.airbyte.config.StandardSyncOperation;
-import io.airbyte.config.StandardSyncOperation.OperatorType;
 import io.airbyte.config.State;
 import io.airbyte.persistence.job.models.IntegrationLauncherConfig;
 import io.airbyte.persistence.job.models.ReplicationInput;
@@ -49,7 +45,8 @@ public class TestConfigHelpers {
    *
    * @return sync config and sync input.
    */
-  public static ImmutablePair<StandardSync, StandardSyncInput> createSyncConfig(final UUID organizationId) {
+  public static ImmutablePair<StandardSync, StandardSyncInput> createSyncConfig(final UUID organizationId,
+                                                                                final UUID sourceDefinitionId) {
     final ImmutablePair<StandardSync, ReplicationInput> replicationInputPair = createReplicationConfig();
     final var replicationInput = replicationInputPair.getRight();
     // For now, these are identical, so we delegate to createReplicationConfig and copy it over for
@@ -65,7 +62,9 @@ public class TestConfigHelpers {
         .withSourceConfiguration(replicationInput.getSourceConfiguration())
         .withOperationSequence(replicationInput.getOperationSequence())
         .withWorkspaceId(replicationInput.getWorkspaceId())
-        .withConnectionContext(new ConnectionContext().withOrganizationId(organizationId)));
+        .withConnectionContext(new ConnectionContext()
+            .withOrganizationId(organizationId)
+            .withSourceDefinitionId(sourceDefinitionId)));
   }
 
   public static ImmutablePair<StandardSync, ReplicationInput> createReplicationConfig() {
@@ -117,19 +116,11 @@ public class TestConfigHelpers {
     final StandardSyncOperation normalizationOperation = new StandardSyncOperation()
         .withOperationId(normalizationOperationId)
         .withName("Normalization")
-        .withOperatorType(OperatorType.NORMALIZATION)
-        .withOperatorNormalization(new OperatorNormalization().withOption(Option.BASIC))
         .withTombstone(false);
 
     final StandardSyncOperation customDbtOperation = new StandardSyncOperation()
         .withOperationId(dbtOperationId)
         .withName("Custom Transformation")
-        .withOperatorType(OperatorType.DBT)
-        .withOperatorDbt(new OperatorDbt()
-            .withDockerImage("docker")
-            .withDbtArguments("--help")
-            .withGitRepoUrl("git url")
-            .withGitRepoBranch("git url"))
         .withTombstone(false);
 
     final ConfiguredAirbyteCatalog catalog = new ConfiguredAirbyteCatalog();

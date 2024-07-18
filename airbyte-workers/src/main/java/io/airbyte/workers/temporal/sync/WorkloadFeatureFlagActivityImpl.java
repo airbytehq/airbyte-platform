@@ -4,8 +4,11 @@
 
 package io.airbyte.workers.temporal.sync;
 
+import io.airbyte.featureflag.Empty;
 import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.featureflag.UseWorkloadApi;
+import io.airbyte.featureflag.WorkloadApiServerEnabled;
+import io.airbyte.featureflag.WorkloadLauncherEnabled;
 import io.airbyte.featureflag.Workspace;
 import jakarta.inject.Singleton;
 
@@ -21,9 +24,11 @@ public class WorkloadFeatureFlagActivityImpl implements WorkloadFeatureFlagActiv
 
   @Override
   public Boolean useWorkloadApi(final WorkloadFeatureFlagActivity.Input input) {
-    final var context = new Workspace(input.getWorkspaceId());
+    var ffCheck = featureFlagClient.boolVariation(UseWorkloadApi.INSTANCE, new Workspace(input.getWorkspaceId()));
+    var envCheck = featureFlagClient.boolVariation(WorkloadLauncherEnabled.INSTANCE, Empty.INSTANCE)
+        && featureFlagClient.boolVariation(WorkloadApiServerEnabled.INSTANCE, Empty.INSTANCE);
 
-    return featureFlagClient.boolVariation(UseWorkloadApi.INSTANCE, context);
+    return ffCheck || envCheck;
   }
 
   @Override

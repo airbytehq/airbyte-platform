@@ -17,22 +17,22 @@ import java.util.concurrent.TimeUnit
  */
 @Singleton
 class CustomOkHttpClientFactory(
-  @Value("\${airbyte.kubernetes.client.call-timeout-sec}") private val callTimeout: java.lang.Long,
-  @Value("\${airbyte.kubernetes.client.connect-timeout-sec}") private val connectTimeout: java.lang.Long,
-  @Value("\${airbyte.kubernetes.client.connection-pool.keep-alive-sec}") private val keepAliveDuration: java.lang.Long,
-  @Value("\${airbyte.kubernetes.client.connection-pool.max-idle-connections}") private val maxIdleConnections: Integer,
-  @Value("\${airbyte.kubernetes.client.read-timeout-sec}") private val readTimeout: java.lang.Long,
-  @Value("\${airbyte.kubernetes.client.write-timeout-sec}") private val writeTimeout: java.lang.Long,
+  @Value("\${airbyte.kubernetes.client.call-timeout-sec}") private val callTimeout: Long,
+  @Value("\${airbyte.kubernetes.client.connect-timeout-sec}") private val connectTimeout: Long,
+  @Value("\${airbyte.kubernetes.client.connection-pool.keep-alive-sec}") private val keepAliveDuration: Long,
+  @Value("\${airbyte.kubernetes.client.connection-pool.max-idle-connections}") private val maxIdleConnections: Int,
+  @Value("\${airbyte.kubernetes.client.read-timeout-sec}") private val readTimeout: Long,
+  @Value("\${airbyte.kubernetes.client.write-timeout-sec}") private val writeTimeout: Long,
 ) : OkHttpClientFactory() {
   override fun additionalConfig(builder: OkHttpClient.Builder?) {
     builder?.apply {
-      callTimeout(callTimeout.toLong(), TimeUnit.SECONDS)
-      connectionPool(ConnectionPool(maxIdleConnections.toInt(), keepAliveDuration.toLong(), TimeUnit.SECONDS))
-      connectTimeout(connectTimeout.toLong(), TimeUnit.SECONDS)
-      readTimeout(readTimeout.toLong(), TimeUnit.SECONDS)
+      callTimeout(callTimeout, TimeUnit.SECONDS)
+      connectionPool(ConnectionPool(maxIdleConnections, keepAliveDuration, TimeUnit.SECONDS))
+      connectTimeout(connectTimeout, TimeUnit.SECONDS)
+      readTimeout(readTimeout, TimeUnit.SECONDS)
       // Retry on Connectivity issues (Unreachable IP/Proxy, Stale Pool Connection)
       retryOnConnectionFailure(true)
-      writeTimeout(writeTimeout.toLong(), TimeUnit.SECONDS)
+      writeTimeout(writeTimeout, TimeUnit.SECONDS)
     }
   }
 }

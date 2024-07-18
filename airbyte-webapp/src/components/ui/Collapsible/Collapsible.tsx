@@ -71,7 +71,7 @@ export const Collapsible: React.FC<React.PropsWithChildren<CollapsibleProps>> = 
               >
                 <Icon type="chevronRight" />
               </div>
-              <FlexContainer direction="row" gap="none" alignItems="center">
+              <FlexContainer direction="row" gap="none" alignItems="center" className={styles.labelContainer}>
                 <Text className={styles.label}>{label}</Text>
                 {infoTooltipContent && <InfoTooltip placement="top-start">{infoTooltipContent}</InfoTooltip>}
               </FlexContainer>

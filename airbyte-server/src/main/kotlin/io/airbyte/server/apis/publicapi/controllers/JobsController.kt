@@ -90,7 +90,7 @@ open class JobsController(
   override fun publicCreateJob(jobCreateRequest: JobCreateRequest): Response {
     val userId: UUID = currentUserService.currentUser.userId
     apiAuthorizationHelper.checkWorkspacePermissions(
-      listOf(jobCreateRequest.connectionId.toString()),
+      listOf(jobCreateRequest.connectionId),
       Scope.CONNECTION,
       userId,
       PermissionType.WORKSPACE_EDITOR,

@@ -12,10 +12,11 @@ import { Text } from "components/ui/Text";
 import { useGetInstanceConfiguration, useSetupInstanceConfiguration } from "core/api";
 import { InstanceConfigurationResponseTrackingStrategy } from "core/api/types/AirbyteClient";
 import { Action, Namespace, useAnalyticsService } from "core/services/analytics";
+import { useAuthService } from "core/services/auth";
 
 import { SecurityCheck } from "./SecurityCheck";
 
-type SecurityCheckStatus = "loading" | "check_failed" | "succeeded" | "ignored" | "failed";
+type SecurityCheckStatus = "loading" | "check_failed" | "succeeded" | "ignored" | "failed" | "skipped";
 
 export interface SetupFormValues {
   email: string;
@@ -39,7 +40,7 @@ const SubmissionButton: React.FC = () => {
 const setupFormValidationSchema = yup.object().shape({
   email: yup.string().email("form.email.error").required("form.empty.error"),
   anonymousDataCollection: yup.bool().required(),
-  securityCheck: yup.mixed<SecurityCheckStatus>().oneOf(["succeeded", "ignored", "check_failed"]).required(),
+  securityCheck: yup.mixed<SecurityCheckStatus>().oneOf(["succeeded", "ignored", "check_failed", "skipped"]).required(),
   organizationName: yup.string().required("form.empty.error"),
 });
 
@@ -48,6 +49,7 @@ export const SetupForm: React.FC = () => {
   const { trackingStrategy } = useGetInstanceConfiguration();
   const { mutateAsync: setUpInstance } = useSetupInstanceConfiguration();
   const analyticsService = useAnalyticsService();
+  const { authType } = useAuthService();
 
   const onSubmit = async (values: SetupFormValues) => {
     await setUpInstance({ ...values, initialSetupComplete: true, displaySetupWizard: false });
@@ -59,12 +61,15 @@ export const SetupForm: React.FC = () => {
     });
   };
 
+  // The security check only makes sense for instances with no auth. If auth is enabled, we should just skip it.
+  const defaultSecurityCheckValue = authType === "none" ? "loading" : "skipped";
+
   return (
     <Form<SetupFormValues>
       defaultValues={{
         email: "",
         anonymousDataCollection: trackingStrategy !== InstanceConfigurationResponseTrackingStrategy.segment,
-        securityCheck: "loading",
+        securityCheck: defaultSecurityCheckValue,
       }}
       schema={setupFormValidationSchema}
       onSubmit={onSubmit}
@@ -93,9 +98,11 @@ export const SetupForm: React.FC = () => {
             description={formatMessage({ id: "preferences.collectData" })}
           />
         )}
-        <Box mb="md">
-          <SecurityCheck />
-        </Box>
+        {defaultSecurityCheckValue !== "skipped" && (
+          <Box mb="md">
+            <SecurityCheck />
+          </Box>
+        )}
         <SubmissionButton />
       </FlexContainer>
     </Form>

@@ -1,5 +1,5 @@
 import React from "react";
-import { FormattedDate, FormattedMessage, FormattedTimeParts, useIntl } from "react-intl";
+import { FormattedDate, FormattedMessage, useIntl } from "react-intl";
 
 import { FlexContainer } from "components/ui/Flex";
 import { Text } from "components/ui/Text";
@@ -74,10 +74,7 @@ export const AttemptDetails: React.FC<AttemptDetailsProps> = ({
         {showEndedAt && attempt.endedAt && (
           <>
             <Text as="span" color="grey" size="sm">
-              <FormattedTimeParts value={attempt.createdAt * 1000} hour="numeric" minute="2-digit">
-                {(parts) => <span>{`${parts[0].value}:${parts[2].value}${parts[4].value} `}</span>}
-              </FormattedTimeParts>
-              <FormattedDate value={attempt.createdAt * 1000} month="2-digit" day="2-digit" year="numeric" />
+              <FormattedDate value={attempt.endedAt * 1000} dateStyle="medium" timeStyle="short" />
             </Text>
             <Text as="span" color="grey" size="sm">
               |

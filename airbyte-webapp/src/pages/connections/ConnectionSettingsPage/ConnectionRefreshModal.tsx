@@ -173,12 +173,12 @@ export const ConnectionRefreshModal: React.FC<ConnectionRefreshModalProps> = ({
               ),
             }}
           />
-          {canMerge && canTruncate && (
-            <Text as="span">
-              <FormattedMessage id="connection.actions.refreshStream.considerOptions" />
-            </Text>
-          )}
         </Text>
+        <Box py="sm">
+          <Text>
+            <FormattedMessage id="connection.actions.refreshStream.description.note" />
+          </Text>
+        </Box>
       </Box>
       <Form<ConnectionRefreshFormValues>
         schema={refreshConnectionFormSchema}

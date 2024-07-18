@@ -2,9 +2,11 @@ import classnames from "classnames";
 import React from "react";
 import { FormattedMessage } from "react-intl";
 
+import { AdminWorkspaceWarning } from "components/ui/AdminWorkspaceWarning";
 import { FlexContainer } from "components/ui/Flex";
 
 import { Action, Namespace, useAnalyticsService } from "core/services/analytics";
+import { FeatureItem, IfFeatureEnabled } from "core/services/features";
 import { useConnectorBuilderFormState } from "services/connectorBuilder/ConnectorBuilderStateService";
 
 import { NameInput } from "./NameInput";
@@ -35,6 +37,9 @@ export const Sidebar: React.FC<React.PropsWithChildren<SidebarProps>> = ({ class
 
   return (
     <FlexContainer direction="column" alignItems="stretch" gap="lg" className={classnames(className, styles.container)}>
+      <IfFeatureEnabled feature={FeatureItem.ShowAdminWarningInWorkspace}>
+        <AdminWorkspaceWarning />
+      </IfFeatureEnabled>
       <UiYamlToggleButton
         yamlSelected={yamlSelected}
         onClick={OnUiToggleClick}

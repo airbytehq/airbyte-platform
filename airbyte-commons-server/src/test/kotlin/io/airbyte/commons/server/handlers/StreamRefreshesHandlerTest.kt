@@ -3,13 +3,24 @@ package io.airbyte.commons.server.handlers
 import io.airbyte.api.model.generated.ActorDefinitionVersionRead
 import io.airbyte.api.model.generated.ConnectionStream
 import io.airbyte.api.model.generated.DestinationIdRequestBody
+import io.airbyte.api.model.generated.JobConfigType
+import io.airbyte.api.model.generated.JobInfoRead
+import io.airbyte.api.model.generated.JobRead
+import io.airbyte.api.model.generated.JobRefreshConfig
+import io.airbyte.api.model.generated.JobStatus
 import io.airbyte.api.model.generated.RefreshMode
+import io.airbyte.commons.server.converters.JobConverter
 import io.airbyte.commons.server.handlers.StreamRefreshesHandler.Companion.connectionStreamsToStreamDescriptors
 import io.airbyte.commons.server.scheduler.EventRunner
+import io.airbyte.commons.server.support.CurrentUserService
+import io.airbyte.config.JobConfig
 import io.airbyte.config.StandardSync
 import io.airbyte.config.persistence.StreamRefreshesRepository
 import io.airbyte.config.persistence.domain.StreamRefresh
 import io.airbyte.data.services.ConnectionService
+import io.airbyte.data.services.ConnectionTimelineEventService
+import io.airbyte.persistence.job.JobPersistence
+import io.airbyte.persistence.job.models.Job
 import io.airbyte.protocol.models.StreamDescriptor
 import io.mockk.clearAllMocks
 import io.mockk.every
@@ -28,6 +39,10 @@ internal class StreamRefreshesHandlerTest {
   private val streamRefreshesRepository: StreamRefreshesRepository = mockk()
   private val eventRunner: EventRunner = mockk()
   private val actorDefinitionVersionHandler: ActorDefinitionVersionHandler = mockk()
+  private val currentUserService: CurrentUserService = mockk()
+  private val jobPersistence: JobPersistence = mockk()
+  private val jobConverter: JobConverter = mockk()
+  private val connectionTimelineEventService: ConnectionTimelineEventService = mockk()
 
   private val streamRefreshesHandler =
     StreamRefreshesHandler(
@@ -35,6 +50,10 @@ internal class StreamRefreshesHandlerTest {
       streamRefreshesRepository,
       eventRunner,
       actorDefinitionVersionHandler,
+      currentUserService,
+      jobPersistence,
+      jobConverter,
+      connectionTimelineEventService,
     )
 
   private val connectionId = UUID.randomUUID()
@@ -73,7 +92,19 @@ internal class StreamRefreshesHandlerTest {
 
     every { streamRefreshesRepository.saveAll(any<List<StreamRefresh>>()) } returns listOf()
     every { eventRunner.startNewManualSync(connectionId) } returns null
-
+    every { jobPersistence.getJob(any()) } returns
+      Job(
+        0L, JobConfig.ConfigType.REFRESH, "scope_id",
+        null, listOf(), io.airbyte.persistence.job.models.JobStatus.SUCCEEDED, 0L, 0L, 0L,
+      )
+    every { jobConverter.getJobInfoRead(any()) } returns
+      JobInfoRead().job(
+        JobRead()
+          .id(0L)
+          .configType(JobConfigType.REFRESH)
+          .createdAt(0L)
+          .refreshConfig(JobRefreshConfig().streamsToRefresh(listOf())),
+      )
     val result = streamRefreshesHandler.createRefreshesForConnection(connectionId, RefreshMode.TRUNCATE, connectionStream)
 
     assertTrue(result)
@@ -91,6 +122,19 @@ internal class StreamRefreshesHandlerTest {
     every { streamRefreshesRepository.saveAll(any<List<StreamRefresh>>()) } returns listOf()
     every { eventRunner.startNewManualSync(connectionId) } returns null
     every { connectionService.getAllStreamsForConnection(connectionId) } returns streamDescriptors
+    every { jobPersistence.getJob(any()) } returns
+      Job(
+        0L, JobConfig.ConfigType.REFRESH, "scope_id",
+        null, listOf(), io.airbyte.persistence.job.models.JobStatus.SUCCEEDED, 0L, 0L, 0L,
+      )
+    every { jobConverter.getJobInfoRead(any()) } returns
+      JobInfoRead().job(
+        JobRead()
+          .id(0L)
+          .configType(JobConfigType.REFRESH)
+          .createdAt(0L)
+          .refreshConfig(JobRefreshConfig().streamsToRefresh(listOf())),
+      )
 
     val result = streamRefreshesHandler.createRefreshesForConnection(connectionId, RefreshMode.TRUNCATE, listOf())
 

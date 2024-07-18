@@ -27,47 +27,47 @@ class RetryState(
   val successivePartialFailures: Int?,
   val totalPartialFailures: Int?,
 ) {
-  override fun equals(o: Any?): Boolean {
-    if (o === this) {
+  override fun equals(other: Any?): Boolean {
+    if (other === this) {
       return true
     }
-    if (o !is RetryState) {
+    if (other !is RetryState) {
       return false
     }
-    if (!o.canEqual(this)) {
+    if (!other.canEqual(this)) {
       return false
     }
     val thisConnectionId: Any? = this.connectionId
-    val otherConnectionId: Any? = o.connectionId
+    val otherConnectionId: Any? = other.connectionId
     if (thisConnectionId != otherConnectionId) {
       return false
     }
     val thisJobId: Any? = this.jobId
-    val otherJobId: Any? = o.jobId
+    val otherJobId: Any? = other.jobId
     if (thisJobId != otherJobId) {
       return false
     }
     val thisSuccessiveCompleteFailures: Any? = this.successiveCompleteFailures
-    val otherSuccessiveCompleteFailures: Any? = o.successiveCompleteFailures
+    val otherSuccessiveCompleteFailures: Any? = other.successiveCompleteFailures
     if (thisSuccessiveCompleteFailures != otherSuccessiveCompleteFailures) {
       return false
     }
     val thisTotalCompleteFailures: Any? = this.totalCompleteFailures
-    val otherTotalCompleteFailures: Any? = o.totalCompleteFailures
+    val otherTotalCompleteFailures: Any? = other.totalCompleteFailures
     if (thisTotalCompleteFailures != otherTotalCompleteFailures) {
       return false
     }
     val thisSuccessivePartialFailures: Any? = this.successivePartialFailures
-    val otherSuccessivePartialFailures: Any? = o.successivePartialFailures
+    val otherSuccessivePartialFailures: Any? = other.successivePartialFailures
     if (thisSuccessivePartialFailures != otherSuccessivePartialFailures) {
       return false
     }
     val thisTotalPartialFailures: Any? = this.totalPartialFailures
-    val otherTotalPartialFailures: Any? = o.totalPartialFailures
+    val otherTotalPartialFailures: Any? = other.totalPartialFailures
     return thisTotalPartialFailures == otherTotalPartialFailures
   }
 
-  protected fun canEqual(other: Any?): Boolean {
+  private fun canEqual(other: Any?): Boolean {
     return other is RetryState
   }
 
@@ -147,8 +147,11 @@ class RetryState(
 
     fun build(): RetryState {
       return RetryState(
-        this.id, this.connectionId, this.jobId, this.createdAt, this.updatedAt, this.successiveCompleteFailures,
-        this.totalCompleteFailures, this.successivePartialFailures, this.totalPartialFailures,
+        id = this.id, connectionId = this.connectionId, jobId = this.jobId, createdAt = this.createdAt, updatedAt = this.updatedAt,
+        successiveCompleteFailures = this.successiveCompleteFailures,
+        totalCompleteFailures = this.totalCompleteFailures,
+        successivePartialFailures = this.successivePartialFailures,
+        totalPartialFailures = this.totalPartialFailures,
       )
     }
 

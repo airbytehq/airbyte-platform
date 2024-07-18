@@ -1,11 +1,13 @@
 import dayjs from "dayjs";
+import isString from "lodash/isString";
 import React from "react";
-import { useIntl } from "react-intl";
+import { FormattedMessage, useIntl } from "react-intl";
 
 import { FlexContainer } from "components/ui/Flex";
 import { Icon, IconType } from "components/ui/Icon";
 import { ExternalLink } from "components/ui/Link/ExternalLink";
 import { SupportLevelBadge } from "components/ui/SupportLevelBadge";
+import { Tooltip } from "components/ui/Tooltip";
 
 import { usePythonCDKVersion } from "core/api";
 import { ConnectorDefinition } from "core/domain/connector";
@@ -43,7 +45,7 @@ interface MetricInfo {
   icon: IconType;
   title: string;
 }
-type MetricLevel = "high" | "medium" | "low";
+type MetricLevel = "high" | "medium" | "low" | "none";
 type IconMap = Record<MetricLevel, MetricInfo>;
 
 const USAGE_ICON_MAP: IconMap = {
@@ -58,6 +60,10 @@ const USAGE_ICON_MAP: IconMap = {
   low: {
     icon: "metricUsageLow",
     title: "docs.metrics.usageRate.tooltip.low",
+  },
+  none: {
+    icon: "metricUsageNone",
+    title: "docs.metrics.usageRate.tooltip.none",
   },
 } as const;
 
@@ -74,30 +80,47 @@ const SUCCESS_ICON_MAP: IconMap = {
     icon: "metricSuccessLow",
     title: "docs.metrics.syncSuccessRate.tooltip.low",
   },
+  none: {
+    icon: "metricSuccessNone",
+    title: "docs.metrics.syncSuccessRate.tooltip.none",
+  },
 } as const;
 
 interface MetricIconProps {
-  iconMap: IconMap;
-  level: MetricLevel;
+  metric: "usage" | "success";
+  connectorDefinition: ConnectorDefinition;
 }
 
-const MetricIcon: React.FC<MetricIconProps> = ({ iconMap, level }) => {
+export const MetricIcon: React.FC<MetricIconProps> = ({ metric, connectorDefinition }) => {
   const { formatMessage } = useIntl();
 
-  const lowercaseLevel = level.toLowerCase() as MetricLevel;
-  if (!iconMap[lowercaseLevel]) {
-    return null;
-  }
+  const normalizeMetricValue = (metricValue: unknown): keyof IconMap => {
+    if (!isString(metricValue)) {
+      return "none";
+    }
 
-  const { icon, title } = iconMap[lowercaseLevel];
+    const lowercaseMetricValue = metricValue.toLowerCase();
+    if (lowercaseMetricValue !== "low" && lowercaseMetricValue !== "medium" && lowercaseMetricValue !== "high") {
+      return "none";
+    }
+
+    return lowercaseMetricValue;
+  };
+
+  const iconMap = metric === "usage" ? USAGE_ICON_MAP : SUCCESS_ICON_MAP;
+  const rawMetricValue =
+    metric === "usage"
+      ? connectorDefinition?.metrics?.all?.usage
+      : connectorDefinition?.metrics?.all?.sync_success_rate;
+  const { icon, title } = iconMap[normalizeMetricValue(rawMetricValue)];
+
   return (
-    <Icon
-      className={styles.wideIcon}
-      size="xs"
-      type={icon}
-      title={formatMessage({ id: title })}
-      aria-label={formatMessage({ id: title })}
-    />
+    <Tooltip
+      control={<Icon className={styles.wideIcon} size="xs" type={icon} aria-label={formatMessage({ id: title })} />}
+      placement="top"
+    >
+      <FormattedMessage id={title} />
+    </Tooltip>
   );
 };
 
@@ -135,7 +158,11 @@ export const ConnectorQualityMetrics: React.FC<ConnectorQualityMetricsProps> = (
   return (
     <FlexContainer direction="column" gap="sm" className={styles.connectorMetadata}>
       <MetadataStat label={formatMessage({ id: "docs.metrics.supportLevel.label" })}>
-        <SupportLevelBadge supportLevel={connectorDefinition.supportLevel} className={styles.statChip} />
+        <SupportLevelBadge
+          supportLevel={connectorDefinition.supportLevel}
+          className={styles.statChip}
+          hideCertified={false}
+        />
       </MetadataStat>
       <MetadataStat label={formatMessage({ id: "docs.metrics.connectorVersion.label" })}>
         <a href="#changelog">{connectorDefinition.dockerImageTag}</a>
@@ -164,12 +191,12 @@ export const ConnectorQualityMetrics: React.FC<ConnectorQualityMetricsProps> = (
       )}
       {syncSuccessRate && (
         <MetadataStat label={formatMessage({ id: "docs.metrics.syncSuccessRate.label" })}>
-          <MetricIcon iconMap={SUCCESS_ICON_MAP} level={syncSuccessRate} />
+          <MetricIcon metric="success" connectorDefinition={connectorDefinition} />
         </MetadataStat>
       )}
       {usageRate && (
         <MetadataStat label={formatMessage({ id: "docs.metrics.usageRate.label" })}>
-          <MetricIcon iconMap={USAGE_ICON_MAP} level={usageRate} />
+          <MetricIcon metric="usage" connectorDefinition={connectorDefinition} />
         </MetadataStat>
       )}
     </FlexContainer>

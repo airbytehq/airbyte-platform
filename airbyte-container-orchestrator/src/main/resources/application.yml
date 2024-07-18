@@ -120,11 +120,6 @@ airbyte:
         cpu-request: ${JOB_MAIN_CONTAINER_CPU_REQUEST:}
         memory-limit: ${JOB_MAIN_CONTAINER_MEMORY_LIMIT:}
         memory-request: ${JOB_MAIN_CONTAINER_MEMORY_REQUEST:}
-      normalization:
-        cpu-limit: ${NORMALIZATION_JOB_MAIN_CONTAINER_CPU_LIMIT:}
-        cpu-request: ${NORMALIZATION_JOB_MAIN_CONTAINER_CPU_REQUEST:}
-        memory-limit: ${NORMALIZATION_JOB_MAIN_CONTAINER_MEMORY_LIMIT:}
-        memory-request: ${NORMALIZATION_JOB_MAIN_CONTAINER_MEMORY_REQUEST:}
       replication:
         annotations: ${JOB_KUBE_ANNOTATIONS:}
         node-selectors: ${JOB_KUBE_NODE_SELECTORS:}
@@ -133,7 +128,7 @@ airbyte:
         memory-limit: ${REPLICATION_ORCHESTRATOR_MEMORY_LIMIT:}
         memory-request: ${REPLICATION_ORCHESTRATOR_MEMORY_REQUEST:}
     replication:
-      persistence-flush-period-sec: ${REPLICATION_FLUSH_PERIOD_SECONDS:60}
+      persistence-flush-period-sec: ${REPLICATION_FLUSH_PERIOD_SECONDS:10}
   workload-api:
     base-path: ${WORKLOAD_API_HOST:}
     bearer-token: ${WORKLOAD_API_BEARER_TOKEN:}
