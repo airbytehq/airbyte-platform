@@ -1047,7 +1047,7 @@ public class ConnectionsHandler {
     connectionEvent.eventType(ConnectionEventType.fromString(event.getEventType()));
     connectionEvent.createdAt(event.getCreatedAt().toEpochSecond());
     connectionEvent.connectionId(event.getConnectionId());
-    connectionEvent.summary(event.getSummary());
+    connectionEvent.summary(Jsons.deserialize(event.getSummary()));
     if (event.getUserId() != null) {
       connectionEvent.user(getUserRead(event.getUserId()));
     }
@@ -1103,9 +1103,8 @@ public class ConnectionsHandler {
     connectionEventWithDetails.connectionId(event.getConnectionId());
     // enforce event type consistency
     connectionEventWithDetails.eventType(ConnectionEventType.fromString(event.getEventType()));
-    connectionEventWithDetails.summary(event.getSummary());
-    // TODO: implement details generation. Note this could be a huge json if conn_settings changed or
-    // schema changed
+    connectionEventWithDetails.summary(Jsons.deserialize(event.getSummary()));
+    // TODO(@keyi): implement details generation for different types of events.
     connectionEventWithDetails.details(null);
     connectionEventWithDetails.createdAt(event.getCreatedAt().toEpochSecond());
     if (event.getUserId() != null) {
