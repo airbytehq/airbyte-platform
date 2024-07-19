@@ -826,7 +826,9 @@ public class SchedulerHandler {
         getBytesLoaded(streamAggregatedStats),
         getRecordsLoaded(streamAggregatedStats),
         job.getAttemptsCount(),
-        job.getConfigType().name(), JobStatus.CANCELLED.name());
+        job.getConfigType().name(),
+        JobStatus.CANCELLED.name(),
+        JobConverter.getStreamsAssociatedWithJob(job));
     connectionTimelineEventService.writeEvent(UUID.fromString(job.getScope()), event, getCurrentUserIdIfExist());
 
     // query same job ID again to get updated job info after cancellation

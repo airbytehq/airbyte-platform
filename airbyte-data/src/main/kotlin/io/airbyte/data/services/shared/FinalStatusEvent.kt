@@ -1,9 +1,12 @@
 package io.airbyte.data.services.shared
 
+import com.fasterxml.jackson.annotation.JsonInclude
 import io.airbyte.config.JobConfig
+import io.airbyte.protocol.models.StreamDescriptor
 import io.micronaut.data.annotation.TypeDef
 import io.micronaut.data.model.DataType
 
+@JsonInclude(JsonInclude.Include.NON_NULL)
 open class FinalStatusEvent(
   private val jobId: Long,
   private val startTimeEpochSeconds: Long,
@@ -13,6 +16,7 @@ open class FinalStatusEvent(
   private val attemptsCount: Int,
   private val jobType: String,
   private val statusType: String,
+  private val streams: List<StreamDescriptor>? = null,
 ) : ConnectionEvent {
   fun getJobId(): Long {
     return jobId
@@ -36,6 +40,10 @@ open class FinalStatusEvent(
 
   fun getAttemptsCount(): Int {
     return attemptsCount
+  }
+
+  fun getStreams(): List<StreamDescriptor>? {
+    return streams
   }
 
   @TypeDef(type = DataType.STRING)

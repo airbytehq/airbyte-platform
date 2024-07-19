@@ -14,6 +14,7 @@ import io.airbyte.api.model.generated.JobStatusEnum;
 import io.airbyte.api.model.generated.JobSuccessWithAttemptNumberRequest;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.commons.server.JobStatus;
+import io.airbyte.commons.server.converters.JobConverter;
 import io.airbyte.commons.server.errors.BadRequestException;
 import io.airbyte.commons.server.handlers.helpers.JobCreationAndStatusUpdateHelper;
 import io.airbyte.commons.server.handlers.helpers.StatsAggregationHelper;
@@ -205,7 +206,8 @@ public class JobsHandler {
           stats.records,
           job.getAttemptsCount(),
           job.getConfigType().name(),
-          JobStatus.SUCCEEDED.name());
+          JobStatus.SUCCEEDED.name(),
+          JobConverter.getStreamsAssociatedWithJob(job));
       connectionEventService.writeEvent(connectionId, event, null);
     } catch (final Exception e) {
       log.warn("Failed to persist timeline event for job: {}", jobId, e);
@@ -238,6 +240,7 @@ public class JobsHandler {
           job.getAttemptsCount(),
           job.getConfigType().name(),
           jobStatus,
+          JobConverter.getStreamsAssociatedWithJob(job),
           firstFailureReasonOfLastAttempt);
       connectionEventService.writeEvent(connectionId, event, null);
     } catch (final Exception e) {

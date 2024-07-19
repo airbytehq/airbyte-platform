@@ -131,6 +131,32 @@ public class JobConverter {
   }
 
   /**
+   * If the job type is REFRESH or CLEAR/RESET, extracts the streams from the job config. Otherwise,
+   * returns null.
+   *
+   * @param job - job
+   * @return List of the streams associated with the job
+   */
+  public static List<io.airbyte.protocol.models.StreamDescriptor> getStreamsAssociatedWithJob(final Job job) {
+    final JobRead jobRead = getJobRead(job);
+    switch (job.getConfigType()) {
+      case REFRESH -> {
+        return jobRead.getRefreshConfig().getStreamsToRefresh().stream().map(streamDescriptor -> new io.airbyte.protocol.models.StreamDescriptor()
+            .withName(streamDescriptor.getName())
+            .withNamespace(streamDescriptor.getNamespace())).collect(Collectors.toList());
+      }
+      case CLEAR, RESET_CONNECTION -> {
+        return jobRead.getResetConfig().getStreamsToReset().stream().map(streamDescriptor -> new io.airbyte.protocol.models.StreamDescriptor()
+            .withName(streamDescriptor.getName())
+            .withNamespace(streamDescriptor.getNamespace())).collect(Collectors.toList());
+      }
+      default -> {
+        return null;
+      }
+    }
+  }
+
+  /**
    * If the job is of type RESET, extracts the part of the reset config that we expose in the API.
    * Otherwise, returns empty optional.
    *

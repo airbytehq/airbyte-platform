@@ -3,13 +3,8 @@ package io.airbyte.commons.server.handlers
 import io.airbyte.api.model.generated.ActorDefinitionVersionRead
 import io.airbyte.api.model.generated.ConnectionStream
 import io.airbyte.api.model.generated.DestinationIdRequestBody
-import io.airbyte.api.model.generated.JobConfigType
-import io.airbyte.api.model.generated.JobInfoRead
-import io.airbyte.api.model.generated.JobRead
-import io.airbyte.api.model.generated.JobRefreshConfig
 import io.airbyte.api.model.generated.JobStatus
 import io.airbyte.api.model.generated.RefreshMode
-import io.airbyte.commons.server.converters.JobConverter
 import io.airbyte.commons.server.handlers.StreamRefreshesHandler.Companion.connectionStreamsToStreamDescriptors
 import io.airbyte.commons.server.scheduler.EventRunner
 import io.airbyte.commons.server.support.CurrentUserService
@@ -41,7 +36,6 @@ internal class StreamRefreshesHandlerTest {
   private val actorDefinitionVersionHandler: ActorDefinitionVersionHandler = mockk()
   private val currentUserService: CurrentUserService = mockk()
   private val jobPersistence: JobPersistence = mockk()
-  private val jobConverter: JobConverter = mockk()
   private val connectionTimelineEventService: ConnectionTimelineEventService = mockk()
 
   private val streamRefreshesHandler =
@@ -52,7 +46,6 @@ internal class StreamRefreshesHandlerTest {
       actorDefinitionVersionHandler,
       currentUserService,
       jobPersistence,
-      jobConverter,
       connectionTimelineEventService,
     )
 
@@ -97,14 +90,6 @@ internal class StreamRefreshesHandlerTest {
         0L, JobConfig.ConfigType.REFRESH, "scope_id",
         null, listOf(), io.airbyte.persistence.job.models.JobStatus.SUCCEEDED, 0L, 0L, 0L,
       )
-    every { jobConverter.getJobInfoRead(any()) } returns
-      JobInfoRead().job(
-        JobRead()
-          .id(0L)
-          .configType(JobConfigType.REFRESH)
-          .createdAt(0L)
-          .refreshConfig(JobRefreshConfig().streamsToRefresh(listOf())),
-      )
     val result = streamRefreshesHandler.createRefreshesForConnection(connectionId, RefreshMode.TRUNCATE, connectionStream)
 
     assertTrue(result)
@@ -127,15 +112,6 @@ internal class StreamRefreshesHandlerTest {
         0L, JobConfig.ConfigType.REFRESH, "scope_id",
         null, listOf(), io.airbyte.persistence.job.models.JobStatus.SUCCEEDED, 0L, 0L, 0L,
       )
-    every { jobConverter.getJobInfoRead(any()) } returns
-      JobInfoRead().job(
-        JobRead()
-          .id(0L)
-          .configType(JobConfigType.REFRESH)
-          .createdAt(0L)
-          .refreshConfig(JobRefreshConfig().streamsToRefresh(listOf())),
-      )
-
     val result = streamRefreshesHandler.createRefreshesForConnection(connectionId, RefreshMode.TRUNCATE, listOf())
 
     assertTrue(result)

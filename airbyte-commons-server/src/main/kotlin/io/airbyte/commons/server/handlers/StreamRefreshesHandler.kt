@@ -3,7 +3,6 @@ package io.airbyte.commons.server.handlers
 import io.airbyte.api.model.generated.ConnectionStream
 import io.airbyte.api.model.generated.DestinationIdRequestBody
 import io.airbyte.api.model.generated.RefreshMode
-import io.airbyte.commons.server.converters.JobConverter
 import io.airbyte.commons.server.scheduler.EventRunner
 import io.airbyte.commons.server.support.CurrentUserService
 import io.airbyte.config.JobConfig.ConfigType
@@ -27,7 +26,6 @@ class StreamRefreshesHandler(
   private val actorDefinitionVersionHandler: ActorDefinitionVersionHandler,
   private val currentUserService: CurrentUserService,
   private val jobPersistence: JobPersistence,
-  private val jobConverter: JobConverter,
   private val connectionTimelineEventService: ConnectionTimelineEventService,
 ) {
   fun deleteRefreshesForConnection(connectionId: UUID) {
@@ -62,20 +60,17 @@ class StreamRefreshesHandler(
     // Store connection timeline event (start a refresh).
     val manualSyncResult = eventRunner.startNewManualSync(connectionId)
     val job = manualSyncResult?.jobId?.let { jobPersistence.getJob(it.get()) }
-    val jobInfo = job?.let { jobConverter.getJobInfoRead(job) }
-    if (jobInfo?.job != null && jobInfo.job.configType != null) {
+    job?.let {
       val userId = currentUserService.currentUser?.userId
       val refreshStartedEvent =
         ManuallyStartedEvent(
-          jobId = jobInfo.job.id,
-          startTimeEpochSeconds = jobInfo.job.createdAt,
+          jobId = job.id,
+          startTimeEpochSeconds = job.createdAtInSecond,
           jobType = ConfigType.REFRESH.name,
           streams =
-            jobInfo.job.refreshConfig.streamsToRefresh.map {
-                streamDescriptor ->
-              StreamDescriptor()
-                .withName(streamDescriptor.name)
-                .withNamespace(streamDescriptor.namespace)
+            job.config.refresh.streamsToRefresh.map {
+                refreshStream ->
+              refreshStream.streamDescriptor
             },
         )
       connectionTimelineEventService.writeEvent(connectionId, refreshStartedEvent, userId)
