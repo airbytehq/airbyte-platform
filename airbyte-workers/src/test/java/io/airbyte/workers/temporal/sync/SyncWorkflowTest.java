@@ -141,7 +141,7 @@ class SyncWorkflowTest {
 
     final ImmutablePair<StandardSync, StandardSyncInput> syncPair = TestConfigHelpers.createSyncConfig(ORGANIZATION_ID, SOURCE_DEFINITION_ID);
     sync = syncPair.getKey();
-    syncInput = syncPair.getValue();
+    syncInput = syncPair.getValue().withSourceId(SOURCE_ID);
 
     syncStats = new SyncStats().withRecordsCommitted(10L);
     standardSyncSummary = new StandardSyncSummary().withTotalStats(syncStats);

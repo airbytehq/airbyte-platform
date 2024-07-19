@@ -110,10 +110,10 @@ public class SyncWorkflowImpl implements SyncWorkflow {
 
     final String taskQueue = Workflow.getInfo().getTaskQueue();
 
-    final Optional<UUID> sourceId = configFetchActivity.getSourceId(connectionId);
+    final Optional<UUID> sourceId = getSourceId(syncInput);
     RefreshSchemaActivityOutput refreshSchemaOutput = null;
-    final boolean shouldRefreshSchema = refreshSchemaActivity.shouldRefreshSchema(sourceId.get());
-    if (!sourceId.isEmpty() && (shouldRefreshSchema || shouldRunAsChildWorkflow)) {
+    final boolean shouldRefreshSchema = sourceId.isPresent() && refreshSchemaActivity.shouldRefreshSchema(sourceId.get());
+    if (sourceId.isPresent() && (shouldRefreshSchema || shouldRunAsChildWorkflow)) {
       try {
         if (shouldRunAsChildWorkflow) {
           final JsonNode sourceConfig = configFetchActivity.getSourceConfig(sourceId.get());
@@ -128,8 +128,6 @@ public class SyncWorkflowImpl implements SyncWorkflow {
         ApmTraceUtils.addExceptionToTrace(e);
         return SyncOutputProvider.getRefreshSchemaFailure(e);
       }
-    } else {
-      LOGGER.error("Not Needed");
     }
 
     final long discoverSchemaEndTime = Workflow.currentTimeMillis();
@@ -196,6 +194,14 @@ public class SyncWorkflowImpl implements SyncWorkflow {
     }
 
     return syncOutput;
+  }
+
+  private Optional<UUID> getSourceId(final StandardSyncInput syncInput) {
+    final int shouldGetSourceFromSyncInput = Workflow.getVersion("SHOULD_GET_SOURCE_FROM_SYNC_INPUT", Workflow.DEFAULT_VERSION, 1);
+    if (shouldGetSourceFromSyncInput != Workflow.DEFAULT_VERSION) {
+      return Optional.ofNullable(syncInput.getSourceId());
+    }
+    return configFetchActivity.getSourceId(syncInput.getConnectionId());
   }
 
   @VisibleForTesting
