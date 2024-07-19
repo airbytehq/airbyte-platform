@@ -55,6 +55,7 @@ internal class ApplyDefinitionsHelperTest {
   private val metricClient: MetricClient = mockk()
   private val supportStateUpdater: SupportStateUpdater = mockk()
   private val actorDefinitionVersionResolver: ActorDefinitionVersionResolver = mockk()
+  private val airbyteCompatibleConnectorsValidator: AirbyteCompatibleConnectorsValidator = mockk()
   private lateinit var applyDefinitionsHelper: ApplyDefinitionsHelper
 
   @BeforeEach
@@ -69,12 +70,14 @@ internal class ApplyDefinitionsHelperTest {
         metricClient,
         supportStateUpdater,
         actorDefinitionVersionResolver,
+        airbyteCompatibleConnectorsValidator,
       )
 
     every { actorDefinitionService.actorDefinitionIdsInUse } returns emptySet()
     every { actorDefinitionService.actorDefinitionIdsToDefaultVersionsMap } returns emptyMap()
     every { definitionsProvider.getDestinationDefinitions() } returns emptyList()
     every { definitionsProvider.getSourceDefinitions() } returns emptyList()
+    every { airbyteCompatibleConnectorsValidator.validate(any(), any()) } returns ConnectorPlatformCompatibilityValidationResult(true, null)
     every { jobPersistence.currentProtocolVersionRange } returns Optional.of(AirbyteProtocolVersionRange(Version("2.0.0"), Version("3.0.0")))
     every { actorDefinitionVersionResolver.fetchRemoteActorDefinitionVersion(any(), any(), any()) } returns Optional.empty()
     mockVoidReturningFunctions()
@@ -345,6 +348,89 @@ internal class ApplyDefinitionsHelperTest {
         ConnectorRegistryConverters.toStandardDestinationDefinition(s3withOldProtocolVersion),
         ConnectorRegistryConverters.toActorDefinitionVersion(postgresWithOldProtocolVersion),
         ConnectorRegistryConverters.toActorDefinitionBreakingChanges(s3withOldProtocolVersion),
+      )
+    }
+    verify {
+      sourceService.writeConnectorMetadata(
+        ConnectorRegistryConverters.toStandardSourceDefinition(SOURCE_POSTGRES_2),
+        ConnectorRegistryConverters.toActorDefinitionVersion(SOURCE_POSTGRES_2),
+        ConnectorRegistryConverters.toActorDefinitionBreakingChanges(SOURCE_POSTGRES_2),
+      )
+    }
+    verify {
+      destinationService.writeConnectorMetadata(
+        ConnectorRegistryConverters.toStandardDestinationDefinition(DESTINATION_S3_2),
+        ConnectorRegistryConverters.toActorDefinitionVersion(DESTINATION_S3_2),
+        ConnectorRegistryConverters.toActorDefinitionBreakingChanges(DESTINATION_S3_2),
+      )
+    }
+    verify { supportStateUpdater.updateSupportStates() }
+    listOf("airbyte/source-postgres", "airbyte/destination-s3").forEach {
+      verify {
+        metricClient.count(
+          OssMetricsRegistry.CONNECTOR_REGISTRY_DEFINITION_PROCESSED,
+          1,
+          MetricAttribute("status", "ok"),
+          MetricAttribute("outcome", DefinitionProcessingSuccessOutcome.INITIAL_VERSION_ADDED.toString()),
+          MetricAttribute("docker_repository", it),
+          MetricAttribute("docker_image_tag", UPDATED_CONNECTOR_VERSION),
+        )
+      }
+    }
+    confirmVerified(actorDefinitionService, sourceService, destinationService, supportStateUpdater, metricClient)
+  }
+
+  @ParameterizedTest
+  @MethodSource("updateScenario")
+  @Throws(
+    JsonValidationException::class,
+    IOException::class,
+    ConfigNotFoundException::class,
+    io.airbyte.data.exceptions.ConfigNotFoundException::class,
+  )
+  fun `new definitions that are incompatible with the airbyte version range should not be written`(
+    updateAll: Boolean,
+    reImport: Boolean,
+  ) {
+    every {
+      airbyteCompatibleConnectorsValidator.validate(POSTGRES_ID.toString(), "0.1.0")
+    } returns ConnectorPlatformCompatibilityValidationResult(false, "Postgres source 0.1.0 can't be updated")
+    every {
+      airbyteCompatibleConnectorsValidator.validate(S3_ID.toString(), "0.1.0")
+    } returns ConnectorPlatformCompatibilityValidationResult(false, "S3 Destination 0.1.0 can't be updated")
+    every { airbyteCompatibleConnectorsValidator.validate(any(), "0.2.0") } returns ConnectorPlatformCompatibilityValidationResult(true, null)
+
+    every { definitionsProvider.sourceDefinitions } returns listOf(SOURCE_POSTGRES, SOURCE_POSTGRES_2)
+    every { definitionsProvider.destinationDefinitions } returns listOf(DESTINATION_S3, DESTINATION_S3_2)
+
+    applyDefinitionsHelper.apply(updateAll, reImport)
+    verifyActorDefinitionServiceInteractions()
+
+    listOf("airbyte/source-postgres", "airbyte/destination-s3").forEach {
+      verify {
+        metricClient.count(
+          OssMetricsRegistry.CONNECTOR_REGISTRY_DEFINITION_PROCESSED,
+          1,
+          MetricAttribute("status", "failed"),
+          MetricAttribute("outcome", DefinitionProcessingFailureReason.INCOMPATIBLE_AIRBYTE_VERSION.toString()),
+          MetricAttribute("docker_repository", it),
+          MetricAttribute("docker_image_tag", INITIAL_CONNECTOR_VERSION),
+        )
+      }
+    }
+
+    verify(exactly = 0) {
+      sourceService.writeConnectorMetadata(
+        ConnectorRegistryConverters.toStandardSourceDefinition(SOURCE_POSTGRES),
+        ConnectorRegistryConverters.toActorDefinitionVersion(SOURCE_POSTGRES),
+        ConnectorRegistryConverters.toActorDefinitionBreakingChanges(SOURCE_POSTGRES),
+      )
+    }
+    verify(exactly = 0) {
+      destinationService.writeConnectorMetadata(
+        ConnectorRegistryConverters.toStandardDestinationDefinition(DESTINATION_S3),
+        ConnectorRegistryConverters.toActorDefinitionVersion(DESTINATION_S3),
+        ConnectorRegistryConverters.toActorDefinitionBreakingChanges(DESTINATION_S3),
       )
     }
     verify {

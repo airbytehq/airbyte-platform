@@ -27,6 +27,7 @@ import io.airbyte.api.model.generated.DeclarativeSourceDefinitionCreateManifestR
 import io.airbyte.api.model.generated.DeclarativeSourceManifest;
 import io.airbyte.api.model.generated.ListDeclarativeManifestsRequestBody;
 import io.airbyte.api.model.generated.UpdateActiveManifestRequestBody;
+import io.airbyte.api.problems.throwable.generated.BadRequestProblem;
 import io.airbyte.commons.server.errors.DeclarativeSourceNotFoundException;
 import io.airbyte.commons.server.errors.SourceIsNotDeclarativeException;
 import io.airbyte.commons.server.errors.ValueConflictKnownException;
@@ -34,6 +35,8 @@ import io.airbyte.commons.server.handlers.helpers.DeclarativeSourceManifestInjec
 import io.airbyte.commons.version.Version;
 import io.airbyte.config.ActorDefinitionConfigInjection;
 import io.airbyte.config.DeclarativeManifest;
+import io.airbyte.config.init.AirbyteCompatibleConnectorsValidator;
+import io.airbyte.config.init.ConnectorPlatformCompatibilityValidationResult;
 import io.airbyte.data.exceptions.ConfigNotFoundException;
 import io.airbyte.data.services.ConnectorBuilderService;
 import io.airbyte.data.services.DeclarativeManifestImageVersionService;
@@ -73,6 +76,7 @@ class DeclarativeSourceDefinitionsHandlerTest {
   private DeclarativeSourceManifestInjector manifestInjector;
   private ConnectorSpecification adaptedConnectorSpecification;
   private ActorDefinitionConfigInjection configInjection;
+  private AirbyteCompatibleConnectorsValidator airbyteCompatibleConnectorsValidator;
 
   private DeclarativeSourceDefinitionsHandler handler;
 
@@ -84,9 +88,11 @@ class DeclarativeSourceDefinitionsHandlerTest {
     manifestInjector = mock(DeclarativeSourceManifestInjector.class);
     adaptedConnectorSpecification = mock(ConnectorSpecification.class);
     configInjection = mock(ActorDefinitionConfigInjection.class);
+    airbyteCompatibleConnectorsValidator = mock(AirbyteCompatibleConnectorsValidator.class);
 
     handler =
-        new DeclarativeSourceDefinitionsHandler(declarativeManifestImageVersionService, connectorBuilderService, workspaceService, manifestInjector);
+        new DeclarativeSourceDefinitionsHandler(declarativeManifestImageVersionService, connectorBuilderService, workspaceService, manifestInjector,
+            airbyteCompatibleConnectorsValidator);
     when(declarativeManifestImageVersionService.getImageVersionByMajorVersion(anyInt()))
         .thenReturn(A_DECLARATIVE_MANIFEST_IMAGE_VERSION);
   }
@@ -232,6 +238,8 @@ class DeclarativeSourceDefinitionsHandlerTest {
 
   @Test
   void whenUpdateDeclarativeManifestVersionThenSetDeclarativeSourceActiveVersion() throws IOException, ConfigNotFoundException {
+    when(airbyteCompatibleConnectorsValidator.validateDeclarativeManifest(eq(A_DECLARATIVE_MANIFEST_IMAGE_VERSION)))
+        .thenReturn(new ConnectorPlatformCompatibilityValidationResult(true, ""));
     givenSourceDefinitionAvailableInWorkspace();
     givenSourceIsDeclarative();
     when(connectorBuilderService.getDeclarativeManifestByActorDefinitionIdAndVersion(A_SOURCE_DEFINITION_ID, A_VERSION))
@@ -250,6 +258,29 @@ class DeclarativeSourceDefinitionsHandlerTest {
     verify(manifestInjector, times(1)).getCdkVersion(A_MANIFEST);
     verify(connectorBuilderService, times(1)).setDeclarativeSourceActiveVersion(A_SOURCE_DEFINITION_ID, A_VERSION, configInjection,
         adaptedConnectorSpecification, A_DECLARATIVE_MANIFEST_IMAGE_VERSION);
+  }
+
+  @Test
+  void updateShouldNotWorkIfValidationFails() throws IOException, ConfigNotFoundException {
+    when(airbyteCompatibleConnectorsValidator.validateDeclarativeManifest(eq(A_DECLARATIVE_MANIFEST_IMAGE_VERSION)))
+        .thenReturn(new ConnectorPlatformCompatibilityValidationResult(false, "Can't update definition"));
+    givenSourceDefinitionAvailableInWorkspace();
+    givenSourceIsDeclarative();
+    when(connectorBuilderService.getDeclarativeManifestByActorDefinitionIdAndVersion(A_SOURCE_DEFINITION_ID, A_VERSION))
+        .thenReturn(new DeclarativeManifest()
+            .withVersion(A_VERSION)
+            .withActorDefinitionId(A_SOURCE_DEFINITION_ID)
+            .withManifest(A_MANIFEST)
+            .withSpec(A_SPEC));
+    when(manifestInjector.createConfigInjection(A_SOURCE_DEFINITION_ID, A_MANIFEST)).thenReturn(configInjection);
+    when(manifestInjector.createDeclarativeManifestConnectorSpecification(A_SPEC)).thenReturn(adaptedConnectorSpecification);
+    when(manifestInjector.getCdkVersion(A_MANIFEST)).thenReturn(A_CDK_VERSION);
+
+    assertThrows(BadRequestProblem.class, () -> handler.updateDeclarativeManifestVersion(
+        new UpdateActiveManifestRequestBody().sourceDefinitionId(A_SOURCE_DEFINITION_ID).workspaceId(A_WORKSPACE_ID).version(A_VERSION)));
+    verify(connectorBuilderService, times(0)).setDeclarativeSourceActiveVersion(A_SOURCE_DEFINITION_ID, A_VERSION, configInjection,
+        adaptedConnectorSpecification, A_DECLARATIVE_MANIFEST_IMAGE_VERSION);
+    verify(manifestInjector, times(1)).getCdkVersion(A_MANIFEST);
   }
 
   @Test

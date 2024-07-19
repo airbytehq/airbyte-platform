@@ -12,6 +12,7 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -36,6 +37,7 @@ import io.airbyte.api.model.generated.SourceRead;
 import io.airbyte.api.model.generated.SourceReadList;
 import io.airbyte.api.model.generated.SupportLevel;
 import io.airbyte.api.model.generated.WorkspaceIdRequestBody;
+import io.airbyte.api.problems.throwable.generated.BadRequestProblem;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.commons.server.converters.ApiPojoConverters;
 import io.airbyte.commons.server.errors.IdNotFoundKnownException;
@@ -55,6 +57,8 @@ import io.airbyte.config.ScopeType;
 import io.airbyte.config.StandardSourceDefinition;
 import io.airbyte.config.SuggestedStreams;
 import io.airbyte.config.helpers.ConnectorRegistryConverters;
+import io.airbyte.config.init.AirbyteCompatibleConnectorsValidator;
+import io.airbyte.config.init.ConnectorPlatformCompatibilityValidationResult;
 import io.airbyte.config.init.SupportStateUpdater;
 import io.airbyte.config.persistence.ActorDefinitionVersionHelper;
 import io.airbyte.config.persistence.ConfigNotFoundException;
@@ -109,6 +113,8 @@ class SourceDefinitionsHandlerTest {
   private FeatureFlagClient featureFlagClient;
   private ActorDefinitionVersionHelper actorDefinitionVersionHelper;
 
+  private AirbyteCompatibleConnectorsValidator airbyteCompatibleConnectorsValidator;
+
   @SuppressWarnings("unchecked")
   @BeforeEach
   void setUp() {
@@ -126,10 +132,11 @@ class SourceDefinitionsHandlerTest {
     sourceDefinitionVersionWithOptionals = generateSourceDefinitionVersionWithOptionals(sourceDefinitionWithOptionals);
     featureFlagClient = mock(TestClient.class);
     actorDefinitionVersionHelper = mock(ActorDefinitionVersionHelper.class);
+    airbyteCompatibleConnectorsValidator = mock(AirbyteCompatibleConnectorsValidator.class);
 
     sourceDefinitionsHandler =
         new SourceDefinitionsHandler(configRepository, uuidSupplier, actorDefinitionHandlerHelper, remoteDefinitionsProvider, sourceHandler,
-            supportStateUpdater, featureFlagClient, actorDefinitionVersionHelper);
+            supportStateUpdater, featureFlagClient, actorDefinitionVersionHelper, airbyteCompatibleConnectorsValidator);
   }
 
   private StandardSourceDefinition generateSourceDefinition() {
@@ -729,6 +736,8 @@ class SourceDefinitionsHandlerTest {
   @DisplayName("updateSourceDefinition should correctly update a sourceDefinition")
   void testUpdateSource(final boolean useIconUrlInApiResponseFlagValue)
       throws ConfigNotFoundException, IOException, JsonValidationException, URISyntaxException, io.airbyte.data.exceptions.ConfigNotFoundException {
+    when(airbyteCompatibleConnectorsValidator.validate(anyString(), anyString()))
+        .thenReturn(new ConnectorPlatformCompatibilityValidationResult(true, ""));
     when(featureFlagClient.boolVariation(UseIconUrlInApiResponse.INSTANCE, new Workspace(ANONYMOUS))).thenReturn(useIconUrlInApiResponseFlagValue);
 
     final String newDockerImageTag = "averydifferenttag";
@@ -789,6 +798,8 @@ class SourceDefinitionsHandlerTest {
       + "if defaultDefinitionVersionFromUpdate throws unsupported protocol version error")
   void testOutOfProtocolRangeUpdateSource() throws ConfigNotFoundException, IOException,
       JsonValidationException {
+    when(airbyteCompatibleConnectorsValidator.validate(anyString(), anyString()))
+        .thenReturn(new ConnectorPlatformCompatibilityValidationResult(true, ""));
     when(configRepository.getStandardSourceDefinition(sourceDefinition.getSourceDefinitionId())).thenReturn(sourceDefinition);
     when(configRepository.getActorDefinitionVersion(sourceDefinition.getDefaultVersionId()))
         .thenReturn(sourceDefinitionVersion);
@@ -811,6 +822,30 @@ class SourceDefinitionsHandlerTest {
         sourceDefinition.getCustom());
     verify(configRepository, never()).writeConnectorMetadata(any(StandardSourceDefinition.class), any());
 
+    verifyNoMoreInteractions(actorDefinitionHandlerHelper);
+  }
+
+  @Test
+  @DisplayName("updateSourceDefinition should not update a sourceDefinition "
+      + "if Airbyte version is unsupported")
+  void testUnsupportedAirbyteVersionUpdateSource() throws ConfigNotFoundException, IOException,
+      JsonValidationException {
+    when(airbyteCompatibleConnectorsValidator.validate(anyString(), eq("12.4.0")))
+        .thenReturn(new ConnectorPlatformCompatibilityValidationResult(false, ""));
+    when(configRepository.getStandardSourceDefinition(sourceDefinition.getSourceDefinitionId())).thenReturn(sourceDefinition);
+    when(configRepository.getActorDefinitionVersion(sourceDefinition.getDefaultVersionId()))
+        .thenReturn(sourceDefinitionVersion);
+    final SourceDefinitionRead currentSource = sourceDefinitionsHandler
+        .getSourceDefinition(
+            new SourceDefinitionIdRequestBody().sourceDefinitionId(sourceDefinition.getSourceDefinitionId()));
+    final String currentTag = currentSource.getDockerImageTag();
+    final String newDockerImageTag = "12.4.0";
+    assertNotEquals(newDockerImageTag, currentTag);
+
+    assertThrows(BadRequestProblem.class, () -> sourceDefinitionsHandler.updateSourceDefinition(
+        new SourceDefinitionUpdate().sourceDefinitionId(this.sourceDefinition.getSourceDefinitionId())
+            .dockerImageTag(newDockerImageTag)));
+    verify(configRepository, never()).writeConnectorMetadata(any(StandardSourceDefinition.class), any());
     verifyNoMoreInteractions(actorDefinitionHandlerHelper);
   }
 

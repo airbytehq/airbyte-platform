@@ -19,6 +19,8 @@ import io.airbyte.api.model.generated.DestinationRead;
 import io.airbyte.api.model.generated.PrivateDestinationDefinitionRead;
 import io.airbyte.api.model.generated.PrivateDestinationDefinitionReadList;
 import io.airbyte.api.model.generated.WorkspaceIdRequestBody;
+import io.airbyte.api.problems.model.generated.ProblemMessageData;
+import io.airbyte.api.problems.throwable.generated.BadRequestProblem;
 import io.airbyte.commons.lang.Exceptions;
 import io.airbyte.commons.resources.MoreResources;
 import io.airbyte.commons.server.converters.ApiPojoConverters;
@@ -33,6 +35,8 @@ import io.airbyte.config.ConnectorRegistryDestinationDefinition;
 import io.airbyte.config.ScopeType;
 import io.airbyte.config.StandardDestinationDefinition;
 import io.airbyte.config.helpers.ConnectorRegistryConverters;
+import io.airbyte.config.init.AirbyteCompatibleConnectorsValidator;
+import io.airbyte.config.init.ConnectorPlatformCompatibilityValidationResult;
 import io.airbyte.config.init.SupportStateUpdater;
 import io.airbyte.config.persistence.ActorDefinitionVersionHelper;
 import io.airbyte.config.persistence.ConfigNotFoundException;
@@ -76,6 +80,7 @@ public class DestinationDefinitionsHandler {
   private final DestinationHandler destinationHandler;
   private final SupportStateUpdater supportStateUpdater;
   private final FeatureFlagClient featureFlagClient;
+  private final AirbyteCompatibleConnectorsValidator airbyteCompatibleConnectorsValidator;
 
   @VisibleForTesting
   public DestinationDefinitionsHandler(final ConfigRepository configRepository,
@@ -85,7 +90,8 @@ public class DestinationDefinitionsHandler {
                                        final DestinationHandler destinationHandler,
                                        final SupportStateUpdater supportStateUpdater,
                                        final FeatureFlagClient featureFlagClient,
-                                       final ActorDefinitionVersionHelper actorDefinitionVersionHelper) {
+                                       final ActorDefinitionVersionHelper actorDefinitionVersionHelper,
+                                       final AirbyteCompatibleConnectorsValidator airbyteCompatibleConnectorsValidator) {
     this.configRepository = configRepository;
     this.uuidSupplier = uuidSupplier;
     this.actorDefinitionHandlerHelper = actorDefinitionHandlerHelper;
@@ -94,6 +100,7 @@ public class DestinationDefinitionsHandler {
     this.supportStateUpdater = supportStateUpdater;
     this.featureFlagClient = featureFlagClient;
     this.actorDefinitionVersionHelper = actorDefinitionVersionHelper;
+    this.airbyteCompatibleConnectorsValidator = airbyteCompatibleConnectorsValidator;
   }
 
   @VisibleForTesting
@@ -272,6 +279,18 @@ public class DestinationDefinitionsHandler {
 
   public DestinationDefinitionRead updateDestinationDefinition(final DestinationDefinitionUpdate destinationDefinitionUpdate)
       throws ConfigNotFoundException, IOException, JsonValidationException, io.airbyte.data.exceptions.ConfigNotFoundException {
+    final ConnectorPlatformCompatibilityValidationResult isNewConnectorVersionSupported =
+        airbyteCompatibleConnectorsValidator.validate(destinationDefinitionUpdate.getDestinationDefinitionId().toString(),
+            destinationDefinitionUpdate.getDockerImageTag());
+    if (!isNewConnectorVersionSupported.isValid()) {
+      final String message = isNewConnectorVersionSupported.getMessage() != null ? isNewConnectorVersionSupported.getMessage()
+          : String.format("Destination %s can't be updated to version %s cause the version "
+              + "is not supported by current platform version",
+              destinationDefinitionUpdate.getDestinationDefinitionId().toString(),
+              destinationDefinitionUpdate.getDockerImageTag());
+      throw new BadRequestProblem(message, new ProblemMessageData().message(message));
+    }
+
     final StandardDestinationDefinition currentDestination = configRepository
         .getStandardDestinationDefinition(destinationDefinitionUpdate.getDestinationDefinitionId());
     final ActorDefinitionVersion currentVersion = configRepository.getActorDefinitionVersion(currentDestination.getDefaultVersionId());

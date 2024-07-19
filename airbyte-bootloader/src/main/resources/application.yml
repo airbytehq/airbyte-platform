@@ -1,6 +1,9 @@
 micronaut:
   application:
     name: airbyte-bootloader
+  caches:
+    platform-compatibility-provider:
+      expire-after-write: 15s
   env:
     cloud-deduction: true
   server:

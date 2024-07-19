@@ -52,6 +52,7 @@ class ApplyDefinitionsHelper(
   private val metricClient: MetricClient,
   private val supportStateUpdater: SupportStateUpdater,
   private val actorDefinitionVersionResolver: ActorDefinitionVersionResolver,
+  private val airbyteCompatibleConnectorsValidator: AirbyteCompatibleConnectorsValidator,
 ) {
   private var newConnectorCount = 0
   private var changedConnectorCount = 0
@@ -84,16 +85,20 @@ class ApplyDefinitionsHelper(
     val protocolCompatibleDestinationDefinitions =
       filterOutIncompatibleDestDefs(currentProtocolRange, latestDestinationDefinitions)
 
+    val airbyteCompatibleSourceDefinitions =
+      filterOutIncompatibleSourceDefsWithCurrentAirbyteVersion(protocolCompatibleSourceDefinitions)
+    val airbyteCompatibleDestinationDefinitions =
+      filterOutIncompatibleDestinationDefsWithCurrentAirbyteVersion(protocolCompatibleDestinationDefinitions)
     val actorDefinitionIdsToDefaultVersionsMap =
       actorDefinitionService.actorDefinitionIdsToDefaultVersionsMap
     val actorDefinitionIdsInUse = actorDefinitionService.actorDefinitionIdsInUse
 
     newConnectorCount = 0
     changedConnectorCount = 0
-    for (def in protocolCompatibleSourceDefinitions) {
+    for (def in airbyteCompatibleSourceDefinitions) {
       applySourceDefinition(actorDefinitionIdsToDefaultVersionsMap, def, actorDefinitionIdsInUse, updateAll, reImportVersionInUse)
     }
-    for (def in protocolCompatibleDestinationDefinitions) {
+    for (def in airbyteCompatibleDestinationDefinitions) {
       applyDestinationDefinition(actorDefinitionIdsToDefaultVersionsMap, def, actorDefinitionIdsInUse, updateAll, reImportVersionInUse)
     }
     supportStateUpdater.updateSupportStates()
@@ -318,6 +323,32 @@ class ApplyDefinitionsHelper(
         trackDefinitionProcessed(def.dockerRepository, def.dockerImageTag, DefinitionProcessingFailureReason.INCOMPATIBLE_PROTOCOL_VERSION)
       }
       isSupported
+    }.toList()
+  }
+
+  private fun filterOutIncompatibleSourceDefsWithCurrentAirbyteVersion(
+    sourceDefs: List<ConnectorRegistrySourceDefinition>,
+  ): List<ConnectorRegistrySourceDefinition> {
+    return sourceDefs.stream().filter { def: ConnectorRegistrySourceDefinition ->
+      val isConnectorSupported = airbyteCompatibleConnectorsValidator.validate(def.sourceDefinitionId.toString(), def.dockerImageTag)
+      if (!isConnectorSupported.isValid) {
+        log.warn(isConnectorSupported.message)
+        trackDefinitionProcessed(def.dockerRepository, def.dockerImageTag, DefinitionProcessingFailureReason.INCOMPATIBLE_AIRBYTE_VERSION)
+      }
+      isConnectorSupported.isValid
+    }.toList()
+  }
+
+  private fun filterOutIncompatibleDestinationDefsWithCurrentAirbyteVersion(
+    destinationDefs: List<ConnectorRegistryDestinationDefinition>,
+  ): List<ConnectorRegistryDestinationDefinition> {
+    return destinationDefs.stream().filter { def: ConnectorRegistryDestinationDefinition ->
+      val isNewConnectorVersionSupported = airbyteCompatibleConnectorsValidator.validate(def.destinationDefinitionId.toString(), def.dockerImageTag)
+      if (!isNewConnectorVersionSupported.isValid) {
+        log.warn(isNewConnectorVersionSupported.message)
+        trackDefinitionProcessed(def.dockerRepository, def.dockerImageTag, DefinitionProcessingFailureReason.INCOMPATIBLE_AIRBYTE_VERSION)
+      }
+      isNewConnectorVersionSupported.isValid
     }.toList()
   }
 

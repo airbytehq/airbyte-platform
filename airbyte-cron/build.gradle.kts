@@ -50,8 +50,11 @@ dependencies {
 
   runtimeOnly(libs.snakeyaml)
 
+  kaptTest(libs.bundles.micronaut.test.annotation.processor)
+
   testImplementation(libs.bundles.junit)
   testImplementation(libs.mockk)
+  testImplementation(libs.bundles.micronaut.test)
 }
 
 val env =
@@ -86,4 +89,23 @@ kapt {
 // Once lombok has been removed, this can also be removed.
 tasks.withType<Jar>().configureEach {
   duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+}
+
+// Copies the connector <> platform compatibility JSON file for use in tests
+tasks.register<Copy>("copyPlatformCompatibilityMatrix") {
+  val platformCompatibilityFile = project.rootProject.layout.projectDirectory.file("tools/connectors/platform-compatibility/platform-compatibility.json")
+  if(file(platformCompatibilityFile).exists()) {
+    from(platformCompatibilityFile)
+    into(project.layout.projectDirectory.dir("src/test/resources"))
+  }
+}
+
+tasks.named("processTestResources") {
+  dependsOn("copyPlatformCompatibilityMatrix")
+}
+
+afterEvaluate {
+  tasks.named("spotlessStyling") {
+    dependsOn("copyPlatformCompatibilityMatrix")
+  }
 }

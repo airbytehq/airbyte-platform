@@ -20,6 +20,8 @@ import io.airbyte.api.model.generated.SourceDefinitionReadList;
 import io.airbyte.api.model.generated.SourceDefinitionUpdate;
 import io.airbyte.api.model.generated.SourceRead;
 import io.airbyte.api.model.generated.WorkspaceIdRequestBody;
+import io.airbyte.api.problems.model.generated.ProblemMessageData;
+import io.airbyte.api.problems.throwable.generated.BadRequestProblem;
 import io.airbyte.commons.lang.Exceptions;
 import io.airbyte.commons.resources.MoreResources;
 import io.airbyte.commons.server.converters.ApiPojoConverters;
@@ -34,6 +36,8 @@ import io.airbyte.config.ConnectorRegistrySourceDefinition;
 import io.airbyte.config.ScopeType;
 import io.airbyte.config.StandardSourceDefinition;
 import io.airbyte.config.helpers.ConnectorRegistryConverters;
+import io.airbyte.config.init.AirbyteCompatibleConnectorsValidator;
+import io.airbyte.config.init.ConnectorPlatformCompatibilityValidationResult;
 import io.airbyte.config.init.SupportStateUpdater;
 import io.airbyte.config.persistence.ActorDefinitionVersionHelper;
 import io.airbyte.config.persistence.ConfigNotFoundException;
@@ -77,6 +81,7 @@ public class SourceDefinitionsHandler {
   private final SourceHandler sourceHandler;
   private final SupportStateUpdater supportStateUpdater;
   private final FeatureFlagClient featureFlagClient;
+  private final AirbyteCompatibleConnectorsValidator airbyteCompatibleConnectorsValidator;
 
   @Inject
   public SourceDefinitionsHandler(final ConfigRepository configRepository,
@@ -86,7 +91,8 @@ public class SourceDefinitionsHandler {
                                   final SourceHandler sourceHandler,
                                   final SupportStateUpdater supportStateUpdater,
                                   final FeatureFlagClient featureFlagClient,
-                                  final ActorDefinitionVersionHelper actorDefinitionVersionHelper) {
+                                  final ActorDefinitionVersionHelper actorDefinitionVersionHelper,
+                                  final AirbyteCompatibleConnectorsValidator airbyteCompatibleConnectorsValidator) {
     this.configRepository = configRepository;
     this.uuidSupplier = uuidSupplier;
     this.actorDefinitionHandlerHelper = actorDefinitionHandlerHelper;
@@ -95,6 +101,7 @@ public class SourceDefinitionsHandler {
     this.supportStateUpdater = supportStateUpdater;
     this.featureFlagClient = featureFlagClient;
     this.actorDefinitionVersionHelper = actorDefinitionVersionHelper;
+    this.airbyteCompatibleConnectorsValidator = airbyteCompatibleConnectorsValidator;
   }
 
   @VisibleForTesting
@@ -278,6 +285,17 @@ public class SourceDefinitionsHandler {
 
   public SourceDefinitionRead updateSourceDefinition(final SourceDefinitionUpdate sourceDefinitionUpdate)
       throws ConfigNotFoundException, IOException, JsonValidationException, io.airbyte.data.exceptions.ConfigNotFoundException {
+    final ConnectorPlatformCompatibilityValidationResult isNewConnectorVersionSupported =
+        airbyteCompatibleConnectorsValidator.validate(sourceDefinitionUpdate.getSourceDefinitionId().toString(),
+            sourceDefinitionUpdate.getDockerImageTag());
+    if (!isNewConnectorVersionSupported.isValid()) {
+      final String message = isNewConnectorVersionSupported.getMessage() != null ? isNewConnectorVersionSupported.getMessage()
+          : String.format("Destination %s can't be updated to version %s cause the version "
+              + "is not supported by current platform version",
+              sourceDefinitionUpdate.getSourceDefinitionId().toString(),
+              sourceDefinitionUpdate.getDockerImageTag());
+      throw new BadRequestProblem(message, new ProblemMessageData().message(message));
+    }
     final StandardSourceDefinition currentSourceDefinition =
         configRepository.getStandardSourceDefinition(sourceDefinitionUpdate.getSourceDefinitionId());
     final ActorDefinitionVersion currentVersion = configRepository.getActorDefinitionVersion(currentSourceDefinition.getDefaultVersionId());

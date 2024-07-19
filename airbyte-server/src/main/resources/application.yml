@@ -10,6 +10,8 @@ micronaut:
     analytics-tracking-identity:
       charset: "UTF-8"
       expire-after-access: 10m
+    platform-compatibility-provider:
+      expire-after-write: 15s
   env:
     cloud-deduction: true
   executors:

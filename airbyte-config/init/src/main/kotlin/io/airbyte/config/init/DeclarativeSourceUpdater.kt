@@ -17,6 +17,7 @@ class DeclarativeSourceUpdater(
   private val declarativeManifestImageVersionsProvider: DeclarativeManifestImageVersionsProvider,
   private val declarativeManifestImageVersionService: DeclarativeManifestImageVersionService,
   private val actorDefinitionService: ActorDefinitionService,
+  private val airbyteCompatibleConnectorsValidator: AirbyteCompatibleConnectorsValidator,
 ) {
   companion object {
     private val log = LoggerFactory.getLogger(DeclarativeSourceUpdater::class.java)
@@ -34,7 +35,9 @@ class DeclarativeSourceUpdater(
         currentDeclarativeManifestImageVersions.any { it.majorVersion == major && it.imageVersion == latestVersion }
       }
 
-    versionsToPersist.forEach { (major, newVersion) ->
+    versionsToPersist.filter { (major, newVersion) ->
+      airbyteCompatibleConnectorsValidator.validateDeclarativeManifest(newVersion).isValid
+    }.forEach { (major, newVersion) ->
       declarativeManifestImageVersionService.writeDeclarativeManifestImageVersion(major, newVersion)
       val previousVersion = currentDeclarativeManifestImageVersions.find { it.majorVersion == major }?.imageVersion
       if (previousVersion == null) {

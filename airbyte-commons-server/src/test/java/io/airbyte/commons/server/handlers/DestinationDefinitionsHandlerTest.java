@@ -11,6 +11,7 @@ import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -33,6 +34,7 @@ import io.airbyte.api.model.generated.PrivateDestinationDefinitionReadList;
 import io.airbyte.api.model.generated.ReleaseStage;
 import io.airbyte.api.model.generated.SupportLevel;
 import io.airbyte.api.model.generated.WorkspaceIdRequestBody;
+import io.airbyte.api.problems.throwable.generated.BadRequestProblem;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.commons.server.converters.ApiPojoConverters;
 import io.airbyte.commons.server.errors.IdNotFoundKnownException;
@@ -51,6 +53,8 @@ import io.airbyte.config.ResourceRequirements;
 import io.airbyte.config.ScopeType;
 import io.airbyte.config.StandardDestinationDefinition;
 import io.airbyte.config.helpers.ConnectorRegistryConverters;
+import io.airbyte.config.init.AirbyteCompatibleConnectorsValidator;
+import io.airbyte.config.init.ConnectorPlatformCompatibilityValidationResult;
 import io.airbyte.config.init.SupportStateUpdater;
 import io.airbyte.config.persistence.ActorDefinitionVersionHelper;
 import io.airbyte.config.persistence.ConfigNotFoundException;
@@ -107,6 +111,7 @@ class DestinationDefinitionsHandlerTest {
   private UUID organizationId;
   private FeatureFlagClient featureFlagClient;
   private ActorDefinitionVersionHelper actorDefinitionVersionHelper;
+  private AirbyteCompatibleConnectorsValidator airbyteCompatibleConnectorsValidator;
 
   @SuppressWarnings("unchecked")
   @BeforeEach
@@ -125,6 +130,7 @@ class DestinationDefinitionsHandlerTest {
     organizationId = UUID.randomUUID();
     featureFlagClient = mock(TestClient.class);
     actorDefinitionVersionHelper = mock(ActorDefinitionVersionHelper.class);
+    airbyteCompatibleConnectorsValidator = mock(AirbyteCompatibleConnectorsValidator.class);
     destinationDefinitionsHandler = new DestinationDefinitionsHandler(
         configRepository,
         uuidSupplier,
@@ -133,7 +139,8 @@ class DestinationDefinitionsHandlerTest {
         destinationHandler,
         supportStateUpdater,
         featureFlagClient,
-        actorDefinitionVersionHelper);
+        actorDefinitionVersionHelper,
+        airbyteCompatibleConnectorsValidator);
   }
 
   private StandardDestinationDefinition generateDestinationDefinition() {
@@ -681,6 +688,8 @@ class DestinationDefinitionsHandlerTest {
   @DisplayName("updateDestinationDefinition should correctly update a destinationDefinition")
   void testUpdateDestination(final boolean useIconUrlInApiResponseFlagValue)
       throws ConfigNotFoundException, IOException, JsonValidationException, URISyntaxException, io.airbyte.data.exceptions.ConfigNotFoundException {
+    when(airbyteCompatibleConnectorsValidator.validate(anyString(), anyString()))
+        .thenReturn(new ConnectorPlatformCompatibilityValidationResult(true, ""));
     when(featureFlagClient.boolVariation(UseIconUrlInApiResponse.INSTANCE, new Workspace(ANONYMOUS))).thenReturn(useIconUrlInApiResponseFlagValue);
 
     final String newDockerImageTag = "averydifferenttag";
@@ -742,6 +751,8 @@ class DestinationDefinitionsHandlerTest {
       + "if defaultDefinitionVersionFromUpdate throws unsupported protocol version error")
   void testOutOfProtocolRangeUpdateDestination() throws ConfigNotFoundException, IOException,
       JsonValidationException {
+    when(airbyteCompatibleConnectorsValidator.validate(anyString(), anyString()))
+        .thenReturn(new ConnectorPlatformCompatibilityValidationResult(true, ""));
     when(configRepository.getStandardDestinationDefinition(destinationDefinition.getDestinationDefinitionId())).thenReturn(destinationDefinition);
     when(configRepository.getActorDefinitionVersion(destinationDefinition.getDefaultVersionId()))
         .thenReturn(destinationDefinitionVersion);
@@ -764,6 +775,30 @@ class DestinationDefinitionsHandlerTest {
         destinationDefinition.getCustom());
     verify(configRepository, never()).writeConnectorMetadata(any(StandardDestinationDefinition.class), any());
 
+    verifyNoMoreInteractions(actorDefinitionHandlerHelper);
+  }
+
+  @Test
+  @DisplayName("updateDestinationDefinition should not update a destinationDefinition "
+      + "if Airbyte version is unsupported")
+  void testUnsupportedAirbyteVersionUpdateDestination() throws ConfigNotFoundException, IOException,
+      JsonValidationException {
+    when(airbyteCompatibleConnectorsValidator.validate(anyString(), eq("12.4.0")))
+        .thenReturn(new ConnectorPlatformCompatibilityValidationResult(false, ""));
+    when(configRepository.getStandardDestinationDefinition(destinationDefinition.getDestinationDefinitionId())).thenReturn(destinationDefinition);
+    when(configRepository.getActorDefinitionVersion(destinationDefinition.getDefaultVersionId()))
+        .thenReturn(destinationDefinitionVersion);
+    final DestinationDefinitionRead currentDestination = destinationDefinitionsHandler
+        .getDestinationDefinition(
+            new DestinationDefinitionIdRequestBody().destinationDefinitionId(destinationDefinition.getDestinationDefinitionId()));
+    final String currentTag = currentDestination.getDockerImageTag();
+    final String newDockerImageTag = "12.4.0";
+    assertNotEquals(newDockerImageTag, currentTag);
+
+    assertThrows(BadRequestProblem.class, () -> destinationDefinitionsHandler.updateDestinationDefinition(
+        new DestinationDefinitionUpdate().destinationDefinitionId(this.destinationDefinition.getDestinationDefinitionId())
+            .dockerImageTag(newDockerImageTag)));
+    verify(configRepository, never()).writeConnectorMetadata(any(StandardDestinationDefinition.class), any());
     verifyNoMoreInteractions(actorDefinitionHandlerHelper);
   }
 

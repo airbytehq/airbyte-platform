@@ -7,7 +7,9 @@ package io.airbyte.bootloader;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 import io.airbyte.commons.features.FeatureFlags;
 import io.airbyte.commons.resources.MoreResources;
@@ -15,8 +17,10 @@ import io.airbyte.commons.version.AirbyteProtocolVersionRange;
 import io.airbyte.commons.version.AirbyteVersion;
 import io.airbyte.commons.version.Version;
 import io.airbyte.config.Configs.DeploymentMode;
+import io.airbyte.config.init.AirbyteCompatibleConnectorsValidator;
 import io.airbyte.config.init.ApplyDefinitionsHelper;
 import io.airbyte.config.init.BreakingChangeNotificationHelper;
+import io.airbyte.config.init.ConnectorPlatformCompatibilityValidationResult;
 import io.airbyte.config.init.DeclarativeManifestImageVersionsProvider;
 import io.airbyte.config.init.DeclarativeSourceUpdater;
 import io.airbyte.config.init.LocalDeclarativeManifestImageVersionsProvider;
@@ -208,13 +212,18 @@ class BootloaderTest {
             breakingChangeNotificationHelper, featureFlagClient);
     val metricClient = new NotImplementedMetricClient();
     val actorDefinitionVersionResolver = mock(ActorDefinitionVersionResolver.class);
+    val airbyteCompatibleConnectorsValidator = mock(AirbyteCompatibleConnectorsValidator.class);
+    when(airbyteCompatibleConnectorsValidator.validate(anyString(), anyString()))
+        .thenReturn(new ConnectorPlatformCompatibilityValidationResult(true, ""));
+    when(airbyteCompatibleConnectorsValidator.validateDeclarativeManifest(anyString()))
+        .thenReturn(new ConnectorPlatformCompatibilityValidationResult(true, ""));
     val applyDefinitionsHelper =
         new ApplyDefinitionsHelper(definitionsProvider, jobsPersistence, actorDefinitionService, sourceService, destinationService,
-            metricClient, supportStateUpdater, actorDefinitionVersionResolver);
+            metricClient, supportStateUpdater, actorDefinitionVersionResolver, airbyteCompatibleConnectorsValidator);
     final DeclarativeManifestImageVersionsProvider declarativeManifestImageVersionsProvider = new LocalDeclarativeManifestImageVersionsProvider();
     val declarativeSourceUpdater =
         new DeclarativeSourceUpdater(declarativeManifestImageVersionsProvider, mock(DeclarativeManifestImageVersionService.class),
-            actorDefinitionService);
+            actorDefinitionService, airbyteCompatibleConnectorsValidator);
     val postLoadExecutor =
         new DefaultPostLoadExecutor(applyDefinitionsHelper, declarativeSourceUpdater);
 
@@ -316,13 +325,14 @@ class BootloaderTest {
     val protocolVersionChecker = new ProtocolVersionChecker(jobsPersistence, airbyteProtocolRange, configRepository, definitionsProvider);
     val metricClient = new NotImplementedMetricClient();
     val actorDefinitionVersionResolver = mock(ActorDefinitionVersionResolver.class);
+    val airbyteCompatibleConnectorsValidator = mock(AirbyteCompatibleConnectorsValidator.class);
     val applyDefinitionsHelper =
         new ApplyDefinitionsHelper(definitionsProvider, jobsPersistence, actorDefinitionService, sourceService, destinationService,
-            metricClient, supportStateUpdater, actorDefinitionVersionResolver);
+            metricClient, supportStateUpdater, actorDefinitionVersionResolver, airbyteCompatibleConnectorsValidator);
     final DeclarativeManifestImageVersionsProvider declarativeManifestImageVersionsProvider = new LocalDeclarativeManifestImageVersionsProvider();
     val declarativeSourceUpdater =
         new DeclarativeSourceUpdater(declarativeManifestImageVersionsProvider, mock(DeclarativeManifestImageVersionService.class),
-            actorDefinitionService);
+            actorDefinitionService, airbyteCompatibleConnectorsValidator);
     val postLoadExecutor = new DefaultPostLoadExecutor(applyDefinitionsHelper, declarativeSourceUpdater);
 
     val bootloader =

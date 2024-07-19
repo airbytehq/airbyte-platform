@@ -17,6 +17,7 @@ internal class DeclarativeSourceUpdaterTest {
   private var mDeclarativeManifestImageVersionsProvider: RemoteDeclarativeManifestImageVersionsProvider = mockk()
   private var mDeclarativeManifestImageVersionService: DeclarativeManifestImageVersionService = mockk()
   private var mActorDefinitionService: ActorDefinitionService = mockk()
+  private var airbyteCompatibleConnectorsValidator: AirbyteCompatibleConnectorsValidator = mockk()
   private lateinit var declarativeSourceUpdater: DeclarativeSourceUpdater
 
   @BeforeEach
@@ -26,6 +27,7 @@ internal class DeclarativeSourceUpdaterTest {
         mDeclarativeManifestImageVersionsProvider,
         mDeclarativeManifestImageVersionService,
         mActorDefinitionService,
+        airbyteCompatibleConnectorsValidator,
       )
 
     justRun { mDeclarativeManifestImageVersionService.writeDeclarativeManifestImageVersion(any(), any()) }
@@ -34,6 +36,7 @@ internal class DeclarativeSourceUpdaterTest {
       mDeclarativeManifestImageVersionService.writeDeclarativeManifestImageVersion(any(), any())
     } returns DeclarativeManifestImageVersion(0, "0.1.0")
     every { mActorDefinitionService.updateDeclarativeActorDefinitionVersions(any(), any()) } returns 1
+    every { airbyteCompatibleConnectorsValidator.validateDeclarativeManifest(any()) } returns ConnectorPlatformCompatibilityValidationResult(true, "")
   }
 
   @Test
@@ -77,6 +80,25 @@ internal class DeclarativeSourceUpdaterTest {
 
     verify(exactly = 1) { mDeclarativeManifestImageVersionsProvider.getLatestDeclarativeManifestImageVersions() }
     verify(exactly = 1) { mDeclarativeManifestImageVersionService.listDeclarativeManifestImageVersions() }
+    confirmVerified(mDeclarativeManifestImageVersionService, mActorDefinitionService, mDeclarativeManifestImageVersionsProvider)
+  }
+
+  @Test
+  fun `should not update version if validation returns false`() {
+    every {
+      airbyteCompatibleConnectorsValidator.validateDeclarativeManifest(any())
+    } returns ConnectorPlatformCompatibilityValidationResult(false, "Can't update definition")
+    every {
+      mDeclarativeManifestImageVersionService.listDeclarativeManifestImageVersions()
+    } returns listOf(DeclarativeManifestImageVersion(0, "0.1.0"), DeclarativeManifestImageVersion(1, "1.0.0"))
+    every { mDeclarativeManifestImageVersionsProvider.getLatestDeclarativeManifestImageVersions() } returns mapOf(0 to "0.1.0", 1 to "1.0.1")
+
+    declarativeSourceUpdater.apply()
+
+    verify(exactly = 1) { mDeclarativeManifestImageVersionsProvider.getLatestDeclarativeManifestImageVersions() }
+    verify(exactly = 1) { mDeclarativeManifestImageVersionService.listDeclarativeManifestImageVersions() }
+    verify(exactly = 0) { mDeclarativeManifestImageVersionService.writeDeclarativeManifestImageVersion(1, "1.0.1") }
+    verify(exactly = 0) { mActorDefinitionService.updateDeclarativeActorDefinitionVersions("1.0.0", "1.0.1") }
     confirmVerified(mDeclarativeManifestImageVersionService, mActorDefinitionService, mDeclarativeManifestImageVersionsProvider)
   }
 }
