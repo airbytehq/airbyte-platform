@@ -44,7 +44,7 @@ class AirbyteCompatibleConnectorsValidator(
       }
       return ConnectorPlatformCompatibilityValidationResult(isValid = true, message = null)
     } catch (e: Exception) {
-      logger.error(e) { "Exception while trying to validate the connector, defaulting to valid" }
+      logger.debug(e) { "Exception while trying to validate the connector, defaulting to valid" }
       return ConnectorPlatformCompatibilityValidationResult(isValid = true, message = null)
     }
   }
