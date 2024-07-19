@@ -42,12 +42,6 @@ micronaut:
           secret: ${WORKLOAD_API_BEARER_TOKEN:}
   server:
     port: 8007
-    cors:
-      enabled: true
-      configurations:
-        web:
-          allowed-origins-regex:
-            - ^.*$
     idle-timeout: ${HTTP_IDLE_TIMEOUT:5m}
     netty:
       access-logger:

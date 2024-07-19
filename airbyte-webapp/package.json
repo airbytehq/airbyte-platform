@@ -89,7 +89,6 @@
     "framer-motion": "^6.3.11",
     "js-yaml": "^4.1.0",
     "json-schema": "^0.4.0",
-    "jwt-decode": "^4.0.0",
     "keycloak-js": "^23.0.7",
     "launchdarkly-js-client-sdk": "^3.1.0",
     "lodash": "^4.17.21",

@@ -1,6 +1,7 @@
 package io.airbyte.server
 
 import io.airbyte.commons.server.support.RbacRoleHelper
+import io.airbyte.server.config.community.auth.CommunityAuthProvider
 import io.micronaut.context.annotation.Property
 import io.micronaut.security.authentication.UsernamePasswordCredentials
 import io.micronaut.test.extensions.junit5.annotation.MicronautTest
@@ -10,16 +11,18 @@ import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 
-@MicronautTest(environments = ["community-auth"])
+@MicronautTest
+@Property(name = "airbyte.edition", value = "community")
+@Property(name = "micronaut.security.enabled", value = "true")
 @Property(name = "airbyte.auth.instanceAdmin.username", value = "test-username")
 @Property(name = "airbyte.auth.instanceAdmin.password", value = "test-password")
-class SimpleAuthProviderTest {
+class CommunityAuthProviderTest {
   @Inject
-  private lateinit var simpleAuthProvider: SimpleAuthProvider<Nothing>
+  private lateinit var communityAuthProvider: CommunityAuthProvider<Nothing>
 
   @Test
   fun `test authenticate with valid credentials`() {
-    val result = simpleAuthProvider.authenticate(null, UsernamePasswordCredentials("test-username", "test-password"))
+    val result = communityAuthProvider.authenticate(null, UsernamePasswordCredentials("test-username", "test-password"))
     assertTrue(result!!.isAuthenticated)
 
     val roles = result.authentication.get().roles
@@ -28,7 +31,7 @@ class SimpleAuthProviderTest {
 
   @Test
   fun `test authenticate with invalid credentials`() {
-    val result = simpleAuthProvider.authenticate(null, UsernamePasswordCredentials("test-username", "invalid-password"))
+    val result = communityAuthProvider.authenticate(null, UsernamePasswordCredentials("test-username", "invalid-password"))
     assertFalse(result!!.isAuthenticated)
   }
 }

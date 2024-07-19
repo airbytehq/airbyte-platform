@@ -222,7 +222,6 @@ export const CloudAuthService: React.FC<PropsWithChildren> = ({ children }) => {
   // Handle login/logoff that happened in another tab
   useEffect(() => {
     broadcastChannel.onmessage = (event) => {
-      console.log("broadcastChannel.onmessage", event);
       if (event.type === "userUnloaded") {
         console.debug("🔑 Received userUnloaded event from other tab.");
         dispatch({ type: "userUnloaded" });

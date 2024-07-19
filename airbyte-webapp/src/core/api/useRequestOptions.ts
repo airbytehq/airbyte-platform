@@ -4,13 +4,16 @@ import { useAuthService } from "core/services/auth";
 
 import { ApiCallOptions } from "./apiCall";
 
+export const emptyGetAccessToken = () => Promise.resolve(null);
+
 export const useRequestOptions = (): ApiCallOptions => {
-  const { getAccessToken } = useAuthService();
+  const { getAccessToken, authType } = useAuthService();
 
   return useMemo(
     () => ({
-      getAccessToken: getAccessToken ?? (() => Promise.resolve(null)),
+      getAccessToken: getAccessToken ?? emptyGetAccessToken,
+      includeCredentials: authType === "simple",
     }),
-    [getAccessToken]
+    [getAccessToken, authType]
   );
 };

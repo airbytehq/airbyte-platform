@@ -59,6 +59,7 @@
   "sidebar.upcomingFeatures": "Upcoming features",
   "sidebar.userSettings": "User settings",
   "sidebar.logout": "Sign out",
+  "sidebar.logout.failed": "An error occurred while signing out. Please try again.",
   "sidebar.lightMode": "Light mode",
   "sidebar.darkMode": "Dark mode",
   "sidebar.beta": "Beta",

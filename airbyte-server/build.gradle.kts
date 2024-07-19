@@ -9,7 +9,7 @@ plugins {
 
 dependencies {
   compileOnly(libs.lombok)
-  annotationProcessor(libs.lombok)     // Lombok must be added BEFORE Micronaut
+  annotationProcessor(libs.lombok) // Lombok must be added BEFORE Micronaut
   annotationProcessor(platform(libs.micronaut.platform))
   annotationProcessor(libs.bundles.micronaut.annotation.processor)
   annotationProcessor(libs.micronaut.jaxrs.processor)
@@ -26,6 +26,7 @@ dependencies {
   implementation(libs.micronaut.jaxrs.server)
   implementation(libs.micronaut.http)
   implementation(libs.micronaut.security)
+  implementation(libs.micronaut.security.jwt)
   implementation(libs.bundles.flyway)
   implementation(libs.s3)
   implementation(libs.sts)
@@ -78,7 +79,7 @@ dependencies {
   runtimeOnly(libs.h2.database)
 
   testCompileOnly(libs.lombok)
-  testAnnotationProcessor(libs.lombok)     // Lombok must be added BEFORE Micronaut
+  testAnnotationProcessor(libs.lombok) // Lombok must be added BEFORE Micronaut
   testAnnotationProcessor(platform(libs.micronaut.platform))
   testAnnotationProcessor(libs.bundles.micronaut.annotation.processor)
   testAnnotationProcessor(libs.micronaut.jaxrs.processor)
@@ -116,9 +117,10 @@ tasks.named("assemble") {
   dependsOn(copySeed)
 }
 
-val env = Properties().apply {
-  load(rootProject.file(".env.dev").inputStream())
-}
+val env =
+  Properties().apply {
+    load(rootProject.file(".env.dev").inputStream())
+  }
 
 airbyte {
   application {
@@ -143,7 +145,7 @@ airbyte {
         "TRACKING_STRATEGY" to env["TRACKING_STRATEGY"].toString(),
         "TEMPORAL_HOST" to "localhost:7233",
         "MICRONAUT_ENVIRONMENTS" to "control-plane",
-      )
+      ),
     )
   }
 
@@ -157,11 +159,14 @@ airbyte {
   }
 
   spotbugs {
-      excludes = listOf("  <Match>\n" +
-              "    <Package name=\"io.airbyte.server.repositories.domain.*\" />\n" +
-              "    <!-- All args constructor used by builders trigger this error -->\n" +
-              "    <Bug pattern=\"NP_PARAMETER_MUST_BE_NONNULL_BUT_MARKED_AS_NULLABLE\" />\n" +
-              "  </Match>")
+    excludes =
+      listOf(
+        "  <Match>\n" +
+          "    <Package name=\"io.airbyte.server.repositories.domain.*\" />\n" +
+          "    <!-- All args constructor used by builders trigger this error -->\n" +
+          "    <Bug pattern=\"NP_PARAMETER_MUST_BE_NONNULL_BUT_MARKED_AS_NULLABLE\" />\n" +
+          "  </Match>",
+      )
   }
 }
 
@@ -171,7 +176,7 @@ tasks.named<Test>("test") {
       "AIRBYTE_VERSION" to env["VERSION"],
       "MICRONAUT_ENVIRONMENTS" to "test",
       "SERVICE_NAME" to project.name,
-    )
+    ),
   )
 }
 

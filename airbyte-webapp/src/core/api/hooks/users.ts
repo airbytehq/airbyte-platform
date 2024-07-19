@@ -11,7 +11,7 @@ import { getUtmFromStorage } from "core/utils/utmStorage";
 import { useGetInstanceConfiguration } from "./instanceConfiguration";
 import { getOrCreateUserByAuthId, getUser, updateUser } from "../generated/AirbyteClient";
 import { UserUpdate } from "../types/AirbyteClient";
-import { useRequestOptions } from "../useRequestOptions";
+import { emptyGetAccessToken, useRequestOptions } from "../useRequestOptions";
 import { useSuspenseQuery } from "../useSuspenseQuery";
 
 const userKeys = {
@@ -20,13 +20,27 @@ const userKeys = {
 };
 
 // In Community, we do not need to pass an access token to get the current user. This function can be passed in place of an actual getAccessToken callback.
-const emptyGetAccesToken = () => Promise.resolve(null);
-
-export const useGetDefaultUser = ({ getAccessToken }: { getAccessToken?: AuthGetAccessToken }) => {
+export const useGetDefaultUser = () => {
   const { defaultUserId: userId } = useGetInstanceConfiguration();
 
-  return useSuspenseQuery(userKeys.detail(userId), () =>
-    getUser({ userId }, { getAccessToken: getAccessToken ?? emptyGetAccesToken })
+  return useSuspenseQuery(userKeys.detail(userId), () => getUser({ userId }, { getAccessToken: emptyGetAccessToken }));
+};
+
+export const useGetDefaultUserAsync = () => {
+  const { defaultUserId: userId } = useGetInstanceConfiguration();
+  return useMutation(
+    () =>
+      getUser(
+        { userId },
+        {
+          getAccessToken: emptyGetAccessToken,
+          // Currently this is only used in the Simple Auth flow, so we need to include cookies
+          includeCredentials: true,
+        }
+      ),
+    {
+      retry: false,
+    }
   );
 };
 

@@ -308,6 +308,13 @@ spec:
           value: "X-Airbyte-Auth"
         - name: AIRBYTE_API_AUTH_HEADER_VALUE
           value: "Internal worker"
+        {{- else if and (eq .Values.global.deploymentMode "oss") (eq .Values.global.auth.enabled true) }}
+        # Self-Managed Enterprise and Community w/ auth enabled use the same auth header, just
+        # splitting into two separate blocks for readability.
+        - name: AIRBYTE_API_AUTH_HEADER_NAME
+          value: "X-Airbyte-Auth"
+        - name: AIRBYTE_API_AUTH_HEADER_VALUE
+          value: "Internal worker"
         {{- end }}
         # SECRETS MANAGER
         - name: SECRET_PERSISTENCE

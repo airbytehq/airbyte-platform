@@ -25,6 +25,7 @@ dependencies {
   implementation(libs.micronaut.inject)
   implementation(libs.micronaut.jaxrs.server)
   implementation(libs.micronaut.security)
+  implementation(libs.micronaut.security.jwt)
   implementation(libs.bundles.micronaut.data.jdbc)
   implementation(libs.bundles.micronaut.kotlin)
   implementation(libs.bundles.flyway)

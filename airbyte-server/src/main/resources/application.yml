@@ -54,8 +54,15 @@ micronaut:
       enabled: true
       configurations:
         web:
-          allowed-origins-regex:
-            - ^.*$
+          allowed-origins-regex: ${CORS_ALLOWED_ORIGINS_REGEX:}
+          allowed-methods:
+            - GET
+            - POST
+            - OPTIONS
+          allowed-headers:
+            - authorization
+            - content-type
+            - X-Airbyte-Analytic-Source
     idle-timeout: ${HTTP_IDLE_TIMEOUT:5m}
     netty:
       access-logger:
