@@ -222,8 +222,12 @@ class SyncWorkflowTest {
     testEnv.close();
   }
 
-  // bundle up all the temporal worker setup / execution into one method.
   private StandardSyncOutput execute() {
+    return execute(false);
+  }
+
+  // bundle up all the temporal worker setup / execution into one method.
+  private StandardSyncOutput execute(final boolean isReset) {
     syncWorker.registerActivitiesImplementations(replicationActivity,
         webhookOperationActivity,
         refreshSchemaActivity,
@@ -236,7 +240,7 @@ class SyncWorkflowTest {
     final SyncWorkflow workflow =
         client.newWorkflowStub(SyncWorkflow.class, WorkflowOptions.newBuilder().setTaskQueue(SYNC_QUEUE).build());
 
-    return workflow.run(JOB_RUN_CONFIG, SOURCE_LAUNCHER_CONFIG, DESTINATION_LAUNCHER_CONFIG, syncInput, sync.getConnectionId());
+    return workflow.run(JOB_RUN_CONFIG, SOURCE_LAUNCHER_CONFIG, DESTINATION_LAUNCHER_CONFIG, syncInput.withIsReset(isReset), sync.getConnectionId());
   }
 
   @Test
@@ -263,6 +267,22 @@ class SyncWorkflowTest {
     final StandardSyncOutput actualOutput = execute();
 
     verifyReplication(replicationActivity, syncInput, true, false, REFRESH_SCHEMA_ACTIVITY_OUTPUT);
+    verifyShouldRefreshSchema(refreshSchemaActivity);
+    verify(reportRunTimeActivity).reportRunTime(any());
+    assertEquals(
+        replicationSuccessOutput.getStandardSyncSummary(),
+        removeRefreshTime(actualOutput.getStandardSyncSummary()));
+  }
+
+  @Test
+  void testNoChildWorkflowWithReset() {
+    doReturn(replicationSuccessOutput).when(replicationActivity).replicateV2(any());
+    doReturn(true).when(workloadFeatureFlagActivity).useWorkloadApi(any());
+    doReturn(true).when(syncFeatureFlagFetcherActivity).shouldRunAsChildWorkflow(any());
+
+    final StandardSyncOutput actualOutput = execute(true);
+
+    verifyReplication(replicationActivity, syncInput, true, false, null);
     verifyShouldRefreshSchema(refreshSchemaActivity);
     verify(reportRunTimeActivity).reportRunTime(any());
     assertEquals(

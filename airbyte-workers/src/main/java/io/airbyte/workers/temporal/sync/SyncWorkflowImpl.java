@@ -97,7 +97,7 @@ public class SyncWorkflowImpl implements SyncWorkflow {
     final var useWorkloadOutputDocStore = checkUseWorkloadOutputFlag(syncInput);
     final var sendRunTimeMetrics = shouldReportRuntime();
     final var shouldRunAsChildWorkflow = shouldRunAsAChildWorkflow(connectionId, syncInput.getWorkspaceId(),
-        syncInput.getConnectionContext().getSourceDefinitionId());
+        syncInput.getConnectionContext().getSourceDefinitionId(), syncInput.getIsReset());
 
     ApmTraceUtils
         .addTagsToTrace(Map.of(
@@ -230,17 +230,25 @@ public class SyncWorkflowImpl implements SyncWorkflow {
     }
   }
 
-  private boolean shouldRunAsAChildWorkflow(final UUID connectionId, final UUID workspaceId, final UUID sourceDefinitionId) {
-    final int shouldRunAsChildWorkflowVersion = Workflow.getVersion("SHOULD_RUN_AS_CHILD", Workflow.DEFAULT_VERSION, 1);
-
+  private boolean shouldRunAsAChildWorkflow(final UUID connectionId, final UUID workspaceId, final UUID sourceDefinitionId, final boolean isReset) {
+    final int shouldRunAsChildWorkflowVersion = Workflow.getVersion("SHOULD_RUN_AS_CHILD", Workflow.DEFAULT_VERSION, 2);
+    final int versionWithoutResetCheck = 1;
     if (shouldRunAsChildWorkflowVersion == Workflow.DEFAULT_VERSION) {
       return false;
+    } else if (shouldRunAsChildWorkflowVersion == versionWithoutResetCheck) {
+      return checkUseWorkloadApiFlag(workspaceId)
+          && syncFeatureFlagFetcherActivity.shouldRunAsChildWorkflow(new SyncFeatureFlagFetcherInput(
+              Optional.ofNullable(connectionId).orElse(DEFAULT_UUID),
+              sourceDefinitionId,
+              workspaceId));
+    } else {
+      return !isReset && checkUseWorkloadApiFlag(workspaceId)
+          && syncFeatureFlagFetcherActivity.shouldRunAsChildWorkflow(new SyncFeatureFlagFetcherInput(
+              Optional.ofNullable(connectionId).orElse(DEFAULT_UUID),
+              sourceDefinitionId,
+              workspaceId));
     }
-    return checkUseWorkloadApiFlag(workspaceId)
-        && syncFeatureFlagFetcherActivity.shouldRunAsChildWorkflow(new SyncFeatureFlagFetcherInput(
-            Optional.ofNullable(connectionId).orElse(DEFAULT_UUID),
-            sourceDefinitionId,
-            workspaceId));
+
   }
 
   private boolean shouldReportRuntime() {
