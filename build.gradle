@@ -150,16 +150,15 @@ tasks.register('archiveReports', Tar) {
 }
 
 tasks.register('generate-docker') {
-    dependsOn(':oss:airbyte-bootloader:assemble')
-    dependsOn(':oss:airbyte-workers:assemble')
-    dependsOn(':oss:airbyte-webapp:assemble')
-    dependsOn(':oss:airbyte-server:assemble')
-    dependsOn(':oss:airbyte-api-server:assemble')
-    dependsOn(':oss:airbyte-db:db-lib:assemble')
-    dependsOn(':oss:airbyte-config:init:assemble')
-    dependsOn(':oss:airbyte-temporal:assemble')
-    dependsOn(':oss:airbyte-keycloak:assemble')
-    dependsOn(':oss:airbyte-keycloak-setup:assemble')
+    dependsOn(':airbyte-bootloader:assemble')
+    dependsOn(':airbyte-workers:assemble')
+    dependsOn(':airbyte-webapp:assemble')
+    dependsOn(':airbyte-server:assemble')
+    dependsOn(':airbyte-db:db-lib:assemble')
+    dependsOn(':airbyte-config:init:assemble')
+    dependsOn(':airbyte-temporal:assemble')
+    dependsOn(':airbyte-keycloak:assemble')
+    dependsOn(':airbyte-keycloak-setup:assemble')
 }
 
 // todo (cgardens) - move this into the plugin.

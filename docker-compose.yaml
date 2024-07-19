@@ -318,36 +318,6 @@ services:
     depends_on:
       bootloader:
         condition: service_completed_successfully
-  airbyte-api-server:
-    image: airbyte/airbyte-api-server:${VERSION}
-    logging: *default-logging
-    container_name: airbyte-api-server
-    restart: unless-stopped
-    ports:
-      - "8006"
-    environment:
-      - AIRBYTE_API_HOST=${AIRBYTE_API_HOST}
-      - AIRBYTE_VERSION=${VERSION}
-      - DEPLOYMENT_MODE=${DEPLOYMENT_MODE}
-      - INTERNAL_API_HOST=${INTERNAL_API_HOST} # Non-ideal, but the existing URL can't have https:// added because it's used for nginx conf
-      - LOG_LEVEL=${LOG_LEVEL}
-      - MICROMETER_METRICS_ENABLED=${MICROMETER_METRICS_ENABLED}
-      - MICROMETER_METRICS_STATSD_FLAVOR=${MICROMETER_METRICS_STATSD_FLAVOR}
-      - SEGMENT_WRITE_KEY=${SEGMENT_WRITE_KEY}
-      - STATSD_HOST=${STATSD_HOST}
-      - STATSD_PORT=${STATSD_PORT}
-      - TRACKING_STRATEGY=${TRACKING_STRATEGY}
-      - DD_LOGS_INJECTION=${DD_LOGS_INJECTION}
-      - JAVA_OPTS=${JAVA_OPTS}
-      - CONTAINER_ORCHESTRATOR_JAVA_OPTS=${CONTAINER_ORCHESTRATOR_JAVA_OPTS}
-      - DD_DOGSTATSD_PORT=${DD_DOGSTATSD_PORT}
-      - DD_TRACE_AGENT_PORT=${DD_TRACE_AGENT_PORT}
-      - DD_AGENT_HOST=${DD_AGENT_HOST}
-    networks:
-      - airbyte_internal
-    depends_on:
-      bootloader:
-        condition: service_completed_successfully
   airbyte-connector-builder-server:
     image: airbyte/connector-builder-server:${VERSION}
     logging: *default-logging
@@ -403,7 +373,6 @@ services:
     depends_on:
       - webapp
       - server
-      - airbyte-api-server
 volumes:
   workspace:
     name: ${WORKSPACE_DOCKER_MOUNT}

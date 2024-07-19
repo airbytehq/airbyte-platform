@@ -21,7 +21,7 @@ interface OrganizationService {
 
 @Singleton
 @Secondary
-abstract class OrganizationServiceImpl(
+open class OrganizationServiceImpl(
   private val organizationsHandler: OrganizationsHandler,
 ) : OrganizationService {
   companion object {

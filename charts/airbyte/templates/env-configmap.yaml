@@ -73,6 +73,8 @@ data:
     {{- else }}
   AIRBYTE_API_HOST: {{ printf "%s/api/public" .Values.global.airbyteUrl | quote }}
     {{- end }}
+  {{- else if (eq .Values.global.edition "community")}}
+  AIRBYTE_API_HOST: http://localhost:{{ .Values.server.service.port }}/api/public
   {{- else }}
   AIRBYTE_API_HOST: http://{{ .Release.Name }}-airbyte-server-svc:{{ .Values.server.service.port }}/api/public
   {{- end }}

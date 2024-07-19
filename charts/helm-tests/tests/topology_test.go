@@ -49,11 +49,6 @@ func TestBasicTopologyConfiguration(t *testing.T) {
 		},
 		{
 			kind:       "Deployment",
-			name:       "airbyte-airbyte-api-server",
-			valuesPath: "airbyte-api-server",
-		},
-		{
-			kind:       "Deployment",
 			name:       "airbyte-cron",
 			valuesPath: "cron",
 		},

@@ -74,7 +74,6 @@ dependencyResolutionManagement {
 include(":oss:airbyte-commons")
 
 include(":oss:airbyte-api")
-include(":oss:airbyte-api-server")
 include(":oss:airbyte-workload-api-server")
 include(":oss:airbyte-commons-protocol")
 include(":oss:airbyte-config:specs")
@@ -125,7 +124,6 @@ include(":oss:airbyte-connector-sidecar")
 
 project(":oss:airbyte-commons").projectDir = file("airbyte-commons")
 project(":oss:airbyte-api").projectDir = file("airbyte-api")
-project(":oss:airbyte-api-server").projectDir = file("airbyte-api-server")
 project(":oss:airbyte-workload-api-server").projectDir = file("airbyte-workload-api-server")
 project(":oss:airbyte-commons-protocol").projectDir = file("airbyte-commons-protocol")
 project(":oss:airbyte-config:specs").projectDir = file("airbyte-config/specs")
