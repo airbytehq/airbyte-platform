@@ -112,17 +112,12 @@ internal class StreamStatusCompletionTrackerTest {
   }
 
   @Test
-  fun `test that we get the status of the streams that send a status if the exit code is 1 and no stream status is send`() {
+  fun `test that we get not stream status if the exit code is 1 even the source emitted some stream status`() {
     streamStatusCompletionTracker.startTracking(catalog, true)
     streamStatusCompletionTracker.track(getStreamStatusCompletedMessage("name1").trace.streamStatus)
     val result = streamStatusCompletionTracker.finalize(1, mapper)
 
-    assertEquals(
-      listOf(
-        getStreamStatusCompletedMessage("name1"),
-      ),
-      result,
-    )
+    assertEquals(listOf<AirbyteMessage>(), result)
   }
 
   @Test

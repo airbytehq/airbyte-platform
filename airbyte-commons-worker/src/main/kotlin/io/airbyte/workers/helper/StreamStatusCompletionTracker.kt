@@ -46,14 +46,10 @@ class StreamStatusCompletionTracker(
     exitCode: Int,
     namespacingMapper: AirbyteMapper,
   ): List<AirbyteMessage> {
-    if (!shouldEmitStreamStatus) {
+    if (!shouldEmitStreamStatus || exitCode != 0) {
       return listOf()
     }
-    return if (0 == exitCode) {
-      streamDescriptorsToCompleteStatusMessage(hasCompletedStatus.keys, namespacingMapper)
-    } else {
-      streamDescriptorsToCompleteStatusMessage(hasCompletedStatus.filter { it.value }.keys, namespacingMapper)
-    }
+    return streamDescriptorsToCompleteStatusMessage(hasCompletedStatus.keys, namespacingMapper)
   }
 
   private fun streamDescriptorsToCompleteStatusMessage(
