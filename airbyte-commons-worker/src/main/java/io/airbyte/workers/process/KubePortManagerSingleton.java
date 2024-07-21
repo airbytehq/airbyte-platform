@@ -65,7 +65,7 @@ public class KubePortManagerSingleton {
   }
 
   public Integer take() throws InterruptedException {
-    LOGGER.debug("workerPorts remaining capacity: %s", workerPorts.remainingCapacity());
+    LOGGER.info("workerPorts remaining capacity: {}", workerPorts.size());
     return workerPorts.poll(10, TimeUnit.MINUTES);
   }
 
@@ -81,6 +81,7 @@ public class KubePortManagerSingleton {
    */
   public void offer(final Integer port) {
     if (!workerPorts.contains(port)) {
+      LOGGER.info("Releasing the port {}", port);
       workerPorts.add(port);
     }
   }

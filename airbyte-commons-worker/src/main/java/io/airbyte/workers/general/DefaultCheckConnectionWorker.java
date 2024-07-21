@@ -127,11 +127,19 @@ public class DefaultCheckConnectionWorker implements CheckConnectionWorker {
       final String errorMessage = String.format("Lost connection to the %s: ", input.getActorType());
       LOGGER.error(errorMessage, e);
       LineGobbler.endSection(LOG_SECTION_NAME);
+      if (process != null) {
+        LOGGER.error("Releasing the ports after IO exception");
+        process.destroy();
+      }
       throw new WorkerException(errorMessage, e);
     } catch (final Exception e) {
       ApmTraceUtils.addExceptionToTrace(e);
       LOGGER.error("Unexpected error while checking connection: ", e);
       LineGobbler.endSection(LOG_SECTION_NAME);
+      if (process != null) {
+        LOGGER.error("Releasing the ports after Unexpected error");
+        process.destroy();
+      }
       throw new WorkerException("Unexpected error while getting checking connection.", e);
     }
   }
