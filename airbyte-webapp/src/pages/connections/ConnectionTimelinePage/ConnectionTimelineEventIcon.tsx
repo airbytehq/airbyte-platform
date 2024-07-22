@@ -4,16 +4,11 @@ import { Icon, IconProps } from "components/ui/Icon";
 
 import styles from "./ConnectionTimelineEventIcon.module.scss";
 export const ConnectionTimelineEventIcon: React.FC<{
-  isLast: boolean;
   icon: IconProps["type"];
   statusIcon?: IconProps["type"];
-}> = ({ isLast, icon, statusIcon }) => {
+}> = ({ icon, statusIcon }) => {
   return (
-    <div
-      className={classNames(styles.connectionTimelineEventIcon__container, {
-        [styles["connectionTimelineEventIcon__container--last"]]: isLast,
-      })}
-    >
+    <div className={classNames(styles.connectionTimelineEventIcon)}>
       {statusIcon && (
         <div className={styles.connectionTimelineEventIcon__statusIndicator}>
           <Icon

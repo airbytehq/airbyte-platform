@@ -77,7 +77,7 @@ const handleClick = (
   }
 };
 
-export const JobEventMenu: React.FC<{ eventId: string; jobId: number }> = ({ eventId, jobId }) => {
+export const JobEventMenu: React.FC<{ eventId: string; jobId?: number }> = ({ eventId, jobId }) => {
   const { formatMessage } = useIntl();
   const { connection } = useConnectionFormService();
   const { openModal } = useModalService();

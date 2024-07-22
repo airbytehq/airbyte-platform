@@ -1,6 +1,7 @@
 import { FormattedMessage, useIntl } from "react-intl";
 import { useEffectOnce } from "react-use";
 
+import { EmptyState } from "components/common/EmptyState";
 import { ConnectionSyncContextProvider } from "components/connection/ConnectionSync/ConnectionSyncContext";
 import { PageContainer } from "components/PageContainer";
 import { Box } from "components/ui/Box";
@@ -8,32 +9,36 @@ import { Card } from "components/ui/Card";
 import { FlexContainer } from "components/ui/Flex";
 import { Heading } from "components/ui/Heading";
 
-import { useFilters } from "core/api";
+import { useFilters, useGetConnectionEvent, useListConnectionEvents } from "core/api";
 import { PageTrackingCodes, useTrackPage } from "core/services/analytics";
-import { useConnectionFormService } from "hooks/services/ConnectionForm/ConnectionFormService";
+import { trackError } from "core/utils/datadog";
+import { useConnectionEditService } from "hooks/services/ConnectionEdit/ConnectionEditService";
 import { useModalService } from "hooks/services/Modal";
 
-import { ClearEvent } from "./components/ClearEvent";
-import { RefreshEvent } from "./components/RefreshEvent";
-import { SyncEvent } from "./components/SyncEvent";
+import { ClearEventItem } from "./components/ClearEventItem";
+import { JobStartEventItem } from "./components/JobStartEventItem";
+import { RefreshEventItem } from "./components/RefreshEventItem";
+import { SyncEventItem } from "./components/SyncEventItem";
+import { SyncFailEventItem } from "./components/SyncFailEventItem";
 import { ConnectionTimelineFilters } from "./ConnectionTimelineFilters";
 import styles from "./ConnectionTimelinePage.module.scss";
 import { openJobLogsModalFromTimeline } from "./JobEventMenu";
-import { mockConnectionTimelineEventList } from "./mocks";
 import {
-  castEventSummaryToConnectionTimelineJobStatsProps,
-  eventTypeByFilterValue,
-  eventTypeByStatusFilterValue,
-  extractStreamsFromTimelineEvent,
-  TimelineFilterValues,
-} from "./utils";
+  clearEventSchema,
+  jobStartedEventSchema,
+  refreshEventSchema,
+  syncEventSchema,
+  syncFailEventSchema,
+} from "./types";
+import { eventTypeByStatusFilterValue, TimelineFilterValues } from "./utils";
 
 export const ConnectionTimelinePage: React.FC = () => {
   useTrackPage(PageTrackingCodes.CONNECTIONS_ITEM_TIMELINE);
-  const { events: connectionEvents } = mockConnectionTimelineEventList;
+  const { connection } = useConnectionEditService();
+
+  const { events: connectionEvents } = useListConnectionEvents(connection.connectionId);
   const { openModal } = useModalService();
   const { formatMessage } = useIntl();
-  const { connection } = useConnectionFormService();
 
   const [filterValues, setFilterValue, resetFilters, filtersAreDefault] = useFilters<TimelineFilterValues>({
     status: null,
@@ -43,37 +48,55 @@ export const ConnectionTimelinePage: React.FC = () => {
     jobId: null,
     attemptNumber: null,
   });
+  const singleEventItem = useGetConnectionEvent(filterValues.eventId);
 
+  // todo: this will move to the endpoint in https://github.com/airbytehq/airbyte-platform-internal/pull/13128
   const connectionEventsToShow = connectionEvents.filter((connectionEvent) => {
-    if (filterValues.eventId) {
-      return connectionEvent.id === filterValues.eventId;
+    const { eventId: eventIdFilter, status: statusFilter, eventType: eventTypeFilter } = filterValues;
+
+    if (eventIdFilter) {
+      return connectionEvent.id === eventIdFilter;
     }
 
-    if (filterValues.status && filterValues.eventType) {
-      return (
-        eventTypeByStatusFilterValue[filterValues.status].includes(connectionEvent.eventType) &&
-        eventTypeByFilterValue[filterValues.eventType].includes(connectionEvent.eventType)
-      );
+    if (statusFilter) {
+      const eventTypes = eventTypeByStatusFilterValue[statusFilter];
+
+      if (eventTypeFilter) {
+        return (
+          eventTypes.includes(connectionEvent.eventType) &&
+          ((eventTypeFilter === "sync" && syncEventSchema.isValidSync(connectionEvent)) ||
+            (eventTypeFilter === "refresh" && refreshEventSchema.isValidSync(connectionEvent)) ||
+            (eventTypeFilter === "clear" && clearEventSchema.isValidSync(connectionEvent)))
+        );
+      }
+
+      return eventTypes.includes(connectionEvent.eventType);
     }
-    if (filterValues.status) {
-      return eventTypeByStatusFilterValue[filterValues.status].includes(connectionEvent.eventType);
-    }
-    if (filterValues.eventType) {
-      return eventTypeByFilterValue[filterValues.eventType].includes(connectionEvent.eventType);
+
+    if (eventTypeFilter) {
+      if (eventTypeFilter === "sync") {
+        return syncEventSchema.isValidSync(connectionEvent);
+      } else if (eventTypeFilter === "refresh") {
+        return refreshEventSchema.isValidSync(connectionEvent);
+      } else if (eventTypeFilter === "clear") {
+        return clearEventSchema.isValidSync(connectionEvent);
+      }
+      return false;
     }
 
     return true;
   });
 
   useEffectOnce(() => {
-    if (filterValues.openLogs === "true" && (filterValues.eventId || filterValues.jobId)) {
-      const event = { jobId: 55874 };
+    if (filterValues.openLogs === "true" && (filterValues.eventId || !!singleEventItem?.summary.jobId)) {
+      const jobId = singleEventItem?.summary.jobId;
+
       const jobIdFromFilter = parseInt(filterValues.jobId ?? "");
       const attemptNumberFromFilter = parseInt(filterValues.attemptNumber ?? "");
 
       openJobLogsModalFromTimeline({
         openModal,
-        jobId: !isNaN(jobIdFromFilter) ? jobIdFromFilter : event.jobId,
+        jobId: !isNaN(jobIdFromFilter) ? jobIdFromFilter : jobId,
         formatMessage,
         connectionName: connection.name ?? "",
         initialAttemptId: !isNaN(attemptNumberFromFilter) ? attemptNumberFromFilter : undefined,
@@ -84,7 +107,7 @@ export const ConnectionTimelinePage: React.FC = () => {
   return (
     <PageContainer centered>
       <ConnectionSyncContextProvider>
-        <Box pb="xl">
+        <Box p="xl">
           <Card noPadding>
             <Box p="lg">
               <FlexContainer direction="column">
@@ -102,52 +125,45 @@ export const ConnectionTimelinePage: React.FC = () => {
               </FlexContainer>
             </Box>
             <div className={styles.eventList}>
+              {connectionEventsToShow.length === 0 && (
+                <Box p="xl">
+                  <EmptyState text={<FormattedMessage id="connection.timeline.empty" />} />
+                </Box>
+              )}
               {connectionEventsToShow.map((event) => {
-                const stats = castEventSummaryToConnectionTimelineJobStatsProps(event.eventSummary);
-                const streamsToList = extractStreamsFromTimelineEvent(event.eventSummary);
-
-                if (!stats || stats.jobStatus === "pending" || stats.jobStatus === "running") {
-                  return null;
+                if (syncEventSchema.isValidSync(event, { recursive: true, stripUnknown: true })) {
+                  return (
+                    <Box py="lg" key={event.id}>
+                      <SyncEventItem syncEvent={event} />
+                    </Box>
+                  );
+                } else if (syncFailEventSchema.isValidSync(event, { recursive: true, stripUnknown: true })) {
+                  return (
+                    <Box py="lg" key={event.id}>
+                      <SyncFailEventItem syncEvent={event} />
+                    </Box>
+                  );
+                } else if (refreshEventSchema.isValidSync(event, { recursive: true, stripUnknown: true })) {
+                  return (
+                    <Box py="lg" key={event.id}>
+                      <RefreshEventItem refreshEvent={event} key={event.id} />
+                    </Box>
+                  );
+                } else if (clearEventSchema.isValidSync(event, { recursive: true, stripUnknown: true })) {
+                  return (
+                    <Box py="lg" key={event.id}>
+                      <ClearEventItem clearEvent={event} />
+                    </Box>
+                  );
+                } else if (jobStartedEventSchema.isValidSync(event, { recursive: true, stripUnknown: true })) {
+                  return (
+                    <Box py="lg" key={event.id}>
+                      <JobStartEventItem jobStartEvent={event} />
+                    </Box>
+                  );
                 }
-
-                return (
-                  <Box py="lg" key={event.id}>
-                    {event.eventType.includes("sync") && (
-                      <SyncEvent
-                        jobId={stats.jobId}
-                        recordsCommitted={stats.recordsCommitted}
-                        bytesCommitted={stats.bytesCommitted}
-                        eventId={event.id}
-                        jobStartedAt={stats.jobStartedAt}
-                        jobEndedAt={stats.jobEndedAt}
-                        eventType={event.eventType}
-                        attemptsCount={stats.attemptsCount}
-                        jobStatus={stats.jobStatus}
-                        failureMessage={stats.failureMessage}
-                      />
-                    )}
-                    {event.eventType.includes("clear") && (
-                      <ClearEvent
-                        jobId={stats.jobId}
-                        eventId={event.id}
-                        eventType={event.eventType}
-                        attemptsCount={stats.attemptsCount}
-                        jobStatus={stats.jobStatus}
-                        clearedStreams={streamsToList}
-                      />
-                    )}
-                    {event.eventType.includes("refresh") && (
-                      <RefreshEvent
-                        jobId={stats.jobId}
-                        eventId={event.id}
-                        eventType={event.eventType}
-                        attemptsCount={stats.attemptsCount}
-                        jobStatus={stats.jobStatus}
-                        refreshedStreams={streamsToList}
-                      />
-                    )}
-                  </Box>
-                );
+                trackError(new Error("Invalid connection timeline event"), { event });
+                return null;
               })}
             </div>
           </Card>

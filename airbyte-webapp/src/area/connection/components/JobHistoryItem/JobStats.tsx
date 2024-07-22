@@ -1,10 +1,6 @@
-import classNames from "classnames";
-import { useState } from "react";
 import { FormattedMessage, useIntl } from "react-intl";
 
-import { Button } from "components/ui/Button";
 import { FlexContainer } from "components/ui/Flex";
-import { Icon } from "components/ui/Icon";
 import { Text } from "components/ui/Text";
 
 import { JobWithAttempts } from "area/connection/types/jobs";
@@ -13,7 +9,7 @@ import { formatBytes } from "core/utils/numberHelper";
 import { useFormatLengthOfTime } from "core/utils/time";
 import { useLocalStorage } from "core/utils/useLocalStorage";
 
-import styles from "./JobStats.module.scss";
+import { JobFailureDetails } from "./JobFailureDetails";
 
 interface JobStatsProps {
   jobWithAttempts: JobWithAttempts;
@@ -28,8 +24,6 @@ export const JobStats: React.FC<JobStatsProps> = ({ jobWithAttempts }) => {
   const lastAttempt = attempts?.at(-1); // even if attempts is present it might be empty, which `.at` propagates to `lastAttempt`
 
   const jobRunTime = useFormatLengthOfTime((job.updatedAt - job.createdAt) * 1000);
-
-  const [isSecondaryMessageExpanded, setIsSecondaryMessageExpanded] = useState(false);
 
   if (job.status === "running") {
     return null;
@@ -84,50 +78,7 @@ export const JobStats: React.FC<JobStatsProps> = ({ jobWithAttempts }) => {
           </>
         )}
       </FlexContainer>
-      {job.status === "failed" && failureUiDetails && (
-        <Text color="grey500" size="sm" className={styles.failedMessage}>
-          {formatMessage(
-            { id: "failureMessage.label" },
-            {
-              type: (
-                <Text size="sm" color={failureUiDetails.type === "error" ? "red400" : "yellow600"} as="span">
-                  {failureUiDetails.typeLabel}:
-                </Text>
-              ),
-              message: failureUiDetails.message,
-            }
-          )}
-          {failureUiDetails?.secondaryMessage && (
-            <>
-              &nbsp;
-              <Button
-                variant="link"
-                className={styles.seeMore}
-                iconPosition="right"
-                onClick={() => setIsSecondaryMessageExpanded((expanded) => !expanded)}
-              >
-                <FormattedMessage id={isSecondaryMessageExpanded ? "jobs.failure.seeLess" : "jobs.failure.seeMore"} />
-                <Icon
-                  type={isSecondaryMessageExpanded ? "chevronDown" : "chevronRight"}
-                  size="sm"
-                  className={styles.seeMoreIcon}
-                />
-              </Button>
-            </>
-          )}
-        </Text>
-      )}
-      {failureUiDetails && isSecondaryMessageExpanded && (
-        <Text
-          size="sm"
-          className={classNames(styles.secondaryMessage, {
-            [styles.errorMessage]: failureUiDetails.type === "error",
-            [styles.warningMessage]: failureUiDetails.type === "warning",
-          })}
-        >
-          {failureUiDetails.secondaryMessage}
-        </Text>
-      )}
+      {failureUiDetails && job.status === "failed" && <JobFailureDetails failureUiDetails={failureUiDetails} />}
     </>
   );
 };

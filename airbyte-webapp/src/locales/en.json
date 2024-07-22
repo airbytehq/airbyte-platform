@@ -697,6 +697,7 @@
   "connection.actions.cancel.clear.confirm.cancel": "No, continue clear",
 
   "connection.timeline": "Timeline",
+  "connection.timeline.empty": "No events to display",
   "connection.timeline.error": "Error: ",
   "connection.timeline.warning": "Warning: ",
   "connection.timeline.clear_cancelled": "Clearing data cancelled ({value, plural, one {# stream} other {# streams}})",
@@ -722,6 +723,13 @@
   "connection.timeline.filters.allEventTypes": "All event types",
   "connection.timeline.filters.allStatuses": "All statuses",
   "connection.timeline.filters.eventId": "id: {eventId}",
+  "connection.timeline.sync_started": "Sync started",
+  "connection.timeline.sync_started.description": "{user} manually started this sync",
+  "connection.timeline.clear_started": "Clear data started",
+  "connection.timeline.clear_started.description": "{user} manually started this clear",
+  "connection.timeline.refresh_started": "Refresh started",
+  "connection.timeline.refresh_started.description": "{user} manually started this refresh",
+  "connection.timeline.user.unknown": "[unknown user]",
 
   "connection.actions.error": "There was an error starting this job.  Please try again.",
   "connection.actions.refreshData": "Refresh your data",

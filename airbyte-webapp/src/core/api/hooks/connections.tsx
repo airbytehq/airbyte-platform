@@ -27,10 +27,12 @@ import {
   getConnectionUptimeHistory,
   getState,
   getStateType,
+  getConnectionEvent,
   clearConnectionStream,
   clearConnection,
   refreshConnectionStream,
   syncConnection,
+  listConnectionEvents,
   webBackendCreateConnection,
   webBackendGetConnection,
   webBackendListConnectionsForWorkspace,
@@ -39,6 +41,7 @@ import {
 import { SCOPE_WORKSPACE } from "../scopes";
 import {
   AirbyteCatalog,
+  ConnectionEventWithDetails,
   ConnectionScheduleData,
   ConnectionScheduleType,
   ConnectionStateCreateOrUpdate,
@@ -74,6 +77,8 @@ export const connectionsKeys = {
   statuses: (connectionIds: string[]) => [...connectionsKeys.all, "status", connectionIds],
   syncProgress: (connectionId: string) => [...connectionsKeys.all, "syncProgress", connectionId] as const,
   lastJobPerStream: (connectionId: string) => [...connectionsKeys.all, "lastSyncPerStream", connectionId] as const,
+  eventsList: (connectionId: string) => [...connectionsKeys.all, "eventsList", connectionId] as const,
+  event: (eventId: string) => [...connectionsKeys.all, "event", eventId] as const,
 };
 
 export interface ConnectionValues {
@@ -95,6 +100,28 @@ interface CreateConnectionProps {
   destinationDefinition?: { name: string; destinationDefinitionId: string };
   sourceCatalogId: string | undefined;
 }
+
+export const useListConnectionEvents = (connectionId: string) => {
+  const requestOptions = useRequestOptions();
+
+  return useSuspenseQuery(connectionsKeys.eventsList(connectionId), async () => {
+    return await listConnectionEvents({ connectionId }, requestOptions);
+  });
+};
+
+export const useGetConnectionEvent = (connectionEventId: string | null): ConnectionEventWithDetails | undefined => {
+  const requestOptions = useRequestOptions();
+
+  return useSuspenseQuery(
+    connectionsKeys.event(connectionEventId ?? ""),
+    async () => {
+      return await getConnectionEvent({ connectionEventId: connectionEventId ?? "" }, requestOptions);
+    },
+    {
+      enabled: !!connectionEventId,
+    }
+  );
+};
 
 export const useGetLastJobPerStream = (connectionId: string) => {
   const requestOptions = useRequestOptions();
