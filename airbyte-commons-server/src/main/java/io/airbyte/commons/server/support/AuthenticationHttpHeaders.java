@@ -69,11 +69,6 @@ public final class AuthenticationHttpHeaders {
   public static final String EXTERNAL_AUTH_ID_HEADER = AIRBYTE_HEADER_PREFIX + "External-Auth-Id";
 
   /**
-   * HTTP header that contains the auth user ID for authorization purposes.
-   */
-  public static final String EMAIL_HEADER = AIRBYTE_HEADER_PREFIX + "Email";
-
-  /**
    * HTTP header that contains the workspace ID for authorization purposes.
    */
   public static final String WORKSPACE_ID_HEADER = AIRBYTE_HEADER_PREFIX + "Workspace-Id";
