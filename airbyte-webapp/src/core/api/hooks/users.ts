@@ -58,7 +58,7 @@ export const useGetOrCreateUser = () => {
       if (newUserCreated) {
         analytics.track(Namespace.USER, Action.CREATE, {
           actionDescription: "New user registered",
-          user_id: userRead.authUserId,
+          user_id: authUserId,
           name: userRead.name,
           email: userRead.email,
           isCorporate: isCorporateEmail(userRead.email),
