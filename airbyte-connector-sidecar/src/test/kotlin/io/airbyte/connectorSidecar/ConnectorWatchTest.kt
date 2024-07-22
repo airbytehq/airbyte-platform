@@ -81,6 +81,7 @@ class ConnectorWatchTest {
           outputPath,
           configDir,
           fileTimeoutMinutes = 42,
+          fileTimeoutMinutesWithinSync = 43,
           connectorMessageProcessor,
           serDeProvider,
           airbyteProtocolVersionedMigratorFactory,
@@ -200,7 +201,7 @@ class ConnectorWatchTest {
 
     every { connectorWatcher.areNeededFilesPresent() } returns false
 
-    every { connectorWatcher.fileTimeoutReach(any()) } returns true
+    every { connectorWatcher.fileTimeoutReach(any(), any()) } returns true
 
     every { connectorWatcher.exitFileNotFound() } returns Unit
 

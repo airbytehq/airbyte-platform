@@ -56,6 +56,7 @@ airbyte:
     # Can we bump this value? Does it need to be configured per operation?
     # Should we pass it in from the launcher?
     file-timeout-minutes: ${SIDECAR_FILE_TIMEOUT_MINUTES:9}
+    file-timeout-minutes-within-sync: ${SIDECAR_FILE_TIMEOUT_WITHIN_SYNC_MINUTES:9}
   workload-api:
     base-path: ${WORKLOAD_API_HOST:}
     bearer-token: ${WORKLOAD_API_BEARER_TOKEN:}
