@@ -13,7 +13,7 @@ data class SyncFeatureFlagFetcherInput(
     @JvmOverloads
     constructor(
       val connectionId: UUID? = null,
-      private val sourceDefinitionId: UUID? = null,
+      val sourceDefinitionId: UUID? = null,
       val workspaceId: UUID? = null,
     ) {
       fun build(): SyncFeatureFlagFetcherInput {

@@ -70,7 +70,7 @@ data class Multi(val contexts: List<Context>) : Context {
  *
  * @param [key] the unique identifying value of this organization
  */
-data class Organization(override val key: String) : Context {
+data class Organization constructor(override val key: String) : Context {
   override val kind = "organization"
 
   /**
@@ -86,7 +86,7 @@ data class Organization(override val key: String) : Context {
  *
  * @param [key] the unique identifying value of this workspace
  */
-data class Workspace(override val key: String) : Context {
+data class Workspace constructor(override val key: String) : Context {
   override val kind = "workspace"
 
   /**
@@ -229,7 +229,7 @@ data class Priority(override val key: String) : Context {
   override val kind: String = "priority"
 
   companion object {
-    const val HIGH_PRIORITY = "high"
+    val HIGH_PRIORITY = "high"
   }
 }
 

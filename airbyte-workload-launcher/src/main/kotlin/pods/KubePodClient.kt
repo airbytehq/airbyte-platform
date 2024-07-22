@@ -3,6 +3,7 @@ package io.airbyte.workload.launcher.pods
 import com.google.common.annotations.VisibleForTesting
 import datadog.trace.api.Trace
 import io.airbyte.commons.constants.WorkerConstants.KubeConstants.FULL_POD_TIMEOUT
+import io.airbyte.featureflag.FeatureFlagClient
 import io.airbyte.metrics.lib.ApmTraceUtils
 import io.airbyte.persistence.job.models.ReplicationInput
 import io.airbyte.workers.models.CheckConnectionInput
@@ -36,6 +37,7 @@ class KubePodClient(
   private val kubePodLauncher: KubePodLauncher,
   private val labeler: PodLabeler,
   private val mapper: PayloadKubeInputMapper,
+  private val featureFlagClient: FeatureFlagClient,
   private val orchestratorPodFactory: OrchestratorPodFactory,
   @Named("checkPodFactory") private val checkPodFactory: ConnectorPodFactory,
   @Named("discoverPodFactory") private val discoverPodFactory: ConnectorPodFactory,

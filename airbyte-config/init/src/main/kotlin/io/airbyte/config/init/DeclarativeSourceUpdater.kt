@@ -35,7 +35,7 @@ class DeclarativeSourceUpdater(
         currentDeclarativeManifestImageVersions.any { it.majorVersion == major && it.imageVersion == latestVersion }
       }
 
-    versionsToPersist.filter { (_, newVersion) ->
+    versionsToPersist.filter { (major, newVersion) ->
       airbyteCompatibleConnectorsValidator.validateDeclarativeManifest(newVersion).isValid
     }.forEach { (major, newVersion) ->
       declarativeManifestImageVersionService.writeDeclarativeManifestImageVersion(major, newVersion)

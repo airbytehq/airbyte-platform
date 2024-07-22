@@ -36,7 +36,7 @@ enum class WorkloadStatus(private val value: String) {
     @JvmStatic
     @JsonCreator
     fun fromValue(value: String): WorkloadStatus {
-      val result = entries.firstOrNull { it.value.equals(value, true) }
+      val result = values().firstOrNull { it.value.equals(value, true) }
       return result ?: throw IllegalArgumentException("Unexpected value '$value'")
     }
   }

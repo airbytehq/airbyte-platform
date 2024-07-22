@@ -116,8 +116,8 @@ class SupportStateUpdater(
 
     val versionIdsToUpdateByState =
       mapOf(
-        ActorDefinitionVersion.SupportState.UNSUPPORTED to mutableListOf(),
-        ActorDefinitionVersion.SupportState.DEPRECATED to mutableListOf(),
+        ActorDefinitionVersion.SupportState.UNSUPPORTED to mutableListOf<UUID>(),
+        ActorDefinitionVersion.SupportState.DEPRECATED to mutableListOf<UUID>(),
         ActorDefinitionVersion.SupportState.SUPPORTED to mutableListOf<UUID>(),
       )
 

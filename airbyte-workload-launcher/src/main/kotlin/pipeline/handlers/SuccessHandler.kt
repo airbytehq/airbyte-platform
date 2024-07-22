@@ -43,7 +43,7 @@ class SuccessHandler(
         )
       }
 
-      // If we skipped then we didn't launch the workload on this run, so we don't set its status to "launched".
+      // If we skipped then we didn't launch the workload on this run so we don't set it to launched.
       if (!io.skip) {
         try {
           apiClient.updateStatusToLaunched(io.msg.workloadId)

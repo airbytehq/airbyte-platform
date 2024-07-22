@@ -66,7 +66,7 @@ class AnalyticsTrackingBeanFactory {
   private fun <T> convertToEnum(
     value: String,
     creatorFunction: Function<String, T>,
-    @Suppress("SameParameterValue") defaultValue: T,
+    defaultValue: T,
   ): T = if (StringUtils.isNotEmpty(value)) creatorFunction.apply(value.uppercase()) else defaultValue
 
   private fun getDeploymentEnvironment(environment: Environment): String =

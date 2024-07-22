@@ -4,7 +4,7 @@
 package io.airbyte.config.init
 
 /**
- * Defines any additional tasks that should be executed after successful bootstrapping of the Airbyte
+ * Defines any additional tasks that should be executed after successful boostrapping of the Airbyte
  * environment.
  */
 interface PostLoadExecutor {

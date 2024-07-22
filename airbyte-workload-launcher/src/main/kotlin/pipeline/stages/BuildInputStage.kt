@@ -22,10 +22,13 @@ import io.airbyte.workload.launcher.pipeline.stages.model.SpecPayload
 import io.airbyte.workload.launcher.pipeline.stages.model.SyncPayload
 import io.airbyte.workload.launcher.pipeline.stages.model.WorkloadPayload
 import io.airbyte.workload.launcher.serde.PayloadDeserializer
+import io.github.oshai.kotlinlogging.KotlinLogging
 import io.micronaut.context.annotation.Value
 import jakarta.inject.Named
 import jakarta.inject.Singleton
 import reactor.core.publisher.Mono
+
+private val logger = KotlinLogging.logger {}
 
 /**
  * Deserializes input payloads and performs any necessary hydration from other

@@ -32,8 +32,8 @@ enum class AuthMode {
 
 @Factory
 class AuthModeFactory(
-  private val deploymentMode: DeploymentMode,
-  private val airbyteEdition: Configs.AirbyteEdition,
+  val deploymentMode: DeploymentMode,
+  val airbyteEdition: Configs.AirbyteEdition,
 ) {
   /**
    * When the Airbyte edition is set to `community` and Micronaut Security is enabled, the
@@ -66,10 +66,10 @@ class AuthModeFactory(
  */
 @Factory
 class AuthConfigFactory(
-  private val authMode: AuthMode,
-  private val keycloakConfig: AirbyteKeycloakConfiguration? = null,
-  private val oidcConfig: OidcConfig? = null,
-  private val initialUserConfig: InitialUserConfig? = null,
+  val authMode: AuthMode,
+  val keycloakConfig: AirbyteKeycloakConfiguration? = null,
+  val oidcConfig: OidcConfig? = null,
+  val initialUserConfig: InitialUserConfig? = null,
 ) {
   @Singleton
   fun authConfig(): AuthConfigs = AuthConfigs(authMode, keycloakConfig, oidcConfig, initialUserConfig)

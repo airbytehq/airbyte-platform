@@ -168,7 +168,7 @@ class DockerPodLauncher(private val dockerConfig: DockerConfig) {
   }
 
   companion object {
-    private const val DOCKER_ENV_FILE_NAME = "env-file"
+    private val DOCKER_ENV_FILE_NAME = "env-file"
   }
 
   private fun MutableList<String>.addOption(

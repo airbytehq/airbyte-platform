@@ -38,10 +38,10 @@ open class LocalTestingSecretPersistence(
     initialize()
     val result =
       dslContext.fetch("SELECT payload FROM secrets WHERE coordinate = ?;", coordinate.fullCoordinate)
-    return if (result.size == 0) {
-      ""
+    if (result.size == 0) {
+      return ""
     } else {
-      result[0].getValue(0, String::class.java) ?: ""
+      return result[0].getValue(0, String::class.java) ?: ""
     }
   }
 

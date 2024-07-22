@@ -31,9 +31,7 @@ class RemoteDeclarativeManifestImageVersionsProvider(
     return latestVersionsByMajor
   }
 
-  private fun getTagsForRepository(
-    @Suppress("SameParameterValue") repository: String,
-  ): List<String> {
+  private fun getTagsForRepository(repository: String): List<String> {
     val tags = mutableListOf<String>()
 
     // 100 is max allowed page size for DockerHub

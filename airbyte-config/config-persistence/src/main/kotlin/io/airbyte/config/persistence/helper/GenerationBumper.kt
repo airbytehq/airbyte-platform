@@ -9,7 +9,7 @@ import jakarta.inject.Singleton
 import java.util.UUID
 
 @Singleton
-class GenerationBumper(private val streamGenerationRepository: StreamGenerationRepository) {
+class GenerationBumper(val streamGenerationRepository: StreamGenerationRepository) {
   /**
    * This is increasing the generation of the stream being refreshed.
    * For each stream being refreshed, it fetches the current generation and then create a new entry in the generation

@@ -16,11 +16,11 @@ data class ReportRunTimeActivityInput(
     @JvmOverloads
     constructor(
       val connectionId: UUID? = null,
-      private val sourceDefinitionId: UUID? = null,
-      private val startTime: Long? = null,
-      private val refreshSchemaEndTime: Long? = null,
-      private val replicationEndTime: Long? = null,
-      private val shouldRefreshSchema: Boolean? = null,
+      val sourceDefinitionId: UUID? = null,
+      val startTime: Long? = null,
+      val refreshSchemaEndTime: Long? = null,
+      val replicationEndTime: Long? = null,
+      val shouldRefreshSchema: Boolean? = null,
     ) {
       fun build(): ReportRunTimeActivityInput {
         return ReportRunTimeActivityInput(
