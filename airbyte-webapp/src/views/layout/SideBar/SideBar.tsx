@@ -84,7 +84,6 @@ export const SideBar: React.FC<PropsWithChildren<SideBarProps>> = ({
             icon="wrench"
             testId="builderLink"
             to={RoutePaths.ConnectorBuilder}
-            withBadge="beta"
           />
           <IfFeatureEnabled feature={FeatureItem.Billing}>
             <NavItem
