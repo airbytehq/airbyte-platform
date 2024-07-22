@@ -15,67 +15,57 @@ import io.airbyte.workers.models.PostprocessCatalogInput
 import io.airbyte.workers.models.RefreshSchemaActivityOutput
 import io.airbyte.workers.temporal.discover.catalog.DiscoverCatalogActivity
 import io.airbyte.workers.temporal.discover.catalog.DiscoverCatalogHelperActivity
-import io.github.oshai.kotlinlogging.KotlinLogging
 
-private val logger = KotlinLogging.logger {}
-
-open class DiscoverCatalogAndAutoPropagateWorkflowImpl : DiscoverCatalogAndAutoPropagateWorkflow {
+open class DiscoverCatalogAndAutoPropagateWorkflowImpl
   @VisibleForTesting
-  constructor(activity: DiscoverCatalogActivity, reportActivity: DiscoverCatalogHelperActivity) {
-    this.activity = activity
-    this.reportActivity = reportActivity
-  }
+  constructor(
+    @TemporalActivityStub(activityOptionsBeanName = "discoveryActivityOptionsWithRetry")
+    val activity: DiscoverCatalogActivity,
+    @TemporalActivityStub(activityOptionsBeanName = "shortActivityOptions")
+    val reportActivity: DiscoverCatalogHelperActivity,
+  ) : DiscoverCatalogAndAutoPropagateWorkflow {
+    @Trace(operationName = ApmTraceConstants.WORKFLOW_TRACE_OPERATION_NAME)
+    override fun run(
+      jobRunConfig: JobRunConfig,
+      launcherConfig: IntegrationLauncherConfig,
+      config: StandardDiscoverCatalogInput,
+    ): RefreshSchemaActivityOutput {
+      ApmTraceUtils.addTagsToTrace(
+        mapOf(
+          ApmTraceConstants.Tags.ATTEMPT_NUMBER_KEY to jobRunConfig.attemptId,
+          ApmTraceConstants.Tags.JOB_ID_KEY to jobRunConfig.jobId,
+          ApmTraceConstants.Tags.DOCKER_IMAGE_KEY to launcherConfig.dockerImage,
+        ),
+      )
+      val workloadResult =
+        try {
+          activity.runWithWorkload(
+            DiscoverCatalogInput(
+              jobRunConfig,
+              launcherConfig,
+              config,
+            ),
+          )
+        } catch (e: WorkerException) {
+          reportActivity.reportFailure(true)
+          throw RuntimeException(e)
+        }
 
-  constructor() {}
-
-  @TemporalActivityStub(activityOptionsBeanName = "discoveryActivityOptionsWithRetry")
-  private lateinit var activity: DiscoverCatalogActivity
-
-  @TemporalActivityStub(activityOptionsBeanName = "shortActivityOptions")
-  private lateinit var reportActivity: DiscoverCatalogHelperActivity
-
-  @Trace(operationName = ApmTraceConstants.WORKFLOW_TRACE_OPERATION_NAME)
-  override fun run(
-    jobRunConfig: JobRunConfig,
-    launcherConfig: IntegrationLauncherConfig,
-    config: StandardDiscoverCatalogInput,
-  ): RefreshSchemaActivityOutput {
-    ApmTraceUtils.addTagsToTrace(
-      mapOf(
-        ApmTraceConstants.Tags.ATTEMPT_NUMBER_KEY to jobRunConfig.attemptId,
-        ApmTraceConstants.Tags.JOB_ID_KEY to jobRunConfig.jobId,
-        ApmTraceConstants.Tags.DOCKER_IMAGE_KEY to launcherConfig.dockerImage,
-      ),
-    )
-    val workloadResult =
-      try {
-        activity.runWithWorkload(
-          DiscoverCatalogInput(
-            jobRunConfig,
-            launcherConfig,
-            config,
-          ),
-        )
-      } catch (e: WorkerException) {
-        reportActivity.reportFailure(true)
-        throw RuntimeException(e)
+      if (workloadResult.discoverCatalogId == null) {
+        return failure()
       }
 
-    if (workloadResult.discoverCatalogId == null) {
-      return failure()
+      val postprocessResult = reportActivity.postprocess(PostprocessCatalogInput(workloadResult.discoverCatalogId, launcherConfig.connectionId))
+      if (postprocessResult.isFailure) {
+        return failure()
+      }
+
+      reportActivity.reportSuccess(true)
+      return RefreshSchemaActivityOutput(postprocessResult.diff)
     }
 
-    val postprocessResult = reportActivity.postprocess(PostprocessCatalogInput(workloadResult.discoverCatalogId, launcherConfig.connectionId))
-    if (postprocessResult.isFailure) {
-      return failure()
+    fun failure(): RefreshSchemaActivityOutput {
+      reportActivity.reportFailure(true)
+      return RefreshSchemaActivityOutput(null)
     }
-
-    reportActivity.reportSuccess(true)
-    return RefreshSchemaActivityOutput(postprocessResult.diff)
   }
-
-  fun failure(): RefreshSchemaActivityOutput {
-    reportActivity.reportFailure(true)
-    return RefreshSchemaActivityOutput(null)
-  }
-}
