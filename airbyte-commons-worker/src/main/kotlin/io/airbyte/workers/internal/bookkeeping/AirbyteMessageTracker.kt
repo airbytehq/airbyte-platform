@@ -15,7 +15,7 @@ import java.util.ArrayList
 private val logger = KotlinLogging.logger {}
 
 /**
- * This class is responsible for stats and metadata tracking surrounding [AirbyteRecordMessage].
+ * This class is responsible for stats and metadata tracking surrounding [io.airbyte.protocol.models.AirbyteRecordMessage].
  *
  * It is not intended to perform meaningful operations - transforming, mutating, triggering
  * downstream actions etc. - on specific messages.
@@ -78,7 +78,7 @@ class AirbyteMessageTracker(
       srcErrorTraceMsgs.map {
         FailureHelper.sourceFailure(it, jobId, attempt)
       } + dstErrorTraceMsgs.map { FailureHelper.destinationFailure(it, jobId, attempt) }
-    return allErrors.sortedBy { it.getTimestamp() }
+    return allErrors.sortedBy { it.timestamp }
   }
 
   /**

@@ -121,7 +121,7 @@ class ClientSupportFactory {
           WorkloadApiServerException::class.java,
         ),
       )
-      // TODO move these metrics into a centralized metric registery as part of the MetricClient refactor/cleanup
+      // TODO move these metrics into a centralized metric registry as part of the MetricClient refactor/cleanup
       .onAbort { l ->
         logger.warn { "Attempt aborted.  Attempt count ${l.attemptCount}" }
         meterRegistry.ifPresent {

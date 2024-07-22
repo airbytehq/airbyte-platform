@@ -343,7 +343,11 @@ class ReplicationWorkerHelper(
     }
 
     // Metric to help investigating https://github.com/airbytehq/airbyte/issues/34567
-    if (failures.any { f -> f.failureOrigin.equals("destination") && f.internalMessage.contains("Unable to deserialize PartialAirbyteMessage") }) {
+    if (failures.any { f ->
+        f.failureOrigin.equals(FailureReason.FailureOrigin.DESTINATION) &&
+          f.internalMessage != null && f.internalMessage.contains("Unable to deserialize PartialAirbyteMessage")
+      }
+    ) {
       metricClient.count(OssMetricsRegistry.DESTINATION_DESERIALIZATION_ERROR, 1, *metricAttrs.toTypedArray())
     }
 
@@ -420,8 +424,7 @@ class ReplicationWorkerHelper(
     // internally we always want to deal with the state message we got from the
     // source, so we only modify the state message after processing it, right before we send it to the
     // destination
-    return attachIdToStateMessageFromSource(sourceRawMessage)
-      .let { internalProcessMessageFromSource(it) }
+    return internalProcessMessageFromSource(attachIdToStateMessageFromSource(sourceRawMessage))
       .let { mapper.mapMessage(it) }
       .let { Optional.ofNullable(it) }
   }
@@ -512,9 +515,9 @@ private fun toConnectionAttrs(ctx: ReplicationContext?): List<MetricAttribute> {
   }
 
   return buildList {
-    ctx.connectionId?.let { add(MetricAttribute(MetricTags.CONNECTION_ID, it.toString())) }
-    ctx.jobId?.let { add(MetricAttribute(MetricTags.JOB_ID, it.toString())) }
-    ctx.attempt?.let { add(MetricAttribute(MetricTags.ATTEMPT_NUMBER, it.toString())) }
+    add(MetricAttribute(MetricTags.CONNECTION_ID, ctx.connectionId.toString()))
+    add(MetricAttribute(MetricTags.JOB_ID, ctx.jobId.toString()))
+    add(MetricAttribute(MetricTags.ATTEMPT_NUMBER, ctx.attempt.toString()))
     add(MetricAttribute(MetricTags.IS_RESET, ctx.isReset.toString()))
   }
 }
@@ -558,8 +561,8 @@ private fun recordStateStatsMetric(
     extractStateRecordCount(stats),
     *toConnectionAttrs(ctx).toTypedArray(),
     *buildList {
-      ctx.sourceImage?.let { add(MetricAttribute(MetricTags.SOURCE_IMAGE, it)) }
-      ctx.destinationImage?.let {
+      add(MetricAttribute(MetricTags.SOURCE_IMAGE, ctx.sourceImage))
+      ctx.destinationImage.let {
         add(MetricAttribute(MetricTags.DESTINATION_IMAGE, it))
         add(MetricAttribute(MetricTags.AIRBYTE_MESSAGE_ORIGIN, messageOrigin.name))
       }

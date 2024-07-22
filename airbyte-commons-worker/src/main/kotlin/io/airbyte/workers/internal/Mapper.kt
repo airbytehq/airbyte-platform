@@ -43,9 +43,9 @@ class NamespacingMapper
     private val streamPrefix: String?,
     private val destinationToSource: MutableMap<NamespaceStreamName, NamespaceStreamName> = mutableMapOf(),
   ) : AirbyteMapper {
-    override fun mapCatalog(inputCatalog: ConfiguredAirbyteCatalog): ConfiguredAirbyteCatalog {
-      val catalog: ConfiguredAirbyteCatalog = Jsons.clone(inputCatalog)
-      catalog.streams.forEach { configuredStream ->
+    override fun mapCatalog(catalog: ConfiguredAirbyteCatalog): ConfiguredAirbyteCatalog {
+      val catalogCopy: ConfiguredAirbyteCatalog = Jsons.clone(catalog)
+      catalogCopy.streams.forEach { configuredStream ->
         val stream = configuredStream.stream
 
         when (namespaceDefinition) {
@@ -63,7 +63,7 @@ class NamespacingMapper
         }
         stream.withName(transformStreamName(stream.name, streamPrefix))
       }
-      return catalog
+      return catalogCopy
     }
 
     override fun mapMessage(message: AirbyteMessage): AirbyteMessage {

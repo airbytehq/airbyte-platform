@@ -17,7 +17,7 @@ class StreamStatusCompletionTracker(
   private val hasCompletedStatus = mutableMapOf<StreamDescriptor, Boolean>()
   private var shouldEmitStreamStatus = false
 
-  open fun startTracking(
+  fun startTracking(
     configuredAirbyteCatalog: ConfiguredAirbyteCatalog,
     supportRefreshes: Boolean,
   ) {
@@ -30,7 +30,7 @@ class StreamStatusCompletionTracker(
     }
   }
 
-  open fun track(streamStatus: AirbyteStreamStatusTraceMessage) {
+  fun track(streamStatus: AirbyteStreamStatusTraceMessage) {
     if (shouldEmitStreamStatus && streamStatus.status == AirbyteStreamStatusTraceMessage.AirbyteStreamStatus.COMPLETE) {
       if (hasCompletedStatus[streamStatus.streamDescriptor] == null) {
         throw WorkerException(
@@ -42,7 +42,7 @@ class StreamStatusCompletionTracker(
     }
   }
 
-  open fun finalize(
+  fun finalize(
     exitCode: Int,
     namespacingMapper: AirbyteMapper,
   ): List<AirbyteMessage> {

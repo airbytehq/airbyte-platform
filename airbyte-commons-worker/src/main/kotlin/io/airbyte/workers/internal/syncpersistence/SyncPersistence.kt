@@ -4,13 +4,11 @@ import datadog.trace.api.Trace
 import io.airbyte.api.client.AirbyteApiClient
 import io.airbyte.api.client.model.generated.AttemptStats
 import io.airbyte.api.client.model.generated.AttemptStreamStats
-import io.airbyte.api.client.model.generated.ConnectionState
 import io.airbyte.api.client.model.generated.ConnectionStateCreateOrUpdate
 import io.airbyte.api.client.model.generated.SaveStatsRequestBody
 import io.airbyte.commons.converters.StateConverter
 import io.airbyte.config.SyncStats
 import io.airbyte.config.helpers.StateMessageHelper
-import io.airbyte.featureflag.FeatureFlagClient
 import io.airbyte.metrics.lib.MetricAttribute
 import io.airbyte.metrics.lib.MetricClient
 import io.airbyte.metrics.lib.MetricClientFactory
@@ -19,7 +17,6 @@ import io.airbyte.metrics.lib.OssMetricsRegistry
 import io.airbyte.protocol.models.AirbyteEstimateTraceMessage
 import io.airbyte.protocol.models.AirbyteRecordMessage
 import io.airbyte.protocol.models.AirbyteStateMessage
-import io.airbyte.protocol.models.ConfiguredAirbyteCatalog
 import io.airbyte.workers.internal.bookkeeping.SyncStatsTracker
 import io.airbyte.workers.internal.bookkeeping.getPerStreamStats
 import io.airbyte.workers.internal.bookkeeping.getTotalStats
@@ -66,13 +63,10 @@ class SyncPersistenceImpl
     @Named("syncPersistenceExecutorService") private val stateFlushExecutorService: ScheduledExecutorService,
     @Value("\${airbyte.worker.replication.persistence-flush-period-sec}") private val stateFlushPeriodInSeconds: Long,
     private val metricClient: MetricClient,
-    private val featureFlagClient: FeatureFlagClient,
     @param:Parameter private val syncStatsTracker: SyncStatsTracker,
     @param:Parameter private val connectionId: UUID,
-    @param:Parameter private val workspaceId: UUID,
     @param:Parameter private val jobId: Long,
     @param:Parameter private val attemptNumber: Int,
-    @param:Parameter private val catalog: ConfiguredAirbyteCatalog,
   ) : SyncPersistence, SyncStatsTracker by syncStatsTracker {
     private var stateBuffer = stateAggregatorFactory.create()
     private var stateFlushFuture: ScheduledFuture<*>? = null
@@ -82,7 +76,7 @@ class SyncPersistenceImpl
     private var statsToPersist: SaveStatsRequestBody? = null
     private var retryWithJitterConfig: RetryWithJitterConfig? = null
 
-    protected constructor(
+    constructor(
       airbyteApiClient: AirbyteApiClient,
       stateAggregatorFactory: StateAggregatorFactory,
       syncStatsTracker: SyncStatsTracker,
@@ -90,11 +84,8 @@ class SyncPersistenceImpl
       stateFlushPeriodInSeconds: Long,
       retryWithJitterConfig: RetryWithJitterConfig?,
       connectionId: UUID,
-      workspaceId: UUID,
       jobId: Long,
       attemptNumber: Int,
-      catalog: ConfiguredAirbyteCatalog,
-      featureFlagClient: FeatureFlagClient,
     ) : this(
       airbyteApiClient = airbyteApiClient,
       stateAggregatorFactory = stateAggregatorFactory,
@@ -103,11 +94,8 @@ class SyncPersistenceImpl
       syncStatsTracker = syncStatsTracker,
       metricClient = MetricClientFactory.getMetricClient(),
       connectionId = connectionId,
-      workspaceId = workspaceId,
       jobId = jobId,
       attemptNumber = attemptNumber,
-      catalog = catalog,
-      featureFlagClient = featureFlagClient,
     ) {
       this.retryWithJitterConfig = retryWithJitterConfig
     }
@@ -338,8 +326,6 @@ class SyncPersistenceImpl
       syncStatsTracker.endOfReplication(completedSuccessfully)
     }
   }
-
-private fun isStateEmpty(connectionState: ConnectionState?) = connectionState?.state?.isEmpty ?: false
 
 private fun buildSaveStatsRequest(
   syncStatsTracker: SyncStatsTracker,

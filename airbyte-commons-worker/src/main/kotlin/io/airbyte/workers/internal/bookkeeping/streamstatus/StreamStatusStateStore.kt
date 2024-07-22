@@ -5,11 +5,8 @@ import io.airbyte.api.client.model.generated.StreamStatusRunState.COMPLETE
 import io.airbyte.api.client.model.generated.StreamStatusRunState.INCOMPLETE
 import io.airbyte.api.client.model.generated.StreamStatusRunState.RATE_LIMITED
 import io.airbyte.api.client.model.generated.StreamStatusRunState.RUNNING
-import io.github.oshai.kotlinlogging.KotlinLogging
 import java.util.concurrent.ConcurrentHashMap
 import io.airbyte.api.client.model.generated.StreamStatusRunState as ApiEnum
-
-private val logger = KotlinLogging.logger {}
 
 /**
  * Stores the per stream status state and enforces valid state transitions.
