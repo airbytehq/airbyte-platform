@@ -149,6 +149,28 @@ export const SelectConnector: React.FC<SelectConnectorProps> = ({
     [allSearchResults]
   );
 
+  const certifiedBadge = useMemo(
+    () =>
+      searchTerm && searchResultsByTab.certified.length > 0
+        ? searchResultsByTab.certified.length.toString()
+        : undefined,
+    [searchTerm, searchResultsByTab.certified.length]
+  );
+
+  const marketplaceBadge = useMemo(
+    () =>
+      searchTerm && searchResultsByTab.marketplace.length > 0
+        ? searchResultsByTab.marketplace.length.toString()
+        : undefined,
+    [searchTerm, searchResultsByTab.marketplace.length]
+  );
+
+  const customBadge = useMemo(
+    () =>
+      searchTerm && searchResultsByTab.custom.length > 0 ? searchResultsByTab.custom.length.toString() : undefined,
+    [searchTerm, searchResultsByTab.custom.length]
+  );
+
   const analyticsService = useAnalyticsService();
   useDebounce(
     () => {
@@ -243,6 +265,7 @@ export const SelectConnector: React.FC<SelectConnectorProps> = ({
           <ButtonTab
             id="certified"
             name={getTabDisplayName("certified")}
+            badge={certifiedBadge}
             isActive={selectedTab === "certified"}
             onSelect={() => {
               setSelectedTab("certified");
@@ -251,6 +274,7 @@ export const SelectConnector: React.FC<SelectConnectorProps> = ({
           <ButtonTab
             id="marketplace"
             name={getTabDisplayName("marketplace")}
+            badge={marketplaceBadge}
             isActive={selectedTab === "marketplace"}
             onSelect={() => setSelectedTab("marketplace")}
           />
@@ -258,6 +282,7 @@ export const SelectConnector: React.FC<SelectConnectorProps> = ({
             <ButtonTab
               id="custom"
               name={getTabDisplayName("custom")}
+              badge={customBadge}
               isActive={selectedTab === "custom"}
               onSelect={() => setSelectedTab("custom")}
             />
