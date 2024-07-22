@@ -14,6 +14,7 @@ import io.airbyte.config.ConnectorInfo
 import io.github.oshai.kotlinlogging.KotlinLogging
 import io.micronaut.cache.annotation.CacheConfig
 import io.micronaut.cache.annotation.Cacheable
+import io.micronaut.context.annotation.Requires
 import io.micronaut.http.HttpHeaders
 import io.micronaut.http.MediaType
 import jakarta.inject.Named
@@ -29,6 +30,7 @@ private val logger = KotlinLogging.logger {}
 
 @Singleton
 @CacheConfig("platform-compatibility-provider")
+@Requires(property = "airbyte.deployment-mode", notEquals = "CLOUD")
 open class AirbyteCompatibleConnectorVersionsProvider(
   @Named("platformCompatibilityClient") val okHttpClient: OkHttpClient,
 ) {

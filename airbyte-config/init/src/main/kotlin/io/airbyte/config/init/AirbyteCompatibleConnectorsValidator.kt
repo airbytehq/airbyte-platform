@@ -7,17 +7,49 @@ package io.airbyte.config.init
 import io.airbyte.commons.version.AirbyteVersion
 import io.airbyte.config.CompatibilityRule
 import io.github.oshai.kotlinlogging.KotlinLogging
+import io.micronaut.context.annotation.Requires
 import jakarta.inject.Singleton
 import org.semver4j.Semver
 
 private val logger = KotlinLogging.logger {}
 
+interface AirbyteCompatibleConnectorsValidator {
+  fun validate(
+    connectorId: String,
+    connectorVersion: String,
+  ): ConnectorPlatformCompatibilityValidationResult
+
+  fun validateDeclarativeManifest(connectorVersion: String): ConnectorPlatformCompatibilityValidationResult {
+    return validate(DECLARATIVE_MANIFEST_DEFINITION_ID, connectorVersion)
+  }
+
+  companion object {
+    const val DECLARATIVE_MANIFEST_DEFINITION_ID = "8dbab097-db1e-4555-87e8-52f5f94bfad4"
+  }
+}
+
 @Singleton
-class AirbyteCompatibleConnectorsValidator(
+@Requires(property = "airbyte.deployment-mode", value = "CLOUD")
+class AlwaysValidAirbyteCompatibleConnectorsValidator : AirbyteCompatibleConnectorsValidator {
+  constructor() {
+    logger.info { "Airbyte connector <> platform compatibility validation disabled.  All connector versions will be considered valid." }
+  }
+
+  override fun validate(
+    connectorId: String,
+    connectorVersion: String,
+  ): ConnectorPlatformCompatibilityValidationResult {
+    return ConnectorPlatformCompatibilityValidationResult(isValid = true, message = null)
+  }
+}
+
+@Singleton
+@Requires(property = "airbyte.deployment-mode", notEquals = "CLOUD")
+class RealAirbyteCompatibleConnectorsValidator(
   private val airbyteCompatibleConnectorVersionsProvider: AirbyteCompatibleConnectorVersionsProvider,
   private val airbyteVersion: AirbyteVersion,
-) {
-  fun validate(
+) : AirbyteCompatibleConnectorsValidator {
+  override fun validate(
     connectorId: String,
     connectorVersion: String,
   ): ConnectorPlatformCompatibilityValidationResult {
@@ -44,13 +76,9 @@ class AirbyteCompatibleConnectorsValidator(
       }
       return ConnectorPlatformCompatibilityValidationResult(isValid = true, message = null)
     } catch (e: Exception) {
-      logger.debug(e) { "Exception while trying to validate the connector, defaulting to valid" }
+      logger.warn(e) { "Exception while trying to validate the connector '$connectorId:$connectorVersion', defaulting to valid." }
       return ConnectorPlatformCompatibilityValidationResult(isValid = true, message = null)
     }
-  }
-
-  fun validateDeclarativeManifest(connectorVersion: String): ConnectorPlatformCompatibilityValidationResult {
-    return validate(DECLARATIVE_MANIFEST_DEFINITION_ID, connectorVersion)
   }
 
   private fun validateConnectorCompatibility(
@@ -77,10 +105,6 @@ class AirbyteCompatibleConnectorsValidator(
             " Compatible Airbyte Version(s): ${compatibilityRule.airbyteVersion}",
       )
     }
-  }
-
-  companion object {
-    const val DECLARATIVE_MANIFEST_DEFINITION_ID = "8dbab097-db1e-4555-87e8-52f5f94bfad4"
   }
 }
 

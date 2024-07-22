@@ -49,7 +49,7 @@ internal class AirbyteCompatibleConnectorsValidatorTest {
     val airbyteCompatibleConnectorVersionsProvider: AirbyteCompatibleConnectorVersionsProvider = mockk()
     val airbyteVersion = AirbyteVersion(currentAirbyteVersion)
     val validator =
-      AirbyteCompatibleConnectorsValidator(
+      RealAirbyteCompatibleConnectorsValidator(
         airbyteCompatibleConnectorVersionsProvider = airbyteCompatibleConnectorVersionsProvider,
         airbyteVersion = airbyteVersion,
       )
@@ -68,28 +68,6 @@ internal class AirbyteCompatibleConnectorsValidatorTest {
         result.message,
       )
     }
-  }
-
-  private fun getCompatibilityMatrix(
-    connectorId: UUID,
-    connectorVersion: String,
-    incompatibleAirbyteVersion: String,
-  ): AirbyteCompatibleConnectorVersionsMatrix {
-    return AirbyteCompatibleConnectorVersionsMatrix().withCompatibleConnectors(
-      listOf(
-        ConnectorInfo()
-          .withConnectorName(CONNECTOR_NAME)
-          .withConnectorType("type")
-          .withConnectorDefinitionId(connectorId)
-          .withCompatibilityMatrix(
-            listOf(
-              CompatibilityRule()
-                .withConnectorVersion(connectorVersion)
-                .withAirbyteVersion(incompatibleAirbyteVersion),
-            ),
-          ),
-      ),
-    )
   }
 
   @Test
@@ -118,7 +96,7 @@ internal class AirbyteCompatibleConnectorsValidatorTest {
           ),
         )
     val validator =
-      AirbyteCompatibleConnectorsValidator(
+      RealAirbyteCompatibleConnectorsValidator(
         airbyteCompatibleConnectorVersionsProvider = airbyteCompatibleConnectorVersionsProvider,
         airbyteVersion = airbyteVersion,
       )
@@ -138,7 +116,7 @@ internal class AirbyteCompatibleConnectorsValidatorTest {
     val airbyteCompatibleConnectorVersionsProvider: AirbyteCompatibleConnectorVersionsProvider = mockk()
     val airbyteVersion = AirbyteVersion("1.2.3")
     val validator =
-      AirbyteCompatibleConnectorsValidator(
+      RealAirbyteCompatibleConnectorsValidator(
         airbyteCompatibleConnectorVersionsProvider = airbyteCompatibleConnectorVersionsProvider,
         airbyteVersion = airbyteVersion,
       )
@@ -147,5 +125,35 @@ internal class AirbyteCompatibleConnectorsValidatorTest {
       AirbyteCompatibleConnectorVersionsMatrix().convertToMap()
     val result = validator.validate(connectorId = connectorId, connectorVersion = connectorVersion)
     assertEquals(true, result.isValid)
+  }
+
+  @Test
+  internal fun testAlwaysValidValidator() {
+    val validator = AlwaysValidAirbyteCompatibleConnectorsValidator()
+    assertEquals(true, validator.validate(connectorId = CONNECTOR_NAME, connectorVersion = "some version").isValid)
+    assertEquals(true, validator.validate(connectorId = CONNECTOR_NAME, connectorVersion = "1.2.3").isValid)
+    assertEquals(true, validator.validate(connectorId = CONNECTOR_NAME, connectorVersion = "dev").isValid)
+  }
+
+  private fun getCompatibilityMatrix(
+    connectorId: UUID,
+    connectorVersion: String,
+    incompatibleAirbyteVersion: String,
+  ): AirbyteCompatibleConnectorVersionsMatrix {
+    return AirbyteCompatibleConnectorVersionsMatrix().withCompatibleConnectors(
+      listOf(
+        ConnectorInfo()
+          .withConnectorName(CONNECTOR_NAME)
+          .withConnectorType("type")
+          .withConnectorDefinitionId(connectorId)
+          .withCompatibilityMatrix(
+            listOf(
+              CompatibilityRule()
+                .withConnectorVersion(connectorVersion)
+                .withAirbyteVersion(incompatibleAirbyteVersion),
+            ),
+          ),
+      ),
+    )
   }
 }
