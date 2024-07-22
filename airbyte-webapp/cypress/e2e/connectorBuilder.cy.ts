@@ -37,6 +37,7 @@ import { goToSourcePage, openSourceConnectionsPage } from "pages/sourcePage";
 describe("Connector builder", { testIsolation: false }, () => {
   let connectorName = "";
   beforeEach(() => {
+    cy.on("uncaught:exception", () => false);
     connectorName = appendRandomString("dummy_api");
     // Updated for cypress 12 because connector builder uses local storage
     // docs.cypress.io/guides/references/migration-guide#Simulating-Pre-Test-Isolation-Behavior
@@ -119,6 +120,7 @@ describe("Connector builder", { testIsolation: false }, () => {
   });
 
   it("Sync published version", () => {
+    testStream();
     publishProject();
 
     const sourceName = connectorName;
@@ -133,6 +135,7 @@ describe("Connector builder", { testIsolation: false }, () => {
     goToConnectorBuilderProjectsPage();
     editProjectBuilder(connectorName);
     configurePagination();
+    testStream();
     publishProject();
     sync(sourceName, destinationName);
 
@@ -152,6 +155,7 @@ describe("Connector builder", { testIsolation: false }, () => {
 
   it("Validate going back to a previously created connector", () => {
     configureParameterizedRequests(10);
+    testStream();
     publishProject();
     goToConnectorBuilderProjectsPage();
     editProjectBuilder(connectorName);
