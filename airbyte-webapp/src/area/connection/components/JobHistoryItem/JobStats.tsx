@@ -55,15 +55,6 @@ export const JobStats: React.FC<JobStatsProps> = ({ jobWithAttempts }) => {
             </Text>
             <Text as="span" color="grey500" size="sm">
               <FormattedMessage
-                id="sources.countRecordsExtracted"
-                values={{ count: job.aggregatedStats.recordsEmitted || 0 }}
-              />
-            </Text>
-            <Text as="span" color="grey500" size="sm">
-              |
-            </Text>
-            <Text as="span" color="grey500" size="sm">
-              <FormattedMessage
                 id="sources.countRecordsLoaded"
                 values={{ count: job.aggregatedStats.recordsCommitted || 0 }}
               />
