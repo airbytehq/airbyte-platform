@@ -1,4 +1,5 @@
 import { FormattedMessage, useIntl } from "react-intl";
+import { useEffectOnce } from "react-use";
 
 import { ConnectionSyncContextProvider } from "components/connection/ConnectionSync/ConnectionSyncContext";
 import { PageContainer } from "components/PageContainer";
@@ -39,6 +40,8 @@ export const ConnectionTimelinePage: React.FC = () => {
     eventType: null,
     eventId: null,
     openLogs: null,
+    jobId: null,
+    attemptNumber: null,
   });
 
   const connectionEventsToShow = connectionEvents.filter((connectionEvent) => {
@@ -62,10 +65,21 @@ export const ConnectionTimelinePage: React.FC = () => {
     return true;
   });
 
-  if (filterValues.openLogs === "true" && filterValues.eventId) {
-    const jobId = 55874; // todo: calculate this by fetching single connection timeline event from API based on filterValues.eventId once get endpoint is merged!
-    openJobLogsModalFromTimeline(openModal, jobId, formatMessage, connection.name ?? "");
-  }
+  useEffectOnce(() => {
+    if (filterValues.openLogs === "true" && (filterValues.eventId || filterValues.jobId)) {
+      const event = { jobId: 55874 };
+      const jobIdFromFilter = parseInt(filterValues.jobId ?? "");
+      const attemptNumberFromFilter = parseInt(filterValues.attemptNumber ?? "");
+
+      openJobLogsModalFromTimeline({
+        openModal,
+        jobId: !isNaN(jobIdFromFilter) ? jobIdFromFilter : event.jobId,
+        formatMessage,
+        connectionName: connection.name ?? "",
+        initialAttemptId: !isNaN(attemptNumberFromFilter) ? attemptNumberFromFilter : undefined,
+      });
+    }
+  });
 
   return (
     <PageContainer centered>

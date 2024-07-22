@@ -137,6 +137,8 @@ export interface TimelineFilterValues {
   eventType: "sync" | "clear" | "refresh" | null;
   eventId: string | null;
   openLogs: "true" | "false" | null;
+  jobId: string | null;
+  attemptNumber: string | null;
 }
 
 export const eventTypeByFilterValue: Record<
