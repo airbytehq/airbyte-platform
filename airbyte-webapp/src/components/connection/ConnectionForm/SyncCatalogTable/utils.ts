@@ -1,4 +1,4 @@
-import { CoreOptions, Row } from "@tanstack/react-table";
+import { Row } from "@tanstack/react-table";
 import isEqual from "lodash/isEqual";
 
 import {
@@ -10,19 +10,24 @@ import { Path, SyncSchemaField, SyncSchemaFieldObject, traverseSchemaToField } f
 
 import { SyncCatalogUIModel } from "./SyncCatalogTable";
 import { StatusToDisplay } from "../../syncCatalog/StreamsConfigTable/useStreamsConfigTableRowProps";
-import { compareObjectsByFields, flattenSyncSchemaFields, getFieldPathDisplayName } from "../../syncCatalog/utils";
+import { compareObjectsByFields, getFieldPathDisplayName } from "../../syncCatalog/utils";
 import { FormConnectionFormValues, SyncStreamFieldWithId } from "../formConfig";
 import { isSameSyncStream } from "../utils";
 
 // Streams
-export const getStreamRows = (
+/**
+ * Prepare all levels of rows: stream => fields => nestedFields
+ * @param streams
+ * @param initialStreams
+ * @param prefix
+ */
+export const getSyncCatalogRows = (
   streams: SyncStreamFieldWithId[],
   initialStreams: FormConnectionFormValues["syncCatalog"]["streams"],
   prefix?: string
 ) =>
   streams.map((streamNode) => {
     const traversedFields = traverseSchemaToField(streamNode.stream?.jsonSchema, streamNode.stream?.name);
-    const flattenedFields = flattenSyncSchemaFields(traversedFields);
 
     const initialStreamNode = initialStreams.find((item) =>
       isSameSyncStream(item, streamNode.stream?.name, streamNode.stream?.namespace)
@@ -34,25 +39,29 @@ export const getStreamRows = (
       name: `${prefix ? prefix : ""}${streamNode.stream?.name || ""}`,
       namespace: streamNode.stream?.namespace || "",
       isEnabled: streamNode.config?.selected,
-      traversedFields,
-      flattenedFields,
+      traversedFields, // we need all traversed fields for updating field
+      subRows: traversedFields.map((rowField) => {
+        return {
+          streamNode,
+          initialStreamNode,
+          name: getFieldPathDisplayName(rowField.path),
+          field: rowField,
+          traversedFields,
+          subRows: rowField?.fields?.map((nestedField) => {
+            return {
+              streamNode,
+              initialStreamNode,
+              name: getFieldPathDisplayName(nestedField.path),
+              field: nestedField,
+              traversedFields,
+            };
+          }),
+        };
+      }),
     };
   });
 
 export const isStreamRow = (row: Row<SyncCatalogUIModel>) => row.depth === 0;
-
-/**
- * react-table subRows should have the same structure as parent row(stream)
- * that's why some props in SyncCatalogUIModel are optional
- */
-export const getStreamFieldRows: CoreOptions<SyncCatalogUIModel>["getSubRows"] = (row) =>
-  row?.flattenedFields?.map((field) => ({
-    streamNode: row.streamNode,
-    initialStreamNode: row.initialStreamNode,
-    name: getFieldPathDisplayName(field.path), // need for global filtering
-    field,
-    traversedFields: row.traversedFields, // we need all traversed fields for updating field
-  }));
 
 // Stream  Fields
 /*
