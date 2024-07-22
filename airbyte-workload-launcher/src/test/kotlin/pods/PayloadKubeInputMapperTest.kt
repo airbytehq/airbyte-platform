@@ -23,8 +23,6 @@ import io.airbyte.workers.process.KubePodInfo
 import io.airbyte.workers.process.Metadata.AWS_ASSUME_ROLE_EXTERNAL_ID
 import io.airbyte.workers.sync.OrchestratorConstants
 import io.airbyte.workers.sync.ReplicationLauncherWorker
-import io.airbyte.workers.sync.ReplicationLauncherWorker.INIT_FILE_DESTINATION_LAUNCHER_CONFIG
-import io.airbyte.workers.sync.ReplicationLauncherWorker.INIT_FILE_SOURCE_LAUNCHER_CONFIG
 import io.airbyte.workload.launcher.config.OrchestratorEnvSingleton
 import io.airbyte.workload.launcher.model.getActorType
 import io.airbyte.workload.launcher.model.getAttemptId
@@ -124,8 +122,6 @@ class PayloadKubeInputMapperTest {
           OrchestratorConstants.INIT_FILE_APPLICATION to ReplicationLauncherWorker.REPLICATION,
           OrchestratorConstants.INIT_FILE_JOB_RUN_CONFIG to mockSerializedOutput,
           OrchestratorConstants.INIT_FILE_INPUT to mockSerializedOutput,
-          INIT_FILE_SOURCE_LAUNCHER_CONFIG to mockSerializedOutput,
-          INIT_FILE_DESTINATION_LAUNCHER_CONFIG to mockSerializedOutput,
           KUBE_POD_INFO to mockSerializedOutput,
           OrchestratorConstants.WORKLOAD_ID_FILE to workloadId,
         ),
@@ -244,7 +240,6 @@ class PayloadKubeInputMapperTest {
     Assertions.assertEquals(pullPolicy, result.kubePodInfo.mainContainerInfo.pullPolicy)
     Assertions.assertEquals(
       mapOf(
-        OrchestratorConstants.INIT_FILE_JOB_RUN_CONFIG to mockSerializedOutput,
         OrchestratorConstants.CONNECTION_CONFIGURATION to mockSerializedOutput,
         OrchestratorConstants.SIDECAR_INPUT to mockSerializedOutput,
       ),
@@ -379,7 +374,6 @@ class PayloadKubeInputMapperTest {
     Assertions.assertEquals(pullPolicy, result.kubePodInfo.mainContainerInfo.pullPolicy)
     Assertions.assertEquals(
       mapOf(
-        OrchestratorConstants.INIT_FILE_JOB_RUN_CONFIG to mockSerializedOutput,
         OrchestratorConstants.CONNECTION_CONFIGURATION to mockSerializedOutput,
         OrchestratorConstants.SIDECAR_INPUT to mockSerializedOutput,
       ),
@@ -489,7 +483,6 @@ class PayloadKubeInputMapperTest {
     Assertions.assertEquals(pullPolicy, result.kubePodInfo.mainContainerInfo.pullPolicy)
     Assertions.assertEquals(
       mapOf(
-        OrchestratorConstants.INIT_FILE_JOB_RUN_CONFIG to mockSerializedOutput,
         OrchestratorConstants.SIDECAR_INPUT to mockSerializedOutput,
       ),
       result.fileMap,

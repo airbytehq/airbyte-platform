@@ -22,8 +22,6 @@ import io.airbyte.workers.process.KubeContainerInfo
 import io.airbyte.workers.process.KubePodInfo
 import io.airbyte.workers.process.Metadata.AWS_ASSUME_ROLE_EXTERNAL_ID
 import io.airbyte.workers.sync.OrchestratorConstants
-import io.airbyte.workers.sync.ReplicationLauncherWorker.INIT_FILE_DESTINATION_LAUNCHER_CONFIG
-import io.airbyte.workers.sync.ReplicationLauncherWorker.INIT_FILE_SOURCE_LAUNCHER_CONFIG
 import io.airbyte.workers.sync.ReplicationLauncherWorker.REPLICATION
 import io.airbyte.workload.launcher.config.OrchestratorEnvSingleton
 import io.airbyte.workload.launcher.model.getAttemptId
@@ -127,7 +125,7 @@ class PayloadKubeInputMapper(
         getNodeSelectors(input.launcherConfig.isCustomConnector, checkWorkerConfigs)
       }
 
-    val fileMap = buildCheckFileMap(workloadId, input, input.jobRunConfig, logPath)
+    val fileMap = buildCheckFileMap(workloadId, input, logPath)
 
     val extraEnv = resolveAwsAssumedRoleEnvVars(input.launcherConfig)
 
@@ -169,7 +167,7 @@ class PayloadKubeInputMapper(
         getNodeSelectors(input.usesCustomConnector(), discoverWorkerConfigs)
       }
 
-    val fileMap = buildDiscoverFileMap(workloadId, input, input.jobRunConfig, logPath)
+    val fileMap = buildDiscoverFileMap(workloadId, input, logPath)
 
     val extraEnv = resolveAwsAssumedRoleEnvVars(input.launcherConfig)
 
@@ -206,7 +204,7 @@ class PayloadKubeInputMapper(
 
     val nodeSelectors = getNodeSelectors(input.usesCustomConnector(), specWorkerConfigs)
 
-    val fileMap = buildSpecFileMap(workloadId, input, input.jobRunConfig, logPath)
+    val fileMap = buildSpecFileMap(workloadId, input, logPath)
 
     return ConnectorKubeInput(
       labeler.getSpecLabels() + sharedLabels,
@@ -255,90 +253,76 @@ class PayloadKubeInputMapper(
     jobRunConfig: JobRunConfig,
     kubePodInfo: KubePodInfo,
   ): Map<String, String> {
-    return sharedFileMap(jobRunConfig) +
-      mapOf(
-        OrchestratorConstants.INIT_FILE_INPUT to serializer.serialize(input),
-        OrchestratorConstants.INIT_FILE_APPLICATION to REPLICATION,
-        OrchestratorConstants.INIT_FILE_ENV_MAP to serializer.serialize(orchestratorEnvSingleton.orchestratorEnvMap(input.connectionId)),
-        OrchestratorConstants.WORKLOAD_ID_FILE to workloadId,
-        INIT_FILE_SOURCE_LAUNCHER_CONFIG to serializer.serialize(input.sourceLauncherConfig),
-        INIT_FILE_DESTINATION_LAUNCHER_CONFIG to serializer.serialize(input.destinationLauncherConfig),
-        KUBE_POD_INFO to serializer.serialize(kubePodInfo),
-      )
+    return mapOf(
+      OrchestratorConstants.INIT_FILE_JOB_RUN_CONFIG to serializer.serialize(jobRunConfig),
+      OrchestratorConstants.INIT_FILE_INPUT to serializer.serialize(input),
+      OrchestratorConstants.INIT_FILE_APPLICATION to REPLICATION,
+      OrchestratorConstants.INIT_FILE_ENV_MAP to serializer.serialize(orchestratorEnvSingleton.orchestratorEnvMap(input.connectionId)),
+      OrchestratorConstants.WORKLOAD_ID_FILE to workloadId,
+      KUBE_POD_INFO to serializer.serialize(kubePodInfo),
+    )
   }
 
   private fun buildCheckFileMap(
     workloadId: String,
     input: CheckConnectionInput,
-    jobRunConfig: JobRunConfig,
     logPath: String,
   ): Map<String, String> {
-    return sharedFileMap(jobRunConfig) +
-      mapOf(
-        OrchestratorConstants.CONNECTION_CONFIGURATION to serializer.serialize(input.checkConnectionInput.connectionConfiguration),
-        OrchestratorConstants.SIDECAR_INPUT to
-          serializer.serialize(
-            SidecarInput(
-              input.checkConnectionInput,
-              null,
-              workloadId,
-              input.launcherConfig,
-              OperationType.CHECK,
-              logPath,
-            ),
+    return mapOf(
+      OrchestratorConstants.CONNECTION_CONFIGURATION to serializer.serialize(input.checkConnectionInput.connectionConfiguration),
+      OrchestratorConstants.SIDECAR_INPUT to
+        serializer.serialize(
+          SidecarInput(
+            input.checkConnectionInput,
+            null,
+            workloadId,
+            input.launcherConfig,
+            OperationType.CHECK,
+            logPath,
           ),
-      )
+        ),
+    )
   }
 
   private fun buildDiscoverFileMap(
     workloadId: String,
     input: DiscoverCatalogInput,
-    jobRunConfig: JobRunConfig,
     logPath: String,
   ): Map<String, String> {
-    return sharedFileMap(jobRunConfig) +
-      mapOf(
-        OrchestratorConstants.CONNECTION_CONFIGURATION to serializer.serialize(input.discoverCatalogInput.connectionConfiguration),
-        OrchestratorConstants.SIDECAR_INPUT to
-          serializer.serialize(
-            SidecarInput(
-              null,
-              input.discoverCatalogInput,
-              workloadId,
-              input.launcherConfig,
-              OperationType.DISCOVER,
-              logPath,
-            ),
+    return mapOf(
+      OrchestratorConstants.CONNECTION_CONFIGURATION to serializer.serialize(input.discoverCatalogInput.connectionConfiguration),
+      OrchestratorConstants.SIDECAR_INPUT to
+        serializer.serialize(
+          SidecarInput(
+            null,
+            input.discoverCatalogInput,
+            workloadId,
+            input.launcherConfig,
+            OperationType.DISCOVER,
+            logPath,
           ),
-      )
+        ),
+    )
   }
 
   private fun buildSpecFileMap(
     workloadId: String,
     input: SpecInput,
-    jobRunConfig: JobRunConfig,
     logPath: String,
   ): Map<String, String> {
-    return sharedFileMap(jobRunConfig) +
-      mapOf(
-        OrchestratorConstants.SIDECAR_INPUT to
-          serializer.serialize(
-            SidecarInput(
-              null,
-              null,
-              workloadId,
-              input.launcherConfig,
-              // TODO: change to OperationType.SPEC once we add it to the sidecar
-              OperationType.SPEC,
-              logPath,
-            ),
-          ),
-      )
-  }
-
-  private fun sharedFileMap(jobRunConfig: JobRunConfig): Map<String, String> {
     return mapOf(
-      OrchestratorConstants.INIT_FILE_JOB_RUN_CONFIG to serializer.serialize(jobRunConfig),
+      OrchestratorConstants.SIDECAR_INPUT to
+        serializer.serialize(
+          SidecarInput(
+            null,
+            null,
+            workloadId,
+            input.launcherConfig,
+            // TODO: change to OperationType.SPEC once we add it to the sidecar
+            OperationType.SPEC,
+            logPath,
+          ),
+        ),
     )
   }
 }
