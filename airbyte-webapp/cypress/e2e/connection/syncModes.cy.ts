@@ -65,7 +65,7 @@ const saveConnectionAndAssertStreams = (
   { expectModal = true }: { expectModal?: boolean } | undefined = {}
 ) => {
   replicationPage
-    .saveChangesAndHandleResetModal({ interceptUpdateHandler: modifyAccountsTableInterceptHandler, expectModal })
+    .saveChangesAndHandleRefreshModal({ interceptUpdateHandler: modifyAccountsTableInterceptHandler, expectModal })
     .then((connection) => {
       const stream = connection.syncCatalog.streams.find(
         ({ stream }) => stream?.namespace === expectedSyncMode.namespace && stream.name === expectedSyncMode.name
