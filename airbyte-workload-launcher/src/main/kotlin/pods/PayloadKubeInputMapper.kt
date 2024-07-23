@@ -23,7 +23,6 @@ import io.airbyte.workers.process.KubePodInfo
 import io.airbyte.workers.process.Metadata.AWS_ASSUME_ROLE_EXTERNAL_ID
 import io.airbyte.workers.sync.OrchestratorConstants
 import io.airbyte.workers.sync.ReplicationLauncherWorker.REPLICATION
-import io.airbyte.workload.launcher.config.OrchestratorEnvSingleton
 import io.airbyte.workload.launcher.model.getAttemptId
 import io.airbyte.workload.launcher.model.getJobId
 import io.airbyte.workload.launcher.model.getOrchestratorResourceReqs
@@ -43,7 +42,6 @@ class PayloadKubeInputMapper(
   private val serializer: ObjectSerializer,
   private val labeler: PodLabeler,
   private val podNameGenerator: PodNameGenerator,
-  private val orchestratorEnvSingleton: OrchestratorEnvSingleton,
   @Value("\${airbyte.worker.job.kube.namespace}") private val namespace: String?,
   @Named("orchestratorKubeContainerInfo") private val orchestratorKubeContainerInfo: KubeContainerInfo,
   @Named("connectorAwsAssumedRoleSecretEnv") private val connectorAwsAssumedRoleSecretEnvList: List<EnvVar>,
@@ -257,7 +255,6 @@ class PayloadKubeInputMapper(
       OrchestratorConstants.INIT_FILE_JOB_RUN_CONFIG to serializer.serialize(jobRunConfig),
       OrchestratorConstants.INIT_FILE_INPUT to serializer.serialize(input),
       OrchestratorConstants.INIT_FILE_APPLICATION to REPLICATION,
-      OrchestratorConstants.INIT_FILE_ENV_MAP to serializer.serialize(orchestratorEnvSingleton.orchestratorEnvMap(input.connectionId)),
       OrchestratorConstants.WORKLOAD_ID_FILE to workloadId,
       KUBE_POD_INFO to serializer.serialize(kubePodInfo),
     )

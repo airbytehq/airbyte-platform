@@ -20,7 +20,6 @@ object OrchestratorConstants {
   const val JOB_OUTPUT_FILENAME = "jobOutput.json"
   const val CONNECTION_CONFIGURATION = "connectionConfiguration.json"
   const val EXIT_CODE_FILE = "exitCode.txt"
-  const val INIT_FILE_ENV_MAP = "envMap.json"
   const val INIT_FILE_INPUT = "input.json"
   const val INIT_FILE_JOB_RUN_CONFIG = "jobRunConfig.json"
   const val INIT_FILE_APPLICATION = "application.txt"

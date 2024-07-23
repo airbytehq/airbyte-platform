@@ -146,9 +146,7 @@ public abstract class LauncherWorker<INPUT, OUTPUT> implements Worker<INPUT, OUT
       fileMap.putAll(Map.of(
           OrchestratorConstants.INIT_FILE_APPLICATION, application,
           OrchestratorConstants.INIT_FILE_JOB_RUN_CONFIG, Jsons.serialize(jobRunConfig),
-          OrchestratorConstants.INIT_FILE_INPUT, Jsons.serialize(input),
-          // OrchestratorConstants.INIT_FILE_ENV_MAP might be duplicated since the pod env contains everything
-          OrchestratorConstants.INIT_FILE_ENV_MAP, Jsons.serialize(envMap)));
+          OrchestratorConstants.INIT_FILE_INPUT, Jsons.serialize(input)));
 
       final Map<Integer, Integer> portMap = Map.of(
           serverPort, serverPort,

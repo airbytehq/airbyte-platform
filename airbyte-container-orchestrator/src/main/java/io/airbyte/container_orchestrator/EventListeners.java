@@ -9,15 +9,11 @@ import io.airbyte.config.EnvConfigs;
 import io.airbyte.config.helpers.LogClientSingleton;
 import io.airbyte.config.helpers.LogConfigs;
 import io.airbyte.persistence.job.models.JobRunConfig;
-import io.airbyte.workers.sync.OrchestratorConstants;
 import io.micronaut.runtime.event.annotation.EventListener;
 import io.micronaut.runtime.server.event.ServerStartupEvent;
 import jakarta.inject.Inject;
-import jakarta.inject.Named;
 import jakarta.inject.Singleton;
 import java.lang.invoke.MethodHandles;
-import java.util.Map;
-import java.util.function.BiFunction;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.core.LoggerContext;
 import org.slf4j.Logger;
@@ -30,52 +26,17 @@ import org.slf4j.LoggerFactory;
 public class EventListeners {
 
   private static final Logger log = LoggerFactory.getLogger(MethodHandles.lookup().lookupClass());
-  private final Map<String, String> envVars;
   private final EnvConfigs configs;
   private final JobRunConfig jobRunConfig;
   private final LogConfigs logConfigs;
-  private final BiFunction<String, String, Void> propertySetter;
 
   @Inject
-  EventListeners(@Named("envVars") final Map<String, String> envVars,
-                 final EnvConfigs configs,
+  EventListeners(final EnvConfigs configs,
                  final JobRunConfig jobRunConfig,
                  final LogConfigs logConfigs) {
-    this(envVars, configs, jobRunConfig, logConfigs, (name, value) -> {
-      System.setProperty(name, value);
-      return null;
-    });
-  }
-
-  /**
-   * Exists only for overriding the default property setter for testing.
-   */
-  protected EventListeners(@Named("envVars") final Map<String, String> envVars,
-                           final EnvConfigs configs,
-                           final JobRunConfig jobRunConfig,
-                           final LogConfigs logConfigs,
-                           final BiFunction<String, String, Void> propertySetter) {
-    this.envVars = envVars;
     this.configs = configs;
     this.jobRunConfig = jobRunConfig;
     this.logConfigs = logConfigs;
-    this.propertySetter = propertySetter;
-  }
-
-  /**
-   * Configures the environment variables for this app.
-   * <p>
-   * Should this be replaced with env-vars set on the container itself?
-   *
-   * @param unused required so Micronaut knows when to run this event-listener, but not used
-   */
-  @EventListener
-  void setEnvVars(final ServerStartupEvent unused) {
-    log.debug("settings env vars");
-
-    OrchestratorConstants.ENV_VARS_TO_TRANSFER.stream()
-        .filter(envVars::containsKey)
-        .forEach(envVar -> propertySetter.apply(envVar, envVars.get(envVar)));
   }
 
   /**

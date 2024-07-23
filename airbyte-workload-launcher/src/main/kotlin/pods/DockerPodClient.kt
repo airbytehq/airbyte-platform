@@ -89,7 +89,6 @@ class DockerPodClient(
     jobRunConfig: JobRunConfig,
   ): Map<String, String> {
     return mapOf(
-      OrchestratorConstants.INIT_FILE_ENV_MAP to serializer.serialize(orchestratorEnvSingleton.orchestratorEnvMap(input.connectionId)),
       OrchestratorConstants.INIT_FILE_JOB_RUN_CONFIG to serializer.serialize(jobRunConfig),
       AsyncOrchestratorPodProcess.KUBE_POD_INFO to
         serializer.serialize(

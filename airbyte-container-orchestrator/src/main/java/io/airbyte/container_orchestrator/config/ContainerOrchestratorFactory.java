@@ -42,7 +42,6 @@ import jakarta.inject.Named;
 import jakarta.inject.Singleton;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
-import java.util.Map;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 
@@ -64,8 +63,8 @@ class ContainerOrchestratorFactory {
   }
 
   @Singleton
-  EnvConfigs envConfigs(@Named("envVars") final Map<String, String> env) {
-    return new EnvConfigs(env);
+  EnvConfigs envConfigs() {
+    return new EnvConfigs();
   }
 
   @Singleton
