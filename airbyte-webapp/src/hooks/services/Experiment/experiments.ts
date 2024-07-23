@@ -15,8 +15,6 @@ export interface Experiments {
   "connection.onboarding.sources": string;
   "connection.streamCentricUI.errorMultiplier": number;
   "connection.streamCentricUI.lateMultiplier": number;
-  "connection.streamCentricUI.v2": boolean;
-  "connection.streamCentricUI.historicalOverview": boolean;
   "connection.rateLimitedUI": boolean;
   "connection.timeline": boolean;
   "connection.jobCancellationModal": boolean;
