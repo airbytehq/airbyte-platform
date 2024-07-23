@@ -329,9 +329,9 @@ class StandardSyncPersistenceTest extends BaseConfigDatabaseTest {
     assertEquals(2, notificationConfigurations.size());
     assertEquals(NotificationType.email,
         notificationConfigurations.stream().filter(notificationConfigurationRecord -> notificationConfigurationRecord.getConnectionId()
-            .equals(syncGa.getConnectionId())).map(record -> record.getNotificationType()).findFirst().get());
+            .equals(syncGa.getConnectionId())).map(NotificationConfigurationRecord::getNotificationType).findFirst().get());
     assertFalse(notificationConfigurations.stream().filter(notificationConfigurationRecord -> notificationConfigurationRecord.getConnectionId()
-        .equals(syncGa.getConnectionId())).map(record -> record.getEnabled()).findFirst().get());
+        .equals(syncGa.getConnectionId())).map(NotificationConfigurationRecord::getEnabled).findFirst().get());
   }
 
   private List<NotificationConfigurationRecord> getNotificationConfigurations() throws SQLException {

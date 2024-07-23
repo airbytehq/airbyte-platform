@@ -27,6 +27,7 @@ import java.io.IOException;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -55,10 +56,8 @@ public class JobErrorReporter {
   private static final String CONNECTOR_COMMAND_META_KEY = "connector_command";
   private static final String JOB_ID_KEY = "job_id";
 
-  private static final ImmutableSet<FailureType> UNSUPPORTED_FAILURETYPES =
+  private static final Set<FailureType> UNSUPPORTED_FAILURETYPES =
       ImmutableSet.of(FailureType.CONFIG_ERROR, FailureType.MANUAL_CANCELLATION, FailureType.TRANSIENT_ERROR);
-  private static final long COMMUNITY_SUPPORT_LEVEL = 100L;
-  private static final long CRITICAL_SUPPORT_LEVEL = 300L;
 
   private final ConfigRepository configRepository;
   private final DeploymentMode deploymentMode;
@@ -108,6 +107,8 @@ public class JobErrorReporter {
           final FailureOrigin failureOrigin = failureReason.getFailureOrigin();
           LOGGER.info("Reporting failure for jobId '{}' connectionId '{}' origin '{}'", jobContext.jobId(), connectionId, failureOrigin);
 
+          // We only care about the failure origins listed below, i.e. those that come from connectors.
+          // The rest are ignored.
           if (failureOrigin == FailureOrigin.SOURCE) {
             final StandardSourceDefinition sourceDefinition = configRepository.getSourceDefinitionFromConnection(connectionId);
             final ActorDefinitionVersion sourceVersion = configRepository.getActorDefinitionVersion(jobContext.sourceVersionId());
@@ -126,9 +127,6 @@ public class JobErrorReporter {
                     destinationVersion.getInternalSupportLevel()));
 
             reportJobFailureReason(workspace, failureReason, dockerImage, metadata, attemptConfig);
-          } else {
-            // We only care about the above failure origins, i.e. those that come from connectors.
-            // The rest are ignored.
           }
         }
       } catch (final Exception e) {

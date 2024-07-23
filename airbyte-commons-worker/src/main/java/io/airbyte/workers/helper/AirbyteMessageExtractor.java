@@ -33,7 +33,7 @@ public class AirbyteMessageExtractor {
 
   public static List<List<String>> getPks(final Optional<ConfiguredAirbyteStream> catalogStream) {
     return catalogStream
-        .map(stream -> stream.getPrimaryKey())
+        .map(ConfiguredAirbyteStream::getPrimaryKey)
         .orElse(new ArrayList<>());
   }
 

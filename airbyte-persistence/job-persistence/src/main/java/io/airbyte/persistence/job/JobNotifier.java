@@ -41,17 +41,12 @@ import io.airbyte.persistence.job.models.Job;
 import io.airbyte.persistence.job.models.JobStatus;
 import io.airbyte.persistence.job.tracker.TrackingMetadata;
 import io.micronaut.core.util.functional.ThrowingFunction;
-import java.time.Duration;
 import java.time.Instant;
-import java.time.ZoneId;
-import java.time.format.DateTimeFormatter;
-import java.time.format.FormatStyle;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.stream.Collectors;
-import org.apache.commons.lang3.time.DurationFormatUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -194,20 +189,6 @@ public class JobNotifier {
 
     MetricClientFactory.getMetricClient().count(OssMetricsRegistry.NOTIFICATIONS_SENT, 1, metricClientAttribute,
         metricTriggerAttribute);
-  }
-
-  private String getJobDescription(final Job job, final String reason) {
-    final Instant jobStartedDate = Instant.ofEpochSecond(job.getStartedAtInSecond().orElse(job.getCreatedAtInSecond()));
-    final DateTimeFormatter formatter = DateTimeFormatter.ofLocalizedDateTime(FormatStyle.FULL)
-        .withZone(ZoneId.systemDefault());
-    final Instant jobUpdatedDate = Instant.ofEpochSecond(job.getUpdatedAtInSecond());
-    final Instant adjustedJobUpdatedDate = jobUpdatedDate.equals(jobStartedDate) ? Instant.now() : jobUpdatedDate;
-    final Duration duration = Duration.between(jobStartedDate, adjustedJobUpdatedDate);
-    final String durationString = DurationFormatUtils.formatDurationWords(duration.toMillis(),
-        true, true);
-
-    return String.format("sync started on %s, running for %s%s.",
-        formatter.format(jobStartedDate), durationString, reason);
   }
 
   public void failJob(final Job job, List<JobPersistence.AttemptStats> attemptStats) {

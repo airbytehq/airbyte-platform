@@ -121,7 +121,7 @@ public class TemporalProxyHelper {
   private <T> TemporalActivityStubInterceptor<T> generateInterceptor(final Class<T> workflowImplClass,
                                                                      final Collection<BeanRegistration<ActivityOptions>> activityOptions) {
     final TemporalActivityStubInterceptor<T> interceptor = new TemporalActivityStubInterceptor(workflowImplClass, activityOptions);
-    activityStubGenerator.ifPresent(a -> interceptor.setActivityStubGenerator(a));
+    activityStubGenerator.ifPresent(interceptor::setActivityStubGenerator);
     return interceptor;
   }
 

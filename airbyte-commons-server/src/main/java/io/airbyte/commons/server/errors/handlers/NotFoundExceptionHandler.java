@@ -31,7 +31,7 @@ public class NotFoundExceptionHandler implements ExceptionHandler<NotFoundExcept
   @Override
   public HttpResponse handle(final HttpRequest request, final NotFoundException exception) {
     final IdNotFoundKnownException idnf = new IdNotFoundKnownException("Object not found. " + exception.getMessage(), exception);
-    LOGGER.error("Not found exception", idnf.getNotFoundKnownExceptionInfo());
+    LOGGER.error("Not found exception {}", idnf.getNotFoundKnownExceptionInfo());
 
     return HttpResponse.status(HttpStatus.NOT_FOUND)
         .body(KnownException.infoFromThrowableWithMessage(exception, "Internal Server Error: " + exception.getMessage()))

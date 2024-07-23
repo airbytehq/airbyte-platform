@@ -29,7 +29,6 @@ import io.airbyte.workers.internal.exception.DestinationException;
 import io.airbyte.workers.internal.exception.SourceException;
 import io.airbyte.workers.process.AsyncKubePodStatus;
 import io.airbyte.workers.workload.JobOutputDocStore;
-import io.airbyte.workers.workload.WorkloadIdGenerator;
 import io.airbyte.workload.api.client.model.generated.WorkloadCancelRequest;
 import io.airbyte.workload.api.client.model.generated.WorkloadFailureRequest;
 import io.airbyte.workload.api.client.model.generated.WorkloadSuccessRequest;
@@ -54,7 +53,6 @@ public class ReplicationJobOrchestrator implements JobOrchestrator<ReplicationIn
   // Used by the orchestrator to mark the job RUNNING once the relevant pods are spun up.
   private final AsyncStateManager asyncStateManager;
   private final WorkloadApiClient workloadApiClient;
-  private final WorkloadIdGenerator workloadIdGenerator;
   private final boolean workloadEnabled;
   private final JobOutputDocStore jobOutputDocStore;
 
@@ -64,7 +62,6 @@ public class ReplicationJobOrchestrator implements JobOrchestrator<ReplicationIn
                                     final ReplicationWorkerFactory replicationWorkerFactory,
                                     final AsyncStateManager asyncStateManager,
                                     final WorkloadApiClient workloadApiClient,
-                                    final WorkloadIdGenerator workloadIdGenerator,
                                     final boolean workloadEnabled,
                                     final JobOutputDocStore jobOutputDocStore) {
     this.configDir = Path.of(configDir);
@@ -73,7 +70,6 @@ public class ReplicationJobOrchestrator implements JobOrchestrator<ReplicationIn
     this.replicationWorkerFactory = replicationWorkerFactory;
     this.asyncStateManager = asyncStateManager;
     this.workloadApiClient = workloadApiClient;
-    this.workloadIdGenerator = workloadIdGenerator;
     this.workloadEnabled = workloadEnabled;
     this.jobOutputDocStore = jobOutputDocStore;
   }

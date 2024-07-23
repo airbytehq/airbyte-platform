@@ -26,7 +26,7 @@ public class DeploymentMetadataApiController implements DeploymentMetadataApi {
 
   @Override
   public DeploymentMetadataRead getDeploymentMetadata() {
-    return ApiHelper.execute(() -> deploymentMetadataHandler.getDeploymentMetadata());
+    return ApiHelper.execute(deploymentMetadataHandler::getDeploymentMetadata);
   }
 
 }

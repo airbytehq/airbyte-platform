@@ -91,6 +91,7 @@ import lombok.extern.slf4j.Slf4j;
  */
 @Singleton
 @Slf4j
+@SuppressWarnings("PMD.ExceptionAsFlowControl")
 public class DiscoverCatalogActivityImpl implements DiscoverCatalogActivity {
 
   static final long DISCOVER_CATALOG_SNAP_DURATION = Duration.ofMinutes(15).toMillis();
@@ -221,7 +222,7 @@ public class DiscoverCatalogActivityImpl implements DiscoverCatalogActivity {
 
     final WorkloadCreateRequest workloadCreateRequest = new WorkloadCreateRequest(
         workloadId,
-        List.of(new WorkloadLabel(Metadata.JOB_LABEL_KEY, jobId.toString()),
+        List.of(new WorkloadLabel(Metadata.JOB_LABEL_KEY, jobId),
             new WorkloadLabel(Metadata.ATTEMPT_LABEL_KEY, String.valueOf(attemptNumber)),
             new WorkloadLabel(Metadata.WORKSPACE_LABEL_KEY, workspaceId.toString()),
             new WorkloadLabel(Metadata.ACTOR_TYPE, String.valueOf(ActorType.SOURCE.toString()))),

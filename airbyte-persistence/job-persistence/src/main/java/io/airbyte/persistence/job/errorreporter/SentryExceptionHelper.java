@@ -11,7 +11,7 @@ import io.sentry.protocol.SentryStackTrace;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
-import java.util.HashMap;
+import java.util.EnumMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -191,7 +191,7 @@ public class SentryExceptionHelper {
         if (lineno != null) {
           stackFrame.setLineno(Integer.valueOf(lineno));
         }
-        if (sourceDescription != null && sourceDescription.equals("Native Method")) {
+        if ("Native Method".equals(sourceDescription)) {
           stackFrame.setNative(true);
         }
 
@@ -261,7 +261,7 @@ public class SentryExceptionHelper {
     // the logic below is built based on the ~450 unique dbt errors we encountered before this PR
     // and is a best effort to isolate the useful part of the error logs for debugging and grouping
     // and bring some semblance of exception 'types' to differentiate between errors.
-    final Map<ErrorMapKeys, String> errorMessageAndType = new HashMap<>();
+    final Map<ErrorMapKeys, String> errorMessageAndType = new EnumMap<>(ErrorMapKeys.class);
     final String[] stacktraceLines = stacktrace.split("\n");
 
     boolean defaultNextLine = false;

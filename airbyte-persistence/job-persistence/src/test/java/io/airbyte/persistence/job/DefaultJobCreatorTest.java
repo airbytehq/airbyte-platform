@@ -229,14 +229,6 @@ class DefaultJobCreatorTest {
         new DefaultJobCreator(jobPersistence, resourceRequirementsProvider, mFeatureFlagClient, streamRefreshesRepository);
   }
 
-  private static Stream<Arguments> provideStreamRefreshJobConfig() {
-    return Stream.of(
-        Arguments.of(RefreshStream.RefreshType.MERGE, true),
-        Arguments.of(RefreshStream.RefreshType.MERGE, false),
-        Arguments.of(RefreshStream.RefreshType.TRUNCATE, true),
-        Arguments.of(RefreshStream.RefreshType.TRUNCATE, false));
-  }
-
   @ParameterizedTest
   @EnumSource(RefreshStream.RefreshType.class)
   void testCreateRefreshJob(final RefreshStream.RefreshType refreshType) throws IOException {

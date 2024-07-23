@@ -34,7 +34,7 @@ import org.slf4j.LoggerFactory;
 /**
  * Helpers for interacting with Workspaces.
  */
-@SuppressWarnings("PMD.AvoidCatchingThrowable")
+@SuppressWarnings({"PMD.AvoidCatchingThrowable", "PMD.PreserveStackTrace"})
 public class WorkspaceHelper {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(WorkspaceHelper.class);

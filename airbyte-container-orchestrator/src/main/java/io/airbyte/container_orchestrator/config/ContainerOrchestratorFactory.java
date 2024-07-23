@@ -32,7 +32,6 @@ import io.airbyte.workers.storage.StorageClientFactory;
 import io.airbyte.workers.sync.OrchestratorConstants;
 import io.airbyte.workers.sync.ReplicationLauncherWorker;
 import io.airbyte.workers.workload.JobOutputDocStore;
-import io.airbyte.workers.workload.WorkloadIdGenerator;
 import io.fabric8.kubernetes.client.DefaultKubernetesClient;
 import io.micronaut.context.annotation.Factory;
 import io.micronaut.context.annotation.Prototype;
@@ -114,12 +113,11 @@ class ContainerOrchestratorFactory {
                                      final ReplicationWorkerFactory replicationWorkerFactory,
                                      final AsyncStateManager asyncStateManager,
                                      final WorkloadApiClient workloadApiClient,
-                                     final WorkloadIdGenerator workloadIdGenerator,
                                      @Value("${airbyte.workload.enabled}") final boolean workloadEnabled,
                                      final JobOutputDocStore jobOutputDocStore) {
     return switch (application) {
       case ReplicationLauncherWorker.REPLICATION -> new ReplicationJobOrchestrator(configDir, envConfigs, jobRunConfig,
-          replicationWorkerFactory, asyncStateManager, workloadApiClient, workloadIdGenerator, workloadEnabled, jobOutputDocStore);
+          replicationWorkerFactory, asyncStateManager, workloadApiClient, workloadEnabled, jobOutputDocStore);
       case AsyncOrchestratorPodProcess.NO_OP -> new NoOpOrchestrator();
       default -> throw new IllegalStateException("Could not find job orchestrator for application: " + application);
     };

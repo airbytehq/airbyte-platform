@@ -250,7 +250,7 @@ public class TrackingMetadata {
    */
   public static JsonNode failureReasonAsJson(final FailureReason failureReason) {
     // we want the json to always include failureOrigin and failureType, even when they are null
-    final LinkedHashMap<String, Object> linkedHashMap = new LinkedHashMap<>();
+    final Map<String, Object> linkedHashMap = new LinkedHashMap<>();
     linkedHashMap.put("failureOrigin", failureReason.getFailureOrigin());
     linkedHashMap.put("failureType", failureReason.getFailureType());
     linkedHashMap.put("internalMessage", failureReason.getInternalMessage());

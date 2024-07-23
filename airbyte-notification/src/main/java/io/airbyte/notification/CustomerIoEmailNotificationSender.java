@@ -28,6 +28,7 @@ import org.jetbrains.annotations.NotNull;
 @Requires(property = "airbyte.notification.customerio.apikey",
           notEquals = "")
 @Replaces(FakeCustomerIoEmailNotificationSender.class)
+@SuppressWarnings({"PMD.ExceptionAsFlowControl", "PMD.ConfusingArgumentToVarargsMethod"})
 public class CustomerIoEmailNotificationSender implements NotificationSender<CustomerIoEmailConfig> {
 
   public static final MediaType JSON = MediaType.get("application/json; charset=utf-8");

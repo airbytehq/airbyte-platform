@@ -26,6 +26,7 @@ import java.util.UUID;
  * Following docs from
  * https://developer.atlassian.com/cloud/trello/guides/rest-api/authorization/#using-basic-oauth.
  */
+@SuppressWarnings("PMD.LooseCoupling")
 public class TrelloOAuthFlow extends BaseOAuthFlow {
 
   private static final String REQUEST_TOKEN_URL = "https://trello.com/1/OAuthGetRequestToken";

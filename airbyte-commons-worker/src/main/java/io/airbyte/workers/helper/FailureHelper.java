@@ -492,7 +492,8 @@ public class FailureHelper {
 
     final var maxWidthAdjusted = maxWidth - ATTRIBUTION_MESSAGE.length() - 1;
     // 4 is the min maxWidth of the Apache Lib we are using.
-    if (maxWidthAdjusted < 4) {
+    final var minMaxWidthApacheLib = 4;
+    if (maxWidthAdjusted < minMaxWidthApacheLib) {
       return str;
     }
 

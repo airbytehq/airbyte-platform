@@ -26,6 +26,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 @ExtendWith(MockitoExtension.class)
+@SuppressWarnings({"PMD.LooseCoupling", "PMD.AvoidDuplicateLiterals"})
 class CloudSqlDatabaseProvisionerTest {
 
   private static final String PROJECT_ID = "project-id";

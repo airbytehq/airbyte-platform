@@ -160,7 +160,7 @@ class DefaultSyncJobFactoryTest {
   }
 
   @Test
-  public void testImageIsDefault() {
+  void testImageIsDefault() {
     final DefaultJobCreator jobCreator = mock(DefaultJobCreator.class);
     final ConfigRepository configRepository = mock(ConfigRepository.class);
     final OAuthConfigSupplier oAuthConfigSupplier = mock(OAuthConfigSupplier.class);

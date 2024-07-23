@@ -94,6 +94,7 @@ import lombok.extern.slf4j.Slf4j;
  */
 @Singleton
 @Slf4j
+@SuppressWarnings("PMD.ExceptionAsFlowControl")
 public class CheckConnectionActivityImpl implements CheckConnectionActivity {
 
   private final WorkerConfigsProvider workerConfigsProvider;
@@ -133,7 +134,6 @@ public class CheckConnectionActivityImpl implements CheckConnectionActivity {
                                      @Named("checkActivityOptions") final ActivityOptions activityOptions) {
     this(workerConfigsProvider,
         processFactory,
-        secretsRepositoryReader,
         workspaceRoot,
         workerEnvironment,
         logConfigs,
@@ -158,7 +158,6 @@ public class CheckConnectionActivityImpl implements CheckConnectionActivity {
   @VisibleForTesting
   CheckConnectionActivityImpl(final WorkerConfigsProvider workerConfigsProvider,
                               final ProcessFactory processFactory,
-                              final SecretsRepositoryReader secretsRepositoryReader,
                               final Path workspaceRoot,
                               final WorkerEnvironment workerEnvironment,
                               final LogConfigs logConfigs,
@@ -248,7 +247,7 @@ public class CheckConnectionActivityImpl implements CheckConnectionActivity {
 
     final WorkloadCreateRequest workloadCreateRequest = new WorkloadCreateRequest(
         workloadId,
-        List.of(new WorkloadLabel(Metadata.JOB_LABEL_KEY, jobId.toString()),
+        List.of(new WorkloadLabel(Metadata.JOB_LABEL_KEY, jobId),
             new WorkloadLabel(Metadata.ATTEMPT_LABEL_KEY, String.valueOf(attemptNumber)),
             new WorkloadLabel(Metadata.WORKSPACE_LABEL_KEY, workspaceId.toString()),
             new WorkloadLabel(Metadata.ACTOR_TYPE, String.valueOf(input.getCheckConnectionInput().getActorType().toString()))),

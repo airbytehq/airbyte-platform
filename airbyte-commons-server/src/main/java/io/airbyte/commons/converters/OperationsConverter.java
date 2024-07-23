@@ -15,6 +15,7 @@ import io.airbyte.config.OperatorWebhook;
 import io.airbyte.config.StandardSyncOperation;
 import io.airbyte.config.StandardSyncOperation.OperatorType;
 import io.airbyte.config.StandardWorkspace;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -29,20 +30,18 @@ public class OperationsConverter {
                                                    final StandardSyncOperation standardSyncOperation,
                                                    final StandardWorkspace standardWorkspace) {
     standardSyncOperation.withOperatorType(Enums.convertTo(operatorConfig.getOperatorType(), OperatorType.class));
-    switch (operatorConfig.getOperatorType()) {
-      case WEBHOOK -> {
-        Preconditions.checkArgument(operatorConfig.getWebhook() != null);
-        // TODO(mfsiega-airbyte): check that the webhook config id references a real webhook config.
-        final Optional<String> customDbtHost = Optional.ofNullable(standardWorkspace.getWebhookOperationConfigs())
-            .flatMap(webHookOperationConfig -> {
-              if (webHookOperationConfig.has("customDbtHost") && webHookOperationConfig.get("customDbtHost").isTextual()) {
-                return Optional.of(webHookOperationConfig.get("customDbtHost").asText());
-              }
-              return Optional.empty();
-            });
+    if (Objects.requireNonNull(operatorConfig.getOperatorType()) == io.airbyte.api.model.generated.OperatorType.WEBHOOK) {
+      Preconditions.checkArgument(operatorConfig.getWebhook() != null);
+      // TODO(mfsiega-airbyte): check that the webhook config id references a real webhook config.
+      final Optional<String> customDbtHost = Optional.ofNullable(standardWorkspace.getWebhookOperationConfigs())
+          .flatMap(webHookOperationConfig -> {
+            if (webHookOperationConfig.has("customDbtHost") && webHookOperationConfig.get("customDbtHost").isTextual()) {
+              return Optional.of(webHookOperationConfig.get("customDbtHost").asText());
+            }
+            return Optional.empty();
+          });
 
-        standardSyncOperation.withOperatorWebhook(webhookOperatorFromConfig(operatorConfig.getWebhook(), customDbtHost));
-      }
+      standardSyncOperation.withOperatorWebhook(webhookOperatorFromConfig(operatorConfig.getWebhook(), customDbtHost));
     }
   }
 
@@ -57,11 +56,9 @@ public class OperationsConverter {
           .operationId(standardSyncOperation.getOperationId())
           .name(standardSyncOperation.getName());
     }
-    switch (standardSyncOperation.getOperatorType()) {
-      case WEBHOOK -> {
-        Preconditions.checkArgument(standardSyncOperation.getOperatorWebhook() != null);
-        operatorConfiguration.webhook(webhookOperatorFromPersistence(standardSyncOperation.getOperatorWebhook()));
-      }
+    if (Objects.requireNonNull(standardSyncOperation.getOperatorType()) == OperatorType.WEBHOOK) {
+      Preconditions.checkArgument(standardSyncOperation.getOperatorWebhook() != null);
+      operatorConfiguration.webhook(webhookOperatorFromPersistence(standardSyncOperation.getOperatorWebhook()));
     }
     return new OperationRead()
         .workspaceId(standardSyncOperation.getWorkspaceId())

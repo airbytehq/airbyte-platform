@@ -70,6 +70,7 @@ import lombok.extern.slf4j.Slf4j;
  * process. If the store isn't updated by the underlying pod, it will appear as failed.
  */
 @Slf4j
+@SuppressWarnings("PMD.ExceptionAsFlowControl")
 public class AsyncOrchestratorPodProcess implements KubePod {
 
   public static final String KUBE_POD_INFO = "KUBE_POD_INFO";

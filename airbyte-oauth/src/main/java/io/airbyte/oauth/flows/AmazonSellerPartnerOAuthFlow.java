@@ -23,6 +23,7 @@ import org.apache.http.client.utils.URIBuilder;
 /**
  * Amazon Sellers OAuth.
  */
+@SuppressWarnings("PMD.AvoidLiteralsInIfCondition")
 public class AmazonSellerPartnerOAuthFlow extends BaseOAuth2Flow {
 
   private static final String ACCESS_TOKEN_URL = "https://api.amazon.com/auth/o2/token";

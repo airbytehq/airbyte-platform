@@ -85,6 +85,7 @@ import lombok.extern.slf4j.Slf4j;
  */
 @Singleton
 @Slf4j
+@SuppressWarnings("PMD.PreserveStackTrace")
 public class JobHistoryHandler {
 
   private final ConnectionService connectionService;
@@ -156,7 +157,7 @@ public class JobHistoryHandler {
         : DEFAULT_PAGE_SIZE;
     final List<Job> jobs;
 
-    final HashMap<String, Object> tags = new HashMap<>(Map.of(MetricTags.CONFIG_TYPES, configTypes.toString()));
+    final Map<String, Object> tags = new HashMap<>(Map.of(MetricTags.CONFIG_TYPES, configTypes.toString()));
     if (configId != null) {
       tags.put(MetricTags.CONNECTION_ID, configId);
     }
@@ -212,7 +213,7 @@ public class JobHistoryHandler {
         : DEFAULT_PAGE_SIZE;
     final List<Job> jobs;
 
-    final HashMap<String, Object> tags = new HashMap<>(Map.of(MetricTags.CONFIG_TYPES, configTypes.toString()));
+    final Map<String, Object> tags = new HashMap<>(Map.of(MetricTags.CONFIG_TYPES, configTypes.toString()));
     if (configId != null) {
       tags.put(MetricTags.CONNECTION_ID, configId);
     }

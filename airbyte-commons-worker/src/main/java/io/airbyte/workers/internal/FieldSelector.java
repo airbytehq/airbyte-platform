@@ -23,6 +23,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.tuple.ImmutablePair;
 
@@ -36,8 +37,8 @@ public class FieldSelector {
    * validationErrors must be a ConcurrentHashMap as they are updated and read in different threads
    * concurrently for performance.
    */
-  private final ConcurrentHashMap<AirbyteStreamNameNamespacePair, ImmutablePair<Set<String>, Integer>> validationErrors = new ConcurrentHashMap<>();
-  private final ConcurrentHashMap<AirbyteStreamNameNamespacePair, Set<String>> uncountedValidationErrors = new ConcurrentHashMap<>();
+  private final ConcurrentMap<AirbyteStreamNameNamespacePair, ImmutablePair<Set<String>, Integer>> validationErrors = new ConcurrentHashMap<>();
+  private final ConcurrentMap<AirbyteStreamNameNamespacePair, Set<String>> uncountedValidationErrors = new ConcurrentHashMap<>();
   private final Map<AirbyteStreamNameNamespacePair, List<String>> streamToSelectedFields = new HashMap<>();
   private final Map<AirbyteStreamNameNamespacePair, Set<String>> streamToAllFields = new HashMap<>();
   private final Map<AirbyteStreamNameNamespacePair, Set<String>> unexpectedFields = new HashMap<>();

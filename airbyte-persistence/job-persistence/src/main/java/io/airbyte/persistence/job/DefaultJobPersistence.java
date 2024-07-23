@@ -91,10 +91,13 @@ import org.slf4j.LoggerFactory;
 /**
  * Encapsulates jobs db interactions for the Jobs / Attempts domain models.
  */
+@SuppressWarnings("PMD.AvoidDuplicateLiterals")
 public class DefaultJobPersistence implements JobPersistence {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(DefaultJobPersistence.class);
-  private static final String ATTEMPT_NUMBER = "attempt_number";
+  private static final String ATTEMPT_ENDED_AT_FIELD = "attempt_ended_at";
+  private static final String ATTEMPT_FAILURE_SUMMARY_FIELD = "attempt_failure_summary";
+  private static final String ATTEMPT_NUMBER_FIELD = "attempt_number";
   private static final String JOB_ID = "job_id";
   private static final String WHERE = "WHERE ";
   private static final String AND = " AND ";
@@ -449,7 +452,7 @@ public class DefaultJobPersistence implements JobPersistence {
   private static Attempt getAttemptFromRecord(final Record record) {
     final String attemptOutputString = record.get("attempt_output", String.class);
     final Attempt attempt = new Attempt(
-        record.get(ATTEMPT_NUMBER, int.class),
+        record.get(ATTEMPT_NUMBER_FIELD, int.class),
         record.get(JOB_ID, Long.class),
         Path.of(record.get("log_path", String.class)),
         record.get("attempt_sync_config", String.class) == null ? null
@@ -457,31 +460,31 @@ public class DefaultJobPersistence implements JobPersistence {
         attemptOutputString == null ? null : parseJobOutputFromString(attemptOutputString),
         Enums.toEnum(record.get("attempt_status", String.class), AttemptStatus.class).orElseThrow(),
         record.get("processing_task_queue", String.class),
-        record.get("attempt_failure_summary", String.class) == null ? null
-            : Jsons.deserialize(record.get("attempt_failure_summary", String.class), AttemptFailureSummary.class),
+        record.get(ATTEMPT_FAILURE_SUMMARY_FIELD, String.class) == null ? null
+            : Jsons.deserialize(record.get(ATTEMPT_FAILURE_SUMMARY_FIELD, String.class), AttemptFailureSummary.class),
         getEpoch(record, "attempt_created_at"),
         getEpoch(record, "attempt_updated_at"),
-        Optional.ofNullable(record.get("attempt_ended_at"))
-            .map(value -> getEpoch(record, "attempt_ended_at"))
+        Optional.ofNullable(record.get(ATTEMPT_ENDED_AT_FIELD))
+            .map(value -> getEpoch(record, ATTEMPT_ENDED_AT_FIELD))
             .orElse(null));
     return attempt;
   }
 
   private static Attempt getAttemptFromRecordLight(final Record record) {
     return new Attempt(
-        record.get(ATTEMPT_NUMBER, int.class),
+        record.get(ATTEMPT_NUMBER_FIELD, int.class),
         record.get(JOB_ID, Long.class),
         Path.of(record.get("log_path", String.class)),
         new AttemptSyncConfig(),
         new JobOutput(),
         Enums.toEnum(record.get("attempt_status", String.class), AttemptStatus.class).orElseThrow(),
         record.get("processing_task_queue", String.class),
-        record.get("attempt_failure_summary", String.class) == null ? null
-            : Jsons.deserialize(record.get("attempt_failure_summary", String.class), AttemptFailureSummary.class),
+        record.get(ATTEMPT_FAILURE_SUMMARY_FIELD, String.class) == null ? null
+            : Jsons.deserialize(record.get(ATTEMPT_FAILURE_SUMMARY_FIELD, String.class), AttemptFailureSummary.class),
         getEpoch(record, "attempt_created_at"),
         getEpoch(record, "attempt_updated_at"),
-        Optional.ofNullable(record.get("attempt_ended_at"))
-            .map(value -> getEpoch(record, "attempt_ended_at"))
+        Optional.ofNullable(record.get(ATTEMPT_ENDED_AT_FIELD))
+            .map(value -> getEpoch(record, ATTEMPT_ENDED_AT_FIELD))
             .orElse(null));
   }
 
@@ -499,7 +502,7 @@ public class DefaultJobPersistence implements JobPersistence {
   private static List<AttemptWithJobInfo> getAttemptsWithJobsFromResult(final Result<Record> result) {
     return result
         .stream()
-        .filter(record -> record.getValue(ATTEMPT_NUMBER) != null)
+        .filter(record -> record.getValue(ATTEMPT_NUMBER_FIELD) != null)
         .map(record -> new AttemptWithJobInfo(getAttemptFromRecord(record), getJobFromRecord(record)))
         .collect(Collectors.toList());
   }
@@ -517,7 +520,7 @@ public class DefaultJobPersistence implements JobPersistence {
         }
         jobs.add(currentJob);
       }
-      if (entry.getValue(ATTEMPT_NUMBER) != null) {
+      if (entry.getValue(ATTEMPT_NUMBER_FIELD) != null) {
         try (var ignored = attemptStopwatch.start()) {
           currentJob.getAttempts().add(getAttemptFromRecord(entry));
         }
@@ -541,7 +544,7 @@ public class DefaultJobPersistence implements JobPersistence {
         currentJob = getJobFromRecord(entry);
         jobs.add(currentJob);
       }
-      if (entry.getValue(ATTEMPT_NUMBER) != null) {
+      if (entry.getValue(ATTEMPT_NUMBER_FIELD) != null) {
         currentJob.getAttempts().add(getAttemptFromRecordLight(entry));
       }
     }
@@ -713,7 +716,7 @@ public class DefaultJobPersistence implements JobPersistence {
           now)
           .stream()
           .findFirst()
-          .map(r -> r.get(ATTEMPT_NUMBER, Integer.class))
+          .map(r -> r.get(ATTEMPT_NUMBER_FIELD, Integer.class))
           .orElseThrow(() -> new RuntimeException("This should not happen"));
     });
 

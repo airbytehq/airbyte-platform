@@ -21,6 +21,7 @@ import org.slf4j.LoggerFactory;
  * Concrete implementation of AppendToAttemptLogActivity.
  */
 @Singleton
+@SuppressWarnings("PMD.AppendToAttemptLogActivityImpl")
 public class AppendToAttemptLogActivityImpl implements AppendToAttemptLogActivity {
 
   @VisibleForTesting
@@ -41,6 +42,7 @@ public class AppendToAttemptLogActivityImpl implements AppendToAttemptLogActivit
     this.workerEnvironment = workerEnvironment;
   }
 
+  @SuppressWarnings("PMD.UnusedLocalVariable")
   @Override
   public LogOutput log(final LogInput input) {
     if (input.getJobId() == null || input.getAttemptNumber() == null) {

@@ -47,6 +47,7 @@ import org.jooq.impl.DSL;
  *
  */
 @Slf4j
+@SuppressWarnings("PMD.LiteralsFirstInComparisons")
 public class UserPersistence {
 
   public static final String PRIMARY_KEY = "id";

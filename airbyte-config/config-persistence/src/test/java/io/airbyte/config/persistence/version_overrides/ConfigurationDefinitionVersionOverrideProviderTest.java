@@ -31,9 +31,6 @@ import io.airbyte.data.services.ActorDefinitionService;
 import io.airbyte.data.services.ScopedConfigurationService;
 import io.airbyte.data.services.WorkspaceService;
 import io.airbyte.data.services.shared.ConnectorVersionKey;
-import io.airbyte.featureflag.FeatureFlagClient;
-import io.airbyte.featureflag.TestClient;
-import io.airbyte.metrics.lib.MetricClient;
 import io.airbyte.protocol.models.ConnectorSpecification;
 import io.airbyte.validation.json.JsonValidationException;
 import java.io.IOException;
@@ -46,6 +43,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 
+@SuppressWarnings({"PMD.LiteralsFirstInComparisons", "PMD.AvoidDuplicateLiterals"})
 class ConfigurationDefinitionVersionOverrideProviderTest {
 
   private static final UUID ACTOR_DEFINITION_ID = UUID.randomUUID();
@@ -92,8 +90,6 @@ class ConfigurationDefinitionVersionOverrideProviderTest {
   private WorkspaceService mWorkspaceService;
   private ActorDefinitionService mActorDefinitionService;
   private ScopedConfigurationService mScopedConfigurationService;
-  private FeatureFlagClient mFeatureFlagClient;
-  private MetricClient mMetricClient;
   private ConfigurationDefinitionVersionOverrideProvider overrideProvider;
 
   @BeforeEach
@@ -101,8 +97,6 @@ class ConfigurationDefinitionVersionOverrideProviderTest {
     mWorkspaceService = mock(WorkspaceService.class);
     mActorDefinitionService = mock(ActorDefinitionService.class);
     mScopedConfigurationService = mock(ScopedConfigurationService.class);
-    mFeatureFlagClient = mock(TestClient.class);
-    mMetricClient = mock(MetricClient.class);
     overrideProvider = new ConfigurationDefinitionVersionOverrideProvider(mWorkspaceService, mActorDefinitionService, mScopedConfigurationService);
 
     when(mWorkspaceService.getStandardWorkspaceNoSecrets(WORKSPACE_ID, true))

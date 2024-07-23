@@ -18,6 +18,7 @@ import org.slf4j.LoggerFactory;
  * invalid catalog to a new valid catalog Issue:
  * <a href="https://github.com/airbytehq/oncall/issues/2703">...</a>
  */
+@SuppressWarnings("PMD.UseCollectionIsEmpty")
 public class V0_50_16_002__RemoveInvalidSourceStripeCatalog extends BaseJavaMigration {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(

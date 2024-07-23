@@ -48,6 +48,7 @@ import lombok.extern.slf4j.Slf4j;
 
 @Singleton
 @Slf4j
+@SuppressWarnings({"PMD.PreserveStackTrace", "PMD.ExceptionAsFlowControl"})
 public class UserInvitationHandler {
 
   static final String ACCEPT_INVITE_PATH = "/accept-invite?inviteCode=";

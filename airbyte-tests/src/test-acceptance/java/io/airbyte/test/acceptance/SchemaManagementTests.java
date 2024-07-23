@@ -12,9 +12,6 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.node.JsonNodeFactory;
-import com.fasterxml.jackson.databind.node.ObjectNode;
 import io.airbyte.api.client.model.generated.AirbyteCatalog;
 import io.airbyte.api.client.model.generated.AirbyteStream;
 import io.airbyte.api.client.model.generated.AirbyteStreamAndConfiguration;
@@ -120,7 +117,7 @@ class SchemaManagementTests {
             .build());
   }
 
-  void init() throws URISyntaxException, IOException, InterruptedException, GeneralSecurityException {
+  private void init() throws URISyntaxException, IOException, InterruptedException, GeneralSecurityException {
     // Set up the API client.
     final var airbyteApiClient = createAirbyteApiClient(AIRBYTE_SERVER_HOST + "/api", Map.of(GATEWAY_AUTH_HEADER, AIRBYTE_AUTH_HEADER));
 
@@ -238,7 +235,7 @@ class SchemaManagementTests {
         SchemaChangeBackfillPreference.ENABLED);
     // Run a sync with the initial data.
     final var jobRead = testHarness.syncConnection(createdConnection.getConnectionId()).getJob();
-    testHarness.waitForSuccessfulSyncNoTimeout(jobRead);;
+    testHarness.waitForSuccessfulSyncNoTimeout(jobRead);
 
     // Modify the source to add a new column, which will be populated with a default value.
     testHarness.runSqlScriptInSource("postgres_add_column_with_default_value.sql");
@@ -272,39 +269,6 @@ class SchemaManagementTests {
     final ConnectionRead secondUpdate = testHarness.getConnection(createdConnection.getConnectionId());
     assertEquals(firstUpdate.getSyncCatalog(), secondUpdate.getSyncCatalog());
     assertNotEquals(firstUpdate.getSourceCatalogId(), secondUpdate.getSourceCatalogId());
-  }
-
-  private List<JsonNode> getExpectedRecordsForIdAndName() {
-    final var nodeFactory = JsonNodeFactory.withExactBigDecimals(false);
-    return List.of(
-        new ObjectNode(nodeFactory).put("id", 1).put(FIELD_NAME, "sherif"),
-        new ObjectNode(nodeFactory).put("id", 2).put(FIELD_NAME, "charles"),
-        new ObjectNode(nodeFactory).put("id", 3).put(FIELD_NAME, "jared"),
-        new ObjectNode(nodeFactory).put("id", 4).put(FIELD_NAME, "michel"),
-        new ObjectNode(nodeFactory).put("id", 5).put(FIELD_NAME, "john"));
-  }
-
-  private List<JsonNode> getExpectedRecordsForIdAndNameWithUpdatedCatalog() {
-    final var nodeFactory = JsonNodeFactory.withExactBigDecimals(false);
-    return List.of(
-        new ObjectNode(nodeFactory).put("id", 1).put(FIELD_NAME, "sherif").put(A_NEW_COLUMN, (Integer) null),
-        new ObjectNode(nodeFactory).put("id", 2).put(FIELD_NAME, "charles").put(A_NEW_COLUMN, (Integer) null),
-        new ObjectNode(nodeFactory).put("id", 3).put(FIELD_NAME, "jared").put(A_NEW_COLUMN, (Integer) null),
-        new ObjectNode(nodeFactory).put("id", 4).put(FIELD_NAME, "michel").put(A_NEW_COLUMN, (Integer) null),
-        new ObjectNode(nodeFactory).put("id", 5).put(FIELD_NAME, "john").put(A_NEW_COLUMN, (Integer) null),
-        new ObjectNode(nodeFactory).put("id", 6).put(FIELD_NAME, "a-new-name").put(A_NEW_COLUMN, 100));
-  }
-
-  private List<JsonNode> getExpectedRecordsForIdAndNameWithBackfilledColumn() {
-    final var nodeFactory = JsonNodeFactory.withExactBigDecimals(false);
-    return List.of(
-        new ObjectNode(nodeFactory).put("id", 1).put(FIELD_NAME, "sherif").put(A_NEW_COLUMN, DEFAULT_VALUE),
-        new ObjectNode(nodeFactory).put("id", 2).put(FIELD_NAME, "charles").put(A_NEW_COLUMN, DEFAULT_VALUE),
-        new ObjectNode(nodeFactory).put("id", 3).put(FIELD_NAME, "jared").put(A_NEW_COLUMN, DEFAULT_VALUE),
-        new ObjectNode(nodeFactory).put("id", 4).put(FIELD_NAME, "michel").put(A_NEW_COLUMN, DEFAULT_VALUE),
-        new ObjectNode(nodeFactory).put("id", 5).put(FIELD_NAME, "john").put(A_NEW_COLUMN, DEFAULT_VALUE),
-        // Note: this is a new record, with a different value from the default.
-        new ObjectNode(nodeFactory).put("id", 6).put(FIELD_NAME, "a-new-name").put(A_NEW_COLUMN, 100));
   }
 
   private AirbyteCatalog getExpectedCatalogWithExtraColumnAndTable() {

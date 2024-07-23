@@ -22,6 +22,7 @@ import org.slf4j.MDC;
 /**
  * Abstraction to consume an {@link InputStream} to completion.
  */
+@SuppressWarnings("PMD.UnusedLocalVariable")
 public class LineGobbler implements VoidCallable {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(LineGobbler.class);

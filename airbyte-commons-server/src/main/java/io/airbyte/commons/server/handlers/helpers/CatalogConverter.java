@@ -86,7 +86,7 @@ public class CatalogConverter {
             configuredStream.getStream()
                 .getJsonSchema()
                 .findValue("properties")
-                .fieldNames().forEachRemaining((name) -> selectedColumns.add(name));
+                .fieldNames().forEachRemaining(selectedColumns::add);
             configuration.setSelectedFields(
                 selectedColumns.stream().map((fieldName) -> new SelectedFieldInfo().addFieldPathItem(fieldName)).collect(Collectors.toList()));
           }
@@ -200,7 +200,7 @@ public class CatalogConverter {
    */
   public static io.airbyte.protocol.models.ConfiguredAirbyteCatalog toConfiguredProtocol(final io.airbyte.api.model.generated.AirbyteCatalog catalog)
       throws JsonValidationException {
-    final ArrayList<JsonValidationException> errors = new ArrayList<>();
+    final List<JsonValidationException> errors = new ArrayList<>();
     final List<io.airbyte.protocol.models.ConfiguredAirbyteStream> streams = catalog.getStreams()
         .stream()
         .filter(s -> s.getConfig().getSelected())
@@ -323,7 +323,7 @@ public class CatalogConverter {
   public static io.airbyte.protocol.models.AirbyteCatalog toProtocol(
                                                                      final io.airbyte.api.model.generated.AirbyteCatalog catalog)
       throws JsonValidationException {
-    final ArrayList<JsonValidationException> errors = new ArrayList<>();
+    final List<JsonValidationException> errors = new ArrayList<>();
 
     final io.airbyte.protocol.models.AirbyteCatalog protoCatalog =
         new io.airbyte.protocol.models.AirbyteCatalog();

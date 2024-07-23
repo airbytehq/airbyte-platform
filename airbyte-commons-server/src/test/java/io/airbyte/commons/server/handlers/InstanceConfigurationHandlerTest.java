@@ -45,6 +45,7 @@ import org.junit.jupiter.params.provider.CsvSource;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+@SuppressWarnings("PMD.AvoidDuplicateLiterals")
 @ExtendWith(MockitoExtension.class)
 class InstanceConfigurationHandlerTest {
 

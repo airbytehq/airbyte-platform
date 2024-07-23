@@ -120,7 +120,7 @@ class HeartBeatTimeoutChaperoneTest {
         metricClient);
     when(featureFlagClient.boolVariation(eq(ShouldFailSyncIfHeartbeatFailure.INSTANCE), any())).thenReturn(true);
     when(heartbeatMonitor.isBeating()).thenReturn(Optional.of(false));
-    assertDoesNotThrow(() -> CompletableFuture.runAsync(() -> heartbeatTimeoutChaperone.monitor()).get(1000, TimeUnit.MILLISECONDS));
+    assertDoesNotThrow(() -> CompletableFuture.runAsync(heartbeatTimeoutChaperone::monitor).get(1000, TimeUnit.MILLISECONDS));
   }
 
   @Test
@@ -136,7 +136,7 @@ class HeartBeatTimeoutChaperoneTest {
     when(featureFlagClient.boolVariation(eq(ShouldFailSyncIfHeartbeatFailure.INSTANCE), any())).thenReturn(false);
     when(heartbeatMonitor.isBeating()).thenReturn(Optional.of(true), Optional.of(false));
 
-    assertDoesNotThrow(() -> CompletableFuture.runAsync(() -> heartbeatTimeoutChaperone.monitor()).get(1000, TimeUnit.MILLISECONDS));
+    assertDoesNotThrow(() -> CompletableFuture.runAsync(heartbeatTimeoutChaperone::monitor).get(1000, TimeUnit.MILLISECONDS));
   }
 
 }

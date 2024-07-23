@@ -101,7 +101,7 @@ class ApiAcceptanceTests {
 
   @Test
   void testFailedGet404() {
-    final var e = assertThrows(ClientException.class, () -> testHarness.getNonExistentResource());
+    final var e = assertThrows(ClientException.class, testHarness::getNonExistentResource);
     assertEquals(HttpStatus.NOT_FOUND.getCode(), e.getStatusCode());
   }
 

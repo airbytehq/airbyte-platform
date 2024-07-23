@@ -29,7 +29,8 @@ import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;
  * regressions.
  */
 @Tags({@Tag("sync"), @Tag("enterprise")})
-public class WorkloadBasicAcceptanceTests {
+@SuppressWarnings("PMD.JUnitTestsShouldIncludeAssert")
+class WorkloadBasicAcceptanceTests {
 
   AcceptanceTestsResources testResources = new AcceptanceTestsResources();
 

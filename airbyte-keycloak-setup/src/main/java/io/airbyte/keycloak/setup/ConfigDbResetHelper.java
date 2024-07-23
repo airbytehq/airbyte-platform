@@ -43,7 +43,8 @@ public class ConfigDbResetHelper {
    */
   private void throwIfMultipleOrganizations() throws SQLException {
     final var orgCount = this.configDb.query(ctx -> ctx.fetchCount(Tables.ORGANIZATION));
-    if (orgCount > 1) {
+    int orgLimit = 1;
+    if (orgCount > orgLimit) {
       throw new IllegalStateException("Multiple organizations found in ConfigDb. "
           + "This is not supported with the KEYCLOAK_RESET_REALM process.");
     }

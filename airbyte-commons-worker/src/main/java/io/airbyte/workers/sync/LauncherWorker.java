@@ -59,6 +59,7 @@ import org.slf4j.LoggerFactory;
  * @param <OUTPUT> either {@link Void} or a json-serializable output class for the worker
  */
 @Slf4j
+@SuppressWarnings("PMD.ExceptionAsFlowControl")
 public abstract class LauncherWorker<INPUT, OUTPUT> implements Worker<INPUT, OUTPUT> {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(LauncherWorker.class);

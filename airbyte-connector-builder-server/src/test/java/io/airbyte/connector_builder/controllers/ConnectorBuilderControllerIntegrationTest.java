@@ -103,8 +103,8 @@ class ConnectorBuilderControllerIntegrationTest {
   void testStreamRead() {
     final ConnectorBuilderController controller = givenAirbyteCdkReturnMessage(streamRead);
     final StreamRead streamRead = controller.readStream(new StreamReadRequestBody().config(A_CONFIG).manifest(A_MANIFEST).stream(A_STREAM));
-    assertTrue(streamRead.getLogs().size() > 0);
-    assertTrue(streamRead.getSlices().size() > 0);
+    assertFalse(streamRead.getLogs().isEmpty());
+    assertFalse(streamRead.getSlices().isEmpty());
     assertNotNull(streamRead.getInferredSchema());
     assertFalse(streamRead.getTestReadLimitReached());
   }
@@ -114,8 +114,8 @@ class ConnectorBuilderControllerIntegrationTest {
     final ConnectorBuilderController controller = givenAirbyteCdkReturnMessage(streamRead);
     final StreamRead streamRead =
         controller.readStream(new StreamReadRequestBody().config(A_CONFIG).manifest(A_MANIFEST).stream(A_STREAM).formGeneratedManifest(true));
-    assertTrue(streamRead.getLogs().size() > 0);
-    assertTrue(streamRead.getSlices().size() > 0);
+    assertFalse(streamRead.getLogs().isEmpty());
+    assertFalse(streamRead.getSlices().isEmpty());
     assertNotNull(streamRead.getInferredSchema());
     assertFalse(streamRead.getTestReadLimitReached());
   }

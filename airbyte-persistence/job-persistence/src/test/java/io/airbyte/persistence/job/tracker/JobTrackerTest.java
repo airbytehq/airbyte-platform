@@ -116,18 +116,18 @@ class JobTrackerTest {
   private static final long SYNC_RECORDS_SYNC = 4L;
   private static final long LONG_JOB_ID = 10L; // for sync the job id is a long not a uuid.
 
-  private static final ImmutableMap<String, Object> STARTED_STATE_METADATA = ImmutableMap.<String, Object>builder()
+  private static final Map<String, Object> STARTED_STATE_METADATA = ImmutableMap.<String, Object>builder()
       .put(ATTEMPT_STAGE_KEY, "STARTED")
       .build();
-  private static final ImmutableMap<String, Object> SUCCEEDED_STATE_METADATA = ImmutableMap.<String, Object>builder()
+  private static final Map<String, Object> SUCCEEDED_STATE_METADATA = ImmutableMap.<String, Object>builder()
       .put(ATTEMPT_STAGE_KEY, "ENDED")
       .put("attempt_completion_status", JobState.SUCCEEDED)
       .build();
-  private static final ImmutableMap<String, Object> FAILED_STATE_METADATA = ImmutableMap.<String, Object>builder()
+  private static final Map<String, Object> FAILED_STATE_METADATA = ImmutableMap.<String, Object>builder()
       .put(ATTEMPT_STAGE_KEY, "ENDED")
       .put("attempt_completion_status", JobState.FAILED)
       .build();
-  private static final ImmutableMap<String, Object> ATTEMPT_METADATA = ImmutableMap.<String, Object>builder()
+  private static final Map<String, Object> ATTEMPT_METADATA = ImmutableMap.<String, Object>builder()
       .put("sync_start_time", SYNC_START_TIME)
       .put("duration", SYNC_DURATION)
       .put("volume_rows", SYNC_RECORDS_SYNC)
@@ -145,7 +145,7 @@ class JobTrackerTest {
       .put("destination_write_start_time", 11L)
       .put("destination_write_end_time", 12L)
       .build();
-  private static final ImmutableMap<String, Object> SYNC_CONFIG_METADATA = ImmutableMap.<String, Object>builder()
+  private static final Map<String, Object> SYNC_CONFIG_METADATA = ImmutableMap.<String, Object>builder()
       .put(JobTracker.CONFIG + ".source", "{\"key\":\"set\"}")
       .put(JobTracker.CONFIG + ".destination", "{\"key\":false}")
       .put(JobTracker.CATALOG + ".sync_mode.full_refresh", JobTracker.SET)
@@ -212,7 +212,7 @@ class JobTrackerTest {
 
   @Test
   void testTrackCheckConnectionSource() throws ConfigNotFoundException, IOException, JsonValidationException {
-    final ImmutableMap<String, Object> metadata = ImmutableMap.<String, Object>builder()
+    final Map<String, Object> metadata = ImmutableMap.<String, Object>builder()
         .put(JOB_TYPE, ConfigType.CHECK_CONNECTION_SOURCE)
         .put(JOB_ID_KEY, JOB_ID.toString())
         .put(ATTEMPT_ID, 0)
@@ -251,7 +251,7 @@ class JobTrackerTest {
 
   @Test
   void testTrackCheckConnectionDestination() throws ConfigNotFoundException, IOException, JsonValidationException {
-    final ImmutableMap<String, Object> metadata = ImmutableMap.<String, Object>builder()
+    final Map<String, Object> metadata = ImmutableMap.<String, Object>builder()
         .put(JOB_TYPE, ConfigType.CHECK_CONNECTION_DESTINATION)
         .put(JOB_ID_KEY, JOB_ID.toString())
         .put(ATTEMPT_ID, 0)
@@ -290,7 +290,7 @@ class JobTrackerTest {
 
   @Test
   void testTrackDiscover() throws ConfigNotFoundException, IOException, JsonValidationException {
-    final ImmutableMap<String, Object> metadata = ImmutableMap.<String, Object>builder()
+    final Map<String, Object> metadata = ImmutableMap.<String, Object>builder()
         .put(JOB_TYPE, ConfigType.DISCOVER_SCHEMA)
         .put(JOB_ID_KEY, JOB_ID.toString())
         .put(ATTEMPT_ID, 0)
@@ -429,7 +429,7 @@ class JobTrackerTest {
     final long jobId = 10L;
     when(workspaceHelper.getWorkspaceForJobIdIgnoreExceptions(jobId)).thenReturn(WORKSPACE_ID);
 
-    final ImmutableMap<String, Object> metadata = getJobMetadata(configType, jobId);
+    final Map<String, Object> metadata = getJobMetadata(configType, jobId);
     final Job job = getJobMock(configType, jobId);
     // test when frequency is manual.
 
@@ -561,7 +561,7 @@ class JobTrackerTest {
   }
 
   private JsonNode configFailureJson() {
-    final LinkedHashMap<String, Object> linkedHashMap = new LinkedHashMap<>();
+    final Map<String, Object> linkedHashMap = new LinkedHashMap<>();
     linkedHashMap.put("failureOrigin", "source");
     linkedHashMap.put("failureType", "config_error");
     linkedHashMap.put("internalMessage", "Internal config error error msg");
@@ -573,7 +573,7 @@ class JobTrackerTest {
   }
 
   private JsonNode systemFailureJson() {
-    final LinkedHashMap<String, Object> linkedHashMap1 = new LinkedHashMap<>();
+    final Map<String, Object> linkedHashMap1 = new LinkedHashMap<>();
     linkedHashMap1.put("failureOrigin", "replication");
     linkedHashMap1.put("failureType", "system_error");
     linkedHashMap1.put("internalMessage", "Internal system error error msg");
@@ -585,7 +585,7 @@ class JobTrackerTest {
   }
 
   private JsonNode unknownFailureJson() {
-    final LinkedHashMap<String, Object> linkedHashMap2 = new LinkedHashMap<>();
+    final Map<String, Object> linkedHashMap2 = new LinkedHashMap<>();
     linkedHashMap2.put("failureOrigin", null);
     linkedHashMap2.put("failureType", null);
     linkedHashMap2.put("internalMessage", "Internal unknown error error msg");
@@ -780,7 +780,7 @@ class JobTrackerTest {
     return getJobWithAttemptsMock(configType, jobId, getAttemptsWithFailuresMock());
   }
 
-  private ImmutableMap<String, Object> getJobMetadata(final ConfigType configType, final long jobId) {
+  private Map<String, Object> getJobMetadata(final ConfigType configType, final long jobId) {
     return ImmutableMap.<String, Object>builder()
         .put(JOB_TYPE, configType != ConfigType.RESET_CONNECTION ? configType : ConfigType.CLEAR)
         .put(JOB_ID_KEY, String.valueOf(jobId))
@@ -816,14 +816,14 @@ class JobTrackerTest {
     connectionCheckSuccessOutput.setStatus(Status.SUCCEEDED);
     final var checkConnectionSuccessJobOutput = new ConnectorJobOutput().withCheckConnection(connectionCheckSuccessOutput);
     jobStateConsumer.accept(JobState.SUCCEEDED, checkConnectionSuccessJobOutput);
-    final ImmutableMap<String, Object> checkConnSuccessMetadata = ImmutableMap.of("check_connection_outcome", "succeeded");
+    final Map<String, Object> checkConnSuccessMetadata = ImmutableMap.of("check_connection_outcome", "succeeded");
 
     final var connectionCheckFailureOutput = new StandardCheckConnectionOutput();
     connectionCheckFailureOutput.setStatus(Status.FAILED);
     connectionCheckFailureOutput.setMessage("Please check your Personal Access Token.");
     final var checkConnectionFailureJobOutput = new ConnectorJobOutput().withCheckConnection(connectionCheckFailureOutput);
     jobStateConsumer.accept(JobState.SUCCEEDED, checkConnectionFailureJobOutput); // The job still succeeded, only the connection check failed
-    final ImmutableMap<String, Object> checkConnFailureMetadata = ImmutableMap.of(
+    final Map<String, Object> checkConnFailureMetadata = ImmutableMap.of(
         "check_connection_outcome", "failed",
         "check_connection_message", "Please check your Personal Access Token.");
 
@@ -831,7 +831,7 @@ class JobTrackerTest {
     final var failedCheckJobOutput = new ConnectorJobOutput();
     failedCheckJobOutput.setFailureReason(getConfigFailureReasonMock());
     jobStateConsumer.accept(JobState.FAILED, failedCheckJobOutput);
-    final ImmutableMap<String, Object> failedCheckJobMetadata = ImmutableMap.of("failure_reason", configFailureJson().toString());
+    final Map<String, Object> failedCheckJobMetadata = ImmutableMap.of("failure_reason", configFailureJson().toString());
 
     if (workspaceSet) {
       assertCorrectMessageForStartedState(
@@ -868,7 +868,7 @@ class JobTrackerTest {
     failedDiscoverOutput.setFailureReason(getSystemFailureReasonMock());
     jobStateConsumer.accept(JobState.FAILED, failedDiscoverOutput);
 
-    final ImmutableMap<String, Object> failedDiscoverMetadata = ImmutableMap.of("failure_reason", systemFailureJson().toString());
+    final Map<String, Object> failedDiscoverMetadata = ImmutableMap.of("failure_reason", systemFailureJson().toString());
 
     if (workspaceSet) {
       assertCorrectMessageForStartedState(JobTracker.DISCOVER_EVENT, metadata);

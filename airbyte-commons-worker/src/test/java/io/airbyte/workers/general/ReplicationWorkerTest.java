@@ -447,7 +447,7 @@ abstract class ReplicationWorkerTest {
     verify(replicationAirbyteMessageEventPublishingHelper).publishEvent(new ReplicationAirbyteMessageEvent(AirbyteMessageOrigin.SOURCE,
         CONFIG_MESSAGE,
         new ReplicationContext(false, replicationInput.getConnectionId(), replicationInput.getSourceId(), replicationInput.getDestinationId(),
-            Long.valueOf(JOB_ID), JOB_ATTEMPT, replicationInput.getWorkspaceId(), SOURCE_IMAGE, DESTINATION_IMAGE, SOURCE_DEFINITION_ID,
+            Long.parseLong(JOB_ID), JOB_ATTEMPT, replicationInput.getWorkspaceId(), SOURCE_IMAGE, DESTINATION_IMAGE, SOURCE_DEFINITION_ID,
             DESTINATION_DEFINITION_ID)));
   }
 
@@ -460,7 +460,7 @@ abstract class ReplicationWorkerTest {
         .publishEvent(new ReplicationAirbyteMessageEvent(AirbyteMessageOrigin.SOURCE,
             CONFIG_MESSAGE,
             new ReplicationContext(false, replicationInput.getConnectionId(), replicationInput.getSourceId(), replicationInput.getDestinationId(),
-                Long.valueOf(JOB_ID), JOB_ATTEMPT, replicationInput.getWorkspaceId(), SOURCE_IMAGE, DESTINATION_IMAGE, SOURCE_DEFINITION_ID,
+                Long.parseLong(JOB_ID), JOB_ATTEMPT, replicationInput.getWorkspaceId(), SOURCE_IMAGE, DESTINATION_IMAGE, SOURCE_DEFINITION_ID,
                 DESTINATION_DEFINITION_ID)));
 
     final ReplicationWorker worker = getDefaultReplicationWorker();
@@ -484,7 +484,7 @@ abstract class ReplicationWorkerTest {
     verify(replicationAirbyteMessageEventPublishingHelper).publishEvent(new ReplicationAirbyteMessageEvent(AirbyteMessageOrigin.DESTINATION,
         CONFIG_MESSAGE,
         new ReplicationContext(false, replicationInput.getConnectionId(), replicationInput.getSourceId(), replicationInput.getDestinationId(),
-            Long.valueOf(JOB_ID), JOB_ATTEMPT, replicationInput.getWorkspaceId(), SOURCE_IMAGE, DESTINATION_IMAGE, SOURCE_DEFINITION_ID,
+            Long.parseLong(JOB_ID), JOB_ATTEMPT, replicationInput.getWorkspaceId(), SOURCE_IMAGE, DESTINATION_IMAGE, SOURCE_DEFINITION_ID,
             DESTINATION_DEFINITION_ID)));
   }
 
@@ -499,7 +499,7 @@ abstract class ReplicationWorkerTest {
         .publishEvent(new ReplicationAirbyteMessageEvent(AirbyteMessageOrigin.DESTINATION,
             CONFIG_MESSAGE,
             new ReplicationContext(false, replicationInput.getConnectionId(), replicationInput.getSourceId(), replicationInput.getDestinationId(),
-                Long.valueOf(JOB_ID), JOB_ATTEMPT, replicationInput.getWorkspaceId(), SOURCE_IMAGE, DESTINATION_IMAGE, SOURCE_DEFINITION_ID,
+                Long.parseLong(JOB_ID), JOB_ATTEMPT, replicationInput.getWorkspaceId(), SOURCE_IMAGE, DESTINATION_IMAGE, SOURCE_DEFINITION_ID,
                 DESTINATION_DEFINITION_ID)));
 
     final ReplicationWorker worker = getDefaultReplicationWorker();
@@ -1066,7 +1066,6 @@ abstract class ReplicationWorkerTest {
         "Airbyte detected that the Destination didn't make progress in the last 15 seconds, exceeding the configured 10 seconds threshold. Airbyte will try reading again on the next sync. Please see https://docs.airbyte.com/understanding-airbyte/heartbeats for more info.",
         failureReason.getExternalMessage());
     assertEquals("Last action 15 seconds ago, exceeding the threshold of 10 seconds.", failureReason.getInternalMessage());
-    System.out.println(failureReason.getInternalMessage());
     assertEquals(failureReason.getFailureOrigin(), FailureOrigin.DESTINATION);
     assertEquals(failureReason.getFailureType(), FailureType.DESTINATION_TIMEOUT);
   }
@@ -1122,21 +1121,6 @@ abstract class ReplicationWorkerTest {
     verify(streamStatusCompletionTracker).startTracking(any(), anyBoolean());
     verify(streamStatusCompletionTracker).track(streamStatus.getTrace().getStreamStatus());
     verify(streamStatusCompletionTracker).finalize(0, mapper);
-  }
-
-  private ReplicationContext simpleContext(final boolean isReset) {
-    return new ReplicationContext(
-        isReset,
-        replicationInput.getConnectionId(),
-        replicationInput.getSourceId(),
-        replicationInput.getDestinationId(),
-        Long.valueOf(JOB_ID),
-        JOB_ATTEMPT,
-        replicationInput.getWorkspaceId(),
-        SOURCE_IMAGE,
-        DESTINATION_IMAGE,
-        SOURCE_DEFINITION_ID,
-        DESTINATION_DEFINITION_ID);
   }
 
 }

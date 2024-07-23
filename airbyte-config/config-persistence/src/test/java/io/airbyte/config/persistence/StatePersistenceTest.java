@@ -62,6 +62,7 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+@SuppressWarnings("PMD.AvoidDuplicateLiterals")
 class StatePersistenceTest extends BaseConfigDatabaseTest {
 
   private StatePersistence statePersistence;
@@ -872,7 +873,7 @@ class StatePersistenceTest extends BaseConfigDatabaseTest {
   }
 
   @Test
-  public void testEraseStreamState() throws JsonValidationException, IOException {
+  void testEraseStreamState() throws JsonValidationException, IOException {
     final StateWrapper connectionState = new StateWrapper()
         .withStateType(StateType.STREAM)
         .withStateMessages(List.of(

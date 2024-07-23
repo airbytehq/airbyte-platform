@@ -17,7 +17,7 @@ import org.jooq.impl.TableImpl;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-public class ConfigDbResetHelperTest extends BaseConfigDatabaseTest {
+class ConfigDbResetHelperTest extends BaseConfigDatabaseTest {
 
   private static final UUID KEYCLOAK_USER_1_ID = UUID.randomUUID();
   private static final UUID KEYCLOAK_USER_2_ID = UUID.randomUUID();
@@ -67,7 +67,7 @@ public class ConfigDbResetHelperTest extends BaseConfigDatabaseTest {
     });
 
     // Expect an exception to be thrown when the helper is invoked
-    assertThrows(IllegalStateException.class, () -> configDbResetHelper.deleteConfigDbUsers());
+    assertThrows(IllegalStateException.class, configDbResetHelper::deleteConfigDbUsers);
 
     // Expect no records to be deleted
     assertEquals(3, countRowsInTable(Tables.USER));

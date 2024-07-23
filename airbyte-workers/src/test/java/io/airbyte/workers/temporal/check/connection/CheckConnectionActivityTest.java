@@ -26,7 +26,6 @@ import io.airbyte.config.StandardCheckConnectionInput;
 import io.airbyte.config.StandardCheckConnectionOutput;
 import io.airbyte.config.WorkloadPriority;
 import io.airbyte.config.helpers.LogConfigs;
-import io.airbyte.config.secrets.SecretsRepositoryReader;
 import io.airbyte.featureflag.ConfigFileClient;
 import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.metrics.lib.MetricClient;
@@ -57,7 +56,7 @@ import org.mockito.Captor;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 @ExtendWith(MockitoExtension.class)
-public class CheckConnectionActivityTest {
+class CheckConnectionActivityTest {
 
   private final WorkerConfigsProvider workerConfigsProvider = mock(WorkerConfigsProvider.class);
   private final ProcessFactory processFactory = mock(ProcessFactory.class);
@@ -94,7 +93,6 @@ public class CheckConnectionActivityTest {
     checkConnectionActivity = spy(new CheckConnectionActivityImpl(
         workerConfigsProvider,
         processFactory,
-        mock(SecretsRepositoryReader.class),
         workspaceRoot,
         workerEnvironment,
         logConfigs,

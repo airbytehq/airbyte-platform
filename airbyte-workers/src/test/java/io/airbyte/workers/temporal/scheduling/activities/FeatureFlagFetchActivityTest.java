@@ -9,7 +9,6 @@ import static org.mockito.Mockito.when;
 
 import io.airbyte.api.client.AirbyteApiClient;
 import io.airbyte.api.client.generated.WorkspaceApi;
-import io.airbyte.featureflag.FeatureFlagClient;
 import java.util.Map;
 import java.util.UUID;
 import org.junit.jupiter.api.Assertions;
@@ -23,7 +22,6 @@ class FeatureFlagFetchActivityTest {
   private AirbyteApiClient mAirbyteApiClient;
   private WorkspaceApi mWorkspaceApi;
   private FeatureFlagFetchActivity featureFlagFetchActivity;
-  private FeatureFlagClient featureFlagClient;
 
   @BeforeEach
   void setUp() {

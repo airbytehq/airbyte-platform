@@ -21,7 +21,7 @@ import io.airbyte.validation.json.JsonValidationException;
 import jakarta.inject.Named;
 import jakarta.inject.Singleton;
 import java.io.IOException;
-import java.util.HashMap;
+import java.util.EnumMap;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
@@ -55,7 +55,7 @@ public class ConfigurationDefinitionVersionOverrideProvider implements Definitio
   private Optional<ScopedConfiguration> getScopedConfig(final UUID actorDefinitionId, final UUID workspaceId, @Nullable final UUID actorId) {
     final UUID organizationId = getOrganizationId(workspaceId);
 
-    final Map<ConfigScopeType, UUID> scopes = new HashMap<>(Map.of(ConfigScopeType.WORKSPACE, workspaceId));
+    final Map<ConfigScopeType, UUID> scopes = new EnumMap<>(Map.of(ConfigScopeType.WORKSPACE, workspaceId));
 
     if (organizationId != null) {
       scopes.put(ConfigScopeType.ORGANIZATION, organizationId);

@@ -114,7 +114,7 @@ import org.slf4j.MDC;
 
 // Suppressing AvoidPrintStackTrace PMD warnings because
 // it is required for the connectors
-@SuppressWarnings("PMD.AvoidPrintStackTrace")
+@SuppressWarnings({"PMD.AvoidPrintStackTrace", "PMD.ExceptionAsFlowControl"})
 // TODO(Davin): Better test for this. See https://github.com/airbytehq/airbyte/issues/3700.
 @Slf4j
 public class KubePodProcess implements KubePod {

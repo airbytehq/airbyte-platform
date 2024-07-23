@@ -253,7 +253,7 @@ public class DbConverter {
   public static StandardSourceDefinition buildStandardSourceDefinition(final Record record, final long defaultMaxSecondsBetweenMessages) {
     var maxSecondsBetweenMessage = record.get(ACTOR_DEFINITION.MAX_SECONDS_BETWEEN_MESSAGES) == null
         ? defaultMaxSecondsBetweenMessages
-        : record.get(ACTOR_DEFINITION.MAX_SECONDS_BETWEEN_MESSAGES).longValue();
+        : record.get(ACTOR_DEFINITION.MAX_SECONDS_BETWEEN_MESSAGES);
 
     // All sources are starting to set this field according to their rate limits. As a
     // safeguard for sources with rate limits that are too low e.g. minutes etc, we default to

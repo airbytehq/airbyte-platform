@@ -74,8 +74,8 @@ public class JwtTokenParser {
         // speakeasy generated jwt tokens contain the auth user id under the userId field
         jwtMap.put(JWT_AUTH_USER_ID, jwtNode.get("user_id"));
       }
-      if (jwtNode.containsKey("firebase")) {
-        jwtMap.put(JWT_FIREBASE, jwtNode.get("firebase"));
+      if (jwtNode.containsKey(JWT_FIREBASE)) {
+        jwtMap.put(JWT_FIREBASE, jwtNode.get(JWT_FIREBASE));
       }
     }
 
@@ -114,7 +114,7 @@ public class JwtTokenParser {
   }
 
   private static AuthProvider resolveAuthProvider(final Map<String, Object> jwtNode) {
-    if (jwtNode.containsKey("firebase")) {
+    if (jwtNode.containsKey(JWT_FIREBASE)) {
       return AuthProvider.GOOGLE_IDENTITY_PLATFORM;
     }
     if (resolveSsoRealm(jwtNode) != null) {

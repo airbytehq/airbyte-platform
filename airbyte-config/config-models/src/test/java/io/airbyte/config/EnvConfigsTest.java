@@ -64,7 +64,7 @@ class EnvConfigsTest {
   @Test
   void testAirbyteVersion() {
     envMap.put(EnvVar.AIRBYTE_VERSION.name(), null);
-    assertThrows(IllegalArgumentException.class, () -> config.getAirbyteVersion());
+    assertThrows(IllegalArgumentException.class, config::getAirbyteVersion);
 
     envMap.put(EnvVar.AIRBYTE_VERSION.name(), DEV);
     assertEquals(new AirbyteVersion(DEV), config.getAirbyteVersion());
@@ -73,7 +73,7 @@ class EnvConfigsTest {
   @Test
   void testWorkspaceRoot() {
     envMap.put(EnvVar.WORKSPACE_ROOT.name(), null);
-    assertThrows(IllegalArgumentException.class, () -> config.getWorkspaceRoot());
+    assertThrows(IllegalArgumentException.class, config::getWorkspaceRoot);
 
     envMap.put(EnvVar.WORKSPACE_ROOT.name(), ABCDEF);
     assertEquals(Paths.get(ABCDEF), config.getWorkspaceRoot());
@@ -82,7 +82,7 @@ class EnvConfigsTest {
   @Test
   void testGetDatabaseUser() {
     envMap.put(EnvVar.DATABASE_USER.name(), null);
-    assertThrows(IllegalArgumentException.class, () -> config.getDatabaseUser());
+    assertThrows(IllegalArgumentException.class, config::getDatabaseUser);
 
     envMap.put(EnvVar.DATABASE_USER.name(), "user");
     assertEquals("user", config.getDatabaseUser());
@@ -91,7 +91,7 @@ class EnvConfigsTest {
   @Test
   void testGetDatabasePassword() {
     envMap.put(EnvVar.DATABASE_PASSWORD.name(), null);
-    assertThrows(IllegalArgumentException.class, () -> config.getDatabasePassword());
+    assertThrows(IllegalArgumentException.class, config::getDatabasePassword);
 
     envMap.put(EnvVar.DATABASE_PASSWORD.name(), "password");
     assertEquals("password", config.getDatabasePassword());
@@ -100,7 +100,7 @@ class EnvConfigsTest {
   @Test
   void testGetDatabaseUrl() {
     envMap.put(EnvVar.DATABASE_URL.name(), null);
-    assertThrows(IllegalArgumentException.class, () -> config.getDatabaseUrl());
+    assertThrows(IllegalArgumentException.class, config::getDatabaseUrl);
 
     envMap.put(EnvVar.DATABASE_URL.name(), "url");
     assertEquals("url", config.getDatabaseUrl());

@@ -4,8 +4,6 @@
 
 package io.airbyte.db.instance.configs.migrations;
 
-import static org.junit.jupiter.api.Assertions.*;
-
 import io.airbyte.db.factory.FlywayFactory;
 import io.airbyte.db.instance.configs.AbstractConfigsDatabaseTest;
 import io.airbyte.db.instance.configs.ConfigsDatabaseMigrator;
@@ -24,6 +22,7 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+@SuppressWarnings("PMD.AvoidDuplicateLiterals")
 class V0_57_4_006__AddCdkVersionLastModifiedToActorDefVersionTest extends AbstractConfigsDatabaseTest {
 
   @BeforeEach

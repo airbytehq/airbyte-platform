@@ -16,6 +16,7 @@ import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 
+@SuppressWarnings("PMD.UnusedPrivateField")
 class PerfDestinationFactory {
 
   record PerfAirbyteDestination(DestinationHelper helper) implements AirbyteDestination {

@@ -17,7 +17,8 @@ import org.jooq.impl.DSL;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-public class V0_57_4_001__AddRefreshSupportTest extends AbstractConfigsDatabaseTest {
+@SuppressWarnings("PMD.JUnitTestsShouldIncludeAssert")
+class V0_57_4_001__AddRefreshSupportTest extends AbstractConfigsDatabaseTest {
 
   @BeforeEach
   void beforeEach() {

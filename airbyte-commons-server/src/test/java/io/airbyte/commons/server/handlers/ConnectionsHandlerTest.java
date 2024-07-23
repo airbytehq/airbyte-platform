@@ -37,7 +37,6 @@ import io.airbyte.api.model.generated.CatalogDiff;
 import io.airbyte.api.model.generated.ConnectionAutoPropagateResult;
 import io.airbyte.api.model.generated.ConnectionAutoPropagateSchemaChange;
 import io.airbyte.api.model.generated.ConnectionCreate;
-import io.airbyte.api.model.generated.ConnectionDataHistoryReadItem;
 import io.airbyte.api.model.generated.ConnectionDataHistoryRequestBody;
 import io.airbyte.api.model.generated.ConnectionLastJobPerStreamReadItem;
 import io.airbyte.api.model.generated.ConnectionLastJobPerStreamRequestBody;
@@ -170,7 +169,6 @@ import io.airbyte.validation.json.JsonValidationException;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
-import java.time.LocalDate;
 import java.time.ZoneId;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
@@ -193,6 +191,7 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.MockedStatic;
 import org.mockito.Mockito;
 
+@SuppressWarnings("PMD.AvoidDuplicateLiterals")
 class ConnectionsHandlerTest {
 
   private static final Instant CURRENT_INSTANT = Instant.now();
@@ -1704,13 +1703,6 @@ class ConnectionsHandlerTest {
           connectionTimelineEventService, userPersistence);
     }
 
-    private Attempt generateMockAttempt(final Instant attemptTime, final long recordsSynced) {
-      final StandardSyncSummary standardSyncSummary = new StandardSyncSummary().withTotalStats(new SyncStats().withRecordsCommitted(recordsSynced));
-      final StandardSyncOutput standardSyncOutput = new StandardSyncOutput().withStandardSyncSummary(standardSyncSummary);
-      final JobOutput jobOutput = new JobOutput().withOutputType(OutputType.SYNC).withSync(standardSyncOutput);
-      return new Attempt(0, 0, null, null, jobOutput, AttemptStatus.FAILED, null, null, 0, 0, attemptTime.getEpochSecond());
-    }
-
     private Attempt generateMockAttemptWithStreamStats(final Instant attemptTime, final List<Map<List<String>, Long>> streamsToRecordsSynced) {
       final List<StreamSyncStats> streamSyncStatsList = streamsToRecordsSynced.stream().map(streamToRecordsSynced -> {
         final List<String> streamKey = new ArrayList<>(streamToRecordsSynced.keySet().iterator().next());
@@ -1733,18 +1725,6 @@ class ConnectionsHandlerTest {
 
     private Job generateMockJob(final UUID connectionId, final Attempt attempt) {
       return new Job(0L, JobConfig.ConfigType.SYNC, connectionId.toString(), null, List.of(attempt), JobStatus.RUNNING, 1001L, 1000L, 1002L);
-    }
-
-    private List<ConnectionDataHistoryReadItem> generateEmptyConnectionDataHistoryReadList(final LocalDate startDate,
-                                                                                           final LocalDate endDate,
-                                                                                           final String timezone) {
-      final List<ConnectionDataHistoryReadItem> connectionDataHistoryReadList = new ArrayList<>();
-      for (LocalDate date = startDate; !date.isAfter(endDate); date = date.plusDays(1)) {
-        connectionDataHistoryReadList.add(new ConnectionDataHistoryReadItem()
-            .timestamp(Math.toIntExact(date.atStartOfDay(ZoneId.of(timezone)).toEpochSecond()))
-            .recordsCommitted(0L));
-      }
-      return connectionDataHistoryReadList;
     }
 
     @Nested

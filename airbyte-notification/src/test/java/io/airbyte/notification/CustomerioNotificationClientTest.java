@@ -37,6 +37,7 @@ import org.apache.http.HttpHeaders;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+@SuppressWarnings("PMD.AvoidDuplicateLiterals")
 class CustomerioNotificationClientTest {
 
   private static final String API_ENDPOINT = "v1/send";

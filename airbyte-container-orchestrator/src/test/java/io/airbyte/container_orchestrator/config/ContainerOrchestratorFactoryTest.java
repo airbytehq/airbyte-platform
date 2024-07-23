@@ -27,7 +27,6 @@ import io.airbyte.workers.process.DockerProcessFactory;
 import io.airbyte.workers.process.ProcessFactory;
 import io.airbyte.workers.sync.ReplicationLauncherWorker;
 import io.airbyte.workers.workload.JobOutputDocStore;
-import io.airbyte.workers.workload.WorkloadIdGenerator;
 import io.micronaut.context.annotation.Bean;
 import io.micronaut.context.annotation.Property;
 import io.micronaut.context.annotation.Replaces;
@@ -125,18 +124,18 @@ class ContainerOrchestratorFactoryTest {
 
     final var repl = factory.jobOrchestrator(
         ReplicationLauncherWorker.REPLICATION, configDir, envConfigs, jobRunConfig, replicationWorkerFactory,
-        asyncStateManager, workloadApiClient, new WorkloadIdGenerator(), false, jobOutputDocStore);
+        asyncStateManager, workloadApiClient, false, jobOutputDocStore);
     assertEquals("Replication", repl.getOrchestratorName());
 
     final var noop = factory.jobOrchestrator(
         AsyncOrchestratorPodProcess.NO_OP, configDir, envConfigs, jobRunConfig, replicationWorkerFactory,
-        asyncStateManager, workloadApiClient, new WorkloadIdGenerator(), false, jobOutputDocStore);
+        asyncStateManager, workloadApiClient, false, jobOutputDocStore);
     assertEquals("NO_OP", noop.getOrchestratorName());
 
     var caught = false;
     try {
       factory.jobOrchestrator("does not exist", configDir, envConfigs, jobRunConfig, replicationWorkerFactory,
-          asyncStateManager, workloadApiClient, new WorkloadIdGenerator(), false, jobOutputDocStore);
+          asyncStateManager, workloadApiClient, false, jobOutputDocStore);
     } catch (final Exception e) {
       caught = true;
     }

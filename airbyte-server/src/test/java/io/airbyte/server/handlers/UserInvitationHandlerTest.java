@@ -66,7 +66,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 @ExtendWith(MockitoExtension.class)
-public class UserInvitationHandlerTest {
+class UserInvitationHandlerTest {
 
   @Mock
   UserInvitationService service;
@@ -407,7 +407,7 @@ public class UserInvitationHandlerTest {
       when(service.cancelUserInvitation(inviteCode)).thenReturn(cancelledInvitation);
       when(mapper.toApi(cancelledInvitation)).thenReturn(mock(UserInvitationRead.class));
 
-      final UserInvitationRead result = handler.cancel(req);
+      handler.cancel(req);
 
       verify(service, times(1)).cancelUserInvitation(inviteCode);
       verifyNoMoreInteractions(service);

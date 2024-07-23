@@ -128,11 +128,6 @@ class NamespacingMapperTest {
     expectedMessage.getRecord().withNamespace(null);
     final AirbyteMessage actualMessage = mapper.mapMessage(originalMessage);
 
-    final AirbyteMessage expectedStreamStatusMessage = AirbyteMessageUtils.createStreamStatusTraceMessageWithType(
-        new StreamDescriptor().withName(OUTPUT_PREFIX + STREAM_NAME),
-        AirbyteStreamStatusTraceMessage.AirbyteStreamStatus.COMPLETE);
-    final AirbyteMessage actualStreamStatusMessage = mapper.mapMessage(originalStreamStatusMessage);
-
     assertEquals(expectedMessage, actualMessage);
   }
 

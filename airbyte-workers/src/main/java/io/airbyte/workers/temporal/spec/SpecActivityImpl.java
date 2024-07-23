@@ -180,7 +180,7 @@ public class SpecActivityImpl implements SpecActivity {
 
     final WorkloadCreateRequest workloadCreateRequest = new WorkloadCreateRequest(
         workloadId,
-        List.of(new WorkloadLabel(Metadata.JOB_LABEL_KEY, jobId.toString())),
+        List.of(new WorkloadLabel(Metadata.JOB_LABEL_KEY, jobId)),
         serializedInput,
         fullLogPath(Path.of(workloadId)),
         Geography.AUTO.getValue(),

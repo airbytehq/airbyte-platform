@@ -11,7 +11,7 @@ import io.airbyte.config.BreakingChangeScope.ScopeType;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 
-public class BreakingChangeScopeFactoryTest {
+class BreakingChangeScopeFactoryTest {
 
   @Test
   void testCreateStreamBreakingChangeScope() {

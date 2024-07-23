@@ -149,7 +149,6 @@ class WebBackendConnectionsHandlerTest {
   private SchedulerHandler schedulerHandler;
   private StateHandler stateHandler;
   private DestinationHandler destinationHandler;
-  private DestinationDefinitionsHandler destinationDefinitionsHandler;
   private WebBackendConnectionsHandler wbHandler;
   private SourceRead sourceRead;
   private ConnectionRead connectionRead;
@@ -208,7 +207,6 @@ class WebBackendConnectionsHandlerTest {
     when(featureFlagClient.boolVariation(UseIconUrlInApiResponse.INSTANCE, new Workspace(ANONYMOUS)))
         .thenReturn(true);
 
-    destinationDefinitionsHandler = mock(DestinationDefinitionsHandler.class);
     destinationHandler = new DestinationHandler(configRepository,
         validator,
         connectionsHandler,

@@ -71,8 +71,8 @@ public class AuthenticationHeaderResolver {
     try {
       if (properties.containsKey(ORGANIZATION_ID_HEADER)) {
         return List.of(UUID.fromString(properties.get(ORGANIZATION_ID_HEADER)));
-      } else if (properties.containsKey(SCOPE_TYPE_HEADER) && properties.containsKey(SCOPE_ID_HEADER) && properties.get(SCOPE_TYPE_HEADER)
-          .equals(ScopeType.ORGANIZATION.value().toLowerCase())) {
+      } else if (properties.containsKey(SCOPE_TYPE_HEADER) && properties.containsKey(SCOPE_ID_HEADER)
+          && properties.get(SCOPE_TYPE_HEADER).equalsIgnoreCase(ScopeType.ORGANIZATION.value())) {
         // if the scope type is organization, we can use the scope id directly to resolve an organization
         // id.
         final String organizationId = properties.get(SCOPE_ID_HEADER);
@@ -147,8 +147,8 @@ public class AuthenticationHeaderResolver {
         // this will be skipped
         // The full list of workspace ID permissions is handled below in the catch-all.
         return resolveWorkspaces(properties);
-      } else if (properties.containsKey(SCOPE_TYPE_HEADER) && properties.containsKey(SCOPE_ID_HEADER) && properties.get(SCOPE_TYPE_HEADER)
-          .equals(ScopeType.WORKSPACE.value().toLowerCase())) {
+      } else if (properties.containsKey(SCOPE_TYPE_HEADER) && properties.containsKey(SCOPE_ID_HEADER)
+          && properties.get(SCOPE_TYPE_HEADER).equalsIgnoreCase(ScopeType.WORKSPACE.value())) {
         // if the scope type is workspace, we can use the scope id directly to resolve a workspace id.
         final String workspaceId = properties.get(SCOPE_ID_HEADER);
         return List.of(UUID.fromString(workspaceId));

@@ -88,6 +88,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
+@SuppressWarnings("PMD.JUnitTestsShouldIncludeAssert")
 class ConnectorBuilderProjectsHandlerTest {
 
   private static final UUID A_SOURCE_DEFINITION_ID = UUID.randomUUID();

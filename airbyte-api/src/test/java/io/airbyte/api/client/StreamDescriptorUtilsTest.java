@@ -10,24 +10,24 @@ import java.util.List;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
-public class StreamDescriptorUtilsTest {
+class StreamDescriptorUtilsTest {
 
   @Test
-  public void testBuildFullyQualifiedNameWithNamespace() {
+  void testBuildFullyQualifiedNameWithNamespace() {
     StreamDescriptor descriptor = new StreamDescriptor().name("main_name").namespace("namespace");
     String fqn = StreamDescriptorUtils.buildFullyQualifiedName(descriptor);
     Assertions.assertEquals("namespace.main_name", fqn);
   }
 
   @Test
-  public void testBuildFullyQualifiedNameNoNamespace() {
+  void testBuildFullyQualifiedNameNoNamespace() {
     StreamDescriptor descriptor = new StreamDescriptor().name("foobar");
     String fqn = StreamDescriptorUtils.buildFullyQualifiedName(descriptor);
     Assertions.assertEquals("foobar", fqn);
   }
 
   @Test
-  public void testBuildFieldName() {
+  void testBuildFieldName() {
     Assertions.assertEquals("root.branch.value", StreamDescriptorUtils.buildFieldName(List.of("root", "branch", "value")));
     Assertions.assertEquals("single_value", StreamDescriptorUtils.buildFieldName(List.of("single_value")));
   }

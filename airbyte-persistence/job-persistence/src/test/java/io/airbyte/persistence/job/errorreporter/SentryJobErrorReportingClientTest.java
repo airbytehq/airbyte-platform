@@ -45,6 +45,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 
+@SuppressWarnings("PMD.LooseCoupling")
 class SentryJobErrorReportingClientTest {
 
   private static final UUID WORKSPACE_ID = UUID.randomUUID();

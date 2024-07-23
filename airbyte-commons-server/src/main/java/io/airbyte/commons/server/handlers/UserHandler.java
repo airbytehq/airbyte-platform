@@ -79,6 +79,7 @@ import org.slf4j.LoggerFactory;
  * UserHandler.
  */
 @Singleton
+@SuppressWarnings("PMD.PreserveStackTrace")
 public class UserHandler {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(UserHandler.class);
@@ -513,14 +514,6 @@ public class UserHandler {
       throws IOException, JsonValidationException {
     permissionHandler.createPermission(new io.airbyte.api.model.generated.PermissionCreate()
         .organizationId(orgId)
-        .userId(userId)
-        .permissionType(permissionType));
-  }
-
-  private void createPermissionForUserAndWorkspace(final UUID userId, final UUID workspaceId, final PermissionType permissionType)
-      throws IOException, JsonValidationException {
-    permissionHandler.createPermission(new io.airbyte.api.model.generated.PermissionCreate()
-        .workspaceId(workspaceId)
         .userId(userId)
         .permissionType(permissionType));
   }

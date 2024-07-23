@@ -335,7 +335,7 @@ class SyncPersistenceImplTest {
 
     // Final flush
     when(executorService.awaitTermination(anyLong(), any())).thenReturn(true);
-    assertThrows(Exception.class, () -> syncPersistence.close());
+    assertThrows(Exception.class, syncPersistence::close);
     verify(stateApi, times(1)).createOrUpdateState(buildStateRequest(connectionId, List.of(state)));
     verify(attemptApi, never()).saveStats(any());
   }
@@ -351,7 +351,7 @@ class SyncPersistenceImplTest {
 
     // Final flush
     when(executorService.awaitTermination(anyLong(), any())).thenReturn(true);
-    assertThrows(Exception.class, () -> syncPersistence.close());
+    assertThrows(Exception.class, syncPersistence::close);
     verify(stateApi).createOrUpdateState(buildStateRequest(connectionId, List.of(state)));
     verify(attemptApi, times(1)).saveStats(any());
   }

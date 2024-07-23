@@ -33,7 +33,6 @@ import io.airbyte.config.AttemptFailureSummary;
 import io.airbyte.config.AttemptSyncConfig;
 import io.airbyte.config.FailureReason;
 import io.airbyte.config.FailureReason.FailureOrigin;
-import io.airbyte.config.FailureReason.FailureType;
 import io.airbyte.config.JobConfig;
 import io.airbyte.config.JobConfig.ConfigType;
 import io.airbyte.config.JobGetSpecConfig;
@@ -323,10 +322,6 @@ class DefaultJobPersistenceTest {
     final StreamSyncStats streamSyncStats = new StreamSyncStats().withStats(
         new SyncStats().withBytesEmitted(100L).withRecordsEmitted(9L).withEstimatedBytes(200L).withEstimatedRecords(10L))
         .withStreamNamespace(streamNamespace).withStreamName(streamName);
-    final FailureReason failureReason1 = new FailureReason().withFailureOrigin(FailureOrigin.DESTINATION).withFailureType(FailureType.SYSTEM_ERROR)
-        .withExternalMessage("There was an error");
-    final FailureReason failureReason2 = new FailureReason().withFailureOrigin(FailureOrigin.SOURCE).withFailureType(FailureType.CONFIG_ERROR)
-        .withExternalMessage("There was another error");
 
     final StandardSyncOutput standardSyncOutput =
         new StandardSyncOutput().withStandardSyncSummary(new StandardSyncSummary()

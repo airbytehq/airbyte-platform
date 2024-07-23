@@ -514,7 +514,7 @@ public class WebBackendConnectionsHandler {
           outputStreamConfig.setSyncMode(discoveredStreamConfig.getSyncMode());
         }
 
-        if (originalStreamConfig.getCursorField().size() > 0) {
+        if (!originalStreamConfig.getCursorField().isEmpty()) {
           outputStreamConfig.setCursorField(originalStreamConfig.getCursorField());
         } else {
           outputStreamConfig.setCursorField(discoveredStreamConfig.getCursorField());
@@ -525,7 +525,7 @@ public class WebBackendConnectionsHandler {
         final boolean hasSourceDefinedPK = stream.getSourceDefinedPrimaryKey() != null && !stream.getSourceDefinedPrimaryKey().isEmpty();
         if (hasSourceDefinedPK) {
           outputStreamConfig.setPrimaryKey(stream.getSourceDefinedPrimaryKey());
-        } else if (originalStreamConfig.getPrimaryKey().size() > 0) {
+        } else if (!originalStreamConfig.getPrimaryKey().isEmpty()) {
           outputStreamConfig.setPrimaryKey(originalStreamConfig.getPrimaryKey());
         } else {
           outputStreamConfig.setPrimaryKey(discoveredStreamConfig.getPrimaryKey());
@@ -545,8 +545,8 @@ public class WebBackendConnectionsHandler {
           final Set<String> originallySelected = new HashSet<>(
               originalConfiguredStream.getConfig().getSelectedFields().stream().map((field) -> field.getFieldPath().get(0)).toList());
           originalDiscoveredStream.getStream().getJsonSchema().findPath("properties").fieldNames()
-              .forEachRemaining((name) -> originallyDiscovered.add(name));
-          stream.getJsonSchema().findPath("properties").fieldNames().forEachRemaining((name) -> refreshDiscovered.add(name));
+              .forEachRemaining(originallyDiscovered::add);
+          stream.getJsonSchema().findPath("properties").fieldNames().forEachRemaining(refreshDiscovered::add);
           // We include a selected field if it:
           // (is in the newly discovered schema) AND (it was either originally selected OR not in the
           // originally discovered schema at all)
@@ -636,7 +636,7 @@ public class WebBackendConnectionsHandler {
     final ConnectionRead updatedConnectionRead = connectionsHandler.updateConnection(connectionPatch);
 
     // detect if any streams need to be reset based on the patch and initial catalog, if so, reset them
-    resetStreamsIfNeeded(webBackendConnectionPatch, oldConfiguredCatalog, updatedConnectionRead, originalConnectionRead, source.getWorkspaceId());
+    resetStreamsIfNeeded(webBackendConnectionPatch, oldConfiguredCatalog, updatedConnectionRead, originalConnectionRead);
     /*
      * This catalog represents the full catalog that was used to create the configured catalog. It will
      * have all streams that were present at the time. It will have no configuration set.
@@ -662,8 +662,7 @@ public class WebBackendConnectionsHandler {
   private void resetStreamsIfNeeded(final WebBackendConnectionUpdate webBackendConnectionPatch,
                                     final ConfiguredAirbyteCatalog oldConfiguredCatalog,
                                     final ConnectionRead updatedConnectionRead,
-                                    final ConnectionRead oldConnectionRead,
-                                    final UUID workspaceId)
+                                    final ConnectionRead oldConnectionRead)
       throws JsonValidationException, ConfigNotFoundException, IOException, io.airbyte.data.exceptions.ConfigNotFoundException {
 
     final UUID connectionId = webBackendConnectionPatch.getConnectionId();

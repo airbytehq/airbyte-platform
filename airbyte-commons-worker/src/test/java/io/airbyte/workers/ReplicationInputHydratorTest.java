@@ -77,6 +77,7 @@ import org.mockito.ArgumentCaptor;
 /**
  * Tests for the replication activity specifically.
  */
+@SuppressWarnings("PMD.AvoidDuplicateLiterals")
 class ReplicationInputHydratorTest {
 
   private static final UUID CONNECTION_ID = UUID.randomUUID();
@@ -346,7 +347,6 @@ class ReplicationInputHydratorTest {
     final ReplicationInputHydrator replicationInputHydrator = getReplicationInputHydrator();
     final io.airbyte.config.StreamDescriptor stream1 = new io.airbyte.config.StreamDescriptor().withName("s1").withNamespace("ns1");
     final io.airbyte.config.StreamDescriptor stream2 = new io.airbyte.config.StreamDescriptor().withName("s1");
-    final io.airbyte.config.StreamDescriptor stream3 = new io.airbyte.config.StreamDescriptor().withName("s1").withNamespace("ns2");
     final io.airbyte.config.StreamDescriptor stream4 = new io.airbyte.config.StreamDescriptor().withName("s2");
     replicationInputHydrator.trackBackfillAndResume(
         1L,

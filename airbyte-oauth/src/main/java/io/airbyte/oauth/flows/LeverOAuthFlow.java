@@ -20,6 +20,7 @@ import org.apache.http.client.utils.URIBuilder;
 /**
  * Lever OAuth.
  */
+@SuppressWarnings("PMD.LiteralsFirstInComparisons")
 public class LeverOAuthFlow extends BaseOAuth2Flow {
 
   private static final String AUTHORIZE_URL = "%s/authorize";

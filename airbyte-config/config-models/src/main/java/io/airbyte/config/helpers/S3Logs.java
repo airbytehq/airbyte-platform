@@ -44,10 +44,6 @@ public class S3Logs implements CloudLogs {
     this.s3ClientFactory = s3ClientFactory;
   }
 
-  private File getFile(final LogConfigs configs, final String logPath, final int pageSize) throws IOException {
-    return getFile(getOrCreateS3Client(), configs, logPath, pageSize);
-  }
-
   @VisibleForTesting
   static File getFile(final S3Client s3Client, final LogConfigs configs, final String logPath, final int pageSize) throws IOException {
     LOGGER.debug("Retrieving logs from S3 path: {}", logPath);

@@ -108,19 +108,19 @@ class TemporalAttemptExecutionTest {
     verify(worker).run(anyString(), any());
     verify(mdcSetter, atLeast(1)).accept(jobRoot);
     verify(attemptApi, times(1)).setWorkflowInAttempt(
-        argThat(request -> request.getAttemptNumber() == ATTEMPT_NUMBER && request.getJobId() == Long.valueOf(JOB_ID)));
+        argThat(request -> request.getAttemptNumber() == ATTEMPT_NUMBER && request.getJobId() == Long.parseLong(JOB_ID)));
   }
 
   @Test
   void testThrowsUnCheckedException() throws Exception {
     when(worker.run(anyString(), any())).thenThrow(new IllegalArgumentException());
 
-    assertThrows(IllegalArgumentException.class, () -> attemptExecution.get());
+    assertThrows(IllegalArgumentException.class, attemptExecution::get);
 
     verify(worker).run(anyString(), any());
     verify(mdcSetter).accept(jobRoot);
     verify(attemptApi, times(1)).setWorkflowInAttempt(
-        argThat(request -> request.getAttemptNumber() == ATTEMPT_NUMBER && request.getJobId() == Long.valueOf(JOB_ID)));
+        argThat(request -> request.getAttemptNumber() == ATTEMPT_NUMBER && request.getJobId() == Long.parseLong(JOB_ID)));
   }
 
 }

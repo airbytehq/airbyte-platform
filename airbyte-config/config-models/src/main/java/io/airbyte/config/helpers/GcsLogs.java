@@ -53,7 +53,7 @@ public class GcsLogs implements CloudLogs {
 
     LOGGER.debug("Start GCS list request.");
 
-    final LinkedList<Blob> descending = new LinkedList<>();
+    final List<Blob> descending = new LinkedList<>();
     gcsClient.list(
         configs.getStorageConfig().getBuckets().getLog(),
         Storage.BlobListOption.prefix(logPath))

@@ -153,7 +153,7 @@ public class CatalogClientConverters {
                                                                                                final io.airbyte.protocol.models.AirbyteCatalog catalog) {
     return new io.airbyte.api.client.model.generated.AirbyteCatalog(catalog.getStreams()
         .stream()
-        .map(stream -> toAirbyteStreamClientApi(stream))
+        .map(CatalogClientConverters::toAirbyteStreamClientApi)
         .map(s -> new io.airbyte.api.client.model.generated.AirbyteStreamAndConfiguration(s, generateDefaultConfiguration(s)))
         .toList());
   }
@@ -162,7 +162,7 @@ public class CatalogClientConverters {
   private static io.airbyte.api.client.model.generated.AirbyteStreamConfiguration generateDefaultConfiguration(
                                                                                                                final io.airbyte.api.client.model.generated.AirbyteStream stream) {
     return new io.airbyte.api.client.model.generated.AirbyteStreamConfiguration(
-        stream.getSupportedSyncModes().size() > 0 ? Enums.convertTo(stream.getSupportedSyncModes().get(0),
+        !stream.getSupportedSyncModes().isEmpty() ? Enums.convertTo(stream.getSupportedSyncModes().get(0),
             io.airbyte.api.client.model.generated.SyncMode.class) : io.airbyte.api.client.model.generated.SyncMode.INCREMENTAL,
         io.airbyte.api.client.model.generated.DestinationSyncMode.APPEND,
         stream.getDefaultCursorField(),

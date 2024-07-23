@@ -43,6 +43,7 @@ import org.keycloak.representations.idm.ClientRepresentation;
 @Singleton
 @Slf4j
 @RequiresAuthMode(AuthMode.OIDC)
+@SuppressWarnings("PMD.ExceptionAsFlowControl")
 public class ApplicationServiceKeycloakImpl implements ApplicationService {
 
   // This number should be kept low or this code will start to do a lot of work.
