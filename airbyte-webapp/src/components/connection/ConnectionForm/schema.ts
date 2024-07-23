@@ -1,7 +1,6 @@
 import * as yup from "yup";
 import { SchemaOf } from "yup";
 
-import { NormalizationType } from "area/connection/types";
 import { validateCronExpression, validateCronFrequencyOneHourOrMore } from "area/connection/utils";
 import {
   AirbyteStreamAndConfiguration,
@@ -16,8 +15,6 @@ import {
   SyncMode,
   SchemaChangeBackfillPreference,
 } from "core/api/types/AirbyteClient";
-
-import { dbtOperationReadOrCreateSchema } from "../TransformationForm";
 
 /**
  * yup schema for the schedule data
@@ -81,6 +78,7 @@ const streamSchema: SchemaOf<AirbyteStream> = yup.object({
   defaultCursorField: yup.array().of(yup.string()).optional(),
   sourceDefinedPrimaryKey: yup.array().of(yup.array().of(yup.string())).optional(),
   namespace: yup.string().optional(),
+  isResumable: yup.boolean().optional(),
 });
 
 /**
@@ -202,8 +200,6 @@ export const createConnectionValidationSchema = (
         ? yup.mixed().oneOf(Object.values(NonBreakingChangesPreference)).required("form.empty.error")
         : yup.mixed().notRequired(),
       geography: yup.mixed<Geography>().oneOf(Object.values(Geography)).optional(),
-      normalization: yup.mixed<NormalizationType>().oneOf(Object.values(NormalizationType)).optional(),
-      transformations: yup.array().of(dbtOperationReadOrCreateSchema).optional(),
       syncCatalog: syncCatalogSchema,
       notifySchemaChanges: yup.boolean().optional(),
       backfillPreference: yup.mixed().oneOf(Object.values(SchemaChangeBackfillPreference)).optional(),

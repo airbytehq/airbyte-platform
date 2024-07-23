@@ -23,8 +23,10 @@ import io.airbyte.config.ActorDefinitionVersion;
 import io.airbyte.config.AttemptSyncConfig;
 import io.airbyte.config.ConnectorJobOutput;
 import io.airbyte.config.FailureReason;
-import io.airbyte.config.JobConfig;
 import io.airbyte.config.JobConfig.ConfigType;
+import io.airbyte.config.JobConfigProxy;
+import io.airbyte.config.RefreshStream;
+import io.airbyte.config.RefreshStream.RefreshType;
 import io.airbyte.config.StandardCheckConnectionOutput;
 import io.airbyte.config.StandardDestinationDefinition;
 import io.airbyte.config.StandardSourceDefinition;
@@ -34,9 +36,11 @@ import io.airbyte.config.StandardWorkspace;
 import io.airbyte.config.persistence.ActorDefinitionVersionHelper;
 import io.airbyte.config.persistence.ConfigNotFoundException;
 import io.airbyte.config.persistence.ConfigRepository;
+import io.airbyte.featureflag.Empty;
 import io.airbyte.featureflag.FeatureFlagClient;
-import io.airbyte.featureflag.UseWorkloadApiForCheck;
-import io.airbyte.featureflag.UseWorkloadApiForDiscover;
+import io.airbyte.featureflag.UseWorkloadApi;
+import io.airbyte.featureflag.WorkloadApiServerEnabled;
+import io.airbyte.featureflag.WorkloadLauncherEnabled;
 import io.airbyte.featureflag.Workspace;
 import io.airbyte.persistence.job.JobPersistence;
 import io.airbyte.persistence.job.WorkspaceHelper;
@@ -56,6 +60,7 @@ import java.util.Map.Entry;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 /**
  * Tracking calls to each job type.
@@ -198,8 +203,11 @@ public class JobTracker {
       final Map<String, Object> failureReasonMetadata = generateFailureReasonMetadata(failureReason);
       final Map<String, Object> sourceDefMetadata = generateSourceDefinitionMetadata(sourceDefinitionId, workspaceId, actorId);
       final Map<String, Object> stateMetadata = generateStateMetadata(jobState);
-      final Map<String, Object> workloadMetadata =
-          Map.of("workload_enabled", featureFlagClient.boolVariation(UseWorkloadApiForDiscover.INSTANCE, new Workspace(workspaceId)));
+
+      var ffCheck = featureFlagClient.boolVariation(UseWorkloadApi.INSTANCE, new Workspace(workspaceId));
+      var envCheck = featureFlagClient.boolVariation(WorkloadLauncherEnabled.INSTANCE, Empty.INSTANCE)
+          && featureFlagClient.boolVariation(WorkloadApiServerEnabled.INSTANCE, Empty.INSTANCE);
+      final Map<String, Object> workloadMetadata = Map.of("workload_enabled", ffCheck || envCheck);
 
       track(workspaceId, DISCOVER_EVENT, MoreMaps.merge(jobMetadata, failureReasonMetadata, sourceDefMetadata, stateMetadata, workloadMetadata));
     });
@@ -213,6 +221,7 @@ public class JobTracker {
    */
   public void trackSync(final Job job, final JobState jobState) {
     Exceptions.swallow(() -> {
+      final JobConfigProxy jobConfig = new JobConfigProxy(job.getConfig());
       final ConfigType configType = job.getConfigType();
       final boolean allowedJob = REPLICATION_TYPES.contains(configType);
       Preconditions.checkArgument(allowedJob, "Job type " + configType + " is not allowed!");
@@ -242,10 +251,11 @@ public class JobTracker {
       final Map<String, Object> syncMetadata = generateSyncMetadata(standardSync);
       final Map<String, Object> stateMetadata = generateStateMetadata(jobState);
       final Map<String, Object> syncConfigMetadata = generateSyncConfigMetadata(
-          job.getConfig(),
+          jobConfig,
           attemptSyncConfig.orElse(null),
           sourceVersion.getSpec().getConnectionSpecification(),
           destinationVersion.getSpec().getConnectionSpecification());
+      final Map<String, Object> refreshMetadata = generateRefreshMetadata(jobConfig);
 
       track(workspaceId,
           SYNC_EVENT,
@@ -256,7 +266,8 @@ public class JobTracker {
               destinationDefMetadata,
               syncMetadata,
               stateMetadata,
-              syncConfigMetadata));
+              syncConfigMetadata,
+              refreshMetadata));
     });
   }
 
@@ -306,8 +317,25 @@ public class JobTracker {
     });
   }
 
+  private Map<String, Object> generateRefreshMetadata(final JobConfigProxy jobConfig) {
+    if (jobConfig.getConfigType() == ConfigType.REFRESH) {
+      final List<String> refreshTypes = jobConfig
+          .getRaw()
+          .getRefresh()
+          .getStreamsToRefresh()
+          .stream()
+          .map(RefreshStream::getRefreshType)
+          .collect(Collectors.toSet())
+          .stream()
+          .map(RefreshType::value)
+          .toList();
+      return Map.of("refresh_types", refreshTypes);
+    }
+    return Map.of();
+  }
+
   private Map<String, Object> generateSyncConfigMetadata(
-                                                         final JobConfig config,
+                                                         final JobConfigProxy config,
                                                          @Nullable final AttemptSyncConfig attemptSyncConfig,
                                                          final JsonNode sourceConfigSchema,
                                                          final JsonNode destinationConfigSchema) {
@@ -325,11 +353,10 @@ public class JobTracker {
             mapToJsonString(configToMetadata(destinationConfiguration, destinationConfigSchema)));
       }
 
+      final var configuredCatalog = config.getConfiguredCatalog();
       final Map<String, Object> catalogMetadata;
-      if (config.getConfigType() == ConfigType.SYNC) {
-        catalogMetadata = getCatalogMetadata(config.getSync().getConfiguredAirbyteCatalog());
-      } else if (config.getConfigType() == ConfigType.REFRESH) {
-        catalogMetadata = getCatalogMetadata(config.getRefresh().getConfiguredAirbyteCatalog());
+      if (configuredCatalog != null) {
+        catalogMetadata = getCatalogMetadata(configuredCatalog);
       } else {
         // This is not possible
         throw new IllegalStateException("This should not be reacheable");
@@ -469,7 +496,10 @@ public class JobTracker {
    */
   private Map<String, Object> generateCheckConnectionMetadata(final @Nullable StandardCheckConnectionOutput output, final UUID workspaceId) {
     final Map<String, Object> metadata = new HashMap<>();
-    metadata.put("workload_enabled", featureFlagClient.boolVariation(UseWorkloadApiForCheck.INSTANCE, new Workspace(workspaceId)));
+    var ffCheck = featureFlagClient.boolVariation(UseWorkloadApi.INSTANCE, new Workspace(workspaceId));
+    var envCheck = featureFlagClient.boolVariation(WorkloadLauncherEnabled.INSTANCE, Empty.INSTANCE)
+        && featureFlagClient.boolVariation(WorkloadApiServerEnabled.INSTANCE, Empty.INSTANCE);
+    metadata.put("workload_enabled", ffCheck || envCheck);
 
     if (output == null) {
       return metadata;
@@ -524,7 +554,12 @@ public class JobTracker {
                                           final Optional<Job> previousJob) {
     final Map<String, Object> metadata = new HashMap<>();
     if (configType != null) {
-      metadata.put("job_type", configType);
+      // This is a cosmetic fix for our job tracking.
+      // https://github.com/airbytehq/airbyte-internal-issues/issues/7671 tracks the more complete
+      // refactoring. Once that is done, this should no longer be needed as we can directly log
+      // configType.
+      final var eventConfigType = configType == ConfigType.RESET_CONNECTION ? ConfigType.CLEAR : configType;
+      metadata.put("job_type", eventConfigType);
     }
     metadata.put("job_id", jobId);
     metadata.put("attempt_id", attempt);

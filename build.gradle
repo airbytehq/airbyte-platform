@@ -25,11 +25,12 @@ buildscript {
 plugins {
     id "base"
     id "com.dorongold.task-tree" version "2.1.1"
-    id "io.airbyte.gradle.jvm" version "0.32.0" apply false
-    id "io.airbyte.gradle.jvm.app" version "0.32.0" apply false
-    id "io.airbyte.gradle.jvm.lib" version "0.32.0" apply false
-    id "io.airbyte.gradle.docker" version "0.32.0" apply false
-    id "io.airbyte.gradle.publish" version "0.32.0" apply false
+    id "io.airbyte.gradle.jvm" version "0.36.4" apply false
+    id "io.airbyte.gradle.jvm.app" version "0.36.4" apply false
+    id "io.airbyte.gradle.jvm.lib" version "0.36.4" apply false
+    id "io.airbyte.gradle.docker" version "0.36.4" apply false
+    id "io.airbyte.gradle.publish" version "0.36.4" apply false
+    id "io.airbyte.gradle.kube-reload" version "0.36.4" apply false
     // uncomment for testing plugin locally
     // id "io.airbyte.gradle.jvm" version "local-test" apply false
     // id "io.airbyte.gradle.jvm.app" version "local-test" apply false
@@ -69,19 +70,19 @@ if (System.getProperty("ciMode", "false") == "true") {
 }
 
 Properties env = new Properties()
-rootProject.file('.env.dev').withInputStream { env.load(it) }
+// can't use rootProject, because sometimes this project is root and sometimes it is project(':oss')
+project.file(".env.dev").withInputStream { env.load(it) }
 
 if (!env.containsKey('VERSION')) {
     throw new Exception('Version not specified in .env file...')
 }
 
-// `version` is used as the application build version for artifacts like jars
-// `image_tag` is used as the docker tag applied to built images.
-// These values are the same for building an specific Airbyte release or branch via the 'VERSION' environment variable.
-// For local development builds, the 'VERSION' environment variable is unset, and built images are tagged with 'dev'.
 ext {
-    version = System.getenv("VERSION") ?: env.VERSION
-    image_tag = System.getenv("VERSION") ?: 'dev'
+    // used for publishing jars
+    oss_version = System.getenv("VERSION")
+    // todo (cgardens) - remove the implicit behavior so it doesn't require an explanatory comment.
+    // for cloud (prod + stage) this is going to be an image_tag (see build-artifacts.yaml). for OSS this is going to be the oss version.
+    webapp_version = System.getenv("VERSION") ?: env.VERSION
 }
 
 allprojects {
@@ -90,7 +91,38 @@ allprojects {
     def sub = rootDir.relativePath(projectDir.parentFile).replace('/', '.')
     group = "io.airbyte${sub.isEmpty() ? '' : ".$sub"}"
 
-    version = rootProject.ext.version
+    // todo (cgardens) - separate oss version and artifact version
+    version = oss_version
+
+    configurations.all {
+        resolutionStrategy {
+            // Ensure that the versions defined in deps.toml are used
+            // instead of versions from transitive dependencies
+            // Force to avoid updated version brought in transitively from Micronaut 3.8+
+            force(libs.flyway.core,
+                    libs.jooq,
+                    libs.s3,
+                    libs.aws.java.sdk.s3,
+                    libs.sts,
+                    libs.aws.java.sdk.sts,
+                    libs.elasticsearch,
+                    libs.apache.mime4j.core, // Force upgrade to remediate GHSA-jw7r-rxff-gv24
+                    libs.platform.testcontainers.postgresql)
+        }
+    }
+}
+
+// For internal use we call this from the root of the project. In the project
+// mirrored to open-source, this project is the root. That means that its name
+// is different by default. In the internal repo it is project(:oss) and in
+// oss it is the rootProject. We create this closure and then expose it to all
+// submodules so that they have a canonical way of referring to this gradle
+// module.
+def ossRootActual = project
+subprojects {
+    ext {
+        ossRootProject = ossRootActual
+    }
 }
 
 tasks.register('archiveReports', Tar) {
@@ -117,80 +149,33 @@ tasks.register('archiveReports', Tar) {
     }
 }
 
-subprojects { sp ->
-    // airbyte-webapp has not been converted to the gradle plugins
-    if (sp.name != "airbyte-webapp") {
-        return
-    }
-
-    apply plugin: 'base'
-
-//    configurations {
-//        runtimeClasspath
-//    }
-
-    tasks.register("copyDocker", Copy) {
-        from "${project.projectDir}/Dockerfile"
-        into "build/docker/"
-    }
-
-    // Although this task is defined for every subproject with the dockerImageName property,
-    // It is not necessarily used for all subprojects. Non-TAR producing projects can ignore this.
-    tasks.register("copyGeneratedTar", Copy) {
-        dependsOn tasks.named("copyDocker")
-//        dependsOn copyWellKnownTypes
-        dependsOn tasks.named("distTar")
-        from('build/distributions') {
-            // Assume that tars are named <parent-project-name>-<child-project-name>-*.tar.
-            // Because we only have a handle to the child project, and to keep things simple,
-            // use a * regex to catch all prefixes.
-            include "*$sp.name-*.tar"
-        }
-        into 'build/docker/bin'
-    }
-
-    tasks.register("buildDockerImage", com.bmuschko.gradle.docker.tasks.image.DockerBuildImage) {
-        // This is currently only used for connectors.
-        def jdkVersion = System.getenv('JDK_VERSION') ?: '17.0.4'
-
-        def arch = System.getenv('BUILD_ARCH') ?: System.getProperty("os.arch").toLowerCase()
-        def isArm64 = arch == "aarch64" || arch == "arm64"
-        def buildArch = System.getenv('DOCKER_BUILD_ARCH') ?: isArm64 ? 'arm64' : 'amd64'
-        def buildPlatform = System.getenv('DOCKER_BUILD_PLATFORM') ?: isArm64 ? 'linux/arm64' : 'linux/amd64'
-        def alpineImage = System.getenv('ALPINE_IMAGE') ?: isArm64 ? 'arm64v8/alpine:3.14' : 'amd64/alpine:3.14'
-
-        // Used by the platform -- Must be an Amazon Corretto-based image for build to work without modification to Dockerfile instructions
-        def openjdkImage = System.getenv('JDK_IMAGE') ?: 'airbyte/airbyte-base-java-image:3.2.1'
-
-        platform = buildPlatform
-        images.add("airbyte/$sp.dockerImageName:$rootProject.ext.image_tag")
-        buildArgs.put('JDK_VERSION', jdkVersion)
-        buildArgs.put('DOCKER_BUILD_ARCH', buildArch)
-        buildArgs.put('ALPINE_IMAGE', alpineImage)
-        buildArgs.put('JDK_IMAGE', openjdkImage)
-        buildArgs.put('VERSION', rootProject.ext.version)
-
-    }
-
-    tasks.named("assemble") {
-        dependsOn tasks.named("buildDockerImage")
-    }
-
-    tasks.register("dockerBuildImage") {
-        dependsOn tasks.named("buildDockerImage")
-    }
-}
-
-
 tasks.register('generate-docker') {
     dependsOn(':airbyte-bootloader:assemble')
     dependsOn(':airbyte-workers:assemble')
     dependsOn(':airbyte-webapp:assemble')
     dependsOn(':airbyte-server:assemble')
-    dependsOn(':airbyte-api-server:assemble')
     dependsOn(':airbyte-db:db-lib:assemble')
     dependsOn(':airbyte-config:init:assemble')
     dependsOn(':airbyte-temporal:assemble')
     dependsOn(':airbyte-keycloak:assemble')
     dependsOn(':airbyte-keycloak-setup:assemble')
+}
+
+// todo (cgardens) - move this into the plugin.
+// By default ./gradlew :oss:build doesn't do anything, so we need to manually set the dependencies.
+def taskNames = ['assemble', 'build', 'check', 'clean', 'format', 'jar', 'publishToMavenLocal', 'test']
+// For tasks that don't exist gradle by default, we need to register them first.
+tasks.register('format')
+tasks.register('jar')
+tasks.register('publishToMavenLocal')
+tasks.register('test')
+// For each task type register its subprojects instance of that task type as a dependency. It is
+// equivalent to doing something like this:
+// tasks.named('assemble') {
+//    dependsOn subprojects.collect { it.getTasksByName('assemble', true) }
+//}
+taskNames.each { taskName ->
+    tasks.named(taskName) {
+        dependsOn subprojects.collect { it.getTasksByName(taskName, true) }
+    }
 }

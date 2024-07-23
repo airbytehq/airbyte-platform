@@ -14,12 +14,3 @@ fun CheckConnectionInput.getAttemptId(): Long {
 fun CheckConnectionInput.getActorType(): ActorType {
   return this.checkConnectionInput.actorType
 }
-
-fun CheckConnectionInput.setConnectorLabels(labels: Map<String, String>): CheckConnectionInput {
-  return this.apply {
-    launcherConfig =
-      launcherConfig.apply {
-        additionalLabels = labels
-      }
-  }
-}

@@ -4,6 +4,9 @@
 
 package io.airbyte.workload.launcher.config
 
+import io.airbyte.commons.envvar.EnvVar.LOG4J_CONFIGURATION_FILE
+import io.airbyte.commons.envvar.EnvVar.LOG_LEVEL
+import io.airbyte.commons.envvar.EnvVar.S3_PATH_STYLE_ACCESS
 import io.airbyte.commons.workers.config.WorkerConfigs
 import io.airbyte.config.storage.StorageConfig
 import io.airbyte.workers.process.Metadata.AWS_ACCESS_KEY_ID
@@ -35,8 +38,11 @@ class EnvVarConfigBeanFactory {
     @Named("apiClientEnvMap") apiClientEnvMap: Map<String, String>,
     @Named("micronautEnvMap") micronautEnvMap: Map<String, String>,
     @Named("workloadApiSecretEnv") secretsEnvMap: Map<String, EnvVarSource>,
+    @Named("loggingEnvVars") loggingEnvMap: Map<String, String>,
   ): List<EnvVar> {
     val envMap: MutableMap<String, String> = HashMap()
+
+    envMap.putAll(loggingEnvMap)
 
     // Cloud storage configuration
     envMap.putAll(storageConfig.toEnvVarMap())
@@ -61,6 +67,16 @@ class EnvVarConfigBeanFactory {
         .toList()
 
     return envVars + secretEnvVars
+  }
+
+  @Singleton
+  @Named("loggingEnvVars")
+  fun checkEnvVars(): Map<String, String> {
+    return mapOf(
+      LOG_LEVEL.name to LOG_LEVEL.fetch("")!!,
+      S3_PATH_STYLE_ACCESS.name to S3_PATH_STYLE_ACCESS.fetch("")!!,
+      LOG4J_CONFIGURATION_FILE.name to LOG4J_CONFIGURATION_FILE.fetch("")!!,
+    )
   }
 
   /**
@@ -188,9 +204,14 @@ class EnvVarConfigBeanFactory {
   @Singleton
   @Named("apiClientEnvMap")
   fun apiClientEnvMap(
-    @Value("\${airbyte.internal.api.host}") apiHost: String,
-    @Value("\${airbyte.internal.api.auth-header.name}") apiAuthHeaderName: String,
-    @Value("\${airbyte.internal.api.auth-header.value}") apiAuthHeaderValue: String,
+    /*
+     * Reference the environment variable, instead of the resolved property, so that
+     * the entry in the orchestrator's application.yml is consistent with all other
+     * services that use the Airbyte API client.
+     */
+    @Value("\${INTERNAL_API_HOST}") internalApiHost: String,
+    @Value("\${airbyte.internal-api.auth-header.name}") apiAuthHeaderName: String,
+    @Value("\${airbyte.internal-api.auth-header.value}") apiAuthHeaderValue: String,
     @Value("\${airbyte.control.plane.auth-endpoint}") controlPlaneAuthEndpoint: String,
     @Value("\${airbyte.data.plane.service-account.email}") dataPlaneServiceAccountEmail: String,
     @Value("\${airbyte.data.plane.service-account.credentials-path}") dataPlaneServiceAccountCredentialsPath: String,
@@ -198,7 +219,7 @@ class EnvVarConfigBeanFactory {
   ): Map<String, String> {
     val envMap: MutableMap<String, String> = HashMap()
 
-    envMap[INTERNAL_API_HOST_ENV_VAR] = apiHost
+    envMap[INTERNAL_API_HOST_ENV_VAR] = internalApiHost
     envMap[AIRBYTE_API_AUTH_HEADER_NAME_ENV_VAR] = apiAuthHeaderName
     envMap[AIRBYTE_API_AUTH_HEADER_VALUE_ENV_VAR] = apiAuthHeaderValue
     envMap[CONTROL_PLANE_AUTH_ENDPOINT_ENV_VAR] = controlPlaneAuthEndpoint

@@ -23,7 +23,10 @@ import io.airbyte.connector_builder.api.model.generated.StreamReadSlicesInner;
 import io.airbyte.connector_builder.command_runner.SynchronousCdkCommandRunner;
 import io.airbyte.connector_builder.exceptions.AirbyteCdkInvalidInputException;
 import io.airbyte.protocol.models.AirbyteRecordMessage;
+import java.io.IOException;
+import java.util.Collections;
 import java.util.List;
+import org.assertj.core.util.Lists;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
@@ -33,13 +36,17 @@ class AirbyteCdkRequesterImplTest {
   private static final String READ_STREAM_COMMAND = "test_read";
   private static final JsonNode A_CONFIG;
   private static final JsonNode A_MANIFEST;
+  private static final List<JsonNode> A_STATE;
   private static final String A_STREAM = "test";
   private static final Integer A_LIMIT = 1;
+  private static final List<JsonNode> AN_EMPTY_STATE;
 
   static {
     try {
       A_CONFIG = new ObjectMapper().readTree("{\"config\": 1}");
       A_MANIFEST = new ObjectMapper().readTree("{\"manifest\": 1}");
+      A_STATE = Collections.singletonList(new ObjectMapper().readTree("{\"key\": \"value\"}"));
+      AN_EMPTY_STATE = Lists.newArrayList();
     } catch (final JsonProcessingException e) {
       throw new RuntimeException(e);
     }
@@ -61,17 +68,17 @@ class AirbyteCdkRequesterImplTest {
     final JsonNode response = mapper.readTree(
         "{\"test_read_limit_reached\": true, \"logs\":[{\"message\":\"log message1\"}, {\"message\":\"log message2\"}], "
             + "\"slices\": [{\"pages\": [{\"records\": [{\"record\": 1}]}], \"slice_descriptor\": {\"startDatetime\": "
-            + "\"2023-11-01T00:00:00+00:00\", \"listItem\": \"item\"}, \"state\": {\"airbyte\": \"state\"}}, {\"pages\": []}],"
+            + "\"2023-11-01T00:00:00+00:00\", \"listItem\": \"item\"}, \"state\": [{\"airbyte\": \"state\"}]}, {\"pages\": []}],"
             + "\"inferred_schema\": {\"schema\": 1}, \"latest_config_update\": { \"config_key\": \"config_value\"},"
             + "\"auxiliary_requests\": [{\"title\": \"Refresh token\",\"description\": \"Obtains access token\",\"request\": {\"url\": "
             + "\"https://a-url.com/oauth2/v1/tokens/bearer\",\"headers\": {\"Content-Type\": "
             + "\"application/x-www-form-urlencoded\"},\"http_method\": \"POST\",\"body\": \"a_request_body\"},\"response\": {\"status\": 200,"
             + "\"body\": \"a_response_body\",\"headers\": {\"Date\": \"Tue, 11 Jul 2023 16:28:10 GMT\"}}}]}");
     final ArgumentCaptor<String> configCaptor = ArgumentCaptor.forClass(String.class);
-    when(commandRunner.runCommand(eq(READ_STREAM_COMMAND), configCaptor.capture(), any()))
+    when(commandRunner.runCommand(eq(READ_STREAM_COMMAND), configCaptor.capture(), any(), any()))
         .thenReturn(new AirbyteRecordMessage().withData(response));
 
-    final StreamRead streamRead = requester.readStream(A_MANIFEST, A_CONFIG, A_STREAM, recordLimit, pageLimit, sliceLimit);
+    final StreamRead streamRead = requester.readStream(A_MANIFEST, A_CONFIG, A_STATE, A_STREAM, recordLimit, pageLimit, sliceLimit);
 
     final boolean testReadLimitReached = mapper.convertValue(response.get("test_read_limit_reached"), new TypeReference<>() {});
     assertEquals(testReadLimitReached, streamRead.getTestReadLimitReached());
@@ -128,10 +135,25 @@ class AirbyteCdkRequesterImplTest {
 
   @Test
   void givenStreamIsNullWhenReadStreamThenThrowException() throws Exception {
-    when(commandRunner.runCommand(eq(READ_STREAM_COMMAND), any(), any()))
+    when(commandRunner.runCommand(eq(READ_STREAM_COMMAND), any(), any(), any()))
         .thenReturn(
             new AirbyteRecordMessage().withData(new ObjectMapper().readTree("{\"streams\":[{\"name\": \"missing stream\", \"stream\": null}]}")));
-    assertThrows(AirbyteCdkInvalidInputException.class, () -> requester.readStream(A_MANIFEST, A_CONFIG, null, A_LIMIT, A_LIMIT, A_LIMIT));
+    assertThrows(AirbyteCdkInvalidInputException.class, () -> requester.readStream(A_MANIFEST, A_CONFIG, A_STATE, null, A_LIMIT, A_LIMIT, A_LIMIT));
+  }
+
+  @Test
+  void whenStateIsNotNullAdaptStateConvertsItDirectlyToString() throws IOException {
+    String adaptedState = requester.adaptState(A_STATE);
+    assertEquals("""
+                 [ {
+                   "key" : "value"
+                 } ]""", adaptedState);
+  }
+
+  @Test
+  void whenStateIsNullAdaptStateReturnsAnEmptyArray() throws IOException {
+    String adaptedState = requester.adaptState(null);
+    assertEquals("[ ]", adaptedState);
   }
 
   void assertRunCommandArgs(final ArgumentCaptor<String> configCaptor, final String command) throws Exception {

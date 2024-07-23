@@ -13,6 +13,13 @@
   justify-content: center;
   align-items: center;
 
+  &.small {
+    height: 14px;
+    min-width: 14px;
+    border-radius: variables.$border-radius-pill;
+    padding: 0;
+  }
+
   &.default {
     background: colors.$dark-blue-100;
   }
@@ -27,6 +34,10 @@
 
   &.blue {
     background: colors.$blue;
+  }
+
+  &.yellow {
+    background: colors.$yellow;
   }
 
   &.blue--outline {

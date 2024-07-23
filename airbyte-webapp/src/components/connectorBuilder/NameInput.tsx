@@ -7,7 +7,13 @@ import { Input } from "components/ui/Input";
 
 import styles from "./NameInput.module.scss";
 
-export const NameInput = () => {
+interface NameInputProps {
+  className?: string;
+  size: "sm" | "md";
+  showBorder?: boolean;
+}
+
+export const NameInput: React.FC<NameInputProps> = ({ className, size, showBorder = false }) => {
   const { formatMessage } = useIntl();
   const {
     field,
@@ -16,6 +22,11 @@ export const NameInput = () => {
   const hasError = Boolean(error);
   const [showInput, setShowInput] = useState(false);
   const inputRef = useRef<HTMLInputElement | null>(null);
+
+  const sizeStyles = {
+    [styles.sizeS]: size === "sm",
+    [styles.sizeM]: size === "md",
+  };
 
   useEffect(() => {
     if (showInput && inputRef.current) {
@@ -27,10 +38,15 @@ export const NameInput = () => {
     return (
       <button
         type="button"
-        className={classNames(styles.label, { [styles.invalid]: hasError })}
+        className={classNames(className, styles.label, {
+          ...sizeStyles,
+          [styles.invalid]: hasError,
+          [styles.showBorder]: showBorder,
+        })}
         onClick={() => {
           setShowInput(true);
         }}
+        data-testid="connector-name-label"
       >
         {field.value || formatMessage({ id: "connectorBuilder.emptyName" })}
       </button>
@@ -38,8 +54,8 @@ export const NameInput = () => {
   }
   return (
     <Input
-      containerClassName={styles.inputContainer}
-      className={styles.input}
+      containerClassName={classNames(className, styles.inputContainer)}
+      className={classNames(styles.input, sizeStyles)}
       {...field}
       ref={(el) => {
         inputRef.current = el;
@@ -52,6 +68,7 @@ export const NameInput = () => {
       type="text"
       value={field.value ?? ""}
       error={hasError}
+      data-testid="connector-name-input"
     />
   );
 };

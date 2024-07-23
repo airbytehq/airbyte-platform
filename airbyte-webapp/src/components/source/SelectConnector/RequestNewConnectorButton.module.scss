@@ -1,19 +1,19 @@
 @use "scss/variables";
 @use "scss/colors";
 
-$iconHeight: 38px;
-
 .button {
+  padding: variables.$spacing-xl;
   display: flex;
   justify-content: center;
   align-items: center;
-  gap: variables.$spacing-lg;
-  color: colors.$grey-500;
-  border: variables.$border-thin solid colors.$grey-100;
+  gap: variables.$spacing-sm;
+  border: variables.$border-thin dashed colors.$grey-400;
   box-shadow: none;
-  background-color: colors.$grey-30;
+  background-color: transparent;
   border-radius: variables.$border-radius-md;
-  transition: color variables.$transition, border-color variables.$transition;
+  transition:
+    color variables.$transition,
+    border-color variables.$transition;
 
   &:only-child {
     grid-column: 2 / 3;
@@ -21,7 +21,9 @@ $iconHeight: 38px;
 
   &__text {
     transition: color variables.$transition;
-    color: colors.$grey-500;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
 
   &:hover,
@@ -35,7 +37,7 @@ $iconHeight: 38px;
     }
   }
 
-  svg {
-    min-height: $iconHeight;
+  & .icon {
+    flex-shrink: 0;
   }
 }

@@ -39,6 +39,7 @@
 
     &:hover,
     &:focus-visible {
+      color: colors.$dark-blue-900;
       background: colors.$blue-30;
     }
   }

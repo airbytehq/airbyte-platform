@@ -18,7 +18,9 @@ var commonConfigMapKeys = toStringSet(
 	"ACTIVITY_MAX_ATTEMPT",
 	"ACTIVITY_MAX_DELAY_BETWEEN_ATTEMPTS_SECONDS",
 	"AIRBYTE_API_HOST",
+	"AIRBYTE_SERVER_HOST",
 	"AIRBYTE_EDITION",
+	"AIRBYTE_URL",
 	"AIRBYTE_VERSION",
 	"API_URL",
 	"AUTO_DETECT_SCHEMA",
@@ -58,6 +60,7 @@ var commonConfigMapKeys = toStringSet(
 	"RUN_DATABASE_MIGRATION_ON_STARTUP",
 	"S3_PATH_STYLE_ACCESS",
 	"SEGMENT_WRITE_KEY",
+	"SERVER_MICRONAUT_ENVIRONMENTS",
 	"SHOULD_RUN_NOTIFY_WORKFLOWS",
 	"STATSD_HOST",
 	"STATSD_PORT",
@@ -74,12 +77,18 @@ var commonConfigMapKeys = toStringSet(
 	"WORKER_ENVIRONMENT",
 	"WORKFLOW_FAILURE_RESTART_DELAY_SECONDS",
 	"WORKLOAD_API_HOST",
+	"WORKLOAD_API_SERVER_ENABLED",
+	"WORKLOAD_LAUNCHER_ENABLED",
 	"WORKLOAD_LAUNCHER_PARALLELISM",
 	"WORKSPACE_DOCKER_MOUNT",
 	"WORKSPACE_ROOT",
+	"PUB_SUB_ENABLED",
+	"PUB_SUB_TOPIC_NAME",
 )
 
 var proEditionConfigMapKeys = toStringSet(
+	"INITIAL_USER_FIRST_NAME",
+	"INITIAL_USER_LAST_NAME",
 	"KEYCLOAK_INTERNAL_HOST",
 	"KEYCLOAK_PORT",
 	"KEYCLOAK_HOSTNAME_URL",
@@ -133,8 +142,13 @@ func TestHelmTemplateWithDefaultValues(t *testing.T) {
 
 		for _, c := range cases {
 			t.Run("edition="+c.edition, func(t *testing.T) {
-				helmOpts := baseHelmOptions()
-				helmOpts.SetValues["global.edition"] = c.edition
+				var helmOpts *helm.Options
+				switch c.edition {
+				case "community":
+					helmOpts = baseHelmOptions()
+				case "pro", "enterprise":
+					helmOpts = baseHelmOptionsForEnterpriseWithAirbyteYml()
+				}
 
 				configMapYaml, err := helm.RenderTemplateE(t, helmOpts, chartPath, "airbyte", []string{"templates/env-configmap.yaml"})
 				require.NoError(t, err, "failure rendering template")
@@ -178,8 +192,13 @@ func TestHelmTemplateWithDefaultValues(t *testing.T) {
 
 		for _, c := range cases {
 			t.Run("edition="+c.edition, func(t *testing.T) {
-				helmOpts := baseHelmOptions()
-				helmOpts.SetValues["global.edition"] = c.edition
+				var helmOpts *helm.Options
+				switch c.edition {
+				case "community":
+					helmOpts = baseHelmOptions()
+				case "pro", "enterprise":
+					helmOpts = baseHelmOptionsForEnterpriseWithAirbyteYml()
+				}
 
 				secretYaml, err := helm.RenderTemplateE(t, helmOpts, chartPath, "airbyte", []string{"templates/secret.yaml"})
 				require.NoError(t, err, "failure rendering template")
@@ -196,54 +215,53 @@ func TestHelmTemplateWithDefaultValues(t *testing.T) {
 		}
 	})
 
-	// TODO (angel): Re-enable this when we can conditionally create the airbyte-yaml secret
-	//t.Run("verify airbyte-yml secret", func(t *testing.T) {
-	//	cases := []struct {
-	//		airbyteYamlFile string
-	//		shouldRender    bool
-	//	}{
-	//		{
-	//			airbyteYamlFile: "",
-	//			shouldRender:    false,
-	//		},
-	//		{
-	//			airbyteYamlFile: "fixtures/airbyte.yaml",
-	//			shouldRender:    true,
-	//		},
-	//	}
+	t.Run("verify airbyte-yml secret", func(t *testing.T) {
+		cases := []struct {
+			airbyteYamlFile string
+			shouldRender    bool
+		}{
+			{
+				airbyteYamlFile: "",
+				shouldRender:    false,
+			},
+			{
+				airbyteYamlFile: "fixtures/airbyte.yaml",
+				shouldRender:    true,
+			},
+		}
 
-	//	for _, c := range cases {
-	//		t.Run("airbyteYaml="+c.airbyteYamlFile, func(t *testing.T) {
-	//			helmOpts := baseHelmOptions()
+		for _, c := range cases {
+			t.Run("airbyteYaml="+c.airbyteYamlFile, func(t *testing.T) {
+				helmOpts := baseHelmOptions()
 
-	//			if c.airbyteYamlFile == "" {
-	//				_, err := helm.RenderTemplateE(t, helmOpts, chartPath, "airbyte", []string{"templates/airbyte-yml-secret.yaml"})
-	//				require.Error(t, err, "template should not render if empty")
-	//				return
-	//			}
+				if c.airbyteYamlFile == "" {
+					_, err := helm.RenderTemplateE(t, helmOpts, chartPath, "airbyte", []string{"templates/airbyte-yml-secret.yaml"})
+					require.Error(t, err, "template should not render if empty")
+					return
+				}
 
-	//			if c.airbyteYamlFile != "" {
-	//				helmOpts.SetFiles = map[string]string{
-	//					"airbyteYml": c.airbyteYamlFile,
-	//				}
-	//			}
+				if c.airbyteYamlFile != "" {
+					helmOpts.SetFiles = map[string]string{
+						"global.airbyteYml": c.airbyteYamlFile,
+					}
+				}
 
-	//			secretYaml, err := helm.RenderTemplateE(t, helmOpts, chartPath, "airbyte", []string{"templates/airbyte-yml-secret.yaml"})
-	//			require.NoError(t, err, "failure rendering template")
+				secretYaml, err := helm.RenderTemplateE(t, helmOpts, chartPath, "airbyte", []string{"templates/airbyte-yml-secret.yaml"})
+				require.NoError(t, err, "failure rendering template")
 
-	//			secret, err := getSecret(secretYaml, "airbyte-airbyte-yml")
-	//			assert.NotNil(t, secret)
-	//			require.NoError(t, err)
+				secret, err := getSecret(secretYaml, "airbyte-airbyte-yml")
+				assert.NotNil(t, secret)
+				require.NoError(t, err)
 
-	//			if c.shouldRender {
-	//				assert.Equal(t, secret.Name, "airbyte-airbyte-yml")
-	//				assert.NotEmpty(t, secret.Data["fileContents"])
-	//			} else {
-	//				assert.Empty(t, secret.Name)
-	//			}
-	//		})
-	//	}
-	//})
+				if c.shouldRender {
+					assert.Equal(t, secret.Name, "airbyte-airbyte-yml")
+					assert.NotEmpty(t, secret.Data["fileContents"])
+				} else {
+					assert.Empty(t, secret.Name)
+				}
+			})
+		}
+	})
 
 	t.Run("default storage configs", func(t *testing.T) {
 		helmOpts := baseHelmOptions()

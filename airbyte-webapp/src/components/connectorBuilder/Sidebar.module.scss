@@ -18,8 +18,8 @@
 }
 
 .connectorName {
-  overflow-x: auto;
-  text-align: center;
+  word-wrap: break-word;
+  flex: 0 0 auto;
   max-width: 100%;
 }
 

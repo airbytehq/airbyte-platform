@@ -32,3 +32,7 @@ properties:
     description: Replication Context object with IDs of the relevant connection, source, destination, etc.
     type: object
     "$ref": ActorContext.yaml
+  manual:
+    description: True if the discover catalog was not part of a sync
+    type: boolean
+    default: true

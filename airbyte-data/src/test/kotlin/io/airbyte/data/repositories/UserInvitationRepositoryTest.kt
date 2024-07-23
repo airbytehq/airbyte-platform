@@ -8,6 +8,7 @@ import io.airbyte.db.instance.configs.jooq.generated.enums.InvitationStatus
 import io.airbyte.db.instance.configs.jooq.generated.enums.PermissionType
 import io.airbyte.db.instance.configs.jooq.generated.enums.ScopeType
 import io.micronaut.test.extensions.junit5.annotation.MicronautTest
+import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.Test
@@ -16,7 +17,7 @@ import java.time.ZoneOffset
 import java.util.UUID
 
 @MicronautTest
-internal class UserInvitationRepositoryTest : AbstractConfigRepositoryTest<UserInvitationRepository>(UserInvitationRepository::class) {
+internal class UserInvitationRepositoryTest : AbstractConfigRepositoryTest() {
   companion object {
     const val INVITE_CODE = "some-code"
     val EXPIRES_AT = OffsetDateTime.now(ZoneOffset.UTC).plusDays(7).truncatedTo(java.time.temporal.ChronoUnit.SECONDS)
@@ -43,6 +44,11 @@ internal class UserInvitationRepositoryTest : AbstractConfigRepositoryTest<UserI
     }
   }
 
+  @AfterEach
+  fun tearDown() {
+    userInvitationRepository.deleteAll()
+  }
+
   private fun assertInvitationEquals(
     expected: UserInvitation,
     actual: UserInvitation,
@@ -65,20 +71,20 @@ internal class UserInvitationRepositoryTest : AbstractConfigRepositoryTest<UserI
 
   @Test
   fun `test db insertion`() {
-    val saveResult = repository.save(userInvitation)
-    assert(repository.count() == 1L)
+    val saveResult = userInvitationRepository.save(userInvitation)
+    assert(userInvitationRepository.count() == 1L)
 
-    val persistedInvitation = repository.findById(saveResult.id!!).get()
+    val persistedInvitation = userInvitationRepository.findById(saveResult.id!!).get()
 
     assertInvitationEquals(userInvitation, persistedInvitation)
   }
 
   @Test
   fun `test find by invite code`() {
-    val persistedInvitation = repository.save(userInvitation)
-    assertEquals(repository.count(), 1L)
+    val persistedInvitation = userInvitationRepository.save(userInvitation)
+    assertEquals(userInvitationRepository.count(), 1L)
 
-    val foundInvitation = repository.findByInviteCode(INVITE_CODE).get()
+    val foundInvitation = userInvitationRepository.findByInviteCode(INVITE_CODE).get()
     assertInvitationEquals(persistedInvitation, foundInvitation)
   }
 
@@ -100,14 +106,14 @@ internal class UserInvitationRepositoryTest : AbstractConfigRepositoryTest<UserI
         scopeId = workspaceId,
         status = matchingStatus,
       )
-    repository.save(matchingWorkspaceInvite)
+    userInvitationRepository.save(matchingWorkspaceInvite)
 
     val anotherMatchingInvite =
       matchingWorkspaceInvite.copy(
         id = UUID.randomUUID(),
         inviteCode = UUID.randomUUID().toString(),
       )
-    repository.save(anotherMatchingInvite)
+    userInvitationRepository.save(anotherMatchingInvite)
 
     val wrongStatusWorkspaceInvite =
       matchingWorkspaceInvite.copy(
@@ -115,7 +121,7 @@ internal class UserInvitationRepositoryTest : AbstractConfigRepositoryTest<UserI
         inviteCode = UUID.randomUUID().toString(),
         status = otherStatus,
       )
-    repository.save(wrongStatusWorkspaceInvite)
+    userInvitationRepository.save(wrongStatusWorkspaceInvite)
 
     val wrongWorkspaceInvite =
       matchingWorkspaceInvite.copy(
@@ -123,7 +129,7 @@ internal class UserInvitationRepositoryTest : AbstractConfigRepositoryTest<UserI
         inviteCode = UUID.randomUUID().toString(),
         scopeId = otherWorkspaceId,
       )
-    repository.save(wrongWorkspaceInvite)
+    userInvitationRepository.save(wrongWorkspaceInvite)
 
     val nothingMatchesWorkspaceInvite =
       userInvitation.copy(
@@ -132,7 +138,7 @@ internal class UserInvitationRepositoryTest : AbstractConfigRepositoryTest<UserI
         scopeId = otherWorkspaceId,
         status = otherStatus,
       )
-    repository.save(nothingMatchesWorkspaceInvite)
+    userInvitationRepository.save(nothingMatchesWorkspaceInvite)
 
     // setup org invites
 
@@ -144,14 +150,14 @@ internal class UserInvitationRepositoryTest : AbstractConfigRepositoryTest<UserI
         scopeType = ScopeType.organization,
         status = matchingStatus,
       )
-    repository.save(matchingOrgInvite)
+    userInvitationRepository.save(matchingOrgInvite)
 
     val anotherMatchingOrgInvite =
       matchingOrgInvite.copy(
         id = UUID.randomUUID(),
         inviteCode = UUID.randomUUID().toString(),
       )
-    repository.save(anotherMatchingOrgInvite)
+    userInvitationRepository.save(anotherMatchingOrgInvite)
 
     val wrongStatusOrgInvite =
       matchingOrgInvite.copy(
@@ -159,7 +165,7 @@ internal class UserInvitationRepositoryTest : AbstractConfigRepositoryTest<UserI
         inviteCode = UUID.randomUUID().toString(),
         status = otherStatus,
       )
-    repository.save(wrongStatusOrgInvite)
+    userInvitationRepository.save(wrongStatusOrgInvite)
 
     val wrongOrgInvite =
       matchingOrgInvite.copy(
@@ -168,7 +174,7 @@ internal class UserInvitationRepositoryTest : AbstractConfigRepositoryTest<UserI
         scopeId = otherOrganizationId,
         status = matchingStatus,
       )
-    repository.save(wrongOrgInvite)
+    userInvitationRepository.save(wrongOrgInvite)
 
     val nothingMatchesOrgInvite =
       userInvitation.copy(
@@ -178,13 +184,13 @@ internal class UserInvitationRepositoryTest : AbstractConfigRepositoryTest<UserI
         scopeType = ScopeType.organization,
         status = otherStatus,
       )
-    repository.save(nothingMatchesOrgInvite)
+    userInvitationRepository.save(nothingMatchesOrgInvite)
 
     val expectedWorkspaceMatches = listOf(matchingWorkspaceInvite, anotherMatchingInvite)
     val expectedOrgMatches = listOf(matchingOrgInvite, anotherMatchingOrgInvite)
 
-    val actualWorkspaceInvites = repository.findByStatusAndScopeTypeAndScopeId(matchingStatus, EntityScopeType.workspace, workspaceId)
-    val actualOrgInvites = repository.findByStatusAndScopeTypeAndScopeId(matchingStatus, EntityScopeType.organization, organizationId)
+    val actualWorkspaceInvites = userInvitationRepository.findByStatusAndScopeTypeAndScopeId(matchingStatus, EntityScopeType.workspace, workspaceId)
+    val actualOrgInvites = userInvitationRepository.findByStatusAndScopeTypeAndScopeId(matchingStatus, EntityScopeType.organization, organizationId)
 
     // for each workspace invitation found, make sure that it has a match by calling assertInvitationEquals
     expectedWorkspaceMatches.forEach { expected ->
@@ -218,14 +224,14 @@ internal class UserInvitationRepositoryTest : AbstractConfigRepositoryTest<UserI
         status = matchingStatus,
         invitedEmail = matchingEmail,
       )
-    repository.save(matchingInvite)
+    userInvitationRepository.save(matchingInvite)
 
     val anotherMatchingInvite =
       matchingInvite.copy(
         id = UUID.randomUUID(),
         inviteCode = UUID.randomUUID().toString(),
       )
-    repository.save(anotherMatchingInvite)
+    userInvitationRepository.save(anotherMatchingInvite)
 
     val wrongEmailInvite =
       matchingInvite.copy(
@@ -233,7 +239,7 @@ internal class UserInvitationRepositoryTest : AbstractConfigRepositoryTest<UserI
         inviteCode = UUID.randomUUID().toString(),
         invitedEmail = otherEmail,
       )
-    repository.save(wrongEmailInvite)
+    userInvitationRepository.save(wrongEmailInvite)
 
     val wrongWorkspaceInvite =
       matchingInvite.copy(
@@ -241,7 +247,7 @@ internal class UserInvitationRepositoryTest : AbstractConfigRepositoryTest<UserI
         inviteCode = UUID.randomUUID().toString(),
         scopeId = otherWorkspaceId,
       )
-    repository.save(wrongWorkspaceInvite)
+    userInvitationRepository.save(wrongWorkspaceInvite)
 
     val wrongStatusInvite =
       matchingInvite.copy(
@@ -249,7 +255,7 @@ internal class UserInvitationRepositoryTest : AbstractConfigRepositoryTest<UserI
         inviteCode = UUID.randomUUID().toString(),
         status = otherStatus,
       )
-    repository.save(wrongStatusInvite)
+    userInvitationRepository.save(wrongStatusInvite)
 
     val wrongEverythingInvite =
       userInvitation.copy(
@@ -259,11 +265,11 @@ internal class UserInvitationRepositoryTest : AbstractConfigRepositoryTest<UserI
         scopeId = otherWorkspaceId,
         status = otherStatus,
       )
-    repository.save(wrongEverythingInvite)
+    userInvitationRepository.save(wrongEverythingInvite)
 
     val expectedMatches = listOf(matchingInvite, anotherMatchingInvite)
     val actualMatches =
-      repository.findByStatusAndScopeTypeAndScopeIdAndInvitedEmail(
+      userInvitationRepository.findByStatusAndScopeTypeAndScopeIdAndInvitedEmail(
         matchingStatus,
         EntityScopeType.workspace,
         workspaceId,

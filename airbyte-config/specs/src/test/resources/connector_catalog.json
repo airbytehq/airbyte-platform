@@ -4344,6 +4344,10 @@
       "custom": false,
       "releaseStage": "generally_available",
       "supportLevel": "community",
+      "ab_internal": {
+        "sl": 300,
+        "ql": 300
+      },
       "resourceRequirements": {
         "jobSpecific": [
           {
@@ -13219,7 +13223,11 @@
       "public": true,
       "custom": false,
       "releaseStage": "generally_available",
-      "supportLevel": "community"
+      "supportLevel": "community",
+      "ab_internal": {
+        "sl": 300,
+        "ql": 400
+      }
     },
     {
       "sourceDefinitionId": "badc5925-0485-42be-8caa-b34096cb71b5",

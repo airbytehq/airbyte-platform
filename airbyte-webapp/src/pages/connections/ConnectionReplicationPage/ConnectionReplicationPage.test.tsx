@@ -1,5 +1,4 @@
 import { render as tlr, act } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
 import React, { Suspense } from "react";
 import { VirtuosoMockContext } from "react-virtuoso";
 
@@ -21,7 +20,6 @@ import { TestWrapper, useMockIntersectionObserver } from "test-utils/testutils";
 
 import { useGetConnectionQuery } from "core/api";
 import { WebBackendConnectionUpdate } from "core/api/types/AirbyteClient";
-import { defaultOssFeatures, FeatureItem } from "core/services/features";
 import { ConnectionEditServiceProvider } from "hooks/services/ConnectionEdit/ConnectionEditService";
 
 import { ConnectionReplicationPage } from "./ConnectionReplicationPage";
@@ -121,78 +119,6 @@ describe("ConnectionReplicationPage", () => {
 
     await act(async () => {
       expect(renderResult.findByText("We are fetching the schema of your data source.", { exact: false })).toBeTruthy();
-    });
-  });
-
-  describe("cron expression validation", () => {
-    const INVALID_CRON_EXPRESSION = "invalid cron expression";
-    const CRON_EXPRESSION_EVERY_MINUTE = "* * * * * * ?";
-
-    it("should display an error for an invalid cron expression", async () => {
-      setupSpies();
-      const renderResult = await render();
-
-      await userEvent.click(renderResult.getByTestId("configuration-card-expand-arrow"));
-
-      await userEvent.click(renderResult.getByTestId("schedule-type-listbox-button"));
-      await userEvent.click(renderResult.getByTestId("cron-option"));
-
-      const cronExpressionInput = renderResult.getByTestId("cronExpression");
-
-      await userEvent.clear(cronExpressionInput);
-      await userEvent.type(cronExpressionInput, INVALID_CRON_EXPRESSION, { delay: 1 });
-
-      const errorMessage = await renderResult.findByText(/invalid cron expression/i);
-
-      expect(errorMessage).toBeInTheDocument();
-    });
-
-    it("should allow cron expressions under one hour when feature enabled", async () => {
-      setupSpies();
-
-      const renderResult = await render();
-
-      await userEvent.click(renderResult.getByTestId("configuration-card-expand-arrow"));
-
-      await userEvent.click(renderResult.getByTestId("schedule-type-listbox-button"));
-      await userEvent.click(renderResult.getByTestId("cron-option"));
-
-      const cronExpressionField = renderResult.getByTestId("cronExpression");
-
-      await userEvent.clear(cronExpressionField);
-      await userEvent.type(cronExpressionField, CRON_EXPRESSION_EVERY_MINUTE, { delay: 1 });
-
-      const errorMessage = renderResult.queryByTestId("cronExpressionError");
-
-      expect(errorMessage).not.toBeInTheDocument();
-    });
-
-    it("should not allow cron expressions under one hour when feature not enabled", async () => {
-      setupSpies();
-
-      const featuresToInject = defaultOssFeatures.filter((f) => f !== FeatureItem.AllowSyncSubOneHourCronExpressions);
-
-      const container = tlr(
-        <TestWrapper features={featuresToInject}>
-          <ConnectionEditServiceProvider connectionId={mockConnection.connectionId}>
-            <ConnectionReplicationPage />
-          </ConnectionEditServiceProvider>
-        </TestWrapper>
-      );
-
-      await userEvent.click(container.getByTestId("configuration-card-expand-arrow"));
-
-      await userEvent.click(container.getByTestId("schedule-type-listbox-button"));
-      await userEvent.click(container.getByTestId("cron-option"));
-
-      const cronExpressionField = container.getByTestId("cronExpression");
-
-      await userEvent.clear(cronExpressionField);
-      await userEvent.type(cronExpressionField, CRON_EXPRESSION_EVERY_MINUTE, { delay: 1 });
-
-      const errorMessage = await container.findByTestId("cronExpressionError");
-
-      expect(errorMessage).toBeInTheDocument();
     });
   });
 });

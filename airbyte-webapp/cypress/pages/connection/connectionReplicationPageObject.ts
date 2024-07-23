@@ -4,19 +4,18 @@ import { interceptUpdateConnectionRequest, waitForUpdateConnectionRequest } from
 import { RouteHandler } from "cypress/types/net-stubbing";
 import { getTestId } from "utils/selectors";
 
-const resetModalSaveButton = "[data-testid='resetModal-save']";
+const refreshModalSaveButton = "[data-testid='refreshModal-save']";
 const successResult = "div[data-id='success-result']";
-const resetModalResetCheckbox = "[data-testid='resetModal-reset-checkbox']";
-const saveStreamChangesButton = "button[data-testid='resetModal-save']";
+const refreshModalRefreshCheckbox = "[data-testid='refreshModal-refresh-checkbox']";
+const saveStreamChangesButton = "button[data-testid='refreshModal-save']";
 const schemaChangesDetectedBanner = "[data-testid='schemaChangesDetected']";
 const schemaChangesReviewButton = "[data-testid='schemaChangesDetected-button']";
 const schemaChangesBackdrop = "[data-testid='schemaChangesBackdrop']";
-export const nonBreakingChangesPreference = "[data-testid='nonBreakingChangesPreference-listbox-button']";
-const nonBreakingChangesPreferenceValue = (value: string) => `[data-testid='${value}-option']`;
 const noDiffToast = "[data-testid='notification-connection.noDiff']";
 const cancelButton = getTestId("cancel-edit-button", "button");
 const saveButton = getTestId("save-edit-button", "button");
 export const refreshSourceSchemaBtn = getTestId("refresh-source-schema-btn", "button");
+export const nextButtonOrLink = getTestId("next-creation-page");
 
 export const checkSchemaChangesDetected = ({ breaking }: { breaking: boolean }) => {
   cy.get(schemaChangesDetectedBanner).should("exist");
@@ -32,7 +31,7 @@ interface ClickSaveButtonParams {
   interceptUpdateHandler?: RouteHandler;
 }
 
-export const saveChangesAndHandleResetModal = ({
+export const saveChangesAndHandleRefreshModal = ({
   expectModal = true,
   shouldReset = false,
   interceptUpdateHandler,
@@ -59,7 +58,7 @@ export const checkSuccessResult = () => cy.get(successResult).should("exist");
 
 export const confirmStreamConfigurationChangedPopup = ({ reset = false } = {}) => {
   if (!reset) {
-    cy.get(resetModalResetCheckbox).click({ force: true });
+    cy.get(refreshModalRefreshCheckbox).click({ force: true });
   }
   cy.get(saveStreamChangesButton).click();
 };
@@ -78,12 +77,7 @@ export const clickSchemaChangesReviewButton = () => {
   cy.get(schemaChangesReviewButton).should("not.exist");
 };
 
-export const selectNonBreakingChangesPreference = (preference: "ignore" | "disable") => {
-  cy.get(nonBreakingChangesPreference).click();
-  cy.get(nonBreakingChangesPreferenceValue(preference)).click();
-};
-
-export const resetModalSaveBtnClick = () => cy.get(resetModalSaveButton).click();
+export const refreshModalSaveBtnClick = () => cy.get(refreshModalSaveButton).click();
 
 export const clickCancelEditButton = () => {
   cy.get(cancelButton).click({ force: true });

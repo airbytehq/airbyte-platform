@@ -4,14 +4,17 @@
 
 package io.airbyte.workers.temporal.scheduling.activities;
 
-import io.airbyte.api.client.generated.WorkspaceApi;
-import io.airbyte.api.client.invoker.generated.ApiException;
+import io.airbyte.api.client.AirbyteApiClient;
 import io.airbyte.api.client.model.generated.ConnectionIdRequestBody;
 import io.airbyte.api.client.model.generated.WorkspaceRead;
+import io.airbyte.commons.temporal.exception.RetryableException;
+import io.micronaut.http.HttpStatus;
 import jakarta.inject.Singleton;
+import java.io.IOException;
 import java.util.HashMap;
 import java.util.UUID;
 import lombok.extern.slf4j.Slf4j;
+import org.openapitools.client.infrastructure.ClientException;
 
 /**
  * Fetches feature flags to be used in temporal workflows.
@@ -20,10 +23,10 @@ import lombok.extern.slf4j.Slf4j;
 @Singleton
 public class FeatureFlagFetchActivityImpl implements FeatureFlagFetchActivity {
 
-  private final WorkspaceApi workspaceApi;
+  private final AirbyteApiClient airbyteApiClient;
 
-  public FeatureFlagFetchActivityImpl(final WorkspaceApi workspaceApi) {
-    this.workspaceApi = workspaceApi;
+  public FeatureFlagFetchActivityImpl(final AirbyteApiClient airbyteApiClient) {
+    this.airbyteApiClient = airbyteApiClient;
   }
 
   /**
@@ -34,9 +37,15 @@ public class FeatureFlagFetchActivityImpl implements FeatureFlagFetchActivity {
    */
   public UUID getWorkspaceId(final UUID connectionId) {
     try {
-      final WorkspaceRead workspace = workspaceApi.getWorkspaceByConnectionId(new ConnectionIdRequestBody().connectionId(connectionId));
+      final WorkspaceRead workspace =
+          airbyteApiClient.getWorkspaceApi().getWorkspaceByConnectionId(new ConnectionIdRequestBody(connectionId));
       return workspace.getWorkspaceId();
-    } catch (final ApiException e) {
+    } catch (final ClientException e) {
+      if (e.getStatusCode() == HttpStatus.NOT_FOUND.getCode()) {
+        throw e;
+      }
+      throw new RetryableException(e);
+    } catch (final IOException e) {
       throw new RuntimeException("Unable to get workspace ID for connection", e);
     }
   }

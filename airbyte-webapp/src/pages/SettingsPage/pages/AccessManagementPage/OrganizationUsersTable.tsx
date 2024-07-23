@@ -8,8 +8,8 @@ import { OrganizationUserRead } from "core/api/types/AirbyteClient";
 import { useCurrentUser } from "core/services/auth";
 import { RbacRoleHierarchy, partitionPermissionType } from "core/utils/rbac/rbacPermissionsQuery";
 
+import { RoleManagementCell } from "./components/RoleManagementCell";
 import { UserCell } from "./components/UserCell";
-import { RoleManagementCell } from "./next/RoleManagementCell";
 
 export const OrganizationUsersTable: React.FC<{
   users: OrganizationUserRead[];
@@ -33,7 +33,6 @@ export const OrganizationUsersTable: React.FC<{
           );
         },
         sortingFn: "alphanumeric",
-        meta: { responsive: true },
       }),
       columnHelper.accessor("permissionType", {
         id: "permissionType",
@@ -43,7 +42,6 @@ export const OrganizationUsersTable: React.FC<{
             <FormattedMessage id="settings.accessManagement.table.column.role" />
           </>
         ),
-        meta: { responsive: true },
         cell: (props) => {
           const user = {
             userName: props.row.original.name ?? "",

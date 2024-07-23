@@ -23,15 +23,23 @@ public class MetricTags {
   public static final String AUTHENTICATION_RESPONSE_FAILURE_REASON = "authentication_response_failure_reason";
   public static final String AUTHENTICATION_REQUEST_URI_ATTRIBUTE_KEY = "request_uri";
   public static final String CANCELLATION_SOURCE = "cancellation_source";
+  public static final String CONFIG_TYPES = "config_types";
   public static final String CONNECTION_ID = "connection_id";
+  public static final String CONNECTION_IDS = "connection_ids";
   public static final String CRON_TYPE = "cron_type";
+  public static final String CRUD_OPERATION = "crud_operation";
   public static final String DESTINATION_ID = "destination_id";
   public static final String DESTINATION_IMAGE = "destination_image";
+  public static final String DESTINATION_IMAGE_IS_DEFAULT = "destination_image_is_default";
+  public static final String EMITTING_CLASS = "emitting_class";
+  public static final String EXPIRE_SECRET = "expire_secret";
+  public static final String FAILURE_CAUSE = "failure_cause";
   public static final String FAILURE_ORIGIN = "failure_origin";
   public static final String FAILURE_TYPE = "failure_type";
   public static final String GEOGRAPHY = "geography";
   public static final String IMPLEMENTATION = "implementation";
   public static final String IS_CUSTOM_CONNECTOR_SYNC = "is_custom_connector_sync";
+  public static final String IS_RESET = "is_reset";
   public static final String JOB_ID = "job_id";
   public static final String JOB_STATUS = "job_status";
   public static final String KILLED = "killed";
@@ -46,15 +54,17 @@ public class MetricTags {
   public static final String NOTIFICATION_CLIENT = "notification_client";
   public static final String RECORD_COUNT_TYPE = "record_count_type";
   public static final String RELEASE_STAGE = "release_stage";
-  public static final String FAILURE_CAUSE = "failure_cause";
   public static final String SOURCE_ID = "source_id";
+  public static final String SOURCE_DEFINITION_ID = "source_definition_id";
   public static final String SOURCE_IMAGE = "source_image";
+  public static final String SOURCE_IMAGE_IS_DEFAULT = "source_image_is_default";
   public static final String STATUS = "status";
+  public static final String SUCCESS = "success";
+  public static final String WILL_RETRY = "will_retry";
   public static final String WORKSPACE_ID = "workspace_id";
   public static final String WORKLOAD_TYPE = "workload_type";
   public static final String UNKNOWN = "unknown";
   public static final String USER_TYPE = "user_type"; // real user, service account, data plane user, etc
-  public static final String WILL_RETRY = "will_retry";
 
   // payload metric tags
   public static final String URI_NULL = "uri_null";

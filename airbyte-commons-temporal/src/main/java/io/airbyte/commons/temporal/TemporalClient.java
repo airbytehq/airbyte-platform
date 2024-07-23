@@ -20,9 +20,12 @@ import io.airbyte.config.ConnectorJobOutput;
 import io.airbyte.config.JobCheckConnectionConfig;
 import io.airbyte.config.JobDiscoverCatalogConfig;
 import io.airbyte.config.JobGetSpecConfig;
+import io.airbyte.config.RefreshStream.RefreshType;
 import io.airbyte.config.StandardCheckConnectionInput;
 import io.airbyte.config.StandardDiscoverCatalogInput;
 import io.airbyte.config.WorkloadPriority;
+import io.airbyte.config.persistence.StreamRefreshesRepository;
+import io.airbyte.config.persistence.StreamRefreshesRepositoryKt;
 import io.airbyte.config.persistence.StreamResetPersistence;
 import io.airbyte.metrics.lib.MetricAttribute;
 import io.airbyte.metrics.lib.MetricClient;
@@ -77,8 +80,8 @@ public class TemporalClient {
   private final WorkflowClientWrapped workflowClientWrapped;
   private final WorkflowServiceStubsWrapped serviceStubsWrapped;
   private final StreamResetPersistence streamResetPersistence;
+  private final StreamRefreshesRepository streamRefreshesRepository;
   private final ConnectionManagerUtils connectionManagerUtils;
-  private final NotificationClient notificationClient;
   private final StreamResetRecordsHelper streamResetRecordsHelper;
   private final MetricClient metricClient;
 
@@ -86,16 +89,16 @@ public class TemporalClient {
                         final WorkflowClientWrapped workflowClientWrapped,
                         final WorkflowServiceStubsWrapped serviceStubsWrapped,
                         final StreamResetPersistence streamResetPersistence,
+                        final StreamRefreshesRepository streamRefreshesRepository,
                         final ConnectionManagerUtils connectionManagerUtils,
-                        final NotificationClient notificationClient,
                         final StreamResetRecordsHelper streamResetRecordsHelper,
                         final MetricClient metricClient) {
     this.workspaceRoot = workspaceRoot;
     this.workflowClientWrapped = workflowClientWrapped;
     this.serviceStubsWrapped = serviceStubsWrapped;
     this.streamResetPersistence = streamResetPersistence;
+    this.streamRefreshesRepository = streamRefreshesRepository;
     this.connectionManagerUtils = connectionManagerUtils;
-    this.notificationClient = notificationClient;
     this.streamResetRecordsHelper = streamResetRecordsHelper;
     this.metricClient = metricClient;
   }
@@ -296,17 +299,41 @@ public class TemporalClient {
         Optional.of(jobId), Optional.empty());
   }
 
+  public void resetConnectionAsync(final UUID connectionId,
+                                   final List<StreamDescriptor> streamsToReset) {
+    try {
+      streamResetPersistence.createStreamResets(connectionId, streamsToReset);
+      connectionManagerUtils.signalWorkflowAndRepairIfNecessary(connectionId, workflow -> workflow::resetConnection);
+    } catch (IOException | DeletedWorkflowException e) {
+      log.error("Not able to properly create a reset");
+      throw new RuntimeException(e);
+    }
+  }
+
+  public void refreshConnectionAsync(final UUID connectionId,
+                                     final List<StreamDescriptor> streamsToRefresh,
+                                     final RefreshType refreshType) {
+    try {
+      StreamRefreshesRepositoryKt.saveStreamsToRefresh(streamRefreshesRepository, connectionId, streamsToRefresh, refreshType);
+      // This isn't actually doing a reset. workflow::resetConnection will cancel the current run if any
+      // and cause the workflow to run immediately. The next run will be a refresh because we just saved a
+      // refresh configuration.
+      connectionManagerUtils.signalWorkflowAndRepairIfNecessary(connectionId, workflow -> workflow::resetConnection);
+    } catch (DeletedWorkflowException e) {
+      log.error("Not able to properly create a reset");
+      throw new RuntimeException(e);
+    }
+  }
+
   /**
    * Submit a reset connection job to temporal.
    *
    * @param connectionId connection id
    * @param streamsToReset streams that should be rest on the connection
-   * @param syncImmediatelyAfter whether another sync job should be triggered immediately after
    * @return result of reset connection
    */
   public ManualOperationResult resetConnection(final UUID connectionId,
-                                               final List<StreamDescriptor> streamsToReset,
-                                               final boolean syncImmediatelyAfter) {
+                                               final List<StreamDescriptor> streamsToReset) {
     log.info("reset sync request");
 
     try {
@@ -322,11 +349,7 @@ public class TemporalClient {
     final long oldJobId = connectionManagerUtils.getCurrentJobId(connectionId);
 
     try {
-      if (syncImmediatelyAfter) {
-        connectionManagerUtils.signalWorkflowAndRepairIfNecessary(connectionId, workflow -> workflow::resetConnectionAndSkipNextScheduling);
-      } else {
-        connectionManagerUtils.signalWorkflowAndRepairIfNecessary(connectionId, workflow -> workflow::resetConnection);
-      }
+      connectionManagerUtils.signalWorkflowAndRepairIfNecessary(connectionId, workflow -> workflow::resetConnection);
     } catch (final DeletedWorkflowException e) {
       log.error("Can't reset a deleted workflow", e);
       return new ManualOperationResult(
@@ -452,7 +475,7 @@ public class TemporalClient {
         .withPriority(priority);
     final StandardDiscoverCatalogInput input = new StandardDiscoverCatalogInput().withConnectionConfiguration(config.getConnectionConfiguration())
         .withSourceId(config.getSourceId()).withConnectorVersion(config.getConnectorVersion()).withConfigHash(config.getConfigHash())
-        .withResourceRequirements(config.getResourceRequirements()).withActorContext(context);
+        .withResourceRequirements(config.getResourceRequirements()).withActorContext(context).withManual(true);
 
     return execute(jobRunConfig,
         () -> getWorkflowStubWithTaskQueue(DiscoverCatalogWorkflow.class, taskQueue).run(jobRunConfig, launcherConfig, input));
@@ -558,14 +581,6 @@ public class TemporalClient {
    */
   public void forceDeleteWorkflow(final UUID connectionId) {
     connectionManagerUtils.deleteWorkflowIfItExist(connectionId);
-  }
-
-  public void sendSchemaChangeNotification(final UUID connectionId,
-                                           final String connectionName,
-                                           final String sourceName,
-                                           final String url,
-                                           final boolean containsBreakingChange) {
-    notificationClient.sendSchemaChangeNotification(connectionId, connectionName, sourceName, url, containsBreakingChange);
   }
 
   /**

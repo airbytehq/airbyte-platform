@@ -88,12 +88,12 @@ open class WorkloadApi(
     ) @Body workloadCreateRequest: WorkloadCreateRequest,
   ): HttpResponse<Any> {
     ApmTraceUtils.addTagsToTrace(
-      mutableMapOf(
+      mutableMapOf<String, Any?>(
         GEOGRAPHY_TAG to workloadCreateRequest.geography,
         MUTEX_KEY_TAG to workloadCreateRequest.mutexKey,
         WORKLOAD_ID_TAG to workloadCreateRequest.workloadId,
         WORKLOAD_TYPE_TAG to workloadCreateRequest.type,
-      ) as Map<String, Any>?,
+      ),
     )
     if (workloadHandler.workloadAlreadyExists(workloadCreateRequest.workloadId)) {
       return HttpResponse.status(HttpStatus.OK)

@@ -3,5 +3,6 @@ import theme from "./theme";
 
 addons.setConfig({
   panelPosition: "bottom",
-  theme
+  theme,
+  enableShortcuts: false
 });

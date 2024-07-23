@@ -1,8 +1,6 @@
 export enum PageTrackingCodes {
   SIGNUP = "Auth.Signup",
   LOGIN = "Auth.Login",
-  RESET_PASSWORD = "Auth.ResetPassword",
-  VERIFY_EMAIL = "Auth.VerifyEmail",
   SOURCE_NEW = "Source.New",
   SOURCE_LIST = "Source.List",
   SOURCE_ITEM = "Source.Item",
@@ -22,6 +20,7 @@ export enum PageTrackingCodes {
   CONNECTIONS_ITEM_TRANSFORMATION = "Connections.Item.TransformationView",
   CONNECTIONS_ITEM_REPLICATION = "Connections.Item.ReplicationView",
   CONNECTIONS_ITEM_SETTINGS = "Connections.Item.Settings",
+  CONNECTIONS_ITEM_TIMELINE = "Connections.Item.Timeline",
   SETTINGS_ACCOUNT = "Settings.Account",
   SETTINGS_WORKSPACE = "Settings.Workspace",
   SETTINGS_ORGANIZATION = "Settings.Organization",

@@ -1,4 +1,5 @@
 import classNames from "classnames";
+import isEqual from "lodash/isEqual";
 import uniqueId from "lodash/uniqueId";
 import { KeyboardEventHandler, useCallback, useMemo, useState } from "react";
 import {
@@ -236,7 +237,9 @@ export const TagInput: React.FC<TagInputProps> = ({
     // removed from view. Without it, drafting a duplicate value and then clicking outside
     // the field will retain the potentially invalid value *even though* it will be removed
     // from the user's view if `uniqueValues` is set.
-    onChange(valuesToCommit(fieldValue));
+    if (!isEqual(valuesToCommit(fieldValue), fieldValue)) {
+      onChange(valuesToCommit(fieldValue));
+    }
     onBlur?.();
   };
 

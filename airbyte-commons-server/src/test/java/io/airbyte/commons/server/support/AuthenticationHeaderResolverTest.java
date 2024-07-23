@@ -9,7 +9,6 @@ import static io.airbyte.commons.server.support.AuthenticationHttpHeaders.CONNEC
 import static io.airbyte.commons.server.support.AuthenticationHttpHeaders.CONNECTION_ID_HEADER;
 import static io.airbyte.commons.server.support.AuthenticationHttpHeaders.CREATOR_USER_ID_HEADER;
 import static io.airbyte.commons.server.support.AuthenticationHttpHeaders.DESTINATION_ID_HEADER;
-import static io.airbyte.commons.server.support.AuthenticationHttpHeaders.EMAIL_HEADER;
 import static io.airbyte.commons.server.support.AuthenticationHttpHeaders.EXTERNAL_AUTH_ID_HEADER;
 import static io.airbyte.commons.server.support.AuthenticationHttpHeaders.JOB_ID_HEADER;
 import static io.airbyte.commons.server.support.AuthenticationHttpHeaders.OPERATION_ID_HEADER;
@@ -29,7 +28,6 @@ import io.airbyte.api.model.generated.PermissionIdRequestBody;
 import io.airbyte.api.model.generated.PermissionRead;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.commons.server.handlers.PermissionHandler;
-import io.airbyte.config.User;
 import io.airbyte.config.persistence.ConfigNotFoundException;
 import io.airbyte.config.persistence.UserPersistence;
 import io.airbyte.persistence.job.WorkspaceHelper;
@@ -37,7 +35,6 @@ import io.airbyte.validation.json.JsonValidationException;
 import java.io.IOException;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
@@ -250,17 +247,6 @@ class AuthenticationHeaderResolverTest {
 
     final Set<String> resolvedAuthUserIds = resolver.resolveAuthUserIds(properties);
 
-    assertEquals(Set.of(AUTH_USER_ID), resolvedAuthUserIds);
-  }
-
-  @Test
-  void testResolvingAuthUserFromEmail() throws Exception {
-    final String email = "random@email.com";
-    final Map<String, String> properties = Map.of(EMAIL_HEADER, email);
-    final User expectedUser = new User().withEmail(email).withAuthUserId(AUTH_USER_ID);
-    when(userPersistence.getUserByEmail(email)).thenReturn(Optional.of(expectedUser));
-
-    final Set<String> resolvedAuthUserIds = resolver.resolveAuthUserIds(properties);
     assertEquals(Set.of(AUTH_USER_ID), resolvedAuthUserIds);
   }
 

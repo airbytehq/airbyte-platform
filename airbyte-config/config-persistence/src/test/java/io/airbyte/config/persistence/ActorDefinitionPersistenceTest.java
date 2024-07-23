@@ -4,6 +4,7 @@
 
 package io.airbyte.config.persistence;
 
+import static io.airbyte.config.persistence.OrganizationPersistence.DEFAULT_ORGANIZATION_ID;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -28,6 +29,7 @@ import io.airbyte.config.secrets.SecretsRepositoryWriter;
 import io.airbyte.data.helpers.ActorDefinitionVersionUpdater;
 import io.airbyte.data.services.ActorDefinitionService;
 import io.airbyte.data.services.ConnectionService;
+import io.airbyte.data.services.OrganizationService;
 import io.airbyte.data.services.ScopedConfigurationService;
 import io.airbyte.data.services.SecretPersistenceConfigService;
 import io.airbyte.data.services.impls.jooq.ActorDefinitionServiceJooqImpl;
@@ -37,6 +39,7 @@ import io.airbyte.data.services.impls.jooq.ConnectorBuilderServiceJooqImpl;
 import io.airbyte.data.services.impls.jooq.DestinationServiceJooqImpl;
 import io.airbyte.data.services.impls.jooq.OAuthServiceJooqImpl;
 import io.airbyte.data.services.impls.jooq.OperationServiceJooqImpl;
+import io.airbyte.data.services.impls.jooq.OrganizationServiceJooqImpl;
 import io.airbyte.data.services.impls.jooq.SourceServiceJooqImpl;
 import io.airbyte.data.services.impls.jooq.WorkspaceServiceJooqImpl;
 import io.airbyte.featureflag.FeatureFlagClient;
@@ -63,9 +66,10 @@ class ActorDefinitionPersistenceTest extends BaseConfigDatabaseTest {
   private static final String DOCKER_IMAGE_TAG = "0.0.1";
 
   private ConfigRepository configRepository;
+  private ActorDefinitionService actorDefinitionService;
 
   @BeforeEach
-  void setup() throws SQLException {
+  void setup() throws SQLException, IOException {
     truncateAllTables();
 
     final FeatureFlagClient featureFlagClient = mock(TestClient.class);
@@ -78,9 +82,10 @@ class ActorDefinitionPersistenceTest extends BaseConfigDatabaseTest {
     final ScopedConfigurationService scopedConfigurationService = mock(ScopedConfigurationService.class);
 
     final ConnectionService connectionService = new ConnectionServiceJooqImpl(database);
-    final ActorDefinitionService actorDefinitionService = new ActorDefinitionServiceJooqImpl(database);
+    actorDefinitionService = new ActorDefinitionServiceJooqImpl(database);
     final ActorDefinitionVersionUpdater actorDefinitionVersionUpdater =
         new ActorDefinitionVersionUpdater(featureFlagClient, connectionService, actorDefinitionService, scopedConfigurationService);
+    final OrganizationService organizationService = new OrganizationServiceJooqImpl(database);
     configRepository = spy(
         new ConfigRepository(
             new ActorDefinitionServiceJooqImpl(database),
@@ -111,6 +116,8 @@ class ActorDefinitionPersistenceTest extends BaseConfigDatabaseTest {
                 secretsRepositoryReader,
                 secretsRepositoryWriter,
                 secretPersistenceConfigService)));
+
+    organizationService.writeOrganization(MockData.defaultOrganization());
   }
 
   @Test
@@ -325,35 +332,40 @@ class ActorDefinitionPersistenceTest extends BaseConfigDatabaseTest {
   }
 
   @Test
-  void testUpdateAllImageTagsForDeclarativeSourceDefinition() throws JsonValidationException, IOException, ConfigNotFoundException {
-    final String targetImageTag = "7.6.5";
+  void testUpdateDeclarativeActorDefinitionVersions() throws IOException, ConfigNotFoundException, JsonValidationException {
+    final String declarativeDockerRepository = "airbyte/source-declarative-manifest";
+    final String previousTag = "0.1.0";
+    final String newTag = "0.2.0";
+    final String differentMajorTag = "1.0.0";
 
-    final StandardSourceDefinition sourceDef1 = createBaseSourceDef();
+    // Write multiple definitions to be updated and one to not be updated
+    final StandardSourceDefinition sourceDef = createBaseSourceDef();
+    final ActorDefinitionVersion adv = createBaseActorDefVersion(sourceDef.getSourceDefinitionId()).withDockerRepository(declarativeDockerRepository)
+        .withDockerImageTag(previousTag);
+    configRepository.writeConnectorMetadata(sourceDef, adv);
+
     final StandardSourceDefinition sourceDef2 = createBaseSourceDef();
+    final ActorDefinitionVersion adv2 = createBaseActorDefVersion(sourceDef2.getSourceDefinitionId())
+        .withDockerRepository(declarativeDockerRepository).withDockerImageTag(previousTag);
+    configRepository.writeConnectorMetadata(sourceDef2, adv2);
+
     final StandardSourceDefinition sourceDef3 = createBaseSourceDef();
+    final ActorDefinitionVersion adv3 = createBaseActorDefVersion(sourceDef3.getSourceDefinitionId())
+        .withDockerRepository(declarativeDockerRepository).withDockerImageTag(differentMajorTag);
+    configRepository.writeConnectorMetadata(sourceDef3, adv3);
 
-    final ActorDefinitionVersion sourceVer1 = createBaseActorDefVersion(sourceDef1.getSourceDefinitionId());
-    final ActorDefinitionVersion sourceVer2 = createBaseActorDefVersion(sourceDef2.getSourceDefinitionId());
-    sourceVer2.setDockerImageTag(targetImageTag);
-    final ActorDefinitionVersion sourceVer3 = createBaseActorDefVersion(sourceDef3.getSourceDefinitionId());
+    final int numUpdated = actorDefinitionService.updateDeclarativeActorDefinitionVersions(previousTag, newTag);
+    assertEquals(2, numUpdated);
 
-    configRepository.writeConnectorMetadata(sourceDef1, sourceVer1);
-    configRepository.writeConnectorMetadata(sourceDef2, sourceVer2);
-    configRepository.writeConnectorMetadata(sourceDef3, sourceVer3);
+    final StandardSourceDefinition updatedSourceDef = configRepository.getStandardSourceDefinition(sourceDef.getSourceDefinitionId());
+    final StandardSourceDefinition updatedSourceDef2 = configRepository.getStandardSourceDefinition(sourceDef2.getSourceDefinitionId());
+    final StandardSourceDefinition persistedSourceDef3 = configRepository.getStandardSourceDefinition(sourceDef3.getSourceDefinitionId());
 
-    final int updatedDefinitions = configRepository
-        .updateActorDefinitionsDockerImageTag(List.of(sourceDef1.getSourceDefinitionId(), sourceDef2.getSourceDefinitionId()), targetImageTag);
-
-    assertEquals(1, updatedDefinitions);
-
-    final StandardSourceDefinition newSourceDef1 = configRepository.getStandardSourceDefinition(sourceDef1.getSourceDefinitionId());
-    assertEquals(targetImageTag, configRepository.getActorDefinitionVersion(newSourceDef1.getDefaultVersionId()).getDockerImageTag());
-
-    final StandardSourceDefinition newSourceDef2 = configRepository.getStandardSourceDefinition(sourceDef2.getSourceDefinitionId());
-    assertEquals(targetImageTag, configRepository.getActorDefinitionVersion(newSourceDef2.getDefaultVersionId()).getDockerImageTag());
-
-    final StandardSourceDefinition newSourceDef3 = configRepository.getStandardSourceDefinition(sourceDef3.getSourceDefinitionId());
-    assertEquals(DOCKER_IMAGE_TAG, configRepository.getActorDefinitionVersion(newSourceDef3.getDefaultVersionId()).getDockerImageTag());
+    // Definitions that were on the previous tag should be updated to the new tag
+    assertEquals(newTag, configRepository.getActorDefinitionVersion(updatedSourceDef.getDefaultVersionId()).getDockerImageTag());
+    assertEquals(newTag, configRepository.getActorDefinitionVersion(updatedSourceDef2.getDefaultVersionId()).getDockerImageTag());
+    // Definitions on a different version don't get updated
+    assertEquals(differentMajorTag, configRepository.getActorDefinitionVersion(persistedSourceDef3.getDefaultVersionId()).getDockerImageTag());
   }
 
   @Test
@@ -504,6 +516,7 @@ class ActorDefinitionPersistenceTest extends BaseConfigDatabaseTest {
         .withDockerRepository("source-image-" + actorDefId)
         .withDockerImageTag(DOCKER_IMAGE_TAG)
         .withSupportLevel(SupportLevel.COMMUNITY)
+        .withInternalSupportLevel(100L)
         .withProtocolVersion("0.2.0");
   }
 
@@ -532,7 +545,8 @@ class ActorDefinitionPersistenceTest extends BaseConfigDatabaseTest {
         .withSlug("workspace-a-slug")
         .withInitialSetupComplete(false)
         .withTombstone(false)
-        .withDefaultGeography(Geography.AUTO);
+        .withDefaultGeography(Geography.AUTO)
+        .withOrganizationId(DEFAULT_ORGANIZATION_ID);
   }
 
 }

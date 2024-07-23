@@ -1,0 +1,15 @@
+@use "scss/colors";
+@use "scss/variables";
+
+.label {
+  color: colors.$foreground;
+
+  & kbd {
+    padding: variables.$spacing-xs variables.$spacing-sm;
+    color: colors.$foreground;
+    background-color: colors.$dark-blue-800;
+    border-radius: variables.$border-radius-sm;
+    border: solid 1px colors.$grey-500;
+    box-shadow: inset 0 -1px 0 colors.$grey-500;
+  }
+}

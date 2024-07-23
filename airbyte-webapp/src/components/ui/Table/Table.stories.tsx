@@ -1,4 +1,4 @@
-import { ComponentMeta, Story } from "@storybook/react";
+import { Story, StoryObj } from "@storybook/react";
 import { createColumnHelper } from "@tanstack/react-table";
 
 import { Table, TableProps } from "./Table";
@@ -12,11 +12,15 @@ export default {
   title: "UI/Table",
   component: Table,
   argTypes: {},
-} as ComponentMeta<typeof Table>;
+} as StoryObj<typeof Table>;
 
 const Template =
   <T,>(): Story<TableProps<T>> =>
-  (args) => <Table<T> {...args} />;
+  (args) => (
+    <div style={{ height: "100vh" }}>
+      <Table<T> {...args} />
+    </div>
+  );
 
 const data: Item[] = [
   { name: "2017", value: 100 },
@@ -43,4 +47,32 @@ export const Primary = Template<Item>().bind({});
 Primary.args = {
   data,
   columns,
+};
+
+export const PrimaryEmpty = Template<Item>().bind({});
+PrimaryEmpty.args = {
+  data: [],
+  columns,
+};
+
+export const Virtualized = Template<Item>().bind({});
+Virtualized.args = {
+  data,
+  columns,
+  virtualized: true,
+};
+
+export const VirtualizedEmpty = Template<Item>().bind({});
+VirtualizedEmpty.args = {
+  data: [],
+  columns,
+  virtualized: true,
+};
+
+export const VirtualizedCustomEmptyPlaceholder = Template<Item>().bind({});
+VirtualizedCustomEmptyPlaceholder.args = {
+  data: [],
+  columns,
+  virtualized: true,
+  customEmptyPlaceholder: <div>Custom empty placeholder</div>,
 };

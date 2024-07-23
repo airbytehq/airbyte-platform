@@ -5,7 +5,7 @@
 package io.airbyte.server.apis.publicapi.mappers
 
 import io.airbyte.api.model.generated.SourceRead
-import io.airbyte.public_api.model.generated.SourceResponse
+import io.airbyte.publicApi.server.generated.models.SourceResponse
 
 /**
  * Mappers that help convert models from the config api to models from the public api.
@@ -18,12 +18,12 @@ object SourceReadMapper {
    * @return SourceResponse Response object with source details
    */
   fun from(sourceRead: SourceRead): SourceResponse {
-    val sourceResponse = SourceResponse()
-    sourceResponse.sourceId = sourceRead.sourceId
-    sourceResponse.name = sourceRead.name
-    sourceResponse.sourceType = DEFINITION_ID_TO_SOURCE_NAME.get(sourceRead.sourceDefinitionId)
-    sourceResponse.workspaceId = sourceRead.workspaceId
-    sourceResponse.configuration = sourceRead.connectionConfiguration
-    return sourceResponse
+    return SourceResponse(
+      sourceId = sourceRead.sourceId.toString(),
+      name = sourceRead.name,
+      sourceType = DEFINITION_ID_TO_SOURCE_NAME.getOrDefault(sourceRead.sourceDefinitionId, ""),
+      workspaceId = sourceRead.workspaceId.toString(),
+      configuration = sourceRead.connectionConfiguration,
+    )
   }
 }

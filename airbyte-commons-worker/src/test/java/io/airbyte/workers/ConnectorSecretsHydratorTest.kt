@@ -1,10 +1,12 @@
 package io.airbyte.workers
 
 import com.fasterxml.jackson.databind.node.POJONode
+import io.airbyte.api.client.AirbyteApiClient
 import io.airbyte.api.client.generated.SecretsPersistenceConfigApi
 import io.airbyte.api.client.model.generated.ScopeType
 import io.airbyte.api.client.model.generated.SecretPersistenceConfig
 import io.airbyte.api.client.model.generated.SecretPersistenceType
+import io.airbyte.commons.json.Jsons
 import io.airbyte.config.secrets.SecretsRepositoryReader
 import io.airbyte.config.secrets.persistence.RuntimeSecretPersistence
 import io.airbyte.featureflag.FeatureFlagClient
@@ -22,14 +24,17 @@ import java.util.UUID
 class ConnectorSecretsHydratorTest {
   @Test
   fun `uses runtime hydration if ff enabled for organization id`() {
+    val airbyteApiClient: AirbyteApiClient = mockk()
     val secretsRepositoryReader: SecretsRepositoryReader = mockk()
     val secretsApiClient: SecretsPersistenceConfigApi = mockk()
     val featureFlagClient: FeatureFlagClient = mockk()
 
+    every { airbyteApiClient.secretPersistenceConfigApi } returns secretsApiClient
+
     val hydrator =
       ConnectorSecretsHydrator(
         secretsRepositoryReader,
-        secretsApiClient,
+        airbyteApiClient,
         featureFlagClient,
       )
 
@@ -39,10 +44,12 @@ class ConnectorSecretsHydratorTest {
     val orgId = UUID.randomUUID()
 
     val secretConfig =
-      SecretPersistenceConfig()
-        .scopeId(orgId)
-        .scopeType(ScopeType.ORGANIZATION)
-        .secretPersistenceType(SecretPersistenceType.AWS)
+      SecretPersistenceConfig(
+        secretPersistenceType = SecretPersistenceType.AWS,
+        configuration = Jsons.jsonNode(mapOf<String, String>()),
+        scopeId = orgId,
+        scopeType = ScopeType.ORGANIZATION,
+      )
 
     val runtimeSecretPersistence = RuntimeSecretPersistence(mockk())
 
@@ -63,14 +70,17 @@ class ConnectorSecretsHydratorTest {
 
   @Test
   fun `uses default hydration if ff not enabled for organization id`() {
+    val airbyteApiClient: AirbyteApiClient = mockk()
     val secretsRepositoryReader: SecretsRepositoryReader = mockk()
     val secretsApiClient: SecretsPersistenceConfigApi = mockk()
     val featureFlagClient: FeatureFlagClient = mockk()
 
+    every { airbyteApiClient.secretPersistenceConfigApi } returns secretsApiClient
+
     val hydrator =
       ConnectorSecretsHydrator(
         secretsRepositoryReader,
-        secretsApiClient,
+        airbyteApiClient,
         featureFlagClient,
       )
 

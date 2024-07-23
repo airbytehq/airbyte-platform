@@ -10,7 +10,6 @@ import { Action, Namespace, useAnalyticsService } from "core/services/analytics"
 import { naturalComparatorBy } from "core/utils/objects";
 import { useDestinationNamespace } from "hooks/connection/useDestinationNamespace";
 import { useConnectionFormService } from "hooks/services/ConnectionForm/ConnectionFormService";
-import { useExperiment } from "hooks/services/Experiment";
 
 import { updateStreamSyncMode } from "./updateStreamSyncMode";
 import { FormConnectionFormValues, SyncStreamFieldWithId, SUPPORTED_MODES } from "../../ConnectionForm/formConfig";
@@ -59,17 +58,11 @@ export const SyncCatalogRow: React.FC<SyncCatalogRowProps & { className?: string
         ...configObj,
       });
 
-      // config.selectedFields must be removed if fieldSelection is disabled
-      if (!updatedStreamNode.config?.fieldSelectionEnabled) {
-        delete updatedStreamNode.config?.selectedFields;
-      }
-
       updateStreamNode(updatedStreamNode);
     },
     [streamNode, updateStreamNode]
   );
 
-  const isSimplifiedCreation = useExperiment("connection.simplifiedCreation", false);
   const analyticsService = useAnalyticsService();
   const onSelectSyncMode = useCallback(
     (syncMode: SyncModeValue) => {
@@ -79,17 +72,15 @@ export const SyncCatalogRow: React.FC<SyncCatalogRowProps & { className?: string
       const updatedConfig = updateStreamSyncMode(streamNode.stream, streamNode.config, syncMode);
       updateStreamWithConfig(updatedConfig);
 
-      if (isSimplifiedCreation) {
-        analyticsService.track(Namespace.STREAM_SELECTION, Action.SET_SYNC_MODE, {
-          actionDescription: "User selected a sync mode for a stream",
-          streamNamespace: streamNode.stream.namespace,
-          streamName: streamNode.stream.name,
-          syncMode: syncMode.syncMode,
-          destinationSyncMode: syncMode.destinationSyncMode,
-        });
-      }
+      analyticsService.track(Namespace.STREAM_SELECTION, Action.SET_SYNC_MODE, {
+        actionDescription: "User selected a sync mode for a stream",
+        streamNamespace: streamNode.stream.namespace,
+        streamName: streamNode.stream.name,
+        syncMode: syncMode.syncMode,
+        destinationSyncMode: syncMode.destinationSyncMode,
+      });
     },
-    [streamNode, updateStreamWithConfig, isSimplifiedCreation, analyticsService]
+    [streamNode, updateStreamWithConfig, analyticsService]
   );
 
   const onSelectStream = useCallback(

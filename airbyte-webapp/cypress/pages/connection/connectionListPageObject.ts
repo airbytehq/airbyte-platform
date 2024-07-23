@@ -3,7 +3,7 @@ import { getWorkspaceId } from "commands/api/workspace";
 
 const schemaChangeCell = (connectionId: string) => `[data-testid='link-replication-${connectionId}']`;
 
-const changesStatusIcon = (type: string) => `[data-testId='changesStatusIcon-${type}']`;
+const changesStatusIcon = (type: string) => `[data-testId='entitywarnings-${type}']`;
 const connectionStateSwitch = (connectionId: string) => `[data-testId='connection-state-switch-${connectionId}']`;
 const newConnectionButton = "[data-testid='new-connection-button']";
 

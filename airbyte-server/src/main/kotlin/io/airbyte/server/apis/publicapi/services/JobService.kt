@@ -12,13 +12,13 @@ import io.airbyte.api.model.generated.JobListForWorkspacesRequestBody.OrderByFie
 import io.airbyte.api.model.generated.JobListForWorkspacesRequestBody.OrderByMethodEnum
 import io.airbyte.api.model.generated.JobListRequestBody
 import io.airbyte.api.model.generated.Pagination
-import io.airbyte.commons.server.errors.problems.UnprocessableEntityProblem
+import io.airbyte.api.problems.throwable.generated.UnprocessableEntityProblem
 import io.airbyte.commons.server.handlers.JobHistoryHandler
 import io.airbyte.commons.server.handlers.SchedulerHandler
 import io.airbyte.commons.server.support.CurrentUserService
-import io.airbyte.public_api.model.generated.JobResponse
-import io.airbyte.public_api.model.generated.JobTypeEnum
-import io.airbyte.public_api.model.generated.JobsResponse
+import io.airbyte.publicApi.server.generated.models.JobResponse
+import io.airbyte.publicApi.server.generated.models.JobTypeEnum
+import io.airbyte.publicApi.server.generated.models.JobsResponse
 import io.airbyte.server.apis.publicapi.constants.HTTP_RESPONSE_BODY_DEBUG_MESSAGE
 import io.airbyte.server.apis.publicapi.errorHandlers.ConfigClientErrorHandler
 import io.airbyte.server.apis.publicapi.filters.JobsFilter
@@ -42,14 +42,14 @@ interface JobService {
   fun getJobList(
     connectionId: UUID,
     jobsFilter: JobsFilter,
-    orderByField: OrderByFieldEnum = OrderByFieldEnum.CREATEDAT,
+    orderByField: OrderByFieldEnum = OrderByFieldEnum.CREATED_AT,
     orderByMethod: OrderByMethodEnum = OrderByMethodEnum.DESC,
   ): JobsResponse
 
   fun getJobList(
     workspaceIds: List<UUID>,
     jobsFilter: JobsFilter,
-    orderByField: OrderByFieldEnum = OrderByFieldEnum.CREATEDAT,
+    orderByField: OrderByFieldEnum = OrderByFieldEnum.CREATED_AT,
     orderByMethod: OrderByMethodEnum = OrderByMethodEnum.DESC,
   ): JobsResponse
 }
@@ -57,7 +57,7 @@ interface JobService {
 @Singleton
 @Secondary
 class JobServiceImpl(
-  val userService: UserService,
+  private val userService: UserService,
   private val schedulerHandler: SchedulerHandler,
   private val jobHistoryHandler: JobHistoryHandler,
   private val currentUserService: CurrentUserService,
@@ -76,7 +76,7 @@ class JobServiceImpl(
     val connectionIdRequestBody = ConnectionIdRequestBody().connectionId(connectionId)
     val result =
       kotlin.runCatching { schedulerHandler.syncConnection(connectionIdRequestBody) }
-        .onFailure { ConfigClientErrorHandler.handleError(it, connectionId.toString()) }
+        .onFailure { ConfigClientErrorHandler.handleError(it) }
 
     log.debug(HTTP_RESPONSE_BODY_DEBUG_MESSAGE + result)
     return JobResponseMapper.from(result.getOrNull()!!)
@@ -91,7 +91,7 @@ class JobServiceImpl(
       kotlin.runCatching { schedulerHandler.resetConnection(connectionIdRequestBody) }
         .onFailure {
           log.error("reset job error $it")
-          ConfigClientErrorHandler.handleError(it, connectionId.toString())
+          ConfigClientErrorHandler.handleError(it)
         }
     log.debug(HTTP_RESPONSE_BODY_DEBUG_MESSAGE + result)
     return JobResponseMapper.from(result.getOrNull()!!)
@@ -108,7 +108,7 @@ class JobServiceImpl(
       }
         .onFailure {
           log.error("cancel job error $it")
-          ConfigClientErrorHandler.handleError(it, jobId.toString())
+          ConfigClientErrorHandler.handleError(it)
         }
     log.debug(HTTP_RESPONSE_BODY_DEBUG_MESSAGE + result)
     return JobResponseMapper.from(result.getOrNull()!!)
@@ -123,7 +123,7 @@ class JobServiceImpl(
       kotlin.runCatching { jobHistoryHandler.getJobInfoWithoutLogs(jobIdRequestBody) }
         .onFailure {
           log.error("Error getting job info without logs $it")
-          ConfigClientErrorHandler.handleError(it, jobId.toString())
+          ConfigClientErrorHandler.handleError(it)
         }
     log.debug(HTTP_RESPONSE_BODY_DEBUG_MESSAGE + result)
     return JobResponseMapper.from(result.getOrNull()!!)
@@ -155,10 +155,10 @@ class JobServiceImpl(
         )
 
     val result =
-      kotlin.runCatching { jobHistoryHandler.listJobsFor(jobListRequestBody) }
+      kotlin.runCatching { jobHistoryHandler.listJobsForLight(jobListRequestBody) }
         .onFailure {
           log.error("Error getting job list $it")
-          ConfigClientErrorHandler.handleError(it, connectionId.toString())
+          ConfigClientErrorHandler.handleError(it)
         }
 
     log.debug(HTTP_RESPONSE_BODY_DEBUG_MESSAGE + result)
@@ -202,8 +202,8 @@ class JobServiceImpl(
     val result =
       kotlin.runCatching { jobHistoryHandler.listJobsForWorkspaces(requestBody) }
         .onFailure {
-          log.error("Error getting job list $it")
-          ConfigClientErrorHandler.handleError(it, workspaceIds.toString())
+          log.error("Error getting job list:", it)
+          ConfigClientErrorHandler.handleError(it)
         }
 
     log.debug(HTTP_RESPONSE_BODY_DEBUG_MESSAGE + result)
@@ -225,6 +225,8 @@ class JobServiceImpl(
       when (jobType) {
         JobTypeEnum.SYNC -> configTypes.add(JobConfigType.SYNC)
         JobTypeEnum.RESET -> configTypes.add(JobConfigType.RESET_CONNECTION)
+        JobTypeEnum.CLEAR -> configTypes.add(JobConfigType.CLEAR)
+        JobTypeEnum.REFRESH -> configTypes.add(JobConfigType.REFRESH)
         else -> throw UnprocessableEntityProblem()
       }
     }

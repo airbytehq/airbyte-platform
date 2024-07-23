@@ -9,8 +9,8 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import io.airbyte.api.client.AirbyteApiClient;
 import io.airbyte.api.client.generated.WorkspaceApi;
-import io.airbyte.api.client.invoker.generated.ApiException;
 import io.airbyte.api.client.model.generated.ConnectionIdRequestBody;
 import io.airbyte.api.client.model.generated.WorkspaceRead;
 import io.airbyte.commons.temporal.scheduling.ConnectionUpdaterInput;
@@ -20,10 +20,13 @@ import io.airbyte.metrics.lib.MetricTags;
 import io.airbyte.metrics.lib.OssMetricsRegistry;
 import io.airbyte.workers.temporal.scheduling.activities.RecordMetricActivity.FailureCause;
 import io.airbyte.workers.temporal.scheduling.activities.RecordMetricActivity.RecordMetricInput;
+import io.micronaut.http.HttpStatus;
+import java.io.IOException;
 import java.util.Optional;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.openapitools.client.infrastructure.ClientException;
 
 /**
  * Test suite for the {@link RecordMetricActivityImpl} class.
@@ -35,23 +38,27 @@ class RecordMetricActivityImplTest {
   private static final UUID WORKSPACE_ID = UUID.randomUUID();
   private static final OssMetricsRegistry METRIC_NAME = OssMetricsRegistry.TEMPORAL_WORKFLOW_ATTEMPT;
 
+  private AirbyteApiClient airbyteApiClient;
   private MetricClient metricClient;
   private ConnectionUpdaterInput connectionUpdaterInput;
   private RecordMetricActivityImpl activity;
 
   @BeforeEach
-  void setup() throws ApiException {
+  void setup() throws IOException {
+    airbyteApiClient = mock(AirbyteApiClient.class);
     metricClient = mock(MetricClient.class);
     final WorkspaceApi workspaceApi = mock(WorkspaceApi.class);
     connectionUpdaterInput = mock(ConnectionUpdaterInput.class);
 
     when(connectionUpdaterInput.getConnectionId()).thenReturn(CONNECTION_ID);
-    when(workspaceApi.getWorkspaceByConnectionId(new ConnectionIdRequestBody().connectionId(CONNECTION_ID)))
-        .thenReturn(new WorkspaceRead().workspaceId(WORKSPACE_ID));
-    when(workspaceApi.getWorkspaceByConnectionId(new ConnectionIdRequestBody().connectionId(CONNECTION_ID_WITHOUT_WORKSPACE)))
-        .thenThrow(new ApiException(404, "Not Found"));
+    when(workspaceApi.getWorkspaceByConnectionId(new ConnectionIdRequestBody(CONNECTION_ID)))
+        .thenReturn(new WorkspaceRead(WORKSPACE_ID, UUID.randomUUID(), "name", "slug", false, UUID.randomUUID(), null, null, null, null, null, null,
+            null, null, null, null, null, null));
+    when(workspaceApi.getWorkspaceByConnectionId(new ConnectionIdRequestBody(CONNECTION_ID_WITHOUT_WORKSPACE)))
+        .thenThrow(new ClientException("Not Found", HttpStatus.NOT_FOUND.getCode(), null));
+    when(airbyteApiClient.getWorkspaceApi()).thenReturn(workspaceApi);
 
-    activity = new RecordMetricActivityImpl(metricClient, workspaceApi);
+    activity = new RecordMetricActivityImpl(airbyteApiClient, metricClient);
   }
 
   @Test

@@ -14,8 +14,6 @@ import com.google.common.collect.Sets;
 import io.airbyte.commons.enums.Enums;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.config.ConfigSchema;
-import io.airbyte.config.OperatorDbt;
-import io.airbyte.config.OperatorNormalization;
 import io.airbyte.config.OperatorWebhook;
 import io.airbyte.config.StandardSyncOperation;
 import io.airbyte.config.StandardSyncOperation.OperatorType;
@@ -178,8 +176,6 @@ public class OperationServiceJooqImpl implements OperationService {
             .set(OPERATION.NAME, standardSyncOperation.getName())
             .set(OPERATION.OPERATOR_TYPE, Enums.toEnum(standardSyncOperation.getOperatorType().value(),
                 io.airbyte.db.instance.configs.jooq.generated.enums.OperatorType.class).orElseThrow())
-            .set(OPERATION.OPERATOR_NORMALIZATION, JSONB.valueOf(Jsons.serialize(standardSyncOperation.getOperatorNormalization())))
-            .set(OPERATION.OPERATOR_DBT, JSONB.valueOf(Jsons.serialize(standardSyncOperation.getOperatorDbt())))
             .set(OPERATION.OPERATOR_WEBHOOK, JSONB.valueOf(Jsons.serialize(standardSyncOperation.getOperatorWebhook())))
             .set(OPERATION.TOMBSTONE, standardSyncOperation.getTombstone() != null && standardSyncOperation.getTombstone())
             .set(OPERATION.UPDATED_AT, timestamp)
@@ -193,8 +189,6 @@ public class OperationServiceJooqImpl implements OperationService {
             .set(OPERATION.NAME, standardSyncOperation.getName())
             .set(OPERATION.OPERATOR_TYPE, Enums.toEnum(standardSyncOperation.getOperatorType().value(),
                 io.airbyte.db.instance.configs.jooq.generated.enums.OperatorType.class).orElseThrow())
-            .set(OPERATION.OPERATOR_NORMALIZATION, JSONB.valueOf(Jsons.serialize(standardSyncOperation.getOperatorNormalization())))
-            .set(OPERATION.OPERATOR_DBT, JSONB.valueOf(Jsons.serialize(standardSyncOperation.getOperatorDbt())))
             .set(OPERATION.OPERATOR_WEBHOOK, JSONB.valueOf(Jsons.serialize(standardSyncOperation.getOperatorWebhook())))
             .set(OPERATION.TOMBSTONE, standardSyncOperation.getTombstone() != null && standardSyncOperation.getTombstone())
             .set(OPERATION.CREATED_AT, timestamp)
@@ -210,8 +204,6 @@ public class OperationServiceJooqImpl implements OperationService {
         .withName(record.get(OPERATION.NAME))
         .withWorkspaceId(record.get(OPERATION.WORKSPACE_ID))
         .withOperatorType(Enums.toEnum(record.get(OPERATION.OPERATOR_TYPE, String.class), OperatorType.class).orElseThrow())
-        .withOperatorNormalization(Jsons.deserialize(record.get(OPERATION.OPERATOR_NORMALIZATION).data(), OperatorNormalization.class))
-        .withOperatorDbt(Jsons.deserialize(record.get(OPERATION.OPERATOR_DBT).data(), OperatorDbt.class))
         .withOperatorWebhook(record.get(OPERATION.OPERATOR_WEBHOOK) == null ? null
             : Jsons.deserialize(record.get(OPERATION.OPERATOR_WEBHOOK).data(), OperatorWebhook.class))
         .withTombstone(record.get(OPERATION.TOMBSTONE));

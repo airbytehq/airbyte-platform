@@ -24,7 +24,6 @@ import { NotificationService } from "hooks/services/Notification";
 import { AirbyteThemeProvider } from "hooks/theme/useAirbyteTheme";
 
 import LoadingPage from "./components/LoadingPage";
-import en from "./locales/en.json";
 import { Routing } from "./pages/routes";
 
 const Services: React.FC<React.PropsWithChildren<unknown>> = ({ children }) => {
@@ -61,7 +60,7 @@ const App: React.FC = () => {
   return (
     <React.StrictMode>
       <AirbyteThemeProvider>
-        <I18nProvider locale="en" messages={en}>
+        <I18nProvider>
           <QueryProvider>
             <BlockerService>
               <Suspense fallback={<LoadingPage />}>

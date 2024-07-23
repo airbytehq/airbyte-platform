@@ -2,13 +2,11 @@ plugins {
   id("io.airbyte.gradle.jvm.lib")
   id("io.airbyte.gradle.publish")
   `java-test-fixtures`
-  kotlin("jvm")
-  kotlin("kapt")
 }
 
 dependencies {
-  kapt(platform(libs.micronaut.platform))
-  kapt(libs.bundles.micronaut.annotation.processor)
+  ksp(platform(libs.micronaut.platform))
+  ksp(libs.bundles.micronaut.annotation.processor)
 
   api(libs.bundles.micronaut.annotation)
   api(libs.bundles.micronaut.kotlin)
@@ -24,7 +22,7 @@ dependencies {
   api(libs.jakarta.transaction.api)
   api(libs.micronaut.data.tx)
   api(libs.aws.java.sdk.sts)
-  api(project(":airbyte-commons"))
+  api(project(":oss:airbyte-commons"))
 
   /*
    * Marked as "implementation" to avoid leaking these dependencies to services
@@ -32,8 +30,10 @@ dependencies {
    * that do need these dependencies will already have them declared, as they will
    * need to define singletons from these modules in order for everything work.
    */
-  implementation(project(":airbyte-config:config-models"))
-  implementation(project(":airbyte-json-validation"))
+  implementation(project(":oss:airbyte-config:config-models"))
+  implementation(project(":oss:airbyte-json-validation"))
+  implementation(project(":oss:airbyte-metrics:metrics-lib"))
+  implementation(project(":oss:airbyte-featureflag"))
 
   testAnnotationProcessor(platform(libs.micronaut.platform))
   testAnnotationProcessor(libs.bundles.micronaut.test.annotation.processor)
@@ -45,14 +45,5 @@ dependencies {
   testImplementation(libs.airbyte.protocol)
   testImplementation(libs.apache.commons.lang)
   testImplementation(libs.testcontainers.vault)
-  testImplementation(testFixtures(project(":airbyte-config:config-persistence")))
-}
-
-// This is a workaround related to kaptBuild errors. It seems to be because there are no tests in cloud-airbyte-api-server.
-// TODO: this should be removed when we move to kotlin 1.9.20
-// TODO: we should write tests
-afterEvaluate {
-  tasks.named("kaptGenerateStubsTestKotlin") {
-    enabled = false
-  }
+  testImplementation(testFixtures(project(":oss:airbyte-config:config-persistence")))
 }

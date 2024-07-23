@@ -19,10 +19,9 @@ import { FormChangeTrackerService } from "hooks/services/FormChangeTracker";
 import { ModalServiceProvider } from "hooks/services/Modal";
 import { NotificationService } from "hooks/services/Notification";
 import { AirbyteThemeProvider } from "hooks/theme/useAirbyteTheme";
-import en from "locales/en.json";
 import { Routing } from "packages/cloud/cloudRoutes";
 
-import { AppServicesProvider } from "./services/AppServicesProvider";
+import { CloudAuthService } from "./services/auth/CloudAuthService";
 import { ZendeskProvider } from "./services/thirdParty/zendesk";
 
 const Services: React.FC<React.PropsWithChildren<unknown>> = ({ children }) => (
@@ -30,13 +29,13 @@ const Services: React.FC<React.PropsWithChildren<unknown>> = ({ children }) => (
     <ConfirmationModalService>
       <FormChangeTrackerService>
         <FeatureService features={defaultCloudFeatures}>
-          <AppServicesProvider>
+          <CloudAuthService>
             <ModalServiceProvider>
               <HelmetProvider>
                 <ZendeskProvider>{children}</ZendeskProvider>
               </HelmetProvider>
             </ModalServiceProvider>
-          </AppServicesProvider>
+          </CloudAuthService>
         </FeatureService>
       </FormChangeTrackerService>
     </ConfirmationModalService>
@@ -47,7 +46,7 @@ const App: React.FC = () => {
   return (
     <React.StrictMode>
       <AirbyteThemeProvider>
-        <I18nProvider locale="en" messages={en}>
+        <I18nProvider>
           <QueryProvider>
             <BlockerService>
               <Suspense fallback={<LoadingPage />}>

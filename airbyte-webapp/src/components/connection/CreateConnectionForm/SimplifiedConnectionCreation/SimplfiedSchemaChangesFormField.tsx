@@ -45,7 +45,7 @@ export const SimplfiedSchemaChangesFormField: React.FC<{ isCreating: boolean; di
     ];
     return supportedPreferences.map((value) => ({
       value,
-      label: formatMessage({ id: `connectionForm.nonBreakingChangesPreference.autopropagation.${value}.next` }),
+      label: formatMessage({ id: `connectionForm.nonBreakingChangesPreference.autopropagation.${value}` }),
       description: formatMessage({
         id: `connectionForm.nonBreakingChangesPreference.autopropagation.${value}.description`,
       }),
@@ -89,6 +89,7 @@ export const SimplfiedSchemaChangesFormField: React.FC<{ isCreating: boolean; di
                   setValue("nonBreakingChangesPreference", value, { shouldDirty: true })
                 }
                 selectedValue={field.value}
+                data-testid="nonBreakingChangesPreference"
               />
             </InputContainer>
           )}

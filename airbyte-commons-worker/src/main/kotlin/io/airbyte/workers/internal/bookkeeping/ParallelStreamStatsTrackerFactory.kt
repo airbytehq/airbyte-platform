@@ -1,16 +1,22 @@
 package io.airbyte.workers.internal.bookkeeping
 
+import io.airbyte.workers.config.StateCheckSumCountEventHandlerFactory
 import io.micronaut.context.ApplicationContext
-import io.micronaut.kotlin.context.createBean
 import jakarta.inject.Singleton
 import java.util.UUID
 
 @Singleton
-class ParallelStreamStatsTrackerFactory(private val applicationContext: ApplicationContext) {
+class ParallelStreamStatsTrackerFactory(
+  private val applicationContext: ApplicationContext,
+  private val stateCheckSumCountEventHandlerFactory: StateCheckSumCountEventHandlerFactory,
+) {
   fun get(
     connectionId: UUID,
     workspaceId: UUID,
     jobId: Long,
     attemptNumber: Int,
-  ): ParallelStreamStatsTracker = applicationContext.createBean(connectionId, workspaceId, jobId, attemptNumber)
+  ): ParallelStreamStatsTracker {
+    val stateCheckSumCountEventHandler = stateCheckSumCountEventHandlerFactory.get(connectionId, workspaceId, jobId, attemptNumber)
+    return applicationContext.createBean(ParallelStreamStatsTracker::class.java, stateCheckSumCountEventHandler)
+  }
 }

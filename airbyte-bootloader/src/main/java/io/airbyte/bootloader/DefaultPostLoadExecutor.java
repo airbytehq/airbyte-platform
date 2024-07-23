@@ -7,6 +7,7 @@ package io.airbyte.bootloader;
 import io.airbyte.config.init.ApplyDefinitionsHelper;
 import io.airbyte.config.init.DeclarativeSourceUpdater;
 import io.airbyte.config.init.PostLoadExecutor;
+import jakarta.inject.Named;
 import jakarta.inject.Singleton;
 import lombok.extern.slf4j.Slf4j;
 
@@ -29,14 +30,16 @@ public class DefaultPostLoadExecutor implements PostLoadExecutor {
   private final DeclarativeSourceUpdater declarativeSourceUpdater;
 
   public DefaultPostLoadExecutor(final ApplyDefinitionsHelper applyDefinitionsHelper,
-                                 final DeclarativeSourceUpdater declarativeSourceUpdater) {
+                                 @Named("localDeclarativeSourceUpdater") final DeclarativeSourceUpdater declarativeSourceUpdater) {
     this.applyDefinitionsHelper = applyDefinitionsHelper;
     this.declarativeSourceUpdater = declarativeSourceUpdater;
   }
 
   @Override
   public void execute() throws Exception {
-    applyDefinitionsHelper.apply();
+    log.info("Updating connector definitions");
+    applyDefinitionsHelper.apply(false, true);
+    log.info("Done updating connector definitions");
     declarativeSourceUpdater.apply();
 
     log.info("Loaded seed data.");

@@ -21,21 +21,10 @@ plugins {
   id("io.airbyte.gradle.jvm.app")
   id("io.airbyte.gradle.docker")
   id("io.airbyte.gradle.publish")
-  kotlin("jvm")
-  kotlin("kapt")
 }
 
 val airbyteProtocol by configurations.creating
 
-configurations.all {
-  resolutionStrategy {
-    // Ensure that the versions defined in deps.toml are used)
-    // instead of versions from transitive dependencies)
-    // Force to avoid(updated version brought in transitively from Micronaut 3.8+)
-    // that is incompatible with our current Helm setup)
-    force(libs.s3, libs.aws.java.sdk.s3)
-  }
-}
 dependencies {
   compileOnly(libs.lombok)
   annotationProcessor(libs.lombok)     // Lombok must be added BEFORE Micronaut
@@ -54,22 +43,22 @@ dependencies {
   implementation(libs.bundles.datadog)
   implementation(libs.bundles.log4j)
 
-  implementation(project(":airbyte-api"))
-  implementation(project(":airbyte-commons"))
-  implementation(project(":airbyte-config:config-models"))
-  implementation(project(":airbyte-commons-converters"))
-  implementation(project(":airbyte-commons-protocol"))
-  implementation(project(":airbyte-commons-micronaut"))
-  implementation(project(":airbyte-commons-micronaut-security"))
-  implementation(project(":airbyte-commons-temporal"))
-  implementation(project(":airbyte-commons-with-dependencies"))
-  implementation(project(":airbyte-commons-worker"))
-  implementation(project(":airbyte-config:init"))
-  implementation(project(":airbyte-featureflag"))
-  implementation(project(":airbyte-json-validation"))
+  implementation(project(":oss:airbyte-api"))
+  implementation(project(":oss:airbyte-commons"))
+  implementation(project(":oss:airbyte-config:config-models"))
+  implementation(project(":oss:airbyte-commons-converters"))
+  implementation(project(":oss:airbyte-commons-protocol"))
+  implementation(project(":oss:airbyte-commons-micronaut"))
+  implementation(project(":oss:airbyte-commons-micronaut-security"))
+  implementation(project(":oss:airbyte-commons-temporal"))
+  implementation(project(":oss:airbyte-commons-with-dependencies"))
+  implementation(project(":oss:airbyte-commons-worker"))
+  implementation(project(":oss:airbyte-config:init"))
+  implementation(project(":oss:airbyte-featureflag"))
+  implementation(project(":oss:airbyte-json-validation"))
   implementation(libs.airbyte.protocol)
-  implementation(project(":airbyte-metrics:metrics-lib"))
-  implementation(project(":airbyte-worker-models"))
+  implementation(project(":oss:airbyte-metrics:metrics-lib"))
+  implementation(project(":oss:airbyte-worker-models"))
 
   runtimeOnly(libs.snakeyaml)
 
@@ -98,7 +87,7 @@ airbyte {
   }
 }
 
-// Duplicated from :airbyte-worker, eventually, this should be handled in :airbyte-protocol)
+// Duplicated from :oss:airbyte-worker, eventually, this should be handled in :oss:airbyte-protocol
 val generateWellKnownTypes = tasks.register("generateWellKnownTypes") {
   inputs.files(airbyteProtocol) // declaring inputs)
   val targetFile = project.file("build/airbyte/docker/WellKnownTypes.json")
@@ -118,7 +107,7 @@ val generateWellKnownTypes = tasks.register("generateWellKnownTypes") {
   }
 }
 
-tasks.named("dockerBuildImage") {
+tasks.named("dockerCopyDistribution") {
   dependsOn(generateWellKnownTypes)
 }
 

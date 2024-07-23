@@ -11,7 +11,7 @@ import {
   SettingsNavigation,
   SettingsNavigationBlock,
 } from "area/settings/components/SettingsNavigation";
-import { useCurrentOrganizationInfo } from "core/api";
+import { useCurrentWorkspace } from "core/api";
 import { FeatureItem, useFeature } from "core/services/features";
 import { isOsanoActive, showOsanoDrawer } from "core/utils/dataPrivacy";
 import { useIntent } from "core/utils/rbac";
@@ -24,8 +24,8 @@ export const CloudSettingsPage: React.FC = () => {
   const supportsCloudDbtIntegration = useFeature(FeatureItem.AllowDBTCloudIntegration);
   const supportsDataResidency = useFeature(FeatureItem.AllowChangeDataGeographies);
   const isTokenManagementEnabled = useExperiment("settings.token-management-ui", false);
-  const organization = useCurrentOrganizationInfo();
-  const canViewOrgSettings = useIntent("ViewOrganizationSettings", { organizationId: organization?.organizationId });
+  const workspace = useCurrentWorkspace();
+  const canViewOrgSettings = useIntent("ViewOrganizationSettings", { organizationId: workspace.organizationId });
   const showAdvancedSettings = useExperiment("settings.showAdvancedSettings", false);
 
   return (
@@ -95,7 +95,7 @@ export const CloudSettingsPage: React.FC = () => {
             to={CloudSettingsRoutePaths.Notifications}
           />
         </SettingsNavigationBlock>
-        {organization && canViewOrgSettings && (
+        {canViewOrgSettings && (
           <SettingsNavigationBlock title={formatMessage({ id: "settings.organizationSettings" })}>
             <SettingsLink
               iconType="community"

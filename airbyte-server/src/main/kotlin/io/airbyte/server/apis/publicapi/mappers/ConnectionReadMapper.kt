@@ -10,16 +10,16 @@ import io.airbyte.api.model.generated.DestinationSyncMode
 import io.airbyte.api.model.generated.NamespaceDefinitionType
 import io.airbyte.api.model.generated.NonBreakingChangesPreference
 import io.airbyte.api.model.generated.SyncMode
-import io.airbyte.public_api.model.generated.ConnectionResponse
-import io.airbyte.public_api.model.generated.ConnectionScheduleResponse
-import io.airbyte.public_api.model.generated.ConnectionStatusEnum
-import io.airbyte.public_api.model.generated.ConnectionSyncModeEnum
-import io.airbyte.public_api.model.generated.GeographyEnum
-import io.airbyte.public_api.model.generated.NamespaceDefinitionEnum
-import io.airbyte.public_api.model.generated.NonBreakingSchemaUpdatesBehaviorEnum
-import io.airbyte.public_api.model.generated.ScheduleTypeWithBasicEnum
-import io.airbyte.public_api.model.generated.StreamConfiguration
-import io.airbyte.public_api.model.generated.StreamConfigurations
+import io.airbyte.publicApi.server.generated.models.ConnectionResponse
+import io.airbyte.publicApi.server.generated.models.ConnectionScheduleResponse
+import io.airbyte.publicApi.server.generated.models.ConnectionStatusEnum
+import io.airbyte.publicApi.server.generated.models.ConnectionSyncModeEnum
+import io.airbyte.publicApi.server.generated.models.GeographyEnum
+import io.airbyte.publicApi.server.generated.models.NamespaceDefinitionEnum
+import io.airbyte.publicApi.server.generated.models.NonBreakingSchemaUpdatesBehaviorEnum
+import io.airbyte.publicApi.server.generated.models.ScheduleTypeWithBasicEnum
+import io.airbyte.publicApi.server.generated.models.StreamConfiguration
+import io.airbyte.publicApi.server.generated.models.StreamConfigurations
 import java.util.UUID
 
 /**
@@ -36,91 +36,79 @@ object ConnectionReadMapper {
     connectionRead: ConnectionRead,
     workspaceId: UUID?,
   ): ConnectionResponse {
-    val connectionResponse = ConnectionResponse()
-    connectionResponse.connectionId = connectionRead.connectionId
-    connectionResponse.name = connectionRead.name
-    connectionResponse.sourceId = connectionRead.sourceId
-    connectionResponse.destinationId = connectionRead.destinationId
-    connectionResponse.workspaceId = workspaceId
-    connectionResponse.status = ConnectionStatusEnum.fromValue(connectionRead.status.toString())
-    if (connectionRead.geography != null) {
-      connectionResponse.dataResidency = GeographyEnum.fromValue(connectionRead.geography.toString())
-    }
-    val connectionScheduleResponse = ConnectionScheduleResponse()
-    if (connectionRead.namespaceDefinition != null) {
-      connectionResponse.namespaceDefinition = convertNamespaceDefinitionType(connectionRead.namespaceDefinition)
-    }
-    if (connectionRead.namespaceFormat != null) {
-      connectionResponse.namespaceFormat = connectionRead.namespaceFormat
-    }
-    if (connectionRead.prefix != null) {
-      connectionResponse.prefix = connectionRead.prefix
-    }
-    if (connectionRead.nonBreakingChangesPreference != null) {
-      connectionResponse.nonBreakingSchemaUpdatesBehavior = convertNonBreakingChangesPreference(connectionRead.nonBreakingChangesPreference)
-    }
-
-    // connectionRead.getSchedule() is soon to be deprecated, but has not been cleaned up in the
-    // database yet
-    if (connectionRead.schedule != null) {
-      connectionScheduleResponse.scheduleType = ScheduleTypeWithBasicEnum.BASIC
-      // should this string just be a json object?
-      val basicTimingString = "Every " + connectionRead.schedule!!.units + " " + connectionRead.schedule!!.timeUnit.name
-      connectionScheduleResponse.basicTiming = basicTimingString
-    } else if (connectionRead.schedule != null && connectionRead.scheduleType == null) {
-      connectionScheduleResponse.scheduleType = ScheduleTypeWithBasicEnum.MANUAL
-    }
-    if (connectionRead.scheduleType == ConnectionScheduleType.MANUAL) {
-      connectionScheduleResponse.scheduleType = ScheduleTypeWithBasicEnum.MANUAL
-    } else if (connectionRead.scheduleType == ConnectionScheduleType.CRON) {
-      connectionScheduleResponse.scheduleType = ScheduleTypeWithBasicEnum.CRON
-      if (connectionRead.scheduleData != null && connectionRead.scheduleData!!.cron != null) {
-        // should this string just be a json object?
-        val cronExpressionWithTimezone =
-          connectionRead.scheduleData!!.cron!!
-            .cronExpression + " " + connectionRead.scheduleData!!.cron!!.cronTimeZone
-        connectionScheduleResponse.cronExpression = cronExpressionWithTimezone
-      } else {
-//        ConnectionReadMapper.log.error("CronExpression not found in ScheduleData for connection: {}", connectionRead.connectionId)
-      }
-    } else if (connectionRead.scheduleType == ConnectionScheduleType.BASIC) {
-      connectionScheduleResponse.scheduleType = ScheduleTypeWithBasicEnum.BASIC
-      if (connectionRead.scheduleData != null && connectionRead.scheduleData!!.basicSchedule != null) {
-        val schedule = connectionRead.scheduleData!!.basicSchedule
-        val basicTimingString = "Every " + schedule!!.units + " " + schedule.timeUnit.name
-        connectionScheduleResponse.basicTiming = basicTimingString
-      } else {
-//        ConnectionReadMapper.log.error("BasicSchedule not found in ScheduleData for connection: {}", connectionRead.connectionId)
-      }
-    }
-    if (connectionRead.syncCatalog != null) {
-      val streamConfigurations = StreamConfigurations()
-      for (streamAndConfiguration in connectionRead.syncCatalog.streams) {
-        assert(streamAndConfiguration.config != null)
-        val connectionSyncMode: ConnectionSyncModeEnum? =
-          syncModesToConnectionSyncModeEnum(
-            streamAndConfiguration.config!!.syncMode,
-            streamAndConfiguration.config!!.destinationSyncMode,
-          )
-        streamConfigurations.addStreamsItem(
-          StreamConfiguration()
-            .name(streamAndConfiguration.stream!!.name)
-            .primaryKey(streamAndConfiguration.config!!.primaryKey)
-            .cursorField(streamAndConfiguration.config!!.cursorField)
-            .syncMode(connectionSyncMode),
+    val streamConfigurations =
+      connectionRead.syncCatalog?.let { catalog ->
+        StreamConfigurations(
+          streams =
+            catalog.streams.map { streamAndConfiguration ->
+              assert(streamAndConfiguration.config != null)
+              val connectionSyncMode: ConnectionSyncModeEnum? =
+                syncModesToConnectionSyncModeEnum(
+                  streamAndConfiguration.config!!.syncMode,
+                  streamAndConfiguration.config!!.destinationSyncMode,
+                )
+              StreamConfiguration(
+                name = streamAndConfiguration.stream.name,
+                primaryKey = streamAndConfiguration.config.primaryKey,
+                cursorField = streamAndConfiguration.config.cursorField,
+                syncMode = connectionSyncMode,
+              )
+            }.toList(),
         )
-      }
-      connectionResponse.configurations = streamConfigurations
-    }
-    connectionResponse.schedule = connectionScheduleResponse
-    return connectionResponse
+      } ?: StreamConfigurations()
+
+    val connectionScheduleResponse =
+      ConnectionScheduleResponse(
+        scheduleType = getScheduleType(connectionRead = connectionRead),
+        cronExpression = connectionRead.scheduleData?.let { d -> d.cron?.let { c -> "${c.cronExpression} ${c.cronTimeZone}" } },
+        basicTiming =
+          connectionRead.scheduleType?.let { t ->
+            if (t == ConnectionScheduleType.BASIC) {
+              connectionRead.scheduleData?.let { s -> s.basicSchedule?.let { b -> "Every ${b.units} ${b.timeUnit.name}" } }
+            } else {
+              null
+            }
+          },
+      )
+
+    return ConnectionResponse(
+      connectionId = connectionRead.connectionId.toString(),
+      name = connectionRead.name,
+      sourceId = connectionRead.sourceId.toString(),
+      destinationId = connectionRead.destinationId.toString(),
+      workspaceId = workspaceId.toString(),
+      status = ConnectionStatusEnum.valueOf(connectionRead.status.toString().uppercase()),
+      schedule = connectionScheduleResponse,
+      dataResidency = connectionRead.geography?.let { g -> GeographyEnum.valueOf(g.toString().uppercase()) } ?: GeographyEnum.AUTO,
+      configurations = streamConfigurations,
+      nonBreakingSchemaUpdatesBehavior = connectionRead.nonBreakingChangesPreference?.let { n -> convertNonBreakingChangesPreference(n) },
+      namespaceDefinition = connectionRead.namespaceDefinition?.let { n -> convertNamespaceDefinitionType(n) },
+      namespaceFormat = connectionRead.namespaceFormat,
+      prefix = connectionRead.prefix,
+    )
   }
 
-  private fun convertNamespaceDefinitionType(namespaceDefinitionType: NamespaceDefinitionType?): NamespaceDefinitionEnum {
+  private fun getScheduleType(connectionRead: ConnectionRead): ScheduleTypeWithBasicEnum {
+    return if (connectionRead.schedule != null) {
+      ScheduleTypeWithBasicEnum.BASIC
+    } else if (connectionRead.schedule != null && connectionRead.scheduleType == null) {
+      ScheduleTypeWithBasicEnum.MANUAL
+    } else if (connectionRead.scheduleType == ConnectionScheduleType.MANUAL) {
+      ScheduleTypeWithBasicEnum.MANUAL
+    } else if (connectionRead.scheduleType == ConnectionScheduleType.CRON) {
+      ScheduleTypeWithBasicEnum.CRON
+    } else if (connectionRead.scheduleType == ConnectionScheduleType.BASIC) {
+      ScheduleTypeWithBasicEnum.BASIC
+    } else {
+      ScheduleTypeWithBasicEnum.BASIC
+    }
+  }
+
+  private fun convertNamespaceDefinitionType(namespaceDefinitionType: NamespaceDefinitionType): NamespaceDefinitionEnum {
     return if (namespaceDefinitionType == NamespaceDefinitionType.CUSTOMFORMAT) {
       NamespaceDefinitionEnum.CUSTOM_FORMAT
     } else {
-      NamespaceDefinitionEnum.fromValue(namespaceDefinitionType.toString())
+      NamespaceDefinitionEnum.valueOf(namespaceDefinitionType.toString().uppercase())
     }
   }
 
@@ -128,7 +116,7 @@ object ConnectionReadMapper {
     return if (nonBreakingChangesPreference == NonBreakingChangesPreference.DISABLE) {
       NonBreakingSchemaUpdatesBehaviorEnum.DISABLE_CONNECTION
     } else {
-      NonBreakingSchemaUpdatesBehaviorEnum.fromValue(nonBreakingChangesPreference.toString())
+      NonBreakingSchemaUpdatesBehaviorEnum.valueOf(nonBreakingChangesPreference.toString().uppercase())
     }
   }
 
@@ -143,32 +131,32 @@ object ConnectionReadMapper {
     sourceSyncMode: SyncMode?,
     destinationSyncMode: DestinationSyncMode?,
   ): ConnectionSyncModeEnum? {
-    val mapper: MutableMap<SyncMode, Map<DestinationSyncMode, ConnectionSyncModeEnum>>? =
-      java.util.Map.of(
-        SyncMode.FULL_REFRESH,
-        mapOf(
-          Pair(
-            DestinationSyncMode.OVERWRITE,
-            ConnectionSyncModeEnum.FULL_REFRESH_OVERWRITE,
+    val mapper: MutableMap<SyncMode, Map<DestinationSyncMode, ConnectionSyncModeEnum>> =
+      mutableMapOf(
+        SyncMode.FULL_REFRESH to
+          mapOf(
+            Pair(
+              DestinationSyncMode.OVERWRITE,
+              ConnectionSyncModeEnum.FULL_REFRESH_OVERWRITE,
+            ),
+            Pair(
+              DestinationSyncMode.APPEND,
+              ConnectionSyncModeEnum.FULL_REFRESH_APPEND,
+            ),
           ),
-          Pair(
-            DestinationSyncMode.APPEND,
-            ConnectionSyncModeEnum.FULL_REFRESH_APPEND,
+        SyncMode.INCREMENTAL to
+          mapOf(
+            Pair(
+              DestinationSyncMode.APPEND,
+              ConnectionSyncModeEnum.INCREMENTAL_APPEND,
+            ),
+            Pair(
+              DestinationSyncMode.APPEND_DEDUP,
+              ConnectionSyncModeEnum.INCREMENTAL_DEDUPED_HISTORY,
+            ),
           ),
-        ),
-        SyncMode.INCREMENTAL,
-        mapOf(
-          Pair(
-            DestinationSyncMode.APPEND,
-            ConnectionSyncModeEnum.INCREMENTAL_APPEND,
-          ),
-          Pair(
-            DestinationSyncMode.APPEND_DEDUP,
-            ConnectionSyncModeEnum.INCREMENTAL_DEDUPED_HISTORY,
-          ),
-        ),
       )
-    return if (sourceSyncMode == null || destinationSyncMode == null || mapper!![sourceSyncMode] == null) {
+    return if (sourceSyncMode == null || destinationSyncMode == null || mapper[sourceSyncMode] == null) {
       ConnectionSyncModeEnum.FULL_REFRESH_OVERWRITE
     } else {
       mapper[sourceSyncMode]!![destinationSyncMode]

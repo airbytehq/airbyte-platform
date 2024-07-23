@@ -6,12 +6,6 @@ plugins {
   id("io.airbyte.gradle.publish")
 }
 
-configurations.all {
-  resolutionStrategy {
-    force(libs.flyway.core, libs.jooq)
-  }
-}
-
 dependencies {
   compileOnly(libs.lombok)
   annotationProcessor(libs.lombok)     // Lombok must be added BEFORE Micronaut
@@ -24,20 +18,20 @@ dependencies {
   implementation(libs.jooq)
   implementation(libs.guava)
 
-  implementation(project(":airbyte-commons"))
-  implementation(project(":airbyte-commons-micronaut"))
-  implementation(project(":airbyte-config:init"))
-  implementation(project(":airbyte-config:specs"))
-  implementation(project(":airbyte-config:config-models"))
-  implementation(project(":airbyte-config:config-persistence"))
-  implementation(project(":airbyte-config:config-secrets"))
-  implementation(project(":airbyte-data"))
-  implementation(project(":airbyte-db:db-lib"))
-  implementation(project(":airbyte-metrics:metrics-lib"))
-  implementation(project(":airbyte-json-validation"))
-  implementation(project(":airbyte-featureflag"))
+  implementation(project(":oss:airbyte-commons"))
+  implementation(project(":oss:airbyte-commons-micronaut"))
+  implementation(project(":oss:airbyte-config:init"))
+  implementation(project(":oss:airbyte-config:specs"))
+  implementation(project(":oss:airbyte-config:config-models"))
+  implementation(project(":oss:airbyte-config:config-persistence"))
+  implementation(project(":oss:airbyte-config:config-secrets"))
+  implementation(project(":oss:airbyte-data"))
+  implementation(project(":oss:airbyte-db:db-lib"))
+  implementation(project(":oss:airbyte-metrics:metrics-lib"))
+  implementation(project(":oss:airbyte-json-validation"))
+  implementation(project(":oss:airbyte-featureflag"))
   implementation(libs.airbyte.protocol)
-  implementation(project(":airbyte-persistence:job-persistence"))
+  implementation(project(":oss:airbyte-persistence:job-persistence"))
 
   runtimeOnly(libs.snakeyaml)
 

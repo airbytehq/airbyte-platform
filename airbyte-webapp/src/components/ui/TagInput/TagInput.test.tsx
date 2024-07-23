@@ -1,12 +1,29 @@
-import { render, screen } from "@testing-library/react";
+import { act, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { useState } from "react";
 
 import { TagInput } from "./TagInput";
 
-const TagInputWithWrapper = () => {
+const TagInputWithWrapper = ({
+  onChange,
+  uniqueValues,
+}: {
+  onChange?: (values: string[]) => void;
+  uniqueValues?: boolean;
+}) => {
   const [fieldValue, setFieldValue] = useState(["tag1", "tag2"]);
-  return <TagInput name="test" fieldValue={fieldValue} onChange={(values) => setFieldValue(values)} disabled={false} />;
+  return (
+    <TagInput
+      name="test"
+      fieldValue={fieldValue}
+      onChange={(values) => {
+        onChange?.(values);
+        setFieldValue(values);
+      }}
+      disabled={false}
+      uniqueValues={uniqueValues}
+    />
+  );
 };
 
 describe("<TagInput />", () => {
@@ -91,5 +108,29 @@ describe("<TagInput />", () => {
 
     const tag3again = screen.getByText("tag3");
     expect(tag3again).toBeInTheDocument();
+  });
+
+  describe("blurring the TagInput", () => {
+    it("triggers onChange when the value changes from the blur", async () => {
+      const mockOnChange = jest.fn();
+      render(<TagInputWithWrapper onChange={(values: string[]) => mockOnChange(values)} uniqueValues />);
+      const input = screen.getByRole("combobox");
+      await act(async () => userEvent.type(input, "tag2"));
+
+      mockOnChange.mockClear();
+      act(() => input.blur());
+      expect(mockOnChange).toHaveBeenCalledWith(["tag1", "tag2"]);
+    });
+
+    it("does not trigger onChange when the blurring doesn't result in a new value", async () => {
+      const mockOnChange = jest.fn();
+      render(<TagInputWithWrapper onChange={(values: string[]) => mockOnChange(values)} />);
+      const input = screen.getByRole("combobox");
+      await act(async () => userEvent.type(input, "tag2"));
+
+      mockOnChange.mockClear();
+      act(() => input.blur());
+      expect(mockOnChange).not.toHaveBeenCalled();
+    });
   });
 });

@@ -8,6 +8,14 @@
   }
 }
 
+// Lower the specificity with :where, so that any class can override this
+:where(.container) {
+  // Set min-width and min-height to 0 to prevent this flexbox from growing outside
+  // of the bounds of its parent by default.
+  min-width: 0;
+  min-height: 0;
+}
+
 .directionRow {
   flex-direction: row;
 }
@@ -90,4 +98,16 @@
 
 .justifyContentEvenly {
   justify-content: space-evenly;
+}
+
+.wrapWrap {
+  flex-wrap: wrap;
+}
+
+.wrapNowrap {
+  flex-wrap: nowrap;
+}
+
+.wrapWrapReverse {
+  flex-wrap: wrap-reverse;
 }

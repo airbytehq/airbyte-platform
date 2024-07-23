@@ -14,6 +14,7 @@ import io.airbyte.config.StandardWorkspace
 import java.util.Optional
 import java.util.UUID
 import java.util.function.Supplier
+import kotlin.jvm.optionals.getOrNull
 
 // These helpers exist so that we can get some of the utility of working with workspaces but without needing to inject WorkspacesHandler
 
@@ -22,62 +23,49 @@ fun buildStandardWorkspace(
   organization: Organization,
   uuidSupplier: Supplier<UUID>,
 ): StandardWorkspace {
-  val email = workspaceCreateWithId.email
-  val anonymousDataCollection = workspaceCreateWithId.anonymousDataCollection
-  val news = workspaceCreateWithId.news
-  val securityUpdates = workspaceCreateWithId.securityUpdates
-  val displaySetupWizard = workspaceCreateWithId.displaySetupWizard
-
   // if not set on the workspaceCreate, set the defaultGeography to AUTO
-  val defaultGeography =
-    if (workspaceCreateWithId.defaultGeography != null) {
-      Enums.convertTo(
-        workspaceCreateWithId.defaultGeography,
-        Geography::class.java,
-      )
-    } else {
-      Geography.AUTO
-    }
-
-  // NotificationSettings from input will be patched with default values.
-  val notificationSettings: NotificationSettings = patchNotificationSettingsWithDefaultValue(workspaceCreateWithId)
+  val geography: Geography = workspaceCreateWithId.defaultGeography?.let { Enums.convertTo(it, Geography::class.java) } ?: Geography.AUTO
 
   return StandardWorkspace().apply {
-    this.workspaceId = workspaceCreateWithId.id ?: uuidSupplier.get()
-    this.customerId = uuidSupplier.get() // "customer_id" should be deprecated
-    this.name = workspaceCreateWithId.name
-    this.slug = uuidSupplier.get().toString()
-    this.initialSetupComplete = false
-    this.anonymousDataCollection = anonymousDataCollection ?: false
-    this.news = news ?: false
-    this.securityUpdates = securityUpdates ?: false
-    this.displaySetupWizard = displaySetupWizard ?: false
-    this.tombstone = false
-    this.notifications = NotificationConverter.toConfigList(workspaceCreateWithId.notifications)
-    this.notificationSettings = NotificationSettingsConverter.toConfig(notificationSettings)
-    this.defaultGeography = defaultGeography
-    this.webhookOperationConfigs = WorkspaceWebhookConfigsConverter.toPersistenceWrite(workspaceCreateWithId.webhookConfigs, uuidSupplier)
-    this.organizationId = organization.organizationId
-    this.email = email
+    workspaceId = workspaceCreateWithId.id ?: uuidSupplier.get()
+    customerId = uuidSupplier.get() // "customer_id" should be deprecated
+    name = workspaceCreateWithId.name
+    slug = uuidSupplier.get().toString()
+    initialSetupComplete = false
+    anonymousDataCollection = workspaceCreateWithId.anonymousDataCollection ?: false
+    news = workspaceCreateWithId.news ?: false
+    securityUpdates = workspaceCreateWithId.securityUpdates ?: false
+    displaySetupWizard = workspaceCreateWithId.displaySetupWizard ?: false
+    tombstone = false
+    notifications = NotificationConverter.toConfigList(workspaceCreateWithId.notifications)
+    notificationSettings = NotificationSettingsConverter.toConfig(patchNotificationSettingsWithDefaultValue(workspaceCreateWithId))
+    defaultGeography = geography
+    webhookOperationConfigs = WorkspaceWebhookConfigsConverter.toPersistenceWrite(workspaceCreateWithId.webhookConfigs, uuidSupplier)
+    organizationId = organization.organizationId
+    email = workspaceCreateWithId.email
   }
 }
 
 private fun patchNotificationSettingsWithDefaultValue(workspaceCreateWithId: WorkspaceCreateWithId): NotificationSettings {
   val defaultNotificationType = NotificationItem().addNotificationTypeItem(NotificationType.CUSTOMERIO)
+
   return NotificationSettings().apply {
-    this.sendOnSuccess = workspaceCreateWithId.notificationSettings?.sendOnSuccess ?: NotificationItem().notificationType(emptyList())
-    this.sendOnFailure = workspaceCreateWithId.notificationSettings?.sendOnFailure ?: defaultNotificationType
-    this.sendOnConnectionUpdate = workspaceCreateWithId.notificationSettings?.sendOnConnectionUpdate ?: defaultNotificationType
+    // Grab a reference to this `apply` scope's `this`, could also avoid this and reference `this@apply` in the following `with` function instead.
+    val ns = this
 
-    this.sendOnConnectionUpdateActionRequired =
-      workspaceCreateWithId.notificationSettings?.sendOnConnectionUpdateActionRequired ?: defaultNotificationType
+    with(workspaceCreateWithId.notificationSettings) {
+      ns.sendOnSuccess = this?.sendOnSuccess ?: NotificationItem().notificationType(emptyList())
+      ns.sendOnFailure = this?.sendOnFailure ?: defaultNotificationType
+      ns.sendOnConnectionUpdate = this?.sendOnConnectionUpdate ?: defaultNotificationType
 
-    this.sendOnSyncDisabled = workspaceCreateWithId.notificationSettings?.sendOnSyncDisabled ?: defaultNotificationType
-    this.sendOnSyncDisabledWarning = workspaceCreateWithId.notificationSettings?.sendOnSyncDisabledWarning ?: defaultNotificationType
-    this.sendOnBreakingChangeWarning = workspaceCreateWithId.notificationSettings?.sendOnBreakingChangeWarning ?: defaultNotificationType
+      ns.sendOnConnectionUpdateActionRequired = this?.sendOnConnectionUpdateActionRequired ?: defaultNotificationType
 
-    this.sendOnBreakingChangeSyncsDisabled =
-      workspaceCreateWithId.notificationSettings?.sendOnBreakingChangeSyncsDisabled ?: defaultNotificationType
+      ns.sendOnSyncDisabled = this?.sendOnSyncDisabled ?: defaultNotificationType
+      ns.sendOnSyncDisabledWarning = this?.sendOnSyncDisabledWarning ?: defaultNotificationType
+      ns.sendOnBreakingChangeWarning = this?.sendOnBreakingChangeWarning ?: defaultNotificationType
+
+      ns.sendOnBreakingChangeSyncsDisabled = this?.sendOnBreakingChangeSyncsDisabled ?: defaultNotificationType
+    }
   }
 }
 
@@ -86,13 +74,10 @@ fun getDefaultWorkspaceName(
   companyName: String?,
   email: String,
 ): String {
-  var defaultWorkspaceName = ""
-  if (organization.isPresent) {
-    // use organization name as default workspace name
-    defaultWorkspaceName = organization.get().name.trim()
-  }
-  // if organization name is not available or empty, use user's company name (note: this is an
-  // optional field)
+  // use organization name as default workspace name, if present
+  var defaultWorkspaceName: String = organization.getOrNull()?.name?.trim() ?: ""
+
+  // if organization name is not available or empty, use user's company name (note: this is an optional field)
   if (defaultWorkspaceName.isEmpty() && companyName != null) {
     defaultWorkspaceName = companyName.trim()
   }
@@ -100,5 +85,6 @@ fun getDefaultWorkspaceName(
   if (defaultWorkspaceName.isEmpty()) {
     defaultWorkspaceName = email
   }
+
   return defaultWorkspaceName
 }

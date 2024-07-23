@@ -4,8 +4,8 @@ import { Navigate, useSearchParams } from "react-router-dom";
 
 import { LoadingPage } from "components";
 import { HeadTitle } from "components/common/HeadTitle";
-import { SelectDestination } from "components/connection/CreateConnection/SelectDestination";
-import { SelectSource } from "components/connection/CreateConnection/SelectSource";
+import { DefineDestination } from "components/connection/CreateConnection/DefineDestination";
+import { DefineSource } from "components/connection/CreateConnection/DefineSource";
 import { PageHeaderWithNavigation } from "components/ui/PageHeader";
 
 import { useCurrentWorkspaceId } from "area/workspace/utils";
@@ -53,11 +53,11 @@ const CurrentStep: React.FC = () => {
   const destination = useGetDestination(destinationId);
 
   if (!source) {
-    return <SelectSource />;
+    return <DefineSource />;
   }
   // source is configured, but destination is not
   if (!destination) {
-    return <SelectDestination />;
+    return <DefineDestination />;
   }
   // both source and destination are configured, configure the connection now
   if (source && destination) {

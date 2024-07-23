@@ -94,7 +94,7 @@ export const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
             variant={submitButtonVariant}
             onClick={onSubmitBtnClick}
             data-id={submitButtonDataId}
-            disabled={!!confirmationText && confirmationValue !== confirmationText}
+            disabled={!!confirmationText && confirmationValue.trim() !== confirmationText.trim()}
             isLoading={isLoading}
           >
             <FormattedMessage id={submitButtonText} />

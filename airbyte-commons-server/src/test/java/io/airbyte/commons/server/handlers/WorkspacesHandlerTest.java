@@ -51,6 +51,7 @@ import io.airbyte.config.NotificationSettings;
 import io.airbyte.config.Organization;
 import io.airbyte.config.SlackNotificationConfiguration;
 import io.airbyte.config.StandardWorkspace;
+import io.airbyte.config.WebhookOperationConfigs;
 import io.airbyte.config.persistence.ConfigNotFoundException;
 import io.airbyte.config.persistence.ConfigRepository;
 import io.airbyte.config.persistence.ConfigRepository.ResourcesByOrganizationQueryPaginated;
@@ -60,6 +61,8 @@ import io.airbyte.config.persistence.WorkspacePersistence;
 import io.airbyte.config.secrets.SecretsRepositoryWriter;
 import io.airbyte.config.secrets.persistence.SecretPersistence;
 import io.airbyte.data.services.WorkspaceService;
+import io.airbyte.featureflag.TestClient;
+import io.airbyte.metrics.lib.MetricClient;
 import io.airbyte.validation.json.JsonValidationException;
 import java.io.IOException;
 import java.util.Collections;
@@ -122,7 +125,7 @@ class WorkspacesHandlerTest {
     organizationPersistence = mock(OrganizationPersistence.class);
     secretPersistence = mock(SecretPersistence.class);
     permissionPersistence = mock(PermissionPersistence.class);
-    secretsRepositoryWriter = new SecretsRepositoryWriter(secretPersistence);
+    secretsRepositoryWriter = new SecretsRepositoryWriter(secretPersistence, mock(MetricClient.class), mock(TestClient.class));
     connectionsHandler = mock(ConnectionsHandler.class);
     destinationHandler = mock(DestinationHandler.class);
     sourceHandler = mock(SourceHandler.class);
@@ -823,7 +826,8 @@ class WorkspacesHandlerTest {
         .anonymousDataCollection(true)
         .email(expectedNewEmail);
 
-    final StandardWorkspace expectedWorkspace = Jsons.clone(workspace).withEmail(expectedNewEmail).withAnonymousDataCollection(true);
+    final StandardWorkspace expectedWorkspace = Jsons.clone(workspace).withEmail(expectedNewEmail).withAnonymousDataCollection(true)
+        .withWebhookOperationConfigs(Jsons.jsonNode(new WebhookOperationConfigs().withWebhookConfigs(Collections.emptyList())));
     when(configRepository.getStandardWorkspaceNoSecrets(workspace.getWorkspaceId(), false))
         .thenReturn(workspace)
         .thenReturn(expectedWorkspace);
@@ -843,6 +847,7 @@ class WorkspacesHandlerTest {
         .notificationSettings(NotificationSettingsConverter.toApi(workspace.getNotificationSettings()))
         .defaultGeography(GEOGRAPHY_AUTO)
         .organizationId(ORGANIZATION_ID)
+        .webhookConfigs(List.of())
         .tombstone(false);
 
     final WorkspaceRead actualWorkspaceRead = workspacesHandler.updateWorkspace(workspaceUpdate);

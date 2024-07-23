@@ -7,9 +7,9 @@ import io.micronaut.http.annotation.Body;
 import io.micronaut.http.annotation.RequestAttribute;
 import io.micronaut.http.annotation.Body;
 
-import jakarta.ws.rs.*;
-import jakarta.ws.rs.core.Response;
-import jakarta.annotation.Nullable;
+import {{javaxPackage}}.ws.rs.*;
+import {{javaxPackage}}.ws.rs.core.Response;
+import {{javaxPackage}}.annotation.Nullable;
 
 {{#useSwaggerAnnotations}}
 import io.swagger.annotations.*;
@@ -22,8 +22,8 @@ import java.util.concurrent.CompletableFuture;
 import java.io.InputStream;
 import java.util.Map;
 import java.util.List;
-{{#useBeanValidation}}import jakarta.validation.constraints.*;
-import jakarta.validation.Valid;{{/useBeanValidation}}
+{{#useBeanValidation}}import {{javaxPackage}}.validation.constraints.*;
+import {{javaxPackage}}.validation.Valid;{{/useBeanValidation}}
 
 @Path("{{contextPath}}{{commonPath}}"){{#useSwaggerAnnotations}}
 @Api(description = "the {{{baseName}}} API"){{/useSwaggerAnnotations}}{{#hasConsumes}}

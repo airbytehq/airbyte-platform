@@ -1,6 +1,6 @@
 import classNames from "classnames";
 import { Suspense, useCallback, useRef } from "react";
-import { FormattedDate, FormattedMessage, FormattedTimeParts, useIntl } from "react-intl";
+import { FormattedDate, FormattedMessage, useIntl } from "react-intl";
 import { useEffectOnce } from "react-use";
 
 import { Box } from "components/ui/Box";
@@ -15,7 +15,7 @@ import { ResetStreamsDetails } from "area/connection/components/JobHistoryItem/R
 import { JobLogsModal } from "area/connection/components/JobLogsModal/JobLogsModal";
 import { JobWithAttempts } from "area/connection/types/jobs";
 import { buildAttemptLink, useAttemptLink } from "area/connection/utils/attemptLink";
-import { getJobCreatedAt } from "area/connection/utils/jobs";
+import { getJobCreatedAt, isClearJob } from "area/connection/utils/jobs";
 import { useCurrentWorkspaceId } from "area/workspace/utils";
 import { useCurrentWorkspace, useGetDebugInfoJobManual } from "core/api";
 import { copyToClipboard } from "core/utils/clipboard";
@@ -157,6 +157,10 @@ export const JobHistoryItem: React.FC<JobHistoryItemProps> = ({ jobWithAttempts 
     }
   };
 
+  const streamsToList = isClearJob(jobWithAttempts)
+    ? jobWithAttempts.job.resetConfig?.streamsToReset?.map((stream) => stream.name)
+    : jobWithAttempts.job.refreshConfig?.streamsToRefresh?.map((stream) => stream.name);
+
   return (
     <div
       ref={wrapperRef}
@@ -173,25 +177,15 @@ export const JobHistoryItem: React.FC<JobHistoryItemProps> = ({ jobWithAttempts 
       <FlexContainer justifyContent="space-between" alignItems="center" className={styles.jobHistoryItem__main}>
         <Box className={styles.jobHistoryItem__summary}>
           <JobStatusLabel jobWithAttempts={jobWithAttempts} />
-          {jobWithAttempts.job.configType === "reset_connection" ? (
-            <ResetStreamsDetails
-              names={jobWithAttempts.job.resetConfig?.streamsToReset?.map((stream) => stream.name)}
-            />
+          {isClearJob(jobWithAttempts) || jobWithAttempts.job.configType === "refresh" ? (
+            <ResetStreamsDetails names={streamsToList} />
           ) : (
             <JobStats jobWithAttempts={jobWithAttempts} />
           )}
         </Box>
         <Box pr="lg" className={styles.jobHistoryItem__timestamp}>
           <Text>
-            <FormattedTimeParts value={getJobCreatedAt(jobWithAttempts) * 1000} hour="numeric" minute="2-digit">
-              {(parts) => <span>{`${parts[0].value}:${parts[2].value}${parts[4].value} `}</span>}
-            </FormattedTimeParts>
-            <FormattedDate
-              value={getJobCreatedAt(jobWithAttempts) * 1000}
-              month="2-digit"
-              day="2-digit"
-              year="numeric"
-            />
+            <FormattedDate value={getJobCreatedAt(jobWithAttempts) * 1000} dateStyle="medium" timeStyle="short" />
           </Text>
         </Box>
       </FlexContainer>

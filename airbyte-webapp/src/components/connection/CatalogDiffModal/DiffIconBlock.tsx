@@ -1,19 +1,35 @@
-import { useIntl } from "react-intl";
+import { FormattedMessage, useIntl } from "react-intl";
 
+import { Icon } from "components/ui/Icon";
 import { NumberBadge } from "components/ui/NumberBadge";
+import { Tooltip } from "components/ui/Tooltip";
 
 import styles from "./DiffIconBlock.module.scss";
 
 interface DiffIconBlockProps {
+  hasBreakingChanges: boolean;
   newCount: number;
   removedCount: number;
   changedCount: number;
 }
-export const DiffIconBlock: React.FC<DiffIconBlockProps> = ({ newCount, removedCount, changedCount }) => {
+export const DiffIconBlock: React.FC<DiffIconBlockProps> = ({
+  hasBreakingChanges,
+  newCount,
+  removedCount,
+  changedCount,
+}) => {
   const { formatMessage } = useIntl();
 
   return (
     <div className={styles.iconBlock}>
+      {hasBreakingChanges && (
+        <Tooltip
+          placement="left"
+          control={<Icon data-testid="breakingChangeStream" type="warningOutline" color="error" />}
+        >
+          <FormattedMessage id="connection.schemaChange.streamWithBreakingChanges" />
+        </Tooltip>
+      )}
       {removedCount > 0 && (
         <NumberBadge
           value={removedCount}

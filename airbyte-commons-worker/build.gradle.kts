@@ -1,14 +1,6 @@
 plugins {
   id("io.airbyte.gradle.jvm.lib")
   id("io.airbyte.gradle.publish")
-  kotlin("jvm")
-  kotlin("kapt")
-}
-
-configurations.all {
-  resolutionStrategy {
-    force(libs.platform.testcontainers.postgresql)
-  }
 }
 
 dependencies {
@@ -17,7 +9,10 @@ dependencies {
   annotationProcessor(platform(libs.micronaut.platform))
   annotationProcessor(libs.bundles.micronaut.annotation.processor)
 
-  kapt(libs.bundles.micronaut.annotation.processor)
+  ksp(platform(libs.micronaut.platform))
+  ksp(libs.bundles.micronaut.annotation.processor)
+
+  api(libs.google.cloud.pubsub)
 
   implementation(platform(libs.micronaut.platform))
   implementation(libs.bundles.micronaut)
@@ -47,24 +42,24 @@ dependencies {
   implementation(libs.s3)
   implementation(libs.sts)
 
-  implementation(project(":airbyte-api"))
-  implementation(project(":airbyte-analytics"))
-  implementation(project(":airbyte-commons"))
-  implementation(project(":airbyte-commons-auth"))
-  implementation(project(":airbyte-commons-converters"))
-  implementation(project(":airbyte-commons-protocol"))
-  implementation(project(":airbyte-commons-temporal"))
-  implementation(project(":airbyte-commons-temporal-core"))
-  implementation(project(":airbyte-commons-with-dependencies"))
-  implementation(project(":airbyte-config:config-models"))
-  implementation(project(":airbyte-config:config-persistence"))
-  implementation(project(":airbyte-config:config-secrets"))
-  implementation(project(":airbyte-featureflag"))
-  implementation(project(":airbyte-json-validation"))
-  implementation(project(":airbyte-metrics:metrics-lib"))
-  implementation(project(":airbyte-persistence:job-persistence"))
+  implementation(project(":oss:airbyte-api"))
+  implementation(project(":oss:airbyte-analytics"))
+  implementation(project(":oss:airbyte-commons"))
+  implementation(project(":oss:airbyte-commons-auth"))
+  implementation(project(":oss:airbyte-commons-converters"))
+  implementation(project(":oss:airbyte-commons-protocol"))
+  implementation(project(":oss:airbyte-commons-temporal"))
+  implementation(project(":oss:airbyte-commons-temporal-core"))
+  implementation(project(":oss:airbyte-commons-with-dependencies"))
+  implementation(project(":oss:airbyte-config:config-models"))
+  implementation(project(":oss:airbyte-config:config-persistence"))
+  implementation(project(":oss:airbyte-config:config-secrets"))
+  implementation(project(":oss:airbyte-featureflag"))
+  implementation(project(":oss:airbyte-json-validation"))
+  implementation(project(":oss:airbyte-metrics:metrics-lib"))
+  implementation(project(":oss:airbyte-persistence:job-persistence"))
   implementation(libs.airbyte.protocol)
-  implementation(project(":airbyte-worker-models"))
+  implementation(project(":oss:airbyte-worker-models"))
   implementation(libs.jakarta.validation.api)
 
   testCompileOnly(libs.lombok)
@@ -74,9 +69,9 @@ dependencies {
   testAnnotationProcessor(libs.bundles.micronaut.test.annotation.processor)
   testAnnotationProcessor(libs.jmh.annotations)
 
-  kaptTest(platform(libs.micronaut.platform))
-  kaptTest(libs.bundles.micronaut.annotation.processor)
-  kaptTest(libs.bundles.micronaut.test.annotation.processor)
+  kspTest(platform(libs.micronaut.platform))
+  kspTest(libs.bundles.micronaut.annotation.processor)
+  kspTest(libs.bundles.micronaut.test.annotation.processor)
 
   testImplementation(libs.bundles.micronaut.test)
   testImplementation(libs.mockk)
@@ -102,17 +97,12 @@ dependencies {
 }
 
 tasks.named<Test>("test") {
-  maxHeapSize = "10g"
-
   useJUnitPlatform {
     excludeTags("cloud-storage")
   }
 }
 
 // The DuplicatesStrategy will be required while this module is mixture of kotlin and java _with_ lombok dependencies.)
-// Kapt, by default, runs all annotation(processors and disables annotation(processing by javac, however)
-// this default behavior(breaks the lombok java annotation(processor.  To avoid(lombok breaking, ksp(has)
-// keepJavacAnnotationProcessors enabled, which causes duplicate META-INF files to be generated.)
 // Once lombok has been removed, this can also be removed.)
 tasks.withType<Jar>().configureEach {
   duplicatesStrategy = DuplicatesStrategy.EXCLUDE

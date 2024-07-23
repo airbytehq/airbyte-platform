@@ -20,6 +20,8 @@ export default defineConfig({
     specPattern: ["cypress/e2e/**/*.cy.ts"],
     supportFile: "cypress/support/e2e.ts",
     setupNodeEvents(on, config) {
+      // eslint-disable-next-line @typescript-eslint/no-var-requires
+      require("dd-trace/ci/cypress/plugin")(on, config);
       on("task", {
         dbQuery(params) {
           const { query, connection = DB_CONFIG } = params;
@@ -34,6 +36,13 @@ export default defineConfig({
           const db = pgp(connection);
           return db.any(query).finally(db.$pool.end);
         },
+      });
+
+      on("before:browser:launch", (browser, launchOptions) => {
+        if (browser.family === "chromium" && browser.name !== "electron") {
+          launchOptions.args.push("--incognito");
+        }
+        return launchOptions;
       });
     },
   },

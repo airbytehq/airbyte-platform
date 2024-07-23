@@ -10,6 +10,7 @@ import io.airbyte.connector_builder.api.model.generated.StreamRead;
 import io.airbyte.connector_builder.exceptions.AirbyteCdkInvalidInputException;
 import io.airbyte.connector_builder.exceptions.ConnectorBuilderException;
 import java.io.IOException;
+import java.util.List;
 
 /**
  * Exposes a way of handling synchronous Connector Builder requests. Blocks until the job completes.
@@ -21,6 +22,7 @@ public interface AirbyteCdkRequester {
 
   StreamRead readStream(final JsonNode manifest,
                         final JsonNode config,
+                        final List<JsonNode> state,
                         final String stream,
                         final Integer recordLimit,
                         final Integer pageLimit,

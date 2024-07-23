@@ -20,6 +20,7 @@ import io.airbyte.protocol.models.AirbyteMessage.Type;
 import io.airbyte.protocol.models.Config;
 import io.airbyte.workers.context.ReplicationContext;
 import io.airbyte.workers.internal.bookkeeping.AirbyteMessageOrigin;
+import java.io.IOException;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -39,7 +40,7 @@ class AirbyteControlMessageEventListenerTest {
   }
 
   @Test
-  void testDestinationControlMessage() {
+  void testDestinationControlMessage() throws IOException {
     final AirbyteMessageOrigin airbyteMessageOrigin = AirbyteMessageOrigin.DESTINATION;
     final Config config = mock(Config.class);
     final AirbyteControlConnectorConfigMessage airbyteControlConnectorConfigMessage = mock(AirbyteControlConnectorConfigMessage.class);
@@ -63,7 +64,7 @@ class AirbyteControlMessageEventListenerTest {
   }
 
   @Test
-  void testSourceControlMessage() {
+  void testSourceControlMessage() throws IOException {
     final AirbyteMessageOrigin airbyteMessageOrigin = AirbyteMessageOrigin.SOURCE;
     final Config config = mock(Config.class);
     final AirbyteControlConnectorConfigMessage airbyteControlConnectorConfigMessage = mock(AirbyteControlConnectorConfigMessage.class);
@@ -87,7 +88,7 @@ class AirbyteControlMessageEventListenerTest {
   }
 
   @Test
-  void testInternalControlMessage() {
+  void testInternalControlMessage() throws IOException {
     final AirbyteMessageOrigin airbyteMessageOrigin = AirbyteMessageOrigin.INTERNAL;
     final AirbyteMessage airbyteMessage = mock(AirbyteMessage.class);
     final ReplicationContext ReplicationContext = mock(ReplicationContext.class);

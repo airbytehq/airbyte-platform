@@ -30,7 +30,6 @@ import jakarta.inject.Singleton
 import java.time.Duration
 import java.util.Objects
 import java.util.concurrent.TimeUnit
-import java.util.function.Predicate
 
 private val logger = KotlinLogging.logger {}
 
@@ -63,10 +62,10 @@ class KubePodLauncher(
     pod: Pod,
     waitDuration: Duration,
   ) {
-    if (shouldUseCustomK8sInitCheck()) {
-      return waitForPodInitCustomCheck(pod, waitDuration)
+    return if (shouldUseCustomK8sInitCheck()) {
+      waitForPodInitCustomCheck(pod, waitDuration)
     } else {
-      return waitForPodInitDefaultCheck(pod, waitDuration)
+      waitForPodInitDefaultCheck(pod, waitDuration)
     }
   }
 
@@ -177,7 +176,7 @@ class KubePodLauncher(
     )
   }
 
-  fun podsExist(labels: Map<String, String>): Boolean {
+  fun podsRunning(labels: Map<String, String>): Boolean {
     try {
       return runKubeCommand(
         {
@@ -187,13 +186,7 @@ class KubePodLauncher(
             .list()
             .items
             .stream()
-            .filter(
-              Predicate<Pod> { kubePod: Pod? ->
-                !KubePodResourceHelper.isTerminal(
-                  kubePod,
-                )
-              },
-            )
+            .filter { kubePod: Pod -> !KubePodResourceHelper.isTerminal(kubePod) && !PodStatusUtil.isInitializing(kubePod) }
             .findAny()
             .isPresent
         },

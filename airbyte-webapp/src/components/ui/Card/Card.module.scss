@@ -8,6 +8,7 @@ $default-padding: variables.$spacing-xl;
 .cardHeader {
   display: flex;
   justify-content: space-between;
+  flex-direction: row;
   color: colors.$dark-blue;
   padding: $default-padding $default-padding 0 $default-padding;
   border-top-left-radius: $default-border-radius;

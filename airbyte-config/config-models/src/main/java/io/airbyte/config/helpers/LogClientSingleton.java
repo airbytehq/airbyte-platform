@@ -8,6 +8,7 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Charsets;
 import io.airbyte.config.Configs;
 import io.airbyte.config.Configs.WorkerEnvironment;
+import io.airbyte.featureflag.FeatureFlagClient;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Path;
@@ -72,7 +73,11 @@ public class LogClientSingleton {
    * @return last lines in file
    * @throws IOException exception while accessing logs
    */
-  public List<String> getJobLogFile(final WorkerEnvironment workerEnvironment, final LogConfigs logConfigs, final Path logPath) throws IOException {
+  public List<String> getJobLogFile(final WorkerEnvironment workerEnvironment,
+                                    final LogConfigs logConfigs,
+                                    final Path logPath,
+                                    final FeatureFlagClient featureFlagClient)
+      throws IOException {
     if (logPath == null || logPath.equals(Path.of(""))) {
       return Collections.emptyList();
     }
@@ -83,7 +88,7 @@ public class LogClientSingleton {
 
     final var cloudLogPath = sanitisePath(JOB_LOGGING_CLOUD_PREFIX, logPath);
     createCloudClientIfNull(logConfigs);
-    return logClient.tailCloudLog(logConfigs, cloudLogPath, LOG_TAIL_SIZE);
+    return logClient.tailCloudLog(logConfigs, cloudLogPath, LOG_TAIL_SIZE, featureFlagClient);
   }
 
   /**

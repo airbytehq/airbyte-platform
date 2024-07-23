@@ -111,17 +111,50 @@ public class StatePersistence {
     });
   }
 
-  public void bulkDelete(final UUID connectionId, final Set<StreamDescriptor> fullRefreshStreams) throws IOException {
-    final var conditions = fullRefreshStreams.stream().map(stream -> {
-      var nameCondition = DSL.field(DSL.name(STATE.STREAM_NAME.getName())).eq(stream.getName());
-      var connCondition = DSL.field(DSL.name(STATE.CONNECTION_ID.getName())).eq(connectionId);
-      var namespaceCondition = stream.getNamespace() == null
-          ? DSL.field(DSL.name(STATE.NAMESPACE.getName())).isNull()
-          : DSL.field(DSL.name(STATE.NAMESPACE.getName())).eq(stream.getNamespace());
+  /**
+   * Remove all states entry for a connection.
+   *
+   * @param connectionId the id of the connection
+   * @throws IOException if there is an issue while interacting with the db.
+   */
+  public void eraseState(final UUID connectionId) throws IOException {
+    this.database.transaction(ctx -> {
+      deleteStateRecords(ctx, connectionId);
+      return null;
+    });
+  }
 
-      return DSL.and(namespaceCondition, nameCondition, connCondition);
-    }).reduce(DSL.noCondition(), DSL::or);
-    this.database.transaction(ctx -> ctx.deleteFrom(STATE).where(conditions).execute());
+  public void bulkDelete(final UUID connectionId, final Set<StreamDescriptor> streamsToDelete) throws IOException {
+    if (streamsToDelete == null || streamsToDelete.isEmpty()) {
+      return;
+    }
+
+    final Optional<StateWrapper> maybeCurrentState = getCurrentState(connectionId);
+    if (maybeCurrentState.isEmpty()) {
+      return;
+    }
+
+    final Set<StreamDescriptor> streamsInState = maybeCurrentState.get().getStateType() == StateType.GLOBAL
+        ? maybeCurrentState.get().getGlobal().getGlobal().getStreamStates().stream().map(AirbyteStreamState::getStreamDescriptor)
+            .collect(Collectors.toSet())
+        : maybeCurrentState.get().getStateMessages().stream().map(airbyteStateMessage -> airbyteStateMessage.getStream().getStreamDescriptor())
+            .collect(Collectors.toSet());
+
+    if (streamsInState.equals(streamsToDelete)) {
+      eraseState(connectionId);
+    } else {
+
+      final var conditions = streamsToDelete.stream().map(stream -> {
+        var nameCondition = DSL.field(DSL.name(STATE.STREAM_NAME.getName())).eq(stream.getName());
+        var connCondition = DSL.field(DSL.name(STATE.CONNECTION_ID.getName())).eq(connectionId);
+        var namespaceCondition = stream.getNamespace() == null
+            ? DSL.field(DSL.name(STATE.NAMESPACE.getName())).isNull()
+            : DSL.field(DSL.name(STATE.NAMESPACE.getName())).eq(stream.getNamespace());
+
+        return DSL.and(namespaceCondition, nameCondition, connCondition);
+      }).reduce(DSL.noCondition(), DSL::or);
+      this.database.transaction(ctx -> ctx.deleteFrom(STATE).where(conditions).execute());
+    }
   }
 
   private static void clearLegacyState(final DSLContext ctx, final UUID connectionId) {
@@ -269,6 +302,17 @@ public class StatePersistence {
         .where(STATE.CONNECTION_ID.eq(connectionId))
         .fetch(getStateRecordMapper())
         .stream().toList();
+  }
+
+  /**
+   * Delete all connection state records from the DB.
+   *
+   * @param ctx A valid DSL context to use for the query
+   * @param connectionId the ID of the connection
+   */
+  private static void deleteStateRecords(final DSLContext ctx, final UUID connectionId) {
+    ctx.deleteFrom(STATE)
+        .where(STATE.CONNECTION_ID.eq(connectionId)).execute();
   }
 
   /**

@@ -31,8 +31,8 @@ import io.airbyte.config.JobOutput;
 import io.airbyte.config.JobSyncConfig;
 import io.airbyte.config.JobSyncConfig.NamespaceDefinitionType;
 import io.airbyte.config.Metadata;
-import io.airbyte.config.NormalizationSummary;
 import io.airbyte.config.RefreshConfig;
+import io.airbyte.config.RefreshStream;
 import io.airbyte.config.Schedule;
 import io.airbyte.config.Schedule.TimeUnit;
 import io.airbyte.config.StandardCheckConnectionOutput;
@@ -54,6 +54,7 @@ import io.airbyte.persistence.job.WorkspaceHelper;
 import io.airbyte.persistence.job.models.Attempt;
 import io.airbyte.persistence.job.models.Job;
 import io.airbyte.persistence.job.tracker.JobTracker.JobState;
+import io.airbyte.protocol.models.AirbyteStream;
 import io.airbyte.protocol.models.CatalogHelpers;
 import io.airbyte.protocol.models.ConfiguredAirbyteCatalog;
 import io.airbyte.protocol.models.ConfiguredAirbyteStream;
@@ -61,6 +62,7 @@ import io.airbyte.protocol.models.ConnectorSpecification;
 import io.airbyte.protocol.models.DestinationSyncMode;
 import io.airbyte.protocol.models.Field;
 import io.airbyte.protocol.models.JsonSchemaType;
+import io.airbyte.protocol.models.StreamDescriptor;
 import io.airbyte.protocol.models.SyncMode;
 import io.airbyte.validation.json.JsonValidationException;
 import java.io.IOException;
@@ -142,8 +144,6 @@ class JobTrackerTest {
       .put("source_read_end_time", 10L)
       .put("destination_write_start_time", 11L)
       .put("destination_write_end_time", 12L)
-      .put("normalization_start_time", 13L)
-      .put("normalization_end_time", 14L)
       .build();
   private static final ImmutableMap<String, Object> SYNC_CONFIG_METADATA = ImmutableMap.<String, Object>builder()
       .put(JobTracker.CONFIG + ".source", "{\"key\":\"set\"}")
@@ -332,7 +332,10 @@ class JobTrackerTest {
 
   @Test
   void testTrackRefresh() throws ConfigNotFoundException, IOException, JsonValidationException {
-    testAsynchronous(ConfigType.REFRESH, SYNC_CONFIG_METADATA);
+    final Map<String, Object> expectedExtraMetadata = MoreMaps.merge(
+        SYNC_CONFIG_METADATA,
+        Map.of("refresh_types", List.of(RefreshStream.RefreshType.TRUNCATE.toString())));
+    testAsynchronous(ConfigType.REFRESH, expectedExtraMetadata);
   }
 
   @Test
@@ -634,6 +637,7 @@ class JobTrackerTest {
 
     final ConfiguredAirbyteCatalog catalog = new ConfiguredAirbyteCatalog().withStreams(List.of(
         new ConfiguredAirbyteStream()
+            .withStream(new AirbyteStream().withName("stream").withNamespace("namespace"))
             .withSyncMode(SyncMode.FULL_REFRESH)
             .withDestinationSyncMode(DestinationSyncMode.APPEND)));
 
@@ -651,7 +655,13 @@ class JobTrackerTest {
     }
     if (configType == ConfigType.REFRESH) {
       final RefreshConfig refreshConfig = new RefreshConfig()
-          .withConfiguredAirbyteCatalog(catalog);
+          .withConfiguredAirbyteCatalog(catalog)
+          .withStreamsToRefresh(
+              catalog.getStreams()
+                  .stream()
+                  .map(s -> new RefreshStream().withRefreshType(RefreshStream.RefreshType.TRUNCATE)
+                      .withStreamDescriptor(new StreamDescriptor().withName(s.getStream().getName()).withNamespace(s.getStream().getNamespace())))
+                  .toList());
       when(jobConfig.getRefresh()).thenReturn(refreshConfig);
     }
 
@@ -673,7 +683,6 @@ class JobTrackerTest {
     final JobOutput jobOutput = mock(JobOutput.class);
     final StandardSyncOutput syncOutput = mock(StandardSyncOutput.class);
     final StandardSyncSummary syncSummary = mock(StandardSyncSummary.class);
-    final NormalizationSummary normalizationSummary = mock(NormalizationSummary.class);
     final SyncStats syncStats = mock(SyncStats.class);
 
     when(syncSummary.getStartTime()).thenReturn(SYNC_START_TIME);
@@ -681,7 +690,6 @@ class JobTrackerTest {
     when(syncSummary.getBytesSynced()).thenReturn(SYNC_BYTES_SYNC);
     when(syncSummary.getRecordsSynced()).thenReturn(SYNC_RECORDS_SYNC);
     when(syncOutput.getStandardSyncSummary()).thenReturn(syncSummary);
-    when(syncOutput.getNormalizationSummary()).thenReturn(normalizationSummary);
     when(syncSummary.getTotalStats()).thenReturn(syncStats);
     when(jobOutput.getSync()).thenReturn(syncOutput);
     when(attempt.getOutput()).thenReturn(java.util.Optional.of(jobOutput));
@@ -697,8 +705,6 @@ class JobTrackerTest {
     when(syncStats.getSourceReadEndTime()).thenReturn(10L);
     when(syncStats.getDestinationWriteStartTime()).thenReturn(11L);
     when(syncStats.getDestinationWriteEndTime()).thenReturn(12L);
-    when(normalizationSummary.getStartTime()).thenReturn(13L);
-    when(normalizationSummary.getEndTime()).thenReturn(14L);
 
     return attempt;
   }
@@ -776,7 +782,7 @@ class JobTrackerTest {
 
   private ImmutableMap<String, Object> getJobMetadata(final ConfigType configType, final long jobId) {
     return ImmutableMap.<String, Object>builder()
-        .put(JOB_TYPE, configType)
+        .put(JOB_TYPE, configType != ConfigType.RESET_CONNECTION ? configType : ConfigType.CLEAR)
         .put(JOB_ID_KEY, String.valueOf(jobId))
         .put(ATTEMPT_ID, 700)
         .put("connection_id", CONNECTION_ID)

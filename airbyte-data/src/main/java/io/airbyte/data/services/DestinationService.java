@@ -28,6 +28,8 @@ public interface DestinationService {
 
   StandardDestinationDefinition getDestinationDefinitionFromDestination(UUID destinationId);
 
+  Boolean isDestinationActive(UUID destinationId) throws IOException;
+
   StandardDestinationDefinition getDestinationDefinitionFromConnection(UUID connectionId);
 
   List<StandardDestinationDefinition> listStandardDestinationDefinitions(boolean includeTombstone) throws IOException;
@@ -67,7 +69,7 @@ public interface DestinationService {
                               final List<ActorDefinitionBreakingChange> breakingChangesForDefinition)
       throws IOException;
 
-  List<DestinationConnection> listDestinationsWithVersionIds(final List<UUID> actorDefinitionVersionIds) throws IOException;
+  List<DestinationConnection> listDestinationsWithIds(final List<UUID> destinationIds) throws IOException;
 
   DestinationConnection getDestinationConnectionWithSecrets(UUID destinationId) throws JsonValidationException, ConfigNotFoundException, IOException;
 
@@ -75,5 +77,12 @@ public interface DestinationService {
                                              DestinationConnection destination,
                                              ConnectorSpecification connectorSpecification)
       throws JsonValidationException, IOException, ConfigNotFoundException;
+
+  void tombstoneDestination(
+                            final String name,
+                            final UUID workspaceId,
+                            final UUID destinationId,
+                            final ConnectorSpecification spec)
+      throws ConfigNotFoundException, JsonValidationException, IOException;
 
 }

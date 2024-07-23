@@ -2,7 +2,7 @@
  * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
-package io.airbyte.api.client2
+package io.airbyte.api.client
 
 import dev.failsafe.RetryPolicy
 import io.mockk.mockk
@@ -19,7 +19,7 @@ class AirbyteApiClientTest {
     val client: OkHttpClient = mockk()
     val policy: RetryPolicy<Response> = mockk()
 
-    val airbyteApiClient = AirbyteApiClient2(basePath, policy, client)
+    val airbyteApiClient = AirbyteApiClient(basePath, policy, client)
     assertNotNull(airbyteApiClient.attemptApi)
     assertEquals(client, airbyteApiClient.attemptApi.client)
     assertEquals(policy, airbyteApiClient.attemptApi.policy)

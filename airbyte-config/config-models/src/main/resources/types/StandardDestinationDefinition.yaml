@@ -36,3 +36,5 @@ properties:
     default: false
   resourceRequirements:
     "$ref": ActorDefinitionResourceRequirements.yaml
+  metrics:
+    "$ref": ConnectorRegistryEntryMetrics.yaml

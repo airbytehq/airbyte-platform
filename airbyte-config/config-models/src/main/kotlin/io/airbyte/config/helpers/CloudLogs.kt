@@ -6,7 +6,7 @@ import io.airbyte.config.storage.GcsStorageConfig
 import io.airbyte.config.storage.MinioS3ClientFactory
 import io.airbyte.config.storage.MinioStorageConfig
 import io.airbyte.config.storage.S3StorageConfig
-import java.io.File
+import io.airbyte.featureflag.FeatureFlagClient
 import java.io.IOException
 
 /**
@@ -18,16 +18,6 @@ import java.io.IOException
  */
 interface CloudLogs {
   /**
-   * Retrieve all objects at the given path in lexicographical order, and return their contents as one
-   * file.
-   */
-  @Throws(IOException::class)
-  fun downloadCloudLog(
-    configs: LogConfigs,
-    logPath: String,
-  ): File
-
-  /**
    * Assume all the lexicographically ordered objects at the given path form one giant log file,
    * return the last numLines lines.
    */
@@ -36,6 +26,7 @@ interface CloudLogs {
     configs: LogConfigs,
     logPath: String,
     numLines: Int,
+    featureFlagClient: FeatureFlagClient,
   ): List<String>
 
   fun deleteLogs(

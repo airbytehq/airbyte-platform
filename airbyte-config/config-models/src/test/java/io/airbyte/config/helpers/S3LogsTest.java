@@ -9,6 +9,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import io.airbyte.commons.envvar.EnvVar;
 import io.airbyte.config.storage.S3StorageConfig;
 import io.airbyte.config.storage.StorageBucketConfig;
+import io.airbyte.featureflag.TestClient;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -79,7 +80,7 @@ class S3LogsTest {
    */
   @Test
   void testTail() throws IOException {
-    final var data = new S3Logs(() -> s3Client).tailCloudLog(LOG_CONFIGS, "tail", 6);
+    final var data = new S3Logs(() -> s3Client).tailCloudLog(LOG_CONFIGS, "tail", 6, new TestClient());
     final var expected = List.of("Line 4", "Line 5", "Line 6", "Line 7", "Line 8", "Line 9");
     assertEquals(data, expected);
   }

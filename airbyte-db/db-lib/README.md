@@ -21,15 +21,15 @@ Check `io.airbyte.db.instance.configs` for example.
 
 # How to Write a Migration
 - Run the `newMigration` command to create a new migration file in `io.airbyte.db.instance.<db-name>.migrations`.
-  - Configs database: `./gradlew :airbyte-db:db-lib:newConfigsMigration`.
-  - Jobs database: `./gradlew :airbyte-db:db-lib:newJobsMigration`.
+  - Configs database: `./gradlew :oss:airbyte-db:db-lib:newConfigsMigration`.
+  - Jobs database: `./gradlew :oss:airbyte-db:db-lib:newJobsMigration`.
 - Write the migration using [`jOOQ`](https://www.jooq.org/).
 - Use the `runMigration` command to apply your newly written migration if you want to test it.
-  - Configs database: `./gradlew :airbyte-db:db-lib:runConfigsMigration`.
-  - Jobs database: `./gradlew :airbyte-db:db-lib:runJobsMigration`.
+  - Configs database: `./gradlew :oss:airbyte-db:db-lib:runConfigsMigration`.
+  - Jobs database: `./gradlew :oss:airbyte-db:db-lib:runJobsMigration`.
 - Run the `dumpSchema` command to update the database schema.
-  - Configs database: `./gradlew :airbyte-db:db-lib:dumpConfigsSchema`
-  - Jobs database: `./gradlew :airbyte-db:db-lib:dumpJobsSchema`
+  - Configs database: `./gradlew :oss:airbyte-db:db-lib:dumpConfigsSchema`
+  - Jobs database: `./gradlew :oss:airbyte-db:db-lib:dumpJobsSchema`
 - Update the appropriate `BootloaderTest.java` constant (`CURRENT_CONFIGS_MIGRATION_VERSION`, `CURRENT_JOBS_MIGRATION_VERSION`) based off the version described below.
 
 ## Migration Filename
@@ -54,7 +54,7 @@ Check `io.airbyte.db.instance.configs` for example.
 public class V0_29_9_001__Add_active_column extends BaseJavaMigration {
 
   @Override
-  public void migrate(Context context) throws Exception {
+  public void migrate(final Context context) throws Exception {
     DSL.using(context.getConnection()).alterTable("airbyte_configs")
         .addColumn(field("active", SQLDataType.BOOLEAN.defaultValue(true).nullable(true)))
         .execute();

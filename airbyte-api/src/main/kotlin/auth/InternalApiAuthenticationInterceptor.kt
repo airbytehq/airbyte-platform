@@ -4,10 +4,11 @@
 
 package io.airbyte.api.client.auth
 
-import com.google.common.base.CaseFormat
+import io.airbyte.api.client.config.InternalApiAuthenticationFactory.Companion.INTERNAL_API_AUTH_TOKEN_BEAN_NAME
 import io.github.oshai.kotlinlogging.KotlinLogging
+import io.micronaut.context.BeanProvider
 import io.micronaut.context.annotation.Value
-import io.micronaut.http.HttpHeaders
+import jakarta.inject.Named
 import jakarta.inject.Singleton
 import okhttp3.Interceptor
 import okhttp3.Request
@@ -15,29 +16,21 @@ import okhttp3.Response
 
 private val logger = KotlinLogging.logger {}
 
-fun formatUserAgent(userAgent: String): String {
-  return CaseFormat.LOWER_HYPHEN.to(CaseFormat.UPPER_CAMEL, userAgent)
-}
-
 @Singleton
+@Named("internalApiAuthenticationInterceptor")
 class InternalApiAuthenticationInterceptor(
   @Value("\${airbyte.internal-api.auth-header.name}") private val authHeaderName: String,
-  @Value("\${airbyte.internal-api.auth-header.value}") private val authHeaderValue: String,
-  @Value("\${micronaut.application.name}") private val userAgent: String,
-) : Interceptor {
+  @Named(INTERNAL_API_AUTH_TOKEN_BEAN_NAME) private val authHeaderValue: BeanProvider<String>,
+) : AirbyteApiInterceptor {
   override fun intercept(chain: Interceptor.Chain): Response {
     val originalRequest: Request = chain.request()
     val builder: Request.Builder = originalRequest.newBuilder()
 
-    if (originalRequest.header(HttpHeaders.USER_AGENT) == null) {
-      builder.addHeader(HttpHeaders.USER_AGENT, formatUserAgent(userAgent))
-    }
-
-    if (authHeaderName.isNotBlank() && authHeaderValue.isNotBlank()) {
+    if (authHeaderName.isNotBlank() && authHeaderValue.isPresent) {
       logger.debug { "Adding authorization header..." }
-      builder.addHeader(authHeaderName, authHeaderValue)
+      builder.addHeader(authHeaderName, authHeaderValue.get())
     } else {
-      logger.debug { "Bearer token not provided." }
+      logger.debug { "Authorization header/value not provided." }
     }
 
     return chain.proceed(builder.build())

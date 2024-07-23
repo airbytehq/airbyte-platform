@@ -84,7 +84,7 @@ jobs:
               - 'airbyte-connector-builder-server/src/main/openapi/openapi.yaml'
               - 'airbyte-webapp/**'
             frontendServers:
-              - 'airbyte-(server|data|connector-builder-server|commons|commons-!(worker|temporal*))/**'
+              - 'airbyte-(server|data|connector-builder-server|featureflag|commons|commons-!(worker|temporal*))/**'
 
   # Uncomment to debug.
   #  changes-output:
@@ -156,7 +156,7 @@ jobs:
           # todo (cgardens): temporarily skipping airbyte-commons-worker because one of the tests uses too much memory. we are
           # adjusting the test to use a more reasonable amount of memory. https://github.com/airbytehq/oncall/issues/4415
           # command: ./gradlew build javadoc --scan
-          command: ./gradlew build -x :airbyte-commons-worker:test javadoc --scan
+          command: ./gradlew build -x :oss:airbyte-commons-worker:test javadoc --scan
           attempt_limit: 3
           attempt_delay: 5000 # in ms
 

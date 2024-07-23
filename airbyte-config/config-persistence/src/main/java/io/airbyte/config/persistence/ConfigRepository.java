@@ -4,8 +4,8 @@
 
 package io.airbyte.config.persistence;
 
-import com.fasterxml.jackson.databind.JsonNode;
 import com.google.common.annotations.VisibleForTesting;
+import datadog.trace.api.Trace;
 import io.airbyte.commons.version.Version;
 import io.airbyte.config.ActorCatalog;
 import io.airbyte.config.ActorCatalogFetchEvent;
@@ -14,9 +14,6 @@ import io.airbyte.config.ActorDefinitionBreakingChange;
 import io.airbyte.config.ActorDefinitionConfigInjection;
 import io.airbyte.config.ActorDefinitionVersion;
 import io.airbyte.config.ConfigSchema;
-import io.airbyte.config.ConnectorBuilderProject;
-import io.airbyte.config.ConnectorBuilderProjectVersionedManifest;
-import io.airbyte.config.DeclarativeManifest;
 import io.airbyte.config.DestinationConnection;
 import io.airbyte.config.DestinationOAuthParameter;
 import io.airbyte.config.Geography;
@@ -38,8 +35,6 @@ import io.airbyte.data.services.OperationService;
 import io.airbyte.data.services.SourceService;
 import io.airbyte.data.services.WorkspaceService;
 import io.airbyte.protocol.models.AirbyteCatalog;
-import io.airbyte.protocol.models.ConfiguredAirbyteCatalog;
-import io.airbyte.protocol.models.ConnectorSpecification;
 import io.airbyte.protocol.models.StreamDescriptor;
 import io.airbyte.validation.json.JsonValidationException;
 import jakarta.annotation.Nonnull;
@@ -469,18 +464,6 @@ public class ConfigRepository {
     } catch (final io.airbyte.data.exceptions.ConfigNotFoundException e) {
       throw new ConfigNotFoundException(e.getType(), e.getConfigId());
     }
-  }
-
-  /**
-   * Update the docker image tag for multiple actor definitions at once.
-   *
-   * @param actorDefinitionIds the list of actor definition ids to update
-   * @param targetImageTag the new docker image tag for these actor definitions
-   * @throws IOException - you never know when you IO
-   */
-  @Deprecated
-  public int updateActorDefinitionsDockerImageTag(final List<UUID> actorDefinitionIds, final String targetImageTag) throws IOException {
-    return actorDefinitionService.updateActorDefinitionsDockerImageTag(actorDefinitionIds, targetImageTag);
   }
 
   /**
@@ -976,30 +959,6 @@ public class ConfigRepository {
   }
 
   /**
-   * Returns all active sources whose default_version_id is in a given list of version IDs.
-   *
-   * @param actorDefinitionVersionIds - list of actor definition version ids
-   * @return list of SourceConnections
-   * @throws IOException - you never know when you IO
-   */
-  @Deprecated
-  public List<SourceConnection> listSourcesWithVersionIds(final List<UUID> actorDefinitionVersionIds) throws IOException {
-    return sourceService.listSourcesWithVersionIds(actorDefinitionVersionIds);
-  }
-
-  /**
-   * Returns all active destinations whose default_version_id is in a given list of version IDs.
-   *
-   * @param actorDefinitionVersionIds - list of actor definition version ids
-   * @return list of DestinationConnections
-   * @throws IOException - you never know when you IO
-   */
-  @Deprecated
-  public List<DestinationConnection> listDestinationsWithVersionIds(final List<UUID> actorDefinitionVersionIds) throws IOException {
-    return destinationService.listDestinationsWithVersionIds(actorDefinitionVersionIds);
-  }
-
-  /**
    * Returns all active destinations using a definition.
    *
    * @param definitionId - id for the definition
@@ -1072,6 +1031,7 @@ public class ConfigRepository {
    * @throws IOException if there is an issue while interacting with db.
    */
   @Deprecated
+  @Trace
   public List<StandardSync> listWorkspaceStandardSyncs(final UUID workspaceId, final boolean includeDeleted) throws IOException {
     return connectionService.listWorkspaceStandardSyncs(workspaceId, includeDeleted);
   }
@@ -1557,25 +1517,6 @@ public class ConfigRepository {
   }
 
   /**
-   * Get configured catalog for connection.
-   *
-   * @param connectionId connection id
-   * @return configured catalog
-   * @throws JsonValidationException if the workspace is or contains invalid json
-   * @throws ConfigNotFoundException if the config does not exist
-   * @throws IOException if there is an issue while interacting with db.
-   */
-  @Deprecated
-  public ConfiguredAirbyteCatalog getConfiguredCatalogForConnection(final UUID connectionId)
-      throws JsonValidationException, ConfigNotFoundException, IOException {
-    try {
-      return connectionService.getConfiguredCatalogForConnection(connectionId);
-    } catch (final io.airbyte.data.exceptions.ConfigNotFoundException e) {
-      throw new ConfigNotFoundException(e.getType(), e.getConfigId());
-    }
-  }
-
-  /**
    * Get geography for a connection.
    *
    * @param connectionId connection id
@@ -1636,235 +1577,6 @@ public class ConfigRepository {
   }
 
   /**
-   * Get connector builder project.
-   *
-   * @param builderProjectId project id
-   * @param fetchManifestDraft manifest draft
-   * @return builder project
-   * @throws IOException exception while interacting with db
-   * @throws ConfigNotFoundException if build project is not found
-   */
-  @Deprecated
-  public ConnectorBuilderProject getConnectorBuilderProject(final UUID builderProjectId, final boolean fetchManifestDraft)
-      throws IOException, ConfigNotFoundException {
-    try {
-      return connectorBuilderService.getConnectorBuilderProject(builderProjectId, fetchManifestDraft);
-    } catch (final io.airbyte.data.exceptions.ConfigNotFoundException e) {
-      throw new ConfigNotFoundException(e.getType(), e.getConfigId());
-    }
-  }
-
-  /**
-   * Return a versioned manifest associated with a builder project.
-   *
-   * @param builderProjectId ID of the connector_builder_project
-   * @param version the version of the manifest
-   * @return ConnectorBuilderProjectVersionedManifest matching the builderProjectId
-   * @throws ConfigNotFoundException ensures that there a connector_builder_project matching the
-   *         `builderProjectId`, a declarative_manifest with the specified version associated with the
-   *         builder project and an active_declarative_manifest. If either of these conditions is not
-   *         true, this error is thrown
-   * @throws IOException exception while interacting with db
-   */
-  @Deprecated
-  public ConnectorBuilderProjectVersionedManifest getVersionedConnectorBuilderProject(final UUID builderProjectId, final Long version)
-      throws ConfigNotFoundException, IOException {
-    try {
-      return connectorBuilderService.getVersionedConnectorBuilderProject(builderProjectId, version);
-    } catch (final io.airbyte.data.exceptions.ConfigNotFoundException e) {
-      throw new ConfigNotFoundException(e.getType(), e.getConfigId());
-    }
-  }
-
-  /**
-   * Get connector builder project from a workspace id.
-   *
-   * @param workspaceId workspace id
-   * @return builder project
-   * @throws IOException exception while interacting with db
-   */
-  @Deprecated
-  public Stream<ConnectorBuilderProject> getConnectorBuilderProjectsByWorkspace(@Nonnull final UUID workspaceId) throws IOException {
-    return connectorBuilderService.getConnectorBuilderProjectsByWorkspace(workspaceId);
-  }
-
-  /**
-   * Delete builder project.
-   *
-   * @param builderProjectId builder project to delete
-   * @return true if successful
-   * @throws IOException exception while interacting with db
-   */
-  @Deprecated
-  public boolean deleteBuilderProject(final UUID builderProjectId) throws IOException {
-    return connectorBuilderService.deleteBuilderProject(builderProjectId);
-  }
-
-  /**
-   * Write name and draft of a builder project. If it doesn't exist under the specified id, it is
-   * created.
-   *
-   * @param projectId the id of the project
-   * @param workspaceId the id of the workspace the project is associated with
-   * @param name the name of the project
-   * @param manifestDraft the manifest (can be null for no draft)
-   * @throws IOException exception while interacting with db
-   */
-  @Deprecated
-  public void writeBuilderProjectDraft(final UUID projectId, final UUID workspaceId, final String name, final JsonNode manifestDraft)
-      throws IOException {
-    connectorBuilderService.writeBuilderProjectDraft(projectId, workspaceId, name, manifestDraft);
-  }
-
-  /**
-   * Nullify the manifest draft of a builder project.
-   *
-   * @param projectId the id of the project
-   * @throws IOException exception while interacting with db
-   */
-  @Deprecated
-  public void deleteBuilderProjectDraft(final UUID projectId) throws IOException {
-    connectorBuilderService.deleteBuilderProjectDraft(projectId);
-  }
-
-  /**
-   * Nullify the manifest draft of the builder project associated with the provided actor definition
-   * ID and workspace ID.
-   *
-   * @param actorDefinitionId the id of the actor definition to which the project is linked
-   * @param workspaceId the id of the workspace containing the project
-   * @throws IOException exception while interacting with db
-   */
-  @Deprecated
-  public void deleteManifestDraftForActorDefinition(final UUID actorDefinitionId, final UUID workspaceId) throws IOException {
-    connectorBuilderService.deleteManifestDraftForActorDefinition(actorDefinitionId, workspaceId);
-  }
-
-  /**
-   * Write name and draft of a builder project. The actor_definition is also updated to match the new
-   * builder project name.
-   * <p>
-   * Actor definition updated this way should always be private (i.e. public=false). As an additional
-   * protection, we want to shield ourselves from users updating public actor definition and
-   * therefore, the name of the actor definition won't be updated if the actor definition is not
-   * public. See
-   * https://github.com/airbytehq/airbyte-platform-internal/pull/5289#discussion_r1142757109.
-   *
-   * @param projectId the id of the project
-   * @param workspaceId the id of the workspace the project is associated with
-   * @param name the name of the project
-   * @param manifestDraft the manifest (can be null for no draft)
-   * @param actorDefinitionId the id of the associated actor definition
-   * @throws IOException exception while interacting with db
-   */
-  @Deprecated
-  public void updateBuilderProjectAndActorDefinition(final UUID projectId,
-                                                     final UUID workspaceId,
-                                                     final String name,
-                                                     final JsonNode manifestDraft,
-                                                     final UUID actorDefinitionId)
-      throws IOException {
-    connectorBuilderService.updateBuilderProjectAndActorDefinition(projectId, workspaceId, name, manifestDraft, actorDefinitionId);
-  }
-
-  /**
-   * Write a builder project to the db.
-   *
-   * @param builderProjectId builder project to update
-   * @param actorDefinitionId the actor definition id associated with the connector builder project
-   * @throws IOException exception while interacting with db
-   */
-  @Deprecated
-  public void assignActorDefinitionToConnectorBuilderProject(final UUID builderProjectId, final UUID actorDefinitionId) throws IOException {
-    connectorBuilderService.assignActorDefinitionToConnectorBuilderProject(builderProjectId, actorDefinitionId);
-  }
-
-  /**
-   * Update an actor_definition, active_declarative_manifest and create declarative_manifest.
-   * <p>
-   * Note that based on this signature, two problems might occur if the user of this method is not
-   * diligent. This was done because we value more separation of concerns than consistency of the API
-   * of this method. The problems are:
-   *
-   * <pre>
-   * <ul>
-   *   <li>DeclarativeManifest.manifest could be different from the one injected ActorDefinitionConfigInjection.</li>
-   *   <li>DeclarativeManifest.spec could be different from ConnectorSpecification.connectionSpecification</li>
-   * </ul>
-   * </pre>
-   * <p>
-   * Since we decided not to validate this using the signature of the method, we will validate that
-   * runtime and IllegalArgumentException if there is a mismatch.
-   * <p>
-   * The reasoning behind this reasoning is the following: Benefits: Alignment with platform's
-   * definition of the repository. Drawbacks: We will need a method
-   * configRepository.setDeclarativeSourceActiveVersion(sourceDefinitionId, version, manifest, spec);
-   * where version and (manifest, spec) might not be consistent i.e. that a user of this method could
-   * call it with configRepository.setDeclarativeSourceActiveVersion(sourceDefinitionId, version_10,
-   * manifest_of_version_7, spec_of_version_12); However, we agreed that this was very unlikely.
-   * <p>
-   * Note that this is all in the context of data consistency i.e. that we want to do this in one
-   * transaction. When we split this in many services, we will need to rethink data consistency.
-   *
-   * @param declarativeManifest declarative manifest version to create and make active
-   * @param configInjection configInjection for the manifest
-   * @param connectorSpecification connectorSpecification associated with the declarativeManifest
-   *        being created
-   * @throws IOException exception while interacting with db
-   * @throws IllegalArgumentException if there is a mismatch between the different arguments
-   */
-  @Deprecated
-  public void createDeclarativeManifestAsActiveVersion(final DeclarativeManifest declarativeManifest,
-                                                       final ActorDefinitionConfigInjection configInjection,
-                                                       final ConnectorSpecification connectorSpecification)
-      throws IOException {
-    connectorBuilderService.createDeclarativeManifestAsActiveVersion(declarativeManifest, configInjection, connectorSpecification);
-  }
-
-  /**
-   * Update an actor_definition, active_declarative_manifest and create declarative_manifest.
-   * <p>
-   * Note that based on this signature, two problems might occur if the user of this method is not
-   * diligent. This was done because we value more separation of concerns than consistency of the API
-   * of this method. The problems are:
-   *
-   * <pre>
-   * <ul>
-   *   <li>DeclarativeManifest.manifest could be different from the one injected ActorDefinitionConfigInjection.</li>
-   *   <li>DeclarativeManifest.spec could be different from ConnectorSpecification.connectionSpecification</li>
-   * </ul>
-   * </pre>
-   * <p>
-   * At that point, we can only hope the user won't cause data consistency issue using this method
-   * <p>
-   * The reasoning behind this reasoning is the following: Benefits: Alignment with platform's
-   * definition of the repository. Drawbacks: We will need a method
-   * configRepository.setDeclarativeSourceActiveVersion(sourceDefinitionId, version, manifest, spec);
-   * where version and (manifest, spec) might not be consistent i.e. that a user of this method could
-   * call it with configRepository.setDeclarativeSourceActiveVersion(sourceDefinitionId, version_10,
-   * manifest_of_version_7, spec_of_version_12); However, we agreed that this was very unlikely.
-   * <p>
-   * Note that this is all in the context of data consistency i.e. that we want to do this in one
-   * transaction. When we split this in many services, we will need to rethink data consistency.
-   *
-   * @param sourceDefinitionId actor definition to update
-   * @param version the version of the manifest to make active. declarative_manifest.version must
-   *        already exist
-   * @param configInjection configInjection for the manifest
-   * @param connectorSpecification connectorSpecification associated with the declarativeManifest
-   *        being made active
-   * @throws IOException exception while interacting with db
-   */
-  @Deprecated
-  public void setDeclarativeSourceActiveVersion(final UUID sourceDefinitionId,
-                                                final Long version,
-                                                final ActorDefinitionConfigInjection configInjection,
-                                                final ConnectorSpecification connectorSpecification)
-      throws IOException {
-    connectorBuilderService.setDeclarativeSourceActiveVersion(sourceDefinitionId, version, configInjection, connectorSpecification);
-  }
-
-  /**
    * Load all config injection for an actor definition.
    *
    * @param actorDefinitionId id of the actor definition to fetch
@@ -1887,90 +1599,6 @@ public class ConfigRepository {
   @Deprecated
   public void writeActorDefinitionConfigInjectionForPath(final ActorDefinitionConfigInjection actorDefinitionConfigInjection) throws IOException {
     connectorBuilderService.writeActorDefinitionConfigInjectionForPath(actorDefinitionConfigInjection);
-  }
-
-  /**
-   * Insert a declarative manifest. If DECLARATIVE_MANIFEST.ACTOR_DEFINITION_ID and
-   * DECLARATIVE_MANIFEST.VERSION is already in the DB, an exception will be thrown
-   *
-   * @param declarativeManifest declarative manifest to insert
-   * @throws IOException exception while interacting with db
-   */
-  @Deprecated
-  public void insertDeclarativeManifest(final DeclarativeManifest declarativeManifest) throws IOException {
-    connectorBuilderService.insertDeclarativeManifest(declarativeManifest);
-  }
-
-  /**
-   * Insert a declarative manifest and its associated active declarative manifest. If
-   * DECLARATIVE_MANIFEST.ACTOR_DEFINITION_ID and DECLARATIVE_MANIFEST.VERSION is already in the DB,
-   * an exception will be thrown
-   *
-   * @param declarativeManifest declarative manifest to insert
-   * @throws IOException exception while interacting with db
-   */
-  @Deprecated
-  public void insertActiveDeclarativeManifest(final DeclarativeManifest declarativeManifest) throws IOException {
-    connectorBuilderService.insertActiveDeclarativeManifest(declarativeManifest);
-  }
-
-  /**
-   * Read all declarative manifests by actor definition id without the manifest column.
-   *
-   * @param actorDefinitionId actor definition id
-   * @throws IOException exception while interacting with db
-   */
-  @Deprecated
-  public Stream<DeclarativeManifest> getDeclarativeManifestsByActorDefinitionId(final UUID actorDefinitionId) throws IOException {
-    return connectorBuilderService.getDeclarativeManifestsByActorDefinitionId(actorDefinitionId);
-  }
-
-  /**
-   * Read declarative manifest by actor definition id and version with manifest column.
-   *
-   * @param actorDefinitionId actor definition id
-   * @param version the version of the declarative manifest
-   * @throws IOException exception while interacting with db
-   * @throws ConfigNotFoundException exception if no match on DECLARATIVE_MANIFEST.ACTOR_DEFINITION_ID
-   *         and DECLARATIVE_MANIFEST.VERSION
-   */
-  @Deprecated
-  public DeclarativeManifest getDeclarativeManifestByActorDefinitionIdAndVersion(final UUID actorDefinitionId, final long version)
-      throws IOException, ConfigNotFoundException {
-    try {
-      return connectorBuilderService.getDeclarativeManifestByActorDefinitionIdAndVersion(actorDefinitionId, version);
-    } catch (final io.airbyte.data.exceptions.ConfigNotFoundException e) {
-      throw new ConfigNotFoundException(e.getType(), e.getConfigId());
-    }
-  }
-
-  /**
-   * Read currently active declarative manifest by actor definition id by joining with
-   * active_declarative_manifest for the same actor definition id with manifest.
-   *
-   * @param actorDefinitionId actor definition id
-   * @throws IOException exception while interacting with db
-   * @throws ConfigNotFoundException exception if no match on DECLARATIVE_MANIFEST.ACTOR_DEFINITION_ID
-   *         that matches the version of an active manifest
-   */
-  @Deprecated
-  public DeclarativeManifest getCurrentlyActiveDeclarativeManifestsByActorDefinitionId(final UUID actorDefinitionId)
-      throws IOException, ConfigNotFoundException {
-    try {
-      return connectorBuilderService.getCurrentlyActiveDeclarativeManifestsByActorDefinitionId(actorDefinitionId);
-    } catch (final io.airbyte.data.exceptions.ConfigNotFoundException e) {
-      throw new ConfigNotFoundException(e.getType(), e.getConfigId());
-    }
-  }
-
-  /**
-   * Read all actor definition ids which have an active declarative manifest pointing to them.
-   *
-   * @throws IOException exception while interacting with db
-   */
-  @Deprecated
-  public Stream<UUID> getActorDefinitionIdsWithActiveDeclarativeManifest() throws IOException {
-    return connectorBuilderService.getActorDefinitionIdsWithActiveDeclarativeManifest();
   }
 
   /**
@@ -2042,17 +1670,6 @@ public class ConfigRepository {
   @Deprecated
   public List<ActorDefinitionVersion> getActorDefinitionVersions(final List<UUID> actorDefinitionVersionIds) throws IOException {
     return actorDefinitionService.getActorDefinitionVersions(actorDefinitionVersionIds);
-  }
-
-  /**
-   * Set the default version for an actor.
-   *
-   * @param actorId - actor id
-   * @param actorDefinitionVersionId - actor definition version id
-   */
-  @Deprecated
-  public void setActorDefaultVersion(final UUID actorId, final UUID actorDefinitionVersionId) throws IOException {
-    actorDefinitionService.setActorDefaultVersion(actorId, actorDefinitionVersionId);
   }
 
   /**

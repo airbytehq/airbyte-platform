@@ -14,17 +14,21 @@ import static io.airbyte.metrics.lib.MetricTags.JOB_ID;
 
 import datadog.trace.api.Trace;
 import io.airbyte.api.client.AirbyteApiClient;
-import io.airbyte.api.client.generated.JobsApi;
+import io.airbyte.api.client.model.generated.CheckInput;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.commons.temporal.config.WorkerMode;
+import io.airbyte.commons.temporal.exception.RetryableException;
 import io.airbyte.commons.temporal.utils.PayloadChecker;
 import io.airbyte.metrics.lib.ApmTraceUtils;
 import io.airbyte.metrics.lib.MetricAttribute;
 import io.airbyte.workers.models.JobInput;
 import io.airbyte.workers.models.SyncJobCheckConnectionInputs;
 import io.micronaut.context.annotation.Requires;
+import io.micronaut.http.HttpStatus;
 import jakarta.inject.Singleton;
+import java.io.IOException;
 import java.util.Map;
+import org.openapitools.client.infrastructure.ClientException;
 
 /**
  * Generate input for a workflow.
@@ -33,31 +37,41 @@ import java.util.Map;
 @Requires(env = WorkerMode.CONTROL_PLANE)
 public class GenerateInputActivityImpl implements GenerateInputActivity {
 
-  private final JobsApi jobsApi;
+  private final AirbyteApiClient airbyteApiClient;
 
   private final PayloadChecker payloadChecker;
 
   @SuppressWarnings("ParameterName")
-  public GenerateInputActivityImpl(final JobsApi jobsApi, final PayloadChecker payloadChecker) {
-    this.jobsApi = jobsApi;
+  public GenerateInputActivityImpl(final AirbyteApiClient airbyteApiClient, final PayloadChecker payloadChecker) {
+    this.airbyteApiClient = airbyteApiClient;
     this.payloadChecker = payloadChecker;
   }
 
   @Override
+  @SuppressWarnings("UNCHECKED_CAST")
   public SyncJobCheckConnectionInputs getCheckConnectionInputs(final SyncInputWithAttemptNumber input) {
-    return payloadChecker.validatePayloadSize(Jsons.convertValue(AirbyteApiClient.retryWithJitter(
-        () -> jobsApi.getCheckInput(new io.airbyte.api.client.model.generated.CheckInput().jobId(input.getJobId())
-            .attemptNumber(input.getAttemptNumber())),
-        "Create check job input."), SyncJobCheckConnectionInputs.class));
+    try {
+      final var checkInput = airbyteApiClient.getJobsApi()
+          .getCheckInput(new CheckInput(input.getJobId(), input.getAttemptNumber()));
+      return payloadChecker.validatePayloadSize(
+          Jsons.convertValue(checkInput, SyncJobCheckConnectionInputs.class));
+    } catch (final ClientException e) {
+      if (e.getStatusCode() == HttpStatus.NOT_FOUND.getCode()) {
+        throw e;
+      }
+      throw new RetryableException(e);
+    } catch (final IOException e) {
+      throw new RetryableException(e);
+    }
   }
 
   @Trace(operationName = ACTIVITY_TRACE_OPERATION_NAME)
   @Override
-  public JobInput getSyncWorkflowInput(final SyncInput input) {
-    final var jobInput = Jsons.convertValue(AirbyteApiClient.retryWithJitter(
-        () -> jobsApi.getJobInput(new io.airbyte.api.client.model.generated.SyncInput().jobId(input.getJobId())
-            .attemptNumber(input.getAttemptId())),
-        "Create job input."), JobInput.class);
+  @SuppressWarnings("UNCHECKED_CAST")
+  public JobInput getSyncWorkflowInput(final SyncInput input) throws IOException {
+    final var jobInputResult =
+        airbyteApiClient.getJobsApi().getJobInput(new io.airbyte.api.client.model.generated.SyncInput(input.getJobId(), input.getAttemptId()));
+    final var jobInput = Jsons.convertValue(jobInputResult, JobInput.class);
 
     MetricAttribute[] attrs = new MetricAttribute[0];
     try {
@@ -78,7 +92,7 @@ public class GenerateInputActivityImpl implements GenerateInputActivity {
 
   @Trace(operationName = ACTIVITY_TRACE_OPERATION_NAME)
   @Override
-  public JobInput getSyncWorkflowInputWithAttemptNumber(final SyncInputWithAttemptNumber input) {
+  public JobInput getSyncWorkflowInputWithAttemptNumber(final SyncInputWithAttemptNumber input) throws IOException {
     ApmTraceUtils.addTagsToTrace(Map.of(JOB_ID_KEY, input.getJobId()));
     return getSyncWorkflowInput(new SyncInput(
         input.getAttemptNumber(),

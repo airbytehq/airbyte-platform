@@ -127,7 +127,8 @@ public class CatalogClientConverters {
         .withDefaultCursorField(stream.getDefaultCursorField())
         .withSourceDefinedPrimaryKey(
             Optional.ofNullable(stream.getSourceDefinedPrimaryKey()).orElse(Collections.emptyList()))
-        .withNamespace(stream.getNamespace());
+        .withNamespace(stream.getNamespace())
+        .withIsResumable(stream.isResumable());
   }
 
   private static ConfiguredAirbyteStream toConfiguredStreamProtocol(final io.airbyte.api.client.model.generated.AirbyteStream stream,
@@ -150,45 +151,43 @@ public class CatalogClientConverters {
   @SuppressWarnings("LineLength")
   public static io.airbyte.api.client.model.generated.AirbyteCatalog toAirbyteCatalogClientApi(
                                                                                                final io.airbyte.protocol.models.AirbyteCatalog catalog) {
-    return new io.airbyte.api.client.model.generated.AirbyteCatalog()
-        .streams(catalog.getStreams()
-            .stream()
-            .map(stream -> toAirbyteStreamClientApi(stream))
-            .map(s -> new io.airbyte.api.client.model.generated.AirbyteStreamAndConfiguration()
-                .stream(s)
-                .config(generateDefaultConfiguration(s)))
-            .collect(Collectors.toList()));
+    return new io.airbyte.api.client.model.generated.AirbyteCatalog(catalog.getStreams()
+        .stream()
+        .map(stream -> toAirbyteStreamClientApi(stream))
+        .map(s -> new io.airbyte.api.client.model.generated.AirbyteStreamAndConfiguration(s, generateDefaultConfiguration(s)))
+        .toList());
   }
 
   @SuppressWarnings("LineLength")
   private static io.airbyte.api.client.model.generated.AirbyteStreamConfiguration generateDefaultConfiguration(
                                                                                                                final io.airbyte.api.client.model.generated.AirbyteStream stream) {
-    final io.airbyte.api.client.model.generated.AirbyteStreamConfiguration result =
-        new io.airbyte.api.client.model.generated.AirbyteStreamConfiguration()
-            .aliasName(Names.toAlphanumericAndUnderscore(stream.getName()))
-            .cursorField(stream.getDefaultCursorField())
-            .destinationSyncMode(io.airbyte.api.client.model.generated.DestinationSyncMode.APPEND)
-            .primaryKey(stream.getSourceDefinedPrimaryKey())
-            .selected(true);
-    if (stream.getSupportedSyncModes().size() > 0) {
-      result.setSyncMode(Enums.convertTo(stream.getSupportedSyncModes().get(0),
-          io.airbyte.api.client.model.generated.SyncMode.class));
-    } else {
-      result.setSyncMode(io.airbyte.api.client.model.generated.SyncMode.INCREMENTAL);
-    }
-    return result;
+    return new io.airbyte.api.client.model.generated.AirbyteStreamConfiguration(
+        stream.getSupportedSyncModes().size() > 0 ? Enums.convertTo(stream.getSupportedSyncModes().get(0),
+            io.airbyte.api.client.model.generated.SyncMode.class) : io.airbyte.api.client.model.generated.SyncMode.INCREMENTAL,
+        io.airbyte.api.client.model.generated.DestinationSyncMode.APPEND,
+        stream.getDefaultCursorField(),
+        stream.getSourceDefinedPrimaryKey(),
+        Names.toAlphanumericAndUnderscore(stream.getName()),
+        true,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null);
   }
 
   private static io.airbyte.api.client.model.generated.AirbyteStream toAirbyteStreamClientApi(final AirbyteStream stream) {
-    return new io.airbyte.api.client.model.generated.AirbyteStream()
-        .name(stream.getName())
-        .jsonSchema(stream.getJsonSchema())
-        .supportedSyncModes(Enums.convertListTo(stream.getSupportedSyncModes(),
-            io.airbyte.api.client.model.generated.SyncMode.class))
-        .sourceDefinedCursor(stream.getSourceDefinedCursor())
-        .defaultCursorField(stream.getDefaultCursorField())
-        .sourceDefinedPrimaryKey(stream.getSourceDefinedPrimaryKey())
-        .namespace(stream.getNamespace());
+    return new io.airbyte.api.client.model.generated.AirbyteStream(
+        stream.getName(),
+        stream.getJsonSchema(),
+        Enums.convertListTo(stream.getSupportedSyncModes(),
+            io.airbyte.api.client.model.generated.SyncMode.class),
+        stream.getSourceDefinedCursor(),
+        stream.getDefaultCursorField(),
+        stream.getSourceDefinedPrimaryKey(),
+        stream.getNamespace(),
+        stream.getIsResumable());
   }
 
 }

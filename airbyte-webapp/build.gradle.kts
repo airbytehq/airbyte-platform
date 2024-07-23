@@ -6,8 +6,12 @@ import java.io.FileReader
 
 plugins {
     id("base")
-    id("com.bmuschko.docker-remote-api")
+    id("io.airbyte.gradle.docker")
     alias(libs.plugins.node.gradle)
+}
+
+ext {
+    set("appBuildDir", "build/app")
 }
 
 /**
@@ -40,6 +44,7 @@ val pnpmVer = engines?.get("pnpm")?.toString()?.trim()  // Extract 'pnpm' as Str
 val outsideWebappDependencies = listOf(
     "../airbyte-api/src/main/openapi/config.yaml",
     "../airbyte-api/src/main/openapi/cloud-config.yaml",
+    "../airbyte-api/src/main/openapi/api-problems.yaml",
     "../airbyte-connector-builder-server/src/main/openapi/openapi.yaml",
     "../airbyte-connector-builder-resources/CDK_VERSION",
 )
@@ -49,6 +54,12 @@ configure<NodeExtension> {
     version = nodeVersion
     pnpmVersion = pnpmVer
     distBaseUrl = "https://nodejs.org/dist"
+}
+
+airbyte {
+    docker {
+        imageName = "webapp"
+    }
 }
 
 tasks.named("pnpmInstall") {
@@ -77,7 +88,8 @@ val allFiles = fileTree(".") {
 tasks.register<PnpmTask>("pnpmBuild") {
     dependsOn(tasks.named("pnpmInstall"))
 
-    environment.put("VERSION", rootProject.ext.get("version") as String)
+    // todo (cgardens) - this isn't great because this version is used for cloud as well (even though it's pulled from the oss project).
+    environment.put("VERSION", (ext["ossRootProject"] as Project).ext["webapp_version"] as String)
 
     args = listOf("build")
 
@@ -85,7 +97,7 @@ tasks.register<PnpmTask>("pnpmBuild") {
     inputs.property("cloudEnv", System.getenv("WEBAPP_BUILD_CLOUD_ENV") ?: "")
     inputs.files(allFiles, outsideWebappDependencies)
 
-    outputs.dir("build/app")
+    outputs.dir(project.ext.get("appBuildDir") as String)
 }
 
 tasks.register<PnpmTask>("test") {
@@ -101,19 +113,18 @@ tasks.register<PnpmTask>("test") {
     outputs.upToDateWhen { true }
 }
 
-tasks.register<PnpmTask>("e2etest") {
+tasks.register<PnpmTask>("cypress") {
     dependsOn(tasks.named("pnpmInstall"))
 
     /*
-    If the cypressWebappKey property has been set from the outside (see tools/bin/e2e_test.sh)
+    If the cypressWebappKey property has been set from the outside via the workflow file
     we'll record the cypress session, otherwise we're not recording
     */
-    val recordCypress = project.hasProperty("cypressWebappKey") && project.property("cypressWebappKey") as Boolean
-    if (recordCypress) {
-        environment.put("CYPRESS_KEY", project.property("cypressWebappKey") as String)
-        args = listOf("run", "cypress:ci:record")
+    val hasRecordingKey = !System.getenv("CYPRESS_RECORD_KEY").isNullOrEmpty()
+    args = if (hasRecordingKey && System.getProperty("cypressRecord", "false") == "true") {
+        listOf("run", "cypress:run", "--record")
     } else {
-        args = listOf("run", "cypress:ci")
+        listOf("run", "cypress:run")
     }
 
     /*
@@ -123,14 +134,14 @@ tasks.register<PnpmTask>("e2etest") {
     outputs.upToDateWhen { false }
 }
 
-tasks.register<PnpmTask>("cloudE2eTest") {
+tasks.register<PnpmTask>("cypressCloud") {
     dependsOn(tasks.named("pnpmInstall"))
-    val recordCypress = project.hasProperty("cypressCloudWebappKey") && project.property("cypressCloudWebappKey") as Boolean
-    if (recordCypress) {
-        environment.put("CYPRESS_KEY", project.property("cypressCloudWebappKey") as String)
-        args = listOf("run", "cloud-test:stage:record")
+
+    val hasRecordingKey = !System.getenv("CYPRESS_RECORD_KEY").isNullOrEmpty()
+    args = if (hasRecordingKey && System.getProperty("cypressRecord", "false") == "true") {
+        listOf("run", "cloud-test:stage", "--record")
     } else {
-        args = listOf("run", "cloud-test:stage")
+        listOf("run", "cloud-test:stage")
     }
 
     /*
@@ -140,19 +151,59 @@ tasks.register<PnpmTask>("cloudE2eTest") {
     outputs.upToDateWhen { false }
 }
 
-//tasks.register<PnpmTask>("validateLinks") {
-//    dependsOn(tasks.named("pnpmInstall"))
-//
-//    args = listOf("run", "validate-links")
-//
-//    inputs.file("scripts/validate-links.ts")
-//    inputs.file("src/core/utils/links.ts")
-//
-//    // Configure the up-to-date check to always run in CI environments
-//    outputs.upToDateWhen {
-//        System.getenv("CI") == null
-//    }
-//}
+tasks.register<PnpmTask>("licenseCheck") {
+    dependsOn(tasks.named("pnpmInstall"))
+
+    args = listOf("run", "license-check")
+
+    inputs.file("package.json")
+    inputs.file("pnpm-lock.yaml")
+    inputs.file("scripts/license-check.js")
+
+    outputs.upToDateWhen { true }
+}
+
+tasks.register<PnpmTask>("validateLock") {
+    dependsOn(tasks.named("pnpmInstall"))
+
+    args = listOf("run", "validate-lock")
+
+    inputs.files(allFiles)
+
+    outputs.upToDateWhen { true }
+}
+
+tasks.register<PnpmTask>("validateLinks") {
+   dependsOn(tasks.named("pnpmInstall"))
+
+   args = listOf("run", "validate-links")
+
+   inputs.file("scripts/validate-links.ts")
+   inputs.file("src/core/utils/links.ts")
+
+   // Configure the up-to-date check to always run again, since it checks availability of URLs
+   outputs.upToDateWhen { false }
+}
+
+tasks.register<PnpmTask>("unusedCode") {
+    dependsOn(tasks.named("pnpmInstall"))
+
+    args = listOf("run", "unused-code")
+
+    inputs.files(allFiles, outsideWebappDependencies)
+
+    outputs.upToDateWhen { true }
+}
+
+tasks.register<PnpmTask>("prettier") {
+    dependsOn(tasks.named("pnpmInstall"))
+
+    args = listOf("run", "prettier:ci")
+
+    inputs.files(allFiles)
+
+    outputs.upToDateWhen { true }
+}
 
 tasks.register<PnpmTask>("buildStorybook") {
     dependsOn(tasks.named("pnpmInstall"))
@@ -169,30 +220,34 @@ tasks.register<PnpmTask>("buildStorybook") {
 }
 
 tasks.register<Copy>("copyBuildOutput") {
-    dependsOn(tasks.named("copyDocker"), tasks.named("pnpmBuild"))
+    dependsOn(tasks.named("pnpmBuild"))
 
-    from("${project.projectDir}/build/app")
-    into("build/docker/bin/build")
+    from("${project.projectDir}/${project.ext.get("appBuildDir")}")
+    into("build/airbyte/docker/bin/build")
 }
 
 tasks.register<Copy>("copyNginx") {
-    dependsOn(tasks.named("copyDocker"))
-
     from("${project.projectDir}/nginx")
-    into("build/docker/bin/nginx")
+    into("build/airbyte/docker/bin/nginx")
 }
 
 // Those tasks should be run as part of the "check" task
 tasks.named("check") {
-    dependsOn(/* tasks.named("validateLinks"), */ tasks.named("test"))
+    dependsOn(tasks.named("licenseCheck"), tasks.named("validateLock"), tasks.named("unusedCode"), tasks.named("prettier"), tasks.named("test"))
+}
+
+// Some check tasks only should be run on CI, thus a separate ciCheck task
+tasks.register("ciCheck") {
+    dependsOn(tasks.named("check"), tasks.named("validateLinks"))
 }
 
 tasks.named("build") {
     dependsOn(tasks.named("buildStorybook"))
 }
 
-tasks.named("buildDockerImage") {
-    dependsOn(tasks.named("copyDocker"), tasks.named("copyNginx"), tasks.named("copyBuildOutput"))
+tasks.named("dockerCopyDistribution") {
+    dependsOn(tasks.named("copyNginx"), tasks.named("copyBuildOutput"))
+
 }
 
 // Include some cloud-specific tasks only in the airbyte-platform-internal environment

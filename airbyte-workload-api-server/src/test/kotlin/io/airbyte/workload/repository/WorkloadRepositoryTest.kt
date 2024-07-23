@@ -1,6 +1,7 @@
 package io.airbyte.workload.repository
 
 import io.airbyte.db.factory.DSLContextFactory
+import io.airbyte.db.instance.DatabaseConstants
 import io.airbyte.db.instance.test.TestDatabaseProviders
 import io.airbyte.workload.repository.WorkloadRepositoryTest.Fixtures.WORKLOAD_ID
 import io.airbyte.workload.repository.domain.Workload
@@ -39,7 +40,7 @@ internal class WorkloadRepositoryTest {
 
     // we run against an actual database to ensure micronaut data and jooq properly integrate
     private val container: PostgreSQLContainer<*> =
-      PostgreSQLContainer("postgres:13-alpine")
+      PostgreSQLContainer(DatabaseConstants.DEFAULT_DATABASE_VERSION)
         .withDatabaseName("airbyte")
         .withUsername("docker")
         .withPassword("docker")

@@ -1,14 +1,6 @@
 plugins {
   id("io.airbyte.gradle.jvm.lib")
   id("io.airbyte.gradle.publish")
-  kotlin("jvm")
-  kotlin("kapt")
-}
-
-configurations.all {
-  resolutionStrategy {
-    force(libs.platform.testcontainers.postgresql)
-  }
 }
 
 dependencies {
@@ -16,8 +8,8 @@ dependencies {
   annotationProcessor(libs.lombok)     // Lombok must be added BEFORE Micronaut
   annotationProcessor(libs.bundles.micronaut.annotation.processor)
 
-  kapt(platform(libs.micronaut.platform))
-  kapt(libs.bundles.micronaut.annotation.processor)
+  ksp(platform(libs.micronaut.platform))
+  ksp(libs.bundles.micronaut.annotation.processor)
 
   implementation(platform(libs.fasterxml))
   implementation(libs.bundles.jackson)
@@ -28,25 +20,26 @@ dependencies {
   // TODO: remove this, it's pulled in for a Strings.notEmpty() check
   implementation(libs.bundles.log4j)
 
-  implementation(project(":airbyte-commons"))
-  implementation(project(":airbyte-commons-protocol"))
-  implementation(project(":airbyte-oauth"))
-  implementation(project(":airbyte-config:config-models"))
-  implementation(project(":airbyte-db:jooq"))
-  implementation(project(":airbyte-db:db-lib"))
+  implementation(project(":oss:airbyte-commons"))
+  implementation(project(":oss:airbyte-commons-protocol"))
+  implementation(project(":oss:airbyte-oauth"))
+  implementation(project(":oss:airbyte-config:config-models"))
+  implementation(project(":oss:airbyte-db:jooq"))
+  implementation(project(":oss:airbyte-db:db-lib"))
   implementation(libs.airbyte.protocol)
-  implementation(project(":airbyte-config:config-persistence"))
-  implementation(project(":airbyte-featureflag"))
-  implementation(project(":airbyte-json-validation"))
-  implementation(project(":airbyte-notification"))
-  implementation(project(":airbyte-analytics"))
-  implementation(project(":airbyte-metrics:metrics-lib"))
+  implementation(project(":oss:airbyte-config:config-persistence"))
+  implementation(project(":oss:airbyte-featureflag"))
+  implementation(project(":oss:airbyte-json-validation"))
+  implementation(project(":oss:airbyte-notification"))
+  implementation(project(":oss:airbyte-analytics"))
+  implementation(project(":oss:airbyte-metrics:metrics-lib"))
 
   implementation(libs.sentry.java)
   implementation(libs.otel.semconv)
   implementation(libs.otel.sdk)
   implementation(libs.otel.sdk.testing)
   implementation(libs.micrometer.statsd)
+  implementation(libs.bundles.datadog)
   implementation(platform(libs.otel.bom))
   implementation("io.opentelemetry:opentelemetry-api")
   implementation("io.opentelemetry:opentelemetry-sdk")
@@ -56,8 +49,8 @@ dependencies {
   implementation(libs.bundles.micronaut.data.jdbc)
   implementation(libs.bundles.micronaut.kotlin)
 
-  testImplementation(project(":airbyte-config:config-persistence"))
-  testImplementation(project(":airbyte-test-utils"))
+  testImplementation(project(":oss:airbyte-config:config-persistence"))
+  testImplementation(project(":oss:airbyte-test-utils"))
   testImplementation(libs.platform.testcontainers.postgresql)
   testRuntimeOnly(libs.junit.jupiter.engine)
   testImplementation(libs.bundles.junit)

@@ -271,18 +271,17 @@ public class JobCreationAndStatusUpdateHelper {
     List<MetricAttribute> additionalAttributes = new ArrayList<>();
     if (job.getConfigType() == SYNC) {
       final var sync = job.getConfig().getSync();
-      additionalAttributes.add(new MetricAttribute(MetricTags.SOURCE_ID, sync.getSourceDefinitionVersionId().toString()));
       additionalAttributes.add(new MetricAttribute(MetricTags.SOURCE_IMAGE, sync.getSourceDockerImage()));
+      additionalAttributes.add(new MetricAttribute(MetricTags.SOURCE_IMAGE_IS_DEFAULT, String.valueOf(sync.getSourceDockerImageIsDefault())));
       additionalAttributes.add(new MetricAttribute(MetricTags.DESTINATION_IMAGE, sync.getDestinationDockerImage()));
+      additionalAttributes
+          .add(new MetricAttribute(MetricTags.DESTINATION_IMAGE_IS_DEFAULT, String.valueOf(sync.getDestinationDockerImageIsDefault())));
       additionalAttributes.add(new MetricAttribute(MetricTags.WORKSPACE_ID, sync.getWorkspaceId().toString()));
-      additionalAttributes.add(new MetricAttribute(MetricTags.CONNECTION_ID, input.getConnectionId().toString()));
     } else if (job.getConfigType() == REFRESH) {
       final var refresh = job.getConfig().getRefresh();
-      additionalAttributes.add(new MetricAttribute(MetricTags.SOURCE_ID, refresh.getSourceDefinitionVersionId().toString()));
       additionalAttributes.add(new MetricAttribute(MetricTags.SOURCE_IMAGE, refresh.getSourceDockerImage()));
       additionalAttributes.add(new MetricAttribute(MetricTags.DESTINATION_IMAGE, refresh.getDestinationDockerImage()));
       additionalAttributes.add(new MetricAttribute(MetricTags.WORKSPACE_ID, refresh.getWorkspaceId().toString()));
-      additionalAttributes.add(new MetricAttribute(MetricTags.CONNECTION_ID, input.getConnectionId().toString()));
     }
     emitToReleaseStagesMetricHelper(metric, job, additionalAttributes);
   }
@@ -291,11 +290,20 @@ public class JobCreationAndStatusUpdateHelper {
     List<MetricAttribute> additionalAttributes = new ArrayList<>();
     if (job.getConfigType() == SYNC) {
       final var sync = job.getConfig().getSync();
-      additionalAttributes.add(new MetricAttribute(MetricTags.SOURCE_ID, sync.getSourceDefinitionVersionId().toString()));
       additionalAttributes.add(new MetricAttribute(MetricTags.SOURCE_IMAGE, sync.getSourceDockerImage()));
+      additionalAttributes.add(new MetricAttribute(MetricTags.SOURCE_IMAGE_IS_DEFAULT, String.valueOf(sync.getSourceDockerImageIsDefault())));
       additionalAttributes.add(new MetricAttribute(MetricTags.DESTINATION_IMAGE, sync.getDestinationDockerImage()));
+      additionalAttributes
+          .add(new MetricAttribute(MetricTags.DESTINATION_IMAGE_IS_DEFAULT, String.valueOf(sync.getDestinationDockerImageIsDefault())));
       additionalAttributes.add(new MetricAttribute(MetricTags.WORKSPACE_ID, sync.getWorkspaceId().toString()));
-      additionalAttributes.add(new MetricAttribute(MetricTags.CONNECTION_ID, input.getConnectionId().toString()));
+      job.getLastAttempt().flatMap(Attempt::getFailureSummary)
+          .ifPresent(attemptFailureSummary -> {
+            for (FailureReason failureReason : attemptFailureSummary.getFailures()) {
+              String metricTag = MetricTags.getFailureType(failureReason.getFailureType());
+              String failureOriginName = failureReason.getFailureOrigin().name();
+              additionalAttributes.add(new MetricAttribute(String.join("-", failureOriginName, metricTag).toLowerCase(), "true"));
+            }
+          });
     }
     emitToReleaseStagesMetricHelper(metric, job, additionalAttributes);
   }

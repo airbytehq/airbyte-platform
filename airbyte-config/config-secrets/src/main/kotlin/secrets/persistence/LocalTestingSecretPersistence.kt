@@ -62,6 +62,7 @@ open class LocalTestingSecretPersistence(
   }
 
   override fun delete(coordinate: SecretCoordinate) {
-    return
+    initialize()
+    dslContext.execute("DELETE FROM secrets WHERE coordinate = ?;", coordinate.fullCoordinate)
   }
 }

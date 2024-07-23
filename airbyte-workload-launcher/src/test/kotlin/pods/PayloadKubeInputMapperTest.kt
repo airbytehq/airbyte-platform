@@ -14,6 +14,7 @@ import io.airbyte.persistence.job.models.JobRunConfig
 import io.airbyte.persistence.job.models.ReplicationInput
 import io.airbyte.workers.models.CheckConnectionInput
 import io.airbyte.workers.models.DiscoverCatalogInput
+import io.airbyte.workers.models.SidecarInput
 import io.airbyte.workers.models.SpecInput
 import io.airbyte.workers.orchestrator.PodNameGenerator
 import io.airbyte.workers.process.AsyncOrchestratorPodProcess.KUBE_POD_INFO
@@ -22,8 +23,6 @@ import io.airbyte.workers.process.KubePodInfo
 import io.airbyte.workers.process.Metadata.AWS_ASSUME_ROLE_EXTERNAL_ID
 import io.airbyte.workers.sync.OrchestratorConstants
 import io.airbyte.workers.sync.ReplicationLauncherWorker
-import io.airbyte.workers.sync.ReplicationLauncherWorker.INIT_FILE_DESTINATION_LAUNCHER_CONFIG
-import io.airbyte.workers.sync.ReplicationLauncherWorker.INIT_FILE_SOURCE_LAUNCHER_CONFIG
 import io.airbyte.workload.launcher.config.OrchestratorEnvSingleton
 import io.airbyte.workload.launcher.model.getActorType
 import io.airbyte.workload.launcher.model.getAttemptId
@@ -123,8 +122,6 @@ class PayloadKubeInputMapperTest {
           OrchestratorConstants.INIT_FILE_APPLICATION to ReplicationLauncherWorker.REPLICATION,
           OrchestratorConstants.INIT_FILE_JOB_RUN_CONFIG to mockSerializedOutput,
           OrchestratorConstants.INIT_FILE_INPUT to mockSerializedOutput,
-          INIT_FILE_SOURCE_LAUNCHER_CONFIG to mockSerializedOutput,
-          INIT_FILE_DESTINATION_LAUNCHER_CONFIG to mockSerializedOutput,
           KUBE_POD_INFO to mockSerializedOutput,
           OrchestratorConstants.WORKLOAD_ID_FILE to workloadId,
         ),
@@ -193,31 +190,38 @@ class PayloadKubeInputMapperTest {
     val attemptId = 7654L
     val imageName = "image-name"
     val workspaceId1 = UUID.randomUUID()
-
-    val checkConnectionInput = mockk<StandardCheckConnectionInput>()
-    every { checkConnectionInput.connectionConfiguration } returns mockk<JsonNode>()
-
-    every { input.getJobId() } returns jobId
-    every { input.getAttemptId() } returns attemptId
-    every { input.getActorType() } returns ActorType.SOURCE
-    every { input.jobRunConfig } returns mockk<JobRunConfig>()
-    every { input.launcherConfig } returns
+    val workloadId = UUID.randomUUID().toString()
+    val logPath = "/log/path"
+    val launcherConfig =
       mockk<IntegrationLauncherConfig> {
         every { dockerImage } returns imageName
         every { isCustomConnector } returns customConnector
         every { workspaceId } returns workspaceId1
         every { priority } returns workloadPriority
       }
+    val jobRunConfig = mockk<JobRunConfig>()
+    val checkInputConfig = mockk<JsonNode>()
+    val checkConnectionInput = mockk<StandardCheckConnectionInput>()
+    every { checkConnectionInput.connectionConfiguration } returns checkInputConfig
+
+    every { input.getJobId() } returns jobId
+    every { input.getAttemptId() } returns attemptId
+    every { input.getActorType() } returns ActorType.SOURCE
+    every { input.jobRunConfig } returns jobRunConfig
+    every { input.launcherConfig } returns launcherConfig
     every { input.checkConnectionInput } returns checkConnectionInput
 
     val mockSerializedOutput = "Serialized Obj."
-    every { serializer.serialize<Any>(any()) } returns mockSerializedOutput
+    every {
+      serializer.serialize<Any>(SidecarInput(checkConnectionInput, null, workloadId, launcherConfig, SidecarInput.OperationType.CHECK, logPath))
+    } returns mockSerializedOutput
+    every { serializer.serialize<Any>(jobRunConfig) } returns mockSerializedOutput
+    every { serializer.serialize<Any>(checkInputConfig) } returns mockSerializedOutput
 
     val connectorLabels = mapOf("connector" to "labels")
     val sharedLabels = mapOf("pass through" to "labels")
-    every { labeler.getCheckConnectorLabels() } returns connectorLabels
-    val workloadId = UUID.randomUUID().toString()
-    val result = mapper.toKubeInput(workloadId, input, sharedLabels)
+    every { labeler.getCheckLabels() } returns connectorLabels
+    val result = mapper.toKubeInput(workloadId, input, sharedLabels, logPath)
 
     Assertions.assertEquals(connectorLabels + sharedLabels, result.connectorLabels)
     Assertions.assertEquals(
@@ -236,7 +240,6 @@ class PayloadKubeInputMapperTest {
     Assertions.assertEquals(pullPolicy, result.kubePodInfo.mainContainerInfo.pullPolicy)
     Assertions.assertEquals(
       mapOf(
-        OrchestratorConstants.INIT_FILE_JOB_RUN_CONFIG to mockSerializedOutput,
         OrchestratorConstants.CONNECTION_CONFIGURATION to mockSerializedOutput,
         OrchestratorConstants.SIDECAR_INPUT to mockSerializedOutput,
       ),
@@ -313,30 +316,46 @@ class PayloadKubeInputMapperTest {
     val attemptId = 7654L
     val imageName = "image-name"
     val workspaceId1 = UUID.randomUUID()
-
-    val discoverCatalogInput = mockk<StandardDiscoverCatalogInput>()
-    every { discoverCatalogInput.connectionConfiguration } returns mockk<JsonNode>()
-
-    every { input.getJobId() } returns jobId
-    every { input.getAttemptId() } returns attemptId
-    every { input.jobRunConfig } returns mockk<JobRunConfig>()
-    every { input.launcherConfig } returns
+    val workloadId = UUID.randomUUID().toString()
+    val logPath = "/log/path"
+    val launcherConfig =
       mockk<IntegrationLauncherConfig> {
         every { dockerImage } returns imageName
         every { isCustomConnector } returns customConnector
         every { workspaceId } returns workspaceId1
         every { priority } returns workloadPriority
       }
+    val jobRunConfig = mockk<JobRunConfig>()
+    val catalogInputConfig = mockk<JsonNode>()
+    val discoverCatalogInput = mockk<StandardDiscoverCatalogInput>()
+    every { discoverCatalogInput.connectionConfiguration } returns catalogInputConfig
+
+    every { input.getJobId() } returns jobId
+    every { input.getAttemptId() } returns attemptId
+    every { input.jobRunConfig } returns jobRunConfig
+    every { input.launcherConfig } returns launcherConfig
     every { input.discoverCatalogInput } returns discoverCatalogInput
 
     val mockSerializedOutput = "Serialized Obj."
-    every { serializer.serialize<Any>(any()) } returns mockSerializedOutput
+    every {
+      serializer.serialize<Any>(
+        SidecarInput(
+          null,
+          discoverCatalogInput,
+          workloadId,
+          launcherConfig,
+          SidecarInput.OperationType.DISCOVER,
+          logPath,
+        ),
+      )
+    } returns mockSerializedOutput
+    every { serializer.serialize<Any>(jobRunConfig) } returns mockSerializedOutput
+    every { serializer.serialize<Any>(catalogInputConfig) } returns mockSerializedOutput
 
     val connectorLabels = mapOf("connector" to "labels")
     val sharedLabels = mapOf("pass through" to "labels")
-    every { labeler.getCheckConnectorLabels() } returns connectorLabels
-    val workloadId = UUID.randomUUID().toString()
-    val result = mapper.toKubeInput(workloadId, input, sharedLabels)
+    every { labeler.getDiscoverLabels() } returns connectorLabels
+    val result = mapper.toKubeInput(workloadId, input, sharedLabels, logPath)
 
     Assertions.assertEquals(connectorLabels + sharedLabels, result.connectorLabels)
     Assertions.assertEquals(
@@ -355,7 +374,6 @@ class PayloadKubeInputMapperTest {
     Assertions.assertEquals(pullPolicy, result.kubePodInfo.mainContainerInfo.pullPolicy)
     Assertions.assertEquals(
       mapOf(
-        OrchestratorConstants.INIT_FILE_JOB_RUN_CONFIG to mockSerializedOutput,
         OrchestratorConstants.CONNECTION_CONFIGURATION to mockSerializedOutput,
         OrchestratorConstants.SIDECAR_INPUT to mockSerializedOutput,
       ),
@@ -422,25 +440,40 @@ class PayloadKubeInputMapperTest {
     val attemptId = 7654L
     val imageName = "image-name"
     val workspaceId1 = UUID.randomUUID()
-
-    every { input.getJobId() } returns jobId
-    every { input.getAttemptId() } returns attemptId
-    every { input.jobRunConfig } returns mockk<JobRunConfig>()
-    every { input.launcherConfig } returns
+    val workloadId = UUID.randomUUID().toString()
+    val logPath = "/log/path"
+    val launcherConfig =
       mockk<IntegrationLauncherConfig> {
         every { dockerImage } returns imageName
         every { isCustomConnector } returns customConnector
         every { workspaceId } returns workspaceId1
       }
+    val jobRunConfig = mockk<JobRunConfig>()
+
+    every { input.getJobId() } returns jobId
+    every { input.getAttemptId() } returns attemptId
+    every { input.jobRunConfig } returns jobRunConfig
+    every { input.launcherConfig } returns launcherConfig
 
     val mockSerializedOutput = "Serialized Obj."
-    every { serializer.serialize<Any>(any()) } returns mockSerializedOutput
+    every {
+      serializer.serialize<Any>(
+        SidecarInput(
+          null,
+          null,
+          workloadId,
+          launcherConfig,
+          SidecarInput.OperationType.SPEC,
+          logPath,
+        ),
+      )
+    } returns mockSerializedOutput
+    every { serializer.serialize<Any>(jobRunConfig) } returns mockSerializedOutput
 
     val connectorLabels = mapOf("connector" to "labels")
     val sharedLabels = mapOf("pass through" to "labels")
-    every { labeler.getCheckConnectorLabels() } returns connectorLabels
-    val workloadId = UUID.randomUUID().toString()
-    val result = mapper.toKubeInput(workloadId, input, sharedLabels)
+    every { labeler.getSpecLabels() } returns connectorLabels
+    val result = mapper.toKubeInput(workloadId, input, sharedLabels, logPath)
 
     Assertions.assertEquals(connectorLabels + sharedLabels, result.connectorLabels)
     Assertions.assertEquals(if (customConnector) checkCustomSelectors else checkSelectors, result.nodeSelectors)
@@ -450,7 +483,6 @@ class PayloadKubeInputMapperTest {
     Assertions.assertEquals(pullPolicy, result.kubePodInfo.mainContainerInfo.pullPolicy)
     Assertions.assertEquals(
       mapOf(
-        OrchestratorConstants.INIT_FILE_JOB_RUN_CONFIG to mockSerializedOutput,
         OrchestratorConstants.SIDECAR_INPUT to mockSerializedOutput,
       ),
       result.fileMap,

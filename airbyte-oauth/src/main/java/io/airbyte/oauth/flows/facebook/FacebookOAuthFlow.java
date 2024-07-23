@@ -26,8 +26,8 @@ import org.apache.http.client.utils.URIBuilder;
  */
 public abstract class FacebookOAuthFlow extends BaseOAuth2Flow {
 
-  private static final String ACCESS_TOKEN_URL = "https://graph.facebook.com/v12.0/oauth/access_token";
-  private static final String AUTH_CODE_TOKEN_URL = "https://www.facebook.com/v12.0/dialog/oauth";
+  private static final String ACCESS_TOKEN_URL = "https://graph.facebook.com/v19.0/oauth/access_token";
+  private static final String AUTH_CODE_TOKEN_URL = "https://www.facebook.com/v19.0/dialog/oauth";
   private static final String ACCESS_TOKEN = "access_token";
 
   public FacebookOAuthFlow(final HttpClient httpClient) {

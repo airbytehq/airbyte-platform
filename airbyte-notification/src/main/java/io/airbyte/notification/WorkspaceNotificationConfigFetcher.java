@@ -5,11 +5,11 @@
 package io.airbyte.notification;
 
 import io.airbyte.api.client.AirbyteApiClient;
-import io.airbyte.api.client.generated.WorkspaceApi;
 import io.airbyte.api.client.model.generated.ConnectionIdRequestBody;
 import io.airbyte.api.client.model.generated.NotificationItem;
 import io.airbyte.api.client.model.generated.WorkspaceRead;
 import jakarta.inject.Singleton;
+import java.io.IOException;
 import java.util.UUID;
 import lombok.extern.slf4j.Slf4j;
 
@@ -20,10 +20,10 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 public class WorkspaceNotificationConfigFetcher {
 
-  private final WorkspaceApi workspaceApi;
+  private final AirbyteApiClient airbyteApiClient;
 
-  public WorkspaceNotificationConfigFetcher(WorkspaceApi workspaceApi) {
-    this.workspaceApi = workspaceApi;
+  public WorkspaceNotificationConfigFetcher(final AirbyteApiClient airbyteApiClient) {
+    this.airbyteApiClient = airbyteApiClient;
   }
 
   class NotificationItemWithCustomerIoConfig {
@@ -49,13 +49,9 @@ public class WorkspaceNotificationConfigFetcher {
   /**
    * Fetch corresponding notificationItem based on notification action.
    */
-  public NotificationItemWithCustomerIoConfig fetchNotificationConfig(final UUID connectionId, NotificationEvent notificationEvent) {
-    final WorkspaceRead workspaceRead = AirbyteApiClient.retryWithJitter(
-        () -> workspaceApi.getWorkspaceByConnectionId(new ConnectionIdRequestBody().connectionId(connectionId)),
-        "retrieve workspace for notification use.",
-        /* jitterMaxIntervalSecs= */10,
-        /* finalInternvalSecs= */10,
-        /* maxTries= */ 3);
+  public NotificationItemWithCustomerIoConfig fetchNotificationConfig(final UUID connectionId, NotificationEvent notificationEvent)
+      throws IOException {
+    final WorkspaceRead workspaceRead = airbyteApiClient.getWorkspaceApi().getWorkspaceByConnectionId(new ConnectionIdRequestBody(connectionId));
     if (workspaceRead == null) {
       log.error(
           String.format("Unable to fetch workspace by connection %s. Not blocking but we are not sending any notifications. \n", connectionId));

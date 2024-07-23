@@ -4,10 +4,12 @@
 # This also lets us take advantage of our pull-through cache.
 # Thus, when upgrading this image, be sure to also upgrade the mirrored image on dockerhub.
 # See README.md for instructions.
-FROM airbyte/mirrored-keycloak:23.0.3
+FROM airbyte/mirrored-keycloak:23.0.7
 
 WORKDIR /opt/keycloak
 
+# Blacklist recommended by pen testers: https://github.com/danielmiessler/SecLists/blob/master/Passwords/Common-Credentials/10k-most-common.txt
+COPY bin/password-blacklists/10k-most-common.txt data/password-blacklists/10k-most-common.txt
 COPY bin/scripts/entrypoint.sh entrypoint.sh
 COPY bin/themes themes
 
@@ -26,6 +28,5 @@ sed -i '/<cache-container /a \    <global-state><persistent-location path="\/opt
 # Make sure that the <global-state> block is actually there
 # i.e. keycloak didn't change its config file
 grep '<global-state><persistent-location path="/opt/keycloak/data/infinispan"/></global-state>' conf/cache-ispn-override.xml -q
-
 
 ENTRYPOINT ["./entrypoint.sh"]

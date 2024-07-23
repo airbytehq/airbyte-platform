@@ -19,17 +19,17 @@ It is necessary to separate this module from the `lib` module, because we use a 
 The code will be automatically generated when this module is compiled. To manually update the generated code, run the `compileJava` task:
 
 ```sh
-./gradlew :airbyte-db:jooq:compileJava
+./gradlew :oss:airbyte-db:jooq:compileJava
 ```
 
 Or run the following tasks for individual database:
 
 ```sh
 # for configs database
-./gradlew :airbyte-db:jooq:generateConfigsDatabaseJooq
+./gradlew :oss:airbyte-db:jooq:generateConfigsDatabaseJooq
 
 # for jobs database
-./gradlew :airbyte-db:jooq:generateJobsDatabaseJooq
+./gradlew :oss:airbyte-db:jooq:generateJobsDatabaseJooq
 ```
 
 ## How to Setup Code Generation for New Database
@@ -73,7 +73,7 @@ sourceSets.main.java.srcDirs (
 sourceSets {
   main {
     java {
-      srcDirs "$buildDir/generated/<db-name>Database/src/main/java"
+      srcDirs "${project.layout.buildDirectory.get()}/generated/<db-name>Database/src/main/java"
     }
   }
 }

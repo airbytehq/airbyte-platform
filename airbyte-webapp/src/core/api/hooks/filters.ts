@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useState } from "react";
+import isEqual from "lodash/isEqual";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 
 type SetFilterValue<T> = <FilterName extends keyof T, FilterType extends T[FilterName]>(
@@ -6,9 +7,12 @@ type SetFilterValue<T> = <FilterName extends keyof T, FilterType extends T[Filte
   filterValue: FilterType
 ) => void;
 
-type SetFilters<T> = (filters: T) => void;
+type IsDefault = boolean;
+type ResetFilters = () => void;
 
-export const useFilters = <T extends object>(defaultValues: T): [T, SetFilterValue<T>, SetFilters<T>] => {
+export const useFilters = <T extends Record<keyof T, string | null>>(
+  defaultValues: T
+): [T, SetFilterValue<T>, ResetFilters, IsDefault] => {
   const [searchParams, setSearchParams] = useSearchParams();
 
   const [filterValues, setFilterValues] = useState<T>(() => {
@@ -26,35 +30,43 @@ export const useFilters = <T extends object>(defaultValues: T): [T, SetFilterVal
     };
   });
 
-  const setFilterValue = useCallback<SetFilterValue<T>>(
-    (filterName, filterValue) => {
-      setFilterValues((prevValues) => {
-        return { ...prevValues, [filterName]: filterValue };
-      });
-    },
-    [setFilterValues]
-  );
+  const setFilterValue = useCallback<SetFilterValue<T>>((filterName, filterValue) => {
+    setFilterValues((prevValues) => {
+      return { ...prevValues, [filterName]: filterValue };
+    });
+  }, []);
+
+  // Use a ref so that if callers instantiate defaultValues inline, it doesn't cause this useEffect
+  // to be executed on every render cycle.
+  // We also don't expect this value to change, since it is a default.
+  const defaultValuesRef = useRef(defaultValues);
+  defaultValuesRef.current = defaultValues;
 
   useEffect(() => {
     // combine existing search params with filter values
     const nextSearchParams = {
-      ...searchParams,
+      ...Object.fromEntries(searchParams),
       ...filterValues,
     };
 
     // filter out filter values that match their defaults
     const filteredSearchParams = Object.fromEntries(
-      Object.entries(nextSearchParams).filter(([key, value]) => value !== defaultValues[key as keyof T])
+      Object.entries(nextSearchParams).filter(([key, value]) => value !== defaultValuesRef.current[key as keyof T])
     );
 
     // this useEffect can trigger itself forever, so check for sameness
     if (!filtersAreEqual(filteredSearchParams, searchParams)) {
-      // @ts-expect-error TS thinks Object.entries returns items from the prototype chain
       setSearchParams(filteredSearchParams, { replace: true });
     }
   }, [searchParams, filterValues, setSearchParams, defaultValues]);
 
-  return [filterValues, setFilterValue, setFilterValues];
+  const isDefault = useMemo(() => isEqual(filterValues, defaultValuesRef.current), [filterValues]);
+
+  const resetFilters = useCallback(() => {
+    setFilterValues(defaultValuesRef.current);
+  }, []);
+
+  return [filterValues, setFilterValue, resetFilters, isDefault];
 };
 
 function filtersAreEqual(newFilters: Record<string, unknown>, existingParams: URLSearchParams): boolean {

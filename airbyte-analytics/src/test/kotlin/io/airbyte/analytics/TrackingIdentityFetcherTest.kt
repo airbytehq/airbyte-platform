@@ -27,7 +27,7 @@ class TrackingIdentityFetcherTest {
     workspaceFetcher =
       Function {
           workspaceId: UUID ->
-        workspaceApi.getWorkspace(WorkspaceIdRequestBody().workspaceId(workspaceId).includeTombstone(true))
+        workspaceApi.getWorkspace(WorkspaceIdRequestBody(workspaceId = workspaceId, includeTombstone = true))
       }
     trackingIdentityFetcher =
       TrackingIdentityFetcher(
@@ -41,10 +41,26 @@ class TrackingIdentityFetcherTest {
     val customerId2 = UUID.randomUUID()
     val workspaceId1 = UUID.randomUUID()
     val workspaceId2 = UUID.randomUUID()
-    val workspaceRequestBody1 = WorkspaceIdRequestBody().workspaceId(workspaceId1).includeTombstone(true)
-    val workspaceRequestBody2 = WorkspaceIdRequestBody().workspaceId(workspaceId2).includeTombstone(true)
-    val workspaceRead1 = WorkspaceRead().workspaceId(workspaceId1).customerId(customerId1)
-    val workspaceRead2 = WorkspaceRead().workspaceId(workspaceId2).customerId(customerId2)
+    val workspaceRequestBody1 = WorkspaceIdRequestBody(workspaceId = workspaceId1, includeTombstone = true)
+    val workspaceRequestBody2 = WorkspaceIdRequestBody(workspaceId = workspaceId2, includeTombstone = true)
+    val workspaceRead1 =
+      WorkspaceRead(
+        workspaceId = workspaceId1,
+        customerId = customerId1,
+        name = "",
+        slug = "",
+        initialSetupComplete = true,
+        organizationId = workspaceId1,
+      )
+    val workspaceRead2 =
+      WorkspaceRead(
+        workspaceId = workspaceId2,
+        customerId = customerId2,
+        name = "",
+        slug = "",
+        initialSetupComplete = true,
+        organizationId = workspaceId2,
+      )
 
     every { workspaceApi.getWorkspace(workspaceRequestBody1) } returns workspaceRead1
     every { workspaceApi.getWorkspace(workspaceRequestBody2) } returns workspaceRead2
@@ -76,8 +92,16 @@ class TrackingIdentityFetcherTest {
   fun testGetTrackingIdentityInitialSetupNotComplete() {
     val customerId1 = UUID.randomUUID()
     val workspaceId1 = UUID.randomUUID()
-    val workspaceRequestBody1 = WorkspaceIdRequestBody().workspaceId(workspaceId1).includeTombstone(true)
-    val workspaceRead1 = WorkspaceRead().workspaceId(workspaceId1).customerId(customerId1)
+    val workspaceRequestBody1 = WorkspaceIdRequestBody(workspaceId = workspaceId1, includeTombstone = true)
+    val workspaceRead1 =
+      WorkspaceRead(
+        workspaceId = workspaceId1,
+        customerId = customerId1,
+        name = "",
+        slug = "",
+        initialSetupComplete = true,
+        organizationId = workspaceId1,
+      )
 
     every { workspaceApi.getWorkspace(workspaceRequestBody1) } returns workspaceRead1
 
@@ -98,12 +122,15 @@ class TrackingIdentityFetcherTest {
   fun testGetTrackingIdentityNonAnonymous() {
     val customerId = UUID.randomUUID()
     val workspaceId = UUID.randomUUID()
-    val workspaceRequestBody = WorkspaceIdRequestBody().workspaceId(workspaceId).includeTombstone(true)
+    val workspaceRequestBody = WorkspaceIdRequestBody(workspaceId = workspaceId, includeTombstone = true)
     val workspaceRead =
-      WorkspaceRead().workspaceId(workspaceId).customerId(customerId).email(EMAIL)
-        .anonymousDataCollection(false).news(true).securityUpdates(true).defaultGeography(
+      WorkspaceRead(
+        workspaceId = workspaceId, customerId = customerId, email = EMAIL,
+        anonymousDataCollection = false, news = true, securityUpdates = true,
+        defaultGeography =
           Geography.AUTO,
-        )
+        name = "", slug = "", initialSetupComplete = true, organizationId = workspaceId,
+      )
 
     every { workspaceApi.getWorkspace(workspaceRequestBody) } returns workspaceRead
     val actual: TrackingIdentity = trackingIdentityFetcher.apply(workspaceId)
@@ -123,12 +150,15 @@ class TrackingIdentityFetcherTest {
   fun testGetTrackingIdentityAnonymous() {
     val customerId = UUID.randomUUID()
     val workspaceId = UUID.randomUUID()
-    val workspaceRequestBody = WorkspaceIdRequestBody().workspaceId(workspaceId).includeTombstone(true)
+    val workspaceRequestBody = WorkspaceIdRequestBody(workspaceId = workspaceId, includeTombstone = true)
     val workspaceRead =
-      WorkspaceRead().workspaceId(workspaceId).customerId(customerId).email(EMAIL)
-        .anonymousDataCollection(true).news(true).securityUpdates(true).defaultGeography(
+      WorkspaceRead(
+        workspaceId = workspaceId, customerId = customerId, email = EMAIL,
+        anonymousDataCollection = true, news = true, securityUpdates = true,
+        defaultGeography =
           Geography.AUTO,
-        )
+        name = "", slug = "", initialSetupComplete = true, organizationId = workspaceId,
+      )
 
     every { workspaceApi.getWorkspace(workspaceRequestBody) } returns workspaceRead
     val actual: TrackingIdentity = trackingIdentityFetcher.apply(workspaceId)

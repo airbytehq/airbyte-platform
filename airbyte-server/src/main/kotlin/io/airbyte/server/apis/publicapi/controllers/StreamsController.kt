@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.server.apis.publicapi.controllers
@@ -11,15 +11,16 @@ import io.airbyte.api.model.generated.AirbyteStreamAndConfiguration
 import io.airbyte.api.model.generated.DestinationSyncMode
 import io.airbyte.api.model.generated.PermissionType
 import io.airbyte.api.model.generated.SyncMode
+import io.airbyte.api.problems.throwable.generated.UnexpectedProblem
 import io.airbyte.commons.server.authorization.ApiAuthorizationHelper
 import io.airbyte.commons.server.authorization.Scope
-import io.airbyte.commons.server.errors.problems.UnexpectedProblem
 import io.airbyte.commons.server.scheduling.AirbyteTaskExecutors
 import io.airbyte.commons.server.support.CurrentUserService
-import io.airbyte.public_api.generated.PublicStreamsApi
-import io.airbyte.public_api.model.generated.ConnectionSyncModeEnum
-import io.airbyte.public_api.model.generated.StreamProperties
+import io.airbyte.publicApi.server.generated.apis.PublicStreamsApi
+import io.airbyte.publicApi.server.generated.models.ConnectionSyncModeEnum
+import io.airbyte.publicApi.server.generated.models.StreamProperties
 import io.airbyte.server.apis.publicapi.apiTracking.TrackingHelper
+import io.airbyte.server.apis.publicapi.constants.API_PATH
 import io.airbyte.server.apis.publicapi.constants.GET
 import io.airbyte.server.apis.publicapi.constants.STREAMS_PATH
 import io.airbyte.server.apis.publicapi.services.DestinationService
@@ -34,7 +35,7 @@ import org.slf4j.LoggerFactory
 import java.io.IOException
 import java.util.UUID
 
-@Controller(STREAMS_PATH)
+@Controller(API_PATH)
 @Secured(SecurityRule.IS_AUTHENTICATED)
 class StreamsController(
   private val sourceService: SourceService,
@@ -49,67 +50,68 @@ class StreamsController(
 
   @ExecuteOn(AirbyteTaskExecutors.PUBLIC_API)
   override fun getStreamProperties(
-    sourceId: UUID,
-    destinationId: UUID?,
-    ignoreCache: Boolean?,
+    sourceId: String,
+    destinationId: String?,
+    ignoreCache: Boolean,
   ): Response {
     // Check permission for source and destination
     val userId: UUID = currentUserService.currentUser.userId
     apiAuthorizationHelper.checkWorkspacePermissions(
-      listOf(sourceId.toString()),
+      listOf(sourceId),
       Scope.SOURCE,
       userId,
       PermissionType.WORKSPACE_READER,
     )
-    apiAuthorizationHelper.checkWorkspacePermissions(
-      listOf(destinationId!!.toString()),
-      Scope.DESTINATION,
-      userId,
-      PermissionType.WORKSPACE_READER,
-    )
+    destinationId?.apply {
+      apiAuthorizationHelper.checkWorkspacePermissions(
+        listOf(destinationId),
+        Scope.DESTINATION,
+        userId,
+        PermissionType.WORKSPACE_READER,
+      )
+    }
     val httpResponse =
       trackingHelper.callWithTracker(
         {
           sourceService.getSourceSchema(
-            sourceId,
-            ignoreCache!!,
+            UUID.fromString(sourceId),
+            ignoreCache,
           )
         },
         STREAMS_PATH,
         GET,
         userId,
       )
-    val destinationSyncModes =
-      trackingHelper.callWithTracker(
-        {
-          destinationService.getDestinationSyncModes(
-            destinationId,
-          )
-        },
-        STREAMS_PATH,
-        GET,
-        userId,
-      )
+    val destinationSyncModes: List<DestinationSyncMode> =
+      if (destinationId != null) {
+        trackingHelper.callWithTracker(
+          {
+            destinationService.getDestinationSyncModes(
+              UUID.fromString(destinationId),
+            )
+          },
+          STREAMS_PATH,
+          GET,
+          userId,
+        )
+      } else {
+        emptyList()
+      }
     val streamList =
       httpResponse.catalog!!.streams.stream()
         .map { obj: AirbyteStreamAndConfiguration -> obj.stream }
         .toList()
-    val listOfStreamProperties: MutableList<StreamProperties> = emptyList<StreamProperties>().toMutableList()
-    for (airbyteStream in streamList) {
-      val streamProperties = StreamProperties()
-      val sourceSyncModes = airbyteStream!!.supportedSyncModes!!
-      streamProperties.streamName = airbyteStream.name
-      streamProperties.syncModes = getValidSyncModes(sourceSyncModes, destinationSyncModes)
-      if (airbyteStream.defaultCursorField != null) {
-        streamProperties.defaultCursorField = airbyteStream.defaultCursorField
+    val listOfStreamProperties =
+      streamList.map { airbyteStream ->
+        StreamProperties(
+          streamName = airbyteStream.name,
+          syncModes = getValidSyncModes(sourceSyncModes = airbyteStream!!.supportedSyncModes!!, destinationSyncModes = destinationSyncModes),
+          defaultCursorField = airbyteStream.defaultCursorField,
+          sourceDefinedPrimaryKey = airbyteStream.sourceDefinedPrimaryKey,
+          sourceDefinedCursorField = airbyteStream.sourceDefinedCursor != null && airbyteStream.sourceDefinedCursor!!,
+          propertyFields = getStreamFields(connectorSchema = airbyteStream.jsonSchema),
+        )
       }
-      if (airbyteStream.sourceDefinedPrimaryKey != null) {
-        streamProperties.sourceDefinedPrimaryKey = airbyteStream.sourceDefinedPrimaryKey
-      }
-      streamProperties.sourceDefinedCursorField = airbyteStream.sourceDefinedCursor != null && airbyteStream.sourceDefinedCursor!!
-      streamProperties.propertyFields = getStreamFields(airbyteStream.jsonSchema)
-      listOfStreamProperties.add(streamProperties)
-    }
     trackingHelper.trackSuccess(
       STREAMS_PATH,
       GET,
@@ -135,10 +137,10 @@ class StreamsController(
     val streamFields: MutableList<List<String>> = ArrayList()
     val spec: JsonNode =
       try {
-        yamlMapper.readTree<JsonNode>(connectorSchema!!.traverse())
+        yamlMapper.readTree(connectorSchema!!.traverse())
       } catch (e: IOException) {
         log?.error("Error getting stream fields from schema", e)
-        throw UnexpectedProblem(HttpStatus.INTERNAL_SERVER_ERROR)
+        throw UnexpectedProblem()
       }
     val fields = spec.fields()
     while (fields.hasNext()) {
@@ -167,7 +169,10 @@ class StreamsController(
   private fun getValidSyncModes(
     sourceSyncModes: List<SyncMode>,
     destinationSyncModes: List<DestinationSyncMode>,
-  ): List<ConnectionSyncModeEnum> {
+  ): List<ConnectionSyncModeEnum>? {
+    if (destinationSyncModes.isEmpty()) {
+      return null
+    }
     val connectionSyncModes: MutableList<ConnectionSyncModeEnum> = emptyList<ConnectionSyncModeEnum>().toMutableList()
     if (sourceSyncModes.contains(SyncMode.FULL_REFRESH)) {
       if (destinationSyncModes.contains(DestinationSyncMode.APPEND)) {

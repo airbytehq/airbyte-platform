@@ -1,6 +1,8 @@
 import classNames from "classnames";
 import React from "react";
 
+import { FlexContainer } from "components/ui/Flex";
+
 import { SvgIcon } from "area/connector/utils";
 
 import styles from "./ConnectorIcon.module.scss";
@@ -11,7 +13,7 @@ interface ConnectorIconProps {
 }
 
 export const ConnectorIcon: React.FC<ConnectorIconProps> = ({ className, icon }) => (
-  <div className={classNames(styles.content, className)} aria-hidden="true">
+  <FlexContainer className={classNames(styles.content, className)} aria-hidden="true" alignItems="center">
     <SvgIcon src={icon} />
-  </div>
+  </FlexContainer>
 );

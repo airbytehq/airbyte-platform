@@ -4,6 +4,7 @@ export type IconType =
   | "arrowRight"
   | "article"
   | "bell"
+  | "cactus"
   | "calendar"
   | "calendarCheck"
   | "caretDown"
@@ -22,10 +23,12 @@ export type IconType =
   | "comments"
   | "community"
   | "connection"
+  | "collapseAll"
   | "contract"
   | "copy"
   | "credits"
   | "cross"
+  | "cursor"
   | "database"
   | "day"
   | "dbtCloud"
@@ -42,6 +45,7 @@ export type IconType =
   | "errorFilled"
   | "errorOutline"
   | "expand"
+  | "expandAll"
   | "export"
   | "eye"
   | "eyeSlash"
@@ -69,6 +73,14 @@ export type IconType =
   | "location"
   | "lock"
   | "menu"
+  | "metricSuccessHigh"
+  | "metricSuccessLow"
+  | "metricSuccessMed"
+  | "metricSuccessNone"
+  | "metricUsageHigh"
+  | "metricUsageLow"
+  | "metricUsageMed"
+  | "metricUsageNone"
   | "minus"
   | "minusCircle"
   | "modification"
@@ -108,6 +120,7 @@ export type IconType =
   | "statusError"
   | "statusInactive"
   | "statusInProgress"
+  | "statusQueued"
   | "statusSleep"
   | "statusSuccess"
   | "statusWarning"
@@ -127,7 +140,15 @@ export type IconType =
   | "warningOutline"
   | "wrench";
 
-export type IconColor = "primary" | "disabled" | "action" | "success" | "error" | "warning" | "affordance";
+export type IconColor =
+  | "primary"
+  | "disabled"
+  | "action"
+  | "success"
+  | "error"
+  | "warning"
+  | "affordance"
+  | "foreground";
 export type IconSize = "xs" | "sm" | "md" | "lg" | "xl";
 
 export interface IconProps {

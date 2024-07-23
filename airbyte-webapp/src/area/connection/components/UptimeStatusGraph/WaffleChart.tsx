@@ -11,10 +11,13 @@ export interface ChartStream {
 }
 export interface UptimeDayEntry {
   date: number;
+  jobId: number;
+  runtimeMs: number;
+  recordsEmitted: number;
+  recordsCommitted: number;
   streams: ChartStream[];
 }
 
-const CELL_HORIZONTAL_GAP = 2;
 const CELL_VERTICAL_GAP = 0.25;
 
 // these props come from us
@@ -22,6 +25,7 @@ interface StreamWaffleChartProps {
   streamsCount: number;
   colorMap: Record<string, string>;
   dataKey: string; // necessary to enable tooltip display
+  maxStreamsCount: number; // max number of streams synced in a single job
 }
 
 // these are injected by recharts
@@ -36,7 +40,7 @@ interface InjectedStreamWaffleChartProps extends StreamWaffleChartProps {
   isTooltipActive: boolean;
 }
 
-type WaffleColor = "green" | "darkBlue" | "red" | "black" | "empty";
+type WaffleColor = "green" | "darkBlue" | "red" | "black" | "blue" | "empty";
 const getCellColor = (streamStatus: ConnectionStatusIndicatorStatus): WaffleColor => {
   switch (streamStatus) {
     case ConnectionStatusIndicatorStatus.OnTime:
@@ -52,8 +56,17 @@ const getCellColor = (streamStatus: ConnectionStatusIndicatorStatus): WaffleColo
     case ConnectionStatusIndicatorStatus.ActionRequired:
       return "black";
 
+    case ConnectionStatusIndicatorStatus.Queued:
+    case ConnectionStatusIndicatorStatus.Syncing:
+    case ConnectionStatusIndicatorStatus.Refreshing:
+    case ConnectionStatusIndicatorStatus.RateLimited:
+      return "blue";
+
     case ConnectionStatusIndicatorStatus.Disabled:
     case ConnectionStatusIndicatorStatus.Pending:
+    case ConnectionStatusIndicatorStatus.Paused:
+    case ConnectionStatusIndicatorStatus.QueuedForNextSync:
+    case ConnectionStatusIndicatorStatus.Clearing:
       return "empty";
   }
 };
@@ -64,6 +77,7 @@ export const Waffle: React.FC<StreamWaffleChartProps> = (props) => {
   const {
     data,
     colorMap,
+    maxStreamsCount,
     width,
     height,
     offset,
@@ -78,7 +92,7 @@ export const Waffle: React.FC<StreamWaffleChartProps> = (props) => {
   useEffect(() => {
     if (canvas) {
       const availableHeight = height - offsetTop - offsetBottom;
-      const barWidth = width / data.length - CELL_HORIZONTAL_GAP * 2;
+      const barWidth = 30;
       const halfBarWidth = barWidth / 2;
       const cellHeight = availableHeight / streamsCount;
 
@@ -95,8 +109,13 @@ export const Waffle: React.FC<StreamWaffleChartProps> = (props) => {
         rowIndex: number,
         status: ConnectionStatusIndicatorStatus,
         skipRecurse = false
-      ): CellOperation => {
+      ): CellOperation | null => {
         const cellOffset = rowIndex * cellHeight;
+
+        if (columnIndex >= orderedTooltipTicks.length) {
+          return null;
+        }
+
         const xCoordinate = orderedTooltipTicks[columnIndex].coordinate;
 
         const myOperation = {
@@ -113,17 +132,13 @@ export const Waffle: React.FC<StreamWaffleChartProps> = (props) => {
         // address any extra gap that may have been introduced by subpixel positioning
         // by overdrawing the amount of the gap
         if (!skipRecurse) {
-          // horizontal correction
-          if (CELL_HORIZONTAL_GAP > 0 && columnIndex < data.length - 1) {
-            const siblingOperationX = computeCellOperation(columnIndex + 1, rowIndex, status, true);
-            const gapX = siblingOperationX.x - (myOperation.x + myOperation.width);
-            const extraGapX = CELL_HORIZONTAL_GAP - gapX;
-            myOperation.width -= extraGapX;
-          }
-
           // vertical correction
           if (CELL_VERTICAL_GAP > 0 && rowIndex < streamsCount - 1) {
             const siblingOperationY = computeCellOperation(columnIndex, rowIndex + 1, status, true);
+            if (!siblingOperationY) {
+              return null;
+            }
+
             const gapY = siblingOperationY.y - (myOperation.y + myOperation.height);
             const extraGapY = CELL_VERTICAL_GAP - gapY;
             myOperation.height -= extraGapY;
@@ -148,10 +163,19 @@ export const Waffle: React.FC<StreamWaffleChartProps> = (props) => {
         for (let i = 0; i < data.length; i++) {
           const { streams } = data[i];
 
+          // with no offset, the streams are top-aligned to the graph
+          // but we want them anchored to x-axis
+          const rowOffset = maxStreamsCount - streams.length;
+
           for (let j = 0; j < streams.length; j++) {
             const { status } = streams[j];
 
-            const operation = computeCellOperation(i, j, status);
+            const operation = computeCellOperation(i, rowOffset + j, status);
+
+            if (!operation) {
+              continue;
+            }
+
             if (status === ConnectionStatusIndicatorStatus.OnTime) {
               ontimeOperations.push(operation);
             } else {
@@ -170,9 +194,11 @@ export const Waffle: React.FC<StreamWaffleChartProps> = (props) => {
         // tooltip highlight
         if (isTooltipActive && activeTooltipIndex >= 0) {
           const coordinates = computeCellOperation(activeTooltipIndex, 0, ConnectionStatusIndicatorStatus.OnTime);
-          ctx.fillStyle = "rgba(255, 255, 255, 0.4)";
-          ctx.fillRect(coordinates.x, coordinates.y, coordinates.width, availableHeight);
-          ctx.restore();
+          if (coordinates) {
+            ctx.fillStyle = "rgba(255, 255, 255, 0.4)";
+            ctx.fillRect(coordinates.x, coordinates.y, coordinates.width, availableHeight);
+            ctx.restore();
+          }
         }
       }
     }
@@ -190,6 +216,7 @@ export const Waffle: React.FC<StreamWaffleChartProps> = (props) => {
     orderedTooltipTicks,
     activeTooltipIndex,
     isTooltipActive,
+    maxStreamsCount,
   ]);
 
   return (

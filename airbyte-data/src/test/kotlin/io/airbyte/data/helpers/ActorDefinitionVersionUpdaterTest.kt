@@ -136,10 +136,6 @@ internal class ActorDefinitionVersionUpdaterTest {
     val organizationId = UUID.randomUUID()
 
     every {
-      actorDefinitionService.getActorsWithDefaultVersionId(DEFAULT_VERSION.versionId)
-    } returns setOf(actorId)
-
-    every {
       actorDefinitionService.getActorIdsForDefinition(ACTOR_DEFINITION_ID)
     } returns listOf(ActorWorkspaceOrganizationIds(actorId, workspaceId, organizationId))
 
@@ -161,7 +157,6 @@ internal class ActorDefinitionVersionUpdaterTest {
     verifyAll {
       featureFlagClient.boolVariation(UseBreakingChangeScopes, Workspace(ANONYMOUS))
       actorDefinitionService.getDefaultVersionForActorDefinitionIdOptional(ACTOR_DEFINITION_ID)
-      actorDefinitionService.getActorsWithDefaultVersionId(DEFAULT_VERSION.versionId)
       actorDefinitionService.getActorIdsForDefinition(ACTOR_DEFINITION_ID)
       connectionService.actorSyncsAnyListedStream(actorId, listOf("affected_stream"))
       scopedConfigurationService.getScopedConfigurations(
@@ -184,9 +179,6 @@ internal class ActorDefinitionVersionUpdaterTest {
       actorDefinitionService.updateActorDefinitionDefaultVersionId(ACTOR_DEFINITION_ID, NEW_VERSION.versionId)
 
       if (actorIsInBreakingChangeScope) {
-        // Assert actor is not updated
-        actorDefinitionService.setActorDefaultVersions(listOf(), NEW_VERSION.versionId)
-
         // Assert pins are created
         scopedConfigurationService.insertScopedConfigurations(any())
         assertEquals(1, configsToWriteSlot.captured.size)
@@ -204,80 +196,12 @@ internal class ActorDefinitionVersionUpdaterTest {
             .withOrigin(STREAM_SCOPED_BREAKING_CHANGE.version.serialize()),
           capturedConfig.withId(null),
         )
-      } else {
-        // Assert actor is upgraded to the new version
-        actorDefinitionService.setActorDefaultVersions(listOf(actorId), NEW_VERSION.versionId)
       }
     }
 
     if (!actorIsInBreakingChangeScope) {
       verify(exactly = 0) {
         scopedConfigurationService.insertScopedConfigurations(any())
-      }
-    }
-  }
-
-  @ParameterizedTest
-  @ValueSource(booleans = [true, false])
-  fun testGetActorsForNonBreakingUpgrade(useBreakingChangeScopes: Boolean) {
-    every {
-      featureFlagClient.boolVariation(UseBreakingChangeScopes, Workspace(ANONYMOUS))
-    } returns useBreakingChangeScopes
-
-    val actorIdOnInitialVersion = UUID.randomUUID()
-    every {
-      actorDefinitionService.getActorsWithDefaultVersionId(DEFAULT_VERSION.versionId)
-    } returns setOf(actorIdOnInitialVersion)
-
-    val actorsToUpgrade = actorDefinitionVersionUpdater.getActorsToUpgrade(DEFAULT_VERSION, listOf())
-
-    // All actors should get upgraded
-    assertEquals(setOf(actorIdOnInitialVersion), actorsToUpgrade)
-  }
-
-  @ParameterizedTest
-  @ValueSource(booleans = [true, false])
-  fun testGetActorsForBreakingUpgrade(useBreakingChangeScopes: Boolean) {
-    every {
-      featureFlagClient.boolVariation(UseBreakingChangeScopes, Workspace(ANONYMOUS))
-    } returns useBreakingChangeScopes
-
-    // Set up an actor that syncs an affected stream
-    val actorNotSyncingAffectedStream = UUID.randomUUID()
-    val actorSyncingAffectedStream = UUID.randomUUID()
-
-    every {
-      actorDefinitionService.getActorsWithDefaultVersionId(DEFAULT_VERSION.versionId)
-    } returns setOf(actorSyncingAffectedStream, actorNotSyncingAffectedStream)
-
-    every {
-      connectionService.actorSyncsAnyListedStream(actorSyncingAffectedStream, listOf("affected_stream"))
-    } returns true
-
-    every {
-      connectionService.actorSyncsAnyListedStream(actorNotSyncingAffectedStream, listOf("affected_stream"))
-    } returns false
-
-    val actorsToUpgrade =
-      actorDefinitionVersionUpdater.getActorsToUpgrade(
-        DEFAULT_VERSION,
-        listOf(STREAM_SCOPED_BREAKING_CHANGE),
-      )
-
-    if (useBreakingChangeScopes) {
-      // Unaffected actors will be upgraded
-      assertEquals(setOf(actorNotSyncingAffectedStream), actorsToUpgrade)
-    } else {
-      // No actors will be upgraded
-      assertEquals(setOf<UUID>(), actorsToUpgrade)
-    }
-
-    verifyAll {
-      featureFlagClient.boolVariation(UseBreakingChangeScopes, Workspace(ANONYMOUS))
-      actorDefinitionService.getActorsWithDefaultVersionId(DEFAULT_VERSION.versionId)
-      if (useBreakingChangeScopes) {
-        connectionService.actorSyncsAnyListedStream(actorSyncingAffectedStream, listOf("affected_stream"))
-        connectionService.actorSyncsAnyListedStream(actorNotSyncingAffectedStream, listOf("affected_stream"))
       }
     }
   }
@@ -362,7 +286,6 @@ internal class ActorDefinitionVersionUpdaterTest {
   fun testUpgradeActorVersionWithBCPin() {
     val actorId = UUID.randomUUID()
     val actorDefinitionId = UUID.randomUUID()
-    val newVersionId = UUID.randomUUID()
 
     val breakingChangePinConfig =
       ScopedConfiguration()
@@ -379,7 +302,7 @@ internal class ActorDefinitionVersionUpdaterTest {
       )
     } returns Optional.of(breakingChangePinConfig)
 
-    actorDefinitionVersionUpdater.upgradeActorVersion(actorId, actorDefinitionId, newVersionId, ActorType.SOURCE)
+    actorDefinitionVersionUpdater.upgradeActorVersion(actorId, actorDefinitionId, ActorType.SOURCE)
 
     verifyAll {
       scopedConfigurationService.getScopedConfiguration(
@@ -391,7 +314,6 @@ internal class ActorDefinitionVersionUpdaterTest {
       )
 
       scopedConfigurationService.deleteScopedConfiguration(breakingChangePinConfig.id)
-      actorDefinitionService.setActorDefaultVersion(actorId, newVersionId)
     }
   }
 
@@ -399,7 +321,6 @@ internal class ActorDefinitionVersionUpdaterTest {
   fun testUpgradeActorVersionWithManualPinThrowsError() {
     val actorId = UUID.randomUUID()
     val actorDefinitionId = UUID.randomUUID()
-    val newVersionId = UUID.randomUUID()
 
     val manualPinConfig =
       ScopedConfiguration()
@@ -417,7 +338,7 @@ internal class ActorDefinitionVersionUpdaterTest {
     } returns Optional.of(manualPinConfig)
 
     assertThrows<RuntimeException> {
-      actorDefinitionVersionUpdater.upgradeActorVersion(actorId, actorDefinitionId, newVersionId, ActorType.SOURCE)
+      actorDefinitionVersionUpdater.upgradeActorVersion(actorId, actorDefinitionId, ActorType.SOURCE)
     }
 
     verifyAll {
@@ -435,7 +356,6 @@ internal class ActorDefinitionVersionUpdaterTest {
   fun testUpgradeActorVersionWithNoPins() {
     val actorId = UUID.randomUUID()
     val actorDefinitionId = UUID.randomUUID()
-    val newVersionId = UUID.randomUUID()
 
     every {
       scopedConfigurationService.getScopedConfiguration(
@@ -447,7 +367,7 @@ internal class ActorDefinitionVersionUpdaterTest {
       )
     } returns Optional.empty()
 
-    actorDefinitionVersionUpdater.upgradeActorVersion(actorId, actorDefinitionId, newVersionId, ActorType.SOURCE)
+    actorDefinitionVersionUpdater.upgradeActorVersion(actorId, actorDefinitionId, ActorType.SOURCE)
 
     verifyAll {
       scopedConfigurationService.getScopedConfiguration(
@@ -457,8 +377,6 @@ internal class ActorDefinitionVersionUpdaterTest {
         ConfigScopeType.ACTOR,
         actorId,
       )
-
-      actorDefinitionService.setActorDefaultVersion(actorId, newVersionId)
     }
   }
 

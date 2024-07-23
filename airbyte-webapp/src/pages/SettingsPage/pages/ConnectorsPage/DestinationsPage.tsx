@@ -3,6 +3,7 @@ import { FormattedMessage, useIntl } from "react-intl";
 
 import { useDestinationDefinitionList, useUpdateDestinationDefinition, useDestinationList } from "core/api";
 import { DestinationDefinitionRead } from "core/api/types/AirbyteClient";
+import { useFormatError } from "core/errors";
 import { useTrackPage, PageTrackingCodes } from "core/services/analytics";
 import { useNotificationService } from "hooks/services/Notification";
 
@@ -11,6 +12,7 @@ import ConnectorsView from "./components/ConnectorsView";
 const DestinationsPage: React.FC = () => {
   useTrackPage(PageTrackingCodes.SETTINGS_DESTINATION);
 
+  const formatError = useFormatError();
   const { formatMessage } = useIntl();
   const { destinationDefinitions } = useDestinationDefinitionList();
   const { destinations } = useDestinationList();
@@ -52,18 +54,17 @@ const DestinationsPage: React.FC = () => {
       } catch (error) {
         registerNotification({
           id: `destination.update.error.${id}.${version}`,
-          text:
-            formatMessage(
-              { id: "admin.upgradeConnector.error" },
-              { name: definitionMap.current.get(id)?.name, version }
-            ) + (error.message ? `: ${error.message}` : ""),
+          text: `${formatMessage(
+            { id: "admin.upgradeConnector.error" },
+            { name: definitionMap.current.get(id)?.name, version }
+          )}: ${formatError(error)}`,
           type: "error",
         });
       } finally {
         setUpdatingDefinitionId(undefined);
       }
     },
-    [formatMessage, registerNotification, updateDestinationDefinition]
+    [formatError, formatMessage, registerNotification, updateDestinationDefinition]
   );
 
   const usedDestinationDefinitions: DestinationDefinitionRead[] = useMemo(() => {

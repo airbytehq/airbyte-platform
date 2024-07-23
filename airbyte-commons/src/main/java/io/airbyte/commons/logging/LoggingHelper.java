@@ -11,9 +11,7 @@ import com.google.common.annotations.VisibleForTesting;
  */
 public class LoggingHelper {
 
-  public static final String CUSTOM_TRANSFORMATION_LOGGER_PREFIX = "dbt";
   public static final String DESTINATION_LOGGER_PREFIX = "destination";
-  public static final String NORMALIZATION_LOGGER_PREFIX = "normalization";
   public static final String SOURCE_LOGGER_PREFIX = "source";
   public static final String PLATFORM_LOGGER_PREFIX = "platform";
 

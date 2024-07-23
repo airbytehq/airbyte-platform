@@ -1,3 +1,4 @@
+import { getWorkspaceId } from "@cy/commands/api/workspace";
 import {
   createNewConnectionViaApi,
   createPostgresDestinationViaApi,
@@ -9,7 +10,7 @@ import { openSourceConnectionsPage, goToSourcePage } from "@cy/pages/sourcePage"
 import { WebBackendConnectionRead, DestinationRead, SourceRead } from "@src/core/api/types/AirbyteClient";
 import { RoutePaths, ConnectionRoutePaths } from "@src/pages/routePaths";
 import { requestDeleteConnection, requestDeleteDestination, requestDeleteSource } from "commands/api";
-import { appendRandomString, submitButtonClick, getSubmitButton } from "commands/common";
+import { appendRandomString, submitButtonClick } from "commands/common";
 import { runDbQuery } from "commands/db/db";
 import {
   createUsersTableQuery,
@@ -30,7 +31,9 @@ import {
 
 import * as connectionConfigurationForm from "pages/connection/connectionFormPageObject";
 import * as connectionListPage from "pages/connection/connectionListPageObject";
+import * as replicationPage from "pages/connection/connectionReplicationPageObject";
 import * as newConnectionPage from "pages/connection/createConnectionPageObject";
+import { nextButton } from "pages/connection/createConnectionPageObject";
 import { streamDetails } from "pages/connection/StreamDetailsPageObject";
 import { StreamRowPageObject } from "pages/connection/StreamRowPageObject";
 import { streamsTable } from "pages/connection/StreamsTablePageObject";
@@ -71,7 +74,9 @@ describe("Connection - Create new connection", { testIsolation: false }, () => {
   describe("Set up connection", () => {
     describe("From connection page", () => {
       it("should open 'New connection' page", () => {
-        connectionListPage.visit();
+        // using ConnectionsListPage.visit() intercepts connections/list endpoint, which will not be called if this is the first connection being created
+        cy.visit(`/workspaces/${getWorkspaceId()}/connections`);
+
         interceptGetSourcesListRequest();
         interceptGetSourceDefinitionsRequest();
 
@@ -132,7 +137,10 @@ describe("Connection - Create new connection", { testIsolation: false }, () => {
 
           cy.wait("@createDestination", { timeout: 30000 }).then((interception) => {
             const createdDestinationId = interception.response?.body.destinationId;
-            cy.location("search").should("eq", `?sourceId=${source.sourceId}&destinationId=${createdDestinationId}`);
+            cy.location("search").should(
+              "eq",
+              `?sourceId=${source.sourceId}&tab=marketplace&destinationId=${createdDestinationId}`
+            );
 
             requestDeleteDestination({ destinationId: createdDestinationId });
           });
@@ -169,7 +177,7 @@ describe("Connection - Create new connection", { testIsolation: false }, () => {
           cy.location("search").should("eq", `?destinationId=${destination.destinationId}&sourceType=new`);
 
           const testPokeSourceName = appendRandomString("Cypress Test Poke");
-          fillPokeAPIForm(testPokeSourceName, "ditto");
+          fillPokeAPIForm(testPokeSourceName, "bulbasaur");
           cy.get("button").contains("Set up source").click();
           cy.wait("@createSource", { timeout: 30000 }).then((interception) => {
             const createdSourceId = interception.response?.body.sourceId;
@@ -193,6 +201,14 @@ describe("Connection - Create new connection", { testIsolation: false }, () => {
         `/${RoutePaths.Connections}/${ConnectionRoutePaths.ConnectionNew}/${ConnectionRoutePaths.Configure}?sourceId=${source.sourceId}&destinationId=${destination.destinationId}`
       );
       waitForDiscoverSchemaRequest();
+      const dummyStreamRow = new StreamRowPageObject("public", "dummy_table_1");
+
+      dummyStreamRow.toggleStreamSync();
+      dummyStreamRow.isStreamSyncEnabled(true);
+      dummyStreamRow.selectSyncMode("full_refresh", "overwrite");
+
+      cy.get(nextButton).scrollIntoView();
+      cy.get(nextButton).click();
       connectionConfigurationForm.selectScheduleType("Manual");
     });
   });
@@ -210,30 +226,13 @@ describe("Connection - Create new connection", { testIsolation: false }, () => {
       newConnectionPage.checkColumnNames();
     });
 
-    it("should check total amount of table streams", () => {
-      // dummy tables amount + users table
-      newConnectionPage.checkAmountOfStreamTableRows(21);
-    });
-
-    it("should allow to scroll table to desired stream table row and it should be visible", () => {
-      const desiredStreamTableRow = "dummy_table_18";
-
-      newConnectionPage.scrollTableToStream(desiredStreamTableRow);
-      newConnectionPage.isStreamTableRowVisible(desiredStreamTableRow);
-    });
-
     it("should filter table by stream name", () => {
       streamsTable.searchStream("dummy_table_10");
       newConnectionPage.checkAmountOfStreamTableRows(1);
     });
-
-    it("should clear stream search input field and show all available streams", () => {
-      streamsTable.clearStreamSearch();
-      newConnectionPage.checkAmountOfStreamTableRows(21);
-    });
   });
 
-  describe.only("Stream", () => {
+  describe("Stream", () => {
     before(() => {
       interceptDiscoverSchemaRequest();
 
@@ -246,7 +245,7 @@ describe("Connection - Create new connection", { testIsolation: false }, () => {
     const usersStreamRow = new StreamRowPageObject("public", "users");
 
     it("should have no streams checked by default", () => {
-      getSubmitButton().should("be.disabled");
+      cy.get(replicationPage.nextButtonOrLink).should("be.disabled");
       newConnectionPage.getNoStreamsSelectedError().should("exist");
 
       // filter table for an sample stream
@@ -261,20 +260,16 @@ describe("Connection - Create new connection", { testIsolation: false }, () => {
       usersStreamRow.isStreamSyncEnabled(true);
     });
 
-    it("should have added stream style after click", () => {
-      usersStreamRow.hasAddedStyle(true);
-    });
-
     it("should have unchecked sync switch after click and default stream style", () => {
       usersStreamRow.toggleStreamSync();
       usersStreamRow.isStreamSyncEnabled(false);
-      usersStreamRow.hasAddedStyle(false);
     });
 
-    it("should enable form submit after a stream is selected", () => {
+    it("should enable form submit after a stream is selected and configured", () => {
       usersStreamRow.toggleStreamSync();
+      usersStreamRow.selectSyncMode("full_refresh", "overwrite");
       newConnectionPage.getNoStreamsSelectedError().should("not.exist");
-      getSubmitButton().should("be.enabled");
+      cy.get(replicationPage.nextButtonOrLink).should("not.be.disabled");
     });
 
     it("should have data destination name", () => {
@@ -299,6 +294,7 @@ describe("Connection - Create new connection", { testIsolation: false }, () => {
   describe("Submit form", () => {
     it("should set up a connection", () => {
       interceptCreateConnectionRequest();
+      cy.get(nextButton).click();
       submitButtonClick(true);
 
       waitForCreateConnectionRequest().then((interception) => {
@@ -307,7 +303,7 @@ describe("Connection - Create new connection", { testIsolation: false }, () => {
 
         const connection: Partial<WebBackendConnectionRead> = {
           name: `${source.name} → ${destination.name}`,
-          scheduleType: "manual",
+          scheduleType: "basic",
         };
         expect(interception.request.body).to.contain(connection);
         expect(interception.response?.body).to.contain(connection);
@@ -318,6 +314,20 @@ describe("Connection - Create new connection", { testIsolation: false }, () => {
 
     it("should redirect to connection overview page after connection set up", () => {
       newConnectionPage.isAtConnectionOverviewPage(connectionId);
+    });
+  });
+
+  describe("Editing", () => {
+    it("should have added stream style after modifying", () => {
+      cy.visit(`/workspaces/${getWorkspaceId()}/connections/${connectionId}/replication`);
+
+      const usersStreamRow = new StreamRowPageObject("public", "dummy_table_1");
+
+      usersStreamRow.toggleStreamSync();
+      usersStreamRow.hasAddedStyle(true);
+
+      usersStreamRow.toggleStreamSync();
+      usersStreamRow.hasAddedStyle(false);
     });
   });
 });

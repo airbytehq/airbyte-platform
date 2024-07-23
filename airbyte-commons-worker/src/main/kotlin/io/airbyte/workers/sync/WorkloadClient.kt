@@ -12,7 +12,6 @@ import io.micronaut.http.HttpStatus
 import jakarta.inject.Singleton
 import org.openapitools.client.infrastructure.ClientException
 import java.io.IOException
-import kotlin.jvm.optionals.getOrElse
 import kotlin.time.Duration.Companion.seconds
 
 private val logger = KotlinLogging.logger { }
@@ -51,9 +50,18 @@ class WorkloadClient(private val workloadApiClient: WorkloadApiClient, private v
     workloadId: String,
     pollingFrequencyInSeconds: Int,
   ) {
+    waitForWorkload(workloadId, pollingFrequencyInSeconds) {}
+  }
+
+  fun waitForWorkload(
+    workloadId: String,
+    pollingFrequencyInSeconds: Int,
+    loopingAction: () -> Unit,
+  ) {
     try {
       var workload = workloadApiClient.workloadApi.workloadGet(workloadId)
       while (!isWorkloadTerminal(workload)) {
+        loopingAction()
         Thread.sleep(pollingFrequencyInSeconds.seconds.inWholeMilliseconds)
         workload = workloadApiClient.workloadApi.workloadGet(workloadId)
       }
@@ -103,7 +111,9 @@ class WorkloadClient(private val workloadApiClient: WorkloadApiClient, private v
                 else -> FailureReason.FailureOrigin.AIRBYTE_PLATFORM
               },
             )
-            .withExternalMessage("Workload terminated by ${workload.terminationSource}")
+            .withExternalMessage(
+              "Workload ${if (workload.status == WorkloadStatus.CANCELLED) "cancelled by" else "failed, source:"} ${workload.terminationSource}",
+            )
             .withInternalMessage(workload.terminationReason)
 
         // We should never be in this situation, workload is still running not having an output is expected,

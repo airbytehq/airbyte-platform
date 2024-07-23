@@ -97,7 +97,7 @@ manifest should match snapshot:
       ACTIVITY_INITIAL_DELAY_BETWEEN_ATTEMPTS_SECONDS: ""
       ACTIVITY_MAX_ATTEMPT: ""
       ACTIVITY_MAX_DELAY_BETWEEN_ATTEMPTS_SECONDS: ""
-      AIRBYTE_API_HOST: RELEASE-NAME-airbyte-api-server-svc:80
+      AIRBYTE_API_HOST: RELEASE-NAME-airbyte-server-svc:80/api/public
       AIRBYTE_EDITION: pro
       AIRBYTE_VERSION: 0.50.19
       API_URL: /api/v1/
@@ -116,7 +116,7 @@ manifest should match snapshot:
       DATABASE_URL: jdbc:postgresql://airbyte-db-svc:5432/db-airbyte
       DB_DOCKER_MOUNT: airbyte_db
       GOOGLE_APPLICATION_CREDENTIALS: ""
-      INTERNAL_API_HOST: RELEASE-NAME-airbyte-server-svc:8001
+      INTERNAL_API_HOST: http://RELEASE-NAME-airbyte-server-svc:8001
       JOB_MAIN_CONTAINER_CPU_LIMIT: ""
       JOB_MAIN_CONTAINER_CPU_REQUEST: ""
       JOB_MAIN_CONTAINER_MEMORY_LIMIT: ""

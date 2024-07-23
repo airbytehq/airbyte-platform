@@ -12,23 +12,23 @@ import io.airbyte.api.model.generated.SourceDiscoverSchemaRead
 import io.airbyte.api.model.generated.SourceDiscoverSchemaRequestBody
 import io.airbyte.api.model.generated.SourceIdRequestBody
 import io.airbyte.api.model.generated.SourceUpdate
-import io.airbyte.commons.server.errors.problems.UnexpectedProblem
+import io.airbyte.api.problems.model.generated.ProblemMessageData
+import io.airbyte.api.problems.throwable.generated.UnexpectedProblem
 import io.airbyte.commons.server.handlers.SchedulerHandler
 import io.airbyte.commons.server.handlers.SourceHandler
 import io.airbyte.commons.server.support.CurrentUserService
-import io.airbyte.public_api.model.generated.InitiateOauthRequest
-import io.airbyte.public_api.model.generated.SourceCreateRequest
-import io.airbyte.public_api.model.generated.SourcePatchRequest
-import io.airbyte.public_api.model.generated.SourcePutRequest
-import io.airbyte.public_api.model.generated.SourceResponse
-import io.airbyte.public_api.model.generated.SourcesResponse
+import io.airbyte.publicApi.server.generated.models.InitiateOauthRequest
+import io.airbyte.publicApi.server.generated.models.SourceCreateRequest
+import io.airbyte.publicApi.server.generated.models.SourcePatchRequest
+import io.airbyte.publicApi.server.generated.models.SourcePutRequest
+import io.airbyte.publicApi.server.generated.models.SourceResponse
+import io.airbyte.publicApi.server.generated.models.SourcesResponse
 import io.airbyte.server.apis.publicapi.constants.HTTP_RESPONSE_BODY_DEBUG_MESSAGE
 import io.airbyte.server.apis.publicapi.errorHandlers.ConfigClientErrorHandler
 import io.airbyte.server.apis.publicapi.mappers.SourceReadMapper
 import io.airbyte.server.apis.publicapi.mappers.SourcesResponseMapper
 import io.micronaut.context.annotation.Secondary
 import io.micronaut.context.annotation.Value
-import io.micronaut.http.HttpStatus
 import jakarta.inject.Singleton
 import jakarta.ws.rs.core.Response
 import org.slf4j.LoggerFactory
@@ -102,7 +102,7 @@ open class SourceServiceImpl(
       kotlin.runCatching { sourceHandler.createSourceWithOptionalSecret(sourceCreateOss) }
         .onFailure {
           log.error("Error for createSource", it)
-          ConfigClientErrorHandler.handleError(it, sourceDefinitionId.toString())
+          ConfigClientErrorHandler.handleError(it)
         }
     log.debug(HTTP_RESPONSE_BODY_DEBUG_MESSAGE + result)
     return SourceReadMapper.from(result.getOrNull()!!)
@@ -125,7 +125,7 @@ open class SourceServiceImpl(
       kotlin.runCatching { sourceHandler.updateSource(sourceUpdate) }
         .onFailure {
           log.error("Error for updateSource", it)
-          ConfigClientErrorHandler.handleError(it, sourceId.toString())
+          ConfigClientErrorHandler.handleError(it)
         }
     log.debug(HTTP_RESPONSE_BODY_DEBUG_MESSAGE + result)
     return SourceReadMapper.from(result.getOrNull()!!)
@@ -149,7 +149,7 @@ open class SourceServiceImpl(
       kotlin.runCatching { sourceHandler.partialUpdateSource(sourceUpdate) }
         .onFailure {
           log.error("Error for partialUpdateSource", it)
-          ConfigClientErrorHandler.handleError(it, sourceId.toString())
+          ConfigClientErrorHandler.handleError(it)
         }
 
     log.debug(HTTP_RESPONSE_BODY_DEBUG_MESSAGE + result)
@@ -165,7 +165,7 @@ open class SourceServiceImpl(
       kotlin.runCatching { sourceHandler.deleteSource(sourceIdRequestBody) }
         .onFailure {
           log.error("Error for deleteSource", it)
-          ConfigClientErrorHandler.handleError(it, sourceId.toString())
+          ConfigClientErrorHandler.handleError(it)
         }
     log.debug(HTTP_RESPONSE_BODY_DEBUG_MESSAGE + result)
   }
@@ -181,7 +181,7 @@ open class SourceServiceImpl(
       kotlin.runCatching { sourceHandler.getSource(sourceIdRequestBody) }
         .onFailure {
           log.error("Error for getSource", it)
-          ConfigClientErrorHandler.handleError(it, sourceId.toString())
+          ConfigClientErrorHandler.handleError(it)
         }
     log.debug(HTTP_RESPONSE_BODY_DEBUG_MESSAGE + result)
     return SourceReadMapper.from(result.getOrNull()!!)
@@ -200,7 +200,7 @@ open class SourceServiceImpl(
       kotlin.runCatching { schedulerHandler.discoverSchemaForSourceFromSourceId(sourceDiscoverSchemaRequestBody) }
         .onFailure {
           log.error("Error for getSourceSchema", it)
-          ConfigClientErrorHandler.handleError(it, sourceId.toString())
+          ConfigClientErrorHandler.handleError(it)
         }
 
     val sourceDefinitionSpecificationRead = result.getOrNull()!!
@@ -212,7 +212,7 @@ open class SourceServiceImpl(
       } else if (sourceDefinitionSpecificationRead.jobInfo?.failureReason!!.internalMessage != null) {
         errorMessage += " logs:" + sourceDefinitionSpecificationRead.jobInfo!!.failureReason!!.internalMessage
       }
-      throw UnexpectedProblem(HttpStatus.BAD_REQUEST, errorMessage)
+      throw UnexpectedProblem(ProblemMessageData().message(errorMessage))
     }
     return result.getOrNull()!!
   }
@@ -237,7 +237,7 @@ open class SourceServiceImpl(
       kotlin.runCatching { sourceHandler.listSourcesForWorkspaces(listResourcesForWorkspacesRequestBody) }
         .onFailure {
           log.error("Error for listSourcesForWorkspaces", it)
-          ConfigClientErrorHandler.handleError(it, workspaceIds.toString())
+          ConfigClientErrorHandler.handleError(it)
         }
 
     log.debug(HTTP_RESPONSE_BODY_DEBUG_MESSAGE + result)

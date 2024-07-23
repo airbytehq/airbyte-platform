@@ -2,12 +2,6 @@
 @use "scss/mixins";
 @use "scss/colors";
 
-.leftPanel {
-  > *:last-child {
-    padding-bottom: variables.$spacing-page-bottom-cloud;
-  }
-}
-
 .rightPanel {
   @include mixins.left-shadow;
 

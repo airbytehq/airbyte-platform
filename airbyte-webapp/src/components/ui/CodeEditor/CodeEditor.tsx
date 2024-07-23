@@ -1,5 +1,5 @@
 import Editor, { Monaco, useMonaco } from "@monaco-editor/react";
-import { editor } from "monaco-editor/esm/vs/editor/editor.api";
+import { KeyCode, KeyMod, editor } from "monaco-editor/esm/vs/editor/editor.api";
 import React, { useCallback, useEffect } from "react";
 
 import { useAirbyteTheme } from "hooks/theme/useAirbyteTheme";
@@ -18,6 +18,7 @@ interface CodeEditorProps {
   automaticLayout?: boolean;
   showSuggestions?: boolean;
   paddingTop?: boolean;
+  bubbleUpUndoRedo?: boolean;
 }
 
 function hslToHex(hue: number, saturation: number, lightness: number) {
@@ -50,6 +51,7 @@ export const CodeEditor: React.FC<CodeEditorProps> = ({
   automaticLayout,
   paddingTop,
   showSuggestions = true,
+  bubbleUpUndoRedo,
 }) => {
   const monaco = useMonaco();
   const { colorValues } = useAirbyteTheme();
@@ -96,7 +98,22 @@ export const CodeEditor: React.FC<CodeEditorProps> = ({
   return (
     <Editor
       beforeMount={setAirbyteTheme}
-      onMount={onMount}
+      onMount={(editor: editor.IStandaloneCodeEditor) => {
+        // In cases like the Builder, we have our own undo/redo framework in place, so we want to bubble up the
+        // undo/redo keyboard commands to the surrounding page when the user presses those keys, rather than triggering
+        // monaco's internal undo/redo implementation.
+        editor.addCommand(KeyMod.CtrlCmd | KeyCode.KeyZ, () =>
+          bubbleUpUndoRedo ? bubbleUpUndoRedoEvent("undo", editor) : editor.trigger(undefined, "undo", undefined)
+        );
+        editor.addCommand(KeyMod.CtrlCmd | KeyCode.KeyY, () =>
+          bubbleUpUndoRedo ? bubbleUpUndoRedoEvent("redo", editor) : editor.trigger(undefined, "redo", undefined)
+        );
+        editor.addCommand(KeyMod.CtrlCmd | KeyMod.Shift | KeyCode.KeyZ, () =>
+          bubbleUpUndoRedo ? bubbleUpUndoRedoEvent("redo", editor) : editor.trigger(undefined, "redo", undefined)
+        );
+
+        onMount?.(editor);
+      }}
       loading={<Spinner />}
       value={value}
       onChange={onChange}
@@ -121,4 +138,16 @@ export const CodeEditor: React.FC<CodeEditorProps> = ({
       }}
     />
   );
+};
+
+const bubbleUpUndoRedoEvent = (type: "undo" | "redo", editor: editor.IStandaloneCodeEditor) => {
+  const event = new KeyboardEvent("keydown", {
+    key: "z",
+    code: "KeyZ",
+    ctrlKey: true,
+    shiftKey: type === "redo",
+    bubbles: true,
+    cancelable: true,
+  });
+  editor.getDomNode()?.dispatchEvent(event);
 };

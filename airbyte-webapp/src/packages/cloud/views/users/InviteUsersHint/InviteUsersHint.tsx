@@ -9,9 +9,9 @@ import { useCurrentWorkspace } from "core/api";
 import { FeatureItem, useFeature } from "core/services/features";
 import { useIntent } from "core/utils/rbac";
 import { useModalService } from "hooks/services/Modal";
+import { AddUserModal } from "pages/SettingsPage/pages/AccessManagementPage/components/AddUserModal";
 
 import styles from "./InviteUsersHint.module.scss";
-import { AddUserModal } from "../../workspaces/WorkspaceSettingsView/components/AddUserModal";
 
 export interface InviteUsersHintProps {
   connectorType: "source" | "destination";

@@ -2,10 +2,11 @@ import { InstanceConfigurationResponse } from "core/api/types/AirbyteClient";
 
 export const mockProInstanceConfig: InstanceConfigurationResponse = {
   auth: {
+    mode: "oidc",
     clientId: "test-client-id",
     defaultRealm: "test-default-realm",
   },
-  webappUrl: "http://test-airbyte-webapp-url.com",
+  airbyteUrl: "http://test-airbyte-webapp-url.com",
   edition: "pro",
   version: "0.50.1",
   licenseType: "pro",

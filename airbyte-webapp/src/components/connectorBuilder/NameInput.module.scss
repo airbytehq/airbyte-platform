@@ -9,33 +9,44 @@
   cursor: text;
 
   // make look like input
-  font-weight: 700;
-  font-size: 19px;
   background: none;
-  padding: 7px 8px;
-  line-height: 20px;
   border: 1px solid transparent;
-  border-radius: variables.$border-radius-md;
+  border-radius: variables.$border-radius-sm;
+  max-width: 500px;
 
-  &:hover {
-    background-color: colors.$grey-100;
+  &.showBorder {
     border-color: colors.$grey-200;
   }
+
+  &:hover {
+    border-color: colors.$grey-300;
+  }
+}
+
+.sizeS {
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1.4;
+  padding: 4px 6px;
+}
+
+.sizeM {
+  font-size: 19px;
+  font-weight: 700;
+  line-height: 1.4;
+  padding: 7px 8px;
 }
 
 .invalid {
   color: colors.$red;
 }
 
-.input {
-  font-weight: 700;
-  font-size: 19px;
-}
-
 .inputContainer {
-  flex-basis: 400px;
+  min-width: 0;
+  width: 100%;
+  flex-grow: 1;
   flex-shrink: 1;
-  background-color: colors.$grey-100;
-  border-color: colors.$grey-200;
-  border-radius: variables.$border-radius-md;
+  border-color: colors.$grey-300;
+  border-radius: variables.$border-radius-sm;
+  max-width: 500px;
 }

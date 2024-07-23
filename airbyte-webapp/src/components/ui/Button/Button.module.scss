@@ -40,11 +40,18 @@
     opacity: 0.5;
   }
 
+  .childrenContainer {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
   .buttonIcon {
     display: flex;
     justify-content: center;
     align-content: center;
     position: relative;
+    flex: 0 0 auto;
 
     &.positionLeft {
       &.withLabel {
@@ -250,6 +257,33 @@
     .buttonIcon {
       &.isRegularIcon {
         color: colors.$transparentColor;
+      }
+    }
+  }
+
+  &.typeClearDark {
+    background-color: colors.$transparentColor;
+    color: colors.$grey-500;
+    box-shadow: none;
+    padding: 0;
+
+    & .buttonIcon {
+      color: colors.$grey-400;
+    }
+
+    &:hover {
+      color: colors.$grey-600;
+
+      & .buttonIcon {
+        color: colors.$grey-500;
+      }
+    }
+
+    &:active {
+      color: colors.$grey-600;
+
+      & .buttonIcon {
+        color: colors.$grey-500;
       }
     }
   }

@@ -6,7 +6,6 @@ package io.airbyte.commons.server.converters;
 
 import io.airbyte.api.model.generated.AttemptFailureSummary;
 import io.airbyte.api.model.generated.AttemptInfoRead;
-import io.airbyte.api.model.generated.AttemptNormalizationStatusRead;
 import io.airbyte.api.model.generated.AttemptRead;
 import io.airbyte.api.model.generated.AttemptStats;
 import io.airbyte.api.model.generated.AttemptStatus;
@@ -21,6 +20,7 @@ import io.airbyte.api.model.generated.JobInfoLightRead;
 import io.airbyte.api.model.generated.JobInfoRead;
 import io.airbyte.api.model.generated.JobOptionalRead;
 import io.airbyte.api.model.generated.JobRead;
+import io.airbyte.api.model.generated.JobRefreshConfig;
 import io.airbyte.api.model.generated.JobStatus;
 import io.airbyte.api.model.generated.JobWithAttemptsRead;
 import io.airbyte.api.model.generated.LogRead;
@@ -35,6 +35,7 @@ import io.airbyte.commons.server.scheduler.SynchronousResponse;
 import io.airbyte.commons.version.AirbyteVersion;
 import io.airbyte.config.Configs.WorkerEnvironment;
 import io.airbyte.config.JobConfig.ConfigType;
+import io.airbyte.config.JobConfigProxy;
 import io.airbyte.config.JobOutput;
 import io.airbyte.config.ResetSourceConfiguration;
 import io.airbyte.config.StandardSyncOutput;
@@ -43,8 +44,8 @@ import io.airbyte.config.StreamSyncStats;
 import io.airbyte.config.SyncStats;
 import io.airbyte.config.helpers.LogClientSingleton;
 import io.airbyte.config.helpers.LogConfigs;
+import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.persistence.job.models.Attempt;
-import io.airbyte.persistence.job.models.AttemptNormalizationStatus;
 import io.airbyte.persistence.job.models.Job;
 import jakarta.annotation.Nullable;
 import jakarta.inject.Singleton;
@@ -53,7 +54,9 @@ import java.nio.file.Path;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 /**
  * Convert between API and internal versions of job models.
@@ -63,10 +66,14 @@ public class JobConverter {
 
   private final WorkerEnvironment workerEnvironment;
   private final LogConfigs logConfigs;
+  private final FeatureFlagClient featureFlagClient;
 
-  public JobConverter(final WorkerEnvironment workerEnvironment, final LogConfigs logConfigs) {
+  public JobConverter(final WorkerEnvironment workerEnvironment,
+                      final LogConfigs logConfigs,
+                      final FeatureFlagClient featureFlagClient) {
     this.workerEnvironment = workerEnvironment;
     this.logConfigs = logConfigs;
+    this.featureFlagClient = featureFlagClient;
   }
 
   public JobInfoRead getJobInfoRead(final Job job) {
@@ -116,10 +123,37 @@ public class JobConverter {
         .configType(configType)
         .enabledStreams(extractEnabledStreams(job))
         .resetConfig(extractResetConfigIfReset(job).orElse(null))
+        .refreshConfig(extractRefreshConfigIfNeeded(job).orElse(null))
         .createdAt(job.getCreatedAtInSecond())
         .updatedAt(job.getUpdatedAtInSecond())
         .startedAt(job.getStartedAtInSecond().isPresent() ? job.getStartedAtInSecond().get() : null)
         .status(Enums.convertTo(job.getStatus(), JobStatus.class));
+  }
+
+  /**
+   * If the job type is REFRESH or CLEAR/RESET, extracts the streams from the job config. Otherwise,
+   * returns null.
+   *
+   * @param job - job
+   * @return List of the streams associated with the job
+   */
+  public static List<io.airbyte.protocol.models.StreamDescriptor> getStreamsAssociatedWithJob(final Job job) {
+    final JobRead jobRead = getJobRead(job);
+    switch (job.getConfigType()) {
+      case REFRESH -> {
+        return jobRead.getRefreshConfig().getStreamsToRefresh().stream().map(streamDescriptor -> new io.airbyte.protocol.models.StreamDescriptor()
+            .withName(streamDescriptor.getName())
+            .withNamespace(streamDescriptor.getNamespace())).collect(Collectors.toList());
+      }
+      case CLEAR, RESET_CONNECTION -> {
+        return jobRead.getResetConfig().getStreamsToReset().stream().map(streamDescriptor -> new io.airbyte.protocol.models.StreamDescriptor()
+            .withName(streamDescriptor.getName())
+            .withNamespace(streamDescriptor.getNamespace())).collect(Collectors.toList());
+      }
+      default -> {
+        return null;
+      }
+    }
   }
 
   /**
@@ -140,6 +174,28 @@ public class JobConverter {
               .stream()
               .map(ProtocolConverters::streamDescriptorToApi)
               .toList()));
+    } else {
+      return Optional.empty();
+    }
+  }
+
+  /**
+   * If the job is of type RESET, extracts the part of the reset config that we expose in the API.
+   * Otherwise, returns empty optional.
+   *
+   * @param job - job
+   * @return api representation of refresh config
+   */
+  public static Optional<JobRefreshConfig> extractRefreshConfigIfNeeded(final Job job) {
+    if (job.getConfigType() == ConfigType.REFRESH) {
+      final List<StreamDescriptor> refreshedStreams = job.getConfig().getRefresh().getStreamsToRefresh()
+          .stream().flatMap(refreshStream -> Stream.ofNullable(refreshStream.getStreamDescriptor()))
+          .map(ProtocolConverters::streamDescriptorToApi)
+          .toList();
+      if (refreshedStreams == null || refreshedStreams.isEmpty()) {
+        return Optional.empty();
+      }
+      return Optional.ofNullable(new JobRefreshConfig().streamsToRefresh(refreshedStreams));
     } else {
       return Optional.empty();
     }
@@ -224,21 +280,22 @@ public class JobConverter {
     if (failureSummary == null) {
       return null;
     }
-
     return new AttemptFailureSummary()
-        .failures(failureSummary.getFailures().stream().map(JobConverter::getFailureReason).collect(Collectors.toList()))
+        .failures(failureSummary.getFailures().stream()
+            .map(failureReason -> getFailureReason(failureReason, TimeUnit.SECONDS.toMillis(attempt.getUpdatedAtInSecond())))
+            .toList())
         .partialSuccess(failureSummary.getPartialSuccess());
   }
 
   public LogRead getLogRead(final Path logPath) {
     try {
-      return new LogRead().logLines(LogClientSingleton.getInstance().getJobLogFile(workerEnvironment, logConfigs, logPath));
+      return new LogRead().logLines(LogClientSingleton.getInstance().getJobLogFile(workerEnvironment, logConfigs, logPath, featureFlagClient));
     } catch (final IOException e) {
       throw new RuntimeException(e);
     }
   }
 
-  private static FailureReason getFailureReason(final @Nullable io.airbyte.config.FailureReason failureReason) {
+  private static FailureReason getFailureReason(final @Nullable io.airbyte.config.FailureReason failureReason, final long defaultTimestamp) {
     if (failureReason == null) {
       return null;
     }
@@ -248,7 +305,7 @@ public class JobConverter {
         .externalMessage(failureReason.getExternalMessage())
         .internalMessage(failureReason.getInternalMessage())
         .stacktrace(failureReason.getStacktrace())
-        .timestamp(failureReason.getTimestamp())
+        .timestamp(failureReason.getTimestamp() != null ? failureReason.getTimestamp() : defaultTimestamp)
         .retryable(failureReason.getRetryable());
   }
 
@@ -268,21 +325,13 @@ public class JobConverter {
         .succeeded(metadata.isSucceeded())
         .connectorConfigurationUpdated(metadata.isConnectorConfigurationUpdated())
         .logs(getLogRead(metadata.getLogPath()))
-        .failureReason(getFailureReason(metadata.getFailureReason()));
-  }
-
-  public static AttemptNormalizationStatusRead convertAttemptNormalizationStatus(
-                                                                                 final AttemptNormalizationStatus databaseStatus) {
-    return new AttemptNormalizationStatusRead()
-        .attemptNumber(databaseStatus.attemptNumber())
-        .hasRecordsCommitted(!databaseStatus.recordsCommitted().isEmpty())
-        .recordsCommitted(databaseStatus.recordsCommitted().orElse(0L))
-        .hasNormalizationFailed(databaseStatus.normalizationFailed());
+        .failureReason(getFailureReason(metadata.getFailureReason(), TimeUnit.SECONDS.toMillis(metadata.getEndedAt())));
   }
 
   private static List<StreamDescriptor> extractEnabledStreams(final Job job) {
-    return job.getConfig().getSync() != null
-        ? job.getConfig().getSync().getConfiguredAirbyteCatalog().getStreams().stream()
+    final var configuredCatalog = new JobConfigProxy(job.getConfig()).getConfiguredCatalog();
+    return configuredCatalog != null
+        ? configuredCatalog.getStreams().stream()
             .map(s -> new StreamDescriptor().name(s.getStream().getName()).namespace(s.getStream().getNamespace())).collect(Collectors.toList())
         : List.of();
   }

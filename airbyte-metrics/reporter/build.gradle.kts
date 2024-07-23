@@ -8,12 +8,6 @@ configurations {
   create("jdbc")
 }
 
-configurations.all {
-  resolutionStrategy {
-    force(libs.jooq)
-  }
-}
-
 dependencies {
   annotationProcessor(platform(libs.micronaut.platform))
   annotationProcessor(libs.bundles.micronaut.annotation.processor)
@@ -21,10 +15,10 @@ dependencies {
   implementation(platform(libs.micronaut.platform))
   implementation(libs.bundles.micronaut)
 
-  implementation(project(":airbyte-config:config-models"))
-  implementation(project(":airbyte-db:jooq"))
-  implementation(project(":airbyte-db:db-lib"))
-  implementation(project(":airbyte-metrics:metrics-lib"))
+  implementation(project(":oss:airbyte-config:config-models"))
+  implementation(project(":oss:airbyte-db:jooq"))
+  implementation(project(":oss:airbyte-db:db-lib"))
+  implementation(project(":oss:airbyte-metrics:metrics-lib"))
   implementation(libs.jooq)
 
   runtimeOnly(libs.snakeyaml)
@@ -32,7 +26,7 @@ dependencies {
   testAnnotationProcessor(platform(libs.micronaut.platform))
   testAnnotationProcessor(libs.bundles.micronaut.test.annotation.processor)
 
-  testImplementation(project(":airbyte-test-utils"))
+  testImplementation(project(":oss:airbyte-test-utils"))
   testImplementation(libs.bundles.micronaut.test)
   testImplementation(libs.postgresql)
   testImplementation(libs.platform.testcontainers.postgresql)

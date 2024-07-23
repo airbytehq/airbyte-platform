@@ -4,7 +4,7 @@ import { interceptGetConnectionRequest, waitForGetConnectionRequest } from "comm
 import { RouteHandler } from "cypress/types/net-stubbing";
 
 const replicationTab = "div[data-id='replication-step']";
-const syncEnabledSwitch = "[data-testid='enabledControl-switch']";
+const syncEnabledSwitch = "[data-testid='connection-status-switch']";
 
 interface VisitOptions {
   interceptGetHandler?: RouteHandler;

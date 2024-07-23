@@ -1,15 +1,18 @@
+import { UseQueryResult } from "@tanstack/react-query";
 import { renderHook } from "@testing-library/react";
 import dayjs from "dayjs";
 
-import { mockConnection } from "test-utils";
+import { mockConnection } from "test-utils/mock-data/mockConnection";
 
-import { useListConnectionsStatuses, useGetConnection } from "core/api";
+import { useListConnectionsStatuses, useGetConnection, useGetConnectionSyncProgress } from "core/api";
 import {
   ConnectionScheduleDataBasicSchedule,
   ConnectionScheduleDataCron,
   ConnectionStatus,
   ConnectionStatusRead,
+  ConnectionSyncProgressRead,
   FailureType,
+  JobConfigType,
   JobStatus,
   SchemaChange,
   WebBackendConnectionRead,
@@ -41,6 +44,11 @@ const mockUseGetConnection = useGetConnection as unknown as jest.Mock<WebBackend
 jest.mock("core/api");
 const mockUseListConnectionsStatuses = useListConnectionsStatuses as unknown as jest.Mock<
   Array<Partial<ConnectionStatusRead>>
+>;
+
+jest.mock("core/api");
+const mockUseGetConnectionSyncProgress = useGetConnectionSyncProgress as unknown as jest.Mock<
+  Partial<UseQueryResult<ConnectionSyncProgressRead, unknown>>
 >;
 
 interface MockSetup {
@@ -80,6 +88,9 @@ const resetAndSetupMocks = ({
   mockUseSchemaChanges.mockImplementation(() => ({
     hasBreakingSchemaChange,
   }));
+  mockUseGetConnectionSyncProgress.mockReturnValue({
+    data: { connectionId: mockConnection.connectionId, streams: [], configType: JobConfigType.sync },
+  });
 };
 
 describe("isConnectionLate", () => {

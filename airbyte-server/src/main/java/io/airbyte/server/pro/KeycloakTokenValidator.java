@@ -9,9 +9,9 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.airbyte.commons.auth.AuthRole;
 import io.airbyte.commons.auth.config.AirbyteKeycloakConfiguration;
+import io.airbyte.commons.auth.support.JwtTokenParser;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.commons.license.annotation.RequiresAirbyteProEnabled;
-import io.airbyte.commons.server.support.JwtTokenParser;
 import io.airbyte.commons.server.support.RbacRoleHelper;
 import io.micrometer.common.util.StringUtils;
 import io.micronaut.http.HttpRequest;
@@ -72,7 +72,7 @@ public class KeycloakTokenValidator implements TokenValidator<HttpRequest<?>> {
     final Collection<String> roles = new HashSet<>();
 
     try {
-      final String jwtPayloadString = new String(Base64.getDecoder().decode(payload), StandardCharsets.UTF_8);
+      final String jwtPayloadString = new String(Base64.getUrlDecoder().decode(payload), StandardCharsets.UTF_8);
       final JsonNode jwtPayload = Jsons.deserialize(jwtPayloadString);
       log.debug("jwtPayload: {}", jwtPayload);
 

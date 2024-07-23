@@ -3,7 +3,7 @@ import { Meta, StoryFn } from "@storybook/react";
 import { Breadcrumbs, BreadcrumbsDataItem } from "./Breadcrumbs";
 
 export default {
-  title: "UI/NextBreadcrumbs",
+  title: "UI/Breadcrumbs",
   component: Breadcrumbs,
   argTypes: {},
 } as Meta<typeof Breadcrumbs>;

@@ -16,6 +16,7 @@ import io.airbyte.workload.launcher.model.setSourceLabels
 import io.airbyte.workload.launcher.pods.KubePodClient.Companion.ORCHESTRATOR_STARTUP_TIMEOUT_VALUE
 import io.airbyte.workload.launcher.pods.KubePodClient.Companion.POD_INIT_TIMEOUT_VALUE
 import io.airbyte.workload.launcher.pods.KubePodClient.Companion.REPL_CONNECTOR_STARTUP_TIMEOUT_VALUE
+import io.airbyte.workload.launcher.pods.KubePodClientTest.Fixtures.WORKLOAD_ID
 import io.airbyte.workload.launcher.pods.KubePodClientTest.Fixtures.checkLauncherInput
 import io.airbyte.workload.launcher.pods.KubePodClientTest.Fixtures.connectorKubeInput
 import io.airbyte.workload.launcher.pods.KubePodClientTest.Fixtures.discoverLauncherInput
@@ -23,7 +24,6 @@ import io.airbyte.workload.launcher.pods.KubePodClientTest.Fixtures.replKubeInpu
 import io.airbyte.workload.launcher.pods.KubePodClientTest.Fixtures.replLauncherInput
 import io.airbyte.workload.launcher.pods.KubePodClientTest.Fixtures.sharedLabels
 import io.airbyte.workload.launcher.pods.KubePodClientTest.Fixtures.specLauncherInput
-import io.airbyte.workload.launcher.pods.KubePodClientTest.Fixtures.workloadId
 import io.airbyte.workload.launcher.pods.factories.ConnectorPodFactory
 import io.airbyte.workload.launcher.pods.factories.OrchestratorPodFactory
 import io.fabric8.kubernetes.api.model.EnvVar
@@ -129,11 +129,11 @@ class KubePodClientTest {
 
     every { labeler.getSharedLabels(any(), any(), any(), any()) } returns sharedLabels
 
-    every { mapper.toKubeInput(workloadId, replInput, sharedLabels) } returns replKubeInput
-    every { mapper.toKubeInput(workloadId, resetInput, sharedLabels) } returns replKubeInput
-    every { mapper.toKubeInput(workloadId, checkInput, sharedLabels) } returns connectorKubeInput
-    every { mapper.toKubeInput(workloadId, discoverInput, sharedLabels) } returns connectorKubeInput
-    every { mapper.toKubeInput(workloadId, specInput, sharedLabels) } returns connectorKubeInput
+    every { mapper.toKubeInput(WORKLOAD_ID, replInput, sharedLabels) } returns replKubeInput
+    every { mapper.toKubeInput(WORKLOAD_ID, resetInput, sharedLabels) } returns replKubeInput
+    every { mapper.toKubeInput(WORKLOAD_ID, checkInput, sharedLabels, "/log/path") } returns connectorKubeInput
+    every { mapper.toKubeInput(WORKLOAD_ID, discoverInput, sharedLabels, "/log/path") } returns connectorKubeInput
+    every { mapper.toKubeInput(WORKLOAD_ID, specInput, sharedLabels, "/log/path") } returns connectorKubeInput
 
     every {
       orchestratorPodFactory.create(
@@ -236,13 +236,13 @@ class KubePodClientTest {
   @Test
   fun `launchReplication sets pass-through labels for propagation to source and destination`() {
     every { labeler.getSharedLabels(any(), any(), any(), any()) } returns sharedLabels
-    every { mapper.toKubeInput(workloadId, replInput, sharedLabels) } returns replKubeInput
+    every { mapper.toKubeInput(WORKLOAD_ID, replInput, sharedLabels) } returns replKubeInput
 
     client.launchReplication(replInput, replLauncherInput)
 
     val inputWithLabels = replInput.setDestinationLabels(sharedLabels).setSourceLabels(sharedLabels)
 
-    verify { mapper.toKubeInput(workloadId, inputWithLabels, sharedLabels) }
+    verify { mapper.toKubeInput(WORKLOAD_ID, inputWithLabels, sharedLabels) }
   }
 
   @Test
@@ -439,26 +439,26 @@ class KubePodClientTest {
         listOf(EnvVar("extra-env", "val6", null)),
       )
 
-    val workloadId = "workload-id"
-    val passThroughLabels = mapOf("labels" to "we get", "from" to "the activity")
+    const val WORKLOAD_ID = "workload-id"
+    private val passThroughLabels = mapOf("labels" to "we get", "from" to "the activity")
     val sharedLabels = mapOf("arbitrary" to "label", "literally" to "anything")
 
-    val replLauncherInput = RecordFixtures.launcherInput(workloadId = workloadId, labels = passThroughLabels)
+    val replLauncherInput = RecordFixtures.launcherInput(workloadId = WORKLOAD_ID, labels = passThroughLabels)
     val checkLauncherInput =
       RecordFixtures.launcherInput(
-        workloadId = workloadId,
+        workloadId = WORKLOAD_ID,
         labels = passThroughLabels,
         workloadType = WorkloadType.CHECK,
       )
     val discoverLauncherInput =
       RecordFixtures.launcherInput(
-        workloadId = workloadId,
+        workloadId = WORKLOAD_ID,
         labels = passThroughLabels,
         workloadType = WorkloadType.DISCOVER,
       )
     val specLauncherInput =
       RecordFixtures.launcherInput(
-        workloadId = workloadId,
+        workloadId = WORKLOAD_ID,
         labels = passThroughLabels,
         workloadType = WorkloadType.SPEC,
       )

@@ -160,7 +160,7 @@ public class BufferedReplicationWorker implements ReplicationWorker {
     try {
       final ReplicationContext replicationContext = getReplicationContext(replicationInput);
       final ReplicationFeatureFlags flags = replicationFeatureFlagReader.readReplicationFeatureFlags();
-      replicationWorkerHelper.initialize(replicationContext, flags, jobRoot, replicationInput.getCatalog());
+      replicationWorkerHelper.initialize(replicationContext, flags, jobRoot, replicationInput.getCatalog(), replicationInput.getState());
 
       final CloseableWithTimeout destinationWithCloseTimeout = new CloseableWithTimeout(destination, mdc, flags);
       // note: resources are closed in the opposite order in which they are declared. thus source will be

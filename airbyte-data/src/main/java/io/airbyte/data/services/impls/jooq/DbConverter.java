@@ -38,13 +38,13 @@ import io.airbyte.config.ActorDefinitionVersion.SupportState;
 import io.airbyte.config.AllowedHosts;
 import io.airbyte.config.BreakingChangeScope;
 import io.airbyte.config.ConnectorBuilderProject;
+import io.airbyte.config.ConnectorRegistryEntryMetrics;
 import io.airbyte.config.DeclarativeManifest;
 import io.airbyte.config.DestinationConnection;
 import io.airbyte.config.DestinationOAuthParameter;
 import io.airbyte.config.FieldSelectionData;
 import io.airbyte.config.Geography;
 import io.airbyte.config.JobSyncConfig.NamespaceDefinitionType;
-import io.airbyte.config.NormalizationDestinationDefinitionConfig;
 import io.airbyte.config.Notification;
 import io.airbyte.config.NotificationSettings;
 import io.airbyte.config.Organization;
@@ -79,8 +79,8 @@ import java.time.LocalDateTime;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
-import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
 import org.jooq.Record;
@@ -223,7 +223,6 @@ public class DbConverter {
         .withSourceId(record.get(ACTOR.ID))
         .withConfiguration(Jsons.deserialize(record.get(ACTOR.CONFIGURATION).data()))
         .withWorkspaceId(record.get(ACTOR.WORKSPACE_ID))
-        .withDefaultVersionId(record.get(ACTOR.DEFAULT_VERSION_ID))
         .withSourceDefinitionId(record.get(ACTOR.ACTOR_DEFINITION_ID))
         .withTombstone(record.get(ACTOR.TOMBSTONE))
         .withName(record.get(ACTOR.NAME));
@@ -240,7 +239,6 @@ public class DbConverter {
         .withDestinationId(record.get(ACTOR.ID))
         .withConfiguration(Jsons.deserialize(record.get(ACTOR.CONFIGURATION).data()))
         .withWorkspaceId(record.get(ACTOR.WORKSPACE_ID))
-        .withDefaultVersionId(record.get(ACTOR.DEFAULT_VERSION_ID))
         .withDestinationDefinitionId(record.get(ACTOR.ACTOR_DEFINITION_ID))
         .withTombstone(record.get(ACTOR.TOMBSTONE))
         .withName(record.get(ACTOR.NAME));
@@ -278,6 +276,9 @@ public class DbConverter {
         .withResourceRequirements(record.get(ACTOR_DEFINITION.RESOURCE_REQUIREMENTS) == null
             ? null
             : Jsons.deserialize(record.get(ACTOR_DEFINITION.RESOURCE_REQUIREMENTS).data(), ActorDefinitionResourceRequirements.class))
+        .withMetrics(record.get(ACTOR_DEFINITION.METRICS) == null
+            ? null
+            : Jsons.deserialize(record.get(ACTOR_DEFINITION.METRICS).data(), ConnectorRegistryEntryMetrics.class))
         .withMaxSecondsBetweenMessages(maxSecondsBetweenMessage);
   }
 
@@ -297,6 +298,9 @@ public class DbConverter {
         .withTombstone(record.get(ACTOR_DEFINITION.TOMBSTONE))
         .withPublic(record.get(ACTOR_DEFINITION.PUBLIC))
         .withCustom(record.get(ACTOR_DEFINITION.CUSTOM))
+        .withMetrics(record.get(ACTOR_DEFINITION.METRICS) == null
+            ? null
+            : Jsons.deserialize(record.get(ACTOR_DEFINITION.METRICS).data(), ConnectorRegistryEntryMetrics.class))
         .withResourceRequirements(record.get(ACTOR_DEFINITION.RESOURCE_REQUIREMENTS) == null
             ? null
             : Jsons.deserialize(record.get(ACTOR_DEFINITION.RESOURCE_REQUIREMENTS).data(), ActorDefinitionResourceRequirements.class));
@@ -512,6 +516,9 @@ public class DbConverter {
             : Enums.toEnum(record.get(ACTOR_DEFINITION_VERSION.RELEASE_STAGE, String.class), ReleaseStage.class).orElseThrow())
         .withReleaseDate(record.get(ACTOR_DEFINITION_VERSION.RELEASE_DATE) == null ? null
             : record.get(ACTOR_DEFINITION_VERSION.RELEASE_DATE).toString())
+        .withLastPublished(record.get(ACTOR_DEFINITION_VERSION.LAST_PUBLISHED) == null ? null
+            : Date.from(record.get(ACTOR_DEFINITION_VERSION.LAST_PUBLISHED).toInstant()))
+        .withCdkVersion(record.get(ACTOR_DEFINITION_VERSION.CDK_VERSION))
         .withAllowedHosts(record.get(ACTOR_DEFINITION_VERSION.ALLOWED_HOSTS) == null
             ? null
             : Jsons.deserialize(record.get(ACTOR_DEFINITION_VERSION.ALLOWED_HOSTS).data(), AllowedHosts.class))
@@ -519,17 +526,9 @@ public class DbConverter {
             ? null
             : Jsons.deserialize(record.get(ACTOR_DEFINITION_VERSION.SUGGESTED_STREAMS).data(),
                 SuggestedStreams.class))
-        .withSupportsDbt(record.get(ACTOR_DEFINITION_VERSION.SUPPORTS_DBT))
-        .withNormalizationConfig(
-            Objects.nonNull(record.get(ACTOR_DEFINITION_VERSION.NORMALIZATION_REPOSITORY))
-                && Objects.nonNull(record.get(ACTOR_DEFINITION_VERSION.NORMALIZATION_TAG))
-                && Objects.nonNull(record.get(ACTOR_DEFINITION_VERSION.NORMALIZATION_INTEGRATION_TYPE))
-                    ? new NormalizationDestinationDefinitionConfig()
-                        .withNormalizationRepository(record.get(ACTOR_DEFINITION_VERSION.NORMALIZATION_REPOSITORY))
-                        .withNormalizationTag(record.get(ACTOR_DEFINITION_VERSION.NORMALIZATION_TAG))
-                        .withNormalizationIntegrationType(record.get(ACTOR_DEFINITION_VERSION.NORMALIZATION_INTEGRATION_TYPE))
-                    : null)
-        .withSupportState(Enums.toEnum(record.get(ACTOR_DEFINITION_VERSION.SUPPORT_STATE, String.class), SupportState.class).orElseThrow());
+        .withSupportsRefreshes(record.get(ACTOR_DEFINITION_VERSION.SUPPORTS_REFRESHES))
+        .withSupportState(Enums.toEnum(record.get(ACTOR_DEFINITION_VERSION.SUPPORT_STATE, String.class), SupportState.class).orElseThrow())
+        .withInternalSupportLevel(record.get(ACTOR_DEFINITION_VERSION.INTERNAL_SUPPORT_LEVEL, Long.class));
   }
 
   public static SecretPersistenceCoordinate buildSecretPersistenceCoordinate(final Record record) {

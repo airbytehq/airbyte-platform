@@ -17,6 +17,7 @@ import io.airbyte.config.secrets.SecretsRepositoryReader;
 import io.airbyte.config.secrets.SecretsRepositoryWriter;
 import io.airbyte.data.helpers.ActorDefinitionVersionUpdater;
 import io.airbyte.data.services.ConnectionService;
+import io.airbyte.data.services.OrganizationService;
 import io.airbyte.data.services.SecretPersistenceConfigService;
 import io.airbyte.data.services.impls.jooq.ActorDefinitionServiceJooqImpl;
 import io.airbyte.data.services.impls.jooq.CatalogServiceJooqImpl;
@@ -24,6 +25,7 @@ import io.airbyte.data.services.impls.jooq.ConnectorBuilderServiceJooqImpl;
 import io.airbyte.data.services.impls.jooq.DestinationServiceJooqImpl;
 import io.airbyte.data.services.impls.jooq.OAuthServiceJooqImpl;
 import io.airbyte.data.services.impls.jooq.OperationServiceJooqImpl;
+import io.airbyte.data.services.impls.jooq.OrganizationServiceJooqImpl;
 import io.airbyte.data.services.impls.jooq.SourceServiceJooqImpl;
 import io.airbyte.data.services.impls.jooq.WorkspaceServiceJooqImpl;
 import io.airbyte.featureflag.FeatureFlagClient;
@@ -46,6 +48,7 @@ class UserPersistenceTest extends BaseConfigDatabaseTest {
 
   private UserPersistence userPersistence;
   private ConfigRepository configRepository;
+  private OrganizationService organizationService;
 
   @BeforeEach
   void setup() {
@@ -86,6 +89,7 @@ class UserPersistenceTest extends BaseConfigDatabaseTest {
             secretsRepositoryWriter,
             secretPersistenceConfigService));
     userPersistence = new UserPersistence(database);
+    organizationService = new OrganizationServiceJooqImpl(database);
   }
 
   @Nested
@@ -98,6 +102,8 @@ class UserPersistenceTest extends BaseConfigDatabaseTest {
     }
 
     private void setupTestData() throws IOException, JsonValidationException {
+      // Create organization
+      organizationService.writeOrganization(MockData.defaultOrganization());
       // write workspace table
       for (final StandardWorkspace workspace : MockData.standardWorkspaces()) {
         configRepository.writeStandardWorkspaceNoSecrets(workspace);
@@ -188,6 +194,14 @@ class UserPersistenceTest extends BaseConfigDatabaseTest {
         .withPba(false)
         .withOrgLevelBilling(false);
 
+    private static final Organization ORG_2 = new Organization()
+        .withUserId(UUID.randomUUID())
+        .withOrganizationId(UUID.randomUUID())
+        .withName("Org 2")
+        .withEmail("test@org.com")
+        .withPba(false)
+        .withOrgLevelBilling(false);
+
     private static final StandardWorkspace WORKSPACE_1_ORG_1 = new StandardWorkspace()
         .withWorkspaceId(UUID.randomUUID())
         .withName("workspace1_org1")
@@ -206,11 +220,11 @@ class UserPersistenceTest extends BaseConfigDatabaseTest {
         .withTombstone(false)
         .withDefaultGeography(Geography.AUTO);
 
-    private static final StandardWorkspace WORKSPACE_3_NO_ORG = new StandardWorkspace()
+    private static final StandardWorkspace WORKSPACE_3_ORG_2 = new StandardWorkspace()
         .withWorkspaceId(UUID.randomUUID())
         .withName("workspace3_no_org")
         .withSlug("workspace3_no_org-slug")
-        .withOrganizationId(null)
+        .withOrganizationId(ORG_2.getOrganizationId())
         .withInitialSetupComplete(true)
         .withTombstone(false)
         .withDefaultGeography(Geography.AUTO);
@@ -269,7 +283,7 @@ class UserPersistenceTest extends BaseConfigDatabaseTest {
     private static final Permission WORKSPACE_3_READER_PERMISSION = new Permission()
         .withPermissionId(UUID.randomUUID())
         .withUserId(WORKSPACE_2_AND_3_READER_USER.getUserId())
-        .withWorkspaceId(WORKSPACE_3_NO_ORG.getWorkspaceId())
+        .withWorkspaceId(WORKSPACE_3_ORG_2.getWorkspaceId())
         .withPermissionType(PermissionType.WORKSPACE_READER);
 
     private static final Permission BOTH_USER_WORKSPACE_PERMISSION = new Permission()
@@ -291,8 +305,9 @@ class UserPersistenceTest extends BaseConfigDatabaseTest {
       final OrganizationPersistence organizationPersistence = new OrganizationPersistence(database);
 
       organizationPersistence.createOrganization(ORG);
+      organizationPersistence.createOrganization(ORG_2);
 
-      for (final StandardWorkspace workspace : List.of(WORKSPACE_1_ORG_1, WORKSPACE_2_ORG_1, WORKSPACE_3_NO_ORG)) {
+      for (final StandardWorkspace workspace : List.of(WORKSPACE_1_ORG_1, WORKSPACE_2_ORG_1, WORKSPACE_3_ORG_2)) {
         configRepository.writeStandardWorkspaceNoSecrets(workspace);
       }
 
@@ -314,7 +329,7 @@ class UserPersistenceTest extends BaseConfigDatabaseTest {
 
       final Set<User> actualUsersWorkspace1 = new HashSet<>(userPersistence.getUsersWithWorkspaceAccess(WORKSPACE_1_ORG_1.getWorkspaceId()));
       final Set<User> actualUsersWorkspace2 = new HashSet<>(userPersistence.getUsersWithWorkspaceAccess(WORKSPACE_2_ORG_1.getWorkspaceId()));
-      final Set<User> actualUsersWorkspace3 = new HashSet<>(userPersistence.getUsersWithWorkspaceAccess(WORKSPACE_3_NO_ORG.getWorkspaceId()));
+      final Set<User> actualUsersWorkspace3 = new HashSet<>(userPersistence.getUsersWithWorkspaceAccess(WORKSPACE_3_ORG_2.getWorkspaceId()));
 
       Assertions.assertEquals(expectedUsersWorkspace1, actualUsersWorkspace1);
       Assertions.assertEquals(expectedUsersWorkspace2, actualUsersWorkspace2);
@@ -394,7 +409,7 @@ class UserPersistenceTest extends BaseConfigDatabaseTest {
       final Set<UUID> actualUsersWorkspace2 =
           new HashSet<>(userPersistence.listJustUsersForWorkspaceUserAccessInfo(WORKSPACE_2_ORG_1.getWorkspaceId()));
       final Set<UUID> actualUsersWorkspace3 =
-          new HashSet<>(userPersistence.listJustUsersForWorkspaceUserAccessInfo(WORKSPACE_3_NO_ORG.getWorkspaceId()));
+          new HashSet<>(userPersistence.listJustUsersForWorkspaceUserAccessInfo(WORKSPACE_3_ORG_2.getWorkspaceId()));
 
       Assertions.assertEquals(expectedUsersWorkspace1, actualUsersWorkspace1);
       Assertions.assertEquals(expectedUsersWorkspace2, actualUsersWorkspace2);

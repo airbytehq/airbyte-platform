@@ -2,9 +2,9 @@ package io.airbyte.commons.server.authorization
 
 import io.airbyte.api.model.generated.PermissionCheckRead
 import io.airbyte.api.model.generated.PermissionType
+import io.airbyte.api.problems.throwable.generated.ForbiddenProblem
 import io.airbyte.commons.auth.OrganizationAuthRole
 import io.airbyte.commons.auth.WorkspaceAuthRole
-import io.airbyte.commons.server.errors.problems.ForbiddenProblem
 import io.airbyte.commons.server.handlers.PermissionHandler
 import io.airbyte.commons.server.support.AuthenticationHeaderResolver
 import io.airbyte.commons.server.support.AuthenticationHttpHeaders.ORGANIZATION_ID_HEADER
@@ -147,7 +147,7 @@ class ApiAuthorizationHelperTest {
     // You're a workspace admin ONLY, and we require either org admin OR workspace admin -> pass
     every {
       rbacRoleHelper.getRbacRoles(authUserId.toString(), mapOf(ORGANIZATION_ID_HEADER to organizationId.toString()))
-    } returns setOf(WorkspaceAuthRole.WORKSPACE_ADMIN.label)
+    } returns setOf(WorkspaceAuthRole.WORKSPACE_ADMIN.label, OrganizationAuthRole.NONE.label)
     assertDoesNotThrow {
       apiAuthorizationHelper.ensureUserHasAnyRequiredRoleOrThrow(Scope.ORGANIZATION, listOf(organizationId.toString()), requiredRoles)
     }
@@ -155,7 +155,7 @@ class ApiAuthorizationHelperTest {
     // You're an organization admin, and we require either org or workspace admin -> pass
     every {
       rbacRoleHelper.getRbacRoles(authUserId.toString(), mapOf(ORGANIZATION_ID_HEADER to organizationId.toString()))
-    } returns setOf(OrganizationAuthRole.ORGANIZATION_ADMIN.label)
+    } returns setOf(WorkspaceAuthRole.NONE.label, OrganizationAuthRole.ORGANIZATION_ADMIN.label)
     assertDoesNotThrow {
       apiAuthorizationHelper.ensureUserHasAnyRequiredRoleOrThrow(Scope.ORGANIZATION, listOf(organizationId.toString()), requiredRoles)
     }

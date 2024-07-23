@@ -19,7 +19,6 @@ import io.airbyte.config.FailureReason;
 import io.airbyte.config.ReplicationOutput;
 import io.airbyte.container_orchestrator.AsyncStateManager;
 import io.airbyte.metrics.lib.ApmTraceUtils;
-import io.airbyte.persistence.job.models.IntegrationLauncherConfig;
 import io.airbyte.persistence.job.models.JobRunConfig;
 import io.airbyte.persistence.job.models.ReplicationInput;
 import io.airbyte.workers.exception.WorkerException;
@@ -29,7 +28,6 @@ import io.airbyte.workers.helper.FailureHelper;
 import io.airbyte.workers.internal.exception.DestinationException;
 import io.airbyte.workers.internal.exception.SourceException;
 import io.airbyte.workers.process.AsyncKubePodStatus;
-import io.airbyte.workers.sync.ReplicationLauncherWorker;
 import io.airbyte.workers.workload.JobOutputDocStore;
 import io.airbyte.workers.workload.WorkloadIdGenerator;
 import io.airbyte.workload.api.client.model.generated.WorkloadCancelRequest;
@@ -100,14 +98,9 @@ public class ReplicationJobOrchestrator implements JobOrchestrator<ReplicationIn
   public Optional<String> runJob() throws Exception {
     final var replicationInput = readInput();
 
-    final var sourceLauncherConfig = JobOrchestrator.readAndDeserializeFile(
-        getConfigDir().resolve(ReplicationLauncherWorker.INIT_FILE_SOURCE_LAUNCHER_CONFIG),
-        IntegrationLauncherConfig.class);
+    final var sourceLauncherConfig = replicationInput.getSourceLauncherConfig();
 
-    final var destinationLauncherConfig = JobOrchestrator.readAndDeserializeFile(
-        getConfigDir().resolve(ReplicationLauncherWorker.INIT_FILE_DESTINATION_LAUNCHER_CONFIG),
-        IntegrationLauncherConfig.class);
-    log.info("sourceLauncherConfig is: " + sourceLauncherConfig.toString());
+    final var destinationLauncherConfig = replicationInput.getDestinationLauncherConfig();
 
     ApmTraceUtils.addTagsToTrace(
         Map.of(JOB_ID_KEY, jobRunConfig.getJobId(),

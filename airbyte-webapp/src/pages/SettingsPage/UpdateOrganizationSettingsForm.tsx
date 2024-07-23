@@ -23,7 +23,7 @@ type OrganizationFormValues = Pick<OrganizationUpdateRequestBody, "organizationN
 export const UpdateOrganizationSettingsForm: React.FC = () => {
   const { organizationId } = useCurrentWorkspace();
 
-  return <>{organizationId && <OrganizationSettingsForm organizationId={organizationId} />}</>;
+  return <OrganizationSettingsForm organizationId={organizationId} />;
 };
 
 const OrganizationSettingsForm = ({ organizationId }: { organizationId: string }) => {

@@ -34,7 +34,7 @@ class DefaultPostLoadExecutorTest {
         new DefaultPostLoadExecutor(applyDefinitionsHelper, declarativeSourceUpdater);
 
     assertDoesNotThrow(() -> postLoadExecution.execute());
-    verify(applyDefinitionsHelper, times(1)).apply();
+    verify(applyDefinitionsHelper, times(1)).apply(false, true);
   }
 
   @Test
@@ -43,7 +43,7 @@ class DefaultPostLoadExecutorTest {
     final ApplyDefinitionsHelper applyDefinitionsHelper = mock(ApplyDefinitionsHelper.class);
     final DeclarativeSourceUpdater declarativeSourceUpdater = mock(DeclarativeSourceUpdater.class);
 
-    doThrow(new IOException("test")).when(applyDefinitionsHelper).apply();
+    doThrow(new IOException("test")).when(applyDefinitionsHelper).apply(false, true);
 
     final DefaultPostLoadExecutor postLoadExecution =
         new DefaultPostLoadExecutor(applyDefinitionsHelper, declarativeSourceUpdater);

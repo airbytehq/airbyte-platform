@@ -37,7 +37,7 @@ services:
   # written requires the webapp to run. So we pin the webapp to a specific commit.
   # This is not expected to change frequently - or at all.
   webapp:
-    image: "airbyte/webapp:dev-521ad4842c"
+    image: "airbyte/webapp:dev-ccff2332da"
 configs:
   flags:
     file: ./tools/bin/acceptance-test-flags.yml

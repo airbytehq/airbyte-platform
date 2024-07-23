@@ -1,6 +1,6 @@
+import classNames from "classnames";
 import partition from "lodash/partition";
 import { useEffect, useMemo } from "react";
-import { useFormContext } from "react-hook-form";
 import { FormattedMessage, useIntl } from "react-intl";
 
 import { Collapsible } from "components/ui/Collapsible";
@@ -26,10 +26,8 @@ import { LogsDisplay } from "./LogsDisplay";
 import { ResultDisplay } from "./ResultDisplay";
 import { StreamTestButton } from "./StreamTestButton";
 import styles from "./StreamTester.module.scss";
-import { useTestWarnings } from "./useTestWarnings";
 import { useBuilderWatch } from "../types";
-import { useAutoImportSchema } from "../useAutoImportSchema";
-import { formatJson } from "../utils";
+import { useStreamTestMetadata } from "../useStreamTestMetadata";
 
 export const StreamTester: React.FC<{
   hasTestingValuesErrors: boolean;
@@ -51,11 +49,8 @@ export const StreamTester: React.FC<{
     testReadLimits: { recordLimit, pageLimit, sliceLimit },
   } = useConnectorBuilderTestRead();
   const [showLimitWarning, setShowLimitWarning] = useLocalStorage("connectorBuilderLimitWarning", true);
-  const mode = useBuilderWatch("mode");
   const testStreamIndex = useBuilderWatch("testStreamIndex");
-  const { setValue } = useFormContext();
   const auxiliaryRequests = streamReadData?.auxiliary_requests;
-  const autoImportSchema = useAutoImportSchema(testStreamIndex);
 
   const streamName = streamNames[testStreamIndex];
 
@@ -107,17 +102,8 @@ export const StreamTester: React.FC<{
     }
   }, [analyticsService, errorMessage, isFetchedAfterMount, streamName, dataUpdatedAt, errorUpdatedAt]);
 
-  useEffect(() => {
-    if (mode === "ui" && autoImportSchema && streamReadData?.inferred_schema) {
-      setValue(`formValues.streams.${testStreamIndex}.schema`, formatJson(streamReadData.inferred_schema, true), {
-        shouldValidate: true,
-        shouldTouch: true,
-        shouldDirty: true,
-      });
-    }
-  }, [mode, autoImportSchema, testStreamIndex, streamReadData?.inferred_schema, setValue]);
-
-  const testDataWarnings = useTestWarnings();
+  const { getStreamTestWarnings } = useStreamTestMetadata();
+  const testDataWarnings = useMemo(() => getStreamTestWarnings(streamName), [getStreamTestWarnings, streamName]);
 
   return (
     <div className={styles.container}>
@@ -198,7 +184,15 @@ export const StreamTester: React.FC<{
           }}
         />
       )}
-      {!isFetching && testDataWarnings.map((warning, index) => <Message type="warning" text={warning} key={index} />)}
+      {!isFetching &&
+        testDataWarnings.map((warning, index) => (
+          <Message
+            className={classNames({ [styles.secondaryWarning]: warning.priority === "secondary" })}
+            type="warning"
+            text={warning.message}
+            key={index}
+          />
+        ))}
       {!isFetching && (streamReadData !== undefined || errorMessage !== undefined) && (
         <ResizablePanels
           className={styles.resizablePanelsContainer}

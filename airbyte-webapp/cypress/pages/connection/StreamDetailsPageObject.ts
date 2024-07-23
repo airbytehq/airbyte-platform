@@ -30,7 +30,7 @@ const [
   "sync-field-switch"
 );
 
-const getFieldTableRowTestId = (rowIndex: number) => getTestId(`table-row-${rowIndex}`);
+const getFieldTableRowTestId = (fieldPath: string) => getTestId(`table-row-${fieldPath}`);
 
 const getRowByFieldName = (name: string) => cy.get(streamSourceFieldName).contains(name).parents("tr").first();
 
@@ -86,13 +86,13 @@ export class StreamDetailsPageObject {
 
   scrollToBottom() {
     return cy.get(streamDetailsPanel).within(() => {
-      cy.get("div[data-test-id='virtuoso-scroller']").scrollTo("bottom");
+      cy.get("div[data-testid='virtuoso-scroller']").scrollTo("bottom");
     });
   }
 
   scrollToTop() {
     return cy.get(streamDetailsPanel).within(() => {
-      cy.get("div[data-test-id='virtuoso-scroller']").scrollTo("top");
+      cy.get("div[data-testid='virtuoso-scroller']").scrollTo("top");
     });
   }
 
@@ -133,7 +133,7 @@ export class StreamDetailsPageObject {
 
     names.forEach((name, index) => {
       const dataType = dataTypes[index];
-      const rowTestId = getFieldTableRowTestId(index);
+      const rowTestId = getFieldTableRowTestId(name);
 
       cy.get(rowTestId).within(() => {
         cy.get(streamSourceFieldName).should("have.text", name);

@@ -45,7 +45,7 @@ class DockerPodLauncher(private val dockerConfig: DockerConfig) {
    *
    * Returns a list of containerIds.
    */
-  fun find(filters: Map<String, String>): List<String> {
+  private fun find(filters: Map<String, String>): List<String> {
     val cmd = mutableListOf("docker", "ps", "--quiet")
     filters.forEach { (k, v) ->
       cmd.add("--filter")

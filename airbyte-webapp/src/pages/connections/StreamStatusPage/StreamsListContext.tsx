@@ -1,7 +1,7 @@
 import { createContext, useContext, useMemo, useState } from "react";
 
 import { ConnectionStatusIndicatorStatus } from "components/connection/ConnectionStatusIndicator";
-import { sortStreams } from "components/connection/StreamStatus/streamStatusUtils";
+import { sortStreamsAlphabetically, sortStreamsByStatus } from "components/connection/StreamStatus/streamStatusUtils";
 
 import { useStreamsStatuses } from "area/connection/utils";
 import { useConnectionEditService } from "hooks/services/ConnectionEdit/ConnectionEditService";
@@ -10,20 +10,30 @@ const useStreamsContextInit = (connectionId: string) => {
   const [searchTerm, setSearchTerm] = useState("");
 
   const { enabledStreams, streamStatuses } = useStreamsStatuses(connectionId);
-  const sortedStreams = sortStreams(enabledStreams, streamStatuses);
+  const streamsByStatus = sortStreamsByStatus(enabledStreams, streamStatuses);
+  const streamsByName = sortStreamsAlphabetically(enabledStreams, streamStatuses);
 
-  const streams = Object.entries(sortedStreams)
-    .filter(([status]) => status !== ConnectionStatusIndicatorStatus.Disabled)
+  const enabledStreamsByStatus = Object.entries(streamsByStatus)
+    .filter(([status]) => status !== ConnectionStatusIndicatorStatus.Paused)
     .flatMap(([_, stream]) => stream);
 
-  const filteredStreams = useMemo(
-    () => streams.filter((stream) => stream.streamName.includes(searchTerm)),
-    [searchTerm, streams]
+  const enabledStreamsByName = Object.entries(streamsByName)
+    .filter(([status]) => status !== ConnectionStatusIndicatorStatus.Paused)
+    .flatMap(([_, stream]) => stream);
+
+  const filteredStreamsByStatus = useMemo(
+    () => enabledStreamsByStatus.filter((stream) => stream.streamName.includes(searchTerm)),
+    [searchTerm, enabledStreamsByStatus]
   );
 
+  const filteredStreamsByName = useMemo(
+    () => enabledStreamsByName.filter((stream) => stream.streamName.includes(searchTerm)),
+    [enabledStreamsByName, searchTerm]
+  );
   return {
     setSearchTerm,
-    filteredStreams,
+    filteredStreamsByStatus,
+    filteredStreamsByName,
   };
 };
 

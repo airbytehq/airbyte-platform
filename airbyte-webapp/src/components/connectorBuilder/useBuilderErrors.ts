@@ -8,7 +8,8 @@ import {
   useConnectorBuilderFormManagementState,
 } from "services/connectorBuilder/ConnectorBuilderStateService";
 
-import { BuilderFormValues, BuilderState, builderFormValidationSchema, globalSchema, streamSchema } from "./types";
+import { BuilderFormValues, BuilderState } from "./types";
+import { useBuilderValidationSchema } from "./useBuilderValidationSchema";
 
 export const useBuilderErrors = () => {
   const { trigger, getValues } = useFormContext<BuilderState>();
@@ -16,6 +17,7 @@ export const useBuilderErrors = () => {
   const formValuesErrors: FieldErrors<BuilderFormValues> = errors.formValues ?? {};
   const { setScrollToField } = useConnectorBuilderFormManagementState();
   const { setValue } = useFormContext();
+  const { globalSchema, streamSchema, builderFormValidationSchema } = useBuilderValidationSchema();
 
   const errorsRef = useRef(formValuesErrors);
   errorsRef.current = formValuesErrors;
@@ -109,7 +111,16 @@ export const useBuilderErrors = () => {
         callback?.();
       });
     },
-    [getValues, invalidViews, setScrollToField, setValue, trigger]
+    [
+      builderFormValidationSchema,
+      getValues,
+      globalSchema,
+      invalidViews,
+      setScrollToField,
+      setValue,
+      streamSchema,
+      trigger,
+    ]
   );
 
   return { hasErrors, validateAndTouch };

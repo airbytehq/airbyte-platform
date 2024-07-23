@@ -146,7 +146,9 @@ export const UsagePerConnectionTable: React.FC = () => {
                 <FormattedMessage id={`frequency.${props.row.original.connection.connectionScheduleType}`} />
               ) : (
                 <FormattedMessage
-                  id={`frequency.${props.row.original.connection.connectionScheduleTimeUnit ?? "manual"}`}
+                  id={`frequency.${
+                    props.row.original.connection.connectionScheduleTimeUnit?.toLowerCase() ?? "manual"
+                  }`}
                   values={{ value: props.row.original.connection.connectionScheduleUnits }}
                 />
               )}
@@ -198,6 +200,7 @@ export const UsagePerConnectionTable: React.FC = () => {
   return (
     <div className={styles.content}>
       <Table
+        rowId={(row) => row.connection.connectionId}
         variant="white"
         columns={columns}
         data={freeAndPaidUsageByConnection}

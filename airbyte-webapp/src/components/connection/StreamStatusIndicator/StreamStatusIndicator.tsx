@@ -3,52 +3,74 @@ import React from "react";
 
 import { FlexContainer } from "components/ui/Flex";
 import { Icon } from "components/ui/Icon";
+import { CircleLoader } from "components/ui/StatusIcon/CircleLoader";
 
 import styles from "./StreamStatusIndicator.module.scss";
-import { StreamStatusLoadingSpinner } from "./StreamStatusLoadingSpinner";
 import { ConnectionStatusIndicatorStatus } from "../ConnectionStatusIndicator";
 
 const ICON_BY_STATUS: Readonly<Record<ConnectionStatusIndicatorStatus, JSX.Element>> = {
-  [ConnectionStatusIndicatorStatus.ActionRequired]: <Icon type="errorFilled" />,
-  [ConnectionStatusIndicatorStatus.Disabled]: <Icon type="pauseFilled" />,
-  [ConnectionStatusIndicatorStatus.Error]: <Icon type="warningFilled" />,
-  [ConnectionStatusIndicatorStatus.Late]: <Icon type="clockFilled" />,
-  [ConnectionStatusIndicatorStatus.Pending]: <Icon type="pauseFilled" />,
-  [ConnectionStatusIndicatorStatus.OnTime]: <Icon type="successFilled" />,
-  [ConnectionStatusIndicatorStatus.OnTrack]: <Icon type="successFilled" />,
+  actionRequired: <Icon type="errorFilled" title="error" />,
+  disabled: <Icon type="pauseFilled" title="paused" />,
+  paused: <Icon type="pauseFilled" title="paused" />,
+  error: <Icon type="warningFilled" title="warning" />,
+  late: <Icon type="clockFilled" title="late" />,
+  pending: <Icon type="pauseFilled" title="pending" />,
+  onTime: <Icon type="successFilled" title="on-time" />,
+  onTrack: <Icon type="successFilled" title="on-track" />,
+  syncing: <CircleLoader title="syncing" className={styles.syncingIcon} />,
+  clearing: <CircleLoader title="clearing" className={styles.syncingIcon} />,
+  refreshing: <CircleLoader title="refreshing" className={styles.syncingIcon} />,
+  queued: <Icon type="statusQueued" title="queued" />,
+  queuedForNextSync: <Icon type="statusQueued" title="queued" />,
+  rateLimited: <CircleLoader title="rate limited" className={styles.syncingIcon} />,
 };
 
 const STYLE_BY_STATUS: Readonly<Record<ConnectionStatusIndicatorStatus, string>> = {
-  [ConnectionStatusIndicatorStatus.ActionRequired]: styles["status--actionRequired"],
-  [ConnectionStatusIndicatorStatus.Disabled]: styles["status--disabled"],
-  [ConnectionStatusIndicatorStatus.Error]: styles["status--error"],
-  [ConnectionStatusIndicatorStatus.Late]: styles["status--late"],
-  [ConnectionStatusIndicatorStatus.Pending]: styles["status--pending"],
-  [ConnectionStatusIndicatorStatus.OnTime]: styles["status--upToDate"],
-  [ConnectionStatusIndicatorStatus.OnTrack]: styles["status--upToDate"],
+  actionRequired: styles["status--actionRequired"],
+  disabled: styles["status--disabled"],
+  paused: styles["status--disabled"],
+  error: styles["status--error"],
+  late: styles["status--late"],
+  pending: styles["status--pending"],
+  onTime: styles["status--upToDate"],
+  onTrack: styles["status--upToDate"],
+  syncing: styles["status--syncing"],
+  clearing: styles["status--syncing"],
+  refreshing: styles["status--syncing"],
+  queued: styles["status--queued"],
+  queuedForNextSync: styles["status--queued"],
+  rateLimited: styles["status--syncing"],
 };
 
 const BOX_STYLE_BY_STATUS: Readonly<Record<ConnectionStatusIndicatorStatus, string>> = {
-  [ConnectionStatusIndicatorStatus.ActionRequired]: styles["status--actionRequired-withBox"],
-  [ConnectionStatusIndicatorStatus.Disabled]: styles["status--disabled-withBox"],
-  [ConnectionStatusIndicatorStatus.Error]: styles["status--error-withBox"],
-  [ConnectionStatusIndicatorStatus.Late]: styles["status--late-withBox"],
-  [ConnectionStatusIndicatorStatus.Pending]: styles["status--pending-withBox"],
-  [ConnectionStatusIndicatorStatus.OnTime]: styles["status--upToDate-withBox"],
-  [ConnectionStatusIndicatorStatus.OnTrack]: styles["status--upToDate-withBox"],
+  actionRequired: styles["status--actionRequired-withBox"],
+  disabled: styles["status--disabled-withBox"],
+  paused: styles["status--disabled-withBox"],
+  error: styles["status--error-withBox"],
+  late: styles["status--late-withBox"],
+  pending: styles["status--pending-withBox"],
+  onTime: styles["status--upToDate-withBox"],
+  onTrack: styles["status--upToDate-withBox"],
+  syncing: styles["status--syncing-withBox"],
+  clearing: styles["status--syncing-withBox"],
+  refreshing: styles["status--syncing-withBox"],
+  queued: styles["status--queued-withBox"],
+  queuedForNextSync: styles["status--queued-withBox"],
+  rateLimited: styles["status--syncing-withBox"],
 };
 
 interface StreamStatusIndicatorProps {
   status: ConnectionStatusIndicatorStatus;
-  loading?: boolean;
+  // this prop can be removed when the sync progress feature is rolled out
   withBox?: boolean;
 }
 
-export const StreamStatusIndicator: React.FC<StreamStatusIndicatorProps> = ({ status, loading, withBox }) => (
-  <div className={classNames(styles.status, STYLE_BY_STATUS[status], { [BOX_STYLE_BY_STATUS[status]]: withBox })}>
-    <FlexContainer justifyContent="center" alignItems="center" className={styles.icon}>
-      {ICON_BY_STATUS[status]}
-      {loading && <StreamStatusLoadingSpinner className={styles.spinner} />}
-    </FlexContainer>
-  </div>
-);
+export const StreamStatusIndicator: React.FC<StreamStatusIndicatorProps> = ({ status, withBox }) => {
+  return (
+    <div className={classNames(styles.status, STYLE_BY_STATUS[status], { [BOX_STYLE_BY_STATUS[status]]: withBox })}>
+      <FlexContainer justifyContent="center" alignItems="center" className={styles.icon}>
+        {ICON_BY_STATUS[status]}
+      </FlexContainer>
+    </div>
+  );
+};

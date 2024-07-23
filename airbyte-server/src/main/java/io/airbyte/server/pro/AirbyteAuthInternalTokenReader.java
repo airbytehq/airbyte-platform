@@ -5,7 +5,7 @@
 package io.airbyte.server.pro;
 
 import io.airbyte.commons.auth.AirbyteAuthConstants;
-import io.airbyte.commons.license.annotation.RequiresAirbyteProEnabled;
+import io.micronaut.context.annotation.Requires;
 import io.micronaut.security.token.reader.HttpHeaderTokenReader;
 import jakarta.inject.Singleton;
 
@@ -17,7 +17,10 @@ import jakarta.inject.Singleton;
  * will only be present on internal requests.
  */
 @Singleton
-@RequiresAirbyteProEnabled
+@Requires(property = "micronaut.security.enabled",
+          value = "true")
+@Requires(property = "airbyte.deployment-mode",
+          value = "OSS")
 public class AirbyteAuthInternalTokenReader extends HttpHeaderTokenReader {
 
   // This is set higher than other token readers so that it is checked last.

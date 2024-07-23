@@ -12,6 +12,7 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.Lists;
 import io.airbyte.api.model.generated.ActorCatalogWithUpdatedAt;
 import io.airbyte.api.model.generated.ActorDefinitionVersionBreakingChanges;
+import io.airbyte.api.model.generated.ActorStatus;
 import io.airbyte.api.model.generated.CompleteOAuthResponse;
 import io.airbyte.api.model.generated.ConnectionRead;
 import io.airbyte.api.model.generated.DiscoverCatalogResult;
@@ -52,6 +53,7 @@ import io.airbyte.data.helpers.ActorDefinitionVersionUpdater;
 import io.airbyte.data.services.SecretPersistenceConfigService;
 import io.airbyte.data.services.SourceService;
 import io.airbyte.data.services.WorkspaceService;
+import io.airbyte.featureflag.DeleteSecretsWhenTombstoneActors;
 import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.featureflag.Organization;
 import io.airbyte.featureflag.UseIconUrlInApiResponse;
@@ -299,7 +301,7 @@ public class SourceHandler {
 
     final List<SourceRead> reads = Lists.newArrayList();
     for (final SourceConnection sc : sourceConnections) {
-      reads.add(buildSourceRead(sc));
+      reads.add(buildSourceReadWithStatus(sc));
     }
 
     return new SourceReadList().sources(reads);
@@ -316,7 +318,7 @@ public class SourceHandler {
 
     final List<SourceRead> reads = Lists.newArrayList();
     for (final SourceConnection sc : sourceConnections) {
-      reads.add(buildSourceRead(sc));
+      reads.add(buildSourceReadWithStatus(sc));
     }
 
     return new SourceReadList().sources(reads);
@@ -375,22 +377,33 @@ public class SourceHandler {
     }
 
     final var spec = getSpecFromSourceId(source.getSourceId());
-    final JsonNode fullConfig;
-    try {
-      fullConfig = sourceService.getSourceConnectionWithSecrets(source.getSourceId()).getConfiguration();
-    } catch (final io.airbyte.data.exceptions.ConfigNotFoundException e) {
-      throw new ConfigNotFoundException(e.getType(), e.getConfigId());
-    }
 
-    // persist
-    persistSourceConnection(
-        source.getName(),
-        source.getSourceDefinitionId(),
-        source.getWorkspaceId(),
-        source.getSourceId(),
-        true,
-        fullConfig,
-        spec);
+    if (featureFlagClient.boolVariation(DeleteSecretsWhenTombstoneActors.INSTANCE, new Workspace(source.getWorkspaceId().toString()))) {
+      try {
+        sourceService.tombstoneSource(
+            source.getName(),
+            source.getWorkspaceId(),
+            source.getSourceId(), spec);
+      } catch (final io.airbyte.data.exceptions.ConfigNotFoundException e) {
+        throw new ConfigNotFoundException(e.getType(), e.getConfigId());
+      }
+    } else {
+      final JsonNode fullConfig;
+      try {
+        fullConfig = sourceService.getSourceConnectionWithSecrets(source.getSourceId()).getConfiguration();
+      } catch (final io.airbyte.data.exceptions.ConfigNotFoundException e) {
+        throw new ConfigNotFoundException(e.getType(), e.getConfigId());
+      }
+      // persist
+      persistSourceConnection(
+          source.getName(),
+          source.getSourceDefinitionId(),
+          source.getWorkspaceId(),
+          source.getSourceId(),
+          true,
+          fullConfig,
+          spec);
+    }
   }
 
   public DiscoverCatalogResult writeDiscoverCatalogResult(final SourceDiscoverSchemaWriteRequestBody request)
@@ -407,6 +420,18 @@ public class SourceHandler {
         request.getSourceId(),
         request.getConnectorVersion(),
         request.getConfigurationHash());
+  }
+
+  private SourceRead buildSourceReadWithStatus(final SourceConnection sourceConnection)
+      throws JsonValidationException, ConfigNotFoundException, IOException {
+    final SourceRead sourceRead = buildSourceRead(sourceConnection);
+    // add source status into sourceRead
+    if (sourceService.isSourceActive(sourceConnection.getSourceId())) {
+      sourceRead.status(ActorStatus.ACTIVE);
+    } else {
+      sourceRead.status(ActorStatus.INACTIVE);
+    }
+    return sourceRead;
   }
 
   private SourceRead buildSourceRead(final UUID sourceId)
@@ -546,7 +571,7 @@ public class SourceHandler {
     if (organizationId != null && featureFlagClient.boolVariation(UseRuntimeSecretPersistence.INSTANCE, new Organization(organizationId))) {
       final SecretPersistenceConfig secretPersistenceConfig;
       try {
-        secretPersistenceConfig = secretPersistenceConfigService.getSecretPersistenceConfig(ScopeType.ORGANIZATION, organizationId);
+        secretPersistenceConfig = secretPersistenceConfigService.get(ScopeType.ORGANIZATION, organizationId);
       } catch (final io.airbyte.data.exceptions.ConfigNotFoundException e) {
         throw new ConfigNotFoundException(e.getType(), e.getConfigId());
       }
@@ -557,20 +582,6 @@ public class SourceHandler {
     }
     final CompleteOAuthResponse completeOAuthResponse = Jsons.object(secret, CompleteOAuthResponse.class);
     return Jsons.jsonNode(completeOAuthResponse.getAuthPayload());
-  }
-
-  @VisibleForTesting
-  JsonNode hydrateConnectionConfiguration(final UUID sourceDefinitionId,
-                                          final UUID workspaceId,
-                                          final String secretId,
-                                          final JsonNode dehydratedConnectionConfiguration)
-      throws JsonValidationException, ConfigNotFoundException, IOException {
-    final JsonNode hydratedSecret = hydrateOAuthResponseSecret(secretId, workspaceId);
-    final ConnectorSpecification spec =
-        getSpecFromSourceDefinitionIdForWorkspace(sourceDefinitionId, workspaceId);
-    // add OAuth Response data to connection configuration
-
-    return OAuthSecretHelper.setSecretsInConnectionConfiguration(spec, hydratedSecret, dehydratedConnectionConfiguration);
   }
 
 }

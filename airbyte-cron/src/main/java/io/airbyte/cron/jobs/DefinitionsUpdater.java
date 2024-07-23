@@ -19,7 +19,8 @@ import io.micronaut.context.annotation.Requires;
 import io.micronaut.scheduling.annotation.Scheduled;
 import jakarta.inject.Singleton;
 import java.io.IOException;
-import lombok.extern.slf4j.Slf4j;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * DefinitionsUpdater
@@ -28,10 +29,11 @@ import lombok.extern.slf4j.Slf4j;
  * be enabled by setting UPDATE_DEFINITIONS_CRON_ENABLED=true.
  */
 @Singleton
-@Slf4j
 @Requires(property = "airbyte.cron.update-definitions.enabled",
           value = "true")
 public class DefinitionsUpdater {
+
+  private static final Logger log = LoggerFactory.getLogger(DefinitionsUpdater.class);
 
   private final ApplyDefinitionsHelper applyDefinitionsHelper;
   private final DeploymentMode deploymentMode;

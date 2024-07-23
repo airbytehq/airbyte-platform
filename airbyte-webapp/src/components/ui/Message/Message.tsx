@@ -128,7 +128,12 @@ export const Message: React.FC<React.PropsWithChildren<MessageProps>> = ({
         {mainMessage}
       </FlexContainer>
       {isRenderingChildren && (
-        <div className={classNames(styles.childrenContainer, childrenClassName, STYLES_BY_TYPE[type])}>{children}</div>
+        <div
+          className={classNames(styles.childrenContainer, childrenClassName, STYLES_BY_TYPE[type])}
+          data-testid={testId ? `${testId}-children` : undefined}
+        >
+          {children}
+        </div>
       )}
     </FlexContainer>
   );

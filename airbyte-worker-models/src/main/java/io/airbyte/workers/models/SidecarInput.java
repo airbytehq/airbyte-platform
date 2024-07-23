@@ -27,5 +27,6 @@ public class SidecarInput {
   String workloadId;
   IntegrationLauncherConfig integrationLauncherConfig;
   OperationType operationType;
+  String logPath;
 
 }

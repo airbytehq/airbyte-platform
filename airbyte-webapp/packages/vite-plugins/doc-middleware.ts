@@ -19,7 +19,7 @@ const localDocMiddleware = (docsPath: string): Plugin => {
         res.statusCode = 404;
         res.end(`404 - ${docsPath}${req.url} not found`);
       });
-      // Server assets that can be used during. Related gradle task: :airbyte-webapp:copyDocAssets
+      // Server assets that can be used during. Related gradle task: :oss:airbyte-webapp:copyDocAssets
       server.middlewares.use("/docs/.gitbook", express.static(`${docsPath}/../.gitbook`) as Connect.NextHandleFunction);
     },
   };

@@ -11,7 +11,6 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.fasterxml.jackson.databind.JsonNode;
-import io.airbyte.api.client.invoker.generated.ApiException;
 import io.airbyte.api.model.generated.CheckInput;
 import io.airbyte.api.model.generated.ConnectionIdRequestBody;
 import io.airbyte.api.model.generated.ConnectionState;
@@ -150,7 +149,7 @@ class JobInputHandlerTest {
   }
 
   @Test
-  void testGetSyncWorkflowInput() throws JsonValidationException, ConfigNotFoundException, IOException, ApiException {
+  void testGetSyncWorkflowInput() throws JsonValidationException, ConfigNotFoundException, IOException {
     final SyncInput syncInput = new SyncInput().jobId(JOB_ID).attemptNumber(ATTEMPT_NUMBER);
 
     final UUID sourceDefinitionId = UUID.randomUUID();
@@ -236,7 +235,7 @@ class JobInputHandlerTest {
   }
 
   @Test
-  void testGetResetSyncWorkflowInput() throws IOException, ApiException, JsonValidationException, ConfigNotFoundException {
+  void testGetResetSyncWorkflowInput() throws IOException {
     final SyncInput syncInput = new SyncInput().jobId(JOB_ID).attemptNumber(ATTEMPT_NUMBER);
 
     when(stateHandler.getState(new ConnectionIdRequestBody().connectionId(CONNECTION_ID)))

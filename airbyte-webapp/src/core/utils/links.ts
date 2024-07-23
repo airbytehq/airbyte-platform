@@ -39,6 +39,7 @@ export const links = {
   iso8601Duration: "https://en.wikipedia.org/wiki/ISO_8601#Durations",
   ossSecurityDocs: `${BASE_DOCS_LINK}/operator-guides/security/#securing-airbyte-open-source`,
   connectorBuilderAuthentication: `${BASE_DOCS_LINK}/connector-development/connector-builder-ui/authentication`,
+  connectorBuilderRecordSelector: `${BASE_DOCS_LINK}/connector-development/connector-builder-ui/record-processing#record-selection`,
   connectorBuilderPagination: `${BASE_DOCS_LINK}/connector-development/connector-builder-ui/pagination`,
   connectorBuilderIncrementalSync: `${BASE_DOCS_LINK}/connector-development/connector-builder-ui/incremental-sync`,
   connectorBuilderErrorHandler: `${BASE_DOCS_LINK}/connector-development/connector-builder-ui/error-handling`,

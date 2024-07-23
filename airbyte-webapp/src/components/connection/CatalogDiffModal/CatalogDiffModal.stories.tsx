@@ -37,7 +37,10 @@ const oneFieldAddCatalogDiff: CatalogDiff = {
     {
       transformType: "update_stream",
       streamDescriptor: { namespace: "apple", name: "harissa_paste" },
-      updateStream: [{ transformType: "add_field", fieldName: ["users", "phone"], breaking: false }],
+      updateStream: {
+        streamAttributeTransforms: [],
+        fieldTransforms: [{ transformType: "add_field", fieldName: ["users", "phone"], breaking: false }],
+      },
     },
   ],
 };
@@ -47,14 +50,17 @@ const oneFieldUpdateCatalogDiff: CatalogDiff = {
     {
       transformType: "update_stream",
       streamDescriptor: { namespace: "apple", name: "harissa_paste" },
-      updateStream: [
-        {
-          transformType: "update_field_schema",
-          breaking: false,
-          fieldName: ["users", "address"],
-          updateFieldSchema: { oldSchema: { type: "number" }, newSchema: { type: "string" } },
-        },
-      ],
+      updateStream: {
+        streamAttributeTransforms: [],
+        fieldTransforms: [
+          {
+            transformType: "update_field_schema",
+            breaking: false,
+            fieldName: ["users", "address"],
+            updateFieldSchema: { oldSchema: { type: "number" }, newSchema: { type: "string" } },
+          },
+        ],
+      },
     },
   ],
 };
@@ -64,51 +70,54 @@ const fullCatalogDiff: CatalogDiff = {
     {
       transformType: "update_stream",
       streamDescriptor: { namespace: "too_long_of_a_namespace", name: "too_long_of_a_name_for_this" },
-      updateStream: [
-        { transformType: "add_field", fieldName: ["users", "phone"], breaking: false },
-        { transformType: "add_field", fieldName: ["users", "email"], breaking: false },
-        { transformType: "remove_field", fieldName: ["users", "id"], breaking: true },
-        { transformType: "remove_field", fieldName: ["users", "lastName"], breaking: false },
-        {
-          transformType: "remove_field",
-          fieldName:
-            "universe.milky_way_galaxy.earth.land.north_america.alaska.yukon.businesses.stores.names.created_at".split(
+      updateStream: {
+        streamAttributeTransforms: [],
+        fieldTransforms: [
+          { transformType: "add_field", fieldName: ["users", "phone"], breaking: false },
+          { transformType: "add_field", fieldName: ["users", "email"], breaking: false },
+          { transformType: "remove_field", fieldName: ["users", "id"], breaking: true },
+          { transformType: "remove_field", fieldName: ["users", "lastName"], breaking: false },
+          {
+            transformType: "remove_field",
+            fieldName:
+              "universe.milky_way_galaxy.earth.land.north_america.alaska.yukon.businesses.stores.names.created_at".split(
+                "."
+              ),
+            breaking: false,
+          },
+          {
+            transformType: "remove_field",
+            fieldName: "universe.milky_way_galaxy.earth.ocean.pacific.great_barrier_reef.creatures.fish.names.id".split(
               "."
             ),
-          breaking: false,
-        },
-        {
-          transformType: "remove_field",
-          fieldName: "universe.milky_way_galaxy.earth.ocean.pacific.great_barrier_reef.creatures.fish.names.id".split(
-            "."
-          ),
-          breaking: true,
-        },
-        {
-          transformType: "update_field_schema",
-          breaking: false,
-          fieldName: ["users", "address"],
-          updateFieldSchema: { oldSchema: { type: "number" }, newSchema: { type: "string" } },
-        },
-        {
-          transformType: "update_field_schema",
-          breaking: false,
-          fieldName: ["package", "dimensions", "size", "width", "updated_at"],
-          updateFieldSchema: { oldSchema: { type: "string" }, newSchema: { type: "DateTime" } },
-        },
-        {
-          transformType: "update_field_schema",
-          breaking: true,
-          fieldName: ["users", "id"],
-          updateFieldSchema: { oldSchema: { type: "number" }, newSchema: { type: "string" } },
-        },
-        {
-          transformType: "update_field_schema",
-          breaking: true,
-          fieldName: ["package", "from", "address", "country", "id"],
-          updateFieldSchema: { oldSchema: { type: "string" }, newSchema: { type: "DateTime" } },
-        },
-      ],
+            breaking: true,
+          },
+          {
+            transformType: "update_field_schema",
+            breaking: false,
+            fieldName: ["users", "address"],
+            updateFieldSchema: { oldSchema: { type: "number" }, newSchema: { type: "string" } },
+          },
+          {
+            transformType: "update_field_schema",
+            breaking: false,
+            fieldName: ["package", "dimensions", "size", "width", "updated_at"],
+            updateFieldSchema: { oldSchema: { type: "string" }, newSchema: { type: "DateTime" } },
+          },
+          {
+            transformType: "update_field_schema",
+            breaking: true,
+            fieldName: ["users", "id"],
+            updateFieldSchema: { oldSchema: { type: "number" }, newSchema: { type: "string" } },
+          },
+          {
+            transformType: "update_field_schema",
+            breaking: true,
+            fieldName: ["package", "from", "address", "country", "id"],
+            updateFieldSchema: { oldSchema: { type: "string" }, newSchema: { type: "DateTime" } },
+          },
+        ],
+      },
     },
     {
       transformType: "add_stream",

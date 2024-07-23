@@ -1,35 +1,31 @@
 package io.airbyte.data.repositories
 
+import io.airbyte.data.repositories.specialized.LastJobWithStatsPerStreamRepository
 import io.airbyte.db.factory.DSLContextFactory
+import io.airbyte.db.instance.DatabaseConstants
 import io.airbyte.db.instance.test.TestDatabaseProviders
 import io.micronaut.context.ApplicationContext
 import io.micronaut.data.connection.jdbc.advice.DelegatingDataSource
-import io.micronaut.data.repository.CrudRepository
 import org.jooq.DSLContext
 import org.jooq.SQLDialect
 import org.junit.jupiter.api.AfterAll
-import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeAll
 import org.testcontainers.containers.PostgreSQLContainer
 import javax.sql.DataSource
-import kotlin.reflect.KClass
 
 /**
  * This class is meant to be extended by any repository test that needs to run against the Config
  * database. It will handle setting up the micronaut context and jooq dsl context, as well as
- * running migrations to set up a real database container. Each implementing test class should
- * provide a specific repository to test by implementing the abstract getRepository() method.
+ * running migrations to set up a real database container.
  */
-abstract class AbstractConfigRepositoryTest<T : CrudRepository<*, *>>(
-  repositoryClass: KClass<T>,
-) {
+abstract class AbstractConfigRepositoryTest {
   companion object {
     lateinit var context: ApplicationContext
     lateinit var jooqDslContext: DSLContext
 
     // we run against an actual database to ensure micronaut data and jooq properly integrate
     private val container: PostgreSQLContainer<*> =
-      PostgreSQLContainer("postgres:13-alpine")
+      PostgreSQLContainer(DatabaseConstants.DEFAULT_DATABASE_VERSION)
         .withDatabaseName("airbyte")
         .withUsername("docker")
         .withPassword("docker")
@@ -66,6 +62,7 @@ abstract class AbstractConfigRepositoryTest<T : CrudRepository<*, *>>(
 
       // this line is what runs the migrations
       databaseProviders.createNewConfigsDatabase()
+      databaseProviders.createNewJobsDatabase()
     }
 
     @AfterAll
@@ -75,10 +72,20 @@ abstract class AbstractConfigRepositoryTest<T : CrudRepository<*, *>>(
     }
   }
 
-  protected var repository = context.getBean(repositoryClass.java)
-
-  @AfterEach
-  fun cleanDb() {
-    repository.deleteAll()
-  }
+  /**
+   * Each repository is made available to implementing classes through the following properties.
+   * When adding a new repository, add it here so that it can be accessed by implementing classes
+   * for inserting test data or testing repository functionality.
+   */
+  val streamStatsRepository = context.getBean(StreamStatsRepository::class.java)!!
+  val attemptsRepository = context.getBean(AttemptsRepository::class.java)!!
+  val jobsRepository = context.getBean(JobsRepository::class.java)!!
+  val lastJobPerStreamRepository = context.getBean(LastJobWithStatsPerStreamRepository::class.java)!!
+  val connectionTimelineEventRepository = context.getBean(ConnectionTimelineEventRepository::class.java)!!
+  val declarativeManifestImageVersionRepository = context.getBean(DeclarativeManifestImageVersionRepository::class.java)!!
+  val permissionRepository = context.getBean(PermissionRepository::class.java)!!
+  val scopedConfigurationRepository = context.getBean(ScopedConfigurationRepository::class.java)!!
+  val userInvitationRepository = context.getBean(UserInvitationRepository::class.java)!!
+  val organizationEmailDomainRepository = context.getBean(OrganizationEmailDomainRepository::class.java)!!
+  val authRefreshTokenRepository = context.getBean(AuthRefreshTokenRepository::class.java)!!
 }

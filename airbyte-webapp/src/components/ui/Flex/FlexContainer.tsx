@@ -23,6 +23,10 @@ interface FlexContainerProps {
    * The justify-content css property
    */
   justifyContent?: "flex-start" | "flex-end" | "center" | "space-between" | "space-around" | "space-evenly";
+  /**
+   * The flex-wrap css property
+   */
+  wrap?: "wrap" | "nowrap" | "wrap-reverse";
 }
 
 /**
@@ -42,6 +46,7 @@ export const FlexContainer = React.forwardRef<
       gap = "md",
       alignItems = "stretch",
       justifyContent = "flex-start",
+      wrap = "nowrap",
       children,
       ...otherProps
     },
@@ -71,6 +76,9 @@ export const FlexContainer = React.forwardRef<
         [styles.justifyContentBetween]: justifyContent === "space-between",
         [styles.justifyContentAround]: justifyContent === "space-around",
         [styles.justifyContentEvenly]: justifyContent === "space-evenly",
+        [styles.wrapWrap]: wrap === "wrap",
+        [styles.wrapNowrap]: wrap === "nowrap",
+        [styles.wrapWrapReverse]: wrap === "wrap-reverse",
       },
       styles.container,
       className

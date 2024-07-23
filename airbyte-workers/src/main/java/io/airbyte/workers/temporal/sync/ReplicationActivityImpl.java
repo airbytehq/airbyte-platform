@@ -17,7 +17,6 @@ import static io.airbyte.metrics.lib.ApmTraceConstants.Tags.SOURCE_DOCKER_IMAGE_
 import datadog.trace.api.Trace;
 import io.airbyte.api.client.AirbyteApiClient;
 import io.airbyte.api.client.WorkloadApiClient;
-import io.airbyte.api.client.model.generated.StreamDescriptor;
 import io.airbyte.commons.functional.CheckedSupplier;
 import io.airbyte.commons.temporal.HeartbeatUtils;
 import io.airbyte.commons.temporal.utils.PayloadChecker;
@@ -27,6 +26,7 @@ import io.airbyte.config.ReplicationOutput;
 import io.airbyte.config.StandardSyncOutput;
 import io.airbyte.config.StandardSyncSummary;
 import io.airbyte.config.State;
+import io.airbyte.config.StreamDescriptor;
 import io.airbyte.config.helpers.LogConfigs;
 import io.airbyte.config.secrets.SecretsRepositoryReader;
 import io.airbyte.featureflag.Connection;
@@ -41,6 +41,7 @@ import io.airbyte.protocol.models.ConfiguredAirbyteCatalog;
 import io.airbyte.workers.ReplicationInputHydrator;
 import io.airbyte.workers.Worker;
 import io.airbyte.workers.helper.BackfillHelper;
+import io.airbyte.workers.helper.ResumableFullRefreshStatsHelper;
 import io.airbyte.workers.models.ReplicationActivityInput;
 import io.airbyte.workers.orchestrator.OrchestratorHandleFactory;
 import io.airbyte.workers.storage.activities.OutputStorageClient;
@@ -90,6 +91,7 @@ public class ReplicationActivityImpl implements ReplicationActivity {
   private final PayloadChecker payloadChecker;
   private final OutputStorageClient<State> stateStorageClient;
   private final OutputStorageClient<ConfiguredAirbyteCatalog> catalogStorageClient;
+  private final ResumableFullRefreshStatsHelper resumableFullRefreshStatsHelper;
 
   public ReplicationActivityImpl(final SecretsRepositoryReader secretsRepositoryReader,
                                  @Named("workspaceRoot") final Path workspaceRoot,
@@ -106,11 +108,9 @@ public class ReplicationActivityImpl implements ReplicationActivity {
                                  final FeatureFlagClient featureFlagClient,
                                  final PayloadChecker payloadChecker,
                                  @Named("outputStateClient") final OutputStorageClient<State> stateStorageClient,
-                                 @Named("outputCatalogClient") final OutputStorageClient<ConfiguredAirbyteCatalog> catalogStorageClient) {
-    this.replicationInputHydrator = new ReplicationInputHydrator(airbyteApiClient.getConnectionApi(),
-        airbyteApiClient.getJobsApi(),
-        airbyteApiClient.getStateApi(),
-        airbyteApiClient.getSecretPersistenceConfigApi(), secretsRepositoryReader,
+                                 @Named("outputCatalogClient") final OutputStorageClient<ConfiguredAirbyteCatalog> catalogStorageClient,
+                                 final ResumableFullRefreshStatsHelper resumableFullRefreshStatsHelper) {
+    this.replicationInputHydrator = new ReplicationInputHydrator(airbyteApiClient, resumableFullRefreshStatsHelper, secretsRepositoryReader,
         featureFlagClient);
     this.workspaceRoot = workspaceRoot;
     this.workerEnvironment = workerEnvironment;
@@ -127,6 +127,7 @@ public class ReplicationActivityImpl implements ReplicationActivity {
     this.payloadChecker = payloadChecker;
     this.stateStorageClient = stateStorageClient;
     this.catalogStorageClient = catalogStorageClient;
+    this.resumableFullRefreshStatsHelper = resumableFullRefreshStatsHelper;
   }
 
   /**
@@ -220,6 +221,7 @@ public class ReplicationActivityImpl implements ReplicationActivity {
                 .getStreamsToBackfill(replicationActivityInput.getSchemaRefreshOutput().getAppliedDiff(), hydratedReplicationInput.getCatalog());
           }
           BackfillHelper.markBackfilledStreams(streamsToBackfill, standardSyncOutput);
+          resumableFullRefreshStatsHelper.markResumedStreams(hydratedReplicationInput, standardSyncOutput);
           LOGGER.info("sync summary after backfill: {}", standardSyncOutput);
 
           if (featureFlagClient.boolVariation(WriteOutputCatalogToObjectStorage.INSTANCE, new Connection(connectionId))) {

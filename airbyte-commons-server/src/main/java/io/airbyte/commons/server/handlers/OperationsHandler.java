@@ -16,12 +16,13 @@ import io.airbyte.api.model.generated.OperationRead;
 import io.airbyte.api.model.generated.OperationReadList;
 import io.airbyte.api.model.generated.OperationUpdate;
 import io.airbyte.api.model.generated.OperatorConfiguration;
+import io.airbyte.commons.converters.OperationsConverter;
 import io.airbyte.commons.enums.Enums;
-import io.airbyte.commons.server.converters.OperationsConverter;
 import io.airbyte.config.ConfigSchema;
 import io.airbyte.config.StandardSync;
 import io.airbyte.config.StandardSyncOperation;
 import io.airbyte.config.StandardSyncOperation.OperatorType;
+import io.airbyte.config.StandardWorkspace;
 import io.airbyte.config.persistence.ConfigNotFoundException;
 import io.airbyte.config.persistence.ConfigRepository;
 import io.airbyte.validation.json.JsonValidationException;
@@ -69,28 +70,23 @@ public class OperationsHandler {
   public OperationRead createOperation(final OperationCreate operationCreate)
       throws JsonValidationException, IOException, ConfigNotFoundException {
     final UUID operationId = uuidGenerator.get();
-    final StandardSyncOperation standardSyncOperation = toStandardSyncOperation(operationCreate)
+    final StandardWorkspace workspace = configRepository.getStandardWorkspaceNoSecrets(operationCreate.getWorkspaceId(), false);
+    final StandardSyncOperation standardSyncOperation = toStandardSyncOperation(operationCreate, workspace)
         .withOperationId(operationId);
     return persistOperation(standardSyncOperation);
   }
 
-  private StandardSyncOperation toStandardSyncOperation(final OperationCreate operationCreate) {
+  private StandardSyncOperation toStandardSyncOperation(final OperationCreate operationCreate, final StandardWorkspace workspace) {
     final StandardSyncOperation standardSyncOperation = new StandardSyncOperation()
         .withWorkspaceId(operationCreate.getWorkspaceId())
         .withName(operationCreate.getName())
         .withOperatorType(Enums.convertTo(operationCreate.getOperatorConfiguration().getOperatorType(), OperatorType.class))
         .withTombstone(false);
-    OperationsConverter.populateOperatorConfigFromApi(operationCreate.getOperatorConfiguration(), standardSyncOperation);
+    OperationsConverter.populateOperatorConfigFromApi(operationCreate.getOperatorConfiguration(), standardSyncOperation, workspace);
     return standardSyncOperation;
   }
 
   private void validateOperation(final OperatorConfiguration operatorConfiguration) {
-    if ((io.airbyte.api.model.generated.OperatorType.NORMALIZATION).equals(operatorConfiguration.getOperatorType())) {
-      Preconditions.checkArgument(operatorConfiguration.getNormalization() != null);
-    }
-    if ((io.airbyte.api.model.generated.OperatorType.DBT).equals(operatorConfiguration.getOperatorType())) {
-      Preconditions.checkArgument(operatorConfiguration.getDbt() != null);
-    }
     if (io.airbyte.api.model.generated.OperatorType.WEBHOOK.equals(operatorConfiguration.getOperatorType())) {
       Preconditions.checkArgument(operatorConfiguration.getWebhook() != null);
     }
@@ -99,13 +95,16 @@ public class OperationsHandler {
   public OperationRead updateOperation(final OperationUpdate operationUpdate)
       throws ConfigNotFoundException, IOException, JsonValidationException {
     final StandardSyncOperation standardSyncOperation = configRepository.getStandardSyncOperation(operationUpdate.getOperationId());
-    return persistOperation(updateOperation(operationUpdate, standardSyncOperation));
+    final StandardWorkspace workspace = configRepository.getStandardWorkspaceNoSecrets(standardSyncOperation.getWorkspaceId(), false);
+    return persistOperation(updateOperation(operationUpdate, standardSyncOperation, workspace));
   }
 
-  public static StandardSyncOperation updateOperation(final OperationUpdate operationUpdate, final StandardSyncOperation standardSyncOperation) {
+  public static StandardSyncOperation updateOperation(final OperationUpdate operationUpdate,
+                                                      final StandardSyncOperation standardSyncOperation,
+                                                      final StandardWorkspace workspace) {
     standardSyncOperation
         .withName(operationUpdate.getName());
-    OperationsConverter.populateOperatorConfigFromApi(operationUpdate.getOperatorConfiguration(), standardSyncOperation);
+    OperationsConverter.populateOperatorConfigFromApi(operationUpdate.getOperatorConfiguration(), standardSyncOperation, workspace);
     return standardSyncOperation;
   }
 

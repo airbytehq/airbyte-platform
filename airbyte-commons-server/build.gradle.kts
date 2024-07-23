@@ -1,27 +1,18 @@
 plugins {
   id("io.airbyte.gradle.jvm.lib")
   id("io.airbyte.gradle.publish")
-  kotlin("jvm")
-  kotlin("kapt")
 }
 
-configurations.all {
-  resolutionStrategy {
-    // Ensure that the versions defined in deps.toml are used
-    // instead of versions from transitive dependencies
-    force(libs.flyway.core, libs.s3, libs.aws.java.sdk.s3)
-  }
-}
 dependencies {
   compileOnly(libs.lombok)
-  annotationProcessor(libs.lombok)     // Lombok must be added BEFORE Micronaut
+  annotationProcessor(libs.lombok) // Lombok must be added BEFORE Micronaut
 
-  kapt(platform(libs.micronaut.platform))
-  kapt(libs.bundles.micronaut.annotation.processor)
-  kapt(libs.micronaut.jaxrs.processor)
+  ksp(platform(libs.micronaut.platform))
+  ksp(libs.bundles.micronaut.annotation.processor)
+  ksp(libs.micronaut.jaxrs.processor)
 
-  kaptTest(platform(libs.micronaut.platform))
-  kaptTest(libs.bundles.micronaut.test.annotation.processor)
+  kspTest(platform(libs.micronaut.platform))
+  kspTest(libs.bundles.micronaut.test.annotation.processor)
 
   annotationProcessor(platform(libs.micronaut.platform))
   annotationProcessor(libs.bundles.micronaut.annotation.processor)
@@ -29,10 +20,12 @@ dependencies {
 
   implementation(platform(libs.micronaut.platform))
   implementation(libs.bundles.micronaut)
+  implementation(libs.bundles.datadog)
   implementation(libs.micronaut.cache.caffeine)
   implementation(libs.micronaut.inject)
   implementation(libs.micronaut.jaxrs.server)
   implementation(libs.micronaut.security)
+  implementation(libs.micronaut.security.jwt)
   implementation(libs.bundles.micronaut.data.jdbc)
   implementation(libs.bundles.micronaut.kotlin)
   implementation(libs.bundles.flyway)
@@ -46,34 +39,36 @@ dependencies {
   implementation(libs.swagger.annotations)
   implementation(libs.bundles.log4j)
   implementation(libs.commons.io)
-  implementation(project(":airbyte-analytics"))
-  implementation(project(":airbyte-api"))
-  implementation(project(":airbyte-commons"))
-  implementation(project(":airbyte-commons-auth"))
-  implementation(project(":airbyte-commons-converters"))
-  implementation(project(":airbyte-commons-license"))
-  implementation(project(":airbyte-commons-temporal"))
-  implementation(project(":airbyte-commons-temporal-core"))
-  implementation(project(":airbyte-commons-with-dependencies"))
-  implementation(project(":airbyte-config:init"))
-  implementation(project(":airbyte-config:config-models"))
-  implementation(project(":airbyte-config:config-persistence"))
-  implementation(project(":airbyte-config:config-secrets"))
-  implementation(project(":airbyte-config:specs"))
-  implementation(project(":airbyte-data"))
-  implementation(project(":airbyte-featureflag"))
-  implementation(project(":airbyte-metrics:metrics-lib"))
-  implementation(project(":airbyte-db:db-lib"))
-  implementation(project(":airbyte-json-validation"))
-  implementation(project(":airbyte-oauth"))
+  implementation(libs.kotlin.logging)
+  implementation(project(":oss:airbyte-analytics"))
+  implementation(project(":oss:airbyte-api"))
+  implementation(project(":oss:airbyte-commons"))
+  implementation(project(":oss:airbyte-commons-auth"))
+  implementation(project(":oss:airbyte-commons-converters"))
+  implementation(project(":oss:airbyte-commons-license"))
+  implementation(project(":oss:airbyte-commons-protocol"))
+  implementation(project(":oss:airbyte-commons-temporal"))
+  implementation(project(":oss:airbyte-commons-temporal-core"))
+  implementation(project(":oss:airbyte-commons-with-dependencies"))
+  implementation(project(":oss:airbyte-config:init"))
+  implementation(project(":oss:airbyte-config:config-models"))
+  implementation(project(":oss:airbyte-config:config-persistence"))
+  implementation(project(":oss:airbyte-config:config-secrets"))
+  implementation(project(":oss:airbyte-config:specs"))
+  implementation(project(":oss:airbyte-data"))
+  implementation(project(":oss:airbyte-featureflag"))
+  implementation(project(":oss:airbyte-metrics:metrics-lib"))
+  implementation(project(":oss:airbyte-db:db-lib"))
+  implementation(project(":oss:airbyte-json-validation"))
+  implementation(project(":oss:airbyte-oauth"))
   implementation(libs.airbyte.protocol)
-  implementation(project(":airbyte-persistence:job-persistence"))
-  implementation(project(":airbyte-worker-models"))
-  implementation(project(":airbyte-notification"))
+  implementation(project(":oss:airbyte-persistence:job-persistence"))
+  implementation(project(":oss:airbyte-worker-models"))
+  implementation(project(":oss:airbyte-notification"))
 
   testAnnotationProcessor(libs.bundles.micronaut.test.annotation.processor)
 
-  testImplementation(project(":airbyte-test-utils"))
+  testImplementation(project(":oss:airbyte-test-utils"))
   testImplementation(libs.postgresql)
   testImplementation(libs.platform.testcontainers.postgresql)
   testImplementation(libs.mockwebserver)
@@ -95,6 +90,6 @@ tasks.named("spotbugsMain") {
   enabled = false
 }
 
-tasks.withType<Jar>() {
+tasks.withType<Jar> {
   duplicatesStrategy = DuplicatesStrategy.EXCLUDE
 }

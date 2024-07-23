@@ -7,12 +7,12 @@ import React from "react";
 import { mockWorkspace } from "test-utils/mock-data/mockWorkspace";
 import { render, useMockIntersectionObserver } from "test-utils/testutils";
 
+import { OAUTH_BROADCAST_CHANNEL_NAME } from "area/connector/utils/oauthConstants";
 import { useCompleteOAuth } from "core/api";
 import { DestinationDefinitionSpecificationRead } from "core/api/types/AirbyteClient";
 import { ConnectorDefinition, ConnectorDefinitionSpecification } from "core/domain/connector";
 import { AirbyteJSONSchema } from "core/jsonSchema/types";
 import { FeatureItem } from "core/services/features";
-import { OAUTH_BROADCAST_CHANNEL_NAME } from "hooks/services/useConnectorAuth";
 import { ConnectorForm } from "views/Connector/ConnectorForm";
 
 import { ConnectorFormValues } from "./types";

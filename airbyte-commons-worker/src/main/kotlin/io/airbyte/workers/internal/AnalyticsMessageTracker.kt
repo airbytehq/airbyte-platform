@@ -45,7 +45,7 @@ class AnalyticsMessageTracker(private val trackingClient: TrackingClient) {
     }
   }
 
-  private fun generateAnalyticsMetadata(currentMessages: List<JsonNode>): Map<String?, Any?> {
+  private fun generateAnalyticsMetadata(currentMessages: List<JsonNode>): Map<String, Any?> {
     val context = requireNotNull(ctx)
     val jsonList: ArrayNode = Jsons.arrayNode()
     jsonList.addAll(currentMessages)

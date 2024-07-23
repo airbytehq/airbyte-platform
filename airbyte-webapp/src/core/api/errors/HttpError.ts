@@ -1,8 +1,9 @@
+import type { RequestOptions } from "../apiCall";
+
 import { shortUuid } from "core/utils/uuid";
 
 // Need to explicitally import from the file instead of core/errors to avoid circular dependencies
 import { I18nError } from "../../errors/I18nError";
-import { RequestOptions } from "../apiCall";
 
 const defaultHttpMessage = (status: number) => {
   switch (status) {
@@ -54,9 +55,17 @@ export class HttpError<PayloadType = unknown> extends I18nError {
      * The generic type of this class can be used to type this parameter for cases
      * the payload type is known.
      */
-    public readonly response: PayloadType
+    public readonly response: PayloadType,
+    /**
+     * Optional i18nKey to overwrite default i18n logic of HttpError. Only meant to be used from inheritted classes.
+     */
+    i18nKey?: string,
+    /**
+     * Optional i18nParams to overwrite default i18n logic of HttpError. Only meant to be used from inheritted classes.
+     */
+    i18nParams?: I18nError["i18nParams"]
   ) {
-    super(defaultHttpMessage(status), { status });
+    super(i18nKey ?? defaultHttpMessage(status), i18nParams ?? { status });
     this.name = "HttpError";
   }
 }

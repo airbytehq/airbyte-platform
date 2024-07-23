@@ -1,6 +1,6 @@
 import { useIntl } from "react-intl";
 
-import { Input } from "components/ui/Input";
+import { Input, InputProps } from "components/ui/Input";
 
 import styles from "./SearchInput.module.scss";
 import { Icon } from "../Icon";
@@ -10,9 +10,16 @@ interface SearchInputProps {
   value: string;
   onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
   inline?: boolean;
+  containerClassName?: InputProps["containerClassName"];
 }
 
-export const SearchInput: React.FC<SearchInputProps> = ({ value, onChange, placeholder, inline = false }) => {
+export const SearchInput: React.FC<SearchInputProps> = ({
+  value,
+  onChange,
+  placeholder,
+  inline = false,
+  containerClassName,
+}) => {
   const { formatMessage } = useIntl();
 
   return (
@@ -25,6 +32,7 @@ export const SearchInput: React.FC<SearchInputProps> = ({ value, onChange, place
       <Input
         type="search"
         className={styles.searchInput__input}
+        containerClassName={containerClassName}
         placeholder={placeholder ?? formatMessage({ id: "form.search.placeholder" })}
         value={value}
         onChange={onChange}

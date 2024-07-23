@@ -30,7 +30,7 @@ class StatsDRegistryConfigurer : MeterRegistryConfigurer<StatsdMeterRegistry>, O
   override fun configure(meterRegistry: StatsdMeterRegistry?) {
     /*
      * Use a LinkedHashSet to maintain order as items are added to the set. This ensures that the items
-     * are output as key1, value1, key2, value2, etc in order to maintain the relationship between key
+     * are output as key1, value1, key2, value2, etc. in order to maintain the relationship between key
      * value pairs.
      */
     val tags: MutableSet<String> = LinkedHashSet()

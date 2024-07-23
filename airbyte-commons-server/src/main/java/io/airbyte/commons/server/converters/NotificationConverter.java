@@ -62,14 +62,15 @@ public class NotificationConverter {
   }
 
   public static io.airbyte.api.client.model.generated.Notification toClientApi(final io.airbyte.config.Notification configNotification) {
-    final SlackNotificationConfiguration slackNotificationConfiguration = new SlackNotificationConfiguration()
-        .webhook(configNotification.getSlackConfiguration().getWebhook());
-    return new Notification()
-        .notificationType(Enums.convertTo(configNotification.getNotificationType(),
-            io.airbyte.api.client.model.generated.NotificationType.class))
-        .sendOnSuccess(configNotification.getSendOnSuccess())
-        .sendOnFailure(configNotification.getSendOnFailure())
-        .slackConfiguration(slackNotificationConfiguration);
+    final SlackNotificationConfiguration slackNotificationConfiguration =
+        new SlackNotificationConfiguration(
+            configNotification.getSlackConfiguration().getWebhook() != null ? configNotification.getSlackConfiguration().getWebhook() : "");
+    return new Notification(Enums.convertTo(configNotification.getNotificationType(),
+        io.airbyte.api.client.model.generated.NotificationType.class),
+        configNotification.getSendOnSuccess(),
+        configNotification.getSendOnFailure(),
+        slackNotificationConfiguration,
+        null);
   }
 
 }

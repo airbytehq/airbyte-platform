@@ -8,10 +8,11 @@ import { trackError } from "core/utils/datadog";
 import { TrackErrorFn } from "hooks/services/AppMonitoringService";
 
 import { ErrorDetails } from "./ErrorDetails";
+import { WaitForRetry } from "./WaitForRetry";
 
 interface ErrorBoundaryState {
   error?: Error;
-  message?: string;
+  waitForRetry: boolean;
 }
 
 interface ErrorBoundaryHookProps {
@@ -19,6 +20,28 @@ interface ErrorBoundaryHookProps {
   navigate: NavigateFunction;
   trackError: TrackErrorFn;
 }
+
+const SESSION_STORAGE_KEY = "airbyte-last-error-retry";
+/**
+ * Minimum time in ms since the last automatic reload before we'd reload again in case of an async import error.
+ */
+const RETRY_TIMEOUT = 10000;
+
+/**
+ * Checks whether an error is a failure to fetch an async imported module.
+ * In Chrome the error message will be: "Failed to fetch dynamically imported module: <URL>"
+ * In Firefox: "error loading dynamically imported module: <URL>"
+ * In Safari: "Importing a module script failed"
+ */
+const isDyanmicImportError = (error: unknown): boolean => {
+  return (
+    error instanceof Error &&
+    (error.message.includes("Unable to preload CSS") ||
+      (error.name === "TypeError" &&
+        (error.message.includes("dynamically imported module") ||
+          error.message.includes("Importing a module script failed"))))
+  );
+};
 
 class WrappedError extends Error {
   constructor(public readonly cause: unknown) {
@@ -31,10 +54,18 @@ class ErrorBoundaryComponent extends React.Component<
   React.PropsWithChildren<ErrorBoundaryHookProps>,
   ErrorBoundaryState
 > {
-  state: ErrorBoundaryState = {};
+  state: ErrorBoundaryState = { waitForRetry: false };
 
   static getDerivedStateFromError(error: unknown): ErrorBoundaryState {
-    return { error: error instanceof Error ? error : new WrappedError(error) };
+    if (
+      isDyanmicImportError(error) &&
+      Number(sessionStorage.getItem(SESSION_STORAGE_KEY) ?? "0") < Date.now() - RETRY_TIMEOUT
+    ) {
+      // If the error is due to a async import failed and the last retry was more than $RETRY_TIMEOUT ms ago
+      // do use the retry component (which will reload the page) instead of showing the error.
+      return { error: undefined, waitForRetry: true };
+    }
+    return { error: error instanceof Error ? error : new WrappedError(error), waitForRetry: false };
   }
 
   override componentDidUpdate(prevProps: ErrorBoundaryHookProps) {
@@ -53,9 +84,23 @@ class ErrorBoundaryComponent extends React.Component<
     }
   }
 
+  private reloadPage() {
+    sessionStorage.setItem(SESSION_STORAGE_KEY, Date.now().toString());
+    window.location.reload();
+  }
+
   override render(): React.ReactNode {
-    const { error } = this.state;
-    return error ? <ErrorDetails error={error} /> : this.props.children;
+    const { error, waitForRetry } = this.state;
+
+    if (waitForRetry) {
+      return <WaitForRetry retry={this.reloadPage.bind(this)} />;
+    }
+
+    if (error) {
+      return <ErrorDetails error={error} />;
+    }
+
+    return this.props.children;
   }
 }
 

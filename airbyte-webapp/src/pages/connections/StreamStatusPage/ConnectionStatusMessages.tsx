@@ -1,8 +1,9 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useIntl } from "react-intl";
 import { useNavigate } from "react-router-dom";
 
 import { useConnectionStatus } from "components/connection/ConnectionStatus/useConnectionStatus";
+import { ConnectionStatusIndicatorStatus } from "components/connection/ConnectionStatusIndicator";
 import { CopyButton } from "components/ui/CopyButton";
 import { FlexContainer, FlexItem } from "components/ui/Flex";
 import { Icon } from "components/ui/Icon";
@@ -10,12 +11,15 @@ import { Link } from "components/ui/Link";
 import { Message, MessageProps, MessageType, isHigherSeverity, MESSAGE_SEVERITY_LEVELS } from "components/ui/Message";
 import { Text } from "components/ui/Text";
 
+import { useStreamsStatuses } from "area/connection/utils";
 import { useCurrentWorkspaceId } from "area/workspace/utils";
 import { useDestinationDefinitionVersion, useSourceDefinitionVersion } from "core/api";
-import { ActorDefinitionVersionRead, FailureOrigin } from "core/api/types/AirbyteClient";
+import { ActorDefinitionVersionRead, FailureOrigin, StreamStatusRead } from "core/api/types/AirbyteClient";
 import { shouldDisplayBreakingChangeBanner, getHumanReadableUpgradeDeadline } from "core/domain/connector";
+import { Action, Namespace, useAnalyticsService } from "core/services/analytics";
 import { FeatureItem, useFeature } from "core/services/features";
 import { failureUiDetailsFromReason } from "core/utils/errorStatusMessage";
+import { useCurrentTime, useFormatLengthOfTime } from "core/utils/time";
 import { useSchemaChanges } from "hooks/connection/useSchemaChanges";
 import { useConnectionEditService } from "hooks/services/ConnectionEdit/ConnectionEditService";
 import { ConnectionRoutePaths, RoutePaths } from "pages/routePaths";
@@ -43,8 +47,8 @@ const reduceToHighestSeverityMessage = (messages: MessageProps[]): MessageProps[
  * @param connectorBreakingChangeDeadlinesEnabled
  * @returns An array containing id of the message to display and the type of error
  */
-const getBreakingChangeErrorMessage = (
-  actorDefinitionVersion: ActorDefinitionVersionRead,
+export const getBreakingChangeErrorMessage = (
+  actorDefinitionVersion: Pick<ActorDefinitionVersionRead, "supportState">,
   connectorBreakingChangeDeadlinesEnabled: boolean
 ): {
   errorMessageId: string;
@@ -66,15 +70,87 @@ export const ConnectionStatusMessages: React.FC = () => {
 
   const workspaceId = useCurrentWorkspaceId();
   const { connection } = useConnectionEditService();
-  const { failureReason, lastSyncJobId, lastSyncAttemptNumber } = useConnectionStatus(connection.connectionId);
+  const { failureReason, lastSyncJobId, lastSyncAttemptNumber, isRunning } = useConnectionStatus(
+    connection.connectionId
+  );
   const { hasBreakingSchemaChange } = useSchemaChanges(connection.schemaChange);
   const sourceActorDefinitionVersion = useSourceDefinitionVersion(connection.sourceId);
   const destinationActorDefinitionVersion = useDestinationDefinitionVersion(connection.destinationId);
   const connectorBreakingChangeDeadlinesEnabled = useFeature(FeatureItem.ConnectorBreakingChangeDeadlines);
   const [typeCount, setTypeCount] = useState<Partial<Record<MessageType, number>>>({});
 
+  const analyticsService = useAnalyticsService();
+  const statusWithRateLimitedMessaging = useRef<undefined | StreamStatusRead>(undefined);
+
+  const { streamStatuses } = useStreamsStatuses(connection.connectionId);
+  let isRateLimited = false;
+  let rateLimitedQuota = Infinity;
+  let rateLimitedStreamStatus: StreamStatusRead | undefined;
+  streamStatuses.forEach((streamStatus) => {
+    if (streamStatus.status === ConnectionStatusIndicatorStatus.RateLimited) {
+      rateLimitedStreamStatus = streamStatus.relevantHistory.at(0);
+      const quotaReset = streamStatus.relevantHistory.at(0)?.metadata?.quotaReset;
+      if (quotaReset && quotaReset >= Date.now()) {
+        isRateLimited = true;
+        rateLimitedQuota = Math.min(rateLimitedQuota, quotaReset);
+      } else if (quotaReset == null) {
+        isRateLimited = true;
+      }
+    }
+  });
+  const rateLimitedQuotaText = useFormatLengthOfTime(rateLimitedQuota - useCurrentTime());
+
+  useEffect(() => {
+    if (
+      rateLimitedStreamStatus &&
+      (!statusWithRateLimitedMessaging.current /* we have not seen a rate limited stream */ ||
+        statusWithRateLimitedMessaging.current.jobId <
+          rateLimitedStreamStatus.jobId /* this rate limiting applies to a new job */ ||
+        statusWithRateLimitedMessaging.current.streamName !==
+          rateLimitedStreamStatus.streamName /* this rate limiting applies to a new stream */ ||
+        statusWithRateLimitedMessaging.current.streamNamespace !== rateLimitedStreamStatus.streamNamespace)
+    ) {
+      statusWithRateLimitedMessaging.current = rateLimitedStreamStatus;
+      analyticsService.track(Namespace.CONNECTION, Action.RATE_LIMITED, {
+        connector_source_definition: connection.source.sourceName,
+        connector_source_definition_id: connection.source.sourceDefinitionId,
+        connector_destination_definition: connection.destination.destinationName,
+        connector_destination_definition_id: connection.destination.destinationDefinitionId,
+        connection_id: connection.connectionId,
+        job_id: rateLimitedStreamStatus.jobId,
+        stream_name: rateLimitedStreamStatus.streamName,
+        stream_namespace: rateLimitedStreamStatus.streamNamespace,
+        quota_reset: rateLimitedStreamStatus?.metadata?.quotaReset,
+      });
+    }
+  }, [isRateLimited, rateLimitedStreamStatus, rateLimitedQuota, analyticsService, connection]);
+
   const errorMessagesToDisplay = useMemo<MessageProps[]>(() => {
-    const errorMessages: MessageProps[] = [];
+    const rateLimitedMessages: MessageProps[] = isRateLimited
+      ? [
+          {
+            text: formatMessage(
+              {
+                id:
+                  rateLimitedQuota !== Infinity
+                    ? "connection.rateLimitedMessageWithQuota"
+                    : "connection.rateLimitedMessageNoQuota",
+              },
+              {
+                quota: rateLimitedQuotaText,
+              }
+            ),
+            type: "info",
+            "data-testid": "connection-status-message-rate-limited",
+          },
+        ]
+      : [];
+
+    if (isRunning) {
+      return [...rateLimitedMessages];
+    }
+
+    const errorMessages: MessageProps[] = [...rateLimitedMessages];
 
     // If we have an error message and no breaking schema changes, show the error message
     if (failureReason && !hasBreakingSchemaChange) {
@@ -105,6 +181,7 @@ export const ConnectionStatusMessages: React.FC = () => {
               : "connection.stream.status.checkDestinationSettings",
           }),
           type: "error",
+          "data-testid": `connection-status-message-error-${isSourceError ? "source" : "destination"}`,
         } as const;
 
         errorMessages.push(configError);
@@ -142,6 +219,7 @@ export const ConnectionStatusMessages: React.FC = () => {
           ),
           childrenClassName: styles.internalErrorMessage,
           isExpandable: hasInternalErrorMessage,
+          "data-testid": `connection-status-message-warning`,
         } as const;
         errorMessages.push(goToLogError);
       }
@@ -156,6 +234,7 @@ export const ConnectionStatusMessages: React.FC = () => {
         onAction: () => navigate(`../${ConnectionRoutePaths.Replication}`, { state: { triggerRefreshSchema: true } }),
         actionBtnText: formatMessage({ id: "connection.schemaChange.reviewAction" }),
         type: "error",
+        "data-testid": `connection-status-message-breaking-schema-change`,
       });
     }
 
@@ -174,7 +253,6 @@ export const ConnectionStatusMessages: React.FC = () => {
             actor_name: connection.source.name,
             actor_definition_name: connection.source.sourceName,
             actor_type: "source",
-            connection_name: connection.name,
             upgrade_deadline: getHumanReadableUpgradeDeadline(sourceActorDefinitionVersion),
           }
         ),
@@ -206,7 +284,6 @@ export const ConnectionStatusMessages: React.FC = () => {
             actor_name: connection.destination.name,
             actor_definition_name: connection.destination.destinationName,
             actor_type: "destination",
-            connection_name: connection.name,
             upgrade_deadline: getHumanReadableUpgradeDeadline(destinationActorDefinitionVersion),
           }
         ),
@@ -248,23 +325,26 @@ export const ConnectionStatusMessages: React.FC = () => {
       return MESSAGE_SEVERITY_LEVELS[msg2?.type] - MESSAGE_SEVERITY_LEVELS[msg1?.type];
     });
   }, [
-    formatMessage,
-    hasBreakingSchemaChange,
+    isRunning,
     failureReason,
-    lastSyncJobId,
-    lastSyncAttemptNumber,
-    navigate,
-    connection.sourceId,
-    connection.destinationId,
-    workspaceId,
+    hasBreakingSchemaChange,
     sourceActorDefinitionVersion,
     destinationActorDefinitionVersion,
-    connection.name,
+    formatMessage,
+    connection.sourceId,
+    connection.destinationId,
     connection.source.name,
-    connection.destination.name,
     connection.source.sourceName,
+    connection.destination.name,
     connection.destination.destinationName,
+    navigate,
+    workspaceId,
+    lastSyncJobId,
+    lastSyncAttemptNumber,
     connectorBreakingChangeDeadlinesEnabled,
+    isRateLimited,
+    rateLimitedQuota,
+    rateLimitedQuotaText,
   ]);
 
   if (errorMessagesToDisplay.length > 0) {

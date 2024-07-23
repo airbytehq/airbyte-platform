@@ -3,12 +3,23 @@ import type { useIntl } from "react-intl";
 import { FormattedMessage } from "react-intl";
 
 import { FailureOrigin, FailureReason } from "core/api/types/AirbyteClient";
+import { I18nError } from "core/errors";
 
 export class FormError extends Error {
   status?: number;
 }
 
-export const generateMessageFromError = (error: FormError): JSX.Element | string | null => {
+/**
+ * @deprecated Use the `useFormatError` hook from `core/errors` instead.
+ */
+export const generateMessageFromError = (
+  error: FormError,
+  formatMessage: ReturnType<typeof useIntl>["formatMessage"]
+): React.ReactNode => {
+  if (error instanceof I18nError) {
+    return error.translate(formatMessage);
+  }
+
   if (error.message) {
     return error.message;
   }
@@ -24,13 +35,22 @@ export const generateMessageFromError = (error: FormError): JSX.Element | string
   );
 };
 
-interface FailureUiDetails {
+export interface FailureUiDetails {
   type: "error" | "warning";
   typeLabel: string;
   origin: FailureReason["failureOrigin"];
   message: string;
   secondaryMessage?: string;
 }
+
+export const getFailureType = (failure: FailureReason): "error" | "warning" => {
+  const isConfigError = failure.failureType === "config_error";
+  const isSourceError = failure.failureOrigin === FailureOrigin.source;
+  const isDestinationError = failure.failureOrigin === FailureOrigin.destination;
+
+  return isConfigError && (isSourceError || isDestinationError) ? "error" : "warning";
+};
+
 export const failureUiDetailsFromReason = <
   T extends FailureReason | undefined | null,
   RetVal = T extends FailureReason ? FailureUiDetails : null,
@@ -42,12 +62,9 @@ export const failureUiDetailsFromReason = <
     return null as RetVal;
   }
 
-  const isConfigError = reason.failureType === "config_error";
-  const isSourceError = reason.failureOrigin === FailureOrigin.source;
-  const isDestinationError = reason.failureOrigin === FailureOrigin.destination;
-
+  const type = getFailureType(reason);
   const origin = reason.failureOrigin;
-  const type = isConfigError && (isSourceError || isDestinationError) ? "error" : "warning";
+
   const typeLabel = formatMessage(
     { id: type === "error" ? "failureMessage.type.error" : "failureMessage.type.warning" },
     { origin }

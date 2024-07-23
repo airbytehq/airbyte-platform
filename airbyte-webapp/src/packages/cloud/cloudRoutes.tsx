@@ -5,13 +5,14 @@ import { useEffectOnce } from "react-use";
 import LoadingPage from "components/LoadingPage";
 
 import { useCurrentWorkspaceId } from "area/workspace/utils";
-import { useCurrentOrganizationInfo, useCurrentWorkspace, useInvalidateAllWorkspaceScopeOnChange } from "core/api";
+import { useCurrentWorkspace, useInvalidateAllWorkspaceScopeOnChange } from "core/api";
 import { usePrefetchCloudWorkspaceData } from "core/api/cloud";
 import { DefaultErrorBoundary } from "core/errors";
 import { useAnalyticsIdentifyUser, useAnalyticsRegisterValues } from "core/services/analytics/useAnalyticsService";
 import { useAuthService } from "core/services/auth";
 import { FeatureItem, useFeature } from "core/services/features";
 import { isCorporateEmail } from "core/utils/freeEmailProviders";
+import { useIntent } from "core/utils/rbac";
 import { storeUtmFromQuery } from "core/utils/utmStorage";
 import { useExperiment, useExperimentContext } from "hooks/services/Experiment";
 import { useBuildUpdateCheck } from "hooks/services/useBuildUpdateCheck";
@@ -24,14 +25,12 @@ import {
   DestinationsPage as SettingsDestinationsPage,
 } from "pages/SettingsPage/pages/ConnectorsPage";
 import { NotificationPage } from "pages/SettingsPage/pages/NotificationPage";
-import { CompleteOauthRequest } from "views/CompleteOauthRequest";
 
 import { AcceptInvitation } from "./AcceptInvitation";
 import { CloudRoutes } from "./cloudRoutePaths";
 import { LDExperimentServiceProvider } from "./services/thirdParty/launchdarkly";
 import { SSOBookmarkPage } from "./views/auth/SSOBookmarkPage";
 import { SSOIdentifierPage } from "./views/auth/SSOIdentifierPage";
-import { FirebaseActionRoute } from "./views/FirebaseActionRoute";
 import { DbtCloudSettingsView } from "./views/settings/integrations/DbtCloudSettingsView";
 import { CloudSettingsRoutePaths } from "./views/settings/routePaths";
 import { AccountSettingsView } from "./views/users/AccountSettingsView";
@@ -40,7 +39,6 @@ import { DataResidencyView } from "./views/workspaces/DataResidencyView";
 import { WorkspaceSettingsView } from "./views/workspaces/WorkspaceSettingsView";
 
 const LoginPage = React.lazy(() => import("./views/auth/LoginPage"));
-const ResetPasswordPage = React.lazy(() => import("./views/auth/ResetPasswordPage"));
 const SignupPage = React.lazy(() => import("./views/auth/SignupPage"));
 const CloudMainView = React.lazy(() => import("packages/cloud/views/layout/CloudMainView"));
 const CloudWorkspacesPage = React.lazy(() => import("packages/cloud/views/workspaces"));
@@ -70,9 +68,10 @@ const AdvancedSettingsPage = React.lazy(() => import("pages/SettingsPage/pages/A
 
 const MainRoutes: React.FC = () => {
   const workspace = useCurrentWorkspace();
-  const organization = useCurrentOrganizationInfo();
   const isTokenManagementEnabled = useExperiment("settings.token-management-ui", false);
-  useExperimentContext("organization", organization?.organizationId);
+  const canViewOrgSettings = useIntent("ViewOrganizationSettings", { organizationId: workspace.organizationId });
+
+  useExperimentContext("organization", workspace.organizationId);
 
   const analyticsContext = useMemo(
     () => ({
@@ -123,7 +122,7 @@ const MainRoutes: React.FC = () => {
           {supportsCloudDbtIntegration && (
             <Route path={CloudSettingsRoutePaths.DbtCloud} element={<DbtCloudSettingsView />} />
           )}
-          {organization && (
+          {canViewOrgSettings && (
             <Route path={CloudSettingsRoutePaths.Organization} element={<GeneralOrganizationSettingsPage />} />
           )}
           <Route path={CloudSettingsRoutePaths.Advanced} element={<AdvancedSettingsPage />} />
@@ -149,7 +148,6 @@ const CloudMainViewRoutes = () => {
     <Routes>
       <Route path={RoutePaths.SpeakeasyRedirect} element={<SpeakeasyRedirectPage />} />
       <Route path={RoutePaths.Workspaces} element={<CloudWorkspacesPage />} />
-      <Route path={CloudRoutes.AuthFlow} element={<CompleteOauthRequest />} />
       <Route path={CloudRoutes.AcceptInvitation} element={<AcceptInvitation />} />
       <Route
         path={`${RoutePaths.Workspaces}/:workspaceId/*`}
@@ -172,7 +170,7 @@ const CloudWorkspaceDataPrefetcher: React.FC<PropsWithChildren<unknown>> = ({ ch
 };
 
 export const Routing: React.FC = () => {
-  const { user, inited, providers, provider, loggedOut, requirePasswordReset } = useAuthService();
+  const { user, inited, provider, loggedOut } = useAuthService();
   const workspaceId = useCurrentWorkspaceId();
   const { pathname: originalPathname, search, hash } = useLocation();
 
@@ -204,14 +202,13 @@ export const Routing: React.FC = () => {
     () =>
       user
         ? {
-            providers,
             provider,
             email: user.email,
             isCorporate: isCorporateEmail(user.email),
             currentWorkspaceId: workspaceId,
           }
         : {},
-    [provider, providers, user, workspaceId]
+    [provider, user, workspaceId]
   );
 
   useEffectOnce(() => {
@@ -230,11 +227,6 @@ export const Routing: React.FC = () => {
     <LDExperimentServiceProvider>
       <Suspense fallback={<LoadingPage />}>
         <Routes>
-          {/*
-            The firebase callback action route is available no matter wheter a user is logged in or not, since
-            the verify email action need to work in both cases.
-          */}
-          <Route path={CloudRoutes.FirebaseAction} element={<FirebaseActionRoute />} />
           <Route
             path="*"
             element={
@@ -248,12 +240,6 @@ export const Routing: React.FC = () => {
                         <Route path={CloudRoutes.Sso} element={<SSOIdentifierPage />} />
                         <Route path={CloudRoutes.Login} element={<LoginPage />} />
                         <Route path={CloudRoutes.Signup} element={<SignupPage />} />
-                        {requirePasswordReset && (
-                          <Route
-                            path={CloudRoutes.ResetPassword}
-                            element={<ResetPasswordPage requirePasswordReset={requirePasswordReset} />}
-                          />
-                        )}
                         {/* In case a not logged in user tries to access anything else navigate them to login */}
                         <Route path="*" element={<Navigate to={loginRedirectTo} />} />
                       </Routes>

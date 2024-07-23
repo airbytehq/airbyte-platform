@@ -1,13 +1,22 @@
 import pick from "lodash/pick";
-import { createContext, useCallback, useContext, useState } from "react";
+import { createContext, useCallback, useContext, useMemo, useState } from "react";
 import { useIntl } from "react-intl";
 import { useAsyncFn } from "react-use";
 
-import { useCurrentWorkspace, useGetConnection, useGetConnectionQuery, useUpdateConnection } from "core/api";
+import {
+  useCurrentWorkspace,
+  useDestinationDefinitionVersion,
+  useGetConnection,
+  useGetConnectionQuery,
+  useUpdateConnection,
+} from "core/api";
 import {
   AirbyteCatalog,
   ConnectionStatus,
+  ConnectionStream,
+  DestinationSyncMode,
   SchemaChange,
+  SyncMode,
   WebBackendConnectionRead,
   WebBackendConnectionUpdate,
 } from "core/api/types/AirbyteClient";
@@ -37,6 +46,10 @@ interface ConnectionEditHook {
   updateConnectionStatus: (status: ConnectionStatus) => Promise<void>;
   refreshSchema: () => Promise<void>;
   discardRefreshedSchema: () => void;
+  streamsByRefreshType: {
+    streamsSupportingMergeRefresh: ConnectionStream[];
+    streamsSupportingTruncateRefresh: ConnectionStream[];
+  };
 }
 
 const getConnectionCatalog = (connection: WebBackendConnectionRead): ConnectionCatalog =>
@@ -48,6 +61,9 @@ const useConnectionEdit = ({ connectionId }: ConnectionEditProps): ConnectionEdi
   const { registerNotification, unregisterNotificationById } = useNotificationService();
   const getConnectionQuery = useGetConnectionQuery();
   const [connection, setConnection] = useState(useGetConnection(connectionId));
+  const { supportsRefreshes: destinationSupportsRefreshes } = useDestinationDefinitionVersion(
+    connection.destination.destinationId
+  );
   const [catalog, setCatalog] = useState<ConnectionCatalog>(() => getConnectionCatalog(connection));
   const [schemaHasBeenRefreshed, setSchemaHasBeenRefreshed] = useState(false);
 
@@ -151,6 +167,46 @@ const useConnectionEdit = ({ connectionId }: ConnectionEditProps): ConnectionEdi
     }
   });
 
+  const streamsByRefreshType = useMemo(() => {
+    const streamsSupportingMergeRefresh: ConnectionStream[] = [];
+    const streamsSupportingTruncateRefresh: ConnectionStream[] = [];
+
+    for (const stream of catalog.syncCatalog.streams) {
+      if (!stream.stream || !stream.config) {
+        continue;
+      }
+
+      if (stream?.config?.syncMode === SyncMode.incremental && destinationSupportsRefreshes && stream.config.selected) {
+        streamsSupportingMergeRefresh.push({
+          streamName: stream.stream.name,
+          streamNamespace: stream.stream.namespace,
+        });
+
+        if (
+          stream?.config?.destinationSyncMode === DestinationSyncMode.append_dedup &&
+          destinationSupportsRefreshes &&
+          stream.config.selected
+        ) {
+          streamsSupportingTruncateRefresh.push({
+            streamName: stream.stream.name,
+            streamNamespace: stream.stream.namespace,
+          });
+        }
+      }
+    }
+    const sortedStreamsSupportingMergeRefresh = streamsSupportingMergeRefresh.sort((a, b) =>
+      a.streamName.localeCompare(b.streamName)
+    );
+    const sortedStreamsSupportingTruncateRefresh = streamsSupportingTruncateRefresh.sort((a, b) =>
+      a.streamName.localeCompare(b.streamName)
+    );
+
+    return {
+      streamsSupportingMergeRefresh: sortedStreamsSupportingMergeRefresh,
+      streamsSupportingTruncateRefresh: sortedStreamsSupportingTruncateRefresh,
+    };
+  }, [catalog.syncCatalog.streams, destinationSupportsRefreshes]);
+
   return {
     connection,
     // only use `setConnection` directly if you have a good reason: it is handled for you
@@ -164,6 +220,7 @@ const useConnectionEdit = ({ connectionId }: ConnectionEditProps): ConnectionEdi
     updateConnectionStatus,
     refreshSchema,
     discardRefreshedSchema,
+    streamsByRefreshType,
   };
 };
 const ConnectionEditContext = createContext<Omit<ConnectionEditHook, "refreshSchema" | "schemaError"> | null>(null);

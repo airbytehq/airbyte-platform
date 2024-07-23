@@ -32,6 +32,7 @@ import * as connectionForm from "pages/connection/connectionFormPageObject";
 import * as connectionListPage from "pages/connection/connectionListPageObject";
 import * as connectionPage from "pages/connection/connectionPageObject";
 import * as replicationPage from "pages/connection/connectionReplicationPageObject";
+import * as settingsPage from "pages/connection/connectionSettingsPageObject";
 import { streamsTable } from "pages/connection/StreamsTablePageObject";
 
 describe("Connection - Auto-detect schema changes", () => {
@@ -79,7 +80,7 @@ describe("Connection - Auto-detect schema changes", () => {
 
     it("does not show non-breaking change on list page", () => {
       connectionListPage.visit();
-      connectionListPage.getSchemaChangeIcon(connection, "non_breaking").should("not.exist");
+      connectionListPage.getSchemaChangeIcon(connection, "warning").should("not.exist");
       connectionListPage.getConnectionStateSwitch(connection).should("be.checked").and("be.enabled");
     });
 
@@ -105,7 +106,7 @@ describe("Connection - Auto-detect schema changes", () => {
 
       replicationPage.checkSchemaChangesDetectedCleared();
 
-      replicationPage.saveChangesAndHandleResetModal();
+      replicationPage.saveChangesAndHandleRefreshModal({ expectModal: false });
       connectionPage.getSyncEnabledSwitch().should("be.enabled");
     });
 
@@ -148,7 +149,7 @@ describe("Connection - Auto-detect schema changes", () => {
 
     it("shows breaking change on list page", () => {
       connectionListPage.visit();
-      connectionListPage.getSchemaChangeIcon(connection, "breaking").should("exist");
+      connectionListPage.getSchemaChangeIcon(connection, "error").should("exist");
       connectionListPage.getConnectionStateSwitch(connection).should("not.be.checked").and("not.be.enabled");
     });
 
@@ -177,7 +178,7 @@ describe("Connection - Auto-detect schema changes", () => {
       const row = streamsTable.getRow("public", "users");
       row.selectSyncMode(SyncMode.full_refresh, DestinationSyncMode.append);
 
-      replicationPage.saveChangesAndHandleResetModal();
+      replicationPage.saveChangesAndHandleRefreshModal({ expectModal: false });
       connectionPage.getSyncEnabledSwitch().should("be.enabled");
     });
 
@@ -196,13 +197,13 @@ describe("Connection - Auto-detect schema changes", () => {
 
   describe("non-breaking schema update preference", () => {
     it("saves non-breaking schema update preference change", () => {
-      connectionPage.visit(connection, "replication");
-      connectionForm.expandConfigurationSection();
-      replicationPage.selectNonBreakingChangesPreference("disable");
+      connectionPage.visit(connection, "settings");
+      connectionForm.toggleAdvancedSettingsSection();
+      connectionForm.selectNonBreakingChangesPreference("disable");
 
       cy.intercept("/api/v1/web_backend/connections/update").as("updatesNonBreakingPreference");
 
-      replicationPage.saveChangesAndHandleResetModal({ expectModal: false });
+      settingsPage.saveChanges();
 
       cy.wait("@updatesNonBreakingPreference").then((interception) => {
         assert.equal((interception.response?.body as WebBackendConnectionRead).nonBreakingChangesPreference, "disable");

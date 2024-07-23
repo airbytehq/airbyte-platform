@@ -1,18 +1,10 @@
 package io.airbyte.workers.helper
 
-import io.airbyte.featureflag.ActivateRefreshes
-import io.airbyte.featureflag.Connection
-import io.airbyte.featureflag.DestinationDefinition
-import io.airbyte.featureflag.FeatureFlagClient
-import io.airbyte.featureflag.Multi
-import io.airbyte.featureflag.SourceDefinition
-import io.airbyte.featureflag.Workspace
 import io.airbyte.protocol.models.AirbyteMessage
 import io.airbyte.protocol.models.AirbyteStreamStatusTraceMessage
 import io.airbyte.protocol.models.AirbyteTraceMessage
 import io.airbyte.protocol.models.ConfiguredAirbyteCatalog
 import io.airbyte.protocol.models.StreamDescriptor
-import io.airbyte.workers.context.ReplicationContext
 import io.airbyte.workers.exception.WorkerException
 import io.airbyte.workers.internal.AirbyteMapper
 import jakarta.inject.Singleton
@@ -20,28 +12,16 @@ import java.time.Clock
 
 @Singleton
 class StreamStatusCompletionTracker(
-  private val featureFlagClient: FeatureFlagClient,
   private val clock: Clock,
 ) {
   private val hasCompletedStatus = mutableMapOf<StreamDescriptor, Boolean>()
   private var shouldEmitStreamStatus = false
 
-  open fun startTracking(
+  fun startTracking(
     configuredAirbyteCatalog: ConfiguredAirbyteCatalog,
-    replicationContext: ReplicationContext,
+    supportRefreshes: Boolean,
   ) {
-    shouldEmitStreamStatus =
-      featureFlagClient.boolVariation(
-        ActivateRefreshes,
-        Multi(
-          listOf(
-            Workspace(replicationContext.workspaceId),
-            Connection(replicationContext.connectionId),
-            SourceDefinition(replicationContext.sourceDefinitionId),
-            DestinationDefinition(replicationContext.destinationDefinitionId),
-          ),
-        ),
-      )
+    shouldEmitStreamStatus = supportRefreshes
 
     if (shouldEmitStreamStatus) {
       configuredAirbyteCatalog.streams.forEach { stream ->
@@ -50,27 +30,26 @@ class StreamStatusCompletionTracker(
     }
   }
 
-  open fun track(streamStatus: AirbyteStreamStatusTraceMessage) {
+  fun track(streamStatus: AirbyteStreamStatusTraceMessage) {
     if (shouldEmitStreamStatus && streamStatus.status == AirbyteStreamStatusTraceMessage.AirbyteStreamStatus.COMPLETE) {
-      hasCompletedStatus[streamStatus.streamDescriptor] ?: run {
-        throw WorkerException("A stream status has been detected for a stream not present in the catalog")
+      if (hasCompletedStatus[streamStatus.streamDescriptor] == null) {
+        throw WorkerException(
+          "A stream status (${streamStatus.streamDescriptor.namespace}.${streamStatus.streamDescriptor.name}) " +
+            "has been detected for a stream not present in the catalog",
+        )
       }
       hasCompletedStatus[streamStatus.streamDescriptor] = true
     }
   }
 
-  open fun finalize(
+  fun finalize(
     exitCode: Int,
     namespacingMapper: AirbyteMapper,
   ): List<AirbyteMessage> {
-    if (!shouldEmitStreamStatus) {
+    if (!shouldEmitStreamStatus || exitCode != 0) {
       return listOf()
     }
-    return if (0 == exitCode) {
-      streamDescriptorsToCompleteStatusMessage(hasCompletedStatus.keys, namespacingMapper)
-    } else {
-      streamDescriptorsToCompleteStatusMessage(hasCompletedStatus.filter { it.value }.keys, namespacingMapper)
-    }
+    return streamDescriptorsToCompleteStatusMessage(hasCompletedStatus.keys, namespacingMapper)
   }
 
   private fun streamDescriptorsToCompleteStatusMessage(

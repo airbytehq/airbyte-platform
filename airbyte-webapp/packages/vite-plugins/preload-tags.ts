@@ -1,5 +1,7 @@
 import type { Plugin, HtmlTagDescriptor } from "vite";
 
+import path from "node:path";
+
 import { lookup as mimeType } from "mime-types";
 
 export function preloadTags(): Plugin {
@@ -14,7 +16,8 @@ export function preloadTags(): Plugin {
       order: "post",
       handler(html, context) {
         const bundle = context.bundle;
-        if (!bundle) {
+        // Only put the preload tags in the index.html entry page
+        if (!bundle || path.basename(context.filename) !== "index.html") {
           return html;
         }
 

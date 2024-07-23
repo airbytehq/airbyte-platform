@@ -1,11 +1,29 @@
 import { FormattedMessage } from "react-intl";
 
-import { Text } from "components/ui/Text";
+import { EmptyState } from "components/common/EmptyState";
+import { useConnectionSyncContext } from "components/connection/ConnectionSync/ConnectionSyncContext";
+import { Button } from "components/ui/Button";
 
-export const NoDataMessage: React.FC = () => (
-  <div>
-    <Text size="lg" align="center">
-      <FormattedMessage id="connection.overview.graph.noData" />
-    </Text>
-  </div>
-);
+import { useConnectionFormService } from "hooks/services/ConnectionForm/ConnectionFormService";
+
+export const NoDataMessage: React.FC = () => {
+  const { mode } = useConnectionFormService();
+  const { syncConnection, isSyncConnectionAvailable } = useConnectionSyncContext();
+
+  return (
+    <EmptyState
+      icon="chart"
+      text={<FormattedMessage id="connection.overview.graph.noData" />}
+      button={
+        <Button
+          variant="primary"
+          type="button"
+          onClick={syncConnection}
+          disabled={mode === "readonly" || !isSyncConnectionAvailable}
+        >
+          <FormattedMessage id="connection.overview.graph.noData.button" />
+        </Button>
+      }
+    />
+  );
+};

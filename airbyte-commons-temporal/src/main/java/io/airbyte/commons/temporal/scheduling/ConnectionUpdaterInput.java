@@ -27,6 +27,7 @@ public class ConnectionUpdaterInput {
   private UUID connectionId;
   @Nullable
   private Long jobId;
+
   /**
    * This field is unused, it is kept for compatibility reasons.
    */

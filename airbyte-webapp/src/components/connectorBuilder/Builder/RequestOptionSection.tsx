@@ -119,8 +119,7 @@ export const RequestOptionSection: React.FC<RequestOptionSectionProps> = (props)
       copyConfig={{
         path: "requestOptions",
         currentStreamIndex: props.currentStreamIndex,
-        copyFromLabel: formatMessage({ id: "connectorBuilder.copyFromRequestOptionsTitle" }),
-        copyToLabel: formatMessage({ id: "connectorBuilder.copyToRequestOptionsTitle" }),
+        componentName: formatMessage({ id: "connectorBuilder.requestOptions.label" }),
       }}
     >
       {content}

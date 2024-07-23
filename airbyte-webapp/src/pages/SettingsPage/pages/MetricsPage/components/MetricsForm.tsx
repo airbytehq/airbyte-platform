@@ -21,11 +21,11 @@ const ValidationSchema: SchemaOf<MetricsFormValues> = yup.object().shape({
 
 export const MetricsForm: React.FC = () => {
   const { formatMessage } = useIntl();
-  const { workspaceId, anonymousDataCollection } = useCurrentWorkspace();
+  const { workspaceId, organizationId, anonymousDataCollection } = useCurrentWorkspace();
   const { mutateAsync: updateWorkspace } = useUpdateWorkspace();
   const { registerNotification } = useNotificationService();
   const { trackError } = useAppMonitoringService();
-  const canUpdateWorkspace = useIntent("UpdateWorkspace", { workspaceId });
+  const canUpdateWorkspace = useIntent("UpdateWorkspace", { workspaceId, organizationId });
 
   const onSubmit = async ({ anonymousDataCollection }: MetricsFormValues) => {
     await updateWorkspace({

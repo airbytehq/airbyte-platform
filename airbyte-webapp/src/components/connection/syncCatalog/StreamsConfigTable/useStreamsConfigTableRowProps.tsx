@@ -14,11 +14,15 @@ import { compareObjectsByFields } from "../utils";
 export type StatusToDisplay = "disabled" | "added" | "removed" | "changed" | "unchanged";
 
 export const useStreamsConfigTableRowProps = (stream: AirbyteStreamAndConfiguration) => {
-  const { initialValues } = useConnectionFormService();
+  const { initialValues, mode } = useConnectionFormService();
 
   const isStreamEnabled = stream.config?.selected;
 
   const statusToDisplay = useMemo<StatusToDisplay>(() => {
+    if (mode !== "edit") {
+      return "unchanged";
+    }
+
     const rowStatusChanged =
       initialValues.syncCatalog.streams.find(
         (item) => item.stream?.name === stream.stream?.name && item.stream?.namespace === stream.stream?.namespace
@@ -40,7 +44,7 @@ export const useStreamsConfigTableRowProps = (stream: AirbyteStreamAndConfigurat
       return "changed";
     }
     return "unchanged";
-  }, [initialValues.syncCatalog.streams, isStreamEnabled, stream.config, stream.stream]);
+  }, [mode, initialValues.syncCatalog.streams, isStreamEnabled, stream.config, stream.stream]);
 
   const pillButtonVariant = useMemo<PillButtonVariant>(() => {
     if (statusToDisplay === "added") {

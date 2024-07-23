@@ -30,10 +30,11 @@ micronaut:
       enabled: true
     netty:
       access-logger:
-        enabled: ${HTTP_ACCESS_LOG_ENABLED:true}
+        enabled: ${HTTP_ACCESS_LOG_ENABLED:false}
       aggregator:
         max-content-length: 52428800 # 50MB
       max-header-size: ${NETTY_MAX_HEADER_SIZE:32768}
+    max-request-size: 10485760 # 10MB the micronaut default. If we want to bump, double check it works for nginx.
   endpoints:
     v1/manifest_template:
       enable: true
@@ -116,6 +117,10 @@ endpoints:
   threaddump:
     enabled: true
     sensitive: true
+
+jackson:
+  mapper:
+    ACCEPT_CASE_INSENSITIVE_ENUMS: true
 
 logger:
   levels:

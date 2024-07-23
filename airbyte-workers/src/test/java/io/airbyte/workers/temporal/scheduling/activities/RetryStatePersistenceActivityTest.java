@@ -7,16 +7,19 @@ package io.airbyte.workers.temporal.scheduling.activities;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import io.airbyte.api.client.AirbyteApiClient;
 import io.airbyte.api.client.generated.WorkspaceApi;
 import io.airbyte.api.client.model.generated.WorkspaceRead;
 import io.airbyte.commons.temporal.scheduling.retries.RetryManager;
 import io.airbyte.workers.helpers.RetryStateClient;
 import io.airbyte.workers.temporal.scheduling.activities.RetryStatePersistenceActivity.HydrateInput;
 import io.airbyte.workers.temporal.scheduling.activities.RetryStatePersistenceActivity.PersistInput;
+import java.io.IOException;
 import java.util.UUID;
 import java.util.stream.Stream;
 import org.junit.jupiter.api.BeforeEach;
@@ -30,6 +33,9 @@ import org.mockito.Mockito;
 class RetryStatePersistenceActivityTest {
 
   @Mock
+  private AirbyteApiClient mAirbyteApiClient;
+
+  @Mock
   private RetryStateClient mRetryStateClient;
 
   @Mock
@@ -37,17 +43,19 @@ class RetryStatePersistenceActivityTest {
 
   @BeforeEach
   public void setup() throws Exception {
-    mRetryStateClient = Mockito.mock(RetryStateClient.class);
-    mWorkspaceApi = Mockito.mock(WorkspaceApi.class);
-
-    when(mWorkspaceApi.getWorkspaceByConnectionId(any())).thenReturn(new WorkspaceRead().workspaceId(UUID.randomUUID()));
+    mAirbyteApiClient = mock(AirbyteApiClient.class);
+    mRetryStateClient = mock(RetryStateClient.class);
+    mWorkspaceApi = mock(WorkspaceApi.class);
+    when(mWorkspaceApi.getWorkspaceByConnectionId(any())).thenReturn(new WorkspaceRead(UUID.randomUUID(), UUID.randomUUID(), "name", "slug", false,
+        UUID.randomUUID(), null, null, null, null, null, null, null, null, null, null, null, null));
+    when(mAirbyteApiClient.getWorkspaceApi()).thenReturn(mWorkspaceApi);
   }
 
   @ParameterizedTest
   @ValueSource(longs = {124, 541, 12, 2, 1})
   void hydrateDelegatesToRetryStatePersistence(final long jobId) {
     final var manager = RetryManager.builder().build();
-    final RetryStatePersistenceActivityImpl activity = new RetryStatePersistenceActivityImpl(mRetryStateClient, mWorkspaceApi);
+    final RetryStatePersistenceActivityImpl activity = new RetryStatePersistenceActivityImpl(mAirbyteApiClient, mRetryStateClient);
     when(mRetryStateClient.hydrateRetryState(eq(jobId), Mockito.any())).thenReturn(manager);
 
     final HydrateInput input = new HydrateInput(jobId, UUID.randomUUID());
@@ -60,10 +68,10 @@ class RetryStatePersistenceActivityTest {
 
   @ParameterizedTest
   @MethodSource("persistMatrix")
-  void persistDelegatesToRetryStatePersistence(final long jobId, final UUID connectionId) {
+  void persistDelegatesToRetryStatePersistence(final long jobId, final UUID connectionId) throws IOException {
     final var success = true;
     final var manager = RetryManager.builder().build();
-    final RetryStatePersistenceActivityImpl activity = new RetryStatePersistenceActivityImpl(mRetryStateClient, mWorkspaceApi);
+    final RetryStatePersistenceActivityImpl activity = new RetryStatePersistenceActivityImpl(mAirbyteApiClient, mRetryStateClient);
     when(mRetryStateClient.persistRetryState(jobId, connectionId, manager)).thenReturn(success);
 
     final PersistInput input = new PersistInput(jobId, connectionId, manager);

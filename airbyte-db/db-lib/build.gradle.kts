@@ -11,9 +11,6 @@ val migrations by configurations.creating {
 
 configurations.all {
   exclude(group = "io.micronaut.flyway")
-  resolutionStrategy {
-    force(libs.platform.testcontainers.postgresql)
-  }
 }
 
 airbyte {
@@ -28,10 +25,10 @@ dependencies {
   api(libs.jooq)
   api(libs.postgresql)
 
-  implementation(project(":airbyte-commons"))
+  implementation(project(":oss:airbyte-commons"))
   implementation(libs.airbyte.protocol)
-  implementation(project(":airbyte-json-validation"))
-  implementation(project(":airbyte-config:config-models"))
+  implementation(project(":oss:airbyte-json-validation"))
+  implementation(project(":oss:airbyte-config:config-models"))
   implementation(libs.bundles.flyway)
   implementation(libs.guava)
   implementation(platform(libs.fasterxml))
@@ -41,16 +38,16 @@ dependencies {
   migrations(libs.platform.testcontainers.postgresql)
   migrations(sourceSets["main"].output)
 
-  // Mark as compile Only to avoid leaking transitively to connectors)
+  // Mark as compile Only to avoid leaking transitively to connectors
   compileOnly(libs.platform.testcontainers.postgresql)
 
-  // These are required because gradle might be using lower version of Jna from other)
-  // library transitive dependency. Can be removed if we can figure out which library is the cause.)
-  // Refer: https://github.com/testcontainers/testcontainers-java/issues/3834#issuecomment-825409079)
+  // These are required because gradle might be using lower version of Jna from other
+  // library transitive dependency. Can be removed if we can figure out which library is the cause.
+  // Refer: https://github.com/testcontainers/testcontainers-java/issues/3834#issuecomment-825409079
   implementation(libs.jna)
   implementation(libs.jna.platform)
 
-  testImplementation(project(":airbyte-test-utils"))
+  testImplementation(project(":oss:airbyte-test-utils"))
   testImplementation(libs.apache.commons.lang)
   testImplementation(libs.platform.testcontainers.postgresql)
   testRuntimeOnly(libs.junit.jupiter.engine)
@@ -65,42 +62,42 @@ tasks.register<JavaExec>("newConfigsMigration") {
   mainClass = "io.airbyte.db.instance.development.MigrationDevCenter"
   classpath = files(migrations.files)
   args = listOf("configs", "create")
-  dependsOn(tasks.named("classes"))
+  dependsOn(":oss:airbyte-db:db-lib:build")
 }
 
 tasks.register<JavaExec>("runConfigsMigration") {
   mainClass = "io.airbyte.db.instance.development.MigrationDevCenter"
   classpath = files(migrations.files)
   args = listOf("configs", "migrate")
-  dependsOn(tasks.named("classes"))
+  dependsOn(":oss:airbyte-db:db-lib:build")
 }
 
 tasks.register<JavaExec>("dumpConfigsSchema") {
   mainClass = "io.airbyte.db.instance.development.MigrationDevCenter"
   classpath = files(migrations.files)
   args = listOf("configs", "dump_schema")
-  dependsOn(tasks.named("classes"))
+  dependsOn(":oss:airbyte-db:db-lib:build")
 }
 
 tasks.register<JavaExec>("newJobsMigration") {
   mainClass = "io.airbyte.db.instance.development.MigrationDevCenter"
   classpath = files(migrations.files)
   args = listOf("jobs", "create")
-  dependsOn(tasks.named("classes"))
+  dependsOn(":oss:airbyte-db:db-lib:build")
 }
 
 tasks.register<JavaExec>("runJobsMigration") {
   mainClass = "io.airbyte.db.instance.development.MigrationDevCenter"
   classpath = files(migrations.files)
   args = listOf("jobs", "migrate")
-  dependsOn(tasks.named("classes"))
+  dependsOn(":oss:airbyte-db:db-lib:build")
 }
 
 tasks.register<JavaExec>("dumpJobsSchema") {
   mainClass = "io.airbyte.db.instance.development.MigrationDevCenter"
   classpath = files(migrations.files)
   args = listOf("jobs", "dump_schema")
-  dependsOn(tasks.named("classes"))
+  dependsOn(":oss:airbyte-db:db-lib:build")
 }
 
 val copyInitSql = tasks.register<Copy>("copyInitSql") {
@@ -110,6 +107,6 @@ val copyInitSql = tasks.register<Copy>("copyInitSql") {
   into("build/airbyte/docker/bin")
 }
 
-tasks.named("dockerBuildImage") {
+tasks.named("dockerCopyDistribution") {
   dependsOn(copyInitSql)
 }

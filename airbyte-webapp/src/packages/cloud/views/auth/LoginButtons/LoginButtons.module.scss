@@ -1,0 +1,52 @@
+@use "scss/variables";
+@use "scss/colors";
+
+.spinner {
+  height: 115px; // Matches the height of the (currently) two oauth buttons
+}
+
+.sso {
+  text-decoration: none;
+}
+
+.login,
+.google,
+.github,
+.sso {
+  background: colors.$foreground;
+  border: variables.$border-thin solid colors.$grey-300;
+  color: colors.$inverse;
+  height: 46px;
+  justify-content: center;
+  display: flex;
+  align-items: center;
+  font-size: 16px;
+  font-weight: 500;
+  width: 100%;
+  padding: variables.$spacing-md;
+  gap: variables.$spacing-md;
+  border-radius: variables.$border-radius-md;
+  transition: all variables.$transition;
+  cursor: pointer;
+
+  &:hover,
+  &:focus {
+    box-shadow:
+      0 1px 3px rgba(53, 53, 66, 20%),
+      0 1px 2px rgba(53, 53, 66, 12%),
+      0 1px 1px rgba(53, 53, 66, 14%);
+  }
+
+  & > img {
+    height: 24px;
+  }
+}
+
+.sso:hover {
+  color: colors.$inverse;
+}
+
+.error {
+  margin-top: variables.$spacing-lg;
+  color: colors.$red;
+}

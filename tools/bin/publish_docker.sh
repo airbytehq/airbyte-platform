@@ -20,7 +20,6 @@ projectDir=(
   "workload-launcher"
   "keycloak"
   "keycloak-setup"
-  "api-server"
 )
 
 # Set default values to required vars. If set in env, values will be taken from there.
@@ -46,22 +45,8 @@ for workdir in "${projectDir[@]}"
         artifactName="worker"
         ;;
 
-      "api-server")
-        artifactName="airbyte-api-server"
-        ;;
-
       *)
         artifactName=${workdir%/*}
-        ;;
-    esac
-
-    case $workdir in
-      "webapp")
-        dockerDir="build/docker"
-        ;;
-
-      *)
-        dockerDir="build/airbyte/docker"
         ;;
     esac
 
@@ -76,6 +61,6 @@ for workdir in "${projectDir[@]}"
       --build-arg POSTGRES_IMAGE=$POSTGRES_IMAGE            \
       --build-arg JDK_VERSION=$JDK_VERSION                  \
       --push                                                \
-      airbyte-$workdir/$dockerDir
+      airbyte-$workdir/build/airbyte/docker
     docker buildx rm $artifactName
 done

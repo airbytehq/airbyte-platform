@@ -15,9 +15,9 @@ micronaut:
     binders:
       netty:
         bytebuf-allocators:
-          enabled: true
+          enabled: false
         channels:
-          enabled: true
+          enabled: false
         queues:
           enabled: true
       web:
@@ -42,18 +42,13 @@ micronaut:
           secret: ${WORKLOAD_API_BEARER_TOKEN:}
   server:
     port: 8007
-    cors:
-      enabled: true
-      configurations:
-        web:
-          allowed-origins-regex:
-            - ^.*$
+    idle-timeout: ${HTTP_IDLE_TIMEOUT:5m}
     netty:
+      access-logger:
+        enabled: ${HTTP_ACCESS_LOG_ENABLED:false}
       aggregator:
         max-content-length: 52428800 # 50MB
-      access-logger:
-        enabled: ${HTTP_ACCESS_LOG_ENABLED:true}
-    idle-timeout: ${HTTP_IDLE_TIMEOUT:5m}
+    max-request-size: 10485760 # 10MB the micronaut default. If we want to bump, double check it works for nginx.
 
 airbyte:
   feature-flag:
@@ -136,4 +131,6 @@ logger:
 #      com.zaxxer.hikari: TRACE
 
 jackson:
+  mapper:
+    ACCEPT_CASE_INSENSITIVE_ENUMS: true
   serialization-inclusion: always

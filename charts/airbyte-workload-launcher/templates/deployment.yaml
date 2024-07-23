@@ -70,6 +70,16 @@ spec:
               key: AIRBYTE_VERSION
         - name: DATA_PLANE_ID
           value: "local"
+        - name: PUB_SUB_ENABLED
+          valueFrom:
+            configMapKeyRef:
+              name: {{ .Release.Name }}-airbyte-env
+              key: PUB_SUB_ENABLED
+        - name: PUB_SUB_TOPIC_NAME
+          valueFrom:
+            configMapKeyRef:
+              name: {{ .Release.Name }}-airbyte-env
+              key: PUB_SUB_TOPIC_NAME
         - name: CONFIG_ROOT
           valueFrom:
             configMapKeyRef:
@@ -81,31 +91,9 @@ spec:
         - name: CONTAINER_ORCHESTRATOR_SECRET_NAME
           value: {{ include "airbyte.secretStoreName" .Values.global.storage.storageSecretName }}
         {{- end }}
-        - name: DATABASE_HOST
-          valueFrom:
-            configMapKeyRef:
-              name: {{ .Release.Name }}-airbyte-env
-              key: DATABASE_HOST
-        - name: DATABASE_PORT
-          valueFrom:
-            configMapKeyRef:
-              name: {{ .Release.Name }}-airbyte-env
-              key: DATABASE_PORT
-        - name: DATABASE_PASSWORD
-          valueFrom:
-            secretKeyRef:
-              name: {{ .Values.global.database.secretName | default (printf "%s-airbyte-secrets" .Release.Name ) }}
-              key: {{ .Values.global.database.secretValue | default "DATABASE_PASSWORD" }}
-        - name: DATABASE_URL
-          valueFrom:
-            configMapKeyRef:
-              name: {{ .Release.Name }}-airbyte-env
-              key: DATABASE_URL
-        - name: DATABASE_USER
-          valueFrom:
-            secretKeyRef:
-              name: {{ .Release.Name }}-airbyte-secrets
-              key: DATABASE_USER
+
+        {{- include "airbyte.database.envs" . | nindent 8 }}
+
         - name: LOG4J_CONFIGURATION_FILE
           valueFrom:
             configMapKeyRef:
@@ -413,6 +401,13 @@ spec:
               name: {{ .Release.Name }}-airbyte-env
               key: WORKLOAD_LAUNCHER_PARALLELISM
         {{- if or (eq .Values.global.edition "pro") (eq .Values.global.edition "enterprise") }}
+        - name: AIRBYTE_API_AUTH_HEADER_NAME
+          value: "X-Airbyte-Auth"
+        - name: AIRBYTE_API_AUTH_HEADER_VALUE
+          value: "Internal worker"
+        {{- else if and (eq .Values.global.deploymentMode "oss") (eq .Values.global.auth.enabled true) }}
+        # Self-Managed Enterprise and Community w/ auth enabled use the same auth header, just
+        # splitting into two separate blocks for readability.
         - name: AIRBYTE_API_AUTH_HEADER_NAME
           value: "X-Airbyte-Auth"
         - name: AIRBYTE_API_AUTH_HEADER_VALUE

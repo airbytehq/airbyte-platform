@@ -65,12 +65,18 @@ public class SyncSummary {
     return String.format("%d days %d hours", duration.toDays(), duration.toHoursPart());
   }
 
-  public long getDurationInSeconds() {
-    return Duration.between(startedAt, finishedAt).getSeconds();
+  public Long getDurationInSeconds() {
+    if (startedAt != null && finishedAt != null) {
+      return Duration.between(startedAt, finishedAt).getSeconds();
+    }
+    return null;
   }
 
   public String getDurationFormatted() {
-    return formatDuration(startedAt, finishedAt);
+    if (startedAt != null && finishedAt != null) {
+      return formatDuration(startedAt, finishedAt);
+    }
+    return null;
   }
 
   public String getBytesEmittedFormatted() {

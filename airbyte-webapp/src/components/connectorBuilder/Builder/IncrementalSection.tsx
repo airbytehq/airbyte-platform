@@ -42,10 +42,11 @@ export const IncrementalSection: React.FC<IncrementalSectionProps> = ({ streamFi
   const { formatMessage } = useIntl();
   const filterMode = useBuilderWatch(streamFieldPath("incrementalSync.filter_mode"));
   const getExistingOrUniqueKey = useGetUniqueKey();
+  const label = formatMessage({ id: "connectorBuilder.incremental.label" });
   return (
     <BuilderCard
       docLink={links.connectorBuilderIncrementalSync}
-      label={formatMessage({ id: "connectorBuilder.incremental.label" })}
+      label={label}
       tooltip={formatMessage({ id: "connectorBuilder.incremental.tooltip" })}
       inputsConfig={{
         toggleable: true,
@@ -83,8 +84,7 @@ export const IncrementalSection: React.FC<IncrementalSectionProps> = ({ streamFi
       copyConfig={{
         path: "incrementalSync",
         currentStreamIndex,
-        copyFromLabel: formatMessage({ id: "connectorBuilder.copyFromIncrementalTitle" }),
-        copyToLabel: formatMessage({ id: "connectorBuilder.copyToIncrementalTitle" }),
+        componentName: label,
       }}
     >
       <CursorField streamFieldPath={streamFieldPath} />

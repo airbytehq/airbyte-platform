@@ -13,12 +13,12 @@ import io.airbyte.api.model.generated.ApplicationIdRequestBody;
 import io.airbyte.api.model.generated.ApplicationRead;
 import io.airbyte.api.model.generated.ApplicationReadList;
 import io.airbyte.api.model.generated.ApplicationTokenRequest;
-import io.airbyte.commons.license.annotation.RequiresAirbyteProEnabled;
 import io.airbyte.commons.server.scheduling.AirbyteTaskExecutors;
 import io.airbyte.commons.server.support.CurrentUserService;
 import io.airbyte.config.Application;
 import io.airbyte.data.services.ApplicationService;
 import io.micronaut.context.annotation.Context;
+import io.micronaut.context.annotation.Requires;
 import io.micronaut.http.annotation.Body;
 import io.micronaut.http.annotation.Controller;
 import io.micronaut.scheduling.annotation.ExecuteOn;
@@ -32,7 +32,7 @@ import java.time.format.DateTimeFormatter;
  */
 @Context
 @Controller("/api/v1/applications")
-@RequiresAirbyteProEnabled
+@Requires(bean = ApplicationService.class)
 public class ApplicationsController implements ApplicationsApi {
 
   final ApplicationService applicationService;

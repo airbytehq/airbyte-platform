@@ -6,6 +6,7 @@ package io.airbyte.db.init.impl;
 
 import io.airbyte.db.factory.DSLContextFactory;
 import io.airbyte.db.factory.DataSourceFactory;
+import io.airbyte.db.instance.DatabaseConstants;
 import javax.sql.DataSource;
 import org.jooq.DSLContext;
 import org.jooq.SQLDialect;
@@ -26,7 +27,7 @@ class CommonDatabaseInitializerTest {
 
   @BeforeEach
   void setup() {
-    container = new PostgreSQLContainer<>("postgres:13-alpine");
+    container = new PostgreSQLContainer<>(DatabaseConstants.DEFAULT_DATABASE_VERSION);
     container.start();
 
     dataSource = DataSourceFactory.create(container.getUsername(), container.getPassword(), container.getDriverClassName(), container.getJdbcUrl());

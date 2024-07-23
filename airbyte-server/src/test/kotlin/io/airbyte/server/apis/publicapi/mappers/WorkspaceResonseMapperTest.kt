@@ -20,7 +20,7 @@ class WorkspaceResonseMapperTest {
     val workspaceResponse = WorkspaceResponseMapper.from(workspaceRead)
 
     // Then
-    assertEquals(workspaceRead.workspaceId, workspaceResponse.workspaceId)
+    assertEquals(workspaceRead.workspaceId.toString(), workspaceResponse.workspaceId)
     assertEquals(workspaceRead.name, workspaceResponse.name)
   }
 }

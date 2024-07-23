@@ -1,0 +1,9 @@
+@use "scss/variables";
+
+.secondDepth {
+  padding-left: variables.$spacing-lg;
+}
+
+.thirdDepth {
+  padding-left: 2 * variables.$spacing-lg;
+}

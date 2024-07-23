@@ -10,9 +10,11 @@ import { Tooltip } from "components/ui/Tooltip";
 
 import { useCreateApplication, useListApplications } from "core/api";
 import { ApplicationCreate } from "core/api/types/AirbyteClient";
+import { useAuthService } from "core/services/auth";
 import { useModalService } from "hooks/services/Modal";
 
 export const CreateApplicationControl = () => {
+  const { authType } = useAuthService();
   const { formatMessage } = useIntl();
   const { mutateAsync: createApplication } = useCreateApplication();
   const { applications } = useListApplications();
@@ -43,12 +45,17 @@ export const CreateApplicationControl = () => {
             />
           </Box>
           <ModalFooter>
-            <FormSubmissionButtons onCancelClickCallback={onCancel} />
+            <FormSubmissionButtons allowNonDirtyCancel onCancelClickCallback={onCancel} />
           </ModalFooter>
         </Form>
       ),
       size: "md",
     });
+
+  if (authType === "simple") {
+    // Simple auth does not support dynamic creation/deletion of applications
+    return null;
+  }
 
   return (
     <>

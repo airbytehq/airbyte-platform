@@ -1,23 +1,16 @@
+// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+// NOTE: this settings is only discovered when running from oss/build.gradle
+// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 pluginManagement {
   repositories {
     // uncomment for local dev
     // maven {
-    //     name = "localPluginRepo"
-    //     url = uri("../.gradle-plugins-local")
+    // name = "localPluginRepo"
+    // url = uri("../.gradle-plugins-local")
     // }
     maven(url = "https://airbyte.mycloudrepo.io/public/repositories/airbyte-public-jars")
     gradlePluginPortal()
     maven(url = "https://oss.sonatype.org/content/repositories/snapshots")
-  }
-  resolutionStrategy {
-    eachPlugin {
-      // We're using the 6.1.0-SNAPSHOT version of openapi-generator which contains a fix for generating nullable arrays (https://github.com/OpenAPITools/openapi-generator/issues/13025)
-      // The snapshot version isn"t available in the main Gradle Plugin Portal, so we added the Sonatype snapshot repository above.
-      // The useModule command below allows us to map from the plugin id, `org.openapi.generator`, to the underlying module (https://oss.sonatype.org/content/repositories/snapshots/org/openapitools/openapi-generator-gradle-plugin/6.1.0-SNAPSHOT/_
-      if (requested.id.id == "org.openapi.generator") {
-        useModule("org.openapitools:openapi-generator-gradle-plugin:${requested.version}")
-      }
-    }
   }
 }
 
@@ -25,7 +18,7 @@ pluginManagement {
 // as much information as possible.
 plugins {
   id("com.gradle.enterprise") version "3.15.1"
-  id("com.github.burrunan.s3-build-cache") version "1.5"
+  id("com.github.burrunan.s3-build-cache") version "1.8.1"
 }
 
 gradleEnterprise {
@@ -56,7 +49,7 @@ buildCache {
   }
 }
 
-rootProject.name = "airbyte"
+rootProject.name = "airbyte-oss"
 
 // definition for dependency resolution
 dependencyResolutionManagement {
@@ -72,56 +65,107 @@ dependencyResolutionManagement {
 }
 
 // todo (cgardens) - alphabetize
-// shared
-include(":airbyte-commons")
+// Note: Every submodule needs to appear in this file TWICE. First to be included
+// e.g. include("<submodule>") and then a second time to declare its project directory
+// (e.g. project("<submodule>").projectDir = file("<path from oss/ to the submodule>")
+// Because the directory structure in the oss repo doesn't match the actual file
+// structure the project dir has to be declared explicitly. In the oss repo oss is
+// the root.
+include(":oss:airbyte-commons")
 
-include(":airbyte-api")
-include(":airbyte-api-server")
-include(":airbyte-workload-api-server")
-include(":airbyte-commons-protocol")
-include(":airbyte-config:specs")
-include(":airbyte-config:init")
-include(":airbyte-config:config-models") // reused by acceptance tests in connector base.
-include(":airbyte-data")
-include(":airbyte-db:db-lib") // reused by acceptance tests in connector base.
-include(":airbyte-json-validation")
-include(":airbyte-metrics:metrics-lib")
-include(":airbyte-oauth")
-include(":airbyte-test-utils")
+include(":oss:airbyte-api")
+include(":oss:airbyte-workload-api-server")
+include(":oss:airbyte-commons-protocol")
+include(":oss:airbyte-config:specs")
+include(":oss:airbyte-config:init")
+include(":oss:airbyte-config:config-models")
+include(":oss:airbyte-data")
+include(":oss:airbyte-db:db-lib")
+include(":oss:airbyte-json-validation")
+include(":oss:airbyte-metrics:metrics-lib")
+include(":oss:airbyte-oauth")
+include(":oss:airbyte-test-utils")
 
-// airbyte-workers has a lot of dependencies.
-include(":airbyte-analytics") // transitively used by airbyte-workers.
-include(":airbyte-commons-temporal")
-include(":airbyte-commons-temporal-core")
-include(":airbyte-commons-converters")
-include(":airbyte-commons-worker")
-include(":airbyte-config:config-persistence") // transitively used by airbyte-workers.
-include(":airbyte-config:config-secrets") //
-include(":airbyte-featureflag")
-include(":airbyte-db:jooq") // transitively used by airbyte-workers.
-include(":airbyte-micronaut-temporal")
-include(":airbyte-notification") // transitively used by airbyte-workers.
-include(":airbyte-persistence:job-persistence") // transitively used by airbyte-workers.
-include(":airbyte-worker-models")
+include(":oss:airbyte-analytics")
+include(":oss:airbyte-commons-temporal")
+include(":oss:airbyte-commons-temporal-core")
+include(":oss:airbyte-commons-converters")
+include(":oss:airbyte-commons-worker")
+include(":oss:airbyte-config:config-persistence")
+include(":oss:airbyte-config:config-secrets")
+include(":oss:airbyte-featureflag")
+include(":oss:airbyte-db:jooq")
+include(":oss:airbyte-micronaut-temporal")
+include(":oss:airbyte-notification")
+include(":oss:airbyte-persistence:job-persistence")
+include(":oss:airbyte-worker-models")
 
-include(":airbyte-bootloader")
-include(":airbyte-commons-auth")
-include(":airbyte-commons-license")
-include(":airbyte-commons-micronaut")
-include(":airbyte-commons-micronaut-security")
-include(":airbyte-commons-server")
-include(":airbyte-commons-with-dependencies")
-include(":airbyte-connector-builder-server")
-include(":airbyte-container-orchestrator")
-include(":airbyte-cron")
-include(":airbyte-keycloak")
-include(":airbyte-keycloak-setup")
-include(":airbyte-metrics:reporter")
-include(":airbyte-proxy")
-include(":airbyte-server")
-include(":airbyte-temporal")
-include(":airbyte-tests")
-include(":airbyte-webapp")
-include(":airbyte-workers")
-include(":airbyte-workload-launcher")
-include(":airbyte-connector-sidecar")
+include(":oss:airbyte-bootloader")
+include(":oss:airbyte-commons-auth")
+include(":oss:airbyte-commons-license")
+include(":oss:airbyte-commons-micronaut")
+include(":oss:airbyte-commons-micronaut-security")
+include(":oss:airbyte-commons-server")
+include(":oss:airbyte-commons-with-dependencies")
+include(":oss:airbyte-connector-builder-server")
+include(":oss:airbyte-container-orchestrator")
+include(":oss:airbyte-cron")
+include(":oss:airbyte-keycloak")
+include(":oss:airbyte-keycloak-setup")
+include(":oss:airbyte-metrics:reporter")
+include(":oss:airbyte-proxy")
+include(":oss:airbyte-server")
+include(":oss:airbyte-temporal")
+include(":oss:airbyte-tests")
+include(":oss:airbyte-webapp")
+include(":oss:airbyte-workers")
+include(":oss:airbyte-workload-launcher")
+include(":oss:airbyte-connector-sidecar")
+
+project(":oss:airbyte-commons").projectDir = file("airbyte-commons")
+project(":oss:airbyte-api").projectDir = file("airbyte-api")
+project(":oss:airbyte-workload-api-server").projectDir = file("airbyte-workload-api-server")
+project(":oss:airbyte-commons-protocol").projectDir = file("airbyte-commons-protocol")
+project(":oss:airbyte-config:specs").projectDir = file("airbyte-config/specs")
+project(":oss:airbyte-config:init").projectDir = file("airbyte-config/init")
+project(":oss:airbyte-config:config-models").projectDir = file("airbyte-config/config-models")
+project(":oss:airbyte-data").projectDir = file("airbyte-data")
+project(":oss:airbyte-db:db-lib").projectDir = file("airbyte-db/db-lib")
+project(":oss:airbyte-json-validation").projectDir = file("airbyte-json-validation")
+project(":oss:airbyte-metrics:metrics-lib").projectDir = file("airbyte-metrics/metrics-lib")
+project(":oss:airbyte-oauth").projectDir = file("airbyte-oauth")
+project(":oss:airbyte-test-utils").projectDir = file("airbyte-test-utils")
+project(":oss:airbyte-analytics").projectDir = file("airbyte-analytics")
+project(":oss:airbyte-commons-temporal").projectDir = file("airbyte-commons-temporal")
+project(":oss:airbyte-commons-temporal-core").projectDir = file("airbyte-commons-temporal-core")
+project(":oss:airbyte-commons-converters").projectDir = file("airbyte-commons-converters")
+project(":oss:airbyte-commons-worker").projectDir = file("airbyte-commons-worker")
+project(":oss:airbyte-config:config-persistence").projectDir = file("airbyte-config/config-persistence")
+project(":oss:airbyte-config:config-secrets").projectDir = file("airbyte-config/config-secrets")
+project(":oss:airbyte-featureflag").projectDir = file("airbyte-featureflag")
+project(":oss:airbyte-db:jooq").projectDir = file("airbyte-db/jooq")
+project(":oss:airbyte-micronaut-temporal").projectDir = file("airbyte-micronaut-temporal")
+project(":oss:airbyte-notification").projectDir = file("airbyte-notification")
+project(":oss:airbyte-persistence:job-persistence").projectDir = file("airbyte-persistence/job-persistence")
+project(":oss:airbyte-worker-models").projectDir = file("airbyte-worker-models")
+project(":oss:airbyte-bootloader").projectDir = file("airbyte-bootloader")
+project(":oss:airbyte-commons-auth").projectDir = file("airbyte-commons-auth")
+project(":oss:airbyte-commons-license").projectDir = file("airbyte-commons-license")
+project(":oss:airbyte-commons-micronaut").projectDir = file("airbyte-commons-micronaut")
+project(":oss:airbyte-commons-micronaut-security").projectDir = file("airbyte-commons-micronaut-security")
+project(":oss:airbyte-commons-server").projectDir = file("airbyte-commons-server")
+project(":oss:airbyte-commons-with-dependencies").projectDir = file("airbyte-commons-with-dependencies")
+project(":oss:airbyte-connector-builder-server").projectDir = file("airbyte-connector-builder-server")
+project(":oss:airbyte-container-orchestrator").projectDir = file("airbyte-container-orchestrator")
+project(":oss:airbyte-cron").projectDir = file("airbyte-cron")
+project(":oss:airbyte-keycloak").projectDir = file("airbyte-keycloak")
+project(":oss:airbyte-keycloak-setup").projectDir = file("airbyte-keycloak-setup")
+project(":oss:airbyte-metrics:reporter").projectDir = file("airbyte-metrics/reporter")
+project(":oss:airbyte-proxy").projectDir = file("airbyte-proxy")
+project(":oss:airbyte-server").projectDir = file("airbyte-server")
+project(":oss:airbyte-temporal").projectDir = file("airbyte-temporal")
+project(":oss:airbyte-tests").projectDir = file("airbyte-tests")
+project(":oss:airbyte-webapp").projectDir = file("airbyte-webapp")
+project(":oss:airbyte-workers").projectDir = file("airbyte-workers")
+project(":oss:airbyte-workload-launcher").projectDir = file("airbyte-workload-launcher")
+project(":oss:airbyte-connector-sidecar").projectDir = file("airbyte-connector-sidecar")

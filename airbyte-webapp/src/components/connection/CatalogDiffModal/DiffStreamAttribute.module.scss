@@ -1,0 +1,9 @@
+@use "./DiffFieldTable.module.scss";
+
+.diffAttribute {
+  @extend %table;
+}
+
+.diffAttribute__header {
+  @extend %header;
+}

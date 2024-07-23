@@ -1,4 +1,5 @@
 import { updateField } from "@cy/commands/common";
+import { ConnectorTab } from "@src/components/source/SelectConnector";
 
 const nameInput = "input[name=name]";
 const apiKeyInput = "input[name='connectionConfiguration.api_key']";
@@ -12,9 +13,9 @@ const destinationPathInput = "input[name='connectionConfiguration.destination_pa
 const optionalFieldsButton = "button[data-testid='optional-fields']";
 const xminOption = "label[data-testid='radio-option.1']";
 
-export const selectServiceType = (type: string) => {
-  // Make sure community connectors are visible in the grid, since they are hidden by default
-  cy.get("#filter-support-level-community").check({ force: true });
+export const selectServiceType = (type: string, tab: ConnectorTab) => {
+  // Click on the corresponding tab to see the desired connector
+  cy.get(`button[data-id='${tab}-step']`).click();
   cy.contains("button", type).click();
 };
 

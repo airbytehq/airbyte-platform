@@ -77,7 +77,7 @@ fun ApiWorkload.toDomain(): DomainWorkload {
     id = this.id,
     dataplaneId = this.dataplaneId,
     status = this.status?.toDomain() ?: WorkloadStatus.PENDING,
-    workloadLabels = this.labels?.map { it.toDomain() },
+    workloadLabels = this.labels.map { it.toDomain() },
     inputPayload = this.inputPayload,
     logPath = this.logPath,
     geography = this.geography,

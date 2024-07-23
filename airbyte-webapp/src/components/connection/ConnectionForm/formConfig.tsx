@@ -1,34 +1,30 @@
 import { useMemo } from "react";
 import { FieldArrayWithId } from "react-hook-form";
 
-import { NormalizationType } from "area/connection/types";
-import { isDbtTransformation, isNormalizationTransformation } from "area/connection/utils";
 import { useCurrentWorkspace } from "core/api";
 import {
   AirbyteCatalog,
   DestinationSyncMode,
-  OperationCreate,
   SyncMode,
-  ActorDefinitionVersionRead,
   ConnectionScheduleData,
   ConnectionScheduleType,
   Geography,
   NamespaceDefinitionType,
   NonBreakingChangesPreference,
-  OperationRead,
   SchemaChangeBackfillPreference,
+  DestinationDefinitionSpecificationRead,
 } from "core/api/types/AirbyteClient";
 import { FeatureItem, useFeature } from "core/services/features";
-import { ConnectionOrPartialConnection } from "hooks/services/ConnectionForm/ConnectionFormService";
-import { useExperiment } from "hooks/services/Experiment";
+import { ConnectionFormMode, ConnectionOrPartialConnection } from "hooks/services/ConnectionForm/ConnectionFormService";
 
 import { analyzeSyncCatalogBreakingChanges } from "./calculateInitialCatalog";
+import { pruneUnsupportedModes, replicateSourceModes } from "./preferredSyncModes";
 import {
   BASIC_FREQUENCY_DEFAULT_VALUE,
   SOURCE_SPECIFIC_FREQUENCY_DEFAULT,
 } from "./ScheduleFormField/useBasicFrequencyDropdownData";
 import { createConnectionValidationSchema } from "./schema";
-import { DbtOperationRead } from "../TransformationForm";
+import { updateStreamSyncMode } from "../syncCatalog/SyncCatalog/updateStreamSyncMode";
 
 /**
  * react-hook-form form values type for the connection form
@@ -42,8 +38,6 @@ export interface FormConnectionFormValues {
   prefix: string;
   nonBreakingChangesPreference?: NonBreakingChangesPreference;
   geography?: Geography;
-  normalization?: NormalizationType;
-  transformations?: OperationRead[];
   syncCatalog: AirbyteCatalog;
   notifySchemaChanges?: boolean;
   backfillPreference?: SchemaChangeBackfillPreference;
@@ -78,41 +72,50 @@ export const useConnectionValidationSchema = () => {
   );
 };
 
-/**
- * get transformation operations only
- * @param operations
- */
-export const getInitialTransformations = (operations: OperationRead[]): DbtOperationRead[] =>
-  operations?.filter(isDbtTransformation) ?? [];
-
-/**
- * get normalization initial normalization type
- * @param operations
- * @param isEditMode
- */
-export const getInitialNormalization = (
-  operations?: Array<OperationRead | OperationCreate>,
-  isEditMode?: boolean
-): NormalizationType => {
-  const initialNormalization =
-    operations?.find(isNormalizationTransformation)?.operatorConfiguration?.normalization?.option;
-
-  return initialNormalization
-    ? NormalizationType[initialNormalization]
-    : isEditMode
-    ? NormalizationType.raw
-    : NormalizationType.basic;
-};
-
 // react-hook-form form values type for the connection form.
 export const useInitialFormValues = (
   connection: ConnectionOrPartialConnection,
-  destDefinitionVersion: ActorDefinitionVersionRead,
-  isEditMode?: boolean
+  destDefinitionSpecification: DestinationDefinitionSpecificationRead,
+  mode: ConnectionFormMode
 ): FormConnectionFormValues => {
   const workspace = useCurrentWorkspace();
   const { catalogDiff, syncCatalog, schemaChange } = connection;
-  const useSimpliedCreation = useExperiment("connection.simplifiedCreation", false);
+  const { notificationSettings } = useCurrentWorkspace();
+  const supportedSyncModes: SyncMode[] = useMemo(() => {
+    const foundModes = new Set<SyncMode>();
+    for (let i = 0; i < connection.syncCatalog.streams.length; i++) {
+      const stream = connection.syncCatalog.streams[i];
+      stream.stream?.supportedSyncModes?.forEach((mode) => foundModes.add(mode));
+    }
+    return Array.from(foundModes);
+  }, [connection.syncCatalog.streams]);
+
+  if (mode === "create") {
+    const availableModes = pruneUnsupportedModes(
+      replicateSourceModes,
+      supportedSyncModes,
+      destDefinitionSpecification.supportedDestinationSyncModes
+    );
+
+    // when creating, apply the first applicable `replicateSourceModes` entry to each stream
+    syncCatalog.streams.forEach((airbyteStream) => {
+      for (let i = 0; i < availableModes.length; i++) {
+        const [syncMode, destinationSyncMode] = availableModes[i];
+
+        if (airbyteStream?.stream && airbyteStream?.config) {
+          if (!airbyteStream.stream?.supportedSyncModes?.includes(syncMode)) {
+            continue;
+          }
+
+          airbyteStream.config = updateStreamSyncMode(airbyteStream.stream, airbyteStream.config, {
+            syncMode,
+            destinationSyncMode,
+          });
+          break;
+        }
+      }
+    });
+  }
 
   const defaultNonBreakingChangesPreference = NonBreakingChangesPreference.propagate_columns;
 
@@ -140,18 +143,11 @@ export const useInitialFormValues = (
       },
       nonBreakingChangesPreference: connection.nonBreakingChangesPreference ?? defaultNonBreakingChangesPreference,
       geography: connection.geography || workspace.defaultGeography || "auto",
-      ...{
-        ...(destDefinitionVersion.supportsDbt && {
-          normalization: getInitialNormalization(connection.operations ?? [], isEditMode),
-        }),
-      },
-      ...{
-        ...(destDefinitionVersion.supportsDbt && {
-          transformations: getInitialTransformations(connection.operations ?? []),
-        }),
-        syncCatalog: analyzeSyncCatalogBreakingChanges(syncCatalog, catalogDiff, schemaChange),
-      },
-      notifySchemaChanges: connection.notifySchemaChanges ?? useSimpliedCreation,
+      syncCatalog: analyzeSyncCatalogBreakingChanges(syncCatalog, catalogDiff, schemaChange),
+      notifySchemaChanges:
+        connection.notifySchemaChanges ??
+        (notificationSettings?.sendOnConnectionUpdate?.notificationType &&
+          notificationSettings.sendOnConnectionUpdate.notificationType.length > 0),
       backfillPreference: connection.backfillPreference ?? SchemaChangeBackfillPreference.disabled,
     };
 
@@ -168,16 +164,13 @@ export const useInitialFormValues = (
     connection.prefix,
     connection.nonBreakingChangesPreference,
     connection.geography,
-    connection.operations,
     connection.notifySchemaChanges,
     connection.backfillPreference,
     defaultNonBreakingChangesPreference,
     workspace.defaultGeography,
-    destDefinitionVersion.supportsDbt,
-    isEditMode,
     syncCatalog,
     catalogDiff,
     schemaChange,
-    useSimpliedCreation,
+    notificationSettings?.sendOnConnectionUpdate,
   ]);
 };

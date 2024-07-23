@@ -21,9 +21,13 @@ class DeploymentFetcherTest {
   @BeforeEach
   fun setup() {
     deploymentMetadata =
-      DeploymentMetadataRead().id(deploymentId).environment(Configs.WorkerEnvironment.KUBERNETES.name).mode(
-        Configs.DeploymentMode.OSS.name,
-      ).version(airbyteVersion.serialize())
+      DeploymentMetadataRead(
+        id = deploymentId,
+        environment = Configs.WorkerEnvironment.KUBERNETES.name,
+        mode =
+          Configs.DeploymentMode.OSS.name,
+        version = airbyteVersion.serialize(),
+      )
     deploymentFetcher = DeploymentFetcher { deploymentMetadata }
   }
 

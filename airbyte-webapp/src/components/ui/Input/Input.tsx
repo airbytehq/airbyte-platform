@@ -12,10 +12,11 @@ export interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> 
   inline?: boolean;
   containerClassName?: string;
   adornment?: ReactNode;
+  "data-testid"?: string;
 }
 
 export const Input = React.forwardRef<HTMLInputElement, InputProps>(
-  ({ light, error, inline, containerClassName, adornment, ...props }, ref) => {
+  ({ light, error, inline, containerClassName, adornment, "data-testid": testId, ...props }, ref) => {
     const { formatMessage } = useIntl();
 
     const inputRef = useRef<HTMLInputElement | null>(null);
@@ -88,7 +89,7 @@ export const Input = React.forwardRef<HTMLInputElement, InputProps>(
       >
         <input
           aria-invalid={error}
-          data-testid="input"
+          data-testid={testId ?? "input"}
           {...props}
           ref={inputRef}
           type={type}

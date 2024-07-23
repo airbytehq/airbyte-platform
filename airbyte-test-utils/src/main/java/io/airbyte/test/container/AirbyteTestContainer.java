@@ -4,11 +4,11 @@
 
 package io.airbyte.test.container;
 
+import static io.airbyte.test.utils.AcceptanceTestUtils.createAirbyteApiClient;
+
 import com.google.common.collect.Maps;
 import io.airbyte.api.client.AirbyteApiClient;
 import io.airbyte.api.client.generated.HealthApi;
-import io.airbyte.api.client.invoker.generated.ApiClient;
-import io.airbyte.api.client.invoker.generated.ApiException;
 import io.airbyte.test.concurrency.WaitingUtils;
 import java.io.File;
 import java.io.FileWriter;
@@ -28,6 +28,8 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
+import org.openapitools.client.infrastructure.ClientException;
+import org.openapitools.client.infrastructure.ServerException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.testcontainers.containers.DockerComposeContainer;
@@ -111,23 +113,19 @@ public class AirbyteTestContainer {
   }
 
   @SuppressWarnings("BusyWait")
-  private static void waitForAirbyte() throws InterruptedException {
+  private static void waitForAirbyte() {
     // todo (cgardens) - assumes port 8001 which is misleading since we can start airbyte on other
     // ports. need to make this configurable.
-    final AirbyteApiClient apiClient = new AirbyteApiClient(
-        new ApiClient().setScheme("http")
-            .setHost("localhost")
-            .setPort(8001)
-            .setBasePath("/api"));
-    final HealthApi healthApi = apiClient.getHealthApi();
+    final AirbyteApiClient airbyteApiClient = createAirbyteApiClient("http://localhost:8001/api", Map.of());
+    final HealthApi healthApi = airbyteApiClient.getHealthApi();
 
-    final AtomicReference<ApiException> lastException = new AtomicReference<>();
+    final AtomicReference<Exception> lastException = new AtomicReference<>();
     final AtomicInteger attempt = new AtomicInteger();
     final Supplier<Boolean> condition = () -> {
       try {
         healthApi.getHealthCheck();
         return true;
-      } catch (final ApiException e) {
+      } catch (final ClientException | ServerException | IOException e) {
         lastException.set(e);
         LOGGER.info("airbyte not ready yet. attempt: {}", attempt.incrementAndGet());
         return false;

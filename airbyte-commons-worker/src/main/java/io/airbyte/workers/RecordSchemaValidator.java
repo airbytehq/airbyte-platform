@@ -61,7 +61,12 @@ public class RecordSchemaValidator implements Closeable {
       // Rather than allowing connectors to use any version, we enforce validation using V7
       final var schema = streams.get(stream);
       ((ObjectNode) schema).put("$schema", "http://json-schema.org/draft-07/schema#");
-      validator.initializeSchemaValidator(stream.toString(), schema);
+      // Starting with draft-06 of JSON schema, "id" is a reserved keyword. To use "id" in
+      // a JSON schema, it must be escaped as "$id". Because this mistake exists in connectors,
+      // the platform will attempt to migrate "id" property names to the escaped equivalent of "$id".
+      // Copy the schema before modification to ensure that it doesn't mutate the actual catalog schema
+      // used elsewhere in the platform.
+      validator.initializeSchemaValidator(stream.toString(), updateIdNodePropertyName(schema.deepCopy()));
     }
   }
 
@@ -117,6 +122,33 @@ public class RecordSchemaValidator implements Closeable {
   @Override
   public void close() throws IOException {
     validationExecutor.shutdownNow();
+  }
+
+  /**
+   * Migrates the reserved property name <code>id</code> in JSON Schema to its escaped equivalent
+   * <code>$id</code>. The <code>id</code> keyword has been reserved since <a href=
+   * "https://json-schema.org/understanding-json-schema/basics#declaring-a-unique-identifier">draft-06
+   * of JSON Schema</a>. Connectors have been built that violate this, so this code is to correct that
+   * without needing to force update connector version.
+   *
+   * @param node A {@link JsonNode} in the JSON Schema for a connector's catalog.
+   * @return The possible modified {@link JsonNode} with any references to <code>id</code> escaped.
+   */
+  private JsonNode updateIdNodePropertyName(final JsonNode node) {
+    if (node != null) {
+      if (node.has("id")) {
+        ((ObjectNode) node).set("$id", node.get("id"));
+        ((ObjectNode) node).remove("id");
+      }
+
+      for (final JsonNode child : node) {
+        if (child.isContainerNode()) {
+          updateIdNodePropertyName(child);
+        }
+      }
+    }
+
+    return node;
   }
 
 }

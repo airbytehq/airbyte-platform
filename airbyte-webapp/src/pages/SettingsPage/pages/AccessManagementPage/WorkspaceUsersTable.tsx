@@ -8,9 +8,9 @@ import { useCurrentUser } from "core/services/auth";
 import { FeatureItem, useFeature } from "core/services/features";
 import { RbacRoleHierarchy } from "core/utils/rbac/rbacPermissionsQuery";
 
+import { RoleManagementCell } from "./components/RoleManagementCell";
 import { getWorkspaceAccessLevel, UnifiedWorkspaceUserModel } from "./components/useGetAccessManagementData";
 import { UserCell } from "./components/UserCell";
-import { RoleManagementCell } from "./next/RoleManagementCell";
 
 export const WorkspaceUsersTable: React.FC<{
   users: UnifiedWorkspaceUserModel[];
@@ -35,7 +35,6 @@ export const WorkspaceUsersTable: React.FC<{
           );
         },
         sortingFn: "alphanumeric",
-        meta: { responsive: true },
       }),
       columnHelper.accessor(
         (row) => {
@@ -49,7 +48,6 @@ export const WorkspaceUsersTable: React.FC<{
               <FormattedMessage id="settings.accessManagement.table.column.role" />
             </>
           ),
-          meta: { responsive: true },
           cell: (props) => {
             return <RoleManagementCell user={props.row.original} resourceType="workspace" />;
           },

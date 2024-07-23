@@ -14,12 +14,16 @@ $border-radius: variables.$border-radius-lg;
   &--default {
     box-shadow: variables.$box-shadow;
   }
+
+  &--empty {
+    height: 100%;
+  }
 }
 
 .thead--sticky {
   position: sticky;
   top: 0;
-  z-index: z-indices.$tableScroll;
+  z-index: z-indices.$tableStickyHeader;
 }
 
 // --------- <th/> ---------
@@ -85,6 +89,12 @@ $border-radius: variables.$border-radius-lg;
   &:hover {
     background-color: colors.$grey-50;
   }
+
+  &.emptyPlaceholder {
+    &:hover {
+      background-color: colors.$foreground;
+    }
+  }
 }
 
 // --------- <td/> ---------
@@ -111,11 +121,11 @@ $border-radius: variables.$border-radius-lg;
     border-bottom: none;
 
     &:first-child {
-      border-radius: 0 0 0 $border-radius;
+      border-radius: 0 0 $border-radius $border-radius;
     }
 
     &:last-child {
-      border-radius: 0 0 $border-radius;
+      border-radius: 0 0 $border-radius $border-radius;
     }
   }
 }

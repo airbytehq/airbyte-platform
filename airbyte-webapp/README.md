@@ -11,9 +11,9 @@ You can build the webapp using Gradle in the root of the repository:
 
 ```sh
 # Only compile and build the docker webapp image:
-./gradlew :airbyte-webapp:assemble
+./gradlew :oss:airbyte-webapp:assemble
 # Build the webapp and additional artifacts and run tests:
-./gradlew :airbyte-webapp:build
+./gradlew :oss:airbyte-webapp:build
 ```
 
 ## Developing the webapp
@@ -109,9 +109,9 @@ Steps:
 6) Start the frontend development server with `pnpm start`.
 7) Start the cypress test runner with `pnpm run cypress:open`.
 
-#### Reproducing CI test results with `pnpm run cypress:ci` or `pnpm run cypress:ci:record`
+#### Reproducing CI test results with `pnpm run cypress:run`
 
-Unlike `pnpm run cypress:open`, `pnpm run cypress:ci` and `pnpm run cypress:ci:record` use
+Unlike `pnpm run cypress:open`, `pnpm run cypress:run` use
 the dockerized UI (i.e. they expect the UI at port 8000, rather than port 3000). If the
 OSS backend is running but you have run `docker-compose stop webapp`, you'll have to
 re-enable it with `docker-compose start webapp`. These trigger headless runs: you won't
@@ -122,7 +122,7 @@ Steps:
 2) Create the test database: `pnpm run createdbsource` and `pnpm run createdbdestination`.
 3) When running the connector builder tests, start the dummy API server: `pnpm run createdummyapi`
 4) Start the OSS backend: `BASIC_AUTH_USERNAME="" BASIC_AUTH_PASSWORD="" VERSION=dev docker compose --file ../docker-compose.yaml up`.
-5) Start the cypress test run with `pnpm run cypress:ci` or `pnpm run cypress:ci:record`.
+5) Start the cypress test run with `pnpm run cypress:run`.
 
 #### Test setup
 

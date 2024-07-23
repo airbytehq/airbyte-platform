@@ -9,7 +9,10 @@ import {
 } from "@tanstack/react-table";
 import classNames from "classnames";
 import React, { PropsWithChildren } from "react";
+import { FormattedMessage } from "react-intl";
 import { TableVirtuoso, TableComponents, ItemProps } from "react-virtuoso";
+
+import { Text } from "components/ui/Text";
 
 import { SortableTableHeader } from "./SortableTableHeader";
 import styles from "./Table.module.scss";
@@ -23,6 +26,7 @@ export interface TableProps<T> {
   className?: string;
   columns: TableColumns<T>;
   data: T[];
+  rowId?: keyof T | ((row: T) => string);
   variant?: "default" | "light" | "white" | "inBlock";
   getRowCanExpand?: (data: Row<T>) => boolean;
   getIsRowExpanded?: (data: Row<T>) => boolean;
@@ -44,6 +48,10 @@ export interface TableProps<T> {
     React.ComponentProps<typeof TableVirtuoso>,
     "data" | "components" | "totalCount" | "fixedHeaderContent"
   >;
+  /**
+   * Custom placeholder to be shown when the table is empty. Defaults to a simple "No data" message.
+   */
+  customEmptyPlaceholder?: React.ReactElement;
 }
 
 export const Table = <T,>({
@@ -52,6 +60,7 @@ export const Table = <T,>({
   columns,
   data,
   variant = "default",
+  rowId,
   getRowCanExpand,
   getIsRowExpanded,
   expandedRow,
@@ -62,6 +71,7 @@ export const Table = <T,>({
   initialSortBy,
   virtualized = false,
   virtualizedProps,
+  customEmptyPlaceholder,
 }: PropsWithChildren<TableProps<T>>) => {
   const table = useReactTable({
     columns,
@@ -75,6 +85,15 @@ export const Table = <T,>({
     getRowCanExpand,
     getIsRowExpanded,
     enableSorting: sorting,
+    getRowId: rowId
+      ? (originalRow) => {
+          if (typeof rowId === "function") {
+            return rowId(originalRow);
+          }
+
+          return String(originalRow[rowId]);
+        }
+      : undefined,
   });
 
   const rows = table.getRowModel().rows;
@@ -83,6 +102,7 @@ export const Table = <T,>({
     <table
       className={classNames(styles.table, className, {
         [styles["table--default"]]: variant === "default",
+        [styles["table--empty"]]: rows.length === 0,
       })}
       {...props}
       style={style}
@@ -90,8 +110,8 @@ export const Table = <T,>({
     />
   );
 
-  const TableHead: TableComponents["TableHead"] = React.forwardRef((props, ref) => (
-    <thead ref={ref} className={classNames({ [styles["thead--sticky"]]: stickyHeaders })} {...props} />
+  const TableHead: TableComponents["TableHead"] = React.forwardRef(({ style, ...restProps }, ref) => (
+    <thead ref={ref} className={classNames({ [styles["thead--sticky"]]: stickyHeaders })} {...restProps} />
   ));
   TableHead.displayName = "TableHead";
 
@@ -192,16 +212,32 @@ export const Table = <T,>({
       </tr>
     ));
 
+  const EmptyPlaceholder: TableComponents["EmptyPlaceholder"] = () => (
+    <tbody>
+      <tr className={classNames(styles.tr, styles.emptyPlaceholder)}>
+        <td className={styles.td} colSpan={columns.length} style={{ textAlign: "center" }}>
+          <Text bold color="grey" align="center">
+            {customEmptyPlaceholder ? customEmptyPlaceholder : <FormattedMessage id="tables.empty" />}
+          </Text>
+        </td>
+      </tr>
+    </tbody>
+  );
+
   return virtualized ? (
     <TableVirtuoso<T>
       // the parent container should have exact height to make "AutoSizer" work properly
-      style={{ height: "100%" }}
+      style={{
+        height: "100%",
+        minHeight: 100, // for empty state placeholder
+      }}
       totalCount={rows.length}
       {...virtualizedProps}
       components={{
         Table,
         TableHead,
         TableRow: TableRowVirtualized,
+        EmptyPlaceholder,
       }}
       fixedHeaderContent={headerContent}
     />
@@ -213,11 +249,15 @@ export const Table = <T,>({
       data-testid={testId}
     >
       <thead className={classNames({ [styles["thead--sticky"]]: stickyHeaders })}>{headerContent()}</thead>
-      <tbody>
-        {rows.map((row) => (
-          <TableRow key={`table-row-${row.id}`} row={row} />
-        ))}
-      </tbody>
+      {rows.length === 0 ? (
+        <EmptyPlaceholder />
+      ) : (
+        <tbody>
+          {rows.map((row) => (
+            <TableRow key={`table-row-${row.id}`} row={row} />
+          ))}
+        </tbody>
+      )}
     </table>
   );
 };

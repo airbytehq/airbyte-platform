@@ -9,12 +9,14 @@ import io.airbyte.config.StandardSourceDefinition
 import io.airbyte.config.StandardSync
 import io.airbyte.config.StandardWorkspace
 import io.airbyte.config.SupportLevel
+import io.airbyte.config.persistence.OrganizationPersistence.DEFAULT_ORGANIZATION_ID
 import io.airbyte.data.helpers.ActorDefinitionVersionUpdater
 import io.airbyte.data.services.impls.jooq.ActorDefinitionServiceJooqImpl
 import io.airbyte.data.services.impls.jooq.DestinationServiceJooqImpl
 import io.airbyte.data.services.impls.jooq.SourceServiceJooqImpl
 import io.airbyte.data.services.impls.jooq.WorkspaceServiceJooqImpl
 import io.airbyte.db.factory.DSLContextFactory
+import io.airbyte.db.instance.DatabaseConstants
 import io.airbyte.db.instance.test.TestDatabaseProviders
 import io.micronaut.context.ApplicationContext
 import io.micronaut.context.env.PropertySource
@@ -38,7 +40,7 @@ open class RepositoryTestSetup {
 
     // we run against an actual database to ensure micronaut data and jooq properly integrate
     private val container: PostgreSQLContainer<*> =
-      PostgreSQLContainer("postgres:13-alpine")
+      PostgreSQLContainer(DatabaseConstants.DEFAULT_DATABASE_VERSION)
         .withDatabaseName("airbyte")
         .withUsername("docker")
         .withPassword("docker")
@@ -87,7 +89,8 @@ open class RepositoryTestSetup {
           .withDefaultGeography(Geography.US)
           .withName("")
           .withSlug("")
-          .withInitialSetupComplete(true),
+          .withInitialSetupComplete(true)
+          .withOrganizationId(DEFAULT_ORGANIZATION_ID),
       )
 
       val actorDefinitionUpdate: ActorDefinitionVersionUpdater = mockk()
@@ -119,7 +122,8 @@ open class RepositoryTestSetup {
           .withDockerRepository("")
           .withDockerImageTag("")
           .withSupportState(ActorDefinitionVersion.SupportState.SUPPORTED)
-          .withSupportLevel(SupportLevel.CERTIFIED),
+          .withSupportLevel(SupportLevel.CERTIFIED)
+          .withInternalSupportLevel(200L),
         listOf(),
       )
 
@@ -135,7 +139,6 @@ open class RepositoryTestSetup {
           .withSourceId(sourceId)
           .withName("source")
           .withSourceDefinitionId(sourceDefinitionId)
-          .withDefaultVersionId(sourceDefinitionVersionId)
           .withWorkspaceId(workspaceId),
       )
 
@@ -162,7 +165,8 @@ open class RepositoryTestSetup {
           .withDockerRepository("")
           .withDockerImageTag("")
           .withSupportState(ActorDefinitionVersion.SupportState.SUPPORTED)
-          .withSupportLevel(SupportLevel.CERTIFIED),
+          .withSupportLevel(SupportLevel.CERTIFIED)
+          .withInternalSupportLevel(200L),
         listOf(),
       )
 
@@ -174,7 +178,6 @@ open class RepositoryTestSetup {
           .withDestinationId(destinationId)
           .withName("destination")
           .withDestinationDefinitionId(destinationDefinitionId)
-          .withDefaultVersionId(destinationDefinitionVersionId)
           .withWorkspaceId(workspaceId),
       )
 

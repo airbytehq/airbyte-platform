@@ -34,6 +34,7 @@ export const enum Action {
   SELECTION_OPENED = "SelectionOpened",
   CHECKOUT_START = "CheckoutStart",
   LOAD_MORE_JOBS = "LoadMoreJobs",
+  LOAD_MORE_EVENTS = "LoadMoreEvents",
   INVITE = "Invite",
   OAUTH_ATTEMPT = "OAuthAttempt",
   OAUTH_SUCCESS = "OAuthSuccess",
@@ -46,7 +47,11 @@ export const enum Action {
   ANSWERED = "Answered",
   APPLIED = "Applied",
   SET_SYNC_MODE = "SetSyncMode",
+  RATE_LIMITED = "RateLimited",
   DISMISSED_CHANGES_MODAL = "DismissedChangesModal",
+  CONFIRMED_CANCEL_SYNC = "ConfirmedCancelSync",
+  DECLINED_CANCEL_SYNC = "DeclinedCancelSync",
+  SYNC_PROGRESS = "SyncProgress",
 
   // Connector Builder Actions
   CONNECTOR_BUILDER_START = "ConnectorBuilderStart",

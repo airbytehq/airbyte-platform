@@ -34,10 +34,6 @@ import com.google.api.client.util.Preconditions;
  */
 public enum OssMetricsRegistry implements MetricsRegistry {
 
-  ACTIVITY_DBT_TRANSFORMATION(
-      MetricEmittingApps.WORKER,
-      "activity_dbt_transformation",
-      "increments when we start a dbt transformation activity"),
   ACTIVITY_CHECK_CONNECTION(
       MetricEmittingApps.WORKER,
       "activity_check_connection",
@@ -122,10 +118,6 @@ public enum OssMetricsRegistry implements MetricsRegistry {
       MetricEmittingApps.CRON, // Actually `cron` or `bootloader` based on which metric client calls the code
       "connector_registry_definition_processed",
       "increments when a connector registry definition is processed by the ApplyDefinitionsHelper"),
-  CONNECTOR_BREAKING_CHANGE_PIN_SERVED(
-      MetricEmittingApps.SERVER,
-      "connector_breaking_change_pin_served",
-      "increments when a breaking change pin is served"),
   EST_NUM_METRICS_EMITTED_BY_REPORTER(
       MetricEmittingApps.METRICS_REPORTER,
       "est_num_metrics_emitted_by_reporter",
@@ -250,9 +242,6 @@ public enum OssMetricsRegistry implements MetricsRegistry {
   SOURCE_HEARTBEAT_FAILURE(MetricEmittingApps.ORCHESTRATOR,
       "source_hearbeat_failure",
       "Fail a replication because the source missed an heartbeat"),
-  SOURCE_TIME_SINCE_LAST_HEARTBEAT_MILLIS(MetricEmittingApps.ORCHESTRATOR,
-      "source_time_since_last_heartbeat_millis",
-      "Time since last heartbeat (message from a source) for a connection."),
   STATE_BUFFERING(MetricEmittingApps.WORKER,
       "state_buffering",
       "number of state messages being buffered before a flush"),
@@ -450,7 +439,45 @@ public enum OssMetricsRegistry implements MetricsRegistry {
 
   PAYLOAD_VALIDATION_RESULT(MetricEmittingApps.WORKER,
       "payload_validation_result",
-      "The result of the comparing the payload in object storage to the one passed from temporal.");
+      "The result of the comparing the payload in object storage to the one passed from temporal."),
+
+  CREATE_SECRET_DEFAULT_STORE(MetricEmittingApps.SERVER,
+      "create_secret_default_store",
+      "A secret was created in the default configured secret store."),
+  UPDATE_SECRET_DEFAULT_STORE(MetricEmittingApps.SERVER,
+      "update_secret_default_store",
+      "A secret was created in the default configured secret store."),
+  DELETE_SECRET_DEFAULT_STORE(MetricEmittingApps.SERVER,
+      "delete_secret_default_store",
+      "A secret was created in the default configured secret store."),
+
+  CATALOG_SIZE_VALIDATION_ERROR(MetricEmittingApps.SERVER,
+      "catalog_size_validation_error",
+      "The catalog provided by the user was larger than our limit and rejected."),
+
+  EXCESSIVE_CATALOG_SIZE(MetricEmittingApps.SERVER,
+      "excessive_catalog_size",
+      "Distribution of input catalog field counts that exceed the configured limit."),
+
+  REPLICATION_CONTEXT_NOT_INITIALIZED_ERROR(MetricEmittingApps.ORCHESTRATOR,
+      "replication_context_not_initialized_error",
+      "The replication context was not initialized when it was expected to be."),
+
+  DISCOVER_CATALOG_RUN_TIME(MetricEmittingApps.WORKER,
+      "discover_catalog_run_time",
+      "Time to run a discover catalog before a replication."),
+
+  REPLICATION_RUN_TIME(MetricEmittingApps.ORCHESTRATOR,
+      "replication_run_time",
+      "Time to run a replication withing a sync."),
+
+  SYNC_TOTAL_TIME(MetricEmittingApps.ORCHESTRATOR,
+      "sync_total_time",
+      "Time to run a sync workflow."),
+
+  SYNC_WITH_EMPTY_CATALOG(MetricEmittingApps.ORCHESTRATOR,
+      "sync_with_empty_catalog",
+      "Sync was started with an empty configured catalog.");
 
   private final MetricEmittingApp application;
   private final String metricName;

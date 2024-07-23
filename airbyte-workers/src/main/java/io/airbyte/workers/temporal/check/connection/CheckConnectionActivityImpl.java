@@ -13,7 +13,6 @@ import static io.airbyte.metrics.lib.ApmTraceConstants.Tags.JOB_ID_KEY;
 import com.google.common.annotations.VisibleForTesting;
 import datadog.trace.api.Trace;
 import io.airbyte.api.client.AirbyteApiClient;
-import io.airbyte.api.client.invoker.generated.ApiException;
 import io.airbyte.api.client.model.generated.ConnectionIdRequestBody;
 import io.airbyte.api.client.model.generated.Geography;
 import io.airbyte.api.client.model.generated.WorkspaceIdRequestBody;
@@ -24,6 +23,7 @@ import io.airbyte.commons.json.Jsons;
 import io.airbyte.commons.protocol.AirbyteMessageSerDeProvider;
 import io.airbyte.commons.protocol.AirbyteProtocolVersionedMigratorFactory;
 import io.airbyte.commons.temporal.HeartbeatUtils;
+import io.airbyte.commons.temporal.TemporalUtils;
 import io.airbyte.commons.version.AirbyteProtocolVersion;
 import io.airbyte.commons.workers.config.WorkerConfigs;
 import io.airbyte.commons.workers.config.WorkerConfigsProvider;
@@ -38,9 +38,12 @@ import io.airbyte.config.StandardCheckConnectionOutput.Status;
 import io.airbyte.config.helpers.LogConfigs;
 import io.airbyte.config.helpers.ResourceRequirementsUtils;
 import io.airbyte.config.secrets.SecretsRepositoryReader;
+import io.airbyte.featureflag.Empty;
 import io.airbyte.featureflag.FeatureFlagClient;
-import io.airbyte.featureflag.UseWorkloadApiForCheck;
+import io.airbyte.featureflag.UseWorkloadApi;
+import io.airbyte.featureflag.WorkloadApiServerEnabled;
 import io.airbyte.featureflag.WorkloadCheckFrequencyInSeconds;
+import io.airbyte.featureflag.WorkloadLauncherEnabled;
 import io.airbyte.featureflag.Workspace;
 import io.airbyte.metrics.lib.ApmTraceUtils;
 import io.airbyte.metrics.lib.MetricAttribute;
@@ -75,6 +78,7 @@ import io.temporal.activity.ActivityExecutionContext;
 import io.temporal.activity.ActivityOptions;
 import jakarta.inject.Named;
 import jakarta.inject.Singleton;
+import java.io.IOException;
 import java.nio.file.Path;
 import java.time.Duration;
 import java.util.Collections;
@@ -145,7 +149,7 @@ public class CheckConnectionActivityImpl implements CheckConnectionActivity {
         new CheckConnectionInputHydrator(
             new ConnectorSecretsHydrator(
                 secretsRepositoryReader,
-                airbyteApiClient.getSecretPersistenceConfigApi(),
+                airbyteApiClient,
                 featureFlagClient)),
         metricClient,
         activityOptions);
@@ -249,7 +253,7 @@ public class CheckConnectionActivityImpl implements CheckConnectionActivity {
             new WorkloadLabel(Metadata.WORKSPACE_LABEL_KEY, workspaceId.toString()),
             new WorkloadLabel(Metadata.ACTOR_TYPE, String.valueOf(input.getCheckConnectionInput().getActorType().toString()))),
         serializedInput,
-        fullLogPath(Path.of(workloadId)),
+        fullLogPath(TemporalUtils.getJobRoot(workspaceRoot, jobId, attemptNumber)),
         geo.getValue(),
         WorkloadType.CHECK,
         WorkloadPriority.Companion.decode(input.getLauncherConfig().getPriority().toString()),
@@ -281,7 +285,11 @@ public class CheckConnectionActivityImpl implements CheckConnectionActivity {
 
   @Override
   public boolean shouldUseWorkload(final UUID workspaceId) {
-    return featureFlagClient.boolVariation(UseWorkloadApiForCheck.INSTANCE, new Workspace(workspaceId));
+    var ffCheck = featureFlagClient.boolVariation(UseWorkloadApi.INSTANCE, new Workspace(workspaceId));
+    var envCheck = featureFlagClient.boolVariation(WorkloadLauncherEnabled.INSTANCE, Empty.INSTANCE)
+        && featureFlagClient.boolVariation(WorkloadApiServerEnabled.INSTANCE, Empty.INSTANCE);
+
+    return ffCheck || envCheck;
   }
 
   @VisibleForTesting
@@ -290,17 +298,17 @@ public class CheckConnectionActivityImpl implements CheckConnectionActivity {
       return maybeConnectionId
           .map(connectionId -> {
             try {
-              return airbyteApiClient.getConnectionApi().getConnection(new ConnectionIdRequestBody().connectionId(connectionId)).getGeography();
-            } catch (final ApiException e) {
+              return airbyteApiClient.getConnectionApi().getConnection(new ConnectionIdRequestBody(connectionId)).getGeography();
+            } catch (final IOException e) {
               throw new RuntimeException(e);
             }
           }).orElse(
               maybeWorkspaceId.map(
                   workspaceId -> {
                     try {
-                      return airbyteApiClient.getWorkspaceApi().getWorkspace(new WorkspaceIdRequestBody().workspaceId(workspaceId))
+                      return airbyteApiClient.getWorkspaceApi().getWorkspace(new WorkspaceIdRequestBody(workspaceId, false))
                           .getDefaultGeography();
-                    } catch (final ApiException e) {
+                    } catch (final IOException e) {
                       throw new RuntimeException(e);
                     }
                   })
@@ -333,9 +341,7 @@ public class CheckConnectionActivityImpl implements CheckConnectionActivity {
           Collections.emptyMap(),
           Collections.emptyMap());
 
-      final ConnectorConfigUpdater connectorConfigUpdater = new ConnectorConfigUpdater(
-          airbyteApiClient.getSourceApi(),
-          airbyteApiClient.getDestinationApi());
+      final ConnectorConfigUpdater connectorConfigUpdater = new ConnectorConfigUpdater(airbyteApiClient);
 
       final var protocolVersion =
           launcherConfig.getProtocolVersion() != null ? launcherConfig.getProtocolVersion() : AirbyteProtocolVersion.DEFAULT_AIRBYTE_PROTOCOL_VERSION;

@@ -6,10 +6,12 @@ package io.airbyte.server.apis;
 
 import static io.airbyte.commons.auth.AuthRoleConstants.ADMIN;
 import static io.airbyte.commons.auth.AuthRoleConstants.AUTHENTICATED_USER;
+import static io.airbyte.commons.auth.AuthRoleConstants.ORGANIZATION_ADMIN;
 import static io.airbyte.commons.auth.AuthRoleConstants.ORGANIZATION_EDITOR;
 import static io.airbyte.commons.auth.AuthRoleConstants.ORGANIZATION_READER;
 import static io.airbyte.commons.auth.AuthRoleConstants.READER;
 import static io.airbyte.commons.auth.AuthRoleConstants.SELF;
+import static io.airbyte.commons.auth.AuthRoleConstants.WORKSPACE_ADMIN;
 import static io.airbyte.commons.auth.AuthRoleConstants.WORKSPACE_EDITOR;
 import static io.airbyte.commons.auth.AuthRoleConstants.WORKSPACE_READER;
 
@@ -32,7 +34,8 @@ import io.airbyte.api.model.generated.WorkspaceReadList;
 import io.airbyte.api.model.generated.WorkspaceUpdate;
 import io.airbyte.api.model.generated.WorkspaceUpdateName;
 import io.airbyte.api.model.generated.WorkspaceUpdateOrganization;
-import io.airbyte.commons.server.errors.problems.ForbiddenProblem;
+import io.airbyte.api.problems.model.generated.ProblemMessageData;
+import io.airbyte.api.problems.throwable.generated.ForbiddenProblem;
 import io.airbyte.commons.server.handlers.PermissionHandler;
 import io.airbyte.commons.server.handlers.WorkspacesHandler;
 import io.airbyte.commons.server.scheduling.AirbyteTaskExecutors;
@@ -69,15 +72,16 @@ public class WorkspaceApiController implements WorkspaceApi {
   public WorkspaceRead createWorkspace(@Body final WorkspaceCreate workspaceCreate) {
     return ApiHelper.execute(() -> {
       // Verify that the user has permission to create a workspace in an organization,
-      // need to be at least an organization editor to do so.
+      // need to be at least an organization admin to do so.
       if (workspaceCreate.getOrganizationId() != null) {
         final StatusEnum permissionCheckStatus = permissionHandler.checkPermissions(new PermissionCheckRequest()
             .userId(currentUserService.getCurrentUser().getUserId())
-            .permissionType(PermissionType.ORGANIZATION_EDITOR)
+            .permissionType(PermissionType.ORGANIZATION_ADMIN)
             .organizationId(workspaceCreate.getOrganizationId()))
             .getStatus();
         if (!permissionCheckStatus.equals(StatusEnum.SUCCEEDED)) {
-          throw new ForbiddenProblem("User does not have permission to create a workspace in organization " + workspaceCreate.getOrganizationId());
+          throw new ForbiddenProblem(new ProblemMessageData()
+              .message("User does not have permission to create a workspace in organization " + workspaceCreate.getOrganizationId()));
         }
       }
       return workspacesHandler.createWorkspace(workspaceCreate);
@@ -90,16 +94,16 @@ public class WorkspaceApiController implements WorkspaceApi {
   public WorkspaceRead createWorkspaceIfNotExist(@Body final WorkspaceCreateWithId workspaceCreateWithId) {
     return ApiHelper.execute(() -> {
       // Verify that the user has permission to create a workspace in an organization,
-      // need to be at least an organization editor to do so.
+      // need to be at least an organization admin to do so.
       if (workspaceCreateWithId.getOrganizationId() != null) {
         final StatusEnum permissionCheckStatus = permissionHandler.checkPermissions(new PermissionCheckRequest()
             .userId(currentUserService.getCurrentUser().getUserId())
-            .permissionType(PermissionType.ORGANIZATION_EDITOR)
+            .permissionType(PermissionType.ORGANIZATION_ADMIN)
             .organizationId(workspaceCreateWithId.getOrganizationId()))
             .getStatus();
         if (!permissionCheckStatus.equals(StatusEnum.SUCCEEDED)) {
-          throw new ForbiddenProblem(
-              "User does not have permission to create a workspace in organization " + workspaceCreateWithId.getOrganizationId());
+          throw new ForbiddenProblem(new ProblemMessageData().message(
+              "User does not have permission to create a workspace in organization " + workspaceCreateWithId.getOrganizationId()));
         }
       }
       return workspacesHandler.createWorkspaceIfNotExist(workspaceCreateWithId);
@@ -107,7 +111,7 @@ public class WorkspaceApiController implements WorkspaceApi {
   }
 
   @Post("/delete")
-  @Secured({WORKSPACE_EDITOR, ORGANIZATION_EDITOR})
+  @Secured({WORKSPACE_ADMIN, ORGANIZATION_ADMIN})
   @Override
   @Status(HttpStatus.NO_CONTENT)
   public void deleteWorkspace(@Body final WorkspaceIdRequestBody workspaceIdRequestBody) {

@@ -65,7 +65,7 @@ const saveConnectionAndAssertStreams = (
   { expectModal = true }: { expectModal?: boolean } | undefined = {}
 ) => {
   replicationPage
-    .saveChangesAndHandleResetModal({ interceptUpdateHandler: modifyAccountsTableInterceptHandler, expectModal })
+    .saveChangesAndHandleRefreshModal({ interceptUpdateHandler: modifyAccountsTableInterceptHandler, expectModal })
     .then((connection) => {
       const stream = connection.syncCatalog.streams.find(
         ({ stream }) => stream?.namespace === expectedSyncMode.namespace && stream.name === expectedSyncMode.name
@@ -193,14 +193,17 @@ describe("Connection - sync modes", () => {
       });
       streamDetails.close();
 
-      saveConnectionAndAssertStreams({
-        namespace: "public",
-        name: "users",
-        config: {
-          syncMode: SyncMode.full_refresh,
-          destinationSyncMode: DestinationSyncMode.append,
+      saveConnectionAndAssertStreams(
+        {
+          namespace: "public",
+          name: "users",
+          config: {
+            syncMode: SyncMode.full_refresh,
+            destinationSyncMode: DestinationSyncMode.append,
+          },
         },
-      });
+        { expectModal: false }
+      );
 
       // Verify changes after save
       usersStreamRow.hasSelectedSyncMode(SyncMode.full_refresh, DestinationSyncMode.append);

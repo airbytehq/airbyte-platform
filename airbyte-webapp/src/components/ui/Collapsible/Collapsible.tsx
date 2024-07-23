@@ -8,6 +8,7 @@ import { Icon } from "components/ui/Icon";
 import styles from "./Collapsible.module.scss";
 import { FlexContainer } from "../Flex";
 import { Text } from "../Text";
+import { InfoTooltip } from "../Tooltip";
 
 interface CollapsibleProps {
   className?: string;
@@ -20,6 +21,7 @@ interface CollapsibleProps {
   initiallyOpen?: boolean;
   noBodyPadding?: boolean;
   onClick?: (newOpenState: boolean) => void;
+  infoTooltipContent?: React.ReactNode;
 }
 
 export const Collapsible: React.FC<React.PropsWithChildren<CollapsibleProps>> = ({
@@ -34,6 +36,7 @@ export const Collapsible: React.FC<React.PropsWithChildren<CollapsibleProps>> = 
   initiallyOpen = false,
   noBodyPadding = false,
   onClick,
+  infoTooltipContent,
 }) => {
   const childrenCount = React.Children.count(children);
 
@@ -68,7 +71,10 @@ export const Collapsible: React.FC<React.PropsWithChildren<CollapsibleProps>> = 
               >
                 <Icon type="chevronRight" />
               </div>
-              <Text className={styles.label}>{label}</Text>
+              <FlexContainer direction="row" gap="none" alignItems="center">
+                <Text className={styles.label}>{label}</Text>
+                {infoTooltipContent && <InfoTooltip placement="top-start">{infoTooltipContent}</InfoTooltip>}
+              </FlexContainer>
               {showErrorIndicator && <Indicator className={styles.errorIndicator} />}
             </FlexContainer>
           </Disclosure.Button>

@@ -1,6 +1,6 @@
 package io.airbyte.server.apis.publicapi.mappers
 
-import io.airbyte.public_api.model.generated.SourceDefinitionRead.SourceTypeEnum
+import io.airbyte.publicApi.server.generated.models.SourceDefinitionRead.SourceType
 import io.airbyte.server.apis.publicapi.constants.SOURCES_PATH
 import io.airbyte.server.apis.publicapi.helpers.removePublicApiPathPrefix
 import org.junit.jupiter.api.Assertions.assertEquals
@@ -16,7 +16,7 @@ class PaginationMapperTest {
       PaginationMapper.getBuilder(publicApiHost, removePublicApiPathPrefix(SOURCES_PATH))
         .queryParam("string", "string")
         .queryParam("int", 1)
-        .queryParam("enum", SourceTypeEnum.API)
+        .queryParam("enum", SourceType.API.name.lowercase())
 
     assertEquals("$publicApiHost/v1/sources?string=string&int=1&enum=api", paginationMapper.build().toString())
   }

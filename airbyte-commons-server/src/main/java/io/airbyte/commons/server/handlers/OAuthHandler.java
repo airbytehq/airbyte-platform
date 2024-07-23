@@ -548,8 +548,8 @@ public class OAuthHandler {
           && featureFlagClient.boolVariation(UseRuntimeSecretPersistence.INSTANCE, new Organization(organizationId.get()))) {
         try {
           final SecretPersistenceConfig secretPersistenceConfig =
-              secretPersistenceConfigService.getSecretPersistenceConfig(ScopeType.ORGANIZATION, organizationId.get());
-          secretCoordinate = secretsRepositoryWriter.storeSecretToRuntimeSecretPersistence(
+              secretPersistenceConfigService.get(ScopeType.ORGANIZATION, organizationId.get());
+          secretCoordinate = secretsRepositoryWriter.store(
               generateOAuthSecretCoordinate(workspaceId),
               payloadString,
               new RuntimeSecretPersistence(secretPersistenceConfig));
@@ -557,9 +557,9 @@ public class OAuthHandler {
           throw new ConfigNotFoundException(e.getType(), e.getConfigId());
         }
       } else {
-        secretCoordinate = secretsRepositoryWriter.storeSecretToDefaultSecretPersistence(
+        secretCoordinate = secretsRepositoryWriter.store(
             generateOAuthSecretCoordinate(workspaceId),
-            payloadString);
+            payloadString, null);
       }
       return mapToCompleteOAuthResponse(Map.of("secretId", secretCoordinate.getFullCoordinate()));
 
@@ -721,22 +721,19 @@ public class OAuthHandler {
   JsonNode statefulSplitSecrets(final UUID workspaceId, final JsonNode oauthParamConfiguration, final ConnectorSpecification connectorSpecification)
       throws IOException, ConfigNotFoundException {
     final Optional<UUID> organizationId = workspaceService.getOrganizationIdFromWorkspaceId(workspaceId);
+    RuntimeSecretPersistence secretPersistence = null;
+
     if (organizationId.isPresent() && featureFlagClient.boolVariation(UseRuntimeSecretPersistence.INSTANCE, new Organization(organizationId.get()))) {
       try {
-        final SecretPersistenceConfig secretPersistenceConfig =
-            secretPersistenceConfigService.getSecretPersistenceConfig(ScopeType.ORGANIZATION, organizationId.get());
-
-        return secretsRepositoryWriter.statefulSplitSecretsToRuntimeSecretPersistence(
-            workspaceId,
-            oauthParamConfiguration,
-            connectorSpecification,
-            new RuntimeSecretPersistence(secretPersistenceConfig));
-      } catch (final io.airbyte.data.exceptions.ConfigNotFoundException e) {
+        final SecretPersistenceConfig secretPersistenceConfig = secretPersistenceConfigService.get(ScopeType.ORGANIZATION, organizationId.get());
+        secretPersistence = new RuntimeSecretPersistence(secretPersistenceConfig);
+      } catch (io.airbyte.data.exceptions.ConfigNotFoundException e) {
         throw new ConfigNotFoundException(e.getType(), e.getConfigId());
       }
-    } else {
-      return secretsRepositoryWriter.statefulSplitSecretsToDefaultSecretPersistence(workspaceId, oauthParamConfiguration, connectorSpecification);
     }
+
+    return secretsRepositoryWriter.createFromConfig(workspaceId, oauthParamConfiguration, connectorSpecification.getConnectionSpecification(),
+        secretPersistence);
   }
 
 }

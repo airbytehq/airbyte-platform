@@ -36,7 +36,6 @@ jest.mock("core/api", () => ({
       orgLevelBilling: false,
       pba: false,
     })),
-  useListWorkspaces: () => ({ workspaces: [] }),
 }));
 
 describe("CloudWorkspacesPage", () => {

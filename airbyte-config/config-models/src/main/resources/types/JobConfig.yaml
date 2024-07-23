@@ -18,6 +18,7 @@ properties:
       - sync
       - resetConnection
       - refresh
+      - clear
   checkConnection:
     "$ref": JobCheckConnectionConfig.yaml
   discoverCatalog:

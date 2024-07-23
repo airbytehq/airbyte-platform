@@ -12,7 +12,7 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import io.airbyte.commons.auth.config.InitialUserConfiguration;
+import io.airbyte.commons.auth.config.InitialUserConfig;
 import jakarta.ws.rs.core.Response;
 import java.util.Collections;
 import org.junit.jupiter.api.BeforeEach;
@@ -54,7 +54,7 @@ class UserConfiguratorTest {
 
   private UserConfigurator userConfigurator;
   @Mock
-  private InitialUserConfiguration initialUserConfiguration;
+  private InitialUserConfig initialUserConfig;
   @Mock
   private RealmResource realmResource;
   @Mock
@@ -68,10 +68,10 @@ class UserConfiguratorTest {
   void setUp() {
     MockitoAnnotations.openMocks(this);
 
-    when(initialUserConfiguration.getEmail()).thenReturn(EMAIL);
-    when(initialUserConfiguration.getFirstName()).thenReturn(FIRST_NAME);
-    when(initialUserConfiguration.getLastName()).thenReturn(LAST_NAME);
-    when(initialUserConfiguration.getPassword()).thenReturn(PASSWORD);
+    when(initialUserConfig.getEmail()).thenReturn(EMAIL);
+    when(initialUserConfig.getFirstName()).thenReturn(FIRST_NAME);
+    when(initialUserConfig.getLastName()).thenReturn(LAST_NAME);
+    when(initialUserConfig.getPassword()).thenReturn(PASSWORD);
 
     when(realmResource.users()).thenReturn(usersResource);
     when(usersResource.create(any(UserRepresentation.class))).thenReturn(response);
@@ -79,7 +79,7 @@ class UserConfiguratorTest {
     when(usersResource.get(KEYCLOAK_USER_ID)).thenReturn(userResource);
     when(response.getStatusInfo()).thenReturn(Response.Status.OK);
 
-    userConfigurator = new UserConfigurator(initialUserConfiguration);
+    userConfigurator = new UserConfigurator(initialUserConfig);
   }
 
   @Test
@@ -119,9 +119,9 @@ class UserConfiguratorTest {
 
   @Test
   void testConfigureUserRepresentation() {
-    when(initialUserConfiguration.getEmail()).thenReturn(EMAIL);
-    when(initialUserConfiguration.getFirstName()).thenReturn(FIRST_NAME);
-    when(initialUserConfiguration.getLastName()).thenReturn(LAST_NAME);
+    when(initialUserConfig.getEmail()).thenReturn(EMAIL);
+    when(initialUserConfig.getFirstName()).thenReturn(FIRST_NAME);
+    when(initialUserConfig.getLastName()).thenReturn(LAST_NAME);
 
     final UserRepresentation userRepresentation = userConfigurator.getUserRepresentationFromConfig();
 
@@ -133,7 +133,7 @@ class UserConfiguratorTest {
 
   @Test
   void testCreateCredentialRepresentation() {
-    when(initialUserConfiguration.getPassword()).thenReturn(PASSWORD);
+    when(initialUserConfig.getPassword()).thenReturn(PASSWORD);
 
     final CredentialRepresentation credentialRepresentation = userConfigurator.createCredentialRepresentation();
 

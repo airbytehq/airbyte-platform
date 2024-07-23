@@ -14,7 +14,6 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.google.common.annotations.VisibleForTesting;
 import datadog.trace.api.Trace;
 import io.airbyte.api.client.AirbyteApiClient;
-import io.airbyte.api.client.invoker.generated.ApiException;
 import io.airbyte.api.client.model.generated.ConnectionIdRequestBody;
 import io.airbyte.api.client.model.generated.Geography;
 import io.airbyte.api.client.model.generated.ScopeType;
@@ -28,6 +27,7 @@ import io.airbyte.commons.json.Jsons;
 import io.airbyte.commons.protocol.AirbyteMessageSerDeProvider;
 import io.airbyte.commons.protocol.AirbyteProtocolVersionedMigratorFactory;
 import io.airbyte.commons.temporal.HeartbeatUtils;
+import io.airbyte.commons.temporal.TemporalUtils;
 import io.airbyte.commons.workers.config.WorkerConfigs;
 import io.airbyte.commons.workers.config.WorkerConfigsProvider;
 import io.airbyte.commons.workers.config.WorkerConfigsProvider.ResourceType;
@@ -44,13 +44,10 @@ import io.airbyte.config.secrets.persistence.RuntimeSecretPersistence;
 import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.featureflag.Organization;
 import io.airbyte.featureflag.UseRuntimeSecretPersistence;
-import io.airbyte.featureflag.UseWorkloadApiForDiscover;
 import io.airbyte.featureflag.WorkloadCheckFrequencyInSeconds;
 import io.airbyte.featureflag.Workspace;
 import io.airbyte.metrics.lib.ApmTraceUtils;
-import io.airbyte.metrics.lib.MetricAttribute;
 import io.airbyte.metrics.lib.MetricClient;
-import io.airbyte.metrics.lib.MetricTags;
 import io.airbyte.metrics.lib.OssMetricsRegistry;
 import io.airbyte.persistence.job.models.IntegrationLauncherConfig;
 import io.airbyte.persistence.job.models.JobRunConfig;
@@ -78,7 +75,9 @@ import io.temporal.activity.Activity;
 import io.temporal.activity.ActivityExecutionContext;
 import jakarta.inject.Named;
 import jakarta.inject.Singleton;
+import java.io.IOException;
 import java.nio.file.Path;
+import java.time.Duration;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -93,6 +92,8 @@ import lombok.extern.slf4j.Slf4j;
 @Singleton
 @Slf4j
 public class DiscoverCatalogActivityImpl implements DiscoverCatalogActivity {
+
+  static final long DISCOVER_CATALOG_SNAP_DURATION = Duration.ofMinutes(15).toMillis();
 
   private final WorkerConfigsProvider workerConfigsProvider;
   private final ProcessFactory processFactory;
@@ -159,11 +160,11 @@ public class DiscoverCatalogActivityImpl implements DiscoverCatalogActivity {
     if (organizationId != null && featureFlagClient.boolVariation(UseRuntimeSecretPersistence.INSTANCE, new Organization(organizationId))) {
       try {
         final SecretPersistenceConfig secretPersistenceConfig = airbyteApiClient.getSecretPersistenceConfigApi().getSecretsPersistenceConfig(
-            new SecretPersistenceConfigGetRequestBody().scopeType(ScopeType.ORGANIZATION).scopeId(organizationId));
+            new SecretPersistenceConfigGetRequestBody(ScopeType.ORGANIZATION, organizationId));
         final RuntimeSecretPersistence runtimeSecretPersistence =
             SecretPersistenceConfigHelper.fromApiSecretPersistenceConfig(secretPersistenceConfig);
         fullConfig = secretsRepositoryReader.hydrateConfigFromRuntimeSecretPersistence(config.getConnectionConfiguration(), runtimeSecretPersistence);
-      } catch (final ApiException e) {
+      } catch (final IOException e) {
         throw new RuntimeException(e);
       }
     } else {
@@ -204,9 +205,14 @@ public class DiscoverCatalogActivityImpl implements DiscoverCatalogActivity {
   public ConnectorJobOutput runWithWorkload(final DiscoverCatalogInput input) throws WorkerException {
     final String jobId = input.getJobRunConfig().getJobId();
     final int attemptNumber = input.getJobRunConfig().getAttemptId() == null ? 0 : Math.toIntExact(input.getJobRunConfig().getAttemptId());
-    final String workloadId =
-        workloadIdGenerator.generateDiscoverWorkloadId(input.getDiscoverCatalogInput().getActorContext().getActorDefinitionId(), jobId,
-            attemptNumber);
+    final String workloadId = input.getDiscoverCatalogInput().getManual()
+        ? workloadIdGenerator.generateDiscoverWorkloadId(input.getDiscoverCatalogInput().getActorContext().getActorDefinitionId(), jobId,
+            attemptNumber)
+        : workloadIdGenerator.generateDiscoverWorkloadIdV2WithSnap(
+            input.getDiscoverCatalogInput().getActorContext().getActorId(),
+            System.currentTimeMillis(),
+            DISCOVER_CATALOG_SNAP_DURATION);
+
     final String serializedInput = Jsons.serialize(input);
 
     final UUID workspaceId = input.getDiscoverCatalogInput().getActorContext().getWorkspaceId();
@@ -220,7 +226,7 @@ public class DiscoverCatalogActivityImpl implements DiscoverCatalogActivity {
             new WorkloadLabel(Metadata.WORKSPACE_LABEL_KEY, workspaceId.toString()),
             new WorkloadLabel(Metadata.ACTOR_TYPE, String.valueOf(ActorType.SOURCE.toString()))),
         serializedInput,
-        fullLogPath(Path.of(workloadId)),
+        fullLogPath(TemporalUtils.getJobRoot(workspaceRoot, jobId, attemptNumber)),
         geo.getValue(),
         WorkloadType.DISCOVER,
         WorkloadPriority.Companion.decode(input.getLauncherConfig().getPriority().toString()),
@@ -231,7 +237,12 @@ public class DiscoverCatalogActivityImpl implements DiscoverCatalogActivity {
 
     final int checkFrequencyInSeconds =
         featureFlagClient.intVariation(WorkloadCheckFrequencyInSeconds.INSTANCE, new Workspace(workspaceId));
-    workloadClient.waitForWorkload(workloadId, checkFrequencyInSeconds);
+
+    final ActivityExecutionContext context = getActivityContext();
+    workloadClient.waitForWorkload(workloadId, checkFrequencyInSeconds, () -> {
+      context.heartbeat("waiting for workload to complete");
+      return null;
+    });
 
     return workloadClient.getConnectorJobOutput(
         workloadId,
@@ -241,25 +252,9 @@ public class DiscoverCatalogActivityImpl implements DiscoverCatalogActivity {
             .withFailureReason(failureReason));
   }
 
-  @Override
-  public boolean shouldUseWorkload(final UUID workspaceId) {
-    return featureFlagClient.boolVariation(UseWorkloadApiForDiscover.INSTANCE, new Workspace(workspaceId));
-  }
-
-  @Override
-  public void reportSuccess(final Boolean workloadEnabled) {
-    final var workloadEnabledStr = workloadEnabled != null ? workloadEnabled.toString() : "unknown";
-    metricClient.count(OssMetricsRegistry.CATALOG_DISCOVERY, 1,
-        new MetricAttribute(MetricTags.STATUS, "success"),
-        new MetricAttribute("workload_enabled", workloadEnabledStr));
-  }
-
-  @Override
-  public void reportFailure(final Boolean workloadEnabled) {
-    final var workloadEnabledStr = workloadEnabled != null ? workloadEnabled.toString() : "unknown";
-    metricClient.count(OssMetricsRegistry.CATALOG_DISCOVERY, 1,
-        new MetricAttribute(MetricTags.STATUS, "failed"),
-        new MetricAttribute("workload_enabled", workloadEnabledStr));
+  @VisibleForTesting
+  ActivityExecutionContext getActivityContext() {
+    return Activity.getExecutionContext();
   }
 
   @VisibleForTesting
@@ -268,17 +263,17 @@ public class DiscoverCatalogActivityImpl implements DiscoverCatalogActivity {
       return maybeConnectionId
           .map(connectionId -> {
             try {
-              return airbyteApiClient.getConnectionApi().getConnection(new ConnectionIdRequestBody().connectionId(connectionId)).getGeography();
-            } catch (final ApiException e) {
+              return airbyteApiClient.getConnectionApi().getConnection(new ConnectionIdRequestBody(connectionId)).getGeography();
+            } catch (final IOException e) {
               throw new RuntimeException(e);
             }
           }).orElse(
               maybeWorkspaceId.map(
                   workspaceId -> {
                     try {
-                      return airbyteApiClient.getWorkspaceApi().getWorkspace(new WorkspaceIdRequestBody().workspaceId(workspaceId))
+                      return airbyteApiClient.getWorkspaceApi().getWorkspace(new WorkspaceIdRequestBody(workspaceId, false))
                           .getDefaultGeography();
-                    } catch (final ApiException e) {
+                    } catch (final IOException e) {
                       throw new RuntimeException(e);
                     }
                   })
@@ -308,7 +303,7 @@ public class DiscoverCatalogActivityImpl implements DiscoverCatalogActivity {
           new VersionedAirbyteStreamFactory<>(serDeProvider, migratorFactory, launcherConfig.getProtocolVersion(), Optional.empty(),
               Optional.empty(), new VersionedAirbyteStreamFactory.InvalidLineFailureConfiguration(false), gsonPksExtractor);
       final ConnectorConfigUpdater connectorConfigUpdater =
-          new ConnectorConfigUpdater(airbyteApiClient.getSourceApi(), airbyteApiClient.getDestinationApi());
+          new ConnectorConfigUpdater(airbyteApiClient);
       return new DefaultDiscoverCatalogWorker(airbyteApiClient, integrationLauncher, connectorConfigUpdater, streamFactory);
     };
   }

@@ -11,11 +11,9 @@ import io.airbyte.config.AttemptSyncConfig;
 import io.airbyte.config.JobConfig;
 import io.airbyte.config.JobConfig.ConfigType;
 import io.airbyte.config.JobOutput;
-import io.airbyte.config.NormalizationSummary;
 import io.airbyte.config.StreamSyncStats;
 import io.airbyte.config.SyncStats;
 import io.airbyte.persistence.job.models.Attempt;
-import io.airbyte.persistence.job.models.AttemptNormalizationStatus;
 import io.airbyte.persistence.job.models.AttemptWithJobInfo;
 import io.airbyte.persistence.job.models.Job;
 import io.airbyte.persistence.job.models.JobStatus;
@@ -69,8 +67,6 @@ public interface JobPersistence {
    * @return {@link AttemptStats}
    */
   SyncStats getAttemptCombinedStats(long jobId, int attemptNumber) throws IOException;
-
-  List<NormalizationSummary> getNormalizationSummary(long jobId, int attemptNumber) throws IOException;
 
   Job getJob(long jobId) throws IOException;
 
@@ -183,6 +179,7 @@ public interface JobPersistence {
                   Long bytesEmitted,
                   Long recordsCommitted,
                   Long bytesCommitted,
+                  UUID connectionId,
                   List<StreamSyncStats> streamStats)
       throws IOException;
 
@@ -239,6 +236,8 @@ public interface JobPersistence {
    */
   List<Job> listJobs(Set<ConfigType> configTypes, String configId, int limit) throws IOException;
 
+  List<Job> listJobs(Set<ConfigType> configTypes, Set<JobStatus> jobStatuses, String configId, int pagesize) throws IOException;
+
   /**
    * List jobs with filters. Pageable.
    *
@@ -291,6 +290,43 @@ public interface JobPersistence {
    * @return List of jobs that have attempts after the provided timestamp
    */
   List<Job> listJobs(ConfigType configType, Instant attemptEndedAtTimestamp) throws IOException;
+
+  /**
+   * List jobs based on job IDs, nothing more.
+   *
+   * @param jobIds the set of Job ids to list jobs for
+   * @return list of jobs
+   * @throws IOException you never know
+   */
+  List<Job> listJobsLight(final Set<Long> jobIds) throws IOException;
+
+  List<Job> listJobsLight(Set<ConfigType> configTypes, String configId, int pagesize) throws IOException;
+
+  List<Job> listJobsLight(Set<ConfigType> configTypes,
+                          String configId,
+                          int limit,
+                          int offset,
+                          List<JobStatus> statuses,
+                          OffsetDateTime createdAtStart,
+                          OffsetDateTime createdAtEnd,
+                          OffsetDateTime updatedAtStart,
+                          OffsetDateTime updatedAtEnd,
+                          String orderByField,
+                          String orderByMethod)
+      throws IOException;
+
+  List<Job> listJobsLight(Set<ConfigType> configTypes,
+                          List<UUID> workspaceIds,
+                          int limit,
+                          int offset,
+                          List<JobStatus> statuses,
+                          OffsetDateTime createdAtStart,
+                          OffsetDateTime createdAtEnd,
+                          OffsetDateTime updatedAtStart,
+                          OffsetDateTime updatedAtEnd,
+                          String orderByField,
+                          String orderByMethod)
+      throws IOException;
 
   /**
    * List jobs with id.
@@ -346,6 +382,8 @@ public interface JobPersistence {
   List<JobStatusSummary> getLastSyncJobForConnections(final List<UUID> connectionIds) throws IOException;
 
   List<Job> getRunningSyncJobForConnections(final List<UUID> connectionIds) throws IOException;
+
+  List<Job> getRunningJobForConnection(final UUID connectionId) throws IOException;
 
   Optional<Job> getFirstReplicationJob(UUID connectionId) throws IOException;
 
@@ -414,8 +452,6 @@ public interface JobPersistence {
   void purgeJobHistory();
   // a deployment references a setup of airbyte. it is created the first time the docker compose or
   // K8s is ready.
-
-  List<AttemptNormalizationStatus> getAttemptNormalizationStatusesForJob(final Long jobId) throws IOException;
 
   void updateJobConfig(Long jobId, JobConfig config) throws IOException;
 

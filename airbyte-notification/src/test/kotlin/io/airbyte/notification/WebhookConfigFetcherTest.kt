@@ -1,87 +1,99 @@
 package io.airbyte.notification
 
+import io.airbyte.api.client.AirbyteApiClient
 import io.airbyte.api.client.generated.WorkspaceApi
 import io.airbyte.api.client.model.generated.ConnectionIdRequestBody
 import io.airbyte.api.client.model.generated.Notification
 import io.airbyte.api.client.model.generated.NotificationType
 import io.airbyte.api.client.model.generated.SlackNotificationConfiguration
 import io.airbyte.api.client.model.generated.WorkspaceRead
+import io.micronaut.http.HttpStatus
 import io.mockk.every
 import io.mockk.mockk
-import org.junit.jupiter.api.Assertions
+import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.assertThrows
+import org.openapitools.client.infrastructure.ClientException
 import java.util.UUID
 
-class WebhookConfigFetcherTest {
-  private val workspaceApiClient: WorkspaceApi = mockk()
+internal class WebhookConfigFetcherTest {
+  private val airbyteApiClient: AirbyteApiClient = mockk()
+  private val workspaceApi: WorkspaceApi = mockk()
   private val connectionId: UUID = UUID.randomUUID()
-  private val connectionIdRequestBody = ConnectionIdRequestBody().connectionId(connectionId)
-  private val webhookConfigFetcher: WebhookConfigFetcher = WebhookConfigFetcher(workspaceApiClient)
+  private val connectionIdRequestBody = ConnectionIdRequestBody(connectionId)
+  private lateinit var webhookConfigFetcher: WebhookConfigFetcher
+
+  @BeforeEach
+  internal fun setup() {
+    every { airbyteApiClient.workspaceApi } returns workspaceApi
+    webhookConfigFetcher = WebhookConfigFetcher(airbyteApiClient = airbyteApiClient)
+  }
 
   @Test
   fun testNoWorkspace() {
     every {
-      workspaceApiClient.getWorkspaceByConnectionId(connectionIdRequestBody)
-    } returns null
+      workspaceApi.getWorkspaceByConnectionId(connectionIdRequestBody)
+    } throws ClientException("Not found", HttpStatus.NOT_FOUND.code, null)
 
-    val webhookConfig: WebhookConfig? = webhookConfigFetcher.fetchConfig(connectionId)
-
-    Assertions.assertEquals(null, webhookConfig)
+    assertThrows<ClientException> {
+      webhookConfigFetcher.fetchConfig(connectionId)
+    }
   }
 
   @Test
   fun testNoNotification() {
-    val workspaceRead = WorkspaceRead()
-    workspaceRead.notifications = null
+    val workspaceRead: WorkspaceRead = mockk()
 
     every {
-      workspaceApiClient.getWorkspaceByConnectionId(connectionIdRequestBody)
+      workspaceRead.notifications
+    } returns listOf()
+
+    every {
+      workspaceApi.getWorkspaceByConnectionId(connectionIdRequestBody)
     } returns workspaceRead
 
     val webhookConfig: WebhookConfig? = webhookConfigFetcher.fetchConfig(connectionId)
 
-    Assertions.assertEquals(null, webhookConfig)
+    assertEquals(null, webhookConfig)
   }
 
   @Test
   fun testNoSlackNotification() {
-    val notification = Notification()
-    notification.notificationType = NotificationType.CUSTOMERIO
-    val workspaceRead = WorkspaceRead()
-    workspaceRead.notifications =
-      listOf(
-        notification,
-      )
+    val notification: Notification = mockk()
+    every { notification.notificationType } returns NotificationType.CUSTOMERIO
+
+    val workspaceRead: WorkspaceRead = mockk()
+    every { workspaceRead.notifications } returns listOf(notification)
 
     every {
-      workspaceApiClient.getWorkspaceByConnectionId(connectionIdRequestBody)
+      workspaceApi.getWorkspaceByConnectionId(connectionIdRequestBody)
     } returns workspaceRead
 
     val webhookConfig: WebhookConfig? = webhookConfigFetcher.fetchConfig(connectionId)
 
-    Assertions.assertEquals(null, webhookConfig)
+    assertEquals(null, webhookConfig)
   }
 
   @Test
   fun testSlackNotification() {
-    val notification = Notification()
-    notification.notificationType = NotificationType.SLACK
+    val notification: Notification = mockk()
     val webhook = "http://webhook"
-    notification.slackConfiguration = SlackNotificationConfiguration().webhook(webhook)
-    val workspaceRead = WorkspaceRead()
-    workspaceRead.notifications =
-      listOf(
-        notification,
-      )
+
+    every { notification.notificationType } returns NotificationType.SLACK
+    every { notification.slackConfiguration } returns SlackNotificationConfiguration(webhook)
+
+    val workspaceRead: WorkspaceRead = mockk()
+    every { workspaceRead.notifications } returns listOf(notification)
 
     every {
-      workspaceApiClient.getWorkspaceByConnectionId(connectionIdRequestBody)
+      workspaceApi.getWorkspaceByConnectionId(connectionIdRequestBody)
     } returns workspaceRead
 
     val webhookConfig: WebhookConfig? = webhookConfigFetcher.fetchConfig(connectionId)
 
     val expected = WebhookConfig(webhook)
 
-    Assertions.assertEquals(expected, webhookConfig)
+    assertEquals(expected, webhookConfig)
   }
 }

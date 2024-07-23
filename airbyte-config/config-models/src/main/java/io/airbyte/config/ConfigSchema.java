@@ -109,8 +109,6 @@ public enum ConfigSchema implements AirbyteConfig {
 
   // worker
   STANDARD_SYNC_INPUT("StandardSyncInput.yaml", StandardSyncInput.class),
-  NORMALIZATION_INPUT("NormalizationInput.yaml", NormalizationInput.class),
-  OPERATOR_DBT_INPUT("OperatorDbtInput.yaml", OperatorDbtInput.class),
   STANDARD_SYNC_OUTPUT("StandardSyncOutput.yaml", StandardSyncOutput.class),
   REPLICATION_OUTPUT("ReplicationOutput.yaml", ReplicationOutput.class),
   STATE("State.yaml", State.class),

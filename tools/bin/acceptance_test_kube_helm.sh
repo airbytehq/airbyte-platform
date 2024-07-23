@@ -104,10 +104,10 @@ else
 fi
 
 echo "Running worker integration tests..."
-KUBE=true ./gradlew :airbyte-workers:integrationTest --scan
+KUBE=true ./gradlew :oss:airbyte-workers:integrationTest --scan
 
 echo "Running e2e tests via gradle..."
 # Note: we skip basic acceptance tests on local Kube.
-KUBE=true SKIP_BASIC_ACCEPTANCE_TESTS=true USE_EXTERNAL_DEPLOYMENT=true ./gradlew -Dorg.gradle.caching=false :airbyte-tests:acceptanceTest --scan
+KUBE=true SKIP_BASIC_ACCEPTANCE_TESTS=true USE_EXTERNAL_DEPLOYMENT=true ./gradlew -Dorg.gradle.caching=false :oss:airbyte-tests:acceptanceTest --scan
 
 catch

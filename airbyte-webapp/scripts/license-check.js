@@ -8,6 +8,7 @@ const checker = require("license-checker");
  */
 const ALLOWED_LICENSES = [
   "(Apache-2.0 OR MPL-1.1)",
+  "(Apache-2.0 OR BSD-3-Clause)",
   "(AFL-2.1 OR BSD-3-Clause)",
   "(AFLv2.1 OR BSD)",
   "(BSD-2-Clause OR MIT OR Apache-2.0)",
@@ -35,6 +36,7 @@ const ALLOWED_LICENSES = [
   "CC-BY-4.0",
   "ISC",
   "MIT",
+  "MIT AND ISC",
   "MPL-2.0",
   "Public Domain",
   "Python-2.0",

@@ -1,0 +1,23 @@
+package io.airbyte.api.problems.throwable.generated
+
+import io.airbyte.api.problems.AbstractThrowableProblem
+import io.airbyte.api.problems.ProblemResponse
+import io.airbyte.api.problems.model.generated.<problem-class-name>
+<problem-data-class-import>
+
+class <problem-throwable-class-name>(detail: String?, data: <problem-data-class-name>?) : AbstractThrowableProblem(getProblem(detail, data)) {
+  constructor(): this(null, null)
+  constructor(data: <problem-data-class-name>): this(null, data)
+  companion object {
+    private fun getProblem(detail: String?, data: <problem-data-class-name>?): ProblemResponse {
+      val problemResponse = <problem-class-name>()
+      if (detail != null) {
+        problemResponse.detail = detail
+      }
+      if (data != null) {
+        problemResponse.data = data
+      }
+      return problemResponse
+    }
+  }
+}

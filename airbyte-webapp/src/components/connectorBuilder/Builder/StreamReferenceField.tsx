@@ -47,7 +47,14 @@ export const StreamReferenceField: React.FC<StreamReferenceFieldProps> = ({
       <ListBox
         {...props}
         options={options}
-        onSelect={(selected) => selected && setValue(path, selected)}
+        onSelect={(selected) =>
+          selected &&
+          setValue(path, selected, {
+            shouldValidate: true,
+            shouldDirty: true,
+            shouldTouch: true,
+          })
+        }
         selectedValue={value}
         hasError={hasError}
       />

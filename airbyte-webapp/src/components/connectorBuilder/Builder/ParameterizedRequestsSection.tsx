@@ -13,7 +13,13 @@ import { BuilderList } from "./BuilderList";
 import { BuilderOneOf } from "./BuilderOneOf";
 import { BuilderRequestInjection } from "./BuilderRequestInjection";
 import { ToggleGroupField } from "./ToggleGroupField";
-import { LIST_PARTITION_ROUTER, StreamPathFn, BuilderParameterizedRequests } from "../types";
+import { manifestListPartitionRouterToBuilder } from "../convertManifestToBuilderForm";
+import {
+  LIST_PARTITION_ROUTER,
+  StreamPathFn,
+  BuilderParameterizedRequests,
+  builderParameterizedRequestsToManifest,
+} from "../types";
 
 interface ParameterizedRequestsSectionProps {
   streamFieldPath: StreamPathFn;
@@ -31,22 +37,26 @@ export const ParameterizedRequestsSection: React.FC<ParameterizedRequestsSection
   currentStreamIndex,
 }) => {
   const { formatMessage } = useIntl();
+  const label = formatMessage({ id: "connectorBuilder.parameterizedRequests.label" });
 
   return (
     <BuilderCard
       docLink={links.connectorBuilderParameterizedRequests}
-      label={formatMessage({ id: "connectorBuilder.parameterizedRequests.label" })}
+      label={label}
       tooltip={formatMessage({ id: "connectorBuilder.parameterizedRequests.tooltip" })}
       inputsConfig={{
         toggleable: true,
         path: streamFieldPath("parameterizedRequests"),
         defaultValue: [EMPTY_PARAMETERIZED_REQUEST],
+        yamlConfig: {
+          builderToManifest: builderParameterizedRequestsToManifest,
+          manifestToBuilder: manifestListPartitionRouterToBuilder,
+        },
       }}
       copyConfig={{
         path: "parameterizedRequests",
         currentStreamIndex,
-        copyFromLabel: formatMessage({ id: "connectorBuilder.copyFromParameterizedRequestsTitle" }),
-        copyToLabel: formatMessage({ id: "connectorBuilder.copyToParameterizedRequestsTitle" }),
+        componentName: label,
       }}
     >
       <BuilderList

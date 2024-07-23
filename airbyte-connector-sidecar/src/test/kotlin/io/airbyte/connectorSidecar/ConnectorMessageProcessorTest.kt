@@ -1,12 +1,14 @@
 package io.airbyte.connectorSidecar
 
 import com.fasterxml.jackson.databind.JsonNode
+import io.airbyte.api.client.AirbyteApiClient
 import io.airbyte.api.client.generated.SourceApi
 import io.airbyte.api.client.model.generated.DiscoverCatalogResult
 import io.airbyte.commons.converters.ConnectorConfigUpdater
 import io.airbyte.commons.json.Jsons
 import io.airbyte.config.ActorType
 import io.airbyte.config.ConnectorJobOutput
+import io.airbyte.config.FailureReason
 import io.airbyte.config.StandardCheckConnectionInput
 import io.airbyte.config.StandardCheckConnectionOutput
 import io.airbyte.config.StandardDiscoverCatalogInput
@@ -19,7 +21,6 @@ import io.airbyte.protocol.models.AirbyteStream
 import io.airbyte.protocol.models.AirbyteTraceMessage
 import io.airbyte.protocol.models.Config
 import io.airbyte.protocol.models.ConnectorSpecification
-import io.airbyte.workers.exception.WorkerException
 import io.airbyte.workers.internal.AirbyteStreamFactory
 import io.airbyte.workers.models.SidecarInput
 import io.mockk.every
@@ -28,18 +29,24 @@ import io.mockk.junit5.MockKExtension
 import io.mockk.verify
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
+import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
-import org.junit.jupiter.api.assertThrows
 import org.junit.jupiter.api.extension.ExtendWith
+import org.junit.jupiter.params.ParameterizedTest
+import org.junit.jupiter.params.provider.EnumSource
 import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
 import java.io.InputStream
+import java.util.Optional
 import java.util.UUID
 import java.util.stream.Stream
 
 @ExtendWith(MockKExtension::class)
 class ConnectorMessageProcessorTest {
+  @MockK
+  private lateinit var airbyteApiClient: AirbyteApiClient
+
   @MockK
   private lateinit var streamFactory: AirbyteStreamFactory
 
@@ -53,7 +60,8 @@ class ConnectorMessageProcessorTest {
 
   @BeforeEach
   fun init() {
-    connectorMessageProcessor = ConnectorMessageProcessor(connectorConfigUpdater, sourceApi)
+    every { airbyteApiClient.sourceApi } returns sourceApi
+    connectorMessageProcessor = ConnectorMessageProcessor(connectorConfigUpdater, airbyteApiClient)
   }
 
   @Test
@@ -353,15 +361,47 @@ class ConnectorMessageProcessorTest {
 
   @Test
   fun `fail if non 0 exit code`() {
-    assertThrows<WorkerException> {
+    every { streamFactory.create(any()) } returns Stream.of()
+
+    val jobOutput =
       connectorMessageProcessor.run(
         InputStream.nullInputStream(),
         streamFactory,
-        ConnectorMessageProcessor.OperationInput(StandardCheckConnectionInput()),
+        ConnectorMessageProcessor.OperationInput(
+          StandardCheckConnectionInput()
+            .withActorType(ActorType.SOURCE)
+            .withActorId(UUID.randomUUID())
+            .withConnectionConfiguration(Jsons.emptyObject()),
+        ),
         1,
         SidecarInput.OperationType.CHECK,
       )
-    }
+
+    assertTrue(jobOutput.failureReason != null)
+    assertEquals(StandardCheckConnectionOutput.Status.FAILED, jobOutput.checkConnection.status)
+  }
+
+  @ParameterizedTest
+  @EnumSource(value = SidecarInput.OperationType::class)
+  fun `do not override failure reason`(operationType: SidecarInput.OperationType) {
+    val operationInput =
+      if (operationType == SidecarInput.OperationType.CHECK) {
+        ConnectorMessageProcessor.OperationInput(checkInput = StandardCheckConnectionInput().withActorType(ActorType.SOURCE))
+      } else {
+        ConnectorMessageProcessor.OperationInput()
+      }
+    val failureReason = FailureReason().withExternalMessage("test")
+    val jobOutput = ConnectorJobOutput()
+    connectorMessageProcessor.setOutput(
+      operationType,
+      ConnectorMessageProcessor.OperationResult(),
+      jobOutput,
+      Optional.of(failureReason),
+      operationInput,
+      1,
+    )
+
+    assertEquals(failureReason, jobOutput.failureReason)
   }
 
   @Test
@@ -443,7 +483,7 @@ class ConnectorMessageProcessorTest {
       )
 
     val discoveredCatalogId = UUID.randomUUID()
-    every { sourceApi.writeDiscoverCatalogResult(any()) } returns DiscoverCatalogResult().catalogId(discoveredCatalogId)
+    every { sourceApi.writeDiscoverCatalogResult(any()) } returns DiscoverCatalogResult(catalogId = discoveredCatalogId)
 
     val output =
       connectorMessageProcessor.run(

@@ -5,10 +5,7 @@
 package io.airbyte.workload.launcher.config
 
 import dev.failsafe.RetryPolicy
-import io.airbyte.api.client.generated.ConnectionApi
-import io.airbyte.api.client.generated.JobsApi
-import io.airbyte.api.client.generated.SecretsPersistenceConfigApi
-import io.airbyte.api.client.generated.StateApi
+import io.airbyte.api.client.AirbyteApiClient
 import io.airbyte.commons.features.EnvVariableFeatureFlags
 import io.airbyte.commons.features.FeatureFlags
 import io.airbyte.config.secrets.SecretsRepositoryReader
@@ -20,6 +17,7 @@ import io.airbyte.workers.CheckConnectionInputHydrator
 import io.airbyte.workers.ConnectorSecretsHydrator
 import io.airbyte.workers.DiscoverCatalogInputHydrator
 import io.airbyte.workers.ReplicationInputHydrator
+import io.airbyte.workers.helper.ResumableFullRefreshStatsHelper
 import io.micrometer.core.instrument.MeterRegistry
 import io.micronaut.context.annotation.Factory
 import io.micronaut.context.annotation.Value
@@ -48,26 +46,24 @@ class ApplicationBeanFactory {
 
   @Singleton
   fun replicationInputHydrator(
-    connectionApi: ConnectionApi,
-    jobsApi: JobsApi,
-    stateApi: StateApi,
-    secretsPersistenceConfigApi: SecretsPersistenceConfigApi,
+    airbyteApiClient: AirbyteApiClient,
+    resumableFullRefreshStatsHelper: ResumableFullRefreshStatsHelper,
     secretsRepositoryReader: SecretsRepositoryReader,
     featureFlagClient: FeatureFlagClient,
   ): ReplicationInputHydrator {
-    return ReplicationInputHydrator(connectionApi, jobsApi, stateApi, secretsPersistenceConfigApi, secretsRepositoryReader, featureFlagClient)
+    return ReplicationInputHydrator(airbyteApiClient, resumableFullRefreshStatsHelper, secretsRepositoryReader, featureFlagClient)
   }
 
   @Singleton
   fun baseInputHydrator(
-    secretsPersistenceConfigApi: SecretsPersistenceConfigApi,
+    airbyteApiClient: AirbyteApiClient,
     secretsRepositoryReader: SecretsRepositoryReader,
     featureFlagClient: FeatureFlagClient,
   ): ConnectorSecretsHydrator {
     return ConnectorSecretsHydrator(
-      secretsRepositoryReader,
-      secretsPersistenceConfigApi,
-      featureFlagClient,
+      secretsRepositoryReader = secretsRepositoryReader,
+      airbyteApiClient = airbyteApiClient,
+      featureFlagClient = featureFlagClient,
     )
   }
 

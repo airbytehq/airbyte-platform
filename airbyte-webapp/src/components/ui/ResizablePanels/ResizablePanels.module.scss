@@ -1,5 +1,6 @@
 @use "scss/colors";
 @use "scss/variables";
+@use "scss/z-indices";
 
 /*
 * This eliminates flickering scrollbars when resizing using the reflex splitter.
@@ -80,6 +81,7 @@
   border: 0 !important;
   background-color: transparent !important;
   height: auto !important;
+  z-index: z-indices.$panelSplitter !important;
 }
 
 .hidden {

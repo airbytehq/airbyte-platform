@@ -1,0 +1,26 @@
+@use "scss/colors";
+@use "scss/variables";
+@use "scss/z-indices";
+
+.container {
+  width: 100%;
+  height: 100%;
+  position: relative;
+
+  .backdrop {
+    display: none;
+    z-index: z-indices.$schemaChangesBackdrop;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    border-radius: variables.$border-radius-lg;
+    background: linear-gradient(180deg, rgba(248, 248, 250, 50% /* grey-50 50% */) 0%, colors.$foreground 92.54%);
+
+    &.schemaRefreshing {
+      position: absolute;
+      display: flex;
+      width: 100%;
+      height: 100%;
+    }
+  }
+}

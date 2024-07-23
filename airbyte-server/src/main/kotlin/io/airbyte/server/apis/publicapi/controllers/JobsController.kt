@@ -5,17 +5,20 @@
 package io.airbyte.server.apis.publicapi.controllers
 
 import io.airbyte.api.model.generated.PermissionType
+import io.airbyte.api.problems.model.generated.ProblemMessageData
+import io.airbyte.api.problems.throwable.generated.UnprocessableEntityProblem
 import io.airbyte.commons.server.authorization.ApiAuthorizationHelper
 import io.airbyte.commons.server.authorization.Scope
-import io.airbyte.commons.server.errors.problems.UnprocessableEntityProblem
 import io.airbyte.commons.server.scheduling.AirbyteTaskExecutors
 import io.airbyte.commons.server.support.CurrentUserService
-import io.airbyte.public_api.generated.PublicJobsApi
-import io.airbyte.public_api.model.generated.ConnectionResponse
-import io.airbyte.public_api.model.generated.JobCreateRequest
-import io.airbyte.public_api.model.generated.JobStatusEnum
-import io.airbyte.public_api.model.generated.JobTypeEnum
+import io.airbyte.publicApi.server.generated.apis.PublicJobsApi
+import io.airbyte.publicApi.server.generated.models.ConnectionResponse
+import io.airbyte.publicApi.server.generated.models.JobCreateRequest
+import io.airbyte.publicApi.server.generated.models.JobResponse
+import io.airbyte.publicApi.server.generated.models.JobStatusEnum
+import io.airbyte.publicApi.server.generated.models.JobTypeEnum
 import io.airbyte.server.apis.publicapi.apiTracking.TrackingHelper
+import io.airbyte.server.apis.publicapi.constants.API_PATH
 import io.airbyte.server.apis.publicapi.constants.DELETE
 import io.airbyte.server.apis.publicapi.constants.GET
 import io.airbyte.server.apis.publicapi.constants.JOBS_PATH
@@ -37,7 +40,7 @@ import jakarta.ws.rs.core.Response
 import java.time.OffsetDateTime
 import java.util.UUID
 
-@Controller(JOBS_PATH)
+@Controller(API_PATH)
 @Secured(SecurityRule.IS_AUTHENTICATED)
 open class JobsController(
   private val jobService: JobService,
@@ -47,7 +50,7 @@ open class JobsController(
   private val currentUserService: CurrentUserService,
 ) : PublicJobsApi {
   @DELETE
-  @Path("/{jobId}")
+  @Path("$JOBS_PATH/{jobId}")
   @ExecuteOn(AirbyteTaskExecutors.PUBLIC_API)
   override fun publicCancelJob(
     @PathParam("jobId") jobId: Long,
@@ -60,7 +63,7 @@ open class JobsController(
       PermissionType.WORKSPACE_EDITOR,
     )
 
-    val jobResponse: Any? =
+    val jobResponse: JobResponse? =
       trackingHelper.callWithTracker(
         {
           jobService.cancelJob(
@@ -87,7 +90,7 @@ open class JobsController(
   override fun publicCreateJob(jobCreateRequest: JobCreateRequest): Response {
     val userId: UUID = currentUserService.currentUser.userId
     apiAuthorizationHelper.checkWorkspacePermissions(
-      listOf(jobCreateRequest.connectionId.toString()),
+      listOf(jobCreateRequest.connectionId),
       Scope.CONNECTION,
       userId,
       PermissionType.WORKSPACE_EDITOR,
@@ -97,21 +100,21 @@ open class JobsController(
       trackingHelper.callWithTracker(
         {
           connectionService.getConnection(
-            jobCreateRequest.connectionId,
+            UUID.fromString(jobCreateRequest.connectionId),
           )
         },
         JOBS_PATH,
         POST,
         userId,
       ) as ConnectionResponse
-    val workspaceId: UUID = connectionResponse.workspaceId
+    val workspaceId: UUID = UUID.fromString(connectionResponse.workspaceId)
 
     return when (jobCreateRequest.jobType) {
       JobTypeEnum.SYNC -> {
-        val jobResponse: Any =
+        val jobResponse: JobResponse =
           trackingHelper.callWithTracker({
             jobService.sync(
-              jobCreateRequest.connectionId,
+              UUID.fromString(jobCreateRequest.connectionId),
             )
           }, JOBS_PATH, POST, userId)!!
         trackingHelper.trackSuccess(
@@ -127,10 +130,10 @@ open class JobsController(
       }
 
       JobTypeEnum.RESET -> {
-        val jobResponse: Any =
+        val jobResponse: JobResponse =
           trackingHelper.callWithTracker({
             jobService.reset(
-              jobCreateRequest.connectionId,
+              UUID.fromString(jobCreateRequest.connectionId),
             )
           }, JOBS_PATH, POST, userId)!!
         trackingHelper.trackSuccess(
@@ -143,6 +146,36 @@ open class JobsController(
           .status(Response.Status.OK.statusCode)
           .entity(jobResponse)
           .build()
+      }
+
+      JobTypeEnum.CLEAR -> {
+        val jobResponse: Any =
+          trackingHelper.callWithTracker({
+            jobService.reset(
+              UUID.fromString(jobCreateRequest.connectionId),
+            )
+          }, JOBS_PATH, POST, userId)!!
+        trackingHelper.trackSuccess(
+          JOBS_PATH,
+          POST,
+          userId,
+          workspaceId,
+        )
+        Response
+          .status(Response.Status.OK.statusCode)
+          .entity(jobResponse)
+          .build()
+      }
+
+      JobTypeEnum.REFRESH -> {
+        val unprocessableEntityProblem = UnprocessableEntityProblem(ProblemMessageData().message("Refreshes are not supported in the public API"))
+        trackingHelper.trackFailuresIfAny(
+          JOBS_PATH,
+          POST,
+          userId,
+          unprocessableEntityProblem,
+        )
+        throw unprocessableEntityProblem
       }
 
       else -> {
@@ -159,7 +192,7 @@ open class JobsController(
   }
 
   @GET
-  @Path("/{jobId}")
+  @Path("$JOBS_PATH/{jobId}")
   @ExecuteOn(AirbyteTaskExecutors.PUBLIC_API)
   override fun getJob(
     @PathParam("jobId") jobId: Long,
@@ -172,7 +205,7 @@ open class JobsController(
       PermissionType.WORKSPACE_READER,
     )
 
-    val jobResponse: Any? =
+    val jobResponse: JobResponse? =
       trackingHelper.callWithTracker(
         {
           jobService.getJobInfoWithoutLogs(
@@ -197,9 +230,9 @@ open class JobsController(
 
   @ExecuteOn(AirbyteTaskExecutors.PUBLIC_API)
   override fun listJobs(
-    connectionId: UUID?,
-    limit: Int?,
-    offset: Int?,
+    connectionId: String?,
+    limit: Int,
+    offset: Int,
     jobType: JobTypeEnum?,
     workspaceIds: List<UUID>?,
     status: JobStatusEnum?,
@@ -212,7 +245,7 @@ open class JobsController(
     val userId: UUID = currentUserService.currentUser.userId
     if (connectionId != null) {
       apiAuthorizationHelper.checkWorkspacePermissions(
-        listOf(connectionId.toString()),
+        listOf(connectionId),
         Scope.CONNECTION,
         userId,
         PermissionType.WORKSPACE_READER,
@@ -225,7 +258,6 @@ open class JobsController(
         PermissionType.WORKSPACE_READER,
       )
     }
-    val jobsResponse: Any
     val filter =
       JobsFilter(
         createdAtStart,
@@ -240,13 +272,13 @@ open class JobsController(
 
     val (orderByField, orderByMethod) = orderByToFieldAndMethod(orderBy)
 
-    jobsResponse =
+    val jobsResponse =
       (
         if (connectionId != null) {
           trackingHelper.callWithTracker(
             {
               jobService.getJobList(
-                connectionId,
+                UUID.fromString(connectionId),
                 filter,
                 orderByField,
                 orderByMethod,

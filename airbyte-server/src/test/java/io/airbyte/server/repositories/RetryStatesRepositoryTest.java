@@ -4,8 +4,12 @@
 
 package io.airbyte.server.repositories;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
 import io.airbyte.db.factory.DSLContextFactory;
 import io.airbyte.db.init.DatabaseInitializationException;
+import io.airbyte.db.instance.DatabaseConstants;
 import io.airbyte.db.instance.jobs.jooq.generated.Keys;
 import io.airbyte.db.instance.jobs.jooq.generated.Tables;
 import io.airbyte.db.instance.test.TestDatabaseProviders;
@@ -44,7 +48,7 @@ class RetryStatesRepositoryTest {
   static DSLContext jooqDslContext;
 
   // we run against an actual database to ensure micronaut data and jooq properly integrate
-  static PostgreSQLContainer<?> container = new PostgreSQLContainer<>("postgres:13-alpine")
+  static PostgreSQLContainer<?> container = new PostgreSQLContainer<>(DatabaseConstants.DEFAULT_DATABASE_VERSION)
       .withDatabaseName("airbyte")
       .withUsername("docker")
       .withPassword("docker");
@@ -94,8 +98,8 @@ class RetryStatesRepositoryTest {
 
     final var found = repo.findById(inserted.getId());
 
-    Assertions.assertTrue(found.isPresent());
-    Assertions.assertEquals(inserted, found.get());
+    assertTrue(found.isPresent());
+    assertEquals(inserted, found.get());
   }
 
   @Test
@@ -114,15 +118,15 @@ class RetryStatesRepositoryTest {
         .successivePartialFailures(0)
         .build();
 
-    repo.updateByJobId(Fixtures.jobId2, updated);
+    repo.updateByJobId(updated);
 
     final var found2 = repo.findById(id);
 
-    Assertions.assertTrue(found1.isPresent());
-    Assertions.assertEquals(s, found1.get());
+    assertTrue(found1.isPresent());
+    assertEquals(s, found1.get());
 
-    Assertions.assertTrue(found2.isPresent());
-    Assertions.assertEquals(updated, found2.get());
+    assertTrue(found2.isPresent());
+    assertEquals(updated, found2.get());
   }
 
   @Test
@@ -149,14 +153,14 @@ class RetryStatesRepositoryTest {
     final var found2 = repo.findByJobId(Fixtures.jobId3);
     final var found3 = repo.findByJobId(Fixtures.jobId1);
 
-    Assertions.assertTrue(found1.isPresent());
-    Assertions.assertEquals(s1, found1.get());
+    assertTrue(found1.isPresent());
+    assertEquals(s1, found1.get());
 
-    Assertions.assertTrue(found2.isPresent());
-    Assertions.assertEquals(s2, found2.get());
+    assertTrue(found2.isPresent());
+    assertEquals(s2, found2.get());
 
-    Assertions.assertTrue(found3.isPresent());
-    Assertions.assertEquals(s3, found3.get());
+    assertTrue(found3.isPresent());
+    assertEquals(s3, found3.get());
   }
 
   @Test
@@ -170,7 +174,7 @@ class RetryStatesRepositoryTest {
     final var exists1 = repo.existsByJobId(Fixtures.jobId3);
     final var exists2 = repo.existsByJobId(Fixtures.jobId2);
 
-    Assertions.assertTrue(exists1);
+    assertTrue(exists1);
     Assertions.assertFalse(exists2);
   }
 
@@ -194,11 +198,11 @@ class RetryStatesRepositoryTest {
 
     final var found2 = repo.findById(id);
 
-    Assertions.assertTrue(found1.isPresent());
-    Assertions.assertEquals(s, found1.get());
+    assertTrue(found1.isPresent());
+    assertEquals(s, found1.get());
 
-    Assertions.assertTrue(found2.isPresent());
-    Assertions.assertEquals(updated, found2.get());
+    assertTrue(found2.isPresent());
+    assertEquals(updated, found2.get());
   }
 
   @Test
@@ -211,8 +215,8 @@ class RetryStatesRepositoryTest {
 
     final var found1 = repo.findByJobId(Fixtures.jobId4);
 
-    Assertions.assertTrue(found1.isPresent());
-    Assertions.assertEquals(s, found1.get());
+    assertTrue(found1.isPresent());
+    assertEquals(s, found1.get());
   }
 
   private static class Fixtures {
@@ -226,7 +230,7 @@ class RetryStatesRepositoryTest {
     static Long jobId4 = ThreadLocalRandom.current().nextLong();
 
     static RetryStateBuilder state() {
-      return RetryState.builder()
+      return new RetryState.RetryStateBuilder()
           .connectionId(connectionId1)
           .jobId(jobId1)
           .successiveCompleteFailures(0)
@@ -236,7 +240,7 @@ class RetryStatesRepositoryTest {
     }
 
     static RetryStateBuilder stateFrom(final RetryState s) {
-      return RetryState.builder()
+      return new RetryState.RetryStateBuilder()
           .connectionId(s.getConnectionId())
           .jobId(s.getJobId())
           .successiveCompleteFailures(s.getSuccessiveCompleteFailures())

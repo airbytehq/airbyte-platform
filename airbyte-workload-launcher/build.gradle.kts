@@ -4,14 +4,12 @@ plugins {
   id("io.airbyte.gradle.jvm.app")
   id("io.airbyte.gradle.publish")
   id("io.airbyte.gradle.docker")
-  kotlin("kapt")
-  kotlin("jvm")
 }
 
 dependencies {
-  kapt(platform(libs.micronaut.platform))
-  kapt(libs.bundles.micronaut.annotation.processor)
-  kapt(libs.micronaut.openapi)
+  ksp(platform(libs.micronaut.platform))
+  ksp(libs.bundles.micronaut.annotation.processor)
+  ksp(libs.micronaut.openapi)
 
   implementation(libs.bundles.datadog)
   implementation(libs.bundles.kubernetes.client)
@@ -35,20 +33,20 @@ dependencies {
   implementation(libs.slf4j.api)
   implementation(libs.bundles.micronaut.metrics)
   implementation(platform(libs.micronaut.platform))
-  implementation(project(":airbyte-api"))
-  implementation(project(":airbyte-commons"))
-  implementation(project(":airbyte-commons-micronaut"))
-  implementation(project(":airbyte-commons-temporal"))
-  implementation(project(":airbyte-commons-temporal-core"))
-  implementation(project(":airbyte-commons-with-dependencies"))
-  implementation(project(":airbyte-commons-worker"))
-  implementation(project(":airbyte-config:config-models"))
-  implementation(project(":airbyte-config:config-secrets"))
-  implementation(project(":airbyte-data"))
-  implementation(project(":airbyte-featureflag"))
-  implementation(project(":airbyte-metrics:metrics-lib"))
-  implementation(project(":airbyte-micronaut-temporal"))
-  implementation(project(":airbyte-worker-models"))
+  implementation(project(":oss:airbyte-api"))
+  implementation(project(":oss:airbyte-commons"))
+  implementation(project(":oss:airbyte-commons-micronaut"))
+  implementation(project(":oss:airbyte-commons-temporal"))
+  implementation(project(":oss:airbyte-commons-temporal-core"))
+  implementation(project(":oss:airbyte-commons-with-dependencies"))
+  implementation(project(":oss:airbyte-commons-worker"))
+  implementation(project(":oss:airbyte-config:config-models"))
+  implementation(project(":oss:airbyte-config:config-secrets"))
+  implementation(project(":oss:airbyte-data"))
+  implementation(project(":oss:airbyte-featureflag"))
+  implementation(project(":oss:airbyte-metrics:metrics-lib"))
+  implementation(project(":oss:airbyte-micronaut-temporal"))
+  implementation(project(":oss:airbyte-worker-models"))
 
   runtimeOnly(libs.snakeyaml)
   runtimeOnly(libs.kotlin.reflect)
@@ -59,8 +57,8 @@ dependencies {
   runtimeOnly(libs.hikaricp)
   runtimeOnly(libs.h2.database)
 
-  kaptTest((platform(libs.micronaut.platform)))
-  kaptTest(libs.bundles.micronaut.test.annotation.processor)
+  kspTest((platform(libs.micronaut.platform)))
+  kspTest(libs.bundles.micronaut.test.annotation.processor)
   testAnnotationProcessor(platform(libs.micronaut.platform))
   testAnnotationProcessor(libs.bundles.micronaut.test.annotation.processor)
 
@@ -69,7 +67,7 @@ dependencies {
   testImplementation(libs.kotlin.test.runner.junit5)
   testImplementation(libs.bundles.junit)
   testImplementation(libs.assertj.core)
-  testImplementation(project(":airbyte-json-validation"))
+  testImplementation(project(":oss:airbyte-json-validation"))
   testImplementation(libs.airbyte.protocol)
   testImplementation(libs.apache.commons.lang)
   testImplementation(libs.testcontainers.vault)
@@ -95,14 +93,5 @@ airbyte {
   }
   docker {
     imageName.set("workload-launcher")
-  }
-}
-
-// This is a workaround related to kaptBuild errors. It seems to be because there are no tests in cloud-airbyte-api-server.
-// TODO: this should be removed when we move to kotlin 1.9.20
-// TODO: we should write tests
-afterEvaluate {
-  tasks.named("kaptGenerateStubsTestKotlin") {
-    enabled = false
   }
 }

@@ -1,6 +1,7 @@
 @use "scss/variables";
 @use "./DiffSection.module.scss";
 
+%header,
 .header {
   @extend %sectionSubHeader;
 
@@ -12,6 +13,7 @@
   }
 }
 
+%table,
 .table {
   width: 100%;
   border-spacing: 0;

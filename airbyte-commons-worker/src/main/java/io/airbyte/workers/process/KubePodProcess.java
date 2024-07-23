@@ -32,7 +32,6 @@ import io.fabric8.kubernetes.api.model.EnvVarSource;
 import io.fabric8.kubernetes.api.model.LocalObjectReference;
 import io.fabric8.kubernetes.api.model.Pod;
 import io.fabric8.kubernetes.api.model.PodBuilder;
-import io.fabric8.kubernetes.api.model.PodFluent;
 import io.fabric8.kubernetes.api.model.PodSecurityContext;
 import io.fabric8.kubernetes.api.model.PodSecurityContextBuilder;
 import io.fabric8.kubernetes.api.model.Quantity;
@@ -610,7 +609,7 @@ public class KubePodProcess implements KubePod {
 
       final List<Container> containers = Lists.concat(List.of(main, callHeartbeatServer), socatContainers);
 
-      final PodFluent.SpecNested<PodBuilder> podBuilder = new PodBuilder()
+      final var podBuilder = new PodBuilder()
           .withApiVersion("v1")
           .withNewMetadata()
           .withName(podName)

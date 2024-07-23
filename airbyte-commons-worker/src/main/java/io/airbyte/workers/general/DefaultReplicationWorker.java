@@ -145,7 +145,7 @@ public class DefaultReplicationWorker implements ReplicationWorker {
               replicationWorkerHelper.getDestinationDefinitionIdForDestinationId(replicationInput.getDestinationId()));
 
       final ReplicationFeatureFlags flags = replicationFeatureFlagReader.readReplicationFeatureFlags();
-      replicationWorkerHelper.initialize(replicationContext, flags, jobRoot, replicationInput.getCatalog());
+      replicationWorkerHelper.initialize(replicationContext, flags, jobRoot, replicationInput.getCatalog(), replicationInput.getState());
       replicate(jobRoot, replicationInput, flags);
 
       return replicationWorkerHelper.getReplicationOutput();

@@ -10,6 +10,7 @@ import { Message } from "components/ui/Message";
 import { ModalBody, ModalFooter } from "components/ui/Modal";
 import { Text } from "components/ui/Text";
 
+import { useFormatError } from "core/errors";
 import { isCloudApp } from "core/utils/app";
 import { links } from "core/utils/links";
 
@@ -39,7 +40,8 @@ export const AddCustomDockerImageConnectorModal: React.FC<AddCustomDockerImageCo
   onSubmit,
 }) => {
   const { formatMessage } = useIntl();
-  const [error, setError] = useState<string | undefined>();
+  const [error, setError] = useState<Error>();
+  const formatError = useFormatError();
 
   return (
     <Form<ConnectorDefinition>
@@ -55,7 +57,7 @@ export const AddCustomDockerImageConnectorModal: React.FC<AddCustomDockerImageCo
         await onSubmit(values);
       }}
       onError={(e) => {
-        setError(e.message || formatMessage({ id: "form.dockerError" }));
+        setError(e);
       }}
     >
       <ModalBody>
@@ -85,7 +87,7 @@ export const AddCustomDockerImageConnectorModal: React.FC<AddCustomDockerImageCo
             label={formatMessage({ id: "admin.documentationUrl" })}
             optional
           />
-          {error && <Message type="error" text={error} />}
+          {error && <Message type="error" text={formatError(error)} />}
         </Box>
       </ModalBody>
       <ModalFooter>

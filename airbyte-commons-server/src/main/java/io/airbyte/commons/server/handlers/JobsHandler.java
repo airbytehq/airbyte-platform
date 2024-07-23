@@ -6,21 +6,30 @@ package io.airbyte.commons.server.handlers;
 
 import static io.airbyte.commons.server.handlers.helpers.JobCreationAndStatusUpdateHelper.SYNC_CONFIG_SET;
 
+import com.google.common.annotations.VisibleForTesting;
 import io.airbyte.api.model.generated.BooleanRead;
 import io.airbyte.api.model.generated.InternalOperationResult;
 import io.airbyte.api.model.generated.JobFailureRequest;
+import io.airbyte.api.model.generated.JobStatusEnum;
 import io.airbyte.api.model.generated.JobSuccessWithAttemptNumberRequest;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.commons.server.JobStatus;
+import io.airbyte.commons.server.converters.JobConverter;
 import io.airbyte.commons.server.errors.BadRequestException;
 import io.airbyte.commons.server.handlers.helpers.JobCreationAndStatusUpdateHelper;
+import io.airbyte.commons.server.handlers.helpers.StatsAggregationHelper;
 import io.airbyte.config.AttemptFailureSummary;
 import io.airbyte.config.AttemptSyncConfig;
+import io.airbyte.config.FailureReason;
 import io.airbyte.config.JobConfig;
+import io.airbyte.config.JobConfigProxy;
 import io.airbyte.config.JobOutput;
 import io.airbyte.config.JobResetConnectionConfig;
 import io.airbyte.config.JobSyncConfig;
 import io.airbyte.config.StandardSyncOutput;
+import io.airbyte.data.services.ConnectionTimelineEventService;
+import io.airbyte.data.services.shared.FailedEvent;
+import io.airbyte.data.services.shared.FinalStatusEvent;
 import io.airbyte.metrics.lib.MetricClientFactory;
 import io.airbyte.metrics.lib.OssMetricsRegistry;
 import io.airbyte.persistence.job.JobNotifier;
@@ -30,12 +39,15 @@ import io.airbyte.persistence.job.errorreporter.JobErrorReporter;
 import io.airbyte.persistence.job.errorreporter.SyncJobReportingContext;
 import io.airbyte.persistence.job.models.Attempt;
 import io.airbyte.persistence.job.models.Job;
+import io.airbyte.protocol.models.AirbyteStream;
+import io.airbyte.protocol.models.ConfiguredAirbyteStream;
 import jakarta.inject.Singleton;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -50,15 +62,18 @@ public class JobsHandler {
   private final JobCreationAndStatusUpdateHelper jobCreationAndStatusUpdateHelper;
   private final JobNotifier jobNotifier;
   private final JobErrorReporter jobErrorReporter;
+  private final ConnectionTimelineEventService connectionEventService;
 
   public JobsHandler(final JobPersistence jobPersistence,
                      final JobCreationAndStatusUpdateHelper jobCreationAndStatusUpdateHelper,
                      final JobNotifier jobNotifier,
-                     final JobErrorReporter jobErrorReporter) {
+                     final JobErrorReporter jobErrorReporter,
+                     final ConnectionTimelineEventService connectionEventService) {
     this.jobPersistence = jobPersistence;
     this.jobCreationAndStatusUpdateHelper = jobCreationAndStatusUpdateHelper;
     this.jobNotifier = jobNotifier;
     this.jobErrorReporter = jobErrorReporter;
+    this.connectionEventService = connectionEventService;
   }
 
   /**
@@ -73,13 +88,15 @@ public class JobsHandler {
       jobPersistence.failJob(jobId);
       final Job job = jobPersistence.getJob(jobId);
 
-      List<JobPersistence.AttemptStats> attemptStats = new ArrayList<>();
-      for (Attempt attempt : job.getAttempts()) {
+      final List<JobPersistence.AttemptStats> attemptStats = new ArrayList<>();
+      for (final Attempt attempt : job.getAttempts()) {
         attemptStats.add(jobPersistence.getAttemptStats(jobId, attempt.getAttemptNumber()));
       }
-      if (!job.getConfigType().equals(JobConfig.ConfigType.RESET_CONNECTION)) {
+      if (job.getConfigType().equals(JobConfig.ConfigType.SYNC)) {
         jobNotifier.failJob(job, attemptStats);
       }
+      logJobFailureEventInConnectionTimeline(job, input.getConnectionId(), attemptStats);
+
       jobCreationAndStatusUpdateHelper.emitJobToReleaseStagesMetric(OssMetricsRegistry.JOB_FAILED_BY_RELEASE_STAGE, job, input);
 
       final UUID connectionId = UUID.fromString(job.getScope());
@@ -111,19 +128,19 @@ public class JobsHandler {
     }
   }
 
-  private void reportIfLastFailedAttempt(Job job, UUID connectionId, SyncJobReportingContext jobContext) {
-    Optional<Attempt> lastFailedAttempt = job.getLastFailedAttempt();
+  private void reportIfLastFailedAttempt(final Job job, final UUID connectionId, final SyncJobReportingContext jobContext) {
+    final Optional<Attempt> lastFailedAttempt = job.getLastFailedAttempt();
     if (lastFailedAttempt.isPresent()) {
-      Attempt attempt = lastFailedAttempt.get();
-      Optional<AttemptFailureSummary> failureSummaryOpt = attempt.getFailureSummary();
+      final Attempt attempt = lastFailedAttempt.get();
+      final Optional<AttemptFailureSummary> failureSummaryOpt = attempt.getFailureSummary();
 
       if (failureSummaryOpt.isPresent()) {
-        AttemptFailureSummary failureSummary = failureSummaryOpt.get();
+        final AttemptFailureSummary failureSummary = failureSummaryOpt.get();
         AttemptConfigReportingContext attemptConfig = null;
 
-        Optional<AttemptSyncConfig> syncConfigOpt = attempt.getSyncConfig();
+        final Optional<AttemptSyncConfig> syncConfigOpt = attempt.getSyncConfig();
         if (syncConfigOpt.isPresent()) {
-          AttemptSyncConfig syncConfig = syncConfigOpt.get();
+          final AttemptSyncConfig syncConfig = syncConfigOpt.get();
           attemptConfig = new AttemptConfigReportingContext(
               syncConfig.getSourceConfiguration(),
               syncConfig.getDestinationConfiguration(),
@@ -131,7 +148,12 @@ public class JobsHandler {
         }
 
         jobErrorReporter.reportSyncJobFailure(connectionId, failureSummary, jobContext, attemptConfig);
+        log.info("Successfully reported failure for job id '{}' connectionId: '{}'", job.getId(), connectionId);
+      } else {
+        log.info("Failure summary is missing, skipping reporting for jobId '{}', connectionId '{}'", job.getId(), connectionId);
       }
+    } else {
+      log.info("Last failed attempt is missing, skipping reporting for jobId '{}', connectionId '{}'", job.getId(), connectionId);
     }
   }
 
@@ -153,13 +175,14 @@ public class JobsHandler {
       final Job job = jobPersistence.getJob(jobId);
       jobCreationAndStatusUpdateHelper.emitJobToReleaseStagesMetric(OssMetricsRegistry.ATTEMPT_SUCCEEDED_BY_RELEASE_STAGE, job);
 
-      List<JobPersistence.AttemptStats> attemptStats = new ArrayList<>();
-      for (Attempt attempt : job.getAttempts()) {
+      final List<JobPersistence.AttemptStats> attemptStats = new ArrayList<>();
+      for (final Attempt attempt : job.getAttempts()) {
         attemptStats.add(jobPersistence.getAttemptStats(jobId, attempt.getAttemptNumber()));
       }
-      if (!job.getConfigType().equals(JobConfig.ConfigType.RESET_CONNECTION)) {
+      if (job.getConfigType().equals(JobConfig.ConfigType.SYNC)) {
         jobNotifier.successJob(job, attemptStats);
       }
+      logJobSuccessEventInConnectionTimeline(job, input.getConnectionId(), attemptStats);
       jobCreationAndStatusUpdateHelper.emitJobToReleaseStagesMetric(OssMetricsRegistry.JOB_SUCCEEDED_BY_RELEASE_STAGE, job, input);
       jobCreationAndStatusUpdateHelper.trackCompletion(job, JobStatus.SUCCEEDED);
 
@@ -169,6 +192,87 @@ public class JobsHandler {
           JobStatus.SUCCEEDED, e);
       throw new RuntimeException(e);
     }
+  }
+
+  private void logJobSuccessEventInConnectionTimeline(final Job job, final UUID connectionId, final List<JobPersistence.AttemptStats> attemptStats) {
+    final long jobId = job.getId();
+    try {
+      final LoadedStats stats = buildLoadedStats(job, attemptStats);
+      final FinalStatusEvent event = new FinalStatusEvent(
+          jobId,
+          job.getCreatedAtInSecond(),
+          job.getUpdatedAtInSecond(),
+          stats.bytes,
+          stats.records,
+          job.getAttemptsCount(),
+          job.getConfigType().name(),
+          JobStatus.SUCCEEDED.name(),
+          JobConverter.getStreamsAssociatedWithJob(job));
+      connectionEventService.writeEvent(connectionId, event, null);
+    } catch (final Exception e) {
+      log.warn("Failed to persist timeline event for job: {}", jobId, e);
+    }
+  }
+
+  private void logJobFailureEventInConnectionTimeline(final Job job, final UUID connectionId, final List<JobPersistence.AttemptStats> attemptStats) {
+    final long jobId = job.getId();
+    try {
+      final LoadedStats stats = buildLoadedStats(job, attemptStats);
+
+      final Optional<AttemptFailureSummary> lastAttemptFailureSummary = job.getLastAttempt().flatMap(Attempt::getFailureSummary);
+      final Optional<FailureReason> firstFailureReasonOfLastAttempt =
+          lastAttemptFailureSummary.flatMap(summary -> summary.getFailures().stream().findFirst());
+
+      final String jobStatus;
+      if (stats.bytes > 0) {
+        // Sync is incomplete (partial succeeded).
+        jobStatus = JobStatusEnum.INCOMPLETE.name();
+      } else {
+        // Sync is failed.
+        jobStatus = JobStatusEnum.FAILED.name();
+      }
+      final FailedEvent event = new FailedEvent(
+          jobId,
+          job.getCreatedAtInSecond(),
+          job.getUpdatedAtInSecond(),
+          stats.bytes,
+          stats.records,
+          job.getAttemptsCount(),
+          job.getConfigType().name(),
+          jobStatus,
+          JobConverter.getStreamsAssociatedWithJob(job),
+          firstFailureReasonOfLastAttempt);
+      connectionEventService.writeEvent(connectionId, event, null);
+    } catch (final Exception e) {
+      log.warn("Failed to persist timeline event for job: {}", jobId, e);
+    }
+  }
+
+  record LoadedStats(long bytes, long records) {}
+
+  @VisibleForTesting
+  LoadedStats buildLoadedStats(final Job job, final List<JobPersistence.AttemptStats> attemptStats) {
+    final var configuredCatalog = new JobConfigProxy(job.getConfig()).getConfiguredCatalog();
+    final List<ConfiguredAirbyteStream> streams = configuredCatalog != null ? configuredCatalog.getStreams() : List.of();
+
+    long bytesLoaded = 0;
+    long recordsLoaded = 0;
+
+    for (final var stream : streams) {
+      final AirbyteStream currentStream = stream.getStream();
+      final var streamStats = attemptStats.stream()
+          .flatMap(a -> a.perStreamStats().stream()
+              .filter(o -> currentStream.getName().equals(o.getStreamName())
+                  && ((currentStream.getNamespace() == null && o.getStreamNamespace() == null)
+                      || (currentStream.getNamespace() != null && currentStream.getNamespace().equals(o.getStreamNamespace())))))
+          .collect(Collectors.toList());
+      if (!streamStats.isEmpty()) {
+        final StatsAggregationHelper.StreamStatsRecord records = StatsAggregationHelper.getAggregatedStats(stream.getSyncMode(), streamStats);
+        recordsLoaded += records.recordsCommitted();
+        bytesLoaded += records.bytesCommitted();
+      }
+    }
+    return new LoadedStats(bytesLoaded, recordsLoaded);
   }
 
   /**
@@ -233,8 +337,8 @@ public class JobsHandler {
       jobPersistence.cancelJob(jobId);
       // post process
       final var job = jobPersistence.getJob(jobId);
-      List<JobPersistence.AttemptStats> attemptStats = new ArrayList<>();
-      for (Attempt attempt : job.getAttempts()) {
+      final List<JobPersistence.AttemptStats> attemptStats = new ArrayList<>();
+      for (final Attempt attempt : job.getAttempts()) {
         attemptStats.add(jobPersistence.getAttemptStats(jobId, attempt.getAttemptNumber()));
       }
       jobCreationAndStatusUpdateHelper.emitJobToReleaseStagesMetric(OssMetricsRegistry.JOB_CANCELLED_BY_RELEASE_STAGE, job);

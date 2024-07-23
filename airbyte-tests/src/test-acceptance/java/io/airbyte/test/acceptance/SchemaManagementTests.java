@@ -5,18 +5,16 @@
 package io.airbyte.test.acceptance;
 
 import static io.airbyte.config.persistence.OrganizationPersistence.DEFAULT_ORGANIZATION_ID;
-import static org.junit.Assert.assertNotEquals;
+import static io.airbyte.test.utils.AcceptanceTestUtils.createAirbyteApiClient;
+import static io.airbyte.test.utils.AcceptanceTestUtils.modifyCatalog;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import com.fasterxml.jackson.databind.node.ObjectNode;
-import io.airbyte.api.client.AirbyteApiClient;
-import io.airbyte.api.client.generated.WebBackendApi;
-import io.airbyte.api.client.invoker.generated.ApiClient;
-import io.airbyte.api.client.invoker.generated.ApiException;
 import io.airbyte.api.client.model.generated.AirbyteCatalog;
 import io.airbyte.api.client.model.generated.AirbyteStream;
 import io.airbyte.api.client.model.generated.AirbyteStreamAndConfiguration;
@@ -34,21 +32,22 @@ import io.airbyte.api.client.model.generated.WebBackendConnectionRead;
 import io.airbyte.api.client.model.generated.WorkspaceCreate;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.test.utils.AcceptanceTestHarness;
-import io.airbyte.test.utils.Asserts;
 import io.airbyte.test.utils.TestConnectionCreate;
 import java.io.IOException;
-import java.net.URI;
 import java.net.URISyntaxException;
 import java.security.GeneralSecurityException;
+import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
-import org.junit.jupiter.api.condition.DisabledIfEnvironmentVariable;
 import org.junit.jupiter.api.parallel.Execution;
 import org.junit.jupiter.api.parallel.ExecutionMode;
 import org.slf4j.Logger;
@@ -57,11 +56,10 @@ import org.slf4j.LoggerFactory;
 /**
  * Tests for the various schema management functionalities e.g., auto-detect, auto-propagate.
  */
-@DisabledIfEnvironmentVariable(named = "SKIP_BASIC_ACCEPTANCE_TESTS",
-                               matches = "true")
 @Timeout(value = 2,
          unit = TimeUnit.MINUTES) // Default timeout of 2 minutes; individual tests should override if they need longer.
 @Execution(ExecutionMode.CONCURRENT)
+@Tag("api")
 class SchemaManagementTests {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(SchemaManagementTests.class);
@@ -84,24 +82,30 @@ class SchemaManagementTests {
   private void createTestConnections() throws Exception {
     final UUID sourceId = testHarness.createPostgresSource().getSourceId();
     final SourceDiscoverSchemaRead discoverResult = testHarness.discoverSourceSchemaWithId(sourceId);
-    final AirbyteCatalog catalog = discoverResult.getCatalog();
     final UUID destinationId = testHarness.createPostgresDestination().getDestinationId();
-    final UUID normalizationOpId = testHarness.createNormalizationOperation().getOperationId();
     // Use incremental append-dedup with a primary key column, so we can simulate a breaking change by
     // removing that column.
     final SyncMode syncMode = SyncMode.INCREMENTAL;
     final DestinationSyncMode destinationSyncMode = DestinationSyncMode.APPEND_DEDUP;
-    catalog.getStreams().forEach(s -> s.getConfig().syncMode(syncMode).destinationSyncMode(destinationSyncMode).fieldSelectionEnabled(false)
-        .primaryKey(List.of(List.of("id")))
-        .cursorField(List.of("id")));
+    final AirbyteCatalog catalog = modifyCatalog(
+        discoverResult.getCatalog(),
+        Optional.of(syncMode),
+        Optional.of(destinationSyncMode),
+        Optional.of(List.of("id")),
+        Optional.of(List.of(List.of("id"))),
+        Optional.empty(),
+        Optional.of(false),
+        Optional.empty(),
+        Optional.empty(),
+        Optional.empty(),
+        Optional.empty(),
+        Optional.empty());
     createdConnection =
         testHarness.createConnection(new TestConnectionCreate.Builder(
             sourceId,
             destinationId,
             catalog,
-            discoverResult.getCatalogId())
-                .setNormalizationOperationId(normalizationOpId)
-                .build());
+            discoverResult.getCatalogId()).build());
     LOGGER.info("Created connection: {}", createdConnection);
     // Create a connection that shares the source, to verify that the schema management actions are
     // applied to all connections with the same source.
@@ -116,37 +120,27 @@ class SchemaManagementTests {
             .build());
   }
 
-  void init() throws ApiException, URISyntaxException, IOException, InterruptedException, GeneralSecurityException {
-    // TODO(mfsiega-airbyte): clean up and centralize the way we do config.
-    final boolean isGke = System.getenv().containsKey(IS_GKE);
+  void init() throws URISyntaxException, IOException, InterruptedException, GeneralSecurityException {
     // Set up the API client.
-    final URI url = new URI(AIRBYTE_SERVER_HOST);
-    final var underlyingApiClient = new ApiClient().setScheme(url.getScheme())
-        .setHost(url.getHost())
-        .setPort(url.getPort())
-        .setBasePath("/api");
-    if (isGke) {
-      underlyingApiClient.setRequestInterceptor(builder -> builder.setHeader(GATEWAY_AUTH_HEADER, AIRBYTE_AUTH_HEADER));
-    }
-    final var apiClient = new AirbyteApiClient(underlyingApiClient);
+    final var airbyteApiClient = createAirbyteApiClient(AIRBYTE_SERVER_HOST + "/api", Map.of(GATEWAY_AUTH_HEADER, AIRBYTE_AUTH_HEADER));
 
-    // Set up the WebBackend API client.
-    final var underlyingWebBackendApiClient = new ApiClient().setScheme(url.getScheme())
-        .setHost(url.getHost())
-        .setPort(url.getPort())
-        .setBasePath("/api");
-    if (isGke) {
-      underlyingWebBackendApiClient.setRequestInterceptor(builder -> builder.setHeader(GATEWAY_AUTH_HEADER, AIRBYTE_AUTH_HEADER));
-    }
-    final var webBackendApi = new WebBackendApi(underlyingWebBackendApiClient);
-
-    final UUID workspaceId = System.getenv().get(AIRBYTE_ACCEPTANCE_TEST_WORKSPACE_ID) == null ? apiClient.getWorkspaceApi()
-        .createWorkspace(new WorkspaceCreate().email("acceptance-tests@airbyte.io").name("Airbyte Acceptance Tests" + UUID.randomUUID())
-            .organizationId(DEFAULT_ORGANIZATION_ID))
+    final UUID workspaceId = System.getenv().get(AIRBYTE_ACCEPTANCE_TEST_WORKSPACE_ID) == null ? airbyteApiClient.getWorkspaceApi()
+        .createWorkspace(new WorkspaceCreate(
+            "Airbyte Acceptance Tests" + UUID.randomUUID(),
+            DEFAULT_ORGANIZATION_ID,
+            "acceptance-tests@airbyte.io",
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null))
         .getWorkspaceId()
         : UUID.fromString(System.getenv().get(AIRBYTE_ACCEPTANCE_TEST_WORKSPACE_ID));
 
-    testHarness = new AcceptanceTestHarness(apiClient, webBackendApi, workspaceId);
+    testHarness = new AcceptanceTestHarness(airbyteApiClient, workspaceId);
   }
 
   @BeforeEach
@@ -206,8 +200,6 @@ class SchemaManagementTests {
     final AirbyteCatalog catalogWithPropagatedChanges = getExpectedCatalogWithExtraColumnAndTable();
     assertEquals(catalogWithPropagatedChanges, currentConnection.getSyncCatalog());
     assertEquals(ConnectionStatus.ACTIVE, currentConnection.getStatus());
-    Asserts.assertNormalizedDestinationContains(testHarness.getDestinationDatabase(), currentConnection.getNamespaceFormat(),
-        getExpectedRecordsForIdAndNameWithUpdatedCatalog());
 
     // This connection does not have auto propagation, so it should have stayed the same.
     final ConnectionRead currentConnectionWithSameSource = testHarness.getConnection(createdConnectionWithSameSource.getConnectionId());
@@ -225,8 +217,6 @@ class SchemaManagementTests {
     // Run a sync with the initial data.
     final var jobRead = testHarness.syncConnection(createdConnection.getConnectionId()).getJob();
     testHarness.waitForSuccessfulSyncNoTimeout(jobRead);
-    Asserts.assertNormalizedDestinationContains(testHarness.getDestinationDatabase(), createdConnection.getNamespaceFormat(),
-        getExpectedRecordsForIdAndName());
 
     // Modify the source to add a new column and populate it with default values.
     testHarness.runSqlScriptInSource("postgres_add_column_with_default_value.sql");
@@ -236,9 +226,7 @@ class SchemaManagementTests {
     final JobRead jobReadWithBackfills = testHarness.syncConnection(createdConnection.getConnectionId()).getJob();
     testHarness.waitForSuccessfulSyncNoTimeout(jobReadWithBackfills);
     final var currentConnection = testHarness.getConnection(createdConnection.getConnectionId());
-    assertEquals(3, currentConnection.getSyncCatalog().getStreams().get(0).getStream().getJsonSchema().get("properties").size());
-    Asserts.assertNormalizedDestinationContains(testHarness.getDestinationDatabase(), createdConnection.getNamespaceFormat(),
-        getExpectedRecordsForIdAndNameWithUpdatedCatalog());
+    assertEquals(3, currentConnection.getSyncCatalog().getStreams().getFirst().getStream().getJsonSchema().get("properties").size());
   }
 
   @Test
@@ -250,9 +238,7 @@ class SchemaManagementTests {
         SchemaChangeBackfillPreference.ENABLED);
     // Run a sync with the initial data.
     final var jobRead = testHarness.syncConnection(createdConnection.getConnectionId()).getJob();
-    testHarness.waitForSuccessfulSyncNoTimeout(jobRead);
-    Asserts.assertNormalizedDestinationContains(testHarness.getDestinationDatabase(), createdConnection.getNamespaceFormat(),
-        getExpectedRecordsForIdAndName());
+    testHarness.waitForSuccessfulSyncNoTimeout(jobRead);;
 
     // Modify the source to add a new column, which will be populated with a default value.
     testHarness.runSqlScriptInSource("postgres_add_column_with_default_value.sql");
@@ -262,9 +248,7 @@ class SchemaManagementTests {
     testHarness.waitForSuccessfulSyncNoTimeout(jobReadWithBackfills);
     final var currentConnection = testHarness.getConnection(createdConnection.getConnectionId());
     // Expect that we have the two original fields, plus the new one.
-    assertEquals(3, currentConnection.getSyncCatalog().getStreams().get(0).getStream().getJsonSchema().get("properties").size());
-    Asserts.assertNormalizedDestinationContains(testHarness.getDestinationDatabase(), createdConnection.getNamespaceFormat(),
-        getExpectedRecordsForIdAndNameWithBackfilledColumn());
+    assertEquals(3, currentConnection.getSyncCatalog().getStreams().getFirst().getStream().getJsonSchema().get("properties").size());
   }
 
   @Test
@@ -324,43 +308,72 @@ class SchemaManagementTests {
   }
 
   private AirbyteCatalog getExpectedCatalogWithExtraColumnAndTable() {
-    // We have an extra column and an extra stream.
-    final var expectedCatalog = Jsons.clone(createdConnection.getSyncCatalog());
-    expectedCatalog.getStreams().get(0).getStream().jsonSchema(Jsons
-        .deserialize(
-            """
-            {
-                    "type":"object",
-                    "properties": {
-                      "id":{"type":"number","airbyte_type":"integer"},
-                      "name":{"type":"string"},
-                      "a_new_column":{"type":"number","airbyte_type":"integer"}
-                    }
-            }
-            """));
-    expectedCatalog.streams(List.of(new AirbyteStreamAndConfiguration()
-        .stream(new AirbyteStream()
-            .name("a_new_table")
-            .namespace("public")
-            .supportedSyncModes(List.of(SyncMode.FULL_REFRESH, SyncMode.INCREMENTAL))
-            .defaultCursorField(List.of())
-            .sourceDefinedPrimaryKey(List.of())
-            .jsonSchema(Jsons.deserialize("""
-                                          {
-                                                  "type": "object",
-                                                  "properties": { "id": { "type": "number", "airbyte_type": "integer" } }
-                                           }
-                                          """)))
-        .config(new AirbyteStreamConfiguration()
-            .syncMode(SyncMode.FULL_REFRESH)
-            .cursorField(List.of())
-            .destinationSyncMode(DestinationSyncMode.OVERWRITE)
-            .primaryKey(List.of())
-            .aliasName("a_new_table")
-            .selected(true)
-            .fieldSelectionEnabled(false)),
-        expectedCatalog.getStreams().get(0)));
-    return expectedCatalog;
+    final var existingStreamAndConfig = createdConnection.getSyncCatalog().getStreams().getFirst();
+
+    final var streams = new ArrayList<AirbyteStreamAndConfiguration>();
+    streams.add(new AirbyteStreamAndConfiguration(
+        new AirbyteStream(
+            existingStreamAndConfig.getStream().getName(),
+            Jsons.deserialize("""
+                              {
+                                      "type":"object",
+                                      "properties": {
+                                        "id":{"type":"number","airbyte_type":"integer"},
+                                        "name":{"type":"string"},
+                                        "a_new_column":{"type":"number","airbyte_type":"integer"}
+                                      }
+                              }
+                              """),
+            existingStreamAndConfig.getStream().getSupportedSyncModes(),
+            existingStreamAndConfig.getStream().getSourceDefinedCursor(),
+            existingStreamAndConfig.getStream().getDefaultCursorField(),
+            existingStreamAndConfig.getStream().getSourceDefinedPrimaryKey(),
+            existingStreamAndConfig.getStream().getNamespace(),
+            existingStreamAndConfig.getStream().isResumable()),
+        new AirbyteStreamConfiguration(
+            existingStreamAndConfig.getConfig().getSyncMode(),
+            existingStreamAndConfig.getConfig().getDestinationSyncMode(),
+            existingStreamAndConfig.getConfig().getCursorField(),
+            existingStreamAndConfig.getConfig().getPrimaryKey(),
+            existingStreamAndConfig.getConfig().getAliasName(),
+            existingStreamAndConfig.getConfig().getSelected(),
+            existingStreamAndConfig.getConfig().getSuggested(),
+            existingStreamAndConfig.getConfig().getFieldSelectionEnabled(),
+            existingStreamAndConfig.getConfig().getSelectedFields(),
+            existingStreamAndConfig.getConfig().getMinimumGenerationId(),
+            existingStreamAndConfig.getConfig().getGenerationId(),
+            existingStreamAndConfig.getConfig().getSyncId())));
+    streams.add(new AirbyteStreamAndConfiguration(
+        new AirbyteStream(
+            "a_new_table",
+            Jsons.deserialize("""
+                              {
+                                      "type": "object",
+                                      "properties": { "id": { "type": "number", "airbyte_type": "integer" } }
+                               }
+                              """),
+            List.of(SyncMode.FULL_REFRESH, SyncMode.INCREMENTAL),
+            false,
+            List.of(),
+            List.of(),
+            "public",
+            true),
+        new AirbyteStreamConfiguration(
+            SyncMode.FULL_REFRESH,
+            DestinationSyncMode.OVERWRITE,
+            List.of(),
+            List.of(),
+            "a_new_table",
+            true,
+            false,
+            false,
+            List.of(),
+            null,
+            null,
+            null)));
+
+    streams.sort(Comparator.comparing(a -> a.getStream().getName()));
+    return new AirbyteCatalog(streams);
   }
 
 }

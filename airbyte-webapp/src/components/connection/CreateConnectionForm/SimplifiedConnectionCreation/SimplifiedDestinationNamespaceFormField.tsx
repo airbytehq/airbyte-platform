@@ -87,8 +87,8 @@ export const SimplifiedDestinationNamespaceFormField: React.FC<{
 
       return (
         <Box mt="sm">
-          {children.map((child) => (
-            <Badge variant="grey" className={styles.sourceNamespace}>
+          {children.map((child, idx) => (
+            <Badge key={idx} variant="grey" className={styles.sourceNamespace} data-testid="source-namespace-preview">
               {child}
             </Badge>
           ))}
@@ -113,6 +113,7 @@ export const SimplifiedDestinationNamespaceFormField: React.FC<{
                   value={field.value}
                   onChange={field.onChange}
                   disabled={disabled}
+                  data-testid="namespace-definition-custom-format-input"
                 />
               </InputContainer>
               {fieldState.error && (
@@ -126,9 +127,14 @@ export const SimplifiedDestinationNamespaceFormField: React.FC<{
           )}
         />
         {namespaceFormat?.includes(SOURCE_NAMESPACE_REPLACEMENT_STRING) &&
-          enabledStreamNamespaces.map((namespace) => {
+          (enabledStreamNamespaces.length > 0 ? enabledStreamNamespaces : [""]).map((namespace) => {
             return (
-              <Badge variant="grey" className={styles.sourceNamespace}>
+              <Badge
+                key={namespace}
+                variant="grey"
+                className={styles.sourceNamespace}
+                data-testid="custom-namespace-preview"
+              >
                 {namespaceFormat.replace(SOURCE_NAMESPACE_REPLACEMENT_STRING, namespace)}
               </Badge>
             );
@@ -142,6 +148,7 @@ export const SimplifiedDestinationNamespaceFormField: React.FC<{
       label: formatMessage({ id: "connectionForm.customFormat" }),
       description: formatMessage({ id: "connectionForm.customFormatDescriptionNext" }),
       extra: customFormatField,
+      "data-testid": "custom",
     },
     {
       value: NamespaceDefinitionType.destination,
@@ -150,6 +157,7 @@ export const SimplifiedDestinationNamespaceFormField: React.FC<{
         { id: "connectionForm.destinationFormatDescriptionNext" },
         destinationDefinedDescriptionValues
       ),
+      "data-testid": "destination",
     },
     ...(sourceNamespaceAbilities.supportsNamespaces
       ? [
@@ -160,6 +168,7 @@ export const SimplifiedDestinationNamespaceFormField: React.FC<{
               { id: "connectionForm.sourceFormatDescriptionNext" },
               sourceDefinedDescriptionValues
             ),
+            "data-testid": "source",
           },
         ]
       : []),
@@ -205,6 +214,7 @@ export const SimplifiedDestinationNamespaceFormField: React.FC<{
                   setValue("namespaceDefinition", value, { shouldDirty: true })
                 }
                 selectedValue={field.value}
+                data-testid="namespace-definition"
               />
               {field.value === NamespaceDefinitionType.destination && (
                 <Box mt="sm">

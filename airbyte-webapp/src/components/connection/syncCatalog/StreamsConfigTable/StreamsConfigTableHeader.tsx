@@ -13,7 +13,6 @@ import { InfoTooltip, TooltipLearnMoreLink } from "components/ui/Tooltip";
 import { AirbyteStreamAndConfiguration, NamespaceDefinitionType } from "core/api/types/AirbyteClient";
 import { links } from "core/utils/links";
 import { useConnectionFormService } from "hooks/services/ConnectionForm/ConnectionFormService";
-import { useExperiment } from "hooks/services/Experiment";
 import { useModalService } from "hooks/services/Modal";
 
 import styles from "./StreamsConfigTableHeader.module.scss";
@@ -52,7 +51,6 @@ export const StreamsConfigTableHeader: React.FC<StreamsConfigTableHeaderProps> =
   const { mode } = useConnectionFormService();
   const { openModal } = useModalService();
   const { setValue } = useFormContext<FormConnectionFormValues>();
-  const isSimplifiedCreation = useExperiment("connection.simplifiedCreation", false);
 
   const destinationNamespaceChange = (value: DestinationNamespaceFormValues) => {
     setValue("namespaceDefinition", value.namespaceDefinition, { shouldDirty: true });
@@ -104,7 +102,7 @@ export const StreamsConfigTableHeader: React.FC<StreamsConfigTableHeaderProps> =
         </Text>
       </CellText>
       <HeaderCell size="fixed" className={styles.dataDestinationCell}>
-        <FormattedMessage id={isSimplifiedCreation ? "form.namespace" : "form.dataDestination"} />
+        <FormattedMessage id="form.namespace" />
         <Button
           type="button"
           variant="clear"

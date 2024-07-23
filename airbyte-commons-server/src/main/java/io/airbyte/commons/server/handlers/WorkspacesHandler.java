@@ -56,6 +56,7 @@ import io.airbyte.config.persistence.WorkspacePersistence;
 import io.airbyte.config.secrets.SecretsRepositoryWriter;
 import io.airbyte.data.services.WorkspaceService;
 import io.airbyte.validation.json.JsonValidationException;
+import io.micronaut.core.util.CollectionUtils;
 import jakarta.inject.Named;
 import jakarta.inject.Singleton;
 import java.io.IOException;
@@ -426,7 +427,7 @@ public class WorkspacesHandler {
 
     LOGGER.debug("Patched Workspace before persisting: {}", workspace);
 
-    if (workspacePatch.getWebhookConfigs() == null) {
+    if (CollectionUtils.isEmpty(workspacePatch.getWebhookConfigs())) {
       // We aren't persisting any secrets. It's safe (and necessary) to use the NoSecrets variant because
       // we never hydrated them in the first place.
       configRepository.writeStandardWorkspaceNoSecrets(workspace);
@@ -538,7 +539,7 @@ public class WorkspacesHandler {
     if (workspacePatch.getInitialSetupComplete() != null) {
       workspace.setInitialSetupComplete(workspacePatch.getInitialSetupComplete());
     }
-    if (workspacePatch.getNotifications() != null) {
+    if (CollectionUtils.isNotEmpty(workspacePatch.getNotifications())) {
       workspace.setNotifications(NotificationConverter.toConfigList(workspacePatch.getNotifications()));
     }
     if (workspacePatch.getNotificationSettings() != null) {
@@ -547,6 +548,7 @@ public class WorkspacesHandler {
     if (workspacePatch.getDefaultGeography() != null) {
       workspace.setDefaultGeography(ApiPojoConverters.toPersistenceGeography(workspacePatch.getDefaultGeography()));
     }
+    // Empty List is a valid value for webhookConfigs
     if (workspacePatch.getWebhookConfigs() != null) {
       workspace.setWebhookOperationConfigs(WorkspaceWebhookConfigsConverter.toPersistenceWrite(workspacePatch.getWebhookConfigs(), uuidSupplier));
     }

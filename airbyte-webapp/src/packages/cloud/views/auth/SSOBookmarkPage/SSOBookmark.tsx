@@ -8,17 +8,21 @@ import { LoadingSpinner } from "components/ui/LoadingSpinner";
 import { Message } from "components/ui/Message";
 import { Text } from "components/ui/Text";
 
+import { useAuthService } from "core/services/auth";
 import { CloudRoutes } from "packages/cloud/cloudRoutePaths";
-import { useKeycloakService } from "packages/cloud/services/auth/KeycloakService";
 
 import styles from "./SSOBookmarkPage.module.scss";
 
 // A bookmarkable route that redirects to the SSO login page with the provided company identifier
 export const SSOBookmarkPage = () => {
-  const { changeRealmAndRedirectToSignin } = useKeycloakService();
+  const { changeRealmAndRedirectToSignin } = useAuthService();
   const { companyIdentifier } = useParams();
   const [state, setState] = useState<"loading" | "error">("loading");
   const { formatMessage } = useIntl();
+
+  if (!changeRealmAndRedirectToSignin) {
+    throw new Error("Rendered SSOBookmarkPage while AuthService does not provide changeRealmAndRedirectToSignin");
+  }
 
   const validateCompanyIdentifier = useCallback(
     async (companyIdentifier: string) => {

@@ -6,18 +6,12 @@ plugins {
   alias(libs.plugins.nu.studer.jooq)
 }
 
-configurations.all {
-  resolutionStrategy {
-    force(libs.platform.testcontainers.postgresql)
-  }
-}
-
 dependencies {
   implementation(libs.jooq.meta)
   implementation(libs.jooq)
   implementation(libs.postgresql)
   implementation(libs.bundles.flyway)
-  implementation(project(":airbyte-db:db-lib"))
+  implementation(project(":oss:airbyte-db:db-lib"))
 
   // jOOQ code generation)
   implementation(libs.jooq.codegen)
@@ -30,22 +24,24 @@ dependencies {
   implementation(libs.jna.platform)
 
   // The jOOQ code generator(only has access to classes added to the jooqGenerator configuration
-  jooqGenerator(project(":airbyte-db:db-lib")) {
+  jooqGenerator(project(":oss:airbyte-db:db-lib")) {
     isTransitive = false
   }
-  jooqGenerator(project(":airbyte-commons")) {
+  jooqGenerator(project(":oss:airbyte-commons")) {
     isTransitive = false
   }
-  jooqGenerator(project(":airbyte-config:config-models")) {
+  jooqGenerator(project(":oss:airbyte-config:config-models")) {
     isTransitive = false
   }
   jooqGenerator(libs.bundles.flyway)
   jooqGenerator(libs.guava)
   jooqGenerator(libs.hikaricp)
   jooqGenerator(libs.jackson.datatype)
+  jooqGenerator(libs.jackson.jdk.datatype)
   jooqGenerator(libs.postgresql)
   jooqGenerator(libs.slf4j.simple)
   jooqGenerator(libs.platform.testcontainers.postgresql)
+  jooqGenerator(libs.jackson.kotlin)
 }
 
 jooq {
@@ -100,7 +96,8 @@ sourceSets["main"].java {
 
 
 sourceSets["main"].java {
-  srcDirs("$buildDir/generated/configsDatabase/src/main/java", "$buildDir/generated/jobsDatabase/src/main/java")
+  srcDirs("${project.layout.buildDirectory.get()}/generated/configsDatabase/src/main/java",
+    "${project.layout.buildDirectory.get()}/generated/jobsDatabase/src/main/java")
 }
 
 tasks.named<JooqGenerate>("generateConfigsDatabaseJooq") {

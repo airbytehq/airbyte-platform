@@ -131,6 +131,7 @@ export const assertMaxNumberOfSlicesAndPages = () => {
 const SCHEMA =
   " {\n" +
   '   "$schema": "http://json-schema.org/schema#",\n' +
+  '   "additionalProperties": true,\n' +
   '   "properties": {\n' +
   '     "name": {\n' +
   '       "type": [\n         "string",\n         "null"\n       ]\n' +
