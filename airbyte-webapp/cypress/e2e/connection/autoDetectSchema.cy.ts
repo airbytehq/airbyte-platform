@@ -106,7 +106,7 @@ describe("Connection - Auto-detect schema changes", () => {
 
       replicationPage.checkSchemaChangesDetectedCleared();
 
-      replicationPage.saveChangesAndHandleRefreshModal({ expectModal: false });
+      replicationPage.saveChangesAndHandleResetModal({ expectModal: false });
       connectionPage.getSyncEnabledSwitch().should("be.enabled");
     });
 
@@ -178,7 +178,7 @@ describe("Connection - Auto-detect schema changes", () => {
       const row = streamsTable.getRow("public", "users");
       row.selectSyncMode(SyncMode.full_refresh, DestinationSyncMode.append);
 
-      replicationPage.saveChangesAndHandleRefreshModal({ expectModal: false });
+      replicationPage.saveChangesAndHandleResetModal({ expectModal: false });
       connectionPage.getSyncEnabledSwitch().should("be.enabled");
     });
 

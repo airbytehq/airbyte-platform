@@ -4,10 +4,10 @@ import { interceptUpdateConnectionRequest, waitForUpdateConnectionRequest } from
 import { RouteHandler } from "cypress/types/net-stubbing";
 import { getTestId } from "utils/selectors";
 
-const refreshModalSaveButton = "[data-testid='refreshModal-save']";
+const resetModalSaveButton = "[data-testid='resetModal-save']";
 const successResult = "div[data-id='success-result']";
-const refreshModalRefreshCheckbox = "[data-testid='refreshModal-refresh-checkbox']";
-const saveStreamChangesButton = "button[data-testid='refreshModal-save']";
+const resetModalResetCheckbox = "[data-testid='resetModal-reset-checkbox']";
+const saveStreamChangesButton = "button[data-testid='resetModal-save']";
 const schemaChangesDetectedBanner = "[data-testid='schemaChangesDetected']";
 const schemaChangesReviewButton = "[data-testid='schemaChangesDetected-button']";
 const schemaChangesBackdrop = "[data-testid='schemaChangesBackdrop']";
@@ -31,7 +31,7 @@ interface ClickSaveButtonParams {
   interceptUpdateHandler?: RouteHandler;
 }
 
-export const saveChangesAndHandleRefreshModal = ({
+export const saveChangesAndHandleResetModal = ({
   expectModal = true,
   shouldReset = false,
   interceptUpdateHandler,
@@ -58,7 +58,7 @@ export const checkSuccessResult = () => cy.get(successResult).should("exist");
 
 export const confirmStreamConfigurationChangedPopup = ({ reset = false } = {}) => {
   if (!reset) {
-    cy.get(refreshModalRefreshCheckbox).click({ force: true });
+    cy.get(resetModalResetCheckbox).click({ force: true });
   }
   cy.get(saveStreamChangesButton).click();
 };
@@ -77,7 +77,7 @@ export const clickSchemaChangesReviewButton = () => {
   cy.get(schemaChangesReviewButton).should("not.exist");
 };
 
-export const refreshModalSaveBtnClick = () => cy.get(refreshModalSaveButton).click();
+export const resetModalSaveBtnClick = () => cy.get(resetModalSaveButton).click();
 
 export const clickCancelEditButton = () => {
   cy.get(cancelButton).click({ force: true });
