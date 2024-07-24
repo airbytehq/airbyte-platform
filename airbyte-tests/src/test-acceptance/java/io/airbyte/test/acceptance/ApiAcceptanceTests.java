@@ -56,12 +56,8 @@ import org.slf4j.LoggerFactory;
  * <p>
  * We order tests such that earlier tests test more basic behavior relied upon in later tests. e.g.
  * We test that we can create a destination before we test whether we can sync data to it.
- * <p>
- * Suppressing DataFlowIssue to remove linting of NPEs. It removes a ton of noise and in the case of
- * these tests, the assert statement we would need to put in to check nullability is just as good as
- * throwing the NPE as they will be effectively the same at run time.
  */
-@SuppressWarnings({"PMD.JUnitTestsShouldIncludeAssert", "DataFlowIssue", "SqlDialectInspection", "SqlNoDataSourceInspection",
+@SuppressWarnings({"PMD.JUnitTestsShouldIncludeAssert", "SqlDialectInspection", "SqlNoDataSourceInspection",
   "PMD.AvoidDuplicateLiterals"})
 @Tag("api")
 class ApiAcceptanceTests {
