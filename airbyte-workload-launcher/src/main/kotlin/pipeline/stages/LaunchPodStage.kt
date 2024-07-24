@@ -12,13 +12,10 @@ import io.airbyte.workload.launcher.pipeline.stages.model.LaunchStageIO
 import io.airbyte.workload.launcher.pipeline.stages.model.SpecPayload
 import io.airbyte.workload.launcher.pipeline.stages.model.SyncPayload
 import io.airbyte.workload.launcher.pods.PodClient
-import io.github.oshai.kotlinlogging.KotlinLogging
 import io.micronaut.context.annotation.Value
 import jakarta.inject.Named
 import jakarta.inject.Singleton
 import reactor.core.publisher.Mono
-
-private val logger = KotlinLogging.logger {}
 
 /**
  * Launches the pods for the workload, serializing and passing through input

@@ -1,7 +1,6 @@
 package io.airbyte.workload.handler
 
 import io.airbyte.config.WorkloadType
-import io.airbyte.featureflag.FeatureFlagClient
 import io.airbyte.workload.api.domain.Workload
 import io.airbyte.workload.api.domain.WorkloadLabel
 import io.airbyte.workload.errors.ConflictException
@@ -22,7 +21,6 @@ private val logger = KotlinLogging.logger {}
 @Singleton
 class WorkloadHandlerImpl(
   private val workloadRepository: WorkloadRepository,
-  private val featureFlagClient: FeatureFlagClient,
 ) : WorkloadHandler {
   companion object {
     val ACTIVE_STATUSES: List<WorkloadStatus> =
@@ -105,7 +103,7 @@ class WorkloadHandlerImpl(
             failWorkload(it.id, source = "workload-api", reason = "Superseded by $workloadId")
           } catch (_: InvalidStatusTransitionException) {
             // This edge case happens if the workload reached a terminal state through another path.
-            // This would be unusual but not actionable so we're logging a message rather than failing the call.
+            // This would be unusual but not actionable, so we're logging a message rather than failing the call.
             logger.info { "${it.id} was completed before being superseded by $workloadId" }
           }
         }

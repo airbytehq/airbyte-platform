@@ -3,7 +3,6 @@ package io.airbyte.workload.launcher.pods
 import fixtures.RecordFixtures
 import io.airbyte.config.ResourceRequirements
 import io.airbyte.config.WorkloadType
-import io.airbyte.featureflag.TestClient
 import io.airbyte.persistence.job.models.IntegrationLauncherConfig
 import io.airbyte.persistence.job.models.JobRunConfig
 import io.airbyte.persistence.job.models.ReplicationInput
@@ -90,7 +89,6 @@ class KubePodClientTest {
         launcher,
         labeler,
         mapper,
-        featureFlagClient = TestClient(emptyMap()),
         orchestratorPodFactory,
         checkPodFactory,
         discoverPodFactory,

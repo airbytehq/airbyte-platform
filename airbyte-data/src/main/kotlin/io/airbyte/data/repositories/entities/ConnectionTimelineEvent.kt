@@ -20,5 +20,5 @@ data class ConnectionTimelineEvent(
   @field:TypeDef(type = DataType.JSON)
   var summary: String? = null,
   @DateCreated
-  var createdAt: java.time.OffsetDateTime? = null,
+  var createdAt: OffsetDateTime? = null,
 )

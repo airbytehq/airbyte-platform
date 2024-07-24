@@ -159,7 +159,7 @@ class PayloadKubeInputMapper(
       )
 
     val nodeSelectors =
-      if (WorkloadPriority.DEFAULT.equals(input.launcherConfig.priority)) {
+      if (WorkloadPriority.DEFAULT == input.launcherConfig.priority) {
         getNodeSelectors(input.launcherConfig.isCustomConnector, replicationWorkerConfigs)
       } else {
         getNodeSelectors(input.usesCustomConnector(), discoverWorkerConfigs)

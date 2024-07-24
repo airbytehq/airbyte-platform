@@ -51,7 +51,7 @@ open class SecretsRepositoryWriter(
    *
    * @param workspaceId workspace id for the config
    * @param fullConfig full config
-   * @param spec connector specification
+   * @param connSpec connector specification
    * @param runtimeSecretPersistence to use as an override
    * @return partial config
    */
@@ -153,7 +153,7 @@ open class SecretsRepositoryWriter(
    * Ephemeral secrets are intended to be expired after a certain duration for cost and security reasons.
    *
    * @param fullConfig full config
-   * @param spec connector specification
+   * @param connSpec connector specification
    * @param runtimeSecretPersistence to use as an override
    * @return partial config
    */

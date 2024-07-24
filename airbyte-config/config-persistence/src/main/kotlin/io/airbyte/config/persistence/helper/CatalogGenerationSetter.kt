@@ -3,7 +3,6 @@ package io.airbyte.config.persistence.helper
 import io.airbyte.commons.json.Jsons
 import io.airbyte.config.RefreshStream
 import io.airbyte.config.persistence.domain.Generation
-import io.airbyte.config.persistence.domain.StreamRefresh
 import io.airbyte.protocol.models.ConfiguredAirbyteCatalog
 import io.airbyte.protocol.models.ConfiguredAirbyteStream
 import io.airbyte.protocol.models.DestinationSyncMode
@@ -81,13 +80,6 @@ class CatalogGenerationSetter {
   }
 
   private fun getCurrentGenerationByStreamDescriptor(generations: List<Generation>): Map<StreamDescriptor, Long> {
-    return generations
-      .map { StreamDescriptor().withName(it.streamName).withNamespace(it.streamNamespace) to it.generationId }.toMap()
-  }
-
-  private fun getStreamRefreshesAsStreamDescriptors(streamRefreshes: List<StreamRefresh>): Set<StreamDescriptor> {
-    return streamRefreshes.map {
-      StreamDescriptor().withName(it.streamName).withNamespace(it.streamNamespace)
-    }.toHashSet()
+    return generations.associate { StreamDescriptor().withName(it.streamName).withNamespace(it.streamNamespace) to it.generationId }
   }
 }

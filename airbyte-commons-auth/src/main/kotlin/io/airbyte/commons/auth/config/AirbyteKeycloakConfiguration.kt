@@ -17,7 +17,6 @@ class AirbyteKeycloakConfiguration {
   var realm: String = ""
   var clientRealm: String = ""
   var clientId: String = ""
-  var redirectUri: String = ""
   var webClientId: String = ""
   var username: String = ""
   var password: String = ""

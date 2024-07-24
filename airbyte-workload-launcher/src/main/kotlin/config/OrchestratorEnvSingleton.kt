@@ -12,14 +12,11 @@ import io.airbyte.featureflag.FeatureFlagClient
 import io.airbyte.workers.sync.OrchestratorConstants
 import io.fabric8.kubernetes.api.model.EnvVar
 import io.fabric8.kubernetes.api.model.EnvVarSource
-import io.github.oshai.kotlinlogging.KotlinLogging
 import io.micronaut.context.annotation.Value
 import jakarta.inject.Named
 import jakarta.inject.Singleton
 import java.util.UUID
 import io.airbyte.commons.envvar.EnvVar as AbEnvVar
-
-private val logger = KotlinLogging.logger {}
 
 @Singleton
 class OrchestratorEnvSingleton(
