@@ -15,6 +15,7 @@ import {
 } from "services/connectorBuilder/ConnectorBuilderStateService";
 
 import { BuilderMetadata, StreamTestResults, useBuilderWatch } from "./types";
+import { formatJson } from "./utils";
 
 type StreamTestMetadataStatus = {
   isStale: boolean;
@@ -84,7 +85,7 @@ export const useStreamTestMetadata = () => {
         return undefined;
       }
 
-      const streamHash = sha1(resolvedStream);
+      const streamHash = sha1(formatJson(resolvedStream, true));
 
       const { streamHash: metadataStreamHash, ...testStatuses } = metadata.testedStreams[streamName];
 
@@ -179,7 +180,7 @@ const computeStreamTestResults = (
   streamRead: StreamReadTransformedSlices,
   resolvedTestStream: DeclarativeStream
 ): StreamTestResults => {
-  const streamHash = sha1(resolvedTestStream);
+  const streamHash = sha1(formatJson(resolvedTestStream, true));
 
   if (streamRead.slices.length === 0 || streamRead.slices.every((slice) => slice.pages.length === 0)) {
     return {
