@@ -25,6 +25,7 @@ $message-icon-size: 22px;
 .messageContainer {
   padding: variables.$spacing-sm;
   border-radius: variables.$border-radius-md;
+  min-height: auto;
 
   @include type("info", colors.$blue-400, colors.$blue-50);
   @include type("warning", colors.$yellow-500, colors.$yellow-50);
@@ -86,4 +87,5 @@ $message-icon-size: 22px;
 .alignRightColumn {
   align-self: stretch; // flex equivalent of `height: 100%`
   max-height: calc(32px + 9px); // 32px for the button's height, allow up to 9px "padding" on the top
+  min-width: auto;
 }

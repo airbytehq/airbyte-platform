@@ -354,6 +354,7 @@ export const ConnectionStatusMessages: React.FC = () => {
         data-error-count={typeCount.error}
         data-warning-count={typeCount.warning}
         data-notification-count={typeCount.info}
+        className={styles.container}
       >
         {errorMessagesToDisplay.map((message, index) => (
           <Message key={index} className={styles.error} {...message} />
