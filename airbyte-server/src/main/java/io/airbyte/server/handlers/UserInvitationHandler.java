@@ -22,6 +22,7 @@ import io.airbyte.config.InvitationStatus;
 import io.airbyte.config.Permission;
 import io.airbyte.config.ScopeType;
 import io.airbyte.config.User;
+import io.airbyte.config.UserInfo;
 import io.airbyte.config.UserInvitation;
 import io.airbyte.config.persistence.PermissionPersistence;
 import io.airbyte.config.persistence.UserPersistence;
@@ -214,7 +215,7 @@ public class UserInvitationHandler {
     log.info("orgId: " + orgId);
 
     final Set<UUID> userIdsWithEmail = userPersistence.getUsersByEmail(email).stream()
-        .map(User::getUserId)
+        .map(UserInfo::getUserId)
         .collect(Collectors.toSet());
 
     log.info("userIdsWithEmail: " + userIdsWithEmail);

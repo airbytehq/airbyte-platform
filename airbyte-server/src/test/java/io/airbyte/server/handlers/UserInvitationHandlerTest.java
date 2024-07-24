@@ -39,8 +39,10 @@ import io.airbyte.config.InvitationStatus;
 import io.airbyte.config.ScopeType;
 import io.airbyte.config.StandardWorkspace;
 import io.airbyte.config.User;
+import io.airbyte.config.UserInfo;
 import io.airbyte.config.UserInvitation;
 import io.airbyte.config.UserPermission;
+import io.airbyte.config.helpers.UserInfoConverter;
 import io.airbyte.config.persistence.PermissionPersistence;
 import io.airbyte.config.persistence.UserPersistence;
 import io.airbyte.data.services.InvitationDuplicateException;
@@ -57,6 +59,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Stream;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -171,7 +174,7 @@ class UserInvitationHandlerTest {
         when(workspaceService.getOrganizationIdFromWorkspaceId(WORKSPACE_ID)).thenReturn(Optional.of(ORG_ID));
 
         // a user with the email exists, but is not in the workspace's org.
-        final User userWithEmail = new User().withUserId(UUID.randomUUID()).withEmail(INVITED_EMAIL);
+        final UserInfo userWithEmail = new UserInfo().withUserId(UUID.randomUUID()).withEmail(INVITED_EMAIL);
         when(userPersistence.getUsersByEmail(INVITED_EMAIL)).thenReturn(List.of(userWithEmail));
 
         // the org has a user with a different email, but not the one we're inviting.
@@ -257,7 +260,9 @@ class UserInvitationHandlerTest {
         final User matchingUserInOrg1 = new User().withUserId(UUID.randomUUID()).withEmail(INVITED_EMAIL);
         final User matchingUserInOrg2 = new User().withUserId(UUID.randomUUID()).withEmail(INVITED_EMAIL);
         final User matchingUserNotInOrg = new User().withUserId(UUID.randomUUID()).withEmail(INVITED_EMAIL);
-        when(userPersistence.getUsersByEmail(INVITED_EMAIL)).thenReturn(List.of(matchingUserInOrg1, matchingUserInOrg2, matchingUserNotInOrg));
+        when(userPersistence.getUsersByEmail(INVITED_EMAIL))
+            .thenReturn(Stream.of(matchingUserInOrg1, matchingUserInOrg2, matchingUserNotInOrg).map(
+                UserInfoConverter::userInfoFromUser).toList());
 
         // set up three users inside the workspace's org, two with the same email and one with a different
         // email.

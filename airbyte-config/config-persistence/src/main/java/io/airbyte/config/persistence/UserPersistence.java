@@ -23,6 +23,7 @@ import io.airbyte.commons.json.Jsons;
 import io.airbyte.config.Permission;
 import io.airbyte.config.Permission.PermissionType;
 import io.airbyte.config.User;
+import io.airbyte.config.UserInfo;
 import io.airbyte.config.WorkspaceUserAccessInfo;
 import io.airbyte.db.Database;
 import io.airbyte.db.ExceptionWrappingDatabase;
@@ -167,7 +168,7 @@ public class UserPersistence {
    * @return user if found
    */
   public Optional<User> getUser(final UUID userId) throws IOException {
-
+    // FIXME: in the case of multiple auth providers, this will return the first one found.
     final Result<Record> result = database.query(ctx -> ctx
         .select(asterisk())
         .from(USER)
@@ -180,13 +181,10 @@ public class UserPersistence {
     return Optional.of(createUserFromRecord(result.get(0)));
   }
 
-  private User createUserFromRecord(final Record record) {
-    return new User()
+  private UserInfo createUserInfoFromRecord(final Record record) {
+    return new UserInfo()
         .withUserId(record.get(USER.ID))
         .withName(record.get(USER.NAME))
-        .withAuthUserId(record.get(AUTH_USER.AUTH_USER_ID))
-        .withAuthProvider(record.get(AUTH_USER.AUTH_PROVIDER) == null ? null
-            : Enums.toEnum(record.get(AUTH_USER.AUTH_PROVIDER, String.class), io.airbyte.config.AuthProvider.class).orElseThrow())
         .withDefaultWorkspaceId(record.get(USER.DEFAULT_WORKSPACE_ID))
         .withStatus(record.get(USER.STATUS) == null ? null : Enums.toEnum(record.get(USER.STATUS, String.class), User.Status.class).orElseThrow())
         .withCompanyName(record.get(USER.COMPANY_NAME))
@@ -196,6 +194,22 @@ public class UserPersistence {
         // JsonNode `null`
         .withUiMetadata(record.get(USER.UI_METADATA) == null || record.get(USER.UI_METADATA).data().equals("null") ? null
             : Jsons.deserialize(record.get(USER.UI_METADATA).data(), JsonNode.class));
+  }
+
+  private User createUserFromRecord(final Record record) {
+    final UserInfo userInfo = createUserInfoFromRecord(record);
+    return new User()
+        .withUserId(userInfo.getUserId())
+        .withName(userInfo.getName())
+        .withDefaultWorkspaceId(userInfo.getDefaultWorkspaceId())
+        .withStatus(userInfo.getStatus())
+        .withCompanyName(userInfo.getCompanyName())
+        .withEmail(userInfo.getEmail())
+        .withNews(userInfo.getNews())
+        .withUiMetadata(userInfo.getUiMetadata())
+        .withAuthUserId(record.get(AUTH_USER.AUTH_USER_ID))
+        .withAuthProvider(record.get(AUTH_USER.AUTH_PROVIDER) == null ? null
+            : Enums.toEnum(record.get(AUTH_USER.AUTH_PROVIDER, String.class), io.airbyte.config.AuthProvider.class).orElseThrow());
   }
 
   /**
@@ -282,13 +296,13 @@ public class UserPersistence {
   /**
    * Fetch all users with a given email address.
    */
-  public List<User> getUsersByEmail(final String email) throws IOException {
+  public List<UserInfo> getUsersByEmail(final String email) throws IOException {
     return database.query(ctx -> ctx
         .select(asterisk())
         .from(USER)
         .where(USER.EMAIL.eq(email)).fetch())
         .stream()
-        .map(this::createUserFromRecord)
+        .map(this::createUserInfoFromRecord)
         .toList();
   }
 
@@ -302,14 +316,14 @@ public class UserPersistence {
   /**
    * Get all users that have read access to the specified workspace.
    */
-  public List<User> getUsersWithWorkspaceAccess(final UUID workspaceId) throws IOException {
+  public List<UserInfo> getUsersWithWorkspaceAccess(final UUID workspaceId) throws IOException {
     return database
         .query(ctx -> ctx.fetch(
             PermissionPersistenceHelper.LIST_USERS_BY_WORKSPACE_ID_AND_PERMISSION_TYPES_QUERY,
             workspaceId,
             PermissionPersistenceHelper.getGrantingPermissionTypeArray(PermissionType.WORKSPACE_READER)))
         .stream()
-        .map(this::createUserFromRecord)
+        .map(this::createUserInfoFromRecord)
         .toList();
   }
 
