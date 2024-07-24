@@ -67,7 +67,7 @@ class KubePodClient(
         kubeInput.nodeSelectors,
         kubeInput.kubePodInfo,
         kubeInput.annotations,
-        mapOf(),
+        kubeInput.extraEnv,
       )
     try {
       pod =

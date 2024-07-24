@@ -41,6 +41,7 @@ import org.junit.jupiter.params.provider.ValueSource
 import java.util.Optional
 import java.util.UUID
 import java.util.stream.Stream
+import io.airbyte.commons.envvar.EnvVar as AirbyteEnvVar
 
 class PayloadKubeInputMapperTest {
   @ParameterizedTest
@@ -117,10 +118,10 @@ class PayloadKubeInputMapperTest {
           OrchestratorConstants.INIT_FILE_JOB_RUN_CONFIG to mockSerializedOutput,
           OrchestratorConstants.INIT_FILE_INPUT to mockSerializedOutput,
           KUBE_POD_INFO to mockSerializedOutput,
-          OrchestratorConstants.WORKLOAD_ID_FILE to workloadId,
         ),
     )
     assert(result.resourceReqs == resourceReqs)
+    assert(result.extraEnv == listOf(EnvVar(AirbyteEnvVar.WORKLOAD_ID.toString(), workloadId, null)))
   }
 
   @ParameterizedTest

@@ -80,11 +80,6 @@ public class ReplicationJobOrchestrator implements JobOrchestrator<ReplicationIn
   }
 
   @Override
-  public String getOrchestratorName() {
-    return "Replication";
-  }
-
-  @Override
   public Class<ReplicationInput> getInputClass() {
     return ReplicationInput.class;
   }
@@ -102,7 +97,7 @@ public class ReplicationJobOrchestrator implements JobOrchestrator<ReplicationIn
         Map.of(JOB_ID_KEY, jobRunConfig.getJobId(),
             DESTINATION_DOCKER_IMAGE_KEY, destinationLauncherConfig.getDockerImage(),
             SOURCE_DOCKER_IMAGE_KEY, sourceLauncherConfig.getDockerImage()));
-    final Optional<String> workloadId = workloadEnabled ? Optional.of(JobOrchestrator.workloadId(configDir)) : Optional.empty();
+    final Optional<String> workloadId = workloadEnabled ? Optional.of(JobOrchestrator.workloadId()) : Optional.empty();
     final ReplicationWorker replicationWorker =
         replicationWorkerFactory.create(replicationInput, jobRunConfig, sourceLauncherConfig, destinationLauncherConfig, this::markJobRunning,
             workloadId);

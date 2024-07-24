@@ -141,7 +141,7 @@ class KubePodClientTest {
         replKubeInput.nodeSelectors,
         replKubeInput.kubePodInfo,
         replKubeInput.annotations,
-        mapOf(),
+        replKubeInput.extraEnv,
       )
     } returns pod
 
@@ -180,7 +180,7 @@ class KubePodClientTest {
         replKubeInput.nodeSelectors,
         replKubeInput.kubePodInfo,
         replKubeInput.annotations,
-        mapOf(),
+        replKubeInput.extraEnv,
       )
     } returns orchestrator
 
@@ -216,7 +216,7 @@ class KubePodClientTest {
         replKubeInput.nodeSelectors,
         replKubeInput.kubePodInfo,
         replKubeInput.annotations,
-        mapOf(),
+        replKubeInput.extraEnv,
       )
     } returns orchestrator
 
@@ -425,6 +425,7 @@ class KubePodClientTest {
         mapOf("test-file" to "val5"),
         ResourceRequirements().withCpuRequest("test-cpu").withMemoryRequest("test-mem"),
         mapOf("test-annotation" to "val6"),
+        listOf(EnvVar("extra-env", "val7", null)),
       )
 
     val connectorKubeInput =

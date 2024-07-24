@@ -100,7 +100,6 @@ class DockerPodClient(
         ),
       OrchestratorConstants.INIT_FILE_INPUT to serializer.serialize(input),
       OrchestratorConstants.INIT_FILE_APPLICATION to ReplicationLauncherWorker.REPLICATION,
-      OrchestratorConstants.WORKLOAD_ID_FILE to workloadId,
       ReplicationLauncherWorker.INIT_FILE_SOURCE_LAUNCHER_CONFIG to serializer.serialize(input.sourceLauncherConfig),
       ReplicationLauncherWorker.INIT_FILE_DESTINATION_LAUNCHER_CONFIG to serializer.serialize(input.destinationLauncherConfig),
     )

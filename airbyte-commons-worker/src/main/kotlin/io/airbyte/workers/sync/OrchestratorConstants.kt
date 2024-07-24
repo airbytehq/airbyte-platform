@@ -24,7 +24,6 @@ object OrchestratorConstants {
   const val INIT_FILE_JOB_RUN_CONFIG = "jobRunConfig.json"
   const val INIT_FILE_APPLICATION = "application.txt"
   const val SIDECAR_INPUT = "sidecarInput.json"
-  const val WORKLOAD_ID_FILE = "workload.txt"
 
   // See the application.yml of the container-orchestrator for value
   const val SERVER_PORT = 9000

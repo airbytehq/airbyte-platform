@@ -33,6 +33,7 @@ import io.micronaut.context.annotation.Value
 import jakarta.inject.Named
 import jakarta.inject.Singleton
 import java.util.UUID
+import io.airbyte.commons.envvar.EnvVar as AirbyteEnvVar
 
 /**
  * Maps domain layer objects into Kube layer inputs.
@@ -71,7 +72,7 @@ class PayloadKubeInputMapper(
     val orchestratorReqs = input.getOrchestratorResourceReqs()
     val nodeSelectors = getNodeSelectors(input.usesCustomConnector(), replicationWorkerConfigs)
 
-    val fileMap = buildSyncFileMap(workloadId, input, input.jobRunConfig, orchestratorPodInfo)
+    val fileMap = buildSyncFileMap(input, input.jobRunConfig, orchestratorPodInfo)
 
     return OrchestratorKubeInput(
       labeler.getReplicationOrchestratorLabels() + sharedLabels,
@@ -82,6 +83,7 @@ class PayloadKubeInputMapper(
       fileMap,
       orchestratorReqs,
       replicationWorkerConfigs.workerKubeAnnotations,
+      listOf(EnvVar(AirbyteEnvVar.WORKLOAD_ID.toString(), workloadId, null)),
     )
   }
 
@@ -246,7 +248,6 @@ class PayloadKubeInputMapper(
   // TODO: This is the way we pass data into the pods we launch. This should be extracted to
   //  some shared interface between parent / child to make it less brittle.
   private fun buildSyncFileMap(
-    workloadId: String,
     input: ReplicationInput,
     jobRunConfig: JobRunConfig,
     kubePodInfo: KubePodInfo,
@@ -255,7 +256,6 @@ class PayloadKubeInputMapper(
       OrchestratorConstants.INIT_FILE_JOB_RUN_CONFIG to serializer.serialize(jobRunConfig),
       OrchestratorConstants.INIT_FILE_INPUT to serializer.serialize(input),
       OrchestratorConstants.INIT_FILE_APPLICATION to REPLICATION,
-      OrchestratorConstants.WORKLOAD_ID_FILE to workloadId,
       KUBE_POD_INFO to serializer.serialize(kubePodInfo),
     )
   }
@@ -332,6 +332,7 @@ data class OrchestratorKubeInput(
   val fileMap: Map<String, String>,
   val resourceReqs: ResourceRequirements?,
   val annotations: Map<String, String>,
+  val extraEnv: List<EnvVar>,
 )
 
 data class ConnectorKubeInput(
