@@ -15,6 +15,7 @@ import com.google.common.collect.ImmutableMap.Builder;
 import com.google.common.collect.Lists;
 import datadog.trace.api.Trace;
 import io.airbyte.analytics.TrackingClient;
+import io.airbyte.api.common.StreamDescriptorUtils;
 import io.airbyte.api.model.generated.ActorDefinitionRequestBody;
 import io.airbyte.api.model.generated.AirbyteCatalog;
 import io.airbyte.api.model.generated.AirbyteStreamAndConfiguration;
@@ -62,6 +63,7 @@ import io.airbyte.api.model.generated.WorkspaceIdRequestBody;
 import io.airbyte.api.problems.model.generated.ProblemMessageData;
 import io.airbyte.api.problems.throwable.generated.UnexpectedProblem;
 import io.airbyte.commons.converters.ConnectionHelper;
+import io.airbyte.commons.converters.ProtocolConverters;
 import io.airbyte.commons.enums.Enums;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.commons.protocol.CatalogDiffHelpers;
@@ -101,6 +103,7 @@ import io.airbyte.config.helpers.ScheduleHelpers;
 import io.airbyte.config.persistence.ActorDefinitionVersionHelper;
 import io.airbyte.config.persistence.ConfigNotFoundException;
 import io.airbyte.config.persistence.ConfigRepository;
+import io.airbyte.config.persistence.StatePersistence;
 import io.airbyte.config.persistence.StreamGenerationRepository;
 import io.airbyte.config.persistence.UserPersistence;
 import io.airbyte.config.persistence.domain.Generation;
@@ -111,6 +114,7 @@ import io.airbyte.data.services.StreamStatusesService;
 import io.airbyte.data.services.shared.ConnectionEvent;
 import io.airbyte.featureflag.CheckWithCatalog;
 import io.airbyte.featureflag.FeatureFlagClient;
+import io.airbyte.featureflag.ResetStreamsStateWhenDisabled;
 import io.airbyte.featureflag.Workspace;
 import io.airbyte.metrics.lib.ApmTraceUtils;
 import io.airbyte.metrics.lib.MetricAttribute;
@@ -190,6 +194,7 @@ public class ConnectionsHandler {
   private final StreamStatusesService streamStatusesService;
   private final ConnectionTimelineEventService connectionTimelineEventService;
   private final UserPersistence userPersistence;
+  private final StatePersistence statePersistence;
 
   @Inject
   public ConnectionsHandler(final StreamRefreshesHandler streamRefreshesHandler,
@@ -212,7 +217,8 @@ public class ConnectionsHandler {
                             final NotificationHelper notificationHelper,
                             final StreamStatusesService streamStatusesService,
                             final ConnectionTimelineEventService connectionTimelineEventService,
-                            final UserPersistence userPersistence) {
+                            final UserPersistence userPersistence,
+                            final StatePersistence statePersistence) {
     this.jobPersistence = jobPersistence;
     this.configRepository = configRepository;
     this.uuidGenerator = uuidGenerator;
@@ -234,6 +240,7 @@ public class ConnectionsHandler {
     this.streamStatusesService = streamStatusesService;
     this.connectionTimelineEventService = connectionTimelineEventService;
     this.userPersistence = userPersistence;
+    this.statePersistence = statePersistence;
   }
 
   /**
@@ -692,6 +699,20 @@ public class ConnectionsHandler {
     final ConnectionRead initialConnectionRead = ApiPojoConverters.internalToConnectionRead(sync);
     LOGGER.debug("initial ConnectionRead: {}", initialConnectionRead);
 
+    if (connectionPatch.getSyncCatalog() != null
+        && featureFlagClient.boolVariation(ResetStreamsStateWhenDisabled.INSTANCE, new Workspace(workspaceId))) {
+      final var newCatalogActiveStream = connectionPatch.getSyncCatalog().getStreams().stream().filter(s -> s.getConfig().getSelected())
+          .map(s -> new StreamDescriptor().namespace(s.getStream().getNamespace()).name(s.getStream().getName()))
+          .toList();
+      final var deactivatedStreams = sync.getCatalog().getStreams().stream()
+          .map(s -> new StreamDescriptor().name(s.getStream().getName()).namespace(s.getStream().getNamespace()))
+          .collect(Collectors.toSet());
+      newCatalogActiveStream.forEach(deactivatedStreams::remove);
+      LOGGER.debug("Wiping out the state of deactivated streams: [{}]",
+          String.join(", ", deactivatedStreams.stream().map(StreamDescriptorUtils::buildFullyQualifiedName).toList()));
+      statePersistence.bulkDelete(connectionId,
+          deactivatedStreams.stream().map(ProtocolConverters::streamDescriptorToProtocol).collect(Collectors.toSet()));
+    }
     applyPatchToStandardSync(sync, connectionPatch, workspaceId);
 
     LOGGER.debug("patched StandardSync before persisting: {}", sync);

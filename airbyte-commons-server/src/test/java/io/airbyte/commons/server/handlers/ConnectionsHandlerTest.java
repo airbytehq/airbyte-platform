@@ -80,6 +80,7 @@ import io.airbyte.api.model.generated.StreamTransformUpdateStream;
 import io.airbyte.api.model.generated.SyncMode;
 import io.airbyte.api.model.generated.WorkspaceIdRequestBody;
 import io.airbyte.commons.converters.ConnectionHelper;
+import io.airbyte.commons.converters.ProtocolConverters;
 import io.airbyte.commons.enums.Enums;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.commons.server.converters.ApiPojoConverters;
@@ -135,6 +136,7 @@ import io.airbyte.config.persistence.ActorDefinitionVersionHelper;
 import io.airbyte.config.persistence.ActorDefinitionVersionHelper.ActorDefinitionVersionWithOverrideStatus;
 import io.airbyte.config.persistence.ConfigNotFoundException;
 import io.airbyte.config.persistence.ConfigRepository;
+import io.airbyte.config.persistence.StatePersistence;
 import io.airbyte.config.persistence.StreamGenerationRepository;
 import io.airbyte.config.persistence.UserPersistence;
 import io.airbyte.config.persistence.domain.Generation;
@@ -148,7 +150,9 @@ import io.airbyte.data.services.SecretPersistenceConfigService;
 import io.airbyte.data.services.SourceService;
 import io.airbyte.data.services.StreamStatusesService;
 import io.airbyte.data.services.WorkspaceService;
+import io.airbyte.featureflag.ResetStreamsStateWhenDisabled;
 import io.airbyte.featureflag.TestClient;
+import io.airbyte.featureflag.Workspace;
 import io.airbyte.persistence.job.JobNotifier;
 import io.airbyte.persistence.job.JobPersistence;
 import io.airbyte.persistence.job.WorkspaceHelper;
@@ -181,6 +185,7 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 import org.assertj.core.api.Assertions;
 import org.junit.Assert;
 import org.junit.jupiter.api.BeforeEach;
@@ -272,6 +277,7 @@ class ConnectionsHandlerTest {
   private StreamStatusesService streamStatusesService;
   private ConnectionTimelineEventService connectionTimelineEventService;
   private UserPersistence userPersistence;
+  private StatePersistence statePersistence;
 
   @SuppressWarnings("unchecked")
   @BeforeEach
@@ -381,6 +387,7 @@ class ConnectionsHandlerTest {
     streamStatusesService = mock(StreamStatusesService.class);
     connectionTimelineEventService = mock(ConnectionTimelineEventService.class);
     userPersistence = mock(UserPersistence.class);
+    statePersistence = mock(StatePersistence.class);
 
     featureFlagClient = mock(TestClient.class);
 
@@ -448,7 +455,9 @@ class ConnectionsHandlerTest {
           catalogValidator,
           notificationHelper,
           streamStatusesService,
-          connectionTimelineEventService, userPersistence);
+          connectionTimelineEventService,
+          userPersistence,
+          statePersistence);
 
       when(uuidGenerator.get()).thenReturn(standardSync.getConnectionId());
       final StandardSourceDefinition sourceDefinition = new StandardSourceDefinition()
@@ -1336,9 +1345,69 @@ class ConnectionsHandlerTest {
     @Nested
     class UpdateConnection {
 
+      StandardSync moreComplexCatalogSync;
+
+      ConfiguredAirbyteCatalog complexConfiguredCatalog;
+
+      AirbyteCatalog complexCatalog;
+
+      final List<String> catalogStreamNames = List.of("user", "permission", "organization", "workspace", "order");
+
       @BeforeEach
       void setup() throws IOException, JsonValidationException, ConfigNotFoundException {
+        final UUID connection3Id = UUID.randomUUID();
         when(workspaceHelper.getWorkspaceForConnectionId(standardSync.getConnectionId())).thenReturn(workspaceId);
+
+        complexConfiguredCatalog = new ConfiguredAirbyteCatalog()
+            .withStreams(catalogStreamNames.stream().map(this::buildConfiguredStream).toList());
+
+        complexCatalog = new AirbyteCatalog().streams(catalogStreamNames.stream().map(this::buildStream).toList());
+
+        moreComplexCatalogSync = new StandardSync()
+            .withConnectionId(connection3Id)
+            .withName("Connection with non trivial catalog")
+            .withNamespaceDefinition(JobSyncConfig.NamespaceDefinitionType.SOURCE)
+            .withNamespaceFormat(null)
+            .withPrefix("none")
+            .withStatus(StandardSync.Status.ACTIVE)
+            .withCatalog(complexConfiguredCatalog)
+            .withSourceId(sourceId)
+            .withDestinationId(destinationId)
+            .withOperationIds(List.of())
+            .withManual(false)
+            .withSchedule(ConnectionHelpers.generateBasicSchedule())
+            .withScheduleType(ScheduleType.BASIC_SCHEDULE)
+            .withScheduleData(ConnectionHelpers.generateBasicScheduleData())
+            .withResourceRequirements(ConnectionHelpers.TESTING_RESOURCE_REQUIREMENTS)
+            .withSourceCatalogId(UUID.randomUUID())
+            .withGeography(Geography.AUTO)
+            .withNotifySchemaChanges(false)
+            .withNotifySchemaChangesByEmail(true)
+            .withBreakingChange(false);
+        when(configRepository.getStandardSync(moreComplexCatalogSync.getConnectionId())).thenReturn(moreComplexCatalogSync);
+        when(workspaceHelper.getWorkspaceForConnectionId(connection3Id)).thenReturn(workspaceId);
+        when(configRepository.getSourceDefinitionFromConnection(connection3Id))
+            .thenReturn(new StandardSourceDefinition().withName("source").withSourceDefinitionId(UUID.randomUUID()));
+        when(configRepository.getDestinationDefinitionFromConnection(connection3Id))
+            .thenReturn(new StandardDestinationDefinition().withName("destination").withDestinationDefinitionId(UUID.randomUUID()));
+      }
+
+      private ConfiguredAirbyteStream buildConfiguredStream(final String name) {
+        return new ConfiguredAirbyteStream()
+            .withStream(CatalogHelpers.createAirbyteStream(name, Field.of(FIELD_NAME, JsonSchemaType.STRING))
+                .withDefaultCursorField(List.of(FIELD_NAME))
+                .withSourceDefinedCursor(false)
+                .withSupportedSyncModes(
+                    List.of(io.airbyte.protocol.models.SyncMode.FULL_REFRESH, io.airbyte.protocol.models.SyncMode.INCREMENTAL)))
+            .withCursorField(List.of(FIELD_NAME))
+            .withSyncMode(io.airbyte.protocol.models.SyncMode.INCREMENTAL)
+            .withDestinationSyncMode(io.airbyte.protocol.models.DestinationSyncMode.APPEND);
+      }
+
+      private AirbyteStreamAndConfiguration buildStream(final String name) {
+        return new AirbyteStreamAndConfiguration()
+            .stream(new AirbyteStream().name(name))
+            .config(new AirbyteStreamConfiguration().selected(true));
       }
 
       @Test
@@ -1671,6 +1740,26 @@ class ConnectionsHandlerTest {
         assertThrows(BadRequestException.class, () -> connectionsHandler.updateConnection(request));
       }
 
+      @Test
+      void testDeactivateStreamsWipeState() throws JsonValidationException, ConfigNotFoundException, IOException {
+        final AirbyteCatalog catalog = complexCatalog;
+        final List<String> deactivatedStreams = List.of("user", "permission");
+        final List<String> stillActiveStreams = catalogStreamNames.stream().filter(s -> !deactivatedStreams.contains(s)).toList();
+
+        catalog.setStreams(Stream.concat(
+            stillActiveStreams.stream().map(this::buildStream),
+            deactivatedStreams.stream().map(this::buildStream).peek(s -> s.setConfig(new AirbyteStreamConfiguration().selected(false)))).toList());
+        final ConnectionUpdate request = new ConnectionUpdate()
+            .connectionId(moreComplexCatalogSync.getConnectionId())
+            .syncCatalog(catalog);
+        when(featureFlagClient.boolVariation(ResetStreamsStateWhenDisabled.INSTANCE, new Workspace(workspaceId))).thenReturn(true);
+        connectionsHandler.updateConnection(request);
+        final Set<io.airbyte.protocol.models.StreamDescriptor> expectedStreams =
+            Set.of(ProtocolConverters.streamDescriptorToProtocol(new StreamDescriptor().name("user")),
+                ProtocolConverters.streamDescriptorToProtocol(new StreamDescriptor().name("permission")));
+        verify(statePersistence).bulkDelete(moreComplexCatalogSync.getConnectionId(), expectedStreams);
+      }
+
     }
 
   }
@@ -1700,7 +1789,9 @@ class ConnectionsHandlerTest {
           catalogValidator,
           notificationHelper,
           streamStatusesService,
-          connectionTimelineEventService, userPersistence);
+          connectionTimelineEventService,
+          userPersistence,
+          statePersistence);
     }
 
     private Attempt generateMockAttemptWithStreamStats(final Instant attemptTime, final List<Map<List<String>, Long>> streamsToRecordsSynced) {
@@ -1932,7 +2023,9 @@ class ConnectionsHandlerTest {
           catalogValidator,
           notificationHelper,
           streamStatusesService,
-          connectionTimelineEventService, userPersistence);
+          connectionTimelineEventService,
+          userPersistence,
+          statePersistence);
     }
 
     @Test
@@ -2438,7 +2531,9 @@ class ConnectionsHandlerTest {
           catalogValidator,
           notificationHelper,
           streamStatusesService,
-          connectionTimelineEventService, userPersistence);
+          connectionTimelineEventService,
+          userPersistence,
+          statePersistence);
     }
 
     @Test
@@ -2634,7 +2729,9 @@ class ConnectionsHandlerTest {
           catalogValidator,
           notificationHelper,
           streamStatusesService,
-          connectionTimelineEventService, userPersistence);
+          connectionTimelineEventService,
+          userPersistence,
+          statePersistence);
     }
 
     @Test
