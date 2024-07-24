@@ -33,7 +33,6 @@ import static org.mockito.Mockito.when;
 
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import io.airbyte.api.client.AirbyteApiClient;
-import io.airbyte.api.client.WorkloadApiClient;
 import io.airbyte.api.client.generated.ActorDefinitionVersionApi;
 import io.airbyte.api.client.generated.DestinationApi;
 import io.airbyte.api.client.generated.SourceApi;
@@ -105,6 +104,7 @@ import io.airbyte.workers.internal.exception.SourceException;
 import io.airbyte.workers.internal.syncpersistence.SyncPersistence;
 import io.airbyte.workers.test_utils.AirbyteMessageUtils;
 import io.airbyte.workers.test_utils.TestConfigHelpers;
+import io.airbyte.workload.api.client.WorkloadApiClient;
 import io.airbyte.workload.api.client.generated.WorkloadApi;
 import java.io.IOException;
 import java.nio.file.Files;

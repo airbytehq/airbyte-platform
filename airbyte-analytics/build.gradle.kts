@@ -15,7 +15,7 @@ dependencies {
   api(libs.kotlin.logging)
   api(project(":oss:airbyte-commons"))
   api(project(":oss:airbyte-config:config-models"))
-  api(project(":oss:airbyte-api"))
+  api(project(":oss:airbyte-api:server-api"))
 
   testAnnotationProcessor(platform(libs.micronaut.platform))
   testAnnotationProcessor(libs.bundles.micronaut.test.annotation.processor)

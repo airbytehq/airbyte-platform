@@ -10,7 +10,6 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import io.airbyte.api.client.AirbyteApiClient;
-import io.airbyte.api.client.WorkloadApiClient;
 import io.airbyte.api.client.generated.DestinationApi;
 import io.airbyte.api.client.generated.SourceApi;
 import io.airbyte.commons.converters.ConnectorConfigUpdater;
@@ -61,6 +60,7 @@ import io.airbyte.workers.internal.bookkeeping.events.ReplicationAirbyteMessageE
 import io.airbyte.workers.internal.bookkeeping.streamstatus.StreamStatusTrackerFactory;
 import io.airbyte.workers.internal.syncpersistence.SyncPersistence;
 import io.airbyte.workers.process.IntegrationLauncher;
+import io.airbyte.workload.api.client.WorkloadApiClient;
 import io.airbyte.workload.api.client.generated.WorkloadApi;
 import io.micronaut.context.event.ApplicationEventListener;
 import java.nio.file.Path;

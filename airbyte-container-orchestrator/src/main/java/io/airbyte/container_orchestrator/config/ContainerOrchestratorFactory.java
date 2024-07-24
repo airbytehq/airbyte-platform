@@ -4,7 +4,6 @@
 
 package io.airbyte.container_orchestrator.config;
 
-import io.airbyte.api.client.WorkloadApiClient;
 import io.airbyte.commons.envvar.EnvVar;
 import io.airbyte.commons.features.EnvVariableFeatureFlags;
 import io.airbyte.commons.features.FeatureFlags;
@@ -32,6 +31,7 @@ import io.airbyte.workers.storage.StorageClientFactory;
 import io.airbyte.workers.sync.OrchestratorConstants;
 import io.airbyte.workers.sync.ReplicationLauncherWorker;
 import io.airbyte.workers.workload.JobOutputDocStore;
+import io.airbyte.workload.api.client.WorkloadApiClient;
 import io.fabric8.kubernetes.client.DefaultKubernetesClient;
 import io.micronaut.context.annotation.Factory;
 import io.micronaut.context.annotation.Prototype;

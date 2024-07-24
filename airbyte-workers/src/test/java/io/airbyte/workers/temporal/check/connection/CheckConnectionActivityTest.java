@@ -12,7 +12,6 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import io.airbyte.api.client.AirbyteApiClient;
-import io.airbyte.api.client.WorkloadApiClient;
 import io.airbyte.api.client.model.generated.Geography;
 import io.airbyte.commons.features.FeatureFlags;
 import io.airbyte.commons.protocol.AirbyteMessageSerDeProvider;
@@ -38,6 +37,7 @@ import io.airbyte.workers.process.ProcessFactory;
 import io.airbyte.workers.sync.WorkloadClient;
 import io.airbyte.workers.workload.JobOutputDocStore;
 import io.airbyte.workers.workload.WorkloadIdGenerator;
+import io.airbyte.workload.api.client.WorkloadApiClient;
 import io.airbyte.workload.api.client.generated.WorkloadApi;
 import io.airbyte.workload.api.client.model.generated.Workload;
 import io.airbyte.workload.api.client.model.generated.WorkloadCreateRequest;

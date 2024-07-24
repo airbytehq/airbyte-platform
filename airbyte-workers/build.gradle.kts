@@ -69,7 +69,8 @@ dependencies {
   implementation(libs.sentry.java)
 
   implementation(project(":oss:airbyte-analytics"))
-  implementation(project(":oss:airbyte-api"))
+  implementation(project(":oss:airbyte-api:server-api"))
+  implementation(project(":oss:airbyte-api:workload-api"))
   implementation(project(":oss:airbyte-commons"))
   implementation(project(":oss:airbyte-commons-converters"))
   implementation(project(":oss:airbyte-commons-micronaut"))
@@ -113,7 +114,6 @@ dependencies {
   testImplementation(libs.platform.testcontainers.postgresql)
   testImplementation(project(":oss:airbyte-test-utils"))
   testImplementation(libs.bundles.bouncycastle)
-  testImplementation(project(":oss:airbyte-api"))
   testImplementation(libs.bundles.junit)
   testImplementation(libs.assertj.core)
   testImplementation(libs.junit.pioneer)

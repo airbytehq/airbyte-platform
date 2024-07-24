@@ -42,11 +42,11 @@ val pnpmVer = engines?.get("pnpm")?.toString()?.trim()  // Extract 'pnpm' as Str
  * if those change we can't reuse a cached build.
  */
 val outsideWebappDependencies = listOf(
-    "../airbyte-api/src/main/openapi/config.yaml",
-    "../airbyte-api/src/main/openapi/cloud-config.yaml",
-    "../airbyte-api/src/main/openapi/api-problems.yaml",
-    "../airbyte-connector-builder-server/src/main/openapi/openapi.yaml",
-    "../airbyte-connector-builder-resources/CDK_VERSION",
+    project(":oss:airbyte-api:server-api").file("src/main/openapi/config.yaml").path,
+    project(":oss:airbyte-api:commons").file("src/main/openapi/cloud-config.yaml").path,
+    project(":oss:airbyte-api:problems-api").file("src/main/openapi/api-problems.yaml").path,
+    project(":oss:airbyte-connector-builder-server").file("src/main/openapi/openapi.yaml").path,
+    project(":oss:airbyte-connector-builder-server").file("CDK_VERSION").path,
 )
 
 configure<NodeExtension> {

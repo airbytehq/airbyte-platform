@@ -8,7 +8,6 @@ import com.fasterxml.jackson.core.JsonProcessingException
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.google.common.annotations.VisibleForTesting
 import io.airbyte.api.client.AirbyteApiClient
-import io.airbyte.api.client.WorkloadApiClient
 import io.airbyte.api.client.model.generated.ActorType
 import io.airbyte.api.client.model.generated.DestinationIdRequestBody
 import io.airbyte.api.client.model.generated.ResolveActorDefinitionVersionRequestBody
@@ -64,6 +63,7 @@ import io.airbyte.workers.internal.exception.DestinationException
 import io.airbyte.workers.internal.exception.SourceException
 import io.airbyte.workers.internal.syncpersistence.SyncPersistence
 import io.airbyte.workers.models.StateWithId.attachIdToStateMessageFromSource
+import io.airbyte.workload.api.client.WorkloadApiClient
 import io.airbyte.workload.api.client.model.generated.WorkloadHeartbeatRequest
 import io.github.oshai.kotlinlogging.KotlinLogging
 import io.micronaut.http.HttpStatus

@@ -16,7 +16,6 @@ import static io.airbyte.metrics.lib.ApmTraceConstants.Tags.SOURCE_DOCKER_IMAGE_
 
 import datadog.trace.api.Trace;
 import io.airbyte.api.client.AirbyteApiClient;
-import io.airbyte.api.client.WorkloadApiClient;
 import io.airbyte.commons.functional.CheckedSupplier;
 import io.airbyte.commons.temporal.HeartbeatUtils;
 import io.airbyte.commons.temporal.utils.PayloadChecker;
@@ -50,6 +49,7 @@ import io.airbyte.workers.sync.WorkloadClient;
 import io.airbyte.workers.temporal.TemporalAttemptExecution;
 import io.airbyte.workers.workload.JobOutputDocStore;
 import io.airbyte.workers.workload.WorkloadIdGenerator;
+import io.airbyte.workload.api.client.WorkloadApiClient;
 import io.micronaut.context.annotation.Value;
 import io.temporal.activity.Activity;
 import io.temporal.activity.ActivityExecutionContext;

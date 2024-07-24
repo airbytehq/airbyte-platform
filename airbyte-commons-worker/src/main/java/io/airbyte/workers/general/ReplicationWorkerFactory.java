@@ -9,7 +9,6 @@ import static io.airbyte.workers.general.BufferedReplicationWorkerType.BUFFERED_
 
 import io.airbyte.analytics.TrackingClient;
 import io.airbyte.api.client.AirbyteApiClient;
-import io.airbyte.api.client.WorkloadApiClient;
 import io.airbyte.api.client.generated.SourceDefinitionApi;
 import io.airbyte.api.client.model.generated.SourceDefinitionIdRequestBody;
 import io.airbyte.api.client.model.generated.SourceIdRequestBody;
@@ -58,6 +57,7 @@ import io.airbyte.workers.internal.bookkeeping.streamstatus.StreamStatusTrackerF
 import io.airbyte.workers.internal.syncpersistence.SyncPersistence;
 import io.airbyte.workers.internal.syncpersistence.SyncPersistenceFactory;
 import io.airbyte.workers.process.AirbyteIntegrationLauncherFactory;
+import io.airbyte.workload.api.client.WorkloadApiClient;
 import io.micronaut.context.annotation.Value;
 import io.micronaut.core.util.CollectionUtils;
 import jakarta.inject.Singleton;

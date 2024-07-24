@@ -9,7 +9,7 @@ dependencies {
 
   ksp(libs.bundles.micronaut.annotation.processor)
 
-  implementation(project(":oss:airbyte-api"))
+  implementation(project(":oss:airbyte-api:server-api"))
   implementation(project(":oss:airbyte-commons"))
   implementation(project(":oss:airbyte-config:config-models"))
   implementation(project(":oss:airbyte-json-validation"))

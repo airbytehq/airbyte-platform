@@ -2,7 +2,6 @@ package io.airbyte.connectorSidecar
 
 import com.google.common.annotations.VisibleForTesting
 import com.google.common.base.Stopwatch
-import io.airbyte.api.client.WorkloadApiClient
 import io.airbyte.commons.io.LineGobbler
 import io.airbyte.commons.json.Jsons
 import io.airbyte.commons.protocol.AirbyteMessageSerDeProvider
@@ -22,6 +21,7 @@ import io.airbyte.workers.internal.VersionedAirbyteStreamFactory.InvalidLineFail
 import io.airbyte.workers.models.SidecarInput
 import io.airbyte.workers.sync.OrchestratorConstants
 import io.airbyte.workers.workload.JobOutputDocStore
+import io.airbyte.workload.api.client.WorkloadApiClient
 import io.airbyte.workload.api.client.model.generated.WorkloadFailureRequest
 import io.airbyte.workload.api.client.model.generated.WorkloadSuccessRequest
 import io.github.oshai.kotlinlogging.KotlinLogging
