@@ -4,7 +4,6 @@
 
 package io.airbyte.commons.server.handlers;
 
-import static io.airbyte.featureflag.ContextKt.ANONYMOUS;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
@@ -65,7 +64,6 @@ import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.featureflag.HideActorDefinitionFromList;
 import io.airbyte.featureflag.Multi;
 import io.airbyte.featureflag.TestClient;
-import io.airbyte.featureflag.UseIconUrlInApiResponse;
 import io.airbyte.featureflag.Workspace;
 import io.airbyte.protocol.models.ConnectorSpecification;
 import io.airbyte.validation.json.JsonValidationException;
@@ -84,8 +82,6 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.ValueSource;
 
 class DestinationDefinitionsHandlerTest {
 
@@ -222,7 +218,7 @@ class DestinationDefinitionsHandlerTest {
         .dockerRepository(destinationDefinitionVersion.getDockerRepository())
         .dockerImageTag(destinationDefinitionVersion.getDockerImageTag())
         .documentationUrl(new URI(destinationDefinitionVersion.getDocumentationUrl()))
-        .icon(DestinationDefinitionsHandler.loadIcon(destinationDefinition.getIcon()))
+        .icon(ICON_URL)
         .protocolVersion(destinationDefinitionVersion.getProtocolVersion())
         .supportLevel(SupportLevel.fromValue(destinationDefinitionVersion.getSupportLevel().value()))
         .releaseStage(ReleaseStage.fromValue(destinationDefinitionVersion.getReleaseStage().value()))
@@ -238,7 +234,7 @@ class DestinationDefinitionsHandlerTest {
         .dockerRepository(destinationDefinitionVersionWithOptionals.getDockerRepository())
         .dockerImageTag(destinationDefinitionVersionWithOptionals.getDockerImageTag())
         .documentationUrl(new URI(destinationDefinitionVersionWithOptionals.getDocumentationUrl()))
-        .icon(DestinationDefinitionsHandler.loadIcon(destinationDefinitionWithOptionals.getIcon()))
+        .icon(ICON_URL)
         .protocolVersion(destinationDefinitionVersionWithOptionals.getProtocolVersion())
         .supportLevel(SupportLevel.fromValue(destinationDefinitionVersionWithOptionals.getSupportLevel().value()))
         .releaseStage(ReleaseStage.fromValue(destinationDefinitionVersionWithOptionals.getReleaseStage().value()))
@@ -271,7 +267,7 @@ class DestinationDefinitionsHandlerTest {
         .dockerRepository(destinationDefinitionVersion.getDockerRepository())
         .dockerImageTag(destinationDefinitionVersion.getDockerImageTag())
         .documentationUrl(new URI(destinationDefinitionVersion.getDocumentationUrl()))
-        .icon(DestinationDefinitionsHandler.loadIcon(destinationDefinition.getIcon()))
+        .icon(ICON_URL)
         .protocolVersion(destinationDefinitionVersion.getProtocolVersion())
         .supportLevel(SupportLevel.fromValue(destinationDefinitionVersion.getSupportLevel().value()))
         .releaseStage(ReleaseStage.fromValue(destinationDefinitionVersion.getReleaseStage().value()))
@@ -329,7 +325,7 @@ class DestinationDefinitionsHandlerTest {
         .dockerRepository(destinationDefinitionVersion.getDockerRepository())
         .dockerImageTag(destinationDefinitionVersion.getDockerImageTag())
         .documentationUrl(new URI(destinationDefinitionVersion.getDocumentationUrl()))
-        .icon(DestinationDefinitionsHandler.loadIcon(destinationDefinition.getIcon()))
+        .icon(ICON_URL)
         .protocolVersion(destinationDefinitionVersion.getProtocolVersion())
         .supportLevel(SupportLevel.fromValue(destinationDefinitionVersion.getSupportLevel().value()))
         .releaseStage(ReleaseStage.fromValue(destinationDefinitionVersion.getReleaseStage().value()))
@@ -365,7 +361,7 @@ class DestinationDefinitionsHandlerTest {
         .dockerRepository(destinationDefinitionVersion.getDockerRepository())
         .dockerImageTag(destinationDefinitionVersion.getDockerImageTag())
         .documentationUrl(new URI(destinationDefinitionVersion.getDocumentationUrl()))
-        .icon(DestinationDefinitionsHandler.loadIcon(destinationDefinition.getIcon()))
+        .icon(ICON_URL)
         .protocolVersion(destinationDefinitionVersion.getProtocolVersion())
         .supportLevel(SupportLevel.fromValue(destinationDefinitionVersion.getSupportLevel().value()))
         .releaseStage(ReleaseStage.fromValue(destinationDefinitionVersion.getReleaseStage().value()))
@@ -434,7 +430,7 @@ class DestinationDefinitionsHandlerTest {
         .dockerRepository(destinationDefinitionVersion.getDockerRepository())
         .dockerImageTag(destinationDefinitionVersion.getDockerImageTag())
         .documentationUrl(new URI(destinationDefinitionVersion.getDocumentationUrl()))
-        .icon(DestinationDefinitionsHandler.loadIcon(destinationDefinition.getIcon()))
+        .icon(ICON_URL)
         .protocolVersion(destinationDefinitionVersion.getProtocolVersion())
         .supportLevel(SupportLevel.fromValue(destinationDefinitionVersion.getSupportLevel().value()))
         .releaseStage(ReleaseStage.fromValue(destinationDefinitionVersion.getReleaseStage().value()))
@@ -472,7 +468,7 @@ class DestinationDefinitionsHandlerTest {
         .dockerRepository(destinationDefinitionVersion.getDockerRepository())
         .dockerImageTag(destinationDefinitionVersion.getDockerImageTag())
         .documentationUrl(new URI(destinationDefinitionVersion.getDocumentationUrl()))
-        .icon(DestinationDefinitionsHandler.loadIcon(destinationDefinition.getIcon()))
+        .icon(ICON_URL)
         .protocolVersion(destinationDefinitionVersion.getProtocolVersion())
         .supportLevel(SupportLevel.fromValue(destinationDefinitionVersion.getSupportLevel().value()))
         .releaseStage(ReleaseStage.fromValue(destinationDefinitionVersion.getReleaseStage().value()))
@@ -535,7 +531,7 @@ class DestinationDefinitionsHandlerTest {
         .dockerImageTag(destinationDefinitionVersion.getDockerImageTag())
         .documentationUrl(new URI(destinationDefinitionVersion.getDocumentationUrl()))
         .destinationDefinitionId(newDestinationDefinition.getDestinationDefinitionId())
-        .icon(DestinationDefinitionsHandler.loadIcon(newDestinationDefinition.getIcon()))
+        .icon(null)
         .protocolVersion(DEFAULT_PROTOCOL_VERSION)
         .custom(true)
         .supportLevel(SupportLevel.fromValue(destinationDefinitionVersion.getSupportLevel().value()))
@@ -599,7 +595,7 @@ class DestinationDefinitionsHandlerTest {
         .dockerImageTag(destinationDefinitionVersion.getDockerImageTag())
         .documentationUrl(new URI(destinationDefinitionVersion.getDocumentationUrl()))
         .destinationDefinitionId(newDestinationDefinition.getDestinationDefinitionId())
-        .icon(DestinationDefinitionsHandler.loadIcon(newDestinationDefinition.getIcon()))
+        .icon(null)
         .protocolVersion(DEFAULT_PROTOCOL_VERSION)
         .custom(true)
         .supportLevel(SupportLevel.fromValue(destinationDefinitionVersion.getSupportLevel().value()))
@@ -683,14 +679,12 @@ class DestinationDefinitionsHandlerTest {
     verifyNoMoreInteractions(actorDefinitionHandlerHelper);
   }
 
-  @ParameterizedTest
-  @ValueSource(booleans = {true, false})
+  @Test
   @DisplayName("updateDestinationDefinition should correctly update a destinationDefinition")
-  void testUpdateDestination(final boolean useIconUrlInApiResponseFlagValue)
+  void testUpdateDestination()
       throws ConfigNotFoundException, IOException, JsonValidationException, URISyntaxException, io.airbyte.data.exceptions.ConfigNotFoundException {
     when(airbyteCompatibleConnectorsValidator.validate(anyString(), anyString()))
         .thenReturn(new ConnectorPlatformCompatibilityValidationResult(true, ""));
-    when(featureFlagClient.boolVariation(UseIconUrlInApiResponse.INSTANCE, new Workspace(ANONYMOUS))).thenReturn(useIconUrlInApiResponseFlagValue);
 
     final String newDockerImageTag = "averydifferenttag";
     final StandardDestinationDefinition updatedDestination =
@@ -727,7 +721,7 @@ class DestinationDefinitionsHandlerTest {
         .dockerRepository(destinationDefinitionVersion.getDockerRepository())
         .dockerImageTag(newDockerImageTag)
         .documentationUrl(new URI(destinationDefinitionVersion.getDocumentationUrl()))
-        .icon(useIconUrlInApiResponseFlagValue ? ICON_URL : DestinationDefinitionsHandler.loadIcon(destinationDefinition.getIcon()))
+        .icon(ICON_URL)
         .protocolVersion(destinationDefinitionVersion.getProtocolVersion())
         .supportLevel(SupportLevel.fromValue(destinationDefinitionVersion.getSupportLevel().value()))
         .releaseStage(ReleaseStage.fromValue(destinationDefinitionVersion.getReleaseStage().value()))
@@ -837,7 +831,7 @@ class DestinationDefinitionsHandlerTest {
         .dockerRepository(destinationDefinitionVersion.getDockerRepository())
         .dockerImageTag(destinationDefinitionVersion.getDockerImageTag())
         .documentationUrl(new URI(destinationDefinitionVersion.getDocumentationUrl()))
-        .icon(DestinationDefinitionsHandler.loadIcon(destinationDefinition.getIcon()))
+        .icon(ICON_URL)
         .protocolVersion(destinationDefinitionVersion.getProtocolVersion())
         .supportLevel(SupportLevel.fromValue(destinationDefinitionVersion.getSupportLevel().value()))
         .releaseStage(ReleaseStage.fromValue(destinationDefinitionVersion.getReleaseStage().value()))
@@ -873,7 +867,7 @@ class DestinationDefinitionsHandlerTest {
         .dockerRepository(destinationDefinitionVersion.getDockerRepository())
         .dockerImageTag(destinationDefinitionVersion.getDockerImageTag())
         .documentationUrl(new URI(destinationDefinitionVersion.getDocumentationUrl()))
-        .icon(DestinationDefinitionsHandler.loadIcon(destinationDefinition.getIcon()))
+        .icon(ICON_URL)
         .protocolVersion(destinationDefinitionVersion.getProtocolVersion())
         .supportLevel(SupportLevel.fromValue(destinationDefinitionVersion.getSupportLevel().value()))
         .releaseStage(ReleaseStage.fromValue(destinationDefinitionVersion.getReleaseStage().value()))

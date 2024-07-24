@@ -87,8 +87,6 @@ object HideActorDefinitionFromList : Permanent<Boolean>(key = "connectors.hideAc
 
 object PauseSyncsWithUnsupportedActors : Temporary<Boolean>(key = "connectors.pauseSyncsWithUnsupportedActors", default = true)
 
-object UseIconUrlInApiResponse : Temporary<Boolean>(key = "connectors.useIconUrlInApiResponse", default = false)
-
 object DestResourceOverrides : Temporary<String>(key = "dest-resource-overrides", default = "")
 
 object OrchestratorResourceOverrides : Temporary<String>(key = "orchestrator-resource-overrides", default = "")

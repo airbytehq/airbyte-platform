@@ -4,7 +4,6 @@
 
 package io.airbyte.commons.server.handlers;
 
-import static io.airbyte.featureflag.ContextKt.ANONYMOUS;
 import static io.airbyte.protocol.models.CatalogHelpers.createAirbyteStream;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
@@ -62,7 +61,6 @@ import io.airbyte.data.services.SourceService;
 import io.airbyte.data.services.WorkspaceService;
 import io.airbyte.featureflag.DeleteSecretsWhenTombstoneActors;
 import io.airbyte.featureflag.TestClient;
-import io.airbyte.featureflag.UseIconUrlInApiResponse;
 import io.airbyte.featureflag.Workspace;
 import io.airbyte.persistence.job.factory.OAuthConfigSupplier;
 import io.airbyte.protocol.models.AirbyteCatalog;
@@ -129,8 +127,6 @@ class SourceHandlerTest {
     oAuthConfigSupplier = mock(OAuthConfigSupplier.class);
     actorDefinitionVersionHelper = mock(ActorDefinitionVersionHelper.class);
     featureFlagClient = mock(TestClient.class);
-    when(featureFlagClient.boolVariation(UseIconUrlInApiResponse.INSTANCE, new Workspace(ANONYMOUS)))
-        .thenReturn(true);
     sourceService = mock(SourceService.class);
     workspaceService = mock(WorkspaceService.class);
     secretPersistenceConfigService = mock(SecretPersistenceConfigService.class);
