@@ -171,7 +171,7 @@ public class UserPersistence {
     final Result<Record> result = database.query(ctx -> ctx
         .select(asterisk())
         .from(USER)
-        .innerJoin(AUTH_USER).on(USER.ID.eq(AUTH_USER.USER_ID))
+        .leftJoin(AUTH_USER).on(USER.ID.eq(AUTH_USER.USER_ID))
         .where(USER.ID.eq(userId)).fetch());
 
     if (result.isEmpty()) {
@@ -264,7 +264,7 @@ public class UserPersistence {
     final Result<Record> result = database.query(ctx -> ctx
         .select(asterisk())
         .from(USER)
-        .innerJoin(AUTH_USER).on(USER.ID.eq(AUTH_USER.USER_ID))
+        .leftJoin(AUTH_USER).on(USER.ID.eq(AUTH_USER.USER_ID))
         .where(USER.EMAIL.eq(email)).fetch());
 
     if (result.isEmpty()) {
