@@ -56,16 +56,18 @@ export const getStatusIcon = (jobStatus: "failed" | "incomplete" | "cancelled" |
  */
 
 export interface TimelineFilterValues {
-  status: "success" | "failure" | "incomplete" | "cancelled" | null;
-  eventType: "sync" | "clear" | "refresh" | null;
-  eventId: string | null;
-  openLogs: "true" | "false" | null;
-  jobId: string | null;
-  attemptNumber: string | null;
+  status: "success" | "failure" | "incomplete" | "cancelled" | "";
+  eventCategory: "sync" | "clear" | "refresh" | "";
+  startDate: string;
+  endDate: string;
+  eventId: string;
+  openLogs: "true" | "false" | "";
+  jobId: string;
+  attemptNumber: string;
 }
 
 export const eventTypeByStatusFilterValue: Record<
-  Exclude<TimelineFilterValues["status"], null>,
+  Exclude<TimelineFilterValues["status"], "">,
   ConnectionEventType[]
 > = {
   success: [
@@ -83,6 +85,33 @@ export const eventTypeByStatusFilterValue: Record<
     ConnectionEventType.SYNC_CANCELLED,
     ConnectionEventType.CLEAR_CANCELLED,
     ConnectionEventType.REFRESH_CANCELLED,
+  ],
+};
+
+export const eventTypeByTypeFilterValue: Record<
+  Exclude<TimelineFilterValues["eventCategory"], "">,
+  ConnectionEventType[]
+> = {
+  sync: [
+    ConnectionEventType.SYNC_SUCCEEDED,
+    ConnectionEventType.SYNC_CANCELLED,
+    ConnectionEventType.SYNC_FAILED,
+    ConnectionEventType.SYNC_INCOMPLETE,
+    ConnectionEventType.SYNC_STARTED,
+  ],
+  clear: [
+    ConnectionEventType.CLEAR_SUCCEEDED,
+    ConnectionEventType.CLEAR_CANCELLED,
+    ConnectionEventType.CLEAR_FAILED,
+    ConnectionEventType.CLEAR_INCOMPLETE,
+    ConnectionEventType.CLEAR_STARTED,
+  ],
+  refresh: [
+    ConnectionEventType.REFRESH_SUCCEEDED,
+    ConnectionEventType.REFRESH_CANCELLED,
+    ConnectionEventType.REFRESH_FAILED,
+    ConnectionEventType.REFRESH_INCOMPLETE,
+    ConnectionEventType.REFRESH_STARTED,
   ],
 };
 
@@ -110,7 +139,7 @@ export const getStatusByEventType = (eventType: ConnectionEventType) => {
 };
 type filterIconType = "statusSuccess" | "statusError" | "statusWarning" | "sync" | "statusCancelled";
 
-const timelineStatusFilterColors: Record<Exclude<TimelineFilterValues["status"], null>, IconColor> = {
+const timelineStatusFilterColors: Record<Exclude<TimelineFilterValues["status"], "">, IconColor> = {
   success: "success",
   failure: "error",
   cancelled: "disabled",
@@ -120,7 +149,7 @@ const timelineStatusFilterColors: Record<Exclude<TimelineFilterValues["status"],
 const generateStatusFilterOption = (value: TimelineFilterValues["status"], id: string, iconType: filterIconType) => {
   return {
     label:
-      value === null ? null : (
+      value === "" ? null : (
         <FlexContainer gap="sm" alignItems="center">
           <FlexItem>
             <Icon type={iconType} size="md" color={timelineStatusFilterColors[value]} />
@@ -136,12 +165,13 @@ const generateStatusFilterOption = (value: TimelineFilterValues["status"], id: s
   };
 };
 
-const generateEventTypeFilterOption = (value: TimelineFilterValues["eventType"], id: string) => ({
-  label: (
-    <Text color="grey" bold as="span">
-      <FormattedMessage id={id} />
-    </Text>
-  ),
+const generateEventTypeFilterOption = (value: TimelineFilterValues["eventCategory"], id: string) => ({
+  label:
+    value === "" ? null : (
+      <Text color="grey" bold as="span">
+        <FormattedMessage id={id} />
+      </Text>
+    ),
   value,
 });
 
@@ -152,7 +182,7 @@ export const statusFilterOptions = [
         <FormattedMessage id="connection.timeline.filters.allStatuses" />
       </Text>
     ),
-    value: null,
+    value: "",
   },
   generateStatusFilterOption("success", "connection.timeline.filters.success", "statusSuccess"),
   generateStatusFilterOption("failure", "connection.timeline.filters.failure", "statusError"),
@@ -167,7 +197,7 @@ export const eventTypeFilterOptions = [
         <FormattedMessage id="connection.timeline.filters.allEventTypes" />
       </Text>
     ),
-    value: null,
+    value: "",
   },
   generateEventTypeFilterOption("sync", "connection.timeline.filters.sync"),
   generateEventTypeFilterOption("refresh", "connection.timeline.filters.refresh"),

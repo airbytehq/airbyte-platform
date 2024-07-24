@@ -38,7 +38,7 @@ export const ClearEventItem: React.FC<ClearEventProps> = ({ clearEvent }) => {
                 |
               </Text>
               <Text as="span" color="grey400" size="sm">
-                <FormattedMessage id="jobs.jobId" values={{ jobId: clearEvent.summary.jobId }} />
+                <FormattedMessage id="jobs.jobId" values={{ id: clearEvent.summary.jobId }} />
               </Text>
               <Text as="span" color="grey400" size="sm">
                 |
