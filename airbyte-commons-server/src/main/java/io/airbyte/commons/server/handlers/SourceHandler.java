@@ -52,7 +52,6 @@ import io.airbyte.data.helpers.ActorDefinitionVersionUpdater;
 import io.airbyte.data.services.SecretPersistenceConfigService;
 import io.airbyte.data.services.SourceService;
 import io.airbyte.data.services.WorkspaceService;
-import io.airbyte.featureflag.DeleteSecretsWhenTombstoneActors;
 import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.featureflag.Organization;
 import io.airbyte.featureflag.UseRuntimeSecretPersistence;
@@ -376,31 +375,14 @@ public class SourceHandler {
 
     final var spec = getSpecFromSourceId(source.getSourceId());
 
-    if (featureFlagClient.boolVariation(DeleteSecretsWhenTombstoneActors.INSTANCE, new Workspace(source.getWorkspaceId().toString()))) {
-      try {
-        sourceService.tombstoneSource(
-            source.getName(),
-            source.getWorkspaceId(),
-            source.getSourceId(), spec);
-      } catch (final io.airbyte.data.exceptions.ConfigNotFoundException e) {
-        throw new ConfigNotFoundException(e.getType(), e.getConfigId());
-      }
-    } else {
-      final JsonNode fullConfig;
-      try {
-        fullConfig = sourceService.getSourceConnectionWithSecrets(source.getSourceId()).getConfiguration();
-      } catch (final io.airbyte.data.exceptions.ConfigNotFoundException e) {
-        throw new ConfigNotFoundException(e.getType(), e.getConfigId());
-      }
-      // persist
-      persistSourceConnection(
+    // Delete secrets and config in this source and mark it tombstoned.
+    try {
+      sourceService.tombstoneSource(
           source.getName(),
-          source.getSourceDefinitionId(),
           source.getWorkspaceId(),
-          source.getSourceId(),
-          true,
-          fullConfig,
-          spec);
+          source.getSourceId(), spec);
+    } catch (final io.airbyte.data.exceptions.ConfigNotFoundException e) {
+      throw new ConfigNotFoundException(e.getType(), e.getConfigId());
     }
   }
 

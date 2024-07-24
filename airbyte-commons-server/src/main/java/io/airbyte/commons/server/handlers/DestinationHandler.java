@@ -40,7 +40,6 @@ import io.airbyte.config.persistence.ConfigRepository.ResourcesQueryPaginated;
 import io.airbyte.config.secrets.JsonSecretsProcessor;
 import io.airbyte.data.helpers.ActorDefinitionVersionUpdater;
 import io.airbyte.data.services.DestinationService;
-import io.airbyte.featureflag.DeleteSecretsWhenTombstoneActors;
 import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.featureflag.Workspace;
 import io.airbyte.persistence.job.factory.OAuthConfigSupplier;
@@ -149,31 +148,14 @@ public class DestinationHandler {
     final ConnectorSpecification spec =
         getSpecForDestinationId(destination.getDestinationDefinitionId(), destination.getWorkspaceId(), destination.getDestinationId());
 
-    if (featureFlagClient.boolVariation(DeleteSecretsWhenTombstoneActors.INSTANCE, new Workspace(destination.getWorkspaceId().toString()))) {
-      try {
-        destinationService.tombstoneDestination(
-            destination.getName(),
-            destination.getWorkspaceId(),
-            destination.getDestinationId(), spec);
-      } catch (final io.airbyte.data.exceptions.ConfigNotFoundException e) {
-        throw new ConfigNotFoundException(e.getType(), e.getConfigId());
-      }
-    } else {
-      final JsonNode fullConfig;
-      try {
-        fullConfig = destinationService.getDestinationConnectionWithSecrets(destination.getDestinationId()).getConfiguration();
-      } catch (final io.airbyte.data.exceptions.ConfigNotFoundException e) {
-        throw new ConfigNotFoundException(e.getType(), e.getConfigId());
-      }
-      // persist
-      persistDestinationConnection(
+    // Delete secrets and config in this destination and mark it tombstoned.
+    try {
+      destinationService.tombstoneDestination(
           destination.getName(),
-          destination.getDestinationDefinitionId(),
           destination.getWorkspaceId(),
-          destination.getDestinationId(),
-          fullConfig,
-          true,
-          spec);
+          destination.getDestinationId(), spec);
+    } catch (final io.airbyte.data.exceptions.ConfigNotFoundException e) {
+      throw new ConfigNotFoundException(e.getType(), e.getConfigId());
     }
   }
 
