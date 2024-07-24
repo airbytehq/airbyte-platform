@@ -168,16 +168,17 @@ public class UserPersistence {
    * @return user if found
    */
   public Optional<User> getUser(final UUID userId) throws IOException {
-    // FIXME: in the case of multiple auth providers, this will return the first one found.
     final Result<Record> result = database.query(ctx -> ctx
         .select(asterisk())
         .from(USER)
+        .innerJoin(AUTH_USER).on(USER.ID.eq(AUTH_USER.USER_ID))
         .where(USER.ID.eq(userId)).fetch());
 
     if (result.isEmpty()) {
       return Optional.empty();
     }
 
+    // FIXME: in the case of multiple auth providers, this will return the first one found.
     return Optional.of(createUserFromRecord(result.get(0)));
   }
 
@@ -220,16 +221,11 @@ public class UserPersistence {
    * @throws IOException in case of a db error
    */
   public Optional<User> getUserByAuthId(final String userAuthId) throws IOException {
-
     final var resultFromAuthUsersTable = getUserByAuthIdFromAuthUserTable(userAuthId);
-
-    if (!resultFromAuthUsersTable.isEmpty()) {
-      return resultFromAuthUsersTable;
-    } else {
+    if (resultFromAuthUsersTable.isEmpty()) {
       log.warn("User with auth user id {} not found in auth_user table", userAuthId);
     }
-
-    return getUserByAuthIdFromUserTable(userAuthId);
+    return resultFromAuthUsersTable;
   }
 
   public Optional<User> getUserByAuthIdFromAuthUserTable(final String userAuthId) throws IOException {
@@ -256,22 +252,6 @@ public class UserPersistence {
     return Optional.of(createUserFromRecord(result.get(0)));
   }
 
-  // TODO: To be removed once the migration to the auth user table is finished
-  // https://github.com/airbytehq/airbyte-platform-internal/issues/10641
-  @Deprecated(forRemoval = true)
-  public Optional<User> getUserByAuthIdFromUserTable(final String userAuthId) throws IOException {
-    final Result<Record> result = database.query(ctx -> ctx
-        .select(asterisk())
-        .from(USER)
-        .where(USER.AUTH_USER_ID.eq(userAuthId)).fetch());
-
-    if (result.isEmpty()) {
-      return Optional.empty();
-    }
-
-    return Optional.of(createUserFromRecord(result.get(0)));
-  }
-
   /**
    * Fetch user information from their email. TODO remove this after Firebase invitations are
    * replaced, flawed because email is not unique
@@ -284,12 +264,14 @@ public class UserPersistence {
     final Result<Record> result = database.query(ctx -> ctx
         .select(asterisk())
         .from(USER)
+        .innerJoin(AUTH_USER).on(USER.ID.eq(AUTH_USER.USER_ID))
         .where(USER.EMAIL.eq(email)).fetch());
 
     if (result.isEmpty()) {
       return Optional.empty();
     }
 
+    // FIXME: in the case of multiple auth providers, this will return the first one found.
     return Optional.of(createUserFromRecord(result.get(0)));
   }
 

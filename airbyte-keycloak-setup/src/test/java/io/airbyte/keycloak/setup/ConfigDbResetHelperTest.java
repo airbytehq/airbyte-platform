@@ -37,11 +37,18 @@ class ConfigDbResetHelperTest extends BaseConfigDatabaseTest {
           .values(ORGANIZATION_ID, "Org", "org@airbyte.io")
           .execute();
 
-      // Insert sample users, some with AuthProvider as keycloak and one with a different AuthProvider
+      // Insert sample users
       ctx.insertInto(Tables.USER, Tables.USER.ID, Tables.USER.AUTH_PROVIDER, Tables.USER.AUTH_USER_ID, Tables.USER.EMAIL, Tables.USER.NAME)
           .values(KEYCLOAK_USER_1_ID, AuthProvider.keycloak, UUID.randomUUID().toString(), "one@airbyte.io", "User One")
           .values(KEYCLOAK_USER_2_ID, AuthProvider.keycloak, UUID.randomUUID().toString(), "two@airbyte.io", "User Two")
           .values(NON_KEYCLOAK_USER_ID, AuthProvider.airbyte, UUID.randomUUID().toString(), "three@airbyte.io", "User Three")
+          .execute();
+
+      // Insert auth users for these users
+      ctx.insertInto(Tables.AUTH_USER, Tables.AUTH_USER.ID, Tables.AUTH_USER.USER_ID, Tables.AUTH_USER.AUTH_USER_ID, Tables.AUTH_USER.AUTH_PROVIDER)
+          .values(UUID.randomUUID(), KEYCLOAK_USER_1_ID, UUID.randomUUID().toString(), AuthProvider.keycloak)
+          .values(UUID.randomUUID(), KEYCLOAK_USER_2_ID, UUID.randomUUID().toString(), AuthProvider.keycloak)
+          .values(UUID.randomUUID(), NON_KEYCLOAK_USER_ID, UUID.randomUUID().toString(), AuthProvider.airbyte)
           .execute();
 
       // Insert permissions for these users
@@ -89,9 +96,9 @@ class ConfigDbResetHelperTest extends BaseConfigDatabaseTest {
     assertEquals(1, countRowsInTable(Tables.PERMISSION));
 
     // Assert that the remaining user is the one not backed by keycloak
-    final var remainingUserAuthProvider = database.query(ctx -> ctx.select(Tables.USER.AUTH_PROVIDER)
-        .from(Tables.USER)
-        .fetchOne(Tables.USER.AUTH_PROVIDER));
+    final var remainingUserAuthProvider = database.query(ctx -> ctx.select(Tables.AUTH_USER.AUTH_PROVIDER)
+        .from(Tables.AUTH_USER)
+        .fetchOne(Tables.AUTH_USER.AUTH_PROVIDER));
     assertEquals(AuthProvider.airbyte, remainingUserAuthProvider);
 
     // Assert that the remaining permission is the one not associated with a keycloak user
