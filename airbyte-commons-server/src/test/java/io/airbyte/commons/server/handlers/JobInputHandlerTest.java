@@ -64,6 +64,7 @@ import org.junit.jupiter.api.Test;
 /**
  * Test the JobInputHandler.
  */
+@SuppressWarnings("PMD.AvoidDuplicateLiterals")
 class JobInputHandlerTest {
 
   private static JobPersistence jobPersistence;
@@ -103,8 +104,6 @@ class JobInputHandlerTest {
     jobPersistence = mock(JobPersistence.class);
     configRepository = mock(ConfigRepository.class);
     configInjector = mock(ConfigInjector.class);
-    oAuthConfigSupplier = mock(OAuthConfigSupplier.class);
-    actorDefinitionVersionHelper = mock(ActorDefinitionVersionHelper.class);
 
     oAuthConfigSupplier = mock(OAuthConfigSupplier.class);
     job = mock(Job.class);

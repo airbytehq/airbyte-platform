@@ -33,7 +33,7 @@ class DefaultPostLoadExecutorTest {
     final DefaultPostLoadExecutor postLoadExecution =
         new DefaultPostLoadExecutor(applyDefinitionsHelper, declarativeSourceUpdater);
 
-    assertDoesNotThrow(() -> postLoadExecution.execute());
+    assertDoesNotThrow(postLoadExecution::execute);
     verify(applyDefinitionsHelper, times(1)).apply(false, true);
   }
 
@@ -48,7 +48,7 @@ class DefaultPostLoadExecutorTest {
     final DefaultPostLoadExecutor postLoadExecution =
         new DefaultPostLoadExecutor(applyDefinitionsHelper, declarativeSourceUpdater);
 
-    assertThrows(IOException.class, () -> postLoadExecution.execute());
+    assertThrows(IOException.class, postLoadExecution::execute);
   }
 
 }

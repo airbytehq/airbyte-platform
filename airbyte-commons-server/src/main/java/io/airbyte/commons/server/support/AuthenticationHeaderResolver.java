@@ -10,7 +10,6 @@ import static io.airbyte.commons.server.support.AuthenticationHttpHeaders.CONNEC
 import static io.airbyte.commons.server.support.AuthenticationHttpHeaders.CONNECTION_ID_HEADER;
 import static io.airbyte.commons.server.support.AuthenticationHttpHeaders.CREATOR_USER_ID_HEADER;
 import static io.airbyte.commons.server.support.AuthenticationHttpHeaders.DESTINATION_ID_HEADER;
-import static io.airbyte.commons.server.support.AuthenticationHttpHeaders.EMAIL_HEADER;
 import static io.airbyte.commons.server.support.AuthenticationHttpHeaders.EXTERNAL_AUTH_ID_HEADER;
 import static io.airbyte.commons.server.support.AuthenticationHttpHeaders.IS_PUBLIC_API_HEADER;
 import static io.airbyte.commons.server.support.AuthenticationHttpHeaders.JOB_ID_HEADER;
@@ -28,7 +27,6 @@ import io.airbyte.api.model.generated.PermissionRead;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.commons.server.handlers.PermissionHandler;
 import io.airbyte.config.ScopeType;
-import io.airbyte.config.User;
 import io.airbyte.config.persistence.ConfigNotFoundException;
 import io.airbyte.config.persistence.UserPersistence;
 import io.airbyte.persistence.job.WorkspaceHelper;
@@ -40,7 +38,6 @@ import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import lombok.extern.slf4j.Slf4j;
@@ -74,8 +71,8 @@ public class AuthenticationHeaderResolver {
     try {
       if (properties.containsKey(ORGANIZATION_ID_HEADER)) {
         return List.of(UUID.fromString(properties.get(ORGANIZATION_ID_HEADER)));
-      } else if (properties.containsKey(SCOPE_TYPE_HEADER) && properties.containsKey(SCOPE_ID_HEADER) && properties.get(SCOPE_TYPE_HEADER)
-          .equals(ScopeType.ORGANIZATION.value().toLowerCase())) {
+      } else if (properties.containsKey(SCOPE_TYPE_HEADER) && properties.containsKey(SCOPE_ID_HEADER)
+          && properties.get(SCOPE_TYPE_HEADER).equalsIgnoreCase(ScopeType.ORGANIZATION.value())) {
         // if the scope type is organization, we can use the scope id directly to resolve an organization
         // id.
         final String organizationId = properties.get(SCOPE_ID_HEADER);
@@ -95,7 +92,7 @@ public class AuthenticationHeaderResolver {
       }
 
       final List<UUID> organizationIds = new ArrayList<>();
-      for (UUID workspaceId : workspaceIds) {
+      for (final UUID workspaceId : workspaceIds) {
         try {
           organizationIds.add(workspaceHelper.getOrganizationForWorkspace(workspaceId));
         } catch (final Exception e) {
@@ -106,7 +103,7 @@ public class AuthenticationHeaderResolver {
     } catch (final ConfigNotFoundException e) {
       log.debug("Unable to resolve organization ID.", e);
       return null;
-    } catch (IOException e) {
+    } catch (final IOException e) {
       throw new RuntimeException(e);
     }
   }
@@ -150,8 +147,8 @@ public class AuthenticationHeaderResolver {
         // this will be skipped
         // The full list of workspace ID permissions is handled below in the catch-all.
         return resolveWorkspaces(properties);
-      } else if (properties.containsKey(SCOPE_TYPE_HEADER) && properties.containsKey(SCOPE_ID_HEADER) && properties.get(SCOPE_TYPE_HEADER)
-          .equals(ScopeType.WORKSPACE.value().toLowerCase())) {
+      } else if (properties.containsKey(SCOPE_TYPE_HEADER) && properties.containsKey(SCOPE_ID_HEADER)
+          && properties.get(SCOPE_TYPE_HEADER).equalsIgnoreCase(ScopeType.WORKSPACE.value())) {
         // if the scope type is workspace, we can use the scope id directly to resolve a workspace id.
         final String workspaceId = properties.get(SCOPE_ID_HEADER);
         return List.of(UUID.fromString(workspaceId));
@@ -175,7 +172,7 @@ public class AuthenticationHeaderResolver {
     } catch (final JsonValidationException | ConfigNotFoundException e) {
       log.debug("Unable to resolve workspace ID.", e);
       return null;
-    } catch (IOException e) {
+    } catch (final IOException e) {
       throw new RuntimeException(e);
     }
   }
@@ -190,8 +187,6 @@ public class AuthenticationHeaderResolver {
         return resolveAirbyteUserIdToAuthUserIds(properties.get(AIRBYTE_USER_ID_HEADER));
       } else if (properties.containsKey(CREATOR_USER_ID_HEADER)) {
         return resolveAirbyteUserIdToAuthUserIds(properties.get(CREATOR_USER_ID_HEADER));
-      } else if (properties.containsKey(EMAIL_HEADER)) {
-        return resolveEmailToAuthUserIds(properties.get(EMAIL_HEADER));
       } else {
         log.debug("Request does not contain any headers that resolve to a user ID.");
         return null;
@@ -210,16 +205,6 @@ public class AuthenticationHeaderResolver {
     }
 
     return new HashSet<>(authUserIds);
-  }
-
-  // TODO remove email-based resolution after Firebase invitations
-  // are replaced, flawed because email is not unique
-  private Set<String> resolveEmailToAuthUserIds(final String email) throws IOException {
-    final Optional<User> user = userPersistence.getUserByEmail(email);
-    if (user.isEmpty()) {
-      throw new IllegalArgumentException(String.format("Could not find a user database record for email %s", email));
-    }
-    return Set.of(user.get().getAuthUserId());
   }
 
   private UUID resolveWorkspaceIdFromPermissionHeader(final Map<String, String> properties) throws ConfigNotFoundException, IOException {
@@ -258,7 +243,7 @@ public class AuthenticationHeaderResolver {
       return deserialized.stream().map(connectionId -> {
         try {
           return workspaceHelper.getWorkspaceForConnectionId(UUID.fromString(connectionId));
-        } catch (JsonValidationException | ConfigNotFoundException e) {
+        } catch (final JsonValidationException | ConfigNotFoundException e) {
           throw new RuntimeException(e);
         }
       }).toList();

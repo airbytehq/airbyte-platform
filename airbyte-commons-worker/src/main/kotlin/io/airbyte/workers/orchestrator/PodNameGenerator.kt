@@ -1,6 +1,5 @@
 package io.airbyte.workers.orchestrator
 
-import io.airbyte.workers.process.AsyncKubePodStatus
 import io.airbyte.workers.process.KubeProcessFactory.KUBE_NAME_LEN_LIMIT
 import io.airbyte.workers.process.ProcessFactory
 import io.airbyte.workers.sync.ReplicationLauncherWorker.POD_NAME_PREFIX
@@ -59,13 +58,6 @@ class PodNameGenerator(
       attemptId.toInt(),
       KUBE_NAME_LEN_LIMIT,
     )
-  }
-
-  fun getOrchestratorOutputLocation(
-    jobId: String,
-    attemptId: Long,
-  ): String {
-    return "$namespace/${getReplicationOrchestratorPodName(jobId, attemptId)}/${AsyncKubePodStatus.SUCCEEDED.name}"
   }
 
   companion object {

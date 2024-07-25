@@ -27,6 +27,20 @@ export const StreamNameCell: React.FC<StreamNameCellProps> = ({
 }) => {
   const { config } = row.original.streamNode;
 
+  // expand stream and field rows
+  const onToggleExpand = () => {
+    row.getToggleExpandedHandler()();
+    if (!row.subRows) {
+      return;
+    }
+    row.subRows.forEach((field) => {
+      if (!field.getCanExpand()) {
+        return;
+      }
+      field.getToggleExpandedHandler()();
+    });
+  };
+
   return (
     <FlexContainer gap="none" alignItems="center">
       <CheckBox
@@ -38,7 +52,7 @@ export const StreamNameCell: React.FC<StreamNameCellProps> = ({
         type="button"
         icon={row.getIsExpanded() ? "chevronDown" : "chevronRight"}
         variant="clear"
-        onClick={row.getToggleExpandedHandler()}
+        onClick={onToggleExpand}
         disabled={!row.getCanExpand()}
       />
       <TextWithOverflowTooltip>

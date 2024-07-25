@@ -40,6 +40,7 @@ import org.slf4j.LoggerFactory;
  *
  * The monitor checks for a timeout every {@link #pollInterval}.
  */
+@SuppressWarnings("PMD.PreserveStackTrace")
 public class DestinationTimeoutMonitor implements AutoCloseable {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(DestinationTimeoutMonitor.class);

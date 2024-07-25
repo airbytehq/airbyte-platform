@@ -40,7 +40,7 @@ import { SyncModeCell } from "./components/SyncModeCell";
 import { TableControls } from "./components/TableControls";
 import { useInitialRowIndex } from "./hooks/useInitialRowIndex";
 import styles from "./SyncCatalogTable.module.scss";
-import { getRowChangeStatus, getStreamFieldRows, getStreamRows, isStreamRow } from "./utils";
+import { getRowChangeStatus, getSyncCatalogRows, isStreamRow } from "./utils";
 import { FormConnectionFormValues, SyncStreamFieldWithId } from "../formConfig";
 
 export interface SyncCatalogUIModel {
@@ -81,6 +81,7 @@ export interface SyncCatalogUIModel {
    */
   flattenedFields?: SyncSchemaField[];
   field?: SyncSchemaField;
+  subRows?: SyncCatalogUIModel[];
 }
 
 export const SyncCatalogTable: FC = () => {
@@ -202,7 +203,7 @@ export const SyncCatalogTable: FC = () => {
   ];
 
   const preparedData = useMemo(
-    () => getStreamRows(streams, initialValues.syncCatalog.streams, prefix),
+    () => getSyncCatalogRows(streams, initialValues.syncCatalog.streams, prefix),
     [initialValues.syncCatalog.streams, prefix, streams]
   );
 
@@ -210,7 +211,7 @@ export const SyncCatalogTable: FC = () => {
     useReactTable<SyncCatalogUIModel>({
       columns,
       data: preparedData,
-      getSubRows: getStreamFieldRows,
+      getSubRows: (row) => row.subRows,
       state: {
         expanded,
         globalFilter: deferredFilteringValue,
@@ -233,7 +234,7 @@ export const SyncCatalogTable: FC = () => {
       onExpandedChange: setExpanded,
       onColumnFiltersChange: setColumnFilters,
       onGlobalFilterChange: setFiltering,
-      getRowCanExpand: (row) => isStreamRow(row),
+      getRowCanExpand: (row) => !!row.subRows.length,
       debugTable,
     });
 

@@ -63,7 +63,7 @@ class AwsSecretManagerPersistence(private val awsClient: AwsClient, private val 
         // The AWS SDK doesn't differentiate between role access exceptions and secret not found exceptions to prevent leaking information.
         // Because of this we catch the exception and if it's due to the assumed-role not having access, we just ignore it and proceed.
         // In theory, the secret should not exist, and we will go straight to attempting to create which is safe because:
-        // 1. Update and create are distinct actions and we can't create over an already existing secret so we should get an error and no-op
+        // 1. Update and create are distinct actions, and we can't create over an already existing secret, so we should get an error and no-op
         // 2. If the secret does exist, we will get an error and no-op
         if (e.localizedMessage.contains("assumed-role")) {
           logger.info { "AWS exception caught - Secret ${coordinate.coordinateBase} not found" }
@@ -142,7 +142,7 @@ class AwsClient(
 
   private fun parseTags(tags: String?): Map<String, String> {
     // Define the regex pattern for the whole string validation
-    val pattern = "^[\\w\\s._:\\/=+-@]+=[\\w\\s._:\\/=+-@]+(,\\s*[\\w\\s._:\\/=+-@]+=[\\w\\s._:\\/=+-@]+)*\$".toRegex()
+    val pattern = "^[\\w\\s._:/=+-@]+=[\\w\\s._:/=+-@]+(,\\s*[\\w\\s._:/=+-@]+=[\\w\\s._:/=+-@]+)*$".toRegex()
 
     // Check if unparsedTags is not null, not blank, and matches the pattern
     return if (!tags.isNullOrBlank() && pattern.matches(tags)) {

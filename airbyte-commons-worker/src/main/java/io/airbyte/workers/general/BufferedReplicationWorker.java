@@ -58,6 +58,7 @@ import org.slf4j.MDC;
  * There is one thread per IO/Transform and buffers in between the different steps to apply
  * backpressure.
  */
+@SuppressWarnings({"PMD.UnusedLocalVariable", "PMD.ExceptionAsFlowControl"})
 public class BufferedReplicationWorker implements ReplicationWorker {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(BufferedReplicationWorker.class);
@@ -88,7 +89,6 @@ public class BufferedReplicationWorker implements ReplicationWorker {
 
   private static final int sourceMaxBufferSize = 1000;
   private static final int destinationMaxBufferSize = 1000;
-  private static final int observabilityMetricsPeriodInSeconds = 1;
   private static final int executorShutdownGracePeriodInSeconds = 10;
 
   public BufferedReplicationWorker(final String jobId,
@@ -518,7 +518,7 @@ public class BufferedReplicationWorker implements ReplicationWorker {
 
   private class CloseableWithTimeout implements AutoCloseable {
 
-    AutoCloseable autoCloseable;
+    final AutoCloseable autoCloseable;
     private final Map<String, String> mdc;
     private final ReplicationFeatureFlags flags;
 

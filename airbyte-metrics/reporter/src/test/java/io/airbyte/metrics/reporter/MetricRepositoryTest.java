@@ -27,12 +27,12 @@ import java.util.Map;
 import java.util.UUID;
 import org.jooq.DSLContext;
 import org.jooq.JSONB;
-import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
+@SuppressWarnings("PMD.AbstractClassWithoutAbstractMethod")
 abstract class MetricRepositoryTest {
 
   private static final String SRC = "src";
@@ -57,11 +57,6 @@ abstract class MetricRepositoryTest {
     ctx.truncate(JOBS).cascade().execute();
     ctx.truncate(ATTEMPTS).cascade().execute();
     ctx.truncate(WORKSPACE).cascade().execute();
-  }
-
-  @AfterEach
-  void tearDown() {
-
   }
 
   @Nested

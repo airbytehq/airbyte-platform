@@ -25,6 +25,7 @@ import org.slf4j.Logger;
  * values. It substitutes strings with ${} access, e.g. "The ${animal} jumped over the ${target}"
  * with {animal: fox, target: fence}
  */
+@SuppressWarnings("PMD.AvoidReassigningParameters")
 public class ConfigReplacer {
 
   private final Logger logger;

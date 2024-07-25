@@ -41,7 +41,7 @@ data class TemporalCloudConfig(
 )
 
 /**
- * Connection configuration when using a self hosted version of temporal.
+ * Connection configuration when using a self-hosted version of temporal.
  */
 data class TemporalSelfHostedConfig(
   val host: String?,

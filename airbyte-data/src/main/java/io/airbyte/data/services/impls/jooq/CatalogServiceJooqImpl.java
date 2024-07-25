@@ -66,7 +66,7 @@ public class CatalogServiceJooqImpl implements CatalogService {
     final Result<Record> result = database.query(ctx -> ctx.select(ACTOR_CATALOG.asterisk())
         .from(ACTOR_CATALOG).where(ACTOR_CATALOG.ID.eq(actorCatalogId))).fetch();
 
-    if (result.size() > 0) {
+    if (!result.isEmpty()) {
       return DbConverter.buildActorCatalog(result.get(0));
     }
     throw new ConfigNotFoundException(ConfigSchema.ACTOR_CATALOG, actorCatalogId);

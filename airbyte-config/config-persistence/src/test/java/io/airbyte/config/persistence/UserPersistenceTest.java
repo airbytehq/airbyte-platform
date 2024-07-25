@@ -13,6 +13,8 @@ import io.airbyte.config.Permission;
 import io.airbyte.config.Permission.PermissionType;
 import io.airbyte.config.StandardWorkspace;
 import io.airbyte.config.User;
+import io.airbyte.config.UserInfo;
+import io.airbyte.config.helpers.UserInfoConverter;
 import io.airbyte.config.secrets.SecretsRepositoryReader;
 import io.airbyte.config.secrets.SecretsRepositoryWriter;
 import io.airbyte.data.helpers.ActorDefinitionVersionUpdater;
@@ -39,6 +41,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Stream;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
@@ -131,14 +134,6 @@ class UserPersistenceTest extends BaseConfigDatabaseTest {
     }
 
     @Test
-    void getUserByAuthIdFromUserTableTest() throws IOException {
-      for (final User user : MockData.users()) {
-        final Optional<User> userFromDb = userPersistence.getUserByAuthIdFromUserTable(user.getAuthUserId());
-        Assertions.assertEquals(user, userFromDb.get());
-      }
-    }
-
-    @Test
     void getUserByAuthIdFromAuthUserTableTest() throws IOException {
       for (final User user : MockData.users()) {
         final Optional<User> userFromDb = userPersistence.getUserByAuthIdFromAuthUserTable(user.getAuthUserId());
@@ -160,8 +155,9 @@ class UserPersistenceTest extends BaseConfigDatabaseTest {
         userPersistence.writeUser(user);
       }
 
-      final List<User> usersWithSameEmail = userPersistence.getUsersByEmail(MockData.DUP_EMAIL);
-      Assertions.assertEquals(new HashSet<>(MockData.dupEmailUsers()), new HashSet<>(usersWithSameEmail));
+      final List<UserInfo> expectedUsers = MockData.dupEmailUsers().stream().map(UserInfoConverter::userInfoFromUser).toList();
+      final List<UserInfo> usersWithSameEmail = userPersistence.getUsersByEmail(MockData.DUP_EMAIL);
+      Assertions.assertEquals(new HashSet<>(expectedUsers), new HashSet<>(usersWithSameEmail));
     }
 
     @Test
@@ -323,13 +319,16 @@ class UserPersistenceTest extends BaseConfigDatabaseTest {
 
     @Test
     void getUsersWithWorkspaceAccess() throws IOException {
-      final Set<User> expectedUsersWorkspace1 = Set.of(ORG_READER_USER, BOTH_ORG_AND_WORKSPACE_USER);
-      final Set<User> expectedUsersWorkspace2 = Set.of(ORG_READER_USER, WORKSPACE_2_AND_3_READER_USER, BOTH_ORG_AND_WORKSPACE_USER);
-      final Set<User> expectedUsersWorkspace3 = Set.of(WORKSPACE_2_AND_3_READER_USER);
+      final Set<UserInfo> expectedUsersWorkspace1 =
+          Set.copyOf(Stream.of(ORG_READER_USER, BOTH_ORG_AND_WORKSPACE_USER).map(UserInfoConverter::userInfoFromUser).toList());
+      final Set<UserInfo> expectedUsersWorkspace2 = Set.copyOf(
+          Stream.of(ORG_READER_USER, WORKSPACE_2_AND_3_READER_USER, BOTH_ORG_AND_WORKSPACE_USER).map(UserInfoConverter::userInfoFromUser).toList());
+      final Set<UserInfo> expectedUsersWorkspace3 =
+          Set.copyOf(Stream.of(WORKSPACE_2_AND_3_READER_USER).map(UserInfoConverter::userInfoFromUser).toList());
 
-      final Set<User> actualUsersWorkspace1 = new HashSet<>(userPersistence.getUsersWithWorkspaceAccess(WORKSPACE_1_ORG_1.getWorkspaceId()));
-      final Set<User> actualUsersWorkspace2 = new HashSet<>(userPersistence.getUsersWithWorkspaceAccess(WORKSPACE_2_ORG_1.getWorkspaceId()));
-      final Set<User> actualUsersWorkspace3 = new HashSet<>(userPersistence.getUsersWithWorkspaceAccess(WORKSPACE_3_ORG_2.getWorkspaceId()));
+      final Set<UserInfo> actualUsersWorkspace1 = new HashSet<>(userPersistence.getUsersWithWorkspaceAccess(WORKSPACE_1_ORG_1.getWorkspaceId()));
+      final Set<UserInfo> actualUsersWorkspace2 = new HashSet<>(userPersistence.getUsersWithWorkspaceAccess(WORKSPACE_2_ORG_1.getWorkspaceId()));
+      final Set<UserInfo> actualUsersWorkspace3 = new HashSet<>(userPersistence.getUsersWithWorkspaceAccess(WORKSPACE_3_ORG_2.getWorkspaceId()));
 
       Assertions.assertEquals(expectedUsersWorkspace1, actualUsersWorkspace1);
       Assertions.assertEquals(expectedUsersWorkspace2, actualUsersWorkspace2);

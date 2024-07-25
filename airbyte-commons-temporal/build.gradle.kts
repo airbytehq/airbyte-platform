@@ -26,7 +26,7 @@ dependencies {
   implementation(project(":oss:airbyte-persistence:job-persistence"))
   implementation(libs.airbyte.protocol)
   implementation(project(":oss:airbyte-worker-models"))
-  implementation(project(":oss:airbyte-api"))
+  implementation(project(":oss:airbyte-api:server-api"))
   implementation(project(":oss:airbyte-json-validation"))
 
   testAnnotationProcessor(platform(libs.micronaut.platform))

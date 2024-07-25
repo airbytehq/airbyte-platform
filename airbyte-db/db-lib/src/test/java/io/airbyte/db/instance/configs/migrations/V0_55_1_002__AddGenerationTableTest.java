@@ -21,7 +21,7 @@ import org.jooq.DSLContext;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-public class V0_55_1_002__AddGenerationTableTest extends AbstractConfigsDatabaseTest {
+class V0_55_1_002__AddGenerationTableTest extends AbstractConfigsDatabaseTest {
 
   @BeforeEach
   void beforeEach() {
@@ -36,7 +36,7 @@ public class V0_55_1_002__AddGenerationTableTest extends AbstractConfigsDatabase
   }
 
   @Test
-  public void test() {
+  void test() {
     final DSLContext dslContext = getDslContext();
     final boolean tableExists = generationTableExists(dslContext);
 

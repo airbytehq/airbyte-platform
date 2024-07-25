@@ -102,6 +102,7 @@ import org.mockito.MockedStatic;
 import org.mockito.Mockito;
 
 @DisplayName("Job History Handler")
+@SuppressWarnings("PMD.AvoidDuplicateLiterals")
 class JobHistoryHandlerTest {
 
   private static final long JOB_ID = 100L;
@@ -295,7 +296,7 @@ class JobHistoryHandlerTest {
       Attempt successfulJobAttempt2 = createAttempt(1, JOB_ID, CREATED_AT, AttemptStatus.SUCCEEDED);
       final var successfulJob = new Job(JOB_ID, JOB_CONFIG.getConfigType(), JOB_CONFIG_ID, JOB_CONFIG,
           ImmutableList.of(testJobAttempt, successfulJobAttempt2), JOB_STATUS, null, CREATED_AT,
-          CREATED_AT);;
+          CREATED_AT);
       final int pagesize = 25;
       final int rowOffset = 0;
 
@@ -473,7 +474,7 @@ class JobHistoryHandlerTest {
       when(featureFlagClient.boolVariation(HydrateAggregatedStats.INSTANCE, new Workspace(ANONYMOUS))).thenReturn(true);
       final var successfulJob =
           new Job(JOB_ID, JOB_CONFIG.getConfigType(), JOB_CONFIG_ID, JOB_CONFIG, ImmutableList.of(testJobAttempt), JOB_STATUS, null, CREATED_AT,
-              CREATED_AT);;
+              CREATED_AT);
       final int pagesize = 25;
       final int rowOffset = 0;
 

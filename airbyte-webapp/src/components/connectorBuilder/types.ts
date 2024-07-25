@@ -129,6 +129,17 @@ export interface BuilderFormValues {
   version: string;
 }
 
+export interface StreamTestResults {
+  streamHash: string;
+  hasResponse: boolean;
+  responsesAreSuccessful: boolean;
+  hasRecords: boolean;
+  primaryKeysArePresent: boolean;
+  primaryKeysAreUnique: boolean;
+}
+
+type TestedStreams = Record<string, StreamTestResults>;
+
 export type RequestOptionOrPathInject = Omit<RequestOption, "type"> | { inject_into: "path" };
 
 export interface BuilderCursorPagination extends Omit<CursorPagination, "cursor_value" | "stop_condition"> {
@@ -255,6 +266,7 @@ export interface BuilderStream {
   schema?: string;
   autoImportSchema: boolean;
   unknownFields?: YamlString;
+  testResults?: StreamTestResults;
 }
 
 type StreamName = string;
@@ -277,6 +289,7 @@ export interface BuilderMetadata {
     streams?: Record<StreamName, Array<YamlSupportedComponentName["stream"]>>;
     global?: Array<YamlSupportedComponentName["global"]>;
   };
+  testedStreams?: TestedStreams;
 }
 
 // 0.29.0 is the version where breaking changes got introduced - older states can't be supported
@@ -895,6 +908,7 @@ export const builderFormValuesToMetadata = (values: BuilderFormValues): BuilderM
   ) => (isYamlString(value) ? [componentName] : []);
 
   const yamlComponentsPerStream = {} as Record<string, Array<YamlSupportedComponentName["stream"]>>;
+  const testedStreams = {} as TestedStreams;
   values.streams.forEach((stream) => {
     const yamlComponents = [
       ...componentNameIfString("paginator", stream.paginator),
@@ -907,6 +921,10 @@ export const builderFormValuesToMetadata = (values: BuilderFormValues): BuilderM
     ];
     if (yamlComponents.length > 0) {
       yamlComponentsPerStream[stream.name] = yamlComponents;
+    }
+
+    if (stream.testResults) {
+      testedStreams[stream.name] = stream.testResults;
     }
   });
   const hasStreamYamlComponents = Object.keys(yamlComponentsPerStream).length > 0;
@@ -926,6 +944,7 @@ export const builderFormValuesToMetadata = (values: BuilderFormValues): BuilderM
         }),
       },
     }),
+    testedStreams,
   };
 };
 

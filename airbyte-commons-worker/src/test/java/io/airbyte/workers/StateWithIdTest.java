@@ -27,7 +27,7 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.testcontainers.shaded.com.google.common.collect.ImmutableMap;
 
-public class StateWithIdTest {
+class StateWithIdTest {
 
   private static final Queue<Integer> EXPECTED_IDS = new LinkedBlockingQueue<>();
 
@@ -47,7 +47,7 @@ public class StateWithIdTest {
     "{\"[\\\"db_jagkjrgxhw\\\",{\\\"server\\\":\\\"db_jagkjrgxhw\\\"}]\":\"{\\\"transaction_id\\\":null,\\\"lsn\\\":"
         + "23896935,\\\"txId\\\":505,\\\"ts_usec\\\":1677520006097984}\"}"
   })
-  public void globalStateTest(final String cdcState) {
+  void globalStateTest(final String cdcState) {
     final Random random = new Random();
     final double recordCount = random.nextDouble();
     final String cursorName = UUID.randomUUID().toString();
@@ -75,7 +75,7 @@ public class StateWithIdTest {
   }
 
   @Test
-  public void streamStateTest() {
+  void streamStateTest() {
     final Random random = new Random();
     final double recordCount = random.nextDouble();
     final String cursorName = UUID.randomUUID().toString();

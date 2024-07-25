@@ -27,6 +27,7 @@ import io.airbyte.config.DestinationConnection;
 import io.airbyte.config.JobConfig;
 import io.airbyte.config.JobConfigProxy;
 import io.airbyte.config.JobOutput;
+import io.airbyte.config.RefreshStream;
 import io.airbyte.config.StandardDestinationDefinition;
 import io.airbyte.config.StandardSync;
 import io.airbyte.config.StandardSyncOutput;
@@ -167,7 +168,7 @@ public class AttemptHandler {
         throw new IllegalStateException("Trying to create a refresh attempt for a destination which doesn't support refreshes");
       }
       final Set<StreamDescriptor> streamToReset = getFullRefresh(job.getConfig().getRefresh().getConfiguredAirbyteCatalog(), true);
-      streamToReset.addAll(job.getConfig().getRefresh().getStreamsToRefresh().stream().map(streamRefresh -> streamRefresh.getStreamDescriptor())
+      streamToReset.addAll(job.getConfig().getRefresh().getStreamsToRefresh().stream().map(RefreshStream::getStreamDescriptor)
           .collect(Collectors.toSet()));
       generationBumper.updateGenerationForStreams(connectionId, job.getId(), List.of(), streamToReset);
 

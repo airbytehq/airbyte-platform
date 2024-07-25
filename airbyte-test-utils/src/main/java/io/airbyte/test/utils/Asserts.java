@@ -15,7 +15,6 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.node.ObjectNode;
 import dev.failsafe.Failsafe;
 import dev.failsafe.RetryPolicy;
 import io.airbyte.api.client.model.generated.ConnectionState;
@@ -29,9 +28,7 @@ import io.airbyte.db.Database;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -125,41 +122,6 @@ public class Asserts {
       assertTrue(destinationRecords.contains(sourceStreamRecord),
           String.format("destination does not contain record:\n %s \n destination contains:\n %s\n",
               sourceStreamRecord, destinationRecords));
-    }
-  }
-
-  @SuppressWarnings("PMD.ForLoopCanBeForeach")
-  private static boolean recordIsContainedIn(JsonNode sourceStreamRecord, final List<JsonNode> destinationRecords) {
-    // NOTE: I would expect the simple `equals` method to do this deep comparison, but it didn't seem to
-    // be working, so this is a short-term workaround.
-    for (final JsonNode destinationRecord : destinationRecords) {
-      if (sourceStreamRecord.size() != destinationRecord.size()) {
-        continue;
-      }
-      boolean fieldsMatch = true;
-      for (Iterator<Map.Entry<String, JsonNode>> it = sourceStreamRecord.fields(); it.hasNext();) {
-        final var field = it.next();
-        final var destinationValue = destinationRecord.findValue(field.getKey());
-        fieldsMatch &= destinationValue.asText().equals(field.getValue().asText());
-      }
-      if (fieldsMatch) {
-        return true;
-      }
-    }
-    return false;
-  }
-
-  private static void dropAirbyteSystemColumns(final List<JsonNode> destinationRecords) {
-    for (final var record : destinationRecords) {
-      // Clear the properties prefixed with "_airbyte", since we add those, and they won't be in the
-      // source.
-      final List<String> fieldsToKeep = new ArrayList<>();
-      record.fieldNames().forEachRemaining(fieldName -> {
-        if (!fieldName.startsWith("_airbyte")) {
-          fieldsToKeep.add(fieldName);
-        }
-      });
-      ((ObjectNode) record).retain(fieldsToKeep);
     }
   }
 

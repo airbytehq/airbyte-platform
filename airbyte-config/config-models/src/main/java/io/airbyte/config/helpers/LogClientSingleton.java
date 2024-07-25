@@ -96,7 +96,7 @@ public class LogClientSingleton {
    */
   @VisibleForTesting
   public void deleteLogs(final WorkerEnvironment workerEnvironment, final LogConfigs logConfigs, final String logPath) {
-    if (logPath == null || logPath.equals("")) {
+    if (logPath.isEmpty()) {
       return;
     }
 

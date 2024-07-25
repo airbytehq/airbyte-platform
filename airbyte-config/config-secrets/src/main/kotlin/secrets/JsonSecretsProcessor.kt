@@ -21,14 +21,11 @@ import java.util.stream.Collectors
 
 private val logger = KotlinLogging.logger {}
 
-class JsonSecretsProcessor(val copySecrets: Boolean = false) {
+class JsonSecretsProcessor(private val copySecrets: Boolean = false) {
   companion object {
-    protected val VALIDATOR = JsonSchemaValidator()
+    private val VALIDATOR = JsonSchemaValidator()
     const val PROPERTIES_FIELD = "properties"
-    const val TYPE_FIELD = "type"
-    const val ARRAY_TYPE_FIELD = "array"
-    const val ITEMS_FIELD = "items"
-    const val ONE_OF_FIELD = "oneOf"
+    private const val ONE_OF_FIELD = "oneOf"
 
     /**
      * Given a JSONSchema object and an object that conforms to that schema, obfuscate all fields in the

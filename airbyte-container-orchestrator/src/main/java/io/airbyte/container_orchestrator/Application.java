@@ -27,7 +27,7 @@ import org.slf4j.LoggerFactory;
  * This app uses default logging which is directly captured by the calling Temporal worker. In the
  * future this will need to independently interact with cloud storage.
  */
-@SuppressWarnings({"PMD.AvoidCatchingThrowable", "PMD.DoNotTerminateVM", "PMD.AvoidFieldNameMatchingTypeName"})
+@SuppressWarnings({"PMD.AvoidCatchingThrowable", "PMD.DoNotTerminateVM", "PMD.AvoidFieldNameMatchingTypeName", "PMD.UnusedLocalVariable"})
 @Singleton
 public class Application {
 

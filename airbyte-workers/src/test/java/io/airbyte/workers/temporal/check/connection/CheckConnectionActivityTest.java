@@ -12,7 +12,6 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import io.airbyte.api.client.AirbyteApiClient;
-import io.airbyte.api.client.WorkloadApiClient;
 import io.airbyte.api.client.model.generated.Geography;
 import io.airbyte.commons.features.FeatureFlags;
 import io.airbyte.commons.protocol.AirbyteMessageSerDeProvider;
@@ -26,7 +25,6 @@ import io.airbyte.config.StandardCheckConnectionInput;
 import io.airbyte.config.StandardCheckConnectionOutput;
 import io.airbyte.config.WorkloadPriority;
 import io.airbyte.config.helpers.LogConfigs;
-import io.airbyte.config.secrets.SecretsRepositoryReader;
 import io.airbyte.featureflag.ConfigFileClient;
 import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.metrics.lib.MetricClient;
@@ -39,6 +37,7 @@ import io.airbyte.workers.process.ProcessFactory;
 import io.airbyte.workers.sync.WorkloadClient;
 import io.airbyte.workers.workload.JobOutputDocStore;
 import io.airbyte.workers.workload.WorkloadIdGenerator;
+import io.airbyte.workload.api.client.WorkloadApiClient;
 import io.airbyte.workload.api.client.generated.WorkloadApi;
 import io.airbyte.workload.api.client.model.generated.Workload;
 import io.airbyte.workload.api.client.model.generated.WorkloadCreateRequest;
@@ -57,7 +56,7 @@ import org.mockito.Captor;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 @ExtendWith(MockitoExtension.class)
-public class CheckConnectionActivityTest {
+class CheckConnectionActivityTest {
 
   private final WorkerConfigsProvider workerConfigsProvider = mock(WorkerConfigsProvider.class);
   private final ProcessFactory processFactory = mock(ProcessFactory.class);
@@ -94,7 +93,6 @@ public class CheckConnectionActivityTest {
     checkConnectionActivity = spy(new CheckConnectionActivityImpl(
         workerConfigsProvider,
         processFactory,
-        mock(SecretsRepositoryReader.class),
         workspaceRoot,
         workerEnvironment,
         logConfigs,

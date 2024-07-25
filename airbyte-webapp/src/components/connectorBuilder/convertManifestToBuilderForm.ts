@@ -342,6 +342,7 @@ const manifestStreamToBuilder = (
             }),
           })
         : undefined,
+    testResults: metadata?.testedStreams?.[streamName],
   };
 };
 

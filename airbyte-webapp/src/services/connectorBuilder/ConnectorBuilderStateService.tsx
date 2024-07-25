@@ -19,7 +19,9 @@ import {
   DEFAULT_JSON_MANIFEST_VALUES,
   useBuilderWatch,
 } from "components/connectorBuilder/types";
+import { useAutoImportSchema } from "components/connectorBuilder/useAutoImportSchema";
 import { useUpdateLockedInputs } from "components/connectorBuilder/useLockedInputs";
+import { useStreamTestMetadata } from "components/connectorBuilder/useStreamTestMetadata";
 import { UndoRedo, useUndoRedo } from "components/connectorBuilder/useUndoRedo";
 import { formatJson, streamNameOrDefault } from "components/connectorBuilder/utils";
 import { useNoUiValueModal } from "components/connectorBuilder/YamlEditor/NoUiValueModal";
@@ -270,10 +272,6 @@ export const InternalConnectorBuilderFormStateProvider: React.FC<
       : unknownErrorMessage
     : undefined;
 
-  // In UI mode, we can treat the jsonManifest as resolved, since the resolve call is only used to check for invalid YAML
-  // components in that case.
-  // Using the resolve data manifest as the resolved manifest would introduce an unnecessary lag effect in UI mode, where
-  // test reads would use the old manifest until the resolve call completes.
   const resolvedManifest = (resolveData?.manifest ?? DEFAULT_JSON_MANIFEST_VALUES) as ConnectorManifest;
 
   const streams = useBuilderWatch("formValues.streams");
@@ -724,7 +722,6 @@ export const ConnectorBuilderTestReadProvider: React.FC<React.PropsWithChildren<
   const mode = useBuilderWatch("mode");
   const view = useBuilderWatch("view");
   const testStreamIndex = useBuilderWatch("testStreamIndex");
-  const streams = useBuilderWatch("formValues.streams");
 
   useEffect(() => {
     if (typeof view === "number") {
@@ -737,7 +734,7 @@ export const ConnectorBuilderTestReadProvider: React.FC<React.PropsWithChildren<
     ...resolvedManifest,
     streams: [testStream],
   };
-  const streamName = mode === "ui" ? streams[testStreamIndex]?.name : testStream?.name ?? "";
+  const streamName = testStream?.name ?? "";
 
   const DEFAULT_PAGE_LIMIT = 5;
   const DEFAULT_SLICE_LIMIT = 5;
@@ -765,6 +762,9 @@ export const ConnectorBuilderTestReadProvider: React.FC<React.PropsWithChildren<
   const testStateParsed = testState ? JSON.parse(testState) : undefined;
   const testStateArray = testStateParsed && !Array.isArray(testStateParsed) ? [testStateParsed] : testStateParsed;
 
+  const autoImportSchema = useAutoImportSchema(testStreamIndex);
+  const { updateStreamTestResults } = useStreamTestMetadata();
+
   const streamRead = useBuilderProjectReadStream(
     {
       builderProjectId: projectId,
@@ -782,15 +782,33 @@ export const ConnectorBuilderTestReadProvider: React.FC<React.PropsWithChildren<
       if (result.latest_config_update) {
         setValue("testingValues", result.latest_config_update);
       }
+
+      if (mode === "ui" && autoImportSchema && result.inferred_schema) {
+        // additionalProperties is automatically set to true on the schema when saving it to the manifest,
+        // so set it to true on the inferred schema as well to avoid unnecessary diffs
+        result.inferred_schema.additionalProperties = true;
+
+        // Set the inferred schema in the form values when autoImportSchema is enabled
+        setValue(`formValues.streams.${testStreamIndex}.schema`, formatJson(result.inferred_schema, true), {
+          shouldValidate: true,
+          shouldTouch: true,
+          shouldDirty: true,
+        });
+
+        // Set the schema_loader on the test stream to the inferred schema as well, so
+        // that it is included in the stream when generating the test result stream hash.
+        testStream.schema_loader = {
+          type: "InlineSchemaLoader",
+          schema: result.inferred_schema,
+        } as const;
+      }
+
       // update the version so that it is clear which CDK version was used to test the connector
       updateYamlCdkVersion(jsonManifest);
+
+      updateStreamTestResults(result, testStream, streamName, testStreamIndex);
     }
   );
-  // additionalProperties is automatically set to true on the schema when saving it to the manifest,
-  // so set it to true on the inferred schema as well to avoid unnecessary diffs
-  if (streamRead.data?.inferred_schema) {
-    streamRead.data.inferred_schema.additionalProperties = true;
-  }
 
   const schemaWarnings = useSchemaWarnings(streamRead, testStreamIndex, streamName);
 

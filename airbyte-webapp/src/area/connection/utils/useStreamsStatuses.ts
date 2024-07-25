@@ -1,5 +1,3 @@
-import { useRef } from "react";
-
 import { useConnectionStatus } from "components/connection/ConnectionStatus/useConnectionStatus";
 import { ConnectionStatusIndicatorStatus } from "components/connection/ConnectionStatusIndicator";
 import {
@@ -20,8 +18,6 @@ import {
 } from "./computeStreamStatus";
 import { useStreamsSyncProgress } from "./useStreamsSyncProgress";
 
-const createEmptyStreamsStatuses = (): ReturnType<typeof useListStreamsStatuses> => ({ streamStatuses: [] });
-
 export const sortStreamStatuses = (a: StreamStatusRead, b: StreamStatusRead) => {
   if (a.transitionedAt > b.transitionedAt) {
     return -1;
@@ -38,17 +34,13 @@ export const useStreamsStatuses = (
   streamStatuses: Map<string, StreamWithStatus>;
   enabledStreams: AirbyteStreamAndConfigurationWithEnforcedStream[];
 } => {
-  const doUseStreamStatuses = useExperiment("connection.streamCentricUI.v2", false);
   const isRateLimitedUiEnabled = useExperiment("connection.rateLimitedUI", false);
   // memoizing the function to call to get per-stream statuses as
   // otherwise breaks the Rules of Hooks by introducing a conditional;
   // using ref here as react doesn't guarantee `useMemo` won't drop the reference
   // using ref here as react doesn't guarantee `useMemo` won't drop the reference
   // and we need to be sure of it in this case
-  const { current: useStreamStatusesFunction } = useRef(
-    doUseStreamStatuses ? useListStreamsStatuses : createEmptyStreamsStatuses
-  );
-  const data = useStreamStatusesFunction({ connectionId });
+  const data = useListStreamsStatuses({ connectionId });
 
   const connection = useGetConnection(connectionId);
   const { hasBreakingSchemaChange } = useSchemaChanges(connection.schemaChange);

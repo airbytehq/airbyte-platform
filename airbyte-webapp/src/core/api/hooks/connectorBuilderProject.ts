@@ -408,7 +408,7 @@ export const useChangeBuilderProjectVersion = () => {
 export const useBuilderProjectReadStream = (
   params: ConnectorBuilderProjectStreamReadRequestBody,
   testStream: DeclarativeStream,
-  onSuccess: (data: ConnectorBuilderProjectStreamRead) => void
+  onSuccess: (data: StreamReadTransformedSlices) => void
 ) => {
   const requestOptions = useRequestOptions();
 

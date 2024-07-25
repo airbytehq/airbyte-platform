@@ -102,6 +102,7 @@ import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mockito;
 
+@SuppressWarnings("PMD.AvoidDuplicateLiterals")
 class AttemptHandlerTest {
 
   private final JobConverter jobConverter = mock(JobConverter.class);

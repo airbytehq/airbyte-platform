@@ -17,7 +17,7 @@ import io.temporal.client.WorkflowOptions;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
 
-public class ConnectionManageUtilsTest {
+class ConnectionManageUtilsTest {
 
   @Test
   void signalAndRepairIfNeceesaryWhenNoWorkflowWillCreate() throws DeletedWorkflowException {

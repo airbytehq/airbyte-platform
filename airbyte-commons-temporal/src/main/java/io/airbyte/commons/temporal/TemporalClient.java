@@ -67,6 +67,7 @@ import org.apache.commons.lang3.time.StopWatch;
  */
 @Slf4j
 @Singleton
+@SuppressWarnings({"PMD.EmptyCatchBlock", "PMD.CompareObjectsWithEquals"})
 public class TemporalClient {
 
   /**
@@ -137,8 +138,8 @@ public class TemporalClient {
           serviceStubsWrapped.blockingStubListClosedWorkflowExecutions(workflowExecutionsRequest);
       final WorkflowType connectionManagerWorkflowType = WorkflowType.newBuilder().setName(ConnectionManagerWorkflow.class.getSimpleName()).build();
       workflowExecutionInfos.addAll(listOpenWorkflowExecutionsRequest.getExecutionsList().stream()
-          .filter(workflowExecutionInfo -> workflowExecutionInfo.getType() == connectionManagerWorkflowType
-              || workflowExecutionInfo.getStatus() == executionStatus)
+          .filter(workflowExecutionInfo -> workflowExecutionInfo.getType() == (connectionManagerWorkflowType)
+              || workflowExecutionInfo.getStatus() == (executionStatus))
           .flatMap((workflowExecutionInfo -> extractConnectionIdFromWorkflowId(workflowExecutionInfo.getExecution().getWorkflowId()).stream()))
           .collect(Collectors.toSet()));
       token = listOpenWorkflowExecutionsRequest.getNextPageToken();
@@ -194,9 +195,7 @@ public class TemporalClient {
     if (!workflowId.startsWith("connection_manager_")) {
       return Optional.empty();
     }
-    return Optional.ofNullable(StringUtils.removeStart(workflowId, "connection_manager_"))
-        .map(
-            stringUUID -> UUID.fromString(stringUUID));
+    return Optional.of(StringUtils.removeStart(workflowId, "connection_manager_")).map(UUID::fromString);
   }
 
   /**

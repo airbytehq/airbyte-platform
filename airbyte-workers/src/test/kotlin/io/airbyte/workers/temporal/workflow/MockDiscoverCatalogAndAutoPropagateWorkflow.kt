@@ -13,6 +13,7 @@ class MockDiscoverCatalogAndAutoPropagateWorkflow : DiscoverCatalogAndAutoPropag
     launcherConfig: IntegrationLauncherConfig,
     config: StandardDiscoverCatalogInput,
   ): RefreshSchemaActivityOutput {
+    assert(config.actorContext.organizationId != null)
     return REFRESH_SCHEMA_ACTIVITY_OUTPUT
   }
 

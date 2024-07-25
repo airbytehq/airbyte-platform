@@ -5,6 +5,7 @@
 package io.airbyte.commons.concurrency;
 
 import java.util.OptionalInt;
+import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -17,7 +18,7 @@ public class ClosableLinkedBlockingQueue<T> implements ClosableQueue<T> {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(ClosableLinkedBlockingQueue.class);
   private static final int DEFAULT_POLL_TIME_OUT_DURATION_SECONDS = 5;
-  private final LinkedBlockingQueue<T> queue;
+  private final BlockingQueue<T> queue;
 
   private final AtomicBoolean closed;
   private final ReadWriteLock closedLock;

@@ -16,7 +16,6 @@ import static io.airbyte.metrics.lib.ApmTraceConstants.Tags.SOURCE_DOCKER_IMAGE_
 
 import datadog.trace.api.Trace;
 import io.airbyte.api.client.AirbyteApiClient;
-import io.airbyte.api.client.WorkloadApiClient;
 import io.airbyte.commons.functional.CheckedSupplier;
 import io.airbyte.commons.temporal.HeartbeatUtils;
 import io.airbyte.commons.temporal.utils.PayloadChecker;
@@ -50,6 +49,7 @@ import io.airbyte.workers.sync.WorkloadClient;
 import io.airbyte.workers.temporal.TemporalAttemptExecution;
 import io.airbyte.workers.workload.JobOutputDocStore;
 import io.airbyte.workers.workload.WorkloadIdGenerator;
+import io.airbyte.workload.api.client.WorkloadApiClient;
 import io.micronaut.context.annotation.Value;
 import io.temporal.activity.Activity;
 import io.temporal.activity.ActivityExecutionContext;
@@ -60,7 +60,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.UUID;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
 import org.slf4j.Logger;
@@ -70,6 +69,7 @@ import org.slf4j.LoggerFactory;
  * Replication temporal activity impl.
  */
 @Singleton
+@SuppressWarnings("PMD.UseVarargs")
 public class ReplicationActivityImpl implements ReplicationActivity {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(ReplicationActivityImpl.class);
@@ -205,7 +205,7 @@ public class ReplicationActivityImpl implements ReplicationActivity {
                   Optional.ofNullable(replicationActivityInput.getTaskQueue()));
 
           final ReplicationOutput attemptOutput = temporalAttempt.get();
-          final StandardSyncOutput standardSyncOutput = reduceReplicationOutput(attemptOutput, connectionId, metricAttributes);
+          final StandardSyncOutput standardSyncOutput = reduceReplicationOutput(attemptOutput, metricAttributes);
 
           final String standardSyncOutputString = standardSyncOutput.toString();
           LOGGER.info("sync summary: {}", standardSyncOutputString);
@@ -242,9 +242,7 @@ public class ReplicationActivityImpl implements ReplicationActivity {
         context);
   }
 
-  private StandardSyncOutput reduceReplicationOutput(final ReplicationOutput output,
-                                                     final UUID connectionId,
-                                                     final MetricAttribute[] metricAttributes) {
+  private StandardSyncOutput reduceReplicationOutput(final ReplicationOutput output, final MetricAttribute[] metricAttributes) {
     final StandardSyncOutput standardSyncOutput = new StandardSyncOutput();
     final StandardSyncSummary syncSummary = new StandardSyncSummary();
     final ReplicationAttemptSummary replicationSummary = output.getReplicationAttemptSummary();

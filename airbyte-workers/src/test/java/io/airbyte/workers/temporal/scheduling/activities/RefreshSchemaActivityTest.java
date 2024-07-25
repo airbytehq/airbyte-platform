@@ -66,6 +66,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.mockito.quality.Strictness;
 
 @ExtendWith(MockitoExtension.class)
+@SuppressWarnings("PMD.AvoidDuplicateLiterals")
 class RefreshSchemaActivityTest {
 
   private AirbyteApiClient mAirbyteApiClient;

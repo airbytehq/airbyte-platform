@@ -18,14 +18,19 @@ enum JobMenuOptions {
   CopyLinkToJob = "CopyLinkToJob",
   DownloadLogs = "DownloadLogs",
 }
-
-export const openJobLogsModalFromTimeline = (
-  openModal: <ResultType>(options: ModalOptions<ResultType>) => Promise<ModalResult<ResultType>>,
-  jobId: number,
-  formatMessage: (arg0: { id: string }, arg1?: { connectionName: string } | undefined) => string,
-  connectionName: string,
-  initialAttemptId?: number
-) => {
+export const openJobLogsModalFromTimeline = ({
+  openModal,
+  jobId,
+  formatMessage,
+  connectionName,
+  initialAttemptId,
+}: {
+  openModal: <ResultType>(options: ModalOptions<ResultType>) => Promise<ModalResult<ResultType>>;
+  jobId: number;
+  formatMessage: (arg0: { id: string }, arg1?: { connectionName: string } | undefined) => string;
+  connectionName: string;
+  initialAttemptId?: number;
+}) => {
   openModal({
     size: "full",
     title: formatMessage({ id: "jobHistory.logs.title" }, { connectionName }),
@@ -54,7 +59,7 @@ const handleClick = (
 ) => {
   switch (optionClicked.value) {
     case JobMenuOptions.OpenLogsModal:
-      openJobLogsModalFromTimeline(openModal, jobId, formatMessage, connectionName);
+      openJobLogsModalFromTimeline({ openModal, jobId, formatMessage, connectionName });
       break;
 
     case JobMenuOptions.CopyLinkToJob:
@@ -72,7 +77,7 @@ const handleClick = (
   }
 };
 
-export const JobEventMenu: React.FC<{ eventId: string; jobId: number }> = ({ eventId, jobId }) => {
+export const JobEventMenu: React.FC<{ eventId: string; jobId?: number }> = ({ eventId, jobId }) => {
   const { formatMessage } = useIntl();
   const { connection } = useConnectionFormService();
   const { openModal } = useModalService();

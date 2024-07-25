@@ -44,6 +44,7 @@ import org.slf4j.LoggerFactory;
  */
 @Singleton
 @CacheConfig("remote-definitions-provider")
+@SuppressWarnings("PMD.ExceptionAsFlowControl")
 public class RemoteDefinitionsProvider implements DefinitionsProvider {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(RemoteDefinitionsProvider.class);

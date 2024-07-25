@@ -4,7 +4,6 @@
 
 package io.airbyte.commons.server.handlers;
 
-import static io.airbyte.featureflag.ContextKt.ANONYMOUS;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
@@ -112,8 +111,6 @@ import io.airbyte.data.services.SourceService;
 import io.airbyte.data.services.WorkspaceService;
 import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.featureflag.TestClient;
-import io.airbyte.featureflag.UseIconUrlInApiResponse;
-import io.airbyte.featureflag.Workspace;
 import io.airbyte.persistence.job.factory.OAuthConfigSupplier;
 import io.airbyte.persistence.job.models.JobStatusSummary;
 import io.airbyte.protocol.models.CatalogHelpers;
@@ -149,7 +146,6 @@ class WebBackendConnectionsHandlerTest {
   private SchedulerHandler schedulerHandler;
   private StateHandler stateHandler;
   private DestinationHandler destinationHandler;
-  private DestinationDefinitionsHandler destinationDefinitionsHandler;
   private WebBackendConnectionsHandler wbHandler;
   private SourceRead sourceRead;
   private ConnectionRead connectionRead;
@@ -205,10 +201,7 @@ class WebBackendConnectionsHandlerTest {
     final SecretPersistenceConfigService secretPersistenceConfigService = mock(SecretPersistenceConfigService.class);
 
     final Supplier uuidGenerator = mock(Supplier.class);
-    when(featureFlagClient.boolVariation(UseIconUrlInApiResponse.INSTANCE, new Workspace(ANONYMOUS)))
-        .thenReturn(true);
 
-    destinationDefinitionsHandler = mock(DestinationDefinitionsHandler.class);
     destinationHandler = new DestinationHandler(configRepository,
         validator,
         connectionsHandler,
@@ -1487,13 +1480,14 @@ class WebBackendConnectionsHandlerTest {
   void testGetSchemaChangeNoChange() {
     final ConnectionRead connectionReadNotBreaking = new ConnectionRead().breakingChange(false);
 
-    assertEquals(SchemaChange.NO_CHANGE, wbHandler.getSchemaChange(null, Optional.of(UUID.randomUUID()), Optional.of(new ActorCatalogFetchEvent())));
     assertEquals(SchemaChange.NO_CHANGE,
-        wbHandler.getSchemaChange(connectionReadNotBreaking, Optional.empty(), Optional.of(new ActorCatalogFetchEvent())));
+        WebBackendConnectionsHandler.getSchemaChange(null, Optional.of(UUID.randomUUID()), Optional.of(new ActorCatalogFetchEvent())));
+    assertEquals(SchemaChange.NO_CHANGE,
+        WebBackendConnectionsHandler.getSchemaChange(connectionReadNotBreaking, Optional.empty(), Optional.of(new ActorCatalogFetchEvent())));
 
     final UUID catalogId = UUID.randomUUID();
 
-    assertEquals(SchemaChange.NO_CHANGE, wbHandler.getSchemaChange(connectionReadNotBreaking, Optional.of(catalogId),
+    assertEquals(SchemaChange.NO_CHANGE, WebBackendConnectionsHandler.getSchemaChange(connectionReadNotBreaking, Optional.of(catalogId),
         Optional.of(new ActorCatalogFetchEvent().withActorCatalogId(catalogId))));
   }
 
@@ -1502,7 +1496,7 @@ class WebBackendConnectionsHandlerTest {
     final UUID sourceId = UUID.randomUUID();
     final ConnectionRead connectionReadWithSourceId = new ConnectionRead().sourceCatalogId(UUID.randomUUID()).sourceId(sourceId).breakingChange(true);
 
-    assertEquals(SchemaChange.BREAKING, wbHandler.getSchemaChange(connectionReadWithSourceId,
+    assertEquals(SchemaChange.BREAKING, WebBackendConnectionsHandler.getSchemaChange(connectionReadWithSourceId,
         Optional.of(UUID.randomUUID()), Optional.empty()));
   }
 
@@ -1513,7 +1507,7 @@ class WebBackendConnectionsHandlerTest {
     final ConnectionRead connectionReadWithSourceId =
         new ConnectionRead().breakingChange(false);
 
-    assertEquals(SchemaChange.NON_BREAKING, wbHandler.getSchemaChange(connectionReadWithSourceId,
+    assertEquals(SchemaChange.NON_BREAKING, WebBackendConnectionsHandler.getSchemaChange(connectionReadWithSourceId,
         Optional.of(catalogId), Optional.of(new ActorCatalogFetchEvent().withActorCatalogId(differentCatalogId))));
   }
 

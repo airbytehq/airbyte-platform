@@ -64,6 +64,7 @@ jest.mock("core/api", () => ({
     mutateAsync: jest.fn(),
     isLoading: false,
   }),
+  useListStreamsStatuses: () => [],
 }));
 
 jest.mock("core/utils/rbac", () => ({

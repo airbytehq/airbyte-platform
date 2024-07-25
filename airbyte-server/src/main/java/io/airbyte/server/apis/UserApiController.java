@@ -129,7 +129,7 @@ public class UserApiController implements UserApi {
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @Override
   public UserWithPermissionInfoReadList listInstanceAdminUsers() {
-    return ApiHelper.execute(() -> userHandler.listInstanceAdminUsers());
+    return ApiHelper.execute(userHandler::listInstanceAdminUsers);
   }
 
   @Post("/get_or_create_by_auth_id")

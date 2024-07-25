@@ -2,7 +2,6 @@ package io.airbyte.connectorSidecar
 
 import com.google.common.annotations.VisibleForTesting
 import com.google.common.base.Stopwatch
-import io.airbyte.api.client.WorkloadApiClient
 import io.airbyte.commons.io.LineGobbler
 import io.airbyte.commons.json.Jsons
 import io.airbyte.commons.protocol.AirbyteMessageSerDeProvider
@@ -22,6 +21,7 @@ import io.airbyte.workers.internal.VersionedAirbyteStreamFactory.InvalidLineFail
 import io.airbyte.workers.models.SidecarInput
 import io.airbyte.workers.sync.OrchestratorConstants
 import io.airbyte.workers.workload.JobOutputDocStore
+import io.airbyte.workload.api.client.WorkloadApiClient
 import io.airbyte.workload.api.client.model.generated.WorkloadFailureRequest
 import io.airbyte.workload.api.client.model.generated.WorkloadSuccessRequest
 import io.github.oshai.kotlinlogging.KotlinLogging
@@ -43,6 +43,7 @@ class ConnectorWatcher(
   @Named("output") val outputPath: Path,
   @Named("configDir") val configDir: String,
   @Value("\${airbyte.sidecar.file-timeout-minutes}") val fileTimeoutMinutes: Int,
+  @Value("\${airbyte.sidecar.file-timeout-minutes-within-sync}") val fileTimeoutMinutesWithinSync: Int,
   private val connectorMessageProcessor: ConnectorMessageProcessor,
   private val serDeProvider: AirbyteMessageSerDeProvider,
   private val airbyteProtocolVersionedMigratorFactory: AirbyteProtocolVersionedMigratorFactory,
@@ -63,7 +64,13 @@ class ConnectorWatcher(
         val stopwatch: Stopwatch = Stopwatch.createStarted()
         while (!areNeededFilesPresent()) {
           Thread.sleep(100)
-          if (fileTimeoutReach(stopwatch)) {
+          val isWithinSync =
+            if (discoverCatalogInput != null) {
+              !discoverCatalogInput.manual
+            } else {
+              false
+            }
+          if (fileTimeoutReach(stopwatch, isWithinSync)) {
             logger.warn { "Failed to find output files from connector within timeout $fileTimeoutMinutes minute(s). Is the connector still running?" }
             val failureReason =
               FailureReason()
@@ -195,8 +202,15 @@ class ConnectorWatcher(
     exitProcess(2)
   }
 
-  fun fileTimeoutReach(stopwatch: Stopwatch): Boolean {
-    return stopwatch.elapsed() > Duration.ofMinutes(fileTimeoutMinutes.toLong())
+  fun fileTimeoutReach(
+    stopwatch: Stopwatch,
+    withinSync: Boolean,
+  ): Boolean {
+    if (withinSync) {
+      return stopwatch.elapsed() > Duration.ofMinutes(fileTimeoutMinutesWithinSync.toLong())
+    } else {
+      return stopwatch.elapsed() > Duration.ofMinutes(fileTimeoutMinutes.toLong())
+    }
   }
 
   @VisibleForTesting

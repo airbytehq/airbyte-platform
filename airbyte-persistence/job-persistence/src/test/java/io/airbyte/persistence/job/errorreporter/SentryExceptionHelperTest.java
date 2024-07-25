@@ -15,7 +15,7 @@ import java.util.Optional;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
-@SuppressWarnings({"LineLength", "FileTabCharacter"})
+@SuppressWarnings({"LineLength", "FileTabCharacter", "PMD.AvoidDuplicateLiterals"})
 class SentryExceptionHelperTest {
 
   private static final String ERROR_PATH = "/airbyte/connector-errors/error.py";

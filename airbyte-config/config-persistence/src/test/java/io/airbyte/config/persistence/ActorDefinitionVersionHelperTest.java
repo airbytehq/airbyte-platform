@@ -48,7 +48,6 @@ class ActorDefinitionVersionHelperTest {
   private static final UUID ACTOR_DEFINITION_VERSION_ID = UUID.randomUUID();
   private static final UUID ACTOR_ID = UUID.randomUUID();
   private static final UUID WORKSPACE_ID = UUID.randomUUID();
-  private static final UUID WORKSPACE_ID_2 = UUID.randomUUID();
   private static final String DOCKER_REPOSITORY = "airbyte/source-test";
   private static final String DOCKER_IMAGE_TAG = "0.1.0";
   private static final String DOCKER_IMAGE_TAG_2 = "0.2.0";

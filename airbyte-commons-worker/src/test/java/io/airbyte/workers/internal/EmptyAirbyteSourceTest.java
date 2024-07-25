@@ -85,7 +85,7 @@ class EmptyAirbyteSourceTest {
 
   @Test
   void nonStartedSource() {
-    final Throwable thrown = Assertions.catchThrowable(() -> emptyAirbyteSource.attemptRead());
+    final Throwable thrown = Assertions.catchThrowable(emptyAirbyteSource::attemptRead);
     Assertions.assertThat(thrown)
         .isInstanceOf(IllegalStateException.class);
   }
@@ -133,10 +133,10 @@ class EmptyAirbyteSourceTest {
     Assertions.assertThat(stateMessage.getType()).isEqualTo(AirbyteStateType.GLOBAL);
     Assertions.assertThat(stateMessage.getGlobal().getSharedState()).isNull();
     Assertions.assertThat(stateMessage.getGlobal().getStreamStates())
-        .map(streamState -> streamState.getStreamDescriptor())
+        .map(AirbyteStreamState::getStreamDescriptor)
         .containsExactlyElementsOf(streamDescriptors);
     Assertions.assertThat(stateMessage.getGlobal().getStreamStates())
-        .map(streamState -> streamState.getStreamState())
+        .map(AirbyteStreamState::getStreamState)
         .containsOnlyNulls();
 
     streamsToReset.forEach(this::testReceiveResetMessageTupleForSingleStateTypes);
@@ -175,11 +175,11 @@ class EmptyAirbyteSourceTest {
     Assertions.assertThat(stateMessage.getType()).isEqualTo(AirbyteStateType.GLOBAL);
     Assertions.assertThat(stateMessage.getGlobal().getSharedState()).isEqualTo(Jsons.emptyObject());
     Assertions.assertThat(stateMessage.getGlobal().getStreamStates())
-        .filteredOn(streamState -> streamState.getStreamDescriptor().getName() != notResetStreamName)
+        .filteredOn(streamState -> !streamState.getStreamDescriptor().getName().equals(notResetStreamName))
         .map(AirbyteStreamState::getStreamState)
         .containsOnlyNulls();
     Assertions.assertThat(stateMessage.getGlobal().getStreamStates())
-        .filteredOn(streamState -> streamState.getStreamDescriptor().getName() == notResetStreamName)
+        .filteredOn(streamState -> streamState.getStreamDescriptor().getName().equals(notResetStreamName))
         .map(AirbyteStreamState::getStreamState)
         .contains(Jsons.emptyObject());
 
@@ -224,7 +224,7 @@ class EmptyAirbyteSourceTest {
         .map(AirbyteStreamState::getStreamState)
         .containsOnlyNulls();
     Assertions.assertThat(stateMessage.getGlobal().getStreamStates())
-        .filteredOn(streamState -> streamState.getStreamDescriptor().getName() == newStream)
+        .filteredOn(streamState -> streamState.getStreamDescriptor().getName().equals(newStream))
         .hasSize(1);
 
     streamsToReset.forEach(this::testReceiveResetMessageTupleForSingleStateTypes);

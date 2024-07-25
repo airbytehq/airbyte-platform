@@ -2,7 +2,13 @@
 @use "scss/variables";
 
 .eventList {
-  > * {
+  padding: 0;
+  margin: 0;
+
+  li {
+    list-style: none;
+    padding: 0;
+    margin: 0;
     position: relative;
 
     &:not(:last-child)::before {

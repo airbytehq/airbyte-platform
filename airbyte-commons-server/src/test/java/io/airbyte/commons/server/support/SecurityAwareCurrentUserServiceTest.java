@@ -30,7 +30,8 @@ import org.mockito.Mockito;
 @Requires(env = {Environment.TEST})
 @Property(name = "micronaut.security.enabled",
           value = "true")
-public class SecurityAwareCurrentUserServiceTest {
+@SuppressWarnings("PMD.JUnitTestsShouldIncludeAssert")
+class SecurityAwareCurrentUserServiceTest {
 
   @MockBean(SecurityService.class)
   SecurityService mockSecurityService() {

@@ -38,7 +38,7 @@ class ConfigsDatabaseMigrationCheckTest {
     when(flyway.info()).thenReturn(migrationInfoService);
 
     final var check = new ConfigsDatabaseMigrationCheck(databaseAvailabilityCheck, flyway, minimumVersion, CommonDatabaseCheckTest.TIMEOUT_MS);
-    Assertions.assertDoesNotThrow(() -> check.check());
+    Assertions.assertDoesNotThrow(check::check);
   }
 
   @Test
@@ -56,7 +56,7 @@ class ConfigsDatabaseMigrationCheckTest {
     when(flyway.info()).thenReturn(migrationInfoService);
 
     final var check = new ConfigsDatabaseMigrationCheck(databaseAvailabilityCheck, flyway, minimumVersion, CommonDatabaseCheckTest.TIMEOUT_MS);
-    Assertions.assertDoesNotThrow(() -> check.check());
+    Assertions.assertDoesNotThrow(check::check);
   }
 
   @Test
@@ -74,7 +74,7 @@ class ConfigsDatabaseMigrationCheckTest {
     when(flyway.info()).thenReturn(migrationInfoService);
 
     final var check = new ConfigsDatabaseMigrationCheck(databaseAvailabilityCheck, flyway, minimumVersion, CommonDatabaseCheckTest.TIMEOUT_MS);
-    Assertions.assertThrows(DatabaseCheckException.class, () -> check.check());
+    Assertions.assertThrows(DatabaseCheckException.class, check::check);
   }
 
   @Test
@@ -91,7 +91,7 @@ class ConfigsDatabaseMigrationCheckTest {
     when(flyway.info()).thenReturn(migrationInfoService);
 
     final var check = new ConfigsDatabaseMigrationCheck(null, flyway, minimumVersion, CommonDatabaseCheckTest.TIMEOUT_MS);
-    Assertions.assertThrows(DatabaseCheckException.class, () -> check.check());
+    Assertions.assertThrows(DatabaseCheckException.class, check::check);
   }
 
   @Test
@@ -99,7 +99,7 @@ class ConfigsDatabaseMigrationCheckTest {
     final var minimumVersion = VERSION_2;
     final var databaseAvailabilityCheck = mock(ConfigsDatabaseAvailabilityCheck.class);
     final var check = new ConfigsDatabaseMigrationCheck(databaseAvailabilityCheck, null, minimumVersion, CommonDatabaseCheckTest.TIMEOUT_MS);
-    Assertions.assertThrows(DatabaseCheckException.class, () -> check.check());
+    Assertions.assertThrows(DatabaseCheckException.class, check::check);
   }
 
   @Test
@@ -113,7 +113,7 @@ class ConfigsDatabaseMigrationCheckTest {
     when(flyway.info()).thenReturn(migrationInfoService);
 
     final var check = new ConfigsDatabaseMigrationCheck(databaseAvailabilityCheck, flyway, minimumVersion, CommonDatabaseCheckTest.TIMEOUT_MS);
-    Assertions.assertThrows(DatabaseCheckException.class, () -> check.check());
+    Assertions.assertThrows(DatabaseCheckException.class, check::check);
   }
 
 }

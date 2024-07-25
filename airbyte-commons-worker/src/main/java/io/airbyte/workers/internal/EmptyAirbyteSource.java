@@ -239,7 +239,7 @@ public class EmptyAirbyteSource implements AirbyteSource {
       final io.airbyte.protocol.models.StreamDescriptor streamDescriptor = new io.airbyte.protocol.models.StreamDescriptor()
           .withName(configStreamDescriptor.getName())
           .withNamespace(configStreamDescriptor.getNamespace());
-      if (!currentState.getGlobal().getStreamStates().stream().map(streamState -> streamState.getStreamDescriptor()).toList()
+      if (!currentState.getGlobal().getStreamStates().stream().map(AirbyteStreamState::getStreamDescriptor).toList()
           .contains(streamDescriptor)) {
         globalState.getStreamStates().add(new AirbyteStreamState()
             .withStreamDescriptor(streamDescriptor)

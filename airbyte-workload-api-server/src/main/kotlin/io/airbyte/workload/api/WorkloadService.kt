@@ -79,7 +79,7 @@ open class WorkloadService(
     priority: WorkloadPriority,
   ): String {
     val context = mutableListOf<Context>(Geography(geography))
-    if (WorkloadPriority.HIGH.equals(priority)) {
+    if (WorkloadPriority.HIGH == priority) {
       context.add(Priority(HIGH_PRIORITY))
     }
     labels[CONNECTION_ID_LABEL_KEY]?.let {

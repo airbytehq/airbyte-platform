@@ -20,6 +20,7 @@ import org.keycloak.representations.idm.IdentityProviderRepresentation;
  */
 @Singleton
 @Slf4j
+@SuppressWarnings("PMD.LiteralsFirstInComparisons")
 public class IdentityProvidersConfigurator {
 
   static final String AIRBYTE_MANAGED_IDP_KEY = "airbyte-managed-idp";
@@ -58,21 +59,22 @@ public class IdentityProvidersConfigurator {
         .filter(existingIdp -> existingIdp.getConfig().getOrDefault(AIRBYTE_MANAGED_IDP_KEY, "false").equals(AIRBYTE_MANAGED_IDP_VALUE))
         .toList();
 
-    if (existingManagedIdps.size() > 1) {
+    int expNumManagedIdp = 1;
+    if (existingManagedIdps.size() > expNumManagedIdp) {
       log.warn(
           "Found multiple IDPs with Config entry {}={}. This isn't supported, as keycloak-setup only supports one managed IDP. Skipping IDP update.",
           AIRBYTE_MANAGED_IDP_KEY, AIRBYTE_MANAGED_IDP_VALUE);
       return;
     }
 
-    if (existingManagedIdps.size() == 1) {
+    if (existingManagedIdps.size() == expNumManagedIdp) {
       log.info("Found existing managed IDP. Updating it.");
       updateExistingIdp(keycloakRealm, existingManagedIdps.getFirst(), idp);
       return;
     }
 
     // if no managed IDPs exist, but there is exactly one IDP, update it and mark it as airbyte-managed
-    if (existingIdps.size() == 1) {
+    if (existingIdps.size() == expNumManagedIdp) {
       log.info("Found exactly one existing IDP. Updating it and marking it as airbyte-managed.");
       updateExistingIdp(keycloakRealm, existingIdps.getFirst(), idp);
       return;

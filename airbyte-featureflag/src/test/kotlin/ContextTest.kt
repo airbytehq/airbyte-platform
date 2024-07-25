@@ -4,6 +4,7 @@
 package io.airbyte.featureflag
 
 import org.junit.jupiter.api.Test
+import java.util.UUID
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 
@@ -51,6 +52,7 @@ class MultiTest {
 
     Multi(listOf(user, destination, source, connection, workspace)).also {
       assert(it.key.isEmpty())
+      assert(it.attrs.isEmpty())
     }
   }
 
@@ -68,6 +70,7 @@ class WorkspaceTest {
     Workspace("workspace key").also {
       assert(it.kind == "workspace")
       assert(it.key == "workspace key")
+      assert(it.attrs.isEmpty())
     }
   }
 }
@@ -78,6 +81,21 @@ class UserTest {
     User("user key").also {
       assert(it.kind == "user")
       assert(it.key == "user key")
+      assert(it.attrs.isEmpty())
+    }
+  }
+
+  @Test
+  fun `verify data with email`() {
+    val userId = UUID.randomUUID()
+    User(userId, EmailAttribute("user@airbyte.io")).also {
+      assert(it.kind == "user")
+      assert(it.key == userId.toString())
+
+      val emailAttr = it.attrs.firstOrNull()
+      assert(emailAttr?.key == "email")
+      assert(emailAttr?.value == "user@airbyte.io")
+      assert(emailAttr?.private == true)
     }
   }
 }
@@ -88,6 +106,7 @@ class ConnectionTest {
     Connection("connection key").also {
       assert(it.kind == "connection")
       assert(it.key == "connection key")
+      assert(it.attrs.isEmpty())
     }
   }
 }
@@ -98,6 +117,7 @@ class SourceTest {
     Source("source key").also {
       assert(it.kind == "source")
       assert(it.key == "source key")
+      assert(it.attrs.isEmpty())
     }
   }
 }
@@ -108,6 +128,7 @@ class DestinationTest {
     Destination("destination key").also {
       assert(it.kind == "destination")
       assert(it.key == "destination key")
+      assert(it.attrs.isEmpty())
     }
   }
 }
@@ -118,6 +139,7 @@ class SourceDefinitionTest {
     SourceDefinition("source definition key").also {
       assert(it.kind == "source-definition")
       assert(it.key == "source definition key")
+      assert(it.attrs.isEmpty())
     }
   }
 }
@@ -128,6 +150,7 @@ class DestinationDefinitionTest {
     DestinationDefinition("destination definition key").also {
       assert(it.kind == "destination-definition")
       assert(it.key == "destination definition key")
+      assert(it.attrs.isEmpty())
     }
   }
 }

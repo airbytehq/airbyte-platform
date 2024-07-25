@@ -56,16 +56,17 @@ class ConnectorRegistryConvertersTest {
       .withScopeType(ScopeType.STREAM)
       .withImpactedScopes(List.of("stream1", "stream2"));
 
-  private static final BreakingChanges registryBreakingChanges = new BreakingChanges().withAdditionalProperty("1.0.0", new VersionBreakingChange()
-      .withMessage("Sample message").withUpgradeDeadline("2023-07-20").withMigrationDocumentationUrl("https://example.com").withScopedImpact(
-          List.of(breakingChangeScope)));
+  private static final BreakingChanges registryBreakingChanges = new BreakingChanges().withAdditionalProperty(PROTOCOL_VERSION,
+      new VersionBreakingChange()
+          .withMessage("Sample message").withUpgradeDeadline("2023-07-20").withMigrationDocumentationUrl("https://example.com").withScopedImpact(
+              List.of(breakingChangeScope)));
 
   private static final BreakingChanges registryBreakingChangesWithoutScopedImpact =
-      new BreakingChanges().withAdditionalProperty("1.0.0", new VersionBreakingChange()
+      new BreakingChanges().withAdditionalProperty(PROTOCOL_VERSION, new VersionBreakingChange()
           .withMessage("Sample message").withUpgradeDeadline("2023-07-20").withMigrationDocumentationUrl("https://example.com"));
   private static final List<ActorDefinitionBreakingChange> expectedBreakingChanges = List.of(new ActorDefinitionBreakingChange()
       .withActorDefinitionId(DEF_ID)
-      .withVersion(new Version("1.0.0"))
+      .withVersion(new Version(PROTOCOL_VERSION))
       .withMigrationDocumentationUrl("https://example.com")
       .withUpgradeDeadline("2023-07-20")
       .withMessage("Sample message")

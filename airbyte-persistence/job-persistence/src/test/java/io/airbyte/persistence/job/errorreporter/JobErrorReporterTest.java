@@ -43,7 +43,6 @@ class JobErrorReporterTest {
   private static final String AIRBYTE_VERSION = "0.1.40";
   private static final String DOCKER_IMAGE_TAG = "1.2.3";
 
-  private static final Long NO_INTERNAL_SUPPORT_LEVEL = null;
   private static final UUID SOURCE_DEFINITION_ID = UUID.randomUUID();
   private static final UUID SOURCE_DEFINITION_VERSION_ID = UUID.randomUUID();
   private static final String SOURCE_DEFINITION_NAME = "stripe";
@@ -68,7 +67,6 @@ class JobErrorReporterTest {
   private static final String AIRBYTE_VERSION_KEY = "airbyte_version";
   private static final String FAILURE_ORIGIN_KEY = "failure_origin";
   private static final String SOURCE = "source";
-  private static final String PREFIX_FORMAT_STRING = "%s_%s";
   private static final String FAILURE_TYPE_KEY = "failure_type";
   private static final String SYSTEM_ERROR = "system_error";
   private static final String CONNECTOR_DEFINITION_ID_KEY = "connector_definition_id";

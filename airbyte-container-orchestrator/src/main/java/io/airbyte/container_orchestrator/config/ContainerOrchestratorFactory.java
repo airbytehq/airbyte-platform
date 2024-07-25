@@ -4,7 +4,6 @@
 
 package io.airbyte.container_orchestrator.config;
 
-import io.airbyte.api.client.WorkloadApiClient;
 import io.airbyte.commons.envvar.EnvVar;
 import io.airbyte.commons.features.EnvVariableFeatureFlags;
 import io.airbyte.commons.features.FeatureFlags;
@@ -32,7 +31,7 @@ import io.airbyte.workers.storage.StorageClientFactory;
 import io.airbyte.workers.sync.OrchestratorConstants;
 import io.airbyte.workers.sync.ReplicationLauncherWorker;
 import io.airbyte.workers.workload.JobOutputDocStore;
-import io.airbyte.workers.workload.WorkloadIdGenerator;
+import io.airbyte.workload.api.client.WorkloadApiClient;
 import io.fabric8.kubernetes.client.DefaultKubernetesClient;
 import io.micronaut.context.annotation.Factory;
 import io.micronaut.context.annotation.Prototype;
@@ -43,7 +42,6 @@ import jakarta.inject.Named;
 import jakarta.inject.Singleton;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
-import java.util.Map;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 
@@ -65,8 +63,8 @@ class ContainerOrchestratorFactory {
   }
 
   @Singleton
-  EnvConfigs envConfigs(@Named("envVars") final Map<String, String> env) {
-    return new EnvConfigs(env);
+  EnvConfigs envConfigs() {
+    return new EnvConfigs();
   }
 
   @Singleton
@@ -114,12 +112,11 @@ class ContainerOrchestratorFactory {
                                      final ReplicationWorkerFactory replicationWorkerFactory,
                                      final AsyncStateManager asyncStateManager,
                                      final WorkloadApiClient workloadApiClient,
-                                     final WorkloadIdGenerator workloadIdGenerator,
                                      @Value("${airbyte.workload.enabled}") final boolean workloadEnabled,
                                      final JobOutputDocStore jobOutputDocStore) {
     return switch (application) {
       case ReplicationLauncherWorker.REPLICATION -> new ReplicationJobOrchestrator(configDir, envConfigs, jobRunConfig,
-          replicationWorkerFactory, asyncStateManager, workloadApiClient, workloadIdGenerator, workloadEnabled, jobOutputDocStore);
+          replicationWorkerFactory, asyncStateManager, workloadApiClient, workloadEnabled, jobOutputDocStore);
       case AsyncOrchestratorPodProcess.NO_OP -> new NoOpOrchestrator();
       default -> throw new IllegalStateException("Could not find job orchestrator for application: " + application);
     };

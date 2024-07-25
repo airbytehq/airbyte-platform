@@ -5,7 +5,7 @@
 package io.airbyte.commons.auth;
 
 import java.util.Comparator;
-import java.util.HashSet;
+import java.util.EnumSet;
 import java.util.LinkedHashSet;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -32,10 +32,12 @@ public enum OrganizationAuthRole implements AuthRoleInterface {
     this.label = label;
   }
 
+  @Override
   public int getAuthority() {
     return authority;
   }
 
+  @Override
   public String getLabel() {
     return label;
   }
@@ -52,7 +54,7 @@ public enum OrganizationAuthRole implements AuthRoleInterface {
    *         {@link OrganizationAuthRole}.
    */
   public static Set<String> buildOrganizationAuthRolesSet(final OrganizationAuthRole authRole) {
-    final Set<OrganizationAuthRole> authRoles = new HashSet<>();
+    final Set<OrganizationAuthRole> authRoles = EnumSet.noneOf(OrganizationAuthRole.class);
 
     if (authRole != null) {
       authRoles.add(authRole);
@@ -65,7 +67,7 @@ public enum OrganizationAuthRole implements AuthRoleInterface {
     // Sort final set by descending authority order
     return authRoles.stream()
         .sorted(Comparator.comparingInt(OrganizationAuthRole::getAuthority))
-        .map(role -> role.getLabel())
+        .map(OrganizationAuthRole::getLabel)
         .collect(Collectors.toCollection(LinkedHashSet::new));
   }
 

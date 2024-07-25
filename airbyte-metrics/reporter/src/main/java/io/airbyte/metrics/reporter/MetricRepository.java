@@ -16,7 +16,7 @@ import io.airbyte.db.instance.configs.jooq.generated.enums.StatusType;
 import io.airbyte.db.instance.jobs.jooq.generated.enums.AttemptStatus;
 import io.airbyte.db.instance.jobs.jooq.generated.enums.JobStatus;
 import jakarta.inject.Singleton;
-import java.util.HashMap;
+import java.util.EnumMap;
 import java.util.List;
 import java.util.Map;
 import org.jooq.DSLContext;
@@ -294,7 +294,7 @@ class MetricRepository {
     final var statuses = queryResults.getValues("status", JobStatus.class);
     final var times = queryResults.getValues("sec", double.class);
 
-    final var results = new HashMap<JobStatus, Double>();
+    final var results = new EnumMap<JobStatus, Double>(JobStatus.class);
     for (int i = 0; i < statuses.size(); i++) {
       results.put(statuses.get(i), times.get(i));
     }

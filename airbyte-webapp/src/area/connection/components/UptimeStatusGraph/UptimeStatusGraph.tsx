@@ -99,7 +99,8 @@ const sortStreams = (a: SortableStream, b: SortableStream) => {
     return namespaceCompare;
   }
 
-  return nameA.localeCompare(nameB);
+  // streams that are in the job but don't emit a status are given null values
+  return (nameA ?? "").localeCompare(nameB ?? "");
 };
 
 interface RunBucket {

@@ -1,14 +1,16 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { FormattedMessage } from "react-intl";
 
 import { Button } from "components/ui/Button";
 import { Tooltip } from "components/ui/Tooltip";
 
+import { useConfirmationModalService } from "hooks/services/ConfirmationModal";
 import { useConnectorBuilderFormState } from "services/connectorBuilder/ConnectorBuilderStateService";
 
 import styles from "./PublishButton.module.scss";
 import { PublishModal } from "./PublishModal";
 import { useBuilderWatch } from "../types";
+import { useStreamTestMetadata } from "../useStreamTestMetadata";
 
 interface PublishButtonProps {
   className?: string;
@@ -16,13 +18,26 @@ interface PublishButtonProps {
 
 export const PublishButton: React.FC<PublishButtonProps> = ({ className }) => {
   const [isModalOpen, setModalOpen] = useState(false);
-  const { currentProject, yamlIsValid, formValuesValid, permission, resolveErrorMessage } =
-    useConnectorBuilderFormState();
+  const {
+    currentProject,
+    yamlIsValid,
+    formValuesValid,
+    permission,
+    resolveErrorMessage,
+    streamNames,
+    isResolving,
+    formValuesDirty,
+  } = useConnectorBuilderFormState();
   const mode = useBuilderWatch("mode");
 
   let buttonDisabled = permission === "readOnly";
   let showWarningIcon = false;
   let tooltipContent = undefined;
+
+  if (isResolving || formValuesDirty) {
+    buttonDisabled = true;
+    tooltipContent = <FormattedMessage id="connectorBuilder.resolvingStreamList" />;
+  }
 
   if (mode === "yaml" && !yamlIsValid) {
     buttonDisabled = true;
@@ -42,12 +57,42 @@ export const PublishButton: React.FC<PublishButtonProps> = ({ className }) => {
     tooltipContent = <FormattedMessage id="connectorBuilder.resolveErrorPublish" />;
   }
 
+  const { getStreamTestWarnings } = useStreamTestMetadata();
+  const streamsWithWarnings = useMemo(() => {
+    return streamNames.filter((streamName) => getStreamTestWarnings(streamName).length > 0);
+  }, [getStreamTestWarnings, streamNames]);
+
+  const { openConfirmationModal, closeConfirmationModal } = useConfirmationModalService();
+
   const publishButton = (
     <Button
       full
       onClick={() => {
         if (!buttonDisabled) {
-          setModalOpen(!isModalOpen);
+          if (streamsWithWarnings.length > 0) {
+            openConfirmationModal({
+              title: "connectorBuilder.ignoreWarningsModal.title",
+              text: "connectorBuilder.ignoreWarningsModal.text",
+              confirmationText: "ignore warnings",
+              submitButtonText: "connectorBuilder.ignoreWarningsModal.submit",
+              additionalContent: (
+                <>
+                  <ul>
+                    {streamsWithWarnings.map((streamName) => (
+                      <li>{streamName}</li>
+                    ))}
+                  </ul>
+                  <FormattedMessage id="connectorBuilder.ignoreWarningsModal.areYouSure" />
+                </>
+              ),
+              onSubmit: () => {
+                closeConfirmationModal();
+                setModalOpen(true);
+              },
+            });
+          } else {
+            setModalOpen(true);
+          }
         }
       }}
       disabled={buttonDisabled}

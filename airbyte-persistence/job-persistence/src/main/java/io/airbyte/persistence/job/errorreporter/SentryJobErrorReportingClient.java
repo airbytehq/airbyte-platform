@@ -28,6 +28,7 @@ import java.util.Optional;
 /**
  * Sentry implementation for job error reporting.
  */
+@SuppressWarnings("PMD.LooseCoupling")
 public class SentryJobErrorReportingClient implements JobErrorReportingClient {
 
   static final String STACKTRACE_PARSE_ERROR_TAG_KEY = "stacktrace_parse_error";

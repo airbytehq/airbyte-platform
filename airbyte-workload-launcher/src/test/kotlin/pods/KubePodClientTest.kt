@@ -3,7 +3,6 @@ package io.airbyte.workload.launcher.pods
 import fixtures.RecordFixtures
 import io.airbyte.config.ResourceRequirements
 import io.airbyte.config.WorkloadType
-import io.airbyte.featureflag.TestClient
 import io.airbyte.persistence.job.models.IntegrationLauncherConfig
 import io.airbyte.persistence.job.models.JobRunConfig
 import io.airbyte.persistence.job.models.ReplicationInput
@@ -90,7 +89,6 @@ class KubePodClientTest {
         launcher,
         labeler,
         mapper,
-        featureFlagClient = TestClient(emptyMap()),
         orchestratorPodFactory,
         checkPodFactory,
         discoverPodFactory,
@@ -143,7 +141,7 @@ class KubePodClientTest {
         replKubeInput.nodeSelectors,
         replKubeInput.kubePodInfo,
         replKubeInput.annotations,
-        mapOf(),
+        replKubeInput.extraEnv,
       )
     } returns pod
 
@@ -182,7 +180,7 @@ class KubePodClientTest {
         replKubeInput.nodeSelectors,
         replKubeInput.kubePodInfo,
         replKubeInput.annotations,
-        mapOf(),
+        replKubeInput.extraEnv,
       )
     } returns orchestrator
 
@@ -218,7 +216,7 @@ class KubePodClientTest {
         replKubeInput.nodeSelectors,
         replKubeInput.kubePodInfo,
         replKubeInput.annotations,
-        mapOf(),
+        replKubeInput.extraEnv,
       )
     } returns orchestrator
 
@@ -427,6 +425,7 @@ class KubePodClientTest {
         mapOf("test-file" to "val5"),
         ResourceRequirements().withCpuRequest("test-cpu").withMemoryRequest("test-mem"),
         mapOf("test-annotation" to "val6"),
+        listOf(EnvVar("extra-env", "val7", null)),
       )
 
     val connectorKubeInput =

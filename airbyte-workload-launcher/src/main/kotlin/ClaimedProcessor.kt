@@ -8,9 +8,9 @@ import com.google.common.annotations.VisibleForTesting
 import datadog.trace.api.Trace
 import dev.failsafe.Failsafe
 import dev.failsafe.RetryPolicy
-import io.airbyte.api.client.WorkloadApiClient
 import io.airbyte.metrics.lib.ApmTraceUtils
 import io.airbyte.metrics.lib.MetricAttribute
+import io.airbyte.workload.api.client.WorkloadApiClient
 import io.airbyte.workload.api.client.generated.infrastructure.ServerException
 import io.airbyte.workload.api.client.model.generated.WorkloadListRequest
 import io.airbyte.workload.api.client.model.generated.WorkloadListResponse

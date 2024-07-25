@@ -10,6 +10,8 @@ import io.airbyte.db.instance.configs.jooq.generated.enums.AuthProvider;
 import jakarta.inject.Named;
 import jakarta.inject.Singleton;
 import java.sql.SQLException;
+import java.util.List;
+import java.util.UUID;
 
 /**
  * Helper to reset the Config DB state as part of a Keycloak Realm Reset. Cleans up old User records
@@ -29,9 +31,16 @@ public class ConfigDbResetHelper {
     // DO NOT REMOVE THIS CRITICAL CHECK.
     throwIfMultipleOrganizations();
 
-    this.configDb.query(ctx -> ctx.deleteFrom(Tables.USER)
-        .where(Tables.USER.AUTH_PROVIDER.eq(AuthProvider.keycloak))
-        .execute());
+    this.configDb.transaction(ctx -> {
+      final List<UUID> userIds = ctx.select(Tables.AUTH_USER.USER_ID)
+          .from(Tables.AUTH_USER)
+          .where(Tables.AUTH_USER.AUTH_PROVIDER.eq(AuthProvider.keycloak))
+          .fetch(Tables.AUTH_USER.USER_ID);
+      ctx.deleteFrom(Tables.USER)
+          .where(Tables.USER.ID.in(userIds))
+          .execute();
+      return null;
+    });
   }
 
   /**
@@ -43,7 +52,8 @@ public class ConfigDbResetHelper {
    */
   private void throwIfMultipleOrganizations() throws SQLException {
     final var orgCount = this.configDb.query(ctx -> ctx.fetchCount(Tables.ORGANIZATION));
-    if (orgCount > 1) {
+    int orgLimit = 1;
+    if (orgCount > orgLimit) {
       throw new IllegalStateException("Multiple organizations found in ConfigDb. "
           + "This is not supported with the KEYCLOAK_RESET_REALM process.");
     }

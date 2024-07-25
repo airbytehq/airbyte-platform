@@ -78,6 +78,7 @@ import java.util.stream.Stream;
  * truth.
  */
 @Singleton
+@SuppressWarnings("PMD.PreserveStackTrace")
 public class ConnectorBuilderProjectsHandler {
 
   private final DeclarativeManifestImageVersionService declarativeManifestImageVersionService;

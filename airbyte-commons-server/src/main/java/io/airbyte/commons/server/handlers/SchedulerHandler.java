@@ -118,6 +118,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 import lombok.extern.slf4j.Slf4j;
 import org.slf4j.Logger;
@@ -134,7 +135,7 @@ public class SchedulerHandler {
   private static final Logger LOGGER = LoggerFactory.getLogger(SchedulerHandler.class);
   private static final HashFunction HASH_FUNCTION = Hashing.md5();
 
-  private static final ImmutableSet<ErrorCode> VALUE_CONFLICT_EXCEPTION_ERROR_CODE_SET =
+  private static final Set<ErrorCode> VALUE_CONFLICT_EXCEPTION_ERROR_CODE_SET =
       ImmutableSet.of(ErrorCode.WORKFLOW_DELETED, ErrorCode.WORKFLOW_RUNNING);
 
   private final ConnectionsHandler connectionsHandler;
@@ -397,7 +398,7 @@ public class SchedulerHandler {
 
       if (persistedCatalogId.isSuccess() && discoverSchemaRequestBody.getConnectionId() != null) {
         // modify discoveredSchema object to add CatalogDiff, containsBreakingChange, and connectionStatus
-        generateCatalogDiffsAndDisableConnectionsIfNeeded(discoveredSchema, discoverSchemaRequestBody, source.getWorkspaceId());
+        generateCatalogDiffsAndDisableConnectionsIfNeeded(discoveredSchema, discoverSchemaRequestBody);
       }
 
       return discoveredSchema;
@@ -699,8 +700,7 @@ public class SchedulerHandler {
   // connection. Modify the current discoveredSchema object to add a CatalogDiff,
   // containsBreakingChange parameter, and connectionStatus parameter.
   private void generateCatalogDiffsAndDisableConnectionsIfNeeded(final SourceDiscoverSchemaRead discoveredSchema,
-                                                                 final SourceDiscoverSchemaRequestBody discoverSchemaRequestBody,
-                                                                 final UUID workspaceId)
+                                                                 final SourceDiscoverSchemaRequestBody discoverSchemaRequestBody)
       throws JsonValidationException, ConfigNotFoundException, IOException {
     final ConnectionReadList connectionsForSource = connectionsHandler.listConnectionsForSource(discoverSchemaRequestBody.getSourceId(), false);
     for (final ConnectionRead connectionRead : connectionsForSource.getConnections()) {

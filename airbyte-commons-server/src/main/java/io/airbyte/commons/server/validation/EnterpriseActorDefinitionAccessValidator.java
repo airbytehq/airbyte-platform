@@ -28,6 +28,7 @@ import lombok.extern.slf4j.Slf4j;
 @Singleton
 @RequiresAirbyteProEnabled
 @Slf4j
+@SuppressWarnings({"PMD.PreserveStackTrace", "PMD.ExceptionAsFlowControl"})
 @Replaces(CommunityActorDefinitionAccessValidator.class)
 public class EnterpriseActorDefinitionAccessValidator implements ActorDefinitionAccessValidator {
 

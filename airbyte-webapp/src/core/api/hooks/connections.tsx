@@ -1,4 +1,4 @@
-import { Updater, useIsMutating, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { Updater, useInfiniteQuery, useIsMutating, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback } from "react";
 import { FormattedMessage, useIntl } from "react-intl";
 import { useNavigate } from "react-router-dom";
@@ -27,10 +27,12 @@ import {
   getConnectionUptimeHistory,
   getState,
   getStateType,
+  getConnectionEvent,
   clearConnectionStream,
   clearConnection,
   refreshConnectionStream,
   syncConnection,
+  listConnectionEvents,
   webBackendCreateConnection,
   webBackendGetConnection,
   webBackendListConnectionsForWorkspace,
@@ -39,6 +41,8 @@ import {
 import { SCOPE_WORKSPACE } from "../scopes";
 import {
   AirbyteCatalog,
+  ConnectionEventWithDetails,
+  ConnectionEventsRequestBody,
   ConnectionScheduleData,
   ConnectionScheduleType,
   ConnectionStateCreateOrUpdate,
@@ -74,6 +78,11 @@ export const connectionsKeys = {
   statuses: (connectionIds: string[]) => [...connectionsKeys.all, "status", connectionIds],
   syncProgress: (connectionId: string) => [...connectionsKeys.all, "syncProgress", connectionId] as const,
   lastJobPerStream: (connectionId: string) => [...connectionsKeys.all, "lastSyncPerStream", connectionId] as const,
+  eventsList: (
+    connectionId: string | undefined,
+    filters: string | Record<string, string | number | string[] | undefined> = {}
+  ) => [...connectionsKeys.all, "eventsList", connectionId, { filters }] as const,
+  event: (eventId: string) => [...connectionsKeys.all, "event", eventId] as const,
 };
 
 export interface ConnectionValues {
@@ -95,6 +104,52 @@ interface CreateConnectionProps {
   destinationDefinition?: { name: string; destinationDefinitionId: string };
   sourceCatalogId: string | undefined;
 }
+
+export const useListConnectionEventsInfinite = (
+  connectionEventsRequestBody: ConnectionEventsRequestBody,
+  pageSize: number = 50
+) => {
+  const requestOptions = useRequestOptions();
+  const queryKey = connectionsKeys.eventsList(connectionEventsRequestBody.connectionId, {
+    eventTypes: connectionEventsRequestBody.eventTypes,
+    createdAtStart: connectionEventsRequestBody.createdAtStart,
+    createdAtEnd: connectionEventsRequestBody.createdAtEnd,
+  });
+
+  return useInfiniteQuery(
+    queryKey,
+    async ({ pageParam = 0 }: { pageParam?: number }) => {
+      return {
+        data: await listConnectionEvents(
+          {
+            ...connectionEventsRequestBody,
+            pagination: { pageSize, rowOffset: pageSize * pageParam },
+          },
+          requestOptions
+        ),
+        pageParam,
+      };
+    },
+    {
+      getPreviousPageParam: (firstPage) => (firstPage.pageParam > 0 ? firstPage.pageParam - 1 : undefined),
+      getNextPageParam: (lastPage) => (lastPage.data.events.length < pageSize ? undefined : lastPage.pageParam + 1),
+    }
+  );
+};
+
+export const useGetConnectionEvent = (connectionEventId: string | null): ConnectionEventWithDetails | undefined => {
+  const requestOptions = useRequestOptions();
+
+  return useSuspenseQuery(
+    connectionsKeys.event(connectionEventId ?? ""),
+    async () => {
+      return await getConnectionEvent({ connectionEventId: connectionEventId ?? "" }, requestOptions);
+    },
+    {
+      enabled: !!connectionEventId,
+    }
+  );
+};
 
 export const useGetLastJobPerStream = (connectionId: string) => {
   const requestOptions = useRequestOptions();

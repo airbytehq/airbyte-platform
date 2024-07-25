@@ -142,7 +142,7 @@ public class PermissionPersistence {
   }
 
   public List<UserPermission> listInstanceAdminUsers() throws IOException {
-    return this.database.query(ctx -> listInstanceAdminPermissions(ctx));
+    return this.database.query(this::listInstanceAdminPermissions);
   }
 
   public List<UserPermission> listUsersInOrganization(final UUID organizationId) throws IOException {
@@ -157,7 +157,7 @@ public class PermissionPersistence {
         .where(PERMISSION.PERMISSION_TYPE.eq(io.airbyte.db.instance.configs.jooq.generated.enums.PermissionType.instance_admin))
         .fetch();
 
-    return records.stream().map(record -> buildUserPermissionFromRecord(record)).collect(Collectors.toList());
+    return records.stream().map(this::buildUserPermissionFromRecord).collect(Collectors.toList());
   }
 
   public Boolean isUserInstanceAdmin(final UUID userId) throws IOException {
@@ -258,7 +258,7 @@ public class PermissionPersistence {
         .where(PERMISSION.WORKSPACE_ID.eq(workspaceId))
         .fetch();
 
-    return records.stream().map(record -> buildUserPermissionFromRecord(record)).collect(Collectors.toList());
+    return records.stream().map(this::buildUserPermissionFromRecord).collect(Collectors.toList());
   }
 
   /**
@@ -276,7 +276,7 @@ public class PermissionPersistence {
         .where(PERMISSION.ORGANIZATION_ID.eq(organizationId))
         .fetch();
 
-    return records.stream().map(record -> buildUserPermissionFromRecord(record)).collect(Collectors.toList());
+    return records.stream().map(this::buildUserPermissionFromRecord).collect(Collectors.toList());
   }
 
   private UserPermission buildUserPermissionFromRecord(final Record record) {

@@ -88,7 +88,7 @@ public class InstanceConfigurationHandler {
         .initialSetupComplete(initialSetupComplete)
         .defaultUserId(getDefaultUserId())
         .defaultOrganizationId(defaultOrganizationId)
-        .trackingStrategy(trackingStrategy.equalsIgnoreCase("segment") ? TrackingStrategyEnum.SEGMENT : TrackingStrategyEnum.LOGGING);
+        .trackingStrategy("segment".equalsIgnoreCase(trackingStrategy) ? TrackingStrategyEnum.SEGMENT : TrackingStrategyEnum.LOGGING);
   }
 
   public InstanceConfigurationResponse setupInstanceConfiguration(final InstanceConfigurationSetupRequestBody requestBody)

@@ -24,7 +24,8 @@ import org.jooq.impl.DSL;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-public class V0_55_1_004__EnforceOrgsEverywhereTest extends AbstractConfigsDatabaseTest {
+@SuppressWarnings({"PMD.JUnitTestsShouldIncludeAssert", "PMD.AvoidDuplicateLiterals"})
+class V0_55_1_004__EnforceOrgsEverywhereTest extends AbstractConfigsDatabaseTest {
 
   private static final UUID DEFAULT_ORGANIZATION_ID = UUID.fromString("00000000-0000-0000-0000-000000000000");
 

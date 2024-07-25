@@ -87,8 +87,6 @@ object HideActorDefinitionFromList : Permanent<Boolean>(key = "connectors.hideAc
 
 object PauseSyncsWithUnsupportedActors : Temporary<Boolean>(key = "connectors.pauseSyncsWithUnsupportedActors", default = true)
 
-object UseIconUrlInApiResponse : Temporary<Boolean>(key = "connectors.useIconUrlInApiResponse", default = false)
-
 object DestResourceOverrides : Temporary<String>(key = "dest-resource-overrides", default = "")
 
 object OrchestratorResourceOverrides : Temporary<String>(key = "orchestrator-resource-overrides", default = "")
@@ -178,10 +176,6 @@ object UseCustomK8sInitCheck : Temporary<Boolean>(key = "platform.use-custom-k8s
 
 object ConnectionFieldLimitOverride : Permanent<Int>(key = "connection-field-limit-override", default = -1)
 
-object DeleteDanglingSecrets : Temporary<Boolean>(key = "platform.delete-dangling-secrets", default = false)
-
-object DeleteSecretsWhenTombstoneActors : Temporary<Boolean>(key = "platform.delete-secrets-when-tombstone-actors", default = false)
-
 object EnableResumableFullRefresh : Temporary<Boolean>(key = "platform.enable-resumable-full-refresh", default = false)
 
 object AlwaysRunCheckBeforeSync : Permanent<Boolean>(key = "platform.always-run-check-before-sync", default = false)
@@ -193,3 +187,5 @@ object WorkloadApiServerEnabled : EnvVar(envVar = "WORKLOAD_API_SERVER_ENABLED",
 object DiscoverPostprocessInTemporal : Permanent<Boolean>(key = "platform.discover-postprocess-in-temporal", default = false)
 
 object RestrictLoginsForSSODomains : Temporary<Boolean>(key = "platform.restrict-logins-for-sso-domains", default = false)
+
+object ResetStreamsStateWhenDisabled : Temporary<Boolean>(key = "reset-stream-state-on-disable", default = false)

@@ -44,7 +44,7 @@ public class NotificationHelper {
         LOGGER.info("No diff to report for connection: '{}'; skipping notification.", connection.getConnectionId());
         return;
       }
-      if (!(Boolean.TRUE == connection.getNotifySchemaChanges())) {
+      if (Boolean.TRUE != connection.getNotifySchemaChanges()) {
         LOGGER.debug("Schema changes notifications are disabled for connectionId '{}'", connection.getConnectionId());
         return;
       }

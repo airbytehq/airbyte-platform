@@ -4,7 +4,6 @@
 
 package io.airbyte.container_orchestrator.config;
 
-import com.fasterxml.jackson.core.type.TypeReference;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.persistence.job.models.JobRunConfig;
 import io.airbyte.workers.process.AsyncOrchestratorPodProcess;
@@ -19,7 +18,6 @@ import jakarta.inject.Singleton;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.Map;
 
 /**
  * Code for handling configuration files for orchestrated pods.
@@ -54,19 +52,6 @@ public class ConfigFactory {
   @Named("application")
   String application(@Named("configDir") final String configDir) throws IOException {
     return Files.readString(Path.of(configDir, OrchestratorConstants.INIT_FILE_APPLICATION));
-  }
-
-  /**
-   * Returns the contents of the OrchestratorConstants.INIT_FILE_ENV_MAP file.
-   *
-   * @param configDir Which directory contains the OrchestratorConstants.INIT_FILE_ENV_MAP file.
-   * @return Contents of OrchestratorConstants.INIT_FILE_ENV_MAP
-   */
-  @Singleton
-  @Named("envVars")
-  Map<String, String> envVars(@Named("configDir") final String configDir) {
-    return Jsons.deserialize(
-        Path.of(configDir, OrchestratorConstants.INIT_FILE_ENV_MAP).toFile(), new TypeReference<>() {});
   }
 
   /**

@@ -22,6 +22,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import org.apache.commons.lang3.tuple.ImmutablePair;
@@ -39,8 +40,8 @@ class RecordSchemaValidatorTest {
   private static final AirbyteMessage INVALID_RECORD_1 = AirbyteMessageUtils.createRecordMessage(STREAM_NAME, FIELD_NAME, 3);
   private static final AirbyteMessage INVALID_RECORD_2 = AirbyteMessageUtils.createRecordMessage(STREAM_NAME, Map.of(FIELD_NAME, true));
 
-  private ConcurrentHashMap<AirbyteStreamNameNamespacePair, ImmutablePair<Set<String>, Integer>> validationErrors;
-  private ConcurrentHashMap<AirbyteStreamNameNamespacePair, Set<String>> uncountedValidationErrors;
+  private ConcurrentMap<AirbyteStreamNameNamespacePair, ImmutablePair<Set<String>, Integer>> validationErrors;
+  private ConcurrentMap<AirbyteStreamNameNamespacePair, Set<String>> uncountedValidationErrors;
 
   @BeforeEach
   void setup() {

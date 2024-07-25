@@ -156,7 +156,7 @@ import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mockito;
 
-@SuppressWarnings("unchecked")
+@SuppressWarnings({"unchecked", "PMD.AvoidDuplicateLiterals"})
 class SchedulerHandlerTest {
 
   private static final String SOURCE_DOCKER_REPO = "srcimage";

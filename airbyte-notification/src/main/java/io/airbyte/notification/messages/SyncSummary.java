@@ -45,10 +45,11 @@ public class SyncSummary {
   private static String formatVolume(final long bytes) {
     long currentValue = bytes;
     for (String unit : List.of("B", "kB", "MB", "GB")) {
-      if (currentValue < 1024) {
+      var byteLimit = 1024;
+      if (currentValue < byteLimit) {
         return String.format("%d %s", currentValue, unit);
       }
-      currentValue = currentValue / 1024;
+      currentValue = currentValue / byteLimit;
     }
     return String.format("%d TB", currentValue);
   }

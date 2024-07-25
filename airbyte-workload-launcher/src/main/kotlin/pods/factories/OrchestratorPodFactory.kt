@@ -45,7 +45,7 @@ class OrchestratorPodFactory(
     nodeSelectors: Map<String, String>,
     kubePodInfo: KubePodInfo,
     annotations: Map<String, String>,
-    additionalEnvVars: Map<String, String>,
+    extraEnvVars: List<EnvVar>,
   ): Pod {
     val volumes: MutableList<Volume> = ArrayList()
     val volumeMounts: MutableList<VolumeMount> = ArrayList()
@@ -70,15 +70,13 @@ class OrchestratorPodFactory(
 
     val initContainer = initContainerFactory.create(containerResources, volumeMounts)
 
-    val extraKubeEnv = additionalEnvVars.map { (k, v) -> EnvVar(k, v, null) }
-
     val mainContainer =
       ContainerBuilder()
         .withName(KubePodProcess.MAIN_CONTAINER_NAME)
         .withImage(kubePodInfo.mainContainerInfo.image)
         .withImagePullPolicy(kubePodInfo.mainContainerInfo.pullPolicy)
         .withResources(containerResources)
-        .withEnv(orchestratorEnvSingleton.orchestratorEnvVars(connectionId) + extraKubeEnv)
+        .withEnv(orchestratorEnvSingleton.orchestratorEnvVars(connectionId) + extraEnvVars)
         .withPorts(containerPorts)
         .withVolumeMounts(volumeMounts)
         .withSecurityContext(containerSecurityContext())

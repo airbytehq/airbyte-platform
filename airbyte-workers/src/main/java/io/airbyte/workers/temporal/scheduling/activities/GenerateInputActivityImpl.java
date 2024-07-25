@@ -35,6 +35,7 @@ import org.openapitools.client.infrastructure.ClientException;
  */
 @Singleton
 @Requires(env = WorkerMode.CONTROL_PLANE)
+@SuppressWarnings({"PMD.EmptyCatchBlock", "PMD.AvoidCatchingNPE"})
 public class GenerateInputActivityImpl implements GenerateInputActivity {
 
   private final AirbyteApiClient airbyteApiClient;

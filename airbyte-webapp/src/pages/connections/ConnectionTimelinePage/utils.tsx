@@ -4,72 +4,40 @@ import { FlexContainer, FlexItem } from "components/ui/Flex";
 import { Icon, IconColor } from "components/ui/Icon";
 import { Text } from "components/ui/Text";
 
-import { JobStatus } from "core/api/types/AirbyteClient";
-
-/**
- * TYPES -- may change as mock data is removed
- */
-
-export interface ConnectionTimelineEvent {
-  id: string;
-  connectionId: string;
-  userName?: string;
-  timestamp: number;
-  eventType: ConnectionTimelineEventType;
-  eventSummary: Record<string, string | string[] | Record<string, string | string[]>>;
-}
-
-export enum ConnectionTimelineEventType {
-  sync_succeeded = "sync_succeeded",
-  sync_failed = "sync_failed",
-  sync_incomplete = "sync_incomplete",
-  sync_cancelled = "sync_cancelled",
-  clear_succeeded = "clear_succeeded",
-  clear_failed = "clear_failed",
-  clear_incomplete = "clear_incomplete",
-  clear_cancelled = "clear_cancelled",
-  refresh_succeeded = "refresh_succeeded",
-  refresh_failed = "refresh_failed",
-  refresh_incomplete = "refresh_incomplete",
-  refresh_cancelled = "refresh_cancelled",
-}
-
-export interface ConnectionTimelineEventList {
-  events: ConnectionTimelineEvent[];
-}
-
-export interface ConnectionTimelineJobStatsProps {
-  bytesCommitted?: number;
-  recordsCommitted?: number;
-  jobId: number;
-  failureMessage?: string;
-  jobStartedAt: number;
-  jobEndedAt: number;
-  attemptsCount: number;
-  jobStatus: JobStatus;
-}
+import { ConnectionEventType } from "core/api/types/AirbyteClient";
 
 /**
  * GENERAL TIMELINE UTILITIES
  */
 
-export const titleIdMap: Record<ConnectionTimelineEvent["eventType"], string> = {
-  [ConnectionTimelineEventType.clear_cancelled]: "connection.timeline.clear_cancelled",
-  [ConnectionTimelineEventType.clear_failed]: "connection.timeline.clear_failed",
-  [ConnectionTimelineEventType.clear_incomplete]: "connection.timeline.clear_incomplete",
-  [ConnectionTimelineEventType.clear_succeeded]: "connection.timeline.clear_succeeded",
-  [ConnectionTimelineEventType.refresh_cancelled]: "connection.timeline.refresh_cancelled",
-  [ConnectionTimelineEventType.refresh_failed]: "connection.timeline.refresh_failed",
-  [ConnectionTimelineEventType.refresh_incomplete]: "connection.timeline.refresh_incomplete",
-  [ConnectionTimelineEventType.refresh_succeeded]: "connection.timeline.refresh_succeeded",
-  [ConnectionTimelineEventType.sync_cancelled]: "connection.timeline.sync_cancelled",
-  [ConnectionTimelineEventType.sync_failed]: "connection.timeline.sync_failed",
-  [ConnectionTimelineEventType.sync_incomplete]: "connection.timeline.sync_incomplete",
-  [ConnectionTimelineEventType.sync_succeeded]: "connection.timeline.sync_succeeded",
+export const titleIdMap: Record<ConnectionEventType, string> = {
+  [ConnectionEventType.CLEAR_CANCELLED]: "connection.timeline.clear_cancelled",
+  [ConnectionEventType.CLEAR_FAILED]: "connection.timeline.clear_failed",
+  [ConnectionEventType.CLEAR_INCOMPLETE]: "connection.timeline.clear_incomplete",
+  [ConnectionEventType.CLEAR_SUCCEEDED]: "connection.timeline.clear_succeeded",
+  [ConnectionEventType.REFRESH_CANCELLED]: "connection.timeline.refresh_cancelled",
+  [ConnectionEventType.REFRESH_FAILED]: "connection.timeline.refresh_failed",
+  [ConnectionEventType.REFRESH_INCOMPLETE]: "connection.timeline.refresh_incomplete",
+  [ConnectionEventType.REFRESH_SUCCEEDED]: "connection.timeline.refresh_succeeded",
+  [ConnectionEventType.SYNC_CANCELLED]: "connection.timeline.sync_cancelled",
+  [ConnectionEventType.SYNC_FAILED]: "connection.timeline.sync_failed",
+  [ConnectionEventType.SYNC_INCOMPLETE]: "connection.timeline.sync_incomplete",
+  [ConnectionEventType.SYNC_SUCCEEDED]: "connection.timeline.sync_succeeded",
+  [ConnectionEventType.SYNC_STARTED]: "connection.timeline.sync_started",
+  [ConnectionEventType.REFRESH_STARTED]: "connection.timeline.refresh_started",
+  [ConnectionEventType.CLEAR_STARTED]: "connection.timeline.clear_started",
+
+  // todo
+  [ConnectionEventType.CONNECTION_SETTINGS_UPDATE]: "",
+  [ConnectionEventType.CONNECTION_ENABLED]: "",
+  [ConnectionEventType.CONNECTION_DISABLED]: "",
+  [ConnectionEventType.SCHEMA_UPDATE]: "",
+  [ConnectionEventType.CONNECTOR_UPDATE]: "",
+  [ConnectionEventType.UNKNOWN]: "",
 };
 
 /**
- * JOB EVENT UTILITIES
+ * JOB-SPECIFIC EVENT UTILITIES
  */
 
 export const getStatusIcon = (jobStatus: "failed" | "incomplete" | "cancelled" | "succeeded") => {
@@ -83,115 +51,95 @@ export const getStatusIcon = (jobStatus: "failed" | "incomplete" | "cancelled" |
   return "statusSuccess";
 };
 
-export const extractJobIdFromSummary = (eventSummary: ConnectionTimelineEvent["eventSummary"]) => {
-  if (typeof eventSummary.jobId !== "string" || Number.isNaN(parseInt(eventSummary.jobId))) {
-    return undefined;
-  }
-  return parseInt(eventSummary.jobId);
-};
-export const castEventSummaryToConnectionTimelineJobStatsProps = (
-  eventSummary: ConnectionTimelineEvent["eventSummary"]
-): ConnectionTimelineJobStatsProps | undefined => {
-  if (
-    typeof eventSummary.jobId !== "string" ||
-    typeof eventSummary.jobStartedAt !== "string" ||
-    typeof eventSummary.jobEndedAt !== "string" ||
-    typeof eventSummary.attemptsCount !== "string" ||
-    typeof eventSummary.jobStatus !== "string"
-  ) {
-    return undefined;
-  }
-
-  return {
-    bytesCommitted: typeof eventSummary.bytesCommitted === "string" ? parseInt(eventSummary.bytesCommitted) : undefined,
-    recordsCommitted:
-      typeof eventSummary.recordsCommitted === "string" ? parseInt(eventSummary.recordsCommitted) : undefined,
-    jobId: parseInt(eventSummary.jobId),
-    failureMessage: eventSummary.message.toString(),
-    jobStartedAt: parseInt(eventSummary.jobStartedAt),
-    jobEndedAt: parseInt(eventSummary.jobEndedAt),
-    attemptsCount: parseInt(eventSummary.attemptsCount),
-    jobStatus:
-      eventSummary.jobStatus === "failed"
-        ? "failed"
-        : eventSummary.jobStatus === "cancelled"
-        ? "cancelled"
-        : eventSummary.jobStatus === "succeeded"
-        ? "succeeded"
-        : eventSummary.jobStatus === "incomplete"
-        ? "incomplete"
-        : (undefined as unknown as JobStatus),
-  };
-};
-
-export const extractStreamsFromTimelineEvent = (eventSummary: ConnectionTimelineEvent["eventSummary"]) => {
-  return Array.isArray(eventSummary.streams) && eventSummary.streams.length > 0 ? eventSummary.streams : [];
-};
-
 /**
  * FILTER UTILITIES
  */
 
 export interface TimelineFilterValues {
-  status: "success" | "failure" | "incomplete" | "cancelled" | null;
-  eventType: "sync" | "clear" | "refresh" | null;
-  eventId: string | null;
-  openLogs: "true" | "false" | null;
+  status: "success" | "failure" | "incomplete" | "cancelled" | "";
+  eventCategory: "sync" | "clear" | "refresh" | "";
+  startDate: string;
+  endDate: string;
+  eventId: string;
+  openLogs: "true" | "false" | "";
+  jobId: string;
+  attemptNumber: string;
 }
 
-export const eventTypeByFilterValue: Record<
-  Exclude<TimelineFilterValues["eventType"], null>,
-  ConnectionTimelineEventType[]
-> = {
-  sync: [
-    ConnectionTimelineEventType.sync_succeeded,
-    ConnectionTimelineEventType.sync_failed,
-    ConnectionTimelineEventType.sync_incomplete,
-    ConnectionTimelineEventType.sync_cancelled,
-  ],
-  clear: [
-    ConnectionTimelineEventType.clear_succeeded,
-    ConnectionTimelineEventType.clear_failed,
-    ConnectionTimelineEventType.clear_incomplete,
-    ConnectionTimelineEventType.clear_cancelled,
-  ],
-  refresh: [
-    ConnectionTimelineEventType.refresh_succeeded,
-    ConnectionTimelineEventType.refresh_failed,
-    ConnectionTimelineEventType.refresh_incomplete,
-    ConnectionTimelineEventType.refresh_cancelled,
-  ],
-};
-
 export const eventTypeByStatusFilterValue: Record<
-  Exclude<TimelineFilterValues["status"], null>,
-  ConnectionTimelineEventType[]
+  Exclude<TimelineFilterValues["status"], "">,
+  ConnectionEventType[]
 > = {
   success: [
-    ConnectionTimelineEventType.sync_succeeded,
-    ConnectionTimelineEventType.clear_succeeded,
-    ConnectionTimelineEventType.refresh_succeeded,
+    ConnectionEventType.SYNC_SUCCEEDED,
+    ConnectionEventType.CLEAR_SUCCEEDED,
+    ConnectionEventType.REFRESH_SUCCEEDED,
   ],
-  failure: [
-    ConnectionTimelineEventType.sync_failed,
-    ConnectionTimelineEventType.clear_failed,
-    ConnectionTimelineEventType.refresh_failed,
-  ],
+  failure: [ConnectionEventType.SYNC_FAILED, ConnectionEventType.CLEAR_FAILED, ConnectionEventType.REFRESH_FAILED],
   incomplete: [
-    ConnectionTimelineEventType.sync_incomplete,
-    ConnectionTimelineEventType.clear_incomplete,
-    ConnectionTimelineEventType.refresh_incomplete,
+    ConnectionEventType.SYNC_INCOMPLETE,
+    ConnectionEventType.CLEAR_INCOMPLETE,
+    ConnectionEventType.REFRESH_INCOMPLETE,
   ],
   cancelled: [
-    ConnectionTimelineEventType.sync_cancelled,
-    ConnectionTimelineEventType.clear_cancelled,
-    ConnectionTimelineEventType.refresh_cancelled,
+    ConnectionEventType.SYNC_CANCELLED,
+    ConnectionEventType.CLEAR_CANCELLED,
+    ConnectionEventType.REFRESH_CANCELLED,
   ],
 };
 
+export const eventTypeByTypeFilterValue: Record<
+  Exclude<TimelineFilterValues["eventCategory"], "">,
+  ConnectionEventType[]
+> = {
+  sync: [
+    ConnectionEventType.SYNC_SUCCEEDED,
+    ConnectionEventType.SYNC_CANCELLED,
+    ConnectionEventType.SYNC_FAILED,
+    ConnectionEventType.SYNC_INCOMPLETE,
+    ConnectionEventType.SYNC_STARTED,
+  ],
+  clear: [
+    ConnectionEventType.CLEAR_SUCCEEDED,
+    ConnectionEventType.CLEAR_CANCELLED,
+    ConnectionEventType.CLEAR_FAILED,
+    ConnectionEventType.CLEAR_INCOMPLETE,
+    ConnectionEventType.CLEAR_STARTED,
+  ],
+  refresh: [
+    ConnectionEventType.REFRESH_SUCCEEDED,
+    ConnectionEventType.REFRESH_CANCELLED,
+    ConnectionEventType.REFRESH_FAILED,
+    ConnectionEventType.REFRESH_INCOMPLETE,
+    ConnectionEventType.REFRESH_STARTED,
+  ],
+};
+
+export const getStatusByEventType = (eventType: ConnectionEventType) => {
+  if (
+    eventType === ConnectionEventType.SYNC_FAILED ||
+    eventType === ConnectionEventType.CLEAR_FAILED ||
+    eventType === ConnectionEventType.REFRESH_FAILED
+  ) {
+    return "failed";
+  } else if (
+    eventType === ConnectionEventType.SYNC_INCOMPLETE ||
+    eventType === ConnectionEventType.CLEAR_INCOMPLETE ||
+    eventType === ConnectionEventType.REFRESH_INCOMPLETE
+  ) {
+    return "incomplete";
+  } else if (
+    eventType === ConnectionEventType.SYNC_CANCELLED ||
+    eventType === ConnectionEventType.CLEAR_CANCELLED ||
+    eventType === ConnectionEventType.REFRESH_CANCELLED
+  ) {
+    return "cancelled";
+  }
+  return "succeeded";
+};
 type filterIconType = "statusSuccess" | "statusError" | "statusWarning" | "sync" | "statusCancelled";
 
-const timelineStatusFilterColors: Record<Exclude<TimelineFilterValues["status"], null>, IconColor> = {
+const timelineStatusFilterColors: Record<Exclude<TimelineFilterValues["status"], "">, IconColor> = {
   success: "success",
   failure: "error",
   cancelled: "disabled",
@@ -201,7 +149,7 @@ const timelineStatusFilterColors: Record<Exclude<TimelineFilterValues["status"],
 const generateStatusFilterOption = (value: TimelineFilterValues["status"], id: string, iconType: filterIconType) => {
   return {
     label:
-      value === null ? null : (
+      value === "" ? null : (
         <FlexContainer gap="sm" alignItems="center">
           <FlexItem>
             <Icon type={iconType} size="md" color={timelineStatusFilterColors[value]} />
@@ -217,12 +165,13 @@ const generateStatusFilterOption = (value: TimelineFilterValues["status"], id: s
   };
 };
 
-const generateEventTypeFilterOption = (value: TimelineFilterValues["eventType"], id: string) => ({
-  label: (
-    <Text color="grey" bold as="span">
-      <FormattedMessage id={id} />
-    </Text>
-  ),
+const generateEventTypeFilterOption = (value: TimelineFilterValues["eventCategory"], id: string) => ({
+  label:
+    value === "" ? null : (
+      <Text color="grey" bold as="span">
+        <FormattedMessage id={id} />
+      </Text>
+    ),
   value,
 });
 
@@ -233,7 +182,7 @@ export const statusFilterOptions = [
         <FormattedMessage id="connection.timeline.filters.allStatuses" />
       </Text>
     ),
-    value: null,
+    value: "",
   },
   generateStatusFilterOption("success", "connection.timeline.filters.success", "statusSuccess"),
   generateStatusFilterOption("failure", "connection.timeline.filters.failure", "statusError"),
@@ -248,7 +197,7 @@ export const eventTypeFilterOptions = [
         <FormattedMessage id="connection.timeline.filters.allEventTypes" />
       </Text>
     ),
-    value: null,
+    value: "",
   },
   generateEventTypeFilterOption("sync", "connection.timeline.filters.sync"),
   generateEventTypeFilterOption("refresh", "connection.timeline.filters.refresh"),

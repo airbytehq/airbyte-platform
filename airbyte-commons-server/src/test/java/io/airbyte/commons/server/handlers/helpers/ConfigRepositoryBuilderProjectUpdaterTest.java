@@ -27,24 +27,19 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
-public class ConfigRepositoryBuilderProjectUpdaterTest {
+class ConfigRepositoryBuilderProjectUpdaterTest {
 
   private final JsonNode draftManifest = addSpec(Jsons.deserialize("{\"test\":123,\"empty\":{\"array_in_object\":[]}}"));
 
   private static final UUID A_SOURCE_DEFINITION_ID = UUID.randomUUID();
   private static final UUID A_BUILDER_PROJECT_ID = UUID.randomUUID();
   private static final UUID A_WORKSPACE_ID = UUID.randomUUID();
-  private static final String A_DESCRIPTION = "a description";
   private static final String A_SOURCE_NAME = "a source name";
-  private static final String A_NAME = "a name";
-  private static final String A_DOCUMENTATION_URL = "http://documentation.url";
   private static final JsonNode A_MANIFEST;
-  private static final JsonNode A_SPEC;
 
   static {
     try {
       A_MANIFEST = new ObjectMapper().readTree("{\"a_manifest\": \"manifest_value\"}");
-      A_SPEC = new ObjectMapper().readTree("{\"a_spec\": \"spec_value\"}");
     } catch (final JsonProcessingException e) {
       throw new RuntimeException(e);
     }

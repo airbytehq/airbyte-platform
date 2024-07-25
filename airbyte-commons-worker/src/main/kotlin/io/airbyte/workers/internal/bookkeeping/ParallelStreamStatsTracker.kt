@@ -77,7 +77,7 @@ class ParallelStreamStatsTracker(
 
     when (stateMessage.type) {
       AirbyteStateMessage.AirbyteStateType.GLOBAL -> {
-        stateMessage.global.streamStates.forEach { it ->
+        stateMessage.global.streamStates.forEach {
           logStreamNameIfEnabled(it)
           val statsTracker = getOrCreateStreamStatsTracker(getNameNamespacePair(it.streamDescriptor))
           statsTracker.trackStateFromSource(stateMessage)
@@ -389,7 +389,7 @@ class ParallelStreamStatsTracker(
    * Get the [StreamStatsTracker] for a given stream. If this tracker doesn't exist, create it.
    */
   private fun getOrCreateStreamStatsTracker(pair: AirbyteStreamNameNamespacePair): StreamStatsTracker {
-    // if a entry already exists, return it
+    // if an entry already exists, return it
     streamTrackers[pair]?.let { return it }
 
     // We want to avoid multiple threads trying to create a new StreamStatsTracker.

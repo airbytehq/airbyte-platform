@@ -4,11 +4,9 @@
 
 package io.airbyte.commons.server.handlers;
 
-import static io.airbyte.featureflag.ContextKt.ANONYMOUS;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
@@ -69,7 +67,6 @@ import io.airbyte.featureflag.HideActorDefinitionFromList;
 import io.airbyte.featureflag.Multi;
 import io.airbyte.featureflag.SourceDefinition;
 import io.airbyte.featureflag.TestClient;
-import io.airbyte.featureflag.UseIconUrlInApiResponse;
 import io.airbyte.featureflag.Workspace;
 import io.airbyte.protocol.models.ConnectorSpecification;
 import io.airbyte.validation.json.JsonValidationException;
@@ -88,8 +85,6 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.ValueSource;
 
 class SourceDefinitionsHandlerTest {
 
@@ -220,7 +215,7 @@ class SourceDefinitionsHandlerTest {
         .dockerRepository(sourceDefinitionVersion.getDockerRepository())
         .dockerImageTag(sourceDefinitionVersion.getDockerImageTag())
         .documentationUrl(new URI(sourceDefinitionVersion.getDocumentationUrl()))
-        .icon(SourceDefinitionsHandler.loadIcon(sourceDefinition.getIcon()))
+        .icon(ICON_URL)
         .supportLevel(SupportLevel.fromValue(sourceDefinitionVersion.getSupportLevel().value()))
         .releaseStage(ReleaseStage.fromValue(sourceDefinitionVersion.getReleaseStage().value()))
         .releaseDate(LocalDate.parse(sourceDefinitionVersion.getReleaseDate()))
@@ -238,7 +233,7 @@ class SourceDefinitionsHandlerTest {
         .dockerRepository(sourceDefinitionVersion2.getDockerRepository())
         .dockerImageTag(sourceDefinitionVersion2.getDockerImageTag())
         .documentationUrl(new URI(sourceDefinitionVersion2.getDocumentationUrl()))
-        .icon(SourceDefinitionsHandler.loadIcon(sourceDefinition.getIcon()))
+        .icon(ICON_URL)
         .supportLevel(SupportLevel.fromValue(sourceDefinitionVersion2.getSupportLevel().value()))
         .releaseStage(ReleaseStage.fromValue(sourceDefinitionVersion2.getReleaseStage().value()))
         .releaseDate(LocalDate.parse(sourceDefinitionVersion2.getReleaseDate()))
@@ -256,7 +251,7 @@ class SourceDefinitionsHandlerTest {
         .dockerRepository(sourceDefinitionVersionWithOptionals.getDockerRepository())
         .dockerImageTag(sourceDefinitionVersionWithOptionals.getDockerImageTag())
         .documentationUrl(new URI(sourceDefinitionVersionWithOptionals.getDocumentationUrl()))
-        .icon(SourceDefinitionsHandler.loadIcon(sourceDefinitionWithOptionals.getIcon()))
+        .icon(ICON_URL)
         .supportLevel(SupportLevel.fromValue(sourceDefinitionVersionWithOptionals.getSupportLevel().value()))
         .releaseStage(ReleaseStage.fromValue(sourceDefinitionVersionWithOptionals.getReleaseStage().value()))
         .releaseDate(LocalDate.parse(sourceDefinitionVersionWithOptionals.getReleaseDate()))
@@ -294,7 +289,7 @@ class SourceDefinitionsHandlerTest {
         .dockerRepository(sourceDefinitionVersion.getDockerRepository())
         .dockerImageTag(sourceDefinitionVersion.getDockerImageTag())
         .documentationUrl(new URI(sourceDefinitionVersion.getDocumentationUrl()))
-        .icon(SourceDefinitionsHandler.loadIcon(sourceDefinition.getIcon()))
+        .icon(ICON_URL)
         .supportLevel(SupportLevel.fromValue(sourceDefinitionVersion.getSupportLevel().value()))
         .releaseStage(ReleaseStage.fromValue(sourceDefinitionVersion.getReleaseStage().value()))
         .releaseDate(LocalDate.parse(sourceDefinitionVersion.getReleaseDate()))
@@ -309,7 +304,7 @@ class SourceDefinitionsHandlerTest {
         .dockerRepository(sourceDefinitionVersion2.getDockerRepository())
         .dockerImageTag(sourceDefinitionVersion2.getDockerImageTag())
         .documentationUrl(new URI(sourceDefinitionVersion2.getDocumentationUrl()))
-        .icon(SourceDefinitionsHandler.loadIcon(sourceDefinition.getIcon()))
+        .icon(ICON_URL)
         .supportLevel(SupportLevel.fromValue(sourceDefinitionVersion2.getSupportLevel().value()))
         .releaseStage(ReleaseStage.fromValue(sourceDefinitionVersion2.getReleaseStage().value()))
         .releaseDate(LocalDate.parse(sourceDefinitionVersion2.getReleaseDate()))
@@ -372,7 +367,7 @@ class SourceDefinitionsHandlerTest {
         .dockerRepository(sourceDefinitionVersion.getDockerRepository())
         .dockerImageTag(sourceDefinitionVersion.getDockerImageTag())
         .documentationUrl(new URI(sourceDefinitionVersion.getDocumentationUrl()))
-        .icon(SourceDefinitionsHandler.loadIcon(sourceDefinition.getIcon()))
+        .icon(ICON_URL)
         .supportLevel(SupportLevel.fromValue(sourceDefinitionVersion.getSupportLevel().value()))
         .releaseStage(ReleaseStage.fromValue(sourceDefinitionVersion.getReleaseStage().value()))
         .releaseDate(LocalDate.parse(sourceDefinitionVersion.getReleaseDate()))
@@ -387,7 +382,7 @@ class SourceDefinitionsHandlerTest {
         .dockerRepository(sourceDefinitionVersion2.getDockerRepository())
         .dockerImageTag(sourceDefinitionVersion2.getDockerImageTag())
         .documentationUrl(new URI(sourceDefinitionVersion2.getDocumentationUrl()))
-        .icon(SourceDefinitionsHandler.loadIcon(sourceDefinition.getIcon()))
+        .icon(ICON_URL)
         .supportLevel(SupportLevel.fromValue(sourceDefinitionVersion2.getSupportLevel().value()))
         .releaseStage(ReleaseStage.fromValue(sourceDefinitionVersion2.getReleaseStage().value()))
         .releaseDate(LocalDate.parse(sourceDefinitionVersion2.getReleaseDate()))
@@ -424,7 +419,7 @@ class SourceDefinitionsHandlerTest {
         .dockerRepository(sourceDefinitionVersion.getDockerRepository())
         .dockerImageTag(sourceDefinitionVersion.getDockerImageTag())
         .documentationUrl(new URI(sourceDefinitionVersion.getDocumentationUrl()))
-        .icon(SourceDefinitionsHandler.loadIcon(sourceDefinition.getIcon()))
+        .icon(ICON_URL)
         .supportLevel(SupportLevel.fromValue(sourceDefinitionVersion.getSupportLevel().value()))
         .releaseStage(ReleaseStage.fromValue(sourceDefinitionVersion.getReleaseStage().value()))
         .releaseDate(LocalDate.parse(sourceDefinitionVersion.getReleaseDate()))
@@ -487,7 +482,7 @@ class SourceDefinitionsHandlerTest {
         .dockerRepository(sourceDefinitionVersion.getDockerRepository())
         .dockerImageTag(sourceDefinitionVersion.getDockerImageTag())
         .documentationUrl(new URI(sourceDefinitionVersion.getDocumentationUrl()))
-        .icon(SourceDefinitionsHandler.loadIcon(sourceDefinition.getIcon()))
+        .icon(ICON_URL)
         .supportLevel(SupportLevel.fromValue(sourceDefinitionVersion.getSupportLevel().value()))
         .releaseStage(ReleaseStage.fromValue(sourceDefinitionVersion.getReleaseStage().value()))
         .releaseDate(LocalDate.parse(sourceDefinitionVersion.getReleaseDate()))
@@ -521,7 +516,7 @@ class SourceDefinitionsHandlerTest {
         .dockerRepository(sourceDefinitionVersion.getDockerRepository())
         .dockerImageTag(sourceDefinitionVersion.getDockerImageTag())
         .documentationUrl(new URI(sourceDefinitionVersion.getDocumentationUrl()))
-        .icon(SourceDefinitionsHandler.loadIcon(sourceDefinition.getIcon()))
+        .icon(ICON_URL)
         .supportLevel(SupportLevel.fromValue(sourceDefinitionVersion.getSupportLevel().value()))
         .releaseStage(ReleaseStage.fromValue(sourceDefinitionVersion.getReleaseStage().value()))
         .releaseDate(LocalDate.parse(sourceDefinitionVersion.getReleaseDate()))
@@ -583,7 +578,7 @@ class SourceDefinitionsHandlerTest {
         .dockerImageTag(sourceDefinitionVersion.getDockerImageTag())
         .documentationUrl(new URI(sourceDefinitionVersion.getDocumentationUrl()))
         .sourceDefinitionId(newSourceDefinition.getSourceDefinitionId())
-        .icon(SourceDefinitionsHandler.loadIcon(newSourceDefinition.getIcon()))
+        .icon(null)
         .protocolVersion(DEFAULT_PROTOCOL_VERSION)
         .custom(true)
         .supportLevel(SupportLevel.COMMUNITY)
@@ -647,7 +642,7 @@ class SourceDefinitionsHandlerTest {
         .dockerImageTag(sourceDefinitionVersion.getDockerImageTag())
         .documentationUrl(new URI(sourceDefinitionVersion.getDocumentationUrl()))
         .sourceDefinitionId(newSourceDefinition.getSourceDefinitionId())
-        .icon(SourceDefinitionsHandler.loadIcon(newSourceDefinition.getIcon()))
+        .icon(null)
         .protocolVersion(DEFAULT_PROTOCOL_VERSION)
         .custom(true)
         .supportLevel(SupportLevel.COMMUNITY)
@@ -731,14 +726,12 @@ class SourceDefinitionsHandlerTest {
     verifyNoMoreInteractions(actorDefinitionHandlerHelper);
   }
 
-  @ParameterizedTest
-  @ValueSource(booleans = {true, false})
+  @Test
   @DisplayName("updateSourceDefinition should correctly update a sourceDefinition")
-  void testUpdateSource(final boolean useIconUrlInApiResponseFlagValue)
+  void testUpdateSource()
       throws ConfigNotFoundException, IOException, JsonValidationException, URISyntaxException, io.airbyte.data.exceptions.ConfigNotFoundException {
     when(airbyteCompatibleConnectorsValidator.validate(anyString(), anyString()))
         .thenReturn(new ConnectorPlatformCompatibilityValidationResult(true, ""));
-    when(featureFlagClient.boolVariation(UseIconUrlInApiResponse.INSTANCE, new Workspace(ANONYMOUS))).thenReturn(useIconUrlInApiResponseFlagValue);
 
     final String newDockerImageTag = "averydifferenttag";
     final StandardSourceDefinition updatedSource =
@@ -775,7 +768,7 @@ class SourceDefinitionsHandlerTest {
         .dockerRepository(sourceDefinitionVersion.getDockerRepository())
         .dockerImageTag(newDockerImageTag)
         .documentationUrl(new URI(sourceDefinitionVersion.getDocumentationUrl()))
-        .icon(useIconUrlInApiResponseFlagValue ? ICON_URL : SourceDefinitionsHandler.loadIcon(sourceDefinition.getIcon()))
+        .icon(ICON_URL)
         .supportLevel(SupportLevel.fromValue(sourceDefinitionVersion.getSupportLevel().value()))
         .releaseStage(ReleaseStage.fromValue(sourceDefinitionVersion.getReleaseStage().value()))
         .releaseDate(LocalDate.parse(sourceDefinitionVersion.getReleaseDate()))
@@ -884,7 +877,7 @@ class SourceDefinitionsHandlerTest {
         .dockerRepository(sourceDefinitionVersion.getDockerRepository())
         .dockerImageTag(sourceDefinitionVersion.getDockerImageTag())
         .documentationUrl(new URI(sourceDefinitionVersion.getDocumentationUrl()))
-        .icon(SourceDefinitionsHandler.loadIcon(sourceDefinition.getIcon()))
+        .icon(ICON_URL)
         .supportLevel(SupportLevel.fromValue(sourceDefinitionVersion.getSupportLevel().value()))
         .releaseStage(ReleaseStage.fromValue(sourceDefinitionVersion.getReleaseStage().value()))
         .releaseDate(LocalDate.parse(sourceDefinitionVersion.getReleaseDate()))
@@ -919,7 +912,7 @@ class SourceDefinitionsHandlerTest {
         .dockerRepository(sourceDefinitionVersion.getDockerRepository())
         .dockerImageTag(sourceDefinitionVersion.getDockerImageTag())
         .documentationUrl(new URI(sourceDefinitionVersion.getDocumentationUrl()))
-        .icon(SourceDefinitionsHandler.loadIcon(sourceDefinition.getIcon()))
+        .icon(ICON_URL)
         .supportLevel(SupportLevel.fromValue(sourceDefinitionVersion.getSupportLevel().value()))
         .releaseStage(ReleaseStage.fromValue(sourceDefinitionVersion.getReleaseStage().value()))
         .releaseDate(LocalDate.parse(sourceDefinitionVersion.getReleaseDate()))
@@ -1022,14 +1015,6 @@ class SourceDefinitionsHandlerTest {
     void testHttpTimeout() {
       when(remoteDefinitionsProvider.getSourceDefinitions()).thenThrow(new RuntimeException());
       assertEquals(0, sourceDefinitionsHandler.listLatestSourceDefinitions().getSourceDefinitions().size());
-    }
-
-    @Test
-    @DisplayName("Icon should be an SVG icon")
-    void testIconHoldsData() {
-      final String icon = SourceDefinitionsHandler.loadIcon(sourceDefinition.getIcon());
-      assertNotNull(icon);
-      assertTrue(icon.contains("<svg"));
     }
 
   }

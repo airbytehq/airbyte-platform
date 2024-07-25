@@ -29,7 +29,8 @@ import org.mockito.Mockito;
 @Requires(env = {Environment.TEST})
 @Property(name = "micronaut.security.enabled",
           value = "false")
-public class CommunityCurrentUserServiceTest {
+@SuppressWarnings("PMD.JUnitTestsShouldIncludeAssert")
+class CommunityCurrentUserServiceTest {
 
   @MockBean(UserPersistence.class)
   UserPersistence mockUserPersistence() {

@@ -11,7 +11,6 @@ import static io.airbyte.metrics.lib.ApmTraceConstants.Tags.SOURCE_DOCKER_IMAGE_
 
 import com.google.common.annotations.VisibleForTesting;
 import datadog.trace.api.Trace;
-import io.airbyte.api.client.WorkloadApiClient;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.commons.temporal.TemporalUtils;
 import io.airbyte.config.Configs;
@@ -19,7 +18,6 @@ import io.airbyte.config.FailureReason;
 import io.airbyte.config.ReplicationOutput;
 import io.airbyte.container_orchestrator.AsyncStateManager;
 import io.airbyte.metrics.lib.ApmTraceUtils;
-import io.airbyte.persistence.job.models.IntegrationLauncherConfig;
 import io.airbyte.persistence.job.models.JobRunConfig;
 import io.airbyte.persistence.job.models.ReplicationInput;
 import io.airbyte.workers.exception.WorkerException;
@@ -29,9 +27,8 @@ import io.airbyte.workers.helper.FailureHelper;
 import io.airbyte.workers.internal.exception.DestinationException;
 import io.airbyte.workers.internal.exception.SourceException;
 import io.airbyte.workers.process.AsyncKubePodStatus;
-import io.airbyte.workers.sync.ReplicationLauncherWorker;
 import io.airbyte.workers.workload.JobOutputDocStore;
-import io.airbyte.workers.workload.WorkloadIdGenerator;
+import io.airbyte.workload.api.client.WorkloadApiClient;
 import io.airbyte.workload.api.client.model.generated.WorkloadCancelRequest;
 import io.airbyte.workload.api.client.model.generated.WorkloadFailureRequest;
 import io.airbyte.workload.api.client.model.generated.WorkloadSuccessRequest;
@@ -56,7 +53,6 @@ public class ReplicationJobOrchestrator implements JobOrchestrator<ReplicationIn
   // Used by the orchestrator to mark the job RUNNING once the relevant pods are spun up.
   private final AsyncStateManager asyncStateManager;
   private final WorkloadApiClient workloadApiClient;
-  private final WorkloadIdGenerator workloadIdGenerator;
   private final boolean workloadEnabled;
   private final JobOutputDocStore jobOutputDocStore;
 
@@ -66,7 +62,6 @@ public class ReplicationJobOrchestrator implements JobOrchestrator<ReplicationIn
                                     final ReplicationWorkerFactory replicationWorkerFactory,
                                     final AsyncStateManager asyncStateManager,
                                     final WorkloadApiClient workloadApiClient,
-                                    final WorkloadIdGenerator workloadIdGenerator,
                                     final boolean workloadEnabled,
                                     final JobOutputDocStore jobOutputDocStore) {
     this.configDir = Path.of(configDir);
@@ -75,7 +70,6 @@ public class ReplicationJobOrchestrator implements JobOrchestrator<ReplicationIn
     this.replicationWorkerFactory = replicationWorkerFactory;
     this.asyncStateManager = asyncStateManager;
     this.workloadApiClient = workloadApiClient;
-    this.workloadIdGenerator = workloadIdGenerator;
     this.workloadEnabled = workloadEnabled;
     this.jobOutputDocStore = jobOutputDocStore;
   }
@@ -83,11 +77,6 @@ public class ReplicationJobOrchestrator implements JobOrchestrator<ReplicationIn
   @Override
   public Path getConfigDir() {
     return configDir;
-  }
-
-  @Override
-  public String getOrchestratorName() {
-    return "Replication";
   }
 
   @Override
@@ -100,20 +89,15 @@ public class ReplicationJobOrchestrator implements JobOrchestrator<ReplicationIn
   public Optional<String> runJob() throws Exception {
     final var replicationInput = readInput();
 
-    final var sourceLauncherConfig = JobOrchestrator.readAndDeserializeFile(
-        getConfigDir().resolve(ReplicationLauncherWorker.INIT_FILE_SOURCE_LAUNCHER_CONFIG),
-        IntegrationLauncherConfig.class);
+    final var sourceLauncherConfig = replicationInput.getSourceLauncherConfig();
 
-    final var destinationLauncherConfig = JobOrchestrator.readAndDeserializeFile(
-        getConfigDir().resolve(ReplicationLauncherWorker.INIT_FILE_DESTINATION_LAUNCHER_CONFIG),
-        IntegrationLauncherConfig.class);
-    log.info("sourceLauncherConfig is: " + sourceLauncherConfig.toString());
+    final var destinationLauncherConfig = replicationInput.getDestinationLauncherConfig();
 
     ApmTraceUtils.addTagsToTrace(
         Map.of(JOB_ID_KEY, jobRunConfig.getJobId(),
             DESTINATION_DOCKER_IMAGE_KEY, destinationLauncherConfig.getDockerImage(),
             SOURCE_DOCKER_IMAGE_KEY, sourceLauncherConfig.getDockerImage()));
-    final Optional<String> workloadId = workloadEnabled ? Optional.of(JobOrchestrator.workloadId(configDir)) : Optional.empty();
+    final Optional<String> workloadId = workloadEnabled ? Optional.of(JobOrchestrator.workloadId()) : Optional.empty();
     final ReplicationWorker replicationWorker =
         replicationWorkerFactory.create(replicationInput, jobRunConfig, sourceLauncherConfig, destinationLauncherConfig, this::markJobRunning,
             workloadId);

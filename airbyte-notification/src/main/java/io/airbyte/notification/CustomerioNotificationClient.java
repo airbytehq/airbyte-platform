@@ -53,6 +53,7 @@ import org.slf4j.LoggerFactory;
  * For Airbyte Cloud, Airbyte engineers may use `DEFAULT_TRANSACTION_MESSAGE_ID = "6"` as a generic
  * template for notifications.
  */
+@SuppressWarnings("PMD.ConfusingArgumentToVarargsMethod")
 public class CustomerioNotificationClient extends NotificationClient {
 
   public static final ObjectMapper MAPPER = new ObjectMapper();

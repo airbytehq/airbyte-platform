@@ -203,7 +203,7 @@ public class ReplicationInputHydrator {
       throws Exception {
     if (schemaRefreshOutput != null && schemaRefreshOutput.getAppliedDiff() != null) {
       final var streamsToBackfill = BackfillHelper.getStreamsToBackfill(schemaRefreshOutput.getAppliedDiff(), catalog);
-      LOGGER.debug("Backfilling streams: {}", String.join(", ", streamsToBackfill.stream().map(sd -> sd.getName()).toList()));
+      LOGGER.debug("Backfilling streams: {}", String.join(", ", streamsToBackfill.stream().map(StreamDescriptor::getName).toList()));
       final State resetState = BackfillHelper.clearStateForStreamsToBackfill(state, streamsToBackfill);
       if (resetState != null) {
         // We persist the state here in case the attempt fails, the subsequent attempt will continue the

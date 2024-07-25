@@ -6,6 +6,7 @@ package io.airbyte.workers.exception
 
 class InvalidChecksumException(message: String) : WorkerException(message) {
   companion object {
+    @Suppress("ConstPropertyName")
     @java.io.Serial
     private const val serialVersionUID: Long = 1L
   }

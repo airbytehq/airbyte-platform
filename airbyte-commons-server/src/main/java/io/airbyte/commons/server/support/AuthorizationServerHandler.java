@@ -44,7 +44,7 @@ public class AuthorizationServerHandler extends ChannelDuplexHandler {
       // Only update headers if we're not talking about the APPLICATIONS_TOKEN_PATH
       // That endpoint doesn't need the updated headers and can be in a non-JSON format.
       // Did this here because I didn't want to parse a JSON Parsing exception in the contentToJson call.
-      if (!fullHttpRequest.uri().equals(APPLICATIONS_TOKEN_PATH)) {
+      if (!APPLICATIONS_TOKEN_PATH.equals(fullHttpRequest.uri())) {
         updatedMessage = updateHeaders(fullHttpRequest);
       }
     }

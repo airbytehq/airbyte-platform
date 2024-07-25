@@ -33,6 +33,6 @@ class SyncPersistenceFactory(
     catalog: ConfiguredAirbyteCatalog,
   ): SyncPersistence {
     val statsTracker = parallelStreamStatsTrackerFactory.get(connectionId, workspaceId, jobId, attemptNumber)
-    return applicationContext.createBean(statsTracker, connectionId, workspaceId, jobId, attemptNumber, catalog)
+    return applicationContext.createBean(statsTracker, connectionId, jobId, attemptNumber, catalog)
   }
 }

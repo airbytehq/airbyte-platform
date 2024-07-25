@@ -9,7 +9,6 @@ import static io.airbyte.workers.general.BufferedReplicationWorkerType.BUFFERED_
 
 import io.airbyte.analytics.TrackingClient;
 import io.airbyte.api.client.AirbyteApiClient;
-import io.airbyte.api.client.WorkloadApiClient;
 import io.airbyte.api.client.generated.SourceDefinitionApi;
 import io.airbyte.api.client.model.generated.SourceDefinitionIdRequestBody;
 import io.airbyte.api.client.model.generated.SourceIdRequestBody;
@@ -41,7 +40,6 @@ import io.airbyte.persistence.job.models.ReplicationInput;
 import io.airbyte.workers.RecordSchemaValidator;
 import io.airbyte.workers.WorkerMetricReporter;
 import io.airbyte.workers.WorkerUtils;
-import io.airbyte.workers.helper.AirbyteMessageDataExtractor;
 import io.airbyte.workers.helper.StreamStatusCompletionTracker;
 import io.airbyte.workers.internal.AirbyteDestination;
 import io.airbyte.workers.internal.AirbyteMapper;
@@ -59,6 +57,7 @@ import io.airbyte.workers.internal.bookkeeping.streamstatus.StreamStatusTrackerF
 import io.airbyte.workers.internal.syncpersistence.SyncPersistence;
 import io.airbyte.workers.internal.syncpersistence.SyncPersistenceFactory;
 import io.airbyte.workers.process.AirbyteIntegrationLauncherFactory;
+import io.airbyte.workload.api.client.WorkloadApiClient;
 import io.micronaut.context.annotation.Value;
 import io.micronaut.core.util.CollectionUtils;
 import jakarta.inject.Singleton;
@@ -87,7 +86,6 @@ public class ReplicationWorkerFactory {
   private final AirbyteIntegrationLauncherFactory airbyteIntegrationLauncherFactory;
   private final AirbyteApiClient airbyteApiClient;
   private final SyncPersistenceFactory syncPersistenceFactory;
-  private final AirbyteMessageDataExtractor airbyteMessageDataExtractor;
   private final FeatureFlagClient featureFlagClient;
   private final FeatureFlags featureFlags;
   private final MetricClient metricClient;
@@ -101,7 +99,6 @@ public class ReplicationWorkerFactory {
 
   public ReplicationWorkerFactory(
                                   final AirbyteIntegrationLauncherFactory airbyteIntegrationLauncherFactory,
-                                  final AirbyteMessageDataExtractor airbyteMessageDataExtractor,
                                   final AirbyteApiClient airbyteApiClient,
                                   final SyncPersistenceFactory syncPersistenceFactory,
                                   final FeatureFlagClient featureFlagClient,
@@ -117,7 +114,6 @@ public class ReplicationWorkerFactory {
     this.airbyteIntegrationLauncherFactory = airbyteIntegrationLauncherFactory;
     this.airbyteApiClient = airbyteApiClient;
     this.syncPersistenceFactory = syncPersistenceFactory;
-    this.airbyteMessageDataExtractor = airbyteMessageDataExtractor;
     this.replicationAirbyteMessageEventPublishingHelper = replicationAirbyteMessageEventPublishingHelper;
 
     this.featureFlagClient = featureFlagClient;
@@ -176,7 +172,7 @@ public class ReplicationWorkerFactory {
 
     return createReplicationWorker(airbyteSource, airbyteDestination, messageTracker,
         syncPersistence, recordSchemaValidator, fieldSelector, heartbeatTimeoutChaperone,
-        featureFlagClient, jobRunConfig, replicationInput, airbyteMessageDataExtractor, replicationAirbyteMessageEventPublishingHelper,
+        featureFlagClient, jobRunConfig, replicationInput, replicationAirbyteMessageEventPublishingHelper,
         onReplicationRunning, metricClient, destinationTimeout, workloadApiClient, workloadEnabled, analyticsMessageTracker,
         workloadId, airbyteApiClient, streamStatusCompletionTracker, streamStatusTrackerFactory, clock);
   }
@@ -313,7 +309,6 @@ public class ReplicationWorkerFactory {
                                                            final FeatureFlagClient featureFlagClient,
                                                            final JobRunConfig jobRunConfig,
                                                            final ReplicationInput replicationInput,
-                                                           final AirbyteMessageDataExtractor airbyteMessageDataExtractor,
                                                            final ReplicationAirbyteMessageEventPublishingHelper replicationEventPublishingHelper,
                                                            final VoidCallable onReplicationRunning,
                                                            final MetricClient metricClient,
@@ -344,7 +339,6 @@ public class ReplicationWorkerFactory {
         fieldSelector,
         heartbeatTimeoutChaperone,
         new ReplicationFeatureFlagReader(featureFlagClient, flagContext),
-        airbyteMessageDataExtractor,
         replicationEventPublishingHelper,
         onReplicationRunning,
         metricClient,
@@ -393,7 +387,6 @@ public class ReplicationWorkerFactory {
                                                                   final FieldSelector fieldSelector,
                                                                   final HeartbeatTimeoutChaperone srcHeartbeatTimeoutChaperone,
                                                                   final ReplicationFeatureFlagReader replicationFeatureFlagReader,
-                                                                  final AirbyteMessageDataExtractor airbyteMessageDataExtractor,
                                                                   final ReplicationAirbyteMessageEventPublishingHelper messageEventPublishingHelper,
                                                                   final VoidCallable onReplicationRunning,
                                                                   final MetricClient metricClient,

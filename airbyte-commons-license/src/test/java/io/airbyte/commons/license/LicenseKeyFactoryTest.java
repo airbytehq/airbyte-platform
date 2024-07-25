@@ -12,8 +12,9 @@ import java.util.Optional;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
+@SuppressWarnings("PMD.AvoidDuplicateLiterals")
 @MicronautTest(rebuildContext = true)
-public class LicenseKeyFactoryTest {
+class LicenseKeyFactoryTest {
 
   @Inject
   @Named("licenseKey")

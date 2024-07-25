@@ -31,7 +31,7 @@ import org.apache.commons.lang3.NotImplementedException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-public class ApplicationServiceMicronautImplTests {
+class ApplicationServiceMicronautImplTests {
 
   private InstanceAdminConfig instanceAdminConfig;
 

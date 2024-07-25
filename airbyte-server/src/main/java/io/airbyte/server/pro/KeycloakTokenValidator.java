@@ -38,7 +38,8 @@ import reactor.core.publisher.Mono;
 @Slf4j
 @Singleton
 @RequiresAirbyteProEnabled
-@SuppressWarnings({"PMD.PreserveStackTrace", "PMD.UseTryWithResources", "PMD.UnusedFormalParameter", "PMD.UnusedPrivateMethod"})
+@SuppressWarnings({"PMD.PreserveStackTrace", "PMD.UseTryWithResources", "PMD.UnusedFormalParameter", "PMD.UnusedPrivateMethod",
+  "PMD.ExceptionAsFlowControl"})
 public class KeycloakTokenValidator implements TokenValidator<HttpRequest<?>> {
 
   private final OkHttpClient client;

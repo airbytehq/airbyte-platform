@@ -67,11 +67,6 @@ public final class AuthenticationFields {
   public static final String EXTERNAL_AUTH_ID_FIELD_NAME = "authUserId";
 
   /**
-   * Name of the field in HTTP request bodies that contains the email value.
-   */
-  public static final String EMAIL_FIELD_NAME = "email";
-
-  /**
    * Name of the field in HTTP request bodies that contains the workspace ID value.
    */
   public static final String WORKSPACE_ID_FIELD_NAME = "workspaceId";

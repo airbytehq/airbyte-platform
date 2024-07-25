@@ -15,6 +15,7 @@ import io.micronaut.context.annotation.Value;
 import jakarta.inject.Named;
 import jakarta.inject.Singleton;
 import java.util.Arrays;
+import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
@@ -200,8 +201,8 @@ public class WorkerConfigsProvider implements ResourceRequirementsProvider {
           .orElseThrow(() -> new IllegalArgumentException(
               "Unsupported config name " + config.getName() + " doesn't match the (<variant>--)?<type>-<subtype> format"));
       final Map<ResourceType, Map<ResourceSubType, KubeResourceConfig>> typeMap =
-          this.kubeResourceConfigs.computeIfAbsent(key.variant, k -> new HashMap<>());
-      final Map<ResourceSubType, KubeResourceConfig> subTypeMap = typeMap.computeIfAbsent(key.type, k -> new HashMap<>());
+          this.kubeResourceConfigs.computeIfAbsent(key.variant, k -> new EnumMap<>(ResourceType.class));
+      final Map<ResourceSubType, KubeResourceConfig> subTypeMap = typeMap.computeIfAbsent(key.type, k -> new EnumMap<>(ResourceSubType.class));
       subTypeMap.put(key.subType, config);
     }
 

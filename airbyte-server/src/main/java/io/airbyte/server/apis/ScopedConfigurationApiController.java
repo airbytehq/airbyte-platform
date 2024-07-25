@@ -35,6 +35,7 @@ import java.util.UUID;
 @Controller("/api/v1/scoped_configuration")
 @Context
 @Secured(SecurityRule.IS_AUTHENTICATED)
+@SuppressWarnings("PMD.AvoidDuplicateLiterals")
 public class ScopedConfigurationApiController implements ScopedConfigurationApi {
 
   private final ScopedConfigurationHandler scopedConfigurationHandler;

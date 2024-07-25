@@ -28,13 +28,10 @@ import io.airbyte.api.client.model.generated.ConnectionStateCreateOrUpdate;
 import io.airbyte.api.client.model.generated.ConnectionStateType;
 import io.airbyte.api.client.model.generated.StreamState;
 import io.airbyte.commons.json.Jsons;
-import io.airbyte.featureflag.FeatureFlagClient;
-import io.airbyte.featureflag.TestClient;
 import io.airbyte.protocol.models.AirbyteEstimateTraceMessage;
 import io.airbyte.protocol.models.AirbyteRecordMessage;
 import io.airbyte.protocol.models.AirbyteStateMessage;
 import io.airbyte.protocol.models.AirbyteStreamState;
-import io.airbyte.protocol.models.ConfiguredAirbyteCatalog;
 import io.airbyte.protocol.models.StreamDescriptor;
 import io.airbyte.workers.internal.bookkeeping.ParallelStreamStatsTracker;
 import io.airbyte.workers.internal.bookkeeping.SyncStatsTracker;
@@ -63,22 +60,16 @@ class SyncPersistenceImplTest {
   private ArgumentCaptor<Runnable> actualFlushMethod;
 
   private UUID connectionId;
-  private UUID workspaceId;
   private Long jobId;
   private Integer attemptNumber;
-  private ConfiguredAirbyteCatalog catalog;
   private AirbyteApiClient airbyteApiClient;
-  private FeatureFlagClient ffClient;
 
   @BeforeEach
   void beforeEach() {
     connectionId = UUID.randomUUID();
-    workspaceId = UUID.randomUUID();
     jobId = (long) (Math.random() * Long.MAX_VALUE);
     attemptNumber = (int) (Math.random() * Integer.MAX_VALUE);
-    catalog = mock(ConfiguredAirbyteCatalog.class);
     airbyteApiClient = mock(AirbyteApiClient.class);
-    ffClient = mock(TestClient.class);
 
     // Setting up an ArgumentCaptor to be able to manually trigger the actual flush method rather than
     // relying on the ScheduledExecutorService and having to deal with Thread.sleep in the tests.
@@ -99,11 +90,11 @@ class SyncPersistenceImplTest {
 
     syncPersistence = new SyncPersistenceImpl(airbyteApiClient, new StateAggregatorFactory(), syncStatsTracker, executorService,
         flushPeriod, new RetryWithJitterConfig(1, 1, 4),
-        connectionId, workspaceId, jobId, attemptNumber, catalog, ffClient);
+        connectionId, jobId, attemptNumber);
   }
 
   @AfterEach
-  void afterEach() throws Exception {
+  void afterEach() {
     reset(stateApi, attemptApi);
     syncPersistence.close();
   }
@@ -344,7 +335,7 @@ class SyncPersistenceImplTest {
 
     // Final flush
     when(executorService.awaitTermination(anyLong(), any())).thenReturn(true);
-    assertThrows(Exception.class, () -> syncPersistence.close());
+    assertThrows(Exception.class, syncPersistence::close);
     verify(stateApi, times(1)).createOrUpdateState(buildStateRequest(connectionId, List.of(state)));
     verify(attemptApi, never()).saveStats(any());
   }
@@ -360,7 +351,7 @@ class SyncPersistenceImplTest {
 
     // Final flush
     when(executorService.awaitTermination(anyLong(), any())).thenReturn(true);
-    assertThrows(Exception.class, () -> syncPersistence.close());
+    assertThrows(Exception.class, syncPersistence::close);
     verify(stateApi).createOrUpdateState(buildStateRequest(connectionId, List.of(state)));
     verify(attemptApi, times(1)).saveStats(any());
   }
@@ -436,7 +427,7 @@ class SyncPersistenceImplTest {
     syncStatsTracker = mock();
     syncPersistence = new SyncPersistenceImpl(airbyteApiClient, new StateAggregatorFactory(), syncStatsTracker, executorService,
         flushPeriod, new RetryWithJitterConfig(1, 1, 4),
-        connectionId, workspaceId, jobId, attemptNumber, catalog, ffClient);
+        connectionId, jobId, attemptNumber);
 
     syncPersistence.updateStats(new AirbyteRecordMessage());
     verify(syncStatsTracker).updateStats(new AirbyteRecordMessage());

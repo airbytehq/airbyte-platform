@@ -141,7 +141,8 @@ public class TemporalActivityStubInterceptor<T> {
     final TemporalActivityStub annotation = activityStubField.getAnnotation(TemporalActivityStub.class);
     final String activityOptionsBeanName = annotation.activityOptionsBeanName();
     final Optional<ActivityOptions> selectedActivityOptions =
-        availableActivityOptions.stream().filter(b -> b.getIdentifier().getName().equalsIgnoreCase(activityOptionsBeanName)).map(b -> b.getBean())
+        availableActivityOptions.stream().filter(b -> b.getIdentifier().getName().equalsIgnoreCase(activityOptionsBeanName))
+            .map(BeanRegistration::getBean)
             .findFirst();
     if (selectedActivityOptions.isPresent()) {
       return selectedActivityOptions.get();

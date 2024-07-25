@@ -79,14 +79,7 @@ interface TrackingClient {
   )
 }
 
-const val AIRBYTE_ANALYTIC_SOURCE_HEADER = "X-Airbyte-Analytic-Source"
-const val AIRBYTE_DEPLOYMENT_ID = "deployment_id"
-const val AIRBYTE_DEPLOYMENT_MODE = "deployment_mode"
 const val AIRBYTE_ROLE = "airbyte_role"
-const val AIRBYTE_SOURCE = "airbyte_source"
-const val AIRBYTE_TRACKED_AT = "tracked_at"
-const val AIRBYTE_VERSION_KEY = "airbyte_version"
-const val CUSTOMER_ID_KEY = "user_id"
 const val INSTALLATION_ID = "installation_id"
 const val UNKNOWN = "unknown"
 

@@ -15,7 +15,7 @@ import java.io.IOException;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.stream.Collectors;
@@ -77,7 +77,7 @@ public class RecordSchemaValidator implements Closeable {
   public void validateSchema(
                              final AirbyteRecordMessage message,
                              final AirbyteStreamNameNamespacePair airbyteStream,
-                             final ConcurrentHashMap<AirbyteStreamNameNamespacePair, ImmutablePair<Set<String>, Integer>> validationErrors) {
+                             final ConcurrentMap<AirbyteStreamNameNamespacePair, ImmutablePair<Set<String>, Integer>> validationErrors) {
     validationExecutor.execute(() -> {
       Set<String> errorMessages = validator.validateInitializedSchema(airbyteStream.toString(), message.getData());
       if (!errorMessages.isEmpty()) {
@@ -93,7 +93,7 @@ public class RecordSchemaValidator implements Closeable {
   public void validateSchemaWithoutCounting(
                                             final AirbyteRecordMessage message,
                                             final AirbyteStreamNameNamespacePair airbyteStream,
-                                            final ConcurrentHashMap<AirbyteStreamNameNamespacePair, Set<String>> validationErrors) {
+                                            final ConcurrentMap<AirbyteStreamNameNamespacePair, Set<String>> validationErrors) {
     validationExecutor.execute(() -> {
       final Set<String> errorMessages = validator.validateInitializedSchema(airbyteStream.toString(), message.getData());
       if (!errorMessages.isEmpty()) {
@@ -104,7 +104,7 @@ public class RecordSchemaValidator implements Closeable {
 
   private void updateValidationErrors(final Set<String> errorMessages,
                                       final AirbyteStreamNameNamespacePair airbyteStream,
-                                      final ConcurrentHashMap<AirbyteStreamNameNamespacePair, ImmutablePair<Set<String>, Integer>> validationErrors) {
+                                      final ConcurrentMap<AirbyteStreamNameNamespacePair, ImmutablePair<Set<String>, Integer>> validationErrors) {
     validationErrors.compute(airbyteStream, (k, v) -> {
       if (v == null) {
         return new ImmutablePair<>(errorMessages, 1);

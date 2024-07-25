@@ -102,7 +102,7 @@ export const StreamsList = forwardRef<HTMLDivElement>((_, outerRef) => {
     <Card noPadding>
       <Box p="xl" className={styles.cardHeader}>
         <FlexContainer justifyContent="space-between" alignItems="center">
-          <FlexContainer alignItems="center">
+          <FlexContainer alignItems="flex-end">
             <Heading as="h5" size="sm">
               <FormattedMessage id="connection.stream.status.title" />
             </Heading>

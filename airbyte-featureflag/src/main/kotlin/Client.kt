@@ -354,5 +354,12 @@ private fun Context.toLDContext(): LDContext {
     builder.anonymous(true)
   }
 
+  attrs.forEach {
+    builder.set(it.key, it.value)
+    if (it.private) {
+      builder.privateAttributes(it.key)
+    }
+  }
+
   return builder.build()
 }

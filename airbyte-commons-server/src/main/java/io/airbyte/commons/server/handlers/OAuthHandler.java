@@ -469,7 +469,7 @@ public class OAuthHandler {
     }
 
     input.forEach((k, v) -> {
-      if (k != "request_succeeded" && k != "request_error") {
+      if (!"request_succeeded".equals(k) && !"request_error".equals(k)) {
         response.getAuthPayload().put(k, v);
       }
     });

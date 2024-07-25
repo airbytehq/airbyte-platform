@@ -223,7 +223,8 @@ public class SyncWorkflowImpl implements SyncWorkflow {
                   .withActorDefinitionId(syncInput.getConnectionContext().getSourceDefinitionId())
                   .withActorType(ActorType.SOURCE)
                   .withActorId(syncInput.getSourceId())
-                  .withWorkspaceId(syncInput.getWorkspaceId()))
+                  .withWorkspaceId(syncInput.getWorkspaceId())
+                  .withOrganizationId(syncInput.getConnectionContext().getOrganizationId()))
               .withConnectionConfiguration(syncInput.getSourceConfiguration())
               .withSourceId(syncInput.getSourceId().toString())
               .withConfigHash(HASH_FUNCTION.hashBytes(Jsons.serialize(sourceConfig).getBytes(
