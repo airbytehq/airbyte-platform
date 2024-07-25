@@ -134,9 +134,9 @@ components:
     ConnectorContributionReadRequestBody:
       type: object
       required:
-        - connector_id
+        - connector_image_name
       properties:
-        connector_id:
+        connector_image_name:
           type: string
           description: The id of the connector being submitted for contribution
     ConnectorContributionRead:
@@ -155,15 +155,14 @@ components:
       type: object
       required:
         - name
-        - id
+        - connector_image_name
         - github_token
         - manifest_yaml
       properties:
         name:
           type: string
           description: Name of the connector being contributed, e.g. Google Sheets
-        id:
-          # Should we name this something like `module_name` instead, to avoid conflation with connector definition IDs?
+        connector_image_name:
           type: string
           description: The name of the connector module, e.g. source-google-sheets
         description:

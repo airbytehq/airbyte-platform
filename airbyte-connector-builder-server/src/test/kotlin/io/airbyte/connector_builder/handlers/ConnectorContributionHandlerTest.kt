@@ -4,6 +4,7 @@ package io.airbyte.connector_builder.handlers
 
 import io.airbyte.connector_builder.api.model.generated.ConnectorContributionReadRequestBody
 import io.airbyte.connector_builder.services.GithubContributionService
+import io.airbyte.connector_builder.templates.ContributionTemplates
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.mockkConstructor
@@ -17,15 +18,16 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 
 class ConnectorContributionHandlerTest {
-  private var testConnectorId = "source-test-connector"
+  private var testConnectorImageName = "source-test-connector"
   private val requestBodyMock = mockk<ConnectorContributionReadRequestBody>()
   private lateinit var connectorContributionHandler: ConnectorContributionHandler
 
   @BeforeEach
   fun setUp() {
     mockkConstructor(GithubContributionService::class)
-    every { requestBodyMock.connectorId } returns testConnectorId
-    connectorContributionHandler = ConnectorContributionHandler()
+    every { requestBodyMock.connectorImageName } returns testConnectorImageName
+    val templateService = ContributionTemplates()
+    connectorContributionHandler = ConnectorContributionHandler(templateService)
   }
 
   @Test
@@ -52,15 +54,15 @@ class ConnectorContributionHandlerTest {
   }
 
   @Test
-  fun `throws IllegalArgumentException for invalid connectorId`() {
+  fun `throws IllegalArgumentException for invalid connectorImageName`() {
     val invalidRequestBodyMock = mockk<ConnectorContributionReadRequestBody>()
-    every { invalidRequestBodyMock.connectorId } returns "not-a-valid_id"
+    every { invalidRequestBodyMock.connectorImageName } returns "not-a-valid_image_name"
 
     val exception =
       assertThrows<IllegalArgumentException> {
         connectorContributionHandler.connectorContributionRead((invalidRequestBodyMock))
       }
 
-    assertEquals("not-a-valid_id is not a valid connector ID.", exception.message)
+    assertEquals("not-a-valid_image_name is not a valid image name.", exception.message)
   }
 }

@@ -6,22 +6,26 @@ import io.airbyte.connector_builder.api.model.generated.ConnectorContributionRea
 import io.airbyte.connector_builder.api.model.generated.ConnectorContributionReadRequestBody
 import io.airbyte.connector_builder.api.model.generated.GenerateContributionRequestBody
 import io.airbyte.connector_builder.api.model.generated.GenerateContributionResponse
+import io.airbyte.connector_builder.exceptions.ContributionException
 import io.airbyte.connector_builder.services.GithubContributionService
+import io.airbyte.connector_builder.templates.ContributionTemplates
+import io.micronaut.http.HttpStatus
 import jakarta.inject.Singleton
+import org.kohsuke.github.HttpException
 
 @Singleton
-class ConnectorContributionHandler {
+class ConnectorContributionHandler(private val contributionTemplates: ContributionTemplates) {
   fun connectorContributionRead(request: ConnectorContributionReadRequestBody): ConnectorContributionRead {
-    // Validate the request connector ID
-    checkConnectorIdIsValid(request.connectorId)
+    // Validate the request connector name
+    checkConnectorImageNameIsValid(request.connectorImageName)
 
     // Instantiate the Connectors Contribution Service
-    val githubContributionService = GithubContributionService(request.connectorId)
+    val githubContributionService = GithubContributionService(request.connectorImageName, null)
 
     // Check for existing connector
     val connectorExists = githubContributionService.checkConnectorExistsOnMain()
     val connectorName = if (connectorExists) githubContributionService.readConnectorMetadataName() else null
-    val connectorPath = if (connectorExists) "airbytehq/airbyte/tree/master/airbyte-integrations/connectors/${request.connectorId}" else null
+    val connectorPath = if (connectorExists) "airbytehq/airbyte/tree/master/airbyte-integrations/connectors/${request.connectorImageName}" else null
 
     return ConnectorContributionRead().apply {
       connectorImageName = connectorName
@@ -30,29 +34,82 @@ class ConnectorContributionHandler {
     }
   }
 
-  private fun checkConnectorIdIsValid(connectorId: String) {
-    // Connector IDs must begin with "source-" and can contain only lowercase letters, numbers and dashes
+  private fun checkConnectorImageNameIsValid(connectorImageName: String) {
+    // Connector Image Names must begin with "source-" and can contain only lowercase letters, numbers and dashes
     val validPattern = Regex("^source-[a-z0-9-]+$")
-    if (!connectorId.matches(validPattern)) {
-      throw IllegalArgumentException("$connectorId is not a valid connector ID.")
+    if (!connectorImageName.matches(validPattern)) {
+      throw IllegalArgumentException("$connectorImageName is not a valid image name.")
     }
   }
 
-  fun generateContribution(generateContributionRequestBody: GenerateContributionRequestBody?): GenerateContributionResponse {
-    // TODO: get manifest YAML from request body
-
+  fun generateContributionPullRequest(generateContributionRequestBody: GenerateContributionRequestBody): GenerateContributionResponse {
+    // TODO: TEST with an account outside of the airbyte org
     // TODO: generate metadata from manifest + name + description and latest compatible source-declarative-manifest version
-
     // TODO: generate acceptance-test-config (if it does not exist)
-
     // TODO: add placeholder icon SVG
+    val githubToken = generateContributionRequestBody.githubToken
+    val connectorImageName = generateContributionRequestBody.connectorImageName
 
-    // TODO: generate readme (if it does not exist)
+    // 1. Create a branch
+    val githubContributionService = GithubContributionService(connectorImageName, githubToken)
+    githubContributionService.prepareBranchForContribution()
 
-    // TODO: create or update PR
+    // 2. Generate Files
+    val readmeContent =
+      contributionTemplates.renderContributionReadme(
+        connectorImageName,
+        generateContributionRequestBody.name,
+        generateContributionRequestBody.description,
+      )
 
-    // TODO: return URL of created/updated PR
+    // 3. Commit Files
+    // TODO: merge these into a single method
+    val readmeFilePath = githubContributionService.constructConnectorFilePath("README.md")
+    githubContributionService.commitFile(
+      "Create README.md for connector $connectorImageName",
+      readmeFilePath,
+      readmeContent,
+    )
 
-    return GenerateContributionResponse().pullRequestUrl("https://github.com/airbytehq/airbyte/pull/1")
+    // TODO: Ensure manifest is correctly formatted
+    val manifestContent = generateContributionRequestBody.manifestYaml
+    val manifestFilePath = githubContributionService.constructConnectorFilePath("manifest.yaml")
+    githubContributionService.commitFile(
+      "Create manifest.yaml for connector $connectorImageName",
+      manifestFilePath,
+      manifestContent,
+    )
+
+    // 4. Create / update pull request
+    val pullRequest = githubContributionService.getOrCreatePullRequest()
+
+    return GenerateContributionResponse().pullRequestUrl(pullRequest.htmlUrl.toString())
+  }
+
+  fun convertGithubExceptionToContributionException(e: HttpException): Exception {
+    return when (e.responseCode) {
+      401 -> ContributionException("Invalid GitHub token provided.", HttpStatus.UNAUTHORIZED)
+      409 ->
+        ContributionException(
+          "We could not create a fork of the Airbyte repository. Please provide an access token with repo:write permissions.",
+          HttpStatus.PRECONDITION_FAILED,
+        )
+      else -> ContributionException("An unexpected error occurred when creating your github contribution.", HttpStatus.INTERNAL_SERVER_ERROR)
+    }
+  }
+
+  fun convertToContributionException(e: Exception): Exception {
+    return when (e) {
+      is HttpException -> convertGithubExceptionToContributionException(e)
+      else -> e
+    }
+  }
+
+  fun generateContribution(generateContributionRequestBody: GenerateContributionRequestBody): GenerateContributionResponse {
+    try {
+      return generateContributionPullRequest(generateContributionRequestBody)
+    } catch (e: Exception) {
+      throw convertToContributionException(e)
+    }
   }
 }

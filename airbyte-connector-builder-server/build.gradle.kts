@@ -56,6 +56,9 @@ dependencies {
   // Third-party dependencies
   implementation("org.kohsuke:github-api:1.323")
   implementation("org.yaml:snakeyaml:2.2")
+  implementation("io.pebbletemplates:pebble:3.2.2")
+
+  runtimeOnly(libs.snakeyaml)
 
   testRuntimeOnly(libs.junit.jupiter.engine)
   testImplementation(libs.bundles.junit)
@@ -198,4 +201,3 @@ private fun updateToJakartaApi(srcDir: File) {
     }
   }
 }
-
