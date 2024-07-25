@@ -11453,6 +11453,7 @@ components:
         - overwrite
         #- upsert_dedup # TODO chris: SCD Type 1 can be implemented later
         - append_dedup # SCD Type 1 & 2
+        - overwrite_dedup
     AirbyteArchive:
       type: string
       format: binary
