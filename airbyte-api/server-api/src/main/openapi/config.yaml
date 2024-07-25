@@ -8725,6 +8725,7 @@ components:
           description: Prefix that will be prepended to the name of each stream when it is written to the destination.
         operationIds:
           type: array
+          nullable: true
           items:
             $ref: "#/components/schemas/OperationId"
         syncCatalog:
