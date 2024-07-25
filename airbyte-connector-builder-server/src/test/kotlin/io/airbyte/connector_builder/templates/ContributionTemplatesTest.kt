@@ -11,7 +11,7 @@ class ContributionTemplatesTest {
     val connectorImageName = "test"
     val connectorName = "Test Connector"
     val description = "This is a test connector."
-    val readme = contributionTemplates.renderContributionReadme(connectorImageName, connectorName, description)
+    val readme = contributionTemplates.renderContributionReadmeMd(connectorImageName, connectorName, description)
 
     // Assert that the rendered readme contains the connector name
     assert(readme.contains(connectorName))

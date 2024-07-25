@@ -3,8 +3,8 @@
 package io.airbyte.connector_builder.services
 
 import org.kohsuke.github.GHBranch
+import org.kohsuke.github.GHCommit
 import org.kohsuke.github.GHContent
-import org.kohsuke.github.GHContentUpdateResponse
 import org.kohsuke.github.GHFileNotFoundException
 import org.kohsuke.github.GHPullRequest
 import org.kohsuke.github.GHRef
@@ -42,6 +42,18 @@ class GithubContributionService(var connectorImageName: String, personalAccessTo
   val connectorMetadataPath: String
     get() = "$connectorDirectoryPath/metadata.yaml"
 
+  val connectorReadmePath: String
+    get() = "$connectorDirectoryPath/README.md"
+
+  val connectorManifestPath: String
+    get() = "$connectorDirectoryPath/manifest.yaml"
+
+  val connectorIconPath: String
+    get() = "$connectorDirectoryPath/icon.svg"
+
+  val connectorAcceptanceTestConfigPath: String
+    get() = "$connectorDirectoryPath/acceptance-test-config.yml"
+
   val username: String
     get() = githubService!!.myself.login
 
@@ -53,8 +65,15 @@ class GithubContributionService(var connectorImageName: String, personalAccessTo
 
   // PRIVATE METHODS
 
-  private fun getDefaultBranchSha(targetRepository: GHRepository): String {
-    return targetRepository.getRef("heads/${targetRepository.defaultBranch}").getObject().sha
+  fun getBranchSha(
+    branchName: String,
+    targetRepository: GHRepository,
+  ): String {
+    return targetRepository.getRef("heads/$branchName").getObject().sha
+  }
+
+  fun getDefaultBranchSha(targetRepository: GHRepository): String {
+    return getBranchSha(airbyteRepository.defaultBranch, targetRepository)
   }
 
   fun safeReadFileContent(
@@ -79,17 +98,22 @@ class GithubContributionService(var connectorImageName: String, personalAccessTo
     return checkFileExistsOnMain(connectorMetadataPath)
   }
 
-  fun readConnectorMetadataName(): String? {
-    val metadataFile = safeReadFileContent(connectorMetadataPath, forkedRepository) ?: return null
-
+  // TODO: Cache the metadata
+  fun readConnectorMetadata(): Map<String, Any>? {
+    val metadataFile = safeReadFileContent(connectorMetadataPath, airbyteRepository) ?: return null
     val rawYamlString = metadataFile.content
 
-    // parse yaml
+    // Parse YAML
     val yaml = Yaml()
-    val parsedYaml = yaml.load<Map<String, Any>>(rawYamlString)
+    return yaml.load(rawYamlString)
+  }
 
-    // get name from the path "data.name"
-    return parsedYaml["data"]?.let { (it as Map<*, *>)["name"] } as String? ?: ""
+  fun readConnectorMetadataName(): String? {
+    val parsedYaml = readConnectorMetadata() ?: return null
+
+    // Extract "name" from the "data" section
+    val dataSection = parsedYaml["data"] as? Map<*, *>
+    return dataSection?.get("name") as? String
   }
 
   fun constructConnectorFilePath(fileName: String): String {
@@ -164,24 +188,28 @@ class GithubContributionService(var connectorImageName: String, personalAccessTo
     }
   }
 
-  fun commitFile(
+  fun commitFiles(
     message: String,
-    path: String,
-    content: String,
-  ): GHContentUpdateResponse? {
-    val existingSha = getExistingFileSha(path)
-    val contentToCommit =
-      forkedRepository.createContent()
-        .content(content)
-        .path(path)
+    files: Map<String, String>,
+  ): GHCommit {
+    val branchSha = getBranchSha(contributionBranchName, forkedRepository)
+    val treeBuilder = forkedRepository.createTree().baseTree(branchSha)
 
-    if (existingSha != null) {
-      contentToCommit.sha(existingSha)
+    for ((path, content) in files) {
+      treeBuilder.add(path, content, false)
     }
 
-    return contentToCommit.branch(contributionBranchName)
-      .message(message)
-      .commit()
+    val tree = treeBuilder.create()
+    val commit =
+      forkedRepository.createCommit()
+        .message(message)
+        .tree(tree.sha)
+        .parent(branchSha)
+        .create()
+
+    val branchRef = getBranchRef(contributionBranchName, forkedRepository)
+    branchRef?.updateTo(commit.shA1)
+    return commit
   }
 
   fun createPullRequest(): GHPullRequest {

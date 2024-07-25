@@ -12,6 +12,9 @@ import io.airbyte.connector_builder.templates.ContributionTemplates
 import io.micronaut.http.HttpStatus
 import jakarta.inject.Singleton
 import org.kohsuke.github.HttpException
+import java.time.LocalDate
+import java.time.format.DateTimeFormatter
+import java.util.UUID
 
 @Singleton
 class ConnectorContributionHandler(private val contributionTemplates: ContributionTemplates) {
@@ -42,11 +45,54 @@ class ConnectorContributionHandler(private val contributionTemplates: Contributi
     }
   }
 
+  fun createFileCommitMap(
+    connectorImageName: String,
+    connectorName: String,
+    connectorDescription: String,
+    rawManifestYaml: String,
+    githubContributionService: GithubContributionService,
+  ): Map<String, String> {
+    val readmeContent =
+      contributionTemplates.renderContributionReadmeMd(
+        connectorImageName = connectorImageName,
+        connectorName = connectorName,
+        description = connectorDescription,
+      )
+
+    // TODO: Ensure manifest is correctly formatted
+    val manifestContent = rawManifestYaml
+
+    // TODO: Ensure metadata is correctly formatted
+    // TODO: Merge metadata with existing metadata if it exists
+    val metadataContent =
+      contributionTemplates.renderContributionMetadataYaml(
+        connectorImageName = connectorImageName,
+        connectorName = connectorName,
+        actorDefinitionId = UUID.randomUUID().toString(),
+        versionTag = "0.0.1",
+        baseImage = "TODO",
+        allowedHosts = listOf("TODO"),
+        connectorDocsSlug = "TODO",
+        releaseDate = DateTimeFormatter.ofPattern("yyyy-MM-dd").format(LocalDate.now()),
+      )
+
+    val iconContent = contributionTemplates.renderIconSvg()
+    val acceptanceTestConfigContent = contributionTemplates.renderAcceptanceTestConfigYaml(connectorImageName = connectorImageName)
+
+    // TODO: Decern which files are update (metadata.yaml), always overwrite (manifest.yaml), or only create if missing (icon.svg)
+    val filesToCommit =
+      mapOf(
+        githubContributionService.connectorReadmePath to readmeContent,
+        githubContributionService.connectorManifestPath to manifestContent,
+        githubContributionService.connectorMetadataPath to metadataContent,
+        githubContributionService.connectorIconPath to iconContent,
+        githubContributionService.connectorAcceptanceTestConfigPath to acceptanceTestConfigContent,
+      )
+
+    return filesToCommit
+  }
+
   fun generateContributionPullRequest(generateContributionRequestBody: GenerateContributionRequestBody): GenerateContributionResponse {
-    // TODO: TEST with an account outside of the airbyte org
-    // TODO: generate metadata from manifest + name + description and latest compatible source-declarative-manifest version
-    // TODO: generate acceptance-test-config (if it does not exist)
-    // TODO: add placeholder icon SVG
     val githubToken = generateContributionRequestBody.githubToken
     val connectorImageName = generateContributionRequestBody.connectorImageName
 
@@ -55,29 +101,19 @@ class ConnectorContributionHandler(private val contributionTemplates: Contributi
     githubContributionService.prepareBranchForContribution()
 
     // 2. Generate Files
-    val readmeContent =
-      contributionTemplates.renderContributionReadme(
+    val filesToCommit =
+      createFileCommitMap(
         connectorImageName,
         generateContributionRequestBody.name,
         generateContributionRequestBody.description,
+        generateContributionRequestBody.manifestYaml,
+        githubContributionService,
       )
 
     // 3. Commit Files
-    // TODO: merge these into a single method
-    val readmeFilePath = githubContributionService.constructConnectorFilePath("README.md")
-    githubContributionService.commitFile(
-      "Create README.md for connector $connectorImageName",
-      readmeFilePath,
-      readmeContent,
-    )
-
-    // TODO: Ensure manifest is correctly formatted
-    val manifestContent = generateContributionRequestBody.manifestYaml
-    val manifestFilePath = githubContributionService.constructConnectorFilePath("manifest.yaml")
-    githubContributionService.commitFile(
-      "Create manifest.yaml for connector $connectorImageName",
-      manifestFilePath,
-      manifestContent,
+    githubContributionService.commitFiles(
+      "Submission for $connectorImageName from Connector Builder",
+      filesToCommit,
     )
 
     // 4. Create / update pull request
