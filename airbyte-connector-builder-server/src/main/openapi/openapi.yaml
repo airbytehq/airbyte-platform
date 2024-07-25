@@ -16,6 +16,29 @@ externalDocs:
 servers:
   - url: "http://localhost:80/"
 paths:
+  /v1/contribute/read:
+    post:
+      tags:
+        - connectorBuilderServer
+      summary: TODO
+      operationId: readConnectorContribution
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ConnectorContributionReadRequestBody"
+        required: true
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConnectorContributionRead"
+        "400":
+          $ref: "#/components/responses/ExceptionResponse"
+        "422":
+          $ref: "#/components/responses/InvalidInputResponse"
   /v1/stream/read:
     post:
       tags:
@@ -85,6 +108,26 @@ components:
       scheme: bearer
       bearerFormat: JWT
   schemas:
+    ConnectorContributionReadRequestBody:
+      type: object
+      required:
+        - connector_id
+      properties:
+        connector_id:
+          type: string
+          description: The id of the connector being submitted for contribution
+    ConnectorContributionRead:
+      type: object
+      properties:
+        connector_image_name:
+          type: string
+          description: The name of the connector in Github, if it exists
+        github_url:
+          type: string
+          description: The Github URL of the connector in the airbyte repository, if it exists
+        available:
+          type: boolean
+          description: Indicates whether the connector name is available for use
     StreamRead:
       type: object
       required:

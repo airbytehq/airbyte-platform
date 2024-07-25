@@ -23,6 +23,7 @@ import io.airbyte.connector_builder.exceptions.CdkProcessException;
 import io.airbyte.connector_builder.exceptions.CdkUnknownException;
 import io.airbyte.connector_builder.exceptions.ConnectorBuilderException;
 import io.airbyte.connector_builder.file_writer.MockAirbyteFileWriterImpl;
+import io.airbyte.connector_builder.handlers.ConnectorContributionHandler;
 import io.airbyte.connector_builder.handlers.HealthHandler;
 import io.airbyte.connector_builder.handlers.ResolveManifestHandler;
 import io.airbyte.connector_builder.handlers.StreamHandler;
@@ -96,7 +97,8 @@ class ConnectorBuilderControllerIntegrationTest {
     final SynchronousCdkCommandRunner commandRunner = new MockSynchronousPythonCdkCommandRunner(
         this.writer, this.streamFactory, shouldThrow, exitCode, inputStream, errorStream, outputStream);
     final AirbyteCdkRequesterImpl requester = new AirbyteCdkRequesterImpl(commandRunner);
-    return new ConnectorBuilderController(this.healthHandler, new ResolveManifestHandler(requester), new StreamHandler(requester));
+    return new ConnectorBuilderController(this.healthHandler, new ResolveManifestHandler(requester), new StreamHandler(requester),
+        new ConnectorContributionHandler());
   }
 
   @Test
