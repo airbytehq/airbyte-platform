@@ -65,7 +65,7 @@ spec:
         {{- if or (eq .Values.global.edition "pro") (eq .Values.global.edition "enterprise") }}
         - name: API_AUTHORIZATION_ENABLED
           value: "true"
-        {{- else if and (eq .Values.global.deploymentMode "oss") (eq .Values.global.auth.enabled true) }}
+        {{- else if and (eq .Values.global.deploymentMode "oss") .Values.global.auth.enabled }}
         # Self-Managed Enterprise should always have API_AUTHORIZATION_ENABLED set to true, even
         # if global.auth.enabled is not set to true. This can be simplified in the future, once
         # globa.auth.enabled is changed to always default to true across all editions of Airbyte.
@@ -231,6 +231,35 @@ spec:
             configMapKeyRef:
               name: {{ .Release.Name }}-airbyte-env
               key: WORKLOAD_API_SERVER_ENABLED
+
+        {{- if and (eq .Values.global.edition "community") .Values.global.auth.enabled }}
+        # Values for Airbyte auth secrets/credentials in Community edition
+        - name: AB_INSTANCE_ADMIN_USERNAME
+          valueFrom:
+            secretKeyRef:
+              name: {{ .Values.global.auth.secretName | default "airbyte-auth-secrets" | quote }}
+              key: {{ .Values.global.auth.instanceAdmin.usernameSecretKey | default "instance-admin-username" | quote }}
+        - name: AB_INSTANCE_ADMIN_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: {{ .Values.global.auth.secretName | default "airbyte-auth-secrets" | quote }}
+              key: {{ .Values.global.auth.instanceAdmin.passwordSecretKey | default "instance-admin-password" | quote }}
+        - name: AB_INSTANCE_ADMIN_CLIENT_ID
+          valueFrom:
+            secretKeyRef:
+              name: {{ .Values.global.auth.secretName | default "airbyte-auth-secrets" | quote }}
+              key: {{ .Values.global.auth.instanceAdmin.clientIdSecretKey | default "instance-admin-client-id" | quote }}
+        - name: AB_INSTANCE_ADMIN_CLIENT_SECRET
+          valueFrom:
+            secretKeyRef:
+              name: {{ .Values.global.auth.secretName | default "airbyte-auth-secrets" | quote }}
+              key: {{ .Values.global.auth.instanceAdmin.clientSecretSecretKey | default "instance-admin-client-secret" | quote }}
+        - name: AB_JWT_SIGNATURE_SECRET
+          valueFrom:
+            secretKeyRef:
+              name: {{ .Values.global.auth.secretName | default "airbyte-auth-secrets" | quote }}
+              key: {{ .Values.global.auth.jwtSignatureSecretKey | default "jwt-signature-secret" | quote }}
+        {{- end }}
 
         # SECRETS MANAGER
         - name: SECRET_PERSISTENCE

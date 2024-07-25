@@ -224,8 +224,9 @@ class BootloaderTest {
     val declarativeSourceUpdater =
         new DeclarativeSourceUpdater(declarativeManifestImageVersionsProvider, mock(DeclarativeManifestImageVersionService.class),
             actorDefinitionService, airbyteCompatibleConnectorsValidator);
+    val authKubeSecretInitializer = mock(AuthKubernetesSecretInitializer.class);
     val postLoadExecutor =
-        new DefaultPostLoadExecutor(applyDefinitionsHelper, declarativeSourceUpdater);
+        new DefaultPostLoadExecutor(applyDefinitionsHelper, declarativeSourceUpdater, Optional.of(authKubeSecretInitializer));
 
     val bootloader =
         new Bootloader(false, configRepository, configDatabaseInitializer, configsDatabaseMigrator, currentAirbyteVersion,
@@ -333,7 +334,8 @@ class BootloaderTest {
     val declarativeSourceUpdater =
         new DeclarativeSourceUpdater(declarativeManifestImageVersionsProvider, mock(DeclarativeManifestImageVersionService.class),
             actorDefinitionService, airbyteCompatibleConnectorsValidator);
-    val postLoadExecutor = new DefaultPostLoadExecutor(applyDefinitionsHelper, declarativeSourceUpdater);
+    val authKubeSecretInitializer = mock(AuthKubernetesSecretInitializer.class);
+    val postLoadExecutor = new DefaultPostLoadExecutor(applyDefinitionsHelper, declarativeSourceUpdater, Optional.of(authKubeSecretInitializer));
 
     val bootloader =
         new Bootloader(false, configRepository, configDatabaseInitializer, configsDatabaseMigrator, currentAirbyteVersion,

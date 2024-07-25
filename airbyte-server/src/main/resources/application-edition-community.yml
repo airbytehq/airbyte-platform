@@ -18,10 +18,7 @@ micronaut:
     token:
       cookie:
         enabled: true
-        ## TODO: don't do same-site: None on actual deploys (only local dev). We also might need to turn off cookie-secure for http only installs
-        ## solution 1: additional application.yml for cookie-same-site and cookie-secure for local dev?
-        ## solution 2: use a env variable and set it to None for local dev
-        cookie-same-site: None
+        cookie-same-site: ${AB_COOKIE_SAME_SITE:Strict}
         cookie-secure: true
       refresh:
         cookie:
@@ -38,17 +35,17 @@ micronaut:
         signatures:
           secret:
             generator:
-              secret: ${AB_JWT_SIGNATURE_SECRET:51c5739d-1145-4076-b190-8904d2c5de06}
+              secret: ${AB_JWT_SIGNATURE_SECRET:}
         generator:
           refresh-token:
             enabled: true
-            secret: ${AB_JWT_SIGNATURE_SECRET:51c5739d-1145-4076-b190-8904d2c5de06}
+            secret: ${AB_JWT_SIGNATURE_SECRET:}
 
 airbyte:
   edition: community
   auth:
     instanceAdmin:
-      username: ${AB_INSTANCE_ADMIN:airbyte}
-      password: ${AB_INSTANCE_ADMIN_PASSWORD:password}
-      clientId: ${AB_INSTANCE_ADMIN_CLIENT_ID:00000000-00000000-00000000-00000000}
-      clientSecret: ${AB_INSTANCE_ADMIN_CLIENT_SECRET:5ba6a164-4a0b-4efa-8317-83b82648b16b}
+      username: ${AB_INSTANCE_ADMIN_USERNAME:}
+      password: ${AB_INSTANCE_ADMIN_PASSWORD:}
+      clientId: ${AB_INSTANCE_ADMIN_CLIENT_ID:}
+      clientSecret: ${AB_INSTANCE_ADMIN_CLIENT_SECRET:}

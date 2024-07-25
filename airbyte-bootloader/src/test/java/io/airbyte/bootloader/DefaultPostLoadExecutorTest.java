@@ -16,6 +16,7 @@ import io.airbyte.config.init.DeclarativeSourceUpdater;
 import io.airbyte.config.persistence.ConfigNotFoundException;
 import io.airbyte.validation.json.JsonValidationException;
 import java.io.IOException;
+import java.util.Optional;
 import org.junit.jupiter.api.Test;
 
 /**
@@ -27,14 +28,16 @@ class DefaultPostLoadExecutorTest {
   void testPostLoadExecution()
       throws Exception {
     final ApplyDefinitionsHelper applyDefinitionsHelper = mock(ApplyDefinitionsHelper.class);
-
     final DeclarativeSourceUpdater declarativeSourceUpdater = mock(DeclarativeSourceUpdater.class);
+    final Optional<AuthKubernetesSecretInitializer> authSecretInitializer = Optional.of(mock(AuthKubernetesSecretInitializer.class));
 
     final DefaultPostLoadExecutor postLoadExecution =
-        new DefaultPostLoadExecutor(applyDefinitionsHelper, declarativeSourceUpdater);
+        new DefaultPostLoadExecutor(applyDefinitionsHelper, declarativeSourceUpdater, authSecretInitializer);
 
     assertDoesNotThrow(postLoadExecution::execute);
     verify(applyDefinitionsHelper, times(1)).apply(false, true);
+    verify(declarativeSourceUpdater, times(1)).apply();
+    verify(authSecretInitializer.get(), times(1)).initializeSecrets();
   }
 
   @Test
@@ -42,11 +45,12 @@ class DefaultPostLoadExecutorTest {
       throws JsonValidationException, IOException, ConfigNotFoundException, io.airbyte.data.exceptions.ConfigNotFoundException {
     final ApplyDefinitionsHelper applyDefinitionsHelper = mock(ApplyDefinitionsHelper.class);
     final DeclarativeSourceUpdater declarativeSourceUpdater = mock(DeclarativeSourceUpdater.class);
+    final Optional<AuthKubernetesSecretInitializer> authSecretInitializer = Optional.of(mock(AuthKubernetesSecretInitializer.class));
 
     doThrow(new IOException("test")).when(applyDefinitionsHelper).apply(false, true);
 
     final DefaultPostLoadExecutor postLoadExecution =
-        new DefaultPostLoadExecutor(applyDefinitionsHelper, declarativeSourceUpdater);
+        new DefaultPostLoadExecutor(applyDefinitionsHelper, declarativeSourceUpdater, authSecretInitializer);
 
     assertThrows(IOException.class, postLoadExecution::execute);
   }
