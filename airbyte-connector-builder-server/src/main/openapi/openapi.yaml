@@ -39,6 +39,29 @@ paths:
           $ref: "#/components/responses/ExceptionResponse"
         "422":
           $ref: "#/components/responses/InvalidInputResponse"
+  /v1/contribute/generate:
+    post:
+      tags:
+        - connectorBuilderServer
+      summary: Generates a connector module and pushes it to Github as a PR
+      operationId: generateContribution
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/GenerateContributionRequestBody"
+        required: true
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GenerateContributionResponse"
+        "400":
+          $ref: "#/components/responses/ExceptionResponse"
+        "422":
+          $ref: "#/components/responses/InvalidInputResponse"
   /v1/stream/read:
     post:
       tags:
@@ -128,6 +151,38 @@ components:
         available:
           type: boolean
           description: Indicates whether the connector name is available for use
+    GenerateContributionRequestBody:
+      type: object
+      required:
+        - name
+        - id
+        - github_token
+        - manifest_yaml
+      properties:
+        name:
+          type: string
+          description: Name of the connector being contributed, e.g. Google Sheets
+        id:
+          # Should we name this something like `module_name` instead, to avoid conflation with connector definition IDs?
+          type: string
+          description: The name of the connector module, e.g. source-google-sheets
+        description:
+          type: string
+          description: Brief description of the connector and the API it integrates
+        github_token:
+          type: string
+          description: Github Personal Access Token that should be used to create the PR
+        manifest_yaml:
+          type: string
+          description: The connector manifest in YAML form
+    GenerateContributionResponse:
+      type: object
+      required:
+        - pull_request_url
+      properties:
+        pull_request_url:
+          type: string
+          description: URL of the PR that was created or updated
     StreamRead:
       type: object
       required:

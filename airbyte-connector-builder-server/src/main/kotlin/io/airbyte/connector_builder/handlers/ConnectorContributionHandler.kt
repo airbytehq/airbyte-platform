@@ -4,6 +4,8 @@ package io.airbyte.connector_builder.handlers
 
 import io.airbyte.connector_builder.api.model.generated.ConnectorContributionRead
 import io.airbyte.connector_builder.api.model.generated.ConnectorContributionReadRequestBody
+import io.airbyte.connector_builder.api.model.generated.GenerateContributionRequestBody
+import io.airbyte.connector_builder.api.model.generated.GenerateContributionResponse
 import io.airbyte.connector_builder.services.GithubContributionService
 import jakarta.inject.Singleton
 
@@ -34,5 +36,23 @@ class ConnectorContributionHandler {
     if (!connectorId.matches(validPattern)) {
       throw IllegalArgumentException("$connectorId is not a valid connector ID.")
     }
+  }
+
+  fun generateContribution(generateContributionRequestBody: GenerateContributionRequestBody?): GenerateContributionResponse {
+    // TODO: get manifest YAML from request body
+
+    // TODO: generate metadata from manifest + name + description and latest compatible source-declarative-manifest version
+
+    // TODO: generate acceptance-test-config (if it does not exist)
+
+    // TODO: add placeholder icon SVG
+
+    // TODO: generate readme (if it does not exist)
+
+    // TODO: create or update PR
+
+    // TODO: return URL of created/updated PR
+
+    return GenerateContributionResponse().pullRequestUrl("https://github.com/airbytehq/airbyte/pull/1")
   }
 }

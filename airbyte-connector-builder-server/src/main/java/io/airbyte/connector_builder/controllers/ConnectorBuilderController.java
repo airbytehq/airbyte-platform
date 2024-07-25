@@ -9,6 +9,8 @@ import static io.airbyte.commons.auth.AuthRoleConstants.AUTHENTICATED_USER;
 import io.airbyte.connector_builder.api.generated.V1Api;
 import io.airbyte.connector_builder.api.model.generated.ConnectorContributionRead;
 import io.airbyte.connector_builder.api.model.generated.ConnectorContributionReadRequestBody;
+import io.airbyte.connector_builder.api.model.generated.GenerateContributionRequestBody;
+import io.airbyte.connector_builder.api.model.generated.GenerateContributionResponse;
 import io.airbyte.connector_builder.api.model.generated.HealthCheckRead;
 import io.airbyte.connector_builder.api.model.generated.ResolveManifest;
 import io.airbyte.connector_builder.api.model.generated.ResolveManifestRequestBody;
@@ -68,6 +70,15 @@ public class ConnectorBuilderController implements V1Api {
   @ExecuteOn(TaskExecutors.IO)
   public ConnectorContributionRead readConnectorContribution(@Body final ConnectorContributionReadRequestBody connectorContributionReadRequestBody) {
     return connectorContributionHandler.connectorContributionRead(connectorContributionReadRequestBody);
+  }
+
+  @Override
+  @Post(uri = "/contribute/generate",
+        produces = MediaType.APPLICATION_JSON)
+  @Secured({AUTHENTICATED_USER})
+  @ExecuteOn(TaskExecutors.IO)
+  public GenerateContributionResponse generateContribution(@Body final GenerateContributionRequestBody generateContributionRequestBody) {
+    return connectorContributionHandler.generateContribution(generateContributionRequestBody);
   }
 
   @Override
