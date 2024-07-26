@@ -25,6 +25,7 @@ class OidcConfigFactoryTest {
   @Property(name = "airbyte.auth.identity-provider.type", value = "oidc")
   @Property(name = "airbyte.auth.identity-provider.oidc.domain", value = "https://testdomain.com")
   @Property(name = "airbyte.auth.identity-provider.oidc.app-name", value = "testApp")
+  @Property(name = "airbyte.auth.identity-provider.oidc.display-name", value = "testDisplayName")
   @Property(name = "airbyte.auth.identity-provider.oidc.client-id", value = "testClientId")
   @Property(
     name = "airbyte.auth.identity-provider.oidc.client-secret",
@@ -33,10 +34,12 @@ class OidcConfigFactoryTest {
   @Property(name = "airbyte-yml.auth.identity-provider.type", value = "oidc")
   @Property(name = "airbyte-yml.auth.identity-provider.oidc.domain", value = "https://ignored.com")
   @Property(name = "airbyte-yml.auth.identity-provider.oidc.appName", value = "ignoredApp")
+  @Property(name = "airbyte-yml.auth.identity-provider.oidc.displayName", value = "ignoredDisplayName")
   @Property(name = "airbyte-yml.auth.identity-provider.oidc.clientId", value = "ignoredClientId")
   @Property(name = "airbyte-yml.auth.identity-provider.oidc.clientSecret", value = "ignoredClientSecret")
   @Property(name = "airbyte-yml.auth.identity-providers[0].domain", value = "https://ignored.com")
   @Property(name = "airbyte-yml.auth.identity-providers[0].appName", value = "ignoredApp")
+  @Property(name = "airbyte-yml.auth.identity-providers.[0].displayName", value = "ignoredDisplayName")
   @Property(name = "airbyte-yml.auth.identity-providers[0].clientId", value = "ignoredClientId")
   @Property(name = "airbyte-yml.auth.identity-providers[0].clientSecret", value = "ignoredClientSecret")
   fun testCreateOidcConfigFromEnvConfig() {
@@ -44,6 +47,7 @@ class OidcConfigFactoryTest {
     Assertions.assertTrue(oidcConfig.isPresent)
     Assertions.assertEquals("https://testdomain.com", oidcConfig.get().domain)
     Assertions.assertEquals("testApp", oidcConfig.get().appName)
+    Assertions.assertEquals("testDisplayName", oidcConfig.get().displayName)
     Assertions.assertEquals("testClientId", oidcConfig.get().clientId)
     Assertions.assertEquals("testClientSecret", oidcConfig.get().clientSecret)
   }
@@ -52,6 +56,7 @@ class OidcConfigFactoryTest {
   @Property(name = "airbyte-yml.auth.identity-provider.type", value = "oidc")
   @Property(name = "airbyte-yml.auth.identity-provider.oidc.domain", value = "https://testdomain.com")
   @Property(name = "airbyte-yml.auth.identity-provider.oidc.appName", value = "testApp")
+  @Property(name = "airbyte-yml.auth.identity-provider.oidc.displayName", value = "testDisplayName")
   @Property(name = "airbyte-yml.auth.identity-provider.oidc.clientId", value = "testClientId")
   @Property(
     name = "airbyte-yml.auth.identity-provider.oidc.clientSecret",
@@ -60,6 +65,7 @@ class OidcConfigFactoryTest {
   // which are ignored if the single-style properties are set in airbyte.yml
   @Property(name = "airbyte-yml.auth.identity-providers[0].domain", value = "https://ignoreddomain.com")
   @Property(name = "airbyte-yml.auth.identity-providers[0].appName", value = "ignoredApp")
+  @Property(name = "airbyte-yml.auth.identity-providers[0].displayName", value = "ignoredDisplayName")
   @Property(name = "airbyte-yml.auth.identity-providers[0].clientId", value = "ignoredClientId")
   @Property(name = "airbyte-yml.auth.identity-providers[0].clientSecret", value = "ignoredClientSecret")
   fun testCreateOidcConfigFromSingleAirbyteYmlIdp() {
@@ -67,6 +73,24 @@ class OidcConfigFactoryTest {
     Assertions.assertTrue(oidcConfig.isPresent)
     Assertions.assertEquals("https://testdomain.com", oidcConfig.get().domain)
     Assertions.assertEquals("testApp", oidcConfig.get().appName)
+    Assertions.assertEquals("testDisplayName", oidcConfig.get().displayName)
+    Assertions.assertEquals("testClientId", oidcConfig.get().clientId)
+    Assertions.assertEquals("testClientSecret", oidcConfig.get().clientSecret)
+  }
+
+  @Test
+  @Property(name = "airbyte-yml.auth.identity-provider.type", value = "oidc")
+  @Property(name = "airbyte-yml.auth.identity-provider.oidc.domain", value = "https://testdomain.com")
+  @Property(name = "airbyte-yml.auth.identity-provider.oidc.appName", value = "testApp")
+  // airbyte-yml.auth.identity-provider.oidc.displayName is intentionally omitted
+  @Property(name = "airbyte-yml.auth.identity-provider.oidc.clientId", value = "testClientId")
+  @Property(name = "airbyte-yml.auth.identity-provider.oidc.clientSecret", value = "testClientSecret")
+  fun testCreateOidcConfigFromSingleAirbyteYmlIdpDisplayNameFallback() {
+    val oidcConfig = beanContext.findBean(OidcConfig::class.java)
+    Assertions.assertTrue(oidcConfig.isPresent)
+    Assertions.assertEquals("https://testdomain.com", oidcConfig.get().domain)
+    Assertions.assertEquals("testApp", oidcConfig.get().appName)
+    Assertions.assertEquals("testApp", oidcConfig.get().displayName)
     Assertions.assertEquals("testClientId", oidcConfig.get().clientId)
     Assertions.assertEquals("testClientSecret", oidcConfig.get().clientSecret)
   }
@@ -74,6 +98,7 @@ class OidcConfigFactoryTest {
   @Test
   @Property(name = "airbyte-yml.auth.identity-providers[0].domain", value = "https://testdomain.com")
   @Property(name = "airbyte-yml.auth.identity-providers[0].appName", value = "testApp")
+  @Property(name = "airbyte-yml.auth.identity-providers[0].displayName", value = "testDisplayName")
   @Property(name = "airbyte-yml.auth.identity-providers[0].clientId", value = "testClientId")
   @Property(name = "airbyte-yml.auth.identity-providers[0].clientSecret", value = "testClientSecret")
   fun testCreateOidcConfigFromIdentityProviderConfigurations() {
@@ -81,6 +106,23 @@ class OidcConfigFactoryTest {
     Assertions.assertTrue(oidcConfig.isPresent)
     Assertions.assertEquals("https://testdomain.com", oidcConfig.get().domain)
     Assertions.assertEquals("testApp", oidcConfig.get().appName)
+    Assertions.assertEquals("testDisplayName", oidcConfig.get().displayName)
+    Assertions.assertEquals("testClientId", oidcConfig.get().clientId)
+    Assertions.assertEquals("testClientSecret", oidcConfig.get().clientSecret)
+  }
+
+  @Test
+  @Property(name = "airbyte-yml.auth.identity-providers[0].domain", value = "https://testdomain.com")
+  @Property(name = "airbyte-yml.auth.identity-providers[0].appName", value = "testApp")
+  // airbyte-yml.auth.identity-providers[0].displayName is intentionally omitted
+  @Property(name = "airbyte-yml.auth.identity-providers[0].clientId", value = "testClientId")
+  @Property(name = "airbyte-yml.auth.identity-providers[0].clientSecret", value = "testClientSecret")
+  fun testCreateOidcConfigFromIdentityProviderConfigurationsDisplayNameFallback() {
+    val oidcConfig = beanContext.findBean(OidcConfig::class.java)
+    Assertions.assertTrue(oidcConfig.isPresent)
+    Assertions.assertEquals("https://testdomain.com", oidcConfig.get().domain)
+    Assertions.assertEquals("testApp", oidcConfig.get().appName)
+    Assertions.assertEquals("testApp", oidcConfig.get().displayName)
     Assertions.assertEquals("testClientId", oidcConfig.get().clientId)
     Assertions.assertEquals("testClientSecret", oidcConfig.get().clientSecret)
   }

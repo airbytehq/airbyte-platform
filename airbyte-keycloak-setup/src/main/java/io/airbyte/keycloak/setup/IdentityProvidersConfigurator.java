@@ -110,6 +110,7 @@ public class IdentityProvidersConfigurator {
 
   private IdentityProviderRepresentation buildIdpFromConfig(final RealmResource keycloakRealm, final OidcConfig oidcConfig) {
     final IdentityProviderRepresentation idp = new IdentityProviderRepresentation();
+    idp.setDisplayName(oidcConfig.getDisplayName());
     idp.setAlias(oidcConfig.getAppName());
     idp.setProviderId(KEYCLOAK_PROVIDER_ID);
     idp.setEnabled(true);

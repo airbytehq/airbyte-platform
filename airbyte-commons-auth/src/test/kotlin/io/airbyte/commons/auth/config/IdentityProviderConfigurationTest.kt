@@ -18,12 +18,14 @@ class IdentityProviderConfigurationTest {
   @Property(name = "airbyte-yml.auth.identity-providers[0].type", value = "oidc")
   @Property(name = "airbyte-yml.auth.identity-providers[0].domain", value = "testdomain")
   @Property(name = "airbyte-yml.auth.identity-providers[0].appName", value = "testApp")
+  @Property(name = "airbyte-yml.auth.identity-providers[0].displayName", value = "testDisplayName")
   @Property(name = "airbyte-yml.auth.identity-providers[0].clientId", value = "testClientId")
   @Property(name = "airbyte-yml.auth.identity-providers[0].clientSecret", value = "testClientSecret")
   fun testToAuthOidcConfiguration() {
     val result = identityProviderConfiguration.toOidcConfig()
     Assertions.assertEquals("testdomain", result.domain)
     Assertions.assertEquals("testApp", result.appName)
+    Assertions.assertEquals("testDisplayName", result.displayName)
     Assertions.assertEquals("testClientId", result.clientId)
     Assertions.assertEquals("testClientSecret", result.clientSecret)
   }
