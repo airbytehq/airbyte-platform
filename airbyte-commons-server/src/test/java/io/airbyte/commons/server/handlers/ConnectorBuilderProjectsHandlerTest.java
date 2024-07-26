@@ -38,6 +38,8 @@ import io.airbyte.api.model.generated.ConnectorBuilderProjectStreamReadSlicesInn
 import io.airbyte.api.model.generated.ConnectorBuilderProjectTestingValuesUpdate;
 import io.airbyte.api.model.generated.ConnectorBuilderProjectWithWorkspaceId;
 import io.airbyte.api.model.generated.ConnectorBuilderPublishRequestBody;
+import io.airbyte.api.model.generated.DeclarativeManifestBaseImageRead;
+import io.airbyte.api.model.generated.DeclarativeManifestRequestBody;
 import io.airbyte.api.model.generated.DeclarativeSourceManifest;
 import io.airbyte.api.model.generated.ExistingConnectorBuilderProjectWithWorkspaceId;
 import io.airbyte.api.model.generated.SourceDefinitionIdBody;
@@ -102,6 +104,8 @@ class ConnectorBuilderProjectsHandlerTest {
   private static final DeclarativeManifestImageVersion A_DECLARATIVE_MANIFEST_IMAGE_VERSION =
       new DeclarativeManifestImageVersion(0, "0.79.0", "sha256:26f3d6b7dcbfa43504709e42d859c12f8644b7c7bbab0ecac99daa773f7dd35c",
           OffsetDateTime.now(), OffsetDateTime.now());
+  private static final String A_BASE_IMAGE =
+      "docker.io/airbyte/source-declarative-manifest:0.79.0@sha256:26f3d6b7dcbfa43504709e42d859c12f8644b7c7bbab0ecac99daa773f7dd35c";
   private static final String A_DESCRIPTION = "a description";
   private static final String A_SOURCE_NAME = "a source name";
   private static final String A_NAME = "a name";
@@ -737,6 +741,18 @@ class ConnectorBuilderProjectsHandlerTest {
 
     assertEquals(newTestingValuesWithObfuscatedSecrets, projectStreamRead.getLatestConfigUpdate());
     verify(connectorBuilderService, times(1)).updateBuilderProjectTestingValues(project.getBuilderProjectId(), newTestingValuesWithSecretCoordinates);
+  }
+
+  @Test
+  void testGetBaseImageForDeclarativeManifest() {
+    final DeclarativeManifestRequestBody requestBody = new DeclarativeManifestRequestBody().manifest(A_MANIFEST);
+
+    when(manifestInjector.getCdkVersion(any())).thenReturn(A_CDK_VERSION);
+    when(declarativeManifestImageVersionService.getDeclarativeManifestImageVersionByMajorVersion(anyInt()))
+        .thenReturn(A_DECLARATIVE_MANIFEST_IMAGE_VERSION);
+
+    final DeclarativeManifestBaseImageRead responseBody = connectorBuilderProjectsHandler.getDeclarativeManifestBaseImage(requestBody);
+    assertEquals(A_BASE_IMAGE, responseBody.getBaseImage());
   }
 
   private static ConnectorBuilderPublishRequestBody anyConnectorBuilderProjectRequest() {

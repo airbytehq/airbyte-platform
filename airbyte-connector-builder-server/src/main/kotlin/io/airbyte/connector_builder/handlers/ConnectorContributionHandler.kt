@@ -50,6 +50,7 @@ class ConnectorContributionHandler(private val contributionTemplates: Contributi
     connectorName: String,
     connectorDescription: String,
     rawManifestYaml: String,
+    baseImage: String,
     githubContributionService: GithubContributionService,
   ): Map<String, String> {
     val readmeContent =
@@ -70,7 +71,7 @@ class ConnectorContributionHandler(private val contributionTemplates: Contributi
         connectorName = connectorName,
         actorDefinitionId = UUID.randomUUID().toString(),
         versionTag = "0.0.1",
-        baseImage = "TODO",
+        baseImage = baseImage,
         allowedHosts = listOf("TODO"),
         connectorDocsSlug = "TODO",
         releaseDate = DateTimeFormatter.ofPattern("yyyy-MM-dd").format(LocalDate.now()),
@@ -107,6 +108,7 @@ class ConnectorContributionHandler(private val contributionTemplates: Contributi
         generateContributionRequestBody.name,
         generateContributionRequestBody.description,
         generateContributionRequestBody.manifestYaml,
+        generateContributionRequestBody.baseImage,
         githubContributionService,
       )
 

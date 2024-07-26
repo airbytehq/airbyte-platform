@@ -917,6 +917,27 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/SourceDefinitionIdBody"
+  /v1/connector_builder_projects/get_base_image:
+    post:
+      tags:
+        - connector_builder_project
+      summary: Get the base image for the declarative manifest
+      operationId: getDeclarativeManifestBaseImage
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DeclarativeManifestRequestBody"
+        required: true
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DeclarativeManifestBaseImageRead"
+        "404":
+          $ref: "#/components/responses/NotFoundResponse"
   /v1/connector_builder_projects/update:
     post:
       tags:
@@ -7168,6 +7189,12 @@ components:
     DeclarativeManifest:
       description: Low code CDK manifest JSON object
       type: object
+    DeclarativeManifestBaseImageRead:
+      description: Base image associated with a declarative manifest
+      type: object
+      properties:
+        baseImage:
+          type: string
     DeclarativeManifestRead:
       type: object
       properties:
@@ -7179,6 +7206,13 @@ components:
           $ref: "#/components/schemas/ManifestVersion"
         description:
           type: string
+    DeclarativeManifestRequestBody:
+      type: object
+      required:
+        - manifest
+      properties:
+        manifest:
+          $ref: "#/components/schemas/DeclarativeManifest"
     ConnectorBuilderProjectDetails:
       type: object
       required:

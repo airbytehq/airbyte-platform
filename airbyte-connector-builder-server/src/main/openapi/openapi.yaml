@@ -158,6 +158,7 @@ components:
         - connector_image_name
         - github_token
         - manifest_yaml
+        - base_image
       properties:
         name:
           type: string
@@ -174,6 +175,9 @@ components:
         manifest_yaml:
           type: string
           description: The connector manifest in YAML form
+        base_image:
+          type: string
+          description: The base image to use for the connector
     GenerateContributionResponse:
       type: object
       required:

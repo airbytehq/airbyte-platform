@@ -22,7 +22,9 @@ import io.airbyte.api.model.generated.ConnectorBuilderProjectStreamReadSlicesInn
 import io.airbyte.api.model.generated.ConnectorBuilderProjectTestingValuesUpdate;
 import io.airbyte.api.model.generated.ConnectorBuilderProjectWithWorkspaceId;
 import io.airbyte.api.model.generated.ConnectorBuilderPublishRequestBody;
+import io.airbyte.api.model.generated.DeclarativeManifestBaseImageRead;
 import io.airbyte.api.model.generated.DeclarativeManifestRead;
+import io.airbyte.api.model.generated.DeclarativeManifestRequestBody;
 import io.airbyte.api.model.generated.ExistingConnectorBuilderProjectWithWorkspaceId;
 import io.airbyte.api.model.generated.SourceDefinitionIdBody;
 import io.airbyte.api.model.generated.WorkspaceIdRequestBody;
@@ -448,6 +450,14 @@ public class ConnectorBuilderProjectsHandler {
                 new RuntimeSecretPersistence(secretPersistenceConfigOptional.get())))
             : Optional.ofNullable(secretsRepositoryReader.hydrateConfigFromDefaultSecretPersistence(project.getTestingValues()))
         : Optional.empty();
+  }
+
+  public DeclarativeManifestBaseImageRead getDeclarativeManifestBaseImage(final DeclarativeManifestRequestBody declarativeManifestRequestBody) {
+    final JsonNode declarativeManifest = declarativeManifestRequestBody.getManifest();
+    final DeclarativeManifestImageVersion declarativeManifestImageVersion = getImageVersionForManifest(declarativeManifest);
+    final String baseImage = String.format("docker.io/airbyte/source-declarative-manifest:%s@%s", declarativeManifestImageVersion.getImageVersion(),
+        declarativeManifestImageVersion.getImageSha());
+    return new DeclarativeManifestBaseImageRead().baseImage(baseImage);
   }
 
   private DeclarativeManifestImageVersion getImageVersionForManifest(final JsonNode declarativeManifest) {
