@@ -61,7 +61,8 @@ class DeclarativeSourceDefinitionsHandlerTest {
   private static final Version A_CDK_VERSION = new Version("0.0.1");
   private static final String AN_IMAGE_VERSION = "0.79.0";
   private static final DeclarativeManifestImageVersion A_DECLARATIVE_MANIFEST_IMAGE_VERSION =
-      new DeclarativeManifestImageVersion(0, AN_IMAGE_VERSION, OffsetDateTime.now(), OffsetDateTime.now());
+      new DeclarativeManifestImageVersion(0, AN_IMAGE_VERSION, "sha256:26f3d6b7dcbfa43504709e42d859c12f8644b7c7bbab0ecac99daa773f7dd35c",
+          OffsetDateTime.now(), OffsetDateTime.now());
   private static final JsonNode A_MANIFEST;
   private static final JsonNode A_SPEC;
 

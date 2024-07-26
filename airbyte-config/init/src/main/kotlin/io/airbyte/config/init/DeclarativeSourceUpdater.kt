@@ -27,25 +27,37 @@ class DeclarativeSourceUpdater(
     val currentDeclarativeManifestImageVersions = declarativeManifestImageVersionService.listDeclarativeManifestImageVersions()
     val latestDeclarativeManifestImageVersions = declarativeManifestImageVersionsProvider.getLatestDeclarativeManifestImageVersions()
 
-    // Versions which are not currently in the DB - either a version for a new major or a different version for an existing major
+    // Versions which are not currently in the DB or for which the SHA for an existing version has changed
     val versionsToPersist =
       latestDeclarativeManifestImageVersions.filterNot { latestVersion ->
-        currentDeclarativeManifestImageVersions.any { it.majorVersion == latestVersion.majorVersion && it.imageVersion == latestVersion.imageVersion }
+        currentDeclarativeManifestImageVersions.any {
+          it.majorVersion == latestVersion.majorVersion &&
+            it.imageVersion == latestVersion.imageVersion &&
+            it.imageSha == latestVersion.imageSha
+        }
       }
 
     versionsToPersist.filter { newVersion ->
       airbyteCompatibleConnectorsValidator.validateDeclarativeManifest(newVersion.imageVersion).isValid
     }.forEach { newVersion ->
       declarativeManifestImageVersionService.writeDeclarativeManifestImageVersion(newVersion)
-      val previousVersion = currentDeclarativeManifestImageVersions.find { it.majorVersion == newVersion.majorVersion }?.imageVersion
+      val previousVersion = currentDeclarativeManifestImageVersions.find { it.majorVersion == newVersion.majorVersion }
       if (previousVersion == null) {
-        log.info("Persisted declarative manifest image version for new major version ${newVersion.majorVersion}: ${newVersion.imageVersion}")
+        log.info(
+          "Persisted new declarative manifest image version for new major version ${newVersion.majorVersion}: ${newVersion.imageVersion}" +
+            " with sha ${newVersion.imageSha}",
+        )
+      } else if (previousVersion.imageVersion == newVersion.imageVersion) {
+        log.info(
+          "Updated sha for declarative manifest image version ${newVersion.imageVersion} from ${previousVersion.imageSha} to ${newVersion.imageSha}",
+        )
       } else {
         log.info(
-          "Updating declarative manifest image version for major ${newVersion.majorVersion} from $previousVersion to ${newVersion.imageVersion}",
+          "Updated declarative manifest image version for major ${newVersion.majorVersion}" +
+            " from ${previousVersion.imageVersion} to ${newVersion.imageVersion}, with sha ${newVersion.imageSha}",
         )
-        val numUpdated = actorDefinitionService.updateDeclarativeActorDefinitionVersions(previousVersion, newVersion.imageVersion)
-        log.info("Updated $numUpdated declarative actor definitions from $previousVersion to ${newVersion.imageVersion}")
+        val numUpdated = actorDefinitionService.updateDeclarativeActorDefinitionVersions(previousVersion.imageVersion, newVersion.imageVersion)
+        log.info("Updated $numUpdated declarative actor definitions from ${previousVersion.imageVersion} to ${newVersion.imageVersion}")
       }
     }
   }

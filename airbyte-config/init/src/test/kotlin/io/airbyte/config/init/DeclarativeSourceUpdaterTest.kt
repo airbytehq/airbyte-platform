@@ -14,6 +14,7 @@ import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 
 internal class DeclarativeSourceUpdaterTest {
+  private var testSha: String = "sha256:26f3d6b7dcbfa43504709e42d859c12f8644b7c7bbab0ecac99daa773f7dd35c"
   private var mDeclarativeManifestImageVersionsProvider: RemoteDeclarativeManifestImageVersionsProvider = mockk()
   private var mDeclarativeManifestImageVersionService: DeclarativeManifestImageVersionService = mockk()
   private var mActorDefinitionService: ActorDefinitionService = mockk()
@@ -34,15 +35,15 @@ internal class DeclarativeSourceUpdaterTest {
     justRun { mActorDefinitionService.updateDeclarativeActorDefinitionVersions(any(), any()) }
     every {
       mDeclarativeManifestImageVersionService.writeDeclarativeManifestImageVersion(any())
-    } returns DeclarativeManifestImageVersion(0, "0.1.0")
+    } returns DeclarativeManifestImageVersion(0, "0.1.0", testSha)
     every { mActorDefinitionService.updateDeclarativeActorDefinitionVersions(any(), any()) } returns 1
     every { airbyteCompatibleConnectorsValidator.validateDeclarativeManifest(any()) } returns ConnectorPlatformCompatibilityValidationResult(true, "")
   }
 
   @Test
   fun `cdk versions are added when they are not in the database`() {
-    val newVersion0 = DeclarativeManifestImageVersion(0, "0.1.0")
-    val newVersion1 = DeclarativeManifestImageVersion(1, "1.0.0")
+    val newVersion0 = DeclarativeManifestImageVersion(0, "0.1.0", testSha)
+    val newVersion1 = DeclarativeManifestImageVersion(1, "1.0.0", testSha)
 
     every { mDeclarativeManifestImageVersionService.listDeclarativeManifestImageVersions() } returns listOf()
     every { mDeclarativeManifestImageVersionsProvider.getLatestDeclarativeManifestImageVersions() } returns listOf(newVersion0, newVersion1)
@@ -58,9 +59,9 @@ internal class DeclarativeSourceUpdaterTest {
 
   @Test
   fun `new cdk versions are added to database and actor definitions are updated`() {
-    val oldVersion0 = DeclarativeManifestImageVersion(0, "0.1.0")
-    val oldVersion1 = DeclarativeManifestImageVersion(1, "1.0.0")
-    val newVersion1 = DeclarativeManifestImageVersion(1, "1.0.1")
+    val oldVersion0 = DeclarativeManifestImageVersion(0, "0.1.0", testSha)
+    val oldVersion1 = DeclarativeManifestImageVersion(1, "1.0.0", testSha)
+    val newVersion1 = DeclarativeManifestImageVersion(1, "1.0.1", testSha)
     every { mDeclarativeManifestImageVersionService.listDeclarativeManifestImageVersions() } returns listOf(oldVersion0, oldVersion1)
     every { mDeclarativeManifestImageVersionsProvider.getLatestDeclarativeManifestImageVersions() } returns listOf(oldVersion0, newVersion1)
 
@@ -74,9 +75,9 @@ internal class DeclarativeSourceUpdaterTest {
   }
 
   @Test
-  fun `same cdk versions do not result in any calls to actor definition service`() {
-    val oldVersion0 = DeclarativeManifestImageVersion(0, "0.1.0")
-    val oldVersion1 = DeclarativeManifestImageVersion(1, "1.0.0")
+  fun `same declarative manifest versions do not result in any calls to actor definition service`() {
+    val oldVersion0 = DeclarativeManifestImageVersion(0, "0.1.0", testSha)
+    val oldVersion1 = DeclarativeManifestImageVersion(1, "1.0.0", testSha)
     every { mDeclarativeManifestImageVersionService.listDeclarativeManifestImageVersions() } returns listOf(oldVersion0, oldVersion1)
     every { mDeclarativeManifestImageVersionsProvider.getLatestDeclarativeManifestImageVersions() } returns listOf(oldVersion0, oldVersion1)
 
@@ -88,10 +89,26 @@ internal class DeclarativeSourceUpdaterTest {
   }
 
   @Test
+  fun `should update persisted version if SHA has changed`() {
+    val oldVersion0 = DeclarativeManifestImageVersion(0, "0.1.0", testSha)
+    val newVersion0 = DeclarativeManifestImageVersion(0, "0.1.0", "newSha")
+    every { mDeclarativeManifestImageVersionService.listDeclarativeManifestImageVersions() } returns listOf(oldVersion0)
+    every { mDeclarativeManifestImageVersionsProvider.getLatestDeclarativeManifestImageVersions() } returns listOf(newVersion0)
+
+    declarativeSourceUpdater.apply()
+
+    verify(exactly = 1) { mDeclarativeManifestImageVersionsProvider.getLatestDeclarativeManifestImageVersions() }
+    verify(exactly = 1) { mDeclarativeManifestImageVersionService.listDeclarativeManifestImageVersions() }
+    verify(exactly = 1) { mDeclarativeManifestImageVersionService.writeDeclarativeManifestImageVersion(newVersion0) }
+    verify(exactly = 0) { mActorDefinitionService.updateDeclarativeActorDefinitionVersions(any(), any()) }
+    confirmVerified(mDeclarativeManifestImageVersionService, mActorDefinitionService, mDeclarativeManifestImageVersionsProvider)
+  }
+
+  @Test
   fun `should not update version if validation returns false`() {
-    val oldVersion0 = DeclarativeManifestImageVersion(0, "0.1.0")
-    val oldVersion1 = DeclarativeManifestImageVersion(1, "1.0.0")
-    val newVersion1 = DeclarativeManifestImageVersion(1, "1.0.1")
+    val oldVersion0 = DeclarativeManifestImageVersion(0, "0.1.0", testSha)
+    val oldVersion1 = DeclarativeManifestImageVersion(1, "1.0.0", testSha)
+    val newVersion1 = DeclarativeManifestImageVersion(1, "1.0.1", testSha)
     every {
       airbyteCompatibleConnectorsValidator.validateDeclarativeManifest(any())
     } returns ConnectorPlatformCompatibilityValidationResult(false, "Can't update definition")

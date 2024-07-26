@@ -100,7 +100,8 @@ class ConnectorBuilderProjectsHandlerTest {
   private static final Long ACTIVE_MANIFEST_VERSION = 865L;
   private static final Version A_CDK_VERSION = new Version("0.0.1");
   private static final DeclarativeManifestImageVersion A_DECLARATIVE_MANIFEST_IMAGE_VERSION =
-      new DeclarativeManifestImageVersion(0, "0.79.0", OffsetDateTime.now(), OffsetDateTime.now());
+      new DeclarativeManifestImageVersion(0, "0.79.0", "sha256:26f3d6b7dcbfa43504709e42d859c12f8644b7c7bbab0ecac99daa773f7dd35c",
+          OffsetDateTime.now(), OffsetDateTime.now());
   private static final String A_DESCRIPTION = "a description";
   private static final String A_SOURCE_NAME = "a source name";
   private static final String A_NAME = "a name";

@@ -20,12 +20,12 @@ class RemoteDeclarativeManifestImageVersionsProvider(
 
   override fun getLatestDeclarativeManifestImageVersions(): List<DeclarativeManifestImageVersion> {
     val repository = "airbyte/source-declarative-manifest"
-    val tags = getTagsForRepository(repository)
+    val items = getTagsAndShasForRepository(repository)
 
-    val semverStandardVersionTags = tags.filter { it.matches(Regex("""^\d+\.\d+\.\d+$""")) }.toList()
+    val semverStandardVersionTags = items.filter { (imageVersion, _) -> imageVersion.matches(Regex("""^\d+\.\d+\.\d+$""")) }
     val semverStandardDeclarativeManifestImageVersions =
-      semverStandardVersionTags.map {
-        DeclarativeManifestImageVersion(it.split(".")[0].toInt(), it)
+      semverStandardVersionTags.map { (imageVersion, imageSha) ->
+        DeclarativeManifestImageVersion(getMajorVersion(imageVersion), imageVersion, imageSha)
       }
 
     val latestVersionsByMajor =
@@ -38,15 +38,15 @@ class RemoteDeclarativeManifestImageVersionsProvider(
     return latestVersionsByMajor
   }
 
-  private fun getTagsForRepository(
+  private fun getTagsAndShasForRepository(
     @Suppress("SameParameterValue") repository: String,
-  ): List<String> {
-    val tags = mutableListOf<String>()
+  ): Map<String, String> {
+    val tagsAndShas = mutableMapOf<String, String>()
 
     // 100 is max allowed page size for DockerHub
     var nextUrl: String? = "https://hub.docker.com/v2/repositories/$repository/tags?page_size=100"
 
-    log.info("Fetching image tags for $repository...")
+    log.info("Fetching image tags and SHAs for $repository...")
     while (nextUrl != null) {
       val request = Request.Builder().url(nextUrl).build()
       okHttpClient.newCall(request).execute().use { response ->
@@ -56,11 +56,19 @@ class RemoteDeclarativeManifestImageVersionsProvider(
           )
         }
         val body = Jsons.deserialize(response.body!!.string())
-        tags.addAll(body.get("results").elements().asSequence().mapNotNull { it.get("name").asText() })
+        body.get("results").elements().forEach { result ->
+          val tag = result.get("name").asText()
+          val sha = result.get("digest").asText()
+          tagsAndShas[tag] = sha
+        }
         nextUrl = if (!body.get("next").isNull) body.get("next").asText() else null
       }
     }
-    log.info("DockerHub tags for $repository: $tags")
-    return tags
+    log.info("DockerHub tags and SHAs for $repository: $tagsAndShas")
+    return tagsAndShas
+  }
+
+  private fun getMajorVersion(version: String): Int {
+    return version.split(".")[0].toInt()
   }
 }
