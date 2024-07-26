@@ -1046,7 +1046,7 @@
   "settings.defaultDataResidencyUpdateSuccess": "Data residency preference has been updated!",
   "settings.general": "General",
   "settings.members": "Members",
-  "settings.accessManagement.noUsers": "No users have this level of permission",
+  "settings.accessManagement.noUsers": "No users found",
   "settings.accessManagement.removeUser": "Remove user",
   "settings.accessManagement.table.column.member": "Member",
   "settings.accessManagement.table.column.role": "Role",
