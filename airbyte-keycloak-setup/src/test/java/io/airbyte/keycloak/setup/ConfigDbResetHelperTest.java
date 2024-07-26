@@ -38,10 +38,10 @@ class ConfigDbResetHelperTest extends BaseConfigDatabaseTest {
           .execute();
 
       // Insert sample users
-      ctx.insertInto(Tables.USER, Tables.USER.ID, Tables.USER.AUTH_PROVIDER, Tables.USER.AUTH_USER_ID, Tables.USER.EMAIL, Tables.USER.NAME)
-          .values(KEYCLOAK_USER_1_ID, AuthProvider.keycloak, UUID.randomUUID().toString(), "one@airbyte.io", "User One")
-          .values(KEYCLOAK_USER_2_ID, AuthProvider.keycloak, UUID.randomUUID().toString(), "two@airbyte.io", "User Two")
-          .values(NON_KEYCLOAK_USER_ID, AuthProvider.airbyte, UUID.randomUUID().toString(), "three@airbyte.io", "User Three")
+      ctx.insertInto(Tables.USER, Tables.USER.ID, Tables.USER.EMAIL, Tables.USER.NAME)
+          .values(KEYCLOAK_USER_1_ID, "one@airbyte.io", "User One")
+          .values(KEYCLOAK_USER_2_ID, "two@airbyte.io", "User Two")
+          .values(NON_KEYCLOAK_USER_ID, "three@airbyte.io", "User Three")
           .execute();
 
       // Insert auth users for these users

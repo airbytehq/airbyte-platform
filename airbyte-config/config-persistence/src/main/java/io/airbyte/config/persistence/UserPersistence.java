@@ -78,14 +78,9 @@ public class UserPersistence {
           .where(USER.ID.eq(user.getUserId())));
 
       if (isExistingConfig) {
-        // TODO: authUserId and authProvider will be removed from user table once we migrate to auth_user
-        // table https://github.com/airbytehq/airbyte-platform-internal/issues/10641
         ctx.update(USER)
             .set(USER.ID, user.getUserId())
             .set(USER.NAME, user.getName())
-            .set(USER.AUTH_USER_ID, user.getAuthUserId())
-            .set(USER.AUTH_PROVIDER, user.getAuthProvider() == null ? null
-                : Enums.toEnum(user.getAuthProvider().value(), AuthProvider.class).orElseThrow())
             .set(USER.DEFAULT_WORKSPACE_ID, user.getDefaultWorkspaceId())
             .set(USER.STATUS, user.getStatus() == null ? null
                 : Enums.toEnum(user.getStatus().value(), Status.class).orElseThrow())
@@ -97,8 +92,6 @@ public class UserPersistence {
             .where(USER.ID.eq(user.getUserId()))
             .execute();
       } else {
-        // TODO: authUserId and authProvider will be removed from user table once we migrate to auth_user
-        // table https://github.com/airbytehq/airbyte-platform-internal/issues/10641
         final boolean authIdAlreadyExists = ctx.fetchExists(select()
             .from(AUTH_USER)
             .where(AUTH_USER.AUTH_USER_ID.eq(user.getAuthUserId())));
@@ -109,9 +102,6 @@ public class UserPersistence {
         ctx.insertInto(USER)
             .set(USER.ID, user.getUserId())
             .set(USER.NAME, user.getName())
-            .set(USER.AUTH_USER_ID, user.getAuthUserId())
-            .set(USER.AUTH_PROVIDER, user.getAuthProvider() == null ? null
-                : Enums.toEnum(user.getAuthProvider().value(), AuthProvider.class).orElseThrow())
             .set(USER.DEFAULT_WORKSPACE_ID, user.getDefaultWorkspaceId())
             .set(USER.STATUS, user.getStatus() == null ? null
                 : Enums.toEnum(user.getStatus().value(), Status.class).orElseThrow())
