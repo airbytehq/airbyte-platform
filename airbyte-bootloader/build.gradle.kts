@@ -40,8 +40,6 @@ dependencies {
 
   runtimeOnly(libs.snakeyaml)
 
-  testCompileOnly(libs.lombok)
-  testAnnotationProcessor(libs.lombok) // Lombok must be added BEFORE Micronaut
   testAnnotationProcessor(platform(libs.micronaut.platform))
   testAnnotationProcessor(libs.bundles.micronaut.annotation.processor)
   testAnnotationProcessor(libs.bundles.micronaut.test.annotation.processor)
@@ -60,6 +58,9 @@ dependencies {
   testImplementation(libs.mockk)
 
   testRuntimeOnly(libs.junit.jupiter.engine)
+
+  integrationTestCompileOnly(libs.lombok)
+  integrationTestAnnotationProcessor(libs.lombok)
 }
 
 val env =
