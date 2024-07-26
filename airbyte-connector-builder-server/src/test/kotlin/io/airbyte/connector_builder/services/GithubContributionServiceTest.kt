@@ -3,19 +3,24 @@
 package io.airbyte.connector_builder.services
 
 import io.mockk.every
+import io.mockk.justRun
 import io.mockk.mockk
+import io.mockk.verify
 import org.junit.jupiter.api.Assertions.assertDoesNotThrow
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
+import org.kohsuke.github.GHBranch
+import org.kohsuke.github.GHCommit
 import org.kohsuke.github.GHContentUpdateResponse
 import org.kohsuke.github.GHFileNotFoundException
 import org.kohsuke.github.GHPullRequest
 import org.kohsuke.github.GHRef
 import org.kohsuke.github.GHRepository
 import org.kohsuke.github.GitHub
+import org.kohsuke.github.PagedSearchIterable
 
 class GithubContributionServiceTest {
   var testConnectorImageName = "source-test"
@@ -25,6 +30,9 @@ class GithubContributionServiceTest {
   private val repoMock = mockk<GHRepository>()
   private val refMock = mockk<GHRef>()
   private val prMock = mockk<GHPullRequest>()
+  private val pagedSearchPRMock = mockk<PagedSearchIterable<GHPullRequest>>()
+  private val branchMock = mockk<GHBranch>()
+  private val commitMock = mockk<GHCommit>()
   private val contentUpdateResponseMock = mockk<GHContentUpdateResponse>()
 
   private lateinit var contributionService: GithubContributionService
@@ -37,14 +45,20 @@ class GithubContributionServiceTest {
       }
 
     every { githubMock.getRepository(any()) } returns repoMock
+    justRun { refMock.delete() }
+    justRun { refMock.updateTo(any()) }
+
     every { refMock.getObject() } returns
       mockk {
         every { sha } returns "dummySha"
       }
+
+    every { branchMock.merge("dummySha", any()) } returns commitMock
     every { repoMock.createRef(any(), any()) } returns refMock
     every { repoMock.getRef(any()) } returns refMock
     every { repoMock.createPullRequest(any(), any(), any(), any()) } returns prMock
     every { repoMock.getPullRequests(any()) } returns listOf(prMock)
+    every { repoMock.getBranch(any()) } returns branchMock
     every { repoMock.getFileContent(any(), any()) } returns
       mockk {
         every { sha } returns "dummySha"
@@ -59,6 +73,15 @@ class GithubContributionServiceTest {
         every { branch(any()) } returns this
         every { message(any()) } returns this
         every { commit() } returns contentUpdateResponseMock
+      }
+
+    every { pagedSearchPRMock.toList() } returns emptyList()
+
+    every { repoMock.searchPullRequests() } returns
+      mockk {
+        every { isOpen() } returns this
+        every { head(any()) } returns this
+        every { list() } returns pagedSearchPRMock
       }
 
     contributionService =
@@ -125,5 +148,39 @@ class GithubContributionServiceTest {
   @Test
   fun `createPullRequest creates a new pull request successfully`() {
     assertNotNull(contributionService.createPullRequest())
+  }
+
+  @Test
+  fun `prepareBranchForContribution with existing branch and no PR deletes branch`() {
+    every { repoMock.getRef(any()) } returns refMock
+    every { pagedSearchPRMock.toList() } returns emptyList()
+
+    contributionService.prepareBranchForContribution()
+
+    verify { refMock.delete() }
+  }
+
+  @Test
+  fun `prepareBranchForContribution with existing branch and a PR updates branch`() {
+    every { repoMock.getRef(any()) } returns refMock
+    every { pagedSearchPRMock.toList() } returns listOf(prMock)
+
+    contributionService.prepareBranchForContribution()
+
+    verify(exactly = 0) { refMock.delete() }
+    verify { refMock.updateTo(any()) }
+    verify { branchMock.merge("dummySha", "Merge latest changes from main branch") }
+  }
+
+  @Test
+  fun `prepareBranchForContribution with no existing branch creates new branch`() {
+    every {
+      repoMock.getRef("refs/heads/$testUserName/builder-contribute/$testConnectorImageName")
+    } throws GHFileNotFoundException("Branch does not exist")
+    every { repoMock.createRef(any(), any()) } returns refMock
+
+    contributionService.prepareBranchForContribution()
+
+    verify { repoMock.createRef(any(), any()) }
   }
 }

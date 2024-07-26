@@ -227,15 +227,27 @@ class GithubContributionService(var connectorImageName: String, personalAccessTo
     return createPullRequest()
   }
 
+  fun updateForkedBranchAndRepoToLatest() {
+    val airbyteMasterSha = getBranchSha(airbyteRepository.defaultBranch, airbyteRepository)
+    val forkedMasterRef = getBranchRef(airbyteRepository.defaultBranch, forkedRepository)
+    val forkedContributionBranch = getBranch(contributionBranchName, forkedRepository)
+
+    forkedMasterRef?.updateTo(airbyteMasterSha)
+    forkedContributionBranch?.merge(airbyteMasterSha, "Merge latest changes from main branch")
+  }
+
   fun prepareBranchForContribution() {
-    // TODO: Handle updating the forked repository and branch
     val existingBranch = getBranchRef(contributionBranchName, forkedRepository)
     val existingPR = getExistingOpenPullRequest()
 
-    // Ensure we don't bring in any changes from previous contributions.
-    // By deleting the branch if it exists but the PR does not
-    if (existingBranch != null && existingPR == null) {
-      deleteBranch(contributionBranchName, forkedRepository)
+    if (existingBranch != null) {
+      if (existingPR != null) {
+        // Make sure the existing PR stays up to date with master
+        updateForkedBranchAndRepoToLatest()
+      } else {
+        // Delete the branch with old contributions in the PR doesn't exist anymore
+        deleteBranch(contributionBranchName, forkedRepository)
+      }
     }
 
     getOrCreateContributionBranch()
