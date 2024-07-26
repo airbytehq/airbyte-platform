@@ -38,11 +38,13 @@ import io.airbyte.config.DeclarativeManifest;
 import io.airbyte.config.init.AirbyteCompatibleConnectorsValidator;
 import io.airbyte.config.init.ConnectorPlatformCompatibilityValidationResult;
 import io.airbyte.data.exceptions.ConfigNotFoundException;
+import io.airbyte.data.repositories.entities.DeclarativeManifestImageVersion;
 import io.airbyte.data.services.ConnectorBuilderService;
 import io.airbyte.data.services.DeclarativeManifestImageVersionService;
 import io.airbyte.data.services.WorkspaceService;
 import io.airbyte.protocol.models.ConnectorSpecification;
 import java.io.IOException;
+import java.time.OffsetDateTime;
 import java.util.UUID;
 import java.util.stream.Stream;
 import org.junit.jupiter.api.BeforeEach;
@@ -57,7 +59,9 @@ class DeclarativeSourceDefinitionsHandlerTest {
   private static final Long ANOTHER_VERSION = 99L;
   private static final String A_DESCRIPTION = "a description";
   private static final Version A_CDK_VERSION = new Version("0.0.1");
-  private static final String A_DECLARATIVE_MANIFEST_IMAGE_VERSION = "0.70.0";
+  private static final String AN_IMAGE_VERSION = "0.79.0";
+  private static final DeclarativeManifestImageVersion A_DECLARATIVE_MANIFEST_IMAGE_VERSION =
+      new DeclarativeManifestImageVersion(0, AN_IMAGE_VERSION, OffsetDateTime.now(), OffsetDateTime.now());
   private static final JsonNode A_MANIFEST;
   private static final JsonNode A_SPEC;
 
@@ -93,7 +97,7 @@ class DeclarativeSourceDefinitionsHandlerTest {
     handler =
         new DeclarativeSourceDefinitionsHandler(declarativeManifestImageVersionService, connectorBuilderService, workspaceService, manifestInjector,
             airbyteCompatibleConnectorsValidator);
-    when(declarativeManifestImageVersionService.getImageVersionByMajorVersion(anyInt()))
+    when(declarativeManifestImageVersionService.getDeclarativeManifestImageVersionByMajorVersion(anyInt()))
         .thenReturn(A_DECLARATIVE_MANIFEST_IMAGE_VERSION);
   }
 
@@ -150,7 +154,7 @@ class DeclarativeSourceDefinitionsHandlerTest {
         .withSpec(A_SPEC)),
         eq(configInjection),
         eq(adaptedConnectorSpecification),
-        eq(A_DECLARATIVE_MANIFEST_IMAGE_VERSION));
+        eq(AN_IMAGE_VERSION));
   }
 
   @Test
@@ -217,7 +221,7 @@ class DeclarativeSourceDefinitionsHandlerTest {
     when(manifestInjector.createConfigInjection(A_SOURCE_DEFINITION_ID, A_MANIFEST)).thenReturn(configInjection);
     when(manifestInjector.createDeclarativeManifestConnectorSpecification(A_SPEC)).thenReturn(adaptedConnectorSpecification);
     when(manifestInjector.getCdkVersion(A_MANIFEST)).thenReturn(A_CDK_VERSION);
-    when(declarativeManifestImageVersionService.getImageVersionByMajorVersion(0))
+    when(declarativeManifestImageVersionService.getDeclarativeManifestImageVersionByMajorVersion(0))
         .thenThrow(new IllegalStateException("No declarative manifest image version found in database for major version 0"));
 
     assertEquals("No declarative manifest image version found in database for major version 0",
@@ -238,7 +242,7 @@ class DeclarativeSourceDefinitionsHandlerTest {
 
   @Test
   void whenUpdateDeclarativeManifestVersionThenSetDeclarativeSourceActiveVersion() throws IOException, ConfigNotFoundException {
-    when(airbyteCompatibleConnectorsValidator.validateDeclarativeManifest(eq(A_DECLARATIVE_MANIFEST_IMAGE_VERSION)))
+    when(airbyteCompatibleConnectorsValidator.validateDeclarativeManifest(eq(AN_IMAGE_VERSION)))
         .thenReturn(new ConnectorPlatformCompatibilityValidationResult(true, ""));
     givenSourceDefinitionAvailableInWorkspace();
     givenSourceIsDeclarative();
@@ -257,12 +261,12 @@ class DeclarativeSourceDefinitionsHandlerTest {
 
     verify(manifestInjector, times(1)).getCdkVersion(A_MANIFEST);
     verify(connectorBuilderService, times(1)).setDeclarativeSourceActiveVersion(A_SOURCE_DEFINITION_ID, A_VERSION, configInjection,
-        adaptedConnectorSpecification, A_DECLARATIVE_MANIFEST_IMAGE_VERSION);
+        adaptedConnectorSpecification, AN_IMAGE_VERSION);
   }
 
   @Test
   void updateShouldNotWorkIfValidationFails() throws IOException, ConfigNotFoundException {
-    when(airbyteCompatibleConnectorsValidator.validateDeclarativeManifest(eq(A_DECLARATIVE_MANIFEST_IMAGE_VERSION)))
+    when(airbyteCompatibleConnectorsValidator.validateDeclarativeManifest(eq(AN_IMAGE_VERSION)))
         .thenReturn(new ConnectorPlatformCompatibilityValidationResult(false, "Can't update definition"));
     givenSourceDefinitionAvailableInWorkspace();
     givenSourceIsDeclarative();
@@ -279,7 +283,7 @@ class DeclarativeSourceDefinitionsHandlerTest {
     assertThrows(BadRequestProblem.class, () -> handler.updateDeclarativeManifestVersion(
         new UpdateActiveManifestRequestBody().sourceDefinitionId(A_SOURCE_DEFINITION_ID).workspaceId(A_WORKSPACE_ID).version(A_VERSION)));
     verify(connectorBuilderService, times(0)).setDeclarativeSourceActiveVersion(A_SOURCE_DEFINITION_ID, A_VERSION, configInjection,
-        adaptedConnectorSpecification, A_DECLARATIVE_MANIFEST_IMAGE_VERSION);
+        adaptedConnectorSpecification, AN_IMAGE_VERSION);
     verify(manifestInjector, times(1)).getCdkVersion(A_MANIFEST);
   }
 

@@ -51,6 +51,7 @@ import io.airbyte.connectorbuilderserver.api.client.model.generated.HttpResponse
 import io.airbyte.connectorbuilderserver.api.client.model.generated.StreamRead;
 import io.airbyte.connectorbuilderserver.api.client.model.generated.StreamReadRequestBody;
 import io.airbyte.data.exceptions.ConfigNotFoundException;
+import io.airbyte.data.repositories.entities.DeclarativeManifestImageVersion;
 import io.airbyte.data.services.ConnectorBuilderService;
 import io.airbyte.data.services.DeclarativeManifestImageVersionService;
 import io.airbyte.data.services.SecretPersistenceConfigService;
@@ -287,7 +288,7 @@ public class ConnectorBuilderProjectsHandler {
 
     final ActorDefinitionVersion defaultVersion = new ActorDefinitionVersion()
         .withActorDefinitionId(actorDefinitionId)
-        .withDockerImageTag(getImageVersionForManifest(manifest))
+        .withDockerImageTag(getImageVersionForManifest(manifest).getImageVersion())
         .withDockerRepository("airbyte/source-declarative-manifest")
         .withSpec(connectorSpecification)
         .withProtocolVersion(DEFAULT_AIRBYTE_PROTOCOL_VERSION.serialize())
@@ -449,10 +450,10 @@ public class ConnectorBuilderProjectsHandler {
         : Optional.empty();
   }
 
-  private String getImageVersionForManifest(final JsonNode declarativeManifest) {
+  private DeclarativeManifestImageVersion getImageVersionForManifest(final JsonNode declarativeManifest) {
     final Version manifestVersion = manifestInjector.getCdkVersion(declarativeManifest);
     return declarativeManifestImageVersionService
-        .getImageVersionByMajorVersion(Integer.parseInt(manifestVersion.getMajorVersion()));
+        .getDeclarativeManifestImageVersionByMajorVersion(Integer.parseInt(manifestVersion.getMajorVersion()));
   }
 
 }

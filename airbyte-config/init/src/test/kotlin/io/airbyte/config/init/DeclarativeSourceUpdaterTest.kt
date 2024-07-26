@@ -30,10 +30,10 @@ internal class DeclarativeSourceUpdaterTest {
         airbyteCompatibleConnectorsValidator,
       )
 
-    justRun { mDeclarativeManifestImageVersionService.writeDeclarativeManifestImageVersion(any(), any()) }
+    justRun { mDeclarativeManifestImageVersionService.writeDeclarativeManifestImageVersion(any()) }
     justRun { mActorDefinitionService.updateDeclarativeActorDefinitionVersions(any(), any()) }
     every {
-      mDeclarativeManifestImageVersionService.writeDeclarativeManifestImageVersion(any(), any())
+      mDeclarativeManifestImageVersionService.writeDeclarativeManifestImageVersion(any())
     } returns DeclarativeManifestImageVersion(0, "0.1.0")
     every { mActorDefinitionService.updateDeclarativeActorDefinitionVersions(any(), any()) } returns 1
     every { airbyteCompatibleConnectorsValidator.validateDeclarativeManifest(any()) } returns ConnectorPlatformCompatibilityValidationResult(true, "")
@@ -41,40 +41,44 @@ internal class DeclarativeSourceUpdaterTest {
 
   @Test
   fun `cdk versions are added when they are not in the database`() {
+    val newVersion0 = DeclarativeManifestImageVersion(0, "0.1.0")
+    val newVersion1 = DeclarativeManifestImageVersion(1, "1.0.0")
+
     every { mDeclarativeManifestImageVersionService.listDeclarativeManifestImageVersions() } returns listOf()
-    every { mDeclarativeManifestImageVersionsProvider.getLatestDeclarativeManifestImageVersions() } returns mapOf(0 to "0.1.0", 1 to "1.0.0")
+    every { mDeclarativeManifestImageVersionsProvider.getLatestDeclarativeManifestImageVersions() } returns listOf(newVersion0, newVersion1)
 
     declarativeSourceUpdater.apply()
 
     verify(exactly = 1) { mDeclarativeManifestImageVersionsProvider.getLatestDeclarativeManifestImageVersions() }
     verify(exactly = 1) { mDeclarativeManifestImageVersionService.listDeclarativeManifestImageVersions() }
-    verify(exactly = 1) { mDeclarativeManifestImageVersionService.writeDeclarativeManifestImageVersion(0, "0.1.0") }
-    verify(exactly = 1) { mDeclarativeManifestImageVersionService.writeDeclarativeManifestImageVersion(1, "1.0.0") }
+    verify(exactly = 1) { mDeclarativeManifestImageVersionService.writeDeclarativeManifestImageVersion(newVersion0) }
+    verify(exactly = 1) { mDeclarativeManifestImageVersionService.writeDeclarativeManifestImageVersion(newVersion1) }
     confirmVerified(mDeclarativeManifestImageVersionService, mActorDefinitionService, mDeclarativeManifestImageVersionsProvider)
   }
 
   @Test
   fun `new cdk versions are added to database and actor definitions are updated`() {
-    every {
-      mDeclarativeManifestImageVersionService.listDeclarativeManifestImageVersions()
-    } returns listOf(DeclarativeManifestImageVersion(0, "0.1.0"), DeclarativeManifestImageVersion(1, "1.0.0"))
-    every { mDeclarativeManifestImageVersionsProvider.getLatestDeclarativeManifestImageVersions() } returns mapOf(0 to "0.1.0", 1 to "1.0.1")
+    val oldVersion0 = DeclarativeManifestImageVersion(0, "0.1.0")
+    val oldVersion1 = DeclarativeManifestImageVersion(1, "1.0.0")
+    val newVersion1 = DeclarativeManifestImageVersion(1, "1.0.1")
+    every { mDeclarativeManifestImageVersionService.listDeclarativeManifestImageVersions() } returns listOf(oldVersion0, oldVersion1)
+    every { mDeclarativeManifestImageVersionsProvider.getLatestDeclarativeManifestImageVersions() } returns listOf(oldVersion0, newVersion1)
 
     declarativeSourceUpdater.apply()
 
     verify(exactly = 1) { mDeclarativeManifestImageVersionsProvider.getLatestDeclarativeManifestImageVersions() }
     verify(exactly = 1) { mDeclarativeManifestImageVersionService.listDeclarativeManifestImageVersions() }
-    verify(exactly = 1) { mDeclarativeManifestImageVersionService.writeDeclarativeManifestImageVersion(1, "1.0.1") }
+    verify(exactly = 1) { mDeclarativeManifestImageVersionService.writeDeclarativeManifestImageVersion(newVersion1) }
     verify(exactly = 1) { mActorDefinitionService.updateDeclarativeActorDefinitionVersions("1.0.0", "1.0.1") }
     confirmVerified(mDeclarativeManifestImageVersionService, mActorDefinitionService, mDeclarativeManifestImageVersionsProvider)
   }
 
   @Test
   fun `same cdk versions do not result in any calls to actor definition service`() {
-    every {
-      mDeclarativeManifestImageVersionService.listDeclarativeManifestImageVersions()
-    } returns listOf(DeclarativeManifestImageVersion(0, "0.1.0"), DeclarativeManifestImageVersion(1, "1.0.0"))
-    every { mDeclarativeManifestImageVersionsProvider.getLatestDeclarativeManifestImageVersions() } returns mapOf(0 to "0.1.0", 1 to "1.0.0")
+    val oldVersion0 = DeclarativeManifestImageVersion(0, "0.1.0")
+    val oldVersion1 = DeclarativeManifestImageVersion(1, "1.0.0")
+    every { mDeclarativeManifestImageVersionService.listDeclarativeManifestImageVersions() } returns listOf(oldVersion0, oldVersion1)
+    every { mDeclarativeManifestImageVersionsProvider.getLatestDeclarativeManifestImageVersions() } returns listOf(oldVersion0, oldVersion1)
 
     declarativeSourceUpdater.apply()
 
@@ -85,19 +89,20 @@ internal class DeclarativeSourceUpdaterTest {
 
   @Test
   fun `should not update version if validation returns false`() {
+    val oldVersion0 = DeclarativeManifestImageVersion(0, "0.1.0")
+    val oldVersion1 = DeclarativeManifestImageVersion(1, "1.0.0")
+    val newVersion1 = DeclarativeManifestImageVersion(1, "1.0.1")
     every {
       airbyteCompatibleConnectorsValidator.validateDeclarativeManifest(any())
     } returns ConnectorPlatformCompatibilityValidationResult(false, "Can't update definition")
-    every {
-      mDeclarativeManifestImageVersionService.listDeclarativeManifestImageVersions()
-    } returns listOf(DeclarativeManifestImageVersion(0, "0.1.0"), DeclarativeManifestImageVersion(1, "1.0.0"))
-    every { mDeclarativeManifestImageVersionsProvider.getLatestDeclarativeManifestImageVersions() } returns mapOf(0 to "0.1.0", 1 to "1.0.1")
+    every { mDeclarativeManifestImageVersionService.listDeclarativeManifestImageVersions() } returns listOf(oldVersion0, oldVersion1)
+    every { mDeclarativeManifestImageVersionsProvider.getLatestDeclarativeManifestImageVersions() } returns listOf(oldVersion0, newVersion1)
 
     declarativeSourceUpdater.apply()
 
     verify(exactly = 1) { mDeclarativeManifestImageVersionsProvider.getLatestDeclarativeManifestImageVersions() }
     verify(exactly = 1) { mDeclarativeManifestImageVersionService.listDeclarativeManifestImageVersions() }
-    verify(exactly = 0) { mDeclarativeManifestImageVersionService.writeDeclarativeManifestImageVersion(1, "1.0.1") }
+    verify(exactly = 0) { mDeclarativeManifestImageVersionService.writeDeclarativeManifestImageVersion(newVersion1) }
     verify(exactly = 0) { mActorDefinitionService.updateDeclarativeActorDefinitionVersions("1.0.0", "1.0.1") }
     confirmVerified(mDeclarativeManifestImageVersionService, mActorDefinitionService, mDeclarativeManifestImageVersionsProvider)
   }

@@ -1,6 +1,7 @@
 package io.airbyte.config.init
 
 import io.airbyte.commons.json.Jsons
+import io.airbyte.data.repositories.entities.DeclarativeManifestImageVersion
 import jakarta.inject.Named
 import jakarta.inject.Singleton
 import okhttp3.OkHttpClient
@@ -17,17 +18,23 @@ class RemoteDeclarativeManifestImageVersionsProvider(
     private val log = LoggerFactory.getLogger(RemoteDeclarativeManifestImageVersionsProvider::class.java)
   }
 
-  override fun getLatestDeclarativeManifestImageVersions(): Map<Int, String> {
+  override fun getLatestDeclarativeManifestImageVersions(): List<DeclarativeManifestImageVersion> {
     val repository = "airbyte/source-declarative-manifest"
     val tags = getTagsForRepository(repository)
 
     val semverStandardVersionTags = tags.filter { it.matches(Regex("""^\d+\.\d+\.\d+$""")) }.toList()
-    val latestVersionsByMajor =
-      semverStandardVersionTags
-        .groupBy { it.split(".")[0].toInt() }
-        .mapValues { (_, versionsByMajor) -> versionsByMajor.maxBy { it } }
+    val semverStandardDeclarativeManifestImageVersions =
+      semverStandardVersionTags.map {
+        DeclarativeManifestImageVersion(it.split(".")[0].toInt(), it)
+      }
 
-    log.info("Latest versions for $repository: $latestVersionsByMajor")
+    val latestVersionsByMajor =
+      semverStandardDeclarativeManifestImageVersions
+        .groupBy { it.majorVersion }
+        .map { entry ->
+          entry.value.maxBy { version -> version.imageVersion }
+        }
+    log.info("Latest versions for $repository: ${latestVersionsByMajor.map { it.imageVersion }}")
     return latestVersionsByMajor
   }
 

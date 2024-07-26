@@ -25,27 +25,27 @@ class DeclarativeSourceUpdater(
 
   fun apply() {
     val currentDeclarativeManifestImageVersions = declarativeManifestImageVersionService.listDeclarativeManifestImageVersions()
-    val latestVersionsByMajor = declarativeManifestImageVersionsProvider.getLatestDeclarativeManifestImageVersions()
-    log.info("Latest source-declarative-manifest images by major: $latestVersionsByMajor")
+    val latestDeclarativeManifestImageVersions = declarativeManifestImageVersionsProvider.getLatestDeclarativeManifestImageVersions()
 
     // Versions which are not currently in the DB - either a version for a new major or a different version for an existing major
     val versionsToPersist =
-      latestVersionsByMajor.filterNot {
-          (major, latestVersion) ->
-        currentDeclarativeManifestImageVersions.any { it.majorVersion == major && it.imageVersion == latestVersion }
+      latestDeclarativeManifestImageVersions.filterNot { latestVersion ->
+        currentDeclarativeManifestImageVersions.any { it.majorVersion == latestVersion.majorVersion && it.imageVersion == latestVersion.imageVersion }
       }
 
-    versionsToPersist.filter { (_, newVersion) ->
-      airbyteCompatibleConnectorsValidator.validateDeclarativeManifest(newVersion).isValid
-    }.forEach { (major, newVersion) ->
-      declarativeManifestImageVersionService.writeDeclarativeManifestImageVersion(major, newVersion)
-      val previousVersion = currentDeclarativeManifestImageVersions.find { it.majorVersion == major }?.imageVersion
+    versionsToPersist.filter { newVersion ->
+      airbyteCompatibleConnectorsValidator.validateDeclarativeManifest(newVersion.imageVersion).isValid
+    }.forEach { newVersion ->
+      declarativeManifestImageVersionService.writeDeclarativeManifestImageVersion(newVersion)
+      val previousVersion = currentDeclarativeManifestImageVersions.find { it.majorVersion == newVersion.majorVersion }?.imageVersion
       if (previousVersion == null) {
-        log.info("Persisted declarative manifest image version for new major version $major: $newVersion")
+        log.info("Persisted declarative manifest image version for new major version ${newVersion.majorVersion}: ${newVersion.imageVersion}")
       } else {
-        log.info("Updating declarative manifest image version for major $major from $previousVersion to $newVersion")
-        val numUpdated = actorDefinitionService.updateDeclarativeActorDefinitionVersions(previousVersion, newVersion)
-        log.info("Updated $numUpdated declarative actor definitions from $previousVersion to $newVersion")
+        log.info(
+          "Updating declarative manifest image version for major ${newVersion.majorVersion} from $previousVersion to ${newVersion.imageVersion}",
+        )
+        val numUpdated = actorDefinitionService.updateDeclarativeActorDefinitionVersions(previousVersion, newVersion.imageVersion)
+        log.info("Updated $numUpdated declarative actor definitions from $previousVersion to ${newVersion.imageVersion}")
       }
     }
   }

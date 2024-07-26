@@ -21,6 +21,7 @@ import io.airbyte.config.DeclarativeManifest;
 import io.airbyte.config.init.AirbyteCompatibleConnectorsValidator;
 import io.airbyte.config.init.ConnectorPlatformCompatibilityValidationResult;
 import io.airbyte.data.exceptions.ConfigNotFoundException;
+import io.airbyte.data.repositories.entities.DeclarativeManifestImageVersion;
 import io.airbyte.data.services.ConnectorBuilderService;
 import io.airbyte.data.services.DeclarativeManifestImageVersionService;
 import io.airbyte.data.services.WorkspaceService;
@@ -82,7 +83,7 @@ public class DeclarativeSourceDefinitionsHandler {
     if (requestBody.getSetAsActiveManifest()) {
       connectorBuilderService.createDeclarativeManifestAsActiveVersion(declarativeManifest,
           manifestInjector.createConfigInjection(requestBody.getSourceDefinitionId(), declarativeManifest.getManifest()),
-          manifestInjector.createDeclarativeManifestConnectorSpecification(spec), getImageVersionForManifest(declarativeManifest));
+          manifestInjector.createDeclarativeManifestConnectorSpecification(spec), getImageVersionForManifest(declarativeManifest).getImageVersion());
     } else {
       connectorBuilderService.insertDeclarativeManifest(declarativeManifest);
     }
@@ -98,7 +99,7 @@ public class DeclarativeSourceDefinitionsHandler {
     }
     final DeclarativeManifest declarativeManifest = connectorBuilderService.getDeclarativeManifestByActorDefinitionIdAndVersion(
         requestBody.getSourceDefinitionId(), requestBody.getVersion());
-    final String imageVersionForManifest = getImageVersionForManifest(declarativeManifest);
+    final String imageVersionForManifest = getImageVersionForManifest(declarativeManifest).getImageVersion();
     final ConnectorPlatformCompatibilityValidationResult isNewConnectorVersionSupported =
         airbyteCompatibleConnectorsValidator.validateDeclarativeManifest(imageVersionForManifest);
     if (!isNewConnectorVersionSupported.isValid()) {
@@ -143,10 +144,10 @@ public class DeclarativeSourceDefinitionsHandler {
         .sorted(Comparator.comparingLong(DeclarativeManifestVersionRead::getVersion)).collect(Collectors.toList()));
   }
 
-  private String getImageVersionForManifest(final DeclarativeManifest declarativeManifest) {
+  private DeclarativeManifestImageVersion getImageVersionForManifest(final DeclarativeManifest declarativeManifest) {
     final Version manifestVersion = manifestInjector.getCdkVersion(declarativeManifest.getManifest());
     return declarativeManifestImageVersionService
-        .getImageVersionByMajorVersion(Integer.parseInt(manifestVersion.getMajorVersion()));
+        .getDeclarativeManifestImageVersionByMajorVersion(Integer.parseInt(manifestVersion.getMajorVersion()));
   }
 
 }

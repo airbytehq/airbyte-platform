@@ -2,6 +2,7 @@
  * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 package io.airbyte.config.init
+import io.airbyte.data.repositories.entities.DeclarativeManifestImageVersion
 import io.mockk.confirmVerified
 import io.mockk.every
 import io.mockk.justRun
@@ -46,11 +47,11 @@ internal class RemoteDeclarativeManifestImageVersionsProviderTest {
 
     val latestMajorVersions = declarativeManifestImageVersionsProvider.getLatestDeclarativeManifestImageVersions()
     val expectedLatestVersions =
-      mapOf(
-        0 to "0.90.0",
-        1 to "1.0.1",
-        2 to "2.0.0",
-        3 to "3.0.0",
+      listOf(
+        DeclarativeManifestImageVersion(0, "0.90.0"),
+        DeclarativeManifestImageVersion(1, "1.0.1"),
+        DeclarativeManifestImageVersion(2, "2.0.0"),
+        DeclarativeManifestImageVersion(3, "3.0.0"),
       )
     assertEquals(expectedLatestVersions, latestMajorVersions)
 
@@ -100,9 +101,9 @@ internal class RemoteDeclarativeManifestImageVersionsProviderTest {
 
     val latestMajorVersions = declarativeManifestImageVersionsProvider.getLatestDeclarativeManifestImageVersions()
     val expectedLatestVersions =
-      mapOf(
-        0 to "0.90.0",
-        1 to "1.0.1",
+      listOf(
+        DeclarativeManifestImageVersion(1, "1.0.1"),
+        DeclarativeManifestImageVersion(0, "0.90.0"),
       )
     assertEquals(expectedLatestVersions, latestMajorVersions)
 
@@ -125,7 +126,7 @@ internal class RemoteDeclarativeManifestImageVersionsProviderTest {
       )
 
     val latestMajorVersions = declarativeManifestImageVersionsProvider.getLatestDeclarativeManifestImageVersions()
-    assertEquals(emptyMap<Int, String>(), latestMajorVersions)
+    assertEquals(emptyList<DeclarativeManifestImageVersion>(), latestMajorVersions)
 
     verify(exactly = 1) { okHttpClient.newCall(any()).execute() }
     confirmVerified(okHttpClient)

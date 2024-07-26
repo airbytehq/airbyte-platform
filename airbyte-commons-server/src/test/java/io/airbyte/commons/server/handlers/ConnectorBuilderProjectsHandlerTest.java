@@ -68,6 +68,7 @@ import io.airbyte.connectorbuilderserver.api.client.model.generated.StreamReadRe
 import io.airbyte.connectorbuilderserver.api.client.model.generated.StreamReadSlicesInner;
 import io.airbyte.connectorbuilderserver.api.client.model.generated.StreamReadSlicesInnerPagesInner;
 import io.airbyte.data.exceptions.ConfigNotFoundException;
+import io.airbyte.data.repositories.entities.DeclarativeManifestImageVersion;
 import io.airbyte.data.services.ConnectorBuilderService;
 import io.airbyte.data.services.DeclarativeManifestImageVersionService;
 import io.airbyte.data.services.SecretPersistenceConfigService;
@@ -79,6 +80,7 @@ import io.airbyte.protocol.models.ConnectorSpecification;
 import io.airbyte.validation.json.JsonValidationException;
 import java.io.IOException;
 import java.net.URI;
+import java.time.OffsetDateTime;
 import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
@@ -97,7 +99,8 @@ class ConnectorBuilderProjectsHandlerTest {
   private static final Long A_VERSION = 32L;
   private static final Long ACTIVE_MANIFEST_VERSION = 865L;
   private static final Version A_CDK_VERSION = new Version("0.0.1");
-  private static final String A_DECLARATIVE_MANIFEST_IMAGE_VERSION = "0.79.0";
+  private static final DeclarativeManifestImageVersion A_DECLARATIVE_MANIFEST_IMAGE_VERSION =
+      new DeclarativeManifestImageVersion(0, "0.79.0", OffsetDateTime.now(), OffsetDateTime.now());
   private static final String A_DESCRIPTION = "a description";
   private static final String A_SOURCE_NAME = "a source name";
   private static final String A_NAME = "a name";
@@ -195,7 +198,7 @@ class ConnectorBuilderProjectsHandlerTest {
             connectorBuilderServerApiClient);
 
     when(manifestInjector.getCdkVersion(any())).thenReturn(A_CDK_VERSION);
-    when(declarativeManifestImageVersionService.getImageVersionByMajorVersion(anyInt()))
+    when(declarativeManifestImageVersionService.getDeclarativeManifestImageVersionByMajorVersion(anyInt()))
         .thenReturn(A_DECLARATIVE_MANIFEST_IMAGE_VERSION);
   }
 
@@ -233,7 +236,7 @@ class ConnectorBuilderProjectsHandlerTest {
     final ConnectorBuilderProject project = generateBuilderProject();
 
     when(uuidSupplier.get()).thenReturn(project.getBuilderProjectId());
-    when(declarativeManifestImageVersionService.getImageVersionByMajorVersion(anyInt()))
+    when(declarativeManifestImageVersionService.getDeclarativeManifestImageVersionByMajorVersion(anyInt()))
         .thenThrow(new IllegalStateException("No declarative manifest image version found in database for major version 0"));
 
     final ConnectorBuilderPublishRequestBody publish = new ConnectorBuilderPublishRequestBody()
@@ -507,7 +510,7 @@ class ConnectorBuilderProjectsHandlerTest {
             new ActorDefinitionVersion()
                 .withActorDefinitionId(A_SOURCE_DEFINITION_ID)
                 .withDockerRepository("airbyte/source-declarative-manifest")
-                .withDockerImageTag(A_DECLARATIVE_MANIFEST_IMAGE_VERSION)
+                .withDockerImageTag(A_DECLARATIVE_MANIFEST_IMAGE_VERSION.getImageVersion())
                 .withSpec(adaptedConnectorSpecification)
                 .withSupportLevel(SupportLevel.NONE)
                 .withInternalSupportLevel(100L)
