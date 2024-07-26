@@ -7,11 +7,14 @@ import { FormFieldLayout } from "components/connection/ConnectionForm/FormFieldL
 import { RadioButtonTiles } from "components/connection/CreateConnection/RadioButtonTiles";
 import { ControlLabels } from "components/LabeledControl";
 import { Box } from "components/ui/Box";
+import { FlexContainer } from "components/ui/Flex";
+import { ExternalLink } from "components/ui/Link";
 import { ListBox } from "components/ui/ListBox";
 import { Message } from "components/ui/Message";
 import { Text } from "components/ui/Text";
 
 import { NonBreakingChangesPreference } from "core/api/types/AirbyteClient";
+import { links } from "core/utils/links";
 import { useConnectionFormService } from "hooks/services/ConnectionForm/ConnectionFormService";
 
 import { InputContainer } from "./InputContainer";
@@ -61,15 +64,27 @@ export const SimplfiedSchemaChangesFormField: React.FC<{ isCreating: boolean; di
         <FormFieldLayout alignItems="flex-start" nextSizing>
           <ControlLabels
             label={
-              <Text bold>
-                <FormattedMessage
-                  id={
-                    isCreating
-                      ? "connectionForm.nonBreakingChangesPreference.autopropagation.labelCreating"
-                      : "connectionForm.nonBreakingChangesPreference.autopropagation.label"
-                  }
-                />
-              </Text>
+              <FlexContainer direction="column" gap="sm">
+                <Text bold>
+                  <FormattedMessage
+                    id={
+                      isCreating
+                        ? "connectionForm.nonBreakingChangesPreference.autopropagation.labelCreating"
+                        : "connectionForm.nonBreakingChangesPreference.autopropagation.label"
+                    }
+                  />
+                </Text>
+                <Text size="sm" color="grey">
+                  <FormattedMessage
+                    id="connectionForm.nonBreakingChangesPreference.autopropagation.message"
+                    values={{
+                      lnk: (children: React.ReactNode) => (
+                        <ExternalLink href={links.schemaChangeManagement}>{children}</ExternalLink>
+                      ),
+                    }}
+                  />
+                </Text>
+              </FlexContainer>
             }
           />
           {isCreating ? (
@@ -97,7 +112,9 @@ export const SimplfiedSchemaChangesFormField: React.FC<{ isCreating: boolean; di
             <Box mt="md">
               <Message
                 type="info"
-                text={<FormattedMessage id="connectionForm.nonBreakingChangesPreference.autopropagation.message" />}
+                text={
+                  <FormattedMessage id="connectionForm.nonBreakingChangesPreference.autopropagation.messageOnChange" />
+                }
               />
             </Box>
           )}
