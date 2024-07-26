@@ -8792,6 +8792,7 @@ components:
           type: boolean
         operations:
           type: array
+          nullable: true
           items:
             $ref: "#/components/schemas/WebBackendOperationCreateOrUpdate"
         sourceCatalogId:
