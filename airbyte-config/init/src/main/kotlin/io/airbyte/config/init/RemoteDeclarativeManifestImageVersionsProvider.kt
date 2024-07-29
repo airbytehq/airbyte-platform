@@ -1,6 +1,7 @@
 package io.airbyte.config.init
 
 import io.airbyte.commons.json.Jsons
+import io.airbyte.commons.version.Version
 import io.airbyte.data.repositories.entities.DeclarativeManifestImageVersion
 import jakarta.inject.Named
 import jakarta.inject.Singleton
@@ -28,12 +29,14 @@ class RemoteDeclarativeManifestImageVersionsProvider(
         DeclarativeManifestImageVersion(getMajorVersion(imageVersion), imageVersion, imageSha)
       }
 
+    val semverComparator =
+      Comparator<DeclarativeManifestImageVersion> { v1, v2 ->
+        Version(v1.imageVersion).versionCompareTo(Version(v2.imageVersion))
+      }
     val latestVersionsByMajor =
       semverStandardDeclarativeManifestImageVersions
         .groupBy { it.majorVersion }
-        .map { entry ->
-          entry.value.maxBy { version -> version.imageVersion }
-        }
+        .map { entry -> entry.value.maxWith(semverComparator) }
     log.info("Latest versions for $repository: ${latestVersionsByMajor.map { it.imageVersion }}")
     return latestVersionsByMajor
   }

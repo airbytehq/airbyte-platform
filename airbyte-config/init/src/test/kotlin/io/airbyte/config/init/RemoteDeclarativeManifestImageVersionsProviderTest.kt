@@ -112,6 +112,35 @@ internal class RemoteDeclarativeManifestImageVersionsProviderTest {
   }
 
   @Test
+  fun `test versions are compared correctly via semver and not string comparison`() {
+    every { okHttpClient.newCall(any()).execute() } returns
+      successfulResponse(
+        """
+              {
+                "count": 8,
+                "next": null,
+                "previous": null,
+                "results": [
+                  {"name": "3.0.0", "digest": "sha256:26f3d6b7dcbfa43504709e42d859c12f8644b7c7bbab0ecac99daa773f7dd35c"},
+                  {"name": "3.9.0", "digest": "sha256:26f3d6b7dcbfa43504709e42d859c12f8644b7c7bbab0ecac99daa773f7dd35c"},
+                  {"name": "3.10.0", "digest": "sha256:26f3d6b7dcbfa43504709e42d859c12f8644b7c7bbab0ecac99daa773f7dd35c"}
+                ]
+              }
+              """,
+      )
+
+    val latestMajorVersions = declarativeManifestImageVersionsProvider.getLatestDeclarativeManifestImageVersions()
+    val expectedLatestVersions =
+      listOf(
+        DeclarativeManifestImageVersion(3, "3.10.0", "sha256:26f3d6b7dcbfa43504709e42d859c12f8644b7c7bbab0ecac99daa773f7dd35c"),
+      )
+    assertEquals(expectedLatestVersions, latestMajorVersions)
+
+    verify(exactly = 1) { okHttpClient.newCall(any()).execute() }
+    confirmVerified(okHttpClient)
+  }
+
+  @Test
   fun `test no tags available`() {
     every { okHttpClient.newCall(any()).execute() } returns
       successfulResponse(
