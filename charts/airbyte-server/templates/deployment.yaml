@@ -9,6 +9,7 @@ metadata:
     {{ toYaml (mergeOverwrite .Values.extraLabels .Values.global.extraLabels) | nindent 4 }}
     {{- end }}
 spec:
+  minReadySeconds: 30
   replicas: {{ .Values.replicaCount }}
   selector:
     matchLabels:
