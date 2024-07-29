@@ -4,7 +4,6 @@ import { useNavigate } from "react-router-dom";
 
 import { Form } from "components/forms";
 import LoadingSchema from "components/LoadingSchema";
-import { FlexContainer } from "components/ui/Flex";
 
 import { useGetDestinationFromSearchParams, useGetSourceFromSearchParams } from "area/connector/utils";
 import { useCreateConnection, useDiscoverSchema } from "core/api";
@@ -21,6 +20,7 @@ import styles from "./CreateConnectionForm.module.scss";
 import { SchemaError } from "./SchemaError";
 import { SimplifiedConnectionConfiguration } from "./SimplifiedConnectionCreation/SimplifiedConnectionConfiguration";
 import { useAnalyticsTrackFunctions } from "./useAnalyticsTrackFunctions";
+import { ScrollableContainer } from "../../ScrollableContainer";
 import { FormConnectionFormValues, useConnectionValidationSchema } from "../ConnectionForm/formConfig";
 
 export const CREATE_CONNECTION_FORM_ID = "create-connection-form";
@@ -83,19 +83,21 @@ const CreateConnectionFormInner: React.FC = () => {
   );
 
   return (
-    <Suspense fallback={<LoadingSchema />}>
-      <Form<FormConnectionFormValues>
-        defaultValues={initialValues}
-        schema={validationSchema}
-        onSubmit={onSubmit}
-        trackDirtyChanges
-        formTrackerId={CREATE_CONNECTION_FORM_ID}
-      >
-        <FlexContainer direction="column" className={styles.formContainer}>
-          <SimplifiedConnectionConfiguration />
-        </FlexContainer>
-      </Form>
-    </Suspense>
+    <div className={styles.container}>
+      <Suspense fallback={<LoadingSchema />}>
+        <Form<FormConnectionFormValues>
+          defaultValues={initialValues}
+          schema={validationSchema}
+          onSubmit={onSubmit}
+          trackDirtyChanges
+          formTrackerId={CREATE_CONNECTION_FORM_ID}
+        >
+          <div className={styles.formContainer}>
+            <SimplifiedConnectionConfiguration />
+          </div>
+        </Form>
+      </Suspense>
+    </div>
   );
 };
 
@@ -118,7 +120,11 @@ export const CreateConnectionForm: React.FC = () => {
   }, [schemaErrorStatus]);
 
   if (schemaErrorStatus) {
-    return <SchemaError schemaError={schemaErrorStatus} refreshSchema={onDiscoverSchema} />;
+    return (
+      <ScrollableContainer>
+        <SchemaError schemaError={schemaErrorStatus} refreshSchema={onDiscoverSchema} />
+      </ScrollableContainer>
+    );
   }
   if (!schema) {
     return <LoadingSchema />;

@@ -1,5 +1,5 @@
 import isBoolean from "lodash/isBoolean";
-import React, { useCallback, useEffect } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import { useFormState } from "react-hook-form";
 import { FormattedMessage, useIntl } from "react-intl";
 import { useLocation } from "react-router-dom";
@@ -18,6 +18,7 @@ import { SchemaError } from "components/connection/CreateConnectionForm/SchemaEr
 import { Form } from "components/forms";
 import LoadingSchema from "components/LoadingSchema";
 import { ScrollableContainer } from "components/ScrollableContainer";
+import { Box } from "components/ui/Box";
 import { FlexContainer } from "components/ui/Flex";
 import { Message } from "components/ui/Message/Message";
 
@@ -93,6 +94,7 @@ const SchemaChangeMessage: React.FC = () => {
 
 export const ConnectionReplicationPage: React.FC = () => {
   useTrackPage(PageTrackingCodes.CONNECTIONS_ITEM_REPLICATION);
+  const [scrollElement, setScrollElement] = useState<HTMLDivElement | undefined>();
   const isSyncCatalogV2Enabled = useExperiment("connection.syncCatalogV2", false);
   const { trackSchemaEdit } = useAnalyticsTrackFunctions();
 
@@ -217,6 +219,13 @@ export const ConnectionReplicationPage: React.FC = () => {
     }
   }, [refreshSchema, state]);
 
+  const setScrollableContainer = (ref: HTMLDivElement | null) => {
+    if (ref === null) {
+      return;
+    }
+    setScrollElement(ref);
+  };
+
   const newSyncCatalogV2Form = connection && (
     <Form<FormConnectionFormValues>
       defaultValues={initialValues}
@@ -239,7 +248,9 @@ export const ConnectionReplicationPage: React.FC = () => {
 
   const oldSyncCatalogForm =
     schemaError && !schemaRefreshing ? (
-      <SchemaError schemaError={schemaError} refreshSchema={refreshSchema} />
+      <ScrollableContainer>
+        <SchemaError schemaError={schemaError} refreshSchema={refreshSchema} />
+      </ScrollableContainer>
     ) : !schemaRefreshing && connection ? (
       <Form<FormConnectionFormValues>
         defaultValues={initialValues}
@@ -247,23 +258,23 @@ export const ConnectionReplicationPage: React.FC = () => {
         onSubmit={onFormSubmit}
         trackDirtyChanges
       >
-        <FlexContainer direction="column">
-          <SchemaChangeMessage />
-          <SchemaChangeBackdrop>
-            <SyncCatalogCard />
-            <div className={styles.editControlsContainer}>
-              <UpdateConnectionFormControls onCancel={discardRefreshedSchema} />
-            </div>
-          </SchemaChangeBackdrop>
-        </FlexContainer>
+        <div className={styles.formContainer}>
+          <ScrollableContainer ref={setScrollableContainer}>
+            <FlexContainer direction="column">
+              <SchemaChangeMessage />
+              <SchemaChangeBackdrop>
+                <SyncCatalogCard scrollParentContainer={scrollElement} />
+              </SchemaChangeBackdrop>
+            </FlexContainer>
+          </ScrollableContainer>
+          <Box pb="xl" px="xl" pt="lg" className={styles.editControlsContainer}>
+            <UpdateConnectionFormControls onCancel={discardRefreshedSchema} />
+          </Box>
+        </div>
       </Form>
     ) : (
       <LoadingSchema />
     );
 
-  return (
-    <ScrollableContainer className={styles.content}>
-      {isSyncCatalogV2Enabled ? newSyncCatalogV2Form : oldSyncCatalogForm}
-    </ScrollableContainer>
-  );
+  return <div className={styles.container}>{isSyncCatalogV2Enabled ? newSyncCatalogV2Form : oldSyncCatalogForm}</div>;
 };

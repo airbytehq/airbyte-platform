@@ -1,5 +1,40 @@
+@use "scss/colors";
+@use "scss/mixins";
 @use "scss/variables";
+@use "scss/z-indices";
 
-.withScrollbar {
-  padding-right: 0;
+$initial-top: calc(-1 * variables.$spacing-xl);
+$card-header-fixed-height: 72px;
+$controls-container-fixed-height: 76px;
+$table-header-fixed-height: 48px;
+
+.stickyElement,
+%stickyElement {
+  position: sticky;
+  z-index: z-indices.$tableStickyHeader;
+  background-color: colors.$foreground;
+}
+
+.cardHeader {
+  @extend %stickyElement;
+
+  top: $initial-top;
+  height: $card-header-fixed-height;
+  border-top-left-radius: variables.$border-radius-lg;
+  border-top-right-radius: variables.$border-radius-lg;
+}
+
+.controlsContainer {
+  @extend %stickyElement;
+
+  top: $initial-top + $card-header-fixed-height;
+  height: $controls-container-fixed-height;
+}
+
+.tableHeader {
+  @extend %stickyElement;
+
+  top: $initial-top + $card-header-fixed-height + $controls-container-fixed-height;
+  height: $table-header-fixed-height;
+  border-bottom: variables.$border-thin solid colors.$grey-100;
 }
