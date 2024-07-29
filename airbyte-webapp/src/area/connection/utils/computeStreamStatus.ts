@@ -105,11 +105,7 @@ type UIStreamStatus = BaseUIStreamStatus | RateLimitedUIStreamStatus;
 
 export const computeStreamStatus = ({
   statuses,
-  scheduleType,
-  scheduleData,
   hasBreakingSchemaChange,
-  lateMultiplier,
-  errorMultiplier,
   isSyncing,
   recordsExtracted,
   runningJobConfigType,
@@ -119,8 +115,6 @@ export const computeStreamStatus = ({
   scheduleType?: ConnectionScheduleType;
   scheduleData?: ConnectionScheduleData;
   hasBreakingSchemaChange: boolean;
-  lateMultiplier: number;
-  errorMultiplier: number;
   isSyncing: boolean;
   recordsExtracted?: number;
   runningJobConfigType?: string;
@@ -203,7 +197,7 @@ export const computeStreamStatus = ({
   // breaking schema change means user action is required
   if (hasBreakingSchemaChange) {
     return {
-      status: ConnectionStatusIndicatorStatus.ActionRequired,
+      status: ConnectionStatusIndicatorStatus.Failed,
       isRunning,
       lastSuccessfulSync,
     };
@@ -226,40 +220,6 @@ export const computeStreamStatus = ({
     };
   }
 
-  // if the most recent sync failed, is there a previous successful sync within errorMultiplier (2x) schedule frequency?
-  if (
-    statuses[0].jobType === StreamStatusJobType.SYNC &&
-    statuses[0].runState === StreamStatusRunState.INCOMPLETE &&
-    statuses[0].incompleteRunCause === StreamStatusIncompleteRunCause.FAILED &&
-    scheduleType === ConnectionScheduleType.basic &&
-    lastSuccessfulSync && // if there is no previous successful sync it can't be OnTrack - required as isStreamLate (correctly) returns false for this case, but there's more nuance here; more correctly isStreamLate would indicate `stream is not late because stream never succeeded` instead of `false`, but it can't so we test here
-    !isStreamLate(statuses, scheduleType, scheduleData, errorMultiplier)
-  ) {
-    return {
-      status: ConnectionStatusIndicatorStatus.OnTrack,
-      isRunning,
-      lastSuccessfulSync,
-    };
-  }
-
-  // is there a previous successful sync outside lateMultipler (2x) schedule frequency?
-  if (isStreamLate(statuses, scheduleType, scheduleData, lateMultiplier)) {
-    return {
-      status: ConnectionStatusIndicatorStatus.Late,
-      isRunning,
-      lastSuccessfulSync,
-    };
-  }
-
-  // is there a previous successful sync outside 1 schedule frequency?
-  if (isStreamLate(statuses, scheduleType, scheduleData, 1)) {
-    return {
-      status: ConnectionStatusIndicatorStatus.OnTrack,
-      isRunning,
-      lastSuccessfulSync,
-    };
-  }
-
   // is there are error?
   if (
     statuses[0].jobType === StreamStatusJobType.SYNC &&
@@ -267,7 +227,7 @@ export const computeStreamStatus = ({
     statuses[0].incompleteRunCause === StreamStatusIncompleteRunCause.FAILED
   ) {
     return {
-      status: ConnectionStatusIndicatorStatus.Error,
+      status: ConnectionStatusIndicatorStatus.Incomplete,
       isRunning,
       lastSuccessfulSync,
     };
@@ -276,7 +236,7 @@ export const computeStreamStatus = ({
   // completed syncs that haven't been flagged as ontrack/late are on time
   if (lastSuccessfulSync) {
     return {
-      status: ConnectionStatusIndicatorStatus.OnTime,
+      status: ConnectionStatusIndicatorStatus.Synced,
       isRunning,
       lastSuccessfulSync,
     };

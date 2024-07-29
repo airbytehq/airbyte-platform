@@ -17,16 +17,14 @@ import { ChartStream } from "./WaffleChart";
 
 // What statuses we represent to users, other statuses must map to these
 type PresentingStatuses =
-  | ConnectionStatusIndicatorStatus.OnTime
-  | ConnectionStatusIndicatorStatus.Late
-  | ConnectionStatusIndicatorStatus.Error
-  | ConnectionStatusIndicatorStatus.ActionRequired;
+  | ConnectionStatusIndicatorStatus.Synced
+  | ConnectionStatusIndicatorStatus.Incomplete
+  | ConnectionStatusIndicatorStatus.Failed;
 
 const MESSAGE_BY_STATUS: Readonly<Record<PresentingStatuses, string>> = {
-  onTime: "connection.overview.graph.uptimeStatus.onTime",
-  late: "connection.overview.graph.uptimeStatus.late",
-  error: "connection.overview.graph.uptimeStatus.error",
-  actionRequired: "connection.overview.graph.uptimeStatus.actionRequired",
+  synced: "connection.overview.graph.uptimeStatus.synced",
+  incomplete: "connection.overview.graph.uptimeStatus.incomplete",
+  failed: "connection.overview.graph.uptimeStatus.failed",
 };
 
 export const UptimeStatusGraphTooltip: ContentType<number, string> = ({ active, payload }) => {
@@ -45,11 +43,9 @@ export const UptimeStatusGraphTooltip: ContentType<number, string> = ({ active, 
 
   const statusesByCount = streams?.reduce<Record<PresentingStatuses, ChartStream[]>>(
     (acc, stream) => {
-      let { status } = stream;
+      const { status } = stream;
 
-      if (status === ConnectionStatusIndicatorStatus.OnTrack) {
-        status = ConnectionStatusIndicatorStatus.OnTime;
-      } else if (
+      if (
         status === ConnectionStatusIndicatorStatus.Pending ||
         status === ConnectionStatusIndicatorStatus.Syncing ||
         status === ConnectionStatusIndicatorStatus.RateLimited ||
@@ -67,10 +63,9 @@ export const UptimeStatusGraphTooltip: ContentType<number, string> = ({ active, 
     },
     {
       // Order here determines the display order in the tooltip
-      [ConnectionStatusIndicatorStatus.OnTime]: [],
-      [ConnectionStatusIndicatorStatus.Late]: [],
-      [ConnectionStatusIndicatorStatus.Error]: [],
-      [ConnectionStatusIndicatorStatus.ActionRequired]: [],
+      [ConnectionStatusIndicatorStatus.Synced]: [],
+      [ConnectionStatusIndicatorStatus.Incomplete]: [],
+      [ConnectionStatusIndicatorStatus.Failed]: [],
     }
   );
 
@@ -117,7 +112,7 @@ export const UptimeStatusGraphTooltip: ContentType<number, string> = ({ active, 
                       <Text color="grey" size="sm" className={styles.alignText} as="span">
                         {formatMessage({ id: MESSAGE_BY_STATUS[status] }, { count: streams.length })}
                       </Text>
-                      {status === ConnectionStatusIndicatorStatus.Error && (
+                      {status === ConnectionStatusIndicatorStatus.Incomplete && (
                         <>
                           {streams
                             .filter((_, idx) => idx < 3)

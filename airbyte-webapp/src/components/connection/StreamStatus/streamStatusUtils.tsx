@@ -1,7 +1,6 @@
 import { AirbyteStreamAndConfigurationWithEnforcedStream, getStreamKey } from "area/connection/utils";
 import { StreamStatusRead } from "core/api/types/AirbyteClient";
 import { naturalComparatorBy } from "core/utils/objects";
-import { useExperiment } from "hooks/services/Experiment";
 
 import { ConnectionStatusIndicatorStatus } from "../ConnectionStatusIndicator";
 
@@ -32,12 +31,10 @@ export const sortStreamsByStatus = (
     },
     // This is the intended display order thanks to Javascript object insertion order!
     {
-      [ConnectionStatusIndicatorStatus.ActionRequired]: [],
-      [ConnectionStatusIndicatorStatus.Error]: [],
-      [ConnectionStatusIndicatorStatus.Late]: [],
+      [ConnectionStatusIndicatorStatus.Failed]: [],
+      [ConnectionStatusIndicatorStatus.Incomplete]: [],
       [ConnectionStatusIndicatorStatus.Pending]: [],
-      [ConnectionStatusIndicatorStatus.OnTrack]: [],
-      [ConnectionStatusIndicatorStatus.OnTime]: [],
+      [ConnectionStatusIndicatorStatus.Synced]: [],
       [ConnectionStatusIndicatorStatus.Disabled]: [],
       [ConnectionStatusIndicatorStatus.Paused]: [],
       [ConnectionStatusIndicatorStatus.RateLimited]: [],
@@ -92,6 +89,3 @@ export const sortStreamsAlphabetically = (
 
   return allStreams;
 };
-
-export const useLateMultiplierExperiment = () => useExperiment("connection.streamCentricUI.lateMultiplier", 2);
-export const useErrorMultiplierExperiment = () => useExperiment("connection.streamCentricUI.errorMultiplier", 2);

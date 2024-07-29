@@ -11,6 +11,6 @@ type Story = StoryObj<typeof ConnectionStatusIndicator>;
 
 export const Primary: Story = {
   args: {
-    status: ConnectionStatusIndicatorStatus.OnTime,
+    status: ConnectionStatusIndicatorStatus.Synced,
   },
 };

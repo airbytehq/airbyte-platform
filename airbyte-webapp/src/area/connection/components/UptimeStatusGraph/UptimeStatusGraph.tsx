@@ -76,11 +76,9 @@ type SortableStream = Pick<ChartStream, "streamName"> & Partial<Pick<ChartStream
 const statusOrder: ConnectionStatusIndicatorStatus[] = [
   ConnectionStatusIndicatorStatus.Disabled,
   ConnectionStatusIndicatorStatus.Pending,
-  ConnectionStatusIndicatorStatus.OnTime,
-  ConnectionStatusIndicatorStatus.OnTrack,
-  ConnectionStatusIndicatorStatus.Late,
-  ConnectionStatusIndicatorStatus.Error,
-  ConnectionStatusIndicatorStatus.ActionRequired,
+  ConnectionStatusIndicatorStatus.Synced,
+  ConnectionStatusIndicatorStatus.Incomplete,
+  ConnectionStatusIndicatorStatus.Failed,
 ];
 
 const sortStreams = (a: SortableStream, b: SortableStream) => {
@@ -138,10 +136,10 @@ const formatDataForChart = (data: ReturnType<typeof useGetConnectionUptimeHistor
 
           switch (streamStatus.status) {
             case JobStatus.succeeded:
-              status = ConnectionStatusIndicatorStatus.OnTime;
+              status = ConnectionStatusIndicatorStatus.Synced;
               break;
             case JobStatus.failed:
-              status = ConnectionStatusIndicatorStatus.Error;
+              status = ConnectionStatusIndicatorStatus.Incomplete;
               break;
             case JobStatus.running:
               status = ConnectionStatusIndicatorStatus.Syncing;
@@ -217,7 +215,7 @@ export const UptimeStatusGraph: React.FC = React.memo(() => {
       green: colorValues[styles.greenVar],
       darkBlue: colorValues[styles.darkBlueVar],
       red: colorValues[styles.redVar],
-      black: colorValues[styles.blackVar],
+      yellow: colorValues[styles.yellowVar],
       blue: colorValues[styles.blueVar],
       empty: colorValues[styles.emptyVar],
     };
@@ -320,7 +318,7 @@ export function ensureStreams(
         ...bucket,
         streams: foundStreams.streams.map((stream) => ({
           ...stream,
-          status: ConnectionStatusIndicatorStatus.Error,
+          status: ConnectionStatusIndicatorStatus.Incomplete,
         })),
       };
     }

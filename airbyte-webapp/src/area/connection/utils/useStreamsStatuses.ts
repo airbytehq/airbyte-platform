@@ -1,10 +1,6 @@
 import { useConnectionStatus } from "components/connection/ConnectionStatus/useConnectionStatus";
 import { ConnectionStatusIndicatorStatus } from "components/connection/ConnectionStatusIndicator";
-import {
-  StreamWithStatus,
-  useErrorMultiplierExperiment,
-  useLateMultiplierExperiment,
-} from "components/connection/StreamStatus/streamStatusUtils";
+import { StreamWithStatus } from "components/connection/StreamStatus/streamStatusUtils";
 
 import { useListStreamsStatuses, useGetConnection } from "core/api";
 import { StreamStatusJobType, StreamStatusRead } from "core/api/types/AirbyteClient";
@@ -44,8 +40,6 @@ export const useStreamsStatuses = (
 
   const connection = useGetConnection(connectionId);
   const { hasBreakingSchemaChange } = useSchemaChanges(connection.schemaChange);
-  const lateMultiplier = useLateMultiplierExperiment();
-  const errorMultiplier = useErrorMultiplierExperiment();
   const connectionStatus = useConnectionStatus(connectionId);
   const isConnectionDisabled = connection.status !== "active";
 
@@ -118,13 +112,20 @@ export const useStreamsStatuses = (
             scheduleType: connection.scheduleType,
             scheduleData: connection.scheduleData,
             hasBreakingSchemaChange,
-            lateMultiplier,
-            errorMultiplier,
             isSyncing: !!syncProgressItem ? true : false,
             recordsExtracted: syncProgressMap.get(streamKey)?.recordsEmitted,
             runningJobConfigType: syncProgressItem?.configType,
             isRateLimitedUiEnabled,
           });
+
+          // incomplete stream statuses have no knowledge of FailureType (e.g. config vs. system error)
+          // so any Incomplete stream status should be forced to Failed if the connection has a config error
+          if (
+            connectionStatus.status === ConnectionStatusIndicatorStatus.Failed &&
+            detectedStatus.status === ConnectionStatusIndicatorStatus.Incomplete
+          ) {
+            detectedStatus.status = ConnectionStatusIndicatorStatus.Failed;
+          }
 
           if (detectedStatus.status != null) {
             mappedStreamStatus.status = detectedStatus.status;

@@ -13,8 +13,6 @@ export interface Experiments {
   "connection.columnSelection": boolean;
   "connection.onboarding.destinations": string;
   "connection.onboarding.sources": string;
-  "connection.streamCentricUI.errorMultiplier": number;
-  "connection.streamCentricUI.lateMultiplier": number;
   "connection.rateLimitedUI": boolean;
   "connection.timeline": boolean;
   "connector.airbyteCloudIpAddresses": string;

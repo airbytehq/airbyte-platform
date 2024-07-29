@@ -75,12 +75,10 @@ describe("computeStreamStatus", () => {
         scheduleType: undefined,
         scheduleData: undefined,
         hasBreakingSchemaChange: false,
-        lateMultiplier: 2,
-        errorMultiplier: 2,
         isSyncing: false,
       });
       expect(result).toEqual({
-        status: ConnectionStatusIndicatorStatus.OnTime,
+        status: ConnectionStatusIndicatorStatus.Synced,
         isRunning: false,
         lastSuccessfulSync: status,
       });
@@ -94,12 +92,10 @@ describe("computeStreamStatus", () => {
         scheduleType: ConnectionScheduleType.cron,
         scheduleData: cronScheduleData,
         hasBreakingSchemaChange: false,
-        lateMultiplier: 2,
-        errorMultiplier: 2,
         isSyncing: false,
       });
       expect(result).toEqual({
-        status: ConnectionStatusIndicatorStatus.OnTime,
+        status: ConnectionStatusIndicatorStatus.Synced,
         isRunning: false,
         lastSuccessfulSync: status,
       });
@@ -113,12 +109,10 @@ describe("computeStreamStatus", () => {
         scheduleType: ConnectionScheduleType.basic,
         scheduleData: basicScheduleData,
         hasBreakingSchemaChange: false,
-        lateMultiplier: 2,
-        errorMultiplier: 2,
         isSyncing: false,
       });
       expect(result).toEqual({
-        status: ConnectionStatusIndicatorStatus.OnTime,
+        status: ConnectionStatusIndicatorStatus.Synced,
         isRunning: false,
         lastSuccessfulSync: status,
       });
@@ -140,87 +134,18 @@ describe("computeStreamStatus", () => {
         scheduleType: ConnectionScheduleType.basic,
         scheduleData: basicScheduleData,
         hasBreakingSchemaChange: false,
-        lateMultiplier: 2,
-        errorMultiplier: 2,
         isSyncing: false,
       });
       expect(result).toEqual({
-        status: ConnectionStatusIndicatorStatus.OnTime,
+        status: ConnectionStatusIndicatorStatus.Synced,
         isRunning: false,
         lastSuccessfulSync: successStatus,
       });
     });
   });
 
-  describe("late", () => {
-    it('returns "OnTrack" when the most recent sync was successful but one late', () => {
-      const status = buildStreamStatusRead({ runState: StreamStatusRunState.COMPLETE, transitionedAt: threeHoursAgo });
-      const result = computeStreamStatus({
-        statuses: [status],
-        recordsExtracted: 1,
-        scheduleType: ConnectionScheduleType.basic,
-        scheduleData: basicScheduleData,
-        hasBreakingSchemaChange: false,
-        lateMultiplier: 2,
-        errorMultiplier: 2,
-        isSyncing: false,
-      });
-      expect(result).toEqual({
-        status: ConnectionStatusIndicatorStatus.OnTrack,
-        isRunning: false,
-        lastSuccessfulSync: status,
-      });
-    });
-
-    it('returns "OnTrack" when the most recent sync failed but had a successful sync within the 2x window', () => {
-      const failedStatus = buildStreamStatusRead({
-        runState: StreamStatusRunState.INCOMPLETE,
-        incompleteRunCause: StreamStatusIncompleteRunCause.FAILED,
-        transitionedAt: oneHourAgo,
-      });
-      const successStatus = buildStreamStatusRead({
-        runState: StreamStatusRunState.COMPLETE,
-        transitionedAt: threeHoursAgo,
-      });
-      const result = computeStreamStatus({
-        statuses: [failedStatus, successStatus],
-        recordsExtracted: 0,
-        scheduleType: ConnectionScheduleType.basic,
-        scheduleData: basicScheduleData,
-        hasBreakingSchemaChange: false,
-        lateMultiplier: 2,
-        errorMultiplier: 2,
-        isSyncing: false,
-      });
-      expect(result).toEqual({
-        status: ConnectionStatusIndicatorStatus.OnTrack,
-        isRunning: false,
-        lastSuccessfulSync: successStatus,
-      });
-    });
-
-    it('returns "Late" when the most recent sync was successful but two late', () => {
-      const status = buildStreamStatusRead({ runState: StreamStatusRunState.COMPLETE, transitionedAt: fiveHoursAgo });
-      const result = computeStreamStatus({
-        statuses: [status],
-        recordsExtracted: 1,
-        scheduleType: ConnectionScheduleType.basic,
-        scheduleData: basicScheduleData,
-        hasBreakingSchemaChange: false,
-        lateMultiplier: 2,
-        errorMultiplier: 2,
-        isSyncing: false,
-      });
-      expect(result).toEqual({
-        status: ConnectionStatusIndicatorStatus.Late,
-        isRunning: false,
-        lastSuccessfulSync: status,
-      });
-    });
-  });
-
-  describe("action required", () => {
-    it('returns "ActionRequired" when there is a breaking schema change (otherwise ontime)', () => {
+  describe("failed", () => {
+    it('returns "Failed" when there is a breaking schema change (otherwise ontime)', () => {
       const status = buildStreamStatusRead({ runState: StreamStatusRunState.COMPLETE, transitionedAt: oneHourAgo });
       const result = computeStreamStatus({
         statuses: [status],
@@ -228,18 +153,16 @@ describe("computeStreamStatus", () => {
         scheduleType: ConnectionScheduleType.basic,
         scheduleData: basicScheduleData,
         hasBreakingSchemaChange: true,
-        lateMultiplier: 2,
-        errorMultiplier: 2,
         isSyncing: false,
       });
       expect(result).toEqual({
-        status: ConnectionStatusIndicatorStatus.ActionRequired,
+        status: ConnectionStatusIndicatorStatus.Failed,
         isRunning: false,
         lastSuccessfulSync: status,
       });
     });
 
-    it('returns "ActionRequired" when there is a breaking schema change (otherwise error)', () => {
+    it('returns "Failed" when there is a breaking schema change (otherwise error)', () => {
       const status = buildStreamStatusRead({
         runState: StreamStatusRunState.INCOMPLETE,
         incompleteRunCause: StreamStatusIncompleteRunCause.FAILED,
@@ -251,12 +174,10 @@ describe("computeStreamStatus", () => {
         scheduleType: ConnectionScheduleType.basic,
         scheduleData: basicScheduleData,
         hasBreakingSchemaChange: true,
-        lateMultiplier: 2,
-        errorMultiplier: 2,
         isSyncing: false,
       });
       expect(result).toEqual({
-        status: ConnectionStatusIndicatorStatus.ActionRequired,
+        status: ConnectionStatusIndicatorStatus.Failed,
         isRunning: false,
         lastSuccessfulSync: undefined,
       });
@@ -276,12 +197,10 @@ describe("computeStreamStatus", () => {
         scheduleType: ConnectionScheduleType.basic,
         scheduleData: basicScheduleData,
         hasBreakingSchemaChange: false,
-        lateMultiplier: 2,
-        errorMultiplier: 2,
         isSyncing: false,
       });
       expect(result).toEqual({
-        status: ConnectionStatusIndicatorStatus.Error,
+        status: ConnectionStatusIndicatorStatus.Incomplete,
         isRunning: false,
         lastSuccessfulSync: undefined,
       });
@@ -298,12 +217,10 @@ describe("computeStreamStatus", () => {
         recordsExtracted: 0,
         scheduleType: ConnectionScheduleType.manual,
         hasBreakingSchemaChange: false,
-        lateMultiplier: 2,
-        errorMultiplier: 2,
         isSyncing: false,
       });
       expect(result).toEqual({
-        status: ConnectionStatusIndicatorStatus.Error,
+        status: ConnectionStatusIndicatorStatus.Incomplete,
         isRunning: false,
         lastSuccessfulSync: undefined,
       });
@@ -324,12 +241,10 @@ describe("computeStreamStatus", () => {
         recordsExtracted: 0,
         scheduleType: ConnectionScheduleType.manual,
         hasBreakingSchemaChange: false,
-        lateMultiplier: 2,
-        errorMultiplier: 2,
         isSyncing: false,
       });
       expect(result).toEqual({
-        status: ConnectionStatusIndicatorStatus.Error,
+        status: ConnectionStatusIndicatorStatus.Incomplete,
         isRunning: false,
         lastSuccessfulSync: successStatus,
       });
@@ -346,8 +261,6 @@ describe("computeStreamStatus", () => {
           scheduleType: undefined,
           scheduleData: undefined,
           hasBreakingSchemaChange: false,
-          lateMultiplier: 2,
-          errorMultiplier: 2,
           isSyncing: false,
         });
         expect(result).toEqual({
@@ -364,8 +277,6 @@ describe("computeStreamStatus", () => {
           scheduleType: undefined,
           scheduleData: undefined,
           hasBreakingSchemaChange: false,
-          lateMultiplier: 2,
-          errorMultiplier: 2,
           isSyncing: false,
         });
         expect(result).toEqual({
@@ -392,8 +303,6 @@ describe("computeStreamStatus", () => {
           scheduleType: undefined,
           scheduleData: undefined,
           hasBreakingSchemaChange: false,
-          lateMultiplier: 2,
-          errorMultiplier: 2,
           isSyncing: false,
         });
         expect(result).toEqual({
@@ -417,8 +326,6 @@ describe("computeStreamStatus", () => {
           scheduleType: ConnectionScheduleType.basic,
           scheduleData: basicScheduleData,
           hasBreakingSchemaChange: false,
-          lateMultiplier: 2,
-          errorMultiplier: 2,
           isSyncing: false,
         });
         expect(result).toEqual({
@@ -438,8 +345,6 @@ describe("computeStreamStatus", () => {
           scheduleType: ConnectionScheduleType.basic,
           scheduleData: basicScheduleData,
           hasBreakingSchemaChange: false,
-          lateMultiplier: 2,
-          errorMultiplier: 2,
           isSyncing: true,
           runningJobConfigType: JobConfigType.sync,
           recordsExtracted: 0,
@@ -463,8 +368,6 @@ describe("computeStreamStatus", () => {
           scheduleType: ConnectionScheduleType.basic,
           scheduleData: basicScheduleData,
           hasBreakingSchemaChange: false,
-          lateMultiplier: 2,
-          errorMultiplier: 2,
           isSyncing: true,
           runningJobConfigType: JobConfigType.sync,
         });
@@ -487,8 +390,6 @@ describe("computeStreamStatus", () => {
           scheduleType: ConnectionScheduleType.basic,
           scheduleData: basicScheduleData,
           hasBreakingSchemaChange: false,
-          lateMultiplier: 2,
-          errorMultiplier: 2,
           isSyncing: true,
           runningJobConfigType: JobConfigType.refresh,
         });
@@ -512,8 +413,6 @@ describe("computeStreamStatus", () => {
           scheduleType: ConnectionScheduleType.basic,
           scheduleData: basicScheduleData,
           hasBreakingSchemaChange: false,
-          lateMultiplier: 2,
-          errorMultiplier: 2,
           isSyncing: true,
           runningJobConfigType: JobConfigType.sync,
         });
@@ -536,8 +435,6 @@ describe("computeStreamStatus", () => {
           scheduleType: ConnectionScheduleType.basic,
           scheduleData: basicScheduleData,
           hasBreakingSchemaChange: false,
-          lateMultiplier: 2,
-          errorMultiplier: 2,
           isSyncing: true,
           runningJobConfigType: JobConfigType.sync,
         });
@@ -565,8 +462,6 @@ describe("computeStreamStatus", () => {
           scheduleType: ConnectionScheduleType.basic,
           scheduleData: basicScheduleData,
           hasBreakingSchemaChange: false,
-          lateMultiplier: 2,
-          errorMultiplier: 2,
           isSyncing: true,
           runningJobConfigType: JobConfigType.sync,
         });
@@ -591,8 +486,6 @@ describe("computeStreamStatus", () => {
           scheduleType: ConnectionScheduleType.basic,
           scheduleData: basicScheduleData,
           hasBreakingSchemaChange: false,
-          lateMultiplier: 2,
-          errorMultiplier: 2,
           isSyncing: true,
           runningJobConfigType: JobConfigType.sync,
         });
@@ -617,8 +510,6 @@ describe("computeStreamStatus", () => {
           scheduleType: ConnectionScheduleType.basic,
           scheduleData: basicScheduleData,
           hasBreakingSchemaChange: false,
-          lateMultiplier: 2,
-          errorMultiplier: 2,
           isSyncing: true,
           runningJobConfigType: JobConfigType.reset_connection,
         });
@@ -641,8 +532,6 @@ describe("computeStreamStatus", () => {
           scheduleType: ConnectionScheduleType.basic,
           scheduleData: basicScheduleData,
           hasBreakingSchemaChange: false,
-          lateMultiplier: 2,
-          errorMultiplier: 2,
           isSyncing: true,
           runningJobConfigType: JobConfigType.clear,
         });
@@ -667,8 +556,6 @@ describe("computeStreamStatus", () => {
           scheduleType: ConnectionScheduleType.basic,
           scheduleData: basicScheduleData,
           hasBreakingSchemaChange: false,
-          lateMultiplier: 2,
-          errorMultiplier: 2,
           isSyncing: true,
           runningJobConfigType: JobConfigType.refresh,
         });
