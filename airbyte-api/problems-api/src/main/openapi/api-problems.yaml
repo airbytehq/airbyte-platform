@@ -87,6 +87,27 @@ components:
             detail:
               type: string
               default: Your email domain requires SSO sign-in. Please sign in using your SSO provider.
+    UserAlreadyExistsProblemResponse:
+      x-implements: io.airbyte.api.problems.ProblemResponse
+      type: object
+      allOf:
+        - $ref: "#/components/schemas/BaseProblemFields"
+        - type: object
+          properties:
+            status:
+              type: integer
+              default: 409
+            type:
+              type: string
+              default: error:auth/user-already-exists
+            title:
+              type: string
+              default: User already exists
+            detail:
+              type: string
+              default: A user with this email already exists.
+            data:
+              $ref: "#/components/schemas/ProblemEmailData"
     OAuthCallbackFailureProblemResponse:
       x-implements: io.airbyte.api.problems.ProblemResponse
       type: object
@@ -468,6 +489,13 @@ components:
         connectionId:
           type: string
         cronTimezone:
+          type: string
+    ProblemEmailData:
+      type: object
+      required:
+        - email
+      properties:
+        email:
           type: string
     ProblemRedirectURLData:
       type: object
