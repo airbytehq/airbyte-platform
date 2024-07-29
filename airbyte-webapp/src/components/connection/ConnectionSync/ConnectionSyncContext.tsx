@@ -25,7 +25,6 @@ import {
 import { Action, Namespace, useAnalyticsService } from "core/services/analytics";
 import { useConfirmationModalService } from "hooks/services/ConfirmationModal";
 import { useConnectionEditService } from "hooks/services/ConnectionEdit/ConnectionEditService";
-import { useExperiment } from "hooks/services/Experiment";
 
 import { CancelJobModalBody } from "./CancelJobModalBody";
 
@@ -63,7 +62,6 @@ const useConnectionSyncContextInit = (connection: WebBackendConnectionRead): Con
   const queryClient = useQueryClient();
   const { openConfirmationModal, closeConfirmationModal } = useConfirmationModalService();
   const analyticsService = useAnalyticsService();
-  const showCancellationConfirmation = useExperiment("connection.jobCancellationModal", false);
   const { streamsSyncingForFirstTime, isConnectionInitialSync } = useInitialStreamSync(connection.connectionId);
 
   const { mutateAsync: doSyncConnection, isLoading: syncStarting } = useSyncConnection();
@@ -72,25 +70,6 @@ const useConnectionSyncContextInit = (connection: WebBackendConnectionRead): Con
   }, [connection, doSyncConnection]);
 
   const { mutateAsync: doCancelJob, isLoading: cancelStarting } = useCancelJob();
-
-  const cancelJob = useMemo(() => {
-    const jobId = mostRecentJob?.id;
-    if (!jobId) {
-      return undefined;
-    }
-    return async () => {
-      await doCancelJob(jobId);
-      queryClient.setQueriesData<JobReadList>(
-        jobsKeys.useListJobsForConnectionStatus(connection.connectionId),
-        (prevJobList) =>
-          prependArtificialJobToStatus(
-            { configType: mostRecentJob?.configType ?? "sync", status: JobStatus.cancelled },
-            prevJobList
-          )
-      );
-      queryClient.invalidateQueries(connectionsKeys.syncProgress(connection.connectionId));
-    };
-  }, [mostRecentJob, doCancelJob, connection.connectionId, queryClient]);
 
   const cancelJobWithConfirmationModal = useCallback(() => {
     const jobId = mostRecentJob?.id;
@@ -230,7 +209,7 @@ const useConnectionSyncContextInit = (connection: WebBackendConnectionRead): Con
     connectionEnabled,
     syncStarting,
     jobSyncRunning,
-    cancelJob: showCancellationConfirmation ? cancelJobWithConfirmationModal : cancelJob,
+    cancelJob: cancelJobWithConfirmationModal,
     cancelStarting,
     refreshStreams,
     refreshStarting,
