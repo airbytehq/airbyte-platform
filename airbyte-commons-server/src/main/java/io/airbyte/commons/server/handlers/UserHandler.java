@@ -489,8 +489,17 @@ public class UserHandler {
     final boolean shouldEnforceEmailUniqueness = featureFlagClient.boolVariation(EnforceEmailUniqueness.INSTANCE,
         new io.airbyte.featureflag.User(ANONYMOUS, new EmailAttribute(incomingJwtUser.getEmail())));
 
+    Optional<User> existingUserWithEmail = userPersistence.getUserByEmail(incomingJwtUser.getEmail());
+    if (shouldEnforceEmailUniqueness && existingUserWithEmail.isPresent() && existingUserWithEmail.get().getUserId() == DEFAULT_USER_ID) {
+      // (Enterprise) If the email is already taken by the default user, we can safely clear it so the
+      // real user can be created
+      userPersistence.writeUser(existingUserWithEmail.get().withEmail(""));
+      LOGGER.info("Cleared email for default user on first login for {}", incomingJwtUser.getEmail());
+
+      existingUserWithEmail = Optional.empty();
+    }
+
     // (3a) Email has not been used before
-    final Optional<User> existingUserWithEmail = userPersistence.getUserByEmail(incomingJwtUser.getEmail());
     if (!shouldEnforceEmailUniqueness || existingUserWithEmail.isEmpty()) {
       return handleNewUserLogin(incomingJwtUser, userAuthIdRequestBody);
     }

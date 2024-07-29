@@ -339,6 +339,30 @@ class UserHandlerTest {
             () -> userHandler.getOrCreateUserByAuthId(new UserAuthIdRequestBody().authUserId(NEW_AUTH_USER_ID)));
       }
 
+      @Test
+      void testExistingDefaultUserWithEmailUpdatesDefault() throws IOException, JsonValidationException, ConfigNotFoundException {
+        when(jwtUserAuthenticationResolver.resolveUser(NEW_AUTH_USER_ID)).thenReturn(jwtUser);
+        when(userPersistence.getUserByAuthId(NEW_AUTH_USER_ID)).thenReturn(Optional.empty());
+
+        final User defaultUser = new User().withUserId(DEFAULT_USER_ID).withEmail(EMAIL);
+        when(userPersistence.getUserByEmail(EMAIL)).thenReturn(Optional.of(defaultUser));
+
+        final User newUser =
+            new User().withUserId(UUID.randomUUID()).withEmail(EMAIL).withAuthUserId(NEW_AUTH_USER_ID).withDefaultWorkspaceId(UUID.randomUUID());
+        when(uuidSupplier.get()).thenReturn(newUser.getUserId());
+        when(userPersistence.getUser(newUser.getUserId())).thenReturn(Optional.of(newUser));
+
+        final UserGetOrCreateByAuthIdResponse res = userHandler.getOrCreateUserByAuthId(new UserAuthIdRequestBody().authUserId(NEW_AUTH_USER_ID));
+        assertTrue(res.getNewUserCreated());
+        assertEquals(res.getUserRead().getUserId(), newUser.getUserId());
+        assertEquals(res.getUserRead().getEmail(), EMAIL);
+        assertEquals(res.getUserRead().getAuthUserId(), NEW_AUTH_USER_ID);
+
+        verify(userPersistence).writeUser(defaultUser.withEmail(""));
+        verify(userPersistence)
+            .writeUser(argThat(user -> user.getEmail().equals(jwtUser.getEmail()) && user.getAuthUserId().equals(jwtUser.getAuthUserId())));
+      }
+
       private static Stream<Arguments> ssoSignInArgsProvider() {
         return Stream.of(
             // Existing user is already an SSO user (will error):
