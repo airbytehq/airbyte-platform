@@ -23,7 +23,6 @@ import { FlexContainer } from "components/ui/Flex";
 import { Message } from "components/ui/Message/Message";
 
 import { ConnectionValues, useDestinationDefinitionVersion, useGetStateTypeQuery } from "core/api";
-import { WebBackendConnectionRead, WebBackendConnectionUpdate } from "core/api/types/AirbyteClient";
 import { PageTrackingCodes, useTrackPage } from "core/services/analytics";
 import { useConfirmCatalogDiff } from "hooks/connection/useConfirmCatalogDiff";
 import { useSchemaChanges } from "hooks/connection/useSchemaChanges";
@@ -38,21 +37,6 @@ import { recommendActionOnConnectionUpdate } from "./connectionUpdateHelpers";
 import { RecommendRefreshModal } from "./RecommendRefreshModal";
 import { useAnalyticsTrackFunctions } from "./useAnalyticsTrackFunctions";
 import { SchemaRefreshing } from "../../../components/connection/ConnectionForm/SchemaRefreshing";
-
-const toWebBackendConnectionUpdate = (connection: WebBackendConnectionRead): WebBackendConnectionUpdate => ({
-  name: connection.name,
-  connectionId: connection.connectionId,
-  namespaceDefinition: connection.namespaceDefinition,
-  namespaceFormat: connection.namespaceFormat,
-  prefix: connection.prefix,
-  syncCatalog: connection.syncCatalog,
-  scheduleData: connection.scheduleData,
-  scheduleType: connection.scheduleType,
-  status: connection.status,
-  resourceRequirements: connection.resourceRequirements,
-  operations: connection.operations,
-  sourceCatalogId: connection.catalogId,
-});
 
 const SchemaChangeMessage: React.FC = () => {
   const { isDirty } = useFormState<FormConnectionFormValues>();
@@ -109,15 +93,12 @@ export const ConnectionReplicationPage: React.FC = () => {
     connection.destination.destinationId
   );
 
-  const validationSchema = useConnectionValidationSchema();
+  const validationSchema = useConnectionValidationSchema().pick(["syncCatalog"]);
 
   const saveConnection = useCallback(
-    async (values: ConnectionValues, skipReset: boolean) => {
-      const connectionAsUpdate = toWebBackendConnectionUpdate(connection);
-
+    async (values: Partial<ConnectionValues>, skipReset: boolean) => {
       await updateConnection({
-        ...connectionAsUpdate,
-        ...values,
+        syncCatalog: values.syncCatalog,
         connectionId: connection.connectionId,
         skipReset,
       });
@@ -126,7 +107,7 @@ export const ConnectionReplicationPage: React.FC = () => {
   );
 
   const onFormSubmit = useCallback(
-    async (values: FormConnectionFormValues) => {
+    async (values: Pick<FormConnectionFormValues, "syncCatalog">) => {
       setSubmitError(null);
 
       /**
@@ -144,8 +125,8 @@ export const ConnectionReplicationPage: React.FC = () => {
       // handler for modal -- saves connection w/ modal result taken into account
       async function handleModalResult(
         result: ModalResult<boolean>,
-        values: FormConnectionFormValues,
-        saveConnection: (values: ConnectionValues, skipReset: boolean) => Promise<void>
+        values: Pick<FormConnectionFormValues, "syncCatalog">,
+        saveConnection: (values: Pick<ConnectionValues, "syncCatalog">, skipReset: boolean) => Promise<void>
       ) {
         if (result.type === "completed" && isBoolean(result.reason)) {
           // Save the connection taking into account the correct skipReset value from the dialog choice.
@@ -227,7 +208,7 @@ export const ConnectionReplicationPage: React.FC = () => {
   };
 
   const newSyncCatalogV2Form = connection && (
-    <Form<FormConnectionFormValues>
+    <Form<Pick<FormConnectionFormValues, "syncCatalog">>
       defaultValues={initialValues}
       reinitializeDefaultValues
       schema={validationSchema}
@@ -252,7 +233,7 @@ export const ConnectionReplicationPage: React.FC = () => {
         <SchemaError schemaError={schemaError} refreshSchema={refreshSchema} />
       </ScrollableContainer>
     ) : !schemaRefreshing && connection ? (
-      <Form<FormConnectionFormValues>
+      <Form<Pick<FormConnectionFormValues, "syncCatalog">>
         defaultValues={initialValues}
         schema={validationSchema}
         onSubmit={onFormSubmit}
