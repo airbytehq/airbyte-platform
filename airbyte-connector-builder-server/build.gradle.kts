@@ -50,6 +50,7 @@ dependencies {
   implementation(project(":oss:airbyte-config:config-persistence"))
   implementation(project(":oss:airbyte-config:init"))
   implementation(project(":oss:airbyte-metrics:metrics-lib"))
+  implementation(project(":oss:airbyte-api:problems-api"))
 
   implementation(libs.airbyte.protocol)
 

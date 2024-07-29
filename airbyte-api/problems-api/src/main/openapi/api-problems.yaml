@@ -461,6 +461,59 @@ components:
               default: The requested resource could not be found.
             data:
               $ref: "#/components/schemas/ProblemResourceData"
+    InvalidGithubTokenProblemResponse:
+      x-implements: io.airbyte.api.problems.ProblemResponse
+      type: object
+      allOf:
+        - $ref: "#/components/schemas/BaseProblemFields"
+        - type: object
+          properties:
+            status:
+              type: integer
+              default: 401
+            type:
+              type: string
+              default: error:generate-contribution/invalid-github-token
+            title:
+              type: string
+              default: Invalid GitHub token provided.
+    InsufficientGithubTokenPermissionsProblemResponse:
+      x-implements: io.airbyte.api.problems.ProblemResponse
+      type: object
+      allOf:
+        - $ref: "#/components/schemas/BaseProblemFields"
+        - type: object
+          properties:
+            status:
+              type: integer
+              default: 403
+            type:
+              type: string
+              default: error:generate-contribution/insufficient-github-token-permissions
+            title:
+              type: string
+              default: Failed to create fork of Airbyte repository.
+            detail:
+              type: string
+              default: We could not create a fork of the Airbyte repository. Please provide an access token with repo:write permissions.
+    GithubContributionFailedProblemResponse:
+      x-implements: io.airbyte.api.problems.ProblemResponse
+      type: object
+      allOf:
+        - $ref: "#/components/schemas/BaseProblemFields"
+        - type: object
+          properties:
+            status:
+              type: integer
+              default: 500
+            type:
+              type: string
+              default: error:generate-contribution
+            title:
+              type: string
+              default: An unexpected error occurred when creating your GitHub contribution.
+            data:
+              $ref: "#/components/schemas/GithubContributionProblemData"
     ProblemCronData:
       type: object
       properties:
@@ -537,6 +590,16 @@ components:
         host:
           type: string
         code:
+          type: integer
+        message:
+          type: string
+    GithubContributionProblemData:
+      type: object
+      required:
+        - status
+        - message
+      properties:
+        status:
           type: integer
         message:
           type: string

@@ -2,15 +2,18 @@
 
 package io.airbyte.connector_builder.handlers
 
+import io.airbyte.api.problems.model.generated.GithubContributionProblemData
+import io.airbyte.api.problems.throwable.generated.GithubContributionFailedProblem
+import io.airbyte.api.problems.throwable.generated.InsufficientGithubTokenPermissionsProblem
+import io.airbyte.api.problems.throwable.generated.InvalidGithubTokenProblem
 import io.airbyte.connector_builder.api.model.generated.ConnectorContributionRead
 import io.airbyte.connector_builder.api.model.generated.ConnectorContributionReadRequestBody
 import io.airbyte.connector_builder.api.model.generated.GenerateContributionRequestBody
 import io.airbyte.connector_builder.api.model.generated.GenerateContributionResponse
-import io.airbyte.connector_builder.exceptions.ContributionException
 import io.airbyte.connector_builder.services.GithubContributionService
 import io.airbyte.connector_builder.templates.ContributionTemplates
-import io.micronaut.http.HttpStatus
 import jakarta.inject.Singleton
+import org.kohsuke.github.GHFileNotFoundException
 import org.kohsuke.github.HttpException
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
@@ -126,19 +129,17 @@ class ConnectorContributionHandler(private val contributionTemplates: Contributi
 
   fun convertGithubExceptionToContributionException(e: HttpException): Exception {
     return when (e.responseCode) {
-      401 -> ContributionException("Invalid GitHub token provided.", HttpStatus.UNAUTHORIZED)
-      409 ->
-        ContributionException(
-          "We could not create a fork of the Airbyte repository. Please provide an access token with repo:write permissions.",
-          HttpStatus.PRECONDITION_FAILED,
-        )
-      else -> ContributionException("An unexpected error occurred when creating your github contribution.", HttpStatus.INTERNAL_SERVER_ERROR)
+      401 -> InvalidGithubTokenProblem()
+      409 -> InsufficientGithubTokenPermissionsProblem()
+      else -> GithubContributionFailedProblem(GithubContributionProblemData().status(e.responseCode).message(e.message))
     }
   }
 
   fun convertToContributionException(e: Exception): Exception {
     return when (e) {
       is HttpException -> convertGithubExceptionToContributionException(e)
+      // GHFileNotFoundException is encountered when the GitHub token has insufficient permissions to fork the airbyte repo
+      is GHFileNotFoundException -> InsufficientGithubTokenPermissionsProblem()
       else -> e
     }
   }
