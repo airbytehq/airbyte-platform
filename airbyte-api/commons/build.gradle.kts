@@ -2,12 +2,6 @@ plugins {
   id("io.airbyte.gradle.jvm.lib")
 }
 
-airbyte {
-  spotless {
-    excludes = listOf("src/main/openapi/workload-openapi.yaml")
-  }
-}
-
 dependencies {
   annotationProcessor(libs.micronaut.openapi)
 
