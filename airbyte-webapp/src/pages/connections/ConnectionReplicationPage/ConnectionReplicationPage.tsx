@@ -143,7 +143,7 @@ export const ConnectionReplicationPage: React.FC = () => {
             // recommend clearing data
             const stateType = await getStateType(connection.connectionId);
             const result = await openModal<boolean>({
-              title: formatMessage({ id: "connection.streamConfigurationChanged" }),
+              title: formatMessage({ id: "connection.clearDataRecommended" }),
               size: "md",
               content: (props) => <ClearDataWarningModal {...props} stateType={stateType} />,
             });
@@ -151,7 +151,7 @@ export const ConnectionReplicationPage: React.FC = () => {
           } else {
             // recommend refreshing data
             const result = await openModal<boolean>({
-              title: formatMessage({ id: "connection.streamConfigurationChanged" }),
+              title: formatMessage({ id: "connection.refreshDataRecommended" }),
               size: "md",
               content: ({ onCancel, onComplete }) => (
                 <RecommendRefreshModal onCancel={onCancel} onComplete={onComplete} />
