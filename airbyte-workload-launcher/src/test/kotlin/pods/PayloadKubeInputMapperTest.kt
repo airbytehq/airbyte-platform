@@ -113,19 +113,13 @@ class PayloadKubeInputMapperTest {
     assert(
       result.fileMap ==
         mapOf(
+          OrchestratorConstants.INIT_FILE_JOB_RUN_CONFIG to mockSerializedOutput,
           OrchestratorConstants.INIT_FILE_INPUT to mockSerializedOutput,
           KUBE_POD_INFO to mockSerializedOutput,
         ),
     )
     assert(result.resourceReqs == resourceReqs)
-    assert(
-      result.extraEnv ==
-        listOf(
-          EnvVar(AirbyteEnvVar.WORKLOAD_ID.toString(), workloadId, null),
-          EnvVar(AirbyteEnvVar.JOB_ID.toString(), jobId, null),
-          EnvVar(AirbyteEnvVar.ATTEMPT_ID.toString(), attemptId.toString(), null),
-        ),
-    )
+    assert(result.extraEnv == listOf(EnvVar(AirbyteEnvVar.WORKLOAD_ID.toString(), workloadId, null)))
   }
 
   @ParameterizedTest

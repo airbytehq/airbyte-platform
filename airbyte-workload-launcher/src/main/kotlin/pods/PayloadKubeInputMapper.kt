@@ -82,11 +82,7 @@ class PayloadKubeInputMapper(
       fileMap,
       orchestratorReqs,
       replicationWorkerConfigs.workerKubeAnnotations,
-      listOf(
-        EnvVar(AirbyteEnvVar.WORKLOAD_ID.toString(), workloadId, null),
-        EnvVar(AirbyteEnvVar.JOB_ID.toString(), jobId, null),
-        EnvVar(AirbyteEnvVar.ATTEMPT_ID.toString(), attemptId.toString(), null),
-      ),
+      listOf(EnvVar(AirbyteEnvVar.WORKLOAD_ID.toString(), workloadId, null)),
     )
   }
 
@@ -256,6 +252,7 @@ class PayloadKubeInputMapper(
     kubePodInfo: KubePodInfo,
   ): Map<String, String> {
     return mapOf(
+      OrchestratorConstants.INIT_FILE_JOB_RUN_CONFIG to serializer.serialize(jobRunConfig),
       OrchestratorConstants.INIT_FILE_INPUT to serializer.serialize(input),
       KUBE_POD_INFO to serializer.serialize(kubePodInfo),
     )

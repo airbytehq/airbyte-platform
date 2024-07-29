@@ -22,8 +22,6 @@ public class WorkerConstants {
 
   public static final String WORKER_ENVIRONMENT = "WORKER_ENVIRONMENT";
   public static final String WORKER_APPLICATION = "WORKER_APPLICATION";
-  public static final String ATTEMPT_ID = "ATTEMPT_ID";
-  public static final String JOB_ID = "JOB_ID";
 
   public static final String DD_ENV_VAR = "-XX:+ExitOnOutOfMemoryError "
       + "-XX:MaxRAMPercentage=75.0 "

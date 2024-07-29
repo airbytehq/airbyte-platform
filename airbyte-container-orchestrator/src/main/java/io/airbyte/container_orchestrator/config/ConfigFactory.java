@@ -9,6 +9,7 @@ import io.airbyte.persistence.job.models.JobRunConfig;
 import io.airbyte.workers.process.AsyncOrchestratorPodProcess;
 import io.airbyte.workers.process.KubePodInfo;
 import io.airbyte.workers.process.KubePodProcess;
+import io.airbyte.workers.sync.OrchestratorConstants;
 import io.micronaut.context.annotation.Factory;
 import io.micronaut.context.annotation.Value;
 import jakarta.annotation.Nullable;
@@ -41,14 +42,13 @@ public class ConfigFactory {
   /**
    * Returns the contents of the OrchestratorConstants.INIT_FILE_JOB_RUN_CONFIG file.
    *
-   * @param jobId Which job is being run.
-   * @param attemptId Which attempt of the job is being run.
+   * @param configDir Which directory contains the OrchestratorConstants.INIT_FILE_JOB_RUN_CONFIG
+   *        file.
    * @return Contents of OrchestratorConstants.INIT_FILE_JOB_RUN_CONFIG
    */
   @Singleton
-  JobRunConfig jobRunConfig(@Value("${airbyte.job-id}") @Nullable final String jobId,
-                            @Value("${airbyte.attempt-id}") @Nullable final long attemptId) {
-    return new JobRunConfig().withJobId(jobId).withAttemptId(attemptId);
+  JobRunConfig jobRunConfig(@Named("configDir") final String configDir) {
+    return Jsons.deserialize(Path.of(configDir, OrchestratorConstants.INIT_FILE_JOB_RUN_CONFIG).toFile(), JobRunConfig.class);
   }
 
   /**

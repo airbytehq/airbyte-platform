@@ -139,14 +139,13 @@ public abstract class LauncherWorker<INPUT, OUTPUT> implements Worker<INPUT, OUT
       // Manually add the worker environment to the env var map
       envMap.put(WorkerConstants.WORKER_ENVIRONMENT, containerOrchestratorConfig.workerEnvironment().name());
       envMap.put(WorkerConstants.WORKER_APPLICATION, ReplicationLauncherWorker.REPLICATION);
-      envMap.put(WorkerConstants.JOB_ID, jobRunConfig.getJobId());
-      envMap.put(WorkerConstants.ATTEMPT_ID, jobRunConfig.getAttemptId().toString());
 
       // Merge in the env from the ContainerOrchestratorConfig
       containerOrchestratorConfig.environmentVariables().entrySet().stream().forEach(e -> envMap.putIfAbsent(e.getKey(), e.getValue()));
 
       final Map<String, String> fileMap = new HashMap<>(additionalFileMap);
       fileMap.putAll(Map.of(
+          OrchestratorConstants.INIT_FILE_JOB_RUN_CONFIG, Jsons.serialize(jobRunConfig),
           OrchestratorConstants.INIT_FILE_INPUT, Jsons.serialize(input)));
 
       final Map<Integer, Integer> portMap = Map.of(
