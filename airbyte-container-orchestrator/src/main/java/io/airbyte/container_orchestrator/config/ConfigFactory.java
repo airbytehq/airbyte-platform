@@ -15,8 +15,6 @@ import io.micronaut.context.annotation.Value;
 import jakarta.annotation.Nullable;
 import jakarta.inject.Named;
 import jakarta.inject.Singleton;
-import java.io.IOException;
-import java.nio.file.Files;
 import java.nio.file.Path;
 
 /**
@@ -39,19 +37,6 @@ public class ConfigFactory {
       return KubePodProcess.CONFIG_DIR;
     }
     return configDir;
-  }
-
-  /**
-   * Returns the contents of the OrchestratorConstants.INIT_FILE_APPLICATION file.
-   *
-   * @param configDir Which directory contains the OrchestratorConstants.INIT_FILE_APPLICATION file.
-   * @return Contents of OrchestratorConstants.INIT_FILE_APPLICATION
-   * @throws IOException exception while reading the file
-   */
-  @Singleton
-  @Named("application")
-  String application(@Named("configDir") final String configDir) throws IOException {
-    return Files.readString(Path.of(configDir, OrchestratorConstants.INIT_FILE_APPLICATION));
   }
 
   /**

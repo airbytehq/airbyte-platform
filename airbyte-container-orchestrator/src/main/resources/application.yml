@@ -34,6 +34,7 @@ micronaut:
     enabled: false
 
 airbyte:
+  application: ${WORKER_APPLICATION:replication-orchestrator}
   deployment-mode: ${DEPLOYMENT_MODE:OSS}
   role: ${AIRBYTE_ROLE:dev}
   version: ${AIRBYTE_VERSION:dev}

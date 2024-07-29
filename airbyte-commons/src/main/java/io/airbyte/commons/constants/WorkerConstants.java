@@ -21,6 +21,7 @@ public class WorkerConstants {
   public static final String RESET_JOB_SOURCE_DOCKER_IMAGE_STUB = "airbyte_empty";
 
   public static final String WORKER_ENVIRONMENT = "WORKER_ENVIRONMENT";
+  public static final String WORKER_APPLICATION = "WORKER_APPLICATION";
 
   public static final String DD_ENV_VAR = "-XX:+ExitOnOutOfMemoryError "
       + "-XX:MaxRAMPercentage=75.0 "

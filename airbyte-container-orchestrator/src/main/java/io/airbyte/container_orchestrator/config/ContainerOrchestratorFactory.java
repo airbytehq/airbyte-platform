@@ -105,7 +105,7 @@ class ContainerOrchestratorFactory {
 
   @Singleton
   JobOrchestrator<?> jobOrchestrator(
-                                     @Named("application") final String application,
+                                     @Value("${airbyte.application}") final String application,
                                      @Named("configDir") final String configDir,
                                      final EnvConfigs envConfigs,
                                      final JobRunConfig jobRunConfig,

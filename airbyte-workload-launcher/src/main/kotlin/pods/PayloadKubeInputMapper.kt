@@ -22,7 +22,6 @@ import io.airbyte.workers.process.KubeContainerInfo
 import io.airbyte.workers.process.KubePodInfo
 import io.airbyte.workers.process.Metadata.AWS_ASSUME_ROLE_EXTERNAL_ID
 import io.airbyte.workers.sync.OrchestratorConstants
-import io.airbyte.workers.sync.ReplicationLauncherWorker.REPLICATION
 import io.airbyte.workload.launcher.model.getAttemptId
 import io.airbyte.workload.launcher.model.getJobId
 import io.airbyte.workload.launcher.model.getOrchestratorResourceReqs
@@ -255,7 +254,6 @@ class PayloadKubeInputMapper(
     return mapOf(
       OrchestratorConstants.INIT_FILE_JOB_RUN_CONFIG to serializer.serialize(jobRunConfig),
       OrchestratorConstants.INIT_FILE_INPUT to serializer.serialize(input),
-      OrchestratorConstants.INIT_FILE_APPLICATION to REPLICATION,
       KUBE_POD_INFO to serializer.serialize(kubePodInfo),
     )
   }

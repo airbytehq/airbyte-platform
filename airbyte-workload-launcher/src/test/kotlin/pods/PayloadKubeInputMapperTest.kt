@@ -22,7 +22,6 @@ import io.airbyte.workers.process.KubeContainerInfo
 import io.airbyte.workers.process.KubePodInfo
 import io.airbyte.workers.process.Metadata.AWS_ASSUME_ROLE_EXTERNAL_ID
 import io.airbyte.workers.sync.OrchestratorConstants
-import io.airbyte.workers.sync.ReplicationLauncherWorker
 import io.airbyte.workload.launcher.model.getActorType
 import io.airbyte.workload.launcher.model.getAttemptId
 import io.airbyte.workload.launcher.model.getJobId
@@ -114,7 +113,6 @@ class PayloadKubeInputMapperTest {
     assert(
       result.fileMap ==
         mapOf(
-          OrchestratorConstants.INIT_FILE_APPLICATION to ReplicationLauncherWorker.REPLICATION,
           OrchestratorConstants.INIT_FILE_JOB_RUN_CONFIG to mockSerializedOutput,
           OrchestratorConstants.INIT_FILE_INPUT to mockSerializedOutput,
           KUBE_POD_INFO to mockSerializedOutput,

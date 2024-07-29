@@ -9,8 +9,8 @@ import io.airbyte.commons.logging.LoggingHelper;
 import io.airbyte.commons.logging.MdcScope;
 import io.airbyte.container_orchestrator.orchestrator.JobOrchestrator;
 import io.airbyte.workers.process.AsyncKubePodStatus;
+import io.micronaut.context.annotation.Value;
 import io.micronaut.runtime.Micronaut;
-import jakarta.inject.Named;
 import jakarta.inject.Singleton;
 import java.lang.invoke.MethodHandles;
 import org.slf4j.Logger;
@@ -51,7 +51,7 @@ public class Application {
   private final JobOrchestrator<?> jobOrchestrator;
   private final AsyncStateManager asyncStateManager;
 
-  public Application(@Named("application") final String application,
+  public Application(@Value("${airbyte.application}") final String application,
                      final JobOrchestrator<?> jobOrchestrator,
                      final AsyncStateManager asyncStateManager) {
     this.application = application;

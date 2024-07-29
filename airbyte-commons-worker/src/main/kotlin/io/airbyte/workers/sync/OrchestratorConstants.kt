@@ -23,6 +23,7 @@ object OrchestratorConstants {
   const val INIT_FILE_INPUT = "input.json"
   const val INIT_FILE_JOB_RUN_CONFIG = "jobRunConfig.json"
   const val INIT_FILE_APPLICATION = "application.txt"
+  const val APPLICATION = "application"
   const val SIDECAR_INPUT = "sidecarInput.json"
 
   // See the application.yml of the container-orchestrator for value
