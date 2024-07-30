@@ -29,7 +29,7 @@ export const DiffAccordionHeader: React.FC<DiffAccordionHeaderProps> = ({
   const nameCellStyle = classnames(styles.nameCell, styles.row, styles.name);
   const namespaceCellStyles = classnames(styles.nameCell, styles.row, styles.namespace);
 
-  const namespace = streamDescriptor.namespace ?? formatMessage({ id: "form.noNamespace" });
+  const namespace = streamDescriptor.namespace ?? formatMessage({ id: "general.dash" });
 
   return (
     <>
