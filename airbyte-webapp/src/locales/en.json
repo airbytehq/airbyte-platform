@@ -485,6 +485,7 @@
   "sources.countTB": "{count} TB",
   "sources.syncing": "Syncing",
   "sources.starting": "Starting...",
+  "sources.sumOverAttempts": "Sum over attempts",
 
   "sources.updatesEveryMinute": "Updates every minute",
   "sources.downloadLogs": "Download logs",
