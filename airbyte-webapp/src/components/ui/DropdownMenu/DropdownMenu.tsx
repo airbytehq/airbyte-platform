@@ -10,11 +10,11 @@ import { Text } from "components/ui/Text";
 import styles from "./DropdownMenu.module.scss";
 import { DropdownMenuProps, MenuItemContentProps, DropdownMenuOptionType, DropdownMenuOptionAnchorType } from "./types";
 
-const MenuItemContent: React.FC<React.PropsWithChildren<MenuItemContentProps>> = ({ data }) => {
+const MenuItemContent: React.FC<React.PropsWithChildren<MenuItemContentProps>> = ({ data, textSize }) => {
   return (
     <>
       {data?.icon && <span className={styles.icon}>{data.icon}</span>}
-      <Text className={styles.text} size="lg">
+      <Text className={styles.text} size={textSize}>
         {data.displayName}
       </Text>
     </>
@@ -27,6 +27,7 @@ export const DropdownMenu: React.FC<DropdownMenuProps> = ({
   onChange,
   placement = "bottom",
   displacement = 5,
+  textSize = "lg",
   ...restProps
 }) => {
   const { x, y, reference, floating, strategy } = useFloating({
@@ -91,12 +92,12 @@ export const DropdownMenu: React.FC<DropdownMenuProps> = ({
                       ? React.createElement(
                           item.internal ? Link : "a",
                           { ...elementProps(item, active), ...anchorProps(item) },
-                          <MenuItemContent data={item} />
+                          <MenuItemContent data={item} textSize={textSize} />
                         )
                       : React.createElement(
                           item.as ?? "button",
                           { ...elementProps(item, active) },
-                          <MenuItemContent data={item} />
+                          <MenuItemContent data={item} textSize={textSize} />
                         )
                   }
                 </Menu.Item>

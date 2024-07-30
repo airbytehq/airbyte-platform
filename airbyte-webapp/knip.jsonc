@@ -21,7 +21,10 @@
     "src/area/connector/utils/oauthCallback.ts",
     
     // Debug utility meant to be used only temporary for local debugging
-    "src/core/utils/useMemoDebug.ts"
+    "src/core/utils/useMemoDebug.ts",
+
+    // Ignore DropdownButton, which will be used in a follow-up PR soon
+    "src/components/ui/DropdownButton/**"
   ],
   "ignoreDependencies": [
     // Knip doesn't detect the import to this from a SASS file
