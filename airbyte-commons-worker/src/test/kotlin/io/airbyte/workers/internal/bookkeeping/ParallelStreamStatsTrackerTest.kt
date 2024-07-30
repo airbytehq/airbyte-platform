@@ -23,10 +23,13 @@ import io.airbyte.protocol.models.StreamDescriptor
 import io.airbyte.workers.context.ReplicationFeatureFlags
 import io.airbyte.workers.exception.InvalidChecksumException
 import io.airbyte.workers.general.StateCheckSumCountEventHandler
+import io.airbyte.workers.general.StateCheckSumErrorReporter
 import io.airbyte.workers.models.StateWithId
 import io.airbyte.workers.test_utils.AirbyteMessageUtils
 import io.github.oshai.kotlinlogging.KotlinLogging
+import io.mockk.Runs
 import io.mockk.every
+import io.mockk.just
 import io.mockk.mockk
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
@@ -76,6 +79,8 @@ class ParallelStreamStatsTrackerTest {
   @BeforeEach
   fun beforeEach() {
     val trackingIdentityFetcher = mockk<TrackingIdentityFetcher>()
+    val stateCheckSumErrorReporter = mockk<StateCheckSumErrorReporter>()
+    every { stateCheckSumErrorReporter.reportError(any(), any(), any(), any(), any(), any(), any(), any()) } just Runs
     val trackingIdentity = mockk<TrackingIdentity>()
     every { trackingIdentity.email } returns "test"
     every { trackingIdentityFetcher.apply(any()) }.returns(trackingIdentity)
@@ -87,6 +92,7 @@ class ParallelStreamStatsTrackerTest {
         featureFlagClient,
         DeploymentFetcher { DeploymentMetadataRead("test", UUID.randomUUID(), "test", "test") },
         trackingIdentityFetcher,
+        stateCheckSumErrorReporter,
         CONNECTION_ID,
         WORKSPACE_ID,
         JOB_ID,

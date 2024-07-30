@@ -99,6 +99,10 @@ airbyte:
         use-custom-node-selector: ${USE_CUSTOM_NODE_SELECTOR:false}
         node-selectors: ${JOB_ISOLATED_KUBE_NODE_SELECTORS:}
     job:
+      error-reporting:
+        sentry:
+          dsn: ${JOB_ERROR_REPORTING_SENTRY_DSN}
+        strategy: ${JOB_ERROR_REPORTING_STRATEGY:LOGGING}
       kube:
         images:
           busybox: ${JOB_KUBE_BUSYBOX_IMAGE:`busybox:1.28`}

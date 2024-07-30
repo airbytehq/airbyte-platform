@@ -91,7 +91,9 @@ public class SentryJobErrorReportingClient implements JobErrorReportingClient {
     if (workspace != null) {
       final User sentryUser = new User();
       sentryUser.setId(String.valueOf(workspace.getWorkspaceId()));
-      sentryUser.setUsername(workspace.getName());
+      if (workspace.getName() != null) {
+        sentryUser.setUsername(workspace.getName());
+      }
       event.setUser(sentryUser);
     }
 

@@ -85,6 +85,8 @@ object OrchestratorConstants {
           EnvVar.DOCKER_HOST,
           EnvVar.GOOGLE_APPLICATION_CREDENTIALS,
           EnvVar.JOB_DEFAULT_ENV_MAP,
+          EnvVar.JOB_ERROR_REPORTING_SENTRY_DSN,
+          EnvVar.JOB_ERROR_REPORTING_STRATEGY,
           EnvVar.JOB_ISOLATED_KUBE_NODE_SELECTORS,
           EnvVar.JOB_KUBE_ANNOTATIONS,
           EnvVar.JOB_KUBE_BUSYBOX_IMAGE,

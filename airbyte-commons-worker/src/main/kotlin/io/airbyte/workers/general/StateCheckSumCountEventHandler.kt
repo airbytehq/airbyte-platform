@@ -9,6 +9,7 @@ import io.airbyte.analytics.DeploymentFetcher
 import io.airbyte.analytics.TrackingIdentity
 import io.airbyte.analytics.TrackingIdentityFetcher
 import io.airbyte.commons.json.Jsons
+import io.airbyte.config.FailureReason
 import io.airbyte.featureflag.Connection
 import io.airbyte.featureflag.EmitStateStatsToSegment
 import io.airbyte.featureflag.FeatureFlagClient
@@ -48,6 +49,7 @@ class StateCheckSumCountEventHandler(
   private val featureFlagClient: FeatureFlagClient,
   private val deploymentFetcher: DeploymentFetcher,
   private val trackingIdentityFetcher: TrackingIdentityFetcher,
+  private val stateCheckSumReporter: StateCheckSumErrorReporter,
   @param:Parameter private val connectionId: UUID,
   @param:Parameter private val workspaceId: UUID,
   @param:Parameter private val jobId: Long,
@@ -341,6 +343,7 @@ class StateCheckSumCountEventHandler(
       ),
       failOnInvalidChecksum,
       validData,
+      origin,
     )
   }
 
@@ -358,6 +361,7 @@ class StateCheckSumCountEventHandler(
       stateAndPlatformMismatchMessage(origin, stateRecordCount, platformRecordCount, includeStreamInLogs, stateMessage, validData),
       failOnInvalidChecksum,
       validData,
+      origin,
     )
   }
 
@@ -365,10 +369,28 @@ class StateCheckSumCountEventHandler(
     errorMessage: String,
     failOnInvalidChecksum: Boolean,
     validData: Boolean,
+    origin: AirbyteMessageOrigin,
   ) {
     logger.error { errorMessage }
     if (failOnInvalidChecksum && validData) {
       throw InvalidChecksumException(errorMessage)
+    } else if (validData) {
+      val failureOrigin =
+        when (origin) {
+          AirbyteMessageOrigin.SOURCE -> FailureReason.FailureOrigin.SOURCE
+          AirbyteMessageOrigin.DESTINATION -> FailureReason.FailureOrigin.DESTINATION
+          else -> FailureReason.FailureOrigin.AIRBYTE_PLATFORM
+        }
+      stateCheckSumReporter.reportError(
+        workspaceId,
+        connectionId,
+        jobId,
+        attemptNumber,
+        failureOrigin,
+        errorMessage,
+        "The sync appears to have dropped records",
+        InvalidChecksumException(errorMessage),
+      )
     }
   }
 
