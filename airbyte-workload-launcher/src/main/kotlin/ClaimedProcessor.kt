@@ -30,6 +30,7 @@ import jakarta.inject.Singleton
 import reactor.core.publisher.Mono
 import reactor.core.scheduler.Schedulers
 import reactor.kotlin.core.publisher.toFlux
+import java.net.ConnectException
 import java.time.Duration
 
 private val logger = KotlinLogging.logger {}
@@ -54,22 +55,7 @@ class ClaimedProcessor(
         listOf(WorkloadStatus.CLAIMED),
       )
 
-    val workloadList: WorkloadListResponse =
-      Failsafe.with(
-        RetryPolicy.builder<Any>()
-          .withBackoff(Duration.ofSeconds(20), Duration.ofDays(365))
-          .onRetry { logger.error { "Retrying to fetch workloads for dataplane $dataplaneId" } }
-          .abortOn { exception ->
-            when (exception) {
-              // This makes us to retry only on 5XX errors
-              is ServerException -> exception.statusCode / 100 != 5
-              else -> true
-            }
-          }
-          .build(),
-      )
-        .get { -> apiClient.workloadApi.workloadList(workloadListRequest) }
-
+    val workloadList = getWorkloadList(workloadListRequest)
     logger.info { "Re-hydrating ${workloadList.workloads.size} workload claim(s)..." }
     claimProcessorTracker.trackNumberOfClaimsToResume(workloadList.workloads.size)
 
@@ -101,5 +87,31 @@ class ClaimedProcessor(
     val commonTags = hashMapOf<String, Any>()
     commonTags[DATA_PLANE_ID_TAG] = dataplaneId
     ApmTraceUtils.addTagsToTrace(commonTags)
+  }
+
+  private fun getWorkloadList(workloadListRequest: WorkloadListRequest): WorkloadListResponse {
+    while (true) {
+      try {
+        // TODO: consider tuning the retry policy here, since we currently get the default 2 retries.
+        return Failsafe.with(
+          RetryPolicy.builder<Any>()
+            .withBackoff(Duration.ofSeconds(20), Duration.ofDays(365))
+            .onRetry { logger.error { "Retrying to fetch workloads for dataplane $dataplaneId" } }
+            .abortOn { exception ->
+              when (exception) {
+                // This makes us to retry only on 5XX errors
+                is ServerException -> exception.statusCode / 100 != 5
+                else -> true
+              }
+            }
+            .build(),
+        )
+          .get { -> apiClient.workloadApi.workloadList(workloadListRequest) }
+      } catch (e: ConnectException) {
+        // On a ConnectionException, we'll retry indefinitely.
+        logger.warn { "Failed to connect to workload API fetching workloads for dataplane $dataplaneId, retrying..." }
+      }
+      // Otherwise, we'll surface the exception.
+    }
   }
 }
