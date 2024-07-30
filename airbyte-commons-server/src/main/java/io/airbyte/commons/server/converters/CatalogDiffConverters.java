@@ -12,7 +12,7 @@ import io.airbyte.api.model.generated.StreamAttributePrimaryKeyUpdate;
 import io.airbyte.api.model.generated.StreamAttributeTransform;
 import io.airbyte.api.model.generated.StreamTransform;
 import io.airbyte.api.model.generated.StreamTransformUpdateStream;
-import io.airbyte.commons.converters.ProtocolConverters;
+import io.airbyte.commons.converters.ApiConverters;
 import io.airbyte.commons.enums.Enums;
 import io.airbyte.commons.protocol.transform_models.FieldTransformType;
 import io.airbyte.commons.protocol.transform_models.StreamAttributeTransformType;
@@ -27,7 +27,7 @@ public class CatalogDiffConverters {
   public static StreamTransform streamTransformToApi(final io.airbyte.commons.protocol.transform_models.StreamTransform transform) {
     return new StreamTransform()
         .transformType(Enums.convertTo(transform.getTransformType(), StreamTransform.TransformTypeEnum.class))
-        .streamDescriptor(ProtocolConverters.streamDescriptorToApi(transform.getStreamDescriptor()))
+        .streamDescriptor(ApiConverters.toApi(transform.getStreamDescriptor()))
         .updateStream(updateStreamToApi(transform).orElse(null));
   }
 

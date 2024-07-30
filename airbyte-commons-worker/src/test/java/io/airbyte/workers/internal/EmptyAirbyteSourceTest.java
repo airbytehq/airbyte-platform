@@ -7,21 +7,22 @@ package io.airbyte.workers.internal;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.google.common.collect.Lists;
 import io.airbyte.commons.json.Jsons;
+import io.airbyte.config.AirbyteStream;
+import io.airbyte.config.ConfiguredAirbyteCatalog;
+import io.airbyte.config.ConfiguredAirbyteStream;
 import io.airbyte.config.ResetSourceConfiguration;
 import io.airbyte.config.State;
+import io.airbyte.config.StreamDescriptor;
 import io.airbyte.config.WorkerSourceConfig;
+import io.airbyte.config.helpers.ProtocolConverters;
 import io.airbyte.protocol.models.AirbyteGlobalState;
 import io.airbyte.protocol.models.AirbyteMessage;
 import io.airbyte.protocol.models.AirbyteMessage.Type;
 import io.airbyte.protocol.models.AirbyteStateMessage;
 import io.airbyte.protocol.models.AirbyteStateMessage.AirbyteStateType;
-import io.airbyte.protocol.models.AirbyteStream;
 import io.airbyte.protocol.models.AirbyteStreamState;
 import io.airbyte.protocol.models.AirbyteStreamStatusTraceMessage.AirbyteStreamStatus;
 import io.airbyte.protocol.models.AirbyteTraceMessage;
-import io.airbyte.protocol.models.ConfiguredAirbyteCatalog;
-import io.airbyte.protocol.models.ConfiguredAirbyteStream;
-import io.airbyte.protocol.models.StreamDescriptor;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -93,6 +94,8 @@ class EmptyAirbyteSourceTest {
   @Test
   void testGlobal() throws Exception {
     final List<StreamDescriptor> streamDescriptors = getProtocolStreamDescriptorFromName(Lists.newArrayList("a", "b", "c"));
+    final List<io.airbyte.protocol.models.StreamDescriptor> expectedStreamDescriptors =
+        streamDescriptors.stream().map(ProtocolConverters::toProtocol).toList();
 
     final List<StreamDescriptor> streamsToReset = getConfigStreamDescriptorFromName(Lists.newArrayList("a", "b", "c"));
 
@@ -134,7 +137,7 @@ class EmptyAirbyteSourceTest {
     Assertions.assertThat(stateMessage.getGlobal().getSharedState()).isNull();
     Assertions.assertThat(stateMessage.getGlobal().getStreamStates())
         .map(AirbyteStreamState::getStreamDescriptor)
-        .containsExactlyElementsOf(streamDescriptors);
+        .containsExactlyElementsOf(expectedStreamDescriptors);
     Assertions.assertThat(stateMessage.getGlobal().getStreamStates())
         .map(AirbyteStreamState::getStreamState)
         .containsOnlyNulls();
@@ -456,7 +459,7 @@ class EmptyAirbyteSourceTest {
     Assertions.assertThat(message.getTrace().getStreamStatus().getStatus()).isEqualTo(status);
 
     Assertions.assertThat(message.getTrace().getStreamStatus().getStreamDescriptor()).isEqualTo(
-        new StreamDescriptor()
+        new io.airbyte.protocol.models.StreamDescriptor()
             .withName(streamDescriptor.getName())
             .withNamespace(streamDescriptor.getNamespace()));
   }
@@ -471,7 +474,7 @@ class EmptyAirbyteSourceTest {
 
     final AirbyteStateMessage stateMessage = message.getState();
     Assertions.assertThat(stateMessage.getType()).isEqualTo(AirbyteStateType.STREAM);
-    Assertions.assertThat(stateMessage.getStream().getStreamDescriptor()).isEqualTo(new StreamDescriptor()
+    Assertions.assertThat(stateMessage.getStream().getStreamDescriptor()).isEqualTo(new io.airbyte.protocol.models.StreamDescriptor()
         .withName(streamDescriptor.getName())
         .withNamespace(streamDescriptor.getNamespace()));
     Assertions.assertThat(stateMessage.getStream().getStreamState()).isNull();
@@ -508,7 +511,7 @@ class EmptyAirbyteSourceTest {
         .withType(AirbyteStateType.STREAM)
         .withStream(
             new AirbyteStreamState()
-                .withStreamDescriptor(streamDescriptor)
+                .withStreamDescriptor(ProtocolConverters.toProtocol(streamDescriptor))
                 .withStreamState(Jsons.emptyObject())))
         .toList();
   }
@@ -518,7 +521,7 @@ class EmptyAirbyteSourceTest {
         .withSharedState(sharedState)
         .withStreamStates(
             streamDescriptors.stream().map(streamDescriptor -> new AirbyteStreamState()
-                .withStreamDescriptor(streamDescriptor)
+                .withStreamDescriptor(ProtocolConverters.toProtocol(streamDescriptor))
                 .withStreamState(Jsons.emptyObject()))
                 .toList());
 

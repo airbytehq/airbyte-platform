@@ -7,6 +7,7 @@ import io.airbyte.commons.server.scheduler.EventRunner
 import io.airbyte.commons.server.support.CurrentUserService
 import io.airbyte.config.JobConfig.ConfigType
 import io.airbyte.config.RefreshStream
+import io.airbyte.config.StreamDescriptor
 import io.airbyte.config.persistence.StreamRefreshesRepository
 import io.airbyte.config.persistence.domain.StreamRefresh
 import io.airbyte.config.persistence.saveStreamsToRefresh
@@ -14,7 +15,6 @@ import io.airbyte.data.services.ConnectionService
 import io.airbyte.data.services.ConnectionTimelineEventService
 import io.airbyte.data.services.shared.ManuallyStartedEvent
 import io.airbyte.persistence.job.JobPersistence
-import io.airbyte.protocol.models.StreamDescriptor
 import jakarta.inject.Singleton
 import java.util.UUID
 

@@ -16,6 +16,7 @@ import io.airbyte.commons.concurrency.VoidCallable
 import io.airbyte.commons.converters.ThreadedTimeTracker
 import io.airbyte.commons.helper.DockerImageName
 import io.airbyte.commons.io.LineGobbler
+import io.airbyte.config.ConfiguredAirbyteCatalog
 import io.airbyte.config.FailureReason
 import io.airbyte.config.PerformanceMetrics
 import io.airbyte.config.ReplicationAttemptSummary
@@ -36,7 +37,6 @@ import io.airbyte.protocol.models.AirbyteMessage.Type
 import io.airbyte.protocol.models.AirbyteStateMessage
 import io.airbyte.protocol.models.AirbyteStateStats
 import io.airbyte.protocol.models.AirbyteTraceMessage
-import io.airbyte.protocol.models.ConfiguredAirbyteCatalog
 import io.airbyte.workers.WorkerUtils
 import io.airbyte.workers.context.ReplicationContext
 import io.airbyte.workers.context.ReplicationFeatureFlags

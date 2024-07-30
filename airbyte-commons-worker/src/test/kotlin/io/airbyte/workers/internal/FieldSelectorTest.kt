@@ -5,11 +5,11 @@
 package io.airbyte.workers.internal
 
 import io.airbyte.commons.json.Jsons
+import io.airbyte.config.AirbyteStream
+import io.airbyte.config.ConfiguredAirbyteCatalog
+import io.airbyte.config.ConfiguredAirbyteStream
 import io.airbyte.protocol.models.AirbyteMessage
 import io.airbyte.protocol.models.AirbyteRecordMessage
-import io.airbyte.protocol.models.AirbyteStream
-import io.airbyte.protocol.models.ConfiguredAirbyteCatalog
-import io.airbyte.protocol.models.ConfiguredAirbyteStream
 import io.airbyte.workers.RecordSchemaValidator
 import io.airbyte.workers.WorkerUtils
 import io.mockk.mockk

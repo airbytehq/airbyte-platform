@@ -6,7 +6,7 @@ package io.airbyte.commons.protocol;
 
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.commons.version.Version;
-import io.airbyte.protocol.models.ConfiguredAirbyteCatalog;
+import io.airbyte.config.ConfiguredAirbyteCatalog;
 
 /**
  * Serialize a ConfiguredAirbyteCatalog to the specified version
@@ -26,6 +26,8 @@ public class VersionedProtocolSerializer implements ProtocolSerializer {
 
   @Override
   public String serialize(final ConfiguredAirbyteCatalog configuredAirbyteCatalog) {
+    // TODO add safeguards about DestinationSyncModes when we move forward with
+    // DestinationSyncMode.OVERWRITE_DEDUP
     return Jsons.serialize(configuredAirbyteCatalogMigrator.downgrade(configuredAirbyteCatalog, protocolVersion));
   }
 

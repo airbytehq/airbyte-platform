@@ -14,12 +14,12 @@ import io.airbyte.api.client.model.generated.StreamDescriptor;
 import io.airbyte.api.client.model.generated.StreamTransform;
 import io.airbyte.api.client.model.generated.StreamTransformUpdateStream;
 import io.airbyte.commons.json.Jsons;
+import io.airbyte.config.AirbyteStream;
+import io.airbyte.config.ConfiguredAirbyteCatalog;
+import io.airbyte.config.ConfiguredAirbyteStream;
 import io.airbyte.config.State;
+import io.airbyte.config.SyncMode;
 import io.airbyte.config.helpers.StateMessageHelper;
-import io.airbyte.protocol.models.AirbyteStream;
-import io.airbyte.protocol.models.ConfiguredAirbyteCatalog;
-import io.airbyte.protocol.models.ConfiguredAirbyteStream;
-import io.airbyte.protocol.models.SyncMode;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 

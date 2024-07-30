@@ -28,7 +28,7 @@ import io.airbyte.api.model.generated.ResetConfig;
 import io.airbyte.api.model.generated.SourceDefinitionRead;
 import io.airbyte.api.model.generated.StreamDescriptor;
 import io.airbyte.api.model.generated.SynchronousJobRead;
-import io.airbyte.commons.converters.ProtocolConverters;
+import io.airbyte.commons.converters.ApiConverters;
 import io.airbyte.commons.enums.Enums;
 import io.airbyte.commons.server.scheduler.SynchronousJobMetadata;
 import io.airbyte.commons.server.scheduler.SynchronousResponse;
@@ -172,7 +172,7 @@ public class JobConverter {
       return Optional.ofNullable(
           new ResetConfig().streamsToReset(job.getConfig().getResetConnection().getResetSourceConfiguration().getStreamsToReset()
               .stream()
-              .map(ProtocolConverters::streamDescriptorToApi)
+              .map(ApiConverters::toApi)
               .toList()));
     } else {
       return Optional.empty();
@@ -190,7 +190,7 @@ public class JobConverter {
     if (job.getConfigType() == ConfigType.REFRESH) {
       final List<StreamDescriptor> refreshedStreams = job.getConfig().getRefresh().getStreamsToRefresh()
           .stream().flatMap(refreshStream -> Stream.ofNullable(refreshStream.getStreamDescriptor()))
-          .map(ProtocolConverters::streamDescriptorToApi)
+          .map(ApiConverters::toApi)
           .toList();
       if (refreshedStreams == null || refreshedStreams.isEmpty()) {
         return Optional.empty();

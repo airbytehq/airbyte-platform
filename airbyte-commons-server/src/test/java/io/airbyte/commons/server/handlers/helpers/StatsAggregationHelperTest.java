@@ -11,8 +11,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import io.airbyte.commons.server.handlers.helpers.StatsAggregationHelper.StreamStatsRecord;
 import io.airbyte.config.StreamSyncStats;
+import io.airbyte.config.SyncMode;
 import io.airbyte.config.SyncStats;
-import io.airbyte.protocol.models.SyncMode;
 import java.util.List;
 import java.util.Optional;
 import org.junit.jupiter.api.Test;

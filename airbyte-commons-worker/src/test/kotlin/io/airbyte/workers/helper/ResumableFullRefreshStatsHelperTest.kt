@@ -1,21 +1,22 @@
 package io.airbyte.workers.helper
 
 import io.airbyte.commons.json.Jsons
+import io.airbyte.config.AirbyteStream
+import io.airbyte.config.ConfiguredAirbyteCatalog
+import io.airbyte.config.ConfiguredAirbyteStream
 import io.airbyte.config.StandardSyncOutput
 import io.airbyte.config.StandardSyncSummary
 import io.airbyte.config.State
 import io.airbyte.config.StateType
+import io.airbyte.config.StreamDescriptor
 import io.airbyte.config.StreamSyncStats
+import io.airbyte.config.SyncMode
 import io.airbyte.config.SyncStats
+import io.airbyte.config.helpers.ProtocolConverters.Companion.toProtocol
 import io.airbyte.persistence.job.models.ReplicationInput
 import io.airbyte.protocol.models.AirbyteGlobalState
 import io.airbyte.protocol.models.AirbyteStateMessage
-import io.airbyte.protocol.models.AirbyteStream
 import io.airbyte.protocol.models.AirbyteStreamState
-import io.airbyte.protocol.models.ConfiguredAirbyteCatalog
-import io.airbyte.protocol.models.ConfiguredAirbyteStream
-import io.airbyte.protocol.models.StreamDescriptor
-import io.airbyte.protocol.models.SyncMode
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
@@ -167,7 +168,7 @@ class ResumableFullRefreshStatsHelperTest {
                   .withStream(
                     AirbyteStreamState()
                       .withStreamState(Jsons.jsonNode("some state"))
-                      .withStreamDescriptor(s.streamDescriptor),
+                      .withStreamDescriptor(s.streamDescriptor.toProtocol()),
                   )
               }.toList(),
             ),
@@ -185,7 +186,7 @@ class ResumableFullRefreshStatsHelperTest {
                         streams.map { s ->
                           AirbyteStreamState()
                             .withStreamState(Jsons.jsonNode("some state"))
-                            .withStreamDescriptor(s.streamDescriptor)
+                            .withStreamDescriptor(s.streamDescriptor.toProtocol())
                         }.toList(),
                       ),
                   ),

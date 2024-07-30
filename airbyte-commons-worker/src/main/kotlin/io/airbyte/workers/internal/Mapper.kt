@@ -2,12 +2,12 @@ package io.airbyte.workers.internal
 
 import com.google.common.annotations.VisibleForTesting
 import io.airbyte.commons.json.Jsons
+import io.airbyte.config.ConfiguredAirbyteCatalog
 import io.airbyte.config.JobSyncConfig.NamespaceDefinitionType
 import io.airbyte.protocol.models.AirbyteMessage
 import io.airbyte.protocol.models.AirbyteMessage.Type
 import io.airbyte.protocol.models.AirbyteStateMessage.AirbyteStateType
 import io.airbyte.protocol.models.AirbyteTraceMessage
-import io.airbyte.protocol.models.ConfiguredAirbyteCatalog
 import io.github.oshai.kotlinlogging.KotlinLogging
 
 /**

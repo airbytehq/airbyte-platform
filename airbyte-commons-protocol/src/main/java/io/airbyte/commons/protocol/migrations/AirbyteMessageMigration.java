@@ -4,7 +4,7 @@
 
 package io.airbyte.commons.protocol.migrations;
 
-import io.airbyte.protocol.models.ConfiguredAirbyteCatalog;
+import io.airbyte.config.ConfiguredAirbyteCatalog;
 import java.util.Optional;
 
 /**

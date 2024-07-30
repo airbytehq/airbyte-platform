@@ -1,12 +1,12 @@
 package io.airbyte.workers.helper
 
+import io.airbyte.config.AirbyteStream
+import io.airbyte.config.ConfiguredAirbyteCatalog
+import io.airbyte.config.ConfiguredAirbyteStream
+import io.airbyte.config.StreamDescriptor
 import io.airbyte.protocol.models.AirbyteMessage
-import io.airbyte.protocol.models.AirbyteStream
 import io.airbyte.protocol.models.AirbyteStreamStatusTraceMessage
 import io.airbyte.protocol.models.AirbyteTraceMessage
-import io.airbyte.protocol.models.ConfiguredAirbyteCatalog
-import io.airbyte.protocol.models.ConfiguredAirbyteStream
-import io.airbyte.protocol.models.StreamDescriptor
 import io.airbyte.workers.context.ReplicationContext
 import io.airbyte.workers.internal.AirbyteMapper
 import io.mockk.every
@@ -143,7 +143,7 @@ internal class StreamStatusCompletionTrackerTest {
             AirbyteStreamStatusTraceMessage()
               .withStatus(AirbyteStreamStatusTraceMessage.AirbyteStreamStatus.COMPLETE)
               .withStreamDescriptor(
-                StreamDescriptor()
+                io.airbyte.protocol.models.StreamDescriptor()
                   .withName(name)
                   .withNamespace(namespace),
               ),

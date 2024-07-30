@@ -10,6 +10,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.RETURNS_DEEP_STUBS;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -26,14 +27,14 @@ import io.airbyte.commons.logging.LoggingHelper.Color;
 import io.airbyte.commons.protocol.DefaultProtocolSerializer;
 import io.airbyte.commons.protocol.ProtocolSerializer;
 import io.airbyte.config.Configs.WorkerEnvironment;
+import io.airbyte.config.ConfiguredAirbyteCatalog;
 import io.airbyte.config.State;
 import io.airbyte.config.WorkerSourceConfig;
+import io.airbyte.config.helpers.CatalogHelpers;
 import io.airbyte.config.helpers.LogClientSingleton;
 import io.airbyte.config.helpers.LogConfigs;
 import io.airbyte.metrics.lib.MetricClient;
 import io.airbyte.protocol.models.AirbyteMessage;
-import io.airbyte.protocol.models.CatalogHelpers;
-import io.airbyte.protocol.models.ConfiguredAirbyteCatalog;
 import io.airbyte.protocol.models.Field;
 import io.airbyte.protocol.models.JsonSchemaType;
 import io.airbyte.workers.exception.WorkerException;
@@ -104,7 +105,7 @@ class DefaultAirbyteSourceTest {
   private Process process;
   private AirbyteStreamFactory streamFactory;
   private HeartbeatMonitor heartbeatMonitor;
-  private final ProtocolSerializer protocolSerializer = new DefaultProtocolSerializer();
+  private final ProtocolSerializer protocolSerializer = spy(new DefaultProtocolSerializer());
   private MetricClient metricClient;
 
   @BeforeEach
@@ -155,6 +156,9 @@ class DefaultAirbyteSourceTest {
     final AirbyteSource source = new DefaultAirbyteSource(integrationLauncher, streamFactory, heartbeatMonitor, protocolSerializer, featureFlags,
         metricClient);
     source.start(SOURCE_CONFIG, jobRoot, connectionId);
+    // Making sure we are calling the serializer in order to convert internal catalog into protocol
+    // catalog
+    verify(protocolSerializer).serialize(SOURCE_CONFIG.getCatalog());
 
     final List<AirbyteMessage> messages = Lists.newArrayList();
 

@@ -62,8 +62,8 @@ import io.airbyte.api.model.generated.UserReadInConnectionEvent;
 import io.airbyte.api.model.generated.WorkspaceIdRequestBody;
 import io.airbyte.api.problems.model.generated.ProblemMessageData;
 import io.airbyte.api.problems.throwable.generated.UnexpectedProblem;
+import io.airbyte.commons.converters.ApiConverters;
 import io.airbyte.commons.converters.ConnectionHelper;
-import io.airbyte.commons.converters.ProtocolConverters;
 import io.airbyte.commons.enums.Enums;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.commons.protocol.CatalogDiffHelpers;
@@ -82,6 +82,7 @@ import io.airbyte.commons.server.validation.CatalogValidator;
 import io.airbyte.config.ActorCatalog;
 import io.airbyte.config.ActorDefinitionVersion;
 import io.airbyte.config.BasicSchedule;
+import io.airbyte.config.ConfiguredAirbyteCatalog;
 import io.airbyte.config.DestinationConnection;
 import io.airbyte.config.FieldSelectionData;
 import io.airbyte.config.Geography;
@@ -99,6 +100,7 @@ import io.airbyte.config.StandardSync.Status;
 import io.airbyte.config.StandardWorkspace;
 import io.airbyte.config.StreamSyncStats;
 import io.airbyte.config.User;
+import io.airbyte.config.helpers.CatalogHelpers;
 import io.airbyte.config.helpers.ScheduleHelpers;
 import io.airbyte.config.persistence.ActorDefinitionVersionHelper;
 import io.airbyte.config.persistence.ConfigNotFoundException;
@@ -129,8 +131,6 @@ import io.airbyte.persistence.job.models.AttemptWithJobInfo;
 import io.airbyte.persistence.job.models.Job;
 import io.airbyte.persistence.job.models.JobStatus;
 import io.airbyte.persistence.job.models.JobWithStatusAndTimestamp;
-import io.airbyte.protocol.models.CatalogHelpers;
-import io.airbyte.protocol.models.ConfiguredAirbyteCatalog;
 import io.airbyte.validation.json.JsonValidationException;
 import io.micronaut.context.annotation.Value;
 import jakarta.inject.Inject;
@@ -263,7 +263,7 @@ public class ConnectionsHandler {
       validateCatalogDoesntContainDuplicateStreamNames(patch.getSyncCatalog());
       validateCatalogSize(patch.getSyncCatalog(), workspaceId, "update");
 
-      sync.setCatalog(CatalogConverter.toConfiguredProtocol(patch.getSyncCatalog()));
+      sync.setCatalog(CatalogConverter.toConfiguredInternal(patch.getSyncCatalog()));
       sync.withFieldSelectionData(CatalogConverter.getFieldSelectionData(patch.getSyncCatalog()));
     }
 
@@ -546,7 +546,7 @@ public class ConnectionsHandler {
       validateCatalogDoesntContainDuplicateStreamNames(connectionCreate.getSyncCatalog());
       validateCatalogSize(connectionCreate.getSyncCatalog(), workspaceId, "create");
 
-      standardSync.withCatalog(CatalogConverter.toConfiguredProtocol(connectionCreate.getSyncCatalog()));
+      standardSync.withCatalog(CatalogConverter.toConfiguredInternal(connectionCreate.getSyncCatalog()));
       standardSync.withFieldSelectionData(CatalogConverter.getFieldSelectionData(connectionCreate.getSyncCatalog()));
     } else {
       standardSync.withCatalog(new ConfiguredAirbyteCatalog().withStreams(Collections.emptyList()));
@@ -710,7 +710,7 @@ public class ConnectionsHandler {
       LOGGER.debug("Wiping out the state of deactivated streams: [{}]",
           String.join(", ", deactivatedStreams.stream().map(StreamDescriptorUtils::buildFullyQualifiedName).toList()));
       statePersistence.bulkDelete(connectionId,
-          deactivatedStreams.stream().map(ProtocolConverters::streamDescriptorToProtocol).collect(Collectors.toSet()));
+          deactivatedStreams.stream().map(ApiConverters::toInternal).collect(Collectors.toSet()));
     }
     applyPatchToStandardSync(sync, connectionPatch, workspaceId);
 
@@ -833,7 +833,7 @@ public class ConnectionsHandler {
       throws JsonValidationException, ConfigNotFoundException, IOException {
 
     final var catalogWithSelectedFieldsAnnotated = connectionRead.getSyncCatalog();
-    final var configuredCatalog = CatalogConverter.toConfiguredProtocol(catalogWithSelectedFieldsAnnotated);
+    final var configuredCatalog = CatalogConverter.toConfiguredInternal(catalogWithSelectedFieldsAnnotated);
 
     final var rawCatalog = getConnectionAirbyteCatalog(connectionRead.getConnectionId());
 
@@ -1283,7 +1283,7 @@ public class ConnectionsHandler {
     final CatalogDiff diffToApply = getDiff(
         catalogUsedToMakeConfiguredCatalog.orElse(currentCatalog),
         catalog,
-        CatalogConverter.toConfiguredProtocol(currentCatalog));
+        CatalogConverter.toConfiguredInternal(currentCatalog));
     final ConnectionUpdate updateObject =
         new ConnectionUpdate().connectionId(connection.getConnectionId());
     final UUID destinationDefinitionId =

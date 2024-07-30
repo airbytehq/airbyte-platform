@@ -5,11 +5,11 @@
 package io.airbyte.workers.internal;
 
 import com.google.common.collect.Iterables;
+import io.airbyte.config.ConfiguredAirbyteCatalog;
+import io.airbyte.config.ConfiguredAirbyteStream;
+import io.airbyte.config.DestinationSyncMode;
+import io.airbyte.config.SyncMode;
 import io.airbyte.protocol.models.AirbyteMessage;
-import io.airbyte.protocol.models.ConfiguredAirbyteCatalog;
-import io.airbyte.protocol.models.ConfiguredAirbyteStream;
-import io.airbyte.protocol.models.DestinationSyncMode;
-import io.airbyte.protocol.models.SyncMode;
 import io.airbyte.workers.helper.AirbyteMessageExtractor;
 import io.airbyte.workers.internal.exception.SourceException;
 import java.util.List;

@@ -10,13 +10,13 @@ import io.airbyte.commons.server.scheduler.EventRunner
 import io.airbyte.commons.server.support.CurrentUserService
 import io.airbyte.config.JobConfig
 import io.airbyte.config.StandardSync
+import io.airbyte.config.StreamDescriptor
 import io.airbyte.config.persistence.StreamRefreshesRepository
 import io.airbyte.config.persistence.domain.StreamRefresh
 import io.airbyte.data.services.ConnectionService
 import io.airbyte.data.services.ConnectionTimelineEventService
 import io.airbyte.persistence.job.JobPersistence
 import io.airbyte.persistence.job.models.Job
-import io.airbyte.protocol.models.StreamDescriptor
 import io.mockk.clearAllMocks
 import io.mockk.every
 import io.mockk.mockk

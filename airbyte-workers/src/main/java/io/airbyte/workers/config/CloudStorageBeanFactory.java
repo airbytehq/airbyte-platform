@@ -5,9 +5,9 @@
 package io.airbyte.workers.config;
 
 import io.airbyte.commons.json.JsonSerde;
+import io.airbyte.config.ConfiguredAirbyteCatalog;
 import io.airbyte.config.State;
 import io.airbyte.metrics.lib.MetricClient;
-import io.airbyte.protocol.models.ConfiguredAirbyteCatalog;
 import io.airbyte.workers.storage.DocumentType;
 import io.airbyte.workers.storage.StorageClient;
 import io.airbyte.workers.storage.StorageClientFactory;

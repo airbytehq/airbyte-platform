@@ -83,7 +83,7 @@ class DefaultAirbyteDestinationTest {
   private Process process;
   private AirbyteStreamFactory streamFactory;
   private AirbyteMessageBufferedWriterFactory messageWriterFactory;
-  private final ProtocolSerializer protocolSerializer = new DefaultProtocolSerializer();
+  private final ProtocolSerializer protocolSerializer = spy(new DefaultProtocolSerializer());
   private ByteArrayOutputStream outputStream;
   private DestinationTimeoutMonitor destinationTimeoutMonitor;
   private MetricClient metricClient;
@@ -135,6 +135,10 @@ class DefaultAirbyteDestinationTest {
         new DefaultAirbyteDestination(integrationLauncher, streamFactory, messageWriterFactory, protocolSerializer, destinationTimeoutMonitor,
             metricClient);
     destination.start(DESTINATION_CONFIG, jobRoot);
+
+    // Making sure we are calling the serializer in order to convert internal catalog into protocol
+    // catalog
+    verify(protocolSerializer).serialize(DESTINATION_CONFIG.getCatalog());
 
     final AirbyteMessage recordMessage = AirbyteMessageUtils.createRecordMessage(STREAM_NAME, FIELD_NAME, "blue");
     destination.accept(recordMessage);

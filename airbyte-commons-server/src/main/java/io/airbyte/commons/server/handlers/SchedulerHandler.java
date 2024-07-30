@@ -74,6 +74,7 @@ import io.airbyte.config.StandardDestinationDefinition;
 import io.airbyte.config.StandardSourceDefinition;
 import io.airbyte.config.StandardSync;
 import io.airbyte.config.StandardWorkspace;
+import io.airbyte.config.StreamDescriptor;
 import io.airbyte.config.WorkloadPriority;
 import io.airbyte.config.helpers.ResourceRequirementsUtils;
 import io.airbyte.config.persistence.ActorDefinitionVersionHelper;
@@ -108,7 +109,6 @@ import io.airbyte.persistence.job.models.JobStatus;
 import io.airbyte.persistence.job.tracker.JobTracker;
 import io.airbyte.protocol.models.AirbyteCatalog;
 import io.airbyte.protocol.models.ConnectorSpecification;
-import io.airbyte.protocol.models.StreamDescriptor;
 import io.airbyte.validation.json.JsonSchemaValidator;
 import io.airbyte.validation.json.JsonValidationException;
 import jakarta.inject.Singleton;
@@ -526,7 +526,7 @@ public class SchedulerHandler {
       final CatalogDiff diff =
           connectionsHandler.getDiff(catalogUsedToMakeConfiguredCatalog.orElse(syncCatalog),
               sourceAutoPropagateChange.getCatalog(),
-              CatalogConverter.toConfiguredProtocol(syncCatalog));
+              CatalogConverter.toConfiguredInternal(syncCatalog));
 
       final ConnectionUpdate updateObject =
           new ConnectionUpdate().connectionId(connectionRead.getConnectionId());
@@ -710,7 +710,7 @@ public class SchedulerHandler {
           connectionRead.getSyncCatalog();
       final CatalogDiff diff =
           connectionsHandler.getDiff(catalogUsedToMakeConfiguredCatalog.orElse(currentAirbyteCatalog), discoveredSchema.getCatalog(),
-              CatalogConverter.toConfiguredProtocol(currentAirbyteCatalog));
+              CatalogConverter.toConfiguredInternal(currentAirbyteCatalog));
       final boolean containsBreakingChange = AutoPropagateSchemaChangeHelper.containsBreakingChange(diff);
 
       if (containsBreakingChange) {

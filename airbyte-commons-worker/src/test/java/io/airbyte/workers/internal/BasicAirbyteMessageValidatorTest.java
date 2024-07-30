@@ -9,13 +9,13 @@ import static org.junit.Assert.assertThrows;
 import static org.junit.Assert.assertTrue;
 
 import io.airbyte.commons.json.Jsons;
+import io.airbyte.config.AirbyteStream;
+import io.airbyte.config.ConfiguredAirbyteCatalog;
+import io.airbyte.config.ConfiguredAirbyteStream;
+import io.airbyte.config.DestinationSyncMode;
+import io.airbyte.config.SyncMode;
 import io.airbyte.protocol.models.AirbyteMessage;
-import io.airbyte.protocol.models.AirbyteStream;
 import io.airbyte.protocol.models.Config;
-import io.airbyte.protocol.models.ConfiguredAirbyteCatalog;
-import io.airbyte.protocol.models.ConfiguredAirbyteStream;
-import io.airbyte.protocol.models.DestinationSyncMode;
-import io.airbyte.protocol.models.SyncMode;
 import io.airbyte.workers.internal.exception.SourceException;
 import io.airbyte.workers.test_utils.AirbyteMessageUtils;
 import java.util.List;

@@ -5,7 +5,7 @@
 package io.airbyte.commons.protocol;
 
 import io.airbyte.commons.json.Jsons;
-import io.airbyte.protocol.models.ConfiguredAirbyteCatalog;
+import io.airbyte.config.ConfiguredAirbyteCatalog;
 
 /**
  * Default JSON serialization for the Airbyte Protocol.

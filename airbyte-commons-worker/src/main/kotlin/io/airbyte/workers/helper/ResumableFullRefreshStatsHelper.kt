@@ -1,15 +1,15 @@
 package io.airbyte.workers.helper
 
+import io.airbyte.config.ConfiguredAirbyteCatalog
 import io.airbyte.config.StandardSyncOutput
 import io.airbyte.config.State
 import io.airbyte.config.StateType
 import io.airbyte.config.StateWrapper
 import io.airbyte.config.StreamDescriptor
 import io.airbyte.config.StreamSyncStats
+import io.airbyte.config.SyncMode
 import io.airbyte.config.helpers.StateMessageHelper
 import io.airbyte.persistence.job.models.ReplicationInput
-import io.airbyte.protocol.models.ConfiguredAirbyteCatalog
-import io.airbyte.protocol.models.SyncMode
 import io.github.oshai.kotlinlogging.KotlinLogging
 import jakarta.inject.Singleton
 

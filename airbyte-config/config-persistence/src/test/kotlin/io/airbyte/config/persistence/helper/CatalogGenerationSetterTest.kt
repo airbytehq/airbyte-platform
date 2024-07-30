@@ -1,13 +1,13 @@
 package io.airbyte.config.persistence.helper
 
+import io.airbyte.config.AirbyteStream
+import io.airbyte.config.ConfiguredAirbyteCatalog
+import io.airbyte.config.ConfiguredAirbyteStream
+import io.airbyte.config.DestinationSyncMode
 import io.airbyte.config.RefreshStream
+import io.airbyte.config.StreamDescriptor
+import io.airbyte.config.SyncMode
 import io.airbyte.config.persistence.domain.Generation
-import io.airbyte.protocol.models.AirbyteStream
-import io.airbyte.protocol.models.ConfiguredAirbyteCatalog
-import io.airbyte.protocol.models.ConfiguredAirbyteStream
-import io.airbyte.protocol.models.DestinationSyncMode
-import io.airbyte.protocol.models.StreamDescriptor
-import io.airbyte.protocol.models.SyncMode
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test

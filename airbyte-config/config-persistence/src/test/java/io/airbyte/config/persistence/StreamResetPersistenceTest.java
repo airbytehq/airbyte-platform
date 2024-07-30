@@ -8,7 +8,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.spy;
 
-import io.airbyte.protocol.models.StreamDescriptor;
+import io.airbyte.config.StreamDescriptor;
 import io.airbyte.test.utils.BaseConfigDatabaseTest;
 import java.util.ArrayList;
 import java.util.List;

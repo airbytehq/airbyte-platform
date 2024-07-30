@@ -8,7 +8,7 @@ import datadog.trace.api.Trace;
 import io.airbyte.commons.temporal.TemporalClient;
 import io.airbyte.commons.temporal.TemporalClient.ManualOperationResult;
 import io.airbyte.config.RefreshStream.RefreshType;
-import io.airbyte.protocol.models.StreamDescriptor;
+import io.airbyte.config.StreamDescriptor;
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;

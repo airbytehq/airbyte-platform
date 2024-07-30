@@ -6,8 +6,8 @@ package io.airbyte.commons.protocol.migrations.v1;
 
 import io.airbyte.commons.protocol.migrations.AirbyteMessageMigration;
 import io.airbyte.commons.version.Version;
+import io.airbyte.config.ConfiguredAirbyteCatalog;
 import io.airbyte.protocol.models.AirbyteMessage;
-import io.airbyte.protocol.models.ConfiguredAirbyteCatalog;
 import java.util.Optional;
 import org.apache.commons.lang3.NotImplementedException;
 
