@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { FormattedMessage } from "react-intl";
+import { FormattedMessage, useIntl } from "react-intl";
 import { createSearchParams, useSearchParams } from "react-router-dom";
 
 import { Button } from "components/ui/Button";
@@ -8,6 +8,8 @@ import { Link } from "components/ui/Link";
 import { LoadingSpinner } from "components/ui/LoadingSpinner";
 
 import { useAuthService } from "core/services/auth";
+import { useAppMonitoringService } from "hooks/services/AppMonitoringService";
+import { useNotificationService } from "hooks/services/Notification";
 import { CloudRoutes } from "packages/cloud/cloudRoutePaths";
 
 import githubLogo from "./assets/github-logo.svg";
@@ -68,6 +70,9 @@ interface LoginButtonsProps {
 }
 
 export const LoginButtons: React.FC<LoginButtonsProps> = ({ type }) => {
+  const { trackError } = useAppMonitoringService();
+  const { formatMessage } = useIntl();
+  const { registerNotification } = useNotificationService();
   const [pendingRedirect, setPendingRedirect] = useState<"google" | "github" | "password" | null>(null);
   const {
     redirectToSignInWithGithub,
@@ -89,9 +94,25 @@ export const LoginButtons: React.FC<LoginButtonsProps> = ({ type }) => {
   const handleEmailButtonClick = () => {
     setPendingRedirect("password");
     if (type === "signup") {
-      redirectToRegistrationWithPassword?.().catch(() => setPendingRedirect(null));
+      redirectToRegistrationWithPassword?.().catch((error) => {
+        trackError(error);
+        registerNotification({
+          id: "redirectToRegistrationWithPasswordError",
+          type: "error",
+          text: formatMessage({ id: "signup.email.redirectError" }),
+        });
+        setPendingRedirect(null);
+      });
     } else {
-      redirectToSignInWithPassword?.().catch(() => setPendingRedirect(null));
+      redirectToSignInWithPassword?.().catch((error) => {
+        trackError(error);
+        registerNotification({
+          id: "redirectToSignInWithPasswordError",
+          type: "error",
+          text: formatMessage({ id: "login.email.redirectError" }),
+        });
+        setPendingRedirect(null);
+      });
     }
   };
 

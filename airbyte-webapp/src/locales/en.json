@@ -1736,6 +1736,7 @@
   "login.oauth.google": "Continue with Google",
   "login.oauth.github": "Continue with GitHub",
   "login.email": "Continue with Email",
+  "login.email.redirectError": "There was an error signing in with email. Please try again.",
   "login.oauth.differentCredentialsError": "Use your email and password to sign in.",
   "login.oauth.unknownError": "An unknown error happened during sign in: {error}",
   "login.selfhosting": "Interested in self-hosting?",
@@ -1761,6 +1762,7 @@
   "signup.details.freeTrial": "14-day free trial",
   "signup.title": "Create your Airbyte account",
   "signup.method.email": "Sign up using email",
+  "signup.email.redirectError": "There was an error signing up with email. Please try again.",
 
   "connection.header.frequency.tooltip": "Click to edit in Settings",
   "connection.dbtCloudJobs.cardTitle": "Transformations",

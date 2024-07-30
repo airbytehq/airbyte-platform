@@ -1,4 +1,5 @@
 {
   "cron-validation/invalid-timezone": "The timezone {cronTimezone} is currently not supported. Please chose another timezone.",
-  "dbtcloud/access-denied": "dbt Cloud denied access. Please verify your service token and access URL."
+  "dbtcloud/access-denied": "dbt Cloud denied access. Please verify your service token and access URL.",
+  "auth/user-already-exists": "A user with the email {email} already exists."
 }

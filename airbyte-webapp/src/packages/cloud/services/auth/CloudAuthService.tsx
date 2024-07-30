@@ -11,6 +11,7 @@ import { LoadingPage } from "components";
 import { HttpProblem, useGetOrCreateUser, useUpdateUser } from "core/api";
 import { UserRead } from "core/api/types/AirbyteClient";
 import { config } from "core/config";
+import { useFormatError } from "core/errors";
 import { AuthContext, AuthContextApi } from "core/services/auth";
 import { CloudRoutes } from "packages/cloud/cloudRoutePaths";
 
@@ -202,6 +203,7 @@ export const CloudAuthService: React.FC<PropsWithChildren> = ({ children }) => {
   const [logoutInProgress, setLogoutInProgress] = useState(false);
   const { mutateAsync: getAirbyteUser } = useGetOrCreateUser();
   const { mutateAsync: updateAirbyteUser } = useUpdateUser();
+  const formatError = useFormatError();
   const navigate = useNavigate();
 
   // Allows us to get the access token as a callback, instead of re-rendering every time a new access token arrives
@@ -214,9 +216,13 @@ export const CloudAuthService: React.FC<PropsWithChildren> = ({ children }) => {
         navigate(CloudRoutes.Sso, { state: { [SSO_LOGIN_REQUIRED_STATE]: true } });
         return await userManager.signoutSilent();
       }
+      if (HttpProblem.isType(error, "error:auth/user-already-exists")) {
+        navigate(CloudRoutes.Login, { state: { errorMessage: formatError(error) } });
+        return await userManager.signoutSilent();
+      }
       throw error;
     },
-    [navigate, userManager]
+    [navigate, userManager, formatError]
   );
 
   // Handle login/logoff that happened in another tab
