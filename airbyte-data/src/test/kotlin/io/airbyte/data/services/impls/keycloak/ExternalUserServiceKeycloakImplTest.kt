@@ -106,8 +106,14 @@ class ExternalUserServiceKeycloakImplTest {
     every { realm1Resource.users() } returns usersResource1
     every { realm2Resource.users() } returns usersResource2
 
-    every { usersResource1.get(authUserId) } throws NotFoundException() // keycloak throws NotFoundException if no user has the id
-    every { usersResource2.get(authUserId) } returns mockk<UserResource>()
+    val userResource1 = mockk<UserResource>()
+    val userResource2 = mockk<UserResource>()
+
+    every { usersResource1.get(authUserId) } returns userResource1
+    every { usersResource2.get(authUserId) } returns userResource2
+
+    every { userResource1.toRepresentation() } throws NotFoundException() // keycloak throws NotFoundException if no user has the id
+    every { userResource2.toRepresentation() } returns mockk<UserRepresentation>()
 
     // call service method
     val realm = service.getRealmByAuthUserId(authUserId)

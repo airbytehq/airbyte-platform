@@ -38,8 +38,9 @@ class ExternalUserServiceKeycloakImpl(
     val realms = keycloakAdminClient.realms().findAll()
     for (realm in realms) {
       try {
-        val user = keycloakAdminClient.realm(realm.id).users().get(authUserId)
+        val user = keycloakAdminClient.realm(realm.id).users().get(authUserId).toRepresentation()
         if (user != null) {
+          logger.info { "Auth user found in realm ${realm.id} (id: ${user.id})" }
           return realm.id
         }
       } catch (e: NotFoundException) {
