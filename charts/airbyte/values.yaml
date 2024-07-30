@@ -1780,6 +1780,10 @@ keycloak-setup:
     seccompProfile:
       type: RuntimeDefault
 
+  initContainers:
+    keycloakReadinessCheck:
+      image: {}
+
   containerSecurityContext:
     allowPrivilegeEscalation: false 
     runAsNonRoot: true

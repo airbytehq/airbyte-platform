@@ -241,3 +241,48 @@ func TestBasicEnterpriseConfigWithHelmValues(t *testing.T) {
 		})
 	})
 }
+
+func TestKeycloakSetupInitContainerOverride(t *testing.T) {
+	t.Run("default keycloak readiness image is curlimages/curl", func(t *testing.T) {
+		helmOpts := baseHelmOptionsForEnterpriseWithValues()
+		helmOpts.SetValues["global.auth.instanceAdmin.firstName"] = "Octavia"
+		helmOpts.SetValues["global.auth.instanceAdmin.lastName"] = "Squidington"
+		helmOpts.SetValues["global.auth.identityProvider.secretName"] = "sso-secrets"
+		helmOpts.SetValues["global.auth.identityProvider.type"] = "oidc"
+		helmOpts.SetValues["global.auth.identityProvider.oidc.domain"] = "example.com"
+		helmOpts.SetValues["global.auth.identityProvider.oidc.appName"] = "example-app"
+		helmOpts.SetValues["global.auth.identityProvider.oidc.clientIdSecretKey"] = "client-id"
+		helmOpts.SetValues["global.auth.identityProvider.oidc.clientSecretSecretKey"] = "client-secret"
+		chartYaml, err := helm.RenderTemplateE(t, helmOpts, chartPath, "airbyte", nil)
+		assert.NoError(t, err)
+
+		keycloakSetupJob, err := getJob(chartYaml, "airbyte-keycloak-setup")
+		assert.NoError(t, err)
+		assert.NotNil(t, keycloakSetupJob)
+
+		initContainers := keycloakSetupJob.Spec.Template.Spec.InitContainers
+		assert.Equal(t, "curlimages/curl:8.1.1", initContainers[0].Image)
+	})
+
+	t.Run("override init container image ", func(t *testing.T) {
+		helmOpts := baseHelmOptionsForEnterpriseWithValues()
+		helmOpts.SetValues["global.auth.instanceAdmin.firstName"] = "Octavia"
+		helmOpts.SetValues["global.auth.instanceAdmin.lastName"] = "Squidington"
+		helmOpts.SetValues["global.auth.identityProvider.secretName"] = "sso-secrets"
+		helmOpts.SetValues["global.auth.identityProvider.type"] = "oidc"
+		helmOpts.SetValues["global.auth.identityProvider.oidc.domain"] = "example.com"
+		helmOpts.SetValues["global.auth.identityProvider.oidc.appName"] = "example-app"
+		helmOpts.SetValues["global.auth.identityProvider.oidc.clientIdSecretKey"] = "client-id"
+		helmOpts.SetValues["global.auth.identityProvider.oidc.clientSecretSecretKey"] = "client-secret"
+		helmOpts.SetValues["keycloak-setup.initContainers.keycloakReadinessCheck.image"] = "airbyte/custom-curl-image"
+		chartYaml, err := helm.RenderTemplateE(t, helmOpts, chartPath, "airbyte", nil)
+		assert.NoError(t, err)
+
+		keycloakSetupJob, err := getJob(chartYaml, "airbyte-keycloak-setup")
+		assert.NoError(t, err)
+		assert.NotNil(t, keycloakSetupJob)
+
+		initContainers := keycloakSetupJob.Spec.Template.Spec.InitContainers
+		assert.Equal(t, "airbyte/custom-curl-image", initContainers[0].Image)
+	})
+}
