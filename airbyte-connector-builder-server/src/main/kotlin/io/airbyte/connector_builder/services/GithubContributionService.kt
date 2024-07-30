@@ -15,7 +15,7 @@ import org.yaml.snakeyaml.Yaml
 
 class GithubContributionService(var connectorImageName: String, personalAccessToken: String?) {
   var githubService: GitHub? = null
-  val repositoryName = "connector-archive" // TODO - change to airbyte before release
+  val repositoryName = "airbyte"
   val repoOwner = "airbytehq"
   val connectorDirectory = "airbyte-integrations/connectors"
 
