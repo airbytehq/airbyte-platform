@@ -151,23 +151,31 @@ public class ReplicationInputHydrator {
       fullDestinationConfig =
           secretsRepositoryReader.hydrateConfigFromDefaultSecretPersistence(replicationActivityInput.getDestinationConfiguration());
     }
+    return mapActivityInputToReplInput(replicationActivityInput)
+        .withSourceConfiguration(fullSourceConfig)
+        .withDestinationConfiguration(fullDestinationConfig)
+        .withCatalog(catalog)
+        .withState(state);
+  }
+
+  /**
+   * Converts ReplicationActivityInput to ReplicationInput by mapping basic files. Does NOT perform
+   * any hydration. Does not copy unhydrated config.
+   */
+  public ReplicationInput mapActivityInputToReplInput(final ReplicationActivityInput replicationActivityInput) {
     return new ReplicationInput()
         .withNamespaceDefinition(replicationActivityInput.getNamespaceDefinition())
         .withNamespaceFormat(replicationActivityInput.getNamespaceFormat())
         .withPrefix(replicationActivityInput.getPrefix())
         .withSourceId(replicationActivityInput.getSourceId())
         .withDestinationId(replicationActivityInput.getDestinationId())
-        .withSourceConfiguration(fullSourceConfig)
-        .withDestinationConfiguration(fullDestinationConfig)
         .withSyncResourceRequirements(replicationActivityInput.getSyncResourceRequirements())
         .withWorkspaceId(replicationActivityInput.getWorkspaceId())
         .withConnectionId(replicationActivityInput.getConnectionId())
         .withIsReset(replicationActivityInput.getIsReset())
         .withJobRunConfig(replicationActivityInput.getJobRunConfig())
         .withSourceLauncherConfig(replicationActivityInput.getSourceLauncherConfig())
-        .withDestinationLauncherConfig(replicationActivityInput.getDestinationLauncherConfig())
-        .withCatalog(catalog)
-        .withState(state);
+        .withDestinationLauncherConfig(replicationActivityInput.getDestinationLauncherConfig());
   }
 
   @VisibleForTesting

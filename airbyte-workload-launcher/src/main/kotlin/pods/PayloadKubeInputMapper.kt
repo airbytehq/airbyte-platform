@@ -7,6 +7,7 @@ import io.airbyte.featureflag.Connection
 import io.airbyte.featureflag.ContainerOrchestratorDevImage
 import io.airbyte.featureflag.FeatureFlagClient
 import io.airbyte.featureflag.InjectAwsSecretsToConnectorPods
+import io.airbyte.featureflag.OrchestratorFetchesInputFromInit
 import io.airbyte.featureflag.Workspace
 import io.airbyte.persistence.job.models.IntegrationLauncherConfig
 import io.airbyte.persistence.job.models.JobRunConfig
@@ -21,12 +22,12 @@ import io.airbyte.workers.process.AsyncOrchestratorPodProcess.KUBE_POD_INFO
 import io.airbyte.workers.process.KubeContainerInfo
 import io.airbyte.workers.process.KubePodInfo
 import io.airbyte.workers.process.Metadata.AWS_ASSUME_ROLE_EXTERNAL_ID
+import io.airbyte.workers.serde.ObjectSerializer
 import io.airbyte.workers.sync.OrchestratorConstants
 import io.airbyte.workload.launcher.model.getAttemptId
 import io.airbyte.workload.launcher.model.getJobId
 import io.airbyte.workload.launcher.model.getOrchestratorResourceReqs
 import io.airbyte.workload.launcher.model.usesCustomConnector
-import io.airbyte.workload.launcher.serde.ObjectSerializer
 import io.fabric8.kubernetes.api.model.EnvVar
 import io.micronaut.context.annotation.Value
 import jakarta.inject.Named
@@ -251,11 +252,13 @@ class PayloadKubeInputMapper(
     jobRunConfig: JobRunConfig,
     kubePodInfo: KubePodInfo,
   ): Map<String, String> {
-    return mapOf(
-      OrchestratorConstants.INIT_FILE_JOB_RUN_CONFIG to serializer.serialize(jobRunConfig),
-      OrchestratorConstants.INIT_FILE_INPUT to serializer.serialize(input),
-      KUBE_POD_INFO to serializer.serialize(kubePodInfo),
-    )
+    return buildMap {
+      if (!featureFlagClient.boolVariation(OrchestratorFetchesInputFromInit, Connection(input.connectionId))) {
+        put(OrchestratorConstants.INIT_FILE_INPUT, serializer.serialize(input))
+      }
+      put(OrchestratorConstants.INIT_FILE_JOB_RUN_CONFIG, serializer.serialize(jobRunConfig))
+      put(KUBE_POD_INFO, serializer.serialize(kubePodInfo))
+    }
   }
 
   private fun buildCheckFileMap(

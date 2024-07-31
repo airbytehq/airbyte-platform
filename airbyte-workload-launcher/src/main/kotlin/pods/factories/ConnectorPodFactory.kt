@@ -45,7 +45,7 @@ class ConnectorPodFactory(
     nodeSelectors: Map<String, String>,
     kubePodInfo: KubePodInfo,
     annotations: Map<String, String>,
-    extraEnvVars: List<EnvVar>,
+    runtimeEnvVars: List<EnvVar>,
   ): Pod {
     val volumes: MutableList<Volume> = ArrayList()
     val volumeMounts: MutableList<VolumeMount> = ArrayList()
@@ -69,8 +69,8 @@ class ConnectorPodFactory(
 
     val connectorResourceReqs = KubePodProcess.getResourceRequirementsBuilder(connectorReqs).build()
 
-    val init: Container = initContainerFactory.create(connectorResourceReqs, volumeMounts)
-    val main: Container = buildMainContainer(connectorResourceReqs, volumeMounts, kubePodInfo.mainContainerInfo, extraEnvVars)
+    val init: Container = initContainerFactory.createWaiting(connectorResourceReqs, volumeMounts)
+    val main: Container = buildMainContainer(connectorResourceReqs, volumeMounts, kubePodInfo.mainContainerInfo, runtimeEnvVars)
     val sidecar: Container = buildSidecarContainer(volumeMounts + secretVolumeMounts)
 
     // TODO: We should inject the scheduler from the ENV and use this just for overrides
@@ -103,7 +103,7 @@ class ConnectorPodFactory(
     resourceReqs: ResourceRequirements,
     volumeMounts: List<VolumeMount>,
     containerInfo: KubeContainerInfo,
-    extraEnvVars: List<EnvVar>,
+    runtimeEnvVars: List<EnvVar>,
   ): Container {
     val configArgs =
       connectorArgs.map {
@@ -118,7 +118,7 @@ class ConnectorPodFactory(
       .withImage(containerInfo.image)
       .withImagePullPolicy(containerInfo.pullPolicy)
       .withCommand("sh", "-c", mainCommand)
-      .withEnv(connectorEnvVars + extraEnvVars)
+      .withEnv(connectorEnvVars + runtimeEnvVars)
       .withWorkingDir(KubePodProcess.CONFIG_DIR)
       .withVolumeMounts(volumeMounts)
       .withResources(resourceReqs)

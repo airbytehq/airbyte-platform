@@ -82,8 +82,10 @@ class KubePodClient(
       )
     }
 
+    // TODO: put these behind FF check once we convert all files to env vars (flag: OrchestratorHydratesFromInit)
     waitOrchestratorPodInit(pod)
 
+    // TODO: put these behind FF check once we convert all files to env vars (flag: OrchestratorHydratesFromInit)
     copyFileToOrchestrator(kubeInput, pod)
 
     waitForOrchestratorStart(pod)

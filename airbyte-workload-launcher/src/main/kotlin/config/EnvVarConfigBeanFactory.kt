@@ -21,12 +21,48 @@ import io.micronaut.core.util.StringUtils
 import jakarta.inject.Named
 import jakarta.inject.Singleton
 import java.util.function.Consumer
+import io.airbyte.commons.envvar.EnvVar as AirbyteEnvVar
 
 /**
  * Provides and configures the environment variables for the containers we launch.
  */
 @Factory
 class EnvVarConfigBeanFactory {
+  /**
+   * The list of env vars to be passed to the init container.
+   */
+  @Singleton
+  @Named("initEnvVars")
+  fun initEnvVars(
+    @Named("workloadApiEnvMap") workloadApiEnvMap: Map<String, String>,
+    @Named("apiClientEnvMap") apiClientEnvMap: Map<String, String>,
+    @Named("featureFlagEnvVars") ffEnvVars: Map<String, String>,
+    @Named("workloadApiSecretEnv") secretsEnvMap: Map<String, EnvVarSource>,
+  ): List<EnvVar> {
+    val envMap: MutableMap<String, String> = HashMap()
+
+    // Workload Api configuration
+    envMap.putAll(workloadApiEnvMap)
+
+    // Api client configuration
+    envMap.putAll(apiClientEnvMap)
+
+    // FF client configuration
+    envMap.putAll(ffEnvVars)
+
+    val envVars =
+      envMap
+        .map { EnvVar(it.key, it.value, null) }
+        .toList()
+
+    val secretEnvVars =
+      secretsEnvMap
+        .map { EnvVar(it.key, null, it.value) }
+        .toList()
+
+    return envVars + secretEnvVars
+  }
+
   /**
    * The list of env vars to be passed to the check sidecar container.
    */
@@ -70,8 +106,23 @@ class EnvVarConfigBeanFactory {
   }
 
   @Singleton
+  @Named("featureFlagEnvVars")
+  fun featureFlagEnvVars(
+    @Value("\${airbyte.feature-flag.client}") client: String,
+    @Value("\${airbyte.feature-flag.path}") path: String,
+    @Value("\${airbyte.feature-flag.api-key}") apiKey: String,
+  ): Map<String, String> {
+    val envMap: MutableMap<String, String> = HashMap()
+    envMap[AirbyteEnvVar.FEATURE_FLAG_CLIENT.toString()] = client
+    envMap[AirbyteEnvVar.FEATURE_FLAG_PATH.toString()] = path
+    envMap[AirbyteEnvVar.LAUNCHDARKLY_KEY.toString()] = apiKey
+
+    return envMap
+  }
+
+  @Singleton
   @Named("loggingEnvVars")
-  fun checkEnvVars(): Map<String, String> {
+  fun loggingEnvVars(): Map<String, String> {
     return mapOf(
       LOG_LEVEL.name to LOG_LEVEL.fetch("")!!,
       S3_PATH_STYLE_ACCESS.name to S3_PATH_STYLE_ACCESS.fetch("")!!,

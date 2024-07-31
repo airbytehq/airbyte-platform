@@ -114,6 +114,9 @@ airbyte:
           busybox: ${JOB_KUBE_BUSYBOX_IMAGE:`busybox:1.35`}
           curl: ${JOB_KUBE_CURL_IMAGE:`curlimages/curl:7.83.1`}
           socat: ${JOB_KUBE_SOCAT_IMAGE:`alpine/socat:1.7.4.3-r0`}
+        init:
+          container:
+            image-pull-policy: ${JOB_KUBE_INIT_CONTAINER_IMAGE_PULL_POLICY:IfNotPresent}
         main:
           container:
             image-pull-policy: ${JOB_KUBE_MAIN_CONTAINER_IMAGE_PULL_POLICY:IfNotPresent}

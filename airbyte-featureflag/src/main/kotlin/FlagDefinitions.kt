@@ -191,3 +191,5 @@ object EnforceEmailUniqueness : Temporary<Boolean>(key = "platform.enforce-email
 object RestrictLoginsForSSODomains : Temporary<Boolean>(key = "platform.restrict-logins-for-sso-domains", default = false)
 
 object ResetStreamsStateWhenDisabled : Temporary<Boolean>(key = "reset-stream-state-on-disable", default = false)
+
+object OrchestratorFetchesInputFromInit : Temporary<Boolean>(key = "orchestrator-fetches-from-init", default = false)

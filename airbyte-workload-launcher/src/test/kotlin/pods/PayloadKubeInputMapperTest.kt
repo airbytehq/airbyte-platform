@@ -7,7 +7,9 @@ import io.airbyte.config.ResourceRequirements
 import io.airbyte.config.StandardCheckConnectionInput
 import io.airbyte.config.StandardDiscoverCatalogInput
 import io.airbyte.config.WorkloadPriority
+import io.airbyte.featureflag.ContainerOrchestratorDevImage
 import io.airbyte.featureflag.InjectAwsSecretsToConnectorPods
+import io.airbyte.featureflag.OrchestratorFetchesInputFromInit
 import io.airbyte.featureflag.TestClient
 import io.airbyte.persistence.job.models.IntegrationLauncherConfig
 import io.airbyte.persistence.job.models.JobRunConfig
@@ -21,13 +23,13 @@ import io.airbyte.workers.process.AsyncOrchestratorPodProcess.KUBE_POD_INFO
 import io.airbyte.workers.process.KubeContainerInfo
 import io.airbyte.workers.process.KubePodInfo
 import io.airbyte.workers.process.Metadata.AWS_ASSUME_ROLE_EXTERNAL_ID
+import io.airbyte.workers.serde.ObjectSerializer
 import io.airbyte.workers.sync.OrchestratorConstants
 import io.airbyte.workload.launcher.model.getActorType
 import io.airbyte.workload.launcher.model.getAttemptId
 import io.airbyte.workload.launcher.model.getJobId
 import io.airbyte.workload.launcher.model.getOrchestratorResourceReqs
 import io.airbyte.workload.launcher.model.usesCustomConnector
-import io.airbyte.workload.launcher.serde.ObjectSerializer
 import io.fabric8.kubernetes.api.model.EnvVar
 import io.mockk.every
 import io.mockk.mockk
@@ -46,6 +48,9 @@ class PayloadKubeInputMapperTest {
   @ParameterizedTest
   @ValueSource(booleans = [true, false])
   fun `builds a kube input from a replication payload`(customConnector: Boolean) {
+    // I'm overloading this parameter to exercise the FF. The FF check will be removed shortly
+    val shouldKubeCpInput = customConnector
+
     val serializer: ObjectSerializer = mockk()
     val labeler: PodLabeler = mockk()
     val namespace = "test-namespace"
@@ -61,6 +66,9 @@ class PayloadKubeInputMapperTest {
     every { replConfigs.getworkerKubeNodeSelectors() } returns replSelectors
     every { replConfigs.workerIsolatedKubeNodeSelectors } returns Optional.of(replCustomSelectors)
     every { replConfigs.workerKubeAnnotations } returns mapOf("annotation" to "value2")
+    val ffClient: TestClient = mockk()
+    every { ffClient.stringVariation(ContainerOrchestratorDevImage, any()) } returns ""
+    every { ffClient.boolVariation(OrchestratorFetchesInputFromInit, any()) } returns !shouldKubeCpInput
 
     val mapper =
       PayloadKubeInputMapper(
@@ -74,7 +82,7 @@ class PayloadKubeInputMapperTest {
         checkConfigs,
         discoverConfigs,
         specConfigs,
-        TestClient(emptyMap()),
+        ffClient,
       )
     val input: ReplicationInput = mockk()
 
@@ -110,14 +118,16 @@ class PayloadKubeInputMapperTest {
     assert(result.destinationLabels == destinationLabels + sharedLabels)
     assert(result.nodeSelectors == if (customConnector) replCustomSelectors else replSelectors)
     assert(result.kubePodInfo == KubePodInfo(namespace, "orchestrator-repl-job-415-attempt-7654", containerInfo))
-    assert(
-      result.fileMap ==
-        mapOf(
-          OrchestratorConstants.INIT_FILE_JOB_RUN_CONFIG to mockSerializedOutput,
-          OrchestratorConstants.INIT_FILE_INPUT to mockSerializedOutput,
-          KUBE_POD_INFO to mockSerializedOutput,
-        ),
-    )
+    val expectedFileMap: Map<String, String> =
+      buildMap {
+        put(OrchestratorConstants.INIT_FILE_JOB_RUN_CONFIG, mockSerializedOutput)
+        if (shouldKubeCpInput) {
+          put(OrchestratorConstants.INIT_FILE_INPUT, mockSerializedOutput)
+        }
+        put(KUBE_POD_INFO, mockSerializedOutput)
+      }
+
+    assert(result.fileMap == expectedFileMap)
     assert(result.resourceReqs == resourceReqs)
     assert(result.extraEnv == listOf(EnvVar(AirbyteEnvVar.WORKLOAD_ID.toString(), workloadId, null)))
   }

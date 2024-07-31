@@ -10,6 +10,8 @@ import io.airbyte.config.ActorType
 import io.airbyte.config.StandardCheckConnectionInput
 import io.airbyte.config.StandardDiscoverCatalogInput
 import io.airbyte.config.WorkloadType
+import io.airbyte.featureflag.OrchestratorFetchesInputFromInit
+import io.airbyte.featureflag.TestClient
 import io.airbyte.persistence.job.models.ReplicationInput
 import io.airbyte.workers.CheckConnectionInputHydrator
 import io.airbyte.workers.DiscoverCatalogInputHydrator
@@ -18,25 +20,29 @@ import io.airbyte.workers.models.CheckConnectionInput
 import io.airbyte.workers.models.DiscoverCatalogInput
 import io.airbyte.workers.models.ReplicationActivityInput
 import io.airbyte.workers.models.SpecInput
+import io.airbyte.workers.serde.PayloadDeserializer
 import io.airbyte.workload.launcher.pipeline.stages.model.CheckPayload
 import io.airbyte.workload.launcher.pipeline.stages.model.DiscoverCatalogPayload
 import io.airbyte.workload.launcher.pipeline.stages.model.LaunchStageIO
 import io.airbyte.workload.launcher.pipeline.stages.model.SpecPayload
 import io.airbyte.workload.launcher.pipeline.stages.model.SyncPayload
-import io.airbyte.workload.launcher.serde.PayloadDeserializer
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.params.ParameterizedTest
+import org.junit.jupiter.params.provider.ValueSource
 import java.util.UUID
 
 class BuildInputStageTest {
-  @Test
-  fun `parses sync input and hydrates`() {
+  @ParameterizedTest
+  @ValueSource(booleans = [true, false])
+  fun `parses sync input and hydrates`(fetchFromInit: Boolean) {
     val inputStr = "foo"
     val sourceConfig = POJONode("bar")
     val destConfig = POJONode("baz")
     val unhydrated = ReplicationActivityInput()
+    unhydrated.connectionId = UUID.randomUUID()
     val hydrated =
       ReplicationInput()
         .withSourceConfiguration(sourceConfig)
@@ -46,8 +52,11 @@ class BuildInputStageTest {
     val discoverInputHydrator: DiscoverCatalogInputHydrator = mockk()
     val replicationInputHydrator: ReplicationInputHydrator = mockk()
     val deserializer: PayloadDeserializer = mockk()
+    val ffClient: TestClient = mockk()
     every { deserializer.toReplicationActivityInput(inputStr) } returns unhydrated
     every { replicationInputHydrator.getHydratedReplicationInput(unhydrated) } returns hydrated
+    every { replicationInputHydrator.mapActivityInputToReplInput(unhydrated) } returns hydrated
+    every { ffClient.boolVariation(OrchestratorFetchesInputFromInit, any()) } returns fetchFromInit
 
     val stage =
       BuildInputStage(
@@ -57,6 +66,7 @@ class BuildInputStageTest {
         deserializer,
         mockk(),
         "dataplane-id",
+        ffClient,
       )
     val io = LaunchStageIO(msg = RecordFixtures.launcherInput(workloadInput = inputStr, workloadType = WorkloadType.SYNC))
 
@@ -64,7 +74,15 @@ class BuildInputStageTest {
 
     verify {
       deserializer.toReplicationActivityInput(inputStr)
-      replicationInputHydrator.getHydratedReplicationInput(unhydrated)
+    }
+    if (fetchFromInit) {
+      verify {
+        replicationInputHydrator.mapActivityInputToReplInput(unhydrated)
+      }
+    } else {
+      verify {
+        replicationInputHydrator.getHydratedReplicationInput(unhydrated)
+      }
     }
 
     when (val payload = result.payload) {
@@ -109,6 +127,7 @@ class BuildInputStageTest {
         deserializer,
         mockk(),
         "dataplane-id",
+        TestClient(),
       )
     val io = LaunchStageIO(msg = RecordFixtures.launcherInput(workloadInput = inputStr, workloadType = WorkloadType.CHECK))
 
@@ -161,6 +180,7 @@ class BuildInputStageTest {
         deserializer,
         mockk(),
         "dataplane-id",
+        TestClient(),
       )
     val io = LaunchStageIO(msg = RecordFixtures.launcherInput(workloadInput = inputStr, workloadType = WorkloadType.DISCOVER))
 
@@ -196,6 +216,7 @@ class BuildInputStageTest {
         deserializer,
         mockk(),
         "dataplane-id",
+        TestClient(),
       )
     val io = LaunchStageIO(msg = RecordFixtures.launcherInput(workloadInput = inputStr, workloadType = WorkloadType.SPEC))
 

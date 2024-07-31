@@ -1,4 +1,4 @@
-package io.airbyte.workload.launcher.serde
+package io.airbyte.workers.serde
 
 import io.airbyte.commons.json.Jsons
 import jakarta.inject.Singleton

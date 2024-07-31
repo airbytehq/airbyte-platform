@@ -2,6 +2,9 @@ package io.airbyte.workload.launcher.pipeline.stages
 
 import datadog.trace.api.Trace
 import io.airbyte.config.WorkloadType
+import io.airbyte.featureflag.Connection
+import io.airbyte.featureflag.FeatureFlagClient
+import io.airbyte.featureflag.OrchestratorFetchesInputFromInit
 import io.airbyte.metrics.annotations.Instrument
 import io.airbyte.metrics.annotations.Tag
 import io.airbyte.persistence.job.models.ReplicationInput
@@ -12,6 +15,7 @@ import io.airbyte.workers.models.CheckConnectionInput
 import io.airbyte.workers.models.DiscoverCatalogInput
 import io.airbyte.workers.models.ReplicationActivityInput
 import io.airbyte.workers.models.SpecInput
+import io.airbyte.workers.serde.PayloadDeserializer
 import io.airbyte.workload.launcher.metrics.CustomMetricPublisher
 import io.airbyte.workload.launcher.metrics.MeterFilterFactory
 import io.airbyte.workload.launcher.pipeline.stages.model.CheckPayload
@@ -21,7 +25,6 @@ import io.airbyte.workload.launcher.pipeline.stages.model.LaunchStageIO
 import io.airbyte.workload.launcher.pipeline.stages.model.SpecPayload
 import io.airbyte.workload.launcher.pipeline.stages.model.SyncPayload
 import io.airbyte.workload.launcher.pipeline.stages.model.WorkloadPayload
-import io.airbyte.workload.launcher.serde.PayloadDeserializer
 import io.micronaut.context.annotation.Value
 import jakarta.inject.Named
 import jakarta.inject.Singleton
@@ -41,6 +44,7 @@ open class BuildInputStage(
   private val deserializer: PayloadDeserializer,
   metricPublisher: CustomMetricPublisher,
   @Value("\${airbyte.data-plane-id}") dataplaneId: String,
+  private val featureFlagClient: FeatureFlagClient,
 ) : LaunchStage(metricPublisher, dataplaneId) {
   @Trace(operationName = MeterFilterFactory.LAUNCH_PIPELINE_STAGE_OPERATION_NAME, resourceName = "BuildInputStage")
   @Instrument(
@@ -86,7 +90,12 @@ open class BuildInputStage(
 
       WorkloadType.SYNC -> {
         val parsed: ReplicationActivityInput = deserializer.toReplicationActivityInput(rawPayload)
-        val hydrated: ReplicationInput = replicationInputHydrator.getHydratedReplicationInput(parsed)
+        val hydrated: ReplicationInput =
+          if (featureFlagClient.boolVariation(OrchestratorFetchesInputFromInit, Connection(parsed.connectionId))) {
+            replicationInputHydrator.mapActivityInputToReplInput(parsed)
+          } else {
+            replicationInputHydrator.getHydratedReplicationInput(parsed)
+          }
         SyncPayload(hydrated)
       }
 

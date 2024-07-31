@@ -4,6 +4,7 @@ import io.airbyte.config.ResourceRequirements
 import io.airbyte.featureflag.ANONYMOUS
 import io.airbyte.featureflag.Connection
 import io.airbyte.featureflag.FeatureFlagClient
+import io.airbyte.featureflag.OrchestratorFetchesInputFromInit
 import io.airbyte.featureflag.UseCustomK8sScheduler
 import io.airbyte.workers.process.KubePodInfo
 import io.airbyte.workers.process.KubePodProcess
@@ -45,7 +46,7 @@ class OrchestratorPodFactory(
     nodeSelectors: Map<String, String>,
     kubePodInfo: KubePodInfo,
     annotations: Map<String, String>,
-    extraEnvVars: List<EnvVar>,
+    runtimeEnvVars: List<EnvVar>,
   ): Pod {
     val volumes: MutableList<Volume> = ArrayList()
     val volumeMounts: MutableList<VolumeMount> = ArrayList()
@@ -68,7 +69,14 @@ class OrchestratorPodFactory(
 
     val containerResources = KubePodProcess.getResourceRequirementsBuilder(resourceRequirements).build()
 
-    val initContainer = initContainerFactory.create(containerResources, volumeMounts)
+    val envVars = orchestratorEnvSingleton.orchestratorEnvVars(connectionId) + runtimeEnvVars
+
+    val initContainer =
+      if (featureFlagClient.boolVariation(OrchestratorFetchesInputFromInit, Connection(connectionId))) {
+        initContainerFactory.createFetching(containerResources, volumeMounts, runtimeEnvVars)
+      } else {
+        initContainerFactory.createWaiting(containerResources, volumeMounts)
+      }
 
     val mainContainer =
       ContainerBuilder()
@@ -76,7 +84,7 @@ class OrchestratorPodFactory(
         .withImage(kubePodInfo.mainContainerInfo.image)
         .withImagePullPolicy(kubePodInfo.mainContainerInfo.pullPolicy)
         .withResources(containerResources)
-        .withEnv(orchestratorEnvSingleton.orchestratorEnvVars(connectionId) + extraEnvVars)
+        .withEnv(envVars)
         .withPorts(containerPorts)
         .withVolumeMounts(volumeMounts)
         .withSecurityContext(containerSecurityContext())

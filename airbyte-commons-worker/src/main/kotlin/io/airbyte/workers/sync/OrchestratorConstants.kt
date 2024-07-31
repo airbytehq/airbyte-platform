@@ -13,8 +13,6 @@ private const val LOG_LEVEL = "LOG_LEVEL"
 
 // necessary for s3/minio logging. used in the log4j2 configuration.
 private const val S3_PATH_STYLE_ACCESS = "S3_PATH_STYLE_ACCESS"
-private const val FEATURE_FLAG_CLIENT = "FEATURE_FLAG_CLIENT"
-private const val FEATURE_FLAG_PATH = "FEATURE_FLAG_PATH"
 
 object OrchestratorConstants {
   const val JOB_OUTPUT_FILENAME = "jobOutput.json"
@@ -47,8 +45,8 @@ object OrchestratorConstants {
       // add variables defined in this file
       addAll(
         setOf(
-          FEATURE_FLAG_CLIENT,
-          FEATURE_FLAG_PATH,
+          EnvVar.FEATURE_FLAG_CLIENT.toString(),
+          EnvVar.FEATURE_FLAG_PATH.toString(),
           LOG_LEVEL,
           S3_PATH_STYLE_ACCESS,
         ),
