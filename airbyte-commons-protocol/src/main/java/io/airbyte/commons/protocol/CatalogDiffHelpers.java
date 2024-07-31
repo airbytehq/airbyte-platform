@@ -286,7 +286,7 @@ public class CatalogDiffHelpers {
     // Sets are used to compare the PKs in a way that ignores order
     final Set<List<String>> oldPKSet = Set.copyOf(streamConfig.getPrimaryKey());
     final Set<List<String>> newPKSet = Set.copyOf(newSourceDefinedPK);
-    return DestinationSyncMode.APPEND_DEDUP == destinationSyncMode && !oldPKSet.equals(newPKSet);
+    return isDedup(destinationSyncMode) && !oldPKSet.equals(newPKSet);
   }
 
   static boolean fieldTransformBreaksConnection(final Optional<ConfiguredAirbyteStream> configuredStream,
@@ -303,11 +303,15 @@ public class CatalogDiffHelpers {
     }
 
     final DestinationSyncMode destinationSyncMode = streamConfig.getDestinationSyncMode();
-    if (DestinationSyncMode.APPEND_DEDUP == destinationSyncMode && streamConfig.getPrimaryKey()
+    if (isDedup(destinationSyncMode) && streamConfig.getPrimaryKey()
         .contains(fieldName)) {
       return true;
     }
     return false;
+  }
+
+  public static boolean isDedup(final DestinationSyncMode syncMode) {
+    return DestinationSyncMode.APPEND_DEDUP == syncMode || DestinationSyncMode.OVERWRITE_DEDUP == syncMode;
   }
 
 }

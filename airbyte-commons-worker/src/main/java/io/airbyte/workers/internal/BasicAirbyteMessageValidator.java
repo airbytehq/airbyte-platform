@@ -5,9 +5,9 @@
 package io.airbyte.workers.internal;
 
 import com.google.common.collect.Iterables;
+import io.airbyte.commons.protocol.CatalogDiffHelpers;
 import io.airbyte.config.ConfiguredAirbyteCatalog;
 import io.airbyte.config.ConfiguredAirbyteStream;
-import io.airbyte.config.DestinationSyncMode;
 import io.airbyte.config.SyncMode;
 import io.airbyte.protocol.models.AirbyteMessage;
 import io.airbyte.workers.helper.AirbyteMessageExtractor;
@@ -63,7 +63,7 @@ public class BasicAirbyteMessageValidator {
             throw new SourceException(String.format("Missing catalog stream for the stream (namespace: %s, name: %s",
                 record.getStream(), record.getNamespace()));
           } else if (catalogStream.get().getSyncMode().equals(SyncMode.INCREMENTAL)
-              && catalogStream.get().getDestinationSyncMode().equals(DestinationSyncMode.APPEND_DEDUP)) {
+              && CatalogDiffHelpers.isDedup(catalogStream.get().getDestinationSyncMode())) {
             // required PKs
             final List<List<String>> pksList = AirbyteMessageExtractor.getPks(catalogStream);
             if (pksList.isEmpty()) {

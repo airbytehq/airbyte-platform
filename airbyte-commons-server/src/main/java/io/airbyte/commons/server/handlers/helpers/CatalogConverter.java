@@ -166,7 +166,8 @@ public class CatalogConverter {
           && !selectedFieldNames.contains(config.getCursorField().get(0))) { // The cursor isn't in the selected fields.
         throw new JsonValidationException("Cursor field cannot be de-selected in INCREMENTAL syncs");
       }
-      if (config.getDestinationSyncMode().equals(DestinationSyncMode.APPEND_DEDUP)) {
+      if (config.getDestinationSyncMode().equals(DestinationSyncMode.APPEND_DEDUP)
+          || config.getDestinationSyncMode().equals(DestinationSyncMode.OVERWRITE_DEDUP)) {
         for (final List<String> primaryKeyComponent : config.getPrimaryKey()) {
           if (!selectedFieldNames.contains(primaryKeyComponent.get(0))) {
             throw new JsonValidationException("Primary key field cannot be de-selected in DEDUP mode");

@@ -262,10 +262,14 @@ class CatalogDiffHelpersTest {
         Arguments.of(DestinationSyncMode.APPEND_DEDUP, ID_PK, ID_PK, DATE_PK, true),
         Arguments.of(DestinationSyncMode.APPEND_DEDUP, ID_PK, List.of(), DATE_PK, true),
         Arguments.of(DestinationSyncMode.APPEND_DEDUP, COMPOSITE_PK, COMPOSITE_PK, ID_PK, true),
+        Arguments.of(DestinationSyncMode.OVERWRITE_DEDUP, ID_PK, ID_PK, DATE_PK, true),
+        Arguments.of(DestinationSyncMode.OVERWRITE_DEDUP, ID_PK, List.of(), DATE_PK, true),
+        Arguments.of(DestinationSyncMode.OVERWRITE_DEDUP, COMPOSITE_PK, COMPOSITE_PK, ID_PK, true),
 
         // Should not be breaking in DE-DUP mode if the previous and new source-defined PK contain the
         // fields in a different order
         Arguments.of(DestinationSyncMode.APPEND_DEDUP, COMPOSITE_PK, COMPOSITE_PK, COMPOSITE_PK.reversed(), false),
+        Arguments.of(DestinationSyncMode.OVERWRITE_DEDUP, COMPOSITE_PK, COMPOSITE_PK, COMPOSITE_PK.reversed(), false),
 
         // Should not be breaking in other sync modes
         Arguments.of(DestinationSyncMode.APPEND, ID_PK, ID_PK, DATE_PK, false),
@@ -279,11 +283,13 @@ class CatalogDiffHelpersTest {
         Arguments.of(DestinationSyncMode.APPEND, ID_PK, List.of(), ID_PK, false),
         Arguments.of(DestinationSyncMode.APPEND_DEDUP, ID_PK, List.of(), ID_PK, false),
         Arguments.of(DestinationSyncMode.OVERWRITE, ID_PK, List.of(), ID_PK, false),
+        Arguments.of(DestinationSyncMode.OVERWRITE_DEDUP, ID_PK, List.of(), ID_PK, false),
 
         // Removing source-defined PK should not be breaking
         Arguments.of(DestinationSyncMode.APPEND, ID_PK, ID_PK, List.of(), false),
         Arguments.of(DestinationSyncMode.APPEND_DEDUP, ID_PK, ID_PK, List.of(), false),
-        Arguments.of(DestinationSyncMode.OVERWRITE, ID_PK, ID_PK, List.of(), false));
+        Arguments.of(DestinationSyncMode.OVERWRITE, ID_PK, ID_PK, List.of(), false),
+        Arguments.of(DestinationSyncMode.OVERWRITE_DEDUP, ID_PK, ID_PK, List.of(), false));
   }
 
   @ParameterizedTest
