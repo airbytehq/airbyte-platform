@@ -13,6 +13,7 @@ import io.micronaut.context.annotation.Value;
 import io.micronaut.runtime.Micronaut;
 import jakarta.inject.Singleton;
 import java.lang.invoke.MethodHandles;
+import java.util.Optional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -49,11 +50,11 @@ public class Application {
 
   private final String application;
   private final JobOrchestrator<?> jobOrchestrator;
-  private final AsyncStateManager asyncStateManager;
+  private final Optional<AsyncStateManager> asyncStateManager;
 
   public Application(@Value("${airbyte.application}") final String application,
                      final JobOrchestrator<?> jobOrchestrator,
-                     final AsyncStateManager asyncStateManager) {
+                     final Optional<AsyncStateManager> asyncStateManager) {
     this.application = application;
     this.jobOrchestrator = jobOrchestrator;
     this.asyncStateManager = asyncStateManager;
@@ -74,11 +75,12 @@ public class Application {
         .setPrefixColor(LoggingHelper.Color.CYAN_BACKGROUND)
         .build()) {
 
-      asyncStateManager.write(AsyncKubePodStatus.INITIALIZING);
-      asyncStateManager.write(AsyncKubePodStatus.SUCCEEDED, jobOrchestrator.runJob().orElse(""));
+      asyncStateManager.ifPresent(manager -> manager.write(AsyncKubePodStatus.INITIALIZING));
+      final String result = jobOrchestrator.runJob().orElse("");
+      asyncStateManager.ifPresent(manager -> manager.write(AsyncKubePodStatus.SUCCEEDED, result));
     } catch (final Throwable t) {
       log.error("Killing orchestrator because of an Exception", t);
-      asyncStateManager.write(AsyncKubePodStatus.FAILED);
+      asyncStateManager.ifPresent(manager -> manager.write((AsyncKubePodStatus.FAILED)));
       return 1;
     }
 

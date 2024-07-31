@@ -19,7 +19,6 @@ import io.airbyte.workers.models.DiscoverCatalogInput
 import io.airbyte.workers.models.SidecarInput
 import io.airbyte.workers.models.SpecInput
 import io.airbyte.workers.orchestrator.PodNameGenerator
-import io.airbyte.workers.process.AsyncOrchestratorPodProcess.KUBE_POD_INFO
 import io.airbyte.workers.process.KubeContainerInfo
 import io.airbyte.workers.process.KubePodInfo
 import io.airbyte.workers.process.Metadata.AWS_ASSUME_ROLE_EXTERNAL_ID
@@ -124,7 +123,6 @@ class PayloadKubeInputMapperTest {
         if (shouldKubeCpInput) {
           put(OrchestratorConstants.INIT_FILE_INPUT, mockSerializedOutput)
         }
-        put(KUBE_POD_INFO, mockSerializedOutput)
       }
 
     assert(result.fileMap == expectedFileMap)

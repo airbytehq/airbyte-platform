@@ -8,6 +8,8 @@ import com.google.common.annotations.VisibleForTesting;
 import io.airbyte.workers.process.AsyncKubePodStatus;
 import io.airbyte.workers.process.KubePodInfo;
 import io.airbyte.workers.storage.StorageClient;
+import io.airbyte.workers.workload.WorkloadConstants;
+import io.micronaut.context.annotation.Requires;
 import jakarta.inject.Named;
 import jakarta.inject.Singleton;
 import java.lang.invoke.MethodHandles;
@@ -21,8 +23,13 @@ import org.slf4j.LoggerFactory;
  * <p>
  * It doesn't have a single value for a state. Instead, in a location on cloud storage or disk, it
  * writes every state it's encountered.
+ *
+ * @deprecated This class is used by Worker V1 and has been disabled in Worker V2. It will be
+ *             removed once all releases are converted to use Worker V2.
  */
+@Deprecated
 @Singleton
+@Requires(notEnv = WorkloadConstants.WORKER_V2_MICRONAUT_ENV)
 public class AsyncStateManager {
 
   private static final Logger log = LoggerFactory.getLogger(MethodHandles.lookup().lookupClass());

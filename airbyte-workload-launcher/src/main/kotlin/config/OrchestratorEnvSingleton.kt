@@ -67,16 +67,15 @@ class OrchestratorEnvSingleton(
     // Metrics configuration
     envMap.putAll(metricsEnvMap)
 
-    // Micronaut environment
-    envMap.putAll(micronautEnvMap)
-
     // TODO: Don't do this. Be explicit about what env vars we pass.
     // Copy over all local values
     val localEnvMap =
       System.getenv()
         .filter { OrchestratorConstants.ENV_VARS_TO_TRANSFER.contains(it.key) }
-
     envMap.putAll(localEnvMap)
+
+    // Micronaut environment -- this needs to be last to ensure that it is included.
+    envMap.putAll(micronautEnvMap)
 
     return envMap
   }

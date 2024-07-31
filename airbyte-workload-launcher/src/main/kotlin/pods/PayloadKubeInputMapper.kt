@@ -18,7 +18,6 @@ import io.airbyte.workers.models.SidecarInput
 import io.airbyte.workers.models.SidecarInput.OperationType
 import io.airbyte.workers.models.SpecInput
 import io.airbyte.workers.orchestrator.PodNameGenerator
-import io.airbyte.workers.process.AsyncOrchestratorPodProcess.KUBE_POD_INFO
 import io.airbyte.workers.process.KubeContainerInfo
 import io.airbyte.workers.process.KubePodInfo
 import io.airbyte.workers.process.Metadata.AWS_ASSUME_ROLE_EXTERNAL_ID
@@ -72,7 +71,7 @@ class PayloadKubeInputMapper(
     val orchestratorReqs = input.getOrchestratorResourceReqs()
     val nodeSelectors = getNodeSelectors(input.usesCustomConnector(), replicationWorkerConfigs)
 
-    val fileMap = buildSyncFileMap(input, input.jobRunConfig, orchestratorPodInfo)
+    val fileMap = buildSyncFileMap(input, input.jobRunConfig)
 
     return OrchestratorKubeInput(
       labeler.getReplicationOrchestratorLabels() + sharedLabels,
@@ -250,14 +249,12 @@ class PayloadKubeInputMapper(
   private fun buildSyncFileMap(
     input: ReplicationInput,
     jobRunConfig: JobRunConfig,
-    kubePodInfo: KubePodInfo,
   ): Map<String, String> {
     return buildMap {
       if (!featureFlagClient.boolVariation(OrchestratorFetchesInputFromInit, Connection(input.connectionId))) {
         put(OrchestratorConstants.INIT_FILE_INPUT, serializer.serialize(input))
       }
       put(OrchestratorConstants.INIT_FILE_JOB_RUN_CONFIG, serializer.serialize(jobRunConfig))
-      put(KUBE_POD_INFO, serializer.serialize(kubePodInfo))
     }
   }
 
