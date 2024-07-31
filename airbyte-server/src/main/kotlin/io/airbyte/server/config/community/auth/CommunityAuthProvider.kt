@@ -3,9 +3,12 @@
  */
 package io.airbyte.server.config.community.auth
 
+import io.airbyte.api.problems.model.generated.ProblemMessageData
+import io.airbyte.api.problems.throwable.generated.ForbiddenProblem
 import io.airbyte.commons.auth.RequiresAuthMode
 import io.airbyte.commons.auth.config.AuthMode
 import io.airbyte.commons.server.support.RbacRoleHelper
+import io.airbyte.config.persistence.OrganizationPersistence
 import io.airbyte.config.persistence.UserPersistence
 import io.airbyte.data.config.InstanceAdminConfig
 import io.micronaut.http.HttpRequest
@@ -24,12 +27,21 @@ const val SESSION_ID = "sessionId"
 @RequiresAuthMode(AuthMode.SIMPLE)
 class CommunityAuthProvider<B>(
   private val instanceAdminConfig: InstanceAdminConfig,
+  private val organizationPersistence: OrganizationPersistence,
 ) : HttpRequestAuthenticationProvider<B> {
   override fun authenticate(
     requestContext: HttpRequest<B>?,
     authRequest: AuthenticationRequest<String, String>,
   ): AuthenticationResponse? {
-    if (authRequest.identity == instanceAdminConfig.username && authRequest.secret == instanceAdminConfig.password) {
+    // The authRequest identity must match the default organization's email address that
+    // was collected during the instanceConfiguration step.
+    val defaultOrgEmail =
+      organizationPersistence.defaultOrganization
+        .orElseThrow {
+          ForbiddenProblem(ProblemMessageData().message("Default organization not found. Cannot authenticate."))
+        }.email
+
+    if (authRequest.identity == defaultOrgEmail && authRequest.secret == instanceAdminConfig.password) {
       val sessionId = UUID.randomUUID()
       val authenticationResponse =
         AuthenticationResponse.success(

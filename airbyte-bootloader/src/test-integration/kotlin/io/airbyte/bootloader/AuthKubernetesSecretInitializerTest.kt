@@ -22,12 +22,10 @@ import org.junit.jupiter.api.Test
 import java.util.Base64
 
 private const val SECRET_NAME = "test-secret"
-private const val USERNAME_KEY = "username"
 private const val PASSWORD_KEY = "password"
 private const val CLIENT_ID_KEY = "clientId"
 private const val CLIENT_SECRET_KEY = "clientSecret"
 private const val JWT_SIGNATURE_KEY = "jwtSignature"
-private const val PROVIDED_USERNAME_VALUE = "admin"
 private const val PROVIDED_PASSWORD_VALUE = "hunter2"
 private const val PROVIDED_CLIENT_ID_VALUE = "myClientId"
 private const val PROVIDED_CLIENT_SECRET_VALUE = "myClientSecret"
@@ -86,8 +84,7 @@ class AuthKubernetesSecretInitializerTest {
     verify { mockKubernetesClient.resource(capture(secretSlot)) }
     val capturedSecret = secretSlot.captured
     assertEquals(SECRET_NAME, capturedSecret.metadata.name)
-    assertEquals(5, capturedSecret.data.size)
-    assertEquals(Base64.getEncoder().encodeToString(PROVIDED_USERNAME_VALUE.toByteArray()), capturedSecret.data[USERNAME_KEY])
+    assertEquals(4, capturedSecret.data.size)
     assertEquals(Base64.getEncoder().encodeToString(PROVIDED_PASSWORD_VALUE.toByteArray()), capturedSecret.data[PASSWORD_KEY])
     assertEquals(Base64.getEncoder().encodeToString(PROVIDED_CLIENT_ID_VALUE.toByteArray()), capturedSecret.data[CLIENT_ID_KEY])
     assertEquals(Base64.getEncoder().encodeToString(PROVIDED_CLIENT_SECRET_VALUE.toByteArray()), capturedSecret.data[CLIENT_SECRET_KEY])
@@ -115,8 +112,7 @@ class AuthKubernetesSecretInitializerTest {
     verify { mockKubernetesClient.resource(capture(secretSlot)) }
     val capturedSecret = secretSlot.captured
     assertEquals(SECRET_NAME, capturedSecret.metadata.name)
-    assertEquals(5, capturedSecret.data.size)
-    assertEquals(Base64.getEncoder().encodeToString(PROVIDED_USERNAME_VALUE.toByteArray()), capturedSecret.data[USERNAME_KEY])
+    assertEquals(4, capturedSecret.data.size)
     assertEquals(Base64.getEncoder().encodeToString(PROVIDED_PASSWORD_VALUE.toByteArray()), capturedSecret.data[PASSWORD_KEY])
     assertEquals(Base64.getEncoder().encodeToString(PROVIDED_CLIENT_ID_VALUE.toByteArray()), capturedSecret.data[CLIENT_ID_KEY])
     assertEquals(Base64.getEncoder().encodeToString(PROVIDED_CLIENT_SECRET_VALUE.toByteArray()), capturedSecret.data[CLIENT_SECRET_KEY])
@@ -135,11 +131,10 @@ class AuthKubernetesSecretInitializerTest {
         .withNewMetadata()
         .withName(SECRET_NAME)
         .endMetadata()
-        // username is already set in the secret, so it should persist through the update as it
-        // was not provided.
-        .addToData(USERNAME_KEY, Base64.getEncoder().encodeToString("preExistingUsername".toByteArray()))
         // clientId is already set in the secret, but a new value was provided, so it should be updated.
         .addToData(CLIENT_ID_KEY, Base64.getEncoder().encodeToString("preExistingClientId".toByteArray()))
+        // clientSecret is already set in the secret, and no new value was provided, so it should remain the same.
+        .addToData(CLIENT_SECRET_KEY, Base64.getEncoder().encodeToString(PROVIDED_CLIENT_SECRET_VALUE.toByteArray()))
         .build()
     every { mockKubernetesClient.secrets().withName(any()).get() } returns existingSecret
     every { mockKubernetesClient.resource(any<Secret>()) } returns mockResource
@@ -154,8 +149,7 @@ class AuthKubernetesSecretInitializerTest {
     verify { mockKubernetesClient.resource(capture(secretSlot)) }
     val capturedSecret = secretSlot.captured
     assertEquals(SECRET_NAME, capturedSecret.metadata.name)
-    assertEquals(5, capturedSecret.data.size)
-    assertEquals(Base64.getEncoder().encodeToString("preExistingUsername".toByteArray()), capturedSecret.data[USERNAME_KEY])
+    assertEquals(4, capturedSecret.data.size)
     assertEquals(Base64.getEncoder().encodeToString(randomPassword.toByteArray()), capturedSecret.data[PASSWORD_KEY])
     assertEquals(Base64.getEncoder().encodeToString(PROVIDED_CLIENT_ID_VALUE.toByteArray()), capturedSecret.data[CLIENT_ID_KEY])
     assertEquals(Base64.getEncoder().encodeToString(PROVIDED_CLIENT_SECRET_VALUE.toByteArray()), capturedSecret.data[CLIENT_SECRET_KEY])
@@ -166,7 +160,6 @@ class AuthKubernetesSecretInitializerTest {
   }
 
   private fun setupProvidedSecretValuesConfigWithoutPassword() {
-    every { mockProvidedSecretValuesConfig.instanceAdminUsername } returns null
     every { mockProvidedSecretValuesConfig.instanceAdminPassword } returns null
     every { mockProvidedSecretValuesConfig.instanceAdminClientId } returns PROVIDED_CLIENT_ID_VALUE
     every { mockProvidedSecretValuesConfig.instanceAdminClientSecret } returns PROVIDED_CLIENT_SECRET_VALUE
@@ -174,7 +167,6 @@ class AuthKubernetesSecretInitializerTest {
   }
 
   private fun setupSecretKeysConfig() {
-    every { mockSecretKeysConfig.instanceAdminUsernameSecretKey } returns USERNAME_KEY
     every { mockSecretKeysConfig.instanceAdminPasswordSecretKey } returns PASSWORD_KEY
     every { mockSecretKeysConfig.instanceAdminClientIdSecretKey } returns CLIENT_ID_KEY
     every { mockSecretKeysConfig.instanceAdminClientSecretSecretKey } returns CLIENT_SECRET_KEY
@@ -182,7 +174,6 @@ class AuthKubernetesSecretInitializerTest {
   }
 
   private fun setupProvidedSecretValuesConfig() {
-    every { mockProvidedSecretValuesConfig.instanceAdminUsername } returns PROVIDED_USERNAME_VALUE
     every { mockProvidedSecretValuesConfig.instanceAdminPassword } returns PROVIDED_PASSWORD_VALUE
     every { mockProvidedSecretValuesConfig.instanceAdminClientId } returns PROVIDED_CLIENT_ID_VALUE
     every { mockProvidedSecretValuesConfig.instanceAdminClientSecret } returns PROVIDED_CLIENT_SECRET_VALUE

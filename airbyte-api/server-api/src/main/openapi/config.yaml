@@ -11778,6 +11778,7 @@ components:
         - airbyteUrl
         - auth
         - defaultOrganizationId
+        - defaultOrganizationEmail
         - defaultUserId
         - defaultWorkspaceId
         - edition
@@ -11811,6 +11812,9 @@ components:
         defaultOrganizationId:
           type: string
           format: uuid
+        defaultOrganizationEmail:
+          type: string
+          format: email
         defaultWorkspaceId:
           type: string
           format: uuid

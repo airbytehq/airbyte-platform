@@ -14,8 +14,7 @@ import java.util.UUID
 
 private val logger = KotlinLogging.logger {}
 
-const val SECRET_LENGTH = 16
-private const val DEFAULT_USERNAME_VALUE = "airbyte"
+const val SECRET_LENGTH = 32
 
 @Singleton
 @Requires(env = [Environment.KUBERNETES])
@@ -48,12 +47,6 @@ class AuthKubernetesSecretInitializer(
   }
 
   private fun getSecretDataMap(): Map<String, String> {
-    val usernameValue =
-      getOrCreateSecretEncodedValue(
-        secretKeysConfig.instanceAdminUsernameSecretKey,
-        providedSecretValuesConfig.instanceAdminUsername,
-        DEFAULT_USERNAME_VALUE,
-      )
     val passwordValue =
       getOrCreateSecretEncodedValue(
         secretKeysConfig.instanceAdminPasswordSecretKey,
@@ -76,10 +69,9 @@ class AuthKubernetesSecretInitializer(
       getOrCreateSecretEncodedValue(
         secretKeysConfig.jwtSignatureSecretKey,
         providedSecretValuesConfig.jwtSignatureSecret,
-        UUID.randomUUID().toString(),
+        RandomStringUtils.randomAlphanumeric(SECRET_LENGTH),
       )
     return mapOf(
-      secretKeysConfig.instanceAdminUsernameSecretKey!! to usernameValue,
       secretKeysConfig.instanceAdminPasswordSecretKey!! to passwordValue,
       secretKeysConfig.instanceAdminClientIdSecretKey!! to clientIdValue,
       secretKeysConfig.instanceAdminClientSecretSecretKey!! to clientSecretValue,
@@ -115,7 +107,6 @@ class AuthKubernetesSecretInitializer(
 
 @ConfigurationProperties("airbyte.auth.kubernetes-secret.keys")
 open class AuthKubernetesSecretKeysConfig {
-  var instanceAdminUsernameSecretKey: String? = null
   var instanceAdminPasswordSecretKey: String? = null
   var instanceAdminClientIdSecretKey: String? = null
   var instanceAdminClientSecretSecretKey: String? = null
@@ -124,7 +115,6 @@ open class AuthKubernetesSecretKeysConfig {
 
 @ConfigurationProperties("airbyte.auth.kubernetes-secret.values")
 open class AuthKubernetesSecretValuesConfig {
-  var instanceAdminUsername: String? = null
   var instanceAdminPassword: String? = null
   var instanceAdminClientId: String? = null
   var instanceAdminClientSecret: String? = null

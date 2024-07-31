@@ -234,12 +234,7 @@ spec:
               key: WORKLOAD_API_SERVER_ENABLED
 
         {{- if and (eq .Values.global.edition "community") .Values.global.auth.enabled }}
-        # Values for Airbyte auth secrets/credentials in Community edition
-        - name: AB_INSTANCE_ADMIN_USERNAME
-          valueFrom:
-            secretKeyRef:
-              name: {{ .Values.global.auth.secretName | default "airbyte-auth-secrets" | quote }}
-              key: {{ .Values.global.auth.instanceAdmin.usernameSecretKey | default "instance-admin-username" | quote }}
+        # Values for Airbyte auth configurations, secrets, and credentials in Community edition
         - name: AB_INSTANCE_ADMIN_PASSWORD
           valueFrom:
             secretKeyRef:
@@ -260,6 +255,10 @@ spec:
             secretKeyRef:
               name: {{ .Values.global.auth.secretName | default "airbyte-auth-secrets" | quote }}
               key: {{ .Values.global.auth.jwtSignatureSecretKey | default "jwt-signature-secret" | quote }}
+        - name: AB_COOKIE_SECURE
+          value: {{ .Values.global.auth.cookieSecureSetting | default "true" | quote }}
+        - name: AB_COOKIE_SAME_SITE
+          value: {{ .Values.global.auth.cookieSameSiteSetting | default "Strict" | quote }}
         {{- end }}
 
         # SECRETS MANAGER

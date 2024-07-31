@@ -76,7 +76,7 @@ public class InstanceConfigurationHandler {
   }
 
   public InstanceConfigurationResponse getInstanceConfiguration() throws IOException {
-    final UUID defaultOrganizationId = getDefaultOrganizationId();
+    final Organization defaultOrganization = getDefaultOrganization();
     final Boolean initialSetupComplete = workspacePersistence.getInitialSetupComplete();
 
     return new InstanceConfigurationResponse()
@@ -87,18 +87,23 @@ public class InstanceConfigurationHandler {
         .auth(getAuthConfiguration())
         .initialSetupComplete(initialSetupComplete)
         .defaultUserId(getDefaultUserId())
-        .defaultOrganizationId(defaultOrganizationId)
+        .defaultOrganizationId(defaultOrganization.getOrganizationId())
+        .defaultOrganizationEmail(defaultOrganization.getEmail())
         .trackingStrategy("segment".equalsIgnoreCase(trackingStrategy) ? TrackingStrategyEnum.SEGMENT : TrackingStrategyEnum.LOGGING);
   }
 
   public InstanceConfigurationResponse setupInstanceConfiguration(final InstanceConfigurationSetupRequestBody requestBody)
       throws IOException, JsonValidationException, ConfigNotFoundException {
 
-    final UUID defaultOrganizationId = getDefaultOrganizationId();
-    final StandardWorkspace defaultWorkspace = getDefaultWorkspace(defaultOrganizationId);
+    final Organization defaultOrganization = getDefaultOrganization();
+    final StandardWorkspace defaultWorkspace = getDefaultWorkspace(defaultOrganization.getOrganizationId());
 
-    // Update the default organization and user with the provided information
+    // Update the default organization and user with the provided information.
+    // note that this is important especially for Community edition w/ Auth enabled,
+    // because the login email must match the default organization's saved email in
+    // order to login successfully.
     updateDefaultOrganization(requestBody);
+
     updateDefaultUser(requestBody);
 
     // Update the underlying workspace to mark the initial setup as complete
@@ -154,10 +159,9 @@ public class InstanceConfigurationHandler {
     userPersistence.writeUser(defaultUser);
   }
 
-  private UUID getDefaultOrganizationId() throws IOException {
+  private Organization getDefaultOrganization() throws IOException {
     return organizationPersistence.getDefaultOrganization()
-        .orElseThrow(() -> new IllegalStateException("Default organization does not exist."))
-        .getOrganizationId();
+        .orElseThrow(() -> new IllegalStateException("Default organization does not exist."));
   }
 
   private void updateDefaultOrganization(final InstanceConfigurationSetupRequestBody requestBody) throws IOException {
