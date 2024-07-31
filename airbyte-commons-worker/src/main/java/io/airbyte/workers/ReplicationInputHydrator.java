@@ -22,8 +22,8 @@ import io.airbyte.api.client.model.generated.ScopeType;
 import io.airbyte.api.client.model.generated.SecretPersistenceConfig;
 import io.airbyte.api.client.model.generated.SecretPersistenceConfigGetRequestBody;
 import io.airbyte.api.client.model.generated.StreamAttemptMetadata;
+import io.airbyte.commons.converters.ApiClientConverters;
 import io.airbyte.commons.converters.CatalogClientConverters;
-import io.airbyte.commons.converters.ProtocolConverters;
 import io.airbyte.commons.converters.StateConverter;
 import io.airbyte.commons.enums.Enums;
 import io.airbyte.commons.helper.DockerImageName;
@@ -260,7 +260,7 @@ public class ReplicationInputHydrator {
         && jobInfo.getJob().getResetConfig().getStreamsToReset() != null;
     if (hasStreamsToReset) {
       final var streamsToReset =
-          jobInfo.getJob().getResetConfig().getStreamsToReset().stream().map(ProtocolConverters::clientStreamDescriptorToDomain).toList();
+          jobInfo.getJob().getResetConfig().getStreamsToReset().stream().map(ApiClientConverters::toInternal).toList();
       CatalogTransforms.updateCatalogForReset(streamsToReset, catalog);
     }
   }

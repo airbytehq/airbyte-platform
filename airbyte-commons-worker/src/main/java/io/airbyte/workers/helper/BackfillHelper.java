@@ -8,7 +8,6 @@ import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import io.airbyte.api.client.model.generated.ConnectionRead;
 import io.airbyte.api.client.model.generated.SchemaChangeBackfillPreference;
 import io.airbyte.commons.converters.CatalogClientConverters;
-import io.airbyte.commons.converters.ProtocolConverters;
 import io.airbyte.config.CatalogDiff;
 import io.airbyte.config.ConfiguredAirbyteCatalog;
 import io.airbyte.config.ConfiguredAirbyteStream;
@@ -21,6 +20,7 @@ import io.airbyte.config.StreamDescriptor;
 import io.airbyte.config.StreamSyncStats;
 import io.airbyte.config.StreamTransform;
 import io.airbyte.config.SyncMode;
+import io.airbyte.config.helpers.ProtocolConverters;
 import io.airbyte.config.helpers.StateMessageHelper;
 import io.airbyte.protocol.models.AirbyteStateMessage;
 import io.airbyte.workers.models.ReplicationActivityInput;
@@ -78,7 +78,7 @@ public class BackfillHelper {
         continue;
       }
       if (!streamsToBackfill.contains(
-          ProtocolConverters.streamDescriptorToDomain(stateMessage.getStream().getStreamDescriptor()))) {
+          ProtocolConverters.toInternal(stateMessage.getStream().getStreamDescriptor()))) {
         continue;
       }
       // It's listed in the streams to backfill, so we write the state to null.
