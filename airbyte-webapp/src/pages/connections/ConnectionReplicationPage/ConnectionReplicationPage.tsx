@@ -11,14 +11,16 @@ import {
 } from "components/connection/ConnectionForm/formConfig";
 import { useRefreshSourceSchemaWithConfirmationOnDirty } from "components/connection/ConnectionForm/refreshSourceSchemaWithConfirmationOnDirty";
 import { SchemaChangeBackdrop } from "components/connection/ConnectionForm/SchemaChangeBackdrop";
+import { SchemaRefreshing } from "components/connection/ConnectionForm/SchemaRefreshing";
 import { SyncCatalogCard } from "components/connection/ConnectionForm/SyncCatalogCard";
-import { SyncCatalogCardNext } from "components/connection/ConnectionForm/SyncCatalogCardNext";
+import { SyncCatalogTable } from "components/connection/ConnectionForm/SyncCatalogTable";
 import { UpdateConnectionFormControls } from "components/connection/ConnectionForm/UpdateConnectionFormControls";
 import { SchemaError } from "components/connection/CreateConnectionForm/SchemaError";
 import { Form } from "components/forms";
 import LoadingSchema from "components/LoadingSchema";
 import { ScrollableContainer } from "components/ScrollableContainer";
 import { Box } from "components/ui/Box";
+import { Card } from "components/ui/Card";
 import { FlexContainer } from "components/ui/Flex";
 import { Message } from "components/ui/Message/Message";
 
@@ -36,7 +38,6 @@ import styles from "./ConnectionReplicationPage.module.scss";
 import { recommendActionOnConnectionUpdate } from "./connectionUpdateHelpers";
 import { RecommendRefreshModal } from "./RecommendRefreshModal";
 import { useAnalyticsTrackFunctions } from "./useAnalyticsTrackFunctions";
-import { SchemaRefreshing } from "../../../components/connection/ConnectionForm/SchemaRefreshing";
 
 const SchemaChangeMessage: React.FC = () => {
   const { isDirty } = useFormState<FormConnectionFormValues>();
@@ -208,23 +209,29 @@ export const ConnectionReplicationPage: React.FC = () => {
   };
 
   const newSyncCatalogV2Form = connection && (
-    <Form<Pick<FormConnectionFormValues, "syncCatalog">>
-      defaultValues={initialValues}
-      reinitializeDefaultValues
-      schema={validationSchema}
-      onSubmit={onFormSubmit}
-      trackDirtyChanges
-      disabled={mode === "readonly"}
-    >
-      <FlexContainer direction="column">
-        <SchemaChangeMessage />
-        <SchemaChangeBackdrop>
-          <SchemaRefreshing>
-            <SyncCatalogCardNext />
-          </SchemaRefreshing>
-        </SchemaChangeBackdrop>
-      </FlexContainer>
-    </Form>
+    <ScrollableContainer ref={setScrollableContainer} className={styles.scrollableContainer}>
+      <Form<Pick<FormConnectionFormValues, "syncCatalog">>
+        defaultValues={initialValues}
+        reinitializeDefaultValues
+        schema={validationSchema}
+        onSubmit={onFormSubmit}
+        trackDirtyChanges
+        disabled={mode === "readonly"}
+      >
+        <FlexContainer direction="column">
+          <SchemaChangeMessage />
+          <SchemaChangeBackdrop>
+            <SchemaRefreshing>
+              <Card noPadding title={formatMessage({ id: "connection.schema" })}>
+                <Box mb="xl" data-testid="catalog-tree-table-body">
+                  <SyncCatalogTable scrollParentContainer={scrollElement} />
+                </Box>
+              </Card>
+            </SchemaRefreshing>
+          </SchemaChangeBackdrop>
+        </FlexContainer>
+      </Form>
+    </ScrollableContainer>
   );
 
   const oldSyncCatalogForm =

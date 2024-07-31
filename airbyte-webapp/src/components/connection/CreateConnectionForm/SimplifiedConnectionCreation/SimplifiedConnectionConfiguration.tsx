@@ -29,7 +29,7 @@ import styles from "./SimplifiedConnectionConfiguration.module.scss";
 import { SimplifiedConnectionsSettingsCard } from "./SimplifiedConnectionSettingsCard";
 import { SimplifiedSchemaQuestionnaire } from "./SimplifiedSchemaQuestionnaire";
 import { ScrollableContainer } from "../../../ScrollableContainer";
-import { SyncCatalogCardNext } from "../../ConnectionForm/SyncCatalogCardNext";
+import { SyncCatalogTable } from "../../ConnectionForm/SyncCatalogTable";
 import { CREATE_CONNECTION_FORM_ID } from "../CreateConnectionForm";
 
 export const SimplifiedConnectionConfiguration: React.FC = () => {
@@ -86,7 +86,15 @@ const SimplifiedConnectionCreationReplication: React.FC = () => {
         >
           <SimplifiedSchemaQuestionnaire />
         </Card>
-        {isSyncCatalogV2Enabled ? <SyncCatalogCardNext /> : <SyncCatalogCard scrollParentContainer={scrollElement} />}
+        {isSyncCatalogV2Enabled ? (
+          <Card noPadding title={formatMessage({ id: "connection.schema" })}>
+            <Box mb="xl" data-testid="catalog-tree-table-body">
+              <SyncCatalogTable scrollParentContainer={scrollElement} />
+            </Box>
+          </Card>
+        ) : (
+          <SyncCatalogCard scrollParentContainer={scrollElement} />
+        )}
       </FlexContainer>
     </ScrollableContainer>
   );
