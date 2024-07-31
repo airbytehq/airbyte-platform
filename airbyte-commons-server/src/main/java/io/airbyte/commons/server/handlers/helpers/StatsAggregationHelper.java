@@ -220,7 +220,7 @@ public class StatsAggregationHelper {
     List<StreamStatsRecord> streamAggregatedStats = new ArrayList<>();
     streamToSyncMode.keySet().forEach(streamNameAndNamespace -> {
       if (!streamToAttemptStats.containsKey(streamNameAndNamespace)) {
-        log.info("No stats have been persisted for job {} stream {}.", job.getJob().getId(), streamNameAndNamespace);
+        log.debug("No stats have been persisted for job {} stream {}.", job.getJob().getId(), streamNameAndNamespace);
         return;
       }
 
