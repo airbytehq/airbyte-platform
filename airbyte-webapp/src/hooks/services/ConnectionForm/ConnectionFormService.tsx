@@ -5,8 +5,8 @@ import { useIntl } from "react-intl";
 import { FormConnectionFormValues, useInitialFormValues } from "components/connection/ConnectionForm/formConfig";
 import { ExternalLink } from "components/ui/Link";
 
-import { useGetDestinationDefinitionSpecification, HttpProblem } from "core/api";
-import { DestinationDefinitionSpecificationRead, WebBackendConnectionRead } from "core/api/types/AirbyteClient";
+import { HttpProblem } from "core/api";
+import { WebBackendConnectionRead } from "core/api/types/AirbyteClient";
 import { useFormatError } from "core/errors";
 import { FormError } from "core/utils/errorStatusMessage";
 import { links } from "core/utils/links";
@@ -27,7 +27,6 @@ interface ConnectionServiceProps {
 interface ConnectionFormHook {
   connection: ConnectionOrPartialConnection;
   mode: ConnectionFormMode;
-  destDefinitionSpecification: DestinationDefinitionSpecificationRead;
   initialValues: FormConnectionFormValues;
   schemaError?: Error | null;
   refreshSchema: () => Promise<void>;
@@ -42,8 +41,7 @@ const useConnectionForm = ({
   refreshSchema,
 }: ConnectionServiceProps): ConnectionFormHook => {
   const formatError = useFormatError();
-  const destDefinitionSpecification = useGetDestinationDefinitionSpecification(connection.destination.destinationId);
-  const initialValues = useInitialFormValues(connection, destDefinitionSpecification, mode);
+  const initialValues = useInitialFormValues(connection, mode);
   const { formatMessage } = useIntl();
   const [submitError, setSubmitError] = useState<FormError | null>(null);
 
@@ -77,7 +75,6 @@ const useConnectionForm = ({
   return {
     connection,
     mode,
-    destDefinitionSpecification,
     initialValues,
     schemaError,
     refreshSchema,

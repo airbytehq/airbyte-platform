@@ -44,8 +44,7 @@ export const ConnectionSettingsPage: React.FC = () => {
   const { trackError } = useAppMonitoringService();
 
   const { mode } = useConnectionFormService();
-  const { destDefinitionSpecification } = useConnectionFormService();
-  const simplifiedInitialValues = useInitialFormValues(connection, destDefinitionSpecification, mode);
+  const simplifiedInitialValues = useInitialFormValues(connection, mode);
 
   const { workspaceId } = useCurrentWorkspace();
   const canEditConnection = useIntent("EditConnection", { workspaceId });

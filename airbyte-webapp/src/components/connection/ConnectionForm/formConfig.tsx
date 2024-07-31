@@ -1,7 +1,7 @@
 import { useMemo } from "react";
 import { FieldArrayWithId } from "react-hook-form";
 
-import { useCurrentWorkspace } from "core/api";
+import { useCurrentWorkspace, useGetDestinationDefinitionSpecification } from "core/api";
 import {
   AirbyteCatalog,
   DestinationSyncMode,
@@ -12,7 +12,6 @@ import {
   NamespaceDefinitionType,
   NonBreakingChangesPreference,
   SchemaChangeBackfillPreference,
-  DestinationDefinitionSpecificationRead,
 } from "core/api/types/AirbyteClient";
 import { FeatureItem, useFeature } from "core/services/features";
 import { ConnectionFormMode, ConnectionOrPartialConnection } from "hooks/services/ConnectionForm/ConnectionFormService";
@@ -75,10 +74,10 @@ export const useConnectionValidationSchema = () => {
 // react-hook-form form values type for the connection form.
 export const useInitialFormValues = (
   connection: ConnectionOrPartialConnection,
-  destDefinitionSpecification: DestinationDefinitionSpecificationRead,
   mode: ConnectionFormMode
 ): FormConnectionFormValues => {
   const workspace = useCurrentWorkspace();
+  const destDefinitionSpecification = useGetDestinationDefinitionSpecification(connection.destination.destinationId);
   const { catalogDiff, syncCatalog, schemaChange } = connection;
   const { notificationSettings } = useCurrentWorkspace();
   const supportedSyncModes: SyncMode[] = useMemo(() => {
