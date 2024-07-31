@@ -25,7 +25,7 @@ micronaut:
           enabled: true
           cookie-same-site: ${AB_COOKIE_SAME_SITE:Strict}
           cookie-secure: ${AB_COOKIE_SECURE:true}
-          cookie-max-age: PT5M
+          cookie-max-age: P30D
       generator:
         access-token:
           ## Warning: if this is ever exposed to users to customize, the frontend will need to be updated
