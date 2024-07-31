@@ -12,6 +12,7 @@ import io.airbyte.connector_builder.api.model.generated.GenerateContributionRequ
 import io.airbyte.connector_builder.api.model.generated.GenerateContributionResponse
 import io.airbyte.connector_builder.services.GithubContributionService
 import io.airbyte.connector_builder.templates.ContributionTemplates
+import io.airbyte.connector_builder.utils.ManifestParser
 import jakarta.inject.Singleton
 import org.kohsuke.github.GHFileNotFoundException
 import org.kohsuke.github.HttpException
@@ -56,6 +57,8 @@ class ConnectorContributionHandler(private val contributionTemplates: Contributi
     baseImage: String,
     githubContributionService: GithubContributionService,
   ): Map<String, String> {
+    val versionTag = "0.0.1"
+    val releaseDate = DateTimeFormatter.ofPattern("yyyy-MM-dd").format(LocalDate.now())
     val readmeContent =
       contributionTemplates.renderContributionReadmeMd(
         connectorImageName = connectorImageName,
@@ -63,8 +66,17 @@ class ConnectorContributionHandler(private val contributionTemplates: Contributi
         description = connectorDescription,
       )
 
-    // TODO: Ensure manifest is correctly formatted
-    val manifestContent = rawManifestYaml
+    val manifestParser = ManifestParser(rawManifestYaml)
+    var docsContent =
+      contributionTemplates.renderContributionDocsMd(
+        connectorImageName = connectorImageName,
+        connectorName = connectorName,
+        connectorVersionTag = versionTag,
+        description = connectorDescription,
+        manifestParser = manifestParser,
+        authorUsername = githubContributionService.username,
+        releaseDate = releaseDate,
+      )
 
     // TODO: Ensure metadata is correctly formatted
     // TODO: Merge metadata with existing metadata if it exists
@@ -73,11 +85,12 @@ class ConnectorContributionHandler(private val contributionTemplates: Contributi
         connectorImageName = connectorImageName,
         connectorName = connectorName,
         actorDefinitionId = UUID.randomUUID().toString(),
-        versionTag = "0.0.1",
+        versionTag = versionTag,
         baseImage = baseImage,
-        allowedHosts = listOf("TODO"),
-        connectorDocsSlug = "TODO",
-        releaseDate = DateTimeFormatter.ofPattern("yyyy-MM-dd").format(LocalDate.now()),
+        // TODO: Parse Allowed Hosts from manifest
+        allowedHosts = listOf("*"),
+        connectorDocsSlug = githubContributionService.connectorDocsSlug,
+        releaseDate = releaseDate,
       )
 
     val iconContent = contributionTemplates.renderIconSvg()
@@ -87,10 +100,11 @@ class ConnectorContributionHandler(private val contributionTemplates: Contributi
     val filesToCommit =
       mapOf(
         githubContributionService.connectorReadmePath to readmeContent,
-        githubContributionService.connectorManifestPath to manifestContent,
+        githubContributionService.connectorManifestPath to rawManifestYaml,
         githubContributionService.connectorMetadataPath to metadataContent,
         githubContributionService.connectorIconPath to iconContent,
         githubContributionService.connectorAcceptanceTestConfigPath to acceptanceTestConfigContent,
+        githubContributionService.connectorDocsPath to docsContent,
       )
 
     return filesToCommit

@@ -39,6 +39,23 @@ class GithubContributionService(var connectorImageName: String, personalAccessTo
   val connectorDirectoryPath: String
     get() = "$connectorDirectory/$connectorImageName"
 
+  fun imageNameAsDocPath(imageName: String): String {
+    // source-google-sheets -> sources/google-sheets
+    // destination-google-sheets -> destinations/google-sheets
+
+    val parts = imageName.split("-")
+    val connectorType = parts[0] + "s"
+    val connectorName = parts.drop(1).joinToString("-")
+
+    return "$connectorType/$connectorName"
+  }
+
+  val connectorDocsSlug: String
+    get() = "integrations/${imageNameAsDocPath(connectorImageName)}.md"
+
+  val connectorDocsPath: String
+    get() = "docs/$connectorDocsSlug"
+
   val connectorMetadataPath: String
     get() = "$connectorDirectoryPath/metadata.yaml"
 

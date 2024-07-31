@@ -23,7 +23,7 @@ import org.kohsuke.github.GitHub
 import org.kohsuke.github.PagedSearchIterable
 
 class GithubContributionServiceTest {
-  var testConnectorImageName = "source-test"
+  var testConnectorImageName = "source-test-case"
   var testUserName = "testusername"
 
   private val githubMock = mockk<GitHub>()
@@ -182,5 +182,12 @@ class GithubContributionServiceTest {
     contributionService.prepareBranchForContribution()
 
     verify { repoMock.createRef(any(), any()) }
+  }
+
+  @Test
+  fun `connectorDocsPath formats correctly`() {
+    val expectedPath = "docs/integrations/sources/test-case.md"
+    val actualPath = contributionService.connectorDocsPath
+    assertEquals(expectedPath, actualPath)
   }
 }

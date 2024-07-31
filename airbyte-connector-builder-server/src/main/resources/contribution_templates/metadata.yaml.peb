@@ -37,7 +37,7 @@ data:
 
   releaseStage: alpha
   supportLevel: community
-  documentationUrl: https://docs.airbyte.com/integrations/sources/{{ connectorDocsSlug }}
+  documentationUrl: https://docs.airbyte.com/{{ connectorDocsSlug }}
 
   tags:
     - language:manifest-only
