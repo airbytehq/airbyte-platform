@@ -84,7 +84,15 @@ export const trackError = (error: Error, context?: Record<string, unknown>) => {
   datadogRum.addError(error, contextWithFullStory);
 };
 
-export const trackTiming = (name: string) => {
+type TimingName =
+  | "DestinationSettingsPage"
+  | "SourceSettingsPage"
+  | "StreamStatusPage"
+  | "CreditUsage" // Proxy for when the billing page has loaded
+  | "CloudWorkspacesList" // Proxy for when the workspaces page has loaded
+  | "ConnectionsTable"; // Proxy for when the connections page has loaded
+
+export const trackTiming = (name: TimingName) => {
   if (!datadogRum.getInternalContext()) {
     console.debug(`trackTiming(${name}) failed because RUM is not initialized.`);
     return;
