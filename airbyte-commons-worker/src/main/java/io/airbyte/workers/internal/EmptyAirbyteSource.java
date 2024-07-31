@@ -13,6 +13,7 @@ import io.airbyte.config.StateType;
 import io.airbyte.config.StateWrapper;
 import io.airbyte.config.StreamDescriptor;
 import io.airbyte.config.WorkerSourceConfig;
+import io.airbyte.config.helpers.ProtocolConverters;
 import io.airbyte.config.helpers.StateMessageHelper;
 import io.airbyte.protocol.models.AirbyteGlobalState;
 import io.airbyte.protocol.models.AirbyteMessage;
@@ -135,7 +136,7 @@ public class EmptyAirbyteSource implements AirbyteSource {
     if (perStreamMessages.isEmpty()) {
       // Per stream, we emit one 'started', one null state and one 'complete' message.
       // Since there's only 1 state message we move directly from 'started' to 'complete'.
-      final var s = toProtocolStreamDescriptor(streamsToReset.poll());
+      final var s = ProtocolConverters.toProtocol(streamsToReset.poll());
       perStreamMessages.add(AirbyteMessageUtils.createStatusTraceMessage(s, AirbyteStreamStatus.STARTED));
       perStreamMessages.add(buildNullStreamStateMessage(s));
       perStreamMessages.add(AirbyteMessageUtils.createStatusTraceMessage(s, AirbyteStreamStatus.COMPLETE));
@@ -175,7 +176,7 @@ public class EmptyAirbyteSource implements AirbyteSource {
     if (perStreamMessages.isEmpty()) {
       // Per stream, we emit one 'started' and one 'complete' message.
       // The single null state message is to be emitted by the caller.
-      final var s = toProtocolStreamDescriptor(streamsToReset.poll());
+      final var s = ProtocolConverters.toProtocol(streamsToReset.poll());
       perStreamMessages.add(AirbyteMessageUtils.createStatusTraceMessage(s, AirbyteStreamStatus.STARTED));
       perStreamMessages.add(AirbyteMessageUtils.createStatusTraceMessage(s, AirbyteStreamStatus.COMPLETE));
     }
@@ -202,9 +203,7 @@ public class EmptyAirbyteSource implements AirbyteSource {
                 .withType(AirbyteStateType.STREAM)
                 .withStream(
                     new AirbyteStreamState()
-                        .withStreamDescriptor(new io.airbyte.protocol.models.StreamDescriptor()
-                            .withName(stream.getName())
-                            .withNamespace(stream.getNamespace()))
+                        .withStreamDescriptor(stream)
                         .withStreamState(null)));
   }
 
@@ -262,12 +261,6 @@ public class EmptyAirbyteSource implements AirbyteSource {
       log.error("The configuration provided to the reset has an invalid format");
       throw e;
     }
-  }
-
-  private io.airbyte.protocol.models.StreamDescriptor toProtocolStreamDescriptor(final StreamDescriptor streamDescriptor) {
-    return new io.airbyte.protocol.models.StreamDescriptor()
-        .withName(streamDescriptor.getName())
-        .withNamespace(streamDescriptor.getNamespace());
   }
 
 }
