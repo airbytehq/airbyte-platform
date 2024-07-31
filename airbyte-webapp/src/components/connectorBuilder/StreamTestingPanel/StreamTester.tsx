@@ -9,7 +9,6 @@ import { Message } from "components/ui/Message";
 import { NumberBadge } from "components/ui/NumberBadge";
 import { Pre } from "components/ui/Pre";
 import { ResizablePanels } from "components/ui/ResizablePanels";
-import { Spinner } from "components/ui/Spinner";
 import { Text } from "components/ui/Text";
 
 import { HttpError } from "core/api";
@@ -38,7 +37,6 @@ export const StreamTester: React.FC<{
   const {
     streamRead: {
       data: streamReadData,
-      refetch: readStream,
       isError,
       error,
       isFetching,
@@ -47,6 +45,8 @@ export const StreamTester: React.FC<{
       errorUpdatedAt,
     },
     testReadLimits: { recordLimit, pageLimit, sliceLimit },
+    queuedStreamRead,
+    queueStreamRead,
   } = useConnectorBuilderTestRead();
   const [showLimitWarning, setShowLimitWarning] = useLocalStorage("connectorBuilderLimitWarning", true);
   const testStreamIndex = useBuilderWatch("testStreamIndex");
@@ -114,8 +114,8 @@ export const StreamTester: React.FC<{
       )}
 
       <StreamTestButton
-        readStream={() => {
-          readStream();
+        queueStreamRead={() => {
+          queueStreamRead();
           analyticsService.track(Namespace.CONNECTOR_BUILDER, Action.STREAM_TEST, {
             actionDescription: "Stream test initiated",
             stream_name: streamName,
@@ -123,8 +123,9 @@ export const StreamTester: React.FC<{
         }}
         hasTestingValuesErrors={hasTestingValuesErrors}
         setTestingValuesInputOpen={setTestingValuesInputOpen}
-        isResolving={isResolving}
         hasResolveErrors={Boolean(resolveErrorMessage)}
+        isStreamTestQueued={queuedStreamRead}
+        isStreamTestRunning={isFetching}
       />
 
       {resolveErrorMessage !== undefined && (
@@ -165,12 +166,7 @@ export const StreamTester: React.FC<{
           </Text>
         </div>
       )}
-      {isFetching && (
-        <div className={styles.fetchingSpinner}>
-          <Spinner />
-        </div>
-      )}
-      {!isFetching && streamReadData && streamReadData.test_read_limit_reached && showLimitWarning && (
+      {streamReadData && streamReadData.test_read_limit_reached && showLimitWarning && (
         <Message
           type="info"
           text={
@@ -184,16 +180,15 @@ export const StreamTester: React.FC<{
           }}
         />
       )}
-      {!isFetching &&
-        testDataWarnings.map((warning, index) => (
-          <Message
-            className={classNames({ [styles.secondaryWarning]: warning.priority === "secondary" })}
-            type="warning"
-            text={warning.message}
-            key={index}
-          />
-        ))}
-      {!isFetching && (streamReadData !== undefined || errorMessage !== undefined) && (
+      {testDataWarnings.map((warning, index) => (
+        <Message
+          className={classNames({ [styles.secondaryWarning]: warning.priority === "secondary" })}
+          type="warning"
+          text={warning.message}
+          key={index}
+        />
+      ))}
+      {(streamReadData !== undefined || errorMessage !== undefined) && (
         <ResizablePanels
           className={styles.resizablePanelsContainer}
           orientation="horizontal"

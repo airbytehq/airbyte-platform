@@ -1670,6 +1670,7 @@
   "connectorBuilder.undo": "Undo",
   "connectorBuilder.redo": "Redo",
   "connectorBuilder.testRead": "Test stream",
+  "connectorBuilder.testRead.running": "Stream test is in progress…",
   "connectorBuilder.ignoreWarningsModal.title": "Ignore stream test warnings?",
   "connectorBuilder.ignoreWarningsModal.text": "The following streams have test warnings which indicate that they may not work as expected in syncs:",
   "connectorBuilder.ignoreWarningsModal.areYouSure": "Are you sure you want to ignore these warnings and proceed with publishing anyway?",

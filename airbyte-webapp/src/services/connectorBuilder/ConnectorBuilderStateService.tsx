@@ -137,6 +137,8 @@ export interface TestReadContext {
     schemaDifferences: boolean;
     incompatibleSchemaErrors: string[] | undefined;
   };
+  queuedStreamRead: boolean;
+  queueStreamRead: () => void;
 }
 
 interface FormManagementStateContext {
@@ -265,6 +267,7 @@ export const InternalConnectorBuilderFormStateProvider: React.FC<
     // In UI mode, only call resolve if the form is valid, since an invalid form is expected to not resolve
     mode === "yaml" || (mode === "ui" && formValuesValid)
   );
+
   const unknownErrorMessage = formatMessage({ id: "connectorBuilder.unknownError" });
   const resolveErrorMessage = isResolveError
     ? resolveError instanceof HttpError
@@ -717,7 +720,15 @@ function getSavingState(
 
 export const ConnectorBuilderTestReadProvider: React.FC<React.PropsWithChildren<unknown>> = ({ children }) => {
   const workspaceId = useCurrentWorkspaceId();
-  const { projectId, resolvedManifest, jsonManifest, updateYamlCdkVersion } = useConnectorBuilderFormState();
+  const {
+    projectId,
+    isResolving,
+    resolveError,
+    resolvedManifest,
+    jsonManifest,
+    formValuesDirty,
+    updateYamlCdkVersion,
+  } = useConnectorBuilderFormState();
   const { setValue } = useFormContext();
   const mode = useBuilderWatch("mode");
   const view = useBuilderWatch("view");
@@ -810,6 +821,27 @@ export const ConnectorBuilderTestReadProvider: React.FC<React.PropsWithChildren<
     }
   );
 
+  const [queuedStreamRead, setQueuedStreamRead] = useState(false);
+  const { refetch } = streamRead;
+  // trigger a stream read if the a stream read is queued and form is in a ready state to be tested
+  useEffect(() => {
+    if (isResolving || formValuesDirty || !queuedStreamRead) {
+      return;
+    }
+
+    if (resolveError) {
+      setQueuedStreamRead(false);
+      return;
+    }
+
+    setQueuedStreamRead(false);
+    refetch();
+  }, [isResolving, queuedStreamRead, resolveError, refetch, formValuesDirty]);
+
+  const queueStreamRead = useCallback(() => {
+    setQueuedStreamRead(true);
+  }, []);
+
   const schemaWarnings = useSchemaWarnings(streamRead, testStreamIndex, streamName);
 
   const ctx = {
@@ -818,6 +850,8 @@ export const ConnectorBuilderTestReadProvider: React.FC<React.PropsWithChildren<
     schemaWarnings,
     testState,
     setTestState,
+    queuedStreamRead,
+    queueStreamRead,
   };
 
   return <ConnectorBuilderTestReadContext.Provider value={ctx}>{children}</ConnectorBuilderTestReadContext.Provider>;

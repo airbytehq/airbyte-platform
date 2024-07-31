@@ -3,7 +3,6 @@ import { FormattedMessage } from "react-intl";
 
 import { Button } from "components/ui/Button";
 import { FlexContainer } from "components/ui/Flex";
-import { Text } from "components/ui/Text";
 import { Tooltip } from "components/ui/Tooltip";
 
 import { BuilderView, useConnectorBuilderFormState } from "services/connectorBuilder/ConnectorBuilderStateService";
@@ -14,21 +13,23 @@ import { useBuilderWatch } from "../types";
 import { useBuilderErrors } from "../useBuilderErrors";
 
 interface StreamTestButtonProps {
-  readStream: () => void;
+  queueStreamRead: () => void;
   hasTestingValuesErrors: boolean;
   setTestingValuesInputOpen: (open: boolean) => void;
-  isResolving: boolean;
   hasResolveErrors: boolean;
+  isStreamTestQueued: boolean;
+  isStreamTestRunning: boolean;
 }
 
 export const StreamTestButton: React.FC<StreamTestButtonProps> = ({
-  readStream,
+  queueStreamRead,
   hasTestingValuesErrors,
   setTestingValuesInputOpen,
-  isResolving,
   hasResolveErrors,
+  isStreamTestQueued,
+  isStreamTestRunning,
 }) => {
-  const { yamlIsValid, formValuesDirty } = useConnectorBuilderFormState();
+  const { yamlIsValid } = useConnectorBuilderFormState();
   const mode = useBuilderWatch("mode");
   const testStreamIndex = useBuilderWatch("testStreamIndex");
   const { hasErrors, validateAndTouch } = useBuilderErrors();
@@ -42,19 +43,18 @@ export const StreamTestButton: React.FC<StreamTestButtonProps> = ({
     { enableOnFormTags: ["input", "textarea", "select"] }
   );
 
+  const isLoading = isStreamTestQueued || isStreamTestRunning;
+
   let buttonDisabled = false;
   let showWarningIcon = false;
-  let tooltipContent = (
+  let tooltipContent = isLoading ? (
+    <FormattedMessage id="connectorBuilder.testRead.running" />
+  ) : (
     <FlexContainer direction="column" gap="md" alignItems="center">
       <FormattedMessage id="connectorBuilder.testRead" />
       <HotkeyLabel keys={[getCtrlOrCmdKey(), "Enter"]} />
     </FlexContainer>
   );
-
-  if (isResolving || formValuesDirty) {
-    buttonDisabled = true;
-    tooltipContent = <FormattedMessage id="connectorBuilder.resolvingStreamList" />;
-  }
 
   if (mode === "yaml" && !yamlIsValid) {
     buttonDisabled = true;
@@ -71,19 +71,16 @@ export const StreamTestButton: React.FC<StreamTestButtonProps> = ({
   }
 
   const executeTestRead = () => {
-    if (buttonDisabled) {
-      return;
-    }
     if (hasTestingValuesErrors) {
       setTestingValuesInputOpen(true);
       return;
     }
     if (mode === "yaml") {
-      readStream();
+      queueStreamRead();
       return;
     }
 
-    validateAndTouch(readStream, relevantViews);
+    validateAndTouch(queueStreamRead, relevantViews);
   };
 
   const testButton = (
@@ -96,10 +93,9 @@ export const StreamTestButton: React.FC<StreamTestButtonProps> = ({
       data-testid="read-stream"
       icon={showWarningIcon ? "warningOutline" : "rotate"}
       iconSize="sm"
+      isLoading={isLoading}
     >
-      <Text className={styles.testButtonText} size="md" bold>
-        <FormattedMessage id="connectorBuilder.testButton" />
-      </Text>
+      <FormattedMessage id="connectorBuilder.testButton" />
     </Button>
   );
 

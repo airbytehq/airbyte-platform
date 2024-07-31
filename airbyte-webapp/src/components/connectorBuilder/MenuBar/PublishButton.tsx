@@ -5,7 +5,10 @@ import { Button } from "components/ui/Button";
 import { Tooltip } from "components/ui/Tooltip";
 
 import { useConfirmationModalService } from "hooks/services/ConfirmationModal";
-import { useConnectorBuilderFormState } from "services/connectorBuilder/ConnectorBuilderStateService";
+import {
+  useConnectorBuilderFormState,
+  useConnectorBuilderTestRead,
+} from "services/connectorBuilder/ConnectorBuilderStateService";
 
 import styles from "./PublishButton.module.scss";
 import { PublishModal } from "./PublishModal";
@@ -28,13 +31,16 @@ export const PublishButton: React.FC<PublishButtonProps> = ({ className }) => {
     isResolving,
     formValuesDirty,
   } = useConnectorBuilderFormState();
+  const {
+    streamRead: { isFetching: isReadingStream },
+  } = useConnectorBuilderTestRead();
   const mode = useBuilderWatch("mode");
 
   let buttonDisabled = permission === "readOnly";
   let showWarningIcon = false;
   let tooltipContent = undefined;
 
-  if (isResolving || formValuesDirty) {
+  if (isResolving || formValuesDirty || isReadingStream) {
     buttonDisabled = true;
     tooltipContent = <FormattedMessage id="connectorBuilder.resolvingStreamList" />;
   }
@@ -108,17 +114,14 @@ export const PublishButton: React.FC<PublishButtonProps> = ({ className }) => {
 
   return (
     <div className={className}>
-      {tooltipContent !== undefined ? (
-        <Tooltip
-          containerClassName={styles.tooltipContainer}
-          control={publishButton}
-          placement={mode === "yaml" ? "left" : "top"}
-        >
-          {tooltipContent}
-        </Tooltip>
-      ) : (
-        publishButton
-      )}
+      <Tooltip
+        containerClassName={styles.tooltipContainer}
+        control={publishButton}
+        placement={mode === "yaml" ? "left" : "top"}
+        disabled={!tooltipContent}
+      >
+        {tooltipContent}
+      </Tooltip>
       {isModalOpen && (
         <PublishModal
           onClose={() => {
