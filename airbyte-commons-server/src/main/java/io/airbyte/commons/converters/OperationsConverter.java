@@ -114,8 +114,8 @@ public class OperationsConverter {
       Matcher dbtCloudUrlMatcher = dbtUrlPattern.matcher(persistedWebhook.getExecutionUrl());
       final var dbtCloudConfig = new OperatorWebhookDbtCloud();
       if (dbtCloudUrlMatcher.matches()) {
-        dbtCloudConfig.setAccountId(Integer.valueOf(dbtCloudUrlMatcher.group(ACCOUNT_REGEX_GROUP)));
-        dbtCloudConfig.setJobId(Integer.valueOf(dbtCloudUrlMatcher.group(JOB_REGEX_GROUP)));
+        dbtCloudConfig.setAccountId(Long.valueOf(dbtCloudUrlMatcher.group(ACCOUNT_REGEX_GROUP)));
+        dbtCloudConfig.setJobId(Long.valueOf(dbtCloudUrlMatcher.group(JOB_REGEX_GROUP)));
         return dbtCloudConfig;
       }
       return null;
