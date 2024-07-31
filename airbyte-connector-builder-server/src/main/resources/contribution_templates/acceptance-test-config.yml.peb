@@ -1,9 +1,10 @@
 # See [Connector Acceptance Tests](https://docs.airbyte.com/connector-development/testing-connectors/connector-acceptance-tests-reference)
 # for more information about how to configure these tests
-connector_image: airbyte/source-{{ connectorImageName }}:dev
+connector_image: airbyte/{{ connectorImageName }}:dev
 acceptance_tests:
   spec:
-    bypass_reason: "TODO Ensure we can run spec"
+    tests:
+      - spec_path: "manifest.yaml"
   connection:
     bypass_reason: "This is a builder contribution, and we do not have secrets at this time"
   discovery:
