@@ -38,9 +38,9 @@ class ExternalUserServiceKeycloakImplTest {
     val email = "email@airbyte.io"
 
     // set up mocks
-    val realm1 = RealmRepresentation().apply { id = "realm1" }
-    val realm2 = RealmRepresentation().apply { id = "realm2" }
-    val realmToKeep = RealmRepresentation().apply { id = "realm3" }
+    val realm1 = RealmRepresentation().apply { realm = "realm1" }
+    val realm2 = RealmRepresentation().apply { realm = "realm2" }
+    val realmToKeep = RealmRepresentation().apply { realm = "realm3" }
     val userToDelete = UserRepresentation().apply { id = "userToDelete" }
 
     val usersResource1: UsersResource = mockk()
@@ -56,9 +56,9 @@ class ExternalUserServiceKeycloakImplTest {
     val realm2Resource = mockk<RealmResource>()
     val realm3Resource = mockk<RealmResource>()
 
-    every { keycloakAdminClient.realm(realm1.id) } returns realm1Resource
-    every { keycloakAdminClient.realm(realm2.id) } returns realm2Resource
-    every { keycloakAdminClient.realm(realmToKeep.id) } returns realm3Resource
+    every { keycloakAdminClient.realm(realm1.realm) } returns realm1Resource
+    every { keycloakAdminClient.realm(realm2.realm) } returns realm2Resource
+    every { keycloakAdminClient.realm(realmToKeep.realm) } returns realm3Resource
 
     every { realm1Resource.users() } returns usersResource1
     every { realm2Resource.users() } returns usersResource2
@@ -70,7 +70,7 @@ class ExternalUserServiceKeycloakImplTest {
     every { usersResource1.delete(any()) } returns mockk()
 
     // call service method
-    service.deleteUserByEmailOnOtherRealms(email, realmToKeep.id)
+    service.deleteUserByEmailOnOtherRealms(email, realmToKeep.realm)
 
     // should not search on realm to keep (realm3)
     verify(exactly = 0) { usersResource3.search(any()) }
@@ -86,8 +86,8 @@ class ExternalUserServiceKeycloakImplTest {
     val authUserId = "authUserId"
 
     // set up mocks
-    val realm1 = RealmRepresentation().apply { id = "realm1" }
-    val realm2 = RealmRepresentation().apply { id = "realm2" }
+    val realm1 = RealmRepresentation().apply { realm = "realm1" }
+    val realm2 = RealmRepresentation().apply { realm = "realm2" }
 
     val usersResource1: UsersResource = mockk()
     val usersResource2: UsersResource = mockk()
@@ -100,8 +100,8 @@ class ExternalUserServiceKeycloakImplTest {
     val realm1Resource = mockk<RealmResource>()
     val realm2Resource = mockk<RealmResource>()
 
-    every { keycloakAdminClient.realm(realm1.id) } returns realm1Resource
-    every { keycloakAdminClient.realm(realm2.id) } returns realm2Resource
+    every { keycloakAdminClient.realm(realm1.realm) } returns realm1Resource
+    every { keycloakAdminClient.realm(realm2.realm) } returns realm2Resource
 
     every { realm1Resource.users() } returns usersResource1
     every { realm2Resource.users() } returns usersResource2
@@ -123,6 +123,6 @@ class ExternalUserServiceKeycloakImplTest {
     verify(exactly = 1) { usersResource2.get(authUserId) }
 
     // should return realm21
-    assert(realm == realm2.id)
+    assert(realm == realm2.realm)
   }
 }

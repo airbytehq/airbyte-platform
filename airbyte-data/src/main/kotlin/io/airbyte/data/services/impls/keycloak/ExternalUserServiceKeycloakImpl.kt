@@ -27,8 +27,8 @@ class ExternalUserServiceKeycloakImpl(
     keycloakAdminClient.realms().findAll().forEach {
         realm ->
       run {
-        if (realm.id != realmToKeep) {
-          deleteUserByEmailInRealm(email, realm.id)
+        if (realm.realm != realmToKeep) {
+          deleteUserByEmailInRealm(email, realm.realm)
         }
       }
     }
@@ -38,10 +38,10 @@ class ExternalUserServiceKeycloakImpl(
     val realms = keycloakAdminClient.realms().findAll()
     for (realm in realms) {
       try {
-        val user = keycloakAdminClient.realm(realm.id).users().get(authUserId).toRepresentation()
+        val user = keycloakAdminClient.realm(realm.realm).users().get(authUserId).toRepresentation()
         if (user != null) {
-          logger.info { "Auth user found in realm ${realm.id} (id: ${user.id})" }
-          return realm.id
+          logger.info { "Auth user found in realm ${realm.realm} (id: ${user.id})" }
+          return realm.realm
         }
       } catch (e: NotFoundException) {
         continue
@@ -53,15 +53,20 @@ class ExternalUserServiceKeycloakImpl(
 
   private fun deleteUserByEmailInRealm(
     email: String,
-    realmId: String,
+    realm: String,
   ) {
     try {
-      keycloakAdminClient.realm(realmId).users().search(email).forEach { user ->
-        keycloakAdminClient.realm(realmId).users().delete(user.id)
-        logger.info { "Successfully deleted user with ID ${user.id} in realm $realmId" }
+      var didDelete = false
+      keycloakAdminClient.realm(realm).users().search(email).forEach { user ->
+        keycloakAdminClient.realm(realm).users().delete(user.id)
+        didDelete = true
+        logger.info { "Successfully deleted user with ID ${user.id} in realm $realm" }
+      }
+      if (!didDelete) {
+        logger.info { "User with email $email not found in realm $realm" }
       }
     } catch (e: NotFoundException) {
-      logger.info { "User with email $email not found in realm $realmId" }
+      logger.info { "User with email $email not found in realm $realm" }
     }
   }
 }

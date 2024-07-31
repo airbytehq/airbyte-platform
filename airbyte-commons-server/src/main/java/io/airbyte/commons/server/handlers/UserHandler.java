@@ -456,6 +456,8 @@ public class UserHandler {
     LOGGER.info("Replacing existing auth users with new one ({})...", incomingJwtUser.getAuthUserId());
     userPersistence.replaceAuthUserForUserId(existingUser.getUserId(), incomingJwtUser.getAuthUserId(), incomingJwtUser.getAuthProvider());
 
+    LOGGER.info("Done migrating user {} to SSO", existingUser.getUserId());
+
     // (4) Return the user
     final UserRead userRead = buildUserRead(existingUser);
     handleUserPermissionsAndWorkspace(userRead);
