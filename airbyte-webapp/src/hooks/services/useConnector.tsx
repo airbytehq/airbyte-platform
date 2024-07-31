@@ -13,8 +13,8 @@ import {
   useUpdateSourceDefinition,
 } from "core/api";
 import { useFormatError } from "core/errors";
+import { trackError } from "core/utils/datadog";
 
-import { useAppMonitoringService } from "./AppMonitoringService";
 import { useNotificationService } from "./Notification";
 
 export const useUpdateAllConnectors = (connectorType: "sources" | "destinations") => {
@@ -24,7 +24,6 @@ export const useUpdateAllConnectors = (connectorType: "sources" | "destinations"
   const { updateAllSourceVersions } = useUpdateSourceDefinitions();
   const { updateAllDestinationVersions } = useUpdateDestinationDefinitions();
   const { registerNotification } = useNotificationService();
-  const { trackError } = useAppMonitoringService();
 
   return useMutation(
     ["updateAllConnectors", workspaceId],

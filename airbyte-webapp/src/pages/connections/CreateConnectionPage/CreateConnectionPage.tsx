@@ -11,8 +11,7 @@ import { PageHeaderWithNavigation } from "components/ui/PageHeader";
 import { useCurrentWorkspaceId } from "area/workspace/utils";
 import { useGetDestination, useGetSource } from "core/api";
 import { PageTrackingCodes, useTrackPage } from "core/services/analytics";
-import { trackAction } from "core/utils/datadog";
-import { AppActionCodes } from "hooks/services/AppMonitoringService";
+import { AppActionCodes, trackAction } from "core/utils/datadog";
 import { ConnectionRoutePaths, RoutePaths } from "pages/routePaths";
 import { ConnectorDocumentationWrapper } from "views/Connector/ConnectorDocumentationLayout";
 

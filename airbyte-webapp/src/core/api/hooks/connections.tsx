@@ -8,8 +8,8 @@ import { ExternalLink } from "components/ui/Link";
 import { useCurrentWorkspaceId } from "area/workspace/utils";
 import { useFormatError } from "core/errors";
 import { getFrequencyFromScheduleData, useAnalyticsService, Action, Namespace } from "core/services/analytics";
+import { trackError } from "core/utils/datadog";
 import { links } from "core/utils/links";
-import { useAppMonitoringService } from "hooks/services/AppMonitoringService";
 import { useNotificationService } from "hooks/services/Notification";
 import { CloudRoutes } from "packages/cloud/cloudRoutePaths";
 import { RoutePaths } from "pages/routePaths";
@@ -175,7 +175,6 @@ export const useGetConnectionSyncProgress = (connectionId: string, enabled: bool
 export const useSyncConnection = () => {
   const requestOptions = useRequestOptions();
   const formatError = useFormatError();
-  const { trackError } = useAppMonitoringService();
   const queryClient = useQueryClient();
   const analyticsService = useAnalyticsService();
   const { registerNotification } = useNotificationService();
@@ -566,7 +565,6 @@ export const useCreateOrUpdateState = () => {
   const { formatMessage } = useIntl();
   const queryClient = useQueryClient();
   const analyticsService = useAnalyticsService();
-  const { trackError } = useAppMonitoringService();
   const { registerNotification } = useNotificationService();
 
   return useMutation(

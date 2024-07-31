@@ -1,4 +1,4 @@
-import { useAppMonitoringService } from "hooks/services/AppMonitoringService";
+import { trackError } from "core/utils/datadog";
 
 import { useSuspenseQuery } from "../useSuspenseQuery";
 
@@ -14,8 +14,6 @@ const fetchLatestVersionOfPyPackage = async (packageName: string): Promise<strin
  * @returns the latest version of the Python CDK
  */
 export const usePythonCDKVersion = () => {
-  const { trackError } = useAppMonitoringService();
-
   return useSuspenseQuery<string | undefined>(
     ["pypi.cdkVersion"],
     () => {

@@ -8,7 +8,7 @@ import { Link } from "components/ui/Link";
 import { LoadingSpinner } from "components/ui/LoadingSpinner";
 
 import { useAuthService } from "core/services/auth";
-import { useAppMonitoringService } from "hooks/services/AppMonitoringService";
+import { trackError } from "core/utils/datadog";
 import { useNotificationService } from "hooks/services/Notification";
 import { CloudRoutes } from "packages/cloud/cloudRoutePaths";
 
@@ -70,7 +70,6 @@ interface LoginButtonsProps {
 }
 
 export const LoginButtons: React.FC<LoginButtonsProps> = ({ type }) => {
-  const { trackError } = useAppMonitoringService();
   const { formatMessage } = useIntl();
   const { registerNotification } = useNotificationService();
   const [pendingRedirect, setPendingRedirect] = useState<"google" | "github" | "password" | null>(null);

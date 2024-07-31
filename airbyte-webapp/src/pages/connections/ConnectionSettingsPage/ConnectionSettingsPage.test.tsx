@@ -71,13 +71,6 @@ jest.mock("core/utils/rbac", () => ({
   useIntent: () => true,
 }));
 
-jest.mock("hooks/services/AppMonitoringService", () => ({
-  useAppMonitoringService: () => ({
-    trackError: jest.fn(),
-    trackAction: jest.fn(),
-  }),
-}));
-
 jest.mock("components/connection/ConnectionStatus/useConnectionStatus", () => ({
   useConnectionStatus: () => ({
     status: "pending",

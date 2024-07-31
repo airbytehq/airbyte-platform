@@ -13,7 +13,6 @@ import { defaultCloudFeatures, FeatureService } from "core/services/features";
 import { I18nProvider } from "core/services/i18n";
 import { BlockerService } from "core/services/navigation";
 import { isDevelopment } from "core/utils/isDevelopment";
-import { AppMonitoringServiceProvider } from "hooks/services/AppMonitoringService";
 import { ConfirmationModalService } from "hooks/services/ConfirmationModal";
 import { FormChangeTrackerService } from "hooks/services/FormChangeTracker";
 import { ModalServiceProvider } from "hooks/services/Modal";
@@ -52,12 +51,10 @@ const App: React.FC = () => {
               <Suspense fallback={<LoadingPage />}>
                 <DefaultErrorBoundary>
                   <AnalyticsProvider>
-                    <AppMonitoringServiceProvider>
-                      <Services>
-                        <DeployPreviewMessage />
-                        <Routing />
-                      </Services>
-                    </AppMonitoringServiceProvider>
+                    <Services>
+                      <DeployPreviewMessage />
+                      <Routing />
+                    </Services>
                   </AnalyticsProvider>
                 </DefaultErrorBoundary>
               </Suspense>

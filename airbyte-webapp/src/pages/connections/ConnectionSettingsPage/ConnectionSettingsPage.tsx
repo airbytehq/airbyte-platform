@@ -20,8 +20,8 @@ import { Spinner } from "components/ui/Spinner";
 import { useCurrentWorkspace } from "core/api";
 import { Geography, WebBackendConnectionUpdate } from "core/api/types/AirbyteClient";
 import { PageTrackingCodes, useTrackPage } from "core/services/analytics";
+import { trackError } from "core/utils/datadog";
 import { useIntent } from "core/utils/rbac";
-import { useAppMonitoringService } from "hooks/services/AppMonitoringService";
 import { useConnectionEditService } from "hooks/services/ConnectionEdit/ConnectionEditService";
 import { useConnectionFormService } from "hooks/services/ConnectionForm/ConnectionFormService";
 import { useNotificationService } from "hooks/services/Notification";
@@ -41,7 +41,6 @@ export const ConnectionSettingsPage: React.FC = () => {
   const { connection, updateConnection } = useConnectionEditService();
   const { formatMessage } = useIntl();
   const { registerNotification } = useNotificationService();
-  const { trackError } = useAppMonitoringService();
 
   const { mode } = useConnectionFormService();
   const simplifiedInitialValues = useInitialFormValues(connection, mode);

@@ -3,7 +3,8 @@ import { useIntl } from "react-intl";
 import { useEffectOnce } from "react-use";
 import { filter, fromEvent, interval, merge } from "rxjs";
 
-import { useAppMonitoringService } from "./AppMonitoringService";
+import { trackError } from "core/utils/datadog";
+
 import { useNotificationService } from "./Notification";
 
 interface BuildInfo {
@@ -23,7 +24,6 @@ const MINIMUM_WAIT_BEFORE_REFETCH = 3 * 24 * 60 * 60 * 1000; // 3 days
 export const useBuildUpdateCheck = () => {
   const { formatMessage } = useIntl();
   const { registerNotification } = useNotificationService();
-  const { trackError } = useAppMonitoringService();
 
   useEffectOnce(() => {
     // Set the last update check to the timestamp when the page is loaded, so we won't check for another x days from now
@@ -68,5 +68,5 @@ export const useBuildUpdateCheck = () => {
     return () => {
       subscription.unsubscribe();
     };
-  }, [formatMessage, registerNotification, trackError]);
+  }, [formatMessage, registerNotification]);
 };

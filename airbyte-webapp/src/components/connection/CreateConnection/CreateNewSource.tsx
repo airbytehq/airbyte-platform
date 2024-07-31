@@ -8,7 +8,7 @@ import { Button } from "components/ui/Button";
 
 import { useSuggestedSources } from "area/connector/utils";
 import { useCreateSource, useSourceDefinitionList } from "core/api";
-import { AppActionCodes, useAppMonitoringService } from "hooks/services/AppMonitoringService";
+import { AppActionCodes, trackAction } from "core/utils/datadog";
 import { useFormChangeTrackerService } from "hooks/services/FormChangeTracker";
 import { SourceForm, SourceFormValues } from "pages/source/CreateSourcePage/SourceForm";
 
@@ -21,7 +21,6 @@ export const CreateNewSource: React.FC = () => {
   const selectedSourceDefinitionId = searchParams.get(SOURCE_DEFINITION_PARAM);
   const suggestedSourceDefinitionIds = useSuggestedSources();
   const { sourceDefinitions } = useSourceDefinitionList();
-  const { trackAction } = useAppMonitoringService();
   const { mutateAsync: createSource } = useCreateSource();
 
   const { clearAllFormChanges } = useFormChangeTrackerService();
