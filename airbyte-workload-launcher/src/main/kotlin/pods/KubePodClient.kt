@@ -3,6 +3,9 @@ package io.airbyte.workload.launcher.pods
 import com.google.common.annotations.VisibleForTesting
 import datadog.trace.api.Trace
 import io.airbyte.commons.constants.WorkerConstants.KubeConstants.FULL_POD_TIMEOUT
+import io.airbyte.featureflag.Connection
+import io.airbyte.featureflag.FeatureFlagClient
+import io.airbyte.featureflag.OrchestratorFetchesInputFromInit
 import io.airbyte.metrics.lib.ApmTraceUtils
 import io.airbyte.persistence.job.models.ReplicationInput
 import io.airbyte.workers.models.CheckConnectionInput
@@ -40,6 +43,7 @@ class KubePodClient(
   @Named("checkPodFactory") private val checkPodFactory: ConnectorPodFactory,
   @Named("discoverPodFactory") private val discoverPodFactory: ConnectorPodFactory,
   @Named("specPodFactory") private val specPodFactory: ConnectorPodFactory,
+  private val featureFlagClient: FeatureFlagClient,
 ) : PodClient {
   override fun podsExistForAutoId(autoId: UUID): Boolean {
     return kubePodLauncher.podsRunning(labeler.getAutoIdLabels(autoId))
@@ -59,6 +63,12 @@ class KubePodClient(
 
     val kubeInput = mapper.toKubeInput(launcherInput.workloadId, inputWithLabels, sharedLabels)
 
+    // Whether we should kube cp init files over or let the init container fetch itself
+    // if true the init container will fetch, if false we copy over the files
+    // NOTE: FF must be equal for the factory calls and kube cp calls to avoid a potential race
+    // so we check the value here and pass it down.
+    val useFetchingInit = featureFlagClient.boolVariation(OrchestratorFetchesInputFromInit, Connection(replicationInput.connectionId))
+
     var pod =
       orchestratorPodFactory.create(
         replicationInput.connectionId,
@@ -68,6 +78,7 @@ class KubePodClient(
         kubeInput.kubePodInfo,
         kubeInput.annotations,
         kubeInput.extraEnv,
+        useFetchingInit,
       )
     try {
       pod =
@@ -82,11 +93,11 @@ class KubePodClient(
       )
     }
 
-    // TODO: put these behind FF check once we convert all files to env vars (flag: OrchestratorHydratesFromInit)
-    waitOrchestratorPodInit(pod)
+    if (!useFetchingInit) {
+      waitOrchestratorPodInit(pod)
 
-    // TODO: put these behind FF check once we convert all files to env vars (flag: OrchestratorHydratesFromInit)
-    copyFileToOrchestrator(kubeInput, pod)
+      copyFileToOrchestrator(kubeInput, pod)
+    }
 
     waitForOrchestratorStart(pod)
 

@@ -3,6 +3,8 @@ package io.airbyte.workload.launcher.pods
 import fixtures.RecordFixtures
 import io.airbyte.config.ResourceRequirements
 import io.airbyte.config.WorkloadType
+import io.airbyte.featureflag.OrchestratorFetchesInputFromInit
+import io.airbyte.featureflag.TestClient
 import io.airbyte.persistence.job.models.IntegrationLauncherConfig
 import io.airbyte.persistence.job.models.JobRunConfig
 import io.airbyte.persistence.job.models.ReplicationInput
@@ -38,6 +40,8 @@ import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 import org.junit.jupiter.api.extension.ExtendWith
+import org.junit.jupiter.params.ParameterizedTest
+import org.junit.jupiter.params.provider.ValueSource
 import java.lang.RuntimeException
 import java.util.UUID
 
@@ -70,6 +74,9 @@ class KubePodClientTest {
   @MockK
   private lateinit var podFactory: ConnectorPodFactory
 
+  @MockK
+  private lateinit var featureFlagClient: TestClient
+
   private lateinit var client: KubePodClient
 
   private lateinit var replInput: ReplicationInput
@@ -93,6 +100,7 @@ class KubePodClientTest {
         checkPodFactory,
         discoverPodFactory,
         specPodFactory,
+        featureFlagClient,
       )
 
     replInput =
@@ -133,6 +141,8 @@ class KubePodClientTest {
     every { mapper.toKubeInput(WORKLOAD_ID, discoverInput, sharedLabels, "/log/path") } returns connectorKubeInput
     every { mapper.toKubeInput(WORKLOAD_ID, specInput, sharedLabels, "/log/path") } returns connectorKubeInput
 
+    every { featureFlagClient.boolVariation(OrchestratorFetchesInputFromInit, any()) } returns true
+
     every {
       orchestratorPodFactory.create(
         any(),
@@ -142,6 +152,7 @@ class KubePodClientTest {
         replKubeInput.kubePodInfo,
         replKubeInput.annotations,
         replKubeInput.extraEnv,
+        any(),
       )
     } returns pod
 
@@ -163,8 +174,11 @@ class KubePodClientTest {
     every { launcher.waitForPodReadyOrTerminal(any(), any()) } returns Unit
   }
 
-  @Test
-  fun `launchReplication starts an orchestrator and waits on all 3 pods`() {
+  @ValueSource(booleans = [true, false])
+  @ParameterizedTest
+  fun `launchReplication starts an orchestrator and waits on all 3 pods`(useFetchingInit: Boolean) {
+    every { featureFlagClient.boolVariation(OrchestratorFetchesInputFromInit, any()) } returns useFetchingInit
+
     val orchestrator =
       PodBuilder()
         .withNewMetadata()
@@ -181,6 +195,7 @@ class KubePodClientTest {
         replKubeInput.kubePodInfo,
         replKubeInput.annotations,
         replKubeInput.extraEnv,
+        useFetchingInit,
       )
     } returns orchestrator
 
@@ -188,9 +203,11 @@ class KubePodClientTest {
 
     verify { launcher.create(orchestrator) }
 
-    verify { launcher.waitForPodInit(orchestrator, POD_INIT_TIMEOUT_VALUE) }
+    val expectedTimesForKubeCpCalls = if (useFetchingInit) 0 else 1
 
-    verify { launcher.copyFilesToKubeConfigVolumeMain(orchestrator, replKubeInput.fileMap) }
+    verify(exactly = expectedTimesForKubeCpCalls) { launcher.waitForPodInit(orchestrator, POD_INIT_TIMEOUT_VALUE) }
+
+    verify(exactly = expectedTimesForKubeCpCalls) { launcher.copyFilesToKubeConfigVolumeMain(orchestrator, replKubeInput.fileMap) }
 
     verify { launcher.waitForPodReadyOrTerminal(replKubeInput.destinationLabels, REPL_CONNECTOR_STARTUP_TIMEOUT_VALUE) }
 
@@ -201,6 +218,8 @@ class KubePodClientTest {
 
   @Test
   fun `launchReplication starts an orchestrator and waits on all 2 pods for resets`() {
+    every { featureFlagClient.boolVariation(OrchestratorFetchesInputFromInit, any()) } returns false
+
     val orchestrator =
       PodBuilder()
         .withNewMetadata()
@@ -217,6 +236,7 @@ class KubePodClientTest {
         replKubeInput.kubePodInfo,
         replKubeInput.annotations,
         replKubeInput.extraEnv,
+        false,
       )
     } returns orchestrator
 
@@ -252,8 +272,10 @@ class KubePodClientTest {
     }
   }
 
+  // TODO: delete once OrchestratorFetchesInputFromInit rolled out
   @Test
   fun `launchReplication propagates orchestrator wait for init error`() {
+    every { featureFlagClient.boolVariation(OrchestratorFetchesInputFromInit, any()) } returns false
     every { launcher.waitForPodInit(pod, POD_INIT_TIMEOUT_VALUE) } throws RuntimeException("bang")
 
     assertThrows<KubeClientException> {
@@ -261,8 +283,10 @@ class KubePodClientTest {
     }
   }
 
+  // TODO: delete once OrchestratorFetchesInputFromInit rolled out
   @Test
   fun `launchReplication propagates orchestrator copy file map error`() {
+    every { featureFlagClient.boolVariation(OrchestratorFetchesInputFromInit, any()) } returns false
     every { launcher.copyFilesToKubeConfigVolumeMain(any(), replKubeInput.fileMap) } throws RuntimeException("bang")
 
     assertThrows<KubeClientException> {

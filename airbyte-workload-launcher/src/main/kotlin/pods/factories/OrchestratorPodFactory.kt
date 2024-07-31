@@ -4,7 +4,6 @@ import io.airbyte.config.ResourceRequirements
 import io.airbyte.featureflag.ANONYMOUS
 import io.airbyte.featureflag.Connection
 import io.airbyte.featureflag.FeatureFlagClient
-import io.airbyte.featureflag.OrchestratorFetchesInputFromInit
 import io.airbyte.featureflag.UseCustomK8sScheduler
 import io.airbyte.workers.process.KubePodInfo
 import io.airbyte.workers.process.KubePodProcess
@@ -47,6 +46,7 @@ class OrchestratorPodFactory(
     kubePodInfo: KubePodInfo,
     annotations: Map<String, String>,
     runtimeEnvVars: List<EnvVar>,
+    useFetchingInit: Boolean,
   ): Pod {
     val volumes: MutableList<Volume> = ArrayList()
     val volumeMounts: MutableList<VolumeMount> = ArrayList()
@@ -72,7 +72,7 @@ class OrchestratorPodFactory(
     val envVars = orchestratorEnvSingleton.orchestratorEnvVars(connectionId) + runtimeEnvVars
 
     val initContainer =
-      if (featureFlagClient.boolVariation(OrchestratorFetchesInputFromInit, Connection(connectionId))) {
+      if (useFetchingInit) {
         initContainerFactory.createFetching(containerResources, volumeMounts, runtimeEnvVars)
       } else {
         initContainerFactory.createWaiting(containerResources, volumeMounts)
