@@ -7,6 +7,7 @@ package io.airbyte.workload.launcher
 import com.google.common.annotations.VisibleForTesting
 import datadog.trace.api.Trace
 import dev.failsafe.Failsafe
+import dev.failsafe.FailsafeException
 import dev.failsafe.RetryPolicy
 import io.airbyte.metrics.lib.ApmTraceUtils
 import io.airbyte.metrics.lib.MetricAttribute
@@ -107,11 +108,13 @@ class ClaimedProcessor(
             .build(),
         )
           .get { -> apiClient.workloadApi.workloadList(workloadListRequest) }
-      } catch (e: ConnectException) {
+      } catch (e: FailsafeException) {
+        if (e.cause !is ConnectException) {
+          throw e; // Surface all other errors.
+        }
         // On a ConnectionException, we'll retry indefinitely.
         logger.warn { "Failed to connect to workload API fetching workloads for dataplane $dataplaneId, retrying..." }
       }
-      // Otherwise, we'll surface the exception.
     }
   }
 }
