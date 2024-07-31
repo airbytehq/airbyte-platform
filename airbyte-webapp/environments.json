@@ -9,6 +9,12 @@
     "envFile": ".env.development-k8s",
     "description": "Local Kubernetes cluster via `make deploy.oss`"
   },
+  "enterprise-local": {
+    "name": "Local K8s",
+    "group": "Enterprise",
+    "envFile": ".env.development-k8s",
+    "description": "Local Kubernetes cluster via `make deploy.enterprise`"
+  },
   "cloud": {
     "name": "frontend-dev",
     "group": "Cloud",
