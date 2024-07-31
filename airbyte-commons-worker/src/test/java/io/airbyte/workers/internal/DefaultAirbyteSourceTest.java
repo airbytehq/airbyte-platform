@@ -158,7 +158,7 @@ class DefaultAirbyteSourceTest {
     source.start(SOURCE_CONFIG, jobRoot, connectionId);
     // Making sure we are calling the serializer in order to convert internal catalog into protocol
     // catalog
-    verify(protocolSerializer).serialize(SOURCE_CONFIG.getCatalog());
+    verify(protocolSerializer).serialize(SOURCE_CONFIG.getCatalog(), false);
 
     final List<AirbyteMessage> messages = Lists.newArrayList();
 

@@ -9,7 +9,7 @@ import io.airbyte.commons.version.Version;
 import io.airbyte.config.ConfiguredAirbyteCatalog;
 
 /**
- * Serialize a ConfiguredAirbyteCatalog to the specified version
+ * Serialize a ConfiguredAirbyteCatalog to the specified version.
  * <p>
  * This Serializer expects a ConfiguredAirbyteCatalog from the Current version of the platform,
  * converts it to the target protocol version before serializing it.
@@ -25,10 +25,10 @@ public class VersionedProtocolSerializer implements ProtocolSerializer {
   }
 
   @Override
-  public String serialize(final ConfiguredAirbyteCatalog configuredAirbyteCatalog) {
-    // TODO add safeguards about DestinationSyncModes when we move forward with
-    // DestinationSyncMode.OVERWRITE_DEDUP
-    return Jsons.serialize(configuredAirbyteCatalogMigrator.downgrade(configuredAirbyteCatalog, protocolVersion));
+  public String serialize(final ConfiguredAirbyteCatalog configuredAirbyteCatalog, final boolean supportsRefreshes) {
+    return Jsons.serialize(
+        configuredAirbyteCatalogMigrator.downgrade(DefaultProtocolSerializer.replaceDestinationSyncModes(configuredAirbyteCatalog, supportsRefreshes),
+            protocolVersion));
   }
 
 }

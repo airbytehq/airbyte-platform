@@ -8,6 +8,8 @@ import static io.airbyte.commons.logging.LoggingHelper.RESET;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.RETURNS_DEEP_STUBS;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -48,6 +50,8 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -138,7 +142,7 @@ class DefaultAirbyteDestinationTest {
 
     // Making sure we are calling the serializer in order to convert internal catalog into protocol
     // catalog
-    verify(protocolSerializer).serialize(DESTINATION_CONFIG.getCatalog());
+    verify(protocolSerializer).serialize(DESTINATION_CONFIG.getCatalog(), false);
 
     final AirbyteMessage recordMessage = AirbyteMessageUtils.createRecordMessage(STREAM_NAME, FIELD_NAME, "blue");
     destination.accept(recordMessage);
@@ -250,6 +254,24 @@ class DefaultAirbyteDestinationTest {
     // call a second time to verify that exit value is cached
     assertEquals(2, destination.getExitValue());
     verify(process, times(1)).exitValue();
+  }
+
+  @ValueSource(booleans = {true, false})
+  @ParameterizedTest
+  void testSupportRefreshIsPassedToTheSerializer(final boolean supportRefreshes) throws Exception {
+    final AirbyteDestination destination =
+        new DefaultAirbyteDestination(integrationLauncher, streamFactory, messageWriterFactory, protocolSerializer, destinationTimeoutMonitor,
+            metricClient);
+    final WorkerDestinationConfig config = Jsons.clone(DESTINATION_CONFIG);
+    config.setSupportRefreshes(supportRefreshes);
+
+    when(process.isAlive()).thenReturn(false);
+    destination.start(config, jobRoot);
+
+    destination.notifyEndOfInput();
+    destination.close();
+
+    verify(protocolSerializer).serialize(any(), eq(supportRefreshes));
   }
 
 }

@@ -26,3 +26,6 @@ properties:
     format: uuid
   state:
     "$ref": State.yaml
+  supportRefreshes:
+    type: boolean
+    default: false

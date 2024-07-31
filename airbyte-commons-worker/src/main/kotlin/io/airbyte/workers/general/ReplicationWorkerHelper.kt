@@ -76,6 +76,7 @@ import java.util.Collections
 import java.util.Optional
 import java.util.UUID
 import java.util.concurrent.atomic.AtomicBoolean
+import kotlin.properties.Delegates
 import io.airbyte.workload.api.client.generated.infrastructure.ClientException as GeneratedClientException
 
 private val logger = KotlinLogging.logger { }
@@ -115,6 +116,7 @@ class ReplicationWorkerHelper(
   private var ctx: ReplicationContext? = null
   private lateinit var replicationFeatureFlags: ReplicationFeatureFlags
   private lateinit var streamStatusTracker: StreamStatusTracker
+  private var supportRefreshes by Delegates.notNull<Boolean>()
 
   fun markCancelled(): Unit = _cancelled.set(true)
 
@@ -199,7 +201,7 @@ class ReplicationWorkerHelper(
 
     ApmTraceUtils.addTagsToTrace(ctx.connectionId, ctx.attempt.toLong(), ctx.jobId.toString(), jobRoot)
 
-    val supportRefreshes =
+    supportRefreshes =
       airbyteApiClient.actorDefinitionVersionApi.resolveActorDefinitionVersionByTag(
         ResolveActorDefinitionVersionRequestBody(
           actorDefinitionId = ctx.destinationDefinitionId,
@@ -233,7 +235,10 @@ class ReplicationWorkerHelper(
     timeTracker.trackDestinationWriteStartTime()
     destinationConfig =
       WorkerUtils.syncToWorkerDestinationConfig(replicationInput)
-        .apply { catalog = mapper.mapCatalog(catalog) }
+        .apply {
+          catalog = mapper.mapCatalog(catalog)
+          supportRefreshes = this@ReplicationWorkerHelper.supportRefreshes
+        }
 
     try {
       destination.start(destinationConfig, jobRoot)

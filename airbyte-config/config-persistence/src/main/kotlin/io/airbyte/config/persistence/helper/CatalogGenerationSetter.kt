@@ -32,7 +32,13 @@ class CatalogGenerationSetter {
       val currentGeneration = generationByStreamDescriptor.getOrDefault(streamDescriptor, 0)
       val shouldTruncate: Boolean =
         refreshTypeByStream[streamDescriptor] == RefreshStream.RefreshType.TRUNCATE ||
-          (configuredAirbyteStream.syncMode == SyncMode.FULL_REFRESH && configuredAirbyteStream.destinationSyncMode == DestinationSyncMode.OVERWRITE)
+          (
+            configuredAirbyteStream.syncMode == SyncMode.FULL_REFRESH &&
+              (
+                configuredAirbyteStream.destinationSyncMode == DestinationSyncMode.OVERWRITE ||
+                  configuredAirbyteStream.destinationSyncMode == DestinationSyncMode.OVERWRITE_DEDUP
+              )
+          )
 
       setGenerationInformation(configuredAirbyteStream, jobId, currentGeneration, if (shouldTruncate) currentGeneration else 0)
     }

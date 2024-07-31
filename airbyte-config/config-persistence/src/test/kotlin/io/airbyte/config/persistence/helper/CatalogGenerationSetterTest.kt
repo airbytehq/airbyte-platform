@@ -41,6 +41,11 @@ class CatalogGenerationSetterTest {
       ),
       Generation(
         streamName = "name2",
+        streamNamespace = "namespace1",
+        generationId = 3L,
+      ),
+      Generation(
+        streamName = "name2",
         streamNamespace = "namespace2",
         generationId = 2L,
       ),
@@ -150,7 +155,7 @@ class CatalogGenerationSetterTest {
   }
 
   @Test
-  fun `test that min gen is 0 for full refresh overwrite`() {
+  fun `test that min gen is 0 for full refresh overwrite and overwrite dedup`() {
     val catalog =
       ConfiguredAirbyteCatalog().withStreams(
         listOf(
@@ -168,6 +173,13 @@ class CatalogGenerationSetterTest {
           )
             .withSyncMode(SyncMode.FULL_REFRESH)
             .withDestinationSyncMode(DestinationSyncMode.APPEND),
+          ConfiguredAirbyteStream().withStream(
+            AirbyteStream()
+              .withName("name2")
+              .withNamespace("namespace1"),
+          )
+            .withSyncMode(SyncMode.FULL_REFRESH)
+            .withDestinationSyncMode(DestinationSyncMode.OVERWRITE_DEDUP),
         ),
       )
 
@@ -179,11 +191,16 @@ class CatalogGenerationSetterTest {
         generations = generations,
       )
 
+    assertEquals(3, updatedCatalog.streams.size)
     updatedCatalog.streams.forEach {
       if (it.stream.name == "name1" && it.stream.namespace == "namespace1") {
         assertEquals(1L, it.minimumGenerationId)
         assertEquals(jobId, it.syncId)
         assertEquals(1L, it.generationId)
+      } else if (it.stream.name == "name2" && it.stream.namespace == "namespace1") {
+        assertEquals(3L, it.minimumGenerationId)
+        assertEquals(jobId, it.syncId)
+        assertEquals(3L, it.generationId)
       } else {
         assertEquals(0L, it.minimumGenerationId)
         assertEquals(jobId, it.syncId)

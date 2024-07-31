@@ -18,7 +18,8 @@ public enum DestinationSyncMode {
 
   APPEND("append"),
   OVERWRITE("overwrite"),
-  APPEND_DEDUP("append_dedup");
+  APPEND_DEDUP("append_dedup"),
+  OVERWRITE_DEDUP("overwrite_dedup");
 
   private final String value;
   private static final Map<String, DestinationSyncMode> CONSTANTS = new HashMap<String, DestinationSyncMode>();
