@@ -119,7 +119,6 @@ class PayloadKubeInputMapperTest {
     assert(result.kubePodInfo == KubePodInfo(namespace, "orchestrator-repl-job-415-attempt-7654", containerInfo))
     val expectedFileMap: Map<String, String> =
       buildMap {
-        put(OrchestratorConstants.INIT_FILE_JOB_RUN_CONFIG, mockSerializedOutput)
         if (shouldKubeCpInput) {
           put(OrchestratorConstants.INIT_FILE_INPUT, mockSerializedOutput)
         }
@@ -127,7 +126,14 @@ class PayloadKubeInputMapperTest {
 
     assert(result.fileMap == expectedFileMap)
     assert(result.resourceReqs == resourceReqs)
-    assert(result.extraEnv == listOf(EnvVar(AirbyteEnvVar.WORKLOAD_ID.toString(), workloadId, null)))
+    assert(
+      result.extraEnv ==
+        listOf(
+          EnvVar(AirbyteEnvVar.WORKLOAD_ID.toString(), workloadId, null),
+          EnvVar(AirbyteEnvVar.JOB_ID.toString(), jobId, null),
+          EnvVar(AirbyteEnvVar.ATTEMPT_ID.toString(), attemptId.toString(), null),
+        ),
+    )
   }
 
   @ParameterizedTest

@@ -10,7 +10,6 @@ import io.airbyte.featureflag.InjectAwsSecretsToConnectorPods
 import io.airbyte.featureflag.OrchestratorFetchesInputFromInit
 import io.airbyte.featureflag.Workspace
 import io.airbyte.persistence.job.models.IntegrationLauncherConfig
-import io.airbyte.persistence.job.models.JobRunConfig
 import io.airbyte.persistence.job.models.ReplicationInput
 import io.airbyte.workers.models.CheckConnectionInput
 import io.airbyte.workers.models.DiscoverCatalogInput
@@ -71,7 +70,7 @@ class PayloadKubeInputMapper(
     val orchestratorReqs = input.getOrchestratorResourceReqs()
     val nodeSelectors = getNodeSelectors(input.usesCustomConnector(), replicationWorkerConfigs)
 
-    val fileMap = buildSyncFileMap(input, input.jobRunConfig)
+    val fileMap = buildSyncFileMap(input)
 
     return OrchestratorKubeInput(
       labeler.getReplicationOrchestratorLabels() + sharedLabels,
@@ -82,7 +81,11 @@ class PayloadKubeInputMapper(
       fileMap,
       orchestratorReqs,
       replicationWorkerConfigs.workerKubeAnnotations,
-      listOf(EnvVar(AirbyteEnvVar.WORKLOAD_ID.toString(), workloadId, null)),
+      listOf(
+        EnvVar(AirbyteEnvVar.WORKLOAD_ID.toString(), workloadId, null),
+        EnvVar(AirbyteEnvVar.JOB_ID.toString(), jobId, null),
+        EnvVar(AirbyteEnvVar.ATTEMPT_ID.toString(), attemptId.toString(), null),
+      ),
     )
   }
 
@@ -246,15 +249,11 @@ class PayloadKubeInputMapper(
 
   // TODO: This is the way we pass data into the pods we launch. This should be extracted to
   //  some shared interface between parent / child to make it less brittle.
-  private fun buildSyncFileMap(
-    input: ReplicationInput,
-    jobRunConfig: JobRunConfig,
-  ): Map<String, String> {
+  private fun buildSyncFileMap(input: ReplicationInput): Map<String, String> {
     return buildMap {
       if (!featureFlagClient.boolVariation(OrchestratorFetchesInputFromInit, Connection(input.connectionId))) {
         put(OrchestratorConstants.INIT_FILE_INPUT, serializer.serialize(input))
       }
-      put(OrchestratorConstants.INIT_FILE_JOB_RUN_CONFIG, serializer.serialize(jobRunConfig))
     }
   }
 
