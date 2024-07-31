@@ -52,6 +52,7 @@ class JobCreationAndStatusUpdateHelperTest {
   JobTracker mJobTracker;
 
   JobCreationAndStatusUpdateHelper helper;
+  ConnectionTimelineEventHelper connectionTimelineEventHelper;
 
   @BeforeEach
   void setup() {
@@ -59,12 +60,13 @@ class JobCreationAndStatusUpdateHelperTest {
     mJobNotifier = mock(JobNotifier.class);
     mJobPersistence = mock(JobPersistence.class);
     mJobTracker = mock(JobTracker.class);
+    connectionTimelineEventHelper = mock(ConnectionTimelineEventHelper.class);
 
     helper = new JobCreationAndStatusUpdateHelper(
         mJobPersistence,
         mConfigRepository,
         mJobNotifier,
-        mJobTracker);
+        mJobTracker, connectionTimelineEventHelper);
   }
 
   @Test

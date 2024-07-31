@@ -74,15 +74,18 @@ public class JobCreationAndStatusUpdateHelper {
   private final ConfigRepository configRepository;
   private final JobNotifier jobNotifier;
   private final JobTracker jobTracker;
+  private final ConnectionTimelineEventHelper connectionTimelineEventHelper;
 
   public JobCreationAndStatusUpdateHelper(final JobPersistence jobPersistence,
                                           final ConfigRepository configRepository,
                                           final JobNotifier jobNotifier,
-                                          final JobTracker jobTracker) {
+                                          final JobTracker jobTracker,
+                                          final ConnectionTimelineEventHelper connectionTimelineEventHelper) {
     this.jobPersistence = jobPersistence;
     this.configRepository = configRepository;
     this.jobNotifier = jobNotifier;
     this.jobTracker = jobTracker;
+    this.connectionTimelineEventHelper = connectionTimelineEventHelper;
   }
 
   @VisibleForTesting
@@ -158,6 +161,8 @@ public class JobCreationAndStatusUpdateHelper {
       }
       final Job failedJob = jobPersistence.getJob(jobId);
       jobNotifier.failJob(failedJob, attemptStats);
+      // log failure events in connection timeline
+      connectionTimelineEventHelper.logJobFailureEventInConnectionTimeline(job, connectionId, attemptStats);
       trackCompletion(failedJob, JobStatus.FAILED);
     }
   }

@@ -71,6 +71,7 @@ import io.airbyte.commons.server.converters.ConfigurationUpdate;
 import io.airbyte.commons.server.converters.JobConverter;
 import io.airbyte.commons.server.errors.ValueConflictKnownException;
 import io.airbyte.commons.server.handlers.helpers.CatalogConverter;
+import io.airbyte.commons.server.handlers.helpers.ConnectionTimelineEventHelper;
 import io.airbyte.commons.server.handlers.helpers.NotificationHelper;
 import io.airbyte.commons.server.helpers.DestinationHelpers;
 import io.airbyte.commons.server.helpers.SourceHelpers;
@@ -267,6 +268,7 @@ class SchedulerHandlerTest {
   private CurrentUserService currentUserService;
   private StreamRefreshesHandler streamRefreshesHandler;
   private NotificationHelper notificationHelper;
+  private ConnectionTimelineEventHelper connectionTimelineEventHelper;
 
   @BeforeEach
   void setup() throws JsonValidationException, ConfigNotFoundException, IOException {
@@ -320,6 +322,7 @@ class SchedulerHandlerTest {
     streamRefreshesHandler = mock(StreamRefreshesHandler.class);
     when(streamRefreshesHandler.getRefreshesForConnection(any())).thenReturn(new ArrayList<>());
     notificationHelper = mock(NotificationHelper.class);
+    connectionTimelineEventHelper = mock(ConnectionTimelineEventHelper.class);
 
     schedulerHandler = new SchedulerHandler(
         configRepository,
@@ -344,10 +347,8 @@ class SchedulerHandlerTest {
         connectorDefinitionSpecificationHandler,
         workspaceService,
         secretPersistenceConfigService,
-        connectionEventService,
-        currentUserService,
         streamRefreshesHandler,
-        notificationHelper);
+        notificationHelper, connectionTimelineEventHelper);
   }
 
   @Test
