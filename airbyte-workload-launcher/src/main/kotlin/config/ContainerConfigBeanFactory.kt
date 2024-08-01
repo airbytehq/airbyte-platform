@@ -38,7 +38,7 @@ class ContainerConfigBeanFactory {
   @Named("containerOrchestratorImage")
   fun containerOrchestratorImage(
     @Value("\${airbyte.version}") airbyteVersion: String,
-    @Value("\${airbyte.container.orchestrator.image}") injectedImage: String?,
+    @Value("\${airbyte.worker.job.kube.main.container.image}") injectedImage: String?,
   ): String {
     if (injectedImage != null && StringUtils.isNotEmpty(injectedImage)) {
       return injectedImage
@@ -75,9 +75,9 @@ class ContainerConfigBeanFactory {
     }
 
     return if (airbyteVersion.endsWith("-cloud")) {
-      "airbyte/init-container:${airbyteVersion.dropLast(6)}"
+      "airbyte/workload-init-container:${airbyteVersion.dropLast(6)}"
     } else {
-      "airbyte/init-container:$airbyteVersion"
+      "airbyte/workload-init-container:$airbyteVersion"
     }
   }
 

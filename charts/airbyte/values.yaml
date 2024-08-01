@@ -962,6 +962,14 @@ workload-launcher:
     # -- Orchestrator image
     image: ""
 
+  connectorSidecar:
+    # -- Connector Sidecar image
+    image: ""
+
+  # -- Workload init image
+  workloadInit:
+    image: ""
+
   ## current no exist documentations
   activityMaxAttempt: ""
   activityInitialDelayBetweenAttemptsSeconds: ""
