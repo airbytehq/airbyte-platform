@@ -3,9 +3,8 @@ data:
   allowedHosts:
     hosts:
   {% for host in allowedHosts %}
-  - {{ host }}
+    - "{{ host }}"
   {% endfor %}
-
   registries:
     oss:
       enabled: true
