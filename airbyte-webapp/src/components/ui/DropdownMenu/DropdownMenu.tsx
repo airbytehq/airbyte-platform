@@ -2,6 +2,7 @@ import { autoUpdate, useFloating, offset, flip } from "@floating-ui/react-dom";
 import { Menu } from "@headlessui/react";
 import classNames from "classnames";
 import React, { AnchorHTMLAttributes } from "react";
+import { createPortal } from "react-dom";
 // eslint-disable-next-line no-restricted-imports
 import { Link, LinkProps } from "react-router-dom";
 
@@ -65,45 +66,48 @@ export const DropdownMenu: React.FC<DropdownMenuProps> = ({
       {({ open }) => (
         <>
           <Menu.Button as={React.Fragment}>{children({ open })}</Menu.Button>
-          <Menu.Items
-            ref={floating}
-            className={styles.items}
-            style={{
-              position: strategy,
-              top: y ?? 0,
-              left: x ?? 0,
-            }}
-          >
-            {options.map((item, index) => {
-              if (item.as === "separator") {
-                return <div role="presentation" className={styles.separator} key={index} />;
-              }
-              if (item.as === "div") {
+          {createPortal(
+            <Menu.Items
+              ref={floating}
+              className={styles.items}
+              style={{
+                position: strategy,
+                top: y ?? 0,
+                left: x ?? 0,
+              }}
+            >
+              {options.map((item, index) => {
+                if (item.as === "separator") {
+                  return <div role="presentation" className={styles.separator} key={index} />;
+                }
+                if (item.as === "div") {
+                  return (
+                    <div className={item.className} key={index}>
+                      {item.children}
+                    </div>
+                  );
+                }
                 return (
-                  <div className={item.className} key={index}>
-                    {item.children}
-                  </div>
+                  <Menu.Item key={index} disabled={item.disabled}>
+                    {({ active }) =>
+                      item.as === "a"
+                        ? React.createElement(
+                            item.internal ? Link : "a",
+                            { ...elementProps(item, active), ...anchorProps(item) },
+                            <MenuItemContent data={item} textSize={textSize} />
+                          )
+                        : React.createElement(
+                            item.as ?? "button",
+                            { ...elementProps(item, active) },
+                            <MenuItemContent data={item} textSize={textSize} />
+                          )
+                    }
+                  </Menu.Item>
                 );
-              }
-              return (
-                <Menu.Item key={index} disabled={item.disabled}>
-                  {({ active }) =>
-                    item.as === "a"
-                      ? React.createElement(
-                          item.internal ? Link : "a",
-                          { ...elementProps(item, active), ...anchorProps(item) },
-                          <MenuItemContent data={item} textSize={textSize} />
-                        )
-                      : React.createElement(
-                          item.as ?? "button",
-                          { ...elementProps(item, active) },
-                          <MenuItemContent data={item} textSize={textSize} />
-                        )
-                  }
-                </Menu.Item>
-              );
-            })}
-          </Menu.Items>
+              })}
+            </Menu.Items>,
+            document.body
+          )}
         </>
       )}
     </Menu>

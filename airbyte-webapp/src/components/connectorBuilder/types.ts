@@ -127,6 +127,7 @@ export interface BuilderFormValues {
   streams: BuilderStream[];
   checkStreams: string[];
   version: string;
+  description?: string;
 }
 
 export interface StreamTestResults {
@@ -1014,6 +1015,7 @@ export const convertToManifest = (values: BuilderFormValues): ConnectorManifest 
     schemas: streamNameToSchema,
     spec: builderInputsToSpec(values.inputs),
     metadata: builderFormValuesToMetadata(values),
+    description: values.description,
   };
 };
 

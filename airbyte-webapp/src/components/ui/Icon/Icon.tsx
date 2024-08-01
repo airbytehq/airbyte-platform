@@ -58,6 +58,7 @@ import FilesIcon from "./icons/filesIcon.svg?react";
 import FlashIcon from "./icons/flashIcon.svg?react";
 import FolderIcon from "./icons/folderIcon.svg?react";
 import GearIcon from "./icons/gearIcon.svg?react";
+import GithubIcon from "./icons/github.svg?react";
 import GlobeIcon from "./icons/globeIcon.svg?react";
 import GoogleIcon from "./icons/googleIcon.svg?react";
 import GridIcon from "./icons/gridIcon.svg?react";
@@ -220,6 +221,7 @@ export const Icons: Record<IconType, React.FC<React.SVGProps<SVGSVGElement>>> = 
   flash: FlashIcon,
   folder: FolderIcon,
   gear: GearIcon,
+  github: GithubIcon,
   globe: GlobeIcon,
   google: GoogleIcon,
   grid: GridIcon,

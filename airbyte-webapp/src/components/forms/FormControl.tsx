@@ -1,4 +1,5 @@
 import classNames from "classnames";
+import isString from "lodash/isString";
 import uniqueId from "lodash/uniqueId";
 import React, { HTMLInputTypeAttribute, ReactNode, useState } from "react";
 import { FieldError, Path, get, useFormState } from "react-hook-form";
@@ -176,7 +177,7 @@ interface FormLabelProps {
 export const FormLabel: React.FC<FormLabelProps> = ({ description, label, labelTooltip, htmlFor, optional }) => {
   return (
     <label className={styles.control__label} htmlFor={htmlFor}>
-      <Text size="lg">
+      <Text size="lg" className={styles.control__label__text}>
         {label}
         {labelTooltip && <InfoTooltip placement="top-start">{labelTooltip}</InfoTooltip>}
         {optional && (
@@ -185,7 +186,8 @@ export const FormLabel: React.FC<FormLabelProps> = ({ description, label, labelT
           </Text>
         )}
       </Text>
-      {description && <Text className={styles.control__description}>{description}</Text>}
+      {description &&
+        (isString(description) ? <Text className={styles.control__description}>{description}</Text> : description)}
     </label>
   );
 };

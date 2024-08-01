@@ -24,4 +24,5 @@ export interface Experiments {
   "settings.showAdvancedSettings": boolean;
   "upcomingFeaturesPage.url": string;
   "connection.syncCatalogV2": boolean;
+  "connectorBuilder.contributeToMarketplace": boolean;
 }

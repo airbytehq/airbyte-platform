@@ -178,6 +178,7 @@ export const ConnectorBuilderFormStateProvider: React.FC<React.PropsWithChildren
 const MANIFEST_KEY_ORDER: Array<keyof ConnectorManifest> = [
   "version",
   "type",
+  "description",
   "check",
   "definitions",
   "streams",

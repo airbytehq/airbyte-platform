@@ -54,6 +54,7 @@ export type IconType =
   | "flash"
   | "folder"
   | "gear"
+  | "github"
   | "globe"
   | "google"
   | "grid"
