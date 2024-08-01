@@ -2,6 +2,7 @@
 
 package io.airbyte.connector_builder.services
 
+import io.airbyte.commons.server.handlers.logger
 import org.kohsuke.github.GHBranch
 import org.kohsuke.github.GHCommit
 import org.kohsuke.github.GHContent
@@ -11,6 +12,7 @@ import org.kohsuke.github.GHRef
 import org.kohsuke.github.GHRepository
 import org.kohsuke.github.GitHub
 import org.kohsuke.github.GitHubBuilder
+import org.kohsuke.github.HttpException
 import org.yaml.snakeyaml.Yaml
 
 class GithubContributionService(var connectorImageName: String, personalAccessToken: String?) {
@@ -145,14 +147,30 @@ class GithubContributionService(var connectorImageName: String, personalAccessTo
     return targetRepository.createRef("refs/heads/$branchName", baseBranchSha)
   }
 
+  private inline fun <T> safeHandleBranchExceptions(block: () -> T): T? {
+    return try {
+      block()
+    } catch (e: GHFileNotFoundException) {
+      // Handle the case where the branch does not exist
+      logger.debug(e) { "Suppressed GHFileNotFoundException getting branch ref" }
+      null
+    } catch (e: HttpException) {
+      // Handle the case where the fork does not exist
+      if (e.responseCode == 409) {
+        logger.debug(e) { "Suppressed Repository Does not exist error getting branch ref" }
+        null
+      } else {
+        throw e
+      }
+    }
+  }
+
   fun getBranchRef(
     branchName: String,
     targetRepository: GHRepository,
   ): GHRef? {
-    try {
-      return targetRepository.getRef("refs/heads/$branchName")
-    } catch (e: GHFileNotFoundException) {
-      return null
+    return safeHandleBranchExceptions {
+      targetRepository.getRef("refs/heads/$branchName")
     }
   }
 
@@ -160,10 +178,8 @@ class GithubContributionService(var connectorImageName: String, personalAccessTo
     branchName: String,
     targetRepository: GHRepository,
   ): GHBranch? {
-    try {
-      return targetRepository.getBranch(branchName)
-    } catch (e: GHFileNotFoundException) {
-      return null
+    return safeHandleBranchExceptions {
+      targetRepository.getBranch(branchName)
     }
   }
 

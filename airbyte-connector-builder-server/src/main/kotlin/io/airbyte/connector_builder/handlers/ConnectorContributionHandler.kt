@@ -13,12 +13,15 @@ import io.airbyte.connector_builder.api.model.generated.GenerateContributionResp
 import io.airbyte.connector_builder.services.GithubContributionService
 import io.airbyte.connector_builder.templates.ContributionTemplates
 import io.airbyte.connector_builder.utils.ManifestParser
+import io.github.oshai.kotlinlogging.KotlinLogging
 import jakarta.inject.Singleton
 import org.kohsuke.github.GHFileNotFoundException
 import org.kohsuke.github.HttpException
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import java.util.UUID
+
+private val logger = KotlinLogging.logger {}
 
 @Singleton
 class ConnectorContributionHandler(private val contributionTemplates: ContributionTemplates) {
@@ -150,10 +153,11 @@ class ConnectorContributionHandler(private val contributionTemplates: Contributi
   }
 
   fun convertToContributionException(e: Exception): Exception {
+    logger.error(e) { "Failed to generate contribution" }
     return when (e) {
       is HttpException -> convertGithubExceptionToContributionException(e)
       // GHFileNotFoundException is encountered when the GitHub token has insufficient permissions to fork the airbyte repo
-      is GHFileNotFoundException -> InsufficientGithubTokenPermissionsProblem()
+      is GHFileNotFoundException -> InsufficientGithubTokenPermissionsProblem(e)
       else -> e
     }
   }
