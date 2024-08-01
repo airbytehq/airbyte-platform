@@ -1,3 +1,4 @@
+{{- if or (eq .Values.global.edition "community") (eq .Values.global.enterprise.workloadsOptIn true)}}
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -662,3 +663,4 @@ spec:
       {{- if .Values.global.extraVolumes }}
 {{- toYaml .Values.global.extraVolumes | nindent 6 }}
       {{- end }}
+{{- end }}
