@@ -25,7 +25,6 @@ import jakarta.inject.Named
 import jakarta.inject.Singleton
 import java.time.Duration
 import java.time.Instant
-import java.util.Optional
 import java.util.UUID
 
 private const val BASE_URL = "https://cloud.airbyte.com/"
@@ -33,7 +32,7 @@ private val logger = KotlinLogging.logger { }
 
 @Singleton
 class StateCheckSumErrorReporter(
-  @Named("jobErrorReportingClient") private val jobErrorReportingClient: Optional<JobErrorReportingClient>,
+  @Named("stateCheckSumErrorReportingClient") private val jobErrorReportingClient: JobErrorReportingClient,
   @Value("\${airbyte.version}") private val airbyteVersion: String,
   @Value("\${airbyte.deployment-mode}") private val deploymentMode: String,
   private val airbyteApiClient: AirbyteApiClient,
@@ -56,52 +55,50 @@ class StateCheckSumErrorReporter(
       return
     }
     try {
-      jobErrorReportingClient.ifPresent { client ->
-        val standardWorkspace = StandardWorkspace().withWorkspaceId(workspaceId)
-        val commonMetadata =
-          MoreMaps.merge(
-            mapOf(JobErrorReporter.JOB_ID_KEY to jobId.toString()),
-            getConnectionMetadata(workspaceId, connectionId),
-            getWorkspaceMetadata(workspaceId),
-            airbyteMetadata(),
-          )
+      val standardWorkspace = StandardWorkspace().withWorkspaceId(workspaceId)
+      val commonMetadata =
+        MoreMaps.merge(
+          mapOf(JobErrorReporter.JOB_ID_KEY to jobId.toString()),
+          getConnectionMetadata(workspaceId, connectionId),
+          getWorkspaceMetadata(workspaceId),
+          airbyteMetadata(),
+        )
 
-        val metadata: Map<String, String>
-        val dockerImageName: String
+      val metadata: Map<String, String>
+      val dockerImageName: String
 
-        if (origin == FailureReason.FailureOrigin.SOURCE) {
-          val sourceId = retry { airbyteApiClient.connectionApi.getConnection(ConnectionIdRequestBody(connectionId)).sourceId }
-          val source = retry { airbyteApiClient.sourceApi.getSource(SourceIdRequestBody(sourceId)) }
-          val sourceDefinition =
-            retry { airbyteApiClient.sourceDefinitionApi.getSourceDefinition(SourceDefinitionIdRequestBody(source.sourceDefinitionId)) }
-          dockerImageName = getDockerImageName(sourceDefinition.dockerRepository, sourceDefinition.dockerImageTag)
-          metadata = getDefinitionMetadata(sourceDefinition.sourceDefinitionId, sourceDefinition.name, dockerImageName, sourceDefinition.releaseStage)
-        } else if (origin == FailureReason.FailureOrigin.DESTINATION) {
-          val destinationId = retry { airbyteApiClient.connectionApi.getConnection(ConnectionIdRequestBody(connectionId)).destinationId }
-          val destination = retry { airbyteApiClient.destinationApi.getDestination(DestinationIdRequestBody(destinationId)) }
-          val destinationDefinition =
-            retry {
-              airbyteApiClient.destinationDefinitionApi.getDestinationDefinition(
-                DestinationDefinitionIdRequestBody(destination.destinationDefinitionId),
-              )
-            }
-          dockerImageName = getDockerImageName(destinationDefinition.dockerRepository, destinationDefinition.dockerImageTag)
-          metadata =
-            getDefinitionMetadata(
-              destinationDefinition.destinationDefinitionId,
-              destinationDefinition.name,
-              dockerImageName,
-              destinationDefinition.releaseStage,
+      if (origin == FailureReason.FailureOrigin.SOURCE) {
+        val sourceId = retry { airbyteApiClient.connectionApi.getConnection(ConnectionIdRequestBody(connectionId)).sourceId }
+        val source = retry { airbyteApiClient.sourceApi.getSource(SourceIdRequestBody(sourceId)) }
+        val sourceDefinition =
+          retry { airbyteApiClient.sourceDefinitionApi.getSourceDefinition(SourceDefinitionIdRequestBody(source.sourceDefinitionId)) }
+        dockerImageName = getDockerImageName(sourceDefinition.dockerRepository, sourceDefinition.dockerImageTag)
+        metadata = getDefinitionMetadata(sourceDefinition.sourceDefinitionId, sourceDefinition.name, dockerImageName, sourceDefinition.releaseStage)
+      } else if (origin == FailureReason.FailureOrigin.DESTINATION) {
+        val destinationId = retry { airbyteApiClient.connectionApi.getConnection(ConnectionIdRequestBody(connectionId)).destinationId }
+        val destination = retry { airbyteApiClient.destinationApi.getDestination(DestinationIdRequestBody(destinationId)) }
+        val destinationDefinition =
+          retry {
+            airbyteApiClient.destinationDefinitionApi.getDestinationDefinition(
+              DestinationDefinitionIdRequestBody(destination.destinationDefinitionId),
             )
-        } else {
-          logger.info { "Can't use state checksum error reporter for $origin error reporting" }
-          return@ifPresent
-        }
-
-        val failureReason = createFailureReason(origin, internalMessage, externalMessage, exception, jobId, attemptNumber)
-        val allMetadata = MoreMaps.merge(getFailureReasonMetadata(failureReason), metadata, commonMetadata)
-        client.reportJobFailureReason(standardWorkspace, failureReason, dockerImageName, allMetadata, null)
+          }
+        dockerImageName = getDockerImageName(destinationDefinition.dockerRepository, destinationDefinition.dockerImageTag)
+        metadata =
+          getDefinitionMetadata(
+            destinationDefinition.destinationDefinitionId,
+            destinationDefinition.name,
+            dockerImageName,
+            destinationDefinition.releaseStage,
+          )
+      } else {
+        logger.info { "Can't use state checksum error reporter for $origin error reporting" }
+        return
       }
+
+      val failureReason = createFailureReason(origin, internalMessage, externalMessage, exception, jobId, attemptNumber)
+      val allMetadata = MoreMaps.merge(getFailureReasonMetadata(failureReason), metadata, commonMetadata)
+      jobErrorReportingClient.reportJobFailureReason(standardWorkspace, failureReason, dockerImageName, allMetadata, null)
     } catch (e: Exception) {
       logger.error(e) { "Error while trying to report state checksum error" }
     }

@@ -51,6 +51,10 @@ airbyte:
       request-bytes-threshold: ${PUB_SUB_REQUEST_BYTES_THRESHOLD:5000}
       message-count-batch-size: ${PUB_SUB_MESSAGE_COUNT_BATCH_SIZE:50}
       publish-delay-threshold-ms: ${PUB_SUB_PUBLISH_DELAY_THRESHOLD_MS:100}
+      error-reporting:
+        sentry:
+          dsn: ${JOB_ERROR_REPORTING_SENTRY_DSN}
+        strategy: ${JOB_ERROR_REPORTING_STRATEGY:LOGGING}
     storage:
       type: ${STORAGE_TYPE}
       bucket:
@@ -101,10 +105,6 @@ airbyte:
         use-custom-node-selector: ${USE_CUSTOM_NODE_SELECTOR:false}
         node-selectors: ${JOB_ISOLATED_KUBE_NODE_SELECTORS:}
     job:
-      error-reporting:
-        sentry:
-          dsn: ${JOB_ERROR_REPORTING_SENTRY_DSN}
-        strategy: ${JOB_ERROR_REPORTING_STRATEGY:LOGGING}
       kube:
         images:
           busybox: ${JOB_KUBE_BUSYBOX_IMAGE:`busybox:1.28`}

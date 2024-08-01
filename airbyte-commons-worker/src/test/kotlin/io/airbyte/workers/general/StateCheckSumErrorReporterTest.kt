@@ -32,7 +32,6 @@ import org.mockito.Mockito.`when`
 import org.mockito.junit.jupiter.MockitoExtension
 import java.net.URI
 import java.time.Instant
-import java.util.Optional
 import java.util.UUID
 
 @ExtendWith(MockitoExtension::class)
@@ -55,7 +54,7 @@ class StateCheckSumErrorReporterTest {
     airbyteApiClient = mockk<AirbyteApiClient>()
     stateCheckSumErrorReporter =
       StateCheckSumErrorReporter(
-        Optional.of(jobErrorReportingClient),
+        jobErrorReportingClient,
         airbyteVersion,
         deploymentMode,
         airbyteApiClient,
@@ -154,7 +153,7 @@ class StateCheckSumErrorReporterTest {
   fun `test reportError when jobErrorReportingClient is absent`() {
     stateCheckSumErrorReporter =
       StateCheckSumErrorReporter(
-        Optional.empty(),
+        jobErrorReportingClient,
         airbyteVersion,
         deploymentMode,
         airbyteApiClient,
