@@ -35,9 +35,10 @@ class EnvVarConfigBeanFactory {
   @Singleton
   @Named("initEnvVars")
   fun initEnvVars(
-    @Named("workloadApiEnvMap") workloadApiEnvMap: Map<String, String>,
     @Named("apiClientEnvMap") apiClientEnvMap: Map<String, String>,
     @Named("featureFlagEnvVars") ffEnvVars: Map<String, String>,
+    @Named("micronautEnvMap") micronautEnvMap: Map<String, String>,
+    @Named("workloadApiEnvMap") workloadApiEnvMap: Map<String, String>,
     @Named("workloadApiSecretEnv") secretsEnvMap: Map<String, EnvVarSource>,
   ): List<EnvVar> {
     val envMap: MutableMap<String, String> = HashMap()
@@ -50,6 +51,9 @@ class EnvVarConfigBeanFactory {
 
     // FF client configuration
     envMap.putAll(ffEnvVars)
+
+    // Micronaut environment (secretly necessary for configuring API client auth)
+    envMap.putAll(micronautEnvMap)
 
     val envVars =
       envMap
@@ -71,11 +75,11 @@ class EnvVarConfigBeanFactory {
   @Named("sideCarEnvVars")
   fun sideCarEnvVars(
     storageConfig: StorageConfig,
-    @Named("workloadApiEnvMap") workloadApiEnvMap: Map<String, String>,
     @Named("apiClientEnvMap") apiClientEnvMap: Map<String, String>,
-    @Named("micronautEnvMap") micronautEnvMap: Map<String, String>,
-    @Named("workloadApiSecretEnv") secretsEnvMap: Map<String, EnvVarSource>,
     @Named("loggingEnvVars") loggingEnvMap: Map<String, String>,
+    @Named("micronautEnvMap") micronautEnvMap: Map<String, String>,
+    @Named("workloadApiEnvMap") workloadApiEnvMap: Map<String, String>,
+    @Named("workloadApiSecretEnv") secretsEnvMap: Map<String, EnvVarSource>,
   ): List<EnvVar> {
     val envMap: MutableMap<String, String> = HashMap()
 
@@ -90,7 +94,7 @@ class EnvVarConfigBeanFactory {
     // Api client configuration
     envMap.putAll(apiClientEnvMap)
 
-    // Micronaut environment
+    // Micronaut environment (secretly necessary for configuring API client auth)
     envMap.putAll(micronautEnvMap)
 
     val envVars =
@@ -284,6 +288,7 @@ class EnvVarConfigBeanFactory {
 
   /**
    * Map of env vars for specifying the Micronaut environment.
+   * Indirectly necessary for configuring API client auth.
    */
   @Singleton
   @Named("micronautEnvMap")
