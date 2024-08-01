@@ -1699,6 +1699,8 @@
   "jobHistory.logs.logOrigins": "Log origins ({originsSelected} / {totalOrigins})",
   "jobHistory.copyLinkToJob": "Copy link to job",
   "jobHistory.copyLinkToJob.success": "Link copied to clipboard",
+  "jobHistory.copyLinkToEvent": "Copy link to event",
+  "jobHistory.copyLinkToEvent.success": "Link copied to clipboard",
   "jobHistory.viewLogs": "View logs",
   "jobHistory.downloadLogs": "Download logs",
   "jobHistory.statusFilter.label": "Job status",

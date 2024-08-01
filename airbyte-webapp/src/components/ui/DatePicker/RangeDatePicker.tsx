@@ -46,6 +46,7 @@ export const RangeDatePicker: React.FC<RangeDatePickerProps> = ({
           ? dayjs(dateFrom).unix().toString()
           : dayjs(dateFrom).format(valueFormat)
         : "";
+
       const dateToStr = dateTo
         ? valueFormat === "unix"
           ? dayjs(dateTo).endOf("day").unix().toString()
@@ -56,8 +57,6 @@ export const RangeDatePicker: React.FC<RangeDatePickerProps> = ({
     },
     [onChange, valueFormat]
   );
-
-  console.log(value[1]);
 
   const CustomInput = forwardRef<HTMLButtonElement, ButtonProps>(({ onClick }, ref) => {
     const dateFrom = value[0] ? parseDate(value[0]).format(dateFormat) : "";

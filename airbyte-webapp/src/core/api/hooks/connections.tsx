@@ -41,7 +41,6 @@ import {
 import { SCOPE_WORKSPACE } from "../scopes";
 import {
   AirbyteCatalog,
-  ConnectionEventWithDetails,
   ConnectionEventsRequestBody,
   ConnectionScheduleData,
   ConnectionScheduleType,
@@ -107,6 +106,7 @@ interface CreateConnectionProps {
 
 export const useListConnectionEventsInfinite = (
   connectionEventsRequestBody: ConnectionEventsRequestBody,
+  enabled: boolean = true,
   pageSize: number = 50
 ) => {
   const requestOptions = useRequestOptions();
@@ -131,16 +131,18 @@ export const useListConnectionEventsInfinite = (
       };
     },
     {
+      enabled,
+      keepPreviousData: true,
       getPreviousPageParam: (firstPage) => (firstPage.pageParam > 0 ? firstPage.pageParam - 1 : undefined),
       getNextPageParam: (lastPage) => (lastPage.data.events.length < pageSize ? undefined : lastPage.pageParam + 1),
     }
   );
 };
 
-export const useGetConnectionEvent = (connectionEventId: string | null): ConnectionEventWithDetails | undefined => {
+export const useGetConnectionEvent = (connectionEventId: string | null) => {
   const requestOptions = useRequestOptions();
 
-  return useSuspenseQuery(
+  return useQuery(
     connectionsKeys.event(connectionEventId ?? ""),
     async () => {
       return await getConnectionEvent({ connectionEventId: connectionEventId ?? "" }, requestOptions);
