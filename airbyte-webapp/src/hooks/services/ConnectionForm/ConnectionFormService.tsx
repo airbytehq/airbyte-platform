@@ -2,7 +2,7 @@ import React, { createContext, useCallback, useContext, useState } from "react";
 import { FieldErrors } from "react-hook-form";
 import { useIntl } from "react-intl";
 
-import { FormConnectionFormValues, useInitialFormValues } from "components/connection/ConnectionForm/formConfig";
+import { FormConnectionFormValues } from "components/connection/ConnectionForm/formConfig";
 import { ExternalLink } from "components/ui/Link";
 
 import { HttpProblem } from "core/api";
@@ -27,7 +27,6 @@ interface ConnectionServiceProps {
 interface ConnectionFormHook {
   connection: ConnectionOrPartialConnection;
   mode: ConnectionFormMode;
-  initialValues: FormConnectionFormValues;
   schemaError?: Error | null;
   refreshSchema: () => Promise<void>;
   setSubmitError: (submitError: FormError | null) => void;
@@ -41,7 +40,6 @@ const useConnectionForm = ({
   refreshSchema,
 }: ConnectionServiceProps): ConnectionFormHook => {
   const formatError = useFormatError();
-  const initialValues = useInitialFormValues(connection, mode);
   const { formatMessage } = useIntl();
   const [submitError, setSubmitError] = useState<FormError | null>(null);
 
@@ -75,7 +73,6 @@ const useConnectionForm = ({
   return {
     connection,
     mode,
-    initialValues,
     schemaError,
     refreshSchema,
     setSubmitError,

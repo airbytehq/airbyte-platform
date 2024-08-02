@@ -8,6 +8,7 @@ import { useUnmount } from "react-use";
 import {
   FormConnectionFormValues,
   useConnectionValidationSchema,
+  useInitialFormValues,
 } from "components/connection/ConnectionForm/formConfig";
 import { useRefreshSourceSchemaWithConfirmationOnDirty } from "components/connection/ConnectionForm/refreshSourceSchemaWithConfirmationOnDirty";
 import { SchemaChangeBackdrop } from "components/connection/ConnectionForm/SchemaChangeBackdrop";
@@ -89,7 +90,9 @@ export const ConnectionReplicationPage: React.FC = () => {
   const { openModal } = useModalService();
 
   const { connection, schemaRefreshing, updateConnection, discardRefreshedSchema } = useConnectionEditService();
-  const { initialValues, schemaError, setSubmitError, refreshSchema, mode } = useConnectionFormService();
+  const { schemaError, setSubmitError, refreshSchema, mode } = useConnectionFormService();
+  const initialValues = useInitialFormValues(connection, mode);
+
   const { supportsRefreshes: destinationSupportsRefreshes } = useDestinationDefinitionVersion(
     connection.destination.destinationId
   );

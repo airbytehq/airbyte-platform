@@ -1,9 +1,9 @@
 import { renderHook } from "@testing-library/react";
 
-import { FormConnectionFormValues } from "components/connection/ConnectionForm/formConfig";
+import { FormConnectionFormValues, useInitialFormValues } from "components/connection/ConnectionForm/formConfig";
+import { mocked } from "test-utils";
 
 import { AirbyteStreamAndConfiguration } from "core/api/types/AirbyteClient";
-import * as connectionFormService from "hooks/services/ConnectionForm/ConnectionFormService";
 
 import { useStreamsConfigTableRowProps } from "./useStreamsConfigTableRowProps";
 
@@ -15,7 +15,9 @@ const mockStream: Partial<AirbyteStreamAndConfiguration> = {
   config: { selected: true, syncMode: "full_refresh", destinationSyncMode: "overwrite" },
 };
 
-const mockInitialValues: Partial<FormConnectionFormValues> = {
+const mockInitialValues: FormConnectionFormValues = {
+  name: "connection_name",
+  scheduleType: "manual",
   syncCatalog: {
     streams: [
       {
@@ -27,30 +29,34 @@ const mockInitialValues: Partial<FormConnectionFormValues> = {
       },
     ],
   },
+  namespaceDefinition: "source",
+  prefix: "",
 };
 
-const mockDisabledInitialValues: Partial<FormConnectionFormValues> = {
+const mockDisabledInitialValues: FormConnectionFormValues = {
+  ...mockInitialValues,
   syncCatalog: {
     streams: [
       {
         ...mockInitialValues.syncCatalog?.streams[0],
         // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-        config: { ...mockInitialValues.syncCatalog!.streams[0].config!, selected: false },
+        config: { ...mockInitialValues.syncCatalog.streams[0].config!, selected: false },
       },
     ],
   },
 };
 
-const testSetup = (initialValues: Partial<FormConnectionFormValues>) => {
-  jest.spyOn(connectionFormService, "useConnectionFormService").mockImplementation(() => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    return { initialValues, mode: "edit" } as any;
-  });
-};
+jest.mock("components/connection/ConnectionForm/formConfig", () => ({
+  useInitialFormValues: jest.fn().mockReturnValue({}),
+}));
+
+jest.mock("hooks/services/ConnectionForm/ConnectionFormService", () => ({
+  useConnectionFormService: () => ({ mode: "edit" }),
+}));
 
 describe(`${useStreamsConfigTableRowProps.name}`, () => {
   it("should return default styles for a row that starts enabled", () => {
-    testSetup(mockInitialValues);
+    mocked(useInitialFormValues).mockReturnValueOnce(mockInitialValues);
 
     const { result } = renderHook(() => useStreamsConfigTableRowProps(mockStream));
 
@@ -58,7 +64,7 @@ describe(`${useStreamsConfigTableRowProps.name}`, () => {
     expect(result.current.pillButtonVariant).toEqual("grey");
   });
   it("should return disabled styles for a row that starts disabled", () => {
-    testSetup(mockDisabledInitialValues);
+    mocked(useInitialFormValues).mockReturnValueOnce(mockDisabledInitialValues);
 
     const { result } = renderHook(() =>
       useStreamsConfigTableRowProps({
@@ -72,7 +78,7 @@ describe(`${useStreamsConfigTableRowProps.name}`, () => {
     expect(result.current.pillButtonVariant).toEqual("grey");
   });
   it("should return added styles for a row that is added", () => {
-    testSetup(mockDisabledInitialValues);
+    mocked(useInitialFormValues).mockReturnValueOnce(mockDisabledInitialValues);
 
     const { result } = renderHook(() => useStreamsConfigTableRowProps(mockStream));
 
@@ -80,7 +86,7 @@ describe(`${useStreamsConfigTableRowProps.name}`, () => {
     expect(result.current.pillButtonVariant).toEqual("green");
   });
   it("should return removed styles for a row that is removed", () => {
-    testSetup(mockInitialValues);
+    mocked(useInitialFormValues).mockReturnValueOnce(mockInitialValues);
 
     const { result } = renderHook(() =>
       useStreamsConfigTableRowProps({
@@ -94,7 +100,7 @@ describe(`${useStreamsConfigTableRowProps.name}`, () => {
     expect(result.current.pillButtonVariant).toEqual("red");
   });
   it("should return updated styles for a row that is updated", () => {
-    testSetup(mockInitialValues);
+    mocked(useInitialFormValues).mockReturnValueOnce(mockInitialValues);
 
     const { result } = renderHook(() =>
       useStreamsConfigTableRowProps({
@@ -109,7 +115,7 @@ describe(`${useStreamsConfigTableRowProps.name}`, () => {
   });
 
   it("should return added styles for a row that is both added and updated", () => {
-    testSetup(mockDisabledInitialValues);
+    mocked(useInitialFormValues).mockReturnValueOnce(mockDisabledInitialValues);
 
     const { result } = renderHook(() =>
       useStreamsConfigTableRowProps({

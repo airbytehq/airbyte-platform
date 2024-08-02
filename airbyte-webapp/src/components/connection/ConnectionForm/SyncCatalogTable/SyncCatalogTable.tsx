@@ -41,7 +41,7 @@ import { TableControls } from "./components/TableControls";
 import { useInitialRowIndex } from "./hooks/useInitialRowIndex";
 import styles from "./SyncCatalogTable.module.scss";
 import { getRowChangeStatus, getSyncCatalogRows, isStreamRow } from "./utils";
-import { FormConnectionFormValues, SyncStreamFieldWithId } from "../formConfig";
+import { FormConnectionFormValues, SyncStreamFieldWithId, useInitialFormValues } from "../formConfig";
 
 export interface SyncCatalogTableProps {
   /**
@@ -93,7 +93,8 @@ export interface SyncCatalogUIModel {
 
 export const SyncCatalogTable: FC<SyncCatalogTableProps> = ({ scrollParentContainer }) => {
   const { formatMessage } = useIntl();
-  const { mode, initialValues } = useConnectionFormService();
+  const { mode, connection } = useConnectionFormService();
+  const initialValues = useInitialFormValues(connection, mode);
   const { control, trigger } = useFormContext<FormConnectionFormValues>();
   const { fields: streams, update } = useFieldArray({
     name: "syncCatalog.streams",
