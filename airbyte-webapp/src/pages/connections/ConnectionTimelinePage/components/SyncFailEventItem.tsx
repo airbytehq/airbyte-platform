@@ -2,7 +2,7 @@ import { FormattedDate, FormattedMessage, useIntl } from "react-intl";
 import { InferType } from "yup";
 
 import { Box } from "components/ui/Box";
-import { FlexContainer } from "components/ui/Flex";
+import { FlexContainer, FlexItem } from "components/ui/Flex";
 import { Text } from "components/ui/Text";
 
 import { JobFailureDetails } from "area/connection/components/JobHistoryItem/JobFailureDetails";
@@ -33,14 +33,16 @@ export const SyncFailEventItem: React.FC<SyncFailEventItemProps> = ({ syncEvent 
   return (
     <ConnectionTimelineEventItem>
       <ConnectionTimelineEventIcon icon="sync" statusIcon={getStatusIcon(jobStatus)} />
-      <div className={styles.container}>
-        <Text bold>
-          <FormattedMessage id={titleId} />
-        </Text>
-        <Box pt="xs" className={styles.failureDetails}>
-          <JobFailureDetails failureUiDetails={failureUiDetails} />
-        </Box>
-      </div>
+      <FlexItem grow>
+        <div className={styles.container}>
+          <Text bold>
+            <FormattedMessage id={titleId} />
+          </Text>
+          <Box pt="xs" className={styles.failureDetails}>
+            <JobFailureDetails failureUiDetails={failureUiDetails} />
+          </Box>
+        </div>
+      </FlexItem>
       <FlexContainer direction="row" gap="xs" alignItems="center" className={styles.endContent}>
         <Text color="grey400">
           <FormattedDate value={syncEvent.createdAt * 1000} timeStyle="short" dateStyle="medium" />
