@@ -1731,6 +1731,10 @@ keycloak:
     # gid=0(root)
     fsGroup: 0
 
+  initContainers:
+    initDb:
+      image: {}
+
   initContainerSecurityContext:
     allowPrivilegeEscalation: false 
     runAsNonRoot: true
