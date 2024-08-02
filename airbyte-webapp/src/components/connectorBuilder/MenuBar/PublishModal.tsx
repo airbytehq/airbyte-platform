@@ -420,6 +420,7 @@ const ContributeToMarketplace: React.FC<InnerModalProps> = ({ onClose, setPublis
       <ModalBody>
         <FlexContainer direction="column" gap="xl">
           <PublishTypeSwitcher selectedPublishType="marketplace" setPublishType={setPublishType} />
+          <Message type="warning" text={<FormattedMessage id="connectorBuilder.warnPublishSecrets" />} />
           <FlexContainer direction="column" gap="none">
             <FormControl<ContributeToMarketplaceFormValues>
               name="name"
