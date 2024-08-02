@@ -528,6 +528,7 @@
   "destinationSyncMode.append": "Append",
   "destinationSyncMode.append_dedup": "Append + Deduped",
   "destinationSyncMode.overwrite": "Overwrite",
+  "destinationSyncMode.overwrite_dedup": "Overwrite + Deduped",
 
   "syncMode.full_refresh": "Full refresh",
   "syncMode.incremental": "Incremental",

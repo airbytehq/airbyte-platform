@@ -687,7 +687,7 @@ exports[`CreateConnectionForm should render 1`] = `
                                               class="<removed-for-snapshot-test>"
                                               data-type="text"
                                             >
-                                              Full refresh | Overwrite
+                                              Full refresh | Overwrite + Deduped
                                             </p>
                                           </div>
                                           <div
@@ -704,7 +704,33 @@ exports[`CreateConnectionForm should render 1`] = `
                                   </div>
                                   <div
                                     class="<removed-for-snapshot-test>"
-                                  />
+                                  >
+                                    <div
+                                      class="<removed-for-snapshot-test>"
+                                    >
+                                      <div
+                                        class="<removed-for-snapshot-test>"
+                                        data-testid="primary-key-cell"
+                                      >
+                                        <span
+                                          class="<removed-for-snapshot-test>"
+                                          data-type="text"
+                                        >
+                                          Primary key
+                                        </span>
+                                        <span
+                                          class="<removed-for-snapshot-test>"
+                                        >
+                                          <p
+                                            class="<removed-for-snapshot-test>"
+                                            data-type="text"
+                                          >
+                                            missing
+                                          </p>
+                                        </span>
+                                      </div>
+                                    </div>
+                                  </div>
                                   <div
                                     class="<removed-for-snapshot-test>"
                                   >
@@ -816,7 +842,7 @@ exports[`CreateConnectionForm should render 1`] = `
                                               class="<removed-for-snapshot-test>"
                                               data-type="text"
                                             >
-                                              Full refresh | Overwrite
+                                              Full refresh | Overwrite + Deduped
                                             </p>
                                           </div>
                                           <div
@@ -833,7 +859,33 @@ exports[`CreateConnectionForm should render 1`] = `
                                   </div>
                                   <div
                                     class="<removed-for-snapshot-test>"
-                                  />
+                                  >
+                                    <div
+                                      class="<removed-for-snapshot-test>"
+                                    >
+                                      <div
+                                        class="<removed-for-snapshot-test>"
+                                        data-testid="primary-key-cell"
+                                      >
+                                        <span
+                                          class="<removed-for-snapshot-test>"
+                                          data-type="text"
+                                        >
+                                          Primary key
+                                        </span>
+                                        <span
+                                          class="<removed-for-snapshot-test>"
+                                        >
+                                          <p
+                                            class="<removed-for-snapshot-test>"
+                                            data-type="text"
+                                          >
+                                            missing
+                                          </p>
+                                        </span>
+                                      </div>
+                                    </div>
+                                  </div>
                                   <div
                                     class="<removed-for-snapshot-test>"
                                   >
@@ -950,13 +1002,27 @@ exports[`CreateConnectionForm should render 1`] = `
                   Back to Define destination
                 </a>
                 <div>
-                  <a
+                  <span
+                    class="<removed-for-snapshot-test>"
+                  >
+                    <span
+                      class="<removed-for-snapshot-test>"
+                      data-type="text"
+                    >
+                      Unable to save the connection. Review the errors above to finish setup.
+                    </span>
+                  </span>
+                  <button
                     class="<removed-for-snapshot-test>"
                     data-testid="next-creation-page"
-                    href="/link/to/workspace?sourceId=a3295ed7-4acf-4c0b-b16b-07a00e624a52&destinationId=083a53bc-8bc2-4dc0-b05a-4273a96f3b93"
+                    disabled=""
                   >
-                    Next
-                  </a>
+                    <span
+                      class="<removed-for-snapshot-test>"
+                    >
+                      Next
+                    </span>
+                  </button>
                 </div>
               </div>
             </div>

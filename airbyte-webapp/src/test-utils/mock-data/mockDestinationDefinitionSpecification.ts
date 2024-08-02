@@ -272,5 +272,5 @@ export const mockDestinationDefinitionSpecification: DestinationDefinitionSpecif
     succeeded: true,
     logs: { logLines: [] },
   },
-  supportedDestinationSyncModes: ["overwrite", "append", "append_dedup"],
+  supportedDestinationSyncModes: ["overwrite", "overwrite_dedup", "append", "append_dedup"],
 };
