@@ -16,6 +16,7 @@ export interface DropdownMenuOptionBaseType {
   value?: unknown;
   className?: string;
   disabled?: boolean;
+  tooltipContent?: React.ReactNode;
   "data-testid"?: string;
 }
 

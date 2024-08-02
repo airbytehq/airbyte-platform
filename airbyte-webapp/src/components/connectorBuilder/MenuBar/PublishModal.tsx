@@ -34,6 +34,7 @@ import {
 
 import styles from "./PublishModal.module.scss";
 import { useBuilderWatch } from "../types";
+import { useStreamTestMetadata } from "../useStreamTestMetadata";
 
 const PUBLISH_TO_WORKSPACE_NOTIFICATION_ID = "publish-to-workspace-notification";
 
@@ -61,6 +62,13 @@ const PublishTypeSwitcher: React.FC<{
   setPublishType: (type: PublishType) => void;
 }> = ({ selectedPublishType, setPublishType }) => {
   const analyticsService = useAnalyticsService();
+  const { streamNames } = useConnectorBuilderFormState();
+  const { getStreamTestWarnings } = useStreamTestMetadata();
+
+  const streamsWithWarnings = useMemo(() => {
+    return streamNames.filter((streamName) => getStreamTestWarnings(streamName).length > 0);
+  }, [getStreamTestWarnings, streamNames]);
+  const isMarketplaceContributionActionDisabled = streamsWithWarnings.length > 0;
 
   return (
     <FlexContainer>
@@ -76,6 +84,10 @@ const PublishTypeSwitcher: React.FC<{
             value: "marketplace",
             label: <FormattedMessage id="connectorBuilder.publishModal.toMarketplace.label" />,
             description: <FormattedMessage id="connectorBuilder.publishModal.toMarketplace.description" />,
+            disabled: isMarketplaceContributionActionDisabled,
+            tooltipContent: isMarketplaceContributionActionDisabled ? (
+              <FormattedMessage id="connectorBuilder.publishModal.toMarketplace.disabledDescription" />
+            ) : null,
           },
         ]}
         selectedValue={selectedPublishType}

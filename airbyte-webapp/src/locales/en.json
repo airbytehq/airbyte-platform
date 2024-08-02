@@ -1290,6 +1290,7 @@
   "connectorBuilder.publishModal.toWorkspace.description": "Only workspace members can use this connector",
   "connectorBuilder.publishModal.toMarketplace.label": "Contribute to Marketplace",
   "connectorBuilder.publishModal.toMarketplace.description": "Share your connector with our community",
+  "connectorBuilder.publishModal.toMarketplace.disabledDescription": "All streams must be tested and have no warnings in order to contribute to the Marketplace",
   "connectorBuilder.contribute": "Contribute",
   "connectorBuilder.contribution.success": "Your <b>{name}</b> connector was successfully submitted via GitHub and is <a>under review here</a>!",
   "connectorBuilder.contribution.modal.connectorName.label": "Connector Name",

@@ -7,6 +7,7 @@ import { createPortal } from "react-dom";
 import { Link, LinkProps } from "react-router-dom";
 
 import { Text } from "components/ui/Text";
+import { Tooltip } from "components/ui/Tooltip";
 
 import styles from "./DropdownMenu.module.scss";
 import { DropdownMenuProps, MenuItemContentProps, DropdownMenuOptionType, DropdownMenuOptionAnchorType } from "./types";
@@ -48,7 +49,6 @@ export const DropdownMenu: React.FC<DropdownMenuProps> = ({
 
   const elementProps = (item: DropdownMenuOptionType, active: boolean) => {
     return {
-      title: item.displayName,
       onClick: () => onChange && onChange(item),
       className: classNames(styles.item, item?.className, {
         [styles.iconPositionLeft]: (item?.iconPosition === "left" && item.icon) || !item?.iconPosition,
@@ -60,6 +60,24 @@ export const DropdownMenu: React.FC<DropdownMenuProps> = ({
       "data-testid": item["data-testid"],
     } as LinkProps | AnchorHTMLAttributes<Element>;
   };
+
+  const menuItem = (item: DropdownMenuOptionType, index: number) => (
+    <Menu.Item key={index} disabled={item.disabled}>
+      {({ active }) =>
+        item.as === "a"
+          ? React.createElement(
+              item.internal ? Link : "a",
+              { ...elementProps(item, active), ...anchorProps(item) },
+              <MenuItemContent data={item} textSize={textSize} />
+            )
+          : React.createElement(
+              item.as ?? "button",
+              { ...elementProps(item, active) },
+              <MenuItemContent data={item} textSize={textSize} />
+            )
+      }
+    </Menu.Item>
+  );
 
   return (
     <Menu ref={reference} as="div" {...(restProps["data-testid"] && { "data-testid": restProps["data-testid"] })}>
@@ -87,22 +105,14 @@ export const DropdownMenu: React.FC<DropdownMenuProps> = ({
                     </div>
                   );
                 }
-                return (
-                  <Menu.Item key={index} disabled={item.disabled}>
-                    {({ active }) =>
-                      item.as === "a"
-                        ? React.createElement(
-                            item.internal ? Link : "a",
-                            { ...elementProps(item, active), ...anchorProps(item) },
-                            <MenuItemContent data={item} textSize={textSize} />
-                          )
-                        : React.createElement(
-                            item.as ?? "button",
-                            { ...elementProps(item, active) },
-                            <MenuItemContent data={item} textSize={textSize} />
-                          )
-                    }
-                  </Menu.Item>
+                return item.tooltipContent != null ? (
+                  <div>
+                    <Tooltip control={menuItem(item, index)} placement="left">
+                      {item.tooltipContent}
+                    </Tooltip>
+                  </div>
+                ) : (
+                  menuItem(item, index)
                 );
               })}
             </Menu.Items>,

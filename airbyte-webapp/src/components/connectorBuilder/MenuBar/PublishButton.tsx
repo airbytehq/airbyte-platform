@@ -1,5 +1,5 @@
 import { useCallback, useMemo, useState } from "react";
-import { FormattedMessage } from "react-intl";
+import { FormattedMessage, useIntl } from "react-intl";
 
 import { Button, ButtonProps } from "components/ui/Button";
 import { DropdownButton } from "components/ui/DropdownButton";
@@ -108,22 +108,27 @@ export const PublishButton: React.FC<PublishButtonProps> = ({ className }) => {
     "data-testid": "publish-button",
     type: "button",
   };
-
-  const isMarketplaceContributionEnabled = useExperiment("connectorBuilder.contributeToMarketplace", false);
-  const publishButton = isMarketplaceContributionEnabled ? (
+  const { formatMessage } = useIntl();
+  const isMarketplaceContributionFeatureEnabled = useExperiment("connectorBuilder.contributeToMarketplace", false);
+  const isMarketplaceContributionActionDisabled = streamsWithWarnings.length > 0;
+  const publishButton = isMarketplaceContributionFeatureEnabled ? (
     <DropdownButton
       {...buttonProps}
       dropdown={{
         options: [
           {
             icon: <Icon size="sm" type="import" />,
-            displayName: "Publish to workspace",
+            displayName: formatMessage({ id: "connectorBuilder.publishModal.toWorkspace.label" }),
             value: "workspace",
           },
           {
             icon: <Icon size="sm" type="github" />,
-            displayName: "Contribute to Marketplace",
+            displayName: formatMessage({ id: "connectorBuilder.publishModal.toMarketplace.label" }),
             value: "marketplace",
+            disabled: isMarketplaceContributionActionDisabled,
+            tooltipContent: isMarketplaceContributionActionDisabled ? (
+              <FormattedMessage id="connectorBuilder.publishModal.toMarketplace.disabledDescription" />
+            ) : null,
           },
         ],
         textSize: "md",

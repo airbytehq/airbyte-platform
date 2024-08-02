@@ -1,8 +1,10 @@
 import { ComponentProps } from "react";
 
-import { FlexContainer } from "components/ui/Flex";
+import { FlexContainer, FlexItem } from "components/ui/Flex";
+import { Tooltip } from "components/ui/Tooltip";
 
 import { RadioButtonTile, RadioButtonTileOption } from "./RadioButtonTile";
+import styles from "./RadioButtonTiles.module.scss";
 
 interface RadioButtonTilesProps<T> {
   options: Array<RadioButtonTileOption<T>>;
@@ -31,5 +33,17 @@ export const RadioButtonTiles = <T extends string>({
       light={light}
     />
   );
-  return <FlexContainer direction={direction}>{options.map((option) => radioButtonTile(option))}</FlexContainer>;
+  return (
+    <FlexContainer direction={direction}>
+      {options.map((option) =>
+        option.tooltipContent != null ? (
+          <FlexItem className={styles.radioButtonTiles__tile} key={option.value}>
+            <Tooltip control={radioButtonTile(option)}>{option.tooltipContent}</Tooltip>
+          </FlexItem>
+        ) : (
+          radioButtonTile(option)
+        )
+      )}
+    </FlexContainer>
+  );
 };
