@@ -86,8 +86,12 @@ airbyte:
         secret-key: ${AWS_SECRET_ACCESS_KEY:}
         region: ${AWS_REGION:}
       gcp:
+        # injects the actual secret value
         credentials: ${SECRET_STORE_GCP_CREDENTIALS:}
         project-id: ${SECRET_STORE_GCP_PROJECT_ID:}
+        # for injecting the env var source
+        secret-name: ${SECRET_STORE_GCP_SECRET_NAME:}
+        secret-key: ${SECRET_STORE_GCP_SECRET_KEY:}
       vault:
         address: ${VAULT_ADDRESS:}
         prefix: ${VAULT_PREFIX:}

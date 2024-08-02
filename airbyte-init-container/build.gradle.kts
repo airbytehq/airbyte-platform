@@ -28,6 +28,7 @@ dependencies {
   implementation(project(":oss:airbyte-config:config-secrets"))
   implementation(project(":oss:airbyte-commons-worker"))
   implementation(project(":oss:airbyte-featureflag"))
+  implementation(project(":oss:airbyte-metrics:metrics-lib"))
   implementation(project(":oss:airbyte-worker-models"))
 
   kspTest(platform(libs.micronaut.platform))

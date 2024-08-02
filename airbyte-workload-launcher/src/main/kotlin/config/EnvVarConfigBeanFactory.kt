@@ -38,6 +38,8 @@ class EnvVarConfigBeanFactory {
     @Named("apiClientEnvMap") apiClientEnvMap: Map<String, String>,
     @Named("featureFlagEnvVars") ffEnvVars: Map<String, String>,
     @Named("micronautEnvMap") micronautEnvMap: Map<String, String>,
+    @Named("secretPersistenceSecretsEnvMap") secretPersistenceSecretsEnvMap: Map<String, EnvVarSource>,
+    @Named("secretPersistenceEnvMap") secretPersistenceEnvMap: Map<String, String>,
     @Named("workloadApiEnvMap") workloadApiEnvMap: Map<String, String>,
     @Named("workloadApiSecretEnv") secretsEnvMap: Map<String, EnvVarSource>,
   ): List<EnvVar> {
@@ -55,13 +57,16 @@ class EnvVarConfigBeanFactory {
     // Micronaut environment (secretly necessary for configuring API client auth)
     envMap.putAll(micronautEnvMap)
 
+    // Direct env vars for secret persistence
+    envMap.putAll(secretPersistenceEnvMap)
+
     val envVars =
       envMap
         .map { EnvVar(it.key, it.value, null) }
         .toList()
 
     val secretEnvVars =
-      secretsEnvMap
+      (secretsEnvMap + secretPersistenceSecretsEnvMap)
         .map { EnvVar(it.key, null, it.value) }
         .toList()
 
@@ -343,6 +348,39 @@ class EnvVarConfigBeanFactory {
   }
 
   /**
+   * Environment variables for secret persistence configuration.
+   * These values are non-sensitive and passed directly.
+   */
+  @Singleton
+  @Named("secretPersistenceEnvMap")
+  fun secretPersistenceEnvMap(
+    @Value("\${airbyte.secret.store.gcp.project-id}") gcpProjectId: String,
+    @Value("\${airbyte.secret.persistence}") gcpPersistenceType: String,
+  ): Map<String, String> {
+    return buildMap {
+      put(SECRET_PERSISTENCE, gcpPersistenceType)
+      put(SECRET_STORE_GCP_PROJECT_ID, gcpProjectId)
+    }
+  }
+
+  /**
+   * Environment variables for secret persistence configuration.
+   * These values are themselves sourced from kubernetes secrets.
+   * The map key is the environment variable name and the map value
+   * contains the kubernetes secret name and key for lookup.
+   */
+  @Singleton
+  @Named("secretPersistenceSecretsEnvMap")
+  fun secretPersistenceSecretsEnvMap(
+    @Value("\${airbyte.secret.store.gcp.secret-name}") gcpSecretName: String,
+    @Value("\${airbyte.secret.store.gcp.secret-key}") gcpSecretKey: String,
+  ): Map<String, EnvVarSource> {
+    return buildMap {
+      put(SECRET_STORE_GCP_CREDENTIALS, createEnvVarSource(gcpSecretName, gcpSecretKey))
+    }
+  }
+
+  /**
    * Map of env vars for configuring the WorkloadApiClient (separate from ApiClient).
    */
   @Singleton
@@ -387,10 +425,13 @@ class EnvVarConfigBeanFactory {
     private const val WORKLOAD_API_READ_TIMEOUT_SECONDS_ENV_VAR = "WORKLOAD_API_READ_TIMEOUT_SECONDS"
     private const val WORKLOAD_API_RETRY_DELAY_SECONDS_ENV_VAR = "WORKLOAD_API_RETRY_DELAY_SECONDS"
     private const val WORKLOAD_API_MAX_RETRIES_ENV_VAR = "WORKLOAD_API_MAX_RETRIES"
+    private const val SECRET_PERSISTENCE = "SECRET_PERSISTENCE"
+    private const val SECRET_STORE_GCP_PROJECT_ID = "SECRET_STORE_GCP_PROJECT_ID"
 
     // secrets
     const val AWS_ASSUME_ROLE_ACCESS_KEY_ID_ENV_VAR = "AWS_ASSUME_ROLE_ACCESS_KEY_ID"
     const val AWS_ASSUME_ROLE_SECRET_ACCESS_KEY_ENV_VAR = "AWS_ASSUME_ROLE_SECRET_ACCESS_KEY"
     const val WORKLOAD_API_BEARER_TOKEN_ENV_VAR = "WORKLOAD_API_BEARER_TOKEN"
+    private const val SECRET_STORE_GCP_CREDENTIALS = "SECRET_STORE_GCP_CREDENTIALS"
   }
 }
