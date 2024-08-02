@@ -11,7 +11,7 @@ ARG DOCKER_BUILD_ARCH=amd64
 # Don't change this manually.  Bump version expects to make moves based on this string
 ARG VERSION=dev
 
-ENV APPLICATION airbyte-init-container
+ENV APPLICATION airbyte-workload-init-container
 ENV VERSION=${VERSION}
 
 COPY --chown=airbyte:airbyte --from=builder /app /app

@@ -1,6 +1,6 @@
 micronaut:
   application:
-    name: airbyte-init-container
+    name: airbyte-workload-init-container
   server:
     enable: false
   metrics:
