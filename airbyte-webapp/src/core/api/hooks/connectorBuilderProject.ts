@@ -17,6 +17,7 @@ import {
   updateConnectorBuilderProject,
   updateConnectorBuilderProjectTestingValues,
   updateDeclarativeManifestVersion,
+  getDeclarativeManifestBaseImage,
 } from "../generated/AirbyteClient";
 import { SCOPE_WORKSPACE } from "../scopes";
 import {
@@ -31,6 +32,8 @@ import {
   ConnectorBuilderProjectStreamReadSlicesItem,
   ConnectorBuilderProjectStreamReadSlicesItemPagesItem,
   ConnectorBuilderProjectStreamReadSlicesItemStateItem,
+  DeclarativeManifestRequestBody,
+  DeclarativeManifestBaseImageRead,
 } from "../types/AirbyteClient";
 import { DeclarativeComponentSchema, DeclarativeStream, NoPaginationType } from "../types/ConnectorManifest";
 import { useRequestOptions } from "../useRequestOptions";
@@ -45,6 +48,7 @@ const connectorBuilderProjectsKeys = {
   list: (workspaceId: string) => [...connectorBuilderProjectsKeys.all, "list", workspaceId] as const,
   read: (projectId?: string, streamName?: string) =>
     [...connectorBuilderProjectsKeys.all, "read", projectId, streamName] as const,
+  getBaseImage: (version: string) => [...connectorBuilderProjectsKeys.all, "getBaseImage", version] as const,
 };
 
 export interface BuilderProject {
@@ -507,5 +511,14 @@ export const useBuilderProjectUpdateTestingValues = (
     {
       onSuccess,
     }
+  );
+};
+
+export const useGetBuilderProjectBaseImage = (params: DeclarativeManifestRequestBody) => {
+  const requestOptions = useRequestOptions();
+
+  return useQuery<DeclarativeManifestBaseImageRead>(
+    connectorBuilderProjectsKeys.getBaseImage(params.manifest.version),
+    () => getDeclarativeManifestBaseImage(params, requestOptions)
   );
 };

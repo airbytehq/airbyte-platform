@@ -242,7 +242,7 @@ func TestBasicEnterpriseConfigWithHelmValues(t *testing.T) {
 	})
 }
 
-func TestKeycloakSetupInitContainerOverride(t *testing.T) {
+func TestKeycloakInitContainerOverride(t *testing.T) {
 	t.Run("default keycloak readiness image is curlimages/curl", func(t *testing.T) {
 		helmOpts := baseHelmOptionsForEnterpriseWithValues()
 		helmOpts.SetValues["global.auth.instanceAdmin.firstName"] = "Octavia"
@@ -260,8 +260,14 @@ func TestKeycloakSetupInitContainerOverride(t *testing.T) {
 		assert.NoError(t, err)
 		assert.NotNil(t, keycloakSetupJob)
 
-		initContainers := keycloakSetupJob.Spec.Template.Spec.InitContainers
-		assert.Equal(t, "curlimages/curl:8.1.1", initContainers[0].Image)
+		keycloakStatefulSet, err := getStatefulSet(chartYaml, "airbyte-keycloak")
+		assert.NoError(t, err)
+		assert.NotNil(t, keycloakStatefulSet)
+
+		setupInitContainers := keycloakSetupJob.Spec.Template.Spec.InitContainers
+		keycloakInitContainers := keycloakStatefulSet.Spec.Template.Spec.InitContainers
+		assert.Equal(t, "curlimages/curl:8.1.1", setupInitContainers[0].Image)
+		assert.Equal(t, "postgres:13-alpine", keycloakInitContainers[0].Image)
 	})
 
 	t.Run("override init container image ", func(t *testing.T) {
@@ -275,14 +281,21 @@ func TestKeycloakSetupInitContainerOverride(t *testing.T) {
 		helmOpts.SetValues["global.auth.identityProvider.oidc.clientIdSecretKey"] = "client-id"
 		helmOpts.SetValues["global.auth.identityProvider.oidc.clientSecretSecretKey"] = "client-secret"
 		helmOpts.SetValues["keycloak-setup.initContainers.keycloakReadinessCheck.image"] = "airbyte/custom-curl-image"
+		helmOpts.SetValues["keycloak.initContainers.initDb.image"] = "airbyte/custom-postgres-image"
 		chartYaml, err := helm.RenderTemplateE(t, helmOpts, chartPath, "airbyte", nil)
 		assert.NoError(t, err)
 
 		keycloakSetupJob, err := getJob(chartYaml, "airbyte-keycloak-setup")
-		assert.NoError(t, err)
 		assert.NotNil(t, keycloakSetupJob)
+		assert.NoError(t, err)
 
-		initContainers := keycloakSetupJob.Spec.Template.Spec.InitContainers
-		assert.Equal(t, "airbyte/custom-curl-image", initContainers[0].Image)
+		keycloakStatefulSet, err := getStatefulSet(chartYaml, "airbyte-keycloak")
+		assert.NotNil(t, keycloakStatefulSet)
+		assert.NoError(t, err)
+
+		setupInitContainers := keycloakSetupJob.Spec.Template.Spec.InitContainers
+		keycloakInitContainers := keycloakStatefulSet.Spec.Template.Spec.InitContainers
+		assert.Equal(t, "airbyte/custom-curl-image", setupInitContainers[0].Image)
+		assert.Equal(t, "airbyte/custom-postgres-image", keycloakInitContainers[0].Image)
 	})
 }

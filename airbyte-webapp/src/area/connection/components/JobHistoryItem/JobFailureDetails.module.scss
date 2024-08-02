@@ -1,6 +1,11 @@
 @use "scss/colors";
 @use "scss/variables";
 
+.container {
+  display: flex;
+  flex-direction: column;
+}
+
 .failedMessage {
   white-space: nowrap;
   overflow: hidden;
@@ -9,6 +14,7 @@
 
 .seeMore {
   color: colors.$grey-500;
+  min-width: fit-content;
 }
 
 .seeMoreIcon {

@@ -20,14 +20,26 @@ interface JobStartEventItemProps {
 export const JobStartEventItem: React.FC<JobStartEventItemProps> = ({ jobStartEvent }) => {
   const titleId = titleIdMap[jobStartEvent.eventType];
 
-  const { descriptionId, icon } = useMemo<{ descriptionId: string; icon: IconType }>(() => {
+  const { descriptionId, icon, streamsCount } = useMemo<{
+    descriptionId: string;
+    icon: IconType;
+    streamsCount: number | undefined;
+  }>(() => {
     if (jobStartEvent.eventType === "CLEAR_STARTED") {
-      return { descriptionId: "connection.timeline.clear_started.description", icon: "cross" };
+      return {
+        descriptionId: "connection.timeline.clear_started.description",
+        icon: "cross",
+        streamsCount: jobStartEvent.summary.streams?.length ?? 0,
+      };
     } else if (jobStartEvent.eventType === "REFRESH_STARTED") {
-      return { descriptionId: "connection.timeline.refresh_started.description", icon: "rotate" };
+      return {
+        descriptionId: "connection.timeline.refresh_started.description",
+        icon: "rotate",
+        streamsCount: jobStartEvent.summary.streams?.length ?? 0,
+      };
     }
-    return { descriptionId: "connection.timeline.sync_started.description", icon: "sync" };
-  }, [jobStartEvent.eventType]);
+    return { descriptionId: "connection.timeline.sync_started.description", icon: "sync", streamsCount: undefined };
+  }, [jobStartEvent.eventType, jobStartEvent.summary.streams]);
 
   return (
     <ConnectionTimelineEventItem>
@@ -44,6 +56,7 @@ export const JobStartEventItem: React.FC<JobStartEventItemProps> = ({ jobStartEv
                 user: jobStartEvent.user?.name ?? jobStartEvent.user?.email ?? (
                   <FormattedMessage id="connection.timeline.user.unknown" />
                 ),
+                ...(streamsCount !== undefined && { value: streamsCount }),
               }}
             />
           </Text>

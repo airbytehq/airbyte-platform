@@ -1,11 +1,14 @@
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 
 import { DEFAULT_JSON_MANIFEST_VALUES } from "components/connectorBuilder/types";
 
 import { useCurrentWorkspaceId } from "area/workspace/utils";
 import { HttpError } from "core/api";
+import { useFormatError } from "core/errors";
+import { Action, Namespace, useAnalyticsService } from "core/services/analytics";
+import { useNotificationService } from "hooks/services/Notification";
 
-import { readStream, resolveManifest } from "../generated/ConnectorBuilderClient";
+import { readStream, resolveManifest, generateContribution } from "../generated/ConnectorBuilderClient";
 import { KnownExceptionInfo } from "../generated/ConnectorBuilderClient.schemas";
 import {
   ConnectorConfig,
@@ -14,6 +17,7 @@ import {
   ResolveManifest,
   StreamRead,
   StreamReadRequestBody,
+  GenerateContributionRequestBody,
 } from "../types/ConnectorBuilderClient";
 import { DeclarativeComponentSchema } from "../types/ConnectorManifest";
 import { useRequestOptions } from "../useRequestOptions";
@@ -79,5 +83,39 @@ export const useBuilderResolvedManifestSuspense = (manifest?: ConnectorManifest,
     } catch {
       return null;
     }
+  });
+};
+
+export const GENERATE_CONTRIBUTION_NOTIFICATION_ID = "generate-contribution-notification";
+
+export const useBuilderGenerateContribution = () => {
+  const requestOptions = useRequestOptions();
+  const formatError = useFormatError();
+  const { registerNotification } = useNotificationService();
+  const analyticsService = useAnalyticsService();
+
+  return useMutation((params: GenerateContributionRequestBody) => generateContribution(params, requestOptions), {
+    onSuccess: (_date, params) => {
+      analyticsService.track(Namespace.CONNECTOR_BUILDER, Action.CONTRIBUTE_SUCCESS, {
+        actionDescription: "Connector contribution successfully submitted to airbyte repo",
+        connector_name: params.name,
+        connector_image_name: params.connector_image_name,
+      });
+    },
+    onError: (error: Error, params) => {
+      const errorMessage = formatError(error);
+      registerNotification({
+        id: GENERATE_CONTRIBUTION_NOTIFICATION_ID,
+        type: "error",
+        text: errorMessage,
+      });
+      analyticsService.track(Namespace.CONNECTOR_BUILDER, Action.CONTRIBUTE_FAILURE, {
+        actionDescription: "Connector contribution failed to be submitted to airbyte repo",
+        status_code: error instanceof HttpError ? error.status : undefined,
+        error_message: errorMessage,
+        connector_name: params.name,
+        connector_image_name: params.connector_image_name,
+      });
+    },
   });
 };

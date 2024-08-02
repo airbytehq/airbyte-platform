@@ -60,7 +60,7 @@ airbyte {
     )
   }
   docker {
-    imageName.set("init-container")
+    imageName.set("workload-init-container")
   }
 }
 

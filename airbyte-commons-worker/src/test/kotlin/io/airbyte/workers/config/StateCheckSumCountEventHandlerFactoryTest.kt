@@ -16,6 +16,7 @@ import javax.inject.Inject
 @Property(name = "airbyte.internal-api.read-timeout-seconds", value = "10")
 @Property(name = "airbyte.internal-api.auth-header.name", value = "name")
 @Property(name = "micronaut.application.name", value = "test-app")
+@Property(name = "airbyte.cloud.pubsub.error-reporting.strategy", value = "logging")
 internal class StateCheckSumCountEventHandlerFactoryTest {
   @Inject
   lateinit var sumCountEventHandlerFactory: StateCheckSumCountEventHandlerFactory

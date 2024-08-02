@@ -178,6 +178,7 @@ export const ConnectorBuilderFormStateProvider: React.FC<React.PropsWithChildren
 const MANIFEST_KEY_ORDER: Array<keyof ConnectorManifest> = [
   "version",
   "type",
+  "description",
   "check",
   "definitions",
   "streams",
@@ -188,6 +189,7 @@ const MANIFEST_KEY_ORDER: Array<keyof ConnectorManifest> = [
 export function convertJsonToYaml(json: ConnectorManifest): string {
   const yamlString = dump(json, {
     noRefs: true,
+    quotingType: '"',
     sortKeys: (a: keyof ConnectorManifest, b: keyof ConnectorManifest) => {
       const orderA = MANIFEST_KEY_ORDER.indexOf(a);
       const orderB = MANIFEST_KEY_ORDER.indexOf(b);

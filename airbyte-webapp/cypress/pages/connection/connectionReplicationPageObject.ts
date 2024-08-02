@@ -6,8 +6,8 @@ import { getTestId } from "utils/selectors";
 
 const resetModalSaveButton = "[data-testid='resetModal-save']";
 const successResult = "div[data-id='success-result']";
-const resetModalResetRadio = "[data-testid='radio-button-tile-shouldClear-saveWithClear']";
-const saveStreamChangesButton = "button[data-testid='resetModal-save']";
+const resetModalResetRadio = "[data-testid='radio-button-tile-shouldRefresh-saveWithoutRefresh']";
+const saveStreamChangesButton = "button[data-testid='refreshModal-save']";
 const schemaChangesDetectedBanner = "[data-testid='schemaChangesDetected']";
 const schemaChangesReviewButton = "[data-testid='schemaChangesDetected-button']";
 const schemaChangesBackdrop = "[data-testid='schemaChangesBackdrop']";

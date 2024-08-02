@@ -23,9 +23,10 @@ import { JobLogsModalFailureMessage } from "./JobLogsModalFailureMessage";
 interface JobLogsModalProps {
   jobId: number;
   initialAttemptId?: number;
+  eventId?: string;
 }
 
-export const JobLogsModal: React.FC<JobLogsModalProps> = ({ jobId, initialAttemptId }) => {
+export const JobLogsModal: React.FC<JobLogsModalProps> = ({ jobId, initialAttemptId, eventId }) => {
   const searchInputRef = useRef<HTMLInputElement>(null);
   const [inputValue, setInputValue] = useState("");
   const job = useJobInfoWithoutLogs(jobId);
@@ -195,7 +196,7 @@ export const JobLogsModal: React.FC<JobLogsModalProps> = ({ jobId, initialAttemp
             showFailureMessage={false}
           />
           <FlexContainer className={styles.downloadLogs}>
-            <LinkToAttemptButton jobId={jobId} attemptId={selectedAttemptId} />
+            <LinkToAttemptButton jobId={jobId} attemptId={selectedAttemptId} eventId={eventId} />
             <DownloadLogsButton logLines={logLines} fileName={`job-${jobId}-attempt-${selectedAttemptId + 1}`} />
           </FlexContainer>
         </FlexContainer>

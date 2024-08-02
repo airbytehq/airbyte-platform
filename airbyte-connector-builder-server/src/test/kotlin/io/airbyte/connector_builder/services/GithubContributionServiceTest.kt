@@ -12,6 +12,7 @@ import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.assertThrows
 import org.kohsuke.github.GHBranch
 import org.kohsuke.github.GHCommit
 import org.kohsuke.github.GHContentUpdateResponse
@@ -20,6 +21,7 @@ import org.kohsuke.github.GHPullRequest
 import org.kohsuke.github.GHRef
 import org.kohsuke.github.GHRepository
 import org.kohsuke.github.GitHub
+import org.kohsuke.github.HttpException
 import org.kohsuke.github.PagedSearchIterable
 
 class GithubContributionServiceTest {
@@ -122,12 +124,6 @@ class GithubContributionServiceTest {
   }
 
   @Test
-  fun `getBranchRef returns null when branch does not exist`() {
-    every { repoMock.getRef(any()) } throws GHFileNotFoundException("Branch does not exist")
-    assertNull(contributionService.getBranchRef("non-existing-branch", repoMock))
-  }
-
-  @Test
   fun `getExistingOpenPullRequest returns null when no open PR exists`() {
     every { repoMock.getBranch(any()) } returns null
     assertNull(contributionService.getExistingOpenPullRequest())
@@ -189,5 +185,85 @@ class GithubContributionServiceTest {
     val expectedPath = "docs/integrations/sources/test-case.md"
     val actualPath = contributionService.connectorDocsPath
     assertEquals(expectedPath, actualPath)
+  }
+
+  @Test
+  fun `getBranchRef returns branch ref when branch exists`() {
+    every { repoMock.getRef("refs/heads/existing-branch") } returns refMock
+
+    val result = contributionService.getBranchRef("existing-branch", repoMock)
+
+    assertNotNull(result)
+    assertEquals(refMock, result)
+  }
+
+  @Test
+  fun `getBranchRef returns null when branch does not exist`() {
+    every { repoMock.getRef("refs/heads/non-existing-branch") } throws GHFileNotFoundException("Branch does not exist")
+
+    val result = contributionService.getBranchRef("non-existing-branch", repoMock)
+
+    assertNull(result)
+  }
+
+  @Test
+  fun `getBranchRef returns null on HttpException with response code 409`() {
+    every { repoMock.getRef("refs/heads/conflict-branch") } throws HttpException("", 409, "", "")
+
+    val result = contributionService.getBranchRef("conflict-branch", repoMock)
+
+    assertNull(result)
+  }
+
+  @Test
+  fun `getBranchRef throws exception on HttpException with other response code`() {
+    every { repoMock.getRef("refs/heads/error-branch") } throws HttpException("", 500, "", "")
+
+    val exception =
+      assertThrows<HttpException> {
+        contributionService.getBranchRef("error-branch", repoMock)
+      }
+
+    assertEquals(500, exception.responseCode)
+  }
+
+  @Test
+  fun `getBranch returns branch ref when branch exists`() {
+    every { repoMock.getBranch("existing-branch") } returns branchMock
+
+    val result = contributionService.getBranch("existing-branch", repoMock)
+
+    assertNotNull(result)
+    assertEquals(branchMock, result)
+  }
+
+  @Test
+  fun `getBranch returns null when branch does not exist`() {
+    every { repoMock.getBranch("non-existing-branch") } throws GHFileNotFoundException("Branch does not exist")
+
+    val result = contributionService.getBranch("non-existing-branch", repoMock)
+
+    assertNull(result)
+  }
+
+  @Test
+  fun `getBranch returns null on HttpException with response code 409`() {
+    every { repoMock.getBranch("conflict-branch") } throws HttpException("", 409, "", "")
+
+    val result = contributionService.getBranch("conflict-branch", repoMock)
+
+    assertNull(result)
+  }
+
+  @Test
+  fun `getBranch throws exception on HttpException with other response code`() {
+    every { repoMock.getBranch("error-branch") } throws HttpException("", 500, "", "")
+
+    val exception =
+      assertThrows<HttpException> {
+        contributionService.getBranch("error-branch", repoMock)
+      }
+
+    assertEquals(500, exception.responseCode)
   }
 }

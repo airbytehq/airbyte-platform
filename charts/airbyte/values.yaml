@@ -17,6 +17,7 @@ global:
     secretName: "airbyte-config-secrets"
     # -- The key within `licenseKeySecretName` where the Airbyte license key is stored
     licenseKeySecretKey: "license-key"
+    workloadsOptIn: false
 
   # -- The URL where Airbyte will be reached; This should match your Ingress host
   airbyteUrl: ""
@@ -830,7 +831,7 @@ worker:
 ## @section Workload Launcher Parameters
 
 workload-launcher:
-  enabled: false
+  enabled: true
   # -- Number of workload launcher replicas
   replicaCount: 1
 
@@ -960,6 +961,14 @@ workload-launcher:
     # -- Enable or disable Orchestrator
     enabled: true
     # -- Orchestrator image
+    image: ""
+
+  connectorSidecar:
+    # -- Connector Sidecar image
+    image: ""
+
+  # -- Workload init image
+  workloadInit:
     image: ""
 
   ## current no exist documentations
@@ -1722,6 +1731,10 @@ keycloak:
     # gid=0(root)
     fsGroup: 0
 
+  initContainers:
+    initDb:
+      image: {}
+
   initContainerSecurityContext:
     allowPrivilegeEscalation: false 
     runAsNonRoot: true
@@ -1808,7 +1821,7 @@ keycloak-setup:
   affinity: {}
 
 workload-api-server:
-  enabled: false
+  enabled: true
 
   bearerToken: token
 
