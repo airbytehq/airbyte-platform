@@ -2,7 +2,7 @@
 
 package io.airbyte.connector_builder.handlers
 
-import io.airbyte.connector_builder.api.model.generated.ConnectorContributionReadRequestBody
+import io.airbyte.connector_builder.api.model.generated.CheckContributionRequestBody
 import io.airbyte.connector_builder.services.GithubContributionService
 import io.airbyte.connector_builder.templates.ContributionTemplates
 import io.mockk.every
@@ -19,7 +19,7 @@ import org.junit.jupiter.api.assertThrows
 
 class ConnectorContributionHandlerTest {
   private var testConnectorImageName = "source-test-connector"
-  private val requestBodyMock = mockk<ConnectorContributionReadRequestBody>()
+  private val requestBodyMock = mockk<CheckContributionRequestBody>()
   private lateinit var connectorContributionHandler: ConnectorContributionHandler
 
   @BeforeEach
@@ -31,36 +31,36 @@ class ConnectorContributionHandlerTest {
   }
 
   @Test
-  fun `returns existing connector if found in target repository`() {
-    every { anyConstructed<GithubContributionService>().checkConnectorExistsOnMain() } returns true
+  fun `returns details of an existing connector if found in target repository`() {
+    every { anyConstructed<GithubContributionService>().checkIfConnectorExistsOnMain() } returns true
     every { anyConstructed<GithubContributionService>().readConnectorMetadataName() } returns "Test Connector"
 
-    val response = connectorContributionHandler.connectorContributionRead(requestBodyMock)
+    val response = connectorContributionHandler.checkContribution(requestBodyMock)
 
-    assertFalse(response.available)
-    assertEquals("Test Connector", response.connectorImageName)
+    assertTrue(response.connectorExists)
+    assertEquals("Test Connector", response.connectorName)
     assertNotNull(response.githubUrl)
   }
 
   @Test
-  fun `returns truthy boolean if connector not found in target repository`() {
-    every { anyConstructed<GithubContributionService>().checkConnectorExistsOnMain() } returns false
+  fun `returns 'false' for connectorExists if connector not found in target repository`() {
+    every { anyConstructed<GithubContributionService>().checkIfConnectorExistsOnMain() } returns false
 
-    val response = connectorContributionHandler.connectorContributionRead(requestBodyMock)
+    val response = connectorContributionHandler.checkContribution(requestBodyMock)
 
-    assertTrue(response.available)
-    assertNull(response.connectorImageName)
+    assertFalse(response.connectorExists)
+    assertNull(response.connectorName)
     assertNull(response.githubUrl)
   }
 
   @Test
   fun `throws IllegalArgumentException for invalid connectorImageName`() {
-    val invalidRequestBodyMock = mockk<ConnectorContributionReadRequestBody>()
+    val invalidRequestBodyMock = mockk<CheckContributionRequestBody>()
     every { invalidRequestBodyMock.connectorImageName } returns "not-a-valid_image_name"
 
     val exception =
       assertThrows<IllegalArgumentException> {
-        connectorContributionHandler.connectorContributionRead((invalidRequestBodyMock))
+        connectorContributionHandler.checkContribution((invalidRequestBodyMock))
       }
 
     assertEquals("not-a-valid_image_name is not a valid image name.", exception.message)

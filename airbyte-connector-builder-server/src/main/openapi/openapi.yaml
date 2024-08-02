@@ -16,17 +16,17 @@ externalDocs:
 servers:
   - url: "http://localhost:80/"
 paths:
-  /v1/contribute/read:
+  /v1/contribute/check:
     post:
       tags:
         - connectorBuilderServer
-      summary: TODO
-      operationId: readConnectorContribution
+      summary: Checks if a connector being contributed already exists
+      operationId: checkContribution
       requestBody:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/ConnectorContributionReadRequestBody"
+              $ref: "#/components/schemas/CheckContributionRequestBody"
         required: true
       responses:
         "200":
@@ -34,7 +34,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ConnectorContributionRead"
+                $ref: "#/components/schemas/CheckContributionRead"
         "400":
           $ref: "#/components/responses/ExceptionResponse"
         "422":
@@ -131,7 +131,7 @@ components:
       scheme: bearer
       bearerFormat: JWT
   schemas:
-    ConnectorContributionReadRequestBody:
+    CheckContributionRequestBody:
       type: object
       required:
         - connector_image_name
@@ -139,18 +139,20 @@ components:
         connector_image_name:
           type: string
           description: The id of the connector being submitted for contribution
-    ConnectorContributionRead:
+    CheckContributionRead:
       type: object
+      required:
+        - connector_exists
       properties:
-        connector_image_name:
+        connector_name:
           type: string
           description: The name of the connector in Github, if it exists
         github_url:
           type: string
           description: The Github URL of the connector in the airbyte repository, if it exists
-        available:
+        connector_exists:
           type: boolean
-          description: Indicates whether the connector name is available for use
+          description: Indicates whether a connector already exists with the provided image name
     GenerateContributionRequestBody:
       type: object
       required:

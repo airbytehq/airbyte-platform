@@ -6,8 +6,8 @@ import io.airbyte.api.problems.model.generated.GithubContributionProblemData
 import io.airbyte.api.problems.throwable.generated.GithubContributionFailedProblem
 import io.airbyte.api.problems.throwable.generated.InsufficientGithubTokenPermissionsProblem
 import io.airbyte.api.problems.throwable.generated.InvalidGithubTokenProblem
-import io.airbyte.connector_builder.api.model.generated.ConnectorContributionRead
-import io.airbyte.connector_builder.api.model.generated.ConnectorContributionReadRequestBody
+import io.airbyte.connector_builder.api.model.generated.CheckContributionRead
+import io.airbyte.connector_builder.api.model.generated.CheckContributionRequestBody
 import io.airbyte.connector_builder.api.model.generated.GenerateContributionRequestBody
 import io.airbyte.connector_builder.api.model.generated.GenerateContributionResponse
 import io.airbyte.connector_builder.services.GithubContributionService
@@ -25,7 +25,7 @@ private val logger = KotlinLogging.logger {}
 
 @Singleton
 class ConnectorContributionHandler(private val contributionTemplates: ContributionTemplates) {
-  fun connectorContributionRead(request: ConnectorContributionReadRequestBody): ConnectorContributionRead {
+  fun checkContribution(request: CheckContributionRequestBody): CheckContributionRead {
     // Validate the request connector name
     checkConnectorImageNameIsValid(request.connectorImageName)
 
@@ -33,14 +33,14 @@ class ConnectorContributionHandler(private val contributionTemplates: Contributi
     val githubContributionService = GithubContributionService(request.connectorImageName, null)
 
     // Check for existing connector
-    val connectorExists = githubContributionService.checkConnectorExistsOnMain()
+    val connectorExists = githubContributionService.checkIfConnectorExistsOnMain()
     val connectorName = if (connectorExists) githubContributionService.readConnectorMetadataName() else null
     val connectorPath = if (connectorExists) "airbytehq/airbyte/tree/master/airbyte-integrations/connectors/${request.connectorImageName}" else null
 
-    return ConnectorContributionRead().apply {
-      connectorImageName = connectorName
+    return CheckContributionRead().apply {
+      this.connectorName = connectorName
       githubUrl = connectorPath
-      available = !connectorExists
+      this.connectorExists = connectorExists
     }
   }
 

@@ -113,7 +113,7 @@ class GithubContributionService(var connectorImageName: String, personalAccessTo
 
   // PUBLIC METHODS
 
-  fun checkConnectorExistsOnMain(): Boolean {
+  fun checkIfConnectorExistsOnMain(): Boolean {
     return checkFileExistsOnMain(connectorMetadataPath)
   }
 
