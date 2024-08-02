@@ -1,8 +1,10 @@
 import classNames from "classnames";
-import { useMemo, useState } from "react";
-import { useFormContext } from "react-hook-form";
+import debounce from "lodash/debounce";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { useFormContext, useWatch } from "react-hook-form";
 import { FormattedMessage, useIntl } from "react-intl";
 import { ReactMarkdown } from "react-markdown/lib/react-markdown";
+import { useUpdateEffect } from "react-use";
 import * as yup from "yup";
 
 import { RadioButtonTiles } from "components/connection/CreateConnection/RadioButtonTiles";
@@ -19,12 +21,15 @@ import { Text } from "components/ui/Text";
 
 import {
   GENERATE_CONTRIBUTION_NOTIFICATION_ID,
+  useBuilderCheckContribution,
   useBuilderGenerateContribution,
   useGetBuilderProjectBaseImage,
   useListBuilderProjectVersions,
 } from "core/api";
+import { CheckContributionRead } from "core/api/types/ConnectorBuilderClient";
 import { useFormatError } from "core/errors";
 import { Action, Namespace, useAnalyticsService } from "core/services/analytics";
+import { NON_I18N_ERROR_TYPE } from "core/utils/form";
 import { useExperiment } from "hooks/services/Experiment";
 import { useNotificationService } from "hooks/services/Notification";
 import {
@@ -305,6 +310,7 @@ const ContributeToMarketplace: React.FC<InnerModalProps> = ({ onClose, setPublis
   const { registerNotification, unregisterNotificationById } = useNotificationService();
   const formatError = useFormatError();
   const connectorName = useBuilderWatch("name");
+  const connectorImageName = useMemo(() => convertConnectorNameToImageName(connectorName), [connectorName]);
   const { jsonManifest, updateYamlCdkVersion } = useConnectorBuilderFormState();
   const { setValue } = useFormContext();
   const mode = useBuilderWatch("mode");
@@ -321,6 +327,7 @@ const ContributeToMarketplace: React.FC<InnerModalProps> = ({ onClose, setPublis
     isLoading: isLoadingBaseImage,
   } = useGetBuilderProjectBaseImage({ manifest: jsonManifestWithCorrectedVersion });
 
+  const [imageNameError, setImageNameError] = useState<string | null>(null);
   const { mutateAsync: generateContribution, isLoading: isSubmittingContribution } = useBuilderGenerateContribution();
 
   const publishTypeSwitcher = <PublishTypeSwitcher selectedPublishType="marketplace" setPublishType={setPublishType} />;
@@ -417,13 +424,24 @@ const ContributeToMarketplace: React.FC<InnerModalProps> = ({ onClose, setPublis
     <Form<ContributeToMarketplaceFormValues>
       defaultValues={{
         name: connectorName,
-        connectorImageName: "",
+        connectorImageName,
         description: jsonManifest.description,
         githubToken: "",
       }}
       schema={yup.object().shape({
         name: yup.string().required("form.empty.error"),
-        connectorImageName: yup.string().required("form.empty.error"),
+        connectorImageName: yup
+          .string()
+          .required("form.empty.error")
+          .test((value, { createError }) => {
+            if (!value) {
+              return createError({ message: "form.empty.error" });
+            }
+            if (imageNameError) {
+              return createError({ message: imageNameError, type: NON_I18N_ERROR_TYPE });
+            }
+            return true;
+          }),
         description: yup.string(),
         githubToken: yup.string().required("form.empty.error"),
       })}
@@ -440,22 +458,10 @@ const ContributeToMarketplace: React.FC<InnerModalProps> = ({ onClose, setPublis
               label={formatMessage({ id: "connectorBuilder.contribution.modal.connectorName.label" })}
               containerControlClassName={styles.formControl}
             />
-            <FormControl<ContributeToMarketplaceFormValues>
-              name="connectorImageName"
-              fieldType="input"
-              label={formatMessage({ id: "connectorBuilder.contribution.modal.connectorImageName.label" })}
-              labelTooltip={
-                <LabelInfo
-                  label={<FormattedMessage id="connectorBuilder.contribution.modal.connectorImageName.label" />}
-                  description={
-                    <ReactMarkdown>
-                      {formatMessage({ id: "connectorBuilder.contribution.modal.connectorImageName.tooltip" })}
-                    </ReactMarkdown>
-                  }
-                  examples={["source-google-sheets", "source-big-query"]}
-                />
-              }
-              containerControlClassName={styles.formControl}
+            <ConnectorImageNameInput
+              connectorName={connectorName}
+              imageNameError={imageNameError}
+              setImageNameError={setImageNameError}
             />
             <FormControl<ContributeToMarketplaceFormValues>
               name="description"
@@ -523,5 +529,122 @@ const ContributeToMarketplace: React.FC<InnerModalProps> = ({ onClose, setPublis
         </FlexContainer>
       </ModalFooter>
     </Form>
+  );
+};
+
+const imageNameIsValid = (imageName: string) => {
+  return /^source-[a-z0-9-]+$/.test(imageName);
+};
+
+const convertConnectorNameToImageName = (connectorName: string) => {
+  return `source-${connectorName
+    .toLowerCase()
+    .replace(/[^a-z0-9-]+/g, "-")
+    .replace(/-+$/, "")}`;
+};
+
+const ConnectorImageNameInput: React.FC<{
+  connectorName: string;
+  imageNameError: string | null;
+  setImageNameError: (error: string | null) => void;
+}> = ({ connectorName, imageNameError, setImageNameError }) => {
+  const { formatMessage } = useIntl();
+  const fieldName = "connectorImageName";
+
+  const { trigger } = useFormContext();
+  const [footer, setFooter] = useState<string | null>(null);
+  const { getCachedCheck, fetchContributionCheck } = useBuilderCheckContribution();
+
+  const updateErrorAndFooter = useCallback(
+    (contributionCheck: CheckContributionRead) => {
+      if (contributionCheck.connector_exists) {
+        setImageNameError(
+          contributionCheck?.connector_name
+            ? formatMessage(
+                { id: "connectorBuilder.contribution.modal.connectorAlreadyExistsWithName" },
+                { name: contributionCheck.connector_name }
+              )
+            : formatMessage({ id: "connectorBuilder.contribution.modal.connectorAlreadyExistsWithoutName" })
+        );
+        setFooter(null);
+      } else {
+        setImageNameError(null);
+        setFooter(
+          formatMessage({ id: "connectorBuilder.contribution.modal.connectorDoesNotExist" }, { name: connectorName })
+        );
+      }
+    },
+    [connectorName, formatMessage, setImageNameError]
+  );
+
+  // An async function that debounces the call to fetchContributionCheck and resolves
+  // the promise with the result so that the function can be awaited.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const debouncedCheckContribution = useCallback(
+    debounce(async (imageName: string, resolve: (checkResult: CheckContributionRead | Error) => void) => {
+      const result = await fetchContributionCheck({ connector_image_name: imageName });
+      resolve(result);
+    }, 1000),
+    [fetchContributionCheck]
+  );
+
+  const imageName = useWatch({ name: fieldName });
+  useEffect(() => {
+    // cancel any pending checks to avoid stale results
+    debouncedCheckContribution.cancel();
+
+    if (!imageName) {
+      // don't need to set footer or error state, because the yup validation will take precedence here
+      return;
+    }
+
+    if (!imageNameIsValid(imageName)) {
+      setImageNameError(formatMessage({ id: "connectorBuilder.contribution.modal.invalidImageName" }));
+      setFooter(null);
+      return;
+    }
+
+    const cachedCheck = getCachedCheck({ connector_image_name: imageName });
+    if (cachedCheck) {
+      updateErrorAndFooter(cachedCheck);
+      return;
+    }
+
+    setImageNameError(null);
+    setFooter(null);
+
+    debouncedCheckContribution(imageName, (result) => {
+      // in the case of an error response don't show any footer or error message
+      if (result instanceof Error) {
+        return;
+      }
+      updateErrorAndFooter(result);
+    });
+  }, [debouncedCheckContribution, formatMessage, getCachedCheck, imageName, setImageNameError, updateErrorAndFooter]);
+
+  // when imageNameError changes, trigger validation of the image name field
+  useUpdateEffect(() => {
+    trigger(fieldName);
+  }, [imageNameError, trigger]);
+
+  return (
+    <FormControl<ContributeToMarketplaceFormValues>
+      name={fieldName}
+      fieldType="input"
+      label={formatMessage({ id: "connectorBuilder.contribution.modal.connectorImageName.label" })}
+      labelTooltip={
+        <LabelInfo
+          label={<FormattedMessage id="connectorBuilder.contribution.modal.connectorImageName.label" />}
+          description={
+            <ReactMarkdown>
+              {formatMessage({ id: "connectorBuilder.contribution.modal.connectorImageName.tooltip" })}
+            </ReactMarkdown>
+          }
+          examples={["source-google-sheets", "source-big-query"]}
+        />
+      }
+      containerControlClassName={styles.formControl}
+      footer={footer ?? undefined}
+    />
   );
 };

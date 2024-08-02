@@ -1,4 +1,5 @@
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useCallback } from "react";
 
 import { DEFAULT_JSON_MANIFEST_VALUES } from "components/connectorBuilder/types";
 
@@ -8,7 +9,12 @@ import { useFormatError } from "core/errors";
 import { Action, Namespace, useAnalyticsService } from "core/services/analytics";
 import { useNotificationService } from "hooks/services/Notification";
 
-import { readStream, resolveManifest, generateContribution } from "../generated/ConnectorBuilderClient";
+import {
+  readStream,
+  resolveManifest,
+  generateContribution,
+  checkContribution,
+} from "../generated/ConnectorBuilderClient";
 import { KnownExceptionInfo } from "../generated/ConnectorBuilderClient.schemas";
 import {
   ConnectorConfig,
@@ -18,6 +24,8 @@ import {
   StreamRead,
   StreamReadRequestBody,
   GenerateContributionRequestBody,
+  CheckContributionRead,
+  CheckContributionRequestBody,
 } from "../types/ConnectorBuilderClient";
 import { DeclarativeComponentSchema } from "../types/ConnectorManifest";
 import { useRequestOptions } from "../useRequestOptions";
@@ -33,6 +41,7 @@ const connectorBuilderKeys = {
   resolve: (manifest?: ConnectorManifest) => [...connectorBuilderKeys.all, "resolve", { manifest }] as const,
   resolveSuspense: (manifest?: ConnectorManifest) =>
     [...connectorBuilderKeys.all, "resolveSuspense", { manifest }] as const,
+  checkContribution: (imageName?: string) => [...connectorBuilderKeys.all, "checkContribution", { imageName }] as const,
 };
 
 export const useBuilderReadStream = (
@@ -118,4 +127,36 @@ export const useBuilderGenerateContribution = () => {
       });
     },
   });
+};
+
+export const useBuilderCheckContribution = () => {
+  const requestOptions = useRequestOptions();
+  const queryClient = useQueryClient();
+
+  const getCachedCheck = useCallback(
+    (params: CheckContributionRequestBody) => {
+      const queryKey = connectorBuilderKeys.checkContribution(params.connector_image_name);
+      return queryClient.getQueryData<CheckContributionRead>(queryKey);
+    },
+    [queryClient]
+  );
+
+  const fetchContributionCheck = useCallback(
+    async (params: CheckContributionRequestBody) => {
+      try {
+        return await queryClient.fetchQuery<CheckContributionRead>(
+          connectorBuilderKeys.checkContribution(params.connector_image_name),
+          () => checkContribution(params, requestOptions)
+        );
+      } catch (error) {
+        return error as Error;
+      }
+    },
+    [queryClient, requestOptions]
+  );
+
+  return {
+    getCachedCheck,
+    fetchContributionCheck,
+  };
 };
