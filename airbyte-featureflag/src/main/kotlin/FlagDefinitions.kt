@@ -193,3 +193,5 @@ object RestrictLoginsForSSODomains : Temporary<Boolean>(key = "platform.restrict
 object ResetStreamsStateWhenDisabled : Temporary<Boolean>(key = "reset-stream-state-on-disable", default = false)
 
 object OrchestratorFetchesInputFromInit : Temporary<Boolean>(key = "orchestrator-fetches-from-init", default = false)
+
+object RefreshConfigBeforeSecretHydration : Temporary<Boolean>(key = "platform.refresh-config-before-secret-hydration", default = false)
