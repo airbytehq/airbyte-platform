@@ -18,7 +18,7 @@ projectDir=(
   "workers"
   "workload-api-server"
   "workload-launcher"
-  "workload-init-container"
+  "init-container"
   "keycloak"
   "keycloak-setup"
 )
