@@ -3,6 +3,7 @@
 package io.airbyte.connector_builder.handlers
 
 import io.airbyte.api.problems.model.generated.GithubContributionProblemData
+import io.airbyte.api.problems.throwable.generated.ConnectorImageNameInUseProblem
 import io.airbyte.api.problems.throwable.generated.GithubContributionFailedProblem
 import io.airbyte.api.problems.throwable.generated.InsufficientGithubTokenPermissionsProblem
 import io.airbyte.api.problems.throwable.generated.InvalidGithubTokenProblem
@@ -117,8 +118,14 @@ class ConnectorContributionHandler(private val contributionTemplates: Contributi
     val githubToken = generateContributionRequestBody.githubToken
     val connectorImageName = generateContributionRequestBody.connectorImageName
 
-    // 1. Create a branch
     val githubContributionService = GithubContributionService(connectorImageName, githubToken)
+
+    // 0. Error if connector already exists
+    if (githubContributionService.checkIfConnectorExistsOnMain()) {
+      throw ConnectorImageNameInUseProblem()
+    }
+
+    // 1. Create a branch
     githubContributionService.prepareBranchForContribution()
 
     // 2. Generate Files
@@ -147,7 +154,7 @@ class ConnectorContributionHandler(private val contributionTemplates: Contributi
   fun convertGithubExceptionToContributionException(e: HttpException): Exception {
     return when (e.responseCode) {
       401 -> InvalidGithubTokenProblem()
-      409 -> InsufficientGithubTokenPermissionsProblem()
+      409 -> InsufficientGithubTokenPermissionsProblem(e)
       else -> GithubContributionFailedProblem(GithubContributionProblemData().status(e.responseCode).message(e.message))
     }
   }

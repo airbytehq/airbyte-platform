@@ -461,6 +461,22 @@ components:
               default: The requested resource could not be found.
             data:
               $ref: "#/components/schemas/ProblemResourceData"
+    ConnectorImageNameInUseProblemResponse:
+      x-implements: io.airbyte.api.problems.ProblemResponse
+      type: object
+      allOf:
+        - $ref: "#/components/schemas/BaseProblemFields"
+        - type: object
+          properties:
+            status:
+              type: integer
+              default: 409
+            type:
+              type: string
+              default: error:generate-contribution/connector-image-name-in-use
+            title:
+              type: string
+              default: The image name provided is already in use.
     InvalidGithubTokenProblemResponse:
       x-implements: io.airbyte.api.problems.ProblemResponse
       type: object
