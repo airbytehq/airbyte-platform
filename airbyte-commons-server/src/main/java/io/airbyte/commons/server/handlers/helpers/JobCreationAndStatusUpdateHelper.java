@@ -162,7 +162,7 @@ public class JobCreationAndStatusUpdateHelper {
       final Job failedJob = jobPersistence.getJob(jobId);
       jobNotifier.failJob(failedJob, attemptStats);
       // log failure events in connection timeline
-      connectionTimelineEventHelper.logJobFailureEventInConnectionTimeline(job, connectionId, attemptStats);
+      connectionTimelineEventHelper.logJobFailureEventInConnectionTimeline(failedJob, connectionId, attemptStats);
       trackCompletion(failedJob, JobStatus.FAILED);
     }
   }
