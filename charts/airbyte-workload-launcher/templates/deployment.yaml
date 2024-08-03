@@ -454,6 +454,10 @@ spec:
             secretKeyRef:
               name: {{ include "airbyte.secretStoreName" .Values.global.secretsManager.secretsManagerSecretName }}
               key: {{ include "airbyte.googleSecretManagerCredentialsSecretKey" .Values.global.secretsManager.googleSecretManager.credentialsSecretKey }}
+        - name: SECRET_STORE_GCP_SECRET_NAME
+          value: {{ include "airbyte.secretStoreName" .Values.global.secretsManager.secretsManagerSecretName }}
+        - name: SECRET_STORE_GCP_SECRET_KEY
+          value: {{ include "airbyte.googleSecretManagerCredentialsSecretKey" .Values.global.secretsManager.googleSecretManager.credentialsSecretKey }}
         {{- end }}
 
         # Values for vault secrets
