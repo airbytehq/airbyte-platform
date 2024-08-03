@@ -252,7 +252,7 @@ class MinioStorageClientTest {
 }
 
 class S3StorageClientTest {
-  private val config = S3StorageConfig(buckets = buckets, accessKey = "access", secretAccessKey = "secret", region = "us-east-1")
+  private val config = S3StorageConfig(buckets = buckets, accessKey = "access", secretAccessKey = "secret", region = "us-east-1", retry = "10")
 
   @Test
   fun `key matches`() {
