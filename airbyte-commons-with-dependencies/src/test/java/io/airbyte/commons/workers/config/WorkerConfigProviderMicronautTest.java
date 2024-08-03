@@ -5,7 +5,6 @@
 package io.airbyte.commons.workers.config;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNull;
 
 import io.airbyte.commons.workers.config.WorkerConfigsProvider.ResourceType;
 import io.airbyte.config.ResourceRequirements;
@@ -59,7 +58,7 @@ class WorkerConfigProviderMicronautTest {
   @Test
   void testKubeConfigIsReadingAllTheFields() {
     assertEquals("check", checkKubeResourceConfig.getName());
-    assertEquals("check annotations", checkKubeResourceConfig.getAnnotations());
+    assertEquals("check_annotation_key=check_annotation_value", checkKubeResourceConfig.getAnnotations());
     assertEquals("check labels", checkKubeResourceConfig.getLabels());
     assertEquals("check node-selectors", checkKubeResourceConfig.getNodeSelectors());
     assertEquals("check cpu limit", checkKubeResourceConfig.getCpuLimit());
@@ -71,11 +70,11 @@ class WorkerConfigProviderMicronautTest {
   @Test
   void testDefaultFieldBehavior() {
     assertEquals("spec", specKubeResourceConfig.getName());
-    assertEquals("spec annotations", specKubeResourceConfig.getAnnotations());
+    assertEquals("", specKubeResourceConfig.getAnnotations());
     assertEquals("spec labels", specKubeResourceConfig.getLabels());
     assertEquals("spec node selectors", specKubeResourceConfig.getNodeSelectors());
-    assertNull(specKubeResourceConfig.getCpuLimit());
-    assertNull(specKubeResourceConfig.getCpuRequest());
+    assertEquals("", specKubeResourceConfig.getCpuLimit());
+    assertEquals("", specKubeResourceConfig.getCpuRequest());
     assertEquals("spec memory limit", specKubeResourceConfig.getMemoryLimit());
     assertEquals("", specKubeResourceConfig.getMemoryRequest());
   }
@@ -85,9 +84,9 @@ class WorkerConfigProviderMicronautTest {
     final WorkerConfigs specKubeConfig = workerConfigsProvider.getConfig(ResourceType.SPEC);
 
     assertEquals("default cpu limit", specKubeConfig.getResourceRequirements().getCpuLimit());
-    assertEquals("", specKubeConfig.getResourceRequirements().getCpuRequest());
+    assertEquals("default cpu request", specKubeConfig.getResourceRequirements().getCpuRequest());
     assertEquals("spec memory limit", specKubeConfig.getResourceRequirements().getMemoryLimit());
-    assertEquals("", specKubeConfig.getResourceRequirements().getMemoryRequest());
+    assertEquals("default memory request", specKubeConfig.getResourceRequirements().getMemoryRequest());
   }
 
   @Test
@@ -120,18 +119,22 @@ class WorkerConfigProviderMicronautTest {
         testVariant);
     final ResourceRequirements testSourceDatabase = workerConfigsProvider.getResourceRequirements(ResourceRequirementsType.SOURCE, Optional.of(
         "database"), testVariant);
+    final WorkerConfigs checkConfig = workerConfigsProvider.getConfig(ResourceType.CHECK);
+    final WorkerConfigs specConfig = workerConfigsProvider.getConfig(ResourceType.SPEC);
 
     // Testing the variant override lookup
     assertEquals("5", testSourceApi.getCpuLimit());
     assertEquals("10", testSourceDatabase.getCpuLimit());
     assertEquals("default cpu limit", sourceApi.getCpuLimit());
     assertEquals("default cpu limit", sourceDatabase.getCpuLimit());
+    assertEquals(Map.of("check_annotation_key", "check_annotation_value"), checkConfig.getWorkerKubeAnnotations());
 
     // Verifying the default inheritance
     assertEquals("0.5", sourceApi.getCpuRequest());
     assertEquals("1", sourceDatabase.getCpuRequest());
     assertEquals("", testSourceApi.getCpuRequest());
     assertEquals("", testSourceDatabase.getCpuRequest());
+    assertEquals(Map.of("default_annotation_key", "default_annotation_value"), specConfig.getWorkerKubeAnnotations());
   }
 
   @Test
