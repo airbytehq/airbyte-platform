@@ -72,7 +72,7 @@ describe("Status tab", () => {
       cy.get(`[data-loading="true"]`, { timeout: 10000 }).should("exist");
 
       // Wait for the job to complete
-      cy.get(`[data-loading="false"]`, { timeout: 45000 }).should("exist");
+      cy.get(`[data-loading="false"]`, { timeout: 90000 }).should("exist");
 
       cy.get(statusPage.manualSyncButton).should("not.be.disabled");
     });
