@@ -4,20 +4,20 @@
 #
 #    pip-compile
 #
-airbyte-cdk==4.3.0
+airbyte-cdk==4.3.2
     # via -r requirements.in
 airbyte-protocol-models-pdv2==0.12.2
     # via airbyte-cdk
 annotated-types==0.7.0
     # via pydantic
-attrs==23.2.0
+attrs==24.1.0
     # via
     #   cattrs
     #   jsonschema
     #   requests-cache
 backoff==2.2.1
     # via airbyte-cdk
-bracex==2.4
+bracex==2.5
     # via wcmatch
 cachetools==5.4.0
     # via airbyte-cdk
