@@ -90,7 +90,7 @@ export const SyncEventItem: React.FC<SyncEventProps> = ({ syncEvent }) => {
         </Box>
       </ConnectionTimelineEventSummary>
       <ConnectionTimelineEventActions
-        createdAt={syncEvent.createdAt * 1000}
+        createdAt={syncEvent.createdAt}
         eventId={syncEvent.id}
         jobId={syncEvent.summary.jobId}
       />
