@@ -11,13 +11,17 @@ import io.airbyte.api.client.model.generated.DestinationIdRequestBody
 import io.airbyte.api.client.model.generated.ReleaseStage
 import io.airbyte.api.client.model.generated.SourceDefinitionIdRequestBody
 import io.airbyte.api.client.model.generated.SourceIdRequestBody
+import io.airbyte.commons.json.Jsons
 import io.airbyte.commons.map.MoreMaps
 import io.airbyte.config.FailureReason
 import io.airbyte.config.Metadata
 import io.airbyte.config.StandardWorkspace
+import io.airbyte.config.State
 import io.airbyte.persistence.job.WebUrlHelper
+import io.airbyte.persistence.job.errorreporter.AttemptConfigReportingContext
 import io.airbyte.persistence.job.errorreporter.JobErrorReporter
 import io.airbyte.persistence.job.errorreporter.JobErrorReportingClient
+import io.airbyte.protocol.models.AirbyteStateMessage
 import io.github.oshai.kotlinlogging.KotlinLogging
 import io.micronaut.context.annotation.Parameter
 import io.micronaut.context.annotation.Value
@@ -51,6 +55,7 @@ class StateCheckSumErrorReporter(
     internalMessage: String,
     externalMessage: String,
     exception: Throwable,
+    stateMessage: AirbyteStateMessage,
   ) {
     if (errorReported) {
       return
@@ -100,7 +105,13 @@ class StateCheckSumErrorReporter(
 
         val failureReason = createFailureReason(origin, internalMessage, externalMessage, exception, jobId, attemptNumber)
         val allMetadata = MoreMaps.merge(getFailureReasonMetadata(failureReason), metadata, commonMetadata)
-        client.reportJobFailureReason(standardWorkspace, failureReason, dockerImageName, allMetadata, null)
+        client.reportJobFailureReason(
+          standardWorkspace,
+          failureReason,
+          dockerImageName,
+          allMetadata,
+          AttemptConfigReportingContext(null, null, State().withState(Jsons.jsonNode(stateMessage))),
+        )
       }
     } catch (e: Exception) {
       logger.error(e) { "Error while trying to report state checksum error" }

@@ -80,7 +80,7 @@ class ParallelStreamStatsTrackerTest {
   fun beforeEach() {
     val trackingIdentityFetcher = mockk<TrackingIdentityFetcher>()
     val stateCheckSumErrorReporter = mockk<StateCheckSumErrorReporter>()
-    every { stateCheckSumErrorReporter.reportError(any(), any(), any(), any(), any(), any(), any(), any()) } just Runs
+    every { stateCheckSumErrorReporter.reportError(any(), any(), any(), any(), any(), any(), any(), any(), any()) } just Runs
     val trackingIdentity = mockk<TrackingIdentity>()
     every { trackingIdentity.email } returns "test"
     every { trackingIdentityFetcher.apply(any()) }.returns(trackingIdentity)

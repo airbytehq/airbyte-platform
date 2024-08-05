@@ -59,7 +59,7 @@ class StateCheckSumCountEventHandlerTest {
     every { trackingIdentityFetcher.apply(any()) } returns trackingIdentity
     every { deploymentFetcher.get() } returns deployment
     every { featureFlagClient.boolVariation(any(), any()) } returns true
-    every { stateCheckSumErrorReporter.reportError(any(), any(), any(), any(), any(), any(), any(), any()) } just Runs
+    every { stateCheckSumErrorReporter.reportError(any(), any(), any(), any(), any(), any(), any(), any(), any()) } just Runs
     handler =
       StateCheckSumCountEventHandler(
         Optional.of(pubSubWriter),

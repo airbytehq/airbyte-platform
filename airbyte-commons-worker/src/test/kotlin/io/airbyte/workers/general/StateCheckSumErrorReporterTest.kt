@@ -8,11 +8,17 @@ import io.airbyte.api.client.model.generated.DestinationRead
 import io.airbyte.api.client.model.generated.ReleaseStage
 import io.airbyte.api.client.model.generated.SourceDefinitionRead
 import io.airbyte.api.client.model.generated.SourceRead
+import io.airbyte.commons.json.Jsons
 import io.airbyte.config.FailureReason
 import io.airbyte.config.StandardWorkspace
+import io.airbyte.config.State
 import io.airbyte.persistence.job.WebUrlHelper
+import io.airbyte.persistence.job.errorreporter.AttemptConfigReportingContext
 import io.airbyte.persistence.job.errorreporter.JobErrorReporter
 import io.airbyte.persistence.job.errorreporter.JobErrorReportingClient
+import io.airbyte.protocol.models.AirbyteStateMessage
+import io.airbyte.protocol.models.AirbyteStreamState
+import io.airbyte.protocol.models.StreamDescriptor
 import io.mockk.clearAllMocks
 import io.mockk.every
 import io.mockk.mockk
@@ -25,7 +31,6 @@ import org.mockito.Mockito.any
 import org.mockito.Mockito.anyMap
 import org.mockito.Mockito.anyString
 import org.mockito.Mockito.eq
-import org.mockito.Mockito.isNull
 import org.mockito.Mockito.times
 import org.mockito.Mockito.verify
 import org.mockito.Mockito.`when`
@@ -45,6 +50,8 @@ class StateCheckSumErrorReporterTest {
   @Mock
   private lateinit var webUrlHelper: WebUrlHelper
 
+  private lateinit var stateMessage: AirbyteStateMessage
+
   private lateinit var stateCheckSumErrorReporter: StateCheckSumErrorReporter
 
   private val airbyteVersion = "0.1.0"
@@ -61,6 +68,14 @@ class StateCheckSumErrorReporterTest {
         airbyteApiClient,
         webUrlHelper,
       )
+    stateMessage =
+      AirbyteStateMessage().withType(AirbyteStateMessage.AirbyteStateType.STREAM)
+        .withStream(
+          AirbyteStreamState().withStreamState(Jsons.emptyObject()).withStreamDescriptor(
+            StreamDescriptor()
+              .withNamespace("namespace").withName("name"),
+          ),
+        )
   }
 
   @AfterEach
@@ -100,12 +115,21 @@ class StateCheckSumErrorReporterTest {
     every { airbyteApiClient.sourceApi.getSource(any()) } returns source
     every { airbyteApiClient.sourceDefinitionApi.getSourceDefinition(any()) } returns sourceDefinition
 
-    stateCheckSumErrorReporter.reportError(workspaceId, connectionId, jobId, attemptNumber, origin, internalMessage, externalMessage, exception)
+    stateCheckSumErrorReporter.reportError(
+      workspaceId, connectionId, jobId, attemptNumber, origin, internalMessage, externalMessage,
+      exception, stateMessage,
+    )
 
     verify(
       jobErrorReportingClient,
       times(1),
-    ).reportJobFailureReason(any(StandardWorkspace::class.java), any(FailureReason::class.java), eq("source-repo:0.1.0"), anyMap(), isNull())
+    ).reportJobFailureReason(
+      any(StandardWorkspace::class.java),
+      any(FailureReason::class.java),
+      eq("source-repo:0.1.0"),
+      anyMap(),
+      eq(AttemptConfigReportingContext(null, null, State().withState(Jsons.jsonNode(stateMessage)))),
+    )
   }
 
   @Test
@@ -142,12 +166,21 @@ class StateCheckSumErrorReporterTest {
     every { airbyteApiClient.destinationApi.getDestination(any()) } returns destination
     every { airbyteApiClient.destinationDefinitionApi.getDestinationDefinition(any()) } returns destinationDefinition
 
-    stateCheckSumErrorReporter.reportError(workspaceId, connectionId, jobId, attemptNumber, origin, internalMessage, externalMessage, exception)
+    stateCheckSumErrorReporter.reportError(
+      workspaceId, connectionId, jobId, attemptNumber, origin, internalMessage, externalMessage,
+      exception, stateMessage,
+    )
 
     verify(
       jobErrorReportingClient,
       times(1),
-    ).reportJobFailureReason(any(StandardWorkspace::class.java), any(FailureReason::class.java), eq("destination-repo:0.1.0"), anyMap(), isNull())
+    ).reportJobFailureReason(
+      any(StandardWorkspace::class.java),
+      any(FailureReason::class.java),
+      eq("destination-repo:0.1.0"),
+      anyMap(),
+      eq(AttemptConfigReportingContext(null, null, State().withState(Jsons.jsonNode(stateMessage)))),
+    )
   }
 
   @Test
@@ -170,6 +203,7 @@ class StateCheckSumErrorReporterTest {
       "Internal message",
       "External message",
       RuntimeException("Test exception"),
+      stateMessage,
     )
 
     verify(

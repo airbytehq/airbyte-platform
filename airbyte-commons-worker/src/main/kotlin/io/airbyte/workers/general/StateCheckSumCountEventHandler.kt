@@ -344,6 +344,7 @@ class StateCheckSumCountEventHandler(
       failOnInvalidChecksum,
       validData,
       origin,
+      stateMessage,
     )
   }
 
@@ -362,6 +363,7 @@ class StateCheckSumCountEventHandler(
       failOnInvalidChecksum,
       validData,
       origin,
+      stateMessage,
     )
   }
 
@@ -370,8 +372,10 @@ class StateCheckSumCountEventHandler(
     failOnInvalidChecksum: Boolean,
     validData: Boolean,
     origin: AirbyteMessageOrigin,
+    stateMessage: AirbyteStateMessage,
   ) {
     logger.error { errorMessage }
+    logger.error { "Raw state message with bad count ${Jsons.serialize(stateMessage)}" }
     if (failOnInvalidChecksum && validData) {
       throw InvalidChecksumException(errorMessage)
     } else if (validData) {
@@ -390,6 +394,7 @@ class StateCheckSumCountEventHandler(
         errorMessage,
         "The sync appears to have dropped records",
         InvalidChecksumException(errorMessage),
+        stateMessage,
       )
     }
   }
