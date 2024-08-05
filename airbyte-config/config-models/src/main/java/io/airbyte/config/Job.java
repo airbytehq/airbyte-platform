@@ -2,12 +2,10 @@
  * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
-package io.airbyte.persistence.job.models;
+package io.airbyte.config;
 
 import com.google.common.base.Preconditions;
-import io.airbyte.config.JobConfig;
 import io.airbyte.config.JobConfig.ConfigType;
-import io.airbyte.config.JobOutput;
 import jakarta.annotation.Nullable;
 import java.util.Comparator;
 import java.util.EnumSet;

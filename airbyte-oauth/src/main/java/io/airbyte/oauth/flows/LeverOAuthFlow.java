@@ -20,7 +20,6 @@ import org.apache.http.client.utils.URIBuilder;
 /**
  * Lever OAuth.
  */
-@SuppressWarnings("PMD.LiteralsFirstInComparisons")
 public class LeverOAuthFlow extends BaseOAuth2Flow {
 
   private static final String AUTHORIZE_URL = "%s/authorize";
@@ -105,7 +104,7 @@ public class LeverOAuthFlow extends BaseOAuth2Flow {
   private boolean isProduction(final JsonNode inputOAuthConfiguration) {
     final var environment = inputOAuthConfiguration.get("environment");
     return environment != null
-        && environment.asText().toLowerCase(Locale.ROOT).equals("production");
+        && "production".equals(environment.asText().toLowerCase(Locale.ROOT));
   }
 
 }

@@ -28,12 +28,14 @@ import io.airbyte.commons.server.errors.BadRequestException;
 import io.airbyte.commons.server.handlers.helpers.ConnectionTimelineEventHelper;
 import io.airbyte.commons.server.handlers.helpers.JobCreationAndStatusUpdateHelper;
 import io.airbyte.config.AirbyteStream;
+import io.airbyte.config.Attempt;
 import io.airbyte.config.AttemptFailureSummary;
 import io.airbyte.config.AttemptSyncConfig;
 import io.airbyte.config.ConfiguredAirbyteCatalog;
 import io.airbyte.config.ConfiguredAirbyteStream;
 import io.airbyte.config.FailureReason;
 import io.airbyte.config.FailureReason.FailureOrigin;
+import io.airbyte.config.Job;
 import io.airbyte.config.JobConfig;
 import io.airbyte.config.JobOutput;
 import io.airbyte.config.JobSyncConfig;
@@ -46,8 +48,6 @@ import io.airbyte.persistence.job.JobPersistence;
 import io.airbyte.persistence.job.errorreporter.AttemptConfigReportingContext;
 import io.airbyte.persistence.job.errorreporter.JobErrorReporter;
 import io.airbyte.persistence.job.errorreporter.SyncJobReportingContext;
-import io.airbyte.persistence.job.models.Attempt;
-import io.airbyte.persistence.job.models.Job;
 import java.io.IOException;
 import java.util.Collections;
 import java.util.List;
@@ -114,7 +114,7 @@ public class JobsHandlerTest {
         .standardSyncOutput(standardSyncOutput);
 
     final Job job =
-        new Job(JOB_ID, SYNC, CONNECTION_ID.toString(), simpleConfig, List.of(), io.airbyte.persistence.job.models.JobStatus.SUCCEEDED, 0L, 0, 0);
+        new Job(JOB_ID, SYNC, CONNECTION_ID.toString(), simpleConfig, List.of(), io.airbyte.config.JobStatus.SUCCEEDED, 0L, 0, 0);
     when(jobPersistence.getJob(JOB_ID)).thenReturn(job);
     jobsHandler.jobSuccessWithAttemptNumber(request);
 
@@ -132,7 +132,7 @@ public class JobsHandlerTest {
         .jobId(JOB_ID)
         .connectionId(UUID.randomUUID())
         .standardSyncOutput(standardSyncOutput);
-    final Job job = new Job(JOB_ID, RESET_CONNECTION, "", simpleConfig, List.of(), io.airbyte.persistence.job.models.JobStatus.SUCCEEDED, 0L, 0, 0);
+    final Job job = new Job(JOB_ID, RESET_CONNECTION, "", simpleConfig, List.of(), io.airbyte.config.JobStatus.SUCCEEDED, 0L, 0, 0);
     when(jobPersistence.getJob(JOB_ID)).thenReturn(job);
     jobsHandler.jobSuccessWithAttemptNumber(request);
 

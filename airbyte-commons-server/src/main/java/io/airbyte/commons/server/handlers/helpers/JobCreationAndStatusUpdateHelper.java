@@ -16,10 +16,12 @@ import io.airbyte.api.model.generated.JobSuccessWithAttemptNumberRequest;
 import io.airbyte.commons.enums.Enums;
 import io.airbyte.commons.server.JobStatus;
 import io.airbyte.config.ActorDefinitionVersion;
+import io.airbyte.config.Attempt;
 import io.airbyte.config.AttemptFailureSummary;
 import io.airbyte.config.FailureReason;
 import io.airbyte.config.FailureReason.FailureOrigin;
 import io.airbyte.config.FailureReason.FailureType;
+import io.airbyte.config.Job;
 import io.airbyte.config.JobConfig.ConfigType;
 import io.airbyte.config.Metadata;
 import io.airbyte.config.ReleaseStage;
@@ -31,8 +33,6 @@ import io.airbyte.metrics.lib.MetricTags;
 import io.airbyte.metrics.lib.OssMetricsRegistry;
 import io.airbyte.persistence.job.JobNotifier;
 import io.airbyte.persistence.job.JobPersistence;
-import io.airbyte.persistence.job.models.Attempt;
-import io.airbyte.persistence.job.models.Job;
 import io.airbyte.persistence.job.tracker.JobTracker;
 import io.airbyte.persistence.job.tracker.JobTracker.JobState;
 import io.micronaut.core.util.CollectionUtils;
@@ -128,14 +128,14 @@ public class JobCreationAndStatusUpdateHelper {
   }
 
   public boolean didJobSucceed(final Job job) {
-    return job.getStatus().equals(io.airbyte.persistence.job.models.JobStatus.SUCCEEDED);
+    return job.getStatus().equals(io.airbyte.config.JobStatus.SUCCEEDED);
   }
 
   public void failNonTerminalJobs(final UUID connectionId) throws IOException {
     final List<Job> jobs = jobPersistence.listJobsForConnectionWithStatuses(
         connectionId,
         Job.REPLICATION_TYPES,
-        io.airbyte.persistence.job.models.JobStatus.NON_TERMINAL_STATUSES);
+        io.airbyte.config.JobStatus.NON_TERMINAL_STATUSES);
 
     for (final Job job : jobs) {
       final long jobId = job.getId();

@@ -2,11 +2,8 @@
  * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
-package io.airbyte.persistence.job.models;
+package io.airbyte.config;
 
-import io.airbyte.config.AttemptFailureSummary;
-import io.airbyte.config.AttemptSyncConfig;
-import io.airbyte.config.JobOutput;
 import jakarta.annotation.Nullable;
 import java.nio.file.Path;
 import java.util.Objects;

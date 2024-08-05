@@ -10,9 +10,11 @@ import io.airbyte.commons.server.JobStatus;
 import io.airbyte.commons.server.converters.JobConverter;
 import io.airbyte.commons.server.support.CurrentUserService;
 import io.airbyte.config.AirbyteStream;
+import io.airbyte.config.Attempt;
 import io.airbyte.config.AttemptFailureSummary;
 import io.airbyte.config.ConfiguredAirbyteStream;
 import io.airbyte.config.FailureReason;
+import io.airbyte.config.Job;
 import io.airbyte.config.JobConfigProxy;
 import io.airbyte.config.StreamDescriptor;
 import io.airbyte.data.services.ConnectionTimelineEventService;
@@ -21,8 +23,6 @@ import io.airbyte.data.services.shared.FinalStatusEvent;
 import io.airbyte.data.services.shared.ManuallyStartedEvent;
 import io.airbyte.persistence.job.JobPersistence;
 import io.airbyte.persistence.job.JobPersistence.AttemptStats;
-import io.airbyte.persistence.job.models.Attempt;
-import io.airbyte.persistence.job.models.Job;
 import jakarta.inject.Inject;
 import jakarta.inject.Singleton;
 import java.util.List;
@@ -144,7 +144,7 @@ public class ConnectionTimelineEventHelper {
           stats.records,
           job.getAttemptsCount(),
           job.getConfigType().name(),
-          io.airbyte.persistence.job.models.JobStatus.CANCELLED.name(),
+          io.airbyte.config.JobStatus.CANCELLED.name(),
           JobConverter.getStreamsAssociatedWithJob(job));
       connectionTimelineEventService.writeEvent(UUID.fromString(job.getScope()), event, getCurrentUserIdIfExist());
     } catch (final Exception e) {

@@ -12,14 +12,15 @@ import io.airbyte.commons.server.support.CurrentUserService;
 import io.airbyte.config.AirbyteStream;
 import io.airbyte.config.ConfiguredAirbyteCatalog;
 import io.airbyte.config.ConfiguredAirbyteStream;
+import io.airbyte.config.Job;
 import io.airbyte.config.JobConfig;
+import io.airbyte.config.JobStatus;
 import io.airbyte.config.JobSyncConfig;
 import io.airbyte.config.StreamSyncStats;
 import io.airbyte.config.SyncMode;
 import io.airbyte.config.SyncStats;
 import io.airbyte.data.services.ConnectionTimelineEventService;
 import io.airbyte.persistence.job.JobPersistence;
-import io.airbyte.persistence.job.models.Job;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -58,7 +59,7 @@ class ConnectionTimelineEventHelperTest {
 
     final JobConfig jobConfig = new JobConfig().withConfigType(SYNC).withSync(new JobSyncConfig().withConfiguredAirbyteCatalog(catalog));
     final Job job =
-        new Job(100L, SYNC, CONNECTION_ID.toString(), jobConfig, List.of(), io.airbyte.persistence.job.models.JobStatus.SUCCEEDED, 0L, 0L, 0L);
+        new Job(100L, SYNC, CONNECTION_ID.toString(), jobConfig, List.of(), JobStatus.SUCCEEDED, 0L, 0L, 0L);
 
     /*
      * on a per stream basis, the stats are "users" -> (100L, 1L), (500L, 8L), (200L, 7L) "purchase" ->

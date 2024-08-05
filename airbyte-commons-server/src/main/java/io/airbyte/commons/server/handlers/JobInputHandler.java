@@ -4,11 +4,11 @@
 
 package io.airbyte.commons.server.handlers;
 
+import static io.airbyte.config.Job.REPLICATION_TYPES;
+import static io.airbyte.config.Job.SYNC_REPLICATION_TYPES;
 import static io.airbyte.config.helpers.ResourceRequirementsUtils.getResourceRequirementsForJobType;
 import static io.airbyte.metrics.lib.ApmTraceConstants.Tags.ATTEMPT_NUMBER_KEY;
 import static io.airbyte.metrics.lib.ApmTraceConstants.Tags.JOB_ID_KEY;
-import static io.airbyte.persistence.job.models.Job.REPLICATION_TYPES;
-import static io.airbyte.persistence.job.models.Job.SYNC_REPLICATION_TYPES;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import io.airbyte.api.model.generated.CheckInput;
@@ -32,6 +32,7 @@ import io.airbyte.config.ActorType;
 import io.airbyte.config.AttemptSyncConfig;
 import io.airbyte.config.ConnectionContext;
 import io.airbyte.config.DestinationConnection;
+import io.airbyte.config.Job;
 import io.airbyte.config.JobConfig;
 import io.airbyte.config.JobResetConnectionConfig;
 import io.airbyte.config.JobSyncConfig;
@@ -59,7 +60,6 @@ import io.airbyte.metrics.lib.ApmTraceUtils;
 import io.airbyte.persistence.job.JobPersistence;
 import io.airbyte.persistence.job.factory.OAuthConfigSupplier;
 import io.airbyte.persistence.job.models.IntegrationLauncherConfig;
-import io.airbyte.persistence.job.models.Job;
 import io.airbyte.persistence.job.models.JobRunConfig;
 import io.airbyte.workers.models.JobInput;
 import io.airbyte.workers.models.SyncJobCheckConnectionInputs;

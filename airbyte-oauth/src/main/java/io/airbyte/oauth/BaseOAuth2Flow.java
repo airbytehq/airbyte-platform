@@ -8,9 +8,10 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.google.common.collect.ImmutableMap;
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
+import io.airbyte.api.problems.model.generated.ProblemResourceData;
+import io.airbyte.api.problems.throwable.generated.ResourceNotFoundProblem;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.config.ConfigSchema;
-import io.airbyte.config.persistence.ConfigNotFoundException;
 import io.airbyte.protocol.models.OAuthConfigSpecification;
 import io.airbyte.validation.json.JsonSchemaValidator;
 import io.airbyte.validation.json.JsonValidationException;
@@ -105,12 +106,14 @@ public abstract class BaseOAuth2Flow extends BaseOAuthFlow {
                                     final JsonNode inputOAuthConfiguration,
                                     final OAuthConfigSpecification oauthConfigSpecification,
                                     final JsonNode sourceOAuthParamConfig)
-      throws IOException, ConfigNotFoundException, JsonValidationException {
+      throws IOException, JsonValidationException {
     validateInputOAuthConfiguration(oauthConfigSpecification, inputOAuthConfiguration);
     // This should probably never happen because the caller of this function should throw this exception
     // when fetching the param, but this was the prior behavior so adding it here.
     if (sourceOAuthParamConfig == null) {
-      throw new ConfigNotFoundException(ConfigSchema.SOURCE_OAUTH_PARAM, "Undefined OAuth Parameter.");
+      throw new ResourceNotFoundProblem(
+          "Undefined OAuth Parameter.",
+          new ProblemResourceData().resourceType(ConfigSchema.SOURCE_OAUTH_PARAM.name()));
     }
     return formatConsentUrl(sourceDefinitionId, getClientIdUnsafe(sourceOAuthParamConfig), redirectUrl, inputOAuthConfiguration);
   }
@@ -122,12 +125,14 @@ public abstract class BaseOAuth2Flow extends BaseOAuthFlow {
                                          final JsonNode inputOAuthConfiguration,
                                          final OAuthConfigSpecification oauthConfigSpecification,
                                          JsonNode destinationOAuthParamConfig)
-      throws IOException, JsonValidationException, ConfigNotFoundException {
+      throws IOException, JsonValidationException {
     validateInputOAuthConfiguration(oauthConfigSpecification, inputOAuthConfiguration);
     // This should probably never happen because the caller of this function should throw this exception
     // when fetching the param, but this was the prior behavior so adding it here.
     if (destinationOAuthParamConfig == null) {
-      throw new ConfigNotFoundException(ConfigSchema.DESTINATION_OAUTH_PARAM, "Undefined OAuth Parameter.");
+      throw new ResourceNotFoundProblem(
+          "Undefined OAuth Parameter.",
+          new ProblemResourceData().resourceType(ConfigSchema.DESTINATION_OAUTH_PARAM.name()));
     }
     return formatConsentUrl(destinationDefinitionId, getClientIdUnsafe(destinationOAuthParamConfig), redirectUrl, inputOAuthConfiguration);
   }
@@ -167,7 +172,7 @@ public abstract class BaseOAuth2Flow extends BaseOAuthFlow {
                                                  final Map<String, Object> queryParams,
                                                  final String redirectUrl,
                                                  JsonNode oauthParamConfig)
-      throws IOException, ConfigNotFoundException {
+      throws IOException {
     if (containsIgnoredOAuthError(queryParams)) {
       return buildRequestError(queryParams);
     }
@@ -192,7 +197,7 @@ public abstract class BaseOAuth2Flow extends BaseOAuthFlow {
                                                  final JsonNode inputOAuthConfiguration,
                                                  final OAuthConfigSpecification oauthConfigSpecification,
                                                  final JsonNode oauthParamConfig)
-      throws IOException, ConfigNotFoundException, JsonValidationException {
+      throws IOException, JsonValidationException {
     validateInputOAuthConfiguration(oauthConfigSpecification, inputOAuthConfiguration);
     if (containsIgnoredOAuthError(queryParams)) {
       return buildRequestError(queryParams);

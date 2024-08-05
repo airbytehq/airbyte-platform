@@ -7,7 +7,6 @@ package io.airbyte.oauth.flows;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.google.common.collect.ImmutableMap;
 import io.airbyte.commons.json.Jsons;
-import io.airbyte.config.persistence.ConfigNotFoundException;
 import io.airbyte.oauth.BaseOAuth2Flow;
 import io.airbyte.protocol.models.OAuthConfigSpecification;
 import io.airbyte.validation.json.JsonValidationException;
@@ -123,7 +122,7 @@ public class QuickbooksOAuthFlow extends BaseOAuth2Flow {
                                                  final Map<String, Object> queryParams,
                                                  final String redirectUrl,
                                                  JsonNode oauthParamConfig)
-      throws IOException, ConfigNotFoundException {
+      throws IOException {
     if (containsIgnoredOAuthError(queryParams)) {
       return buildRequestError(queryParams);
     }
@@ -149,7 +148,7 @@ public class QuickbooksOAuthFlow extends BaseOAuth2Flow {
                                                  final JsonNode inputOAuthConfiguration,
                                                  final OAuthConfigSpecification oauthConfigSpecification,
                                                  final JsonNode oauthParamConfig)
-      throws IOException, ConfigNotFoundException, JsonValidationException {
+      throws IOException, JsonValidationException {
     validateInputOAuthConfiguration(oauthConfigSpecification, inputOAuthConfiguration);
     if (containsIgnoredOAuthError(queryParams)) {
       return buildRequestError(queryParams);
@@ -221,7 +220,7 @@ public class QuickbooksOAuthFlow extends BaseOAuth2Flow {
                                 final UUID sourceDefinitionId,
                                 final JsonNode configuration,
                                 final JsonNode oauthParamConfig)
-      throws IOException, ConfigNotFoundException, JsonValidationException {
+      throws IOException {
     final String clientId = getClientIdUnsafe(oauthParamConfig);
     final String clientSecret = getClientSecretUnsafe(oauthParamConfig);
     final String authorization = Base64.getEncoder()
