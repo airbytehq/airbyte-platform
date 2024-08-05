@@ -789,8 +789,9 @@
   "connection.stream.status.table.syncStarting": "Sync starting...",
 
   "connection.stream.rateLimitedMessage": "restarting in {quota}",
-  "connection.rateLimitedMessageNoQuota": "This sync is rate limited by the source.",
-  "connection.rateLimitedMessageWithQuota": "This sync is rate limited by the source. We'll try to complete syncing once the time limit is up in {quota}",
+  "connection.stream.rateLimitedMessageNoQuota": "rate limited",
+  "connection.rateLimitedMessageNoQuota": "This sync is being rate limited by the source, it will automatically resume when the source is ready.",
+  "connection.rateLimitedMessageWithQuota": "This sync is being rate limited by the source. We'll try to complete syncing once the time limit is up in {quota}",
 
   "connection.stream.actions.refreshStream": "Refresh stream",
   "connection.stream.actions.refreshStream.confirm.title": "Are you sure you want to refresh the {streamName} stream?",
