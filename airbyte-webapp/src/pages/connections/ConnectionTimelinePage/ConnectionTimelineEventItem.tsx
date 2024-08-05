@@ -3,6 +3,7 @@ import { PropsWithChildren } from "react";
 import { FlexContainer } from "components/ui/Flex";
 
 import styles from "./ConnectionTimelineEventItem.module.scss";
+
 export const ConnectionTimelineEventItem: React.FC<PropsWithChildren<{ centered?: boolean }>> = ({
   centered,
   children,

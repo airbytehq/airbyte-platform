@@ -1,17 +1,17 @@
-import { FormattedDate, FormattedMessage, useIntl } from "react-intl";
+import { FormattedMessage, useIntl } from "react-intl";
 import { InferType } from "yup";
 
 import { Box } from "components/ui/Box";
-import { FlexContainer, FlexItem } from "components/ui/Flex";
 import { Text } from "components/ui/Text";
 
 import { JobFailureDetails } from "area/connection/components/JobHistoryItem/JobFailureDetails";
 import { failureUiDetailsFromReason } from "core/utils/errorStatusMessage";
 
 import styles from "./SyncFailEventItem.module.scss";
+import { ConnectionTimelineEventActions } from "../ConnectionTimelineEventActions";
 import { ConnectionTimelineEventIcon } from "../ConnectionTimelineEventIcon";
 import { ConnectionTimelineEventItem } from "../ConnectionTimelineEventItem";
-import { JobEventMenu } from "../JobEventMenu";
+import { ConnectionTimelineEventSummary } from "../ConnectionTimelineEventSummary";
 import { syncFailEventSchema } from "../types";
 import { getStatusByEventType, getStatusIcon, titleIdMap } from "../utils";
 
@@ -33,22 +33,19 @@ export const SyncFailEventItem: React.FC<SyncFailEventItemProps> = ({ syncEvent 
   return (
     <ConnectionTimelineEventItem>
       <ConnectionTimelineEventIcon icon="sync" statusIcon={getStatusIcon(jobStatus)} />
-      <FlexItem grow>
-        <div className={styles.container}>
-          <Text bold>
-            <FormattedMessage id={titleId} />
-          </Text>
-          <Box pt="xs" className={styles.failureDetails}>
-            <JobFailureDetails failureUiDetails={failureUiDetails} />
-          </Box>
-        </div>
-      </FlexItem>
-      <FlexContainer direction="row" gap="xs" alignItems="center" className={styles.endContent}>
-        <Text color="grey400">
-          <FormattedDate value={syncEvent.createdAt * 1000} timeStyle="short" dateStyle="medium" />
+      <ConnectionTimelineEventSummary>
+        <Text bold>
+          <FormattedMessage id={titleId} />
         </Text>
-        <JobEventMenu eventId={syncEvent.id} jobId={syncEvent.summary.jobId} />
-      </FlexContainer>
+        <Box pt="xs" className={styles.details}>
+          <JobFailureDetails failureUiDetails={failureUiDetails} />
+        </Box>
+      </ConnectionTimelineEventSummary>
+      <ConnectionTimelineEventActions
+        createdAt={syncEvent.createdAt}
+        jobId={syncEvent.summary.jobId}
+        eventId={syncEvent.id}
+      />
     </ConnectionTimelineEventItem>
   );
 };

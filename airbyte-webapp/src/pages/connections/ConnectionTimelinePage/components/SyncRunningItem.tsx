@@ -1,11 +1,11 @@
-import { FormattedDate, FormattedMessage } from "react-intl";
+import { FormattedMessage } from "react-intl";
 
-import { FlexContainer, FlexItem } from "components/ui/Flex";
 import { Text } from "components/ui/Text";
 
+import { ConnectionTimelineEventActions } from "../ConnectionTimelineEventActions";
 import { ConnectionTimelineEventIcon } from "../ConnectionTimelineEventIcon";
 import { ConnectionTimelineEventItem } from "../ConnectionTimelineEventItem";
-import { JobEventMenu } from "../JobEventMenu";
+import { ConnectionTimelineEventSummary } from "../ConnectionTimelineEventSummary";
 
 interface SyncRunningItemProps {
   startedAt: number;
@@ -16,17 +16,13 @@ export const SyncRunningItem: React.FC<SyncRunningItemProps> = ({ startedAt, job
   return (
     <ConnectionTimelineEventItem centered>
       <ConnectionTimelineEventIcon icon="sync" running />
-      <FlexItem grow>
+      <ConnectionTimelineEventSummary>
         <Text bold>
           <FormattedMessage id="connection.timeline.sync_running" />
         </Text>
-      </FlexItem>
-      <FlexContainer direction="row" gap="xs" alignItems="center">
-        <Text color="grey400">
-          <FormattedDate value={startedAt * 1000} timeStyle="short" dateStyle="medium" />
-        </Text>
-        <JobEventMenu jobId={jobId} />
-      </FlexContainer>
+      </ConnectionTimelineEventSummary>
+
+      <ConnectionTimelineEventActions createdAt={startedAt} jobId={jobId} />
     </ConnectionTimelineEventItem>
   );
 };

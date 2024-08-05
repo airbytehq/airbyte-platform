@@ -1,15 +1,15 @@
 import { useMemo } from "react";
-import { FormattedDate, FormattedMessage } from "react-intl";
+import { FormattedMessage } from "react-intl";
 import { InferType } from "yup";
 
 import { Box } from "components/ui/Box";
-import { FlexContainer, FlexItem } from "components/ui/Flex";
 import { IconType } from "components/ui/Icon";
 import { Text } from "components/ui/Text";
 
+import { ConnectionTimelineEventActions } from "../ConnectionTimelineEventActions";
 import { ConnectionTimelineEventIcon } from "../ConnectionTimelineEventIcon";
 import { ConnectionTimelineEventItem } from "../ConnectionTimelineEventItem";
-import { JobEventMenu } from "../JobEventMenu";
+import { ConnectionTimelineEventSummary } from "../ConnectionTimelineEventSummary";
 import { jobStartedEventSchema } from "../types";
 import { titleIdMap } from "../utils";
 
@@ -44,7 +44,7 @@ export const JobStartEventItem: React.FC<JobStartEventItemProps> = ({ jobStartEv
   return (
     <ConnectionTimelineEventItem>
       <ConnectionTimelineEventIcon icon={icon} />
-      <FlexItem grow>
+      <ConnectionTimelineEventSummary>
         <Text bold>
           <FormattedMessage id={titleId} />
         </Text>
@@ -61,13 +61,12 @@ export const JobStartEventItem: React.FC<JobStartEventItemProps> = ({ jobStartEv
             />
           </Text>
         </Box>
-      </FlexItem>
-      <FlexContainer direction="row" gap="xs" alignItems="center">
-        <Text color="grey400">
-          <FormattedDate value={jobStartEvent.createdAt * 1000} timeStyle="short" dateStyle="medium" />
-        </Text>
-        <JobEventMenu eventId={jobStartEvent.id} jobId={jobStartEvent.summary.jobId} />
-      </FlexContainer>
+      </ConnectionTimelineEventSummary>
+      <ConnectionTimelineEventActions
+        createdAt={jobStartEvent.createdAt}
+        eventId={jobStartEvent.id}
+        jobId={jobStartEvent.summary.jobId}
+      />
     </ConnectionTimelineEventItem>
   );
 };
