@@ -26,10 +26,6 @@ export const SyncFailEventItem: React.FC<SyncFailEventItemProps> = ({ syncEvent 
   const failureUiDetails = failureUiDetailsFromReason(syncEvent.summary.failureReason, formatMessage);
   const jobStatus = getStatusByEventType(syncEvent.eventType);
 
-  if (!failureUiDetails) {
-    return null;
-  }
-
   return (
     <ConnectionTimelineEventItem>
       <ConnectionTimelineEventIcon icon="sync" statusIcon={getStatusIcon(jobStatus)} />
@@ -37,9 +33,11 @@ export const SyncFailEventItem: React.FC<SyncFailEventItemProps> = ({ syncEvent 
         <Text bold>
           <FormattedMessage id={titleId} />
         </Text>
-        <Box pt="xs" className={styles.details}>
-          <JobFailureDetails failureUiDetails={failureUiDetails} />
-        </Box>
+        {failureUiDetails && (
+          <Box pt="xs" className={styles.details}>
+            <JobFailureDetails failureUiDetails={failureUiDetails} />
+          </Box>
+        )}
       </ConnectionTimelineEventSummary>
       <ConnectionTimelineEventActions
         createdAt={syncEvent.createdAt}

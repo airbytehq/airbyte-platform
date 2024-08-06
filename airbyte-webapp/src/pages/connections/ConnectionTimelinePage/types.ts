@@ -66,7 +66,7 @@ export const syncFailureEventSummarySchema = yup.object({
   bytesLoaded: yup.number().optional(),
   recordsLoaded: yup.number().optional(),
   jobId: yup.number().required(),
-  failureReason: jobFailureReasonSchema.required(),
+  failureReason: jobFailureReasonSchema.nullable(),
 });
 
 export const refreshEventSummarySchema = yup.object({
