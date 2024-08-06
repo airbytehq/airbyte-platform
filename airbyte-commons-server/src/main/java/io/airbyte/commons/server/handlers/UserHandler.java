@@ -70,12 +70,12 @@ import io.airbyte.featureflag.EnforceEmailUniqueness;
 import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.featureflag.RestrictLoginsForSSODomains;
 import io.airbyte.validation.json.JsonValidationException;
-import jakarta.annotation.Nullable;
 import jakarta.inject.Named;
 import jakarta.inject.Singleton;
 import java.io.IOException;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.function.Supplier;
@@ -387,17 +387,23 @@ public class UserHandler {
         .anyMatch(orgEmailDomain -> orgEmailDomain.getOrganizationId().equals(currentSSOOrg.get().getOrganizationId()));
   }
 
-  private boolean isExistingUserSSO(final UUID userId) throws IOException {
+  private List<String> getExistingUserRealms(final UUID userId) throws IOException {
     final List<AuthUser> keycloakAuthUsers = userPersistence.listAuthUsersForUser(userId).stream()
         .filter(authUser -> authUser.getAuthProvider() == io.airbyte.config.AuthProvider.KEYCLOAK).toList();
 
-    for (final AuthUser authUser : keycloakAuthUsers) {
-      final @Nullable String realm = externalUserService.getRealmByAuthUserId(authUser.getAuthUserId());
-      if (realm != null) {
-        final Optional<SsoConfig> ssoConfig = organizationPersistence.getSsoConfigByRealmName(realm);
-        if (ssoConfig.isPresent()) {
-          return true;
-        }
+    // Note: it's important to reach out to keycloak here to validate that at least one auth user from
+    // our db actually exists in keycloak.
+    return keycloakAuthUsers.stream()
+        .map(authUser -> externalUserService.getRealmByAuthUserId(authUser.getAuthUserId()))
+        .filter(Objects::nonNull)
+        .toList();
+  }
+
+  private boolean isAnyRealmSSO(final List<String> realms) throws IOException {
+    for (final String realm : realms) {
+      final Optional<SsoConfig> ssoConfig = organizationPersistence.getSsoConfigByRealmName(realm);
+      if (ssoConfig.isPresent()) {
+        return true;
       }
     }
 
@@ -430,6 +436,19 @@ public class UserHandler {
     return new UserGetOrCreateByAuthIdResponse()
         .userRead(buildUserRead(updatedUser))
         .newUserCreated(true);
+  }
+
+  private UserGetOrCreateByAuthIdResponse handleRelinkAuthUser(final User existingUser, final User incomingJwtUser)
+      throws IOException, ConfigNotFoundException {
+    LOGGER.info("Relinking auth user {} to orphaned existing user {}...", incomingJwtUser.getAuthUserId(), existingUser.getUserId());
+    userPersistence.replaceAuthUserForUserId(existingUser.getUserId(), incomingJwtUser.getAuthUserId(), incomingJwtUser.getAuthProvider());
+
+    final User updatedUser = userPersistence.getUser(existingUser.getUserId())
+        .orElseThrow(() -> new ConfigNotFoundException(ConfigSchema.USER, existingUser.getUserId()));
+
+    return new UserGetOrCreateByAuthIdResponse()
+        .userRead(buildUserRead(updatedUser))
+        .newUserCreated(false);
   }
 
   private UserGetOrCreateByAuthIdResponse handleFirstTimeSSOLogin(final User existingUser, final User incomingJwtUser)
@@ -509,8 +528,16 @@ public class UserHandler {
     // (3b) A user with the same email already exists
 
     final User existingUser = existingUserWithEmail.get();
+    final List<String> existingUserRealms = getExistingUserRealms(existingUser.getUserId());
+
+    // (3b0) The existing user does not exist in any auth realm, relink it
+    // This can happen if, for example, keycloak state is cleared on an enterprise installation
+    if (existingUserRealms.isEmpty()) {
+      return handleRelinkAuthUser(existingUser, incomingJwtUser);
+    }
+
     final boolean isCurrentSignInSSO = getSsoOrganizationIfExists().isPresent();
-    final boolean isExistingUserSSOAuthed = isExistingUserSSO(existingUser.getUserId());
+    final boolean isExistingUserSSOAuthed = isAnyRealmSSO(existingUserRealms);
 
     // (3b1) This is the first SSO sign in for the user, migrate it for SSO
     if (isCurrentSignInSSO && !isExistingUserSSOAuthed) {

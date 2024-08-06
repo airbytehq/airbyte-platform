@@ -186,7 +186,7 @@ object WorkloadApiServerEnabled : EnvVar(envVar = "WORKLOAD_API_SERVER_ENABLED",
 
 object DiscoverPostprocessInTemporal : Permanent<Boolean>(key = "platform.discover-postprocess-in-temporal", default = false)
 
-object EnforceEmailUniqueness : Temporary<Boolean>(key = "platform.enforce-email-uniqueness", default = false)
+object EnforceEmailUniqueness : Temporary<Boolean>(key = "platform.enforce-email-uniqueness", default = true)
 
 object RestrictLoginsForSSODomains : Temporary<Boolean>(key = "platform.restrict-logins-for-sso-domains", default = false)
 

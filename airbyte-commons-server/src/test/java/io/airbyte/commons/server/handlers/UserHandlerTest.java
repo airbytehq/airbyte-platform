@@ -83,6 +83,7 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.ArgumentsProvider;
 import org.junit.jupiter.params.provider.ArgumentsSource;
+import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.EnumSource;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.mockito.InOrder;
@@ -320,6 +321,7 @@ class UserHandlerTest {
       private static final String NEW_AUTH_USER_ID = "new_auth_user_id";
       private static final String EMAIL = "user@airbyte.io";
       private static final String SSO_REALM = "airbyte-realm";
+      private static final String REALM = "_airbyte-users";
 
       private User jwtUser;
       private User existingUser;
@@ -330,11 +332,20 @@ class UserHandlerTest {
         existingUser = new User().withUserId(EXISTING_USER_ID).withEmail(EMAIL).withAuthUserId(EXISTING_AUTH_USER_ID);
       }
 
-      @Test
-      void testNonSSOSignInEmailExistsThrowsError() throws Exception {
+      @ParameterizedTest
+      @CsvSource({"true", "false"})
+      void testNonSSOSignInEmailExistsThrowsError(final Boolean isExistingUserSSO) throws Exception {
         when(jwtUserAuthenticationResolver.resolveUser(NEW_AUTH_USER_ID)).thenReturn(jwtUser);
         when(userPersistence.getUserByAuthId(NEW_AUTH_USER_ID)).thenReturn(Optional.empty());
         when(userPersistence.getUserByEmail(EMAIL)).thenReturn(Optional.of(existingUser));
+        when(userPersistence.listAuthUsersForUser(EXISTING_USER_ID))
+            .thenReturn(List.of(new AuthUser().withAuthUserId(EXISTING_AUTH_USER_ID).withAuthProvider(AuthProvider.KEYCLOAK)));
+        when(externalUserService.getRealmByAuthUserId(EXISTING_AUTH_USER_ID)).thenReturn(REALM);
+
+        if (isExistingUserSSO) {
+          when(organizationPersistence.getSsoConfigByRealmName(REALM)).thenReturn(Optional.of(new SsoConfig()));
+        }
+
         assertThrows(UserAlreadyExistsProblem.class,
             () -> userHandler.getOrCreateUserByAuthId(new UserAuthIdRequestBody().authUserId(NEW_AUTH_USER_ID)));
       }
@@ -363,6 +374,30 @@ class UserHandlerTest {
             .writeUser(argThat(user -> user.getEmail().equals(jwtUser.getEmail()) && user.getAuthUserId().equals(jwtUser.getAuthUserId())));
       }
 
+      @Test
+      void testRelinkOrphanedUser() throws IOException, JsonValidationException, ConfigNotFoundException {
+        // Auth user in JWT is not linked to any user in the database
+        when(jwtUserAuthenticationResolver.resolveUser(NEW_AUTH_USER_ID)).thenReturn(jwtUser);
+        when(userPersistence.getUserByAuthId(NEW_AUTH_USER_ID)).thenReturn(Optional.empty());
+
+        // A user with the same email exists in the database
+        when(userPersistence.getUserByEmail(EMAIL)).thenReturn(Optional.of(existingUser));
+        when(userPersistence.getUser(EXISTING_USER_ID)).thenReturn(Optional.of(existingUser));
+
+        // None of the auth users configured for the existing user actually exist in the external user
+        // service
+        when(userPersistence.listAuthUsersForUser(EXISTING_USER_ID))
+            .thenReturn(List.of(new AuthUser().withAuthUserId(EXISTING_AUTH_USER_ID).withAuthProvider(AuthProvider.KEYCLOAK)));
+        when(externalUserService.getRealmByAuthUserId(EXISTING_AUTH_USER_ID)).thenReturn(null);
+
+        final UserGetOrCreateByAuthIdResponse res = userHandler.getOrCreateUserByAuthId(new UserAuthIdRequestBody().authUserId(NEW_AUTH_USER_ID));
+        assertFalse(res.getNewUserCreated());
+        assertEquals(res.getUserRead().getUserId(), EXISTING_USER_ID);
+
+        // verify auth user is replaced
+        verify(userPersistence).replaceAuthUserForUserId(EXISTING_USER_ID, NEW_AUTH_USER_ID, AuthProvider.KEYCLOAK);
+      }
+
       private static Stream<Arguments> ssoSignInArgsProvider() {
         return Stream.of(
             // Existing user is already an SSO user (will error):
@@ -383,10 +418,10 @@ class UserHandlerTest {
         when(userPersistence.getUserByAuthId(NEW_AUTH_USER_ID)).thenReturn(Optional.empty());
         when(userPersistence.getUserByEmail(EMAIL)).thenReturn(Optional.of(existingUser));
         when(userPersistence.getUser(EXISTING_USER_ID)).thenReturn(Optional.of(existingUser));
+        when(userPersistence.listAuthUsersForUser(EXISTING_USER_ID))
+            .thenReturn(List.of(new AuthUser().withAuthUserId(EXISTING_AUTH_USER_ID).withAuthProvider(AuthProvider.KEYCLOAK)));
 
         if (isExistingUserSSO) {
-          when(userPersistence.listAuthUsersForUser(EXISTING_USER_ID))
-              .thenReturn(List.of(new AuthUser().withAuthUserId(EXISTING_AUTH_USER_ID).withAuthProvider(AuthProvider.KEYCLOAK)));
           when(externalUserService.getRealmByAuthUserId(EXISTING_AUTH_USER_ID)).thenReturn(SSO_REALM);
           when(organizationPersistence.getSsoConfigByRealmName(SSO_REALM)).thenReturn(Optional.of(new SsoConfig()));
 
@@ -394,6 +429,9 @@ class UserHandlerTest {
               () -> userHandler.getOrCreateUserByAuthId(new UserAuthIdRequestBody().authUserId(NEW_AUTH_USER_ID)));
           return;
         }
+
+        when(externalUserService.getRealmByAuthUserId(EXISTING_AUTH_USER_ID)).thenReturn(REALM);
+        when(organizationPersistence.getSsoConfigByRealmName(REALM)).thenReturn(Optional.empty());
 
         when(applicationService.listApplicationsByUser(existingUser)).thenReturn(List.of(new Application().withId("app_id")));
         when(jwtUserAuthenticationResolver.resolveRealm()).thenReturn(Optional.of(SSO_REALM));
