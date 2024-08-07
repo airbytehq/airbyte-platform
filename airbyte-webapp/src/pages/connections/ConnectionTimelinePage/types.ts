@@ -73,6 +73,7 @@ export const refreshEventSummarySchema = yup.object({
   startTimeEpochSeconds: yup.number().required(),
   endTimeEpochSeconds: yup.number().required(),
   attemptsCount: yup.number().optional(),
+  bytesLoaded: yup.number().required(),
   streams: yup.array().of(streamDescriptorSchema).required(),
   jobId: yup.number().required(),
 });

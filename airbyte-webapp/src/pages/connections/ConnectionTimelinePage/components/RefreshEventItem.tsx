@@ -1,12 +1,12 @@
 import { FormattedMessage } from "react-intl";
 import { InferType } from "yup";
 
-import { Box } from "components/ui/Box";
+import { FlexContainer } from "components/ui/Flex";
 import { Text } from "components/ui/Text";
 
 import { ResetStreamsDetails } from "area/connection/components/JobHistoryItem/ResetStreamDetails";
-import { useLocalStorage } from "core/utils/useLocalStorage";
 
+import { JobStats } from "./JobStats";
 import { ConnectionTimelineEventActions } from "../ConnectionTimelineEventActions";
 import { ConnectionTimelineEventIcon } from "../ConnectionTimelineEventIcon";
 import { ConnectionTimelineEventItem } from "../ConnectionTimelineEventItem";
@@ -19,7 +19,6 @@ interface RefreshEventItemProps {
 }
 export const RefreshEventItem: React.FC<RefreshEventItemProps> = ({ refreshEvent }) => {
   const titleId = titleIdMap[refreshEvent.eventType];
-  const [showExtendedStats] = useLocalStorage("airbyte_extended-attempts-stats", false);
   const jobStatus = getStatusByEventType(refreshEvent.eventType);
   const streamsToList = refreshEvent.summary.streams.map((stream) => stream.name);
 
@@ -28,28 +27,13 @@ export const RefreshEventItem: React.FC<RefreshEventItemProps> = ({ refreshEvent
       <ConnectionTimelineEventIcon icon="rotate" statusIcon={getStatusIcon(jobStatus)} />
 
       <ConnectionTimelineEventSummary>
-        <Text bold>
-          <FormattedMessage id={titleId} values={{ value: streamsToList.length }} />
-        </Text>
-        <Box pt="xs">
+        <FlexContainer gap="xs" direction="column">
+          <Text bold>
+            <FormattedMessage id={titleId} values={{ value: streamsToList.length }} />
+          </Text>
+          <JobStats {...refreshEvent.summary} />
           {streamsToList.length > 0 && <ResetStreamsDetails names={streamsToList} />}
-          {showExtendedStats && (
-            <>
-              <Text as="span" color="grey400" size="sm">
-                |
-              </Text>
-              <Text as="span" color="grey400" size="sm">
-                <FormattedMessage id="jobs.jobId" values={{ id: refreshEvent.summary.jobId }} />
-              </Text>
-              <Text as="span" color="grey400" size="sm">
-                |
-              </Text>
-              <Text as="span" color="grey400" size="sm">
-                <FormattedMessage id="jobs.attemptCount" values={{ count: refreshEvent.summary.attemptsCount }} />
-              </Text>
-            </>
-          )}
-        </Box>
+        </FlexContainer>
       </ConnectionTimelineEventSummary>
       <ConnectionTimelineEventActions
         createdAt={refreshEvent.createdAt}
