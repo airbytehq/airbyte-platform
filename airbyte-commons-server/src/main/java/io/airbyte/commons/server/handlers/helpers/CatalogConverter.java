@@ -14,12 +14,15 @@ import io.airbyte.api.model.generated.DestinationSyncMode;
 import io.airbyte.api.model.generated.SelectedFieldInfo;
 import io.airbyte.api.model.generated.StreamDescriptor;
 import io.airbyte.api.model.generated.SyncMode;
+import io.airbyte.commons.converters.ApiConverters;
 import io.airbyte.commons.enums.Enums;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.commons.text.Names;
 import io.airbyte.config.ActorDefinitionVersion;
+import io.airbyte.config.ConfiguredAirbyteCatalog;
+import io.airbyte.config.ConfiguredAirbyteStream;
 import io.airbyte.config.FieldSelectionData;
-import io.airbyte.protocol.models.ConfiguredAirbyteCatalog;
+import io.airbyte.config.helpers.ProtocolConverters;
 import io.airbyte.validation.json.JsonValidationException;
 import jakarta.annotation.Nullable;
 import java.util.ArrayList;
@@ -91,7 +94,7 @@ public class CatalogConverter {
                 selectedColumns.stream().map((fieldName) -> new SelectedFieldInfo().addFieldPathItem(fieldName)).collect(Collectors.toList()));
           }
           return new io.airbyte.api.model.generated.AirbyteStreamAndConfiguration()
-              .stream(toApi(configuredStream.getStream()))
+              .stream(ApiConverters.toApi(configuredStream.getStream()))
               .config(configuration);
         })
         .collect(Collectors.toList());
@@ -163,7 +166,8 @@ public class CatalogConverter {
           && !selectedFieldNames.contains(config.getCursorField().get(0))) { // The cursor isn't in the selected fields.
         throw new JsonValidationException("Cursor field cannot be de-selected in INCREMENTAL syncs");
       }
-      if (config.getDestinationSyncMode().equals(DestinationSyncMode.APPEND_DEDUP)) {
+      if (config.getDestinationSyncMode().equals(DestinationSyncMode.APPEND_DEDUP)
+          || config.getDestinationSyncMode().equals(DestinationSyncMode.OVERWRITE_DEDUP)) {
         for (final List<String> primaryKeyComponent : config.getPrimaryKey()) {
           if (!selectedFieldNames.contains(primaryKeyComponent.get(0))) {
             throw new JsonValidationException("Primary key field cannot be de-selected in DEDUP mode");
@@ -198,20 +202,20 @@ public class CatalogConverter {
    * @param catalog api catalog
    * @return protocol catalog
    */
-  public static io.airbyte.protocol.models.ConfiguredAirbyteCatalog toConfiguredProtocol(final io.airbyte.api.model.generated.AirbyteCatalog catalog)
+  public static ConfiguredAirbyteCatalog toConfiguredInternal(final io.airbyte.api.model.generated.AirbyteCatalog catalog)
       throws JsonValidationException {
     final List<JsonValidationException> errors = new ArrayList<>();
-    final List<io.airbyte.protocol.models.ConfiguredAirbyteStream> streams = catalog.getStreams()
+    final List<ConfiguredAirbyteStream> streams = catalog.getStreams()
         .stream()
         .filter(s -> s.getConfig().getSelected())
         .map(s -> {
           try {
-            return new io.airbyte.protocol.models.ConfiguredAirbyteStream()
-                .withStream(toConfiguredProtocol(s.getStream(), s.getConfig()))
-                .withSyncMode(Enums.convertTo(s.getConfig().getSyncMode(), io.airbyte.protocol.models.SyncMode.class))
+            return new ConfiguredAirbyteStream()
+                .withStream(ProtocolConverters.toInternal(toConfiguredProtocol(s.getStream(), s.getConfig())))
+                .withSyncMode(Enums.convertTo(s.getConfig().getSyncMode(), io.airbyte.config.SyncMode.class))
                 .withCursorField(s.getConfig().getCursorField())
                 .withDestinationSyncMode(Enums.convertTo(s.getConfig().getDestinationSyncMode(),
-                    io.airbyte.protocol.models.DestinationSyncMode.class))
+                    io.airbyte.config.DestinationSyncMode.class))
                 .withPrimaryKey(Optional.ofNullable(s.getConfig().getPrimaryKey()).orElse(Collections.emptyList()));
           } catch (final JsonValidationException e) {
             LOGGER.error("Error parsing catalog: {}", e);
@@ -223,7 +227,7 @@ public class CatalogConverter {
     if (!errors.isEmpty()) {
       throw errors.get(0);
     }
-    return new io.airbyte.protocol.models.ConfiguredAirbyteCatalog()
+    return new ConfiguredAirbyteCatalog()
         .withStreams(streams);
   }
 
@@ -308,12 +312,12 @@ public class CatalogConverter {
    * @return protocol catalog
    */
   @SuppressWarnings("LineLength")
-  public static io.airbyte.protocol.models.ConfiguredAirbyteCatalog toProtocolKeepAllStreams(
-                                                                                             final io.airbyte.api.model.generated.AirbyteCatalog catalog)
+  public static ConfiguredAirbyteCatalog toProtocolKeepAllStreams(
+                                                                  final io.airbyte.api.model.generated.AirbyteCatalog catalog)
       throws JsonValidationException {
     final AirbyteCatalog clone = Jsons.clone(catalog);
     clone.getStreams().forEach(stream -> stream.getConfig().setSelected(true));
-    return toConfiguredProtocol(clone);
+    return toConfiguredInternal(clone);
   }
 
   /**

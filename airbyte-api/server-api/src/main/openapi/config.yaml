@@ -917,6 +917,27 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/SourceDefinitionIdBody"
+  /v1/connector_builder_projects/get_base_image:
+    post:
+      tags:
+        - connector_builder_project
+      summary: Get the base image for the declarative manifest
+      operationId: getDeclarativeManifestBaseImage
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DeclarativeManifestRequestBody"
+        required: true
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DeclarativeManifestBaseImageRead"
+        "404":
+          $ref: "#/components/responses/NotFoundResponse"
   /v1/connector_builder_projects/update:
     post:
       tags:
@@ -7168,6 +7189,12 @@ components:
     DeclarativeManifest:
       description: Low code CDK manifest JSON object
       type: object
+    DeclarativeManifestBaseImageRead:
+      description: Base image associated with a declarative manifest
+      type: object
+      properties:
+        baseImage:
+          type: string
     DeclarativeManifestRead:
       type: object
       properties:
@@ -7179,6 +7206,13 @@ components:
           $ref: "#/components/schemas/ManifestVersion"
         description:
           type: string
+    DeclarativeManifestRequestBody:
+      type: object
+      required:
+        - manifest
+      properties:
+        manifest:
+          $ref: "#/components/schemas/DeclarativeManifest"
     ConnectorBuilderProjectDetails:
       type: object
       required:
@@ -8725,6 +8759,7 @@ components:
           description: Prefix that will be prepended to the name of each stream when it is written to the destination.
         operationIds:
           type: array
+          nullable: true
           items:
             $ref: "#/components/schemas/OperationId"
         syncCatalog:
@@ -8791,6 +8826,7 @@ components:
           type: boolean
         operations:
           type: array
+          nullable: true
           items:
             $ref: "#/components/schemas/WebBackendOperationCreateOrUpdate"
         sourceCatalogId:
@@ -9503,9 +9539,11 @@ components:
           properties:
             accountId:
               type: integer
+              format: int64
               description: The account id associated with the job
             jobId:
               type: integer
+              format: int64
               description: The job id associated with the job
         executionUrl:
           type: string
@@ -11452,6 +11490,7 @@ components:
         - overwrite
         #- upsert_dedup # TODO chris: SCD Type 1 can be implemented later
         - append_dedup # SCD Type 1 & 2
+        - overwrite_dedup
     AirbyteArchive:
       type: string
       format: binary
@@ -11741,6 +11780,7 @@ components:
         - airbyteUrl
         - auth
         - defaultOrganizationId
+        - defaultOrganizationEmail
         - defaultUserId
         - defaultWorkspaceId
         - edition
@@ -11774,6 +11814,9 @@ components:
         defaultOrganizationId:
           type: string
           format: uuid
+        defaultOrganizationEmail:
+          type: string
+          format: email
         defaultWorkspaceId:
           type: string
           format: uuid

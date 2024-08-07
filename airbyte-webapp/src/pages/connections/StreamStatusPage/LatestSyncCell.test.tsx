@@ -11,7 +11,7 @@ describe("LastSyncCell", () => {
   it("past sync", async () => {
     const result = await render(
       <LatestSyncCell
-        status={ConnectionStatusIndicatorStatus.OnTime}
+        status={ConnectionStatusIndicatorStatus.Synced}
         recordsLoaded={1000}
         recordsExtracted={1000}
         syncStartedAt={BASE_TIME - 1000}
@@ -25,7 +25,7 @@ describe("LastSyncCell", () => {
   it("past sync without recordsLoaded", async () => {
     const result = await render(
       <LatestSyncCell
-        status={ConnectionStatusIndicatorStatus.OnTime}
+        status={ConnectionStatusIndicatorStatus.Synced}
         recordsLoaded={undefined}
         recordsExtracted={undefined}
         syncStartedAt={BASE_TIME - 1000}

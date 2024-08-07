@@ -32,3 +32,5 @@ export function removeEmptyProperties<T>(obj: T) {
   }
   return obj;
 }
+
+export const NON_I18N_ERROR_TYPE = "non-i18n-error";

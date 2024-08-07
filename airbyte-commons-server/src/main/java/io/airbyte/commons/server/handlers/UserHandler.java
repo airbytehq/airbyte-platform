@@ -5,6 +5,7 @@
 package io.airbyte.commons.server.handlers;
 
 import static io.airbyte.config.persistence.UserPersistence.DEFAULT_USER_ID;
+import static io.airbyte.featureflag.ContextKt.ANONYMOUS;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.google.common.annotations.VisibleForTesting;
@@ -33,7 +34,9 @@ import io.airbyte.api.model.generated.WorkspaceUserAccessInfoRead;
 import io.airbyte.api.model.generated.WorkspaceUserAccessInfoReadList;
 import io.airbyte.api.model.generated.WorkspaceUserRead;
 import io.airbyte.api.model.generated.WorkspaceUserReadList;
+import io.airbyte.api.problems.model.generated.ProblemEmailData;
 import io.airbyte.api.problems.throwable.generated.SSORequiredProblem;
+import io.airbyte.api.problems.throwable.generated.UserAlreadyExistsProblem;
 import io.airbyte.commons.auth.config.InitialUserConfig;
 import io.airbyte.commons.auth.support.UserAuthenticationResolver;
 import io.airbyte.commons.enums.Enums;
@@ -41,10 +44,13 @@ import io.airbyte.commons.json.Jsons;
 import io.airbyte.commons.server.errors.ConflictException;
 import io.airbyte.commons.server.errors.OperationNotAllowedException;
 import io.airbyte.commons.server.handlers.helpers.WorkspaceHelpersKt;
+import io.airbyte.config.Application;
+import io.airbyte.config.AuthUser;
 import io.airbyte.config.ConfigSchema;
 import io.airbyte.config.Organization;
 import io.airbyte.config.OrganizationEmailDomain;
 import io.airbyte.config.Permission;
+import io.airbyte.config.SsoConfig;
 import io.airbyte.config.User;
 import io.airbyte.config.User.Status;
 import io.airbyte.config.UserPermission;
@@ -54,10 +60,13 @@ import io.airbyte.config.persistence.OrganizationPersistence;
 import io.airbyte.config.persistence.PermissionPersistence;
 import io.airbyte.config.persistence.SQLOperationNotAllowedException;
 import io.airbyte.config.persistence.UserPersistence;
+import io.airbyte.data.services.ApplicationService;
 import io.airbyte.data.services.ExternalUserService;
 import io.airbyte.data.services.OrganizationEmailDomainService;
 import io.airbyte.data.services.PermissionRedundantException;
 import io.airbyte.data.services.PermissionService;
+import io.airbyte.featureflag.EmailAttribute;
+import io.airbyte.featureflag.EnforceEmailUniqueness;
 import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.featureflag.RestrictLoginsForSSODomains;
 import io.airbyte.validation.json.JsonValidationException;
@@ -66,6 +75,7 @@ import jakarta.inject.Singleton;
 import java.io.IOException;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.function.Supplier;
@@ -89,6 +99,7 @@ public class UserHandler {
   private final PermissionPersistence permissionPersistence;
   private final PermissionService permissionService;
   private final ExternalUserService externalUserService;
+  private final Optional<ApplicationService> applicationService;
   private final OrganizationEmailDomainService organizationEmailDomainService;
   private final PermissionHandler permissionHandler;
   private final WorkspacesHandler workspacesHandler;
@@ -107,6 +118,7 @@ public class UserHandler {
                      final ExternalUserService externalUserService,
                      final OrganizationPersistence organizationPersistence,
                      final OrganizationEmailDomainService organizationEmailDomainService,
+                     final Optional<ApplicationService> applicationService,
                      final PermissionHandler permissionHandler,
                      final WorkspacesHandler workspacesHandler,
                      @Named("uuidGenerator") final Supplier<UUID> uuidGenerator,
@@ -121,6 +133,7 @@ public class UserHandler {
     this.organizationEmailDomainService = organizationEmailDomainService;
     this.permissionPersistence = permissionPersistence;
     this.permissionService = permissionService;
+    this.applicationService = applicationService;
     this.workspacesHandler = workspacesHandler;
     this.permissionHandler = permissionHandler;
     this.userAuthenticationResolver = userAuthenticationResolver;
@@ -374,28 +387,45 @@ public class UserHandler {
         .anyMatch(orgEmailDomain -> orgEmailDomain.getOrganizationId().equals(currentSSOOrg.get().getOrganizationId()));
   }
 
-  public UserGetOrCreateByAuthIdResponse getOrCreateUserByAuthId(final UserAuthIdRequestBody userAuthIdRequestBody)
-      throws JsonValidationException, ConfigNotFoundException, IOException {
+  private List<String> getExistingUserRealms(final UUID userId) throws IOException {
+    final List<AuthUser> keycloakAuthUsers = userPersistence.listAuthUsersForUser(userId).stream()
+        .filter(authUser -> authUser.getAuthProvider() == io.airbyte.config.AuthProvider.KEYCLOAK).toList();
 
-    // check SSO restriction
-    final User incomingJwtUser = resolveIncomingJwtUser(userAuthIdRequestBody);
+    // Note: it's important to reach out to keycloak here to validate that at least one auth user from
+    // our db actually exists in keycloak.
+    return keycloakAuthUsers.stream()
+        .map(authUser -> externalUserService.getRealmByAuthUserId(authUser.getAuthUserId()))
+        .filter(Objects::nonNull)
+        .toList();
+  }
+
+  private boolean isAnyRealmSSO(final List<String> realms) throws IOException {
+    for (final String realm : realms) {
+      final Optional<SsoConfig> ssoConfig = organizationPersistence.getSsoConfigByRealmName(realm);
+      if (ssoConfig.isPresent()) {
+        return true;
+      }
+    }
+
+    return false;
+  }
+
+  private void handleSSORestrictions(final User incomingJwtUser, final boolean authUserExists) throws IOException {
     final boolean allowDomain = isAllowedDomain(incomingJwtUser.getEmail());
     if (!allowDomain) {
-      final Optional<String> authRealm = userAuthenticationResolver.resolveRealm();
-      authRealm.ifPresent(realm -> externalUserService.deleteUserByExternalId(incomingJwtUser.getAuthUserId(), realm));
+      if (!authUserExists) {
+        // Keep keycloak clean by deleting the user if it doesn't exist in our auth_user table is not
+        // allowed to sign in
+        final Optional<String> authRealm = userAuthenticationResolver.resolveRealm();
+        authRealm.ifPresent(realm -> externalUserService.deleteUserByExternalId(incomingJwtUser.getAuthUserId(), realm));
+      }
       throw new SSORequiredProblem();
     }
+  }
 
-    final Optional<User> existingUser = userPersistence.getUserByAuthId(userAuthIdRequestBody.getAuthUserId());
-
-    if (existingUser.isPresent()) {
-      return new UserGetOrCreateByAuthIdResponse()
-          .userRead(buildUserRead(existingUser.get()))
-          .newUserCreated(false);
-    }
-
+  private UserGetOrCreateByAuthIdResponse handleNewUserLogin(final User incomingJwtUser, final UserAuthIdRequestBody userAuthIdRequestBody)
+      throws JsonValidationException, ConfigNotFoundException, IOException {
     final UserRead createdUser = createUserFromIncomingUser(incomingJwtUser, userAuthIdRequestBody);
-
     handleUserPermissionsAndWorkspace(createdUser);
 
     // refresh the user from the database in case anything changed during permission/workspace
@@ -406,6 +436,117 @@ public class UserHandler {
     return new UserGetOrCreateByAuthIdResponse()
         .userRead(buildUserRead(updatedUser))
         .newUserCreated(true);
+  }
+
+  private UserGetOrCreateByAuthIdResponse handleRelinkAuthUser(final User existingUser, final User incomingJwtUser)
+      throws IOException, ConfigNotFoundException {
+    LOGGER.info("Relinking auth user {} to orphaned existing user {}...", incomingJwtUser.getAuthUserId(), existingUser.getUserId());
+    userPersistence.replaceAuthUserForUserId(existingUser.getUserId(), incomingJwtUser.getAuthUserId(), incomingJwtUser.getAuthProvider());
+
+    final User updatedUser = userPersistence.getUser(existingUser.getUserId())
+        .orElseThrow(() -> new ConfigNotFoundException(ConfigSchema.USER, existingUser.getUserId()));
+
+    return new UserGetOrCreateByAuthIdResponse()
+        .userRead(buildUserRead(updatedUser))
+        .newUserCreated(false);
+  }
+
+  private UserGetOrCreateByAuthIdResponse handleFirstTimeSSOLogin(final User existingUser, final User incomingJwtUser)
+      throws JsonValidationException, ConfigNotFoundException, IOException {
+    LOGGER.info("Migrating existing user {} to SSO...", existingUser.getUserId());
+    // (1) Revoke existing applications
+    // FIXME: If the user has multiple pre-existing auth users, it's possible existingUser is resolved
+    // with a non-keycloak auth user on it, which won't find any apps.
+    applicationService.ifPresent(appService -> {
+      LOGGER.info("Revoking existing applications for user {}...", existingUser.getUserId());
+      final List<Application> existingApplications = appService.listApplicationsByUser(existingUser);
+      for (final Application application : existingApplications) {
+        appService.deleteApplication(existingUser, application.getId());
+        LOGGER.info("Revoked application {} for user {}...", application.getId(), existingUser.getUserId());
+      }
+    });
+
+    // (2) Delete the user from other auth realms
+    LOGGER.info("Deleting user with email {} from other auth realms...", existingUser.getEmail());
+    final Optional<String> newRealm = userAuthenticationResolver.resolveRealm();
+    externalUserService.deleteUserByEmailOnOtherRealms(existingUser.getEmail(), newRealm.get());
+
+    // (3) Replace the existing auth user with the new one
+    LOGGER.info("Replacing existing auth users with new one ({})...", incomingJwtUser.getAuthUserId());
+    userPersistence.replaceAuthUserForUserId(existingUser.getUserId(), incomingJwtUser.getAuthUserId(), incomingJwtUser.getAuthProvider());
+
+    LOGGER.info("Done migrating user {} to SSO", existingUser.getUserId());
+
+    // (4) Return the user
+    final UserRead userRead = buildUserRead(existingUser);
+    handleUserPermissionsAndWorkspace(userRead);
+
+    // refresh the user from the database in case anything changed during permission/workspace
+    // modification
+    final User updatedUser = userPersistence.getUser(userRead.getUserId())
+        .orElseThrow(() -> new ConfigNotFoundException(ConfigSchema.USER, userRead.getUserId()));
+
+    return new UserGetOrCreateByAuthIdResponse()
+        .userRead(buildUserRead(updatedUser))
+        .newUserCreated(false);
+  }
+
+  public UserGetOrCreateByAuthIdResponse getOrCreateUserByAuthId(final UserAuthIdRequestBody userAuthIdRequestBody)
+      throws JsonValidationException, ConfigNotFoundException, IOException {
+    final User incomingJwtUser = resolveIncomingJwtUser(userAuthIdRequestBody);
+    final Optional<User> existingAuthUser = userPersistence.getUserByAuthId(userAuthIdRequestBody.getAuthUserId());
+
+    // (1) Restrict logins for SSO domains
+    handleSSORestrictions(incomingJwtUser, existingAuthUser.isPresent());
+
+    // (2) Authenticate existing auth_user
+    if (existingAuthUser.isPresent()) {
+      return new UserGetOrCreateByAuthIdResponse()
+          .userRead(buildUserRead(existingAuthUser.get()))
+          .newUserCreated(false);
+    }
+
+    // (3) Handle non-existing auth_user
+    final boolean shouldEnforceEmailUniqueness = featureFlagClient.boolVariation(EnforceEmailUniqueness.INSTANCE,
+        new io.airbyte.featureflag.User(ANONYMOUS, new EmailAttribute(incomingJwtUser.getEmail())));
+
+    Optional<User> existingUserWithEmail = userPersistence.getUserByEmail(incomingJwtUser.getEmail());
+    if (shouldEnforceEmailUniqueness && existingUserWithEmail.isPresent() && existingUserWithEmail.get().getUserId() == DEFAULT_USER_ID) {
+      // (Enterprise) If the email is already taken by the default user, we can safely clear it so the
+      // real user can be created
+      userPersistence.writeUser(existingUserWithEmail.get().withEmail(""));
+      LOGGER.info("Cleared email for default user on first login for {}", incomingJwtUser.getEmail());
+
+      existingUserWithEmail = Optional.empty();
+    }
+
+    // (3a) Email has not been used before
+    if (!shouldEnforceEmailUniqueness || existingUserWithEmail.isEmpty()) {
+      return handleNewUserLogin(incomingJwtUser, userAuthIdRequestBody);
+    }
+
+    // (3b) A user with the same email already exists
+
+    final User existingUser = existingUserWithEmail.get();
+    final List<String> existingUserRealms = getExistingUserRealms(existingUser.getUserId());
+
+    // (3b0) The existing user does not exist in any auth realm, relink it
+    // This can happen if, for example, keycloak state is cleared on an enterprise installation
+    if (existingUserRealms.isEmpty()) {
+      return handleRelinkAuthUser(existingUser, incomingJwtUser);
+    }
+
+    final boolean isCurrentSignInSSO = getSsoOrganizationIfExists().isPresent();
+    final boolean isExistingUserSSOAuthed = isAnyRealmSSO(existingUserRealms);
+
+    // (3b1) This is the first SSO sign in for the user, migrate it for SSO
+    if (isCurrentSignInSSO && !isExistingUserSSOAuthed) {
+      return handleFirstTimeSSOLogin(existingUser, incomingJwtUser);
+    }
+
+    // (3b2) This isn't a first-time SSO sign in and/or the user already exists
+    userAuthenticationResolver.resolveRealm().ifPresent(realm -> externalUserService.deleteUserByExternalId(incomingJwtUser.getAuthUserId(), realm));
+    throw new UserAlreadyExistsProblem(new ProblemEmailData().email(existingUser.getEmail()));
   }
 
   private User resolveIncomingJwtUser(final UserAuthIdRequestBody userAuthIdRequestBody) {
@@ -458,7 +599,13 @@ public class UserHandler {
     if (orgPermissionsExcludingDefaultUser.isEmpty()) {
       createPermissionForUserAndOrg(user.getUserId(), organization.getOrganizationId(), PermissionType.ORGANIZATION_ADMIN);
     } else {
-      createPermissionForUserAndOrg(user.getUserId(), organization.getOrganizationId(), PermissionType.ORGANIZATION_MEMBER);
+      final UUID userId = user.getUserId();
+      final boolean hasOrgPermission = orgPermissionsExcludingDefaultUser.stream()
+          .anyMatch(userPermission -> userPermission.getUser().getUserId().equals(userId));
+      // check to avoid creating duplicate permissions
+      if (!hasOrgPermission) {
+        createPermissionForUserAndOrg(userId, organization.getOrganizationId(), PermissionType.ORGANIZATION_MEMBER);
+      }
     }
 
     // If this organization doesn't have a workspace yet, create one, and set it as the default

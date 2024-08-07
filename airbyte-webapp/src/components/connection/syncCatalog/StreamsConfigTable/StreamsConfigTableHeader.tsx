@@ -1,3 +1,4 @@
+import classnames from "classnames";
 import set from "lodash/set";
 import React from "react";
 import { useFormContext } from "react-hook-form";
@@ -38,6 +39,7 @@ interface StreamsConfigTableHeaderProps
   streams: AirbyteStreamAndConfiguration[];
   onStreamsChanged: (streams: AirbyteStreamAndConfiguration[]) => void;
   syncSwitchDisabled?: boolean;
+  headerClassName?: string;
 }
 
 export const StreamsConfigTableHeader: React.FC<StreamsConfigTableHeaderProps> = ({
@@ -47,6 +49,7 @@ export const StreamsConfigTableHeader: React.FC<StreamsConfigTableHeaderProps> =
   namespaceDefinition,
   namespaceFormat,
   prefix,
+  headerClassName,
 }) => {
   const { mode } = useConnectionFormService();
   const { openModal } = useModalService();
@@ -84,7 +87,7 @@ export const StreamsConfigTableHeader: React.FC<StreamsConfigTableHeaderProps> =
     <FlexContainer
       justifyContent="flex-start"
       alignItems="center"
-      className={styles.headerContainer}
+      className={classnames(styles.headerContainer, headerClassName)}
       data-testid="catalog-tree-table-header"
     >
       <CellText size="fixed" className={styles.syncCell}>

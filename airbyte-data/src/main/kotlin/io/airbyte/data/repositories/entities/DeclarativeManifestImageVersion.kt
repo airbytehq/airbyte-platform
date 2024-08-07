@@ -10,6 +10,7 @@ data class DeclarativeManifestImageVersion(
   @field:Id
   val majorVersion: Int,
   val imageVersion: String,
+  val imageSha: String,
   @DateCreated
   val createdAt: java.time.OffsetDateTime? = null,
   @DateUpdated

@@ -9,11 +9,11 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.when;
 
+import io.airbyte.config.Job;
 import io.airbyte.config.JobConfig.ConfigType;
+import io.airbyte.config.StreamDescriptor;
 import io.airbyte.config.persistence.StreamResetPersistence;
 import io.airbyte.persistence.job.JobPersistence;
-import io.airbyte.persistence.job.models.Job;
-import io.airbyte.protocol.models.StreamDescriptor;
 import java.io.IOException;
 import java.util.List;
 import java.util.UUID;

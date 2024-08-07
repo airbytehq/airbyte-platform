@@ -8,7 +8,12 @@ import org.junit.jupiter.api.Test
 @MicronautTest
 internal class DeclarativeManifestImageVersionRepositoryTest : AbstractConfigRepositoryTest() {
   companion object {
-    val declarativeManifestImageVersion0 = DeclarativeManifestImageVersion(majorVersion = 0, imageVersion = "0.79.0")
+    val declarativeManifestImageVersion0 =
+      DeclarativeManifestImageVersion(
+        majorVersion = 0,
+        imageVersion = "0.79.0",
+        imageSha = "sha256:d4b897be4f4c9edc5073b60f625cadb6853d8dc7e6178b19c414fe9b743fde33",
+      )
   }
 
   @AfterEach
@@ -35,7 +40,12 @@ internal class DeclarativeManifestImageVersionRepositoryTest : AbstractConfigRep
     declarativeManifestImageVersionRepository.save(declarativeManifestImageVersion0)
     var initialPersistedCdkVersion = declarativeManifestImageVersionRepository.findById(0).get()
 
-    val newActiveVersion = DeclarativeManifestImageVersion(majorVersion = 0, imageVersion = "0.80.0")
+    val newActiveVersion =
+      DeclarativeManifestImageVersion(
+        majorVersion = 0,
+        imageVersion = "0.80.0",
+        "sha256:a54aad18cf460173f753fe938e254a667dac97b703fc05cf6de8c839caf62ef4",
+      )
     declarativeManifestImageVersionRepository.update(newActiveVersion)
     val updatedPersistedCdkVersion = declarativeManifestImageVersionRepository.findById(0).get()
 
@@ -44,7 +54,12 @@ internal class DeclarativeManifestImageVersionRepositoryTest : AbstractConfigRep
 
   @Test
   fun `test insert multiple active versions`() {
-    val declarativeManifestImageVersion1 = DeclarativeManifestImageVersion(majorVersion = 1, imageVersion = "1.0.4")
+    val declarativeManifestImageVersion1 =
+      DeclarativeManifestImageVersion(
+        majorVersion = 1,
+        imageVersion = "1.0.4",
+        "sha256:26f3d6b7dcbfa43504709e42d859c12f8644b7c7bbab0ecac99daa773f7dd35c",
+      )
     declarativeManifestImageVersionRepository.save(declarativeManifestImageVersion0)
     declarativeManifestImageVersionRepository.save(declarativeManifestImageVersion1)
 
@@ -59,7 +74,12 @@ internal class DeclarativeManifestImageVersionRepositoryTest : AbstractConfigRep
 
   @Test
   fun `test get multiple active versions`() {
-    val declarativeManifestImageVersion1 = DeclarativeManifestImageVersion(majorVersion = 1, imageVersion = "1.0.4")
+    val declarativeManifestImageVersion1 =
+      DeclarativeManifestImageVersion(
+        majorVersion = 1,
+        imageVersion = "1.0.4",
+        "sha256:26f3d6b7dcbfa43504709e42d859c12f8644b7c7bbab0ecac99daa773f7dd35c",
+      )
     declarativeManifestImageVersionRepository.save(declarativeManifestImageVersion0)
     declarativeManifestImageVersionRepository.save(declarativeManifestImageVersion1)
 

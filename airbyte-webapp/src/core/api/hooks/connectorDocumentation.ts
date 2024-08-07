@@ -1,9 +1,9 @@
 import { UseQueryResult, useQuery } from "@tanstack/react-query";
 
 import { useCurrentWorkspaceId } from "area/workspace/utils";
+import { AppActionCodes, trackAction } from "core/utils/datadog";
 import { isDevelopment } from "core/utils/isDevelopment";
 import { links } from "core/utils/links";
-import { AppActionCodes, useAppMonitoringService } from "hooks/services/AppMonitoringService";
 
 import { getConnectorDocumentation } from "../generated/AirbyteClient";
 import { ConnectorDocumentationRead } from "../generated/AirbyteClient.schemas";
@@ -40,7 +40,6 @@ export const useConnectorDocumentation = (
   const requestOptions = useRequestOptions();
   const workspaceId = useCurrentWorkspaceId();
   const isDev = isDevelopment();
-  const { trackAction } = useAppMonitoringService();
 
   let fetchDocumentation = () =>
     actorType && actorDefinitionId

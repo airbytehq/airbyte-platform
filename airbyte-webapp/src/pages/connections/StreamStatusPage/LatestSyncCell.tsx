@@ -4,6 +4,7 @@ import { FormattedMessage } from "react-intl";
 import { ConnectionStatusIndicatorStatus } from "components/connection/ConnectionStatusIndicator";
 import { LoadingSpinner } from "components/ui/LoadingSpinner";
 import { Text } from "components/ui/Text";
+import { Tooltip } from "components/ui/Tooltip";
 
 import { activeStatuses } from "area/connection/utils";
 
@@ -35,7 +36,12 @@ export const LatestSyncCell: React.FC<LatestSyncCellProps> = ({
       {!activeStatuses.includes(status) && (
         <Text color="grey" as="span">
           {recordsLoaded !== undefined ? (
-            <FormattedMessage id="sources.countLoaded" values={{ count: recordsLoaded }} />
+            <Tooltip
+              placement="top"
+              control={<FormattedMessage id="sources.countLoaded" values={{ count: recordsLoaded }} />}
+            >
+              <FormattedMessage id="sources.sumOverAttempts" />
+            </Tooltip>
           ) : (
             <>-</>
           )}
@@ -45,9 +51,19 @@ export const LatestSyncCell: React.FC<LatestSyncCellProps> = ({
         <>
           <Text color="grey" as="span">
             {!!recordsLoaded && recordsLoaded > 0 ? (
-              <FormattedMessage id="sources.countLoaded" values={{ count: recordsLoaded }} />
+              <Tooltip
+                placement="top"
+                control={<FormattedMessage id="sources.countLoaded" values={{ count: recordsLoaded }} />}
+              >
+                <FormattedMessage id="sources.sumOverAttempts" />
+              </Tooltip>
             ) : recordsExtracted ? (
-              <FormattedMessage id="sources.countExtracted" values={{ count: recordsExtracted }} />
+              <Tooltip
+                placement="top"
+                control={<FormattedMessage id="sources.countExtracted" values={{ count: recordsExtracted }} />}
+              >
+                <FormattedMessage id="sources.sumOverAttempts" />
+              </Tooltip>
             ) : (
               <FormattedMessage id="sources.starting" />
             )}

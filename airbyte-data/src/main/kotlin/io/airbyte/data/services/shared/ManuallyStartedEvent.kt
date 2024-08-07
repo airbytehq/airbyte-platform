@@ -2,7 +2,7 @@ package io.airbyte.data.services.shared
 
 import com.fasterxml.jackson.annotation.JsonInclude
 import io.airbyte.config.JobConfig.ConfigType
-import io.airbyte.protocol.models.StreamDescriptor
+import io.airbyte.config.StreamDescriptor
 
 @JsonInclude(JsonInclude.Include.NON_NULL)
 class ManuallyStartedEvent(

@@ -1,6 +1,6 @@
 package io.airbyte.workers.internal.syncpersistence
 
-import io.airbyte.protocol.models.ConfiguredAirbyteCatalog
+import io.airbyte.config.ConfiguredAirbyteCatalog
 import io.airbyte.workers.internal.bookkeeping.ParallelStreamStatsTrackerFactory
 import io.micronaut.context.ApplicationContext
 import io.micronaut.kotlin.context.createBean

@@ -55,6 +55,7 @@ class InstanceConfigurationHandlerTest {
   private static final UUID WORKSPACE_ID = UUID.randomUUID();
   private static final UUID USER_ID = UUID.randomUUID();
   private static final UUID ORGANIZATION_ID = UUID.randomUUID();
+  private static final String EMAIL = "org@airbyte.io";
   private static final String DEFAULT_ORG_NAME = "Default Org Name";
   private static final String DEFAULT_USER_NAME = "Default User Name";
 
@@ -114,6 +115,7 @@ class InstanceConfigurationHandlerTest {
         .initialSetupComplete(isInitialSetupComplete)
         .defaultUserId(USER_ID)
         .defaultOrganizationId(ORGANIZATION_ID)
+        .defaultOrganizationEmail(EMAIL)
         .trackingStrategy(TrackingStrategyEnum.LOGGING);
 
     final InstanceConfigurationResponse actual = instanceConfigurationHandler.getInstanceConfiguration();
@@ -199,8 +201,6 @@ class InstanceConfigurationHandlerTest {
 
     instanceConfigurationHandler = getInstanceConfigurationHandler(true);
 
-    final String email = "test@airbyte.com";
-
     final InstanceConfigurationResponse expected = new InstanceConfigurationResponse()
         .edition(EditionEnum.PRO)
         .version("0.50.1")
@@ -213,10 +213,11 @@ class InstanceConfigurationHandlerTest {
         .initialSetupComplete(true)
         .defaultUserId(USER_ID)
         .defaultOrganizationId(ORGANIZATION_ID)
+        .defaultOrganizationEmail(EMAIL)
         .trackingStrategy(TrackingStrategyEnum.LOGGING);
 
     final InstanceConfigurationSetupRequestBody requestBody = new InstanceConfigurationSetupRequestBody()
-        .email(email)
+        .email(EMAIL)
         .displaySetupWizard(true)
         .anonymousDataCollection(true)
         .initialSetupComplete(true);
@@ -240,19 +241,19 @@ class InstanceConfigurationHandlerTest {
     // verify the user was updated with the email and name from the request
     verify(mUserPersistence).writeUser(eq(new User()
         .withUserId(USER_ID)
-        .withEmail(email)
+        .withEmail(EMAIL)
         .withName(expectedUserName)));
 
     // verify the organization was updated with the name from the request
     verify(mOrganizationPersistence).updateOrganization(eq(new Organization()
         .withOrganizationId(ORGANIZATION_ID)
         .withName(expectedOrgName)
-        .withEmail(email)
+        .withEmail(EMAIL)
         .withUserId(USER_ID)));
 
     verify(mWorkspacesHandler).updateWorkspace(eq(new WorkspaceUpdate()
         .workspaceId(WORKSPACE_ID)
-        .email(email)
+        .email(EMAIL)
         .displaySetupWizard(true)
         .anonymousDataCollection(true)
         .initialSetupComplete(true)));
@@ -270,7 +271,8 @@ class InstanceConfigurationHandlerTest {
         Optional.of(new Organization()
             .withOrganizationId(ORGANIZATION_ID)
             .withName(DEFAULT_ORG_NAME)
-            .withUserId(USER_ID)));
+            .withUserId(USER_ID)
+            .withEmail(EMAIL)));
   }
 
   private void stubDefaultAuthConfigs() {

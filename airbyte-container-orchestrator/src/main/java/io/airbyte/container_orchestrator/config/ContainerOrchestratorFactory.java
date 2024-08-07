@@ -42,6 +42,7 @@ import jakarta.inject.Named;
 import jakarta.inject.Singleton;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
+import java.util.Optional;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 
@@ -105,12 +106,12 @@ class ContainerOrchestratorFactory {
 
   @Singleton
   JobOrchestrator<?> jobOrchestrator(
-                                     @Named("application") final String application,
+                                     @Value("${airbyte.application}") final String application,
                                      @Named("configDir") final String configDir,
                                      final EnvConfigs envConfigs,
                                      final JobRunConfig jobRunConfig,
                                      final ReplicationWorkerFactory replicationWorkerFactory,
-                                     final AsyncStateManager asyncStateManager,
+                                     final Optional<AsyncStateManager> asyncStateManager,
                                      final WorkloadApiClient workloadApiClient,
                                      @Value("${airbyte.workload.enabled}") final boolean workloadEnabled,
                                      final JobOutputDocStore jobOutputDocStore) {

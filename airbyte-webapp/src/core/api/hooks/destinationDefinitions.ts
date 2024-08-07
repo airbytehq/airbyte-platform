@@ -2,7 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { useCurrentWorkspaceId } from "area/workspace/utils";
 import { isDefined } from "core/utils/common";
-import { useAppMonitoringService } from "hooks/services/AppMonitoringService";
+import { trackError } from "core/utils/datadog";
 
 import { connectorDefinitionKeys } from "./connectorUpdates";
 import {
@@ -118,7 +118,6 @@ export const useCreateDestinationDefinition = () => {
 export const useUpdateDestinationDefinition = () => {
   const requestOptions = useRequestOptions();
   const queryClient = useQueryClient();
-  const { trackError } = useAppMonitoringService();
 
   return useMutation<
     DestinationDefinitionRead,

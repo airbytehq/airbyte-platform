@@ -4,6 +4,7 @@ import React, { useCallback, useMemo } from "react";
 import { FieldErrors } from "react-hook-form";
 import { useToggle } from "react-use";
 
+import { useGetDestinationDefinitionSpecification } from "core/api";
 import { AirbyteStreamConfiguration } from "core/api/types/AirbyteClient";
 import { traverseSchemaToField } from "core/domain/catalog/traverseSchemaToField";
 import { Action, Namespace, useAnalyticsService } from "core/services/analytics";
@@ -44,10 +45,10 @@ export const SyncCatalogRow: React.FC<SyncCatalogRowProps & { className?: string
     return traversedFields.sort(naturalComparatorBy((field) => field.cleanedName));
   }, [stream?.jsonSchema, stream?.name]);
 
-  const {
-    destDefinitionSpecification: { supportedDestinationSyncModes },
-  } = useConnectionFormService();
-  const { mode } = useConnectionFormService();
+  const { connection, mode } = useConnectionFormService();
+  const { supportedDestinationSyncModes } = useGetDestinationDefinitionSpecification(
+    connection.destination.destinationId
+  );
 
   const [isStreamDetailsPanelOpened, setIsStreamDetailsPanelOpened] = useToggle(false);
 

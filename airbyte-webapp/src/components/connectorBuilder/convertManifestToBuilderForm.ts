@@ -83,6 +83,7 @@ import { AirbyteJSONSchema } from "../../core/jsonSchema/types";
 export const convertToBuilderFormValuesSync = (resolvedManifest: ConnectorManifest) => {
   const builderFormValues = cloneDeep(DEFAULT_BUILDER_FORM_VALUES);
   builderFormValues.checkStreams = resolvedManifest.check.stream_names;
+  builderFormValues.description = resolvedManifest.description;
 
   const streams = resolvedManifest.streams;
   if (streams === undefined || streams.length === 0) {

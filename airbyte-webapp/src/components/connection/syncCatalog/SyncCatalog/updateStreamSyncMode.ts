@@ -30,8 +30,11 @@ export function updateStreamSyncMode(
       }
     }
 
-    // If the destination sync mode is append_dedup, we need to ensure that each piece of the composite primary key is selected
-    if (destinationSyncMode === "append_dedup" && stream.sourceDefinedPrimaryKey) {
+    // If the destination sync mode is performs dedup, we need to ensure that each piece of the composite primary key is selected
+    if (
+      (destinationSyncMode === "append_dedup" || destinationSyncMode === "overwrite_dedup") &&
+      stream.sourceDefinedPrimaryKey
+    ) {
       if (stream.sourceDefinedPrimaryKey?.length) {
         requiredSelectedFields.push(
           ...stream.sourceDefinedPrimaryKey.map((path) => ({

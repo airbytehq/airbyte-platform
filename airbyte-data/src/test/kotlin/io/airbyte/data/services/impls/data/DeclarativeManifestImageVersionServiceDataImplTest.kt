@@ -24,14 +24,12 @@ internal class DeclarativeManifestImageVersionServiceDataImplTest {
   @Test
   fun `test write new declarative manifest image version`() {
     val majorVersion = 0
-    val declarativeManifestImageVersion = "0.0.1"
-
-    val version = DeclarativeManifestImageVersion(majorVersion, declarativeManifestImageVersion)
+    val version = DeclarativeManifestImageVersion(majorVersion, "0.0.1", "sha256:d4b897be4f4c9edc5073b60f625cadb6853d8dc7e6178b19c414fe9b743fde33")
 
     every { declarativeManifestImageVersionRepository.existsById(majorVersion) } returns false
     every { declarativeManifestImageVersionRepository.save(version) } returns version
 
-    val result = declarativeManifestImageVersionService.writeDeclarativeManifestImageVersion(majorVersion, declarativeManifestImageVersion)
+    val result = declarativeManifestImageVersionService.writeDeclarativeManifestImageVersion(version)
     assert(result == version)
 
     verify {
@@ -44,14 +42,12 @@ internal class DeclarativeManifestImageVersionServiceDataImplTest {
   @Test
   fun `test write existing declarative manifest image version`() {
     val majorVersion = 0
-    val declarativeManifestImageVersion = "0.0.2"
-
-    val newVersion = DeclarativeManifestImageVersion(majorVersion, declarativeManifestImageVersion)
+    val newVersion = DeclarativeManifestImageVersion(majorVersion, "0.0.2", "sha256:26f3d6b7dcbfa43504709e42d859c12f8644b7c7bbab0ecac99daa773f7dd35c")
 
     every { declarativeManifestImageVersionRepository.existsById(majorVersion) } returns true
     every { declarativeManifestImageVersionRepository.update(newVersion) } returns newVersion
 
-    val result = declarativeManifestImageVersionService.writeDeclarativeManifestImageVersion(majorVersion, declarativeManifestImageVersion)
+    val result = declarativeManifestImageVersionService.writeDeclarativeManifestImageVersion(newVersion)
     assert(result == newVersion)
 
     verify {
@@ -64,14 +60,12 @@ internal class DeclarativeManifestImageVersionServiceDataImplTest {
   @Test
   fun `test get declarative manifest image version by major version`() {
     val majorVersion = 0
-    val declarativeManifestImageVersion = "0.0.1"
-
-    val version = DeclarativeManifestImageVersion(majorVersion, declarativeManifestImageVersion)
+    val version = DeclarativeManifestImageVersion(majorVersion, "0.0.1", "sha256:d4b897be4f4c9edc5073b60f625cadb6853d8dc7e6178b19c414fe9b743fde33")
 
     every { declarativeManifestImageVersionRepository.findById(majorVersion) } returns Optional.of(version)
 
-    val result = declarativeManifestImageVersionService.getImageVersionByMajorVersion(majorVersion)
-    assert(result == declarativeManifestImageVersion)
+    val result = declarativeManifestImageVersionService.getDeclarativeManifestImageVersionByMajorVersion(majorVersion)
+    assert(result == version)
 
     verify {
       declarativeManifestImageVersionRepository.findById(majorVersion)
@@ -85,7 +79,7 @@ internal class DeclarativeManifestImageVersionServiceDataImplTest {
 
     every { declarativeManifestImageVersionRepository.findById(majorVersion) } returns Optional.empty()
 
-    assertThrows<IllegalStateException> { declarativeManifestImageVersionService.getImageVersionByMajorVersion(majorVersion) }
+    assertThrows<IllegalStateException> { declarativeManifestImageVersionService.getDeclarativeManifestImageVersionByMajorVersion(majorVersion) }
 
     verify {
       declarativeManifestImageVersionRepository.findById(majorVersion)
@@ -95,9 +89,12 @@ internal class DeclarativeManifestImageVersionServiceDataImplTest {
 
   @Test
   fun `test list declarative manifest image versions`() {
-    val declarativeManifestImageVersion0 = DeclarativeManifestImageVersion(0, "0.0.1")
-    val declarativeManifestImageVersion1 = DeclarativeManifestImageVersion(1, "1.0.0")
-    val declarativeManifestImageVersion2 = DeclarativeManifestImageVersion(2, "2.0.0")
+    val declarativeManifestImageVersion0 =
+      DeclarativeManifestImageVersion(0, "0.0.1", "sha256:d4b897be4f4c9edc5073b60f625cadb6853d8dc7e6178b19c414fe9b743fde33")
+    val declarativeManifestImageVersion1 =
+      DeclarativeManifestImageVersion(1, "1.0.0", "sha256:a54aad18cf460173f753fe938e254a667dac97b703fc05cf6de8c839caf62ef4")
+    val declarativeManifestImageVersion2 =
+      DeclarativeManifestImageVersion(2, "2.0.0", "sha256:26f3d6b7dcbfa43504709e42d859c12f8644b7c7bbab0ecac99daa773f7dd35c")
 
     every {
       declarativeManifestImageVersionRepository.findAll()

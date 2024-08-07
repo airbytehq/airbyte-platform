@@ -38,7 +38,7 @@ class ContainerConfigBeanFactory {
   @Named("containerOrchestratorImage")
   fun containerOrchestratorImage(
     @Value("\${airbyte.version}") airbyteVersion: String,
-    @Value("\${airbyte.container.orchestrator.image}") injectedImage: String?,
+    @Value("\${airbyte.worker.job.kube.main.container.image}") injectedImage: String?,
   ): String {
     if (injectedImage != null && StringUtils.isNotEmpty(injectedImage)) {
       return injectedImage
@@ -48,10 +48,10 @@ class ContainerConfigBeanFactory {
   }
 
   @Singleton
-  @Named("containerOrchestratorSidecarImage")
-  fun containerOrchestratorSidecarImage(
+  @Named("connectorSidecarImage")
+  fun connectorSidecarImage(
     @Value("\${airbyte.version}") airbyteVersion: String,
-    @Value("\${airbyte.container.orchestrator.sidecar.image}") injectedImage: String?,
+    @Value("\${airbyte.worker.job.kube.sidecar.container.image}") injectedImage: String?,
   ): String {
     if (injectedImage != null && StringUtils.isNotEmpty(injectedImage)) {
       return injectedImage
@@ -61,6 +61,23 @@ class ContainerConfigBeanFactory {
       "airbyte/connector-sidecar:${airbyteVersion.dropLast(6)}"
     } else {
       "airbyte/connector-sidecar:$airbyteVersion"
+    }
+  }
+
+  @Singleton
+  @Named("initContainerImage")
+  fun initContainerImage(
+    @Value("\${airbyte.version}") airbyteVersion: String,
+    @Value("\${airbyte.worker.job.kube.init.container.image}") injectedImage: String?,
+  ): String {
+    if (injectedImage != null && StringUtils.isNotEmpty(injectedImage)) {
+      return injectedImage
+    }
+
+    return if (airbyteVersion.endsWith("-cloud")) {
+      "airbyte/workload-init-container:${airbyteVersion.dropLast(6)}"
+    } else {
+      "airbyte/workload-init-container:$airbyteVersion"
     }
   }
 
@@ -91,10 +108,19 @@ class ContainerConfigBeanFactory {
   @Singleton
   @Named("sidecarKubeContainerInfo")
   fun sidecarKubeContainerInfo(
-    @Named("containerOrchestratorSidecarImage") containerOrchestratorImage: String,
-    @Value("\${airbyte.worker.job.kube.main.container.image-pull-policy}") containerOrchestratorImagePullPolicy: String,
+    @Named("connectorSidecarImage") connectorSidecarImage: String,
+    @Value("\${airbyte.worker.job.kube.sidecar.container.image-pull-policy}") connectorSidecarImagePullPolicy: String,
   ): KubeContainerInfo {
-    return KubeContainerInfo(containerOrchestratorImage, containerOrchestratorImagePullPolicy)
+    return KubeContainerInfo(connectorSidecarImage, connectorSidecarImagePullPolicy)
+  }
+
+  @Singleton
+  @Named("initContainerInfo")
+  fun initContainerInfo(
+    @Named("initContainerImage") initContainerImage: String,
+    @Value("\${airbyte.worker.job.kube.sidecar.container.image-pull-policy}") initContainerImagePullPolicy: String,
+  ): KubeContainerInfo {
+    return KubeContainerInfo(initContainerImage, initContainerImagePullPolicy)
   }
 
   @Singleton

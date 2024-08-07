@@ -1,0 +1,43 @@
+@use "scss/colors";
+@use "scss/variables";
+
+.container {
+  & button.mainButton {
+    border-top-right-radius: 0;
+    border-bottom-right-radius: 0;
+    padding-right: variables.$spacing-md;
+    border-right-width: 1px;
+    border-right-style: solid;
+
+    &.primarySeparator {
+      border-right-color: colors.$blue-100;
+    }
+
+    &.dangerSeparator {
+      border-right-color: colors.$red-100;
+    }
+
+    &.primaryDarkSeparator {
+      border-right-color: colors.$dark-blue-200;
+    }
+
+    &.secondarySeparator {
+      border-right: 1px solid colors.$grey-300;
+
+      &:hover {
+        border-color: colors.$grey-400;
+      }
+    }
+  }
+
+  & button.dropdownButton {
+    border-top-left-radius: 0;
+    border-bottom-left-radius: 0;
+    border-left-width: 0;
+    padding-inline: 7px;
+
+    &.noPointerEvents {
+      pointer-events: none;
+    }
+  }
+}

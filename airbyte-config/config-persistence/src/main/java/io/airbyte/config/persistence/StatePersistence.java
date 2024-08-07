@@ -12,6 +12,8 @@ import io.airbyte.commons.json.Jsons;
 import io.airbyte.config.State;
 import io.airbyte.config.StateType;
 import io.airbyte.config.StateWrapper;
+import io.airbyte.config.StreamDescriptor;
+import io.airbyte.config.helpers.ProtocolConverters;
 import io.airbyte.config.helpers.StateMessageHelper;
 import io.airbyte.db.Database;
 import io.airbyte.db.ExceptionWrappingDatabase;
@@ -19,7 +21,6 @@ import io.airbyte.protocol.models.AirbyteGlobalState;
 import io.airbyte.protocol.models.AirbyteStateMessage;
 import io.airbyte.protocol.models.AirbyteStateMessage.AirbyteStateType;
 import io.airbyte.protocol.models.AirbyteStreamState;
-import io.airbyte.protocol.models.StreamDescriptor;
 import java.io.IOException;
 import java.time.OffsetDateTime;
 import java.util.List;
@@ -136,8 +137,10 @@ public class StatePersistence {
 
     final Set<StreamDescriptor> streamsInState = maybeCurrentState.get().getStateType() == StateType.GLOBAL
         ? maybeCurrentState.get().getGlobal().getGlobal().getStreamStates().stream().map(AirbyteStreamState::getStreamDescriptor)
+            .map(ProtocolConverters::toInternal)
             .collect(Collectors.toSet())
         : maybeCurrentState.get().getStateMessages().stream().map(airbyteStateMessage -> airbyteStateMessage.getStream().getStreamDescriptor())
+            .map(ProtocolConverters::toInternal)
             .collect(Collectors.toSet());
 
     if (streamsInState.equals(streamsToDelete)) {
@@ -372,7 +375,7 @@ public class StatePersistence {
    */
   private static AirbyteStreamState buildAirbyteStreamState(final StateRecord record) {
     return new AirbyteStreamState()
-        .withStreamDescriptor(new StreamDescriptor().withName(record.streamName).withNamespace(record.namespace))
+        .withStreamDescriptor(new io.airbyte.protocol.models.StreamDescriptor().withName(record.streamName).withNamespace(record.namespace))
         .withStreamState(record.state);
   }
 

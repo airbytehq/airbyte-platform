@@ -3,7 +3,7 @@ import React, { HTMLAttributes } from "react";
 
 import styles from "./Text.module.scss";
 
-type TextSize = "xs" | "sm" | "md" | "lg" | "xl";
+export type TextSize = "xs" | "sm" | "md" | "lg" | "xl";
 type TextColor =
   | "darkBlue"
   | "grey"

@@ -13,10 +13,15 @@ import { Message } from "components/ui/Message";
 import { SupportLevelBadge } from "components/ui/SupportLevelBadge";
 import { Text } from "components/ui/Text";
 
+import {
+  useDestinationDefinition,
+  useDestinationDefinitionVersion,
+  useSourceDefinition,
+  useSourceDefinitionVersion,
+} from "core/api";
 import { ConnectionStatus, SupportLevel } from "core/api/types/AirbyteClient";
 import { useLocalStorage } from "core/utils/useLocalStorage";
 import { useConnectionEditService } from "hooks/services/ConnectionEdit/ConnectionEditService";
-import { useConnectionFormService } from "hooks/services/ConnectionForm/ConnectionFormService";
 import { ConnectionRoutePaths, RoutePaths } from "pages/routePaths";
 
 import styles from "./ConnectionTitleBlock.module.scss";
@@ -55,8 +60,10 @@ export const ConnectionTitleBlock = () => {
   const { connection } = useConnectionEditService();
   const { name, source, destination, status: connectionStatus } = connection;
   const { isRunning, status } = useConnectionStatus(connection.connectionId);
-  const { sourceDefinition, sourceDefinitionVersion, destDefinition, destDefinitionVersion } =
-    useConnectionFormService();
+  const sourceDefinition = useSourceDefinition(connection.source.sourceDefinitionId);
+  const sourceDefinitionVersion = useSourceDefinitionVersion(connection.source.sourceId);
+  const destinationDefinition = useDestinationDefinition(connection.destination.destinationDefinitionId);
+  const destinationDefinitionVersion = useDestinationDefinitionVersion(connection.destination.destinationId);
 
   return (
     <>
@@ -85,9 +92,9 @@ export const ConnectionTitleBlock = () => {
                 name={destination.name}
                 icon={destination.icon}
                 id={destination.destinationId}
-                supportLevel={destDefinitionVersion.supportLevel}
-                custom={destDefinition.custom}
-                version={destDefinitionVersion.dockerImageTag}
+                supportLevel={destinationDefinitionVersion.supportLevel}
+                custom={destinationDefinition.custom}
+                version={destinationDefinitionVersion.dockerImageTag}
                 type="destination"
               />
             </FlexContainer>

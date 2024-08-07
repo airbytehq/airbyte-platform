@@ -6,7 +6,6 @@ package io.airbyte.oauth.flows;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.google.common.collect.ImmutableMap;
-import io.airbyte.config.persistence.ConfigNotFoundException;
 import io.airbyte.oauth.BaseOAuth2Flow;
 import java.io.IOException;
 import java.net.URISyntaxException;
@@ -116,7 +115,7 @@ public class GitlabOAuthFlow extends BaseOAuth2Flow {
                                                  final Map<String, Object> queryParams,
                                                  final String redirectUrl,
                                                  JsonNode oauthParamConfig)
-      throws IOException, ConfigNotFoundException {
+      throws IOException {
     throw new IOException("Deprecated API not supported by this connector");
   }
 

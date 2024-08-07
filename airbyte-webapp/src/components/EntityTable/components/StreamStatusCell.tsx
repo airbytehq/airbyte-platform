@@ -19,13 +19,11 @@ import styles from "./StreamStatusCell.module.scss";
 import { ConnectionTableDataItem } from "../types";
 
 const FILLING_STYLE_BY_STATUS: Readonly<Record<ConnectionStatusIndicatorStatus, string>> = {
-  [ConnectionStatusIndicatorStatus.ActionRequired]: styles["filling--actionRequired"],
-  [ConnectionStatusIndicatorStatus.OnTime]: styles["filling--upToDate"],
-  [ConnectionStatusIndicatorStatus.OnTrack]: styles["filling--upToDate"],
+  [ConnectionStatusIndicatorStatus.Failed]: styles["filling--failed"],
+  [ConnectionStatusIndicatorStatus.Synced]: styles["filling--upToDate"],
   [ConnectionStatusIndicatorStatus.Disabled]: styles["filling--disabled"],
   [ConnectionStatusIndicatorStatus.Paused]: styles["filling--disabled"],
-  [ConnectionStatusIndicatorStatus.Error]: styles["filling--error"],
-  [ConnectionStatusIndicatorStatus.Late]: styles["filling--late"],
+  [ConnectionStatusIndicatorStatus.Incomplete]: styles["filling--incomplete"],
   [ConnectionStatusIndicatorStatus.Pending]: styles["filling--pending"],
   [ConnectionStatusIndicatorStatus.Queued]: styles["filling--queued"],
   [ConnectionStatusIndicatorStatus.Syncing]: styles["filling--syncing"],

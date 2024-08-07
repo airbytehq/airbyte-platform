@@ -9,7 +9,7 @@ import static io.airbyte.commons.server.helpers.ConnectionHelpers.FIELD_NAME;
 import static io.airbyte.commons.server.helpers.ConnectionHelpers.SECOND_FIELD_NAME;
 import static io.airbyte.config.EnvConfigs.DEFAULT_DAYS_OF_ONLY_FAILED_JOBS_BEFORE_CONNECTION_DISABLE;
 import static io.airbyte.config.EnvConfigs.DEFAULT_FAILED_JOBS_IN_A_ROW_BEFORE_CONNECTION_DISABLE;
-import static io.airbyte.persistence.job.models.Job.REPLICATION_TYPES;
+import static io.airbyte.config.Job.REPLICATION_TYPES;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
@@ -80,7 +80,6 @@ import io.airbyte.api.model.generated.StreamTransformUpdateStream;
 import io.airbyte.api.model.generated.SyncMode;
 import io.airbyte.api.model.generated.WorkspaceIdRequestBody;
 import io.airbyte.commons.converters.ConnectionHelper;
-import io.airbyte.commons.converters.ProtocolConverters;
 import io.airbyte.commons.enums.Enums;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.commons.server.converters.ApiPojoConverters;
@@ -98,21 +97,29 @@ import io.airbyte.commons.server.validation.ValidationError;
 import io.airbyte.config.ActorCatalog;
 import io.airbyte.config.ActorDefinitionVersion;
 import io.airbyte.config.ActorType;
+import io.airbyte.config.Attempt;
 import io.airbyte.config.AttemptFailureSummary;
+import io.airbyte.config.AttemptStatus;
+import io.airbyte.config.AttemptWithJobInfo;
 import io.airbyte.config.BasicSchedule;
 import io.airbyte.config.ConfigSchema;
+import io.airbyte.config.ConfiguredAirbyteCatalog;
+import io.airbyte.config.ConfiguredAirbyteStream;
 import io.airbyte.config.Cron;
 import io.airbyte.config.DataType;
 import io.airbyte.config.DestinationConnection;
 import io.airbyte.config.FailureReason;
 import io.airbyte.config.FieldSelectionData;
 import io.airbyte.config.Geography;
+import io.airbyte.config.Job;
 import io.airbyte.config.JobConfig;
 import io.airbyte.config.JobConfig.ConfigType;
 import io.airbyte.config.JobOutput;
 import io.airbyte.config.JobOutput.OutputType;
 import io.airbyte.config.JobResetConnectionConfig;
+import io.airbyte.config.JobStatus;
 import io.airbyte.config.JobSyncConfig;
+import io.airbyte.config.JobWithStatusAndTimestamp;
 import io.airbyte.config.NotificationSettings;
 import io.airbyte.config.RefreshConfig;
 import io.airbyte.config.RefreshStream;
@@ -132,6 +139,7 @@ import io.airbyte.config.StandardSyncSummary;
 import io.airbyte.config.StandardWorkspace;
 import io.airbyte.config.StreamSyncStats;
 import io.airbyte.config.SyncStats;
+import io.airbyte.config.helpers.CatalogHelpers;
 import io.airbyte.config.persistence.ActorDefinitionVersionHelper;
 import io.airbyte.config.persistence.ActorDefinitionVersionHelper.ActorDefinitionVersionWithOverrideStatus;
 import io.airbyte.config.persistence.ConfigNotFoundException;
@@ -157,15 +165,6 @@ import io.airbyte.persistence.job.JobNotifier;
 import io.airbyte.persistence.job.JobPersistence;
 import io.airbyte.persistence.job.WorkspaceHelper;
 import io.airbyte.persistence.job.factory.OAuthConfigSupplier;
-import io.airbyte.persistence.job.models.Attempt;
-import io.airbyte.persistence.job.models.AttemptStatus;
-import io.airbyte.persistence.job.models.AttemptWithJobInfo;
-import io.airbyte.persistence.job.models.Job;
-import io.airbyte.persistence.job.models.JobStatus;
-import io.airbyte.persistence.job.models.JobWithStatusAndTimestamp;
-import io.airbyte.protocol.models.CatalogHelpers;
-import io.airbyte.protocol.models.ConfiguredAirbyteCatalog;
-import io.airbyte.protocol.models.ConfiguredAirbyteStream;
 import io.airbyte.protocol.models.Field;
 import io.airbyte.protocol.models.JsonSchemaType;
 import io.airbyte.validation.json.JsonSchemaValidator;
@@ -525,7 +524,7 @@ class ConnectionsHandlerTest {
 
       final List<RefreshStream> refreshStreamDescriptors =
           List.of(new RefreshStream().withRefreshType(RefreshType.TRUNCATE)
-              .withStreamDescriptor(new io.airbyte.protocol.models.StreamDescriptor().withName("name")));
+              .withStreamDescriptor(new io.airbyte.config.StreamDescriptor().withName("name")));
 
       final JobConfig config = new JobConfig()
           .withRefresh(new RefreshConfig().withStreamsToRefresh(refreshStreamDescriptors));
@@ -559,8 +558,8 @@ class ConnectionsHandlerTest {
     void testGetConnectionForClearJob() throws JsonValidationException, ConfigNotFoundException, IOException {
       final Long jobId = 456L;
 
-      final List<io.airbyte.protocol.models.StreamDescriptor> clearedStreamDescriptors =
-          List.of(new io.airbyte.protocol.models.StreamDescriptor().withName("name"));
+      final List<io.airbyte.config.StreamDescriptor> clearedStreamDescriptors =
+          List.of(new io.airbyte.config.StreamDescriptor().withName("name"));
 
       final JobConfig config = new JobConfig()
           .withResetConnection(new JobResetConnectionConfig().withResetSourceConfiguration(
@@ -1216,7 +1215,7 @@ class ConnectionsHandlerTest {
 
         standardSync
             .withFieldSelectionData(new FieldSelectionData().withAdditionalProperty(STREAM_SELECTION_DATA, true))
-            .getCatalog().getStreams().get(0).withSyncMode(io.airbyte.protocol.models.SyncMode.FULL_REFRESH).withCursorField(null);
+            .getCatalog().getStreams().get(0).withSyncMode(io.airbyte.config.SyncMode.FULL_REFRESH).withCursorField(null);
 
         verify(configRepository).writeStandardSync(standardSync.withNotifySchemaChangesByEmail(null));
       }
@@ -1398,10 +1397,10 @@ class ConnectionsHandlerTest {
                 .withDefaultCursorField(List.of(FIELD_NAME))
                 .withSourceDefinedCursor(false)
                 .withSupportedSyncModes(
-                    List.of(io.airbyte.protocol.models.SyncMode.FULL_REFRESH, io.airbyte.protocol.models.SyncMode.INCREMENTAL)))
+                    List.of(io.airbyte.config.SyncMode.FULL_REFRESH, io.airbyte.config.SyncMode.INCREMENTAL)))
             .withCursorField(List.of(FIELD_NAME))
-            .withSyncMode(io.airbyte.protocol.models.SyncMode.INCREMENTAL)
-            .withDestinationSyncMode(io.airbyte.protocol.models.DestinationSyncMode.APPEND);
+            .withSyncMode(io.airbyte.config.SyncMode.INCREMENTAL)
+            .withDestinationSyncMode(io.airbyte.config.DestinationSyncMode.APPEND);
       }
 
       private AirbyteStreamAndConfiguration buildStream(final String name) {
@@ -1582,7 +1581,7 @@ class ConnectionsHandlerTest {
 
         // expect three streams in the final persisted catalog
         final ConfiguredAirbyteCatalog expectedPersistedCatalog = ConnectionHelpers.generateMultipleStreamsConfiguredAirbyteCatalog(3);
-        expectedPersistedCatalog.getStreams().get(0).withSyncMode(io.airbyte.protocol.models.SyncMode.FULL_REFRESH);
+        expectedPersistedCatalog.getStreams().get(0).withSyncMode(io.airbyte.config.SyncMode.FULL_REFRESH);
         // index 1 is unchanged
         expectedPersistedCatalog.getStreams().get(2).getStream().withName(AZKABAN_USERS);
 
@@ -1754,9 +1753,8 @@ class ConnectionsHandlerTest {
             .syncCatalog(catalog);
         when(featureFlagClient.boolVariation(ResetStreamsStateWhenDisabled.INSTANCE, new Workspace(workspaceId))).thenReturn(true);
         connectionsHandler.updateConnection(request);
-        final Set<io.airbyte.protocol.models.StreamDescriptor> expectedStreams =
-            Set.of(ProtocolConverters.streamDescriptorToProtocol(new StreamDescriptor().name("user")),
-                ProtocolConverters.streamDescriptorToProtocol(new StreamDescriptor().name("permission")));
+        final Set<io.airbyte.config.StreamDescriptor> expectedStreams =
+            Set.of(new io.airbyte.config.StreamDescriptor().withName("user"), new io.airbyte.config.StreamDescriptor().withName("permission"));
         verify(statePersistence).bulkDelete(moreComplexCatalogSync.getConnectionId(), expectedStreams);
       }
 
@@ -2334,9 +2332,9 @@ class ConnectionsHandlerTest {
       final io.airbyte.protocol.models.AirbyteCatalog goodCatalogAltered = Jsons.deserialize(
           good_catalog_altered_json, io.airbyte.protocol.models.AirbyteCatalog.class);
       final ConfiguredAirbyteCatalog badConfiguredCatalog = Jsons.deserialize(
-          bad_config_catalog_json, io.airbyte.protocol.models.ConfiguredAirbyteCatalog.class);
+          bad_config_catalog_json, io.airbyte.config.ConfiguredAirbyteCatalog.class);
       final ConfiguredAirbyteCatalog goodConfiguredCatalog = Jsons.deserialize(
-          good_config_catalog_json, io.airbyte.protocol.models.ConfiguredAirbyteCatalog.class);
+          good_config_catalog_json, io.airbyte.config.ConfiguredAirbyteCatalog.class);
 
       // convert the AirbyteCatalog model to the AirbyteCatalog API model
 
@@ -2471,7 +2469,7 @@ class ConnectionsHandlerTest {
     private static final UUID DESTINATION_ID = UUID.randomUUID();
     private static final UUID DISCOVERED_CATALOG_ID = UUID.randomUUID();
     private static final io.airbyte.protocol.models.AirbyteCatalog airbyteCatalog =
-        CatalogHelpers.createAirbyteCatalog(SHOES, Field.of(SKU, JsonSchemaType.STRING));
+        io.airbyte.protocol.models.CatalogHelpers.createAirbyteCatalog(SHOES, Field.of(SKU, JsonSchemaType.STRING));
     private static final ConfiguredAirbyteCatalog configuredAirbyteCatalog =
         CatalogHelpers.createConfiguredAirbyteCatalog(SHOES, null, Field.of(SKU, JsonSchemaType.STRING));
     private static final String A_DIFFERENT_NAMESPACE = "a-different-namespace";
@@ -2563,12 +2561,12 @@ class ConnectionsHandlerTest {
       final ConfiguredAirbyteCatalog expectedCatalog = Jsons.clone(configuredAirbyteCatalog);
       expectedCatalog.getStreams().forEach(s -> s.getStream().withSourceDefinedCursor(false));
       expectedCatalog.getStreams()
-          .add(new ConfiguredAirbyteStream().withStream(new io.airbyte.protocol.models.AirbyteStream().withName(A_DIFFERENT_STREAM)
-              .withNamespace(A_DIFFERENT_NAMESPACE).withSupportedSyncModes(List.of(io.airbyte.protocol.models.SyncMode.FULL_REFRESH))
+          .add(new ConfiguredAirbyteStream().withStream(new io.airbyte.config.AirbyteStream().withName(A_DIFFERENT_STREAM)
+              .withNamespace(A_DIFFERENT_NAMESPACE).withSupportedSyncModes(List.of(io.airbyte.config.SyncMode.FULL_REFRESH))
               .withSourceDefinedCursor(false)
               .withDefaultCursorField(List.of()))
-              .withDestinationSyncMode(io.airbyte.protocol.models.DestinationSyncMode.OVERWRITE)
-              .withSyncMode(io.airbyte.protocol.models.SyncMode.FULL_REFRESH)
+              .withDestinationSyncMode(io.airbyte.config.DestinationSyncMode.OVERWRITE)
+              .withSyncMode(io.airbyte.config.SyncMode.FULL_REFRESH)
               .withCursorField(List.of()));
       final ArgumentCaptor<StandardSync> standardSyncArgumentCaptor = ArgumentCaptor.forClass(StandardSync.class);
       verify(configRepository).writeStandardSync(standardSyncArgumentCaptor.capture());
@@ -2587,7 +2585,7 @@ class ConnectionsHandlerTest {
       final StandardSync originalSync = Jsons.clone(standardSync);
       final Field newField = Field.of(A_DIFFERENT_COLUMN, JsonSchemaType.STRING);
       final io.airbyte.api.model.generated.AirbyteCatalog catalogWithDiff = CatalogConverter.toApi(
-          CatalogHelpers.createAirbyteCatalog(SHOES,
+          io.airbyte.protocol.models.CatalogHelpers.createAirbyteCatalog(SHOES,
               Field.of(SKU, JsonSchemaType.STRING),
               newField),
           SOURCE_VERSION);
@@ -2617,7 +2615,8 @@ class ConnectionsHandlerTest {
     @Test
     void diffCatalogGeneratesADiffAndUpdatesTheConnection() throws JsonValidationException, ConfigNotFoundException, IOException {
       final Field newField = Field.of(A_DIFFERENT_COLUMN, JsonSchemaType.STRING);
-      final var catalogWithDiff = CatalogHelpers.createAirbyteCatalog(SHOES, Field.of(SKU, JsonSchemaType.STRING), newField);
+      final var catalogWithDiff =
+          io.airbyte.protocol.models.CatalogHelpers.createAirbyteCatalog(SHOES, Field.of(SKU, JsonSchemaType.STRING), newField);
       final ActorCatalog discoveredCatalog = new ActorCatalog()
           .withCatalog(Jsons.jsonNode(catalogWithDiff))
           .withCatalogHash("")
@@ -2667,7 +2666,8 @@ class ConnectionsHandlerTest {
       when(configRepository.getStandardSync(CONNECTION_ID)).thenReturn(standardSync);
 
       final Field newField = Field.of(A_DIFFERENT_COLUMN, JsonSchemaType.STRING);
-      final var catalogWithDiff = CatalogHelpers.createAirbyteCatalog(SHOES, Field.of(SKU, JsonSchemaType.STRING), newField);
+      final var catalogWithDiff =
+          io.airbyte.protocol.models.CatalogHelpers.createAirbyteCatalog(SHOES, Field.of(SKU, JsonSchemaType.STRING), newField);
       final ActorCatalog discoveredCatalog = new ActorCatalog()
           .withCatalog(Jsons.jsonNode(catalogWithDiff))
           .withCatalogHash("")

@@ -9,14 +9,12 @@ import styles from "./StreamStatusIndicator.module.scss";
 import { ConnectionStatusIndicatorStatus } from "../ConnectionStatusIndicator";
 
 const ICON_BY_STATUS: Readonly<Record<ConnectionStatusIndicatorStatus, JSX.Element>> = {
-  actionRequired: <Icon type="errorFilled" title="error" />,
+  failed: <Icon type="errorFilled" title="error" />,
   disabled: <Icon type="pauseFilled" title="paused" />,
   paused: <Icon type="pauseFilled" title="paused" />,
-  error: <Icon type="warningFilled" title="warning" />,
-  late: <Icon type="clockFilled" title="late" />,
+  incomplete: <Icon type="warningFilled" title="warning" />,
   pending: <Icon type="pauseFilled" title="pending" />,
-  onTime: <Icon type="successFilled" title="on-time" />,
-  onTrack: <Icon type="successFilled" title="on-track" />,
+  synced: <Icon type="successFilled" title="synced" />,
   syncing: <CircleLoader title="syncing" className={styles.syncingIcon} />,
   clearing: <CircleLoader title="clearing" className={styles.syncingIcon} />,
   refreshing: <CircleLoader title="refreshing" className={styles.syncingIcon} />,
@@ -26,14 +24,12 @@ const ICON_BY_STATUS: Readonly<Record<ConnectionStatusIndicatorStatus, JSX.Eleme
 };
 
 const STYLE_BY_STATUS: Readonly<Record<ConnectionStatusIndicatorStatus, string>> = {
-  actionRequired: styles["status--actionRequired"],
+  failed: styles["status--failed"],
   disabled: styles["status--disabled"],
   paused: styles["status--disabled"],
-  error: styles["status--error"],
-  late: styles["status--late"],
+  incomplete: styles["status--incomplete"],
   pending: styles["status--pending"],
-  onTime: styles["status--upToDate"],
-  onTrack: styles["status--upToDate"],
+  synced: styles["status--upToDate"],
   syncing: styles["status--syncing"],
   clearing: styles["status--syncing"],
   refreshing: styles["status--syncing"],
@@ -43,14 +39,12 @@ const STYLE_BY_STATUS: Readonly<Record<ConnectionStatusIndicatorStatus, string>>
 };
 
 const BOX_STYLE_BY_STATUS: Readonly<Record<ConnectionStatusIndicatorStatus, string>> = {
-  actionRequired: styles["status--actionRequired-withBox"],
+  failed: styles["status--failed-withBox"],
   disabled: styles["status--disabled-withBox"],
   paused: styles["status--disabled-withBox"],
-  error: styles["status--error-withBox"],
-  late: styles["status--late-withBox"],
+  incomplete: styles["status--incomplete-withBox"],
   pending: styles["status--pending-withBox"],
-  onTime: styles["status--upToDate-withBox"],
-  onTrack: styles["status--upToDate-withBox"],
+  synced: styles["status--upToDate-withBox"],
   syncing: styles["status--syncing-withBox"],
   clearing: styles["status--syncing-withBox"],
   refreshing: styles["status--syncing-withBox"],

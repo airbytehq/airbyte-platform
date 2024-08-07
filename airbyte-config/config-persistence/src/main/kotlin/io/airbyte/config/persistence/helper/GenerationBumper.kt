@@ -1,10 +1,10 @@
 package io.airbyte.config.persistence.helper
 
+import io.airbyte.config.StreamDescriptor
 import io.airbyte.config.persistence.StreamGenerationRepository
 import io.airbyte.config.persistence.domain.Generation
 import io.airbyte.config.persistence.domain.StreamGeneration
 import io.airbyte.config.persistence.domain.StreamRefresh
-import io.airbyte.protocol.models.StreamDescriptor
 import jakarta.inject.Singleton
 import java.util.UUID
 

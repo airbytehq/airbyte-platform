@@ -7,11 +7,16 @@ package io.airbyte.connector_builder.controllers;
 import static io.airbyte.commons.auth.AuthRoleConstants.AUTHENTICATED_USER;
 
 import io.airbyte.connector_builder.api.generated.V1Api;
+import io.airbyte.connector_builder.api.model.generated.CheckContributionRead;
+import io.airbyte.connector_builder.api.model.generated.CheckContributionRequestBody;
+import io.airbyte.connector_builder.api.model.generated.GenerateContributionRequestBody;
+import io.airbyte.connector_builder.api.model.generated.GenerateContributionResponse;
 import io.airbyte.connector_builder.api.model.generated.HealthCheckRead;
 import io.airbyte.connector_builder.api.model.generated.ResolveManifest;
 import io.airbyte.connector_builder.api.model.generated.ResolveManifestRequestBody;
 import io.airbyte.connector_builder.api.model.generated.StreamRead;
 import io.airbyte.connector_builder.api.model.generated.StreamReadRequestBody;
+import io.airbyte.connector_builder.handlers.ConnectorContributionHandler;
 import io.airbyte.connector_builder.handlers.HealthHandler;
 import io.airbyte.connector_builder.handlers.ResolveManifestHandler;
 import io.airbyte.connector_builder.handlers.StreamHandler;
@@ -37,13 +42,16 @@ public class ConnectorBuilderController implements V1Api {
   private final HealthHandler healthHandler;
   private final StreamHandler streamHandler;
   private final ResolveManifestHandler resolveManifestHandler;
+  private final ConnectorContributionHandler connectorContributionHandler;
 
   public ConnectorBuilderController(final HealthHandler healthHandler,
                                     final ResolveManifestHandler resolveManifestHandler,
-                                    final StreamHandler streamHandler) {
+                                    final StreamHandler streamHandler,
+                                    final ConnectorContributionHandler connectorContributionHandler) {
     this.healthHandler = healthHandler;
     this.streamHandler = streamHandler;
     this.resolveManifestHandler = resolveManifestHandler;
+    this.connectorContributionHandler = connectorContributionHandler;
   }
 
   @Override
@@ -53,6 +61,24 @@ public class ConnectorBuilderController implements V1Api {
   @ExecuteOn(TaskExecutors.IO)
   public HealthCheckRead getHealthCheck() {
     return healthHandler.getHealthCheck();
+  }
+
+  @Override
+  @Post(uri = "/contribute/read",
+        produces = MediaType.APPLICATION_JSON)
+  @Secured({AUTHENTICATED_USER})
+  @ExecuteOn(TaskExecutors.IO)
+  public CheckContributionRead checkContribution(@Body final CheckContributionRequestBody checkContributionRequestBody) {
+    return connectorContributionHandler.checkContribution(checkContributionRequestBody);
+  }
+
+  @Override
+  @Post(uri = "/contribute/generate",
+        produces = MediaType.APPLICATION_JSON)
+  @Secured({AUTHENTICATED_USER})
+  @ExecuteOn(TaskExecutors.IO)
+  public GenerateContributionResponse generateContribution(@Body final GenerateContributionRequestBody generateContributionRequestBody) {
+    return connectorContributionHandler.generateContribution(generateContributionRequestBody);
   }
 
   @Override

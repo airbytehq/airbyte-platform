@@ -70,7 +70,7 @@ const ConnectorsView: React.FC<ConnectorsViewProps> = ({
     organizationId: workspace.organizationId,
   });
   const hasUploadCustomConnectorPermissions = useIntent("UploadCustomConnector", {
-    organizationId: workspace.organizationId,
+    workspaceId: workspace.workspaceId,
   });
   const allowUpdateConnectors = useFeature(FeatureItem.AllowUpdateConnectors) && hasUpdateConnectorsPermissions;
   const allowUploadCustomImage = useFeature(FeatureItem.AllowUploadCustomImage) && hasUploadCustomConnectorPermissions;

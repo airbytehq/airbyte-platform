@@ -15,4 +15,6 @@ $icon-padding: 5px;
 .icon {
   position: relative;
   vertical-align: middle;
+  display: flex;
+  align-items: center;
 }

@@ -3,20 +3,19 @@ package io.airbyte.commons.server.handlers
 import io.airbyte.api.model.generated.ActorDefinitionVersionRead
 import io.airbyte.api.model.generated.ConnectionStream
 import io.airbyte.api.model.generated.DestinationIdRequestBody
-import io.airbyte.api.model.generated.JobStatus
 import io.airbyte.api.model.generated.RefreshMode
 import io.airbyte.commons.server.handlers.StreamRefreshesHandler.Companion.connectionStreamsToStreamDescriptors
 import io.airbyte.commons.server.scheduler.EventRunner
 import io.airbyte.commons.server.support.CurrentUserService
+import io.airbyte.config.Job
 import io.airbyte.config.JobConfig
 import io.airbyte.config.StandardSync
+import io.airbyte.config.StreamDescriptor
 import io.airbyte.config.persistence.StreamRefreshesRepository
 import io.airbyte.config.persistence.domain.StreamRefresh
 import io.airbyte.data.services.ConnectionService
 import io.airbyte.data.services.ConnectionTimelineEventService
 import io.airbyte.persistence.job.JobPersistence
-import io.airbyte.persistence.job.models.Job
-import io.airbyte.protocol.models.StreamDescriptor
 import io.mockk.clearAllMocks
 import io.mockk.every
 import io.mockk.mockk
@@ -88,7 +87,7 @@ internal class StreamRefreshesHandlerTest {
     every { jobPersistence.getJob(any()) } returns
       Job(
         0L, JobConfig.ConfigType.REFRESH, "scope_id",
-        null, listOf(), io.airbyte.persistence.job.models.JobStatus.SUCCEEDED, 0L, 0L, 0L,
+        null, listOf(), io.airbyte.config.JobStatus.SUCCEEDED, 0L, 0L, 0L,
       )
     val result = streamRefreshesHandler.createRefreshesForConnection(connectionId, RefreshMode.TRUNCATE, connectionStream)
 
@@ -110,7 +109,7 @@ internal class StreamRefreshesHandlerTest {
     every { jobPersistence.getJob(any()) } returns
       Job(
         0L, JobConfig.ConfigType.REFRESH, "scope_id",
-        null, listOf(), io.airbyte.persistence.job.models.JobStatus.SUCCEEDED, 0L, 0L, 0L,
+        null, listOf(), io.airbyte.config.JobStatus.SUCCEEDED, 0L, 0L, 0L,
       )
     val result = streamRefreshesHandler.createRefreshesForConnection(connectionId, RefreshMode.TRUNCATE, listOf())
 

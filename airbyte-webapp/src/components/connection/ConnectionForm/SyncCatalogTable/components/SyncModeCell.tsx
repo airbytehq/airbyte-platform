@@ -1,6 +1,7 @@
 import { Row } from "@tanstack/react-table";
 import React, { useCallback } from "react";
 
+import { useGetDestinationDefinitionSpecification } from "core/api";
 import { AirbyteStreamConfiguration } from "core/api/types/AirbyteClient";
 import { useConnectionFormService } from "hooks/services/ConnectionForm/ConnectionFormService";
 
@@ -16,10 +17,10 @@ interface SyncModeCellProps {
 }
 
 export const SyncModeCell: React.FC<SyncModeCellProps> = ({ row, updateStreamField }) => {
-  const {
-    mode,
-    destDefinitionSpecification: { supportedDestinationSyncModes },
-  } = useConnectionFormService();
+  const { connection, mode } = useConnectionFormService();
+  const { supportedDestinationSyncModes } = useGetDestinationDefinitionSpecification(
+    connection.destination.destinationId
+  );
 
   const { stream, config } = row.original.streamNode;
 

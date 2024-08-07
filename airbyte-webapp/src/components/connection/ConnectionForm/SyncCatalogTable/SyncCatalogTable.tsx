@@ -41,7 +41,14 @@ import { TableControls } from "./components/TableControls";
 import { useInitialRowIndex } from "./hooks/useInitialRowIndex";
 import styles from "./SyncCatalogTable.module.scss";
 import { getRowChangeStatus, getSyncCatalogRows, isStreamRow } from "./utils";
-import { FormConnectionFormValues, SyncStreamFieldWithId } from "../formConfig";
+import { FormConnectionFormValues, SyncStreamFieldWithId, useInitialFormValues } from "../formConfig";
+
+export interface SyncCatalogTableProps {
+  /**
+   * Outer scrollable container element for virtualized sync catalog items
+   */
+  scrollParentContainer?: HTMLDivElement;
+}
 
 export interface SyncCatalogUIModel {
   /**
@@ -84,9 +91,10 @@ export interface SyncCatalogUIModel {
   subRows?: SyncCatalogUIModel[];
 }
 
-export const SyncCatalogTable: FC = () => {
+export const SyncCatalogTable: FC<SyncCatalogTableProps> = ({ scrollParentContainer }) => {
   const { formatMessage } = useIntl();
-  const { mode, initialValues } = useConnectionFormService();
+  const { mode, connection } = useConnectionFormService();
+  const initialValues = useInitialFormValues(connection, mode);
   const { control, trigger } = useFormContext<FormConnectionFormValues>();
   const { fields: streams, update } = useFieldArray({
     name: "syncCatalog.streams",
@@ -260,8 +268,8 @@ export const SyncCatalogTable: FC = () => {
     <table className={classnames(styles.table)} {...props} style={style} />
   );
 
-  const TableHead: TableComponents["TableHead"] = React.forwardRef((props, ref) => (
-    <thead ref={ref} className={classnames(styles.thead)} {...props} />
+  const TableHead: TableComponents["TableHead"] = React.forwardRef(({ style, ...restProps }, ref) => (
+    <thead ref={ref} className={classnames(styles.thead, styles.stickyTableHeader)} {...restProps} />
   ));
   TableHead.displayName = "TableHead";
 
@@ -310,7 +318,15 @@ export const SyncCatalogTable: FC = () => {
     <tbody>
       <tr className={classnames(styles.tr, styles.emptyPlaceholder)}>
         <td className={styles.td} colSpan={columns.length} style={{ textAlign: "center" }}>
-          No results
+          <Text bold color="grey" align="center">
+            <FormattedMessage
+              id={
+                deferredFilteringValue.length
+                  ? "connection.catalogTree.noMatchingStreams"
+                  : "connection.catalogTree.noStreams"
+              }
+            />
+          </Text>
         </td>
       </tr>
     </tbody>
@@ -331,7 +347,7 @@ export const SyncCatalogTable: FC = () => {
 
   return (
     <>
-      <Box p="md" pl="xl">
+      <Box p="md" pl="xl" className={styles.stickyControlsContainer}>
         {debugTable && (
           <Box p="md">
             {JSON.stringify(
@@ -373,11 +389,10 @@ export const SyncCatalogTable: FC = () => {
           </FlexContainer>
         </FlexContainer>
       </Box>
-      <Box pl="xl">
+      <Box pl="xl" className={styles.stickyTabsContainer}>
         <StreamsFilterTabs columnFilters={columnFilters} onTabSelect={onTabSelect} />
       </Box>
       <TableVirtuoso<SyncCatalogUIModel>
-        style={{ height: "50vh" }}
         totalCount={rows.length}
         initialTopMostItemIndex={initialTopMostItemIndex}
         components={{
@@ -389,6 +404,8 @@ export const SyncCatalogTable: FC = () => {
         fixedHeaderContent={headerContent}
         fixedItemHeight={40}
         increaseViewportBy={50}
+        useWindowScroll
+        customScrollParent={scrollParentContainer}
       />
     </>
   );

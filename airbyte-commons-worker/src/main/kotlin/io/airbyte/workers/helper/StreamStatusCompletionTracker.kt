@@ -1,9 +1,9 @@
 package io.airbyte.workers.helper
 
+import io.airbyte.config.ConfiguredAirbyteCatalog
 import io.airbyte.protocol.models.AirbyteMessage
 import io.airbyte.protocol.models.AirbyteStreamStatusTraceMessage
 import io.airbyte.protocol.models.AirbyteTraceMessage
-import io.airbyte.protocol.models.ConfiguredAirbyteCatalog
 import io.airbyte.protocol.models.StreamDescriptor
 import io.airbyte.workers.exception.WorkerException
 import io.airbyte.workers.internal.AirbyteMapper

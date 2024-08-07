@@ -29,6 +29,7 @@ import io.airbyte.workload.api.client.model.generated.WorkloadCancelRequest;
 import io.airbyte.workload.api.client.model.generated.WorkloadFailureRequest;
 import io.airbyte.workload.api.client.model.generated.WorkloadSuccessRequest;
 import java.nio.file.Path;
+import java.util.Optional;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -67,7 +68,7 @@ class ReplicationJobOrchestratorTest {
         mock(Configs.class),
         jobRunConfig,
         replicationWorkerFactory,
-        mock(AsyncStateManager.class),
+        Optional.of(mock(AsyncStateManager.class)),
         workloadApiClient,
         true,
         mock(JobOutputDocStore.class));
@@ -95,7 +96,7 @@ class ReplicationJobOrchestratorTest {
         mock(Configs.class),
         jobRunConfig,
         replicationWorkerFactory,
-        mock(AsyncStateManager.class),
+        Optional.of(mock(AsyncStateManager.class)),
         workloadApiClient,
         true,
         mock(JobOutputDocStore.class));
@@ -122,7 +123,7 @@ class ReplicationJobOrchestratorTest {
         mock(Configs.class),
         jobRunConfig,
         replicationWorkerFactory,
-        mock(AsyncStateManager.class),
+        Optional.of(mock(AsyncStateManager.class)),
         workloadApiClient,
         true,
         mock(JobOutputDocStore.class));
@@ -149,7 +150,7 @@ class ReplicationJobOrchestratorTest {
         mock(Configs.class),
         jobRunConfig,
         replicationWorkerFactory,
-        mock(AsyncStateManager.class),
+        Optional.of(mock(AsyncStateManager.class)),
         workloadApiClient,
         true,
         mock(JobOutputDocStore.class));

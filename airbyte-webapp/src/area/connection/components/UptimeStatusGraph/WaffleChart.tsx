@@ -40,21 +40,17 @@ interface InjectedStreamWaffleChartProps extends StreamWaffleChartProps {
   isTooltipActive: boolean;
 }
 
-type WaffleColor = "green" | "darkBlue" | "red" | "black" | "blue" | "empty";
+type WaffleColor = "green" | "red" | "yellow" | "blue" | "empty";
 const getCellColor = (streamStatus: ConnectionStatusIndicatorStatus): WaffleColor => {
   switch (streamStatus) {
-    case ConnectionStatusIndicatorStatus.OnTime:
-    case ConnectionStatusIndicatorStatus.OnTrack:
+    case ConnectionStatusIndicatorStatus.Synced:
       return "green";
 
-    case ConnectionStatusIndicatorStatus.Late:
-      return "darkBlue";
+    case ConnectionStatusIndicatorStatus.Incomplete:
+      return "yellow";
 
-    case ConnectionStatusIndicatorStatus.Error:
+    case ConnectionStatusIndicatorStatus.Failed:
       return "red";
-
-    case ConnectionStatusIndicatorStatus.ActionRequired:
-      return "black";
 
     case ConnectionStatusIndicatorStatus.Queued:
     case ConnectionStatusIndicatorStatus.Syncing:
@@ -176,7 +172,7 @@ export const Waffle: React.FC<StreamWaffleChartProps> = (props) => {
               continue;
             }
 
-            if (status === ConnectionStatusIndicatorStatus.OnTime) {
+            if (status === ConnectionStatusIndicatorStatus.Synced) {
               ontimeOperations.push(operation);
             } else {
               otherOperations.push(operation);
@@ -193,7 +189,7 @@ export const Waffle: React.FC<StreamWaffleChartProps> = (props) => {
 
         // tooltip highlight
         if (isTooltipActive && activeTooltipIndex >= 0) {
-          const coordinates = computeCellOperation(activeTooltipIndex, 0, ConnectionStatusIndicatorStatus.OnTime);
+          const coordinates = computeCellOperation(activeTooltipIndex, 0, ConnectionStatusIndicatorStatus.Synced);
           if (coordinates) {
             ctx.fillStyle = "rgba(255, 255, 255, 0.4)";
             ctx.fillRect(coordinates.x, coordinates.y, coordinates.width, availableHeight);

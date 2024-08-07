@@ -39,7 +39,11 @@ spec:
       {{- end }}
       initContainers:
         - name: keycloak-readiness-check
+          {{- if .Values.initContainers.keycloakReadinessCheck.image }}
+          image: {{ .Values.initContainers.keycloakReadinessCheck.image }}
+          {{- else }}
           image: curlimages/curl:8.1.1
+          {{- end }}
           command: [ "sh", "-c", "until curl --output /dev/null --head --fail http://${KEYCLOAK_INTERNAL_HOST}/auth/health/ready; do sleep 1; done;" ]
           env:
             - name: KEYCLOAK_INTERNAL_HOST

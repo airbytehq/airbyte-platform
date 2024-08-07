@@ -65,6 +65,7 @@ export const StreamFieldNameCell: React.FC<StreamFieldNameCellProps> = ({
     mode === "readonly" ||
     (config.syncMode === SyncMode.incremental && (isCursor || isChildFieldCursor)) ||
     (config.destinationSyncMode === DestinationSyncMode.append_dedup && (isPrimaryKey || isChildFieldPrimaryKey)) ||
+    (config.destinationSyncMode === DestinationSyncMode.overwrite_dedup && (isPrimaryKey || isChildFieldPrimaryKey)) ||
     isNestedField;
   const showTooltip = isDisabled && mode !== "readonly" && config?.selected;
 

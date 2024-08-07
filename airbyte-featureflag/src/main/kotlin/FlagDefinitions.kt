@@ -186,6 +186,12 @@ object WorkloadApiServerEnabled : EnvVar(envVar = "WORKLOAD_API_SERVER_ENABLED",
 
 object DiscoverPostprocessInTemporal : Permanent<Boolean>(key = "platform.discover-postprocess-in-temporal", default = false)
 
+object EnforceEmailUniqueness : Temporary<Boolean>(key = "platform.enforce-email-uniqueness", default = true)
+
 object RestrictLoginsForSSODomains : Temporary<Boolean>(key = "platform.restrict-logins-for-sso-domains", default = false)
 
 object ResetStreamsStateWhenDisabled : Temporary<Boolean>(key = "reset-stream-state-on-disable", default = false)
+
+object OrchestratorFetchesInputFromInit : Temporary<Boolean>(key = "orchestrator-fetches-from-init", default = false)
+
+object RefreshConfigBeforeSecretHydration : Temporary<Boolean>(key = "platform.refresh-config-before-secret-hydration", default = false)

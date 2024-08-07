@@ -8,8 +8,8 @@ import { ExternalLink } from "components/ui/Link";
 import { useCurrentWorkspaceId } from "area/workspace/utils";
 import { useFormatError } from "core/errors";
 import { getFrequencyFromScheduleData, useAnalyticsService, Action, Namespace } from "core/services/analytics";
+import { trackError } from "core/utils/datadog";
 import { links } from "core/utils/links";
-import { useAppMonitoringService } from "hooks/services/AppMonitoringService";
 import { useNotificationService } from "hooks/services/Notification";
 import { CloudRoutes } from "packages/cloud/cloudRoutePaths";
 import { RoutePaths } from "pages/routePaths";
@@ -41,7 +41,6 @@ import {
 import { SCOPE_WORKSPACE } from "../scopes";
 import {
   AirbyteCatalog,
-  ConnectionEventWithDetails,
   ConnectionEventsRequestBody,
   ConnectionScheduleData,
   ConnectionScheduleType,
@@ -107,6 +106,7 @@ interface CreateConnectionProps {
 
 export const useListConnectionEventsInfinite = (
   connectionEventsRequestBody: ConnectionEventsRequestBody,
+  enabled: boolean = true,
   pageSize: number = 50
 ) => {
   const requestOptions = useRequestOptions();
@@ -131,16 +131,18 @@ export const useListConnectionEventsInfinite = (
       };
     },
     {
+      enabled,
+      keepPreviousData: true,
       getPreviousPageParam: (firstPage) => (firstPage.pageParam > 0 ? firstPage.pageParam - 1 : undefined),
       getNextPageParam: (lastPage) => (lastPage.data.events.length < pageSize ? undefined : lastPage.pageParam + 1),
     }
   );
 };
 
-export const useGetConnectionEvent = (connectionEventId: string | null): ConnectionEventWithDetails | undefined => {
+export const useGetConnectionEvent = (connectionEventId: string | null) => {
   const requestOptions = useRequestOptions();
 
-  return useSuspenseQuery(
+  return useQuery(
     connectionsKeys.event(connectionEventId ?? ""),
     async () => {
       return await getConnectionEvent({ connectionEventId: connectionEventId ?? "" }, requestOptions);
@@ -175,7 +177,6 @@ export const useGetConnectionSyncProgress = (connectionId: string, enabled: bool
 export const useSyncConnection = () => {
   const requestOptions = useRequestOptions();
   const formatError = useFormatError();
-  const { trackError } = useAppMonitoringService();
   const queryClient = useQueryClient();
   const analyticsService = useAnalyticsService();
   const { registerNotification } = useNotificationService();
@@ -566,7 +567,6 @@ export const useCreateOrUpdateState = () => {
   const { formatMessage } = useIntl();
   const queryClient = useQueryClient();
   const analyticsService = useAnalyticsService();
-  const { trackError } = useAppMonitoringService();
   const { registerNotification } = useNotificationService();
 
   return useMutation(

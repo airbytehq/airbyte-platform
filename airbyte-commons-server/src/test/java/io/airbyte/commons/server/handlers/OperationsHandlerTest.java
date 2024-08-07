@@ -49,9 +49,9 @@ class OperationsHandlerTest {
   private static final String WEBHOOK_OPERATION_NAME = "fake-operation-name";
   private static final UUID WEBHOOK_CONFIG_ID = UUID.randomUUID();
   private static final UUID WEBHOOK_OPERATION_ID = UUID.randomUUID();
-  private static final Integer DBT_CLOUD_WEBHOOK_ACCOUNT_ID = 123;
-  private static final Integer DBT_CLOUD_WEBHOOK_JOB_ID = 456;
-  private static final Integer NEW_DBT_CLOUD_WEBHOOK_ACCOUNT_ID = 789;
+  private static final Long DBT_CLOUD_WEBHOOK_ACCOUNT_ID = 123L;
+  private static final Long DBT_CLOUD_WEBHOOK_JOB_ID = 456L;
+  private static final Long NEW_DBT_CLOUD_WEBHOOK_ACCOUNT_ID = 789L;
   public static final String EXECUTION_BODY = "{\"cause\": \"airbyte\"}";
   public static final String EXECUTION_URL_TEMPLATE = "https://cloud.getdbt.com/api/v2/accounts/%d/jobs/%d/run/";
   private ConfigRepository configRepository;

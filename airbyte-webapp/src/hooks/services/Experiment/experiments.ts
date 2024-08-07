@@ -13,11 +13,8 @@ export interface Experiments {
   "connection.columnSelection": boolean;
   "connection.onboarding.destinations": string;
   "connection.onboarding.sources": string;
-  "connection.streamCentricUI.errorMultiplier": number;
-  "connection.streamCentricUI.lateMultiplier": number;
   "connection.rateLimitedUI": boolean;
   "connection.timeline": boolean;
-  "connection.jobCancellationModal": boolean;
   "connector.airbyteCloudIpAddresses": string;
   "connector.suggestedSourceConnectors": string;
   "connector.suggestedDestinationConnectors": string;
@@ -27,4 +24,5 @@ export interface Experiments {
   "settings.showAdvancedSettings": boolean;
   "upcomingFeaturesPage.url": string;
   "connection.syncCatalogV2": boolean;
+  "connectorBuilder.contributeToMarketplace": boolean;
 }

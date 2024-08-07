@@ -10,7 +10,6 @@ required:
   - refreshType
 properties:
   streamDescriptor:
-    type: object
-    existingJavaType: io.airbyte.protocol.models.StreamDescriptor
+    "$ref": StreamDescriptor.yaml
   refreshType:
     "$ref": RefreshType.yaml

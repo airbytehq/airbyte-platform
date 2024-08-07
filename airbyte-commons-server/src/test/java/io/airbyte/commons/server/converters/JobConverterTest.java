@@ -32,15 +32,22 @@ import io.airbyte.api.model.generated.SynchronousJobRead;
 import io.airbyte.commons.enums.Enums;
 import io.airbyte.commons.server.scheduler.SynchronousJobMetadata;
 import io.airbyte.commons.version.AirbyteVersion;
+import io.airbyte.config.AirbyteStream;
+import io.airbyte.config.Attempt;
+import io.airbyte.config.AttemptStatus;
 import io.airbyte.config.Configs.WorkerEnvironment;
+import io.airbyte.config.ConfiguredAirbyteCatalog;
+import io.airbyte.config.ConfiguredAirbyteStream;
 import io.airbyte.config.FailureReason;
 import io.airbyte.config.FailureReason.FailureOrigin;
 import io.airbyte.config.FailureReason.FailureType;
+import io.airbyte.config.Job;
 import io.airbyte.config.JobConfig;
 import io.airbyte.config.JobConfig.ConfigType;
 import io.airbyte.config.JobOutput;
 import io.airbyte.config.JobOutput.OutputType;
 import io.airbyte.config.JobResetConnectionConfig;
+import io.airbyte.config.JobStatus;
 import io.airbyte.config.JobSyncConfig;
 import io.airbyte.config.RefreshConfig;
 import io.airbyte.config.RefreshStream;
@@ -51,13 +58,6 @@ import io.airbyte.config.StreamSyncStats;
 import io.airbyte.config.SyncStats;
 import io.airbyte.config.helpers.LogConfigs;
 import io.airbyte.featureflag.TestClient;
-import io.airbyte.persistence.job.models.Attempt;
-import io.airbyte.persistence.job.models.AttemptStatus;
-import io.airbyte.persistence.job.models.Job;
-import io.airbyte.persistence.job.models.JobStatus;
-import io.airbyte.protocol.models.AirbyteStream;
-import io.airbyte.protocol.models.ConfiguredAirbyteCatalog;
-import io.airbyte.protocol.models.ConfiguredAirbyteStream;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -107,7 +107,7 @@ class JobConverterTest {
         Arguments.of(
             new Job(1, ConfigType.REFRESH, null, new JobConfig()
                 .withRefresh(new RefreshConfig().withStreamsToRefresh(
-                    List.of(new RefreshStream().withStreamDescriptor(new io.airbyte.protocol.models.StreamDescriptor().withName("test"))))),
+                    List.of(new RefreshStream().withStreamDescriptor(new io.airbyte.config.StreamDescriptor().withName("test"))))),
                 null, null, null, 13, 37),
             Optional.of(new JobRefreshConfig().streamsToRefresh(List.of(new StreamDescriptor().name("test"))))),
         Arguments.of(
@@ -285,8 +285,8 @@ class JobConverterTest {
       final JobConfig resetConfig = new JobConfig()
           .withConfigType(ConfigType.RESET_CONNECTION)
           .withResetConnection(new JobResetConnectionConfig().withResetSourceConfiguration(new ResetSourceConfiguration().withStreamsToReset(List.of(
-              new io.airbyte.protocol.models.StreamDescriptor().withName(USERS),
-              new io.airbyte.protocol.models.StreamDescriptor().withName(ACCOUNTS)))));
+              new io.airbyte.config.StreamDescriptor().withName(USERS),
+              new io.airbyte.config.StreamDescriptor().withName(ACCOUNTS)))));
       final Job resetJob = new Job(
           JOB_ID,
           ConfigType.RESET_CONNECTION,

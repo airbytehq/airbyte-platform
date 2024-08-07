@@ -14,12 +14,13 @@ import io.micronaut.context.annotation.EachProperty
 data class IdentityProviderConfiguration(
   var domain: String? = null,
   var appName: String? = null,
+  var displayName: String? = null,
   var clientId: String? = null,
   var clientSecret: String? = null,
 ) {
   // Eventually, AuthOidcConfiguration will simply replace this class.
   // For now, we want to support airbyte.auth.identity-providers for backwards-compatibility.
   fun toOidcConfig(): OidcConfig {
-    return OidcConfig(domain!!, appName!!, clientId!!, clientSecret!!)
+    return OidcConfig(domain!!, appName!!, displayName ?: appName!!, clientId!!, clientSecret!!)
   }
 }

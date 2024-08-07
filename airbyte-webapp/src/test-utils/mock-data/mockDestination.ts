@@ -358,5 +358,5 @@ export const mockDestinationDefinitionSpecification: DestinationDefinitionSpecif
       logLines: [],
     },
   },
-  supportedDestinationSyncModes: ["overwrite", "append", "append_dedup"],
+  supportedDestinationSyncModes: ["overwrite", "overwrite_dedup", "append", "append_dedup"],
 };

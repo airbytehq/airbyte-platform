@@ -4,7 +4,7 @@
 
 package io.airbyte.commons.protocol.transform_models;
 
-import io.airbyte.protocol.models.StreamDescriptor;
+import io.airbyte.config.StreamDescriptor;
 import lombok.AllArgsConstructor;
 import lombok.EqualsAndHashCode;
 import lombok.ToString;

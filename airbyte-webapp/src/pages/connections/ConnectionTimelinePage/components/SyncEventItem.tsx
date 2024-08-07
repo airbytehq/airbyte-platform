@@ -1,17 +1,18 @@
-import { FormattedDate, FormattedMessage } from "react-intl";
+import { FormattedMessage } from "react-intl";
 import { InferType } from "yup";
 
 import { Box } from "components/ui/Box";
-import { FlexContainer, FlexItem } from "components/ui/Flex";
+import { FlexContainer } from "components/ui/Flex";
 import { Text } from "components/ui/Text";
 
 import { formatBytes } from "core/utils/numberHelper";
 import { useFormatDuration } from "core/utils/time";
 import { useLocalStorage } from "core/utils/useLocalStorage";
 
+import { ConnectionTimelineEventActions } from "../ConnectionTimelineEventActions";
 import { ConnectionTimelineEventIcon } from "../ConnectionTimelineEventIcon";
 import { ConnectionTimelineEventItem } from "../ConnectionTimelineEventItem";
-import { JobEventMenu } from "../JobEventMenu";
+import { ConnectionTimelineEventSummary } from "../ConnectionTimelineEventSummary";
 import { syncEventSchema } from "../types";
 import { getStatusByEventType, getStatusIcon, titleIdMap } from "../utils";
 
@@ -80,20 +81,19 @@ export const SyncEventItem: React.FC<SyncEventProps> = ({ syncEvent }) => {
   return (
     <ConnectionTimelineEventItem>
       <ConnectionTimelineEventIcon icon="sync" statusIcon={getStatusIcon(jobStatus)} />
-      <FlexItem grow>
+      <ConnectionTimelineEventSummary>
         <Text bold>
           <FormattedMessage id={titleId} />
         </Text>
         <Box pt="xs">
           <JobStats />
         </Box>
-      </FlexItem>
-      <FlexContainer direction="row" gap="xs" alignItems="center">
-        <Text color="grey400">
-          <FormattedDate value={syncEvent.createdAt * 1000} timeStyle="short" dateStyle="medium" />
-        </Text>
-        <JobEventMenu eventId={syncEvent.id} jobId={syncEvent.summary.jobId} />
-      </FlexContainer>
+      </ConnectionTimelineEventSummary>
+      <ConnectionTimelineEventActions
+        createdAt={syncEvent.createdAt}
+        eventId={syncEvent.id}
+        jobId={syncEvent.summary.jobId}
+      />
     </ConnectionTimelineEventItem>
   );
 };

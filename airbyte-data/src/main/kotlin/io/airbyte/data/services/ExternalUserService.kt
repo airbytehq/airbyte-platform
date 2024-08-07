@@ -9,4 +9,11 @@ interface ExternalUserService {
     authUserId: String,
     realm: String,
   )
+
+  fun deleteUserByEmailOnOtherRealms(
+    email: String,
+    realmToKeep: String,
+  )
+
+  fun getRealmByAuthUserId(authUserId: String): String?
 }

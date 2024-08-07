@@ -5,8 +5,8 @@ import { Form, FormControl } from "components/forms";
 import { FormSubmissionButtons } from "components/forms/FormSubmissionButtons";
 
 import { useCurrentWorkspace, useUpdateWorkspaceName } from "core/api";
+import { trackError } from "core/utils/datadog";
 import { useIntent } from "core/utils/rbac";
-import { useAppMonitoringService } from "hooks/services/AppMonitoringService";
 import { useNotificationService } from "hooks/services/Notification";
 
 interface UpdateWorkspaceNameFormValues {
@@ -22,7 +22,6 @@ export const UpdateWorkspaceNameForm = () => {
   const { formatMessage } = useIntl();
   const { mutateAsync: updateWorkspaceName } = useUpdateWorkspaceName();
   const { registerNotification } = useNotificationService();
-  const { trackError } = useAppMonitoringService();
   const canUpdateWorkspace = useIntent("UpdateWorkspace", { workspaceId, organizationId });
 
   const onSubmit = async ({ name }: UpdateWorkspaceNameFormValues) => {

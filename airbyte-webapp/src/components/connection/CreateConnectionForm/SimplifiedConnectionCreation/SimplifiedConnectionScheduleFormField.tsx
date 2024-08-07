@@ -241,7 +241,14 @@ const SimplifiedCronScheduleFormControl: React.FC<{ disabled: boolean }> = ({ di
                   <FormattedMessage id="form.cronExpression" />
                 </Text>
                 <Text size="sm" color="grey">
-                  <FormattedMessage id="form.cronExpression.subtitle" />
+                  <FormattedMessage
+                    id="form.cronExpression.subtitle"
+                    values={{
+                      lnk: (children: React.ReactNode) => (
+                        <ExternalLink href={links.cronReferenceLink}>{children}</ExternalLink>
+                      ),
+                    }}
+                  />
                 </Text>
               </FlexContainer>
             }

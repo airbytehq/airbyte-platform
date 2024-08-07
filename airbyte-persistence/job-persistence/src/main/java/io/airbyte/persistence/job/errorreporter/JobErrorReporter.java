@@ -40,21 +40,21 @@ public class JobErrorReporter {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(JobErrorReporter.class);
   private static final String FROM_TRACE_MESSAGE = "from_trace_message";
-  private static final String DEPLOYMENT_MODE_META_KEY = "deployment_mode";
-  private static final String AIRBYTE_VERSION_META_KEY = "airbyte_version";
-  private static final String FAILURE_ORIGIN_META_KEY = "failure_origin";
-  private static final String FAILURE_TYPE_META_KEY = "failure_type";
-  private static final String WORKSPACE_ID_META_KEY = "workspace_id";
-  private static final String WORKSPACE_URL_META_KEY = "workspace_url";
-  private static final String CONNECTION_ID_META_KEY = "connection_id";
-  private static final String CONNECTION_URL_META_KEY = "connection_url";
-  private static final String CONNECTOR_NAME_META_KEY = "connector_name";
-  private static final String CONNECTOR_REPOSITORY_META_KEY = "connector_repository";
-  private static final String CONNECTOR_DEFINITION_ID_META_KEY = "connector_definition_id";
-  private static final String CONNECTOR_RELEASE_STAGE_META_KEY = "connector_release_stage";
+  public static final String DEPLOYMENT_MODE_META_KEY = "deployment_mode";
+  public static final String AIRBYTE_VERSION_META_KEY = "airbyte_version";
+  public static final String FAILURE_ORIGIN_META_KEY = "failure_origin";
+  public static final String FAILURE_TYPE_META_KEY = "failure_type";
+  public static final String WORKSPACE_ID_META_KEY = "workspace_id";
+  public static final String WORKSPACE_URL_META_KEY = "workspace_url";
+  public static final String CONNECTION_ID_META_KEY = "connection_id";
+  public static final String CONNECTION_URL_META_KEY = "connection_url";
+  public static final String CONNECTOR_NAME_META_KEY = "connector_name";
+  public static final String CONNECTOR_REPOSITORY_META_KEY = "connector_repository";
+  public static final String CONNECTOR_DEFINITION_ID_META_KEY = "connector_definition_id";
+  public static final String CONNECTOR_RELEASE_STAGE_META_KEY = "connector_release_stage";
   private static final String CONNECTOR_INTERNAL_SUPPORT_LEVEL_META_KEY = "connector_internal_support_level";
   private static final String CONNECTOR_COMMAND_META_KEY = "connector_command";
-  private static final String JOB_ID_KEY = "job_id";
+  public static final String JOB_ID_KEY = "job_id";
 
   private static final Set<FailureType> UNSUPPORTED_FAILURETYPES =
       ImmutableSet.of(FailureType.CONFIG_ERROR, FailureType.MANUAL_CANCELLATION, FailureType.TRANSIENT_ERROR);

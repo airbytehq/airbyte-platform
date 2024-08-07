@@ -11,9 +11,13 @@ plugins {
 }
 
 dependencies {
-  // Micronaut dependencies)
+  // Micronaut dependencies
   annotationProcessor(platform(libs.micronaut.platform))
   annotationProcessor(libs.bundles.micronaut.annotation.processor)
+
+  ksp(platform(libs.micronaut.platform))
+  ksp(libs.bundles.micronaut.annotation.processor)
+  ksp(libs.micronaut.jaxrs.processor)
 
   implementation(libs.jackson.datatype)
   implementation(libs.jackson.databind)
@@ -46,15 +50,21 @@ dependencies {
   implementation(project(":oss:airbyte-config:config-persistence"))
   implementation(project(":oss:airbyte-config:init"))
   implementation(project(":oss:airbyte-metrics:metrics-lib"))
+  implementation(project(":oss:airbyte-api:problems-api"))
 
   implementation(libs.airbyte.protocol)
+
+  // Third-party dependencies
+  implementation("org.kohsuke:github-api:1.323")
+  implementation("org.yaml:snakeyaml:2.2")
+  implementation("io.pebbletemplates:pebble:3.2.2")
 
   runtimeOnly(libs.snakeyaml)
 
   testRuntimeOnly(libs.junit.jupiter.engine)
   testImplementation(libs.bundles.junit)
   testImplementation(libs.assertj.core)
-
+  testImplementation(libs.mockk)
   testImplementation(libs.junit.pioneer)
 }
 
@@ -137,6 +147,14 @@ val generateOpenApiServer = tasks.register<GenerateTask>("generateOpenApiServer"
 tasks.named("compileJava") {
   dependsOn(generateOpenApiServer)
 }
+
+afterEvaluate {
+  tasks.named("kspKotlin").configure {
+    mustRunAfter(generateOpenApiServer)
+  }
+}
+
+
 // Ensures that the generated models are compiled during the build step, so they are available for use at runtime
 
 sourceSets {
@@ -164,6 +182,10 @@ tasks.named<DockerBuildImage>("dockerBuildImage") {
 
 tasks.named("dockerCopyDistribution") {
   dependsOn(copyPythonDeps, generateOpenApiServer)
+}
+
+tasks.withType<Jar>().configureEach {
+  duplicatesStrategy = DuplicatesStrategy.EXCLUDE
 }
 
 private fun updateToJakartaApi(srcDir: File) {

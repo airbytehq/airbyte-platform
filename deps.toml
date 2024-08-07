@@ -5,7 +5,7 @@ commons_io = "2.7"
 connectors-testcontainers = "1.15.3"
 datadog-version = "1.31.2"
 docker-java = "3.2.8"
-fasterxml_version = "2.17.0"
+fasterxml_version = "2.17.2"
 failsafe = "3.3.2"
 flyway = "10.10.0"
 glassfish_version = "2.31"
@@ -15,23 +15,23 @@ jax-rs = "3.1.0"
 jna = "5.8.0"
 jmh = "1.37"
 jooq = "3.19.7"
-junit-jupiter = "5.10.2"
+junit-jupiter = "5.10.3"
 keycloak = "23.0.7" # should be kept in sync with airbyte-keycloak/Dockerfile base image version
 kotlin-logging = "5.1.0"
 kubernetes-client = "6.12.1"
 log4j = "2.23.1"
-lombok = "1.18.30"
-micronaut = "4.5.0"
+lombok = "1.18.34"
+micronaut = "4.5.1"
 micronaut-cache = "4.3.0"
-micronaut-data = "4.8.1"
+micronaut-data = "4.8.4"
 micronaut-email = "2.5.0"
 micronaut-jaxrs = "4.5.0"
 micronaut-jdbc = "5.6.0"
 micronaut-kotlin = "4.3.0"
 micronaut-micrometer = "5.7.0"
-micronaut-openapi = "6.11.0"
-micronaut-security = "4.9.0"
-micronaut-test = "4.3.0"
+micronaut-openapi = "6.11.1"
+micronaut-security = "4.9.1"
+micronaut-test = "4.4.0"
 moshi = "1.15.0"
 mockito = "5.8.0"
 mockito-kotlin = "5.2.1"
@@ -182,7 +182,7 @@ slf4j-api = { module = "org.slf4j:slf4j-api", version.ref = "slf4j" }
 slf4j-simple = { module = "org.slf4j:slf4j-simple", version.ref = "slf4j" }
 slugify = { module = "com.github.slugify:slugify", version = "2.4" }
 snakeyaml = { module = "org.yaml:snakeyaml", version = "2.2" }
-spotbugs-annotations = { module = "com.github.spotbugs:spotbugs-annotations", version = "4.8.2" }
+spotbugs-annotations = { module = "com.github.spotbugs:spotbugs-annotations", version = "4.8.6" }
 spring-core = { module = "org.springframework:spring-core", version = "6.1.6" }
 stripe = { module = "com.stripe:stripe-java", version = "20.102.0" }
 swagger-annotations = { module = "io.swagger:swagger-annotations", version.ref = "swagger" }

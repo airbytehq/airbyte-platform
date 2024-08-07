@@ -15,6 +15,7 @@ import io.airbyte.connector_builder.api.model.generated.ResolveManifestRequestBo
 import io.airbyte.connector_builder.api.model.generated.StreamRead;
 import io.airbyte.connector_builder.api.model.generated.StreamReadRequestBody;
 import io.airbyte.connector_builder.exceptions.AirbyteCdkInvalidInputException;
+import io.airbyte.connector_builder.handlers.ConnectorContributionHandler;
 import io.airbyte.connector_builder.handlers.HealthHandler;
 import io.airbyte.connector_builder.handlers.ResolveManifestHandler;
 import io.airbyte.connector_builder.handlers.StreamHandler;
@@ -31,6 +32,7 @@ class ConnectorBuilderControllerTest {
   private StreamRead streamReadResponse;
   private ResolveManifestRequestBody resolveManifestRequestBody;
   private ResolveManifest resolveManifest;
+  private ConnectorContributionHandler connectorContributionHandler;
 
   @BeforeEach
   void setup() {
@@ -42,8 +44,10 @@ class ConnectorBuilderControllerTest {
     this.streamReadResponse = mock(StreamRead.class);
     this.resolveManifestRequestBody = mock(ResolveManifestRequestBody.class);
     this.resolveManifest = mock(ResolveManifest.class);
+    this.connectorContributionHandler = mock(ConnectorContributionHandler.class);
 
-    this.controller = new ConnectorBuilderController(this.healthHandler, this.resolveManifestHandler, this.streamHandler);
+    this.controller =
+        new ConnectorBuilderController(this.healthHandler, this.resolveManifestHandler, this.streamHandler, this.connectorContributionHandler);
   }
 
   @Test

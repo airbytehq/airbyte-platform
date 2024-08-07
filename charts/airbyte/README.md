@@ -502,6 +502,7 @@ Helm chart to deploy airbyte
 | workload-launcher.affinity | object | `{}` |                                                                                                                                                                         |
 | workload-launcher.containerOrchestrator.enabled | bool | `true` | Enable or disable Orchestrator                                                                                                                                          |
 | workload-launcher.containerOrchestrator.image | string | `""` | Orchestrator image                                                                                                                                                      |
+| workload-launcher.connectorSidecar.image | string | `""` | Connector sidecar image                                                                                                                                                 |
 | workload-launcher.containerSecurityContext.allowPrivilegeEscalation | bool | `false` |                                                                                                                                                                         |
 | workload-launcher.containerSecurityContext.capabilities.drop[0] | string | `"ALL"` |                                                                                                                                                                         |
 | workload-launcher.containerSecurityContext.readOnlyRootFilesystem | bool | `false` |                                                                                                                                                                         |
@@ -540,4 +541,4 @@ Helm chart to deploy airbyte
 | workload-launcher.resources.limits | object | `{}` | The resources limits for the workload launcher container                                                                                                                |
 | workload-launcher.resources.requests | object | `{}` | The requested resources for the workload launcher container                                                                                                             |
 | workload-launcher.tolerations | list | `[]` | Tolerations for workload launcher pod assignment, see https://kubernetes.io/docs/concepts/configuration/taint-and-toleration/                                           |
-
+| workload-launcher.workloadInit.image | string | `""` | Workload Init image                                                                                                                                                 |

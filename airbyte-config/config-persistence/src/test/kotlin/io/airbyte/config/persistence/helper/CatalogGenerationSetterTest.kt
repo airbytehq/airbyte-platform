@@ -1,13 +1,13 @@
 package io.airbyte.config.persistence.helper
 
+import io.airbyte.config.AirbyteStream
+import io.airbyte.config.ConfiguredAirbyteCatalog
+import io.airbyte.config.ConfiguredAirbyteStream
+import io.airbyte.config.DestinationSyncMode
 import io.airbyte.config.RefreshStream
+import io.airbyte.config.StreamDescriptor
+import io.airbyte.config.SyncMode
 import io.airbyte.config.persistence.domain.Generation
-import io.airbyte.protocol.models.AirbyteStream
-import io.airbyte.protocol.models.ConfiguredAirbyteCatalog
-import io.airbyte.protocol.models.ConfiguredAirbyteStream
-import io.airbyte.protocol.models.DestinationSyncMode
-import io.airbyte.protocol.models.StreamDescriptor
-import io.airbyte.protocol.models.SyncMode
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
@@ -38,6 +38,11 @@ class CatalogGenerationSetterTest {
         streamName = "name1",
         streamNamespace = "namespace1",
         generationId = 1L,
+      ),
+      Generation(
+        streamName = "name2",
+        streamNamespace = "namespace1",
+        generationId = 3L,
       ),
       Generation(
         streamName = "name2",
@@ -150,7 +155,7 @@ class CatalogGenerationSetterTest {
   }
 
   @Test
-  fun `test that min gen is 0 for full refresh overwrite`() {
+  fun `test that min gen is 0 for full refresh overwrite and overwrite dedup`() {
     val catalog =
       ConfiguredAirbyteCatalog().withStreams(
         listOf(
@@ -168,6 +173,13 @@ class CatalogGenerationSetterTest {
           )
             .withSyncMode(SyncMode.FULL_REFRESH)
             .withDestinationSyncMode(DestinationSyncMode.APPEND),
+          ConfiguredAirbyteStream().withStream(
+            AirbyteStream()
+              .withName("name2")
+              .withNamespace("namespace1"),
+          )
+            .withSyncMode(SyncMode.FULL_REFRESH)
+            .withDestinationSyncMode(DestinationSyncMode.OVERWRITE_DEDUP),
         ),
       )
 
@@ -179,11 +191,16 @@ class CatalogGenerationSetterTest {
         generations = generations,
       )
 
+    assertEquals(3, updatedCatalog.streams.size)
     updatedCatalog.streams.forEach {
       if (it.stream.name == "name1" && it.stream.namespace == "namespace1") {
         assertEquals(1L, it.minimumGenerationId)
         assertEquals(jobId, it.syncId)
         assertEquals(1L, it.generationId)
+      } else if (it.stream.name == "name2" && it.stream.namespace == "namespace1") {
+        assertEquals(3L, it.minimumGenerationId)
+        assertEquals(jobId, it.syncId)
+        assertEquals(3L, it.generationId)
       } else {
         assertEquals(0L, it.minimumGenerationId)
         assertEquals(jobId, it.syncId)

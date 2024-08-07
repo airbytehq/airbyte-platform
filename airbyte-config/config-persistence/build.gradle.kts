@@ -19,6 +19,7 @@ dependencies {
   api(libs.bundles.micronaut.annotation)
 
   implementation(project(":oss:airbyte-commons"))
+  implementation(project(":oss:airbyte-commons-converters"))
   implementation(project(":oss:airbyte-commons-protocol"))
   implementation(project(":oss:airbyte-config:config-models"))
   implementation(project(":oss:airbyte-config:specs"))

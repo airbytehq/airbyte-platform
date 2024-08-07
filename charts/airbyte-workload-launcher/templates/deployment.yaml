@@ -1,3 +1,4 @@
+{{- if or (eq .Values.global.edition "community") (eq .Values.global.enterprise.workloadsOptIn true)}}
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -405,7 +406,7 @@ spec:
           value: "X-Airbyte-Auth"
         - name: AIRBYTE_API_AUTH_HEADER_VALUE
           value: "Internal worker"
-        {{- else if and (eq .Values.global.deploymentMode "oss") (eq .Values.global.auth.enabled true) }}
+        {{- else if and (eq .Values.global.deploymentMode "oss") .Values.global.auth.enabled }}
         # Self-Managed Enterprise and Community w/ auth enabled use the same auth header, just
         # splitting into two separate blocks for readability.
         - name: AIRBYTE_API_AUTH_HEADER_NAME
@@ -453,6 +454,10 @@ spec:
             secretKeyRef:
               name: {{ include "airbyte.secretStoreName" .Values.global.secretsManager.secretsManagerSecretName }}
               key: {{ include "airbyte.googleSecretManagerCredentialsSecretKey" .Values.global.secretsManager.googleSecretManager.credentialsSecretKey }}
+        - name: SECRET_STORE_GCP_SECRET_NAME
+          value: {{ include "airbyte.secretStoreName" .Values.global.secretsManager.secretsManagerSecretName }}
+        - name: SECRET_STORE_GCP_SECRET_KEY
+          value: {{ include "airbyte.googleSecretManagerCredentialsSecretKey" .Values.global.secretsManager.googleSecretManager.credentialsSecretKey }}
         {{- end }}
 
         # Values for vault secrets
@@ -662,3 +667,4 @@ spec:
       {{- if .Values.global.extraVolumes }}
 {{- toYaml .Values.global.extraVolumes | nindent 6 }}
       {{- end }}
+{{- end }}

@@ -9,7 +9,7 @@ import { Button } from "components/ui/Button";
 import { FlexContainer } from "components/ui/Flex";
 import { Text } from "components/ui/Text";
 
-import { HttpError } from "core/api";
+import { HttpError, useGetInstanceConfiguration } from "core/api";
 import { useAuthService } from "core/services/auth";
 
 import styles from "./SimpleAuthLoginForm.module.scss";
@@ -27,6 +27,7 @@ const simpleAuthLoginFormSchema = yup.object().shape({
 export const SimpleAuthLoginForm: React.FC = () => {
   const [loginError, setLoginError] = useState<boolean>(false);
   const { login } = useAuthService();
+  const { defaultOrganizationEmail } = useGetInstanceConfiguration();
 
   if (!login) {
     throw new Error("Login function not available");
@@ -34,7 +35,7 @@ export const SimpleAuthLoginForm: React.FC = () => {
 
   return (
     <Form<SimpleAuthLoginFormValues>
-      defaultValues={{ username: "", password: "" }}
+      defaultValues={{ username: defaultOrganizationEmail, password: "" }}
       schema={simpleAuthLoginFormSchema}
       onSubmit={login}
       onError={(error) => {
@@ -50,7 +51,7 @@ export const SimpleAuthLoginForm: React.FC = () => {
       }}
       reValidateMode="onChange"
     >
-      <FormControl fieldType="input" name="username" label="Username" autoComplete="on" />
+      <FormControl fieldType="input" name="username" label="Email" autoComplete="on" type="email" />
       <FormControl fieldType="input" name="password" label="Password" autoComplete="on" type="password" />
       <SubmitButton />
       {loginError && (

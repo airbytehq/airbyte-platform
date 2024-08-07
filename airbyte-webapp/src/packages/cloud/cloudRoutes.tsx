@@ -45,7 +45,6 @@ const CloudWorkspacesPage = React.lazy(() => import("packages/cloud/views/worksp
 const AuthLayout = React.lazy(() => import("packages/cloud/views/auth"));
 const BillingPage = React.lazy(() => import("packages/cloud/views/billing"));
 const UpcomingFeaturesPage = React.lazy(() => import("packages/cloud/views/UpcomingFeaturesPage"));
-const SpeakeasyRedirectPage = React.lazy(() => import("pages/SpeakeasyRedirectPage"));
 
 const ConnectionsRoutes = React.lazy(() => import("pages/connections/ConnectionsRoutes"));
 
@@ -146,7 +145,6 @@ const CloudMainViewRoutes = () => {
 
   return (
     <Routes>
-      <Route path={RoutePaths.SpeakeasyRedirect} element={<SpeakeasyRedirectPage />} />
       <Route path={RoutePaths.Workspaces} element={<CloudWorkspacesPage />} />
       <Route path={CloudRoutes.AcceptInvitation} element={<AcceptInvitation />} />
       <Route

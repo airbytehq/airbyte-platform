@@ -9,29 +9,24 @@ import { useInitialFormValues } from "./formConfig";
 
 jest.mock("core/api", () => ({
   useCurrentWorkspace: () => mockWorkspace,
+  useGetDestinationDefinitionSpecification: () => mockDestinationDefinitionSpecification,
 }));
 
 describe("#useInitialFormValues", () => {
   it("should generate initial values w/ mode: readonly", () => {
-    const { result } = renderHook(() =>
-      useInitialFormValues(mockConnection, mockDestinationDefinitionSpecification, "readonly")
-    );
+    const { result } = renderHook(() => useInitialFormValues(mockConnection, "readonly"));
     expect(result.current).toMatchSnapshot();
     expect(result.current.name).toBeDefined();
   });
 
   it("should generate initial values w/ mode: create", () => {
-    const { result } = renderHook(() =>
-      useInitialFormValues(mockConnection, mockDestinationDefinitionSpecification, "create")
-    );
+    const { result } = renderHook(() => useInitialFormValues(mockConnection, "create"));
     expect(result.current).toMatchSnapshot();
     expect(result.current.name).toBeDefined();
   });
 
   it("should generate initial values w/ mode: edit", () => {
-    const { result } = renderHook(() =>
-      useInitialFormValues(mockConnection, mockDestinationDefinitionSpecification, "edit")
-    );
+    const { result } = renderHook(() => useInitialFormValues(mockConnection, "edit"));
     expect(result.current).toMatchSnapshot();
     expect(result.current.name).toBeDefined();
   });
@@ -39,9 +34,7 @@ describe("#useInitialFormValues", () => {
   it("should pick best sync mode in create mode", () => {
     const connection = cloneDeep(mockConnection);
     connection.syncCatalog.streams[0].stream!.supportedSyncModes = ["full_refresh", "incremental"];
-    const { result } = renderHook(() =>
-      useInitialFormValues(connection, mockDestinationDefinitionSpecification, "create")
-    );
+    const { result } = renderHook(() => useInitialFormValues(connection, "create"));
     expect(result.current.syncCatalog.streams[0].config?.syncMode).toBe("incremental");
     expect(result.current.syncCatalog.streams[0].config?.destinationSyncMode).toBe("append_dedup");
   });
@@ -50,9 +43,7 @@ describe("#useInitialFormValues", () => {
     const connection = cloneDeep(mockConnection);
     connection.syncCatalog.streams[0].stream!.supportedSyncModes = ["full_refresh", "incremental"];
     connection.syncCatalog.streams[0].config!.destinationSyncMode = "append";
-    const { result } = renderHook(() =>
-      useInitialFormValues(connection, mockDestinationDefinitionSpecification, "readonly")
-    );
+    const { result } = renderHook(() => useInitialFormValues(connection, "readonly"));
     expect(result.current.syncCatalog.streams[0].config?.syncMode).toBe("full_refresh");
     expect(result.current.syncCatalog.streams[0].config?.destinationSyncMode).toBe("append");
   });
@@ -62,9 +53,7 @@ describe("#useInitialFormValues", () => {
     connection.syncCatalog.streams[0].stream!.supportedSyncModes = ["full_refresh", "incremental"];
     connection.syncCatalog.streams[0].config!.destinationSyncMode = "append";
 
-    const { result } = renderHook(() =>
-      useInitialFormValues(connection, mockDestinationDefinitionSpecification, "edit")
-    );
+    const { result } = renderHook(() => useInitialFormValues(connection, "edit"));
     expect(result.current.syncCatalog.streams[0].config?.syncMode).toBe("full_refresh");
     expect(result.current.syncCatalog.streams[0].config?.destinationSyncMode).toBe("append");
   });

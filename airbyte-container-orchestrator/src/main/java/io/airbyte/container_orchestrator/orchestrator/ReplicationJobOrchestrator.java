@@ -51,7 +51,7 @@ public class ReplicationJobOrchestrator implements JobOrchestrator<ReplicationIn
   private final JobRunConfig jobRunConfig;
   private final ReplicationWorkerFactory replicationWorkerFactory;
   // Used by the orchestrator to mark the job RUNNING once the relevant pods are spun up.
-  private final AsyncStateManager asyncStateManager;
+  private final Optional<AsyncStateManager> asyncStateManager;
   private final WorkloadApiClient workloadApiClient;
   private final boolean workloadEnabled;
   private final JobOutputDocStore jobOutputDocStore;
@@ -60,7 +60,7 @@ public class ReplicationJobOrchestrator implements JobOrchestrator<ReplicationIn
                                     final Configs configs,
                                     final JobRunConfig jobRunConfig,
                                     final ReplicationWorkerFactory replicationWorkerFactory,
-                                    final AsyncStateManager asyncStateManager,
+                                    final Optional<AsyncStateManager> asyncStateManager,
                                     final WorkloadApiClient workloadApiClient,
                                     final boolean workloadEnabled,
                                     final JobOutputDocStore jobOutputDocStore) {
@@ -175,7 +175,7 @@ public class ReplicationJobOrchestrator implements JobOrchestrator<ReplicationIn
   }
 
   private void markJobRunning() {
-    asyncStateManager.write(AsyncKubePodStatus.RUNNING);
+    asyncStateManager.ifPresent(manager -> manager.write(AsyncKubePodStatus.RUNNING));
   }
 
 }

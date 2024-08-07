@@ -289,7 +289,7 @@ class ReplicationInputHydratorTest {
             null)));
     final var replicationInput = replicationInputHydrator.getHydratedReplicationInput(input);
     assertEquals(1, replicationInput.getCatalog().getStreams().size());
-    assertEquals(io.airbyte.protocol.models.SyncMode.FULL_REFRESH, replicationInput.getCatalog().getStreams().getFirst().getSyncMode());
+    assertEquals(io.airbyte.config.SyncMode.FULL_REFRESH, replicationInput.getCatalog().getStreams().getFirst().getSyncMode());
   }
 
   @ParameterizedTest

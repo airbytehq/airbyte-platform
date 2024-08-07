@@ -18,6 +18,7 @@ projectDir=(
   "workers"
   "workload-api-server"
   "workload-launcher"
+  "workload-init-container"
   "keycloak"
   "keycloak-setup"
 )
@@ -53,13 +54,14 @@ for workdir in "${projectDir[@]}"
     echo "Publishing airbyte/$artifactName..."
     sleep 1
 
-    docker buildx create --use --name $artifactName &&      \
+    docker buildx create --use --driver=docker-container --name $artifactName && \
     docker buildx build -t "airbyte/$artifactName:$VERSION" \
       --platform linux/amd64,linux/arm64                    \
       --build-arg VERSION=$VERSION                          \
       --build-arg ALPINE_IMAGE=$ALPINE_IMAGE                \
       --build-arg POSTGRES_IMAGE=$POSTGRES_IMAGE            \
       --build-arg JDK_VERSION=$JDK_VERSION                  \
+      --sbom=true                                           \
       --push                                                \
       airbyte-$workdir/build/airbyte/docker
     docker buildx rm $artifactName

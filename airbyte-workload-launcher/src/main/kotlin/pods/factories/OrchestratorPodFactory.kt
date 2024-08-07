@@ -45,7 +45,8 @@ class OrchestratorPodFactory(
     nodeSelectors: Map<String, String>,
     kubePodInfo: KubePodInfo,
     annotations: Map<String, String>,
-    extraEnvVars: List<EnvVar>,
+    runtimeEnvVars: List<EnvVar>,
+    useFetchingInit: Boolean,
   ): Pod {
     val volumes: MutableList<Volume> = ArrayList()
     val volumeMounts: MutableList<VolumeMount> = ArrayList()
@@ -68,7 +69,14 @@ class OrchestratorPodFactory(
 
     val containerResources = KubePodProcess.getResourceRequirementsBuilder(resourceRequirements).build()
 
-    val initContainer = initContainerFactory.create(containerResources, volumeMounts)
+    val envVars = orchestratorEnvSingleton.orchestratorEnvVars(connectionId) + runtimeEnvVars
+
+    val initContainer =
+      if (useFetchingInit) {
+        initContainerFactory.createFetching(containerResources, volumeMounts, runtimeEnvVars)
+      } else {
+        initContainerFactory.createWaiting(containerResources, volumeMounts)
+      }
 
     val mainContainer =
       ContainerBuilder()
@@ -76,7 +84,7 @@ class OrchestratorPodFactory(
         .withImage(kubePodInfo.mainContainerInfo.image)
         .withImagePullPolicy(kubePodInfo.mainContainerInfo.pullPolicy)
         .withResources(containerResources)
-        .withEnv(orchestratorEnvSingleton.orchestratorEnvVars(connectionId) + extraEnvVars)
+        .withEnv(envVars)
         .withPorts(containerPorts)
         .withVolumeMounts(volumeMounts)
         .withSecurityContext(containerSecurityContext())

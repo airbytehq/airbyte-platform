@@ -2,19 +2,21 @@ import { autoUpdate, useFloating, offset, flip } from "@floating-ui/react-dom";
 import { Menu } from "@headlessui/react";
 import classNames from "classnames";
 import React, { AnchorHTMLAttributes } from "react";
+import { createPortal } from "react-dom";
 // eslint-disable-next-line no-restricted-imports
 import { Link, LinkProps } from "react-router-dom";
 
 import { Text } from "components/ui/Text";
+import { Tooltip } from "components/ui/Tooltip";
 
 import styles from "./DropdownMenu.module.scss";
 import { DropdownMenuProps, MenuItemContentProps, DropdownMenuOptionType, DropdownMenuOptionAnchorType } from "./types";
 
-const MenuItemContent: React.FC<React.PropsWithChildren<MenuItemContentProps>> = ({ data }) => {
+const MenuItemContent: React.FC<React.PropsWithChildren<MenuItemContentProps>> = ({ data, textSize }) => {
   return (
     <>
       {data?.icon && <span className={styles.icon}>{data.icon}</span>}
-      <Text className={styles.text} size="lg">
+      <Text className={styles.text} size={textSize}>
         {data.displayName}
       </Text>
     </>
@@ -27,6 +29,7 @@ export const DropdownMenu: React.FC<DropdownMenuProps> = ({
   onChange,
   placement = "bottom",
   displacement = 5,
+  textSize = "lg",
   ...restProps
 }) => {
   const { x, y, reference, floating, strategy } = useFloating({
@@ -46,7 +49,6 @@ export const DropdownMenu: React.FC<DropdownMenuProps> = ({
 
   const elementProps = (item: DropdownMenuOptionType, active: boolean) => {
     return {
-      title: item.displayName,
       onClick: () => onChange && onChange(item),
       className: classNames(styles.item, item?.className, {
         [styles.iconPositionLeft]: (item?.iconPosition === "left" && item.icon) || !item?.iconPosition,
@@ -59,50 +61,63 @@ export const DropdownMenu: React.FC<DropdownMenuProps> = ({
     } as LinkProps | AnchorHTMLAttributes<Element>;
   };
 
+  const menuItem = (item: DropdownMenuOptionType, index: number) => (
+    <Menu.Item key={index} disabled={item.disabled}>
+      {({ active }) =>
+        item.as === "a"
+          ? React.createElement(
+              item.internal ? Link : "a",
+              { ...elementProps(item, active), ...anchorProps(item) },
+              <MenuItemContent data={item} textSize={textSize} />
+            )
+          : React.createElement(
+              item.as ?? "button",
+              { ...elementProps(item, active) },
+              <MenuItemContent data={item} textSize={textSize} />
+            )
+      }
+    </Menu.Item>
+  );
+
   return (
     <Menu ref={reference} as="div" {...(restProps["data-testid"] && { "data-testid": restProps["data-testid"] })}>
       {({ open }) => (
         <>
           <Menu.Button as={React.Fragment}>{children({ open })}</Menu.Button>
-          <Menu.Items
-            ref={floating}
-            className={styles.items}
-            style={{
-              position: strategy,
-              top: y ?? 0,
-              left: x ?? 0,
-            }}
-          >
-            {options.map((item, index) => {
-              if (item.as === "separator") {
-                return <div role="presentation" className={styles.separator} key={index} />;
-              }
-              if (item.as === "div") {
-                return (
-                  <div className={item.className} key={index}>
-                    {item.children}
+          {createPortal(
+            <Menu.Items
+              ref={floating}
+              className={styles.items}
+              style={{
+                position: strategy,
+                top: y ?? 0,
+                left: x ?? 0,
+              }}
+            >
+              {options.map((item, index) => {
+                if (item.as === "separator") {
+                  return <div role="presentation" className={styles.separator} key={index} />;
+                }
+                if (item.as === "div") {
+                  return (
+                    <div className={item.className} key={index}>
+                      {item.children}
+                    </div>
+                  );
+                }
+                return item.tooltipContent != null ? (
+                  <div>
+                    <Tooltip control={menuItem(item, index)} placement="left">
+                      {item.tooltipContent}
+                    </Tooltip>
                   </div>
+                ) : (
+                  menuItem(item, index)
                 );
-              }
-              return (
-                <Menu.Item key={index} disabled={item.disabled}>
-                  {({ active }) =>
-                    item.as === "a"
-                      ? React.createElement(
-                          item.internal ? Link : "a",
-                          { ...elementProps(item, active), ...anchorProps(item) },
-                          <MenuItemContent data={item} />
-                        )
-                      : React.createElement(
-                          item.as ?? "button",
-                          { ...elementProps(item, active) },
-                          <MenuItemContent data={item} />
-                        )
-                  }
-                </Menu.Item>
-              );
-            })}
-          </Menu.Items>
+              })}
+            </Menu.Items>,
+            document.body
+          )}
         </>
       )}
     </Menu>

@@ -35,7 +35,7 @@ export const SimplifiedDestinationStreamPrefixNameFormField: React.FC<{ disabled
                     <FormattedMessage id="form.optional" />
                   </Text>
                 </Text>
-                <Text size="sm" color="grey" italicized>
+                <Text size="sm" color="grey">
                   <FormattedMessage id="form.prefix.subtitle" />
                 </Text>
               </FlexContainer>

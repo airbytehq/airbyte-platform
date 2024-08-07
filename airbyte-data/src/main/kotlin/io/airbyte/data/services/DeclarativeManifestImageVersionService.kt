@@ -3,12 +3,9 @@ package io.airbyte.data.services
 import io.airbyte.data.repositories.entities.DeclarativeManifestImageVersion
 
 interface DeclarativeManifestImageVersionService {
-  fun writeDeclarativeManifestImageVersion(
-    majorVersion: Int,
-    imageVersion: String,
-  ): DeclarativeManifestImageVersion
+  fun writeDeclarativeManifestImageVersion(declarativeManifestImageVersion: DeclarativeManifestImageVersion): DeclarativeManifestImageVersion
 
-  fun getImageVersionByMajorVersion(majorVersion: Int): String
+  fun getDeclarativeManifestImageVersionByMajorVersion(majorVersion: Int): DeclarativeManifestImageVersion
 
   fun listDeclarativeManifestImageVersions(): List<DeclarativeManifestImageVersion>
 }

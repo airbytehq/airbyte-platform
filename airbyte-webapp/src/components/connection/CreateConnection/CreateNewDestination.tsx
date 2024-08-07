@@ -10,7 +10,7 @@ import { Button } from "components/ui/Button";
 
 import { useSuggestedDestinations } from "area/connector/utils";
 import { useCreateDestination, useDestinationDefinitionList } from "core/api";
-import { AppActionCodes, useAppMonitoringService } from "hooks/services/AppMonitoringService";
+import { AppActionCodes, trackAction } from "core/utils/datadog";
 import { useFormChangeTrackerService } from "hooks/services/FormChangeTracker";
 
 import { BackToDefineSourceButton } from "./BackToDefineSourceButton";
@@ -25,7 +25,6 @@ export const CreateNewDestination: React.FC = () => {
   const suggestedDestinationDefinitionIds = useSuggestedDestinations();
 
   const { destinationDefinitions } = useDestinationDefinitionList();
-  const { trackAction } = useAppMonitoringService();
   const { mutateAsync: createDestination } = useCreateDestination();
 
   const { clearAllFormChanges } = useFormChangeTrackerService();

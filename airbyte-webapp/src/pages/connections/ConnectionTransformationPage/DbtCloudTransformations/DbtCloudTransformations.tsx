@@ -2,7 +2,6 @@ import React from "react";
 
 import { useCurrentWorkspaceId } from "area/workspace/utils";
 import { useAvailableDbtJobs, useDbtIntegration } from "core/api/cloud";
-import { useAppMonitoringService } from "hooks/services/AppMonitoringService";
 import { useConnectionEditService } from "hooks/services/ConnectionEdit/ConnectionEditService";
 
 import { DbtCloudErrorBoundary } from "./DbtCloudErrorBoundary";
@@ -42,11 +41,10 @@ export const DbtCloudTransformations: React.FC = () => {
   /**
    * we can't use hooks inside the class component, so we to pass them as props
    */
-  const { trackError } = useAppMonitoringService();
   const workspaceId = useCurrentWorkspaceId();
 
   return hasDbtIntegration ? (
-    <DbtCloudErrorBoundary trackError={trackError} workspaceId={workspaceId}>
+    <DbtCloudErrorBoundary workspaceId={workspaceId}>
       <DbtCloudTransformationsWithDbtIntegration />
     </DbtCloudErrorBoundary>
   ) : (

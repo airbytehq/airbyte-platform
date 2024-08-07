@@ -71,6 +71,7 @@ import io.airbyte.commons.server.converters.ConfigurationUpdate;
 import io.airbyte.commons.server.converters.JobConverter;
 import io.airbyte.commons.server.errors.ValueConflictKnownException;
 import io.airbyte.commons.server.handlers.helpers.CatalogConverter;
+import io.airbyte.commons.server.handlers.helpers.ConnectionTimelineEventHelper;
 import io.airbyte.commons.server.handlers.helpers.NotificationHelper;
 import io.airbyte.commons.server.helpers.DestinationHelpers;
 import io.airbyte.commons.server.helpers.SourceHelpers;
@@ -89,7 +90,9 @@ import io.airbyte.config.ActorDefinitionVersion;
 import io.airbyte.config.Configs.WorkerEnvironment;
 import io.airbyte.config.ConnectorJobOutput;
 import io.airbyte.config.DestinationConnection;
+import io.airbyte.config.Job;
 import io.airbyte.config.JobConfig.ConfigType;
+import io.airbyte.config.JobStatus;
 import io.airbyte.config.JobTypeResourceLimit;
 import io.airbyte.config.JobTypeResourceLimit.JobType;
 import io.airbyte.config.NotificationItem;
@@ -103,6 +106,7 @@ import io.airbyte.config.StandardSourceDefinition;
 import io.airbyte.config.StandardSync;
 import io.airbyte.config.StandardSyncOperation;
 import io.airbyte.config.StandardWorkspace;
+import io.airbyte.config.StreamDescriptor;
 import io.airbyte.config.WorkloadPriority;
 import io.airbyte.config.helpers.LogConfigs;
 import io.airbyte.config.persistence.ActorDefinitionVersionHelper;
@@ -124,8 +128,6 @@ import io.airbyte.persistence.job.JobPersistence;
 import io.airbyte.persistence.job.WebUrlHelper;
 import io.airbyte.persistence.job.factory.OAuthConfigSupplier;
 import io.airbyte.persistence.job.factory.SyncJobFactory;
-import io.airbyte.persistence.job.models.Job;
-import io.airbyte.persistence.job.models.JobStatus;
 import io.airbyte.persistence.job.tracker.JobTracker;
 import io.airbyte.protocol.models.AirbyteCatalog;
 import io.airbyte.protocol.models.CatalogHelpers;
@@ -133,7 +135,6 @@ import io.airbyte.protocol.models.ConnectorSpecification;
 import io.airbyte.protocol.models.DestinationSyncMode;
 import io.airbyte.protocol.models.Field;
 import io.airbyte.protocol.models.JsonSchemaType;
-import io.airbyte.protocol.models.StreamDescriptor;
 import io.airbyte.validation.json.JsonSchemaValidator;
 import io.airbyte.validation.json.JsonValidationException;
 import java.io.IOException;
@@ -267,6 +268,7 @@ class SchedulerHandlerTest {
   private CurrentUserService currentUserService;
   private StreamRefreshesHandler streamRefreshesHandler;
   private NotificationHelper notificationHelper;
+  private ConnectionTimelineEventHelper connectionTimelineEventHelper;
 
   @BeforeEach
   void setup() throws JsonValidationException, ConfigNotFoundException, IOException {
@@ -320,6 +322,7 @@ class SchedulerHandlerTest {
     streamRefreshesHandler = mock(StreamRefreshesHandler.class);
     when(streamRefreshesHandler.getRefreshesForConnection(any())).thenReturn(new ArrayList<>());
     notificationHelper = mock(NotificationHelper.class);
+    connectionTimelineEventHelper = mock(ConnectionTimelineEventHelper.class);
 
     schedulerHandler = new SchedulerHandler(
         configRepository,
@@ -344,10 +347,8 @@ class SchedulerHandlerTest {
         connectorDefinitionSpecificationHandler,
         workspaceService,
         secretPersistenceConfigService,
-        connectionEventService,
-        currentUserService,
         streamRefreshesHandler,
-        notificationHelper);
+        notificationHelper, connectionTimelineEventHelper);
   }
 
   @Test

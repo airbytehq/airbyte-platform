@@ -1,7 +1,6 @@
 package io.airbyte.config
 
 import io.airbyte.config.JobConfig.ConfigType
-import io.airbyte.protocol.models.ConfiguredAirbyteCatalog
 
 /**
  * JobConfig proxy that abstracts some complexity from the underlying union-like representation.

@@ -14,7 +14,6 @@ import { ConnectorBuilderProjectTestingValues } from "core/api/types/AirbyteClie
 import { Spec } from "core/api/types/ConnectorManifest";
 import { SourceDefinitionSpecificationDraft } from "core/domain/connector";
 import { useLocalStorage } from "core/utils/useLocalStorage";
-import { useAppMonitoringService } from "hooks/services/AppMonitoringService";
 import {
   applyTestingValuesDefaults,
   useConnectorBuilderFormState,
@@ -42,7 +41,6 @@ export const TestingValuesMenu: React.FC<TestingValuesMenuProps> = ({ testingVal
   const {
     streamRead: { isFetching },
   } = useConnectorBuilderTestRead();
-  const { trackError } = useAppMonitoringService();
 
   const [showInputsWarning, setShowInputsWarning] = useLocalStorage("connectorBuilderInputsWarning", true);
 
@@ -93,11 +91,7 @@ export const TestingValuesMenu: React.FC<TestingValuesMenuProps> = ({ testingVal
           title={<FormattedMessage id="connectorBuilder.testingValuesMenuTitle" />}
         >
           <ModalBody>
-            <TestingValuesMenuErrorBoundaryComponent
-              currentMode={mode}
-              closeAndSwitchToYaml={closeAndSwitchToYaml}
-              trackError={trackError}
-            >
+            <TestingValuesMenuErrorBoundaryComponent currentMode={mode} closeAndSwitchToYaml={closeAndSwitchToYaml}>
               <FlexContainer direction="column">
                 {showInputsWarning && (
                   <Message

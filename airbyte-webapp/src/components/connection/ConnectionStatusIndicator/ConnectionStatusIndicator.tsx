@@ -7,15 +7,13 @@ import { CircleLoader } from "components/ui/StatusIcon/CircleLoader";
 import styles from "./ConnectionStatusIndicator.module.scss";
 
 export enum ConnectionStatusIndicatorStatus {
-  OnTime = "onTime",
-  OnTrack = "onTrack",
-  Late = "late",
+  Synced = "synced",
   Pending = "pending",
   Paused = "paused",
   Syncing = "syncing",
   Queued = "queued",
-  Error = "error",
-  ActionRequired = "actionRequired",
+  Incomplete = "incomplete",
+  Failed = "failed",
   Disabled = "disabled",
   QueuedForNextSync = "queuedForNextSync",
   Clearing = "clearing",
@@ -24,14 +22,12 @@ export enum ConnectionStatusIndicatorStatus {
 }
 
 const ICON_BY_STATUS: Readonly<Record<ConnectionStatusIndicatorStatus, JSX.Element>> = {
-  onTime: <Icon type="statusSuccess" size="md" />,
-  onTrack: <Icon type="statusSuccess" size="md" />,
-  error: <Icon type="statusWarning" size="md" />,
+  synced: <Icon type="statusSuccess" size="md" />,
+  incomplete: <Icon type="statusWarning" size="md" />,
   disabled: <Icon type="statusInactive" size="md" />,
   paused: <Icon type="statusInactive" size="md" />,
   pending: <Icon type="statusInactive" size="md" />,
-  late: <Icon type="clockFilled" size="md" />,
-  actionRequired: <Icon type="statusError" size="md" />,
+  failed: <Icon type="statusError" size="md" />,
   syncing: <CircleLoader className={styles.circleLoader} />,
   clearing: <CircleLoader className={styles.circleLoader} />,
   refreshing: <CircleLoader className={styles.circleLoader} />,
@@ -41,14 +37,12 @@ const ICON_BY_STATUS: Readonly<Record<ConnectionStatusIndicatorStatus, JSX.Eleme
 };
 
 const STYLE_BY_STATUS: Readonly<Record<ConnectionStatusIndicatorStatus, string>> = {
-  onTime: styles["status--upToDate"],
-  onTrack: styles["status--upToDate"],
-  error: styles["status--error"],
+  synced: styles["status--upToDate"],
+  incomplete: styles["status--incomplete"],
   disabled: styles["status--disabled"],
   paused: styles["status--disabled"],
   pending: styles["status--pending"],
-  late: styles["status--late"],
-  actionRequired: styles["status--actionRequired"],
+  failed: styles["status--failed"],
   syncing: styles["status--syncing"],
   clearing: styles["status--syncing"],
   refreshing: styles["status--syncing"],
@@ -58,14 +52,12 @@ const STYLE_BY_STATUS: Readonly<Record<ConnectionStatusIndicatorStatus, string>>
 };
 
 const BOX_STYLE_BY_STATUS: Readonly<Record<ConnectionStatusIndicatorStatus, string>> = {
-  onTime: styles["status--upToDate-withBox"],
-  onTrack: styles["status--upToDate-withBox"],
-  error: styles["status--error-withBox"],
+  synced: styles["status--upToDate-withBox"],
+  incomplete: styles["status--incomplete-withBox"],
   disabled: styles["status--disabled-withBox"],
   paused: styles["status--disabled-withBox"],
   pending: styles["status--pending-withBox"],
-  late: styles["status--late-withBox"],
-  actionRequired: styles["status--actionRequired-withBox"],
+  failed: styles["status--failed-withBox"],
   syncing: styles["status--syncing-withBox"],
   clearing: styles["status--syncing-withBox"],
   refreshing: styles["status--syncing-withBox"],

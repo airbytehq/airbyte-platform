@@ -86,8 +86,12 @@ airbyte:
         secret-key: ${AWS_SECRET_ACCESS_KEY:}
         region: ${AWS_REGION:}
       gcp:
+        # injects the actual secret value
         credentials: ${SECRET_STORE_GCP_CREDENTIALS:}
         project-id: ${SECRET_STORE_GCP_PROJECT_ID:}
+        # for injecting the env var source
+        secret-name: ${SECRET_STORE_GCP_SECRET_NAME:}
+        secret-key: ${SECRET_STORE_GCP_SECRET_KEY:}
       vault:
         address: ${VAULT_ADDRESS:}
         prefix: ${VAULT_PREFIX:}
@@ -97,7 +101,6 @@ airbyte:
     data-plane-creds:
       secret-mount-path: ${CONTAINER_ORCHESTRATOR_DATA_PLANE_CREDS_SECRET_MOUNT_PATH:}
       secret-name: ${CONTAINER_ORCHESTRATOR_DATA_PLANE_CREDS_SECRET_NAME:}
-    image: ${CONTAINER_ORCHESTRATOR_IMAGE:}
     java-opts: ${CONTAINER_ORCHESTRATOR_JAVA_OPTS:}
     secret-mount-path: ${CONTAINER_ORCHESTRATOR_SECRET_MOUNT_PATH:}
     secret-name: ${CONTAINER_ORCHESTRATOR_SECRET_NAME:}
@@ -114,8 +117,13 @@ airbyte:
           busybox: ${JOB_KUBE_BUSYBOX_IMAGE:`busybox:1.35`}
           curl: ${JOB_KUBE_CURL_IMAGE:`curlimages/curl:7.83.1`}
           socat: ${JOB_KUBE_SOCAT_IMAGE:`alpine/socat:1.7.4.3-r0`}
+        init:
+          container:
+            image: ${WORKLOAD_INIT_IMAGE:}
+            image-pull-policy: ${JOB_KUBE_INIT_CONTAINER_IMAGE_PULL_POLICY:IfNotPresent}
         main:
           container:
+            image: ${CONTAINER_ORCHESTRATOR_IMAGE:}
             image-pull-policy: ${JOB_KUBE_MAIN_CONTAINER_IMAGE_PULL_POLICY:IfNotPresent}
             image-pull-secret: ${JOB_KUBE_MAIN_CONTAINER_IMAGE_PULL_SECRET:}
         namespace: ${JOB_KUBE_NAMESPACE:default}
@@ -123,6 +131,7 @@ airbyte:
         tolerations: ${JOB_KUBE_TOLERATIONS:}
         sidecar:
           container:
+            image: ${CONNECTOR_SIDECAR_IMAGE:}
             image-pull-policy: ${JOB_KUBE_SIDECAR_CONTAINER_IMAGE_PULL_POLICY:IfNotPresent}
     kube-job-configs:
       default:

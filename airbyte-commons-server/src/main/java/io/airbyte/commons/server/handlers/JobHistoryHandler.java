@@ -5,8 +5,8 @@
 package io.airbyte.commons.server.handlers;
 
 import static io.airbyte.commons.server.handlers.helpers.StatsAggregationHelper.hydrateWithStats;
+import static io.airbyte.config.Job.SYNC_REPLICATION_TYPES;
 import static io.airbyte.featureflag.ContextKt.ANONYMOUS;
-import static io.airbyte.persistence.job.models.Job.SYNC_REPLICATION_TYPES;
 
 import com.google.common.base.Preconditions;
 import datadog.trace.api.Trace;
@@ -45,10 +45,15 @@ import io.airbyte.commons.server.converters.WorkflowStateConverter;
 import io.airbyte.commons.temporal.TemporalClient;
 import io.airbyte.commons.version.AirbyteVersion;
 import io.airbyte.config.Configs.WorkerEnvironment;
+import io.airbyte.config.ConfiguredAirbyteStream;
+import io.airbyte.config.Job;
 import io.airbyte.config.JobConfig;
 import io.airbyte.config.JobConfig.ConfigType;
 import io.airbyte.config.JobConfigProxy;
+import io.airbyte.config.JobStatus;
+import io.airbyte.config.JobStatusSummary;
 import io.airbyte.config.StandardSync;
+import io.airbyte.config.SyncMode;
 import io.airbyte.config.helpers.LogConfigs;
 import io.airbyte.config.persistence.ConfigNotFoundException;
 import io.airbyte.data.services.ConnectionService;
@@ -58,11 +63,6 @@ import io.airbyte.featureflag.Workspace;
 import io.airbyte.metrics.lib.ApmTraceUtils;
 import io.airbyte.metrics.lib.MetricTags;
 import io.airbyte.persistence.job.JobPersistence;
-import io.airbyte.persistence.job.models.Job;
-import io.airbyte.persistence.job.models.JobStatus;
-import io.airbyte.persistence.job.models.JobStatusSummary;
-import io.airbyte.protocol.models.ConfiguredAirbyteStream;
-import io.airbyte.protocol.models.SyncMode;
 import io.airbyte.validation.json.JsonValidationException;
 import io.micronaut.core.util.CollectionUtils;
 import jakarta.inject.Singleton;

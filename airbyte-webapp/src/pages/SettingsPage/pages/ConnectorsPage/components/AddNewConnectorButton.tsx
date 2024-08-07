@@ -31,7 +31,7 @@ export const AddNewConnectorButton: React.FC<AddNewConnectorButtonProps> = ({ ty
   const { formatMessage } = useIntl();
   const workspace = useCurrentWorkspace();
   const hasUploadCustomConnectorPermissions = useIntent("UploadCustomConnector", {
-    organizationId: workspace.organizationId,
+    workspaceId: workspace.workspaceId,
   });
   const allowUploadCustomDockerImage =
     useFeature(FeatureItem.AllowUploadCustomImage) && hasUploadCustomConnectorPermissions;

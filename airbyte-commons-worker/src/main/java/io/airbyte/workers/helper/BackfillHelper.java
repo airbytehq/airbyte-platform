@@ -8,8 +8,9 @@ import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import io.airbyte.api.client.model.generated.ConnectionRead;
 import io.airbyte.api.client.model.generated.SchemaChangeBackfillPreference;
 import io.airbyte.commons.converters.CatalogClientConverters;
-import io.airbyte.commons.converters.ProtocolConverters;
 import io.airbyte.config.CatalogDiff;
+import io.airbyte.config.ConfiguredAirbyteCatalog;
+import io.airbyte.config.ConfiguredAirbyteStream;
 import io.airbyte.config.FieldTransform;
 import io.airbyte.config.StandardSyncOutput;
 import io.airbyte.config.State;
@@ -18,11 +19,10 @@ import io.airbyte.config.StateWrapper;
 import io.airbyte.config.StreamDescriptor;
 import io.airbyte.config.StreamSyncStats;
 import io.airbyte.config.StreamTransform;
+import io.airbyte.config.SyncMode;
+import io.airbyte.config.helpers.ProtocolConverters;
 import io.airbyte.config.helpers.StateMessageHelper;
 import io.airbyte.protocol.models.AirbyteStateMessage;
-import io.airbyte.protocol.models.ConfiguredAirbyteCatalog;
-import io.airbyte.protocol.models.ConfiguredAirbyteStream;
-import io.airbyte.protocol.models.SyncMode;
 import io.airbyte.workers.models.ReplicationActivityInput;
 import java.util.ArrayList;
 import java.util.List;
@@ -78,7 +78,7 @@ public class BackfillHelper {
         continue;
       }
       if (!streamsToBackfill.contains(
-          ProtocolConverters.streamDescriptorToDomain(stateMessage.getStream().getStreamDescriptor()))) {
+          ProtocolConverters.toInternal(stateMessage.getStream().getStreamDescriptor()))) {
         continue;
       }
       // It's listed in the streams to backfill, so we write the state to null.
@@ -132,7 +132,7 @@ public class BackfillHelper {
   }
 
   private static boolean atLeastOneStreamNeedsBackfill(final CatalogDiff appliedDiff, final ConnectionRead connectionInfo) {
-    return !getStreamsToBackfill(appliedDiff, CatalogClientConverters.toConfiguredAirbyteProtocol(connectionInfo.getSyncCatalog())).isEmpty();
+    return !getStreamsToBackfill(appliedDiff, CatalogClientConverters.toConfiguredAirbyteInternal(connectionInfo.getSyncCatalog())).isEmpty();
   }
 
   private static boolean shouldBackfillStream(final StreamTransform transform, final ConfiguredAirbyteCatalog catalog) {

@@ -9,6 +9,7 @@ import io.airbyte.workers.orchestrator.PodNameGenerator
 import io.airbyte.workers.process.AsyncOrchestratorPodProcess
 import io.airbyte.workers.process.KubeContainerInfo
 import io.airbyte.workers.process.KubePodInfo
+import io.airbyte.workers.serde.ObjectSerializer
 import io.airbyte.workers.sync.OrchestratorConstants
 import io.airbyte.workers.sync.ReplicationLauncherWorker
 import io.airbyte.workload.launcher.config.OrchestratorEnvSingleton
@@ -16,7 +17,6 @@ import io.airbyte.workload.launcher.model.getAttemptId
 import io.airbyte.workload.launcher.model.getJobId
 import io.airbyte.workload.launcher.model.getOrchestratorResourceReqs
 import io.airbyte.workload.launcher.pipeline.consumer.LauncherInput
-import io.airbyte.workload.launcher.serde.ObjectSerializer
 import io.micronaut.context.annotation.Requires
 import io.micronaut.context.env.Environment
 import jakarta.inject.Named

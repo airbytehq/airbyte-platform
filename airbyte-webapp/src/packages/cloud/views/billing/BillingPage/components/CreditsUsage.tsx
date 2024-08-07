@@ -1,9 +1,12 @@
 import React from "react";
 import { FormattedMessage } from "react-intl";
+import { useEffectOnce } from "react-use";
 
 import { Box } from "components/ui/Box";
 import { Card } from "components/ui/Card";
 import { Heading } from "components/ui/Heading";
+
+import { trackTiming } from "core/utils/datadog";
 
 import styles from "./CreditsUsage.module.scss";
 import { useCreditsContext } from "./CreditsUsageContext";
@@ -14,6 +17,10 @@ import { UsagePerDayGraph } from "./UsagePerDayGraph";
 
 export const CreditsUsage: React.FC = () => {
   const { freeAndPaidUsageByTimeChunk, hasFreeUsage } = useCreditsContext();
+
+  useEffectOnce(() => {
+    trackTiming("CreditUsage");
+  });
 
   return (
     <Card className={styles.card}>

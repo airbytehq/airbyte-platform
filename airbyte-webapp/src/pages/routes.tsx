@@ -171,6 +171,7 @@ const RoutingWithWorkspace: React.FC<{ element?: JSX.Element }> = ({ element }) 
 export const Routing: React.FC = () => {
   const { pathname: originalPathname, search, hash } = useLocation();
   const { inited, loggedOut } = useAuthService();
+  const { initialSetupComplete } = useGetInstanceConfiguration();
   useBuildUpdateCheck();
 
   useEffectOnce(() => {
@@ -192,8 +193,14 @@ export const Routing: React.FC = () => {
 
     return (
       <Routes>
-        <Route path={RoutePaths.Login} element={<LoginPage />} />
-        <Route path="*" element={<Navigate to={loginRedirectTo} />} />
+        {!initialSetupComplete ? (
+          <Route path="*" element={<PreferencesRoutes />} />
+        ) : (
+          <>
+            <Route path={RoutePaths.Login} element={<LoginPage />} />
+            <Route path="*" element={<Navigate to={loginRedirectTo} />} />
+          </>
+        )}
       </Routes>
     );
   }

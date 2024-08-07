@@ -4,6 +4,7 @@ import io.airbyte.api.problems.throwable.generated.StateConflictProblem
 import io.airbyte.api.problems.throwable.generated.TryAgainLaterConflictProblem
 import io.airbyte.commons.server.errors.ValueConflictKnownException
 import io.airbyte.commons.server.handlers.SchedulerHandler
+import io.airbyte.data.services.ApplicationService
 import io.airbyte.server.apis.publicapi.errorHandlers.JOB_NOT_RUNNING_MESSAGE
 import io.micronaut.test.annotation.MockBean
 import io.micronaut.test.extensions.junit5.annotation.MicronautTest
@@ -26,6 +27,11 @@ class JobServiceTest {
   @MockBean(SchedulerHandler::class)
   fun schedulerHandler(): SchedulerHandler {
     return schedulerHandler
+  }
+
+  @MockBean(ApplicationService::class)
+  fun applicationService(): ApplicationService {
+    return mockk<ApplicationService>()
   }
 
   @Test

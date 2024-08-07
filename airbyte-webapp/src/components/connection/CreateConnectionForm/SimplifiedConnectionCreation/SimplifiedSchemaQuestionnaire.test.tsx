@@ -29,6 +29,7 @@ describe("getEnforcedDelivery", () => {
       getEnforcedDelivery({
         replicateSource: [
           [SyncMode.incremental, DestinationSyncMode.append_dedup],
+          [SyncMode.full_refresh, DestinationSyncMode.overwrite_dedup],
           [SyncMode.full_refresh, DestinationSyncMode.overwrite],
           [SyncMode.incremental, DestinationSyncMode.append],
         ],
@@ -60,6 +61,7 @@ describe("getEnforcedDelivery", () => {
       getEnforcedDelivery({
         replicateSource: [
           [SyncMode.incremental, DestinationSyncMode.append_dedup],
+          [SyncMode.full_refresh, DestinationSyncMode.overwrite_dedup],
           [SyncMode.full_refresh, DestinationSyncMode.overwrite],
           [SyncMode.incremental, DestinationSyncMode.append],
         ],
@@ -74,6 +76,7 @@ describe("getEnforcedDelivery", () => {
       getEnforcedDelivery({
         replicateSource: [
           [SyncMode.incremental, DestinationSyncMode.append_dedup],
+          [SyncMode.full_refresh, DestinationSyncMode.overwrite_dedup],
           [SyncMode.full_refresh, DestinationSyncMode.overwrite],
           [SyncMode.incremental, DestinationSyncMode.append],
         ],

@@ -2,7 +2,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 
 import { destinationsKeys, sourcesKeys } from "core/api";
 import { Action, Namespace, useAnalyticsService } from "core/services/analytics";
-import { useAppMonitoringService } from "hooks/services/AppMonitoringService";
+import { trackError } from "core/utils/datadog";
 
 import { definitionKeys } from "./actorDefinitionVersions";
 import {
@@ -20,7 +20,6 @@ export const useUpgradeConnectorVersion = (
   const requestOptions = useRequestOptions();
   const queryClient = useQueryClient();
   const analyticsService = useAnalyticsService();
-  const { trackError } = useAppMonitoringService();
 
   return useMutation(
     (connectorId: string) =>

@@ -7,6 +7,8 @@ package io.airbyte.workers;
 import com.fasterxml.jackson.databind.JsonNode;
 import io.airbyte.commons.io.IOs;
 import io.airbyte.commons.json.Jsons;
+import io.airbyte.config.AirbyteStream;
+import io.airbyte.config.ConfiguredAirbyteCatalog;
 import io.airbyte.config.ConnectorJobOutput.OutputType;
 import io.airbyte.config.FailureReason;
 import io.airbyte.config.WorkerDestinationConfig;
@@ -19,7 +21,6 @@ import io.airbyte.protocol.models.AirbyteMessage.Type;
 import io.airbyte.protocol.models.AirbyteStreamNameNamespacePair;
 import io.airbyte.protocol.models.AirbyteTraceMessage;
 import io.airbyte.protocol.models.Config;
-import io.airbyte.protocol.models.ConfiguredAirbyteCatalog;
 import io.airbyte.workers.exception.WorkerException;
 import io.airbyte.workers.helper.FailureHelper;
 import io.airbyte.workers.helper.FailureHelper.ConnectorCommand;
@@ -136,7 +137,7 @@ public class WorkerUtils {
 
   /**
    * Translates a StandardSyncInput into a WorkerDestinationConfig. WorkerDestinationConfig is a
-   * subset of StandardSyncInput.
+   * subset of StandardSyncInput.{}
    */
   public static WorkerDestinationConfig syncToWorkerDestinationConfig(final ReplicationInput replicationInput) {
     return new WorkerDestinationConfig()
@@ -238,9 +239,13 @@ public class WorkerUtils {
   public static Map<AirbyteStreamNameNamespacePair, JsonNode> mapStreamNamesToSchemas(final ConfiguredAirbyteCatalog catalog) {
     return catalog.getStreams().stream().collect(
         Collectors.toMap(
-            k -> AirbyteStreamNameNamespacePair.fromAirbyteStream(k.getStream()),
+            k -> airbyteStreamNameNamespacePairFromAirbyteStream(k.getStream()),
             v -> v.getStream().getJsonSchema()));
 
+  }
+
+  private static AirbyteStreamNameNamespacePair airbyteStreamNameNamespacePairFromAirbyteStream(final AirbyteStream stream) {
+    return new AirbyteStreamNameNamespacePair(stream.getName(), stream.getNamespace());
   }
 
   private static String getStdErrFromErrorStream(final InputStream errorStream) throws IOException {

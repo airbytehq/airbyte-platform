@@ -38,6 +38,8 @@ import io.airbyte.api.model.generated.ConnectorBuilderProjectStreamReadSlicesInn
 import io.airbyte.api.model.generated.ConnectorBuilderProjectTestingValuesUpdate;
 import io.airbyte.api.model.generated.ConnectorBuilderProjectWithWorkspaceId;
 import io.airbyte.api.model.generated.ConnectorBuilderPublishRequestBody;
+import io.airbyte.api.model.generated.DeclarativeManifestBaseImageRead;
+import io.airbyte.api.model.generated.DeclarativeManifestRequestBody;
 import io.airbyte.api.model.generated.DeclarativeSourceManifest;
 import io.airbyte.api.model.generated.ExistingConnectorBuilderProjectWithWorkspaceId;
 import io.airbyte.api.model.generated.SourceDefinitionIdBody;
@@ -68,6 +70,7 @@ import io.airbyte.connectorbuilderserver.api.client.model.generated.StreamReadRe
 import io.airbyte.connectorbuilderserver.api.client.model.generated.StreamReadSlicesInner;
 import io.airbyte.connectorbuilderserver.api.client.model.generated.StreamReadSlicesInnerPagesInner;
 import io.airbyte.data.exceptions.ConfigNotFoundException;
+import io.airbyte.data.repositories.entities.DeclarativeManifestImageVersion;
 import io.airbyte.data.services.ConnectorBuilderService;
 import io.airbyte.data.services.DeclarativeManifestImageVersionService;
 import io.airbyte.data.services.SecretPersistenceConfigService;
@@ -79,6 +82,7 @@ import io.airbyte.protocol.models.ConnectorSpecification;
 import io.airbyte.validation.json.JsonValidationException;
 import java.io.IOException;
 import java.net.URI;
+import java.time.OffsetDateTime;
 import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
@@ -97,7 +101,11 @@ class ConnectorBuilderProjectsHandlerTest {
   private static final Long A_VERSION = 32L;
   private static final Long ACTIVE_MANIFEST_VERSION = 865L;
   private static final Version A_CDK_VERSION = new Version("0.0.1");
-  private static final String A_DECLARATIVE_MANIFEST_IMAGE_VERSION = "0.79.0";
+  private static final DeclarativeManifestImageVersion A_DECLARATIVE_MANIFEST_IMAGE_VERSION =
+      new DeclarativeManifestImageVersion(0, "0.79.0", "sha256:26f3d6b7dcbfa43504709e42d859c12f8644b7c7bbab0ecac99daa773f7dd35c",
+          OffsetDateTime.now(), OffsetDateTime.now());
+  private static final String A_BASE_IMAGE =
+      "docker.io/airbyte/source-declarative-manifest:0.79.0@sha256:26f3d6b7dcbfa43504709e42d859c12f8644b7c7bbab0ecac99daa773f7dd35c";
   private static final String A_DESCRIPTION = "a description";
   private static final String A_SOURCE_NAME = "a source name";
   private static final String A_NAME = "a name";
@@ -195,7 +203,7 @@ class ConnectorBuilderProjectsHandlerTest {
             connectorBuilderServerApiClient);
 
     when(manifestInjector.getCdkVersion(any())).thenReturn(A_CDK_VERSION);
-    when(declarativeManifestImageVersionService.getImageVersionByMajorVersion(anyInt()))
+    when(declarativeManifestImageVersionService.getDeclarativeManifestImageVersionByMajorVersion(anyInt()))
         .thenReturn(A_DECLARATIVE_MANIFEST_IMAGE_VERSION);
   }
 
@@ -233,7 +241,7 @@ class ConnectorBuilderProjectsHandlerTest {
     final ConnectorBuilderProject project = generateBuilderProject();
 
     when(uuidSupplier.get()).thenReturn(project.getBuilderProjectId());
-    when(declarativeManifestImageVersionService.getImageVersionByMajorVersion(anyInt()))
+    when(declarativeManifestImageVersionService.getDeclarativeManifestImageVersionByMajorVersion(anyInt()))
         .thenThrow(new IllegalStateException("No declarative manifest image version found in database for major version 0"));
 
     final ConnectorBuilderPublishRequestBody publish = new ConnectorBuilderPublishRequestBody()
@@ -507,7 +515,7 @@ class ConnectorBuilderProjectsHandlerTest {
             new ActorDefinitionVersion()
                 .withActorDefinitionId(A_SOURCE_DEFINITION_ID)
                 .withDockerRepository("airbyte/source-declarative-manifest")
-                .withDockerImageTag(A_DECLARATIVE_MANIFEST_IMAGE_VERSION)
+                .withDockerImageTag(A_DECLARATIVE_MANIFEST_IMAGE_VERSION.getImageVersion())
                 .withSpec(adaptedConnectorSpecification)
                 .withSupportLevel(SupportLevel.NONE)
                 .withInternalSupportLevel(100L)
@@ -733,6 +741,18 @@ class ConnectorBuilderProjectsHandlerTest {
 
     assertEquals(newTestingValuesWithObfuscatedSecrets, projectStreamRead.getLatestConfigUpdate());
     verify(connectorBuilderService, times(1)).updateBuilderProjectTestingValues(project.getBuilderProjectId(), newTestingValuesWithSecretCoordinates);
+  }
+
+  @Test
+  void testGetBaseImageForDeclarativeManifest() {
+    final DeclarativeManifestRequestBody requestBody = new DeclarativeManifestRequestBody().manifest(A_MANIFEST);
+
+    when(manifestInjector.getCdkVersion(any())).thenReturn(A_CDK_VERSION);
+    when(declarativeManifestImageVersionService.getDeclarativeManifestImageVersionByMajorVersion(anyInt()))
+        .thenReturn(A_DECLARATIVE_MANIFEST_IMAGE_VERSION);
+
+    final DeclarativeManifestBaseImageRead responseBody = connectorBuilderProjectsHandler.getDeclarativeManifestBaseImage(requestBody);
+    assertEquals(A_BASE_IMAGE, responseBody.getBaseImage());
   }
 
   private static ConnectorBuilderPublishRequestBody anyConnectorBuilderProjectRequest() {

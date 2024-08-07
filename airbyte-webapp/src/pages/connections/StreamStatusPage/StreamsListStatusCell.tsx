@@ -12,15 +12,21 @@ import styles from "./StreamsList.module.scss";
 
 export const StatusCell: React.FC<CellContext<UIStreamState, ConnectionStatusIndicatorStatus>> = (props) => {
   const now = useCurrentTime();
+  let isRateLimited = props.row.original.status === ConnectionStatusIndicatorStatus.RateLimited;
   let rateLimitTimeRemaining;
   if (
     props.row.original.status === ConnectionStatusIndicatorStatus.RateLimited &&
-    props.row.original.quotaReset != null &&
-    props.row.original.quotaReset >= now
+    props.row.original.quotaReset != null
   ) {
-    rateLimitTimeRemaining = props.row.original.quotaReset - now;
+    if (props.row.original.quotaReset < now) {
+      // quota reset time has passed, no longer display rate limited status
+      isRateLimited = false;
+    } else {
+      rateLimitTimeRemaining = props.row.original.quotaReset - now;
+    }
   }
   const rateLimitedMessage = useFormatLengthOfTime(rateLimitTimeRemaining);
+
   // detect the hour/minute/second segments in the string we will render
   // and for each segment, increase the width by 30px (in addition to a base 60px for "rendering ")
   const rateLimitTextParts = rateLimitedMessage.match(/(?<h>\d+h )?(?<m>\d+m )?(?<s>\d+s)/);
@@ -30,13 +36,19 @@ export const StatusCell: React.FC<CellContext<UIStreamState, ConnectionStatusInd
     <FlexContainer justifyContent="flex-start" gap="sm" alignItems="center" className={styles.statusCell}>
       <StreamStatusIndicator status={props.cell.getValue()} />
       <FormattedMessage id={`connection.stream.status.${props.cell.getValue()}`} />
-      {rateLimitTimeRemaining && (
+      {isRateLimited && (
         <>
           &nbsp;
           <FormattedMessage id="general.dash" />
-          &nbsp;
           <span style={{ width: `${rateLimitTextWidth}px` }}>
-            <FormattedMessage id="connection.stream.rateLimitedMessage" values={{ quota: rateLimitedMessage }} />
+            <FormattedMessage
+              id={
+                rateLimitTimeRemaining
+                  ? "connection.stream.rateLimitedMessage"
+                  : "connection.stream.rateLimitedMessageNoQuota"
+              }
+              values={{ quota: rateLimitedMessage }}
+            />
           </span>
         </>
       )}

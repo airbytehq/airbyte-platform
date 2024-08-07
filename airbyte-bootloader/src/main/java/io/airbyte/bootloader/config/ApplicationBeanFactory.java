@@ -11,8 +11,12 @@ import io.airbyte.commons.version.Version;
 import io.airbyte.metrics.lib.MetricClient;
 import io.airbyte.metrics.lib.MetricClientFactory;
 import io.airbyte.metrics.lib.MetricEmittingApps;
+import io.fabric8.kubernetes.client.KubernetesClient;
+import io.fabric8.kubernetes.client.KubernetesClientBuilder;
 import io.micronaut.context.annotation.Factory;
+import io.micronaut.context.annotation.Requires;
 import io.micronaut.context.annotation.Value;
+import io.micronaut.context.env.Environment;
 import jakarta.inject.Singleton;
 
 /**
@@ -37,6 +41,12 @@ public class ApplicationBeanFactory {
   public MetricClient metricClient() {
     MetricClientFactory.initialize(MetricEmittingApps.BOOTLOADER);
     return io.airbyte.metrics.lib.MetricClientFactory.getMetricClient();
+  }
+
+  @Singleton
+  @Requires(env = Environment.KUBERNETES)
+  public KubernetesClient kubernetesClient() {
+    return new KubernetesClientBuilder().build();
   }
 
 }

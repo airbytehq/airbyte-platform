@@ -4,7 +4,7 @@ import { FormattedMessage } from "react-intl";
 import { Message } from "components/ui/Message";
 
 import { FormBuildError, isFormBuildError } from "core/form/FormBuildError";
-import { TrackErrorFn } from "hooks/services/AppMonitoringService";
+import { trackError } from "core/utils/datadog";
 
 import { BuilderState } from "../types";
 
@@ -15,7 +15,6 @@ interface ApiErrorBoundaryState {
 interface ApiErrorBoundaryProps {
   closeAndSwitchToYaml: () => void;
   currentMode: BuilderState["mode"];
-  trackError: TrackErrorFn;
 }
 
 export class TestingValuesMenuErrorBoundaryComponent extends React.Component<
@@ -24,7 +23,7 @@ export class TestingValuesMenuErrorBoundaryComponent extends React.Component<
 > {
   componentDidCatch(error: { message: string; status?: number; __type?: string }): void {
     if (isFormBuildError(error)) {
-      this.props.trackError(error, {
+      trackError(error, {
         id: "formBuildError",
         connectorDefinitionId: error.connectorDefinitionId,
         errorBoundary: this.constructor.name,

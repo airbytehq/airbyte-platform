@@ -4,12 +4,12 @@
 
 package io.airbyte.persistence.job;
 
+import static io.airbyte.config.JobStatus.TERMINAL_STATUSES;
 import static io.airbyte.db.instance.jobs.jooq.generated.Tables.ATTEMPTS;
 import static io.airbyte.db.instance.jobs.jooq.generated.Tables.JOBS;
 import static io.airbyte.db.instance.jobs.jooq.generated.Tables.STREAM_ATTEMPT_METADATA;
 import static io.airbyte.db.instance.jobs.jooq.generated.Tables.STREAM_STATS;
 import static io.airbyte.db.instance.jobs.jooq.generated.Tables.SYNC_STATS;
-import static io.airbyte.persistence.job.models.JobStatus.TERMINAL_STATUSES;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.Lists;
@@ -17,7 +17,6 @@ import com.google.common.collect.Sets;
 import datadog.trace.api.Trace;
 import io.airbyte.commons.enums.Enums;
 import io.airbyte.commons.json.Jsons;
-import io.airbyte.commons.protocol.migrations.v1.CatalogMigrationV1Helper;
 import io.airbyte.commons.resources.MoreResources;
 import io.airbyte.commons.text.Names;
 import io.airbyte.commons.timer.Stopwatch;
@@ -25,12 +24,19 @@ import io.airbyte.commons.version.AirbyteProtocolVersion;
 import io.airbyte.commons.version.AirbyteProtocolVersionRange;
 import io.airbyte.commons.version.AirbyteVersion;
 import io.airbyte.commons.version.Version;
+import io.airbyte.config.Attempt;
 import io.airbyte.config.AttemptFailureSummary;
+import io.airbyte.config.AttemptStatus;
 import io.airbyte.config.AttemptSyncConfig;
+import io.airbyte.config.AttemptWithJobInfo;
+import io.airbyte.config.Job;
 import io.airbyte.config.JobConfig;
 import io.airbyte.config.JobConfig.ConfigType;
 import io.airbyte.config.JobOutput;
-import io.airbyte.config.JobOutput.OutputType;
+import io.airbyte.config.JobStatus;
+import io.airbyte.config.JobStatusSummary;
+import io.airbyte.config.JobWithStatusAndTimestamp;
+import io.airbyte.config.JobsRecordsCommitted;
 import io.airbyte.config.StreamSyncStats;
 import io.airbyte.config.SyncStats;
 import io.airbyte.config.persistence.PersistenceHelpers;
@@ -39,14 +45,6 @@ import io.airbyte.db.ExceptionWrappingDatabase;
 import io.airbyte.db.instance.configs.jooq.generated.Tables;
 import io.airbyte.db.instance.jobs.jooq.generated.tables.records.JobsRecord;
 import io.airbyte.metrics.lib.ApmTraceUtils;
-import io.airbyte.persistence.job.models.Attempt;
-import io.airbyte.persistence.job.models.AttemptStatus;
-import io.airbyte.persistence.job.models.AttemptWithJobInfo;
-import io.airbyte.persistence.job.models.Job;
-import io.airbyte.persistence.job.models.JobStatus;
-import io.airbyte.persistence.job.models.JobStatusSummary;
-import io.airbyte.persistence.job.models.JobWithStatusAndTimestamp;
-import io.airbyte.persistence.job.models.JobsRecordsCommitted;
 import io.airbyte.protocol.models.v0.StreamDescriptor;
 import java.io.IOException;
 import java.nio.file.Path;
@@ -431,22 +429,7 @@ public class DefaultJobPersistence implements JobPersistence {
   }
 
   private static JobConfig parseJobConfigFromString(final String jobConfigString) {
-    final JobConfig jobConfig = Jsons.deserialize(jobConfigString, JobConfig.class);
-    // On-the-fly migration of persisted data types related objects (protocol v0->v1)
-    if (jobConfig.getConfigType() == ConfigType.SYNC && jobConfig.getSync() != null) {
-      // TODO feature flag this for data types rollout
-      // CatalogMigrationV1Helper.upgradeSchemaIfNeeded(jobConfig.getSync().getConfiguredAirbyteCatalog());
-      CatalogMigrationV1Helper.downgradeSchemaIfNeeded(jobConfig.getSync().getConfiguredAirbyteCatalog());
-    } else if (jobConfig.getConfigType() == ConfigType.RESET_CONNECTION && jobConfig.getResetConnection() != null) {
-      // TODO feature flag this for data types rollout
-      // CatalogMigrationV1Helper.upgradeSchemaIfNeeded(jobConfig.getResetConnection().getConfiguredAirbyteCatalog());
-      CatalogMigrationV1Helper.downgradeSchemaIfNeeded(jobConfig.getResetConnection().getConfiguredAirbyteCatalog());
-    } else if (jobConfig.getConfigType() == ConfigType.REFRESH && jobConfig.getRefresh() != null) {
-      // TODO feature flag this for data types rollout
-      // CatalogMigrationV1Helper.upgradeSchemaIfNeeded(jobConfig.getRefresh().getConfiguredAirbyteCatalog());
-      CatalogMigrationV1Helper.downgradeSchemaIfNeeded(jobConfig.getRefresh().getConfiguredAirbyteCatalog());
-    }
-    return jobConfig;
+    return Jsons.deserialize(jobConfigString, JobConfig.class);
   }
 
   private static Attempt getAttemptFromRecord(final Record record) {
@@ -489,14 +472,7 @@ public class DefaultJobPersistence implements JobPersistence {
   }
 
   private static JobOutput parseJobOutputFromString(final String jobOutputString) {
-    final JobOutput jobOutput = Jsons.deserialize(jobOutputString, JobOutput.class);
-    // On-the-fly migration of persisted data types related objects (protocol v0->v1)
-    if (jobOutput.getOutputType() == OutputType.DISCOVER_CATALOG && jobOutput.getDiscoverCatalog() != null) {
-      // TODO feature flag this for data types rollout
-      // CatalogMigrationV1Helper.upgradeSchemaIfNeeded(jobOutput.getDiscoverCatalog().getCatalog());
-      CatalogMigrationV1Helper.downgradeSchemaIfNeeded(jobOutput.getDiscoverCatalog().getCatalog());
-    }
-    return jobOutput;
+    return Jsons.deserialize(jobOutputString, JobOutput.class);
   }
 
   private static List<AttemptWithJobInfo> getAttemptsWithJobsFromResult(final Result<Record> result) {

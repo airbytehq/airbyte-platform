@@ -1,5 +1,5 @@
 import isBoolean from "lodash/isBoolean";
-import React, { useCallback, useEffect } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import { useFormState } from "react-hook-form";
 import { FormattedMessage, useIntl } from "react-intl";
 import { useLocation } from "react-router-dom";
@@ -8,21 +8,24 @@ import { useUnmount } from "react-use";
 import {
   FormConnectionFormValues,
   useConnectionValidationSchema,
+  useInitialFormValues,
 } from "components/connection/ConnectionForm/formConfig";
 import { useRefreshSourceSchemaWithConfirmationOnDirty } from "components/connection/ConnectionForm/refreshSourceSchemaWithConfirmationOnDirty";
 import { SchemaChangeBackdrop } from "components/connection/ConnectionForm/SchemaChangeBackdrop";
+import { SchemaRefreshing } from "components/connection/ConnectionForm/SchemaRefreshing";
 import { SyncCatalogCard } from "components/connection/ConnectionForm/SyncCatalogCard";
-import { SyncCatalogCardNext } from "components/connection/ConnectionForm/SyncCatalogCardNext";
+import { SyncCatalogTable } from "components/connection/ConnectionForm/SyncCatalogTable";
 import { UpdateConnectionFormControls } from "components/connection/ConnectionForm/UpdateConnectionFormControls";
 import { SchemaError } from "components/connection/CreateConnectionForm/SchemaError";
 import { Form } from "components/forms";
 import LoadingSchema from "components/LoadingSchema";
 import { ScrollableContainer } from "components/ScrollableContainer";
+import { Box } from "components/ui/Box";
+import { Card } from "components/ui/Card";
 import { FlexContainer } from "components/ui/Flex";
 import { Message } from "components/ui/Message/Message";
 
 import { ConnectionValues, useDestinationDefinitionVersion, useGetStateTypeQuery } from "core/api";
-import { WebBackendConnectionRead, WebBackendConnectionUpdate } from "core/api/types/AirbyteClient";
 import { PageTrackingCodes, useTrackPage } from "core/services/analytics";
 import { useConfirmCatalogDiff } from "hooks/connection/useConfirmCatalogDiff";
 import { useSchemaChanges } from "hooks/connection/useSchemaChanges";
@@ -36,22 +39,6 @@ import styles from "./ConnectionReplicationPage.module.scss";
 import { recommendActionOnConnectionUpdate } from "./connectionUpdateHelpers";
 import { RecommendRefreshModal } from "./RecommendRefreshModal";
 import { useAnalyticsTrackFunctions } from "./useAnalyticsTrackFunctions";
-import { SchemaRefreshing } from "../../../components/connection/ConnectionForm/SchemaRefreshing";
-
-const toWebBackendConnectionUpdate = (connection: WebBackendConnectionRead): WebBackendConnectionUpdate => ({
-  name: connection.name,
-  connectionId: connection.connectionId,
-  namespaceDefinition: connection.namespaceDefinition,
-  namespaceFormat: connection.namespaceFormat,
-  prefix: connection.prefix,
-  syncCatalog: connection.syncCatalog,
-  scheduleData: connection.scheduleData,
-  scheduleType: connection.scheduleType,
-  status: connection.status,
-  resourceRequirements: connection.resourceRequirements,
-  operations: connection.operations,
-  sourceCatalogId: connection.catalogId,
-});
 
 const SchemaChangeMessage: React.FC = () => {
   const { isDirty } = useFormState<FormConnectionFormValues>();
@@ -93,6 +80,7 @@ const SchemaChangeMessage: React.FC = () => {
 
 export const ConnectionReplicationPage: React.FC = () => {
   useTrackPage(PageTrackingCodes.CONNECTIONS_ITEM_REPLICATION);
+  const [scrollElement, setScrollElement] = useState<HTMLDivElement | undefined>();
   const isSyncCatalogV2Enabled = useExperiment("connection.syncCatalogV2", false);
   const { trackSchemaEdit } = useAnalyticsTrackFunctions();
 
@@ -102,20 +90,19 @@ export const ConnectionReplicationPage: React.FC = () => {
   const { openModal } = useModalService();
 
   const { connection, schemaRefreshing, updateConnection, discardRefreshedSchema } = useConnectionEditService();
-  const { initialValues, schemaError, setSubmitError, refreshSchema, mode } = useConnectionFormService();
+  const { schemaError, setSubmitError, refreshSchema, mode } = useConnectionFormService();
+  const initialValues = useInitialFormValues(connection, mode);
+
   const { supportsRefreshes: destinationSupportsRefreshes } = useDestinationDefinitionVersion(
     connection.destination.destinationId
   );
 
-  const validationSchema = useConnectionValidationSchema();
+  const validationSchema = useConnectionValidationSchema().pick(["syncCatalog"]);
 
   const saveConnection = useCallback(
-    async (values: ConnectionValues, skipReset: boolean) => {
-      const connectionAsUpdate = toWebBackendConnectionUpdate(connection);
-
+    async (values: Partial<ConnectionValues>, skipReset: boolean) => {
       await updateConnection({
-        ...connectionAsUpdate,
-        ...values,
+        syncCatalog: values.syncCatalog,
         connectionId: connection.connectionId,
         skipReset,
       });
@@ -124,7 +111,7 @@ export const ConnectionReplicationPage: React.FC = () => {
   );
 
   const onFormSubmit = useCallback(
-    async (values: FormConnectionFormValues) => {
+    async (values: Pick<FormConnectionFormValues, "syncCatalog">) => {
       setSubmitError(null);
 
       /**
@@ -142,8 +129,8 @@ export const ConnectionReplicationPage: React.FC = () => {
       // handler for modal -- saves connection w/ modal result taken into account
       async function handleModalResult(
         result: ModalResult<boolean>,
-        values: FormConnectionFormValues,
-        saveConnection: (values: ConnectionValues, skipReset: boolean) => Promise<void>
+        values: Pick<FormConnectionFormValues, "syncCatalog">,
+        saveConnection: (values: Pick<ConnectionValues, "syncCatalog">, skipReset: boolean) => Promise<void>
       ) {
         if (result.type === "completed" && isBoolean(result.reason)) {
           // Save the connection taking into account the correct skipReset value from the dialog choice.
@@ -160,7 +147,7 @@ export const ConnectionReplicationPage: React.FC = () => {
             // recommend clearing data
             const stateType = await getStateType(connection.connectionId);
             const result = await openModal<boolean>({
-              title: formatMessage({ id: "connection.streamConfigurationChanged" }),
+              title: formatMessage({ id: "connection.clearDataRecommended" }),
               size: "md",
               content: (props) => <ClearDataWarningModal {...props} stateType={stateType} />,
             });
@@ -168,7 +155,7 @@ export const ConnectionReplicationPage: React.FC = () => {
           } else {
             // recommend refreshing data
             const result = await openModal<boolean>({
-              title: formatMessage({ id: "connection.streamConfigurationChanged" }),
+              title: formatMessage({ id: "connection.refreshDataRecommended" }),
               size: "md",
               content: ({ onCancel, onComplete }) => (
                 <RecommendRefreshModal onCancel={onCancel} onComplete={onComplete} />
@@ -217,53 +204,68 @@ export const ConnectionReplicationPage: React.FC = () => {
     }
   }, [refreshSchema, state]);
 
+  const setScrollableContainer = (ref: HTMLDivElement | null) => {
+    if (ref === null) {
+      return;
+    }
+    setScrollElement(ref);
+  };
+
   const newSyncCatalogV2Form = connection && (
-    <Form<FormConnectionFormValues>
-      defaultValues={initialValues}
-      reinitializeDefaultValues
-      schema={validationSchema}
-      onSubmit={onFormSubmit}
-      trackDirtyChanges
-      disabled={mode === "readonly"}
-    >
-      <FlexContainer direction="column">
-        <SchemaChangeMessage />
-        <SchemaChangeBackdrop>
-          <SchemaRefreshing>
-            <SyncCatalogCardNext />
-          </SchemaRefreshing>
-        </SchemaChangeBackdrop>
-      </FlexContainer>
-    </Form>
+    <ScrollableContainer ref={setScrollableContainer} className={styles.scrollableContainer}>
+      <Form<Pick<FormConnectionFormValues, "syncCatalog">>
+        defaultValues={initialValues}
+        reinitializeDefaultValues
+        schema={validationSchema}
+        onSubmit={onFormSubmit}
+        trackDirtyChanges
+        disabled={mode === "readonly"}
+      >
+        <FlexContainer direction="column">
+          <SchemaChangeMessage />
+          <SchemaChangeBackdrop>
+            <SchemaRefreshing>
+              <Card noPadding title={formatMessage({ id: "connection.schema" })}>
+                <Box mb="xl" data-testid="catalog-tree-table-body">
+                  <SyncCatalogTable scrollParentContainer={scrollElement} />
+                </Box>
+              </Card>
+            </SchemaRefreshing>
+          </SchemaChangeBackdrop>
+        </FlexContainer>
+      </Form>
+    </ScrollableContainer>
   );
 
   const oldSyncCatalogForm =
     schemaError && !schemaRefreshing ? (
-      <SchemaError schemaError={schemaError} refreshSchema={refreshSchema} />
+      <ScrollableContainer>
+        <SchemaError schemaError={schemaError} refreshSchema={refreshSchema} />
+      </ScrollableContainer>
     ) : !schemaRefreshing && connection ? (
-      <Form<FormConnectionFormValues>
+      <Form<Pick<FormConnectionFormValues, "syncCatalog">>
         defaultValues={initialValues}
         schema={validationSchema}
         onSubmit={onFormSubmit}
         trackDirtyChanges
       >
-        <FlexContainer direction="column">
-          <SchemaChangeMessage />
-          <SchemaChangeBackdrop>
-            <SyncCatalogCard />
-            <div className={styles.editControlsContainer}>
-              <UpdateConnectionFormControls onCancel={discardRefreshedSchema} />
-            </div>
-          </SchemaChangeBackdrop>
-        </FlexContainer>
+        <div className={styles.formContainer}>
+          <ScrollableContainer ref={setScrollableContainer}>
+            <FlexContainer direction="column">
+              <SchemaChangeMessage />
+              <SchemaChangeBackdrop>
+                <SyncCatalogCard scrollParentContainer={scrollElement} />
+              </SchemaChangeBackdrop>
+            </FlexContainer>
+          </ScrollableContainer>
+          <Box pb="xl" px="xl" pt="lg" className={styles.editControlsContainer}>
+            <UpdateConnectionFormControls onCancel={discardRefreshedSchema} />
+          </Box>
+        </div>
       </Form>
     ) : (
       <LoadingSchema />
     );
 
-  return (
-    <ScrollableContainer className={styles.content}>
-      {isSyncCatalogV2Enabled ? newSyncCatalogV2Form : oldSyncCatalogForm}
-    </ScrollableContainer>
-  );
+  return <div className={styles.container}>{isSyncCatalogV2Enabled ? newSyncCatalogV2Form : oldSyncCatalogForm}</div>;
 };

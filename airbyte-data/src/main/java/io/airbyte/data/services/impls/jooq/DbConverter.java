@@ -37,6 +37,7 @@ import io.airbyte.config.ActorDefinitionVersion;
 import io.airbyte.config.ActorDefinitionVersion.SupportState;
 import io.airbyte.config.AllowedHosts;
 import io.airbyte.config.BreakingChangeScope;
+import io.airbyte.config.ConfiguredAirbyteCatalog;
 import io.airbyte.config.ConnectorBuilderProject;
 import io.airbyte.config.ConnectorRegistryEntryMetrics;
 import io.airbyte.config.DeclarativeManifest;
@@ -73,7 +74,6 @@ import io.airbyte.db.instance.configs.jooq.generated.enums.BackfillPreference;
 import io.airbyte.db.instance.configs.jooq.generated.enums.NotificationType;
 import io.airbyte.db.instance.configs.jooq.generated.tables.records.NotificationConfigurationRecord;
 import io.airbyte.protocol.models.AirbyteCatalog;
-import io.airbyte.protocol.models.ConfiguredAirbyteCatalog;
 import io.airbyte.protocol.models.ConnectorSpecification;
 import java.time.LocalDateTime;
 import java.time.OffsetDateTime;
@@ -152,12 +152,7 @@ public class DbConverter {
   }
 
   private static ConfiguredAirbyteCatalog parseConfiguredAirbyteCatalog(final String configuredAirbyteCatalogString) {
-    final ConfiguredAirbyteCatalog configuredAirbyteCatalog = Jsons.deserialize(configuredAirbyteCatalogString, ConfiguredAirbyteCatalog.class);
-    // On-the-fly migration of persisted data types related objects (protocol v0->v1)
-    // TODO feature flag this for data types rollout
-    // CatalogMigrationV1Helper.upgradeSchemaIfNeeded(configuredAirbyteCatalog);
-    CatalogMigrationV1Helper.downgradeSchemaIfNeeded(configuredAirbyteCatalog);
-    return configuredAirbyteCatalog;
+    return Jsons.deserialize(configuredAirbyteCatalogString, ConfiguredAirbyteCatalog.class);
   }
 
   /**
@@ -368,12 +363,7 @@ public class DbConverter {
    * @return airbyte catalog
    */
   public static AirbyteCatalog parseAirbyteCatalog(final String airbyteCatalogString) {
-    final AirbyteCatalog airbyteCatalog = Jsons.deserialize(airbyteCatalogString, AirbyteCatalog.class);
-    // On-the-fly migration of persisted data types related objects (protocol v0->v1)
-    // TODO feature flag this for data types rollout
-    // CatalogMigrationV1Helper.upgradeSchemaIfNeeded(airbyteCatalog);
-    CatalogMigrationV1Helper.downgradeSchemaIfNeeded(airbyteCatalog);
-    return airbyteCatalog;
+    return Jsons.deserialize(airbyteCatalogString, AirbyteCatalog.class);
   }
 
   /**

@@ -7,9 +7,9 @@ import io.airbyte.featureflag.Connection
 import io.airbyte.featureflag.ContainerOrchestratorDevImage
 import io.airbyte.featureflag.FeatureFlagClient
 import io.airbyte.featureflag.InjectAwsSecretsToConnectorPods
+import io.airbyte.featureflag.OrchestratorFetchesInputFromInit
 import io.airbyte.featureflag.Workspace
 import io.airbyte.persistence.job.models.IntegrationLauncherConfig
-import io.airbyte.persistence.job.models.JobRunConfig
 import io.airbyte.persistence.job.models.ReplicationInput
 import io.airbyte.workers.models.CheckConnectionInput
 import io.airbyte.workers.models.DiscoverCatalogInput
@@ -17,17 +17,15 @@ import io.airbyte.workers.models.SidecarInput
 import io.airbyte.workers.models.SidecarInput.OperationType
 import io.airbyte.workers.models.SpecInput
 import io.airbyte.workers.orchestrator.PodNameGenerator
-import io.airbyte.workers.process.AsyncOrchestratorPodProcess.KUBE_POD_INFO
 import io.airbyte.workers.process.KubeContainerInfo
 import io.airbyte.workers.process.KubePodInfo
 import io.airbyte.workers.process.Metadata.AWS_ASSUME_ROLE_EXTERNAL_ID
+import io.airbyte.workers.serde.ObjectSerializer
 import io.airbyte.workers.sync.OrchestratorConstants
-import io.airbyte.workers.sync.ReplicationLauncherWorker.REPLICATION
 import io.airbyte.workload.launcher.model.getAttemptId
 import io.airbyte.workload.launcher.model.getJobId
 import io.airbyte.workload.launcher.model.getOrchestratorResourceReqs
 import io.airbyte.workload.launcher.model.usesCustomConnector
-import io.airbyte.workload.launcher.serde.ObjectSerializer
 import io.fabric8.kubernetes.api.model.EnvVar
 import io.micronaut.context.annotation.Value
 import jakarta.inject.Named
@@ -72,7 +70,7 @@ class PayloadKubeInputMapper(
     val orchestratorReqs = input.getOrchestratorResourceReqs()
     val nodeSelectors = getNodeSelectors(input.usesCustomConnector(), replicationWorkerConfigs)
 
-    val fileMap = buildSyncFileMap(input, input.jobRunConfig, orchestratorPodInfo)
+    val fileMap = buildSyncFileMap(input)
 
     return OrchestratorKubeInput(
       labeler.getReplicationOrchestratorLabels() + sharedLabels,
@@ -83,7 +81,11 @@ class PayloadKubeInputMapper(
       fileMap,
       orchestratorReqs,
       replicationWorkerConfigs.workerKubeAnnotations,
-      listOf(EnvVar(AirbyteEnvVar.WORKLOAD_ID.toString(), workloadId, null)),
+      listOf(
+        EnvVar(AirbyteEnvVar.WORKLOAD_ID.toString(), workloadId, null),
+        EnvVar(AirbyteEnvVar.JOB_ID.toString(), jobId, null),
+        EnvVar(AirbyteEnvVar.ATTEMPT_ID.toString(), attemptId.toString(), null),
+      ),
     )
   }
 
@@ -247,17 +249,12 @@ class PayloadKubeInputMapper(
 
   // TODO: This is the way we pass data into the pods we launch. This should be extracted to
   //  some shared interface between parent / child to make it less brittle.
-  private fun buildSyncFileMap(
-    input: ReplicationInput,
-    jobRunConfig: JobRunConfig,
-    kubePodInfo: KubePodInfo,
-  ): Map<String, String> {
-    return mapOf(
-      OrchestratorConstants.INIT_FILE_JOB_RUN_CONFIG to serializer.serialize(jobRunConfig),
-      OrchestratorConstants.INIT_FILE_INPUT to serializer.serialize(input),
-      OrchestratorConstants.INIT_FILE_APPLICATION to REPLICATION,
-      KUBE_POD_INFO to serializer.serialize(kubePodInfo),
-    )
+  private fun buildSyncFileMap(input: ReplicationInput): Map<String, String> {
+    return buildMap {
+      if (!featureFlagClient.boolVariation(OrchestratorFetchesInputFromInit, Connection(input.connectionId))) {
+        put(OrchestratorConstants.INIT_FILE_INPUT, serializer.serialize(input))
+      }
+    }
   }
 
   private fun buildCheckFileMap(

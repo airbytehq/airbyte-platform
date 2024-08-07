@@ -1,26 +1,31 @@
 @use "scss/colors";
 @use "scss/variables";
 
-$container-padding-bottom: 28px; // (margins (88px) - button height (32px)) / 2
-
-.content {
-  display: flex;
-  flex-direction: column;
+.container {
+  overflow: hidden;
+  width: 100%;
+  height: 100%;
   min-width: variables.$min-width-wide-table-container;
 
-  > form {
-    display: flex;
-    flex-direction: column;
-    flex: 1;
+  // need to stretch to have scrollable container
+  form,
+  fieldset {
+    height: 100%;
   }
 }
 
+.formContainer {
+  height: 100%;
+  display: grid;
+  grid-template-rows: 1fr auto;
+}
+
 .editControlsContainer {
-  position: sticky;
-  z-index: 1;
-  bottom: 0;
-  margin-left: -#{variables.$spacing-xl};
-  padding: variables.$height-soft-edge variables.$spacing-xl $container-padding-bottom;
-  width: calc(100% + variables.$spacing-xl * 2);
-  overflow: hidden;
+  background-color: colors.$foreground;
+  border-top: variables.$border-thin solid colors.$grey-100;
+}
+
+// Catalog v2
+.scrollableContainer {
+  height: 100%;
 }

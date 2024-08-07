@@ -94,7 +94,7 @@ public class DefaultAirbyteSource implements AirbyteSource {
         WorkerConstants.SOURCE_CONFIG_JSON_FILENAME,
         Jsons.serialize(sourceConfig.getSourceConnectionConfiguration()),
         WorkerConstants.SOURCE_CATALOG_JSON_FILENAME,
-        protocolSerializer.serialize(sourceConfig.getCatalog()),
+        protocolSerializer.serialize(sourceConfig.getCatalog(), false),
         sourceConfig.getState() == null ? null : WorkerConstants.INPUT_STATE_JSON_FILENAME,
         // TODO We should be passing a typed state here and use the protocolSerializer
         sourceConfig.getState() == null ? null : Jsons.serialize(sourceConfig.getState().getState()));
