@@ -19,14 +19,15 @@ interface ConnectionTimelineFiltersProps {
   filtersAreDefault: boolean;
 }
 
+const EARLIEST_TIMELINE_EVENTS_AVAILABLE = dayjs("2024-06-20").toISOString();
+const END_OF_TODAY = dayjs().endOf("day").toISOString();
+
 export const ConnectionTimelineFilters: React.FC<ConnectionTimelineFiltersProps> = ({
   filterValues,
   setFilterValue,
   resetFilters,
   filtersAreDefault,
 }) => {
-  const END_OF_TODAY = dayjs().endOf("day").toISOString();
-
   const [tempRangeDateFilterValue, setTempRangeDateFilterValue] = useState<{ startDate: string; endDate: string }>({
     startDate: filterValues.startDate,
     endDate: filterValues.endDate,
@@ -84,6 +85,7 @@ export const ConnectionTimelineFilters: React.FC<ConnectionTimelineFiltersProps>
               value={[tempRangeDateFilterValue.startDate, tempRangeDateFilterValue.endDate]}
               onChange={updateTempRangeDateFilter}
               onClose={setRangeDateFilterValue}
+              minDate={EARLIEST_TIMELINE_EVENTS_AVAILABLE}
               maxDate={END_OF_TODAY}
               valueFormat="unix"
               buttonText="connection.timeline.rangeDateFilter"

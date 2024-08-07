@@ -64,7 +64,7 @@ export const ConnectionTimelinePage = () => {
               <Box p="lg">
                 <FlexContainer direction="column">
                   <FlexContainer justifyContent="space-between" alignItems="center">
-                    <Heading as="h5" size="sm">
+                    <Heading as="h5" size="sm" data-testid="connectionTimelinePageHeader">
                       <FormattedMessage id="connection.timeline" />
                     </Heading>
                   </FlexContainer>
