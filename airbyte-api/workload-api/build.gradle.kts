@@ -82,6 +82,7 @@ val genWorkloadApiClient = tasks.register<GenerateTask>("genWorkloadApiClient") 
       "enumPropertyNaming"  to "UPPERCASE",
       "generatePom"         to "false",
       "interfaceOnly"       to "true",
+      "serializationLibrary" to "jackson",
     )
 
     doLast {
