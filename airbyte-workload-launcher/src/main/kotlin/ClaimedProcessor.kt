@@ -32,6 +32,7 @@ import reactor.core.publisher.Mono
 import reactor.core.scheduler.Schedulers
 import reactor.kotlin.core.publisher.toFlux
 import java.net.ConnectException
+import java.net.SocketTimeoutException
 import java.time.Duration
 
 private val logger = KotlinLogging.logger {}
@@ -109,10 +110,10 @@ class ClaimedProcessor(
         )
           .get { -> apiClient.workloadApi.workloadList(workloadListRequest) }
       } catch (e: FailsafeException) {
-        if (e.cause !is ConnectException) {
+        if (e.cause !is ConnectException && e.cause !is SocketTimeoutException) {
           throw e; // Surface all other errors.
         }
-        // On a ConnectionException, we'll retry indefinitely.
+        // On a ConnectionException or SocketTimeoutException, we'll retry indefinitely.
         logger.warn { "Failed to connect to workload API fetching workloads for dataplane $dataplaneId, retrying..." }
       }
     }
