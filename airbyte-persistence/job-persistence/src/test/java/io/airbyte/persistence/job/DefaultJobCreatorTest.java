@@ -158,18 +158,18 @@ class DefaultJobCreatorTest {
     final UUID connectionId = UUID.randomUUID();
     final UUID operationId = UUID.randomUUID();
 
-    final ConfiguredAirbyteStream stream1 = new ConfiguredAirbyteStream()
-        .withStream(CatalogHelpers.createAirbyteStream(STREAM1_NAME, Field.of(FIELD_NAME, JsonSchemaType.STRING)))
-        .withSyncMode(SyncMode.FULL_REFRESH)
-        .withDestinationSyncMode(DestinationSyncMode.APPEND);
-    final ConfiguredAirbyteStream stream2 = new ConfiguredAirbyteStream()
-        .withStream(CatalogHelpers.createAirbyteStream(STREAM2_NAME, NAMESPACE, Field.of(FIELD_NAME, JsonSchemaType.STRING)))
-        .withSyncMode(SyncMode.INCREMENTAL)
-        .withDestinationSyncMode(DestinationSyncMode.APPEND);
-    final ConfiguredAirbyteStream stream3 = new ConfiguredAirbyteStream()
-        .withStream(CatalogHelpers.createAirbyteStream(STREAM3_NAME, NAMESPACE, Field.of(FIELD_NAME, JsonSchemaType.STRING)).withIsResumable(true))
-        .withSyncMode(SyncMode.FULL_REFRESH)
-        .withDestinationSyncMode(DestinationSyncMode.OVERWRITE);
+    final ConfiguredAirbyteStream stream1 = new ConfiguredAirbyteStream(
+        CatalogHelpers.createAirbyteStream(STREAM1_NAME, Field.of(FIELD_NAME, JsonSchemaType.STRING)),
+        SyncMode.FULL_REFRESH,
+        DestinationSyncMode.APPEND);
+    final ConfiguredAirbyteStream stream2 = new ConfiguredAirbyteStream(
+        CatalogHelpers.createAirbyteStream(STREAM2_NAME, NAMESPACE, Field.of(FIELD_NAME, JsonSchemaType.STRING)),
+        SyncMode.INCREMENTAL,
+        DestinationSyncMode.APPEND);
+    final ConfiguredAirbyteStream stream3 = new ConfiguredAirbyteStream(
+        CatalogHelpers.createAirbyteStream(STREAM3_NAME, NAMESPACE, Field.of(FIELD_NAME, JsonSchemaType.STRING)).withIsResumable(true),
+        SyncMode.FULL_REFRESH,
+        DestinationSyncMode.OVERWRITE);
     CONFIGURED_AIRBYTE_CATALOG = new ConfiguredAirbyteCatalog().withStreams(List.of(stream1, stream2, stream3));
 
     STANDARD_SYNC = new StandardSync()
@@ -1022,14 +1022,14 @@ class DefaultJobCreatorTest {
 
     final List<StreamDescriptor> streamsToReset = List.of(STREAM1_DESCRIPTOR, STREAM2_DESCRIPTOR);
     final ConfiguredAirbyteCatalog expectedCatalog = new ConfiguredAirbyteCatalog().withStreams(List.of(
-        new ConfiguredAirbyteStream()
-            .withStream(CatalogHelpers.createAirbyteStream(STREAM1_NAME, Field.of(FIELD_NAME, JsonSchemaType.STRING)))
-            .withSyncMode(SyncMode.FULL_REFRESH)
-            .withDestinationSyncMode(DestinationSyncMode.OVERWRITE),
-        new ConfiguredAirbyteStream()
-            .withStream(CatalogHelpers.createAirbyteStream(STREAM2_NAME, NAMESPACE, Field.of(FIELD_NAME, JsonSchemaType.STRING)))
-            .withSyncMode(SyncMode.FULL_REFRESH)
-            .withDestinationSyncMode(DestinationSyncMode.OVERWRITE)));
+        new ConfiguredAirbyteStream(
+            CatalogHelpers.createAirbyteStream(STREAM1_NAME, Field.of(FIELD_NAME, JsonSchemaType.STRING)),
+            SyncMode.FULL_REFRESH,
+            DestinationSyncMode.OVERWRITE),
+        new ConfiguredAirbyteStream(
+            CatalogHelpers.createAirbyteStream(STREAM2_NAME, NAMESPACE, Field.of(FIELD_NAME, JsonSchemaType.STRING)),
+            SyncMode.FULL_REFRESH,
+            DestinationSyncMode.OVERWRITE)));
 
     final SyncResourceRequirements expectedSyncResourceRequirements = new SyncResourceRequirements()
         .withConfigKey(new SyncResourceRequirementsKey().withVariant(DEFAULT_VARIANT))
@@ -1084,14 +1084,14 @@ class DefaultJobCreatorTest {
   void testCreateResetConnectionJobEnsureNoQueuing() throws IOException {
     final List<StreamDescriptor> streamsToReset = List.of(STREAM1_DESCRIPTOR, STREAM2_DESCRIPTOR);
     final ConfiguredAirbyteCatalog expectedCatalog = new ConfiguredAirbyteCatalog().withStreams(List.of(
-        new ConfiguredAirbyteStream()
-            .withStream(CatalogHelpers.createAirbyteStream(STREAM1_NAME, Field.of(FIELD_NAME, JsonSchemaType.STRING)))
-            .withSyncMode(SyncMode.FULL_REFRESH)
-            .withDestinationSyncMode(DestinationSyncMode.OVERWRITE),
-        new ConfiguredAirbyteStream()
-            .withStream(CatalogHelpers.createAirbyteStream(STREAM2_NAME, NAMESPACE, Field.of(FIELD_NAME, JsonSchemaType.STRING)))
-            .withSyncMode(SyncMode.FULL_REFRESH)
-            .withDestinationSyncMode(DestinationSyncMode.OVERWRITE)));
+        new ConfiguredAirbyteStream(
+            CatalogHelpers.createAirbyteStream(STREAM1_NAME, Field.of(FIELD_NAME, JsonSchemaType.STRING)),
+            SyncMode.FULL_REFRESH,
+            DestinationSyncMode.OVERWRITE),
+        new ConfiguredAirbyteStream(
+            CatalogHelpers.createAirbyteStream(STREAM2_NAME, NAMESPACE, Field.of(FIELD_NAME, JsonSchemaType.STRING)),
+            SyncMode.FULL_REFRESH,
+            DestinationSyncMode.OVERWRITE)));
 
     final SyncResourceRequirements expectedSyncResourceRequirements = new SyncResourceRequirements()
         .withConfigKey(new SyncResourceRequirementsKey().withVariant(DEFAULT_VARIANT))
@@ -1145,12 +1145,14 @@ class DefaultJobCreatorTest {
   void testGetResumableFullRefresh() {
     StandardSync standardSync = new StandardSync()
         .withCatalog(new ConfiguredAirbyteCatalog().withStreams(List.of(
-            new ConfiguredAirbyteStream().withSyncMode(SyncMode.INCREMENTAL).withStream(
-                new AirbyteStream().withName("no1").withIsResumable(true)),
-            new ConfiguredAirbyteStream().withSyncMode(SyncMode.FULL_REFRESH).withStream(
-                new AirbyteStream().withName("no2").withIsResumable(false)),
-            new ConfiguredAirbyteStream().withSyncMode(SyncMode.FULL_REFRESH).withStream(
-                new AirbyteStream().withName("yes").withIsResumable(true)))));
+            new ConfiguredAirbyteStream(new AirbyteStream("no1", Jsons.emptyObject(), List.of(SyncMode.INCREMENTAL)).withIsResumable(true),
+                SyncMode.INCREMENTAL, DestinationSyncMode.APPEND),
+            new ConfiguredAirbyteStream(new AirbyteStream("no2", Jsons.emptyObject(), List.of(SyncMode.FULL_REFRESH)).withIsResumable(false),
+                SyncMode.FULL_REFRESH,
+                DestinationSyncMode.APPEND),
+            new ConfiguredAirbyteStream(new AirbyteStream("yes", Jsons.emptyObject(), List.of(SyncMode.FULL_REFRESH)).withIsResumable(true),
+                SyncMode.FULL_REFRESH,
+                DestinationSyncMode.APPEND))));
 
     Set<StreamDescriptor> streamDescriptors = jobCreator.getResumableFullRefresh(standardSync, true);
     assertEquals(1, streamDescriptors.size());

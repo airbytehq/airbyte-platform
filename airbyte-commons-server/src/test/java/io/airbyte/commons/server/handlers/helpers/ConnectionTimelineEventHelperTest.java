@@ -8,10 +8,12 @@ import static io.airbyte.config.JobConfig.ConfigType.SYNC;
 import static org.junit.Assert.assertEquals;
 import static org.mockito.Mockito.mock;
 
+import io.airbyte.commons.json.Jsons;
 import io.airbyte.commons.server.support.CurrentUserService;
 import io.airbyte.config.AirbyteStream;
 import io.airbyte.config.ConfiguredAirbyteCatalog;
 import io.airbyte.config.ConfiguredAirbyteStream;
+import io.airbyte.config.DestinationSyncMode;
 import io.airbyte.config.Job;
 import io.airbyte.config.JobConfig;
 import io.airbyte.config.JobStatus;
@@ -53,9 +55,12 @@ class ConnectionTimelineEventHelperTest {
 
     final ConfiguredAirbyteCatalog catalog = new ConfiguredAirbyteCatalog()
         .withStreams(List.of(
-            new ConfiguredAirbyteStream().withSyncMode(userStreamMode).withStream(new AirbyteStream().withName(userStreamName)),
-            new ConfiguredAirbyteStream().withSyncMode(purchaseStreamMode).withStream(new AirbyteStream().withName(purchaseStreamName)),
-            new ConfiguredAirbyteStream().withSyncMode(vendorStreamMode).withStream(new AirbyteStream().withName(vendorStreamName))));
+            new ConfiguredAirbyteStream(new AirbyteStream(userStreamName, Jsons.emptyObject(), List.of(SyncMode.FULL_REFRESH)), userStreamMode,
+                DestinationSyncMode.APPEND),
+            new ConfiguredAirbyteStream(new AirbyteStream(purchaseStreamName, Jsons.emptyObject(), List.of(SyncMode.FULL_REFRESH)),
+                purchaseStreamMode, DestinationSyncMode.APPEND),
+            new ConfiguredAirbyteStream(new AirbyteStream(vendorStreamName, Jsons.emptyObject(), List.of(SyncMode.FULL_REFRESH)), vendorStreamMode,
+                DestinationSyncMode.APPEND)));
 
     final JobConfig jobConfig = new JobConfig().withConfigType(SYNC).withSync(new JobSyncConfig().withConfiguredAirbyteCatalog(catalog));
     final Job job =

@@ -1,5 +1,6 @@
 package io.airbyte.config.persistence.helper
 
+import io.airbyte.commons.json.Jsons
 import io.airbyte.config.AirbyteStream
 import io.airbyte.config.ConfiguredAirbyteCatalog
 import io.airbyte.config.ConfiguredAirbyteStream
@@ -19,15 +20,27 @@ class CatalogGenerationSetterTest {
   private val catalog =
     ConfiguredAirbyteCatalog().withStreams(
       listOf(
-        ConfiguredAirbyteStream().withStream(
-          AirbyteStream()
-            .withName("name1")
-            .withNamespace("namespace1"),
+        ConfiguredAirbyteStream(
+          stream =
+            AirbyteStream(
+              name = "name1",
+              namespace = "namespace1",
+              jsonSchema = Jsons.emptyObject(),
+              supportedSyncModes = listOf(SyncMode.INCREMENTAL),
+            ),
+          syncMode = SyncMode.INCREMENTAL,
+          destinationSyncMode = DestinationSyncMode.APPEND,
         ),
-        ConfiguredAirbyteStream().withStream(
-          AirbyteStream()
-            .withName("name2")
-            .withNamespace("namespace2"),
+        ConfiguredAirbyteStream(
+          stream =
+            AirbyteStream(
+              name = "name2",
+              namespace = "namespace2",
+              jsonSchema = Jsons.emptyObject(),
+              supportedSyncModes = listOf(SyncMode.INCREMENTAL),
+            ),
+          syncMode = SyncMode.INCREMENTAL,
+          destinationSyncMode = DestinationSyncMode.APPEND,
         ),
       ),
     )
@@ -159,27 +172,36 @@ class CatalogGenerationSetterTest {
     val catalog =
       ConfiguredAirbyteCatalog().withStreams(
         listOf(
-          ConfiguredAirbyteStream().withStream(
-            AirbyteStream()
-              .withName("name1")
-              .withNamespace("namespace1"),
-          )
-            .withSyncMode(SyncMode.FULL_REFRESH)
-            .withDestinationSyncMode(DestinationSyncMode.OVERWRITE),
-          ConfiguredAirbyteStream().withStream(
-            AirbyteStream()
-              .withName("name2")
-              .withNamespace("namespace2"),
-          )
-            .withSyncMode(SyncMode.FULL_REFRESH)
-            .withDestinationSyncMode(DestinationSyncMode.APPEND),
-          ConfiguredAirbyteStream().withStream(
-            AirbyteStream()
-              .withName("name2")
-              .withNamespace("namespace1"),
-          )
-            .withSyncMode(SyncMode.FULL_REFRESH)
-            .withDestinationSyncMode(DestinationSyncMode.OVERWRITE_DEDUP),
+          ConfiguredAirbyteStream(
+            AirbyteStream(
+              name = "name1",
+              namespace = "namespace1",
+              jsonSchema = Jsons.emptyObject(),
+              supportedSyncModes = listOf(SyncMode.FULL_REFRESH),
+            ),
+            SyncMode.FULL_REFRESH,
+            DestinationSyncMode.OVERWRITE,
+          ),
+          ConfiguredAirbyteStream(
+            AirbyteStream(
+              name = "name2",
+              namespace = "namespace2",
+              jsonSchema = Jsons.emptyObject(),
+              supportedSyncModes = listOf(SyncMode.FULL_REFRESH),
+            ),
+            SyncMode.FULL_REFRESH,
+            DestinationSyncMode.APPEND,
+          ),
+          ConfiguredAirbyteStream(
+            AirbyteStream(
+              name = "name2",
+              namespace = "namespace1",
+              jsonSchema = Jsons.emptyObject(),
+              supportedSyncModes = listOf(SyncMode.FULL_REFRESH),
+            ),
+            SyncMode.FULL_REFRESH,
+            DestinationSyncMode.OVERWRITE_DEDUP,
+          ),
         ),
       )
 
@@ -214,20 +236,28 @@ class CatalogGenerationSetterTest {
     val catalog =
       ConfiguredAirbyteCatalog().withStreams(
         listOf(
-          ConfiguredAirbyteStream().withStream(
-            AirbyteStream()
-              .withName("name1")
-              .withNamespace("namespace1"),
-          )
-            .withSyncMode(SyncMode.INCREMENTAL)
-            .withDestinationSyncMode(DestinationSyncMode.APPEND),
-          ConfiguredAirbyteStream().withStream(
-            AirbyteStream()
-              .withName("name2")
-              .withNamespace("namespace2"),
-          )
-            .withSyncMode(SyncMode.FULL_REFRESH)
-            .withDestinationSyncMode(DestinationSyncMode.OVERWRITE),
+          ConfiguredAirbyteStream(
+            stream =
+              AirbyteStream(
+                name = "name1",
+                namespace = "namespace1",
+                jsonSchema = Jsons.emptyObject(),
+                supportedSyncModes = listOf(SyncMode.INCREMENTAL),
+              ),
+            syncMode = SyncMode.INCREMENTAL,
+            destinationSyncMode = DestinationSyncMode.APPEND,
+          ),
+          ConfiguredAirbyteStream(
+            stream =
+              AirbyteStream(
+                name = "name2",
+                namespace = "namespace2",
+                jsonSchema = Jsons.emptyObject(),
+                supportedSyncModes = listOf(SyncMode.FULL_REFRESH),
+              ),
+            syncMode = SyncMode.FULL_REFRESH,
+            destinationSyncMode = DestinationSyncMode.OVERWRITE,
+          ),
         ),
       )
 

@@ -177,30 +177,28 @@ public class CatalogClientConverters {
       }
       ((ObjectNode) properties).retain(selectedFieldNames);
     }
-    return new io.airbyte.config.AirbyteStream()
-        .withName(stream.getName())
-        .withJsonSchema(stream.getJsonSchema())
-        .withSupportedSyncModes(Enums.convertListTo(stream.getSupportedSyncModes(), io.airbyte.config.SyncMode.class))
-        .withSourceDefinedCursor(stream.getSourceDefinedCursor())
-        .withDefaultCursorField(stream.getDefaultCursorField())
-        .withSourceDefinedPrimaryKey(
-            Optional.ofNullable(stream.getSourceDefinedPrimaryKey()).orElse(Collections.emptyList()))
-        .withNamespace(stream.getNamespace())
-        .withIsResumable(stream.isResumable());
+    return new io.airbyte.config.AirbyteStream(stream.getName(), stream.getJsonSchema(),
+        Enums.convertListTo(stream.getSupportedSyncModes(), io.airbyte.config.SyncMode.class))
+            .withSourceDefinedCursor(stream.getSourceDefinedCursor())
+            .withDefaultCursorField(stream.getDefaultCursorField())
+            .withSourceDefinedPrimaryKey(
+                Optional.ofNullable(stream.getSourceDefinedPrimaryKey()).orElse(Collections.emptyList()))
+            .withNamespace(stream.getNamespace())
+            .withIsResumable(stream.isResumable());
   }
 
   private static ConfiguredAirbyteStream toConfiguredStreamInternal(final io.airbyte.api.client.model.generated.AirbyteStream stream,
                                                                     final AirbyteStreamConfiguration config)
       throws JsonValidationException {
-    return new ConfiguredAirbyteStream()
-        .withStream(toStreamInternal(stream, config))
-        .withSyncMode(Enums.convertTo(config.getSyncMode(), io.airbyte.config.SyncMode.class))
-        .withDestinationSyncMode(Enums.convertTo(config.getDestinationSyncMode(), io.airbyte.config.DestinationSyncMode.class))
-        .withPrimaryKey(config.getPrimaryKey())
-        .withCursorField(config.getCursorField())
-        .withGenerationId(config.getGenerationId())
-        .withMinimumGenerationId(config.getMinimumGenerationId())
-        .withSyncId(config.getSyncId());
+    return new ConfiguredAirbyteStream(
+        toStreamInternal(stream, config),
+        Enums.convertTo(config.getSyncMode(), io.airbyte.config.SyncMode.class),
+        Enums.convertTo(config.getDestinationSyncMode(), io.airbyte.config.DestinationSyncMode.class))
+            .withPrimaryKey(config.getPrimaryKey())
+            .withCursorField(config.getCursorField())
+            .withGenerationId(config.getGenerationId())
+            .withMinimumGenerationId(config.getMinimumGenerationId())
+            .withSyncId(config.getSyncId());
   }
 
   /**

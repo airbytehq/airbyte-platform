@@ -636,10 +636,10 @@ class JobTrackerTest {
             .withDockerRepository(CONNECTOR_REPOSITORY));
 
     final ConfiguredAirbyteCatalog catalog = new ConfiguredAirbyteCatalog().withStreams(List.of(
-        new ConfiguredAirbyteStream()
-            .withStream(new AirbyteStream().withName("stream").withNamespace("namespace"))
-            .withSyncMode(SyncMode.FULL_REFRESH)
-            .withDestinationSyncMode(DestinationSyncMode.APPEND)));
+        new ConfiguredAirbyteStream(
+            new AirbyteStream("stream", Jsons.emptyObject(), List.of(SyncMode.FULL_REFRESH)).withNamespace("namespace"),
+            SyncMode.FULL_REFRESH,
+            DestinationSyncMode.APPEND)));
 
     final AttemptSyncConfig attemptSyncConfig = new AttemptSyncConfig()
         .withSourceConfiguration(Jsons.jsonNode(ImmutableMap.of("key", "some_value")))

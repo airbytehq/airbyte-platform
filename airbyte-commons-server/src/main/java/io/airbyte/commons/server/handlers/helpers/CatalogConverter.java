@@ -210,13 +210,12 @@ public class CatalogConverter {
         .filter(s -> s.getConfig().getSelected())
         .map(s -> {
           try {
-            return new ConfiguredAirbyteStream()
-                .withStream(ProtocolConverters.toInternal(toConfiguredProtocol(s.getStream(), s.getConfig())))
-                .withSyncMode(Enums.convertTo(s.getConfig().getSyncMode(), io.airbyte.config.SyncMode.class))
-                .withCursorField(s.getConfig().getCursorField())
-                .withDestinationSyncMode(Enums.convertTo(s.getConfig().getDestinationSyncMode(),
-                    io.airbyte.config.DestinationSyncMode.class))
-                .withPrimaryKey(Optional.ofNullable(s.getConfig().getPrimaryKey()).orElse(Collections.emptyList()));
+            return new ConfiguredAirbyteStream(
+                ProtocolConverters.toInternal(toConfiguredProtocol(s.getStream(), s.getConfig())),
+                Enums.convertTo(s.getConfig().getSyncMode(), io.airbyte.config.SyncMode.class),
+                Enums.convertTo(s.getConfig().getDestinationSyncMode(), io.airbyte.config.DestinationSyncMode.class))
+                    .withCursorField(s.getConfig().getCursorField())
+                    .withPrimaryKey(Optional.ofNullable(s.getConfig().getPrimaryKey()).orElse(Collections.emptyList()));
           } catch (final JsonValidationException e) {
             LOGGER.error("Error parsing catalog: {}", e);
             errors.add(e);

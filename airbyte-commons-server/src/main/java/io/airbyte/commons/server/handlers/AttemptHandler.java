@@ -214,7 +214,7 @@ public class AttemptHandler {
         .filter(s -> {
           if (s.getSyncMode().equals(SyncMode.FULL_REFRESH)) {
             if (excludeResumableStreams) {
-              return s.getStream().getIsResumable() == null || !s.getStream().getIsResumable();
+              return s.getStream().isResumable() == null || !s.getStream().isResumable();
             } else {
               return true;
             }

@@ -50,6 +50,7 @@ import io.airbyte.config.AttemptStatus;
 import io.airbyte.config.ConfiguredAirbyteCatalog;
 import io.airbyte.config.ConfiguredAirbyteStream;
 import io.airbyte.config.DestinationConnection;
+import io.airbyte.config.DestinationSyncMode;
 import io.airbyte.config.FailureReason;
 import io.airbyte.config.FailureReason.FailureOrigin;
 import io.airbyte.config.Job;
@@ -256,8 +257,10 @@ class AttemptHandlerTest {
     final var mCatalog = mock(ConfiguredAirbyteCatalog.class);
     when(mSyncConfig.getConfiguredAirbyteCatalog()).thenReturn(mCatalog);
     when(mCatalog.getStreams()).thenReturn(List.of(
-        new ConfiguredAirbyteStream().withStream(new AirbyteStream().withIsResumable(true).withName("rfrStream"))
-            .withSyncMode(SyncMode.FULL_REFRESH)));
+        new ConfiguredAirbyteStream(
+            new AirbyteStream("rfrStream", Jsons.emptyObject(), List.of(io.airbyte.config.SyncMode.FULL_REFRESH)).withIsResumable(true),
+            SyncMode.FULL_REFRESH,
+            DestinationSyncMode.APPEND)));
 
     when(jobPersistence.getJob(JOB_ID)).thenReturn(mJob);
     when(path.resolve(Mockito.anyString())).thenReturn(path);
@@ -309,8 +312,9 @@ class AttemptHandlerTest {
     final var mCatalog = mock(ConfiguredAirbyteCatalog.class);
     when(mResetConfig.getConfiguredAirbyteCatalog()).thenReturn(mCatalog);
     when(mCatalog.getStreams()).thenReturn(List.of(
-        new ConfiguredAirbyteStream().withStream(new AirbyteStream().withIsResumable(true).withName("rfrStream"))
-            .withSyncMode(SyncMode.INCREMENTAL)));
+        new ConfiguredAirbyteStream(new AirbyteStream("rfrStream", Jsons.emptyObject(), List.of(SyncMode.INCREMENTAL)).withIsResumable(true),
+            SyncMode.INCREMENTAL,
+            DestinationSyncMode.APPEND)));
     when(mResetConfig.getResetSourceConfiguration()).thenReturn(new ResetSourceConfiguration().withStreamsToReset(
         List.of(new StreamDescriptor().withName("rfrStream"))));
 
@@ -357,10 +361,12 @@ class AttemptHandlerTest {
     final var mCatalog = mock(ConfiguredAirbyteCatalog.class);
     when(mRefreshConfig.getConfiguredAirbyteCatalog()).thenReturn(mCatalog);
     when(mCatalog.getStreams()).thenReturn(List.of(
-        new ConfiguredAirbyteStream().withStream(new AirbyteStream().withIsResumable(true).withName("rfrStream"))
-            .withSyncMode(SyncMode.FULL_REFRESH),
-        new ConfiguredAirbyteStream().withStream(new AirbyteStream().withName("nonRfrStream"))
-            .withSyncMode(SyncMode.FULL_REFRESH)));
+        new ConfiguredAirbyteStream(
+            new AirbyteStream("rfrStream", Jsons.emptyObject(), List.of(io.airbyte.config.SyncMode.FULL_REFRESH)).withIsResumable(true),
+            SyncMode.FULL_REFRESH,
+            DestinationSyncMode.APPEND),
+        new ConfiguredAirbyteStream(new AirbyteStream("nonRfrStream", Jsons.emptyObject(), List.of(io.airbyte.config.SyncMode.FULL_REFRESH)),
+            SyncMode.FULL_REFRESH, DestinationSyncMode.APPEND)));
 
     when(jobPersistence.getJob(JOB_ID)).thenReturn(mJob);
     when(path.resolve(Mockito.anyString())).thenReturn(path);
@@ -414,10 +420,17 @@ class AttemptHandlerTest {
       when(mSyncConfig.getConfiguredAirbyteCatalog()).thenReturn(mCatalog);
 
       when(mCatalog.getStreams()).thenReturn(List.of(
-          new ConfiguredAirbyteStream().withSyncMode(SyncMode.FULL_REFRESH).withStream(new AirbyteStream().withName("full").withIsResumable(true)),
-          new ConfiguredAirbyteStream().withSyncMode(SyncMode.INCREMENTAL).withStream(new AirbyteStream().withName("incre")),
-          new ConfiguredAirbyteStream().withSyncMode(SyncMode.FULL_REFRESH).withStream(new AirbyteStream().withName("full").withNamespace("name")),
-          new ConfiguredAirbyteStream().withSyncMode(SyncMode.INCREMENTAL).withStream(new AirbyteStream().withName("incre").withNamespace("name"))));
+          new ConfiguredAirbyteStream(
+              new AirbyteStream("full", Jsons.emptyObject(), List.of(io.airbyte.config.SyncMode.FULL_REFRESH)).withIsResumable(true),
+              SyncMode.FULL_REFRESH, DestinationSyncMode.APPEND),
+          new ConfiguredAirbyteStream(new AirbyteStream("incre", Jsons.emptyObject(), List.of(SyncMode.INCREMENTAL)), SyncMode.INCREMENTAL,
+              DestinationSyncMode.APPEND),
+          new ConfiguredAirbyteStream(
+              new AirbyteStream("full", Jsons.emptyObject(), List.of(io.airbyte.config.SyncMode.FULL_REFRESH)).withNamespace("name"),
+              SyncMode.FULL_REFRESH, DestinationSyncMode.APPEND),
+          new ConfiguredAirbyteStream(new AirbyteStream("incre", Jsons.emptyObject(), List.of(SyncMode.INCREMENTAL)).withNamespace("name"),
+              SyncMode.INCREMENTAL,
+              DestinationSyncMode.APPEND)));
 
       final var streams = handler.getFullRefreshStreamsToClear(mCatalog, 1, enableResumableFullRefresh);
       final var exp = enableResumableFullRefresh ? Set.of(new StreamDescriptor().withName("full").withNamespace("name"))
@@ -468,10 +481,15 @@ class AttemptHandlerTest {
       when(mDyncConfig.getConfiguredAirbyteCatalog()).thenReturn(mCatalog);
 
       when(mCatalog.getStreams()).thenReturn(List.of(
-          new ConfiguredAirbyteStream().withSyncMode(SyncMode.FULL_REFRESH).withStream(new AirbyteStream().withName("full").withIsResumable(true)),
-          new ConfiguredAirbyteStream().withSyncMode(SyncMode.INCREMENTAL).withStream(new AirbyteStream().withName("incre")),
-          new ConfiguredAirbyteStream().withSyncMode(SyncMode.FULL_REFRESH).withStream(new AirbyteStream().withName("full").withNamespace("name")),
-          new ConfiguredAirbyteStream().withSyncMode(SyncMode.INCREMENTAL).withStream(new AirbyteStream().withName("incre").withNamespace("name"))));
+          new ConfiguredAirbyteStream(new AirbyteStream("full", Jsons.emptyObject(), List.of(SyncMode.FULL_REFRESH)).withIsResumable(true),
+              SyncMode.FULL_REFRESH, DestinationSyncMode.APPEND),
+          new ConfiguredAirbyteStream(new AirbyteStream("incre", Jsons.emptyObject(), List.of(SyncMode.INCREMENTAL)), SyncMode.INCREMENTAL,
+              DestinationSyncMode.APPEND),
+          new ConfiguredAirbyteStream(new AirbyteStream("full", Jsons.emptyObject(), List.of(SyncMode.FULL_REFRESH)).withNamespace("name"),
+              SyncMode.FULL_REFRESH, DestinationSyncMode.APPEND),
+          new ConfiguredAirbyteStream(new AirbyteStream("incre", Jsons.emptyObject(), List.of(SyncMode.INCREMENTAL)).withNamespace("name"),
+              SyncMode.INCREMENTAL,
+              DestinationSyncMode.APPEND)));
 
       when(jobPersistence.createAttempt(JOB_ID, expectedLogPath)).thenReturn(attemptNumber);
 

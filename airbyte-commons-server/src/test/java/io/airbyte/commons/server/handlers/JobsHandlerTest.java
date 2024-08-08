@@ -23,6 +23,7 @@ import static org.mockito.Mockito.when;
 import io.airbyte.api.model.generated.InternalOperationResult;
 import io.airbyte.api.model.generated.JobFailureRequest;
 import io.airbyte.api.model.generated.JobSuccessWithAttemptNumberRequest;
+import io.airbyte.commons.json.Jsons;
 import io.airbyte.commons.server.JobStatus;
 import io.airbyte.commons.server.errors.BadRequestException;
 import io.airbyte.commons.server.handlers.helpers.ConnectionTimelineEventHelper;
@@ -33,6 +34,7 @@ import io.airbyte.config.AttemptFailureSummary;
 import io.airbyte.config.AttemptSyncConfig;
 import io.airbyte.config.ConfiguredAirbyteCatalog;
 import io.airbyte.config.ConfiguredAirbyteStream;
+import io.airbyte.config.DestinationSyncMode;
 import io.airbyte.config.FailureReason;
 import io.airbyte.config.FailureReason.FailureOrigin;
 import io.airbyte.config.Job;
@@ -85,7 +87,9 @@ public class JobsHandlerTest {
 
   private static final JobOutput jobOutput = new JobOutput().withSync(standardSyncOutput);
   private static final ConfiguredAirbyteCatalog catalog = new ConfiguredAirbyteCatalog()
-      .withStreams(List.of(new ConfiguredAirbyteStream().withSyncMode(SyncMode.FULL_REFRESH).withStream(new AirbyteStream().withName("stream"))));
+      .withStreams(
+          List.of(new ConfiguredAirbyteStream(new AirbyteStream("stream", Jsons.emptyObject(), List.of(io.airbyte.config.SyncMode.FULL_REFRESH)),
+              SyncMode.FULL_REFRESH, DestinationSyncMode.APPEND)));
   private static final JobConfig simpleConfig =
       new JobConfig().withConfigType(SYNC).withSync(new JobSyncConfig().withConfiguredAirbyteCatalog(catalog));
 

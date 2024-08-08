@@ -93,7 +93,7 @@ class ReplicationInputHydratorTest {
       new AirbyteStreamAndConfiguration(
           new AirbyteStream(
               TEST_STREAM_NAME,
-              null,
+              Jsons.emptyObject(),
               List.of(SyncMode.INCREMENTAL),
               null,
               null,

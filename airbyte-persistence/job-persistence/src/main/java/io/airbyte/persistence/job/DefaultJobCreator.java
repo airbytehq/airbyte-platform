@@ -9,6 +9,7 @@ import com.google.common.annotations.VisibleForTesting;
 import io.airbyte.commons.version.Version;
 import io.airbyte.config.ActorDefinitionVersion;
 import io.airbyte.config.ConfiguredAirbyteCatalog;
+import io.airbyte.config.ConfiguredAirbyteStream;
 import io.airbyte.config.DestinationConnection;
 import io.airbyte.config.JobConfig;
 import io.airbyte.config.JobConfig.ConfigType;
@@ -200,11 +201,9 @@ public class DefaultJobCreator implements JobCreator {
 
     return standardSync.getCatalog().getStreams().stream()
         .filter(stream -> stream.getSyncMode() == SyncMode.FULL_REFRESH
-            && stream.getStream().getIsResumable() != null
-            && stream.getStream().getIsResumable())
-        .map(stream -> new StreamDescriptor()
-            .withName(stream.getStream().getName())
-            .withNamespace(stream.getStream().getNamespace()))
+            && stream.getStream().isResumable() != null
+            && stream.getStream().isResumable())
+        .map(ConfiguredAirbyteStream::getStreamDescriptor)
         .collect(Collectors.toSet());
   }
 

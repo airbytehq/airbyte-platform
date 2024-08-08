@@ -5,6 +5,7 @@ import io.airbyte.config.AirbyteStream
 import io.airbyte.config.ConfiguredAirbyteCatalog
 import io.airbyte.config.ConfiguredAirbyteStream
 import io.airbyte.config.DestinationSyncMode
+import io.airbyte.config.SyncMode
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 import io.airbyte.protocol.models.AirbyteStream as ProtocolAirbyteStream
@@ -30,22 +31,19 @@ class DefaultProtocolSerializerTest {
       serializer: ProtocolSerializer,
       supportRefreshes: Boolean,
     ) {
+      val appendStreamName = "append"
+      val overwriteStreamName = "overwrite"
+      val appendDedupStreamName = "append_dedup"
+      val overwriteDedupStreamName = "overwrite_dedup"
+
       val configuredCatalog =
         ConfiguredAirbyteCatalog()
           .withStreams(
             listOf(
-              ConfiguredAirbyteStream()
-                .withStream(AirbyteStream().withName("append"))
-                .withDestinationSyncMode(DestinationSyncMode.APPEND),
-              ConfiguredAirbyteStream()
-                .withStream(AirbyteStream().withName("overwrite"))
-                .withDestinationSyncMode(DestinationSyncMode.OVERWRITE),
-              ConfiguredAirbyteStream()
-                .withStream(AirbyteStream().withName("append_dedup"))
-                .withDestinationSyncMode(DestinationSyncMode.APPEND_DEDUP),
-              ConfiguredAirbyteStream()
-                .withStream(AirbyteStream().withName("overwrite_dedup"))
-                .withDestinationSyncMode(DestinationSyncMode.OVERWRITE_DEDUP),
+              ConfiguredAirbyteStream(getAirbyteStream(appendStreamName), SyncMode.INCREMENTAL, DestinationSyncMode.APPEND),
+              ConfiguredAirbyteStream(getAirbyteStream(overwriteStreamName), SyncMode.FULL_REFRESH, DestinationSyncMode.OVERWRITE),
+              ConfiguredAirbyteStream(getAirbyteStream(appendDedupStreamName), SyncMode.FULL_REFRESH, DestinationSyncMode.APPEND_DEDUP),
+              ConfiguredAirbyteStream(getAirbyteStream(overwriteDedupStreamName), SyncMode.FULL_REFRESH, DestinationSyncMode.OVERWRITE_DEDUP),
             ),
           )
       val frozenConfiguredCatalog = Jsons.clone(configuredCatalog)
@@ -55,16 +53,36 @@ class DefaultProtocolSerializerTest {
           .withStreams(
             listOf(
               ProtocolConfiguredAirbyteStream()
-                .withStream(ProtocolAirbyteStream().withName("append"))
+                .withStream(
+                  ProtocolAirbyteStream().withName(
+                    appendStreamName,
+                  ).withJsonSchema(Jsons.emptyObject()).withSupportedSyncModes(listOf(io.airbyte.protocol.models.SyncMode.FULL_REFRESH)),
+                )
+                .withSyncMode(io.airbyte.protocol.models.SyncMode.INCREMENTAL)
                 .withDestinationSyncMode(ProtocolDestinationSyncMode.APPEND),
               ProtocolConfiguredAirbyteStream()
-                .withStream(ProtocolAirbyteStream().withName("overwrite"))
+                .withStream(
+                  ProtocolAirbyteStream().withName(
+                    overwriteStreamName,
+                  ).withJsonSchema(Jsons.emptyObject()).withSupportedSyncModes(listOf(io.airbyte.protocol.models.SyncMode.FULL_REFRESH)),
+                )
+                .withSyncMode(io.airbyte.protocol.models.SyncMode.FULL_REFRESH)
                 .withDestinationSyncMode(if (supportRefreshes) ProtocolDestinationSyncMode.APPEND else ProtocolDestinationSyncMode.OVERWRITE),
               ProtocolConfiguredAirbyteStream()
-                .withStream(ProtocolAirbyteStream().withName("append_dedup"))
+                .withStream(
+                  ProtocolAirbyteStream().withName(
+                    appendDedupStreamName,
+                  ).withJsonSchema(Jsons.emptyObject()).withSupportedSyncModes(listOf(io.airbyte.protocol.models.SyncMode.FULL_REFRESH)),
+                )
+                .withSyncMode(io.airbyte.protocol.models.SyncMode.FULL_REFRESH)
                 .withDestinationSyncMode(ProtocolDestinationSyncMode.APPEND_DEDUP),
               ProtocolConfiguredAirbyteStream()
-                .withStream(ProtocolAirbyteStream().withName("overwrite_dedup"))
+                .withStream(
+                  ProtocolAirbyteStream().withName(
+                    overwriteDedupStreamName,
+                  ).withJsonSchema(Jsons.emptyObject()).withSupportedSyncModes(listOf(io.airbyte.protocol.models.SyncMode.FULL_REFRESH)),
+                )
+                .withSyncMode(io.airbyte.protocol.models.SyncMode.FULL_REFRESH)
                 .withDestinationSyncMode(if (supportRefreshes) ProtocolDestinationSyncMode.APPEND_DEDUP else ProtocolDestinationSyncMode.OVERWRITE),
             ),
           )
@@ -78,5 +96,7 @@ class DefaultProtocolSerializerTest {
       // Verify we didn't mutate the input
       assertEquals(frozenConfiguredCatalog, configuredCatalog)
     }
+
+    fun getAirbyteStream(name: String) = AirbyteStream(name, Jsons.emptyObject(), listOf(SyncMode.FULL_REFRESH))
   }
 }

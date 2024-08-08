@@ -30,6 +30,7 @@ import io.airbyte.api.model.generated.SourceDefinitionRead;
 import io.airbyte.api.model.generated.StreamDescriptor;
 import io.airbyte.api.model.generated.SynchronousJobRead;
 import io.airbyte.commons.enums.Enums;
+import io.airbyte.commons.json.Jsons;
 import io.airbyte.commons.server.scheduler.SynchronousJobMetadata;
 import io.airbyte.commons.version.AirbyteVersion;
 import io.airbyte.config.AirbyteStream;
@@ -38,6 +39,7 @@ import io.airbyte.config.AttemptStatus;
 import io.airbyte.config.Configs.WorkerEnvironment;
 import io.airbyte.config.ConfiguredAirbyteCatalog;
 import io.airbyte.config.ConfiguredAirbyteStream;
+import io.airbyte.config.DestinationSyncMode;
 import io.airbyte.config.FailureReason;
 import io.airbyte.config.FailureReason.FailureOrigin;
 import io.airbyte.config.FailureReason.FailureType;
@@ -55,6 +57,7 @@ import io.airbyte.config.ResetSourceConfiguration;
 import io.airbyte.config.StandardSyncOutput;
 import io.airbyte.config.StandardSyncSummary;
 import io.airbyte.config.StreamSyncStats;
+import io.airbyte.config.SyncMode;
 import io.airbyte.config.SyncStats;
 import io.airbyte.config.helpers.LogConfigs;
 import io.airbyte.featureflag.TestClient;
@@ -145,8 +148,10 @@ class JobConverterTest {
     private static final JobConfig JOB_CONFIG = new JobConfig()
         .withConfigType(CONFIG_TYPE)
         .withSync(new JobSyncConfig().withConfiguredAirbyteCatalog(new ConfiguredAirbyteCatalog().withStreams(List.of(
-            new ConfiguredAirbyteStream().withStream(new AirbyteStream().withName(USERS)),
-            new ConfiguredAirbyteStream().withStream(new AirbyteStream().withName(ACCOUNTS))))));
+            new ConfiguredAirbyteStream(new AirbyteStream(USERS, Jsons.emptyObject(), List.of(SyncMode.INCREMENTAL)), SyncMode.INCREMENTAL,
+                DestinationSyncMode.APPEND),
+            new ConfiguredAirbyteStream(new AirbyteStream(ACCOUNTS, Jsons.emptyObject(), List.of(SyncMode.INCREMENTAL)), SyncMode.INCREMENTAL,
+                DestinationSyncMode.APPEND)))));
 
     private static final JobOutput JOB_OUTPUT = new JobOutput()
         .withOutputType(OutputType.SYNC)

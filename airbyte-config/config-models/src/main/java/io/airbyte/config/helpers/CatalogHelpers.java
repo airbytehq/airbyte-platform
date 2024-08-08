@@ -43,9 +43,7 @@ public class CatalogHelpers {
   public static AirbyteStream createAirbyteStream(final String streamName,
                                                   final String namespace,
                                                   final List<Field> fields) {
-    return new AirbyteStream().withName(streamName).withNamespace(namespace)
-        .withJsonSchema(fieldsToJsonSchema(fields))
-        .withSupportedSyncModes(List.of(SyncMode.FULL_REFRESH));
+    return new AirbyteStream(streamName, fieldsToJsonSchema(fields), List.of(SyncMode.FULL_REFRESH)).withNamespace(namespace);
   }
 
   public static ConfiguredAirbyteCatalog createConfiguredAirbyteCatalog(final String streamName,
@@ -71,11 +69,10 @@ public class CatalogHelpers {
   public static ConfiguredAirbyteStream createConfiguredAirbyteStream(final String streamName,
                                                                       final String namespace,
                                                                       final List<Field> fields) {
-    return new ConfiguredAirbyteStream()
-        .withStream(new AirbyteStream().withName(streamName).withNamespace(namespace)
-            .withJsonSchema(fieldsToJsonSchema(fields))
-            .withSupportedSyncModes(List.of(SyncMode.FULL_REFRESH)))
-        .withSyncMode(SyncMode.FULL_REFRESH).withDestinationSyncMode(DestinationSyncMode.OVERWRITE);
+    return new ConfiguredAirbyteStream(
+        new AirbyteStream(streamName, fieldsToJsonSchema(fields), List.of(SyncMode.FULL_REFRESH)).withNamespace(namespace),
+        SyncMode.FULL_REFRESH,
+        DestinationSyncMode.OVERWRITE);
   }
 
   /**
@@ -111,8 +108,7 @@ public class CatalogHelpers {
    * @return stream descriptor
    */
   public static StreamDescriptor extractDescriptor(final AirbyteStream airbyteStream) {
-    return new StreamDescriptor().withName(airbyteStream.getName())
-        .withNamespace(airbyteStream.getNamespace());
+    return airbyteStream.getStreamDescriptor();
   }
 
   /**

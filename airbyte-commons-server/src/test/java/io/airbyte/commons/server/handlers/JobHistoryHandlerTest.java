@@ -45,6 +45,7 @@ import io.airbyte.api.model.generated.StreamDescriptor;
 import io.airbyte.api.model.generated.StreamStats;
 import io.airbyte.api.model.generated.StreamSyncProgressReadItem;
 import io.airbyte.commons.enums.Enums;
+import io.airbyte.commons.json.Jsons;
 import io.airbyte.commons.server.converters.JobConverter;
 import io.airbyte.commons.server.helpers.ConnectionHelpers;
 import io.airbyte.commons.server.helpers.DestinationHelpers;
@@ -58,6 +59,7 @@ import io.airbyte.config.Configs.WorkerEnvironment;
 import io.airbyte.config.ConfiguredAirbyteCatalog;
 import io.airbyte.config.ConfiguredAirbyteStream;
 import io.airbyte.config.DestinationConnection;
+import io.airbyte.config.DestinationSyncMode;
 import io.airbyte.config.Job;
 import io.airbyte.config.JobCheckConnectionConfig;
 import io.airbyte.config.JobConfig;
@@ -115,14 +117,11 @@ class JobHistoryHandlerTest {
       .withCheckConnection(new JobCheckConnectionConfig())
       .withSync(new JobSyncConfig().withConfiguredAirbyteCatalog(
           new ConfiguredAirbyteCatalog().withStreams(List.of(
-              new ConfiguredAirbyteStream()
-                  .withSyncMode(SyncMode.FULL_REFRESH)
-                  .withStream(new AirbyteStream()
-                      .withNamespace("ns1")
-                      .withName("stream1")),
-              new ConfiguredAirbyteStream()
-                  .withSyncMode(SyncMode.INCREMENTAL)
-                  .withStream(new AirbyteStream().withName("stream2"))))));
+              new ConfiguredAirbyteStream(new AirbyteStream("stream1", Jsons.emptyObject(), List.of(SyncMode.FULL_REFRESH)).withNamespace("ns1"),
+                  SyncMode.FULL_REFRESH,
+                  DestinationSyncMode.APPEND),
+              new ConfiguredAirbyteStream(new AirbyteStream("stream2", Jsons.emptyObject(), List.of(SyncMode.INCREMENTAL)), SyncMode.INCREMENTAL,
+                  DestinationSyncMode.APPEND)))));
   private static final Path LOG_PATH = Path.of("log_path");
   private static final LogRead EMPTY_LOG_READ = new LogRead().logLines(new ArrayList<>());
   private static final long CREATED_AT = System.currentTimeMillis() / 1000;

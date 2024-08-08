@@ -1392,21 +1392,21 @@ class ConnectionsHandlerTest {
       }
 
       private ConfiguredAirbyteStream buildConfiguredStream(final String name) {
-        return new ConfiguredAirbyteStream()
-            .withStream(CatalogHelpers.createAirbyteStream(name, Field.of(FIELD_NAME, JsonSchemaType.STRING))
+        return new ConfiguredAirbyteStream(
+            CatalogHelpers.createAirbyteStream(name, Field.of(FIELD_NAME, JsonSchemaType.STRING))
                 .withDefaultCursorField(List.of(FIELD_NAME))
                 .withSourceDefinedCursor(false)
                 .withSupportedSyncModes(
-                    List.of(io.airbyte.config.SyncMode.FULL_REFRESH, io.airbyte.config.SyncMode.INCREMENTAL)))
-            .withCursorField(List.of(FIELD_NAME))
-            .withSyncMode(io.airbyte.config.SyncMode.INCREMENTAL)
-            .withDestinationSyncMode(io.airbyte.config.DestinationSyncMode.APPEND);
+                    List.of(io.airbyte.config.SyncMode.FULL_REFRESH, io.airbyte.config.SyncMode.INCREMENTAL)),
+            io.airbyte.config.SyncMode.INCREMENTAL,
+            io.airbyte.config.DestinationSyncMode.APPEND)
+                .withCursorField(List.of(FIELD_NAME));
       }
 
       private AirbyteStreamAndConfiguration buildStream(final String name) {
         return new AirbyteStreamAndConfiguration()
-            .stream(new AirbyteStream().name(name))
-            .config(new AirbyteStreamConfiguration().selected(true));
+            .stream(new AirbyteStream().name(name).jsonSchema(Jsons.emptyObject()).supportedSyncModes(List.of(SyncMode.INCREMENTAL)))
+            .config(new AirbyteStreamConfiguration().syncMode(SyncMode.INCREMENTAL).destinationSyncMode(DestinationSyncMode.APPEND).selected(true));
       }
 
       @Test
@@ -1747,7 +1747,10 @@ class ConnectionsHandlerTest {
 
         catalog.setStreams(Stream.concat(
             stillActiveStreams.stream().map(this::buildStream),
-            deactivatedStreams.stream().map(this::buildStream).peek(s -> s.setConfig(new AirbyteStreamConfiguration().selected(false)))).toList());
+            deactivatedStreams.stream().map(this::buildStream)
+                .peek(s -> s.setConfig(
+                    new AirbyteStreamConfiguration().syncMode(SyncMode.INCREMENTAL).destinationSyncMode(DestinationSyncMode.APPEND).selected(false))))
+            .toList());
         final ConnectionUpdate request = new ConnectionUpdate()
             .connectionId(moreComplexCatalogSync.getConnectionId())
             .syncCatalog(catalog);
@@ -2543,8 +2546,9 @@ class ConnectionsHandlerTest {
           CatalogConverter.toApi(Jsons.clone(airbyteCatalog), SOURCE_VERSION);
       catalogWithDiff.addStreamsItem(new AirbyteStreamAndConfiguration()
           .stream(new AirbyteStream().name(A_DIFFERENT_STREAM).namespace(A_DIFFERENT_NAMESPACE).sourceDefinedCursor(false)
-              .supportedSyncModes(List.of(SyncMode.FULL_REFRESH)))
-          .config(new AirbyteStreamConfiguration().selected(true)));
+              .jsonSchema(Jsons.emptyObject()).supportedSyncModes(List.of(SyncMode.FULL_REFRESH)))
+          .config(
+              new AirbyteStreamConfiguration().syncMode(SyncMode.FULL_REFRESH).destinationSyncMode(DestinationSyncMode.OVERWRITE).selected(true)));
 
       final ConnectionAutoPropagateSchemaChange request = new ConnectionAutoPropagateSchemaChange()
           .connectionId(CONNECTION_ID)
@@ -2561,13 +2565,14 @@ class ConnectionsHandlerTest {
       final ConfiguredAirbyteCatalog expectedCatalog = Jsons.clone(configuredAirbyteCatalog);
       expectedCatalog.getStreams().forEach(s -> s.getStream().withSourceDefinedCursor(false));
       expectedCatalog.getStreams()
-          .add(new ConfiguredAirbyteStream().withStream(new io.airbyte.config.AirbyteStream().withName(A_DIFFERENT_STREAM)
-              .withNamespace(A_DIFFERENT_NAMESPACE).withSupportedSyncModes(List.of(io.airbyte.config.SyncMode.FULL_REFRESH))
-              .withSourceDefinedCursor(false)
-              .withDefaultCursorField(List.of()))
-              .withDestinationSyncMode(io.airbyte.config.DestinationSyncMode.OVERWRITE)
-              .withSyncMode(io.airbyte.config.SyncMode.FULL_REFRESH)
-              .withCursorField(List.of()));
+          .add(new ConfiguredAirbyteStream(
+              new io.airbyte.config.AirbyteStream(A_DIFFERENT_STREAM, Jsons.emptyObject(), List.of(io.airbyte.config.SyncMode.FULL_REFRESH))
+                  .withNamespace(A_DIFFERENT_NAMESPACE)
+                  .withSourceDefinedCursor(false)
+                  .withDefaultCursorField(List.of()),
+              io.airbyte.config.SyncMode.FULL_REFRESH,
+              io.airbyte.config.DestinationSyncMode.OVERWRITE)
+                  .withCursorField(List.of()));
       final ArgumentCaptor<StandardSync> standardSyncArgumentCaptor = ArgumentCaptor.forClass(StandardSync.class);
       verify(configRepository).writeStandardSync(standardSyncArgumentCaptor.capture());
       final StandardSync actualStandardSync = standardSyncArgumentCaptor.getValue();

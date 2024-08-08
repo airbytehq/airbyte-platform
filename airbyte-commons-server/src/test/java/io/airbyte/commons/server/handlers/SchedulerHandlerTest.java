@@ -2012,8 +2012,10 @@ class SchedulerHandlerTest {
         .addStreamsItem(new AirbyteStreamAndConfiguration().stream(new AirbyteStream().name("foo").namespace("ns")));
     final io.airbyte.api.model.generated.AirbyteCatalog configuredCatalog = new io.airbyte.api.model.generated.AirbyteCatalog()
         .addStreamsItem(new AirbyteStreamAndConfiguration()
-            .stream(new AirbyteStream().name("foo").namespace("ns").supportedSyncModes(List.of(SyncMode.FULL_REFRESH)))
-            .config(new AirbyteStreamConfiguration().selected(true).syncMode(SyncMode.FULL_REFRESH)));
+            .stream(
+                new AirbyteStream().name("foo").namespace("ns").jsonSchema(Jsons.emptyObject()).supportedSyncModes(List.of(SyncMode.FULL_REFRESH)))
+            .config(new AirbyteStreamConfiguration().selected(true).syncMode(SyncMode.FULL_REFRESH).destinationSyncMode(
+                io.airbyte.api.model.generated.DestinationSyncMode.APPEND)));
 
     final io.airbyte.api.model.generated.AirbyteCatalog newCatalog = new io.airbyte.api.model.generated.AirbyteCatalog()
         .addStreamsItem(new AirbyteStreamAndConfiguration().stream(new AirbyteStream().name("foo").namespace("ns")));

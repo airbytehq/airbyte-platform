@@ -287,7 +287,7 @@ class ReplicationWorkerHelperTest {
   }
 
   private ConfiguredAirbyteCatalog buildConfiguredAirbyteCatalog() {
-    return new ConfiguredAirbyteCatalog().withAdditionalProperty("test", "test");
+    return new ConfiguredAirbyteCatalog();
   }
 
 }
