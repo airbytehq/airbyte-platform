@@ -7,6 +7,7 @@ import { Text } from "components/ui/Text";
 import { ResetStreamsDetails } from "area/connection/components/JobHistoryItem/ResetStreamDetails";
 import { useLocalStorage } from "core/utils/useLocalStorage";
 
+import { UserCancelledDescription } from "./TimelineEventUser";
 import { ConnectionTimelineEventActions } from "../ConnectionTimelineEventActions";
 import { ConnectionTimelineEventIcon } from "../ConnectionTimelineEventIcon";
 import { ConnectionTimelineEventItem } from "../ConnectionTimelineEventItem";
@@ -31,12 +32,10 @@ export const ClearEventItem: React.FC<ClearEventProps> = ({ clearEvent }) => {
           <FormattedMessage id={title} values={{ value: streamsToList.length }} />
         </Text>
         <Box pt="xs">
+          {jobStatus === "cancelled" && <UserCancelledDescription user={clearEvent.user} jobType="clear" />}
           {streamsToList.length > 0 && <ResetStreamsDetails names={streamsToList} />}
           {showExtendedStats && (
             <>
-              <Text as="span" color="grey400" size="sm">
-                |
-              </Text>
               <Text as="span" color="grey400" size="sm">
                 <FormattedMessage id="jobs.jobId" values={{ id: clearEvent.summary.jobId }} />
               </Text>

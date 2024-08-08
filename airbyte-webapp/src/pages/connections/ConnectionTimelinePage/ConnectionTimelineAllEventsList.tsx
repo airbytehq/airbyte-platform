@@ -61,9 +61,19 @@ export const ConnectionTimelineAllEventsList: React.FC<{
     createdAtEnd: filterValues.endDate !== "" ? filterValues.endDate : undefined,
   });
 
+  const showRunningJob =
+    isRunning &&
+    !!syncProgressData &&
+    (filterValues.endDate === "" || parseInt(filterValues.endDate) > (syncProgressData.syncStartedAt ?? 0)) &&
+    (filterValues.startDate === "" || parseInt(filterValues.startDate) < (syncProgressData.syncStartedAt ?? 0)) &&
+    filterValues.status === "" &&
+    (filterValues.eventCategory === "" ||
+      filterValues.eventCategory === syncProgressData.configType ||
+      (filterValues.eventCategory === "clear" && syncProgressData.configType === "reset_connection"));
+
   const connectionEventsToShow = useMemo(() => {
     return [
-      ...(isRunning && !!syncProgressData
+      ...(showRunningJob
         ? [
             {
               id: "running",
@@ -86,7 +96,7 @@ export const ConnectionTimelineAllEventsList: React.FC<{
         : []), // if there is a running sync, append an item to the top of the list
       ...(connectionEventsData?.pages.flatMap<ConnectionEvent>((page) => page.data.events) ?? []),
     ];
-  }, [connection.connectionId, connectionEventsData?.pages, isRunning, syncProgressData]);
+  }, [connection.connectionId, connectionEventsData?.pages, showRunningJob, syncProgressData]);
 
   useEffect(() => {
     refetch();

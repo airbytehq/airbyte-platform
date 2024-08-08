@@ -7,6 +7,7 @@ import { Text } from "components/ui/Text";
 import { ResetStreamsDetails } from "area/connection/components/JobHistoryItem/ResetStreamDetails";
 
 import { JobStats } from "./JobStats";
+import { UserCancelledDescription } from "./TimelineEventUser";
 import { ConnectionTimelineEventActions } from "../ConnectionTimelineEventActions";
 import { ConnectionTimelineEventIcon } from "../ConnectionTimelineEventIcon";
 import { ConnectionTimelineEventItem } from "../ConnectionTimelineEventItem";
@@ -31,7 +32,10 @@ export const RefreshEventItem: React.FC<RefreshEventItemProps> = ({ refreshEvent
           <Text bold>
             <FormattedMessage id={titleId} values={{ value: streamsToList.length }} />
           </Text>
-          <JobStats {...refreshEvent.summary} />
+          <FlexContainer gap="xs" alignItems="baseline">
+            {jobStatus === "cancelled" && <UserCancelledDescription user={refreshEvent.user} jobType="refresh" />}
+            <JobStats {...refreshEvent.summary} />
+          </FlexContainer>
           {streamsToList.length > 0 && <ResetStreamsDetails names={streamsToList} />}
         </FlexContainer>
       </ConnectionTimelineEventSummary>

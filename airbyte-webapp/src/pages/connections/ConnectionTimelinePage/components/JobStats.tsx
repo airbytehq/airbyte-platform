@@ -26,10 +26,10 @@ export const JobStats: React.FC<JobStatsProps> = ({
 }) => {
   const [showExtendedStats] = useLocalStorage("airbyte_extended-attempts-stats", false);
   const duration = useFormatDuration(startTimeEpochSeconds * 1000, endTimeEpochSeconds * 1000);
-  console.log({ duration });
+
   return (
     <FlexContainer gap="sm">
-      {bytesLoaded && (
+      {bytesLoaded !== undefined && (
         <>
           <Text as="span" color="grey400" size="sm">
             {formatBytes(bytesLoaded)}
@@ -37,7 +37,7 @@ export const JobStats: React.FC<JobStatsProps> = ({
           <StatSeparator />
         </>
       )}
-      {recordsLoaded && (
+      {!!recordsLoaded !== undefined && (
         <>
           <Text as="span" color="grey400" size="sm">
             <FormattedMessage id="sources.countRecordsLoaded" values={{ count: recordsLoaded }} />

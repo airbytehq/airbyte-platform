@@ -6,6 +6,7 @@ import { Box } from "components/ui/Box";
 import { IconType } from "components/ui/Icon";
 import { Text } from "components/ui/Text";
 
+import { TimelineEventUser } from "./TimelineEventUser";
 import { ConnectionTimelineEventActions } from "../ConnectionTimelineEventActions";
 import { ConnectionTimelineEventIcon } from "../ConnectionTimelineEventIcon";
 import { ConnectionTimelineEventItem } from "../ConnectionTimelineEventItem";
@@ -53,9 +54,7 @@ export const JobStartEventItem: React.FC<JobStartEventItemProps> = ({ jobStartEv
             <FormattedMessage
               id={descriptionId}
               values={{
-                user: jobStartEvent.user?.name ?? jobStartEvent.user?.email ?? (
-                  <FormattedMessage id="connection.timeline.user.unknown" />
-                ),
+                user: <TimelineEventUser user={jobStartEvent.user} />,
                 ...(streamsCount !== undefined && { value: streamsCount }),
               }}
             />

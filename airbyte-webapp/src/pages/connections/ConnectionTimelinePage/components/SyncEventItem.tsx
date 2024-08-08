@@ -2,9 +2,11 @@ import { FormattedMessage } from "react-intl";
 import { InferType } from "yup";
 
 import { Box } from "components/ui/Box";
+import { FlexContainer } from "components/ui/Flex";
 import { Text } from "components/ui/Text";
 
 import { JobStats } from "./JobStats";
+import { UserCancelledDescription } from "./TimelineEventUser";
 import { ConnectionTimelineEventActions } from "../ConnectionTimelineEventActions";
 import { ConnectionTimelineEventIcon } from "../ConnectionTimelineEventIcon";
 import { ConnectionTimelineEventItem } from "../ConnectionTimelineEventItem";
@@ -29,7 +31,10 @@ export const SyncEventItem: React.FC<SyncEventProps> = ({ syncEvent }) => {
           <FormattedMessage id={titleId} />
         </Text>
         <Box pt="xs">
-          <JobStats {...syncEvent.summary} />
+          <FlexContainer gap="sm" alignItems="baseline">
+            {jobStatus === "cancelled" && <UserCancelledDescription user={syncEvent.user} jobType="sync" />}
+            <JobStats {...syncEvent.summary} />
+          </FlexContainer>
         </Box>
       </ConnectionTimelineEventSummary>
       <ConnectionTimelineEventActions
