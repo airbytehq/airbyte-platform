@@ -487,6 +487,7 @@ create index "stream_refreshes_connection_id_stream_name_idx" on "public"."strea
 create index "stream_refreshes_connection_id_stream_name_stream_namespace_idx" on "public"."stream_refreshes"("connection_id" asc, "stream_name" asc, "stream_namespace" asc);
 create index "connection_id_stream_name_namespace_idx" on "public"."stream_reset"("connection_id" asc, "stream_name" asc, "stream_namespace" asc);
 create index "user_email_idx" on "public"."user"("email" asc);
+create unique index "user_email_unique_key" on "public"."user"(lower((email)::text) asc);
 create index "user_invitation_accepted_by_user_id_index" on "public"."user_invitation"("accepted_by_user_id" asc);
 create index "user_invitation_expires_at_index" on "public"."user_invitation"("expires_at" asc);
 create index "user_invitation_invite_code_idx" on "public"."user_invitation"("invite_code" asc);

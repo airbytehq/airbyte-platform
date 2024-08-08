@@ -282,8 +282,10 @@ public class UserPersistence {
   }
 
   /**
-   * Fetch all users with a given email address.
+   * Fetch all users with a given email address. Deprecated: This will be removed once usages are
+   * updated, since user emails are now unique.
    */
+  @Deprecated
   public List<UserInfo> getUsersByEmail(final String email) throws IOException {
     return database.query(ctx -> ctx
         .select(asterisk())

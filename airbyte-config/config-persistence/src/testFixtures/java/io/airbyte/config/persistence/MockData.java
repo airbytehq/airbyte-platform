@@ -303,34 +303,6 @@ public class MockData {
     return Arrays.asList(user1, user2, user3, user4, user5);
   }
 
-  public static List<User> dupEmailUsers() {
-    final User dupEmailUser1 = new User()
-        .withUserId(DUP_EMAIL_USER_ID_1)
-        .withName("dup-email-user-1")
-        .withAuthUserId(DUP_EMAIL_USER_ID_1.toString())
-        .withAuthProvider(AuthProvider.KEYCLOAK)
-        .withDefaultWorkspaceId(null)
-        .withStatus(User.Status.REGISTERED)
-        .withCompanyName("dup-user-company")
-        .withEmail(DUP_EMAIL)
-        .withNews(true)
-        .withUiMetadata(null);
-
-    final User dupEmailUser2 = new User()
-        .withUserId(DUP_EMAIL_USER_ID_2)
-        .withName("dup-email-user-2")
-        .withAuthUserId(DUP_EMAIL_USER_ID_2.toString())
-        .withAuthProvider(AuthProvider.KEYCLOAK)
-        .withDefaultWorkspaceId(null)
-        .withStatus(User.Status.REGISTERED)
-        .withCompanyName("dup-user-company")
-        .withEmail(DUP_EMAIL)
-        .withNews(true)
-        .withUiMetadata(null);
-
-    return Arrays.asList(dupEmailUser1, dupEmailUser2);
-  }
-
   public static List<Permission> permissions() {
     return Arrays.asList(permission1, permission2, permission3, permission4, permission5, permission6, permission7, permission8);
   }
