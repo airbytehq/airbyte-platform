@@ -104,6 +104,8 @@ export const ConnectionReplicationPage: React.FC = () => {
       await updateConnection({
         syncCatalog: values.syncCatalog,
         connectionId: connection.connectionId,
+        // required to update the catalog if a schema change w/transforms exists
+        sourceCatalogId: connection.catalogId,
         skipReset,
       });
     },
