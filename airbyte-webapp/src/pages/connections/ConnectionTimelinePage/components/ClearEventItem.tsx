@@ -32,7 +32,11 @@ export const ClearEventItem: React.FC<ClearEventProps> = ({ clearEvent }) => {
           <FormattedMessage id={title} values={{ value: streamsToList.length }} />
         </Text>
         <Box pt="xs">
-          {jobStatus === "cancelled" && <UserCancelledDescription user={clearEvent.user} jobType="clear" />}
+          {jobStatus === "cancelled" && !!clearEvent.user && (
+            <div>
+              <UserCancelledDescription user={clearEvent.user} jobType="clear" />
+            </div>
+          )}
           {streamsToList.length > 0 && <ResetStreamsDetails names={streamsToList} />}
           {showExtendedStats && (
             <>

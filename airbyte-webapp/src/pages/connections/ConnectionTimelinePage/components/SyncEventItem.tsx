@@ -32,7 +32,9 @@ export const SyncEventItem: React.FC<SyncEventProps> = ({ syncEvent }) => {
         </Text>
         <Box pt="xs">
           <FlexContainer gap="sm" alignItems="baseline">
-            {jobStatus === "cancelled" && <UserCancelledDescription user={syncEvent.user} jobType="sync" />}
+            {jobStatus === "cancelled" && !!syncEvent.user && (
+              <UserCancelledDescription user={syncEvent.user} jobType="sync" />
+            )}
             <JobStats {...syncEvent.summary} />
           </FlexContainer>
         </Box>

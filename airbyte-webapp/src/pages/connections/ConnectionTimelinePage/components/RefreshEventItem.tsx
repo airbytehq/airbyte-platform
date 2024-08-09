@@ -33,7 +33,9 @@ export const RefreshEventItem: React.FC<RefreshEventItemProps> = ({ refreshEvent
             <FormattedMessage id={titleId} values={{ value: streamsToList.length }} />
           </Text>
           <FlexContainer gap="xs" alignItems="baseline">
-            {jobStatus === "cancelled" && <UserCancelledDescription user={refreshEvent.user} jobType="refresh" />}
+            {jobStatus === "cancelled" && !!refreshEvent.user && (
+              <UserCancelledDescription user={refreshEvent.user} jobType="refresh" />
+            )}
             <JobStats {...refreshEvent.summary} />
           </FlexContainer>
           {streamsToList.length > 0 && <ResetStreamsDetails names={streamsToList} />}

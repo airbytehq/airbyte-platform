@@ -6,16 +6,16 @@ import { Text } from "components/ui/Text";
 import { userInEventSchema } from "../types";
 
 interface TimelineEventUserProps {
-  user: InferType<typeof userInEventSchema>;
+  user?: InferType<typeof userInEventSchema>;
 }
 
 interface UserCancelledDescriptionProps {
-  user: InferType<typeof userInEventSchema>;
+  user?: InferType<typeof userInEventSchema>;
   jobType: string;
 }
 
 export const TimelineEventUser: React.FC<TimelineEventUserProps> = ({ user }) => {
-  return <>{user.name ?? user.email ?? <FormattedMessage id="connection.timeline.unknownUser" />}</>;
+  return <>{user?.name ?? user?.email ?? <FormattedMessage id="connection.timeline.unknownUser" />}</>;
 };
 
 export const UserCancelledDescription: React.FC<UserCancelledDescriptionProps> = ({ user, jobType }) => {
@@ -42,9 +42,11 @@ export const UserCancelledDescription: React.FC<UserCancelledDescriptionProps> =
           }}
         />
       </Text>
-      <Text as="span" color="grey400" size="sm">
-        |
-      </Text>
+      {jobType !== "clear" && (
+        <Text as="span" color="grey400" size="sm">
+          |
+        </Text>
+      )}
     </>
   );
 };
