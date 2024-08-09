@@ -30,6 +30,7 @@ import { CheckContributionRead } from "core/api/types/ConnectorBuilderClient";
 import { useFormatError } from "core/errors";
 import { Action, Namespace, useAnalyticsService } from "core/services/analytics";
 import { NON_I18N_ERROR_TYPE } from "core/utils/form";
+import { useLocalStorage } from "core/utils/useLocalStorage";
 import { useExperiment } from "hooks/services/Experiment";
 import { useNotificationService } from "hooks/services/Notification";
 import {
@@ -331,6 +332,7 @@ const ContributeToMarketplace: React.FC<InnerModalProps> = ({ onClose, setPublis
   const { mutateAsync: generateContribution, isLoading: isSubmittingContribution } = useBuilderGenerateContribution();
 
   const publishTypeSwitcher = <PublishTypeSwitcher selectedPublishType="marketplace" setPublishType={setPublishType} />;
+  const [showPublishWarning, setShowPublishWarning] = useLocalStorage("connectorBuilderPublishWarning", true);
 
   if (isLoadingBaseImage) {
     return (
@@ -450,7 +452,15 @@ const ContributeToMarketplace: React.FC<InnerModalProps> = ({ onClose, setPublis
       <ModalBody>
         <FlexContainer direction="column" gap="xl">
           <PublishTypeSwitcher selectedPublishType="marketplace" setPublishType={setPublishType} />
-          <Message type="warning" text={<FormattedMessage id="connectorBuilder.warnPublishSecrets" />} />
+          {showPublishWarning && (
+            <Message
+              type="warning"
+              text={<FormattedMessage id="connectorBuilder.warnPublishSecrets" />}
+              onClose={() => {
+                setShowPublishWarning(false);
+              }}
+            />
+          )}
           <FlexContainer direction="column" gap="none">
             <FormControl<ContributeToMarketplaceFormValues>
               name="name"

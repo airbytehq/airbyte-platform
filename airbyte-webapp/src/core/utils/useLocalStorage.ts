@@ -10,6 +10,7 @@ import { Theme } from "hooks/theme/useAirbyteTheme";
 interface AirbyteLocalStorage {
   connectorBuilderEditorView: BuilderState["mode"];
   connectorBuilderInputsWarning: boolean;
+  connectorBuilderPublishWarning: boolean;
   connectorBuilderRecordView: "json" | "table";
   connectorBuilderLimitWarning: boolean;
   allowlistIpsOpen: boolean;
