@@ -7,24 +7,22 @@ import { Tooltip } from "components/ui/Tooltip";
 
 import { buildAttemptLink } from "area/connection/utils/attemptLink";
 import { copyToClipboard } from "core/utils/clipboard";
-import { useExperiment } from "hooks/services/Experiment";
 
 interface Props {
   jobId: string | number;
   attemptId?: number;
   eventId?: string;
+  openedFromTimeline?: boolean;
 }
 
-export const LinkToAttemptButton: React.FC<Props> = ({ jobId, attemptId, eventId }) => {
+export const LinkToAttemptButton: React.FC<Props> = ({ jobId, attemptId, eventId, openedFromTimeline }) => {
   const { formatMessage } = useIntl();
-  const connectionTimeline = useExperiment("connection.timeline", false);
   const [showCopiedTooltip, setShowCopiedTooltip] = useState(false);
   const [hideTooltip] = useDebounce(() => setShowCopiedTooltip(false), 3000, [showCopiedTooltip]);
-
   const onCopyLink = async () => {
     const url = new URL(window.location.href);
 
-    if (connectionTimeline) {
+    if (openedFromTimeline) {
       url.searchParams.set("openLogs", "true");
       if (eventId) {
         url.searchParams.set("eventId", eventId);

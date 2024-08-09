@@ -24,9 +24,10 @@ interface JobLogsModalProps {
   jobId: number;
   initialAttemptId?: number;
   eventId?: string;
+  openedFromTimeline?: boolean;
 }
 
-export const JobLogsModal: React.FC<JobLogsModalProps> = ({ jobId, initialAttemptId, eventId }) => {
+export const JobLogsModal: React.FC<JobLogsModalProps> = ({ jobId, initialAttemptId, eventId, openedFromTimeline }) => {
   const searchInputRef = useRef<HTMLInputElement>(null);
   const [inputValue, setInputValue] = useState("");
   const job = useJobInfoWithoutLogs(jobId);
@@ -196,7 +197,12 @@ export const JobLogsModal: React.FC<JobLogsModalProps> = ({ jobId, initialAttemp
             showFailureMessage={false}
           />
           <FlexContainer className={styles.downloadLogs}>
-            <LinkToAttemptButton jobId={jobId} attemptId={selectedAttemptId} eventId={eventId} />
+            <LinkToAttemptButton
+              jobId={jobId}
+              attemptId={selectedAttemptId}
+              eventId={eventId}
+              openedFromTimeline={openedFromTimeline}
+            />
             <DownloadLogsButton logLines={logLines} fileName={`job-${jobId}-attempt-${selectedAttemptId + 1}`} />
           </FlexContainer>
         </FlexContainer>

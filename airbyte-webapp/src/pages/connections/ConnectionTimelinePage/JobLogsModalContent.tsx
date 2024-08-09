@@ -20,5 +20,5 @@ export const JobLogsModalContent: React.FC<{
     return null;
   }
 
-  return <JobLogsModal jobId={jobIdToUse} initialAttemptId={attemptNumber} eventId={eventId} />;
+  return <JobLogsModal jobId={jobIdToUse} initialAttemptId={attemptNumber} eventId={eventId} openedFromTimeline />;
 };
