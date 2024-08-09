@@ -47,8 +47,20 @@ class ManifestParser(rawManifestYaml: String) {
     return processManifestMap(yamlMap)
   }
 
+  /**
+   * Removes escape quote characters from the serialized string
+   * e.g. \\" -> "
+   *
+   * Note: This is due to the way the yaml in the FE library serializes escaped strings
+   */
+  private fun unEscapeQuotes(serializedString: String): String {
+    // Handle escaped quotes in the string
+    // \\" -> "
+    return serializedString.replace("\\\\\"", "\"")
+  }
+
   private fun removeEscapes(serializedYaml: String): String {
-    var deserializedYaml = serializedYaml.replace("\\\"", "\"")
+    var deserializedYaml = unEscapeQuotes(serializedYaml)
     deserializedYaml = deserializedYaml.replace("\\n", "\n")
     return deserializedYaml
   }
@@ -61,7 +73,7 @@ class ManifestParser(rawManifestYaml: String) {
     return try {
       Yaml().load(yaml) as Map<String, Any>
     } catch (e: Exception) {
-      throw ManifestParserException("Manifest provided is not valid yaml.")
+      throw ManifestParserException("Manifest provided is not valid yaml. error: ${e.message}", e)
     }
   }
 

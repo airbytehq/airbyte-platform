@@ -12,7 +12,9 @@ fun jacksonSerialize(input: String): String {
   // Serialize the string to JSON, which will automatically escape quotes
   val jsonString = mapper.writeValueAsString(input)
   // Remove the enclosing double quotes that Jackson adds
-  return jsonString.substring(1, jsonString.length - 1)
+  return jsonString
+    .substring(1, jsonString.length - 1)
+    .replace("\\\"", "\"")
 }
 
 class ContributionTemplatesTest {
