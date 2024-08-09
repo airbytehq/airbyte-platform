@@ -133,6 +133,11 @@ public class DefaultCheckConnectionWorker implements CheckConnectionWorker {
       LOGGER.error("Unexpected error while checking connection: ", e);
       LineGobbler.endSection(LOG_SECTION_NAME);
       throw new WorkerException("Unexpected error while getting checking connection.", e);
+    }finally {
+      if (process != null) {
+        LOGGER.info("cleaning up the resources including ports!");
+        process.destroy();
+      }
     }
   }
 
