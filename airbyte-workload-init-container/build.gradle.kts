@@ -10,7 +10,6 @@ configurations.all {
   exclude(group = "io.micronaut", module = "micronaut-http-server-netty")
   exclude(group = "io.micronaut.openapi")
   exclude(group = "io.micronaut.flyway")
-  exclude(group = "io.micronaut.sql")
 }
 
 dependencies {
@@ -22,6 +21,7 @@ dependencies {
   implementation(libs.kotlin.logging)
   implementation(libs.micronaut.jackson.databind)
   implementation(libs.slf4j.api)
+  implementation(libs.micronaut.jooq)
 
   implementation(project(":oss:airbyte-api:server-api"))
   implementation(project(":oss:airbyte-api:workload-api"))

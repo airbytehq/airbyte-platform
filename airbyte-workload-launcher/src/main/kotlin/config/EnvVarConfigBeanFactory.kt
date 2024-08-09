@@ -8,6 +8,7 @@ import io.airbyte.commons.envvar.EnvVar.LOG4J_CONFIGURATION_FILE
 import io.airbyte.commons.envvar.EnvVar.LOG_LEVEL
 import io.airbyte.commons.envvar.EnvVar.S3_PATH_STYLE_ACCESS
 import io.airbyte.commons.workers.config.WorkerConfigs
+import io.airbyte.config.Configs
 import io.airbyte.config.storage.StorageConfig
 import io.airbyte.workers.process.Metadata.AWS_ACCESS_KEY_ID
 import io.airbyte.workers.process.Metadata.AWS_SECRET_ACCESS_KEY
@@ -42,6 +43,7 @@ class EnvVarConfigBeanFactory {
     @Named("secretPersistenceEnvMap") secretPersistenceEnvMap: Map<String, String>,
     @Named("workloadApiEnvMap") workloadApiEnvMap: Map<String, String>,
     @Named("workloadApiSecretEnv") secretsEnvMap: Map<String, EnvVarSource>,
+    @Named("databaseEnvMap") dbEnvMap: Map<String, String>,
   ): List<EnvVar> {
     val envMap: MutableMap<String, String> = HashMap()
 
@@ -59,6 +61,9 @@ class EnvVarConfigBeanFactory {
 
     // Direct env vars for secret persistence
     envMap.putAll(secretPersistenceEnvMap)
+
+    // Add db env vars for local deployments if applicable
+    envMap.putAll(dbEnvMap)
 
     val envVars =
       envMap
@@ -376,7 +381,9 @@ class EnvVarConfigBeanFactory {
     @Value("\${airbyte.secret.store.gcp.secret-key}") gcpSecretKey: String,
   ): Map<String, EnvVarSource> {
     return buildMap {
-      put(SECRET_STORE_GCP_CREDENTIALS, createEnvVarSource(gcpSecretName, gcpSecretKey))
+      if (gcpSecretName.isNotBlank()) {
+        put(SECRET_STORE_GCP_CREDENTIALS, createEnvVarSource(gcpSecretName, gcpSecretKey))
+      }
     }
   }
 
@@ -400,6 +407,26 @@ class EnvVarConfigBeanFactory {
     envMap[WORKLOAD_API_MAX_RETRIES_ENV_VAR] = workloadApiRetriesMax
 
     return envMap
+  }
+
+  @Singleton
+  @Named("databaseEnvMap")
+  fun databaseEnvMap(
+    @Value("\${airbyte.secret.persistence}") secretPersistenceType: String,
+    @Value("\${datasources.local-secrets.url:}") dbUrl: String,
+    @Value("\${datasources.local-secrets.username:}") dbUsername: String,
+    @Value("\${datasources.local-secrets.password:}") dbPassword: String,
+  ): Map<String, String> {
+    // Only pass through DB env vars if configured for local storage of secrets
+    if (secretPersistenceType != Configs.SecretPersistenceType.TESTING_CONFIG_DB_TABLE.toString()) {
+      return mapOf()
+    }
+
+    return mapOf(
+      AirbyteEnvVar.DATABASE_URL.toString() to dbUrl,
+      AirbyteEnvVar.DATABASE_USER.toString() to dbUsername,
+      AirbyteEnvVar.DATABASE_PASSWORD.toString() to dbPassword,
+    )
   }
 
   companion object {
