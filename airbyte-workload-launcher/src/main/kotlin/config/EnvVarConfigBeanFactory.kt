@@ -44,6 +44,7 @@ class EnvVarConfigBeanFactory {
     @Named("workloadApiEnvMap") workloadApiEnvMap: Map<String, String>,
     @Named("workloadApiSecretEnv") secretsEnvMap: Map<String, EnvVarSource>,
     @Named("databaseEnvMap") dbEnvMap: Map<String, String>,
+    @Named("awsAssumedRoleSecretEnv") awsAssumedRoleSecretEnv: Map<String, EnvVarSource>,
   ): List<EnvVar> {
     val envMap: MutableMap<String, String> = HashMap()
 
@@ -71,7 +72,7 @@ class EnvVarConfigBeanFactory {
         .toList()
 
     val secretEnvVars =
-      (secretsEnvMap + secretPersistenceSecretsEnvMap)
+      (secretsEnvMap + secretPersistenceSecretsEnvMap + awsAssumedRoleSecretEnv)
         .map { EnvVar(it.key, null, it.value) }
         .toList()
 
@@ -201,8 +202,8 @@ class EnvVarConfigBeanFactory {
    * To be injected into orchestrator pods, so they can start AWS connector pods that use assumed role access.
    */
   @Singleton
-  @Named("orchestratorAwsAssumedRoleSecretEnv")
-  fun orchestratorAwsAssumedRoleSecretEnv(
+  @Named("awsAssumedRoleSecretEnv")
+  fun awsAssumedRoleSecretEnv(
     @Value("\${airbyte.connector.source.credentials.aws.assumed-role.access-key}") awsAssumedRoleAccessKey: String,
     @Value("\${airbyte.connector.source.credentials.aws.assumed-role.secret-key}") awsAssumedRoleSecretKey: String,
     @Value("\${airbyte.connector.source.credentials.aws.assumed-role.secret-name}") awsAssumedRoleSecretName: String,
@@ -241,9 +242,9 @@ class EnvVarConfigBeanFactory {
   @Named("orchestratorSecretsEnvMap")
   fun orchestratorSecretsEnvMap(
     @Named("workloadApiSecretEnv") workloadApiSecretEnv: Map<String, EnvVarSource>,
-    @Named("orchestratorAwsAssumedRoleSecretEnv") orchestratorAwsAssumedRoleSecretEnv: Map<String, EnvVarSource>,
+    @Named("awsAssumedRoleSecretEnv") awsAssumedRoleSecretEnv: Map<String, EnvVarSource>,
   ): Map<String, EnvVarSource> {
-    return workloadApiSecretEnv + orchestratorAwsAssumedRoleSecretEnv
+    return workloadApiSecretEnv + awsAssumedRoleSecretEnv
   }
 
   private fun createEnvVarSource(
