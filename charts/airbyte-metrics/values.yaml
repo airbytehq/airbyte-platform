@@ -1,5 +1,7 @@
 
 global:
+  # imagePullSecrets:
+  #   - name: ""
   serviceAccountName: placeholderServiceAccount
   deploymentMode: oss
   extraContainers: []
