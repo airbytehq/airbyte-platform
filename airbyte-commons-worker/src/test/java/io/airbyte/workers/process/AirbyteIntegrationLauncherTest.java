@@ -135,7 +135,6 @@ class AirbyteIntegrationLauncherTest {
     Mockito.verify(processFactory).create(ResourceType.SPEC, SPEC_JOB, JOB_ID, JOB_ATTEMPT, CONNECTION_ID, WORKSPACE_ID, JOB_ROOT, FAKE_IMAGE, false,
         false,
         Collections.emptyMap(),
-        null,
         expectedResourceRequirements, null, Map.of(JOB_TYPE_KEY, SPEC_JOB), JOB_METADATA,
         Map.of(),
         Collections.emptyMap(), "spec");
@@ -148,7 +147,7 @@ class AirbyteIntegrationLauncherTest {
     final ConnectorResourceRequirements expectedResourceRequirements =
         AirbyteIntegrationLauncher.buildGenericConnectorResourceRequirements(workerConfigs.getResourceRequirements());
     Mockito.verify(processFactory).create(ResourceType.CHECK, CHECK_JOB, JOB_ID, JOB_ATTEMPT, CONNECTION_ID, WORKSPACE_ID, JOB_ROOT, FAKE_IMAGE,
-        false, false, CONFIG_FILES, null,
+        false, false, CONFIG_FILES,
         expectedResourceRequirements,
         null,
         Map.of(JOB_TYPE_KEY, CHECK_JOB),
@@ -166,7 +165,6 @@ class AirbyteIntegrationLauncherTest {
         AirbyteIntegrationLauncher.buildGenericConnectorResourceRequirements(workerConfigs.getResourceRequirements());
     Mockito.verify(processFactory).create(ResourceType.DISCOVER, DISCOVER_JOB, JOB_ID, JOB_ATTEMPT, CONNECTION_ID, WORKSPACE_ID, JOB_ROOT, FAKE_IMAGE,
         false, false, CONFIG_FILES,
-        null,
         expectedResourceRequirements,
         null,
         Map.of(JOB_TYPE_KEY, DISCOVER_JOB),
@@ -195,7 +193,6 @@ class AirbyteIntegrationLauncherTest {
     Mockito.verify(processFactory).create(ResourceType.REPLICATION, READ_STEP, JOB_ID, JOB_ATTEMPT, CONNECTION_ID, WORKSPACE_ID, JOB_ROOT, FAKE_IMAGE,
         false, false,
         CONFIG_CATALOG_STATE_FILES,
-        null,
         expectedResourceRequirements,
         null,
         Map.of(JOB_TYPE_KEY, SYNC_JOB, SYNC_STEP_KEY, READ_STEP, "other1", "label1"),
@@ -220,7 +217,6 @@ class AirbyteIntegrationLauncherTest {
     Mockito.verify(processFactory).create(ResourceType.REPLICATION, READ_STEP, JOB_ID, JOB_ATTEMPT, CONNECTION_ID, WORKSPACE_ID, JOB_ROOT, FAKE_IMAGE,
         false, false,
         CONFIG_CATALOG_STATE_FILES,
-        null,
         expectedResourceRequirements,
         null,
         Map.of(JOB_TYPE_KEY, SYNC_JOB, SYNC_STEP_KEY, READ_STEP),
@@ -245,7 +241,7 @@ class AirbyteIntegrationLauncherTest {
         rssReqDestinationStdOut);
     Mockito.verify(processFactory).create(ResourceType.REPLICATION, WRITE_STEP, JOB_ID, JOB_ATTEMPT, CONNECTION_ID, WORKSPACE_ID, JOB_ROOT,
         FAKE_IMAGE, false, true,
-        CONFIG_CATALOG_FILES, null,
+        CONFIG_CATALOG_FILES,
         expectedResourceRequirements,
         null,
         Map.of(JOB_TYPE_KEY, SYNC_JOB, SYNC_STEP_KEY, WRITE_STEP),
@@ -264,7 +260,7 @@ class AirbyteIntegrationLauncherTest {
     envVarLauncher.write(JOB_ROOT, CONFIG, "{}", CATALOG, "{}");
     Mockito.verify(processFactory).create(ResourceType.REPLICATION, WRITE_STEP, JOB_ID, JOB_ATTEMPT, CONNECTION_ID, WORKSPACE_ID, JOB_ROOT,
         FAKE_IMAGE, false, true,
-        CONFIG_CATALOG_FILES, null,
+        CONFIG_CATALOG_FILES,
         expectedResourceRequirements,
         null,
         Map.of(JOB_TYPE_KEY, SYNC_JOB, SYNC_STEP_KEY, WRITE_STEP, "other2", "label2"),
@@ -287,7 +283,7 @@ class AirbyteIntegrationLauncherTest {
         AirbyteIntegrationLauncher.buildGenericConnectorResourceRequirements(workerConfigs.getResourceRequirements());
     Mockito.verify(processFactory).create(ResourceType.REPLICATION, WRITE_STEP, JOB_ID, JOB_ATTEMPT, CONNECTION_ID, WORKSPACE_ID, JOB_ROOT,
         FAKE_IMAGE, false, true,
-        CONFIG_CATALOG_FILES, null,
+        CONFIG_CATALOG_FILES,
         expectedResourceRequirements,
         null,
         Map.of(JOB_TYPE_KEY, SYNC_JOB, SYNC_STEP_KEY, WRITE_STEP),
@@ -305,7 +301,7 @@ class AirbyteIntegrationLauncherTest {
     envVarLauncher.write(JOB_ROOT, CONFIG, "{}", CATALOG, "{}");
     Mockito.verify(processFactory).create(ResourceType.REPLICATION, WRITE_STEP, JOB_ID, JOB_ATTEMPT, CONNECTION_ID, WORKSPACE_ID, JOB_ROOT,
         FAKE_IMAGE, false, true,
-        CONFIG_CATALOG_FILES, null,
+        CONFIG_CATALOG_FILES,
         expectedResourceRequirements,
         null,
         Map.of(JOB_TYPE_KEY, SYNC_JOB, SYNC_STEP_KEY, WRITE_STEP),

@@ -74,7 +74,6 @@ import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
 import lombok.val;
 import org.apache.commons.io.output.NullOutputStream;
-import org.apache.commons.text.StringEscapeUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.slf4j.MDC;
@@ -227,7 +226,6 @@ public class KubePodProcess implements KubePod {
                                    final String image,
                                    final String imagePullPolicy,
                                    final boolean usesStdin,
-                                   final String entrypointOverride,
                                    final List<VolumeMount> mainVolumeMounts,
                                    final ResourceRequirements resourceRequirements,
                                    final Map<Integer, Integer> internalToExternalPorts,
@@ -238,7 +236,6 @@ public class KubePodProcess implements KubePod {
       throws IOException {
     final var argsStr = String.join(" ", args);
     final var optionalStdin = usesStdin ? String.format("< %s", STDIN_PIPE_FILE) : "";
-    final var entrypointOverrideValue = entrypointOverride == null ? "" : StringEscapeUtils.escapeXSI(entrypointOverride);
 
     // communicates its completion to the heartbeat check via a file and closes itself if the heartbeat
     // fails
@@ -246,7 +243,6 @@ public class KubePodProcess implements KubePod {
         .replaceAll("TERMINATION_FILE_CHECK", TERMINATION_FILE_CHECK)
         .replaceAll("TERMINATION_FILE_MAIN", TERMINATION_FILE_MAIN)
         .replaceAll("OPTIONAL_STDIN", optionalStdin)
-        .replace("ENTRYPOINT_OVERRIDE_VALUE", entrypointOverrideValue) // use replace and not replaceAll to preserve escaping and quoting
         .replaceAll("ARGS", argsStr)
         .replaceAll("STDERR_PIPE_FILE", STDERR_PIPE_FILE)
         .replaceAll("STDOUT_PIPE_FILE", STDOUT_PIPE_FILE)
@@ -444,7 +440,6 @@ public class KubePodProcess implements KubePod {
                         final String kubeHeartbeatUrl,
                         final boolean usesStdin,
                         final Map<String, String> files,
-                        final String entrypointOverride,
                         final ConnectorResourceRequirements podResourceRequirements,
                         final List<String> imagePullSecrets,
                         final List<TolerationPOJO> tolerations,
@@ -468,10 +463,6 @@ public class KubePodProcess implements KubePod {
       this.stderrServerSocket = new ServerSocket(stderrLocalPort);
       this.executorService = Executors.newFixedThreadPool(2);
       setupStdOutAndStdErrListeners();
-
-      if (entrypointOverride != null) {
-        LOGGER.info("Found entrypoint override: {}", entrypointOverride);
-      }
 
       final Volume pipeVolume = new VolumeBuilder()
           .withName("airbyte-pipes")
@@ -580,7 +571,6 @@ public class KubePodProcess implements KubePod {
           image,
           imagePullPolicy,
           usesStdin,
-          entrypointOverride,
           List.of(pipeVolumeMount, configVolumeMount, terminationVolumeMount, tmpVolumeMount),
           podResourceRequirements.main(),
           internalToExternalPorts,

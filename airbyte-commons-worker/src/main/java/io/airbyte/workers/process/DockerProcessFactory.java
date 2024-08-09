@@ -103,7 +103,6 @@ public class DockerProcessFactory implements ProcessFactory {
                         final boolean usesIsolatedPool,
                         final boolean usesStdin,
                         final Map<String, String> files,
-                        final String entrypoint,
                         final ConnectorResourceRequirements connectorResourceRequirements,
                         final AllowedHosts allowedHosts,
                         final Map<String, String> labels,
@@ -165,10 +164,6 @@ public class DockerProcessFactory implements ProcessFactory {
         cmd.add(envEntry.getKey() + "=" + envEntry.getValue());
       }
 
-      if (!Strings.isNullOrEmpty(entrypoint)) {
-        cmd.add("--entrypoint");
-        cmd.add(entrypoint);
-      }
       if (resourceRequirements != null) {
         if (!Strings.isNullOrEmpty(resourceRequirements.getCpuLimit())) {
           cmd.add(String.format("--cpus=%s", resourceRequirements.getCpuLimit()));
