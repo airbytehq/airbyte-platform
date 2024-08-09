@@ -7,6 +7,7 @@ package io.airbyte.workers.helpers;
 import io.airbyte.api.client.model.generated.ConnectionScheduleType;
 import io.micronaut.context.annotation.Value;
 import jakarta.inject.Singleton;
+import java.security.SecureRandom;
 import java.time.Duration;
 import java.util.Random;
 import lombok.extern.slf4j.Slf4j;
@@ -62,7 +63,7 @@ public class ScheduleJitterHelper {
     }
 
     final int jitterSeconds;
-    final Random random = new Random();
+    final Random random = new SecureRandom();
 
     // CRON schedules should not have negative jitter included, because then it is possible for the sync
     // to start and finish before the real scheduled time. This can result in a double sync because the
