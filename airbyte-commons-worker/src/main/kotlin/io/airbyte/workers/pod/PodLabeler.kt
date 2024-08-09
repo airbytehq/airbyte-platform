@@ -1,5 +1,10 @@
-package io.airbyte.workload.launcher.pods
+package io.airbyte.workers.pod
 
+import io.airbyte.workers.pod.PodLabeler.LabelKeys.AUTO_ID
+import io.airbyte.workers.pod.PodLabeler.LabelKeys.MUTEX_KEY
+import io.airbyte.workers.pod.PodLabeler.LabelKeys.SWEEPER_LABEL_KEY
+import io.airbyte.workers.pod.PodLabeler.LabelKeys.SWEEPER_LABEL_VALUE
+import io.airbyte.workers.pod.PodLabeler.LabelKeys.WORKLOAD_ID
 import io.airbyte.workers.process.Metadata
 import io.airbyte.workers.process.Metadata.CHECK_JOB
 import io.airbyte.workers.process.Metadata.DISCOVER_JOB
@@ -11,19 +16,11 @@ import io.airbyte.workers.process.Metadata.SYNC_JOB
 import io.airbyte.workers.process.Metadata.SYNC_STEP_KEY
 import io.airbyte.workers.process.Metadata.WRITE_STEP
 import io.airbyte.workers.process.ProcessFactory
-import io.airbyte.workload.launcher.pods.PodLabeler.LabelKeys.AUTO_ID
-import io.airbyte.workload.launcher.pods.PodLabeler.LabelKeys.MUTEX_KEY
-import io.airbyte.workload.launcher.pods.PodLabeler.LabelKeys.SWEEPER_LABEL_KEY
-import io.airbyte.workload.launcher.pods.PodLabeler.LabelKeys.SWEEPER_LABEL_VALUE
-import io.airbyte.workload.launcher.pods.PodLabeler.LabelKeys.WORKLOAD_ID
-import jakarta.inject.Named
 import jakarta.inject.Singleton
 import java.util.UUID
 
 @Singleton
-class PodLabeler(
-  @Named("containerOrchestratorImage") private val orchestratorImageName: String,
-) {
+class PodLabeler {
   fun getSourceLabels(): Map<String, String> {
     return mapOf(
       SYNC_STEP_KEY to READ_STEP,
@@ -36,8 +33,8 @@ class PodLabeler(
     )
   }
 
-  fun getReplicationOrchestratorLabels(): Map<String, String> {
-    return getImageLabels() +
+  fun getReplicationOrchestratorLabels(orchestratorImageName: String): Map<String, String> {
+    return getImageLabels(orchestratorImageName) +
       mapOf(
         JOB_TYPE_KEY to SYNC_JOB,
         SYNC_STEP_KEY to ORCHESTRATOR_REPLICATION_STEP,
@@ -62,7 +59,7 @@ class PodLabeler(
     )
   }
 
-  private fun getImageLabels(): Map<String, String> {
+  private fun getImageLabels(orchestratorImageName: String): Map<String, String> {
     val shortImageName = ProcessFactory.getShortImageName(orchestratorImageName)
     val imageVersion = ProcessFactory.getImageVersion(orchestratorImageName)
 

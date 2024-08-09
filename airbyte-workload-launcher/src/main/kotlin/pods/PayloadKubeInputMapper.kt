@@ -3,6 +3,7 @@ package io.airbyte.workload.launcher.pods
 import io.airbyte.commons.workers.config.WorkerConfigs
 import io.airbyte.config.ResourceRequirements
 import io.airbyte.config.WorkloadPriority
+import io.airbyte.config.WorkloadType
 import io.airbyte.featureflag.Connection
 import io.airbyte.featureflag.ContainerOrchestratorDevImage
 import io.airbyte.featureflag.FeatureFlagClient
@@ -11,12 +12,17 @@ import io.airbyte.featureflag.OrchestratorFetchesInputFromInit
 import io.airbyte.featureflag.Workspace
 import io.airbyte.persistence.job.models.IntegrationLauncherConfig
 import io.airbyte.persistence.job.models.ReplicationInput
+import io.airbyte.workers.input.getAttemptId
+import io.airbyte.workers.input.getJobId
+import io.airbyte.workers.input.getOrchestratorResourceReqs
+import io.airbyte.workers.input.usesCustomConnector
 import io.airbyte.workers.models.CheckConnectionInput
 import io.airbyte.workers.models.DiscoverCatalogInput
 import io.airbyte.workers.models.SidecarInput
 import io.airbyte.workers.models.SidecarInput.OperationType
 import io.airbyte.workers.models.SpecInput
-import io.airbyte.workers.orchestrator.PodNameGenerator
+import io.airbyte.workers.pod.PodLabeler
+import io.airbyte.workers.pod.PodNameGenerator
 import io.airbyte.workers.process.KubeContainerInfo
 import io.airbyte.workers.process.KubePodInfo
 import io.airbyte.workers.process.Metadata.AWS_ASSUME_ROLE_EXTERNAL_ID
@@ -24,7 +30,6 @@ import io.airbyte.workers.serde.ObjectSerializer
 import io.airbyte.workers.sync.OrchestratorConstants
 import io.airbyte.workload.launcher.model.getAttemptId
 import io.airbyte.workload.launcher.model.getJobId
-import io.airbyte.workload.launcher.model.getOrchestratorResourceReqs
 import io.airbyte.workload.launcher.model.usesCustomConnector
 import io.fabric8.kubernetes.api.model.EnvVar
 import io.micronaut.context.annotation.Value
@@ -73,7 +78,7 @@ class PayloadKubeInputMapper(
     val fileMap = buildSyncFileMap(input)
 
     return OrchestratorKubeInput(
-      labeler.getReplicationOrchestratorLabels() + sharedLabels,
+      labeler.getReplicationOrchestratorLabels(orchestratorKubeContainerInfo.image) + sharedLabels,
       labeler.getSourceLabels() + sharedLabels,
       labeler.getDestinationLabels() + sharedLabels,
       nodeSelectors,
@@ -82,6 +87,7 @@ class PayloadKubeInputMapper(
       orchestratorReqs,
       replicationWorkerConfigs.workerKubeAnnotations,
       listOf(
+        EnvVar(AirbyteEnvVar.OPERATION_TYPE.toString(), WorkloadType.SYNC.toString(), null),
         EnvVar(AirbyteEnvVar.WORKLOAD_ID.toString(), workloadId, null),
         EnvVar(AirbyteEnvVar.JOB_ID.toString(), jobId, null),
         EnvVar(AirbyteEnvVar.ATTEMPT_ID.toString(), attemptId.toString(), null),

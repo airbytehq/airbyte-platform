@@ -2,7 +2,7 @@ package io.airbyte.initContainer
 
 import io.airbyte.initContainer.InputFetcherTest.Fixtures.WORKLOAD_ID
 import io.airbyte.initContainer.InputFetcherTest.Fixtures.workload
-import io.airbyte.initContainer.input.ReplicationHydrationProcessor
+import io.airbyte.initContainer.input.InputHydrationProcessor
 import io.airbyte.initContainer.system.SystemClient
 import io.airbyte.workload.api.client.WorkloadApiClient
 import io.airbyte.workload.api.client.model.generated.Workload
@@ -22,7 +22,7 @@ class InputFetcherTest {
   lateinit var workloadApiClient: WorkloadApiClient
 
   @MockK
-  lateinit var inputProcessor: ReplicationHydrationProcessor
+  lateinit var inputProcessor: InputHydrationProcessor
 
   @MockK
   lateinit var systemClient: SystemClient
@@ -42,12 +42,12 @@ class InputFetcherTest {
   @Test
   fun `fetches input and processes it`() {
     every { workloadApiClient.workloadApi.workloadGet(WORKLOAD_ID) } returns workload
-    every { inputProcessor.process(workload.inputPayload) } returns Unit
+    every { inputProcessor.process(workload) } returns Unit
 
     fetcher.fetch(WORKLOAD_ID)
 
     verify { workloadApiClient.workloadApi.workloadGet(WORKLOAD_ID) }
-    verify { inputProcessor.process(workload.inputPayload) }
+    verify { inputProcessor.process(workload) }
   }
 
   @Test
@@ -65,7 +65,7 @@ class InputFetcherTest {
   @Test
   fun `fails workload on workload process error`() {
     every { workloadApiClient.workloadApi.workloadGet(WORKLOAD_ID) } returns workload
-    every { inputProcessor.process(workload.inputPayload) } throws Exception("bang")
+    every { inputProcessor.process(workload) } throws Exception("bang")
     every { workloadApiClient.workloadApi.workloadFailure(any()) } returns Unit
     every { systemClient.exitProcess(1) } returns Unit
 

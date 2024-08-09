@@ -1,5 +1,8 @@
-package io.airbyte.workload.launcher.pods
+package io.airbyte.workers.pod
 
+import io.airbyte.workers.pod.PodLabeler.LabelKeys.AUTO_ID
+import io.airbyte.workers.pod.PodLabeler.LabelKeys.MUTEX_KEY
+import io.airbyte.workers.pod.PodLabeler.LabelKeys.WORKLOAD_ID
 import io.airbyte.workers.process.Metadata.CHECK_JOB
 import io.airbyte.workers.process.Metadata.DISCOVER_JOB
 import io.airbyte.workers.process.Metadata.IMAGE_NAME
@@ -12,9 +15,6 @@ import io.airbyte.workers.process.Metadata.SYNC_JOB
 import io.airbyte.workers.process.Metadata.SYNC_STEP_KEY
 import io.airbyte.workers.process.Metadata.WRITE_STEP
 import io.airbyte.workers.process.ProcessFactory
-import io.airbyte.workload.launcher.pods.PodLabeler.LabelKeys.AUTO_ID
-import io.airbyte.workload.launcher.pods.PodLabeler.LabelKeys.MUTEX_KEY
-import io.airbyte.workload.launcher.pods.PodLabeler.LabelKeys.WORKLOAD_ID
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.Arguments
@@ -25,7 +25,7 @@ import java.util.stream.Stream
 class PodLabelerTest {
   @Test
   fun getSourceLabels() {
-    val labeler = PodLabeler(ORCHESTRATOR_IMAGE_NAME)
+    val labeler = PodLabeler()
     val result = labeler.getSourceLabels()
 
     assert(
@@ -38,7 +38,7 @@ class PodLabelerTest {
 
   @Test
   fun getDestinationLabels() {
-    val labeler = PodLabeler(ORCHESTRATOR_IMAGE_NAME)
+    val labeler = PodLabeler()
     val result = labeler.getDestinationLabels()
 
     assert(
@@ -51,8 +51,8 @@ class PodLabelerTest {
 
   @Test
   fun getReplicationOrchestratorLabels() {
-    val labeler = PodLabeler(ORCHESTRATOR_IMAGE_NAME)
-    val result = labeler.getReplicationOrchestratorLabels()
+    val labeler = PodLabeler()
+    val result = labeler.getReplicationOrchestratorLabels(ORCHESTRATOR_IMAGE_NAME)
     val shortImageName = ProcessFactory.getShortImageName(ORCHESTRATOR_IMAGE_NAME)
     val imageVersion = ProcessFactory.getImageVersion(ORCHESTRATOR_IMAGE_NAME)
 
@@ -69,7 +69,7 @@ class PodLabelerTest {
 
   @Test
   fun getCheckLabels() {
-    val labeler = PodLabeler(ORCHESTRATOR_IMAGE_NAME)
+    val labeler = PodLabeler()
     val result = labeler.getCheckLabels()
 
     assert(
@@ -82,7 +82,7 @@ class PodLabelerTest {
 
   @Test
   fun getDiscoverLabels() {
-    val labeler = PodLabeler(ORCHESTRATOR_IMAGE_NAME)
+    val labeler = PodLabeler()
     val result = labeler.getDiscoverLabels()
 
     assert(
@@ -95,7 +95,7 @@ class PodLabelerTest {
 
   @Test
   fun getSpecLabels() {
-    val labeler = PodLabeler(ORCHESTRATOR_IMAGE_NAME)
+    val labeler = PodLabeler()
     val result = labeler.getSpecLabels()
 
     assert(
@@ -109,7 +109,7 @@ class PodLabelerTest {
   @ParameterizedTest
   @MethodSource("randomStringMatrix")
   fun getWorkloadLabels(workloadId: String) {
-    val labeler = PodLabeler(ORCHESTRATOR_IMAGE_NAME)
+    val labeler = PodLabeler()
     val result = labeler.getWorkloadLabels(workloadId)
 
     assert(
@@ -123,7 +123,7 @@ class PodLabelerTest {
   @ParameterizedTest
   @MethodSource("randomStringMatrix")
   fun getMutexLabels(key: String) {
-    val labeler = PodLabeler(ORCHESTRATOR_IMAGE_NAME)
+    val labeler = PodLabeler()
     val result = labeler.getMutexLabels(key)
 
     assert(
@@ -136,7 +136,7 @@ class PodLabelerTest {
 
   @Test
   fun getAutoIdLabels() {
-    val labeler = PodLabeler(ORCHESTRATOR_IMAGE_NAME)
+    val labeler = PodLabeler()
     val id = UUID.randomUUID()
     val result = labeler.getAutoIdLabels(id)
 
@@ -156,7 +156,7 @@ class PodLabelerTest {
     passThroughLabels: Map<String, String>,
     autoId: UUID,
   ) {
-    val labeler = PodLabeler(ORCHESTRATOR_IMAGE_NAME)
+    val labeler = PodLabeler()
     val result = labeler.getSharedLabels(workloadId, mutexKey, passThroughLabels, autoId)
 
     assert(

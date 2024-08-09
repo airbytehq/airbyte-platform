@@ -1,4 +1,4 @@
-package io.airbyte.workers.orchestrator
+package io.airbyte.workers.pod
 
 import io.airbyte.workers.process.KubeProcessFactory.KUBE_NAME_LEN_LIMIT
 import io.airbyte.workers.process.ProcessFactory

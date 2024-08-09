@@ -1,7 +1,7 @@
 package io.airbyte.initContainer
 
 import io.airbyte.config.FailureReason.FailureOrigin
-import io.airbyte.initContainer.input.ReplicationHydrationProcessor
+import io.airbyte.initContainer.input.InputHydrationProcessor
 import io.airbyte.initContainer.system.SystemClient
 import io.airbyte.workload.api.client.WorkloadApiClient
 import io.airbyte.workload.api.client.model.generated.WorkloadFailureRequest
@@ -13,20 +13,19 @@ private val logger = KotlinLogging.logger {}
 @Singleton
 class InputFetcher(
   private val workloadApiClient: WorkloadApiClient,
-  private val replInputProcessor: ReplicationHydrationProcessor,
+  private val hydrationProcessor: InputHydrationProcessor,
   private val systemClient: SystemClient,
 ) {
   fun fetch(workloadId: String) {
-    val rawPayload =
+    val workload =
       try {
-        val workload = workloadApiClient.workloadApi.workloadGet(workloadId)
-        workload.inputPayload
+        workloadApiClient.workloadApi.workloadGet(workloadId)
       } catch (e: Exception) {
         return failWorkloadAndExit(workloadId, "fetching workload", e)
       }
 
     try {
-      replInputProcessor.process(rawPayload)
+      hydrationProcessor.process(workload)
     } catch (e: Exception) {
       return failWorkloadAndExit(workloadId, "processing workload", e)
     }

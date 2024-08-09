@@ -20,6 +20,8 @@ airbyte:
     client: ${FEATURE_FLAG_CLIENT:}
     path: ${FEATURE_FLAG_PATH:/flags}
     api-key: ${LAUNCHDARKLY_KEY:}
+  init:
+    operation: ${OPERATION_TYPE:}
   internal-api:
     auth-header:
       name: ${AIRBYTE_API_AUTH_HEADER_NAME:}

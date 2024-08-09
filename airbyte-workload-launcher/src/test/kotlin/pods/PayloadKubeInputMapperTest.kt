@@ -7,6 +7,7 @@ import io.airbyte.config.ResourceRequirements
 import io.airbyte.config.StandardCheckConnectionInput
 import io.airbyte.config.StandardDiscoverCatalogInput
 import io.airbyte.config.WorkloadPriority
+import io.airbyte.config.WorkloadType
 import io.airbyte.featureflag.ContainerOrchestratorDevImage
 import io.airbyte.featureflag.InjectAwsSecretsToConnectorPods
 import io.airbyte.featureflag.OrchestratorFetchesInputFromInit
@@ -14,11 +15,16 @@ import io.airbyte.featureflag.TestClient
 import io.airbyte.persistence.job.models.IntegrationLauncherConfig
 import io.airbyte.persistence.job.models.JobRunConfig
 import io.airbyte.persistence.job.models.ReplicationInput
+import io.airbyte.workers.input.getAttemptId
+import io.airbyte.workers.input.getJobId
+import io.airbyte.workers.input.getOrchestratorResourceReqs
+import io.airbyte.workers.input.usesCustomConnector
 import io.airbyte.workers.models.CheckConnectionInput
 import io.airbyte.workers.models.DiscoverCatalogInput
 import io.airbyte.workers.models.SidecarInput
 import io.airbyte.workers.models.SpecInput
-import io.airbyte.workers.orchestrator.PodNameGenerator
+import io.airbyte.workers.pod.PodLabeler
+import io.airbyte.workers.pod.PodNameGenerator
 import io.airbyte.workers.process.KubeContainerInfo
 import io.airbyte.workers.process.KubePodInfo
 import io.airbyte.workers.process.Metadata.AWS_ASSUME_ROLE_EXTERNAL_ID
@@ -27,8 +33,6 @@ import io.airbyte.workers.sync.OrchestratorConstants
 import io.airbyte.workload.launcher.model.getActorType
 import io.airbyte.workload.launcher.model.getAttemptId
 import io.airbyte.workload.launcher.model.getJobId
-import io.airbyte.workload.launcher.model.getOrchestratorResourceReqs
-import io.airbyte.workload.launcher.model.usesCustomConnector
 import io.fabric8.kubernetes.api.model.EnvVar
 import io.mockk.every
 import io.mockk.mockk
@@ -85,7 +89,7 @@ class PayloadKubeInputMapperTest {
       )
     val input: ReplicationInput = mockk()
 
-    mockkStatic("io.airbyte.workload.launcher.model.ReplicationInputExtensionsKt")
+    mockkStatic("io.airbyte.workers.input.ReplicationInputExtensionsKt")
     val jobId = "415"
     val attemptId = 7654L
     val resourceReqs = ResourceRequirements()
@@ -106,7 +110,7 @@ class PayloadKubeInputMapperTest {
     val sourceLabels = mapOf("source" to "labels")
     val destinationLabels = mapOf("dest" to "labels")
     val sharedLabels = mapOf("pass through" to "labels")
-    every { labeler.getReplicationOrchestratorLabels() } returns orchestratorLabels
+    every { labeler.getReplicationOrchestratorLabels(containerInfo.image) } returns orchestratorLabels
     every { labeler.getSourceLabels() } returns sourceLabels
     every { labeler.getDestinationLabels() } returns destinationLabels
     val workloadId = UUID.randomUUID().toString()
@@ -129,6 +133,7 @@ class PayloadKubeInputMapperTest {
     assert(
       result.extraEnv ==
         listOf(
+          EnvVar(AirbyteEnvVar.OPERATION_TYPE.toString(), WorkloadType.SYNC.toString(), null),
           EnvVar(AirbyteEnvVar.WORKLOAD_ID.toString(), workloadId, null),
           EnvVar(AirbyteEnvVar.JOB_ID.toString(), jobId, null),
           EnvVar(AirbyteEnvVar.ATTEMPT_ID.toString(), attemptId.toString(), null),

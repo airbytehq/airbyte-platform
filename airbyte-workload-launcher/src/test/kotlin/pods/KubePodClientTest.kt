@@ -8,12 +8,13 @@ import io.airbyte.featureflag.TestClient
 import io.airbyte.persistence.job.models.IntegrationLauncherConfig
 import io.airbyte.persistence.job.models.JobRunConfig
 import io.airbyte.persistence.job.models.ReplicationInput
+import io.airbyte.workers.input.setDestinationLabels
+import io.airbyte.workers.input.setSourceLabels
 import io.airbyte.workers.models.CheckConnectionInput
 import io.airbyte.workers.models.DiscoverCatalogInput
 import io.airbyte.workers.models.SpecInput
+import io.airbyte.workers.pod.PodLabeler
 import io.airbyte.workers.process.KubePodInfo
-import io.airbyte.workload.launcher.model.setDestinationLabels
-import io.airbyte.workload.launcher.model.setSourceLabels
 import io.airbyte.workload.launcher.pods.KubePodClient.Companion.ORCHESTRATOR_STARTUP_TIMEOUT_VALUE
 import io.airbyte.workload.launcher.pods.KubePodClient.Companion.POD_INIT_TIMEOUT_VALUE
 import io.airbyte.workload.launcher.pods.KubePodClient.Companion.REPL_CONNECTOR_STARTUP_TIMEOUT_VALUE

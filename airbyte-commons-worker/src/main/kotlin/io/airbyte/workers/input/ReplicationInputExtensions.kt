@@ -1,4 +1,4 @@
-package io.airbyte.workload.launcher.model
+package io.airbyte.workers.input
 
 import io.airbyte.config.ResourceRequirements
 import io.airbyte.persistence.job.models.ReplicationInput
