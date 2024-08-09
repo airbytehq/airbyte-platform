@@ -1,4 +1,4 @@
-import { Suspense } from "react";
+import { MutableRefObject, Suspense, useEffect, useRef } from "react";
 import { useIntl } from "react-intl";
 import { Navigate, useSearchParams } from "react-router-dom";
 
@@ -45,11 +45,30 @@ export const CreateConnectionPage: React.FC = () => {
 
 const CurrentStep: React.FC = () => {
   const workspaceId = useCurrentWorkspaceId();
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const sourceId = searchParams.get("sourceId");
   const destinationId = searchParams.get("destinationId");
   const source = useGetSource(sourceId);
   const destination = useGetDestination(destinationId);
+
+  const sourceRef: MutableRefObject<string | null> = useRef(sourceId);
+  useEffect(() => {
+    if (destinationId) {
+      // don't do anything if destination is already set
+      return;
+    }
+    if (sourceRef.current !== sourceId && sourceId) {
+      // when the sourceId changes remove all params except sourceId
+      const paramKeys = Array.from(searchParams.keys());
+      paramKeys.forEach((key) => {
+        if (key !== "sourceId") {
+          searchParams.delete(key);
+        }
+      });
+      setSearchParams(searchParams);
+    }
+    sourceRef.current = sourceId;
+  }, [sourceId, destinationId, searchParams, setSearchParams]);
 
   if (!source) {
     return <DefineSource />;
