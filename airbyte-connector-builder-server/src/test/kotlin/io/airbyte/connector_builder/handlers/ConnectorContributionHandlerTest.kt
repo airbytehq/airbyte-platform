@@ -27,7 +27,7 @@ class ConnectorContributionHandlerTest {
     mockkConstructor(GithubContributionService::class)
     every { requestBodyMock.connectorImageName } returns testConnectorImageName
     val templateService = ContributionTemplates()
-    connectorContributionHandler = ConnectorContributionHandler(templateService)
+    connectorContributionHandler = ConnectorContributionHandler(templateService, null)
   }
 
   @Test

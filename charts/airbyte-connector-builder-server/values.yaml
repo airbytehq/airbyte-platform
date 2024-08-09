@@ -180,6 +180,9 @@ secrets: {}
 
 env_vars: {}
 
+gsm:
+  BUILDER_GITHUB_AIRBYTE_PAT_TOKEN: builder-github-airbyte-pat-token
+
 debug:
   enabled: false
   remoteDebugPort: 5005

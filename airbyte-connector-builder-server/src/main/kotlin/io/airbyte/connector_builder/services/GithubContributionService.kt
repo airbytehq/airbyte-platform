@@ -3,6 +3,7 @@
 package io.airbyte.connector_builder.services
 
 import io.airbyte.commons.server.handlers.logger
+import io.github.oshai.kotlinlogging.KotlinLogging
 import org.kohsuke.github.GHBranch
 import org.kohsuke.github.GHCommit
 import org.kohsuke.github.GHContent
@@ -15,6 +16,8 @@ import org.kohsuke.github.GitHubBuilder
 import org.kohsuke.github.HttpException
 import org.yaml.snakeyaml.Yaml
 
+private val logger = KotlinLogging.logger {}
+
 class GithubContributionService(var connectorImageName: String, personalAccessToken: String?) {
   var githubService: GitHub? = null
   val repositoryName = "airbyte"
@@ -23,8 +26,10 @@ class GithubContributionService(var connectorImageName: String, personalAccessTo
 
   init {
     val builder = GitHubBuilder()
-    if (personalAccessToken != null) {
+    if (!personalAccessToken.isNullOrEmpty()) {
       builder.withOAuthToken(personalAccessToken)
+    } else {
+      logger.warn { "No personal access token provided for GitHub API. This may cause you to be rate limited by the Github API" }
     }
 
     githubService = builder.build()

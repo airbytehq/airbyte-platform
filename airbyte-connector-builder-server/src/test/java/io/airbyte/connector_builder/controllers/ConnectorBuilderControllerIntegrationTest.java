@@ -101,7 +101,7 @@ class ConnectorBuilderControllerIntegrationTest {
         this.writer, this.streamFactory, shouldThrow, exitCode, inputStream, errorStream, outputStream);
     final AirbyteCdkRequesterImpl requester = new AirbyteCdkRequesterImpl(commandRunner);
     return new ConnectorBuilderController(this.healthHandler, new ResolveManifestHandler(requester), new StreamHandler(requester),
-        new ConnectorContributionHandler(contributionTemplates));
+        new ConnectorContributionHandler(contributionTemplates, null));
   }
 
   @Test
