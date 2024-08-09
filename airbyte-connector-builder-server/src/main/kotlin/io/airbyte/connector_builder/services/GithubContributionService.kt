@@ -265,13 +265,21 @@ class GithubContributionService(var connectorImageName: String, personalAccessTo
     return createPullRequest()
   }
 
-  fun updateForkedBranchAndRepoToLatest() {
+  fun attemptUpdateForkedBranchAndRepoToLatest() {
     val airbyteMasterSha = getBranchSha(airbyteRepository.defaultBranch, airbyteRepository)
     val forkedMasterRef = getBranchRef(airbyteRepository.defaultBranch, forkedRepository)
     val forkedContributionBranch = getBranch(contributionBranchName, forkedRepository)
 
-    forkedMasterRef?.updateTo(airbyteMasterSha)
-    forkedContributionBranch?.merge(airbyteMasterSha, "Merge latest changes from main branch")
+    try {
+      forkedMasterRef?.updateTo(airbyteMasterSha)
+      forkedContributionBranch?.merge(airbyteMasterSha, "Merge latest changes from main branch")
+    } catch (e: GHFileNotFoundException) {
+      // HACK: This method is flaky and relies on an eventually consistent GitHub API
+      // TODO: Update to use `merge-upstream` instead
+      // WHEN: When a version of org.kohsuke:github-api < 1.323 is available
+      // WHY: https://github.com/hub4j/github-api/pull/1898 will be part of that change
+      logger.error(e) { "Failed to update forked branch to latest" }
+    }
   }
 
   fun prepareBranchForContribution() {
@@ -281,7 +289,7 @@ class GithubContributionService(var connectorImageName: String, personalAccessTo
     if (existingBranch != null) {
       if (existingPR != null) {
         // Make sure the existing PR stays up to date with master
-        updateForkedBranchAndRepoToLatest()
+        attemptUpdateForkedBranchAndRepoToLatest()
       } else {
         // Delete the branch with old contributions in the PR doesn't exist anymore
         deleteBranch(contributionBranchName, forkedRepository)
