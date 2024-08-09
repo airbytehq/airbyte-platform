@@ -60,7 +60,13 @@ export const ConnectionHeaderControls: React.FC = () => {
       <FreeHistoricalSyncIndicator />
       <Tooltip
         control={
-          <Button icon="clockOutline" variant="clear" className={styles.scheduleButton} onClick={onScheduleBtnClick}>
+          <Button
+            icon="clockOutline"
+            variant="clear"
+            data-testid="schedule-button"
+            className={styles.scheduleButton}
+            onClick={onScheduleBtnClick}
+          >
             <FormattedScheduleDataMessage
               scheduleType={connection.scheduleType}
               scheduleData={connection.scheduleData}
