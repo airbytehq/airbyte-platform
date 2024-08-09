@@ -8,6 +8,6 @@ import jakarta.inject.Singleton
 @Singleton
 class SystemClient {
   fun exitProcess(code: Int) {
-    exitProcess(code)
+    kotlin.system.exitProcess(code)
   }
 }
