@@ -756,10 +756,6 @@ public class SchedulerHandler {
   private boolean shouldDisableConnection(final boolean containsBreakingChange,
                                           final NonBreakingChangesPreference preference,
                                           final CatalogDiff diff) {
-    if (!envVariableFeatureFlags.autoDetectSchema()) {
-      return false;
-    }
-
     return containsBreakingChange || (preference == NonBreakingChangesPreference.DISABLE && !diff.getTransforms().isEmpty());
   }
 

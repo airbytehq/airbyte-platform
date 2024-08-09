@@ -85,7 +85,6 @@ public class AirbyteIntegrationLauncherFactory {
         // At this moment, if either source or destination is from custom connector image, we will put all
         // jobs into isolated pool to run.
         launcherConfig.getIsCustomConnector(),
-        featureFlags,
         launcherConfig.getAdditionalEnvironmentVariables() == null ? Collections.emptyMap() : launcherConfig.getAdditionalEnvironmentVariables(),
         launcherConfig.getAdditionalLabels() == null ? Collections.emptyMap() : launcherConfig.getAdditionalLabels());
   }

@@ -14,7 +14,6 @@ import static io.airbyte.metrics.lib.ApmTraceConstants.Tags.JOB_ID_KEY;
 import datadog.trace.api.Trace;
 import io.airbyte.api.client.AirbyteApiClient;
 import io.airbyte.api.client.model.generated.Geography;
-import io.airbyte.commons.features.FeatureFlags;
 import io.airbyte.commons.functional.CheckedSupplier;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.commons.protocol.AirbyteMessageSerDeProvider;
@@ -96,7 +95,6 @@ public class SpecActivityImpl implements SpecActivity {
   private final String airbyteVersion;
   private final AirbyteMessageSerDeProvider serDeProvider;
   private final AirbyteProtocolVersionedMigratorFactory migratorFactory;
-  private final FeatureFlags featureFlags;
   private final GsonPksExtractor gsonPksExtractor;
   private final FeatureFlagClient featureFlagClient;
   private final WorkloadClient workloadClient;
@@ -112,7 +110,6 @@ public class SpecActivityImpl implements SpecActivity {
                           @Value("${airbyte.version}") final String airbyteVersion,
                           final AirbyteMessageSerDeProvider serDeProvider,
                           final AirbyteProtocolVersionedMigratorFactory migratorFactory,
-                          final FeatureFlags featureFlags,
                           final GsonPksExtractor gsonPksExtractor,
                           final FeatureFlagClient featureFlagClient,
                           final WorkloadClient workloadClient,
@@ -127,7 +124,6 @@ public class SpecActivityImpl implements SpecActivity {
     this.airbyteVersion = airbyteVersion;
     this.serDeProvider = serDeProvider;
     this.migratorFactory = migratorFactory;
-    this.featureFlags = featureFlags;
     this.gsonPksExtractor = gsonPksExtractor;
     this.featureFlagClient = featureFlagClient;
     this.workloadClient = workloadClient;
@@ -238,7 +234,6 @@ public class SpecActivityImpl implements SpecActivity {
           null,
           launcherConfig.getAllowedHosts(),
           launcherConfig.getIsCustomConnector(),
-          featureFlags,
           Collections.emptyMap(),
           Collections.emptyMap());
 

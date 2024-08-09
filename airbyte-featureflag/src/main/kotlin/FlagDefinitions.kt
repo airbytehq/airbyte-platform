@@ -15,8 +15,6 @@ package io.airbyte.featureflag
  */
 object LogConnectorMessages : EnvVar(envVar = "LOG_CONNECTOR_MESSAGES")
 
-object AutoDetectSchema : EnvVar(envVar = "AUTO_DETECT_SCHEMA")
-
 object RemoveValidationLimit : Temporary<Boolean>(key = "validation.removeValidationLimit", default = false)
 
 object FieldSelectionEnabled : Temporary<Boolean>(key = "connection.columnSelection", default = false)

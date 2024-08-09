@@ -6,7 +6,6 @@ import io.airbyte.analytics.DEPLOYMENT_MODE_ENV_VAR
 import io.airbyte.analytics.SEGMENT_WRITE_KEY_ENV_VAR
 import io.airbyte.analytics.TRACKING_STRATEGY_ENV_VAR
 import io.airbyte.commons.envvar.EnvVar
-import io.airbyte.commons.features.EnvVariableFeatureFlags
 import io.airbyte.config.EnvConfigs
 
 private const val LOG_LEVEL = "LOG_LEVEL"
@@ -53,12 +52,6 @@ object OrchestratorConstants {
       )
       // add job shared envs
       addAll(EnvConfigs.JOB_SHARED_ENVS.keys)
-      // add EnvVariableFeatureFlags
-      addAll(
-        setOf(
-          EnvVariableFeatureFlags.AUTO_DETECT_SCHEMA,
-        ),
-      )
       // add tracking client
       addAll(
         setOf(

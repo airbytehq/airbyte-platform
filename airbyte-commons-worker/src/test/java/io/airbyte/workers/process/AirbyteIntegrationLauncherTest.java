@@ -73,7 +73,6 @@ class AirbyteIntegrationLauncherTest {
               .put(WorkerEnvConstants.WORKER_CONNECTOR_IMAGE, FAKE_IMAGE)
               .put(WorkerEnvConstants.WORKER_JOB_ID, JOB_ID)
               .put(WorkerEnvConstants.WORKER_JOB_ATTEMPT, String.valueOf(JOB_ATTEMPT))
-              .put(EnvVariableFeatureFlags.AUTO_DETECT_SCHEMA, String.valueOf(FEATURE_FLAGS.autoDetectSchema()))
               .put("USE_STREAM_CAPABLE_STATE", "true")
               .put(EnvVar.SOCAT_KUBE_CPU_LIMIT.name(), CONFIGS.getSocatSidecarKubeCpuLimit())
               .put(EnvVar.SOCAT_KUBE_CPU_REQUEST.name(), CONFIGS.getSocatSidecarKubeCpuRequest())
@@ -121,7 +120,7 @@ class AirbyteIntegrationLauncherTest {
         .withSourceStdOut(rssReqSourceStdOut);
     launcher = new AirbyteIntegrationLauncher(JOB_ID, JOB_ATTEMPT, CONNECTION_ID, WORKSPACE_ID, FAKE_IMAGE, processFactory,
         workerConfigs.getResourceRequirements(), syncResourceRequirements, null, false,
-        FEATURE_FLAGS, Collections.emptyMap(), Collections.emptyMap());
+        Collections.emptyMap(), Collections.emptyMap());
   }
 
   @Test
@@ -178,7 +177,7 @@ class AirbyteIntegrationLauncherTest {
 
     launcher = new AirbyteIntegrationLauncher(JOB_ID, JOB_ATTEMPT, CONNECTION_ID, WORKSPACE_ID, FAKE_IMAGE, processFactory,
         workerConfigs.getResourceRequirements(), syncResourceRequirements, null, false,
-        FEATURE_FLAGS, Collections.emptyMap(), additionalLabels);
+        Collections.emptyMap(), additionalLabels);
 
     launcher.read(JOB_ROOT, CONFIG, "{}", CATALOG, "{}", STATE, "{}");
 
@@ -207,7 +206,7 @@ class AirbyteIntegrationLauncherTest {
   void readWithoutSyncResources() throws WorkerException {
     launcher = new AirbyteIntegrationLauncher(JOB_ID, JOB_ATTEMPT, CONNECTION_ID, WORKSPACE_ID, FAKE_IMAGE, processFactory,
         workerConfigs.getResourceRequirements(), null, null, false,
-        FEATURE_FLAGS, Collections.emptyMap(), Collections.emptyMap());
+        Collections.emptyMap(), Collections.emptyMap());
     launcher.read(JOB_ROOT, CONFIG, "{}", CATALOG, "{}", STATE, "{}");
 
     final ConnectorResourceRequirements expectedResourceRequirements =
@@ -253,8 +252,7 @@ class AirbyteIntegrationLauncherTest {
     final var additionalLabels = Map.of("other2", "label2");
     final var envVarLauncher =
         new AirbyteIntegrationLauncher(JOB_ID, JOB_ATTEMPT, CONNECTION_ID, WORKSPACE_ID, FAKE_IMAGE, processFactory,
-            workerConfigs.getResourceRequirements(), syncResourceRequirements, null, false,
-            FEATURE_FLAGS, additionalEnvVars, additionalLabels);
+            workerConfigs.getResourceRequirements(), syncResourceRequirements, null, false, additionalEnvVars, additionalLabels);
     envVarLauncher.write(JOB_ROOT, CONFIG, "{}", CATALOG, "{}");
     Mockito.verify(processFactory).create(ResourceType.REPLICATION, WRITE_STEP, JOB_ID, JOB_ATTEMPT, CONNECTION_ID, WORKSPACE_ID, JOB_ROOT,
         FAKE_IMAGE, false, true,
@@ -274,7 +272,7 @@ class AirbyteIntegrationLauncherTest {
   void writeWithoutSyncResources() throws WorkerException, JsonProcessingException {
     launcher = new AirbyteIntegrationLauncher(JOB_ID, JOB_ATTEMPT, CONNECTION_ID, WORKSPACE_ID, FAKE_IMAGE, processFactory,
         workerConfigs.getResourceRequirements(), null, null, false,
-        FEATURE_FLAGS, Collections.emptyMap(), Collections.emptyMap());
+        Collections.emptyMap(), Collections.emptyMap());
     launcher.write(JOB_ROOT, CONFIG, "{}", CATALOG, "{}");
 
     final ConnectorResourceRequirements expectedResourceRequirements =
@@ -295,7 +293,7 @@ class AirbyteIntegrationLauncherTest {
     final var envVarLauncher =
         new AirbyteIntegrationLauncher(JOB_ID, JOB_ATTEMPT, CONNECTION_ID, WORKSPACE_ID, FAKE_IMAGE, processFactory,
             workerConfigs.getResourceRequirements(), null, null, false,
-            FEATURE_FLAGS, additionalEnvVars, Collections.emptyMap());
+            additionalEnvVars, Collections.emptyMap());
     envVarLauncher.write(JOB_ROOT, CONFIG, "{}", CATALOG, "{}");
     Mockito.verify(processFactory).create(ResourceType.REPLICATION, WRITE_STEP, JOB_ID, JOB_ATTEMPT, CONNECTION_ID, WORKSPACE_ID, JOB_ROOT,
         FAKE_IMAGE, false, true,

@@ -13,7 +13,6 @@ import static org.mockito.Mockito.when;
 
 import io.airbyte.api.client.AirbyteApiClient;
 import io.airbyte.api.client.model.generated.Geography;
-import io.airbyte.commons.features.FeatureFlags;
 import io.airbyte.commons.protocol.AirbyteMessageSerDeProvider;
 import io.airbyte.commons.protocol.AirbyteProtocolVersionedMigratorFactory;
 import io.airbyte.commons.workers.config.WorkerConfigsProvider;
@@ -67,7 +66,6 @@ class CheckConnectionActivityTest {
   private final String airbyteVersion = "";
   private final AirbyteMessageSerDeProvider serDeProvider = mock(AirbyteMessageSerDeProvider.class);
   private final AirbyteProtocolVersionedMigratorFactory migratorFactory = mock(AirbyteProtocolVersionedMigratorFactory.class);
-  private final FeatureFlags featureFlags = mock(FeatureFlags.class);
   private final GsonPksExtractor gsonPksExtractor = mock(GsonPksExtractor.class);
   private final WorkloadApi workloadApi = mock(WorkloadApi.class);
   private final WorkloadApiClient workloadApiClient = mock(WorkloadApiClient.class);
@@ -100,7 +98,6 @@ class CheckConnectionActivityTest {
         airbyteVersion,
         serDeProvider,
         migratorFactory,
-        featureFlags,
         featureFlagClient,
         gsonPksExtractor,
         new WorkloadClient(workloadApiClient, jobOutputDocStore),

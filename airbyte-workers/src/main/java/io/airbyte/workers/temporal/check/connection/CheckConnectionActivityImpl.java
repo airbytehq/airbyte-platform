@@ -17,7 +17,6 @@ import io.airbyte.api.client.model.generated.ConnectionIdRequestBody;
 import io.airbyte.api.client.model.generated.Geography;
 import io.airbyte.api.client.model.generated.WorkspaceIdRequestBody;
 import io.airbyte.commons.converters.ConnectorConfigUpdater;
-import io.airbyte.commons.features.FeatureFlags;
 import io.airbyte.commons.functional.CheckedSupplier;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.commons.protocol.AirbyteMessageSerDeProvider;
@@ -106,7 +105,6 @@ public class CheckConnectionActivityImpl implements CheckConnectionActivity {
   private final String airbyteVersion;
   private final AirbyteMessageSerDeProvider serDeProvider;
   private final AirbyteProtocolVersionedMigratorFactory migratorFactory;
-  private final FeatureFlags featureFlags;
   private final GsonPksExtractor gsonPksExtractor;
   private final CheckConnectionInputHydrator inputHydrator;
   private final WorkloadClient workloadClient;
@@ -125,7 +123,6 @@ public class CheckConnectionActivityImpl implements CheckConnectionActivity {
                                      @Value("${airbyte.version}") final String airbyteVersion,
                                      final AirbyteMessageSerDeProvider serDeProvider,
                                      final AirbyteProtocolVersionedMigratorFactory migratorFactory,
-                                     final FeatureFlags featureFlags,
                                      final FeatureFlagClient featureFlagClient,
                                      final GsonPksExtractor gsonPksExtractor,
                                      final WorkloadClient workloadClient,
@@ -141,7 +138,6 @@ public class CheckConnectionActivityImpl implements CheckConnectionActivity {
         airbyteVersion,
         serDeProvider,
         migratorFactory,
-        featureFlags,
         featureFlagClient,
         gsonPksExtractor,
         workloadClient,
@@ -165,7 +161,6 @@ public class CheckConnectionActivityImpl implements CheckConnectionActivity {
                               final String airbyteVersion,
                               final AirbyteMessageSerDeProvider serDeProvider,
                               final AirbyteProtocolVersionedMigratorFactory migratorFactory,
-                              final FeatureFlags featureFlags,
                               final FeatureFlagClient featureFlagClient,
                               final GsonPksExtractor gsonPksExtractor,
                               final WorkloadClient workloadClient,
@@ -182,7 +177,6 @@ public class CheckConnectionActivityImpl implements CheckConnectionActivity {
     this.airbyteVersion = airbyteVersion;
     this.serDeProvider = serDeProvider;
     this.migratorFactory = migratorFactory;
-    this.featureFlags = featureFlags;
     this.gsonPksExtractor = gsonPksExtractor;
     this.workloadClient = workloadClient;
     this.workloadIdGenerator = workloadIdGenerator;
@@ -336,7 +330,6 @@ public class CheckConnectionActivityImpl implements CheckConnectionActivity {
           null,
           launcherConfig.getAllowedHosts(),
           launcherConfig.getIsCustomConnector(),
-          featureFlags,
           Collections.emptyMap(),
           Collections.emptyMap());
 

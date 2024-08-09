@@ -299,7 +299,7 @@ public class DiscoverCatalogActivityImpl implements DiscoverCatalogActivity {
               ResourceRequirementsUtils.getResourceRequirements(actorDefinitionResourceRequirements, defaultWorkerConfigResourceRequirements),
               null,
               launcherConfig.getAllowedHosts(), launcherConfig.getIsCustomConnector(),
-              featureFlags, Collections.emptyMap(), Collections.emptyMap());
+              Collections.emptyMap(), Collections.emptyMap());
       final AirbyteStreamFactory streamFactory =
           new VersionedAirbyteStreamFactory<>(serDeProvider, migratorFactory, launcherConfig.getProtocolVersion(), Optional.empty(),
               Optional.empty(), new VersionedAirbyteStreamFactory.InvalidLineFailureConfiguration(false), gsonPksExtractor);

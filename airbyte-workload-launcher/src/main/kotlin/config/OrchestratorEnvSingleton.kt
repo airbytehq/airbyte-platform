@@ -1,7 +1,6 @@
 package io.airbyte.workload.launcher.config
 
 import io.airbyte.commons.constants.WorkerConstants
-import io.airbyte.commons.features.EnvVariableFeatureFlags
 import io.airbyte.commons.features.FeatureFlags
 import io.airbyte.config.Configs
 import io.airbyte.config.EnvConfigs
@@ -38,7 +37,6 @@ class OrchestratorEnvSingleton(
   fun orchestratorEnvMap(connectionId: UUID): Map<String, String> {
     // Build the map of additional environment variables to be passed to the container orchestrator
     val envMap: MutableMap<String, String> = HashMap()
-    envMap[EnvVariableFeatureFlags.AUTO_DETECT_SCHEMA] = java.lang.Boolean.toString(featureFlags.autoDetectSchema())
     overrideOrchestratorJavaOpts(envMap, connectionId)
     val configs: Configs = EnvConfigs()
     envMap[AbEnvVar.FEATURE_FLAG_CLIENT.name] = AbEnvVar.FEATURE_FLAG_CLIENT.fetch() ?: ""

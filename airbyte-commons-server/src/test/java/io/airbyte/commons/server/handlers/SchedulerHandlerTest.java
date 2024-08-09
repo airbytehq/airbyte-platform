@@ -945,7 +945,6 @@ class SchedulerHandlerTest {
   void whenDiscoverPostprocessInTemporalEnabledDiffAndDisablingIsNotPerformed(final boolean enabled)
       throws IOException, JsonValidationException, ConfigNotFoundException {
     when(featureFlagClient.boolVariation(eq(DiscoverPostprocessInTemporal.INSTANCE), any())).thenReturn(enabled);
-    when(envVariableFeatureFlags.autoDetectSchema()).thenReturn(false);
     final SourceConnection source = SourceHelpers.generateSource(UUID.randomUUID());
     final UUID connectionId1 = UUID.randomUUID();
     final UUID connectionId2 = UUID.randomUUID();
@@ -1076,67 +1075,6 @@ class SchedulerHandlerTest {
 
   // TODO: to be removed once we swap to new discover flow
   @Test
-  void testDiscoverSchemaFromSourceIdWithConnectionIdNonBreakingDisableConnectionPreferenceNoFeatureFlag()
-      throws IOException, JsonValidationException, ConfigNotFoundException {
-    final SourceConnection source = SourceHelpers.generateSource(UUID.randomUUID());
-    final UUID connectionId = UUID.randomUUID();
-    final UUID discoveredCatalogId = UUID.randomUUID();
-    final SynchronousResponse<UUID> discoverResponse = (SynchronousResponse<UUID>) jobResponse;
-    final SourceDiscoverSchemaRequestBody request =
-        new SourceDiscoverSchemaRequestBody().sourceId(source.getSourceId()).connectionId(connectionId).disableCache(true).notifySchemaChange(true);
-    final StreamTransform streamTransform = new StreamTransform().transformType(TransformTypeEnum.REMOVE_STREAM)
-        .streamDescriptor(new io.airbyte.api.model.generated.StreamDescriptor().name(DOGS));
-    final CatalogDiff catalogDiff = new CatalogDiff().addTransformsItem(streamTransform);
-    final StandardSourceDefinition sourceDef = new StandardSourceDefinition()
-        .withSourceDefinitionId(source.getSourceDefinitionId());
-    final ActorDefinitionVersion sourceVersion = new ActorDefinitionVersion()
-        .withDockerRepository(SOURCE_DOCKER_REPO)
-        .withDockerImageTag(SOURCE_DOCKER_TAG)
-        .withProtocolVersion(SOURCE_PROTOCOL_VERSION);
-    when(envVariableFeatureFlags.autoDetectSchema()).thenReturn(false);
-    when(configRepository.getStandardSourceDefinition(source.getSourceDefinitionId()))
-        .thenReturn(sourceDef);
-    when(actorDefinitionVersionHelper.getSourceVersion(sourceDef, source.getWorkspaceId(), source.getSourceId()))
-        .thenReturn(sourceVersion);
-    when(configRepository.getSourceConnection(source.getSourceId())).thenReturn(source);
-    when(synchronousSchedulerClient.createDiscoverSchemaJob(source, sourceVersion, false, null, WorkloadPriority.HIGH))
-        .thenReturn(discoverResponse);
-    when(webUrlHelper.getConnectionReplicationPageUrl(source.getWorkspaceId(), connectionId)).thenReturn(CONNECTION_URL);
-
-    when(discoverResponse.isSuccess()).thenReturn(true);
-    when(discoverResponse.getOutput()).thenReturn(discoveredCatalogId);
-
-    final AirbyteCatalog airbyteCatalogCurrent = new AirbyteCatalog().withStreams(Lists.newArrayList(
-        CatalogHelpers.createAirbyteStream(SHOES, Field.of(SKU, JsonSchemaType.STRING)),
-        CatalogHelpers.createAirbyteStream(DOGS, Field.of(NAME, JsonSchemaType.STRING))));
-
-    final ConnectionRead connectionRead =
-        new ConnectionRead().syncCatalog(CatalogConverter.toApi(airbyteCatalogCurrent, sourceVersion)).nonBreakingChangesPreference(
-            NonBreakingChangesPreference.DISABLE).status(ConnectionStatus.ACTIVE).connectionId(connectionId).sourceId(source.getSourceId())
-            .notifySchemaChanges(true);
-    when(connectionsHandler.getConnection(request.getConnectionId())).thenReturn(connectionRead);
-    when(connectionsHandler.getDiff(any(), any(), any())).thenReturn(catalogDiff);
-    final ConnectionReadList connectionReadList = new ConnectionReadList().connections(List.of(connectionRead));
-    when(connectionsHandler.listConnectionsForSource(source.getSourceId(), false)).thenReturn(connectionReadList);
-
-    final ActorCatalog actorCatalog = new ActorCatalog()
-        .withCatalog(Jsons.jsonNode(airbyteCatalog))
-        .withCatalogHash("")
-        .withId(discoveredCatalogId);
-    when(configRepository.getActorCatalogById(discoveredCatalogId)).thenReturn(actorCatalog);
-
-    final AirbyteCatalog persistenceCatalog = Jsons.object(actorCatalog.getCatalog(),
-        io.airbyte.protocol.models.AirbyteCatalog.class);
-    final io.airbyte.api.model.generated.AirbyteCatalog expectedActorCatalog = CatalogConverter.toApi(persistenceCatalog, sourceVersion);
-
-    final SourceDiscoverSchemaRead actual = schedulerHandler.discoverSchemaForSourceFromSourceId(request);
-    assertEquals(actual.getCatalogDiff(), catalogDiff);
-    assertEquals(actual.getCatalog(), expectedActorCatalog);
-    assertEquals(actual.getConnectionStatus(), ConnectionStatus.ACTIVE);
-  }
-
-  // TODO: to be removed once we swap to new discover flow
-  @Test
   void testDiscoverSchemaFromSourceIdWithConnectionIdNonBreakingDisableConnectionPreferenceFeatureFlag()
       throws IOException, JsonValidationException, ConfigNotFoundException {
     final SourceConnection source = SourceHelpers.generateSource(UUID.randomUUID());
@@ -1155,7 +1093,6 @@ class SchedulerHandlerTest {
             .withDockerRepository(SOURCE_DOCKER_REPO)
             .withDockerImageTag(SOURCE_DOCKER_TAG)
             .withProtocolVersion(SOURCE_PROTOCOL_VERSION);
-    when(envVariableFeatureFlags.autoDetectSchema()).thenReturn(true);
     when(configRepository.getStandardSourceDefinition(source.getSourceDefinitionId()))
         .thenReturn(sourceDef);
     when(actorDefinitionVersionHelper.getSourceVersion(sourceDef, source.getWorkspaceId(), source.getSourceId()))
@@ -1200,73 +1137,6 @@ class SchedulerHandlerTest {
 
   // TODO: to be removed once we swap to new discover flow
   @Test
-  void testDiscoverSchemaFromSourceIdWithConnectionIdBreaking()
-      throws IOException, JsonValidationException, ConfigNotFoundException {
-    when(envVariableFeatureFlags.autoDetectSchema()).thenReturn(false);
-    final SourceConnection source = SourceHelpers.generateSource(UUID.randomUUID());
-    final UUID connectionId = UUID.randomUUID();
-    final UUID discoveredCatalogId = UUID.randomUUID();
-    final SynchronousResponse<UUID> discoverResponse = (SynchronousResponse<UUID>) jobResponse;
-    final SourceDiscoverSchemaRequestBody request =
-        new SourceDiscoverSchemaRequestBody().sourceId(source.getSourceId()).connectionId(connectionId).disableCache(true).notifySchemaChange(true);
-    final StreamTransform streamTransform = new StreamTransform().transformType(TransformTypeEnum.UPDATE_STREAM)
-        .streamDescriptor(new io.airbyte.api.model.generated.StreamDescriptor().name(DOGS))
-        .updateStream(new StreamTransformUpdateStream().addFieldTransformsItem(new FieldTransform().transformType(
-            FieldTransform.TransformTypeEnum.REMOVE_FIELD).breaking(true)));
-    final CatalogDiff catalogDiff = new CatalogDiff().addTransformsItem(streamTransform);
-    final StandardSourceDefinition sourceDef = new StandardSourceDefinition()
-        .withSourceDefinitionId(source.getSourceDefinitionId());
-    final ActorDefinitionVersion sourceVersion = new ActorDefinitionVersion()
-        .withDockerRepository(SOURCE_DOCKER_REPO)
-        .withProtocolVersion(SOURCE_PROTOCOL_VERSION)
-        .withDockerImageTag(SOURCE_DOCKER_TAG);
-    when(configRepository.getStandardSourceDefinition(source.getSourceDefinitionId()))
-        .thenReturn(sourceDef);
-    when(actorDefinitionVersionHelper.getSourceVersion(sourceDef, source.getWorkspaceId(), source.getSourceId()))
-        .thenReturn(sourceVersion);
-    when(configRepository.getSourceConnection(source.getSourceId())).thenReturn(source);
-    when(synchronousSchedulerClient.createDiscoverSchemaJob(source, sourceVersion, false, null, WorkloadPriority.HIGH))
-        .thenReturn(discoverResponse);
-    when(webUrlHelper.getConnectionReplicationPageUrl(source.getWorkspaceId(), connectionId)).thenReturn(CONNECTION_URL);
-
-    when(discoverResponse.isSuccess()).thenReturn(true);
-    when(discoverResponse.getOutput()).thenReturn(discoveredCatalogId);
-
-    final AirbyteCatalog airbyteCatalogCurrent = new AirbyteCatalog().withStreams(Lists.newArrayList(
-        CatalogHelpers.createAirbyteStream(SHOES, Field.of(SKU, JsonSchemaType.STRING)),
-        CatalogHelpers.createAirbyteStream(DOGS, Field.of(NAME, JsonSchemaType.STRING))));
-
-    final ConnectionRead connectionRead =
-        new ConnectionRead().syncCatalog(CatalogConverter.toApi(airbyteCatalogCurrent, sourceVersion)).status(ConnectionStatus.ACTIVE)
-            .connectionId(connectionId)
-            .sourceId(source.getSourceId())
-            .notifySchemaChanges(true);
-    when(connectionsHandler.getConnection(request.getConnectionId())).thenReturn(connectionRead);
-    when(connectionsHandler.getDiff(any(), any(), any())).thenReturn(catalogDiff);
-    final ConnectionReadList connectionReadList = new ConnectionReadList().connections(List.of(connectionRead));
-    when(connectionsHandler.listConnectionsForSource(source.getSourceId(), false)).thenReturn(connectionReadList);
-
-    final ActorCatalog actorCatalog = new ActorCatalog()
-        .withCatalog(Jsons.jsonNode(airbyteCatalog))
-        .withCatalogHash("")
-        .withId(discoveredCatalogId);
-    when(configRepository.getActorCatalogById(discoveredCatalogId)).thenReturn(actorCatalog);
-
-    final AirbyteCatalog persistenceCatalog = Jsons.object(actorCatalog.getCatalog(),
-        io.airbyte.protocol.models.AirbyteCatalog.class);
-    final io.airbyte.api.model.generated.AirbyteCatalog expectedActorCatalog = CatalogConverter.toApi(persistenceCatalog, sourceVersion);
-    final ConnectionUpdate expectedConnectionUpdate =
-        new ConnectionUpdate().connectionId(connectionId).breakingChange(true).status(ConnectionStatus.ACTIVE);
-
-    final SourceDiscoverSchemaRead actual = schedulerHandler.discoverSchemaForSourceFromSourceId(request);
-    assertEquals(actual.getCatalogDiff(), catalogDiff);
-    assertEquals(actual.getCatalog(), expectedActorCatalog);
-    assertEquals(actual.getConnectionStatus(), ConnectionStatus.ACTIVE);
-    verify(connectionsHandler).updateConnection(expectedConnectionUpdate);
-  }
-
-  // TODO: to be removed once we swap to new discover flow
-  @Test
   void testDiscoverSchemaFromSourceIdWithConnectionIdBreakingFeatureFlagOn()
       throws IOException, JsonValidationException, ConfigNotFoundException, InterruptedException {
     final SourceConnection source = SourceHelpers.generateSource(UUID.randomUUID());
@@ -1286,7 +1156,6 @@ class SchedulerHandlerTest {
         .withDockerRepository(SOURCE_DOCKER_REPO)
         .withDockerImageTag(SOURCE_DOCKER_TAG)
         .withProtocolVersion(SOURCE_PROTOCOL_VERSION);
-    when(envVariableFeatureFlags.autoDetectSchema()).thenReturn(true);
     when(configRepository.getStandardSourceDefinition(source.getSourceDefinitionId()))
         .thenReturn(sourceDef);
     when(actorDefinitionVersionHelper.getSourceVersion(sourceDef, source.getWorkspaceId(), source.getSourceId()))
@@ -1348,7 +1217,6 @@ class SchedulerHandlerTest {
         .withDockerRepository(SOURCE_DOCKER_REPO)
         .withDockerImageTag(SOURCE_DOCKER_TAG)
         .withProtocolVersion(SOURCE_PROTOCOL_VERSION);
-    when(envVariableFeatureFlags.autoDetectSchema()).thenReturn(true);
     when(configRepository.getStandardSourceDefinition(source.getSourceDefinitionId()))
         .thenReturn(sourceDef);
     when(actorDefinitionVersionHelper.getSourceVersion(sourceDef, source.getWorkspaceId(), source.getSourceId()))
@@ -1424,7 +1292,6 @@ class SchedulerHandlerTest {
         .withDockerRepository(SOURCE_DOCKER_REPO)
         .withDockerImageTag(SOURCE_DOCKER_TAG)
         .withProtocolVersion(SOURCE_PROTOCOL_VERSION);
-    when(envVariableFeatureFlags.autoDetectSchema()).thenReturn(true);
     when(configRepository.getStandardSourceDefinition(source.getSourceDefinitionId()))
         .thenReturn(sourceDef);
     when(actorDefinitionVersionHelper.getSourceVersion(sourceDef, source.getWorkspaceId(), source.getSourceId()))
