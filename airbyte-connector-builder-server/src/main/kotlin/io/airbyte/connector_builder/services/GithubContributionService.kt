@@ -58,10 +58,10 @@ class GithubContributionService(var connectorImageName: String, personalAccessTo
   }
 
   val connectorDocsSlug: String
-    get() = "integrations/${imageNameAsDocPath(connectorImageName)}.md"
+    get() = "integrations/${imageNameAsDocPath(connectorImageName)}"
 
   val connectorDocsPath: String
-    get() = "docs/$connectorDocsSlug"
+    get() = "docs/integrations/${imageNameAsDocPath(connectorImageName)}.md"
 
   val connectorMetadataPath: String
     get() = "$connectorDirectoryPath/metadata.yaml"
