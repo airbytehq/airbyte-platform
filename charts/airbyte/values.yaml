@@ -86,8 +86,28 @@ global:
     #passwordSecretKey: "" # e.g."database-password"
 
   storage:
+    # -- The storage backend type. Supports s3, gcs, minio (default)
     type: minio # default storage used
-    # TODO: Add full configuration here
+    # -- Secret name where storage provider credentials are stored
+    #storageSecretName: "airbyte-config-secrets"
+
+    # S3
+    #bucket: ## S3 bucket names that you've created. We recommend storing the following all in one bucket.
+    #  log: airbyte-bucket
+    #  state: airbyte-bucket
+    #  workloadOutput: airbyte-bucket
+    #s3:
+    #  region: "" ## e.g. us-east-1
+    #  authenticationType: credentials ## Use "credentials" or "instanceProfile"
+
+    # GCS
+    #bucket: ## GCS bucket names that you've created. We recommend storing the following all in one bucket.
+    #  log: airbyte-bucket
+    #  state: airbyte-bucket
+    #  workloadOutput: airbyte-bucket
+    #gcs:
+    #  projectId: <project-id>
+    #  credentialsJson: /secrets/gcs-log-creds/gcp.json
 
   metrics:
     # -- The metric client to configure globally. Supports "otel"

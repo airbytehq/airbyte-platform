@@ -269,11 +269,27 @@ func TestGCSStorageConfigurationSecrets(t *testing.T) {
 		assert.ErrorContains(t, err, "You must set 'global.storage.gcs'")
 	})
 
-	t.Run("should return an error if global.storage.gcs.credentialsJson is not set", func(t *testing.T) {
+	t.Run("should return an error if global.storage.gcs.credentialsJson is not set and default secret is used", func(t *testing.T) {
 		helmOpts := baseHelmOptionsForStorageType("gcs")
 		helmOpts.SetValues["global.storage.gcs.someKey"] = "dummy-value"
 		_, err := helm.RenderTemplateE(t, helmOpts, chartPath, "airbyte", nil)
 		assert.ErrorContains(t, err, "You must set 'global.storage.gcs.credentialsJson'")
+	})
+
+	t.Run("should not create gcs-log-creds secret if `storageSecretName` is set", func(t *testing.T) {
+		helmOpts := baseHelmOptionsForStorageType("gcs")
+		helmOpts.SetValues["global.storage.gcs.projectId"] = "project-id"
+		helmOpts.SetValues["global.storage.storageSecretName"] = "airbyte-config-secrets"
+		_, err := helm.RenderTemplateE(t, helmOpts, chartPath, "airbyte", nil)
+		assert.NoError(t, err)
+
+		expectedVolumeMounts := []expectedVolumeMount{
+			expectedSecretVolumeMount().
+				RefName("airbyte-config-secrets").
+				Volume("gcs-log-creds-volume").
+				MountPath("/secrets/gcs-log-creds"),
+		}
+		verifyVolumeMountsForDeployments(t, helmOpts, expectedVolumeMounts, []string{"airbyte-server", "airbyte-worker", "airbyte-workload-launcher"})
 	})
 
 	t.Run("should mount credentials from a secret", func(t *testing.T) {
