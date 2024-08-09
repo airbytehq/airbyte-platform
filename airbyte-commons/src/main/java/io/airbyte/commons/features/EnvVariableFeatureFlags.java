@@ -18,12 +18,8 @@ public class EnvVariableFeatureFlags implements FeatureFlags {
   // Set this value to true to see all messages from the source to destination, set to one second
   // emission
   public static final String LOG_CONNECTOR_MESSAGES = "LOG_CONNECTOR_MESSAGES";
-  public static final String APPLY_FIELD_SELECTION = "APPLY_FIELD_SELECTION";
 
   public static final String FIELD_SELECTION_WORKSPACES = "FIELD_SELECTION_WORKSPACES";
-
-  public static final String PROCESS_IN_GCP_DATA_PLANE = "PROCESS_IN_GCP_DATA_PLANE";
-  public static final String PROCESS_IN_GCP_DATA_PLANE_WORKSPACE_IDS = "PROCESS_IN_GCP_DATA_PLANE_WORKSPACE_IDS";
 
   @Override
   public boolean autoDisablesFailingConnections() {
@@ -40,11 +36,6 @@ public class EnvVariableFeatureFlags implements FeatureFlags {
   @Override
   public boolean logConnectorMessages() {
     return getEnvOrDefault(LOG_CONNECTOR_MESSAGES, false, Boolean::parseBoolean);
-  }
-
-  @Override
-  public boolean applyFieldSelection() {
-    return getEnvOrDefault(APPLY_FIELD_SELECTION, false, Boolean::parseBoolean);
   }
 
   @Override

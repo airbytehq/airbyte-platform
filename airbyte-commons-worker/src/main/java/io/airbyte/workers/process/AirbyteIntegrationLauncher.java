@@ -299,7 +299,6 @@ public class AirbyteIntegrationLauncher implements IntegrationLauncher {
             .put(WorkerEnvConstants.WORKER_JOB_ID, jobId)
             .put(WorkerEnvConstants.WORKER_JOB_ATTEMPT, String.valueOf(attempt))
             .put(EnvVariableFeatureFlags.AUTO_DETECT_SCHEMA, String.valueOf(featureFlags.autoDetectSchema()))
-            .put(EnvVariableFeatureFlags.APPLY_FIELD_SELECTION, String.valueOf(featureFlags.applyFieldSelection()))
             .put(EnvVariableFeatureFlags.FIELD_SELECTION_WORKSPACES, featureFlags.fieldSelectionWorkspaces())
             // The platform doesn't support this env-var anymore, however the connectors still depend on it,
             // defaulting to false if not supplied.

@@ -17,13 +17,6 @@ public interface FeatureFlags {
   boolean logConnectorMessages();
 
   /**
-   * Return true if field selection should be applied. See also fieldSelectionWorkspaces.
-   *
-   * @return whether field selection should be applied
-   */
-  boolean applyFieldSelection();
-
-  /**
    * Get the workspaces allow-listed for field selection. This should take precedence over
    * applyFieldSelection.
    *
