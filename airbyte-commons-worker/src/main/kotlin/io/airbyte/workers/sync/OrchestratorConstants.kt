@@ -57,7 +57,6 @@ object OrchestratorConstants {
       addAll(
         setOf(
           EnvVariableFeatureFlags.AUTO_DETECT_SCHEMA,
-          EnvVariableFeatureFlags.FIELD_SELECTION_WORKSPACES,
         ),
       )
       // add tracking client

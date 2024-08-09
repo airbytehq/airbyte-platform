@@ -16,12 +16,4 @@ public interface FeatureFlags {
 
   boolean logConnectorMessages();
 
-  /**
-   * Get the workspaces allow-listed for field selection. This should take precedence over
-   * applyFieldSelection.
-   *
-   * @return a comma-separated list of workspace ids where field selection should be enabled.
-   */
-  String fieldSelectionWorkspaces();
-
 }

@@ -299,7 +299,6 @@ public class AirbyteIntegrationLauncher implements IntegrationLauncher {
             .put(WorkerEnvConstants.WORKER_JOB_ID, jobId)
             .put(WorkerEnvConstants.WORKER_JOB_ATTEMPT, String.valueOf(attempt))
             .put(EnvVariableFeatureFlags.AUTO_DETECT_SCHEMA, String.valueOf(featureFlags.autoDetectSchema()))
-            .put(EnvVariableFeatureFlags.FIELD_SELECTION_WORKSPACES, featureFlags.fieldSelectionWorkspaces())
             // The platform doesn't support this env-var anymore, however the connectors still depend on it,
             // defaulting to false if not supplied.
             .put("USE_STREAM_CAPABLE_STATE", "true")

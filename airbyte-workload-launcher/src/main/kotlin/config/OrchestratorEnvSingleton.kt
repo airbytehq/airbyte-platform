@@ -39,7 +39,6 @@ class OrchestratorEnvSingleton(
     // Build the map of additional environment variables to be passed to the container orchestrator
     val envMap: MutableMap<String, String> = HashMap()
     envMap[EnvVariableFeatureFlags.AUTO_DETECT_SCHEMA] = java.lang.Boolean.toString(featureFlags.autoDetectSchema())
-    envMap[EnvVariableFeatureFlags.FIELD_SELECTION_WORKSPACES] = featureFlags.fieldSelectionWorkspaces()
     overrideOrchestratorJavaOpts(envMap, connectionId)
     val configs: Configs = EnvConfigs()
     envMap[AbEnvVar.FEATURE_FLAG_CLIENT.name] = AbEnvVar.FEATURE_FLAG_CLIENT.fetch() ?: ""

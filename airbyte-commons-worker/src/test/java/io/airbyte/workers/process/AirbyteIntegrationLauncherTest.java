@@ -74,7 +74,6 @@ class AirbyteIntegrationLauncherTest {
               .put(WorkerEnvConstants.WORKER_JOB_ID, JOB_ID)
               .put(WorkerEnvConstants.WORKER_JOB_ATTEMPT, String.valueOf(JOB_ATTEMPT))
               .put(EnvVariableFeatureFlags.AUTO_DETECT_SCHEMA, String.valueOf(FEATURE_FLAGS.autoDetectSchema()))
-              .put(EnvVariableFeatureFlags.FIELD_SELECTION_WORKSPACES, FEATURE_FLAGS.fieldSelectionWorkspaces())
               .put("USE_STREAM_CAPABLE_STATE", "true")
               .put(EnvVar.SOCAT_KUBE_CPU_LIMIT.name(), CONFIGS.getSocatSidecarKubeCpuLimit())
               .put(EnvVar.SOCAT_KUBE_CPU_REQUEST.name(), CONFIGS.getSocatSidecarKubeCpuRequest())

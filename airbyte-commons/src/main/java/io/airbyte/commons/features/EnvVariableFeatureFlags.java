@@ -19,8 +19,6 @@ public class EnvVariableFeatureFlags implements FeatureFlags {
   // emission
   public static final String LOG_CONNECTOR_MESSAGES = "LOG_CONNECTOR_MESSAGES";
 
-  public static final String FIELD_SELECTION_WORKSPACES = "FIELD_SELECTION_WORKSPACES";
-
   @Override
   public boolean autoDisablesFailingConnections() {
     log.info("Auto Disable Failing Connections: " + Boolean.parseBoolean(System.getenv("AUTO_DISABLE_FAILING_CONNECTIONS")));
@@ -36,11 +34,6 @@ public class EnvVariableFeatureFlags implements FeatureFlags {
   @Override
   public boolean logConnectorMessages() {
     return getEnvOrDefault(LOG_CONNECTOR_MESSAGES, false, Boolean::parseBoolean);
-  }
-
-  @Override
-  public String fieldSelectionWorkspaces() {
-    return getEnvOrDefault(FIELD_SELECTION_WORKSPACES, "", (arg) -> arg);
   }
 
   /**
