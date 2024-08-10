@@ -10,4 +10,5 @@ package io.airbyte.workers.context;
 public record ReplicationFeatureFlags(boolean isDestinationTimeoutEnabled,
                                       int workloadHeartbeatRate,
                                       long workloadHeartbeatTimeoutInMinutes,
-                                      boolean failOnInvalidChecksum) {}
+                                      boolean failOnInvalidChecksum,
+                                      boolean logStateMsgs) {}

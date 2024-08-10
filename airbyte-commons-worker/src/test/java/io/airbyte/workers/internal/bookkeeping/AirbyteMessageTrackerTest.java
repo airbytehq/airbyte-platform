@@ -37,7 +37,7 @@ class AirbyteMessageTrackerTest {
   @BeforeEach
   void setup() {
     this.messageTracker =
-        new AirbyteMessageTracker(syncStatsTracker, new EnvVariableFeatureFlags(), "airbyte/source-image", "airbyte/destination-image");
+        new AirbyteMessageTracker(syncStatsTracker, new EnvVariableFeatureFlags(), false, "airbyte/source-image", "airbyte/destination-image");
   }
 
   @Test

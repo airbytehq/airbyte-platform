@@ -272,8 +272,10 @@ public class ReplicationWorkerFactory {
                                                             final FeatureFlagClient featureFlagClient) {
     final Context flagContext = getFeatureFlagContext(replicationInput);
     final ReplicationFeatureFlagReader replicationFeatureFlagReader = new ReplicationFeatureFlagReader(featureFlagClient, flagContext);
-    syncPersistence.setReplicationFeatureFlags(replicationFeatureFlagReader.readReplicationFeatureFlags());
-    return new AirbyteMessageTracker(syncPersistence, featureFlags, replicationInput.getSourceLauncherConfig().getDockerImage(),
+    final var ffs = replicationFeatureFlagReader.readReplicationFeatureFlags();
+    syncPersistence.setReplicationFeatureFlags(ffs);
+
+    return new AirbyteMessageTracker(syncPersistence, featureFlags, ffs.logStateMsgs(), replicationInput.getSourceLauncherConfig().getDockerImage(),
         replicationInput.getDestinationLauncherConfig().getDockerImage());
   }
 
