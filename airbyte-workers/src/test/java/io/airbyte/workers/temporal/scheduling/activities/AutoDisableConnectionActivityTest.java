@@ -46,11 +46,7 @@ class AutoDisableConnectionActivityTest {
     activityInput = new AutoDisableConnectionActivityInput();
     activityInput.setConnectionId(CONNECTION_ID);
 
-    when(mFeatureFlags.autoDisablesFailingConnections()).thenReturn(true);
-
-    autoDisableActivity = new AutoDisableConnectionActivityImpl(
-        mFeatureFlags,
-        mAirbyteApiClient);
+    autoDisableActivity = new AutoDisableConnectionActivityImpl(mAirbyteApiClient);
   }
 
   @Test
@@ -67,13 +63,6 @@ class AutoDisableConnectionActivityTest {
     when(mAirbyteApiClient.getConnectionApi()).thenReturn(connectionApi);
     when(connectionApi.autoDisableConnection(Mockito.any()))
         .thenReturn(new InternalOperationResult(false));
-    final AutoDisableConnectionOutput output = autoDisableActivity.autoDisableFailingConnection(activityInput);
-    assertFalse(output.isDisabled());
-  }
-
-  @Test
-  void testFeatureFlagDisabled() {
-    when(mFeatureFlags.autoDisablesFailingConnections()).thenReturn(false);
     final AutoDisableConnectionOutput output = autoDisableActivity.autoDisableFailingConnection(activityInput);
     assertFalse(output.isDisabled());
   }

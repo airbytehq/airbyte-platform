@@ -19,13 +19,6 @@ public class EnvVariableFeatureFlags implements FeatureFlags {
   public static final String LOG_CONNECTOR_MESSAGES = "LOG_CONNECTOR_MESSAGES";
 
   @Override
-  public boolean autoDisablesFailingConnections() {
-    log.info("Auto Disable Failing Connections: " + Boolean.parseBoolean(System.getenv("AUTO_DISABLE_FAILING_CONNECTIONS")));
-
-    return Boolean.parseBoolean(System.getenv("AUTO_DISABLE_FAILING_CONNECTIONS"));
-  }
-
-  @Override
   public boolean logConnectorMessages() {
     return getEnvOrDefault(LOG_CONNECTOR_MESSAGES, false, Boolean::parseBoolean);
   }
