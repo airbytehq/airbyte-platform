@@ -12,7 +12,6 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import datadog.trace.api.Trace;
 import io.airbyte.commons.constants.WorkerConstants;
-import io.airbyte.commons.features.FeatureFlags;
 import io.airbyte.commons.io.IOs;
 import io.airbyte.commons.io.LineGobbler;
 import io.airbyte.commons.json.Jsons;
@@ -72,13 +71,13 @@ public class DefaultAirbyteSource implements AirbyteSource {
                               final AirbyteStreamFactory streamFactory,
                               final HeartbeatMonitor heartbeatMonitor,
                               final ProtocolSerializer protocolSerializer,
-                              final FeatureFlags featureFlags,
+                              final boolean logConnectorMsgs,
                               final MetricClient metricClient) {
     this.integrationLauncher = integrationLauncher;
     this.streamFactory = streamFactory;
     this.protocolSerializer = protocolSerializer;
     this.heartbeatMonitor = heartbeatMonitor;
-    this.featureFlagLogConnectorMsgs = featureFlags.logConnectorMessages();
+    this.featureFlagLogConnectorMsgs = logConnectorMsgs;
     this.messageMetricsTracker = new MessageMetricsTracker(metricClient);
   }
 

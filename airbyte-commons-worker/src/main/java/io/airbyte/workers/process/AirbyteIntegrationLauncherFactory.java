@@ -12,7 +12,9 @@ import io.airbyte.commons.protocol.VersionedProtocolSerializer;
 import io.airbyte.config.ConfiguredAirbyteCatalog;
 import io.airbyte.config.SyncResourceRequirements;
 import io.airbyte.featureflag.Connection;
+import io.airbyte.featureflag.Empty;
 import io.airbyte.featureflag.FeatureFlagClient;
+import io.airbyte.featureflag.LogConnectorMessages;
 import io.airbyte.featureflag.Multi;
 import io.airbyte.featureflag.PrintLongRecordPks;
 import io.airbyte.featureflag.Workspace;
@@ -108,12 +110,14 @@ public class AirbyteIntegrationLauncherFactory {
             new Connection(sourceLauncherConfig.getConnectionId()),
             new Workspace(sourceLauncherConfig.getWorkspaceId()))));
 
+    final boolean logConnectorMessages = featureFlagClient.boolVariation(LogConnectorMessages.INSTANCE, Empty.INSTANCE);
+
     return new DefaultAirbyteSource(sourceLauncher,
         getStreamFactory(sourceLauncherConfig, configuredAirbyteCatalog, DefaultAirbyteSource.CONTAINER_LOG_MDC_BUILDER,
             new VersionedAirbyteStreamFactory.InvalidLineFailureConfiguration(printLongRecordPks)),
         heartbeatMonitor,
         getProtocolSerializer(sourceLauncherConfig),
-        featureFlags,
+        logConnectorMessages,
         metricClient);
   }
 

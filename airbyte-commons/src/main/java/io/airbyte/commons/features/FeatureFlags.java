@@ -10,6 +10,4 @@ package io.airbyte.commons.features;
  */
 public interface FeatureFlags {
 
-  boolean logConnectorMessages();
-
 }

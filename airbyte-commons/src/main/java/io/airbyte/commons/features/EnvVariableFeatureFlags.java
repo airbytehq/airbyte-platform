@@ -14,14 +14,6 @@ import org.slf4j.LoggerFactory;
 public class EnvVariableFeatureFlags implements FeatureFlags {
 
   private static final Logger log = LoggerFactory.getLogger(EnvVariableFeatureFlags.class);
-  // Set this value to true to see all messages from the source to destination, set to one second
-  // emission
-  public static final String LOG_CONNECTOR_MESSAGES = "LOG_CONNECTOR_MESSAGES";
-
-  @Override
-  public boolean logConnectorMessages() {
-    return getEnvOrDefault(LOG_CONNECTOR_MESSAGES, false, Boolean::parseBoolean);
-  }
 
   /**
    * Get env variable.

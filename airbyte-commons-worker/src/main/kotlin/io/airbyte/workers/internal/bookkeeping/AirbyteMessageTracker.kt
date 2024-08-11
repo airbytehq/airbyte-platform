@@ -1,6 +1,5 @@
 package io.airbyte.workers.internal.bookkeeping
 
-import io.airbyte.commons.features.FeatureFlags
 import io.airbyte.commons.json.Jsons
 import io.airbyte.config.FailureReason
 import io.airbyte.protocol.models.AirbyteAnalyticsTraceMessage
@@ -22,14 +21,13 @@ private val logger = KotlinLogging.logger {}
  */
 class AirbyteMessageTracker(
   val syncStatsTracker: SyncStatsTracker,
-  featureFlags: FeatureFlags,
   private val logStateMsgs: Boolean,
+  private val logConnectorMsgs: Boolean,
   private val sourceDockerImage: String,
   private val destinationDockerImage: String,
 ) {
   private val dstErrorTraceMsgs = ArrayList<AirbyteTraceMessage>()
   private val srcErrorTraceMsgs = ArrayList<AirbyteTraceMessage>()
-  private val logConnectorMsgs: Boolean = featureFlags.logConnectorMessages()
   private val stateAggregator: StateAggregator = DefaultStateAggregator()
 
   /**
