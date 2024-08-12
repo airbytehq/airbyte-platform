@@ -62,7 +62,6 @@ import io.airbyte.data.services.ApplicationService;
 import io.airbyte.data.services.ExternalUserService;
 import io.airbyte.data.services.OrganizationEmailDomainService;
 import io.airbyte.data.services.PermissionService;
-import io.airbyte.featureflag.EnforceEmailUniqueness;
 import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.featureflag.RestrictLoginsForSSODomains;
 import io.airbyte.featureflag.TestClient;
@@ -144,7 +143,7 @@ class UserHandlerTest {
     featureFlagClient = mock(TestClient.class);
 
     when(featureFlagClient.boolVariation(eq(RestrictLoginsForSSODomains.INSTANCE), any())).thenReturn(true);
-    when(featureFlagClient.boolVariation(eq(EnforceEmailUniqueness.INSTANCE), any())).thenReturn(true);
+
     userHandler =
         new UserHandler(userPersistence, permissionPersistence, permissionService, externalUserService, organizationPersistence,
             organizationEmailDomainService, Optional.of(applicationService),

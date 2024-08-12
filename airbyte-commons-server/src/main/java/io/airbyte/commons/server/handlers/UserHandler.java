@@ -5,7 +5,6 @@
 package io.airbyte.commons.server.handlers;
 
 import static io.airbyte.config.persistence.UserPersistence.DEFAULT_USER_ID;
-import static io.airbyte.featureflag.ContextKt.ANONYMOUS;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.google.common.annotations.VisibleForTesting;
@@ -66,7 +65,6 @@ import io.airbyte.data.services.OrganizationEmailDomainService;
 import io.airbyte.data.services.PermissionRedundantException;
 import io.airbyte.data.services.PermissionService;
 import io.airbyte.featureflag.EmailAttribute;
-import io.airbyte.featureflag.EnforceEmailUniqueness;
 import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.featureflag.RestrictLoginsForSSODomains;
 import io.airbyte.validation.json.JsonValidationException;
@@ -370,20 +368,20 @@ public class UserHandler {
   }
 
   private boolean isAllowedDomain(final String email) throws IOException {
+    if (!featureFlagClient.boolVariation(RestrictLoginsForSSODomains.INSTANCE,
+        new io.airbyte.featureflag.User(UUID.randomUUID(), new EmailAttribute(email)))) {
+      return true;
+    }
+
     final String emailDomain = email.split("@")[1];
     final List<OrganizationEmailDomain> restrictedForOrganizations = organizationEmailDomainService.findByEmailDomain(emailDomain);
 
-    final List<OrganizationEmailDomain> filteredOrganizations = restrictedForOrganizations.stream()
-        .filter(orgEmailDomain -> featureFlagClient.boolVariation(RestrictLoginsForSSODomains.INSTANCE,
-            new io.airbyte.featureflag.Organization(orgEmailDomain.getOrganizationId())))
-        .toList();
-
-    if (filteredOrganizations.isEmpty()) {
+    if (restrictedForOrganizations.isEmpty()) {
       return true;
     }
 
     final Optional<Organization> currentSSOOrg = getSsoOrganizationIfExists();
-    return currentSSOOrg.isPresent() && filteredOrganizations.stream()
+    return currentSSOOrg.isPresent() && restrictedForOrganizations.stream()
         .anyMatch(orgEmailDomain -> orgEmailDomain.getOrganizationId().equals(currentSSOOrg.get().getOrganizationId()));
   }
 
@@ -507,11 +505,9 @@ public class UserHandler {
     }
 
     // (3) Handle non-existing auth_user
-    final boolean shouldEnforceEmailUniqueness = featureFlagClient.boolVariation(EnforceEmailUniqueness.INSTANCE,
-        new io.airbyte.featureflag.User(ANONYMOUS, new EmailAttribute(incomingJwtUser.getEmail())));
 
     Optional<User> existingUserWithEmail = userPersistence.getUserByEmail(incomingJwtUser.getEmail());
-    if (shouldEnforceEmailUniqueness && existingUserWithEmail.isPresent() && existingUserWithEmail.get().getUserId() == DEFAULT_USER_ID) {
+    if (existingUserWithEmail.isPresent() && existingUserWithEmail.get().getUserId() == DEFAULT_USER_ID) {
       // (Enterprise) If the email is already taken by the default user, we can safely clear it so the
       // real user can be created
       userPersistence.writeUser(existingUserWithEmail.get().withEmail(""));
@@ -521,7 +517,7 @@ public class UserHandler {
     }
 
     // (3a) Email has not been used before
-    if (!shouldEnforceEmailUniqueness || existingUserWithEmail.isEmpty()) {
+    if (existingUserWithEmail.isEmpty()) {
       return handleNewUserLogin(incomingJwtUser, userAuthIdRequestBody);
     }
 
