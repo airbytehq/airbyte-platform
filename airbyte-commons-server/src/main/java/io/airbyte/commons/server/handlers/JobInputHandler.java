@@ -20,7 +20,6 @@ import io.airbyte.api.model.generated.SyncInput;
 import io.airbyte.commons.constants.WorkerConstants;
 import io.airbyte.commons.converters.ConfigReplacer;
 import io.airbyte.commons.converters.StateConverter;
-import io.airbyte.commons.features.FeatureFlags;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.commons.server.converters.ApiPojoConverters;
 import io.airbyte.commons.server.handlers.helpers.ContextBuilder;
@@ -83,7 +82,6 @@ public class JobInputHandler {
 
   private final JobPersistence jobPersistence;
   private final ConfigRepository configRepository;
-  private final FeatureFlags featureFlags;
   private final FeatureFlagClient featureFlagClient;
   private final OAuthConfigSupplier oAuthConfigSupplier;
   private final ConfigInjector configInjector;
@@ -97,7 +95,6 @@ public class JobInputHandler {
   @SuppressWarnings("ParameterName")
   public JobInputHandler(final JobPersistence jobPersistence,
                          final ConfigRepository configRepository,
-                         final FeatureFlags featureFlags,
                          final FeatureFlagClient featureFlagClient,
                          final OAuthConfigSupplier oAuthConfigSupplier,
                          final ConfigInjector configInjector,
@@ -107,7 +104,6 @@ public class JobInputHandler {
                          final ContextBuilder contextBuilder) {
     this.jobPersistence = jobPersistence;
     this.configRepository = configRepository;
-    this.featureFlags = featureFlags;
     this.featureFlagClient = featureFlagClient;
     this.oAuthConfigSupplier = oAuthConfigSupplier;
     this.configInjector = configInjector;

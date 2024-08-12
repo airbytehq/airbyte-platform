@@ -1,7 +1,6 @@
 package io.airbyte.workload.launcher.config
 
 import io.airbyte.commons.constants.WorkerConstants
-import io.airbyte.commons.features.FeatureFlags
 import io.airbyte.config.Configs
 import io.airbyte.config.EnvConfigs
 import io.airbyte.config.storage.StorageConfig
@@ -20,7 +19,6 @@ import io.airbyte.commons.envvar.EnvVar as AbEnvVar
 @Singleton
 class OrchestratorEnvSingleton(
   private val featureFlagClient: FeatureFlagClient,
-  private val featureFlags: FeatureFlags,
   private val workerEnv: Configs.WorkerEnvironment,
   private val storageConfig: StorageConfig,
   @Named("workloadApiEnvMap") private val workloadApiEnvMap: Map<String, String>,

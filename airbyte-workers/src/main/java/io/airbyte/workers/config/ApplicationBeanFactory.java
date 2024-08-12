@@ -4,8 +4,6 @@
 
 package io.airbyte.workers.config;
 
-import io.airbyte.commons.features.EnvVariableFeatureFlags;
-import io.airbyte.commons.features.FeatureFlags;
 import io.airbyte.commons.version.AirbyteProtocolVersionRange;
 import io.airbyte.commons.version.Version;
 import io.airbyte.config.AirbyteConfigValidator;
@@ -44,11 +42,6 @@ public class ApplicationBeanFactory {
   @Named("currentSecondsSupplier")
   public Supplier<Long> currentSecondsSupplier() {
     return () -> Instant.now().getEpochSecond();
-  }
-
-  @Singleton
-  public FeatureFlags featureFlags() {
-    return new EnvVariableFeatureFlags();
   }
 
   @Singleton

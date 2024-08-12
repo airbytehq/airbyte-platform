@@ -64,7 +64,6 @@ import io.airbyte.api.model.generated.StreamTransformUpdateStream;
 import io.airbyte.api.model.generated.SyncMode;
 import io.airbyte.api.model.generated.SynchronousJobRead;
 import io.airbyte.commons.enums.Enums;
-import io.airbyte.commons.features.EnvVariableFeatureFlags;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.commons.lang.Exceptions;
 import io.airbyte.commons.server.converters.ConfigurationUpdate;
@@ -251,7 +250,6 @@ class SchedulerHandlerTest {
   private EventRunner eventRunner;
   private JobConverter jobConverter;
   private ConnectionsHandler connectionsHandler;
-  private EnvVariableFeatureFlags envVariableFeatureFlags;
   private WebUrlHelper webUrlHelper;
   private ActorDefinitionVersionHelper actorDefinitionVersionHelper;
   private FeatureFlagClient featureFlagClient;
@@ -295,7 +293,6 @@ class SchedulerHandlerTest {
     jobPersistence = mock(JobPersistence.class);
     eventRunner = mock(EventRunner.class);
     connectionsHandler = mock(ConnectionsHandler.class);
-    envVariableFeatureFlags = mock(EnvVariableFeatureFlags.class);
     webUrlHelper = mock(WebUrlHelper.class);
     actorDefinitionVersionHelper = mock(ActorDefinitionVersionHelper.class);
     when(actorDefinitionVersionHelper.getDestinationVersion(any(), any())).thenReturn(SOME_ACTOR_DEFINITION);
@@ -334,7 +331,6 @@ class SchedulerHandlerTest {
         eventRunner,
         jobConverter,
         connectionsHandler,
-        envVariableFeatureFlags,
         webUrlHelper,
         actorDefinitionVersionHelper,
         featureFlagClient,

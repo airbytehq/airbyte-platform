@@ -43,7 +43,6 @@ import io.airbyte.api.model.generated.SourceUpdate;
 import io.airbyte.api.model.generated.StreamTransform;
 import io.airbyte.api.model.generated.SynchronousJobRead;
 import io.airbyte.commons.enums.Enums;
-import io.airbyte.commons.features.FeatureFlags;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.commons.server.converters.ConfigurationUpdate;
 import io.airbyte.commons.server.converters.JobConverter;
@@ -143,7 +142,6 @@ public class SchedulerHandler {
   private final JobPersistence jobPersistence;
   private final JobConverter jobConverter;
   private final EventRunner eventRunner;
-  private final FeatureFlags envVariableFeatureFlags;
   private final WebUrlHelper webUrlHelper;
   private final ActorDefinitionVersionHelper actorDefinitionVersionHelper;
   private final FeatureFlagClient featureFlagClient;
@@ -169,7 +167,6 @@ public class SchedulerHandler {
                           final EventRunner eventRunner,
                           final JobConverter jobConverter,
                           final ConnectionsHandler connectionsHandler,
-                          final FeatureFlags envVariableFeatureFlags,
                           final WebUrlHelper webUrlHelper,
                           final ActorDefinitionVersionHelper actorDefinitionVersionHelper,
                           final FeatureFlagClient featureFlagClient,
@@ -194,7 +191,6 @@ public class SchedulerHandler {
     this.eventRunner = eventRunner;
     this.jobConverter = jobConverter;
     this.connectionsHandler = connectionsHandler;
-    this.envVariableFeatureFlags = envVariableFeatureFlags;
     this.webUrlHelper = webUrlHelper;
     this.actorDefinitionVersionHelper = actorDefinitionVersionHelper;
     this.featureFlagClient = featureFlagClient;

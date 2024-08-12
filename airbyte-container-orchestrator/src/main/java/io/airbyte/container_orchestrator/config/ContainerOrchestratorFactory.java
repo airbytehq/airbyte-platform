@@ -5,8 +5,6 @@
 package io.airbyte.container_orchestrator.config;
 
 import io.airbyte.commons.envvar.EnvVar;
-import io.airbyte.commons.features.EnvVariableFeatureFlags;
-import io.airbyte.commons.features.FeatureFlags;
 import io.airbyte.commons.workers.config.WorkerConfigsProvider;
 import io.airbyte.config.EnvConfigs;
 import io.airbyte.container_orchestrator.AsyncStateManager;
@@ -56,11 +54,6 @@ class ContainerOrchestratorFactory {
   public MetricClient metricClient() {
     MetricClientFactory.initialize(MetricEmittingApps.ORCHESTRATOR);
     return MetricClientFactory.getMetricClient();
-  }
-
-  @Singleton
-  FeatureFlags featureFlags() {
-    return new EnvVariableFeatureFlags();
   }
 
   @Singleton

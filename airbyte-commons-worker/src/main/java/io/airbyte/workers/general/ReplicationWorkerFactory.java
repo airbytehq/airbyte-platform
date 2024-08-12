@@ -14,7 +14,6 @@ import io.airbyte.api.client.model.generated.SourceDefinitionIdRequestBody;
 import io.airbyte.api.client.model.generated.SourceIdRequestBody;
 import io.airbyte.commons.concurrency.VoidCallable;
 import io.airbyte.commons.converters.ThreadedTimeTracker;
-import io.airbyte.commons.features.FeatureFlags;
 import io.airbyte.featureflag.ConcurrentSourceStreamRead;
 import io.airbyte.featureflag.Connection;
 import io.airbyte.featureflag.Context;
@@ -87,7 +86,6 @@ public class ReplicationWorkerFactory {
   private final AirbyteApiClient airbyteApiClient;
   private final SyncPersistenceFactory syncPersistenceFactory;
   private final FeatureFlagClient featureFlagClient;
-  private final FeatureFlags featureFlags;
   private final MetricClient metricClient;
   private final ReplicationAirbyteMessageEventPublishingHelper replicationAirbyteMessageEventPublishingHelper;
   private final TrackingClient trackingClient;
@@ -102,7 +100,6 @@ public class ReplicationWorkerFactory {
                                   final AirbyteApiClient airbyteApiClient,
                                   final SyncPersistenceFactory syncPersistenceFactory,
                                   final FeatureFlagClient featureFlagClient,
-                                  final FeatureFlags featureFlags,
                                   final ReplicationAirbyteMessageEventPublishingHelper replicationAirbyteMessageEventPublishingHelper,
                                   final MetricClient metricClient,
                                   final WorkloadApiClient workloadApiClient,
@@ -117,7 +114,6 @@ public class ReplicationWorkerFactory {
     this.replicationAirbyteMessageEventPublishingHelper = replicationAirbyteMessageEventPublishingHelper;
 
     this.featureFlagClient = featureFlagClient;
-    this.featureFlags = featureFlags;
     this.metricClient = metricClient;
     this.workloadApiClient = workloadApiClient;
     this.workloadEnabled = workloadEnabled;

@@ -21,7 +21,6 @@ import io.airbyte.api.client.model.generated.SecretPersistenceConfig;
 import io.airbyte.api.client.model.generated.SecretPersistenceConfigGetRequestBody;
 import io.airbyte.api.client.model.generated.WorkspaceIdRequestBody;
 import io.airbyte.commons.converters.ConnectorConfigUpdater;
-import io.airbyte.commons.features.FeatureFlags;
 import io.airbyte.commons.functional.CheckedSupplier;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.commons.protocol.AirbyteMessageSerDeProvider;
@@ -106,7 +105,6 @@ public class DiscoverCatalogActivityImpl implements DiscoverCatalogActivity {
   private final String airbyteVersion;
   private final AirbyteMessageSerDeProvider serDeProvider;
   private final AirbyteProtocolVersionedMigratorFactory migratorFactory;
-  private final FeatureFlags featureFlags;
   private final MetricClient metricClient;
   private final FeatureFlagClient featureFlagClient;
   private final GsonPksExtractor gsonPksExtractor;
@@ -123,7 +121,6 @@ public class DiscoverCatalogActivityImpl implements DiscoverCatalogActivity {
                                      @Value("${airbyte.version}") final String airbyteVersion,
                                      final AirbyteMessageSerDeProvider serDeProvider,
                                      final AirbyteProtocolVersionedMigratorFactory migratorFactory,
-                                     final FeatureFlags featureFlags,
                                      final MetricClient metricClient,
                                      final FeatureFlagClient featureFlagClient,
                                      final GsonPksExtractor gsonPksExtractor,
@@ -139,7 +136,6 @@ public class DiscoverCatalogActivityImpl implements DiscoverCatalogActivity {
     this.airbyteVersion = airbyteVersion;
     this.serDeProvider = serDeProvider;
     this.migratorFactory = migratorFactory;
-    this.featureFlags = featureFlags;
     this.metricClient = metricClient;
     this.featureFlagClient = featureFlagClient;
     this.gsonPksExtractor = gsonPksExtractor;

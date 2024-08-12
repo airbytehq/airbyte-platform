@@ -6,8 +6,6 @@ package io.airbyte.workload.launcher.config
 
 import dev.failsafe.RetryPolicy
 import io.airbyte.api.client.AirbyteApiClient
-import io.airbyte.commons.features.EnvVariableFeatureFlags
-import io.airbyte.commons.features.FeatureFlags
 import io.airbyte.config.secrets.SecretsRepositoryReader
 import io.airbyte.featureflag.FeatureFlagClient
 import io.airbyte.metrics.lib.MetricClient
@@ -33,11 +31,6 @@ import java.util.Optional
  */
 @Factory
 class ApplicationBeanFactory {
-  @Singleton
-  fun featureFlags(): FeatureFlags {
-    return EnvVariableFeatureFlags()
-  }
-
   @Singleton
   fun metricClient(): MetricClient {
     MetricClientFactory.initialize(MetricEmittingApps.SERVER)

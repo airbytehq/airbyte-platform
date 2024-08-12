@@ -11,7 +11,6 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
-import io.airbyte.commons.features.FeatureFlags;
 import io.airbyte.commons.resources.MoreResources;
 import io.airbyte.commons.version.AirbyteProtocolVersionRange;
 import io.airbyte.commons.version.AirbyteVersion;
@@ -137,7 +136,6 @@ class BootloaderTest {
     // The protocol version range should contain our default protocol version since many definitions we
     // load don't provide a protocol version.
     val airbyteProtocolRange = new AirbyteProtocolVersionRange(new Version(PROTOCOL_VERSION_001), new Version(PROTOCOL_VERSION_124));
-    val mockedFeatureFlags = mock(FeatureFlags.class);
     val runMigrationOnStartup = true;
 
     val configsDslContext = DSLContextFactory.create(configsDataSource, SQLDialect.POSTGRES);
@@ -228,8 +226,8 @@ class BootloaderTest {
         new DefaultPostLoadExecutor(applyDefinitionsHelper, declarativeSourceUpdater, Optional.of(authKubeSecretInitializer));
 
     val bootloader =
-        new Bootloader(false, configRepository, configDatabaseInitializer, configsDatabaseMigrator, currentAirbyteVersion,
-            mockedFeatureFlags, jobsDatabaseInitializer, jobsDatabaseMigrator, jobsPersistence, organizationPersistence, protocolVersionChecker,
+        new Bootloader(false, configRepository, configDatabaseInitializer, configsDatabaseMigrator, currentAirbyteVersion, jobsDatabaseInitializer,
+            jobsDatabaseMigrator, jobsPersistence, organizationPersistence, protocolVersionChecker,
             runMigrationOnStartup, DEFAULT_REALM, postLoadExecutor);
     bootloader.load();
 
@@ -254,7 +252,6 @@ class BootloaderTest {
   void testRequiredVersionUpgradePredicate() throws Exception {
     val currentAirbyteVersion = new AirbyteVersion(VERSION_0330_ALPHA);
     val airbyteProtocolRange = new AirbyteProtocolVersionRange(new Version(PROTOCOL_VERSION_001), new Version(PROTOCOL_VERSION_124));
-    val mockedFeatureFlags = mock(FeatureFlags.class);
     val runMigrationOnStartup = true;
 
     val configsDslContext = DSLContextFactory.create(configsDataSource, SQLDialect.POSTGRES);
@@ -337,8 +334,8 @@ class BootloaderTest {
     val postLoadExecutor = new DefaultPostLoadExecutor(applyDefinitionsHelper, declarativeSourceUpdater, Optional.of(authKubeSecretInitializer));
 
     val bootloader =
-        new Bootloader(false, configRepository, configDatabaseInitializer, configsDatabaseMigrator, currentAirbyteVersion,
-            mockedFeatureFlags, jobsDatabaseInitializer, jobsDatabaseMigrator, jobsPersistence, organizationPersistence, protocolVersionChecker,
+        new Bootloader(false, configRepository, configDatabaseInitializer, configsDatabaseMigrator, currentAirbyteVersion, jobsDatabaseInitializer,
+            jobsDatabaseMigrator, jobsPersistence, organizationPersistence, protocolVersionChecker,
             runMigrationOnStartup, DEFAULT_REALM, postLoadExecutor);
 
     // starting from no previous version is always legal.
@@ -393,7 +390,6 @@ class BootloaderTest {
     final var testTriggered = new AtomicBoolean();
     val currentAirbyteVersion = new AirbyteVersion(VERSION_0330_ALPHA);
     val airbyteProtocolRange = new AirbyteProtocolVersionRange(new Version(PROTOCOL_VERSION_001), new Version(PROTOCOL_VERSION_124));
-    val mockedFeatureFlags = mock(FeatureFlags.class);
     val runMigrationOnStartup = true;
 
     val configsDslContext = DSLContextFactory.create(configsDataSource, SQLDialect.POSTGRES);
@@ -464,7 +460,7 @@ class BootloaderTest {
     };
     val bootloader =
         new Bootloader(false, configRepository, configDatabaseInitializer, configsDatabaseMigrator, currentAirbyteVersion,
-            mockedFeatureFlags, jobsDatabaseInitializer, jobsDatabaseMigrator, jobsPersistence, organizationPersistence, protocolVersionChecker,
+            jobsDatabaseInitializer, jobsDatabaseMigrator, jobsPersistence, organizationPersistence, protocolVersionChecker,
             runMigrationOnStartup, DEFAULT_REALM, postLoadExecutor);
     bootloader.load();
     assertTrue(testTriggered.get());

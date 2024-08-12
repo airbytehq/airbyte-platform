@@ -11,7 +11,6 @@ import static org.mockito.Mockito.when;
 import io.airbyte.api.client.AirbyteApiClient;
 import io.airbyte.api.client.generated.ConnectionApi;
 import io.airbyte.api.client.model.generated.InternalOperationResult;
-import io.airbyte.commons.features.FeatureFlags;
 import io.airbyte.workers.temporal.scheduling.activities.AutoDisableConnectionActivity.AutoDisableConnectionActivityInput;
 import io.airbyte.workers.temporal.scheduling.activities.AutoDisableConnectionActivity.AutoDisableConnectionOutput;
 import java.io.IOException;
@@ -25,9 +24,6 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 @ExtendWith(MockitoExtension.class)
 class AutoDisableConnectionActivityTest {
-
-  @Mock
-  private FeatureFlags mFeatureFlags;
 
   @Mock
   private AirbyteApiClient mAirbyteApiClient;

@@ -18,7 +18,6 @@ import io.airbyte.api.model.generated.ConnectionStateType;
 import io.airbyte.api.model.generated.SaveAttemptSyncConfigRequestBody;
 import io.airbyte.api.model.generated.SyncInput;
 import io.airbyte.commons.constants.WorkerConstants;
-import io.airbyte.commons.features.FeatureFlags;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.commons.server.converters.ApiPojoConverters;
 import io.airbyte.commons.server.handlers.helpers.ContextBuilder;
@@ -92,7 +91,6 @@ class JobInputHandlerTest {
   private static final UUID DESTINATION_ID = UUID.randomUUID();
   private static final UUID CONNECTION_ID = UUID.randomUUID();
 
-  private FeatureFlags featureFlags;
   private AttemptHandler attemptHandler;
   private StateHandler stateHandler;
   private JobInputHandler jobInputHandler;
@@ -108,7 +106,6 @@ class JobInputHandlerTest {
     oAuthConfigSupplier = mock(OAuthConfigSupplier.class);
     job = mock(Job.class);
     featureFlagClient = new TestClient(new HashMap<>());
-    featureFlags = mock(FeatureFlags.class);
     attemptHandler = mock(AttemptHandler.class);
     stateHandler = mock(StateHandler.class);
     actorDefinitionVersionHelper = mock(ActorDefinitionVersionHelper.class);
@@ -116,7 +113,6 @@ class JobInputHandlerTest {
 
     jobInputHandler = new JobInputHandler(jobPersistence,
         configRepository,
-        featureFlags,
         featureFlagClient,
         oAuthConfigSupplier,
         configInjector,

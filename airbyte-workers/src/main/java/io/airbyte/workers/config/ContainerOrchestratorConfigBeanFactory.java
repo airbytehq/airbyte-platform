@@ -5,7 +5,6 @@
 package io.airbyte.workers.config;
 
 import io.airbyte.commons.envvar.EnvVar;
-import io.airbyte.commons.features.FeatureFlags;
 import io.airbyte.config.Configs;
 import io.airbyte.config.Configs.WorkerEnvironment;
 import io.airbyte.config.EnvConfigs;
@@ -69,7 +68,6 @@ public class ContainerOrchestratorConfigBeanFactory {
                                                                            @Value("${datadog.agent.host}") final String dataDogAgentHost,
                                                                            @Value("${datadog.agent.port}") final String dataDogStatsdPort,
                                                                            @Value("${airbyte.metric.should-publish}") final String shouldPublishMetrics,
-                                                                           final FeatureFlags featureFlags,
                                                                            @Value("${airbyte.container.orchestrator.java-opts}") final String containerOrchestratorJavaOpts,
                                                                            final WorkerEnvironment workerEnvironment,
                                                                            /*

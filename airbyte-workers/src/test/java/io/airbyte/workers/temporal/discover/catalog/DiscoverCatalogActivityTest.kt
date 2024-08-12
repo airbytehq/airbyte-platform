@@ -6,7 +6,6 @@ package io.airbyte.workers.temporal.discover.catalog
 import io.airbyte.api.client.AirbyteApiClient
 import io.airbyte.api.client.generated.ConnectionApi
 import io.airbyte.api.client.model.generated.Geography
-import io.airbyte.commons.features.FeatureFlags
 import io.airbyte.commons.protocol.AirbyteMessageSerDeProvider
 import io.airbyte.commons.protocol.AirbyteProtocolVersionedMigratorFactory
 import io.airbyte.commons.workers.config.WorkerConfigsProvider
@@ -56,7 +55,6 @@ class DiscoverCatalogActivityTest {
   private val airbyteVersion = ""
   private val serDeProvider: AirbyteMessageSerDeProvider = mockk()
   private val migratorFactory: AirbyteProtocolVersionedMigratorFactory = mockk()
-  private val featureFlags: FeatureFlags = mockk()
   private val metricClient: MetricClient = mockk()
   private val featureFlagClient: FeatureFlagClient = spyk(TestClient())
   private val gsonPksExtractor: GsonPksExtractor = mockk()
@@ -84,7 +82,6 @@ class DiscoverCatalogActivityTest {
           airbyteVersion,
           serDeProvider,
           migratorFactory,
-          featureFlags,
           metricClient,
           featureFlagClient,
           gsonPksExtractor,

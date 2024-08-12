@@ -17,8 +17,6 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import io.airbyte.commons.envvar.EnvVar;
-import io.airbyte.commons.features.EnvVariableFeatureFlags;
-import io.airbyte.commons.features.FeatureFlags;
 import io.airbyte.commons.workers.config.WorkerConfigs;
 import io.airbyte.commons.workers.config.WorkerConfigsProvider.ResourceType;
 import io.airbyte.config.Configs;
@@ -64,7 +62,6 @@ class AirbyteIntegrationLauncherTest {
       CATALOG, "{}",
       "state", "{}");
 
-  private static final FeatureFlags FEATURE_FLAGS = new EnvVariableFeatureFlags();
   private static final Configs CONFIGS = new EnvConfigs();
 
   private static final Map<String, String> JOB_METADATA =

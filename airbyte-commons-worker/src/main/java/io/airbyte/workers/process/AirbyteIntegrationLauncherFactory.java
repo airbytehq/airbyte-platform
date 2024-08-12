@@ -4,7 +4,6 @@
 
 package io.airbyte.workers.process;
 
-import io.airbyte.commons.features.FeatureFlags;
 import io.airbyte.commons.logging.MdcScope;
 import io.airbyte.commons.protocol.AirbyteMessageSerDeProvider;
 import io.airbyte.commons.protocol.AirbyteProtocolVersionedMigratorFactory;
@@ -44,7 +43,6 @@ public class AirbyteIntegrationLauncherFactory {
   private final ProcessFactory processFactory;
   private final AirbyteMessageSerDeProvider serDeProvider;
   private final AirbyteProtocolVersionedMigratorFactory migratorFactory;
-  private final FeatureFlags featureFlags;
   private final FeatureFlagClient featureFlagClient;
   private final GsonPksExtractor gsonPksExtractor;
   private final MetricClient metricClient;
@@ -52,14 +50,12 @@ public class AirbyteIntegrationLauncherFactory {
   public AirbyteIntegrationLauncherFactory(final ProcessFactory processFactory,
                                            final AirbyteMessageSerDeProvider serDeProvider,
                                            final AirbyteProtocolVersionedMigratorFactory migratorFactory,
-                                           final FeatureFlags featureFlags,
                                            final FeatureFlagClient featureFlagClient,
                                            final GsonPksExtractor gsonPksExtractor,
                                            final MetricClient metricClient) {
     this.processFactory = processFactory;
     this.serDeProvider = serDeProvider;
     this.migratorFactory = migratorFactory;
-    this.featureFlags = featureFlags;
     this.featureFlagClient = featureFlagClient;
     this.gsonPksExtractor = gsonPksExtractor;
     this.metricClient = metricClient;

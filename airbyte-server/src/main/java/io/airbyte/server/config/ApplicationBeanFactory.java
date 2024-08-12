@@ -5,8 +5,6 @@
 package io.airbyte.server.config;
 
 import io.airbyte.analytics.TrackingClient;
-import io.airbyte.commons.features.EnvVariableFeatureFlags;
-import io.airbyte.commons.features.FeatureFlags;
 import io.airbyte.commons.server.handlers.helpers.BuilderProjectUpdater;
 import io.airbyte.commons.server.handlers.helpers.CompositeBuilderProjectUpdater;
 import io.airbyte.commons.server.handlers.helpers.ConfigRepositoryBuilderProjectUpdater;
@@ -123,11 +121,6 @@ public class ApplicationBeanFactory {
   @Singleton
   public WebUrlHelper webUrlHelper(@Value("${airbyte.web-app.url}") final String webAppUrl) {
     return new WebUrlHelper(webAppUrl);
-  }
-
-  @Singleton
-  public FeatureFlags featureFlags() {
-    return new EnvVariableFeatureFlags();
   }
 
   @Singleton
