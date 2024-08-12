@@ -78,6 +78,7 @@ dependencies {
   implementation(project(":oss:airbyte-test-utils"))
   implementation(project(":oss:airbyte-commons-worker"))
   implementation(project(":oss:airbyte-container-orchestrator"))
+  implementation(project(":oss:airbyte-featureflag"))
 
   implementation(libs.bundles.kubernetes.client)
   implementation(libs.platform.testcontainers)

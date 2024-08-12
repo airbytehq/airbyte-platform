@@ -44,6 +44,7 @@ object OrchestratorConstants {
       // add variables defined in this file
       addAll(
         setOf(
+          EnvVar.FEATURE_FLAG_BASEURL.toString(),
           EnvVar.FEATURE_FLAG_CLIENT.toString(),
           EnvVar.FEATURE_FLAG_PATH.toString(),
           LOG_LEVEL,

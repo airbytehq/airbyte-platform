@@ -15,7 +15,10 @@ import io.micronaut.context.annotation.Property
 import io.micronaut.context.annotation.Requires
 import io.micronaut.context.annotation.Secondary
 import jakarta.inject.Inject
+import jakarta.inject.Named
 import jakarta.inject.Singleton
+import okhttp3.OkHttpClient
+import okhttp3.Request
 import org.slf4j.LoggerFactory
 import java.lang.Thread.MIN_PRIORITY
 import java.nio.file.Path
@@ -72,12 +75,16 @@ internal const val CONFIG_FF_CLIENT = "airbyte.feature-flag.client"
 
 /** If [CONFIG_FF_CLIENT] equals this value, return the [LaunchDarklyClient], otherwise the [ConfigFileClient]. */
 internal const val CONFIG_FF_CLIENT_VAL_LAUNCHDARKLY = "launchdarkly"
+internal const val CONFIG_FF_CLIENT_VAL_FFS = "ffs"
 
 /** Config key to provide the api-key as required by the [LaunchDarklyClient]. */
 internal const val CONFIG_FF_APIKEY = "airbyte.feature-flag.api-key"
 
 /** Config key to provide the location of the flags config file used by the [ConfigFileClient]. */
 internal const val CONFIG_FF_PATH = "airbyte.feature-flag.path"
+
+/** Config key to provide the base URL used by the [FeatureFlagServiceClient] */
+internal const val CONFIG_FF_BASEURL = "airbyte.feature-flag.base-url"
 
 /**
  * Config file based feature-flag client.
@@ -89,6 +96,7 @@ internal const val CONFIG_FF_PATH = "airbyte.feature-flag.path"
  * If the [config] is provided, it will be watched for changes and the internal representation of the [config] will be updated to match.
  */
 @Singleton
+@Requires(property = CONFIG_FF_CLIENT, notEquals = CONFIG_FF_CLIENT_VAL_FFS)
 @Requires(property = CONFIG_FF_CLIENT, notEquals = CONFIG_FF_CLIENT_VAL_LAUNCHDARKLY)
 class ConfigFileClient(
   @Property(name = CONFIG_FF_PATH) config: Path?,
@@ -146,8 +154,7 @@ class ConfigFileClient(
 }
 
 /**
- * LaunchDarkly based feature-flag client. Feature-flags are derived from an external source (the LDClient).
- * Also supports flags defined via environment-variables via the [EnvVar] class.
+ * FeatureFlagService based feature-flag client.
  *
  * @param [client] the Launch-Darkly client for interfacing with Launch-Darkly.
  */
@@ -177,6 +184,55 @@ class LaunchDarklyClient(private val client: LDClient) : FeatureFlagClient {
   ): Int {
     return client.intVariation(flag.key, context.toLDContext(), flag.default)
   }
+}
+
+@Singleton
+@Requires(property = CONFIG_FF_CLIENT, value = CONFIG_FF_CLIENT_VAL_FFS)
+class FeatureFlagServiceClient(
+  @Named("ffsHttpClient") private val httpClient: OkHttpClient,
+  @Property(name = CONFIG_FF_BASEURL) private val baseUrl: String,
+) : FeatureFlagClient {
+  private val basePath = "/api/v1/feature-flags"
+
+  override fun boolVariation(
+    flag: Flag<Boolean>,
+    context: Context,
+  ): Boolean {
+    return callFeatureFlagService(flag.key, context)?.toBoolean() ?: flag.default
+  }
+
+  override fun stringVariation(
+    flag: Flag<String>,
+    context: Context,
+  ): String {
+    return callFeatureFlagService(flag.key, context) ?: flag.default
+  }
+
+  override fun intVariation(
+    flag: Flag<Int>,
+    context: Context,
+  ): Int {
+    return callFeatureFlagService(flag.key, context)?.toInt() ?: flag.default
+  }
+
+  private fun callFeatureFlagService(
+    key: String,
+    context: Context,
+  ): String? {
+    val request =
+      Request.Builder()
+        .url("$baseUrl$basePath/$key/evaluate?${context.toQueryParams()}")
+        .build()
+    return httpClient.newCall(request).execute().use {
+      if (it.code == 200) it.body?.string() else null
+    }
+  }
+
+  private fun Context.toQueryParams(): String =
+    when (this) {
+      is Multi -> contexts.joinToString("&") { it.toQueryParams() }
+      else -> "kind=$kind&value=$key"
+    }
 }
 
 /**

@@ -37,6 +37,7 @@ airbyte:
     client: ${FEATURE_FLAG_CLIENT:}
     path: ${FEATURE_FLAG_PATH:/flags}
     api-key: ${LAUNCHDARKLY_KEY:}
+    base-url: ${FEATURE_FLAG_BASEURL:}
   kubernetes:
     client:
       call-timeout-sec: ${KUBERNETES_CLIENT_CALL_TIMEOUT_SECONDS:30}

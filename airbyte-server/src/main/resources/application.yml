@@ -130,6 +130,7 @@ airbyte:
     client: ${FEATURE_FLAG_CLIENT:}
     path: ${FEATURE_FLAG_PATH:/flags}
     api-key: ${LAUNCHDARKLY_KEY:}
+    base-url: ${FEATURE_FLAG_BASEURL:}
   flyway:
     configs:
       initialization-timeout-ms: ${CONFIGS_DATABASE_INITIALIZATION_TIMEOUT_MS:60000}
