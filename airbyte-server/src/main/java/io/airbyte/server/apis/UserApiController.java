@@ -14,7 +14,6 @@ import io.airbyte.api.generated.UserApi;
 import io.airbyte.api.model.generated.OrganizationIdRequestBody;
 import io.airbyte.api.model.generated.OrganizationUserReadList;
 import io.airbyte.api.model.generated.UserAuthIdRequestBody;
-import io.airbyte.api.model.generated.UserCreate;
 import io.airbyte.api.model.generated.UserEmailRequestBody;
 import io.airbyte.api.model.generated.UserGetOrCreateByAuthIdResponse;
 import io.airbyte.api.model.generated.UserIdRequestBody;
@@ -46,14 +45,6 @@ public class UserApiController implements UserApi {
 
   public UserApiController(final UserHandler userHandler) {
     this.userHandler = userHandler;
-  }
-
-  @Post("/create")
-  @SecuredUser
-  @Secured({ADMIN, SELF})
-  @Override
-  public UserRead createUser(@Body final UserCreate userCreate) {
-    return ApiHelper.execute(() -> userHandler.createUser(userCreate));
   }
 
   @Post("/get")

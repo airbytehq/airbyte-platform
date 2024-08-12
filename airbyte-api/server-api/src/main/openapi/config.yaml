@@ -3621,29 +3621,6 @@ paths:
           description: Successfully delete stream reset records for job
 
   # USERS
-  /v1/users/create:
-    post:
-      tags:
-        - user
-      summary: Creates an Airbyte user
-      operationId: createUser
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/UserCreate"
-        required: true
-      responses:
-        "200":
-          description: Successful operation
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/UserRead"
-        "409":
-          description: Version already exists for definition id
-          $ref: "#/components/responses/ExceptionResponse"
-
   /v1/users/get:
     post:
       tags:
