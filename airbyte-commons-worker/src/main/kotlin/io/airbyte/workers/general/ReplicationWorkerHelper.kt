@@ -40,6 +40,7 @@ import io.airbyte.protocol.models.AirbyteTraceMessage
 import io.airbyte.workers.WorkerUtils
 import io.airbyte.workers.context.ReplicationContext
 import io.airbyte.workers.context.ReplicationFeatureFlags
+import io.airbyte.workers.exception.WorkerException
 import io.airbyte.workers.exception.WorkloadHeartbeatException
 import io.airbyte.workers.helper.FailureHelper
 import io.airbyte.workers.helper.ResumableFullRefreshStatsHelper
@@ -243,7 +244,7 @@ class ReplicationWorkerHelper(
     try {
       destination.start(destinationConfig, jobRoot)
     } catch (e: Exception) {
-      throw RuntimeException(e)
+      throw WorkerException("Unable to start the destination", e)
     }
   }
 
@@ -261,7 +262,7 @@ class ReplicationWorkerHelper(
     try {
       source.start(sourceConfig, jobRoot, ctx?.connectionId)
     } catch (e: Exception) {
-      throw RuntimeException(e)
+      throw WorkerException("Unable to start the source", e)
     }
   }
 
