@@ -51,13 +51,6 @@ airbyte:
         delay-seconds: ${KUBERNETES_CLIENT_RETRY_DELAY_SECONDS:2}
         max: ${KUBERNETES_CLIENT_MAX_RETRIES:5}
     resource-check-rate: ${WORKLOAD_LAUNCHER_POD_PENDING_RESOURCE_CHECK_RATE:PT30S}
-  docker:
-    docker-socket: ${DOCKER_SOCKET:}
-    network: ${DOCKER_NETWORK:host}
-    workspace-mount-name: ${WORKSPACE_DOCKER_MOUNT:}
-    workspace-mount-path: ${WORKSPACE_ROOT}
-    local-mount-name: ${LOCAL_DOCKER_MOUNT:}
-    local-mount-path: ${LOCAL_ROOT}
   workload-api:
     base-path: ${WORKLOAD_API_HOST:}
     bearer-token: ${WORKLOAD_API_BEARER_TOKEN:}
@@ -216,7 +209,6 @@ airbyte:
         region: ${AWS_DEFAULT_REGION:}
         secret-access-key: ${AWS_SECRET_ACCESS_KEY:}
   workspace:
-    docker-mount: ${WORKSPACE_DOCKER_MOUNT:}
     root: ${WORKSPACE_ROOT}
 
 datadog:

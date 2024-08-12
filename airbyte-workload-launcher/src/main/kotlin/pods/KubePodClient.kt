@@ -24,8 +24,6 @@ import io.airbyte.workload.launcher.pipeline.consumer.LauncherInput
 import io.airbyte.workload.launcher.pods.factories.ConnectorPodFactory
 import io.airbyte.workload.launcher.pods.factories.OrchestratorPodFactory
 import io.fabric8.kubernetes.api.model.Pod
-import io.micronaut.context.annotation.Requires
-import io.micronaut.context.env.Environment
 import jakarta.inject.Named
 import jakarta.inject.Singleton
 import java.time.Duration
@@ -37,7 +35,6 @@ import kotlin.time.TimeSource
  * Composes raw Kube layer atomic operations to perform business operations.
  */
 @Singleton
-@Requires(env = [Environment.KUBERNETES])
 class KubePodClient(
   private val kubePodLauncher: KubePodLauncher,
   private val labeler: PodLabeler,
@@ -47,13 +44,13 @@ class KubePodClient(
   @Named("discoverPodFactory") private val discoverPodFactory: ConnectorPodFactory,
   @Named("specPodFactory") private val specPodFactory: ConnectorPodFactory,
   private val featureFlagClient: FeatureFlagClient,
-) : PodClient {
-  override fun podsExistForAutoId(autoId: UUID): Boolean {
+) {
+  fun podsExistForAutoId(autoId: UUID): Boolean {
     return kubePodLauncher.podsRunning(labeler.getAutoIdLabels(autoId))
   }
 
   @Trace(operationName = LAUNCH_REPLICATION_OPERATION_NAME)
-  override fun launchReplication(
+  fun launchReplication(
     replicationInput: ReplicationInput,
     launcherInput: LauncherInput,
   ) {
@@ -192,7 +189,7 @@ class KubePodClient(
     }
   }
 
-  override fun launchCheck(
+  fun launchCheck(
     checkInput: CheckConnectionInput,
     launcherInput: LauncherInput,
   ) {
@@ -210,7 +207,7 @@ class KubePodClient(
     launchConnectorWithSidecar(kubeInput, checkPodFactory, launcherInput.workloadType.toOperationName())
   }
 
-  override fun launchDiscover(
+  fun launchDiscover(
     discoverCatalogInput: DiscoverCatalogInput,
     launcherInput: LauncherInput,
   ) {
@@ -228,7 +225,7 @@ class KubePodClient(
     launchConnectorWithSidecar(kubeInput, discoverPodFactory, launcherInput.workloadType.toOperationName())
   }
 
-  override fun launchSpec(
+  fun launchSpec(
     specInput: SpecInput,
     launcherInput: LauncherInput,
   ) {
@@ -318,7 +315,7 @@ class KubePodClient(
     println("ELAPSED TIME (SIDECAR): ${start.elapsedNow()}")
   }
 
-  override fun deleteMutexPods(mutexKey: String): Boolean {
+  fun deleteMutexPods(mutexKey: String): Boolean {
     val labels = labeler.getMutexLabels(mutexKey)
 
     try {
