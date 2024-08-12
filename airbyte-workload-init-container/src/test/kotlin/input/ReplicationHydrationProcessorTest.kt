@@ -56,7 +56,7 @@ class ReplicationHydrationProcessorTest {
   }
 
   @Test
-  fun `parses input, hydrates and writes output to expected file`() {
+  fun `parses input, hydrates, adds labels and writes output to expected file`() {
     val input = Fixtures.workload
     val activityInput = ReplicationActivityInput()
     val hydrated =

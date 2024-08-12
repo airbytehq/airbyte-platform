@@ -3,6 +3,7 @@ package io.airbyte.workload.launcher.pods
 import fixtures.RecordFixtures
 import io.airbyte.config.ResourceRequirements
 import io.airbyte.config.WorkloadType
+import io.airbyte.featureflag.ConnectorSidecarFetchesInputFromInit
 import io.airbyte.featureflag.OrchestratorFetchesInputFromInit
 import io.airbyte.featureflag.TestClient
 import io.airbyte.persistence.job.models.IntegrationLauncherConfig
@@ -157,6 +158,8 @@ class KubePodClientTest {
       )
     } returns pod
 
+    every { featureFlagClient.boolVariation(ConnectorSidecarFetchesInputFromInit, any()) } returns true
+
     every {
       podFactory.create(
         connectorKubeInput.connectorLabels,
@@ -164,6 +167,7 @@ class KubePodClientTest {
         connectorKubeInput.kubePodInfo,
         connectorKubeInput.annotations,
         connectorKubeInput.extraEnv,
+        any(),
       )
     } returns pod
 
@@ -329,6 +333,7 @@ class KubePodClientTest {
         connectorKubeInput.kubePodInfo,
         connectorKubeInput.annotations,
         connectorKubeInput.extraEnv,
+        any(),
       )
     } returns pod
 
@@ -348,6 +353,7 @@ class KubePodClientTest {
         connectorKubeInput.kubePodInfo,
         connectorKubeInput.annotations,
         connectorKubeInput.extraEnv,
+        any(),
       )
     } returns pod
 
@@ -367,6 +373,7 @@ class KubePodClientTest {
         connectorKubeInput.kubePodInfo,
         connectorKubeInput.annotations,
         connectorKubeInput.extraEnv,
+        any(),
       )
     } returns pod
 
@@ -375,8 +382,11 @@ class KubePodClientTest {
     verify { client.launchConnectorWithSidecar(connectorKubeInput, specPodFactory, "SPEC") }
   }
 
-  @Test
-  fun `launchConnectorWithSidecar starts a pod and waits on it`() {
+  @ValueSource(booleans = [true, false])
+  @ParameterizedTest
+  fun `launchConnectorWithSidecar starts a pod and waits on it`(useFetchingInit: Boolean) {
+    every { featureFlagClient.boolVariation(ConnectorSidecarFetchesInputFromInit, any()) } returns useFetchingInit
+
     val connector =
       PodBuilder()
         .withNewMetadata()
@@ -391,14 +401,17 @@ class KubePodClientTest {
         connectorKubeInput.kubePodInfo,
         connectorKubeInput.annotations,
         connectorKubeInput.extraEnv,
+        any(),
       )
     } returns connector
 
     client.launchConnectorWithSidecar(connectorKubeInput, podFactory, "OPERATION NAME")
 
-    verify { launcher.waitForPodInit(connector, POD_INIT_TIMEOUT_VALUE) }
+    if (!useFetchingInit) {
+      verify { launcher.waitForPodInit(connector, POD_INIT_TIMEOUT_VALUE) }
 
-    verify { launcher.copyFilesToKubeConfigVolumeMain(connector, connectorKubeInput.fileMap) }
+      verify { launcher.copyFilesToKubeConfigVolumeMain(connector, connectorKubeInput.fileMap) }
+    }
 
     verify { launcher.waitForPodReadyOrTerminalByPod(connector, REPL_CONNECTOR_STARTUP_TIMEOUT_VALUE) }
   }
@@ -414,6 +427,7 @@ class KubePodClientTest {
 
   @Test
   fun `launchConnectorWithSidecar propagates pod wait for init error`() {
+    every { featureFlagClient.boolVariation(ConnectorSidecarFetchesInputFromInit, any()) } returns false
     every { launcher.waitForPodInit(pod, POD_INIT_TIMEOUT_VALUE) } throws RuntimeException("bang")
 
     assertThrows<KubeClientException> {
@@ -422,7 +436,8 @@ class KubePodClientTest {
   }
 
   @Test
-  fun `launchConnectorWithSidecar propagates orchestrator copy file map error`() {
+  fun `launchConnectorWithSidecar propagates copy file map error`() {
+    every { featureFlagClient.boolVariation(ConnectorSidecarFetchesInputFromInit, any()) } returns false
     every { launcher.copyFilesToKubeConfigVolumeMain(any(), connectorKubeInput.fileMap) } throws RuntimeException("bang")
 
     assertThrows<KubeClientException> {
@@ -461,6 +476,7 @@ class KubePodClientTest {
         mapOf("test-file" to "val4"),
         mapOf("test-annotation" to "val5"),
         listOf(EnvVar("extra-env", "val6", null)),
+        UUID.randomUUID(),
       )
 
     const val WORKLOAD_ID = "workload-id"

@@ -5,6 +5,7 @@ import io.airbyte.config.ResourceRequirements
 import io.airbyte.config.WorkloadPriority
 import io.airbyte.config.WorkloadType
 import io.airbyte.featureflag.Connection
+import io.airbyte.featureflag.ConnectorSidecarFetchesInputFromInit
 import io.airbyte.featureflag.ContainerOrchestratorDevImage
 import io.airbyte.featureflag.FeatureFlagClient
 import io.airbyte.featureflag.InjectAwsSecretsToConnectorPods
@@ -77,6 +78,14 @@ class PayloadKubeInputMapper(
 
     val fileMap = buildSyncFileMap(input)
 
+    val runtimeEnvVars =
+      listOf(
+        EnvVar(AirbyteEnvVar.OPERATION_TYPE.toString(), WorkloadType.SYNC.toString(), null),
+        EnvVar(AirbyteEnvVar.WORKLOAD_ID.toString(), workloadId, null),
+        EnvVar(AirbyteEnvVar.JOB_ID.toString(), jobId, null),
+        EnvVar(AirbyteEnvVar.ATTEMPT_ID.toString(), attemptId.toString(), null),
+      )
+
     return OrchestratorKubeInput(
       labeler.getReplicationOrchestratorLabels(orchestratorKubeContainerInfo.image) + sharedLabels,
       labeler.getSourceLabels() + sharedLabels,
@@ -86,12 +95,7 @@ class PayloadKubeInputMapper(
       fileMap,
       orchestratorReqs,
       replicationWorkerConfigs.workerKubeAnnotations,
-      listOf(
-        EnvVar(AirbyteEnvVar.OPERATION_TYPE.toString(), WorkloadType.SYNC.toString(), null),
-        EnvVar(AirbyteEnvVar.WORKLOAD_ID.toString(), workloadId, null),
-        EnvVar(AirbyteEnvVar.JOB_ID.toString(), jobId, null),
-        EnvVar(AirbyteEnvVar.ATTEMPT_ID.toString(), attemptId.toString(), null),
-      ),
+      runtimeEnvVars,
     )
   }
 
@@ -135,7 +139,10 @@ class PayloadKubeInputMapper(
 
     val fileMap = buildCheckFileMap(workloadId, input, logPath)
 
-    val extraEnv = resolveAwsAssumedRoleEnvVars(input.launcherConfig)
+    val runtimeEnvVars =
+      resolveAwsAssumedRoleEnvVars(input.launcherConfig) +
+        EnvVar(AirbyteEnvVar.OPERATION_TYPE.toString(), WorkloadType.CHECK.toString(), null) +
+        EnvVar(AirbyteEnvVar.WORKLOAD_ID.toString(), workloadId, null)
 
     return ConnectorKubeInput(
       labeler.getCheckLabels() + sharedLabels,
@@ -143,7 +150,8 @@ class PayloadKubeInputMapper(
       connectorPodInfo,
       fileMap,
       checkWorkerConfigs.workerKubeAnnotations,
-      extraEnv,
+      runtimeEnvVars,
+      input.launcherConfig.workspaceId,
     )
   }
 
@@ -177,7 +185,10 @@ class PayloadKubeInputMapper(
 
     val fileMap = buildDiscoverFileMap(workloadId, input, logPath)
 
-    val extraEnv = resolveAwsAssumedRoleEnvVars(input.launcherConfig)
+    val runtimeEnvVars =
+      resolveAwsAssumedRoleEnvVars(input.launcherConfig) +
+        EnvVar(AirbyteEnvVar.OPERATION_TYPE.toString(), WorkloadType.DISCOVER.toString(), null) +
+        EnvVar(AirbyteEnvVar.WORKLOAD_ID.toString(), workloadId, null)
 
     return ConnectorKubeInput(
       labeler.getDiscoverLabels() + sharedLabels,
@@ -185,7 +196,8 @@ class PayloadKubeInputMapper(
       connectorPodInfo,
       fileMap,
       discoverWorkerConfigs.workerKubeAnnotations,
-      extraEnv,
+      runtimeEnvVars,
+      input.launcherConfig.workspaceId,
     )
   }
 
@@ -214,13 +226,20 @@ class PayloadKubeInputMapper(
 
     val fileMap = buildSpecFileMap(workloadId, input, logPath)
 
+    val runtimeEnvVars =
+      listOf(
+        EnvVar(AirbyteEnvVar.OPERATION_TYPE.toString(), WorkloadType.SPEC.toString(), null),
+        EnvVar(AirbyteEnvVar.WORKLOAD_ID.toString(), workloadId, null),
+      )
+
     return ConnectorKubeInput(
       labeler.getSpecLabels() + sharedLabels,
       nodeSelectors,
       connectorPodInfo,
       fileMap,
       specWorkerConfigs.workerKubeAnnotations,
-      listOf(),
+      runtimeEnvVars,
+      input.launcherConfig.workspaceId,
     )
   }
 
@@ -268,6 +287,10 @@ class PayloadKubeInputMapper(
     input: CheckConnectionInput,
     logPath: String,
   ): Map<String, String> {
+    if (featureFlagClient.boolVariation(ConnectorSidecarFetchesInputFromInit, Workspace(input.launcherConfig.workspaceId))) {
+      return mapOf()
+    }
+
     return mapOf(
       OrchestratorConstants.CONNECTION_CONFIGURATION to serializer.serialize(input.checkConnectionInput.connectionConfiguration),
       OrchestratorConstants.SIDECAR_INPUT to
@@ -289,6 +312,10 @@ class PayloadKubeInputMapper(
     input: DiscoverCatalogInput,
     logPath: String,
   ): Map<String, String> {
+    if (featureFlagClient.boolVariation(ConnectorSidecarFetchesInputFromInit, Workspace(input.launcherConfig.workspaceId))) {
+      return mapOf()
+    }
+
     return mapOf(
       OrchestratorConstants.CONNECTION_CONFIGURATION to serializer.serialize(input.discoverCatalogInput.connectionConfiguration),
       OrchestratorConstants.SIDECAR_INPUT to
@@ -310,6 +337,10 @@ class PayloadKubeInputMapper(
     input: SpecInput,
     logPath: String,
   ): Map<String, String> {
+    if (featureFlagClient.boolVariation(ConnectorSidecarFetchesInputFromInit, Workspace(input.launcherConfig.workspaceId))) {
+      return mapOf()
+    }
+
     return mapOf(
       OrchestratorConstants.SIDECAR_INPUT to
         serializer.serialize(
@@ -345,4 +376,5 @@ data class ConnectorKubeInput(
   val fileMap: Map<String, String>,
   val annotations: Map<String, String>,
   val extraEnv: List<EnvVar>,
+  val workspaceId: UUID,
 )

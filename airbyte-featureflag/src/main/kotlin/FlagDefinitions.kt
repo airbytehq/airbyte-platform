@@ -192,6 +192,8 @@ object ResetStreamsStateWhenDisabled : Temporary<Boolean>(key = "reset-stream-st
 
 object OrchestratorFetchesInputFromInit : Temporary<Boolean>(key = "orchestrator-fetches-from-init", default = false)
 
+object ConnectorSidecarFetchesInputFromInit : Temporary<Boolean>(key = "connector-sidecar-fetches-from-init", default = false)
+
 object RefreshConfigBeforeSecretHydration : Temporary<Boolean>(key = "platform.refresh-config-before-secret-hydration", default = false)
 
 object LogStateMsgs : Temporary<Boolean>(key = "platform.log-state-msgs", default = false)

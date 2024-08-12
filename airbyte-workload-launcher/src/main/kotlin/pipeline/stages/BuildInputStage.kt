@@ -9,6 +9,7 @@ import io.airbyte.api.client.model.generated.SyncInput
 import io.airbyte.commons.json.Jsons
 import io.airbyte.config.WorkloadType
 import io.airbyte.featureflag.Connection
+import io.airbyte.featureflag.ConnectorSidecarFetchesInputFromInit
 import io.airbyte.featureflag.FeatureFlagClient
 import io.airbyte.featureflag.Multi
 import io.airbyte.featureflag.OrchestratorFetchesInputFromInit
@@ -83,16 +84,22 @@ open class BuildInputStage(
   private fun buildPayload(
     rawPayload: String,
     type: WorkloadType,
-  ): WorkloadPayload =
-    when (type) {
+  ): WorkloadPayload {
+    return when (type) {
       WorkloadType.CHECK -> {
         val parsed: CheckConnectionInput = deserializer.toCheckConnectionInput(rawPayload)
+        if (featureFlagClient.boolVariation(ConnectorSidecarFetchesInputFromInit, Workspace(parsed.launcherConfig.workspaceId))) {
+          return CheckPayload(parsed)
+        }
         val hydrated = parsed.apply { checkConnectionInput = checkInputHydrator.getHydratedStandardCheckInput(parsed.checkConnectionInput) }
         CheckPayload(hydrated)
       }
 
       WorkloadType.DISCOVER -> {
         val parsed: DiscoverCatalogInput = deserializer.toDiscoverCatalogInput(rawPayload)
+        if (featureFlagClient.boolVariation(ConnectorSidecarFetchesInputFromInit, Workspace(parsed.launcherConfig.workspaceId))) {
+          return DiscoverCatalogPayload(parsed)
+        }
         val hydrated =
           parsed.apply {
             discoverCatalogInput = discoverConnectionInputHydrator.getHydratedStandardDiscoverInput(parsed.discoverCatalogInput)
@@ -124,6 +131,7 @@ open class BuildInputStage(
         throw NotImplementedError("Unimplemented workload type: $type")
       }
     }
+  }
 
   private fun shouldRefreshSecretsReferences(input: ReplicationActivityInput): Boolean {
     val context =

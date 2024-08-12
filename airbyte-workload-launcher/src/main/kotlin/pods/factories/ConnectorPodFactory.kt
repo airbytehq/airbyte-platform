@@ -46,6 +46,7 @@ class ConnectorPodFactory(
     kubePodInfo: KubePodInfo,
     annotations: Map<String, String>,
     runtimeEnvVars: List<EnvVar>,
+    useFetchingInit: Boolean,
   ): Pod {
     val volumes: MutableList<Volume> = ArrayList()
     val volumeMounts: MutableList<VolumeMount> = ArrayList()
@@ -69,7 +70,13 @@ class ConnectorPodFactory(
 
     val connectorResourceReqs = KubePodProcess.getResourceRequirementsBuilder(connectorReqs).build()
 
-    val init: Container = initContainerFactory.createWaiting(connectorResourceReqs, volumeMounts)
+    val init: Container =
+      if (useFetchingInit) {
+        initContainerFactory.createFetching(connectorResourceReqs, volumeMounts, runtimeEnvVars)
+      } else {
+        initContainerFactory.createWaiting(connectorResourceReqs, volumeMounts)
+      }
+
     val main: Container = buildMainContainer(connectorResourceReqs, volumeMounts, kubePodInfo.mainContainerInfo, runtimeEnvVars)
     val sidecar: Container = buildSidecarContainer(volumeMounts + secretVolumeMounts)
 

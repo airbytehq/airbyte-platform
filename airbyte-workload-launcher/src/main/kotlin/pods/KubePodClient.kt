@@ -4,8 +4,10 @@ import com.google.common.annotations.VisibleForTesting
 import datadog.trace.api.Trace
 import io.airbyte.commons.constants.WorkerConstants.KubeConstants.FULL_POD_TIMEOUT
 import io.airbyte.featureflag.Connection
+import io.airbyte.featureflag.ConnectorSidecarFetchesInputFromInit
 import io.airbyte.featureflag.FeatureFlagClient
 import io.airbyte.featureflag.OrchestratorFetchesInputFromInit
+import io.airbyte.featureflag.Workspace
 import io.airbyte.metrics.lib.ApmTraceUtils
 import io.airbyte.persistence.job.models.ReplicationInput
 import io.airbyte.workers.input.setDestinationLabels
@@ -252,6 +254,12 @@ class KubePodClient(
   ) {
     val start = TimeSource.Monotonic.markNow()
 
+    // Whether we should kube cp init files over or let the init container fetch itself
+    // if true the init container will fetch, if false we copy over the files
+    // NOTE: FF must be equal for the factory calls and kube cp calls to avoid a potential race
+    // so we check the value here and pass it down.
+    val useFetchingInit = featureFlagClient.boolVariation(ConnectorSidecarFetchesInputFromInit, Workspace(kubeInput.workspaceId))
+
     var pod =
       factory.create(
         kubeInput.connectorLabels,
@@ -259,6 +267,7 @@ class KubePodClient(
         kubeInput.kubePodInfo,
         kubeInput.annotations,
         kubeInput.extraEnv,
+        useFetchingInit,
       )
     try {
       pod = kubePodLauncher.create(pod)
@@ -271,26 +280,28 @@ class KubePodClient(
       )
     }
 
-    try {
-      kubePodLauncher.waitForPodInit(pod, POD_INIT_TIMEOUT_VALUE)
-    } catch (e: RuntimeException) {
-      ApmTraceUtils.addExceptionToTrace(e)
-      throw KubeClientException(
-        "$podLogLabel pod failed to init within allotted timeout.",
-        e,
-        KubeCommandType.WAIT_INIT,
-      )
-    }
+    if (!useFetchingInit) {
+      try {
+        kubePodLauncher.waitForPodInit(pod, POD_INIT_TIMEOUT_VALUE)
+      } catch (e: RuntimeException) {
+        ApmTraceUtils.addExceptionToTrace(e)
+        throw KubeClientException(
+          "$podLogLabel pod failed to init within allotted timeout.",
+          e,
+          KubeCommandType.WAIT_INIT,
+        )
+      }
 
-    try {
-      kubePodLauncher.copyFilesToKubeConfigVolumeMain(pod, kubeInput.fileMap)
-    } catch (e: RuntimeException) {
-      ApmTraceUtils.addExceptionToTrace(e)
-      throw KubeClientException(
-        "Failed to copy files to $podLogLabel pod ${kubeInput.kubePodInfo.name}.",
-        e,
-        KubeCommandType.COPY,
-      )
+      try {
+        kubePodLauncher.copyFilesToKubeConfigVolumeMain(pod, kubeInput.fileMap)
+      } catch (e: RuntimeException) {
+        ApmTraceUtils.addExceptionToTrace(e)
+        throw KubeClientException(
+          "Failed to copy files to $podLogLabel pod ${kubeInput.kubePodInfo.name}.",
+          e,
+          KubeCommandType.COPY,
+        )
+      }
     }
 
     try {

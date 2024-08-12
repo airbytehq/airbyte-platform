@@ -8,6 +8,7 @@ import io.airbyte.config.StandardCheckConnectionInput
 import io.airbyte.config.StandardDiscoverCatalogInput
 import io.airbyte.config.WorkloadPriority
 import io.airbyte.config.WorkloadType
+import io.airbyte.featureflag.ConnectorSidecarFetchesInputFromInit
 import io.airbyte.featureflag.ContainerOrchestratorDevImage
 import io.airbyte.featureflag.InjectAwsSecretsToConnectorPods
 import io.airbyte.featureflag.OrchestratorFetchesInputFromInit
@@ -147,11 +148,13 @@ class PayloadKubeInputMapperTest {
     customConnector: Boolean,
     assumedRoleEnabled: Boolean,
     workloadPriority: WorkloadPriority,
+    useFetchingInit: Boolean,
   ) {
     val ffClient =
       TestClient(
         mapOf(
           InjectAwsSecretsToConnectorPods.key to assumedRoleEnabled,
+          ConnectorSidecarFetchesInputFromInit.key to useFetchingInit,
         ),
       )
 
@@ -246,18 +249,23 @@ class PayloadKubeInputMapperTest {
     Assertions.assertEquals(podName, result.kubePodInfo.name)
     Assertions.assertEquals(imageName, result.kubePodInfo.mainContainerInfo.image)
     Assertions.assertEquals(pullPolicy, result.kubePodInfo.mainContainerInfo.pullPolicy)
-    Assertions.assertEquals(
-      mapOf(
-        OrchestratorConstants.CONNECTION_CONFIGURATION to mockSerializedOutput,
-        OrchestratorConstants.SIDECAR_INPUT to mockSerializedOutput,
-      ),
-      result.fileMap,
-    )
+    val expectedFileMap =
+      buildMap {
+        if (!useFetchingInit) {
+          put(OrchestratorConstants.CONNECTION_CONFIGURATION, mockSerializedOutput)
+          put(OrchestratorConstants.SIDECAR_INPUT, mockSerializedOutput)
+        }
+      }
+    Assertions.assertEquals(expectedFileMap, result.fileMap)
 
+    val workloadTypeEnvVar = EnvVar(AirbyteEnvVar.OPERATION_TYPE.toString(), WorkloadType.CHECK.toString(), null)
+    val workloadIdEnvVar = EnvVar(AirbyteEnvVar.WORKLOAD_ID.toString(), workloadId, null)
+    assert(result.extraEnv.contains(workloadTypeEnvVar))
+    assert(result.extraEnv.contains(workloadIdEnvVar))
     if (!customConnector && assumedRoleEnabled) {
       val externalIdVar = EnvVar(AWS_ASSUME_ROLE_EXTERNAL_ID, workspaceId1.toString(), null)
-      val expectedEnvList = awsAssumedRoleEnv + externalIdVar
-      Assertions.assertEquals(expectedEnvList, result.extraEnv)
+      assert(result.extraEnv.contains(externalIdVar))
+      awsAssumedRoleEnv.forEach { assert(result.extraEnv.contains(it)) }
     } else {
       awsAssumedRoleEnv.forEach { assert(!result.extraEnv.contains(it)) }
     }
@@ -269,11 +277,13 @@ class PayloadKubeInputMapperTest {
     customConnector: Boolean,
     assumedRoleEnabled: Boolean,
     workloadPriority: WorkloadPriority,
+    useFetchingInit: Boolean,
   ) {
     val ffClient =
       TestClient(
         mapOf(
           InjectAwsSecretsToConnectorPods.key to assumedRoleEnabled,
+          ConnectorSidecarFetchesInputFromInit.key to useFetchingInit,
         ),
       )
 
@@ -376,18 +386,24 @@ class PayloadKubeInputMapperTest {
     Assertions.assertEquals(podName, result.kubePodInfo.name)
     Assertions.assertEquals(imageName, result.kubePodInfo.mainContainerInfo.image)
     Assertions.assertEquals(pullPolicy, result.kubePodInfo.mainContainerInfo.pullPolicy)
-    Assertions.assertEquals(
-      mapOf(
-        OrchestratorConstants.CONNECTION_CONFIGURATION to mockSerializedOutput,
-        OrchestratorConstants.SIDECAR_INPUT to mockSerializedOutput,
-      ),
-      result.fileMap,
-    )
+    val expectedFileMap =
+      buildMap {
+        if (!useFetchingInit) {
+          put(OrchestratorConstants.CONNECTION_CONFIGURATION, mockSerializedOutput)
+          put(OrchestratorConstants.SIDECAR_INPUT, mockSerializedOutput)
+        }
+      }
+    Assertions.assertEquals(expectedFileMap, result.fileMap)
+
+    val workloadTypeEnvVar = EnvVar(AirbyteEnvVar.OPERATION_TYPE.toString(), WorkloadType.DISCOVER.toString(), null)
+    val workloadIdEnvVar = EnvVar(AirbyteEnvVar.WORKLOAD_ID.toString(), workloadId, null)
+    assert(result.extraEnv.contains(workloadTypeEnvVar))
+    assert(result.extraEnv.contains(workloadIdEnvVar))
 
     if (!customConnector && assumedRoleEnabled) {
       val externalIdVar = EnvVar(AWS_ASSUME_ROLE_EXTERNAL_ID, workspaceId1.toString(), null)
-      val expectedEnvList = awsAssumedRoleEnv + externalIdVar
-      Assertions.assertEquals(expectedEnvList, result.extraEnv)
+      assert(result.extraEnv.contains(externalIdVar))
+      awsAssumedRoleEnv.forEach { assert(result.extraEnv.contains(it)) }
     } else {
       awsAssumedRoleEnv.forEach { assert(!result.extraEnv.contains(it)) }
     }
@@ -396,8 +412,15 @@ class PayloadKubeInputMapperTest {
   @ParameterizedTest
   @ValueSource(booleans = [true, false])
   fun `builds a kube input from a spec payload`(customConnector: Boolean) {
+    // I'm overloading this parameter to exercise the FF. The FF check will be removed shortly
+    val useFetchingInit = customConnector
+
     val ffClient =
-      TestClient()
+      TestClient(
+        mapOf(
+          ConnectorSidecarFetchesInputFromInit.key to useFetchingInit,
+        ),
+      )
 
     val serializer: ObjectSerializer = mockk()
     val labeler: PodLabeler = mockk()
@@ -481,23 +504,26 @@ class PayloadKubeInputMapperTest {
     Assertions.assertEquals(podName, result.kubePodInfo.name)
     Assertions.assertEquals(imageName, result.kubePodInfo.mainContainerInfo.image)
     Assertions.assertEquals(pullPolicy, result.kubePodInfo.mainContainerInfo.pullPolicy)
-    Assertions.assertEquals(
-      mapOf(
-        OrchestratorConstants.SIDECAR_INPUT to mockSerializedOutput,
-      ),
-      result.fileMap,
-    )
+    val expectedFileMap =
+      buildMap {
+        if (!useFetchingInit) {
+          put(OrchestratorConstants.SIDECAR_INPUT, mockSerializedOutput)
+        }
+      }
+    Assertions.assertEquals(expectedFileMap, result.fileMap)
   }
 
   companion object {
     @JvmStatic
     private fun connectorInputMatrix(): Stream<Arguments> {
       return Stream.of(
-        Arguments.of(true, true, WorkloadPriority.HIGH),
-        Arguments.of(false, true, WorkloadPriority.HIGH),
-        Arguments.of(true, false, WorkloadPriority.HIGH),
-        Arguments.of(false, false, WorkloadPriority.HIGH),
-        Arguments.of(false, false, WorkloadPriority.DEFAULT),
+        Arguments.of(true, true, WorkloadPriority.HIGH, true),
+        Arguments.of(false, true, WorkloadPriority.HIGH, true),
+        Arguments.of(true, false, WorkloadPriority.HIGH, true),
+        Arguments.of(false, false, WorkloadPriority.HIGH, true),
+        Arguments.of(false, false, WorkloadPriority.HIGH, false),
+        Arguments.of(false, false, WorkloadPriority.DEFAULT, false),
+        Arguments.of(false, false, WorkloadPriority.DEFAULT, true),
       )
     }
   }
