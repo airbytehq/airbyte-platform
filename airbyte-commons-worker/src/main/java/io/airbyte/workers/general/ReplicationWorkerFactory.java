@@ -270,7 +270,7 @@ public class ReplicationWorkerFactory {
     final var ffs = replicationFeatureFlagReader.readReplicationFeatureFlags();
     syncPersistence.setReplicationFeatureFlags(ffs);
 
-    return new AirbyteMessageTracker(syncPersistence, ffs.logConnectorMsgs(), ffs.logStateMsgs(),
+    return new AirbyteMessageTracker(syncPersistence, ffs.logStateMsgs(), ffs.logConnectorMsgs(),
         replicationInput.getSourceLauncherConfig().getDockerImage(),
         replicationInput.getDestinationLauncherConfig().getDockerImage());
   }
