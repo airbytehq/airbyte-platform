@@ -55,6 +55,7 @@ export const StreamConfigView: React.FC<StreamConfigViewProps> = React.memo(({ s
     <T extends string>(fieldPath: T) => `${streamPath}.${fieldPath}` as const,
     [streamPath]
   );
+  const baseUrl = useBuilderWatch("formValues.global.urlBase");
 
   return (
     <BuilderConfigView
@@ -80,6 +81,7 @@ export const StreamConfigView: React.FC<StreamConfigViewProps> = React.memo(({ s
               type="string"
               path={streamFieldPath("urlPath")}
               manifestPath="HttpRequester.properties.path"
+              preview={baseUrl ? (value) => `${baseUrl}${value}` : undefined}
             />
             <BuilderField
               type="enum"

@@ -48,6 +48,7 @@ interface BaseFieldProps {
   optional?: boolean;
   pattern?: string;
   adornment?: ReactNode;
+  preview?: (arg0: string) => ReactNode;
   className?: string;
   omitInterpolationContext?: boolean;
 }
@@ -128,6 +129,7 @@ const InnerBuilderField: React.FC<BuilderFieldProps> = ({
   readOnly,
   pattern,
   adornment,
+  preview,
   manifestPath,
   omitInterpolationContext,
   ...props
@@ -199,25 +201,28 @@ const InnerBuilderField: React.FC<BuilderFieldProps> = ({
       ref={elementRef}
     >
       {(props.type === "number" || props.type === "string" || props.type === "integer") && (
-        <Input
-          {...field}
-          onChange={(e) => {
-            setValue(e.target.value);
-          }}
-          className={props.className}
-          type={props.type}
-          value={(fieldValue as string | number | undefined) ?? ""}
-          error={hasError}
-          readOnly={readOnly}
-          adornment={adornment}
-          disabled={props.disabled}
-          step={props.step}
-          min={props.min}
-          onBlur={(e) => {
-            field.onBlur();
-            props.onBlur?.(e.target.value);
-          }}
-        />
+        <>
+          <Input
+            {...field}
+            onChange={(e) => {
+              setValue(e.target.value);
+            }}
+            className={props.className}
+            type={props.type}
+            value={(fieldValue as string | number | undefined) ?? ""}
+            error={hasError}
+            readOnly={readOnly}
+            adornment={adornment}
+            disabled={props.disabled}
+            step={props.step}
+            min={props.min}
+            onBlur={(e) => {
+              field.onBlur();
+              props.onBlur?.(e.target.value);
+            }}
+          />
+          {preview && !hasError && <div className={styles.inputPreview}>{preview(fieldValue)}</div>}
+        </>
       )}
       {(props.type === "date" || props.type === "date-time") && (
         <DatePicker
