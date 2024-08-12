@@ -9,6 +9,8 @@ import static io.airbyte.metrics.lib.ApmTraceConstants.Tags.WEBHOOK_CONFIG_ID_KE
 
 import com.fasterxml.jackson.databind.JsonNode;
 import datadog.trace.api.Trace;
+import dev.failsafe.Failsafe;
+import dev.failsafe.RetryPolicy;
 import io.airbyte.api.client.AirbyteApiClient;
 import io.airbyte.api.client.model.generated.ScopeType;
 import io.airbyte.api.client.model.generated.SecretPersistenceConfig;
@@ -33,6 +35,7 @@ import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import java.time.temporal.ChronoUnit;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
@@ -48,8 +51,13 @@ public class WebhookOperationActivityImpl implements WebhookOperationActivity {
   private static final Logger LOGGER = LoggerFactory.getLogger(WebhookOperationActivityImpl.class);
   private static final int MAX_RETRIES = 3;
 
-  private final HttpClient httpClient;
+  private static final RetryPolicy<Object> WEBHOOK_RETRY_POLICY = RetryPolicy.builder()
+      .withBackoff(1, 5, ChronoUnit.SECONDS)
+      .withMaxRetries(MAX_RETRIES)
+      .handle(Exception.class)
+      .build();
 
+  private final HttpClient httpClient;
   private final SecretsRepositoryReader secretsRepositoryReader;
   private final AirbyteApiClient airbyteApiClient;
   private final FeatureFlagClient featureFlagClient;
@@ -98,6 +106,12 @@ public class WebhookOperationActivityImpl implements WebhookOperationActivity {
     ApmTraceUtils.addTagsToTrace(Map.of(WEBHOOK_CONFIG_ID_KEY, input.getWebhookConfigId()));
     LOGGER.info("Invoking webhook operation {}", webhookConfig.get().getName());
 
+    final HttpRequest.Builder requestBuilder = buildRequest(input, webhookConfig);
+
+    return Failsafe.with(WEBHOOK_RETRY_POLICY).get(() -> sendWebhook(requestBuilder, webhookConfig));
+  }
+
+  private HttpRequest.Builder buildRequest(final OperatorWebhookInput input, final Optional<WebhookConfig> webhookConfig) {
     final HttpRequest.Builder requestBuilder = HttpRequest.newBuilder()
         .uri(URI.create(input.getExecutionUrl()));
     if (input.getExecutionBody() != null) {
@@ -109,24 +123,18 @@ public class WebhookOperationActivityImpl implements WebhookOperationActivity {
           .header("Authorization", "Bearer " + webhookConfig.get().getAuthToken()).build();
     }
 
-    Exception finalException = null;
-    // TODO(mfsiega-airbyte): replace this loop with retries configured on the HttpClient impl.
-    for (int i = 0; i < MAX_RETRIES; i++) {
-      try {
-        final HttpResponse<String> response = this.httpClient.send(requestBuilder.build(), HttpResponse.BodyHandlers.ofString());
-        LOGGER.debug("Webhook response: {}", response == null ? null : response.body());
-        LOGGER.info("Webhook response status: {}", response == null ? "empty response" : response.statusCode());
-        // Return true if the request was successful.
-        final boolean isSuccessful = response != null && response.statusCode() >= 200 && response.statusCode() <= 300;
-        LOGGER.info("Webhook {} execution status {}", webhookConfig.get().getName(), isSuccessful ? "successful" : "failed");
-        return isSuccessful;
-      } catch (final Exception e) {
-        LOGGER.warn(e.getMessage());
-        finalException = e;
-      }
-    }
-    // If we ever get here, it means we exceeded MAX_RETRIES without returning in the happy path.
-    throw new RuntimeException(finalException);
+    return requestBuilder;
+  }
+
+  private boolean sendWebhook(final HttpRequest.Builder requestBuilder, final Optional<WebhookConfig> webhookConfig)
+      throws IOException, InterruptedException {
+    final HttpResponse<String> response = this.httpClient.send(requestBuilder.build(), HttpResponse.BodyHandlers.ofString());
+    LOGGER.debug("Webhook response: {}", response == null ? null : response.body());
+    LOGGER.info("Webhook response status: {}", response == null ? "empty response" : response.statusCode());
+    // Return true if the request was successful.
+    final boolean isSuccessful = response != null && response.statusCode() >= 200 && response.statusCode() <= 300;
+    LOGGER.info("Webhook {} execution status {}", webhookConfig.get().getName(), isSuccessful ? "successful" : "failed");
+    return isSuccessful;
   }
 
 }

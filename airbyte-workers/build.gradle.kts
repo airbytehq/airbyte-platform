@@ -67,6 +67,7 @@ dependencies {
   implementation(libs.micrometer.statsd)
   implementation(libs.bundles.datadog)
   implementation(libs.sentry.java)
+  implementation(libs.failsafe)
 
   implementation(project(":oss:airbyte-analytics"))
   implementation(project(":oss:airbyte-api:server-api"))
