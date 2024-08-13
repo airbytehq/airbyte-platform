@@ -13,6 +13,7 @@ import io.airbyte.config.FailureReason
 import io.airbyte.featureflag.Connection
 import io.airbyte.featureflag.EmitStateStatsToSegment
 import io.airbyte.featureflag.FeatureFlagClient
+import io.airbyte.featureflag.LogStateMsgs
 import io.airbyte.featureflag.LogStreamNamesInSateMessage
 import io.airbyte.featureflag.Multi
 import io.airbyte.featureflag.Workspace
@@ -212,7 +213,8 @@ class StateCheckSumCountEventHandler(
                   checksumValidationEnabled,
                 )
               } else {
-                checksumIsValid(origin, includeStreamInLogs, stateMessage, checksumValidationEnabled)
+                val shouldIncludeStreamInLogs = includeStreamInLogs || featureFlagClient.boolVariation(LogStateMsgs, Connection(connectionId))
+                checksumIsValid(origin, shouldIncludeStreamInLogs, stateMessage, checksumValidationEnabled)
               }
             }
           } else {
@@ -240,7 +242,8 @@ class StateCheckSumCountEventHandler(
             checksumValidationEnabled,
           )
         } else {
-          checksumIsValid(origin, includeStreamInLogs, stateMessage, checksumValidationEnabled)
+          val shouldIncludeStreamInLogs = includeStreamInLogs || featureFlagClient.boolVariation(LogStateMsgs, Connection(connectionId))
+          checksumIsValid(origin, shouldIncludeStreamInLogs, stateMessage, checksumValidationEnabled)
         }
       }
     } else {

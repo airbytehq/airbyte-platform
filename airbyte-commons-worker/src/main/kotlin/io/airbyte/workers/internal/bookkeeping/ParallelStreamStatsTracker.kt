@@ -390,14 +390,28 @@ class ParallelStreamStatsTracker(
    */
   private fun getOrCreateStreamStatsTracker(pair: AirbyteStreamNameNamespacePair): StreamStatsTracker {
     // if an entry already exists, return it
-    streamTrackers[pair]?.let { return it }
+    streamTrackers[pair]?.let {
+      if (replicationFeatureFlags?.logStateMsgs == true) {
+        logger.info { "Using existing stats tracker for stream $pair" }
+      }
+      return it
+    }
 
     // We want to avoid multiple threads trying to create a new StreamStatsTracker.
     // This operation should be fairly rare, once per stream, so the synchronized block shouldn't cause
     // too much contention.
     synchronized(this) {
       // Making sure the stream hasn't been created since the previous check.
-      streamTrackers[pair]?.let { return it }
+      streamTrackers[pair]?.let {
+        if (replicationFeatureFlags?.logStateMsgs == true) {
+          logger.info { "Using existing stats tracker for stream $pair" }
+        }
+        return it
+      }
+
+      if (replicationFeatureFlags?.logStateMsgs == true) {
+        logger.info { "Creating new stats tracker for stream $pair" }
+      }
       // if no existing tracker exists, create a new one and also place it into the trackers map
       return StreamStatsTracker(
         nameNamespacePair = pair,
