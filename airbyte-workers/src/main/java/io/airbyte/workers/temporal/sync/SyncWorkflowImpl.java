@@ -145,11 +145,13 @@ public class SyncWorkflowImpl implements SyncWorkflow {
         .replicateV2(generateReplicationActivityInput(syncInput, jobRunConfig, sourceLauncherConfig, destinationLauncherConfig, taskQueue,
             refreshSchemaOutput, useWorkloadApi, useWorkloadOutputDocStore));
 
+    LOGGER.info("Checking for post-sync operations to execute...");
+    LOGGER.info("Sync input contains {} operation(s).", syncInput.getOperationSequence() != null ? syncInput.getOperationSequence().size() : 0);
     if (syncInput.getOperationSequence() != null && !syncInput.getOperationSequence().isEmpty()) {
       for (final StandardSyncOperation standardSyncOperation : syncInput.getOperationSequence()) {
         if (standardSyncOperation.getOperatorType() == OperatorType.WEBHOOK) {
-          LOGGER.info("running webhook operation");
-          LOGGER.debug("webhook operation input: {}", standardSyncOperation);
+          LOGGER.info("Running webhook operation {}...", standardSyncOperation.getOperatorWebhook().getWebhookConfigId());
+          LOGGER.debug("Webhook operation input: {}", standardSyncOperation);
           final boolean success = webhookOperationActivity
               .invokeWebhook(new OperatorWebhookInput()
                   .withExecutionUrl(standardSyncOperation.getOperatorWebhook().getExecutionUrl())
@@ -157,7 +159,7 @@ public class SyncWorkflowImpl implements SyncWorkflow {
                   .withWebhookConfigId(standardSyncOperation.getOperatorWebhook().getWebhookConfigId())
                   .withWorkspaceWebhookConfigs(syncInput.getWebhookOperationConfigs())
                   .withConnectionContext(syncInput.getConnectionContext()));
-          LOGGER.info("webhook {} completed {}", standardSyncOperation.getOperatorWebhook().getWebhookConfigId(),
+          LOGGER.info("Webhook {} completed {}", standardSyncOperation.getOperatorWebhook().getWebhookConfigId(),
               success ? "successfully" : "unsuccessfully");
           // TODO(mfsiega-airbyte): clean up this logic to be returned from the webhook invocation.
           if (syncOutput.getWebhookOperationSummary() == null) {
@@ -172,6 +174,8 @@ public class SyncWorkflowImpl implements SyncWorkflow {
           LOGGER.warn("Unsupported operation type '{}' found.  Skipping operation...", standardSyncOperation.getOperatorType());
         }
       }
+    } else {
+      LOGGER.info("No post-sync operation(s) to perform.");
     }
 
     final long replicationEndTime = Workflow.currentTimeMillis();
