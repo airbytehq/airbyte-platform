@@ -29,6 +29,7 @@ import jakarta.inject.Named
 import jakarta.inject.Singleton
 import java.time.Duration
 import java.util.UUID
+import java.util.concurrent.TimeoutException
 import kotlin.time.TimeSource
 
 /**
@@ -99,6 +100,8 @@ class KubePodClient(
       waitOrchestratorPodInit(pod)
 
       copyFileToOrchestrator(kubeInput, pod)
+    } else {
+      waitForPodInitComplete(pod, "orchestrator")
     }
 
     waitForOrchestratorStart(pod)
@@ -114,7 +117,7 @@ class KubePodClient(
   @Trace(operationName = WAIT_ORCHESTRATOR_OPERATION_NAME)
   fun waitOrchestratorPodInit(orchestratorPod: Pod) {
     try {
-      kubePodLauncher.waitForPodInit(orchestratorPod, POD_INIT_TIMEOUT_VALUE)
+      kubePodLauncher.waitForPodInitStartup(orchestratorPod, POD_INIT_TIMEOUT_VALUE)
     } catch (e: RuntimeException) {
       ApmTraceUtils.addExceptionToTrace(e)
       throw KubeClientException(
@@ -281,7 +284,7 @@ class KubePodClient(
 
     if (!useFetchingInit) {
       try {
-        kubePodLauncher.waitForPodInit(pod, POD_INIT_TIMEOUT_VALUE)
+        kubePodLauncher.waitForPodInitStartup(pod, POD_INIT_TIMEOUT_VALUE)
       } catch (e: RuntimeException) {
         ApmTraceUtils.addExceptionToTrace(e)
         throw KubeClientException(
@@ -301,6 +304,8 @@ class KubePodClient(
           KubeCommandType.COPY,
         )
       }
+    } else {
+      waitForPodInitComplete(pod, podLogLabel)
     }
 
     try {
@@ -333,9 +338,26 @@ class KubePodClient(
     }
   }
 
+  @VisibleForTesting
+  fun waitForPodInitComplete(
+    pod: Pod,
+    podLogLabel: String,
+  ) {
+    try {
+      kubePodLauncher.waitForPodInitComplete(pod, POD_INIT_TIMEOUT_VALUE)
+    } catch (e: TimeoutException) {
+      ApmTraceUtils.addExceptionToTrace(e)
+      throw KubeClientException(
+        "$podLogLabel pod failed to init within allotted timeout.",
+        e,
+        KubeCommandType.WAIT_INIT,
+      )
+    }
+  }
+
   companion object {
     private val TIMEOUT_SLACK: Duration = Duration.ofSeconds(5)
-    val ORCHESTRATOR_STARTUP_TIMEOUT_VALUE: Duration = Duration.ofMinutes(3)
+    val ORCHESTRATOR_STARTUP_TIMEOUT_VALUE: Duration = Duration.ofMinutes(1)
     val POD_INIT_TIMEOUT_VALUE: Duration = Duration.ofMinutes(15)
     val REPL_CONNECTOR_STARTUP_TIMEOUT_VALUE: Duration = FULL_POD_TIMEOUT.plus(TIMEOUT_SLACK)
   }
