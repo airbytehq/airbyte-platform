@@ -109,7 +109,7 @@ export const PublishButton: React.FC<PublishButtonProps> = ({ className }) => {
     type: "button",
   };
   const { formatMessage } = useIntl();
-  const isMarketplaceContributionFeatureEnabled = useExperiment("connectorBuilder.contributeToMarketplace", false);
+  const isMarketplaceContributionFeatureEnabled = useExperiment("connectorBuilder.contributeToMarketplace", true);
   const isMarketplaceContributionActionDisabled = streamsWithWarnings.length > 0;
   const publishButton = isMarketplaceContributionFeatureEnabled ? (
     <DropdownButton
