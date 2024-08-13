@@ -110,6 +110,7 @@ class KubePodClientTest {
         .withSourceLauncherConfig(IntegrationLauncherConfig())
         .withDestinationLauncherConfig(IntegrationLauncherConfig())
         .withConnectionId(UUID.randomUUID())
+        .withWorkspaceId(UUID.randomUUID())
 
     resetInput =
       ReplicationInput()
@@ -117,6 +118,7 @@ class KubePodClientTest {
         .withDestinationLauncherConfig(IntegrationLauncherConfig())
         .withIsReset(true)
         .withConnectionId(UUID.randomUUID())
+        .withWorkspaceId(UUID.randomUUID())
 
     checkInput =
       CheckConnectionInput(

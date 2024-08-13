@@ -127,11 +127,13 @@ class EnvVarConfigBeanFactory {
     @Value("\${airbyte.feature-flag.client}") client: String,
     @Value("\${airbyte.feature-flag.path}") path: String,
     @Value("\${airbyte.feature-flag.api-key}") apiKey: String,
+    @Value("\${airbyte.feature-flag.base-url}") baseUrl: String,
   ): Map<String, String> {
     val envMap: MutableMap<String, String> = HashMap()
     envMap[AirbyteEnvVar.FEATURE_FLAG_CLIENT.toString()] = client
     envMap[AirbyteEnvVar.FEATURE_FLAG_PATH.toString()] = path
     envMap[AirbyteEnvVar.LAUNCHDARKLY_KEY.toString()] = apiKey
+    envMap[AirbyteEnvVar.FEATURE_FLAG_BASEURL.toString()] = baseUrl
 
     return envMap
   }

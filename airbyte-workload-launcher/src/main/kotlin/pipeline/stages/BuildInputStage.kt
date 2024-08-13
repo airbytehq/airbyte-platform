@@ -112,8 +112,10 @@ open class BuildInputStage(
         if (shouldRefreshSecretsReferences(parsed)) {
           refreshSecretsReferences(parsed)
         }
+        val ffContext = Multi(listOf(Connection(parsed.connectionId), Workspace(parsed.workspaceId)))
+
         val hydrated: ReplicationInput =
-          if (featureFlagClient.boolVariation(OrchestratorFetchesInputFromInit, Connection(parsed.connectionId))) {
+          if (featureFlagClient.boolVariation(OrchestratorFetchesInputFromInit, ffContext)) {
             replicationInputHydrator.mapActivityInputToReplInput(parsed)
           } else {
             replicationInputHydrator.getHydratedReplicationInput(parsed)

@@ -6,6 +6,7 @@ import io.airbyte.commons.constants.WorkerConstants.KubeConstants.FULL_POD_TIMEO
 import io.airbyte.featureflag.Connection
 import io.airbyte.featureflag.ConnectorSidecarFetchesInputFromInit
 import io.airbyte.featureflag.FeatureFlagClient
+import io.airbyte.featureflag.Multi
 import io.airbyte.featureflag.OrchestratorFetchesInputFromInit
 import io.airbyte.featureflag.Workspace
 import io.airbyte.metrics.lib.ApmTraceUtils
@@ -65,9 +66,10 @@ class KubePodClient(
 
     // Whether we should kube cp init files over or let the init container fetch itself
     // if true the init container will fetch, if false we copy over the files
-    // NOTE: FF must be equal for the factory calls and kube cp calls to avoid a potential race
+    // NOTE: FF must be equal for the factory calls and kube cp calls to avoid a potential race,
     // so we check the value here and pass it down.
-    val useFetchingInit = featureFlagClient.boolVariation(OrchestratorFetchesInputFromInit, Connection(replicationInput.connectionId))
+    val ffContext = Multi(listOf(Connection(replicationInput.connectionId), Workspace(replicationInput.workspaceId)))
+    val useFetchingInit = featureFlagClient.boolVariation(OrchestratorFetchesInputFromInit, ffContext)
 
     var pod =
       orchestratorPodFactory.create(

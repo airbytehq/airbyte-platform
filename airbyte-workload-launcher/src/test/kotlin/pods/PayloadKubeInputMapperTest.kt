@@ -103,6 +103,7 @@ class PayloadKubeInputMapperTest {
     every { input.sourceLauncherConfig } returns mockk<IntegrationLauncherConfig>()
     every { input.destinationLauncherConfig } returns mockk<IntegrationLauncherConfig>()
     every { input.connectionId } returns mockk<UUID>()
+    every { input.workspaceId } returns mockk<UUID>()
 
     val mockSerializedOutput = "Serialized Obj."
     every { serializer.serialize<Any>(any()) } returns mockSerializedOutput

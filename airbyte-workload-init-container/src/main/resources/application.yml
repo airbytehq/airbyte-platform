@@ -20,6 +20,7 @@ airbyte:
     client: ${FEATURE_FLAG_CLIENT:}
     path: ${FEATURE_FLAG_PATH:/flags}
     api-key: ${LAUNCHDARKLY_KEY:}
+    base-url: ${FEATURE_FLAG_BASEURL:}
   init:
     operation: ${OPERATION_TYPE:}
   internal-api:

@@ -9,6 +9,7 @@ import io.airbyte.featureflag.ConnectorSidecarFetchesInputFromInit
 import io.airbyte.featureflag.ContainerOrchestratorDevImage
 import io.airbyte.featureflag.FeatureFlagClient
 import io.airbyte.featureflag.InjectAwsSecretsToConnectorPods
+import io.airbyte.featureflag.Multi
 import io.airbyte.featureflag.OrchestratorFetchesInputFromInit
 import io.airbyte.featureflag.Workspace
 import io.airbyte.persistence.job.models.IntegrationLauncherConfig
@@ -272,11 +273,11 @@ class PayloadKubeInputMapper(
     }
   }
 
-  // TODO: This is the way we pass data into the pods we launch. This should be extracted to
-  //  some shared interface between parent / child to make it less brittle.
   private fun buildSyncFileMap(input: ReplicationInput): Map<String, String> {
+    val ffContext = Multi(listOf(Connection(input.connectionId), Workspace(input.workspaceId)))
+
     return buildMap {
-      if (!featureFlagClient.boolVariation(OrchestratorFetchesInputFromInit, Connection(input.connectionId))) {
+      if (!featureFlagClient.boolVariation(OrchestratorFetchesInputFromInit, ffContext)) {
         put(OrchestratorConstants.INIT_FILE_INPUT, serializer.serialize(input))
       }
     }
