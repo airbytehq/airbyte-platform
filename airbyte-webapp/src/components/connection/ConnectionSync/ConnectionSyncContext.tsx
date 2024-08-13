@@ -58,6 +58,7 @@ export const jobStatusesIndicatingFinishedExecution: string[] = [
 const useConnectionSyncContextInit = (connection: WebBackendConnectionRead): ConnectionSyncContext => {
   const { jobs } = useListJobsForConnectionStatus(connection.connectionId);
   const mostRecentJob = jobs?.[0]?.job;
+
   const connectionEnabled = connection.status === ConnectionStatus.active;
   const queryClient = useQueryClient();
   const { openConfirmationModal, closeConfirmationModal } = useConfirmationModalService();
@@ -69,7 +70,8 @@ const useConnectionSyncContextInit = (connection: WebBackendConnectionRead): Con
     doSyncConnection(connection);
   }, [connection, doSyncConnection]);
 
-  const { mutateAsync: doCancelJob, isLoading: cancelStarting } = useCancelJob();
+  const { mutateAsync: doCancelJob, isLoading: isCancelLoading } = useCancelJob();
+  const cancelStarting = isCancelLoading || (mostRecentJob?.status !== "running" && mostRecentJob?.id === 999999999);
 
   const cancelJobWithConfirmationModal = useCallback(() => {
     const jobId = mostRecentJob?.id;
