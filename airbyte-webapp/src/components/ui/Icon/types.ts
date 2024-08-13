@@ -53,6 +53,7 @@ export type IconType =
   | "files"
   | "flash"
   | "folder"
+  | "folderOpen"
   | "gear"
   | "github"
   | "globe"
