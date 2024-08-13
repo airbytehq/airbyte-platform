@@ -2,17 +2,16 @@
  * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
-package io.airbyte.server.pro;
+package io.airbyte.commons.server.authorization;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import io.airbyte.commons.auth.AuthRole;
+import io.airbyte.commons.auth.RequiresAuthMode;
 import io.airbyte.commons.auth.config.AirbyteKeycloakConfiguration;
+import io.airbyte.commons.auth.config.AuthMode;
 import io.airbyte.commons.auth.support.JwtTokenParser;
 import io.airbyte.commons.json.Jsons;
-import io.airbyte.commons.license.annotation.RequiresAirbyteProEnabled;
-import io.airbyte.commons.server.support.RbacRoleHelper;
 import io.micrometer.common.util.StringUtils;
 import io.micronaut.http.HttpRequest;
 import io.micronaut.security.authentication.Authentication;
@@ -22,8 +21,7 @@ import jakarta.inject.Named;
 import jakarta.inject.Singleton;
 import java.nio.charset.StandardCharsets;
 import java.util.Base64;
-import java.util.Collection;
-import java.util.HashSet;
+import java.util.Map;
 import lombok.extern.slf4j.Slf4j;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
@@ -32,26 +30,26 @@ import org.reactivestreams.Publisher;
 import reactor.core.publisher.Mono;
 
 /**
- * Token Validator for Airbyte Pro. Performs an online validation of the token against the Keycloak
- * server.
+ * Token Validator for Airbyte Cloud and Enterprise. Performs an online validation of the token
+ * against the Keycloak server.
  */
 @Slf4j
 @Singleton
-@RequiresAirbyteProEnabled
+@RequiresAuthMode(AuthMode.OIDC)
 @SuppressWarnings({"PMD.PreserveStackTrace", "PMD.UseTryWithResources", "PMD.UnusedFormalParameter", "PMD.UnusedPrivateMethod",
   "PMD.ExceptionAsFlowControl"})
 public class KeycloakTokenValidator implements TokenValidator<HttpRequest<?>> {
 
   private final OkHttpClient client;
   private final AirbyteKeycloakConfiguration keycloakConfiguration;
-  private final RbacRoleHelper rbacRoleHelper;
+  private final TokenRoleResolver tokenRoleResolver;
 
   public KeycloakTokenValidator(@Named("keycloakTokenValidatorHttpClient") final OkHttpClient okHttpClient,
                                 final AirbyteKeycloakConfiguration keycloakConfiguration,
-                                final RbacRoleHelper rbacRoleHelper) {
+                                final TokenRoleResolver tokenRoleResolver) {
     this.client = okHttpClient;
     this.keycloakConfiguration = keycloakConfiguration;
-    this.rbacRoleHelper = rbacRoleHelper;
+    this.tokenRoleResolver = tokenRoleResolver;
   }
 
   @Override
@@ -70,7 +68,6 @@ public class KeycloakTokenValidator implements TokenValidator<HttpRequest<?>> {
 
   private Authentication getAuthentication(final String token, final HttpRequest<?> request) {
     final String payload = JwtTokenParser.getJwtPayloadToken(token);
-    final Collection<String> roles = new HashSet<>();
 
     try {
       final String jwtPayloadString = new String(Base64.getUrlDecoder().decode(payload), StandardCharsets.UTF_8);
@@ -81,11 +78,7 @@ public class KeycloakTokenValidator implements TokenValidator<HttpRequest<?>> {
       log.debug("Performing authentication for auth user '{}'...", authUserId);
 
       if (StringUtils.isNotBlank(authUserId)) {
-        log.debug("Successfully authenticated auth user '{}'.", authUserId);
-        roles.add(AuthRole.AUTHENTICATED_USER.toString());
-
-        log.debug("Fetching roles for auth user '{}'...", authUserId);
-        roles.addAll(rbacRoleHelper.getRbacRoles(authUserId, request));
+        final var roles = tokenRoleResolver.resolveRoles(authUserId, request);
 
         log.debug("Authenticating user '{}' with roles {}...", authUserId, roles);
         final var userAttributeMap = JwtTokenParser.convertJwtPayloadToUserAttributes(jwtPayload);
@@ -100,10 +93,19 @@ public class KeycloakTokenValidator implements TokenValidator<HttpRequest<?>> {
   }
 
   private Mono<Boolean> validateTokenWithKeycloak(final String token) {
+    final String realm;
+    try {
+      final Map<String, Object> jwtAttributes = JwtTokenParser.tokenToAttributes(token);
+      realm = (String) jwtAttributes.get(JwtTokenParser.JWT_SSO_REALM);
+      log.debug("Extracted realm {}", realm);
+    } catch (final Exception e) {
+      log.error("Failed to parse realm from JWT token: {}", token, e);
+      return Mono.just(false);
+    }
     final okhttp3.Request request = new Request.Builder()
         .addHeader(org.apache.http.HttpHeaders.CONTENT_TYPE, "application/json")
         .addHeader(org.apache.http.HttpHeaders.AUTHORIZATION, "Bearer " + token)
-        .url(keycloakConfiguration.getKeycloakUserInfoEndpoint())
+        .url(keycloakConfiguration.getKeycloakUserInfoEndpointForRealm(realm))
         .get()
         .build();
 

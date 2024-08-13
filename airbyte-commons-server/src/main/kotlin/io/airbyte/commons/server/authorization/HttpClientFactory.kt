@@ -1,4 +1,4 @@
-package io.airbyte.server.config
+package io.airbyte.commons.server.authorization
 
 import io.micronaut.context.annotation.Factory
 import jakarta.inject.Named
@@ -14,7 +14,5 @@ class HttpClientFactory {
    */
   @Singleton
   @Named("keycloakTokenValidatorHttpClient")
-  fun okHttpClient(): OkHttpClient {
-    return OkHttpClient()
-  }
+  fun okHttpClient(): OkHttpClient = OkHttpClient()
 }

@@ -6,7 +6,10 @@ package io.airbyte.commons.auth.support;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import io.airbyte.commons.json.Jsons;
 import io.airbyte.config.AuthProvider;
+import java.nio.charset.StandardCharsets;
+import java.util.Base64;
 import java.util.HashMap;
 import java.util.Map;
 import lombok.extern.slf4j.Slf4j;
@@ -38,6 +41,13 @@ public class JwtTokenParser {
     final String jwtPayload = tokenParts[1];
 
     return jwtPayload;
+  }
+
+  public static Map<String, Object> tokenToAttributes(final String jwtToken) {
+    final String rawJwtPayload = getJwtPayloadToken(jwtToken);
+    final String jwtPayloadDecoded = new String(Base64.getUrlDecoder().decode(rawJwtPayload), StandardCharsets.UTF_8);
+    final JsonNode jwtPayloadNode = Jsons.deserialize(jwtPayloadDecoded);
+    return convertJwtPayloadToUserAttributes(jwtPayloadNode);
   }
 
   /**

@@ -22,11 +22,11 @@ class AirbyteKeycloakConfiguration {
   var password: String = ""
   var resetRealm: Boolean = false
 
-  fun getKeycloakUserInfoEndpoint(): String {
+  fun getKeycloakUserInfoEndpointForRealm(realm: String): String {
     val hostWithoutTrailingSlash = if (host.endsWith("/")) host.substring(0, host.length - 1) else host
     val basePathWithLeadingSlash = if (basePath.startsWith("/")) basePath else "/$basePath"
     val keycloakUserInfoURI = "/protocol/openid-connect/userinfo"
-    return "$protocol://$hostWithoutTrailingSlash$basePathWithLeadingSlash/realms/$airbyteRealm$keycloakUserInfoURI"
+    return "$protocol://$hostWithoutTrailingSlash$basePathWithLeadingSlash/realms/$realm$keycloakUserInfoURI"
   }
 
   fun getServerUrl(): String = "$protocol://$host$basePath"

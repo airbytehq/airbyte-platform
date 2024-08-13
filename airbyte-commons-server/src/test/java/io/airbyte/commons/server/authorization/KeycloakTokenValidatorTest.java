@@ -2,7 +2,7 @@
  * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
-package io.airbyte.server;
+package io.airbyte.commons.server.authorization;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
@@ -10,8 +10,6 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import io.airbyte.commons.auth.config.AirbyteKeycloakConfiguration;
-import io.airbyte.commons.server.support.RbacRoleHelper;
-import io.airbyte.server.pro.KeycloakTokenValidator;
 import io.micronaut.http.HttpHeaders;
 import io.micronaut.http.HttpRequest;
 import io.micronaut.http.netty.NettyHttpHeaders;
@@ -60,7 +58,7 @@ class KeycloakTokenValidatorTest {
   private KeycloakTokenValidator keycloakTokenValidator;
   private OkHttpClient httpClient;
   private AirbyteKeycloakConfiguration keycloakConfiguration;
-  private RbacRoleHelper rbacRoleHelper;
+  private TokenRoleResolver tokenRoleResolver;
 
   @BeforeEach
   void setUp() {
@@ -71,10 +69,10 @@ class KeycloakTokenValidatorTest {
     httpClient = mock(OkHttpClient.class);
 
     keycloakConfiguration = mock(AirbyteKeycloakConfiguration.class);
-    when(keycloakConfiguration.getKeycloakUserInfoEndpoint()).thenReturn(LOCALHOST + URI_PATH);
-    rbacRoleHelper = mock(RbacRoleHelper.class);
+    when(keycloakConfiguration.getKeycloakUserInfoEndpointForRealm(any())).thenReturn(LOCALHOST + URI_PATH);
+    tokenRoleResolver = mock(TokenRoleResolver.class);
 
-    keycloakTokenValidator = new KeycloakTokenValidator(httpClient, keycloakConfiguration, rbacRoleHelper);
+    keycloakTokenValidator = new KeycloakTokenValidator(httpClient, keycloakConfiguration, tokenRoleResolver);
   }
 
   @Test
@@ -107,7 +105,7 @@ class KeycloakTokenValidatorTest {
     final Set<String> mockedRoles =
         Set.of("ORGANIZATION_ADMIN", "ORGANIZATION_EDITOR", "ORGANIZATION_READER", "ORGANIZATION_MEMBER", "ADMIN", "EDITOR", "READER");
 
-    when(rbacRoleHelper.getRbacRoles(eq(expectedUserId), any(HttpRequest.class)))
+    when(tokenRoleResolver.resolveRoles(eq(expectedUserId), any(HttpRequest.class)))
         .thenReturn(mockedRoles);
 
     StepVerifier.create(responsePublisher)
