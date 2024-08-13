@@ -5,7 +5,7 @@ data:
   {% for host in allowedHosts %}
     - "{{ host }}"
   {% endfor %}
-  registries:
+  registryOverrides:
     oss:
       enabled: true
     cloud:
