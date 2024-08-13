@@ -176,7 +176,7 @@ public class CatalogConverter {
       }
       for (final String selectedFieldName : selectedFieldNames) {
         if (!properties.has(selectedFieldName)) {
-          throw new JsonValidationException(String.format("Requested selected field %s not found in JSON schema", selectedFieldName));
+          LOGGER.info("Requested selected field {} not found in JSON schema", selectedFieldName);
         }
       }
       ((ObjectNode) properties).retain(selectedFieldNames);
