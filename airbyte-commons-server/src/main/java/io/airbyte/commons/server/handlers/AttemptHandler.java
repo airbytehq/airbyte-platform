@@ -4,6 +4,8 @@
 
 package io.airbyte.commons.server.handlers;
 
+import static io.airbyte.commons.logging.LogMdcHelperKt.DEFAULT_LOG_FILENAME;
+
 import com.google.common.annotations.VisibleForTesting;
 import io.airbyte.api.model.generated.AttemptInfoRead;
 import io.airbyte.api.model.generated.AttemptStats;
@@ -37,7 +39,6 @@ import io.airbyte.config.StreamDescriptor;
 import io.airbyte.config.StreamSyncStats;
 import io.airbyte.config.SyncMode;
 import io.airbyte.config.SyncStats;
-import io.airbyte.config.helpers.LogClientSingleton;
 import io.airbyte.config.persistence.ActorDefinitionVersionHelper;
 import io.airbyte.config.persistence.StatePersistence;
 import io.airbyte.config.persistence.helper.GenerationBumper;
@@ -118,7 +119,7 @@ public class AttemptHandler {
     }
 
     final Path jobRoot = TemporalUtils.getJobRoot(workspaceRoot, String.valueOf(jobId), job.getAttemptsCount());
-    final Path logFilePath = jobRoot.resolve(LogClientSingleton.LOG_FILENAME);
+    final Path logFilePath = jobRoot.resolve(DEFAULT_LOG_FILENAME);
     final int persistedAttemptNumber = jobPersistence.createAttempt(jobId, logFilePath);
 
     final UUID connectionId = UUID.fromString(job.getScope());

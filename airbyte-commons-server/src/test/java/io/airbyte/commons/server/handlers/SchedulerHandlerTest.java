@@ -66,6 +66,7 @@ import io.airbyte.api.model.generated.SynchronousJobRead;
 import io.airbyte.commons.enums.Enums;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.commons.lang.Exceptions;
+import io.airbyte.commons.logging.LogClientManager;
 import io.airbyte.commons.server.converters.ConfigurationUpdate;
 import io.airbyte.commons.server.converters.JobConverter;
 import io.airbyte.commons.server.errors.ValueConflictKnownException;
@@ -85,7 +86,6 @@ import io.airbyte.commons.version.Version;
 import io.airbyte.config.ActorCatalog;
 import io.airbyte.config.ActorDefinitionResourceRequirements;
 import io.airbyte.config.ActorDefinitionVersion;
-import io.airbyte.config.Configs.WorkerEnvironment;
 import io.airbyte.config.ConnectorJobOutput;
 import io.airbyte.config.DestinationConnection;
 import io.airbyte.config.Job;
@@ -106,7 +106,6 @@ import io.airbyte.config.StandardSyncOperation;
 import io.airbyte.config.StandardWorkspace;
 import io.airbyte.config.StreamDescriptor;
 import io.airbyte.config.WorkloadPriority;
-import io.airbyte.config.helpers.LogConfigs;
 import io.airbyte.config.persistence.ActorDefinitionVersionHelper;
 import io.airbyte.config.persistence.ConfigNotFoundException;
 import io.airbyte.config.persistence.ConfigRepository;
@@ -263,6 +262,7 @@ class SchedulerHandlerTest {
   private StreamRefreshesHandler streamRefreshesHandler;
   private NotificationHelper notificationHelper;
   private ConnectionTimelineEventHelper connectionTimelineEventHelper;
+  private LogClientManager logClientManager;
 
   @BeforeEach
   void setup() throws JsonValidationException, ConfigNotFoundException, IOException {
@@ -299,8 +299,9 @@ class SchedulerHandlerTest {
     jobNotifier = mock(JobNotifier.class);
     jobTracker = mock(JobTracker.class);
     connectorDefinitionSpecificationHandler = mock(ConnectorDefinitionSpecificationHandler.class);
+    logClientManager = mock(LogClientManager.class);
 
-    jobConverter = spy(new JobConverter(WorkerEnvironment.DOCKER, LogConfigs.EMPTY, new TestClient()));
+    jobConverter = spy(new JobConverter(logClientManager));
 
     featureFlagClient = mock(TestClient.class);
     workspaceService = mock(WorkspaceService.class);

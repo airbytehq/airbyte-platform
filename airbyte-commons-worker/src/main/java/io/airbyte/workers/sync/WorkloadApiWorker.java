@@ -4,7 +4,6 @@
 
 package io.airbyte.workers.sync;
 
-import static io.airbyte.config.helpers.LogClientSingleton.fullLogPath;
 import static io.airbyte.metrics.lib.MetricEmittingApps.WORKLOAD_LAUNCHER;
 
 import dev.failsafe.Failsafe;
@@ -14,6 +13,7 @@ import io.airbyte.api.client.AirbyteApiClient;
 import io.airbyte.api.client.model.generated.ConnectionIdRequestBody;
 import io.airbyte.api.client.model.generated.Geography;
 import io.airbyte.commons.json.Jsons;
+import io.airbyte.commons.logging.LogClientManager;
 import io.airbyte.config.ReplicationOutput;
 import io.airbyte.featureflag.Connection;
 import io.airbyte.featureflag.Context;
@@ -78,6 +78,7 @@ public class WorkloadApiWorker implements Worker<ReplicationInput, ReplicationOu
   private final WorkloadIdGenerator workloadIdGenerator;
   private final ReplicationActivityInput input;
   private final FeatureFlagClient featureFlagClient;
+  private final LogClientManager logClientManager;
 
   private String workloadId = null;
 
@@ -87,7 +88,8 @@ public class WorkloadApiWorker implements Worker<ReplicationInput, ReplicationOu
                            final WorkloadClient workloadClient,
                            final WorkloadIdGenerator workloadIdGenerator,
                            final ReplicationActivityInput input,
-                           final FeatureFlagClient featureFlagClient) {
+                           final FeatureFlagClient featureFlagClient,
+                           final LogClientManager logClientManager) {
     this.jobOutputDocStore = jobOutputDocStore;
     this.apiClient = apiClient;
     this.workloadApiClient = workloadApiClient;
@@ -95,6 +97,7 @@ public class WorkloadApiWorker implements Worker<ReplicationInput, ReplicationOu
     this.workloadIdGenerator = workloadIdGenerator;
     this.input = input;
     this.featureFlagClient = featureFlagClient;
+    this.logClientManager = logClientManager;
   }
 
   @Override
@@ -121,7 +124,7 @@ public class WorkloadApiWorker implements Worker<ReplicationInput, ReplicationOu
             new WorkloadLabel(Metadata.WORKSPACE_LABEL_KEY, replicationInput.getWorkspaceId().toString()),
             new WorkloadLabel(Metadata.WORKER_POD_LABEL_KEY, Metadata.WORKER_POD_LABEL_VALUE)),
         serializedInput,
-        fullLogPath(jobRoot),
+        logClientManager.fullLogPath(jobRoot),
         geo.getValue(),
         WorkloadType.SYNC,
         WorkloadPriority.DEFAULT,

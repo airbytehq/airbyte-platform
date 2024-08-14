@@ -5,8 +5,6 @@
 package io.airbyte.config;
 
 import io.airbyte.commons.version.AirbyteVersion;
-import io.airbyte.config.helpers.LogConfigs;
-import io.airbyte.config.storage.CloudStorageConfigs;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.Map;
@@ -159,14 +157,6 @@ public interface Configs {
    * Define the Job pod socat image.
    */
   String getSocatSidecarKubeCpuRequest();
-
-  // Logging/Monitoring/Tracking
-
-  /**
-   * Define either S3, Minio or GCS as a logging backend. Kubernetes only. Multiple variables are
-   * involved here. Please see {@link CloudStorageConfigs} for more info.
-   */
-  LogConfigs getLogConfigs();
 
   /**
    * Worker environment.

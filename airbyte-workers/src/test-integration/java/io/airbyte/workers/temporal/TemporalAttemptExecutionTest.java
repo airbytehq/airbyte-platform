@@ -17,6 +17,7 @@ import static org.mockito.Mockito.when;
 
 import io.airbyte.api.client.AirbyteApiClient;
 import io.airbyte.api.client.generated.AttemptApi;
+import io.airbyte.commons.logging.LogClientManager;
 import io.airbyte.config.Configs;
 import io.airbyte.db.instance.DatabaseConstants;
 import io.airbyte.persistence.job.models.JobRunConfig;
@@ -58,6 +59,9 @@ class TemporalAttemptExecutionTest {
   @Mock
   private AttemptApi attemptApi;
 
+  @Mock
+  private LogClientManager logClientManager;
+
   @BeforeAll
   static void setUpAll() {
     container = new PostgreSQLContainer<>(DatabaseConstants.DEFAULT_DATABASE_VERSION)
@@ -87,7 +91,8 @@ class TemporalAttemptExecutionTest {
         mdcSetter,
         airbyteApiClient,
         () -> "workflow_id", configs.getAirbyteVersionOrWarning(),
-        Optional.of("SYNC"));
+        Optional.of("SYNC"),
+        logClientManager);
   }
 
   @AfterAll

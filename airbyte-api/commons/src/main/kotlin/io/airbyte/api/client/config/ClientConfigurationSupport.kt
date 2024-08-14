@@ -11,7 +11,6 @@ import okhttp3.HttpUrl
 import okhttp3.Response
 import java.lang.Exception
 import java.time.Duration
-import java.util.Optional
 
 private val logger = KotlinLogging.logger {}
 
@@ -20,7 +19,7 @@ object ClientConfigurationSupport {
     retryDelaySeconds: Long,
     jitterFactor: Double,
     maxRetries: Int,
-    meterRegistry: Optional<MeterRegistry>,
+    meterRegistry: MeterRegistry?,
     metricPrefix: String,
     clientRetryExceptions: List<Class<out Exception>> = listOf(),
   ): RetryPolicy<Response> {
@@ -30,7 +29,7 @@ object ClientConfigurationSupport {
       // TODO move these metrics into a centralized metric registry as part of the MetricClient refactor/cleanup
       .onAbort { l ->
         logger.warn { "Attempt aborted.  Attempt count ${l.attemptCount}" }
-        meterRegistry.ifPresent {
+        meterRegistry?.let {
             r ->
           r.counter(
             "$metricPrefix.abort",
@@ -42,7 +41,7 @@ object ClientConfigurationSupport {
       }
       .onFailure { l ->
         logger.error(l.exception) { "Failed to call ${l.result?.request?.url ?: UNKNOWN}.  Last response: ${l.result}" }
-        meterRegistry.ifPresent {
+        meterRegistry?.let {
             r ->
           r.counter(
             "$metricPrefix.failure",
@@ -54,7 +53,7 @@ object ClientConfigurationSupport {
       }
       .onRetry { l ->
         logger.warn { "Retry attempt ${l.attemptCount} of $maxRetries. Last response: ${l.lastResult}" }
-        meterRegistry.ifPresent {
+        meterRegistry?.let {
             r ->
           r.counter(
             "$metricPrefix.retry",
@@ -66,7 +65,7 @@ object ClientConfigurationSupport {
       }
       .onRetriesExceeded { l ->
         logger.error(l.exception) { "Retry attempts exceeded." }
-        meterRegistry.ifPresent {
+        meterRegistry?.let {
             r ->
           r.counter(
             "$metricPrefix.retries_exceeded",
@@ -78,7 +77,7 @@ object ClientConfigurationSupport {
       }
       .onSuccess { l ->
         logger.debug { "Successfully called ${l.result.request.url}.  Response: ${l.result}, isRetry: ${l.isRetry}" }
-        meterRegistry.ifPresent {
+        meterRegistry?.let {
             r ->
           r.counter(
             "$metricPrefix.success",

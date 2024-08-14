@@ -65,6 +65,7 @@ public class MetricTags {
   public static final String WORKLOAD_TYPE = "workload_type";
   public static final String UNKNOWN = "unknown";
   public static final String USER_TYPE = "user_type"; // real user, service account, data plane user, etc
+  public static final String LOG_CLIENT_TYPE = "log_client_type";
 
   // payload metric tags
   public static final String URI_NULL = "uri_null";

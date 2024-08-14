@@ -6,15 +6,15 @@ package io.airbyte.workers.temporal.discover.catalog
 import io.airbyte.api.client.AirbyteApiClient
 import io.airbyte.api.client.generated.ConnectionApi
 import io.airbyte.api.client.model.generated.Geography
+import io.airbyte.commons.logging.DEFAULT_LOG_FILENAME
+import io.airbyte.commons.logging.LogClientManager
 import io.airbyte.commons.protocol.AirbyteMessageSerDeProvider
 import io.airbyte.commons.protocol.AirbyteProtocolVersionedMigratorFactory
 import io.airbyte.commons.workers.config.WorkerConfigsProvider
 import io.airbyte.config.ActorContext
-import io.airbyte.config.Configs.WorkerEnvironment
 import io.airbyte.config.ConnectorJobOutput
 import io.airbyte.config.StandardDiscoverCatalogInput
 import io.airbyte.config.WorkloadPriority
-import io.airbyte.config.helpers.LogConfigs
 import io.airbyte.config.secrets.SecretsRepositoryReader
 import io.airbyte.featureflag.FeatureFlagClient
 import io.airbyte.featureflag.TestClient
@@ -49,8 +49,6 @@ class DiscoverCatalogActivityTest {
   private val processFactory: ProcessFactory = mockk()
   private val secretsRepositoryReader: SecretsRepositoryReader = mockk()
   private val workspaceRoot: Path = Path.of("workspace-root")
-  private val workerEnvironment: WorkerEnvironment = mockk()
-  private val logConfigs: LogConfigs = mockk()
   private val airbyteApiClient: AirbyteApiClient = mockk()
   private val airbyteVersion = ""
   private val serDeProvider: AirbyteMessageSerDeProvider = mockk()
@@ -63,6 +61,7 @@ class DiscoverCatalogActivityTest {
   private val workloadApiClient: WorkloadApiClient = mockk()
   private val workloadIdGenerator: WorkloadIdGenerator = mockk()
   private val jobOutputDocStore: JobOutputDocStore = mockk()
+  private val logClientManager: LogClientManager = mockk()
   private lateinit var discoverCatalogActivity: DiscoverCatalogActivityImpl
 
   @BeforeEach
@@ -76,8 +75,6 @@ class DiscoverCatalogActivityTest {
           processFactory,
           secretsRepositoryReader,
           workspaceRoot,
-          workerEnvironment,
-          logConfigs,
           airbyteApiClient,
           airbyteVersion,
           serDeProvider,
@@ -87,9 +84,11 @@ class DiscoverCatalogActivityTest {
           gsonPksExtractor,
           WorkloadClient(workloadApiClient, jobOutputDocStore),
           workloadIdGenerator,
+          logClientManager,
         ),
       )
     every { discoverCatalogActivity.activityContext } returns mockk()
+    every { logClientManager.fullLogPath(any()) } answers { Path.of(invocation.args[0].toString(), DEFAULT_LOG_FILENAME).toString() }
   }
 
   @ParameterizedTest

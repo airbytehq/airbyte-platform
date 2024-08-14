@@ -14,7 +14,6 @@ dependencies {
 
   api(libs.bundles.micronaut.annotation)
   api(libs.micronaut.http)
-  api(libs.bundles.micronaut.metrics)
   api(libs.failsafe.okhttp)
   api(libs.okhttp)
   api(libs.guava)
@@ -24,6 +23,7 @@ dependencies {
   api(libs.jackson.kotlin)
   api(libs.moshi.kotlin)
   api(project(":oss:airbyte-config:config-models"))
+  api(project(":oss:airbyte-metrics:metrics-lib"))
 
   implementation(platform(libs.micronaut.platform))
   implementation(libs.bundles.micronaut)

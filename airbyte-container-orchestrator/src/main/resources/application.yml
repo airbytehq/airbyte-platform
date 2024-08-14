@@ -147,6 +147,7 @@ airbyte:
       max: ${WORKLOAD_API_MAX_RETRIES:5}
   workload:
     enabled: false
+  workspace-root: ${WORKSPACE_ROOT}
 
 endpoints:
   beans:

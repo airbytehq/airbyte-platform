@@ -11,13 +11,6 @@ import io.airbyte.commons.envvar.EnvVar;
 import io.airbyte.commons.lang.Exceptions;
 import io.airbyte.commons.map.MoreMaps;
 import io.airbyte.commons.version.AirbyteVersion;
-import io.airbyte.config.helpers.LogConfigs;
-import io.airbyte.config.storage.GcsStorageConfig;
-import io.airbyte.config.storage.LocalStorageConfig;
-import io.airbyte.config.storage.MinioStorageConfig;
-import io.airbyte.config.storage.S3StorageConfig;
-import io.airbyte.config.storage.StorageBucketConfig;
-import io.airbyte.config.storage.StorageConfig;
 import java.nio.file.Path;
 import java.util.Arrays;
 import java.util.List;
@@ -80,34 +73,6 @@ public class EnvConfigs implements Configs {
   public EnvConfigs(final Map<String, String> envMap) {
     this.getEnv = envMap::get;
     this.getAllEnvKeys = envMap::keySet;
-  }
-
-  private StorageConfig getLogConfiguration() {
-    final var buckets = new StorageBucketConfig(
-        getEnsureEnv(EnvVar.STORAGE_BUCKET_LOG),
-        getEnsureEnv(EnvVar.STORAGE_BUCKET_STATE),
-        getEnsureEnv(EnvVar.STORAGE_BUCKET_WORKLOAD_OUTPUT),
-        getEnsureEnv(EnvVar.STORAGE_BUCKET_ACTIVITY_PAYLOAD));
-
-    return switch (getEnsureEnv(EnvVar.STORAGE_TYPE)) {
-      case "GCS" -> new GcsStorageConfig(
-          buckets,
-          getEnsureEnv(EnvVar.GOOGLE_APPLICATION_CREDENTIALS));
-      case "LOCAL" -> new LocalStorageConfig(
-          buckets,
-          getEnv(EnvVar.LOCAL_ROOT));
-      case "MINIO" -> new MinioStorageConfig(
-          buckets,
-          getEnsureEnv(EnvVar.AWS_ACCESS_KEY_ID),
-          getEnsureEnv(EnvVar.AWS_ACCESS_KEY_ID),
-          getEnsureEnv(EnvVar.AWS_DEFAULT_REGION));
-      case "S3" -> new S3StorageConfig(
-          buckets,
-          getEnsureEnv(EnvVar.AWS_ACCESS_KEY_ID),
-          getEnsureEnv(EnvVar.AWS_ACCESS_KEY_ID),
-          getEnsureEnv(EnvVar.AWS_DEFAULT_REGION));
-      default -> throw new IllegalArgumentException(EnvVar.STORAGE_TYPE.name() + " has is an unsupported value");
-    };
   }
 
   // CORE
@@ -340,11 +305,6 @@ public class EnvConfigs implements Configs {
         Entry::getKey,
         entry -> Exceptions.swallowWithDefault(() -> Objects.requireNonNullElse(entry.getValue().apply(this), ""), "")));
     return MoreMaps.merge(jobPrefixedEnvMap, jobSharedEnvMap);
-  }
-
-  @Override
-  public LogConfigs getLogConfigs() {
-    return new LogConfigs(getLogConfiguration());
   }
 
   // Helpers

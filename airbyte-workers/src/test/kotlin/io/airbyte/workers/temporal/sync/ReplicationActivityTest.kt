@@ -2,18 +2,16 @@ package io.airbyte.workers.temporal.sync
 
 import io.airbyte.api.client.AirbyteApiClient
 import io.airbyte.commons.functional.CheckedSupplier
+import io.airbyte.commons.logging.LogClientManager
 import io.airbyte.commons.temporal.utils.PayloadChecker
-import io.airbyte.config.Configs.WorkerEnvironment
 import io.airbyte.config.ConfiguredAirbyteCatalog
 import io.airbyte.config.ReplicationOutput
 import io.airbyte.config.State
-import io.airbyte.config.helpers.LogConfigs
 import io.airbyte.featureflag.FeatureFlagClient
 import io.airbyte.metrics.lib.MetricClient
 import io.airbyte.persistence.job.models.ReplicationInput
 import io.airbyte.workers.ReplicationInputHydrator
 import io.airbyte.workers.Worker
-import io.airbyte.workers.helper.ResumableFullRefreshStatsHelper
 import io.airbyte.workers.orchestrator.OrchestratorHandleFactory
 import io.airbyte.workers.storage.activities.OutputStorageClient
 import io.airbyte.workers.sync.WorkloadClient
@@ -30,8 +28,6 @@ import java.nio.file.Path
 class ReplicationActivityTest {
   val replicationInputHydrator: ReplicationInputHydrator = mockk()
   val workspaceRoot: Path = mockk()
-  val workerEnvironment: WorkerEnvironment = mockk()
-  val logConfigs: LogConfigs = mockk()
   val airbyteVersion: String = "version"
   val airbyteApiClient: AirbyteApiClient = mockk()
   val workloadApiClient: WorkloadApiClient = mockk()
@@ -44,15 +40,13 @@ class ReplicationActivityTest {
   val payloadChecker: PayloadChecker = mockk()
   val stateStorageClient: OutputStorageClient<State> = mockk()
   val catalogStorageClient: OutputStorageClient<ConfiguredAirbyteCatalog> = mockk()
-  val resumableFullRefreshStatsHelper: ResumableFullRefreshStatsHelper = mockk()
+  val logClientManager: LogClientManager = mockk()
 
   val replicationActivity =
     spyk(
       ReplicationActivityImpl(
         replicationInputHydrator,
         workspaceRoot,
-        workerEnvironment,
-        logConfigs,
         airbyteVersion,
         airbyteApiClient,
         jobOutputDocStore,
@@ -65,7 +59,7 @@ class ReplicationActivityTest {
         payloadChecker,
         stateStorageClient,
         catalogStorageClient,
-        resumableFullRefreshStatsHelper,
+        logClientManager,
       ),
     )
 
