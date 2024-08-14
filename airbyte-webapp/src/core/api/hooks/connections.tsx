@@ -139,13 +139,13 @@ export const useListConnectionEventsInfinite = (
   );
 };
 
-export const useGetConnectionEvent = (connectionEventId: string | null) => {
+export const useGetConnectionEvent = (connectionEventId: string | null, connectionId: string) => {
   const requestOptions = useRequestOptions();
 
   return useQuery(
     connectionsKeys.event(connectionEventId ?? ""),
     async () => {
-      return await getConnectionEvent({ connectionEventId: connectionEventId ?? "" }, requestOptions);
+      return await getConnectionEvent({ connectionEventId: connectionEventId ?? "", connectionId }, requestOptions);
     },
     {
       enabled: !!connectionEventId,

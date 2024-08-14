@@ -30,12 +30,14 @@ export const openJobLogsModalFromTimeline = ({
   eventId,
   connectionName,
   attemptNumber,
+  connectionId,
 }: {
   openModal: <ResultType>(options: ModalOptions<ResultType>) => Promise<ModalResult<ResultType>>;
   jobId?: number;
   eventId?: string;
   connectionName: string;
   attemptNumber?: number;
+  connectionId: string;
 }) => {
   if (!jobId && !eventId) {
     return;
@@ -52,7 +54,12 @@ export const openJobLogsModalFromTimeline = ({
           </div>
         }
       >
-        <JobLogsModalContent jobId={jobId} attemptNumber={attemptNumber} eventId={eventId} />
+        <JobLogsModalContent
+          jobId={jobId}
+          attemptNumber={attemptNumber}
+          eventId={eventId}
+          connectionId={connectionId}
+        />
       </Suspense>
     ),
   });
@@ -75,6 +82,7 @@ export const JobEventMenu: React.FC<{ eventId?: string; jobId: number }> = ({ ev
           jobId,
           eventId,
           connectionName: connection.name,
+          connectionId: connection.connectionId,
         });
         break;
 

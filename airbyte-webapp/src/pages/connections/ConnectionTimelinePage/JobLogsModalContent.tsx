@@ -6,8 +6,9 @@ export const JobLogsModalContent: React.FC<{
   jobId?: number;
   attemptNumber?: number;
   resetFilters?: () => void;
-}> = ({ eventId, jobId, attemptNumber, resetFilters }) => {
-  const { data: singleEventItem } = useGetConnectionEvent(eventId ?? null);
+  connectionId: string;
+}> = ({ eventId, jobId, attemptNumber, resetFilters, connectionId }) => {
+  const { data: singleEventItem } = useGetConnectionEvent(eventId ?? null, connectionId);
 
   const jobIdFromEvent = singleEventItem?.summary.jobId;
 

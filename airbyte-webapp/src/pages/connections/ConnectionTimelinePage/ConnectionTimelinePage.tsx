@@ -20,8 +20,8 @@ import { ConnectionTimelineFilters } from "./ConnectionTimelineFilters";
 import { openJobLogsModalFromTimeline } from "./JobEventMenu";
 import { TimelineFilterValues } from "./utils";
 
-const OneEventItem: React.FC<{ eventId: string }> = ({ eventId }) => {
-  const { data: singleEventItem } = useGetConnectionEvent(eventId);
+const OneEventItem: React.FC<{ eventId: string; connectionId: string }> = ({ eventId, connectionId }) => {
+  const { data: singleEventItem } = useGetConnectionEvent(eventId, connectionId);
   return singleEventItem ? <EventLineItem event={singleEventItem} /> : null;
 };
 
@@ -52,6 +52,7 @@ export const ConnectionTimelinePage = () => {
       eventId: filterValues.eventId,
       connectionName: connection.name,
       attemptNumber: !isNaN(attemptNumberFromFilter) ? attemptNumberFromFilter : undefined,
+      connectionId: connection.connectionId,
     });
   }
 
@@ -77,7 +78,7 @@ export const ConnectionTimelinePage = () => {
                 </FlexContainer>
               </Box>
               {filterValues.eventId ? (
-                <OneEventItem eventId={filterValues.eventId} />
+                <OneEventItem eventId={filterValues.eventId} connectionId={connection.connectionId} />
               ) : (
                 <ConnectionTimelineAllEventsList filterValues={filterValues} scrollElement={scrollElement} />
               )}
