@@ -126,6 +126,9 @@ airbyte:
       base-url: ${CONNECTOR_REGISTRY_BASE_URL:}
       timeout-ms: ${CONNECTOR_REGISTRY_TIMEOUT_MS:30000}
   deployment-mode: ${DEPLOYMENT_MODE:OSS}
+  support-email-domains:
+    oss: ""
+    cloud: "airbyte.io"
   feature-flag:
     client: ${FEATURE_FLAG_CLIENT:}
     path: ${FEATURE_FLAG_PATH:/flags}

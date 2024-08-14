@@ -9122,8 +9122,7 @@ components:
     UserReadInConnectionEvent:
       type: object
       required:
-        - id
-        - email
+        - isDeleted
       properties:
         id:
           type: string
@@ -9133,6 +9132,9 @@ components:
           format: email
         name:
           type: string
+        isDeleted:
+          type: boolean
+          default: false
     ConnectionEvent:
       type: object
       required:

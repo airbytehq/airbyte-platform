@@ -15,6 +15,7 @@ import io.airbyte.commons.temporal.TemporalClient;
 import io.airbyte.commons.version.AirbyteProtocolVersionRange;
 import io.airbyte.commons.version.Version;
 import io.airbyte.commons.workers.config.WorkerConfigsProvider;
+import io.airbyte.config.Configs.DeploymentMode;
 import io.airbyte.config.persistence.ActorDefinitionVersionHelper;
 import io.airbyte.config.persistence.ConfigInjector;
 import io.airbyte.config.persistence.ConfigRepository;
@@ -42,9 +43,13 @@ import jakarta.inject.Named;
 import jakarta.inject.Singleton;
 import java.net.http.HttpClient;
 import java.nio.file.Path;
+import java.util.Arrays;
 import java.util.List;
+import java.util.Objects;
+import java.util.Set;
 import java.util.UUID;
 import java.util.function.Supplier;
+import java.util.stream.Collectors;
 
 /**
  * Bean factory for the airbyte server micronaut app.
@@ -133,6 +138,22 @@ public class ApplicationBeanFactory {
   @Named("workspaceRoot")
   public Path workspaceRoot(@Value("${airbyte.workspace.root}") final String workspaceRoot) {
     return Path.of(workspaceRoot);
+  }
+
+  @Singleton
+  @Named("airbyteSupportEmailDomains")
+  public Set<String> airbyteSupportEmailDomains(
+                                                @Value("${airbyte.deployment-mode}") final String deployMode,
+                                                @Value("${airbyte.support-email-domains.oss}") final String ossSupportEmailDomains,
+                                                @Value("${airbyte.support-email-domains.cloud}") final String cloudSupportEmailDomains) {
+    final String supportEmailDomains = Objects.equals(deployMode, DeploymentMode.OSS.name()) ? ossSupportEmailDomains : cloudSupportEmailDomains;
+    if (supportEmailDomains.isEmpty()) {
+      return Set.of();
+    }
+    return Arrays.stream(supportEmailDomains.split(","))
+        .map(String::trim)
+        .filter(s -> !s.isEmpty())
+        .collect(Collectors.toSet());
   }
 
   @Singleton

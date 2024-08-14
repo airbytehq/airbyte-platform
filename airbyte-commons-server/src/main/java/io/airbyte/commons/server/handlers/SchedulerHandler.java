@@ -780,7 +780,7 @@ public class SchedulerHandler {
     for (final Attempt attempt : job.getAttempts()) {
       attemptStats.add(jobPersistence.getAttemptStats(jobId, attempt.getAttemptNumber()));
     }
-    connectionTimelineEventHelper.logJobCancellationEventInConnectionTimeline(job, UUID.fromString(job.getScope()), attemptStats);
+    connectionTimelineEventHelper.logJobCancellationEventInConnectionTimeline(job, attemptStats);
     // query same job ID again to get updated job info after cancellation
     return jobConverter.getJobInfoRead(jobPersistence.getJob(jobId));
   }

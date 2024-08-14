@@ -78,7 +78,6 @@ import io.airbyte.commons.server.scheduler.EventRunner;
 import io.airbyte.commons.server.scheduler.SynchronousJobMetadata;
 import io.airbyte.commons.server.scheduler.SynchronousResponse;
 import io.airbyte.commons.server.scheduler.SynchronousSchedulerClient;
-import io.airbyte.commons.server.support.CurrentUserService;
 import io.airbyte.commons.temporal.ErrorCode;
 import io.airbyte.commons.temporal.JobMetadata;
 import io.airbyte.commons.temporal.TemporalClient.ManualOperationResult;
@@ -114,7 +113,6 @@ import io.airbyte.config.persistence.ConfigRepository;
 import io.airbyte.config.persistence.StreamResetPersistence;
 import io.airbyte.config.persistence.domain.StreamRefresh;
 import io.airbyte.config.secrets.SecretsRepositoryWriter;
-import io.airbyte.data.services.ConnectionTimelineEventService;
 import io.airbyte.data.services.SecretPersistenceConfigService;
 import io.airbyte.data.services.WorkspaceService;
 import io.airbyte.db.instance.configs.jooq.generated.enums.RefreshType;
@@ -262,8 +260,6 @@ class SchedulerHandlerTest {
   private ConnectorDefinitionSpecificationHandler connectorDefinitionSpecificationHandler;
   private WorkspaceService workspaceService;
   private SecretPersistenceConfigService secretPersistenceConfigService;
-  private ConnectionTimelineEventService connectionEventService;
-  private CurrentUserService currentUserService;
   private StreamRefreshesHandler streamRefreshesHandler;
   private NotificationHelper notificationHelper;
   private ConnectionTimelineEventHelper connectionTimelineEventHelper;
@@ -309,8 +305,6 @@ class SchedulerHandlerTest {
     featureFlagClient = mock(TestClient.class);
     workspaceService = mock(WorkspaceService.class);
     secretPersistenceConfigService = mock(SecretPersistenceConfigService.class);
-    connectionEventService = mock(ConnectionTimelineEventService.class);
-    currentUserService = mock(CurrentUserService.class);
 
     when(connectorDefinitionSpecificationHandler.getDestinationSpecification(any())).thenReturn(new DestinationDefinitionSpecificationRead()
         .supportedDestinationSyncModes(

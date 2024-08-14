@@ -88,6 +88,7 @@ import io.airbyte.commons.server.errors.BadRequestException;
 import io.airbyte.commons.server.handlers.helpers.ActorDefinitionHandlerHelper;
 import io.airbyte.commons.server.handlers.helpers.AutoPropagateSchemaChangeHelper;
 import io.airbyte.commons.server.handlers.helpers.CatalogConverter;
+import io.airbyte.commons.server.handlers.helpers.ConnectionTimelineEventHelper;
 import io.airbyte.commons.server.handlers.helpers.NotificationHelper;
 import io.airbyte.commons.server.handlers.helpers.StatsAggregationHelper;
 import io.airbyte.commons.server.helpers.ConnectionHelpers;
@@ -146,7 +147,6 @@ import io.airbyte.config.persistence.ConfigNotFoundException;
 import io.airbyte.config.persistence.ConfigRepository;
 import io.airbyte.config.persistence.StatePersistence;
 import io.airbyte.config.persistence.StreamGenerationRepository;
-import io.airbyte.config.persistence.UserPersistence;
 import io.airbyte.config.persistence.domain.Generation;
 import io.airbyte.config.persistence.helper.CatalogGenerationSetter;
 import io.airbyte.config.secrets.JsonSecretsProcessor;
@@ -275,7 +275,7 @@ class ConnectionsHandlerTest {
   private NotificationHelper notificationHelper;
   private StreamStatusesService streamStatusesService;
   private ConnectionTimelineEventService connectionTimelineEventService;
-  private UserPersistence userPersistence;
+  private ConnectionTimelineEventHelper connectionTimelineEventHelper;
   private StatePersistence statePersistence;
 
   @SuppressWarnings("unchecked")
@@ -385,7 +385,7 @@ class ConnectionsHandlerTest {
     actorDefinitionHandlerHelper = mock(ActorDefinitionHandlerHelper.class);
     streamStatusesService = mock(StreamStatusesService.class);
     connectionTimelineEventService = mock(ConnectionTimelineEventService.class);
-    userPersistence = mock(UserPersistence.class);
+    connectionTimelineEventHelper = mock(ConnectionTimelineEventHelper.class);
     statePersistence = mock(StatePersistence.class);
 
     featureFlagClient = mock(TestClient.class);
@@ -455,7 +455,7 @@ class ConnectionsHandlerTest {
           notificationHelper,
           streamStatusesService,
           connectionTimelineEventService,
-          userPersistence,
+          connectionTimelineEventHelper,
           statePersistence);
 
       when(uuidGenerator.get()).thenReturn(standardSync.getConnectionId());
@@ -1791,7 +1791,7 @@ class ConnectionsHandlerTest {
           notificationHelper,
           streamStatusesService,
           connectionTimelineEventService,
-          userPersistence,
+          connectionTimelineEventHelper,
           statePersistence);
     }
 
@@ -2025,7 +2025,7 @@ class ConnectionsHandlerTest {
           notificationHelper,
           streamStatusesService,
           connectionTimelineEventService,
-          userPersistence,
+          connectionTimelineEventHelper,
           statePersistence);
     }
 
@@ -2533,7 +2533,7 @@ class ConnectionsHandlerTest {
           notificationHelper,
           streamStatusesService,
           connectionTimelineEventService,
-          userPersistence,
+          connectionTimelineEventHelper,
           statePersistence);
     }
 
@@ -2735,7 +2735,7 @@ class ConnectionsHandlerTest {
           notificationHelper,
           streamStatusesService,
           connectionTimelineEventService,
-          userPersistence,
+          connectionTimelineEventHelper,
           statePersistence);
     }
 
