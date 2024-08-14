@@ -19,6 +19,7 @@ import io.airbyte.featureflag.Multi
 import io.airbyte.featureflag.Workspace
 import io.airbyte.protocol.models.AirbyteStateMessage
 import io.airbyte.protocol.models.AirbyteStateStats
+import io.airbyte.protocol.models.AirbyteStreamNameNamespacePair
 import io.airbyte.protocol.models.AirbyteStreamState
 import io.airbyte.protocol.models.StreamDescriptor
 import io.airbyte.workers.exception.InvalidChecksumException
@@ -189,6 +190,7 @@ class StateCheckSumCountEventHandler(
     failOnInvalidChecksum: Boolean,
     checksumValidationEnabled: Boolean,
     includeStreamInLogs: Boolean = true,
+    streamPlatformRecordCounts: Map<AirbyteStreamNameNamespacePair, Long> = emptyMap(),
   ) {
     if (!isStateTypeSupported(stateMessage)) {
       return
@@ -220,26 +222,28 @@ class StateCheckSumCountEventHandler(
           } else {
             if (platformRecordCount != stateRecordCount) {
               misMatchBetweenStateCountAndPlatformCount(
-                origin,
-                stateRecordCount,
-                platformRecordCount,
-                includeStreamInLogs,
-                stateMessage,
-                failOnInvalidChecksum,
-                checksumValidationEnabled,
+                origin = origin,
+                stateRecordCount = stateRecordCount,
+                platformRecordCount = platformRecordCount,
+                includeStreamInLogs = includeStreamInLogs,
+                stateMessage = stateMessage,
+                failOnInvalidChecksum = failOnInvalidChecksum,
+                validData = checksumValidationEnabled,
+                streamPlatformRecordCounts = streamPlatformRecordCounts,
               )
             }
             sourceIsMissingButDestinationIsPresent(stateRecordCount, platformRecordCount, stateMessage, checksumValidationEnabled)
           }
         } else if (stateRecordCount != platformRecordCount) {
           misMatchBetweenStateCountAndPlatformCount(
-            origin,
-            stateRecordCount,
-            platformRecordCount,
-            includeStreamInLogs,
-            stateMessage,
-            failOnInvalidChecksum,
-            checksumValidationEnabled,
+            origin = origin,
+            stateRecordCount = stateRecordCount,
+            platformRecordCount = platformRecordCount,
+            includeStreamInLogs = includeStreamInLogs,
+            stateMessage = stateMessage,
+            failOnInvalidChecksum = failOnInvalidChecksum,
+            validData = checksumValidationEnabled,
+            streamPlatformRecordCounts = streamPlatformRecordCounts,
           )
         } else {
           val shouldIncludeStreamInLogs = includeStreamInLogs || featureFlagClient.boolVariation(LogStateMsgs, Connection(connectionId))
@@ -359,10 +363,19 @@ class StateCheckSumCountEventHandler(
     stateMessage: AirbyteStateMessage,
     failOnInvalidChecksum: Boolean,
     validData: Boolean,
+    streamPlatformRecordCounts: Map<AirbyteStreamNameNamespacePair, Long>,
   ) {
     noCheckSumError = false
     logAndFailIfRequired(
-      stateAndPlatformMismatchMessage(origin, stateRecordCount, platformRecordCount, includeStreamInLogs, stateMessage, validData),
+      stateAndPlatformMismatchMessage(
+        origin = origin,
+        stateRecordCount = stateRecordCount,
+        platformRecordCount = platformRecordCount,
+        includeStreamInLogs = includeStreamInLogs,
+        stateMessage = stateMessage,
+        validData = validData,
+        streamPlatformRecordCounts = streamPlatformRecordCounts,
+      ),
       failOnInvalidChecksum,
       validData,
       origin,
@@ -428,6 +441,7 @@ class StateCheckSumCountEventHandler(
       includeStreamInLogs: Boolean,
       stateMessage: AirbyteStateMessage,
       validData: Boolean,
+      streamPlatformRecordCounts: Map<AirbyteStreamNameNamespacePair, Long>,
     ): String {
       return "${origin.name.lowercase().replaceFirstChar { it.uppercase() }} state message checksum is invalid: state " +
         "record count $stateRecordCount does not equal platform tracked record count $platformRecordCount" +
@@ -440,6 +454,14 @@ class StateCheckSumCountEventHandler(
           " No hash collisions were observed."
         } else {
           " Hash collisions were observed so count comparison result may be wrong."
+        } +
+        if (includeStreamInLogs) {
+          " Observed the following record counts per stream: \n" +
+            streamPlatformRecordCounts.forEach { (name, count) ->
+              " $name : $count\n"
+            }
+        } else {
+          ""
         }
     }
 
