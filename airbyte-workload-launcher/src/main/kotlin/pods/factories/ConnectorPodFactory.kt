@@ -69,16 +69,17 @@ class ConnectorPodFactory(
     }
 
     val connectorResourceReqs = KubePodProcess.getResourceRequirementsBuilder(connectorReqs).build()
+    val internalVolumeMounts = volumeMounts + secretVolumeMounts
 
     val init: Container =
       if (useFetchingInit) {
-        initContainerFactory.createFetching(connectorResourceReqs, volumeMounts, runtimeEnvVars)
+        initContainerFactory.createFetching(connectorResourceReqs, internalVolumeMounts, runtimeEnvVars)
       } else {
-        initContainerFactory.createWaiting(connectorResourceReqs, volumeMounts)
+        initContainerFactory.createWaiting(connectorResourceReqs, internalVolumeMounts)
       }
 
     val main: Container = buildMainContainer(connectorResourceReqs, volumeMounts, kubePodInfo.mainContainerInfo, runtimeEnvVars)
-    val sidecar: Container = buildSidecarContainer(volumeMounts + secretVolumeMounts)
+    val sidecar: Container = buildSidecarContainer(internalVolumeMounts)
 
     // TODO: We should inject the scheduler from the ENV and use this just for overrides
     val schedulerName = featureFlagClient.stringVariation(UseCustomK8sScheduler, Connection(ANONYMOUS))
