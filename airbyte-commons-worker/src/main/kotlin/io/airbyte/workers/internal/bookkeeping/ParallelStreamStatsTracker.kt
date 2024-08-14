@@ -391,9 +391,6 @@ class ParallelStreamStatsTracker(
   private fun getOrCreateStreamStatsTracker(pair: AirbyteStreamNameNamespacePair): StreamStatsTracker {
     // if an entry already exists, return it
     streamTrackers[pair]?.let {
-      if (replicationFeatureFlags?.logStateMsgs == true) {
-        logger.info { "Using existing stats tracker for stream $pair" }
-      }
       return it
     }
 
@@ -403,9 +400,6 @@ class ParallelStreamStatsTracker(
     synchronized(this) {
       // Making sure the stream hasn't been created since the previous check.
       streamTrackers[pair]?.let {
-        if (replicationFeatureFlags?.logStateMsgs == true) {
-          logger.info { "Using existing stats tracker for stream $pair" }
-        }
         return it
       }
 
