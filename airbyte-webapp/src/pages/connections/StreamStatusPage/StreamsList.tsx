@@ -45,7 +45,7 @@ export const StreamsList = forwardRef<HTMLDivElement>((_, outerRef) => {
       }),
       columnHelper.accessor("streamName", {
         header: () => <FormattedMessage id="connection.stream.status.table.streamName" />,
-        cell: (props) => <>{props.cell.getValue()}</>,
+        cell: (props) => <span data-testid="streams-list-name-cell-content">{props.cell.getValue()}</span>,
         meta: { responsive: true },
       }),
       columnHelper.accessor("recordsLoaded", {

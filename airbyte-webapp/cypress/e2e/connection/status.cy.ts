@@ -69,10 +69,10 @@ describe("Status tab", () => {
       cy.get(statusPage.manualSyncButton).should("be.disabled");
 
       // Wait for the job to start
-      cy.get(`[data-loading="true"]`, { timeout: 10000 }).should("exist");
+      cy.get(`[data-testid="connection-status-indicator"][data-loading="true"]`, { timeout: 10000 }).should("exist");
 
       // Wait for the job to complete
-      cy.get(`[data-loading="false"]`, { timeout: 90000 }).should("exist");
+      cy.get(`[data-testid="connection-status-indicator"][data-loading="false"]`, { timeout: 90000 }).should("exist");
 
       cy.get(statusPage.manualSyncButton).should("not.be.disabled");
     });

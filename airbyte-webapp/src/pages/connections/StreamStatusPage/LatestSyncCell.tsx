@@ -29,10 +29,14 @@ export const LatestSyncCell: React.FC<LatestSyncCellProps> = ({
   const minutes = Math.abs(end.diff(start, "minute")) - hours * 60;
 
   if (!activeStatuses.includes(status) && isLoadingHistoricalData) {
-    return <LoadingSpinner />;
+    return (
+      <span data-testid="streams-list-latest-sync-cell-content" data-loading="true">
+        <LoadingSpinner />
+      </span>
+    );
   }
   return (
-    <>
+    <span data-testid="streams-list-latest-sync-cell-content" data-loading="false">
       {!activeStatuses.includes(status) && (
         <Text color="grey" as="span">
           {recordsLoaded !== undefined ? (
@@ -90,6 +94,6 @@ export const LatestSyncCell: React.FC<LatestSyncCellProps> = ({
           )}
         </>
       )}
-    </>
+    </span>
   );
 };
