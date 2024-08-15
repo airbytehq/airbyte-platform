@@ -35,7 +35,6 @@ export const sortStreamsByStatus = (
       [ConnectionStatusIndicatorStatus.Incomplete]: [],
       [ConnectionStatusIndicatorStatus.Pending]: [],
       [ConnectionStatusIndicatorStatus.Synced]: [],
-      [ConnectionStatusIndicatorStatus.Disabled]: [],
       [ConnectionStatusIndicatorStatus.Paused]: [],
       [ConnectionStatusIndicatorStatus.RateLimited]: [],
       [ConnectionStatusIndicatorStatus.Syncing]: [],

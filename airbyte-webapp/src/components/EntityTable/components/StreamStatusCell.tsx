@@ -21,7 +21,6 @@ import { ConnectionTableDataItem } from "../types";
 const FILLING_STYLE_BY_STATUS: Readonly<Record<ConnectionStatusIndicatorStatus, string>> = {
   [ConnectionStatusIndicatorStatus.Failed]: styles["filling--failed"],
   [ConnectionStatusIndicatorStatus.Synced]: styles["filling--upToDate"],
-  [ConnectionStatusIndicatorStatus.Disabled]: styles["filling--disabled"],
   [ConnectionStatusIndicatorStatus.Paused]: styles["filling--disabled"],
   [ConnectionStatusIndicatorStatus.Incomplete]: styles["filling--incomplete"],
   [ConnectionStatusIndicatorStatus.Pending]: styles["filling--pending"],

@@ -1,16 +1,15 @@
 @use "../colors";
 
 $failed: colors.$red;
-$disabled: colors.$grey;
 $incomplete: colors.$yellow;
 $pending: colors.$grey-400;
 $up-to-date: colors.$green;
 $cancelled: colors.$grey-400;
+$paused: colors.$grey;
 $syncing: colors.$blue-400;
 $queued: colors.$blue-50;
-
 $failed-light: colors.$red-40;
-$disabled-light: colors.$grey-100;
+$paused-light: colors.$grey-100;
 $incomplete-light: colors.$yellow-50;
 $pending-light: colors.$grey-100;
 $up-to-date-light: colors.$green-40;
@@ -20,7 +19,7 @@ $queued-light: colors.$foreground;
 
 $by-stream-status:
   "failed" $failed $failed-light,
-  "disabled" $disabled $disabled-light,
+  "paused" $paused $paused-light,
   "incomplete" $incomplete $incomplete-light,
   "pending" $pending $pending-light,
   "upToDate" $up-to-date $up-to-date-light,

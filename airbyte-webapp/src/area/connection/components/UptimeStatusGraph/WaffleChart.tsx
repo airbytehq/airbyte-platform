@@ -58,7 +58,6 @@ const getCellColor = (streamStatus: ConnectionStatusIndicatorStatus): WaffleColo
     case ConnectionStatusIndicatorStatus.RateLimited:
       return "blue";
 
-    case ConnectionStatusIndicatorStatus.Disabled:
     case ConnectionStatusIndicatorStatus.Pending:
     case ConnectionStatusIndicatorStatus.Paused:
     case ConnectionStatusIndicatorStatus.QueuedForNextSync:

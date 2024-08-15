@@ -10,7 +10,6 @@ import { ConnectionStatusIndicatorStatus } from "../ConnectionStatusIndicator";
 
 const ICON_BY_STATUS: Readonly<Record<ConnectionStatusIndicatorStatus, JSX.Element>> = {
   failed: <Icon type="errorFilled" title="error" />,
-  disabled: <Icon type="pauseFilled" title="paused" />,
   paused: <Icon type="pauseFilled" title="paused" />,
   incomplete: <Icon type="warningFilled" title="warning" />,
   pending: <Icon type="pauseFilled" title="pending" />,
@@ -25,8 +24,7 @@ const ICON_BY_STATUS: Readonly<Record<ConnectionStatusIndicatorStatus, JSX.Eleme
 
 const STYLE_BY_STATUS: Readonly<Record<ConnectionStatusIndicatorStatus, string>> = {
   failed: styles["status--failed"],
-  disabled: styles["status--disabled"],
-  paused: styles["status--disabled"],
+  paused: styles["status--paused"],
   incomplete: styles["status--incomplete"],
   pending: styles["status--pending"],
   synced: styles["status--upToDate"],
@@ -40,8 +38,7 @@ const STYLE_BY_STATUS: Readonly<Record<ConnectionStatusIndicatorStatus, string>>
 
 const BOX_STYLE_BY_STATUS: Readonly<Record<ConnectionStatusIndicatorStatus, string>> = {
   failed: styles["status--failed-withBox"],
-  disabled: styles["status--disabled-withBox"],
-  paused: styles["status--disabled-withBox"],
+  paused: styles["status--paused-withBox"],
   incomplete: styles["status--incomplete-withBox"],
   pending: styles["status--pending-withBox"],
   synced: styles["status--upToDate-withBox"],
