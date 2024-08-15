@@ -10,6 +10,8 @@ import io.airbyte.commons.constants.WorkerConstants;
 import io.fabric8.kubernetes.api.model.EnvVar;
 import io.micrometer.common.util.StringUtils;
 import jakarta.validation.constraints.NotNull;
+
+import java.lang.reflect.Array;
 import java.util.List;
 import java.util.Map;
 import org.slf4j.Logger;
@@ -68,30 +70,32 @@ public class ConnectorApmSupportHelper {
   /**
    * Extracts the image name from the provided image string, if the image string uses the following
    * format: {@code <image name>:<image version>}.
+   * Image name may include registry and port number, which is also delimited by ":"
    *
    * @param image The image.
    * @return The name extracted from the image, or the originally provided string if blank.
    */
   public static String getImageName(final String image) {
-    if (StringUtils.isNotEmpty(image)) {
-      return image.split(IMAGE_DELIMITER)[0];
+    final int delimeterIndex = image.lastIndexOf(IMAGE_DELIMITER);
+    if (delimeterIndex >= 0) {
+      return image.substring(0, delimeterIndex);
     }
-
     return image;
   }
 
   /**
    * Extracts the image version from the provided image string, if the image string uses the following
    * format: {@code <image name>:<image version>}.
+   * Image name may include registry and port number, which is also delimited by ":"
    *
    * @param image The image.
    * @return The version extracted from the image, or the originally provided string if blank.
    */
   public static String getImageVersion(final String image) {
-    if (StringUtils.isNotEmpty(image)) {
-      return image.split(IMAGE_DELIMITER)[1];
+    final int delimeterIndex = image.lastIndexOf(IMAGE_DELIMITER);
+    if (delimeterIndex >= 0 && image.length() > delimeterIndex + 1) {
+      return image.substring(delimeterIndex + 1);
     }
-
     return image;
   }
 
