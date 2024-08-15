@@ -1,10 +1,8 @@
-import Validator from "jsonschema";
+import { Validator } from "@cfworker/json-schema";
 import uniq from "lodash/uniq";
 
-import { humanReadableError } from "components/connectorBuilder/humanReadableValidationError";
-
-import type { StreamReadSlicesItemPagesItemRecordsItem } from "core/api/types/ConnectorBuilderClient";
-import type { InlineSchemaLoaderSchema } from "core/api/types/ConnectorManifest";
+import { StreamReadSlicesItemPagesItemRecordsItem } from "core/api/types/ConnectorBuilderClient";
+import { InlineSchemaLoaderSchema } from "core/api/types/ConnectorManifest";
 
 export interface IncomingData {
   schema: string;
@@ -27,12 +25,12 @@ onmessage = (event: MessageEvent<IncomingData>) => {
     postMessage({ streamName });
     return;
   }
-
+  const validator = new Validator(parsedSchema, undefined, false);
   const errors = uniq(
-    records.flatMap((record) => Validator.validate(record, parsedSchema).errors.map(humanReadableError))
+    records.flatMap((record) =>
+      validator.validate(record).errors.map((error) => `${error.error} (${error.keywordLocation})`)
+    )
   );
-
   const response: OutgoingData = { incompatibleSchemaErrors: errors.length ? errors : undefined, streamName };
-
   postMessage(response);
 };

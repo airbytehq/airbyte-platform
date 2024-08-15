@@ -1,24 +1,33 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback } from "react";
 
-import { resolveAndValidate } from "components/connectorBuilder/Builder/manifestHelpers";
-import { ManifestValidationError } from "components/connectorBuilder/utils";
+import { DEFAULT_JSON_MANIFEST_VALUES } from "components/connectorBuilder/types";
 
+import { useCurrentWorkspaceId } from "area/workspace/utils";
 import { HttpError } from "core/api";
 import { useFormatError } from "core/errors";
 import { Action, Namespace, useAnalyticsService } from "core/services/analytics";
 import { useNotificationService } from "hooks/services/Notification";
 
-import { readStream, generateContribution, checkContribution } from "../generated/ConnectorBuilderClient";
+import {
+  readStream,
+  resolveManifest,
+  generateContribution,
+  checkContribution,
+} from "../generated/ConnectorBuilderClient";
+import { KnownExceptionInfo } from "../generated/ConnectorBuilderClient.schemas";
 import {
   ConnectorConfig,
+  ConnectorManifest,
+  ResolveManifestRequestBody,
+  ResolveManifest,
   StreamRead,
   StreamReadRequestBody,
   GenerateContributionRequestBody,
   CheckContributionRead,
   CheckContributionRequestBody,
 } from "../types/ConnectorBuilderClient";
-import { ConnectorManifest } from "../types/ConnectorManifest";
+import { DeclarativeComponentSchema } from "../types/ConnectorManifest";
 import { useRequestOptions } from "../useRequestOptions";
 import { useSuspenseQuery } from "../useSuspenseQuery";
 
@@ -49,24 +58,37 @@ export const useBuilderReadStream = (
   });
 };
 
-// use react-query for the async resolveAndValidate call, even though it isn't an API call,
-// to gain caching and suspense support out of the box
-export const useBuilderResolvedManifest = (manifest: ConnectorManifest, enabled = true) => {
-  return useQuery<ConnectorManifest, ManifestValidationError>(
-    connectorBuilderKeys.resolve(manifest),
-    () => resolveAndValidate(manifest),
+export const useBuilderResolvedManifest = (params: ResolveManifestRequestBody, enabled = true) => {
+  const requestOptions = useRequestOptions();
+
+  return useQuery<ResolveManifest, HttpError<KnownExceptionInfo>>(
+    connectorBuilderKeys.resolve(params.manifest),
+    () => resolveManifest(params, requestOptions),
     {
       keepPreviousData: true,
+      cacheTime: 0,
       retry: false,
       enabled,
     }
   );
 };
 
-export const useBuilderResolvedManifestSuspense = (manifest: ConnectorManifest) => {
+export const useBuilderResolveManifestQuery = () => {
+  const requestOptions = useRequestOptions();
+  const workspaceId = useCurrentWorkspaceId();
+  return (manifest: ConnectorManifest, projectId?: string) =>
+    resolveManifest({ manifest, workspace_id: workspaceId, project_id: projectId }, requestOptions);
+};
+
+export const useBuilderResolvedManifestSuspense = (manifest?: ConnectorManifest, projectId?: string) => {
+  const resolveManifestQuery = useBuilderResolveManifestQuery();
+
   return useSuspenseQuery(connectorBuilderKeys.resolveSuspense(manifest), async () => {
+    if (!manifest) {
+      return DEFAULT_JSON_MANIFEST_VALUES;
+    }
     try {
-      return await resolveAndValidate(manifest);
+      return (await resolveManifestQuery(manifest, projectId)).manifest as DeclarativeComponentSchema;
     } catch {
       return null;
     }

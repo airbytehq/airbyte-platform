@@ -1,11 +1,10 @@
 import { QueryClient, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import isArray from "lodash/isArray";
 
-import { resolveAndValidate } from "components/connectorBuilder/Builder/manifestHelpers";
-
 import { useCurrentWorkspaceId } from "area/workspace/utils";
 import { sourceDefinitionKeys } from "core/api";
 
+import { useBuilderResolveManifestQuery } from "./connectorBuilderApi";
 import {
   createConnectorBuilderProject,
   createDeclarativeSourceDefinitionManifest,
@@ -194,6 +193,7 @@ export const useBuilderProject = (builderProjectId: string) => {
 
 export const useResolvedBuilderProjectVersion = (projectId: string, version?: number) => {
   const requestOptions = useRequestOptions();
+  const resolveManifestQuery = useBuilderResolveManifestQuery();
   const workspaceId = useCurrentWorkspaceId();
 
   return useQuery(
@@ -209,7 +209,7 @@ export const useResolvedBuilderProjectVersion = (projectId: string, version?: nu
       if (!project.declarativeManifest?.manifest) {
         return null;
       }
-      return await resolveAndValidate(project.declarativeManifest.manifest as DeclarativeComponentSchema);
+      return (await resolveManifestQuery(project.declarativeManifest.manifest)).manifest as DeclarativeComponentSchema;
     },
     {
       retry: false,

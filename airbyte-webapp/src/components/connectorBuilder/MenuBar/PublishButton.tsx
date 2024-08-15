@@ -24,7 +24,7 @@ interface PublishButtonProps {
 }
 
 export const PublishButton: React.FC<PublishButtonProps> = ({ className }) => {
-  const { yamlIsValid, formValuesValid, permission, resolveError, streamNames, isResolving, formValuesDirty } =
+  const { yamlIsValid, formValuesValid, permission, resolveErrorMessage, streamNames, isResolving, formValuesDirty } =
     useConnectorBuilderFormState();
   const {
     streamRead: { isFetching: isReadingStream },
@@ -51,7 +51,7 @@ export const PublishButton: React.FC<PublishButtonProps> = ({ className }) => {
     tooltipContent = <FormattedMessage id="connectorBuilder.configErrorsPublish" />;
   }
 
-  if (resolveError) {
+  if (resolveErrorMessage) {
     buttonDisabled = true;
     tooltipContent = <FormattedMessage id="connectorBuilder.resolveErrorPublish" />;
   }

@@ -106,7 +106,7 @@ export const DropdownMenu: React.FC<DropdownMenuProps> = ({
                   );
                 }
                 return item.tooltipContent != null ? (
-                  <div key={index}>
+                  <div>
                     <Tooltip control={menuItem(item, index)} placement="left">
                       {item.tooltipContent}
                     </Tooltip>

@@ -13,7 +13,6 @@ import {
 } from "core/api/types/ConnectorManifest";
 
 import {
-  convertToBuilderFormValuesSync,
   manifestAuthenticatorToBuilder,
   manifestErrorHandlerToBuilder,
   manifestIncrementalSyncToBuilder,
@@ -22,7 +21,13 @@ import {
   manifestSubstreamPartitionRouterToBuilder,
   manifestTransformationsToBuilder,
 } from "./convertManifestToBuilderForm";
-import { DEFAULT_BUILDER_FORM_VALUES, OLDEST_SUPPORTED_CDK_VERSION, isYamlString } from "./types";
+import {
+  DEFAULT_BUILDER_FORM_VALUES,
+  DEFAULT_CONNECTOR_NAME,
+  OLDEST_SUPPORTED_CDK_VERSION,
+  isYamlString,
+} from "./types";
+import { convertToBuilderFormValues } from "./useManifestToBuilderForm";
 import { formatJson } from "./utils";
 
 const baseManifest: ConnectorManifest = {
@@ -134,7 +139,22 @@ const stream2: DeclarativeStream = merge({}, stream1, {
   },
 });
 
+const noOpResolve = (manifest: ConnectorManifest) => {
+  return Promise.resolve({ manifest });
+};
+
 describe("Conversion throws error when", () => {
+  it("resolve throws error", async () => {
+    const errorMessage = "Some resolve error message";
+    const resolve = (_manifest: ConnectorManifest) => {
+      throw new Error(errorMessage);
+    };
+    const convert = async () => {
+      return convertToBuilderFormValues(resolve, {} as ConnectorManifest, DEFAULT_CONNECTOR_NAME);
+    };
+    await expect(convert).rejects.toThrow(errorMessage);
+  });
+
   it("manifests has incorrect retriever type", async () => {
     const convert = async () => {
       const manifest: ConnectorManifest = {
@@ -150,7 +170,7 @@ describe("Conversion throws error when", () => {
           },
         ],
       };
-      return convertToBuilderFormValuesSync(manifest);
+      return convertToBuilderFormValues(noOpResolve, manifest, DEFAULT_CONNECTOR_NAME);
     };
     await expect(convert).rejects.toThrow("doesn't use a SimpleRetriever");
   });
@@ -170,7 +190,7 @@ describe("Conversion throws error when", () => {
           }),
         ],
       };
-      return convertToBuilderFormValuesSync(manifest);
+      return convertToBuilderFormValues(noOpResolve, manifest, DEFAULT_CONNECTOR_NAME);
     };
     await expect(convert).rejects.toThrow("doesn't use a HttpRequester");
   });
@@ -463,7 +483,7 @@ describe("Conversion throws error when", () => {
 
 describe("Conversion successfully results in", () => {
   it("default values if manifest is empty", async () => {
-    const formValues = convertToBuilderFormValuesSync(baseManifest);
+    const formValues = await convertToBuilderFormValues(noOpResolve, baseManifest, DEFAULT_CONNECTOR_NAME);
     expect(formValues).toEqual(DEFAULT_BUILDER_FORM_VALUES);
   });
 
@@ -486,7 +506,7 @@ describe("Conversion successfully results in", () => {
         },
       },
     };
-    const formValues = convertToBuilderFormValuesSync(manifest);
+    const formValues = await convertToBuilderFormValues(noOpResolve, manifest, DEFAULT_CONNECTOR_NAME);
     expect(formValues.inputs).toEqual([
       {
         key: "api_key",
@@ -515,7 +535,7 @@ describe("Conversion successfully results in", () => {
         },
       },
     };
-    const formValues = convertToBuilderFormValuesSync(manifest);
+    const formValues = await convertToBuilderFormValues(noOpResolve, manifest, DEFAULT_CONNECTOR_NAME);
     expect(formValues.inputs).toEqual([
       {
         key: "api_key",
@@ -562,7 +582,7 @@ describe("Conversion successfully results in", () => {
         },
       },
     };
-    const formValues = convertToBuilderFormValuesSync(manifest);
+    const formValues = await convertToBuilderFormValues(noOpResolve, manifest, DEFAULT_CONNECTOR_NAME);
     expect(formValues.inputs).toEqual([
       {
         key: "api_key",
@@ -595,7 +615,7 @@ describe("Conversion successfully results in", () => {
         }),
       ],
     };
-    const formValues = convertToBuilderFormValuesSync(manifest);
+    const formValues = await convertToBuilderFormValues(noOpResolve, manifest, DEFAULT_CONNECTOR_NAME);
     expect(formValues.streams[0].requestOptions.requestParameters).toEqual([
       ["k1", "v1"],
       ["k2", "v2"],
@@ -618,7 +638,7 @@ describe("Conversion successfully results in", () => {
         }),
       ],
     };
-    const formValues = convertToBuilderFormValuesSync(manifest);
+    const formValues = await convertToBuilderFormValues(noOpResolve, manifest, DEFAULT_CONNECTOR_NAME);
     expect(formValues.streams[0].requestOptions.requestBody).toEqual({
       type: "json_list",
       values: [
@@ -645,7 +665,7 @@ describe("Conversion successfully results in", () => {
         }),
       ],
     };
-    const formValues = convertToBuilderFormValuesSync(manifest);
+    const formValues = await convertToBuilderFormValues(noOpResolve, manifest, DEFAULT_CONNECTOR_NAME);
     expect(formValues.streams[0].requestOptions.requestBody).toEqual({
       type: "json_freeform",
       value: formatJson(body),
@@ -668,7 +688,7 @@ describe("Conversion successfully results in", () => {
         }),
       ],
     };
-    const formValues = convertToBuilderFormValuesSync(manifest);
+    const formValues = await convertToBuilderFormValues(noOpResolve, manifest, DEFAULT_CONNECTOR_NAME);
     expect(formValues.streams[0].requestOptions.requestBody).toEqual({
       type: "form_list",
       values: [
@@ -700,7 +720,7 @@ describe("Conversion successfully results in", () => {
         }),
       ],
     };
-    const formValues = convertToBuilderFormValuesSync(manifest);
+    const formValues = await convertToBuilderFormValues(noOpResolve, manifest, DEFAULT_CONNECTOR_NAME);
     expect(formValues.streams[0].recordSelector).toEqual({
       fieldPath: ["a", "b"],
       filterCondition: "{{ record.c > 1 }}",
@@ -721,7 +741,7 @@ describe("Conversion successfully results in", () => {
         }),
       ],
     };
-    const formValues = convertToBuilderFormValuesSync(manifest);
+    const formValues = await convertToBuilderFormValues(noOpResolve, manifest, DEFAULT_CONNECTOR_NAME);
     expect(formValues.streams[0].requestOptions.requestBody).toEqual({
       type: "string_freeform",
       value: "abc def",
@@ -737,7 +757,7 @@ describe("Conversion successfully results in", () => {
         }),
       ],
     };
-    const formValues = convertToBuilderFormValuesSync(manifest);
+    const formValues = await convertToBuilderFormValues(noOpResolve, manifest, DEFAULT_CONNECTOR_NAME);
     expect(formValues.streams[0].primaryKey).toEqual(["id"]);
   });
 
@@ -763,7 +783,7 @@ describe("Conversion successfully results in", () => {
         }),
       ],
     };
-    const formValues = convertToBuilderFormValuesSync(manifest);
+    const formValues = await convertToBuilderFormValues(noOpResolve, manifest, DEFAULT_CONNECTOR_NAME);
     expect(formValues.streams[0].parameterizedRequests).toEqual([
       {
         type: "ListPartitionRouter",
@@ -800,7 +820,7 @@ describe("Conversion successfully results in", () => {
         }),
       ],
     };
-    const formValues = convertToBuilderFormValuesSync(manifest);
+    const formValues = await convertToBuilderFormValues(noOpResolve, manifest, DEFAULT_CONNECTOR_NAME);
     expect(formValues.streams[1].parentStreams).toEqual([
       {
         parent_key: "key",
@@ -825,7 +845,7 @@ describe("Conversion successfully results in", () => {
         }),
       ],
     };
-    const formValues = convertToBuilderFormValuesSync(manifest);
+    const formValues = await convertToBuilderFormValues(noOpResolve, manifest, DEFAULT_CONNECTOR_NAME);
     expect(formValues.streams[0].schema).toEqual(
       `{
   "a": "xxx",
@@ -852,7 +872,7 @@ describe("Conversion successfully results in", () => {
       ],
       spec: apiTokenSpec,
     };
-    const formValues = convertToBuilderFormValuesSync(manifest);
+    const formValues = await convertToBuilderFormValues(noOpResolve, manifest, DEFAULT_CONNECTOR_NAME);
     if (isYamlString(formValues.global.authenticator)) {
       throw new Error("Authenticator should not be a YAML string");
     }
@@ -876,7 +896,7 @@ describe("Conversion successfully results in", () => {
       ],
       spec: oauthSpec,
     };
-    const formValues = convertToBuilderFormValuesSync(manifest);
+    const formValues = await convertToBuilderFormValues(noOpResolve, manifest, DEFAULT_CONNECTOR_NAME);
     expect(formValues.global.authenticator).toEqual({
       type: "OAuthAuthenticator",
       client_id: '{{ config["client_id"] }}',
@@ -918,7 +938,7 @@ describe("Conversion successfully results in", () => {
       ],
       spec: oauthSpec,
     };
-    const formValues = convertToBuilderFormValuesSync(manifest);
+    const formValues = await convertToBuilderFormValues(noOpResolve, manifest, DEFAULT_CONNECTOR_NAME);
     expect(formValues.global.authenticator).toEqual({
       type: "OAuthAuthenticator",
       client_id: '{{ config["client_id"] }}',
@@ -986,7 +1006,7 @@ describe("Conversion successfully results in", () => {
         }),
       ],
     };
-    const formValues = convertToBuilderFormValuesSync(manifest);
+    const formValues = await convertToBuilderFormValues(noOpResolve, manifest, DEFAULT_CONNECTOR_NAME);
     expect(formValues.global.authenticator).toEqual({
       type: "SessionTokenAuthenticator",
       login_requester: {
@@ -1047,7 +1067,7 @@ describe("Conversion successfully results in", () => {
       streams: [merge({}, stream1, unknownFields)],
       spec: apiTokenSpec,
     };
-    const formValues = convertToBuilderFormValuesSync(manifest);
+    const formValues = await convertToBuilderFormValues(noOpResolve, manifest, DEFAULT_CONNECTOR_NAME);
     expect(formValues.streams[0].unknownFields).toEqual(dump(unknownFields));
   });
 });

@@ -33,7 +33,7 @@ export const links = {
   cloudAllowlistIPsLink: `${BASE_DOCS_LINK}/operating-airbyte/security#network-security-1`,
   dataResidencySurvey: "https://forms.gle/Dr7MPTdt9k3xTinL8",
   connectionDataResidency: `${BASE_DOCS_LINK}/cloud/managing-airbyte-cloud/manage-data-residency#choose-the-data-residency-for-a-connection`,
-  lowCodeYamlDescription: `${BASE_DOCS_LINK}/connector-development/config-based/understanding-the-yaml-file/reference`,
+  lowCodeYamlDescription: `${BASE_DOCS_LINK}/connector-development/config-based/understanding-the-yaml-file/yaml-overview`,
   upcomingFeaturesPage: "https://embedded.airbyte.com/upcoming-releases",
   stripeCustomerPortal: "https://billing.stripe.com/p/login/5kAbJs2Gy83H2YwdQQ",
   iso8601Duration: "https://en.wikipedia.org/wiki/ISO_8601#Durations",

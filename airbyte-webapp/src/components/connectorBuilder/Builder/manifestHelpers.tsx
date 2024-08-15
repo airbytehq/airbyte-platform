@@ -1,4 +1,3 @@
-import { validate } from "jsonschema";
 import get from "lodash/get";
 import { ReactNode } from "react";
 import { FormattedMessage } from "react-intl";
@@ -6,12 +5,9 @@ import ReactMarkdown from "react-markdown";
 
 import { LabelInfo } from "components/Label";
 
-import { ConnectorManifest } from "core/api/types/ConnectorManifest";
 import { links } from "core/utils/links";
 
 import declarativeComponentSchema from "../../../../build/declarative_component_schema.yaml";
-import { humanReadableError } from "../humanReadableValidationError";
-import { ManifestValidationError, resolveRefs } from "../utils";
 
 export interface ManifestDescriptor {
   title?: string;
@@ -111,21 +107,3 @@ export function getLabelAndTooltip(
       ) : null,
   };
 }
-
-export const resolveAndValidate = async (manifest: ConnectorManifest) => {
-  const resolvedManifest = await resolveRefs(manifest);
-
-  const validationResult = validate(resolvedManifest, declarativeComponentSchema);
-  if (validationResult.valid) {
-    return resolvedManifest;
-  }
-
-  throw new ManifestValidationError(
-    validationResult.errors.map(humanReadableError),
-    validationResult.errors.some((error) => error.name === "anyOf")
-      ? validate(resolvedManifest, declarativeComponentSchema, { nestedErrors: true })
-          .errors.reverse()
-          .map(humanReadableError)
-      : undefined
-  );
-};

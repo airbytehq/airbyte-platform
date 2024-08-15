@@ -139,9 +139,6 @@ export default defineConfig(() => {
         scss: path.resolve(__dirname, "./src/scss"),
       },
     },
-    worker: {
-      plugins: () => [viteTsconfigPaths()],
-    },
   };
 
   return config;
