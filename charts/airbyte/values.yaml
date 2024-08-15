@@ -22,7 +22,6 @@ global:
   # -- The URL where Airbyte will be reached; This should match your Ingress host
   airbyteUrl: ""
 
-
   # -- Auth configuration
   auth:
     # -- Whether auth is enabled
@@ -1422,6 +1421,9 @@ postgresql:
   # https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#affinity-and-anti-affinity
   affinity: {}
 
+  # -- Specific StorageClass --#
+  storageClassName: {}
+
 # External PostgreSQL configuration, All of these values are only used when postgresql.enabled is set to false
 externalDatabase:
   # -- Database host
@@ -1452,6 +1454,7 @@ minio:
 
   storage:
     volumeClaimValue: 500Mi
+    storageClassName: {}
 
   # -- Node labels for pod assignment, see https://kubernetes.io/docs/user-guide/node-selection/
   ##
