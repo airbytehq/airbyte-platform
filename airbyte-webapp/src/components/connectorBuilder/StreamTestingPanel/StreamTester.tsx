@@ -3,11 +3,9 @@ import partition from "lodash/partition";
 import { useEffect, useMemo } from "react";
 import { FormattedMessage, useIntl } from "react-intl";
 
-import { Collapsible } from "components/ui/Collapsible";
 import { FlexContainer } from "components/ui/Flex";
 import { Message } from "components/ui/Message";
 import { NumberBadge } from "components/ui/NumberBadge";
-import { Pre } from "components/ui/Pre";
 import { ResizablePanels } from "components/ui/ResizablePanels";
 import { Text } from "components/ui/Text";
 
@@ -25,6 +23,7 @@ import { LogsDisplay } from "./LogsDisplay";
 import { ResultDisplay } from "./ResultDisplay";
 import { StreamTestButton } from "./StreamTestButton";
 import styles from "./StreamTester.module.scss";
+import { ManifestValidationErrorDisplay } from "../ManifestValidationErrorDisplay";
 import { useBuilderWatch } from "../types";
 import { useStreamTestMetadata } from "../useStreamTestMetadata";
 
@@ -33,7 +32,7 @@ export const StreamTester: React.FC<{
   setTestingValuesInputOpen: (open: boolean) => void;
 }> = ({ hasTestingValuesErrors, setTestingValuesInputOpen }) => {
   const { formatMessage } = useIntl();
-  const { streamNames, isResolving, resolveErrorMessage, resolveError } = useConnectorBuilderFormState();
+  const { streamNames, isResolving, resolveError } = useConnectorBuilderFormState();
   const {
     streamRead: {
       data: streamReadData,
@@ -56,16 +55,12 @@ export const StreamTester: React.FC<{
 
   const analyticsService = useAnalyticsService();
 
-  const requestErrorStatus = resolveError?.status;
-
   const unknownErrorMessage = formatMessage({ id: "connectorBuilder.unknownError" });
   const errorMessage = isError
     ? error instanceof HttpError
       ? error.response?.message || unknownErrorMessage
       : unknownErrorMessage
     : undefined;
-
-  const errorExceptionStack = resolveError?.response?.exceptionStack;
 
   const [errorLogs, nonErrorLogs] = useMemo(
     () =>
@@ -123,46 +118,25 @@ export const StreamTester: React.FC<{
         }}
         hasTestingValuesErrors={hasTestingValuesErrors}
         setTestingValuesInputOpen={setTestingValuesInputOpen}
-        hasResolveErrors={Boolean(resolveErrorMessage)}
+        hasResolveErrors={resolveError !== null}
         isStreamTestQueued={queuedStreamRead}
         isStreamTestRunning={isFetching}
       />
 
-      {resolveErrorMessage !== undefined && (
+      {resolveError !== null && (
         <div className={styles.listErrorDisplay}>
+          <ManifestValidationErrorDisplay error={resolveError} />
           <Text>
-            <FormattedMessage id="connectorBuilder.couldNotValidateConnectorSpec" />
-          </Text>
-          <Text bold>{resolveErrorMessage}</Text>
-          {errorExceptionStack && (
-            <Collapsible label={formatMessage({ id: "connectorBuilder.tracebackLabel" })} className={styles.traceback}>
-              <Pre longLines>{errorExceptionStack}</Pre>
-            </Collapsible>
-          )}
-          <Text>
-            {[400, 422].includes(requestErrorStatus as number) ? (
-              <FormattedMessage
-                id="connectorBuilder.ensureProperYaml"
-                values={{
-                  a: (node: React.ReactNode) => (
-                    <a href={links.lowCodeYamlDescription} target="_blank" rel="noreferrer">
-                      {node}
-                    </a>
-                  ),
-                }}
-              />
-            ) : (
-              <FormattedMessage
-                id="connectorBuilder.contactSupport"
-                values={{
-                  a: (node: React.ReactNode) => (
-                    <a href={links.supportPortal} target="_blank" rel="noreferrer">
-                      {node}
-                    </a>
-                  ),
-                }}
-              />
-            )}
+            <FormattedMessage
+              id="connectorBuilder.ensureProperYaml"
+              values={{
+                a: (node: React.ReactNode) => (
+                  <a href={links.lowCodeYamlDescription} target="_blank" rel="noreferrer">
+                    {node}
+                  </a>
+                ),
+              }}
+            />
           </Text>
         </div>
       )}

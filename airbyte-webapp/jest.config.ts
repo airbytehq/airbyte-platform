@@ -21,6 +21,10 @@ const jestConfig: Config = {
   },
   setupFilesAfterEnv: ["./src/test-utils/setup-tests.ts"],
   globalSetup: "./src/test-utils/global-setup.js",
+  transform: {
+    "\\.[jt]sx?$": "babel-jest",
+    "\\.yaml$": "jest-transform-yaml",
+  },
 };
 
 export default jestConfig;

@@ -1,9 +1,11 @@
 import classNames from "classnames";
 import { dump, load, YAMLException } from "js-yaml";
+import isString from "lodash/isString";
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { FieldPath, useFormContext, useWatch } from "react-hook-form";
 import { FormattedMessage, useIntl } from "react-intl";
 
+import { ManifestValidationErrorDisplay } from "components/connectorBuilder/ManifestValidationErrorDisplay";
 import { ControlLabels } from "components/LabeledControl";
 import { Button } from "components/ui/Button";
 import { Card } from "components/ui/Card";
@@ -25,7 +27,7 @@ import { BuilderYamlField } from "./BuilderYamlField";
 import { ManifestCompatibilityError } from "../convertManifestToBuilderForm";
 import { BuilderState, BuilderStream, isYamlString, useBuilderWatch } from "../types";
 import { UiYamlToggleButton } from "../UiYamlToggleButton";
-import { useCopyValueIncludingArrays } from "../utils";
+import { ManifestValidationError, useCopyValueIncludingArrays } from "../utils";
 
 interface BuilderCardProps {
   className?: string;
@@ -139,7 +141,7 @@ const YamlEditableComponent: React.FC<React.PropsWithChildren<YamlEditableCompon
   manifestToBuilder,
   getLockedInputKeys,
 }) => {
-  const { resolveErrorMessage } = useConnectorBuilderFormState();
+  const { resolveError } = useConnectorBuilderFormState();
   const { openConfirmationModal, closeConfirmationModal } = useConfirmationModalService();
   const { setValue, unregister } = useFormContext();
   const formValue = useBuilderWatch(path);
@@ -177,23 +179,26 @@ const YamlEditableComponent: React.FC<React.PropsWithChildren<YamlEditableCompon
   );
 
   const confirmDiscardYaml = useCallback(
-    (errorMessage?: string) => {
+    (error?: string | ManifestValidationError) => {
       const text = (
-        <FlexContainer direction="column">
+        <FlexContainer direction="column" gap="lg">
           <FlexItem>
             <FormattedMessage
               id={
-                errorMessage
+                error
                   ? "connectorBuilder.yamlComponent.discardChanges.knownErrorIntro"
                   : "connectorBuilder.yamlComponent.discardChanges.unknownErrorIntro"
               }
             />
           </FlexItem>
-          {errorMessage && (
-            <Pre className={styles.discardYamlError} wrapText>
-              {errorMessage}
-            </Pre>
-          )}
+          {error &&
+            (isString(error) ? (
+              <Pre className={styles.discardYamlError} wrapText>
+                {error}
+              </Pre>
+            ) : (
+              <ManifestValidationErrorDisplay error={error} />
+            ))}
           <FlexItem>
             <FormattedMessage
               id={
@@ -236,8 +241,8 @@ const YamlEditableComponent: React.FC<React.PropsWithChildren<YamlEditableCompon
         disabled={localYamlIsDirty}
         onClick={() => {
           if (isYaml) {
-            if (resolveErrorMessage) {
-              confirmDiscardYaml(resolveErrorMessage);
+            if (resolveError) {
+              confirmDiscardYaml(resolveError);
               return;
             }
 

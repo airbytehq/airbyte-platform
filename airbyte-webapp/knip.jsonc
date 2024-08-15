@@ -27,7 +27,10 @@
     // Knip doesn't detect the import to this from a SASS file
     "normalize.css",
     // Knip does not detect the pure `/// <reference />` import for this
-    "@types/segment-analytics"
+    "@types/segment-analytics",
+    // Knip does not detect that the jsonschema package uses this, because it does require("url"),
+    // which assumes that the package already exists in node
+    "url"
   ],
   "include": ["files", "dependencies"]
 }

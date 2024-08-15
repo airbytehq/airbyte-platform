@@ -1,0 +1,22 @@
+@use "scss/variables";
+
+.container {
+  & ul {
+    // padding-left: ;
+    display: flex;
+    flex-direction: column;
+    gap: variables.$spacing-md;
+  }
+
+  & p {
+    font-size: inherit;
+  }
+
+  & pre {
+    font-size: variables.$font-size-md;
+  }
+}
+
+.collapsible {
+  gap: 0;
+}

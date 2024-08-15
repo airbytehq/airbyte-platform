@@ -6,8 +6,18 @@ import { FormattedMessage } from "react-intl";
 import { useNavigate } from "react-router-dom";
 
 import { HeadTitle } from "components/common/HeadTitle";
-import { BuilderFormValues, DEFAULT_CONNECTOR_NAME } from "components/connectorBuilder/types";
-import { useManifestToBuilderForm } from "components/connectorBuilder/useManifestToBuilderForm";
+import { resolveAndValidate } from "components/connectorBuilder/Builder/manifestHelpers";
+import { CDK_VERSION } from "components/connectorBuilder/cdk";
+import {
+  convertToBuilderFormValuesSync,
+  ManifestCompatibilityError,
+} from "components/connectorBuilder/convertManifestToBuilderForm";
+import {
+  BuilderFormValues,
+  DEFAULT_CONNECTOR_NAME,
+  OLDEST_SUPPORTED_CDK_VERSION,
+  versionSupported,
+} from "components/connectorBuilder/types";
 import { Button, ButtonProps } from "components/ui/Button";
 import { Card } from "components/ui/Card";
 import { FlexContainer } from "components/ui/Flex";
@@ -44,7 +54,6 @@ const ConnectorBuilderCreatePageInner: React.FC = () => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { createAndNavigate, isLoading: isCreateProjectLoading } = useCreateAndNavigate();
   const { registerNotification, unregisterNotificationById } = useNotificationService();
-  const { convertToBuilderFormValues } = useManifestToBuilderForm();
   const [importYamlLoading, setImportYamlLoading] = useState(false);
 
   const { workspaceId } = useCurrentWorkspace();
@@ -94,7 +103,14 @@ const ConnectorBuilderCreatePageInner: React.FC = () => {
 
           let convertedFormValues: BuilderFormValues;
           try {
-            convertedFormValues = await convertToBuilderFormValues(json, DEFAULT_CONNECTOR_NAME);
+            if (!versionSupported(json.version)) {
+              throw new ManifestCompatibilityError(
+                undefined,
+                `Connector builder UI only supports manifests version >= ${OLDEST_SUPPORTED_CDK_VERSION} and <= ${CDK_VERSION}, encountered ${json.version}`
+              );
+            }
+            const resolvedManifest = await resolveAndValidate(json);
+            convertedFormValues = convertToBuilderFormValuesSync(resolvedManifest);
           } catch (e) {
             analyticsService.track(Namespace.CONNECTOR_BUILDER, Action.UI_INCOMPATIBLE_YAML_IMPORTED, {
               actionDescription: "A YAML manifest that's incompatible with the Builder UI was imported",
@@ -120,7 +136,7 @@ const ConnectorBuilderCreatePageInner: React.FC = () => {
         reader.readAsText(file);
       }
     },
-    [analyticsService, convertToBuilderFormValues, createAndNavigate, registerNotification]
+    [analyticsService, createAndNavigate, registerNotification]
   );
 
   // clear out notification on unmount, so it doesn't persist after a redirect

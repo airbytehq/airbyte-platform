@@ -51,7 +51,6 @@
     "cloud-cypress:run": "cypress run --config-file cypress/cypress.cloud-config.ts"
   },
   "dependencies": {
-    "@cfworker/json-schema": "^1.12.7",
     "@datadog/browser-rum": "^4.21.2",
     "@dnd-kit/core": "^6.0.8",
     "@dnd-kit/sortable": "^7.0.2",
@@ -84,6 +83,7 @@
     "framer-motion": "^6.3.11",
     "js-yaml": "^4.1.0",
     "json-schema": "^0.4.0",
+    "jsonschema": "^1.4.1",
     "keycloak-js": "^23.0.7",
     "launchdarkly-js-client-sdk": "^3.1.0",
     "lodash": "^4.17.21",
@@ -123,6 +123,7 @@
     "ts-pattern": "^4.2.1",
     "typesafe-actions": "^5.1.0",
     "unified": "^10.1.2",
+    "url": "^0.11.4",
     "uuid": "^9.0.1",
     "victory-vendor": "36.6.8",
     "yup": "^0.32.11"
@@ -198,6 +199,7 @@
     "history": "^5.3.0",
     "jest": "^29.7.0",
     "jest-environment-jsdom": "^29.7.0",
+    "jest-transform-yaml": "^1.1.2",
     "json-schema-traverse": "^1.0.0",
     "knip": "^5.2.2",
     "license-checker": "^25.0.1",
