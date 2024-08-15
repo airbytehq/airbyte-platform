@@ -22,6 +22,7 @@ global:
   # -- The URL where Airbyte will be reached; This should match your Ingress host
   airbyteUrl: ""
 
+
   # -- Auth configuration
   auth:
     # -- Whether auth is enabled
