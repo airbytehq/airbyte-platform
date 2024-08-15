@@ -90,15 +90,15 @@ class ParallelStreamStatsTrackerTest {
     featureFlagClient = TestClient(mapOf(EmitStateStatsToSegment.key to true, LogStateMsgs.key to false))
     checkSumCountEventHandler =
       StateCheckSumCountEventHandler(
-        Optional.empty(),
-        featureFlagClient,
-        DeploymentFetcher { DeploymentMetadataRead("test", UUID.randomUUID(), "test", "test") },
-        trackingIdentityFetcher,
-        stateCheckSumErrorReporter,
-        CONNECTION_ID,
-        WORKSPACE_ID,
-        JOB_ID,
-        ATTEMPT_NUMBER,
+        pubSubWriter = Optional.empty(),
+        featureFlagClient = featureFlagClient,
+        deploymentFetcher = DeploymentFetcher { DeploymentMetadataRead("test", UUID.randomUUID(), "test", "test") },
+        trackingIdentityFetcher = trackingIdentityFetcher,
+        stateCheckSumReporter = stateCheckSumErrorReporter,
+        connectionId = CONNECTION_ID,
+        workspaceId = WORKSPACE_ID,
+        jobId = JOB_ID,
+        attemptNumber = ATTEMPT_NUMBER,
       )
     statsTracker = ParallelStreamStatsTracker(metricClient, checkSumCountEventHandler)
   }

@@ -1,4 +1,4 @@
-import { Disclosure } from "@headlessui/react";
+import { Disclosure, DisclosureButton, DisclosurePanel } from "@headlessui/react";
 import classnames from "classnames";
 import React from "react";
 import { FormattedMessage, useIntl } from "react-intl";
@@ -106,7 +106,7 @@ export const ConnectionSettingsPage: React.FC = () => {
         <Disclosure>
           {({ open }) => (
             <>
-              <Disclosure.Button
+              <DisclosureButton
                 as={Button}
                 variant="clear"
                 icon={open ? "chevronDown" : "chevronRight"}
@@ -114,12 +114,12 @@ export const ConnectionSettingsPage: React.FC = () => {
                 className={classnames(styles.advancedButton, styles.alignStart)}
               >
                 <FormattedMessage id="connection.state.title" />
-              </Disclosure.Button>
-              <Disclosure.Panel className={styles.advancedPanel}>
+              </DisclosureButton>
+              <DisclosurePanel className={styles.advancedPanel}>
                 <React.Suspense fallback={<Spinner />}>
                   <StateBlock connectionId={connection.connectionId} disabled={mode === "readonly"} />
                 </React.Suspense>
-              </Disclosure.Panel>
+              </DisclosurePanel>
             </>
           )}
         </Disclosure>

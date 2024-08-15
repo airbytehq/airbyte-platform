@@ -40,6 +40,7 @@ dependencies {
   implementation(libs.bundles.log4j)
   implementation(libs.commons.io)
   implementation(libs.kotlin.logging)
+  implementation(libs.reactor.core)
   implementation(project(":oss:airbyte-analytics"))
   implementation(project(":oss:airbyte-api:connector-builder-api"))
   implementation(project(":oss:airbyte-api:problems-api"))
@@ -48,6 +49,7 @@ dependencies {
   implementation(project(":oss:airbyte-commons-auth"))
   implementation(project(":oss:airbyte-commons-converters"))
   implementation(project(":oss:airbyte-commons-license"))
+  implementation(project(":oss:airbyte-commons-logging"))
   implementation(project(":oss:airbyte-commons-protocol"))
   implementation(project(":oss:airbyte-commons-temporal"))
   implementation(project(":oss:airbyte-commons-temporal-core"))
@@ -81,6 +83,7 @@ dependencies {
   testImplementation(libs.bundles.micronaut.test)
   testImplementation(libs.micronaut.http)
   testImplementation(libs.mockk)
+  testImplementation(libs.reactor.test)
 
   testRuntimeOnly(libs.junit.jupiter.engine)
 }

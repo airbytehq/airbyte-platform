@@ -4,6 +4,7 @@
 
 package io.airbyte.commons.temporal;
 
+import static io.airbyte.commons.logging.LogMdcHelperKt.DEFAULT_LOG_FILENAME;
 import static io.airbyte.commons.temporal.scheduling.ConnectionManagerWorkflow.NON_RUNNING_JOB_ID;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -42,7 +43,6 @@ import io.airbyte.config.StandardCheckConnectionInput;
 import io.airbyte.config.StandardDiscoverCatalogInput;
 import io.airbyte.config.StreamDescriptor;
 import io.airbyte.config.WorkloadPriority;
-import io.airbyte.config.helpers.LogClientSingleton;
 import io.airbyte.config.persistence.StreamRefreshesRepository;
 import io.airbyte.config.persistence.StreamResetPersistence;
 import io.airbyte.metrics.lib.MetricClient;
@@ -115,7 +115,7 @@ public class TemporalClientTest {
   @BeforeEach
   void setup() throws IOException {
     workspaceRoot = Files.createTempDirectory(Path.of("/tmp"), "temporal_client_test");
-    logPath = workspaceRoot.resolve(String.valueOf(JOB_ID)).resolve(String.valueOf(ATTEMPT_ID)).resolve(LogClientSingleton.LOG_FILENAME);
+    logPath = workspaceRoot.resolve(String.valueOf(JOB_ID)).resolve(String.valueOf(ATTEMPT_ID)).resolve(DEFAULT_LOG_FILENAME);
     workflowClient = mock(WorkflowClient.class);
     when(workflowClient.getOptions()).thenReturn(WorkflowClientOptions.newBuilder().setNamespace(NAMESPACE).build());
     workflowServiceStubs = mock(WorkflowServiceStubs.class);

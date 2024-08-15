@@ -46,6 +46,7 @@ import io.airbyte.api.model.generated.StreamStats;
 import io.airbyte.api.model.generated.StreamSyncProgressReadItem;
 import io.airbyte.commons.enums.Enums;
 import io.airbyte.commons.json.Jsons;
+import io.airbyte.commons.logging.LogClientManager;
 import io.airbyte.commons.server.converters.JobConverter;
 import io.airbyte.commons.server.helpers.ConnectionHelpers;
 import io.airbyte.commons.server.helpers.DestinationHelpers;
@@ -55,7 +56,6 @@ import io.airbyte.commons.version.AirbyteVersion;
 import io.airbyte.config.AirbyteStream;
 import io.airbyte.config.Attempt;
 import io.airbyte.config.AttemptStatus;
-import io.airbyte.config.Configs.WorkerEnvironment;
 import io.airbyte.config.ConfiguredAirbyteCatalog;
 import io.airbyte.config.ConfiguredAirbyteStream;
 import io.airbyte.config.DestinationConnection;
@@ -73,7 +73,6 @@ import io.airbyte.config.StandardSync;
 import io.airbyte.config.StreamSyncStats;
 import io.airbyte.config.SyncMode;
 import io.airbyte.config.SyncStats;
-import io.airbyte.config.helpers.LogConfigs;
 import io.airbyte.config.persistence.ConfigNotFoundException;
 import io.airbyte.data.services.ConnectionService;
 import io.airbyte.data.services.impls.jooq.ConnectionServiceJooqImpl;
@@ -272,8 +271,6 @@ class JobHistoryHandlerTest {
     final AirbyteVersion airbyteVersion = mock(AirbyteVersion.class);
     jobHistoryHandler = new JobHistoryHandler(
         jobPersistence,
-        WorkerEnvironment.DOCKER,
-        LogConfigs.EMPTY,
         connectionService,
         sourceHandler,
         sourceDefinitionsHandler,
@@ -281,7 +278,8 @@ class JobHistoryHandlerTest {
         destinationDefinitionsHandler,
         airbyteVersion,
         temporalClient,
-        featureFlagClient);
+        featureFlagClient,
+        mock(LogClientManager.class));
   }
 
   @Nested

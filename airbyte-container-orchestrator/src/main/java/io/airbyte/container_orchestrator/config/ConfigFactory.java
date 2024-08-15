@@ -62,4 +62,10 @@ public class ConfigFactory {
     return Jsons.deserialize(Path.of(configDir, AsyncOrchestratorPodProcess.KUBE_POD_INFO).toFile(), KubePodInfo.class);
   }
 
+  @Singleton
+  @Named("workspaceRoot")
+  public Path workspaceRoot(@Value("${airbyte.workspace-root}") final String workspaceRoot) {
+    return Path.of(workspaceRoot);
+  }
+
 }

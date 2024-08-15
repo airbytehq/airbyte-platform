@@ -200,7 +200,7 @@ public class ConnectionApiController implements ConnectionApi {
   @Post(uri = "/events/get")
   @Secured({WORKSPACE_READER, ORGANIZATION_READER})
   @ExecuteOn(AirbyteTaskExecutors.IO)
-  public ConnectionEventWithDetails getConnectionEvent(@Body final ConnectionEventIdRequestBody connectionEventIdRequestBody) {
+  public ConnectionEventWithDetails getConnectionEvent(@Body @Valid @NotNull final ConnectionEventIdRequestBody connectionEventIdRequestBody) {
     return ApiHelper.execute(() -> connectionsHandler.getConnectionEvent(connectionEventIdRequestBody));
   }
 

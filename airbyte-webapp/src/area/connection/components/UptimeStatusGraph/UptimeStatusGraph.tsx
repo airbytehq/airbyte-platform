@@ -74,7 +74,6 @@ const generatePlaceholderHistory = (
 type SortableStream = Pick<ChartStream, "streamName"> & Partial<Pick<ChartStream, "streamNamespace" | "status">>;
 
 const statusOrder: ConnectionStatusIndicatorStatus[] = [
-  ConnectionStatusIndicatorStatus.Disabled,
   ConnectionStatusIndicatorStatus.Pending,
   ConnectionStatusIndicatorStatus.Synced,
   ConnectionStatusIndicatorStatus.Incomplete,

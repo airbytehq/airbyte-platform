@@ -58,7 +58,6 @@ import io.airbyte.api.model.generated.StreamDescriptor;
 import io.airbyte.api.model.generated.StreamStats;
 import io.airbyte.api.model.generated.StreamTransform;
 import io.airbyte.api.model.generated.StreamTransform.TransformTypeEnum;
-import io.airbyte.api.model.generated.UserReadInConnectionEvent;
 import io.airbyte.api.model.generated.WorkspaceIdRequestBody;
 import io.airbyte.api.problems.model.generated.ProblemMessageData;
 import io.airbyte.api.problems.throwable.generated.UnexpectedProblem;
@@ -74,6 +73,7 @@ import io.airbyte.commons.server.handlers.helpers.AutoPropagateSchemaChangeHelpe
 import io.airbyte.commons.server.handlers.helpers.AutoPropagateSchemaChangeHelper.UpdateSchemaResult;
 import io.airbyte.commons.server.handlers.helpers.CatalogConverter;
 import io.airbyte.commons.server.handlers.helpers.ConnectionScheduleHelper;
+import io.airbyte.commons.server.handlers.helpers.ConnectionTimelineEventHelper;
 import io.airbyte.commons.server.handlers.helpers.NotificationHelper;
 import io.airbyte.commons.server.handlers.helpers.PaginationHelper;
 import io.airbyte.commons.server.handlers.helpers.StatsAggregationHelper;
@@ -104,7 +104,6 @@ import io.airbyte.config.StandardSync.ScheduleType;
 import io.airbyte.config.StandardSync.Status;
 import io.airbyte.config.StandardWorkspace;
 import io.airbyte.config.StreamSyncStats;
-import io.airbyte.config.User;
 import io.airbyte.config.helpers.CatalogHelpers;
 import io.airbyte.config.helpers.ScheduleHelpers;
 import io.airbyte.config.persistence.ActorDefinitionVersionHelper;
@@ -112,7 +111,6 @@ import io.airbyte.config.persistence.ConfigNotFoundException;
 import io.airbyte.config.persistence.ConfigRepository;
 import io.airbyte.config.persistence.StatePersistence;
 import io.airbyte.config.persistence.StreamGenerationRepository;
-import io.airbyte.config.persistence.UserPersistence;
 import io.airbyte.config.persistence.domain.Generation;
 import io.airbyte.config.persistence.helper.CatalogGenerationSetter;
 import io.airbyte.data.repositories.entities.ConnectionTimelineEvent;
@@ -192,7 +190,7 @@ public class ConnectionsHandler {
   private final NotificationHelper notificationHelper;
   private final StreamStatusesService streamStatusesService;
   private final ConnectionTimelineEventService connectionTimelineEventService;
-  private final UserPersistence userPersistence;
+  private final ConnectionTimelineEventHelper connectionTimelineEventHelper;
   private final StatePersistence statePersistence;
 
   @Inject
@@ -216,7 +214,7 @@ public class ConnectionsHandler {
                             final NotificationHelper notificationHelper,
                             final StreamStatusesService streamStatusesService,
                             final ConnectionTimelineEventService connectionTimelineEventService,
-                            final UserPersistence userPersistence,
+                            final ConnectionTimelineEventHelper connectionTimelineEventHelper,
                             final StatePersistence statePersistence) {
     this.jobPersistence = jobPersistence;
     this.configRepository = configRepository;
@@ -238,7 +236,7 @@ public class ConnectionsHandler {
     this.notificationHelper = notificationHelper;
     this.streamStatusesService = streamStatusesService;
     this.connectionTimelineEventService = connectionTimelineEventService;
-    this.userPersistence = userPersistence;
+    this.connectionTimelineEventHelper = connectionTimelineEventHelper;
     this.statePersistence = statePersistence;
   }
 
@@ -1070,22 +1068,9 @@ public class ConnectionsHandler {
     connectionEvent.connectionId(event.getConnectionId());
     connectionEvent.summary(Jsons.deserialize(event.getSummary()));
     if (event.getUserId() != null) {
-      connectionEvent.user(getUserRead(event.getUserId()));
+      connectionEvent.user(connectionTimelineEventHelper.getUserReadInConnectionEvent(event.getUserId(), event.getConnectionId()));
     }
     return connectionEvent;
-  }
-
-  private UserReadInConnectionEvent getUserRead(final UUID userId) {
-    try {
-      final User user = userPersistence.getUser(userId).orElseThrow();
-      return new UserReadInConnectionEvent()
-          .id(user.getUserId())
-          .name(user.getName())
-          .email(user.getEmail());
-    } catch (final Exception e) {
-      LOGGER.error("Error while retrieving user information.", e);
-      return null;
-    }
   }
 
   private ConnectionEventList convertConnectionEventList(final List<ConnectionTimelineEvent> events) {
@@ -1129,7 +1114,7 @@ public class ConnectionsHandler {
     connectionEventWithDetails.details(null);
     connectionEventWithDetails.createdAt(event.getCreatedAt().toEpochSecond());
     if (event.getUserId() != null) {
-      connectionEventWithDetails.user(getUserRead(event.getUserId()));
+      connectionEventWithDetails.user(connectionTimelineEventHelper.getUserReadInConnectionEvent(event.getUserId(), event.getConnectionId()));
     }
     return connectionEventWithDetails;
   }

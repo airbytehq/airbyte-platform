@@ -30,11 +30,11 @@ import io.airbyte.api.model.generated.StreamDescriptor;
 import io.airbyte.api.model.generated.SynchronousJobRead;
 import io.airbyte.commons.converters.ApiConverters;
 import io.airbyte.commons.enums.Enums;
+import io.airbyte.commons.logging.LogClientManager;
 import io.airbyte.commons.server.scheduler.SynchronousJobMetadata;
 import io.airbyte.commons.server.scheduler.SynchronousResponse;
 import io.airbyte.commons.version.AirbyteVersion;
 import io.airbyte.config.Attempt;
-import io.airbyte.config.Configs.WorkerEnvironment;
 import io.airbyte.config.Job;
 import io.airbyte.config.JobConfig.ConfigType;
 import io.airbyte.config.JobConfigProxy;
@@ -44,9 +44,6 @@ import io.airbyte.config.StandardSyncOutput;
 import io.airbyte.config.StandardSyncSummary;
 import io.airbyte.config.StreamSyncStats;
 import io.airbyte.config.SyncStats;
-import io.airbyte.config.helpers.LogClientSingleton;
-import io.airbyte.config.helpers.LogConfigs;
-import io.airbyte.featureflag.FeatureFlagClient;
 import jakarta.annotation.Nullable;
 import jakarta.inject.Singleton;
 import java.io.IOException;
@@ -64,16 +61,10 @@ import java.util.stream.Stream;
 @Singleton
 public class JobConverter {
 
-  private final WorkerEnvironment workerEnvironment;
-  private final LogConfigs logConfigs;
-  private final FeatureFlagClient featureFlagClient;
+  private final LogClientManager logClientManager;
 
-  public JobConverter(final WorkerEnvironment workerEnvironment,
-                      final LogConfigs logConfigs,
-                      final FeatureFlagClient featureFlagClient) {
-    this.workerEnvironment = workerEnvironment;
-    this.logConfigs = logConfigs;
-    this.featureFlagClient = featureFlagClient;
+  public JobConverter(final LogClientManager logClientManager) {
+    this.logClientManager = logClientManager;
   }
 
   public JobInfoRead getJobInfoRead(final Job job) {
@@ -192,7 +183,7 @@ public class JobConverter {
           .stream().flatMap(refreshStream -> Stream.ofNullable(refreshStream.getStreamDescriptor()))
           .map(ApiConverters::toApi)
           .toList();
-      if (refreshedStreams == null || refreshedStreams.isEmpty()) {
+      if (refreshedStreams.isEmpty()) {
         return Optional.empty();
       }
       return Optional.ofNullable(new JobRefreshConfig().streamsToRefresh(refreshedStreams));
@@ -289,7 +280,7 @@ public class JobConverter {
 
   public LogRead getLogRead(final Path logPath) {
     try {
-      return new LogRead().logLines(LogClientSingleton.getInstance().getJobLogFile(workerEnvironment, logConfigs, logPath, featureFlagClient));
+      return new LogRead().logLines(logClientManager.getJobLogFile(logPath));
     } catch (final IOException e) {
       throw new RuntimeException(e);
     }

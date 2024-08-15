@@ -1,9 +1,9 @@
 package io.airbyte.workload.launcher.config
 
 import io.airbyte.commons.constants.WorkerConstants
+import io.airbyte.commons.logging.StorageConfig
 import io.airbyte.config.Configs
 import io.airbyte.config.EnvConfigs
-import io.airbyte.config.storage.StorageConfig
 import io.airbyte.featureflag.Connection
 import io.airbyte.featureflag.ContainerOrchestratorJavaOpts
 import io.airbyte.featureflag.FeatureFlagClient

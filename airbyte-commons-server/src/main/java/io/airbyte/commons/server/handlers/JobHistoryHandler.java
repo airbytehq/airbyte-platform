@@ -39,12 +39,12 @@ import io.airbyte.api.model.generated.StreamDescriptor;
 import io.airbyte.api.model.generated.StreamStats;
 import io.airbyte.api.model.generated.StreamSyncProgressReadItem;
 import io.airbyte.commons.enums.Enums;
+import io.airbyte.commons.logging.LogClientManager;
 import io.airbyte.commons.server.converters.ApiPojoConverters;
 import io.airbyte.commons.server.converters.JobConverter;
 import io.airbyte.commons.server.converters.WorkflowStateConverter;
 import io.airbyte.commons.temporal.TemporalClient;
 import io.airbyte.commons.version.AirbyteVersion;
-import io.airbyte.config.Configs.WorkerEnvironment;
 import io.airbyte.config.ConfiguredAirbyteStream;
 import io.airbyte.config.Job;
 import io.airbyte.config.JobConfig;
@@ -54,7 +54,6 @@ import io.airbyte.config.JobStatus;
 import io.airbyte.config.JobStatusSummary;
 import io.airbyte.config.StandardSync;
 import io.airbyte.config.SyncMode;
-import io.airbyte.config.helpers.LogConfigs;
 import io.airbyte.config.persistence.ConfigNotFoundException;
 import io.airbyte.data.services.ConnectionService;
 import io.airbyte.featureflag.FeatureFlagClient;
@@ -102,8 +101,6 @@ public class JobHistoryHandler {
   private final FeatureFlagClient featureFlagClient;
 
   public JobHistoryHandler(final JobPersistence jobPersistence,
-                           final WorkerEnvironment workerEnvironment,
-                           final LogConfigs logConfigs,
                            final ConnectionService connectionService,
                            final SourceHandler sourceHandler,
                            final SourceDefinitionsHandler sourceDefinitionsHandler,
@@ -111,9 +108,10 @@ public class JobHistoryHandler {
                            final DestinationDefinitionsHandler destinationDefinitionsHandler,
                            final AirbyteVersion airbyteVersion,
                            final TemporalClient temporalClient,
-                           final FeatureFlagClient featureFlagClient) {
+                           final FeatureFlagClient featureFlagClient,
+                           final LogClientManager logClientManager) {
     this.featureFlagClient = featureFlagClient;
-    jobConverter = new JobConverter(workerEnvironment, logConfigs, featureFlagClient);
+    jobConverter = new JobConverter(logClientManager);
     workflowStateConverter = new WorkflowStateConverter();
     this.jobPersistence = jobPersistence;
     this.connectionService = connectionService;
@@ -123,21 +121,6 @@ public class JobHistoryHandler {
     this.destinationDefinitionsHandler = destinationDefinitionsHandler;
     this.airbyteVersion = airbyteVersion;
     this.temporalClient = temporalClient;
-  }
-
-  @Deprecated(forRemoval = true)
-  public JobHistoryHandler(final JobPersistence jobPersistence,
-                           final WorkerEnvironment workerEnvironment,
-                           final LogConfigs logConfigs,
-                           final ConnectionService connectionService,
-                           final SourceHandler sourceHandler,
-                           final SourceDefinitionsHandler sourceDefinitionsHandler,
-                           final DestinationHandler destinationHandler,
-                           final DestinationDefinitionsHandler destinationDefinitionsHandler,
-                           final AirbyteVersion airbyteVersion,
-                           final FeatureFlagClient featureFlagClient) {
-    this(jobPersistence, workerEnvironment, logConfigs, connectionService, sourceHandler, sourceDefinitionsHandler, destinationHandler,
-        destinationDefinitionsHandler, airbyteVersion, null, featureFlagClient);
   }
 
   @SuppressWarnings("UnstableApiUsage")

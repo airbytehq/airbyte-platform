@@ -7,9 +7,9 @@ package io.airbyte.workload.launcher.config
 import io.airbyte.commons.envvar.EnvVar.LOG4J_CONFIGURATION_FILE
 import io.airbyte.commons.envvar.EnvVar.LOG_LEVEL
 import io.airbyte.commons.envvar.EnvVar.S3_PATH_STYLE_ACCESS
+import io.airbyte.commons.logging.StorageConfig
 import io.airbyte.commons.workers.config.WorkerConfigs
 import io.airbyte.config.Configs
-import io.airbyte.config.storage.StorageConfig
 import io.airbyte.workers.process.Metadata.AWS_ACCESS_KEY_ID
 import io.airbyte.workers.process.Metadata.AWS_SECRET_ACCESS_KEY
 import io.airbyte.workers.workload.WorkloadConstants
@@ -362,12 +362,22 @@ class EnvVarConfigBeanFactory {
   @Singleton
   @Named("secretPersistenceEnvMap")
   fun secretPersistenceEnvMap(
+    @Value("\${airbyte.secret.persistence}") persistenceType: String,
     @Value("\${airbyte.secret.store.gcp.project-id}") gcpProjectId: String,
-    @Value("\${airbyte.secret.persistence}") gcpPersistenceType: String,
+    @Value("\${airbyte.secret.store.aws.region}") awsRegion: String,
+    @Value("\${airbyte.secret.store.aws.kms-key-arn}") awsKmsKeyArn: String,
+    @Value("\${airbyte.secret.store.aws.tags}") awsTags: String,
+    @Value("\${airbyte.secret.store.vault.address}") vaultAddress: String,
+    @Value("\${airbyte.secret.store.vault.prefix}") vaultPrefix: String,
   ): Map<String, String> {
     return buildMap {
-      put(SECRET_PERSISTENCE, gcpPersistenceType)
+      put(SECRET_PERSISTENCE, persistenceType)
       put(SECRET_STORE_GCP_PROJECT_ID, gcpProjectId)
+      put(AWS_SECRET_MANAGER_REGION, awsRegion)
+      put(AWS_KMS_KEY_ARN, awsKmsKeyArn)
+      put(AWS_SECRET_MANAGER_SECRET_TAGS, awsTags)
+      put(VAULT_ADDRESS, vaultAddress)
+      put(VAULT_PREFIX, vaultPrefix)
     }
   }
 
@@ -380,12 +390,28 @@ class EnvVarConfigBeanFactory {
   @Singleton
   @Named("secretPersistenceSecretsEnvMap")
   fun secretPersistenceSecretsEnvMap(
-    @Value("\${airbyte.secret.store.gcp.secret-name}") gcpSecretName: String,
-    @Value("\${airbyte.secret.store.gcp.secret-key}") gcpSecretKey: String,
+    @Value("\${airbyte.secret.store.gcp.credentials-ref-name}") gcpCredsRefName: String,
+    @Value("\${airbyte.secret.store.gcp.credentials-ref-key}") gcpCredsRefKey: String,
+    @Value("\${airbyte.secret.store.aws.access-key-ref-name}") awsAccessKeyRefName: String,
+    @Value("\${airbyte.secret.store.aws.access-key-ref-key}") awsAccessKeyRefKey: String,
+    @Value("\${airbyte.secret.store.aws.secret-key-ref-name}") awsSecretKeyRefName: String,
+    @Value("\${airbyte.secret.store.aws.secret-key-ref-key}") awsSecretKeyRefKey: String,
+    @Value("\${airbyte.secret.store.vault.token-ref-name}") vaultTokenRefName: String,
+    @Value("\${airbyte.secret.store.vault.token-ref-key}") vaultTokenRefKey: String,
   ): Map<String, EnvVarSource> {
     return buildMap {
-      if (gcpSecretName.isNotBlank()) {
-        put(SECRET_STORE_GCP_CREDENTIALS, createEnvVarSource(gcpSecretName, gcpSecretKey))
+      // Note: If any of the secret ref names or keys are blank kube will fail to create the pod, so we have to manually exclude empties
+      if (gcpCredsRefName.isNotBlank() && gcpCredsRefKey.isNotBlank()) {
+        put(SECRET_STORE_GCP_CREDENTIALS, createEnvVarSource(gcpCredsRefName, gcpCredsRefKey))
+      }
+      if (awsAccessKeyRefName.isNotBlank() && awsAccessKeyRefKey.isNotBlank()) {
+        put(AWS_SECRET_MANAGER_ACCESS_KEY_ID, createEnvVarSource(awsAccessKeyRefName, awsAccessKeyRefKey))
+      }
+      if (awsSecretKeyRefName.isNotBlank() && awsSecretKeyRefKey.isNotBlank()) {
+        put(AWS_SECRET_MANAGER_SECRET_ACCESS_KEY, createEnvVarSource(awsSecretKeyRefName, awsSecretKeyRefKey))
+      }
+      if (vaultTokenRefName.isNotBlank() && vaultTokenRefKey.isNotBlank()) {
+        put(VAULT_AUTH_TOKEN, createEnvVarSource(vaultTokenRefName, vaultTokenRefKey))
       }
     }
   }
@@ -457,11 +483,19 @@ class EnvVarConfigBeanFactory {
     private const val WORKLOAD_API_MAX_RETRIES_ENV_VAR = "WORKLOAD_API_MAX_RETRIES"
     private const val SECRET_PERSISTENCE = "SECRET_PERSISTENCE"
     private const val SECRET_STORE_GCP_PROJECT_ID = "SECRET_STORE_GCP_PROJECT_ID"
+    private const val AWS_SECRET_MANAGER_REGION = "AWS_SECRET_MANAGER_REGION"
+    private const val AWS_KMS_KEY_ARN = "AWS_KMS_KEY_ARN"
+    private const val AWS_SECRET_MANAGER_SECRET_TAGS = "AWS_SECRET_MANAGER_SECRET_TAGS"
+    private const val VAULT_ADDRESS = "VAULT_ADDRESS"
+    private const val VAULT_PREFIX = "VAULT_PREFIX"
 
     // secrets
     const val AWS_ASSUME_ROLE_ACCESS_KEY_ID_ENV_VAR = "AWS_ASSUME_ROLE_ACCESS_KEY_ID"
     const val AWS_ASSUME_ROLE_SECRET_ACCESS_KEY_ENV_VAR = "AWS_ASSUME_ROLE_SECRET_ACCESS_KEY"
     const val WORKLOAD_API_BEARER_TOKEN_ENV_VAR = "WORKLOAD_API_BEARER_TOKEN"
     private const val SECRET_STORE_GCP_CREDENTIALS = "SECRET_STORE_GCP_CREDENTIALS"
+    private const val AWS_SECRET_MANAGER_ACCESS_KEY_ID = "AWS_SECRET_MANAGER_ACCESS_KEY_ID"
+    private const val AWS_SECRET_MANAGER_SECRET_ACCESS_KEY = "AWS_SECRET_MANAGER_SECRET_ACCESS_KEY"
+    private const val VAULT_AUTH_TOKEN = "VAULT_AUTH_TOKEN"
   }
 }

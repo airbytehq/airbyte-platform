@@ -1,12 +1,16 @@
+/*
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ */
+
 package io.airbyte.workers.storage
 
 import com.google.cloud.storage.Storage
-import io.airbyte.config.storage.GcsStorageConfig
-import io.airbyte.config.storage.LocalStorageConfig
-import io.airbyte.config.storage.MinioStorageConfig
-import io.airbyte.config.storage.S3StorageConfig
-import io.airbyte.config.storage.STORAGE_TYPE
-import io.airbyte.config.storage.StorageBucketConfig
+import io.airbyte.commons.logging.GcsStorageConfig
+import io.airbyte.commons.logging.LocalStorageConfig
+import io.airbyte.commons.logging.MinioStorageConfig
+import io.airbyte.commons.logging.S3StorageConfig
+import io.airbyte.commons.logging.STORAGE_TYPE
+import io.airbyte.commons.logging.StorageBucketConfig
 import io.micronaut.context.annotation.Bean
 import io.micronaut.context.annotation.Primary
 import io.micronaut.context.annotation.Property

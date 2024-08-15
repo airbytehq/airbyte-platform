@@ -99,11 +99,12 @@ class ParallelStreamStatsTracker(
           getNameNamespacePair(stateMessage),
         )
         stateCheckSumEventHandler.validateStateChecksum(
-          stateMessage,
-          statsTracker.getTrackedEmittedRecordsSinceLastStateMessage().toDouble(),
-          AirbyteMessageOrigin.SOURCE,
-          failOnInvalidChecksum,
-          checksumValidationEnabled,
+          stateMessage = stateMessage,
+          platformRecordCount = statsTracker.getTrackedEmittedRecordsSinceLastStateMessage().toDouble(),
+          origin = AirbyteMessageOrigin.SOURCE,
+          failOnInvalidChecksum = failOnInvalidChecksum,
+          checksumValidationEnabled = checksumValidationEnabled,
+          streamPlatformRecordCounts = getStreamToEmittedRecords(),
         )
       }
     }
@@ -134,11 +135,12 @@ class ParallelStreamStatsTracker(
       else -> {
         val statsTracker = getOrCreateStreamStatsTracker(getNameNamespacePair(stateMessage))
         stateCheckSumEventHandler.validateStateChecksum(
-          stateMessage,
-          statsTracker.getTrackedCommittedRecordsSinceLastStateMessage(stateMessage).toDouble(),
-          AirbyteMessageOrigin.DESTINATION,
-          failOnInvalidChecksum,
-          checksumValidationEnabled,
+          stateMessage = stateMessage,
+          platformRecordCount = statsTracker.getTrackedCommittedRecordsSinceLastStateMessage(stateMessage).toDouble(),
+          origin = AirbyteMessageOrigin.DESTINATION,
+          failOnInvalidChecksum = failOnInvalidChecksum,
+          checksumValidationEnabled = checksumValidationEnabled,
+          streamPlatformRecordCounts = getStreamToCommittedRecords(),
         )
         statsTracker.trackStateFromDestination(stateMessage)
       }
@@ -171,12 +173,13 @@ class ParallelStreamStatsTracker(
   ) {
     val expectedRecordCount = streamTrackers.values.sumOf { getEmittedCount(origin, stateMessage, it).toDouble() }
     stateCheckSumEventHandler.validateStateChecksum(
-      stateMessage,
-      expectedRecordCount,
-      origin,
-      failOnInvalidChecksum,
-      checksumValidationEnabled,
-      false,
+      stateMessage = stateMessage,
+      platformRecordCount = expectedRecordCount,
+      origin = origin,
+      failOnInvalidChecksum = failOnInvalidChecksum,
+      checksumValidationEnabled = checksumValidationEnabled,
+      includeStreamInLogs = false,
+      streamPlatformRecordCounts = getStreamToEmittedRecords(),
     )
   }
 
@@ -391,9 +394,6 @@ class ParallelStreamStatsTracker(
   private fun getOrCreateStreamStatsTracker(pair: AirbyteStreamNameNamespacePair): StreamStatsTracker {
     // if an entry already exists, return it
     streamTrackers[pair]?.let {
-      if (replicationFeatureFlags?.logStateMsgs == true) {
-        logger.info { "Using existing stats tracker for stream $pair" }
-      }
       return it
     }
 
@@ -403,9 +403,6 @@ class ParallelStreamStatsTracker(
     synchronized(this) {
       // Making sure the stream hasn't been created since the previous check.
       streamTrackers[pair]?.let {
-        if (replicationFeatureFlags?.logStateMsgs == true) {
-          logger.info { "Using existing stats tracker for stream $pair" }
-        }
         return it
       }
 

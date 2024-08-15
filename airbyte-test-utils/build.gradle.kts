@@ -22,6 +22,7 @@ dependencies {
   implementation(project(":oss:airbyte-api:server-api"))
   implementation(project(":oss:airbyte-api:workload-api"))
   implementation(project(":oss:airbyte-commons-auth"))
+  implementation(project(":oss:airbyte-commons-logging"))
   implementation(project(":oss:airbyte-commons-temporal"))
   implementation(project(":oss:airbyte-commons-worker"))
   implementation(libs.bundles.kubernetes.client)

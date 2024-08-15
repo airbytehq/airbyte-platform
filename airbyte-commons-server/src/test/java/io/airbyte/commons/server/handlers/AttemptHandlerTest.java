@@ -4,6 +4,7 @@
 
 package io.airbyte.commons.server.handlers;
 
+import static io.airbyte.commons.logging.LogMdcHelperKt.DEFAULT_LOG_FILENAME;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -70,7 +71,6 @@ import io.airbyte.config.StateWrapper;
 import io.airbyte.config.StreamDescriptor;
 import io.airbyte.config.SyncMode;
 import io.airbyte.config.SyncStats;
-import io.airbyte.config.helpers.LogClientSingleton;
 import io.airbyte.config.persistence.ActorDefinitionVersionHelper;
 import io.airbyte.config.persistence.ConfigNotFoundException;
 import io.airbyte.config.persistence.StatePersistence;
@@ -266,7 +266,7 @@ class AttemptHandlerTest {
     when(path.resolve(Mockito.anyString())).thenReturn(path);
 
     final Path expectedRoot = TemporalUtils.getJobRoot(path, String.valueOf(JOB_ID), ATTEMPT_NUMBER);
-    final Path expectedLogPath = expectedRoot.resolve(LogClientSingleton.LOG_FILENAME);
+    final Path expectedLogPath = expectedRoot.resolve(DEFAULT_LOG_FILENAME);
 
     when(jobPersistence.createAttempt(JOB_ID, expectedLogPath))
         .thenReturn(attemptNumber);
@@ -322,7 +322,7 @@ class AttemptHandlerTest {
     when(path.resolve(Mockito.anyString())).thenReturn(path);
 
     final Path expectedRoot = TemporalUtils.getJobRoot(path, String.valueOf(JOB_ID), ATTEMPT_NUMBER);
-    final Path expectedLogPath = expectedRoot.resolve(LogClientSingleton.LOG_FILENAME);
+    final Path expectedLogPath = expectedRoot.resolve(DEFAULT_LOG_FILENAME);
 
     when(jobPersistence.createAttempt(JOB_ID, expectedLogPath))
         .thenReturn(attemptNumber);
@@ -372,7 +372,7 @@ class AttemptHandlerTest {
     when(path.resolve(Mockito.anyString())).thenReturn(path);
 
     final Path expectedRoot = TemporalUtils.getJobRoot(path, String.valueOf(JOB_ID), ATTEMPT_NUMBER);
-    final Path expectedLogPath = expectedRoot.resolve(LogClientSingleton.LOG_FILENAME);
+    final Path expectedLogPath = expectedRoot.resolve(DEFAULT_LOG_FILENAME);
 
     when(jobPersistence.createAttempt(JOB_ID, expectedLogPath))
         .thenReturn(attemptNumber);
@@ -475,7 +475,7 @@ class AttemptHandlerTest {
       when(ffClient.boolVariation(any(), any())).thenReturn(true);
       when(ffClient.boolVariation(eq(EnableResumableFullRefresh.INSTANCE), any())).thenReturn(enableResumableFullRefresh);
       final Path expectedRoot = TemporalUtils.getJobRoot(path, String.valueOf(JOB_ID), ATTEMPT_NUMBER);
-      final Path expectedLogPath = expectedRoot.resolve(LogClientSingleton.LOG_FILENAME);
+      final Path expectedLogPath = expectedRoot.resolve(DEFAULT_LOG_FILENAME);
 
       final var mCatalog = mock(ConfiguredAirbyteCatalog.class);
       when(mDyncConfig.getConfiguredAirbyteCatalog()).thenReturn(mCatalog);

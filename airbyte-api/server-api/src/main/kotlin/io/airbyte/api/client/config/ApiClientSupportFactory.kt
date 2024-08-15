@@ -20,7 +20,6 @@ import org.openapitools.client.infrastructure.ServerException
 import java.io.IOException
 import java.lang.Exception
 import java.time.Duration
-import java.util.Optional
 
 @Factory
 class ApiClientSupportFactory {
@@ -42,14 +41,14 @@ class ApiClientSupportFactory {
     @Value("\${airbyte.internal-api.retries.delay-seconds:2}") retryDelaySeconds: Long,
     @Value("\${airbyte.internal-api.retries.max:5}") maxRetries: Int,
     @Value("\${airbyte.internal-api.jitter-factor:.25}") jitterFactor: Double,
-    meterRegistry: Optional<MeterRegistry>,
+    meterRegistry: MeterRegistry?,
   ): RetryPolicy<Response> {
     return generateDefaultRetryPolicy(
       retryDelaySeconds = retryDelaySeconds,
       jitterFactor = jitterFactor,
       maxRetries = maxRetries,
       meterRegistry = meterRegistry,
-      metricPrefix = "airbyte-api-client",
+      metricPrefix = "api-client",
       clientRetryExceptions = clientRetryExceptions,
     )
   }

@@ -20,7 +20,6 @@ import okhttp3.Response
 import java.io.IOException
 import java.lang.Exception
 import java.time.Duration
-import java.util.Optional
 import io.airbyte.workload.api.client.generated.infrastructure.ClientException as WorkloadApiClientException
 import io.airbyte.workload.api.client.generated.infrastructure.ServerException as WorkloadApiServerException
 
@@ -44,7 +43,7 @@ class WorkloadApiClientSupportFactory {
     @Value("\${airbyte.workload-api.retries.delay-seconds:2}") retryDelaySeconds: Long,
     @Value("\${airbyte.workload-api.retries.max:5}") maxRetries: Int,
     @Value("\${airbyte.workload-api.jitter-factor:.25}") jitterFactor: Double,
-    meterRegistry: Optional<MeterRegistry>,
+    meterRegistry: MeterRegistry?,
   ): RetryPolicy<Response> {
     return generateDefaultRetryPolicy(
       retryDelaySeconds = retryDelaySeconds,

@@ -62,17 +62,17 @@ class StateCheckSumCountEventHandlerTest {
     every { stateCheckSumErrorReporter.reportError(any(), any(), any(), any(), any(), any(), any(), any(), any()) } just Runs
     handler =
       StateCheckSumCountEventHandler(
-        Optional.of(pubSubWriter),
-        featureFlagClient,
-        deploymentFetcher,
-        trackingIdentityFetcher,
-        stateCheckSumErrorReporter,
-        connectionId,
-        workspaceId,
-        jobId,
-        attemptNumber,
-        epochMilliSupplier,
-        idSupplier,
+        pubSubWriter = Optional.of(pubSubWriter),
+        featureFlagClient = featureFlagClient,
+        deploymentFetcher = deploymentFetcher,
+        trackingIdentityFetcher = trackingIdentityFetcher,
+        stateCheckSumReporter = stateCheckSumErrorReporter,
+        connectionId = connectionId,
+        workspaceId = workspaceId,
+        jobId = jobId,
+        attemptNumber = attemptNumber,
+        epochMilliSupplier = epochMilliSupplier,
+        idSupplier = idSupplier,
       )
   }
 
@@ -92,15 +92,15 @@ class StateCheckSumCountEventHandlerTest {
   fun `default epochMilliSupplier test`() {
     val handler =
       StateCheckSumCountEventHandler(
-        Optional.of(pubSubWriter),
-        featureFlagClient,
-        deploymentFetcher,
-        trackingIdentityFetcher,
-        stateCheckSumErrorReporter,
-        connectionId,
-        workspaceId,
-        jobId,
-        attemptNumber,
+        pubSubWriter = Optional.of(pubSubWriter),
+        featureFlagClient = featureFlagClient,
+        deploymentFetcher = deploymentFetcher,
+        trackingIdentityFetcher = trackingIdentityFetcher,
+        stateCheckSumReporter = stateCheckSumErrorReporter,
+        connectionId = connectionId,
+        workspaceId = workspaceId,
+        jobId = jobId,
+        attemptNumber = attemptNumber,
       )
     val timeInMicroSecond = handler.getCurrentTimeInMicroSecond()
     val instant = Instant.ofEpochMilli(timeInMicroSecond / 1000)

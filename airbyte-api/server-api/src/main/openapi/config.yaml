@@ -2239,7 +2239,6 @@ paths:
           $ref: "#/components/responses/NotFoundResponse"
         "422":
           $ref: "#/components/responses/InvalidInputResponse"
-
   /v1/connections/events/list:
     post:
       tags:
@@ -9092,9 +9091,12 @@ components:
       type: object
       required:
         - connectionEventId
+        - connectionId
       properties:
         connectionEventId:
           $ref: "#/components/schemas/ConnectionEventId"
+        connectionId:
+          $ref: "#/components/schemas/ConnectionId"
     ConnectionEventType:
       type: string
       enum:
@@ -9122,8 +9124,7 @@ components:
     UserReadInConnectionEvent:
       type: object
       required:
-        - id
-        - email
+        - isDeleted
       properties:
         id:
           type: string
@@ -9133,6 +9134,9 @@ components:
           format: email
         name:
           type: string
+        isDeleted:
+          type: boolean
+          default: false
     ConnectionEvent:
       type: object
       required:

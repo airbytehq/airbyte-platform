@@ -14,7 +14,6 @@ dependencies {
 
   api(libs.bundles.micronaut.annotation)
   api(libs.micronaut.http)
-  api(libs.bundles.micronaut.metrics)
   api(libs.failsafe.okhttp)
   api(libs.okhttp)
   api(libs.guava)
@@ -24,6 +23,7 @@ dependencies {
   api(libs.jackson.kotlin)
   api(libs.moshi.kotlin)
   api(project(":oss:airbyte-config:config-models"))
+  api(project(":oss:airbyte-metrics:metrics-lib"))
 
   implementation(platform(libs.micronaut.platform))
   implementation(libs.bundles.micronaut)
@@ -33,11 +33,12 @@ dependencies {
   implementation(libs.jakarta.validation.api)
   implementation(libs.jackson.datatype)
   implementation(libs.jackson.databind)
+  implementation(libs.micronaut.security.oauth2)
   implementation(libs.openapi.jackson.databind.nullable)
   implementation(libs.reactor.core)
   implementation(libs.slf4j.api)
   implementation(libs.swagger.annotations)
-    
+
   implementation(project(":oss:airbyte-commons"))
 
   compileOnly(libs.v3.swagger.annotations)
@@ -51,7 +52,6 @@ dependencies {
   testImplementation(libs.kotlin.test.runner.junit5)
 }
 
-
 tasks.withType<JavaCompile>().configureEach {
   options.compilerArgs = listOf("-parameters")
 }
@@ -60,5 +60,5 @@ tasks.withType<JavaCompile>().configureEach {
 // still runs into spotbug issues. Working theory is that
 // generated code is being picked up. Disable as a short-term fix.
 tasks.named("spotbugsMain") {
-    enabled = false
+  enabled = false
 }

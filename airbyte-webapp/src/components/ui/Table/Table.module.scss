@@ -95,6 +95,14 @@ $border-radius: variables.$border-radius-lg;
       background-color: colors.$foreground;
     }
   }
+
+  &:last-child > td:first-child {
+    border-bottom-left-radius: $border-radius;
+  }
+
+  &:last-child > td:last-child {
+    border-bottom-right-radius: $border-radius;
+  }
 }
 
 // --------- <td/> ---------
@@ -115,17 +123,5 @@ $border-radius: variables.$border-radius-lg;
 
   &--noPadding {
     padding: 0;
-  }
-
-  tr:last-child > & {
-    border-bottom: none;
-
-    &:first-child {
-      border-radius: 0 0 $border-radius $border-radius;
-    }
-
-    &:last-child {
-      border-radius: 0 0 $border-radius $border-radius;
-    }
   }
 }

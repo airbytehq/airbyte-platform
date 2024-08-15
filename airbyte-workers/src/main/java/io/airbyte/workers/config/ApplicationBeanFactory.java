@@ -7,7 +7,6 @@ package io.airbyte.workers.config;
 import io.airbyte.commons.version.AirbyteProtocolVersionRange;
 import io.airbyte.commons.version.Version;
 import io.airbyte.config.AirbyteConfigValidator;
-import io.airbyte.config.helpers.LogClientSingleton;
 import io.airbyte.metrics.lib.MetricClient;
 import io.airbyte.metrics.lib.MetricClientFactory;
 import io.airbyte.metrics.lib.MetricEmittingApps;
@@ -72,11 +71,6 @@ public class ApplicationBeanFactory {
   @Singleton
   public StateAggregatorFactory stateAggregatorFactory() {
     return new StateAggregatorFactory();
-  }
-
-  @Singleton
-  public LogClientSingleton logClientSingleton() {
-    return LogClientSingleton.getInstance();
   }
 
 }
