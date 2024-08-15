@@ -13,9 +13,9 @@ import { getBreakingChangeErrorMessage } from "pages/connections/StreamStatusPag
 
 import AllConnectionsStatusCell from "./components/AllConnectionsStatusCell";
 import ConnectEntitiesCell from "./components/ConnectEntitiesCell";
-import { ConnectorNameCell } from "./components/ConnectorNameCell";
+import { ConnectorName } from "./components/ConnectorName";
 import { EntityNameCell } from "./components/EntityNameCell";
-import { LastSyncCell } from "./components/LastSyncCell";
+import { LastSync } from "./components/LastSync";
 import styles from "./ImplementationTable.module.scss";
 import { EntityTableDataItem } from "./types";
 
@@ -53,7 +53,7 @@ const ImplementationTable: React.FC<ImplementationTableProps> = ({ data, entity 
         },
         cell: (props) => (
           <Link to={props.row.original.entityId} variant="primary" className={styles.cellContent}>
-            <ConnectorNameCell
+            <ConnectorName
               value={props.cell.getValue()}
               icon={props.row.original.connectorIcon}
               enabled={props.row.original.enabled}
@@ -83,7 +83,7 @@ const ImplementationTable: React.FC<ImplementationTableProps> = ({ data, entity 
         },
         cell: (props) => (
           <Link to={props.row.original.entityId} variant="primary" className={styles.cellContent}>
-            <LastSyncCell timeInSeconds={props.cell.getValue() || 0} enabled={props.row.original.enabled} />
+            <LastSync timeInSeconds={props.cell.getValue() || 0} enabled={props.row.original.enabled} />
           </Link>
         ),
         sortUndefined: 1,

@@ -4,14 +4,14 @@ import { FormattedRelativeTime } from "react-intl";
 
 import { Text } from "components/ui/Text";
 
-import styles from "./LastSyncCell.module.scss";
+import styles from "./LastSync.module.scss";
 
-interface LastSyncCellProps {
+interface LastSyncProps {
   timeInSeconds?: number | null;
   enabled?: boolean;
 }
 
-export const LastSyncCell: React.FC<LastSyncCellProps> = ({ timeInSeconds, enabled }) => {
+export const LastSync: React.FC<LastSyncProps> = ({ timeInSeconds, enabled }) => {
   return (
     <>
       {timeInSeconds ? (

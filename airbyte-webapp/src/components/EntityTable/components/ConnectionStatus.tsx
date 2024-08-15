@@ -8,13 +8,13 @@ import { StatusIconStatus } from "components/ui/StatusIcon/StatusIcon";
 import { EntityNameCell } from "./EntityNameCell";
 import { Status } from "../types";
 
-interface ConnectionStatusCellProps {
+interface ConnectionStatusProps {
   status: string | null;
   value: string;
   enabled: boolean;
 }
 
-export const ConnectionStatusCell: React.FC<ConnectionStatusCellProps> = ({ status, value, enabled }) => {
+export const ConnectionStatus: React.FC<ConnectionStatusProps> = ({ status, value, enabled }) => {
   const { formatMessage } = useIntl();
   const isStreamCentricV2 = false;
   const statusIconStatus = useMemo<StatusIconStatus | undefined>(

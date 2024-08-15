@@ -1,9 +1,11 @@
+import { CellContext } from "@tanstack/react-table";
 import { render } from "@testing-library/react";
 
 import { TestSuspenseBoundary, TestWrapper } from "test-utils";
 import { mockWorkspace } from "test-utils/mock-data/mockWorkspace";
 
 import { StateSwitchCell } from "./StateSwitchCell";
+import { ConnectionTableDataItem } from "../types";
 
 jest.mock("core/api", () => ({
   useCurrentWorkspace: jest.fn(() => mockWorkspace),
@@ -19,11 +21,28 @@ jest.mock("core/utils/rbac", () => ({
 
 const mockId = "mock-id";
 
-describe(`${StateSwitchCell.name}`, () => {
+const makeCellProps = (
+  connectionId: string,
+  enabled = false,
+  schemaChange: ConnectionTableDataItem["schemaChange"] = "no_change"
+): CellContext<ConnectionTableDataItem, boolean> =>
+  ({
+    row: {
+      original: {
+        connectionId,
+        schemaChange,
+      },
+    },
+    cell: {
+      getValue: () => enabled,
+    },
+  }) as unknown as CellContext<ConnectionTableDataItem, boolean>;
+
+describe("StateSwitchCell", () => {
   it("renders enabled switch", () => {
     const { getByTestId } = render(
       <TestSuspenseBoundary>
-        <StateSwitchCell connectionId={mockId} enabled />
+        <StateSwitchCell {...makeCellProps(mockId, true)} />
       </TestSuspenseBoundary>,
       {
         wrapper: TestWrapper,
@@ -39,7 +58,7 @@ describe(`${StateSwitchCell.name}`, () => {
   it("renders disabled switch when connection has `breaking` changes", () => {
     const { getByTestId } = render(
       <TestSuspenseBoundary>
-        <StateSwitchCell connectionId={mockId} schemaChange="breaking" />
+        <StateSwitchCell {...makeCellProps(mockId, false, "breaking")} />
       </TestSuspenseBoundary>,
       {
         wrapper: TestWrapper,
@@ -58,7 +77,7 @@ describe(`${StateSwitchCell.name}`, () => {
 
     const { getByTestId } = render(
       <TestSuspenseBoundary>
-        <StateSwitchCell connectionId={mockId} schemaChange="breaking" />
+        <StateSwitchCell {...makeCellProps(mockId, false, "breaking")} />
       </TestSuspenseBoundary>,
       {
         wrapper: TestWrapper,
