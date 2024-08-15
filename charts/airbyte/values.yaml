@@ -85,6 +85,10 @@ global:
     # -- The key within `secretName` where the password is stored
     #passwordSecretKey: "" # e.g."database-password"
 
+    # -- db-pvc Specific StorageClass --#
+    storageClassName: {}
+
+
   storage:
     # -- The storage backend type. Supports s3, gcs, minio (default)
     type: minio # default storage used
@@ -1421,8 +1425,6 @@ postgresql:
   # https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#affinity-and-anti-affinity
   affinity: {}
 
-  # -- Specific StorageClass --#
-  storageClassName: {}
 
 # External PostgreSQL configuration, All of these values are only used when postgresql.enabled is set to false
 externalDatabase:
