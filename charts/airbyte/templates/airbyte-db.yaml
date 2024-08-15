@@ -73,7 +73,7 @@ spec:
       name: airbyte-volume-db
     spec:
       accessModes: [ "ReadWriteOnce" ]
-      storageClassName: {{ .Values.database.storageClassName }}
+      storageClassName: {{ .Values.postgres.storageClassName }}
       resources:
         requests:
           storage: 500Mi
