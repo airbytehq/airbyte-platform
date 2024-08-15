@@ -1,4 +1,4 @@
-import { Disclosure } from "@headlessui/react";
+import { Disclosure, DisclosureButton, DisclosurePanel } from "@headlessui/react";
 import classNames from "classnames";
 import React from "react";
 
@@ -49,7 +49,7 @@ export const Collapsible: React.FC<React.PropsWithChildren<CollapsibleProps>> = 
           className={classNames(className, styles.container, { [styles.footer]: type === "footer" })}
           gap="xl"
         >
-          <Disclosure.Button
+          <DisclosureButton
             data-testid={dataTestId}
             className={classNames(buttonClassName, styles.button, { [styles.buttonSection]: type === "section" })}
             onClick={() => onClick?.(!open)}
@@ -77,13 +77,13 @@ export const Collapsible: React.FC<React.PropsWithChildren<CollapsibleProps>> = 
               </FlexContainer>
               {showErrorIndicator && <Indicator className={styles.errorIndicator} />}
             </FlexContainer>
-          </Disclosure.Button>
-          <Disclosure.Panel
+          </DisclosureButton>
+          <DisclosurePanel
             className={classNames(styles.body, { [styles["body--noPadding"]]: noBodyPadding })}
             unmount={false}
           >
             {children}
-          </Disclosure.Panel>
+          </DisclosurePanel>
         </FlexContainer>
       )}
     </Disclosure>
