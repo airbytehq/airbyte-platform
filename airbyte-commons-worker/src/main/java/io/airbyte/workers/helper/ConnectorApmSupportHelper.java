@@ -10,8 +10,6 @@ import io.airbyte.commons.constants.WorkerConstants;
 import io.fabric8.kubernetes.api.model.EnvVar;
 import io.micrometer.common.util.StringUtils;
 import jakarta.validation.constraints.NotNull;
-
-import java.lang.reflect.Array;
 import java.util.List;
 import java.util.Map;
 import org.slf4j.Logger;
