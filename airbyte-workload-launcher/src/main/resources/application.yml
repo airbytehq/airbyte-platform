@@ -76,20 +76,32 @@ airbyte:
     persistence: ${SECRET_PERSISTENCE}
     store:
       aws:
-        access-key: ${AWS_ACCESS_KEY:}
-        secret-key: ${AWS_SECRET_ACCESS_KEY:}
-        region: ${AWS_REGION:}
+        region: ${AWS_SECRET_MANAGER_REGION:}
+        kms-key-arn: ${AWS_KMS_KEY_ARN:}
+        tags: ${AWS_SECRET_MANAGER_SECRET_TAGS:}
+        # injects actual secret values
+        access-key: ${AWS_SECRET_MANAGER_ACCESS_KEY_ID:}
+        secret-key: ${AWS_SECRET_MANAGER_SECRET_ACCESS_KEY:}
+        # injects the names/keys for secret reference
+        access-key-ref-name: ${AWS_SECRET_MANAGER_ACCESS_KEY_ID_REF_NAME:}
+        access-key-ref-key: ${AWS_SECRET_MANAGER_ACCESS_KEY_ID_REF_KEY:}
+        secret-key-ref-name: ${AWS_SECRET_MANAGER_SECRET_ACCESS_KEY_REF_NAME:}
+        secret-key-ref-key: ${AWS_SECRET_MANAGER_SECRET_ACCESS_KEY_REF_KEY:}
       gcp:
         # injects the actual secret value
         credentials: ${SECRET_STORE_GCP_CREDENTIALS:}
         project-id: ${SECRET_STORE_GCP_PROJECT_ID:}
-        # for injecting the env var source
-        secret-name: ${SECRET_STORE_GCP_SECRET_NAME:}
-        secret-key: ${SECRET_STORE_GCP_SECRET_KEY:}
+        # injects the name/key for secret reference
+        credentials-ref-name: ${SECRET_STORE_GCP_SECRET_NAME:}
+        credentials-ref-key: ${SECRET_STORE_GCP_SECRET_KEY:}
       vault:
         address: ${VAULT_ADDRESS:}
         prefix: ${VAULT_PREFIX:}
+        # injects the actual secret value
         token: ${VAULT_AUTH_TOKEN:}
+        # injects the name/key for secret reference
+        token-ref-name: ${VAULT_AUTH_TOKEN_REF_NAME:}
+        token-ref-key: ${VAULT_AUTH_TOKEN_REF_KEY:}
   version: ${AIRBYTE_VERSION}
   container.orchestrator:
     data-plane-creds:
