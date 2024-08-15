@@ -57,6 +57,7 @@ export const ClearEventItem: React.FC<ClearEventProps> = ({ clearEvent }) => {
         createdAt={clearEvent.createdAt}
         eventId={clearEvent.id}
         jobId={clearEvent.summary.jobId}
+        attemptCount={clearEvent.summary.attemptsCount}
       />
     </ConnectionTimelineEventItem>
   );

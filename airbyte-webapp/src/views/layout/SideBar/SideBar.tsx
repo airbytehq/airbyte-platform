@@ -47,8 +47,8 @@ export const SideBar: React.FC<PropsWithChildren<SideBarProps>> = ({
     if (authType === "simple" || authType === "none") {
       return formatMessage({ id: "sidebar.defaultUsername" });
     }
-    return user?.name;
-  }, [authType, user?.name, formatMessage]);
+    return user?.name?.trim() || user?.email?.trim();
+  }, [authType, user?.name, user?.email, formatMessage]);
 
   return (
     <nav className={classNames(styles.sidebar, { [styles.hidden]: isHidden })}>
