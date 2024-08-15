@@ -178,7 +178,8 @@ secrets: {}
 # env_vars:
 #   AIRBYTE_VERSION: 0.40.4
 
-env_vars: {}
+env_vars:
+  AI_ASSIST_URL_BASE: "https://builder-ai-production-t4klofs23a-wm.a.run.app/api"
 
 gsm:
   BUILDER_GITHUB_AIRBYTE_PAT_TOKEN: builder-github-airbyte-pat-token

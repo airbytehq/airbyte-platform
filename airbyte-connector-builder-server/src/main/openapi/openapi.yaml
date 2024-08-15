@@ -108,6 +108,29 @@ paths:
           $ref: "#/components/responses/ExceptionResponse"
         "422":
           $ref: "#/components/responses/InvalidInputResponse"
+  /v1/assist/v1/process:
+    post:
+      tags:
+        - connectorBuilderServer
+      summary: Assist server access point
+      operationId: assistV1Process
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AssistV1ProcessRequestBody"
+        required: true
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AssistV1Process"
+        "400":
+          $ref: "#/components/responses/ExceptionResponse"
+        "422":
+          $ref: "#/components/responses/InvalidInputResponse"
   /v1/health:
     get:
       tags:
@@ -123,7 +146,6 @@ paths:
                 $ref: "#/components/schemas/HealthCheckRead"
       # This route is unsecured for external monitoring.
       security: []
-
 components:
   securitySchemes:
     bearerAuth:
@@ -373,6 +395,12 @@ components:
         manifest:
           type: object
           description: The config-based connector manifest contents with $refs and $parameters resolved
+    AssistV1ProcessRequestBody:
+      type: object
+      additionalProperties: true
+    AssistV1Process:
+      type: object
+      additionalProperties: true
     HealthCheckRead:
       type: object
       required:
@@ -437,7 +465,6 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/InvalidInputProperty"
-
   responses:
     InvalidInputResponse:
       description: Input failed validation
