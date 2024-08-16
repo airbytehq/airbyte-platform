@@ -226,7 +226,7 @@ class DefaultJobCreatorTest {
         .thenReturn(workerResourceRequirements);
     streamRefreshesRepository = mock(StreamRefreshesRepository.class);
     jobCreator =
-        new DefaultJobCreator(jobPersistence, resourceRequirementsProvider, mFeatureFlagClient, streamRefreshesRepository);
+        new DefaultJobCreator(jobPersistence, resourceRequirementsProvider, mFeatureFlagClient, streamRefreshesRepository, null);
   }
 
   @ParameterizedTest
@@ -243,7 +243,7 @@ class DefaultJobCreatorTest {
     when(statePersistence.getCurrentState(STANDARD_SYNC.getConnectionId())).thenReturn(Optional.of(stateWrapper));
 
     jobCreator =
-        new DefaultJobCreator(jobPersistence, resourceRequirementsProvider, mFeatureFlagClient, streamRefreshesRepository);
+        new DefaultJobCreator(jobPersistence, resourceRequirementsProvider, mFeatureFlagClient, streamRefreshesRepository, null);
 
     final Optional<String> expectedSourceType = Optional.of("database");
     final ResourceRequirements destStderrResourceRequirements = new ResourceRequirements().withCpuLimit("10");
@@ -328,7 +328,7 @@ class DefaultJobCreatorTest {
   void testFailToCreateRefreshIfNotAllowed() {
     final FeatureFlagClient mFeatureFlagClient = mock(TestClient.class);
     jobCreator =
-        new DefaultJobCreator(jobPersistence, resourceRequirementsProvider, mFeatureFlagClient, streamRefreshesRepository);
+        new DefaultJobCreator(jobPersistence, resourceRequirementsProvider, mFeatureFlagClient, streamRefreshesRepository, null);
 
     assertThrows(IllegalStateException.class, () -> jobCreator.createRefreshConnection(
         STANDARD_SYNC,
@@ -738,7 +738,7 @@ class DefaultJobCreatorTest {
         .withMemoryRequest("800Mi");
 
     final var jobCreator = new DefaultJobCreator(jobPersistence, resourceRequirementsProvider,
-        new TestClient(Map.of(DestResourceOverrides.INSTANCE.getKey(), Jsons.serialize(overrides))), streamRefreshesRepository);
+        new TestClient(Map.of(DestResourceOverrides.INSTANCE.getKey(), Jsons.serialize(overrides))), streamRefreshesRepository, null);
 
     jobCreator.createSyncJob(
         SOURCE_CONNECTION,
@@ -806,7 +806,7 @@ class DefaultJobCreatorTest {
         .withMemoryRequest("800Mi");
 
     final var jobCreator = new DefaultJobCreator(jobPersistence, resourceRequirementsProvider,
-        new TestClient(Map.of(OrchestratorResourceOverrides.INSTANCE.getKey(), Jsons.serialize(overrides))), streamRefreshesRepository);
+        new TestClient(Map.of(OrchestratorResourceOverrides.INSTANCE.getKey(), Jsons.serialize(overrides))), streamRefreshesRepository, null);
 
     final var standardSync = new StandardSync()
         .withConnectionId(UUID.randomUUID())
@@ -886,7 +886,7 @@ class DefaultJobCreatorTest {
         .withMemoryRequest("800Mi");
 
     final var jobCreator = new DefaultJobCreator(jobPersistence, resourceRequirementsProvider,
-        new TestClient(Map.of(SourceResourceOverrides.INSTANCE.getKey(), Jsons.serialize(overrides))), streamRefreshesRepository);
+        new TestClient(Map.of(SourceResourceOverrides.INSTANCE.getKey(), Jsons.serialize(overrides))), streamRefreshesRepository, null);
 
     jobCreator.createSyncJob(
         SOURCE_CONNECTION,
@@ -946,7 +946,7 @@ class DefaultJobCreatorTest {
         .withMemoryRequest("800Mi");
 
     final var jobCreator = new DefaultJobCreator(jobPersistence, resourceRequirementsProvider,
-        new TestClient(Map.of(DestResourceOverrides.INSTANCE.getKey(), Jsons.serialize(weirdness))), streamRefreshesRepository);
+        new TestClient(Map.of(DestResourceOverrides.INSTANCE.getKey(), Jsons.serialize(weirdness))), streamRefreshesRepository, null);
 
     jobCreator.createSyncJob(
         SOURCE_CONNECTION,

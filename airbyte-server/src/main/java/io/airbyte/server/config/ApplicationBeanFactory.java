@@ -98,8 +98,9 @@ public class ApplicationBeanFactory {
   public DefaultJobCreator defaultJobCreator(final JobPersistence jobPersistence,
                                              final WorkerConfigsProvider workerConfigsProvider,
                                              final FeatureFlagClient featureFlagClient,
-                                             final StreamRefreshesRepository streamRefreshesRepository) {
-    return new DefaultJobCreator(jobPersistence, workerConfigsProvider, featureFlagClient, streamRefreshesRepository);
+                                             final StreamRefreshesRepository streamRefreshesRepository,
+                                             @Value("${airbyte.worker.kube-job-config-variant-override}") final String variantOverride) {
+    return new DefaultJobCreator(jobPersistence, workerConfigsProvider, featureFlagClient, streamRefreshesRepository, variantOverride);
   }
 
   @SuppressWarnings("ParameterName")
