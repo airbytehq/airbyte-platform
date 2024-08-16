@@ -3,6 +3,13 @@
 
 .container {
   min-height: 0;
+  min-width: 0;
+}
+
+.tabGroup {
+  display: flex;
+  min-height: 0;
+  min-width: 0;
 }
 
 .tabList {
