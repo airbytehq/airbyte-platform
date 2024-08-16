@@ -9,19 +9,21 @@ interface ConnectionTimelineEventActionsProps {
   jobId: number;
   eventId?: string;
   createdAt: number;
+  attemptCount?: number;
 }
 
 export const ConnectionTimelineEventActions: React.FC<ConnectionTimelineEventActionsProps> = ({
   jobId,
   eventId,
   createdAt,
+  attemptCount,
 }) => {
   return (
     <div className={styles.eventActions}>
       <Text color="grey400">
         <FormattedDate value={createdAt * 1000} timeStyle="short" dateStyle="medium" />
       </Text>
-      <JobEventMenu jobId={jobId} eventId={eventId} />
+      <JobEventMenu jobId={jobId} eventId={eventId} attemptCount={attemptCount} />
     </div>
   );
 };

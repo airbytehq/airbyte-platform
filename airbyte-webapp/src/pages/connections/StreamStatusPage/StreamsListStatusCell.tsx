@@ -33,7 +33,13 @@ export const StatusCell: React.FC<CellContext<UIStreamState, ConnectionStatusInd
   const rateLimitTextWidth =
     60 + Object.entries(rateLimitTextParts?.groups ?? {}).filter(([, value]) => Boolean(value)).length * 30;
   return (
-    <FlexContainer justifyContent="flex-start" gap="sm" alignItems="center" className={styles.statusCell}>
+    <FlexContainer
+      justifyContent="flex-start"
+      gap="sm"
+      alignItems="center"
+      className={styles.statusCell}
+      data-testid="streams-list-status-cell-content"
+    >
       <StreamStatusIndicator status={props.cell.getValue()} />
       <FormattedMessage id={`connection.stream.status.${props.cell.getValue()}`} />
       {isRateLimited && (

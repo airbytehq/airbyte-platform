@@ -14,6 +14,7 @@ import { JobLogOrigins, KNOWN_LOG_ORIGINS, useCleanLogs } from "area/connection/
 import { VirtualLogs } from "area/connection/components/JobHistoryItem/VirtualLogs";
 import { LinkToAttemptButton } from "area/connection/components/JobLogsModal/LinkToAttemptButton";
 import { useAttemptCombinedStatsForJob, useAttemptForJob, useJobInfoWithoutLogs } from "core/api";
+import { trackError } from "core/utils/datadog";
 
 import { AttemptStatusIcon } from "./AttemptStatusIcon";
 import { DownloadLogsButton } from "./DownloadLogsButton";
@@ -34,9 +35,14 @@ export const JobLogsModal: React.FC<JobLogsModalProps> = ({ jobId, initialAttemp
   const [highlightedMatchIndex, setHighlightedMatchIndex] = useState<number | undefined>(undefined);
   const [matchingLines, setMatchingLines] = useState<number[]>([]);
   const highlightedMatchingLineNumber = highlightedMatchIndex !== undefined ? highlightedMatchIndex + 1 : undefined;
+  if (job.attempts.length === 0) {
+    trackError(new Error(`No attempts for job`), { jobId, eventId });
+  }
+
   const [selectedAttemptId, setSelectedAttemptId] = useState(
     initialAttemptId ?? job.attempts[job.attempts.length - 1].attempt.id
   );
+
   const jobAttempt = useAttemptForJob(jobId, selectedAttemptId);
   const aggregatedAttemptStats = useAttemptCombinedStatsForJob(jobId, selectedAttemptId, {
     refetchInterval() {

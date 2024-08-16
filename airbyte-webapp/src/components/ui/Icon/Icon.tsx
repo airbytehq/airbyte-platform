@@ -4,6 +4,7 @@ import React from "react";
 
 import styles from "./Icon.module.scss";
 import AddCircleIcon from "./icons/addCircleIcon.svg?react";
+import AIStarsIcon from "./icons/aiStarsIcon.svg?react";
 import ArrowLeftIcon from "./icons/arrowLeftIcon.svg?react";
 import ArrowRightIcon from "./icons/arrowRightIcon.svg?react";
 import ArticleIcon from "./icons/articleIcon.svg?react";
@@ -168,6 +169,7 @@ const sizeMap: Record<NonNullable<IconProps["size"]>, string> = {
 
 export const Icons: Record<IconType, React.FC<React.SVGProps<SVGSVGElement>>> = {
   addCircle: AddCircleIcon,
+  aiStars: AIStarsIcon,
   arrowLeft: ArrowLeftIcon,
   arrowRight: ArrowRightIcon,
   article: ArticleIcon,

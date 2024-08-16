@@ -1,4 +1,9 @@
-import { Listbox } from "@headlessui/react";
+import {
+  Listbox,
+  ListboxOption as OriginalListboxOption,
+  ListboxButton as OriginalListboxButton,
+  ListboxOptions as OriginalListboxOptions,
+} from "@headlessui/react";
 import { Float, FloatProps } from "@headlessui-float/react";
 import classNames from "classnames";
 import debounce from "lodash/debounce";
@@ -123,7 +128,8 @@ export const ListBox = <T,>({
   };
 
   const ListBoxOption: React.FC<Option<T>> = ({ label, value, icon, disabled, ...restOptionProps }, index) => (
-    <Listbox.Option
+    <OriginalListboxOption
+      as="li"
       key={typeof label === "string" ? label : index}
       value={value}
       disabled={disabled}
@@ -149,7 +155,7 @@ export const ListBox = <T,>({
           </Text>
         </FlexContainer>
       )}
-    </Listbox.Option>
+    </OriginalListboxOption>
   );
 
   const isVirtualized = useMemo(() => options.length > MIN_OPTIONS_FOR_VIRTUALIZATION, [options.length]);
@@ -206,7 +212,7 @@ export const ListBox = <T,>({
             elementResize: false, // this will prevent render in wrong place after multiple open/close actions
           }}
         >
-          <Listbox.Button
+          <OriginalListboxButton
             className={classNames(buttonClassName, styles.button, { [styles["button--error"]]: hasError })}
             onClick={(e) => e.stopPropagation()}
             {...(testId && {
@@ -216,8 +222,10 @@ export const ListBox = <T,>({
             onFocus={onFocus}
           >
             <ControlButton selectedOption={selectedOption} isDisabled={isDisabled} />
-          </Listbox.Button>
-          <Listbox.Options
+          </OriginalListboxButton>
+          <OriginalListboxOptions
+            as="ul"
+            modal={false}
             onKeyDown={isVirtualized ? handleKeydownForVirtualizedList : undefined}
             className={classNames(styles.optionsMenu, { [styles.nonAdaptive]: !adaptiveWidth }, optionsMenuClassName)}
           >
@@ -234,11 +242,11 @@ export const ListBox = <T,>({
               options.map(ListBoxOption)
             )}
             {footerOption && (
-              <Listbox.Option value={undefined} className={classNames(styles.option, optionClassName)}>
+              <OriginalListboxOption value={undefined} className={classNames(styles.option, optionClassName)}>
                 {footerOption}
-              </Listbox.Option>
+              </OriginalListboxOption>
             )}
-          </Listbox.Options>
+          </OriginalListboxOptions>
         </Float>
       </Listbox>
     </div>

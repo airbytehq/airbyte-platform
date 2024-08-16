@@ -1,5 +1,5 @@
 import { autoUpdate, flip, offset, useFloating } from "@floating-ui/react-dom";
-import { Popover } from "@headlessui/react";
+import { Popover, PopoverButton, PopoverPanel } from "@headlessui/react";
 import React from "react";
 
 import { Box } from "components/ui/Box";
@@ -37,7 +37,7 @@ export const RoleManagementMenu: React.FC<RoleManagementMenuProps> = ({
     <Popover>
       {({ close }) => (
         <>
-          <Popover.Button ref={reference} as={RoleManagementButton}>
+          <PopoverButton ref={reference} as={RoleManagementButton}>
             <Box py="sm" px="xs">
               <FlexContainer direction="row" alignItems="center" gap="xs">
                 <UserRoleText highestPermissionType={highestPermissionType} />
@@ -46,8 +46,8 @@ export const RoleManagementMenu: React.FC<RoleManagementMenuProps> = ({
                 </FlexItem>
               </FlexContainer>
             </Box>
-          </Popover.Button>
-          <Popover.Panel
+          </PopoverButton>
+          <PopoverPanel
             ref={floating}
             style={{
               position: strategy,
@@ -57,7 +57,7 @@ export const RoleManagementMenu: React.FC<RoleManagementMenuProps> = ({
             className={styles.roleManagementMenu__popoverPanel}
           >
             <RoleManagementMenuBody user={user} resourceType={resourceType} close={close} />
-          </Popover.Panel>
+          </PopoverPanel>
         </>
       )}
     </Popover>

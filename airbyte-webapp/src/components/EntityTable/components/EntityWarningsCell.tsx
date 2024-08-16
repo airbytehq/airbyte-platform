@@ -1,5 +1,6 @@
 import { PropsOf } from "@headlessui/react/dist/types";
-import React, { ReactNode } from "react";
+import { CellContext, ColumnDefTemplate } from "@tanstack/react-table";
+import { ReactNode } from "react";
 import { FormattedMessage } from "react-intl";
 
 import { FlexContainer, FlexItem } from "components/ui/Flex";
@@ -18,10 +19,7 @@ import { getBreakingChangeErrorMessage } from "pages/connections/StreamStatusPag
 import { ConnectionRoutePaths, RoutePaths } from "pages/routePaths";
 
 import styles from "./EntityWarningsCell.module.scss";
-
-interface EntityWarningCellProps {
-  connection: WebBackendConnectionListItem;
-}
+import { ConnectionTableDataItem } from "../types";
 
 const schemaChangeToMessageType: Record<SchemaChange, MessageType> = {
   breaking: "error",
@@ -36,7 +34,10 @@ const typetoIcon: Record<MessageType, ReactNode> = {
   info: null,
 };
 
-export const EntityWarningsCell: React.FC<EntityWarningCellProps> = ({ connection }) => {
+export const EntityWarningsCell: ColumnDefTemplate<
+  CellContext<ConnectionTableDataItem, WebBackendConnectionListItem>
+> = (props) => {
+  const connection = props.cell.getValue();
   const allowAutoDetectSchema = useFeature(FeatureItem.AllowAutoDetectSchema);
   const connectorBreakingChangeDeadlinesEnabled = useFeature(FeatureItem.ConnectorBreakingChangeDeadlines);
   const createLink = useCurrentWorkspaceLink();

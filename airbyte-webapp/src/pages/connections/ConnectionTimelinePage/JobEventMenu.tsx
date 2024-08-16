@@ -65,7 +65,11 @@ export const openJobLogsModalFromTimeline = ({
   });
 };
 
-export const JobEventMenu: React.FC<{ eventId?: string; jobId: number }> = ({ eventId, jobId }) => {
+export const JobEventMenu: React.FC<{ eventId?: string; jobId: number; attemptCount?: number }> = ({
+  eventId,
+  jobId,
+  attemptCount,
+}) => {
   const { formatMessage } = useIntl();
   const { connection } = useConnectionEditService();
   const { openModal } = useModalService();
@@ -176,10 +180,12 @@ export const JobEventMenu: React.FC<{ eventId?: string; jobId: number }> = ({ ev
         {
           displayName: formatMessage({ id: "jobHistory.viewLogs" }),
           value: JobMenuOptions.OpenLogsModal,
+          disabled: attemptCount === 0,
         },
         {
           displayName: formatMessage({ id: "jobHistory.downloadLogs" }),
           value: JobMenuOptions.DownloadLogs,
+          disabled: attemptCount === 0,
         },
       ]}
       onChange={onChangeHandler}

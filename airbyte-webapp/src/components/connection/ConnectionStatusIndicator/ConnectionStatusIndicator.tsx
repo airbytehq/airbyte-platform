@@ -14,7 +14,6 @@ export enum ConnectionStatusIndicatorStatus {
   Queued = "queued",
   Incomplete = "incomplete",
   Failed = "failed",
-  Disabled = "disabled",
   QueuedForNextSync = "queuedForNextSync",
   Clearing = "clearing",
   Refreshing = "refreshing",
@@ -24,7 +23,6 @@ export enum ConnectionStatusIndicatorStatus {
 const ICON_BY_STATUS: Readonly<Record<ConnectionStatusIndicatorStatus, JSX.Element>> = {
   synced: <Icon type="statusSuccess" size="md" />,
   incomplete: <Icon type="statusWarning" size="md" />,
-  disabled: <Icon type="statusInactive" size="md" />,
   paused: <Icon type="statusInactive" size="md" />,
   pending: <Icon type="statusInactive" size="md" />,
   failed: <Icon type="statusError" size="md" />,
@@ -39,8 +37,7 @@ const ICON_BY_STATUS: Readonly<Record<ConnectionStatusIndicatorStatus, JSX.Eleme
 const STYLE_BY_STATUS: Readonly<Record<ConnectionStatusIndicatorStatus, string>> = {
   synced: styles["status--upToDate"],
   incomplete: styles["status--incomplete"],
-  disabled: styles["status--disabled"],
-  paused: styles["status--disabled"],
+  paused: styles["status--paused"],
   pending: styles["status--pending"],
   failed: styles["status--failed"],
   syncing: styles["status--syncing"],
@@ -54,8 +51,7 @@ const STYLE_BY_STATUS: Readonly<Record<ConnectionStatusIndicatorStatus, string>>
 const BOX_STYLE_BY_STATUS: Readonly<Record<ConnectionStatusIndicatorStatus, string>> = {
   synced: styles["status--upToDate-withBox"],
   incomplete: styles["status--incomplete-withBox"],
-  disabled: styles["status--disabled-withBox"],
-  paused: styles["status--disabled-withBox"],
+  paused: styles["status--paused-withBox"],
   pending: styles["status--pending-withBox"],
   failed: styles["status--failed-withBox"],
   syncing: styles["status--syncing-withBox"],

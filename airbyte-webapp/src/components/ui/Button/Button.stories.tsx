@@ -96,3 +96,13 @@ SecondaryDark.args = {
   children: "primaryDark",
   disabled: false,
 };
+
+export const Highlight = Template.bind({});
+Highlight.args = {
+  variant: "highlight",
+  icon: "aiStars",
+  iconPosition: "left",
+  disabled: false,
+  isLoading: false,
+  children: "AI Assist",
+};

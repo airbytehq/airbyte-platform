@@ -4,7 +4,7 @@ micrometer:
 
 airbyte:
   secret:
-    persistence: TESTING_CONFIG_DB_TABLE
+    persistence: ${SECRET_PERSISTENCE:TESTING_CONFIG_DB_TABLE}
 
 datasources:
   local-secrets:

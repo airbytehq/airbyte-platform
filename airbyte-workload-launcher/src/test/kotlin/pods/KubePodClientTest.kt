@@ -104,6 +104,7 @@ class KubePodClientTest {
         discoverPodFactory,
         specPodFactory,
         featureFlagClient,
+        listOf(),
       )
 
     replInput =

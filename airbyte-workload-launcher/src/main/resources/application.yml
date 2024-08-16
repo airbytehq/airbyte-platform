@@ -76,20 +76,32 @@ airbyte:
     persistence: ${SECRET_PERSISTENCE}
     store:
       aws:
-        access-key: ${AWS_ACCESS_KEY:}
-        secret-key: ${AWS_SECRET_ACCESS_KEY:}
-        region: ${AWS_REGION:}
+        region: ${AWS_SECRET_MANAGER_REGION:}
+        kms-key-arn: ${AWS_KMS_KEY_ARN:}
+        tags: ${AWS_SECRET_MANAGER_SECRET_TAGS:}
+        # injects actual secret values
+        access-key: ${AWS_SECRET_MANAGER_ACCESS_KEY_ID:}
+        secret-key: ${AWS_SECRET_MANAGER_SECRET_ACCESS_KEY:}
+        # injects the names/keys for secret reference
+        access-key-ref-name: ${AWS_SECRET_MANAGER_ACCESS_KEY_ID_REF_NAME:}
+        access-key-ref-key: ${AWS_SECRET_MANAGER_ACCESS_KEY_ID_REF_KEY:}
+        secret-key-ref-name: ${AWS_SECRET_MANAGER_SECRET_ACCESS_KEY_REF_NAME:}
+        secret-key-ref-key: ${AWS_SECRET_MANAGER_SECRET_ACCESS_KEY_REF_KEY:}
       gcp:
         # injects the actual secret value
         credentials: ${SECRET_STORE_GCP_CREDENTIALS:}
         project-id: ${SECRET_STORE_GCP_PROJECT_ID:}
-        # for injecting the env var source
-        secret-name: ${SECRET_STORE_GCP_SECRET_NAME:}
-        secret-key: ${SECRET_STORE_GCP_SECRET_KEY:}
+        # injects the name/key for secret reference
+        credentials-ref-name: ${SECRET_STORE_GCP_SECRET_NAME:}
+        credentials-ref-key: ${SECRET_STORE_GCP_SECRET_KEY:}
       vault:
         address: ${VAULT_ADDRESS:}
         prefix: ${VAULT_PREFIX:}
+        # injects the actual secret value
         token: ${VAULT_AUTH_TOKEN:}
+        # injects the name/key for secret reference
+        token-ref-name: ${VAULT_AUTH_TOKEN_REF_NAME:}
+        token-ref-key: ${VAULT_AUTH_TOKEN_REF_KEY:}
   version: ${AIRBYTE_VERSION}
   container.orchestrator:
     data-plane-creds:
@@ -140,32 +152,32 @@ airbyte:
         annotations: ${CHECK_JOB_KUBE_ANNOTATIONS:}
         labels: ${CHECK_JOB_KUBE_LABELS:}
         node-selectors: ${CHECK_JOB_KUBE_NODE_SELECTORS:}
-        cpu-limit: ${CHECK_JOB_MAIN_CONTAINER_CPU_LIMIT:}
-        cpu-request: ${CHECK_JOB_MAIN_CONTAINER_CPU_REQUEST:}
-        memory-limit: ${CHECK_JOB_MAIN_CONTAINER_MEMORY_LIMIT:}
-        memory-request: ${CHECK_JOB_MAIN_CONTAINER_MEMORY_REQUEST:}
+        cpu-limit: ${CHECK_JOB_MAIN_CONTAINER_CPU_LIMIT:2}
+        cpu-request: ${CHECK_JOB_MAIN_CONTAINER_CPU_REQUEST:2}
+        memory-limit: ${CHECK_JOB_MAIN_CONTAINER_MEMORY_LIMIT:500Mi}
+        memory-request: ${CHECK_JOB_MAIN_CONTAINER_MEMORY_REQUEST:500Mi}
       discover:
         annotations: ${DISCOVER_JOB_KUBE_ANNOTATIONS:}
         labels: ${DISCOVER_JOB_KUBE_LABELS:}
         node-selectors: ${DISCOVER_JOB_KUBE_NODE_SELECTORS:}
-        cpu-limit: ${DISCOVER_JOB_MAIN_CONTAINER_CPU_LIMIT:}
-        cpu-request: ${DISCOVER_JOB_MAIN_CONTAINER_CPU_REQUEST:}
-        memory-limit: ${DISCOVER_JOB_MAIN_CONTAINER_MEMORY_LIMIT:}
-        memory-request: ${DISCOVER_JOB_MAIN_CONTAINER_MEMORY_REQUEST:}
+        cpu-limit: ${DISCOVER_JOB_MAIN_CONTAINER_CPU_LIMIT:2}
+        cpu-request: ${DISCOVER_JOB_MAIN_CONTAINER_CPU_REQUEST:2}
+        memory-limit: ${DISCOVER_JOB_MAIN_CONTAINER_MEMORY_LIMIT:500Mi}
+        memory-request: ${DISCOVER_JOB_MAIN_CONTAINER_MEMORY_REQUEST:500Mi}
       spec:
         annotations: ${SPEC_JOB_KUBE_ANNOTATIONS:}
         labels: ${SPEC_JOB_KUBE_LABELS:}
         node-selectors: ${SPEC_JOB_KUBE_NODE_SELECTORS:}
-        cpu-limit: ${SPEC_JOB_MAIN_CONTAINER_CPU_LIMIT:}
-        cpu-request: ${SPEC_JOB_MAIN_CONTAINER_CPU_REQUEST:}
-        memory-limit: ${SPEC_JOB_MAIN_CONTAINER_MEMORY_LIMIT:}
-        memory-request: ${SPEC_JOB_MAIN_CONTAINER_MEMORY_REQUEST:}
+        cpu-limit: ${SPEC_JOB_MAIN_CONTAINER_CPU_LIMIT:1}
+        cpu-request: ${SPEC_JOB_MAIN_CONTAINER_CPU_REQUEST:1}
+        memory-limit: ${SPEC_JOB_MAIN_CONTAINER_MEMORY_LIMIT:200Mi}
+        memory-request: ${SPEC_JOB_MAIN_CONTAINER_MEMORY_REQUEST:200Mi}
     connector-sidecar:
       resources:
-        cpu-limit: ${SIDECAR_MAIN_CONTAINER_CPU_LIMIT:}
-        cpu-request: ${SIDECAR_MAIN_CONTAINER_CPU_REQUEST:}
-        memory-limit: ${SIDECAR_MAIN_CONTAINER_MEMORY_LIMIT:}
-        memory-request: ${SIDECAR_MAIN_CONTAINER_MEMORY_REQUEST:}
+        cpu-limit: ${SIDECAR_MAIN_CONTAINER_CPU_LIMIT:2}
+        cpu-request: ${SIDECAR_MAIN_CONTAINER_CPU_REQUEST:2}
+        memory-limit: ${SIDECAR_MAIN_CONTAINER_MEMORY_LIMIT:500Mi}
+        memory-request: ${SIDECAR_MAIN_CONTAINER_MEMORY_REQUEST:500Mi}
     isolated:
       kube:
         use-custom-node-selector: ${USE_CUSTOM_NODE_SELECTOR:false}

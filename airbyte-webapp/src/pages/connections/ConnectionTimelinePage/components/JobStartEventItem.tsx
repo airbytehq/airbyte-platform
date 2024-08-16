@@ -7,7 +7,6 @@ import { IconType } from "components/ui/Icon";
 import { Text } from "components/ui/Text";
 
 import { TimelineEventUser } from "./TimelineEventUser";
-import { ConnectionTimelineEventActions } from "../ConnectionTimelineEventActions";
 import { ConnectionTimelineEventIcon } from "../ConnectionTimelineEventIcon";
 import { ConnectionTimelineEventItem } from "../ConnectionTimelineEventItem";
 import { ConnectionTimelineEventSummary } from "../ConnectionTimelineEventSummary";
@@ -61,11 +60,6 @@ export const JobStartEventItem: React.FC<JobStartEventItemProps> = ({ jobStartEv
           </Text>
         </Box>
       </ConnectionTimelineEventSummary>
-      <ConnectionTimelineEventActions
-        createdAt={jobStartEvent.createdAt}
-        eventId={jobStartEvent.id}
-        jobId={jobStartEvent.summary.jobId}
-      />
     </ConnectionTimelineEventItem>
   );
 };

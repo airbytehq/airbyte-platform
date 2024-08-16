@@ -672,7 +672,7 @@ exports[`CreateConnectionForm should render 1`] = `
                                         class="<removed-for-snapshot-test>"
                                         data-headlessui-state=""
                                         data-testid="sync-mode-select-listbox-button"
-                                        id="headlessui-listbox-button-:r0:"
+                                        id="headlessui-listbox-button-:r2:"
                                         type="button"
                                       >
                                         <div
@@ -827,7 +827,7 @@ exports[`CreateConnectionForm should render 1`] = `
                                         class="<removed-for-snapshot-test>"
                                         data-headlessui-state=""
                                         data-testid="sync-mode-select-listbox-button"
-                                        id="headlessui-listbox-button-:r1:"
+                                        id="headlessui-listbox-button-:r5:"
                                         type="button"
                                       >
                                         <div

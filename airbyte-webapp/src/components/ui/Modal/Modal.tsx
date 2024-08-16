@@ -1,4 +1,4 @@
-import { Dialog } from "@headlessui/react";
+import { Dialog, DialogPanel } from "@headlessui/react";
 import classNames from "classnames";
 import React, { useState } from "react";
 import { useIntl } from "react-intl";
@@ -63,7 +63,7 @@ export const Modal: React.FC<React.PropsWithChildren<ModalProps>> = ({
           [styles["modalContainer--noSidebarOffset"]]: size === "full",
         })}
       >
-        <Dialog.Panel className={styles.modalPanel}>
+        <DialogPanel className={styles.modalPanel}>
           {cardless ? (
             children
           ) : (
@@ -89,7 +89,7 @@ export const Modal: React.FC<React.PropsWithChildren<ModalProps>> = ({
               {children}
             </div>
           )}
-        </Dialog.Panel>
+        </DialogPanel>
       </Wrapper>
     </Dialog>
   );

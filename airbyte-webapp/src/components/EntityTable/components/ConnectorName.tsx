@@ -4,10 +4,10 @@ import { ConnectorIcon } from "components/common/ConnectorIcon";
 import { FlexContainer } from "components/ui/Flex";
 import { Tooltip } from "components/ui/Tooltip";
 
-import styles from "./ConnectorNameCell.module.scss";
+import styles from "./ConnectorName.module.scss";
 import { EntityNameCell } from "./EntityNameCell";
 
-interface ConnectorNameCellProps {
+interface ConnectorNameProps {
   enabled: boolean;
   /**
    * connector name defined by user
@@ -23,7 +23,7 @@ interface ConnectorNameCellProps {
   hideIcon?: boolean;
 }
 
-export const ConnectorNameCell: React.FC<ConnectorNameCellProps> = ({ value, actualName, enabled, icon, hideIcon }) => (
+export const ConnectorName: React.FC<ConnectorNameProps> = ({ value, actualName, enabled, icon, hideIcon }) => (
   <FlexContainer alignItems="center">
     {!hideIcon && (
       <>

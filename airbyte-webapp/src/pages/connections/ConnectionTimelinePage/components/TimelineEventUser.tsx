@@ -15,7 +15,7 @@ interface UserCancelledDescriptionProps {
 }
 
 export const TimelineEventUser: React.FC<TimelineEventUserProps> = ({ user }) => {
-  return <>{user?.name ?? user?.email ?? <FormattedMessage id="connection.timeline.unknownUser" />}</>;
+  return <>{user?.name?.trim() || user?.email?.trim() || <FormattedMessage id="connection.timeline.unknownUser" />}</>;
 };
 
 export const UserCancelledDescription: React.FC<UserCancelledDescriptionProps> = ({ user, jobType }) => {

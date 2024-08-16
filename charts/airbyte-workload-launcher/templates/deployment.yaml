@@ -349,6 +349,17 @@ spec:
             secretKeyRef:
               name: {{ include "airbyte.secretStoreName" .Values.global.secretsManager.secretsManagerSecretName }}
               key: {{ include "airbyte.awsSecretManagerSecretAccessKeySecretKey" .Values.global.secretsManager.awsSecretManager.secretAccessKeySecretKey }}
+
+        - name: AWS_SECRET_MANAGER_ACCESS_KEY_ID_REF_NAME
+          value: {{ include "airbyte.secretStoreName" .Values.global.secretsManager.secretsManagerSecretName }}
+        - name: AWS_SECRET_MANAGER_ACCESS_KEY_ID_REF_KEY
+          value: {{ include "airbyte.awsSecretManagerAccessKeyIdSecretKey" .Values.global.secretsManager.awsSecretManager.accessKeyIdSecretKey }}
+
+        - name: AWS_SECRET_MANAGER_SECRET_ACCESS_KEY_REF_NAME
+          value: {{ include "airbyte.secretStoreName" .Values.global.secretsManager.secretsManagerSecretName }}
+        - name: AWS_SECRET_MANAGER_SECRET_ACCESS_KEY_REF_KEY
+          value: {{ include "airbyte.awsSecretManagerSecretAccessKeySecretKey" .Values.global.secretsManager.awsSecretManager.secretAccessKeySecretKey }}
+
         {{- end }}
         {{- if ((((.Values.global).secretsManager).awsSecretManager).region) }}
         - name: AWS_SECRET_MANAGER_REGION
@@ -390,6 +401,10 @@ spec:
             secretKeyRef:
               name: {{ include "airbyte.secretStoreName" .Values.global.secretsManager.secretsManagerSecretName }}
               key: {{ include "airbyte.vaultAuthTokenSecretKey" .Values.global.secretsManager.vault.authTokenSecretKey }}
+        - name: VAULT_AUTH_TOKEN_REF_NAME
+          value: {{ include "airbyte.secretStoreName" .Values.global.secretsManager.secretsManagerSecretName }}
+        - name: VAULT_AUTH_TOKEN_REF_KEY
+          value: {{ include "airbyte.vaultAuthTokenSecretKey" .Values.global.secretsManager.vault.authTokenSecretKey }}
         {{- end }}
 
         # STORAGE

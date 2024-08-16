@@ -87,6 +87,7 @@ class PayloadKubeInputMapperTest {
         discoverConfigs,
         specConfigs,
         ffClient,
+        listOf(),
       )
     val input: ReplicationInput = mockk()
 
@@ -194,6 +195,7 @@ class PayloadKubeInputMapperTest {
         discoverConfigs,
         specConfigs,
         ffClient,
+        listOf(),
       )
     val input: CheckConnectionInput = mockk()
 
@@ -323,6 +325,7 @@ class PayloadKubeInputMapperTest {
         discoverConfigs,
         specConfigs,
         ffClient,
+        listOf(),
       )
     val input: DiscoverCatalogInput = mockk()
 
@@ -456,6 +459,7 @@ class PayloadKubeInputMapperTest {
         discoverConfigs,
         specConfigs,
         ffClient,
+        listOf(),
       )
     val input: SpecInput = mockk()
 
