@@ -47,7 +47,7 @@ class KubePodClient(
   @Named("discoverPodFactory") private val discoverPodFactory: ConnectorPodFactory,
   @Named("specPodFactory") private val specPodFactory: ConnectorPodFactory,
   private val featureFlagClient: FeatureFlagClient,
-  @Named("staticFlagContexts") private val contexts: List<Context>,
+  @Named("infraFlagContexts") private val contexts: List<Context>,
 ) {
   fun podsExistForAutoId(autoId: UUID): Boolean {
     return kubePodLauncher.podsRunning(labeler.getAutoIdLabels(autoId))

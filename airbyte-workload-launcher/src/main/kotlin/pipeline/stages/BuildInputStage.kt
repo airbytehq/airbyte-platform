@@ -59,7 +59,7 @@ open class BuildInputStage(
   metricPublisher: CustomMetricPublisher,
   @Value("\${airbyte.data-plane-id}") dataplaneId: String,
   private val featureFlagClient: FeatureFlagClient,
-  @Named("staticFlagContexts") private val contexts: List<Context>,
+  @Named("infraFlagContexts") private val contexts: List<Context>,
 ) : LaunchStage(metricPublisher, dataplaneId) {
   @Trace(operationName = MeterFilterFactory.LAUNCH_PIPELINE_STAGE_OPERATION_NAME, resourceName = "BuildInputStage")
   @Instrument(
