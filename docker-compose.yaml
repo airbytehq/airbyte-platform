@@ -8,6 +8,7 @@ x-logging: &default-logging
 services:
   docker-proxy:
       image: alpine/socat
+      container_name: docker-proxy
       command: -t 900 TCP-LISTEN:2375,fork,reuseaddr UNIX-CONNECT:/var/run/docker.sock
       ports: 
         - "2375"
