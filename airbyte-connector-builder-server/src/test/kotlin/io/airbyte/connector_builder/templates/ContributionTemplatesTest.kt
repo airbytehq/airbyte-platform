@@ -65,12 +65,12 @@ class ContributionTemplatesTest {
     assert(docs.contains(releaseDate))
     assert(docs.contains(username))
 
-    for (stream in manifestParser.streams!!) {
+    for (stream in manifestParser.streams) {
       // Assert that the rendered docs contains the stream name
       assert(docs.contains("| ${stream["name"]} |"))
     }
 
-    val connectionSpecification = manifestParser.spec?.get("connection_specification") as Map<String, Any>
+    val connectionSpecification = manifestParser.spec.get("connection_specification") as Map<String, Any>
     val properties = connectionSpecification["properties"] as Map<String, Any>
 
     for (prop in properties) {
@@ -198,5 +198,62 @@ class ContributionTemplatesTest {
       )
 
     assertEquals(contributionTemplates.toTemplateStreams(streams), expectedTemplateStreams)
+  }
+
+  @Test
+  fun `render metadata file formatting`() {
+    val contributionTemplates = ContributionTemplates()
+    val renderedYaml =
+      contributionTemplates.renderContributionMetadataYaml(
+        connectorImageName = "test",
+        connectorName = "Test Connector",
+        actorDefinitionId = "test-id",
+        versionTag = "0.0.1",
+        baseImage = "test-base-image",
+        allowedHosts = listOf("*"),
+        connectorDocsSlug = "test-docs-slug",
+        releaseDate = "2021-01-01",
+      )
+    val expectedOutput =
+      """
+    |metadataSpecVersion: "1.0"
+    |data:
+    |  allowedHosts:
+    |    hosts:
+    |      - "*"
+    |  registryOverrides:
+    |    oss:
+    |      enabled: true
+    |    cloud:
+    |      enabled: true
+    |  remoteRegistries:
+    |    pypi:
+    |      enabled: false
+    |      packageName: airbyte-test
+    |  connectorBuildOptions:
+    |    baseImage: test-base-image
+    |  connectorSubtype: api
+    |  connectorType: source
+    |  definitionId: test-id
+    |  dockerImageTag: 0.0.1
+    |  dockerRepository: airbyte/test
+    |  githubIssueLabel: test
+    |  icon: icon.svg
+    |  license: MIT
+    |  name: Test Connector
+    |  releaseDate: 2021-01-01
+    |  releaseStage: alpha
+    |  supportLevel: community
+    |  documentationUrl: https://docs.airbyte.com/test-docs-slug
+    |  tags:
+    |    - language:manifest-only
+    |    - cdk:low-code
+    |  ab_internal:
+    |    ql: 100
+    |    sl: 100
+    |
+      """.trimMargin()
+
+    assertEquals(expectedOutput, renderedYaml)
   }
 }
