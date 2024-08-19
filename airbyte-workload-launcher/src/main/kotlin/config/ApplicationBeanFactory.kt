@@ -28,7 +28,6 @@ import jakarta.inject.Singleton
 import okhttp3.internal.http2.StreamResetException
 import java.net.SocketTimeoutException
 import java.time.Duration
-import java.util.Optional
 
 /**
  * Micronaut bean factory for general application beans.
@@ -89,15 +88,15 @@ class ApplicationBeanFactory {
     @Value("\${airbyte.kubernetes.client.retries.delay-seconds}") retryDelaySeconds: Long,
     @Value("\${airbyte.kubernetes.client.retries.max}") maxRetries: Int,
     @Named("kubeHttpErrorRetryPredicate") predicate: (Throwable) -> Boolean,
-    meterRegistry: Optional<MeterRegistry>,
+    meterRegistry: MeterRegistry?,
   ): RetryPolicy<Any> {
     val metricTags = arrayOf("max_retries", maxRetries.toString())
 
     return RetryPolicy.builder<Any>()
       .handleIf(predicate)
       .onRetry { l ->
-        meterRegistry.ifPresent { r ->
-          r.counter(
+        meterRegistry
+          ?.counter(
             "kube_api_client.retry",
             *metricTags,
             *arrayOf(
@@ -108,35 +107,31 @@ class ApplicationBeanFactory {
               "exception_type",
               l.lastException.javaClass.name,
             ),
-          ).increment()
-        }
+          )?.increment()
       }
       .onAbort { l ->
-        meterRegistry.ifPresent { r ->
-          r.counter(
+        meterRegistry
+          ?.counter(
             "kube_api_client.abort",
             *metricTags,
             *arrayOf("retry_attempt", l.attemptCount.toString()),
-          ).increment()
-        }
+          )?.increment()
       }
       .onFailedAttempt { l ->
-        meterRegistry.ifPresent { r ->
-          r.counter(
+        meterRegistry
+          ?.counter(
             "kube_api_client.failed",
             *metricTags,
             *arrayOf("retry_attempt", l.attemptCount.toString()),
-          ).increment()
-        }
+          )?.increment()
       }
       .onSuccess { l ->
-        meterRegistry.ifPresent { r ->
-          r.counter(
+        meterRegistry
+          ?.counter(
             "kube_api_client.success",
             *metricTags,
             *arrayOf("retry_attempt", l.attemptCount.toString()),
-          ).increment()
-        }
+          )?.increment()
       }
       .withDelay(Duration.ofSeconds(retryDelaySeconds))
       .withMaxRetries(maxRetries)
