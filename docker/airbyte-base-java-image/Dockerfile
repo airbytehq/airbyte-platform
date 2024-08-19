@@ -1,12 +1,14 @@
-FROM amazoncorretto:21-alpine
+FROM amazoncorretto:21
 
 ARG DOCKER_BUILD_ARCH=amd64
 
 WORKDIR /app
 
-# Use apk for Alpine Linux to install necessary packages
 RUN <<EOF
-apk --no-cache add tar shadow bash
+yum install -y tar shadow-utils
+yum update -y --security
+yum clean all
+rm -rf /var/cache/yum
 groupadd --gid 1000 airbyte
 useradd --uid 1000 --gid airbyte --shell /bin/bash --create-home airbyte
 # Create mount point for secrets

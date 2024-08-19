@@ -1,11 +1,11 @@
-ARG JDK_IMAGE=airbyte/airbyte-base-java-image:3.2.5
+ARG JDK_IMAGE=airbyte/airbyte-base-java-image:3.2.3
 FROM ${JDK_IMAGE}
 
 USER root
 
-RUN apk update && \
-    apk upgrade && \
-    apk add --no-cache git build-base gcc make patch zlib-dev bzip2 bzip2-dev readline-dev sqlite sqlite-dev openssl-dev tk-dev libffi-dev xz-dev
+RUN yum update -y && \
+    yum groupinstall -y "Development Tools" && \
+    yum install -y gcc make patch zlib-devel bzip2 bzip2-devel readline-devel sqlite sqlite-devel openssl11-devel tk-devel libffi-devel xz-devel
 
 USER airbyte:airbyte
 

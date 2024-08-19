@@ -1,4 +1,4 @@
-ARG JAVA_PYTHON_BASE_IMAGE_VERSION=2.1.6
+ARG JAVA_PYTHON_BASE_IMAGE_VERSION=2.1.5
 FROM airbyte/airbyte-base-java-python-image:${JAVA_PYTHON_BASE_IMAGE_VERSION} AS connector-builder-server
 
 # Set up CDK requirements
