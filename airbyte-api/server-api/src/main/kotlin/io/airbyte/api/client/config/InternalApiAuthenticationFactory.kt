@@ -86,10 +86,10 @@ class InternalApiAuthenticationFactory {
       val key = cred.privateKey as RSAPrivateKey
       val algorithm: com.auth0.jwt.algorithms.Algorithm = com.auth0.jwt.algorithms.Algorithm.RSA256(null, key)
       val signedToken = token.sign(algorithm)
-      meterRegistry.ifPresent { registry -> registry.counter("airbyte-api-client.auth-token.success").increment() }
+      meterRegistry.ifPresent { registry -> registry.counter("api-client.auth-token.success").increment() }
       return "Bearer $signedToken"
     } catch (e: Exception) {
-      meterRegistry.ifPresent { registry -> registry.counter("airbyte-api-client.auth-token.failure").increment() }
+      meterRegistry.ifPresent { registry -> registry.counter("api-client.auth-token.failure").increment() }
       logger.error(e) { "An issue occurred while generating a data plane auth token. Defaulting to empty string." }
       ""
     }
