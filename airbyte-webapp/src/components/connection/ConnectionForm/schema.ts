@@ -139,7 +139,7 @@ export const streamAndConfigurationSchema: SchemaOf<AirbyteStreamAndConfiguratio
         if (
           SyncMode.incremental === value.syncMode &&
           !this.parent.stream.sourceDefinedCursor &&
-          value.cursorField?.length === 0
+          value.cursorField?.filter(Boolean).length === 0 // filter out empty strings
         ) {
           errors.push(
             this.createError({

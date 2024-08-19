@@ -80,6 +80,14 @@ $row-height: 40px;
     animation: highlight 2s forwards;
   }
 
+  &:last-child > td:first-child {
+    border-bottom-left-radius: $border-radius;
+  }
+
+  &:last-child > td:last-child {
+    border-bottom-right-radius: $border-radius;
+  }
+
   @keyframes highlight {
     0%,
     50% {
@@ -103,13 +111,6 @@ $row-height: 40px;
 .td {
   padding: 0 variables.$spacing-lg;
   word-wrap: break-word;
-
-  tr:last-child > & {
-    &:first-child,
-    &:last-child {
-      border-radius: 0 0 $border-radius $border-radius;
-    }
-  }
 }
 
 .streamOrFieldNameCell {

@@ -8,7 +8,7 @@ import { TextWithOverflowTooltip } from "components/ui/Text";
 
 import { AirbyteStreamConfiguration } from "core/api/types/AirbyteClient";
 
-import { GlobalFilterHighlighter } from "./GlobalFilterHighlighter";
+import { TextHighlighter } from "./TextHighlighter";
 import { SyncStreamFieldWithId } from "../../formConfig";
 import { SyncCatalogUIModel } from "../SyncCatalogTable";
 
@@ -56,7 +56,7 @@ export const StreamNameCell: React.FC<StreamNameCellProps> = ({
         disabled={!row.getCanExpand()}
       />
       <TextWithOverflowTooltip>
-        <GlobalFilterHighlighter searchWords={[globalFilterValue]} textToHighlight={value} />
+        <TextHighlighter searchWords={[globalFilterValue]} textToHighlight={value} />
       </TextWithOverflowTooltip>
     </FlexContainer>
   );

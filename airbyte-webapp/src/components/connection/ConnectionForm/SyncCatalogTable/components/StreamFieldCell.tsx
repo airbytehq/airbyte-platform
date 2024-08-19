@@ -16,8 +16,8 @@ import { SyncSchemaFieldObject } from "core/domain/catalog";
 import { useConnectionFormService } from "hooks/services/ConnectionForm/ConnectionFormService";
 import { useExperiment } from "hooks/services/Experiment";
 
-import { GlobalFilterHighlighter } from "./GlobalFilterHighlighter";
 import styles from "./StreamFieldCell.module.scss";
+import { TextHighlighter } from "./TextHighlighter";
 import {
   isChildFieldCursor as checkIsChildFieldCursor,
   isChildFieldPrimaryKey as checkIsChildFieldPrimaryKey,
@@ -124,10 +124,7 @@ export const StreamFieldNameCell: React.FC<StreamFieldNameCellProps> = ({
           )}
         </FlexContainer>
         <TextWithOverflowTooltip size="sm">
-          <GlobalFilterHighlighter
-            searchWords={[globalFilterValue]}
-            textToHighlight={getFieldPathDisplayName(field.path)}
-          />
+          <TextHighlighter searchWords={[globalFilterValue]} textToHighlight={getFieldPathDisplayName(field.path)} />
         </TextWithOverflowTooltip>
         <Text size="sm" color="grey300">
           <FormattedMessage
