@@ -675,9 +675,6 @@
   "connection.status.clearing": "Clearing data",
   "connection.status.paused": "Paused",
 
-  "connection.status.onTrack.failureDescription": "The previous sync encountered an issue but is expected to automatically recover in the next sync.",
-  "connection.status.onTrack.delayedDescription": "The connection is delayed but is expected to catch up before the next sync.",
-
   "connection.actions.clearData": "Clearing your data will delete all data in your destination.",
   "connection.uptimeStatus.synced": "Synced",
   "connection.uptimeStatus.incomplete": "Stopped due to error(s)",
@@ -829,12 +826,9 @@
   "connection.overview.graph.uptimeStatus": "Streams status",
   "connection.overview.graph.uptimeStatus.more": "+{moreCount} more",
 
-  "connection.overview.graph.uptimeStatus.onTime": "{count, plural, one {# stream} other {# streams}} synced",
   "connection.overview.graph.uptimeStatus.incomplete": "{count, plural, one {# stream} other {# streams}} incomplete",
   "connection.overview.graph.uptimeStatus.failed": "{count, plural, one {# stream} other {# streams}} stopped (action required)",
-  "connection.overview.graph.uptimeStatus.syncing": "Syncing",
   "connection.overview.graph.uptimeStatus.synced": "Synced",
-  "connection.overview.graph.uptimeStatus.queued": "Queued",
 
   "form.scheduleType": "Schedule type",
   "form.scheduleTypeNext": "Sync schedule",

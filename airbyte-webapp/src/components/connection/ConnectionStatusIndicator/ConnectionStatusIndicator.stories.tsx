@@ -1,6 +1,6 @@
 import { Meta, StoryObj } from "@storybook/react";
 
-import { ConnectionStatusIndicator, ConnectionStatusIndicatorStatus } from "./ConnectionStatusIndicator";
+import { ConnectionStatusIndicator, ConnectionStatusType } from "./ConnectionStatusIndicator";
 
 export default {
   title: "connection/ConnectionStatusIndicator",
@@ -11,6 +11,6 @@ type Story = StoryObj<typeof ConnectionStatusIndicator>;
 
 export const Primary: Story = {
   args: {
-    status: ConnectionStatusIndicatorStatus.Synced,
+    status: ConnectionStatusType.Synced,
   },
 };

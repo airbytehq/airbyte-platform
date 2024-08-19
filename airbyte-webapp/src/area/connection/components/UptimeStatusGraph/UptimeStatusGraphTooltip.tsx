@@ -1,10 +1,7 @@
 import { FormattedMessage, FormattedTime, useIntl } from "react-intl";
 import { ContentType } from "recharts/types/component/Tooltip";
 
-import {
-  ConnectionStatusIndicator,
-  ConnectionStatusIndicatorStatus,
-} from "components/connection/ConnectionStatusIndicator";
+import { StreamStatusIndicator, StreamStatusType } from "components/connection/StreamStatusIndicator";
 import { Box } from "components/ui/Box";
 import { Card } from "components/ui/Card";
 import { FlexContainer } from "components/ui/Flex";
@@ -16,10 +13,7 @@ import styles from "./UptimeStatusGraphTooltip.module.scss";
 import { ChartStream } from "./WaffleChart";
 
 // What statuses we represent to users, other statuses must map to these
-type PresentingStatuses =
-  | ConnectionStatusIndicatorStatus.Synced
-  | ConnectionStatusIndicatorStatus.Incomplete
-  | ConnectionStatusIndicatorStatus.Failed;
+type PresentingStatuses = StreamStatusType.Synced | StreamStatusType.Incomplete | StreamStatusType.Failed;
 
 const MESSAGE_BY_STATUS: Readonly<Record<PresentingStatuses, string>> = {
   synced: "connection.overview.graph.uptimeStatus.synced",
@@ -46,14 +40,14 @@ export const UptimeStatusGraphTooltip: ContentType<number, string> = ({ active, 
       const { status } = stream;
 
       if (
-        status === ConnectionStatusIndicatorStatus.Pending ||
-        status === ConnectionStatusIndicatorStatus.Syncing ||
-        status === ConnectionStatusIndicatorStatus.RateLimited ||
-        status === ConnectionStatusIndicatorStatus.Clearing ||
-        status === ConnectionStatusIndicatorStatus.Refreshing ||
-        status === ConnectionStatusIndicatorStatus.QueuedForNextSync ||
-        status === ConnectionStatusIndicatorStatus.Queued ||
-        status === ConnectionStatusIndicatorStatus.Paused
+        status === StreamStatusType.Pending ||
+        status === StreamStatusType.Syncing ||
+        status === StreamStatusType.RateLimited ||
+        status === StreamStatusType.Clearing ||
+        status === StreamStatusType.Refreshing ||
+        status === StreamStatusType.QueuedForNextSync ||
+        status === StreamStatusType.Queued ||
+        status === StreamStatusType.Paused
       ) {
         return acc;
       }
@@ -62,9 +56,9 @@ export const UptimeStatusGraphTooltip: ContentType<number, string> = ({ active, 
     },
     {
       // Order here determines the display order in the tooltip
-      [ConnectionStatusIndicatorStatus.Synced]: [],
-      [ConnectionStatusIndicatorStatus.Incomplete]: [],
-      [ConnectionStatusIndicatorStatus.Failed]: [],
+      [StreamStatusType.Synced]: [],
+      [StreamStatusType.Incomplete]: [],
+      [StreamStatusType.Failed]: [],
     }
   );
 
@@ -105,13 +99,13 @@ export const UptimeStatusGraphTooltip: ContentType<number, string> = ({ active, 
                 return streams.length === 0 ? null : (
                   <FlexContainer key={status} gap="sm">
                     <Box mt="xs">
-                      <ConnectionStatusIndicator size="xs" status={status} />
+                      <StreamStatusIndicator size="xs" status={status} />
                     </Box>
                     <FlexContainer direction="column" gap="none">
                       <Text color="grey" size="sm" className={styles.alignText} as="span">
                         {formatMessage({ id: MESSAGE_BY_STATUS[status] }, { count: streams.length })}
                       </Text>
-                      {status === ConnectionStatusIndicatorStatus.Incomplete && (
+                      {status === StreamStatusType.Incomplete && (
                         <>
                           {streams
                             .filter((_, idx) => idx < 3)

@@ -1,8 +1,7 @@
 import { CellContext } from "@tanstack/react-table";
 import { FormattedMessage } from "react-intl";
 
-import { ConnectionStatusIndicatorStatus } from "components/connection/ConnectionStatusIndicator";
-import { StreamStatusIndicator } from "components/connection/StreamStatusIndicator";
+import { StreamStatusType, StreamStatusIndicator } from "components/connection/StreamStatusIndicator";
 import { FlexContainer } from "components/ui/Flex";
 
 import { UIStreamState } from "area/connection/utils/useUiStreamsStates";
@@ -10,14 +9,11 @@ import { useCurrentTime, useFormatLengthOfTime } from "core/utils/time";
 
 import styles from "./StreamsList.module.scss";
 
-export const StatusCell: React.FC<CellContext<UIStreamState, ConnectionStatusIndicatorStatus>> = (props) => {
+export const StatusCell: React.FC<CellContext<UIStreamState, StreamStatusType>> = (props) => {
   const now = useCurrentTime();
-  let isRateLimited = props.row.original.status === ConnectionStatusIndicatorStatus.RateLimited;
+  let isRateLimited = props.row.original.status === StreamStatusType.RateLimited;
   let rateLimitTimeRemaining;
-  if (
-    props.row.original.status === ConnectionStatusIndicatorStatus.RateLimited &&
-    props.row.original.quotaReset != null
-  ) {
+  if (props.row.original.status === StreamStatusType.RateLimited && props.row.original.quotaReset != null) {
     if (props.row.original.quotaReset < now) {
       // quota reset time has passed, no longer display rate limited status
       isRateLimited = false;

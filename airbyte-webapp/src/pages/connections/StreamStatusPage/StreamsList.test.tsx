@@ -3,7 +3,8 @@ import dayjs from "dayjs";
 import { VirtuosoMockContext } from "react-virtuoso";
 
 import { useConnectionStatus } from "components/connection/ConnectionStatus/useConnectionStatus";
-import { ConnectionStatusIndicatorStatus } from "components/connection/ConnectionStatusIndicator";
+import { ConnectionStatusType } from "components/connection/ConnectionStatusIndicator";
+import { StreamStatusType } from "components/connection/StreamStatusIndicator";
 import { TestWrapper } from "test-utils";
 import { mockConnection } from "test-utils/mock-data/mockConnection";
 
@@ -59,7 +60,7 @@ describe("StreamsList", () => {
         {
           streamName: "test-stream-1",
           streamNamespace: "test-namespace",
-          status: ConnectionStatusIndicatorStatus.Synced,
+          status: StreamStatusType.Synced,
           isLoadingHistoricalData: false,
           recordsExtracted: 1000,
           recordsLoaded: 1000,
@@ -68,7 +69,7 @@ describe("StreamsList", () => {
         {
           streamName: "test-stream-2",
           streamNamespace: "test-namespace",
-          status: ConnectionStatusIndicatorStatus.QueuedForNextSync,
+          status: StreamStatusType.QueuedForNextSync,
           isLoadingHistoricalData: false,
         },
       ],
@@ -84,7 +85,7 @@ describe("StreamsList", () => {
         {
           streamName: "test-stream-1",
           streamNamespace: "test-namespace",
-          status: ConnectionStatusIndicatorStatus.Queued,
+          status: StreamStatusType.Queued,
           isLoadingHistoricalData: false,
           recordsExtracted: 500,
           recordsLoaded: 0,
@@ -92,7 +93,7 @@ describe("StreamsList", () => {
         {
           streamName: "test-stream-2",
           streamNamespace: "test-namespace",
-          status: ConnectionStatusIndicatorStatus.Syncing,
+          status: StreamStatusType.Syncing,
           isLoadingHistoricalData: false,
           recordsExtracted: 0,
           recordsLoaded: 0,
@@ -110,7 +111,7 @@ describe("StreamsList", () => {
         {
           streamName: "test-stream-1",
           streamNamespace: "test-namespace",
-          status: ConnectionStatusIndicatorStatus.Queued,
+          status: StreamStatusType.Queued,
           isLoadingHistoricalData: true,
           recordsExtracted: 500,
           recordsLoaded: 0,
@@ -118,7 +119,7 @@ describe("StreamsList", () => {
         {
           streamName: "test-stream-2",
           streamNamespace: "test-namespace",
-          status: ConnectionStatusIndicatorStatus.Syncing,
+          status: StreamStatusType.Syncing,
           isLoadingHistoricalData: true,
           recordsExtracted: 0,
           recordsLoaded: 0,
@@ -136,7 +137,7 @@ describe("StreamsList", () => {
         {
           streamName: "test-stream-1",
           streamNamespace: "test-namespace",
-          status: ConnectionStatusIndicatorStatus.Paused,
+          status: StreamStatusType.Paused,
           isLoadingHistoricalData: true,
           recordsExtracted: 500,
           recordsLoaded: 0,
@@ -145,7 +146,7 @@ describe("StreamsList", () => {
         {
           streamName: "test-stream-2",
           streamNamespace: "test-namespace",
-          status: ConnectionStatusIndicatorStatus.Paused,
+          status: StreamStatusType.Paused,
           isLoadingHistoricalData: true,
           recordsExtracted: 0,
           recordsLoaded: 0,
@@ -173,7 +174,7 @@ describe("StreamsList", () => {
       });
 
       (useConnectionStatus as jest.Mock).mockReturnValue({
-        status: "active",
+        status: ConnectionStatusType.Syncing,
         nextSync: Math.floor(Date.now() / 1000),
         recordsExtracted: 1000,
         recordsLoaded: 900,

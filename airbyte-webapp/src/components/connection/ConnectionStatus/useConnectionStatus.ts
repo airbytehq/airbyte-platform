@@ -1,25 +1,16 @@
 import dayjs from "dayjs";
 
 import { useGetConnection, useGetConnectionSyncProgress, useListConnectionsStatuses } from "core/api";
-import {
-  ConnectionScheduleType,
-  ConnectionStatus,
-  FailureReason,
-  FailureType,
-  JobStatus,
-} from "core/api/types/AirbyteClient";
+import { ConnectionStatus, FailureReason, FailureType, JobStatus } from "core/api/types/AirbyteClient";
 import { moveTimeToFutureByPeriod } from "core/utils/time";
 import { useSchemaChanges } from "hooks/connection/useSchemaChanges";
 
-import { ConnectionStatusIndicatorStatus } from "../ConnectionStatusIndicator";
-
-export const isHandleableScheduledConnection = (scheduleType: ConnectionScheduleType | undefined) =>
-  scheduleType === "basic";
+import { ConnectionStatusType } from "../ConnectionStatusIndicator";
 
 export interface UIConnectionStatus {
   // user-facing status reflecting the state of the connection
-  status: ConnectionStatusIndicatorStatus;
-  // status of the last completed sync job, useful for distinguishing between failed & delayed in OnTrack status
+  status: ConnectionStatusType;
+  // status of the last completed sync job, useful for distinguishing failed jobs, first job since reset, etc.
   lastSyncJobStatus: JobStatus | undefined;
   // unix timestamp of the last successful sync job
   lastSuccessfulSync: number | undefined;
@@ -27,7 +18,6 @@ export interface UIConnectionStatus {
   nextSync: number | undefined;
   // is the connection currently running a job
   isRunning: boolean;
-
   // for displaying error message and linking to the relevant logs
   failureReason?: FailureReason;
   lastSyncJobId?: number;
@@ -72,7 +62,7 @@ export const useConnectionStatus = (connectionId: string): UIConnectionStatus =>
 
   if (isRunning) {
     return {
-      status: ConnectionStatusIndicatorStatus.Syncing,
+      status: ConnectionStatusType.Syncing,
       lastSyncJobStatus,
       nextSync,
       lastSuccessfulSync,
@@ -87,7 +77,7 @@ export const useConnectionStatus = (connectionId: string): UIConnectionStatus =>
 
   if (hasBreakingSchemaChange || hasConfigError) {
     return {
-      status: ConnectionStatusIndicatorStatus.Failed,
+      status: ConnectionStatusType.Failed,
       lastSyncJobStatus,
       nextSync,
       lastSuccessfulSync,
@@ -102,7 +92,7 @@ export const useConnectionStatus = (connectionId: string): UIConnectionStatus =>
 
   if (connection.status !== ConnectionStatus.active) {
     return {
-      status: ConnectionStatusIndicatorStatus.Paused,
+      status: ConnectionStatusType.Paused,
       lastSyncJobStatus,
       nextSync,
       lastSuccessfulSync,
@@ -117,7 +107,7 @@ export const useConnectionStatus = (connectionId: string): UIConnectionStatus =>
 
   if (lastSyncJobStatus == null || isLastCompletedJobReset) {
     return {
-      status: ConnectionStatusIndicatorStatus.Pending,
+      status: ConnectionStatusType.Pending,
       lastSyncJobStatus,
       nextSync,
       lastSuccessfulSync,
@@ -132,7 +122,7 @@ export const useConnectionStatus = (connectionId: string): UIConnectionStatus =>
 
   if (lastSyncJobStatus === JobStatus.failed) {
     return {
-      status: ConnectionStatusIndicatorStatus.Incomplete,
+      status: ConnectionStatusType.Incomplete,
       lastSyncJobStatus,
       nextSync,
       lastSuccessfulSync,
@@ -146,7 +136,7 @@ export const useConnectionStatus = (connectionId: string): UIConnectionStatus =>
   }
 
   return {
-    status: ConnectionStatusIndicatorStatus.Synced,
+    status: ConnectionStatusType.Synced,
     lastSyncJobStatus,
     nextSync,
     lastSuccessfulSync,
