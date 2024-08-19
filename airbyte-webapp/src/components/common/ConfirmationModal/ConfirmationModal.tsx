@@ -51,7 +51,7 @@ export const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
       testId="confirmationModal"
     >
       <div className={styles.content}>
-        {isString(text) ? <FormattedMessage id={text} values={textValues} /> : text}
+        <Text>{isString(text) ? <FormattedMessage id={text} values={textValues} /> : text}</Text>
         {additionalContent}
         {confirmationText && (
           <Box pt="lg">
@@ -71,12 +71,14 @@ export const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
                   />
                 </Text>
               </label>
-              <Input
-                id="confirmation-text"
-                placeholder={confirmationText}
-                onChange={(event) => setConfirmationValue(event.target.value)}
-                value={confirmationValue}
-              />
+              <Box mt="md">
+                <Input
+                  id="confirmation-text"
+                  placeholder={confirmationText}
+                  onChange={(event) => setConfirmationValue(event.target.value)}
+                  value={confirmationValue}
+                />
+              </Box>
             </FlexContainer>
           </Box>
         )}

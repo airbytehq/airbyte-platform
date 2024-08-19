@@ -1,6 +1,12 @@
 import * as yup from "yup";
 
-import { ConnectionEventType, FailureOrigin, FailureType, JobConfigType } from "core/api/types/AirbyteClient";
+import {
+  ConnectionEventType,
+  FailureOrigin,
+  FailureReason,
+  FailureType,
+  JobConfigType,
+} from "core/api/types/AirbyteClient";
 
 /**
  * add a new event type to the connection timeline:
@@ -26,13 +32,15 @@ const jobRunningStreamSchema = yup.object({
   configType: yup.mixed<JobConfigType>().oneOf(["sync", "refresh", "clear", "reset_connection"]).required(),
 });
 
+export type TimelineFailureReason = Omit<FailureReason, "timestamp">;
+
 export const jobFailureReasonSchema = yup.object({
   failureType: yup.mixed<FailureType>().optional(),
   failureOrigin: yup.mixed<FailureOrigin>().optional(),
   externalMessage: yup.string().optional(),
   internalMessage: yup.string().optional(),
   retryable: yup.boolean().optional(),
-  timestamp: yup.number().required(),
+  timestamp: yup.number().optional(),
   stacktrace: yup.string().optional(),
 });
 

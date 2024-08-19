@@ -144,7 +144,7 @@ class ApplicationBeanFactory {
   }
 
   @Singleton
-  @Named("staticFlagContexts")
+  @Named("infraFlagContexts")
   fun staticFlagContext(
     @Property(name = "airbyte.workload-launcher.geography") geography: String,
     @Property(name = "airbyte.data-plane-name") dataPlaneName: String?,

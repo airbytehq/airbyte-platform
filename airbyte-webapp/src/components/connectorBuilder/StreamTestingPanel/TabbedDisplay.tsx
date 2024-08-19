@@ -29,8 +29,8 @@ export const TabbedDisplay: React.FC<TabbedDisplayProps> = ({ className, tabs, d
   }, [defaultTabIndex, selectedIndex, tabs.length]);
 
   return (
-    <FlexContainer className={classNames(className, styles.container)} direction="column">
-      <TabGroup selectedIndex={selectedIndex} onChange={setSelectedIndex}>
+    <TabGroup className={styles.tabGroup} selectedIndex={selectedIndex} onChange={setSelectedIndex}>
+      <FlexContainer className={classNames(className, styles.container)} direction="column">
         <TabList className={styles.tabList}>
           {tabs.map((tab) => (
             <Tab className={styles.tab} key={tab.key} data-testid={tab["data-testid"]}>
@@ -54,7 +54,7 @@ export const TabbedDisplay: React.FC<TabbedDisplayProps> = ({ className, tabs, d
             </TabPanel>
           ))}
         </TabPanels>
-      </TabGroup>
-    </FlexContainer>
+      </FlexContainer>
+    </TabGroup>
   );
 };

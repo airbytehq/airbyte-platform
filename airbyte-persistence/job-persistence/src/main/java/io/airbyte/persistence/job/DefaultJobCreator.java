@@ -74,15 +74,18 @@ public class DefaultJobCreator implements JobCreator {
   private final ResourceRequirementsProvider resourceRequirementsProvider;
   private final FeatureFlagClient featureFlagClient;
   private final StreamRefreshesRepository streamRefreshesRepository;
+  private final String variantOverride;
 
   public DefaultJobCreator(final JobPersistence jobPersistence,
                            final ResourceRequirementsProvider resourceRequirementsProvider,
                            final FeatureFlagClient featureFlagClient,
-                           final StreamRefreshesRepository streamRefreshesRepository) {
+                           final StreamRefreshesRepository streamRefreshesRepository,
+                           @Nullable final String variantOverride) {
     this.jobPersistence = jobPersistence;
     this.resourceRequirementsProvider = resourceRequirementsProvider;
     this.featureFlagClient = featureFlagClient;
     this.streamRefreshesRepository = streamRefreshesRepository;
+    this.variantOverride = variantOverride;
   }
 
   @Override
@@ -255,7 +258,9 @@ public class DefaultJobCreator implements JobCreator {
                                                                final StandardDestinationDefinition destinationDefinition,
                                                                final boolean isReset) {
     final var ffContext = buildFeatureFlagContext(workspaceId, standardSync, sourceDefinition, destinationDefinition);
-    final String variant = featureFlagClient.stringVariation(UseResourceRequirementsVariant.INSTANCE, ffContext);
+    final String variant =
+        variantOverride == null || variantOverride.isBlank() ? featureFlagClient.stringVariation(UseResourceRequirementsVariant.INSTANCE, ffContext)
+            : variantOverride;
 
     // Note on use of sourceType, throughput is driven by the source, if the source is slow, the rest is
     // going to be slow. With this in mind, we align the resources given to the orchestrator and the

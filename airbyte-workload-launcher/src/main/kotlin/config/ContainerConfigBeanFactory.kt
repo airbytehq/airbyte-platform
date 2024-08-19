@@ -150,10 +150,10 @@ class ContainerConfigBeanFactory {
   @Singleton
   @Named("checkConnectorReqs")
   fun checkConnectorReqs(
-    @Value("\${airbyte.worker.kube-job-configs.check.cpu-limit}") cpuLimit: String,
-    @Value("\${airbyte.worker.kube-job-configs.check.cpu-request}") cpuRequest: String,
-    @Value("\${airbyte.worker.kube-job-configs.check.memory-limit}") memoryLimit: String,
-    @Value("\${airbyte.worker.kube-job-configs.check.memory-request}") memoryRequest: String,
+    @Value("\${airbyte.worker.kube-job-configs.check.cpu-limit:2}") cpuLimit: String,
+    @Value("\${airbyte.worker.kube-job-configs.check.cpu-request:2}") cpuRequest: String,
+    @Value("\${airbyte.worker.kube-job-configs.check.memory-limit:500Mi}") memoryLimit: String,
+    @Value("\${airbyte.worker.kube-job-configs.check.memory-request:500Mi}") memoryRequest: String,
   ): ResourceRequirements {
     return ResourceRequirements()
       .withCpuLimit(cpuLimit)
@@ -165,10 +165,10 @@ class ContainerConfigBeanFactory {
   @Singleton
   @Named("discoverConnectorReqs")
   fun discoverConnectorReqs(
-    @Value("\${airbyte.worker.kube-job-configs.discover.cpu-limit}") cpuLimit: String,
-    @Value("\${airbyte.worker.kube-job-configs.discover.cpu-request}") cpuRequest: String,
-    @Value("\${airbyte.worker.kube-job-configs.discover.memory-limit}") memoryLimit: String,
-    @Value("\${airbyte.worker.kube-job-configs.discover.memory-request}") memoryRequest: String,
+    @Value("\${airbyte.worker.kube-job-configs.discover.cpu-limit:2}") cpuLimit: String,
+    @Value("\${airbyte.worker.kube-job-configs.discover.cpu-request:2}") cpuRequest: String,
+    @Value("\${airbyte.worker.kube-job-configs.discover.memory-limit:500Mi}") memoryLimit: String,
+    @Value("\${airbyte.worker.kube-job-configs.discover.memory-request:500Mi}") memoryRequest: String,
   ): ResourceRequirements {
     return ResourceRequirements()
       .withCpuLimit(cpuLimit)
@@ -180,10 +180,10 @@ class ContainerConfigBeanFactory {
   @Singleton
   @Named("specConnectorReqs")
   fun specConnectorReqs(
-    @Value("\${airbyte.worker.kube-job-configs.spec.cpu-limit}") cpuLimit: String,
-    @Value("\${airbyte.worker.kube-job-configs.spec.cpu-request}") cpuRequest: String,
-    @Value("\${airbyte.worker.kube-job-configs.spec.memory-limit}") memoryLimit: String,
-    @Value("\${airbyte.worker.kube-job-configs.spec.memory-request}") memoryRequest: String,
+    @Value("\${airbyte.worker.kube-job-configs.spec.cpu-limit:1}") cpuLimit: String,
+    @Value("\${airbyte.worker.kube-job-configs.spec.cpu-request:1}") cpuRequest: String,
+    @Value("\${airbyte.worker.kube-job-configs.spec.memory-limit:200Mi}") memoryLimit: String,
+    @Value("\${airbyte.worker.kube-job-configs.spec.memory-request:200Mi}") memoryRequest: String,
   ): ResourceRequirements {
     return ResourceRequirements()
       .withCpuLimit(cpuLimit)
@@ -195,10 +195,10 @@ class ContainerConfigBeanFactory {
   @Singleton
   @Named("sidecarReqs")
   fun sidecarReqs(
-    @Value("\${airbyte.worker.connector-sidecar.resources.cpu-limit}") cpuLimit: String,
-    @Value("\${airbyte.worker.connector-sidecar.resources.cpu-request}") cpuRequest: String,
-    @Value("\${airbyte.worker.connector-sidecar.resources.memory-limit}") memoryLimit: String,
-    @Value("\${airbyte.worker.connector-sidecar.resources.memory-request}") memoryRequest: String,
+    @Value("\${airbyte.worker.connector-sidecar.resources.cpu-limit:2}") cpuLimit: String,
+    @Value("\${airbyte.worker.connector-sidecar.resources.cpu-request:2}") cpuRequest: String,
+    @Value("\${airbyte.worker.connector-sidecar.resources.memory-limit:500Mi}") memoryLimit: String,
+    @Value("\${airbyte.worker.connector-sidecar.resources.memory-request:500Mi}") memoryRequest: String,
   ): ResourceRequirements {
     return ResourceRequirements()
       .withCpuLimit(cpuLimit)

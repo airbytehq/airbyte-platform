@@ -163,6 +163,7 @@ airbyte:
     strategy: ${TRACKING_STRATEGY:LOGGING}
     write-key: ${SEGMENT_WRITE_KEY:}
   worker:
+    kube-job-config-variant-override: ${JOB_RESOURCE_VARIANT_OVERRIDE:}
     kube-job-configs:
       default:
         annotations: ${JOB_KUBE_ANNOTATIONS:}
@@ -271,6 +272,106 @@ airbyte:
         cpu-request: 0.5
         memory-limit: 50Mi
         memory-request: 25Mi
+
+      # Generally low resource containers
+      lowresource--destination-stderr:
+        cpu-limit: ${JOB_VARIANT_LOW_RESOURCE_DEST_ERR_CPU_LIMIT:0}
+        cpu-request: ${JOB_VARIANT_LOW_RESOURCE_DEST_ERR_CPU_REQUEST:0}
+        memory-limit: ${JOB_VARIANT_LOW_RESOURCE_DEST_ERR_MEM_LIMIT:0}
+        memory-request: ${JOB_VARIANT_LOW_RESOURCE_DEST_ERR_MEM_REQUEST:0}
+      lowresource--destination-stdout:
+        cpu-limit: ${JOB_VARIANT_LOW_RESOURCE_DEST_OUT_CPU_LIMIT:0}
+        cpu-request: ${JOB_VARIANT_LOW_RESOURCE_DEST_OUT_CPU_REQUEST:0}
+        memory-limit: ${JOB_VARIANT_LOW_RESOURCE_DEST_OUT_MEM_LIMIT:0}
+        memory-request: ${JOB_VARIANT_LOW_RESOURCE_DEST_OUT_MEM_REQUEST:0}
+      lowresource--heartbeat:
+        cpu-limit: ${JOB_VARIANT_LOW_RESOURCE_HEARTBEAT_CPU_LIMIT:0}
+        cpu-request: ${JOB_VARIANT_LOW_RESOURCE_HEARTBEAT_CPU_REQUEST:0}
+        memory-limit: ${JOB_VARIANT_LOW_RESOURCE_HEARTBEAT_MEM_LIMIT:0}
+        memory-request: ${JOB_VARIANT_LOW_RESOURCE_HEARTBEAT_MEM_REQUEST:0}
+      lowresource--source-stderr:
+        cpu-limit: ${JOB_VARIANT_LOW_RESOURCE_SOURCE_ERR_CPU_LIMIT:0}
+        cpu-request: ${JOB_VARIANT_LOW_RESOURCE_SOURCE_ERR_CPU_REQUEST:0}
+        memory-limit: ${JOB_VARIANT_LOW_RESOURCE_SOURCE_ERR_MEM_LIMIT:0}
+        memory-request: ${JOB_VARIANT_LOW_RESOURCE_SOURCE_ERR_MEM_REQUEST:0}
+      # Default base sync values
+      lowresource--destination:
+        cpu-limit: ${JOB_MAIN_CONTAINER_CPU_LIMIT:0}
+        cpu-request: ${JOB_MAIN_CONTAINER_CPU_REQUEST:0}
+        memory-limit: ${JOB_MAIN_CONTAINER_MEMORY_LIMIT:0}
+        memory-request: ${JOB_MAIN_CONTAINER_MEMORY_REQUEST:0}
+      lowresource--destination-stdin:
+        cpu-limit: ${JOB_VARIANT_LOW_RESOURCE_DEST_IN_CPU_LIMIT:0}
+        cpu-request: ${JOB_VARIANT_LOW_RESOURCE_DEST_IN_CPU_REQUEST:0}
+        memory-limit: ${JOB_VARIANT_LOW_RESOURCE_DEST_IN_MEM_LIMIT:0}
+        memory-request: ${JOB_VARIANT_LOW_RESOURCE_DEST_IN_MEM_REQUEST:0}
+      lowresource--orchestrator:
+        cpu-limit: ${JOB_MAIN_CONTAINER_CPU_LIMIT:0}
+        cpu-request: ${JOB_MAIN_CONTAINER_CPU_REQUEST:0}
+        memory-limit: ${JOB_MAIN_CONTAINER_MEMORY_LIMIT:0}
+        memory-request: ${JOB_MAIN_CONTAINER_MEMORY_REQUEST:0}
+      lowresource--source:
+        cpu-limit: ${JOB_MAIN_CONTAINER_CPU_LIMIT:0}
+        cpu-request: ${JOB_MAIN_CONTAINER_CPU_REQUEST:0}
+        memory-limit: ${JOB_MAIN_CONTAINER_MEMORY_LIMIT:0}
+        memory-request: ${JOB_MAIN_CONTAINER_MEMORY_REQUEST:0}
+      lowresource--source-stdout:
+        cpu-limit: ${JOB_VARIANT_LOW_RESOURCE_SOURCE_OUT_CPU_LIMIT:0}
+        cpu-request: ${JOB_VARIANT_LOW_RESOURCE_SOURCE_OUT_CPU_REQUEST:0}
+        memory-limit: ${JOB_VARIANT_LOW_RESOURCE_SOURCE_OUT_MEM_LIMIT:0}
+        memory-request: ${JOB_VARIANT_LOW_RESOURCE_SOURCE_OUT_MEM_REQUEST:0}
+      # API syncs
+      lowresource--source-api:
+        cpu-limit: ${JOB_MAIN_CONTAINER_CPU_LIMIT:0}
+        cpu-request: ${JOB_MAIN_CONTAINER_CPU_REQUEST:0}
+        memory-limit: ${JOB_MAIN_CONTAINER_MEMORY_LIMIT:0}
+        memory-request: ${JOB_MAIN_CONTAINER_MEMORY_REQUEST:0}
+      lowresource--source-stdout-api:
+        cpu-limit: ${JOB_VARIANT_LOW_RESOURCE_SOURCE_OUT_API_CPU_LIMIT:0}
+        cpu-request: ${JOB_VARIANT_LOW_RESOURCE_SOURCE_OUT_API_CPU_REQUEST:0}
+        memory-limit: ${JOB_VARIANT_LOW_RESOURCE_SOURCE_OUT_API_MEM_LIMIT:0}
+        memory-request: ${JOB_VARIANT_LOW_RESOURCE_SOURCE_OUT_API_MEM_REQUEST:0}
+      lowresource--orchestrator-api:
+        cpu-limit: ${JOB_MAIN_CONTAINER_CPU_LIMIT:0}
+        cpu-request: ${JOB_MAIN_CONTAINER_CPU_REQUEST:0}
+        memory-limit: ${JOB_MAIN_CONTAINER_MEMORY_LIMIT:0}
+        memory-request: ${JOB_MAIN_CONTAINER_MEMORY_REQUEST:0}
+      lowresource--destination-api:
+        cpu-limit: ${JOB_MAIN_CONTAINER_CPU_LIMIT:0}
+        cpu-request: ${JOB_MAIN_CONTAINER_CPU_REQUEST:0}
+        memory-limit: ${JOB_MAIN_CONTAINER_MEMORY_LIMIT:0}
+        memory-request: ${JOB_MAIN_CONTAINER_MEMORY_REQUEST:0}
+      lowresource--destination-stdin-api:
+        cpu-limit: ${JOB_VARIANT_LOW_RESOURCE_DEST_IN_API_CPU_LIMIT:0}
+        cpu-request: ${JOB_VARIANT_LOW_RESOURCE_DEST_IN_API_CPU_REQUEST:0}
+        memory-limit: ${JOB_VARIANT_LOW_RESOURCE_DEST_IN_API_MEM_LIMIT:0}
+        memory-request: ${JOB_VARIANT_LOW_RESOURCE_DEST_IN_API_MEM_REQUEST:0}
+      # Database syncs resource override
+      lowresource--source-database:
+        cpu-limit: ${JOB_MAIN_CONTAINER_CPU_LIMIT:0}
+        cpu-request: ${JOB_MAIN_CONTAINER_CPU_REQUEST:0}
+        memory-limit: ${JOB_MAIN_CONTAINER_MEMORY_LIMIT:0}
+        memory-request: ${JOB_MAIN_CONTAINER_MEMORY_REQUEST:0}
+      lowresource--source-stdout-database:
+        cpu-limit: ${JOB_VARIANT_LOW_RESOURCE_SOURCE_OUT_DB_CPU_LIMIT:0}
+        cpu-request: ${JOB_VARIANT_LOW_RESOURCE_SOURCE_OUT_DB_CPU_REQUEST:0}
+        memory-limit: ${JOB_VARIANT_LOW_RESOURCE_SOURCE_OUT_DB_MEM_LIMIT:0}
+        memory-request: ${JOB_VARIANT_LOW_RESOURCE_SOURCE_OUT_DB_MEM_REQUEST:0}
+      lowresource--orchestrator-database:
+        cpu-limit: ${JOB_MAIN_CONTAINER_CPU_LIMIT:0}
+        cpu-request: ${JOB_MAIN_CONTAINER_CPU_REQUEST:0}
+        memory-limit: ${JOB_MAIN_CONTAINER_MEMORY_LIMIT:0}
+        memory-request: ${JOB_MAIN_CONTAINER_MEMORY_REQUEST:0}
+      lowresource--destination-database:
+        cpu-limit: ${JOB_MAIN_CONTAINER_CPU_LIMIT:0}
+        cpu-request: ${JOB_MAIN_CONTAINER_CPU_REQUEST:0}
+        memory-limit: ${JOB_MAIN_CONTAINER_MEMORY_LIMIT:0}
+        memory-request: ${JOB_MAIN_CONTAINER_MEMORY_REQUEST:0}
+      lowresource--destination-stdin-database:
+        cpu-limit: ${JOB_VARIANT_LOW_RESOURCE_DEST_IN_DB_CPU_LIMIT:0}
+        cpu-request: ${JOB_VARIANT_LOW_RESOURCE_DEST_IN_DB_CPU_REQUEST:0}
+        memory-limit: ${JOB_VARIANT_LOW_RESOURCE_DEST_IN_DB_MEM_LIMIT:0}
+        memory-request: ${JOB_VARIANT_LOW_RESOURCE_DEST_IN_DB_MEM_REQUEST:0}
 
     job:
       error-reporting:

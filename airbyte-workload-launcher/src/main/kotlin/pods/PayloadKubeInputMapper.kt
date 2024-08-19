@@ -57,7 +57,7 @@ class PayloadKubeInputMapper(
   @Named("discoverWorkerConfigs") private val discoverWorkerConfigs: WorkerConfigs,
   @Named("specWorkerConfigs") private val specWorkerConfigs: WorkerConfigs,
   private val featureFlagClient: FeatureFlagClient,
-  @Named("staticFlagContexts") private val contexts: List<Context>,
+  @Named("infraFlagContexts") private val contexts: List<Context>,
 ) {
   fun toKubeInput(
     workloadId: String,

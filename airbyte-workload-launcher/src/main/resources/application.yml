@@ -152,32 +152,32 @@ airbyte:
         annotations: ${CHECK_JOB_KUBE_ANNOTATIONS:}
         labels: ${CHECK_JOB_KUBE_LABELS:}
         node-selectors: ${CHECK_JOB_KUBE_NODE_SELECTORS:}
-        cpu-limit: ${CHECK_JOB_MAIN_CONTAINER_CPU_LIMIT:2}
-        cpu-request: ${CHECK_JOB_MAIN_CONTAINER_CPU_REQUEST:2}
-        memory-limit: ${CHECK_JOB_MAIN_CONTAINER_MEMORY_LIMIT:500Mi}
-        memory-request: ${CHECK_JOB_MAIN_CONTAINER_MEMORY_REQUEST:500Mi}
+        cpu-limit: ${CHECK_JOB_MAIN_CONTAINER_CPU_LIMIT:}
+        cpu-request: ${CHECK_JOB_MAIN_CONTAINER_CPU_REQUEST:}
+        memory-limit: ${CHECK_JOB_MAIN_CONTAINER_MEMORY_LIMIT:}
+        memory-request: ${CHECK_JOB_MAIN_CONTAINER_MEMORY_REQUEST:}
       discover:
         annotations: ${DISCOVER_JOB_KUBE_ANNOTATIONS:}
         labels: ${DISCOVER_JOB_KUBE_LABELS:}
         node-selectors: ${DISCOVER_JOB_KUBE_NODE_SELECTORS:}
-        cpu-limit: ${DISCOVER_JOB_MAIN_CONTAINER_CPU_LIMIT:2}
-        cpu-request: ${DISCOVER_JOB_MAIN_CONTAINER_CPU_REQUEST:2}
-        memory-limit: ${DISCOVER_JOB_MAIN_CONTAINER_MEMORY_LIMIT:500Mi}
-        memory-request: ${DISCOVER_JOB_MAIN_CONTAINER_MEMORY_REQUEST:500Mi}
+        cpu-limit: ${DISCOVER_JOB_MAIN_CONTAINER_CPU_LIMIT:}
+        cpu-request: ${DISCOVER_JOB_MAIN_CONTAINER_CPU_REQUEST:}
+        memory-limit: ${DISCOVER_JOB_MAIN_CONTAINER_MEMORY_LIMIT:}
+        memory-request: ${DISCOVER_JOB_MAIN_CONTAINER_MEMORY_REQUEST:}
       spec:
         annotations: ${SPEC_JOB_KUBE_ANNOTATIONS:}
         labels: ${SPEC_JOB_KUBE_LABELS:}
         node-selectors: ${SPEC_JOB_KUBE_NODE_SELECTORS:}
-        cpu-limit: ${SPEC_JOB_MAIN_CONTAINER_CPU_LIMIT:1}
-        cpu-request: ${SPEC_JOB_MAIN_CONTAINER_CPU_REQUEST:1}
-        memory-limit: ${SPEC_JOB_MAIN_CONTAINER_MEMORY_LIMIT:200Mi}
-        memory-request: ${SPEC_JOB_MAIN_CONTAINER_MEMORY_REQUEST:200Mi}
+        cpu-limit: ${SPEC_JOB_MAIN_CONTAINER_CPU_LIMIT:}
+        cpu-request: ${SPEC_JOB_MAIN_CONTAINER_CPU_REQUEST:}
+        memory-limit: ${SPEC_JOB_MAIN_CONTAINER_MEMORY_LIMIT:}
+        memory-request: ${SPEC_JOB_MAIN_CONTAINER_MEMORY_REQUEST:}
     connector-sidecar:
       resources:
-        cpu-limit: ${SIDECAR_MAIN_CONTAINER_CPU_LIMIT:2}
-        cpu-request: ${SIDECAR_MAIN_CONTAINER_CPU_REQUEST:2}
-        memory-limit: ${SIDECAR_MAIN_CONTAINER_MEMORY_LIMIT:500Mi}
-        memory-request: ${SIDECAR_MAIN_CONTAINER_MEMORY_REQUEST:500Mi}
+        cpu-limit: ${SIDECAR_MAIN_CONTAINER_CPU_LIMIT:}
+        cpu-request: ${SIDECAR_MAIN_CONTAINER_CPU_REQUEST:}
+        memory-limit: ${SIDECAR_MAIN_CONTAINER_MEMORY_LIMIT:}
+        memory-request: ${SIDECAR_MAIN_CONTAINER_MEMORY_REQUEST:}
     isolated:
       kube:
         use-custom-node-selector: ${USE_CUSTOM_NODE_SELECTOR:false}
