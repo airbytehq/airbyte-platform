@@ -2,8 +2,9 @@
 
 .eventActions {
   display: flex;
-  gap: variables.$spacing-xs;
   align-items: center;
   flex-shrink: 0;
   min-width: max-content;
+  justify-content: flex-start;
+  flex-basis: 180px;
 }

@@ -72,7 +72,7 @@ export const ConnectionTimelineAllEventsList: React.FC<{
       (filterValues.eventCategory === "clear" && syncProgressData.configType === "reset_connection"));
 
   const connectionEventsToShow = useMemo(() => {
-    return [
+    const events = [
       ...(showRunningJob
         ? [
             {
@@ -96,6 +96,8 @@ export const ConnectionTimelineAllEventsList: React.FC<{
         : []), // if there is a running sync, append an item to the top of the list
       ...(connectionEventsData?.pages.flatMap<ConnectionEvent>((page) => page.data.events) ?? []),
     ];
+
+    return events;
   }, [connection.connectionId, connectionEventsData?.pages, showRunningJob, syncProgressData]);
 
   useEffect(() => {
@@ -136,7 +138,7 @@ export const ConnectionTimelineAllEventsList: React.FC<{
           Item: "li" as any,
         }}
         itemContent={(_index, event) => {
-          return <EventLineItem event={event} />;
+          return <EventLineItem event={event} key={event.id} />;
         }}
       />
       {isFetchingNextPage && (
