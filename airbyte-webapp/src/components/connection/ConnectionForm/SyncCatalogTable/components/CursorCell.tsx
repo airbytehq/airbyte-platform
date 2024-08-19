@@ -1,53 +1,75 @@
 import { Row } from "@tanstack/react-table";
 import get from "lodash/get";
-import React, { useMemo } from "react";
+import React from "react";
 import { useFormState } from "react-hook-form";
 import { FormattedMessage } from "react-intl";
 import ValidationError from "yup/lib/ValidationError";
 
+import { Option } from "components/ui/ComboBox";
 import { FlexContainer } from "components/ui/Flex";
-import { Icon } from "components/ui/Icon";
-import { TextWithOverflowTooltip } from "components/ui/Text";
 
+import { AirbyteStreamConfiguration } from "core/api/types/AirbyteClient";
+import { SyncSchemaFieldObject } from "core/domain/catalog";
+
+import { CatalogComboBox } from "./CatalogComboBox/CatalogComboBox";
+import styles from "./NextCursorCell.module.scss";
+import { updateCursorField } from "../../../syncCatalog/SyncCatalog/streamConfigHelpers";
 import { checkCursorAndPKRequirements, getFieldPathType } from "../../../syncCatalog/utils";
-import { FormConnectionFormValues } from "../../formConfig";
+import { FormConnectionFormValues, SyncStreamFieldWithId } from "../../formConfig";
 import { SyncCatalogUIModel } from "../SyncCatalogTable";
 import { pathDisplayName } from "../utils";
 
-interface CursorCellProps {
+interface NextCursorCellProps {
   row: Row<SyncCatalogUIModel>;
+  updateStreamField: (streamNode: SyncStreamFieldWithId, updatedConfig: Partial<AirbyteStreamConfiguration>) => void;
 }
 
-export const CursorCell: React.FC<CursorCellProps> = ({ row }) => {
+export const CursorCell: React.FC<NextCursorCellProps> = ({ row, updateStreamField }) => {
   const { config, stream } = row.original.streamNode;
   const { errors } = useFormState<FormConnectionFormValues>();
 
   const { cursorRequired, shouldDefineCursor } = checkCursorAndPKRequirements(config!, stream!);
   const cursorType = getFieldPathType(cursorRequired, shouldDefineCursor);
 
-  const cursorFieldString = useMemo(() => {
-    if (cursorType === "sourceDefined") {
-      if (stream?.defaultCursorField?.length) {
-        return pathDisplayName(stream.defaultCursorField);
-      }
-      return <FormattedMessage id="connection.catalogTree.sourceDefined" />;
-    } else if (cursorType === "required" && config?.cursorField?.length) {
-      return pathDisplayName(config?.cursorField);
-    }
-    return <FormattedMessage id="form.error.cursor.missing" />;
-  }, [config?.cursorField, cursorType, stream?.defaultCursorField]);
+  const cursorOptions: Option[] =
+    row.original.subRows
+      ?.filter((subRow) => subRow?.field && !SyncSchemaFieldObject.isNestedField(subRow?.field))
+      .map((subRow) => subRow?.field?.cleanedName ?? "")
+      .sort()
+      .map((name) => ({ value: name })) ?? [];
+
+  const cursorValue =
+    cursorType === "sourceDefined"
+      ? pathDisplayName(stream?.defaultCursorField ?? [])
+      : cursorType === "required"
+      ? pathDisplayName(config?.cursorField ?? [])
+      : "";
 
   const cursorConfigValidationError: ValidationError | undefined = get(
     errors,
     `syncCatalog.streams[${stream?.name}_${stream?.namespace}].config.cursorField`
   );
 
+  const onChange = (cursor: string) => {
+    const numberOfFieldsInStream = Object.keys(stream?.jsonSchema?.properties ?? {}).length ?? 0;
+    const updatedConfig = updateCursorField(config!, [cursor], numberOfFieldsInStream);
+    updateStreamField(row.original.streamNode, updatedConfig);
+  };
+
   return config?.selected && cursorType ? (
     <FlexContainer direction="row" gap="xs" alignItems="center" data-testid="cursor-field-cell">
-      <Icon type="cursor" size="sm" color={cursorConfigValidationError ? "error" : "action"} />
-      <TextWithOverflowTooltip color={cursorConfigValidationError ? "red" : "grey"}>
-        {cursorFieldString}
-      </TextWithOverflowTooltip>
+      <CatalogComboBox
+        disabled={!shouldDefineCursor}
+        options={cursorOptions}
+        value={cursorValue}
+        onChange={onChange}
+        error={cursorConfigValidationError}
+        buttonErrorText={<FormattedMessage id="form.error.cursor.missing" />}
+        buttonAddText={<FormattedMessage id="form.error.cursor.addMissing" />}
+        buttonEditText={<FormattedMessage id="form.error.cursor.edit" />}
+        controlClassName={styles.control}
+        controlBtnIcon="cursor"
+      />
     </FlexContainer>
   ) : null;
 };

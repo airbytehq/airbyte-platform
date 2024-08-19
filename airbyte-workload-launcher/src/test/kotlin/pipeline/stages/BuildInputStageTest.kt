@@ -90,6 +90,7 @@ class BuildInputStageTest {
         mockk(),
         "dataplane-id",
         ffClient,
+        listOf(),
       )
     val io = LaunchStageIO(msg = RecordFixtures.launcherInput(workloadInput = inputStr, workloadType = WorkloadType.SYNC))
 
@@ -158,6 +159,7 @@ class BuildInputStageTest {
         mockk(),
         "dataplane-id",
         ffClient,
+        listOf(),
       )
     val io = LaunchStageIO(msg = RecordFixtures.launcherInput(workloadInput = inputStr, workloadType = WorkloadType.CHECK))
 
@@ -222,6 +224,7 @@ class BuildInputStageTest {
         mockk(),
         "dataplane-id",
         ffClient,
+        listOf(),
       )
     val io = LaunchStageIO(msg = RecordFixtures.launcherInput(workloadInput = inputStr, workloadType = WorkloadType.DISCOVER))
 
@@ -263,6 +266,7 @@ class BuildInputStageTest {
         mockk(),
         "dataplane-id",
         TestClient(),
+        listOf(),
       )
     val io = LaunchStageIO(msg = RecordFixtures.launcherInput(workloadInput = inputStr, workloadType = WorkloadType.SPEC))
 

@@ -174,9 +174,9 @@ export const SyncCatalogTable: FC<SyncCatalogTableProps> = ({ scrollParentContai
       header: () => {},
       cell: ({ row }) =>
         isStreamRow(row) ? (
-          <PKCell row={row} />
+          <PKCell row={row} updateStreamField={onUpdateStreamConfigWithStreamNode} />
         ) : (
-          <FieldPKCell row={row} updateStreamField={onUpdateStreamConfigWithStreamNode} />
+          <FieldPKCell row={row} />
         ),
       meta: {
         thClassName: styles.pkCell,
@@ -187,9 +187,9 @@ export const SyncCatalogTable: FC<SyncCatalogTableProps> = ({ scrollParentContai
       header: () => {},
       cell: ({ row }) =>
         isStreamRow(row) ? (
-          <CursorCell row={row} />
+          <CursorCell row={row} updateStreamField={onUpdateStreamConfigWithStreamNode} />
         ) : (
-          <FieldCursorCell row={row} updateStreamField={onUpdateStreamConfigWithStreamNode} />
+          <FieldCursorCell row={row} />
         ),
       meta: {
         thClassName: styles.cursorCell,

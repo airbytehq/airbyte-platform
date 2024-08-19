@@ -70,9 +70,9 @@ When used in the cloud/in Kubernetes, the logging client emits the following met
 
 | Metric Name                               | Type  | Description                                                         |
 |:------------------------------------------|:------|:--------------------------------------------------------------------|
-| log_client_file_byte_count        | Count | The count in bytes of the retrieved log lines                       |
-| log_client_file_line_count        | Count | The count of the number of lines retrieved from the log file        |
-| log_client_files_retrieved        | Gauge | The number of log files read in order to retrieve the log lines.    |
-| log_client_file_retrieval_time_ms | Timer | The amount of time in milliseconds spent to retrieve the log lines. |
+| airbyte.log_client_file_byte_count        | Count | The count in bytes of the retrieved log lines                       |
+| airbyte.log_client_file_line_count        | Count | The count of the number of lines retrieved from the log file        |
+| airbyte.log_client_files_retrieved        | Gauge | The number of log files read in order to retrieve the log lines.    |
+| airbyte.log_client_file_retrieval_time_ms | Timer | The amount of time in milliseconds spent to retrieve the log lines. |
 
 Each of these metrics are automatically tagged with the log client type (e.g. `gcs`, `s3`, `minio`, etc). 

@@ -129,11 +129,12 @@ public class WebhookOperationActivityImpl implements WebhookOperationActivity {
   private boolean sendWebhook(final HttpRequest.Builder requestBuilder, final Optional<WebhookConfig> webhookConfig)
       throws IOException, InterruptedException {
     final HttpResponse<String> response = this.httpClient.send(requestBuilder.build(), HttpResponse.BodyHandlers.ofString());
-    LOGGER.debug("Webhook response: {}", response == null ? null : response.body());
-    LOGGER.info("Webhook response status: {}", response == null ? "empty response" : response.statusCode());
-    // Return true if the request was successful.
+
     final boolean isSuccessful = response != null && response.statusCode() >= 200 && response.statusCode() <= 300;
     LOGGER.info("Webhook {} execution status {}", webhookConfig.get().getName(), isSuccessful ? "successful" : "failed");
+    if (!isSuccessful) {
+      LOGGER.error("Webhook {} error code: {} response: {}", webhookConfig.get().getName(), response.statusCode(), response.body());
+    }
     return isSuccessful;
   }
 

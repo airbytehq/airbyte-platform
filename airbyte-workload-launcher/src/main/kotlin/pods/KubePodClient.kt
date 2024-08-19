@@ -5,6 +5,7 @@ import datadog.trace.api.Trace
 import io.airbyte.commons.constants.WorkerConstants.KubeConstants.FULL_POD_TIMEOUT
 import io.airbyte.featureflag.Connection
 import io.airbyte.featureflag.ConnectorSidecarFetchesInputFromInit
+import io.airbyte.featureflag.Context
 import io.airbyte.featureflag.FeatureFlagClient
 import io.airbyte.featureflag.Multi
 import io.airbyte.featureflag.OrchestratorFetchesInputFromInit
@@ -46,6 +47,7 @@ class KubePodClient(
   @Named("discoverPodFactory") private val discoverPodFactory: ConnectorPodFactory,
   @Named("specPodFactory") private val specPodFactory: ConnectorPodFactory,
   private val featureFlagClient: FeatureFlagClient,
+  @Named("infraFlagContexts") private val contexts: List<Context>,
 ) {
   fun podsExistForAutoId(autoId: UUID): Boolean {
     return kubePodLauncher.podsRunning(labeler.getAutoIdLabels(autoId))
@@ -258,9 +260,16 @@ class KubePodClient(
 
     // Whether we should kube cp init files over or let the init container fetch itself
     // if true the init container will fetch, if false we copy over the files
-    // NOTE: FF must be equal for the factory calls and kube cp calls to avoid a potential race
+    // NOTE: FF must be equal for the factory calls and kube cp calls to avoid a potential race,
     // so we check the value here and pass it down.
-    val useFetchingInit = featureFlagClient.boolVariation(ConnectorSidecarFetchesInputFromInit, Workspace(kubeInput.workspaceId))
+    val ffContext =
+      Multi(
+        buildList {
+          add(Workspace(kubeInput.workspaceId))
+          addAll(contexts)
+        },
+      )
+    val useFetchingInit = featureFlagClient.boolVariation(ConnectorSidecarFetchesInputFromInit, ffContext)
 
     var pod =
       factory.create(

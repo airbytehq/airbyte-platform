@@ -7,6 +7,7 @@ import io.airbyte.config.WorkloadType
 import io.airbyte.featureflag.Connection
 import io.airbyte.featureflag.ConnectorSidecarFetchesInputFromInit
 import io.airbyte.featureflag.ContainerOrchestratorDevImage
+import io.airbyte.featureflag.Context
 import io.airbyte.featureflag.FeatureFlagClient
 import io.airbyte.featureflag.InjectAwsSecretsToConnectorPods
 import io.airbyte.featureflag.Multi
@@ -56,6 +57,7 @@ class PayloadKubeInputMapper(
   @Named("discoverWorkerConfigs") private val discoverWorkerConfigs: WorkerConfigs,
   @Named("specWorkerConfigs") private val specWorkerConfigs: WorkerConfigs,
   private val featureFlagClient: FeatureFlagClient,
+  @Named("infraFlagContexts") private val contexts: List<Context>,
 ) {
   fun toKubeInput(
     workloadId: String,
@@ -288,7 +290,7 @@ class PayloadKubeInputMapper(
     input: CheckConnectionInput,
     logPath: String,
   ): Map<String, String> {
-    if (featureFlagClient.boolVariation(ConnectorSidecarFetchesInputFromInit, Workspace(input.launcherConfig.workspaceId))) {
+    if (featureFlagClient.boolVariation(ConnectorSidecarFetchesInputFromInit, buildFFContext(input.launcherConfig.workspaceId))) {
       return mapOf()
     }
 
@@ -313,7 +315,7 @@ class PayloadKubeInputMapper(
     input: DiscoverCatalogInput,
     logPath: String,
   ): Map<String, String> {
-    if (featureFlagClient.boolVariation(ConnectorSidecarFetchesInputFromInit, Workspace(input.launcherConfig.workspaceId))) {
+    if (featureFlagClient.boolVariation(ConnectorSidecarFetchesInputFromInit, buildFFContext(input.launcherConfig.workspaceId))) {
       return mapOf()
     }
 
@@ -338,7 +340,7 @@ class PayloadKubeInputMapper(
     input: SpecInput,
     logPath: String,
   ): Map<String, String> {
-    if (featureFlagClient.boolVariation(ConnectorSidecarFetchesInputFromInit, Workspace(input.launcherConfig.workspaceId))) {
+    if (featureFlagClient.boolVariation(ConnectorSidecarFetchesInputFromInit, buildFFContext(input.launcherConfig.workspaceId))) {
       return mapOf()
     }
 
@@ -354,6 +356,15 @@ class PayloadKubeInputMapper(
             logPath,
           ),
         ),
+    )
+  }
+
+  private fun buildFFContext(workspaceId: UUID): Context {
+    return Multi(
+      buildList {
+        add(Workspace(workspaceId))
+        addAll(contexts)
+      },
     )
   }
 }

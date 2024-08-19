@@ -20,11 +20,11 @@ import io.airbyte.featureflag.WorkloadApiRouting
 import io.airbyte.metrics.lib.ApmTraceUtils
 import io.airbyte.metrics.lib.MetricAttribute
 import io.airbyte.workload.metrics.CustomMetricPublisher
-import io.airbyte.workload.metrics.StatsDRegistryConfigurer.Companion.QUEUE_NAME_TAG
-import io.airbyte.workload.metrics.StatsDRegistryConfigurer.Companion.WORKLOAD_ID_TAG
-import io.airbyte.workload.metrics.StatsDRegistryConfigurer.Companion.WORKLOAD_PUBLISHER_OPERATION_NAME
-import io.airbyte.workload.metrics.StatsDRegistryConfigurer.Companion.WORKLOAD_TYPE_TAG
 import io.airbyte.workload.metrics.WorkloadApiMetricMetadata
+import io.airbyte.workload.metrics.WorkloadApiMetricMetadata.Companion.QUEUE_NAME_TAG
+import io.airbyte.workload.metrics.WorkloadApiMetricMetadata.Companion.WORKLOAD_ID_TAG
+import io.airbyte.workload.metrics.WorkloadApiMetricMetadata.Companion.WORKLOAD_PUBLISHER_OPERATION_NAME
+import io.airbyte.workload.metrics.WorkloadApiMetricMetadata.Companion.WORKLOAD_TYPE_TAG
 import jakarta.inject.Singleton
 import java.util.UUID
 

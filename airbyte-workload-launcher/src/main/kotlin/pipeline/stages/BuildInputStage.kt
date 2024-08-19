@@ -10,6 +10,7 @@ import io.airbyte.commons.json.Jsons
 import io.airbyte.config.WorkloadType
 import io.airbyte.featureflag.Connection
 import io.airbyte.featureflag.ConnectorSidecarFetchesInputFromInit
+import io.airbyte.featureflag.Context
 import io.airbyte.featureflag.FeatureFlagClient
 import io.airbyte.featureflag.Multi
 import io.airbyte.featureflag.OrchestratorFetchesInputFromInit
@@ -58,6 +59,7 @@ open class BuildInputStage(
   metricPublisher: CustomMetricPublisher,
   @Value("\${airbyte.data-plane-id}") dataplaneId: String,
   private val featureFlagClient: FeatureFlagClient,
+  @Named("infraFlagContexts") private val contexts: List<Context>,
 ) : LaunchStage(metricPublisher, dataplaneId) {
   @Trace(operationName = MeterFilterFactory.LAUNCH_PIPELINE_STAGE_OPERATION_NAME, resourceName = "BuildInputStage")
   @Instrument(
@@ -88,7 +90,14 @@ open class BuildInputStage(
     return when (type) {
       WorkloadType.CHECK -> {
         val parsed: CheckConnectionInput = deserializer.toCheckConnectionInput(rawPayload)
-        if (featureFlagClient.boolVariation(ConnectorSidecarFetchesInputFromInit, Workspace(parsed.launcherConfig.workspaceId))) {
+        val ffContext =
+          Multi(
+            buildList {
+              add(Workspace(parsed.launcherConfig.workspaceId))
+              addAll(contexts)
+            },
+          )
+        if (featureFlagClient.boolVariation(ConnectorSidecarFetchesInputFromInit, ffContext)) {
           return CheckPayload(parsed)
         }
         val hydrated = parsed.apply { checkConnectionInput = checkInputHydrator.getHydratedStandardCheckInput(parsed.checkConnectionInput) }
@@ -97,7 +106,14 @@ open class BuildInputStage(
 
       WorkloadType.DISCOVER -> {
         val parsed: DiscoverCatalogInput = deserializer.toDiscoverCatalogInput(rawPayload)
-        if (featureFlagClient.boolVariation(ConnectorSidecarFetchesInputFromInit, Workspace(parsed.launcherConfig.workspaceId))) {
+        val ffContext =
+          Multi(
+            buildList {
+              add(Workspace(parsed.launcherConfig.workspaceId))
+              addAll(contexts)
+            },
+          )
+        if (featureFlagClient.boolVariation(ConnectorSidecarFetchesInputFromInit, ffContext)) {
           return DiscoverCatalogPayload(parsed)
         }
         val hydrated =
